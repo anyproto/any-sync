@@ -2,8 +2,6 @@ syntax = "proto3";
 package anytype;
 option go_package = "pb";
 
-import "pb/protos/changes.proto";
-
 // the element of change tree used to store and internal apply smartBlock history
 message ACLChange {
   repeated string treeHeadIds = 1;
@@ -26,12 +24,6 @@ message ACLChange {
       UserJoin userJoin = 5;
       UserConfirm userConfirm = 6;
     }
-  }
-
-  message ChangeData {
-    anytype.Change.Snapshot snapshot = 1;
-    repeated anytype.Change.Content content = 2;
-    repeated anytype.Change.FileKeys fileKeys = 3;
   }
 
   message ACLData {
