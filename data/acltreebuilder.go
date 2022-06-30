@@ -3,8 +3,8 @@ package data
 import (
 	"context"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/threadmodels"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"
 	"github.com/textileio/go-threads/core/thread"
@@ -41,7 +41,7 @@ func (tb *ACLTreeBuilder) loadChange(id string) (ch *Change, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
-	record, err := tb.thread.GetRecord(ctx, id)
+	record, err := tb.thread.GetChange(ctx, id)
 	if err != nil {
 		return nil, err
 	}

@@ -1,87 +1,86 @@
 thread:
   author: A
-logs:
-  - id: A.1
+changes:
+  - id: A.1.1
     identity: A
-    records:
-      - id: A.1.1
-        aclSnapshot:
-          userStates:
-            - identity: A
-              encryptionKey: key.Enc.A
-              encryptedReadKeys: [key.Read.1]
-              permission: admin
-            - identity: B
-              encryptionKey: key.Enc.B
-              encryptedReadKeys: [key.Read.1]
-              permission: admin
-        snapshot:
-          blocks:
-            - id: root
-        aclChanges:
-          - userAdd:
-              identity: A
-              permission: admin
-              encryptionKey: key.Enc.A
-              encryptedReadKeys: [key.Read.1]
-          - userAdd:
-              identity: B
-              permission: admin
-              encryptionKey: key.Enc.B
-              encryptedReadKeys: [key.Read.1]
-        readKey: key.Read.1
-      - id: A.1.2
-        aclSnapshot:
-          userStates:
-            - identity: A
-              encryptionKey: key.Enc.A
-              encryptedReadKeys: [key.Read.1]
-              permission: admin
-            - identity: B
-              encryptionKey: key.Enc.B
-              encryptedReadKeys: [key.Read.1]
-              permission: admin
-            - identity: D
-              encryptionKey: key.Enc.D
-              encryptedReadKeys: [ key.Read.1 ]
-              permission: admin
-        snapshot:
-          blocks:
-            - id: root
-        aclChanges:
-          - userAdd:
-              identity: D
-              permission: admin
-              encryptionKey: key.Enc.D
-              encryptedReadKeys: [key.Read.1]
-        readKey: key.Read.1
-      - id: A.1.3
-        aclChanges:
-          - userAdd:
-              identity: E
-              permission: admin
-              encryptionKey: key.Enc.E
-              encryptedReadKeys: [key.Read.1]
-        readKey: key.Read.1
-  - id: B.1
+    aclSnapshot:
+      userStates:
+        - identity: A
+          encryptionKey: key.Enc.A
+          encryptedReadKeys: [key.Read.1]
+          permission: admin
+        - identity: B
+          encryptionKey: key.Enc.B
+          encryptedReadKeys: [key.Read.1]
+          permission: admin
+    snapshot:
+      blocks:
+        - id: root
+    aclChanges:
+      - userAdd:
+          identity: A
+          permission: admin
+          encryptionKey: key.Enc.A
+          encryptedReadKeys: [key.Read.1]
+      - userAdd:
+          identity: B
+          permission: admin
+          encryptionKey: key.Enc.B
+          encryptedReadKeys: [key.Read.1]
+    readKey: key.Read.1
+  - id: A.1.2
+    identity: A
+    aclSnapshot:
+      userStates:
+        - identity: A
+          encryptionKey: key.Enc.A
+          encryptedReadKeys: [key.Read.1]
+          permission: admin
+        - identity: B
+          encryptionKey: key.Enc.B
+          encryptedReadKeys: [key.Read.1]
+          permission: admin
+        - identity: D
+          encryptionKey: key.Enc.D
+          encryptedReadKeys: [ key.Read.1 ]
+          permission: admin
+    snapshot:
+      blocks:
+        - id: root
+    aclChanges:
+      - userAdd:
+          identity: D
+          permission: admin
+          encryptionKey: key.Enc.D
+          encryptedReadKeys: [key.Read.1]
+    readKey: key.Read.1
+  - id: A.1.3
+    identity: A
+    aclChanges:
+      - userAdd:
+          identity: E
+          permission: admin
+          encryptionKey: key.Enc.E
+          encryptedReadKeys: [key.Read.1]
+    readKey: key.Read.1
+  - id: B.1.1
     identity: B
-    records:
-      - id: B.1.1
-        aclChanges:
-          - userAdd:
-              identity: C
-              permission: admin
-              encryptionKey: key.Enc.C
-              encryptedReadKeys: [ key.Read.1 ]
-        readKey: key.Read.1
-      - id: B.1.2
-        aclChanges:
-          - userAdd:
-              identity: F
-              permission: admin
-              encryptionKey: key.Enc.F
-              encryptedReadKeys: [ key.Read.1 ]
-        readKey: key.Read.1
+    aclChanges:
+      - userAdd:
+          identity: C
+          permission: admin
+          encryptionKey: key.Enc.C
+          encryptedReadKeys: [ key.Read.1 ]
+    readKey: key.Read.1
+  - id: B.1.2
+    identity: B
+    aclChanges:
+      - userAdd:
+          identity: F
+          permission: admin
+          encryptionKey: key.Enc.F
+          encryptedReadKeys: [ key.Read.1 ]
+    readKey: key.Read.1
 keys:
   Enc:
     - A
@@ -120,3 +119,6 @@ graph:
     baseSnapshot: A.1.2
     aclHeads: [A.1.2]
     treeHeads: [A.1.2]
+heads:
+  - A.1.3
+  - B.1.2

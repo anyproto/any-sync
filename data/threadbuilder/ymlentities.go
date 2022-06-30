@@ -20,11 +20,8 @@ type ACLSnapshot struct {
 	} `yaml:"userStates"`
 }
 
-type ChangeSnapshot struct {
-	Blocks []struct {
-		Id          string   `yaml:"id"`
-		ChildrenIds []string `yaml:"childrenIds"`
-	} `yaml:"blocks"`
+type PlainTextSnapshot struct {
+	Text string `yaml:"text"`
 }
 
 type ACLChange struct {
@@ -67,29 +64,25 @@ type ACLChange struct {
 	}
 }
 
-type DocumentChange struct {
-	BlockAdd *struct {
-		Id       string `yaml:"id"`
-		TargetId string `yaml:"targetId"`
+type PlainTextChange struct {
+	TextAppend *struct {
+		Text string `yaml:"text"`
 	} `yaml:"blockAdd"`
 }
 
 type YMLThread struct {
 	Description *ThreadDescription `yaml:"thread"`
-	Logs        []struct {
+	Changes     []struct {
 		Id       string `yaml:"id"`
 		Identity string `yaml:"identity"`
-		Records  []struct {
-			Id string `yaml:"id"`
 
-			AclSnapshot *ACLSnapshot      `yaml:"aclSnapshot"`
-			Snapshot    *ChangeSnapshot   `yaml:"snapshot"`
-			AclChanges  []*ACLChange      `yaml:"aclChanges"`
-			Changes     []*DocumentChange `yaml:"changes"`
+		AclSnapshot *ACLSnapshot       `yaml:"aclSnapshot"`
+		Snapshot    *PlainTextSnapshot `yaml:"snapshot"`
+		AclChanges  []*ACLChange       `yaml:"aclChanges"`
+		Changes     []*PlainTextChange `yaml:"changes"`
 
-			ReadKey string `yaml:"readKey"`
-		} `yaml:"records"`
-	} `yaml:"logs"`
+		ReadKey string `yaml:"readKey"`
+	} `yaml:"changes"`
 
 	Keys Keys `yaml:"keys"`
 
@@ -100,4 +93,6 @@ type YMLThread struct {
 		ACLHeads     []string `yaml:"aclHeads"`
 		TreeHeads    []string `yaml:"treeHeads"`
 	} `yaml:"graph"`
+
+	Heads []string `yaml:"heads"`
 }

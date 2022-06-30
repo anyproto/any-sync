@@ -1,10 +1,11 @@
 package threadbuilder
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/threadmodels"
-	"github.com/textileio/go-threads/crypto/symmetric"
 	"hash/fnv"
 	"strings"
+
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/threadmodels"
+	"github.com/textileio/go-threads/crypto/symmetric"
 )
 
 type SymKey struct {

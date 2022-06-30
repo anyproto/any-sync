@@ -2,8 +2,9 @@ package data
 
 import (
 	"fmt"
+
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/threadmodels"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pb"
 )
 
 type ACLStateBuilder struct {

@@ -2,33 +2,17 @@ package threadmodels
 
 import (
 	"context"
-
 	"github.com/gogo/protobuf/proto"
 )
 
 type Thread interface {
 	ID() string
-	GetLogs() ([]ThreadLog, error)
-	GetRecord(ctx context.Context, recordID string) (*ThreadRecord, error)
-	PushRecord(payload proto.Marshaler) (id string, err error)
-
-	// SubscribeForRecords()
+	GetChange(ctx context.Context, recordID string) (*RawChange, error)
+	PushChange(payload proto.Marshaler) (id string, err error)
 }
 
-type SignedPayload struct {
+type RawChange struct {
 	Payload   []byte
 	Signature []byte
-}
-
-type ThreadRecord struct {
-	PrevId string
-	Id     string
-	LogId  string
-	Signed *SignedPayload
-}
-
-type ThreadLog struct {
-	ID      string
-	Head    string
-	Counter int64
+	Id        string
 }

@@ -1,9 +1,9 @@
 package data
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/threadbuilder"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/threadmodels"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pb"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
