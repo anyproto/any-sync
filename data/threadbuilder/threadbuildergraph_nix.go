@@ -30,7 +30,7 @@ func (t *ThreadBuilder) Graph() (string, error) {
 	graph.SetDir(true)
 	var nodes = make(map[string]struct{})
 
-	var addNodes = func(r *threadRecord) error {
+	var addNodes = func(r *threadChange) error {
 		// TODO: revisit function after checking
 
 		style := "solid"
@@ -105,7 +105,7 @@ func (t *ThreadBuilder) Graph() (string, error) {
 		return nil
 	}
 
-	var addLinks = func(t *threadRecord) error {
+	var addLinks = func(t *threadChange) error {
 		for _, prevId := range t.AclHeadIds {
 			err := createEdge(t.id, prevId, EdgeParameters{
 				style: "dashed",

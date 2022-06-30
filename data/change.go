@@ -3,7 +3,7 @@ package data
 import (
 	"fmt"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
 	"github.com/gogo/protobuf/proto"
 	"github.com/textileio/go-threads/crypto/symmetric"
 )

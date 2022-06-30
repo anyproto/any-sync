@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/threadmodels"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pb"
-	"github.com/textileio/go-threads/crypto/symmetric"
 	"hash/fnv"
+
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/threadmodels"
+	"github.com/textileio/go-threads/crypto/symmetric"
 )
 
 var ErrNoSuchUser = errors.New("no such user")

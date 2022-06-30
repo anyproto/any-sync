@@ -13,7 +13,6 @@ message ACLChange {
   uint64 currentReadKeyHash = 6;
   int64 timestamp = 7;
   string identity = 8;
-  map<string, string> logHeads = 9;
 
   message ACLContentValue {
     oneof value {
