@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/threadmodels"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"
 	"github.com/textileio/go-threads/core/thread"
-	"sort"
 	"time"
 )
 
@@ -41,7 +39,7 @@ func (tb *ACLTreeBuilder) loadChange(id string) (ch *Change, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
-	record, err := tb.thread.GetChange(ctx, id)
+	change, err := tb.thread.GetChange(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -49,11 +47,11 @@ func (tb *ACLTreeBuilder) loadChange(id string) (ch *Change, err error) {
 	aclChange := new(pb.ACLChange)
 
 	// TODO: think what should we do with such cases, because this can be used by attacker to break our tree
-	if err = proto.Unmarshal(record.Signed.Payload, aclChange); err != nil {
+	if err = proto.Unmarshal(change.Payload, aclChange); err != nil {
 		return
 	}
 	var verified bool
-	verified, err = tb.verify(aclChange.Identity, record.Signed.Payload, record.Signed.Signature)
+	verified, err = tb.verify(aclChange.Identity, change.Payload, change.Signature)
 	if err != nil {
 		return
 	}
@@ -80,44 +78,10 @@ func (tb *ACLTreeBuilder) verify(identity string, payload, signature []byte) (is
 	return identityKey.Verify(payload, signature)
 }
 
-func (tb *ACLTreeBuilder) getLogs() (logs []threadmodels.ThreadLog, err error) {
-	// TODO: Add beforeId building logic
-	logs, err = tb.thread.GetLogs()
-	if err != nil {
-		return nil, fmt.Errorf("GetLogs error: %w", err)
-	}
-
-	log.Debugf("build tree: logs: %v", logs)
-	if len(logs) == 0 || len(logs) == 1 && len(logs[0].Head) <= 1 {
-		return nil, ErrEmpty
-	}
-	var nonEmptyLogs = logs[:0]
-	for _, l := range logs {
-		if len(l.Head) == 0 {
-			continue
-		}
-		if ch, err := tb.loadChange(l.Head); err != nil {
-			log.Errorf("loading head %s of the log %s failed: %v", l.Head, l.ID, err)
-		} else {
-			tb.logHeads[l.ID] = ch
-		}
-		nonEmptyLogs = append(nonEmptyLogs, l)
-	}
-	return nonEmptyLogs, nil
-}
-
 func (tb *ACLTreeBuilder) Build() (*Tree, error) {
-	logs, err := tb.getLogs()
-	if err != nil {
-		return nil, err
-	}
+	heads := tb.thread.Heads()
 
-	heads, err := tb.getACLHeads(logs)
-	if err != nil {
-		return nil, fmt.Errorf("get acl heads error: %v", err)
-	}
-
-	if err = tb.buildTreeFromStart(heads); err != nil {
+	if err := tb.buildTreeFromStart(heads); err != nil {
 		return nil, fmt.Errorf("buildTree error: %v", err)
 	}
 	tb.cache = nil
@@ -167,48 +131,6 @@ func (tb *ACLTreeBuilder) dfsFromStart(stack []string) (buf []*Change, possibleR
 		}
 	}
 	return buf, possibleRoots, nil
-}
-
-func (tb *ACLTreeBuilder) getPrecedingACLHeads(head string) ([]string, error) {
-	headChange, err := tb.loadChange(head)
-	if err != nil {
-		return nil, err
-	}
-
-	if headChange.Content.GetAclData() != nil {
-		return []string{head}, nil
-	} else {
-		return headChange.PreviousIds, nil
-	}
-}
-
-func (tb *ACLTreeBuilder) getACLHeads(logs []threadmodels.ThreadLog) (aclTreeHeads []string, err error) {
-	sort.Slice(logs, func(i, j int) bool {
-		return logs[i].ID < logs[j].ID
-	})
-
-	// get acl tree heads from log heads
-	for _, l := range logs {
-		if slice.FindPos(aclTreeHeads, l.Head) != -1 { // do not scan known heads
-			continue
-		}
-		precedingHeads, err := tb.getPrecedingACLHeads(l.Head)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, head := range precedingHeads {
-			if slice.FindPos(aclTreeHeads, l.Head) != -1 {
-				continue
-			}
-			aclTreeHeads = append(aclTreeHeads, head)
-		}
-	}
-
-	if len(aclTreeHeads) == 0 {
-		return nil, fmt.Errorf("no usable ACL heads in thread")
-	}
-	return aclTreeHeads, nil
 }
 
 func (tb *ACLTreeBuilder) getRoot(possibleRoots []*Change) (*Change, error) {

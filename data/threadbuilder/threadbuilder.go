@@ -68,6 +68,10 @@ func (t *ThreadBuilder) GetKeychain() *Keychain {
 // at the same time this guy can add some random folks which are not in space
 // but we should compare this against space in the future
 
+func (t *ThreadBuilder) Heads() []string {
+	return t.heads
+}
+
 func (t *ThreadBuilder) GetChange(ctx context.Context, recordID string) (*threadmodels.RawChange, error) {
 	rec := t.allChanges[recordID]
 
