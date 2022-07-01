@@ -7,10 +7,11 @@ import (
 	"crypto/subtle"
 	"crypto/x509"
 	"errors"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/lib/strkey"
+	"io"
+
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/strkey"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	crypto_pb "github.com/libp2p/go-libp2p-core/crypto/pb"
-	"io"
 )
 
 type SigningPubKey crypto.PubKey
