@@ -82,7 +82,7 @@ func (sb *ACLStateBuilder) BuildBefore(beforeId string) (*ACLState, bool, error)
 				if err == nil {
 					startChange = c
 				} else if err != ErrDocumentForbidden {
-					log.Errorf("marking change %s as invalid: %v", c.Id, err)
+					//log.Errorf("marking change %s as invalid: %v", c.Id, err)
 					sb.tree.RemoveInvalidChange(c.Id)
 				}
 			}()

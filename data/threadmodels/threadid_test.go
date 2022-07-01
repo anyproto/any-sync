@@ -1,7 +1,6 @@
 package threadmodels
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/lib/core/smartblock"
 	"testing"
 )
 
@@ -11,7 +10,7 @@ func TestCreateACLThreadIDVerify(t *testing.T) {
 		t.Fatalf("should not return error after generating key pair: %v", err)
 	}
 
-	thread, err := CreateACLThreadID(pubKey, smartblock.SmartBlockTypeWorkspace)
+	thread, err := CreateACLThreadID(pubKey, 1)
 	if err != nil {
 		t.Fatalf("should not return error after generating thread: %v", err)
 	}

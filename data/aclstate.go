@@ -89,7 +89,7 @@ func (st *ACLState) ApplyChange(changeId string, change *pb.ACLChange) error {
 
 	for _, ch := range change.GetAclData().GetAclContent() {
 		if err := st.applyChange(changeId, ch); err != nil {
-			log.Infof("error while applying changes: %v; ignore", err)
+			//log.Infof("error while applying changes: %v; ignore", err)
 			return err
 		}
 	}
