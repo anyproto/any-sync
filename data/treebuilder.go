@@ -11,7 +11,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/common/log"
 	"github.com/textileio/go-threads/core/thread"
-	"sort"
 	"time"
 )
 
@@ -89,13 +88,10 @@ func (tb *TreeBuilder) verify(identity string, payload, signature []byte) (isVer
 }
 
 func (tb *TreeBuilder) Build(fromStart bool) (*Tree, error) {
-	heads, err := tb.getActualHeads()
-	if err != nil {
-		return nil, fmt.Errorf("get acl heads error: %v", err)
-	}
+	heads := tb.thread.Heads()
 
 	if fromStart {
-		if err = tb.buildTreeFromStart(heads); err != nil {
+		if err := tb.buildTreeFromStart(heads); err != nil {
 			return nil, fmt.Errorf("buildTree error: %v", err)
 		}
 	} else {
@@ -193,59 +189,6 @@ func (tb *TreeBuilder) dfs(stack []string, breakpoint string) (buf []*Change, er
 		}
 	}
 	return buf, nil
-}
-
-func (tb *TreeBuilder) getActualHeads(logs []threadmodels.ThreadLog) (heads []string, err error) {
-	sort.Slice(logs, func(i, j int) bool {
-		return logs[i].ID < logs[j].ID
-	})
-	var knownHeads []string
-	var validLogs = logs[:0]
-	for _, l := range logs {
-		if slice.FindPos(knownHeads, l.Head) != -1 { // do not scan known heads
-			continue
-		}
-		sh, err := tb.getNearSnapshot(l.Head)
-		if err != nil {
-			log.Warnf("can't get near snapshot: %v; ignore", err)
-			continue
-		}
-		if sh.LogHeads != nil {
-			for _, headId := range sh.LogHeads {
-				knownHeads = append(knownHeads, headId)
-			}
-		}
-		validLogs = append(validLogs, l)
-	}
-	for _, l := range validLogs {
-		if slice.FindPos(knownHeads, l.Head) != -1 { // do not scan known heads
-			continue
-		} else {
-			heads = append(heads, l.Head)
-		}
-	}
-	if len(heads) == 0 {
-		return nil, fmt.Errorf("no usable logs in head")
-	}
-	return
-}
-
-func (tb *TreeBuilder) getNearSnapshot(id string) (sh *Change, err error) {
-	ch, err := tb.loadChange(id)
-	if err != nil {
-		return
-	}
-
-	if ch.IsSnapshot {
-		sh = ch
-	} else {
-		sh, err = tb.loadChange(ch.SnapshotId)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return sh, nil
 }
 
 func (tb *TreeBuilder) findBreakpoint(heads []string) (breakpoint string, err error) {

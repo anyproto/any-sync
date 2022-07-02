@@ -10,11 +10,12 @@ package data
 import (
 	"bytes"
 	"fmt"
-	"github.com/goccy/go-graphviz"
-	"github.com/goccy/go-graphviz/cgraph"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/goccy/go-graphviz"
+	"github.com/goccy/go-graphviz/cgraph"
 )
 
 func (t *Tree) Graph() (data string, err error) {
@@ -70,17 +71,18 @@ func (t *Tree) Graph() (data string, err error) {
 			}
 		}
 		if c.DecryptedDocumentChange != nil {
-			for _, chc := range c.DecryptedDocumentChange.Content {
-				tp := fmt.Sprintf("%T", chc.Value)
-				tp = strings.Replace(tp, "ChangeContentValueOf", "", 1)
-				res := ""
-				for _, ts := range tp {
-					if unicode.IsUpper(ts) {
-						res += string(ts)
-					}
-				}
-				chSymbs = append(chSymbs, res)
-			}
+			// TODO: add some parser to provide custom unmarshalling for the document change
+			//for _, chc := range c.DecryptedDocumentChange.Content {
+			//	tp := fmt.Sprintf("%T", chc.Value)
+			//	tp = strings.Replace(tp, "ChangeContentValueOf", "", 1)
+			//	res := ""
+			//	for _, ts := range tp {
+			//		if unicode.IsUpper(ts) {
+			//			res += string(ts)
+			//		}
+			//	}
+			//	chSymbs = append(chSymbs, res)
+			//}
 		}
 
 		shortId := c.Id
