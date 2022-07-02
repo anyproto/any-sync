@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/threadmodels"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"
 	"github.com/textileio/go-threads/core/thread"
 	"time"
@@ -80,8 +81,12 @@ func (tb *ACLTreeBuilder) verify(identity string, payload, signature []byte) (is
 
 func (tb *ACLTreeBuilder) Build() (*Tree, error) {
 	heads := tb.thread.Heads()
+	aclHeads, err := tb.getACLHeads(heads)
+	if err != nil {
+		return nil, err
+	}
 
-	if err := tb.buildTreeFromStart(heads); err != nil {
+	if err = tb.buildTreeFromStart(aclHeads); err != nil {
 		return nil, fmt.Errorf("buildTree error: %v", err)
 	}
 	tb.cache = nil
@@ -156,4 +161,41 @@ func (tb *ACLTreeBuilder) getRoot(possibleRoots []*Change) (*Change, error) {
 		}
 	}
 	return nil, fmt.Errorf("could not find any root")
+}
+
+func (tb *ACLTreeBuilder) getACLHeads(heads []string) (aclTreeHeads []string, err error) {
+	for _, head := range heads {
+		if slice.FindPos(aclTreeHeads, head) != -1 { // do not scan known heads
+			continue
+		}
+		precedingHeads, err := tb.getPrecedingACLHeads(head)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, aclHead := range precedingHeads {
+			if slice.FindPos(aclTreeHeads, aclHead) != -1 {
+				continue
+			}
+			aclTreeHeads = append(aclTreeHeads, aclHead)
+		}
+	}
+
+	if len(aclTreeHeads) == 0 {
+		return nil, fmt.Errorf("no usable ACL heads in thread")
+	}
+	return aclTreeHeads, nil
+}
+
+func (tb *ACLTreeBuilder) getPrecedingACLHeads(head string) ([]string, error) {
+	headChange, err := tb.loadChange(head)
+	if err != nil {
+		return nil, err
+	}
+
+	if headChange.Content.GetAclData() != nil {
+		return []string{head}, nil
+	} else {
+		return headChange.PreviousIds, nil
+	}
 }
