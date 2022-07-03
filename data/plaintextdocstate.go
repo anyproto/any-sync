@@ -47,6 +47,10 @@ func (p *PlainTextDocumentState) applyChange(ch *pb.PlainTextChangeContent) erro
 
 type PlainTextDocumentStateProvider struct{}
 
+func NewPlainTextDocumentStateProvider() *PlainTextDocumentStateProvider {
+	return &PlainTextDocumentStateProvider{}
+}
+
 func (p *PlainTextDocumentStateProvider) ProvideFromInitialChange(change []byte, id string) (DocumentState, error) {
 	var changesData pb.PlainTextChangeData
 	err := proto.Unmarshal(change, &changesData)

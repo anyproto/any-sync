@@ -19,6 +19,7 @@ func TestACLStateBuilder_UserJoinBuild(t *testing.T) {
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],
 		threadmodels.NewEd25519Decoder(),
+		NewPlainTextDocumentStateProvider(),
 		false)
 	if err != nil {
 		t.Fatalf("should build acl aclState without err: %v", err)
@@ -53,6 +54,7 @@ func TestACLStateBuilder_UserRemoveBuild(t *testing.T) {
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],
 		threadmodels.NewEd25519Decoder(),
+		NewPlainTextDocumentStateProvider(),
 		false)
 	if err != nil {
 		t.Fatalf("should build acl aclState without err: %v", err)
@@ -83,6 +85,7 @@ func TestACLStateBuilder_UserRemoveBeforeBuild(t *testing.T) {
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],
 		threadmodels.NewEd25519Decoder(),
+		NewPlainTextDocumentStateProvider(),
 		false)
 	if err != nil {
 		t.Fatalf("should build acl aclState without err: %v", err)
@@ -114,6 +117,7 @@ func TestACLStateBuilder_InvalidSnapshotBuild(t *testing.T) {
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],
 		threadmodels.NewEd25519Decoder(),
+		NewPlainTextDocumentStateProvider(),
 		false)
 	if err != nil {
 		t.Fatalf("should build acl aclState without err: %v", err)
@@ -144,6 +148,7 @@ func TestACLStateBuilder_ValidSnapshotBuild(t *testing.T) {
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],
 		threadmodels.NewEd25519Decoder(),
+		NewPlainTextDocumentStateProvider(),
 		false)
 	if err != nil {
 		t.Fatalf("should build acl aclState without err: %v", err)

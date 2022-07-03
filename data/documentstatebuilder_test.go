@@ -17,21 +17,14 @@ func TestDocumentStateBuilder_UserJoinBuild(t *testing.T) {
 		thread,
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],
+		NewPlainTextDocumentStateProvider(),
 		threadmodels.NewEd25519Decoder())
 	if err != nil {
 		t.Fatalf("should build acl aclState without err: %v", err)
 	}
 
-	st := ctx.DocState
-	allIds := make(map[string]bool)
-	for _, b := range st.Blocks() {
-		allIds[b.Id] = true
-	}
-	if err != nil {
-		t.Fatalf("iterate should not return error: %v", err)
-	}
-	assert.True(t, allIds["root"])
-	assert.True(t, allIds["first"])
+	st := ctx.DocState.(*PlainTextDocumentState)
+	assert.Equal(t, st.Text, "")
 }
 
 func TestDocumentStateBuilder_UserRemoveBuild(t *testing.T) {
@@ -44,19 +37,12 @@ func TestDocumentStateBuilder_UserRemoveBuild(t *testing.T) {
 		thread,
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],
+		NewPlainTextDocumentStateProvider(),
 		threadmodels.NewEd25519Decoder())
 	if err != nil {
 		t.Fatalf("should build acl aclState without err: %v", err)
 	}
 
-	st := ctx.DocState
-	allIds := make(map[string]bool)
-	for _, b := range st.Blocks() {
-		allIds[b.Id] = true
-	}
-	if err != nil {
-		t.Fatalf("iterate should not return error: %v", err)
-	}
-	assert.True(t, allIds["root"])
-	assert.True(t, allIds["second"])
+	st := ctx.DocState.(*PlainTextDocumentState)
+	assert.Equal(t, st.Text, "")
 }
