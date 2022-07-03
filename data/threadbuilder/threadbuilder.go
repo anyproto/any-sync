@@ -126,7 +126,7 @@ func (t *ThreadBuilder) Parse(thread *YMLThread) {
 		newChange.readKey = k
 		newChange.signKey = t.keychain.SigningKeys[ch.Identity]
 		aclChange := &pb.ACLChange{}
-		aclChange.Identity = newChange.Identity
+		aclChange.Identity = ch.Identity
 		if len(ch.AclChanges) > 0 || ch.AclSnapshot != nil {
 			aclChange.AclData = &pb.ACLChangeACLData{}
 			if ch.AclSnapshot != nil {
@@ -368,7 +368,8 @@ func (t *ThreadBuilder) convertPermission(perm string) pb.ACLChangeUserPermissio
 
 func (t *ThreadBuilder) traverseFromHeads(f func(t *threadChange) error) error {
 	uniqMap := map[string]struct{}{}
-	stack := t.heads
+	stack := make([]string, len(t.heads), 10)
+	copy(stack, t.heads)
 	for len(stack) > 0 {
 		id := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
