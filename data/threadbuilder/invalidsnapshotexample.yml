@@ -14,8 +14,7 @@ changes:
           encryptedReadKeys: [key.Read.1]
           permission: admin
     snapshot:
-      blocks:
-        - id: root
+      text: "some text"
     aclChanges:
       - userAdd:
           identity: A
@@ -45,8 +44,7 @@ changes:
           encryptedReadKeys: [ key.Read.1 ]
           permission: admin
     snapshot:
-      blocks:
-        - id: root
+      text: "some text"
     aclChanges:
       - userAdd:
           identity: D

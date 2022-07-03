@@ -67,7 +67,7 @@ type ACLChange struct {
 type PlainTextChange struct {
 	TextAppend *struct {
 		Text string `yaml:"text"`
-	} `yaml:"blockAdd"`
+	} `yaml:"textAppend"`
 }
 
 type YMLThread struct {
