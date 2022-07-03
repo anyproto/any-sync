@@ -126,7 +126,7 @@ func (t *ThreadBuilder) Parse(thread *YMLThread) {
 		newChange.readKey = k
 		newChange.signKey = t.keychain.SigningKeys[ch.Identity]
 		aclChange := &pb.ACLChange{}
-		aclChange.Identity = ch.Identity
+		aclChange.Identity = t.keychain.GetIdentity(ch.Identity)
 		if len(ch.AclChanges) > 0 || ch.AclSnapshot != nil {
 			aclChange.AclData = &pb.ACLChangeACLData{}
 			if ch.AclSnapshot != nil {
