@@ -1,14 +1,13 @@
 package data
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/core/block/editor/state"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/threadmodels"
 )
 
 type ACLContext struct {
 	Tree     *Tree
 	ACLState *ACLState
-	DocState *state.State
+	DocState DocumentState
 }
 
 func createTreeFromThread(t threadmodels.Thread, fromStart bool) (*Tree, error) {
@@ -21,6 +20,7 @@ func createACLStateFromThread(
 	identity string,
 	key threadmodels.EncryptionPrivKey,
 	decoder threadmodels.SigningPubKeyDecoder,
+	provider InitialStateProvider,
 	fromStart bool) (*ACLContext, error) {
 	tree, err := createTreeFromThread(t, fromStart)
 	if err != nil {
@@ -41,7 +41,7 @@ func createACLStateFromThread(
 		}
 		if !valid {
 			// TODO: think about what to do if the snapshot is invalid - should we rebuild the tree without it
-			return createACLStateFromThread(t, identity, key, decoder, true)
+			return createACLStateFromThread(t, identity, key, decoder, provider, true)
 		}
 	}
 
@@ -64,13 +64,14 @@ func createDocumentStateFromThread(
 	t threadmodels.Thread,
 	identity string,
 	key threadmodels.EncryptionPrivKey,
+	provider InitialStateProvider,
 	decoder threadmodels.SigningPubKeyDecoder) (*ACLContext, error) {
-	context, err := createACLStateFromThread(t, identity, key, decoder, false)
+	context, err := createACLStateFromThread(t, identity, key, decoder, provider, false)
 	if err != nil {
 		return nil, err
 	}
 
-	docStateBuilder := newDocumentStateBuilder(context.Tree, context.ACLState)
+	docStateBuilder := newDocumentStateBuilder(context.Tree, context.ACLState, provider)
 	docState, err := docStateBuilder.build()
 	if err != nil {
 		return nil, err

@@ -1,59 +1,51 @@
 package data
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/core/block/editor/state"
-	"time"
+	"fmt"
 )
 
 type documentStateBuilder struct {
-	tree     *Tree
-	aclState *ACLState // TODO: decide if this is needed or not
+	tree          *Tree
+	aclState      *ACLState // TODO: decide if this is needed or not
+	stateProvider InitialStateProvider
 }
 
-func newDocumentStateBuilder(tree *Tree, state *ACLState) *documentStateBuilder {
+func newDocumentStateBuilder(tree *Tree, state *ACLState, stateProvider InitialStateProvider) *documentStateBuilder {
 	return &documentStateBuilder{
-		tree:     tree,
-		aclState: state,
+		tree:          tree,
+		aclState:      state,
+		stateProvider: stateProvider,
 	}
 }
 
 // TODO: we should probably merge the two builders into one
-func (d *documentStateBuilder) build() (s *state.State, err error) {
+func (d *documentStateBuilder) build() (s DocumentState, err error) {
 	var (
-		startId    string
-		applyRoot  bool
-		st         = time.Now()
-		lastChange *Change
-		count      int
+		startId string
+		count   int
 	)
 	rootChange := d.tree.Root()
-	root := state.NewDocFromSnapshot("root", rootChange.DecryptedDocumentChange.Snapshot).(*state.State)
-	root.SetChangeId(rootChange.Id)
+
+	if rootChange.DecryptedDocumentChange == nil {
+		err = fmt.Errorf("root doesn't have decrypted change")
+		return
+	}
+
+	s, err = d.stateProvider.ProvideFromInitialChange(rootChange.DecryptedDocumentChange, rootChange.Id)
+	if err != nil {
+		return
+	}
 
 	t := d.tree
-	if startId = root.ChangeId(); startId == "" {
-		startId = t.RootId()
-		applyRoot = true
-	}
+	startId = rootChange.Id
 
 	t.Iterate(startId, func(c *Change) (isContinue bool) {
 		count++
-		lastChange = c
 		if startId == c.Id {
-			s = root.NewState()
-			if applyRoot && c.DecryptedDocumentChange != nil {
-				s.ApplyChangeIgnoreErr(c.DecryptedDocumentChange.Content...)
-				s.SetChangeId(c.Id)
-				s.AddFileKeys(c.DecryptedDocumentChange.FileKeys...)
-			}
 			return true
 		}
 		if c.DecryptedDocumentChange != nil {
-			ns := s.NewState()
-			ns.ApplyChangeIgnoreErr(c.DecryptedDocumentChange.Content...)
-			ns.SetChangeId(c.Id)
-			ns.AddFileKeys(c.DecryptedDocumentChange.FileKeys...)
-			_, _, err = state.ApplyStateFastOne(ns)
+			_, err = s.ApplyChange(c.DecryptedDocumentChange, c.Id)
 			if err != nil {
 				return false
 			}
@@ -61,12 +53,7 @@ func (d *documentStateBuilder) build() (s *state.State, err error) {
 		return true
 	})
 	if err != nil {
-		return nil, err
+		return
 	}
-	if lastChange != nil {
-		s.SetLastModified(lastChange.Content.Timestamp, lastChange.Content.Identity)
-	}
-
-	log.Infof("build state (crdt): changes: %d; dur: %v;", count, time.Since(st))
 	return s, err
 }
