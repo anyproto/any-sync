@@ -125,10 +125,12 @@ func (tb *TreeBuilder) buildTreeFromStart(heads []string) (err error) {
 	return
 }
 
-func (tb *TreeBuilder) dfsFromStart(stack []string) (buf []*Change, possibleRoots []*Change, err error) {
+func (tb *TreeBuilder) dfsFromStart(heads []string) (buf []*Change, possibleRoots []*Change, err error) {
+	stack := make([]string, len(heads), len(heads)*2)
+	copy(stack, heads)
+
 	buf = make([]*Change, 0, len(stack)*2)
 	uniqMap := make(map[string]struct{})
-
 	for len(stack) > 0 {
 		id := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
@@ -166,7 +168,10 @@ func (tb *TreeBuilder) buildTree(heads []string, breakpoint string) (err error) 
 	return
 }
 
-func (tb *TreeBuilder) dfs(stack []string, breakpoint string) (buf []*Change, err error) {
+func (tb *TreeBuilder) dfs(heads []string, breakpoint string) (buf []*Change, err error) {
+	stack := make([]string, len(heads), len(heads)*2)
+	copy(stack, heads)
+
 	buf = make([]*Change, 0, len(stack)*2)
 	uniqMap := map[string]struct{}{breakpoint: {}}
 	for len(stack) > 0 {
