@@ -24,7 +24,7 @@ func TestDocumentStateBuilder_UserJoinBuild(t *testing.T) {
 	}
 
 	st := ctx.DocState.(*PlainTextDocumentState)
-	assert.Equal(t, st.Text, "")
+	assert.Equal(t, st.Text, "some text|first")
 }
 
 func TestDocumentStateBuilder_UserRemoveBuild(t *testing.T) {
@@ -44,5 +44,5 @@ func TestDocumentStateBuilder_UserRemoveBuild(t *testing.T) {
 	}
 
 	st := ctx.DocState.(*PlainTextDocumentState)
-	assert.Equal(t, st.Text, "")
+	assert.Equal(t, st.Text, "some text|first")
 }

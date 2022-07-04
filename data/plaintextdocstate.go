@@ -40,7 +40,7 @@ func (p *PlainTextDocumentState) applyChange(ch *pb.PlainTextChangeContent) erro
 	switch {
 	case ch.GetTextAppend() != nil:
 		text := ch.GetTextAppend().GetText()
-		p.Text += text
+		p.Text += "|" + text
 	}
 	return nil
 }

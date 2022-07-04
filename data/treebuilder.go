@@ -21,7 +21,6 @@ var (
 
 type TreeBuilder struct {
 	cache                map[string]*Change
-	logHeads             map[string]*Change
 	identityKeys         map[string]threadmodels.SigningPubKey
 	signingPubKeyDecoder threadmodels.SigningPubKeyDecoder
 	tree                 *Tree
@@ -31,7 +30,6 @@ type TreeBuilder struct {
 func NewTreeBuilder(t threadmodels.Thread, decoder threadmodels.SigningPubKeyDecoder) *TreeBuilder {
 	return &TreeBuilder{
 		cache:                make(map[string]*Change),
-		logHeads:             make(map[string]*Change),
 		identityKeys:         make(map[string]threadmodels.SigningPubKey),
 		signingPubKeyDecoder: decoder,
 		tree:                 &Tree{}, // TODO: add NewTree method
