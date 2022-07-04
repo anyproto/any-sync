@@ -109,10 +109,12 @@ func (tb *ACLTreeBuilder) buildTreeFromStart(heads []string) (err error) {
 	return
 }
 
-func (tb *ACLTreeBuilder) dfsFromStart(stack []string) (buf []*Change, possibleRoots []*Change, err error) {
+func (tb *ACLTreeBuilder) dfsFromStart(heads []string) (buf []*Change, possibleRoots []*Change, err error) {
+	stack := make([]string, len(heads), len(heads)*2)
+	copy(stack, heads)
+
 	buf = make([]*Change, 0, len(stack)*2)
 	uniqMap := make(map[string]struct{})
-
 	for len(stack) > 0 {
 		id := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
