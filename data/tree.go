@@ -130,6 +130,7 @@ func (t *Tree) RemoveInvalidChange(id string) {
 			stack = append(stack, el.Id)
 		}
 	}
+	t.updateHeads()
 }
 
 func (t *Tree) add(c *Change) (attached bool) {

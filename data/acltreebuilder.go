@@ -13,7 +13,6 @@ import (
 
 type ACLTreeBuilder struct {
 	cache                map[string]*Change
-	logHeads             map[string]*Change
 	identityKeys         map[string]threadmodels.SigningPubKey
 	signingPubKeyDecoder threadmodels.SigningPubKeyDecoder
 	tree                 *Tree
@@ -23,7 +22,6 @@ type ACLTreeBuilder struct {
 func NewACLTreeBuilder(t threadmodels.Thread, decoder threadmodels.SigningPubKeyDecoder) *ACLTreeBuilder {
 	return &ACLTreeBuilder{
 		cache:                make(map[string]*Change),
-		logHeads:             make(map[string]*Change),
 		identityKeys:         make(map[string]threadmodels.SigningPubKey),
 		signingPubKeyDecoder: decoder,
 		tree:                 &Tree{}, // TODO: add NewTree method
