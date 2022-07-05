@@ -14,14 +14,17 @@ type changeLoader struct {
 	identityKeys         map[string]threadmodels.SigningPubKey
 	signingPubKeyDecoder threadmodels.SigningPubKeyDecoder
 	thread               threadmodels.Thread
+	changeCreator        func(id string, ch *pb.ACLChange) (*Change, error)
 }
 
 func newChangeLoader(
 	thread threadmodels.Thread,
-	signingPubKeyDecoder threadmodels.SigningPubKeyDecoder) *changeLoader {
+	signingPubKeyDecoder threadmodels.SigningPubKeyDecoder,
+	changeCreator func(id string, ch *pb.ACLChange) (*Change, error)) *changeLoader {
 	return &changeLoader{
 		signingPubKeyDecoder: signingPubKeyDecoder,
 		thread:               thread,
+		changeCreator:        changeCreator,
 	}
 }
 
@@ -61,7 +64,7 @@ func (c *changeLoader) loadChange(id string) (ch *Change, err error) {
 		return
 	}
 
-	ch, err = NewACLChange(id, aclChange)
+	ch, err = c.changeCreator(id, aclChange)
 	c.cache[id] = ch
 
 	return ch, nil

@@ -12,6 +12,7 @@ type ACLContext struct {
 
 func createTreeFromThread(t threadmodels.Thread, fromStart bool) (*Tree, error) {
 	treeBuilder := NewTreeBuilder(t, threadmodels.NewEd25519Decoder())
+	treeBuilder.Init()
 	return treeBuilder.Build(fromStart)
 }
 
@@ -27,14 +28,21 @@ func createACLStateFromThread(
 		return nil, err
 	}
 
+	accountData := &AccountData{
+		Identity: identity,
+		EncKey:   key,
+	}
+
 	aclTreeBuilder := NewACLTreeBuilder(t, decoder)
+	aclTreeBuilder.Init()
 	aclTree, err := aclTreeBuilder.Build()
 	if err != nil {
 		return nil, err
 	}
 
 	if !fromStart {
-		snapshotValidator := NewSnapshotValidator(aclTree, identity, key, decoder)
+		snapshotValidator := NewSnapshotValidator(decoder, accountData)
+		snapshotValidator.Init(aclTree)
 		valid, err := snapshotValidator.ValidateSnapshot(tree.root)
 		if err != nil {
 			return nil, err
@@ -45,7 +53,8 @@ func createACLStateFromThread(
 		}
 	}
 
-	aclBuilder, err := NewACLStateBuilder(tree, identity, key, decoder)
+	aclBuilder := NewACLStateBuilder(decoder, accountData)
+	err = aclBuilder.Init(tree)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +80,8 @@ func createDocumentStateFromThread(
 		return nil, err
 	}
 
-	docStateBuilder := newDocumentStateBuilder(context.Tree, context.ACLState, provider)
+	docStateBuilder := newDocumentStateBuilder(provider)
+	docStateBuilder.init(context.ACLState, context.Tree)
 	docState, err := docStateBuilder.build()
 	if err != nil {
 		return nil, err

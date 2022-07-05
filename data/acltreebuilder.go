@@ -21,7 +21,10 @@ func NewACLTreeBuilder(t threadmodels.Thread, decoder threadmodels.SigningPubKey
 	return &ACLTreeBuilder{
 		signingPubKeyDecoder: decoder,
 		thread:               t,
-		changeLoader:         newChangeLoader(t, decoder),
+		changeLoader: newChangeLoader(
+			t,
+			decoder,
+			NewACLChange),
 	}
 }
 
