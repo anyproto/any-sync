@@ -6,32 +6,31 @@ import (
 )
 
 type SnapshotValidator struct {
-	aclTree  *Tree
-	identity string
-	key      threadmodels.EncryptionPrivKey
-	decoder  threadmodels.SigningPubKeyDecoder
+	aclTree      *Tree
+	identity     string
+	key          threadmodels.EncryptionPrivKey
+	decoder      threadmodels.SigningPubKeyDecoder
+	stateBuilder *ACLStateBuilder
 }
 
 func NewSnapshotValidator(
-	aclTree *Tree,
-	identity string,
-	key threadmodels.EncryptionPrivKey,
-	decoder threadmodels.SigningPubKeyDecoder) *SnapshotValidator {
+	decoder threadmodels.SigningPubKeyDecoder,
+	accountData *AccountData) *SnapshotValidator {
 	return &SnapshotValidator{
-		aclTree:  aclTree,
-		identity: identity,
-		key:      key,
-		decoder:  decoder,
+		identity:     accountData.Identity,
+		key:          accountData.EncKey,
+		decoder:      decoder,
+		stateBuilder: NewACLStateBuilder(decoder, accountData),
 	}
 }
 
-func (s *SnapshotValidator) ValidateSnapshot(ch *Change) (bool, error) {
-	stateBuilder, err := NewACLStateBuilder(s.aclTree, s.identity, s.key, s.decoder)
-	if err != nil {
-		return false, err
-	}
+func (s *SnapshotValidator) Init(aclTree *Tree) error {
+	s.aclTree = aclTree
+	return s.stateBuilder.Init(aclTree)
+}
 
-	st, found, err := stateBuilder.BuildBefore(ch.Id)
+func (s *SnapshotValidator) ValidateSnapshot(ch *Change) (bool, error) {
+	st, found, err := s.stateBuilder.BuildBefore(ch.Id)
 	if err != nil {
 		return false, err
 	}
