@@ -29,7 +29,10 @@ func NewTreeBuilder(t threadmodels.Thread, decoder threadmodels.SigningPubKeyDec
 	return &TreeBuilder{
 		signingPubKeyDecoder: decoder,
 		thread:               t,
-		changeLoader:         newChangeLoader(t, decoder),
+		changeLoader: newChangeLoader(
+			t,
+			decoder,
+			NewChange),
 	}
 }
 

@@ -47,9 +47,9 @@ func (d *Document) Update(changes []*pb.ACLChange) (DocumentState, UpdateResult,
 }
 
 func (d *Document) Build() (DocumentState, error) {
-	treeBuilder := NewTreeBuilder(d.thread, threadmodels.NewEd25519Decoder())
+	//treeBuilder := NewTreeBuilder(d.thread, threadmodels.NewEd25519Decoder())
 
-	return treeBuilder.Build(fromStart)
+	//return treeBuilder.Build(fromStart)
 	return nil, nil
 }
 
