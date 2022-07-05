@@ -4,18 +4,23 @@ import (
 	"fmt"
 )
 
+// example ->
+
 type documentStateBuilder struct {
 	tree          *Tree
 	aclState      *ACLState // TODO: decide if this is needed or not
 	stateProvider InitialStateProvider
 }
 
-func newDocumentStateBuilder(tree *Tree, state *ACLState, stateProvider InitialStateProvider) *documentStateBuilder {
+func newDocumentStateBuilder(stateProvider InitialStateProvider) *documentStateBuilder {
 	return &documentStateBuilder{
-		tree:          tree,
-		aclState:      state,
 		stateProvider: stateProvider,
 	}
+}
+
+func (d *documentStateBuilder) init(aclState *ACLState, tree *Tree) {
+	d.tree = tree
+	d.aclState = aclState
 }
 
 // TODO: we should probably merge the two builders into one
@@ -45,7 +50,7 @@ func (d *documentStateBuilder) build() (s DocumentState, err error) {
 			return true
 		}
 		if c.DecryptedDocumentChange != nil {
-			_, err = s.ApplyChange(c.DecryptedDocumentChange, c.Id)
+			s, err = s.ApplyChange(c.DecryptedDocumentChange, c.Id)
 			if err != nil {
 				return false
 			}

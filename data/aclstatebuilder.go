@@ -20,9 +20,11 @@ type decreasedPermissionsParameters struct {
 	startChange string
 }
 
-func NewACLStateBuilder(decoder threadmodels.SigningPubKeyDecoder) *ACLStateBuilder {
+func NewACLStateBuilder(decoder threadmodels.SigningPubKeyDecoder, accountData *AccountData) *ACLStateBuilder {
 	return &ACLStateBuilder{
-		decoder: decoder,
+		decoder:  decoder,
+		identity: accountData.Identity,
+		key:      accountData.EncKey,
 	}
 }
 
@@ -32,8 +34,7 @@ func (sb *ACLStateBuilder) Build() (*ACLState, error) {
 }
 
 func (sb *ACLStateBuilder) Init(
-	tree *Tree,
-	accountData *AccountData) error {
+	tree *Tree) error {
 	root := tree.Root()
 	if !root.IsSnapshot {
 		return fmt.Errorf("root should always be a snapshot")
@@ -42,15 +43,13 @@ func (sb *ACLStateBuilder) Init(
 	snapshot := root.Content.GetAclData().GetAclSnapshot()
 	state, err := NewACLStateFromSnapshot(
 		snapshot,
-		accountData.Identity,
-		accountData.EncKey,
+		sb.identity,
+		sb.key,
 		sb.decoder)
 	if err != nil {
 		return fmt.Errorf("could not build aclState from snapshot: %w", err)
 	}
 	sb.tree = tree
-	sb.identity = accountData.Identity
-	sb.key = accountData.EncKey
 	sb.aclState = state
 
 	return nil
