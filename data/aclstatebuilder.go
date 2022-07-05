@@ -12,6 +12,7 @@ type ACLStateBuilder struct {
 	aclState *ACLState
 	identity string
 	key      threadmodels.EncryptionPrivKey
+	decoder  threadmodels.SigningPubKeyDecoder
 }
 
 type decreasedPermissionsParameters struct {
@@ -19,33 +20,40 @@ type decreasedPermissionsParameters struct {
 	startChange string
 }
 
-func NewACLStateBuilder(
-	tree *Tree,
-	identity string,
-	key threadmodels.EncryptionPrivKey,
-	decoder threadmodels.SigningPubKeyDecoder) (*ACLStateBuilder, error) {
-	root := tree.Root()
-	if !root.IsSnapshot {
-		return nil, fmt.Errorf("root should always be a snapshot")
-	}
-
-	snapshot := root.Content.GetAclData().GetAclSnapshot()
-	state, err := NewACLStateFromSnapshot(snapshot, identity, key, decoder)
-	if err != nil {
-		return nil, fmt.Errorf("could not build aclState from snapshot: %w", err)
-	}
-
+func NewACLStateBuilder(decoder threadmodels.SigningPubKeyDecoder) *ACLStateBuilder {
 	return &ACLStateBuilder{
-		tree:     tree,
-		aclState: state,
-		identity: identity,
-		key:      key,
-	}, nil
+		decoder: decoder,
+	}
 }
 
 func (sb *ACLStateBuilder) Build() (*ACLState, error) {
 	state, _, err := sb.BuildBefore("")
 	return state, err
+}
+
+func (sb *ACLStateBuilder) Init(
+	tree *Tree,
+	accountData *AccountData) error {
+	root := tree.Root()
+	if !root.IsSnapshot {
+		return fmt.Errorf("root should always be a snapshot")
+	}
+
+	snapshot := root.Content.GetAclData().GetAclSnapshot()
+	state, err := NewACLStateFromSnapshot(
+		snapshot,
+		accountData.Identity,
+		accountData.EncKey,
+		sb.decoder)
+	if err != nil {
+		return fmt.Errorf("could not build aclState from snapshot: %w", err)
+	}
+	sb.tree = tree
+	sb.identity = accountData.Identity
+	sb.key = accountData.EncKey
+	sb.aclState = state
+
+	return nil
 }
 
 // TODO: we can probably have only one state builder, because we can build both at the same time
