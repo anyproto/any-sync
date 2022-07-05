@@ -8,8 +8,9 @@ import (
 type Thread interface {
 	ID() string
 	Heads() []string
-	// TODO: add ACL heads
 	GetChange(ctx context.Context, recordID string) (*RawChange, error)
+	//SetHeads(heads []string)
+	//AddChanges(*pb.ACLChange)
 	PushChange(payload proto.Marshaler) (id string, err error)
 }
 
