@@ -36,7 +36,7 @@ func (tb *ACLTreeBuilder) Init() {
 }
 
 func (tb *ACLTreeBuilder) Build() (*Tree, error) {
-	heads := tb.thread.Heads()
+	heads := tb.thread.MaybeHeads()
 	aclHeads, err := tb.getACLHeads(heads)
 	if err != nil {
 		return nil, err

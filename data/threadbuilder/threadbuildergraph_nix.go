@@ -36,13 +36,13 @@ func (t *ThreadBuilder) Graph() (string, error) {
 		style := "solid"
 		if r.GetAclData() != nil {
 			style = "filled"
-		} else if r.changesData != nil {
+		} else if r.changesDataDecrypted != nil {
 			style = "dashed"
 		}
 
 		var chSymbs []string
-		if r.changesData != nil {
-			for _, chc := range r.changesData.Content {
+		if r.changesDataDecrypted != nil {
+			for _, chc := range r.changesDataDecrypted.Content {
 				tp := fmt.Sprintf("%T", chc.Value)
 				tp = strings.Replace(tp, "ChangeContentValueOf", "", 1)
 				res := ""

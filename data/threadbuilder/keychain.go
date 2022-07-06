@@ -14,11 +14,13 @@ type SymKey struct {
 }
 
 type Keychain struct {
-	SigningKeys         map[string]threadmodels.SigningPrivKey
-	EncryptionKeys      map[string]threadmodels.EncryptionPrivKey
-	ReadKeys            map[string]*SymKey
-	GeneratedIdentities map[string]string
-	coder               *threadmodels.Ed25519SigningPubKeyDecoder
+	SigningKeys           map[string]threadmodels.SigningPrivKey
+	SigningKeysByIdentity map[string]threadmodels.SigningPrivKey
+	EncryptionKeys        map[string]threadmodels.EncryptionPrivKey
+	ReadKeys              map[string]*SymKey
+	ReadKeysByHash        map[uint64]*SymKey
+	GeneratedIdentities   map[string]string
+	coder                 *threadmodels.Ed25519SigningPubKeyDecoder
 }
 
 func NewKeychain() *Keychain {
@@ -71,6 +73,7 @@ func (k *Keychain) AddSigningKey(name string) {
 	if err != nil {
 		panic(err)
 	}
+	k.SigningKeysByIdentity[res] = newPrivKey
 	k.GeneratedIdentities[name] = res
 }
 
@@ -84,6 +87,10 @@ func (k *Keychain) AddReadKey(name string) {
 	hasher.Write(key.Bytes())
 
 	k.ReadKeys[name] = &SymKey{
+		Hash: hasher.Sum64(),
+		Key:  key,
+	}
+	k.ReadKeysByHash[hasher.Sum64()] = &SymKey{
 		Hash: hasher.Sum64(),
 		Key:  key,
 	}

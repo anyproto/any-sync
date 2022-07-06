@@ -94,5 +94,6 @@ type YMLThread struct {
 		TreeHeads    []string `yaml:"treeHeads"`
 	} `yaml:"graph"`
 
-	Heads []string `yaml:"heads"`
+	Heads      []string `yaml:"heads"`
+	MaybeHeads []string `yaml:"maybeHeads"`
 }

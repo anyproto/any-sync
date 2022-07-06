@@ -20,34 +20,15 @@ type threadChange struct {
 	readKey *SymKey
 	signKey threadmodels.SigningPrivKey
 
-	changesData *pb.PlainTextChangeData
+	changesDataDecrypted []byte
 }
 
 type ThreadBuilder struct {
 	threadId   string
 	allChanges map[string]*threadChange
 	heads      []string
+	maybeHeads []string
 	keychain   *Keychain
-}
-
-func (t *ThreadBuilder) AddChange(change *threadmodels.RawChange) error {
-	//TODO implement me
-	panic("implement me")
-	return nil
-}
-
-func (t *ThreadBuilder) MaybeHeads() []string {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (t *ThreadBuilder) SetMaybeHeads(heads []string) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (t *ThreadBuilder) SetHeads(heads []string) {
-	//TODO implement me
 }
 
 func NewThreadBuilder(keychain *Keychain) *ThreadBuilder {
@@ -92,17 +73,58 @@ func (t *ThreadBuilder) Heads() []string {
 	return t.heads
 }
 
+func (t *ThreadBuilder) AddChange(change *threadmodels.RawChange) error {
+	aclChange := new(pb.ACLChange)
+	var err error
+
+	// TODO: think what should we do with such cases, because this can be used by attacker to break our tree
+	if err = proto.Unmarshal(change.Payload, aclChange); err != nil {
+		return fmt.Errorf("could not unmarshall changes")
+	}
+	var changesData []byte
+
+	// get correct readkey
+	readKey := t.keychain.ReadKeysByHash[aclChange.CurrentReadKeyHash]
+	if aclChange.ChangesData != nil {
+		changesData, err = readKey.Key.Decrypt(aclChange.ChangesData)
+		if err != nil {
+			return fmt.Errorf("failed to decrypt changes data: %w", err)
+		}
+	}
+
+	// get correct signing key
+	signKey := t.keychain.SigningKeysByIdentity[aclChange.Identity]
+	t.maybeHeads = append(t.maybeHeads, change.Id)
+
+	t.allChanges[change.Id] = &threadChange{
+		ACLChange:            aclChange,
+		id:                   change.Id,
+		readKey:              readKey,
+		signKey:              signKey,
+		changesDataDecrypted: changesData,
+	}
+	return nil
+}
+
+func (t *ThreadBuilder) MaybeHeads() []string {
+	return t.maybeHeads
+}
+
+func (t *ThreadBuilder) SetMaybeHeads(heads []string) {
+	// we should copy here instead of just setting the value
+	t.maybeHeads = heads
+}
+
+func (t *ThreadBuilder) SetHeads(heads []string) {
+	// we should copy here instead of just setting the value
+	t.heads = heads
+}
+
 func (t *ThreadBuilder) GetChange(ctx context.Context, recordID string) (*threadmodels.RawChange, error) {
 	rec := t.allChanges[recordID]
 
-	var encrypted []byte
-	if rec.changesData != nil {
-		m, err := proto.Marshal(rec.changesData)
-		if err != nil {
-			panic("should be able to marshal data!")
-		}
-
-		encrypted, err = rec.readKey.Key.Encrypt(m)
+	if rec.changesDataDecrypted != nil {
+		encrypted, err := rec.readKey.Key.Encrypt(rec.changesDataDecrypted)
 		if err != nil {
 			panic("should be able to encrypt data with read key!")
 		}
@@ -162,9 +184,9 @@ func (t *ThreadBuilder) Parse(thread *YMLThread) {
 			}
 		}
 		if len(ch.Changes) > 0 || ch.Snapshot != nil {
-			newChange.changesData = &pb.PlainTextChangeData{}
+			changesData := &pb.PlainTextChangeData{}
 			if ch.Snapshot != nil {
-				newChange.changesData.Snapshot = t.parseChangeSnapshot(ch.Snapshot)
+				changesData.Snapshot = t.parseChangeSnapshot(ch.Snapshot)
 			}
 			if len(ch.Changes) > 0 {
 				var changeContents []*pb.PlainTextChangeContent
@@ -172,8 +194,13 @@ func (t *ThreadBuilder) Parse(thread *YMLThread) {
 					aclChangeContent := t.parseDocumentChange(ch)
 					changeContents = append(changeContents, aclChangeContent)
 				}
-				newChange.changesData.Content = changeContents
+				changesData.Content = changeContents
 			}
+			m, err := proto.Marshal(changesData)
+			if err != nil {
+				return
+			}
+			newChange.changesDataDecrypted = m
 		}
 		aclChange.CurrentReadKeyHash = k.Hash
 		newChange.ACLChange = aclChange
@@ -421,4 +448,5 @@ func (t *ThreadBuilder) parseGraph(thread *YMLThread) {
 
 func (t *ThreadBuilder) parseHeads(thread *YMLThread) {
 	t.heads = thread.Heads
+	t.maybeHeads = thread.MaybeHeads
 }
