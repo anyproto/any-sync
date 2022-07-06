@@ -64,6 +64,8 @@ func (d *Document) Update(changes ...*threadmodels.RawChange) (DocumentState, Up
 		treeChange := d.treeBuilder.changeCreator(ch.Id, aclChange)
 		treeChanges = append(treeChanges, treeChange)
 
+		// this already sets MaybeHeads to include new changes
+		// TODO: change this behaviour as non-obvious, because it is not evident from the interface
 		err = d.thread.AddChange(ch)
 		if err != nil {
 			return nil, UpdateResultNoAction, fmt.Errorf("change with id %s cannot be added: %w", ch.Id, err)
@@ -98,6 +100,11 @@ func (d *Document) Update(changes ...*threadmodels.RawChange) (DocumentState, Up
 		res, _ := d.Build()
 		return res, UpdateResultRebuild, fmt.Errorf("could not add changes to state, rebuilded")
 	}
+
+	// setting all heads
+	d.thread.SetHeads(d.docContext.fullTree.Heads())
+	// this should be the entrypoint when we build the document
+	d.thread.SetMaybeHeads(d.docContext.fullTree.Heads())
 
 	return newState, UpdateResultAppend, nil
 }
@@ -150,6 +157,11 @@ func (d *Document) build(fromStart bool) (DocumentState, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// setting all heads
+	d.thread.SetHeads(d.docContext.fullTree.Heads())
+	// this should be the entrypoint when we build the document
+	d.thread.SetMaybeHeads(d.docContext.fullTree.Heads())
 
 	return d.docContext.docState, nil
 }

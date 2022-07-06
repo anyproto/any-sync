@@ -99,5 +99,5 @@ graph:
     baseSnapshot: A.1.1
     aclHeads: [B.1.1]
     treeHeads: [B.1.1]
-heads:
+maybeHeads:
   - "A.1.3"
