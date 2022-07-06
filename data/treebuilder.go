@@ -44,7 +44,7 @@ func (tb *TreeBuilder) Init() {
 }
 
 func (tb *TreeBuilder) Build(fromStart bool) (*Tree, error) {
-	heads := tb.thread.Heads()
+	heads := tb.thread.MaybeHeads()
 
 	if fromStart {
 		if err := tb.buildTreeFromStart(heads); err != nil {

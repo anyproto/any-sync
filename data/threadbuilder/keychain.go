@@ -25,11 +25,13 @@ type Keychain struct {
 
 func NewKeychain() *Keychain {
 	return &Keychain{
-		SigningKeys:         map[string]threadmodels.SigningPrivKey{},
-		EncryptionKeys:      map[string]threadmodels.EncryptionPrivKey{},
-		GeneratedIdentities: map[string]string{},
-		ReadKeys:            map[string]*SymKey{},
-		coder:               threadmodels.NewEd25519Decoder(),
+		SigningKeys:           map[string]threadmodels.SigningPrivKey{},
+		SigningKeysByIdentity: map[string]threadmodels.SigningPrivKey{},
+		EncryptionKeys:        map[string]threadmodels.EncryptionPrivKey{},
+		GeneratedIdentities:   map[string]string{},
+		ReadKeys:              map[string]*SymKey{},
+		ReadKeysByHash:        map[uint64]*SymKey{},
+		coder:                 threadmodels.NewEd25519Decoder(),
 	}
 }
 
