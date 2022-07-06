@@ -30,6 +30,26 @@ type ThreadBuilder struct {
 	keychain   *Keychain
 }
 
+func (t *ThreadBuilder) AddChange(change *threadmodels.RawChange) error {
+	//TODO implement me
+	panic("implement me")
+	return nil
+}
+
+func (t *ThreadBuilder) MaybeHeads() []string {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t *ThreadBuilder) SetMaybeHeads(heads []string) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t *ThreadBuilder) SetHeads(heads []string) {
+	//TODO implement me
+}
+
 func NewThreadBuilder(keychain *Keychain) *ThreadBuilder {
 	return &ThreadBuilder{
 		allChanges: make(map[string]*threadChange),

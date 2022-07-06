@@ -38,7 +38,7 @@ func (ch *Change) IsACLChange() bool {
 	return ch.Content.GetAclData() != nil
 }
 
-func NewChange(id string, ch *pb.ACLChange) (*Change, error) {
+func NewChange(id string, ch *pb.ACLChange) *Change {
 	return &Change{
 		Next:        nil,
 		PreviousIds: ch.TreeHeadIds,
@@ -46,10 +46,10 @@ func NewChange(id string, ch *pb.ACLChange) (*Change, error) {
 		Content:     ch,
 		SnapshotId:  ch.SnapshotBaseId,
 		IsSnapshot:  ch.GetAclData().GetAclSnapshot() != nil,
-	}, nil
+	}
 }
 
-func NewACLChange(id string, ch *pb.ACLChange) (*Change, error) {
+func NewACLChange(id string, ch *pb.ACLChange) *Change {
 	return &Change{
 		Next:        nil,
 		PreviousIds: ch.AclHeadIds,
@@ -57,5 +57,5 @@ func NewACLChange(id string, ch *pb.ACLChange) (*Change, error) {
 		Content:     ch,
 		SnapshotId:  ch.SnapshotBaseId,
 		IsSnapshot:  ch.GetAclData().GetAclSnapshot() != nil,
-	}, nil
+	}
 }

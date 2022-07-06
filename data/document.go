@@ -1,7 +1,7 @@
 package data
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/threadmodels"
 )
 
@@ -28,10 +28,9 @@ type Document struct {
 type UpdateResult int
 
 const (
-	UpdateResultAppend = iota
+	UpdateResultNoAction = iota
+	UpdateResultAppend
 	UpdateResultRebuild
-	UpdateResultExists
-	UpdateResultNoAction
 )
 
 func NewDocument(
@@ -53,8 +52,54 @@ func NewDocument(
 	}
 }
 
-func (d *Document) Update(changes []*pb.ACLChange) (DocumentState, UpdateResult, error) {
-	return nil, 0, nil
+func (d *Document) Update(changes ...*threadmodels.RawChange) (DocumentState, UpdateResult, error) {
+	var treeChanges []*Change
+
+	for _, ch := range changes {
+		aclChange, err := d.treeBuilder.makeVerifiedACLChange(ch)
+		if err != nil {
+			return nil, UpdateResultNoAction, fmt.Errorf("change with id %s is incorrect: %w", ch.Id, err)
+		}
+
+		treeChange := d.treeBuilder.changeCreator(ch.Id, aclChange)
+		treeChanges = append(treeChanges, treeChange)
+
+		err = d.thread.AddChange(ch)
+		if err != nil {
+			return nil, UpdateResultNoAction, fmt.Errorf("change with id %s cannot be added: %w", ch.Id, err)
+		}
+	}
+
+	for _, ch := range treeChanges {
+		if ch.IsACLChange() {
+			res, err := d.Build()
+			return res, UpdateResultRebuild, err
+		}
+	}
+
+	prevHeads := d.docContext.fullTree.Heads()
+	mode := d.docContext.fullTree.Add(treeChanges...)
+	switch mode {
+	case Nothing:
+		return d.docContext.docState, UpdateResultNoAction, nil
+	case Rebuild:
+		res, err := d.Build()
+		return res, UpdateResultRebuild, err
+	default:
+		break
+	}
+
+	// because for every new change we know it was after any of the previous heads
+	// each of previous heads must have same "Next" nodes
+	// so it doesn't matter which one we choose
+	// so we choose first one
+	newState, err := d.docStateBuilder.appendFrom(prevHeads[0])
+	if err != nil {
+		res, _ := d.Build()
+		return res, UpdateResultRebuild, fmt.Errorf("could not add changes to state, rebuilded")
+	}
+
+	return newState, UpdateResultAppend, nil
 }
 
 func (d *Document) Build() (DocumentState, error) {
@@ -77,7 +122,11 @@ func (d *Document) build(fromStart bool) (DocumentState, error) {
 	}
 
 	if !fromStart {
-		d.snapshotValidator.Init(d.docContext.aclTree)
+		err = d.snapshotValidator.Init(d.docContext.aclTree)
+		if err != nil {
+			return nil, err
+		}
+
 		valid, err := d.snapshotValidator.ValidateSnapshot(d.docContext.fullTree.root)
 		if err != nil {
 			return nil, err
