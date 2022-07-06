@@ -9,6 +9,8 @@ package threadbuilder
 
 import (
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
+	"github.com/gogo/protobuf/proto"
 	"strings"
 	"unicode"
 
@@ -42,7 +44,13 @@ func (t *ThreadBuilder) Graph() (string, error) {
 
 		var chSymbs []string
 		if r.changesDataDecrypted != nil {
-			for _, chc := range r.changesDataDecrypted.Content {
+			res := &pb.PlainTextChangeData{}
+			err := proto.Unmarshal(r.changesDataDecrypted, res)
+			if err != nil {
+				return err
+			}
+
+			for _, chc := range res.Content {
 				tp := fmt.Sprintf("%T", chc.Value)
 				tp = strings.Replace(tp, "ChangeContentValueOf", "", 1)
 				res := ""
