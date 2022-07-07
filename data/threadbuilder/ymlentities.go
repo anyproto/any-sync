@@ -70,29 +70,35 @@ type PlainTextChange struct {
 	} `yaml:"textAppend"`
 }
 
+type GraphNode struct {
+	Id           string   `yaml:"id"`
+	BaseSnapshot string   `yaml:"baseSnapshot"`
+	AclSnapshot  string   `yaml:"aclSnapshot"`
+	ACLHeads     []string `yaml:"aclHeads"`
+	TreeHeads    []string `yaml:"treeHeads"`
+}
+
+type Change struct {
+	Id       string `yaml:"id"`
+	Identity string `yaml:"identity"`
+
+	AclSnapshot *ACLSnapshot       `yaml:"aclSnapshot"`
+	Snapshot    *PlainTextSnapshot `yaml:"snapshot"`
+	AclChanges  []*ACLChange       `yaml:"aclChanges"`
+	Changes     []*PlainTextChange `yaml:"changes"`
+
+	ReadKey string `yaml:"readKey"`
+}
+
 type YMLThread struct {
-	Description *ThreadDescription `yaml:"thread"`
-	Changes     []struct {
-		Id       string `yaml:"id"`
-		Identity string `yaml:"identity"`
-
-		AclSnapshot *ACLSnapshot       `yaml:"aclSnapshot"`
-		Snapshot    *PlainTextSnapshot `yaml:"snapshot"`
-		AclChanges  []*ACLChange       `yaml:"aclChanges"`
-		Changes     []*PlainTextChange `yaml:"changes"`
-
-		ReadKey string `yaml:"readKey"`
-	} `yaml:"changes"`
+	Description    *ThreadDescription `yaml:"thread"`
+	Changes        []*Change          `yaml:"changes"`
+	UpdatedChanges []*Change          `yaml:"updatedChanges"`
 
 	Keys Keys `yaml:"keys"`
 
-	Graph []struct {
-		Id           string   `yaml:"id"`
-		BaseSnapshot string   `yaml:"baseSnapshot"`
-		AclSnapshot  string   `yaml:"aclSnapshot"`
-		ACLHeads     []string `yaml:"aclHeads"`
-		TreeHeads    []string `yaml:"treeHeads"`
-	} `yaml:"graph"`
+	Graph        []*GraphNode `yaml:"graph"`
+	UpdatedGraph []*GraphNode `yaml:"updatedGraph"`
 
 	Heads      []string `yaml:"heads"`
 	MaybeHeads []string `yaml:"maybeHeads"`

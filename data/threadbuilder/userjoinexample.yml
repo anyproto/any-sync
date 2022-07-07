@@ -101,3 +101,15 @@ graph:
     treeHeads: [B.1.1]
 maybeHeads:
   - "A.1.3"
+updatedChanges:
+  - id: B.1.3
+    identity: B
+    changes:
+      - textAppend:
+          text: "first"
+    readKey: key.Read.1
+updatedGraph:
+  - id: B.1.3
+    baseSnapshot: A.1.1
+    aclHeads: [ B.1.1 ]
+    treeHeads: [ B.1.2 ]
