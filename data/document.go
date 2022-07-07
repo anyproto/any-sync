@@ -28,7 +28,7 @@ type Document struct {
 type UpdateResult int
 
 const (
-	UpdateResultNoAction = iota
+	UpdateResultNoAction UpdateResult = iota
 	UpdateResultAppend
 	UpdateResultRebuild
 )
@@ -56,6 +56,7 @@ func NewDocument(
 func (d *Document) Update(changes ...*threadmodels.RawChange) (DocumentState, UpdateResult, error) {
 	var treeChanges []*Change
 
+	var foundACLChange bool
 	for _, ch := range changes {
 		aclChange, err := d.treeBuilder.makeVerifiedACLChange(ch)
 		if err != nil {
@@ -71,13 +72,14 @@ func (d *Document) Update(changes ...*threadmodels.RawChange) (DocumentState, Up
 		if err != nil {
 			return nil, UpdateResultNoAction, fmt.Errorf("change with id %s cannot be added: %w", ch.Id, err)
 		}
+		if treeChange.IsACLChange() {
+			foundACLChange = true
+		}
 	}
 
-	for _, ch := range treeChanges {
-		if ch.IsACLChange() {
-			res, err := d.Build()
-			return res, UpdateResultRebuild, err
-		}
+	if foundACLChange {
+		res, err := d.Build()
+		return res, UpdateResultRebuild, err
 	}
 
 	prevHeads := d.docContext.fullTree.Heads()
@@ -92,11 +94,28 @@ func (d *Document) Update(changes ...*threadmodels.RawChange) (DocumentState, Up
 		break
 	}
 
+	// decrypting everything, because we have no new keys
+	for _, ch := range treeChanges {
+		if ch.Content.GetChangesData() != nil {
+			key, exists := d.docContext.aclState.userReadKeys[ch.Content.CurrentReadKeyHash]
+			if !exists {
+				err := fmt.Errorf("failed to find key with hash: %d", ch.Content.CurrentReadKeyHash)
+				return nil, UpdateResultNoAction, err
+			}
+
+			err := ch.DecryptContents(key)
+			if err != nil {
+				err = fmt.Errorf("failed to decrypt contents for hash: %d", ch.Content.CurrentReadKeyHash)
+				return nil, UpdateResultNoAction, err
+			}
+		}
+	}
+
 	// because for every new change we know it was after any of the previous heads
 	// each of previous heads must have same "Next" nodes
 	// so it doesn't matter which one we choose
 	// so we choose first one
-	newState, err := d.docStateBuilder.appendFrom(prevHeads[0])
+	newState, err := d.docStateBuilder.appendFrom(prevHeads[0], d.docContext.docState)
 	if err != nil {
 		res, _ := d.Build()
 		return res, UpdateResultRebuild, fmt.Errorf("could not add changes to state, rebuilded")

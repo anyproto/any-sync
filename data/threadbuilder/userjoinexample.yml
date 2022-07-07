@@ -106,7 +106,7 @@ updatedChanges:
     identity: B
     changes:
       - textAppend:
-          text: "first"
+          text: "second"
     readKey: key.Read.1
 updatedGraph:
   - id: B.1.3

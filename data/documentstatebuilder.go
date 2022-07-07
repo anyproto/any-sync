@@ -63,8 +63,12 @@ func (d *documentStateBuilder) build() (s DocumentState, err error) {
 	return s, err
 }
 
-func (d *documentStateBuilder) appendFrom(fromId string) (s DocumentState, err error) {
+func (d *documentStateBuilder) appendFrom(fromId string, init DocumentState) (s DocumentState, err error) {
+	s = init
 	d.tree.Iterate(fromId, func(c *Change) (isContinue bool) {
+		if c.Id == fromId {
+			return true
+		}
 		if c.DecryptedDocumentChange != nil {
 			s, err = s.ApplyChange(c.DecryptedDocumentChange, c.Id)
 			if err != nil {
