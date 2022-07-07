@@ -66,6 +66,7 @@ func (d *documentStateBuilder) build() (s DocumentState, err error) {
 func (d *documentStateBuilder) appendFrom(fromId string, init DocumentState) (s DocumentState, err error) {
 	// TODO: we should do something like state copy probably
 	s = init
+	// TODO: we should have the same logic as in ACLStateBuilder, that means we should either pass in both methods state from the outside or save the state inside the builder
 	d.tree.Iterate(fromId, func(c *Change) (isContinue bool) {
 		if c.Id == fromId {
 			return true
