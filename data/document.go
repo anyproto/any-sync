@@ -37,6 +37,7 @@ func NewDocument(
 	thread threadmodels.Thread,
 	stateProvider InitialStateProvider,
 	accountData *AccountData) *Document {
+
 	decoder := threadmodels.NewEd25519Decoder()
 	return &Document{
 		thread:            thread,
