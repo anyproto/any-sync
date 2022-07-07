@@ -64,6 +64,7 @@ func (d *documentStateBuilder) build() (s DocumentState, err error) {
 }
 
 func (d *documentStateBuilder) appendFrom(fromId string, init DocumentState) (s DocumentState, err error) {
+	// TODO: we should do something like state copy probably
 	s = init
 	d.tree.Iterate(fromId, func(c *Change) (isContinue bool) {
 		if c.Id == fromId {

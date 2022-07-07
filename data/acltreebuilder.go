@@ -128,7 +128,7 @@ func (tb *ACLTreeBuilder) getACLHeads(heads []string) (aclTreeHeads []string, er
 		}
 		precedingHeads, err := tb.getPrecedingACLHeads(head)
 		if err != nil {
-			return nil, err
+			continue
 		}
 
 		for _, aclHead := range precedingHeads {
