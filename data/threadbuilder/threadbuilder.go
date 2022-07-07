@@ -24,17 +24,19 @@ type threadChange struct {
 }
 
 type ThreadBuilder struct {
-	threadId   string
-	allChanges map[string]*threadChange
-	heads      []string
-	maybeHeads []string
-	keychain   *Keychain
+	threadId       string
+	allChanges     map[string]*threadChange
+	updatedChanges map[string]*threadChange
+	heads          []string
+	maybeHeads     []string
+	keychain       *Keychain
 }
 
 func NewThreadBuilder(keychain *Keychain) *ThreadBuilder {
 	return &ThreadBuilder{
-		allChanges: make(map[string]*threadChange),
-		keychain:   keychain,
+		allChanges:     make(map[string]*threadChange),
+		updatedChanges: make(map[string]*threadChange),
+		keychain:       keychain,
 	}
 }
 
@@ -121,7 +123,20 @@ func (t *ThreadBuilder) SetHeads(heads []string) {
 }
 
 func (t *ThreadBuilder) GetChange(ctx context.Context, recordID string) (*threadmodels.RawChange, error) {
-	rec := t.allChanges[recordID]
+	return t.getChange(recordID, t.allChanges), nil
+}
+
+func (t *ThreadBuilder) GetUpdatedChanges() []*threadmodels.RawChange {
+	var res []*threadmodels.RawChange
+	for _, ch := range t.updatedChanges {
+		rawCh := t.getChange(ch.id, t.updatedChanges)
+		res = append(res, rawCh)
+	}
+	return res
+}
+
+func (t *ThreadBuilder) getChange(changeId string, m map[string]*threadChange) *threadmodels.RawChange {
+	rec := m[changeId]
 
 	if rec.changesDataDecrypted != nil {
 		encrypted, err := rec.readKey.Key.Encrypt(rec.changesDataDecrypted)
@@ -145,13 +160,9 @@ func (t *ThreadBuilder) GetChange(ctx context.Context, recordID string) (*thread
 	transformedRec := &threadmodels.RawChange{
 		Payload:   aclMarshaled,
 		Signature: signature,
-		Id:        recordID,
+		Id:        changeId,
 	}
-	return transformedRec, nil
-}
-
-func (t *ThreadBuilder) PushChange(payload proto.Marshaler) (id string, err error) {
-	panic("implement me")
+	return transformedRec
 }
 
 func (t *ThreadBuilder) Parse(thread *YMLThread) {
@@ -161,53 +172,64 @@ func (t *ThreadBuilder) Parse(thread *YMLThread) {
 	t.keychain.ParseKeys(&thread.Keys)
 	t.threadId = t.parseThreadId(thread.Description)
 	for _, ch := range thread.Changes {
-		newChange := &threadChange{
-			id: ch.Id,
-		}
-		k := t.keychain.GetKey(ch.ReadKey).(*SymKey)
-		newChange.readKey = k
-		newChange.signKey = t.keychain.SigningKeys[ch.Identity]
-		aclChange := &pb.ACLChange{}
-		aclChange.Identity = t.keychain.GetIdentity(ch.Identity)
-		if len(ch.AclChanges) > 0 || ch.AclSnapshot != nil {
-			aclChange.AclData = &pb.ACLChangeACLData{}
-			if ch.AclSnapshot != nil {
-				aclChange.AclData.AclSnapshot = t.parseACLSnapshot(ch.AclSnapshot)
-			}
-			if ch.AclChanges != nil {
-				var aclChangeContents []*pb.ACLChangeACLContentValue
-				for _, ch := range ch.AclChanges {
-					aclChangeContent := t.parseACLChange(ch)
-					aclChangeContents = append(aclChangeContents, aclChangeContent)
-				}
-				aclChange.AclData.AclContent = aclChangeContents
-			}
-		}
-		if len(ch.Changes) > 0 || ch.Snapshot != nil {
-			changesData := &pb.PlainTextChangeData{}
-			if ch.Snapshot != nil {
-				changesData.Snapshot = t.parseChangeSnapshot(ch.Snapshot)
-			}
-			if len(ch.Changes) > 0 {
-				var changeContents []*pb.PlainTextChangeContent
-				for _, ch := range ch.Changes {
-					aclChangeContent := t.parseDocumentChange(ch)
-					changeContents = append(changeContents, aclChangeContent)
-				}
-				changesData.Content = changeContents
-			}
-			m, err := proto.Marshal(changesData)
-			if err != nil {
-				return
-			}
-			newChange.changesDataDecrypted = m
-		}
-		aclChange.CurrentReadKeyHash = k.Hash
-		newChange.ACLChange = aclChange
+		newChange := t.parseChange(ch)
 		t.allChanges[newChange.id] = newChange
 	}
+
+	for _, ch := range thread.UpdatedChanges {
+		newChange := t.parseChange(ch)
+		t.updatedChanges[newChange.id] = newChange
+	}
+
 	t.parseGraph(thread)
 	t.parseHeads(thread)
+}
+
+func (t *ThreadBuilder) parseChange(ch *Change) *threadChange {
+	newChange := &threadChange{
+		id: ch.Id,
+	}
+	k := t.keychain.GetKey(ch.ReadKey).(*SymKey)
+	newChange.readKey = k
+	newChange.signKey = t.keychain.SigningKeys[ch.Identity]
+	aclChange := &pb.ACLChange{}
+	aclChange.Identity = t.keychain.GetIdentity(ch.Identity)
+	if len(ch.AclChanges) > 0 || ch.AclSnapshot != nil {
+		aclChange.AclData = &pb.ACLChangeACLData{}
+		if ch.AclSnapshot != nil {
+			aclChange.AclData.AclSnapshot = t.parseACLSnapshot(ch.AclSnapshot)
+		}
+		if ch.AclChanges != nil {
+			var aclChangeContents []*pb.ACLChangeACLContentValue
+			for _, ch := range ch.AclChanges {
+				aclChangeContent := t.parseACLChange(ch)
+				aclChangeContents = append(aclChangeContents, aclChangeContent)
+			}
+			aclChange.AclData.AclContent = aclChangeContents
+		}
+	}
+	if len(ch.Changes) > 0 || ch.Snapshot != nil {
+		changesData := &pb.PlainTextChangeData{}
+		if ch.Snapshot != nil {
+			changesData.Snapshot = t.parseChangeSnapshot(ch.Snapshot)
+		}
+		if len(ch.Changes) > 0 {
+			var changeContents []*pb.PlainTextChangeContent
+			for _, ch := range ch.Changes {
+				aclChangeContent := t.parseDocumentChange(ch)
+				changeContents = append(changeContents, aclChangeContent)
+			}
+			changesData.Content = changeContents
+		}
+		m, err := proto.Marshal(changesData)
+		if err != nil {
+			return nil
+		}
+		newChange.changesDataDecrypted = m
+	}
+	aclChange.CurrentReadKeyHash = k.Hash
+	newChange.ACLChange = aclChange
+	return newChange
 }
 
 func (t *ThreadBuilder) parseThreadId(description *ThreadDescription) string {
@@ -415,8 +437,8 @@ func (t *ThreadBuilder) convertPermission(perm string) pb.ACLChangeUserPermissio
 
 func (t *ThreadBuilder) traverseFromHeads(f func(t *threadChange) error) error {
 	uniqMap := map[string]struct{}{}
-	stack := make([]string, len(t.heads), 10)
-	copy(stack, t.heads)
+	stack := make([]string, len(t.maybeHeads), 10)
+	copy(stack, t.maybeHeads)
 	for len(stack) > 0 {
 		id := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
@@ -440,6 +462,13 @@ func (t *ThreadBuilder) traverseFromHeads(f func(t *threadChange) error) error {
 func (t *ThreadBuilder) parseGraph(thread *YMLThread) {
 	for _, node := range thread.Graph {
 		rec := t.allChanges[node.Id]
+		rec.AclHeadIds = node.ACLHeads
+		rec.TreeHeadIds = node.TreeHeads
+		rec.SnapshotBaseId = node.BaseSnapshot
+	}
+
+	for _, node := range thread.UpdatedGraph {
+		rec := t.updatedChanges[node.Id]
 		rec.AclHeadIds = node.ACLHeads
 		rec.TreeHeadIds = node.TreeHeads
 		rec.SnapshotBaseId = node.BaseSnapshot
