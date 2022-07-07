@@ -33,8 +33,7 @@ func (sb *ACLStateBuilder) Build() (*ACLState, error) {
 	return state, err
 }
 
-func (sb *ACLStateBuilder) Init(
-	tree *Tree) error {
+func (sb *ACLStateBuilder) Init(tree *Tree) error {
 	root := tree.Root()
 	if !root.IsSnapshot {
 		return fmt.Errorf("root should always be a snapshot")

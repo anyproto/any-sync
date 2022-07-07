@@ -2,11 +2,15 @@ package data
 
 import (
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/threadmodels"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
+	"github.com/gogo/protobuf/proto"
 )
 
 type AccountData struct {
 	Identity string
+	SignKey  threadmodels.SigningPrivKey
 	EncKey   threadmodels.EncryptionPrivKey
 }
 
@@ -33,6 +37,12 @@ const (
 	UpdateResultRebuild
 )
 
+type CreateChangePayload struct {
+	ChangesData proto.Marshaler
+	ACLData     *pb.ACLChangeACLData
+	Id          string // TODO: this is just for testing, because id should be created automatically from content
+}
+
 func NewDocument(
 	thread threadmodels.Thread,
 	stateProvider InitialStateProvider,
@@ -51,6 +61,59 @@ func NewDocument(
 		docStateBuilder:   newDocumentStateBuilder(stateProvider),
 		docContext:        &documentContext{},
 	}
+}
+
+func (d *Document) Create(payload *CreateChangePayload) error {
+	// TODO: add snapshot creation logic
+	marshalled, err := payload.ChangesData.Marshal()
+	if err != nil {
+		return err
+	}
+
+	encrypted, err := d.docContext.aclState.userReadKeys[d.docContext.aclState.currentReadKeyHash].
+		Encrypt(marshalled)
+	if err != nil {
+		return err
+	}
+
+	aclChange := &pb.ACLChange{
+		TreeHeadIds:        d.docContext.fullTree.Heads(),
+		AclHeadIds:         d.getACLHeads(),
+		SnapshotBaseId:     d.docContext.fullTree.RootId(),
+		AclData:            payload.ACLData,
+		ChangesData:        encrypted,
+		CurrentReadKeyHash: d.docContext.aclState.currentReadKeyHash,
+		Timestamp:          0,
+		Identity:           d.accountData.Identity,
+	}
+
+	// TODO: add CID creation logic based on content
+	ch := NewChange(payload.Id, aclChange)
+	ch.DecryptedDocumentChange = marshalled
+
+	fullMarshalledChange, err := proto.Marshal(aclChange)
+	if err != nil {
+		return err
+	}
+	signature, err := d.accountData.SignKey.Sign(fullMarshalledChange)
+	if err != nil {
+		return err
+	}
+	d.docContext.fullTree.AddFast(ch)
+
+	err = d.thread.AddChange(&threadmodels.RawChange{
+		Payload:   marshalled,
+		Signature: signature,
+		Id:        payload.Id,
+	})
+	if err != nil {
+		return err
+	}
+
+	d.thread.SetHeads([]string{ch.Id})
+	d.thread.SetMaybeHeads([]string{ch.Id})
+
+	return nil
 }
 
 func (d *Document) Update(changes ...*threadmodels.RawChange) (DocumentState, UpdateResult, error) {
@@ -133,6 +196,35 @@ func (d *Document) Build() (DocumentState, error) {
 	return d.build(false)
 }
 
+// TODO: this should not be the responsibility of Document, move it somewhere else after testing
+func (d *Document) getACLHeads() []string {
+	var aclTreeHeads []string
+	for _, head := range d.docContext.fullTree.Heads() {
+		if slice.FindPos(aclTreeHeads, head) != -1 { // do not scan known heads
+			continue
+		}
+		precedingHeads := d.getPrecedingACLHeads(head)
+
+		for _, aclHead := range precedingHeads {
+			if slice.FindPos(aclTreeHeads, aclHead) != -1 {
+				continue
+			}
+			aclTreeHeads = append(aclTreeHeads, aclHead)
+		}
+	}
+	return aclTreeHeads
+}
+
+func (d *Document) getPrecedingACLHeads(head string) []string {
+	headChange := d.docContext.fullTree.attached[head]
+
+	if headChange.Content.GetAclData() != nil {
+		return []string{head}
+	} else {
+		return headChange.Content.AclHeadIds
+	}
+}
+
 func (d *Document) build(fromStart bool) (DocumentState, error) {
 	d.treeBuilder.Init()
 	d.aclTreeBuilder.Init()
@@ -143,6 +235,7 @@ func (d *Document) build(fromStart bool) (DocumentState, error) {
 		return nil, err
 	}
 
+	// TODO: remove this from context as this is used only to validate snapshot
 	d.docContext.aclTree, err = d.aclTreeBuilder.Build()
 	if err != nil {
 		return nil, err
