@@ -15,6 +15,7 @@ type AccountData struct {
 }
 
 type Document struct {
+	// TODO: ensure that every operation on Document is synchronized
 	thread        threadmodels.Thread
 	stateProvider InitialStateProvider
 	accountData   *AccountData
@@ -99,6 +100,14 @@ func (d *Document) Create(payload *CreateChangePayload) error {
 	if err != nil {
 		return err
 	}
+
+	if aclChange.AclData != nil {
+		// we can apply change right away without going through builder, because
+		err = d.docContext.aclState.ApplyChange(payload.Id, aclChange)
+		if err != nil {
+			return err
+		}
+	}
 	d.docContext.fullTree.AddFast(ch)
 
 	err = d.thread.AddChange(&threadmodels.RawChange{
@@ -157,6 +166,7 @@ func (d *Document) Update(changes ...*threadmodels.RawChange) (DocumentState, Up
 		break
 	}
 
+	// TODO: we should still check if the user making those changes are able to write using "aclState"
 	// decrypting everything, because we have no new keys
 	for _, ch := range treeChanges {
 		if ch.Content.GetChangesData() != nil {
