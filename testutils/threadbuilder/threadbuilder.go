@@ -8,7 +8,10 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"gopkg.in/yaml.v3"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
+	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/testchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 )
 
 const plainTextDocType uint16 = 1
@@ -17,7 +20,7 @@ type threadChange struct {
 	*pb.ACLChange
 	id      string
 	readKey *SymKey
-	signKey threadmodels.SigningPrivKey
+	signKey keys.SigningPrivKey
 
 	changesDataDecrypted []byte
 }
@@ -45,7 +48,7 @@ func NewThreadBuilderFromFile(file string) (*ThreadBuilder, error) {
 		return nil, err
 	}
 
-	thread := YMLThread{Some: &Super{}}
+	thread := YMLThread{}
 	err = yaml.Unmarshal(content, &thread)
 	if err != nil {
 		return nil, err
@@ -74,7 +77,7 @@ func (t *ThreadBuilder) Heads() []string {
 	return t.heads
 }
 
-func (t *ThreadBuilder) AddChange(change *threadmodels.RawChange) error {
+func (t *ThreadBuilder) AddChange(change *thread.RawChange) error {
 	aclChange := new(pb.ACLChange)
 	var err error
 
@@ -121,12 +124,12 @@ func (t *ThreadBuilder) SetHeads(heads []string) {
 	t.heads = heads
 }
 
-func (t *ThreadBuilder) GetChange(ctx context.Context, recordID string) (*threadmodels.RawChange, error) {
+func (t *ThreadBuilder) GetChange(ctx context.Context, recordID string) (*thread.RawChange, error) {
 	return t.getChange(recordID, t.allChanges), nil
 }
 
-func (t *ThreadBuilder) GetUpdatedChanges() []*threadmodels.RawChange {
-	var res []*threadmodels.RawChange
+func (t *ThreadBuilder) GetUpdatedChanges() []*thread.RawChange {
+	var res []*thread.RawChange
 	for _, ch := range t.updatedChanges {
 		rawCh := t.getChange(ch.id, t.updatedChanges)
 		res = append(res, rawCh)
@@ -134,7 +137,7 @@ func (t *ThreadBuilder) GetUpdatedChanges() []*threadmodels.RawChange {
 	return res
 }
 
-func (t *ThreadBuilder) getChange(changeId string, m map[string]*threadChange) *threadmodels.RawChange {
+func (t *ThreadBuilder) getChange(changeId string, m map[string]*threadChange) *thread.RawChange {
 	rec := m[changeId]
 
 	if rec.changesDataDecrypted != nil {
@@ -156,7 +159,7 @@ func (t *ThreadBuilder) getChange(changeId string, m map[string]*threadChange) *
 		panic("should be able to sign final acl message!")
 	}
 
-	transformedRec := &threadmodels.RawChange{
+	transformedRec := &thread.RawChange{
 		Payload:   aclMarshaled,
 		Signature: signature,
 		Id:        changeId,
@@ -208,12 +211,12 @@ func (t *ThreadBuilder) parseChange(ch *Change) *threadChange {
 		}
 	}
 	if len(ch.Changes) > 0 || ch.Snapshot != nil {
-		changesData := &pb.PlainTextChangeData{}
+		changesData := &testpb.PlainTextChangeData{}
 		if ch.Snapshot != nil {
 			changesData.Snapshot = t.parseChangeSnapshot(ch.Snapshot)
 		}
 		if len(ch.Changes) > 0 {
-			var changeContents []*pb.PlainTextChangeContent
+			var changeContents []*testpb.PlainTextChangeContent
 			for _, ch := range ch.Changes {
 				aclChangeContent := t.parseDocumentChange(ch)
 				changeContents = append(changeContents, aclChangeContent)
@@ -236,7 +239,7 @@ func (t *ThreadBuilder) parseThreadId(description *ThreadDescription) string {
 		panic("no author in thread")
 	}
 	key := t.keychain.SigningKeys[description.Author]
-	id, err := threadmodels.CreateACLThreadID(key.GetPublic(), plainTextDocType)
+	id, err := thread.CreateACLThreadID(key.GetPublic(), plainTextDocType)
 	if err != nil {
 		panic(err)
 	}
@@ -244,8 +247,8 @@ func (t *ThreadBuilder) parseThreadId(description *ThreadDescription) string {
 	return id.String()
 }
 
-func (t *ThreadBuilder) parseChangeSnapshot(s *PlainTextSnapshot) *pb.PlainTextChangeSnapshot {
-	return &pb.PlainTextChangeSnapshot{
+func (t *ThreadBuilder) parseChangeSnapshot(s *PlainTextSnapshot) *testpb.PlainTextChangeSnapshot {
+	return &testpb.PlainTextChangeSnapshot{
 		Text: s.Text,
 	}
 }
@@ -257,7 +260,7 @@ func (t *ThreadBuilder) parseACLSnapshot(s *ACLSnapshot) *pb.ACLChangeACLSnapsho
 		aclUserState.Identity = t.keychain.GetIdentity(state.Identity)
 
 		encKey := t.keychain.
-			GetKey(state.EncryptionKey).(threadmodels.EncryptionPrivKey)
+			GetKey(state.EncryptionKey).(keys.EncryptionPrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 		aclUserState.EncryptionKey = rawKey
 
@@ -270,12 +273,12 @@ func (t *ThreadBuilder) parseACLSnapshot(s *ACLSnapshot) *pb.ACLChangeACLSnapsho
 	}
 }
 
-func (t *ThreadBuilder) parseDocumentChange(ch *PlainTextChange) (convCh *pb.PlainTextChangeContent) {
+func (t *ThreadBuilder) parseDocumentChange(ch *PlainTextChange) (convCh *testpb.PlainTextChangeContent) {
 	switch {
 	case ch.TextAppend != nil:
-		convCh = &pb.PlainTextChangeContent{
-			Value: &pb.PlainTextChangeContentValueOfTextAppend{
-				TextAppend: &pb.PlainTextChangeTextAppend{
+		convCh = &testpb.PlainTextChangeContent{
+			Value: &testpb.PlainTextChangeContentValueOfTextAppend{
+				TextAppend: &testpb.PlainTextChangeTextAppend{
 					Text: ch.TextAppend.Text,
 				},
 			},
@@ -294,7 +297,7 @@ func (t *ThreadBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChangeACLCo
 		add := ch.UserAdd
 
 		encKey := t.keychain.
-			GetKey(add.EncryptionKey).(threadmodels.EncryptionPrivKey)
+			GetKey(add.EncryptionKey).(keys.EncryptionPrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 
 		convCh = &pb.ACLChangeACLContentValue{
@@ -311,11 +314,11 @@ func (t *ThreadBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChangeACLCo
 		join := ch.UserJoin
 
 		encKey := t.keychain.
-			GetKey(join.EncryptionKey).(threadmodels.EncryptionPrivKey)
+			GetKey(join.EncryptionKey).(keys.EncryptionPrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 
 		idKey, _ := t.keychain.SigningKeys[join.Identity].GetPublic().Raw()
-		signKey := t.keychain.GetKey(join.AcceptSignature).(threadmodels.SigningPrivKey)
+		signKey := t.keychain.GetKey(join.AcceptSignature).(keys.SigningPrivKey)
 		signature, err := signKey.Sign(idKey)
 		if err != nil {
 			panic(err)
@@ -334,9 +337,9 @@ func (t *ThreadBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChangeACLCo
 		}
 	case ch.UserInvite != nil:
 		invite := ch.UserInvite
-		rawAcceptKey, _ := t.keychain.GetKey(invite.AcceptKey).(threadmodels.SigningPrivKey).GetPublic().Raw()
+		rawAcceptKey, _ := t.keychain.GetKey(invite.AcceptKey).(keys.SigningPrivKey).GetPublic().Raw()
 		encKey := t.keychain.
-			GetKey(invite.EncryptionKey).(threadmodels.EncryptionPrivKey)
+			GetKey(invite.EncryptionKey).(keys.EncryptionPrivKey)
 		rawEncKey, _ := encKey.GetPublic().Raw()
 
 		convCh = &pb.ACLChangeACLContentValue{
@@ -408,7 +411,7 @@ func (t *ThreadBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChangeACLCo
 	return convCh
 }
 
-func (t *ThreadBuilder) encryptReadKeys(keys []string, encKey threadmodels.EncryptionPrivKey) (enc [][]byte) {
+func (t *ThreadBuilder) encryptReadKeys(keys []string, encKey keys.EncryptionPrivKey) (enc [][]byte) {
 	for _, k := range keys {
 		realKey := t.keychain.GetKey(k).(*SymKey).Key.Bytes()
 		res, err := encKey.GetPublic().Encrypt(realKey)

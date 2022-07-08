@@ -3,7 +3,8 @@ package acltree
 import (
 	"fmt"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acltree/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 )
 
@@ -20,7 +21,7 @@ type decreasedPermissionsParameters struct {
 	startChange string
 }
 
-func NewACLStateBuilder(decoder keys.SigningPubKeyDecoder, accountData *AccountData) *ACLStateBuilder {
+func NewACLStateBuilder(decoder keys.SigningPubKeyDecoder, accountData *account.AccountData) *ACLStateBuilder {
 	return &ACLStateBuilder{
 		decoder:  decoder,
 		identity: accountData.Identity,

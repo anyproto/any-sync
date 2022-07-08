@@ -1,4 +1,4 @@
-package acltree
+package exampledocument
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/threadbuilder"

@@ -1,7 +1,8 @@
-package acltree
+package exampledocument
 
 import (
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"
@@ -20,13 +21,13 @@ type Document struct {
 	accountData   *AccountData
 	decoder       threadmodels.SigningPubKeyDecoder
 
-	treeBuilder       *TreeBuilder
-	aclTreeBuilder    *ACLTreeBuilder
-	aclStateBuilder   *ACLStateBuilder
-	snapshotValidator *SnapshotValidator
-	docStateBuilder   *documentStateBuilder
+	treeBuilder       *acltree.TreeBuilder
+	aclTreeBuilder    *acltree.ACLTreeBuilder
+	aclStateBuilder   *acltree.ACLStateBuilder
+	snapshotValidator *acltree.SnapshotValidator
+	docStateBuilder   *acltree.documentStateBuilder
 
-	docContext *documentContext
+	docContext *acltree.documentContext
 }
 
 type UpdateResult int
@@ -54,12 +55,12 @@ func NewDocument(
 		stateProvider:     stateProvider,
 		accountData:       accountData,
 		decoder:           decoder,
-		aclTreeBuilder:    NewACLTreeBuilder(thread, decoder),
-		treeBuilder:       NewTreeBuilder(thread, decoder),
-		snapshotValidator: NewSnapshotValidator(decoder, accountData),
-		aclStateBuilder:   NewACLStateBuilder(decoder, accountData),
-		docStateBuilder:   newDocumentStateBuilder(stateProvider),
-		docContext:        &documentContext{},
+		aclTreeBuilder:    acltree.NewACLTreeBuilder(thread, decoder),
+		treeBuilder:       acltree.NewTreeBuilder(thread, decoder),
+		snapshotValidator: acltree.NewSnapshotValidator(decoder, accountData),
+		aclStateBuilder:   acltree.NewACLStateBuilder(decoder, accountData),
+		docStateBuilder:   acltree.newDocumentStateBuilder(stateProvider),
+		docContext:        &acltree.documentContext{},
 	}
 }
 
@@ -94,7 +95,7 @@ func (d *Document) CreateChange(payload *CreateChangePayload) error {
 	}
 
 	// TODO: add CID creation logic based on content
-	ch := NewChange(payload.Id, aclChange)
+	ch := acltree.NewChange(payload.Id, aclChange)
 	ch.DecryptedDocumentChange = marshalled
 
 	fullMarshalledChange, err := proto.Marshal(aclChange)
@@ -115,7 +116,7 @@ func (d *Document) CreateChange(payload *CreateChangePayload) error {
 	}
 	d.docContext.fullTree.AddFast(ch)
 
-	err = d.thread.AddChange(&threadmodels.RawChange{
+	err = d.thread.AddChange(&thread.RawChange{
 		Payload:   marshalled,
 		Signature: signature,
 		Id:        payload.Id,
@@ -130,8 +131,8 @@ func (d *Document) CreateChange(payload *CreateChangePayload) error {
 	return nil
 }
 
-func (d *Document) Update(changes ...*threadmodels.RawChange) (DocumentState, UpdateResult, error) {
-	var treeChanges []*Change
+func (d *Document) Update(changes ...*thread.RawChange) (DocumentState, UpdateResult, error) {
+	var treeChanges []*acltree.Change
 
 	var foundACLChange bool
 	for _, ch := range changes {
@@ -162,9 +163,9 @@ func (d *Document) Update(changes ...*threadmodels.RawChange) (DocumentState, Up
 	prevHeads := d.docContext.fullTree.Heads()
 	mode := d.docContext.fullTree.Add(treeChanges...)
 	switch mode {
-	case Nothing:
+	case acltree.Nothing:
 		return d.docContext.docState, UpdateResultNoAction, nil
-	case Rebuild:
+	case acltree.Rebuild:
 		res, err := d.Build()
 		return res, UpdateResultRebuild, err
 	default:

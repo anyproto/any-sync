@@ -2,19 +2,22 @@ package acltree
 
 import (
 	"fmt"
+
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 )
 
 type SnapshotValidator struct {
 	aclTree      *Tree
 	identity     string
-	key          threadmodels.EncryptionPrivKey
-	decoder      threadmodels.SigningPubKeyDecoder
+	key          keys.EncryptionPrivKey
+	decoder      keys.SigningPubKeyDecoder
 	stateBuilder *ACLStateBuilder
 }
 
 func NewSnapshotValidator(
-	decoder threadmodels.SigningPubKeyDecoder,
-	accountData *AccountData) *SnapshotValidator {
+	decoder keys.SigningPubKeyDecoder,
+	accountData *account.AccountData) *SnapshotValidator {
 	return &SnapshotValidator{
 		identity:     accountData.Identity,
 		key:          accountData.EncKey,

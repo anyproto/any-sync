@@ -1,14 +1,15 @@
-package acltree
+package exampledocument
 
 import (
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acltree"
 )
 
 // example ->
 
 type documentStateBuilder struct {
-	tree          *Tree
-	aclState      *aclState // TODO: decide if this is needed or not
+	tree          *acltree.Tree
+	aclState      *acltree.aclState // TODO: decide if this is needed or not
 	stateProvider InitialStateProvider
 }
 
@@ -18,7 +19,7 @@ func newDocumentStateBuilder(stateProvider InitialStateProvider) *documentStateB
 	}
 }
 
-func (d *documentStateBuilder) init(aclState *aclState, tree *Tree) {
+func (d *documentStateBuilder) init(aclState *acltree.aclState, tree *acltree.Tree) {
 	d.tree = tree
 	d.aclState = aclState
 }
@@ -44,7 +45,7 @@ func (d *documentStateBuilder) build() (s DocumentState, err error) {
 	t := d.tree
 	startId = rootChange.Id
 
-	t.Iterate(startId, func(c *Change) (isContinue bool) {
+	t.Iterate(startId, func(c *acltree.Change) (isContinue bool) {
 		count++
 		if startId == c.Id {
 			return true
@@ -67,7 +68,7 @@ func (d *documentStateBuilder) appendFrom(fromId string, init DocumentState) (s 
 	// TODO: we should do something like state copy probably
 	s = init
 	// TODO: we should have the same logic as in ACLStateBuilder, that means we should either pass in both methods state from the outside or save the state inside the builder
-	d.tree.Iterate(fromId, func(c *Change) (isContinue bool) {
+	d.tree.Iterate(fromId, func(c *acltree.Change) (isContinue bool) {
 		if c.Id == fromId {
 			return true
 		}

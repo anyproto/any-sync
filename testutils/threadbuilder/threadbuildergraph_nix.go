@@ -9,12 +9,14 @@ package threadbuilder
 
 import (
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
+
 	"github.com/gogo/protobuf/proto"
 	"strings"
 	"unicode"
 
 	"github.com/awalterschulze/gographviz"
+
+	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/testchanges/pb"
 )
 
 // To quickly look at visualized string you can use https://dreampuf.github.io/GraphvizOnline
@@ -44,7 +46,7 @@ func (t *ThreadBuilder) Graph() (string, error) {
 
 		var chSymbs []string
 		if r.changesDataDecrypted != nil {
-			res := &pb.PlainTextChangeData{}
+			res := &testpb.PlainTextChangeData{}
 			err := proto.Unmarshal(r.changesDataDecrypted, res)
 			if err != nil {
 				return err
