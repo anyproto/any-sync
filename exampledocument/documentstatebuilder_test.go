@@ -1,6 +1,7 @@
-package acltree
+package exampledocument
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/threadbuilder"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -12,7 +13,7 @@ func TestDocumentStateBuilder_UserJoinBuild(t *testing.T) {
 		t.Fatal(err)
 	}
 	keychain := thread.GetKeychain()
-	ctx, err := createDocumentStateFromThread(
+	ctx, err := acltree.createDocumentStateFromThread(
 		thread,
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],
@@ -32,7 +33,7 @@ func TestDocumentStateBuilder_UserRemoveBuild(t *testing.T) {
 		t.Fatal(err)
 	}
 	keychain := thread.GetKeychain()
-	ctx, err := createDocumentStateFromThread(
+	ctx, err := acltree.createDocumentStateFromThread(
 		thread,
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],

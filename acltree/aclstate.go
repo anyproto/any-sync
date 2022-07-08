@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acltree/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/textileio/go-threads/crypto/symmetric"
 )

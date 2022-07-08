@@ -3,12 +3,77 @@ package acltree
 import (
 	"testing"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acltree/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/threadbuilder"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 
 	"github.com/stretchr/testify/assert"
 )
+
+type ACLContext struct {
+	Tree     *Tree
+	ACLState *aclState
+}
+
+func createTreeFromThread(t thread.Thread, fromStart bool) (*Tree, error) {
+	treeBuilder := NewTreeBuilder(t, keys.NewEd25519Decoder())
+	treeBuilder.Init()
+	return treeBuilder.Build(fromStart)
+}
+
+func createACLStateFromThread(
+	t thread.Thread,
+	identity string,
+	key keys.EncryptionPrivKey,
+	decoder keys.SigningPubKeyDecoder,
+	fromStart bool) (*ACLContext, error) {
+	tree, err := createTreeFromThread(t, fromStart)
+	if err != nil {
+		return nil, err
+	}
+
+	accountData := &account.AccountData{
+		Identity: identity,
+		EncKey:   key,
+	}
+
+	aclTreeBuilder := NewACLTreeBuilder(t, decoder)
+	aclTreeBuilder.Init()
+	aclTree, err := aclTreeBuilder.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	if !fromStart {
+		snapshotValidator := NewSnapshotValidator(decoder, accountData)
+		snapshotValidator.Init(aclTree)
+		valid, err := snapshotValidator.ValidateSnapshot(tree.root)
+		if err != nil {
+			return nil, err
+		}
+		if !valid {
+			// TODO: think about what to do if the snapshot is invalid - should we rebuild the tree without it
+			return createACLStateFromThread(t, identity, key, decoder, true)
+		}
+	}
+
+	aclBuilder := NewACLStateBuilder(decoder, accountData)
+	err = aclBuilder.Init(tree)
+	if err != nil {
+		return nil, err
+	}
+
+	aclState, err := aclBuilder.Build()
+	if err != nil {
+		return nil, err
+	}
+	return &ACLContext{
+		Tree:     tree,
+		ACLState: aclState,
+	}, nil
+}
 
 func TestACLStateBuilder_UserJoinBuild(t *testing.T) {
 	thread, err := threadbuilder.NewThreadBuilderFromFile("threadbuilder/userjoinexample.yml")
@@ -21,7 +86,6 @@ func TestACLStateBuilder_UserJoinBuild(t *testing.T) {
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],
 		keys.NewEd25519Decoder(),
-		NewPlainTextDocumentStateProvider(),
 		false)
 	if err != nil {
 		t.Fatalf("should build acl aclState without err: %v", err)
@@ -56,7 +120,6 @@ func TestACLStateBuilder_UserRemoveBuild(t *testing.T) {
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],
 		keys.NewEd25519Decoder(),
-		NewPlainTextDocumentStateProvider(),
 		false)
 	if err != nil {
 		t.Fatalf("should build acl aclState without err: %v", err)
@@ -87,7 +150,6 @@ func TestACLStateBuilder_UserRemoveBeforeBuild(t *testing.T) {
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],
 		keys.NewEd25519Decoder(),
-		NewPlainTextDocumentStateProvider(),
 		false)
 	if err != nil {
 		t.Fatalf("should build acl aclState without err: %v", err)
@@ -119,7 +181,6 @@ func TestACLStateBuilder_InvalidSnapshotBuild(t *testing.T) {
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],
 		keys.NewEd25519Decoder(),
-		NewPlainTextDocumentStateProvider(),
 		false)
 	if err != nil {
 		t.Fatalf("should build acl aclState without err: %v", err)
@@ -150,7 +211,6 @@ func TestACLStateBuilder_ValidSnapshotBuild(t *testing.T) {
 		keychain.GetIdentity("A"),
 		keychain.EncryptionKeys["A"],
 		keys.NewEd25519Decoder(),
-		NewPlainTextDocumentStateProvider(),
 		false)
 	if err != nil {
 		t.Fatalf("should build acl aclState without err: %v", err)

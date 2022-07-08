@@ -1,4 +1,4 @@
-package acltree
+package exampledocument
 
 type DocumentState interface {
 	ApplyChange(change []byte, id string) (DocumentState, error)

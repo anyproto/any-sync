@@ -1,8 +1,7 @@
-package acltree
+package exampledocument
 
 import (
 	"fmt"
-
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
 	"github.com/gogo/protobuf/proto"
 )

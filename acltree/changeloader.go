@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acltree/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/gogo/protobuf/proto"

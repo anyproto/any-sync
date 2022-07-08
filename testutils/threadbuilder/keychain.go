@@ -4,6 +4,8 @@ import (
 	"hash/fnv"
 	"strings"
 
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
+
 	"github.com/textileio/go-threads/crypto/symmetric"
 )
 
@@ -13,24 +15,24 @@ type SymKey struct {
 }
 
 type Keychain struct {
-	SigningKeys           map[string]threadmodels.SigningPrivKey
-	SigningKeysByIdentity map[string]threadmodels.SigningPrivKey
-	EncryptionKeys        map[string]threadmodels.EncryptionPrivKey
+	SigningKeys           map[string]keys.SigningPrivKey
+	SigningKeysByIdentity map[string]keys.SigningPrivKey
+	EncryptionKeys        map[string]keys.EncryptionPrivKey
 	ReadKeys              map[string]*SymKey
 	ReadKeysByHash        map[uint64]*SymKey
 	GeneratedIdentities   map[string]string
-	coder                 *threadmodels.Ed25519SigningPubKeyDecoder
+	coder                 *keys.Ed25519SigningPubKeyDecoder
 }
 
 func NewKeychain() *Keychain {
 	return &Keychain{
-		SigningKeys:           map[string]threadmodels.SigningPrivKey{},
-		SigningKeysByIdentity: map[string]threadmodels.SigningPrivKey{},
-		EncryptionKeys:        map[string]threadmodels.EncryptionPrivKey{},
+		SigningKeys:           map[string]keys.SigningPrivKey{},
+		SigningKeysByIdentity: map[string]keys.SigningPrivKey{},
+		EncryptionKeys:        map[string]keys.EncryptionPrivKey{},
 		GeneratedIdentities:   map[string]string{},
 		ReadKeys:              map[string]*SymKey{},
 		ReadKeysByHash:        map[uint64]*SymKey{},
-		coder:                 threadmodels.NewEd25519Decoder(),
+		coder:                 keys.NewEd25519Decoder(),
 	}
 }
 
@@ -52,7 +54,7 @@ func (k *Keychain) AddEncryptionKey(name string) {
 	if _, exists := k.EncryptionKeys[name]; exists {
 		return
 	}
-	newPrivKey, _, err := threadmodels.GenerateRandomRSAKeyPair(2048)
+	newPrivKey, _, err := keys.GenerateRandomRSAKeyPair(2048)
 	if err != nil {
 		panic(err)
 	}
@@ -64,7 +66,7 @@ func (k *Keychain) AddSigningKey(name string) {
 	if _, exists := k.SigningKeys[name]; exists {
 		return
 	}
-	newPrivKey, pubKey, err := threadmodels.GenerateRandomEd25519KeyPair()
+	newPrivKey, pubKey, err := keys.GenerateRandomEd25519KeyPair()
 	if err != nil {
 		panic(err)
 	}

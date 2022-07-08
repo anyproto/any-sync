@@ -3,9 +3,9 @@ package acltree
 import (
 	"errors"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	//"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/lib/logging"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/prometheus/common/log"
