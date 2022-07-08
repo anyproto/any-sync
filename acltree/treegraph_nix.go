@@ -109,7 +109,7 @@ func (t *Tree) Graph() (data string, err error) {
 		if n, ok := nodes[id]; ok {
 			return n, nil
 		}
-		n, err := graph.CreateNode(fmt.Sprintf("%s: not in tree", id))
+		n, err := graph.CreateNode(fmt.Sprintf("%s: not in Tree", id))
 		if err != nil {
 			return nil, err
 		}

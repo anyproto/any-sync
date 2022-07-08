@@ -14,13 +14,13 @@ import (
 
 type ACLContext struct {
 	Tree     *Tree
-	ACLState *aclState
+	ACLState *ACLState
 }
 
 func createTreeFromThread(t thread.Thread, fromStart bool) (*Tree, error) {
-	treeBuilder := NewTreeBuilder(t, keys.NewEd25519Decoder())
-	treeBuilder.Init()
-	return treeBuilder.Build(fromStart)
+	treeBuilder := newTreeBuilder(t, keys.NewEd25519Decoder())
+	treeBuilder.init()
+	return treeBuilder.build(fromStart)
 }
 
 func createACLStateFromThread(
@@ -39,33 +39,33 @@ func createACLStateFromThread(
 		EncKey:   key,
 	}
 
-	aclTreeBuilder := NewACLTreeBuilder(t, decoder)
-	aclTreeBuilder.Init()
-	aclTree, err := aclTreeBuilder.Build()
+	aclTreeBuilder := newACLTreeBuilder(t, decoder)
+	aclTreeBuilder.init()
+	aclTree, err := aclTreeBuilder.build()
 	if err != nil {
 		return nil, err
 	}
 
 	if !fromStart {
-		snapshotValidator := NewSnapshotValidator(decoder, accountData)
-		snapshotValidator.Init(aclTree)
-		valid, err := snapshotValidator.ValidateSnapshot(tree.root)
+		snapshotValidator := newSnapshotValidator(decoder, accountData)
+		snapshotValidator.init(aclTree)
+		valid, err := snapshotValidator.validateSnapshot(tree.root)
 		if err != nil {
 			return nil, err
 		}
 		if !valid {
-			// TODO: think about what to do if the snapshot is invalid - should we rebuild the tree without it
+			// TODO: think about what to do if the snapshot is invalid - should we rebuild the Tree without it
 			return createACLStateFromThread(t, identity, key, decoder, true)
 		}
 	}
 
-	aclBuilder := NewACLStateBuilder(decoder, accountData)
-	err = aclBuilder.Init(tree)
+	aclBuilder := newACLStateBuilder(decoder, accountData)
+	err = aclBuilder.init(tree)
 	if err != nil {
 		return nil, err
 	}
 
-	aclState, err := aclBuilder.Build()
+	aclState, err := aclBuilder.build()
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func TestACLStateBuilder_UserJoinBuild(t *testing.T) {
 		keys.NewEd25519Decoder(),
 		false)
 	if err != nil {
-		t.Fatalf("should build acl aclState without err: %v", err)
+		t.Fatalf("should build acl ACLState without err: %v", err)
 	}
 	aclState := ctx.ACLState
 	//fmt.Println(ctx.Tree.Graph())
@@ -102,7 +102,7 @@ func TestACLStateBuilder_UserJoinBuild(t *testing.T) {
 	assert.Equal(t, aclState.userStates[cId].Permissions, pb.ACLChange_Reader)
 
 	var changeIds []string
-	ctx.Tree.iterate(ctx.Tree.root, func(c *Change) (isContinue bool) {
+	ctx.Tree.Iterate(ctx.Tree.root.Id, func(c *Change) (isContinue bool) {
 		changeIds = append(changeIds, c.Id)
 		return true
 	})
@@ -122,7 +122,7 @@ func TestACLStateBuilder_UserRemoveBuild(t *testing.T) {
 		keys.NewEd25519Decoder(),
 		false)
 	if err != nil {
-		t.Fatalf("should build acl aclState without err: %v", err)
+		t.Fatalf("should build acl ACLState without err: %v", err)
 	}
 	aclState := ctx.ACLState
 	//fmt.Println(ctx.Tree.Graph())
@@ -132,7 +132,7 @@ func TestACLStateBuilder_UserRemoveBuild(t *testing.T) {
 	assert.Equal(t, aclState.userStates[aId].Permissions, pb.ACLChange_Admin)
 
 	var changeIds []string
-	ctx.Tree.iterate(ctx.Tree.root, func(c *Change) (isContinue bool) {
+	ctx.Tree.Iterate(ctx.Tree.root.Id, func(c *Change) (isContinue bool) {
 		changeIds = append(changeIds, c.Id)
 		return true
 	})
@@ -152,7 +152,7 @@ func TestACLStateBuilder_UserRemoveBeforeBuild(t *testing.T) {
 		keys.NewEd25519Decoder(),
 		false)
 	if err != nil {
-		t.Fatalf("should build acl aclState without err: %v", err)
+		t.Fatalf("should build acl ACLState without err: %v", err)
 	}
 	aclState := ctx.ACLState
 	//fmt.Println(ctx.Tree.Graph())
@@ -163,7 +163,7 @@ func TestACLStateBuilder_UserRemoveBeforeBuild(t *testing.T) {
 	assert.Nil(t, aclState.userStates[keychain.GetIdentity("B")])
 
 	var changeIds []string
-	ctx.Tree.iterate(ctx.Tree.root, func(c *Change) (isContinue bool) {
+	ctx.Tree.Iterate(ctx.Tree.root.Id, func(c *Change) (isContinue bool) {
 		changeIds = append(changeIds, c.Id)
 		return true
 	})
@@ -183,7 +183,7 @@ func TestACLStateBuilder_InvalidSnapshotBuild(t *testing.T) {
 		keys.NewEd25519Decoder(),
 		false)
 	if err != nil {
-		t.Fatalf("should build acl aclState without err: %v", err)
+		t.Fatalf("should build acl ACLState without err: %v", err)
 	}
 	aclState := ctx.ACLState
 	//fmt.Println(ctx.Tree.Graph())
@@ -193,7 +193,7 @@ func TestACLStateBuilder_InvalidSnapshotBuild(t *testing.T) {
 	assert.Equal(t, aclState.identity, keychain.GetIdentity("A"))
 
 	var changeIds []string
-	ctx.Tree.iterate(ctx.Tree.root, func(c *Change) (isContinue bool) {
+	ctx.Tree.Iterate(ctx.Tree.root.Id, func(c *Change) (isContinue bool) {
 		changeIds = append(changeIds, c.Id)
 		return true
 	})
@@ -213,7 +213,7 @@ func TestACLStateBuilder_ValidSnapshotBuild(t *testing.T) {
 		keys.NewEd25519Decoder(),
 		false)
 	if err != nil {
-		t.Fatalf("should build acl aclState without err: %v", err)
+		t.Fatalf("should build acl ACLState without err: %v", err)
 	}
 	aclState := ctx.ACLState
 	//fmt.Println(ctx.Tree.Graph())
@@ -223,7 +223,7 @@ func TestACLStateBuilder_ValidSnapshotBuild(t *testing.T) {
 	assert.Equal(t, aclState.identity, keychain.GetIdentity("A"))
 
 	var changeIds []string
-	ctx.Tree.iterate(ctx.Tree.root, func(c *Change) (isContinue bool) {
+	ctx.Tree.Iterate(ctx.Tree.root.Id, func(c *Change) (isContinue bool) {
 		changeIds = append(changeIds, c.Id)
 		return true
 	})

@@ -8,9 +8,9 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 )
 
-type ACLStateBuilder struct {
+type aclStateBuilder struct {
 	tree     *Tree
-	aclState *aclState
+	aclState *ACLState
 	identity string
 	key      keys.EncryptionPrivKey
 	decoder  keys.SigningPubKeyDecoder
@@ -21,33 +21,33 @@ type decreasedPermissionsParameters struct {
 	startChange string
 }
 
-func NewACLStateBuilder(decoder keys.SigningPubKeyDecoder, accountData *account.AccountData) *ACLStateBuilder {
-	return &ACLStateBuilder{
+func newACLStateBuilder(decoder keys.SigningPubKeyDecoder, accountData *account.AccountData) *aclStateBuilder {
+	return &aclStateBuilder{
 		decoder:  decoder,
 		identity: accountData.Identity,
 		key:      accountData.EncKey,
 	}
 }
 
-func (sb *ACLStateBuilder) Build() (*aclState, error) {
-	state, _, err := sb.BuildBefore("")
+func (sb *aclStateBuilder) build() (*ACLState, error) {
+	state, _, err := sb.buildBefore("")
 	return state, err
 }
 
-func (sb *ACLStateBuilder) Init(tree *Tree) error {
+func (sb *aclStateBuilder) init(tree *Tree) error {
 	root := tree.Root()
 	if !root.IsSnapshot {
 		return fmt.Errorf("root should always be a snapshot")
 	}
 
 	snapshot := root.Content.GetAclData().GetAclSnapshot()
-	state, err := NewACLStateFromSnapshot(
+	state, err := newACLStateFromSnapshot(
 		snapshot,
 		sb.identity,
 		sb.key,
 		sb.decoder)
 	if err != nil {
-		return fmt.Errorf("could not build aclState from snapshot: %w", err)
+		return fmt.Errorf("could not build ACLState from snapshot: %w", err)
 	}
 	sb.tree = tree
 	sb.aclState = state
@@ -56,7 +56,7 @@ func (sb *ACLStateBuilder) Init(tree *Tree) error {
 }
 
 // TODO: we can probably have only one state builder, because we can build both at the same time
-func (sb *ACLStateBuilder) BuildBefore(beforeId string) (*aclState, bool, error) {
+func (sb *aclStateBuilder) buildBefore(beforeId string) (*ACLState, bool, error) {
 	var (
 		err                  error
 		startChange          = sb.tree.root
@@ -83,8 +83,8 @@ func (sb *ACLStateBuilder) BuildBefore(beforeId string) (*aclState, bool, error)
 	}
 
 	for {
-		// TODO: we should optimize this method to just remember last state of iterator and not iterate from the start and skip if nothing was removed from the tree
-		sb.tree.iterateSkip(sb.tree.root, startChange, func(c *Change) (isContinue bool) {
+		// TODO: we should optimize this method to just remember last state of iterator and not iterate from the start and skip if nothing was removed from the Tree
+		sb.tree.IterateSkip(sb.tree.root.Id, startChange.Id, func(c *Change) (isContinue bool) {
 			defer func() {
 				if err == nil {
 					startChange = c
@@ -101,13 +101,13 @@ func (sb *ACLStateBuilder) BuildBefore(beforeId string) (*aclState, bool, error)
 
 			idSeenMap[c.Content.Identity] = append(idSeenMap[c.Content.Identity], c)
 			if c.Content.GetAclData() != nil {
-				err = sb.aclState.ApplyChange(c.Id, c.Content)
+				err = sb.aclState.applyChange(c.Id, c.Content)
 				if err != nil {
 					return false
 				}
 
 				// if we have some users who have less permissions now
-				users := sb.aclState.GetPermissionDecreasedUsers(c.Content)
+				users := sb.aclState.getPermissionDecreasedUsers(c.Content)
 				if len(users) > 0 {
 					decreasedPermissions = &decreasedPermissionsParameters{
 						users:       users,
@@ -118,7 +118,7 @@ func (sb *ACLStateBuilder) BuildBefore(beforeId string) (*aclState, bool, error)
 			}
 
 			// the user can't make changes
-			if !sb.aclState.HasPermission(c.Content.Identity, pb.ACLChange_Writer) && !sb.aclState.HasPermission(c.Content.Identity, pb.ACLChange_Admin) {
+			if !sb.aclState.hasPermission(c.Content.Identity, pb.ACLChange_Writer) && !sb.aclState.hasPermission(c.Content.Identity, pb.ACLChange_Admin) {
 				err = fmt.Errorf("user %s cannot make changes", c.Content.Identity)
 				return false
 			}
@@ -168,8 +168,8 @@ func (sb *ACLStateBuilder) BuildBefore(beforeId string) (*aclState, bool, error)
 
 			decreasedPermissions = nil
 			if removed {
-				// starting from the beginning but with updated tree
-				return sb.BuildBefore(beforeId)
+				// starting from the beginning but with updated Tree
+				return sb.buildBefore(beforeId)
 			}
 		} else if err == nil {
 			// we can finish the acl state building process
