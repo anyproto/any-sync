@@ -9,7 +9,7 @@ import (
 	gothread "github.com/textileio/go-threads/core/thread"
 )
 
-type ACLTreeBuilder struct {
+type aclTreeBuilder struct {
 	cache                map[string]*Change
 	identityKeys         map[string]keys.SigningPubKey
 	signingPubKeyDecoder keys.SigningPubKeyDecoder
@@ -19,8 +19,8 @@ type ACLTreeBuilder struct {
 	*changeLoader
 }
 
-func NewACLTreeBuilder(t thread.Thread, decoder keys.SigningPubKeyDecoder) *ACLTreeBuilder {
-	return &ACLTreeBuilder{
+func newACLTreeBuilder(t thread.Thread, decoder keys.SigningPubKeyDecoder) *aclTreeBuilder {
+	return &aclTreeBuilder{
 		signingPubKeyDecoder: decoder,
 		thread:               t,
 		changeLoader: newChangeLoader(
@@ -30,14 +30,14 @@ func NewACLTreeBuilder(t thread.Thread, decoder keys.SigningPubKeyDecoder) *ACLT
 	}
 }
 
-func (tb *ACLTreeBuilder) Init() {
+func (tb *aclTreeBuilder) init() {
 	tb.cache = make(map[string]*Change)
 	tb.identityKeys = make(map[string]keys.SigningPubKey)
 	tb.tree = &Tree{}
 	tb.changeLoader.init(tb.cache, tb.identityKeys)
 }
 
-func (tb *ACLTreeBuilder) Build() (*Tree, error) {
+func (tb *aclTreeBuilder) build() (*Tree, error) {
 	heads := tb.thread.MaybeHeads()
 	aclHeads, err := tb.getACLHeads(heads)
 	if err != nil {
@@ -52,10 +52,10 @@ func (tb *ACLTreeBuilder) Build() (*Tree, error) {
 	return tb.tree, nil
 }
 
-func (tb *ACLTreeBuilder) buildTreeFromStart(heads []string) (err error) {
+func (tb *aclTreeBuilder) buildTreeFromStart(heads []string) (err error) {
 	changes, possibleRoots, err := tb.dfsFromStart(heads)
 	if len(possibleRoots) == 0 {
-		return fmt.Errorf("cannot have tree without root")
+		return fmt.Errorf("cannot have Tree without root")
 	}
 	root, err := tb.getRoot(possibleRoots)
 	if err != nil {
@@ -67,7 +67,7 @@ func (tb *ACLTreeBuilder) buildTreeFromStart(heads []string) (err error) {
 	return
 }
 
-func (tb *ACLTreeBuilder) dfsFromStart(heads []string) (buf []*Change, possibleRoots []*Change, err error) {
+func (tb *aclTreeBuilder) dfsFromStart(heads []string) (buf []*Change, possibleRoots []*Change, err error) {
 	stack := make([]string, len(heads), len(heads)*2)
 	copy(stack, heads)
 
@@ -98,7 +98,7 @@ func (tb *ACLTreeBuilder) dfsFromStart(heads []string) (buf []*Change, possibleR
 	return buf, possibleRoots, nil
 }
 
-func (tb *ACLTreeBuilder) getRoot(possibleRoots []*Change) (*Change, error) {
+func (tb *aclTreeBuilder) getRoot(possibleRoots []*Change) (*Change, error) {
 	threadId, err := gothread.Decode(tb.thread.ID())
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func (tb *ACLTreeBuilder) getRoot(possibleRoots []*Change) (*Change, error) {
 	return nil, fmt.Errorf("could not find any root")
 }
 
-func (tb *ACLTreeBuilder) getACLHeads(heads []string) (aclTreeHeads []string, err error) {
+func (tb *aclTreeBuilder) getACLHeads(heads []string) (aclTreeHeads []string, err error) {
 	for _, head := range heads {
 		if slice.FindPos(aclTreeHeads, head) != -1 { // do not scan known heads
 			continue
@@ -147,7 +147,7 @@ func (tb *ACLTreeBuilder) getACLHeads(heads []string) (aclTreeHeads []string, er
 	return aclTreeHeads, nil
 }
 
-func (tb *ACLTreeBuilder) getPrecedingACLHeads(head string) ([]string, error) {
+func (tb *aclTreeBuilder) getPrecedingACLHeads(head string) ([]string, error) {
 	headChange, err := tb.loadChange(head)
 	if err != nil {
 		return nil, err

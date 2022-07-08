@@ -15,6 +15,7 @@ const (
 	Nothing
 )
 
+// TODO: consider abstracting into separate package with iterator
 type Tree struct {
 	root        *Change
 	headIds     []string
@@ -293,6 +294,12 @@ func (t *Tree) iterateSkip(start *Change, skipBefore *Change, f func(c *Change) 
 	it := newIterator()
 	defer freeIterator(it)
 	it.iterateSkip(start, skipBefore, f)
+}
+
+func (t *Tree) IterateSkip(startId string, skipBeforeId string, f func(c *Change) (isContinue bool)) {
+	it := newIterator()
+	defer freeIterator(it)
+	it.iterateSkip(t.attached[startId], t.attached[skipBeforeId], f)
 }
 
 func (t *Tree) Iterate(startId string, f func(c *Change) (isContinue bool)) {

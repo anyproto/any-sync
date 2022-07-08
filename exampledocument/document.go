@@ -21,10 +21,10 @@ type Document struct {
 	accountData   *AccountData
 	decoder       threadmodels.SigningPubKeyDecoder
 
-	treeBuilder       *acltree.TreeBuilder
-	aclTreeBuilder    *acltree.ACLTreeBuilder
-	aclStateBuilder   *acltree.ACLStateBuilder
-	snapshotValidator *acltree.SnapshotValidator
+	treeBuilder       *acltree.treeBuilder
+	aclTreeBuilder    *acltree.aclTreeBuilder
+	aclStateBuilder   *acltree.aclStateBuilder
+	snapshotValidator *acltree.snapshotValidator
 	docStateBuilder   *acltree.documentStateBuilder
 
 	docContext *acltree.documentContext
@@ -55,10 +55,10 @@ func NewDocument(
 		stateProvider:     stateProvider,
 		accountData:       accountData,
 		decoder:           decoder,
-		aclTreeBuilder:    acltree.NewACLTreeBuilder(thread, decoder),
-		treeBuilder:       acltree.NewTreeBuilder(thread, decoder),
-		snapshotValidator: acltree.NewSnapshotValidator(decoder, accountData),
-		aclStateBuilder:   acltree.NewACLStateBuilder(decoder, accountData),
+		aclTreeBuilder:    acltree.newACLTreeBuilder(thread, decoder),
+		treeBuilder:       acltree.newTreeBuilder(thread, decoder),
+		snapshotValidator: acltree.newSnapshotValidator(decoder, accountData),
+		aclStateBuilder:   acltree.newACLStateBuilder(decoder, accountData),
 		docStateBuilder:   acltree.newDocumentStateBuilder(stateProvider),
 		docContext:        &acltree.documentContext{},
 	}
@@ -242,28 +242,28 @@ func (d *Document) getPrecedingACLHeads(head string) []string {
 }
 
 func (d *Document) build(fromStart bool) (DocumentState, error) {
-	d.treeBuilder.Init()
-	d.aclTreeBuilder.Init()
+	d.treeBuilder.init()
+	d.aclTreeBuilder.init()
 
 	var err error
-	d.docContext.fullTree, err = d.treeBuilder.Build(fromStart)
+	d.docContext.fullTree, err = d.treeBuilder.build(fromStart)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: remove this from context as this is used only to validate snapshot
-	d.docContext.aclTree, err = d.aclTreeBuilder.Build()
+	d.docContext.aclTree, err = d.aclTreeBuilder.build()
 	if err != nil {
 		return nil, err
 	}
 
 	if !fromStart {
-		err = d.snapshotValidator.Init(d.docContext.aclTree)
+		err = d.snapshotValidator.init(d.docContext.aclTree)
 		if err != nil {
 			return nil, err
 		}
 
-		valid, err := d.snapshotValidator.ValidateSnapshot(d.docContext.fullTree.root)
+		valid, err := d.snapshotValidator.validateSnapshot(d.docContext.fullTree.root)
 		if err != nil {
 			return nil, err
 		}
@@ -271,12 +271,12 @@ func (d *Document) build(fromStart bool) (DocumentState, error) {
 			return d.build(true)
 		}
 	}
-	err = d.aclStateBuilder.Init(d.docContext.fullTree)
+	err = d.aclStateBuilder.init(d.docContext.fullTree)
 	if err != nil {
 		return nil, err
 	}
 
-	d.docContext.aclState, err = d.aclStateBuilder.Build()
+	d.docContext.aclState, err = d.aclStateBuilder.build()
 	if err != nil {
 		return nil, err
 	}

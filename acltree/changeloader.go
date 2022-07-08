@@ -76,7 +76,7 @@ func (c *changeLoader) verify(identity string, payload, signature []byte) (isVer
 func (c *changeLoader) makeVerifiedACLChange(change *thread.RawChange) (aclChange *pb.ACLChange, err error) {
 	aclChange = new(pb.ACLChange)
 
-	// TODO: think what should we do with such cases, because this can be used by attacker to break our tree
+	// TODO: think what should we do with such cases, because this can be used by attacker to break our Tree
 	if err = proto.Unmarshal(change.Payload, aclChange); err != nil {
 		return
 	}

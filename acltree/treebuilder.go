@@ -17,7 +17,7 @@ var (
 	ErrEmpty = errors.New("logs empty")
 )
 
-type TreeBuilder struct {
+type treeBuilder struct {
 	cache                map[string]*Change
 	identityKeys         map[string]keys.SigningPubKey
 	signingPubKeyDecoder keys.SigningPubKeyDecoder
@@ -27,8 +27,8 @@ type TreeBuilder struct {
 	*changeLoader
 }
 
-func NewTreeBuilder(t thread.Thread, decoder keys.SigningPubKeyDecoder) *TreeBuilder {
-	return &TreeBuilder{
+func newTreeBuilder(t thread.Thread, decoder keys.SigningPubKeyDecoder) *treeBuilder {
+	return &treeBuilder{
 		signingPubKeyDecoder: decoder,
 		thread:               t,
 		changeLoader: newChangeLoader(
@@ -38,14 +38,14 @@ func NewTreeBuilder(t thread.Thread, decoder keys.SigningPubKeyDecoder) *TreeBui
 	}
 }
 
-func (tb *TreeBuilder) Init() {
+func (tb *treeBuilder) init() {
 	tb.cache = make(map[string]*Change)
 	tb.identityKeys = make(map[string]keys.SigningPubKey)
 	tb.tree = &Tree{}
 	tb.changeLoader.init(tb.cache, tb.identityKeys)
 }
 
-func (tb *TreeBuilder) Build(fromStart bool) (*Tree, error) {
+func (tb *treeBuilder) build(fromStart bool) (*Tree, error) {
 	heads := tb.thread.MaybeHeads()
 
 	if fromStart {
@@ -68,10 +68,10 @@ func (tb *TreeBuilder) Build(fromStart bool) (*Tree, error) {
 	return tb.tree, nil
 }
 
-func (tb *TreeBuilder) buildTreeFromStart(heads []string) (err error) {
+func (tb *treeBuilder) buildTreeFromStart(heads []string) (err error) {
 	changes, possibleRoots, err := tb.dfsFromStart(heads)
 	if len(possibleRoots) == 0 {
-		return fmt.Errorf("cannot have tree without root")
+		return fmt.Errorf("cannot have Tree without root")
 	}
 	root, err := tb.getRoot(possibleRoots)
 	if err != nil {
@@ -83,7 +83,7 @@ func (tb *TreeBuilder) buildTreeFromStart(heads []string) (err error) {
 	return
 }
 
-func (tb *TreeBuilder) dfsFromStart(heads []string) (buf []*Change, possibleRoots []*Change, err error) {
+func (tb *treeBuilder) dfsFromStart(heads []string) (buf []*Change, possibleRoots []*Change, err error) {
 	stack := make([]string, len(heads), len(heads)*2)
 	copy(stack, heads)
 
@@ -114,7 +114,7 @@ func (tb *TreeBuilder) dfsFromStart(heads []string) (buf []*Change, possibleRoot
 	return buf, possibleRoots, nil
 }
 
-func (tb *TreeBuilder) buildTree(heads []string, breakpoint string) (err error) {
+func (tb *treeBuilder) buildTree(heads []string, breakpoint string) (err error) {
 	ch, err := tb.loadChange(breakpoint)
 	if err != nil {
 		return
@@ -126,7 +126,7 @@ func (tb *TreeBuilder) buildTree(heads []string, breakpoint string) (err error) 
 	return
 }
 
-func (tb *TreeBuilder) dfs(heads []string, breakpoint string) (buf []*Change, err error) {
+func (tb *treeBuilder) dfs(heads []string, breakpoint string) (buf []*Change, err error) {
 	stack := make([]string, len(heads), len(heads)*2)
 	copy(stack, heads)
 
@@ -154,7 +154,7 @@ func (tb *TreeBuilder) dfs(heads []string, breakpoint string) (buf []*Change, er
 	return buf, nil
 }
 
-func (tb *TreeBuilder) findBreakpoint(heads []string) (breakpoint string, err error) {
+func (tb *treeBuilder) findBreakpoint(heads []string) (breakpoint string, err error) {
 	var (
 		ch          *Change
 		snapshotIds []string
@@ -171,7 +171,7 @@ func (tb *TreeBuilder) findBreakpoint(heads []string) (breakpoint string, err er
 	return tb.findCommonSnapshot(snapshotIds)
 }
 
-func (tb *TreeBuilder) findCommonSnapshot(snapshotIds []string) (snapshotId string, err error) {
+func (tb *treeBuilder) findCommonSnapshot(snapshotIds []string) (snapshotId string, err error) {
 	if len(snapshotIds) == 1 {
 		return snapshotIds[0], nil
 	} else if len(snapshotIds) == 0 {
@@ -190,7 +190,7 @@ func (tb *TreeBuilder) findCommonSnapshot(snapshotIds []string) (snapshotId stri
 	return snapshotIds[0], nil
 }
 
-func (tb *TreeBuilder) findCommonForTwoSnapshots(s1, s2 string) (s string, err error) {
+func (tb *treeBuilder) findCommonForTwoSnapshots(s1, s2 string) (s string, err error) {
 	// fast cases
 	if s1 == s2 {
 		return s1, nil
@@ -249,14 +249,14 @@ func (tb *TreeBuilder) findCommonForTwoSnapshots(s1, s2 string) (s string, err e
 		}
 	}
 
-	log.Warnf("changes build tree: possible versions split")
+	log.Warnf("changes build Tree: possible versions split")
 
 	// prefer not first snapshot
 	if len(ch1.PreviousIds) == 0 && len(ch2.PreviousIds) > 0 {
-		log.Warnf("changes build tree: prefer %s(%d prevIds) over %s(%d prevIds)", s2, len(ch2.PreviousIds), s1, len(ch1.PreviousIds))
+		log.Warnf("changes build Tree: prefer %s(%d prevIds) over %s(%d prevIds)", s2, len(ch2.PreviousIds), s1, len(ch1.PreviousIds))
 		return s2, nil
 	} else if len(ch1.PreviousIds) > 0 && len(ch2.PreviousIds) == 0 {
-		log.Warnf("changes build tree: prefer %s(%d prevIds) over %s(%d prevIds)", s1, len(ch1.PreviousIds), s2, len(ch2.PreviousIds))
+		log.Warnf("changes build Tree: prefer %s(%d prevIds) over %s(%d prevIds)", s1, len(ch1.PreviousIds), s2, len(ch2.PreviousIds))
 		return s1, nil
 	}
 
@@ -268,25 +268,25 @@ func (tb *TreeBuilder) findCommonForTwoSnapshots(s1, s2 string) (s string, err e
 	// TODO: can we even have empty snapshots?
 	// prefer not empty snapshot
 	if isEmptySnapshot(ch1) && !isEmptySnapshot(ch2) {
-		log.Warnf("changes build tree: prefer %s(not empty) over %s(empty)", s2, s1)
+		log.Warnf("changes build Tree: prefer %s(not empty) over %s(empty)", s2, s1)
 		return s2, nil
 	} else if isEmptySnapshot(ch2) && !isEmptySnapshot(ch1) {
-		log.Warnf("changes build tree: prefer %s(not empty) over %s(empty)", s1, s2)
+		log.Warnf("changes build Tree: prefer %s(not empty) over %s(empty)", s1, s2)
 		return s1, nil
 	}
 
 	// TODO: add virtual change mechanics
 	// unexpected behavior - just return lesser id
 	if s1 < s2 {
-		log.Warnf("changes build tree: prefer %s (%s<%s)", s1, s1, s2)
+		log.Warnf("changes build Tree: prefer %s (%s<%s)", s1, s1, s2)
 		return s1, nil
 	}
-	log.Warnf("changes build tree: prefer %s (%s<%s)", s2, s2, s1)
+	log.Warnf("changes build Tree: prefer %s (%s<%s)", s2, s2, s1)
 
 	return s2, nil
 }
 
-func (tb *TreeBuilder) getRoot(possibleRoots []*Change) (*Change, error) {
+func (tb *treeBuilder) getRoot(possibleRoots []*Change) (*Change, error) {
 	threadId, err := gothread.Decode(tb.thread.ID())
 	if err != nil {
 		return nil, err

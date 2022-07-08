@@ -7,44 +7,44 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 )
 
-type SnapshotValidator struct {
+type snapshotValidator struct {
 	aclTree      *Tree
 	identity     string
 	key          keys.EncryptionPrivKey
 	decoder      keys.SigningPubKeyDecoder
-	stateBuilder *ACLStateBuilder
+	stateBuilder *aclStateBuilder
 }
 
-func NewSnapshotValidator(
+func newSnapshotValidator(
 	decoder keys.SigningPubKeyDecoder,
-	accountData *account.AccountData) *SnapshotValidator {
-	return &SnapshotValidator{
+	accountData *account.AccountData) *snapshotValidator {
+	return &snapshotValidator{
 		identity:     accountData.Identity,
 		key:          accountData.EncKey,
 		decoder:      decoder,
-		stateBuilder: NewACLStateBuilder(decoder, accountData),
+		stateBuilder: newACLStateBuilder(decoder, accountData),
 	}
 }
 
-func (s *SnapshotValidator) Init(aclTree *Tree) error {
+func (s *snapshotValidator) init(aclTree *Tree) error {
 	s.aclTree = aclTree
-	return s.stateBuilder.Init(aclTree)
+	return s.stateBuilder.init(aclTree)
 }
 
-func (s *SnapshotValidator) ValidateSnapshot(ch *Change) (bool, error) {
-	st, found, err := s.stateBuilder.BuildBefore(ch.Id)
+func (s *snapshotValidator) validateSnapshot(ch *Change) (bool, error) {
+	st, found, err := s.stateBuilder.buildBefore(ch.Id)
 	if err != nil {
 		return false, err
 	}
 
 	if !found {
-		return false, fmt.Errorf("didn't find snapshot in ACL tree")
+		return false, fmt.Errorf("didn't find snapshot in ACL Tree")
 	}
 
-	otherSt, err := NewACLStateFromSnapshot(ch.Content.GetAclData().GetAclSnapshot(), s.identity, s.key, s.decoder)
+	otherSt, err := newACLStateFromSnapshot(ch.Content.GetAclData().GetAclSnapshot(), s.identity, s.key, s.decoder)
 	if err != nil {
 		return false, err
 	}
 
-	return st.Equal(otherSt), nil
+	return st.equal(otherSt), nil
 }

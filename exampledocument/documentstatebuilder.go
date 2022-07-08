@@ -8,7 +8,7 @@ import (
 // example ->
 
 type documentStateBuilder struct {
-	tree          *acltree.Tree
+	tree          *acltree.tree
 	aclState      *acltree.aclState // TODO: decide if this is needed or not
 	stateProvider InitialStateProvider
 }
@@ -19,7 +19,7 @@ func newDocumentStateBuilder(stateProvider InitialStateProvider) *documentStateB
 	}
 }
 
-func (d *documentStateBuilder) init(aclState *acltree.aclState, tree *acltree.Tree) {
+func (d *documentStateBuilder) init(aclState *acltree.aclState, tree *acltree.tree) {
 	d.tree = tree
 	d.aclState = aclState
 }
@@ -67,7 +67,7 @@ func (d *documentStateBuilder) build() (s DocumentState, err error) {
 func (d *documentStateBuilder) appendFrom(fromId string, init DocumentState) (s DocumentState, err error) {
 	// TODO: we should do something like state copy probably
 	s = init
-	// TODO: we should have the same logic as in ACLStateBuilder, that means we should either pass in both methods state from the outside or save the state inside the builder
+	// TODO: we should have the same logic as in aclStateBuilder, that means we should either pass in both methods state from the outside or save the state inside the builder
 	d.tree.Iterate(fromId, func(c *acltree.Change) (isContinue bool) {
 		if c.Id == fromId {
 			return true

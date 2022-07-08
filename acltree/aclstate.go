@@ -17,7 +17,7 @@ var ErrUserRemoved = errors.New("user was removed from the document")
 var ErrDocumentForbidden = errors.New("your user was forbidden access to the document")
 var ErrUserAlreadyExists = errors.New("user already exists")
 
-type aclState struct {
+type ACLState struct {
 	currentReadKeyHash   uint64
 	userReadKeys         map[uint64]*symmetric.Key
 	userStates           map[string]*pb.ACLChangeUserState
@@ -27,12 +27,12 @@ type aclState struct {
 	identity             string
 }
 
-func NewACLStateFromSnapshot(
+func newACLStateFromSnapshot(
 	snapshot *pb.ACLChangeACLSnapshot,
 	identity string,
 	encryptionKey keys.EncryptionPrivKey,
-	signingPubKeyDecoder keys.SigningPubKeyDecoder) (*aclState, error) {
-	st := &aclState{
+	signingPubKeyDecoder keys.SigningPubKeyDecoder) (*ACLState, error) {
+	st := &ACLState{
 		identity:             identity,
 		encryptionKey:        encryptionKey,
 		userReadKeys:         make(map[uint64]*symmetric.Key),
@@ -47,7 +47,7 @@ func NewACLStateFromSnapshot(
 	return st, nil
 }
 
-func (st *aclState) recreateFromSnapshot(snapshot *pb.ACLChangeACLSnapshot) error {
+func (st *ACLState) recreateFromSnapshot(snapshot *pb.ACLChangeACLSnapshot) error {
 	state := snapshot.AclState
 	for _, userState := range state.UserStates {
 		st.userStates[userState.Identity] = userState
@@ -74,21 +74,21 @@ func (st *aclState) recreateFromSnapshot(snapshot *pb.ACLChangeACLSnapshot) erro
 	return nil
 }
 
-func (st *aclState) ApplyChange(changeId string, change *pb.ACLChange) error {
+func (st *ACLState) applyChange(changeId string, change *pb.ACLChange) error {
 	// we can't check this for the user which is joining, because it will not be in our list
 	if !st.isUserJoin(change) {
-		// we check signature when we add this to the tree, so no need to do it here
+		// we check signature when we add this to the Tree, so no need to do it here
 		if _, exists := st.userStates[change.Identity]; !exists {
 			return ErrNoSuchUser
 		}
 
-		if !st.HasPermission(change.Identity, pb.ACLChange_Admin) {
+		if !st.hasPermission(change.Identity, pb.ACLChange_Admin) {
 			return fmt.Errorf("user %s must have admin permissions", change.Identity)
 		}
 	}
 
 	for _, ch := range change.GetAclData().GetAclContent() {
-		if err := st.applyChange(changeId, ch); err != nil {
+		if err := st.applyChangeContent(changeId, ch); err != nil {
 			//log.Infof("error while applying changes: %v; ignore", err)
 			return err
 		}
@@ -98,7 +98,7 @@ func (st *aclState) ApplyChange(changeId string, change *pb.ACLChange) error {
 }
 
 // TODO: remove changeId, because it is not needed
-func (st *aclState) applyChange(changeId string, ch *pb.ACLChangeACLContentValue) error {
+func (st *ACLState) applyChangeContent(changeId string, ch *pb.ACLChangeACLContentValue) error {
 	switch {
 	case ch.GetUserPermissionChange() != nil:
 		return st.applyUserPermissionChange(ch.GetUserPermissionChange())
@@ -117,7 +117,7 @@ func (st *aclState) applyChange(changeId string, ch *pb.ACLChangeACLContentValue
 	}
 }
 
-func (st *aclState) applyUserPermissionChange(ch *pb.ACLChangeUserPermissionChange) error {
+func (st *ACLState) applyUserPermissionChange(ch *pb.ACLChangeUserPermissionChange) error {
 	if _, exists := st.userStates[ch.Identity]; !exists {
 		return ErrNoSuchUser
 	}
@@ -126,12 +126,12 @@ func (st *aclState) applyUserPermissionChange(ch *pb.ACLChangeUserPermissionChan
 	return nil
 }
 
-func (st *aclState) applyUserInvite(changeId string, ch *pb.ACLChangeUserInvite) error {
+func (st *ACLState) applyUserInvite(changeId string, ch *pb.ACLChangeUserInvite) error {
 	st.userInvites[changeId] = ch
 	return nil
 }
 
-func (st *aclState) applyUserJoin(ch *pb.ACLChangeUserJoin) error {
+func (st *ACLState) applyUserJoin(ch *pb.ACLChangeUserJoin) error {
 	invite, exists := st.userInvites[ch.UserInviteChangeId]
 	if !exists {
 		return fmt.Errorf("no such invite with id %s", ch.UserInviteChangeId)
@@ -188,7 +188,7 @@ func (st *aclState) applyUserJoin(ch *pb.ACLChangeUserJoin) error {
 	return nil
 }
 
-func (st *aclState) applyUserAdd(ch *pb.ACLChangeUserAdd) error {
+func (st *ACLState) applyUserAdd(ch *pb.ACLChangeUserAdd) error {
 	if _, exists := st.userStates[ch.Identity]; exists {
 		return ErrUserAlreadyExists
 	}
@@ -203,7 +203,7 @@ func (st *aclState) applyUserAdd(ch *pb.ACLChangeUserAdd) error {
 	return nil
 }
 
-func (st *aclState) applyUserRemove(ch *pb.ACLChangeUserRemove) error {
+func (st *ACLState) applyUserRemove(ch *pb.ACLChangeUserRemove) error {
 	if ch.Identity == st.identity {
 		return ErrDocumentForbidden
 	}
@@ -235,7 +235,7 @@ func (st *aclState) applyUserRemove(ch *pb.ACLChangeUserRemove) error {
 	return nil
 }
 
-func (st *aclState) applyUserConfirm(ch *pb.ACLChangeUserConfirm) error {
+func (st *ACLState) applyUserConfirm(ch *pb.ACLChangeUserConfirm) error {
 	if _, exists := st.userStates[ch.Identity]; !exists {
 		return ErrNoSuchUser
 	}
@@ -245,7 +245,7 @@ func (st *aclState) applyUserConfirm(ch *pb.ACLChangeUserConfirm) error {
 	return nil
 }
 
-func (st *aclState) decryptReadKeyAndHash(msg []byte) (*symmetric.Key, uint64, error) {
+func (st *ACLState) decryptReadKeyAndHash(msg []byte) (*symmetric.Key, uint64, error) {
 	decrypted, err := st.encryptionKey.Decrypt(msg)
 	if err != nil {
 		return nil, 0, ErrFailedToDecrypt
@@ -261,7 +261,7 @@ func (st *aclState) decryptReadKeyAndHash(msg []byte) (*symmetric.Key, uint64, e
 	return key, hasher.Sum64(), nil
 }
 
-func (st *aclState) HasPermission(identity string, permission pb.ACLChangeUserPermissions) bool {
+func (st *ACLState) hasPermission(identity string, permission pb.ACLChangeUserPermissions) bool {
 	state, exists := st.userStates[identity]
 	if !exists {
 		return false
@@ -270,12 +270,12 @@ func (st *aclState) HasPermission(identity string, permission pb.ACLChangeUserPe
 	return state.Permissions == permission
 }
 
-func (st *aclState) isUserJoin(ch *pb.ACLChange) bool {
+func (st *ACLState) isUserJoin(ch *pb.ACLChange) bool {
 	// if we have a UserJoin, then it should always be the first one applied
 	return ch.AclData.GetAclContent() != nil && ch.AclData.GetAclContent()[0].GetUserJoin() != nil
 }
 
-func (st *aclState) GetPermissionDecreasedUsers(ch *pb.ACLChange) (identities []*pb.ACLChangeUserPermissionChange) {
+func (st *ACLState) getPermissionDecreasedUsers(ch *pb.ACLChange) (identities []*pb.ACLChangeUserPermissionChange) {
 	// this should be called after general checks are completed
 	if ch.GetAclData().GetAclContent() == nil {
 		return nil
@@ -307,7 +307,7 @@ func (st *aclState) GetPermissionDecreasedUsers(ch *pb.ACLChange) (identities []
 	return identities
 }
 
-func (st *aclState) Equal(other *aclState) bool {
+func (st *ACLState) equal(other *ACLState) bool {
 	if st == nil && other == nil {
 		return true
 	}
@@ -349,4 +349,9 @@ func (st *aclState) Equal(other *aclState) bool {
 
 	// TODO: add detailed user invites comparison + compare other stuff
 	return true
+}
+
+func (st *ACLState) GetUserStates() map[string]*pb.ACLChangeUserState {
+	// TODO: we should provide better API that would not allow to change this map from the outside
+	return st.userStates
 }
