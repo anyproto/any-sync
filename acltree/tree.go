@@ -15,7 +15,7 @@ const (
 	Nothing
 )
 
-// TODO: consider abstracting into separate package with iterator
+// TODO: consider abstracting into separate package with iterator, remove
 type Tree struct {
 	root        *Change
 	headIds     []string
