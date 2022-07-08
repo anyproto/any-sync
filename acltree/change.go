@@ -2,10 +2,17 @@ package acltree
 
 import (
 	"fmt"
+	"github.com/gogo/protobuf/proto"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
 	"github.com/textileio/go-threads/crypto/symmetric"
 )
+
+type ChangeContent struct {
+	ChangesData proto.Marshaler
+	ACLData     *pb.ACLChangeACLData
+	Id          string // TODO: this is just for testing, because id should be created automatically from content
+}
 
 // Change is an abstract type for all types of changes
 type Change struct {
