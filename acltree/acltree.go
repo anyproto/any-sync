@@ -1,13 +1,11 @@
 package acltree
 
 import (
+	"sync"
+
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
-	"github.com/gogo/protobuf/proto"
-	"sync"
 )
 
 type AddResultSummary int
@@ -25,10 +23,9 @@ type AddResult struct {
 	Summary AddResultSummary
 }
 
-// TODO: Change add change content to include ACLChangeBuilder
 type ACLTree interface {
 	ACLState() *ACLState
-	AddContent(changeContent *ChangeContent) (*Change, error)
+	AddContent(f func(builder ChangeBuilder)) (*Change, error)
 	AddChanges(changes ...*Change) (AddResult, error)
 	Heads() []string
 	Iterate(func(change *Change) bool)
@@ -40,14 +37,15 @@ type aclTree struct {
 	thread      thread.Thread
 	accountData *account.AccountData
 
-	fullTree *Tree
-	aclTree  *Tree // TODO: right now we don't use it, we can probably have only local var for now. This tree is built from start of the document
-	aclState *ACLState
+	fullTree         *Tree
+	aclTreeFromStart *Tree // TODO: right now we don't use it, we can probably have only local var for now. This tree is built from start of the document
+	aclState         *ACLState
 
 	treeBuilder       *treeBuilder
 	aclTreeBuilder    *aclTreeBuilder
 	aclStateBuilder   *aclStateBuilder
 	snapshotValidator *snapshotValidator
+	changeBuilder     *changeBuilder
 
 	sync.Mutex
 }
@@ -58,6 +56,7 @@ func BuildACLTree(t thread.Thread, acc *account.AccountData) (ACLTree, error) {
 	treeBuilder := newTreeBuilder(t, decoder)
 	snapshotValidator := newSnapshotValidator(decoder, acc)
 	aclStateBuilder := newACLStateBuilder(decoder, acc)
+	changeBuilder := newChangeBuilder()
 
 	aclTree := &aclTree{
 		thread:            t,
@@ -68,6 +67,7 @@ func BuildACLTree(t thread.Thread, acc *account.AccountData) (ACLTree, error) {
 		aclTreeBuilder:    aclTreeBuilder,
 		aclStateBuilder:   aclStateBuilder,
 		snapshotValidator: snapshotValidator,
+		changeBuilder:     changeBuilder,
 	}
 	err := aclTree.rebuildFromThread(false)
 	if err != nil {
@@ -80,7 +80,7 @@ func BuildACLTree(t thread.Thread, acc *account.AccountData) (ACLTree, error) {
 // TODO: this is not used for now, in future we should think about not making full tree rebuild
 func (a *aclTree) rebuildFromTree(validateSnapshot bool) (err error) {
 	if validateSnapshot {
-		err = a.snapshotValidator.Init(a.aclTree)
+		err = a.snapshotValidator.Init(a.aclTreeFromStart)
 		if err != nil {
 			return err
 		}
@@ -118,13 +118,13 @@ func (a *aclTree) rebuildFromThread(fromStart bool) error {
 	}
 
 	// TODO: remove this from context as this is used only to validate snapshot
-	a.aclTree, err = a.aclTreeBuilder.Build()
+	a.aclTreeFromStart, err = a.aclTreeBuilder.Build()
 	if err != nil {
 		return err
 	}
 
 	if !fromStart {
-		err = a.snapshotValidator.Init(a.aclTree)
+		err = a.snapshotValidator.Init(a.aclTreeFromStart)
 		if err != nil {
 			return err
 		}
@@ -150,98 +150,40 @@ func (a *aclTree) rebuildFromThread(fromStart bool) error {
 	return nil
 }
 
-// TODO: this should not be the responsibility of ACLTree, move it somewhere else after testing
-func (a *aclTree) getACLHeads() []string {
-	var aclTreeHeads []string
-	for _, head := range a.fullTree.Heads() {
-		if slice.FindPos(aclTreeHeads, head) != -1 { // do not scan known heads
-			continue
-		}
-		precedingHeads := a.getPrecedingACLHeads(head)
-
-		for _, aclHead := range precedingHeads {
-			if slice.FindPos(aclTreeHeads, aclHead) != -1 {
-				continue
-			}
-			aclTreeHeads = append(aclTreeHeads, aclHead)
-		}
-	}
-	return aclTreeHeads
-}
-
-func (a *aclTree) getPrecedingACLHeads(head string) []string {
-	headChange := a.fullTree.attached[head]
-
-	if headChange.Content.GetAclData() != nil {
-		return []string{head}
-	} else {
-		return headChange.Content.AclHeadIds
-	}
-}
-
 func (a *aclTree) ACLState() *ACLState {
 	return a.aclState
 }
 
-func (a *aclTree) AddContent(changeContent *ChangeContent) (*Change, error) {
+func (a *aclTree) AddContent(build func(builder ChangeBuilder)) (*Change, error) {
 	// TODO: add snapshot creation logic
 	a.Lock()
 	defer a.Unlock()
-	marshalled, err := changeContent.ChangesData.Marshal()
+
+	a.changeBuilder.Init(a.aclState, a.fullTree, a.accountData)
+	build(a.changeBuilder)
+
+	ch, marshalled, err := a.changeBuilder.Build()
+	if err != nil {
+		return nil, err
+	}
+	err = a.aclState.applyChange(ch.Id, ch.Content)
 	if err != nil {
 		return nil, err
 	}
 
-	encrypted, err := a.aclState.userReadKeys[a.aclState.currentReadKeyHash].
-		Encrypt(marshalled)
-	if err != nil {
-		return nil, err
-	}
-
-	aclChange := &pb.ACLChange{
-		TreeHeadIds:        a.fullTree.Heads(),
-		AclHeadIds:         a.getACLHeads(),
-		SnapshotBaseId:     a.fullTree.RootId(),
-		AclData:            changeContent.ACLData,
-		ChangesData:        encrypted,
-		CurrentReadKeyHash: a.aclState.currentReadKeyHash,
-		Timestamp:          0,
-		Identity:           a.accountData.Identity,
-	}
-
-	// TODO: add CID creation logic based on content
-	ch := NewChange(changeContent.Id, aclChange)
-	ch.DecryptedDocumentChange = marshalled
-
-	fullMarshalledChange, err := proto.Marshal(aclChange)
-	if err != nil {
-		return nil, err
-	}
-	signature, err := a.accountData.SignKey.Sign(fullMarshalledChange)
-	if err != nil {
-		return nil, err
-	}
-
-	if aclChange.AclData != nil {
-		// we can apply change right away without going through builder, because
-		err = a.aclState.applyChange(changeContent.Id, aclChange)
-		if err != nil {
-			return nil, err
-		}
-	}
 	a.fullTree.AddFast(ch)
 
 	err = a.thread.AddRawChange(&thread.RawChange{
 		Payload:   marshalled,
-		Signature: signature,
-		Id:        changeContent.Id,
+		Signature: ch.Signature(),
+		Id:        ch.Id,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	a.thread.SetHeads([]string{ch.Id})
-	return a.fullTree.attached[changeContent.Id], nil
+	return ch, nil
 }
 
 func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {

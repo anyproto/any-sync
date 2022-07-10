@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"sort"
 )
 
@@ -286,6 +287,34 @@ func (t *Tree) updateHeads() {
 	t.metaHeadIds = newMetaHeadIds
 	sort.Strings(t.headIds)
 	sort.Strings(t.metaHeadIds)
+}
+
+func (t *Tree) ACLHeads() []string {
+	var aclTreeHeads []string
+	for _, head := range t.Heads() {
+		if slice.FindPos(aclTreeHeads, head) != -1 { // do not scan known heads
+			continue
+		}
+		precedingHeads := t.getPrecedingACLHeads(head)
+
+		for _, aclHead := range precedingHeads {
+			if slice.FindPos(aclTreeHeads, aclHead) != -1 {
+				continue
+			}
+			aclTreeHeads = append(aclTreeHeads, aclHead)
+		}
+	}
+	return aclTreeHeads
+}
+
+func (t *Tree) getPrecedingACLHeads(head string) []string {
+	headChange := t.attached[head]
+
+	if headChange.Content.GetAclData() != nil {
+		return []string{head}
+	} else {
+		return headChange.Content.AclHeadIds
+	}
 }
 
 func (t *Tree) iterate(start *Change, f func(c *Change) (isContinue bool)) {
