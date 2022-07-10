@@ -3,6 +3,7 @@ package threadbuilder
 import (
 	"context"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges"
 	"io/ioutil"
 
 	"github.com/gogo/protobuf/proto"
@@ -77,11 +78,10 @@ func (t *ThreadBuilder) Heads() []string {
 	return t.heads
 }
 
-func (t *ThreadBuilder) AddChange(change *thread.RawChange) error {
+func (t *ThreadBuilder) AddRawChange(change *thread.RawChange) error {
 	aclChange := new(pb.ACLChange)
 	var err error
 
-	// TODO: think what should we do with such cases, because this can be used by attacker to break our tree
 	if err = proto.Unmarshal(change.Payload, aclChange); err != nil {
 		return fmt.Errorf("could not unmarshall changes")
 	}
@@ -98,7 +98,6 @@ func (t *ThreadBuilder) AddChange(change *thread.RawChange) error {
 
 	// get correct signing key
 	signKey := t.keychain.SigningKeysByIdentity[aclChange.Identity]
-	t.maybeHeads = append(t.maybeHeads, change.Id)
 
 	t.allChanges[change.Id] = &threadChange{
 		ACLChange:            aclChange,
@@ -110,11 +109,42 @@ func (t *ThreadBuilder) AddChange(change *thread.RawChange) error {
 	return nil
 }
 
-func (t *ThreadBuilder) MaybeHeads() []string {
+func (t *ThreadBuilder) AddPossibleHead(head string) {
+	t.maybeHeads = append(t.maybeHeads, head)
+}
+
+func (t *ThreadBuilder) AddChange(change aclchanges.Change) error {
+	aclChange := change.ProtoChange()
+	var err error
+	var changesData []byte
+
+	// get correct readkey
+	readKey := t.keychain.ReadKeysByHash[aclChange.CurrentReadKeyHash]
+	if aclChange.ChangesData != nil {
+		changesData, err = readKey.Key.Decrypt(aclChange.ChangesData)
+		if err != nil {
+			return fmt.Errorf("failed to decrypt changes data: %w", err)
+		}
+	}
+
+	// get correct signing key
+	signKey := t.keychain.SigningKeysByIdentity[aclChange.Identity]
+
+	t.allChanges[change.CID()] = &threadChange{
+		ACLChange:            aclChange,
+		id:                   change.CID(),
+		readKey:              readKey,
+		signKey:              signKey,
+		changesDataDecrypted: changesData,
+	}
+	return nil
+}
+
+func (t *ThreadBuilder) PossibleHeads() []string {
 	return t.maybeHeads
 }
 
-func (t *ThreadBuilder) SetMaybeHeads(heads []string) {
+func (t *ThreadBuilder) SetPossibleHeads(heads []string) {
 	// we should copy here instead of just setting the value
 	t.maybeHeads = heads
 }

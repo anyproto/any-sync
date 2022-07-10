@@ -32,7 +32,7 @@ type ACLTree interface {
 	Heads() []string
 	Iterate(func(change *Change) bool)
 	IterateFrom(string, func(change *Change) bool)
-	HasChange(change *Change) bool
+	HasChange(string) bool
 }
 
 type aclTree struct {
@@ -225,7 +225,7 @@ func (a *aclTree) AddContent(changeContent *ChangeContent) (*Change, error) {
 	}
 	a.fullTree.AddFast(ch)
 
-	err = a.thread.AddChange(&thread.RawChange{
+	err = a.thread.AddRawChange(&thread.RawChange{
 		Payload:   marshalled,
 		Signature: signature,
 		Id:        changeContent.Id,
@@ -245,26 +245,21 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 			aclChanges = append(aclChanges, ch)
 			break
 		}
+		a.thread.A
 	}
 
 	// TODO: understand the common snapshot problem
 	prevHeads := a.fullTree.Heads()
-	prevRoot := a.
 	mode := a.fullTree.Add(changes...)
 	switch mode {
-	case acltree.Nothing:
-		return d.docContext.docState, UpdateResultNoAction, nil
-	case acltree.Rebuild:
+	case Nothing:
+		return AddResult{Summary: AddResultSummaryNothing}, nil
+	case Rebuild:
 		res, err := d.Build()
-		return res, UpdateResultRebuild, err
+		return AddResult{Summary: Rebuild}, err
 	default:
 		break
 	}
-}
-
-func (a *aclTree) Heads() []string {
-	//TODO implement me
-	panic("implement me")
 }
 
 func (a *aclTree) Iterate(f func(change *Change) bool) {
@@ -277,7 +272,7 @@ func (a *aclTree) IterateFrom(s string, f func(change *Change) bool) {
 	panic("implement me")
 }
 
-func (a *aclTree) HasChange(change *Change) bool {
+func (a *aclTree) HasChange(s string) bool {
 	//TODO implement me
 	panic("implement me")
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/data/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"
 )
@@ -144,7 +145,7 @@ func (d *Document) Update(changes ...*thread.RawChange) (DocumentState, UpdateRe
 		treeChange := d.treeBuilder.changeCreator(ch.Id, aclChange)
 		treeChanges = append(treeChanges, treeChange)
 
-		// this already sets MaybeHeads to include new changes
+		// this already sets PossibleHeads to include new changes
 		// TODO: change this behaviour as non-obvious, because it is not evident from the interface
 		err = d.thread.AddChange(ch)
 		if err != nil {
