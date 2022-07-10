@@ -25,6 +25,7 @@ type Change struct {
 	DecryptedDocumentChange []byte
 
 	Content *pb.ACLChange
+	Sign    []byte
 }
 
 func (ch *Change) DecryptContents(key *symmetric.Key) error {
@@ -65,4 +66,20 @@ func NewACLChange(id string, ch *pb.ACLChange) *Change {
 		SnapshotId:  ch.SnapshotBaseId,
 		IsSnapshot:  ch.GetAclData().GetAclSnapshot() != nil,
 	}
+}
+
+func (ch *Change) ProtoChange() *pb.ACLChange {
+	return ch.Content
+}
+
+func (ch *Change) DecryptedChangeContent() []byte {
+	return ch.DecryptedDocumentChange
+}
+
+func (ch *Change) Signature() []byte {
+	return ch.Sign
+}
+
+func (ch *Change) CID() string {
+	return ch.Id
 }

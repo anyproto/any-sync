@@ -33,6 +33,10 @@ type Tree struct {
 	duplicateEvents int
 }
 
+func (t *Tree) GetUnattachedChanges(changes ...*Change) []*Change {
+	return nil
+}
+
 func (t *Tree) RootId() string {
 	if t.root != nil {
 		return t.root.Id
