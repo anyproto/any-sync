@@ -11,13 +11,14 @@ type Thread interface {
 	ID() string
 
 	Heads() []string
-	PossibleHeads() []string
+	Orphans() []string
 	SetHeads(heads []string)
-	SetPossibleHeads(heads []string)
-	AddPossibleHead(head string)
+	RemoveOrphans(orphan ...string)
+	AddOrphans(orphan ...string)
 
 	AddRawChange(change *RawChange) error
 	AddChange(change aclchanges.Change) error
+	// TODO: have methods with raw changes also
 	GetChange(ctx context.Context, recordID string) (*RawChange, error)
 }
 

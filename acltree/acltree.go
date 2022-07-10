@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"
+	"sync"
 )
 
 type AddResultSummary int
@@ -18,17 +19,17 @@ const (
 )
 
 type AddResult struct {
-	AttachedChanges   []*Change
-	InvalidChanges    []*Change
-	UnattachedChanges []*Change
-
+	OldHeads []string
+	Heads    []string
+	// TODO: add summary for changes
 	Summary AddResultSummary
 }
 
+// TODO: Change add change content to include ACLChangeBuilder
 type ACLTree interface {
 	ACLState() *ACLState
 	AddContent(changeContent *ChangeContent) (*Change, error)
-	AddChanges(changes ...*Change) (AddResult, error) // TODO: Make change as interface
+	AddChanges(changes ...*Change) (AddResult, error)
 	Heads() []string
 	Iterate(func(change *Change) bool)
 	IterateFrom(string, func(change *Change) bool)
@@ -40,13 +41,15 @@ type aclTree struct {
 	accountData *account.AccountData
 
 	fullTree *Tree
-	aclTree  *Tree // this tree is built from start of the document
+	aclTree  *Tree // TODO: right now we don't use it, we can probably have only local var for now. This tree is built from start of the document
 	aclState *ACLState
 
 	treeBuilder       *treeBuilder
 	aclTreeBuilder    *aclTreeBuilder
 	aclStateBuilder   *aclStateBuilder
 	snapshotValidator *snapshotValidator
+
+	sync.Mutex
 }
 
 func BuildACLTree(t thread.Thread, acc *account.AccountData) (ACLTree, error) {
@@ -74,14 +77,15 @@ func BuildACLTree(t thread.Thread, acc *account.AccountData) (ACLTree, error) {
 	return aclTree, nil
 }
 
+// TODO: this is not used for now, in future we should think about not making full tree rebuild
 func (a *aclTree) rebuildFromTree(validateSnapshot bool) (err error) {
 	if validateSnapshot {
-		err = a.snapshotValidator.init(a.aclTree)
+		err = a.snapshotValidator.Init(a.aclTree)
 		if err != nil {
 			return err
 		}
 
-		valid, err := a.snapshotValidator.validateSnapshot(a.fullTree.root)
+		valid, err := a.snapshotValidator.ValidateSnapshot(a.fullTree.root)
 		if err != nil {
 			return err
 		}
@@ -90,12 +94,12 @@ func (a *aclTree) rebuildFromTree(validateSnapshot bool) (err error) {
 		}
 	}
 
-	err = a.aclStateBuilder.init(a.fullTree)
+	err = a.aclStateBuilder.Init(a.fullTree)
 	if err != nil {
 		return err
 	}
 
-	a.aclState, err = a.aclStateBuilder.build()
+	a.aclState, err = a.aclStateBuilder.Build()
 	if err != nil {
 		return err
 	}
@@ -104,28 +108,28 @@ func (a *aclTree) rebuildFromTree(validateSnapshot bool) (err error) {
 }
 
 func (a *aclTree) rebuildFromThread(fromStart bool) error {
-	a.treeBuilder.init()
-	a.aclTreeBuilder.init()
+	a.treeBuilder.Init()
+	a.aclTreeBuilder.Init()
 
 	var err error
-	a.fullTree, err = a.treeBuilder.build(fromStart)
+	a.fullTree, err = a.treeBuilder.Build(fromStart)
 	if err != nil {
 		return err
 	}
 
 	// TODO: remove this from context as this is used only to validate snapshot
-	a.aclTree, err = a.aclTreeBuilder.build()
+	a.aclTree, err = a.aclTreeBuilder.Build()
 	if err != nil {
 		return err
 	}
 
 	if !fromStart {
-		err = a.snapshotValidator.init(a.aclTree)
+		err = a.snapshotValidator.Init(a.aclTree)
 		if err != nil {
 			return err
 		}
 
-		valid, err := a.snapshotValidator.validateSnapshot(a.fullTree.root)
+		valid, err := a.snapshotValidator.ValidateSnapshot(a.fullTree.root)
 		if err != nil {
 			return err
 		}
@@ -133,12 +137,12 @@ func (a *aclTree) rebuildFromThread(fromStart bool) error {
 			return a.rebuildFromThread(true)
 		}
 	}
-	err = a.aclStateBuilder.init(a.fullTree)
+	err = a.aclStateBuilder.Init(a.fullTree)
 	if err != nil {
 		return err
 	}
 
-	a.aclState, err = a.aclStateBuilder.build()
+	a.aclState, err = a.aclStateBuilder.Build()
 	if err != nil {
 		return err
 	}
@@ -181,6 +185,8 @@ func (a *aclTree) ACLState() *ACLState {
 
 func (a *aclTree) AddContent(changeContent *ChangeContent) (*Change, error) {
 	// TODO: add snapshot creation logic
+	a.Lock()
+	defer a.Unlock()
 	marshalled, err := changeContent.ChangesData.Marshal()
 	if err != nil {
 		return nil, err
@@ -239,40 +245,100 @@ func (a *aclTree) AddContent(changeContent *ChangeContent) (*Change, error) {
 }
 
 func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
+	a.Lock()
+	defer a.Unlock()
+	// TODO: make proper error handling, because there are a lot of corner cases where this will break
 	var aclChanges []*Change
+	var err error
+
+	defer func() {
+		if err != nil {
+			return
+		}
+		// removing attached or invalid orphans
+		var toRemove []string
+
+		for _, orphan := range a.thread.Orphans() {
+			if _, exists := a.fullTree.attached[orphan]; exists {
+				toRemove = append(toRemove, orphan)
+			}
+			if _, exists := a.fullTree.invalidChanges[orphan]; exists {
+				toRemove = append(toRemove, orphan)
+			}
+		}
+		a.thread.RemoveOrphans(toRemove...)
+	}()
+
 	for _, ch := range changes {
 		if ch.IsACLChange() {
 			aclChanges = append(aclChanges, ch)
 			break
 		}
-		a.thread.A
+		err = a.thread.AddChange(ch)
+		if err != nil {
+			return AddResult{}, err
+		}
+		a.thread.AddOrphans(ch.Id)
 	}
 
-	// TODO: understand the common snapshot problem
 	prevHeads := a.fullTree.Heads()
 	mode := a.fullTree.Add(changes...)
 	switch mode {
 	case Nothing:
-		return AddResult{Summary: AddResultSummaryNothing}, nil
+		return AddResult{
+			OldHeads: prevHeads,
+			Heads:    prevHeads,
+			Summary:  AddResultSummaryNothing,
+		}, nil
+
 	case Rebuild:
-		res, err := d.Build()
-		return AddResult{Summary: Rebuild}, err
+		err = a.rebuildFromThread(false)
+		if err != nil {
+			return AddResult{}, err
+		}
+
+		return AddResult{
+			OldHeads: prevHeads,
+			Heads:    a.fullTree.Heads(),
+			Summary:  AddResultSummaryRebuild,
+		}, nil
 	default:
-		break
+		a.aclState, err = a.aclStateBuilder.Build()
+		if err != nil {
+			return AddResult{}, err
+		}
+
+		return AddResult{
+			OldHeads: prevHeads,
+			Heads:    a.fullTree.Heads(),
+			Summary:  AddResultSummaryAppend,
+		}, nil
 	}
 }
 
 func (a *aclTree) Iterate(f func(change *Change) bool) {
-	//TODO implement me
-	panic("implement me")
+	a.Lock()
+	defer a.Unlock()
+	a.fullTree.Iterate(a.fullTree.RootId(), f)
 }
 
 func (a *aclTree) IterateFrom(s string, f func(change *Change) bool) {
-	//TODO implement me
-	panic("implement me")
+	a.Lock()
+	defer a.Unlock()
+	a.fullTree.Iterate(s, f)
 }
 
 func (a *aclTree) HasChange(s string) bool {
-	//TODO implement me
-	panic("implement me")
+	a.Lock()
+	defer a.Unlock()
+	_, attachedExists := a.fullTree.attached[s]
+	_, unattachedExists := a.fullTree.unAttached[s]
+	_, invalidExists := a.fullTree.invalidChanges[s]
+	return attachedExists || unattachedExists || invalidExists
+}
+
+func (a *aclTree) Heads() []string {
+	a.Lock()
+	defer a.Unlock()
+	return a.fullTree.Heads()
 }

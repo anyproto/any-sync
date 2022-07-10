@@ -19,8 +19,8 @@ type ACLContext struct {
 
 func createTreeFromThread(t thread.Thread, fromStart bool) (*Tree, error) {
 	treeBuilder := newTreeBuilder(t, keys.NewEd25519Decoder())
-	treeBuilder.init()
-	return treeBuilder.build(fromStart)
+	treeBuilder.Init()
+	return treeBuilder.Build(fromStart)
 }
 
 func createACLStateFromThread(
@@ -40,16 +40,16 @@ func createACLStateFromThread(
 	}
 
 	aclTreeBuilder := newACLTreeBuilder(t, decoder)
-	aclTreeBuilder.init()
-	aclTree, err := aclTreeBuilder.build()
+	aclTreeBuilder.Init()
+	aclTree, err := aclTreeBuilder.Build()
 	if err != nil {
 		return nil, err
 	}
 
 	if !fromStart {
 		snapshotValidator := newSnapshotValidator(decoder, accountData)
-		snapshotValidator.init(aclTree)
-		valid, err := snapshotValidator.validateSnapshot(tree.root)
+		snapshotValidator.Init(aclTree)
+		valid, err := snapshotValidator.ValidateSnapshot(tree.root)
 		if err != nil {
 			return nil, err
 		}
@@ -60,12 +60,12 @@ func createACLStateFromThread(
 	}
 
 	aclBuilder := newACLStateBuilder(decoder, accountData)
-	err = aclBuilder.init(tree)
+	err = aclBuilder.Init(tree)
 	if err != nil {
 		return nil, err
 	}
 
-	aclState, err := aclBuilder.build()
+	aclState, err := aclBuilder.Build()
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func TestACLStateBuilder_UserJoinBuild(t *testing.T) {
 		keys.NewEd25519Decoder(),
 		false)
 	if err != nil {
-		t.Fatalf("should build acl ACLState without err: %v", err)
+		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
 	aclState := ctx.ACLState
 	//fmt.Println(ctx.Tree.Graph())
@@ -122,7 +122,7 @@ func TestACLStateBuilder_UserRemoveBuild(t *testing.T) {
 		keys.NewEd25519Decoder(),
 		false)
 	if err != nil {
-		t.Fatalf("should build acl ACLState without err: %v", err)
+		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
 	aclState := ctx.ACLState
 	//fmt.Println(ctx.Tree.Graph())
@@ -152,7 +152,7 @@ func TestACLStateBuilder_UserRemoveBeforeBuild(t *testing.T) {
 		keys.NewEd25519Decoder(),
 		false)
 	if err != nil {
-		t.Fatalf("should build acl ACLState without err: %v", err)
+		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
 	aclState := ctx.ACLState
 	//fmt.Println(ctx.Tree.Graph())
@@ -183,7 +183,7 @@ func TestACLStateBuilder_InvalidSnapshotBuild(t *testing.T) {
 		keys.NewEd25519Decoder(),
 		false)
 	if err != nil {
-		t.Fatalf("should build acl ACLState without err: %v", err)
+		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
 	aclState := ctx.ACLState
 	//fmt.Println(ctx.Tree.Graph())
@@ -213,7 +213,7 @@ func TestACLStateBuilder_ValidSnapshotBuild(t *testing.T) {
 		keys.NewEd25519Decoder(),
 		false)
 	if err != nil {
-		t.Fatalf("should build acl ACLState without err: %v", err)
+		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
 	aclState := ctx.ACLState
 	//fmt.Println(ctx.Tree.Graph())

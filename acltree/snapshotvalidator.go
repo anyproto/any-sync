@@ -26,13 +26,13 @@ func newSnapshotValidator(
 	}
 }
 
-func (s *snapshotValidator) init(aclTree *Tree) error {
+func (s *snapshotValidator) Init(aclTree *Tree) error {
 	s.aclTree = aclTree
-	return s.stateBuilder.init(aclTree)
+	return s.stateBuilder.Init(aclTree)
 }
 
-func (s *snapshotValidator) validateSnapshot(ch *Change) (bool, error) {
-	st, found, err := s.stateBuilder.buildBefore(ch.Id)
+func (s *snapshotValidator) ValidateSnapshot(ch *Change) (bool, error) {
+	st, found, err := s.stateBuilder.BuildBefore(ch.Id)
 	if err != nil {
 		return false, err
 	}

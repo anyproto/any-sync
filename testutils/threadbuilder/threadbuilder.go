@@ -109,7 +109,7 @@ func (t *ThreadBuilder) AddRawChange(change *thread.RawChange) error {
 	return nil
 }
 
-func (t *ThreadBuilder) AddPossibleHead(head string) {
+func (t *ThreadBuilder) AddOrphans(head string) {
 	t.maybeHeads = append(t.maybeHeads, head)
 }
 
@@ -140,7 +140,7 @@ func (t *ThreadBuilder) AddChange(change aclchanges.Change) error {
 	return nil
 }
 
-func (t *ThreadBuilder) PossibleHeads() []string {
+func (t *ThreadBuilder) Orphans() []string {
 	return t.maybeHeads
 }
 

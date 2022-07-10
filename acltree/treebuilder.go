@@ -38,27 +38,29 @@ func newTreeBuilder(t thread.Thread, decoder keys.SigningPubKeyDecoder) *treeBui
 	}
 }
 
-func (tb *treeBuilder) init() {
+func (tb *treeBuilder) Init() {
 	tb.cache = make(map[string]*Change)
 	tb.identityKeys = make(map[string]keys.SigningPubKey)
 	tb.tree = &Tree{}
-	tb.changeLoader.init(tb.cache, tb.identityKeys)
+	tb.changeLoader.Init(tb.cache, tb.identityKeys)
 }
 
-func (tb *treeBuilder) build(fromStart bool) (*Tree, error) {
-	heads := tb.thread.PossibleHeads()
+func (tb *treeBuilder) Build(fromStart bool) (*Tree, error) {
+	var headsAndOrphans []string
+	headsAndOrphans = append(headsAndOrphans, tb.thread.Orphans()...)
+	headsAndOrphans = append(headsAndOrphans, tb.thread.Heads()...)
 
 	if fromStart {
-		if err := tb.buildTreeFromStart(heads); err != nil {
+		if err := tb.buildTreeFromStart(headsAndOrphans); err != nil {
 			return nil, fmt.Errorf("buildTree error: %v", err)
 		}
 	} else {
-		breakpoint, err := tb.findBreakpoint(heads)
+		breakpoint, err := tb.findBreakpoint(headsAndOrphans)
 		if err != nil {
 			return nil, fmt.Errorf("findBreakpoint error: %v", err)
 		}
 
-		if err = tb.buildTree(heads, breakpoint); err != nil {
+		if err = tb.buildTree(headsAndOrphans, breakpoint); err != nil {
 			return nil, fmt.Errorf("buildTree error: %v", err)
 		}
 	}

@@ -30,7 +30,7 @@ func newChangeLoader(
 	}
 }
 
-func (c *changeLoader) init(cache map[string]*Change,
+func (c *changeLoader) Init(cache map[string]*Change,
 	identityKeys map[string]keys.SigningPubKey) {
 	c.cache = cache
 	c.identityKeys = identityKeys
