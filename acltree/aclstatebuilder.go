@@ -10,7 +10,6 @@ import (
 
 type aclStateBuilder struct {
 	tree     *Tree
-	aclState *ACLState
 	identity string
 	key      keys.EncryptionPrivKey
 	decoder  keys.SigningPubKeyDecoder
@@ -29,15 +28,28 @@ func newACLStateBuilder(decoder keys.SigningPubKeyDecoder, accountData *account.
 	}
 }
 
-func (sb *aclStateBuilder) build() (*ACLState, error) {
-	state, _, err := sb.buildBefore("")
+func (sb *aclStateBuilder) Init(tree *Tree) error {
+	sb.tree = tree
+	return nil
+}
+
+func (sb *aclStateBuilder) Build() (*ACLState, error) {
+	state, _, err := sb.BuildBefore("")
 	return state, err
 }
 
-func (sb *aclStateBuilder) init(tree *Tree) error {
-	root := tree.Root()
+// TODO: we can probably have only one state builder, because we can Build both at the same time
+func (sb *aclStateBuilder) BuildBefore(beforeId string) (*ACLState, bool, error) {
+	var (
+		err                  error
+		startChange          = sb.tree.root
+		foundId              bool
+		idSeenMap            = make(map[string][]*Change)
+		decreasedPermissions *decreasedPermissionsParameters
+	)
+	root := sb.tree.Root()
 	if !root.IsSnapshot {
-		return fmt.Errorf("root should always be a snapshot")
+		return nil, false, fmt.Errorf("root should always be a snapshot")
 	}
 
 	snapshot := root.Content.GetAclData().GetAclSnapshot()
@@ -47,27 +59,13 @@ func (sb *aclStateBuilder) init(tree *Tree) error {
 		sb.key,
 		sb.decoder)
 	if err != nil {
-		return fmt.Errorf("could not build ACLState from snapshot: %w", err)
+		return nil, false, fmt.Errorf("could not build ACLState from snapshot: %w", err)
 	}
-	sb.tree = tree
-	sb.aclState = state
 
-	return nil
-}
-
-// TODO: we can probably have only one state builder, because we can build both at the same time
-func (sb *aclStateBuilder) buildBefore(beforeId string) (*ACLState, bool, error) {
-	var (
-		err                  error
-		startChange          = sb.tree.root
-		foundId              bool
-		idSeenMap            = make(map[string][]*Change)
-		decreasedPermissions *decreasedPermissionsParameters
-	)
 	idSeenMap[startChange.Content.Identity] = append(idSeenMap[startChange.Content.Identity], startChange)
 
 	if startChange.Content.GetChangesData() != nil {
-		key, exists := sb.aclState.userReadKeys[startChange.Content.CurrentReadKeyHash]
+		key, exists := state.userReadKeys[startChange.Content.CurrentReadKeyHash]
 		if !exists {
 			return nil, false, fmt.Errorf("no first snapshot")
 		}
@@ -79,7 +77,7 @@ func (sb *aclStateBuilder) buildBefore(beforeId string) (*ACLState, bool, error)
 	}
 
 	if beforeId == startChange.Id {
-		return sb.aclState, true, nil
+		return state, true, nil
 	}
 
 	for {
@@ -101,13 +99,13 @@ func (sb *aclStateBuilder) buildBefore(beforeId string) (*ACLState, bool, error)
 
 			idSeenMap[c.Content.Identity] = append(idSeenMap[c.Content.Identity], c)
 			if c.Content.GetAclData() != nil {
-				err = sb.aclState.applyChange(c.Id, c.Content)
+				err = state.applyChange(c.Id, c.Content)
 				if err != nil {
 					return false
 				}
 
 				// if we have some users who have less permissions now
-				users := sb.aclState.getPermissionDecreasedUsers(c.Content)
+				users := state.getPermissionDecreasedUsers(c.Content)
 				if len(users) > 0 {
 					decreasedPermissions = &decreasedPermissionsParameters{
 						users:       users,
@@ -118,14 +116,14 @@ func (sb *aclStateBuilder) buildBefore(beforeId string) (*ACLState, bool, error)
 			}
 
 			// the user can't make changes
-			if !sb.aclState.hasPermission(c.Content.Identity, pb.ACLChange_Writer) && !sb.aclState.hasPermission(c.Content.Identity, pb.ACLChange_Admin) {
+			if !state.hasPermission(c.Content.Identity, pb.ACLChange_Writer) && !state.hasPermission(c.Content.Identity, pb.ACLChange_Admin) {
 				err = fmt.Errorf("user %s cannot make changes", c.Content.Identity)
 				return false
 			}
 
 			// decrypting contents on the fly
 			if c.Content.GetChangesData() != nil {
-				key, exists := sb.aclState.userReadKeys[c.Content.CurrentReadKeyHash]
+				key, exists := state.userReadKeys[c.Content.CurrentReadKeyHash]
 				if !exists {
 					err = fmt.Errorf("failed to find key with hash: %d", c.Content.CurrentReadKeyHash)
 					return false
@@ -169,7 +167,7 @@ func (sb *aclStateBuilder) buildBefore(beforeId string) (*ACLState, bool, error)
 			decreasedPermissions = nil
 			if removed {
 				// starting from the beginning but with updated Tree
-				return sb.buildBefore(beforeId)
+				return sb.BuildBefore(beforeId)
 			}
 		} else if err == nil {
 			// we can finish the acl state building process
@@ -185,5 +183,5 @@ func (sb *aclStateBuilder) buildBefore(beforeId string) (*ACLState, bool, error)
 		err = nil
 	}
 
-	return sb.aclState, foundId, err
+	return state, foundId, err
 }

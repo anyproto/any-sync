@@ -30,16 +30,19 @@ func newACLTreeBuilder(t thread.Thread, decoder keys.SigningPubKeyDecoder) *aclT
 	}
 }
 
-func (tb *aclTreeBuilder) init() {
+func (tb *aclTreeBuilder) Init() {
 	tb.cache = make(map[string]*Change)
 	tb.identityKeys = make(map[string]keys.SigningPubKey)
 	tb.tree = &Tree{}
-	tb.changeLoader.init(tb.cache, tb.identityKeys)
+	tb.changeLoader.Init(tb.cache, tb.identityKeys)
 }
 
-func (tb *aclTreeBuilder) build() (*Tree, error) {
-	heads := tb.thread.PossibleHeads()
-	aclHeads, err := tb.getACLHeads(heads)
+func (tb *aclTreeBuilder) Build() (*Tree, error) {
+	var headsAndOrphans []string
+	headsAndOrphans = append(headsAndOrphans, tb.thread.Orphans()...)
+	headsAndOrphans = append(headsAndOrphans, tb.thread.Heads()...)
+	aclHeads, err := tb.getACLHeads(headsAndOrphans)
+
 	if err != nil {
 		return nil, err
 	}
