@@ -100,6 +100,6 @@ type YMLThread struct {
 	Graph        []*GraphNode `yaml:"graph"`
 	UpdatedGraph []*GraphNode `yaml:"updatedGraph"`
 
-	Heads      []string `yaml:"heads"`
-	MaybeHeads []string `yaml:"maybeHeads"`
+	Heads   []string `yaml:"heads"`
+	Orphans []string `yaml:"orphans"`
 }

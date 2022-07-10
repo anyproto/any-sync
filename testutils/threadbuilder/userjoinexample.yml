@@ -99,7 +99,7 @@ graph:
     baseSnapshot: A.1.1
     aclHeads: [B.1.1]
     treeHeads: [B.1.1]
-maybeHeads:
+orphans:
   - "A.1.3"
 updatedChanges:
   - id: B.1.3

@@ -124,7 +124,7 @@ graph:
     baseSnapshot: A.1.2
     aclHeads: [A.1.2]
     treeHeads: [A.1.2]
-maybeHeads:
+orphans:
   - "A.1.3"
   - "B.1.2"
 

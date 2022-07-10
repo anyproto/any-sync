@@ -1,5 +1,11 @@
 package acltree
 
+//func createTreeFromThread(t thread.Thread, fromStart bool) (*Tree, error) {
+//	treeBuilder := newTreeBuilder(t, keys.NewEd25519Decoder())
+//	treeBuilder.Init()
+//	return treeBuilder.Build(fromStart)
+//}
+//
 //func TestACLTreeBuilder_UserJoinCorrectHeadsAndLen(t *testing.T) {
 //	thread, err := threadbuilder.NewThreadBuilderFromFile("threadbuilder/userjoinexample.yml")
 //	if err != nil {

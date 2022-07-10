@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"io/ioutil"
 
 	"github.com/gogo/protobuf/proto"
@@ -31,7 +32,7 @@ type ThreadBuilder struct {
 	allChanges     map[string]*threadChange
 	updatedChanges map[string]*threadChange
 	heads          []string
-	maybeHeads     []string
+	orphans        []string
 	keychain       *Keychain
 }
 
@@ -109,8 +110,8 @@ func (t *ThreadBuilder) AddRawChange(change *thread.RawChange) error {
 	return nil
 }
 
-func (t *ThreadBuilder) AddOrphans(head string) {
-	t.maybeHeads = append(t.maybeHeads, head)
+func (t *ThreadBuilder) AddOrphans(orphans ...string) {
+	t.orphans = append(t.orphans, orphans...)
 }
 
 func (t *ThreadBuilder) AddChange(change aclchanges.Change) error {
@@ -141,17 +142,16 @@ func (t *ThreadBuilder) AddChange(change aclchanges.Change) error {
 }
 
 func (t *ThreadBuilder) Orphans() []string {
-	return t.maybeHeads
-}
-
-func (t *ThreadBuilder) SetPossibleHeads(heads []string) {
-	// we should copy here instead of just setting the value
-	t.maybeHeads = heads
+	return t.orphans
 }
 
 func (t *ThreadBuilder) SetHeads(heads []string) {
 	// we should copy here instead of just setting the value
 	t.heads = heads
+}
+
+func (t *ThreadBuilder) RemoveOrphans(orphans ...string) {
+	t.orphans = slice.Difference(t.orphans, orphans)
 }
 
 func (t *ThreadBuilder) GetChange(ctx context.Context, recordID string) (*thread.RawChange, error) {
@@ -214,7 +214,7 @@ func (t *ThreadBuilder) Parse(thread *YMLThread) {
 	}
 
 	t.parseGraph(thread)
-	t.parseHeads(thread)
+	t.parseOrphans(thread)
 }
 
 func (t *ThreadBuilder) parseChange(ch *Change) *threadChange {
@@ -469,8 +469,8 @@ func (t *ThreadBuilder) convertPermission(perm string) pb.ACLChangeUserPermissio
 
 func (t *ThreadBuilder) traverseFromHeads(f func(t *threadChange) error) error {
 	uniqMap := map[string]struct{}{}
-	stack := make([]string, len(t.maybeHeads), 10)
-	copy(stack, t.maybeHeads)
+	stack := make([]string, len(t.orphans), 10)
+	copy(stack, t.orphans)
 	for len(stack) > 0 {
 		id := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
@@ -507,7 +507,6 @@ func (t *ThreadBuilder) parseGraph(thread *YMLThread) {
 	}
 }
 
-func (t *ThreadBuilder) parseHeads(thread *YMLThread) {
-	t.heads = thread.Heads
-	t.maybeHeads = thread.MaybeHeads
+func (t *ThreadBuilder) parseOrphans(thread *YMLThread) {
+	t.orphans = thread.Orphans
 }
