@@ -1,4 +1,4 @@
-package exampledocument
+package plaintextdocument
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/acltree"
@@ -23,7 +23,7 @@ func TestDocumentStateBuilder_UserJoinBuild(t *testing.T) {
 		t.Fatalf("should build acl aclState without err: %v", err)
 	}
 
-	st := ctx.DocState.(*PlainTextDocumentState)
+	st := ctx.DocState.(*DocumentState)
 	assert.Equal(t, st.Text, "some text|first")
 }
 
@@ -43,6 +43,6 @@ func TestDocumentStateBuilder_UserRemoveBuild(t *testing.T) {
 		t.Fatalf("should build acl aclState without err: %v", err)
 	}
 
-	st := ctx.DocState.(*PlainTextDocumentState)
+	st := ctx.DocState.(*DocumentState)
 	assert.Equal(t, st.Text, "some text|first")
 }

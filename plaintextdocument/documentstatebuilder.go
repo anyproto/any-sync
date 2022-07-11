@@ -1,4 +1,4 @@
-package exampledocument
+package plaintextdocument
 
 import (
 	"fmt"

@@ -23,19 +23,26 @@ type AddResult struct {
 	Summary AddResultSummary
 }
 
+type TreeUpdateListener interface {
+	Update(tree ACLTree)
+	Rebuild(tree ACLTree)
+}
+
 type ACLTree interface {
 	ACLState() *ACLState
 	AddContent(f func(builder ChangeBuilder)) (*Change, error)
 	AddChanges(changes ...*Change) (AddResult, error)
 	Heads() []string
+	Root() *Change
 	Iterate(func(change *Change) bool)
 	IterateFrom(string, func(change *Change) bool)
 	HasChange(string) bool
 }
 
 type aclTree struct {
-	thread      thread.Thread
-	accountData *account.AccountData
+	thread         thread.Thread
+	accountData    *account.AccountData
+	updateListener TreeUpdateListener
 
 	fullTree         *Tree
 	aclTreeFromStart *Tree // TODO: right now we don't use it, we can probably have only local var for now. This tree is built from start of the document
@@ -50,7 +57,10 @@ type aclTree struct {
 	sync.Mutex
 }
 
-func BuildACLTree(t thread.Thread, acc *account.AccountData) (ACLTree, error) {
+func BuildACLTree(
+	t thread.Thread,
+	acc *account.AccountData,
+	listener TreeUpdateListener) (ACLTree, error) {
 	decoder := keys.NewEd25519Decoder()
 	aclTreeBuilder := newACLTreeBuilder(t, decoder)
 	treeBuilder := newTreeBuilder(t, decoder)
@@ -68,6 +78,7 @@ func BuildACLTree(t thread.Thread, acc *account.AccountData) (ACLTree, error) {
 		aclStateBuilder:   aclStateBuilder,
 		snapshotValidator: snapshotValidator,
 		changeBuilder:     changeBuilder,
+		updateListener:    listener,
 	}
 	err := aclTree.rebuildFromThread(false)
 	if err != nil {
@@ -183,6 +194,7 @@ func (a *aclTree) AddContent(build func(builder ChangeBuilder)) (*Change, error)
 	}
 
 	a.thread.SetHeads([]string{ch.Id})
+	a.updateListener.Update(a)
 	return ch, nil
 }
 
@@ -190,8 +202,8 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 	a.Lock()
 	defer a.Unlock()
 	// TODO: make proper error handling, because there are a lot of corner cases where this will break
-	var aclChanges []*Change
 	var err error
+	var mode Mode
 
 	defer func() {
 		if err != nil {
@@ -209,13 +221,17 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 			}
 		}
 		a.thread.RemoveOrphans(toRemove...)
+		switch mode {
+		case Append:
+			a.updateListener.Update(a)
+		case Rebuild:
+			a.updateListener.Rebuild(a)
+		default:
+			break
+		}
 	}()
 
 	for _, ch := range changes {
-		if ch.IsACLChange() {
-			aclChanges = append(aclChanges, ch)
-			break
-		}
 		err = a.thread.AddChange(ch)
 		if err != nil {
 			return AddResult{}, err
@@ -224,7 +240,7 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 	}
 
 	prevHeads := a.fullTree.Heads()
-	mode := a.fullTree.Add(changes...)
+	mode = a.fullTree.Add(changes...)
 	switch mode {
 	case Nothing:
 		return AddResult{
@@ -283,4 +299,10 @@ func (a *aclTree) Heads() []string {
 	a.Lock()
 	defer a.Unlock()
 	return a.fullTree.Heads()
+}
+
+func (a *aclTree) Root() *Change {
+	a.Lock()
+	defer a.Unlock()
+	return a.fullTree.Root()
 }
