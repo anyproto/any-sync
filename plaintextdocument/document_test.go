@@ -1,4 +1,4 @@
-package exampledocument
+package plaintextdocument
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/threadbuilder"
@@ -22,7 +22,7 @@ func TestDocument_Build(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	st := res.(*PlainTextDocumentState)
+	st := res.(*DocumentState)
 	assert.Equal(t, st.Text, "some text|first")
 }
 
@@ -42,11 +42,11 @@ func TestDocument_Update(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	st := res.(*PlainTextDocumentState)
+	st := res.(*DocumentState)
 	assert.Equal(t, st.Text, "some text|first")
 
 	rawChs := thread.GetUpdatedChanges()
 	res, updateResult, err := doc.Update(rawChs...)
 	assert.Equal(t, updateResult, UpdateResultAppend)
-	assert.Equal(t, res.(*PlainTextDocumentState).Text, "some text|first|second")
+	assert.Equal(t, res.(*DocumentState).Text, "some text|first|second")
 }

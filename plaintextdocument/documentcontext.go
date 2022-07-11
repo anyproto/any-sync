@@ -1,4 +1,4 @@
-package exampledocument
+package plaintextdocument
 
 import "github.com/anytypeio/go-anytype-infrastructure-experiments/acltree"
 
