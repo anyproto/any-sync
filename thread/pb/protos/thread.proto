@@ -3,6 +3,6 @@ package anytype;
 option go_package = "pb";
 
 message ThreadHeader {
-  string firstRecordId = 1;
+  string firstChangeId = 1;
   bool isWorkspace = 2;
 }
