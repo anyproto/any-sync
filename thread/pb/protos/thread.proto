@@ -1,0 +1,8 @@
+syntax = "proto3";
+package anytype;
+option go_package = "pb";
+
+message ThreadHeader {
+  string firstRecordId = 1;
+  bool isWorkspace = 2;
+}

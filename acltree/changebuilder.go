@@ -68,10 +68,14 @@ func (c *changeBuilder) Build() (*Change, []byte, error) {
 		return nil, nil, err
 	}
 
+	if c.makeSnapshot {
+		c.aclData.AclSnapshot = c.aclState.makeSnapshot()
+	}
+
 	aclChange := &pb.ACLChange{
 		TreeHeadIds:        c.tree.Heads(),
 		AclHeadIds:         c.tree.ACLHeads(),
-		SnapshotBaseId:     c.tree.RootId(), // TODO: add logic for ACL snapshot
+		SnapshotBaseId:     c.tree.RootId(),
 		AclData:            c.aclData,
 		ChangesData:        encrypted,
 		CurrentReadKeyHash: c.aclState.currentReadKeyHash,

@@ -27,6 +27,20 @@ type ACLState struct {
 	identity             string
 }
 
+func newACLState(
+	identity string,
+	encryptionKey keys.EncryptionPrivKey,
+	signingPubKeyDecoder keys.SigningPubKeyDecoder) *ACLState {
+	return &ACLState{
+		identity:             identity,
+		encryptionKey:        encryptionKey,
+		userReadKeys:         make(map[uint64]*symmetric.Key),
+		userStates:           make(map[string]*pb.ACLChangeUserState),
+		userInvites:          make(map[string]*pb.ACLChangeUserInvite),
+		signingPubKeyDecoder: signingPubKeyDecoder,
+	}
+}
+
 func newACLStateFromSnapshot(
 	snapshot *pb.ACLChangeACLSnapshot,
 	identity string,
@@ -72,6 +86,19 @@ func (st *ACLState) recreateFromSnapshot(snapshot *pb.ACLChangeACLSnapshot) erro
 		st.userInvites = snapshot.GetAclState().GetInvites()
 	}
 	return nil
+}
+
+func (st *ACLState) makeSnapshot() *pb.ACLChangeACLSnapshot {
+	var userStates []*pb.ACLChangeUserState
+	for _, st := range st.userStates {
+		userStates = append(userStates, st)
+	}
+
+	return &pb.ACLChangeACLSnapshot{AclState: &pb.ACLChangeACLState{
+		ReadKeyHashes: nil,
+		UserStates:    userStates, // TODO: make states and invites in same format
+		Invites:       st.userInvites,
+	}}
 }
 
 func (st *ACLState) applyChange(changeId string, change *pb.ACLChange) error {
