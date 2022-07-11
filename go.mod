@@ -12,6 +12,11 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/textileio/go-threads v1.0.2-0.20210304072541-d0f91da84404
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+	github.com/multiformats/go-base32 v0.0.3
+	github.com/multiformats/go-multiaddr v0.3.3
+	github.com/multiformats/go-multiaddr-dns v0.3.1
+	github.com/multiformats/go-multibase v0.0.3
+	github.com/multiformats/go-multihash v0.0.15
 )
 
 require (

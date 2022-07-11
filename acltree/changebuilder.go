@@ -3,6 +3,7 @@ package acltree
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/gogo/protobuf/proto"
 )
@@ -83,10 +84,6 @@ func (c *changeBuilder) Build() (*Change, []byte, error) {
 		Identity:           c.acc.Identity,
 	}
 
-	// TODO: add CID creation logic based on content
-	ch := NewChange(c.id, aclChange)
-	ch.DecryptedDocumentChange = marshalled
-
 	fullMarshalledChange, err := proto.Marshal(aclChange)
 	if err != nil {
 		return nil, nil, err
@@ -95,6 +92,12 @@ func (c *changeBuilder) Build() (*Change, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	id, err := cid.NewCIDFromBytes(fullMarshalledChange)
+	if err != nil {
+		return nil, nil, err
+	}
+	ch := NewChange(id, aclChange)
+	ch.DecryptedDocumentChange = marshalled
 	ch.Sign = signature
 
 	return ch, fullMarshalledChange, nil
