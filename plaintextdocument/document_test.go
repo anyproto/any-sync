@@ -45,4 +45,10 @@ func TestDocument_PlainTextDocument_AddText(t *testing.T) {
 		t.Fatalf("should be able to add document: %v", err)
 	}
 	assert.Equal(t, doc.Text(), "Some text|Next")
+
+	err = doc.AddText("Shmext")
+	if err != nil {
+		t.Fatalf("should be able to add document: %v", err)
+	}
+	assert.Equal(t, doc.Text(), "Some text|Next|Shmext")
 }
