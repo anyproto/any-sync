@@ -6,7 +6,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
-	gothread "github.com/textileio/go-threads/core/thread"
 )
 
 type aclTreeBuilder struct {
@@ -56,11 +55,7 @@ func (tb *aclTreeBuilder) Build() (*Tree, error) {
 }
 
 func (tb *aclTreeBuilder) buildTreeFromStart(heads []string) (err error) {
-	changes, possibleRoots, err := tb.dfsFromStart(heads)
-	if len(possibleRoots) == 0 {
-		return fmt.Errorf("cannot have Tree without root")
-	}
-	root, err := tb.getRoot(possibleRoots)
+	changes, root, err := tb.dfsFromStart(heads)
 	if err != nil {
 		return err
 	}
@@ -70,7 +65,8 @@ func (tb *aclTreeBuilder) buildTreeFromStart(heads []string) (err error) {
 	return
 }
 
-func (tb *aclTreeBuilder) dfsFromStart(heads []string) (buf []*Change, possibleRoots []*Change, err error) {
+func (tb *aclTreeBuilder) dfsFromStart(heads []string) (buf []*Change, root *Change, err error) {
+	var possibleRoots []*Change
 	stack := make([]string, len(heads), len(heads)*2)
 	copy(stack, heads)
 
@@ -98,32 +94,14 @@ func (tb *aclTreeBuilder) dfsFromStart(heads []string) (buf []*Change, possibleR
 			possibleRoots = append(possibleRoots, ch)
 		}
 	}
-	return buf, possibleRoots, nil
-}
-
-func (tb *aclTreeBuilder) getRoot(possibleRoots []*Change) (*Change, error) {
-	threadId, err := gothread.Decode(tb.thread.ID())
-	if err != nil {
-		return nil, err
-	}
-
+	header := tb.thread.Header()
 	for _, r := range possibleRoots {
-		id := r.Content.Identity
-		sk, err := tb.signingPubKeyDecoder.DecodeFromString(id)
-		if err != nil {
-			continue
-		}
-
-		res, err := thread.VerifyACLThreadID(sk, threadId)
-		if err != nil {
-			continue
-		}
-
-		if res {
-			return r, nil
+		if r.Id == header.FirstChangeId {
+			return buf, r, nil
 		}
 	}
-	return nil, fmt.Errorf("could not find any root")
+
+	return nil, nil, fmt.Errorf("could not find root change")
 }
 
 func (tb *aclTreeBuilder) getACLHeads(heads []string) (aclTreeHeads []string, err error) {

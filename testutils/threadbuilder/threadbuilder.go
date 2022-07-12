@@ -13,6 +13,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
 	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/testchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
+	threadpb "github.com/anytypeio/go-anytype-infrastructure-experiments/thread/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 )
 
@@ -34,6 +35,7 @@ type ThreadBuilder struct {
 	heads          []string
 	orphans        []string
 	keychain       *Keychain
+	header         *threadpb.ThreadHeader
 }
 
 func NewThreadBuilder(keychain *Keychain) *ThreadBuilder {
@@ -165,6 +167,10 @@ func (t *ThreadBuilder) GetUpdatedChanges() []*thread.RawChange {
 		res = append(res, rawCh)
 	}
 	return res
+}
+
+func (t *ThreadBuilder) Header() *threadpb.ThreadHeader {
+	return t.header
 }
 
 func (t *ThreadBuilder) getChange(changeId string, m map[string]*threadChange) *thread.RawChange {
@@ -509,4 +515,11 @@ func (t *ThreadBuilder) parseGraph(thread *YMLThread) {
 
 func (t *ThreadBuilder) parseOrphans(thread *YMLThread) {
 	t.orphans = thread.Orphans
+}
+
+func (t *ThreadBuilder) parseHeader(thread *YMLThread) {
+	t.header = &threadpb.ThreadHeader{
+		FirstChangeId: thread.Header.FirstChangeId,
+		IsWorkspace:   thread.Header.IsWorkspace,
+	}
 }

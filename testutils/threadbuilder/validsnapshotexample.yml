@@ -127,4 +127,7 @@ graph:
 orphans:
   - "A.1.3"
   - "B.1.2"
+header:
+  firstChangeId: A.1.1
+  isWorkspace: false
 

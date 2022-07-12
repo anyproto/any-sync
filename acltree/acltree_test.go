@@ -10,6 +10,12 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/threadbuilder"
 )
 
+type mockListener struct{}
+
+func (m *mockListener) Update(tree ACLTree) {}
+
+func (m *mockListener) Rebuild(tree ACLTree) {}
+
 func TestACLTree_UserJoinBuild(t *testing.T) {
 	thr, err := threadbuilder.NewThreadBuilderFromFile("threadbuilder/userjoinexample.yml")
 	if err != nil {
@@ -21,7 +27,8 @@ func TestACLTree_UserJoinBuild(t *testing.T) {
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
 	}
-	tree, err := BuildACLTree(thr, accountData)
+	listener := &mockListener{}
+	tree, err := BuildACLTree(thr, accountData, listener)
 	if err != nil {
 		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
@@ -55,7 +62,8 @@ func TestACLTree_UserRemoveBuild(t *testing.T) {
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
 	}
-	tree, err := BuildACLTree(thr, accountData)
+	listener := &mockListener{}
+	tree, err := BuildACLTree(thr, accountData, listener)
 	if err != nil {
 		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
@@ -85,7 +93,8 @@ func TestACLTree_UserRemoveBeforeBuild(t *testing.T) {
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
 	}
-	tree, err := BuildACLTree(thr, accountData)
+	listener := &mockListener{}
+	tree, err := BuildACLTree(thr, accountData, listener)
 	if err != nil {
 		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
@@ -116,7 +125,8 @@ func TestACLTree_InvalidSnapshotBuild(t *testing.T) {
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
 	}
-	tree, err := BuildACLTree(thr, accountData)
+	listener := &mockListener{}
+	tree, err := BuildACLTree(thr, accountData, listener)
 	if err != nil {
 		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
@@ -146,7 +156,8 @@ func TestACLTree_ValidSnapshotBuild(t *testing.T) {
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
 	}
-	tree, err := BuildACLTree(thr, accountData)
+	listener := &mockListener{}
+	tree, err := BuildACLTree(thr, accountData, listener)
 	if err != nil {
 		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
