@@ -85,6 +85,7 @@ func BuildACLTree(
 		return nil, err
 	}
 	aclTree.removeOrphans()
+	t.SetHeads(aclTree.Heads())
 
 	return aclTree, nil
 }
