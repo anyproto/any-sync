@@ -91,7 +91,15 @@ func (i *iterator) iterateLin(c *Change) bool {
 			break
 		}
 	}
-	i.breakpoint = c
+	if len(c.Next) == 0 && len(c.PreviousIds) <= 1 {
+		if !i.f(c) {
+			return false
+		}
+		i.doneMap[c] = struct{}{}
+	} else {
+		i.breakpoint = c
+	}
+
 	return true
 }
 

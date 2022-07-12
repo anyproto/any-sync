@@ -99,6 +99,56 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 	assert.Equal(t, changeIds, []string{"A.1.1", "A.1.2", "B.1.1", "B.1.2", "B.1.3", "A.1.4"})
 }
 
+func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
+	thr, err := threadbuilder.NewThreadBuilderWithTestName("userjoinexampleupdate.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	keychain := thr.GetKeychain()
+	accountData := &account.AccountData{
+		Identity: keychain.GetIdentity("A"),
+		SignKey:  keychain.SigningKeys["A"],
+		EncKey:   keychain.EncryptionKeys["A"],
+	}
+	listener := &mockListener{}
+	tree, err := BuildACLTree(thr, accountData, listener)
+	if err != nil {
+		t.Fatalf("should Build acl ACLState without err: %v", err)
+	}
+	rawChanges := thr.GetUpdates("rebuild")
+	var changes []*Change
+	for _, ch := range rawChanges {
+		newCh, err := NewFromRawChange(ch)
+		if err != nil {
+			t.Fatalf("should be able to create change from raw: %v", err)
+		}
+		changes = append(changes, newCh)
+	}
+
+	res, err := tree.AddChanges(changes...)
+	assert.Equal(t, res.Summary, AddResultSummaryRebuild)
+
+	aclState := tree.ACLState()
+	aId := keychain.GeneratedIdentities["A"]
+	bId := keychain.GeneratedIdentities["B"]
+	cId := keychain.GeneratedIdentities["C"]
+	dId := keychain.GeneratedIdentities["D"]
+
+	assert.Equal(t, aclState.identity, aId)
+	assert.Equal(t, aclState.userStates[aId].Permissions, pb.ACLChange_Admin)
+	assert.Equal(t, aclState.userStates[bId].Permissions, pb.ACLChange_Writer)
+	assert.Equal(t, aclState.userStates[cId].Permissions, pb.ACLChange_Reader)
+	assert.Equal(t, aclState.userStates[dId].Permissions, pb.ACLChange_Writer)
+
+	var changeIds []string
+
+	tree.Iterate(func(c *Change) (isContinue bool) {
+		changeIds = append(changeIds, c.Id)
+		return true
+	})
+	assert.Equal(t, changeIds, []string{"A.1.1", "A.1.2", "B.1.1", "B.1.2", "A.1.4"})
+}
+
 func TestACLTree_UserRemoveBuild(t *testing.T) {
 	thr, err := threadbuilder.NewThreadBuilderWithTestName("userremoveexample.yml")
 	if err != nil {
