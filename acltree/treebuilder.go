@@ -9,7 +9,6 @@ import (
 	//"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/lib/logging"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/prometheus/common/log"
-	gothread "github.com/textileio/go-threads/core/thread"
 )
 
 var (
@@ -71,11 +70,7 @@ func (tb *treeBuilder) Build(fromStart bool) (*Tree, error) {
 }
 
 func (tb *treeBuilder) buildTreeFromStart(heads []string) (err error) {
-	changes, possibleRoots, err := tb.dfsFromStart(heads)
-	if len(possibleRoots) == 0 {
-		return fmt.Errorf("cannot have Tree without root")
-	}
-	root, err := tb.getRoot(possibleRoots)
+	changes, root, err := tb.dfsFromStart(heads)
 	if err != nil {
 		return err
 	}
@@ -85,7 +80,8 @@ func (tb *treeBuilder) buildTreeFromStart(heads []string) (err error) {
 	return
 }
 
-func (tb *treeBuilder) dfsFromStart(heads []string) (buf []*Change, possibleRoots []*Change, err error) {
+func (tb *treeBuilder) dfsFromStart(heads []string) (buf []*Change, root *Change, err error) {
+	var possibleRoots []*Change
 	stack := make([]string, len(heads), len(heads)*2)
 	copy(stack, heads)
 
@@ -113,7 +109,14 @@ func (tb *treeBuilder) dfsFromStart(heads []string) (buf []*Change, possibleRoot
 			possibleRoots = append(possibleRoots, ch)
 		}
 	}
-	return buf, possibleRoots, nil
+	header := tb.thread.Header()
+	for _, r := range possibleRoots {
+		if r.Id == header.FirstChangeId {
+			return buf, r, nil
+		}
+	}
+
+	return nil, nil, fmt.Errorf("could not find root change")
 }
 
 func (tb *treeBuilder) buildTree(heads []string, breakpoint string) (err error) {
@@ -286,29 +289,4 @@ func (tb *treeBuilder) findCommonForTwoSnapshots(s1, s2 string) (s string, err e
 	log.Warnf("changes build Tree: prefer %s (%s<%s)", s2, s2, s1)
 
 	return s2, nil
-}
-
-func (tb *treeBuilder) getRoot(possibleRoots []*Change) (*Change, error) {
-	threadId, err := gothread.Decode(tb.thread.ID())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, r := range possibleRoots {
-		id := r.Content.Identity
-		sk, err := tb.signingPubKeyDecoder.DecodeFromString(id)
-		if err != nil {
-			continue
-		}
-
-		res, err := thread.VerifyACLThreadID(sk, threadId)
-		if err != nil {
-			continue
-		}
-
-		if res {
-			return r, nil
-		}
-	}
-	return nil, fmt.Errorf("could not find any root")
 }

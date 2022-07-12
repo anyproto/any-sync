@@ -90,6 +90,11 @@ type Change struct {
 	ReadKey string `yaml:"readKey"`
 }
 
+type Header struct {
+	FirstChangeId string `yaml:"firstChangeId"`
+	IsWorkspace   bool   `yaml:"isWorkspace"`
+}
+
 type YMLThread struct {
 	Description    *ThreadDescription `yaml:"thread"`
 	Changes        []*Change          `yaml:"changes"`
@@ -102,4 +107,5 @@ type YMLThread struct {
 
 	Heads   []string `yaml:"heads"`
 	Orphans []string `yaml:"orphans"`
+	Header  *Header  `yaml:"header"`
 }
