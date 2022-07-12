@@ -41,7 +41,7 @@ func (s *snapshotValidator) ValidateSnapshot(ch *Change) (bool, error) {
 		return false, fmt.Errorf("didn't find snapshot in ACL Tree")
 	}
 
-	otherSt, err := newACLStateFromSnapshot(ch.Content.GetAclData().GetAclSnapshot(), s.identity, s.key, s.decoder)
+	otherSt, err := newACLStateFromSnapshotChange(ch.Content, s.identity, s.key, s.decoder)
 	if err != nil {
 		return false, err
 	}

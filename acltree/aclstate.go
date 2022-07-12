@@ -41,8 +41,8 @@ func newACLState(
 	}
 }
 
-func newACLStateFromSnapshot(
-	snapshot *pb.ACLChangeACLSnapshot,
+func newACLStateFromSnapshotChange(
+	snapshotChange *pb.ACLChange,
 	identity string,
 	encryptionKey keys.EncryptionPrivKey,
 	signingPubKeyDecoder keys.SigningPubKeyDecoder) (*ACLState, error) {
@@ -54,14 +54,18 @@ func newACLStateFromSnapshot(
 		userInvites:          make(map[string]*pb.ACLChangeUserInvite),
 		signingPubKeyDecoder: signingPubKeyDecoder,
 	}
-	err := st.recreateFromSnapshot(snapshot)
+	err := st.recreateFromSnapshotChange(snapshotChange)
 	if err != nil {
 		return nil, err
 	}
 	return st, nil
 }
 
-func (st *ACLState) recreateFromSnapshot(snapshot *pb.ACLChangeACLSnapshot) error {
+func (st *ACLState) recreateFromSnapshotChange(snapshotChange *pb.ACLChange) error {
+	snapshot := snapshotChange.GetAclData().GetAclSnapshot()
+	if snapshot == nil {
+		return fmt.Errorf("could not create state from snapshot, because it is nil")
+	}
 	state := snapshot.AclState
 	for _, userState := range state.UserStates {
 		st.userStates[userState.Identity] = userState
@@ -71,7 +75,6 @@ func (st *ACLState) recreateFromSnapshot(snapshot *pb.ACLChangeACLSnapshot) erro
 	if !exists {
 		return ErrNoSuchUser
 	}
-	var lastKeyHash uint64
 	for _, key := range userState.EncryptedReadKeys {
 		key, hash, err := st.decryptReadKeyAndHash(key)
 		if err != nil {
@@ -79,9 +82,8 @@ func (st *ACLState) recreateFromSnapshot(snapshot *pb.ACLChangeACLSnapshot) erro
 		}
 
 		st.userReadKeys[hash] = key
-		lastKeyHash = hash
 	}
-	st.currentReadKeyHash = lastKeyHash
+	st.currentReadKeyHash = snapshotChange.CurrentReadKeyHash
 	if snapshot.GetAclState().GetInvites() != nil {
 		st.userInvites = snapshot.GetAclState().GetInvites()
 	}
@@ -101,21 +103,29 @@ func (st *ACLState) makeSnapshot() *pb.ACLChangeACLSnapshot {
 	}}
 }
 
-func (st *ACLState) applyChange(changeId string, change *pb.ACLChange) error {
+func (st *ACLState) applyChange(change *pb.ACLChange) (err error) {
+	defer func() {
+		if err != nil {
+			return
+		}
+		st.currentReadKeyHash = change.CurrentReadKeyHash
+	}()
 	// we can't check this for the user which is joining, because it will not be in our list
 	if !st.isUserJoin(change) {
 		// we check signature when we add this to the Tree, so no need to do it here
 		if _, exists := st.userStates[change.Identity]; !exists {
-			return ErrNoSuchUser
+			err = ErrNoSuchUser
+			return
 		}
 
 		if !st.hasPermission(change.Identity, pb.ACLChange_Admin) {
-			return fmt.Errorf("user %s must have admin permissions", change.Identity)
+			err = fmt.Errorf("user %s must have admin permissions", change.Identity)
+			return
 		}
 	}
 
 	for _, ch := range change.GetAclData().GetAclContent() {
-		if err := st.applyChangeContent(changeId, ch); err != nil {
+		if err = st.applyChangeContent(ch); err != nil {
 			//log.Infof("error while applying changes: %v; ignore", err)
 			return err
 		}
@@ -125,7 +135,7 @@ func (st *ACLState) applyChange(changeId string, change *pb.ACLChange) error {
 }
 
 // TODO: remove changeId, because it is not needed
-func (st *ACLState) applyChangeContent(changeId string, ch *pb.ACLChangeACLContentValue) error {
+func (st *ACLState) applyChangeContent(ch *pb.ACLChangeACLContentValue) error {
 	switch {
 	case ch.GetUserPermissionChange() != nil:
 		return st.applyUserPermissionChange(ch.GetUserPermissionChange())
@@ -134,7 +144,7 @@ func (st *ACLState) applyChangeContent(changeId string, ch *pb.ACLChangeACLConte
 	case ch.GetUserRemove() != nil:
 		return st.applyUserRemove(ch.GetUserRemove())
 	case ch.GetUserInvite() != nil:
-		return st.applyUserInvite(changeId, ch.GetUserInvite())
+		return st.applyUserInvite(ch.GetUserInvite())
 	case ch.GetUserJoin() != nil:
 		return st.applyUserJoin(ch.GetUserJoin())
 	case ch.GetUserConfirm() != nil:
@@ -153,15 +163,15 @@ func (st *ACLState) applyUserPermissionChange(ch *pb.ACLChangeUserPermissionChan
 	return nil
 }
 
-func (st *ACLState) applyUserInvite(changeId string, ch *pb.ACLChangeUserInvite) error {
-	st.userInvites[changeId] = ch
+func (st *ACLState) applyUserInvite(ch *pb.ACLChangeUserInvite) error {
+	st.userInvites[ch.InviteId] = ch
 	return nil
 }
 
 func (st *ACLState) applyUserJoin(ch *pb.ACLChangeUserJoin) error {
-	invite, exists := st.userInvites[ch.UserInviteChangeId]
+	invite, exists := st.userInvites[ch.UserInviteId]
 	if !exists {
-		return fmt.Errorf("no such invite with id %s", ch.UserInviteChangeId)
+		return fmt.Errorf("no such invite with id %s", ch.UserInviteId)
 	}
 
 	if _, exists = st.userStates[ch.Identity]; exists {
@@ -190,7 +200,6 @@ func (st *ACLState) applyUserJoin(ch *pb.ACLChangeUserJoin) error {
 
 	// if ourselves -> we need to decrypt the read keys
 	if st.identity == ch.Identity {
-		var lastKeyHash uint64
 		for _, key := range ch.EncryptedReadKeys {
 			key, hash, err := st.decryptReadKeyAndHash(key)
 			if err != nil {
@@ -198,9 +207,7 @@ func (st *ACLState) applyUserJoin(ch *pb.ACLChangeUserJoin) error {
 			}
 
 			st.userReadKeys[hash] = key
-			lastKeyHash = hash
 		}
-		st.currentReadKeyHash = lastKeyHash
 	}
 
 	// adding user to the list
@@ -225,6 +232,17 @@ func (st *ACLState) applyUserAdd(ch *pb.ACLChangeUserAdd) error {
 		EncryptionKey:     ch.EncryptionKey,
 		Permissions:       ch.Permissions,
 		EncryptedReadKeys: ch.EncryptedReadKeys,
+	}
+
+	if ch.Identity == st.identity {
+		for _, key := range ch.EncryptedReadKeys {
+			key, hash, err := st.decryptReadKeyAndHash(key)
+			if err != nil {
+				return ErrFailedToDecrypt
+			}
+
+			st.userReadKeys[hash] = key
+		}
 	}
 
 	return nil

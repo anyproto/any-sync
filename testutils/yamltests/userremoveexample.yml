@@ -29,6 +29,7 @@ changes:
           encryptionKey: key.Enc.Onetime1
           encryptedReadKeys: [key.Read.1]
           permissions: writer
+          inviteId: A.1.2
     readKey: key.Read.1
   - id: A.1.3
     identity: A

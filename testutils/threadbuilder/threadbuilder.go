@@ -367,11 +367,11 @@ func (t *ThreadBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChangeACLCo
 		convCh = &pb.ACLChangeACLContentValue{
 			Value: &pb.ACLChangeACLContentValueValueOfUserJoin{
 				UserJoin: &pb.ACLChangeUserJoin{
-					Identity:           t.keychain.GetIdentity(join.Identity),
-					EncryptionKey:      rawKey,
-					AcceptSignature:    signature,
-					UserInviteChangeId: join.InviteId,
-					EncryptedReadKeys:  t.encryptReadKeys(join.EncryptedReadKeys, encKey),
+					Identity:          t.keychain.GetIdentity(join.Identity),
+					EncryptionKey:     rawKey,
+					AcceptSignature:   signature,
+					UserInviteId:      join.InviteId,
+					EncryptedReadKeys: t.encryptReadKeys(join.EncryptedReadKeys, encKey),
 				},
 			},
 		}
@@ -389,6 +389,7 @@ func (t *ThreadBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChangeACLCo
 					EncryptPublicKey:  rawEncKey,
 					EncryptedReadKeys: t.encryptReadKeys(invite.EncryptedReadKeys, encKey),
 					Permissions:       t.convertPermission(invite.Permissions),
+					InviteId:          invite.InviteId,
 				},
 			},
 		}
