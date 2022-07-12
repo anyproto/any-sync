@@ -7,7 +7,7 @@ package acltree
 //}
 //
 //func TestACLTreeBuilder_UserJoinCorrectHeadsAndLen(t *testing.T) {
-//	thread, err := threadbuilder.NewThreadBuilderFromFile("threadbuilder/userjoinexample.yml")
+//	thread, err := threadbuilder.NewThreadBuilderWithTestName("threadbuilder/userjoinexample.yml")
 //	if err != nil {
 //		t.Fatal(err)
 //	}
@@ -22,7 +22,7 @@ package acltree
 //}
 //
 //func TestTreeBuilder_UserJoinTestTreeIterate(t *testing.T) {
-//	thread, err := threadbuilder.NewThreadBuilderFromFile("threadbuilder/userjoinexample.yml")
+//	thread, err := threadbuilder.NewThreadBuilderWithTestName("threadbuilder/userjoinexample.yml")
 //	if err != nil {
 //		t.Fatal(err)
 //	}
@@ -43,7 +43,7 @@ package acltree
 //}
 //
 //func TestTreeBuilder_UserRemoveTestTreeIterate(t *testing.T) {
-//	thread, err := threadbuilder.NewThreadBuilderFromFile("threadbuilder/userremoveexample.yml")
+//	thread, err := threadbuilder.NewThreadBuilderWithTestName("threadbuilder/userremoveexample.yml")
 //	if err != nil {
 //		t.Fatal(err)
 //	}
