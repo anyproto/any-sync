@@ -123,9 +123,6 @@ updates:
             permission: writer
             encryptionKey: key.Enc.D
             encryptedReadKeys: [ key.Read.1 ]
-      changes:
-        - textAppend:
-            text: "second"
       readKey: key.Read.1
     graph:
       - id: B.1.3

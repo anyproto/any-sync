@@ -84,38 +84,54 @@ func BuildACLTree(
 	if err != nil {
 		return nil, err
 	}
+	aclTree.removeOrphans()
 
 	return aclTree, nil
 }
 
 // TODO: this is not used for now, in future we should think about not making full tree rebuild
-func (a *aclTree) rebuildFromTree(validateSnapshot bool) (err error) {
-	if validateSnapshot {
-		err = a.snapshotValidator.Init(a.aclTreeFromStart)
-		if err != nil {
-			return err
-		}
+//func (a *aclTree) rebuildFromTree(validateSnapshot bool) (err error) {
+//	if validateSnapshot {
+//		err = a.snapshotValidator.Init(a.aclTreeFromStart)
+//		if err != nil {
+//			return err
+//		}
+//
+//		valid, err := a.snapshotValidator.ValidateSnapshot(a.fullTree.root)
+//		if err != nil {
+//			return err
+//		}
+//		if !valid {
+//			return a.rebuildFromThread(true)
+//		}
+//	}
+//
+//	err = a.aclStateBuilder.Init(a.fullTree)
+//	if err != nil {
+//		return err
+//	}
+//
+//	a.aclState, err = a.aclStateBuilder.Build()
+//	if err != nil {
+//		return err
+//	}
+//
+//	return nil
+//}
 
-		valid, err := a.snapshotValidator.ValidateSnapshot(a.fullTree.root)
-		if err != nil {
-			return err
+func (a *aclTree) removeOrphans() {
+	// removing attached or invalid orphans
+	var toRemove []string
+
+	for _, orphan := range a.thread.Orphans() {
+		if _, exists := a.fullTree.attached[orphan]; exists {
+			toRemove = append(toRemove, orphan)
 		}
-		if !valid {
-			return a.rebuildFromThread(true)
+		if _, exists := a.fullTree.invalidChanges[orphan]; exists {
+			toRemove = append(toRemove, orphan)
 		}
 	}
-
-	err = a.aclStateBuilder.Init(a.fullTree)
-	if err != nil {
-		return err
-	}
-
-	a.aclState, err = a.aclStateBuilder.Build()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	a.thread.RemoveOrphans(toRemove...)
 }
 
 func (a *aclTree) rebuildFromThread(fromStart bool) error {
@@ -213,18 +229,8 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 		if err != nil {
 			return
 		}
-		// removing attached or invalid orphans
-		var toRemove []string
-
-		for _, orphan := range a.thread.Orphans() {
-			if _, exists := a.fullTree.attached[orphan]; exists {
-				toRemove = append(toRemove, orphan)
-			}
-			if _, exists := a.fullTree.invalidChanges[orphan]; exists {
-				toRemove = append(toRemove, orphan)
-			}
-		}
-		a.thread.RemoveOrphans(toRemove...)
+		a.removeOrphans()
+		a.thread.SetHeads(a.fullTree.Heads())
 		switch mode {
 		case Append:
 			a.updateListener.Update(a)
@@ -265,6 +271,8 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 			Summary:  AddResultSummaryRebuild,
 		}, nil
 	default:
+		// just rebuilding the state from start without reloading everything from thread
+		// as an optimization we could've started from current heads, but I didn't implement that
 		a.aclState, err = a.aclStateBuilder.Build()
 		if err != nil {
 			return AddResult{}, err
