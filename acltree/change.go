@@ -2,6 +2,7 @@ package acltree
 
 import (
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
@@ -44,6 +45,18 @@ func (ch *Change) DecryptContents(key *symmetric.Key) error {
 
 func (ch *Change) IsACLChange() bool {
 	return ch.Content.GetAclData() != nil
+}
+
+func NewFromRawChange(rawChange *thread.RawChange) (*Change, error) {
+	unmarshalled := &pb.ACLChange{}
+	err := proto.Unmarshal(rawChange.Payload, unmarshalled)
+	if err != nil {
+		return nil, err
+	}
+
+	ch := NewChange(rawChange.Id, unmarshalled)
+	ch.Sign = rawChange.Signature
+	return ch, nil
 }
 
 func NewChange(id string, ch *pb.ACLChange) *Change {

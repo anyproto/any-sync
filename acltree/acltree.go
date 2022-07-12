@@ -148,6 +148,10 @@ func (a *aclTree) rebuildFromThread(fromStart bool) error {
 			return a.rebuildFromThread(true)
 		}
 	}
+	// TODO: there is a question how we can validate not only that the full tree is built correctly
+	//  but also that the ACL prev ids are not messed up. I think we should probably compare the resulting
+	//  acl state with the acl state which is built in aclTreeFromStart
+
 	err = a.aclStateBuilder.Init(a.fullTree)
 	if err != nil {
 		return err

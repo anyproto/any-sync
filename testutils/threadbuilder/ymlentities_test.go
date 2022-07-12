@@ -6,7 +6,7 @@ import (
 )
 
 func Test_YamlParse(t *testing.T) {
-	tb, _ := NewThreadBuilderWithTestName("userjoinexample.yml")
+	tb, _ := NewThreadBuilderWithTestName("userjoinexampleupdate.yml")
 	gr, _ := tb.Graph()
 	fmt.Println(gr)
 }

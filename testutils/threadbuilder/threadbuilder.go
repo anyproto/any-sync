@@ -30,21 +30,25 @@ type threadChange struct {
 	changesDataDecrypted []byte
 }
 
+type updateUseCase struct {
+	changes map[string]*threadChange
+}
+
 type ThreadBuilder struct {
-	threadId       string
-	allChanges     map[string]*threadChange
-	updatedChanges map[string]*threadChange
-	heads          []string
-	orphans        []string
-	keychain       *Keychain
-	header         *threadpb.ThreadHeader
+	threadId   string
+	allChanges map[string]*threadChange
+	updates    map[string]*updateUseCase
+	heads      []string
+	orphans    []string
+	keychain   *Keychain
+	header     *threadpb.ThreadHeader
 }
 
 func NewThreadBuilder(keychain *Keychain) *ThreadBuilder {
 	return &ThreadBuilder{
-		allChanges:     make(map[string]*threadChange),
-		updatedChanges: make(map[string]*threadChange),
-		keychain:       keychain,
+		allChanges: make(map[string]*threadChange),
+		updates:    make(map[string]*updateUseCase),
+		keychain:   keychain,
 	}
 }
 
@@ -162,10 +166,11 @@ func (t *ThreadBuilder) GetChange(ctx context.Context, recordID string) (*thread
 	return t.getChange(recordID, t.allChanges), nil
 }
 
-func (t *ThreadBuilder) GetUpdatedChanges() []*thread.RawChange {
+func (t *ThreadBuilder) GetUpdates(useCase string) []*thread.RawChange {
 	var res []*thread.RawChange
-	for _, ch := range t.updatedChanges {
-		rawCh := t.getChange(ch.id, t.updatedChanges)
+	update := t.updates[useCase]
+	for _, ch := range update.changes {
+		rawCh := t.getChange(ch.id, update.changes)
 		res = append(res, rawCh)
 	}
 	return res
@@ -216,14 +221,10 @@ func (t *ThreadBuilder) Parse(thread *YMLThread) {
 		t.allChanges[newChange.id] = newChange
 	}
 
-	for _, ch := range thread.UpdatedChanges {
-		newChange := t.parseChange(ch)
-		t.updatedChanges[newChange.id] = newChange
-	}
-
 	t.parseGraph(thread)
 	t.parseOrphans(thread)
 	t.parseHeader(thread)
+	t.parseUpdates(thread.Updates)
 }
 
 func (t *ThreadBuilder) parseChange(ch *Change) *threadChange {
@@ -500,16 +501,29 @@ func (t *ThreadBuilder) traverseFromHeads(f func(t *threadChange) error) error {
 	return nil
 }
 
+func (t *ThreadBuilder) parseUpdates(updates []*Update) {
+	for _, update := range updates {
+		useCase := &updateUseCase{
+			changes: map[string]*threadChange{},
+		}
+		for _, ch := range update.Changes {
+			newChange := t.parseChange(ch)
+			useCase.changes[newChange.id] = newChange
+		}
+		for _, node := range update.Graph {
+			rec := useCase.changes[node.Id]
+			rec.AclHeadIds = node.ACLHeads
+			rec.TreeHeadIds = node.TreeHeads
+			rec.SnapshotBaseId = node.BaseSnapshot
+		}
+
+		t.updates[update.UseCase] = useCase
+	}
+}
+
 func (t *ThreadBuilder) parseGraph(thread *YMLThread) {
 	for _, node := range thread.Graph {
 		rec := t.allChanges[node.Id]
-		rec.AclHeadIds = node.ACLHeads
-		rec.TreeHeadIds = node.TreeHeads
-		rec.SnapshotBaseId = node.BaseSnapshot
-	}
-
-	for _, node := range thread.UpdatedGraph {
-		rec := t.updatedChanges[node.Id]
 		rec.AclHeadIds = node.ACLHeads
 		rec.TreeHeadIds = node.TreeHeads
 		rec.SnapshotBaseId = node.BaseSnapshot
