@@ -95,15 +95,20 @@ type Header struct {
 	IsWorkspace   bool   `yaml:"isWorkspace"`
 }
 
+type Update struct {
+	UseCase string       `yaml:"useCase"`
+	Changes []*Change    `yaml:"changes"`
+	Graph   []*GraphNode `yaml:"graph"`
+}
+
 type YMLThread struct {
-	Description    *ThreadDescription `yaml:"thread"`
-	Changes        []*Change          `yaml:"changes"`
-	UpdatedChanges []*Change          `yaml:"updatedChanges"`
+	Description *ThreadDescription `yaml:"thread"`
+	Changes     []*Change          `yaml:"changes"`
+	Updates     []*Update          `yaml:"updates"`
 
 	Keys Keys `yaml:"keys"`
 
-	Graph        []*GraphNode `yaml:"graph"`
-	UpdatedGraph []*GraphNode `yaml:"updatedGraph"`
+	Graph []*GraphNode `yaml:"graph"`
 
 	Heads   []string `yaml:"heads"`
 	Orphans []string `yaml:"orphans"`

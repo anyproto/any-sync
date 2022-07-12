@@ -106,31 +106,33 @@ header:
   isWorkspace: false
 orphans:
   - "A.1.3"
-updatedChanges:
-  - id: B.1.3
-    identity: B
+updates:
+  - useCase: append
     changes:
-      - textAppend:
-          text: "second"
-    readKey: key.Read.1
-  - id: A.1.4
-    identity: A
-    aclChanges:
-      - userAdd:
-          identity: D
-          permission: writer
-          encryptionKey: key.Enc.D
-          encryptedReadKeys: [ key.Read.1 ]
-    changes:
-      - textAppend:
-          text: "second"
-    readKey: key.Read.1
-updatedGraph:
-  - id: B.1.3
-    baseSnapshot: A.1.1
-    aclHeads: [ B.1.1 ]
-    treeHeads: [ B.1.2 ]
-  - id: A.1.4
-    baseSnapshot: A.1.1
-    aclHeads: [ B.1.1 ]
-    treeHeads: [ B.1.3 ]
+    - id: B.1.3
+      identity: B
+      changes:
+        - textAppend:
+            text: "second"
+      readKey: key.Read.1
+    - id: A.1.4
+      identity: A
+      aclChanges:
+        - userAdd:
+            identity: D
+            permission: writer
+            encryptionKey: key.Enc.D
+            encryptedReadKeys: [ key.Read.1 ]
+      changes:
+        - textAppend:
+            text: "second"
+      readKey: key.Read.1
+    graph:
+      - id: B.1.3
+        baseSnapshot: A.1.1
+        aclHeads: [ B.1.1 ]
+        treeHeads: [ B.1.2 ]
+      - id: A.1.4
+        baseSnapshot: A.1.1
+        aclHeads: [ B.1.1 ]
+        treeHeads: [ B.1.3 ]
