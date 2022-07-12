@@ -23,7 +23,10 @@ type plainTextDocument struct {
 }
 
 func (p *plainTextDocument) Text() string {
-	return p.state.Text
+	if p.state != nil {
+		return p.state.Text
+	}
+	return ""
 }
 
 func (p *plainTextDocument) AddText(text string) error {
