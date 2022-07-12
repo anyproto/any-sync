@@ -169,6 +169,9 @@ func (tb *treeBuilder) findBreakpoint(heads []string) (breakpoint string, err er
 			return
 		}
 		shId := ch.SnapshotId
+		if ch.IsSnapshot {
+			shId = ch.Id
+		}
 		if slice.FindPos(snapshotIds, shId) == -1 {
 			snapshotIds = append(snapshotIds, shId)
 		}

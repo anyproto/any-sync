@@ -54,7 +54,7 @@ type aclTree struct {
 	snapshotValidator *snapshotValidator
 	changeBuilder     *changeBuilder
 
-	sync.Mutex
+	sync.RWMutex
 }
 
 func BuildACLTree(
@@ -86,6 +86,7 @@ func BuildACLTree(
 	}
 	aclTree.removeOrphans()
 	t.SetHeads(aclTree.Heads())
+	listener.Rebuild(aclTree)
 
 	return aclTree, nil
 }
@@ -183,13 +184,19 @@ func (a *aclTree) rebuildFromThread(fromStart bool) error {
 }
 
 func (a *aclTree) ACLState() *ACLState {
+	a.RLock()
+	defer a.RUnlock()
 	return a.aclState
 }
 
 func (a *aclTree) AddContent(build func(builder ChangeBuilder) error) (*Change, error) {
 	// TODO: add snapshot creation logic
 	a.Lock()
-	defer a.Unlock()
+	defer func() {
+		a.Unlock()
+		// TODO: should this be called in a separate goroutine to prevent accidental cycles (tree->updater->tree)
+		a.updateListener.Update(a)
+	}()
 
 	a.changeBuilder.Init(a.aclState, a.fullTree, a.accountData)
 	err := build(a.changeBuilder)
@@ -213,13 +220,11 @@ func (a *aclTree) AddContent(build func(builder ChangeBuilder) error) (*Change, 
 	}
 
 	a.thread.SetHeads([]string{ch.Id})
-	a.updateListener.Update(a)
 	return ch, nil
 }
 
 func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 	a.Lock()
-	defer a.Unlock()
 	// TODO: make proper error handling, because there are a lot of corner cases where this will break
 	var err error
 	var mode Mode
@@ -230,6 +235,7 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 		}
 		a.removeOrphans()
 		a.thread.SetHeads(a.fullTree.Heads())
+		a.Unlock()
 		switch mode {
 		case Append:
 			a.updateListener.Update(a)
@@ -286,20 +292,20 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 }
 
 func (a *aclTree) Iterate(f func(change *Change) bool) {
-	a.Lock()
-	defer a.Unlock()
+	a.RLock()
+	defer a.RUnlock()
 	a.fullTree.Iterate(a.fullTree.RootId(), f)
 }
 
 func (a *aclTree) IterateFrom(s string, f func(change *Change) bool) {
-	a.Lock()
-	defer a.Unlock()
+	a.RLock()
+	defer a.RUnlock()
 	a.fullTree.Iterate(s, f)
 }
 
 func (a *aclTree) HasChange(s string) bool {
-	a.Lock()
-	defer a.Unlock()
+	a.RLock()
+	defer a.RUnlock()
 	_, attachedExists := a.fullTree.attached[s]
 	_, unattachedExists := a.fullTree.unAttached[s]
 	_, invalidExists := a.fullTree.invalidChanges[s]
@@ -307,13 +313,13 @@ func (a *aclTree) HasChange(s string) bool {
 }
 
 func (a *aclTree) Heads() []string {
-	a.Lock()
-	defer a.Unlock()
+	a.RLock()
+	defer a.RUnlock()
 	return a.fullTree.Heads()
 }
 
 func (a *aclTree) Root() *Change {
-	a.Lock()
-	defer a.Unlock()
+	a.RLock()
+	defer a.RUnlock()
 	return a.fullTree.Root()
 }
