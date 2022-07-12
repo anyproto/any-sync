@@ -79,11 +79,6 @@ func (t *ThreadBuilder) GetKeychain() *Keychain {
 	return t.keychain
 }
 
-// writer can create docs -> id can create writer permissions
-// by id we can check who created
-// at the same time this guy can add some random folks which are not in space
-// but we should compare this against space in the future
-
 func (t *ThreadBuilder) Heads() []string {
 	return t.heads
 }
@@ -228,6 +223,7 @@ func (t *ThreadBuilder) Parse(thread *YMLThread) {
 
 	t.parseGraph(thread)
 	t.parseOrphans(thread)
+	t.parseHeader(thread)
 }
 
 func (t *ThreadBuilder) parseChange(ch *Change) *threadChange {
