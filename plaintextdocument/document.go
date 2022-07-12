@@ -2,7 +2,9 @@ package plaintextdocument
 
 import (
 	"fmt"
+
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/account"
+	aclpb "github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/testchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
@@ -113,7 +115,7 @@ func NewPlainTextDocument(
 	create func(change *thread.RawChange) (thread.Thread, error),
 	text string) (PlainTextDocument, error) {
 	changeBuilder := func(builder acltree.ChangeBuilder) {
-		builder.UserAdd(acc.Identity, acc.EncKey.GetPublic())
+		builder.UserAdd(acc.Identity, acc.EncKey.GetPublic(), aclpb.ACLChange_Admin)
 		builder.AddChangeContent(createInitialChangeContent(text))
 	}
 	t, err := acltree.BuildThreadWithACL(

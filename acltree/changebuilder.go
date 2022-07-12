@@ -11,7 +11,7 @@ import (
 type MarshalledChange = []byte
 
 type ACLChangeBuilder interface {
-	UserAdd(identity string, encryptionKey keys.EncryptionPubKey)
+	UserAdd(identity string, encryptionKey keys.EncryptionPubKey, permissions pb.ACLChangeUserPermissions)
 	AddId(id string)      // TODO: this is only for testing
 	SetMakeSnapshot(bool) // TODO: who should decide this? probably ACLTree so we can delete it
 }
