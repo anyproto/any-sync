@@ -52,7 +52,7 @@ func (c *changeBuilder) SetMakeSnapshot(b bool) {
 	c.makeSnapshot = b
 }
 
-func (c *changeBuilder) UserAdd(identity string, encryptionKey keys.EncryptionPubKey) {
+func (c *changeBuilder) UserAdd(identity string, encryptionKey keys.EncryptionPubKey, permissions pb.ACLChangeUserPermissions) {
 	//TODO implement me
 	panic("implement me")
 }

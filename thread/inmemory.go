@@ -18,7 +18,7 @@ type inMemoryThread struct {
 	orphans []string
 	changes map[string]*RawChange
 
-	sync.Mutex
+	sync.RWMutex
 }
 
 func NewInMemoryThread(firstChange *RawChange) (Thread, error) {
@@ -44,27 +44,37 @@ func NewInMemoryThread(firstChange *RawChange) (Thread, error) {
 		heads:   []string{firstChange.Id},
 		orphans: nil,
 		changes: changes,
-		Mutex:   sync.Mutex{},
+		RWMutex: sync.RWMutex{},
 	}, nil
 }
 
 func (t *inMemoryThread) ID() string {
+	t.RLock()
+	defer t.RUnlock()
 	return t.id
 }
 
 func (t *inMemoryThread) Header() *pb.ThreadHeader {
+	t.RLock()
+	defer t.RUnlock()
 	return t.header
 }
 
 func (t *inMemoryThread) Heads() []string {
+	t.RLock()
+	defer t.RUnlock()
 	return t.heads
 }
 
 func (t *inMemoryThread) Orphans() []string {
+	t.RLock()
+	defer t.RUnlock()
 	return t.orphans
 }
 
 func (t *inMemoryThread) SetHeads(heads []string) {
+	t.Lock()
+	defer t.Unlock()
 	t.heads = t.heads[:0]
 
 	for _, h := range heads {
@@ -73,20 +83,28 @@ func (t *inMemoryThread) SetHeads(heads []string) {
 }
 
 func (t *inMemoryThread) RemoveOrphans(orphans ...string) {
+	t.Lock()
+	defer t.Unlock()
 	t.orphans = slice.Difference(t.orphans, orphans)
 }
 
 func (t *inMemoryThread) AddOrphans(orphans ...string) {
+	t.Lock()
+	defer t.Unlock()
 	t.orphans = append(t.orphans, orphans...)
 }
 
 func (t *inMemoryThread) AddRawChange(change *RawChange) error {
+	t.Lock()
+	defer t.Unlock()
 	// TODO: better to do deep copy
 	t.changes[change.Id] = change
 	return nil
 }
 
 func (t *inMemoryThread) AddChange(change aclchanges.Change) error {
+	t.Lock()
+	defer t.Unlock()
 	signature := change.Signature()
 	id := change.CID()
 	aclChange := change.ProtoChange()
@@ -105,6 +123,8 @@ func (t *inMemoryThread) AddChange(change aclchanges.Change) error {
 }
 
 func (t *inMemoryThread) GetChange(ctx context.Context, changeId string) (*RawChange, error) {
+	t.RLock()
+	defer t.RUnlock()
 	if res, exists := t.changes[changeId]; exists {
 		return res, nil
 	}
