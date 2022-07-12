@@ -27,13 +27,14 @@ func (p *plainTextDocument) Text() string {
 }
 
 func (p *plainTextDocument) AddText(text string) error {
-	_, err := p.aclTree.AddContent(func(builder acltree.ChangeBuilder) {
+	_, err := p.aclTree.AddContent(func(builder acltree.ChangeBuilder) error {
 		builder.AddChangeContent(
 			&pb.PlainTextChangeData{
 				Content: []*pb.PlainTextChangeContent{
 					createAppendTextChangeContent(text),
 				},
 			})
+		return nil
 	})
 	return err
 }
@@ -114,9 +115,13 @@ func NewPlainTextDocument(
 	acc *account.AccountData,
 	create func(change *thread.RawChange) (thread.Thread, error),
 	text string) (PlainTextDocument, error) {
-	changeBuilder := func(builder acltree.ChangeBuilder) {
-		builder.UserAdd(acc.Identity, acc.EncKey.GetPublic(), aclpb.ACLChange_Admin)
+	changeBuilder := func(builder acltree.ChangeBuilder) error {
+		err := builder.UserAdd(acc.Identity, acc.EncKey.GetPublic(), aclpb.ACLChange_Admin)
+		if err != nil {
+			return err
+		}
 		builder.AddChangeContent(createInitialChangeContent(text))
+		return nil
 	}
 	t, err := acltree.BuildThreadWithACL(
 		acc,

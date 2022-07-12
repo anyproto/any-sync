@@ -30,7 +30,7 @@ type TreeUpdateListener interface {
 
 type ACLTree interface {
 	ACLState() *ACLState
-	AddContent(f func(builder ChangeBuilder)) (*Change, error)
+	AddContent(f func(builder ChangeBuilder) error) (*Change, error)
 	AddChanges(changes ...*Change) (AddResult, error)
 	Heads() []string
 	Root() *Change
@@ -186,23 +186,21 @@ func (a *aclTree) ACLState() *ACLState {
 	return a.aclState
 }
 
-func (a *aclTree) AddContent(build func(builder ChangeBuilder)) (*Change, error) {
+func (a *aclTree) AddContent(build func(builder ChangeBuilder) error) (*Change, error) {
 	// TODO: add snapshot creation logic
 	a.Lock()
 	defer a.Unlock()
 
 	a.changeBuilder.Init(a.aclState, a.fullTree, a.accountData)
-	build(a.changeBuilder)
-
-	ch, marshalled, err := a.changeBuilder.Build()
-	if err != nil {
-		return nil, err
-	}
-	err = a.aclState.applyChange(ch.Id, ch.Content)
+	err := build(a.changeBuilder)
 	if err != nil {
 		return nil, err
 	}
 
+	ch, marshalled, err := a.changeBuilder.BuildAndApply()
+	if err != nil {
+		return nil, err
+	}
 	a.fullTree.AddFast(ch)
 
 	err = a.thread.AddRawChange(&thread.RawChange{

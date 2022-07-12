@@ -52,9 +52,8 @@ func (sb *aclStateBuilder) BuildBefore(beforeId string) (*ACLState, bool, error)
 		return nil, false, fmt.Errorf("root should always be a snapshot")
 	}
 
-	snapshot := root.Content.GetAclData().GetAclSnapshot()
-	state, err := newACLStateFromSnapshot(
-		snapshot,
+	state, err := newACLStateFromSnapshotChange(
+		root.Content,
 		sb.identity,
 		sb.key,
 		sb.decoder)
@@ -99,7 +98,7 @@ func (sb *aclStateBuilder) BuildBefore(beforeId string) (*ACLState, bool, error)
 
 			idSeenMap[c.Content.Identity] = append(idSeenMap[c.Content.Identity], c)
 			if c.Content.GetAclData() != nil {
-				err = state.applyChange(c.Id, c.Content)
+				err = state.applyChange(c.Content)
 				if err != nil {
 					return false
 				}

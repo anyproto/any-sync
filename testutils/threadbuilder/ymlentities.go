@@ -45,6 +45,7 @@ type ACLChange struct {
 		EncryptionKey     string   `yaml:"encryptionKey"`
 		EncryptedReadKeys []string `yaml:"encryptedReadKeys"`
 		Permissions       string   `yaml:"permissions"`
+		InviteId          string   `yaml:"inviteId"`
 	} `yaml:"userInvite"`
 
 	UserConfirm *struct {

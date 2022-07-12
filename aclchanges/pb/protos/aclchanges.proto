@@ -69,13 +69,14 @@ message ACLChange {
     bytes encryptPublicKey = 2;
     repeated bytes encryptedReadKeys = 3; // all read keys that we know for the user
     UserPermissions permissions = 4;
+    string InviteId = 5;
   }
 
   message UserJoin {
     string identity = 1;
     bytes encryptionKey = 2;
     bytes acceptSignature = 3; // sign acceptPublicKey
-    string userInviteChangeId = 4;
+    string userInviteId = 4;
     repeated bytes encryptedReadKeys = 5; // the idea is that user should itself reencrypt the keys with the pub key
   }
 
