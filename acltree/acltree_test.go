@@ -17,7 +17,7 @@ func (m *mockListener) Update(tree ACLTree) {}
 func (m *mockListener) Rebuild(tree ACLTree) {}
 
 func TestACLTree_UserJoinBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderFromFile("threadbuilder/userjoinexample.yml")
+	thr, err := threadbuilder.NewThreadBuilderWithTestName("userjoinexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestACLTree_UserJoinBuild(t *testing.T) {
 }
 
 func TestACLTree_UserRemoveBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderFromFile("threadbuilder/userremoveexample.yml")
+	thr, err := threadbuilder.NewThreadBuilderWithTestName("userremoveexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestACLTree_UserRemoveBuild(t *testing.T) {
 }
 
 func TestACLTree_UserRemoveBeforeBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderFromFile("threadbuilder/userremovebeforeexample.yml")
+	thr, err := threadbuilder.NewThreadBuilderWithTestName("userremovebeforeexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +115,7 @@ func TestACLTree_UserRemoveBeforeBuild(t *testing.T) {
 }
 
 func TestACLTree_InvalidSnapshotBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderFromFile("threadbuilder/invalidsnapshotexample.yml")
+	thr, err := threadbuilder.NewThreadBuilderWithTestName("invalidsnapshotexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +146,7 @@ func TestACLTree_InvalidSnapshotBuild(t *testing.T) {
 }
 
 func TestACLTree_ValidSnapshotBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderFromFile("threadbuilder/validsnapshotexample.yml")
+	thr, err := threadbuilder.NewThreadBuilderWithTestName("validsnapshotexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}

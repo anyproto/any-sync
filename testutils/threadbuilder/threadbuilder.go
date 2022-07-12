@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/yamltests"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"io/ioutil"
+	"path"
 
 	"github.com/gogo/protobuf/proto"
 	"gopkg.in/yaml.v3"
@@ -44,6 +46,11 @@ func NewThreadBuilder(keychain *Keychain) *ThreadBuilder {
 		updatedChanges: make(map[string]*threadChange),
 		keychain:       keychain,
 	}
+}
+
+func NewThreadBuilderWithTestName(name string) (*ThreadBuilder, error) {
+	filePath := path.Join(yamltests.Path(), name)
+	return NewThreadBuilderFromFile(filePath)
 }
 
 func NewThreadBuilderFromFile(file string) (*ThreadBuilder, error) {

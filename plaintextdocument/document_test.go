@@ -8,7 +8,7 @@ package plaintextdocument
 //)
 //
 //func TestDocument_Build(t *testing.T) {
-//	thread, err := threadbuilder.NewThreadBuilderFromFile("threadbuilder/userjoinexample.yml")
+//	thread, err := threadbuilder.NewThreadBuilderWithTestName("threadbuilder/userjoinexample.yml")
 //	if err != nil {
 //		t.Fatal(err)
 //	}
@@ -28,7 +28,7 @@ package plaintextdocument
 //}
 //
 //func TestDocument_Update(t *testing.T) {
-//	thread, err := threadbuilder.NewThreadBuilderFromFile("threadbuilder/userjoinexample.yml")
+//	thread, err := threadbuilder.NewThreadBuilderWithTestName("threadbuilder/userjoinexample.yml")
 //	if err != nil {
 //		t.Fatal(err)
 //	}
