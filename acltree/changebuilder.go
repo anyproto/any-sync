@@ -8,6 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/textileio/go-threads/crypto/symmetric"
 	"hash/fnv"
+	"time"
 )
 
 type MarshalledChange = []byte
@@ -105,34 +106,37 @@ func (c *changeBuilder) UserAdd(identity string, encryptionKey keys.EncryptionPu
 }
 
 func (c *changeBuilder) BuildAndApply() (*Change, []byte, error) {
-	marshalled, err := c.changeContent.Marshal()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	encrypted, err := c.aclState.userReadKeys[c.aclState.currentReadKeyHash].
-		Encrypt(marshalled)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	aclChange := &pb.ACLChange{
 		TreeHeadIds:        c.tree.Heads(),
 		AclHeadIds:         c.tree.ACLHeads(),
 		SnapshotBaseId:     c.tree.RootId(),
 		AclData:            c.aclData,
-		ChangesData:        encrypted,
-		CurrentReadKeyHash: c.aclState.currentReadKeyHash,
-		Timestamp:          0,
+		CurrentReadKeyHash: c.readKeyHash,
+		Timestamp:          int64(time.Now().Nanosecond()),
 		Identity:           c.acc.Identity,
 	}
-	err = c.aclState.applyChange(aclChange)
+	err := c.aclState.applyChange(aclChange)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if c.makeSnapshot {
 		c.aclData.AclSnapshot = c.aclState.makeSnapshot()
+	}
+
+	var marshalled []byte
+	if c.changeContent != nil {
+		marshalled, err = c.changeContent.Marshal()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		encrypted, err := c.aclState.userReadKeys[c.aclState.currentReadKeyHash].
+			Encrypt(marshalled)
+		if err != nil {
+			return nil, nil, err
+		}
+		aclChange.ChangesData = encrypted
 	}
 
 	fullMarshalledChange, err := proto.Marshal(aclChange)

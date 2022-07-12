@@ -31,5 +31,12 @@ func BuildThreadWithACL(
 		Signature: change.Signature(),
 		Id:        change.CID(),
 	}
-	return create(rawChange)
+
+	thr, err := create(rawChange)
+	if err != nil {
+		return nil, err
+	}
+
+	thr.SetHeads([]string{change.CID()})
+	return thr, nil
 }

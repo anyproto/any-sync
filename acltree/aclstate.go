@@ -110,8 +110,11 @@ func (st *ACLState) applyChange(change *pb.ACLChange) (err error) {
 		}
 		st.currentReadKeyHash = change.CurrentReadKeyHash
 	}()
+
 	// we can't check this for the user which is joining, because it will not be in our list
-	if !st.isUserJoin(change) {
+	// the same is for the first change to be added
+	skipIdentityCheck := st.isUserJoin(change) || (st.currentReadKeyHash == 0 && st.isUserAdd(change))
+	if !skipIdentityCheck {
 		// we check signature when we add this to the Tree, so no need to do it here
 		if _, exists := st.userStates[change.Identity]; !exists {
 			err = ErrNoSuchUser
@@ -318,6 +321,12 @@ func (st *ACLState) hasPermission(identity string, permission pb.ACLChangeUserPe
 func (st *ACLState) isUserJoin(ch *pb.ACLChange) bool {
 	// if we have a UserJoin, then it should always be the first one applied
 	return ch.AclData.GetAclContent() != nil && ch.AclData.GetAclContent()[0].GetUserJoin() != nil
+}
+
+func (st *ACLState) isUserAdd(ch *pb.ACLChange) bool {
+	// if we have a UserAdd, then it should always be the first one applied
+	userAdd := ch.AclData.GetAclContent()[0].GetUserAdd()
+	return ch.AclData.GetAclContent() != nil && userAdd != nil && userAdd.GetIdentity() == ch.Identity
 }
 
 func (st *ACLState) getPermissionDecreasedUsers(ch *pb.ACLChange) (identities []*pb.ACLChangeUserPermissionChange) {
