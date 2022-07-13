@@ -85,7 +85,11 @@ func BuildACLTree(
 		return nil, err
 	}
 	aclTree.removeOrphans()
-	t.SetHeads(aclTree.Heads())
+	err = t.SetHeads(aclTree.Heads())
+	if err != nil {
+		return nil, err
+	}
+
 	listener.Rebuild(aclTree)
 
 	return aclTree, nil
@@ -121,11 +125,15 @@ func BuildACLTree(
 //	return nil
 //}
 
-func (a *aclTree) removeOrphans() {
+func (a *aclTree) removeOrphans() error {
 	// removing attached or invalid orphans
 	var toRemove []string
 
-	for _, orphan := range a.treeStorage.Orphans() {
+	orphans, err := a.treeStorage.Orphans()
+	if err != nil {
+		return err
+	}
+	for _, orphan := range orphans {
 		if _, exists := a.fullTree.attached[orphan]; exists {
 			toRemove = append(toRemove, orphan)
 		}
@@ -133,7 +141,7 @@ func (a *aclTree) removeOrphans() {
 			toRemove = append(toRemove, orphan)
 		}
 	}
-	a.treeStorage.RemoveOrphans(toRemove...)
+	return a.treeStorage.RemoveOrphans(toRemove...)
 }
 
 func (a *aclTree) rebuildFromStorage(fromStart bool) error {
@@ -219,7 +227,10 @@ func (a *aclTree) AddContent(build func(builder ChangeBuilder) error) (*Change, 
 		return nil, err
 	}
 
-	a.treeStorage.SetHeads([]string{ch.Id})
+	err = a.treeStorage.SetHeads([]string{ch.Id})
+	if err != nil {
+		return nil, err
+	}
 	return ch, nil
 }
 
@@ -233,8 +244,17 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 		if err != nil {
 			return
 		}
-		a.removeOrphans()
-		a.treeStorage.SetHeads(a.fullTree.Heads())
+
+		err = a.removeOrphans()
+		if err != nil {
+			return
+		}
+
+		err = a.treeStorage.SetHeads(a.fullTree.Heads())
+		if err != nil {
+			return
+		}
+
 		a.Unlock()
 		switch mode {
 		case Append:
@@ -251,7 +271,10 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 		if err != nil {
 			return AddResult{}, err
 		}
-		a.treeStorage.AddOrphans(ch.Id)
+		err = a.treeStorage.AddOrphans(ch.Id)
+		if err != nil {
+			return AddResult{}, err
+		}
 	}
 
 	prevHeads := a.fullTree.Heads()

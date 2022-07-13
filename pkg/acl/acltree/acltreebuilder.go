@@ -38,8 +38,16 @@ func (tb *aclTreeBuilder) Init() {
 
 func (tb *aclTreeBuilder) Build() (*Tree, error) {
 	var headsAndOrphans []string
-	headsAndOrphans = append(headsAndOrphans, tb.treeStorage.Orphans()...)
-	headsAndOrphans = append(headsAndOrphans, tb.treeStorage.Heads()...)
+	orphans, err := tb.treeStorage.Orphans()
+	if err != nil {
+		return nil, err
+	}
+	heads, err := tb.treeStorage.Heads()
+	if err != nil {
+		return nil, err
+	}
+	headsAndOrphans = append(headsAndOrphans, orphans...)
+	headsAndOrphans = append(headsAndOrphans, heads...)
 	aclHeads, err := tb.getACLHeads(headsAndOrphans)
 
 	if err != nil {
@@ -94,7 +102,11 @@ func (tb *aclTreeBuilder) dfsFromStart(heads []string) (buf []*Change, root *Cha
 			possibleRoots = append(possibleRoots, ch)
 		}
 	}
-	header := tb.treeStorage.Header()
+	header, err := tb.treeStorage.Header()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	for _, r := range possibleRoots {
 		if r.Id == header.FirstChangeId {
 			return buf, r, nil
