@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/textileio/go-threads/crypto/symmetric"
 	"hash/fnv"

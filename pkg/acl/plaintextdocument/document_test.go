@@ -1,9 +1,9 @@
 package plaintextdocument
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/testutils/threadbuilder"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/threadbuilder"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

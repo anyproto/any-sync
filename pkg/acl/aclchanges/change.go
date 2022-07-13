@@ -1,7 +1,7 @@
 package aclchanges
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
 )
 
 type Change interface {

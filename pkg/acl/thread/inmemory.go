@@ -3,8 +3,8 @@ package thread
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/thread/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"

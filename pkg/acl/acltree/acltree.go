@@ -1,8 +1,8 @@
 package acltree
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
 	"sync"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"

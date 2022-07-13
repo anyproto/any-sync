@@ -3,8 +3,8 @@ package acltree
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges/pb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
 	"time"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
