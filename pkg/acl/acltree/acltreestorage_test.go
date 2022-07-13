@@ -31,15 +31,27 @@ func Test_BuildTreeStorageWithACL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build should not return error")
 	}
-	if len(thr.Heads()) == 0 {
+
+	heads, err := thr.Heads()
+	if err != nil {
+		t.Fatalf("should return heads: %v", err)
+	}
+	if len(heads) == 0 {
 		t.Fatalf("tree storage should have non-empty heads")
 	}
-	if thr.Header() == nil {
-		t.Fatalf("tree storage should have non-empty header")
+
+	header, err := thr.Header()
+	if err != nil {
+		t.Fatalf("tree storage header should return without error: %v", err)
 	}
-	assert.Equal(t, thr.Heads()[0], thr.Header().FirstChangeId)
-	assert.NotEmpty(t, thr.TreeID())
-	ch, err := thr.GetChange(context.Background(), thr.Header().FirstChangeId)
+	assert.Equal(t, heads[0], header.FirstChangeId)
+
+	treeId, err := thr.TreeID()
+	if err != nil {
+		t.Fatalf("tree id should return without error: %v", err)
+	}
+	assert.NotEmpty(t, treeId)
+	ch, err := thr.GetChange(context.Background(), header.FirstChangeId)
 	if err != nil {
 		t.Fatalf("get change should not return error: %v", err)
 	}

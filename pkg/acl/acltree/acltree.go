@@ -4,8 +4,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"sync"
-
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 )
 
 type AddResultSummary int
@@ -61,11 +59,10 @@ func BuildACLTree(
 	t treestorage.TreeStorage,
 	acc *account.AccountData,
 	listener TreeUpdateListener) (ACLTree, error) {
-	decoder := keys.NewEd25519Decoder()
-	aclTreeBuilder := newACLTreeBuilder(t, decoder)
-	treeBuilder := newTreeBuilder(t, decoder)
-	snapshotValidator := newSnapshotValidator(decoder, acc)
-	aclStateBuilder := newACLStateBuilder(decoder, acc)
+	aclTreeBuilder := newACLTreeBuilder(t, acc.Decoder)
+	treeBuilder := newTreeBuilder(t, acc.Decoder)
+	snapshotValidator := newSnapshotValidator(acc.Decoder, acc) // TODO: this looks weird, change it
+	aclStateBuilder := newACLStateBuilder(acc.Decoder, acc)
 	changeBuilder := newChangeBuilder()
 
 	aclTree := &aclTree{
@@ -84,7 +81,10 @@ func BuildACLTree(
 	if err != nil {
 		return nil, err
 	}
-	aclTree.removeOrphans()
+	err = aclTree.removeOrphans()
+	if err != nil {
+		return nil, err
+	}
 	err = t.SetHeads(aclTree.Heads())
 	if err != nil {
 		return nil, err

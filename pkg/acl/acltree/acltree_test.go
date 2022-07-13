@@ -4,6 +4,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/treestoragebuilder"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,6 +26,7 @@ func TestACLTree_UserJoinBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  keys.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -59,6 +61,7 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  keys.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -108,6 +111,7 @@ func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  keys.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -158,6 +162,7 @@ func TestACLTree_UserRemoveBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  keys.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -188,6 +193,7 @@ func TestACLTree_UserRemoveBeforeBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  keys.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -219,6 +225,7 @@ func TestACLTree_InvalidSnapshotBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  keys.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -249,6 +256,7 @@ func TestACLTree_ValidSnapshotBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  keys.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)

@@ -37,6 +37,9 @@ func BuildTreeStorageWithACL(
 		return nil, err
 	}
 
-	thr.SetHeads([]string{change.CID()})
+	err = thr.SetHeads([]string{change.CID()})
+	if err != nil {
+		return nil, err
+	}
 	return thr, nil
 }
