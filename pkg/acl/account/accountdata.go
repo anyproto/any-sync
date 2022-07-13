@@ -7,7 +7,7 @@ import (
 
 type AccountData struct { // TODO: create a convenient constructor for this
 	Identity string // TODO: this is essentially the same as sign key
-	SignKey  signingkey.SigningPrivKey
-	EncKey   encryptionkey.EncryptionPrivKey
-	Decoder  signingkey.SigningPubKeyDecoder
+	SignKey  signingkey.PrivKey
+	EncKey   encryptionkey.PrivKey
+	Decoder  signingkey.PubKeyDecoder
 }

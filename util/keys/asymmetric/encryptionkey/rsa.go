@@ -60,15 +60,15 @@ func (e *EncryptionRsaPrivKey) Decrypt(bytes []byte) ([]byte, error) {
 	return rsa.DecryptOAEP(hash, rand.Reader, &e.privKey, bytes, nil)
 }
 
-func (e *EncryptionRsaPrivKey) GetPublic() EncryptionPubKey {
+func (e *EncryptionRsaPrivKey) GetPublic() PubKey {
 	return &EncryptionRsaPubKey{pubKey: e.privKey.PublicKey}
 }
 
-func GenerateRandomRSAKeyPair(bits int) (EncryptionPrivKey, EncryptionPubKey, error) {
+func GenerateRandomRSAKeyPair(bits int) (PrivKey, PubKey, error) {
 	return GenerateRSAKeyPair(bits, rand.Reader)
 }
 
-func GenerateRSAKeyPair(bits int, src io.Reader) (EncryptionPrivKey, EncryptionPubKey, error) {
+func GenerateRSAKeyPair(bits int, src io.Reader) (PrivKey, PubKey, error) {
 	if bits < MinRsaKeyBits {
 		return nil, nil, ErrKeyLengthTooSmall
 	}
@@ -80,7 +80,7 @@ func GenerateRSAKeyPair(bits int, src io.Reader) (EncryptionPrivKey, EncryptionP
 	return &EncryptionRsaPrivKey{privKey: *priv}, &EncryptionRsaPubKey{pubKey: pk}, nil
 }
 
-func NewEncryptionRsaPrivKeyFromBytes(bytes []byte) (EncryptionPrivKey, error) {
+func NewEncryptionRsaPrivKeyFromBytes(bytes []byte) (PrivKey, error) {
 	sk, err := x509.ParsePKCS1PrivateKey(bytes)
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func NewEncryptionRsaPrivKeyFromBytes(bytes []byte) (EncryptionPrivKey, error) {
 	return &EncryptionRsaPrivKey{privKey: *sk}, nil
 }
 
-func NewEncryptionRsaPubKeyFromBytes(bytes []byte) (EncryptionPubKey, error) {
+func NewEncryptionRsaPubKeyFromBytes(bytes []byte) (PubKey, error) {
 	pub, err := x509.ParsePKIXPublicKey(bytes)
 	if err != nil {
 		return nil, err

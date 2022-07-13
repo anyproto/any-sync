@@ -23,16 +23,16 @@ type Ed25519PublicKey struct {
 	k ed25519.PublicKey
 }
 
-func NewSigningEd25519PubKeyFromBytes(bytes []byte) (SigningPubKey, error) {
+func NewSigningEd25519PubKeyFromBytes(bytes []byte) (PubKey, error) {
 	return UnmarshalEd25519PublicKey(bytes)
 }
 
-func GenerateRandomEd25519KeyPair() (SigningPrivKey, SigningPubKey, error) {
+func GenerateRandomEd25519KeyPair() (PrivKey, PubKey, error) {
 	return GenerateEd25519Key(rand.Reader)
 }
 
 // GenerateEd25519Key generates a new ed25519 private and public key pair.
-func GenerateEd25519Key(src io.Reader) (SigningPrivKey, SigningPubKey, error) {
+func GenerateEd25519Key(src io.Reader) (PrivKey, PubKey, error) {
 	pub, priv, err := ed25519.GenerateKey(src)
 	if err != nil {
 		return nil, nil, err
@@ -74,7 +74,7 @@ func (k *Ed25519PrivateKey) Equals(o keys.Key) bool {
 }
 
 // GetPublic returns an ed25519 public key from a private key.
-func (k *Ed25519PrivateKey) GetPublic() SigningPubKey {
+func (k *Ed25519PrivateKey) GetPublic() PubKey {
 	return &Ed25519PublicKey{k: k.pubKeyBytes()}
 }
 
@@ -104,7 +104,7 @@ func (k *Ed25519PublicKey) Verify(data []byte, sig []byte) (bool, error) {
 }
 
 // UnmarshalEd25519PublicKey returns a public key from input bytes.
-func UnmarshalEd25519PublicKey(data []byte) (SigningPubKey, error) {
+func UnmarshalEd25519PublicKey(data []byte) (PubKey, error) {
 	if len(data) != 32 {
 		return nil, errors.New("expect ed25519 public key data size to be 32")
 	}
@@ -115,7 +115,7 @@ func UnmarshalEd25519PublicKey(data []byte) (SigningPubKey, error) {
 }
 
 // UnmarshalEd25519PrivateKey returns a private key from input bytes.
-func UnmarshalEd25519PrivateKey(data []byte) (SigningPrivKey, error) {
+func UnmarshalEd25519PrivateKey(data []byte) (PrivKey, error) {
 	switch len(data) {
 	case ed25519.PrivateKeySize + ed25519.PublicKeySize:
 		// Remove the redundant public key. See issue #36.
@@ -146,15 +146,15 @@ func UnmarshalEd25519PrivateKey(data []byte) (SigningPrivKey, error) {
 
 type Ed25519SigningPubKeyDecoder struct{}
 
-func NewEd25519Decoder() SigningPubKeyDecoder {
+func NewEd25519Decoder() PubKeyDecoder {
 	return &Ed25519SigningPubKeyDecoder{}
 }
 
-func (e *Ed25519SigningPubKeyDecoder) DecodeFromBytes(bytes []byte) (SigningPubKey, error) {
+func (e *Ed25519SigningPubKeyDecoder) DecodeFromBytes(bytes []byte) (PubKey, error) {
 	return NewSigningEd25519PubKeyFromBytes(bytes)
 }
 
-func (e *Ed25519SigningPubKeyDecoder) DecodeFromString(identity string) (SigningPubKey, error) {
+func (e *Ed25519SigningPubKeyDecoder) DecodeFromString(identity string) (PubKey, error) {
 	pubKeyRaw, err := strkey.Decode(0x5b, identity)
 	if err != nil {
 		return nil, err
@@ -167,7 +167,7 @@ func (e *Ed25519SigningPubKeyDecoder) DecodeFromStringIntoBytes(identity string)
 	return strkey.Decode(0x5b, identity)
 }
 
-func (e *Ed25519SigningPubKeyDecoder) EncodeToString(pubkey SigningPubKey) (string, error) {
+func (e *Ed25519SigningPubKeyDecoder) EncodeToString(pubkey PubKey) (string, error) {
 	raw, err := pubkey.Raw()
 	if err != nil {
 		return "", err

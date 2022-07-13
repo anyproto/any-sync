@@ -14,7 +14,7 @@ import (
 type MarshalledChange = []byte
 
 type ACLChangeBuilder interface {
-	UserAdd(identity string, encryptionKey encryptionkey.EncryptionPubKey, permissions pb.ACLChangeUserPermissions) error
+	UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions pb.ACLChangeUserPermissions) error
 	AddId(id string)      // TODO: this is only for testing
 	SetMakeSnapshot(bool) // TODO: who should decide this? probably ACLTree so we can delete it
 }
@@ -68,7 +68,7 @@ func (c *changeBuilder) SetMakeSnapshot(b bool) {
 	c.makeSnapshot = b
 }
 
-func (c *changeBuilder) UserAdd(identity string, encryptionKey encryptionkey.EncryptionPubKey, permissions pb.ACLChangeUserPermissions) error {
+func (c *changeBuilder) UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions pb.ACLChangeUserPermissions) error {
 	var allKeys []*symmetric.Key
 	if c.aclState.currentReadKeyHash != 0 {
 		for _, key := range c.aclState.userReadKeys {
