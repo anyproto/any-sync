@@ -1,0 +1,6 @@
+anytype:
+  swarmKey: "/key/swarm/psk/1.0.0/base16/209992e611c27d5dce8fbd2e7389f6b51da9bee980992ef60739460b536139ec"
+
+grpcServer:
+  listenAddrs:
+    - ":443"
