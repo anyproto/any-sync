@@ -48,31 +48,31 @@ func NewInMemoryTreeStorage(firstChange *RawChange) (TreeStorage, error) {
 	}, nil
 }
 
-func (t *inMemoryTreeStorage) TreeID() string {
+func (t *inMemoryTreeStorage) TreeID() (string, error) {
 	t.RLock()
 	defer t.RUnlock()
-	return t.id
+	return t.id, nil
 }
 
-func (t *inMemoryTreeStorage) Header() *pb.TreeHeader {
+func (t *inMemoryTreeStorage) Header() (*pb.TreeHeader, error) {
 	t.RLock()
 	defer t.RUnlock()
-	return t.header
+	return t.header, nil
 }
 
-func (t *inMemoryTreeStorage) Heads() []string {
+func (t *inMemoryTreeStorage) Heads() ([]string, error) {
 	t.RLock()
 	defer t.RUnlock()
-	return t.heads
+	return t.heads, nil
 }
 
-func (t *inMemoryTreeStorage) Orphans() []string {
+func (t *inMemoryTreeStorage) Orphans() ([]string, error) {
 	t.RLock()
 	defer t.RUnlock()
-	return t.orphans
+	return t.orphans, nil
 }
 
-func (t *inMemoryTreeStorage) SetHeads(heads []string) {
+func (t *inMemoryTreeStorage) SetHeads(heads []string) error {
 	t.Lock()
 	defer t.Unlock()
 	t.heads = t.heads[:0]
@@ -80,18 +80,21 @@ func (t *inMemoryTreeStorage) SetHeads(heads []string) {
 	for _, h := range heads {
 		t.heads = append(t.heads, h)
 	}
+	return nil
 }
 
-func (t *inMemoryTreeStorage) RemoveOrphans(orphans ...string) {
+func (t *inMemoryTreeStorage) RemoveOrphans(orphans ...string) error {
 	t.Lock()
 	defer t.Unlock()
 	t.orphans = slice.Difference(t.orphans, orphans)
+	return nil
 }
 
-func (t *inMemoryTreeStorage) AddOrphans(orphans ...string) {
+func (t *inMemoryTreeStorage) AddOrphans(orphans ...string) error {
 	t.Lock()
 	defer t.Unlock()
 	t.orphans = append(t.orphans, orphans...)
+	return nil
 }
 
 func (t *inMemoryTreeStorage) AddRawChange(change *RawChange) error {

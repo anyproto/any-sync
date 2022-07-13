@@ -6,16 +6,15 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/pb"
 )
 
-// TODO: change methods to have errors as a return parameter, because we will be dealing with a real database
 type TreeStorage interface {
-	TreeID() string
+	TreeID() (string, error)
 
-	Header() *pb.TreeHeader
-	Heads() []string
-	Orphans() []string
-	SetHeads(heads []string)
-	RemoveOrphans(orphan ...string)
-	AddOrphans(orphan ...string)
+	Header() (*pb.TreeHeader, error)
+	Heads() ([]string, error)
+	Orphans() ([]string, error)
+	SetHeads(heads []string) error
+	RemoveOrphans(orphan ...string) error
+	AddOrphans(orphan ...string) error
 
 	AddRawChange(change *RawChange) error
 	AddChange(change aclchanges.Change) error

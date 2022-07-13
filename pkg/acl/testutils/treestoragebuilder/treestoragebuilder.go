@@ -75,16 +75,16 @@ func NewTreeStorageBuilderFromFile(file string) (*TreeStorageBuilder, error) {
 	return tb, nil
 }
 
-func (t *TreeStorageBuilder) TreeID() string {
-	return t.treeId
+func (t *TreeStorageBuilder) TreeID() (string, error) {
+	return t.treeId, nil
 }
 
 func (t *TreeStorageBuilder) GetKeychain() *Keychain {
 	return t.keychain
 }
 
-func (t *TreeStorageBuilder) Heads() []string {
-	return t.heads
+func (t *TreeStorageBuilder) Heads() ([]string, error) {
+	return t.heads, nil
 }
 
 func (t *TreeStorageBuilder) AddRawChange(change *treestorage.RawChange) error {
@@ -118,8 +118,9 @@ func (t *TreeStorageBuilder) AddRawChange(change *treestorage.RawChange) error {
 	return nil
 }
 
-func (t *TreeStorageBuilder) AddOrphans(orphans ...string) {
+func (t *TreeStorageBuilder) AddOrphans(orphans ...string) error {
 	t.orphans = append(t.orphans, orphans...)
+	return nil
 }
 
 func (t *TreeStorageBuilder) AddChange(change aclchanges.Change) error {
@@ -149,17 +150,19 @@ func (t *TreeStorageBuilder) AddChange(change aclchanges.Change) error {
 	return nil
 }
 
-func (t *TreeStorageBuilder) Orphans() []string {
-	return t.orphans
+func (t *TreeStorageBuilder) Orphans() ([]string, error) {
+	return t.orphans, nil
 }
 
-func (t *TreeStorageBuilder) SetHeads(heads []string) {
+func (t *TreeStorageBuilder) SetHeads(heads []string) error {
 	// we should copy here instead of just setting the value
 	t.heads = heads
+	return nil
 }
 
-func (t *TreeStorageBuilder) RemoveOrphans(orphans ...string) {
+func (t *TreeStorageBuilder) RemoveOrphans(orphans ...string) error {
 	t.orphans = slice.Difference(t.orphans, orphans)
+	return nil
 }
 
 func (t *TreeStorageBuilder) GetChange(ctx context.Context, recordID string) (*treestorage.RawChange, error) {
@@ -176,8 +179,8 @@ func (t *TreeStorageBuilder) GetUpdates(useCase string) []*treestorage.RawChange
 	return res
 }
 
-func (t *TreeStorageBuilder) Header() *storagepb.TreeHeader {
-	return t.header
+func (t *TreeStorageBuilder) Header() (*storagepb.TreeHeader, error) {
+	return t.header, nil
 }
 
 func (t *TreeStorageBuilder) getChange(changeId string, m map[string]*treeChange) *treestorage.RawChange {
