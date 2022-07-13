@@ -21,7 +21,7 @@ type Keychain struct {
 	ReadKeys              map[string]*SymKey
 	ReadKeysByHash        map[uint64]*SymKey
 	GeneratedIdentities   map[string]string
-	coder                 *keys.Ed25519SigningPubKeyDecoder
+	coder                 keys.SigningPubKeyDecoder
 }
 
 func NewKeychain() *Keychain {
