@@ -5,7 +5,7 @@
 // +build !nographviz
 // +build amd64 arm64
 
-package threadbuilder
+package treestoragebuilder
 
 import (
 	"fmt"
@@ -26,14 +26,14 @@ type EdgeParameters struct {
 	label string
 }
 
-func (t *ThreadBuilder) Graph() (string, error) {
+func (t *TreeStorageBuilder) Graph() (string, error) {
 	// TODO: check updates on https://github.com/goccy/go-graphviz/issues/52 or make a fix yourself to use better library here
 	graph := gographviz.NewGraph()
 	graph.SetName("G")
 	graph.SetDir(true)
 	var nodes = make(map[string]struct{})
 
-	var addNodes = func(r *threadChange) error {
+	var addNodes = func(r *treeChange) error {
 		// TODO: revisit function after checking
 
 		style := "solid"
@@ -114,7 +114,7 @@ func (t *ThreadBuilder) Graph() (string, error) {
 		return nil
 	}
 
-	var addLinks = func(t *threadChange) error {
+	var addLinks = func(t *treeChange) error {
 		for _, prevId := range t.AclHeadIds {
 			err := createEdge(t.id, prevId, EdgeParameters{
 				style: "dashed",

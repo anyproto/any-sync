@@ -2,14 +2,14 @@ package acltree
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 )
 
-func BuildThreadWithACL(
+func BuildTreeStorageWithACL(
 	acc *account.AccountData,
 	build func(builder ChangeBuilder) error,
-	create func(change *thread.RawChange) (thread.Thread, error)) (thread.Thread, error) {
+	create func(change *treestorage.RawChange) (treestorage.TreeStorage, error)) (treestorage.TreeStorage, error) {
 	bld := newChangeBuilder()
 	bld.Init(
 		newACLState(acc.Identity, acc.EncKey, keys.NewEd25519Decoder()),
@@ -26,7 +26,7 @@ func BuildThreadWithACL(
 		return nil, err
 	}
 
-	rawChange := &thread.RawChange{
+	rawChange := &treestorage.RawChange{
 		Payload:   payload,
 		Signature: change.Signature(),
 		Id:        change.CID(),

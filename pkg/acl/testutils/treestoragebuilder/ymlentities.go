@@ -1,6 +1,6 @@
-package threadbuilder
+package treestoragebuilder
 
-type ThreadDescription struct {
+type TreeDescription struct {
 	Author string `yaml:"author"`
 }
 
@@ -102,10 +102,10 @@ type Update struct {
 	Graph   []*GraphNode `yaml:"graph"`
 }
 
-type YMLThread struct {
-	Description *ThreadDescription `yaml:"thread"`
-	Changes     []*Change          `yaml:"changes"`
-	Updates     []*Update          `yaml:"updates"`
+type YMLTree struct {
+	Description *TreeDescription `yaml:"tree"`
+	Changes     []*Change        `yaml:"changes"`
+	Updates     []*Update        `yaml:"updates"`
 
 	Keys Keys `yaml:"keys"`
 

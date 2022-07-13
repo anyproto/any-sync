@@ -1,4 +1,4 @@
-package threadbuilder
+package treestoragebuilder
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 )
 
 func Test_YamlParse(t *testing.T) {
-	tb, _ := NewThreadBuilderWithTestName("userjoinexampleupdate.yml")
+	tb, _ := NewTreeStorageBuilderWithTestName("userjoinexampleupdate.yml")
 	gr, _ := tb.Graph()
 	fmt.Println(gr)
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"time"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
@@ -15,17 +15,17 @@ type changeLoader struct {
 	cache                map[string]*Change
 	identityKeys         map[string]keys.SigningPubKey
 	signingPubKeyDecoder keys.SigningPubKeyDecoder
-	thread               thread.Thread
+	treeStorage          treestorage.TreeStorage
 	changeCreator        func(id string, ch *pb.ACLChange) *Change
 }
 
 func newChangeLoader(
-	thread thread.Thread,
+	treeStorage treestorage.TreeStorage,
 	signingPubKeyDecoder keys.SigningPubKeyDecoder,
 	changeCreator func(id string, ch *pb.ACLChange) *Change) *changeLoader {
 	return &changeLoader{
 		signingPubKeyDecoder: signingPubKeyDecoder,
-		thread:               thread,
+		treeStorage:          treeStorage,
 		changeCreator:        changeCreator,
 	}
 }
@@ -45,7 +45,7 @@ func (c *changeLoader) loadChange(id string) (ch *Change, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
-	change, err := c.thread.GetChange(ctx, id)
+	change, err := c.treeStorage.GetChange(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (c *changeLoader) verify(identity string, payload, signature []byte) (isVer
 	return identityKey.Verify(payload, signature)
 }
 
-func (c *changeLoader) makeVerifiedACLChange(change *thread.RawChange) (aclChange *pb.ACLChange, err error) {
+func (c *changeLoader) makeVerifiedACLChange(change *treestorage.RawChange) (aclChange *pb.ACLChange, err error) {
 	aclChange = new(pb.ACLChange)
 
 	// TODO: think what should we do with such cases, because this can be used by attacker to break our Tree

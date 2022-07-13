@@ -3,7 +3,7 @@ package acltree
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/threadbuilder"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/treestoragebuilder"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,7 +16,7 @@ func (m *mockListener) Update(tree ACLTree) {}
 func (m *mockListener) Rebuild(tree ACLTree) {}
 
 func TestACLTree_UserJoinBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("userjoinexample.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("userjoinexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +50,7 @@ func TestACLTree_UserJoinBuild(t *testing.T) {
 }
 
 func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("userjoinexampleupdate.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("userjoinexampleupdate.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 }
 
 func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("userjoinexampleupdate.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("userjoinexampleupdate.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
 }
 
 func TestACLTree_UserRemoveBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("userremoveexample.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("userremoveexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +179,7 @@ func TestACLTree_UserRemoveBuild(t *testing.T) {
 }
 
 func TestACLTree_UserRemoveBeforeBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("userremovebeforeexample.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("userremovebeforeexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +210,7 @@ func TestACLTree_UserRemoveBeforeBuild(t *testing.T) {
 }
 
 func TestACLTree_InvalidSnapshotBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("invalidsnapshotexample.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("invalidsnapshotexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,7 +240,7 @@ func TestACLTree_InvalidSnapshotBuild(t *testing.T) {
 }
 
 func TestACLTree_ValidSnapshotBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("validsnapshotexample.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("validsnapshotexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}

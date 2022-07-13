@@ -2,10 +2,10 @@
 // +build !linux,!darwin android ios nographviz
 // +build !amd64
 
-package threadbuilder
+package treestoragebuilder
 
 import "fmt"
 
-func (t *ThreadBuilder) Graph() (string, error) {
+func (t *TreeStorageBuilder) Graph() (string, error) {
 	return "", fmt.Errorf("building graphs is not supported")
 }

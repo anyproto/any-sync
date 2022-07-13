@@ -1,16 +1,16 @@
-package thread
+package treestorage
 
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/pb"
 )
 
 // TODO: change methods to have errors as a return parameter, because we will be dealing with a real database
-type Thread interface {
-	ID() string
+type TreeStorage interface {
+	TreeID() string
 
-	Header() *pb.ThreadHeader
+	Header() *pb.TreeHeader
 	Heads() []string
 	Orphans() []string
 	SetHeads(heads []string)

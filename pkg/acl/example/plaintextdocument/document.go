@@ -6,7 +6,7 @@ import (
 	aclpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/pb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 
 	"github.com/gogo/protobuf/proto"
 )
@@ -111,12 +111,12 @@ func (p *plainTextDocument) Rebuild(tree acltree.ACLTree) {
 }
 
 func NewInMemoryPlainTextDocument(acc *account.AccountData, text string) (PlainTextDocument, error) {
-	return NewPlainTextDocument(acc, thread.NewInMemoryThread, text)
+	return NewPlainTextDocument(acc, treestorage.NewInMemoryTreeStorage, text)
 }
 
 func NewPlainTextDocument(
 	acc *account.AccountData,
-	create func(change *thread.RawChange) (thread.Thread, error),
+	create func(change *treestorage.RawChange) (treestorage.TreeStorage, error),
 	text string) (PlainTextDocument, error) {
 	changeBuilder := func(builder acltree.ChangeBuilder) error {
 		err := builder.UserAdd(acc.Identity, acc.EncKey.GetPublic(), aclpb.ACLChange_Admin)
@@ -126,7 +126,7 @@ func NewPlainTextDocument(
 		builder.AddChangeContent(createInitialChangeContent(text))
 		return nil
 	}
-	t, err := acltree.BuildThreadWithACL(
+	t, err := acltree.BuildTreeStorageWithACL(
 		acc,
 		changeBuilder,
 		create)
