@@ -12,7 +12,6 @@ require (
 	github.com/multiformats/go-multihash v0.0.15
 	github.com/prometheus/common v0.18.0
 	github.com/stretchr/testify v1.7.0
-	github.com/textileio/go-threads v1.0.2-0.20210304072541-d0f91da84404
 	go.uber.org/zap v1.21.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -40,5 +39,3 @@ require (
 	golang.org/x/sys v0.0.0-20210510120138-977fb7262007 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
 )
-
-replace github.com/textileio/go-threads => github.com/anytypeio/go-threads v1.1.0-rc1.0.20220223104843-a67245cee80e

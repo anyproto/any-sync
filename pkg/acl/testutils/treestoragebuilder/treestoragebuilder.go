@@ -9,14 +9,14 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/yamltests"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	storagepb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"io/ioutil"
 	"path"
 
 	"github.com/gogo/protobuf/proto"
 	"gopkg.in/yaml.v3"
-
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 )
 
 const plainTextDocType uint16 = 1
@@ -25,7 +25,7 @@ type treeChange struct {
 	*pb.ACLChange
 	id      string
 	readKey *SymKey
-	signKey keys.SigningPrivKey
+	signKey signingkey.SigningPrivKey
 
 	changesDataDecrypted []byte
 }
@@ -297,7 +297,7 @@ func (t *TreeStorageBuilder) parseACLSnapshot(s *ACLSnapshot) *pb.ACLChangeACLSn
 		aclUserState.Identity = t.keychain.GetIdentity(state.Identity)
 
 		encKey := t.keychain.
-			GetKey(state.EncryptionKey).(keys.EncryptionPrivKey)
+			GetKey(state.EncryptionKey).(encryptionkey.EncryptionPrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 		aclUserState.EncryptionKey = rawKey
 
@@ -334,7 +334,7 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChange
 		add := ch.UserAdd
 
 		encKey := t.keychain.
-			GetKey(add.EncryptionKey).(keys.EncryptionPrivKey)
+			GetKey(add.EncryptionKey).(encryptionkey.EncryptionPrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 
 		convCh = &pb.ACLChangeACLContentValue{
@@ -351,11 +351,11 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChange
 		join := ch.UserJoin
 
 		encKey := t.keychain.
-			GetKey(join.EncryptionKey).(keys.EncryptionPrivKey)
+			GetKey(join.EncryptionKey).(encryptionkey.EncryptionPrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 
 		idKey, _ := t.keychain.SigningKeys[join.Identity].GetPublic().Raw()
-		signKey := t.keychain.GetKey(join.AcceptSignature).(keys.SigningPrivKey)
+		signKey := t.keychain.GetKey(join.AcceptSignature).(signingkey.SigningPrivKey)
 		signature, err := signKey.Sign(idKey)
 		if err != nil {
 			panic(err)
@@ -374,9 +374,9 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChange
 		}
 	case ch.UserInvite != nil:
 		invite := ch.UserInvite
-		rawAcceptKey, _ := t.keychain.GetKey(invite.AcceptKey).(keys.SigningPrivKey).GetPublic().Raw()
+		rawAcceptKey, _ := t.keychain.GetKey(invite.AcceptKey).(signingkey.SigningPrivKey).GetPublic().Raw()
 		encKey := t.keychain.
-			GetKey(invite.EncryptionKey).(keys.EncryptionPrivKey)
+			GetKey(invite.EncryptionKey).(encryptionkey.EncryptionPrivKey)
 		rawEncKey, _ := encKey.GetPublic().Raw()
 
 		convCh = &pb.ACLChangeACLContentValue{
@@ -449,7 +449,7 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChange
 	return convCh
 }
 
-func (t *TreeStorageBuilder) encryptReadKeys(keys []string, encKey keys.EncryptionPrivKey) (enc [][]byte) {
+func (t *TreeStorageBuilder) encryptReadKeys(keys []string, encKey encryptionkey.EncryptionPrivKey) (enc [][]byte) {
 	for _, k := range keys {
 		realKey := t.keychain.GetKey(k).(*SymKey).Key.Bytes()
 		res, err := encKey.GetPublic().Encrypt(realKey)

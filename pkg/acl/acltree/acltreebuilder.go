@@ -3,22 +3,22 @@ package acltree
 import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 )
 
 type aclTreeBuilder struct {
 	cache                map[string]*Change
-	identityKeys         map[string]keys.SigningPubKey
-	signingPubKeyDecoder keys.SigningPubKeyDecoder
+	identityKeys         map[string]signingkey.SigningPubKey
+	signingPubKeyDecoder signingkey.SigningPubKeyDecoder
 	tree                 *Tree
 	treeStorage          treestorage.TreeStorage
 
 	*changeLoader
 }
 
-func newACLTreeBuilder(t treestorage.TreeStorage, decoder keys.SigningPubKeyDecoder) *aclTreeBuilder {
+func newACLTreeBuilder(t treestorage.TreeStorage, decoder signingkey.SigningPubKeyDecoder) *aclTreeBuilder {
 	return &aclTreeBuilder{
 		signingPubKeyDecoder: decoder,
 		treeStorage:          t,
@@ -31,7 +31,7 @@ func newACLTreeBuilder(t treestorage.TreeStorage, decoder keys.SigningPubKeyDeco
 
 func (tb *aclTreeBuilder) Init() {
 	tb.cache = make(map[string]*Change)
-	tb.identityKeys = make(map[string]keys.SigningPubKey)
+	tb.identityKeys = make(map[string]signingkey.SigningPubKey)
 	tb.tree = &Tree{}
 	tb.changeLoader.Init(tb.cache, tb.identityKeys)
 }

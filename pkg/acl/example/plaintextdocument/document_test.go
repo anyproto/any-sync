@@ -4,7 +4,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/treestoragebuilder"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -17,7 +17,7 @@ func TestDocument_NewPlainTextDocument(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  keys.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519Decoder(),
 	}
 
 	doc, err := NewPlainTextDocument(data, treestorage.NewInMemoryTreeStorage, "Some text")
@@ -35,7 +35,7 @@ func TestDocument_PlainTextDocument_AddText(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  keys.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519Decoder(),
 	}
 
 	doc, err := NewPlainTextDocument(data, treestorage.NewInMemoryTreeStorage, "Some text")

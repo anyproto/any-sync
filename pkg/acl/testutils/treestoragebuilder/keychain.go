@@ -1,12 +1,12 @@
 package treestoragebuilder
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"hash/fnv"
 	"strings"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
-
-	"github.com/textileio/go-threads/crypto/symmetric"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 )
 
 type SymKey struct {
@@ -15,24 +15,24 @@ type SymKey struct {
 }
 
 type Keychain struct {
-	SigningKeys           map[string]keys.SigningPrivKey
-	SigningKeysByIdentity map[string]keys.SigningPrivKey
-	EncryptionKeys        map[string]keys.EncryptionPrivKey
+	SigningKeys           map[string]signingkey.SigningPrivKey
+	SigningKeysByIdentity map[string]signingkey.SigningPrivKey
+	EncryptionKeys        map[string]encryptionkey.EncryptionPrivKey
 	ReadKeys              map[string]*SymKey
 	ReadKeysByHash        map[uint64]*SymKey
 	GeneratedIdentities   map[string]string
-	coder                 keys.SigningPubKeyDecoder
+	coder                 signingkey.SigningPubKeyDecoder
 }
 
 func NewKeychain() *Keychain {
 	return &Keychain{
-		SigningKeys:           map[string]keys.SigningPrivKey{},
-		SigningKeysByIdentity: map[string]keys.SigningPrivKey{},
-		EncryptionKeys:        map[string]keys.EncryptionPrivKey{},
+		SigningKeys:           map[string]signingkey.SigningPrivKey{},
+		SigningKeysByIdentity: map[string]signingkey.SigningPrivKey{},
+		EncryptionKeys:        map[string]encryptionkey.EncryptionPrivKey{},
 		GeneratedIdentities:   map[string]string{},
 		ReadKeys:              map[string]*SymKey{},
 		ReadKeysByHash:        map[uint64]*SymKey{},
-		coder:                 keys.NewEd25519Decoder(),
+		coder:                 signingkey.NewEd25519Decoder(),
 	}
 }
 
@@ -54,7 +54,7 @@ func (k *Keychain) AddEncryptionKey(name string) {
 	if _, exists := k.EncryptionKeys[name]; exists {
 		return
 	}
-	newPrivKey, _, err := keys.GenerateRandomRSAKeyPair(2048)
+	newPrivKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
 	if err != nil {
 		panic(err)
 	}
@@ -66,7 +66,7 @@ func (k *Keychain) AddSigningKey(name string) {
 	if _, exists := k.SigningKeys[name]; exists {
 		return
 	}
-	newPrivKey, pubKey, err := keys.GenerateRandomEd25519KeyPair()
+	newPrivKey, pubKey, err := signingkey.GenerateRandomEd25519KeyPair()
 	if err != nil {
 		panic(err)
 	}

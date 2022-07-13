@@ -1,4 +1,4 @@
-package keys
+package signingkey
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"io"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/strkey"
@@ -63,10 +64,10 @@ func (k *Ed25519PrivateKey) pubKeyBytes() []byte {
 }
 
 // Equals compares two ed25519 private keys.
-func (k *Ed25519PrivateKey) Equals(o Key) bool {
+func (k *Ed25519PrivateKey) Equals(o keys.Key) bool {
 	edk, ok := o.(*Ed25519PrivateKey)
 	if !ok {
-		return keyEquals(k, o)
+		return keys.KeyEquals(k, o)
 	}
 
 	return subtle.ConstantTimeCompare(k.k, edk.k) == 1
@@ -88,10 +89,10 @@ func (k *Ed25519PublicKey) Raw() ([]byte, error) {
 }
 
 // Equals compares two ed25519 public keys.
-func (k *Ed25519PublicKey) Equals(o Key) bool {
+func (k *Ed25519PublicKey) Equals(o keys.Key) bool {
 	edk, ok := o.(*Ed25519PublicKey)
 	if !ok {
-		return keyEquals(k, o)
+		return keys.KeyEquals(k, o)
 	}
 
 	return bytes.Equal(k.k, edk.k)
