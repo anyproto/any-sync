@@ -7,7 +7,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/server"
 	"go.uber.org/zap"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -34,6 +37,12 @@ func main() {
 		return
 	}
 
+	if debug, ok := os.LookupEnv("ANYPROF"); ok && debug != "" {
+		go func() {
+			http.ListenAndServe(debug, nil)
+		}()
+	}
+
 	// create app
 	ctx := context.Background()
 	a := new(app.App)
@@ -50,7 +59,7 @@ func main() {
 
 	// start app
 	if err := a.Start(ctx); err != nil {
-		log.Error("can't start app", zap.Error(err))
+		log.Fatal("can't start app", zap.Error(err))
 	}
 	log.Info("app started", zap.String("version", a.Version()))
 
@@ -71,5 +80,5 @@ func main() {
 }
 
 func Bootstrap(a *app.App) {
-	//a.Register(mycomponent.New())
+	a.Register(server.New())
 }

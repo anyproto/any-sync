@@ -3,4 +3,7 @@ anytype:
 
 grpcServer:
   listenAddrs:
-    - ":443"
+    - "127.0.0.1:4430"
+  tls: false
+  tlsKeyFile: "etc/x509/key.pem"
+  tlsCertFile: "etc/x509/cert.pem"
