@@ -1,14 +1,16 @@
-package keys
+package encryptionkey
+
+import "github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 
 type EncryptionPrivKey interface {
-	Key
+	keys.Key
 
 	Decrypt([]byte) ([]byte, error)
 	GetPublic() EncryptionPubKey
 }
 
 type EncryptionPubKey interface {
-	Key
+	keys.Key
 
 	Encrypt(data []byte) ([]byte, error)
 }

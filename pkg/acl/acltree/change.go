@@ -6,7 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/gogo/protobuf/proto"
 
-	"github.com/textileio/go-threads/crypto/symmetric"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 )
 
 type ChangeContent struct {

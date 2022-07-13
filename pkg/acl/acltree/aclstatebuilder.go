@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
-
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 )
 
 type aclStateBuilder struct {
 	tree     *Tree
 	identity string
-	key      keys.EncryptionPrivKey
-	decoder  keys.SigningPubKeyDecoder
+	key      encryptionkey.EncryptionPrivKey
+	decoder  signingkey.SigningPubKeyDecoder
 }
 
 type decreasedPermissionsParameters struct {
@@ -20,7 +20,7 @@ type decreasedPermissionsParameters struct {
 	startChange string
 }
 
-func newACLStateBuilder(decoder keys.SigningPubKeyDecoder, accountData *account.AccountData) *aclStateBuilder {
+func newACLStateBuilder(decoder signingkey.SigningPubKeyDecoder, accountData *account.AccountData) *aclStateBuilder {
 	return &aclStateBuilder{
 		decoder:  decoder,
 		identity: accountData.Identity,

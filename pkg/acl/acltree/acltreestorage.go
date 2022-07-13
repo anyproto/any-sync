@@ -3,7 +3,7 @@ package acltree
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 )
 
 func BuildTreeStorageWithACL(
@@ -12,7 +12,7 @@ func BuildTreeStorageWithACL(
 	create func(change *treestorage.RawChange) (treestorage.TreeStorage, error)) (treestorage.TreeStorage, error) {
 	bld := newChangeBuilder()
 	bld.Init(
-		newACLState(acc.Identity, acc.EncKey, keys.NewEd25519Decoder()),
+		newACLState(acc.Identity, acc.EncKey, signingkey.NewEd25519Decoder()),
 		&Tree{},
 		acc)
 	err := build(bld)

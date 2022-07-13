@@ -5,23 +5,23 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"time"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/gogo/protobuf/proto"
 )
 
 type changeLoader struct {
 	cache                map[string]*Change
-	identityKeys         map[string]keys.SigningPubKey
-	signingPubKeyDecoder keys.SigningPubKeyDecoder
+	identityKeys         map[string]signingkey.SigningPubKey
+	signingPubKeyDecoder signingkey.SigningPubKeyDecoder
 	treeStorage          treestorage.TreeStorage
 	changeCreator        func(id string, ch *pb.ACLChange) *Change
 }
 
 func newChangeLoader(
 	treeStorage treestorage.TreeStorage,
-	signingPubKeyDecoder keys.SigningPubKeyDecoder,
+	signingPubKeyDecoder signingkey.SigningPubKeyDecoder,
 	changeCreator func(id string, ch *pb.ACLChange) *Change) *changeLoader {
 	return &changeLoader{
 		signingPubKeyDecoder: signingPubKeyDecoder,
@@ -31,7 +31,7 @@ func newChangeLoader(
 }
 
 func (c *changeLoader) Init(cache map[string]*Change,
-	identityKeys map[string]keys.SigningPubKey) {
+	identityKeys map[string]signingkey.SigningPubKey) {
 	c.cache = cache
 	c.identityKeys = identityKeys
 }

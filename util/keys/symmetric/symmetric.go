@@ -1,4 +1,4 @@
-package keys
+package symmetric
 
 import (
 	"crypto/aes"
@@ -17,17 +17,11 @@ const (
 	KeyBytes = 32
 )
 
-// Key is a wrapper for a symmetric key.
-type key struct {
+type Key struct {
 	raw []byte
 }
 
-func (k *key) Equals(k2 Key) bool {
-	otherKey, ok := k2.(*key)
-	if !ok {
-		return false
-	}
-
+func (k *Key) Equals(otherKey *Key) bool {
 	otherRaw := otherKey.raw
 	keyRaw := k.raw
 
@@ -43,21 +37,21 @@ func (k *key) Equals(k2 Key) bool {
 	return true
 }
 
-func (k *key) Raw() ([]byte, error) {
+func (k *Key) Raw() ([]byte, error) {
 	return k.raw, nil
 }
 
 // NewRandom returns a random key.
-func NewRandom() (Key, error) {
+func NewRandom() (*Key, error) {
 	raw := make([]byte, KeyBytes)
 	if _, err := rand.Read(raw); err != nil {
 		return nil, err
 	}
-	return &key{raw: raw}, nil
+	return &Key{raw: raw}, nil
 }
 
 // New returns Key if err is nil and panics otherwise.
-func New() Key {
+func New() *Key {
 	k, err := NewRandom()
 	if err != nil {
 		panic(err)
@@ -66,15 +60,15 @@ func New() Key {
 }
 
 // FromBytes returns a key by decoding bytes.
-func FromBytes(k []byte) (Key, error) {
+func FromBytes(k []byte) (*Key, error) {
 	if len(k) != KeyBytes {
 		return nil, fmt.Errorf("invalid key")
 	}
-	return &key{raw: k}, nil
+	return &Key{raw: k}, nil
 }
 
 // FromString returns a key by decoding a base32-encoded string.
-func FromString(k string) (Key, error) {
+func FromString(k string) (*Key, error) {
 	_, b, err := mbase.Decode(k)
 	if err != nil {
 		return nil, err
@@ -83,17 +77,17 @@ func FromString(k string) (Key, error) {
 }
 
 // Bytes returns raw key bytes.
-func (k *key) Bytes() []byte {
+func (k *Key) Bytes() []byte {
 	return k.raw
 }
 
 // MarshalBinary implements BinaryMarshaler.
-func (k *key) MarshalBinary() ([]byte, error) {
+func (k *Key) MarshalBinary() ([]byte, error) {
 	return k.raw, nil
 }
 
 // String returns the base32-encoded string representation of raw key bytes.
-func (k *key) String() string {
+func (k *Key) String() string {
 	str, err := mbase.Encode(mbase.Base32, k.raw)
 	if err != nil {
 		panic("should not error with hardcoded mbase: " + err.Error())
@@ -102,7 +96,7 @@ func (k *key) String() string {
 }
 
 // Encrypt performs AES-256 GCM encryption on plaintext.
-func (k *key) Encrypt(plaintext []byte) ([]byte, error) {
+func (k *Key) Encrypt(plaintext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(k.raw[:KeyBytes])
 	if err != nil {
 		return nil, err
@@ -121,7 +115,7 @@ func (k *key) Encrypt(plaintext []byte) ([]byte, error) {
 }
 
 // Decrypt uses key to perform AES-256 GCM decryption on ciphertext.
-func (k *key) Decrypt(ciphertext []byte) ([]byte, error) {
+func (k *Key) Decrypt(ciphertext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(k.raw[:KeyBytes])
 	if err != nil {
 		return nil, err

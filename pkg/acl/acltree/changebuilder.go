@@ -4,9 +4,9 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 	"github.com/gogo/protobuf/proto"
-	"github.com/textileio/go-threads/crypto/symmetric"
 	"hash/fnv"
 	"time"
 )
@@ -14,7 +14,7 @@ import (
 type MarshalledChange = []byte
 
 type ACLChangeBuilder interface {
-	UserAdd(identity string, encryptionKey keys.EncryptionPubKey, permissions pb.ACLChangeUserPermissions) error
+	UserAdd(identity string, encryptionKey encryptionkey.EncryptionPubKey, permissions pb.ACLChangeUserPermissions) error
 	AddId(id string)      // TODO: this is only for testing
 	SetMakeSnapshot(bool) // TODO: who should decide this? probably ACLTree so we can delete it
 }
@@ -68,7 +68,7 @@ func (c *changeBuilder) SetMakeSnapshot(b bool) {
 	c.makeSnapshot = b
 }
 
-func (c *changeBuilder) UserAdd(identity string, encryptionKey keys.EncryptionPubKey, permissions pb.ACLChangeUserPermissions) error {
+func (c *changeBuilder) UserAdd(identity string, encryptionKey encryptionkey.EncryptionPubKey, permissions pb.ACLChangeUserPermissions) error {
 	var allKeys []*symmetric.Key
 	if c.aclState.currentReadKeyHash != 0 {
 		for _, key := range c.aclState.userReadKeys {

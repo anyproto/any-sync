@@ -1,7 +1,9 @@
-package keys
+package signingkey
+
+import "github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 
 type SigningPrivKey interface {
-	Key
+	keys.Key
 
 	Sign([]byte) ([]byte, error)
 
@@ -9,7 +11,7 @@ type SigningPrivKey interface {
 }
 
 type SigningPubKey interface {
-	Key
+	keys.Key
 
 	Verify(data []byte, sig []byte) (bool, error)
 }

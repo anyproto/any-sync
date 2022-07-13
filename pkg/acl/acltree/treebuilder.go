@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	//"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/lib/logging"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/prometheus/common/log"
@@ -18,15 +18,15 @@ var (
 
 type treeBuilder struct {
 	cache                map[string]*Change
-	identityKeys         map[string]keys.SigningPubKey
-	signingPubKeyDecoder keys.SigningPubKeyDecoder
+	identityKeys         map[string]signingkey.SigningPubKey
+	signingPubKeyDecoder signingkey.SigningPubKeyDecoder
 	tree                 *Tree
 	treeStorage          treestorage.TreeStorage
 
 	*changeLoader
 }
 
-func newTreeBuilder(t treestorage.TreeStorage, decoder keys.SigningPubKeyDecoder) *treeBuilder {
+func newTreeBuilder(t treestorage.TreeStorage, decoder signingkey.SigningPubKeyDecoder) *treeBuilder {
 	return &treeBuilder{
 		signingPubKeyDecoder: decoder,
 		treeStorage:          t,
@@ -39,7 +39,7 @@ func newTreeBuilder(t treestorage.TreeStorage, decoder keys.SigningPubKeyDecoder
 
 func (tb *treeBuilder) Init() {
 	tb.cache = make(map[string]*Change)
-	tb.identityKeys = make(map[string]keys.SigningPubKey)
+	tb.identityKeys = make(map[string]signingkey.SigningPubKey)
 	tb.tree = &Tree{}
 	tb.changeLoader.Init(tb.cache, tb.identityKeys)
 }

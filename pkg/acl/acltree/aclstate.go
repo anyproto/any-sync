@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
-	"github.com/textileio/go-threads/crypto/symmetric"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 	"hash/fnv"
 )
 
@@ -21,15 +22,15 @@ type ACLState struct {
 	userReadKeys         map[uint64]*symmetric.Key
 	userStates           map[string]*pb.ACLChangeUserState
 	userInvites          map[string]*pb.ACLChangeUserInvite
-	signingPubKeyDecoder keys.SigningPubKeyDecoder
-	encryptionKey        keys.EncryptionPrivKey
+	signingPubKeyDecoder signingkey.SigningPubKeyDecoder
+	encryptionKey        encryptionkey.EncryptionPrivKey
 	identity             string
 }
 
 func newACLState(
 	identity string,
-	encryptionKey keys.EncryptionPrivKey,
-	signingPubKeyDecoder keys.SigningPubKeyDecoder) *ACLState {
+	encryptionKey encryptionkey.EncryptionPrivKey,
+	signingPubKeyDecoder signingkey.SigningPubKeyDecoder) *ACLState {
 	return &ACLState{
 		identity:             identity,
 		encryptionKey:        encryptionKey,
@@ -43,8 +44,8 @@ func newACLState(
 func newACLStateFromSnapshotChange(
 	snapshotChange *pb.ACLChange,
 	identity string,
-	encryptionKey keys.EncryptionPrivKey,
-	signingPubKeyDecoder keys.SigningPubKeyDecoder) (*ACLState, error) {
+	encryptionKey encryptionkey.EncryptionPrivKey,
+	signingPubKeyDecoder signingkey.SigningPubKeyDecoder) (*ACLState, error) {
 	st := &ACLState{
 		identity:             identity,
 		encryptionKey:        encryptionKey,
