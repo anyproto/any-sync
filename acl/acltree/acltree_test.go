@@ -1,13 +1,12 @@
 package acltree
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/testutils/threadbuilder"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/threadbuilder"
 )
 
 type mockListener struct{}

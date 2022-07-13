@@ -3,10 +3,10 @@ package acltree
 import (
 	"context"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/thread"
 	"time"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/gogo/protobuf/proto"
 )

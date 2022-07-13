@@ -9,14 +9,13 @@ package threadbuilder
 
 import (
 	"fmt"
+	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/acl/testutils/testchanges/pb"
 
 	"github.com/gogo/protobuf/proto"
 	"strings"
 	"unicode"
 
 	"github.com/awalterschulze/gographviz"
-
-	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/testchanges/pb"
 )
 
 // To quickly look at visualized string you can use https://dreampuf.github.io/GraphvizOnline

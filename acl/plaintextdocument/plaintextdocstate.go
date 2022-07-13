@@ -2,8 +2,8 @@ package plaintextdocument
 
 import (
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/testutils/testchanges/pb"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/testchanges/pb"
 	"github.com/gogo/protobuf/proto"
 )
 
