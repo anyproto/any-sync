@@ -30,7 +30,7 @@ func NewInMemoryTreeStorage(firstChange *RawChange) (TreeStorage, error) {
 	if err != nil {
 		return nil, err
 	}
-	threadId, err := cid.NewCIDFromBytes(marshalledHeader)
+	treeId, err := cid.NewCIDFromBytes(marshalledHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func NewInMemoryTreeStorage(firstChange *RawChange) (TreeStorage, error) {
 	changes[firstChange.Id] = firstChange
 
 	return &inMemoryTreeStorage{
-		id:      threadId,
+		id:      treeId,
 		header:  header,
 		heads:   []string{firstChange.Id},
 		orphans: nil,

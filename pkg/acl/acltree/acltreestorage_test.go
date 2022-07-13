@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestBuildThreadWithACL(t *testing.T) {
+func Test_BuildTreeStorageWithACL(t *testing.T) {
 	keychain := treestoragebuilder.NewKeychain()
 	keychain.AddSigningKey("A")
 	keychain.AddEncryptionKey("A")
@@ -32,10 +32,10 @@ func TestBuildThreadWithACL(t *testing.T) {
 		t.Fatalf("build should not return error")
 	}
 	if len(thr.Heads()) == 0 {
-		t.Fatalf("thread should have non-empty heads")
+		t.Fatalf("tree storage should have non-empty heads")
 	}
 	if thr.Header() == nil {
-		t.Fatalf("thread should have non-empty header")
+		t.Fatalf("tree storage should have non-empty header")
 	}
 	assert.Equal(t, thr.Heads()[0], thr.Header().FirstChangeId)
 	assert.NotEmpty(t, thr.TreeID())
