@@ -2,8 +2,8 @@ package thread
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/thread/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread/pb"
 )
 
 // TODO: change methods to have errors as a return parameter, because we will be dealing with a real database

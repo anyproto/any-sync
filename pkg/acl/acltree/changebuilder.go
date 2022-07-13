@@ -1,8 +1,8 @@
 package acltree
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/gogo/protobuf/proto"

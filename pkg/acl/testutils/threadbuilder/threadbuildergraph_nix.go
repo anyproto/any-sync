@@ -9,7 +9,7 @@ package threadbuilder
 
 import (
 	"fmt"
-	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/acl/testutils/testchanges/pb"
+	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/pb"
 
 	"github.com/gogo/protobuf/proto"
 	"strings"

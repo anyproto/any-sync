@@ -2,11 +2,11 @@ package plaintextdocument
 
 import (
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/account"
-	aclpb "github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges/pb"
-	acltree2 "github.com/anytypeio/go-anytype-infrastructure-experiments/acl/acltree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/testutils/testchanges/pb"
-	thread2 "github.com/anytypeio/go-anytype-infrastructure-experiments/acl/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
+	aclpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
 
 	"github.com/gogo/protobuf/proto"
 )
@@ -18,7 +18,7 @@ type PlainTextDocument interface {
 
 type plainTextDocument struct {
 	heads   []string
-	aclTree acltree2.ACLTree
+	aclTree acltree.ACLTree
 	state   *DocumentState
 }
 
@@ -30,7 +30,7 @@ func (p *plainTextDocument) Text() string {
 }
 
 func (p *plainTextDocument) AddText(text string) error {
-	_, err := p.aclTree.AddContent(func(builder acltree2.ChangeBuilder) error {
+	_, err := p.aclTree.AddContent(func(builder acltree.ChangeBuilder) error {
 		builder.AddChangeContent(
 			&pb.PlainTextChangeData{
 				Content: []*pb.PlainTextChangeContent{
@@ -42,7 +42,7 @@ func (p *plainTextDocument) AddText(text string) error {
 	return err
 }
 
-func (p *plainTextDocument) Update(tree acltree2.ACLTree) {
+func (p *plainTextDocument) Update(tree acltree.ACLTree) {
 	p.aclTree = tree
 	var err error
 	defer func() {
@@ -54,7 +54,7 @@ func (p *plainTextDocument) Update(tree acltree2.ACLTree) {
 	prevHeads := p.heads
 	p.heads = tree.Heads()
 	startId := prevHeads[0]
-	tree.IterateFrom(startId, func(change *acltree2.Change) (isContinue bool) {
+	tree.IterateFrom(startId, func(change *acltree.Change) (isContinue bool) {
 		if change.Id == startId {
 			return true
 		}
@@ -68,7 +68,7 @@ func (p *plainTextDocument) Update(tree acltree2.ACLTree) {
 	})
 }
 
-func (p *plainTextDocument) Rebuild(tree acltree2.ACLTree) {
+func (p *plainTextDocument) Rebuild(tree acltree.ACLTree) {
 	p.aclTree = tree
 	p.heads = tree.Heads()
 	var startId string
@@ -92,7 +92,7 @@ func (p *plainTextDocument) Rebuild(tree acltree2.ACLTree) {
 	}
 
 	startId = rootChange.Id
-	tree.Iterate(func(change *acltree2.Change) (isContinue bool) {
+	tree.Iterate(func(change *acltree.Change) (isContinue bool) {
 		if startId == change.Id {
 			return true
 		}
@@ -111,14 +111,14 @@ func (p *plainTextDocument) Rebuild(tree acltree2.ACLTree) {
 }
 
 func NewInMemoryPlainTextDocument(acc *account.AccountData, text string) (PlainTextDocument, error) {
-	return NewPlainTextDocument(acc, thread2.NewInMemoryThread, text)
+	return NewPlainTextDocument(acc, thread.NewInMemoryThread, text)
 }
 
 func NewPlainTextDocument(
 	acc *account.AccountData,
-	create func(change *thread2.RawChange) (thread2.Thread, error),
+	create func(change *thread.RawChange) (thread.Thread, error),
 	text string) (PlainTextDocument, error) {
-	changeBuilder := func(builder acltree2.ChangeBuilder) error {
+	changeBuilder := func(builder acltree.ChangeBuilder) error {
 		err := builder.UserAdd(acc.Identity, acc.EncKey.GetPublic(), aclpb.ACLChange_Admin)
 		if err != nil {
 			return err
@@ -126,7 +126,7 @@ func NewPlainTextDocument(
 		builder.AddChangeContent(createInitialChangeContent(text))
 		return nil
 	}
-	t, err := acltree2.BuildThreadWithACL(
+	t, err := acltree.BuildThreadWithACL(
 		acc,
 		changeBuilder,
 		create)
@@ -139,7 +139,7 @@ func NewPlainTextDocument(
 		aclTree: nil,
 		state:   nil,
 	}
-	tree, err := acltree2.BuildACLTree(t, acc, doc)
+	tree, err := acltree.BuildACLTree(t, acc, doc)
 	if err != nil {
 		return nil, err
 	}

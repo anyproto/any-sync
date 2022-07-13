@@ -2,7 +2,7 @@ package acltree
 
 import (
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 )
