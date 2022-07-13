@@ -15,20 +15,20 @@ type SymKey struct {
 }
 
 type Keychain struct {
-	SigningKeys           map[string]signingkey.SigningPrivKey
-	SigningKeysByIdentity map[string]signingkey.SigningPrivKey
-	EncryptionKeys        map[string]encryptionkey.EncryptionPrivKey
+	SigningKeys           map[string]signingkey.PrivKey
+	SigningKeysByIdentity map[string]signingkey.PrivKey
+	EncryptionKeys        map[string]encryptionkey.PrivKey
 	ReadKeys              map[string]*SymKey
 	ReadKeysByHash        map[uint64]*SymKey
 	GeneratedIdentities   map[string]string
-	coder                 signingkey.SigningPubKeyDecoder
+	coder                 signingkey.PubKeyDecoder
 }
 
 func NewKeychain() *Keychain {
 	return &Keychain{
-		SigningKeys:           map[string]signingkey.SigningPrivKey{},
-		SigningKeysByIdentity: map[string]signingkey.SigningPrivKey{},
-		EncryptionKeys:        map[string]encryptionkey.EncryptionPrivKey{},
+		SigningKeys:           map[string]signingkey.PrivKey{},
+		SigningKeysByIdentity: map[string]signingkey.PrivKey{},
+		EncryptionKeys:        map[string]encryptionkey.PrivKey{},
 		GeneratedIdentities:   map[string]string{},
 		ReadKeys:              map[string]*SymKey{},
 		ReadKeysByHash:        map[uint64]*SymKey{},

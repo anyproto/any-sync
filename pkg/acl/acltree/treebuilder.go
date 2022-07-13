@@ -18,15 +18,15 @@ var (
 
 type treeBuilder struct {
 	cache                map[string]*Change
-	identityKeys         map[string]signingkey.SigningPubKey
-	signingPubKeyDecoder signingkey.SigningPubKeyDecoder
+	identityKeys         map[string]signingkey.PubKey
+	signingPubKeyDecoder signingkey.PubKeyDecoder
 	tree                 *Tree
 	treeStorage          treestorage.TreeStorage
 
 	*changeLoader
 }
 
-func newTreeBuilder(t treestorage.TreeStorage, decoder signingkey.SigningPubKeyDecoder) *treeBuilder {
+func newTreeBuilder(t treestorage.TreeStorage, decoder signingkey.PubKeyDecoder) *treeBuilder {
 	return &treeBuilder{
 		signingPubKeyDecoder: decoder,
 		treeStorage:          t,
@@ -39,7 +39,7 @@ func newTreeBuilder(t treestorage.TreeStorage, decoder signingkey.SigningPubKeyD
 
 func (tb *treeBuilder) Init() {
 	tb.cache = make(map[string]*Change)
-	tb.identityKeys = make(map[string]signingkey.SigningPubKey)
+	tb.identityKeys = make(map[string]signingkey.PubKey)
 	tb.tree = &Tree{}
 	tb.changeLoader.Init(tb.cache, tb.identityKeys)
 }

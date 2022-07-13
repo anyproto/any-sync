@@ -22,15 +22,15 @@ type ACLState struct {
 	userReadKeys         map[uint64]*symmetric.Key
 	userStates           map[string]*pb.ACLChangeUserState
 	userInvites          map[string]*pb.ACLChangeUserInvite
-	signingPubKeyDecoder signingkey.SigningPubKeyDecoder
-	encryptionKey        encryptionkey.EncryptionPrivKey
+	signingPubKeyDecoder signingkey.PubKeyDecoder
+	encryptionKey        encryptionkey.PrivKey
 	identity             string
 }
 
 func newACLState(
 	identity string,
-	encryptionKey encryptionkey.EncryptionPrivKey,
-	signingPubKeyDecoder signingkey.SigningPubKeyDecoder) *ACLState {
+	encryptionKey encryptionkey.PrivKey,
+	signingPubKeyDecoder signingkey.PubKeyDecoder) *ACLState {
 	return &ACLState{
 		identity:             identity,
 		encryptionKey:        encryptionKey,
@@ -44,8 +44,8 @@ func newACLState(
 func newACLStateFromSnapshotChange(
 	snapshotChange *pb.ACLChange,
 	identity string,
-	encryptionKey encryptionkey.EncryptionPrivKey,
-	signingPubKeyDecoder signingkey.SigningPubKeyDecoder) (*ACLState, error) {
+	encryptionKey encryptionkey.PrivKey,
+	signingPubKeyDecoder signingkey.PubKeyDecoder) (*ACLState, error) {
 	st := &ACLState{
 		identity:             identity,
 		encryptionKey:        encryptionKey,

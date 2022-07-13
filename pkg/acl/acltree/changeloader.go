@@ -13,15 +13,15 @@ import (
 
 type changeLoader struct {
 	cache                map[string]*Change
-	identityKeys         map[string]signingkey.SigningPubKey
-	signingPubKeyDecoder signingkey.SigningPubKeyDecoder
+	identityKeys         map[string]signingkey.PubKey
+	signingPubKeyDecoder signingkey.PubKeyDecoder
 	treeStorage          treestorage.TreeStorage
 	changeCreator        func(id string, ch *pb.ACLChange) *Change
 }
 
 func newChangeLoader(
 	treeStorage treestorage.TreeStorage,
-	signingPubKeyDecoder signingkey.SigningPubKeyDecoder,
+	signingPubKeyDecoder signingkey.PubKeyDecoder,
 	changeCreator func(id string, ch *pb.ACLChange) *Change) *changeLoader {
 	return &changeLoader{
 		signingPubKeyDecoder: signingPubKeyDecoder,
@@ -31,7 +31,7 @@ func newChangeLoader(
 }
 
 func (c *changeLoader) Init(cache map[string]*Change,
-	identityKeys map[string]signingkey.SigningPubKey) {
+	identityKeys map[string]signingkey.PubKey) {
 	c.cache = cache
 	c.identityKeys = identityKeys
 }

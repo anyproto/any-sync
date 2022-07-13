@@ -10,13 +10,13 @@ import (
 type snapshotValidator struct {
 	aclTree      *Tree
 	identity     string
-	key          encryptionkey.EncryptionPrivKey
-	decoder      signingkey.SigningPubKeyDecoder
+	key          encryptionkey.PrivKey
+	decoder      signingkey.PubKeyDecoder
 	stateBuilder *aclStateBuilder
 }
 
 func newSnapshotValidator(
-	decoder signingkey.SigningPubKeyDecoder,
+	decoder signingkey.PubKeyDecoder,
 	accountData *account.AccountData) *snapshotValidator {
 	return &snapshotValidator{
 		identity:     accountData.Identity,

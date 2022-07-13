@@ -11,8 +11,8 @@ import (
 type aclStateBuilder struct {
 	tree     *Tree
 	identity string
-	key      encryptionkey.EncryptionPrivKey
-	decoder  signingkey.SigningPubKeyDecoder
+	key      encryptionkey.PrivKey
+	decoder  signingkey.PubKeyDecoder
 }
 
 type decreasedPermissionsParameters struct {
@@ -20,7 +20,7 @@ type decreasedPermissionsParameters struct {
 	startChange string
 }
 
-func newACLStateBuilder(decoder signingkey.SigningPubKeyDecoder, accountData *account.AccountData) *aclStateBuilder {
+func newACLStateBuilder(decoder signingkey.PubKeyDecoder, accountData *account.AccountData) *aclStateBuilder {
 	return &aclStateBuilder{
 		decoder:  decoder,
 		identity: accountData.Identity,

@@ -2,23 +2,23 @@ package signingkey
 
 import "github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 
-type SigningPrivKey interface {
+type PrivKey interface {
 	keys.Key
 
 	Sign([]byte) ([]byte, error)
 
-	GetPublic() SigningPubKey
+	GetPublic() PubKey
 }
 
-type SigningPubKey interface {
+type PubKey interface {
 	keys.Key
 
 	Verify(data []byte, sig []byte) (bool, error)
 }
 
-type SigningPubKeyDecoder interface {
-	DecodeFromBytes(bytes []byte) (SigningPubKey, error)
-	DecodeFromString(identity string) (SigningPubKey, error)
+type PubKeyDecoder interface {
+	DecodeFromBytes(bytes []byte) (PubKey, error)
+	DecodeFromString(identity string) (PubKey, error)
 	DecodeFromStringIntoBytes(identity string) ([]byte, error)
-	EncodeToString(pubkey SigningPubKey) (string, error)
+	EncodeToString(pubkey PubKey) (string, error)
 }
