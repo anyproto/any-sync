@@ -1,0 +1,109 @@
+thread:
+  author: A
+changes:
+  - id: A.1.1
+    identity: A
+    aclSnapshot:
+      userStates:
+        - identity: A
+          encryptionKey: key.Enc.A
+          encryptedReadKeys: [key.Read.1]
+          permission: admin
+        - identity: B
+          encryptionKey: key.Enc.B
+          encryptedReadKeys: [key.Read.1]
+          permission: admin
+    snapshot:
+      text: "some text"
+    aclChanges:
+      - userAdd:
+          identity: A
+          permission: admin
+          encryptionKey: key.Enc.A
+          encryptedReadKeys: [key.Read.1]
+      - userAdd:
+          identity: B
+          permission: admin
+          encryptionKey: key.Enc.B
+          encryptedReadKeys: [key.Read.1]
+    changes:
+      - textAppend:
+          text: "some text"
+    readKey: key.Read.1
+  - id: A.1.2
+    identity: A
+    aclChanges:
+      - userRemove:
+          removedIdentity: B
+          newReadKey: key.Read.2
+          identitiesLeft: [A, C]
+    readKey: key.Read.2
+  - id: A.1.3
+    identity: A
+    aclChanges:
+      - userAdd:
+          identity: E
+          permission: admin
+          encryptionKey: key.Enc.E
+          encryptedReadKeys: [key.Read.1, key.Read.2]
+    readKey: key.Read.2
+  - id: B.1.1
+    identity: B
+    aclChanges:
+      - userAdd:
+          identity: C
+          permission: admin
+          encryptionKey: key.Enc.C
+          encryptedReadKeys: [ key.Read.1 ]
+    readKey: key.Read.1
+  - id: B.1.2
+    identity: B
+    aclChanges:
+      - userAdd:
+          identity: D
+          permission: admin
+          encryptionKey: key.Enc.D
+          encryptedReadKeys: [ key.Read.1 ]
+    readKey: key.Read.1
+keys:
+  Enc:
+    - A
+    - B
+    - C
+    - D
+    - E
+  Sign:
+    - A
+    - B
+    - C
+    - D
+    - E
+  Read:
+    - 1
+    - 2
+graph:
+  - id: A.1.1
+    baseSnapshot: A.1.1
+    aclSnapshot: A.1.1
+  - id: A.1.2
+    baseSnapshot: A.1.1
+    aclHeads: [B.1.1]
+    treeHeads: [B.1.1]
+  - id: B.1.1
+    baseSnapshot: A.1.1
+    aclHeads: [A.1.1]
+    treeHeads: [A.1.1]
+  - id: B.1.2
+    baseSnapshot: A.1.1
+    aclHeads: [B.1.1]
+    treeHeads: [B.1.1]
+  - id: A.1.3
+    baseSnapshot: A.1.1
+    aclHeads: [A.1.2]
+    treeHeads: [A.1.2]
+orphans:
+  - "A.1.3"
+  - "B.1.2"
+header:
+  firstChangeId: A.1.1
+  isWorkspace: false

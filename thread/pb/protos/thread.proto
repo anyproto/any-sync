@@ -1,0 +1,9 @@
+syntax = "proto3";
+package anytype;
+option go_package = "pb";
+
+message ThreadHeader {
+  string firstChangeId = 1;
+  bool isWorkspace = 2;
+  // TODO: add user identity, signature and nano timestamp
+}

@@ -1,0 +1,26 @@
+syntax = "proto3";
+package anytype;
+option go_package = "pb";
+
+// TODO: move to separate package
+
+message PlainTextChange {
+  message Content {
+    oneof value {
+      TextAppend textAppend = 1;
+    }
+  }
+
+  message TextAppend {
+    string text = 1;
+  }
+
+  message Snapshot {
+    string text = 1;
+  }
+
+  message Data {
+    repeated Content content = 1;
+    Snapshot snapshot = 2;
+  }
+}
