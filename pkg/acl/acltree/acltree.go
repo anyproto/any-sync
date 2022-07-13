@@ -2,7 +2,7 @@ package acltree
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"sync"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
@@ -40,7 +40,7 @@ type ACLTree interface {
 }
 
 type aclTree struct {
-	thread         thread.Thread
+	thread         treestorage.TreeStorage
 	accountData    *account.AccountData
 	updateListener TreeUpdateListener
 
@@ -58,7 +58,7 @@ type aclTree struct {
 }
 
 func BuildACLTree(
-	t thread.Thread,
+	t treestorage.TreeStorage,
 	acc *account.AccountData,
 	listener TreeUpdateListener) (ACLTree, error) {
 	decoder := keys.NewEd25519Decoder()
@@ -210,7 +210,7 @@ func (a *aclTree) AddContent(build func(builder ChangeBuilder) error) (*Change, 
 	}
 	a.fullTree.AddFast(ch)
 
-	err = a.thread.AddRawChange(&thread.RawChange{
+	err = a.thread.AddRawChange(&treestorage.RawChange{
 		Payload:   marshalled,
 		Signature: ch.Signature(),
 		Id:        ch.Id,

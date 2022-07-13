@@ -2,14 +2,14 @@ package plaintextdocument
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/threadbuilder"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/treestoragebuilder"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestDocument_NewPlainTextDocument(t *testing.T) {
-	keychain := threadbuilder.NewKeychain()
+	keychain := treestoragebuilder.NewKeychain()
 	keychain.AddSigningKey("A")
 	keychain.AddEncryptionKey("A")
 	data := &account.AccountData{
@@ -18,7 +18,7 @@ func TestDocument_NewPlainTextDocument(t *testing.T) {
 		EncKey:   keychain.EncryptionKeys["A"],
 	}
 
-	doc, err := NewPlainTextDocument(data, thread.NewInMemoryThread, "Some text")
+	doc, err := NewPlainTextDocument(data, treestorage.NewInMemoryTreeStorage, "Some text")
 	if err != nil {
 		t.Fatalf("should not create document with error: %v", err)
 	}
@@ -26,7 +26,7 @@ func TestDocument_NewPlainTextDocument(t *testing.T) {
 }
 
 func TestDocument_PlainTextDocument_AddText(t *testing.T) {
-	keychain := threadbuilder.NewKeychain()
+	keychain := treestoragebuilder.NewKeychain()
 	keychain.AddSigningKey("A")
 	keychain.AddEncryptionKey("A")
 	data := &account.AccountData{
@@ -35,7 +35,7 @@ func TestDocument_PlainTextDocument_AddText(t *testing.T) {
 		EncKey:   keychain.EncryptionKeys["A"],
 	}
 
-	doc, err := NewPlainTextDocument(data, thread.NewInMemoryThread, "Some text")
+	doc, err := NewPlainTextDocument(data, treestorage.NewInMemoryTreeStorage, "Some text")
 	if err != nil {
 		t.Fatalf("should not create document with error: %v", err)
 	}

@@ -3,7 +3,7 @@ package acltree
 import (
 	"errors"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	//"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/lib/logging"
@@ -21,15 +21,15 @@ type treeBuilder struct {
 	identityKeys         map[string]keys.SigningPubKey
 	signingPubKeyDecoder keys.SigningPubKeyDecoder
 	tree                 *Tree
-	thread               thread.Thread
+	treeStorage          treestorage.TreeStorage
 
 	*changeLoader
 }
 
-func newTreeBuilder(t thread.Thread, decoder keys.SigningPubKeyDecoder) *treeBuilder {
+func newTreeBuilder(t treestorage.TreeStorage, decoder keys.SigningPubKeyDecoder) *treeBuilder {
 	return &treeBuilder{
 		signingPubKeyDecoder: decoder,
-		thread:               t,
+		treeStorage:          t,
 		changeLoader: newChangeLoader(
 			t,
 			decoder,
@@ -46,8 +46,8 @@ func (tb *treeBuilder) Init() {
 
 func (tb *treeBuilder) Build(fromStart bool) (*Tree, error) {
 	var headsAndOrphans []string
-	headsAndOrphans = append(headsAndOrphans, tb.thread.Orphans()...)
-	headsAndOrphans = append(headsAndOrphans, tb.thread.Heads()...)
+	headsAndOrphans = append(headsAndOrphans, tb.treeStorage.Orphans()...)
+	headsAndOrphans = append(headsAndOrphans, tb.treeStorage.Heads()...)
 
 	if fromStart {
 		if err := tb.buildTreeFromStart(headsAndOrphans); err != nil {
@@ -109,7 +109,7 @@ func (tb *treeBuilder) dfsFromStart(heads []string) (buf []*Change, root *Change
 			possibleRoots = append(possibleRoots, ch)
 		}
 	}
-	header := tb.thread.Header()
+	header := tb.treeStorage.Header()
 	for _, r := range possibleRoots {
 		if r.Id == header.FirstChangeId {
 			return buf, r, nil

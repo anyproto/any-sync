@@ -1,4 +1,4 @@
-package threadbuilder
+package treestoragebuilder
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
 	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/yamltests"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
-	threadpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	storagepb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"io/ioutil"
 	"path"
@@ -21,7 +21,7 @@ import (
 
 const plainTextDocType uint16 = 1
 
-type threadChange struct {
+type treeChange struct {
 	*pb.ACLChange
 	id      string
 	readKey *SymKey
@@ -31,63 +31,63 @@ type threadChange struct {
 }
 
 type updateUseCase struct {
-	changes map[string]*threadChange
+	changes map[string]*treeChange
 }
 
-type ThreadBuilder struct {
-	threadId   string
-	allChanges map[string]*threadChange
+type TreeStorageBuilder struct {
+	treeId     string
+	allChanges map[string]*treeChange
 	updates    map[string]*updateUseCase
 	heads      []string
 	orphans    []string
 	keychain   *Keychain
-	header     *threadpb.ThreadHeader
+	header     *storagepb.TreeHeader
 }
 
-func NewThreadBuilder(keychain *Keychain) *ThreadBuilder {
-	return &ThreadBuilder{
-		allChanges: make(map[string]*threadChange),
+func NewTreeStorageBuilder(keychain *Keychain) *TreeStorageBuilder {
+	return &TreeStorageBuilder{
+		allChanges: make(map[string]*treeChange),
 		updates:    make(map[string]*updateUseCase),
 		keychain:   keychain,
 	}
 }
 
-func NewThreadBuilderWithTestName(name string) (*ThreadBuilder, error) {
+func NewTreeStorageBuilderWithTestName(name string) (*TreeStorageBuilder, error) {
 	filePath := path.Join(yamltests.Path(), name)
-	return NewThreadBuilderFromFile(filePath)
+	return NewTreeStorageBuilderFromFile(filePath)
 }
 
-func NewThreadBuilderFromFile(file string) (*ThreadBuilder, error) {
+func NewTreeStorageBuilderFromFile(file string) (*TreeStorageBuilder, error) {
 	content, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
 
-	thread := YMLThread{}
-	err = yaml.Unmarshal(content, &thread)
+	ymlTree := YMLTree{}
+	err = yaml.Unmarshal(content, &ymlTree)
 	if err != nil {
 		return nil, err
 	}
 
-	tb := NewThreadBuilder(NewKeychain())
-	tb.Parse(&thread)
+	tb := NewTreeStorageBuilder(NewKeychain())
+	tb.Parse(&ymlTree)
 
 	return tb, nil
 }
 
-func (t *ThreadBuilder) ID() string {
-	return t.threadId
+func (t *TreeStorageBuilder) TreeID() string {
+	return t.treeId
 }
 
-func (t *ThreadBuilder) GetKeychain() *Keychain {
+func (t *TreeStorageBuilder) GetKeychain() *Keychain {
 	return t.keychain
 }
 
-func (t *ThreadBuilder) Heads() []string {
+func (t *TreeStorageBuilder) Heads() []string {
 	return t.heads
 }
 
-func (t *ThreadBuilder) AddRawChange(change *thread.RawChange) error {
+func (t *TreeStorageBuilder) AddRawChange(change *treestorage.RawChange) error {
 	aclChange := new(pb.ACLChange)
 	var err error
 
@@ -108,7 +108,7 @@ func (t *ThreadBuilder) AddRawChange(change *thread.RawChange) error {
 	// get correct signing key
 	signKey := t.keychain.SigningKeysByIdentity[aclChange.Identity]
 
-	t.allChanges[change.Id] = &threadChange{
+	t.allChanges[change.Id] = &treeChange{
 		ACLChange:            aclChange,
 		id:                   change.Id,
 		readKey:              readKey,
@@ -118,11 +118,11 @@ func (t *ThreadBuilder) AddRawChange(change *thread.RawChange) error {
 	return nil
 }
 
-func (t *ThreadBuilder) AddOrphans(orphans ...string) {
+func (t *TreeStorageBuilder) AddOrphans(orphans ...string) {
 	t.orphans = append(t.orphans, orphans...)
 }
 
-func (t *ThreadBuilder) AddChange(change aclchanges.Change) error {
+func (t *TreeStorageBuilder) AddChange(change aclchanges.Change) error {
 	aclChange := change.ProtoChange()
 	var err error
 	var changesData []byte
@@ -139,7 +139,7 @@ func (t *ThreadBuilder) AddChange(change aclchanges.Change) error {
 	// get correct signing key
 	signKey := t.keychain.SigningKeysByIdentity[aclChange.Identity]
 
-	t.allChanges[change.CID()] = &threadChange{
+	t.allChanges[change.CID()] = &treeChange{
 		ACLChange:            aclChange,
 		id:                   change.CID(),
 		readKey:              readKey,
@@ -149,25 +149,25 @@ func (t *ThreadBuilder) AddChange(change aclchanges.Change) error {
 	return nil
 }
 
-func (t *ThreadBuilder) Orphans() []string {
+func (t *TreeStorageBuilder) Orphans() []string {
 	return t.orphans
 }
 
-func (t *ThreadBuilder) SetHeads(heads []string) {
+func (t *TreeStorageBuilder) SetHeads(heads []string) {
 	// we should copy here instead of just setting the value
 	t.heads = heads
 }
 
-func (t *ThreadBuilder) RemoveOrphans(orphans ...string) {
+func (t *TreeStorageBuilder) RemoveOrphans(orphans ...string) {
 	t.orphans = slice.Difference(t.orphans, orphans)
 }
 
-func (t *ThreadBuilder) GetChange(ctx context.Context, recordID string) (*thread.RawChange, error) {
+func (t *TreeStorageBuilder) GetChange(ctx context.Context, recordID string) (*treestorage.RawChange, error) {
 	return t.getChange(recordID, t.allChanges), nil
 }
 
-func (t *ThreadBuilder) GetUpdates(useCase string) []*thread.RawChange {
-	var res []*thread.RawChange
+func (t *TreeStorageBuilder) GetUpdates(useCase string) []*treestorage.RawChange {
+	var res []*treestorage.RawChange
 	update := t.updates[useCase]
 	for _, ch := range update.changes {
 		rawCh := t.getChange(ch.id, update.changes)
@@ -176,11 +176,11 @@ func (t *ThreadBuilder) GetUpdates(useCase string) []*thread.RawChange {
 	return res
 }
 
-func (t *ThreadBuilder) Header() *threadpb.ThreadHeader {
+func (t *TreeStorageBuilder) Header() *storagepb.TreeHeader {
 	return t.header
 }
 
-func (t *ThreadBuilder) getChange(changeId string, m map[string]*threadChange) *thread.RawChange {
+func (t *TreeStorageBuilder) getChange(changeId string, m map[string]*treeChange) *treestorage.RawChange {
 	rec := m[changeId]
 
 	if rec.changesDataDecrypted != nil {
@@ -202,7 +202,7 @@ func (t *ThreadBuilder) getChange(changeId string, m map[string]*threadChange) *
 		panic("should be able to sign final acl message!")
 	}
 
-	transformedRec := &thread.RawChange{
+	transformedRec := &treestorage.RawChange{
 		Payload:   aclMarshaled,
 		Signature: signature,
 		Id:        changeId,
@@ -210,25 +210,25 @@ func (t *ThreadBuilder) getChange(changeId string, m map[string]*threadChange) *
 	return transformedRec
 }
 
-func (t *ThreadBuilder) Parse(thread *YMLThread) {
+func (t *TreeStorageBuilder) Parse(tree *YMLTree) {
 	// Just to clarify - we are generating new identities for the ones that
 	// are specified in the yml file, because our identities should be Ed25519
 	// the same thing is happening for the encryption keys
-	t.keychain.ParseKeys(&thread.Keys)
-	t.threadId = t.parseThreadId(thread.Description)
-	for _, ch := range thread.Changes {
+	t.keychain.ParseKeys(&tree.Keys)
+	t.treeId = t.parseTreeId(tree.Description)
+	for _, ch := range tree.Changes {
 		newChange := t.parseChange(ch)
 		t.allChanges[newChange.id] = newChange
 	}
 
-	t.parseGraph(thread)
-	t.parseOrphans(thread)
-	t.parseHeader(thread)
-	t.parseUpdates(thread.Updates)
+	t.parseGraph(tree)
+	t.parseOrphans(tree)
+	t.parseHeader(tree)
+	t.parseUpdates(tree.Updates)
 }
 
-func (t *ThreadBuilder) parseChange(ch *Change) *threadChange {
-	newChange := &threadChange{
+func (t *TreeStorageBuilder) parseChange(ch *Change) *treeChange {
+	newChange := &treeChange{
 		id: ch.Id,
 	}
 	k := t.keychain.GetKey(ch.ReadKey).(*SymKey)
@@ -274,26 +274,20 @@ func (t *ThreadBuilder) parseChange(ch *Change) *threadChange {
 	return newChange
 }
 
-func (t *ThreadBuilder) parseThreadId(description *ThreadDescription) string {
+func (t *TreeStorageBuilder) parseTreeId(description *TreeDescription) string {
 	if description == nil {
-		panic("no author in thread")
+		panic("no author in tree")
 	}
-	key := t.keychain.SigningKeys[description.Author]
-	id, err := thread.CreateACLThreadID(key.GetPublic(), plainTextDocType)
-	if err != nil {
-		panic(err)
-	}
-
-	return id.String()
+	return description.Author + ".tree.id"
 }
 
-func (t *ThreadBuilder) parseChangeSnapshot(s *PlainTextSnapshot) *testpb.PlainTextChangeSnapshot {
+func (t *TreeStorageBuilder) parseChangeSnapshot(s *PlainTextSnapshot) *testpb.PlainTextChangeSnapshot {
 	return &testpb.PlainTextChangeSnapshot{
 		Text: s.Text,
 	}
 }
 
-func (t *ThreadBuilder) parseACLSnapshot(s *ACLSnapshot) *pb.ACLChangeACLSnapshot {
+func (t *TreeStorageBuilder) parseACLSnapshot(s *ACLSnapshot) *pb.ACLChangeACLSnapshot {
 	newState := &pb.ACLChangeACLState{}
 	for _, state := range s.UserStates {
 		aclUserState := &pb.ACLChangeUserState{}
@@ -313,7 +307,7 @@ func (t *ThreadBuilder) parseACLSnapshot(s *ACLSnapshot) *pb.ACLChangeACLSnapsho
 	}
 }
 
-func (t *ThreadBuilder) parseDocumentChange(ch *PlainTextChange) (convCh *testpb.PlainTextChangeContent) {
+func (t *TreeStorageBuilder) parseDocumentChange(ch *PlainTextChange) (convCh *testpb.PlainTextChangeContent) {
 	switch {
 	case ch.TextAppend != nil:
 		convCh = &testpb.PlainTextChangeContent{
@@ -331,7 +325,7 @@ func (t *ThreadBuilder) parseDocumentChange(ch *PlainTextChange) (convCh *testpb
 	return convCh
 }
 
-func (t *ThreadBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChangeACLContentValue) {
+func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChangeACLContentValue) {
 	switch {
 	case ch.UserAdd != nil:
 		add := ch.UserAdd
@@ -452,7 +446,7 @@ func (t *ThreadBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChangeACLCo
 	return convCh
 }
 
-func (t *ThreadBuilder) encryptReadKeys(keys []string, encKey keys.EncryptionPrivKey) (enc [][]byte) {
+func (t *TreeStorageBuilder) encryptReadKeys(keys []string, encKey keys.EncryptionPrivKey) (enc [][]byte) {
 	for _, k := range keys {
 		realKey := t.keychain.GetKey(k).(*SymKey).Key.Bytes()
 		res, err := encKey.GetPublic().Encrypt(realKey)
@@ -465,7 +459,7 @@ func (t *ThreadBuilder) encryptReadKeys(keys []string, encKey keys.EncryptionPri
 	return
 }
 
-func (t *ThreadBuilder) convertPermission(perm string) pb.ACLChangeUserPermissions {
+func (t *TreeStorageBuilder) convertPermission(perm string) pb.ACLChangeUserPermissions {
 	switch perm {
 	case "admin":
 		return pb.ACLChange_Admin
@@ -478,7 +472,7 @@ func (t *ThreadBuilder) convertPermission(perm string) pb.ACLChangeUserPermissio
 	}
 }
 
-func (t *ThreadBuilder) traverseFromHeads(f func(t *threadChange) error) error {
+func (t *TreeStorageBuilder) traverseFromHeads(f func(t *treeChange) error) error {
 	uniqMap := map[string]struct{}{}
 	stack := make([]string, len(t.orphans), 10)
 	copy(stack, t.orphans)
@@ -502,10 +496,10 @@ func (t *ThreadBuilder) traverseFromHeads(f func(t *threadChange) error) error {
 	return nil
 }
 
-func (t *ThreadBuilder) parseUpdates(updates []*Update) {
+func (t *TreeStorageBuilder) parseUpdates(updates []*Update) {
 	for _, update := range updates {
 		useCase := &updateUseCase{
-			changes: map[string]*threadChange{},
+			changes: map[string]*treeChange{},
 		}
 		for _, ch := range update.Changes {
 			newChange := t.parseChange(ch)
@@ -522,8 +516,8 @@ func (t *ThreadBuilder) parseUpdates(updates []*Update) {
 	}
 }
 
-func (t *ThreadBuilder) parseGraph(thread *YMLThread) {
-	for _, node := range thread.Graph {
+func (t *TreeStorageBuilder) parseGraph(tree *YMLTree) {
+	for _, node := range tree.Graph {
 		rec := t.allChanges[node.Id]
 		rec.AclHeadIds = node.ACLHeads
 		rec.TreeHeadIds = node.TreeHeads
@@ -531,13 +525,13 @@ func (t *ThreadBuilder) parseGraph(thread *YMLThread) {
 	}
 }
 
-func (t *ThreadBuilder) parseOrphans(thread *YMLThread) {
-	t.orphans = thread.Orphans
+func (t *TreeStorageBuilder) parseOrphans(tree *YMLTree) {
+	t.orphans = tree.Orphans
 }
 
-func (t *ThreadBuilder) parseHeader(thread *YMLThread) {
-	t.header = &threadpb.ThreadHeader{
-		FirstChangeId: thread.Header.FirstChangeId,
-		IsWorkspace:   thread.Header.IsWorkspace,
+func (t *TreeStorageBuilder) parseHeader(tree *YMLTree) {
+	t.header = &storagepb.TreeHeader{
+		FirstChangeId: tree.Header.FirstChangeId,
+		IsWorkspace:   tree.Header.IsWorkspace,
 	}
 }

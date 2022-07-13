@@ -1,4 +1,4 @@
-package threadbuilder
+package treestoragebuilder
 
 import (
 	"hash/fnv"

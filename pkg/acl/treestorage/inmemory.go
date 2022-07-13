@@ -1,19 +1,19 @@
-package thread
+package treestorage
 
 import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"
 	"sync"
 )
 
-type inMemoryThread struct {
+type inMemoryTreeStorage struct {
 	id      string
-	header  *pb.ThreadHeader
+	header  *pb.TreeHeader
 	heads   []string
 	orphans []string
 	changes map[string]*RawChange
@@ -21,8 +21,8 @@ type inMemoryThread struct {
 	sync.RWMutex
 }
 
-func NewInMemoryThread(firstChange *RawChange) (Thread, error) {
-	header := &pb.ThreadHeader{
+func NewInMemoryTreeStorage(firstChange *RawChange) (TreeStorage, error) {
+	header := &pb.TreeHeader{
 		FirstChangeId: firstChange.Id,
 		IsWorkspace:   false,
 	}
@@ -38,7 +38,7 @@ func NewInMemoryThread(firstChange *RawChange) (Thread, error) {
 	changes := make(map[string]*RawChange)
 	changes[firstChange.Id] = firstChange
 
-	return &inMemoryThread{
+	return &inMemoryTreeStorage{
 		id:      threadId,
 		header:  header,
 		heads:   []string{firstChange.Id},
@@ -48,31 +48,31 @@ func NewInMemoryThread(firstChange *RawChange) (Thread, error) {
 	}, nil
 }
 
-func (t *inMemoryThread) ID() string {
+func (t *inMemoryTreeStorage) TreeID() string {
 	t.RLock()
 	defer t.RUnlock()
 	return t.id
 }
 
-func (t *inMemoryThread) Header() *pb.ThreadHeader {
+func (t *inMemoryTreeStorage) Header() *pb.TreeHeader {
 	t.RLock()
 	defer t.RUnlock()
 	return t.header
 }
 
-func (t *inMemoryThread) Heads() []string {
+func (t *inMemoryTreeStorage) Heads() []string {
 	t.RLock()
 	defer t.RUnlock()
 	return t.heads
 }
 
-func (t *inMemoryThread) Orphans() []string {
+func (t *inMemoryTreeStorage) Orphans() []string {
 	t.RLock()
 	defer t.RUnlock()
 	return t.orphans
 }
 
-func (t *inMemoryThread) SetHeads(heads []string) {
+func (t *inMemoryTreeStorage) SetHeads(heads []string) {
 	t.Lock()
 	defer t.Unlock()
 	t.heads = t.heads[:0]
@@ -82,19 +82,19 @@ func (t *inMemoryThread) SetHeads(heads []string) {
 	}
 }
 
-func (t *inMemoryThread) RemoveOrphans(orphans ...string) {
+func (t *inMemoryTreeStorage) RemoveOrphans(orphans ...string) {
 	t.Lock()
 	defer t.Unlock()
 	t.orphans = slice.Difference(t.orphans, orphans)
 }
 
-func (t *inMemoryThread) AddOrphans(orphans ...string) {
+func (t *inMemoryTreeStorage) AddOrphans(orphans ...string) {
 	t.Lock()
 	defer t.Unlock()
 	t.orphans = append(t.orphans, orphans...)
 }
 
-func (t *inMemoryThread) AddRawChange(change *RawChange) error {
+func (t *inMemoryTreeStorage) AddRawChange(change *RawChange) error {
 	t.Lock()
 	defer t.Unlock()
 	// TODO: better to do deep copy
@@ -102,7 +102,7 @@ func (t *inMemoryThread) AddRawChange(change *RawChange) error {
 	return nil
 }
 
-func (t *inMemoryThread) AddChange(change aclchanges.Change) error {
+func (t *inMemoryTreeStorage) AddChange(change aclchanges.Change) error {
 	t.Lock()
 	defer t.Unlock()
 	signature := change.Signature()
@@ -122,7 +122,7 @@ func (t *inMemoryThread) AddChange(change aclchanges.Change) error {
 	return nil
 }
 
-func (t *inMemoryThread) GetChange(ctx context.Context, changeId string) (*RawChange, error) {
+func (t *inMemoryTreeStorage) GetChange(ctx context.Context, changeId string) (*RawChange, error) {
 	t.RLock()
 	defer t.RUnlock()
 	if res, exists := t.changes[changeId]; exists {
