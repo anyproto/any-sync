@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"hash/fnv"
-
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/textileio/go-threads/crypto/symmetric"
+	"hash/fnv"
 )
 
 var ErrNoSuchUser = errors.New("no such user")

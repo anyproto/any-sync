@@ -3,8 +3,12 @@ package threadbuilder
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/yamltests"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges/pb"
+	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/acl/testutils/testchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/testutils/yamltests"
+	thread2 "github.com/anytypeio/go-anytype-infrastructure-experiments/acl/thread"
+	threadpb "github.com/anytypeio/go-anytype-infrastructure-experiments/acl/thread/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"io/ioutil"
 	"path"
@@ -12,10 +16,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"gopkg.in/yaml.v3"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
-	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/testchanges/pb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
-	threadpb "github.com/anytypeio/go-anytype-infrastructure-experiments/thread/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 )
 
@@ -87,7 +87,7 @@ func (t *ThreadBuilder) Heads() []string {
 	return t.heads
 }
 
-func (t *ThreadBuilder) AddRawChange(change *thread.RawChange) error {
+func (t *ThreadBuilder) AddRawChange(change *thread2.RawChange) error {
 	aclChange := new(pb.ACLChange)
 	var err error
 
@@ -162,12 +162,12 @@ func (t *ThreadBuilder) RemoveOrphans(orphans ...string) {
 	t.orphans = slice.Difference(t.orphans, orphans)
 }
 
-func (t *ThreadBuilder) GetChange(ctx context.Context, recordID string) (*thread.RawChange, error) {
+func (t *ThreadBuilder) GetChange(ctx context.Context, recordID string) (*thread2.RawChange, error) {
 	return t.getChange(recordID, t.allChanges), nil
 }
 
-func (t *ThreadBuilder) GetUpdates(useCase string) []*thread.RawChange {
-	var res []*thread.RawChange
+func (t *ThreadBuilder) GetUpdates(useCase string) []*thread2.RawChange {
+	var res []*thread2.RawChange
 	update := t.updates[useCase]
 	for _, ch := range update.changes {
 		rawCh := t.getChange(ch.id, update.changes)
@@ -180,7 +180,7 @@ func (t *ThreadBuilder) Header() *threadpb.ThreadHeader {
 	return t.header
 }
 
-func (t *ThreadBuilder) getChange(changeId string, m map[string]*threadChange) *thread.RawChange {
+func (t *ThreadBuilder) getChange(changeId string, m map[string]*threadChange) *thread2.RawChange {
 	rec := m[changeId]
 
 	if rec.changesDataDecrypted != nil {
@@ -202,7 +202,7 @@ func (t *ThreadBuilder) getChange(changeId string, m map[string]*threadChange) *
 		panic("should be able to sign final acl message!")
 	}
 
-	transformedRec := &thread.RawChange{
+	transformedRec := &thread2.RawChange{
 		Payload:   aclMarshaled,
 		Signature: signature,
 		Id:        changeId,
@@ -279,7 +279,7 @@ func (t *ThreadBuilder) parseThreadId(description *ThreadDescription) string {
 		panic("no author in thread")
 	}
 	key := t.keychain.SigningKeys[description.Author]
-	id, err := thread.CreateACLThreadID(key.GetPublic(), plainTextDocType)
+	id, err := thread2.CreateACLThreadID(key.GetPublic(), plainTextDocType)
 	if err != nil {
 		panic(err)
 	}

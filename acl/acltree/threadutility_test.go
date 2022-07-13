@@ -2,10 +2,10 @@ package acltree
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/testutils/threadbuilder"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/testutils/threadbuilder"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/thread"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

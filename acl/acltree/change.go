@@ -2,10 +2,10 @@ package acltree
 
 import (
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/thread"
 	"github.com/gogo/protobuf/proto"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/aclchanges/pb"
 	"github.com/textileio/go-threads/crypto/symmetric"
 )
 

@@ -2,8 +2,8 @@ package acltree
 
 import (
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/acl/thread"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/thread"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 )
