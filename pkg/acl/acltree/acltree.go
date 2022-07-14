@@ -1,6 +1,7 @@
 package acltree
 
 import (
+	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"sync"
@@ -28,8 +29,8 @@ type TreeUpdateListener interface {
 
 type ACLTree interface {
 	ACLState() *ACLState
-	AddContent(f func(builder ChangeBuilder) error) (*Change, error)
-	AddChanges(changes ...*Change) (AddResult, error)
+	AddContent(ctx context.Context, f func(builder ChangeBuilder) error) (*Change, error)
+	AddChanges(ctx context.Context, changes ...*Change) (AddResult, error)
 	Heads() []string
 	Root() *Change
 	Iterate(func(change *Change) bool)
@@ -197,7 +198,7 @@ func (a *aclTree) ACLState() *ACLState {
 	return a.aclState
 }
 
-func (a *aclTree) AddContent(build func(builder ChangeBuilder) error) (*Change, error) {
+func (a *aclTree) AddContent(ctx context.Context, build func(builder ChangeBuilder) error) (*Change, error) {
 	// TODO: add snapshot creation logic
 	a.Lock()
 	defer func() {
@@ -234,7 +235,7 @@ func (a *aclTree) AddContent(build func(builder ChangeBuilder) error) (*Change, 
 	return ch, nil
 }
 
-func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
+func (a *aclTree) AddChanges(ctx context.Context, changes ...*Change) (AddResult, error) {
 	a.Lock()
 	// TODO: make proper error handling, because there are a lot of corner cases where this will break
 	var err error

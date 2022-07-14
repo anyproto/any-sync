@@ -1,6 +1,7 @@
 package plaintextdocument
 
 import (
+	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/treestoragebuilder"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
@@ -43,13 +44,13 @@ func TestDocument_PlainTextDocument_AddText(t *testing.T) {
 		t.Fatalf("should not create document with error: %v", err)
 	}
 
-	err = doc.AddText("Next")
+	err = doc.AddText(context.Background(), "Next")
 	if err != nil {
 		t.Fatalf("should be able to add document: %v", err)
 	}
 	assert.Equal(t, doc.Text(), "Some text|Next")
 
-	err = doc.AddText("Shmext")
+	err = doc.AddText(context.Background(), "Shmext")
 	if err != nil {
 		t.Fatalf("should be able to add document: %v", err)
 	}
