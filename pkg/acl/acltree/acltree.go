@@ -36,6 +36,8 @@ type ACLTree interface {
 	Iterate(func(change *Change) bool)
 	IterateFrom(string, func(change *Change) bool)
 	HasChange(string) bool
+
+	Close() error
 }
 
 type aclTree struct {
@@ -346,4 +348,8 @@ func (a *aclTree) Root() *Change {
 	a.RLock()
 	defer a.RUnlock()
 	return a.fullTree.Root()
+}
+
+func (a *aclTree) Close() error {
+	return nil
 }

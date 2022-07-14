@@ -12,7 +12,7 @@ func BuildTreeStorageWithACL(
 	create func(change *treestorage.RawChange) (treestorage.TreeStorage, error)) (treestorage.TreeStorage, error) {
 	bld := newChangeBuilder()
 	bld.Init(
-		newACLState(acc.Identity, acc.EncKey, signingkey.NewEd25519Decoder()),
+		newACLState(acc.Identity, acc.EncKey, signingkey.NewEd25519PubKeyDecoder()),
 		&Tree{},
 		acc)
 	err := build(bld)

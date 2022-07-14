@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 	"go.uber.org/zap"
 	"os"
 	"os/signal"
@@ -17,9 +18,10 @@ import (
 var log = logger.NewNamed("main")
 
 var (
-	flagConfigFile = flag.String("c", "etc/config.yml", "path to config file")
-	flagVersion    = flag.Bool("v", false, "show version and exit")
-	flagHelp       = flag.Bool("h", false, "show help and exit")
+	flagConfigFile  = flag.String("c", "etc/config.yml", "path to config file")
+	flagAccountFile = flag.String("a", "etc/account.yaml", "path to account file")
+	flagVersion     = flag.Bool("v", false, "show version and exit")
+	flagHelp        = flag.Bool("h", false, "show help and exit")
 )
 
 func main() {
@@ -44,8 +46,15 @@ func main() {
 		log.Fatal("can't open config file", zap.Error(err))
 	}
 
+	// open account file with node's keys
+	acc, err := account.NewFromFile(*flagAccountFile)
+	if err != nil {
+		log.Fatal("can't open account file", zap.Error(err))
+	}
+
 	// bootstrap components
 	a.Register(conf)
+	a.Register(acc)
 	Bootstrap(a)
 
 	// start app

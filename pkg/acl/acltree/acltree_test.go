@@ -27,7 +27,7 @@ func TestACLTree_UserJoinBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -62,8 +62,25 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
+
+	// Use this for key generation
+	//encryptionDecoder := keys.NewKeyDecoder(func(bytes []byte) (keys.Key, error) {
+	//	key, err := encryptionkey.NewEncryptionRsaPrivKeyFromBytes(bytes)
+	//	return key, err
+	//})
+	//encodedEncryptionKey, _ := encryptionDecoder.EncodeToString(keychain.EncryptionKeys["A"])
+	//
+	//signingDecoder := keys.NewKeyDecoder(func(bytes []byte) (keys.Key, error) {
+	//	key, err := signingkey.NewSigningEd25519PrivKeyFromBytes(bytes)
+	//	return key, err
+	//})
+	//encodedSigningKey, _ := signingDecoder.EncodeToString(keychain.SigningKeys["A"])
+	//
+	//fmt.Println(encodedEncryptionKey)
+	//fmt.Println(encodedSigningKey)
+
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
 	if err != nil {
@@ -112,7 +129,7 @@ func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -163,7 +180,7 @@ func TestACLTree_UserRemoveBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -194,7 +211,7 @@ func TestACLTree_UserRemoveBeforeBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -226,7 +243,7 @@ func TestACLTree_InvalidSnapshotBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -257,7 +274,7 @@ func TestACLTree_ValidSnapshotBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
