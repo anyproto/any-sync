@@ -3,7 +3,7 @@ package acltree
 import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 )
@@ -16,7 +16,7 @@ type aclStateBuilder struct {
 }
 
 type decreasedPermissionsParameters struct {
-	users       []*pb.ACLChangeUserPermissionChange
+	users       []*aclpb.ACLChangeUserPermissionChange
 	startChange string
 }
 
@@ -115,7 +115,7 @@ func (sb *aclStateBuilder) BuildBefore(beforeId string) (*ACLState, bool, error)
 			}
 
 			// the user can't make changes
-			if !state.hasPermission(c.Content.Identity, pb.ACLChange_Writer) && !state.hasPermission(c.Content.Identity, pb.ACLChange_Admin) {
+			if !state.hasPermission(c.Content.Identity, aclpb.ACLChange_Writer) && !state.hasPermission(c.Content.Identity, aclpb.ACLChange_Admin) {
 				err = fmt.Errorf("user %s cannot make changes", c.Content.Identity)
 				return false
 			}
@@ -155,7 +155,7 @@ func (sb *aclStateBuilder) BuildBefore(beforeId string) (*ACLState, bool, error)
 					// if we find some invalid changes
 					if _, exists := validChanges[seen.Id]; !exists {
 						// if the user didn't have enough permission to make changes
-						if seen.IsACLChange() || permChange.Permissions > pb.ACLChange_Writer {
+						if seen.IsACLChange() || permChange.Permissions > aclpb.ACLChange_Writer {
 							removed = true
 							sb.tree.RemoveInvalidChange(seen.Id)
 						}

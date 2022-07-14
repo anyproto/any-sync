@@ -3,7 +3,7 @@ package acltree
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/treestoragebuilder"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"testing"
@@ -40,9 +40,9 @@ func TestACLTree_UserJoinBuild(t *testing.T) {
 	cId := keychain.GeneratedIdentities["C"]
 
 	assert.Equal(t, aclState.identity, aId)
-	assert.Equal(t, aclState.userStates[aId].Permissions, pb.ACLChange_Admin)
-	assert.Equal(t, aclState.userStates[bId].Permissions, pb.ACLChange_Writer)
-	assert.Equal(t, aclState.userStates[cId].Permissions, pb.ACLChange_Reader)
+	assert.Equal(t, aclState.userStates[aId].Permissions, aclpb.ACLChange_Admin)
+	assert.Equal(t, aclState.userStates[bId].Permissions, aclpb.ACLChange_Writer)
+	assert.Equal(t, aclState.userStates[cId].Permissions, aclpb.ACLChange_Reader)
 
 	var changeIds []string
 	tree.Iterate(func(c *Change) (isContinue bool) {
@@ -89,10 +89,10 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 	dId := keychain.GeneratedIdentities["D"]
 
 	assert.Equal(t, aclState.identity, aId)
-	assert.Equal(t, aclState.userStates[aId].Permissions, pb.ACLChange_Admin)
-	assert.Equal(t, aclState.userStates[bId].Permissions, pb.ACLChange_Writer)
-	assert.Equal(t, aclState.userStates[cId].Permissions, pb.ACLChange_Reader)
-	assert.Equal(t, aclState.userStates[dId].Permissions, pb.ACLChange_Writer)
+	assert.Equal(t, aclState.userStates[aId].Permissions, aclpb.ACLChange_Admin)
+	assert.Equal(t, aclState.userStates[bId].Permissions, aclpb.ACLChange_Writer)
+	assert.Equal(t, aclState.userStates[cId].Permissions, aclpb.ACLChange_Reader)
+	assert.Equal(t, aclState.userStates[dId].Permissions, aclpb.ACLChange_Writer)
 
 	var changeIds []string
 	tree.Iterate(func(c *Change) (isContinue bool) {
@@ -139,10 +139,10 @@ func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
 	dId := keychain.GeneratedIdentities["D"]
 
 	assert.Equal(t, aclState.identity, aId)
-	assert.Equal(t, aclState.userStates[aId].Permissions, pb.ACLChange_Admin)
-	assert.Equal(t, aclState.userStates[bId].Permissions, pb.ACLChange_Writer)
-	assert.Equal(t, aclState.userStates[cId].Permissions, pb.ACLChange_Reader)
-	assert.Equal(t, aclState.userStates[dId].Permissions, pb.ACLChange_Writer)
+	assert.Equal(t, aclState.userStates[aId].Permissions, aclpb.ACLChange_Admin)
+	assert.Equal(t, aclState.userStates[bId].Permissions, aclpb.ACLChange_Writer)
+	assert.Equal(t, aclState.userStates[cId].Permissions, aclpb.ACLChange_Reader)
+	assert.Equal(t, aclState.userStates[dId].Permissions, aclpb.ACLChange_Writer)
 
 	var changeIds []string
 
@@ -174,7 +174,7 @@ func TestACLTree_UserRemoveBuild(t *testing.T) {
 	aId := keychain.GeneratedIdentities["A"]
 
 	assert.Equal(t, aclState.identity, aId)
-	assert.Equal(t, aclState.userStates[aId].Permissions, pb.ACLChange_Admin)
+	assert.Equal(t, aclState.userStates[aId].Permissions, aclpb.ACLChange_Admin)
 
 	var changeIds []string
 	tree.Iterate(func(c *Change) (isContinue bool) {
@@ -203,7 +203,7 @@ func TestACLTree_UserRemoveBeforeBuild(t *testing.T) {
 	}
 	aclState := tree.ACLState()
 	for _, s := range []string{"A", "C", "E"} {
-		assert.Equal(t, aclState.userStates[keychain.GetIdentity(s)].Permissions, pb.ACLChange_Admin)
+		assert.Equal(t, aclState.userStates[keychain.GetIdentity(s)].Permissions, aclpb.ACLChange_Admin)
 	}
 	assert.Equal(t, aclState.identity, keychain.GetIdentity("A"))
 	assert.Nil(t, aclState.userStates[keychain.GetIdentity("B")])
@@ -235,7 +235,7 @@ func TestACLTree_InvalidSnapshotBuild(t *testing.T) {
 	}
 	aclState := tree.ACLState()
 	for _, s := range []string{"A", "B", "C", "D", "E", "F"} {
-		assert.Equal(t, aclState.userStates[keychain.GetIdentity(s)].Permissions, pb.ACLChange_Admin)
+		assert.Equal(t, aclState.userStates[keychain.GetIdentity(s)].Permissions, aclpb.ACLChange_Admin)
 	}
 	assert.Equal(t, aclState.identity, keychain.GetIdentity("A"))
 
@@ -266,7 +266,7 @@ func TestACLTree_ValidSnapshotBuild(t *testing.T) {
 	}
 	aclState := tree.ACLState()
 	for _, s := range []string{"A", "B", "C", "D", "E", "F"} {
-		assert.Equal(t, aclState.userStates[keychain.GetIdentity(s)].Permissions, pb.ACLChange_Admin)
+		assert.Equal(t, aclState.userStates[keychain.GetIdentity(s)].Permissions, aclpb.ACLChange_Admin)
 	}
 	assert.Equal(t, aclState.identity, keychain.GetIdentity("A"))
 
