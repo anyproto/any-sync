@@ -1,0 +1,31 @@
+syntax = "proto3";
+package anytype;
+option go_package = "syncpb";
+
+import "pkg/acl/aclchanges/aclpb/protos/aclchanges.proto";
+
+message Sync {
+  message HeadUpdate {
+    repeated Head heads = 1;
+    repeated acl.ACLChange changes = 2;
+    string senderId = 3;
+  }
+
+  message Head {
+    string id = 1;
+    repeated string snapshotPath = 2;
+  }
+
+  message Full {
+    // here with send the request with all changes we have (we already know sender's snapshot path)
+    message Request {
+      repeated Head heads = 1;
+      repeated acl.ACLChange changes = 2;
+    }
+
+    message Response {
+      repeated Head heads = 1;
+      repeated acl.ACLChange changes = 2;
+    }
+  }
+}
