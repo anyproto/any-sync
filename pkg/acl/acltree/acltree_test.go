@@ -67,14 +67,12 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 
 	// Use this for key generation
 	//encryptionDecoder := keys.NewKeyDecoder(func(bytes []byte) (keys.Key, error) {
-	//	key, err := encryptionkey.NewEncryptionRsaPrivKeyFromBytes(bytes)
-	//	return key, err
+	//	return encryptionkey.NewEncryptionRsaPrivKeyFromBytes(bytes)
 	//})
 	//encodedEncryptionKey, _ := encryptionDecoder.EncodeToString(keychain.EncryptionKeys["A"])
 	//
 	//signingDecoder := keys.NewKeyDecoder(func(bytes []byte) (keys.Key, error) {
-	//	key, err := signingkey.NewSigningEd25519PrivKeyFromBytes(bytes)
-	//	return key, err
+	//	return signingkey.NewSigningEd25519PrivKeyFromBytes(bytes)
 	//})
 	//encodedSigningKey, _ := signingDecoder.EncodeToString(keychain.SigningKeys["A"])
 	//
