@@ -27,6 +27,10 @@ func NewSigningEd25519PubKeyFromBytes(bytes []byte) (PubKey, error) {
 	return UnmarshalEd25519PublicKey(bytes)
 }
 
+func NewSigningEd25519PrivKeyFromBytes(bytes []byte) (PrivKey, error) {
+	return UnmarshalEd25519PrivateKey(bytes)
+}
+
 func GenerateRandomEd25519KeyPair() (PrivKey, PubKey, error) {
 	return GenerateEd25519Key(rand.Reader)
 }
@@ -146,7 +150,7 @@ func UnmarshalEd25519PrivateKey(data []byte) (PrivKey, error) {
 
 type Ed25519SigningPubKeyDecoder struct{}
 
-func NewEd25519Decoder() PubKeyDecoder {
+func NewEd25519PubKeyDecoder() PubKeyDecoder {
 	return &Ed25519SigningPubKeyDecoder{}
 }
 

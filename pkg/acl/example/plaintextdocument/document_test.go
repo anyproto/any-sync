@@ -18,7 +18,7 @@ func TestDocument_NewPlainTextDocument(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 
 	doc, err := NewPlainTextDocument(data, treestorage.NewInMemoryTreeStorage, "Some text")
@@ -36,7 +36,7 @@ func TestDocument_PlainTextDocument_AddText(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 
 	doc, err := NewPlainTextDocument(data, treestorage.NewInMemoryTreeStorage, "Some text")
