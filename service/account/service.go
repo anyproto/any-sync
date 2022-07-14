@@ -40,12 +40,10 @@ func NewFromFile(path string) (app.Component, error) {
 		return nil, err
 	}
 	privateEncryptionDecoder := keys.NewKeyDecoder(func(bytes []byte) (keys.Key, error) {
-		key, err := encryptionkey.NewEncryptionRsaPrivKeyFromBytes(bytes)
-		return key, err
+		return encryptionkey.NewEncryptionRsaPrivKeyFromBytes(bytes)
 	})
 	privateSigningDecoder := keys.NewKeyDecoder(func(bytes []byte) (keys.Key, error) {
-		key, err := signingkey.NewSigningEd25519PrivKeyFromBytes(bytes)
-		return key, err
+		return signingkey.NewSigningEd25519PrivKeyFromBytes(bytes)
 	})
 	// TODO: Convert this to new decoder
 	publicSigningDecoder := signingkey.NewEd25519PubKeyDecoder()
