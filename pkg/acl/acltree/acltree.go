@@ -27,6 +27,12 @@ type TreeUpdateListener interface {
 	Rebuild(tree ACLTree)
 }
 
+type NoOpListener struct{}
+
+func (n NoOpListener) Update(tree ACLTree) {}
+
+func (n NoOpListener) Rebuild(tree ACLTree) {}
+
 type ACLTree interface {
 	ACLState() *ACLState
 	AddContent(ctx context.Context, f func(builder ChangeBuilder) error) (*Change, error)
@@ -195,6 +201,7 @@ func (a *aclTree) rebuildFromStorage(fromStart bool) error {
 }
 
 func (a *aclTree) ACLState() *ACLState {
+	// TODO: probably locks should be happening outside because we are using object cache
 	a.RLock()
 	defer a.RUnlock()
 	return a.aclState
