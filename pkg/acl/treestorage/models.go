@@ -3,13 +3,13 @@ package treestorage
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 )
 
 type TreeStorage interface {
 	TreeID() (string, error)
 
-	Header() (*pb.TreeHeader, error)
+	Header() (*treepb.TreeHeader, error)
 	Heads() ([]string, error)
 	Orphans() ([]string, error)
 	SetHeads(heads []string) error

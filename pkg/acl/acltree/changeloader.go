@@ -3,7 +3,7 @@ package acltree
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"time"
@@ -16,13 +16,13 @@ type changeLoader struct {
 	identityKeys         map[string]signingkey.PubKey
 	signingPubKeyDecoder signingkey.PubKeyDecoder
 	treeStorage          treestorage.TreeStorage
-	changeCreator        func(id string, ch *pb.ACLChange) *Change
+	changeCreator        func(id string, ch *aclpb.ACLChange) *Change
 }
 
 func newChangeLoader(
 	treeStorage treestorage.TreeStorage,
 	signingPubKeyDecoder signingkey.PubKeyDecoder,
-	changeCreator func(id string, ch *pb.ACLChange) *Change) *changeLoader {
+	changeCreator func(id string, ch *aclpb.ACLChange) *Change) *changeLoader {
 	return &changeLoader{
 		signingPubKeyDecoder: signingPubKeyDecoder,
 		treeStorage:          treeStorage,
@@ -73,8 +73,8 @@ func (c *changeLoader) verify(identity string, payload, signature []byte) (isVer
 	return identityKey.Verify(payload, signature)
 }
 
-func (c *changeLoader) makeVerifiedACLChange(change *treestorage.RawChange) (aclChange *pb.ACLChange, err error) {
-	aclChange = new(pb.ACLChange)
+func (c *changeLoader) makeVerifiedACLChange(change *treestorage.RawChange) (aclChange *aclpb.ACLChange, err error) {
+	aclChange = new(aclpb.ACLChange)
 
 	// TODO: think what should we do with such cases, because this can be used by attacker to break our Tree
 	if err = proto.Unmarshal(change.Payload, aclChange); err != nil {

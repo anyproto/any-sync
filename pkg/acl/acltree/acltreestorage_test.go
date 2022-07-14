@@ -3,7 +3,7 @@ package acltree
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/treestoragebuilder"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +25,7 @@ func Test_BuildTreeStorageWithACL(t *testing.T) {
 			return builder.UserAdd(
 				keychain.GetIdentity("A"),
 				keychain.EncryptionKeys["A"].GetPublic(),
-				pb.ACLChange_Admin)
+				aclpb.ACLChange_Admin)
 		},
 		treestorage.NewInMemoryTreeStorage)
 	if err != nil {

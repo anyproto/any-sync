@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
-	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/testchangepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/yamltests"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
-	storagepb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/pb"
+	storagepb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
@@ -22,7 +22,7 @@ import (
 const plainTextDocType uint16 = 1
 
 type treeChange struct {
-	*pb.ACLChange
+	*aclpb.ACLChange
 	id      string
 	readKey *SymKey
 	signKey signingkey.PrivKey
@@ -88,7 +88,7 @@ func (t *TreeStorageBuilder) Heads() ([]string, error) {
 }
 
 func (t *TreeStorageBuilder) AddRawChange(change *treestorage.RawChange) error {
-	aclChange := new(pb.ACLChange)
+	aclChange := new(aclpb.ACLChange)
 	var err error
 
 	if err = proto.Unmarshal(change.Payload, aclChange); err != nil {
@@ -237,15 +237,15 @@ func (t *TreeStorageBuilder) parseChange(ch *Change) *treeChange {
 	k := t.keychain.GetKey(ch.ReadKey).(*SymKey)
 	newChange.readKey = k
 	newChange.signKey = t.keychain.SigningKeys[ch.Identity]
-	aclChange := &pb.ACLChange{}
+	aclChange := &aclpb.ACLChange{}
 	aclChange.Identity = t.keychain.GetIdentity(ch.Identity)
 	if len(ch.AclChanges) > 0 || ch.AclSnapshot != nil {
-		aclChange.AclData = &pb.ACLChangeACLData{}
+		aclChange.AclData = &aclpb.ACLChangeACLData{}
 		if ch.AclSnapshot != nil {
 			aclChange.AclData.AclSnapshot = t.parseACLSnapshot(ch.AclSnapshot)
 		}
 		if ch.AclChanges != nil {
-			var aclChangeContents []*pb.ACLChangeACLContentValue
+			var aclChangeContents []*aclpb.ACLChangeACLContentValue
 			for _, ch := range ch.AclChanges {
 				aclChangeContent := t.parseACLChange(ch)
 				aclChangeContents = append(aclChangeContents, aclChangeContent)
@@ -290,10 +290,10 @@ func (t *TreeStorageBuilder) parseChangeSnapshot(s *PlainTextSnapshot) *testpb.P
 	}
 }
 
-func (t *TreeStorageBuilder) parseACLSnapshot(s *ACLSnapshot) *pb.ACLChangeACLSnapshot {
-	newState := &pb.ACLChangeACLState{}
+func (t *TreeStorageBuilder) parseACLSnapshot(s *ACLSnapshot) *aclpb.ACLChangeACLSnapshot {
+	newState := &aclpb.ACLChangeACLState{}
 	for _, state := range s.UserStates {
-		aclUserState := &pb.ACLChangeUserState{}
+		aclUserState := &aclpb.ACLChangeUserState{}
 		aclUserState.Identity = t.keychain.GetIdentity(state.Identity)
 
 		encKey := t.keychain.
@@ -305,7 +305,7 @@ func (t *TreeStorageBuilder) parseACLSnapshot(s *ACLSnapshot) *pb.ACLChangeACLSn
 		aclUserState.Permissions = t.convertPermission(state.Permissions)
 		newState.UserStates = append(newState.UserStates, aclUserState)
 	}
-	return &pb.ACLChangeACLSnapshot{
+	return &aclpb.ACLChangeACLSnapshot{
 		AclState: newState,
 	}
 }
@@ -328,7 +328,7 @@ func (t *TreeStorageBuilder) parseDocumentChange(ch *PlainTextChange) (convCh *t
 	return convCh
 }
 
-func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChangeACLContentValue) {
+func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACLChangeACLContentValue) {
 	switch {
 	case ch.UserAdd != nil:
 		add := ch.UserAdd
@@ -337,9 +337,9 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChange
 			GetKey(add.EncryptionKey).(encryptionkey.PrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 
-		convCh = &pb.ACLChangeACLContentValue{
-			Value: &pb.ACLChangeACLContentValueValueOfUserAdd{
-				UserAdd: &pb.ACLChangeUserAdd{
+		convCh = &aclpb.ACLChangeACLContentValue{
+			Value: &aclpb.ACLChangeACLContentValueValueOfUserAdd{
+				UserAdd: &aclpb.ACLChangeUserAdd{
 					Identity:          t.keychain.GetIdentity(add.Identity),
 					EncryptionKey:     rawKey,
 					EncryptedReadKeys: t.encryptReadKeys(add.EncryptedReadKeys, encKey),
@@ -361,9 +361,9 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChange
 			panic(err)
 		}
 
-		convCh = &pb.ACLChangeACLContentValue{
-			Value: &pb.ACLChangeACLContentValueValueOfUserJoin{
-				UserJoin: &pb.ACLChangeUserJoin{
+		convCh = &aclpb.ACLChangeACLContentValue{
+			Value: &aclpb.ACLChangeACLContentValueValueOfUserJoin{
+				UserJoin: &aclpb.ACLChangeUserJoin{
 					Identity:          t.keychain.GetIdentity(join.Identity),
 					EncryptionKey:     rawKey,
 					AcceptSignature:   signature,
@@ -379,9 +379,9 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChange
 			GetKey(invite.EncryptionKey).(encryptionkey.PrivKey)
 		rawEncKey, _ := encKey.GetPublic().Raw()
 
-		convCh = &pb.ACLChangeACLContentValue{
-			Value: &pb.ACLChangeACLContentValueValueOfUserInvite{
-				UserInvite: &pb.ACLChangeUserInvite{
+		convCh = &aclpb.ACLChangeACLContentValue{
+			Value: &aclpb.ACLChangeACLContentValueValueOfUserInvite{
+				UserInvite: &aclpb.ACLChangeUserInvite{
 					AcceptPublicKey:   rawAcceptKey,
 					EncryptPublicKey:  rawEncKey,
 					EncryptedReadKeys: t.encryptReadKeys(invite.EncryptedReadKeys, encKey),
@@ -393,9 +393,9 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChange
 	case ch.UserConfirm != nil:
 		confirm := ch.UserConfirm
 
-		convCh = &pb.ACLChangeACLContentValue{
-			Value: &pb.ACLChangeACLContentValueValueOfUserConfirm{
-				UserConfirm: &pb.ACLChangeUserConfirm{
+		convCh = &aclpb.ACLChangeACLContentValue{
+			Value: &aclpb.ACLChangeACLContentValueValueOfUserConfirm{
+				UserConfirm: &aclpb.ACLChangeUserConfirm{
 					Identity:  t.keychain.GetIdentity(confirm.Identity),
 					UserAddId: confirm.UserAddId,
 				},
@@ -404,9 +404,9 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChange
 	case ch.UserPermissionChange != nil:
 		permissionChange := ch.UserPermissionChange
 
-		convCh = &pb.ACLChangeACLContentValue{
-			Value: &pb.ACLChangeACLContentValueValueOfUserPermissionChange{
-				UserPermissionChange: &pb.ACLChangeUserPermissionChange{
+		convCh = &aclpb.ACLChangeACLContentValue{
+			Value: &aclpb.ACLChangeACLContentValueValueOfUserPermissionChange{
+				UserPermissionChange: &aclpb.ACLChangeUserPermissionChange{
 					Identity:    t.keychain.GetIdentity(permissionChange.Identity),
 					Permissions: t.convertPermission(permissionChange.Permission),
 				},
@@ -417,7 +417,7 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChange
 
 		newReadKey := t.keychain.GetKey(remove.NewReadKey).(*SymKey)
 
-		var replaces []*pb.ACLChangeReadKeyReplace
+		var replaces []*aclpb.ACLChangeReadKeyReplace
 		for _, id := range remove.IdentitiesLeft {
 			identity := t.keychain.GetIdentity(id)
 			encKey := t.keychain.EncryptionKeys[id]
@@ -426,16 +426,16 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *pb.ACLChange
 			if err != nil {
 				panic(err)
 			}
-			replaces = append(replaces, &pb.ACLChangeReadKeyReplace{
+			replaces = append(replaces, &aclpb.ACLChangeReadKeyReplace{
 				Identity:         identity,
 				EncryptionKey:    rawEncKey,
 				EncryptedReadKey: encReadKey,
 			})
 		}
 
-		convCh = &pb.ACLChangeACLContentValue{
-			Value: &pb.ACLChangeACLContentValueValueOfUserRemove{
-				UserRemove: &pb.ACLChangeUserRemove{
+		convCh = &aclpb.ACLChangeACLContentValue{
+			Value: &aclpb.ACLChangeACLContentValueValueOfUserRemove{
+				UserRemove: &aclpb.ACLChangeUserRemove{
 					Identity:        t.keychain.GetIdentity(remove.RemovedIdentity),
 					ReadKeyReplaces: replaces,
 				},
@@ -462,14 +462,14 @@ func (t *TreeStorageBuilder) encryptReadKeys(keys []string, encKey encryptionkey
 	return
 }
 
-func (t *TreeStorageBuilder) convertPermission(perm string) pb.ACLChangeUserPermissions {
+func (t *TreeStorageBuilder) convertPermission(perm string) aclpb.ACLChangeUserPermissions {
 	switch perm {
 	case "admin":
-		return pb.ACLChange_Admin
+		return aclpb.ACLChange_Admin
 	case "writer":
-		return pb.ACLChange_Writer
+		return aclpb.ACLChange_Writer
 	case "reader":
-		return pb.ACLChange_Reader
+		return aclpb.ACLChange_Reader
 	default:
 		panic(fmt.Sprintf("incorrect permission: %s", perm))
 	}

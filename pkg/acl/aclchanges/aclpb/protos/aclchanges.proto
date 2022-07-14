@@ -1,6 +1,6 @@
 syntax = "proto3";
 package anytype;
-option go_package = "pb";
+option go_package = "aclpb";
 
 // the element of change tree used to store and internal apply smartBlock history
 message ACLChange {

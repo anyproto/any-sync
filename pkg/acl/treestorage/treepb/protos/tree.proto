@@ -1,6 +1,6 @@
 syntax = "proto3";
 package anytype;
-option go_package = "pb";
+option go_package = "treepb";
 
 message TreeHeader {
   string firstChangeId = 1;

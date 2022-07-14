@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"
@@ -13,7 +13,7 @@ import (
 
 type inMemoryTreeStorage struct {
 	id      string
-	header  *pb.TreeHeader
+	header  *treepb.TreeHeader
 	heads   []string
 	orphans []string
 	changes map[string]*RawChange
@@ -22,7 +22,7 @@ type inMemoryTreeStorage struct {
 }
 
 func NewInMemoryTreeStorage(firstChange *RawChange) (TreeStorage, error) {
-	header := &pb.TreeHeader{
+	header := &treepb.TreeHeader{
 		FirstChangeId: firstChange.Id,
 		IsWorkspace:   false,
 	}
@@ -54,7 +54,7 @@ func (t *inMemoryTreeStorage) TreeID() (string, error) {
 	return t.id, nil
 }
 
-func (t *inMemoryTreeStorage) Header() (*pb.TreeHeader, error) {
+func (t *inMemoryTreeStorage) Header() (*treepb.TreeHeader, error) {
 	t.RLock()
 	defer t.RUnlock()
 	return t.header, nil

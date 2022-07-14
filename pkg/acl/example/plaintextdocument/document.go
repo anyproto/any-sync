@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	aclpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
+	aclpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/testchangepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 
 	"github.com/gogo/protobuf/proto"
@@ -33,8 +33,8 @@ func (p *plainTextDocument) Text() string {
 func (p *plainTextDocument) AddText(ctx context.Context, text string) error {
 	_, err := p.aclTree.AddContent(ctx, func(builder acltree.ChangeBuilder) error {
 		builder.AddChangeContent(
-			&pb.PlainTextChangeData{
-				Content: []*pb.PlainTextChangeContent{
+			&testchangepb.PlainTextChangeData{
+				Content: []*testchangepb.PlainTextChangeContent{
 					createAppendTextChangeContent(text),
 				},
 			})
@@ -149,18 +149,18 @@ func NewPlainTextDocument(
 }
 
 func createInitialChangeContent(text string) proto.Marshaler {
-	return &pb.PlainTextChangeData{
-		Content: []*pb.PlainTextChangeContent{
+	return &testchangepb.PlainTextChangeData{
+		Content: []*testchangepb.PlainTextChangeContent{
 			createAppendTextChangeContent(text),
 		},
-		Snapshot: &pb.PlainTextChangeSnapshot{Text: text},
+		Snapshot: &testchangepb.PlainTextChangeSnapshot{Text: text},
 	}
 }
 
-func createAppendTextChangeContent(text string) *pb.PlainTextChangeContent {
-	return &pb.PlainTextChangeContent{
-		Value: &pb.PlainTextChangeContentValueOfTextAppend{
-			TextAppend: &pb.PlainTextChangeTextAppend{
+func createAppendTextChangeContent(text string) *testchangepb.PlainTextChangeContent {
+	return &testchangepb.PlainTextChangeContent{
+		Value: &testchangepb.PlainTextChangeContentValueOfTextAppend{
+			TextAppend: &testchangepb.PlainTextChangeTextAppend{
 				Text: text,
 			},
 		},

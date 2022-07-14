@@ -9,7 +9,7 @@ package treestoragebuilder
 
 import (
 	"fmt"
-	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/pb"
+	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/testchangepb"
 
 	"github.com/gogo/protobuf/proto"
 	"strings"
