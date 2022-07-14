@@ -1,11 +1,10 @@
 package acltree
 
 import (
+	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"sync"
-
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 )
 
 type AddResultSummary int
@@ -30,8 +29,8 @@ type TreeUpdateListener interface {
 
 type ACLTree interface {
 	ACLState() *ACLState
-	AddContent(f func(builder ChangeBuilder) error) (*Change, error)
-	AddChanges(changes ...*Change) (AddResult, error)
+	AddContent(ctx context.Context, f func(builder ChangeBuilder) error) (*Change, error)
+	AddChanges(ctx context.Context, changes ...*Change) (AddResult, error)
 	Heads() []string
 	Root() *Change
 	Iterate(func(change *Change) bool)
@@ -40,7 +39,7 @@ type ACLTree interface {
 }
 
 type aclTree struct {
-	thread         thread.Thread
+	treeStorage    treestorage.TreeStorage
 	accountData    *account.AccountData
 	updateListener TreeUpdateListener
 
@@ -58,18 +57,17 @@ type aclTree struct {
 }
 
 func BuildACLTree(
-	t thread.Thread,
+	t treestorage.TreeStorage,
 	acc *account.AccountData,
 	listener TreeUpdateListener) (ACLTree, error) {
-	decoder := keys.NewEd25519Decoder()
-	aclTreeBuilder := newACLTreeBuilder(t, decoder)
-	treeBuilder := newTreeBuilder(t, decoder)
-	snapshotValidator := newSnapshotValidator(decoder, acc)
-	aclStateBuilder := newACLStateBuilder(decoder, acc)
+	aclTreeBuilder := newACLTreeBuilder(t, acc.Decoder)
+	treeBuilder := newTreeBuilder(t, acc.Decoder)
+	snapshotValidator := newSnapshotValidator(acc.Decoder, acc) // TODO: this looks weird, change it
+	aclStateBuilder := newACLStateBuilder(acc.Decoder, acc)
 	changeBuilder := newChangeBuilder()
 
 	aclTree := &aclTree{
-		thread:            t,
+		treeStorage:       t,
 		accountData:       acc,
 		fullTree:          nil,
 		aclState:          nil,
@@ -80,12 +78,19 @@ func BuildACLTree(
 		changeBuilder:     changeBuilder,
 		updateListener:    listener,
 	}
-	err := aclTree.rebuildFromThread(false)
+	err := aclTree.rebuildFromStorage(false)
 	if err != nil {
 		return nil, err
 	}
-	aclTree.removeOrphans()
-	t.SetHeads(aclTree.Heads())
+	err = aclTree.removeOrphans()
+	if err != nil {
+		return nil, err
+	}
+	err = t.SetHeads(aclTree.Heads())
+	if err != nil {
+		return nil, err
+	}
+
 	listener.Rebuild(aclTree)
 
 	return aclTree, nil
@@ -104,7 +109,7 @@ func BuildACLTree(
 //			return err
 //		}
 //		if !valid {
-//			return a.rebuildFromThread(true)
+//			return a.rebuildFromStorage(true)
 //		}
 //	}
 //
@@ -121,11 +126,15 @@ func BuildACLTree(
 //	return nil
 //}
 
-func (a *aclTree) removeOrphans() {
+func (a *aclTree) removeOrphans() error {
 	// removing attached or invalid orphans
 	var toRemove []string
 
-	for _, orphan := range a.thread.Orphans() {
+	orphans, err := a.treeStorage.Orphans()
+	if err != nil {
+		return err
+	}
+	for _, orphan := range orphans {
 		if _, exists := a.fullTree.attached[orphan]; exists {
 			toRemove = append(toRemove, orphan)
 		}
@@ -133,10 +142,10 @@ func (a *aclTree) removeOrphans() {
 			toRemove = append(toRemove, orphan)
 		}
 	}
-	a.thread.RemoveOrphans(toRemove...)
+	return a.treeStorage.RemoveOrphans(toRemove...)
 }
 
-func (a *aclTree) rebuildFromThread(fromStart bool) error {
+func (a *aclTree) rebuildFromStorage(fromStart bool) error {
 	a.treeBuilder.Init()
 	a.aclTreeBuilder.Init()
 
@@ -163,7 +172,7 @@ func (a *aclTree) rebuildFromThread(fromStart bool) error {
 			return err
 		}
 		if !valid {
-			return a.rebuildFromThread(true)
+			return a.rebuildFromStorage(true)
 		}
 	}
 	// TODO: there is a question how we can validate not only that the full tree is built correctly
@@ -189,7 +198,7 @@ func (a *aclTree) ACLState() *ACLState {
 	return a.aclState
 }
 
-func (a *aclTree) AddContent(build func(builder ChangeBuilder) error) (*Change, error) {
+func (a *aclTree) AddContent(ctx context.Context, build func(builder ChangeBuilder) error) (*Change, error) {
 	// TODO: add snapshot creation logic
 	a.Lock()
 	defer func() {
@@ -210,7 +219,7 @@ func (a *aclTree) AddContent(build func(builder ChangeBuilder) error) (*Change, 
 	}
 	a.fullTree.AddFast(ch)
 
-	err = a.thread.AddRawChange(&thread.RawChange{
+	err = a.treeStorage.AddRawChange(&treestorage.RawChange{
 		Payload:   marshalled,
 		Signature: ch.Signature(),
 		Id:        ch.Id,
@@ -219,11 +228,14 @@ func (a *aclTree) AddContent(build func(builder ChangeBuilder) error) (*Change, 
 		return nil, err
 	}
 
-	a.thread.SetHeads([]string{ch.Id})
+	err = a.treeStorage.SetHeads([]string{ch.Id})
+	if err != nil {
+		return nil, err
+	}
 	return ch, nil
 }
 
-func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
+func (a *aclTree) AddChanges(ctx context.Context, changes ...*Change) (AddResult, error) {
 	a.Lock()
 	// TODO: make proper error handling, because there are a lot of corner cases where this will break
 	var err error
@@ -233,8 +245,17 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 		if err != nil {
 			return
 		}
-		a.removeOrphans()
-		a.thread.SetHeads(a.fullTree.Heads())
+
+		err = a.removeOrphans()
+		if err != nil {
+			return
+		}
+
+		err = a.treeStorage.SetHeads(a.fullTree.Heads())
+		if err != nil {
+			return
+		}
+
 		a.Unlock()
 		switch mode {
 		case Append:
@@ -247,11 +268,14 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 	}()
 
 	for _, ch := range changes {
-		err = a.thread.AddChange(ch)
+		err = a.treeStorage.AddChange(ch)
 		if err != nil {
 			return AddResult{}, err
 		}
-		a.thread.AddOrphans(ch.Id)
+		err = a.treeStorage.AddOrphans(ch.Id)
+		if err != nil {
+			return AddResult{}, err
+		}
 	}
 
 	prevHeads := a.fullTree.Heads()
@@ -265,7 +289,7 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 		}, nil
 
 	case Rebuild:
-		err = a.rebuildFromThread(false)
+		err = a.rebuildFromStorage(false)
 		if err != nil {
 			return AddResult{}, err
 		}
@@ -276,7 +300,7 @@ func (a *aclTree) AddChanges(changes ...*Change) (AddResult, error) {
 			Summary:  AddResultSummaryRebuild,
 		}, nil
 	default:
-		// just rebuilding the state from start without reloading everything from thread
+		// just rebuilding the state from start without reloading everything from tree storage
 		// as an optimization we could've started from current heads, but I didn't implement that
 		a.aclState, err = a.aclStateBuilder.Build()
 		if err != nil {
