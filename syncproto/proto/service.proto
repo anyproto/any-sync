@@ -1,6 +1,6 @@
 syntax = "proto3";
 package anytype;
-option go_package = "syncproto";
+option go_package = "/syncproto";
 
 import "syncproto/proto/commands.proto";
 
