@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
 	"go.uber.org/zap"
 	"os"
 	"os/signal"
@@ -55,6 +56,7 @@ func main() {
 	// bootstrap components
 	a.Register(conf)
 	a.Register(acc)
+	a.Register(treecache.NewTreeCache())
 	Bootstrap(a)
 
 	// start app
