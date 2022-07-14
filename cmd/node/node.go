@@ -81,4 +81,5 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(server.New())
+	a.Register(server.NewDRPC())
 }
