@@ -1,6 +1,7 @@
 package plaintextdocument
 
 import (
+	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	aclpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
@@ -13,7 +14,7 @@ import (
 
 type PlainTextDocument interface {
 	Text() string
-	AddText(text string) error
+	AddText(ctx context.Context, text string) error
 }
 
 type plainTextDocument struct {
@@ -29,8 +30,8 @@ func (p *plainTextDocument) Text() string {
 	return ""
 }
 
-func (p *plainTextDocument) AddText(text string) error {
-	_, err := p.aclTree.AddContent(func(builder acltree.ChangeBuilder) error {
+func (p *plainTextDocument) AddText(ctx context.Context, text string) error {
+	_, err := p.aclTree.AddContent(ctx, func(builder acltree.ChangeBuilder) error {
 		builder.AddChangeContent(
 			&pb.PlainTextChangeData{
 				Content: []*pb.PlainTextChangeContent{

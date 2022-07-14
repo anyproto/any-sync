@@ -1,6 +1,7 @@
 package acltree
 
 import (
+	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/treestoragebuilder"
@@ -78,7 +79,7 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 		changes = append(changes, newCh)
 	}
 
-	res, err := tree.AddChanges(changes...)
+	res, err := tree.AddChanges(context.Background(), changes...)
 	assert.Equal(t, res.Summary, AddResultSummaryAppend)
 
 	aclState := tree.ACLState()
@@ -128,7 +129,7 @@ func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
 		changes = append(changes, newCh)
 	}
 
-	res, err := tree.AddChanges(changes...)
+	res, err := tree.AddChanges(context.Background(), changes...)
 	assert.Equal(t, res.Summary, AddResultSummaryRebuild)
 
 	aclState := tree.ACLState()
