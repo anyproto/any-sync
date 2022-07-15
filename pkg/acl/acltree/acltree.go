@@ -3,6 +3,7 @@ package acltree
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"sync"
 )
@@ -228,7 +229,7 @@ func (a *aclTree) AddContent(ctx context.Context, build func(builder ChangeBuild
 	}
 	a.fullTree.AddFast(ch)
 
-	err = a.treeStorage.AddRawChange(&treestorage.RawChange{
+	err = a.treeStorage.AddRawChange(&aclpb.RawChange{
 		Payload:   marshalled,
 		Signature: ch.Signature(),
 		Id:        ch.Id,

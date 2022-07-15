@@ -7,7 +7,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	testpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/testchangepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/yamltests"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	storagepb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
@@ -87,7 +86,7 @@ func (t *TreeStorageBuilder) Heads() ([]string, error) {
 	return t.heads, nil
 }
 
-func (t *TreeStorageBuilder) AddRawChange(change *treestorage.RawChange) error {
+func (t *TreeStorageBuilder) AddRawChange(change *aclpb.RawChange) error {
 	aclChange := new(aclpb.ACLChange)
 	var err error
 
@@ -165,12 +164,12 @@ func (t *TreeStorageBuilder) RemoveOrphans(orphans ...string) error {
 	return nil
 }
 
-func (t *TreeStorageBuilder) GetChange(ctx context.Context, recordID string) (*treestorage.RawChange, error) {
+func (t *TreeStorageBuilder) GetChange(ctx context.Context, recordID string) (*aclpb.RawChange, error) {
 	return t.getChange(recordID, t.allChanges), nil
 }
 
-func (t *TreeStorageBuilder) GetUpdates(useCase string) []*treestorage.RawChange {
-	var res []*treestorage.RawChange
+func (t *TreeStorageBuilder) GetUpdates(useCase string) []*aclpb.RawChange {
+	var res []*aclpb.RawChange
 	update := t.updates[useCase]
 	for _, ch := range update.changes {
 		rawCh := t.getChange(ch.id, update.changes)
@@ -183,7 +182,7 @@ func (t *TreeStorageBuilder) Header() (*storagepb.TreeHeader, error) {
 	return t.header, nil
 }
 
-func (t *TreeStorageBuilder) getChange(changeId string, m map[string]*treeChange) *treestorage.RawChange {
+func (t *TreeStorageBuilder) getChange(changeId string, m map[string]*treeChange) *aclpb.RawChange {
 	rec := m[changeId]
 
 	if rec.changesDataDecrypted != nil {
@@ -205,7 +204,7 @@ func (t *TreeStorageBuilder) getChange(changeId string, m map[string]*treeChange
 		panic("should be able to sign final acl message!")
 	}
 
-	transformedRec := &treestorage.RawChange{
+	transformedRec := &aclpb.RawChange{
 		Payload:   aclMarshaled,
 		Signature: signature,
 		Id:        changeId,

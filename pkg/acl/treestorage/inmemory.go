@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
@@ -16,12 +17,12 @@ type inMemoryTreeStorage struct {
 	header  *treepb.TreeHeader
 	heads   []string
 	orphans []string
-	changes map[string]*RawChange
+	changes map[string]*aclpb.RawChange
 
 	sync.RWMutex
 }
 
-func NewInMemoryTreeStorage(firstChange *RawChange) (TreeStorage, error) {
+func NewInMemoryTreeStorage(firstChange *aclpb.RawChange) (TreeStorage, error) {
 	header := &treepb.TreeHeader{
 		FirstChangeId: firstChange.Id,
 		IsWorkspace:   false,
@@ -35,7 +36,7 @@ func NewInMemoryTreeStorage(firstChange *RawChange) (TreeStorage, error) {
 		return nil, err
 	}
 
-	changes := make(map[string]*RawChange)
+	changes := make(map[string]*aclpb.RawChange)
 	changes[firstChange.Id] = firstChange
 
 	return &inMemoryTreeStorage{
@@ -97,7 +98,7 @@ func (t *inMemoryTreeStorage) AddOrphans(orphans ...string) error {
 	return nil
 }
 
-func (t *inMemoryTreeStorage) AddRawChange(change *RawChange) error {
+func (t *inMemoryTreeStorage) AddRawChange(change *aclpb.RawChange) error {
 	t.Lock()
 	defer t.Unlock()
 	// TODO: better to do deep copy
@@ -116,7 +117,7 @@ func (t *inMemoryTreeStorage) AddChange(change aclchanges.Change) error {
 	if err != nil {
 		return err
 	}
-	rawChange := &RawChange{
+	rawChange := &aclpb.RawChange{
 		Payload:   fullMarshalledChange,
 		Signature: signature,
 		Id:        id,
@@ -125,7 +126,7 @@ func (t *inMemoryTreeStorage) AddChange(change aclchanges.Change) error {
 	return nil
 }
 
-func (t *inMemoryTreeStorage) GetChange(ctx context.Context, changeId string) (*RawChange, error) {
+func (t *inMemoryTreeStorage) GetChange(ctx context.Context, changeId string) (*aclpb.RawChange, error) {
 	t.RLock()
 	defer t.RUnlock()
 	if res, exists := t.changes[changeId]; exists {
