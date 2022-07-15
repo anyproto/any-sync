@@ -38,6 +38,7 @@ type ACLTree interface {
 	ACLState() *ACLState
 	AddContent(ctx context.Context, f func(builder ChangeBuilder) error) (*Change, error)
 	AddChanges(ctx context.Context, changes ...*Change) (AddResult, error)
+	AddRawChanges(ctx context.Context, changes ...*aclpb.RawChange) (AddResult, error)
 	Heads() []string
 	Root() *Change
 	Iterate(func(change *Change) bool)
@@ -243,6 +244,20 @@ func (a *aclTree) AddContent(ctx context.Context, build func(builder ChangeBuild
 		return nil, err
 	}
 	return ch, nil
+}
+
+func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawChange) (AddResult, error) {
+	var aclChanges []*Change
+	for _, ch := range rawChanges {
+		change, err := NewFromRawChange(ch)
+		// TODO: think what if we will have incorrect signatures on rawChanges, how everything will work
+		if err != nil {
+			continue
+		}
+		aclChanges = append(aclChanges, change)
+	}
+
+	return a.AddChanges(ctx, aclChanges...)
 }
 
 func (a *aclTree) AddChanges(ctx context.Context, changes ...*Change) (AddResult, error) {
