@@ -3,7 +3,6 @@ package acltree
 import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
@@ -47,7 +46,7 @@ func (ch *Change) IsACLChange() bool {
 	return ch.Content.GetAclData() != nil
 }
 
-func NewFromRawChange(rawChange *treestorage.RawChange) (*Change, error) {
+func NewFromRawChange(rawChange *aclpb.RawChange) (*Change, error) {
 	unmarshalled := &aclpb.ACLChange{}
 	err := proto.Unmarshal(rawChange.Payload, unmarshalled)
 	if err != nil {

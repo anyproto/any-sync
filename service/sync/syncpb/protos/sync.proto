@@ -7,8 +7,8 @@ import "pkg/acl/aclchanges/aclpb/protos/aclchanges.proto";
 message Sync {
   message HeadUpdate {
     repeated Head heads = 1;
-    repeated acl.ACLChange changes = 2;
-    string senderId = 3;
+    repeated acl.RawChange changes = 2;
+    string treeId = 3;
   }
 
   message Head {
@@ -20,12 +20,14 @@ message Sync {
     // here with send the request with all changes we have (we already know sender's snapshot path)
     message Request {
       repeated Head heads = 1;
-      repeated acl.ACLChange changes = 2;
+      repeated acl.RawChange changes = 2;
+      string treeId = 3;
     }
 
     message Response {
       repeated Head heads = 1;
-      repeated acl.ACLChange changes = 2;
+      repeated acl.RawChange changes = 2;
+      string treeId = 3;
     }
   }
 }

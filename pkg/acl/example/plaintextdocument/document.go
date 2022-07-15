@@ -117,7 +117,7 @@ func NewInMemoryPlainTextDocument(acc *account.AccountData, text string) (PlainT
 
 func NewPlainTextDocument(
 	acc *account.AccountData,
-	create func(change *treestorage.RawChange) (treestorage.TreeStorage, error),
+	create func(change *aclpb.RawChange) (treestorage.TreeStorage, error),
 	text string) (PlainTextDocument, error) {
 	changeBuilder := func(builder acltree.ChangeBuilder) error {
 		err := builder.UserAdd(acc.Identity, acc.EncKey.GetPublic(), aclpb.ACLChange_Admin)

@@ -2,6 +2,12 @@ syntax = "proto3";
 package acl;
 option go_package = "aclpb";
 
+message RawChange {
+  bytes payload = 1;
+  bytes signature = 2;
+  string id = 3;
+}
+
 // the element of change tree used to store and internal apply smartBlock history
 message ACLChange {
   repeated string treeHeadIds = 1;
