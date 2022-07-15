@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/syncpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
@@ -14,21 +15,12 @@ type requestHander struct {
 }
 
 func (r *requestHander) HandleHeadUpdate(ctx context.Context, senderId string, update *syncpb.SyncHeadUpdate) (err error) {
-	var fullRequest *syncpb.SyncFullRequest
-	var snapshotPath []string
-	var result acltree.AddResult
-	defer func() {
-		if err != nil || fullRequest != nil {
-			return
-		}
-		newUpdate := &syncpb.SyncHeadUpdate{
-			Heads:        result.Heads,
-			Changes:      result.Added,
-			SnapshotPath: snapshotPath,
-			TreeId:       update.TreeId,
-		}
-		err = r.client.NotifyHeadsChanged(newUpdate)
-	}()
+	var (
+		fullRequest  *syncpb.SyncFullRequest
+		snapshotPath []string
+		result       acltree.AddResult
+	)
+	
 	err = r.treeCache.Do(ctx, update.TreeId, func(tree acltree.ACLTree) error {
 		// TODO: check if we already have those changes
 		result, err = tree.AddRawChanges(ctx, update.Changes...)
@@ -45,16 +37,33 @@ func (r *requestHander) HandleHeadUpdate(ctx context.Context, senderId string, u
 		}
 		return nil
 	})
-	if err != nil {
-		return err
+	// if there are no such tree
+	if err == treestorage.UnknownTreeId {
+		fullRequest = &syncpb.SyncFullRequest{
+			TreeId: update.TreeId,
+		}
 	}
+	// if we have incompatible heads, or we haven't seen the tree at all
 	if fullRequest != nil {
 		return r.client.RequestFullSync(senderId, fullRequest)
 	}
+	// if error or nothing has changed
+	if err != nil || len(result.Added) == 0 {
+		return err
+	}
+	// otherwise sending heads update message
+	newUpdate := &syncpb.SyncHeadUpdate{
+		Heads:        result.Heads,
+		Changes:      result.Added,
+		SnapshotPath: snapshotPath,
+		TreeId:       update.TreeId,
+	}
+	err = r.client.NotifyHeadsChanged(newUpdate)
 	return
 }
 
 func (r *requestHander) HandleFullSync(ctx context.Context, senderId string, request *syncpb.SyncFullRequest) error {
+	// TODO: add case of new tree
 	return nil
 }
 
