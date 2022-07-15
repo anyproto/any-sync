@@ -85,16 +85,7 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
 	rawChanges := thr.GetUpdates("append")
-	var changes []*Change
-	for _, ch := range rawChanges {
-		newCh, err := NewFromRawChange(ch)
-		if err != nil {
-			t.Fatalf("should be able to create change from raw: %v", err)
-		}
-		changes = append(changes, newCh)
-	}
-
-	res, err := tree.AddChanges(context.Background(), changes...)
+	res, err := tree.AddRawChanges(context.Background(), rawChanges...)
 	assert.Equal(t, res.Summary, AddResultSummaryAppend)
 
 	aclState := tree.ACLState()
@@ -135,16 +126,7 @@ func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
 		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
 	rawChanges := thr.GetUpdates("rebuild")
-	var changes []*Change
-	for _, ch := range rawChanges {
-		newCh, err := NewFromRawChange(ch)
-		if err != nil {
-			t.Fatalf("should be able to create change from raw: %v", err)
-		}
-		changes = append(changes, newCh)
-	}
-
-	res, err := tree.AddChanges(context.Background(), changes...)
+	res, err := tree.AddRawChanges(context.Background(), rawChanges...)
 	assert.Equal(t, res.Summary, AddResultSummaryRebuild)
 
 	aclState := tree.ACLState()
