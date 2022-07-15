@@ -19,8 +19,14 @@ const (
 type AddResult struct {
 	OldHeads []string
 	Heads    []string
+	Added    []*aclpb.RawChange
 	// TODO: add summary for changes
 	Summary AddResultSummary
+}
+
+type HeadWithPathToRoot struct {
+	Id   string
+	Path []string
 }
 
 type TreeUpdateListener interface {
@@ -37,13 +43,13 @@ func (n NoOpListener) Rebuild(tree ACLTree) {}
 type ACLTree interface {
 	ACLState() *ACLState
 	AddContent(ctx context.Context, f func(builder ChangeBuilder) error) (*Change, error)
-	AddChanges(ctx context.Context, changes ...*Change) (AddResult, error)
 	AddRawChanges(ctx context.Context, changes ...*aclpb.RawChange) (AddResult, error)
 	Heads() []string
 	Root() *Change
 	Iterate(func(change *Change) bool)
 	IterateFrom(string, func(change *Change) bool)
 	HasChange(string) bool
+	HeadsPathToRoot() []HeadWithPathToRoot
 
 	Close() error
 }
@@ -247,24 +253,20 @@ func (a *aclTree) AddContent(ctx context.Context, build func(builder ChangeBuild
 }
 
 func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawChange) (AddResult, error) {
-	var aclChanges []*Change
+	a.Lock()
+	// TODO: make proper error handling, because there are a lot of corner cases where this will break
+	var err error
+	var mode Mode
+
+	var changes []*Change
 	for _, ch := range rawChanges {
 		change, err := NewFromRawChange(ch)
 		// TODO: think what if we will have incorrect signatures on rawChanges, how everything will work
 		if err != nil {
 			continue
 		}
-		aclChanges = append(aclChanges, change)
+		changes = append(changes, change)
 	}
-
-	return a.AddChanges(ctx, aclChanges...)
-}
-
-func (a *aclTree) AddChanges(ctx context.Context, changes ...*Change) (AddResult, error) {
-	a.Lock()
-	// TODO: make proper error handling, because there are a lot of corner cases where this will break
-	var err error
-	var mode Mode
 
 	defer func() {
 		if err != nil {
@@ -291,6 +293,16 @@ func (a *aclTree) AddChanges(ctx context.Context, changes ...*Change) (AddResult
 			break
 		}
 	}()
+
+	getAddedChanges := func() []*aclpb.RawChange {
+		var added []*aclpb.RawChange
+		for _, ch := range rawChanges {
+			if _, exists := a.fullTree.attached[ch.Id]; exists {
+				added = append(added, ch)
+			}
+		}
+		return added
+	}
 
 	for _, ch := range changes {
 		err = a.treeStorage.AddChange(ch)
@@ -322,6 +334,7 @@ func (a *aclTree) AddChanges(ctx context.Context, changes ...*Change) (AddResult
 		return AddResult{
 			OldHeads: prevHeads,
 			Heads:    a.fullTree.Heads(),
+			Added:    getAddedChanges(),
 			Summary:  AddResultSummaryRebuild,
 		}, nil
 	default:
@@ -335,6 +348,7 @@ func (a *aclTree) AddChanges(ctx context.Context, changes ...*Change) (AddResult
 		return AddResult{
 			OldHeads: prevHeads,
 			Heads:    a.fullTree.Heads(),
+			Added:    getAddedChanges(),
 			Summary:  AddResultSummaryAppend,
 		}, nil
 	}
@@ -375,4 +389,29 @@ func (a *aclTree) Root() *Change {
 
 func (a *aclTree) Close() error {
 	return nil
+}
+
+func (a *aclTree) HeadsPathToRoot() []HeadWithPathToRoot {
+	a.RLock()
+	defer a.RUnlock()
+	var headsWithPath []HeadWithPathToRoot
+	for _, h := range a.fullTree.Heads() {
+		headWithPath := HeadWithPathToRoot{
+			Id: h,
+		}
+		var path []string
+		// TODO: think that the user may have not all of the snapshots locally
+		currentSnapshotId := a.fullTree.attached[h].SnapshotId
+		for currentSnapshotId != "" {
+			sn, err := a.treeBuilder.loadChange(currentSnapshotId)
+			if err != nil {
+				break
+			}
+			path = append(path, currentSnapshotId)
+			currentSnapshotId = sn.SnapshotId
+		}
+		headWithPath.Path = path
+		headsWithPath = append(headsWithPath, headWithPath)
+	}
+	return headsWithPath
 }
