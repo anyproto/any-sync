@@ -134,3 +134,34 @@ func (t *inMemoryTreeStorage) GetChange(ctx context.Context, changeId string) (*
 	}
 	return nil, fmt.Errorf("could not get change with id: %s", changeId)
 }
+
+type inMemoryTreeStorageProvider struct {
+	trees map[string]TreeStorage
+}
+
+func (i *inMemoryTreeStorageProvider) TreeStorage(treeId string) (TreeStorage, error) {
+	if tree, exists := i.trees[treeId]; exists {
+		return tree, nil
+	}
+	return nil, UnknownTreeId
+}
+
+func (i *inMemoryTreeStorageProvider) InsertTree(tree TreeStorage) error {
+	if tree == nil {
+		return fmt.Errorf("tree should not be nil")
+	}
+
+	id, err := tree.TreeID()
+	if err != nil {
+		return err
+	}
+
+	i.trees[id] = tree
+	return nil
+}
+
+func NewInMemoryTreeStorageProvider() Provider {
+	return &inMemoryTreeStorageProvider{
+		trees: make(map[string]TreeStorage),
+	}
+}
