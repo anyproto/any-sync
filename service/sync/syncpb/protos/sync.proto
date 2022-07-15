@@ -6,28 +6,26 @@ import "pkg/acl/aclchanges/aclpb/protos/aclchanges.proto";
 
 message Sync {
   message HeadUpdate {
-    repeated Head heads = 1;
+    repeated string heads = 1;
     repeated acl.RawChange changes = 2;
     string treeId = 3;
-  }
-
-  message Head {
-    string id = 1;
-    repeated string snapshotPath = 2;
+    repeated string snapshotPath = 4;
   }
 
   message Full {
     // here with send the request with all changes we have (we already know sender's snapshot path)
     message Request {
-      repeated Head heads = 1;
+      repeated string heads = 1;
       repeated acl.RawChange changes = 2;
       string treeId = 3;
+      repeated string snapshotPath = 4;
     }
 
     message Response {
-      repeated Head heads = 1;
+      repeated string heads = 1;
       repeated acl.RawChange changes = 2;
       string treeId = 3;
+      repeated string snapshotPath = 4;
     }
   }
 }

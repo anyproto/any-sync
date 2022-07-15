@@ -24,11 +24,6 @@ type AddResult struct {
 	Summary AddResultSummary
 }
 
-type HeadWithPathToRoot struct {
-	Id   string
-	Path []string
-}
-
 type TreeUpdateListener interface {
 	Update(tree ACLTree)
 	Rebuild(tree ACLTree)
@@ -49,7 +44,7 @@ type ACLTree interface {
 	Iterate(func(change *Change) bool)
 	IterateFrom(string, func(change *Change) bool)
 	HasChange(string) bool
-	HeadsPathToRoot() []HeadWithPathToRoot
+	SnapshotPath() []string
 
 	Close() error
 }
@@ -391,27 +386,20 @@ func (a *aclTree) Close() error {
 	return nil
 }
 
-func (a *aclTree) HeadsPathToRoot() []HeadWithPathToRoot {
+func (a *aclTree) SnapshotPath() []string {
 	a.RLock()
 	defer a.RUnlock()
-	var headsWithPath []HeadWithPathToRoot
-	for _, h := range a.fullTree.Heads() {
-		headWithPath := HeadWithPathToRoot{
-			Id: h,
+
+	var path []string
+	// TODO: think that the user may have not all of the snapshots locally
+	currentSnapshotId := a.fullTree.RootId()
+	for currentSnapshotId != "" {
+		sn, err := a.treeBuilder.loadChange(currentSnapshotId)
+		if err != nil {
+			break
 		}
-		var path []string
-		// TODO: think that the user may have not all of the snapshots locally
-		currentSnapshotId := a.fullTree.attached[h].SnapshotId
-		for currentSnapshotId != "" {
-			sn, err := a.treeBuilder.loadChange(currentSnapshotId)
-			if err != nil {
-				break
-			}
-			path = append(path, currentSnapshotId)
-			currentSnapshotId = sn.SnapshotId
-		}
-		headWithPath.Path = path
-		headsWithPath = append(headsWithPath, headWithPath)
+		path = append(path, currentSnapshotId)
+		currentSnapshotId = sn.SnapshotId
 	}
-	return headsWithPath
+	return path
 }
