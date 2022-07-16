@@ -13,6 +13,7 @@ const CName = "treecache"
 
 type Service interface {
 	Do(ctx context.Context, treeId string, f func(tree acltree.ACLTree) error) error
+	Add(ctx context.Context, treeId string, tree acltree.ACLTree) error
 }
 
 type service struct {
@@ -35,6 +36,10 @@ func (s *service) Do(ctx context.Context, treeId string, f func(tree acltree.ACL
 	aclTree.Lock()
 	defer aclTree.Unlock()
 	return f(tree.(acltree.ACLTree))
+}
+
+func (s *service) Add(ctx context.Context, treeId string, tree acltree.ACLTree) error {
+	return s.cache.Add(treeId, tree)
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
