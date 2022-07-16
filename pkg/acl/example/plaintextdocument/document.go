@@ -17,6 +17,7 @@ type PlainTextDocument interface {
 	AddText(ctx context.Context, text string) error
 }
 
+// TODO: this struct is not thread-safe, so use it wisely :-)
 type plainTextDocument struct {
 	heads   []string
 	aclTree acltree.ACLTree

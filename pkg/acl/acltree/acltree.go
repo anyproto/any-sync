@@ -2,6 +2,7 @@ package acltree
 
 import (
 	"context"
+	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
@@ -35,7 +36,16 @@ func (n NoOpListener) Update(tree ACLTree) {}
 
 func (n NoOpListener) Rebuild(tree ACLTree) {}
 
+type RWLocker interface {
+	sync.Locker
+	RLock()
+	RUnlock()
+}
+
+var ErrNoCommonSnapshot = errors.New("trees doesn't have a common snapshot")
+
 type ACLTree interface {
+	RWLocker
 	ACLState() *ACLState
 	AddContent(ctx context.Context, f func(builder ChangeBuilder) error) (*Change, error)
 	AddRawChanges(ctx context.Context, changes ...*aclpb.RawChange) (AddResult, error)
@@ -45,6 +55,7 @@ type ACLTree interface {
 	IterateFrom(string, func(change *Change) bool)
 	HasChange(string) bool
 	SnapshotPath() []string
+	ChangesAfterCommonSnapshot(snapshotPath []string) ([]*aclpb.RawChange, error)
 
 	Close() error
 }
@@ -204,17 +215,12 @@ func (a *aclTree) rebuildFromStorage(fromStart bool) error {
 }
 
 func (a *aclTree) ACLState() *ACLState {
-	// TODO: probably locks should be happening outside because we are using object cache
-	a.RLock()
-	defer a.RUnlock()
 	return a.aclState
 }
 
 func (a *aclTree) AddContent(ctx context.Context, build func(builder ChangeBuilder) error) (*Change, error) {
 	// TODO: add snapshot creation logic
-	a.Lock()
 	defer func() {
-		a.Unlock()
 		// TODO: should this be called in a separate goroutine to prevent accidental cycles (tree->updater->tree)
 		a.updateListener.Update(a)
 	}()
@@ -248,7 +254,6 @@ func (a *aclTree) AddContent(ctx context.Context, build func(builder ChangeBuild
 }
 
 func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawChange) (AddResult, error) {
-	a.Lock()
 	// TODO: make proper error handling, because there are a lot of corner cases where this will break
 	var err error
 	var mode Mode
@@ -278,7 +283,6 @@ func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 			return
 		}
 
-		a.Unlock()
 		switch mode {
 		case Append:
 			a.updateListener.Update(a)
@@ -350,20 +354,14 @@ func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 }
 
 func (a *aclTree) Iterate(f func(change *Change) bool) {
-	a.RLock()
-	defer a.RUnlock()
 	a.fullTree.Iterate(a.fullTree.RootId(), f)
 }
 
 func (a *aclTree) IterateFrom(s string, f func(change *Change) bool) {
-	a.RLock()
-	defer a.RUnlock()
 	a.fullTree.Iterate(s, f)
 }
 
 func (a *aclTree) HasChange(s string) bool {
-	a.RLock()
-	defer a.RUnlock()
 	_, attachedExists := a.fullTree.attached[s]
 	_, unattachedExists := a.fullTree.unAttached[s]
 	_, invalidExists := a.fullTree.invalidChanges[s]
@@ -371,14 +369,10 @@ func (a *aclTree) HasChange(s string) bool {
 }
 
 func (a *aclTree) Heads() []string {
-	a.RLock()
-	defer a.RUnlock()
 	return a.fullTree.Heads()
 }
 
 func (a *aclTree) Root() *Change {
-	a.RLock()
-	defer a.RUnlock()
 	return a.fullTree.Root()
 }
 
@@ -387,8 +381,7 @@ func (a *aclTree) Close() error {
 }
 
 func (a *aclTree) SnapshotPath() []string {
-	a.RLock()
-	defer a.RUnlock()
+	// TODO: think about caching this
 
 	var path []string
 	// TODO: think that the user may have not all of the snapshots locally
@@ -402,4 +395,64 @@ func (a *aclTree) SnapshotPath() []string {
 		currentSnapshotId = sn.SnapshotId
 	}
 	return path
+}
+
+func (a *aclTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawChange, error) {
+	// TODO: think about when the clients will have their full acl tree and thus full snapshots
+	//  but no changes after some of the snapshots
+	commonSnapshot, err := a.commonSnapshotForTwoPaths(a.SnapshotPath(), theirPath)
+	if err != nil {
+		return nil, err
+	}
+	// we presume that we have everything after the common snapshot, though this may not be the case in case of clients and only ACL tree changes
+	changes, err := a.treeBuilder.dfs(a.fullTree.Heads(), commonSnapshot, func(id string) (*Change, error) {
+		// using custom load function to skip verification step and save raw changes
+		raw, err := a.treeStorage.GetChange(context.Background(), id)
+		if err != nil {
+			return nil, err
+		}
+
+		aclChange, err := a.treeBuilder.makeUnverifiedACLChange(raw)
+		if err != nil {
+			return nil, err
+		}
+
+		ch := NewChange(id, aclChange)
+		ch.Raw = raw
+		return ch, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	var rawChanges []*aclpb.RawChange
+	for _, ch := range changes {
+		rawChanges = append(rawChanges, ch.Raw)
+	}
+	return rawChanges, nil
+}
+
+func (a *aclTree) commonSnapshotForTwoPaths(ourPath []string, theirPath []string) (string, error) {
+	var i int
+	var j int
+OuterLoop:
+	// find starting point from the right
+	for i = len(ourPath) - 1; i >= 0; i-- {
+		for j = len(theirPath) - 1; j >= 0; j-- {
+			// most likely there would be only one comparison, because mostly the snapshot path will start from the root for nodes
+			if ourPath[i] == theirPath[j] {
+				break OuterLoop
+			}
+		}
+	}
+	if i < 0 || j < 0 {
+		return "", ErrNoCommonSnapshot
+	}
+	// find last common element of the sequence moving from right to left
+	for i >= 0 && j >= 0 {
+		if ourPath[i] == theirPath[j] {
+			i--
+			j--
+		}
+	}
+	return ourPath[i+1], nil
 }

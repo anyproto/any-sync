@@ -143,7 +143,7 @@ func (i *inMemoryTreeStorageProvider) TreeStorage(treeId string) (TreeStorage, e
 	if tree, exists := i.trees[treeId]; exists {
 		return tree, nil
 	}
-	return nil, UnknownTreeId
+	return nil, ErrUnknownTreeId
 }
 
 func (i *inMemoryTreeStorageProvider) InsertTree(tree TreeStorage) error {
