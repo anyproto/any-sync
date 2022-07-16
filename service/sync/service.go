@@ -6,7 +6,6 @@ import (
 )
 
 type service struct {
-	pubSub PubSub
 }
 
 const CName = "SyncService"

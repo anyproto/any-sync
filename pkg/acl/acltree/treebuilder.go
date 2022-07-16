@@ -135,13 +135,16 @@ func (tb *treeBuilder) buildTree(heads []string, breakpoint string) (err error) 
 		return
 	}
 	tb.tree.AddFast(ch)
-	changes, err := tb.dfs(heads, breakpoint)
+	changes, err := tb.dfs(heads, breakpoint, tb.loadChange)
 
 	tb.tree.AddFast(changes...)
 	return
 }
 
-func (tb *treeBuilder) dfs(heads []string, breakpoint string) (buf []*Change, err error) {
+func (tb *treeBuilder) dfs(
+	heads []string,
+	breakpoint string,
+	load func(string) (*Change, error)) (buf []*Change, err error) {
 	stack := make([]string, len(heads), len(heads)*2)
 	copy(stack, heads)
 
@@ -154,7 +157,7 @@ func (tb *treeBuilder) dfs(heads []string, breakpoint string) (buf []*Change, er
 			continue
 		}
 
-		ch, err := tb.loadChange(id)
+		ch, err := load(id)
 		if err != nil {
 			continue
 		}

@@ -91,3 +91,9 @@ func (c *changeLoader) makeVerifiedACLChange(change *aclpb.RawChange) (aclChange
 	}
 	return
 }
+
+func (c *changeLoader) makeUnverifiedACLChange(change *aclpb.RawChange) (aclChange *aclpb.ACLChange, err error) {
+	aclChange = new(aclpb.ACLChange)
+	err = proto.Unmarshal(change.Payload, aclChange)
+	return
+}

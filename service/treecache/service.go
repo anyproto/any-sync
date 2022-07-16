@@ -31,6 +31,9 @@ func (s *service) Do(ctx context.Context, treeId string, f func(tree acltree.ACL
 	if err != nil {
 		return err
 	}
+	aclTree := tree.(acltree.ACLTree)
+	aclTree.Lock()
+	defer aclTree.Unlock()
 	return f(tree.(acltree.ACLTree))
 }
 

@@ -20,7 +20,7 @@ func (r *requestHander) HandleHeadUpdate(ctx context.Context, senderId string, u
 		snapshotPath []string
 		result       acltree.AddResult
 	)
-	
+
 	err = r.treeCache.Do(ctx, update.TreeId, func(tree acltree.ACLTree) error {
 		// TODO: check if we already have those changes
 		result, err = tree.AddRawChanges(ctx, update.Changes...)
@@ -30,7 +30,7 @@ func (r *requestHander) HandleHeadUpdate(ctx context.Context, senderId string, u
 		shouldFullSync := !slice.UnsortedEquals(update.Heads, tree.Heads())
 		snapshotPath = tree.SnapshotPath()
 		if shouldFullSync {
-			fullRequest, err = r.prepareFullSyncRequest(tree)
+			fullRequest, err = r.prepareFullSyncRequest(update.TreeId, update.SnapshotPath, tree)
 			if err != nil {
 				return err
 			}
@@ -38,7 +38,7 @@ func (r *requestHander) HandleHeadUpdate(ctx context.Context, senderId string, u
 		return nil
 	})
 	// if there are no such tree
-	if err == treestorage.UnknownTreeId {
+	if err == treestorage.ErrUnknownTreeId {
 		fullRequest = &syncpb.SyncFullRequest{
 			TreeId: update.TreeId,
 		}
@@ -62,12 +62,25 @@ func (r *requestHander) HandleHeadUpdate(ctx context.Context, senderId string, u
 	return
 }
 
-func (r *requestHander) HandleFullSync(ctx context.Context, senderId string, request *syncpb.SyncFullRequest) error {
+func (r *requestHander) HandleFullSyncRequest(ctx context.Context, senderId string, request *syncpb.SyncFullRequest) error {
 	// TODO: add case of new tree
 	return nil
 }
 
-func (r *requestHander) prepareFullSyncRequest(tree acltree.ACLTree) (*syncpb.SyncFullRequest, error) {
+func (r *requestHander) HandleFullSyncResponse(ctx context.Context, senderId string, request *syncpb.SyncFullRequest) error {
+	// TODO: add case of new tree
+	return nil
+}
 
-	return nil, nil
+func (r *requestHander) prepareFullSyncRequest(treeId string, theirPath []string, tree acltree.ACLTree) (*syncpb.SyncFullRequest, error) {
+	ourChanges, err := tree.ChangesAfterCommonSnapshot(theirPath)
+	if err != nil {
+		return nil, err
+	}
+	return &syncpb.SyncFullRequest{
+		Heads:        tree.Heads(),
+		Changes:      ourChanges,
+		TreeId:       treeId,
+		SnapshotPath: tree.SnapshotPath(),
+	}, nil
 }
