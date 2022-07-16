@@ -26,7 +26,7 @@ func (s *service) Account() *account.AccountData {
 }
 
 type StaticAccount struct {
-	SigningKey    string `yaml:"siginingKey"`
+	SigningKey    string `yaml:"signingKey"`
 	EncryptionKey string `yaml:"encryptionKey"`
 }
 
