@@ -46,6 +46,7 @@ var ErrNoCommonSnapshot = errors.New("trees doesn't have a common snapshot")
 
 type ACLTree interface {
 	RWLocker
+	ID() string
 	ACLState() *ACLState
 	AddContent(ctx context.Context, f func(builder ChangeBuilder) error) (*Change, error)
 	AddRawChanges(ctx context.Context, changes ...*aclpb.RawChange) (AddResult, error)
@@ -65,6 +66,7 @@ type aclTree struct {
 	accountData    *account.AccountData
 	updateListener TreeUpdateListener
 
+	id               string
 	fullTree         *Tree
 	aclTreeFromStart *Tree // TODO: right now we don't use it, we can probably have only local var for now. This tree is built from start of the document
 	aclState         *ACLState
@@ -109,6 +111,10 @@ func BuildACLTree(
 		return nil, err
 	}
 	err = t.SetHeads(aclTree.Heads())
+	if err != nil {
+		return nil, err
+	}
+	aclTree.id, err = t.TreeID()
 	if err != nil {
 		return nil, err
 	}
@@ -212,6 +218,10 @@ func (a *aclTree) rebuildFromStorage(fromStart bool) error {
 	}
 
 	return nil
+}
+
+func (a *aclTree) ID() string {
+	return a.id
 }
 
 func (a *aclTree) ACLState() *ACLState {
@@ -400,13 +410,25 @@ func (a *aclTree) SnapshotPath() []string {
 func (a *aclTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawChange, error) {
 	// TODO: think about when the clients will have their full acl tree and thus full snapshots
 	//  but no changes after some of the snapshots
-	commonSnapshot, err := a.commonSnapshotForTwoPaths(a.SnapshotPath(), theirPath)
-	if err != nil {
-		return nil, err
+
+	var (
+		isNewDocument = len(theirPath) != 0
+		ourPath       = a.SnapshotPath()
+		// by default returning everything we have
+		commonSnapshot = ourPath[len(ourPath)-1] // TODO: root snapshot, probably it is better to have a specific method in treestorage
+		err            error
+	)
+
+	// if this is non-empty request
+	if !isNewDocument {
+		commonSnapshot, err = a.commonSnapshotForTwoPaths(ourPath, theirPath)
+		if err != nil {
+			return nil, err
+		}
 	}
-	// we presume that we have everything after the common snapshot, though this may not be the case in case of clients and only ACL tree changes
-	changes, err := a.treeBuilder.dfs(a.fullTree.Heads(), commonSnapshot, func(id string) (*Change, error) {
-		// using custom load function to skip verification step and save raw changes
+	var rawChanges []*aclpb.RawChange
+	// using custom load function to skip verification step and save raw changes
+	load := func(id string) (*Change, error) {
 		raw, err := a.treeStorage.GetChange(context.Background(), id)
 		if err != nil {
 			return nil, err
@@ -418,16 +440,21 @@ func (a *aclTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 		}
 
 		ch := NewChange(id, aclChange)
-		ch.Raw = raw
+		rawChanges = append(rawChanges, raw)
 		return ch, nil
-	})
+	}
+	// we presume that we have everything after the common snapshot, though this may not be the case in case of clients and only ACL tree changes
+	_, err = a.treeBuilder.dfs(a.fullTree.Heads(), commonSnapshot, load)
 	if err != nil {
 		return nil, err
 	}
-	var rawChanges []*aclpb.RawChange
-	for _, ch := range changes {
-		rawChanges = append(rawChanges, ch.Raw)
+	if isNewDocument {
+		_, err = load(commonSnapshot)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	return rawChanges, nil
 }
 
