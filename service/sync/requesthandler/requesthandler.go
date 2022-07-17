@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/client"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/syncpb"
@@ -66,7 +67,7 @@ func (r *requestHandler) HandleHeadUpdate(ctx context.Context, senderId string, 
 		shouldFullSync := !slice.UnsortedEquals(update.Heads, tree.Heads())
 		snapshotPath = tree.SnapshotPath()
 		if shouldFullSync {
-			fullRequest, err = r.prepareFullSyncRequest(update.TreeId, update.SnapshotPath, tree)
+			fullRequest, err = r.prepareFullSyncRequest(update.TreeId, update.TreeHeader, update.SnapshotPath, tree)
 			if err != nil {
 				return err
 			}
@@ -75,8 +76,10 @@ func (r *requestHandler) HandleHeadUpdate(ctx context.Context, senderId string, 
 	})
 	// if there are no such tree
 	if err == treestorage.ErrUnknownTreeId {
+		// TODO: maybe we can optimize this by sending the header and stuff right away, so when the tree is created we are able to add it on first request
 		fullRequest = &syncpb.SyncFullRequest{
-			TreeId: update.TreeId,
+			TreeId:     update.TreeId,
+			TreeHeader: update.TreeHeader,
 		}
 	}
 	// if we have incompatible heads, or we haven't seen the tree at all
@@ -93,6 +96,7 @@ func (r *requestHandler) HandleHeadUpdate(ctx context.Context, senderId string, 
 		Changes:      result.Added,
 		SnapshotPath: snapshotPath,
 		TreeId:       update.TreeId,
+		TreeHeader:   update.TreeHeader,
 	}
 	return r.client.NotifyHeadsChanged(newUpdate)
 }
@@ -106,7 +110,7 @@ func (r *requestHandler) HandleFullSyncRequest(ctx context.Context, senderId str
 
 	err = r.treeCache.Do(ctx, request.TreeId, func(tree acltree.ACLTree) error {
 		// TODO: check if we already have those changes
-		// if we have non empty request
+		// if we have non-empty request
 		if len(request.Heads) != 0 {
 			result, err = tree.AddRawChanges(ctx, request.Changes...)
 			if err != nil {
@@ -135,6 +139,7 @@ func (r *requestHandler) HandleFullSyncRequest(ctx context.Context, senderId str
 		Changes:      result.Added,
 		SnapshotPath: snapshotPath,
 		TreeId:       request.TreeId,
+		TreeHeader:   request.TreeHeader,
 	}
 	return r.client.NotifyHeadsChanged(newUpdate)
 }
@@ -154,17 +159,18 @@ func (r *requestHandler) HandleFullSyncResponse(ctx context.Context, senderId st
 		snapshotPath = tree.SnapshotPath()
 		return nil
 	})
-	if err == treestorage.ErrUnknownTreeId {
-		// TODO: probably sometimes we should notify about this (e.g. if client created new document)
-		return r.createTree(response)
-	}
 	// if error or nothing has changed
-	if err != nil || len(result.Added) == 0 {
+	if (err != nil || len(result.Added) == 0) && err != treestorage.ErrUnknownTreeId {
 		return err
 	}
-
-	// TODO: probably here we should not send an update message, because the other node had already sent it after updating with our data
-	// otherwise sending heads update message
+	// if we have a new tree
+	if err == treestorage.ErrUnknownTreeId {
+		err = r.createTree(ctx, response)
+		if err != nil {
+			return err
+		}
+	}
+	// sending heads update message
 	newUpdate := &syncpb.SyncHeadUpdate{
 		Heads:        result.Heads,
 		Changes:      result.Added,
@@ -174,7 +180,7 @@ func (r *requestHandler) HandleFullSyncResponse(ctx context.Context, senderId st
 	return r.client.NotifyHeadsChanged(newUpdate)
 }
 
-func (r *requestHandler) prepareFullSyncRequest(treeId string, theirPath []string, tree acltree.ACLTree) (*syncpb.SyncFullRequest, error) {
+func (r *requestHandler) prepareFullSyncRequest(treeId string, header *treepb.TreeHeader, theirPath []string, tree acltree.ACLTree) (*syncpb.SyncFullRequest, error) {
 	ourChanges, err := tree.ChangesAfterCommonSnapshot(theirPath)
 	if err != nil {
 		return nil, err
@@ -184,10 +190,15 @@ func (r *requestHandler) prepareFullSyncRequest(treeId string, theirPath []strin
 		Changes:      ourChanges,
 		TreeId:       treeId,
 		SnapshotPath: tree.SnapshotPath(),
+		TreeHeader:   header,
 	}, nil
 }
 
-func (r *requestHandler) prepareFullSyncResponse(treeId string, theirPath []string, theirChanges []*aclpb.RawChange, tree acltree.ACLTree) (*syncpb.SyncFullResponse, error) {
+func (r *requestHandler) prepareFullSyncResponse(
+	treeId string,
+	theirPath []string,
+	theirChanges []*aclpb.RawChange,
+	tree acltree.ACLTree) (*syncpb.SyncFullResponse, error) {
 	// TODO: we can probably use the common snapshot calculated on the request step from previous peer
 	ourChanges, err := tree.ChangesAfterCommonSnapshot(theirPath)
 	if err != nil {
@@ -211,10 +222,10 @@ func (r *requestHandler) prepareFullSyncResponse(treeId string, theirPath []stri
 		Changes:      final,
 		TreeId:       treeId,
 		SnapshotPath: tree.SnapshotPath(),
+		TreeHeader:   tree.Header(),
 	}, nil
 }
 
-func (r *requestHandler) createTree(response *syncpb.SyncFullResponse) error {
-	// TODO: write create tree functionality
-	return nil
+func (r *requestHandler) createTree(ctx context.Context, response *syncpb.SyncFullResponse) error {
+	return r.treeCache.Add(ctx, response.TreeId, response.TreeHeader, response.Changes)
 }

@@ -4,13 +4,16 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
+	"github.com/gogo/protobuf/proto"
 )
 
-func BuildTreeStorageWithACL(
+func CreateNewTreeStorageWithACL(
 	acc *account.AccountData,
 	build func(builder ChangeBuilder) error,
-	create func(change *aclpb.RawChange) (treestorage.TreeStorage, error)) (treestorage.TreeStorage, error) {
+	create treestorage.CreatorFunc) (treestorage.TreeStorage, error) {
 	bld := newChangeBuilder()
 	bld.Init(
 		newACLState(acc.Identity, acc.EncKey, signingkey.NewEd25519PubKeyDecoder()),
@@ -32,8 +35,12 @@ func BuildTreeStorageWithACL(
 		Signature: change.Signature(),
 		Id:        change.CID(),
 	}
+	header, id, err := createTreeHeaderAndId(rawChange)
+	if err != nil {
+		return nil, err
+	}
 
-	thr, err := create(rawChange)
+	thr, err := create(id, header, []*aclpb.RawChange{rawChange})
 	if err != nil {
 		return nil, err
 	}
@@ -43,4 +50,21 @@ func BuildTreeStorageWithACL(
 		return nil, err
 	}
 	return thr, nil
+}
+
+func createTreeHeaderAndId(change *aclpb.RawChange) (*treepb.TreeHeader, string, error) {
+	header := &treepb.TreeHeader{
+		FirstChangeId: change.Id,
+		IsWorkspace:   false,
+	}
+	marshalledHeader, err := proto.Marshal(header)
+	if err != nil {
+		return nil, "", err
+	}
+	treeId, err := cid.NewCIDFromBytes(marshalledHeader)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return header, treeId, nil
 }

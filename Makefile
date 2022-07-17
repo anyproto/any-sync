@@ -25,12 +25,13 @@ protos-go:
 	@$(eval P_TIMESTAMP := Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types)
 	@$(eval P_STRUCT := Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types)
 	@$(eval P_ACL_CHANGES := M$(P_ACL_CHANGES_PATH_PB)/protos/aclchanges.proto=github.com/anytypeio/go-anytype-infrastructure-experiments/$(P_ACL_CHANGES_PATH_PB))
+	@$(eval P_TREE_CHANGES := M$(P_TREE_STORAGE_PATH_PB)/protos/tree.proto=github.com/anytypeio/go-anytype-infrastructure-experiments/$(P_TREE_STORAGE_PATH_PB))
 
 	# use if needed $(eval PKGMAP := $$(P_TIMESTAMP),$$(P_STRUCT))
 	$(GOGO_START) protoc --gogofaster_out=:. $(P_ACL_CHANGES_PATH_PB)/protos/*.proto; mv $(P_ACL_CHANGES_PATH_PB)/protos/*.go $(P_ACL_CHANGES_PATH_PB)
 	$(GOGO_START) protoc --gogofaster_out=:. $(P_TREE_STORAGE_PATH_PB)/protos/*.proto; mv $(P_TREE_STORAGE_PATH_PB)/protos/*.go $(P_TREE_STORAGE_PATH_PB)
 	$(GOGO_START) protoc --gogofaster_out=:. $(P_PLAINTEXT_CHANGES_PATH_PB)/protos/*.proto; mv $(P_PLAINTEXT_CHANGES_PATH_PB)/protos/*.go $(P_PLAINTEXT_CHANGES_PATH_PB)
-	$(eval PKGMAP := $$(P_ACL_CHANGES))
+	$(eval PKGMAP := $$(P_ACL_CHANGES),$$(P_TREE_CHANGES))
 	$(GOGO_START) protoc --gogofaster_out=$(PKGMAP):. $(P_SYNC_CHANGES_PATH_PB)/protos/*.proto; mv $(P_SYNC_CHANGES_PATH_PB)/protos/*.go $(P_SYNC_CHANGES_PATH_PB)
 
 build:
