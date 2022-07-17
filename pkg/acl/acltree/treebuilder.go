@@ -3,16 +3,16 @@ package acltree
 import (
 	"errors"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	//"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/lib/logging"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
-	"github.com/prometheus/common/log"
 )
 
 var (
-	//log      = logging.Logger("anytype-data")
+	log      = logger.NewNamed("acltree").Sugar()
 	ErrEmpty = errors.New("logs empty")
 )
 

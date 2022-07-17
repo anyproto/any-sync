@@ -27,7 +27,7 @@ protos-go:
 	GOGO_NO_UNDERSCORE=1 GOGO_EXPORT_ONEOF_INTERFACE=1 protoc --gogofaster_out=$(PKGMAP):./thread/pb thread/pb/protos/*.*; mv thread/pb/thread/pb/protos/*.go thread/pb; rm -rf thread/pb/thread
 
 protos:
-	GOGO_NO_UNDERSCORE=1 GOGO_EXPORT_ONEOF_INTERFACE=1 protoc --gogofaster_out=plugins=grpc:. syncproto/proto/*.proto; mv syncproto/proto/*.go syncproto
+	GOGO_NO_UNDERSCORE=1 GOGO_EXPORT_ONEOF_INTERFACE=1 protoc --gogofaster_out=plugins=grpc:. syncproto/proto/*.proto
 
 
 build:
