@@ -6,7 +6,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"
 	"sync"
@@ -22,29 +21,25 @@ type inMemoryTreeStorage struct {
 	sync.RWMutex
 }
 
-func NewInMemoryTreeStorage(firstChange *aclpb.RawChange) (TreeStorage, error) {
-	header := &treepb.TreeHeader{
-		FirstChangeId: firstChange.Id,
-		IsWorkspace:   false,
-	}
-	marshalledHeader, err := proto.Marshal(header)
-	if err != nil {
-		return nil, err
-	}
-	treeId, err := cid.NewCIDFromBytes(marshalledHeader)
-	if err != nil {
-		return nil, err
-	}
+type CreatorFunc = func(string, *treepb.TreeHeader, []*aclpb.RawChange) (TreeStorage, error)
 
-	changes := make(map[string]*aclpb.RawChange)
-	changes[firstChange.Id] = firstChange
+func NewInMemoryTreeStorage(
+	treeId string,
+	header *treepb.TreeHeader,
+	changes []*aclpb.RawChange) (TreeStorage, error) {
+	allChanges := make(map[string]*aclpb.RawChange)
+	var orphans []string
+	for _, ch := range changes {
+		allChanges[ch.Id] = ch
+		orphans = append(orphans, ch.Id)
+	}
 
 	return &inMemoryTreeStorage{
 		id:      treeId,
 		header:  header,
-		heads:   []string{firstChange.Id},
-		orphans: nil,
-		changes: changes,
+		heads:   nil,
+		orphans: orphans,
+		changes: allChanges,
 		RWMutex: sync.RWMutex{},
 	}, nil
 }
@@ -137,27 +132,28 @@ func (t *inMemoryTreeStorage) GetChange(ctx context.Context, changeId string) (*
 
 type inMemoryTreeStorageProvider struct {
 	trees map[string]TreeStorage
+	sync.RWMutex
 }
 
 func (i *inMemoryTreeStorageProvider) TreeStorage(treeId string) (TreeStorage, error) {
+	i.RLock()
+	defer i.RUnlock()
 	if tree, exists := i.trees[treeId]; exists {
 		return tree, nil
 	}
 	return nil, ErrUnknownTreeId
 }
 
-func (i *inMemoryTreeStorageProvider) InsertTree(tree TreeStorage) error {
-	if tree == nil {
-		return fmt.Errorf("tree should not be nil")
-	}
-
-	id, err := tree.TreeID()
+func (i *inMemoryTreeStorageProvider) CreateTreeStorage(treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange) (TreeStorage, error) {
+	i.Lock()
+	defer i.Unlock()
+	res, err := NewInMemoryTreeStorage(treeId, header, changes)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	i.trees[id] = tree
-	return nil
+	i.trees[treeId] = res
+	return res, nil
 }
 
 func NewInMemoryTreeStorageProvider() Provider {

@@ -19,7 +19,7 @@ func Test_BuildTreeStorageWithACL(t *testing.T) {
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
 	}
-	thr, err := BuildTreeStorageWithACL(
+	thr, err := CreateNewTreeStorageWithACL(
 		data,
 		func(builder ChangeBuilder) error {
 			return builder.UserAdd(

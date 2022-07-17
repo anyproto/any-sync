@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"sync"
 )
 
@@ -47,6 +48,7 @@ var ErrNoCommonSnapshot = errors.New("trees doesn't have a common snapshot")
 type ACLTree interface {
 	RWLocker
 	ID() string
+	Header() *treepb.TreeHeader
 	ACLState() *ACLState
 	AddContent(ctx context.Context, f func(builder ChangeBuilder) error) (*Change, error)
 	AddRawChanges(ctx context.Context, changes ...*aclpb.RawChange) (AddResult, error)
@@ -67,6 +69,7 @@ type aclTree struct {
 	updateListener TreeUpdateListener
 
 	id               string
+	header           *treepb.TreeHeader
 	fullTree         *Tree
 	aclTreeFromStart *Tree // TODO: right now we don't use it, we can probably have only local var for now. This tree is built from start of the document
 	aclState         *ACLState
@@ -115,6 +118,10 @@ func BuildACLTree(
 		return nil, err
 	}
 	aclTree.id, err = t.TreeID()
+	if err != nil {
+		return nil, err
+	}
+	aclTree.header, err = t.Header()
 	if err != nil {
 		return nil, err
 	}
@@ -222,6 +229,10 @@ func (a *aclTree) rebuildFromStorage(fromStart bool) error {
 
 func (a *aclTree) ID() string {
 	return a.id
+}
+
+func (a *aclTree) Header() *treepb.TreeHeader {
+	return a.header
 }
 
 func (a *aclTree) ACLState() *ACLState {

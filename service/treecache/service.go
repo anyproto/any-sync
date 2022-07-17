@@ -3,8 +3,10 @@ package treecache
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 )
@@ -13,7 +15,7 @@ const CName = "treecache"
 
 type Service interface {
 	Do(ctx context.Context, treeId string, f func(tree acltree.ACLTree) error) error
-	Add(ctx context.Context, treeId string, tree acltree.ACLTree) error
+	Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange) error
 }
 
 type service struct {
@@ -38,13 +40,20 @@ func (s *service) Do(ctx context.Context, treeId string, f func(tree acltree.ACL
 	return f(tree.(acltree.ACLTree))
 }
 
-func (s *service) Add(ctx context.Context, treeId string, tree acltree.ACLTree) error {
-	return s.cache.Add(treeId, tree)
+func (s *service) Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange) error {
+	_, err := s.treeProvider.CreateTreeStorage(treeId, header, changes)
+	if err != nil {
+		return err
+	}
+	// forcing the tree to build
+	_, err = s.cache.Get(ctx, treeId)
+	return err
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 	s.cache = ocache.New(s.loadTree)
 	s.account = a.MustComponent(account.CName).(account.Service)
+	s.treeProvider = treestorage.NewInMemoryTreeStorageProvider()
 	// TODO: for test we should load some predefined keys
 	return nil
 }
