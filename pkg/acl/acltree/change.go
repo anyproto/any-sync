@@ -2,16 +2,16 @@ package acltree
 
 import (
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/gogo/protobuf/proto"
 
-	"github.com/textileio/go-threads/crypto/symmetric"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 )
 
 type ChangeContent struct {
 	ChangesData proto.Marshaler
-	ACLData     *pb.ACLChangeACLData
+	ACLData     *aclpb.ACLChangeACLData
 	Id          string // TODO: this is just for testing, because id should be created automatically from content
 }
 
@@ -25,7 +25,7 @@ type Change struct {
 	IsSnapshot              bool
 	DecryptedDocumentChange []byte
 
-	Content *pb.ACLChange
+	Content *aclpb.ACLChange
 	Sign    []byte
 }
 
@@ -47,8 +47,8 @@ func (ch *Change) IsACLChange() bool {
 	return ch.Content.GetAclData() != nil
 }
 
-func NewFromRawChange(rawChange *thread.RawChange) (*Change, error) {
-	unmarshalled := &pb.ACLChange{}
+func NewFromRawChange(rawChange *treestorage.RawChange) (*Change, error) {
+	unmarshalled := &aclpb.ACLChange{}
 	err := proto.Unmarshal(rawChange.Payload, unmarshalled)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func NewFromRawChange(rawChange *thread.RawChange) (*Change, error) {
 	return ch, nil
 }
 
-func NewChange(id string, ch *pb.ACLChange) *Change {
+func NewChange(id string, ch *aclpb.ACLChange) *Change {
 	return &Change{
 		Next:        nil,
 		PreviousIds: ch.TreeHeadIds,
@@ -70,7 +70,7 @@ func NewChange(id string, ch *pb.ACLChange) *Change {
 	}
 }
 
-func NewACLChange(id string, ch *pb.ACLChange) *Change {
+func NewACLChange(id string, ch *aclpb.ACLChange) *Change {
 	return &Change{
 		Next:        nil,
 		PreviousIds: ch.AclHeadIds,
@@ -81,7 +81,7 @@ func NewACLChange(id string, ch *pb.ACLChange) *Change {
 	}
 }
 
-func (ch *Change) ProtoChange() *pb.ACLChange {
+func (ch *Change) ProtoChange() *aclpb.ACLChange {
 	return ch.Content
 }
 

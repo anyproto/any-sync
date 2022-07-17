@@ -2,26 +2,26 @@ package acltree
 
 import (
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 )
 
 type aclTreeBuilder struct {
 	cache                map[string]*Change
-	identityKeys         map[string]keys.SigningPubKey
-	signingPubKeyDecoder keys.SigningPubKeyDecoder
+	identityKeys         map[string]signingkey.PubKey
+	signingPubKeyDecoder signingkey.PubKeyDecoder
 	tree                 *Tree
-	thread               thread.Thread
+	treeStorage          treestorage.TreeStorage
 
 	*changeLoader
 }
 
-func newACLTreeBuilder(t thread.Thread, decoder keys.SigningPubKeyDecoder) *aclTreeBuilder {
+func newACLTreeBuilder(t treestorage.TreeStorage, decoder signingkey.PubKeyDecoder) *aclTreeBuilder {
 	return &aclTreeBuilder{
 		signingPubKeyDecoder: decoder,
-		thread:               t,
+		treeStorage:          t,
 		changeLoader: newChangeLoader(
 			t,
 			decoder,
@@ -31,15 +31,23 @@ func newACLTreeBuilder(t thread.Thread, decoder keys.SigningPubKeyDecoder) *aclT
 
 func (tb *aclTreeBuilder) Init() {
 	tb.cache = make(map[string]*Change)
-	tb.identityKeys = make(map[string]keys.SigningPubKey)
+	tb.identityKeys = make(map[string]signingkey.PubKey)
 	tb.tree = &Tree{}
 	tb.changeLoader.Init(tb.cache, tb.identityKeys)
 }
 
 func (tb *aclTreeBuilder) Build() (*Tree, error) {
 	var headsAndOrphans []string
-	headsAndOrphans = append(headsAndOrphans, tb.thread.Orphans()...)
-	headsAndOrphans = append(headsAndOrphans, tb.thread.Heads()...)
+	orphans, err := tb.treeStorage.Orphans()
+	if err != nil {
+		return nil, err
+	}
+	heads, err := tb.treeStorage.Heads()
+	if err != nil {
+		return nil, err
+	}
+	headsAndOrphans = append(headsAndOrphans, orphans...)
+	headsAndOrphans = append(headsAndOrphans, heads...)
 	aclHeads, err := tb.getACLHeads(headsAndOrphans)
 
 	if err != nil {
@@ -94,7 +102,11 @@ func (tb *aclTreeBuilder) dfsFromStart(heads []string) (buf []*Change, root *Cha
 			possibleRoots = append(possibleRoots, ch)
 		}
 	}
-	header := tb.thread.Header()
+	header, err := tb.treeStorage.Header()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	for _, r := range possibleRoots {
 		if r.Id == header.FirstChangeId {
 			return buf, r, nil
@@ -123,7 +135,7 @@ func (tb *aclTreeBuilder) getACLHeads(heads []string) (aclTreeHeads []string, er
 	}
 
 	if len(aclTreeHeads) == 0 {
-		return nil, fmt.Errorf("no usable ACL heads in thread")
+		return nil, fmt.Errorf("no usable ACL heads in tree storage")
 	}
 	return aclTreeHeads, nil
 }

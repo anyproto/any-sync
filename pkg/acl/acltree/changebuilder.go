@@ -2,11 +2,11 @@ package acltree
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 	"github.com/gogo/protobuf/proto"
-	"github.com/textileio/go-threads/crypto/symmetric"
 	"hash/fnv"
 	"time"
 )
@@ -14,7 +14,7 @@ import (
 type MarshalledChange = []byte
 
 type ACLChangeBuilder interface {
-	UserAdd(identity string, encryptionKey keys.EncryptionPubKey, permissions pb.ACLChangeUserPermissions) error
+	UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions aclpb.ACLChangeUserPermissions) error
 	AddId(id string)      // TODO: this is only for testing
 	SetMakeSnapshot(bool) // TODO: who should decide this? probably ACLTree so we can delete it
 }
@@ -29,7 +29,7 @@ type changeBuilder struct {
 	tree     *Tree
 	acc      *account.AccountData
 
-	aclData       *pb.ACLChangeACLData
+	aclData       *aclpb.ACLChangeACLData
 	changeContent proto.Marshaler
 	id            string
 	makeSnapshot  bool
@@ -46,7 +46,7 @@ func (c *changeBuilder) Init(state *ACLState, tree *Tree, acc *account.AccountDa
 	c.tree = tree
 	c.acc = acc
 
-	c.aclData = &pb.ACLChangeACLData{}
+	c.aclData = &aclpb.ACLChangeACLData{}
 	// setting read key for further encryption etc
 	if state.currentReadKeyHash == 0 {
 		c.readKey, _ = symmetric.NewRandom()
@@ -68,7 +68,7 @@ func (c *changeBuilder) SetMakeSnapshot(b bool) {
 	c.makeSnapshot = b
 }
 
-func (c *changeBuilder) UserAdd(identity string, encryptionKey keys.EncryptionPubKey, permissions pb.ACLChangeUserPermissions) error {
+func (c *changeBuilder) UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions aclpb.ACLChangeUserPermissions) error {
 	var allKeys []*symmetric.Key
 	if c.aclState.currentReadKeyHash != 0 {
 		for _, key := range c.aclState.userReadKeys {
@@ -91,9 +91,9 @@ func (c *changeBuilder) UserAdd(identity string, encryptionKey keys.EncryptionPu
 	if err != nil {
 		return err
 	}
-	ch := &pb.ACLChangeACLContentValue{
-		Value: &pb.ACLChangeACLContentValueValueOfUserAdd{
-			UserAdd: &pb.ACLChangeUserAdd{
+	ch := &aclpb.ACLChangeACLContentValue{
+		Value: &aclpb.ACLChangeACLContentValueValueOfUserAdd{
+			UserAdd: &aclpb.ACLChangeUserAdd{
 				Identity:          identity,
 				EncryptionKey:     rawKey,
 				EncryptedReadKeys: encryptedKeys,
@@ -106,7 +106,7 @@ func (c *changeBuilder) UserAdd(identity string, encryptionKey keys.EncryptionPu
 }
 
 func (c *changeBuilder) BuildAndApply() (*Change, []byte, error) {
-	aclChange := &pb.ACLChange{
+	aclChange := &aclpb.ACLChange{
 		TreeHeadIds:        c.tree.Heads(),
 		AclHeadIds:         c.tree.ACLHeads(),
 		SnapshotBaseId:     c.tree.RootId(),

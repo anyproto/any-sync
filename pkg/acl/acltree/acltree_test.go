@@ -1,9 +1,11 @@
 package acltree
 
 import (
+	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/pb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/threadbuilder"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/treestoragebuilder"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,7 +18,7 @@ func (m *mockListener) Update(tree ACLTree) {}
 func (m *mockListener) Rebuild(tree ACLTree) {}
 
 func TestACLTree_UserJoinBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("userjoinexample.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("userjoinexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,6 +27,7 @@ func TestACLTree_UserJoinBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  signingkey.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -37,9 +40,9 @@ func TestACLTree_UserJoinBuild(t *testing.T) {
 	cId := keychain.GeneratedIdentities["C"]
 
 	assert.Equal(t, aclState.identity, aId)
-	assert.Equal(t, aclState.userStates[aId].Permissions, pb.ACLChange_Admin)
-	assert.Equal(t, aclState.userStates[bId].Permissions, pb.ACLChange_Writer)
-	assert.Equal(t, aclState.userStates[cId].Permissions, pb.ACLChange_Reader)
+	assert.Equal(t, aclState.userStates[aId].Permissions, aclpb.ACLChange_Admin)
+	assert.Equal(t, aclState.userStates[bId].Permissions, aclpb.ACLChange_Writer)
+	assert.Equal(t, aclState.userStates[cId].Permissions, aclpb.ACLChange_Reader)
 
 	var changeIds []string
 	tree.Iterate(func(c *Change) (isContinue bool) {
@@ -50,7 +53,7 @@ func TestACLTree_UserJoinBuild(t *testing.T) {
 }
 
 func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("userjoinexampleupdate.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("userjoinexampleupdate.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,6 +62,7 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  signingkey.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -75,7 +79,7 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 		changes = append(changes, newCh)
 	}
 
-	res, err := tree.AddChanges(changes...)
+	res, err := tree.AddChanges(context.Background(), changes...)
 	assert.Equal(t, res.Summary, AddResultSummaryAppend)
 
 	aclState := tree.ACLState()
@@ -85,10 +89,10 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 	dId := keychain.GeneratedIdentities["D"]
 
 	assert.Equal(t, aclState.identity, aId)
-	assert.Equal(t, aclState.userStates[aId].Permissions, pb.ACLChange_Admin)
-	assert.Equal(t, aclState.userStates[bId].Permissions, pb.ACLChange_Writer)
-	assert.Equal(t, aclState.userStates[cId].Permissions, pb.ACLChange_Reader)
-	assert.Equal(t, aclState.userStates[dId].Permissions, pb.ACLChange_Writer)
+	assert.Equal(t, aclState.userStates[aId].Permissions, aclpb.ACLChange_Admin)
+	assert.Equal(t, aclState.userStates[bId].Permissions, aclpb.ACLChange_Writer)
+	assert.Equal(t, aclState.userStates[cId].Permissions, aclpb.ACLChange_Reader)
+	assert.Equal(t, aclState.userStates[dId].Permissions, aclpb.ACLChange_Writer)
 
 	var changeIds []string
 	tree.Iterate(func(c *Change) (isContinue bool) {
@@ -99,7 +103,7 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 }
 
 func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("userjoinexampleupdate.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("userjoinexampleupdate.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,6 +112,7 @@ func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  signingkey.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -124,7 +129,7 @@ func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
 		changes = append(changes, newCh)
 	}
 
-	res, err := tree.AddChanges(changes...)
+	res, err := tree.AddChanges(context.Background(), changes...)
 	assert.Equal(t, res.Summary, AddResultSummaryRebuild)
 
 	aclState := tree.ACLState()
@@ -134,10 +139,10 @@ func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
 	dId := keychain.GeneratedIdentities["D"]
 
 	assert.Equal(t, aclState.identity, aId)
-	assert.Equal(t, aclState.userStates[aId].Permissions, pb.ACLChange_Admin)
-	assert.Equal(t, aclState.userStates[bId].Permissions, pb.ACLChange_Writer)
-	assert.Equal(t, aclState.userStates[cId].Permissions, pb.ACLChange_Reader)
-	assert.Equal(t, aclState.userStates[dId].Permissions, pb.ACLChange_Writer)
+	assert.Equal(t, aclState.userStates[aId].Permissions, aclpb.ACLChange_Admin)
+	assert.Equal(t, aclState.userStates[bId].Permissions, aclpb.ACLChange_Writer)
+	assert.Equal(t, aclState.userStates[cId].Permissions, aclpb.ACLChange_Reader)
+	assert.Equal(t, aclState.userStates[dId].Permissions, aclpb.ACLChange_Writer)
 
 	var changeIds []string
 
@@ -149,7 +154,7 @@ func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
 }
 
 func TestACLTree_UserRemoveBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("userremoveexample.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("userremoveexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,6 +163,7 @@ func TestACLTree_UserRemoveBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  signingkey.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -168,7 +174,7 @@ func TestACLTree_UserRemoveBuild(t *testing.T) {
 	aId := keychain.GeneratedIdentities["A"]
 
 	assert.Equal(t, aclState.identity, aId)
-	assert.Equal(t, aclState.userStates[aId].Permissions, pb.ACLChange_Admin)
+	assert.Equal(t, aclState.userStates[aId].Permissions, aclpb.ACLChange_Admin)
 
 	var changeIds []string
 	tree.Iterate(func(c *Change) (isContinue bool) {
@@ -179,7 +185,7 @@ func TestACLTree_UserRemoveBuild(t *testing.T) {
 }
 
 func TestACLTree_UserRemoveBeforeBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("userremovebeforeexample.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("userremovebeforeexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,6 +194,7 @@ func TestACLTree_UserRemoveBeforeBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  signingkey.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -196,7 +203,7 @@ func TestACLTree_UserRemoveBeforeBuild(t *testing.T) {
 	}
 	aclState := tree.ACLState()
 	for _, s := range []string{"A", "C", "E"} {
-		assert.Equal(t, aclState.userStates[keychain.GetIdentity(s)].Permissions, pb.ACLChange_Admin)
+		assert.Equal(t, aclState.userStates[keychain.GetIdentity(s)].Permissions, aclpb.ACLChange_Admin)
 	}
 	assert.Equal(t, aclState.identity, keychain.GetIdentity("A"))
 	assert.Nil(t, aclState.userStates[keychain.GetIdentity("B")])
@@ -210,7 +217,7 @@ func TestACLTree_UserRemoveBeforeBuild(t *testing.T) {
 }
 
 func TestACLTree_InvalidSnapshotBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("invalidsnapshotexample.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("invalidsnapshotexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,6 +226,7 @@ func TestACLTree_InvalidSnapshotBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  signingkey.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -227,7 +235,7 @@ func TestACLTree_InvalidSnapshotBuild(t *testing.T) {
 	}
 	aclState := tree.ACLState()
 	for _, s := range []string{"A", "B", "C", "D", "E", "F"} {
-		assert.Equal(t, aclState.userStates[keychain.GetIdentity(s)].Permissions, pb.ACLChange_Admin)
+		assert.Equal(t, aclState.userStates[keychain.GetIdentity(s)].Permissions, aclpb.ACLChange_Admin)
 	}
 	assert.Equal(t, aclState.identity, keychain.GetIdentity("A"))
 
@@ -240,7 +248,7 @@ func TestACLTree_InvalidSnapshotBuild(t *testing.T) {
 }
 
 func TestACLTree_ValidSnapshotBuild(t *testing.T) {
-	thr, err := threadbuilder.NewThreadBuilderWithTestName("validsnapshotexample.yml")
+	thr, err := treestoragebuilder.NewTreeStorageBuilderWithTestName("validsnapshotexample.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,6 +257,7 @@ func TestACLTree_ValidSnapshotBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
+		Decoder:  signingkey.NewEd25519Decoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -257,7 +266,7 @@ func TestACLTree_ValidSnapshotBuild(t *testing.T) {
 	}
 	aclState := tree.ACLState()
 	for _, s := range []string{"A", "B", "C", "D", "E", "F"} {
-		assert.Equal(t, aclState.userStates[keychain.GetIdentity(s)].Permissions, pb.ACLChange_Admin)
+		assert.Equal(t, aclState.userStates[keychain.GetIdentity(s)].Permissions, aclpb.ACLChange_Admin)
 	}
 	assert.Equal(t, aclState.identity, keychain.GetIdentity("A"))
 
