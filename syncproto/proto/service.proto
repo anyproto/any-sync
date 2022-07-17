@@ -1,9 +1,0 @@
-syntax = "proto3";
-package anytype;
-option go_package = "/syncproto";
-
-import "syncproto/proto/commands.proto";
-
-service AnytypeSync {
-    rpc Ping(stream anytype.Ping.Request) returns (stream anytype.Ping.Response);
-}

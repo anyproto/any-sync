@@ -35,7 +35,7 @@ protos-go:
 	$(GOGO_START) protoc --gogofaster_out=$(PKGMAP):. $(P_SYNC_CHANGES_PATH_PB)/protos/*.proto; mv $(P_SYNC_CHANGES_PATH_PB)/protos/*.go $(P_SYNC_CHANGES_PATH_PB)
 
 protos:
-	GOGO_NO_UNDERSCORE=1 GOGO_EXPORT_ONEOF_INTERFACE=1 protoc --gogofaster_out=plugins=grpc:. syncproto/proto/*.proto; mv syncproto/proto/*.go syncproto
+	GOGO_NO_UNDERSCORE=1 GOGO_EXPORT_ONEOF_INTERFACE=1 protoc --gogofaster_out=plugins=grpc:. syncproto/proto/*.proto
 
 
 build:

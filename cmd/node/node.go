@@ -7,7 +7,8 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/server"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/drpcserver"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/transport"
 	"go.uber.org/zap"
 	"net/http"
 	_ "net/http/pprof"
@@ -77,8 +78,10 @@ func main() {
 	} else {
 		log.Info("goodbye!")
 	}
+	time.Sleep(time.Second / 3)
 }
 
 func Bootstrap(a *app.App) {
-	a.Register(server.New())
+	a.Register(transport.New()).
+		Register(drpcserver.New())
 }
