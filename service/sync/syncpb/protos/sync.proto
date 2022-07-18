@@ -6,6 +6,18 @@ import "pkg/acl/aclchanges/aclpb/protos/aclchanges.proto";
 import "pkg/acl/treestorage/treepb/protos/tree.proto";
 
 message Sync {
+  message Content {
+    repeated ContentValue messages = 1;
+  }
+
+  message ContentValue {
+    oneof value {
+      HeadUpdate headUpdate = 1;
+      Full.Request fullSyncRequest = 2;
+      Full.Response fullSyncResponse = 3;
+    }
+  }
+
   message HeadUpdate {
     repeated string heads = 1;
     repeated acl.RawChange changes = 2;
