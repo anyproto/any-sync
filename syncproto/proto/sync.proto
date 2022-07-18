@@ -1,0 +1,7 @@
+syntax = "proto3";
+package anytype;
+option go_package = "/syncproto";
+
+message SyncMessage {
+    int64 seq = 1;
+}
