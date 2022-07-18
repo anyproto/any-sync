@@ -25,9 +25,7 @@ func NewRequestHandler() app.Component {
 }
 
 type RequestHandler interface {
-	HandleHeadUpdate(ctx context.Context, senderId string, update *syncpb.SyncHeadUpdate) (err error)
-	HandleFullSyncRequest(ctx context.Context, senderId string, request *syncpb.SyncFullRequest) (err error)
-	HandleFullSyncResponse(ctx context.Context, senderId string, request *syncpb.SyncFullRequest) (err error)
+	HandleFullSyncContent(ctx context.Context, senderId string, request *syncpb.SyncContent) (err error)
 }
 
 const CName = "SyncRequestHandler"
@@ -48,6 +46,19 @@ func (r *requestHandler) Run(ctx context.Context) (err error) {
 }
 
 func (r *requestHandler) Close(ctx context.Context) (err error) {
+	return nil
+}
+
+func (r *requestHandler) HandleFullSyncContent(ctx context.Context, senderId string, content *syncpb.SyncContent) error {
+	msg := content.GetMessage()
+	switch {
+	case msg.GetFullSyncRequest() != nil:
+		return r.HandleFullSyncRequest(ctx, senderId, msg.GetFullSyncRequest())
+	case msg.GetFullSyncResponse() != nil:
+		return r.HandleFullSyncResponse(ctx, senderId, msg.GetFullSyncResponse())
+	case msg.GetHeadUpdate() != nil:
+		return r.HandleHeadUpdate(ctx, senderId, msg.GetHeadUpdate())
+	}
 	return nil
 }
 
