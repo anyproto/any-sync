@@ -2,9 +2,9 @@ package transport
 
 import (
 	"context"
-	"crypto/rand"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/sec"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
@@ -33,12 +33,19 @@ type service struct {
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
-	var pubKey crypto.PubKey
-	s.key, pubKey, err = crypto.GenerateEd25519Key(rand.Reader)
+	acc := a.MustComponent(account.CName).(account.Service)
+	rawKey, err := acc.Account().SignKey.Raw()
 	if err != nil {
-		return
+		return err
 	}
-	pubKeyRaw, _ := pubKey.Raw()
+
+	// converting into libp2p crypto structure
+	s.key, err = crypto.UnmarshalEd25519PrivateKey(rawKey)
+	if err != nil {
+		return err
+	}
+
+	pubKeyRaw, _ := s.key.GetPublic().Raw()
 	log.Info("transport keys generated", zap.Binary("pubKey", pubKeyRaw))
 	return nil
 }
