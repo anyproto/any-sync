@@ -5,8 +5,9 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/message"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/syncpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/transport"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/syncproto"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"storj.io/drpc"
 	"storj.io/drpc/drpcserver"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -27,19 +29,25 @@ func New() DRPCServer {
 
 type DRPCServer interface {
 	app.ComponentRunnable
+
+	SendMessage(peerId string, msg *syncpb.SyncContent)
+	BroadcastMessage(msg *syncpb.SyncContent)
 }
 
 type drpcServer struct {
-	config     config.GrpcServer
-	drpcServer *drpcserver.Server
-	transport  transport.Service
-	listeners  []transport.ContextListener
-	cancel     func()
+	config         config.GrpcServer
+	drpcServer     *drpcserver.Server
+	transport      transport.Service
+	listeners      []transport.ContextListener
+	messageService message.Service
+
+	cancel func()
 }
 
 func (s *drpcServer) Init(ctx context.Context, a *app.App) (err error) {
 	s.config = a.MustComponent(config.CName).(*config.Config).GrpcServer
 	s.transport = a.MustComponent(transport.CName).(transport.Service)
+	s.messageService = a.MustComponent(message.CName).(message.Service)
 	return nil
 }
 
@@ -114,23 +122,22 @@ func (s *drpcServer) HandleRPC(stream drpc.Stream, rpc string) (err error) {
 	if err != nil {
 		return
 	}
-	l := log.With(zap.String("peer", sc.RemotePeer().String()))
+	peerId := sc.RemotePeer().String()
+	l := log.With(zap.String("peer", peerId))
 	l.Info("stream opened")
 	defer func() {
 		l.Info("stream closed", zap.Error(err))
 	}()
-	for {
-		msg := &syncproto.SyncMessage{}
-		if err = stream.MsgRecv(msg, enc{}); err != nil {
-			if err == io.EOF {
-				return
-			}
-		}
-		//log.Debug("receive msg", zap.Int("seq", int(msg.Seq)))
-		if err = stream.MsgSend(msg, enc{}); err != nil {
-			return
-		}
-	}
+
+	ch := s.messageService.RegisterMessageSender(peerId)
+	defer s.messageService.UnregisterMessageSender(peerId)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	go s.sendMessages(stream, wg, ch)
+	go s.receiveMessages(stream, wg, peerId)
+	wg.Wait()
+
 	return nil
 }
 
@@ -144,6 +151,33 @@ func (s *drpcServer) Close(ctx context.Context) (err error) {
 		}
 	}
 	return
+}
+
+func (s *drpcServer) sendMessages(stream drpc.Stream, wg *sync.WaitGroup, ch chan *syncpb.SyncContent) {
+	defer wg.Done()
+	for {
+		select {
+		case msg := <-ch:
+			if err := stream.MsgSend(msg, enc{}); err != nil {
+				return
+			}
+		case <-stream.Context().Done():
+			return
+		}
+	}
+}
+
+func (s *drpcServer) receiveMessages(stream drpc.Stream, wg *sync.WaitGroup, peerId string) {
+	defer wg.Done()
+	for {
+		msg := &syncpb.SyncContent{}
+		if err := stream.MsgRecv(msg, enc{}); err != nil {
+			if err == io.EOF {
+				return
+			}
+		}
+		s.messageService.HandleMessage(peerId, msg)
+	}
 }
 
 type enc struct{}

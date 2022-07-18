@@ -13,6 +13,7 @@ require (
 	github.com/multiformats/go-multibase v0.0.3
 	github.com/multiformats/go-multihash v0.1.0
 	github.com/stretchr/testify v1.7.0
+	github.com/cheggaaa/mb v1.0.3
 	go.uber.org/zap v1.21.0
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.32
