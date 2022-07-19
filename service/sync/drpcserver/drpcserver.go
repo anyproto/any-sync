@@ -29,9 +29,6 @@ func New() DRPCServer {
 
 type DRPCServer interface {
 	app.ComponentRunnable
-
-	SendMessage(peerId string, msg *syncpb.SyncContent)
-	BroadcastMessage(msg *syncpb.SyncContent)
 }
 
 type drpcServer struct {
@@ -176,7 +173,10 @@ func (s *drpcServer) receiveMessages(stream drpc.Stream, wg *sync.WaitGroup, pee
 				return
 			}
 		}
-		s.messageService.HandleMessage(peerId, msg)
+		err := s.messageService.HandleMessage(peerId, msg)
+		if err != nil {
+			log.Error("error handling message", zap.Error(err))
+		}
 	}
 }
 

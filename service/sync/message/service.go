@@ -35,8 +35,8 @@ func NewMessageService() app.Component {
 type Service interface {
 	RegisterMessageSender(peerId string) chan *syncpb.SyncContent
 	UnregisterMessageSender(peerId string)
-	HandleMessage(peerId string, msg *syncpb.SyncContent)
-	SendMessage(peerId string, msg *syncpb.SyncContent)
+	HandleMessage(peerId string, msg *syncpb.SyncContent) error
+	SendMessage(peerId string, msg *syncpb.SyncContent) error
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
@@ -82,15 +82,15 @@ func (s *service) UnregisterMessageSender(peerId string) {
 	delete(s.senderChannels, peerId)
 }
 
-func (s *service) HandleMessage(peerId string, msg *syncpb.SyncContent) {
-	_ = s.receiveBatcher.Add(&message{
+func (s *service) HandleMessage(peerId string, msg *syncpb.SyncContent) error {
+	return s.receiveBatcher.Add(&message{
 		peerId:  peerId,
 		content: msg,
 	})
 }
 
-func (s *service) SendMessage(peerId string, msg *syncpb.SyncContent) {
-	_ = s.sendBatcher.Add(&message{
+func (s *service) SendMessage(peerId string, msg *syncpb.SyncContent) error {
+	return s.sendBatcher.Add(&message{
 		peerId:  peerId,
 		content: msg,
 	})
@@ -129,13 +129,23 @@ func (s *service) runSender(ctx context.Context) {
 		msgs := s.sendBatcher.WaitMinMax(1, 100)
 		s.RLock()
 		for _, msg := range msgs {
-			typedMsg := msg.(*message)
-			ch, exists := s.senderChannels[typedMsg.peerId]
-			if !exists {
-				continue
-			}
-			ch <- typedMsg.content
+			s.sendMessage(msg.(*message))
 		}
 		s.RUnlock()
 	}
+}
+
+func (s *service) sendMessage(typedMsg *message) {
+	// this should be done under lock
+	if typedMsg.content.GetMessage().GetHeadUpdate() != nil {
+		for _, ch := range s.senderChannels {
+			ch <- typedMsg.content
+		}
+		return
+	}
+	ch, exists := s.senderChannels[typedMsg.peerId]
+	if !exists {
+		return
+	}
+	ch <- typedMsg.content
 }
