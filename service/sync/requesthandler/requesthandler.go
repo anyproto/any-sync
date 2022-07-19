@@ -8,16 +8,16 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/client"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/message"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/syncpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 )
 
 type requestHandler struct {
-	treeCache treecache.Service
-	client    client.Client
-	account   account.Service
+	treeCache      treecache.Service
+	account        account.Service
+	messageService message.Service
 }
 
 func NewRequestHandler() app.Component {
@@ -32,8 +32,8 @@ const CName = "SyncRequestHandler"
 
 func (r *requestHandler) Init(ctx context.Context, a *app.App) (err error) {
 	r.treeCache = a.MustComponent(treecache.CName).(treecache.Service)
-	r.client = a.MustComponent(client.CName).(client.Client)
 	r.account = a.MustComponent(account.CName).(account.Service)
+	r.messageService = a.MustComponent(message.CName).(message.Service)
 	return nil
 }
 
@@ -95,7 +95,7 @@ func (r *requestHandler) HandleHeadUpdate(ctx context.Context, senderId string, 
 	}
 	// if we have incompatible heads, or we haven't seen the tree at all
 	if fullRequest != nil {
-		return r.client.RequestFullSync(senderId, fullRequest)
+		return r.messageService.SendMessage(senderId, wrapFullRequest(fullRequest))
 	}
 	// if error or nothing has changed
 	if err != nil || len(result.Added) == 0 {
@@ -109,7 +109,7 @@ func (r *requestHandler) HandleHeadUpdate(ctx context.Context, senderId string, 
 		TreeId:       update.TreeId,
 		TreeHeader:   update.TreeHeader,
 	}
-	return r.client.NotifyHeadsChanged(newUpdate)
+	return r.messageService.SendMessage("", wrapHeadUpdate(newUpdate))
 }
 
 func (r *requestHandler) HandleFullSyncRequest(ctx context.Context, senderId string, request *syncpb.SyncFullRequest) (err error) {
@@ -138,7 +138,7 @@ func (r *requestHandler) HandleFullSyncRequest(ctx context.Context, senderId str
 	if err != nil {
 		return err
 	}
-	err = r.client.SendFullSyncResponse(senderId, fullResponse)
+	err = r.messageService.SendMessage(senderId, wrapFullResponse(fullResponse))
 	// if error or nothing has changed
 	if err != nil || len(result.Added) == 0 {
 		return err
@@ -152,7 +152,7 @@ func (r *requestHandler) HandleFullSyncRequest(ctx context.Context, senderId str
 		TreeId:       request.TreeId,
 		TreeHeader:   request.TreeHeader,
 	}
-	return r.client.NotifyHeadsChanged(newUpdate)
+	return r.messageService.SendMessage("", wrapHeadUpdate(newUpdate))
 }
 
 func (r *requestHandler) HandleFullSyncResponse(ctx context.Context, senderId string, response *syncpb.SyncFullResponse) (err error) {
@@ -188,7 +188,7 @@ func (r *requestHandler) HandleFullSyncResponse(ctx context.Context, senderId st
 		SnapshotPath: snapshotPath,
 		TreeId:       response.TreeId,
 	}
-	return r.client.NotifyHeadsChanged(newUpdate)
+	return r.messageService.SendMessage("", wrapHeadUpdate(newUpdate))
 }
 
 func (r *requestHandler) prepareFullSyncRequest(treeId string, header *treepb.TreeHeader, theirPath []string, tree acltree.ACLTree) (*syncpb.SyncFullRequest, error) {
@@ -239,4 +239,22 @@ func (r *requestHandler) prepareFullSyncResponse(
 
 func (r *requestHandler) createTree(ctx context.Context, response *syncpb.SyncFullResponse) error {
 	return r.treeCache.Add(ctx, response.TreeId, response.TreeHeader, response.Changes)
+}
+
+func wrapHeadUpdate(update *syncpb.SyncHeadUpdate) *syncpb.SyncContent {
+	return &syncpb.SyncContent{Message: &syncpb.SyncContentValue{
+		Value: &syncpb.SyncContentValueValueOfHeadUpdate{HeadUpdate: update},
+	}}
+}
+
+func wrapFullRequest(request *syncpb.SyncFullRequest) *syncpb.SyncContent {
+	return &syncpb.SyncContent{Message: &syncpb.SyncContentValue{
+		Value: &syncpb.SyncContentValueValueOfFullSyncRequest{FullSyncRequest: request},
+	}}
+}
+
+func wrapFullResponse(response *syncpb.SyncFullResponse) *syncpb.SyncContent {
+	return &syncpb.SyncContent{Message: &syncpb.SyncContentValue{
+		Value: &syncpb.SyncContentValueValueOfFullSyncResponse{FullSyncResponse: response},
+	}}
 }
