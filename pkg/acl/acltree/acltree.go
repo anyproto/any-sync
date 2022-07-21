@@ -50,7 +50,7 @@ type ACLTree interface {
 	ID() string
 	Header() *treepb.TreeHeader
 	ACLState() *ACLState
-	AddContent(ctx context.Context, f func(builder ChangeBuilder) error) (*Change, error)
+	AddContent(ctx context.Context, f func(builder ChangeBuilder) error) (*aclpb.RawChange, error)
 	AddRawChanges(ctx context.Context, changes ...*aclpb.RawChange) (AddResult, error)
 	Heads() []string
 	Root() *Change
@@ -59,6 +59,7 @@ type ACLTree interface {
 	HasChange(string) bool
 	SnapshotPath() []string
 	ChangesAfterCommonSnapshot(snapshotPath []string) ([]*aclpb.RawChange, error)
+	Storage() treestorage.TreeStorage
 
 	Close() error
 }
@@ -239,7 +240,11 @@ func (a *aclTree) ACLState() *ACLState {
 	return a.aclState
 }
 
-func (a *aclTree) AddContent(ctx context.Context, build func(builder ChangeBuilder) error) (*Change, error) {
+func (a *aclTree) Storage() treestorage.TreeStorage {
+	return a.treeStorage
+}
+
+func (a *aclTree) AddContent(ctx context.Context, build func(builder ChangeBuilder) error) (*aclpb.RawChange, error) {
 	// TODO: add snapshot creation logic
 	defer func() {
 		// TODO: should this be called in a separate goroutine to prevent accidental cycles (tree->updater->tree)
@@ -257,12 +262,13 @@ func (a *aclTree) AddContent(ctx context.Context, build func(builder ChangeBuild
 		return nil, err
 	}
 	a.fullTree.AddFast(ch)
-
-	err = a.treeStorage.AddRawChange(&aclpb.RawChange{
+	rawCh := &aclpb.RawChange{
 		Payload:   marshalled,
 		Signature: ch.Signature(),
 		Id:        ch.Id,
-	})
+	}
+
+	err = a.treeStorage.AddRawChange(rawCh)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +277,7 @@ func (a *aclTree) AddContent(ctx context.Context, build func(builder ChangeBuild
 	if err != nil {
 		return nil, err
 	}
-	return ch, nil
+	return rawCh, nil
 }
 
 func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawChange) (AddResult, error) {
