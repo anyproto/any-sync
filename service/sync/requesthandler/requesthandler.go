@@ -95,7 +95,7 @@ func (r *requestHandler) HandleHeadUpdate(ctx context.Context, senderId string, 
 	}
 	// if we have incompatible heads, or we haven't seen the tree at all
 	if fullRequest != nil {
-		return r.messageService.SendMessage(senderId, wrapFullRequest(fullRequest))
+		return r.messageService.SendMessage(senderId, syncpb.WrapFullRequest(fullRequest))
 	}
 	// if error or nothing has changed
 	if err != nil || len(result.Added) == 0 {
@@ -109,7 +109,7 @@ func (r *requestHandler) HandleHeadUpdate(ctx context.Context, senderId string, 
 		TreeId:       update.TreeId,
 		TreeHeader:   update.TreeHeader,
 	}
-	return r.messageService.SendMessage("", wrapHeadUpdate(newUpdate))
+	return r.messageService.SendMessage("", syncpb.WrapHeadUpdate(newUpdate))
 }
 
 func (r *requestHandler) HandleFullSyncRequest(ctx context.Context, senderId string, request *syncpb.SyncFullRequest) (err error) {
@@ -138,7 +138,7 @@ func (r *requestHandler) HandleFullSyncRequest(ctx context.Context, senderId str
 	if err != nil {
 		return err
 	}
-	err = r.messageService.SendMessage(senderId, wrapFullResponse(fullResponse))
+	err = r.messageService.SendMessage(senderId, syncpb.WrapFullResponse(fullResponse))
 	// if error or nothing has changed
 	if err != nil || len(result.Added) == 0 {
 		return err
@@ -152,7 +152,7 @@ func (r *requestHandler) HandleFullSyncRequest(ctx context.Context, senderId str
 		TreeId:       request.TreeId,
 		TreeHeader:   request.TreeHeader,
 	}
-	return r.messageService.SendMessage("", wrapHeadUpdate(newUpdate))
+	return r.messageService.SendMessage("", syncpb.WrapHeadUpdate(newUpdate))
 }
 
 func (r *requestHandler) HandleFullSyncResponse(ctx context.Context, senderId string, response *syncpb.SyncFullResponse) (err error) {
@@ -188,7 +188,7 @@ func (r *requestHandler) HandleFullSyncResponse(ctx context.Context, senderId st
 		SnapshotPath: snapshotPath,
 		TreeId:       response.TreeId,
 	}
-	return r.messageService.SendMessage("", wrapHeadUpdate(newUpdate))
+	return r.messageService.SendMessage("", syncpb.WrapHeadUpdate(newUpdate))
 }
 
 func (r *requestHandler) prepareFullSyncRequest(treeId string, header *treepb.TreeHeader, theirPath []string, tree acltree.ACLTree) (*syncpb.SyncFullRequest, error) {
@@ -246,22 +246,4 @@ func (r *requestHandler) createTree(ctx context.Context, response *syncpb.SyncFu
 		func(tree acltree.ACLTree) error {
 			return nil
 		})
-}
-
-func wrapHeadUpdate(update *syncpb.SyncHeadUpdate) *syncpb.SyncContent {
-	return &syncpb.SyncContent{Message: &syncpb.SyncContentValue{
-		Value: &syncpb.SyncContentValueValueOfHeadUpdate{HeadUpdate: update},
-	}}
-}
-
-func wrapFullRequest(request *syncpb.SyncFullRequest) *syncpb.SyncContent {
-	return &syncpb.SyncContent{Message: &syncpb.SyncContentValue{
-		Value: &syncpb.SyncContentValueValueOfFullSyncRequest{FullSyncRequest: request},
-	}}
-}
-
-func wrapFullResponse(response *syncpb.SyncFullResponse) *syncpb.SyncContent {
-	return &syncpb.SyncContent{Message: &syncpb.SyncContentValue{
-		Value: &syncpb.SyncContentValueValueOfFullSyncResponse{FullSyncResponse: response},
-	}}
 }

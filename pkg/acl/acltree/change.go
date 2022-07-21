@@ -23,7 +23,6 @@ type Change struct {
 	SnapshotId              string
 	IsSnapshot              bool
 	DecryptedDocumentChange []byte
-	Raw                     *aclpb.RawChange // this will not be present on all changes, we only need it sometimes
 
 	Content *aclpb.ACLChange
 	Sign    []byte
