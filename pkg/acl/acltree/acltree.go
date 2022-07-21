@@ -279,7 +279,7 @@ func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 	var err error
 	var mode Mode
 
-	var changes []*Change
+	var changes []*Change // TODO: = addChangesBuf[:0] ...
 	for _, ch := range rawChanges {
 		change, err := NewFromRawChange(ch)
 		// TODO: think what if we will have incorrect signatures on rawChanges, how everything will work

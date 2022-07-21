@@ -35,6 +35,7 @@ func NewMessageService() app.Component {
 type Service interface {
 	RegisterMessageSender(peerId string) chan *syncpb.SyncContent
 	UnregisterMessageSender(peerId string)
+
 	HandleMessage(peerId string, msg *syncpb.SyncContent) error
 	SendMessage(peerId string, msg *syncpb.SyncContent) error
 }

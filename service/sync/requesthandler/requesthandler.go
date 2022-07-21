@@ -238,7 +238,14 @@ func (r *requestHandler) prepareFullSyncResponse(
 }
 
 func (r *requestHandler) createTree(ctx context.Context, response *syncpb.SyncFullResponse) error {
-	return r.treeCache.Add(ctx, response.TreeId, response.TreeHeader, response.Changes)
+	return r.treeCache.Add(
+		ctx,
+		response.TreeId,
+		response.TreeHeader,
+		response.Changes,
+		func(tree acltree.ACLTree) error {
+			return nil
+		})
 }
 
 func wrapHeadUpdate(update *syncpb.SyncHeadUpdate) *syncpb.SyncContent {
