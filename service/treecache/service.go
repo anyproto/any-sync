@@ -13,9 +13,13 @@ import (
 
 const CName = "treecache"
 
+type ACLTreeFunc = func(tree acltree.ACLTree) error
+type ChangeBuildFunc = func(builder acltree.ChangeBuilder) error
+
 type Service interface {
-	Do(ctx context.Context, treeId string, f func(tree acltree.ACLTree) error) error
-	Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange) error
+	Do(ctx context.Context, treeId string, f ACLTreeFunc) error
+	Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange, f ACLTreeFunc) error
+	Create(ctx context.Context, build ChangeBuildFunc, f ACLTreeFunc) error
 }
 
 type service struct {
@@ -28,7 +32,22 @@ func NewTreeCache() app.ComponentRunnable {
 	return &service{}
 }
 
-func (s *service) Do(ctx context.Context, treeId string, f func(tree acltree.ACLTree) error) error {
+func (s *service) Create(ctx context.Context, build ChangeBuildFunc, f ACLTreeFunc) error {
+	acc := s.account.Account()
+	st, err := acltree.CreateNewTreeStorageWithACL(acc, build, s.treeProvider.CreateTreeStorage)
+	if err != nil {
+		return err
+	}
+
+	id, err := st.TreeID()
+	if err != nil {
+		return err
+	}
+
+	return s.Do(ctx, id, f)
+}
+
+func (s *service) Do(ctx context.Context, treeId string, f ACLTreeFunc) error {
 	tree, err := s.cache.Get(ctx, treeId)
 	defer s.cache.Release(treeId)
 	if err != nil {
@@ -40,14 +59,12 @@ func (s *service) Do(ctx context.Context, treeId string, f func(tree acltree.ACL
 	return f(tree.(acltree.ACLTree))
 }
 
-func (s *service) Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange) error {
+func (s *service) Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange, f ACLTreeFunc) error {
 	_, err := s.treeProvider.CreateTreeStorage(treeId, header, changes)
 	if err != nil {
 		return err
 	}
-	// forcing the tree to build
-	_, err = s.cache.Get(ctx, treeId)
-	return err
+	return s.Do(ctx, treeId, f)
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
