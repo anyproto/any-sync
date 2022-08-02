@@ -38,6 +38,12 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
+	defer func() {
+		if err == nil {
+			log.Info("api server started running on port 8080")
+		}
+	}()
+
 	s.srv = &http.Server{
 		Addr: ":8080",
 	}
@@ -47,7 +53,15 @@ func (s *service) Run(ctx context.Context) (err error) {
 	mux.HandleFunc("/appendDocument", s.appendDocument)
 	s.srv.Handler = mux
 
-	return s.srv.ListenAndServe()
+	go s.runServer()
+	return nil
+}
+
+func (s *service) runServer() {
+	err := s.srv.ListenAndServe()
+	if err != nil {
+		log.With(zap.Error(err)).Error("could not run api server")
+	}
 }
 
 func (s *service) Close(ctx context.Context) (err error) {

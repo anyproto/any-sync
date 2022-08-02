@@ -3,23 +3,30 @@ package document
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/testchangepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/message"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/syncpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
 	"github.com/gogo/protobuf/proto"
+	"go.uber.org/zap"
 )
 
 var CName = "DocumentService"
+
+var log = logger.NewNamed("documentservice")
 
 type service struct {
 	messageService message.Service
 	treeCache      treecache.Service
 	account        account.Service
+	// to create new documents we need to know all nodes
+	nodes []*node.Node
 }
 
 type Service interface {
@@ -35,6 +42,10 @@ func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 	s.account = a.MustComponent(account.CName).(account.Service)
 	s.messageService = a.MustComponent(message.CName).(message.Service)
 	s.treeCache = a.MustComponent(treecache.CName).(treecache.Service)
+
+	nodesService := a.MustComponent(node.CName).(node.Service)
+	s.nodes = nodesService.Nodes()
+
 	return nil
 }
 
@@ -57,6 +68,8 @@ func (s *service) UpdateDocument(ctx context.Context, id, text string) (err erro
 		snapshotPath []string
 		heads        []string
 	)
+	log.With(zap.String("id", id), zap.String("text", text)).
+		Debug("updating document")
 
 	err = s.treeCache.Do(ctx, id, func(tree acltree.ACLTree) error {
 		ch, err = tree.AddContent(ctx, func(builder acltree.ChangeBuilder) error {
@@ -99,12 +112,22 @@ func (s *service) CreateDocument(ctx context.Context, text string) (id string, e
 		snapshotPath []string
 		heads        []string
 	)
+	log.With(zap.String("id", id), zap.String("text", text)).
+		Debug("creating document")
 
 	err = s.treeCache.Create(ctx, func(builder acltree.ChangeBuilder) error {
 		err := builder.UserAdd(acc.Identity, acc.EncKey.GetPublic(), aclpb.ACLChange_Admin)
 		if err != nil {
 			return err
 		}
+		// adding all predefined nodes to the document as admins
+		for _, n := range s.nodes {
+			err = builder.UserAdd(n.SigningKeyString, n.EncryptionKey, aclpb.ACLChange_Admin)
+			if err != nil {
+				return err
+			}
+		}
+
 		builder.AddChangeContent(createInitialChangeContent(text))
 		return nil
 	}, func(tree acltree.ACLTree) error {
