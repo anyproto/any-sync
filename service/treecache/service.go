@@ -28,7 +28,7 @@ type service struct {
 	cache        ocache.OCache
 }
 
-func NewTreeCache() app.ComponentRunnable {
+func New() app.ComponentRunnable {
 	return &service{}
 }
 

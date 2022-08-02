@@ -27,7 +27,7 @@ type Service interface {
 	CreateDocument(ctx context.Context, text string) (string, error)
 }
 
-func NewService() app.Component {
+func New() app.Component {
 	return &service{}
 }
 

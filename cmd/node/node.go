@@ -7,8 +7,14 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/document"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/drpcserver"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/message"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/requesthandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/transport"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
 	"go.uber.org/zap"
 	"net/http"
 	_ "net/http/pprof"
@@ -22,6 +28,7 @@ var log = logger.NewNamed("main")
 
 var (
 	flagConfigFile = flag.String("c", "etc/config.yml", "path to config file")
+	flagNodesFile  = flag.String("a", "etc/nodes.yml", "path to account file")
 	flagVersion    = flag.Bool("v", false, "show version and exit")
 	flagHelp       = flag.Bool("h", false, "show help and exit")
 )
@@ -54,8 +61,28 @@ func main() {
 		log.Fatal("can't open config file", zap.Error(err))
 	}
 
+	// open nodes file with node's keys
+	acc, err := account.NewFromFile(*flagNodesFile)
+	if err != nil {
+		log.Fatal("can't open nodes file", zap.Error(err))
+	}
+
+	// open nodes file with data related to other nodes
+	nodes, err := node.NewFromFile(*flagNodesFile)
+	if err != nil {
+		log.Fatal("can't open nodes file", zap.Error(err))
+	}
+
 	// bootstrap components
 	a.Register(conf)
+	a.Register(acc)
+	a.Register(nodes)
+	a.Register(document.New())
+	a.Register(drpcserver.New())
+	a.Register(message.New())
+	a.Register(requesthandler.New())
+	a.Register(transport.New())
+	a.Register(treecache.New())
 	Bootstrap(a)
 
 	// start app
