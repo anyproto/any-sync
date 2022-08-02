@@ -60,6 +60,7 @@ type ACLTree interface {
 	SnapshotPath() []string
 	ChangesAfterCommonSnapshot(snapshotPath []string) ([]*aclpb.RawChange, error)
 	Storage() treestorage.TreeStorage
+	DebugDump() (string, error)
 
 	Close() error
 }
@@ -473,6 +474,10 @@ func (a *aclTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 	}
 
 	return rawChanges, nil
+}
+
+func (a *aclTree) DebugDump() (string, error) {
+	return a.fullTree.Graph()
 }
 
 func (a *aclTree) commonSnapshotForTwoPaths(ourPath []string, theirPath []string) (string, error) {
