@@ -2,21 +2,21 @@ package keys
 
 import "github.com/anytypeio/go-anytype-infrastructure-experiments/util/strkey"
 
-type keyDecoder struct {
-	create func([]byte) (Key, error)
+type keyDecoder[T Key] struct {
+	create func([]byte) (T, error)
 }
 
-func NewKeyDecoder(create func(bytes []byte) (Key, error)) Decoder {
-	return &keyDecoder{
+func NewKeyDecoder[T Key](create func(bytes []byte) (T, error)) Decoder {
+	return &keyDecoder[T]{
 		create: create,
 	}
 }
 
-func (e *keyDecoder) DecodeFromBytes(bytes []byte) (Key, error) {
+func (e *keyDecoder[T]) DecodeFromBytes(bytes []byte) (Key, error) {
 	return e.create(bytes)
 }
 
-func (e *keyDecoder) DecodeFromString(identity string) (Key, error) {
+func (e *keyDecoder[T]) DecodeFromString(identity string) (Key, error) {
 	pubKeyRaw, err := strkey.Decode(0x5b, identity)
 	if err != nil {
 		return nil, err
@@ -25,11 +25,11 @@ func (e *keyDecoder) DecodeFromString(identity string) (Key, error) {
 	return e.DecodeFromBytes(pubKeyRaw)
 }
 
-func (e *keyDecoder) DecodeFromStringIntoBytes(identity string) ([]byte, error) {
+func (e *keyDecoder[T]) DecodeFromStringIntoBytes(identity string) ([]byte, error) {
 	return strkey.Decode(0x5b, identity)
 }
 
-func (e *keyDecoder) EncodeToString(key Key) (string, error) {
+func (e *keyDecoder[T]) EncodeToString(key Key) (string, error) {
 	raw, err := key.Raw()
 	if err != nil {
 		return "", err

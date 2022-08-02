@@ -2,9 +2,10 @@ package account
 
 import (
 	"context"
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"gopkg.in/yaml.v3"
@@ -31,32 +32,38 @@ type StaticAccount struct {
 }
 
 func NewFromFile(path string) (app.Component, error) {
-	acc := &StaticAccount{}
+	nodeInfo := &config.NodeInfo{}
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	if err = yaml.Unmarshal(data, acc); err != nil {
+	if err = yaml.Unmarshal(data, nodeInfo); err != nil {
 		return nil, err
 	}
-	privateEncryptionDecoder := keys.NewKeyDecoder(func(bytes []byte) (keys.Key, error) {
-		return encryptionkey.NewEncryptionRsaPrivKeyFromBytes(bytes)
-	})
-	privateSigningDecoder := keys.NewKeyDecoder(func(bytes []byte) (keys.Key, error) {
-		return signingkey.NewSigningEd25519PrivKeyFromBytes(bytes)
-	})
-	// TODO: Convert this to new decoder
-	publicSigningDecoder := signingkey.NewEd25519PubKeyDecoder()
+	privateEncryptionDecoder := encryptionkey.NewRSAPrivKeyDecoder()
+	privateSigningDecoder := signingkey.NewEDPrivKeyDecoder()
+	publicSigningDecoder := signingkey.NewEDPubKeyDecoder()
+
+	var acc *config.Node
+	for _, node := range nodeInfo.Nodes {
+		if node.Alias == nodeInfo.CurrentAlias {
+			acc = node
+			break
+		}
+	}
+	if acc == nil {
+		return nil, fmt.Errorf("the node should have a defined alias")
+	}
 
 	decodedEncryptionKey, err := privateEncryptionDecoder.DecodeFromString(acc.EncryptionKey)
 	if err != nil {
 		return nil, err
 	}
-	decodedSiginingKey, err := privateSigningDecoder.DecodeFromString(acc.EncryptionKey)
+	decodedSigningKey, err := privateSigningDecoder.DecodeFromString(acc.SigningKey)
 	if err != nil {
 		return nil, err
 	}
-	signKey := decodedSiginingKey.(signingkey.PrivKey)
+	signKey := decodedSigningKey.(signingkey.PrivKey)
 	identity, err := publicSigningDecoder.EncodeToString(signKey.GetPublic())
 	if err != nil {
 		return nil, err

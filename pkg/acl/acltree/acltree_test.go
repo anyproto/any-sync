@@ -65,20 +65,6 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 
-	// Use this for key generation
-	//encryptionDecoder := keys.NewKeyDecoder(func(bytes []byte) (keys.Key, error) {
-	//	return encryptionkey.NewEncryptionRsaPrivKeyFromBytes(bytes)
-	//})
-	//encodedEncryptionKey, _ := encryptionDecoder.EncodeToString(keychain.EncryptionKeys["A"])
-	//
-	//signingDecoder := keys.NewKeyDecoder(func(bytes []byte) (keys.Key, error) {
-	//	return signingkey.NewSigningEd25519PrivKeyFromBytes(bytes)
-	//})
-	//encodedSigningKey, _ := signingDecoder.EncodeToString(keychain.SigningKeys["A"])
-	//
-	//fmt.Println(encodedEncryptionKey)
-	//fmt.Println(encodedSigningKey)
-
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
 	if err != nil {
