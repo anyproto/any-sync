@@ -28,7 +28,7 @@ type message struct {
 	content *syncpb.SyncContent
 }
 
-func NewMessageService() app.Component {
+func New() app.Component {
 	return &service{}
 }
 

@@ -20,7 +20,7 @@ type requestHandler struct {
 	messageService message.Service
 }
 
-func NewRequestHandler() app.Component {
+func New() app.Component {
 	return &requestHandler{}
 }
 
