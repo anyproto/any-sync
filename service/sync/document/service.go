@@ -94,6 +94,11 @@ func (s *service) UpdateDocument(ctx context.Context, id, text string) (err erro
 	if err != nil {
 		return err
 	}
+	log.With(
+		zap.String("id", id),
+		zap.Strings("heads", heads),
+		zap.String("header", header.String())).
+		Debug("document updated in the database")
 
 	return s.messageService.SendMessage("", syncpb.WrapHeadUpdate(&syncpb.SyncHeadUpdate{
 		Heads:        heads,
@@ -139,7 +144,11 @@ func (s *service) CreateDocument(ctx context.Context, text string) (id string, e
 		if err != nil {
 			return err
 		}
-
+		log.With(
+			zap.String("id", id),
+			zap.Strings("heads", heads),
+			zap.String("header", header.String())).
+			Debug("document created in the database")
 		return nil
 	})
 	if err != nil {

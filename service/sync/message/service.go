@@ -53,8 +53,8 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
-	go s.runSender(ctx)
-	go s.runReceiver(ctx)
+	//go s.runSender(ctx)
+	//go s.runReceiver(ctx)
 	return nil
 }
 
@@ -84,6 +84,10 @@ func (s *service) UnregisterMessageSender(peerId string) {
 }
 
 func (s *service) HandleMessage(peerId string, msg *syncpb.SyncContent) error {
+	log.With(
+		zap.String("peerId", peerId),
+		zap.String("message", msgType(msg))).
+		Debug("handling message from peer")
 	return s.receiveBatcher.Add(&message{
 		peerId:  peerId,
 		content: msg,
@@ -91,6 +95,10 @@ func (s *service) HandleMessage(peerId string, msg *syncpb.SyncContent) error {
 }
 
 func (s *service) SendMessage(peerId string, msg *syncpb.SyncContent) error {
+	log.With(
+		zap.String("peerId", peerId),
+		zap.String("message", msgType(msg))).
+		Debug("sending message to peer")
 	return s.sendBatcher.Add(&message{
 		peerId:  peerId,
 		content: msg,
@@ -149,4 +157,17 @@ func (s *service) sendMessage(typedMsg *message) {
 		return
 	}
 	ch <- typedMsg.content
+}
+
+func msgType(content *syncpb.SyncContent) string {
+	msg := content.GetMessage()
+	switch {
+	case msg.GetFullSyncRequest() != nil:
+		return "FullSyncRequest"
+	case msg.GetFullSyncResponse() != nil:
+		return "FullSyncResponse"
+	case msg.GetHeadUpdate() != nil:
+		return "HeadUpdate"
+	}
+	return "UnknownMessage"
 }
