@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/awalterschulze/gographviz v0.0.0-20190522210029-fa59802746ab
+	github.com/cheggaaa/mb v1.0.3
 	github.com/goccy/go-graphviz v0.0.9
 	github.com/gogo/protobuf v1.3.2
 	github.com/ipfs/go-cid v0.1.0
@@ -13,7 +14,6 @@ require (
 	github.com/multiformats/go-multibase v0.0.3
 	github.com/multiformats/go-multihash v0.1.0
 	github.com/stretchr/testify v1.7.0
-	github.com/cheggaaa/mb v1.0.3
 	go.uber.org/zap v1.21.0
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.32

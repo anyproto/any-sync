@@ -8,7 +8,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/message"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/syncpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
@@ -17,7 +16,7 @@ import (
 type requestHandler struct {
 	treeCache      treecache.Service
 	account        account.Service
-	messageService message.Service
+	messageService MessageSender
 }
 
 func New() app.Component {
@@ -28,12 +27,16 @@ type RequestHandler interface {
 	HandleFullSyncContent(ctx context.Context, senderId string, request *syncpb.SyncContent) (err error)
 }
 
+type MessageSender interface {
+	SendMessage(peerId string, msg *syncpb.SyncContent) error
+}
+
 const CName = "SyncRequestHandler"
 
 func (r *requestHandler) Init(ctx context.Context, a *app.App) (err error) {
 	r.treeCache = a.MustComponent(treecache.CName).(treecache.Service)
 	r.account = a.MustComponent(account.CName).(account.Service)
-	r.messageService = a.MustComponent(message.CName).(message.Service)
+	r.messageService = a.MustComponent("MessageService").(MessageSender)
 	return nil
 }
 

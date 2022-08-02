@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/api"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/document"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/drpcserver"
@@ -77,12 +78,6 @@ func main() {
 	a.Register(conf)
 	a.Register(acc)
 	a.Register(nodes)
-	a.Register(document.New())
-	a.Register(drpcserver.New())
-	a.Register(message.New())
-	a.Register(requesthandler.New())
-	a.Register(transport.New())
-	a.Register(treecache.New())
 	Bootstrap(a)
 
 	// start app
@@ -110,5 +105,10 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(transport.New()).
-		Register(drpcserver.New())
+		Register(drpcserver.New()).
+		Register(document.New()).
+		Register(message.New()).
+		Register(requesthandler.New()).
+		Register(treecache.New()).
+		Register(api.New())
 }
