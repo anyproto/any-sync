@@ -3,18 +3,22 @@ package treecache
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
+	"go.uber.org/zap"
 )
 
 const CName = "treecache"
 
 type ACLTreeFunc = func(tree acltree.ACLTree) error
 type ChangeBuildFunc = func(builder acltree.ChangeBuilder) error
+
+var log = logger.NewNamed("treecache")
 
 type Service interface {
 	Do(ctx context.Context, treeId string, f ACLTreeFunc) error
@@ -48,6 +52,10 @@ func (s *service) Create(ctx context.Context, build ChangeBuildFunc, f ACLTreeFu
 }
 
 func (s *service) Do(ctx context.Context, treeId string, f ACLTreeFunc) error {
+	log.
+		With(zap.String("treeId", treeId)).
+		Debug("requesting tree from cache to perform operation")
+
 	tree, err := s.cache.Get(ctx, treeId)
 	defer s.cache.Release(treeId)
 	if err != nil {
@@ -60,6 +68,10 @@ func (s *service) Do(ctx context.Context, treeId string, f ACLTreeFunc) error {
 }
 
 func (s *service) Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange, f ACLTreeFunc) error {
+	log.
+		With(zap.String("treeId", treeId)).
+		Debug("adding tree with changes")
+
 	_, err := s.treeProvider.CreateTreeStorage(treeId, header, changes)
 	if err != nil {
 		return err
