@@ -94,7 +94,7 @@ func (s *service) createDocument(w http.ResponseWriter, req *http.Request) {
 		query = req.URL.Query()
 		text  = query.Get("text")
 	)
-	treeId, err := s.documentService.CreateDocument(context.Background(), text)
+	treeId, err := s.documentService.CreateDocument(context.Background(), fmt.Sprintf("created document with id: %s", text))
 	if err != nil {
 		sendText(w, http.StatusInternalServerError, err.Error())
 		return
@@ -113,7 +113,7 @@ func (s *service) appendDocument(w http.ResponseWriter, req *http.Request) {
 		sendText(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	sendText(w, http.StatusOK, "")
+	sendText(w, http.StatusOK, fmt.Sprintf("updated document with id: %s with text: %s", treeId, text))
 }
 
 func sendText(r http.ResponseWriter, code int, body string) {
