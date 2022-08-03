@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/document"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
@@ -25,11 +26,13 @@ type service struct {
 	treeCache       treecache.Service
 	documentService document.Service
 	srv             *http.Server
+	cfg             *config.Config
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 	s.treeCache = a.MustComponent(treecache.CName).(treecache.Service)
 	s.documentService = a.MustComponent(document.CName).(document.Service)
+	s.cfg = a.MustComponent(config.CName).(*config.Config)
 	return nil
 }
 
@@ -40,12 +43,12 @@ func (s *service) Name() (name string) {
 func (s *service) Run(ctx context.Context) (err error) {
 	defer func() {
 		if err == nil {
-			log.Info("api server started running on port 8080")
+			log.With(zap.String("port", s.cfg.APIServer.Port)).Info("api server started running")
 		}
 	}()
 
 	s.srv = &http.Server{
-		Addr: ":8080",
+		Addr: fmt.Sprintf(":%s", s.cfg.APIServer.Port),
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/treeDump", s.treeDump)

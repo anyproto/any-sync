@@ -4,92 +4,134 @@ import (
 	"flag"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/peer"
 	"gopkg.in/yaml.v3"
-	"math/rand"
+	"io/ioutil"
 	"os"
-	"time"
 )
 
 var (
+	flagNodeMap           = flag.String("n", "cmd/nodesgen/nodemap.yml", "path to nodes map file")
 	flagAccountConfigFile = flag.String("a", "etc/nodes.yml", "path to account file")
-	flagBaseAddress       = flag.String("ba", "127.0.0.1:4430", "base ip for each node (you should change it later)")
-	flagNodeCount         = flag.Int("nc", 5, "the count of nodes for which we create the keys")
+	flagEtcPath           = flag.String("e", "etc", "path to etc directory")
 )
 
-func main() {
-	rand.Seed(time.Now().UnixNano())
-	flag.Parse()
+type NodesMap struct {
+	Nodes []struct {
+		Addresses []string `yaml:"grpcAddresses"`
+		APIPort   string   `yaml:"apiPort"`
+	} `yaml:"nodes"`
+}
 
-	if *flagNodeCount <= 0 {
-		panic("node count should not be zero or less")
+func main() {
+	nodesMap := &NodesMap{}
+	data, err := ioutil.ReadFile(*flagNodeMap)
+	if err != nil {
+		panic(err)
 	}
 
-	encryptionDecoder := encryptionkey.NewRSAPrivKeyDecoder()
-	signingDecoder := signingkey.NewEDPrivKeyDecoder()
+	err = yaml.Unmarshal(data, nodesMap)
+	if err != nil {
+		panic(err)
+	}
+	flag.Parse()
 
-	var nodes []*config.Node
-	for i := 0; i < *flagNodeCount; i++ {
-		node, err := genRandomNodeKeys(*flagBaseAddress, encryptionDecoder, signingDecoder)
+	var configs []config.Config
+	var nodes []config.Node
+	for _, n := range nodesMap.Nodes {
+		cfg, err := genConfig(n.Addresses, n.APIPort)
 		if err != nil {
-			panic(fmt.Sprintf("could not generate keys for node: %v", err))
+			panic(fmt.Sprintf("could not generate the config file: %s", err.Error()))
+		}
+		configs = append(configs, cfg)
+
+		node := config.Node{
+			PeerId:        cfg.Account.PeerId,
+			Address:       cfg.GrpcServer.ListenAddrs[0],
+			SigningKey:    cfg.Account.SigningKey,
+			EncryptionKey: cfg.Account.EncryptionKey,
 		}
 		nodes = append(nodes, node)
 	}
-	nodeInfo := config.NodeInfo{
-		CurrentAlias: nodes[0].Alias,
-		Nodes:        nodes,
-	}
-	bytes, err := yaml.Marshal(nodeInfo)
-	if err != nil {
-		panic(fmt.Sprintf("could not marshal the keys: %v", err))
+	for idx := range configs {
+		configs[idx].Nodes = nodes
 	}
 
-	err = os.WriteFile(*flagAccountConfigFile, bytes, 0644)
-	if err != nil {
-		panic(fmt.Sprintf("could not write the generated nodes to file: %v", err))
+	// saving configs
+	configsPath := fmt.Sprintf("%s/configs", *flagEtcPath)
+	createDir := func() {
+		err := os.Mkdir(configsPath, os.ModePerm)
+		if err != nil {
+			panic(fmt.Sprintf("failed to create the configs directory: %v", err))
+		}
+	}
+	if _, err := os.Stat(configsPath); os.IsNotExist(err) {
+		createDir()
+	} else {
+		err = os.RemoveAll(configsPath)
+		if err != nil {
+			panic(fmt.Sprintf("failed to remove the configs directory: %v", err))
+		}
+		createDir()
+	}
+	for _, cfg := range configs {
+		path := fmt.Sprintf("%s/%s.yml", configsPath, cfg.Account.PeerId)
+		bytes, err := yaml.Marshal(cfg)
+		if err != nil {
+			panic(fmt.Sprintf("could not marshal the keys: %v", err))
+		}
+
+		err = os.WriteFile(path, bytes, os.ModePerm)
+		if err != nil {
+			panic(fmt.Sprintf("could not write the config to file: %v", err))
+		}
 	}
 }
 
-func genRandomNodeKeys(address string, encKeyDecoder keys.Decoder, signKeyDecoder keys.Decoder) (*config.Node, error) {
+func genConfig(addresses []string, apiPort string) (config.Config, error) {
 	encKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
 	if err != nil {
-		return nil, err
+		return config.Config{}, err
 	}
 
 	signKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
 	if err != nil {
-		return nil, err
+		return config.Config{}, err
 	}
+
+	encKeyDecoder := encryptionkey.NewRSAPrivKeyDecoder()
+	signKeyDecoder := signingkey.NewEDPrivKeyDecoder()
 
 	encEncKey, err := encKeyDecoder.EncodeToString(encKey)
 	if err != nil {
-		return nil, err
+		return config.Config{}, err
 	}
 
 	encSignKey, err := signKeyDecoder.EncodeToString(signKey)
 	if err != nil {
-		return nil, err
+		return config.Config{}, err
 	}
 
-	return &config.Node{
-		Alias:         randString(5),
-		Address:       address,
-		SigningKey:    encSignKey,
-		EncryptionKey: encEncKey,
+	peerID, err := peer.IDFromSigningPubKey(signKey.GetPublic())
+	if err != nil {
+		return config.Config{}, err
+	}
+
+	return config.Config{
+		Anytype: config.Anytype{SwarmKey: "/key/swarm/psk/1.0.0/base16/209992e611c27d5dce8fbd2e7389f6b51da9bee980992ef60739460b536139ec"},
+		GrpcServer: config.GrpcServer{
+			ListenAddrs: addresses,
+			TLS:         false,
+		},
+		Account: config.Account{
+			PeerId:        peerID.String(),
+			SigningKey:    encSignKey,
+			EncryptionKey: encEncKey,
+		},
+		APIServer: config.APIServer{
+			Port: apiPort,
+		},
 	}, nil
-}
-
-func randString(n int) string {
-	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-	b := make([]byte, n)
-	for i := 0; i < n; i++ {
-		idx := rand.Intn(len(letterBytes))
-		b[i] = letterBytes[idx]
-	}
-
-	return string(b)
 }
