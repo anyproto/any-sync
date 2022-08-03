@@ -29,7 +29,6 @@ var log = logger.NewNamed("main")
 
 var (
 	flagConfigFile = flag.String("c", "etc/config.yml", "path to config file")
-	flagNodesFile  = flag.String("a", "etc/nodes.yml", "path to account file")
 	flagVersion    = flag.Bool("v", false, "show version and exit")
 	flagHelp       = flag.Bool("h", false, "show help and exit")
 )
@@ -62,22 +61,8 @@ func main() {
 		log.Fatal("can't open config file", zap.Error(err))
 	}
 
-	// open nodes file with node's keys
-	acc, err := account.NewFromFile(*flagNodesFile)
-	if err != nil {
-		log.Fatal("can't open nodes file", zap.Error(err))
-	}
-
-	// open nodes file with data related to other nodes
-	nodes, err := node.NewFromFile(*flagNodesFile)
-	if err != nil {
-		log.Fatal("can't open nodes file", zap.Error(err))
-	}
-
 	// bootstrap components
 	a.Register(conf)
-	a.Register(acc)
-	a.Register(nodes)
 	Bootstrap(a)
 
 	// start app
@@ -104,8 +89,10 @@ func main() {
 }
 
 func Bootstrap(a *app.App) {
-	a.Register(transport.New()).
+	a.Register(account.New()).
+		Register(transport.New()).
 		Register(drpcserver.New()).
+		Register(node.New()).
 		Register(document.New()).
 		Register(message.New()).
 		Register(requesthandler.New()).
