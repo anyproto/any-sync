@@ -83,6 +83,7 @@ func (t *Tree) Graph() (data string, err error) {
 			//	}
 			//	chSymbs = append(chSymbs, res)
 			//}
+			chSymbs = append(chSymbs, "DEC")
 		}
 
 		shortId := c.Id
