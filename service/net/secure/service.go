@@ -1,11 +1,13 @@
-package transport
+package secure
 
 import (
 	"context"
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/sec"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	"go.uber.org/zap"
@@ -14,9 +16,9 @@ import (
 
 type HandshakeError error
 
-var log = logger.NewNamed("transport")
+const CName = "net/secure"
 
-const CName = "transport"
+var log = logger.NewNamed(CName)
 
 func New() Service {
 	return &service{}
@@ -33,20 +35,39 @@ type service struct {
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
-	acc := a.MustComponent(account.CName).(account.Service)
-	rawKey, err := acc.Account().SignKey.Raw()
+	peerConf := a.MustComponent(config.CName).(*config.Config).PeerList
+	pkb, err := crypto.ConfigDecodeKey(peerConf.MyId.PrivKey)
 	if err != nil {
-		return err
+		return
+	}
+	if s.key, err = crypto.UnmarshalEd25519PrivateKey(pkb); err != nil {
+		return
 	}
 
-	// converting into libp2p crypto structure
-	s.key, err = crypto.UnmarshalEd25519PrivateKey(rawKey)
+	pid, err := peer.Decode(peerConf.MyId.PeerId)
 	if err != nil {
-		return err
+		return
 	}
 
-	pubKeyRaw, _ := s.key.GetPublic().Raw()
-	log.Info("transport keys generated", zap.Binary("pubKey", pubKeyRaw))
+	var testData = []byte("test data")
+	sign, err := s.key.Sign(testData)
+	if err != nil {
+		return
+	}
+	pubKey, err := pid.ExtractPublicKey()
+	if err != nil {
+		return
+	}
+	ok, err := pubKey.Verify(testData, sign)
+	if err != nil {
+		return
+	}
+	if !ok {
+		return fmt.Errorf("peerId and privateKey mismatched")
+	}
+
+	log.Info("secure service init", zap.String("peerId", peerConf.MyId.PeerId))
+
 	return nil
 }
 
