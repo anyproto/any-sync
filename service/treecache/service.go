@@ -15,6 +15,7 @@ import (
 
 const CName = "treecache"
 
+// TODO: add context
 type ACLTreeFunc = func(tree acltree.ACLTree) error
 type ChangeBuildFunc = func(builder acltree.ChangeBuilder) error
 

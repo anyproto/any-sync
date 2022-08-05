@@ -164,7 +164,7 @@ func (r *requestHandler) HandleFullSyncRequest(ctx context.Context, senderId str
 		TreeId:       request.TreeId,
 		TreeHeader:   request.TreeHeader,
 	}
-	return r.messageService.SendToSpace(ctx, "", syncproto.WrapHeadUpdate(newUpdate))
+	return r.messageService.SendToSpace(ctx, "def", syncproto.WrapHeadUpdate(newUpdate))
 }
 
 func (r *requestHandler) HandleFullSyncResponse(ctx context.Context, senderId string, response *syncproto.SyncFullResponse) (err error) {

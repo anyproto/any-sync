@@ -63,6 +63,9 @@ func (s *service) HandleMessage(ctx context.Context, msg *pool.Message) (err err
 	if err != nil {
 		log.With(zap.String("peerId", msg.Peer().Id()), zap.Error(err)).
 			Error("could not ack message")
+	} else {
+		log.With(zap.String("peerId", msg.Peer().Id()), zap.Int("type", int(msg.Header.Type))).
+			Debug("ack returned")
 	}
 	syncMsg := &syncproto.Sync{}
 	err = proto.Unmarshal(msg.Data, syncMsg)
@@ -70,7 +73,7 @@ func (s *service) HandleMessage(ctx context.Context, msg *pool.Message) (err err
 		return err
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*5)
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
 	return s.requestHandler.HandleSyncMessage(timeoutCtx, msg.Peer().Id(), syncMsg)
 }
@@ -95,50 +98,26 @@ func (s *service) SendMessage(ctx context.Context, peerId string, msg *syncproto
 		Header: &syncproto.Header{Type: syncproto.MessageType_MessageTypeSync},
 		Data:   marshalled,
 	})
+
 	if err != nil {
 		log.With(
 			zap.String("peerId", peerId),
 			zap.String("message", msgType(msg)),
 			zap.Error(err)).
-			Error("failed to send message to peer")
+			Debug("failed to send message to peer")
+	} else {
+		log.With(
+			zap.String("peerId", peerId),
+			zap.String("message", msgType(msg))).
+			Debug("message send to peer completed")
 	}
 	return err
 }
 
 func (s *service) SendToSpace(ctx context.Context, spaceId string, msg *syncproto.Sync) error {
-	// dial manually to all peers
 	for _, rp := range s.nodes {
-		if er := s.pool.DialAndAddPeer(context.Background(), rp.PeerId); er != nil {
-			log.Info("can't dial to peer", zap.Error(er))
-		} else {
-			log.Info("connected with peer", zap.String("peerId", rp.PeerId))
-		}
+		s.SendMessage(ctx, rp.PeerId, msg)
 	}
-
-	marshalled, err := proto.Marshal(msg)
-	if err != nil {
-		return err
-	}
-
-	// TODO: use Broadcast method here when it is ready
-	for _, n := range s.nodes {
-		log.With(
-			zap.String("peerId", n.PeerId),
-			zap.String("message", msgType(msg))).
-			Debug("sending message to peer")
-		err := s.pool.SendAndWait(ctx, n.PeerId, &syncproto.Message{
-			Header: &syncproto.Header{Type: syncproto.MessageType_MessageTypeSync},
-			Data:   marshalled,
-		})
-		if err != nil {
-			log.With(
-				zap.String("peerId", n.PeerId),
-				zap.String("message", msgType(msg)),
-				zap.Error(err)).
-				Error("failed to send message to peer")
-		}
-	}
-
 	return nil
 }
 
