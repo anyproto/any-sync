@@ -2,6 +2,9 @@ syntax = "proto3";
 package anytype;
 option go_package = "/syncproto";
 
+import "pkg/acl/aclchanges/aclpb/protos/aclchanges.proto";
+import "pkg/acl/treestorage/treepb/protos/tree.proto";
+
 message Message {
     Header header = 1;
     bytes data = 2;
@@ -19,7 +22,6 @@ enum MessageType {
     MessageTypeSubscription = 1;
     MessageTypeSync = 2;
 }
-
 
 message System {
     Handshake handshake = 1;
@@ -60,5 +62,40 @@ message Subscription {
 
 message Sync {
     string spaceId = 1;
+    ContentValue message = 2;
 
+    message ContentValue {
+        oneof value {
+            HeadUpdate headUpdate = 1;
+            Full.Request fullSyncRequest = 2;
+            Full.Response fullSyncResponse = 3;
+        }
+    }
+
+    message HeadUpdate {
+        repeated string heads = 1;
+        repeated acl.RawChange changes = 2;
+        string treeId = 3;
+        repeated string snapshotPath = 4;
+        tree.TreeHeader treeHeader = 5;
+    }
+
+    message Full {
+        // here with send the request with all changes we have (we already know sender's snapshot path)
+        message Request {
+            repeated string heads = 1;
+            repeated acl.RawChange changes = 2;
+            string treeId = 3;
+            repeated string snapshotPath = 4;
+            tree.TreeHeader treeHeader = 5;
+        }
+
+        message Response {
+            repeated string heads = 1;
+            repeated acl.RawChange changes = 2;
+            string treeId = 3;
+            repeated string snapshotPath = 4;
+            tree.TreeHeader treeHeader = 5;
+        }
+    }
 }
