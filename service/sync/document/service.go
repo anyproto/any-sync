@@ -11,8 +11,8 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/message"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/syncpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/syncproto"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 )
@@ -100,10 +100,10 @@ func (s *service) UpdateDocument(ctx context.Context, id, text string) (err erro
 		zap.String("header", header.String())).
 		Debug("document updated in the database")
 
-	return s.messageService.SendMessage("", syncpb.WrapHeadUpdate(&syncpb.SyncHeadUpdate{
+	return s.messageService.SendToSpace("", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
 		Heads:        heads,
 		Changes:      []*aclpb.RawChange{ch},
-		TreeId:       "",
+		TreeId:       id,
 		SnapshotPath: snapshotPath,
 		TreeHeader:   header,
 	}))
@@ -155,10 +155,10 @@ func (s *service) CreateDocument(ctx context.Context, text string) (id string, e
 		return "", err
 	}
 
-	err = s.messageService.SendMessage("", syncpb.WrapHeadUpdate(&syncpb.SyncHeadUpdate{
+	err = s.messageService.SendToSpace("", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
 		Heads:        heads,
 		Changes:      []*aclpb.RawChange{ch},
-		TreeId:       "",
+		TreeId:       id,
 		SnapshotPath: snapshotPath,
 		TreeHeader:   header,
 	}))

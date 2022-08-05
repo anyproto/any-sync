@@ -13,9 +13,8 @@ import (
 )
 
 var (
-	flagNodeMap           = flag.String("n", "cmd/nodesgen/nodemap.yml", "path to nodes map file")
-	flagAccountConfigFile = flag.String("a", "etc/nodes.yml", "path to account file")
-	flagEtcPath           = flag.String("e", "etc", "path to etc directory")
+	flagNodeMap = flag.String("n", "cmd/nodesgen/nodemap.yml", "path to nodes map file")
+	flagEtcPath = flag.String("e", "etc", "path to etc directory")
 )
 
 type NodesMap struct {

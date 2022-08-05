@@ -24,12 +24,12 @@ func New() app.Component {
 }
 
 type RequestHandler interface {
-	HandleFullSyncContent(ctx context.Context, senderId string, request *syncproto.Sync) (err error)
+	HandleSyncMessage(ctx context.Context, senderId string, request *syncproto.Sync) (err error)
 }
 
 type MessageSender interface {
 	SendMessage(peerId string, msg *syncproto.Sync) error
-	SendSpace(spaceId string, msg *syncproto.Sync) error
+	SendToSpace(spaceId string, msg *syncproto.Sync) error
 }
 
 const CName = "SyncRequestHandler"
@@ -53,7 +53,7 @@ func (r *requestHandler) Close(ctx context.Context) (err error) {
 	return nil
 }
 
-func (r *requestHandler) HandleFullSyncContent(ctx context.Context, senderId string, content *syncproto.Sync) error {
+func (r *requestHandler) HandleSyncMessage(ctx context.Context, senderId string, content *syncproto.Sync) error {
 	msg := content.GetMessage()
 	switch {
 	case msg.GetFullSyncRequest() != nil:
@@ -113,7 +113,7 @@ func (r *requestHandler) HandleHeadUpdate(ctx context.Context, senderId string, 
 		TreeId:       update.TreeId,
 		TreeHeader:   update.TreeHeader,
 	}
-	return r.messageService.SendSpace("", syncproto.WrapHeadUpdate(newUpdate))
+	return r.messageService.SendToSpace("", syncproto.WrapHeadUpdate(newUpdate))
 }
 
 func (r *requestHandler) HandleFullSyncRequest(ctx context.Context, senderId string, request *syncproto.SyncFullRequest) (err error) {
@@ -156,7 +156,7 @@ func (r *requestHandler) HandleFullSyncRequest(ctx context.Context, senderId str
 		TreeId:       request.TreeId,
 		TreeHeader:   request.TreeHeader,
 	}
-	return r.messageService.SendSpace("", syncproto.WrapHeadUpdate(newUpdate))
+	return r.messageService.SendToSpace("", syncproto.WrapHeadUpdate(newUpdate))
 }
 
 func (r *requestHandler) HandleFullSyncResponse(ctx context.Context, senderId string, response *syncproto.SyncFullResponse) (err error) {
@@ -192,7 +192,7 @@ func (r *requestHandler) HandleFullSyncResponse(ctx context.Context, senderId st
 		SnapshotPath: snapshotPath,
 		TreeId:       response.TreeId,
 	}
-	return r.messageService.SendSpace("", syncproto.WrapHeadUpdate(newUpdate))
+	return r.messageService.SendToSpace("", syncproto.WrapHeadUpdate(newUpdate))
 }
 
 func (r *requestHandler) prepareFullSyncRequest(treeId string, header *treepb.TreeHeader, theirPath []string, tree acltree.ACLTree) (*syncproto.SyncFullRequest, error) {
