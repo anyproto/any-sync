@@ -2,6 +2,63 @@ syntax = "proto3";
 package anytype;
 option go_package = "/syncproto";
 
-message SyncMessage {
-    int64 seq = 1;
+message Message {
+    Header header = 1;
+    bytes data = 2;
+}
+
+message Header {
+    bytes traceId = 1;
+    uint64 requestId = 2;
+    uint64 replyId = 3;
+    MessageType type = 4;
+}
+
+enum MessageType {
+    MessageTypeSystem = 0;
+    MessageTypeSubscription = 1;
+    MessageTypeSync = 2;
+}
+
+
+message System {
+    Handshake handshake = 1;
+    Ping ping = 2;
+    Ack ack = 3;
+
+    message Handshake {
+        string protocolVersion = 1;
+    }
+    message Ping {
+        uint64 unixTime = 1;
+    }
+    message Ack {
+        Error error = 2;
+    }
+    message Error {
+        Code code = 1;
+        string description = 2;
+
+        enum Code {
+            UNKNOWN = 0;
+            UNSUPPORTED_PROTOCOL_VERSION = 10;
+        }
+    }
+}
+
+message Subscription {
+    SubscribeSpace subscribeSpace = 1;
+    UnsubscribeSpace unsubscribeSpace = 2;
+
+    message SubscribeSpace {
+        string spaceId = 1;
+    }
+    message UnsubscribeSpace {
+        string spaceId = 1;
+    }
+}
+
+message Sync {
+    string spaceId = 1;
+
 }

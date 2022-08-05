@@ -1,0 +1,16 @@
+anytype:
+  swarmKey: "/key/swarm/psk/1.0.0/base16/209992e611c27d5dce8fbd2e7389f6b51da9bee980992ef60739460b536139ec"
+
+grpcServer:
+  listenAddrs:
+    - "127.0.0.1:4431"
+
+peerList:
+  myId:
+    peerId: "12D3KooWA4FLWvrMbCtp2MbzKcC5RRN7HqxxBxPcSADFfzrGiW3U"
+    privKey: "InCGjb55V9+jj2PebUExUuwrpOIBc4hmgk2dSqyk3k4DjmgrdoNVuFe7xCFaFdUVb0RJYj6A+OTp2yXASTmq2w=="
+  remote:
+    - peerId: "12D3KooWHJpSEMQUZCyK8TK181LhjzntWjKfXDr7MWks9cw41R2C"
+      addr: "127.0.0.1:4430"
+    - peerId: "12D3KooWK6c1CPLL4Bvjim9A9SDRmehy12hYjbqX1VASHKfH7W7H"
+      addr: "127.0.0.1:4432"

@@ -7,8 +7,11 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/drpcserver"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/transport"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/example"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/dialer"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/rpc/server"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/secure"
 	"go.uber.org/zap"
 	"net/http"
 	_ "net/http/pprof"
@@ -82,6 +85,9 @@ func main() {
 }
 
 func Bootstrap(a *app.App) {
-	a.Register(transport.New()).
-		Register(drpcserver.New())
+	a.Register(secure.New()).
+		Register(server.New()).
+		Register(dialer.New()).
+		Register(pool.NewPool()).
+		Register(&example.Example{})
 }

@@ -92,6 +92,20 @@ func TestOCache_Get(t *testing.T) {
 		_, err := c.Get(context.TODO(), "id")
 		assert.Equal(t, ErrClosed, err)
 	})
+	t.Run("context cancel", func(t *testing.T) {
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			time.Sleep(time.Second / 3)
+			return &testObject{
+				name: "id",
+			}, nil
+		})
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		_, err := c.Get(ctx, "id")
+		assert.Equal(t, context.Canceled, err)
+		assert.NoError(t, c.Close())
+	})
 }
 
 func TestOCache_GC(t *testing.T) {

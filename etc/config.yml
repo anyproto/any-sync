@@ -4,7 +4,13 @@ anytype:
 grpcServer:
   listenAddrs:
     - "127.0.0.1:4430"
-    - "127.0.0.1:4431"
-  tls: false
-  tlsKeyFile: "etc/x509/key.pem"
-  tlsCertFile: "etc/x509/cert.pem"
+
+peerList:
+  myId:
+    peerId: "12D3KooWHJpSEMQUZCyK8TK181LhjzntWjKfXDr7MWks9cw41R2C"
+    privKey: "3BhkWxi0Vzc2AhLtw7LhFHa9Ys4P0wHOlPCW02O6FKJvS8V2nzkJGDlM3vcSLZZ0m9tyYuCKqK4TWUKXgu/FVQ=="
+  remote:
+    - peerId: "12D3KooWA4FLWvrMbCtp2MbzKcC5RRN7HqxxBxPcSADFfzrGiW3U"
+      addr: "127.0.0.1:4431"
+    - peerId: "12D3KooWK6c1CPLL4Bvjim9A9SDRmehy12hYjbqX1VASHKfH7W7H"
+      addr: "127.0.0.1:4432"
