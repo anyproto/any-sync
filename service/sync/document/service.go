@@ -100,7 +100,7 @@ func (s *service) UpdateDocument(ctx context.Context, id, text string) (err erro
 		zap.String("header", header.String())).
 		Debug("document updated in the database")
 
-	return s.messageService.SendToSpace("", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
+	return s.messageService.SendToSpace(ctx, "", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
 		Heads:        heads,
 		Changes:      []*aclpb.RawChange{ch},
 		TreeId:       id,
@@ -155,7 +155,7 @@ func (s *service) CreateDocument(ctx context.Context, text string) (id string, e
 		return "", err
 	}
 
-	err = s.messageService.SendToSpace("", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
+	err = s.messageService.SendToSpace(ctx, "", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
 		Heads:        heads,
 		Changes:      []*aclpb.RawChange{ch},
 		TreeId:       id,

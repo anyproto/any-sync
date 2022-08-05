@@ -11,6 +11,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"sync"
+	"time"
 )
 
 var log = logger.NewNamed("messageservice")
@@ -29,14 +30,15 @@ func New() app.Component {
 }
 
 type Service interface {
-	SendMessage(peerId string, msg *syncproto.Sync) error
-	SendToSpace(spaceId string, msg *syncproto.Sync) error
+	SendMessage(ctx context.Context, peerId string, msg *syncproto.Sync) error
+	SendToSpace(ctx context.Context, spaceId string, msg *syncproto.Sync) error
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 	s.requestHandler = a.MustComponent(requesthandler.CName).(requesthandler.RequestHandler)
 	s.nodes = a.MustComponent(config.CName).(*config.Config).Nodes
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
+	s.pool.AddHandler(syncproto.MessageType_MessageTypeSync, s.HandleMessage)
 	return nil
 }
 
@@ -45,8 +47,6 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
-	s.pool.AddHandler(syncproto.MessageType_MessageTypeSync, s.HandleMessage)
-
 	return nil
 }
 
@@ -59,16 +59,23 @@ func (s *service) HandleMessage(ctx context.Context, msg *pool.Message) (err err
 		zap.String("peerId", msg.Peer().Id())).
 		Debug("handling message from peer")
 
-	var syncMsg *syncproto.Sync
+	err = msg.Ack()
+	if err != nil {
+		log.With(zap.String("peerId", msg.Peer().Id()), zap.Error(err)).
+			Error("could not ack message")
+	}
+	syncMsg := &syncproto.Sync{}
 	err = proto.Unmarshal(msg.Data, syncMsg)
 	if err != nil {
 		return err
 	}
 
-	return s.requestHandler.HandleSyncMessage(ctx, msg.Peer().Id(), syncMsg)
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+	return s.requestHandler.HandleSyncMessage(timeoutCtx, msg.Peer().Id(), syncMsg)
 }
 
-func (s *service) SendMessage(peerId string, msg *syncproto.Sync) error {
+func (s *service) SendMessage(ctx context.Context, peerId string, msg *syncproto.Sync) error {
 	log.With(
 		zap.String("peerId", peerId),
 		zap.String("message", msgType(msg))).
@@ -84,7 +91,7 @@ func (s *service) SendMessage(peerId string, msg *syncproto.Sync) error {
 		return err
 	}
 
-	err = s.pool.SendAndWait(context.Background(), peerId, &syncproto.Message{
+	err = s.pool.SendAndWait(ctx, peerId, &syncproto.Message{
 		Header: &syncproto.Header{Type: syncproto.MessageType_MessageTypeSync},
 		Data:   marshalled,
 	})
@@ -98,7 +105,7 @@ func (s *service) SendMessage(peerId string, msg *syncproto.Sync) error {
 	return err
 }
 
-func (s *service) SendToSpace(spaceId string, msg *syncproto.Sync) error {
+func (s *service) SendToSpace(ctx context.Context, spaceId string, msg *syncproto.Sync) error {
 	log.With(
 		zap.String("message", msgType(msg))).
 		Debug("sending message to all")
@@ -119,7 +126,7 @@ func (s *service) SendToSpace(spaceId string, msg *syncproto.Sync) error {
 
 	// TODO: use Broadcast method here when it is ready
 	for _, n := range s.nodes {
-		err := s.pool.SendAndWait(context.Background(), n.PeerId, &syncproto.Message{
+		err := s.pool.SendAndWait(ctx, n.PeerId, &syncproto.Message{
 			Header: &syncproto.Header{Type: syncproto.MessageType_MessageTypeSync},
 			Data:   marshalled,
 		})
