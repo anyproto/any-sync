@@ -42,10 +42,10 @@ type dialer struct {
 
 func (d *dialer) Init(ctx context.Context, a *app.App) (err error) {
 	d.transport = a.MustComponent(secure.CName).(secure.Service)
-	peerConf := a.MustComponent(config.CName).(*config.Config).PeerList.Remote
+	nodes := a.MustComponent(config.CName).(*config.Config).Nodes
 	d.peerAddrs = map[string][]string{}
-	for _, rp := range peerConf {
-		d.peerAddrs[rp.PeerId] = []string{rp.Addr}
+	for _, n := range nodes {
+		d.peerAddrs[n.PeerId] = []string{n.Address}
 	}
 	return
 }
