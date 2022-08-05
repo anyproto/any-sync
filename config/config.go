@@ -26,9 +26,7 @@ func NewFromFile(path string) (c *Config, err error) {
 type Config struct {
 	Anytype    Anytype    `yaml:"anytype"`
 	GrpcServer GrpcServer `yaml:"grpcServer"`
-	Account    Account    `yaml:"account"`
-	APIServer  APIServer  `yaml:"apiServer"`
-	Nodes      []Node     `yaml:"nodes"`
+	PeerList   PeerList   `yaml:"peerList"`
 }
 
 func (c *Config) Init(ctx context.Context, a *app.App) (err error) {

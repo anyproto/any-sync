@@ -1,27 +1,24 @@
-package drpcserver
+package server
 
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/message"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/syncpb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/transport"
-	"github.com/gogo/protobuf/proto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/rpc"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/secure"
 	"go.uber.org/zap"
-	"io"
 	"net"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcserver"
 	"strings"
-	"sync"
 	"time"
 )
 
-var log = logger.NewNamed("drpcserver")
+const CName = "net/drpcserver"
 
-const CName = "drpcserver"
+var log = logger.NewNamed(CName)
 
 func New() DRPCServer {
 	return &drpcServer{}
@@ -32,19 +29,18 @@ type DRPCServer interface {
 }
 
 type drpcServer struct {
-	config         config.GrpcServer
-	drpcServer     *drpcserver.Server
-	transport      transport.Service
-	listeners      []transport.ContextListener
-	messageService message.Service
-
-	cancel func()
+	config     config.GrpcServer
+	drpcServer *drpcserver.Server
+	transport  secure.Service
+	listeners  []secure.ContextListener
+	pool       pool.Pool
+	cancel     func()
 }
 
 func (s *drpcServer) Init(ctx context.Context, a *app.App) (err error) {
 	s.config = a.MustComponent(config.CName).(*config.Config).GrpcServer
-	s.transport = a.MustComponent(transport.CName).(transport.Service)
-	s.messageService = a.MustComponent(message.CName).(message.Service)
+	s.transport = a.MustComponent(secure.CName).(secure.Service)
+	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	return nil
 }
 
@@ -66,7 +62,7 @@ func (s *drpcServer) Run(ctx context.Context) (err error) {
 	return
 }
 
-func (s *drpcServer) serve(ctx context.Context, lis transport.ContextListener) {
+func (s *drpcServer) serve(ctx context.Context, lis secure.ContextListener) {
 	l := log.With(zap.String("localAddr", lis.Addr().String()))
 	l.Info("drpc listener started")
 	defer func() {
@@ -90,7 +86,7 @@ func (s *drpcServer) serve(ctx context.Context, lis transport.ContextListener) {
 				}
 				continue
 			}
-			if _, ok := err.(transport.HandshakeError); ok {
+			if _, ok := err.(secure.HandshakeError); ok {
 				l.Warn("listener handshake error", zap.Error(err))
 				continue
 			}
@@ -113,29 +109,14 @@ func (s *drpcServer) serveConn(ctx context.Context, conn net.Conn) {
 	}
 }
 
-func (s *drpcServer) HandleRPC(stream drpc.Stream, rpc string) (err error) {
+func (s *drpcServer) HandleRPC(stream drpc.Stream, _ string) (err error) {
 	ctx := stream.Context()
-	sc, err := transport.CtxSecureConn(ctx)
+	sc, err := secure.CtxSecureConn(ctx)
 	if err != nil {
 		return
 	}
-	peerId := sc.RemotePeer().String()
-	l := log.With(zap.String("peer", peerId))
-	l.Info("stream opened")
-	defer func() {
-		l.Info("stream closed", zap.Error(err))
-	}()
-
-	ch := s.messageService.RegisterMessageSender(peerId)
-	defer s.messageService.UnregisterMessageSender(peerId)
-
-	wg := &sync.WaitGroup{}
-	wg.Add(2)
-	go s.sendMessages(stream, wg, ch)
-	go s.receiveMessages(stream, wg, peerId)
-	wg.Wait()
-
-	return nil
+	log.With(zap.String("peer", sc.RemotePeer().String())).Debug("stream opened")
+	return s.pool.AddAndReadPeer(rpc.PeerFromStream(sc, stream, true))
 }
 
 func (s *drpcServer) Close(ctx context.Context) (err error) {
@@ -148,44 +129,4 @@ func (s *drpcServer) Close(ctx context.Context) (err error) {
 		}
 	}
 	return
-}
-
-func (s *drpcServer) sendMessages(stream drpc.Stream, wg *sync.WaitGroup, ch chan *syncpb.SyncContent) {
-	defer wg.Done()
-	for {
-		select {
-		case msg := <-ch:
-			if err := stream.MsgSend(msg, enc{}); err != nil {
-				return
-			}
-		case <-stream.Context().Done():
-			return
-		}
-	}
-}
-
-func (s *drpcServer) receiveMessages(stream drpc.Stream, wg *sync.WaitGroup, peerId string) {
-	defer wg.Done()
-	for {
-		msg := &syncpb.SyncContent{}
-		if err := stream.MsgRecv(msg, enc{}); err != nil {
-			if err == io.EOF {
-				return
-			}
-		}
-		err := s.messageService.HandleMessage(peerId, msg)
-		if err != nil {
-			log.Error("error handling message", zap.Error(err))
-		}
-	}
-}
-
-type enc struct{}
-
-func (e enc) Marshal(msg drpc.Message) ([]byte, error) {
-	return msg.(proto.Marshaler).Marshal()
-}
-
-func (e enc) Unmarshal(buf []byte, msg drpc.Message) error {
-	return msg.(proto.Unmarshaler).Unmarshal(buf)
 }

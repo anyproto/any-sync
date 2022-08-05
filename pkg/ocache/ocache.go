@@ -10,19 +10,16 @@ import (
 )
 
 var (
-	ErrClosed  = errors.New("object cache closed")
-	ErrExists  = errors.New("object exists")
-	ErrTimeout = errors.New("loading object timed out")
+	ErrClosed    = errors.New("object cache closed")
+	ErrExists    = errors.New("object exists")
+	ErrTimeout   = errors.New("loading object timed out")
+	ErrNotExists = errors.New("object not exists")
 )
 
 var (
 	defaultTTL = time.Minute
 	defaultGC  = 20 * time.Second
 )
-
-type key int
-
-const CacheTimeout key = 0
 
 var log = logger.NewNamed("ocache")
 
@@ -61,7 +58,9 @@ func New(loadFunc LoadFunc, opts ...Option) OCache {
 	for _, o := range opts {
 		o(c)
 	}
-	go c.ticker()
+	if c.ttl != 0 {
+		go c.ticker()
+	}
 	return c
 }
 
@@ -99,6 +98,8 @@ type OCache interface {
 	// Increases the object refs counter on successful
 	// When 'loadFunc' returns a non-nil error, an object will not be stored to cache
 	Get(ctx context.Context, id string) (value Object, err error)
+	// Pick returns value if it's presents in cache (will not call loadFunc)
+	Pick(id string) (value Object, err error)
 	// Add adds new object to cache
 	// Returns error when object exists
 	Add(id string, value Object) (err error)
@@ -154,26 +155,26 @@ func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
 	e.refCount++
 	c.mu.Unlock()
 
-	timeout := ctx.Value(CacheTimeout)
 	if load {
-		if timeout != nil {
-			go c.load(ctx, id, e)
-		} else {
-			c.load(ctx, id, e)
-		}
+		go c.load(ctx, id, e)
 	}
-
-	if timeout != nil {
-		duration := timeout.(time.Duration)
-		select {
-		case <-e.load:
-			return e.value, e.loadErr
-		case <-time.After(duration):
-			return nil, ErrTimeout
-		}
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-e.load:
 	}
-	<-e.load
 	return e.value, e.loadErr
+}
+
+func (c *oCache) Pick(id string) (value Object, err error) {
+	c.mu.Lock()
+	val, ok := c.data[id]
+	c.mu.Unlock()
+	if !ok {
+		return nil, ErrNotExists
+	}
+	<-val.load
+	return val.value, val.loadErr
 }
 
 func (c *oCache) load(ctx context.Context, id string, e *entry) {
