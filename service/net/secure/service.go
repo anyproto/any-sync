@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/sec"
@@ -35,8 +36,9 @@ type service struct {
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
-	peerConf := a.MustComponent(config.CName).(*config.Config).PeerList
-	pkb, err := crypto.ConfigDecodeKey(peerConf.MyId.PrivKey)
+	account := a.MustComponent(config.CName).(*config.Config).Account
+	decoder := signingkey.NewEDPrivKeyDecoder()
+	pkb, err := decoder.DecodeFromStringIntoBytes(account.SigningKey)
 	if err != nil {
 		return
 	}
@@ -44,7 +46,7 @@ func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 		return
 	}
 
-	pid, err := peer.Decode(peerConf.MyId.PeerId)
+	pid, err := peer.Decode(account.PeerId)
 	if err != nil {
 		return
 	}
@@ -66,7 +68,7 @@ func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 		return fmt.Errorf("peerId and privateKey mismatched")
 	}
 
-	log.Info("secure service init", zap.String("peerId", peerConf.MyId.PeerId))
+	log.Info("secure service init", zap.String("peerId", account.PeerId))
 
 	return nil
 }
