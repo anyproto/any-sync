@@ -32,7 +32,7 @@ func NewKeychain() *Keychain {
 		GeneratedIdentities:   map[string]string{},
 		ReadKeys:              map[string]*SymKey{},
 		ReadKeysByHash:        map[uint64]*SymKey{},
-		coder:                 signingkey.NewEd25519Decoder(),
+		coder:                 signingkey.NewEd25519PubKeyDecoder(),
 	}
 }
 

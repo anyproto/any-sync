@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"
 	"sync"
@@ -16,34 +16,30 @@ type inMemoryTreeStorage struct {
 	header  *treepb.TreeHeader
 	heads   []string
 	orphans []string
-	changes map[string]*RawChange
+	changes map[string]*aclpb.RawChange
 
 	sync.RWMutex
 }
 
-func NewInMemoryTreeStorage(firstChange *RawChange) (TreeStorage, error) {
-	header := &treepb.TreeHeader{
-		FirstChangeId: firstChange.Id,
-		IsWorkspace:   false,
-	}
-	marshalledHeader, err := proto.Marshal(header)
-	if err != nil {
-		return nil, err
-	}
-	treeId, err := cid.NewCIDFromBytes(marshalledHeader)
-	if err != nil {
-		return nil, err
-	}
+type CreatorFunc = func(string, *treepb.TreeHeader, []*aclpb.RawChange) (TreeStorage, error)
 
-	changes := make(map[string]*RawChange)
-	changes[firstChange.Id] = firstChange
+func NewInMemoryTreeStorage(
+	treeId string,
+	header *treepb.TreeHeader,
+	changes []*aclpb.RawChange) (TreeStorage, error) {
+	allChanges := make(map[string]*aclpb.RawChange)
+	var orphans []string
+	for _, ch := range changes {
+		allChanges[ch.Id] = ch
+		orphans = append(orphans, ch.Id)
+	}
 
 	return &inMemoryTreeStorage{
 		id:      treeId,
 		header:  header,
-		heads:   []string{firstChange.Id},
-		orphans: nil,
-		changes: changes,
+		heads:   nil,
+		orphans: orphans,
+		changes: allChanges,
 		RWMutex: sync.RWMutex{},
 	}, nil
 }
@@ -97,7 +93,7 @@ func (t *inMemoryTreeStorage) AddOrphans(orphans ...string) error {
 	return nil
 }
 
-func (t *inMemoryTreeStorage) AddRawChange(change *RawChange) error {
+func (t *inMemoryTreeStorage) AddRawChange(change *aclpb.RawChange) error {
 	t.Lock()
 	defer t.Unlock()
 	// TODO: better to do deep copy
@@ -116,7 +112,7 @@ func (t *inMemoryTreeStorage) AddChange(change aclchanges.Change) error {
 	if err != nil {
 		return err
 	}
-	rawChange := &RawChange{
+	rawChange := &aclpb.RawChange{
 		Payload:   fullMarshalledChange,
 		Signature: signature,
 		Id:        id,
@@ -125,11 +121,43 @@ func (t *inMemoryTreeStorage) AddChange(change aclchanges.Change) error {
 	return nil
 }
 
-func (t *inMemoryTreeStorage) GetChange(ctx context.Context, changeId string) (*RawChange, error) {
+func (t *inMemoryTreeStorage) GetChange(ctx context.Context, changeId string) (*aclpb.RawChange, error) {
 	t.RLock()
 	defer t.RUnlock()
 	if res, exists := t.changes[changeId]; exists {
 		return res, nil
 	}
 	return nil, fmt.Errorf("could not get change with id: %s", changeId)
+}
+
+type inMemoryTreeStorageProvider struct {
+	trees map[string]TreeStorage
+	sync.RWMutex
+}
+
+func (i *inMemoryTreeStorageProvider) TreeStorage(treeId string) (TreeStorage, error) {
+	i.RLock()
+	defer i.RUnlock()
+	if tree, exists := i.trees[treeId]; exists {
+		return tree, nil
+	}
+	return nil, ErrUnknownTreeId
+}
+
+func (i *inMemoryTreeStorageProvider) CreateTreeStorage(treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange) (TreeStorage, error) {
+	i.Lock()
+	defer i.Unlock()
+	res, err := NewInMemoryTreeStorage(treeId, header, changes)
+	if err != nil {
+		return nil, err
+	}
+
+	i.trees[treeId] = res
+	return res, nil
+}
+
+func NewInMemoryTreeStorageProvider() Provider {
+	return &inMemoryTreeStorageProvider{
+		trees: make(map[string]TreeStorage),
+	}
 }

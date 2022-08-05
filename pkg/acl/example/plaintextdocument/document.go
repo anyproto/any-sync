@@ -17,6 +17,7 @@ type PlainTextDocument interface {
 	AddText(ctx context.Context, text string) error
 }
 
+// TODO: this struct is not thread-safe, so use it wisely :-)
 type plainTextDocument struct {
 	heads   []string
 	aclTree acltree.ACLTree
@@ -117,7 +118,7 @@ func NewInMemoryPlainTextDocument(acc *account.AccountData, text string) (PlainT
 
 func NewPlainTextDocument(
 	acc *account.AccountData,
-	create func(change *treestorage.RawChange) (treestorage.TreeStorage, error),
+	create treestorage.CreatorFunc,
 	text string) (PlainTextDocument, error) {
 	changeBuilder := func(builder acltree.ChangeBuilder) error {
 		err := builder.UserAdd(acc.Identity, acc.EncKey.GetPublic(), aclpb.ACLChange_Admin)
@@ -127,7 +128,7 @@ func NewPlainTextDocument(
 		builder.AddChangeContent(createInitialChangeContent(text))
 		return nil
 	}
-	t, err := acltree.BuildTreeStorageWithACL(
+	t, err := acltree.CreateNewTreeStorageWithACL(
 		acc,
 		changeBuilder,
 		create)

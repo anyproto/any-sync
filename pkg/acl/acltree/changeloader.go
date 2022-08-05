@@ -73,7 +73,7 @@ func (c *changeLoader) verify(identity string, payload, signature []byte) (isVer
 	return identityKey.Verify(payload, signature)
 }
 
-func (c *changeLoader) makeVerifiedACLChange(change *treestorage.RawChange) (aclChange *aclpb.ACLChange, err error) {
+func (c *changeLoader) makeVerifiedACLChange(change *aclpb.RawChange) (aclChange *aclpb.ACLChange, err error) {
 	aclChange = new(aclpb.ACLChange)
 
 	// TODO: think what should we do with such cases, because this can be used by attacker to break our Tree
@@ -89,5 +89,11 @@ func (c *changeLoader) makeVerifiedACLChange(change *treestorage.RawChange) (acl
 		err = fmt.Errorf("the signature of the payload cannot be verified")
 		return
 	}
+	return
+}
+
+func (c *changeLoader) makeUnverifiedACLChange(change *aclpb.RawChange) (aclChange *aclpb.ACLChange, err error) {
+	aclChange = new(aclpb.ACLChange)
+	err = proto.Unmarshal(change.Payload, aclChange)
 	return
 }

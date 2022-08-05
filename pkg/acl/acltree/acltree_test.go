@@ -27,7 +27,7 @@ func TestACLTree_UserJoinBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -62,24 +62,16 @@ func TestACLTree_UserJoinUpdate_Append(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
+
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
 	if err != nil {
 		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
 	rawChanges := thr.GetUpdates("append")
-	var changes []*Change
-	for _, ch := range rawChanges {
-		newCh, err := NewFromRawChange(ch)
-		if err != nil {
-			t.Fatalf("should be able to create change from raw: %v", err)
-		}
-		changes = append(changes, newCh)
-	}
-
-	res, err := tree.AddChanges(context.Background(), changes...)
+	res, err := tree.AddRawChanges(context.Background(), rawChanges...)
 	assert.Equal(t, res.Summary, AddResultSummaryAppend)
 
 	aclState := tree.ACLState()
@@ -112,7 +104,7 @@ func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -120,16 +112,7 @@ func TestACLTree_UserJoinUpdate_Rebuild(t *testing.T) {
 		t.Fatalf("should Build acl ACLState without err: %v", err)
 	}
 	rawChanges := thr.GetUpdates("rebuild")
-	var changes []*Change
-	for _, ch := range rawChanges {
-		newCh, err := NewFromRawChange(ch)
-		if err != nil {
-			t.Fatalf("should be able to create change from raw: %v", err)
-		}
-		changes = append(changes, newCh)
-	}
-
-	res, err := tree.AddChanges(context.Background(), changes...)
+	res, err := tree.AddRawChanges(context.Background(), rawChanges...)
 	assert.Equal(t, res.Summary, AddResultSummaryRebuild)
 
 	aclState := tree.ACLState()
@@ -163,7 +146,7 @@ func TestACLTree_UserRemoveBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -194,7 +177,7 @@ func TestACLTree_UserRemoveBeforeBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -226,7 +209,7 @@ func TestACLTree_InvalidSnapshotBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
@@ -257,7 +240,7 @@ func TestACLTree_ValidSnapshotBuild(t *testing.T) {
 		Identity: keychain.GetIdentity("A"),
 		SignKey:  keychain.SigningKeys["A"],
 		EncKey:   keychain.EncryptionKeys["A"],
-		Decoder:  signingkey.NewEd25519Decoder(),
+		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
 	}
 	listener := &mockListener{}
 	tree, err := BuildACLTree(thr, accountData, listener)
