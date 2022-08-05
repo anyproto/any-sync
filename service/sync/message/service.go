@@ -45,14 +45,6 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
-	// dial manually to all peers
-	for _, rp := range s.nodes {
-		if er := s.pool.DialAndAddPeer(ctx, rp.PeerId); er != nil {
-			log.Info("can't dial to peer", zap.Error(er))
-		} else {
-			log.Info("connected with peer", zap.String("peerId", rp.PeerId))
-		}
-	}
 	s.pool.AddHandler(syncproto.MessageType_MessageTypeSync, s.HandleMessage)
 
 	return nil
@@ -82,6 +74,11 @@ func (s *service) SendMessage(peerId string, msg *syncproto.Sync) error {
 		zap.String("message", msgType(msg))).
 		Debug("sending message to peer")
 
+	err := s.pool.DialAndAddPeer(context.Background(), peerId)
+	if err != nil {
+		return err
+	}
+
 	marshalled, err := proto.Marshal(msg)
 	if err != nil {
 		return err
@@ -105,6 +102,15 @@ func (s *service) SendToSpace(spaceId string, msg *syncproto.Sync) error {
 	log.With(
 		zap.String("message", msgType(msg))).
 		Debug("sending message to all")
+
+	// dial manually to all peers
+	for _, rp := range s.nodes {
+		if er := s.pool.DialAndAddPeer(context.Background(), rp.PeerId); er != nil {
+			log.Info("can't dial to peer", zap.Error(er))
+		} else {
+			log.Info("connected with peer", zap.String("peerId", rp.PeerId))
+		}
+	}
 
 	marshalled, err := proto.Marshal(msg)
 	if err != nil {

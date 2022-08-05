@@ -92,12 +92,12 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
+		Register(node.New()).
 		Register(secure.New()).
 		Register(server.New()).
 		Register(dialer.New()).
 		Register(pool.NewPool()).
 		//Register(&example.Example{})
-		Register(node.New()).
 		Register(document.New()).
 		Register(message.New()).
 		Register(requesthandler.New()).
