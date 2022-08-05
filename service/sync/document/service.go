@@ -117,8 +117,6 @@ func (s *service) CreateDocument(ctx context.Context, text string) (id string, e
 		snapshotPath []string
 		heads        []string
 	)
-	log.With(zap.String("id", id), zap.String("text", text)).
-		Debug("creating document")
 
 	err = s.treeCache.Create(ctx, func(builder acltree.ChangeBuilder) error {
 		err := builder.UserAdd(acc.Identity, acc.EncKey.GetPublic(), aclpb.ACLChange_Admin)
@@ -154,6 +152,8 @@ func (s *service) CreateDocument(ctx context.Context, text string) (id string, e
 	if err != nil {
 		return "", err
 	}
+	log.With(zap.String("id", id), zap.String("text", text)).
+		Debug("creating document")
 
 	err = s.messageService.SendToSpace(ctx, "", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
 		Heads:        heads,

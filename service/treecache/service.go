@@ -69,7 +69,7 @@ func (s *service) Do(ctx context.Context, treeId string, f ACLTreeFunc) error {
 
 func (s *service) Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange, f ACLTreeFunc) error {
 	log.
-		With(zap.String("treeId", treeId)).
+		With(zap.String("treeId", treeId), zap.Int("len(changes)", len(changes))).
 		Debug("adding tree with changes")
 
 	_, err := s.treeProvider.CreateTreeStorage(treeId, header, changes)

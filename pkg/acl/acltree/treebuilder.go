@@ -4,10 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/thread"
-
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
-	//"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/lib/logging"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 )
 
@@ -18,18 +16,18 @@ var (
 
 type treeBuilder struct {
 	cache                map[string]*Change
-	identityKeys         map[string]keys.SigningPubKey
-	signingPubKeyDecoder keys.SigningPubKeyDecoder
+	identityKeys         map[string]signingkey.PubKey
+	signingPubKeyDecoder signingkey.PubKeyDecoder
 	tree                 *Tree
-	thread               thread.Thread
+	treeStorage          treestorage.TreeStorage
 
 	*changeLoader
 }
 
-func newTreeBuilder(t thread.Thread, decoder keys.SigningPubKeyDecoder) *treeBuilder {
+func newTreeBuilder(t treestorage.TreeStorage, decoder signingkey.PubKeyDecoder) *treeBuilder {
 	return &treeBuilder{
 		signingPubKeyDecoder: decoder,
-		thread:               t,
+		treeStorage:          t,
 		changeLoader: newChangeLoader(
 			t,
 			decoder,
@@ -39,15 +37,23 @@ func newTreeBuilder(t thread.Thread, decoder keys.SigningPubKeyDecoder) *treeBui
 
 func (tb *treeBuilder) Init() {
 	tb.cache = make(map[string]*Change)
-	tb.identityKeys = make(map[string]keys.SigningPubKey)
+	tb.identityKeys = make(map[string]signingkey.PubKey)
 	tb.tree = &Tree{}
 	tb.changeLoader.Init(tb.cache, tb.identityKeys)
 }
 
 func (tb *treeBuilder) Build(fromStart bool) (*Tree, error) {
 	var headsAndOrphans []string
-	headsAndOrphans = append(headsAndOrphans, tb.thread.Orphans()...)
-	headsAndOrphans = append(headsAndOrphans, tb.thread.Heads()...)
+	orphans, err := tb.treeStorage.Orphans()
+	if err != nil {
+		return nil, err
+	}
+	heads, err := tb.treeStorage.Heads()
+	if err != nil {
+		return nil, err
+	}
+	headsAndOrphans = append(headsAndOrphans, orphans...)
+	headsAndOrphans = append(headsAndOrphans, heads...)
 
 	if fromStart {
 		if err := tb.buildTreeFromStart(headsAndOrphans); err != nil {
@@ -109,7 +115,10 @@ func (tb *treeBuilder) dfsFromStart(heads []string) (buf []*Change, root *Change
 			possibleRoots = append(possibleRoots, ch)
 		}
 	}
-	header := tb.thread.Header()
+	header, err := tb.treeStorage.Header()
+	if err != nil {
+		return nil, nil, err
+	}
 	for _, r := range possibleRoots {
 		if r.Id == header.FirstChangeId {
 			return buf, r, nil
@@ -125,13 +134,16 @@ func (tb *treeBuilder) buildTree(heads []string, breakpoint string) (err error) 
 		return
 	}
 	tb.tree.AddFast(ch)
-	changes, err := tb.dfs(heads, breakpoint)
+	changes, err := tb.dfs(heads, breakpoint, tb.loadChange)
 
 	tb.tree.AddFast(changes...)
 	return
 }
 
-func (tb *treeBuilder) dfs(heads []string, breakpoint string) (buf []*Change, err error) {
+func (tb *treeBuilder) dfs(
+	heads []string,
+	breakpoint string,
+	load func(string) (*Change, error)) (buf []*Change, err error) {
 	stack := make([]string, len(heads), len(heads)*2)
 	copy(stack, heads)
 
@@ -144,7 +156,7 @@ func (tb *treeBuilder) dfs(heads []string, breakpoint string) (buf []*Change, er
 			continue
 		}
 
-		ch, err := tb.loadChange(id)
+		ch, err := load(id)
 		if err != nil {
 			continue
 		}
