@@ -98,7 +98,7 @@ func (s *service) createDocument(w http.ResponseWriter, req *http.Request) {
 		query = req.URL.Query()
 		text  = query.Get("text")
 	)
-	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	treeId, err := s.documentService.CreateDocument(timeoutCtx, fmt.Sprintf("created document with id: %s", text))
 	cancel()
 	if err != nil {
@@ -114,7 +114,7 @@ func (s *service) appendDocument(w http.ResponseWriter, req *http.Request) {
 		text   = query.Get("text")
 		treeId = query.Get("treeId")
 	)
-	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	err := s.documentService.UpdateDocument(timeoutCtx, treeId, text)
 	cancel()
 	if err != nil {

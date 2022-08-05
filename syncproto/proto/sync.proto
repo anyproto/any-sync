@@ -15,6 +15,7 @@ message Header {
     uint64 requestId = 2;
     uint64 replyId = 3;
     MessageType type = 4;
+    string debugInfo = 5;
 }
 
 enum MessageType {

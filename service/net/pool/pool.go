@@ -15,7 +15,10 @@ import (
 	"sync/atomic"
 )
 
-const CName = "sync/peerPool"
+const (
+	CName                              = "sync/peerPool"
+	maxSimultaneousOperationsPerStream = 10
+)
 
 var log = logger.NewNamed("peerPool")
 
@@ -45,7 +48,7 @@ type Pool interface {
 
 type pool struct {
 	peersById       map[string]*peerEntry
-	waiters         waiters
+	waiters         *waiters
 	handlers        map[syncproto.MessageType][]Handler
 	peersIdsByGroup map[string][]string
 
@@ -60,7 +63,7 @@ func (p *pool) Init(ctx context.Context, a *app.App) (err error) {
 	p.peersById = map[string]*peerEntry{}
 	p.handlers = map[syncproto.MessageType][]Handler{}
 	p.peersIdsByGroup = map[string][]string{}
-	p.waiters = waiters{waiters: map[uint64]*waiter{}}
+	p.waiters = &waiters{waiters: map[uint64]*waiter{}}
 	p.dialer = a.MustComponent(dialer.CName).(dialer.Dialer)
 	p.wg = &sync.WaitGroup{}
 	return nil
@@ -160,6 +163,7 @@ func (p *pool) SendAndWait(ctx context.Context, peerId string, msg *syncproto.Me
 	repId := p.waiters.NewReplyId()
 	msg.GetHeader().RequestId = repId
 	ch := make(chan Reply, 1)
+	log.With(zap.Uint64("reply id", repId)).Debug("adding waiter for reply id")
 	p.waiters.Add(repId, &waiter{ch: ch})
 	defer p.waiters.Remove(repId)
 	if err = peer.peer.Send(msg); err != nil {
@@ -172,24 +176,41 @@ func (p *pool) SendAndWait(ctx context.Context, peerId string, msg *syncproto.Me
 		}
 		return nil
 	case <-ctx.Done():
+		log.Debug("context error happened in send and wait")
 		return ctx.Err()
 	}
 }
 
 func (p *pool) Broadcast(ctx context.Context, groupId string, msg *syncproto.Message) (err error) {
+
 	//TODO implement me
 	panic("implement me")
 }
 
 func (p *pool) readPeerLoop(peer peer.Peer) (err error) {
 	defer p.wg.Done()
+	limiter := make(chan struct{}, maxSimultaneousOperationsPerStream)
+	for i := 0; i < maxSimultaneousOperationsPerStream; i++ {
+		limiter <- struct{}{}
+	}
+Loop:
 	for {
 		msg, err := peer.Recv()
 		if err != nil {
 			log.Debug("peer receive error", zap.Error(err), zap.String("peerId", peer.Id()))
 			break
 		}
-		p.handleMessage(peer, msg)
+		select {
+		case <-limiter:
+		case <-peer.Context().Done():
+			break Loop
+		}
+		go func() {
+			defer func() {
+				limiter <- struct{}{}
+			}()
+			p.handleMessage(peer, msg)
+		}()
 	}
 	if err = p.removePeer(peer.Id()); err != nil {
 		log.Error("remove peer error", zap.String("peerId", peer.Id()))
@@ -209,7 +230,8 @@ func (p *pool) removePeer(peerId string) (err error) {
 }
 
 func (p *pool) handleMessage(peer peer.Peer, msg *syncproto.Message) {
-	log.With(zap.String("peerId", peer.Id())).Debug("received message from peer")
+	log.With(zap.String("peerId", peer.Id()), zap.String("header", msg.GetHeader().String())).
+		Debug("received message from peer")
 	replyId := msg.GetHeader().GetReplyId()
 	if replyId != 0 {
 		if !p.waiters.Send(replyId, Reply{
@@ -219,7 +241,7 @@ func (p *pool) handleMessage(peer peer.Peer, msg *syncproto.Message) {
 				peer:    peer,
 			},
 		}) {
-			log.Debug("received reply with unknown (or expired) replyId", zap.Uint64("replyId", replyId))
+			log.Debug("received reply with unknown (or expired) replyId", zap.Uint64("replyId", replyId), zap.String("header", msg.GetHeader().String()))
 		}
 		return
 	}
@@ -262,7 +284,7 @@ type waiters struct {
 	mu       sync.Mutex
 }
 
-func (w waiters) Send(replyId uint64, r Reply) (ok bool) {
+func (w *waiters) Send(replyId uint64, r Reply) (ok bool) {
 	w.mu.Lock()
 	wait := w.waiters[replyId]
 	if wait == nil {
@@ -282,13 +304,13 @@ func (w waiters) Send(replyId uint64, r Reply) (ok bool) {
 	return true
 }
 
-func (w waiters) Add(replyId uint64, wait *waiter) {
+func (w *waiters) Add(replyId uint64, wait *waiter) {
 	w.mu.Lock()
 	w.waiters[replyId] = wait
 	w.mu.Unlock()
 }
 
-func (w waiters) Remove(id uint64) error {
+func (w *waiters) Remove(id uint64) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if _, ok := w.waiters[id]; ok {
@@ -298,7 +320,7 @@ func (w waiters) Remove(id uint64) error {
 	return fmt.Errorf("waiter not found")
 }
 
-func (w waiters) NewReplyId() uint64 {
+func (w *waiters) NewReplyId() uint64 {
 	res := atomic.AddUint64(&w.replySeq, 1)
 	if res == 0 {
 		return w.NewReplyId()

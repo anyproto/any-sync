@@ -3,6 +3,7 @@ package pool
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/syncproto"
+	"go.uber.org/zap"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -43,6 +44,7 @@ func (m *Message) Ack() (err error) {
 		},
 		Data: data,
 	}
+	log.With(zap.String("header", rep.Header.String())).Info("sending ack to peer")
 	return m.peer.Send(rep)
 }
 
