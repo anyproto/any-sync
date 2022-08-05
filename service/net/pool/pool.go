@@ -209,6 +209,7 @@ func (p *pool) removePeer(peerId string) (err error) {
 }
 
 func (p *pool) handleMessage(peer peer.Peer, msg *syncproto.Message) {
+	log.With(zap.String("peerId", peer.Id())).Debug("received message from peer")
 	replyId := msg.GetHeader().GetReplyId()
 	if replyId != 0 {
 		if !p.waiters.Send(replyId, Reply{
@@ -224,6 +225,7 @@ func (p *pool) handleMessage(peer peer.Peer, msg *syncproto.Message) {
 	}
 	handlers := p.handlers[msg.GetHeader().GetType()]
 	if len(handlers) == 0 {
+		log.With(zap.String("peerId", peer.Id())).Debug("no handlers for such message")
 		return
 	}
 

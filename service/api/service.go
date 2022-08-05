@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"time"
 )
 
 const CName = "APIService"
@@ -97,7 +98,9 @@ func (s *service) createDocument(w http.ResponseWriter, req *http.Request) {
 		query = req.URL.Query()
 		text  = query.Get("text")
 	)
-	treeId, err := s.documentService.CreateDocument(context.Background(), fmt.Sprintf("created document with id: %s", text))
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	treeId, err := s.documentService.CreateDocument(timeoutCtx, fmt.Sprintf("created document with id: %s", text))
+	cancel()
 	if err != nil {
 		sendText(w, http.StatusInternalServerError, err.Error())
 		return
@@ -111,7 +114,9 @@ func (s *service) appendDocument(w http.ResponseWriter, req *http.Request) {
 		text   = query.Get("text")
 		treeId = query.Get("treeId")
 	)
-	err := s.documentService.UpdateDocument(context.Background(), treeId, text)
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	err := s.documentService.UpdateDocument(timeoutCtx, treeId, text)
+	cancel()
 	if err != nil {
 		sendText(w, http.StatusInternalServerError, err.Error())
 		return
