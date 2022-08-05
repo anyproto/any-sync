@@ -3,6 +3,7 @@ package requesthandler
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
@@ -11,6 +12,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/syncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
+	"go.uber.org/zap"
 )
 
 type requestHandler struct {
@@ -18,6 +20,8 @@ type requestHandler struct {
 	account        account.Service
 	messageService MessageSender
 }
+
+var log = logger.NewNamed("requesthandler")
 
 func New() app.Component {
 	return &requestHandler{}
@@ -72,6 +76,8 @@ func (r *requestHandler) HandleHeadUpdate(ctx context.Context, senderId string, 
 		snapshotPath []string
 		result       acltree.AddResult
 	)
+	log.With(zap.String("peerId", senderId), zap.String("treeId", update.TreeId)).
+		Debug("received head update message")
 
 	err = r.treeCache.Do(ctx, update.TreeId, func(tree acltree.ACLTree) error {
 		// TODO: check if we already have those changes
@@ -122,6 +128,8 @@ func (r *requestHandler) HandleFullSyncRequest(ctx context.Context, senderId str
 		snapshotPath []string
 		result       acltree.AddResult
 	)
+	log.With(zap.String("peerId", senderId), zap.String("treeId", request.TreeId)).
+		Debug("received full sync request message")
 
 	err = r.treeCache.Do(ctx, request.TreeId, func(tree acltree.ACLTree) error {
 		// TODO: check if we already have those changes
@@ -164,6 +172,8 @@ func (r *requestHandler) HandleFullSyncResponse(ctx context.Context, senderId st
 		snapshotPath []string
 		result       acltree.AddResult
 	)
+	log.With(zap.String("peerId", senderId), zap.String("treeId", response.TreeId)).
+		Debug("received full sync response message")
 
 	err = r.treeCache.Do(ctx, response.TreeId, func(tree acltree.ACLTree) error {
 		// TODO: check if we already have those changes
@@ -227,10 +237,12 @@ func (r *requestHandler) prepareFullSyncResponse(
 	// filtering our changes, so we will not send the same changes back
 	var final []*aclpb.RawChange
 	for _, ch := range ourChanges {
-		if _, exists := theirMap[ch.Id]; exists {
+		if _, exists := theirMap[ch.Id]; !exists {
 			final = append(final, ch)
 		}
 	}
+	log.With(zap.Int("len(changes)", len(final)), zap.String("id", treeId)).
+		Debug("sending changes for tree")
 
 	return &syncproto.SyncFullResponse{
 		Heads:        tree.Heads(),

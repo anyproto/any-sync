@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/requesthandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/syncproto"
 	"github.com/gogo/protobuf/proto"
@@ -19,7 +19,7 @@ var log = logger.NewNamed("messageservice")
 const CName = "MessageService"
 
 type service struct {
-	nodes          []config.Node
+	nodes          []*node.Node
 	requestHandler requesthandler.RequestHandler
 	pool           pool.Pool
 	sync.RWMutex
@@ -36,7 +36,7 @@ type Service interface {
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 	s.requestHandler = a.MustComponent(requesthandler.CName).(requesthandler.RequestHandler)
-	s.nodes = a.MustComponent(config.CName).(*config.Config).Nodes
+	s.nodes = a.MustComponent(node.CName).(node.Service).Nodes()
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.pool.AddHandler(syncproto.MessageType_MessageTypeSync, s.HandleMessage)
 	return nil
@@ -106,10 +106,6 @@ func (s *service) SendMessage(ctx context.Context, peerId string, msg *syncproto
 }
 
 func (s *service) SendToSpace(ctx context.Context, spaceId string, msg *syncproto.Sync) error {
-	log.With(
-		zap.String("message", msgType(msg))).
-		Debug("sending message to all")
-
 	// dial manually to all peers
 	for _, rp := range s.nodes {
 		if er := s.pool.DialAndAddPeer(context.Background(), rp.PeerId); er != nil {
@@ -126,6 +122,10 @@ func (s *service) SendToSpace(ctx context.Context, spaceId string, msg *syncprot
 
 	// TODO: use Broadcast method here when it is ready
 	for _, n := range s.nodes {
+		log.With(
+			zap.String("peerId", n.PeerId),
+			zap.String("message", msgType(msg))).
+			Debug("sending message to peer")
 		err := s.pool.SendAndWait(ctx, n.PeerId, &syncproto.Message{
 			Header: &syncproto.Header{Type: syncproto.MessageType_MessageTypeSync},
 			Data:   marshalled,

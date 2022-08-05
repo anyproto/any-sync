@@ -3,13 +3,17 @@ package node
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
+	"go.uber.org/zap"
 )
 
 const CName = "NodesService"
+
+var log = logger.NewNamed("nodesservice")
 
 type Node struct {
 	Address             string
@@ -46,7 +50,7 @@ func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 		if err != nil {
 			return err
 		}
-
+		log.With(zap.String("node", node.PeerId)).Debug("adding peer to known nodes")
 		filteredNodes = append(filteredNodes, node)
 	}
 	s.nodes = filteredNodes

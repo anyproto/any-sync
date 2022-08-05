@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
+	"go.uber.org/zap"
 	"sync"
 )
 
@@ -430,7 +431,7 @@ func (a *aclTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 	//  but no changes after some of the snapshots
 
 	var (
-		isNewDocument = len(theirPath) != 0
+		isNewDocument = len(theirPath) == 0
 		ourPath       = a.SnapshotPath()
 		// by default returning everything we have
 		commonSnapshot = ourPath[len(ourPath)-1] // TODO: root snapshot, probably it is better to have a specific method in treestorage
@@ -462,16 +463,26 @@ func (a *aclTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 		return ch, nil
 	}
 	// we presume that we have everything after the common snapshot, though this may not be the case in case of clients and only ACL tree changes
+	log.With(
+		zap.Strings("heads", a.fullTree.Heads()),
+		zap.String("breakpoint", commonSnapshot),
+		zap.String("id", a.id)).
+		Debug("getting all changes from common snapshot")
 	_, err = a.treeBuilder.dfs(a.fullTree.Heads(), commonSnapshot, load)
 	if err != nil {
 		return nil, err
 	}
 	if isNewDocument {
+		// adding snapshot to raw changes
 		_, err = load(commonSnapshot)
 		if err != nil {
 			return nil, err
 		}
 	}
+	log.With(
+		zap.Int("len(changes)", len(rawChanges)),
+		zap.String("id", a.id)).
+		Debug("sending all changes after common snapshot")
 
 	return rawChanges, nil
 }
@@ -483,6 +494,8 @@ func (a *aclTree) DebugDump() (string, error) {
 func (a *aclTree) commonSnapshotForTwoPaths(ourPath []string, theirPath []string) (string, error) {
 	var i int
 	var j int
+	log.With(zap.Strings("our path", ourPath), zap.Strings("their path", theirPath)).
+		Debug("finding common snapshot for two paths")
 OuterLoop:
 	// find starting point from the right
 	for i = len(ourPath) - 1; i >= 0; i-- {

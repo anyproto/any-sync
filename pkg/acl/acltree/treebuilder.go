@@ -6,7 +6,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
-
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 )
 
