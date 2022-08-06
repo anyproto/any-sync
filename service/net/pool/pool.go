@@ -154,41 +154,59 @@ func (p *pool) RemovePeerIdFromGroup(peerId, groupId string) (err error) {
 }
 
 func (p *pool) SendAndWait(ctx context.Context, peerId string, msg *syncproto.Message) (err error) {
+	defer func() {
+		if err != nil {
+			log.With(
+				zap.String("peerId", peerId),
+				zap.String("header", msg.GetHeader().String())).
+				Error("failed sending message to peer", zap.Error(err))
+		} else {
+			log.With(
+				zap.String("peerId", peerId),
+				zap.String("header", msg.GetHeader().String())).
+				Debug("sent message to peer")
+		}
+	}()
+
 	p.mu.RLock()
 	peer := p.peersById[peerId]
 	p.mu.RUnlock()
 	if peer == nil {
-		return ErrPeerNotFound
+		err = ErrPeerNotFound
+		return
 	}
+
 	repId := p.waiters.NewReplyId()
 	msg.GetHeader().RequestId = repId
 	ch := make(chan Reply, 1)
+
 	log.With(zap.Uint64("reply id", repId)).Debug("adding waiter for reply id")
 	p.waiters.Add(repId, &waiter{ch: ch})
 	defer p.waiters.Remove(repId)
+
 	if err = peer.peer.Send(msg); err != nil {
 		return
 	}
 	select {
 	case rep := <-ch:
 		if rep.Error != nil {
-			return rep.Error
+			err = rep.Error
 		}
-		return nil
 	case <-ctx.Done():
-		log.Debug("context error happened in send and wait")
-		return ctx.Err()
+		log.Debug("context done in SendAndWait")
+		err = ctx.Err()
 	}
+	return
 }
 
 func (p *pool) Broadcast(ctx context.Context, groupId string, msg *syncproto.Message) (err error) {
-
 	//TODO implement me
 	panic("implement me")
 }
 
 func (p *pool) readPeerLoop(peer peer.Peer) (err error) {
 	defer p.wg.Done()
+
 	limiter := make(chan struct{}, maxSimultaneousOperationsPerStream)
 	for i := 0; i < maxSimultaneousOperationsPerStream; i++ {
 		limiter <- struct{}{}
@@ -213,7 +231,7 @@ Loop:
 		}()
 	}
 	if err = p.removePeer(peer.Id()); err != nil {
-		log.Error("remove peer error", zap.String("peerId", peer.Id()))
+		log.Error("remove peer error", zap.String("peerId", peer.Id()), zap.Error(err))
 	}
 	return
 }

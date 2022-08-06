@@ -482,7 +482,7 @@ func (a *aclTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 	log.With(
 		zap.Int("len(changes)", len(rawChanges)),
 		zap.String("id", a.id)).
-		Debug("sending all changes after common snapshot")
+		Debug("returning all changes after common snapshot")
 
 	return rawChanges, nil
 }
