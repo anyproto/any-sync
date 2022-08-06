@@ -9,7 +9,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/requesthandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/syncproto"
 	"github.com/gogo/protobuf/proto"
-	"go.uber.org/zap"
 	"sync"
 	"time"
 )
@@ -30,8 +29,8 @@ func New() app.Component {
 }
 
 type Service interface {
-	SendMessage(ctx context.Context, peerId string, msg *syncproto.Sync) error
-	SendToSpace(ctx context.Context, spaceId string, msg *syncproto.Sync) error
+	SendMessageAsync(peerId string, msg *syncproto.Sync) error
+	SendToSpaceAsync(spaceId string, msg *syncproto.Sync) error
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
@@ -55,70 +54,58 @@ func (s *service) Close(ctx context.Context) (err error) {
 }
 
 func (s *service) HandleMessage(ctx context.Context, msg *pool.Message) (err error) {
-	log.With(
-		zap.String("peerId", msg.Peer().Id())).
-		Debug("handling message from peer")
+	defer func() {
+		if err != nil {
+			msg.AckError(syncproto.SystemError_UNKNOWN, err.Error())
+		} else {
+			msg.Ack()
+		}
+	}()
 
-	err = msg.Ack()
-	if err != nil {
-		log.With(zap.String("peerId", msg.Peer().Id()), zap.Error(err)).
-			Error("could not ack message")
-	} else {
-		log.With(zap.String("peerId", msg.Peer().Id()), zap.Int("type", int(msg.Header.Type))).
-			Debug("ack returned")
-	}
 	syncMsg := &syncproto.Sync{}
 	err = proto.Unmarshal(msg.Data, syncMsg)
 	if err != nil {
-		return err
+		return
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
-	return s.requestHandler.HandleSyncMessage(timeoutCtx, msg.Peer().Id(), syncMsg)
+	err = s.requestHandler.HandleSyncMessage(timeoutCtx, msg.Peer().Id(), syncMsg)
+	return
 }
 
-func (s *service) SendMessage(ctx context.Context, peerId string, msg *syncproto.Sync) error {
-	log.With(
-		zap.String("peerId", peerId),
-		zap.String("message", msgType(msg))).
-		Debug("sending message to peer")
-
-	err := s.pool.DialAndAddPeer(context.Background(), peerId)
+func (s *service) SendMessageAsync(peerId string, msg *syncproto.Sync) (err error) {
+	err = s.pool.DialAndAddPeer(context.Background(), peerId)
 	if err != nil {
-		return err
+		return
 	}
 
 	marshalled, err := proto.Marshal(msg)
 	if err != nil {
-		return err
+		return
 	}
 
-	err = s.pool.SendAndWait(ctx, peerId, &syncproto.Message{
-		Header: &syncproto.Header{Type: syncproto.MessageType_MessageTypeSync},
-		Data:   marshalled,
-	})
-
-	if err != nil {
-		log.With(
-			zap.String("peerId", peerId),
-			zap.String("message", msgType(msg)),
-			zap.Error(err)).
-			Debug("failed to send message to peer")
-	} else {
-		log.With(
-			zap.String("peerId", peerId),
-			zap.String("message", msgType(msg))).
-			Debug("message send to peer completed")
-	}
-	return err
+	go s.sendAsync(peerId, msgType(msg), marshalled)
+	return
 }
 
-func (s *service) SendToSpace(ctx context.Context, spaceId string, msg *syncproto.Sync) error {
+func (s *service) SendToSpaceAsync(spaceId string, msg *syncproto.Sync) error {
 	for _, rp := range s.nodes {
-		s.SendMessage(ctx, rp.PeerId, msg)
+		s.SendMessageAsync(rp.PeerId, msg)
 	}
 	return nil
+}
+
+func (s *service) sendAsync(peerId string, msgTypeStr string, marshalled []byte) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+	return s.pool.SendAndWait(ctx, peerId, &syncproto.Message{
+		Header: &syncproto.Header{
+			Type:      syncproto.MessageType_MessageTypeSync,
+			DebugInfo: msgTypeStr,
+		},
+		Data: marshalled,
+	})
 }
 
 func msgType(content *syncproto.Sync) string {
