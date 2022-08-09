@@ -109,3 +109,14 @@ message ACLChange {
     Removed = 3;
   }
 }
+
+message Change {
+  repeated string treeHeadIds = 1;
+  repeated string aclHeadIds = 2;
+  string snapshotBaseId = 3; // we will only have one base snapshot for both
+  bytes changesData = 4;
+  uint64 currentReadKeyHash = 5;
+  int64 timestamp = 6;
+  string identity = 7;
+  bool isSnapshot = 8;
+}
