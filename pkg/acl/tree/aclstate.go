@@ -50,18 +50,12 @@ func newACLState() *ACLState {
 	}
 }
 
-func (st *ACLState) applyChange(changeWrapper *Change) (err error) {
-	change := changeWrapper.Content
+func (st *ACLState) applyChange(change *aclpb.Change) (err error) {
 	aclData := &aclpb.ACLChangeACLData{}
 
-	if changeWrapper.DecryptedModel != nil {
-		aclData = changeWrapper.DecryptedModel.(*aclpb.ACLChangeACLData)
-	} else {
-		err = proto.Unmarshal(change.ChangesData, aclData)
-		if err != nil {
-			return
-		}
-		changeWrapper.DecryptedModel = aclData
+	err = proto.Unmarshal(change.ChangesData, aclData)
+	if err != nil {
+		return
 	}
 
 	defer func() {
@@ -71,23 +65,51 @@ func (st *ACLState) applyChange(changeWrapper *Change) (err error) {
 		st.currentReadKeyHash = change.CurrentReadKeyHash
 	}()
 
+	return st.applyChangeData(aclData, change.CurrentReadKeyHash, change.Identity)
+}
+
+func (st *ACLState) applyChangeAndUpdate(changeWrapper *Change) (err error) {
+	change := changeWrapper.Content
+	aclData := &aclpb.ACLChangeACLData{}
+
+	if changeWrapper.ParsedModel != nil {
+		aclData = changeWrapper.ParsedModel.(*aclpb.ACLChangeACLData)
+	} else {
+		err = proto.Unmarshal(change.ChangesData, aclData)
+		if err != nil {
+			return
+		}
+		changeWrapper.ParsedModel = aclData
+	}
+
+	return st.applyChangeData(aclData, changeWrapper.Content.CurrentReadKeyHash, changeWrapper.Content.Identity)
+}
+
+func (st *ACLState) applyChangeData(changeData *aclpb.ACLChangeACLData, hash uint64, identity string) (err error) {
+	defer func() {
+		if err != nil {
+			return
+		}
+		st.currentReadKeyHash = hash
+	}()
+
 	// we can't check this for the user which is joining, because it will not be in our list
 	// the same is for the first change to be added
-	skipIdentityCheck := st.isUserJoin(aclData) || (st.currentReadKeyHash == 0 && st.isUserAdd(aclData, change.Identity))
+	skipIdentityCheck := st.isUserJoin(changeData) || (st.currentReadKeyHash == 0 && st.isUserAdd(changeData, identity))
 	if !skipIdentityCheck {
 		// we check signature when we add this to the Tree, so no need to do it here
-		if _, exists := st.userStates[change.Identity]; !exists {
+		if _, exists := st.userStates[identity]; !exists {
 			err = ErrNoSuchUser
 			return
 		}
 
-		if !st.hasPermission(change.Identity, aclpb.ACLChange_Admin) {
-			err = fmt.Errorf("user %s must have admin permissions", change.Identity)
+		if !st.hasPermission(identity, aclpb.ACLChange_Admin) {
+			err = fmt.Errorf("user %s must have admin permissions", identity)
 			return
 		}
 	}
 
-	for _, ch := range aclData.GetAclContent() {
+	for _, ch := range changeData.GetAclContent() {
 		if err = st.applyChangeContent(ch); err != nil {
 			log.Infof("error while applying changes: %v; ignore", err)
 			return err

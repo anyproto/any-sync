@@ -15,33 +15,25 @@ type MarshalledChange = []byte
 
 type ACLChangeBuilder interface {
 	UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions aclpb.ACLChangeUserPermissions) error
-	AddId(id string)      // TODO: this is only for testing
-	SetMakeSnapshot(bool) // TODO: who should decide this? probably ACLTree so we can delete it
+	AddId(id string) // TODO: this is only for testing
 }
 
-type ChangeBuilder interface {
-	ACLChangeBuilder
-	AddChangeContent(marshaler proto.Marshaler) // user code should be responsible for making regular snapshots
-}
-
-type changeBuilder struct {
+type aclChangeBuilder struct {
 	aclState *ACLState
 	tree     *Tree
 	acc      *account.AccountData
 
-	aclData       *aclpb.ACLChangeACLData
-	changeContent proto.Marshaler
-	id            string
-	makeSnapshot  bool
-	readKey       *symmetric.Key
-	readKeyHash   uint64
+	aclData     *aclpb.ACLChangeACLData
+	id          string
+	readKey     *symmetric.Key
+	readKeyHash uint64
 }
 
-func newChangeBuilder() *changeBuilder {
-	return &changeBuilder{}
+func newACLChangeBuilder() *aclChangeBuilder {
+	return &aclChangeBuilder{}
 }
 
-func (c *changeBuilder) Init(state *ACLState, tree *Tree, acc *account.AccountData) {
+func (c *aclChangeBuilder) Init(state *ACLState, tree *Tree, acc *account.AccountData) {
 	c.aclState = state
 	c.tree = tree
 	c.acc = acc
@@ -60,15 +52,11 @@ func (c *changeBuilder) Init(state *ACLState, tree *Tree, acc *account.AccountDa
 	}
 }
 
-func (c *changeBuilder) AddId(id string) {
+func (c *aclChangeBuilder) AddId(id string) {
 	c.id = id
 }
 
-func (c *changeBuilder) SetMakeSnapshot(b bool) {
-	c.makeSnapshot = b
-}
-
-func (c *changeBuilder) UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions aclpb.ACLChangeUserPermissions) error {
+func (c *aclChangeBuilder) UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions aclpb.ACLChangeUserPermissions) error {
 	var allKeys []*symmetric.Key
 	if c.aclState.currentReadKeyHash != 0 {
 		for _, key := range c.aclState.userReadKeys {
@@ -105,38 +93,23 @@ func (c *changeBuilder) UserAdd(identity string, encryptionKey encryptionkey.Pub
 	return nil
 }
 
-func (c *changeBuilder) BuildAndApply() (*Change, []byte, error) {
-	aclChange := &aclpb.ACLChange{
+func (c *aclChangeBuilder) BuildAndApply() (*Change, []byte, error) {
+	aclChange := &aclpb.Change{
 		TreeHeadIds:        c.tree.Heads(),
-		AclHeadIds:         c.tree.ACLHeads(),
 		SnapshotBaseId:     c.tree.RootId(),
-		AclData:            c.aclData,
 		CurrentReadKeyHash: c.readKeyHash,
 		Timestamp:          int64(time.Now().Nanosecond()),
 		Identity:           c.acc.Identity,
 	}
-	err := c.aclState.applyChange(aclChange)
+
+	marshalledData, err := proto.Marshal(c.aclData)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	if c.makeSnapshot {
-		c.aclData.AclSnapshot = c.aclState.makeSnapshot()
-	}
-
-	var marshalled []byte
-	if c.changeContent != nil {
-		marshalled, err = c.changeContent.Marshal()
-		if err != nil {
-			return nil, nil, err
-		}
-
-		encrypted, err := c.aclState.userReadKeys[c.aclState.currentReadKeyHash].
-			Encrypt(marshalled)
-		if err != nil {
-			return nil, nil, err
-		}
-		aclChange.ChangesData = encrypted
+	aclChange.ChangesData = marshalledData
+	err = c.aclState.applyChange(aclChange)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	fullMarshalledChange, err := proto.Marshal(aclChange)
@@ -152,12 +125,8 @@ func (c *changeBuilder) BuildAndApply() (*Change, []byte, error) {
 		return nil, nil, err
 	}
 	ch := NewChange(id, aclChange)
-	ch.DecryptedDocumentChange = marshalled
+	ch.ParsedModel = c.aclData
 	ch.Sign = signature
 
 	return ch, fullMarshalledChange, nil
-}
-
-func (c *changeBuilder) AddChangeContent(marshaler proto.Marshaler) {
-	c.changeContent = marshaler
 }

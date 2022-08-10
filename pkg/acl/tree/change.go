@@ -23,7 +23,7 @@ type Change struct {
 	SnapshotId      string
 	IsSnapshot      bool
 	DecryptedChange []byte // TODO: check if we need it
-	DecryptedModel  interface{}
+	ParsedModel     interface{}
 
 	Content *aclpb.Change
 	Sign    []byte

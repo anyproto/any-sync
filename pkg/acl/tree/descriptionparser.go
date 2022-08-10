@@ -20,8 +20,8 @@ func (a aclDescriptionParser) ParseChange(changeWrapper *Change) (res []string, 
 	change := changeWrapper.Content
 	aclData := &aclpb.ACLChangeACLData{}
 
-	if changeWrapper.DecryptedModel != nil {
-		aclData = changeWrapper.DecryptedModel.(*aclpb.ACLChangeACLData)
+	if changeWrapper.ParsedModel != nil {
+		aclData = changeWrapper.ParsedModel.(*aclpb.ACLChangeACLData)
 	} else {
 		err = proto.Unmarshal(change.ChangesData, aclData)
 		if err != nil {
