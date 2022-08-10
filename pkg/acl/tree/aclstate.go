@@ -50,11 +50,18 @@ func newACLState() *ACLState {
 	}
 }
 
-func (st *ACLState) applyChange(change *aclpb.Change) (err error) {
+func (st *ACLState) applyChange(changeWrapper *Change) (err error) {
+	change := changeWrapper.Content
 	aclData := &aclpb.ACLChangeACLData{}
-	err = proto.Unmarshal(change.ChangesData, aclData)
-	if err != nil {
-		return
+
+	if changeWrapper.DecryptedModel != nil {
+		aclData = changeWrapper.DecryptedModel.(*aclpb.ACLChangeACLData)
+	} else {
+		err = proto.Unmarshal(change.ChangesData, aclData)
+		if err != nil {
+			return
+		}
+		changeWrapper.DecryptedModel = aclData
 	}
 
 	defer func() {

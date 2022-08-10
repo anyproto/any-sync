@@ -22,10 +22,16 @@ type Change struct {
 	Id              string
 	SnapshotId      string
 	IsSnapshot      bool
-	DecryptedChange []byte
+	DecryptedChange []byte // TODO: check if we need it
+	DecryptedModel  interface{}
 
 	Content *aclpb.Change
 	Sign    []byte
+}
+
+func (ch *Change) ProtoChange() *aclpb.ACLChange {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (ch *Change) DecryptContents(key *symmetric.Key) error {
@@ -63,10 +69,6 @@ func NewChange(id string, ch *aclpb.Change) *Change {
 		SnapshotId:  ch.SnapshotBaseId,
 		IsSnapshot:  ch.IsSnapshot,
 	}
-}
-
-func (ch *Change) ProtoChange() *aclpb.Change {
-	return ch.Content
 }
 
 func (ch *Change) DecryptedChangeContent() []byte {

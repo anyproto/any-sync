@@ -223,8 +223,8 @@ func (tb *treeBuilder) makeVerifiedChange(change *aclpb.RawChange) (aclChange *a
 	return
 }
 
-func (tb *treeBuilder) makeUnverifiedACLChange(change *aclpb.RawChange) (aclChange *aclpb.ACLChange, err error) {
-	aclChange = new(aclpb.ACLChange)
+func (tb *treeBuilder) makeUnverifiedACLChange(change *aclpb.RawChange) (aclChange *aclpb.Change, err error) {
+	aclChange = new(aclpb.Change)
 	err = proto.Unmarshal(change.Payload, aclChange)
 	return
 }
