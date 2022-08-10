@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
@@ -16,16 +17,14 @@ import (
 const CName = "treecache"
 
 // TODO: add context
-type ACLTreeFunc = func(tree acltree.ACLTree) error
+type ACLTreeFunc = func(tree tree.ACLTree) error
 type ChangeBuildFunc = func(builder acltree.ChangeBuilder) error
 
 var log = logger.NewNamed("treecache")
 
 type Service interface {
-	DoWrite(ctx context.Context, treeId string, f ACLTreeFunc) error
-	DoRead(ctx context.Context, treeId string, f ACLTreeFunc) error
+	Do(ctx context.Context, treeId string, f ACLTreeFunc) error
 	Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange, f ACLTreeFunc) error
-	Create(ctx context.Context, build ChangeBuildFunc, f ACLTreeFunc) error
 }
 
 type service struct {
@@ -38,51 +37,17 @@ func New() app.ComponentRunnable {
 	return &service{}
 }
 
-func (s *service) Create(ctx context.Context, build ChangeBuildFunc, f ACLTreeFunc) error {
-	acc := s.account.Account()
-	st, err := acltree.CreateNewTreeStorageWithACL(acc, build, s.treeProvider.CreateTreeStorage)
-	if err != nil {
-		return err
-	}
-
-	id, err := st.TreeID()
-	if err != nil {
-		return err
-	}
-
-	return s.DoWrite(ctx, id, f)
-}
-
-func (s *service) DoWrite(ctx context.Context, treeId string, f ACLTreeFunc) error {
+func (s *service) Do(ctx context.Context, treeId string, f ACLTreeFunc) error {
 	log.
 		With(zap.String("treeId", treeId)).
 		Debug("requesting tree from cache to perform operation")
 
-	tree, err := s.cache.Get(ctx, treeId)
+	t, err := s.cache.Get(ctx, treeId)
 	defer s.cache.Release(treeId)
 	if err != nil {
 		return err
 	}
-	aclTree := tree.(acltree.ACLTree)
-	aclTree.Lock()
-	defer aclTree.Unlock()
-	return f(tree.(acltree.ACLTree))
-}
-
-func (s *service) DoRead(ctx context.Context, treeId string, f ACLTreeFunc) error {
-	log.
-		With(zap.String("treeId", treeId)).
-		Debug("requesting tree from cache to perform operation")
-
-	tree, err := s.cache.Get(ctx, treeId)
-	defer s.cache.Release(treeId)
-	if err != nil {
-		return err
-	}
-	aclTree := tree.(acltree.ACLTree)
-	aclTree.RLock()
-	defer aclTree.RUnlock()
-	return f(tree.(acltree.ACLTree))
+	return f(t.(tree.ACLTree))
 }
 
 func (s *service) Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange, f ACLTreeFunc) error {

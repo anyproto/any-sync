@@ -43,10 +43,9 @@ type docTree struct {
 	accountData    *account.AccountData
 	updateListener TreeUpdateListener
 
-	id       string
-	header   *treepb.TreeHeader
-	tree     *Tree
-	aclState *ACLState
+	id     string
+	header *treepb.TreeHeader
+	tree   *Tree
 
 	treeBuilder *treeBuilder
 	validator   DocTreeValidator
@@ -62,7 +61,6 @@ func BuildDocTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountDat
 		treeStorage:    t,
 		accountData:    acc,
 		tree:           nil,
-		aclState:       nil,
 		treeBuilder:    treeBuilder,
 		validator:      validator,
 		updateListener: listener,
@@ -100,7 +98,6 @@ func BuildDocTree(t treestorage.TreeStorage, decoder signingkey.PubKeyDecoder, l
 	docTree := &docTree{
 		treeStorage:    t,
 		tree:           nil,
-		aclState:       nil,
 		treeBuilder:    treeBuilder,
 		validator:      validator,
 		updateListener: listener,
@@ -222,7 +219,7 @@ func (d *docTree) AddContent(ctx context.Context, aclTree ACLTree, content proto
 		// clearing tree, because we already fixed everything in the last snapshot
 		d.tree = &Tree{}
 	}
-	d.tree.AddFast(ch)
+	d.tree.AddFast(ch) // TODO: Add head
 	rawCh := &aclpb.RawChange{
 		Payload:   fullMarshalledChange,
 		Signature: ch.Signature(),

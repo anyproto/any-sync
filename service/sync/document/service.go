@@ -7,6 +7,8 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/testchangepb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
@@ -22,9 +24,10 @@ var CName = "DocumentService"
 var log = logger.NewNamed("documentservice")
 
 type service struct {
-	messageService message.Service
-	treeCache      treecache.Service
-	account        account.Service
+	messageService      message.Service
+	treeCache           treecache.Service
+	account             account.Service
+	treeStorageProvider treestorage.Provider
 	// to create new documents we need to know all nodes
 	nodes []*node.Node
 }
@@ -42,6 +45,7 @@ func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 	s.account = a.MustComponent(account.CName).(account.Service)
 	s.messageService = a.MustComponent(message.CName).(message.Service)
 	s.treeCache = a.MustComponent(treecache.CName).(treecache.Service)
+	// TODO: add TreeStorageProvider service
 
 	nodesService := a.MustComponent(node.CName).(node.Service)
 	s.nodes = nodesService.Nodes()
@@ -71,7 +75,7 @@ func (s *service) UpdateDocument(ctx context.Context, id, text string) (err erro
 	log.With(zap.String("id", id), zap.String("text", text)).
 		Debug("updating document")
 
-	err = s.treeCache.DoWrite(ctx, id, func(tree acltree.ACLTree) error {
+	err = s.treeCache.Do(ctx, id, func(tree acltree.ACLTree) error {
 		ch, err = tree.AddContent(ctx, func(builder acltree.ChangeBuilder) error {
 			builder.AddChangeContent(
 				&testchangepb.PlainTextChangeData{
@@ -109,7 +113,7 @@ func (s *service) UpdateDocument(ctx context.Context, id, text string) (err erro
 	}))
 }
 
-func (s *service) CreateDocument(ctx context.Context, text string) (id string, err error) {
+func (s *service) CreateACLTree(ctx context.Context) (id string, err error) {
 	acc := s.account.Account()
 	var (
 		ch           *aclpb.RawChange
@@ -118,7 +122,7 @@ func (s *service) CreateDocument(ctx context.Context, text string) (id string, e
 		heads        []string
 	)
 
-	err = s.treeCache.Create(ctx, func(builder acltree.ChangeBuilder) error {
+	t, err := tree.CreateNewTreeStorageWithACL(acc, func(builder tree.ACLChangeBuilder) error {
 		err := builder.UserAdd(acc.Identity, acc.EncKey.GetPublic(), aclpb.ACLChange_Admin)
 		if err != nil {
 			return err
@@ -130,28 +134,81 @@ func (s *service) CreateDocument(ctx context.Context, text string) (id string, e
 				return err
 			}
 		}
-
-		builder.AddChangeContent(createInitialChangeContent(text))
 		return nil
-	}, func(tree acltree.ACLTree) error {
-		id = tree.ID()
-		heads = tree.Heads()
-		header = tree.Header()
-		snapshotPath = tree.SnapshotPath()
-		ch, err = tree.Storage().GetChange(ctx, heads[0])
+	}, s.treeStorageProvider.CreateTreeStorage)
+
+	id, err = t.TreeID()
+	if err != nil {
+		return "", err
+	}
+
+	header, err = t.Header()
+	if err != nil {
+		return "", err
+	}
+
+	heads = []string{header.FirstChangeId}
+	snapshotPath = []string{header.FirstChangeId}
+	ch, err = t.GetChange(ctx, header.FirstChangeId)
+	if err != nil {
+		return "", err
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	err = s.messageService.SendToSpaceAsync("", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
+		Heads:        heads,
+		Changes:      []*aclpb.RawChange{ch},
+		TreeId:       id,
+		SnapshotPath: snapshotPath,
+		TreeHeader:   header,
+	}))
+	return id, nil
+}
+
+func (s *service) CreateDocumentTree(ctx context.Context, aclTreeId string, text string) (id string, err error) {
+	acc := s.account.Account()
+	var (
+		ch           *aclpb.RawChange
+		header       *treepb.TreeHeader
+		snapshotPath []string
+		heads        []string
+	)
+	err = s.treeCache.Do(ctx, aclTreeId, func(t tree.ACLTree) error {
+		t.RLock()
+		defer t.RUnlock()
+
+		content := createInitialChangeContent(text)
+		doc, err := tree.CreateNewTreeStorage(acc, t, content, s.treeStorageProvider.CreateTreeStorage)
 		if err != nil {
 			return err
 		}
-		log.With(
-			zap.String("id", id),
-			zap.Strings("heads", heads),
-			zap.String("header", header.String())).
-			Debug("document created in the database")
+
+		id, err = doc.TreeID()
+		if err != nil {
+			return err
+		}
+
+		header, err = doc.Header()
+		if err != nil {
+			return err
+		}
+
+		heads = []string{header.FirstChangeId}
+		snapshotPath = []string{header.FirstChangeId}
+		ch, err = doc.GetChange(ctx, header.FirstChangeId)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	})
 	if err != nil {
 		return "", err
 	}
+
 	log.With(zap.String("id", id), zap.String("text", text)).
 		Debug("creating document")
 

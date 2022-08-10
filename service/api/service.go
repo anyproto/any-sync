@@ -79,7 +79,7 @@ func (s *service) treeDump(w http.ResponseWriter, req *http.Request) {
 		dump   string
 		err    error
 	)
-	err = s.treeCache.DoWrite(context.Background(), treeId, func(tree acltree.ACLTree) error {
+	err = s.treeCache.Do(context.Background(), treeId, func(tree acltree.ACLTree) error {
 		dump, err = tree.DebugDump()
 		if err != nil {
 			return err
