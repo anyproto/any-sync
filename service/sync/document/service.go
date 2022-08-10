@@ -71,7 +71,7 @@ func (s *service) UpdateDocument(ctx context.Context, id, text string) (err erro
 	log.With(zap.String("id", id), zap.String("text", text)).
 		Debug("updating document")
 
-	err = s.treeCache.Do(ctx, id, func(tree acltree.ACLTree) error {
+	err = s.treeCache.DoWrite(ctx, id, func(tree acltree.ACLTree) error {
 		ch, err = tree.AddContent(ctx, func(builder acltree.ChangeBuilder) error {
 			builder.AddChangeContent(
 				&testchangepb.PlainTextChangeData{

@@ -79,7 +79,7 @@ func (r *requestHandler) HandleHeadUpdate(ctx context.Context, senderId string, 
 	log.With(zap.String("peerId", senderId), zap.String("treeId", update.TreeId)).
 		Debug("processing head update")
 
-	err = r.treeCache.Do(ctx, update.TreeId, func(tree acltree.ACLTree) error {
+	err = r.treeCache.DoWrite(ctx, update.TreeId, func(tree acltree.ACLTree) error {
 		// TODO: check if we already have those changes
 		result, err = tree.AddRawChanges(ctx, update.Changes...)
 		if err != nil {
@@ -133,7 +133,7 @@ func (r *requestHandler) HandleFullSyncRequest(ctx context.Context, senderId str
 	log.With(zap.String("peerId", senderId), zap.String("treeId", request.TreeId)).
 		Debug("processing full sync request")
 
-	err = r.treeCache.Do(ctx, request.TreeId, func(tree acltree.ACLTree) error {
+	err = r.treeCache.DoWrite(ctx, request.TreeId, func(tree acltree.ACLTree) error {
 		// TODO: check if we already have those changes
 		// if we have non-empty request
 		if len(request.Heads) != 0 {
@@ -177,7 +177,7 @@ func (r *requestHandler) HandleFullSyncResponse(ctx context.Context, senderId st
 	log.With(zap.String("peerId", senderId), zap.String("treeId", response.TreeId)).
 		Debug("processing full sync response")
 
-	err = r.treeCache.Do(ctx, response.TreeId, func(tree acltree.ACLTree) error {
+	err = r.treeCache.DoWrite(ctx, response.TreeId, func(tree acltree.ACLTree) error {
 		// TODO: check if we already have those changes
 		result, err = tree.AddRawChanges(ctx, response.Changes...)
 		if err != nil {
