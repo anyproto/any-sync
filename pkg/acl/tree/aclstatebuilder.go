@@ -55,7 +55,15 @@ func (sb *aclStateBuilder) BuildBefore(beforeId string) (*ACLState, bool, error)
 		return state, true, nil
 	}
 
-	sb.tree.IterateSkip(sb.tree.root.Id, startChange.Id, func(c *Change) (isContinue bool) {
+	iterFunc := func(c *Change) (isContinue bool) {
+		defer func() {
+			if err == nil {
+				startChange = c
+			} else if err != ErrDocumentForbidden {
+				//log.Errorf("marking change %s as invalid: %v", c.Id, err)
+				sb.tree.RemoveInvalidChange(c.Id)
+			}
+		}()
 		err = state.applyChange(c)
 		if err != nil {
 			return false
@@ -73,7 +81,22 @@ func (sb *aclStateBuilder) BuildBefore(beforeId string) (*ACLState, bool, error)
 		}
 
 		return true
-	})
+	}
+
+	for {
+		sb.tree.IterateSkip(sb.tree.root.Id, startChange.Id, iterFunc)
+		if err == nil {
+			break
+		}
+
+		// the user is forbidden to access the document
+		if err == ErrDocumentForbidden {
+			return nil, foundId, err
+		}
+
+		// otherwise we have to continue from the change which we had
+		err = nil
+	}
 
 	return state, foundId, err
 }
