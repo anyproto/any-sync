@@ -22,7 +22,8 @@ type ChangeBuildFunc = func(builder acltree.ChangeBuilder) error
 var log = logger.NewNamed("treecache")
 
 type Service interface {
-	Do(ctx context.Context, treeId string, f ACLTreeFunc) error
+	DoWrite(ctx context.Context, treeId string, f ACLTreeFunc) error
+	DoRead(ctx context.Context, treeId string, f ACLTreeFunc) error
 	Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange, f ACLTreeFunc) error
 	Create(ctx context.Context, build ChangeBuildFunc, f ACLTreeFunc) error
 }
@@ -49,10 +50,10 @@ func (s *service) Create(ctx context.Context, build ChangeBuildFunc, f ACLTreeFu
 		return err
 	}
 
-	return s.Do(ctx, id, f)
+	return s.DoWrite(ctx, id, f)
 }
 
-func (s *service) Do(ctx context.Context, treeId string, f ACLTreeFunc) error {
+func (s *service) DoWrite(ctx context.Context, treeId string, f ACLTreeFunc) error {
 	log.
 		With(zap.String("treeId", treeId)).
 		Debug("requesting tree from cache to perform operation")
@@ -65,6 +66,22 @@ func (s *service) Do(ctx context.Context, treeId string, f ACLTreeFunc) error {
 	aclTree := tree.(acltree.ACLTree)
 	aclTree.Lock()
 	defer aclTree.Unlock()
+	return f(tree.(acltree.ACLTree))
+}
+
+func (s *service) DoRead(ctx context.Context, treeId string, f ACLTreeFunc) error {
+	log.
+		With(zap.String("treeId", treeId)).
+		Debug("requesting tree from cache to perform operation")
+
+	tree, err := s.cache.Get(ctx, treeId)
+	defer s.cache.Release(treeId)
+	if err != nil {
+		return err
+	}
+	aclTree := tree.(acltree.ACLTree)
+	aclTree.RLock()
+	defer aclTree.RUnlock()
 	return f(tree.(acltree.ACLTree))
 }
 
