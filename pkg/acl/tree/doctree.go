@@ -6,17 +6,25 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"sync"
+	"time"
 )
+
+type TreeUpdateListener interface {
+	Update(tree DocTree)
+	Rebuild(tree DocTree)
+}
 
 type DocTree interface {
 	RWLocker
 	ID() string
 	Header() *treepb.TreeHeader
-	AddContent(ctx context.Context, content proto.Marshaler) (*aclpb.RawChange, error)
-	AddRawChanges(ctx context.Context, validator ChangeValidator, changes ...*aclpb.RawChange) (AddResult, error)
+	AddContent(ctx context.Context, aclTree ACLTree, content proto.Marshaler, isSnapshot bool) (*aclpb.RawChange, error)
+	AddRawChanges(ctx context.Context, aclTree ACLTree, changes ...*aclpb.RawChange) (AddResult, error)
 	Heads() []string
 	Root() *Change
 	Iterate(func(change *Change) bool)
@@ -41,29 +49,25 @@ type docTree struct {
 	aclState *ACLState
 
 	treeBuilder *treeBuilder
+	validator   DocTreeValidator
 
 	sync.RWMutex
 }
 
-func BuildDocTreeWithIdentity(
-	t treestorage.TreeStorage,
-	acc *account.AccountData,
-	listener TreeUpdateListener) (DocTree, error) {
+func BuildDocTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountData, listener TreeUpdateListener, aclTree ACLTree) (DocTree, error) {
 	treeBuilder := newTreeBuilder(t, acc.Decoder)
-	aclStateBuilder := newACLStateBuilderWithIdentity(acc.Decoder, acc)
-	changeBuilder := newChangeBuilder()
+	validator := newTreeValidator()
 
 	docTree := &docTree{
-		treeStorage:     t,
-		accountData:     acc,
-		tree:            nil,
-		aclState:        nil,
-		treeBuilder:     treeBuilder,
-		aclStateBuilder: aclStateBuilder,
-		changeBuilder:   changeBuilder,
-		updateListener:  listener,
+		treeStorage:    t,
+		accountData:    acc,
+		tree:           nil,
+		aclState:       nil,
+		treeBuilder:    treeBuilder,
+		validator:      validator,
+		updateListener: listener,
 	}
-	err := docTree.rebuildFromStorage()
+	err := docTree.rebuildFromStorage(aclTree)
 	if err != nil {
 		return nil, err
 	}
@@ -89,106 +93,155 @@ func BuildDocTreeWithIdentity(
 	return docTree, nil
 }
 
-func BuildACLTree(t treestorage.TreeStorage) {
-	// TODO: Add logic for building without identity
+func BuildDocTree(t treestorage.TreeStorage, decoder signingkey.PubKeyDecoder, listener TreeUpdateListener, aclTree ACLTree) (DocTree, error) {
+	treeBuilder := newTreeBuilder(t, decoder)
+	validator := newTreeValidator()
+
+	docTree := &docTree{
+		treeStorage:    t,
+		tree:           nil,
+		aclState:       nil,
+		treeBuilder:    treeBuilder,
+		validator:      validator,
+		updateListener: listener,
+	}
+	err := docTree.rebuildFromStorage(aclTree)
+	if err != nil {
+		return nil, err
+	}
+	err = docTree.removeOrphans()
+	if err != nil {
+		return nil, err
+	}
+	err = t.SetHeads(docTree.Heads())
+	if err != nil {
+		return nil, err
+	}
+	docTree.id, err = t.TreeID()
+	if err != nil {
+		return nil, err
+	}
+	docTree.header, err = t.Header()
+	if err != nil {
+		return nil, err
+	}
+
+	listener.Rebuild(docTree)
+
+	return docTree, nil
 }
 
-func (a *docTree) removeOrphans() error {
+func (d *docTree) removeOrphans() error {
 	// removing attached or invalid orphans
 	var toRemove []string
 
-	orphans, err := a.treeStorage.Orphans()
+	orphans, err := d.treeStorage.Orphans()
 	if err != nil {
 		return err
 	}
 	for _, orphan := range orphans {
-		if _, exists := a.tree.attached[orphan]; exists {
+		if _, exists := d.tree.attached[orphan]; exists {
 			toRemove = append(toRemove, orphan)
 		}
-		if _, exists := a.tree.invalidChanges[orphan]; exists {
+		if _, exists := d.tree.invalidChanges[orphan]; exists {
 			toRemove = append(toRemove, orphan)
 		}
 	}
-	return a.treeStorage.RemoveOrphans(toRemove...)
+	return d.treeStorage.RemoveOrphans(toRemove...)
 }
 
-func (a *docTree) rebuildFromStorage() (err error) {
-	a.treeBuilder.Init()
+func (d *docTree) rebuildFromStorage(aclTree ACLTree) (err error) {
+	d.treeBuilder.Init()
 
-	a.tree, err = a.treeBuilder.Build(false)
+	d.tree, err = d.treeBuilder.Build(false)
 	if err != nil {
 		return err
 	}
 
-	err = a.aclStateBuilder.Init(a.tree)
-	if err != nil {
-		return err
-	}
-
-	a.aclState, err = a.aclStateBuilder.Build()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return d.validator.ValidateTree(d.tree, aclTree)
 }
 
-func (a *docTree) ID() string {
-	return a.id
+func (d *docTree) ID() string {
+	return d.id
 }
 
-func (a *docTree) Header() *treepb.TreeHeader {
-	return a.header
+func (d *docTree) Header() *treepb.TreeHeader {
+	return d.header
 }
 
-func (a *docTree) ACLState() *ACLState {
-	return a.aclState
+func (d *docTree) Storage() treestorage.TreeStorage {
+	return d.treeStorage
 }
 
-func (a *docTree) Storage() treestorage.TreeStorage {
-	return a.treeStorage
-}
-
-func (a *docTree) AddContent(ctx context.Context, build func(builder ChangeBuilder) error) (*aclpb.RawChange, error) {
-	if a.accountData == nil {
+func (d *docTree) AddContent(ctx context.Context, aclTree ACLTree, content proto.Marshaler, isSnapshot bool) (*aclpb.RawChange, error) {
+	if d.accountData == nil {
 		return nil, ErrTreeWithoutIdentity
 	}
 
 	defer func() {
 		// TODO: should this be called in a separate goroutine to prevent accidental cycles (tree->updater->tree)
-		a.updateListener.Update(a)
+		d.updateListener.Update(d)
 	}()
+	state := aclTree.ACLState()
+	change := &aclpb.Change{
+		TreeHeadIds:        d.tree.Heads(),
+		AclHeadIds:         aclTree.Heads(),
+		SnapshotBaseId:     d.tree.RootId(),
+		CurrentReadKeyHash: state.currentReadKeyHash,
+		Timestamp:          int64(time.Now().Nanosecond()),
+		Identity:           d.accountData.Identity,
+	}
 
-	a.changeBuilder.Init(a.aclState, a.tree, a.accountData)
-	err := build(a.changeBuilder)
+	marshalledData, err := content.Marshal()
 	if err != nil {
 		return nil, err
 	}
-
-	ch, marshalled, err := a.changeBuilder.BuildAndApply()
+	encrypted, err := state.userReadKeys[state.currentReadKeyHash].Encrypt(marshalledData)
 	if err != nil {
 		return nil, err
 	}
-	a.tree.AddFast(ch)
+	change.ChangesData = encrypted
+
+	fullMarshalledChange, err := proto.Marshal(change)
+	if err != nil {
+		return nil, err
+	}
+	signature, err := d.accountData.SignKey.Sign(fullMarshalledChange)
+	if err != nil {
+		return nil, err
+	}
+	id, err := cid.NewCIDFromBytes(fullMarshalledChange)
+	if err != nil {
+		return nil, err
+	}
+	ch := NewChange(id, change)
+	ch.ParsedModel = content
+	ch.Sign = signature
+
+	if isSnapshot {
+		// clearing tree, because we already fixed everything in the last snapshot
+		d.tree = &Tree{}
+	}
+	d.tree.AddFast(ch)
 	rawCh := &aclpb.RawChange{
-		Payload:   marshalled,
+		Payload:   fullMarshalledChange,
 		Signature: ch.Signature(),
 		Id:        ch.Id,
 	}
 
-	err = a.treeStorage.AddRawChange(rawCh)
+	err = d.treeStorage.AddRawChange(rawCh)
 	if err != nil {
 		return nil, err
 	}
 
-	err = a.treeStorage.SetHeads([]string{ch.Id})
+	err = d.treeStorage.SetHeads([]string{ch.Id})
 	if err != nil {
 		return nil, err
 	}
 	return rawCh, nil
 }
 
-func (a *docTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawChange) (AddResult, error) {
+func (d *docTree) AddRawChanges(ctx context.Context, aclTree ACLTree, rawChanges ...*aclpb.RawChange) (AddResult, error) {
 	// TODO: make proper error handling, because there are a lot of corner cases where this will break
 	var err error
 	var mode Mode
@@ -208,21 +261,21 @@ func (a *docTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 			return
 		}
 
-		err = a.removeOrphans()
+		err = d.removeOrphans()
 		if err != nil {
 			return
 		}
 
-		err = a.treeStorage.SetHeads(a.tree.Heads())
+		err = d.treeStorage.SetHeads(d.tree.Heads())
 		if err != nil {
 			return
 		}
 
 		switch mode {
 		case Append:
-			a.updateListener.Update(a)
+			d.updateListener.Update(d)
 		case Rebuild:
-			a.updateListener.Rebuild(a)
+			d.updateListener.Rebuild(d)
 		default:
 			break
 		}
@@ -231,28 +284,49 @@ func (a *docTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 	getAddedChanges := func() []*aclpb.RawChange {
 		var added []*aclpb.RawChange
 		for _, ch := range rawChanges {
-			if _, exists := a.tree.attached[ch.Id]; exists {
+			if _, exists := d.tree.attached[ch.Id]; exists {
 				added = append(added, ch)
 			}
 		}
 		return added
 	}
 
-	for _, ch := range changes {
-		err = a.treeStorage.AddChange(ch)
+	prevHeads := d.tree.Heads()
+	rebuild := func() (AddResult, error) {
+		err = d.rebuildFromStorage(aclTree)
 		if err != nil {
 			return AddResult{}, err
 		}
-		err = a.treeStorage.AddOrphans(ch.Id)
+
+		return AddResult{
+			OldHeads: prevHeads,
+			Heads:    d.tree.Heads(),
+			Added:    getAddedChanges(),
+			Summary:  AddResultSummaryRebuild,
+		}, nil
+	}
+
+	for _, ch := range changes {
+		err = d.treeStorage.AddChange(ch)
+		if err != nil {
+			return AddResult{}, err
+		}
+		err = d.treeStorage.AddOrphans(ch.Id)
 		if err != nil {
 			return AddResult{}, err
 		}
 	}
 
-	prevHeads := a.tree.Heads()
-	mode = a.tree.Add(changes...)
+	mode = d.tree.Add(changes...)
 	switch mode {
 	case Nothing:
+		for _, ch := range changes {
+			// rebuilding if the snapshot is different from the root
+			if ch.SnapshotId != d.tree.RootId() {
+				return rebuild()
+			}
+		}
+
 		return AddResult{
 			OldHeads: prevHeads,
 			Heads:    prevHeads,
@@ -260,69 +334,59 @@ func (a *docTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 		}, nil
 
 	case Rebuild:
-		err = a.rebuildFromStorage()
-		if err != nil {
-			return AddResult{}, err
-		}
-
-		return AddResult{
-			OldHeads: prevHeads,
-			Heads:    a.tree.Heads(),
-			Added:    getAddedChanges(),
-			Summary:  AddResultSummaryRebuild,
-		}, nil
+		return rebuild()
 	default:
 		// just rebuilding the state from start without reloading everything from tree storage
 		// as an optimization we could've started from current heads, but I didn't implement that
-		a.aclState, err = a.aclStateBuilder.Build()
+		err = d.validator.ValidateTree(d.tree, aclTree)
 		if err != nil {
 			return AddResult{}, err
 		}
 
 		return AddResult{
 			OldHeads: prevHeads,
-			Heads:    a.tree.Heads(),
+			Heads:    d.tree.Heads(),
 			Added:    getAddedChanges(),
 			Summary:  AddResultSummaryAppend,
 		}, nil
 	}
 }
 
-func (a *docTree) Iterate(f func(change *Change) bool) {
-	a.tree.Iterate(a.tree.RootId(), f)
+func (d *docTree) Iterate(f func(change *Change) bool) {
+	d.tree.Iterate(d.tree.RootId(), f)
 }
 
-func (a *docTree) IterateFrom(s string, f func(change *Change) bool) {
-	a.tree.Iterate(s, f)
+func (d *docTree) IterateFrom(s string, f func(change *Change) bool) {
+	d.tree.Iterate(s, f)
 }
 
-func (a *docTree) HasChange(s string) bool {
-	_, attachedExists := a.tree.attached[s]
-	_, unattachedExists := a.tree.unAttached[s]
-	_, invalidExists := a.tree.invalidChanges[s]
+func (d *docTree) HasChange(s string) bool {
+	_, attachedExists := d.tree.attached[s]
+	_, unattachedExists := d.tree.unAttached[s]
+	_, invalidExists := d.tree.invalidChanges[s]
 	return attachedExists || unattachedExists || invalidExists
 }
 
-func (a *docTree) Heads() []string {
-	return a.tree.Heads()
+func (d *docTree) Heads() []string {
+	return d.tree.Heads()
 }
 
-func (a *docTree) Root() *Change {
-	return a.tree.Root()
+func (d *docTree) Root() *Change {
+	return d.tree.Root()
 }
 
-func (a *docTree) Close() error {
+func (d *docTree) Close() error {
 	return nil
 }
 
-func (a *docTree) SnapshotPath() []string {
+func (d *docTree) SnapshotPath() []string {
 	// TODO: think about caching this
 
 	var path []string
 	// TODO: think that the user may have not all of the snapshots locally
-	currentSnapshotId := a.tree.RootId()
+	currentSnapshotId := d.tree.RootId()
 	for currentSnapshotId != "" {
-		sn, err := a.treeBuilder.loadChange(currentSnapshotId)
+		sn, err := d.treeBuilder.loadChange(currentSnapshotId)
 		if err != nil {
 			break
 		}
@@ -332,13 +396,13 @@ func (a *docTree) SnapshotPath() []string {
 	return path
 }
 
-func (a *docTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawChange, error) {
+func (d *docTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawChange, error) {
 	// TODO: think about when the clients will have their full acl tree and thus full snapshots
 	//  but no changes after some of the snapshots
 
 	var (
 		isNewDocument = len(theirPath) == 0
-		ourPath       = a.SnapshotPath()
+		ourPath       = d.SnapshotPath()
 		// by default returning everything we have
 		commonSnapshot = ourPath[len(ourPath)-1] // TODO: root snapshot, probably it is better to have a specific method in treestorage
 		err            error
@@ -354,12 +418,12 @@ func (a *docTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 	var rawChanges []*aclpb.RawChange
 	// using custom load function to skip verification step and save raw changes
 	load := func(id string) (*Change, error) {
-		raw, err := a.treeStorage.GetChange(context.Background(), id)
+		raw, err := d.treeStorage.GetChange(context.Background(), id)
 		if err != nil {
 			return nil, err
 		}
 
-		aclChange, err := a.treeBuilder.makeUnverifiedACLChange(raw)
+		aclChange, err := d.treeBuilder.makeUnverifiedACLChange(raw)
 		if err != nil {
 			return nil, err
 		}
@@ -370,11 +434,11 @@ func (a *docTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 	}
 	// we presume that we have everything after the common snapshot, though this may not be the case in case of clients and only ACL tree changes
 	log.With(
-		zap.Strings("heads", a.tree.Heads()),
+		zap.Strings("heads", d.tree.Heads()),
 		zap.String("breakpoint", commonSnapshot),
-		zap.String("id", a.id)).
+		zap.String("id", d.id)).
 		Debug("getting all changes from common snapshot")
-	_, err = a.treeBuilder.dfs(a.tree.Heads(), commonSnapshot, load)
+	_, err = d.treeBuilder.dfs(d.tree.Heads(), commonSnapshot, load)
 	if err != nil {
 		return nil, err
 	}
@@ -387,12 +451,12 @@ func (a *docTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 	}
 	log.With(
 		zap.Int("len(changes)", len(rawChanges)),
-		zap.String("id", a.id)).
+		zap.String("id", d.id)).
 		Debug("returning all changes after common snapshot")
 
 	return rawChanges, nil
 }
 
-func (a *docTree) DebugDump() (string, error) {
-	return a.tree.Graph(ACLDescriptionParser)
+func (d *docTree) DebugDump() (string, error) {
+	return d.tree.Graph(NoOpDescriptionParser)
 }

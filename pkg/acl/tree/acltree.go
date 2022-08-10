@@ -30,7 +30,7 @@ type AddResult struct {
 	Summary AddResultSummary
 }
 
-type TreeUpdateListener interface {
+type ACLTreeUpdateListener interface {
 	Update(tree ACLTree)
 	Rebuild(tree ACLTree)
 }
@@ -72,7 +72,7 @@ type ACLTree interface {
 type aclTree struct {
 	treeStorage    treestorage.TreeStorage
 	accountData    *account.AccountData
-	updateListener TreeUpdateListener
+	updateListener ACLTreeUpdateListener
 
 	id       string
 	header   *treepb.TreeHeader
@@ -86,7 +86,7 @@ type aclTree struct {
 	sync.RWMutex
 }
 
-func BuildACLTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountData, listener TreeUpdateListener) (ACLTree, error) {
+func BuildACLTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountData, listener ACLTreeUpdateListener) (ACLTree, error) {
 	treeBuilder := newTreeBuilder(t, acc.Decoder)
 	aclStateBuilder := newACLStateBuilderWithIdentity(acc.Decoder, acc)
 	changeBuilder := newACLChangeBuilder()
@@ -127,7 +127,7 @@ func BuildACLTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountDat
 	return aclTree, nil
 }
 
-func BuildACLTree(t treestorage.TreeStorage, decoder signingkey.PubKeyDecoder, listener TreeUpdateListener) (ACLTree, error) {
+func BuildACLTree(t treestorage.TreeStorage, decoder signingkey.PubKeyDecoder, listener ACLTreeUpdateListener) (ACLTree, error) {
 	treeBuilder := newTreeBuilder(t, decoder)
 	aclStateBuilder := newACLStateBuilder()
 	changeBuilder := newACLChangeBuilder()

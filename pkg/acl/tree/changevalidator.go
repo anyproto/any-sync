@@ -1,18 +1,15 @@
 package tree
 
-type ChangeValidator interface {
-	ValidateChange(change *Change) error
+type DocTreeValidator interface {
+	ValidateTree(tree *Tree, aclTree ACLTree) error
 }
 
-type defChangeValidator struct {
-	aclTree ACLTree
-}
+type docTreeValidator struct{}
 
-func NewDefChangeValidator(aclTree ACLTree) ChangeValidator {
-	return &defChangeValidator{}
+func newTreeValidator() DocTreeValidator {
+	return &docTreeValidator{}
 }
-
-func (c *defChangeValidator) ValidateChange(change *Change) error {
+func (v *docTreeValidator) ValidateTree(tree *Tree, aclTree ACLTree) error {
 	// TODO: add validation logic where we check that the change refers to correct acl heads
 	//  that means that more recent changes should refer to more recent acl heads
 	return nil
