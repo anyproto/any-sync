@@ -360,6 +360,10 @@ func (d *docTree) Root() *Change {
 	return d.tree.Root()
 }
 
+func (d *docTree) Close() error {
+	return nil
+}
+
 func (d *docTree) SnapshotPath() []string {
 	// TODO: think about caching this
 

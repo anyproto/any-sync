@@ -378,6 +378,10 @@ func (a *aclTree) Root() *Change {
 	return a.tree.Root()
 }
 
+func (a *aclTree) Close() error {
+	return nil
+}
+
 func (a *aclTree) SnapshotPath() []string {
 	// TODO: think about caching this
 

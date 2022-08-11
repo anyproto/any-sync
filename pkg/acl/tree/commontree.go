@@ -18,4 +18,5 @@ type CommonTree interface {
 	ChangesAfterCommonSnapshot(snapshotPath []string) ([]*aclpb.RawChange, error)
 	Storage() treestorage.TreeStorage
 	DebugDump() (string, error)
+	Close() error
 }
