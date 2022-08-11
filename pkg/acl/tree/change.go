@@ -29,9 +29,8 @@ type Change struct {
 	Sign    []byte
 }
 
-func (ch *Change) ProtoChange() *aclpb.ACLChange {
-	//TODO implement me
-	panic("implement me")
+func (ch *Change) ProtoChange() proto.Marshaler {
+	return ch.Content
 }
 
 func (ch *Change) DecryptContents(key *symmetric.Key) error {

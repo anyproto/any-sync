@@ -101,6 +101,10 @@ func (c *aclChangeBuilder) BuildAndApply() (*Change, []byte, error) {
 		Timestamp:          int64(time.Now().Nanosecond()),
 		Identity:           c.acc.Identity,
 	}
+	if c.aclState.currentReadKeyHash == 0 {
+		// setting IsSnapshot for initial change
+		aclChange.IsSnapshot = true
+	}
 
 	marshalledData, err := proto.Marshal(c.aclData)
 	if err != nil {

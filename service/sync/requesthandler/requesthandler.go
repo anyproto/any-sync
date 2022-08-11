@@ -93,6 +93,11 @@ func (r *requestHandler) HandleHeadUpdate(
 			t := obj.(tree.ACLTree)
 			t.Lock()
 			defer t.Unlock()
+
+			if slice.UnsortedEquals(update.Heads, t.Heads()) {
+				return nil
+			}
+
 			// TODO: check if we already have those changes
 			result, err = t.AddRawChanges(ctx, update.Changes...)
 			if err != nil {
@@ -118,10 +123,15 @@ func (r *requestHandler) HandleHeadUpdate(
 			docTree.Lock()
 			defer docTree.Unlock()
 
-			return r.treeCache.Do(ctx, treeId, func(obj interface{}) error {
+			if slice.UnsortedEquals(update.Heads, docTree.Heads()) {
+				return nil
+			}
+
+			return r.treeCache.Do(ctx, docTree.Header().AclTreeId, func(obj interface{}) error {
 				aclTree := obj.(tree.ACLTree)
 				aclTree.RLock()
 				defer aclTree.RUnlock()
+
 				// TODO: check if we already have those changes
 				result, err = docTree.AddRawChanges(ctx, aclTree, update.Changes...)
 				if err != nil {
@@ -164,6 +174,7 @@ func (r *requestHandler) HandleHeadUpdate(
 	if err != nil || len(result.Added) == 0 {
 		return err
 	}
+	log.Info("res", zap.Int("result added", len(result.Added)))
 	// otherwise sending heads update message
 	newUpdate := &syncproto.SyncHeadUpdate{
 		Heads:        result.Heads,
@@ -194,6 +205,10 @@ func (r *requestHandler) HandleFullSyncRequest(
 			t.Lock()
 			defer t.Unlock()
 
+			//if slice.UnsortedEquals(request.Heads, t.Heads()) {
+			//	return nil
+			//}
+
 			// TODO: check if we already have those changes
 			// if we have non-empty request
 			if len(request.Heads) != 0 {
@@ -212,12 +227,17 @@ func (r *requestHandler) HandleFullSyncRequest(
 	}
 
 	requestDocTree := func() {
+		log.Info("getting doc tree from treeCache", zap.String("treeId", treeId))
 		err = r.treeCache.Do(ctx, treeId, func(obj interface{}) error {
 			docTree := obj.(tree.DocTree)
 			docTree.Lock()
 			defer docTree.Unlock()
 
-			return r.treeCache.Do(ctx, treeId, func(obj interface{}) error {
+			//if slice.UnsortedEquals(request.Heads, docTree.Heads()) {
+			//	return nil
+			//}
+			log.Info("getting tree from treeCache", zap.String("aclId", docTree.Header().AclTreeId))
+			return r.treeCache.Do(ctx, docTree.Header().AclTreeId, func(obj interface{}) error {
 				aclTree := obj.(tree.ACLTree)
 				aclTree.RLock()
 				defer aclTree.RUnlock()
@@ -285,6 +305,11 @@ func (r *requestHandler) HandleFullSyncResponse(
 			t := obj.(tree.ACLTree)
 			t.Lock()
 			defer t.Unlock()
+
+			if slice.UnsortedEquals(response.Heads, t.Heads()) {
+				return nil
+			}
+
 			// TODO: check if we already have those changes
 			result, err = t.AddRawChanges(ctx, response.Changes...)
 			if err != nil {
@@ -301,7 +326,11 @@ func (r *requestHandler) HandleFullSyncResponse(
 			docTree.Lock()
 			defer docTree.Unlock()
 
-			return r.treeCache.Do(ctx, treeId, func(obj interface{}) error {
+			if slice.UnsortedEquals(response.Heads, docTree.Heads()) {
+				return nil
+			}
+
+			return r.treeCache.Do(ctx, docTree.Header().AclTreeId, func(obj interface{}) error {
 				aclTree := obj.(tree.ACLTree)
 				aclTree.RLock()
 				defer aclTree.RUnlock()

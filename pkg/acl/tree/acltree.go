@@ -111,7 +111,9 @@ func BuildACLTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountDat
 		return nil, err
 	}
 
-	listener.Rebuild(aclTree)
+	if listener != nil {
+		listener.Rebuild(aclTree)
+	}
 
 	return aclTree, nil
 }
@@ -151,7 +153,9 @@ func BuildACLTree(t treestorage.TreeStorage, decoder signingkey.PubKeyDecoder, l
 		return nil, err
 	}
 
-	listener.Rebuild(aclTree)
+	if listener != nil {
+		listener.Rebuild(aclTree)
+	}
 
 	return aclTree, nil
 }
@@ -259,13 +263,28 @@ func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 	var mode Mode
 
 	var changes []*Change // TODO: = addChangesBuf[:0] ...
-	for _, ch := range rawChanges {
+	var notSeenIdx []int
+	prevHeads := a.tree.Heads()
+	for idx, ch := range rawChanges {
+		if a.HasChange(ch.Id) {
+			continue
+		}
+
 		change, err := NewFromRawChange(ch)
 		// TODO: think what if we will have incorrect signatures on rawChanges, how everything will work
 		if err != nil {
 			continue
 		}
 		changes = append(changes, change)
+		notSeenIdx = append(notSeenIdx, idx)
+	}
+
+	if len(notSeenIdx) == 0 {
+		return AddResult{
+			OldHeads: prevHeads,
+			Heads:    prevHeads,
+			Summary:  AddResultSummaryNothing,
+		}, nil
 	}
 
 	defer func() {
@@ -286,6 +305,7 @@ func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 		if a.updateListener == nil {
 			return
 		}
+
 		switch mode {
 		case Append:
 			a.updateListener.Update(a)
@@ -298,9 +318,10 @@ func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 
 	getAddedChanges := func() []*aclpb.RawChange {
 		var added []*aclpb.RawChange
-		for _, ch := range rawChanges {
-			if _, exists := a.tree.attached[ch.Id]; exists {
-				added = append(added, ch)
+		for _, idx := range notSeenIdx {
+			rawChange := rawChanges[idx]
+			if _, exists := a.tree.attached[rawChange.Id]; exists {
+				added = append(added, rawChange)
 			}
 		}
 		return added
@@ -317,7 +338,6 @@ func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 		}
 	}
 
-	prevHeads := a.tree.Heads()
 	rebuild := func() (AddResult, error) {
 		err = a.rebuildFromStorage()
 		if err != nil {
@@ -337,7 +357,7 @@ func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 	case Nothing:
 		for _, ch := range changes {
 			// rebuilding if the snapshot is different from the root
-			if ch.SnapshotId != a.tree.RootId() {
+			if ch.SnapshotId != a.tree.RootId() && ch.SnapshotId != "" {
 				return rebuild()
 			}
 		}
