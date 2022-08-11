@@ -5,7 +5,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/testchangepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
@@ -33,8 +32,9 @@ type service struct {
 }
 
 type Service interface {
-	UpdateDocument(ctx context.Context, id, text string) error
-	CreateDocument(ctx context.Context, text string) (string, error)
+	UpdateDocumentTree(ctx context.Context, id, text string) error
+	CreateACLTree(ctx context.Context) (id string, err error)
+	CreateDocumentTree(ctx context.Context, aclTreeId string, text string) (id string, err error)
 }
 
 func New() app.Component {
@@ -65,7 +65,7 @@ func (s *service) Close(ctx context.Context) (err error) {
 	return nil
 }
 
-func (s *service) UpdateDocument(ctx context.Context, id, text string) (err error) {
+func (s *service) UpdateDocumentTree(ctx context.Context, id, text string) (err error) {
 	var (
 		ch           *aclpb.RawChange
 		header       *treepb.TreeHeader
@@ -75,24 +75,28 @@ func (s *service) UpdateDocument(ctx context.Context, id, text string) (err erro
 	log.With(zap.String("id", id), zap.String("text", text)).
 		Debug("updating document")
 
-	err = s.treeCache.Do(ctx, id, func(tree acltree.ACLTree) error {
-		ch, err = tree.AddContent(ctx, func(builder acltree.ChangeBuilder) error {
-			builder.AddChangeContent(
-				&testchangepb.PlainTextChangeData{
-					Content: []*testchangepb.PlainTextChangeContent{
-						createAppendTextChangeContent(text),
-					},
-				})
+	err = s.treeCache.Do(ctx, id, func(obj interface{}) error {
+		docTree := obj.(tree.DocTree)
+		err = s.treeCache.Do(ctx, docTree.Header().AclTreeId, func(obj interface{}) error {
+			aclTree := obj.(tree.ACLTree)
+			aclTree.RLock()
+			defer aclTree.RUnlock()
+
+			content := createAppendTextChange(text)
+			_, err := docTree.AddContent(ctx, aclTree, content, false)
+			if err != nil {
+				return err
+			}
 			return nil
 		})
 		if err != nil {
 			return err
 		}
 
-		id = tree.ID()
-		heads = tree.Heads()
-		header = tree.Header()
-		snapshotPath = tree.SnapshotPath()
+		id = docTree.ID()
+		heads = docTree.Heads()
+		header = docTree.Header()
+		snapshotPath = docTree.SnapshotPath()
 		return nil
 	})
 	if err != nil {
@@ -176,11 +180,12 @@ func (s *service) CreateDocumentTree(ctx context.Context, aclTreeId string, text
 		snapshotPath []string
 		heads        []string
 	)
-	err = s.treeCache.Do(ctx, aclTreeId, func(t tree.ACLTree) error {
+	err = s.treeCache.Do(ctx, aclTreeId, func(obj interface{}) error {
+		t := obj.(tree.ACLTree)
 		t.RLock()
 		defer t.RUnlock()
 
-		content := createInitialChangeContent(text)
+		content := createInitialTextChange(text)
 		doc, err := tree.CreateNewTreeStorage(acc, t, content, s.treeStorageProvider.CreateTreeStorage)
 		if err != nil {
 			return err
@@ -225,12 +230,20 @@ func (s *service) CreateDocumentTree(ctx context.Context, aclTreeId string, text
 	return id, err
 }
 
-func createInitialChangeContent(text string) proto.Marshaler {
+func createInitialTextChange(text string) proto.Marshaler {
 	return &testchangepb.PlainTextChangeData{
 		Content: []*testchangepb.PlainTextChangeContent{
 			createAppendTextChangeContent(text),
 		},
 		Snapshot: &testchangepb.PlainTextChangeSnapshot{Text: text},
+	}
+}
+
+func createAppendTextChange(text string) proto.Marshaler {
+	return &testchangepb.PlainTextChangeData{
+		Content: []*testchangepb.PlainTextChangeContent{
+			createAppendTextChangeContent(text),
+		},
 	}
 }
 
