@@ -21,21 +21,9 @@ type TreeUpdateListener interface {
 
 type DocTree interface {
 	RWLocker
-	ID() string
-	Header() *treepb.TreeHeader
+	CommonTree
 	AddContent(ctx context.Context, aclTree ACLTree, content proto.Marshaler, isSnapshot bool) (*aclpb.RawChange, error)
 	AddRawChanges(ctx context.Context, aclTree ACLTree, changes ...*aclpb.RawChange) (AddResult, error)
-	Heads() []string
-	Root() *Change
-	Iterate(func(change *Change) bool)
-	IterateFrom(string, func(change *Change) bool)
-	HasChange(string) bool
-	SnapshotPath() []string
-	ChangesAfterCommonSnapshot(snapshotPath []string) ([]*aclpb.RawChange, error)
-	Storage() treestorage.TreeStorage
-	DebugDump() (string, error)
-
-	Close() error
 }
 
 type docTree struct {
@@ -370,10 +358,6 @@ func (d *docTree) Heads() []string {
 
 func (d *docTree) Root() *Change {
 	return d.tree.Root()
-}
-
-func (d *docTree) Close() error {
-	return nil
 }
 
 func (d *docTree) SnapshotPath() []string {

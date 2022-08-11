@@ -77,6 +77,8 @@ func (s *service) UpdateDocumentTree(ctx context.Context, id, text string) (err 
 
 	err = s.treeCache.Do(ctx, id, func(obj interface{}) error {
 		docTree := obj.(tree.DocTree)
+		docTree.Lock()
+		defer docTree.Unlock()
 		err = s.treeCache.Do(ctx, docTree.Header().AclTreeId, func(obj interface{}) error {
 			aclTree := obj.(tree.ACLTree)
 			aclTree.RLock()
