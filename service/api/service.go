@@ -115,7 +115,7 @@ func (s *service) appendDocument(w http.ResponseWriter, req *http.Request) {
 		treeId = query.Get("treeId")
 	)
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	err := s.documentService.UpdateDocument(timeoutCtx, treeId, text)
+	err := s.documentService.UpdateDocumentTree(timeoutCtx, treeId, text)
 	cancel()
 	if err != nil {
 		sendText(w, http.StatusInternalServerError, err.Error())
