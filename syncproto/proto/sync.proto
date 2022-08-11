@@ -64,6 +64,8 @@ message Subscription {
 message Sync {
     string spaceId = 1;
     ContentValue message = 2;
+    tree.TreeHeader treeHeader = 3;
+    string treeId = 4;
 
     message ContentValue {
         oneof value {
@@ -76,9 +78,7 @@ message Sync {
     message HeadUpdate {
         repeated string heads = 1;
         repeated acl.RawChange changes = 2;
-        string treeId = 3;
-        repeated string snapshotPath = 4;
-        tree.TreeHeader treeHeader = 5;
+        repeated string snapshotPath = 3;
     }
 
     message Full {
@@ -86,17 +86,13 @@ message Sync {
         message Request {
             repeated string heads = 1;
             repeated acl.RawChange changes = 2;
-            string treeId = 3;
-            repeated string snapshotPath = 4;
-            tree.TreeHeader treeHeader = 5;
+            repeated string snapshotPath = 3;
         }
 
         message Response {
             repeated string heads = 1;
             repeated acl.RawChange changes = 2;
-            string treeId = 3;
-            repeated string snapshotPath = 4;
-            tree.TreeHeader treeHeader = 5;
+            repeated string snapshotPath = 3;
         }
     }
 }

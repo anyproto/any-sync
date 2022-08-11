@@ -6,7 +6,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
@@ -19,7 +18,6 @@ const CName = "treecache"
 
 // TODO: add context
 type TreeFunc = func(tree interface{}) error
-type ChangeBuildFunc = func(builder acltree.ChangeBuilder) error
 
 var log = logger.NewNamed("treecache")
 
