@@ -99,6 +99,7 @@ func (s *service) loadTree(ctx context.Context, id string) (ocache.Object, error
 	default:
 		return nil, fmt.Errorf("incorrect type")
 	}
+	log.Info("got header", zap.String("header", header.String()))
 	var docTree tree.DocTree
 	// TODO: it is a question if we need to use ACLTree on the first tree build, because we can think that the tree is already validated
 	err = s.Do(ctx, header.AclTreeId, func(obj interface{}) error {

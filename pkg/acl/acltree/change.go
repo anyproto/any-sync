@@ -80,7 +80,7 @@ func NewACLChange(id string, ch *aclpb.ACLChange) *Change {
 	}
 }
 
-func (ch *Change) ProtoChange() *aclpb.ACLChange {
+func (ch *Change) ProtoChange() proto.Marshaler {
 	return ch.Content
 }
 

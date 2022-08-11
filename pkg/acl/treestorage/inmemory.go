@@ -7,7 +7,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
-	"github.com/gogo/protobuf/proto"
 	"sync"
 )
 
@@ -106,9 +105,8 @@ func (t *inMemoryTreeStorage) AddChange(change aclchanges.Change) error {
 	defer t.Unlock()
 	signature := change.Signature()
 	id := change.CID()
-	aclChange := change.ProtoChange()
 
-	fullMarshalledChange, err := proto.Marshal(aclChange)
+	fullMarshalledChange, err := change.ProtoChange().Marshal()
 	if err != nil {
 		return err
 	}

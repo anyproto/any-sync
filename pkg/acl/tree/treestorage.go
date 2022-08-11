@@ -35,7 +35,7 @@ func CreateNewTreeStorageWithACL(
 		Signature: change.Signature(),
 		Id:        change.CID(),
 	}
-	header, id, err := createTreeHeaderAndId(rawChange, treepb.TreeHeader_ACLTree)
+	header, id, err := createTreeHeaderAndId(rawChange, treepb.TreeHeader_ACLTree, "")
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +64,7 @@ func CreateNewTreeStorage(
 		CurrentReadKeyHash: state.currentReadKeyHash,
 		Timestamp:          int64(time.Now().Nanosecond()),
 		Identity:           acc.Identity,
+		IsSnapshot:         true,
 	}
 
 	marshalledData, err := content.Marshal()
@@ -84,7 +85,7 @@ func CreateNewTreeStorage(
 	if err != nil {
 		return nil, err
 	}
-	id, err := cid.NewCIDFromBytes(fullMarshalledChange)
+	changeId, err := cid.NewCIDFromBytes(fullMarshalledChange)
 	if err != nil {
 		return nil, err
 	}
@@ -92,29 +93,30 @@ func CreateNewTreeStorage(
 	rawChange := &aclpb.RawChange{
 		Payload:   fullMarshalledChange,
 		Signature: signature,
-		Id:        id,
+		Id:        changeId,
 	}
-	header, id, err := createTreeHeaderAndId(rawChange, treepb.TreeHeader_DocTree)
+	header, treeId, err := createTreeHeaderAndId(rawChange, treepb.TreeHeader_DocTree, aclTree.ID())
 	if err != nil {
 		return nil, err
 	}
 
-	thr, err := create(id, header, []*aclpb.RawChange{rawChange})
+	thr, err := create(treeId, header, []*aclpb.RawChange{rawChange})
 	if err != nil {
 		return nil, err
 	}
 
-	err = thr.SetHeads([]string{id})
+	err = thr.SetHeads([]string{changeId})
 	if err != nil {
 		return nil, err
 	}
 	return thr, nil
 }
 
-func createTreeHeaderAndId(change *aclpb.RawChange, treeType treepb.TreeHeaderTreeType) (*treepb.TreeHeader, string, error) {
+func createTreeHeaderAndId(change *aclpb.RawChange, treeType treepb.TreeHeaderTreeType, aclTreeId string) (*treepb.TreeHeader, string, error) {
 	header := &treepb.TreeHeader{
 		FirstChangeId: change.Id,
 		Type:          treeType,
+		AclTreeId:     aclTreeId,
 	}
 	marshalledHeader, err := proto.Marshal(header)
 	if err != nil {

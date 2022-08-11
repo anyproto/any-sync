@@ -10,6 +10,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -52,6 +53,7 @@ func (tb *treeBuilder) Build(fromStart bool) (*Tree, error) {
 	headsAndOrphans = append(headsAndOrphans, orphans...)
 	headsAndOrphans = append(headsAndOrphans, heads...)
 
+	log.With(zap.Strings("heads", heads), zap.Strings("orphans", orphans)).Debug("building tree")
 	if fromStart {
 		if err := tb.buildTreeFromStart(headsAndOrphans); err != nil {
 			return nil, fmt.Errorf("buildTree error: %v", err)
@@ -67,7 +69,7 @@ func (tb *treeBuilder) Build(fromStart bool) (*Tree, error) {
 		}
 	}
 
-	tb.cache = nil
+	tb.cache = make(map[string]*Change)
 
 	return tb.tree, nil
 }
@@ -187,8 +189,8 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 		return nil, err
 	}
 
-	tb.cache[id] = NewChange(id, verifiedChange)
-
+	ch = NewChange(id, verifiedChange)
+	tb.cache[id] = ch
 	return ch, nil
 }
 

@@ -118,10 +118,8 @@ func (s *service) UpdateDocumentTree(ctx context.Context, id, text string) (err 
 	return s.messageService.SendToSpaceAsync("", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
 		Heads:        heads,
 		Changes:      []*aclpb.RawChange{ch},
-		TreeId:       id,
 		SnapshotPath: snapshotPath,
-		TreeHeader:   header,
-	}))
+	}, header, id))
 }
 
 func (s *service) CreateACLTree(ctx context.Context) (id string, err error) {
@@ -172,10 +170,8 @@ func (s *service) CreateACLTree(ctx context.Context) (id string, err error) {
 	err = s.messageService.SendToSpaceAsync("", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
 		Heads:        heads,
 		Changes:      []*aclpb.RawChange{ch},
-		TreeId:       id,
 		SnapshotPath: snapshotPath,
-		TreeHeader:   header,
-	}))
+	}, header, id))
 	return id, nil
 }
 
@@ -227,10 +223,8 @@ func (s *service) CreateDocumentTree(ctx context.Context, aclTreeId string, text
 	err = s.messageService.SendToSpaceAsync("", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
 		Heads:        heads,
 		Changes:      []*aclpb.RawChange{ch},
-		TreeId:       id,
 		SnapshotPath: snapshotPath,
-		TreeHeader:   header,
-	}))
+	}, header, id))
 	if err != nil {
 		return "", err
 	}
