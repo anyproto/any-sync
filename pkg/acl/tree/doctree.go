@@ -165,7 +165,9 @@ func (d *docTree) AddContent(ctx context.Context, aclTree ACLTree, content proto
 
 	defer func() {
 		// TODO: should this be called in a separate goroutine to prevent accidental cycles (tree->updater->tree)
-		d.updateListener.Update(d)
+		if d.updateListener != nil {
+			d.updateListener.Update(d)
+		}
 	}()
 	state := aclTree.ACLState()
 	change := &aclpb.Change{
@@ -253,6 +255,10 @@ func (d *docTree) AddRawChanges(ctx context.Context, aclTree ACLTree, rawChanges
 
 		err = d.treeStorage.SetHeads(d.tree.Heads())
 		if err != nil {
+			return
+		}
+
+		if d.updateListener == nil {
 			return
 		}
 

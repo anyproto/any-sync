@@ -27,24 +27,21 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 type MessageType int32
 
 const (
-	MessageType_MessageTypeSystem MessageType = 0
-	MessageType_MessageTypeSpace  MessageType = 1
-	MessageType_MessageTypeSync   MessageType = 2
-	MessageType_MessageTypeFile   MessageType = 3
+	MessageType_MessageTypeSystem       MessageType = 0
+	MessageType_MessageTypeSubscription MessageType = 1
+	MessageType_MessageTypeSync         MessageType = 2
 )
 
 var MessageType_name = map[int32]string{
 	0: "MessageTypeSystem",
-	1: "MessageTypeSpace",
+	1: "MessageTypeSubscription",
 	2: "MessageTypeSync",
-	3: "MessageTypeFile",
 }
 
 var MessageType_value = map[string]int32{
-	"MessageTypeSystem": 0,
-	"MessageTypeSpace":  1,
-	"MessageTypeSync":   2,
-	"MessageTypeFile":   3,
+	"MessageTypeSystem":       0,
+	"MessageTypeSubscription": 1,
+	"MessageTypeSync":         2,
 }
 
 func (x MessageType) String() string {
@@ -452,16 +449,158 @@ func (m *SystemError) GetDescription() string {
 	return ""
 }
 
+type Subscription struct {
+	SubscribeSpace   *SubscriptionSubscribeSpace   `protobuf:"bytes,1,opt,name=subscribeSpace,proto3" json:"subscribeSpace,omitempty"`
+	UnsubscribeSpace *SubscriptionUnsubscribeSpace `protobuf:"bytes,2,opt,name=unsubscribeSpace,proto3" json:"unsubscribeSpace,omitempty"`
+}
+
+func (m *Subscription) Reset()         { *m = Subscription{} }
+func (m *Subscription) String() string { return proto.CompactTextString(m) }
+func (*Subscription) ProtoMessage()    {}
+func (*Subscription) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4b28dfdd48a89166, []int{3}
+}
+func (m *Subscription) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Subscription) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Subscription.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Subscription) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Subscription.Merge(m, src)
+}
+func (m *Subscription) XXX_Size() int {
+	return m.Size()
+}
+func (m *Subscription) XXX_DiscardUnknown() {
+	xxx_messageInfo_Subscription.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Subscription proto.InternalMessageInfo
+
+func (m *Subscription) GetSubscribeSpace() *SubscriptionSubscribeSpace {
+	if m != nil {
+		return m.SubscribeSpace
+	}
+	return nil
+}
+
+func (m *Subscription) GetUnsubscribeSpace() *SubscriptionUnsubscribeSpace {
+	if m != nil {
+		return m.UnsubscribeSpace
+	}
+	return nil
+}
+
+type SubscriptionSubscribeSpace struct {
+	SpaceId string `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+}
+
+func (m *SubscriptionSubscribeSpace) Reset()         { *m = SubscriptionSubscribeSpace{} }
+func (m *SubscriptionSubscribeSpace) String() string { return proto.CompactTextString(m) }
+func (*SubscriptionSubscribeSpace) ProtoMessage()    {}
+func (*SubscriptionSubscribeSpace) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4b28dfdd48a89166, []int{3, 0}
+}
+func (m *SubscriptionSubscribeSpace) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SubscriptionSubscribeSpace) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SubscriptionSubscribeSpace.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SubscriptionSubscribeSpace) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SubscriptionSubscribeSpace.Merge(m, src)
+}
+func (m *SubscriptionSubscribeSpace) XXX_Size() int {
+	return m.Size()
+}
+func (m *SubscriptionSubscribeSpace) XXX_DiscardUnknown() {
+	xxx_messageInfo_SubscriptionSubscribeSpace.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SubscriptionSubscribeSpace proto.InternalMessageInfo
+
+func (m *SubscriptionSubscribeSpace) GetSpaceId() string {
+	if m != nil {
+		return m.SpaceId
+	}
+	return ""
+}
+
+type SubscriptionUnsubscribeSpace struct {
+	SpaceId string `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+}
+
+func (m *SubscriptionUnsubscribeSpace) Reset()         { *m = SubscriptionUnsubscribeSpace{} }
+func (m *SubscriptionUnsubscribeSpace) String() string { return proto.CompactTextString(m) }
+func (*SubscriptionUnsubscribeSpace) ProtoMessage()    {}
+func (*SubscriptionUnsubscribeSpace) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4b28dfdd48a89166, []int{3, 1}
+}
+func (m *SubscriptionUnsubscribeSpace) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SubscriptionUnsubscribeSpace) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SubscriptionUnsubscribeSpace.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SubscriptionUnsubscribeSpace) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SubscriptionUnsubscribeSpace.Merge(m, src)
+}
+func (m *SubscriptionUnsubscribeSpace) XXX_Size() int {
+	return m.Size()
+}
+func (m *SubscriptionUnsubscribeSpace) XXX_DiscardUnknown() {
+	xxx_messageInfo_SubscriptionUnsubscribeSpace.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SubscriptionUnsubscribeSpace proto.InternalMessageInfo
+
+func (m *SubscriptionUnsubscribeSpace) GetSpaceId() string {
+	if m != nil {
+		return m.SpaceId
+	}
+	return ""
+}
+
 type Sync struct {
-	SpaceId string            `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
-	Message *SyncContentValue `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	SpaceId    string             `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	Message    *SyncContentValue  `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	TreeHeader *treepb.TreeHeader `protobuf:"bytes,3,opt,name=treeHeader,proto3" json:"treeHeader,omitempty"`
+	TreeId     string             `protobuf:"bytes,4,opt,name=treeId,proto3" json:"treeId,omitempty"`
 }
 
 func (m *Sync) Reset()         { *m = Sync{} }
 func (m *Sync) String() string { return proto.CompactTextString(m) }
 func (*Sync) ProtoMessage()    {}
 func (*Sync) Descriptor() ([]byte, []int) {
-	return fileDescriptor_4b28dfdd48a89166, []int{3}
+	return fileDescriptor_4b28dfdd48a89166, []int{4}
 }
 func (m *Sync) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -504,6 +643,20 @@ func (m *Sync) GetMessage() *SyncContentValue {
 	return nil
 }
 
+func (m *Sync) GetTreeHeader() *treepb.TreeHeader {
+	if m != nil {
+		return m.TreeHeader
+	}
+	return nil
+}
+
+func (m *Sync) GetTreeId() string {
+	if m != nil {
+		return m.TreeId
+	}
+	return ""
+}
+
 type SyncContentValue struct {
 	// Types that are valid to be assigned to Value:
 	//	*SyncContentValueValueOfHeadUpdate
@@ -516,7 +669,7 @@ func (m *SyncContentValue) Reset()         { *m = SyncContentValue{} }
 func (m *SyncContentValue) String() string { return proto.CompactTextString(m) }
 func (*SyncContentValue) ProtoMessage()    {}
 func (*SyncContentValue) Descriptor() ([]byte, []int) {
-	return fileDescriptor_4b28dfdd48a89166, []int{3, 0}
+	return fileDescriptor_4b28dfdd48a89166, []int{4, 0}
 }
 func (m *SyncContentValue) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -605,16 +758,14 @@ func (*SyncContentValue) XXX_OneofWrappers() []interface{} {
 type SyncHeadUpdate struct {
 	Heads        []string           `protobuf:"bytes,1,rep,name=heads,proto3" json:"heads,omitempty"`
 	Changes      []*aclpb.RawChange `protobuf:"bytes,2,rep,name=changes,proto3" json:"changes,omitempty"`
-	TreeId       string             `protobuf:"bytes,3,opt,name=treeId,proto3" json:"treeId,omitempty"`
-	SnapshotPath []string           `protobuf:"bytes,4,rep,name=snapshotPath,proto3" json:"snapshotPath,omitempty"`
-	TreeHeader   *treepb.TreeHeader `protobuf:"bytes,5,opt,name=treeHeader,proto3" json:"treeHeader,omitempty"`
+	SnapshotPath []string           `protobuf:"bytes,3,rep,name=snapshotPath,proto3" json:"snapshotPath,omitempty"`
 }
 
 func (m *SyncHeadUpdate) Reset()         { *m = SyncHeadUpdate{} }
 func (m *SyncHeadUpdate) String() string { return proto.CompactTextString(m) }
 func (*SyncHeadUpdate) ProtoMessage()    {}
 func (*SyncHeadUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_4b28dfdd48a89166, []int{3, 1}
+	return fileDescriptor_4b28dfdd48a89166, []int{4, 1}
 }
 func (m *SyncHeadUpdate) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -657,23 +808,9 @@ func (m *SyncHeadUpdate) GetChanges() []*aclpb.RawChange {
 	return nil
 }
 
-func (m *SyncHeadUpdate) GetTreeId() string {
-	if m != nil {
-		return m.TreeId
-	}
-	return ""
-}
-
 func (m *SyncHeadUpdate) GetSnapshotPath() []string {
 	if m != nil {
 		return m.SnapshotPath
-	}
-	return nil
-}
-
-func (m *SyncHeadUpdate) GetTreeHeader() *treepb.TreeHeader {
-	if m != nil {
-		return m.TreeHeader
 	}
 	return nil
 }
@@ -685,7 +822,7 @@ func (m *SyncFull) Reset()         { *m = SyncFull{} }
 func (m *SyncFull) String() string { return proto.CompactTextString(m) }
 func (*SyncFull) ProtoMessage()    {}
 func (*SyncFull) Descriptor() ([]byte, []int) {
-	return fileDescriptor_4b28dfdd48a89166, []int{3, 2}
+	return fileDescriptor_4b28dfdd48a89166, []int{4, 2}
 }
 func (m *SyncFull) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -718,16 +855,14 @@ var xxx_messageInfo_SyncFull proto.InternalMessageInfo
 type SyncFullRequest struct {
 	Heads        []string           `protobuf:"bytes,1,rep,name=heads,proto3" json:"heads,omitempty"`
 	Changes      []*aclpb.RawChange `protobuf:"bytes,2,rep,name=changes,proto3" json:"changes,omitempty"`
-	TreeId       string             `protobuf:"bytes,3,opt,name=treeId,proto3" json:"treeId,omitempty"`
-	SnapshotPath []string           `protobuf:"bytes,4,rep,name=snapshotPath,proto3" json:"snapshotPath,omitempty"`
-	TreeHeader   *treepb.TreeHeader `protobuf:"bytes,5,opt,name=treeHeader,proto3" json:"treeHeader,omitempty"`
+	SnapshotPath []string           `protobuf:"bytes,3,rep,name=snapshotPath,proto3" json:"snapshotPath,omitempty"`
 }
 
 func (m *SyncFullRequest) Reset()         { *m = SyncFullRequest{} }
 func (m *SyncFullRequest) String() string { return proto.CompactTextString(m) }
 func (*SyncFullRequest) ProtoMessage()    {}
 func (*SyncFullRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_4b28dfdd48a89166, []int{3, 2, 0}
+	return fileDescriptor_4b28dfdd48a89166, []int{4, 2, 0}
 }
 func (m *SyncFullRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -770,13 +905,6 @@ func (m *SyncFullRequest) GetChanges() []*aclpb.RawChange {
 	return nil
 }
 
-func (m *SyncFullRequest) GetTreeId() string {
-	if m != nil {
-		return m.TreeId
-	}
-	return ""
-}
-
 func (m *SyncFullRequest) GetSnapshotPath() []string {
 	if m != nil {
 		return m.SnapshotPath
@@ -784,26 +912,17 @@ func (m *SyncFullRequest) GetSnapshotPath() []string {
 	return nil
 }
 
-func (m *SyncFullRequest) GetTreeHeader() *treepb.TreeHeader {
-	if m != nil {
-		return m.TreeHeader
-	}
-	return nil
-}
-
 type SyncFullResponse struct {
 	Heads        []string           `protobuf:"bytes,1,rep,name=heads,proto3" json:"heads,omitempty"`
 	Changes      []*aclpb.RawChange `protobuf:"bytes,2,rep,name=changes,proto3" json:"changes,omitempty"`
-	TreeId       string             `protobuf:"bytes,3,opt,name=treeId,proto3" json:"treeId,omitempty"`
-	SnapshotPath []string           `protobuf:"bytes,4,rep,name=snapshotPath,proto3" json:"snapshotPath,omitempty"`
-	TreeHeader   *treepb.TreeHeader `protobuf:"bytes,5,opt,name=treeHeader,proto3" json:"treeHeader,omitempty"`
+	SnapshotPath []string           `protobuf:"bytes,3,rep,name=snapshotPath,proto3" json:"snapshotPath,omitempty"`
 }
 
 func (m *SyncFullResponse) Reset()         { *m = SyncFullResponse{} }
 func (m *SyncFullResponse) String() string { return proto.CompactTextString(m) }
 func (*SyncFullResponse) ProtoMessage()    {}
 func (*SyncFullResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_4b28dfdd48a89166, []int{3, 2, 1}
+	return fileDescriptor_4b28dfdd48a89166, []int{4, 2, 1}
 }
 func (m *SyncFullResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -846,23 +965,9 @@ func (m *SyncFullResponse) GetChanges() []*aclpb.RawChange {
 	return nil
 }
 
-func (m *SyncFullResponse) GetTreeId() string {
-	if m != nil {
-		return m.TreeId
-	}
-	return ""
-}
-
 func (m *SyncFullResponse) GetSnapshotPath() []string {
 	if m != nil {
 		return m.SnapshotPath
-	}
-	return nil
-}
-
-func (m *SyncFullResponse) GetTreeHeader() *treepb.TreeHeader {
-	if m != nil {
-		return m.TreeHeader
 	}
 	return nil
 }
@@ -877,6 +982,9 @@ func init() {
 	proto.RegisterType((*SystemPing)(nil), "anytype.System.Ping")
 	proto.RegisterType((*SystemAck)(nil), "anytype.System.Ack")
 	proto.RegisterType((*SystemError)(nil), "anytype.System.Error")
+	proto.RegisterType((*Subscription)(nil), "anytype.Subscription")
+	proto.RegisterType((*SubscriptionSubscribeSpace)(nil), "anytype.Subscription.SubscribeSpace")
+	proto.RegisterType((*SubscriptionUnsubscribeSpace)(nil), "anytype.Subscription.UnsubscribeSpace")
 	proto.RegisterType((*Sync)(nil), "anytype.Sync")
 	proto.RegisterType((*SyncContentValue)(nil), "anytype.Sync.ContentValue")
 	proto.RegisterType((*SyncHeadUpdate)(nil), "anytype.Sync.HeadUpdate")
@@ -888,58 +996,61 @@ func init() {
 func init() { proto.RegisterFile("syncproto/proto/sync.proto", fileDescriptor_4b28dfdd48a89166) }
 
 var fileDescriptor_4b28dfdd48a89166 = []byte{
-	// 806 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xd4, 0x55, 0xd1, 0x6e, 0xe3, 0x44,
-	0x14, 0xf5, 0x24, 0x4e, 0xbc, 0xbe, 0xae, 0x5a, 0x33, 0xdb, 0x45, 0xc6, 0xac, 0x22, 0x2b, 0x02,
-	0x61, 0x01, 0x72, 0x57, 0x81, 0x15, 0x12, 0x6f, 0xbb, 0xa5, 0x51, 0x22, 0x20, 0x89, 0x26, 0x49,
-	0x91, 0x78, 0x59, 0x4d, 0xed, 0xd9, 0x24, 0x8a, 0x3b, 0x36, 0x1e, 0x07, 0xc8, 0x5f, 0xec, 0x37,
-	0xf0, 0x0d, 0x48, 0x20, 0xbe, 0x80, 0xc7, 0x7d, 0xe4, 0x11, 0xb5, 0x12, 0x1f, 0x01, 0x2f, 0x68,
-	0xc6, 0x76, 0xe2, 0x66, 0xfb, 0x03, 0xfb, 0xd0, 0x66, 0xee, 0xb9, 0xe7, 0x5c, 0x9f, 0x1b, 0xdf,
-	0xb9, 0x01, 0x57, 0x6c, 0x79, 0x98, 0x66, 0x49, 0x9e, 0x9c, 0x15, 0xff, 0x65, 0x1c, 0xa8, 0x23,
-	0x36, 0x28, 0xdf, 0xe6, 0xdb, 0x94, 0xb9, 0x4f, 0xd2, 0xf5, 0xe2, 0x8c, 0x86, 0xb1, 0xfc, 0x0b,
-	0x97, 0x94, 0x2f, 0x98, 0x90, 0xc7, 0xf4, 0xaa, 0xd0, 0x88, 0x1a, 0x5e, 0x48, 0xdd, 0x4f, 0x2b,
-	0x45, 0x9e, 0x31, 0x26, 0xf2, 0x24, 0xa3, 0x0b, 0xa6, 0xce, 0x7b, 0x8d, 0x8c, 0x0a, 0x76, 0xb7,
-	0x0f, 0xc6, 0xb7, 0x4c, 0x08, 0xba, 0x60, 0xf8, 0x23, 0x68, 0x2f, 0x19, 0x8d, 0x58, 0xe6, 0x20,
-	0x0f, 0xf9, 0x56, 0xef, 0x24, 0x28, 0x4d, 0x04, 0x03, 0x05, 0x93, 0x32, 0x8d, 0x31, 0xe8, 0x11,
-	0xcd, 0xa9, 0xd3, 0xf0, 0x90, 0x7f, 0x44, 0xd4, 0xb9, 0xfb, 0x0b, 0x82, 0x76, 0x41, 0xc3, 0x0e,
-	0x18, 0x79, 0x46, 0x43, 0x36, 0x8c, 0x54, 0xa1, 0x23, 0x52, 0x85, 0xf8, 0x31, 0x98, 0x19, 0xfb,
-	0x61, 0xc3, 0x44, 0x3e, 0x8c, 0x94, 0x5a, 0x27, 0x7b, 0x40, 0xea, 0x32, 0x96, 0xc6, 0xdb, 0x61,
-	0xe4, 0x34, 0x55, 0xae, 0x0a, 0xb1, 0x0f, 0xba, 0xf4, 0xe1, 0xe8, 0x1e, 0xf2, 0x8f, 0x7b, 0xa7,
-	0x3b, 0x5f, 0xa5, 0xf3, 0xd9, 0x36, 0x65, 0x44, 0x31, 0xe4, 0x13, 0x22, 0x76, 0xb5, 0x59, 0x0c,
-	0xf9, 0xcb, 0xc4, 0x69, 0x79, 0xc8, 0x37, 0xc9, 0x1e, 0xe8, 0xfe, 0xda, 0x84, 0xf6, 0x74, 0x2b,
-	0x72, 0x76, 0x8d, 0xbf, 0x00, 0x73, 0x49, 0x79, 0x24, 0x96, 0x74, 0xcd, 0xca, 0x7e, 0xdf, 0xdb,
-	0xd5, 0x2d, 0x38, 0xc1, 0xa0, 0x22, 0x90, 0x3d, 0x57, 0x7a, 0x49, 0x57, 0x7c, 0xa1, 0xec, 0x5b,
-	0x35, 0x2f, 0xa5, 0x66, 0xb2, 0xe2, 0x0b, 0xa2, 0x18, 0xf8, 0x43, 0x68, 0xd2, 0x70, 0xad, 0x7a,
-	0xb1, 0x7a, 0x0f, 0x0f, 0x89, 0xcf, 0xc2, 0x35, 0x91, 0x79, 0xf7, 0x29, 0x98, 0x83, 0x5a, 0xf5,
-	0x13, 0xf5, 0x5e, 0xc2, 0x24, 0xbe, 0x64, 0x99, 0x58, 0x25, 0x5c, 0x99, 0x33, 0xc9, 0x21, 0xec,
-	0x76, 0x41, 0x97, 0xcf, 0xc2, 0x2e, 0x3c, 0xd8, 0xf0, 0xd5, 0xcf, 0xb3, 0xd5, 0x75, 0xd1, 0x87,
-	0x4e, 0x76, 0xb1, 0xdb, 0x83, 0xe6, 0xb3, 0x70, 0x8d, 0x3f, 0x81, 0x16, 0xcb, 0xb2, 0x24, 0x2b,
-	0x3d, 0x3f, 0x3a, 0xb4, 0x72, 0x21, 0x93, 0xa4, 0xe0, 0xb8, 0xaf, 0x10, 0xb4, 0x14, 0x80, 0x03,
-	0xd0, 0xc3, 0x24, 0x2a, 0xaa, 0x1e, 0xf7, 0xdc, 0x7b, 0x55, 0xc1, 0x79, 0x12, 0x31, 0xa2, 0x78,
-	0xd8, 0x03, 0x2b, 0x62, 0x22, 0xcc, 0x56, 0x69, 0x2e, 0x7d, 0x37, 0x94, 0xef, 0x3a, 0xd4, 0x7d,
-	0x0a, 0xba, 0xe4, 0x63, 0x0b, 0x8c, 0xf9, 0xe8, 0xeb, 0xd1, 0xf8, 0xbb, 0x91, 0xad, 0x61, 0x0f,
-	0x1e, 0xcf, 0x47, 0xd3, 0xf9, 0x64, 0x32, 0x26, 0xb3, 0x8b, 0xaf, 0x5e, 0x4c, 0xc8, 0x78, 0x36,
-	0x3e, 0x1f, 0x7f, 0xf3, 0xe2, 0xf2, 0x82, 0x4c, 0x87, 0xe3, 0x91, 0x0d, 0xdd, 0x7f, 0xdb, 0xa0,
-	0x4f, 0xb7, 0x3c, 0x94, 0x13, 0x22, 0xd2, 0xfd, 0x64, 0x99, 0xa4, 0x0a, 0xf1, 0xe7, 0x60, 0x5c,
-	0x17, 0xc3, 0x50, 0x36, 0x59, 0xb7, 0xcb, 0xc3, 0xe0, 0x3c, 0xe1, 0x39, 0xe3, 0xf9, 0x25, 0x8d,
-	0x37, 0x8c, 0x54, 0x54, 0xf7, 0x1f, 0x04, 0x47, 0xf5, 0x0c, 0xfe, 0x12, 0x40, 0xce, 0xf8, 0x3c,
-	0x8d, 0x68, 0x5e, 0x8d, 0x85, 0x73, 0xb7, 0xd2, 0x60, 0x97, 0x1f, 0x68, 0xa4, 0xc6, 0xc6, 0x7d,
-	0x38, 0x79, 0xb9, 0x89, 0x63, 0x49, 0x22, 0xc5, 0x4c, 0xdf, 0x6f, 0xa5, 0xbf, 0x89, 0xe3, 0xa0,
-	0x64, 0x0c, 0x34, 0x72, 0x28, 0xc2, 0x43, 0xb0, 0xf7, 0x90, 0x48, 0x13, 0x2e, 0x58, 0x39, 0x43,
-	0xef, 0xdf, 0x5b, 0xa8, 0xa0, 0x0c, 0x34, 0xf2, 0x86, 0xec, 0xb9, 0x01, 0xad, 0x1f, 0x65, 0x5f,
-	0xee, 0x1f, 0x08, 0x60, 0x6f, 0x1c, 0x9f, 0x42, 0x4b, 0x1a, 0x17, 0x0e, 0xf2, 0x9a, 0xbe, 0x49,
-	0x8a, 0x00, 0xfb, 0x60, 0x94, 0x9b, 0xc4, 0x69, 0x78, 0x4d, 0xdf, 0xea, 0x1d, 0x07, 0x34, 0x8c,
-	0x03, 0x42, 0x7f, 0x3a, 0x57, 0x30, 0xa9, 0xd2, 0xf8, 0x5d, 0x68, 0xcb, 0x15, 0x52, 0x5e, 0x54,
-	0x93, 0x94, 0x11, 0xee, 0xc2, 0x91, 0xe0, 0x34, 0x15, 0xcb, 0x24, 0x9f, 0xd0, 0x7c, 0xe9, 0xe8,
-	0xaa, 0xfc, 0x1d, 0x0c, 0x3f, 0x01, 0x90, 0xec, 0x62, 0x57, 0xa8, 0x2b, 0x6a, 0xf5, 0xec, 0x40,
-	0x6d, 0xa4, 0xd9, 0x0e, 0x27, 0x35, 0x8e, 0xfb, 0x5f, 0x03, 0x74, 0xd9, 0xab, 0xfb, 0x1b, 0x02,
-	0xa3, 0xfa, 0x96, 0xde, 0xae, 0x16, 0x7e, 0x47, 0xf0, 0xa0, 0x7a, 0x2b, 0x6f, 0x97, 0xf5, 0x8f,
-	0x23, 0xb0, 0x6a, 0x6b, 0x16, 0x3f, 0x82, 0x77, 0x6a, 0x61, 0xb1, 0x0a, 0x6c, 0x0d, 0x9f, 0x82,
-	0x5d, 0x87, 0xe5, 0xad, 0xb4, 0x11, 0x7e, 0x08, 0x27, 0x77, 0xc8, 0x3c, 0xb4, 0x1b, 0x07, 0x60,
-	0x7f, 0x15, 0x33, 0xbb, 0xf9, 0xfc, 0x83, 0x3f, 0x6f, 0x3a, 0xe8, 0xf5, 0x4d, 0x07, 0xfd, 0x7d,
-	0xd3, 0x41, 0xaf, 0x6e, 0x3b, 0xda, 0xeb, 0xdb, 0x8e, 0xf6, 0xd7, 0x6d, 0x47, 0xfb, 0x1e, 0xce,
-	0x76, 0x3f, 0x93, 0x57, 0x6d, 0xf5, 0xf1, 0xd9, 0xff, 0x01, 0x00, 0x00, 0xff, 0xff, 0x07, 0xa6,
-	0xab, 0xcd, 0x3a, 0x07, 0x00, 0x00,
+	// 858 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x55, 0xd1, 0x8e, 0xda, 0x46,
+	0x14, 0xc5, 0x60, 0x20, 0x5c, 0x10, 0xeb, 0x4e, 0x92, 0xd6, 0x75, 0x22, 0x84, 0x50, 0xda, 0x5a,
+	0x69, 0xe4, 0x8d, 0x68, 0xa3, 0x4a, 0x7d, 0x4b, 0xb6, 0xbb, 0x02, 0x35, 0x05, 0x34, 0xc0, 0x56,
+	0xea, 0x4b, 0x34, 0xd8, 0x13, 0x40, 0x78, 0xc7, 0xae, 0xc7, 0x6e, 0xcb, 0x2f, 0xf4, 0x29, 0xdf,
+	0xd0, 0x6f, 0xe8, 0x47, 0xf4, 0x31, 0x8f, 0x7d, 0xac, 0x76, 0xd5, 0x7e, 0x47, 0x35, 0x33, 0x36,
+	0xf6, 0x3a, 0xe4, 0x35, 0x0f, 0xc0, 0xdc, 0x33, 0xe7, 0xdc, 0x7b, 0x2e, 0xe3, 0xb9, 0x06, 0x8b,
+	0xef, 0x99, 0x1b, 0x46, 0x41, 0x1c, 0x9c, 0xaa, 0x6f, 0x11, 0x3b, 0x72, 0x89, 0x9a, 0x84, 0xed,
+	0xe3, 0x7d, 0x48, 0xad, 0xa7, 0xe1, 0x6e, 0x7d, 0x4a, 0x5c, 0x5f, 0x7c, 0xdc, 0x0d, 0x61, 0x6b,
+	0xca, 0xc5, 0x32, 0x5c, 0x29, 0x0d, 0x2f, 0xe0, 0x4a, 0x6a, 0x3d, 0xc9, 0x14, 0x71, 0x44, 0x29,
+	0x8f, 0x83, 0x88, 0xac, 0xa9, 0x5c, 0xe7, 0x1a, 0x11, 0x29, 0xf6, 0xe0, 0x02, 0x9a, 0x3f, 0x50,
+	0xce, 0xc9, 0x9a, 0xa2, 0x2f, 0xa0, 0xb1, 0xa1, 0xc4, 0xa3, 0x91, 0xa9, 0xf5, 0x35, 0xbb, 0x3d,
+	0x3c, 0x71, 0x52, 0x13, 0xce, 0x48, 0xc2, 0x38, 0xdd, 0x46, 0x08, 0x74, 0x8f, 0xc4, 0xc4, 0xac,
+	0xf6, 0x35, 0xbb, 0x83, 0xe5, 0x7a, 0xf0, 0x87, 0x06, 0x0d, 0x45, 0x43, 0x26, 0x34, 0xe3, 0x88,
+	0xb8, 0x74, 0xec, 0xc9, 0x44, 0x1d, 0x9c, 0x85, 0xe8, 0x21, 0xb4, 0x22, 0xfa, 0x73, 0x42, 0x79,
+	0x3c, 0xf6, 0xa4, 0x5a, 0xc7, 0x39, 0x20, 0x74, 0x11, 0x0d, 0xfd, 0xfd, 0xd8, 0x33, 0x6b, 0x72,
+	0x2f, 0x0b, 0x91, 0x0d, 0xba, 0xf0, 0x61, 0xea, 0x7d, 0xcd, 0xee, 0x0e, 0xef, 0x1d, 0x7c, 0xa5,
+	0xce, 0x17, 0xfb, 0x90, 0x62, 0xc9, 0x10, 0x15, 0x3c, 0xba, 0x4a, 0xd6, 0x63, 0xf6, 0x3a, 0x30,
+	0xeb, 0x7d, 0xcd, 0x6e, 0xe1, 0x1c, 0x18, 0xfc, 0x59, 0x83, 0xc6, 0x7c, 0xcf, 0x63, 0x7a, 0x85,
+	0xbe, 0x81, 0xd6, 0x86, 0x30, 0x8f, 0x6f, 0xc8, 0x8e, 0xa6, 0xfd, 0x7e, 0x7a, 0xc8, 0xab, 0x38,
+	0xce, 0x28, 0x23, 0xe0, 0x9c, 0x2b, 0xbc, 0x84, 0x5b, 0xb6, 0x96, 0xf6, 0xdb, 0x05, 0x2f, 0xa9,
+	0x66, 0xb6, 0x65, 0x6b, 0x2c, 0x19, 0xe8, 0x33, 0xa8, 0x11, 0x77, 0x27, 0x7b, 0x69, 0x0f, 0xef,
+	0x96, 0x89, 0xcf, 0xdd, 0x1d, 0x16, 0xfb, 0xd6, 0x33, 0x68, 0x8d, 0x0a, 0xd9, 0x4f, 0xe4, 0xb9,
+	0xb8, 0x81, 0x7f, 0x49, 0x23, 0xbe, 0x0d, 0x98, 0x34, 0xd7, 0xc2, 0x65, 0xd8, 0x1a, 0x80, 0x2e,
+	0x6a, 0x21, 0x0b, 0xee, 0x24, 0x6c, 0xfb, 0xdb, 0x62, 0x7b, 0xa5, 0xfa, 0xd0, 0xf1, 0x21, 0xb6,
+	0x86, 0x50, 0x7b, 0xee, 0xee, 0xd0, 0x97, 0x50, 0xa7, 0x51, 0x14, 0x44, 0xa9, 0xe7, 0xfb, 0x65,
+	0x2b, 0xe7, 0x62, 0x13, 0x2b, 0x8e, 0xf5, 0x46, 0x83, 0xba, 0x04, 0x90, 0x03, 0xba, 0x1b, 0x78,
+	0x2a, 0x6b, 0x77, 0x68, 0x1d, 0x55, 0x39, 0x67, 0x81, 0x47, 0xb1, 0xe4, 0xa1, 0x3e, 0xb4, 0x3d,
+	0xca, 0xdd, 0x68, 0x1b, 0xc6, 0xc2, 0x77, 0x55, 0xfa, 0x2e, 0x42, 0x83, 0x67, 0xa0, 0x0b, 0x3e,
+	0x6a, 0x43, 0x73, 0x39, 0xf9, 0x7e, 0x32, 0xfd, 0x71, 0x62, 0x54, 0x50, 0x1f, 0x1e, 0x2e, 0x27,
+	0xf3, 0xe5, 0x6c, 0x36, 0xc5, 0x8b, 0xf3, 0xef, 0x5e, 0xcd, 0xf0, 0x74, 0x31, 0x3d, 0x9b, 0xbe,
+	0x7c, 0x75, 0x79, 0x8e, 0xe7, 0xe3, 0xe9, 0xc4, 0x80, 0xc1, 0xef, 0x55, 0xe8, 0xcc, 0x93, 0xd5,
+	0x21, 0x0f, 0x7a, 0x09, 0x5d, 0xae, 0xe2, 0x15, 0x9d, 0x87, 0xc4, 0xcd, 0x4e, 0xf0, 0x51, 0xee,
+	0xb1, 0x40, 0xcf, 0x82, 0x94, 0x8b, 0x4b, 0x5a, 0x84, 0xc1, 0x48, 0x58, 0x29, 0x9f, 0xfa, 0xa7,
+	0x3e, 0x3f, 0x9e, 0x6f, 0x59, 0x62, 0xe3, 0x77, 0xf4, 0xd6, 0x63, 0xe8, 0xde, 0xae, 0x2a, 0x9e,
+	0x6e, 0x1e, 0xe6, 0xb7, 0xa2, 0x85, 0xb3, 0xd0, 0x7a, 0x02, 0x46, 0x39, 0xe3, 0xfb, 0xd9, 0x83,
+	0x9b, 0x3a, 0xe8, 0xf3, 0x3d, 0x73, 0xdf, 0x4f, 0x41, 0x5f, 0x43, 0xf3, 0x4a, 0xdd, 0x8c, 0xb4,
+	0x8f, 0xe2, 0xd9, 0x31, 0xd7, 0x39, 0x0b, 0x58, 0x4c, 0x59, 0x7c, 0x49, 0xfc, 0x84, 0xe2, 0x8c,
+	0x8a, 0x9e, 0x02, 0x88, 0xb9, 0xa0, 0x2e, 0x71, 0xfa, 0xd4, 0x1a, 0x8e, 0x1c, 0x15, 0x8b, 0x03,
+	0x8e, 0x0b, 0x1c, 0xf4, 0x31, 0x34, 0x44, 0x34, 0xf6, 0xe4, 0xc5, 0x6c, 0xe1, 0x34, 0xb2, 0xfe,
+	0xd3, 0xa0, 0x53, 0xac, 0x81, 0xbe, 0x05, 0x10, 0xa3, 0x63, 0x19, 0x7a, 0x24, 0xce, 0xce, 0xca,
+	0xbc, 0xed, 0x69, 0x74, 0xd8, 0x1f, 0x55, 0x70, 0x81, 0x8d, 0x2e, 0xe0, 0xe4, 0x75, 0xe2, 0xfb,
+	0x82, 0x84, 0xd5, 0xa8, 0x38, 0xde, 0xd4, 0x45, 0xe2, 0xfb, 0x4e, 0xca, 0x18, 0x55, 0x70, 0x59,
+	0x84, 0xc6, 0x60, 0xe4, 0x10, 0x0f, 0x03, 0xc6, 0x69, 0xda, 0xe4, 0x83, 0xa3, 0x89, 0x14, 0x65,
+	0x54, 0xc1, 0xef, 0xc8, 0x5e, 0x34, 0xa1, 0xfe, 0x8b, 0xe8, 0xcb, 0x0a, 0x01, 0x72, 0xdf, 0xe8,
+	0x1e, 0xd4, 0x85, 0x6f, 0x6e, 0x6a, 0xfd, 0x9a, 0xdd, 0xc2, 0x2a, 0x40, 0x36, 0x34, 0xd3, 0xf9,
+	0x6c, 0x56, 0xfb, 0x35, 0xbb, 0x3d, 0xec, 0x3a, 0xc4, 0xf5, 0x1d, 0x4c, 0x7e, 0x3d, 0x93, 0x30,
+	0xce, 0xb6, 0xd1, 0x00, 0x3a, 0x9c, 0x91, 0x90, 0x6f, 0x82, 0x78, 0x46, 0xe2, 0x8d, 0x59, 0x93,
+	0x69, 0x6e, 0x61, 0xd6, 0xbf, 0x1a, 0xe8, 0xc2, 0xa0, 0x75, 0x05, 0xcd, 0xac, 0xb3, 0x0f, 0x51,
+	0x97, 0xc1, 0x9d, 0xac, 0xfd, 0x0f, 0x51, 0xef, 0xf1, 0x25, 0xb4, 0x0b, 0xc3, 0x1d, 0xdd, 0x87,
+	0x8f, 0x0a, 0xa1, 0x1a, 0x40, 0x46, 0x05, 0x3d, 0x80, 0x4f, 0x8a, 0x70, 0xe1, 0x8e, 0x1a, 0x1a,
+	0xba, 0x0b, 0x27, 0xb7, 0x34, 0xcc, 0x35, 0xaa, 0x2f, 0x1e, 0xfd, 0x75, 0xdd, 0xd3, 0xde, 0x5e,
+	0xf7, 0xb4, 0x7f, 0xae, 0x7b, 0xda, 0x9b, 0x9b, 0x5e, 0xe5, 0xed, 0x4d, 0xaf, 0xf2, 0xf7, 0x4d,
+	0xaf, 0xf2, 0x13, 0x9c, 0x1e, 0x5e, 0xc7, 0xab, 0x86, 0xfc, 0xf9, 0xea, 0xff, 0x00, 0x00, 0x00,
+	0xff, 0xff, 0x6a, 0x04, 0xc0, 0x87, 0xa2, 0x07, 0x00, 0x00,
 }
 
 func (m *Message) Marshal() (dAtA []byte, err error) {
@@ -1223,6 +1334,113 @@ func (m *SystemError) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *Subscription) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Subscription) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Subscription) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.UnsubscribeSpace != nil {
+		{
+			size, err := m.UnsubscribeSpace.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSync(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.SubscribeSpace != nil {
+		{
+			size, err := m.SubscribeSpace.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSync(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SubscriptionSubscribeSpace) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SubscriptionSubscribeSpace) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SubscriptionSubscribeSpace) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.SpaceId) > 0 {
+		i -= len(m.SpaceId)
+		copy(dAtA[i:], m.SpaceId)
+		i = encodeVarintSync(dAtA, i, uint64(len(m.SpaceId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SubscriptionUnsubscribeSpace) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SubscriptionUnsubscribeSpace) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SubscriptionUnsubscribeSpace) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.SpaceId) > 0 {
+		i -= len(m.SpaceId)
+		copy(dAtA[i:], m.SpaceId)
+		i = encodeVarintSync(dAtA, i, uint64(len(m.SpaceId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *Sync) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1243,6 +1461,25 @@ func (m *Sync) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.TreeId) > 0 {
+		i -= len(m.TreeId)
+		copy(dAtA[i:], m.TreeId)
+		i = encodeVarintSync(dAtA, i, uint64(len(m.TreeId)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.TreeHeader != nil {
+		{
+			size, err := m.TreeHeader.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSync(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
 	if m.Message != nil {
 		{
 			size, err := m.Message.MarshalToSizedBuffer(dAtA[:i])
@@ -1380,33 +1617,14 @@ func (m *SyncHeadUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.TreeHeader != nil {
-		{
-			size, err := m.TreeHeader.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintSync(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x2a
-	}
 	if len(m.SnapshotPath) > 0 {
 		for iNdEx := len(m.SnapshotPath) - 1; iNdEx >= 0; iNdEx-- {
 			i -= len(m.SnapshotPath[iNdEx])
 			copy(dAtA[i:], m.SnapshotPath[iNdEx])
 			i = encodeVarintSync(dAtA, i, uint64(len(m.SnapshotPath[iNdEx])))
 			i--
-			dAtA[i] = 0x22
+			dAtA[i] = 0x1a
 		}
-	}
-	if len(m.TreeId) > 0 {
-		i -= len(m.TreeId)
-		copy(dAtA[i:], m.TreeId)
-		i = encodeVarintSync(dAtA, i, uint64(len(m.TreeId)))
-		i--
-		dAtA[i] = 0x1a
 	}
 	if len(m.Changes) > 0 {
 		for iNdEx := len(m.Changes) - 1; iNdEx >= 0; iNdEx-- {
@@ -1477,33 +1695,14 @@ func (m *SyncFullRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.TreeHeader != nil {
-		{
-			size, err := m.TreeHeader.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintSync(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x2a
-	}
 	if len(m.SnapshotPath) > 0 {
 		for iNdEx := len(m.SnapshotPath) - 1; iNdEx >= 0; iNdEx-- {
 			i -= len(m.SnapshotPath[iNdEx])
 			copy(dAtA[i:], m.SnapshotPath[iNdEx])
 			i = encodeVarintSync(dAtA, i, uint64(len(m.SnapshotPath[iNdEx])))
 			i--
-			dAtA[i] = 0x22
+			dAtA[i] = 0x1a
 		}
-	}
-	if len(m.TreeId) > 0 {
-		i -= len(m.TreeId)
-		copy(dAtA[i:], m.TreeId)
-		i = encodeVarintSync(dAtA, i, uint64(len(m.TreeId)))
-		i--
-		dAtA[i] = 0x1a
 	}
 	if len(m.Changes) > 0 {
 		for iNdEx := len(m.Changes) - 1; iNdEx >= 0; iNdEx-- {
@@ -1551,33 +1750,14 @@ func (m *SyncFullResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.TreeHeader != nil {
-		{
-			size, err := m.TreeHeader.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintSync(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x2a
-	}
 	if len(m.SnapshotPath) > 0 {
 		for iNdEx := len(m.SnapshotPath) - 1; iNdEx >= 0; iNdEx-- {
 			i -= len(m.SnapshotPath[iNdEx])
 			copy(dAtA[i:], m.SnapshotPath[iNdEx])
 			i = encodeVarintSync(dAtA, i, uint64(len(m.SnapshotPath[iNdEx])))
 			i--
-			dAtA[i] = 0x22
+			dAtA[i] = 0x1a
 		}
-	}
-	if len(m.TreeId) > 0 {
-		i -= len(m.TreeId)
-		copy(dAtA[i:], m.TreeId)
-		i = encodeVarintSync(dAtA, i, uint64(len(m.TreeId)))
-		i--
-		dAtA[i] = 0x1a
 	}
 	if len(m.Changes) > 0 {
 		for iNdEx := len(m.Changes) - 1; iNdEx >= 0; iNdEx-- {
@@ -1734,6 +1914,49 @@ func (m *SystemError) Size() (n int) {
 	return n
 }
 
+func (m *Subscription) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.SubscribeSpace != nil {
+		l = m.SubscribeSpace.Size()
+		n += 1 + l + sovSync(uint64(l))
+	}
+	if m.UnsubscribeSpace != nil {
+		l = m.UnsubscribeSpace.Size()
+		n += 1 + l + sovSync(uint64(l))
+	}
+	return n
+}
+
+func (m *SubscriptionSubscribeSpace) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.SpaceId)
+	if l > 0 {
+		n += 1 + l + sovSync(uint64(l))
+	}
+	return n
+}
+
+func (m *SubscriptionUnsubscribeSpace) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.SpaceId)
+	if l > 0 {
+		n += 1 + l + sovSync(uint64(l))
+	}
+	return n
+}
+
 func (m *Sync) Size() (n int) {
 	if m == nil {
 		return 0
@@ -1746,6 +1969,14 @@ func (m *Sync) Size() (n int) {
 	}
 	if m.Message != nil {
 		l = m.Message.Size()
+		n += 1 + l + sovSync(uint64(l))
+	}
+	if m.TreeHeader != nil {
+		l = m.TreeHeader.Size()
+		n += 1 + l + sovSync(uint64(l))
+	}
+	l = len(m.TreeId)
+	if l > 0 {
 		n += 1 + l + sovSync(uint64(l))
 	}
 	return n
@@ -1817,19 +2048,11 @@ func (m *SyncHeadUpdate) Size() (n int) {
 			n += 1 + l + sovSync(uint64(l))
 		}
 	}
-	l = len(m.TreeId)
-	if l > 0 {
-		n += 1 + l + sovSync(uint64(l))
-	}
 	if len(m.SnapshotPath) > 0 {
 		for _, s := range m.SnapshotPath {
 			l = len(s)
 			n += 1 + l + sovSync(uint64(l))
 		}
-	}
-	if m.TreeHeader != nil {
-		l = m.TreeHeader.Size()
-		n += 1 + l + sovSync(uint64(l))
 	}
 	return n
 }
@@ -1861,19 +2084,11 @@ func (m *SyncFullRequest) Size() (n int) {
 			n += 1 + l + sovSync(uint64(l))
 		}
 	}
-	l = len(m.TreeId)
-	if l > 0 {
-		n += 1 + l + sovSync(uint64(l))
-	}
 	if len(m.SnapshotPath) > 0 {
 		for _, s := range m.SnapshotPath {
 			l = len(s)
 			n += 1 + l + sovSync(uint64(l))
 		}
-	}
-	if m.TreeHeader != nil {
-		l = m.TreeHeader.Size()
-		n += 1 + l + sovSync(uint64(l))
 	}
 	return n
 }
@@ -1896,19 +2111,11 @@ func (m *SyncFullResponse) Size() (n int) {
 			n += 1 + l + sovSync(uint64(l))
 		}
 	}
-	l = len(m.TreeId)
-	if l > 0 {
-		n += 1 + l + sovSync(uint64(l))
-	}
 	if len(m.SnapshotPath) > 0 {
 		for _, s := range m.SnapshotPath {
 			l = len(s)
 			n += 1 + l + sovSync(uint64(l))
 		}
-	}
-	if m.TreeHeader != nil {
-		l = m.TreeHeader.Size()
-		n += 1 + l + sovSync(uint64(l))
 	}
 	return n
 }
@@ -2708,6 +2915,292 @@ func (m *SystemError) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *Subscription) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Subscription: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Subscription: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SubscribeSpace", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.SubscribeSpace == nil {
+				m.SubscribeSpace = &SubscriptionSubscribeSpace{}
+			}
+			if err := m.SubscribeSpace.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UnsubscribeSpace", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.UnsubscribeSpace == nil {
+				m.UnsubscribeSpace = &SubscriptionUnsubscribeSpace{}
+			}
+			if err := m.UnsubscribeSpace.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SubscriptionSubscribeSpace) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SubscribeSpace: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SubscribeSpace: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SpaceId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SubscriptionUnsubscribeSpace) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: UnsubscribeSpace: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: UnsubscribeSpace: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SpaceId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *Sync) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -2804,6 +3297,74 @@ func (m *Sync) Unmarshal(dAtA []byte) error {
 			if err := m.Message.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TreeHeader", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.TreeHeader == nil {
+				m.TreeHeader = &treepb.TreeHeader{}
+			}
+			if err := m.TreeHeader.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TreeId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.TreeId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -3078,38 +3639,6 @@ func (m *SyncHeadUpdate) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TreeId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthSync
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthSync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.TreeId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field SnapshotPath", wireType)
 			}
 			var stringLen uint64
@@ -3139,42 +3668,6 @@ func (m *SyncHeadUpdate) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.SnapshotPath = append(m.SnapshotPath, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TreeHeader", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthSync
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthSync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.TreeHeader == nil {
-				m.TreeHeader = &treepb.TreeHeader{}
-			}
-			if err := m.TreeHeader.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -3344,38 +3837,6 @@ func (m *SyncFullRequest) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TreeId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthSync
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthSync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.TreeId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field SnapshotPath", wireType)
 			}
 			var stringLen uint64
@@ -3405,42 +3866,6 @@ func (m *SyncFullRequest) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.SnapshotPath = append(m.SnapshotPath, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TreeHeader", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthSync
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthSync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.TreeHeader == nil {
-				m.TreeHeader = &treepb.TreeHeader{}
-			}
-			if err := m.TreeHeader.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -3560,38 +3985,6 @@ func (m *SyncFullResponse) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TreeId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthSync
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthSync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.TreeId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field SnapshotPath", wireType)
 			}
 			var stringLen uint64
@@ -3621,42 +4014,6 @@ func (m *SyncFullResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.SnapshotPath = append(m.SnapshotPath, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TreeHeader", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthSync
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthSync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.TreeHeader == nil {
-				m.TreeHeader = &treepb.TreeHeader{}
-			}
-			if err := m.TreeHeader.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

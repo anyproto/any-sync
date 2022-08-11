@@ -283,15 +283,16 @@ func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 			return
 		}
 
-		if a.updateListener != nil {
-			switch mode {
-			case Append:
-				a.updateListener.Update(a)
-			case Rebuild:
-				a.updateListener.Rebuild(a)
-			default:
-				break
-			}
+		if a.updateListener == nil {
+			return
+		}
+		switch mode {
+		case Append:
+			a.updateListener.Update(a)
+		case Rebuild:
+			a.updateListener.Rebuild(a)
+		default:
+			break
 		}
 	}()
 
@@ -317,16 +318,7 @@ func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 	}
 
 	prevHeads := a.tree.Heads()
-	mode = a.tree.Add(changes...)
-	switch mode {
-	case Nothing:
-		return AddResult{
-			OldHeads: prevHeads,
-			Heads:    prevHeads,
-			Summary:  AddResultSummaryNothing,
-		}, nil
-
-	case Rebuild:
+	rebuild := func() (AddResult, error) {
 		err = a.rebuildFromStorage()
 		if err != nil {
 			return AddResult{}, err
@@ -338,6 +330,26 @@ func (a *aclTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawCha
 			Added:    getAddedChanges(),
 			Summary:  AddResultSummaryRebuild,
 		}, nil
+	}
+
+	mode = a.tree.Add(changes...)
+	switch mode {
+	case Nothing:
+		for _, ch := range changes {
+			// rebuilding if the snapshot is different from the root
+			if ch.SnapshotId != a.tree.RootId() {
+				return rebuild()
+			}
+		}
+
+		return AddResult{
+			OldHeads: prevHeads,
+			Heads:    prevHeads,
+			Summary:  AddResultSummaryNothing,
+		}, nil
+
+	case Rebuild:
+		return rebuild()
 	default:
 		// just rebuilding the state from start without reloading everything from tree storage
 		// as an optimization we could've started from current heads, but I didn't implement that
