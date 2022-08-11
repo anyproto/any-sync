@@ -6,8 +6,8 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/document"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/document"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
 	"go.uber.org/zap"
 	"io"
@@ -53,7 +53,8 @@ func (s *service) Run(ctx context.Context) (err error) {
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/treeDump", s.treeDump)
-	mux.HandleFunc("/createDocument", s.createDocument)
+	mux.HandleFunc("/createDocumentTree", s.createDocumentTree)
+	mux.HandleFunc("/createACLTree", s.createACLTree)
 	mux.HandleFunc("/appendDocument", s.appendDocument)
 	s.srv.Handler = mux
 
@@ -79,8 +80,9 @@ func (s *service) treeDump(w http.ResponseWriter, req *http.Request) {
 		dump   string
 		err    error
 	)
-	err = s.treeCache.Do(context.Background(), treeId, func(tree acltree.ACLTree) error {
-		dump, err = tree.DebugDump()
+	err = s.treeCache.Do(context.Background(), treeId, func(obj interface{}) error {
+		t := obj.(tree.CommonTree)
+		dump, err = t.DebugDump()
 		if err != nil {
 			return err
 		}
@@ -93,13 +95,25 @@ func (s *service) treeDump(w http.ResponseWriter, req *http.Request) {
 	sendText(w, http.StatusOK, dump)
 }
 
-func (s *service) createDocument(w http.ResponseWriter, req *http.Request) {
+func (s *service) createDocumentTree(w http.ResponseWriter, req *http.Request) {
 	var (
-		query = req.URL.Query()
-		text  = query.Get("text")
+		query     = req.URL.Query()
+		text      = query.Get("text")
+		aclTreeId = query.Get("aclTreeId")
 	)
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	treeId, err := s.documentService.CreateDocument(timeoutCtx, fmt.Sprintf("created document with id: %s", text))
+	treeId, err := s.documentService.CreateDocumentTree(timeoutCtx, aclTreeId, text)
+	cancel()
+	if err != nil {
+		sendText(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	sendText(w, http.StatusOK, treeId)
+}
+
+func (s *service) createACLTree(w http.ResponseWriter, req *http.Request) {
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	treeId, err := s.documentService.CreateACLTree(timeoutCtx)
 	cancel()
 	if err != nil {
 		sendText(w, http.StatusInternalServerError, err.Error())

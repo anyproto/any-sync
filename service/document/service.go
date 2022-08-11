@@ -2,15 +2,16 @@ package document
 
 import (
 	"context"
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/testchangepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/message"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/syncproto"
@@ -23,10 +24,10 @@ var CName = "DocumentService"
 var log = logger.NewNamed("documentservice")
 
 type service struct {
-	messageService      message.Service
-	treeCache           treecache.Service
-	account             account.Service
-	treeStorageProvider treestorage.Provider
+	messageService message.Service
+	treeCache      treecache.Service
+	account        account.Service
+	storage        storage.Service
 	// to create new documents we need to know all nodes
 	nodes []*node.Node
 }
@@ -45,7 +46,7 @@ func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 	s.account = a.MustComponent(account.CName).(account.Service)
 	s.messageService = a.MustComponent(message.CName).(message.Service)
 	s.treeCache = a.MustComponent(treecache.CName).(treecache.Service)
-	// TODO: add TreeStorageProvider service
+	s.storage = a.MustComponent(storage.CName).(storage.Service)
 
 	nodesService := a.MustComponent(node.CName).(node.Service)
 	s.nodes = nodesService.Nodes()
@@ -76,7 +77,11 @@ func (s *service) UpdateDocumentTree(ctx context.Context, id, text string) (err 
 		Debug("updating document")
 
 	err = s.treeCache.Do(ctx, id, func(obj interface{}) error {
-		docTree := obj.(tree.DocTree)
+		docTree, ok := obj.(tree.DocTree)
+		if !ok {
+			return fmt.Errorf("can't update acl trees with text")
+		}
+
 		docTree.Lock()
 		defer docTree.Unlock()
 		err = s.treeCache.Do(ctx, docTree.Header().AclTreeId, func(obj interface{}) error {
@@ -141,7 +146,7 @@ func (s *service) CreateACLTree(ctx context.Context) (id string, err error) {
 			}
 		}
 		return nil
-	}, s.treeStorageProvider.CreateTreeStorage)
+	}, s.storage.CreateTreeStorage)
 
 	id, err = t.TreeID()
 	if err != nil {
@@ -188,7 +193,7 @@ func (s *service) CreateDocumentTree(ctx context.Context, aclTreeId string, text
 		defer t.RUnlock()
 
 		content := createInitialTextChange(text)
-		doc, err := tree.CreateNewTreeStorage(acc, t, content, s.treeStorageProvider.CreateTreeStorage)
+		doc, err := tree.CreateNewTreeStorage(acc, t, content, s.storage.CreateTreeStorage)
 		if err != nil {
 			return err
 		}

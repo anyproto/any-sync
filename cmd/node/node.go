@@ -9,12 +9,13 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/api"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/document"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/dialer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/secure"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/document"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/message"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/requesthandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
@@ -97,6 +98,7 @@ func Bootstrap(a *app.App) {
 		Register(server.New()).
 		Register(dialer.New()).
 		Register(pool.NewPool()).
+		Register(storage.New()).
 		//Register(&example.Example{})
 		Register(document.New()).
 		Register(message.New()).

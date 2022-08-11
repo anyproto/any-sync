@@ -8,10 +8,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/storage"
 	"go.uber.org/zap"
 )
 
@@ -29,9 +29,9 @@ type Service interface {
 }
 
 type service struct {
-	treeProvider treestorage.Provider
-	account      account.Service
-	cache        ocache.OCache
+	storage storage.Service
+	account account.Service
+	cache   ocache.OCache
 }
 
 func New() app.ComponentRunnable {
@@ -56,7 +56,7 @@ func (s *service) Add(ctx context.Context, treeId string, header *treepb.TreeHea
 		With(zap.String("treeId", treeId), zap.Int("len(changes)", len(changes))).
 		Debug("adding tree with changes")
 
-	_, err := s.treeProvider.CreateTreeStorage(treeId, header, changes)
+	_, err := s.storage.CreateTreeStorage(treeId, header, changes)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func (s *service) Add(ctx context.Context, treeId string, header *treepb.TreeHea
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 	s.cache = ocache.New(s.loadTree)
 	s.account = a.MustComponent(account.CName).(account.Service)
-	s.treeProvider = treestorage.NewInMemoryTreeStorageProvider()
+	s.storage = a.MustComponent(storage.CName).(storage.Service)
 	// TODO: for test we should load some predefined keys
 	return nil
 }
@@ -84,7 +84,7 @@ func (s *service) Close(ctx context.Context) (err error) {
 }
 
 func (s *service) loadTree(ctx context.Context, id string) (ocache.Object, error) {
-	t, err := s.treeProvider.TreeStorage(id)
+	t, err := s.storage.TreeStorage(id)
 	if err != nil {
 		return nil, err
 	}
