@@ -51,22 +51,11 @@ var ErrNoCommonSnapshot = errors.New("trees doesn't have a common snapshot")
 
 type ACLTree interface {
 	RWLocker
-	ID() string
-	Header() *treepb.TreeHeader
+	CommonTree
+
 	ACLState() *ACLState
 	AddContent(ctx context.Context, f func(builder ACLChangeBuilder) error) (*aclpb.RawChange, error)
 	AddRawChanges(ctx context.Context, changes ...*aclpb.RawChange) (AddResult, error)
-	Heads() []string
-	Root() *Change
-	Iterate(func(change *Change) bool)
-	IterateFrom(string, func(change *Change) bool)
-	HasChange(string) bool
-	SnapshotPath() []string
-	ChangesAfterCommonSnapshot(snapshotPath []string) ([]*aclpb.RawChange, error)
-	Storage() treestorage.TreeStorage
-	DebugDump() (string, error)
-
-	Close() error
 }
 
 type aclTree struct {
@@ -387,10 +376,6 @@ func (a *aclTree) Heads() []string {
 
 func (a *aclTree) Root() *Change {
 	return a.tree.Root()
-}
-
-func (a *aclTree) Close() error {
-	return nil
 }
 
 func (a *aclTree) SnapshotPath() []string {
