@@ -90,7 +90,7 @@ func (s *service) UpdateDocumentTree(ctx context.Context, id, text string) (err 
 			defer aclTree.RUnlock()
 
 			content := createAppendTextChange(text)
-			_, err := docTree.AddContent(ctx, aclTree, content, false)
+			ch, err = docTree.AddContent(ctx, aclTree, content, false)
 			if err != nil {
 				return err
 			}
