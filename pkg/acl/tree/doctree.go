@@ -228,6 +228,10 @@ func (d *docTree) AddRawChanges(ctx context.Context, aclTree ACLTree, rawChanges
 		if d.HasChange(ch.Id) {
 			continue
 		}
+		// if we already added the change to invalid ones
+		if _, exists := d.tree.invalidChanges[ch.Id]; exists {
+			return AddResult{}, ErrHasInvalidChanges
+		}
 
 		var change *Change
 		change, err = NewFromVerifiedRawChange(ch, d.identityKeys, d.treeBuilder.signingPubKeyDecoder)
@@ -329,7 +333,15 @@ func (d *docTree) AddRawChanges(ctx context.Context, aclTree ACLTree, rawChanges
 		// as an optimization we could've started from current heads, but I didn't implement that
 		err = d.validator.ValidateTree(d.tree, aclTree)
 		if err != nil {
-			return AddResult{}, err
+			// rolling back
+			for _, ch := range d.tmpChangesBuf {
+				if _, exists := d.tree.attached[ch.Id]; exists {
+					delete(d.tree.attached, ch.Id)
+				} else if _, exists := d.tree.unAttached[ch.Id]; exists {
+					delete(d.tree.unAttached, ch.Id)
+				}
+			}
+			return AddResult{}, ErrHasInvalidChanges
 		}
 
 		addResult = AddResult{
