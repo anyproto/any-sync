@@ -5,11 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
-	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"time"
 )
@@ -22,38 +21,39 @@ var (
 type treeBuilder struct {
 	cache                map[string]*Change
 	identityKeys         map[string]signingkey.PubKey
-	signingPubKeyDecoder signingkey.PubKeyDecoder
+	signingPubKeyDecoder keys.Decoder
 	tree                 *Tree
 	treeStorage          treestorage.TreeStorage
 }
 
-func newTreeBuilder(t treestorage.TreeStorage, decoder signingkey.PubKeyDecoder) *treeBuilder {
+func newTreeBuilder(t treestorage.TreeStorage, decoder keys.Decoder) *treeBuilder {
 	return &treeBuilder{
 		signingPubKeyDecoder: decoder,
 		treeStorage:          t,
 	}
 }
 
-func (tb *treeBuilder) Init() {
+func (tb *treeBuilder) Init(identityKeys map[string]signingkey.PubKey) {
 	tb.cache = make(map[string]*Change)
-	tb.identityKeys = make(map[string]signingkey.PubKey)
+	tb.identityKeys = identityKeys
 	tb.tree = &Tree{}
 }
 
-func (tb *treeBuilder) Build(fromStart bool) (*Tree, error) {
+func (tb *treeBuilder) Build(fromStart bool, newChanges []*Change) (*Tree, error) {
 	var headsAndOrphans []string
-	orphans, err := tb.treeStorage.Orphans()
-	if err != nil {
-		return nil, err
-	}
 	heads, err := tb.treeStorage.Heads()
 	if err != nil {
 		return nil, err
 	}
-	headsAndOrphans = append(headsAndOrphans, orphans...)
-	headsAndOrphans = append(headsAndOrphans, heads...)
 
-	log.With(zap.Strings("heads", heads), zap.Strings("orphans", orphans)).Debug("building tree")
+	headsAndOrphans = append(headsAndOrphans, heads...)
+	tb.cache = make(map[string]*Change)
+	for _, ch := range newChanges {
+		headsAndOrphans = append(headsAndOrphans, ch.Id)
+		tb.cache[ch.Id] = ch
+	}
+
+	log.With(zap.Strings("heads", heads)).Debug("building tree")
 	if fromStart {
 		if err := tb.buildTreeFromStart(headsAndOrphans); err != nil {
 			return nil, fmt.Errorf("buildTree error: %v", err)
@@ -68,8 +68,6 @@ func (tb *treeBuilder) Build(fromStart bool) (*Tree, error) {
 			return nil, fmt.Errorf("buildTree error: %v", err)
 		}
 	}
-
-	tb.cache = make(map[string]*Change)
 
 	return tb.tree, nil
 }
@@ -184,51 +182,14 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 		return nil, err
 	}
 
-	verifiedChange, err := tb.makeVerifiedChange(change)
+	// TODO: maybe we can use unverified changes here, because we shouldn't put bad changes in the DB in the first place
+	ch, err = NewFromVerifiedRawChange(change, tb.identityKeys, tb.signingPubKeyDecoder)
 	if err != nil {
 		return nil, err
 	}
 
-	ch = NewChange(id, verifiedChange)
 	tb.cache[id] = ch
 	return ch, nil
-}
-
-func (tb *treeBuilder) verify(identity string, payload, signature []byte) (isVerified bool, err error) {
-	identityKey, exists := tb.identityKeys[identity]
-	if !exists {
-		identityKey, err = tb.signingPubKeyDecoder.DecodeFromString(identity)
-		if err != nil {
-			return
-		}
-		tb.identityKeys[identity] = identityKey
-	}
-	return identityKey.Verify(payload, signature)
-}
-
-func (tb *treeBuilder) makeVerifiedChange(change *aclpb.RawChange) (aclChange *aclpb.Change, err error) {
-	aclChange = new(aclpb.Change)
-
-	// TODO: think what should we do with such cases, because this can be used by attacker to break our Tree
-	if err = proto.Unmarshal(change.Payload, aclChange); err != nil {
-		return
-	}
-	var verified bool
-	verified, err = tb.verify(aclChange.Identity, change.Payload, change.Signature)
-	if err != nil {
-		return
-	}
-	if !verified {
-		err = fmt.Errorf("the signature of the payload cannot be verified")
-		return
-	}
-	return
-}
-
-func (tb *treeBuilder) makeUnverifiedACLChange(change *aclpb.RawChange) (aclChange *aclpb.Change, err error) {
-	aclChange = new(aclpb.Change)
-	err = proto.Unmarshal(change.Payload, aclChange)
-	return
 }
 
 func (tb *treeBuilder) findBreakpoint(heads []string) (breakpoint string, err error) {

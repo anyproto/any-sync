@@ -458,12 +458,11 @@ func (a *aclTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 			return nil, err
 		}
 
-		aclChange, err := a.treeBuilder.makeUnverifiedACLChange(raw)
+		ch, err := NewFromRawChange(raw)
 		if err != nil {
 			return nil, err
 		}
 
-		ch := NewChange(id, aclChange)
 		rawChanges = append(rawChanges, raw)
 		return ch, nil
 	}
