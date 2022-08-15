@@ -3,6 +3,8 @@ package tree
 import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
@@ -57,6 +59,36 @@ func NewFromRawChange(rawChange *aclpb.RawChange) (*Change, error) {
 	ch := NewChange(rawChange.Id, unmarshalled)
 	ch.Sign = rawChange.Signature
 	return ch, nil
+}
+
+func NewFromVerifiedRawChange(
+	rawChange *aclpb.RawChange,
+	identityKeys map[string]signingkey.PubKey,
+	decoder keys.Decoder) (*Change, error) {
+	unmarshalled := &aclpb.Change{}
+	err := proto.Unmarshal(rawChange.Payload, unmarshalled)
+	if err != nil {
+		return nil, err
+	}
+
+	identityKey, exists := identityKeys[unmarshalled.Identity]
+	if !exists {
+		key, err := decoder.DecodeFromString(unmarshalled.Identity)
+		if err != nil {
+			return nil, err
+		}
+		identityKey = key.(signingkey.PubKey)
+		identityKeys[unmarshalled.Identity] = identityKey
+	}
+	res, err := identityKey.Verify(rawChange.Payload, rawChange.Signature)
+	if err != nil {
+		return nil, err
+	}
+	if !res {
+		return nil, fmt.Errorf("change has incorrect signature")
+	}
+
+	return NewChange(rawChange.Id, unmarshalled), nil
 }
 
 func NewChange(id string, ch *aclpb.Change) *Change {

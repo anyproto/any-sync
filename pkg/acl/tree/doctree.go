@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
@@ -38,6 +39,12 @@ type docTree struct {
 	treeBuilder *treeBuilder
 	validator   DocTreeValidator
 
+	difSnapshotBuf []*aclpb.RawChange
+	tmpChangesBuf  []*Change
+	notSeenIdxBuf  []int
+
+	identityKeys map[string]signingkey.PubKey
+
 	sync.RWMutex
 }
 
@@ -52,16 +59,12 @@ func BuildDocTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountDat
 		treeBuilder:    treeBuilder,
 		validator:      validator,
 		updateListener: listener,
+		tmpChangesBuf:  make([]*Change, 0, 10),
+		difSnapshotBuf: make([]*aclpb.RawChange, 0, 10),
+		notSeenIdxBuf:  make([]int, 0, 10),
+		identityKeys:   make(map[string]signingkey.PubKey),
 	}
-	err := docTree.rebuildFromStorage(aclTree)
-	if err != nil {
-		return nil, err
-	}
-	err = docTree.removeOrphans()
-	if err != nil {
-		return nil, err
-	}
-	err = t.SetHeads(docTree.Heads())
+	err := docTree.rebuildFromStorage(aclTree, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +84,7 @@ func BuildDocTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountDat
 	return docTree, nil
 }
 
-func BuildDocTree(t treestorage.TreeStorage, decoder signingkey.PubKeyDecoder, listener TreeUpdateListener, aclTree ACLTree) (DocTree, error) {
+func BuildDocTree(t treestorage.TreeStorage, decoder keys.Decoder, listener TreeUpdateListener, aclTree ACLTree) (DocTree, error) {
 	treeBuilder := newTreeBuilder(t, decoder)
 	validator := newTreeValidator()
 
@@ -91,16 +94,12 @@ func BuildDocTree(t treestorage.TreeStorage, decoder signingkey.PubKeyDecoder, l
 		treeBuilder:    treeBuilder,
 		validator:      validator,
 		updateListener: listener,
+		tmpChangesBuf:  make([]*Change, 0, 10),
+		difSnapshotBuf: make([]*aclpb.RawChange, 0, 10),
+		notSeenIdxBuf:  make([]int, 0, 10),
+		identityKeys:   make(map[string]signingkey.PubKey),
 	}
-	err := docTree.rebuildFromStorage(aclTree)
-	if err != nil {
-		return nil, err
-	}
-	err = docTree.removeOrphans()
-	if err != nil {
-		return nil, err
-	}
-	err = t.SetHeads(docTree.Heads())
+	err := docTree.rebuildFromStorage(aclTree, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -120,29 +119,10 @@ func BuildDocTree(t treestorage.TreeStorage, decoder signingkey.PubKeyDecoder, l
 	return docTree, nil
 }
 
-func (d *docTree) removeOrphans() error {
-	// removing attached or invalid orphans
-	var toRemove []string
+func (d *docTree) rebuildFromStorage(aclTree ACLTree, newChanges []*Change) (err error) {
+	d.treeBuilder.Init(d.identityKeys)
 
-	orphans, err := d.treeStorage.Orphans()
-	if err != nil {
-		return err
-	}
-	for _, orphan := range orphans {
-		if _, exists := d.tree.attached[orphan]; exists {
-			toRemove = append(toRemove, orphan)
-		}
-		if _, exists := d.tree.invalidChanges[orphan]; exists {
-			toRemove = append(toRemove, orphan)
-		}
-	}
-	return d.treeStorage.RemoveOrphans(toRemove...)
-}
-
-func (d *docTree) rebuildFromStorage(aclTree ACLTree) (err error) {
-	d.treeBuilder.Init()
-
-	d.tree, err = d.treeBuilder.Build(false)
+	d.tree, err = d.treeBuilder.Build(false, newChanges)
 	if err != nil {
 		return err
 	}
@@ -233,29 +213,34 @@ func (d *docTree) AddContent(ctx context.Context, aclTree ACLTree, content proto
 	return rawCh, nil
 }
 
-func (d *docTree) AddRawChanges(ctx context.Context, aclTree ACLTree, rawChanges ...*aclpb.RawChange) (AddResult, error) {
-	// TODO: make proper error handling, because there are a lot of corner cases where this will break
-	var err error
+func (d *docTree) AddRawChanges(ctx context.Context, aclTree ACLTree, rawChanges ...*aclpb.RawChange) (addResult AddResult, err error) {
 	var mode Mode
 
-	var changes []*Change // TODO: = addChangesBuf[:0] ...
-	var notSeenIdx []int
+	// resetting buffers
+	d.tmpChangesBuf = d.tmpChangesBuf[:0]
+	d.notSeenIdxBuf = d.notSeenIdxBuf[:0]
+	d.difSnapshotBuf = d.difSnapshotBuf[:0]
+
 	prevHeads := d.tree.Heads()
+
+	// filtering changes, verifying and unmarshalling them
 	for idx, ch := range rawChanges {
 		if d.HasChange(ch.Id) {
 			continue
 		}
 
-		change, err := NewFromRawChange(ch)
-		// TODO: think what if we will have incorrect signatures on rawChanges, how everything will work
+		var change *Change
+		change, err = NewFromVerifiedRawChange(ch, d.identityKeys, d.treeBuilder.signingPubKeyDecoder)
 		if err != nil {
-			continue
+			return AddResult{}, err
 		}
-		changes = append(changes, change)
-		notSeenIdx = append(notSeenIdx, idx)
+
+		d.tmpChangesBuf = append(d.tmpChangesBuf, change)
+		d.notSeenIdxBuf = append(d.notSeenIdxBuf, idx)
 	}
 
-	if len(notSeenIdx) == 0 {
+	// if no new changes, then returning
+	if len(d.notSeenIdxBuf) == 0 {
 		return AddResult{
 			OldHeads: prevHeads,
 			Heads:    prevHeads,
@@ -268,11 +253,15 @@ func (d *docTree) AddRawChanges(ctx context.Context, aclTree ACLTree, rawChanges
 			return
 		}
 
-		err = d.removeOrphans()
-		if err != nil {
-			return
+		// adding to database all the added changes only after they are good
+		for _, ch := range addResult.Added {
+			err = d.treeStorage.AddRawChange(ch)
+			if err != nil {
+				return
+			}
 		}
 
+		// setting heads
 		err = d.treeStorage.SetHeads(d.tree.Heads())
 		if err != nil {
 			return
@@ -292,9 +281,10 @@ func (d *docTree) AddRawChanges(ctx context.Context, aclTree ACLTree, rawChanges
 		}
 	}()
 
+	// returns changes that we added to the tree
 	getAddedChanges := func() []*aclpb.RawChange {
 		var added []*aclpb.RawChange
-		for _, idx := range notSeenIdx {
+		for _, idx := range d.notSeenIdxBuf {
 			rawChange := rawChanges[idx]
 			if _, exists := d.tree.attached[rawChange.Id]; exists {
 				added = append(added, rawChange)
@@ -303,49 +293,37 @@ func (d *docTree) AddRawChanges(ctx context.Context, aclTree ACLTree, rawChanges
 		return added
 	}
 
-	rebuild := func() (AddResult, error) {
-		err = d.rebuildFromStorage(aclTree)
-		if err != nil {
-			return AddResult{}, err
-		}
+	// checking if we have some changes with different snapshot and then rebuilding
+	for _, ch := range d.tmpChangesBuf {
+		if ch.SnapshotId != d.tree.RootId() && ch.SnapshotId != "" {
+			err = d.rebuildFromStorage(aclTree, d.tmpChangesBuf)
+			if err != nil {
+				return AddResult{}, err
+			}
 
-		return AddResult{
-			OldHeads: prevHeads,
-			Heads:    d.tree.Heads(),
-			Added:    getAddedChanges(),
-			Summary:  AddResultSummaryRebuild,
-		}, nil
-	}
-
-	for _, ch := range changes {
-		err = d.treeStorage.AddChange(ch)
-		if err != nil {
-			return AddResult{}, err
-		}
-		err = d.treeStorage.AddOrphans(ch.Id)
-		if err != nil {
-			return AddResult{}, err
+			addResult = AddResult{
+				OldHeads: prevHeads,
+				Heads:    d.tree.Heads(),
+				Added:    getAddedChanges(),
+				Summary:  AddResultSummaryRebuild,
+			}
+			err = nil
+			return
 		}
 	}
 
-	mode = d.tree.Add(changes...)
+	// normal mode of operation, where we don't need to rebuild from database
+	mode = d.tree.Add(d.tmpChangesBuf...)
 	switch mode {
 	case Nothing:
-		for _, ch := range changes {
-			// rebuilding if the snapshot is different from the root
-			if ch.SnapshotId != d.tree.RootId() && ch.SnapshotId != "" {
-				return rebuild()
-			}
-		}
-
-		return AddResult{
+		addResult = AddResult{
 			OldHeads: prevHeads,
 			Heads:    prevHeads,
 			Summary:  AddResultSummaryNothing,
-		}, nil
+		}
+		err = nil
+		return
 
-	case Rebuild:
-		return rebuild()
 	default:
 		// just rebuilding the state from start without reloading everything from tree storage
 		// as an optimization we could've started from current heads, but I didn't implement that
@@ -354,13 +332,15 @@ func (d *docTree) AddRawChanges(ctx context.Context, aclTree ACLTree, rawChanges
 			return AddResult{}, err
 		}
 
-		return AddResult{
+		addResult = AddResult{
 			OldHeads: prevHeads,
 			Heads:    d.tree.Heads(),
 			Added:    getAddedChanges(),
 			Summary:  AddResultSummaryAppend,
-		}, nil
+		}
+		err = nil
 	}
+	return
 }
 
 func (d *docTree) Iterate(f func(change *Change) bool) {
@@ -434,12 +414,11 @@ func (d *docTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 			return nil, err
 		}
 
-		aclChange, err := d.treeBuilder.makeUnverifiedACLChange(raw)
+		ch, err := NewFromRawChange(raw)
 		if err != nil {
 			return nil, err
 		}
 
-		ch := NewChange(id, aclChange)
 		rawChanges = append(rawChanges, raw)
 		return ch, nil
 	}
