@@ -15,6 +15,7 @@ import (
 type AddResultSummary int
 
 var ErrTreeWithoutIdentity = errors.New("acl tree is created without identity")
+var ErrHasInvalidChanges = errors.New("the change is invalid")
 
 const (
 	AddResultSummaryNothing AddResultSummary = iota
