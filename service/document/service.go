@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/testchangepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
@@ -131,7 +132,7 @@ func (s *service) CreateACLTree(ctx context.Context) (id string, err error) {
 		heads        []string
 	)
 
-	t, err := tree.CreateNewTreeStorageWithACL(acc, func(builder tree.ACLChangeBuilder) error {
+	t, err := tree.CreateNewTreeStorageWithACL(acc, func(builder list.ACLChangeBuilder) error {
 		err := builder.UserAdd(acc.Identity, acc.EncKey.GetPublic(), aclpb.ACLChange_Admin)
 		if err != nil {
 			return err

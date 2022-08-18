@@ -8,6 +8,12 @@ message RawChange {
   string id = 3;
 }
 
+message RawRecord {
+  bytes payload = 1;
+  bytes signature = 2;
+  string id = 3;
+}
+
 // the element of change tree used to store and internal apply smartBlock history
 message ACLChange {
   repeated string treeHeadIds = 1;
@@ -112,11 +118,19 @@ message ACLChange {
 
 message Change {
   repeated string treeHeadIds = 1;
-  repeated string aclHeadIds = 2;
+  string aclHeadId = 2;
   string snapshotBaseId = 3; // we will only have one base snapshot for both
   bytes changesData = 4;
   uint64 currentReadKeyHash = 5;
   int64 timestamp = 6;
   string identity = 7;
   bool isSnapshot = 8;
+}
+
+message Record {
+  string prevId = 1;
+  string identity = 2;
+  bytes data = 3;
+  uint64 currentReadKeyHash = 4;
+  int64 timestamp = 5;
 }
