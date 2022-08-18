@@ -1,16 +1,21 @@
-package tree
+package list
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 	"github.com/gogo/protobuf/proto"
+	"go.uber.org/zap"
 	"hash/fnv"
 )
+
+var log = logger.NewNamed("acllist")
 
 var ErrNoSuchUser = errors.New("no such user")
 var ErrFailedToDecrypt = errors.New("failed to decrypt key")
@@ -23,7 +28,7 @@ type ACLState struct {
 	userReadKeys         map[uint64]*symmetric.Key
 	userStates           map[string]*aclpb.ACLChangeUserState
 	userInvites          map[string]*aclpb.ACLChangeUserInvite
-	signingPubKeyDecoder signingkey.PubKeyDecoder
+	signingPubKeyDecoder keys.Decoder
 	encryptionKey        encryptionkey.PrivKey
 	identity             string
 }
@@ -31,14 +36,14 @@ type ACLState struct {
 func newACLStateWithIdentity(
 	identity string,
 	encryptionKey encryptionkey.PrivKey,
-	signingPubKeyDecoder signingkey.PubKeyDecoder) *ACLState {
+	decoder keys.Decoder) *ACLState {
 	return &ACLState{
 		identity:             identity,
 		encryptionKey:        encryptionKey,
 		userReadKeys:         make(map[uint64]*symmetric.Key),
 		userStates:           make(map[string]*aclpb.ACLChangeUserState),
 		userInvites:          make(map[string]*aclpb.ACLChangeUserInvite),
-		signingPubKeyDecoder: signingPubKeyDecoder,
+		signingPubKeyDecoder: decoder,
 	}
 }
 
@@ -50,10 +55,18 @@ func newACLState() *ACLState {
 	}
 }
 
-func (st *ACLState) applyChange(change *aclpb.Change) (err error) {
+func (st *ACLState) CurrentReadKeyHash() uint64 {
+	return st.currentReadKeyHash
+}
+
+func (st *ACLState) UserReadKeys() map[uint64]*symmetric.Key {
+	return st.userReadKeys
+}
+
+func (st *ACLState) applyRecord(record *aclpb.Record) (err error) {
 	aclData := &aclpb.ACLChangeACLData{}
 
-	err = proto.Unmarshal(change.ChangesData, aclData)
+	err = proto.Unmarshal(record.Data, aclData)
 	if err != nil {
 		return
 	}
@@ -62,27 +75,27 @@ func (st *ACLState) applyChange(change *aclpb.Change) (err error) {
 		if err != nil {
 			return
 		}
-		st.currentReadKeyHash = change.CurrentReadKeyHash
+		st.currentReadKeyHash = record.CurrentReadKeyHash
 	}()
 
-	return st.applyChangeData(aclData, change.CurrentReadKeyHash, change.Identity)
+	return st.applyChangeData(aclData, record.CurrentReadKeyHash, record.Identity)
 }
 
-func (st *ACLState) applyChangeAndUpdate(changeWrapper *Change) (err error) {
-	change := changeWrapper.Content
+func (st *ACLState) applyChangeAndUpdate(recordWrapper *Record) (err error) {
+	change := recordWrapper.Content
 	aclData := &aclpb.ACLChangeACLData{}
 
-	if changeWrapper.ParsedModel != nil {
-		aclData = changeWrapper.ParsedModel.(*aclpb.ACLChangeACLData)
+	if recordWrapper.ParsedModel != nil {
+		aclData = recordWrapper.ParsedModel.(*aclpb.ACLChangeACLData)
 	} else {
-		err = proto.Unmarshal(change.ChangesData, aclData)
+		err = proto.Unmarshal(change.Data, aclData)
 		if err != nil {
 			return
 		}
-		changeWrapper.ParsedModel = aclData
+		recordWrapper.ParsedModel = aclData
 	}
 
-	return st.applyChangeData(aclData, changeWrapper.Content.CurrentReadKeyHash, changeWrapper.Content.Identity)
+	return st.applyChangeData(aclData, recordWrapper.Content.CurrentReadKeyHash, recordWrapper.Content.Identity)
 }
 
 func (st *ACLState) applyChangeData(changeData *aclpb.ACLChangeACLData, hash uint64, identity string) (err error) {
@@ -111,7 +124,7 @@ func (st *ACLState) applyChangeData(changeData *aclpb.ACLChangeACLData, hash uin
 
 	for _, ch := range changeData.GetAclContent() {
 		if err = st.applyChangeContent(ch); err != nil {
-			log.Infof("error while applying changes: %v; ignore", err)
+			log.Info("error while applying changes: %v; ignore", zap.Error(err))
 			return err
 		}
 	}
@@ -174,7 +187,7 @@ func (st *ACLState) applyUserJoin(ch *aclpb.ACLChangeUserJoin) error {
 		return fmt.Errorf("failed to decode signing identity as bytes")
 	}
 
-	res, err := verificationKey.Verify(rawSignedId, signature)
+	res, err := verificationKey.(signingkey.PubKey).Verify(rawSignedId, signature)
 	if err != nil {
 		return fmt.Errorf("verification returned error: %w", err)
 	}

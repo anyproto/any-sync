@@ -2,8 +2,10 @@ package tree
 
 import (
 	"context"
+	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
@@ -20,11 +22,37 @@ type TreeUpdateListener interface {
 	Rebuild(tree DocTree)
 }
 
+type RWLocker interface {
+	sync.Locker
+	RLock()
+	RUnlock()
+}
+
+var ErrHasInvalidChanges = errors.New("the change is invalid")
+var ErrNoCommonSnapshot = errors.New("trees doesn't have a common snapshot")
+var ErrTreeWithoutIdentity = errors.New("acl tree is created without identity")
+
+type AddResultSummary int
+
+const (
+	AddResultSummaryNothing AddResultSummary = iota
+	AddResultSummaryAppend
+	AddResultSummaryRebuild
+)
+
+type AddResult struct {
+	OldHeads []string
+	Heads    []string
+	Added    []*aclpb.RawChange
+	// TODO: add summary for changes
+	Summary AddResultSummary
+}
+
 type DocTree interface {
 	RWLocker
 	CommonTree
-	AddContent(ctx context.Context, aclTree ACLTree, content proto.Marshaler, isSnapshot bool) (*aclpb.RawChange, error)
-	AddRawChanges(ctx context.Context, aclTree ACLTree, changes ...*aclpb.RawChange) (AddResult, error)
+	AddContent(ctx context.Context, aclList list.ACLList, content proto.Marshaler, isSnapshot bool) (*aclpb.RawChange, error)
+	AddRawChanges(ctx context.Context, aclList list.ACLList, changes ...*aclpb.RawChange) (AddResult, error)
 }
 
 type docTree struct {
@@ -48,7 +76,7 @@ type docTree struct {
 	sync.RWMutex
 }
 
-func BuildDocTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountData, listener TreeUpdateListener, aclTree ACLTree) (DocTree, error) {
+func BuildDocTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountData, listener TreeUpdateListener, aclList list.ACLList) (DocTree, error) {
 	treeBuilder := newTreeBuilder(t, acc.Decoder)
 	validator := newTreeValidator()
 
@@ -64,7 +92,7 @@ func BuildDocTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountDat
 		notSeenIdxBuf:  make([]int, 0, 10),
 		identityKeys:   make(map[string]signingkey.PubKey),
 	}
-	err := docTree.rebuildFromStorage(aclTree, nil)
+	err := docTree.rebuildFromStorage(aclList, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +112,7 @@ func BuildDocTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountDat
 	return docTree, nil
 }
 
-func BuildDocTree(t treestorage.TreeStorage, decoder keys.Decoder, listener TreeUpdateListener, aclTree ACLTree) (DocTree, error) {
+func BuildDocTree(t treestorage.TreeStorage, decoder keys.Decoder, listener TreeUpdateListener, aclList list.ACLList) (DocTree, error) {
 	treeBuilder := newTreeBuilder(t, decoder)
 	validator := newTreeValidator()
 
@@ -99,7 +127,7 @@ func BuildDocTree(t treestorage.TreeStorage, decoder keys.Decoder, listener Tree
 		notSeenIdxBuf:  make([]int, 0, 10),
 		identityKeys:   make(map[string]signingkey.PubKey),
 	}
-	err := docTree.rebuildFromStorage(aclTree, nil)
+	err := docTree.rebuildFromStorage(aclList, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +147,7 @@ func BuildDocTree(t treestorage.TreeStorage, decoder keys.Decoder, listener Tree
 	return docTree, nil
 }
 
-func (d *docTree) rebuildFromStorage(aclTree ACLTree, newChanges []*Change) (err error) {
+func (d *docTree) rebuildFromStorage(aclList list.ACLList, newChanges []*Change) (err error) {
 	d.treeBuilder.Init(d.identityKeys)
 
 	d.tree, err = d.treeBuilder.Build(false, newChanges)
@@ -127,7 +155,7 @@ func (d *docTree) rebuildFromStorage(aclTree ACLTree, newChanges []*Change) (err
 		return err
 	}
 
-	return d.validator.ValidateTree(d.tree, aclTree)
+	return d.validator.ValidateTree(d.tree, aclList)
 }
 
 func (d *docTree) ID() string {
@@ -142,7 +170,7 @@ func (d *docTree) Storage() treestorage.TreeStorage {
 	return d.treeStorage
 }
 
-func (d *docTree) AddContent(ctx context.Context, aclTree ACLTree, content proto.Marshaler, isSnapshot bool) (*aclpb.RawChange, error) {
+func (d *docTree) AddContent(ctx context.Context, aclList list.ACLList, content proto.Marshaler, isSnapshot bool) (*aclpb.RawChange, error) {
 	if d.accountData == nil {
 		return nil, ErrTreeWithoutIdentity
 	}
@@ -153,12 +181,12 @@ func (d *docTree) AddContent(ctx context.Context, aclTree ACLTree, content proto
 			d.updateListener.Update(d)
 		}
 	}()
-	state := aclTree.ACLState()
+	state := aclList.ACLState()
 	change := &aclpb.Change{
 		TreeHeadIds:        d.tree.Heads(),
-		AclHeadIds:         aclTree.Heads(),
+		AclHeadId:          aclList.Last().Id,
 		SnapshotBaseId:     d.tree.RootId(),
-		CurrentReadKeyHash: state.currentReadKeyHash,
+		CurrentReadKeyHash: state.CurrentReadKeyHash(),
 		Timestamp:          int64(time.Now().Nanosecond()),
 		Identity:           d.accountData.Identity,
 		IsSnapshot:         isSnapshot,
@@ -168,7 +196,7 @@ func (d *docTree) AddContent(ctx context.Context, aclTree ACLTree, content proto
 	if err != nil {
 		return nil, err
 	}
-	encrypted, err := state.userReadKeys[state.currentReadKeyHash].Encrypt(marshalledData)
+	encrypted, err := state.UserReadKeys()[state.CurrentReadKeyHash()].Encrypt(marshalledData)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +241,7 @@ func (d *docTree) AddContent(ctx context.Context, aclTree ACLTree, content proto
 	return rawCh, nil
 }
 
-func (d *docTree) AddRawChanges(ctx context.Context, aclTree ACLTree, rawChanges ...*aclpb.RawChange) (addResult AddResult, err error) {
+func (d *docTree) AddRawChanges(ctx context.Context, aclList list.ACLList, rawChanges ...*aclpb.RawChange) (addResult AddResult, err error) {
 	var mode Mode
 
 	// resetting buffers
@@ -300,7 +328,7 @@ func (d *docTree) AddRawChanges(ctx context.Context, aclTree ACLTree, rawChanges
 	// checking if we have some changes with different snapshot and then rebuilding
 	for _, ch := range d.tmpChangesBuf {
 		if ch.SnapshotId != d.tree.RootId() && ch.SnapshotId != "" {
-			err = d.rebuildFromStorage(aclTree, d.tmpChangesBuf)
+			err = d.rebuildFromStorage(aclList, d.tmpChangesBuf)
 			if err != nil {
 				return AddResult{}, err
 			}
@@ -331,7 +359,7 @@ func (d *docTree) AddRawChanges(ctx context.Context, aclTree ACLTree, rawChanges
 	default:
 		// just rebuilding the state from start without reloading everything from tree storage
 		// as an optimization we could've started from current heads, but I didn't implement that
-		err = d.validator.ValidateTree(d.tree, aclTree)
+		err = d.validator.ValidateTree(d.tree, aclList)
 		if err != nil {
 			// rolling back
 			for _, ch := range d.tmpChangesBuf {
@@ -366,8 +394,7 @@ func (d *docTree) IterateFrom(s string, f func(change *Change) bool) {
 func (d *docTree) HasChange(s string) bool {
 	_, attachedExists := d.tree.attached[s]
 	_, unattachedExists := d.tree.unAttached[s]
-	_, invalidExists := d.tree.invalidChanges[s]
-	return attachedExists || unattachedExists || invalidExists
+	return attachedExists || unattachedExists
 }
 
 func (d *docTree) Heads() []string {
@@ -461,4 +488,32 @@ func (d *docTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 
 func (d *docTree) DebugDump() (string, error) {
 	return d.tree.Graph(NoOpDescriptionParser)
+}
+
+func commonSnapshotForTwoPaths(ourPath []string, theirPath []string) (string, error) {
+	var i int
+	var j int
+	log.With(zap.Strings("our path", ourPath), zap.Strings("their path", theirPath)).
+		Debug("finding common snapshot for two paths")
+OuterLoop:
+	// find starting point from the right
+	for i = len(ourPath) - 1; i >= 0; i-- {
+		for j = len(theirPath) - 1; j >= 0; j-- {
+			// most likely there would be only one comparison, because mostly the snapshot path will start from the root for nodes
+			if ourPath[i] == theirPath[j] {
+				break OuterLoop
+			}
+		}
+	}
+	if i < 0 || j < 0 {
+		return "", ErrNoCommonSnapshot
+	}
+	// find last common element of the sequence moving from right to left
+	for i >= 0 && j >= 0 {
+		if ourPath[i] == theirPath[j] {
+			i--
+			j--
+		}
+	}
+	return ourPath[i+1], nil
 }

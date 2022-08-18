@@ -1,4 +1,4 @@
-package tree
+package list
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
@@ -20,7 +20,7 @@ type ACLChangeBuilder interface {
 
 type aclChangeBuilder struct {
 	aclState *ACLState
-	tree     *Tree
+	list     ACLList
 	acc      *account.AccountData
 
 	aclData     *aclpb.ACLChangeACLData
@@ -33,9 +33,9 @@ func newACLChangeBuilder() *aclChangeBuilder {
 	return &aclChangeBuilder{}
 }
 
-func (c *aclChangeBuilder) Init(state *ACLState, tree *Tree, acc *account.AccountData) {
+func (c *aclChangeBuilder) Init(state *ACLState, list ACLList, acc *account.AccountData) {
 	c.aclState = state
-	c.tree = tree
+	c.list = list
 	c.acc = acc
 
 	c.aclData = &aclpb.ACLChangeACLData{}
@@ -93,30 +93,25 @@ func (c *aclChangeBuilder) UserAdd(identity string, encryptionKey encryptionkey.
 	return nil
 }
 
-func (c *aclChangeBuilder) BuildAndApply() (*Change, []byte, error) {
-	aclChange := &aclpb.Change{
-		TreeHeadIds:        c.tree.Heads(),
-		SnapshotBaseId:     c.tree.RootId(),
+func (c *aclChangeBuilder) BuildAndApply() (*Record, []byte, error) {
+	aclRecord := &aclpb.Record{
+		PrevId:             c.list.Last().Id,
 		CurrentReadKeyHash: c.readKeyHash,
 		Timestamp:          int64(time.Now().Nanosecond()),
 		Identity:           c.acc.Identity,
-	}
-	if c.aclState.currentReadKeyHash == 0 {
-		// setting IsSnapshot for initial change
-		aclChange.IsSnapshot = true
 	}
 
 	marshalledData, err := proto.Marshal(c.aclData)
 	if err != nil {
 		return nil, nil, err
 	}
-	aclChange.ChangesData = marshalledData
-	err = c.aclState.applyChange(aclChange)
+	aclRecord.Data = marshalledData
+	err = c.aclState.applyRecord(aclRecord)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	fullMarshalledChange, err := proto.Marshal(aclChange)
+	fullMarshalledChange, err := proto.Marshal(aclRecord)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -128,7 +123,7 @@ func (c *aclChangeBuilder) BuildAndApply() (*Change, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	ch := NewChange(id, aclChange)
+	ch := NewRecord(id, aclRecord)
 	ch.ParsedModel = c.aclData
 	ch.Sign = signature
 
