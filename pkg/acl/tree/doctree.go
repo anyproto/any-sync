@@ -184,7 +184,7 @@ func (d *docTree) AddContent(ctx context.Context, aclList list.ACLList, content 
 	state := aclList.ACLState()
 	change := &aclpb.Change{
 		TreeHeadIds:        d.tree.Heads(),
-		AclHeadId:          aclList.Last().Id,
+		AclHeadId:          aclList.Head().Id,
 		SnapshotBaseId:     d.tree.RootId(),
 		CurrentReadKeyHash: state.CurrentReadKeyHash(),
 		Timestamp:          int64(time.Now().Nanosecond()),

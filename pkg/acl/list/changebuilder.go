@@ -95,7 +95,7 @@ func (c *aclChangeBuilder) UserAdd(identity string, encryptionKey encryptionkey.
 
 func (c *aclChangeBuilder) BuildAndApply() (*Record, []byte, error) {
 	aclRecord := &aclpb.Record{
-		PrevId:             c.list.Last().Id,
+		PrevId:             c.list.Head().Id,
 		CurrentReadKeyHash: c.readKeyHash,
 		Timestamp:          int64(time.Now().Nanosecond()),
 		Identity:           c.acc.Identity,

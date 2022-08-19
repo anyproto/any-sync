@@ -1,4 +1,4 @@
-package treestoragebuilder
+package acllistbuilder
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"

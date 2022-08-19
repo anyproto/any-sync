@@ -1,4 +1,4 @@
-package treestoragebuilder
+package acllistbuilder
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 )
 
 func Test_YamlParse(t *testing.T) {
-	tb, _ := NewTreeStorageBuilderWithTestName("userjoinexampleupdate.yml")
+	tb, _ := NewACLListStorageBuilderWithTestName("userjoinexampleupdate.yml")
 	gr, _ := tb.Graph()
 	fmt.Println(gr)
 }

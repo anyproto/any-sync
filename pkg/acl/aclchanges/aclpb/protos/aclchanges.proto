@@ -134,3 +134,15 @@ message Record {
   uint64 currentReadKeyHash = 4;
   int64 timestamp = 5;
 }
+
+message Header {
+  string firstId = 1;
+  string aclListId = 2;
+  string workspaceId = 3;
+  DocType docType = 4;
+
+  enum DocType {
+    ACL = 0;
+    DocTree = 1;
+  }
+}
