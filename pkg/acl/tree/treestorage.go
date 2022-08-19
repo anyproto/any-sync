@@ -61,7 +61,7 @@ func CreateNewTreeStorage(
 
 	state := aclList.ACLState()
 	change := &aclpb.Change{
-		AclHeadId:          aclList.Last().Id,
+		AclHeadId:          aclList.Head().Id,
 		CurrentReadKeyHash: state.CurrentReadKeyHash(),
 		Timestamp:          int64(time.Now().Nanosecond()),
 		Identity:           acc.Identity,

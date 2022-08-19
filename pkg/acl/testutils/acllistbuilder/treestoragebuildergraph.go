@@ -2,10 +2,10 @@
 // +build !linux,!darwin android ios nographviz
 // +build !amd64
 
-package treestoragebuilder
+package acllistbuilder
 
 import "fmt"
 
-func (t *TreeStorageBuilder) Graph() (string, error) {
+func (t *ACLListStorageBuilder) Graph() (string, error) {
 	return "", fmt.Errorf("building graphs is not supported")
 }

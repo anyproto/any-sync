@@ -1,27 +1,9 @@
-package treestoragebuilder
-
-type TreeDescription struct {
-	Author string `yaml:"author"`
-}
+package acllistbuilder
 
 type Keys struct {
 	Enc  []string `yaml:"Enc"`
 	Sign []string `yaml:"Sign"`
 	Read []string `yaml:"Read"`
-}
-
-type ACLSnapshot struct {
-	UserStates []struct {
-		Identity          string   `yaml:"identity"`
-		EncryptionKey     string   `yaml:"encryptionKey"`
-		EncryptedReadKeys []string `yaml:"encryptedReadKeys"`
-		Permissions       string   `yaml:"permission"`
-		IsConfirmed       bool     `yaml:"isConfirmed"`
-	} `yaml:"userStates"`
-}
-
-type PlainTextSnapshot struct {
-	Text string `yaml:"text"`
 }
 
 type ACLChange struct {
@@ -65,28 +47,9 @@ type ACLChange struct {
 	}
 }
 
-type PlainTextChange struct {
-	TextAppend *struct {
-		Text string `yaml:"text"`
-	} `yaml:"textAppend"`
-}
-
-type GraphNode struct {
-	Id           string   `yaml:"id"`
-	BaseSnapshot string   `yaml:"baseSnapshot"`
-	AclSnapshot  string   `yaml:"aclSnapshot"`
-	ACLHeads     []string `yaml:"aclHeads"`
-	TreeHeads    []string `yaml:"treeHeads"`
-}
-
-type Change struct {
-	Id       string `yaml:"id"`
-	Identity string `yaml:"identity"`
-
-	AclSnapshot *ACLSnapshot       `yaml:"aclSnapshot"`
-	Snapshot    *PlainTextSnapshot `yaml:"snapshot"`
-	AclChanges  []*ACLChange       `yaml:"aclChanges"`
-	Changes     []*PlainTextChange `yaml:"changes"`
+type Record struct {
+	Identity   string       `yaml:"identity"`
+	AclChanges []*ACLChange `yaml:"aclChanges"`
 
 	ReadKey string `yaml:"readKey"`
 }
@@ -96,22 +59,8 @@ type Header struct {
 	IsWorkspace   bool   `yaml:"isWorkspace"`
 }
 
-type Update struct {
-	UseCase string       `yaml:"useCase"`
-	Changes []*Change    `yaml:"changes"`
-	Graph   []*GraphNode `yaml:"graph"`
-}
-
-type YMLTree struct {
-	Description *TreeDescription `yaml:"tree"`
-	Changes     []*Change        `yaml:"changes"`
-	Updates     []*Update        `yaml:"updates"`
+type YMLList struct {
+	Records []*Record `yaml:"records"`
 
 	Keys Keys `yaml:"keys"`
-
-	Graph []*GraphNode `yaml:"graph"`
-
-	Heads   []string `yaml:"heads"`
-	Orphans []string `yaml:"orphans"`
-	Header  *Header  `yaml:"header"`
 }
