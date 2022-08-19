@@ -5,7 +5,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/gogo/protobuf/proto"
 	"time"
@@ -96,7 +95,7 @@ func CreateNewTreeStorage(
 		Signature: signature,
 		Id:        changeId,
 	}
-	header, treeId, err := createTreeHeaderAndId(rawChange, treepb.TreeHeader_DocTree, aclList.ID())
+	header, treeId, err := createTreeHeaderAndId(rawChange, aclpb.Header_DocTree, aclList.ID())
 	if err != nil {
 		return nil, err
 	}
@@ -113,11 +112,11 @@ func CreateNewTreeStorage(
 	return thr, nil
 }
 
-func createTreeHeaderAndId(change *aclpb.RawChange, treeType treepb.TreeHeaderTreeType, aclTreeId string) (*treepb.TreeHeader, string, error) {
-	header := &treepb.TreeHeader{
-		FirstChangeId: change.Id,
-		Type:          treeType,
-		AclTreeId:     aclTreeId,
+func createTreeHeaderAndId(change *aclpb.RawChange, treeType aclpb.HeaderDocType, aclListId string) (*aclpb.Header, string, error) {
+	header := &aclpb.Header{
+		FirstId:   change.Id,
+		DocType:   treeType,
+		AclListId: aclListId,
 	}
 	marshalledHeader, err := proto.Marshal(header)
 	if err != nil {
