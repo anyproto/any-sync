@@ -22,6 +22,13 @@ var ErrFailedToDecrypt = errors.New("failed to decrypt key")
 var ErrUserRemoved = errors.New("user was removed from the document")
 var ErrDocumentForbidden = errors.New("your user was forbidden access to the document")
 var ErrUserAlreadyExists = errors.New("user already exists")
+var ErrNoSuchRecord = errors.New("no such record")
+var ErrInsufficientPermissions = errors.New("insufficient permissions")
+
+type UserPermissionPair struct {
+	Identity   string
+	Permission aclpb.ACLChangeUserPermissions
+}
 
 type ACLState struct {
 	currentReadKeyHash   uint64
@@ -31,6 +38,7 @@ type ACLState struct {
 	signingPubKeyDecoder keys.Decoder
 	encryptionKey        encryptionkey.PrivKey
 	identity             string
+	permissionsAtRecord  map[string][]UserPermissionPair
 }
 
 func newACLStateWithIdentity(
@@ -44,14 +52,16 @@ func newACLStateWithIdentity(
 		userStates:           make(map[string]*aclpb.ACLChangeUserState),
 		userInvites:          make(map[string]*aclpb.ACLChangeUserInvite),
 		signingPubKeyDecoder: decoder,
+		permissionsAtRecord:  make(map[string][]UserPermissionPair),
 	}
 }
 
 func newACLState() *ACLState {
 	return &ACLState{
-		userReadKeys: make(map[uint64]*symmetric.Key),
-		userStates:   make(map[string]*aclpb.ACLChangeUserState),
-		userInvites:  make(map[string]*aclpb.ACLChangeUserInvite),
+		userReadKeys:        make(map[uint64]*symmetric.Key),
+		userStates:          make(map[string]*aclpb.ACLChangeUserState),
+		userInvites:         make(map[string]*aclpb.ACLChangeUserInvite),
+		permissionsAtRecord: make(map[string][]UserPermissionPair),
 	}
 }
 
@@ -63,7 +73,22 @@ func (st *ACLState) UserReadKeys() map[uint64]*symmetric.Key {
 	return st.userReadKeys
 }
 
+func (st *ACLState) PermissionsAtRecord(id string, identity string) (UserPermissionPair, error) {
+	permissions, ok := st.permissionsAtRecord[id]
+	if !ok {
+		return UserPermissionPair{}, ErrNoSuchRecord
+	}
+
+	for _, perm := range permissions {
+		if perm.Identity == identity {
+			return perm, nil
+		}
+	}
+	return UserPermissionPair{}, ErrNoSuchUser
+}
+
 func (st *ACLState) applyRecord(record *aclpb.Record) (err error) {
+	// TODO: this should be probably changed
 	aclData := &aclpb.ACLChangeACLData{}
 
 	err = proto.Unmarshal(record.Data, aclData)
@@ -95,7 +120,21 @@ func (st *ACLState) applyChangeAndUpdate(recordWrapper *Record) (err error) {
 		recordWrapper.ParsedModel = aclData
 	}
 
-	return st.applyChangeData(aclData, recordWrapper.Content.CurrentReadKeyHash, recordWrapper.Content.Identity)
+	err = st.applyChangeData(aclData, recordWrapper.Content.CurrentReadKeyHash, recordWrapper.Content.Identity)
+	if err != nil {
+		return err
+	}
+
+	var permissions []UserPermissionPair
+	for _, state := range st.userStates {
+		permission := UserPermissionPair{
+			Identity:   state.Identity,
+			Permission: state.Permissions,
+		}
+		permissions = append(permissions, permission)
+	}
+	st.permissionsAtRecord[recordWrapper.Id] = permissions
+	return nil
 }
 
 func (st *ACLState) applyChangeData(changeData *aclpb.ACLChangeACLData, hash uint64, identity string) (err error) {

@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
@@ -92,7 +93,7 @@ func (s *service) loadTree(ctx context.Context, id string) (ocache.Object, error
 
 	switch header.DocType {
 	case aclpb.Header_ACL:
-		return tree.BuildACLTreeWithIdentity(t, s.account.Account(), nil)
+		return list.BuildACLListWithIdentity(acc)
 	case aclpb.Header_DocTree:
 		break
 	default:
