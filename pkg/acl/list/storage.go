@@ -6,7 +6,7 @@ import (
 )
 
 type Storage interface {
-	ID() string
+	ID() (string, error)
 	Head() (*aclpb.RawRecord, error)
 	Header() (*aclpb.Header, error)
 	GetRecord(ctx context.Context, id string) (*aclpb.RawRecord, error)

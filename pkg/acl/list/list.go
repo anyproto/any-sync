@@ -1,8 +1,12 @@
 package list
 
 import (
+	"context"
+	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
+	"sync"
 )
 
 type IterFunc = func(record *Record) (IsContinue bool)
@@ -11,7 +15,7 @@ type ACLList interface {
 	tree.RWLocker
 	ID() string
 	Header() *aclpb.Header
-	ACLState() ACLState
+	ACLState() *ACLState
 	IsAfter(first string, second string) (bool, error)
 	Head() *Record
 	Get(id string) (*Record, error)
@@ -19,43 +23,123 @@ type ACLList interface {
 	IterateFrom(startId string, iterFunc IterFunc)
 }
 
-//func (t *ACLListStorageBuilder) IsAfter(first string, second string) (bool, error) {
-//	firstRec, okFirst := t.indexes[first]
-//	secondRec, okSecond := t.indexes[second]
-//	if !okFirst || !okSecond {
-//		return false, fmt.Errorf("not all entries are there: first (%b), second (%b)", okFirst, okSecond)
-//	}
-//	return firstRec > secondRec, nil
-//}
-//
-//func (t *ACLListStorageBuilder) Head() *list.Record {
-//	return t.records[len(t.records)-1]
-//}
-//
-//func (t *ACLListStorageBuilder) Get(id string) (*list.Record, error) {
-//	recIdx, ok := t.indexes[id]
-//	if !ok {
-//		return nil, fmt.Errorf("no such record")
-//	}
-//	return t.records[recIdx], nil
-//}
-//
-//func (t *ACLListStorageBuilder) Iterate(iterFunc list.IterFunc) {
-//	for _, rec := range t.records {
-//		if !iterFunc(rec) {
-//			return
-//		}
-//	}
-//}
-//
-//func (t *ACLListStorageBuilder) IterateFrom(startId string, iterFunc list.IterFunc) {
-//	recIdx, ok := t.indexes[startId]
-//	if !ok {
-//		return
-//	}
-//	for i := recIdx; i < len(t.records); i++ {
-//		if !iterFunc(t.records[i]) {
-//			return
-//		}
-//	}
-//}
+type aclList struct {
+	header  *aclpb.Header
+	records []*Record
+	indexes map[string]int
+	id      string
+
+	builder  *aclStateBuilder
+	aclState *ACLState
+
+	sync.RWMutex
+}
+
+func BuildACLListWithIdentity(acc *account.AccountData, storage Storage) (ACLList, error) {
+	builder := newACLStateBuilderWithIdentity(acc.Decoder, acc)
+	header, err := storage.Header()
+	if err != nil {
+		return nil, err
+	}
+
+	rawRecord, err := storage.Head()
+	if err != nil {
+		return nil, err
+	}
+
+	record, err := NewFromRawRecord(rawRecord)
+	if err != nil {
+		return nil, err
+	}
+	records := []*Record{record}
+
+	for record.Content.PrevId != "" {
+		rawRecord, err = storage.GetRecord(context.Background(), record.Content.PrevId)
+		if err != nil {
+			return nil, err
+		}
+		record, err = NewFromRawRecord(rawRecord)
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, record)
+	}
+
+	indexes := make(map[string]int)
+	for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
+		records[i], records[j] = records[j], records[i]
+		indexes[records[i].Id] = i
+		indexes[records[j].Id] = j
+	}
+	// adding missed index if needed
+	if len(records)%2 != 0 {
+		indexes[records[len(records)/2].Id] = len(records) / 2
+	}
+
+	state, err := builder.Build(records)
+	if err != nil {
+		return nil, err
+	}
+
+	return &aclList{
+		header:   header,
+		records:  records,
+		indexes:  indexes,
+		builder:  builder,
+		aclState: state,
+		RWMutex:  sync.RWMutex{},
+	}, nil
+}
+
+func (a *aclList) ID() string {
+	return a.id
+}
+
+func (a *aclList) Header() *aclpb.Header {
+	return a.header
+}
+
+func (a *aclList) ACLState() *ACLState {
+	return a.aclState
+}
+
+func (a *aclList) IsAfter(first string, second string) (bool, error) {
+	firstRec, okFirst := a.indexes[first]
+	secondRec, okSecond := a.indexes[second]
+	if !okFirst || !okSecond {
+		return false, fmt.Errorf("not all entries are there: first (%b), second (%b)", okFirst, okSecond)
+	}
+	return firstRec > secondRec, nil
+}
+
+func (a *aclList) Head() *Record {
+	return a.records[len(a.records)-1]
+}
+
+func (a *aclList) Get(id string) (*Record, error) {
+	recIdx, ok := a.indexes[id]
+	if !ok {
+		return nil, fmt.Errorf("no such record")
+	}
+	return a.records[recIdx], nil
+}
+
+func (a *aclList) Iterate(iterFunc IterFunc) {
+	for _, rec := range a.records {
+		if !iterFunc(rec) {
+			return
+		}
+	}
+}
+
+func (a *aclList) IterateFrom(startId string, iterFunc IterFunc) {
+	recIdx, ok := a.indexes[startId]
+	if !ok {
+		return
+	}
+	for i := recIdx; i < len(a.records); i++ {
+		if !iterFunc(a.records[i]) {
+			return
+		}
+	}
+}
