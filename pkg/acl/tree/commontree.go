@@ -3,12 +3,11 @@ package tree
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 )
 
 type CommonTree interface {
 	ID() string
-	Header() *treepb.TreeHeader
+	Header() *aclpb.Header
 	Heads() []string
 	Root() *Change
 	Iterate(func(change *Change) bool)

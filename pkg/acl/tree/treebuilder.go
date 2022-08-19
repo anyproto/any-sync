@@ -117,7 +117,7 @@ func (tb *treeBuilder) dfsFromStart(heads []string) (buf []*Change, root *Change
 		return nil, nil, err
 	}
 	for _, r := range possibleRoots {
-		if r.Id == header.FirstChangeId {
+		if r.Id == header.FirstId {
 			return buf, r, nil
 		}
 	}
@@ -177,7 +177,7 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
-	change, err := tb.treeStorage.GetChange(ctx, id)
+	change, err := tb.treeStorage.GetRawChange(ctx, id)
 	if err != nil {
 		return nil, err
 	}

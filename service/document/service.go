@@ -195,7 +195,7 @@ func (s *service) CreateDocumentTree(ctx context.Context, aclTreeId string, text
 			return err
 		}
 
-		id, err = doc.TreeID()
+		id, err = doc.ID()
 		if err != nil {
 			return err
 		}
@@ -207,7 +207,7 @@ func (s *service) CreateDocumentTree(ctx context.Context, aclTreeId string, text
 
 		heads = []string{header.FirstChangeId}
 		snapshotPath = []string{header.FirstChangeId}
-		ch, err = doc.GetChange(ctx, header.FirstChangeId)
+		ch, err = doc.GetRawChange(ctx, header.FirstChangeId)
 		if err != nil {
 			return err
 		}

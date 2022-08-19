@@ -7,7 +7,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
@@ -61,7 +60,7 @@ type docTree struct {
 	updateListener TreeUpdateListener
 
 	id     string
-	header *treepb.TreeHeader
+	header *aclpb.Header
 	tree   *Tree
 
 	treeBuilder *treeBuilder
@@ -96,7 +95,7 @@ func BuildDocTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountDat
 	if err != nil {
 		return nil, err
 	}
-	docTree.id, err = t.TreeID()
+	docTree.id, err = t.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +130,7 @@ func BuildDocTree(t treestorage.TreeStorage, decoder keys.Decoder, listener Tree
 	if err != nil {
 		return nil, err
 	}
-	docTree.id, err = t.TreeID()
+	docTree.id, err = t.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +161,7 @@ func (d *docTree) ID() string {
 	return d.id
 }
 
-func (d *docTree) Header() *treepb.TreeHeader {
+func (d *docTree) Header() *aclpb.Header {
 	return d.header
 }
 
@@ -448,7 +447,7 @@ func (d *docTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 	var rawChanges []*aclpb.RawChange
 	// using custom load function to skip verification step and save raw changes
 	load := func(id string) (*Change, error) {
-		raw, err := d.treeStorage.GetChange(context.Background(), id)
+		raw, err := d.treeStorage.GetRawChange(context.Background(), id)
 		if err != nil {
 			return nil, err
 		}

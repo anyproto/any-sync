@@ -10,7 +10,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"io/ioutil"
 	"path"
-	"sync"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -25,7 +24,6 @@ type ACLListStorageBuilder struct {
 	keychain   *Keychain
 	header     *aclpb.Header
 	id         string
-	sync.RWMutex
 }
 
 func NewACLListStorageBuilder(keychain *Keychain) *ACLListStorageBuilder {
