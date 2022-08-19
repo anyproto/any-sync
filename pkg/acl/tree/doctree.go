@@ -10,6 +10,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"sync"
@@ -130,6 +131,22 @@ func BuildDocTree(t treestorage.TreeStorage, decoder keys.Decoder, listener Tree
 	if err != nil {
 		return nil, err
 	}
+	storageHeads, err := t.Heads()
+	if err != nil {
+		return nil, err
+	}
+	// comparing rebuilt heads with heads in storage
+	// in theory it can happen that we didn't set heads because the process has crashed
+	// therefore we want to set them later
+	if !slice.UnsortedEquals(storageHeads, docTree.tree.Heads()) {
+		log.With(zap.Strings("storage", storageHeads), zap.Strings("rebuilt", docTree.tree.Heads())).
+			Errorf("the heads in storage and tree are different")
+		err = t.SetHeads(docTree.tree.Heads())
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	docTree.id, err = t.ID()
 	if err != nil {
 		return nil, err
@@ -324,11 +341,22 @@ func (d *docTree) AddRawChanges(ctx context.Context, aclList list.ACLList, rawCh
 		return added
 	}
 
+	rollback := func() {
+		for _, ch := range d.tmpChangesBuf {
+			if _, exists := d.tree.attached[ch.Id]; exists {
+				delete(d.tree.attached, ch.Id)
+			} else if _, exists := d.tree.unAttached[ch.Id]; exists {
+				delete(d.tree.unAttached, ch.Id)
+			}
+		}
+	}
+
 	// checking if we have some changes with different snapshot and then rebuilding
 	for _, ch := range d.tmpChangesBuf {
 		if ch.SnapshotId != d.tree.RootId() && ch.SnapshotId != "" {
 			err = d.rebuildFromStorage(aclList, d.tmpChangesBuf)
 			if err != nil {
+				rollback()
 				return AddResult{}, err
 			}
 
@@ -360,14 +388,7 @@ func (d *docTree) AddRawChanges(ctx context.Context, aclList list.ACLList, rawCh
 		// as an optimization we could've started from current heads, but I didn't implement that
 		err = d.validator.ValidateTree(d.tree, aclList)
 		if err != nil {
-			// rolling back
-			for _, ch := range d.tmpChangesBuf {
-				if _, exists := d.tree.attached[ch.Id]; exists {
-					delete(d.tree.attached, ch.Id)
-				} else if _, exists := d.tree.unAttached[ch.Id]; exists {
-					delete(d.tree.unAttached, ch.Id)
-				}
-			}
+			rollback()
 			return AddResult{}, ErrHasInvalidChanges
 		}
 
@@ -444,6 +465,7 @@ func (d *docTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 			return nil, err
 		}
 	}
+	// TODO: if the snapshot is in the tree we probably can skip going to the DB
 	var rawChanges []*aclpb.RawChange
 	// using custom load function to skip verification step and save raw changes
 	load := func(id string) (*Change, error) {

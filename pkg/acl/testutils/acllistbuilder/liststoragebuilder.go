@@ -101,8 +101,8 @@ func (t *ACLListStorageBuilder) AddRecord(ctx context.Context, rec *aclpb.Record
 	panic("implement me")
 }
 
-func (t *ACLListStorageBuilder) ID() string {
-	return t.id
+func (t *ACLListStorageBuilder) ID() (string, error) {
+	return t.id, nil
 }
 
 func (t *ACLListStorageBuilder) GetKeychain() *Keychain {

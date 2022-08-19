@@ -7,7 +7,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/storage"
@@ -23,7 +22,7 @@ var log = logger.NewNamed("treecache")
 
 type Service interface {
 	Do(ctx context.Context, treeId string, f TreeFunc) error
-	Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange, f TreeFunc) error
+	Add(ctx context.Context, treeId string, header *aclpb.Header, changes []*aclpb.RawChange, f TreeFunc) error
 }
 
 type service struct {
@@ -91,10 +90,10 @@ func (s *service) loadTree(ctx context.Context, id string) (ocache.Object, error
 		return nil, err
 	}
 
-	switch header.Type {
-	case treepb.TreeHeader_ACLTree:
+	switch header.DocType {
+	case aclpb.Header_ACL:
 		return tree.BuildACLTreeWithIdentity(t, s.account.Account(), nil)
-	case treepb.TreeHeader_DocTree:
+	case aclpb.Header_DocTree:
 		break
 	default:
 		return nil, fmt.Errorf("incorrect type")

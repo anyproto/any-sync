@@ -7,7 +7,6 @@ import (
 )
 
 type aclStateBuilder struct {
-	log      ACLList
 	identity string
 	key      encryptionkey.PrivKey
 	decoder  keys.Decoder
@@ -25,12 +24,7 @@ func newACLStateBuilder() *aclStateBuilder {
 	return &aclStateBuilder{}
 }
 
-func (sb *aclStateBuilder) Init(aclLog ACLList) error {
-	sb.log = aclLog
-	return nil
-}
-
-func (sb *aclStateBuilder) Build() (*ACLState, error) {
+func (sb *aclStateBuilder) Build(records []*Record) (*ACLState, error) {
 	var (
 		err   error
 		state *ACLState
@@ -41,11 +35,12 @@ func (sb *aclStateBuilder) Build() (*ACLState, error) {
 	} else {
 		state = newACLState()
 	}
-
-	sb.log.Iterate(func(c *Record) (isContinue bool) {
-		err = state.applyChangeAndUpdate(c)
-		return err == nil
-	})
+	for _, rec := range records {
+		err = state.applyChangeAndUpdate(rec)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return state, err
 }
