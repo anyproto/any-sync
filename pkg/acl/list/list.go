@@ -6,14 +6,19 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 	"sync"
 )
 
 type IterFunc = func(record *Record) (IsContinue bool)
 
+type RWLocker interface {
+	sync.Locker
+	RLock()
+	RUnlock()
+}
+
 type ACLList interface {
-	tree.RWLocker
+	RWLocker
 	ID() string
 	Header() *aclpb.Header
 	ACLState() *ACLState
