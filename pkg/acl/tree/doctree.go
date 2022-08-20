@@ -238,7 +238,10 @@ func (d *docTree) AddContent(ctx context.Context, aclList list.ACLList, content 
 		// clearing tree, because we already fixed everything in the last snapshot
 		d.tree = &Tree{}
 	}
-	d.tree.AddFast(ch) // TODO: Add head
+	err = d.tree.AddMergedHead(ch)
+	if err != nil {
+		panic("error in adding head")
+	}
 	rawCh := &aclpb.RawChange{
 		Payload:   fullMarshalledChange,
 		Signature: ch.Signature(),

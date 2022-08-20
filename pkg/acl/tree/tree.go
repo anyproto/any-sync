@@ -56,6 +56,31 @@ func (t *Tree) AddFast(changes ...*Change) {
 	t.updateHeads()
 }
 
+func (t *Tree) AddMergedHead(c *Change) error {
+	// check that it was not inserted previously
+	if _, ok := t.attached[c.Id]; ok {
+		return fmt.Errorf("change already exists")
+	} else if _, ok := t.unAttached[c.Id]; ok {
+		return fmt.Errorf("change already exists")
+	}
+	t.add(c)
+
+	// check that it was attached after adding
+	if _, ok := t.attached[c.Id]; !ok {
+		return fmt.Errorf("change is not attached")
+	}
+
+	// check that previous heads have new change as next
+	for _, prevHead := range t.headIds {
+		head := t.attached[prevHead]
+		if len(head.Next) != 1 || head.Next[0].Id != c.Id {
+			return fmt.Errorf("this is not a new head")
+		}
+	}
+	t.headIds = []string{c.Id}
+	return nil
+}
+
 func (t *Tree) Add(changes ...*Change) (mode Mode) {
 	var beforeHeadIds = t.headIds
 	var attached bool
@@ -263,7 +288,7 @@ func (t *Tree) dfs(startChange string) (uniqMap map[string]*Change) {
 }
 
 func (t *Tree) updateHeads() {
-	var newHeadIds, newMetaHeadIds []string
+	var newHeadIds []string
 	t.iterate(t.root, func(c *Change) (isContinue bool) {
 		if len(c.Next) == 0 {
 			newHeadIds = append(newHeadIds, c.Id)
@@ -271,9 +296,7 @@ func (t *Tree) updateHeads() {
 		return true
 	})
 	t.headIds = newHeadIds
-	t.metaHeadIds = newMetaHeadIds
 	sort.Strings(t.headIds)
-	sort.Strings(t.metaHeadIds)
 }
 
 func (t *Tree) iterate(start *Change, f func(c *Change) (isContinue bool)) {
