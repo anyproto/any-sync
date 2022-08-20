@@ -15,7 +15,6 @@ const (
 	Nothing
 )
 
-// TODO: consider abstracting into separate package with iterator, remove
 type Tree struct {
 	root        *Change
 	headIds     []string
@@ -155,7 +154,6 @@ func (t *Tree) add(c *Change) (attached bool) {
 	}
 	// attaching only if all prev ids are attached
 	attached = true
-	// the logic below is the following
 	for _, pid := range c.PreviousIds {
 		if _, ok := t.attached[pid]; ok {
 			continue
@@ -210,7 +208,7 @@ func (t *Tree) attach(c *Change, newEl bool) {
 					break
 				}
 			}
-			prev.Next = append(prev.Next[:insertIdx+1], prev.Next[:insertIdx]...)
+			prev.Next = append(prev.Next[:insertIdx+1], prev.Next[insertIdx:]...)
 			prev.Next[insertIdx] = c
 		}
 	}
