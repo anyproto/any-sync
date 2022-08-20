@@ -19,7 +19,6 @@ type ChangeContent struct {
 // Change is an abstract type for all types of changes
 type Change struct {
 	Next            []*Change
-	Unattached      []*Change
 	PreviousIds     []string
 	Id              string
 	SnapshotId      string

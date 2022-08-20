@@ -33,10 +33,6 @@ type Tree struct {
 	duplicateEvents int
 }
 
-func (t *Tree) GetUnattachedChanges(changes ...*Change) []*Change {
-	return nil
-}
-
 func (t *Tree) RootId() string {
 	if t.root != nil {
 		return t.root.Id
@@ -111,6 +107,7 @@ func (t *Tree) RemoveInvalidChange(id string) {
 		t.invalidChanges[top] = struct{}{}
 		if rem, exists = t.unAttached[top]; exists {
 			delete(t.unAttached, top)
+			// TODO: delete waitlist, this can only help for memory/performance
 		} else if rem, exists = t.attached[top]; exists {
 			// remove from all prev changes
 			for _, id := range rem.PreviousIds {
@@ -127,9 +124,6 @@ func (t *Tree) RemoveInvalidChange(id string) {
 				}
 			}
 			delete(t.attached, top)
-		}
-		for _, el := range rem.Unattached {
-			stack = append(stack, el.Id)
 		}
 		for _, el := range rem.Next {
 			stack = append(stack, el.Id)
@@ -161,16 +155,13 @@ func (t *Tree) add(c *Change) (attached bool) {
 	}
 	// attaching only if all prev ids are attached
 	attached = true
+	// the logic below is the following
 	for _, pid := range c.PreviousIds {
-		if prev, ok := t.attached[pid]; ok {
-			prev.Unattached = append(prev.Unattached, c)
+		if _, ok := t.attached[pid]; ok {
 			continue
 		}
 		attached = false
-		if prev, ok := t.unAttached[pid]; ok {
-			prev.Unattached = append(prev.Unattached, c)
-			continue
-		}
+		// updating wait list for either unseen or unAttached changes
 		wl := t.waitList[pid]
 		wl = append(wl, c.Id)
 		t.waitList[pid] = wl
@@ -178,11 +169,6 @@ func (t *Tree) add(c *Change) (attached bool) {
 	if attached {
 		t.attach(c, true)
 	} else {
-		// clearing wait list
-		for _, wid := range t.waitList[c.Id] {
-			c.Unattached = append(c.Unattached, t.unAttached[wid])
-		}
-		delete(t.waitList, c.Id)
 		t.unAttached[c.Id] = c
 	}
 	return
@@ -196,6 +182,7 @@ func (t *Tree) canAttach(c *Change) (attach bool) {
 	for _, id := range c.PreviousIds {
 		if _, exists := t.attached[id]; !exists {
 			attach = false
+			break
 		}
 	}
 	return
@@ -209,36 +196,39 @@ func (t *Tree) attach(c *Change, newEl bool) {
 
 	// add next to all prev changes
 	for _, id := range c.PreviousIds {
-		// prev id must be attached if we attach this id
+		// prev id must already be attached if we attach this id, so we don't need to check if it exists
 		prev := t.attached[id]
-		prev.Next = append(prev.Next, c)
-		if len(prev.Next) > 1 {
-			sort.Sort(sortChanges(prev.Next))
-		}
-		for i, next := range prev.Unattached {
-			if next.Id == c.Id {
-				prev.Unattached[i] = nil
-				prev.Unattached = append(prev.Unattached[:i], prev.Unattached[i+1:]...)
-				break
+		// appending c to next changes of all previous changes
+		if len(prev.Next) == 0 || prev.Next[len(prev.Next)-1].Id <= c.Id {
+			prev.Next = append(prev.Next, c)
+		} else {
+			// inserting in correct position, before the change which is greater or equal
+			insertIdx := 0
+			for idx, el := range prev.Next {
+				if el.Id >= c.Id {
+					insertIdx = idx
+					break
+				}
 			}
+			prev.Next = append(prev.Next[:insertIdx+1], prev.Next[:insertIdx]...)
+			prev.Next[insertIdx] = c
 		}
 	}
+	// TODO: as a future optimization we can actually sort next later after we finished building the tree
 
 	// clearing wait list
 	if waitIds, ok := t.waitList[c.Id]; ok {
 		for _, wid := range waitIds {
+			// next can only be in unAttached, because if next is attached then previous (we) are attached
+			// which is obviously not true, because we are attaching previous only now
 			next := t.unAttached[wid]
 			if t.canAttach(next) {
 				t.attach(next, false)
 			}
+			// if we can't attach next that means that some other change will trigger attachment later,
+			// so we don't care about those changes
 		}
 		delete(t.waitList, c.Id)
-	}
-
-	for _, next := range c.Unattached {
-		if t.canAttach(next) {
-			t.attach(next, false)
-		}
 	}
 }
 
@@ -370,18 +360,4 @@ func (t *Tree) String() string {
 
 func (t *Tree) Get(id string) *Change {
 	return t.attached[id]
-}
-
-type sortChanges []*Change
-
-func (s sortChanges) Len() int {
-	return len(s)
-}
-
-func (s sortChanges) Less(i, j int) bool {
-	return s[i].Id < s[j].Id
-}
-
-func (s sortChanges) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
 }
