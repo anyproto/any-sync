@@ -7,9 +7,8 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/testchangepb"
+	testchanges "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/proto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/storage"
@@ -35,7 +34,6 @@ type service struct {
 
 type Service interface {
 	UpdateDocumentTree(ctx context.Context, id, text string) error
-	CreateACLTree(ctx context.Context) (id string, err error)
 	CreateDocumentTree(ctx context.Context, aclTreeId string, text string) (id string, err error)
 }
 
@@ -60,7 +58,7 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
-	return nil
+	return s.importACLList(ctx)
 }
 
 func (s *service) Close(ctx context.Context) (err error) {
@@ -70,7 +68,7 @@ func (s *service) Close(ctx context.Context) (err error) {
 func (s *service) UpdateDocumentTree(ctx context.Context, id, text string) (err error) {
 	var (
 		ch           *aclpb.RawChange
-		header       *treepb.TreeHeader
+		header       *aclpb.Header
 		snapshotPath []string
 		heads        []string
 	)
@@ -85,8 +83,8 @@ func (s *service) UpdateDocumentTree(ctx context.Context, id, text string) (err 
 
 		docTree.Lock()
 		defer docTree.Unlock()
-		err = s.treeCache.Do(ctx, docTree.Header().AclTreeId, func(obj interface{}) error {
-			aclTree := obj.(tree.ACLTree)
+		err = s.treeCache.Do(ctx, docTree.Header().AclListId, func(obj interface{}) error {
+			aclTree := obj.(list.ACLList)
 			aclTree.RLock()
 			defer aclTree.RUnlock()
 
@@ -123,69 +121,20 @@ func (s *service) UpdateDocumentTree(ctx context.Context, id, text string) (err 
 	}, header, id))
 }
 
-func (s *service) CreateACLTree(ctx context.Context) (id string, err error) {
-	acc := s.account.Account()
-	var (
-		ch           *aclpb.RawChange
-		header       *treepb.TreeHeader
-		snapshotPath []string
-		heads        []string
-	)
-
-	t, err := tree.CreateNewTreeStorageWithACL(acc, func(builder list.ACLChangeBuilder) error {
-		err := builder.UserAdd(acc.Identity, acc.EncKey.GetPublic(), aclpb.ACLChange_Admin)
-		if err != nil {
-			return err
-		}
-		// adding all predefined nodes to the document as admins
-		for _, n := range s.nodes {
-			err = builder.UserAdd(n.SigningKeyString, n.EncryptionKey, aclpb.ACLChange_Admin)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	}, s.storage.CreateTreeStorage)
-
-	id, err = t.TreeID()
-	if err != nil {
-		return "", err
-	}
-
-	header, err = t.Header()
-	if err != nil {
-		return "", err
-	}
-
-	heads = []string{header.FirstChangeId}
-	snapshotPath = []string{header.FirstChangeId}
-	ch, err = t.GetChange(ctx, header.FirstChangeId)
-	if err != nil {
-		return "", err
-	}
-
-	if err != nil {
-		return "", err
-	}
-
-	err = s.messageService.SendToSpaceAsync("", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
-		Heads:        heads,
-		Changes:      []*aclpb.RawChange{ch},
-		SnapshotPath: snapshotPath,
-	}, header, id))
-	return id, nil
+func (s *service) importACLList(ctx context.Context) (err error) {
+	panic("not implemented")
 }
 
-func (s *service) CreateDocumentTree(ctx context.Context, aclTreeId string, text string) (id string, err error) {
+func (s *service) CreateDocumentTree(ctx context.Context, aclListId string, text string) (id string, err error) {
 	acc := s.account.Account()
 	var (
 		ch           *aclpb.RawChange
-		header       *treepb.TreeHeader
+		header       *aclpb.Header
 		snapshotPath []string
 		heads        []string
 	)
-	err = s.treeCache.Do(ctx, aclTreeId, func(obj interface{}) error {
-		t := obj.(tree.ACLTree)
+	err = s.treeCache.Do(ctx, aclListId, func(obj interface{}) error {
+		t := obj.(list.ACLList)
 		t.RLock()
 		defer t.RUnlock()
 
@@ -205,9 +154,9 @@ func (s *service) CreateDocumentTree(ctx context.Context, aclTreeId string, text
 			return err
 		}
 
-		heads = []string{header.FirstChangeId}
-		snapshotPath = []string{header.FirstChangeId}
-		ch, err = doc.GetRawChange(ctx, header.FirstChangeId)
+		heads = []string{header.FirstId}
+		snapshotPath = []string{header.FirstId}
+		ch, err = doc.GetRawChange(ctx, header.FirstId)
 		if err != nil {
 			return err
 		}
@@ -233,26 +182,26 @@ func (s *service) CreateDocumentTree(ctx context.Context, aclTreeId string, text
 }
 
 func createInitialTextChange(text string) proto.Marshaler {
-	return &testchangepb.PlainTextChangeData{
-		Content: []*testchangepb.PlainTextChangeContent{
+	return &testchanges.PlainTextChangeData{
+		Content: []*testchanges.PlainTextChangeContent{
 			createAppendTextChangeContent(text),
 		},
-		Snapshot: &testchangepb.PlainTextChangeSnapshot{Text: text},
+		Snapshot: &testchanges.PlainTextChangeSnapshot{Text: text},
 	}
 }
 
 func createAppendTextChange(text string) proto.Marshaler {
-	return &testchangepb.PlainTextChangeData{
-		Content: []*testchangepb.PlainTextChangeContent{
+	return &testchanges.PlainTextChangeData{
+		Content: []*testchanges.PlainTextChangeContent{
 			createAppendTextChangeContent(text),
 		},
 	}
 }
 
-func createAppendTextChangeContent(text string) *testchangepb.PlainTextChangeContent {
-	return &testchangepb.PlainTextChangeContent{
-		Value: &testchangepb.PlainTextChangeContentValueOfTextAppend{
-			TextAppend: &testchangepb.PlainTextChangeTextAppend{
+func createAppendTextChangeContent(text string) *testchanges.PlainTextChangeContent {
+	return &testchanges.PlainTextChangeContent{
+		Value: &testchanges.PlainTextChangeContentValueOfTextAppend{
+			TextAppend: &testchanges.PlainTextChangeTextAppend{
 				Text: text,
 			},
 		},

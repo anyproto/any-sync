@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
+	aclstorage "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
@@ -17,13 +18,13 @@ import (
 const CName = "treecache"
 
 // TODO: add context
-type TreeFunc = func(tree interface{}) error
+type ObjFunc = func(obj interface{}) error
 
 var log = logger.NewNamed("treecache")
 
 type Service interface {
-	Do(ctx context.Context, treeId string, f TreeFunc) error
-	Add(ctx context.Context, treeId string, header *aclpb.Header, changes []*aclpb.RawChange, f TreeFunc) error
+	Do(ctx context.Context, treeId string, f ObjFunc) error
+	Add(ctx context.Context, treeId string, header *aclpb.Header, changes []*aclpb.RawChange, f ObjFunc) error
 }
 
 type service struct {
@@ -36,7 +37,7 @@ func New() app.ComponentRunnable {
 	return &service{}
 }
 
-func (s *service) Do(ctx context.Context, treeId string, f TreeFunc) error {
+func (s *service) Do(ctx context.Context, treeId string, f ObjFunc) error {
 	log.
 		With(zap.String("treeId", treeId)).
 		Debug("requesting tree from cache to perform operation")
@@ -49,7 +50,7 @@ func (s *service) Do(ctx context.Context, treeId string, f TreeFunc) error {
 	return f(t)
 }
 
-func (s *service) Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange, f TreeFunc) error {
+func (s *service) Add(ctx context.Context, treeId string, header *aclpb.Header, changes []*aclpb.RawChange, f ObjFunc) error {
 	log.
 		With(zap.String("treeId", treeId), zap.Int("len(changes)", len(changes))).
 		Debug("adding tree with changes")
@@ -82,7 +83,7 @@ func (s *service) Close(ctx context.Context) (err error) {
 }
 
 func (s *service) loadTree(ctx context.Context, id string) (ocache.Object, error) {
-	t, err := s.storage.TreeStorage(id)
+	t, err := s.storage.Storage(id)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +94,7 @@ func (s *service) loadTree(ctx context.Context, id string) (ocache.Object, error
 
 	switch header.DocType {
 	case aclpb.Header_ACL:
-		return list.BuildACLListWithIdentity(acc)
+		return list.BuildACLListWithIdentity(s.account.Account(), t.(aclstorage.ListStorage))
 	case aclpb.Header_DocTree:
 		break
 	default:
@@ -101,13 +102,13 @@ func (s *service) loadTree(ctx context.Context, id string) (ocache.Object, error
 	}
 	log.Info("got header", zap.String("header", header.String()))
 	var docTree tree.DocTree
-	// TODO: it is a question if we need to use ACLTree on the first tree build, because we can think that the tree is already validated
-	err = s.Do(ctx, header.AclTreeId, func(obj interface{}) error {
-		aclTree := obj.(tree.ACLTree)
+	// TODO: it is a question if we need to use ACLList on the first tree build, because we can think that the tree is already validated
+	err = s.Do(ctx, header.AclListId, func(obj interface{}) error {
+		aclTree := obj.(list.ACLList)
 		aclTree.RLock()
 		defer aclTree.RUnlock()
 
-		docTree, err = tree.BuildDocTreeWithIdentity(t, s.account.Account(), nil, aclTree)
+		docTree, err = tree.BuildDocTreeWithIdentity(t.(aclstorage.TreeStorage), s.account.Account(), nil, aclTree)
 		if err != nil {
 			return err
 		}

@@ -1,4 +1,4 @@
-package treestorage
+package storage
 
 import (
 	"context"
@@ -6,9 +6,7 @@ import (
 )
 
 type TreeStorage interface {
-	ID() (string, error)
-
-	Header() (*aclpb.Header, error)
+	Storage
 	Heads() ([]string, error)
 	SetHeads(heads []string) error
 

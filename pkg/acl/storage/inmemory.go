@@ -1,4 +1,4 @@
-package treestorage
+package storage
 
 import (
 	"context"
@@ -86,21 +86,21 @@ func (t *inMemoryTreeStorage) GetRawChange(ctx context.Context, changeId string)
 	return nil, fmt.Errorf("could not get change with id: %s", changeId)
 }
 
-type inMemoryTreeStorageProvider struct {
-	trees map[string]TreeStorage
+type inMemoryStorageProvider struct {
+	objects map[string]Storage
 	sync.RWMutex
 }
 
-func (i *inMemoryTreeStorageProvider) TreeStorage(treeId string) (TreeStorage, error) {
+func (i *inMemoryStorageProvider) Storage(id string) (Storage, error) {
 	i.RLock()
 	defer i.RUnlock()
-	if tree, exists := i.trees[treeId]; exists {
+	if tree, exists := i.objects[id]; exists {
 		return tree, nil
 	}
 	return nil, ErrUnknownTreeId
 }
 
-func (i *inMemoryTreeStorageProvider) CreateTreeStorage(treeId string, header *aclpb.Header, changes []*aclpb.RawChange) (TreeStorage, error) {
+func (i *inMemoryStorageProvider) CreateTreeStorage(treeId string, header *aclpb.Header, changes []*aclpb.RawChange) (TreeStorage, error) {
 	i.Lock()
 	defer i.Unlock()
 	res, err := NewInMemoryTreeStorage(treeId, header, changes)
@@ -108,12 +108,12 @@ func (i *inMemoryTreeStorageProvider) CreateTreeStorage(treeId string, header *a
 		return nil, err
 	}
 
-	i.trees[treeId] = res
+	i.objects[treeId] = res
 	return res, nil
 }
 
 func NewInMemoryTreeStorageProvider() Provider {
-	return &inMemoryTreeStorageProvider{
-		trees: make(map[string]TreeStorage),
+	return &inMemoryStorageProvider{
+		objects: make(map[string]Storage),
 	}
 }

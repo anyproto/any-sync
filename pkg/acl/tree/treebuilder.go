@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
@@ -23,10 +23,10 @@ type treeBuilder struct {
 	identityKeys         map[string]signingkey.PubKey
 	signingPubKeyDecoder keys.Decoder
 	tree                 *Tree
-	treeStorage          treestorage.TreeStorage
+	treeStorage          storage.TreeStorage
 }
 
-func newTreeBuilder(t treestorage.TreeStorage, decoder keys.Decoder) *treeBuilder {
+func newTreeBuilder(t storage.TreeStorage, decoder keys.Decoder) *treeBuilder {
 	return &treeBuilder{
 		signingPubKeyDecoder: decoder,
 		treeStorage:          t,

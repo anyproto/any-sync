@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 	"sync"
 )
@@ -21,6 +22,7 @@ type ACLList interface {
 	Get(id string) (*Record, error)
 	Iterate(iterFunc IterFunc)
 	IterateFrom(startId string, iterFunc IterFunc)
+	Close() (err error)
 }
 
 type aclList struct {
@@ -35,7 +37,7 @@ type aclList struct {
 	sync.RWMutex
 }
 
-func BuildACLListWithIdentity(acc *account.AccountData, storage Storage) (ACLList, error) {
+func BuildACLListWithIdentity(acc *account.AccountData, storage storage.ListStorage) (ACLList, error) {
 	builder := newACLStateBuilderWithIdentity(acc.Decoder, acc)
 	header, err := storage.Header()
 	if err != nil {
@@ -54,7 +56,7 @@ func BuildACLListWithIdentity(acc *account.AccountData, storage Storage) (ACLLis
 	records := []*Record{record}
 
 	for record.Content.PrevId != "" {
-		rawRecord, err = storage.GetRecord(context.Background(), record.Content.PrevId)
+		rawRecord, err = storage.GetRawRecord(context.Background(), record.Content.PrevId)
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +111,7 @@ func (a *aclList) IsAfter(first string, second string) (bool, error) {
 	if !okFirst || !okSecond {
 		return false, fmt.Errorf("not all entries are there: first (%b), second (%b)", okFirst, okSecond)
 	}
-	return firstRec > secondRec, nil
+	return firstRec >= secondRec, nil
 }
 
 func (a *aclList) Head() *Record {
@@ -142,4 +144,8 @@ func (a *aclList) IterateFrom(startId string, iterFunc IterFunc) {
 			return
 		}
 	}
+}
+
+func (a *aclList) Close() (err error) {
+	return nil
 }

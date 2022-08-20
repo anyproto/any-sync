@@ -6,7 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
@@ -56,7 +56,7 @@ type DocTree interface {
 }
 
 type docTree struct {
-	treeStorage    treestorage.TreeStorage
+	treeStorage    storage.TreeStorage
 	accountData    *account.AccountData
 	updateListener TreeUpdateListener
 
@@ -76,7 +76,7 @@ type docTree struct {
 	sync.RWMutex
 }
 
-func BuildDocTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountData, listener TreeUpdateListener, aclList list.ACLList) (DocTree, error) {
+func BuildDocTreeWithIdentity(t storage.TreeStorage, acc *account.AccountData, listener TreeUpdateListener, aclList list.ACLList) (DocTree, error) {
 	treeBuilder := newTreeBuilder(t, acc.Decoder)
 	validator := newTreeValidator()
 
@@ -112,7 +112,7 @@ func BuildDocTreeWithIdentity(t treestorage.TreeStorage, acc *account.AccountDat
 	return docTree, nil
 }
 
-func BuildDocTree(t treestorage.TreeStorage, decoder keys.Decoder, listener TreeUpdateListener, aclList list.ACLList) (DocTree, error) {
+func BuildDocTree(t storage.TreeStorage, decoder keys.Decoder, listener TreeUpdateListener, aclList list.ACLList) (DocTree, error) {
 	treeBuilder := newTreeBuilder(t, decoder)
 	validator := newTreeValidator()
 
@@ -182,7 +182,7 @@ func (d *docTree) Header() *aclpb.Header {
 	return d.header
 }
 
-func (d *docTree) Storage() treestorage.TreeStorage {
+func (d *docTree) Storage() storage.TreeStorage {
 	return d.treeStorage
 }
 

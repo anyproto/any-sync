@@ -1,6 +1,6 @@
 package syncproto
 
-import "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
+import "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage/treepb"
 
 func WrapHeadUpdate(update *SyncHeadUpdate, header *treepb.TreeHeader, treeId string) *Sync {
 	return &Sync{

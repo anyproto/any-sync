@@ -119,6 +119,6 @@ func msgInfo(content *syncproto.Sync) (syncMethod string) {
 	case msg.GetHeadUpdate() != nil:
 		syncMethod = "HeadUpdate"
 	}
-	syncMethod = fmt.Sprintf("method: %s, treeType: %s", syncMethod, content.TreeHeader.Type.String())
+	syncMethod = fmt.Sprintf("method: %s, treeType: %s", syncMethod, content.TreeHeader.DocType.String())
 	return
 }
