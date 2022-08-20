@@ -1,4 +1,4 @@
-package treestorage
+package storage
 
 import (
 	"errors"
@@ -8,6 +8,6 @@ import (
 var ErrUnknownTreeId = errors.New("tree does not exist")
 
 type Provider interface {
-	TreeStorage(treeId string) (TreeStorage, error)
+	Storage(id string) (Storage, error)
 	CreateTreeStorage(treeId string, header *aclpb.Header, changes []*aclpb.RawChange) (TreeStorage, error)
 }

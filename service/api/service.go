@@ -54,7 +54,6 @@ func (s *service) Run(ctx context.Context) (err error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/treeDump", s.treeDump)
 	mux.HandleFunc("/createDocumentTree", s.createDocumentTree)
-	mux.HandleFunc("/createACLTree", s.createACLTree)
 	mux.HandleFunc("/appendDocument", s.appendDocument)
 	s.srv.Handler = mux
 
@@ -99,21 +98,10 @@ func (s *service) createDocumentTree(w http.ResponseWriter, req *http.Request) {
 	var (
 		query     = req.URL.Query()
 		text      = query.Get("text")
-		aclTreeId = query.Get("aclTreeId")
+		aclListId = query.Get("aclListId")
 	)
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	treeId, err := s.documentService.CreateDocumentTree(timeoutCtx, aclTreeId, text)
-	cancel()
-	if err != nil {
-		sendText(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	sendText(w, http.StatusOK, treeId)
-}
-
-func (s *service) createACLTree(w http.ResponseWriter, req *http.Request) {
-	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	treeId, err := s.documentService.CreateACLTree(timeoutCtx)
+	treeId, err := s.documentService.CreateDocumentTree(timeoutCtx, aclListId, text)
 	cancel()
 	if err != nil {
 		sendText(w, http.StatusInternalServerError, err.Error())

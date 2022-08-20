@@ -4,14 +4,13 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 )
 
 var CName = "storage"
 
 type Service interface {
-	treestorage.Provider
+	storage.Provider
 }
 
 func New() app.Component {
@@ -19,19 +18,19 @@ func New() app.Component {
 }
 
 type service struct {
-	storageProvider treestorage.Provider
+	storageProvider storage.Provider
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
-	s.storageProvider = treestorage.NewInMemoryTreeStorageProvider()
+	s.storageProvider = storage.NewInMemoryTreeStorageProvider()
 	return nil
 }
 
-func (s *service) TreeStorage(treeId string) (treestorage.TreeStorage, error) {
-	return s.storageProvider.TreeStorage(treeId)
+func (s *service) Storage(treeId string) (storage.Storage, error) {
+	return s.storageProvider.Storage(treeId)
 }
 
-func (s *service) CreateTreeStorage(treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange) (treestorage.TreeStorage, error) {
+func (s *service) CreateTreeStorage(treeId string, header *aclpb.Header, changes []*aclpb.RawChange) (storage.TreeStorage, error) {
 	return s.storageProvider.CreateTreeStorage(treeId, header, changes)
 }
 

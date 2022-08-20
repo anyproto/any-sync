@@ -4,7 +4,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/gogo/protobuf/proto"
 	"time"
@@ -14,7 +14,7 @@ import (
 //func CreateNewTreeStorageWithACL(
 //	acc *account.AccountData,
 //	build func(builder list.ACLChangeBuilder) error,
-//	create treestorage.CreatorFunc) (treestorage.TreeStorage, error) {
+//	create treestorage.CreatorFunc) (treestorage.Storage, error) {
 //	bld := list.newACLChangeBuilder()
 //	bld.Init(
 //		list.newACLStateWithIdentity(acc.Identity, acc.EncKey, signingkey.NewEd25519PubKeyDecoder()),
@@ -56,7 +56,7 @@ func CreateNewTreeStorage(
 	acc *account.AccountData,
 	aclList list.ACLList,
 	content proto.Marshaler,
-	create treestorage.CreatorFunc) (treestorage.TreeStorage, error) {
+	create storage.CreatorFunc) (storage.TreeStorage, error) {
 
 	state := aclList.ACLState()
 	change := &aclpb.Change{

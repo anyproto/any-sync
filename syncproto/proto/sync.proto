@@ -3,7 +3,6 @@ package anytype;
 option go_package = "/syncproto";
 
 import "pkg/acl/aclchanges/aclpb/protos/aclchanges.proto";
-import "pkg/acl/treestorage/treepb/protos/tree.proto";
 
 message Message {
     Header header = 1;
@@ -64,7 +63,7 @@ message Subscription {
 message Sync {
     string spaceId = 1;
     ContentValue message = 2;
-    tree.TreeHeader treeHeader = 3;
+    acl.Header treeHeader = 3;
     string treeId = 4;
 
     message ContentValue {
