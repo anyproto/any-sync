@@ -154,8 +154,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 	case ch.UserAdd != nil:
 		add := ch.UserAdd
 
-		encKey := t.keychain.
-			GetKey(add.EncryptionKey).(encryptionkey.PrivKey)
+		encKey := t.keychain.GetKey(add.EncryptionKey).(encryptionkey.PrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 
 		convCh = &aclpb.ACLChangeACLContentValue{

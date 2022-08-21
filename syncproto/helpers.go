@@ -1,8 +1,10 @@
 package syncproto
 
-import "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage/treepb"
+import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+)
 
-func WrapHeadUpdate(update *SyncHeadUpdate, header *treepb.TreeHeader, treeId string) *Sync {
+func WrapHeadUpdate(update *SyncHeadUpdate, header *aclpb.Header, treeId string) *Sync {
 	return &Sync{
 		Message: &SyncContentValue{
 			Value: &SyncContentValueValueOfHeadUpdate{HeadUpdate: update},
@@ -12,7 +14,7 @@ func WrapHeadUpdate(update *SyncHeadUpdate, header *treepb.TreeHeader, treeId st
 	}
 }
 
-func WrapFullRequest(request *SyncFullRequest, header *treepb.TreeHeader, treeId string) *Sync {
+func WrapFullRequest(request *SyncFullRequest, header *aclpb.Header, treeId string) *Sync {
 	return &Sync{
 		Message: &SyncContentValue{
 			Value: &SyncContentValueValueOfFullSyncRequest{FullSyncRequest: request},
@@ -22,7 +24,7 @@ func WrapFullRequest(request *SyncFullRequest, header *treepb.TreeHeader, treeId
 	}
 }
 
-func WrapFullResponse(response *SyncFullResponse, header *treepb.TreeHeader, treeId string) *Sync {
+func WrapFullResponse(response *SyncFullResponse, header *aclpb.Header, treeId string) *Sync {
 	return &Sync{
 		Message: &SyncContentValue{
 			Value: &SyncContentValueValueOfFullSyncResponse{FullSyncResponse: response},
