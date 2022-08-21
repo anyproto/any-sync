@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"sync"
 )
 
@@ -44,7 +45,20 @@ type aclList struct {
 
 func BuildACLListWithIdentity(acc *account.AccountData, storage storage.ListStorage) (ACLList, error) {
 	builder := newACLStateBuilderWithIdentity(acc.Decoder, acc)
+	return buildWithACLStateBuilder(builder, storage)
+}
+
+func BuildACLList(decoder keys.Decoder, storage storage.ListStorage) (ACLList, error) {
+	return buildWithACLStateBuilder(newACLStateBuilder(decoder), storage)
+}
+
+func buildWithACLStateBuilder(builder *aclStateBuilder, storage storage.ListStorage) (ACLList, error) {
 	header, err := storage.Header()
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := storage.ID()
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +108,7 @@ func BuildACLListWithIdentity(acc *account.AccountData, storage storage.ListStor
 		indexes:  indexes,
 		builder:  builder,
 		aclState: state,
+		id:       id,
 		RWMutex:  sync.RWMutex{},
 	}, nil
 }
@@ -114,7 +129,7 @@ func (a *aclList) IsAfter(first string, second string) (bool, error) {
 	firstRec, okFirst := a.indexes[first]
 	secondRec, okSecond := a.indexes[second]
 	if !okFirst || !okSecond {
-		return false, fmt.Errorf("not all entries are there: first (%b), second (%b)", okFirst, okSecond)
+		return false, fmt.Errorf("not all entries are there: first (%t), second (%t)", okFirst, okSecond)
 	}
 	return firstRec >= secondRec, nil
 }

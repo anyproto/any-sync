@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/yamltests"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
@@ -34,7 +35,7 @@ func NewACLListStorageBuilder(keychain *Keychain) *ACLListStorageBuilder {
 	}
 }
 
-func NewACLListStorageBuilderWithTestName(name string) (*ACLListStorageBuilder, error) {
+func NewListStorageWithTestName(name string) (storage.ListStorage, error) {
 	filePath := path.Join(yamltests.Path(), name)
 	return NewACLListStorageBuilderFromFile(filePath)
 }
@@ -89,7 +90,7 @@ func (t *ACLListStorageBuilder) Header() (*aclpb.Header, error) {
 	return t.header, nil
 }
 
-func (t *ACLListStorageBuilder) GetRecord(ctx context.Context, id string) (*aclpb.RawRecord, error) {
+func (t *ACLListStorageBuilder) GetRawRecord(ctx context.Context, id string) (*aclpb.RawRecord, error) {
 	recIdx, ok := t.indexes[id]
 	if !ok {
 		return nil, fmt.Errorf("no such record")
@@ -97,7 +98,7 @@ func (t *ACLListStorageBuilder) GetRecord(ctx context.Context, id string) (*aclp
 	return t.getRecord(recIdx), nil
 }
 
-func (t *ACLListStorageBuilder) AddRecord(ctx context.Context, rec *aclpb.Record) error {
+func (t *ACLListStorageBuilder) AddRawRecord(ctx context.Context, rec *aclpb.RawRecord) error {
 	panic("implement me")
 }
 

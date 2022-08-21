@@ -1,9 +1,14 @@
 package acllistbuilder
 
+type Key struct {
+	Name  string `yaml:"name"`
+	Value string `yaml:"value"`
+}
+
 type Keys struct {
-	Enc  []string `yaml:"Enc"`
-	Sign []string `yaml:"Sign"`
-	Read []string `yaml:"Read"`
+	Enc  []*Key `yaml:"Enc"`
+	Sign []*Key `yaml:"Sign"`
+	Read []*Key `yaml:"Read"`
 }
 
 type ACLChange struct {
@@ -50,8 +55,7 @@ type ACLChange struct {
 type Record struct {
 	Identity   string       `yaml:"identity"`
 	AclChanges []*ACLChange `yaml:"aclChanges"`
-
-	ReadKey string `yaml:"readKey"`
+	ReadKey    string       `yaml:"readKey"`
 }
 
 type Header struct {

@@ -56,12 +56,13 @@ func newACLStateWithIdentity(
 	}
 }
 
-func newACLState() *ACLState {
+func newACLState(decoder keys.Decoder) *ACLState {
 	return &ACLState{
-		userReadKeys:        make(map[uint64]*symmetric.Key),
-		userStates:          make(map[string]*aclpb.ACLChangeUserState),
-		userInvites:         make(map[string]*aclpb.ACLChangeUserInvite),
-		permissionsAtRecord: make(map[string][]UserPermissionPair),
+		signingPubKeyDecoder: decoder,
+		userReadKeys:         make(map[uint64]*symmetric.Key),
+		userStates:           make(map[string]*aclpb.ACLChangeUserState),
+		userInvites:          make(map[string]*aclpb.ACLChangeUserInvite),
+		permissionsAtRecord:  make(map[string][]UserPermissionPair),
 	}
 }
 

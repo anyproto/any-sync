@@ -50,8 +50,8 @@ func (k *Keychain) ParseKeys(keys *Keys) {
 	}
 }
 
-func (k *Keychain) AddEncryptionKey(name string) {
-	if _, exists := k.EncryptionKeys[name]; exists {
+func (k *Keychain) AddEncryptionKey(key *Key) {
+	if _, exists := k.EncryptionKeys[key.Name]; exists {
 		return
 	}
 	newPrivKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
@@ -59,11 +59,11 @@ func (k *Keychain) AddEncryptionKey(name string) {
 		panic(err)
 	}
 
-	k.EncryptionKeys[name] = newPrivKey
+	k.EncryptionKeys[key.Name] = newPrivKey
 }
 
-func (k *Keychain) AddSigningKey(name string) {
-	if _, exists := k.SigningKeys[name]; exists {
+func (k *Keychain) AddSigningKey(key *Key) {
+	if _, exists := k.SigningKeys[key.Name]; exists {
 		return
 	}
 	newPrivKey, pubKey, err := signingkey.GenerateRandomEd25519KeyPair()
@@ -71,48 +71,47 @@ func (k *Keychain) AddSigningKey(name string) {
 		panic(err)
 	}
 
-	k.SigningKeys[name] = newPrivKey
+	k.SigningKeys[key.Name] = newPrivKey
 	res, err := k.coder.EncodeToString(pubKey)
 	if err != nil {
 		panic(err)
 	}
 	k.SigningKeysByIdentity[res] = newPrivKey
-	k.GeneratedIdentities[name] = res
+	k.GeneratedIdentities[key.Name] = res
 }
 
-func (k *Keychain) AddReadKey(name string) {
-	if _, exists := k.ReadKeys[name]; exists {
+func (k *Keychain) AddReadKey(key *Key) {
+	if _, exists := k.ReadKeys[key.Name]; exists {
 		return
 	}
-	key, _ := symmetric.NewRandom()
+	rkey, _ := symmetric.NewRandom()
 
 	hasher := fnv.New64()
-	hasher.Write(key.Bytes())
+	hasher.Write(rkey.Bytes())
 
-	k.ReadKeys[name] = &SymKey{
+	k.ReadKeys[key.Name] = &SymKey{
 		Hash: hasher.Sum64(),
-		Key:  key,
+		Key:  rkey,
 	}
 	k.ReadKeysByHash[hasher.Sum64()] = &SymKey{
 		Hash: hasher.Sum64(),
-		Key:  key,
+		Key:  rkey,
 	}
 }
 
-func (k *Keychain) AddKey(key string) {
-	parts := strings.Split(key, ".")
+func (k *Keychain) AddKey(key *Key) {
+	parts := strings.Split(key.Name, ".")
 	if len(parts) != 3 {
 		panic("cannot parse a key")
 	}
-	name := parts[2]
 
 	switch parts[1] {
 	case "Sign":
-		k.AddSigningKey(name)
+		k.AddSigningKey(key)
 	case "Enc":
-		k.AddEncryptionKey(name)
+		k.AddEncryptionKey(key)
 	case "Read":
-		k.AddReadKey(name)
+		k.AddReadKey(key)
 	default:
 		panic("incorrect format")
 	}

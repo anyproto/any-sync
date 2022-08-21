@@ -20,8 +20,10 @@ func newACLStateBuilderWithIdentity(decoder keys.Decoder, accountData *account.A
 	}
 }
 
-func newACLStateBuilder() *aclStateBuilder {
-	return &aclStateBuilder{}
+func newACLStateBuilder(decoder keys.Decoder) *aclStateBuilder {
+	return &aclStateBuilder{
+		decoder: decoder,
+	}
 }
 
 func (sb *aclStateBuilder) Build(records []*Record) (*ACLState, error) {
@@ -30,10 +32,10 @@ func (sb *aclStateBuilder) Build(records []*Record) (*ACLState, error) {
 		state *ACLState
 	)
 
-	if sb.decoder != nil {
+	if sb.key != nil {
 		state = newACLStateWithIdentity(sb.identity, sb.key, sb.decoder)
 	} else {
-		state = newACLState()
+		state = newACLState(sb.decoder)
 	}
 	for _, rec := range records {
 		err = state.applyChangeAndUpdate(rec)
