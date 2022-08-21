@@ -111,7 +111,22 @@ func (k *Keychain) AddReadKey(key *Key) {
 	if _, exists := k.ReadKeys[key.Name]; exists {
 		return
 	}
-	rkey, _ := symmetric.NewRandom()
+
+	var (
+		rkey *symmetric.Key
+		err  error
+	)
+	if key.Value == "generated" {
+		rkey, err = symmetric.NewRandom()
+		if err != nil {
+			panic("should be able to generate symmetric key")
+		}
+	} else {
+		rkey, err = symmetric.FromString(key.Value)
+		if err != nil {
+			panic("should be able to parse symmetric key")
+		}
+	}
 
 	hasher := fnv.New64()
 	hasher.Write(rkey.Bytes())
