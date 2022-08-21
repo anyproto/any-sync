@@ -2,7 +2,6 @@ package requesthandler
 
 import (
 	"context"
-	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
@@ -23,8 +22,6 @@ type requestHandler struct {
 }
 
 var log = logger.NewNamed("requesthandler")
-
-var ErrIncorrectDocType = errors.New("incorrec doc type")
 
 func New() app.Component {
 	return &requestHandler{}
