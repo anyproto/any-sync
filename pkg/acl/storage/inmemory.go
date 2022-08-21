@@ -91,6 +91,17 @@ type inMemoryStorageProvider struct {
 	sync.RWMutex
 }
 
+func (i *inMemoryStorageProvider) AddStorage(id string, st Storage) error {
+	i.Lock()
+	defer i.Unlock()
+	if _, exists := i.objects[id]; exists {
+		return fmt.Errorf("storage already exists")
+	}
+
+	i.objects[id] = st
+	return nil
+}
+
 func (i *inMemoryStorageProvider) Storage(id string) (Storage, error) {
 	i.RLock()
 	defer i.RUnlock()

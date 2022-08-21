@@ -54,11 +54,23 @@ func (k *Keychain) AddEncryptionKey(key *Key) {
 	if _, exists := k.EncryptionKeys[key.Name]; exists {
 		return
 	}
-	newPrivKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
-	if err != nil {
-		panic(err)
+	var (
+		newPrivKey encryptionkey.PrivKey
+		err        error
+	)
+	if key.Value == "generated" {
+		newPrivKey, _, err = encryptionkey.GenerateRandomRSAKeyPair(2048)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		decoder := encryptionkey.NewRSAPrivKeyDecoder()
+		privKey, err := decoder.DecodeFromString(key.Value)
+		if err != nil {
+			panic(err)
+		}
+		newPrivKey = privKey.(encryptionkey.PrivKey)
 	}
-
 	k.EncryptionKeys[key.Name] = newPrivKey
 }
 
@@ -66,9 +78,24 @@ func (k *Keychain) AddSigningKey(key *Key) {
 	if _, exists := k.SigningKeys[key.Name]; exists {
 		return
 	}
-	newPrivKey, pubKey, err := signingkey.GenerateRandomEd25519KeyPair()
-	if err != nil {
-		panic(err)
+	var (
+		newPrivKey signingkey.PrivKey
+		pubKey     signingkey.PubKey
+		err        error
+	)
+	if key.Value == "generated" {
+		newPrivKey, pubKey, err = signingkey.GenerateRandomEd25519KeyPair()
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		decoder := signingkey.NewEDPrivKeyDecoder()
+		privKey, err := decoder.DecodeFromString(key.Value)
+		if err != nil {
+			panic(err)
+		}
+		newPrivKey = privKey.(signingkey.PrivKey)
+		pubKey = newPrivKey.GetPublic()
 	}
 
 	k.SigningKeys[key.Name] = newPrivKey

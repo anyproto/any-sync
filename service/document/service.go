@@ -58,7 +58,7 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
-	return s.importACLList(ctx)
+	return nil
 }
 
 func (s *service) Close(ctx context.Context) (err error) {
@@ -119,10 +119,6 @@ func (s *service) UpdateDocumentTree(ctx context.Context, id, text string) (err 
 		Changes:      []*aclpb.RawChange{ch},
 		SnapshotPath: snapshotPath,
 	}, header, id))
-}
-
-func (s *service) importACLList(ctx context.Context) (err error) {
-	panic("not implemented")
 }
 
 func (s *service) CreateDocumentTree(ctx context.Context, aclListId string, text string) (id string, err error) {
