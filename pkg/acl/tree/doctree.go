@@ -77,48 +77,27 @@ type docTree struct {
 }
 
 func BuildDocTreeWithIdentity(t storage.TreeStorage, acc *account.AccountData, listener TreeUpdateListener, aclList list.ACLList) (DocTree, error) {
-	treeBuilder := newTreeBuilder(t, acc.Decoder)
-	validator := newTreeValidator()
-
-	docTree := &docTree{
-		treeStorage:    t,
-		accountData:    acc,
-		tree:           nil,
-		treeBuilder:    treeBuilder,
-		validator:      validator,
-		updateListener: listener,
-		tmpChangesBuf:  make([]*Change, 0, 10),
-		difSnapshotBuf: make([]*aclpb.RawChange, 0, 10),
-		notSeenIdxBuf:  make([]int, 0, 10),
-		identityKeys:   make(map[string]signingkey.PubKey),
-	}
-	err := docTree.rebuildFromStorage(aclList, nil)
-	if err != nil {
-		return nil, err
-	}
-	docTree.id, err = t.ID()
-	if err != nil {
-		return nil, err
-	}
-	docTree.header, err = t.Header()
-	if err != nil {
-		return nil, err
-	}
-
-	if listener != nil {
-		listener.Rebuild(docTree)
-	}
-
-	return docTree, nil
+	return buildDocTreeWithAccount(t, acc, acc.Decoder, listener, aclList)
 }
 
 func BuildDocTree(t storage.TreeStorage, decoder keys.Decoder, listener TreeUpdateListener, aclList list.ACLList) (DocTree, error) {
+	return buildDocTreeWithAccount(t, nil, decoder, listener, aclList)
+}
+
+func buildDocTreeWithAccount(
+	t storage.TreeStorage,
+	acc *account.AccountData,
+	decoder keys.Decoder,
+	listener TreeUpdateListener,
+	aclList list.ACLList) (DocTree, error) {
+
 	treeBuilder := newTreeBuilder(t, decoder)
 	validator := newTreeValidator()
 
 	docTree := &docTree{
 		treeStorage:    t,
 		tree:           nil,
+		accountData:    acc,
 		treeBuilder:    treeBuilder,
 		validator:      validator,
 		updateListener: listener,
