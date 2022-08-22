@@ -66,6 +66,8 @@ func (r *requestHandler) HandleSyncMessage(ctx context.Context, senderId string,
 		return r.HandleFullSyncResponse(ctx, senderId, msg.GetFullSyncResponse(), content.GetTreeHeader(), content.GetTreeId())
 	case msg.GetHeadUpdate() != nil:
 		return r.HandleHeadUpdate(ctx, senderId, msg.GetHeadUpdate(), content.GetTreeHeader(), content.GetTreeId())
+	case msg.GetAclList() != nil:
+		return r.HandleACLList(ctx, senderId, msg.GetAclList(), content.GetTreeHeader(), content.GetTreeId())
 	}
 	return nil
 }
@@ -267,6 +269,27 @@ func (r *requestHandler) HandleFullSyncResponse(
 	return r.messageService.SendToSpaceAsync("", syncproto.WrapHeadUpdate(newUpdate, header, treeId))
 }
 
+func (r *requestHandler) HandleACLList(
+	ctx context.Context,
+	senderId string,
+	req *syncproto.SyncACLList,
+	header *aclpb.Header,
+	id string) (err error) {
+
+	err = r.treeCache.Do(ctx, id, func(obj interface{}) error {
+		return nil
+	})
+	// do nothing if already added
+	if err == nil {
+		return nil
+	}
+	// if not found then add to storage
+	if err == storage.ErrUnknownTreeId {
+		return r.createACLList(ctx, req, header, id)
+	}
+	return err
+}
+
 func (r *requestHandler) prepareFullSyncRequest(theirPath []string, t tree.CommonTree) (*syncproto.SyncFullRequest, error) {
 	ourChanges, err := t.ChangesAfterCommonSnapshot(theirPath)
 	if err != nil {
@@ -320,9 +343,23 @@ func (r *requestHandler) createTree(
 	return r.treeCache.Add(
 		ctx,
 		treeId,
-		header,
-		response.Changes,
-		func(obj interface{}) error {
-			return nil
+		treecache.TreePayload{
+			Header:  header,
+			Changes: response.Changes,
+		})
+}
+
+func (r *requestHandler) createACLList(
+	ctx context.Context,
+	req *syncproto.SyncACLList,
+	header *aclpb.Header,
+	treeId string) error {
+
+	return r.treeCache.Add(
+		ctx,
+		treeId,
+		treecache.ACLListPayload{
+			Header:  header,
+			Records: req.Records,
 		})
 }

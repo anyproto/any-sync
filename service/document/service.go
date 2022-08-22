@@ -58,7 +58,15 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
-	return nil
+	syncData := s.storage.ImportedACLSyncData()
+
+	// we could have added a timeout or some additional logic,
+	// but let's just use the ACL id of the latest started node :-)
+	return s.messageService.SendToSpaceAsync("", syncproto.WrapACLList(
+		&syncproto.SyncACLList{Records: syncData.Records},
+		syncData.Header,
+		syncData.Id,
+	))
 }
 
 func (s *service) Close(ctx context.Context) (err error) {

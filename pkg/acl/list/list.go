@@ -22,6 +22,7 @@ type ACLList interface {
 	RWLocker
 	ID() string
 	Header() *aclpb.Header
+	Records() []*Record
 	ACLState() *ACLState
 	IsAfter(first string, second string) (bool, error)
 	Head() *Record
@@ -111,6 +112,10 @@ func buildWithACLStateBuilder(builder *aclStateBuilder, storage storage.ListStor
 		id:       id,
 		RWMutex:  sync.RWMutex{},
 	}, nil
+}
+
+func (a *aclList) Records() []*Record {
+	return a.records
 }
 
 func (a *aclList) ID() string {

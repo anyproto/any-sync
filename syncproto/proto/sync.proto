@@ -60,7 +60,12 @@ message Sync {
             HeadUpdate headUpdate = 1;
             Full.Request fullSyncRequest = 2;
             Full.Response fullSyncResponse = 3;
+            ACLList aclList = 4;
         }
+    }
+
+    message ACLList {
+        repeated acl.RawRecord records = 1;
     }
 
     message HeadUpdate {

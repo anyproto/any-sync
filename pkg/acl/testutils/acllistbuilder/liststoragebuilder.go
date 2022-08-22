@@ -106,6 +106,10 @@ func (t *ACLListStorageBuilder) ID() (string, error) {
 	return t.id, nil
 }
 
+func (t *ACLListStorageBuilder) GetRawRecords() []*aclpb.RawRecord {
+	return t.rawRecords
+}
+
 func (t *ACLListStorageBuilder) GetKeychain() *Keychain {
 	return t.keychain
 }

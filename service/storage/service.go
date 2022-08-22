@@ -18,8 +18,15 @@ var CName = "storage"
 
 var log = logger.NewNamed("storage").Sugar()
 
+type ImportedACLSyncData struct {
+	Id      string
+	Header  *aclpb.Header
+	Records []*aclpb.RawRecord
+}
+
 type Service interface {
 	storage.Provider
+	ImportedACLSyncData() ImportedACLSyncData
 }
 
 func New() app.Component {
@@ -27,7 +34,8 @@ func New() app.Component {
 }
 
 type service struct {
-	storageProvider storage.Provider
+	storageProvider     storage.Provider
+	importedACLSyncData ImportedACLSyncData
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
@@ -48,8 +56,16 @@ func (s *service) CreateTreeStorage(treeId string, header *aclpb.Header, changes
 	return s.storageProvider.CreateTreeStorage(treeId, header, changes)
 }
 
+func (s *service) CreateACLListStorage(id string, header *aclpb.Header, records []*aclpb.RawRecord) (storage.ListStorage, error) {
+	return s.storageProvider.CreateACLListStorage(id, header, records)
+}
+
 func (s *service) Name() (name string) {
 	return CName
+}
+
+func (s *service) ImportedACLSyncData() ImportedACLSyncData {
+	return s.importedACLSyncData
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
@@ -72,10 +88,21 @@ func (s *service) importACLList(a *app.App) (err error) {
 		return err
 	}
 
+	header, err := st.Header()
+	if err != nil {
+		return err
+	}
+
 	// checking that acl list contains all the needed permissions for all our nodes
 	err = s.checkActualNodesPermissions(st, a)
 	if err != nil {
 		return err
+	}
+
+	s.importedACLSyncData = ImportedACLSyncData{
+		Id:      id,
+		Header:  header,
+		Records: st.GetRawRecords(),
 	}
 
 	log.Infof("imported ACLList with id %s", id)
