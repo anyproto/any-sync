@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
+	"go.uber.org/zap"
 	"sync"
 )
 
@@ -98,6 +99,8 @@ func buildWithACLStateBuilder(builder *aclStateBuilder, storage storage.ListStor
 		indexes[records[len(records)/2].Id] = len(records) / 2
 	}
 
+	log.With(zap.String("head id", records[len(records)-1].Id), zap.String("list id", id)).
+		Info("building acl tree")
 	state, err := builder.Build(records)
 	if err != nil {
 		return nil, err
