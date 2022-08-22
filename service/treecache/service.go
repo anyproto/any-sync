@@ -17,14 +17,23 @@ import (
 
 const CName = "treecache"
 
-// TODO: add context
 type ObjFunc = func(obj interface{}) error
 
 var log = logger.NewNamed("treecache")
 
+type TreePayload struct {
+	Header  *aclpb.Header
+	Changes []*aclpb.RawChange
+}
+
+type ACLListPayload struct {
+	Header  *aclpb.Header
+	Records []*aclpb.RawRecord
+}
+
 type Service interface {
-	Do(ctx context.Context, treeId string, f ObjFunc) error
-	Add(ctx context.Context, treeId string, header *aclpb.Header, changes []*aclpb.RawChange, f ObjFunc) error
+	Do(ctx context.Context, id string, f ObjFunc) error
+	Add(ctx context.Context, id string, payload interface{}) error
 }
 
 type service struct {
@@ -50,16 +59,29 @@ func (s *service) Do(ctx context.Context, treeId string, f ObjFunc) error {
 	return f(t)
 }
 
-func (s *service) Add(ctx context.Context, treeId string, header *aclpb.Header, changes []*aclpb.RawChange, f ObjFunc) error {
-	log.
-		With(zap.String("treeId", treeId), zap.Int("len(changes)", len(changes))).
-		Debug("adding tree with changes")
+func (s *service) Add(ctx context.Context, treeId string, payload interface{}) error {
+	switch pl := payload.(type) {
+	case TreePayload:
+		log.
+			With(zap.String("treeId", treeId), zap.Int("len(changes)", len(pl.Changes))).
+			Debug("adding Tree with changes")
 
-	_, err := s.storage.CreateTreeStorage(treeId, header, changes)
-	if err != nil {
-		return err
+		_, err := s.storage.CreateTreeStorage(treeId, pl.Header, pl.Changes)
+		if err != nil {
+			return err
+		}
+	case ACLListPayload:
+		log.
+			With(zap.String("treeId", treeId), zap.Int("len(changes)", len(pl.Records))).
+			Debug("adding ACLList with records")
+
+		_, err := s.storage.CreateACLListStorage(treeId, pl.Header, pl.Records)
+		if err != nil {
+			return err
+		}
+
 	}
-	return s.Do(ctx, treeId, f)
+	return nil
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
@@ -92,7 +114,7 @@ func (s *service) loadTree(ctx context.Context, id string) (ocache.Object, error
 		return nil, err
 	}
 
-	switch header.DocType {
+	switch header.DocType { // handler
 	case aclpb.Header_ACL:
 		return list.BuildACLListWithIdentity(s.account.Account(), t.(aclstorage.ListStorage))
 	case aclpb.Header_DocTree:

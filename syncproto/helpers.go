@@ -33,3 +33,13 @@ func WrapFullResponse(response *SyncFullResponse, header *aclpb.Header, treeId s
 		TreeId:     treeId,
 	}
 }
+
+func WrapACLList(aclList *SyncACLList, header *aclpb.Header, id string) *Sync {
+	return &Sync{
+		Message: &SyncContentValue{
+			Value: &SyncContentValueValueOfAclList{AclList: aclList},
+		},
+		TreeHeader: header,
+		TreeId:     id,
+	}
+}

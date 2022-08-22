@@ -11,4 +11,5 @@ type Provider interface {
 	Storage(id string) (Storage, error)
 	AddStorage(id string, st Storage) error
 	CreateTreeStorage(treeId string, header *aclpb.Header, changes []*aclpb.RawChange) (TreeStorage, error)
+	CreateACLListStorage(id string, header *aclpb.Header, records []*aclpb.RawRecord) (ListStorage, error)
 }

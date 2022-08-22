@@ -7,11 +7,64 @@ import (
 	"sync"
 )
 
+type inMemoryACLListStorage struct {
+	header  *aclpb.Header
+	records []*aclpb.RawRecord
+
+	id string
+
+	sync.RWMutex
+}
+
+func NewInMemoryACLListStorage(
+	id string,
+	header *aclpb.Header,
+	records []*aclpb.RawRecord) (ListStorage, error) {
+	return &inMemoryACLListStorage{
+		id:      id,
+		header:  header,
+		records: records,
+		RWMutex: sync.RWMutex{},
+	}, nil
+}
+
+func (i *inMemoryACLListStorage) Header() (*aclpb.Header, error) {
+	i.RLock()
+	defer i.RUnlock()
+	return i.header, nil
+}
+
+func (i *inMemoryACLListStorage) Head() (*aclpb.RawRecord, error) {
+	i.RLock()
+	defer i.RUnlock()
+	return i.records[len(i.records)-1], nil
+}
+
+func (i *inMemoryACLListStorage) GetRawRecord(ctx context.Context, id string) (*aclpb.RawRecord, error) {
+	i.RLock()
+	defer i.RUnlock()
+	for _, rec := range i.records {
+		if rec.Id == id {
+			return rec, nil
+		}
+	}
+	return nil, fmt.Errorf("no such record")
+}
+
+func (i *inMemoryACLListStorage) AddRawRecord(ctx context.Context, rec *aclpb.RawRecord) error {
+	panic("implement me")
+}
+
+func (i *inMemoryACLListStorage) ID() (string, error) {
+	i.RLock()
+	defer i.RUnlock()
+	return i.id, nil
+}
+
 type inMemoryTreeStorage struct {
 	id      string
 	header  *aclpb.Header
 	heads   []string
-	orphans []string
 	changes map[string]*aclpb.RawChange
 
 	sync.RWMutex
@@ -24,17 +77,14 @@ func NewInMemoryTreeStorage(
 	header *aclpb.Header,
 	changes []*aclpb.RawChange) (TreeStorage, error) {
 	allChanges := make(map[string]*aclpb.RawChange)
-	var orphans []string
 	for _, ch := range changes {
 		allChanges[ch.Id] = ch
-		orphans = append(orphans, ch.Id)
 	}
 
 	return &inMemoryTreeStorage{
 		id:      treeId,
 		header:  header,
 		heads:   nil,
-		orphans: orphans,
 		changes: allChanges,
 		RWMutex: sync.RWMutex{},
 	}, nil
@@ -120,6 +170,18 @@ func (i *inMemoryStorageProvider) CreateTreeStorage(treeId string, header *aclpb
 	}
 
 	i.objects[treeId] = res
+	return res, nil
+}
+
+func (i *inMemoryStorageProvider) CreateACLListStorage(id string, header *aclpb.Header, records []*aclpb.RawRecord) (ListStorage, error) {
+	i.Lock()
+	defer i.Unlock()
+	res, err := NewInMemoryACLListStorage(id, header, records)
+	if err != nil {
+		return nil, err
+	}
+
+	i.objects[id] = res
 	return res, nil
 }
 
