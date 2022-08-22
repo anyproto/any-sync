@@ -15,7 +15,7 @@ import (
 	"hash/fnv"
 )
 
-var log = logger.NewNamed("acllist")
+var log = logger.NewNamed("acllist").Sugar()
 
 var ErrNoSuchUser = errors.New("no such user")
 var ErrFailedToDecrypt = errors.New("failed to decrypt key")
@@ -77,6 +77,7 @@ func (st *ACLState) UserReadKeys() map[uint64]*symmetric.Key {
 func (st *ACLState) PermissionsAtRecord(id string, identity string) (UserPermissionPair, error) {
 	permissions, ok := st.permissionsAtRecord[id]
 	if !ok {
+		log.Errorf("missing record at id %s", id)
 		return UserPermissionPair{}, ErrNoSuchRecord
 	}
 
@@ -135,6 +136,7 @@ func (st *ACLState) applyChangeAndUpdate(recordWrapper *Record) (err error) {
 		permissions = append(permissions, permission)
 	}
 	st.permissionsAtRecord[recordWrapper.Id] = permissions
+	log.Infof("adding permissions at record %s", recordWrapper.Id)
 	return nil
 }
 

@@ -26,7 +26,7 @@ func (v *docTreeValidator) ValidateTree(tree *Tree, aclList list.ACLList) (err e
 
 	tree.Iterate(tree.RootId(), func(c *Change) (isContinue bool) {
 		// checking if the user could write
-		perm, err = state.PermissionsAtRecord(c.Id, c.Content.Identity)
+		perm, err = state.PermissionsAtRecord(c.Content.AclHeadId, c.Content.Identity)
 		if err != nil {
 			return false
 		}
