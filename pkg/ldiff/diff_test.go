@@ -37,6 +37,7 @@ func TestDiff_fillRange(t *testing.T) {
 }
 
 func TestDiff_Diff(t *testing.T) {
+	ctx := context.Background()
 	t.Run("basic", func(t *testing.T) {
 		d1 := New(16, 16)
 		d2 := New(16, 16)
@@ -52,8 +53,6 @@ func TestDiff_Diff(t *testing.T) {
 				Head: head,
 			})
 		}
-
-		ctx := context.Background()
 
 		newIds, changedIds, removedIds, err := d1.Diff(ctx, d2)
 		require.NoError(t, err)
@@ -76,6 +75,46 @@ func TestDiff_Diff(t *testing.T) {
 		assert.Len(t, newIds, 1)
 		assert.Len(t, changedIds, 1)
 		assert.Len(t, removedIds, 1)
+	})
+	t.Run("empty", func(t *testing.T) {
+		d1 := New(16, 16)
+		d2 := New(16, 16)
+		newIds, changedIds, removedIds, err := d1.Diff(ctx, d2)
+		require.NoError(t, err)
+		assert.Len(t, newIds, 0)
+		assert.Len(t, changedIds, 0)
+		assert.Len(t, removedIds, 0)
+	})
+	t.Run("one empty", func(t *testing.T) {
+		d1 := New(4, 4)
+		d2 := New(4, 4)
+		for i := 0; i < 10; i++ {
+			d2.Set(Element{
+				Id:   fmt.Sprint(i),
+				Head: bson.NewObjectId().Hex(),
+			})
+		}
+
+		newIds, changedIds, removedIds, err := d1.Diff(ctx, d2)
+		require.NoError(t, err)
+		assert.Len(t, newIds, 10)
+		assert.Len(t, changedIds, 0)
+		assert.Len(t, removedIds, 0)
+	})
+	t.Run("context cancel", func(t *testing.T) {
+		d1 := New(4, 4)
+		d2 := New(4, 4)
+		for i := 0; i < 10; i++ {
+			d2.Set(Element{
+				Id:   fmt.Sprint(i),
+				Head: bson.NewObjectId().Hex(),
+			})
+		}
+		var cancel func()
+		ctx, cancel = context.WithCancel(ctx)
+		cancel()
+		_, _, _, err := d1.Diff(ctx, d2)
+		assert.ErrorIs(t, err, context.Canceled)
 	})
 }
 

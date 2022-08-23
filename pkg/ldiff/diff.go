@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/cespare/xxhash"
 	"github.com/huandu/skiplist"
 	"github.com/zeebo/blake3"
@@ -78,8 +77,8 @@ type element struct {
 // Diff contains elements and can compare it with Remote diff
 type Diff interface {
 	Remote
-	// Set adds or update element in container
-	Set(e Element)
+	// Set adds or update elements in container
+	Set(elements ...Element)
 	// RemoveId removes element by id
 	RemoveId(id string) error
 	// Diff makes diff with remote container
@@ -124,12 +123,14 @@ func (d *diff) CalcScore(key interface{}) float64 {
 }
 
 // Set adds or update element in container
-func (d *diff) Set(e Element) {
+func (d *diff) Set(elements ...Element) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	el := &element{Element: e, hash: xxhash.Sum64([]byte(e.Id))}
-	d.sl.Remove(el)
-	d.sl.Set(el, nil)
+	for _, e := range elements {
+		el := &element{Element: e, hash: xxhash.Sum64([]byte(e.Id))}
+		d.sl.Remove(el)
+		d.sl.Set(el, nil)
+	}
 }
 
 // RemoveId removes element by id
@@ -208,7 +209,12 @@ func (d *diff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, removed
 		Limit: d.compareThreshold,
 	})
 	for len(dctx.toSend) > 0 {
-		fmt.Println("fill ranges:", len(dctx.toSend))
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+			return
+		default:
+		}
 		if dctx.myRes, err = d.Ranges(ctx, dctx.toSend, dctx.myRes); err != nil {
 			return
 		}
