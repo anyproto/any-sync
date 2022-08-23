@@ -24,6 +24,7 @@ require (
 
 require (
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
+	github.com/anytypeio/go-chash v0.0.0-20220629194632-4ad1154fe232 // indirect
 	github.com/btcsuite/btcd v0.22.1 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.1.3 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1 // indirect

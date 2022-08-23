@@ -41,6 +41,7 @@ type Pool interface {
 	RemovePeerIdFromGroup(peerId, groupId string) (err error)
 
 	SendAndWait(ctx context.Context, peerId string, msg *syncproto.Message) (err error)
+	SendAndWaitResponse(ctx context.Context, id string, s *syncproto.Message) (resp *Message, err error)
 	Broadcast(ctx context.Context, groupId string, msg *syncproto.Message) (err error)
 
 	app.ComponentRunnable
@@ -154,6 +155,14 @@ func (p *pool) RemovePeerIdFromGroup(peerId, groupId string) (err error) {
 }
 
 func (p *pool) SendAndWait(ctx context.Context, peerId string, msg *syncproto.Message) (err error) {
+	resp, err := p.SendAndWaitResponse(ctx, peerId, msg)
+	if err != nil {
+		return
+	}
+	return resp.IsAck()
+}
+
+func (p *pool) SendAndWaitResponse(ctx context.Context, peerId string, msg *syncproto.Message) (resp *Message, err error) {
 	defer func() {
 		if err != nil {
 			log.With(
@@ -191,7 +200,10 @@ func (p *pool) SendAndWait(ctx context.Context, peerId string, msg *syncproto.Me
 	case rep := <-ch:
 		if rep.Error != nil {
 			err = rep.Error
+			return
 		}
+		resp = rep.Message
+		return
 	case <-ctx.Done():
 		log.Debug("context done in SendAndWait")
 		err = ctx.Err()
