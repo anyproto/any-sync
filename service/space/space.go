@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/configuration"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/space/remotediff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/space/spacesync"
 	"go.uber.org/zap"
@@ -21,8 +22,8 @@ type Space interface {
 //
 
 type space struct {
-	id string
-
+	id           string
+	conf         configuration.Configuration
 	diff         ldiff.Diff
 	diffHandler  func()
 	syncCtx      context.Context
@@ -105,8 +106,45 @@ func (s *space) syncLoop() {
 }
 
 func (s *space) sync(ctx context.Context) error {
-
+	peerIds, err := s.peerIds(ctx)
+	if err != nil {
+		return err
+	}
+	for _, peerId := range peerIds {
+		if err := s.syncWithPeer(ctx, peerId); err != nil {
+			log.Error("can't sync with peer", zap.String("peer", peerId), zap.Error(err))
+		}
+	}
 	return nil
+}
+
+func (s *space) syncWithPeer(ctx context.Context, peerId string) (err error) {
+	rdiff := remotediff.NewRemoteDiff(s.s.pool, peerId, s.id)
+	newIds, changedIds, removedIds, err := s.diff.Diff(ctx, rdiff)
+	if err != nil {
+		return nil
+	}
+	log.Info("sync done:", zap.Strings("newIds", newIds), zap.Strings("changedIds", changedIds), zap.Strings("removedIds", removedIds))
+	return
+}
+
+func (s *space) peerIds(ctx context.Context) (peerIds []string, err error) {
+	if s.conf.IsResponsible(s.id) {
+		peers, err := s.conf.AllPeers(ctx, s.id)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range peers {
+			peerIds = append(peerIds, p.Id())
+		}
+	} else {
+		peer, err := s.conf.OnePeer(ctx, s.id)
+		if err != nil {
+			return nil, err
+		}
+		peerIds = append(peerIds, peer.Id())
+	}
+	return
 }
 
 func (s *space) Close() error {

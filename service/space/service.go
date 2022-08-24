@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/configuration"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool/handler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/space/spacesync"
@@ -29,17 +30,20 @@ type Service interface {
 }
 
 type service struct {
-	conf  config.Space
-	cache ocache.OCache
-	pool  pool.Pool
+	conf        config.Space
+	cache       ocache.OCache
+	pool        pool.Pool
+	confService configuration.Service
 }
 
 func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 	s.conf = a.MustComponent(config.CName).(*config.Config).Space
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
+	s.confService = a.MustComponent(configuration.CName).(configuration.Service)
 	ttlSec := time.Second * time.Duration(s.conf.GCTTL)
 	s.cache = ocache.New(s.loadSpace, ocache.WithTTL(ttlSec), ocache.WithGCPeriod(time.Minute))
 	s.pool.AddHandler(syncproto.MessageType_MessageTypeSpace, handler.Reply{ReplyHandler: s}.Handle)
+
 	return nil
 }
 
@@ -53,7 +57,7 @@ func (s *service) Run(ctx context.Context) (err error) {
 
 func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object, err error) {
 	// TODO: load from database here
-	sp := &space{s: s, id: id}
+	sp := &space{s: s, id: id, conf: s.confService.GetLast()}
 	if err = sp.Run(ctx); err != nil {
 		return nil, err
 	}
