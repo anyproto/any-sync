@@ -75,7 +75,7 @@ func (s *service) HandleMessage(ctx context.Context, msg *pool.Message) (err err
 }
 
 func (s *service) SendMessageAsync(peerId string, msg *syncproto.Sync) (err error) {
-	err = s.pool.DialAndAddPeer(context.Background(), peerId)
+	_, err = s.pool.DialAndAddPeer(context.Background(), peerId)
 	if err != nil {
 		return
 	}

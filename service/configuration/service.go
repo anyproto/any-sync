@@ -38,8 +38,9 @@ func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	configNodes := a.MustComponent(node.CName).(node.Service).Nodes()
 	config := &configuration{
-		id:   "config",
-		pool: s.pool,
+		id:        "config",
+		accountId: s.accountId,
+		pool:      s.pool,
 	}
 	if config.chash, err = chash.New(chash.Config{
 		PartitionCount:    partitionCount,
