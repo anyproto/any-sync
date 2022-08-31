@@ -10,6 +10,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/api"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/configuration"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/file"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/dialer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/rpc/server"
@@ -96,6 +97,7 @@ func Bootstrap(a *app.App) {
 		Register(node.New()).
 		Register(secure.New()).
 		Register(server.New()).
+		Register(&file.Service{}).
 		Register(dialer.New()).
 		Register(pool.NewPool()).
 		Register(configuration.New()).

@@ -22,6 +22,7 @@ enum MessageType {
     MessageTypeSystem = 0;
     MessageTypeSpace = 1;
     MessageTypeSync = 2;
+    MessageTypeFile = 3;
 }
 
 message System {
