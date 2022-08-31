@@ -195,7 +195,6 @@ func (p *pool) SendAndWaitResponse(ctx context.Context, peerId string, msg *sync
 	msg.GetHeader().RequestId = repId
 	ch := make(chan Reply, 1)
 
-	log.With(zap.Uint64("reply id", repId)).Debug("adding waiter for reply id")
 	p.waiters.Add(repId, &waiter{ch: ch})
 	defer p.waiters.Remove(repId)
 

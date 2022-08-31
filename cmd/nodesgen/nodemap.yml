@@ -1,9 +1,13 @@
 nodes:
   - grpcAddresses:
       - "127.0.0.1:4430"
-      - "127.0.0.1:4431"
     apiPort: "8080"
   - grpcAddresses:
-      - "127.0.0.1:4432"
-      - "127.0.0.1:4433"
+      - "127.0.0.1:4431"
     apiPort: "8081"
+  - grpcAddresses:
+      - "127.0.0.1:4432"
+    apiPort: "8082"
+  - grpcAddresses:
+      - "127.0.0.1:4433"
+    apiPort: "8083"

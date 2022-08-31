@@ -5,7 +5,7 @@ import "go.uber.org/zap"
 var DefaultLogger *zap.Logger
 
 func init() {
-	DefaultLogger, _ = zap.NewDevelopment()
+	DefaultLogger, _ = zap.NewDevelopment(zap.IncreaseLevel(zap.InfoLevel))
 }
 
 func Default() *zap.Logger {
