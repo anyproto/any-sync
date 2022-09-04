@@ -186,22 +186,24 @@ func TestTree_CheckRootReduce(t *testing.T) {
 		tr.Add(
 			newSnapshot("0", ""),
 			newSnapshot("1", "0", "0"),
-			newChange("1.1", "0", "1"),
 			newChange("1.2", "0", "1"),
-			newChange("1.4", "0", "1.2"),
 			newChange("1.3", "0", "1"),
 			newChange("1.3.1", "0", "1.3"),
-			newChange("1.2+3", "0", "1.4", "1.3.1"),
-			newChange("1.2+3.1", "0", "1.2+3"),
-			newSnapshot("10", "0", "1.2+3.1", "1.1"),
+			newSnapshot("1.2+3", "1", "1.2", "1.3.1"),
+			newChange("1.2+3.1", "1", "1.2+3"),
+			newChange("1.2+3.2", "1", "1.2+3"),
+			newSnapshot("10", "1.2+3", "1.2+3.1", "1.2+3.2"),
 			newChange("last", "10", "10"),
 		)
 		t.Run("check root", func(t *testing.T) {
 			total := tr.checkRoot(tr.attached["10"])
 			assert.Equal(t, 1, total)
 
+			total = tr.checkRoot(tr.attached["1.2+3"])
+			assert.Equal(t, 4, total)
+
 			total = tr.checkRoot(tr.attached["1"])
-			assert.Equal(t, 9, total)
+			assert.Equal(t, 8, total)
 		})
 		t.Run("reduce", func(t *testing.T) {
 			tr.reduceTree()
@@ -304,6 +306,9 @@ func BenchmarkTree_Add(b *testing.B) {
 			tr.AddFast(getChanges()...)
 		}
 	})
+}
+
+func BenchmarkTree_IterateLinear(b *testing.B) {
 	// prepare linear tree
 	tr := new(Tree)
 	tr.AddFast(newSnapshot("0", ""))

@@ -24,10 +24,11 @@ type Tree struct {
 	// missed id -> list of dependency ids
 	waitList       map[string][]string
 	invalidChanges map[string]struct{}
+	possibleRoots  []*Change
 
 	// bufs
-	iterCompBuf []*Change
-	iterQueue   []*Change
+	visitedBuf []*Change
+	stackBuf   []*Change
 
 	duplicateEvents int
 }
@@ -59,14 +60,13 @@ func (t *Tree) AddFast(changes ...*Change) {
 func (t *Tree) AddMergedHead(c *Change) error {
 	// check that it was not inserted previously
 	if _, ok := t.attached[c.Id]; ok {
-		return fmt.Errorf("change already exists")
+		return fmt.Errorf("change already exists") // TODO: named error
 	} else if _, ok := t.unAttached[c.Id]; ok {
 		return fmt.Errorf("change already exists")
 	}
-	t.add(c)
 
 	// check that it was attached after adding
-	if _, ok := t.attached[c.Id]; !ok {
+	if !t.add(c) {
 		return fmt.Errorf("change is not attached")
 	}
 
@@ -172,6 +172,7 @@ func (t *Tree) add(c *Change) (attached bool) {
 		t.unAttached = make(map[string]*Change)
 		t.waitList = make(map[string][]string)
 		t.invalidChanges = make(map[string]struct{})
+		t.possibleRoots = make([]*Change, 0, 10)
 		return true
 	}
 	if len(c.PreviousIds) > 1 {
@@ -215,6 +216,9 @@ func (t *Tree) attach(c *Change, newEl bool) {
 	t.attached[c.Id] = c
 	if !newEl {
 		delete(t.unAttached, c.Id)
+	}
+	if c.IsSnapshot {
+		t.possibleRoots = append(t.possibleRoots, c)
 	}
 
 	// add next to all prev changes
@@ -266,25 +270,31 @@ func (t *Tree) after(id1, id2 string) (found bool) {
 	return
 }
 
-func (t *Tree) dfs(startChange string) (uniqMap map[string]*Change) {
-	stack := make([]*Change, 0, 10)
-	stack = append(stack, t.attached[startChange])
-	uniqMap = map[string]*Change{}
+func (t *Tree) dfsPrev(stack []*Change, visit func(ch *Change), afterVisit func([]*Change)) {
+	t.visitedBuf = t.visitedBuf[:0]
 
 	for len(stack) > 0 {
 		ch := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
-		if _, exists := uniqMap[ch.Id]; exists {
+		if ch.visited {
 			continue
 		}
 
-		uniqMap[ch.Id] = ch
+		ch.visited = true
+		t.visitedBuf = append(t.visitedBuf, ch)
 
-		for _, prev := range ch.PreviousIds {
-			stack = append(stack, t.attached[prev])
+		for _, prevId := range ch.PreviousIds {
+			prevCh := t.attached[prevId]
+			if !prevCh.visited {
+				stack = append(stack, prevCh)
+			}
 		}
+		visit(ch)
 	}
-	return uniqMap
+	afterVisit(t.visitedBuf)
+	for _, ch := range t.visitedBuf {
+		ch.visited = false
+	}
 }
 
 func (t *Tree) updateHeads() {

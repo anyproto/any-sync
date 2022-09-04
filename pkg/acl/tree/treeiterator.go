@@ -46,19 +46,28 @@ func (i *iterator) topSort(start *Change) {
 		ch := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
 
-		if ch.visited {
+		// this looks a bit clumsy, but the idea is that we will go through the change again as soon as we finished
+		// going through its branches
+		if ch.branchesFinished {
 			i.resBuf = append(i.resBuf, ch)
+			ch.branchesFinished = false
 			continue
 		}
 
-		ch.visited = true
+		// in theory, it may be the case that we add the change two times
+		// but probably due to the way how we build the tree, we won't need it
+		if ch.visited {
+			continue
+		}
+
 		stack = append(stack, ch)
+		ch.visited = true
+		ch.branchesFinished = true
 
 		for j := 0; j < len(ch.Next); j++ {
-			if ch.Next[j].visited {
-				continue
+			if !ch.Next[j].visited {
+				stack = append(stack, ch.Next[j])
 			}
-			stack = append(stack, ch.Next[j])
 		}
 	}
 	for _, ch := range i.resBuf {
