@@ -105,6 +105,7 @@ func TestTree_Add(t *testing.T) {
 		t.Log(time.Since(st))
 		assert.Equal(t, []string{"9999"}, tr.Heads())
 	})
+	// TODO: add my tests
 }
 
 func TestTree_Hash(t *testing.T) {
@@ -157,9 +158,10 @@ func TestTree_Iterate(t *testing.T) {
 			newChange("1", "0", "0"),
 			newChange("1.1", "0", "1"),
 			newChange("1.2", "0", "1"),
+			newChange("1.4", "0", "1.2"),
 			newChange("1.3", "0", "1"),
 			newChange("1.3.1", "0", "1.3"),
-			newChange("1.2+3", "0", "1.2", "1.3.1"),
+			newChange("1.2+3", "0", "1.4", "1.3.1"),
 			newChange("1.2+3.1", "0", "1.2+3"),
 			newChange("10", "0", "1.2+3.1", "1.1"),
 			newChange("last", "0", "10"),
@@ -174,7 +176,7 @@ func TestTree_Iterate(t *testing.T) {
 			res = append(res, c.Id)
 			return true
 		})
-		assert.Equal(t, []string{"0", "1", "1.1", "1.2", "1.3", "1.3.1", "1.2+3", "1.2+3.1", "10", "last"}, res)
+		assert.Equal(t, []string{"0", "1", "1.1", "1.2", "1.4", "1.3", "1.3.1", "1.2+3", "1.2+3.1", "10", "last"}, res)
 	})
 }
 
@@ -209,6 +211,19 @@ func BenchmarkTree_Add(b *testing.B) {
 			tr := new(Tree)
 			tr.AddFast(newSnapshot("root", ""))
 			tr.AddFast(getChanges()...)
+		}
+	})
+	// prepare linear tree
+	tr := new(Tree)
+	tr.AddFast(newSnapshot("0", ""))
+	for j := 0; j < 10000; j++ {
+		tr.Add(newChange(fmt.Sprint(j+1), "0", fmt.Sprint(j)))
+	}
+	b.Run("add linear", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			tr.Iterate("0", func(c *Change) (isContinue bool) {
+				return true
+			})
 		}
 	})
 }
