@@ -150,6 +150,97 @@ func TestTree_AddFuzzy(t *testing.T) {
 	}
 }
 
+func TestTree_CheckRootReduce(t *testing.T) {
+	t.Run("check root once", func(t *testing.T) {
+		tr := new(Tree)
+		tr.Add(
+			newSnapshot("0", ""),
+			newChange("1", "0", "0"),
+			newChange("1.1", "0", "1"),
+			newChange("1.2", "0", "1"),
+			newChange("1.4", "0", "1.2"),
+			newChange("1.3", "0", "1"),
+			newChange("1.3.1", "0", "1.3"),
+			newChange("1.2+3", "0", "1.4", "1.3.1"),
+			newChange("1.2+3.1", "0", "1.2+3"),
+			newSnapshot("10", "0", "1.2+3.1", "1.1"),
+			newChange("last", "10", "10"),
+		)
+		t.Run("check root", func(t *testing.T) {
+			total := tr.checkRoot(tr.attached["10"])
+			assert.Equal(t, 1, total)
+		})
+		t.Run("reduce", func(t *testing.T) {
+			tr.reduceTree()
+			assert.Equal(t, "10", tr.RootId())
+			var res []string
+			tr.Iterate(tr.RootId(), func(c *Change) (isContinue bool) {
+				res = append(res, c.Id)
+				return true
+			})
+			assert.Equal(t, []string{"10", "last"}, res)
+		})
+	})
+	t.Run("check root many", func(t *testing.T) {
+		tr := new(Tree)
+		tr.Add(
+			newSnapshot("0", ""),
+			newSnapshot("1", "0", "0"),
+			newChange("1.1", "0", "1"),
+			newChange("1.2", "0", "1"),
+			newChange("1.4", "0", "1.2"),
+			newChange("1.3", "0", "1"),
+			newChange("1.3.1", "0", "1.3"),
+			newChange("1.2+3", "0", "1.4", "1.3.1"),
+			newChange("1.2+3.1", "0", "1.2+3"),
+			newSnapshot("10", "0", "1.2+3.1", "1.1"),
+			newChange("last", "10", "10"),
+		)
+		t.Run("check root", func(t *testing.T) {
+			total := tr.checkRoot(tr.attached["10"])
+			assert.Equal(t, 1, total)
+
+			total = tr.checkRoot(tr.attached["1"])
+			assert.Equal(t, 9, total)
+		})
+		t.Run("reduce", func(t *testing.T) {
+			tr.reduceTree()
+			assert.Equal(t, "10", tr.RootId())
+			var res []string
+			tr.Iterate(tr.RootId(), func(c *Change) (isContinue bool) {
+				res = append(res, c.Id)
+				return true
+			})
+			assert.Equal(t, []string{"10", "last"}, res)
+		})
+	})
+	t.Run("check root incorrect", func(t *testing.T) {
+		tr := new(Tree)
+		tr.Add(
+			newSnapshot("0", ""),
+			newChange("1", "0", "0"),
+			newChange("1.1", "0", "1"),
+			newChange("1.2", "0", "1"),
+			newChange("1.4", "0", "1.2"),
+			newChange("1.3", "0", "1"),
+			newSnapshot("1.3.1", "0", "1.3"),
+			newChange("1.2+3", "0", "1.4", "1.3.1"),
+			newChange("1.2+3.1", "0", "1.2+3"),
+			newChange("10", "0", "1.2+3.1", "1.1"),
+			newChange("last", "10", "10"),
+		)
+		t.Run("check root", func(t *testing.T) {
+			total := tr.checkRoot(tr.attached["1.3.1"])
+			assert.Equal(t, -1, total)
+		})
+		t.Run("reduce", func(t *testing.T) {
+			tr.reduceTree()
+			assert.Equal(t, "0", tr.RootId())
+			assert.Equal(t, 0, len(tr.possibleRoots))
+		})
+	})
+}
+
 func TestTree_Iterate(t *testing.T) {
 	t.Run("complex tree", func(t *testing.T) {
 		tr := new(Tree)
