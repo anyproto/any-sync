@@ -123,7 +123,7 @@ func (s *service) loadTree(ctx context.Context, id string) (ocache.Object, error
 		return nil, fmt.Errorf("incorrect type")
 	}
 	log.Info("got header", zap.String("header", header.String()))
-	var docTree tree.DocTree
+	var docTree tree.ObjectTree
 	// TODO: it is a question if we need to use ACLList on the first tree build, because we can think that the tree is already validated
 	err = s.Do(ctx, header.AclListId, func(obj interface{}) error {
 		aclTree := obj.(list.ACLList)
