@@ -84,7 +84,7 @@ func (s *service) UpdateDocumentTree(ctx context.Context, id, text string) (err 
 		Debug("updating document")
 
 	err = s.treeCache.Do(ctx, id, func(obj interface{}) error {
-		docTree, ok := obj.(tree.DocTree)
+		docTree, ok := obj.(tree.ObjectTree)
 		if !ok {
 			return fmt.Errorf("can't update acl trees with text")
 		}

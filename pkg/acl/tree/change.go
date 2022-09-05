@@ -64,7 +64,7 @@ func NewChangeFromRaw(rawChange *aclpb.RawChange) (*Change, error) {
 	return ch, nil
 }
 
-func NewVerifiedChangeFromRaw(
+func newVerifiedChangeFromRaw(
 	rawChange *aclpb.RawChange,
 	kch *keychain) (*Change, error) {
 	unmarshalled := &aclpb.Change{}

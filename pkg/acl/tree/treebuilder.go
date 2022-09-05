@@ -131,7 +131,7 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 		return nil, err
 	}
 
-	ch, err = NewVerifiedChangeFromRaw(change, tb.kch)
+	ch, err = newVerifiedChangeFromRaw(change, tb.kch)
 	if err != nil {
 		return nil, err
 	}

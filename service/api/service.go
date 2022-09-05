@@ -80,7 +80,7 @@ func (s *service) treeDump(w http.ResponseWriter, req *http.Request) {
 		err    error
 	)
 	err = s.treeCache.Do(context.Background(), treeId, func(obj interface{}) error {
-		t := obj.(tree.CommonTree)
+		t := obj.(tree.ObjectTree)
 		dump, err = t.DebugDump()
 		if err != nil {
 			return err

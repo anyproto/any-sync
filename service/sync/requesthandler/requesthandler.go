@@ -88,7 +88,7 @@ func (r *requestHandler) HandleHeadUpdate(
 		Debug("processing head update")
 
 	err = r.treeCache.Do(ctx, treeId, func(obj interface{}) error {
-		docTree := obj.(tree.DocTree)
+		docTree := obj.(tree.ObjectTree)
 		docTree.Lock()
 		defer docTree.Unlock()
 
@@ -160,7 +160,7 @@ func (r *requestHandler) HandleFullSyncRequest(
 
 	log.Info("getting doc tree from treeCache", zap.String("treeId", treeId))
 	err = r.treeCache.Do(ctx, treeId, func(obj interface{}) error {
-		docTree := obj.(tree.DocTree)
+		docTree := obj.(tree.ObjectTree)
 		docTree.Lock()
 		defer docTree.Unlock()
 
@@ -222,7 +222,7 @@ func (r *requestHandler) HandleFullSyncResponse(
 		Debug("processing full sync response")
 
 	err = r.treeCache.Do(ctx, treeId, func(obj interface{}) error {
-		docTree := obj.(tree.DocTree)
+		docTree := obj.(tree.ObjectTree)
 		docTree.Lock()
 		defer docTree.Unlock()
 
@@ -290,7 +290,7 @@ func (r *requestHandler) HandleACLList(
 	return err
 }
 
-func (r *requestHandler) prepareFullSyncRequest(theirPath []string, t tree.CommonTree) (*syncproto.SyncFullRequest, error) {
+func (r *requestHandler) prepareFullSyncRequest(theirPath []string, t tree.ObjectTree) (*syncproto.SyncFullRequest, error) {
 	ourChanges, err := t.ChangesAfterCommonSnapshot(theirPath)
 	if err != nil {
 		return nil, err
@@ -306,7 +306,7 @@ func (r *requestHandler) prepareFullSyncResponse(
 	treeId string,
 	theirPath []string,
 	theirChanges []*aclpb.RawChange,
-	t tree.CommonTree) (*syncproto.SyncFullResponse, error) {
+	t tree.ObjectTree) (*syncproto.SyncFullResponse, error) {
 	// TODO: we can probably use the common snapshot calculated on the request step from previous peer
 	ourChanges, err := t.ChangesAfterCommonSnapshot(theirPath)
 	if err != nil {
