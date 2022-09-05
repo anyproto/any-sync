@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"go.uber.org/zap"
 	"time"
@@ -133,7 +131,7 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 		return nil, err
 	}
 
-	ch, err = NewVerifiedChangeFromRaw(change, tb.identityKeys, tb.signingPubKeyDecoder)
+	ch, err = NewVerifiedChangeFromRaw(change, tb.kch)
 	if err != nil {
 		return nil, err
 	}

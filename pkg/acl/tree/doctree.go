@@ -25,8 +25,10 @@ type RWLocker interface {
 	RUnlock()
 }
 
-var ErrHasInvalidChanges = errors.New("the change is invalid")
-var ErrNoCommonSnapshot = errors.New("trees doesn't have a common snapshot")
+var (
+	ErrHasInvalidChanges = errors.New("the change is invalid")
+	ErrNoCommonSnapshot  = errors.New("trees doesn't have a common snapshot")
+)
 
 type AddResultSummary int
 
@@ -40,7 +42,7 @@ type AddResult struct {
 	OldHeads []string
 	Heads    []string
 	Added    []*aclpb.RawChange
-	// TODO: add summary for changes
+
 	Summary AddResultSummary
 }
 
@@ -64,10 +66,12 @@ type docTree struct {
 	kch         *keychain
 
 	// buffers
-	difSnapshotBuf []*aclpb.RawChange
-	tmpChangesBuf  []*Change
-	newSnapshots   []*Change
-	notSeenIdxBuf  []int
+	difSnapshotBuf  []*aclpb.RawChange
+	tmpChangesBuf   []*Change
+	newSnapshotsBuf []*Change
+	notSeenIdxBuf   []int
+
+	snapshotPath []string
 
 	sync.RWMutex
 }
@@ -128,7 +132,7 @@ func (d *docTree) rebuildFromStorage(aclList list.ACLList, newChanges []*Change)
 
 	d.tree, err = d.treeBuilder.Build(newChanges)
 	if err != nil {
-		return err
+		return
 	}
 
 	// during building the tree we may have marked some changes as possible roots,
@@ -198,9 +202,8 @@ func (d *docTree) AddContent(ctx context.Context, aclList list.ACLList, content 
 		return nil, err
 	}
 
-	docChange := NewChange(id, aclChange)
+	docChange := NewChange(id, aclChange, signature)
 	docChange.ParsedModel = content
-	docChange.Sign = signature
 
 	if content.IsSnapshot {
 		// clearing tree, because we already fixed everything in the last snapshot
@@ -269,10 +272,11 @@ func (d *docTree) addRawChanges(ctx context.Context, aclList list.ACLList, rawCh
 	d.tmpChangesBuf = d.tmpChangesBuf[:0]
 	d.notSeenIdxBuf = d.notSeenIdxBuf[:0]
 	d.difSnapshotBuf = d.difSnapshotBuf[:0]
-	d.newSnapshots = d.newSnapshots[:0]
+	d.newSnapshotsBuf = d.newSnapshotsBuf[:0]
 
-	prevHeads := d.tree.Heads()
-	// TODO: if we can use new snapshot -> update tree, check if some snapshot, dfsPrev?
+	// this will be returned to client so we shouldn't use buffer here
+	prevHeadsCopy := make([]string, 0, len(d.tree.Heads()))
+	copy(prevHeadsCopy, d.tree.Heads())
 
 	// filtering changes, verifying and unmarshalling them
 	for idx, ch := range rawChanges {
@@ -287,7 +291,7 @@ func (d *docTree) addRawChanges(ctx context.Context, aclList list.ACLList, rawCh
 		}
 
 		if change.IsSnapshot {
-			d.newSnapshots = append(d.newSnapshots, change)
+			d.newSnapshotsBuf = append(d.newSnapshotsBuf, change)
 		}
 		d.tmpChangesBuf = append(d.tmpChangesBuf, change)
 		d.notSeenIdxBuf = append(d.notSeenIdxBuf, idx)
@@ -296,11 +300,17 @@ func (d *docTree) addRawChanges(ctx context.Context, aclList list.ACLList, rawCh
 	// if no new changes, then returning
 	if len(d.notSeenIdxBuf) == 0 {
 		addResult = AddResult{
-			OldHeads: prevHeads,
-			Heads:    prevHeads,
+			OldHeads: prevHeadsCopy,
+			Heads:    prevHeadsCopy,
 			Summary:  AddResultSummaryNothing,
 		}
 		return
+	}
+
+	headsCopy := func() []string {
+		newHeads := make([]string, 0, len(d.tree.Heads()))
+		copy(newHeads, d.tree.Heads())
+		return newHeads
 	}
 
 	// returns changes that we added to the tree
@@ -330,7 +340,7 @@ func (d *docTree) addRawChanges(ctx context.Context, aclList list.ACLList, rawCh
 		if ch.SnapshotId == d.tree.RootId() {
 			return false
 		}
-		for _, sn := range d.newSnapshots {
+		for _, sn := range d.newSnapshotsBuf {
 			// if change refers to newly received snapshot
 			if ch.SnapshotId == sn.Id {
 				return false
@@ -350,8 +360,8 @@ func (d *docTree) addRawChanges(ctx context.Context, aclList list.ACLList, rawCh
 			}
 
 			addResult = AddResult{
-				OldHeads: prevHeads,
-				Heads:    d.tree.Heads(),
+				OldHeads: prevHeadsCopy,
+				Heads:    headsCopy(),
 				Added:    getAddedChanges(),
 				Summary:  AddResultSummaryRebuild,
 			}
@@ -364,8 +374,8 @@ func (d *docTree) addRawChanges(ctx context.Context, aclList list.ACLList, rawCh
 	switch mode {
 	case Nothing:
 		addResult = AddResult{
-			OldHeads: prevHeads,
-			Heads:    prevHeads,
+			OldHeads: prevHeadsCopy,
+			Heads:    prevHeadsCopy,
 			Summary:  AddResultSummaryNothing,
 		}
 		return
@@ -381,8 +391,8 @@ func (d *docTree) addRawChanges(ctx context.Context, aclList list.ACLList, rawCh
 		}
 
 		addResult = AddResult{
-			OldHeads: prevHeads,
-			Heads:    d.tree.Heads(),
+			OldHeads: prevHeadsCopy,
+			Heads:    headsCopy(),
 			Added:    getAddedChanges(),
 			Summary:  AddResultSummaryAppend,
 		}
@@ -417,7 +427,9 @@ func (d *docTree) Close() error {
 }
 
 func (d *docTree) SnapshotPath() []string {
-	// TODO: think about caching this
+	if d.snapshotPathIsActual() {
+		return d.snapshotPath
+	}
 
 	var path []string
 	// TODO: think that the user may have not all of the snapshots locally
@@ -430,20 +442,22 @@ func (d *docTree) SnapshotPath() []string {
 		path = append(path, currentSnapshotId)
 		currentSnapshotId = sn.SnapshotId
 	}
+	d.snapshotPath = path
+
 	return path
 }
 
 func (d *docTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawChange, error) {
 	var (
-		isNewDocument = len(theirPath) == 0
-		ourPath       = d.SnapshotPath()
+		needFullDocument = len(theirPath) == 0
+		ourPath          = d.SnapshotPath()
 		// by default returning everything we have
 		commonSnapshot = ourPath[len(ourPath)-1]
 		err            error
 	)
 
 	// if this is non-empty request
-	if !isNewDocument {
+	if !needFullDocument {
 		commonSnapshot, err = commonSnapshotForTwoPaths(ourPath, theirPath)
 		if err != nil {
 			return nil, err
@@ -457,17 +471,13 @@ func (d *docTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawCh
 		Debug("getting all changes from common snapshot")
 
 	if commonSnapshot == d.tree.RootId() {
-		return d.getChangesFromTree(isNewDocument)
+		return d.getChangesFromTree()
 	} else {
-		return d.getChangesFromDB(commonSnapshot, isNewDocument)
+		return d.getChangesFromDB(commonSnapshot, needFullDocument)
 	}
 }
 
-func (d *docTree) getChangesFromTree(isNewDocument bool) (marshalledChanges []*aclpb.RawChange, err error) {
-	if !isNewDocument {
-		// ignoring root change
-		d.tree.Root().visited = true
-	}
+func (d *docTree) getChangesFromTree() (rawChanges []*aclpb.RawChange, err error) {
 	d.tree.dfsPrev(d.tree.HeadsChanges(), func(ch *Change) bool {
 		var marshalled []byte
 		marshalled, err = ch.Content.Marshal()
@@ -479,18 +489,14 @@ func (d *docTree) getChangesFromTree(isNewDocument bool) (marshalledChanges []*a
 			Signature: ch.Signature(),
 			Id:        ch.Id,
 		}
-		marshalledChanges = append(marshalledChanges, raw)
+		rawChanges = append(rawChanges, raw)
 		return true
 	}, func(changes []*Change) {})
 
-	if err != nil {
-		return nil, err
-	}
 	return
 }
 
-func (d *docTree) getChangesFromDB(commonSnapshot string, isNewDocument bool) (marshalledChanges []*aclpb.RawChange, err error) {
-	var rawChanges []*aclpb.RawChange
+func (d *docTree) getChangesFromDB(commonSnapshot string, needStartSnapshot bool) (rawChanges []*aclpb.RawChange, err error) {
 	load := func(id string) (*Change, error) {
 		raw, err := d.treeStorage.GetRawChange(context.Background(), id)
 		if err != nil {
@@ -508,18 +514,19 @@ func (d *docTree) getChangesFromDB(commonSnapshot string, isNewDocument bool) (m
 
 	_, err = d.treeBuilder.dfs(d.tree.Heads(), commonSnapshot, load)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	if isNewDocument {
+	if needStartSnapshot {
 		// adding snapshot to raw changes
 		_, err = load(commonSnapshot)
-		if err != nil {
-			return nil, err
-		}
 	}
 
-	return rawChanges, nil
+	return
+}
+
+func (d *docTree) snapshotPathIsActual() bool {
+	return len(d.snapshotPath) != 0 && d.snapshotPath[len(d.snapshotPath)-1] == d.tree.RootId()
 }
 
 func (d *docTree) DebugDump() (string, error) {

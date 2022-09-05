@@ -1,12 +1,15 @@
 package tree
 
 import (
+	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 )
+
+var ErrIncorrectSignature = errors.New("change has incorrect signature")
 
 type ChangeContent struct {
 	ChangesData proto.Marshaler
@@ -21,8 +24,8 @@ type Change struct {
 	Id              string
 	SnapshotId      string
 	IsSnapshot      bool
-	DecryptedChange []byte // TODO: check if we need it
-	ParsedModel     interface{}
+	DecryptedChange []byte      // TODO: check if we need it
+	ParsedModel     interface{} // TODO: check if we need it
 
 	// iterator helpers
 	visited          bool
@@ -57,8 +60,7 @@ func NewChangeFromRaw(rawChange *aclpb.RawChange) (*Change, error) {
 		return nil, err
 	}
 
-	ch := NewChange(rawChange.Id, unmarshalled)
-	ch.Sign = rawChange.Signature
+	ch := NewChange(rawChange.Id, unmarshalled, rawChange.Signature)
 	return ch, nil
 }
 
@@ -66,7 +68,7 @@ func NewVerifiedChangeFromRaw(
 	rawChange *aclpb.RawChange,
 	kch *keychain) (*Change, error) {
 	unmarshalled := &aclpb.Change{}
-	err := proto.Unmarshal(rawChange.Payload, unmarshalled)
+	ch, err := NewChangeFromRaw(rawChange)
 	if err != nil {
 		return nil, err
 	}
@@ -81,13 +83,13 @@ func NewVerifiedChangeFromRaw(
 		return nil, err
 	}
 	if !res {
-		return nil, fmt.Errorf("change has incorrect signature")
+		return nil, ErrIncorrectSignature
 	}
 
-	return NewChange(rawChange.Id, unmarshalled), nil
+	return ch, nil
 }
 
-func NewChange(id string, ch *aclpb.Change) *Change {
+func NewChange(id string, ch *aclpb.Change, signature []byte) *Change {
 	return &Change{
 		Next:        nil,
 		PreviousIds: ch.TreeHeadIds,
@@ -95,6 +97,7 @@ func NewChange(id string, ch *aclpb.Change) *Change {
 		Content:     ch,
 		SnapshotId:  ch.SnapshotBaseId,
 		IsSnapshot:  ch.IsSnapshot,
+		Sign:        signature,
 	}
 }
 
