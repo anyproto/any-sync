@@ -10,48 +10,6 @@ import (
 	"time"
 )
 
-//
-//func CreateNewTreeStorageWithACL(
-//	acc *account.AccountData,
-//	build func(builder list.ACLChangeBuilder) error,
-//	create treestorage.CreatorFunc) (treestorage.Storage, error) {
-//	bld := list.newACLChangeBuilder()
-//	bld.Init(
-//		list.newACLStateWithIdentity(acc.Identity, acc.EncKey, signingkey.NewEd25519PubKeyDecoder()),
-//		&Tree{},
-//		acc)
-//	err := build(bld)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	change, payload, err := bld.BuildAndApply()
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	rawChange := &aclpb.RawChange{
-//		Payload:   payload,
-//		Signature: change.Signature(),
-//		Id:        change.CID(),
-//	}
-//	header, id, err := createTreeHeaderAndId(rawChange, treepb.TreeHeader_ACLTree, "")
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	thr, err := create(id, header, []*aclpb.RawChange{rawChange})
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	err = thr.SetHeads([]string{change.CID()})
-//	if err != nil {
-//		return nil, err
-//	}
-//	return thr, nil
-//}
-
 func CreateNewTreeStorage(
 	acc *account.AccountData,
 	aclList list.ACLList,
@@ -71,20 +29,29 @@ func CreateNewTreeStorage(
 	if err != nil {
 		return nil, err
 	}
-	encrypted, err := state.UserReadKeys()[state.CurrentReadKeyHash()].Encrypt(marshalledData)
+
+	readKey, err := state.CurrentReadKey()
 	if err != nil {
 		return nil, err
 	}
+
+	encrypted, err := readKey.Encrypt(marshalledData)
+	if err != nil {
+		return nil, err
+	}
+
 	change.ChangesData = encrypted
 
 	fullMarshalledChange, err := proto.Marshal(change)
 	if err != nil {
 		return nil, err
 	}
+
 	signature, err := acc.SignKey.Sign(fullMarshalledChange)
 	if err != nil {
 		return nil, err
 	}
+
 	changeId, err := cid.NewCIDFromBytes(fullMarshalledChange)
 	if err != nil {
 		return nil, err

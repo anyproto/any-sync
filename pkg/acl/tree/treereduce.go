@@ -21,8 +21,9 @@ func (t *Tree) checkRoot(change *Change) (total int) {
 	change.visited = true
 	t.dfsPrev(
 		stack,
-		func(ch *Change) {
+		func(ch *Change) bool {
 			total += 1
+			return true
 		},
 		func(changes []*Change) {
 			if t.root.visited {
@@ -45,7 +46,9 @@ func (t *Tree) makeRootAndRemove(start *Change) {
 
 	t.dfsPrev(
 		stack,
-		func(ch *Change) {},
+		func(ch *Change) bool {
+			return true
+		},
 		func(changes []*Change) {
 			for _, ch := range changes {
 				delete(t.unAttached, ch.Id)

@@ -24,6 +24,7 @@ var ErrDocumentForbidden = errors.New("your user was forbidden access to the doc
 var ErrUserAlreadyExists = errors.New("user already exists")
 var ErrNoSuchRecord = errors.New("no such record")
 var ErrInsufficientPermissions = errors.New("insufficient permissions")
+var ErrNoReadKey = errors.New("acl state doesn't have a read key")
 
 type UserPermissionPair struct {
 	Identity   string
@@ -68,6 +69,14 @@ func newACLState(decoder keys.Decoder) *ACLState {
 
 func (st *ACLState) CurrentReadKeyHash() uint64 {
 	return st.currentReadKeyHash
+}
+
+func (st *ACLState) CurrentReadKey() (*symmetric.Key, error) {
+	key, exists := st.userReadKeys[st.currentReadKeyHash]
+	if !exists {
+		return nil, ErrNoReadKey
+	}
+	return key, nil
 }
 
 func (st *ACLState) UserReadKeys() map[uint64]*symmetric.Key {
