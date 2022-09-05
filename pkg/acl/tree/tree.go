@@ -270,8 +270,15 @@ func (t *Tree) after(id1, id2 string) (found bool) {
 	return
 }
 
-func (t *Tree) dfsPrev(stack []*Change, visit func(ch *Change), afterVisit func([]*Change)) {
+func (t *Tree) dfsPrev(stack []*Change, visit func(ch *Change) (isContinue bool), afterVisit func([]*Change)) {
 	t.visitedBuf = t.visitedBuf[:0]
+
+	defer func() {
+		afterVisit(t.visitedBuf)
+		for _, ch := range t.visitedBuf {
+			ch.visited = false
+		}
+	}()
 
 	for len(stack) > 0 {
 		ch := stack[len(stack)-1]
@@ -289,11 +296,9 @@ func (t *Tree) dfsPrev(stack []*Change, visit func(ch *Change), afterVisit func(
 				stack = append(stack, prevCh)
 			}
 		}
-		visit(ch)
-	}
-	afterVisit(t.visitedBuf)
-	for _, ch := range t.visitedBuf {
-		ch.visited = false
+		if !visit(ch) {
+			return
+		}
 	}
 }
 
@@ -371,6 +376,14 @@ func (t *Tree) Len() int {
 
 func (t *Tree) Heads() []string {
 	return t.headIds
+}
+
+func (t *Tree) HeadsChanges() []*Change {
+	var heads []*Change
+	for _, head := range t.headIds {
+		heads = append(heads, t.attached[head])
+	}
+	return heads
 }
 
 func (t *Tree) String() string {

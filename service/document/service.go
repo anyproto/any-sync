@@ -97,7 +97,13 @@ func (s *service) UpdateDocumentTree(ctx context.Context, id, text string) (err 
 			defer aclTree.RUnlock()
 
 			content := createAppendTextChange(text)
-			ch, err = docTree.AddContent(ctx, aclTree, content, false)
+			signable := tree.SignableChangeContent{
+				Proto:      content,
+				Key:        s.account.Account().SignKey,
+				Identity:   s.account.Account().Identity,
+				IsSnapshot: false,
+			}
+			ch, err = docTree.AddContent(ctx, aclTree, signable)
 			if err != nil {
 				return err
 			}
