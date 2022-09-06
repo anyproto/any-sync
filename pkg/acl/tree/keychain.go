@@ -13,6 +13,7 @@ type keychain struct {
 func newKeychain() *keychain {
 	return &keychain{
 		decoder: signingkey.NewEDPubKeyDecoder(),
+		keys:    make(map[string]signingkey.PubKey),
 	}
 }
 
