@@ -85,18 +85,13 @@ func (tb *treeBuilder) dfs(
 	load func(string) (*Change, error)) (buf []*Change, err error) {
 	tb.idStack = tb.idStack[:0]
 	tb.loadBuffer = tb.loadBuffer[:0]
-	buf = tb.loadBuffer
 
-	var (
-		stack   = tb.idStack
-		uniqMap = map[string]struct{}{breakpoint: {}}
-	)
+	uniqMap := map[string]struct{}{breakpoint: {}}
+	tb.idStack = append(tb.idStack, heads...)
 
-	copy(stack, heads)
-
-	for len(stack) > 0 {
-		id := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
+	for len(tb.idStack) > 0 {
+		id := tb.idStack[len(tb.idStack)-1]
+		tb.idStack = tb.idStack[:len(tb.idStack)-1]
 		if _, exists := uniqMap[id]; exists {
 			continue
 		}
@@ -107,16 +102,16 @@ func (tb *treeBuilder) dfs(
 		}
 
 		uniqMap[id] = struct{}{}
-		buf = append(buf, ch)
+		tb.loadBuffer = append(tb.loadBuffer, ch)
 
 		for _, prev := range ch.PreviousIds {
-			if _, exists := uniqMap[id]; exists {
+			if _, exists := uniqMap[prev]; exists {
 				continue
 			}
-			stack = append(stack, prev)
+			tb.idStack = append(tb.idStack, prev)
 		}
 	}
-	return buf, nil
+	return tb.loadBuffer, nil
 }
 
 func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {

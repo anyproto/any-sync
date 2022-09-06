@@ -481,6 +481,7 @@ func (ot *objectTree) Close() error {
 }
 
 func (ot *objectTree) SnapshotPath() []string {
+	// TODO: Add error as return parameter
 	if ot.snapshotPathIsActual() {
 		return ot.snapshotPath
 	}
