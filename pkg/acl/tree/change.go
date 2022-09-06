@@ -9,7 +9,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 )
 
-var ErrIncorrectSignature = errors.New("change has incorrect signature")
+var (
+	ErrIncorrectSignature = errors.New("change has incorrect signature")
+	ErrIncorrectCID       = errors.New("change has incorrect CID")
+)
 
 type ChangeContent struct {
 	ChangesData proto.Marshaler
