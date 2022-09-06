@@ -60,12 +60,19 @@ func (c *changeBuilder) ConvertFromRawAndVerify(rawChange *aclpb.RawChange) (ch 
 		return
 	}
 
+	// verifying signature
 	res, err := identityKey.Verify(rawChange.Payload, rawChange.Signature)
 	if err != nil {
 		return
 	}
 	if !res {
 		err = ErrIncorrectSignature
+		return
+	}
+
+	// verifying ID
+	if !cid.VerifyCID(rawChange.Payload, rawChange.Id) {
+		err = ErrIncorrectCID
 	}
 
 	return

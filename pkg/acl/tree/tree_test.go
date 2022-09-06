@@ -17,7 +17,7 @@ func newChange(id string, snapshotId string, prevIds ...string) *Change {
 	}
 }
 
-func newSnapshot(id string, snapshotId string, prevIds ...string) *Change {
+func newSnapshot(id, snapshotId string, prevIds ...string) *Change {
 	return &Change{
 		PreviousIds: prevIds,
 		Id:          id,
