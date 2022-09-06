@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"go.uber.org/zap"
 	"sync"
@@ -43,6 +44,9 @@ type AddResult struct {
 	Summary AddResultSummary
 }
 
+type ChangeIterateFunc = func(change *Change) bool
+type ChangeConvertFunc = func(decrypted []byte) (any, error)
+
 type ObjectTree interface {
 	RWLocker
 
@@ -52,8 +56,8 @@ type ObjectTree interface {
 	Root() *Change
 	HasChange(string) bool
 
-	Iterate(func(change *Change) bool)
-	IterateFrom(string, func(change *Change) bool)
+	Iterate(convert ChangeConvertFunc, iterate ChangeIterateFunc) error
+	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 
 	SnapshotPath() []string
 	ChangesAfterCommonSnapshot(snapshotPath []string) ([]*aclpb.RawChange, error)
@@ -78,6 +82,8 @@ type objectTree struct {
 	id     string
 	header *aclpb.Header
 	tree   *Tree
+
+	keys map[uint64]*symmetric.Key
 
 	// buffers
 	difSnapshotBuf  []*aclpb.RawChange
@@ -119,16 +125,18 @@ func defaultObjectTreeDeps(
 
 func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 	objTree := &objectTree{
-		treeStorage:    deps.treeStorage,
-		updateListener: deps.updateListener,
-		treeBuilder:    deps.treeBuilder,
-		validator:      deps.validator,
-		aclList:        deps.aclList,
-		changeBuilder:  deps.changeBuilder,
-		tree:           nil,
-		tmpChangesBuf:  make([]*Change, 0, 10),
-		difSnapshotBuf: make([]*aclpb.RawChange, 0, 10),
-		notSeenIdxBuf:  make([]int, 0, 10),
+		treeStorage:     deps.treeStorage,
+		updateListener:  deps.updateListener,
+		treeBuilder:     deps.treeBuilder,
+		validator:       deps.validator,
+		aclList:         deps.aclList,
+		changeBuilder:   deps.changeBuilder,
+		tree:            nil,
+		keys:            make(map[uint64]*symmetric.Key),
+		tmpChangesBuf:   make([]*Change, 0, 10),
+		difSnapshotBuf:  make([]*aclpb.RawChange, 0, 10),
+		notSeenIdxBuf:   make([]int, 0, 10),
+		newSnapshotsBuf: make([]*Change, 0, 10),
 	}
 
 	err := objTree.rebuildFromStorage(nil)
@@ -185,7 +193,7 @@ func (ot *objectTree) rebuildFromStorage(newChanges []*Change) (err error) {
 	// but obviously they are not roots, because of the way how we construct the tree
 	ot.tree.clearPossibleRoots()
 
-	return ot.validator.ValidateTree(ot.tree, ot.aclList)
+	return ot.validateTree()
 }
 
 func (ot *objectTree) ID() string {
@@ -400,7 +408,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 	default:
 		// just rebuilding the state from start without reloading everything from tree storage
 		// as an optimization we could've started from current heads, but I didn't implement that
-		err = ot.validator.ValidateTree(ot.tree, ot.aclList)
+		err = ot.validateTree()
 		if err != nil {
 			rollback()
 			err = ErrHasInvalidChanges
@@ -417,12 +425,42 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 	return
 }
 
-func (ot *objectTree) Iterate(f func(change *Change) bool) {
-	ot.tree.Iterate(ot.tree.RootId(), f)
+func (ot *objectTree) Iterate(convert ChangeConvertFunc, iterate ChangeIterateFunc) (err error) {
+	return ot.IterateFrom(ot.tree.RootId(), convert, iterate)
 }
 
-func (ot *objectTree) IterateFrom(s string, f func(change *Change) bool) {
-	ot.tree.Iterate(s, f)
+func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) (err error) {
+	if convert == nil {
+		ot.tree.Iterate(id, iterate)
+		return
+	}
+
+	ot.tree.Iterate(ot.tree.RootId(), func(c *Change) (isContinue bool) {
+		var model any
+		if c.ParsedModel != nil {
+			return iterate(c)
+		}
+		readKey, exists := ot.keys[c.Content.CurrentReadKeyHash]
+		if !exists {
+			err = list.ErrNoReadKey
+			return false
+		}
+
+		var decrypted []byte
+		decrypted, err = readKey.Decrypt(c.Content.GetChangesData())
+		if err != nil {
+			return false
+		}
+
+		model, err = convert(decrypted)
+		if err != nil {
+			return false
+		}
+
+		c.ParsedModel = model
+		return iterate(c)
+	})
+	return
 }
 
 func (ot *objectTree) HasChange(s string) bool {
@@ -544,6 +582,21 @@ func (ot *objectTree) getChangesFromDB(commonSnapshot string, needStartSnapshot 
 
 func (ot *objectTree) snapshotPathIsActual() bool {
 	return len(ot.snapshotPath) != 0 && ot.snapshotPath[len(ot.snapshotPath)-1] == ot.tree.RootId()
+}
+
+func (ot *objectTree) validateTree() error {
+	ot.aclList.RLock()
+	defer ot.aclList.RUnlock()
+	state := ot.aclList.ACLState()
+
+	// just not to take lock many times, updating the key map from aclList
+	if len(ot.keys) != len(state.UserReadKeys()) {
+		for key, value := range state.UserReadKeys() {
+			ot.keys[key] = value
+		}
+	}
+
+	return ot.validator.ValidateTree(ot.tree, ot.aclList)
 }
 
 func (ot *objectTree) DebugDump() (string, error) {

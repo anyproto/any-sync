@@ -7,6 +7,7 @@ import (
 )
 
 type ObjectTreeValidator interface {
+	// ValidateTree should always be entered while holding a read lock on ACLList
 	ValidateTree(tree *Tree, aclList list.ACLList) error
 }
 
@@ -17,8 +18,7 @@ func newTreeValidator() ObjectTreeValidator {
 }
 
 func (v *objectTreeValidator) ValidateTree(tree *Tree, aclList list.ACLList) (err error) {
-	aclList.RLock()
-	defer aclList.RUnlock()
+
 	var (
 		perm  list.UserPermissionPair
 		state = aclList.ACLState()

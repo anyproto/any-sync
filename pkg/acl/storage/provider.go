@@ -7,9 +7,22 @@ import (
 
 var ErrUnknownTreeId = errors.New("tree does not exist")
 
+type TreeStorageCreatePayload struct {
+	TreeId  string
+	Header  *aclpb.Header
+	Changes []*aclpb.RawChange
+	Heads   []string
+}
+
+type ACLListStorageCreatePayload struct {
+	ListId  string
+	Header  *aclpb.Header
+	Records []*aclpb.RawRecord
+}
+
 type Provider interface {
 	Storage(id string) (Storage, error)
 	AddStorage(id string, st Storage) error
-	CreateTreeStorage(treeId string, header *aclpb.Header, changes []*aclpb.RawChange) (TreeStorage, error)
-	CreateACLListStorage(id string, header *aclpb.Header, records []*aclpb.RawRecord) (ListStorage, error)
+	CreateTreeStorage(payload TreeStorageCreatePayload) (TreeStorage, error)
+	CreateACLListStorage(payload ACLListStorageCreatePayload) (ListStorage, error)
 }

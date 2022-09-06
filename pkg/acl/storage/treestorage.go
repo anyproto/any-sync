@@ -13,3 +13,5 @@ type TreeStorage interface {
 	AddRawChange(change *aclpb.RawChange) error
 	GetRawChange(ctx context.Context, recordID string) (*aclpb.RawChange, error)
 }
+
+type TreeStorageCreatorFunc = func(payload TreeStorageCreatePayload) (TreeStorage, error)

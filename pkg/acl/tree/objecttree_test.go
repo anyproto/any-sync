@@ -37,7 +37,7 @@ func (c *mockChangeCreator) createNewTreeStorage(treeId, aclListId, aclHeadId, f
 		WorkspaceId: "",
 		DocType:     aclpb.Header_DocTree,
 	}
-	treeStorage, _ := storage.NewInMemoryTreeStorage(treeId, header, []*aclpb.RawChange{firstChange})
+	treeStorage, _ := storage.NewInMemoryTreeStorage(treeId, header, []string{firstChangeId}, []*aclpb.RawChange{firstChange})
 	return treeStorage
 }
 
