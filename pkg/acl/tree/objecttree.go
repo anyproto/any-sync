@@ -539,6 +539,7 @@ func (ot *objectTree) getChangesFromTree() (rawChanges []*aclpb.RawChange, err e
 		if err != nil {
 			return false
 		}
+
 		raw := &aclpb.RawChange{
 			Payload:   marshalled,
 			Signature: ch.Signature(),
@@ -581,7 +582,7 @@ func (ot *objectTree) getChangesFromDB(commonSnapshot string, needStartSnapshot 
 }
 
 func (ot *objectTree) snapshotPathIsActual() bool {
-	return len(ot.snapshotPath) != 0 && ot.snapshotPath[len(ot.snapshotPath)-1] == ot.tree.RootId()
+	return len(ot.snapshotPath) != 0 && ot.snapshotPath[0] == ot.tree.RootId()
 }
 
 func (ot *objectTree) validateTree() error {
