@@ -299,9 +299,14 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 	ot.difSnapshotBuf = ot.difSnapshotBuf[:0]
 	ot.newSnapshotsBuf = ot.newSnapshotsBuf[:0]
 
+	headsCopy := func() []string {
+		newHeads := make([]string, 0, len(ot.tree.Heads()))
+		newHeads = append(newHeads, ot.tree.Heads()...)
+		return newHeads
+	}
+
 	// this will be returned to client, so we shouldn't use buffer here
-	prevHeadsCopy := make([]string, 0, len(ot.tree.Heads()))
-	copy(prevHeadsCopy, ot.tree.Heads())
+	prevHeadsCopy := headsCopy()
 
 	// filtering changes, verifying and unmarshalling them
 	for idx, ch := range rawChanges {
@@ -330,12 +335,6 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 			Summary:  AddResultSummaryNothing,
 		}
 		return
-	}
-
-	headsCopy := func() []string {
-		newHeads := make([]string, 0, len(ot.tree.Heads()))
-		copy(newHeads, ot.tree.Heads())
-		return newHeads
 	}
 
 	// returns changes that we added to the tree
