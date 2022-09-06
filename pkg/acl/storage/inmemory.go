@@ -70,11 +70,10 @@ type inMemoryTreeStorage struct {
 	sync.RWMutex
 }
 
-type CreatorFunc = func(string, *aclpb.Header, []*aclpb.RawChange) (TreeStorage, error)
-
 func NewInMemoryTreeStorage(
 	treeId string,
 	header *aclpb.Header,
+	heads []string,
 	changes []*aclpb.RawChange) (TreeStorage, error) {
 	allChanges := make(map[string]*aclpb.RawChange)
 	for _, ch := range changes {
@@ -84,7 +83,7 @@ func NewInMemoryTreeStorage(
 	return &inMemoryTreeStorage{
 		id:      treeId,
 		header:  header,
-		heads:   nil,
+		heads:   heads,
 		changes: allChanges,
 		RWMutex: sync.RWMutex{},
 	}, nil
@@ -161,27 +160,27 @@ func (i *inMemoryStorageProvider) Storage(id string) (Storage, error) {
 	return nil, ErrUnknownTreeId
 }
 
-func (i *inMemoryStorageProvider) CreateTreeStorage(treeId string, header *aclpb.Header, changes []*aclpb.RawChange) (TreeStorage, error) {
+func (i *inMemoryStorageProvider) CreateTreeStorage(payload TreeStorageCreatePayload) (TreeStorage, error) {
 	i.Lock()
 	defer i.Unlock()
-	res, err := NewInMemoryTreeStorage(treeId, header, changes)
+	res, err := NewInMemoryTreeStorage(payload.TreeId, payload.Header, payload.Heads, payload.Changes)
 	if err != nil {
 		return nil, err
 	}
 
-	i.objects[treeId] = res
+	i.objects[payload.TreeId] = res
 	return res, nil
 }
 
-func (i *inMemoryStorageProvider) CreateACLListStorage(id string, header *aclpb.Header, records []*aclpb.RawRecord) (ListStorage, error) {
+func (i *inMemoryStorageProvider) CreateACLListStorage(payload ACLListStorageCreatePayload) (ListStorage, error) {
 	i.Lock()
 	defer i.Unlock()
-	res, err := NewInMemoryACLListStorage(id, header, records)
+	res, err := NewInMemoryACLListStorage(payload.ListId, payload.Header, payload.Records)
 	if err != nil {
 		return nil, err
 	}
 
-	i.objects[id] = res
+	i.objects[payload.ListId] = res
 	return res, nil
 }
 

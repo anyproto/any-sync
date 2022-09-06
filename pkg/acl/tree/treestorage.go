@@ -14,7 +14,7 @@ func CreateNewTreeStorage(
 	acc *account.AccountData,
 	aclList list.ACLList,
 	content proto.Marshaler,
-	create storage.CreatorFunc) (storage.TreeStorage, error) {
+	create storage.TreeStorageCreatorFunc) (thr storage.TreeStorage, err error) {
 
 	state := aclList.ACLState()
 	change := &aclpb.Change{
@@ -27,34 +27,34 @@ func CreateNewTreeStorage(
 
 	marshalledData, err := content.Marshal()
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	readKey, err := state.CurrentReadKey()
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	encrypted, err := readKey.Encrypt(marshalledData)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	change.ChangesData = encrypted
 
 	fullMarshalledChange, err := proto.Marshal(change)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	signature, err := acc.SignKey.Sign(fullMarshalledChange)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	changeId, err := cid.NewCIDFromBytes(fullMarshalledChange)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	rawChange := &aclpb.RawChange{
@@ -64,35 +64,28 @@ func CreateNewTreeStorage(
 	}
 	header, treeId, err := createTreeHeaderAndId(rawChange, aclpb.Header_DocTree, aclList.ID())
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	thr, err := create(treeId, header, []*aclpb.RawChange{rawChange})
-	if err != nil {
-		return nil, err
-	}
-
-	err = thr.SetHeads([]string{changeId})
-	if err != nil {
-		return nil, err
-	}
-	return thr, nil
+	return create(storage.TreeStorageCreatePayload{
+		TreeId:  treeId,
+		Header:  header,
+		Changes: []*aclpb.RawChange{rawChange},
+		Heads:   []string{rawChange.Id},
+	})
 }
 
-func createTreeHeaderAndId(change *aclpb.RawChange, treeType aclpb.HeaderDocType, aclListId string) (*aclpb.Header, string, error) {
-	header := &aclpb.Header{
+func createTreeHeaderAndId(change *aclpb.RawChange, treeType aclpb.HeaderDocType, aclListId string) (header *aclpb.Header, treeId string, err error) {
+	header = &aclpb.Header{
 		FirstId:   change.Id,
 		DocType:   treeType,
 		AclListId: aclListId,
 	}
 	marshalledHeader, err := proto.Marshal(header)
 	if err != nil {
-		return nil, "", err
-	}
-	treeId, err := cid.NewCIDFromBytes(marshalledHeader)
-	if err != nil {
-		return nil, "", err
+		return
 	}
 
-	return header, treeId, nil
+	treeId, err = cid.NewCIDFromBytes(marshalledHeader)
+	return
 }
