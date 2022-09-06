@@ -6,19 +6,19 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 )
 
-type DocTreeValidator interface {
+type ObjectTreeValidator interface {
 	ValidateTree(tree *Tree, aclList list.ACLList) error
 }
 
-type docTreeValidator struct{}
+type objectTreeValidator struct{}
 
-func newTreeValidator() DocTreeValidator {
-	return &docTreeValidator{}
+func newTreeValidator() ObjectTreeValidator {
+	return &objectTreeValidator{}
 }
 
-func (v *docTreeValidator) ValidateTree(tree *Tree, aclList list.ACLList) (err error) {
-	// TODO: add validation logic where we check that the change refers to correct acl heads
-	//  that means that more recent changes should refer to more recent acl heads
+func (v *objectTreeValidator) ValidateTree(tree *Tree, aclList list.ACLList) (err error) {
+	aclList.RLock()
+	defer aclList.RUnlock()
 	var (
 		perm  list.UserPermissionPair
 		state = aclList.ACLState()

@@ -17,25 +17,26 @@ var (
 )
 
 type treeBuilder struct {
-	cache       map[string]*Change
-	kch         *keychain
-	tree        *Tree
 	treeStorage storage.TreeStorage
+	builder     ChangeBuilder
+
+	cache map[string]*Change
+	tree  *Tree
 
 	// buffers
 	idStack    []string
 	loadBuffer []*Change
 }
 
-func newTreeBuilder(t storage.TreeStorage) *treeBuilder {
+func newTreeBuilder(storage storage.TreeStorage, builder ChangeBuilder) *treeBuilder {
 	return &treeBuilder{
-		treeStorage: t,
+		treeStorage: storage,
+		builder:     builder,
 	}
 }
 
-func (tb *treeBuilder) Init(kch *keychain) {
+func (tb *treeBuilder) Reset() {
 	tb.cache = make(map[string]*Change)
-	tb.kch = kch
 	tb.tree = &Tree{}
 }
 
@@ -131,7 +132,7 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 		return nil, err
 	}
 
-	ch, err = newVerifiedChangeFromRaw(change, tb.kch)
+	ch, err = tb.builder.ConvertFromRawAndVerify(change)
 	if err != nil {
 		return nil, err
 	}

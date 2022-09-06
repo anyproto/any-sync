@@ -115,6 +115,7 @@ func (t *Tree) Add(changes ...*Change) (mode Mode) {
 	return Append
 }
 
+// RemoveInvalidChange removes all the changes that are descendants of id
 func (t *Tree) RemoveInvalidChange(id string) {
 	stack := []string{id}
 	// removing all children of this id (either next or unattached)

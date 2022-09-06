@@ -6,12 +6,9 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
-	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"sync"
-	"time"
 )
 
 type ObjectTreeUpdateListener interface {
@@ -64,23 +61,23 @@ type ObjectTree interface {
 	Storage() storage.TreeStorage
 	DebugDump() (string, error)
 
-	AddContent(ctx context.Context, aclList list.ACLList, content SignableChangeContent) (*aclpb.RawChange, error)
-	AddRawChanges(ctx context.Context, aclList list.ACLList, changes ...*aclpb.RawChange) (AddResult, error)
+	AddContent(ctx context.Context, content SignableChangeContent) (*aclpb.RawChange, error)
+	AddRawChanges(ctx context.Context, changes ...*aclpb.RawChange) (AddResult, error)
 
 	Close() error
 }
 
 type objectTree struct {
 	treeStorage    storage.TreeStorage
+	changeBuilder  ChangeBuilder
 	updateListener ObjectTreeUpdateListener
+	validator      ObjectTreeValidator
+	treeBuilder    *treeBuilder
+	aclList        list.ACLList
 
 	id     string
 	header *aclpb.Header
 	tree   *Tree
-
-	treeBuilder *treeBuilder
-	validator   DocTreeValidator
-	kch         *keychain
 
 	// buffers
 	difSnapshotBuf  []*aclpb.RawChange
@@ -93,26 +90,52 @@ type objectTree struct {
 	sync.RWMutex
 }
 
-func BuildObjectTree(treeStorage storage.TreeStorage, listener ObjectTreeUpdateListener, aclList list.ACLList) (ObjectTree, error) {
-	treeBuilder := newTreeBuilder(treeStorage)
-	validator := newTreeValidator()
+type objectTreeDeps struct {
+	changeBuilder  ChangeBuilder
+	treeBuilder    *treeBuilder
+	treeStorage    storage.TreeStorage
+	updateListener ObjectTreeUpdateListener
+	validator      ObjectTreeValidator
+	aclList        list.ACLList
+}
 
-	objTree := &objectTree{
-		treeStorage:    treeStorage,
-		tree:           nil,
+func defaultObjectTreeDeps(
+	treeStorage storage.TreeStorage,
+	listener ObjectTreeUpdateListener,
+	aclList list.ACLList) objectTreeDeps {
+
+	keychain := newKeychain()
+	changeBuilder := newChangeBuilder(keychain)
+	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
+	return objectTreeDeps{
+		changeBuilder:  changeBuilder,
 		treeBuilder:    treeBuilder,
-		validator:      validator,
+		treeStorage:    treeStorage,
 		updateListener: listener,
+		validator:      newTreeValidator(),
+		aclList:        aclList,
+	}
+}
+
+func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
+	objTree := &objectTree{
+		treeStorage:    deps.treeStorage,
+		updateListener: deps.updateListener,
+		treeBuilder:    deps.treeBuilder,
+		validator:      deps.validator,
+		aclList:        deps.aclList,
+		changeBuilder:  deps.changeBuilder,
+		tree:           nil,
 		tmpChangesBuf:  make([]*Change, 0, 10),
 		difSnapshotBuf: make([]*aclpb.RawChange, 0, 10),
 		notSeenIdxBuf:  make([]int, 0, 10),
-		kch:            newKeychain(),
 	}
-	err := objTree.rebuildFromStorage(aclList, nil)
+
+	err := objTree.rebuildFromStorage(nil)
 	if err != nil {
 		return nil, err
 	}
-	storageHeads, err := treeStorage.Heads()
+	storageHeads, err := objTree.treeStorage.Heads()
 	if err != nil {
 		return nil, err
 	}
@@ -123,30 +146,35 @@ func BuildObjectTree(treeStorage storage.TreeStorage, listener ObjectTreeUpdateL
 	if !slice.UnsortedEquals(storageHeads, objTree.tree.Heads()) {
 		log.With(zap.Strings("storage", storageHeads), zap.Strings("rebuilt", objTree.tree.Heads())).
 			Errorf("the heads in storage and objTree are different")
-		err = treeStorage.SetHeads(objTree.tree.Heads())
+		err = objTree.treeStorage.SetHeads(objTree.tree.Heads())
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	objTree.id, err = treeStorage.ID()
+	objTree.id, err = objTree.treeStorage.ID()
 	if err != nil {
 		return nil, err
 	}
-	objTree.header, err = treeStorage.Header()
+	objTree.header, err = objTree.treeStorage.Header()
 	if err != nil {
 		return nil, err
 	}
 
-	if listener != nil {
-		listener.Rebuild(objTree)
+	if objTree.updateListener != nil {
+		objTree.updateListener.Rebuild(objTree)
 	}
 
 	return objTree, nil
 }
 
-func (ot *objectTree) rebuildFromStorage(aclList list.ACLList, newChanges []*Change) (err error) {
-	ot.treeBuilder.Init(ot.kch)
+func BuildObjectTree(treeStorage storage.TreeStorage, listener ObjectTreeUpdateListener, aclList list.ACLList) (ObjectTree, error) {
+	deps := defaultObjectTreeDeps(treeStorage, listener, aclList)
+	return buildObjectTree(deps)
+}
+
+func (ot *objectTree) rebuildFromStorage(newChanges []*Change) (err error) {
+	ot.treeBuilder.Reset()
 
 	ot.tree, err = ot.treeBuilder.Build(newChanges)
 	if err != nil {
@@ -157,7 +185,7 @@ func (ot *objectTree) rebuildFromStorage(aclList list.ACLList, newChanges []*Cha
 	// but obviously they are not roots, because of the way how we construct the tree
 	ot.tree.clearPossibleRoots()
 
-	return ot.validator.ValidateTree(ot.tree, aclList)
+	return ot.validator.ValidateTree(ot.tree, ot.aclList)
 }
 
 func (ot *objectTree) ID() string {
@@ -172,69 +200,40 @@ func (ot *objectTree) Storage() storage.TreeStorage {
 	return ot.treeStorage
 }
 
-func (ot *objectTree) AddContent(ctx context.Context, aclList list.ACLList, content SignableChangeContent) (rawChange *aclpb.RawChange, err error) {
+func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeContent) (rawChange *aclpb.RawChange, err error) {
+	ot.aclList.Lock()
 	defer func() {
+		ot.aclList.Unlock()
 		if ot.updateListener != nil {
 			ot.updateListener.Update(ot)
 		}
 	}()
-	state := aclList.ACLState() // special method for own keys
-	aclChange := &aclpb.Change{
-		TreeHeadIds:        ot.tree.Heads(),
-		AclHeadId:          aclList.Head().Id,
-		SnapshotBaseId:     ot.tree.RootId(),
-		CurrentReadKeyHash: state.CurrentReadKeyHash(),
-		Timestamp:          int64(time.Now().Nanosecond()),
-		Identity:           content.Identity,
-		IsSnapshot:         content.IsSnapshot,
-	}
 
-	marshalledData, err := content.Proto.Marshal()
-	if err != nil {
-		return nil, err
-	}
-
+	state := ot.aclList.ACLState() // special method for own keys
 	readKey, err := state.CurrentReadKey()
 	if err != nil {
 		return nil, err
 	}
 
-	encrypted, err := readKey.Encrypt(marshalledData)
-	if err != nil {
-		return nil, err
+	payload := BuilderContent{
+		treeHeadIds:        ot.tree.Heads(),
+		aclHeadId:          ot.aclList.Head().Id,
+		snapshotBaseId:     ot.tree.RootId(),
+		currentReadKeyHash: state.CurrentReadKeyHash(),
+		identity:           content.Identity,
+		isSnapshot:         content.IsSnapshot,
+		signingKey:         content.Key,
+		readKey:            readKey,
+		content:            content.Proto,
 	}
-	aclChange.ChangesData = encrypted
-
-	fullMarshalledChange, err := proto.Marshal(aclChange)
-	if err != nil {
-		return nil, err
-	}
-
-	signature, err := content.Key.Sign(fullMarshalledChange)
-	if err != nil {
-		return nil, err
-	}
-
-	id, err := cid.NewCIDFromBytes(fullMarshalledChange)
-	if err != nil {
-		return nil, err
-	}
-
-	docChange := NewChange(id, aclChange, signature)
-	docChange.ParsedModel = content
-
+	objChange, rawChange, err := ot.changeBuilder.BuildContent(payload)
 	if content.IsSnapshot {
 		// clearing tree, because we already fixed everything in the last snapshot
 		ot.tree = &Tree{}
 	}
-	err = ot.tree.AddMergedHead(docChange)
+	err = ot.tree.AddMergedHead(objChange)
 	if err != nil {
 		panic(err)
-	}
-	rawChange = &aclpb.RawChange{
-		Payload:   fullMarshalledChange,
-		Signature: docChange.Signature(),
-		Id:        docChange.Id,
 	}
 
 	err = ot.treeStorage.AddRawChange(rawChange)
@@ -242,13 +241,13 @@ func (ot *objectTree) AddContent(ctx context.Context, aclList list.ACLList, cont
 		return
 	}
 
-	err = ot.treeStorage.SetHeads([]string{docChange.Id})
+	err = ot.treeStorage.SetHeads([]string{objChange.Id})
 	return
 }
 
-func (ot *objectTree) AddRawChanges(ctx context.Context, aclList list.ACLList, rawChanges ...*aclpb.RawChange) (addResult AddResult, err error) {
+func (ot *objectTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawChange) (addResult AddResult, err error) {
 	var mode Mode
-	mode, addResult, err = ot.addRawChanges(ctx, aclList, rawChanges...)
+	mode, addResult, err = ot.addRawChanges(ctx, rawChanges...)
 	if err != nil {
 		return
 	}
@@ -285,14 +284,14 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, aclList list.ACLList, r
 	return
 }
 
-func (ot *objectTree) addRawChanges(ctx context.Context, aclList list.ACLList, rawChanges ...*aclpb.RawChange) (mode Mode, addResult AddResult, err error) {
+func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.RawChange) (mode Mode, addResult AddResult, err error) {
 	// resetting buffers
 	ot.tmpChangesBuf = ot.tmpChangesBuf[:0]
 	ot.notSeenIdxBuf = ot.notSeenIdxBuf[:0]
 	ot.difSnapshotBuf = ot.difSnapshotBuf[:0]
 	ot.newSnapshotsBuf = ot.newSnapshotsBuf[:0]
 
-	// this will be returned to client so we shouldn't use buffer here
+	// this will be returned to client, so we shouldn't use buffer here
 	prevHeadsCopy := make([]string, 0, len(ot.tree.Heads()))
 	copy(prevHeadsCopy, ot.tree.Heads())
 
@@ -303,7 +302,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, aclList list.ACLList, r
 		}
 
 		var change *Change
-		change, err = newVerifiedChangeFromRaw(ch, ot.kch)
+		change, err = ot.changeBuilder.ConvertFromRawAndVerify(ch)
 		if err != nil {
 			return
 		}
@@ -370,10 +369,10 @@ func (ot *objectTree) addRawChanges(ctx context.Context, aclList list.ACLList, r
 	// checking if we have some changes with different snapshot and then rebuilding
 	for _, ch := range ot.tmpChangesBuf {
 		if isOldSnapshot(ch) {
-			err = ot.rebuildFromStorage(aclList, ot.tmpChangesBuf)
+			err = ot.rebuildFromStorage(ot.tmpChangesBuf)
 			if err != nil {
 				// rebuilding without new changes
-				ot.rebuildFromStorage(aclList, nil)
+				ot.rebuildFromStorage(nil)
 				return
 			}
 
@@ -401,7 +400,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, aclList list.ACLList, r
 	default:
 		// just rebuilding the state from start without reloading everything from tree storage
 		// as an optimization we could've started from current heads, but I didn't implement that
-		err = ot.validator.ValidateTree(ot.tree, aclList)
+		err = ot.validator.ValidateTree(ot.tree, ot.aclList)
 		if err != nil {
 			rollback()
 			err = ErrHasInvalidChanges
