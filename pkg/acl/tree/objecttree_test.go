@@ -1,12 +1,14 @@
 package tree
 
 import (
+	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/acllistbuilder"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/gogo/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -77,7 +79,7 @@ func prepareACLList(t *testing.T) list.ACLList {
 	return aclList
 }
 
-func TestObjectTree_Build(t *testing.T) {
+func TestObjectTree(t *testing.T) {
 	aclList := prepareACLList(t)
 	changeCreator := &mockChangeCreator{}
 	treeStorage := changeCreator.createNewTreeStorage("treeId", aclList.ID(), aclList.Head().Id, "0")
@@ -91,6 +93,52 @@ func TestObjectTree_Build(t *testing.T) {
 		aclList:        aclList,
 	}
 
-	_, err := buildObjectTree(deps)
+	// check build
+	objTree, err := buildObjectTree(deps)
 	require.NoError(t, err, "building tree should be without error")
+
+	// check tree iterate
+	var iterChangesId []string
+	err = objTree.Iterate(nil, func(change *Change) bool {
+		iterChangesId = append(iterChangesId, change.Id)
+		return true
+	})
+	require.NoError(t, err, "iterate should be without error")
+	assert.Equal(t, []string{"0"}, iterChangesId)
+
+	t.Run("add simple", func(t *testing.T) {
+		rawChanges := []*aclpb.RawChange{
+			changeCreator.createRaw("1", aclList.Head().Id, "0", false, "0"),
+			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
+		}
+		res, err := objTree.AddRawChanges(context.Background(), rawChanges...)
+		require.NoError(t, err, "adding changes should be without error")
+
+		// check result
+		assert.Equal(t, []string{"0"}, res.OldHeads)
+		assert.Equal(t, []string{"2"}, res.Heads)
+		assert.Equal(t, len(rawChanges), len(res.Added))
+
+		// check tree heads
+		assert.Equal(t, []string{"2"}, objTree.Heads())
+
+		// check tree iterate
+		var iterChangesId []string
+		err = objTree.Iterate(nil, func(change *Change) bool {
+			iterChangesId = append(iterChangesId, change.Id)
+			return true
+		})
+		require.NoError(t, err, "iterate should be without error")
+		assert.Equal(t, []string{"0", "1", "2"}, iterChangesId)
+
+		// check storage
+		heads, _ := treeStorage.Heads()
+		assert.Equal(t, []string{"2"}, heads)
+
+		for _, ch := range rawChanges {
+			raw, err := treeStorage.GetRawChange(context.Background(), ch.Id)
+			assert.NoError(t, err, "storage should have all the changes")
+			assert.Equal(t, ch, raw, "the changes in the storage should be the same")
+		}
+	})
 }
