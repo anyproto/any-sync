@@ -10,6 +10,7 @@ message Space {
     message Content {
         oneof value {
             DiffRange diffRange = 1;
+
         }
     }
 }

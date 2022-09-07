@@ -97,7 +97,7 @@ func Bootstrap(a *app.App) {
 		Register(node.New()).
 		Register(secure.New()).
 		Register(server.New()).
-		Register(&file.Service{}).
+		Register(file.New()).
 		Register(dialer.New()).
 		Register(pool.NewPool()).
 		Register(configuration.New()).
