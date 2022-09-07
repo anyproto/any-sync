@@ -2,74 +2,54 @@ package remotediff
 
 import (
 	"context"
-	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/space/spacesync"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/syncproto"
 )
 
-func NewRemoteDiff(p pool.Pool, peerId, spaceId string) ldiff.Remote {
+type Client interface {
+	HeadSync(ctx context.Context, in *spacesync.HeadSyncRequest) (*spacesync.HeadSyncResponse, error)
+}
+
+func NewRemoteDiff(spaceId string, client Client) ldiff.Remote {
 	return remote{
-		pool:    p,
-		peerId:  peerId,
 		spaceId: spaceId,
+		client:  client,
 	}
 }
 
 type remote struct {
-	pool    pool.Pool
-	peerId  string
 	spaceId string
+	client  Client
 }
 
 func (r remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error) {
 	results = resBuf[:0]
-	pbRanges := make([]*spacesync.DiffRange_Request_Range, 0, len(ranges))
+	pbRanges := make([]*spacesync.HeadSyncRange, 0, len(ranges))
 	for _, rg := range ranges {
-		pbRanges = append(pbRanges, &spacesync.DiffRange_Request_Range{
+		pbRanges = append(pbRanges, &spacesync.HeadSyncRange{
 			From:  rg.From,
 			To:    rg.To,
 			Limit: uint32(rg.Limit),
 		})
 	}
-	req := &spacesync.Space{
+	req := &spacesync.HeadSyncRequest{
 		SpaceId: r.spaceId,
-		Message: &spacesync.Space_Content{
-			Value: &spacesync.Space_Content_DiffRange{
-				DiffRange: &spacesync.DiffRange{
-					Request: &spacesync.DiffRange_Request{
-						Ranges: pbRanges,
-					},
-				},
-			},
-		},
+		Ranges:  pbRanges,
 	}
-	msg, err := req.Marshal()
+	resp, err := r.client.HeadSync(ctx, req)
 	if err != nil {
 		return
 	}
-	resp, err := r.pool.SendAndWaitResponse(ctx, r.peerId, &syncproto.Message{
-		Header: &syncproto.Header{
-			Type: syncproto.MessageType_MessageTypeSpace,
-		},
-		Data: msg,
-	})
-	if err != nil {
-		return
-	}
-	var spaceResp = &spacesync.Space{}
-	if err = resp.UnmarshalData(spaceResp); err != nil {
-		return
-	}
-	rangeResp := spaceResp.GetMessage().GetDiffRange().GetResponse()
-	if rangeResp != nil {
-		return nil, fmt.Errorf("got nil response")
-	}
-	for _, rr := range rangeResp.Results {
+	for _, rr := range resp.Results {
 		var elms []ldiff.Element
 		if len(rr.Elements) > 0 {
 			elms = make([]ldiff.Element, 0, len(rr.Elements))
+		}
+		for _, e := range rr.Elements {
+			elms = append(elms, ldiff.Element{
+				Id:   e.Id,
+				Head: e.Head,
+			})
 		}
 		results = append(results, ldiff.RangeResult{
 			Hash:     rr.Hash,
@@ -80,12 +60,7 @@ func (r remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff
 	return
 }
 
-func HandlerRangeRequest(ctx context.Context, d ldiff.Diff, diffRange *spacesync.DiffRange) (resp *spacesync.DiffRange, err error) {
-	req := diffRange.GetRequest()
-	if req != nil {
-		return nil, fmt.Errorf("received nil request")
-	}
-
+func HandlerRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesync.HeadSyncRequest) (resp *spacesync.HeadSyncResponse, err error) {
 	ranges := make([]ldiff.Range, 0, len(req.Ranges))
 	for _, reqRange := range req.Ranges {
 		ranges = append(ranges, ldiff.Range{
@@ -99,27 +74,25 @@ func HandlerRangeRequest(ctx context.Context, d ldiff.Diff, diffRange *spacesync
 		return
 	}
 
-	var rangeResp = &spacesync.DiffRange_Response{
-		Results: make([]*spacesync.DiffRange_Response_Result, len(res)),
+	var rangeResp = &spacesync.HeadSyncResponse{
+		Results: make([]*spacesync.HeadSyncResult, 0, len(res)),
 	}
 	for _, rangeRes := range res {
-		var elements []*spacesync.DiffRange_Response_Result_Element
+		var elements []*spacesync.HeadSyncResultElement
 		if len(rangeRes.Elements) > 0 {
-			elements = make([]*spacesync.DiffRange_Response_Result_Element, 0, len(rangeRes.Elements))
+			elements = make([]*spacesync.HeadSyncResultElement, 0, len(rangeRes.Elements))
 			for _, el := range rangeRes.Elements {
-				elements = append(elements, &spacesync.DiffRange_Response_Result_Element{
+				elements = append(elements, &spacesync.HeadSyncResultElement{
 					Id:   el.Id,
 					Head: el.Head,
 				})
 			}
 		}
-		rangeResp.Results = append(rangeResp.Results, &spacesync.DiffRange_Response_Result{
+		rangeResp.Results = append(rangeResp.Results, &spacesync.HeadSyncResult{
 			Hash:     rangeRes.Hash,
 			Elements: elements,
 			Count:    uint32(rangeRes.Count),
 		})
 	}
-	return &spacesync.DiffRange{
-		Response: rangeResp,
-	}, nil
+	return rangeResp, nil
 }
