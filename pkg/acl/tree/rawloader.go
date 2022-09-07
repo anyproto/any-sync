@@ -71,6 +71,7 @@ func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*aclpb.
 
 	// if we stopped at breakpoints or there are no breakpoints
 	if !rootVisited || len(breakpoints) == 0 {
+		// in this case we will add root if there are no breakpoints
 		return convert(results)
 	}
 
@@ -81,6 +82,7 @@ func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*aclpb.
 	}
 
 	// doing another dfs to get all changes before breakpoints, we need to exclude them from results
+	// if we don't have some breakpoints we will just ignore them
 	t.dfsPrev(
 		stack,
 		[]string{},
@@ -98,35 +100,12 @@ func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*aclpb.
 	return convert(results)
 }
 
-func (r *rawChangeLoader) loadEntry(id string) (entry rawCacheEntry, err error) {
-	var ok bool
-	if entry, ok = r.cache[id]; ok {
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer cancel()
-
-	rawChange, err := r.treeStorage.GetRawChange(ctx, id)
-	if err != nil {
-		return
-	}
-
-	change, err := r.changeBuilder.ConvertFromRaw(rawChange)
-	if err != nil {
-		return
-	}
-	entry = rawCacheEntry{
-		change:    change,
-		rawChange: rawChange,
-	}
-	r.cache[id] = entry
-	return
-}
-
 func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoints []string) ([]*aclpb.RawChange, error) {
-	// initializing buffers
-	r.idStack = r.idStack[:0]
+	// resetting cache
+	r.cache = make(map[string]rawCacheEntry)
+	defer func() {
+		r.cache = nil
+	}()
 
 	// updating map
 	bufPosMap := make(map[string]int)
@@ -142,6 +121,10 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 		shouldVisit func(counter int, mapExists bool) bool,
 		visit func(prevCounter int, entry rawCacheEntry) int) bool {
 
+		// resetting stack
+		r.idStack = r.idStack[:0]
+		r.idStack = append(r.idStack, heads...)
+
 		commonSnapshotVisited := false
 		for len(r.idStack) > 0 {
 			id := r.idStack[len(r.idStack)-1]
@@ -152,6 +135,7 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 				continue
 			}
 
+			// TODO: add proper error handling, we must ignore errors on missing breakpoints though
 			entry, err := r.loadEntry(id)
 			if err != nil {
 				continue
@@ -189,16 +173,22 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 		})
 
 	// checking if we stopped at breakpoints
-	if !rootVisited || len(breakpoints) == 0 {
+	if !rootVisited {
 		return buffer, nil
 	}
 
-	// resetting stack
-	r.idStack = r.idStack[:0]
-	r.idStack = append(r.idStack, breakpoints...)
+	// if there are no breakpoints then we should load root also
+	if len(breakpoints) == 0 {
+		common, err := r.loadEntry(commonSnapshot)
+		if err != nil {
+			return nil, err
+		}
+		buffer = append(buffer, common.rawChange)
+		return buffer, nil
+	}
 
 	// marking all visited as nil
-	dfs(commonSnapshot, heads, len(buffer),
+	dfs(commonSnapshot, breakpoints, len(buffer),
 		func(counter int, mapExists bool) bool {
 			return !mapExists || counter < len(buffer)
 		},
@@ -208,11 +198,39 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 			}
 			return len(buffer) + 1
 		})
+
+	// discarding visited
 	discardFromSlice(buffer, func(change *aclpb.RawChange) bool {
 		return change == nil
 	})
 
 	return buffer, nil
+}
+
+func (r *rawChangeLoader) loadEntry(id string) (entry rawCacheEntry, err error) {
+	var ok bool
+	if entry, ok = r.cache[id]; ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	rawChange, err := r.treeStorage.GetRawChange(ctx, id)
+	if err != nil {
+		return
+	}
+
+	change, err := r.changeBuilder.ConvertFromRaw(rawChange)
+	if err != nil {
+		return
+	}
+	entry = rawCacheEntry{
+		change:    change,
+		rawChange: rawChange,
+	}
+	r.cache[id] = entry
+	return
 }
 
 func discardFromSlice[T any](elements []T, isDiscarded func(T) bool) {

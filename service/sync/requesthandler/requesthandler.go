@@ -101,10 +101,10 @@ func (r *requestHandler) HandleHeadUpdate(
 		}
 
 		// if we couldn't add all the changes
-		shouldFullSync := !slice.UnsortedEquals(update.Heads, objTree.Heads())
+		shouldFullSync := len(update.Changes) != len(result.Added)
 		snapshotPath = objTree.SnapshotPath()
 		if shouldFullSync {
-			fullRequest, err = r.prepareFullSyncRequest(update.SnapshotPath, objTree)
+			fullRequest, err = r.prepareFullSyncRequest(objTree)
 			if err != nil {
 				return err
 			}
@@ -141,26 +141,13 @@ func (r *requestHandler) HandleFullSyncRequest(
 	header *aclpb.Header,
 	treeId string) (err error) {
 
-	var (
-		fullResponse *syncproto.SyncFullResponse
-		snapshotPath []string
-		result       tree.AddResult
-	)
+	var fullResponse *syncproto.SyncFullResponse
 	err = r.treeCache.Do(ctx, treeId, func(obj any) error {
 		objTree := obj.(tree.ObjectTree)
 		objTree.Lock()
 		defer objTree.Unlock()
 
-		log.Info("getting tree from treeCache", zap.String("aclId", objTree.Header().AclListId))
-		// if we have non-empty request
-		if len(request.Heads) != 0 {
-			result, err = objTree.AddRawChanges(ctx, request.Changes...)
-			if err != nil {
-				return err
-			}
-		}
-		snapshotPath = objTree.SnapshotPath()
-		fullResponse, err = r.prepareFullSyncResponse(treeId, request.SnapshotPath, request.Changes, objTree)
+		fullResponse, err = r.prepareFullSyncResponse(treeId, request.SnapshotPath, request.Heads, objTree)
 		if err != nil {
 			return err
 		}
@@ -170,19 +157,7 @@ func (r *requestHandler) HandleFullSyncRequest(
 	if err != nil {
 		return err
 	}
-	err = r.messageService.SendMessageAsync(senderId, syncproto.WrapFullResponse(fullResponse, header, treeId))
-	// if error or nothing has changed
-	if err != nil || len(result.Added) == 0 {
-		return err
-	}
-
-	// otherwise sending heads update message
-	newUpdate := &syncproto.SyncHeadUpdate{
-		Heads:        result.Heads,
-		Changes:      result.Added,
-		SnapshotPath: snapshotPath,
-	}
-	return r.messageService.SendToSpaceAsync("", syncproto.WrapHeadUpdate(newUpdate, header, treeId))
+	return r.messageService.SendMessageAsync(senderId, syncproto.WrapFullResponse(fullResponse, header, treeId))
 }
 
 func (r *requestHandler) HandleFullSyncResponse(
@@ -196,19 +171,17 @@ func (r *requestHandler) HandleFullSyncResponse(
 		snapshotPath []string
 		result       tree.AddResult
 	)
-	log.With(zap.String("peerId", senderId), zap.String("treeId", treeId)).
-		Debug("processing full sync response")
 
 	err = r.treeCache.Do(ctx, treeId, func(obj interface{}) error {
 		objTree := obj.(tree.ObjectTree)
 		objTree.Lock()
 		defer objTree.Unlock()
 
+		// if we already have the heads for whatever reason
 		if slice.UnsortedEquals(response.Heads, objTree.Heads()) {
 			return nil
 		}
 
-		// TODO: check if we already have those changes
 		result, err = objTree.AddRawChanges(ctx, response.Changes...)
 		if err != nil {
 			return err
@@ -263,46 +236,25 @@ func (r *requestHandler) HandleACLList(
 	return err
 }
 
-func (r *requestHandler) prepareFullSyncRequest(theirPath []string, t tree.ObjectTree) (*syncproto.SyncFullRequest, error) {
-	ourChanges, err := t.ChangesAfterCommonSnapshot(theirPath)
-	if err != nil {
-		return nil, err
-	}
+func (r *requestHandler) prepareFullSyncRequest(t tree.ObjectTree) (*syncproto.SyncFullRequest, error) {
 	return &syncproto.SyncFullRequest{
 		Heads:        t.Heads(),
-		Changes:      ourChanges,
 		SnapshotPath: t.SnapshotPath(),
 	}, nil
 }
 
 func (r *requestHandler) prepareFullSyncResponse(
 	treeId string,
-	theirPath []string,
-	theirChanges []*aclpb.RawChange,
+	theirPath, theirHeads []string,
 	t tree.ObjectTree) (*syncproto.SyncFullResponse, error) {
-	// TODO: we can probably use the common snapshot calculated on the request step from previous peer
-	ourChanges, err := t.ChangesAfterCommonSnapshot(theirPath)
+	ourChanges, err := t.ChangesAfterCommonSnapshot(theirPath, theirHeads)
 	if err != nil {
 		return nil, err
 	}
-	theirMap := make(map[string]struct{})
-	for _, ch := range theirChanges {
-		theirMap[ch.Id] = struct{}{}
-	}
-
-	// filtering our changes, so we will not send the same changes back
-	var final []*aclpb.RawChange
-	for _, ch := range ourChanges {
-		if _, exists := theirMap[ch.Id]; !exists {
-			final = append(final, ch)
-		}
-	}
-	log.With(zap.Int("len(changes)", len(final)), zap.String("id", treeId)).
-		Debug("preparing changes for tree")
 
 	return &syncproto.SyncFullResponse{
 		Heads:        t.Heads(),
-		Changes:      final,
+		Changes:      ourChanges,
 		SnapshotPath: t.SnapshotPath(),
 	}, nil
 }
