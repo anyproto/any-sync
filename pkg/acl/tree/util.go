@@ -21,6 +21,8 @@ OuterLoop:
 		if ourPath[i] == theirPath[j] {
 			i--
 			j--
+		} else {
+			break
 		}
 	}
 	return ourPath[i+1], nil
