@@ -29,6 +29,7 @@ type Config struct {
 	Account    Account    `yaml:"account"`
 	APIServer  APIServer  `yaml:"apiServer"`
 	Nodes      []Node     `yaml:"nodes"`
+	Space      Space      `yaml:"space"`
 }
 
 func (c *Config) Init(ctx context.Context, a *app.App) (err error) {

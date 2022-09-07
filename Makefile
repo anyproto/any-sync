@@ -13,7 +13,7 @@ endif
 export PATH=$(GOPATH)/bin:$(shell echo $$PATH)
 
 # TODO: folders were changed, so we should update Makefile and protos generation
-protos-go:
+proto:
 	@echo 'Generating protobuf packages (Go)...'
 #   Uncomment if needed
 	@$(eval ROOT_PKG := pkg)
@@ -29,8 +29,9 @@ protos-go:
 	$(GOGO_START) protoc --gogofaster_out=:. $(P_ACL_CHANGES_PATH_PB)/protos/*.proto; mv $(P_ACL_CHANGES_PATH_PB)/protos/*.go $(P_ACL_CHANGES_PATH_PB)
 	$(GOGO_START) protoc --gogofaster_out=:. $(P_TEST_CHANGES_PATH_PB)/proto/*.proto
 	$(eval PKGMAP := $$(P_ACL_CHANGES))
-	$(GOGO_START) protoc --gogofaster_out=$(PKGMAP),plugins=grpc:. $(P_SYNC_CHANGES_PATH_PB)/proto/*.proto
+	$(GOGO_START) protoc --gogofaster_out=$(PKGMAP):. $(P_SYNC_CHANGES_PATH_PB)/proto/*.proto
+	$(GOGO_START) protoc --gogofaster_out=$(PKGMAP):. service/space/spacesync/protos/*.proto
 
 build:
 	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/app))
-	go build -o bin/anytype-node -ldflags "$(FLAGS)" cmd/node/node.go
+	go build -v -o bin/anytype-node -ldflags "$(FLAGS)" cmd/node/node.go

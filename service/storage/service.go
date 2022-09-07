@@ -52,12 +52,12 @@ func (s *service) AddStorage(id string, st storage.Storage) error {
 	return s.storageProvider.AddStorage(id, st)
 }
 
-func (s *service) CreateTreeStorage(treeId string, header *aclpb.Header, changes []*aclpb.RawChange) (storage.TreeStorage, error) {
-	return s.storageProvider.CreateTreeStorage(treeId, header, changes)
+func (s *service) CreateTreeStorage(payload storage.TreeStorageCreatePayload) (storage.TreeStorage, error) {
+	return s.storageProvider.CreateTreeStorage(payload)
 }
 
-func (s *service) CreateACLListStorage(id string, header *aclpb.Header, records []*aclpb.RawRecord) (storage.ListStorage, error) {
-	return s.storageProvider.CreateACLListStorage(id, header, records)
+func (s *service) CreateACLListStorage(payload storage.ACLListStorageCreatePayload) (storage.ListStorage, error) {
+	return s.storageProvider.CreateACLListStorage(payload)
 }
 
 func (s *service) Name() (name string) {

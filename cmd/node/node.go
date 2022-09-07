@@ -9,6 +9,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/api"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/configuration"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/document"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/dialer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
@@ -99,7 +100,7 @@ func Bootstrap(a *app.App) {
 		Register(dialer.New()).
 		Register(pool.NewPool()).
 		Register(storage.New()).
-		//Register(&example.Example{})
+		Register(configuration.New()).
 		Register(document.New()).
 		Register(message.New()).
 		Register(requesthandler.New()).

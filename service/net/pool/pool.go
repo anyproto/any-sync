@@ -11,6 +11,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/syncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"go.uber.org/zap"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 )
@@ -34,13 +35,15 @@ func NewPool() Pool {
 type Handler func(ctx context.Context, msg *Message) (err error)
 
 type Pool interface {
-	DialAndAddPeer(ctx context.Context, id string) (err error)
 	AddAndReadPeer(peer peer.Peer) (err error)
 	AddHandler(msgType syncproto.MessageType, h Handler)
 	AddPeerIdToGroup(peerId, groupId string) (err error)
 	RemovePeerIdFromGroup(peerId, groupId string) (err error)
+	DialAndAddPeer(ctx context.Context, id string) (peer.Peer, error)
+	GetOrDialOneOf(ctx context.Context, peerIds []string) (peer.Peer, error)
 
 	SendAndWait(ctx context.Context, peerId string, msg *syncproto.Message) (err error)
+	SendAndWaitResponse(ctx context.Context, id string, s *syncproto.Message) (resp *Message, err error)
 	Broadcast(ctx context.Context, groupId string, msg *syncproto.Message) (err error)
 
 	app.ComponentRunnable
@@ -88,25 +91,29 @@ func (p *pool) AddHandler(msgType syncproto.MessageType, h Handler) {
 	p.handlers[msgType] = append(p.handlers[msgType], h)
 }
 
-func (p *pool) DialAndAddPeer(ctx context.Context, peerId string) (err error) {
+func (p *pool) DialAndAddPeer(ctx context.Context, peerId string) (peer.Peer, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.closed {
-		return ErrPoolClosed
+		return nil, ErrPoolClosed
 	}
-	if _, ok := p.peersById[peerId]; ok {
-		return nil
+	return p.dialAndAdd(ctx, peerId)
+}
+
+func (p *pool) dialAndAdd(ctx context.Context, peerId string) (peer.Peer, error) {
+	if peer, ok := p.peersById[peerId]; ok {
+		return peer.peer, nil
 	}
 	peer, err := p.dialer.Dial(ctx, peerId)
 	if err != nil {
-		return
+		return nil, err
 	}
 	p.peersById[peer.Id()] = &peerEntry{
 		peer: peer,
 	}
 	p.wg.Add(1)
 	go p.readPeerLoop(peer)
-	return nil
+	return peer, nil
 }
 
 func (p *pool) AddAndReadPeer(peer peer.Peer) (err error) {
@@ -154,6 +161,14 @@ func (p *pool) RemovePeerIdFromGroup(peerId, groupId string) (err error) {
 }
 
 func (p *pool) SendAndWait(ctx context.Context, peerId string, msg *syncproto.Message) (err error) {
+	resp, err := p.SendAndWaitResponse(ctx, peerId, msg)
+	if err != nil {
+		return
+	}
+	return resp.IsAck()
+}
+
+func (p *pool) SendAndWaitResponse(ctx context.Context, peerId string, msg *syncproto.Message) (resp *Message, err error) {
 	defer func() {
 		if err != nil {
 			log.With(
@@ -191,12 +206,47 @@ func (p *pool) SendAndWait(ctx context.Context, peerId string, msg *syncproto.Me
 	case rep := <-ch:
 		if rep.Error != nil {
 			err = rep.Error
+			return
 		}
+		resp = rep.Message
+		return
 	case <-ctx.Done():
 		log.Debug("context done in SendAndWait")
 		err = ctx.Err()
 	}
 	return
+}
+
+func (p *pool) GetOrDialOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
+	p.mu.RLock()
+	if p.closed {
+		p.mu.RUnlock()
+		return nil, ErrPoolClosed
+	}
+	for _, peerId := range peerIds {
+		peer, ok := p.peersById[peerId]
+		if ok {
+			p.mu.RUnlock()
+			return peer.peer, nil
+		}
+	}
+	p.mu.RUnlock()
+	rand.Shuffle(len(peerIds), func(i, j int) {
+		peerIds[i], peerIds[j] = peerIds[j], peerIds[i]
+	})
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	var lastErr error
+	for _, peerId := range peerIds {
+		peer, err := p.dialAndAdd(ctx, peerId)
+		if err != nil {
+			lastErr = err
+			continue
+		} else {
+			return peer, nil
+		}
+	}
+	return nil, lastErr
 }
 
 func (p *pool) Broadcast(ctx context.Context, groupId string, msg *syncproto.Message) (err error) {
