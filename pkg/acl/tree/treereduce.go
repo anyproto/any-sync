@@ -18,9 +18,9 @@ func (t *Tree) checkRoot(change *Change) (total int) {
 		stack = append(stack, t.attached[h])
 	}
 
-	change.visited = true
 	t.dfsPrev(
 		stack,
+		[]string{change.Id},
 		func(ch *Change) bool {
 			total += 1
 			return true
@@ -31,7 +31,6 @@ func (t *Tree) checkRoot(change *Change) (total int) {
 			}
 		},
 	)
-	change.visited = false
 
 	return
 }
@@ -46,6 +45,7 @@ func (t *Tree) makeRootAndRemove(start *Change) {
 
 	t.dfsPrev(
 		stack,
+		[]string{},
 		func(ch *Change) bool {
 			return true
 		},

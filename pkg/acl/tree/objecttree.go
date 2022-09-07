@@ -60,7 +60,7 @@ type ObjectTree interface {
 	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 
 	SnapshotPath() []string
-	ChangesAfterCommonSnapshot(snapshotPath []string) ([]*aclpb.RawChange, error)
+	ChangesAfterCommonSnapshot(snapshotPath, heads []string) ([]*aclpb.RawChange, error)
 
 	Storage() storage.TreeStorage
 	DebugDump() (string, error)
@@ -511,11 +511,11 @@ func (ot *objectTree) SnapshotPath() []string {
 	return path
 }
 
-func (ot *objectTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.RawChange, error) {
+func (ot *objectTree) ChangesAfterCommonSnapshot(theirPath, theirHeads []string) ([]*aclpb.RawChange, error) {
 	var (
 		needFullDocument = len(theirPath) == 0
 		ourPath          = ot.SnapshotPath()
-		// by default returning everything we have
+		// by default returning everything we have from start
 		commonSnapshot = ourPath[len(ourPath)-1]
 		err            error
 	)
@@ -528,40 +528,38 @@ func (ot *objectTree) ChangesAfterCommonSnapshot(theirPath []string) ([]*aclpb.R
 		}
 	}
 
-	log.With(
-		zap.Strings("heads", ot.tree.Heads()),
-		zap.String("breakpoint", commonSnapshot),
-		zap.String("id", ot.id)).
-		Debug("getting all changes from common snapshot")
-
 	if commonSnapshot == ot.tree.RootId() {
-		return ot.getChangesFromTree()
+		return ot.getChangesFromTree(theirHeads)
 	} else {
-		return ot.getChangesFromDB(commonSnapshot, needFullDocument)
+		return ot.getChangesFromDB(commonSnapshot, theirHeads, needFullDocument)
 	}
 }
 
-func (ot *objectTree) getChangesFromTree() (rawChanges []*aclpb.RawChange, err error) {
-	ot.tree.dfsPrev(ot.tree.HeadsChanges(), func(ch *Change) bool {
-		var marshalled []byte
-		marshalled, err = ch.Content.Marshal()
-		if err != nil {
-			return false
-		}
+func (ot *objectTree) getChangesFromTree(theirHeads []string) (rawChanges []*aclpb.RawChange, err error) {
+	ot.tree.dfsPrev(
+		ot.tree.HeadsChanges(),
+		theirHeads,
+		func(ch *Change) bool {
+			var marshalled []byte
+			marshalled, err = ch.Content.Marshal()
+			if err != nil {
+				return false
+			}
 
-		raw := &aclpb.RawChange{
-			Payload:   marshalled,
-			Signature: ch.Signature(),
-			Id:        ch.Id,
-		}
-		rawChanges = append(rawChanges, raw)
-		return true
-	}, func(changes []*Change) {})
+			raw := &aclpb.RawChange{
+				Payload:   marshalled,
+				Signature: ch.Signature(),
+				Id:        ch.Id,
+			}
+			rawChanges = append(rawChanges, raw)
+			return true
+		},
+		func(changes []*Change) {})
 
 	return
 }
 
-func (ot *objectTree) getChangesFromDB(commonSnapshot string, needStartSnapshot bool) (rawChanges []*aclpb.RawChange, err error) {
+func (ot *objectTree) getChangesFromDB(commonSnapshot string, theirHeads []string, needStartSnapshot bool) (rawChanges []*aclpb.RawChange, err error) {
 	load := func(id string) (*Change, error) {
 		raw, err := ot.treeStorage.GetRawChange(context.Background(), id)
 		if err != nil {
@@ -576,8 +574,13 @@ func (ot *objectTree) getChangesFromDB(commonSnapshot string, needStartSnapshot 
 		rawChanges = append(rawChanges, raw)
 		return ch, nil
 	}
+	// setting breakpoints to include head and common snapshot
+	// that means that we will ignore all changes which start at theirHeads
+	breakpoints := make([]string, 0, len(theirHeads)+1)
+	breakpoints = append(breakpoints, commonSnapshot)
+	breakpoints = append(breakpoints, theirHeads...)
 
-	_, err = ot.treeBuilder.dfs(ot.tree.Heads(), commonSnapshot, load)
+	_, err = ot.treeBuilder.dfs(ot.tree.Heads(), breakpoints, load)
 	if err != nil {
 		return
 	}
