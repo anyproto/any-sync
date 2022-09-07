@@ -271,8 +271,16 @@ func (t *Tree) after(id1, id2 string) (found bool) {
 	return
 }
 
-func (t *Tree) dfsPrev(stack []*Change, visit func(ch *Change) (isContinue bool), afterVisit func([]*Change)) {
+func (t *Tree) dfsPrev(stack []*Change, breakpoints []string, visit func(ch *Change) (isContinue bool), afterVisit func([]*Change)) {
 	t.visitedBuf = t.visitedBuf[:0]
+
+	// setting breakpoints as visited
+	for _, breakpoint := range breakpoints {
+		if ch, ok := t.attached[breakpoint]; ok {
+			ch.visited = true
+			t.visitedBuf = append(t.visitedBuf, ch)
+		}
+	}
 
 	defer func() {
 		afterVisit(t.visitedBuf)
