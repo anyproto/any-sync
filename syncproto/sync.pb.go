@@ -503,10 +503,10 @@ func (m *Sync) GetMessage() *Sync_ContentValue {
 
 type Sync_ContentValue struct {
 	// Types that are valid to be assigned to Value:
-	//	*Sync_Content_Value_HeadUpdate
-	//	*Sync_Content_Value_FullSyncRequest
-	//	*Sync_Content_Value_FullSyncResponse
-	Value isSync_Content_Value_Value `protobuf_oneof:"value"`
+	//	*Sync_ContentValue_HeadUpdate
+	//	*Sync_ContentValue_FullSyncRequest
+	//	*Sync_ContentValue_FullSyncResponse
+	Value isSync_ContentValue_Value `protobuf_oneof:"value"`
 }
 
 func (m *Sync_ContentValue) Reset()         { *m = Sync_ContentValue{} }
@@ -542,27 +542,27 @@ func (m *Sync_ContentValue) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Sync_ContentValue proto.InternalMessageInfo
 
-type isSync_Content_Value_Value interface {
-	isSync_Content_Value_Value()
+type isSync_ContentValue_Value interface {
+	isSync_ContentValue_Value()
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
 
-type Sync_Content_Value_HeadUpdate struct {
+type Sync_ContentValue_HeadUpdate struct {
 	HeadUpdate *Sync_HeadUpdate `protobuf:"bytes,1,opt,name=headUpdate,proto3,oneof" json:"headUpdate,omitempty"`
 }
-type Sync_Content_Value_FullSyncRequest struct {
+type Sync_ContentValue_FullSyncRequest struct {
 	FullSyncRequest *Sync_Full_Request `protobuf:"bytes,2,opt,name=fullSyncRequest,proto3,oneof" json:"fullSyncRequest,omitempty"`
 }
-type Sync_Content_Value_FullSyncResponse struct {
+type Sync_ContentValue_FullSyncResponse struct {
 	FullSyncResponse *Sync_Full_Response `protobuf:"bytes,3,opt,name=fullSyncResponse,proto3,oneof" json:"fullSyncResponse,omitempty"`
 }
 
-func (*Sync_Content_Value_HeadUpdate) isSync_Content_Value_Value()       {}
-func (*Sync_Content_Value_FullSyncRequest) isSync_Content_Value_Value()  {}
-func (*Sync_Content_Value_FullSyncResponse) isSync_Content_Value_Value() {}
+func (*Sync_ContentValue_HeadUpdate) isSync_ContentValue_Value()       {}
+func (*Sync_ContentValue_FullSyncRequest) isSync_ContentValue_Value()  {}
+func (*Sync_ContentValue_FullSyncResponse) isSync_ContentValue_Value() {}
 
-func (m *Sync_ContentValue) GetValue() isSync_Content_Value_Value {
+func (m *Sync_ContentValue) GetValue() isSync_ContentValue_Value {
 	if m != nil {
 		return m.Value
 	}
@@ -570,21 +570,21 @@ func (m *Sync_ContentValue) GetValue() isSync_Content_Value_Value {
 }
 
 func (m *Sync_ContentValue) GetHeadUpdate() *Sync_HeadUpdate {
-	if x, ok := m.GetValue().(*Sync_Content_Value_HeadUpdate); ok {
+	if x, ok := m.GetValue().(*Sync_ContentValue_HeadUpdate); ok {
 		return x.HeadUpdate
 	}
 	return nil
 }
 
 func (m *Sync_ContentValue) GetFullSyncRequest() *Sync_Full_Request {
-	if x, ok := m.GetValue().(*Sync_Content_Value_FullSyncRequest); ok {
+	if x, ok := m.GetValue().(*Sync_ContentValue_FullSyncRequest); ok {
 		return x.FullSyncRequest
 	}
 	return nil
 }
 
 func (m *Sync_ContentValue) GetFullSyncResponse() *Sync_Full_Response {
-	if x, ok := m.GetValue().(*Sync_Content_Value_FullSyncResponse); ok {
+	if x, ok := m.GetValue().(*Sync_ContentValue_FullSyncResponse); ok {
 		return x.FullSyncResponse
 	}
 	return nil
@@ -593,9 +593,9 @@ func (m *Sync_ContentValue) GetFullSyncResponse() *Sync_Full_Response {
 // XXX_OneofWrappers is for the internal use of the proto package.
 func (*Sync_ContentValue) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
-		(*Sync_Content_Value_HeadUpdate)(nil),
-		(*Sync_Content_Value_FullSyncRequest)(nil),
-		(*Sync_Content_Value_FullSyncResponse)(nil),
+		(*Sync_ContentValue_HeadUpdate)(nil),
+		(*Sync_ContentValue_FullSyncRequest)(nil),
+		(*Sync_ContentValue_FullSyncResponse)(nil),
 	}
 }
 
@@ -1293,12 +1293,12 @@ func (m *Sync_ContentValue) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *Sync_Content_Value_HeadUpdate) MarshalTo(dAtA []byte) (int, error) {
+func (m *Sync_ContentValue_HeadUpdate) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *Sync_Content_Value_HeadUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Sync_ContentValue_HeadUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.HeadUpdate != nil {
 		{
@@ -1314,12 +1314,12 @@ func (m *Sync_Content_Value_HeadUpdate) MarshalToSizedBuffer(dAtA []byte) (int, 
 	}
 	return len(dAtA) - i, nil
 }
-func (m *Sync_Content_Value_FullSyncRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *Sync_ContentValue_FullSyncRequest) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *Sync_Content_Value_FullSyncRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Sync_ContentValue_FullSyncRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.FullSyncRequest != nil {
 		{
@@ -1335,12 +1335,12 @@ func (m *Sync_Content_Value_FullSyncRequest) MarshalToSizedBuffer(dAtA []byte) (
 	}
 	return len(dAtA) - i, nil
 }
-func (m *Sync_Content_Value_FullSyncResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *Sync_ContentValue_FullSyncResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *Sync_Content_Value_FullSyncResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Sync_ContentValue_FullSyncResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.FullSyncResponse != nil {
 		{
@@ -1759,7 +1759,7 @@ func (m *Sync_ContentValue) Size() (n int) {
 	return n
 }
 
-func (m *Sync_Content_Value_HeadUpdate) Size() (n int) {
+func (m *Sync_ContentValue_HeadUpdate) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1771,7 +1771,7 @@ func (m *Sync_Content_Value_HeadUpdate) Size() (n int) {
 	}
 	return n
 }
-func (m *Sync_Content_Value_FullSyncRequest) Size() (n int) {
+func (m *Sync_ContentValue_FullSyncRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1783,7 +1783,7 @@ func (m *Sync_Content_Value_FullSyncRequest) Size() (n int) {
 	}
 	return n
 }
-func (m *Sync_Content_Value_FullSyncResponse) Size() (n int) {
+func (m *Sync_ContentValue_FullSyncResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2884,7 +2884,7 @@ func (m *Sync_ContentValue) Unmarshal(dAtA []byte) error {
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &Sync_Content_Value_HeadUpdate{v}
+			m.Value = &Sync_ContentValue_HeadUpdate{v}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -2919,7 +2919,7 @@ func (m *Sync_ContentValue) Unmarshal(dAtA []byte) error {
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &Sync_Content_Value_FullSyncRequest{v}
+			m.Value = &Sync_ContentValue_FullSyncRequest{v}
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -2954,7 +2954,7 @@ func (m *Sync_ContentValue) Unmarshal(dAtA []byte) error {
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &Sync_Content_Value_FullSyncResponse{v}
+			m.Value = &Sync_ContentValue_FullSyncResponse{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

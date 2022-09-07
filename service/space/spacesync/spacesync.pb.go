@@ -22,245 +22,47 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type Space struct {
-	SpaceId string         `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
-	Message *Space_Content `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+type ErrCodes int32
+
+const (
+	ErrCodes_Unexpected ErrCodes = 0
+)
+
+var ErrCodes_name = map[int32]string{
+	0: "Unexpected",
 }
 
-func (m *Space) Reset()         { *m = Space{} }
-func (m *Space) String() string { return proto.CompactTextString(m) }
-func (*Space) ProtoMessage()    {}
-func (*Space) Descriptor() ([]byte, []int) {
+var ErrCodes_value = map[string]int32{
+	"Unexpected": 0,
+}
+
+func (x ErrCodes) String() string {
+	return proto.EnumName(ErrCodes_name, int32(x))
+}
+
+func (ErrCodes) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_11d78c2fb7c80384, []int{0}
 }
-func (m *Space) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Space) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Space.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Space) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Space.Merge(m, src)
-}
-func (m *Space) XXX_Size() int {
-	return m.Size()
-}
-func (m *Space) XXX_DiscardUnknown() {
-	xxx_messageInfo_Space.DiscardUnknown(m)
-}
 
-var xxx_messageInfo_Space proto.InternalMessageInfo
-
-func (m *Space) GetSpaceId() string {
-	if m != nil {
-		return m.SpaceId
-	}
-	return ""
-}
-
-func (m *Space) GetMessage() *Space_Content {
-	if m != nil {
-		return m.Message
-	}
-	return nil
-}
-
-type Space_Content struct {
-	// Types that are valid to be assigned to Value:
-	//
-	//	*Space_Content_DiffRange
-	Value isSpace_Content_Value `protobuf_oneof:"value"`
-}
-
-func (m *Space_Content) Reset()         { *m = Space_Content{} }
-func (m *Space_Content) String() string { return proto.CompactTextString(m) }
-func (*Space_Content) ProtoMessage()    {}
-func (*Space_Content) Descriptor() ([]byte, []int) {
-	return fileDescriptor_11d78c2fb7c80384, []int{0, 0}
-}
-func (m *Space_Content) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Space_Content) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Space_Content.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Space_Content) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Space_Content.Merge(m, src)
-}
-func (m *Space_Content) XXX_Size() int {
-	return m.Size()
-}
-func (m *Space_Content) XXX_DiscardUnknown() {
-	xxx_messageInfo_Space_Content.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Space_Content proto.InternalMessageInfo
-
-type isSpace_Content_Value interface {
-	isSpace_Content_Value()
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type Space_Content_DiffRange struct {
-	DiffRange *DiffRange `protobuf:"bytes,1,opt,name=diffRange,proto3,oneof" json:"diffRange,omitempty"`
-}
-
-func (*Space_Content_DiffRange) isSpace_Content_Value() {}
-
-func (m *Space_Content) GetValue() isSpace_Content_Value {
-	if m != nil {
-		return m.Value
-	}
-	return nil
-}
-
-func (m *Space_Content) GetDiffRange() *DiffRange {
-	if x, ok := m.GetValue().(*Space_Content_DiffRange); ok {
-		return x.DiffRange
-	}
-	return nil
-}
-
-// XXX_OneofWrappers is for the internal use of the proto package.
-func (*Space_Content) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
-		(*Space_Content_DiffRange)(nil),
-	}
-}
-
-type DiffRange struct {
-	Request  *DiffRange_Request  `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
-	Response *DiffRange_Response `protobuf:"bytes,2,opt,name=response,proto3" json:"response,omitempty"`
-}
-
-func (m *DiffRange) Reset()         { *m = DiffRange{} }
-func (m *DiffRange) String() string { return proto.CompactTextString(m) }
-func (*DiffRange) ProtoMessage()    {}
-func (*DiffRange) Descriptor() ([]byte, []int) {
-	return fileDescriptor_11d78c2fb7c80384, []int{1}
-}
-func (m *DiffRange) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *DiffRange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_DiffRange.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *DiffRange) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DiffRange.Merge(m, src)
-}
-func (m *DiffRange) XXX_Size() int {
-	return m.Size()
-}
-func (m *DiffRange) XXX_DiscardUnknown() {
-	xxx_messageInfo_DiffRange.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_DiffRange proto.InternalMessageInfo
-
-func (m *DiffRange) GetRequest() *DiffRange_Request {
-	if m != nil {
-		return m.Request
-	}
-	return nil
-}
-
-func (m *DiffRange) GetResponse() *DiffRange_Response {
-	if m != nil {
-		return m.Response
-	}
-	return nil
-}
-
-type DiffRange_Request struct {
-	Ranges []*DiffRange_Request_Range `protobuf:"bytes,1,rep,name=ranges,proto3" json:"ranges,omitempty"`
-}
-
-func (m *DiffRange_Request) Reset()         { *m = DiffRange_Request{} }
-func (m *DiffRange_Request) String() string { return proto.CompactTextString(m) }
-func (*DiffRange_Request) ProtoMessage()    {}
-func (*DiffRange_Request) Descriptor() ([]byte, []int) {
-	return fileDescriptor_11d78c2fb7c80384, []int{1, 0}
-}
-func (m *DiffRange_Request) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *DiffRange_Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_DiffRange_Request.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *DiffRange_Request) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DiffRange_Request.Merge(m, src)
-}
-func (m *DiffRange_Request) XXX_Size() int {
-	return m.Size()
-}
-func (m *DiffRange_Request) XXX_DiscardUnknown() {
-	xxx_messageInfo_DiffRange_Request.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_DiffRange_Request proto.InternalMessageInfo
-
-func (m *DiffRange_Request) GetRanges() []*DiffRange_Request_Range {
-	if m != nil {
-		return m.Ranges
-	}
-	return nil
-}
-
-type DiffRange_Request_Range struct {
+// HeadSyncRange presenting a request for one range
+type HeadSyncRange struct {
 	From  uint64 `protobuf:"varint,1,opt,name=from,proto3" json:"from,omitempty"`
 	To    uint64 `protobuf:"varint,2,opt,name=to,proto3" json:"to,omitempty"`
 	Limit uint32 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
 }
 
-func (m *DiffRange_Request_Range) Reset()         { *m = DiffRange_Request_Range{} }
-func (m *DiffRange_Request_Range) String() string { return proto.CompactTextString(m) }
-func (*DiffRange_Request_Range) ProtoMessage()    {}
-func (*DiffRange_Request_Range) Descriptor() ([]byte, []int) {
-	return fileDescriptor_11d78c2fb7c80384, []int{1, 0, 0}
+func (m *HeadSyncRange) Reset()         { *m = HeadSyncRange{} }
+func (m *HeadSyncRange) String() string { return proto.CompactTextString(m) }
+func (*HeadSyncRange) ProtoMessage()    {}
+func (*HeadSyncRange) Descriptor() ([]byte, []int) {
+	return fileDescriptor_11d78c2fb7c80384, []int{0}
 }
-func (m *DiffRange_Request_Range) XXX_Unmarshal(b []byte) error {
+func (m *HeadSyncRange) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *DiffRange_Request_Range) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *HeadSyncRange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_DiffRange_Request_Range.Marshal(b, m, deterministic)
+		return xxx_messageInfo_HeadSyncRange.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -270,55 +72,58 @@ func (m *DiffRange_Request_Range) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return b[:n], nil
 	}
 }
-func (m *DiffRange_Request_Range) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DiffRange_Request_Range.Merge(m, src)
+func (m *HeadSyncRange) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HeadSyncRange.Merge(m, src)
 }
-func (m *DiffRange_Request_Range) XXX_Size() int {
+func (m *HeadSyncRange) XXX_Size() int {
 	return m.Size()
 }
-func (m *DiffRange_Request_Range) XXX_DiscardUnknown() {
-	xxx_messageInfo_DiffRange_Request_Range.DiscardUnknown(m)
+func (m *HeadSyncRange) XXX_DiscardUnknown() {
+	xxx_messageInfo_HeadSyncRange.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DiffRange_Request_Range proto.InternalMessageInfo
+var xxx_messageInfo_HeadSyncRange proto.InternalMessageInfo
 
-func (m *DiffRange_Request_Range) GetFrom() uint64 {
+func (m *HeadSyncRange) GetFrom() uint64 {
 	if m != nil {
 		return m.From
 	}
 	return 0
 }
 
-func (m *DiffRange_Request_Range) GetTo() uint64 {
+func (m *HeadSyncRange) GetTo() uint64 {
 	if m != nil {
 		return m.To
 	}
 	return 0
 }
 
-func (m *DiffRange_Request_Range) GetLimit() uint32 {
+func (m *HeadSyncRange) GetLimit() uint32 {
 	if m != nil {
 		return m.Limit
 	}
 	return 0
 }
 
-type DiffRange_Response struct {
-	Results []*DiffRange_Response_Result `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
+// HeadSyncResult presenting a response for one range
+type HeadSyncResult struct {
+	Hash     []byte                   `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
+	Elements []*HeadSyncResultElement `protobuf:"bytes,2,rep,name=elements,proto3" json:"elements,omitempty"`
+	Count    uint32                   `protobuf:"varint,3,opt,name=count,proto3" json:"count,omitempty"`
 }
 
-func (m *DiffRange_Response) Reset()         { *m = DiffRange_Response{} }
-func (m *DiffRange_Response) String() string { return proto.CompactTextString(m) }
-func (*DiffRange_Response) ProtoMessage()    {}
-func (*DiffRange_Response) Descriptor() ([]byte, []int) {
-	return fileDescriptor_11d78c2fb7c80384, []int{1, 1}
+func (m *HeadSyncResult) Reset()         { *m = HeadSyncResult{} }
+func (m *HeadSyncResult) String() string { return proto.CompactTextString(m) }
+func (*HeadSyncResult) ProtoMessage()    {}
+func (*HeadSyncResult) Descriptor() ([]byte, []int) {
+	return fileDescriptor_11d78c2fb7c80384, []int{1}
 }
-func (m *DiffRange_Response) XXX_Unmarshal(b []byte) error {
+func (m *HeadSyncResult) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *DiffRange_Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *HeadSyncResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_DiffRange_Response.Marshal(b, m, deterministic)
+		return xxx_messageInfo_HeadSyncResult.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -328,102 +133,57 @@ func (m *DiffRange_Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return b[:n], nil
 	}
 }
-func (m *DiffRange_Response) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DiffRange_Response.Merge(m, src)
+func (m *HeadSyncResult) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HeadSyncResult.Merge(m, src)
 }
-func (m *DiffRange_Response) XXX_Size() int {
+func (m *HeadSyncResult) XXX_Size() int {
 	return m.Size()
 }
-func (m *DiffRange_Response) XXX_DiscardUnknown() {
-	xxx_messageInfo_DiffRange_Response.DiscardUnknown(m)
+func (m *HeadSyncResult) XXX_DiscardUnknown() {
+	xxx_messageInfo_HeadSyncResult.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DiffRange_Response proto.InternalMessageInfo
+var xxx_messageInfo_HeadSyncResult proto.InternalMessageInfo
 
-func (m *DiffRange_Response) GetResults() []*DiffRange_Response_Result {
-	if m != nil {
-		return m.Results
-	}
-	return nil
-}
-
-type DiffRange_Response_Result struct {
-	Hash     []byte                               `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
-	Elements []*DiffRange_Response_Result_Element `protobuf:"bytes,2,rep,name=elements,proto3" json:"elements,omitempty"`
-	Count    uint32                               `protobuf:"varint,3,opt,name=count,proto3" json:"count,omitempty"`
-}
-
-func (m *DiffRange_Response_Result) Reset()         { *m = DiffRange_Response_Result{} }
-func (m *DiffRange_Response_Result) String() string { return proto.CompactTextString(m) }
-func (*DiffRange_Response_Result) ProtoMessage()    {}
-func (*DiffRange_Response_Result) Descriptor() ([]byte, []int) {
-	return fileDescriptor_11d78c2fb7c80384, []int{1, 1, 0}
-}
-func (m *DiffRange_Response_Result) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *DiffRange_Response_Result) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_DiffRange_Response_Result.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *DiffRange_Response_Result) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DiffRange_Response_Result.Merge(m, src)
-}
-func (m *DiffRange_Response_Result) XXX_Size() int {
-	return m.Size()
-}
-func (m *DiffRange_Response_Result) XXX_DiscardUnknown() {
-	xxx_messageInfo_DiffRange_Response_Result.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_DiffRange_Response_Result proto.InternalMessageInfo
-
-func (m *DiffRange_Response_Result) GetHash() []byte {
+func (m *HeadSyncResult) GetHash() []byte {
 	if m != nil {
 		return m.Hash
 	}
 	return nil
 }
 
-func (m *DiffRange_Response_Result) GetElements() []*DiffRange_Response_Result_Element {
+func (m *HeadSyncResult) GetElements() []*HeadSyncResultElement {
 	if m != nil {
 		return m.Elements
 	}
 	return nil
 }
 
-func (m *DiffRange_Response_Result) GetCount() uint32 {
+func (m *HeadSyncResult) GetCount() uint32 {
 	if m != nil {
 		return m.Count
 	}
 	return 0
 }
 
-type DiffRange_Response_Result_Element struct {
+// HeadSyncResultElement presenting state of one object
+type HeadSyncResultElement struct {
 	Id   string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Head string `protobuf:"bytes,2,opt,name=head,proto3" json:"head,omitempty"`
 }
 
-func (m *DiffRange_Response_Result_Element) Reset()         { *m = DiffRange_Response_Result_Element{} }
-func (m *DiffRange_Response_Result_Element) String() string { return proto.CompactTextString(m) }
-func (*DiffRange_Response_Result_Element) ProtoMessage()    {}
-func (*DiffRange_Response_Result_Element) Descriptor() ([]byte, []int) {
-	return fileDescriptor_11d78c2fb7c80384, []int{1, 1, 0, 0}
+func (m *HeadSyncResultElement) Reset()         { *m = HeadSyncResultElement{} }
+func (m *HeadSyncResultElement) String() string { return proto.CompactTextString(m) }
+func (*HeadSyncResultElement) ProtoMessage()    {}
+func (*HeadSyncResultElement) Descriptor() ([]byte, []int) {
+	return fileDescriptor_11d78c2fb7c80384, []int{2}
 }
-func (m *DiffRange_Response_Result_Element) XXX_Unmarshal(b []byte) error {
+func (m *HeadSyncResultElement) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *DiffRange_Response_Result_Element) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *HeadSyncResultElement) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_DiffRange_Response_Result_Element.Marshal(b, m, deterministic)
+		return xxx_messageInfo_HeadSyncResultElement.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -433,41 +193,137 @@ func (m *DiffRange_Response_Result_Element) XXX_Marshal(b []byte, deterministic 
 		return b[:n], nil
 	}
 }
-func (m *DiffRange_Response_Result_Element) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DiffRange_Response_Result_Element.Merge(m, src)
+func (m *HeadSyncResultElement) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HeadSyncResultElement.Merge(m, src)
 }
-func (m *DiffRange_Response_Result_Element) XXX_Size() int {
+func (m *HeadSyncResultElement) XXX_Size() int {
 	return m.Size()
 }
-func (m *DiffRange_Response_Result_Element) XXX_DiscardUnknown() {
-	xxx_messageInfo_DiffRange_Response_Result_Element.DiscardUnknown(m)
+func (m *HeadSyncResultElement) XXX_DiscardUnknown() {
+	xxx_messageInfo_HeadSyncResultElement.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DiffRange_Response_Result_Element proto.InternalMessageInfo
+var xxx_messageInfo_HeadSyncResultElement proto.InternalMessageInfo
 
-func (m *DiffRange_Response_Result_Element) GetId() string {
+func (m *HeadSyncResultElement) GetId() string {
 	if m != nil {
 		return m.Id
 	}
 	return ""
 }
 
-func (m *DiffRange_Response_Result_Element) GetHead() string {
+func (m *HeadSyncResultElement) GetHead() string {
 	if m != nil {
 		return m.Head
 	}
 	return ""
 }
 
+// HeadSyncRequest is a request for HeadSync
+type HeadSyncRequest struct {
+	SpaceId string           `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	Ranges  []*HeadSyncRange `protobuf:"bytes,2,rep,name=ranges,proto3" json:"ranges,omitempty"`
+}
+
+func (m *HeadSyncRequest) Reset()         { *m = HeadSyncRequest{} }
+func (m *HeadSyncRequest) String() string { return proto.CompactTextString(m) }
+func (*HeadSyncRequest) ProtoMessage()    {}
+func (*HeadSyncRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_11d78c2fb7c80384, []int{3}
+}
+func (m *HeadSyncRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *HeadSyncRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_HeadSyncRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *HeadSyncRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HeadSyncRequest.Merge(m, src)
+}
+func (m *HeadSyncRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *HeadSyncRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_HeadSyncRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_HeadSyncRequest proto.InternalMessageInfo
+
+func (m *HeadSyncRequest) GetSpaceId() string {
+	if m != nil {
+		return m.SpaceId
+	}
+	return ""
+}
+
+func (m *HeadSyncRequest) GetRanges() []*HeadSyncRange {
+	if m != nil {
+		return m.Ranges
+	}
+	return nil
+}
+
+// HeadSyncResponse is a response for HeadSync
+type HeadSyncResponse struct {
+	Results []*HeadSyncResult `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
+}
+
+func (m *HeadSyncResponse) Reset()         { *m = HeadSyncResponse{} }
+func (m *HeadSyncResponse) String() string { return proto.CompactTextString(m) }
+func (*HeadSyncResponse) ProtoMessage()    {}
+func (*HeadSyncResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_11d78c2fb7c80384, []int{4}
+}
+func (m *HeadSyncResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *HeadSyncResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_HeadSyncResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *HeadSyncResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HeadSyncResponse.Merge(m, src)
+}
+func (m *HeadSyncResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *HeadSyncResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_HeadSyncResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_HeadSyncResponse proto.InternalMessageInfo
+
+func (m *HeadSyncResponse) GetResults() []*HeadSyncResult {
+	if m != nil {
+		return m.Results
+	}
+	return nil
+}
+
 func init() {
-	proto.RegisterType((*Space)(nil), "anytype.Space")
-	proto.RegisterType((*Space_Content)(nil), "anytype.Space.Content")
-	proto.RegisterType((*DiffRange)(nil), "anytype.DiffRange")
-	proto.RegisterType((*DiffRange_Request)(nil), "anytype.DiffRange.Request")
-	proto.RegisterType((*DiffRange_Request_Range)(nil), "anytype.DiffRange.Request.Range")
-	proto.RegisterType((*DiffRange_Response)(nil), "anytype.DiffRange.Response")
-	proto.RegisterType((*DiffRange_Response_Result)(nil), "anytype.DiffRange.Response.Result")
-	proto.RegisterType((*DiffRange_Response_Result_Element)(nil), "anytype.DiffRange.Response.Result.Element")
+	proto.RegisterEnum("anySpace.ErrCodes", ErrCodes_name, ErrCodes_value)
+	proto.RegisterType((*HeadSyncRange)(nil), "anySpace.HeadSyncRange")
+	proto.RegisterType((*HeadSyncResult)(nil), "anySpace.HeadSyncResult")
+	proto.RegisterType((*HeadSyncResultElement)(nil), "anySpace.HeadSyncResultElement")
+	proto.RegisterType((*HeadSyncRequest)(nil), "anySpace.HeadSyncRequest")
+	proto.RegisterType((*HeadSyncResponse)(nil), "anySpace.HeadSyncResponse")
 }
 
 func init() {
@@ -475,37 +331,34 @@ func init() {
 }
 
 var fileDescriptor_11d78c2fb7c80384 = []byte{
-	// 428 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x92, 0xbf, 0x8e, 0xd4, 0x30,
-	0x10, 0xc6, 0xd7, 0xd9, 0x3f, 0xde, 0xcc, 0x02, 0x85, 0x85, 0x20, 0x0a, 0x52, 0x14, 0x6d, 0x15,
-	0x21, 0xe1, 0x83, 0x80, 0x04, 0x05, 0x0d, 0x07, 0x9c, 0xa0, 0x35, 0x1d, 0x5d, 0xd8, 0x78, 0xef,
-	0x22, 0x25, 0x76, 0x88, 0x9d, 0x93, 0xf6, 0x05, 0xa8, 0xe9, 0x79, 0x02, 0xde, 0x84, 0xf2, 0x4a,
-	0x4a, 0xb4, 0xfb, 0x0a, 0x54, 0x54, 0x28, 0x93, 0x38, 0x57, 0xc0, 0x42, 0x13, 0xcd, 0x8c, 0x7f,
-	0xdf, 0x97, 0x6f, 0x2c, 0x03, 0x37, 0xb2, 0xb9, 0x2c, 0x36, 0xf2, 0xc4, 0xd4, 0x99, 0xfb, 0x9a,
-	0x9d, 0xda, 0x9c, 0xd4, 0x8d, 0xb6, 0xda, 0x5c, 0x0f, 0x38, 0x0e, 0x18, 0xcd, 0xd4, 0xce, 0xee,
-	0x6a, 0xb9, 0xfe, 0x42, 0x60, 0xfe, 0xae, 0x3b, 0x64, 0x01, 0x50, 0xa4, 0xde, 0xe6, 0x01, 0x89,
-	0x49, 0xe2, 0x0b, 0xd7, 0xb2, 0x87, 0x40, 0x2b, 0x69, 0x4c, 0x76, 0x2e, 0x03, 0x2f, 0x26, 0xc9,
-	0x2a, 0xbd, 0xc3, 0x07, 0x39, 0x47, 0x29, 0x7f, 0xa9, 0x95, 0x95, 0xca, 0x0a, 0x87, 0x85, 0x67,
-	0x40, 0x87, 0x19, 0x4b, 0xc1, 0xcf, 0x8b, 0xed, 0x56, 0x64, 0xea, 0x5c, 0xa2, 0xf1, 0x2a, 0x65,
-	0xa3, 0xfc, 0x95, 0x3b, 0x79, 0x33, 0x11, 0xd7, 0xd8, 0x29, 0x85, 0xf9, 0x65, 0x56, 0xb6, 0x72,
-	0xfd, 0x6b, 0x0a, 0xfe, 0xc8, 0xb0, 0x27, 0x40, 0x1b, 0xf9, 0xb1, 0x95, 0xc6, 0x0e, 0x46, 0xe1,
-	0x9f, 0x46, 0x5c, 0xf4, 0x84, 0x70, 0x28, 0x7b, 0x0a, 0xcb, 0x46, 0x9a, 0x5a, 0x2b, 0xe3, 0xe2,
-	0xdf, 0xfb, 0xab, 0xac, 0x47, 0xc4, 0x08, 0x87, 0x9f, 0x08, 0xd0, 0xc1, 0x8d, 0x3d, 0x83, 0x45,
-	0xd3, 0x71, 0x26, 0x20, 0xf1, 0x34, 0x59, 0xa5, 0xf1, 0xf1, 0x3f, 0x73, 0xec, 0xc4, 0xc0, 0x87,
-	0x2f, 0x60, 0xde, 0xa7, 0x67, 0x30, 0xdb, 0x36, 0xba, 0xc2, 0xe8, 0x33, 0x81, 0x35, 0xbb, 0x05,
-	0x9e, 0xd5, 0x98, 0x6a, 0x26, 0x3c, 0xab, 0xd9, 0x6d, 0x98, 0x97, 0x45, 0x55, 0xd8, 0x60, 0x1a,
-	0x93, 0xe4, 0xa6, 0xe8, 0x9b, 0xf0, 0x27, 0x81, 0xa5, 0xcb, 0xc7, 0x9e, 0x77, 0x97, 0x60, 0xda,
-	0xd2, 0xba, 0x28, 0xeb, 0x7f, 0x6c, 0xd3, 0x15, 0x6d, 0x89, 0x97, 0x81, 0x92, 0xf0, 0x2b, 0x81,
-	0x45, 0x3f, 0xeb, 0xf2, 0x5c, 0x64, 0xe6, 0x02, 0xf3, 0xdc, 0x10, 0x58, 0xb3, 0x33, 0x58, 0xca,
-	0x52, 0x56, 0x52, 0x59, 0x13, 0x78, 0xe8, 0x7e, 0xff, 0xff, 0xee, 0xfc, 0x75, 0x2f, 0x11, 0xa3,
-	0xb6, 0xdb, 0x63, 0xa3, 0x5b, 0x35, 0xee, 0x81, 0x4d, 0xf8, 0x00, 0xe8, 0x80, 0x76, 0x8b, 0x17,
-	0xee, 0x9d, 0x79, 0x45, 0x8e, 0x61, 0x64, 0x96, 0xe3, 0x55, 0xf8, 0x02, 0xeb, 0xd3, 0x47, 0xdf,
-	0xf6, 0x11, 0xb9, 0xda, 0x47, 0xe4, 0xc7, 0x3e, 0x22, 0x9f, 0x0f, 0xd1, 0xe4, 0xea, 0x10, 0x4d,
-	0xbe, 0x1f, 0xa2, 0xc9, 0xfb, 0xbb, 0x47, 0x5e, 0xfb, 0x87, 0x05, 0xbe, 0xee, 0xc7, 0xbf, 0x03,
-	0x00, 0x00, 0xff, 0xff, 0x12, 0x5a, 0x4f, 0xd6, 0x0f, 0x03, 0x00, 0x00,
+	// 369 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x92, 0xbf, 0x6e, 0xe2, 0x40,
+	0x10, 0xc6, 0x6d, 0xf3, 0xcf, 0xcc, 0x1d, 0x1c, 0x5a, 0xdd, 0x09, 0x1f, 0x85, 0x0f, 0xb9, 0x42,
+	0x57, 0x18, 0x85, 0x94, 0x54, 0x49, 0x44, 0x14, 0x52, 0x2e, 0x4a, 0x13, 0xa5, 0x71, 0xec, 0x49,
+	0xb0, 0x04, 0xbb, 0x8e, 0x77, 0x49, 0xc2, 0x5b, 0xe4, 0xb1, 0x52, 0x52, 0xa6, 0x8c, 0xe0, 0x45,
+	0x22, 0x0f, 0x31, 0x24, 0x92, 0x69, 0xac, 0x99, 0xf1, 0x7c, 0xdf, 0xfc, 0x76, 0x34, 0xe0, 0x2b,
+	0x4c, 0x1f, 0xe3, 0x10, 0xfb, 0x2a, 0x09, 0xf2, 0xaf, 0x5a, 0x8a, 0xb0, 0x9f, 0xa4, 0x52, 0x4b,
+	0xb5, 0x2f, 0xf8, 0x54, 0x60, 0x76, 0x20, 0x96, 0x93, 0xac, 0xe6, 0x8d, 0xa1, 0x71, 0x81, 0x41,
+	0x34, 0x59, 0x8a, 0x90, 0x07, 0xe2, 0x1e, 0x19, 0x83, 0xf2, 0x5d, 0x2a, 0xe7, 0x8e, 0xd9, 0x35,
+	0x7b, 0x65, 0x4e, 0x31, 0x6b, 0x82, 0xa5, 0xa5, 0x63, 0x51, 0xc5, 0xd2, 0x92, 0xfd, 0x86, 0xca,
+	0x2c, 0x9e, 0xc7, 0xda, 0x29, 0x75, 0xcd, 0x5e, 0x83, 0x6f, 0x13, 0xef, 0x09, 0x9a, 0x3b, 0x2b,
+	0x54, 0x8b, 0x99, 0xce, 0xbc, 0xa6, 0x81, 0x9a, 0x92, 0xd7, 0x4f, 0x4e, 0x31, 0x1b, 0x82, 0x8d,
+	0x33, 0x9c, 0xa3, 0xd0, 0xca, 0xb1, 0xba, 0xa5, 0xde, 0x8f, 0xc1, 0x3f, 0x3f, 0xa7, 0xf1, 0xbf,
+	0xeb, 0x47, 0xdb, 0x3e, 0xbe, 0x13, 0x64, 0x83, 0x43, 0xb9, 0x10, 0xbb, 0xc1, 0x94, 0x78, 0x43,
+	0xf8, 0x53, 0x28, 0xcc, 0xb8, 0xe3, 0x88, 0xa6, 0xd7, 0xb9, 0x15, 0x47, 0xc4, 0x83, 0x41, 0x44,
+	0x2f, 0xa9, 0x73, 0x8a, 0xbd, 0x1b, 0xf8, 0xb5, 0x17, 0x3f, 0x2c, 0x50, 0x69, 0xe6, 0x40, 0x8d,
+	0x16, 0x36, 0xce, 0xb5, 0x79, 0xca, 0xfa, 0x50, 0x4d, 0xb3, 0x2d, 0xe5, 0xe8, 0xed, 0x02, 0xf4,
+	0xec, 0x3f, 0xff, 0x6c, 0xf3, 0xce, 0xa1, 0xf5, 0x05, 0x2d, 0x91, 0x42, 0x21, 0x1b, 0x40, 0x2d,
+	0x25, 0x4c, 0xe5, 0x98, 0xe4, 0xe2, 0x1c, 0x5a, 0x00, 0xcf, 0x1b, 0xff, 0x77, 0xc0, 0x1e, 0xa5,
+	0xe9, 0x99, 0x8c, 0x50, 0xb1, 0x26, 0xc0, 0x95, 0xc0, 0xe7, 0x04, 0x43, 0x8d, 0x51, 0xcb, 0x18,
+	0x5c, 0x42, 0x85, 0xc4, 0xec, 0x04, 0xec, 0x5c, 0xcf, 0xfe, 0x16, 0x79, 0xd2, 0xf3, 0x3a, 0x9d,
+	0xc2, 0x71, 0xc4, 0x76, 0x7a, 0xf4, 0xba, 0x76, 0xcd, 0xd5, 0xda, 0x35, 0xdf, 0xd7, 0xae, 0xf9,
+	0xb2, 0x71, 0x8d, 0xd5, 0xc6, 0x35, 0xde, 0x36, 0xae, 0x71, 0xdd, 0x3e, 0x70, 0x62, 0xb7, 0x55,
+	0x3a, 0xa9, 0xe3, 0x8f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x09, 0x7e, 0xc8, 0x77, 0x84, 0x02, 0x00,
+	0x00,
 }
 
-func (m *Space) Marshal() (dAtA []byte, err error) {
+func (m *HeadSyncRange) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -515,191 +368,12 @@ func (m *Space) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Space) MarshalTo(dAtA []byte) (int, error) {
+func (m *HeadSyncRange) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *Space) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Message != nil {
-		{
-			size, err := m.Message.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintSpacesync(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.SpaceId) > 0 {
-		i -= len(m.SpaceId)
-		copy(dAtA[i:], m.SpaceId)
-		i = encodeVarintSpacesync(dAtA, i, uint64(len(m.SpaceId)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *Space_Content) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Space_Content) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Space_Content) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Value != nil {
-		{
-			size := m.Value.Size()
-			i -= size
-			if _, err := m.Value.MarshalTo(dAtA[i:]); err != nil {
-				return 0, err
-			}
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *Space_Content_DiffRange) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Space_Content_DiffRange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.DiffRange != nil {
-		{
-			size, err := m.DiffRange.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintSpacesync(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-func (m *DiffRange) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *DiffRange) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *DiffRange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Response != nil {
-		{
-			size, err := m.Response.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintSpacesync(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	if m.Request != nil {
-		{
-			size, err := m.Request.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintSpacesync(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *DiffRange_Request) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *DiffRange_Request) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *DiffRange_Request) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Ranges) > 0 {
-		for iNdEx := len(m.Ranges) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Ranges[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintSpacesync(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *DiffRange_Request_Range) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *DiffRange_Request_Range) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *DiffRange_Request_Range) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *HeadSyncRange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -722,7 +396,7 @@ func (m *DiffRange_Request_Range) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	return len(dAtA) - i, nil
 }
 
-func (m *DiffRange_Response) Marshal() (dAtA []byte, err error) {
+func (m *HeadSyncResult) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -732,49 +406,12 @@ func (m *DiffRange_Response) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *DiffRange_Response) MarshalTo(dAtA []byte) (int, error) {
+func (m *HeadSyncResult) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *DiffRange_Response) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Results) > 0 {
-		for iNdEx := len(m.Results) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Results[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintSpacesync(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *DiffRange_Response_Result) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *DiffRange_Response_Result) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *DiffRange_Response_Result) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *HeadSyncResult) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -808,7 +445,7 @@ func (m *DiffRange_Response_Result) MarshalToSizedBuffer(dAtA []byte) (int, erro
 	return len(dAtA) - i, nil
 }
 
-func (m *DiffRange_Response_Result_Element) Marshal() (dAtA []byte, err error) {
+func (m *HeadSyncResultElement) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -818,12 +455,12 @@ func (m *DiffRange_Response_Result_Element) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *DiffRange_Response_Result_Element) MarshalTo(dAtA []byte) (int, error) {
+func (m *HeadSyncResultElement) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *DiffRange_Response_Result_Element) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *HeadSyncResultElement) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -845,6 +482,87 @@ func (m *DiffRange_Response_Result_Element) MarshalToSizedBuffer(dAtA []byte) (i
 	return len(dAtA) - i, nil
 }
 
+func (m *HeadSyncRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *HeadSyncRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *HeadSyncRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Ranges) > 0 {
+		for iNdEx := len(m.Ranges) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Ranges[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintSpacesync(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.SpaceId) > 0 {
+		i -= len(m.SpaceId)
+		copy(dAtA[i:], m.SpaceId)
+		i = encodeVarintSpacesync(dAtA, i, uint64(len(m.SpaceId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *HeadSyncResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *HeadSyncResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *HeadSyncResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Results) > 0 {
+		for iNdEx := len(m.Results) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Results[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintSpacesync(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintSpacesync(dAtA []byte, offset int, v uint64) int {
 	offset -= sovSpacesync(v)
 	base := offset
@@ -856,80 +574,7 @@ func encodeVarintSpacesync(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *Space) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.SpaceId)
-	if l > 0 {
-		n += 1 + l + sovSpacesync(uint64(l))
-	}
-	if m.Message != nil {
-		l = m.Message.Size()
-		n += 1 + l + sovSpacesync(uint64(l))
-	}
-	return n
-}
-
-func (m *Space_Content) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Value != nil {
-		n += m.Value.Size()
-	}
-	return n
-}
-
-func (m *Space_Content_DiffRange) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.DiffRange != nil {
-		l = m.DiffRange.Size()
-		n += 1 + l + sovSpacesync(uint64(l))
-	}
-	return n
-}
-func (m *DiffRange) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Request != nil {
-		l = m.Request.Size()
-		n += 1 + l + sovSpacesync(uint64(l))
-	}
-	if m.Response != nil {
-		l = m.Response.Size()
-		n += 1 + l + sovSpacesync(uint64(l))
-	}
-	return n
-}
-
-func (m *DiffRange_Request) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Ranges) > 0 {
-		for _, e := range m.Ranges {
-			l = e.Size()
-			n += 1 + l + sovSpacesync(uint64(l))
-		}
-	}
-	return n
-}
-
-func (m *DiffRange_Request_Range) Size() (n int) {
+func (m *HeadSyncRange) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -947,22 +592,7 @@ func (m *DiffRange_Request_Range) Size() (n int) {
 	return n
 }
 
-func (m *DiffRange_Response) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.Results) > 0 {
-		for _, e := range m.Results {
-			l = e.Size()
-			n += 1 + l + sovSpacesync(uint64(l))
-		}
-	}
-	return n
-}
-
-func (m *DiffRange_Response_Result) Size() (n int) {
+func (m *HeadSyncResult) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -984,7 +614,7 @@ func (m *DiffRange_Response_Result) Size() (n int) {
 	return n
 }
 
-func (m *DiffRange_Response_Result_Element) Size() (n int) {
+func (m *HeadSyncResultElement) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1001,13 +631,47 @@ func (m *DiffRange_Response_Result_Element) Size() (n int) {
 	return n
 }
 
+func (m *HeadSyncRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.SpaceId)
+	if l > 0 {
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	if len(m.Ranges) > 0 {
+		for _, e := range m.Ranges {
+			l = e.Size()
+			n += 1 + l + sovSpacesync(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *HeadSyncResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Results) > 0 {
+		for _, e := range m.Results {
+			l = e.Size()
+			n += 1 + l + sovSpacesync(uint64(l))
+		}
+	}
+	return n
+}
+
 func sovSpacesync(x uint64) (n int) {
 	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozSpacesync(x uint64) (n int) {
 	return sovSpacesync(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *Space) Unmarshal(dAtA []byte) error {
+func (m *HeadSyncRange) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1030,419 +694,10 @@ func (m *Space) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Space: wiretype end group for non-group")
+			return fmt.Errorf("proto: HeadSyncRange: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Space: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SpaceId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSpacesync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.SpaceId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Message", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSpacesync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Message == nil {
-				m.Message = &Space_Content{}
-			}
-			if err := m.Message.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipSpacesync(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Space_Content) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowSpacesync
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Content: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Content: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DiffRange", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSpacesync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &DiffRange{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Value = &Space_Content_DiffRange{v}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipSpacesync(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *DiffRange) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowSpacesync
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: DiffRange: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: DiffRange: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Request", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSpacesync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Request == nil {
-				m.Request = &DiffRange_Request{}
-			}
-			if err := m.Request.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Response", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSpacesync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Response == nil {
-				m.Response = &DiffRange_Response{}
-			}
-			if err := m.Response.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipSpacesync(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *DiffRange_Request) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowSpacesync
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Request: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Request: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Ranges", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSpacesync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Ranges = append(m.Ranges, &DiffRange_Request_Range{})
-			if err := m.Ranges[len(m.Ranges)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipSpacesync(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *DiffRange_Request_Range) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowSpacesync
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Range: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Range: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: HeadSyncRange: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1523,7 +778,7 @@ func (m *DiffRange_Request_Range) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *DiffRange_Response) Unmarshal(dAtA []byte) error {
+func (m *HeadSyncResult) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1546,94 +801,10 @@ func (m *DiffRange_Response) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Response: wiretype end group for non-group")
+			return fmt.Errorf("proto: HeadSyncResult: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Response: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Results", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSpacesync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Results = append(m.Results, &DiffRange_Response_Result{})
-			if err := m.Results[len(m.Results)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipSpacesync(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *DiffRange_Response_Result) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowSpacesync
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Result: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Result: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: HeadSyncResult: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1699,7 +870,7 @@ func (m *DiffRange_Response_Result) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Elements = append(m.Elements, &DiffRange_Response_Result_Element{})
+			m.Elements = append(m.Elements, &HeadSyncResultElement{})
 			if err := m.Elements[len(m.Elements)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -1744,7 +915,7 @@ func (m *DiffRange_Response_Result) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *DiffRange_Response_Result_Element) Unmarshal(dAtA []byte) error {
+func (m *HeadSyncResultElement) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1767,10 +938,10 @@ func (m *DiffRange_Response_Result_Element) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Element: wiretype end group for non-group")
+			return fmt.Errorf("proto: HeadSyncResultElement: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Element: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: HeadSyncResultElement: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1836,6 +1007,206 @@ func (m *DiffRange_Response_Result_Element) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Head = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSpacesync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *HeadSyncRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSpacesync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: HeadSyncRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: HeadSyncRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SpaceId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Ranges", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Ranges = append(m.Ranges, &HeadSyncRange{})
+			if err := m.Ranges[len(m.Ranges)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSpacesync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *HeadSyncResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSpacesync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: HeadSyncResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: HeadSyncResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Results", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Results = append(m.Results, &HeadSyncResult{})
+			if err := m.Results[len(m.Results)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

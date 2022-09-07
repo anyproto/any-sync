@@ -40,7 +40,7 @@ func (c *configuration) AllPeers(ctx context.Context, spaceId string) (peers []p
 	nodeIds := c.NodeIds(spaceId)
 	peers = make([]peer.Peer, 0, len(nodeIds))
 	for _, id := range nodeIds {
-		p, e := c.pool.DialAndAddPeer(ctx, id)
+		p, e := c.pool.Get(ctx, id)
 		if e == nil {
 			peers = append(peers, p)
 		}
@@ -53,7 +53,7 @@ func (c *configuration) AllPeers(ctx context.Context, spaceId string) (peers []p
 
 func (c *configuration) OnePeer(ctx context.Context, spaceId string) (p peer.Peer, err error) {
 	nodeIds := c.NodeIds(spaceId)
-	return c.pool.GetOrDialOneOf(ctx, nodeIds)
+	return c.pool.GetOneOf(ctx, nodeIds)
 }
 
 func (c *configuration) NodeIds(spaceId string) []string {

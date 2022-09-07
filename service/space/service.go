@@ -9,10 +9,9 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/configuration"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool/handler"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/space/spacesync"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/syncproto"
-	"github.com/gogo/protobuf/proto"
+	"storj.io/drpc/drpcerr"
 	"time"
 )
 
@@ -25,7 +24,7 @@ func New() Service {
 }
 
 type Service interface {
-	handler.ReplyHandler
+	spacesync.DRPCSpaceServer
 	app.ComponentRunnable
 }
 
@@ -42,7 +41,7 @@ func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 	s.confService = a.MustComponent(configuration.CName).(configuration.Service)
 	ttlSec := time.Second * time.Duration(s.conf.GCTTL)
 	s.cache = ocache.New(s.loadSpace, ocache.WithTTL(ttlSec), ocache.WithGCPeriod(time.Minute))
-	s.pool.AddHandler(syncproto.MessageType_MessageTypeSpace, handler.Reply{ReplyHandler: s}.Handle)
+	spacesync.DRPCRegisterSpace(a.MustComponent(server.CName).(server.DRPCServer), s)
 
 	return nil
 }
@@ -72,19 +71,8 @@ func (s *service) get(ctx context.Context, id string) (Space, error) {
 	return obj.(Space), nil
 }
 
-func (s *service) Handle(ctx context.Context, data []byte) (resp proto.Marshaler, err error) {
-	var spaceReq = &spacesync.Space{}
-	if err = spaceReq.Unmarshal(data); err != nil {
-		return
-	}
-	if spaceReq.SpaceId != "" {
-		sp, e := s.get(ctx, spaceReq.SpaceId)
-		if e != nil {
-			return nil, e
-		}
-		return sp.Handle(ctx, spaceReq)
-	}
-	return nil, fmt.Errorf("unexpected space message")
+func (s *service) HeadSync(ctx context.Context, request *spacesync.HeadSyncRequest) (*spacesync.HeadSyncResponse, error) {
+	return nil, drpcerr.WithCode(fmt.Errorf("check"), 42)
 }
 
 func (s *service) Close(ctx context.Context) (err error) {

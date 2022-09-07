@@ -2,34 +2,58 @@ package peer
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/syncproto"
+	"github.com/libp2p/go-libp2p-core/sec"
+	"storj.io/drpc"
+	"sync/atomic"
 	"time"
 )
 
-type Dir uint
-
-const (
-	// DirInbound indicates peer created connection
-	DirInbound Dir = iota
-	// DirOutbound indicates that our host created  connection
-	DirOutbound
-)
-
-type Info struct {
-	Id             string
-	Dir            Dir
-	LastActiveUnix int64
-}
-
-func (i Info) LastActive() time.Time {
-	return time.Unix(i.LastActiveUnix, 0)
+func NewPeer(sc sec.SecureConn, conn drpc.Conn) Peer {
+	return &peer{
+		id:        sc.RemotePeer().String(),
+		lastUsage: time.Now().Unix(),
+		sc:        sc,
+		Conn:      conn,
+	}
 }
 
 type Peer interface {
 	Id() string
-	Info() Info
-	Recv() (*syncproto.Message, error)
-	Send(msg *syncproto.Message) (err error)
-	Context() context.Context
-	Close() error
+	LastUsage() time.Time
+	UpdateLastUsage()
+	drpc.Conn
+}
+
+type peer struct {
+	id        string
+	lastUsage int64
+	sc        sec.SecureConn
+	drpc.Conn
+}
+
+func (p *peer) Id() string {
+	return p.id
+}
+
+func (p *peer) LastUsage() time.Time {
+	select {
+	case <-p.Closed():
+		return time.Unix(0, 0)
+	default:
+	}
+	return time.Unix(atomic.LoadInt64(&p.lastUsage), 0)
+}
+
+func (p *peer) Invoke(ctx context.Context, rpc string, enc drpc.Encoding, in, out drpc.Message) error {
+	defer p.UpdateLastUsage()
+	return p.Conn.Invoke(ctx, rpc, enc, in, out)
+}
+
+func (p *peer) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) (drpc.Stream, error) {
+	defer p.UpdateLastUsage()
+	return p.Conn.NewStream(ctx, rpc, enc)
+}
+
+func (p *peer) UpdateLastUsage() {
+	atomic.StoreInt64(&p.lastUsage, time.Now().Unix())
 }
