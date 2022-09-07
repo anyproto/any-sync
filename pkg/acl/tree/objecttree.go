@@ -209,31 +209,17 @@ func (ot *objectTree) Storage() storage.TreeStorage {
 }
 
 func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeContent) (rawChange *aclpb.RawChange, err error) {
-	ot.aclList.Lock()
 	defer func() {
-		ot.aclList.Unlock()
-		if ot.updateListener != nil {
+		if err == nil && ot.updateListener != nil {
 			ot.updateListener.Update(ot)
 		}
 	}()
 
-	state := ot.aclList.ACLState() // special method for own keys
-	readKey, err := state.CurrentReadKey()
+	payload, err := ot.prepareBuilderContent(content)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	payload := BuilderContent{
-		treeHeadIds:        ot.tree.Heads(),
-		aclHeadId:          ot.aclList.Head().Id,
-		snapshotBaseId:     ot.tree.RootId(),
-		currentReadKeyHash: state.CurrentReadKeyHash(),
-		identity:           content.Identity,
-		isSnapshot:         content.IsSnapshot,
-		signingKey:         content.Key,
-		readKey:            readKey,
-		content:            content.Proto,
-	}
 	objChange, rawChange, err := ot.changeBuilder.BuildContent(payload)
 	if content.IsSnapshot {
 		// clearing tree, because we already fixed everything in the last snapshot
@@ -250,6 +236,29 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 	}
 
 	err = ot.treeStorage.SetHeads([]string{objChange.Id})
+	return
+}
+
+func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt BuilderContent, err error) {
+	ot.aclList.RLock()
+	defer ot.aclList.RUnlock()
+
+	state := ot.aclList.ACLState() // special method for own keys
+	readKey, err := state.CurrentReadKey()
+	if err != nil {
+		return
+	}
+	cnt = BuilderContent{
+		treeHeadIds:        ot.tree.Heads(),
+		aclHeadId:          ot.aclList.Head().Id,
+		snapshotBaseId:     ot.tree.RootId(),
+		currentReadKeyHash: state.CurrentReadKeyHash(),
+		identity:           content.Identity,
+		isSnapshot:         content.IsSnapshot,
+		signingKey:         content.Key,
+		readKey:            readKey,
+		content:            content.Proto,
+	}
 	return
 }
 
