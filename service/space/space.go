@@ -6,7 +6,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/configuration"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/space/remotediff"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/space/spacesync"
 	"go.uber.org/zap"
 	"math/rand"
 	"sync"
@@ -15,7 +14,6 @@ import (
 
 type Space interface {
 	Id() string
-	Handle(ctx context.Context, msg *spacesync.Space) (repl *spacesync.Space, err error)
 	Close() error
 }
 
@@ -64,22 +62,6 @@ func (s *space) testFill() {
 		}
 	}
 	s.diff.Set(els...)
-}
-
-func (s *space) Handle(ctx context.Context, msg *spacesync.Space) (repl *spacesync.Space, err error) {
-	if diffRange := msg.GetMessage().GetDiffRange(); diffRange != nil {
-		resp, er := remotediff.HandlerRangeRequest(ctx, s.diff, diffRange)
-		if er != nil {
-			return nil, er
-		}
-		return &spacesync.Space{SpaceId: s.id, Message: &spacesync.Space_Content{
-			Value: &spacesync.Space_Content_DiffRange{
-				DiffRange: resp,
-			},
-		}}, nil
-	}
-
-	return nil, fmt.Errorf("unexpected request")
 }
 
 func (s *space) syncLoop() {

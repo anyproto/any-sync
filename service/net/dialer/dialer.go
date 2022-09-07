@@ -7,7 +7,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/peer"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/rpc"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/secure"
 	"github.com/libp2p/go-libp2p-core/sec"
 	"go.uber.org/zap"
@@ -60,7 +59,7 @@ func (d *dialer) UpdateAddrs(addrs map[string][]string) {
 	d.mu.Unlock()
 }
 
-func (d *dialer) Dial(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+func (d *dialer) Dial(ctx context.Context, peerId string) (p peer.Peer, err error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	addrs, ok := d.peerAddrs[peerId]
@@ -68,11 +67,11 @@ func (d *dialer) Dial(ctx context.Context, peerId string) (peer peer.Peer, err e
 		return nil, ErrArrdsNotFound
 	}
 	var (
-		stream drpc.Stream
-		sc     sec.SecureConn
+		conn drpc.Conn
+		sc   sec.SecureConn
 	)
 	for _, addr := range addrs {
-		stream, sc, err = d.makeStream(ctx, addr)
+		conn, sc, err = d.handshake(ctx, addr)
 		if err != nil {
 			log.Info("can't connect to host", zap.String("addr", addr))
 		} else {
@@ -83,10 +82,10 @@ func (d *dialer) Dial(ctx context.Context, peerId string) (peer peer.Peer, err e
 	if err != nil {
 		return
 	}
-	return rpc.PeerFromStream(sc, stream, false), nil
+	return peer.NewPeer(sc, conn), nil
 }
 
-func (d *dialer) makeStream(ctx context.Context, addr string) (stream drpc.Stream, sc sec.SecureConn, err error) {
+func (d *dialer) handshake(ctx context.Context, addr string) (conn drpc.Conn, sc sec.SecureConn, err error) {
 	tcpConn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return
@@ -96,9 +95,6 @@ func (d *dialer) makeStream(ctx context.Context, addr string) (stream drpc.Strea
 		return
 	}
 	log.Info("connected with remote host", zap.String("serverPeer", sc.RemotePeer().String()), zap.String("per", sc.LocalPeer().String()))
-	stream, err = drpcconn.New(sc).NewStream(ctx, "", rpc.Encoding)
-	if err != nil {
-		return
-	}
-	return stream, sc, err
+	conn = drpcconn.New(sc)
+	return conn, sc, err
 }

@@ -6,11 +6,11 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/rpc"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/secure"
 	"go.uber.org/zap"
 	"net"
 	"storj.io/drpc"
+	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
 	"strings"
 	"time"
@@ -21,11 +21,12 @@ const CName = "net/drpcserver"
 var log = logger.NewNamed(CName)
 
 func New() DRPCServer {
-	return &drpcServer{}
+	return &drpcServer{Mux: drpcmux.New()}
 }
 
 type DRPCServer interface {
 	app.ComponentRunnable
+	drpc.Mux
 }
 
 type drpcServer struct {
@@ -35,6 +36,7 @@ type drpcServer struct {
 	listeners  []secure.ContextListener
 	pool       pool.Pool
 	cancel     func()
+	*drpcmux.Mux
 }
 
 func (s *drpcServer) Init(ctx context.Context, a *app.App) (err error) {
@@ -49,7 +51,7 @@ func (s *drpcServer) Name() (name string) {
 }
 
 func (s *drpcServer) Run(ctx context.Context) (err error) {
-	s.drpcServer = drpcserver.New(s)
+	s.drpcServer = drpcserver.New(s.Mux)
 	ctx, s.cancel = context.WithCancel(ctx)
 	for _, addr := range s.config.ListenAddrs {
 		tcpList, err := net.Listen("tcp", addr)
@@ -107,16 +109,6 @@ func (s *drpcServer) serveConn(ctx context.Context, conn net.Conn) {
 			l.Warn("serve connection error", zap.Error(err))
 		}
 	}
-}
-
-func (s *drpcServer) HandleRPC(stream drpc.Stream, _ string) (err error) {
-	ctx := stream.Context()
-	sc, err := secure.CtxSecureConn(ctx)
-	if err != nil {
-		return
-	}
-	log.With(zap.String("peer", sc.RemotePeer().String())).Debug("stream opened")
-	return s.pool.AddAndReadPeer(rpc.PeerFromStream(sc, stream, true))
 }
 
 func (s *drpcServer) Close(ctx context.Context) (err error) {
