@@ -72,12 +72,13 @@ type ObjectTree interface {
 }
 
 type objectTree struct {
-	treeStorage    storage.TreeStorage
-	changeBuilder  ChangeBuilder
-	updateListener ObjectTreeUpdateListener
-	validator      ObjectTreeValidator
-	treeBuilder    *treeBuilder
-	aclList        list.ACLList
+	treeStorage     storage.TreeStorage
+	changeBuilder   ChangeBuilder
+	updateListener  ObjectTreeUpdateListener
+	validator       ObjectTreeValidator
+	rawChangeLoader *rawChangeLoader
+	treeBuilder     *treeBuilder
+	aclList         list.ACLList
 
 	id     string
 	header *aclpb.Header
@@ -97,12 +98,13 @@ type objectTree struct {
 }
 
 type objectTreeDeps struct {
-	changeBuilder  ChangeBuilder
-	treeBuilder    *treeBuilder
-	treeStorage    storage.TreeStorage
-	updateListener ObjectTreeUpdateListener
-	validator      ObjectTreeValidator
-	aclList        list.ACLList
+	changeBuilder   ChangeBuilder
+	treeBuilder     *treeBuilder
+	treeStorage     storage.TreeStorage
+	updateListener  ObjectTreeUpdateListener
+	validator       ObjectTreeValidator
+	rawChangeLoader *rawChangeLoader
+	aclList         list.ACLList
 }
 
 func defaultObjectTreeDeps(
@@ -114,12 +116,13 @@ func defaultObjectTreeDeps(
 	changeBuilder := newChangeBuilder(keychain)
 	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
 	return objectTreeDeps{
-		changeBuilder:  changeBuilder,
-		treeBuilder:    treeBuilder,
-		treeStorage:    treeStorage,
-		updateListener: listener,
-		validator:      newTreeValidator(),
-		aclList:        aclList,
+		changeBuilder:   changeBuilder,
+		treeBuilder:     treeBuilder,
+		treeStorage:     treeStorage,
+		updateListener:  listener,
+		validator:       newTreeValidator(),
+		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
+		aclList:         aclList,
 	}
 }
 
@@ -131,6 +134,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		validator:       deps.validator,
 		aclList:         deps.aclList,
 		changeBuilder:   deps.changeBuilder,
+		rawChangeLoader: deps.rawChangeLoader,
 		tree:            nil,
 		keys:            make(map[uint64]*symmetric.Key),
 		tmpChangesBuf:   make([]*Change, 0, 10),
@@ -531,66 +535,16 @@ func (ot *objectTree) ChangesAfterCommonSnapshot(theirPath, theirHeads []string)
 	if commonSnapshot == ot.tree.RootId() {
 		return ot.getChangesFromTree(theirHeads)
 	} else {
-		return ot.getChangesFromDB(commonSnapshot, theirHeads, needFullDocument)
+		return ot.getChangesFromDB(commonSnapshot, theirHeads)
 	}
 }
 
 func (ot *objectTree) getChangesFromTree(theirHeads []string) (rawChanges []*aclpb.RawChange, err error) {
-	ot.tree.dfsPrev(
-		ot.tree.HeadsChanges(),
-		theirHeads,
-		func(ch *Change) bool {
-			var marshalled []byte
-			marshalled, err = ch.Content.Marshal()
-			if err != nil {
-				return false
-			}
-
-			raw := &aclpb.RawChange{
-				Payload:   marshalled,
-				Signature: ch.Signature(),
-				Id:        ch.Id,
-			}
-			rawChanges = append(rawChanges, raw)
-			return true
-		},
-		func(changes []*Change) {})
-
-	return
+	return ot.rawChangeLoader.LoadFromTree(ot.tree, theirHeads)
 }
 
-func (ot *objectTree) getChangesFromDB(commonSnapshot string, theirHeads []string, needStartSnapshot bool) (rawChanges []*aclpb.RawChange, err error) {
-	load := func(id string) (*Change, error) {
-		raw, err := ot.treeStorage.GetRawChange(context.Background(), id)
-		if err != nil {
-			return nil, err
-		}
-
-		ch, err := NewChangeFromRaw(raw)
-		if err != nil {
-			return nil, err
-		}
-
-		rawChanges = append(rawChanges, raw)
-		return ch, nil
-	}
-	// setting breakpoints to include head and common snapshot
-	// that means that we will ignore all changes which start at theirHeads
-	breakpoints := make([]string, 0, len(theirHeads)+1)
-	breakpoints = append(breakpoints, commonSnapshot)
-	breakpoints = append(breakpoints, theirHeads...)
-
-	_, err = ot.treeBuilder.dfs(ot.tree.Heads(), breakpoints, load)
-	if err != nil {
-		return
-	}
-
-	if needStartSnapshot {
-		// adding snapshot to raw changes
-		_, err = load(commonSnapshot)
-	}
-
-	return
+func (ot *objectTree) getChangesFromDB(commonSnapshot string, theirHeads []string) (rawChanges []*aclpb.RawChange, err error) {
+	return ot.rawChangeLoader.LoadFromStorage(commonSnapshot, ot.tree.headIds, theirHeads)
 }
 
 func (ot *objectTree) snapshotPathIsActual() bool {
