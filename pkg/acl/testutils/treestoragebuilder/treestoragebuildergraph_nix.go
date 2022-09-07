@@ -66,7 +66,7 @@ func (t *TreeStorageBuilder) Graph() (string, error) {
 		if r.GetAclData() != nil {
 			for _, chc := range r.GetAclData().AclContent {
 				tp := fmt.Sprintf("%T", chc.Value)
-				tp = strings.Replace(tp, "ACLChange_ACLContentValueValueOf", "", 1)
+				tp = strings.Replace(tp, "ACLChange_ACLContent_Value_", "", 1)
 				res := ""
 				for _, ts := range tp {
 					if unicode.IsUpper(ts) {

@@ -72,8 +72,8 @@ func (s *space) Handle(ctx context.Context, msg *spacesync.Space) (repl *spacesy
 		if er != nil {
 			return nil, er
 		}
-		return &spacesync.Space{SpaceId: s.id, Message: &spacesync.SpaceContent{
-			Value: &spacesync.SpaceContent_Value_DiffRange{
+		return &spacesync.Space{SpaceId: s.id, Message: &spacesync.Space_Content{
+			Value: &spacesync.Space_Content_DiffRange{
 				DiffRange: resp,
 			},
 		}}, nil

@@ -60,7 +60,7 @@ func (t *Tree) Graph() (data string, err error) {
 		if c.Content.AclData != nil {
 			for _, chc := range c.Content.AclData.AclContent {
 				tp := fmt.Sprintf("%T", chc.Value)
-				tp = strings.Replace(tp, "ACLChange_ACLContentValueValueOf", "", 1)
+				tp = strings.Replace(tp, "ACLChange_ACLContent_Value_", "", 1)
 				res := ""
 				for _, ts := range tp {
 					if unicode.IsUpper(ts) {
