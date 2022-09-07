@@ -361,7 +361,7 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACLCha
 		}
 
 		convCh = &aclpb.ACLChange_ACLContentValue{
-			Value: &aclpb.ACLChange_ACLContentValueValueOfUserJoin{
+			Value: &aclpb.ACLChange_ACLContent_Value_UserJoin{
 				UserJoin: &aclpb.ACLChange_UserJoin{
 					Identity:          t.keychain.GetIdentity(join.Identity),
 					EncryptionKey:     rawKey,
@@ -379,7 +379,7 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACLCha
 		rawEncKey, _ := encKey.GetPublic().Raw()
 
 		convCh = &aclpb.ACLChange_ACLContentValue{
-			Value: &aclpb.ACLChange_ACLContentValueValueOfUserInvite{
+			Value: &aclpb.ACLChange_ACLContent_Value_UserInvite{
 				UserInvite: &aclpb.ACLChange_UserInvite{
 					AcceptPublicKey:   rawAcceptKey,
 					EncryptPublicKey:  rawEncKey,
@@ -393,7 +393,7 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACLCha
 		confirm := ch.UserConfirm
 
 		convCh = &aclpb.ACLChange_ACLContentValue{
-			Value: &aclpb.ACLChange_ACLContentValueValueOfUserConfirm{
+			Value: &aclpb.ACLChange_ACLContent_Value_UserConfirm{
 				UserConfirm: &aclpb.ACLChange_UserConfirm{
 					Identity:  t.keychain.GetIdentity(confirm.Identity),
 					UserAddId: confirm.UserAddId,
@@ -404,7 +404,7 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACLCha
 		permissionChange := ch.UserPermissionChange
 
 		convCh = &aclpb.ACLChange_ACLContentValue{
-			Value: &aclpb.ACLChange_ACLContentValueValueOfUserPermissionChange{
+			Value: &aclpb.ACLChange_ACLContent_Value_UserPermissionChange{
 				UserPermissionChange: &aclpb.ACLChange_UserPermissionChange{
 					Identity:    t.keychain.GetIdentity(permissionChange.Identity),
 					Permissions: t.convertPermission(permissionChange.Permission),
@@ -416,7 +416,7 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACLCha
 
 		newReadKey := t.keychain.GetKey(remove.NewReadKey).(*SymKey)
 
-		var replaces []*aclpb.ACLChangeReadKeyReplace
+		var replaces []*aclpb.ACLChange_ReadKeyReplace
 		for _, id := range remove.IdentitiesLeft {
 			identity := t.keychain.GetIdentity(id)
 			encKey := t.keychain.EncryptionKeys[id]
@@ -425,7 +425,7 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACLCha
 			if err != nil {
 				panic(err)
 			}
-			replaces = append(replaces, &aclpb.ACLChangeReadKeyReplace{
+			replaces = append(replaces, &aclpb.ACLChange_ReadKeyReplace{
 				Identity:         identity,
 				EncryptionKey:    rawEncKey,
 				EncryptedReadKey: encReadKey,
@@ -433,7 +433,7 @@ func (t *TreeStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACLCha
 		}
 
 		convCh = &aclpb.ACLChange_ACLContentValue{
-			Value: &aclpb.ACLChange_ACLContentValueValueOfUserRemove{
+			Value: &aclpb.ACLChange_ACLContent_Value_UserRemove{
 				UserRemove: &aclpb.ACLChange_UserRemove{
 					Identity:        t.keychain.GetIdentity(remove.RemovedIdentity),
 					ReadKeyReplaces: replaces,
