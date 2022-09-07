@@ -73,22 +73,24 @@ func (tb *treeBuilder) buildTree(heads []string, breakpoint string) (err error) 
 		return
 	}
 	tb.tree.AddFast(ch)
-	changes, err := tb.dfs(heads, breakpoint, tb.loadChange)
+	changes, err := tb.dfs(heads, breakpoint)
 
 	tb.tree.AddFast(changes...)
 	return
 }
 
-func (tb *treeBuilder) dfs(
-	heads []string,
-	breakpoint string,
-	load func(string) (*Change, error)) (buf []*Change, err error) {
+func (tb *treeBuilder) dfs(heads []string, breakpoint string) (buf []*Change, err error) {
+	// initializing buffers
 	tb.idStack = tb.idStack[:0]
 	tb.loadBuffer = tb.loadBuffer[:0]
 
+	// updating map
 	uniqMap := map[string]struct{}{breakpoint: {}}
+
+	// preparing dfs
 	tb.idStack = append(tb.idStack, heads...)
 
+	// dfs
 	for len(tb.idStack) > 0 {
 		id := tb.idStack[len(tb.idStack)-1]
 		tb.idStack = tb.idStack[:len(tb.idStack)-1]
@@ -96,7 +98,7 @@ func (tb *treeBuilder) dfs(
 			continue
 		}
 
-		ch, err := load(id)
+		ch, err := tb.loadChange(id)
 		if err != nil {
 			continue
 		}
