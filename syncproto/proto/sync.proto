@@ -20,7 +20,7 @@ message Header {
 
 enum MessageType {
     MessageTypeSystem = 0;
-    MessageTypeSubscription = 1;
+    MessageTypeSpace = 1;
     MessageTypeSync = 2;
 }
 
@@ -46,18 +46,6 @@ message System {
             UNKNOWN = 0;
             UNSUPPORTED_PROTOCOL_VERSION = 10;
         }
-    }
-}
-
-message Subscription {
-    SubscribeSpace subscribeSpace = 1;
-    UnsubscribeSpace unsubscribeSpace = 2;
-
-    message SubscribeSpace {
-        string spaceId = 1;
-    }
-    message UnsubscribeSpace {
-        string spaceId = 1;
     }
 }
 

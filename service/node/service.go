@@ -24,6 +24,14 @@ type Node struct {
 	EncryptionKeyString string
 }
 
+func (n *Node) Id() string {
+	return n.PeerId
+}
+
+func (n *Node) Capacity() float64 {
+	return 1
+}
+
 func New() app.Component {
 	return &service{}
 }
