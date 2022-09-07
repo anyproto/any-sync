@@ -23,8 +23,8 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type Space struct {
-	SpaceId string        `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
-	Message *SpaceContent `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	SpaceId string         `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	Message *Space_Content `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 }
 
 func (m *Space) Reset()         { *m = Space{} }
@@ -67,31 +67,32 @@ func (m *Space) GetSpaceId() string {
 	return ""
 }
 
-func (m *Space) GetMessage() *SpaceContent {
+func (m *Space) GetMessage() *Space_Content {
 	if m != nil {
 		return m.Message
 	}
 	return nil
 }
 
-type SpaceContent struct {
+type Space_Content struct {
 	// Types that are valid to be assigned to Value:
-	//	*SpaceContentValueOfDiffRange
-	Value IsSpaceContentValue `protobuf_oneof:"value"`
+	//
+	//	*Space_Content_DiffRange
+	Value isSpace_Content_Value `protobuf_oneof:"value"`
 }
 
-func (m *SpaceContent) Reset()         { *m = SpaceContent{} }
-func (m *SpaceContent) String() string { return proto.CompactTextString(m) }
-func (*SpaceContent) ProtoMessage()    {}
-func (*SpaceContent) Descriptor() ([]byte, []int) {
+func (m *Space_Content) Reset()         { *m = Space_Content{} }
+func (m *Space_Content) String() string { return proto.CompactTextString(m) }
+func (*Space_Content) ProtoMessage()    {}
+func (*Space_Content) Descriptor() ([]byte, []int) {
 	return fileDescriptor_11d78c2fb7c80384, []int{0, 0}
 }
-func (m *SpaceContent) XXX_Unmarshal(b []byte) error {
+func (m *Space_Content) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SpaceContent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Space_Content) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SpaceContent.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Space_Content.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -101,54 +102,54 @@ func (m *SpaceContent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return b[:n], nil
 	}
 }
-func (m *SpaceContent) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SpaceContent.Merge(m, src)
+func (m *Space_Content) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Space_Content.Merge(m, src)
 }
-func (m *SpaceContent) XXX_Size() int {
+func (m *Space_Content) XXX_Size() int {
 	return m.Size()
 }
-func (m *SpaceContent) XXX_DiscardUnknown() {
-	xxx_messageInfo_SpaceContent.DiscardUnknown(m)
+func (m *Space_Content) XXX_DiscardUnknown() {
+	xxx_messageInfo_Space_Content.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SpaceContent proto.InternalMessageInfo
+var xxx_messageInfo_Space_Content proto.InternalMessageInfo
 
-type IsSpaceContentValue interface {
-	IsSpaceContentValue()
+type isSpace_Content_Value interface {
+	isSpace_Content_Value()
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
 
-type SpaceContentValueOfDiffRange struct {
+type Space_Content_DiffRange struct {
 	DiffRange *DiffRange `protobuf:"bytes,1,opt,name=diffRange,proto3,oneof" json:"diffRange,omitempty"`
 }
 
-func (*SpaceContentValueOfDiffRange) IsSpaceContentValue() {}
+func (*Space_Content_DiffRange) isSpace_Content_Value() {}
 
-func (m *SpaceContent) GetValue() IsSpaceContentValue {
+func (m *Space_Content) GetValue() isSpace_Content_Value {
 	if m != nil {
 		return m.Value
 	}
 	return nil
 }
 
-func (m *SpaceContent) GetDiffRange() *DiffRange {
-	if x, ok := m.GetValue().(*SpaceContentValueOfDiffRange); ok {
+func (m *Space_Content) GetDiffRange() *DiffRange {
+	if x, ok := m.GetValue().(*Space_Content_DiffRange); ok {
 		return x.DiffRange
 	}
 	return nil
 }
 
 // XXX_OneofWrappers is for the internal use of the proto package.
-func (*SpaceContent) XXX_OneofWrappers() []interface{} {
+func (*Space_Content) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
-		(*SpaceContentValueOfDiffRange)(nil),
+		(*Space_Content_DiffRange)(nil),
 	}
 }
 
 type DiffRange struct {
-	Request  *DiffRangeRequest  `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
-	Response *DiffRangeResponse `protobuf:"bytes,2,opt,name=response,proto3" json:"response,omitempty"`
+	Request  *DiffRange_Request  `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
+	Response *DiffRange_Response `protobuf:"bytes,2,opt,name=response,proto3" json:"response,omitempty"`
 }
 
 func (m *DiffRange) Reset()         { *m = DiffRange{} }
@@ -184,36 +185,36 @@ func (m *DiffRange) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_DiffRange proto.InternalMessageInfo
 
-func (m *DiffRange) GetRequest() *DiffRangeRequest {
+func (m *DiffRange) GetRequest() *DiffRange_Request {
 	if m != nil {
 		return m.Request
 	}
 	return nil
 }
 
-func (m *DiffRange) GetResponse() *DiffRangeResponse {
+func (m *DiffRange) GetResponse() *DiffRange_Response {
 	if m != nil {
 		return m.Response
 	}
 	return nil
 }
 
-type DiffRangeRequest struct {
-	Ranges []*DiffRangeRequestRange `protobuf:"bytes,1,rep,name=ranges,proto3" json:"ranges,omitempty"`
+type DiffRange_Request struct {
+	Ranges []*DiffRange_Request_Range `protobuf:"bytes,1,rep,name=ranges,proto3" json:"ranges,omitempty"`
 }
 
-func (m *DiffRangeRequest) Reset()         { *m = DiffRangeRequest{} }
-func (m *DiffRangeRequest) String() string { return proto.CompactTextString(m) }
-func (*DiffRangeRequest) ProtoMessage()    {}
-func (*DiffRangeRequest) Descriptor() ([]byte, []int) {
+func (m *DiffRange_Request) Reset()         { *m = DiffRange_Request{} }
+func (m *DiffRange_Request) String() string { return proto.CompactTextString(m) }
+func (*DiffRange_Request) ProtoMessage()    {}
+func (*DiffRange_Request) Descriptor() ([]byte, []int) {
 	return fileDescriptor_11d78c2fb7c80384, []int{1, 0}
 }
-func (m *DiffRangeRequest) XXX_Unmarshal(b []byte) error {
+func (m *DiffRange_Request) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *DiffRangeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *DiffRange_Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_DiffRangeRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_DiffRange_Request.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -223,43 +224,43 @@ func (m *DiffRangeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (m *DiffRangeRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DiffRangeRequest.Merge(m, src)
+func (m *DiffRange_Request) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DiffRange_Request.Merge(m, src)
 }
-func (m *DiffRangeRequest) XXX_Size() int {
+func (m *DiffRange_Request) XXX_Size() int {
 	return m.Size()
 }
-func (m *DiffRangeRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_DiffRangeRequest.DiscardUnknown(m)
+func (m *DiffRange_Request) XXX_DiscardUnknown() {
+	xxx_messageInfo_DiffRange_Request.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DiffRangeRequest proto.InternalMessageInfo
+var xxx_messageInfo_DiffRange_Request proto.InternalMessageInfo
 
-func (m *DiffRangeRequest) GetRanges() []*DiffRangeRequestRange {
+func (m *DiffRange_Request) GetRanges() []*DiffRange_Request_Range {
 	if m != nil {
 		return m.Ranges
 	}
 	return nil
 }
 
-type DiffRangeRequestRange struct {
+type DiffRange_Request_Range struct {
 	From  uint64 `protobuf:"varint,1,opt,name=from,proto3" json:"from,omitempty"`
 	To    uint64 `protobuf:"varint,2,opt,name=to,proto3" json:"to,omitempty"`
 	Limit uint32 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
 }
 
-func (m *DiffRangeRequestRange) Reset()         { *m = DiffRangeRequestRange{} }
-func (m *DiffRangeRequestRange) String() string { return proto.CompactTextString(m) }
-func (*DiffRangeRequestRange) ProtoMessage()    {}
-func (*DiffRangeRequestRange) Descriptor() ([]byte, []int) {
+func (m *DiffRange_Request_Range) Reset()         { *m = DiffRange_Request_Range{} }
+func (m *DiffRange_Request_Range) String() string { return proto.CompactTextString(m) }
+func (*DiffRange_Request_Range) ProtoMessage()    {}
+func (*DiffRange_Request_Range) Descriptor() ([]byte, []int) {
 	return fileDescriptor_11d78c2fb7c80384, []int{1, 0, 0}
 }
-func (m *DiffRangeRequestRange) XXX_Unmarshal(b []byte) error {
+func (m *DiffRange_Request_Range) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *DiffRangeRequestRange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *DiffRange_Request_Range) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_DiffRangeRequestRange.Marshal(b, m, deterministic)
+		return xxx_messageInfo_DiffRange_Request_Range.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -269,55 +270,55 @@ func (m *DiffRangeRequestRange) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		return b[:n], nil
 	}
 }
-func (m *DiffRangeRequestRange) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DiffRangeRequestRange.Merge(m, src)
+func (m *DiffRange_Request_Range) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DiffRange_Request_Range.Merge(m, src)
 }
-func (m *DiffRangeRequestRange) XXX_Size() int {
+func (m *DiffRange_Request_Range) XXX_Size() int {
 	return m.Size()
 }
-func (m *DiffRangeRequestRange) XXX_DiscardUnknown() {
-	xxx_messageInfo_DiffRangeRequestRange.DiscardUnknown(m)
+func (m *DiffRange_Request_Range) XXX_DiscardUnknown() {
+	xxx_messageInfo_DiffRange_Request_Range.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DiffRangeRequestRange proto.InternalMessageInfo
+var xxx_messageInfo_DiffRange_Request_Range proto.InternalMessageInfo
 
-func (m *DiffRangeRequestRange) GetFrom() uint64 {
+func (m *DiffRange_Request_Range) GetFrom() uint64 {
 	if m != nil {
 		return m.From
 	}
 	return 0
 }
 
-func (m *DiffRangeRequestRange) GetTo() uint64 {
+func (m *DiffRange_Request_Range) GetTo() uint64 {
 	if m != nil {
 		return m.To
 	}
 	return 0
 }
 
-func (m *DiffRangeRequestRange) GetLimit() uint32 {
+func (m *DiffRange_Request_Range) GetLimit() uint32 {
 	if m != nil {
 		return m.Limit
 	}
 	return 0
 }
 
-type DiffRangeResponse struct {
-	Results []*DiffRangeResponseResult `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
+type DiffRange_Response struct {
+	Results []*DiffRange_Response_Result `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
 }
 
-func (m *DiffRangeResponse) Reset()         { *m = DiffRangeResponse{} }
-func (m *DiffRangeResponse) String() string { return proto.CompactTextString(m) }
-func (*DiffRangeResponse) ProtoMessage()    {}
-func (*DiffRangeResponse) Descriptor() ([]byte, []int) {
+func (m *DiffRange_Response) Reset()         { *m = DiffRange_Response{} }
+func (m *DiffRange_Response) String() string { return proto.CompactTextString(m) }
+func (*DiffRange_Response) ProtoMessage()    {}
+func (*DiffRange_Response) Descriptor() ([]byte, []int) {
 	return fileDescriptor_11d78c2fb7c80384, []int{1, 1}
 }
-func (m *DiffRangeResponse) XXX_Unmarshal(b []byte) error {
+func (m *DiffRange_Response) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *DiffRangeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *DiffRange_Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_DiffRangeResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_DiffRange_Response.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -327,43 +328,43 @@ func (m *DiffRangeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
-func (m *DiffRangeResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DiffRangeResponse.Merge(m, src)
+func (m *DiffRange_Response) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DiffRange_Response.Merge(m, src)
 }
-func (m *DiffRangeResponse) XXX_Size() int {
+func (m *DiffRange_Response) XXX_Size() int {
 	return m.Size()
 }
-func (m *DiffRangeResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_DiffRangeResponse.DiscardUnknown(m)
+func (m *DiffRange_Response) XXX_DiscardUnknown() {
+	xxx_messageInfo_DiffRange_Response.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DiffRangeResponse proto.InternalMessageInfo
+var xxx_messageInfo_DiffRange_Response proto.InternalMessageInfo
 
-func (m *DiffRangeResponse) GetResults() []*DiffRangeResponseResult {
+func (m *DiffRange_Response) GetResults() []*DiffRange_Response_Result {
 	if m != nil {
 		return m.Results
 	}
 	return nil
 }
 
-type DiffRangeResponseResult struct {
-	Hash     []byte                            `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
-	Elements []*DiffRangeResponseResultElement `protobuf:"bytes,2,rep,name=elements,proto3" json:"elements,omitempty"`
-	Count    uint32                            `protobuf:"varint,3,opt,name=count,proto3" json:"count,omitempty"`
+type DiffRange_Response_Result struct {
+	Hash     []byte                               `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
+	Elements []*DiffRange_Response_Result_Element `protobuf:"bytes,2,rep,name=elements,proto3" json:"elements,omitempty"`
+	Count    uint32                               `protobuf:"varint,3,opt,name=count,proto3" json:"count,omitempty"`
 }
 
-func (m *DiffRangeResponseResult) Reset()         { *m = DiffRangeResponseResult{} }
-func (m *DiffRangeResponseResult) String() string { return proto.CompactTextString(m) }
-func (*DiffRangeResponseResult) ProtoMessage()    {}
-func (*DiffRangeResponseResult) Descriptor() ([]byte, []int) {
+func (m *DiffRange_Response_Result) Reset()         { *m = DiffRange_Response_Result{} }
+func (m *DiffRange_Response_Result) String() string { return proto.CompactTextString(m) }
+func (*DiffRange_Response_Result) ProtoMessage()    {}
+func (*DiffRange_Response_Result) Descriptor() ([]byte, []int) {
 	return fileDescriptor_11d78c2fb7c80384, []int{1, 1, 0}
 }
-func (m *DiffRangeResponseResult) XXX_Unmarshal(b []byte) error {
+func (m *DiffRange_Response_Result) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *DiffRangeResponseResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *DiffRange_Response_Result) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_DiffRangeResponseResult.Marshal(b, m, deterministic)
+		return xxx_messageInfo_DiffRange_Response_Result.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -373,56 +374,56 @@ func (m *DiffRangeResponseResult) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return b[:n], nil
 	}
 }
-func (m *DiffRangeResponseResult) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DiffRangeResponseResult.Merge(m, src)
+func (m *DiffRange_Response_Result) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DiffRange_Response_Result.Merge(m, src)
 }
-func (m *DiffRangeResponseResult) XXX_Size() int {
+func (m *DiffRange_Response_Result) XXX_Size() int {
 	return m.Size()
 }
-func (m *DiffRangeResponseResult) XXX_DiscardUnknown() {
-	xxx_messageInfo_DiffRangeResponseResult.DiscardUnknown(m)
+func (m *DiffRange_Response_Result) XXX_DiscardUnknown() {
+	xxx_messageInfo_DiffRange_Response_Result.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DiffRangeResponseResult proto.InternalMessageInfo
+var xxx_messageInfo_DiffRange_Response_Result proto.InternalMessageInfo
 
-func (m *DiffRangeResponseResult) GetHash() []byte {
+func (m *DiffRange_Response_Result) GetHash() []byte {
 	if m != nil {
 		return m.Hash
 	}
 	return nil
 }
 
-func (m *DiffRangeResponseResult) GetElements() []*DiffRangeResponseResultElement {
+func (m *DiffRange_Response_Result) GetElements() []*DiffRange_Response_Result_Element {
 	if m != nil {
 		return m.Elements
 	}
 	return nil
 }
 
-func (m *DiffRangeResponseResult) GetCount() uint32 {
+func (m *DiffRange_Response_Result) GetCount() uint32 {
 	if m != nil {
 		return m.Count
 	}
 	return 0
 }
 
-type DiffRangeResponseResultElement struct {
+type DiffRange_Response_Result_Element struct {
 	Id   string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Head string `protobuf:"bytes,2,opt,name=head,proto3" json:"head,omitempty"`
 }
 
-func (m *DiffRangeResponseResultElement) Reset()         { *m = DiffRangeResponseResultElement{} }
-func (m *DiffRangeResponseResultElement) String() string { return proto.CompactTextString(m) }
-func (*DiffRangeResponseResultElement) ProtoMessage()    {}
-func (*DiffRangeResponseResultElement) Descriptor() ([]byte, []int) {
+func (m *DiffRange_Response_Result_Element) Reset()         { *m = DiffRange_Response_Result_Element{} }
+func (m *DiffRange_Response_Result_Element) String() string { return proto.CompactTextString(m) }
+func (*DiffRange_Response_Result_Element) ProtoMessage()    {}
+func (*DiffRange_Response_Result_Element) Descriptor() ([]byte, []int) {
 	return fileDescriptor_11d78c2fb7c80384, []int{1, 1, 0, 0}
 }
-func (m *DiffRangeResponseResultElement) XXX_Unmarshal(b []byte) error {
+func (m *DiffRange_Response_Result_Element) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *DiffRangeResponseResultElement) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *DiffRange_Response_Result_Element) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_DiffRangeResponseResultElement.Marshal(b, m, deterministic)
+		return xxx_messageInfo_DiffRange_Response_Result_Element.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -432,26 +433,26 @@ func (m *DiffRangeResponseResultElement) XXX_Marshal(b []byte, deterministic boo
 		return b[:n], nil
 	}
 }
-func (m *DiffRangeResponseResultElement) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DiffRangeResponseResultElement.Merge(m, src)
+func (m *DiffRange_Response_Result_Element) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DiffRange_Response_Result_Element.Merge(m, src)
 }
-func (m *DiffRangeResponseResultElement) XXX_Size() int {
+func (m *DiffRange_Response_Result_Element) XXX_Size() int {
 	return m.Size()
 }
-func (m *DiffRangeResponseResultElement) XXX_DiscardUnknown() {
-	xxx_messageInfo_DiffRangeResponseResultElement.DiscardUnknown(m)
+func (m *DiffRange_Response_Result_Element) XXX_DiscardUnknown() {
+	xxx_messageInfo_DiffRange_Response_Result_Element.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DiffRangeResponseResultElement proto.InternalMessageInfo
+var xxx_messageInfo_DiffRange_Response_Result_Element proto.InternalMessageInfo
 
-func (m *DiffRangeResponseResultElement) GetId() string {
+func (m *DiffRange_Response_Result_Element) GetId() string {
 	if m != nil {
 		return m.Id
 	}
 	return ""
 }
 
-func (m *DiffRangeResponseResultElement) GetHead() string {
+func (m *DiffRange_Response_Result_Element) GetHead() string {
 	if m != nil {
 		return m.Head
 	}
@@ -460,13 +461,13 @@ func (m *DiffRangeResponseResultElement) GetHead() string {
 
 func init() {
 	proto.RegisterType((*Space)(nil), "anytype.Space")
-	proto.RegisterType((*SpaceContent)(nil), "anytype.Space.Content")
+	proto.RegisterType((*Space_Content)(nil), "anytype.Space.Content")
 	proto.RegisterType((*DiffRange)(nil), "anytype.DiffRange")
-	proto.RegisterType((*DiffRangeRequest)(nil), "anytype.DiffRange.Request")
-	proto.RegisterType((*DiffRangeRequestRange)(nil), "anytype.DiffRange.Request.Range")
-	proto.RegisterType((*DiffRangeResponse)(nil), "anytype.DiffRange.Response")
-	proto.RegisterType((*DiffRangeResponseResult)(nil), "anytype.DiffRange.Response.Result")
-	proto.RegisterType((*DiffRangeResponseResultElement)(nil), "anytype.DiffRange.Response.Result.Element")
+	proto.RegisterType((*DiffRange_Request)(nil), "anytype.DiffRange.Request")
+	proto.RegisterType((*DiffRange_Request_Range)(nil), "anytype.DiffRange.Request.Range")
+	proto.RegisterType((*DiffRange_Response)(nil), "anytype.DiffRange.Response")
+	proto.RegisterType((*DiffRange_Response_Result)(nil), "anytype.DiffRange.Response.Result")
+	proto.RegisterType((*DiffRange_Response_Result_Element)(nil), "anytype.DiffRange.Response.Result.Element")
 }
 
 func init() {
@@ -546,7 +547,7 @@ func (m *Space) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SpaceContent) Marshal() (dAtA []byte, err error) {
+func (m *Space_Content) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -556,12 +557,12 @@ func (m *SpaceContent) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SpaceContent) MarshalTo(dAtA []byte) (int, error) {
+func (m *Space_Content) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SpaceContent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Space_Content) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -578,12 +579,12 @@ func (m *SpaceContent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SpaceContentValueOfDiffRange) MarshalTo(dAtA []byte) (int, error) {
+func (m *Space_Content_DiffRange) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SpaceContentValueOfDiffRange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Space_Content_DiffRange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.DiffRange != nil {
 		{
@@ -646,7 +647,7 @@ func (m *DiffRange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *DiffRangeRequest) Marshal() (dAtA []byte, err error) {
+func (m *DiffRange_Request) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -656,12 +657,12 @@ func (m *DiffRangeRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *DiffRangeRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *DiffRange_Request) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *DiffRangeRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *DiffRange_Request) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -683,7 +684,7 @@ func (m *DiffRangeRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *DiffRangeRequestRange) Marshal() (dAtA []byte, err error) {
+func (m *DiffRange_Request_Range) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -693,12 +694,12 @@ func (m *DiffRangeRequestRange) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *DiffRangeRequestRange) MarshalTo(dAtA []byte) (int, error) {
+func (m *DiffRange_Request_Range) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *DiffRangeRequestRange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *DiffRange_Request_Range) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -721,7 +722,7 @@ func (m *DiffRangeRequestRange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *DiffRangeResponse) Marshal() (dAtA []byte, err error) {
+func (m *DiffRange_Response) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -731,12 +732,12 @@ func (m *DiffRangeResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *DiffRangeResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *DiffRange_Response) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *DiffRangeResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *DiffRange_Response) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -758,7 +759,7 @@ func (m *DiffRangeResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *DiffRangeResponseResult) Marshal() (dAtA []byte, err error) {
+func (m *DiffRange_Response_Result) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -768,12 +769,12 @@ func (m *DiffRangeResponseResult) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *DiffRangeResponseResult) MarshalTo(dAtA []byte) (int, error) {
+func (m *DiffRange_Response_Result) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *DiffRangeResponseResult) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *DiffRange_Response_Result) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -807,7 +808,7 @@ func (m *DiffRangeResponseResult) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	return len(dAtA) - i, nil
 }
 
-func (m *DiffRangeResponseResultElement) Marshal() (dAtA []byte, err error) {
+func (m *DiffRange_Response_Result_Element) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -817,12 +818,12 @@ func (m *DiffRangeResponseResultElement) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *DiffRangeResponseResultElement) MarshalTo(dAtA []byte) (int, error) {
+func (m *DiffRange_Response_Result_Element) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *DiffRangeResponseResultElement) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *DiffRange_Response_Result_Element) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -872,7 +873,7 @@ func (m *Space) Size() (n int) {
 	return n
 }
 
-func (m *SpaceContent) Size() (n int) {
+func (m *Space_Content) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -884,7 +885,7 @@ func (m *SpaceContent) Size() (n int) {
 	return n
 }
 
-func (m *SpaceContentValueOfDiffRange) Size() (n int) {
+func (m *Space_Content_DiffRange) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -913,7 +914,7 @@ func (m *DiffRange) Size() (n int) {
 	return n
 }
 
-func (m *DiffRangeRequest) Size() (n int) {
+func (m *DiffRange_Request) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -928,7 +929,7 @@ func (m *DiffRangeRequest) Size() (n int) {
 	return n
 }
 
-func (m *DiffRangeRequestRange) Size() (n int) {
+func (m *DiffRange_Request_Range) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -946,7 +947,7 @@ func (m *DiffRangeRequestRange) Size() (n int) {
 	return n
 }
 
-func (m *DiffRangeResponse) Size() (n int) {
+func (m *DiffRange_Response) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -961,7 +962,7 @@ func (m *DiffRangeResponse) Size() (n int) {
 	return n
 }
 
-func (m *DiffRangeResponseResult) Size() (n int) {
+func (m *DiffRange_Response_Result) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -983,7 +984,7 @@ func (m *DiffRangeResponseResult) Size() (n int) {
 	return n
 }
 
-func (m *DiffRangeResponseResultElement) Size() (n int) {
+func (m *DiffRange_Response_Result_Element) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1097,7 +1098,7 @@ func (m *Space) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Message == nil {
-				m.Message = &SpaceContent{}
+				m.Message = &Space_Content{}
 			}
 			if err := m.Message.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1124,7 +1125,7 @@ func (m *Space) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SpaceContent) Unmarshal(dAtA []byte) error {
+func (m *Space_Content) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1186,7 +1187,7 @@ func (m *SpaceContent) Unmarshal(dAtA []byte) error {
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &SpaceContentValueOfDiffRange{v}
+			m.Value = &Space_Content_DiffRange{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1268,7 +1269,7 @@ func (m *DiffRange) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Request == nil {
-				m.Request = &DiffRangeRequest{}
+				m.Request = &DiffRange_Request{}
 			}
 			if err := m.Request.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1304,7 +1305,7 @@ func (m *DiffRange) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Response == nil {
-				m.Response = &DiffRangeResponse{}
+				m.Response = &DiffRange_Response{}
 			}
 			if err := m.Response.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -1331,7 +1332,7 @@ func (m *DiffRange) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *DiffRangeRequest) Unmarshal(dAtA []byte) error {
+func (m *DiffRange_Request) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1389,7 +1390,7 @@ func (m *DiffRangeRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Ranges = append(m.Ranges, &DiffRangeRequestRange{})
+			m.Ranges = append(m.Ranges, &DiffRange_Request_Range{})
 			if err := m.Ranges[len(m.Ranges)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -1415,7 +1416,7 @@ func (m *DiffRangeRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *DiffRangeRequestRange) Unmarshal(dAtA []byte) error {
+func (m *DiffRange_Request_Range) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1522,7 +1523,7 @@ func (m *DiffRangeRequestRange) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *DiffRangeResponse) Unmarshal(dAtA []byte) error {
+func (m *DiffRange_Response) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1580,7 +1581,7 @@ func (m *DiffRangeResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Results = append(m.Results, &DiffRangeResponseResult{})
+			m.Results = append(m.Results, &DiffRange_Response_Result{})
 			if err := m.Results[len(m.Results)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -1606,7 +1607,7 @@ func (m *DiffRangeResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *DiffRangeResponseResult) Unmarshal(dAtA []byte) error {
+func (m *DiffRange_Response_Result) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1698,7 +1699,7 @@ func (m *DiffRangeResponseResult) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Elements = append(m.Elements, &DiffRangeResponseResultElement{})
+			m.Elements = append(m.Elements, &DiffRange_Response_Result_Element{})
 			if err := m.Elements[len(m.Elements)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -1743,7 +1744,7 @@ func (m *DiffRangeResponseResult) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *DiffRangeResponseResultElement) Unmarshal(dAtA []byte) error {
+func (m *DiffRange_Response_Result_Element) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {

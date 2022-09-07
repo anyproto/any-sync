@@ -5,18 +5,20 @@
 // +build !nographviz
 // +build amd64 arm64
 
-package tree
+package acltree
 
 import (
 	"bytes"
 	"fmt"
-	"github.com/goccy/go-graphviz"
-	"github.com/goccy/go-graphviz/cgraph"
 	"strings"
 	"time"
+	"unicode"
+
+	"github.com/goccy/go-graphviz"
+	"github.com/goccy/go-graphviz/cgraph"
 )
 
-func (t *Tree) Graph(parser DescriptionParser) (data string, err error) {
+func (t *Tree) Graph() (data string, err error) {
 	var order = make(map[string]string)
 	var seq = 0
 	t.Iterate(t.RootId(), func(c *Change) (isContinue bool) {
@@ -44,15 +46,44 @@ func (t *Tree) Graph(parser DescriptionParser) (data string, err error) {
 		if e != nil {
 			return e
 		}
-		n.SetStyle(cgraph.FilledNodeStyle)
+		if c.Content.GetAclData() != nil {
+			n.SetStyle(cgraph.FilledNodeStyle)
+		} else if c.IsSnapshot {
+			n.SetStyle(cgraph.DashedNodeStyle)
+		}
 		nodes[c.Id] = n
 		ord := order[c.Id]
 		if ord == "" {
 			ord = "miss"
 		}
-		chSymbs, err := parser.ParseChange(c)
-		if err != nil {
-			return err
+		var chSymbs []string
+		if c.Content.AclData != nil {
+			for _, chc := range c.Content.AclData.AclContent {
+				tp := fmt.Sprintf("%T", chc.Value)
+				tp = strings.Replace(tp, "ACLChange_ACLContentValueValueOf", "", 1)
+				res := ""
+				for _, ts := range tp {
+					if unicode.IsUpper(ts) {
+						res += string(ts)
+					}
+				}
+				chSymbs = append(chSymbs, res)
+			}
+		}
+		if c.DecryptedDocumentChange != nil {
+			// TODO: add some parser to provide custom unmarshalling for the document change
+			//for _, chc := range c.DecryptedDocumentChange.Content {
+			//	tp := fmt.Sprintf("%T", chc.Value)
+			//	tp = strings.Replace(tp, "ChangeContent_Value_", "", 1)
+			//	res := ""
+			//	for _, ts := range tp {
+			//		if unicode.IsUpper(ts) {
+			//			res += string(ts)
+			//		}
+			//	}
+			//	chSymbs = append(chSymbs, res)
+			//}
+			chSymbs = append(chSymbs, "DEC")
 		}
 
 		shortId := c.Id

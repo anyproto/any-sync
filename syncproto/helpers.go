@@ -1,45 +1,19 @@
 package syncproto
 
-import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
-)
-
-func WrapHeadUpdate(update *SyncHeadUpdate, header *aclpb.Header, treeId string) *Sync {
-	return &Sync{
-		Message: &SyncContentValue{
-			Value: &SyncContentValueValueOfHeadUpdate{HeadUpdate: update},
-		},
-		TreeHeader: header,
-		TreeId:     treeId,
-	}
+func WrapHeadUpdate(update *Sync_HeadUpdate) *Sync {
+	return &Sync{Message: &Sync_ContentValue{
+		Value: &Sync_Content_Value_HeadUpdate{HeadUpdate: update},
+	}}
 }
 
-func WrapFullRequest(request *SyncFullRequest, header *aclpb.Header, treeId string) *Sync {
-	return &Sync{
-		Message: &SyncContentValue{
-			Value: &SyncContentValueValueOfFullSyncRequest{FullSyncRequest: request},
-		},
-		TreeHeader: header,
-		TreeId:     treeId,
-	}
+func WrapFullRequest(request *Sync_Full_Request) *Sync {
+	return &Sync{Message: &Sync_ContentValue{
+		Value: &Sync_Content_Value_FullSyncRequest{FullSyncRequest: request},
+	}}
 }
 
-func WrapFullResponse(response *SyncFullResponse, header *aclpb.Header, treeId string) *Sync {
-	return &Sync{
-		Message: &SyncContentValue{
-			Value: &SyncContentValueValueOfFullSyncResponse{FullSyncResponse: response},
-		},
-		TreeHeader: header,
-		TreeId:     treeId,
-	}
-}
-
-func WrapACLList(aclList *SyncACLList, header *aclpb.Header, id string) *Sync {
-	return &Sync{
-		Message: &SyncContentValue{
-			Value: &SyncContentValueValueOfAclList{AclList: aclList},
-		},
-		TreeHeader: header,
-		TreeId:     id,
-	}
+func WrapFullResponse(response *Sync_Full_Response) *Sync {
+	return &Sync{Message: &Sync_ContentValue{
+		Value: &Sync_Content_Value_FullSyncResponse{FullSyncResponse: response},
+	}}
 }

@@ -25,9 +25,9 @@ type remote struct {
 
 func (r remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error) {
 	results = resBuf[:0]
-	pbRanges := make([]*spacesync.DiffRangeRequestRange, 0, len(ranges))
+	pbRanges := make([]*spacesync.DiffRange_Request_Range, 0, len(ranges))
 	for _, rg := range ranges {
-		pbRanges = append(pbRanges, &spacesync.DiffRangeRequestRange{
+		pbRanges = append(pbRanges, &spacesync.DiffRange_Request_Range{
 			From:  rg.From,
 			To:    rg.To,
 			Limit: uint32(rg.Limit),
@@ -35,10 +35,10 @@ func (r remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff
 	}
 	req := &spacesync.Space{
 		SpaceId: r.spaceId,
-		Message: &spacesync.SpaceContent{
-			Value: &spacesync.SpaceContentValueOfDiffRange{
+		Message: &spacesync.Space_Content{
+			Value: &spacesync.Space_Content_DiffRange{
 				DiffRange: &spacesync.DiffRange{
-					Request: &spacesync.DiffRangeRequest{
+					Request: &spacesync.DiffRange_Request{
 						Ranges: pbRanges,
 					},
 				},
@@ -99,21 +99,21 @@ func HandlerRangeRequest(ctx context.Context, d ldiff.Diff, diffRange *spacesync
 		return
 	}
 
-	var rangeResp = &spacesync.DiffRangeResponse{
-		Results: make([]*spacesync.DiffRangeResponseResult, len(res)),
+	var rangeResp = &spacesync.DiffRange_Response{
+		Results: make([]*spacesync.DiffRange_Response_Result, len(res)),
 	}
 	for _, rangeRes := range res {
-		var elements []*spacesync.DiffRangeResponseResultElement
+		var elements []*spacesync.DiffRange_Response_Result_Element
 		if len(rangeRes.Elements) > 0 {
-			elements = make([]*spacesync.DiffRangeResponseResultElement, 0, len(rangeRes.Elements))
+			elements = make([]*spacesync.DiffRange_Response_Result_Element, 0, len(rangeRes.Elements))
 			for _, el := range rangeRes.Elements {
-				elements = append(elements, &spacesync.DiffRangeResponseResultElement{
+				elements = append(elements, &spacesync.DiffRange_Response_Result_Element{
 					Id:   el.Id,
 					Head: el.Head,
 				})
 			}
 		}
-		rangeResp.Results = append(rangeResp.Results, &spacesync.DiffRangeResponseResult{
+		rangeResp.Results = append(rangeResp.Results, &spacesync.DiffRange_Response_Result{
 			Hash:     rangeRes.Hash,
 			Elements: elements,
 			Count:    uint32(rangeRes.Count),

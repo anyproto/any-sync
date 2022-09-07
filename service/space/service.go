@@ -78,10 +78,9 @@ func (s *service) Handle(ctx context.Context, data []byte) (resp proto.Marshaler
 		return
 	}
 	if spaceReq.SpaceId != "" {
-		var sp Space
-		sp, err = s.get(ctx, spaceReq.SpaceId)
-		if err != nil {
-			return
+		sp, e := s.get(ctx, spaceReq.SpaceId)
+		if e != nil {
+			return nil, e
 		}
 		return sp.Handle(ctx, spaceReq)
 	}
