@@ -19,6 +19,7 @@ type rawChangeLoader struct {
 type rawCacheEntry struct {
 	change    *Change
 	rawChange *aclpb.RawChange
+	position  int
 }
 
 func newRawChangeLoader(treeStorage storage.TreeStorage, changeBuilder ChangeBuilder) *rawChangeLoader {
@@ -107,50 +108,56 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 		r.cache = nil
 	}()
 
-	// updating map
-	bufPosMap := make(map[string]int)
-	for _, breakpoint := range breakpoints {
-		bufPosMap[breakpoint] = -1
+	existingBreakpoints := make([]string, 0, len(breakpoints))
+	for _, b := range breakpoints {
+		entry, err := r.loadEntry(b)
+		if err != nil {
+			continue
+		}
+		entry.position = -1
+		r.cache[b] = entry
+		existingBreakpoints = append(existingBreakpoints, b)
 	}
-	bufPosMap[commonSnapshot] = -1
+	r.cache[commonSnapshot] = rawCacheEntry{position: -1}
 
 	dfs := func(
 		commonSnapshot string,
 		heads []string,
 		startCounter int,
 		shouldVisit func(counter int, mapExists bool) bool,
-		visit func(prevCounter int, entry rawCacheEntry) int) bool {
+		visit func(entry rawCacheEntry) rawCacheEntry) bool {
 
 		// resetting stack
 		r.idStack = r.idStack[:0]
 		r.idStack = append(r.idStack, heads...)
 
 		commonSnapshotVisited := false
+		var err error
 		for len(r.idStack) > 0 {
 			id := r.idStack[len(r.idStack)-1]
 			r.idStack = r.idStack[:len(r.idStack)-1]
 
-			cnt, exists := bufPosMap[id]
-			if !shouldVisit(cnt, exists) {
+			entry, exists := r.cache[id]
+			if !shouldVisit(entry.position, exists) {
 				continue
 			}
-
-			// TODO: add proper error handling, we must ignore errors on missing breakpoints though
-			entry, err := r.loadEntry(id)
-			if err != nil {
-				continue
+			if !exists {
+				entry, err = r.loadEntry(id)
+				if err != nil {
+					continue
+				}
 			}
 
 			// setting the counter when we visit
-			bufPosMap[id] = visit(cnt, entry)
+			r.cache[id] = visit(entry)
 
 			for _, prev := range entry.change.PreviousIds {
 				if prev == commonSnapshot {
 					commonSnapshotVisited = true
 					break
 				}
-				cnt, exists = bufPosMap[prev]
-				if !shouldVisit(cnt, exists) {
+				entry, exists = r.cache[prev]
+				if !shouldVisit(entry.position, exists) {
 					continue
 				}
 				r.idStack = append(r.idStack, prev)
@@ -167,9 +174,10 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 		func(counter int, mapExists bool) bool {
 			return !mapExists
 		},
-		func(_ int, entry rawCacheEntry) int {
+		func(entry rawCacheEntry) rawCacheEntry {
 			buffer = append(buffer, entry.rawChange)
-			return len(buffer) - 1
+			entry.position = len(buffer) - 1
+			return entry
 		})
 
 	// checking if we stopped at breakpoints
@@ -188,15 +196,16 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 	}
 
 	// marking all visited as nil
-	dfs(commonSnapshot, breakpoints, len(buffer),
+	dfs(commonSnapshot, existingBreakpoints, len(buffer),
 		func(counter int, mapExists bool) bool {
 			return !mapExists || counter < len(buffer)
 		},
-		func(discardedPosition int, entry rawCacheEntry) int {
-			if discardedPosition != -1 {
-				buffer[discardedPosition] = nil
+		func(entry rawCacheEntry) rawCacheEntry {
+			if entry.position != -1 {
+				buffer[entry.position] = nil
 			}
-			return len(buffer) + 1
+			entry.position = len(buffer) + 1
+			return entry
 		})
 
 	// discarding visited
@@ -208,11 +217,6 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 }
 
 func (r *rawChangeLoader) loadEntry(id string) (entry rawCacheEntry, err error) {
-	var ok bool
-	if entry, ok = r.cache[id]; ok {
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
@@ -229,7 +233,6 @@ func (r *rawChangeLoader) loadEntry(id string) (entry rawCacheEntry, err error) 
 		change:    change,
 		rawChange: rawChange,
 	}
-	r.cache[id] = entry
 	return
 }
 
