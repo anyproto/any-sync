@@ -90,7 +90,7 @@ func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*aclpb.
 			return true
 		},
 		func(visited []*Change) {
-			discardFromSlice(results, func(change *Change) bool {
+			results = discardFromSlice(results, func(change *Change) bool {
 				return change.visited
 			})
 		},
@@ -200,7 +200,7 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 		})
 
 	// discarding visited
-	discardFromSlice(buffer, func(change *aclpb.RawChange) bool {
+	buffer = discardFromSlice(buffer, func(change *aclpb.RawChange) bool {
 		return change == nil
 	})
 
@@ -233,17 +233,20 @@ func (r *rawChangeLoader) loadEntry(id string) (entry rawCacheEntry, err error) 
 	return
 }
 
-func discardFromSlice[T any](elements []T, isDiscarded func(T) bool) {
+func discardFromSlice[T any](elements []T, isDiscarded func(T) bool) []T {
 	var (
 		finishedIdx = 0
 		currentIdx  = 0
 	)
 	for currentIdx < len(elements) {
-		if !isDiscarded(elements[currentIdx]) && finishedIdx != currentIdx {
-			elements[finishedIdx] = elements[currentIdx]
+		if !isDiscarded(elements[currentIdx]) {
+			if finishedIdx != currentIdx {
+				elements[finishedIdx] = elements[currentIdx]
+			}
 			finishedIdx++
 		}
 		currentIdx++
 	}
 	elements = elements[:finishedIdx]
+	return elements
 }

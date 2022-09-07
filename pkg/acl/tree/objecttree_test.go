@@ -92,12 +92,13 @@ func prepareTreeContext(t *testing.T, aclList list.ACLList) testTreeContext {
 	treeStorage := changeCreator.createNewTreeStorage("treeId", aclList.ID(), aclList.Head().Id, "0")
 	changeBuilder := &mockChangeBuilder{}
 	deps := objectTreeDeps{
-		changeBuilder:  changeBuilder,
-		treeBuilder:    newTreeBuilder(treeStorage, changeBuilder),
-		treeStorage:    treeStorage,
-		updateListener: nil,
-		validator:      &mockChangeValidator{},
-		aclList:        aclList,
+		changeBuilder:   changeBuilder,
+		treeBuilder:     newTreeBuilder(treeStorage, changeBuilder),
+		treeStorage:     treeStorage,
+		updateListener:  nil,
+		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
+		validator:       &mockChangeValidator{},
+		aclList:         aclList,
 	}
 
 	// check build
@@ -271,7 +272,7 @@ func TestObjectTree(t *testing.T) {
 		assert.Equal(t, true, objTree.(*objectTree).snapshotPathIsActual())
 	})
 
-	t.Run("changes after common snapshot complex", func(t *testing.T) {
+	t.Run("changes from tree after common snapshot complex", func(t *testing.T) {
 		ctx := prepareTreeContext(t, aclList)
 		changeCreator := ctx.changeCreator
 		objTree := ctx.objTree
@@ -289,7 +290,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err, "adding changes should be without error")
 		require.Equal(t, "0", objTree.Root().Id)
 
-		t.Run("changes from tree", func(t *testing.T) {
+		t.Run("all changes from tree", func(t *testing.T) {
 			changes, err := objTree.ChangesAfterCommonSnapshot([]string{"3", "0"}, []string{})
 			require.NoError(t, err, "changes after common snapshot should be without error")
 
@@ -302,9 +303,11 @@ func TestObjectTree(t *testing.T) {
 				_, ok := changeIds[raw.Id]
 				assert.Equal(t, true, ok)
 			}
+			_, ok := changeIds["0"]
+			assert.Equal(t, true, ok)
 		})
 
-		t.Run("changes from tree after first", func(t *testing.T) {
+		t.Run("changes from tree after 1", func(t *testing.T) {
 			changes, err := objTree.ChangesAfterCommonSnapshot([]string{"3", "0"}, []string{"1"})
 			require.NoError(t, err, "changes after common snapshot should be without error")
 
@@ -313,14 +316,32 @@ func TestObjectTree(t *testing.T) {
 				changeIds[ch.Id] = struct{}{}
 			}
 
-			for _, raw := range rawChanges {
-				if raw.Id == "1" {
-					_, ok := changeIds[raw.Id]
-					assert.Equal(t, false, ok)
-					continue
-				}
-				_, ok := changeIds[raw.Id]
+			for _, id := range []string{"2", "3", "4", "5", "6"} {
+				_, ok := changeIds[id]
 				assert.Equal(t, true, ok)
+			}
+			for _, id := range []string{"0", "1"} {
+				_, ok := changeIds[id]
+				assert.Equal(t, false, ok)
+			}
+		})
+
+		t.Run("changes from tree after 5", func(t *testing.T) {
+			changes, err := objTree.ChangesAfterCommonSnapshot([]string{"3", "0"}, []string{"5"})
+			require.NoError(t, err, "changes after common snapshot should be without error")
+
+			changeIds := make(map[string]struct{})
+			for _, ch := range changes {
+				changeIds[ch.Id] = struct{}{}
+			}
+
+			for _, id := range []string{"2", "3", "4", "6"} {
+				_, ok := changeIds[id]
+				assert.Equal(t, true, ok)
+			}
+			for _, id := range []string{"0", "1", "5"} {
+				_, ok := changeIds[id]
+				assert.Equal(t, false, ok)
 			}
 		})
 	})
