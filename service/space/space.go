@@ -19,8 +19,6 @@ type Space interface {
 	Close() error
 }
 
-//
-
 type space struct {
 	id           string
 	conf         configuration.Configuration
@@ -78,6 +76,12 @@ func (s *space) Handle(ctx context.Context, msg *spacesync.Space) (repl *spacesy
 			},
 		}}, nil
 	}
+
+	///
+
+	///
+
+	///
 
 	return nil, fmt.Errorf("unexpected request")
 }

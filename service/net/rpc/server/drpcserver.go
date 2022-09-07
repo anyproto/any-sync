@@ -50,6 +50,8 @@ func (s *drpcServer) Name() (name string) {
 
 func (s *drpcServer) Run(ctx context.Context) (err error) {
 	s.drpcServer = drpcserver.New(s)
+
+	s.drpcServer = drpcserver.New(mux)
 	ctx, s.cancel = context.WithCancel(ctx)
 	for _, addr := range s.config.ListenAddrs {
 		tcpList, err := net.Listen("tcp", addr)
