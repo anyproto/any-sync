@@ -45,7 +45,7 @@ func (t *TreeStorageBuilder) Graph() (string, error) {
 
 		var chSymbs []string
 		if r.changesDataDecrypted != nil {
-			res := &testpb.PlainTextChangeData{}
+			res := &testpb.PlainTextChange_Data{}
 			err := proto.Unmarshal(r.changesDataDecrypted, res)
 			if err != nil {
 				return err
@@ -53,7 +53,7 @@ func (t *TreeStorageBuilder) Graph() (string, error) {
 
 			for _, chc := range res.Content {
 				tp := fmt.Sprintf("%T", chc.Value)
-				tp = strings.Replace(tp, "ChangeContentValueOf", "", 1)
+				tp = strings.Replace(tp, "ChangeContent_Value_", "", 1)
 				res := ""
 				for _, ts := range tp {
 					if unicode.IsUpper(ts) {
@@ -66,7 +66,7 @@ func (t *TreeStorageBuilder) Graph() (string, error) {
 		if r.GetAclData() != nil {
 			for _, chc := range r.GetAclData().AclContent {
 				tp := fmt.Sprintf("%T", chc.Value)
-				tp = strings.Replace(tp, "ACLChangeACLContentValueValueOf", "", 1)
+				tp = strings.Replace(tp, "ACLChange_ACLContentValueValueOf", "", 1)
 				res := ""
 				for _, ts := range tp {
 					if unicode.IsUpper(ts) {

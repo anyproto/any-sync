@@ -52,28 +52,28 @@ func (MessageType) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_4b28dfdd48a89166, []int{0}
 }
 
-type SystemErrorCode int32
+type System_Error_Code int32
 
 const (
-	SystemError_UNKNOWN                      SystemErrorCode = 0
-	SystemError_UNSUPPORTED_PROTOCOL_VERSION SystemErrorCode = 10
+	System_Error_UNKNOWN                      System_Error_Code = 0
+	System_Error_UNSUPPORTED_PROTOCOL_VERSION System_Error_Code = 10
 )
 
-var SystemErrorCode_name = map[int32]string{
+var System_Error_Code_name = map[int32]string{
 	0:  "UNKNOWN",
 	10: "UNSUPPORTED_PROTOCOL_VERSION",
 }
 
-var SystemErrorCode_value = map[string]int32{
+var System_Error_Code_value = map[string]int32{
 	"UNKNOWN":                      0,
 	"UNSUPPORTED_PROTOCOL_VERSION": 10,
 }
 
-func (x SystemErrorCode) String() string {
-	return proto.EnumName(SystemErrorCode_name, int32(x))
+func (x System_Error_Code) String() string {
+	return proto.EnumName(System_Error_Code_name, int32(x))
 }
 
-func (SystemErrorCode) EnumDescriptor() ([]byte, []int) {
+func (System_Error_Code) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_4b28dfdd48a89166, []int{2, 3, 0}
 }
 
@@ -206,9 +206,9 @@ func (m *Header) GetDebugInfo() string {
 }
 
 type System struct {
-	Handshake *SystemHandshake `protobuf:"bytes,1,opt,name=handshake,proto3" json:"handshake,omitempty"`
-	Ping      *SystemPing      `protobuf:"bytes,2,opt,name=ping,proto3" json:"ping,omitempty"`
-	Ack       *SystemAck       `protobuf:"bytes,3,opt,name=ack,proto3" json:"ack,omitempty"`
+	Handshake *System_Handshake `protobuf:"bytes,1,opt,name=handshake,proto3" json:"handshake,omitempty"`
+	Ping      *System_Ping      `protobuf:"bytes,2,opt,name=ping,proto3" json:"ping,omitempty"`
+	Ack       *System_Ack       `protobuf:"bytes,3,opt,name=ack,proto3" json:"ack,omitempty"`
 }
 
 func (m *System) Reset()         { *m = System{} }
@@ -244,43 +244,43 @@ func (m *System) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_System proto.InternalMessageInfo
 
-func (m *System) GetHandshake() *SystemHandshake {
+func (m *System) GetHandshake() *System_Handshake {
 	if m != nil {
 		return m.Handshake
 	}
 	return nil
 }
 
-func (m *System) GetPing() *SystemPing {
+func (m *System) GetPing() *System_Ping {
 	if m != nil {
 		return m.Ping
 	}
 	return nil
 }
 
-func (m *System) GetAck() *SystemAck {
+func (m *System) GetAck() *System_Ack {
 	if m != nil {
 		return m.Ack
 	}
 	return nil
 }
 
-type SystemHandshake struct {
+type System_Handshake struct {
 	ProtocolVersion string `protobuf:"bytes,1,opt,name=protocolVersion,proto3" json:"protocolVersion,omitempty"`
 }
 
-func (m *SystemHandshake) Reset()         { *m = SystemHandshake{} }
-func (m *SystemHandshake) String() string { return proto.CompactTextString(m) }
-func (*SystemHandshake) ProtoMessage()    {}
-func (*SystemHandshake) Descriptor() ([]byte, []int) {
+func (m *System_Handshake) Reset()         { *m = System_Handshake{} }
+func (m *System_Handshake) String() string { return proto.CompactTextString(m) }
+func (*System_Handshake) ProtoMessage()    {}
+func (*System_Handshake) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4b28dfdd48a89166, []int{2, 0}
 }
-func (m *SystemHandshake) XXX_Unmarshal(b []byte) error {
+func (m *System_Handshake) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SystemHandshake) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *System_Handshake) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SystemHandshake.Marshal(b, m, deterministic)
+		return xxx_messageInfo_System_Handshake.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -290,41 +290,41 @@ func (m *SystemHandshake) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (m *SystemHandshake) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SystemHandshake.Merge(m, src)
+func (m *System_Handshake) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_System_Handshake.Merge(m, src)
 }
-func (m *SystemHandshake) XXX_Size() int {
+func (m *System_Handshake) XXX_Size() int {
 	return m.Size()
 }
-func (m *SystemHandshake) XXX_DiscardUnknown() {
-	xxx_messageInfo_SystemHandshake.DiscardUnknown(m)
+func (m *System_Handshake) XXX_DiscardUnknown() {
+	xxx_messageInfo_System_Handshake.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SystemHandshake proto.InternalMessageInfo
+var xxx_messageInfo_System_Handshake proto.InternalMessageInfo
 
-func (m *SystemHandshake) GetProtocolVersion() string {
+func (m *System_Handshake) GetProtocolVersion() string {
 	if m != nil {
 		return m.ProtocolVersion
 	}
 	return ""
 }
 
-type SystemPing struct {
+type System_Ping struct {
 	UnixTime uint64 `protobuf:"varint,1,opt,name=unixTime,proto3" json:"unixTime,omitempty"`
 }
 
-func (m *SystemPing) Reset()         { *m = SystemPing{} }
-func (m *SystemPing) String() string { return proto.CompactTextString(m) }
-func (*SystemPing) ProtoMessage()    {}
-func (*SystemPing) Descriptor() ([]byte, []int) {
+func (m *System_Ping) Reset()         { *m = System_Ping{} }
+func (m *System_Ping) String() string { return proto.CompactTextString(m) }
+func (*System_Ping) ProtoMessage()    {}
+func (*System_Ping) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4b28dfdd48a89166, []int{2, 1}
 }
-func (m *SystemPing) XXX_Unmarshal(b []byte) error {
+func (m *System_Ping) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SystemPing) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *System_Ping) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SystemPing.Marshal(b, m, deterministic)
+		return xxx_messageInfo_System_Ping.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -334,41 +334,41 @@ func (m *SystemPing) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *SystemPing) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SystemPing.Merge(m, src)
+func (m *System_Ping) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_System_Ping.Merge(m, src)
 }
-func (m *SystemPing) XXX_Size() int {
+func (m *System_Ping) XXX_Size() int {
 	return m.Size()
 }
-func (m *SystemPing) XXX_DiscardUnknown() {
-	xxx_messageInfo_SystemPing.DiscardUnknown(m)
+func (m *System_Ping) XXX_DiscardUnknown() {
+	xxx_messageInfo_System_Ping.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SystemPing proto.InternalMessageInfo
+var xxx_messageInfo_System_Ping proto.InternalMessageInfo
 
-func (m *SystemPing) GetUnixTime() uint64 {
+func (m *System_Ping) GetUnixTime() uint64 {
 	if m != nil {
 		return m.UnixTime
 	}
 	return 0
 }
 
-type SystemAck struct {
-	Error *SystemError `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+type System_Ack struct {
+	Error *System_Error `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
 }
 
-func (m *SystemAck) Reset()         { *m = SystemAck{} }
-func (m *SystemAck) String() string { return proto.CompactTextString(m) }
-func (*SystemAck) ProtoMessage()    {}
-func (*SystemAck) Descriptor() ([]byte, []int) {
+func (m *System_Ack) Reset()         { *m = System_Ack{} }
+func (m *System_Ack) String() string { return proto.CompactTextString(m) }
+func (*System_Ack) ProtoMessage()    {}
+func (*System_Ack) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4b28dfdd48a89166, []int{2, 2}
 }
-func (m *SystemAck) XXX_Unmarshal(b []byte) error {
+func (m *System_Ack) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SystemAck) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *System_Ack) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SystemAck.Marshal(b, m, deterministic)
+		return xxx_messageInfo_System_Ack.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -378,42 +378,42 @@ func (m *SystemAck) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *SystemAck) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SystemAck.Merge(m, src)
+func (m *System_Ack) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_System_Ack.Merge(m, src)
 }
-func (m *SystemAck) XXX_Size() int {
+func (m *System_Ack) XXX_Size() int {
 	return m.Size()
 }
-func (m *SystemAck) XXX_DiscardUnknown() {
-	xxx_messageInfo_SystemAck.DiscardUnknown(m)
+func (m *System_Ack) XXX_DiscardUnknown() {
+	xxx_messageInfo_System_Ack.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SystemAck proto.InternalMessageInfo
+var xxx_messageInfo_System_Ack proto.InternalMessageInfo
 
-func (m *SystemAck) GetError() *SystemError {
+func (m *System_Ack) GetError() *System_Error {
 	if m != nil {
 		return m.Error
 	}
 	return nil
 }
 
-type SystemError struct {
-	Code        SystemErrorCode `protobuf:"varint,1,opt,name=code,proto3,enum=anytype.SystemErrorCode" json:"code,omitempty"`
-	Description string          `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+type System_Error struct {
+	Code        System_Error_Code `protobuf:"varint,1,opt,name=code,proto3,enum=anytype.System_Error_Code" json:"code,omitempty"`
+	Description string            `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
 }
 
-func (m *SystemError) Reset()         { *m = SystemError{} }
-func (m *SystemError) String() string { return proto.CompactTextString(m) }
-func (*SystemError) ProtoMessage()    {}
-func (*SystemError) Descriptor() ([]byte, []int) {
+func (m *System_Error) Reset()         { *m = System_Error{} }
+func (m *System_Error) String() string { return proto.CompactTextString(m) }
+func (*System_Error) ProtoMessage()    {}
+func (*System_Error) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4b28dfdd48a89166, []int{2, 3}
 }
-func (m *SystemError) XXX_Unmarshal(b []byte) error {
+func (m *System_Error) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SystemError) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *System_Error) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SystemError.Marshal(b, m, deterministic)
+		return xxx_messageInfo_System_Error.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -423,26 +423,26 @@ func (m *SystemError) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		return b[:n], nil
 	}
 }
-func (m *SystemError) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SystemError.Merge(m, src)
+func (m *System_Error) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_System_Error.Merge(m, src)
 }
-func (m *SystemError) XXX_Size() int {
+func (m *System_Error) XXX_Size() int {
 	return m.Size()
 }
-func (m *SystemError) XXX_DiscardUnknown() {
-	xxx_messageInfo_SystemError.DiscardUnknown(m)
+func (m *System_Error) XXX_DiscardUnknown() {
+	xxx_messageInfo_System_Error.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SystemError proto.InternalMessageInfo
+var xxx_messageInfo_System_Error proto.InternalMessageInfo
 
-func (m *SystemError) GetCode() SystemErrorCode {
+func (m *System_Error) GetCode() System_Error_Code {
 	if m != nil {
 		return m.Code
 	}
-	return SystemError_UNKNOWN
+	return System_Error_UNKNOWN
 }
 
-func (m *SystemError) GetDescription() string {
+func (m *System_Error) GetDescription() string {
 	if m != nil {
 		return m.Description
 	}
@@ -450,8 +450,8 @@ func (m *SystemError) GetDescription() string {
 }
 
 type Sync struct {
-	SpaceId string            `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
-	Message *SyncContentValue `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	SpaceId string             `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	Message *Sync_ContentValue `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 }
 
 func (m *Sync) Reset()         { *m = Sync{} }
@@ -494,33 +494,33 @@ func (m *Sync) GetSpaceId() string {
 	return ""
 }
 
-func (m *Sync) GetMessage() *SyncContentValue {
+func (m *Sync) GetMessage() *Sync_ContentValue {
 	if m != nil {
 		return m.Message
 	}
 	return nil
 }
 
-type SyncContentValue struct {
+type Sync_ContentValue struct {
 	// Types that are valid to be assigned to Value:
-	//	*SyncContentValueValueOfHeadUpdate
-	//	*SyncContentValueValueOfFullSyncRequest
-	//	*SyncContentValueValueOfFullSyncResponse
-	Value IsSyncContentValueValue `protobuf_oneof:"value"`
+	//	*Sync_Content_Value_HeadUpdate
+	//	*Sync_Content_Value_FullSyncRequest
+	//	*Sync_Content_Value_FullSyncResponse
+	Value isSync_Content_Value_Value `protobuf_oneof:"value"`
 }
 
-func (m *SyncContentValue) Reset()         { *m = SyncContentValue{} }
-func (m *SyncContentValue) String() string { return proto.CompactTextString(m) }
-func (*SyncContentValue) ProtoMessage()    {}
-func (*SyncContentValue) Descriptor() ([]byte, []int) {
+func (m *Sync_ContentValue) Reset()         { *m = Sync_ContentValue{} }
+func (m *Sync_ContentValue) String() string { return proto.CompactTextString(m) }
+func (*Sync_ContentValue) ProtoMessage()    {}
+func (*Sync_ContentValue) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4b28dfdd48a89166, []int{3, 0}
 }
-func (m *SyncContentValue) XXX_Unmarshal(b []byte) error {
+func (m *Sync_ContentValue) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SyncContentValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Sync_ContentValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SyncContentValue.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Sync_ContentValue.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -530,76 +530,76 @@ func (m *SyncContentValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (m *SyncContentValue) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SyncContentValue.Merge(m, src)
+func (m *Sync_ContentValue) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Sync_ContentValue.Merge(m, src)
 }
-func (m *SyncContentValue) XXX_Size() int {
+func (m *Sync_ContentValue) XXX_Size() int {
 	return m.Size()
 }
-func (m *SyncContentValue) XXX_DiscardUnknown() {
-	xxx_messageInfo_SyncContentValue.DiscardUnknown(m)
+func (m *Sync_ContentValue) XXX_DiscardUnknown() {
+	xxx_messageInfo_Sync_ContentValue.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SyncContentValue proto.InternalMessageInfo
+var xxx_messageInfo_Sync_ContentValue proto.InternalMessageInfo
 
-type IsSyncContentValueValue interface {
-	IsSyncContentValueValue()
+type isSync_Content_Value_Value interface {
+	isSync_Content_Value_Value()
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
 
-type SyncContentValueValueOfHeadUpdate struct {
-	HeadUpdate *SyncHeadUpdate `protobuf:"bytes,1,opt,name=headUpdate,proto3,oneof" json:"headUpdate,omitempty"`
+type Sync_Content_Value_HeadUpdate struct {
+	HeadUpdate *Sync_HeadUpdate `protobuf:"bytes,1,opt,name=headUpdate,proto3,oneof" json:"headUpdate,omitempty"`
 }
-type SyncContentValueValueOfFullSyncRequest struct {
-	FullSyncRequest *SyncFullRequest `protobuf:"bytes,2,opt,name=fullSyncRequest,proto3,oneof" json:"fullSyncRequest,omitempty"`
+type Sync_Content_Value_FullSyncRequest struct {
+	FullSyncRequest *Sync_Full_Request `protobuf:"bytes,2,opt,name=fullSyncRequest,proto3,oneof" json:"fullSyncRequest,omitempty"`
 }
-type SyncContentValueValueOfFullSyncResponse struct {
-	FullSyncResponse *SyncFullResponse `protobuf:"bytes,3,opt,name=fullSyncResponse,proto3,oneof" json:"fullSyncResponse,omitempty"`
+type Sync_Content_Value_FullSyncResponse struct {
+	FullSyncResponse *Sync_Full_Response `protobuf:"bytes,3,opt,name=fullSyncResponse,proto3,oneof" json:"fullSyncResponse,omitempty"`
 }
 
-func (*SyncContentValueValueOfHeadUpdate) IsSyncContentValueValue()       {}
-func (*SyncContentValueValueOfFullSyncRequest) IsSyncContentValueValue()  {}
-func (*SyncContentValueValueOfFullSyncResponse) IsSyncContentValueValue() {}
+func (*Sync_Content_Value_HeadUpdate) isSync_Content_Value_Value()       {}
+func (*Sync_Content_Value_FullSyncRequest) isSync_Content_Value_Value()  {}
+func (*Sync_Content_Value_FullSyncResponse) isSync_Content_Value_Value() {}
 
-func (m *SyncContentValue) GetValue() IsSyncContentValueValue {
+func (m *Sync_ContentValue) GetValue() isSync_Content_Value_Value {
 	if m != nil {
 		return m.Value
 	}
 	return nil
 }
 
-func (m *SyncContentValue) GetHeadUpdate() *SyncHeadUpdate {
-	if x, ok := m.GetValue().(*SyncContentValueValueOfHeadUpdate); ok {
+func (m *Sync_ContentValue) GetHeadUpdate() *Sync_HeadUpdate {
+	if x, ok := m.GetValue().(*Sync_Content_Value_HeadUpdate); ok {
 		return x.HeadUpdate
 	}
 	return nil
 }
 
-func (m *SyncContentValue) GetFullSyncRequest() *SyncFullRequest {
-	if x, ok := m.GetValue().(*SyncContentValueValueOfFullSyncRequest); ok {
+func (m *Sync_ContentValue) GetFullSyncRequest() *Sync_Full_Request {
+	if x, ok := m.GetValue().(*Sync_Content_Value_FullSyncRequest); ok {
 		return x.FullSyncRequest
 	}
 	return nil
 }
 
-func (m *SyncContentValue) GetFullSyncResponse() *SyncFullResponse {
-	if x, ok := m.GetValue().(*SyncContentValueValueOfFullSyncResponse); ok {
+func (m *Sync_ContentValue) GetFullSyncResponse() *Sync_Full_Response {
+	if x, ok := m.GetValue().(*Sync_Content_Value_FullSyncResponse); ok {
 		return x.FullSyncResponse
 	}
 	return nil
 }
 
 // XXX_OneofWrappers is for the internal use of the proto package.
-func (*SyncContentValue) XXX_OneofWrappers() []interface{} {
+func (*Sync_ContentValue) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
-		(*SyncContentValueValueOfHeadUpdate)(nil),
-		(*SyncContentValueValueOfFullSyncRequest)(nil),
-		(*SyncContentValueValueOfFullSyncResponse)(nil),
+		(*Sync_Content_Value_HeadUpdate)(nil),
+		(*Sync_Content_Value_FullSyncRequest)(nil),
+		(*Sync_Content_Value_FullSyncResponse)(nil),
 	}
 }
 
-type SyncHeadUpdate struct {
+type Sync_HeadUpdate struct {
 	Heads        []string           `protobuf:"bytes,1,rep,name=heads,proto3" json:"heads,omitempty"`
 	Changes      []*aclpb.RawChange `protobuf:"bytes,2,rep,name=changes,proto3" json:"changes,omitempty"`
 	TreeId       string             `protobuf:"bytes,3,opt,name=treeId,proto3" json:"treeId,omitempty"`
@@ -607,18 +607,18 @@ type SyncHeadUpdate struct {
 	TreeHeader   *treepb.TreeHeader `protobuf:"bytes,5,opt,name=treeHeader,proto3" json:"treeHeader,omitempty"`
 }
 
-func (m *SyncHeadUpdate) Reset()         { *m = SyncHeadUpdate{} }
-func (m *SyncHeadUpdate) String() string { return proto.CompactTextString(m) }
-func (*SyncHeadUpdate) ProtoMessage()    {}
-func (*SyncHeadUpdate) Descriptor() ([]byte, []int) {
+func (m *Sync_HeadUpdate) Reset()         { *m = Sync_HeadUpdate{} }
+func (m *Sync_HeadUpdate) String() string { return proto.CompactTextString(m) }
+func (*Sync_HeadUpdate) ProtoMessage()    {}
+func (*Sync_HeadUpdate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4b28dfdd48a89166, []int{3, 1}
 }
-func (m *SyncHeadUpdate) XXX_Unmarshal(b []byte) error {
+func (m *Sync_HeadUpdate) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SyncHeadUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Sync_HeadUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SyncHeadUpdate.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Sync_HeadUpdate.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -628,68 +628,68 @@ func (m *SyncHeadUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return b[:n], nil
 	}
 }
-func (m *SyncHeadUpdate) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SyncHeadUpdate.Merge(m, src)
+func (m *Sync_HeadUpdate) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Sync_HeadUpdate.Merge(m, src)
 }
-func (m *SyncHeadUpdate) XXX_Size() int {
+func (m *Sync_HeadUpdate) XXX_Size() int {
 	return m.Size()
 }
-func (m *SyncHeadUpdate) XXX_DiscardUnknown() {
-	xxx_messageInfo_SyncHeadUpdate.DiscardUnknown(m)
+func (m *Sync_HeadUpdate) XXX_DiscardUnknown() {
+	xxx_messageInfo_Sync_HeadUpdate.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SyncHeadUpdate proto.InternalMessageInfo
+var xxx_messageInfo_Sync_HeadUpdate proto.InternalMessageInfo
 
-func (m *SyncHeadUpdate) GetHeads() []string {
+func (m *Sync_HeadUpdate) GetHeads() []string {
 	if m != nil {
 		return m.Heads
 	}
 	return nil
 }
 
-func (m *SyncHeadUpdate) GetChanges() []*aclpb.RawChange {
+func (m *Sync_HeadUpdate) GetChanges() []*aclpb.RawChange {
 	if m != nil {
 		return m.Changes
 	}
 	return nil
 }
 
-func (m *SyncHeadUpdate) GetTreeId() string {
+func (m *Sync_HeadUpdate) GetTreeId() string {
 	if m != nil {
 		return m.TreeId
 	}
 	return ""
 }
 
-func (m *SyncHeadUpdate) GetSnapshotPath() []string {
+func (m *Sync_HeadUpdate) GetSnapshotPath() []string {
 	if m != nil {
 		return m.SnapshotPath
 	}
 	return nil
 }
 
-func (m *SyncHeadUpdate) GetTreeHeader() *treepb.TreeHeader {
+func (m *Sync_HeadUpdate) GetTreeHeader() *treepb.TreeHeader {
 	if m != nil {
 		return m.TreeHeader
 	}
 	return nil
 }
 
-type SyncFull struct {
+type Sync_Full struct {
 }
 
-func (m *SyncFull) Reset()         { *m = SyncFull{} }
-func (m *SyncFull) String() string { return proto.CompactTextString(m) }
-func (*SyncFull) ProtoMessage()    {}
-func (*SyncFull) Descriptor() ([]byte, []int) {
+func (m *Sync_Full) Reset()         { *m = Sync_Full{} }
+func (m *Sync_Full) String() string { return proto.CompactTextString(m) }
+func (*Sync_Full) ProtoMessage()    {}
+func (*Sync_Full) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4b28dfdd48a89166, []int{3, 2}
 }
-func (m *SyncFull) XXX_Unmarshal(b []byte) error {
+func (m *Sync_Full) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SyncFull) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Sync_Full) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SyncFull.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Sync_Full.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -699,20 +699,20 @@ func (m *SyncFull) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *SyncFull) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SyncFull.Merge(m, src)
+func (m *Sync_Full) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Sync_Full.Merge(m, src)
 }
-func (m *SyncFull) XXX_Size() int {
+func (m *Sync_Full) XXX_Size() int {
 	return m.Size()
 }
-func (m *SyncFull) XXX_DiscardUnknown() {
-	xxx_messageInfo_SyncFull.DiscardUnknown(m)
+func (m *Sync_Full) XXX_DiscardUnknown() {
+	xxx_messageInfo_Sync_Full.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SyncFull proto.InternalMessageInfo
+var xxx_messageInfo_Sync_Full proto.InternalMessageInfo
 
 // here with send the request with all changes we have (we already know sender's snapshot path)
-type SyncFullRequest struct {
+type Sync_Full_Request struct {
 	Heads        []string           `protobuf:"bytes,1,rep,name=heads,proto3" json:"heads,omitempty"`
 	Changes      []*aclpb.RawChange `protobuf:"bytes,2,rep,name=changes,proto3" json:"changes,omitempty"`
 	TreeId       string             `protobuf:"bytes,3,opt,name=treeId,proto3" json:"treeId,omitempty"`
@@ -720,18 +720,18 @@ type SyncFullRequest struct {
 	TreeHeader   *treepb.TreeHeader `protobuf:"bytes,5,opt,name=treeHeader,proto3" json:"treeHeader,omitempty"`
 }
 
-func (m *SyncFullRequest) Reset()         { *m = SyncFullRequest{} }
-func (m *SyncFullRequest) String() string { return proto.CompactTextString(m) }
-func (*SyncFullRequest) ProtoMessage()    {}
-func (*SyncFullRequest) Descriptor() ([]byte, []int) {
+func (m *Sync_Full_Request) Reset()         { *m = Sync_Full_Request{} }
+func (m *Sync_Full_Request) String() string { return proto.CompactTextString(m) }
+func (*Sync_Full_Request) ProtoMessage()    {}
+func (*Sync_Full_Request) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4b28dfdd48a89166, []int{3, 2, 0}
 }
-func (m *SyncFullRequest) XXX_Unmarshal(b []byte) error {
+func (m *Sync_Full_Request) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SyncFullRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Sync_Full_Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SyncFullRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Sync_Full_Request.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -741,54 +741,54 @@ func (m *SyncFullRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (m *SyncFullRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SyncFullRequest.Merge(m, src)
+func (m *Sync_Full_Request) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Sync_Full_Request.Merge(m, src)
 }
-func (m *SyncFullRequest) XXX_Size() int {
+func (m *Sync_Full_Request) XXX_Size() int {
 	return m.Size()
 }
-func (m *SyncFullRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_SyncFullRequest.DiscardUnknown(m)
+func (m *Sync_Full_Request) XXX_DiscardUnknown() {
+	xxx_messageInfo_Sync_Full_Request.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SyncFullRequest proto.InternalMessageInfo
+var xxx_messageInfo_Sync_Full_Request proto.InternalMessageInfo
 
-func (m *SyncFullRequest) GetHeads() []string {
+func (m *Sync_Full_Request) GetHeads() []string {
 	if m != nil {
 		return m.Heads
 	}
 	return nil
 }
 
-func (m *SyncFullRequest) GetChanges() []*aclpb.RawChange {
+func (m *Sync_Full_Request) GetChanges() []*aclpb.RawChange {
 	if m != nil {
 		return m.Changes
 	}
 	return nil
 }
 
-func (m *SyncFullRequest) GetTreeId() string {
+func (m *Sync_Full_Request) GetTreeId() string {
 	if m != nil {
 		return m.TreeId
 	}
 	return ""
 }
 
-func (m *SyncFullRequest) GetSnapshotPath() []string {
+func (m *Sync_Full_Request) GetSnapshotPath() []string {
 	if m != nil {
 		return m.SnapshotPath
 	}
 	return nil
 }
 
-func (m *SyncFullRequest) GetTreeHeader() *treepb.TreeHeader {
+func (m *Sync_Full_Request) GetTreeHeader() *treepb.TreeHeader {
 	if m != nil {
 		return m.TreeHeader
 	}
 	return nil
 }
 
-type SyncFullResponse struct {
+type Sync_Full_Response struct {
 	Heads        []string           `protobuf:"bytes,1,rep,name=heads,proto3" json:"heads,omitempty"`
 	Changes      []*aclpb.RawChange `protobuf:"bytes,2,rep,name=changes,proto3" json:"changes,omitempty"`
 	TreeId       string             `protobuf:"bytes,3,opt,name=treeId,proto3" json:"treeId,omitempty"`
@@ -796,18 +796,18 @@ type SyncFullResponse struct {
 	TreeHeader   *treepb.TreeHeader `protobuf:"bytes,5,opt,name=treeHeader,proto3" json:"treeHeader,omitempty"`
 }
 
-func (m *SyncFullResponse) Reset()         { *m = SyncFullResponse{} }
-func (m *SyncFullResponse) String() string { return proto.CompactTextString(m) }
-func (*SyncFullResponse) ProtoMessage()    {}
-func (*SyncFullResponse) Descriptor() ([]byte, []int) {
+func (m *Sync_Full_Response) Reset()         { *m = Sync_Full_Response{} }
+func (m *Sync_Full_Response) String() string { return proto.CompactTextString(m) }
+func (*Sync_Full_Response) ProtoMessage()    {}
+func (*Sync_Full_Response) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4b28dfdd48a89166, []int{3, 2, 1}
 }
-func (m *SyncFullResponse) XXX_Unmarshal(b []byte) error {
+func (m *Sync_Full_Response) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SyncFullResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Sync_Full_Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SyncFullResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Sync_Full_Response.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -817,47 +817,47 @@ func (m *SyncFullResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (m *SyncFullResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SyncFullResponse.Merge(m, src)
+func (m *Sync_Full_Response) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Sync_Full_Response.Merge(m, src)
 }
-func (m *SyncFullResponse) XXX_Size() int {
+func (m *Sync_Full_Response) XXX_Size() int {
 	return m.Size()
 }
-func (m *SyncFullResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_SyncFullResponse.DiscardUnknown(m)
+func (m *Sync_Full_Response) XXX_DiscardUnknown() {
+	xxx_messageInfo_Sync_Full_Response.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SyncFullResponse proto.InternalMessageInfo
+var xxx_messageInfo_Sync_Full_Response proto.InternalMessageInfo
 
-func (m *SyncFullResponse) GetHeads() []string {
+func (m *Sync_Full_Response) GetHeads() []string {
 	if m != nil {
 		return m.Heads
 	}
 	return nil
 }
 
-func (m *SyncFullResponse) GetChanges() []*aclpb.RawChange {
+func (m *Sync_Full_Response) GetChanges() []*aclpb.RawChange {
 	if m != nil {
 		return m.Changes
 	}
 	return nil
 }
 
-func (m *SyncFullResponse) GetTreeId() string {
+func (m *Sync_Full_Response) GetTreeId() string {
 	if m != nil {
 		return m.TreeId
 	}
 	return ""
 }
 
-func (m *SyncFullResponse) GetSnapshotPath() []string {
+func (m *Sync_Full_Response) GetSnapshotPath() []string {
 	if m != nil {
 		return m.SnapshotPath
 	}
 	return nil
 }
 
-func (m *SyncFullResponse) GetTreeHeader() *treepb.TreeHeader {
+func (m *Sync_Full_Response) GetTreeHeader() *treepb.TreeHeader {
 	if m != nil {
 		return m.TreeHeader
 	}
@@ -866,20 +866,20 @@ func (m *SyncFullResponse) GetTreeHeader() *treepb.TreeHeader {
 
 func init() {
 	proto.RegisterEnum("anytype.MessageType", MessageType_name, MessageType_value)
-	proto.RegisterEnum("anytype.SystemErrorCode", SystemErrorCode_name, SystemErrorCode_value)
+	proto.RegisterEnum("anytype.System_Error_Code", System_Error_Code_name, System_Error_Code_value)
 	proto.RegisterType((*Message)(nil), "anytype.Message")
 	proto.RegisterType((*Header)(nil), "anytype.Header")
 	proto.RegisterType((*System)(nil), "anytype.System")
-	proto.RegisterType((*SystemHandshake)(nil), "anytype.System.Handshake")
-	proto.RegisterType((*SystemPing)(nil), "anytype.System.Ping")
-	proto.RegisterType((*SystemAck)(nil), "anytype.System.Ack")
-	proto.RegisterType((*SystemError)(nil), "anytype.System.Error")
+	proto.RegisterType((*System_Handshake)(nil), "anytype.System.Handshake")
+	proto.RegisterType((*System_Ping)(nil), "anytype.System.Ping")
+	proto.RegisterType((*System_Ack)(nil), "anytype.System.Ack")
+	proto.RegisterType((*System_Error)(nil), "anytype.System.Error")
 	proto.RegisterType((*Sync)(nil), "anytype.Sync")
-	proto.RegisterType((*SyncContentValue)(nil), "anytype.Sync.ContentValue")
-	proto.RegisterType((*SyncHeadUpdate)(nil), "anytype.Sync.HeadUpdate")
-	proto.RegisterType((*SyncFull)(nil), "anytype.Sync.Full")
-	proto.RegisterType((*SyncFullRequest)(nil), "anytype.Sync.Full.Request")
-	proto.RegisterType((*SyncFullResponse)(nil), "anytype.Sync.Full.Response")
+	proto.RegisterType((*Sync_ContentValue)(nil), "anytype.Sync.ContentValue")
+	proto.RegisterType((*Sync_HeadUpdate)(nil), "anytype.Sync.HeadUpdate")
+	proto.RegisterType((*Sync_Full)(nil), "anytype.Sync.Full")
+	proto.RegisterType((*Sync_Full_Request)(nil), "anytype.Sync.Full.Request")
+	proto.RegisterType((*Sync_Full_Response)(nil), "anytype.Sync.Full.Response")
 }
 
 func init() { proto.RegisterFile("syncproto/proto/sync.proto", fileDescriptor_4b28dfdd48a89166) }
@@ -1091,7 +1091,7 @@ func (m *System) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SystemHandshake) Marshal() (dAtA []byte, err error) {
+func (m *System_Handshake) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1101,12 +1101,12 @@ func (m *SystemHandshake) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SystemHandshake) MarshalTo(dAtA []byte) (int, error) {
+func (m *System_Handshake) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SystemHandshake) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *System_Handshake) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1121,7 +1121,7 @@ func (m *SystemHandshake) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SystemPing) Marshal() (dAtA []byte, err error) {
+func (m *System_Ping) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1131,12 +1131,12 @@ func (m *SystemPing) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SystemPing) MarshalTo(dAtA []byte) (int, error) {
+func (m *System_Ping) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SystemPing) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *System_Ping) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1149,7 +1149,7 @@ func (m *SystemPing) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SystemAck) Marshal() (dAtA []byte, err error) {
+func (m *System_Ack) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1159,12 +1159,12 @@ func (m *SystemAck) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SystemAck) MarshalTo(dAtA []byte) (int, error) {
+func (m *System_Ack) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SystemAck) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *System_Ack) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1184,7 +1184,7 @@ func (m *SystemAck) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SystemError) Marshal() (dAtA []byte, err error) {
+func (m *System_Error) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1194,12 +1194,12 @@ func (m *SystemError) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SystemError) MarshalTo(dAtA []byte) (int, error) {
+func (m *System_Error) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SystemError) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *System_Error) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1261,7 +1261,7 @@ func (m *Sync) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SyncContentValue) Marshal() (dAtA []byte, err error) {
+func (m *Sync_ContentValue) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1271,12 +1271,12 @@ func (m *SyncContentValue) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SyncContentValue) MarshalTo(dAtA []byte) (int, error) {
+func (m *Sync_ContentValue) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SyncContentValue) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Sync_ContentValue) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1293,12 +1293,12 @@ func (m *SyncContentValue) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SyncContentValueValueOfHeadUpdate) MarshalTo(dAtA []byte) (int, error) {
+func (m *Sync_Content_Value_HeadUpdate) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SyncContentValueValueOfHeadUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Sync_Content_Value_HeadUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.HeadUpdate != nil {
 		{
@@ -1314,12 +1314,12 @@ func (m *SyncContentValueValueOfHeadUpdate) MarshalToSizedBuffer(dAtA []byte) (i
 	}
 	return len(dAtA) - i, nil
 }
-func (m *SyncContentValueValueOfFullSyncRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *Sync_Content_Value_FullSyncRequest) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SyncContentValueValueOfFullSyncRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Sync_Content_Value_FullSyncRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.FullSyncRequest != nil {
 		{
@@ -1335,12 +1335,12 @@ func (m *SyncContentValueValueOfFullSyncRequest) MarshalToSizedBuffer(dAtA []byt
 	}
 	return len(dAtA) - i, nil
 }
-func (m *SyncContentValueValueOfFullSyncResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *Sync_Content_Value_FullSyncResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SyncContentValueValueOfFullSyncResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Sync_Content_Value_FullSyncResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.FullSyncResponse != nil {
 		{
@@ -1356,7 +1356,7 @@ func (m *SyncContentValueValueOfFullSyncResponse) MarshalToSizedBuffer(dAtA []by
 	}
 	return len(dAtA) - i, nil
 }
-func (m *SyncHeadUpdate) Marshal() (dAtA []byte, err error) {
+func (m *Sync_HeadUpdate) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1366,12 +1366,12 @@ func (m *SyncHeadUpdate) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SyncHeadUpdate) MarshalTo(dAtA []byte) (int, error) {
+func (m *Sync_HeadUpdate) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SyncHeadUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Sync_HeadUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1430,7 +1430,7 @@ func (m *SyncHeadUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SyncFull) Marshal() (dAtA []byte, err error) {
+func (m *Sync_Full) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1440,12 +1440,12 @@ func (m *SyncFull) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SyncFull) MarshalTo(dAtA []byte) (int, error) {
+func (m *Sync_Full) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SyncFull) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Sync_Full) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1453,7 +1453,7 @@ func (m *SyncFull) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SyncFullRequest) Marshal() (dAtA []byte, err error) {
+func (m *Sync_Full_Request) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1463,12 +1463,12 @@ func (m *SyncFullRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SyncFullRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *Sync_Full_Request) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SyncFullRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Sync_Full_Request) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1527,7 +1527,7 @@ func (m *SyncFullRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SyncFullResponse) Marshal() (dAtA []byte, err error) {
+func (m *Sync_Full_Response) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1537,12 +1537,12 @@ func (m *SyncFullResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SyncFullResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *Sync_Full_Response) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SyncFullResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Sync_Full_Response) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1676,7 +1676,7 @@ func (m *System) Size() (n int) {
 	return n
 }
 
-func (m *SystemHandshake) Size() (n int) {
+func (m *System_Handshake) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1689,7 +1689,7 @@ func (m *SystemHandshake) Size() (n int) {
 	return n
 }
 
-func (m *SystemPing) Size() (n int) {
+func (m *System_Ping) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1701,7 +1701,7 @@ func (m *SystemPing) Size() (n int) {
 	return n
 }
 
-func (m *SystemAck) Size() (n int) {
+func (m *System_Ack) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1714,7 +1714,7 @@ func (m *SystemAck) Size() (n int) {
 	return n
 }
 
-func (m *SystemError) Size() (n int) {
+func (m *System_Error) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1747,7 +1747,7 @@ func (m *Sync) Size() (n int) {
 	return n
 }
 
-func (m *SyncContentValue) Size() (n int) {
+func (m *Sync_ContentValue) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1759,7 +1759,7 @@ func (m *SyncContentValue) Size() (n int) {
 	return n
 }
 
-func (m *SyncContentValueValueOfHeadUpdate) Size() (n int) {
+func (m *Sync_Content_Value_HeadUpdate) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1771,7 +1771,7 @@ func (m *SyncContentValueValueOfHeadUpdate) Size() (n int) {
 	}
 	return n
 }
-func (m *SyncContentValueValueOfFullSyncRequest) Size() (n int) {
+func (m *Sync_Content_Value_FullSyncRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1783,7 +1783,7 @@ func (m *SyncContentValueValueOfFullSyncRequest) Size() (n int) {
 	}
 	return n
 }
-func (m *SyncContentValueValueOfFullSyncResponse) Size() (n int) {
+func (m *Sync_Content_Value_FullSyncResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1795,7 +1795,7 @@ func (m *SyncContentValueValueOfFullSyncResponse) Size() (n int) {
 	}
 	return n
 }
-func (m *SyncHeadUpdate) Size() (n int) {
+func (m *Sync_HeadUpdate) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1830,7 +1830,7 @@ func (m *SyncHeadUpdate) Size() (n int) {
 	return n
 }
 
-func (m *SyncFull) Size() (n int) {
+func (m *Sync_Full) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1839,7 +1839,7 @@ func (m *SyncFull) Size() (n int) {
 	return n
 }
 
-func (m *SyncFullRequest) Size() (n int) {
+func (m *Sync_Full_Request) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1874,7 +1874,7 @@ func (m *SyncFullRequest) Size() (n int) {
 	return n
 }
 
-func (m *SyncFullResponse) Size() (n int) {
+func (m *Sync_Full_Response) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2267,7 +2267,7 @@ func (m *System) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Handshake == nil {
-				m.Handshake = &SystemHandshake{}
+				m.Handshake = &System_Handshake{}
 			}
 			if err := m.Handshake.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2303,7 +2303,7 @@ func (m *System) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Ping == nil {
-				m.Ping = &SystemPing{}
+				m.Ping = &System_Ping{}
 			}
 			if err := m.Ping.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2339,7 +2339,7 @@ func (m *System) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Ack == nil {
-				m.Ack = &SystemAck{}
+				m.Ack = &System_Ack{}
 			}
 			if err := m.Ack.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2366,7 +2366,7 @@ func (m *System) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SystemHandshake) Unmarshal(dAtA []byte) error {
+func (m *System_Handshake) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2448,7 +2448,7 @@ func (m *SystemHandshake) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SystemPing) Unmarshal(dAtA []byte) error {
+func (m *System_Ping) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2517,7 +2517,7 @@ func (m *SystemPing) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SystemAck) Unmarshal(dAtA []byte) error {
+func (m *System_Ack) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2576,7 +2576,7 @@ func (m *SystemAck) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Error == nil {
-				m.Error = &SystemError{}
+				m.Error = &System_Error{}
 			}
 			if err := m.Error.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2603,7 +2603,7 @@ func (m *SystemAck) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SystemError) Unmarshal(dAtA []byte) error {
+func (m *System_Error) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2646,7 +2646,7 @@ func (m *SystemError) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Code |= SystemErrorCode(b&0x7F) << shift
+				m.Code |= System_Error_Code(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -2795,7 +2795,7 @@ func (m *Sync) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Message == nil {
-				m.Message = &SyncContentValue{}
+				m.Message = &Sync_ContentValue{}
 			}
 			if err := m.Message.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2822,7 +2822,7 @@ func (m *Sync) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SyncContentValue) Unmarshal(dAtA []byte) error {
+func (m *Sync_ContentValue) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2880,11 +2880,11 @@ func (m *SyncContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &SyncHeadUpdate{}
+			v := &Sync_HeadUpdate{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &SyncContentValueValueOfHeadUpdate{v}
+			m.Value = &Sync_Content_Value_HeadUpdate{v}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -2915,11 +2915,11 @@ func (m *SyncContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &SyncFullRequest{}
+			v := &Sync_Full_Request{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &SyncContentValueValueOfFullSyncRequest{v}
+			m.Value = &Sync_Content_Value_FullSyncRequest{v}
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -2950,11 +2950,11 @@ func (m *SyncContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &SyncFullResponse{}
+			v := &Sync_Full_Response{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &SyncContentValueValueOfFullSyncResponse{v}
+			m.Value = &Sync_Content_Value_FullSyncResponse{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2977,7 +2977,7 @@ func (m *SyncContentValue) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SyncHeadUpdate) Unmarshal(dAtA []byte) error {
+func (m *Sync_HeadUpdate) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3193,7 +3193,7 @@ func (m *SyncHeadUpdate) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SyncFull) Unmarshal(dAtA []byte) error {
+func (m *Sync_Full) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3243,7 +3243,7 @@ func (m *SyncFull) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SyncFullRequest) Unmarshal(dAtA []byte) error {
+func (m *Sync_Full_Request) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3459,7 +3459,7 @@ func (m *SyncFullRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SyncFullResponse) Unmarshal(dAtA []byte) error {
+func (m *Sync_Full_Response) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {

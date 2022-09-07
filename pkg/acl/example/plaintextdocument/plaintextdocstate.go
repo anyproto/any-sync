@@ -20,7 +20,7 @@ func NewDocumentState(text string, id string) *DocumentState {
 }
 
 func BuildDocumentStateFromChange(change []byte, id string) (*DocumentState, error) {
-	var changesData testchangepb.PlainTextChangeData
+	var changesData testchangepb.PlainTextChange_Data
 	err := proto.Unmarshal(change, &changesData)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func BuildDocumentStateFromChange(change []byte, id string) (*DocumentState, err
 }
 
 func (p *DocumentState) ApplyChange(change []byte, id string) (*DocumentState, error) {
-	var changesData testchangepb.PlainTextChangeData
+	var changesData testchangepb.PlainTextChange_Data
 	err := proto.Unmarshal(change, &changesData)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (p *DocumentState) ApplyChange(change []byte, id string) (*DocumentState, e
 	return p, nil
 }
 
-func (p *DocumentState) applyChange(ch *testchangepb.PlainTextChangeContent) error {
+func (p *DocumentState) applyChange(ch *testchangepb.PlainTextChange_Content) error {
 	switch {
 	case ch.GetTextAppend() != nil:
 		text := ch.GetTextAppend().GetText()

@@ -16,7 +16,7 @@ type aclStateBuilder struct {
 }
 
 type decreasedPermissionsParameters struct {
-	users       []*aclpb.ACLChangeUserPermissionChange
+	users       []*aclpb.ACLChange_UserPermissionChange
 	startChange string
 }
 

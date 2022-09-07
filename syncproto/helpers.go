@@ -1,19 +1,19 @@
 package syncproto
 
-func WrapHeadUpdate(update *SyncHeadUpdate) *Sync {
-	return &Sync{Message: &SyncContentValue{
-		Value: &SyncContentValueValueOfHeadUpdate{HeadUpdate: update},
+func WrapHeadUpdate(update *Sync_HeadUpdate) *Sync {
+	return &Sync{Message: &Sync_ContentValue{
+		Value: &Sync_Content_Value_HeadUpdate{HeadUpdate: update},
 	}}
 }
 
-func WrapFullRequest(request *SyncFullRequest) *Sync {
-	return &Sync{Message: &SyncContentValue{
-		Value: &SyncContentValueValueOfFullSyncRequest{FullSyncRequest: request},
+func WrapFullRequest(request *Sync_Full_Request) *Sync {
+	return &Sync{Message: &Sync_ContentValue{
+		Value: &Sync_Content_Value_FullSyncRequest{FullSyncRequest: request},
 	}}
 }
 
-func WrapFullResponse(response *SyncFullResponse) *Sync {
-	return &Sync{Message: &SyncContentValue{
-		Value: &SyncContentValueValueOfFullSyncResponse{FullSyncResponse: response},
+func WrapFullResponse(response *Sync_Full_Response) *Sync {
+	return &Sync{Message: &Sync_ContentValue{
+		Value: &Sync_Content_Value_FullSyncResponse{FullSyncResponse: response},
 	}}
 }

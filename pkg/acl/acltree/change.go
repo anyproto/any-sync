@@ -10,7 +10,7 @@ import (
 
 type ChangeContent struct {
 	ChangesData proto.Marshaler
-	ACLData     *aclpb.ACLChangeACLData
+	ACLData     *aclpb.ACLChange_ACLData
 	Id          string // TODO: this is just for testing, because id should be created automatically from content
 }
 

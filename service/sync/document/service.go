@@ -74,8 +74,8 @@ func (s *service) UpdateDocument(ctx context.Context, id, text string) (err erro
 	err = s.treeCache.Do(ctx, id, func(tree acltree.ACLTree) error {
 		ch, err = tree.AddContent(ctx, func(builder acltree.ChangeBuilder) error {
 			builder.AddChangeContent(
-				&testchangepb.PlainTextChangeData{
-					Content: []*testchangepb.PlainTextChangeContent{
+				&testchangepb.PlainTextChange_Data{
+					Content: []*testchangepb.PlainTextChange_Content{
 						createAppendTextChangeContent(text),
 					},
 				})
@@ -100,7 +100,7 @@ func (s *service) UpdateDocument(ctx context.Context, id, text string) (err erro
 		zap.String("header", header.String())).
 		Debug("document updated in the database")
 
-	return s.messageService.SendToSpaceAsync("", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
+	return s.messageService.SendToSpaceAsync("", syncproto.WrapHeadUpdate(&syncproto.Sync_HeadUpdate{
 		Heads:        heads,
 		Changes:      []*aclpb.RawChange{ch},
 		TreeId:       id,
@@ -155,7 +155,7 @@ func (s *service) CreateDocument(ctx context.Context, text string) (id string, e
 	log.With(zap.String("id", id), zap.String("text", text)).
 		Debug("creating document")
 
-	err = s.messageService.SendToSpaceAsync("", syncproto.WrapHeadUpdate(&syncproto.SyncHeadUpdate{
+	err = s.messageService.SendToSpaceAsync("", syncproto.WrapHeadUpdate(&syncproto.Sync_HeadUpdate{
 		Heads:        heads,
 		Changes:      []*aclpb.RawChange{ch},
 		TreeId:       id,
@@ -169,18 +169,18 @@ func (s *service) CreateDocument(ctx context.Context, text string) (id string, e
 }
 
 func createInitialChangeContent(text string) proto.Marshaler {
-	return &testchangepb.PlainTextChangeData{
-		Content: []*testchangepb.PlainTextChangeContent{
+	return &testchangepb.PlainTextChange_Data{
+		Content: []*testchangepb.PlainTextChange_Content{
 			createAppendTextChangeContent(text),
 		},
-		Snapshot: &testchangepb.PlainTextChangeSnapshot{Text: text},
+		Snapshot: &testchangepb.PlainTextChange_Snapshot{Text: text},
 	}
 }
 
-func createAppendTextChangeContent(text string) *testchangepb.PlainTextChangeContent {
-	return &testchangepb.PlainTextChangeContent{
-		Value: &testchangepb.PlainTextChangeContentValueOfTextAppend{
-			TextAppend: &testchangepb.PlainTextChangeTextAppend{
+func createAppendTextChangeContent(text string) *testchangepb.PlainTextChange_Content {
+	return &testchangepb.PlainTextChange_Content{
+		Value: &testchangepb.PlainTextChange_Content_TextAppend{
+			TextAppend: &testchangepb.PlainTextChange_TextAppend{
 				Text: text,
 			},
 		},

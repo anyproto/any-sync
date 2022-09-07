@@ -14,7 +14,7 @@ import (
 type MarshalledChange = []byte
 
 type ACLChangeBuilder interface {
-	UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions aclpb.ACLChangeUserPermissions) error
+	UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions aclpb.ACLChange_UserPermissions) error
 	AddId(id string)      // TODO: this is only for testing
 	SetMakeSnapshot(bool) // TODO: who should decide this? probably ACLTree so we can delete it
 }
@@ -29,7 +29,7 @@ type changeBuilder struct {
 	tree     *Tree
 	acc      *account.AccountData
 
-	aclData       *aclpb.ACLChangeACLData
+	aclData       *aclpb.ACLChange_ACLData
 	changeContent proto.Marshaler
 	id            string
 	makeSnapshot  bool
@@ -46,7 +46,7 @@ func (c *changeBuilder) Init(state *ACLState, tree *Tree, acc *account.AccountDa
 	c.tree = tree
 	c.acc = acc
 
-	c.aclData = &aclpb.ACLChangeACLData{}
+	c.aclData = &aclpb.ACLChange_ACLData{}
 	// setting read key for further encryption etc
 	if state.currentReadKeyHash == 0 {
 		c.readKey, _ = symmetric.NewRandom()
@@ -68,7 +68,7 @@ func (c *changeBuilder) SetMakeSnapshot(b bool) {
 	c.makeSnapshot = b
 }
 
-func (c *changeBuilder) UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions aclpb.ACLChangeUserPermissions) error {
+func (c *changeBuilder) UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions aclpb.ACLChange_UserPermissions) error {
 	var allKeys []*symmetric.Key
 	if c.aclState.currentReadKeyHash != 0 {
 		for _, key := range c.aclState.userReadKeys {
@@ -91,9 +91,9 @@ func (c *changeBuilder) UserAdd(identity string, encryptionKey encryptionkey.Pub
 	if err != nil {
 		return err
 	}
-	ch := &aclpb.ACLChangeACLContentValue{
-		Value: &aclpb.ACLChangeACLContentValueValueOfUserAdd{
-			UserAdd: &aclpb.ACLChangeUserAdd{
+	ch := &aclpb.ACLChange_ACLContentValue{
+		Value: &aclpb.ACLChange_ACLContent_Value_UserAdd{
+			UserAdd: &aclpb.ACLChange_UserAdd{
 				Identity:          identity,
 				EncryptionKey:     rawKey,
 				EncryptedReadKeys: encryptedKeys,

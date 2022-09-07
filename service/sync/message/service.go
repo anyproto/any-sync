@@ -56,7 +56,7 @@ func (s *service) Close(ctx context.Context) (err error) {
 func (s *service) HandleMessage(ctx context.Context, msg *pool.Message) (err error) {
 	defer func() {
 		if err != nil {
-			msg.AckError(syncproto.SystemError_UNKNOWN, err.Error())
+			msg.AckError(syncproto.System_Error_UNKNOWN, err.Error())
 		} else {
 			msg.Ack()
 		}

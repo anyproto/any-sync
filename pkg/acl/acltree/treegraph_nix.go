@@ -60,7 +60,7 @@ func (t *Tree) Graph() (data string, err error) {
 		if c.Content.AclData != nil {
 			for _, chc := range c.Content.AclData.AclContent {
 				tp := fmt.Sprintf("%T", chc.Value)
-				tp = strings.Replace(tp, "ACLChangeACLContentValueValueOf", "", 1)
+				tp = strings.Replace(tp, "ACLChange_ACLContentValueValueOf", "", 1)
 				res := ""
 				for _, ts := range tp {
 					if unicode.IsUpper(ts) {
@@ -74,7 +74,7 @@ func (t *Tree) Graph() (data string, err error) {
 			// TODO: add some parser to provide custom unmarshalling for the document change
 			//for _, chc := range c.DecryptedDocumentChange.Content {
 			//	tp := fmt.Sprintf("%T", chc.Value)
-			//	tp = strings.Replace(tp, "ChangeContentValueOf", "", 1)
+			//	tp = strings.Replace(tp, "ChangeContent_Value_", "", 1)
 			//	res := ""
 			//	for _, ts := range tp {
 			//		if unicode.IsUpper(ts) {

@@ -34,8 +34,8 @@ func (p *plainTextDocument) Text() string {
 func (p *plainTextDocument) AddText(ctx context.Context, text string) error {
 	_, err := p.aclTree.AddContent(ctx, func(builder acltree.ChangeBuilder) error {
 		builder.AddChangeContent(
-			&testchangepb.PlainTextChangeData{
-				Content: []*testchangepb.PlainTextChangeContent{
+			&testchangepb.PlainTextChange_Data{
+				Content: []*testchangepb.PlainTextChange_Content{
 					createAppendTextChangeContent(text),
 				},
 			})
@@ -150,18 +150,18 @@ func NewPlainTextDocument(
 }
 
 func createInitialChangeContent(text string) proto.Marshaler {
-	return &testchangepb.PlainTextChangeData{
-		Content: []*testchangepb.PlainTextChangeContent{
+	return &testchangepb.PlainTextChange_Data{
+		Content: []*testchangepb.PlainTextChange_Content{
 			createAppendTextChangeContent(text),
 		},
-		Snapshot: &testchangepb.PlainTextChangeSnapshot{Text: text},
+		Snapshot: &testchangepb.PlainTextChange_Snapshot{Text: text},
 	}
 }
 
-func createAppendTextChangeContent(text string) *testchangepb.PlainTextChangeContent {
-	return &testchangepb.PlainTextChangeContent{
-		Value: &testchangepb.PlainTextChangeContentValueOfTextAppend{
-			TextAppend: &testchangepb.PlainTextChangeTextAppend{
+func createAppendTextChangeContent(text string) *testchangepb.PlainTextChange_Content {
+	return &testchangepb.PlainTextChange_Content{
+		Value: &testchangepb.PlainTextChange_Content_TextAppend{
+			TextAppend: &testchangepb.PlainTextChange_TextAppend{
 				Text: text,
 			},
 		},

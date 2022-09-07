@@ -48,7 +48,7 @@ func (m *Message) ReplyType(tp syncproto.MessageType, data proto.Marshaler) (err
 
 func (m *Message) Ack() (err error) {
 	ack := &syncproto.System{
-		Ack: &syncproto.SystemAck{},
+		Ack: &syncproto.System_Ack{},
 	}
 	data, err := ack.Marshal()
 	if err != nil {
@@ -78,10 +78,10 @@ func (m *Message) Ack() (err error) {
 	return
 }
 
-func (m *Message) AckError(code syncproto.SystemErrorCode, description string) (err error) {
+func (m *Message) AckError(code syncproto.System_Error_Code, description string) (err error) {
 	ack := &syncproto.System{
-		Ack: &syncproto.SystemAck{
-			Error: &syncproto.SystemError{
+		Ack: &syncproto.System_Ack{
+			Error: &syncproto.System_Error{
 				Code:        code,
 				Description: description,
 			},

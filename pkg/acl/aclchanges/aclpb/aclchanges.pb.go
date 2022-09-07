@@ -22,34 +22,34 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type ACLChangeUserPermissions int32
+type ACLChange_UserPermissions int32
 
 const (
-	ACLChange_Admin   ACLChangeUserPermissions = 0
-	ACLChange_Writer  ACLChangeUserPermissions = 1
-	ACLChange_Reader  ACLChangeUserPermissions = 2
-	ACLChange_Removed ACLChangeUserPermissions = 3
+	ACLChange_Admin   ACLChange_UserPermissions = 0
+	ACLChange_Writer  ACLChange_UserPermissions = 1
+	ACLChange_Reader  ACLChange_UserPermissions = 2
+	ACLChange_Removed ACLChange_UserPermissions = 3
 )
 
-var ACLChangeUserPermissions_name = map[int32]string{
+var ACLChange_UserPermissions_name = map[int32]string{
 	0: "Admin",
 	1: "Writer",
 	2: "Reader",
 	3: "Removed",
 }
 
-var ACLChangeUserPermissions_value = map[string]int32{
+var ACLChange_UserPermissions_value = map[string]int32{
 	"Admin":   0,
 	"Writer":  1,
 	"Reader":  2,
 	"Removed": 3,
 }
 
-func (x ACLChangeUserPermissions) String() string {
-	return proto.EnumName(ACLChangeUserPermissions_name, int32(x))
+func (x ACLChange_UserPermissions) String() string {
+	return proto.EnumName(ACLChange_UserPermissions_name, int32(x))
 }
 
-func (ACLChangeUserPermissions) EnumDescriptor() ([]byte, []int) {
+func (ACLChange_UserPermissions) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1, 0}
 }
 
@@ -115,10 +115,10 @@ func (m *RawChange) GetId() string {
 
 // the element of change tree used to store and internal apply smartBlock history
 type ACLChange struct {
-	TreeHeadIds    []string          `protobuf:"bytes,1,rep,name=treeHeadIds,proto3" json:"treeHeadIds,omitempty"`
-	AclHeadIds     []string          `protobuf:"bytes,2,rep,name=aclHeadIds,proto3" json:"aclHeadIds,omitempty"`
-	SnapshotBaseId string            `protobuf:"bytes,3,opt,name=snapshotBaseId,proto3" json:"snapshotBaseId,omitempty"`
-	AclData        *ACLChangeACLData `protobuf:"bytes,4,opt,name=aclData,proto3" json:"aclData,omitempty"`
+	TreeHeadIds    []string           `protobuf:"bytes,1,rep,name=treeHeadIds,proto3" json:"treeHeadIds,omitempty"`
+	AclHeadIds     []string           `protobuf:"bytes,2,rep,name=aclHeadIds,proto3" json:"aclHeadIds,omitempty"`
+	SnapshotBaseId string             `protobuf:"bytes,3,opt,name=snapshotBaseId,proto3" json:"snapshotBaseId,omitempty"`
+	AclData        *ACLChange_ACLData `protobuf:"bytes,4,opt,name=aclData,proto3" json:"aclData,omitempty"`
 	// the data is encoded with read key and should be read in ChangesData format
 	ChangesData        []byte `protobuf:"bytes,5,opt,name=changesData,proto3" json:"changesData,omitempty"`
 	CurrentReadKeyHash uint64 `protobuf:"varint,6,opt,name=currentReadKeyHash,proto3" json:"currentReadKeyHash,omitempty"`
@@ -180,7 +180,7 @@ func (m *ACLChange) GetSnapshotBaseId() string {
 	return ""
 }
 
-func (m *ACLChange) GetAclData() *ACLChangeACLData {
+func (m *ACLChange) GetAclData() *ACLChange_ACLData {
 	if m != nil {
 		return m.AclData
 	}
@@ -215,29 +215,30 @@ func (m *ACLChange) GetIdentity() string {
 	return ""
 }
 
-type ACLChangeACLContentValue struct {
+type ACLChange_ACLContentValue struct {
 	// Types that are valid to be assigned to Value:
-	//	*ACLChangeACLContentValueValueOfUserAdd
-	//	*ACLChangeACLContentValueValueOfUserRemove
-	//	*ACLChangeACLContentValueValueOfUserPermissionChange
-	//	*ACLChangeACLContentValueValueOfUserInvite
-	//	*ACLChangeACLContentValueValueOfUserJoin
-	//	*ACLChangeACLContentValueValueOfUserConfirm
-	Value IsACLChangeACLContentValueValue `protobuf_oneof:"value"`
+	//
+	//	*ACLChange_ACLContent_Value_UserAdd
+	//	*ACLChange_ACLContent_Value_UserRemove
+	//	*ACLChange_ACLContent_Value_UserPermissionChange
+	//	*ACLChange_ACLContent_Value_UserInvite
+	//	*ACLChange_ACLContent_Value_UserJoin
+	//	*ACLChange_ACLContent_Value_UserConfirm
+	Value isACLChange_ACLContent_Value_Value `protobuf_oneof:"value"`
 }
 
-func (m *ACLChangeACLContentValue) Reset()         { *m = ACLChangeACLContentValue{} }
-func (m *ACLChangeACLContentValue) String() string { return proto.CompactTextString(m) }
-func (*ACLChangeACLContentValue) ProtoMessage()    {}
-func (*ACLChangeACLContentValue) Descriptor() ([]byte, []int) {
+func (m *ACLChange_ACLContentValue) Reset()         { *m = ACLChange_ACLContentValue{} }
+func (m *ACLChange_ACLContentValue) String() string { return proto.CompactTextString(m) }
+func (*ACLChange_ACLContentValue) ProtoMessage()    {}
+func (*ACLChange_ACLContentValue) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1, 0}
 }
-func (m *ACLChangeACLContentValue) XXX_Unmarshal(b []byte) error {
+func (m *ACLChange_ACLContentValue) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChangeACLContentValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLChange_ACLContentValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChangeACLContentValue.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLChange_ACLContentValue.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -247,128 +248,128 @@ func (m *ACLChangeACLContentValue) XXX_Marshal(b []byte, deterministic bool) ([]
 		return b[:n], nil
 	}
 }
-func (m *ACLChangeACLContentValue) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChangeACLContentValue.Merge(m, src)
+func (m *ACLChange_ACLContentValue) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLChange_ACLContentValue.Merge(m, src)
 }
-func (m *ACLChangeACLContentValue) XXX_Size() int {
+func (m *ACLChange_ACLContentValue) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChangeACLContentValue) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChangeACLContentValue.DiscardUnknown(m)
+func (m *ACLChange_ACLContentValue) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLChange_ACLContentValue.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChangeACLContentValue proto.InternalMessageInfo
+var xxx_messageInfo_ACLChange_ACLContentValue proto.InternalMessageInfo
 
-type IsACLChangeACLContentValueValue interface {
-	IsACLChangeACLContentValueValue()
+type isACLChange_ACLContent_Value_Value interface {
+	isACLChange_ACLContent_Value_Value()
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
 
-type ACLChangeACLContentValueValueOfUserAdd struct {
-	UserAdd *ACLChangeUserAdd `protobuf:"bytes,1,opt,name=userAdd,proto3,oneof" json:"userAdd,omitempty"`
+type ACLChange_ACLContent_Value_UserAdd struct {
+	UserAdd *ACLChange_UserAdd `protobuf:"bytes,1,opt,name=userAdd,proto3,oneof" json:"userAdd,omitempty"`
 }
-type ACLChangeACLContentValueValueOfUserRemove struct {
-	UserRemove *ACLChangeUserRemove `protobuf:"bytes,2,opt,name=userRemove,proto3,oneof" json:"userRemove,omitempty"`
+type ACLChange_ACLContent_Value_UserRemove struct {
+	UserRemove *ACLChange_UserRemove `protobuf:"bytes,2,opt,name=userRemove,proto3,oneof" json:"userRemove,omitempty"`
 }
-type ACLChangeACLContentValueValueOfUserPermissionChange struct {
-	UserPermissionChange *ACLChangeUserPermissionChange `protobuf:"bytes,3,opt,name=userPermissionChange,proto3,oneof" json:"userPermissionChange,omitempty"`
+type ACLChange_ACLContent_Value_UserPermissionChange struct {
+	UserPermissionChange *ACLChange_UserPermissionChange `protobuf:"bytes,3,opt,name=userPermissionChange,proto3,oneof" json:"userPermissionChange,omitempty"`
 }
-type ACLChangeACLContentValueValueOfUserInvite struct {
-	UserInvite *ACLChangeUserInvite `protobuf:"bytes,4,opt,name=userInvite,proto3,oneof" json:"userInvite,omitempty"`
+type ACLChange_ACLContent_Value_UserInvite struct {
+	UserInvite *ACLChange_UserInvite `protobuf:"bytes,4,opt,name=userInvite,proto3,oneof" json:"userInvite,omitempty"`
 }
-type ACLChangeACLContentValueValueOfUserJoin struct {
-	UserJoin *ACLChangeUserJoin `protobuf:"bytes,5,opt,name=userJoin,proto3,oneof" json:"userJoin,omitempty"`
+type ACLChange_ACLContent_Value_UserJoin struct {
+	UserJoin *ACLChange_UserJoin `protobuf:"bytes,5,opt,name=userJoin,proto3,oneof" json:"userJoin,omitempty"`
 }
-type ACLChangeACLContentValueValueOfUserConfirm struct {
-	UserConfirm *ACLChangeUserConfirm `protobuf:"bytes,6,opt,name=userConfirm,proto3,oneof" json:"userConfirm,omitempty"`
+type ACLChange_ACLContent_Value_UserConfirm struct {
+	UserConfirm *ACLChange_UserConfirm `protobuf:"bytes,6,opt,name=userConfirm,proto3,oneof" json:"userConfirm,omitempty"`
 }
 
-func (*ACLChangeACLContentValueValueOfUserAdd) IsACLChangeACLContentValueValue()              {}
-func (*ACLChangeACLContentValueValueOfUserRemove) IsACLChangeACLContentValueValue()           {}
-func (*ACLChangeACLContentValueValueOfUserPermissionChange) IsACLChangeACLContentValueValue() {}
-func (*ACLChangeACLContentValueValueOfUserInvite) IsACLChangeACLContentValueValue()           {}
-func (*ACLChangeACLContentValueValueOfUserJoin) IsACLChangeACLContentValueValue()             {}
-func (*ACLChangeACLContentValueValueOfUserConfirm) IsACLChangeACLContentValueValue()          {}
+func (*ACLChange_ACLContent_Value_UserAdd) isACLChange_ACLContent_Value_Value()              {}
+func (*ACLChange_ACLContent_Value_UserRemove) isACLChange_ACLContent_Value_Value()           {}
+func (*ACLChange_ACLContent_Value_UserPermissionChange) isACLChange_ACLContent_Value_Value() {}
+func (*ACLChange_ACLContent_Value_UserInvite) isACLChange_ACLContent_Value_Value()           {}
+func (*ACLChange_ACLContent_Value_UserJoin) isACLChange_ACLContent_Value_Value()             {}
+func (*ACLChange_ACLContent_Value_UserConfirm) isACLChange_ACLContent_Value_Value()          {}
 
-func (m *ACLChangeACLContentValue) GetValue() IsACLChangeACLContentValueValue {
+func (m *ACLChange_ACLContentValue) GetValue() isACLChange_ACLContent_Value_Value {
 	if m != nil {
 		return m.Value
 	}
 	return nil
 }
 
-func (m *ACLChangeACLContentValue) GetUserAdd() *ACLChangeUserAdd {
-	if x, ok := m.GetValue().(*ACLChangeACLContentValueValueOfUserAdd); ok {
+func (m *ACLChange_ACLContentValue) GetUserAdd() *ACLChange_UserAdd {
+	if x, ok := m.GetValue().(*ACLChange_ACLContent_Value_UserAdd); ok {
 		return x.UserAdd
 	}
 	return nil
 }
 
-func (m *ACLChangeACLContentValue) GetUserRemove() *ACLChangeUserRemove {
-	if x, ok := m.GetValue().(*ACLChangeACLContentValueValueOfUserRemove); ok {
+func (m *ACLChange_ACLContentValue) GetUserRemove() *ACLChange_UserRemove {
+	if x, ok := m.GetValue().(*ACLChange_ACLContent_Value_UserRemove); ok {
 		return x.UserRemove
 	}
 	return nil
 }
 
-func (m *ACLChangeACLContentValue) GetUserPermissionChange() *ACLChangeUserPermissionChange {
-	if x, ok := m.GetValue().(*ACLChangeACLContentValueValueOfUserPermissionChange); ok {
+func (m *ACLChange_ACLContentValue) GetUserPermissionChange() *ACLChange_UserPermissionChange {
+	if x, ok := m.GetValue().(*ACLChange_ACLContent_Value_UserPermissionChange); ok {
 		return x.UserPermissionChange
 	}
 	return nil
 }
 
-func (m *ACLChangeACLContentValue) GetUserInvite() *ACLChangeUserInvite {
-	if x, ok := m.GetValue().(*ACLChangeACLContentValueValueOfUserInvite); ok {
+func (m *ACLChange_ACLContentValue) GetUserInvite() *ACLChange_UserInvite {
+	if x, ok := m.GetValue().(*ACLChange_ACLContent_Value_UserInvite); ok {
 		return x.UserInvite
 	}
 	return nil
 }
 
-func (m *ACLChangeACLContentValue) GetUserJoin() *ACLChangeUserJoin {
-	if x, ok := m.GetValue().(*ACLChangeACLContentValueValueOfUserJoin); ok {
+func (m *ACLChange_ACLContentValue) GetUserJoin() *ACLChange_UserJoin {
+	if x, ok := m.GetValue().(*ACLChange_ACLContent_Value_UserJoin); ok {
 		return x.UserJoin
 	}
 	return nil
 }
 
-func (m *ACLChangeACLContentValue) GetUserConfirm() *ACLChangeUserConfirm {
-	if x, ok := m.GetValue().(*ACLChangeACLContentValueValueOfUserConfirm); ok {
+func (m *ACLChange_ACLContentValue) GetUserConfirm() *ACLChange_UserConfirm {
+	if x, ok := m.GetValue().(*ACLChange_ACLContent_Value_UserConfirm); ok {
 		return x.UserConfirm
 	}
 	return nil
 }
 
 // XXX_OneofWrappers is for the internal use of the proto package.
-func (*ACLChangeACLContentValue) XXX_OneofWrappers() []interface{} {
+func (*ACLChange_ACLContentValue) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
-		(*ACLChangeACLContentValueValueOfUserAdd)(nil),
-		(*ACLChangeACLContentValueValueOfUserRemove)(nil),
-		(*ACLChangeACLContentValueValueOfUserPermissionChange)(nil),
-		(*ACLChangeACLContentValueValueOfUserInvite)(nil),
-		(*ACLChangeACLContentValueValueOfUserJoin)(nil),
-		(*ACLChangeACLContentValueValueOfUserConfirm)(nil),
+		(*ACLChange_ACLContent_Value_UserAdd)(nil),
+		(*ACLChange_ACLContent_Value_UserRemove)(nil),
+		(*ACLChange_ACLContent_Value_UserPermissionChange)(nil),
+		(*ACLChange_ACLContent_Value_UserInvite)(nil),
+		(*ACLChange_ACLContent_Value_UserJoin)(nil),
+		(*ACLChange_ACLContent_Value_UserConfirm)(nil),
 	}
 }
 
-type ACLChangeACLData struct {
-	AclSnapshot *ACLChangeACLSnapshot       `protobuf:"bytes,1,opt,name=aclSnapshot,proto3" json:"aclSnapshot,omitempty"`
-	AclContent  []*ACLChangeACLContentValue `protobuf:"bytes,2,rep,name=aclContent,proto3" json:"aclContent,omitempty"`
+type ACLChange_ACLData struct {
+	AclSnapshot *ACLChange_ACLSnapshot       `protobuf:"bytes,1,opt,name=aclSnapshot,proto3" json:"aclSnapshot,omitempty"`
+	AclContent  []*ACLChange_ACLContentValue `protobuf:"bytes,2,rep,name=aclContent,proto3" json:"aclContent,omitempty"`
 }
 
-func (m *ACLChangeACLData) Reset()         { *m = ACLChangeACLData{} }
-func (m *ACLChangeACLData) String() string { return proto.CompactTextString(m) }
-func (*ACLChangeACLData) ProtoMessage()    {}
-func (*ACLChangeACLData) Descriptor() ([]byte, []int) {
+func (m *ACLChange_ACLData) Reset()         { *m = ACLChange_ACLData{} }
+func (m *ACLChange_ACLData) String() string { return proto.CompactTextString(m) }
+func (*ACLChange_ACLData) ProtoMessage()    {}
+func (*ACLChange_ACLData) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1, 1}
 }
-func (m *ACLChangeACLData) XXX_Unmarshal(b []byte) error {
+func (m *ACLChange_ACLData) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChangeACLData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLChange_ACLData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChangeACLData.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLChange_ACLData.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -378,49 +379,49 @@ func (m *ACLChangeACLData) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (m *ACLChangeACLData) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChangeACLData.Merge(m, src)
+func (m *ACLChange_ACLData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLChange_ACLData.Merge(m, src)
 }
-func (m *ACLChangeACLData) XXX_Size() int {
+func (m *ACLChange_ACLData) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChangeACLData) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChangeACLData.DiscardUnknown(m)
+func (m *ACLChange_ACLData) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLChange_ACLData.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChangeACLData proto.InternalMessageInfo
+var xxx_messageInfo_ACLChange_ACLData proto.InternalMessageInfo
 
-func (m *ACLChangeACLData) GetAclSnapshot() *ACLChangeACLSnapshot {
+func (m *ACLChange_ACLData) GetAclSnapshot() *ACLChange_ACLSnapshot {
 	if m != nil {
 		return m.AclSnapshot
 	}
 	return nil
 }
 
-func (m *ACLChangeACLData) GetAclContent() []*ACLChangeACLContentValue {
+func (m *ACLChange_ACLData) GetAclContent() []*ACLChange_ACLContentValue {
 	if m != nil {
 		return m.AclContent
 	}
 	return nil
 }
 
-type ACLChangeACLSnapshot struct {
+type ACLChange_ACLSnapshot struct {
 	// We don't need ACLState as a separate message now, because we simplified the snapshot model
-	AclState *ACLChangeACLState `protobuf:"bytes,1,opt,name=aclState,proto3" json:"aclState,omitempty"`
+	AclState *ACLChange_ACLState `protobuf:"bytes,1,opt,name=aclState,proto3" json:"aclState,omitempty"`
 }
 
-func (m *ACLChangeACLSnapshot) Reset()         { *m = ACLChangeACLSnapshot{} }
-func (m *ACLChangeACLSnapshot) String() string { return proto.CompactTextString(m) }
-func (*ACLChangeACLSnapshot) ProtoMessage()    {}
-func (*ACLChangeACLSnapshot) Descriptor() ([]byte, []int) {
+func (m *ACLChange_ACLSnapshot) Reset()         { *m = ACLChange_ACLSnapshot{} }
+func (m *ACLChange_ACLSnapshot) String() string { return proto.CompactTextString(m) }
+func (*ACLChange_ACLSnapshot) ProtoMessage()    {}
+func (*ACLChange_ACLSnapshot) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1, 2}
 }
-func (m *ACLChangeACLSnapshot) XXX_Unmarshal(b []byte) error {
+func (m *ACLChange_ACLSnapshot) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChangeACLSnapshot) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLChange_ACLSnapshot) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChangeACLSnapshot.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLChange_ACLSnapshot.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -430,43 +431,43 @@ func (m *ACLChangeACLSnapshot) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
-func (m *ACLChangeACLSnapshot) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChangeACLSnapshot.Merge(m, src)
+func (m *ACLChange_ACLSnapshot) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLChange_ACLSnapshot.Merge(m, src)
 }
-func (m *ACLChangeACLSnapshot) XXX_Size() int {
+func (m *ACLChange_ACLSnapshot) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChangeACLSnapshot) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChangeACLSnapshot.DiscardUnknown(m)
+func (m *ACLChange_ACLSnapshot) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLChange_ACLSnapshot.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChangeACLSnapshot proto.InternalMessageInfo
+var xxx_messageInfo_ACLChange_ACLSnapshot proto.InternalMessageInfo
 
-func (m *ACLChangeACLSnapshot) GetAclState() *ACLChangeACLState {
+func (m *ACLChange_ACLSnapshot) GetAclState() *ACLChange_ACLState {
 	if m != nil {
 		return m.AclState
 	}
 	return nil
 }
 
-type ACLChangeACLState struct {
-	ReadKeyHashes []uint64                        `protobuf:"varint,1,rep,packed,name=readKeyHashes,proto3" json:"readKeyHashes,omitempty"`
-	UserStates    []*ACLChangeUserState           `protobuf:"bytes,2,rep,name=userStates,proto3" json:"userStates,omitempty"`
-	Invites       map[string]*ACLChangeUserInvite `protobuf:"bytes,3,rep,name=invites,proto3" json:"invites,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+type ACLChange_ACLState struct {
+	ReadKeyHashes []uint64                         `protobuf:"varint,1,rep,packed,name=readKeyHashes,proto3" json:"readKeyHashes,omitempty"`
+	UserStates    []*ACLChange_UserState           `protobuf:"bytes,2,rep,name=userStates,proto3" json:"userStates,omitempty"`
+	Invites       map[string]*ACLChange_UserInvite `protobuf:"bytes,3,rep,name=invites,proto3" json:"invites,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
-func (m *ACLChangeACLState) Reset()         { *m = ACLChangeACLState{} }
-func (m *ACLChangeACLState) String() string { return proto.CompactTextString(m) }
-func (*ACLChangeACLState) ProtoMessage()    {}
-func (*ACLChangeACLState) Descriptor() ([]byte, []int) {
+func (m *ACLChange_ACLState) Reset()         { *m = ACLChange_ACLState{} }
+func (m *ACLChange_ACLState) String() string { return proto.CompactTextString(m) }
+func (*ACLChange_ACLState) ProtoMessage()    {}
+func (*ACLChange_ACLState) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1, 3}
 }
-func (m *ACLChangeACLState) XXX_Unmarshal(b []byte) error {
+func (m *ACLChange_ACLState) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChangeACLState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLChange_ACLState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChangeACLState.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLChange_ACLState.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -476,59 +477,59 @@ func (m *ACLChangeACLState) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
-func (m *ACLChangeACLState) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChangeACLState.Merge(m, src)
+func (m *ACLChange_ACLState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLChange_ACLState.Merge(m, src)
 }
-func (m *ACLChangeACLState) XXX_Size() int {
+func (m *ACLChange_ACLState) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChangeACLState) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChangeACLState.DiscardUnknown(m)
+func (m *ACLChange_ACLState) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLChange_ACLState.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChangeACLState proto.InternalMessageInfo
+var xxx_messageInfo_ACLChange_ACLState proto.InternalMessageInfo
 
-func (m *ACLChangeACLState) GetReadKeyHashes() []uint64 {
+func (m *ACLChange_ACLState) GetReadKeyHashes() []uint64 {
 	if m != nil {
 		return m.ReadKeyHashes
 	}
 	return nil
 }
 
-func (m *ACLChangeACLState) GetUserStates() []*ACLChangeUserState {
+func (m *ACLChange_ACLState) GetUserStates() []*ACLChange_UserState {
 	if m != nil {
 		return m.UserStates
 	}
 	return nil
 }
 
-func (m *ACLChangeACLState) GetInvites() map[string]*ACLChangeUserInvite {
+func (m *ACLChange_ACLState) GetInvites() map[string]*ACLChange_UserInvite {
 	if m != nil {
 		return m.Invites
 	}
 	return nil
 }
 
-type ACLChangeUserState struct {
-	Identity          string                   `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	EncryptionKey     []byte                   `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
-	EncryptedReadKeys [][]byte                 `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
-	Permissions       ACLChangeUserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLChangeUserPermissions" json:"permissions,omitempty"`
-	IsConfirmed       bool                     `protobuf:"varint,5,opt,name=IsConfirmed,proto3" json:"IsConfirmed,omitempty"`
+type ACLChange_UserState struct {
+	Identity          string                    `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	EncryptionKey     []byte                    `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
+	EncryptedReadKeys [][]byte                  `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
+	Permissions       ACLChange_UserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLChange_UserPermissions" json:"permissions,omitempty"`
+	IsConfirmed       bool                      `protobuf:"varint,5,opt,name=IsConfirmed,proto3" json:"IsConfirmed,omitempty"`
 }
 
-func (m *ACLChangeUserState) Reset()         { *m = ACLChangeUserState{} }
-func (m *ACLChangeUserState) String() string { return proto.CompactTextString(m) }
-func (*ACLChangeUserState) ProtoMessage()    {}
-func (*ACLChangeUserState) Descriptor() ([]byte, []int) {
+func (m *ACLChange_UserState) Reset()         { *m = ACLChange_UserState{} }
+func (m *ACLChange_UserState) String() string { return proto.CompactTextString(m) }
+func (*ACLChange_UserState) ProtoMessage()    {}
+func (*ACLChange_UserState) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1, 4}
 }
-func (m *ACLChangeUserState) XXX_Unmarshal(b []byte) error {
+func (m *ACLChange_UserState) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChangeUserState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLChange_UserState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChangeUserState.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLChange_UserState.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -538,47 +539,47 @@ func (m *ACLChangeUserState) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return b[:n], nil
 	}
 }
-func (m *ACLChangeUserState) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChangeUserState.Merge(m, src)
+func (m *ACLChange_UserState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLChange_UserState.Merge(m, src)
 }
-func (m *ACLChangeUserState) XXX_Size() int {
+func (m *ACLChange_UserState) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChangeUserState) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChangeUserState.DiscardUnknown(m)
+func (m *ACLChange_UserState) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLChange_UserState.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChangeUserState proto.InternalMessageInfo
+var xxx_messageInfo_ACLChange_UserState proto.InternalMessageInfo
 
-func (m *ACLChangeUserState) GetIdentity() string {
+func (m *ACLChange_UserState) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
 	return ""
 }
 
-func (m *ACLChangeUserState) GetEncryptionKey() []byte {
+func (m *ACLChange_UserState) GetEncryptionKey() []byte {
 	if m != nil {
 		return m.EncryptionKey
 	}
 	return nil
 }
 
-func (m *ACLChangeUserState) GetEncryptedReadKeys() [][]byte {
+func (m *ACLChange_UserState) GetEncryptedReadKeys() [][]byte {
 	if m != nil {
 		return m.EncryptedReadKeys
 	}
 	return nil
 }
 
-func (m *ACLChangeUserState) GetPermissions() ACLChangeUserPermissions {
+func (m *ACLChange_UserState) GetPermissions() ACLChange_UserPermissions {
 	if m != nil {
 		return m.Permissions
 	}
 	return ACLChange_Admin
 }
 
-func (m *ACLChangeUserState) GetIsConfirmed() bool {
+func (m *ACLChange_UserState) GetIsConfirmed() bool {
 	if m != nil {
 		return m.IsConfirmed
 	}
@@ -586,25 +587,25 @@ func (m *ACLChangeUserState) GetIsConfirmed() bool {
 }
 
 // we already know identity and encryptionKey
-type ACLChangeUserAdd struct {
-	Identity          string                   `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	EncryptionKey     []byte                   `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
-	EncryptedReadKeys [][]byte                 `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
-	Permissions       ACLChangeUserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLChangeUserPermissions" json:"permissions,omitempty"`
+type ACLChange_UserAdd struct {
+	Identity          string                    `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	EncryptionKey     []byte                    `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
+	EncryptedReadKeys [][]byte                  `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
+	Permissions       ACLChange_UserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLChange_UserPermissions" json:"permissions,omitempty"`
 }
 
-func (m *ACLChangeUserAdd) Reset()         { *m = ACLChangeUserAdd{} }
-func (m *ACLChangeUserAdd) String() string { return proto.CompactTextString(m) }
-func (*ACLChangeUserAdd) ProtoMessage()    {}
-func (*ACLChangeUserAdd) Descriptor() ([]byte, []int) {
+func (m *ACLChange_UserAdd) Reset()         { *m = ACLChange_UserAdd{} }
+func (m *ACLChange_UserAdd) String() string { return proto.CompactTextString(m) }
+func (*ACLChange_UserAdd) ProtoMessage()    {}
+func (*ACLChange_UserAdd) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1, 5}
 }
-func (m *ACLChangeUserAdd) XXX_Unmarshal(b []byte) error {
+func (m *ACLChange_UserAdd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChangeUserAdd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLChange_UserAdd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChangeUserAdd.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLChange_UserAdd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -614,40 +615,40 @@ func (m *ACLChangeUserAdd) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (m *ACLChangeUserAdd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChangeUserAdd.Merge(m, src)
+func (m *ACLChange_UserAdd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLChange_UserAdd.Merge(m, src)
 }
-func (m *ACLChangeUserAdd) XXX_Size() int {
+func (m *ACLChange_UserAdd) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChangeUserAdd) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChangeUserAdd.DiscardUnknown(m)
+func (m *ACLChange_UserAdd) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLChange_UserAdd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChangeUserAdd proto.InternalMessageInfo
+var xxx_messageInfo_ACLChange_UserAdd proto.InternalMessageInfo
 
-func (m *ACLChangeUserAdd) GetIdentity() string {
+func (m *ACLChange_UserAdd) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
 	return ""
 }
 
-func (m *ACLChangeUserAdd) GetEncryptionKey() []byte {
+func (m *ACLChange_UserAdd) GetEncryptionKey() []byte {
 	if m != nil {
 		return m.EncryptionKey
 	}
 	return nil
 }
 
-func (m *ACLChangeUserAdd) GetEncryptedReadKeys() [][]byte {
+func (m *ACLChange_UserAdd) GetEncryptedReadKeys() [][]byte {
 	if m != nil {
 		return m.EncryptedReadKeys
 	}
 	return nil
 }
 
-func (m *ACLChangeUserAdd) GetPermissions() ACLChangeUserPermissions {
+func (m *ACLChange_UserAdd) GetPermissions() ACLChange_UserPermissions {
 	if m != nil {
 		return m.Permissions
 	}
@@ -655,23 +656,23 @@ func (m *ACLChangeUserAdd) GetPermissions() ACLChangeUserPermissions {
 }
 
 // TODO: this is not used as of now
-type ACLChangeUserConfirm struct {
+type ACLChange_UserConfirm struct {
 	Identity  string `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	UserAddId string `protobuf:"bytes,2,opt,name=userAddId,proto3" json:"userAddId,omitempty"`
 }
 
-func (m *ACLChangeUserConfirm) Reset()         { *m = ACLChangeUserConfirm{} }
-func (m *ACLChangeUserConfirm) String() string { return proto.CompactTextString(m) }
-func (*ACLChangeUserConfirm) ProtoMessage()    {}
-func (*ACLChangeUserConfirm) Descriptor() ([]byte, []int) {
+func (m *ACLChange_UserConfirm) Reset()         { *m = ACLChange_UserConfirm{} }
+func (m *ACLChange_UserConfirm) String() string { return proto.CompactTextString(m) }
+func (*ACLChange_UserConfirm) ProtoMessage()    {}
+func (*ACLChange_UserConfirm) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1, 6}
 }
-func (m *ACLChangeUserConfirm) XXX_Unmarshal(b []byte) error {
+func (m *ACLChange_UserConfirm) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChangeUserConfirm) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLChange_UserConfirm) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChangeUserConfirm.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLChange_UserConfirm.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -681,52 +682,52 @@ func (m *ACLChangeUserConfirm) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
-func (m *ACLChangeUserConfirm) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChangeUserConfirm.Merge(m, src)
+func (m *ACLChange_UserConfirm) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLChange_UserConfirm.Merge(m, src)
 }
-func (m *ACLChangeUserConfirm) XXX_Size() int {
+func (m *ACLChange_UserConfirm) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChangeUserConfirm) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChangeUserConfirm.DiscardUnknown(m)
+func (m *ACLChange_UserConfirm) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLChange_UserConfirm.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChangeUserConfirm proto.InternalMessageInfo
+var xxx_messageInfo_ACLChange_UserConfirm proto.InternalMessageInfo
 
-func (m *ACLChangeUserConfirm) GetIdentity() string {
+func (m *ACLChange_UserConfirm) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
 	return ""
 }
 
-func (m *ACLChangeUserConfirm) GetUserAddId() string {
+func (m *ACLChange_UserConfirm) GetUserAddId() string {
 	if m != nil {
 		return m.UserAddId
 	}
 	return ""
 }
 
-type ACLChangeUserInvite struct {
-	AcceptPublicKey   []byte                   `protobuf:"bytes,1,opt,name=acceptPublicKey,proto3" json:"acceptPublicKey,omitempty"`
-	EncryptPublicKey  []byte                   `protobuf:"bytes,2,opt,name=encryptPublicKey,proto3" json:"encryptPublicKey,omitempty"`
-	EncryptedReadKeys [][]byte                 `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
-	Permissions       ACLChangeUserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLChangeUserPermissions" json:"permissions,omitempty"`
-	InviteId          string                   `protobuf:"bytes,5,opt,name=InviteId,proto3" json:"InviteId,omitempty"`
+type ACLChange_UserInvite struct {
+	AcceptPublicKey   []byte                    `protobuf:"bytes,1,opt,name=acceptPublicKey,proto3" json:"acceptPublicKey,omitempty"`
+	EncryptPublicKey  []byte                    `protobuf:"bytes,2,opt,name=encryptPublicKey,proto3" json:"encryptPublicKey,omitempty"`
+	EncryptedReadKeys [][]byte                  `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
+	Permissions       ACLChange_UserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLChange_UserPermissions" json:"permissions,omitempty"`
+	InviteId          string                    `protobuf:"bytes,5,opt,name=InviteId,proto3" json:"InviteId,omitempty"`
 }
 
-func (m *ACLChangeUserInvite) Reset()         { *m = ACLChangeUserInvite{} }
-func (m *ACLChangeUserInvite) String() string { return proto.CompactTextString(m) }
-func (*ACLChangeUserInvite) ProtoMessage()    {}
-func (*ACLChangeUserInvite) Descriptor() ([]byte, []int) {
+func (m *ACLChange_UserInvite) Reset()         { *m = ACLChange_UserInvite{} }
+func (m *ACLChange_UserInvite) String() string { return proto.CompactTextString(m) }
+func (*ACLChange_UserInvite) ProtoMessage()    {}
+func (*ACLChange_UserInvite) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1, 7}
 }
-func (m *ACLChangeUserInvite) XXX_Unmarshal(b []byte) error {
+func (m *ACLChange_UserInvite) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChangeUserInvite) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLChange_UserInvite) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChangeUserInvite.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLChange_UserInvite.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -736,54 +737,54 @@ func (m *ACLChangeUserInvite) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return b[:n], nil
 	}
 }
-func (m *ACLChangeUserInvite) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChangeUserInvite.Merge(m, src)
+func (m *ACLChange_UserInvite) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLChange_UserInvite.Merge(m, src)
 }
-func (m *ACLChangeUserInvite) XXX_Size() int {
+func (m *ACLChange_UserInvite) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChangeUserInvite) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChangeUserInvite.DiscardUnknown(m)
+func (m *ACLChange_UserInvite) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLChange_UserInvite.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChangeUserInvite proto.InternalMessageInfo
+var xxx_messageInfo_ACLChange_UserInvite proto.InternalMessageInfo
 
-func (m *ACLChangeUserInvite) GetAcceptPublicKey() []byte {
+func (m *ACLChange_UserInvite) GetAcceptPublicKey() []byte {
 	if m != nil {
 		return m.AcceptPublicKey
 	}
 	return nil
 }
 
-func (m *ACLChangeUserInvite) GetEncryptPublicKey() []byte {
+func (m *ACLChange_UserInvite) GetEncryptPublicKey() []byte {
 	if m != nil {
 		return m.EncryptPublicKey
 	}
 	return nil
 }
 
-func (m *ACLChangeUserInvite) GetEncryptedReadKeys() [][]byte {
+func (m *ACLChange_UserInvite) GetEncryptedReadKeys() [][]byte {
 	if m != nil {
 		return m.EncryptedReadKeys
 	}
 	return nil
 }
 
-func (m *ACLChangeUserInvite) GetPermissions() ACLChangeUserPermissions {
+func (m *ACLChange_UserInvite) GetPermissions() ACLChange_UserPermissions {
 	if m != nil {
 		return m.Permissions
 	}
 	return ACLChange_Admin
 }
 
-func (m *ACLChangeUserInvite) GetInviteId() string {
+func (m *ACLChange_UserInvite) GetInviteId() string {
 	if m != nil {
 		return m.InviteId
 	}
 	return ""
 }
 
-type ACLChangeUserJoin struct {
+type ACLChange_UserJoin struct {
 	Identity          string   `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	EncryptionKey     []byte   `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
 	AcceptSignature   []byte   `protobuf:"bytes,3,opt,name=acceptSignature,proto3" json:"acceptSignature,omitempty"`
@@ -791,18 +792,18 @@ type ACLChangeUserJoin struct {
 	EncryptedReadKeys [][]byte `protobuf:"bytes,5,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
 }
 
-func (m *ACLChangeUserJoin) Reset()         { *m = ACLChangeUserJoin{} }
-func (m *ACLChangeUserJoin) String() string { return proto.CompactTextString(m) }
-func (*ACLChangeUserJoin) ProtoMessage()    {}
-func (*ACLChangeUserJoin) Descriptor() ([]byte, []int) {
+func (m *ACLChange_UserJoin) Reset()         { *m = ACLChange_UserJoin{} }
+func (m *ACLChange_UserJoin) String() string { return proto.CompactTextString(m) }
+func (*ACLChange_UserJoin) ProtoMessage()    {}
+func (*ACLChange_UserJoin) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1, 8}
 }
-func (m *ACLChangeUserJoin) XXX_Unmarshal(b []byte) error {
+func (m *ACLChange_UserJoin) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChangeUserJoin) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLChange_UserJoin) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChangeUserJoin.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLChange_UserJoin.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -812,70 +813,70 @@ func (m *ACLChangeUserJoin) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
-func (m *ACLChangeUserJoin) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChangeUserJoin.Merge(m, src)
+func (m *ACLChange_UserJoin) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLChange_UserJoin.Merge(m, src)
 }
-func (m *ACLChangeUserJoin) XXX_Size() int {
+func (m *ACLChange_UserJoin) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChangeUserJoin) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChangeUserJoin.DiscardUnknown(m)
+func (m *ACLChange_UserJoin) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLChange_UserJoin.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChangeUserJoin proto.InternalMessageInfo
+var xxx_messageInfo_ACLChange_UserJoin proto.InternalMessageInfo
 
-func (m *ACLChangeUserJoin) GetIdentity() string {
+func (m *ACLChange_UserJoin) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
 	return ""
 }
 
-func (m *ACLChangeUserJoin) GetEncryptionKey() []byte {
+func (m *ACLChange_UserJoin) GetEncryptionKey() []byte {
 	if m != nil {
 		return m.EncryptionKey
 	}
 	return nil
 }
 
-func (m *ACLChangeUserJoin) GetAcceptSignature() []byte {
+func (m *ACLChange_UserJoin) GetAcceptSignature() []byte {
 	if m != nil {
 		return m.AcceptSignature
 	}
 	return nil
 }
 
-func (m *ACLChangeUserJoin) GetUserInviteId() string {
+func (m *ACLChange_UserJoin) GetUserInviteId() string {
 	if m != nil {
 		return m.UserInviteId
 	}
 	return ""
 }
 
-func (m *ACLChangeUserJoin) GetEncryptedReadKeys() [][]byte {
+func (m *ACLChange_UserJoin) GetEncryptedReadKeys() [][]byte {
 	if m != nil {
 		return m.EncryptedReadKeys
 	}
 	return nil
 }
 
-type ACLChangeUserRemove struct {
-	Identity        string                     `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	ReadKeyReplaces []*ACLChangeReadKeyReplace `protobuf:"bytes,3,rep,name=readKeyReplaces,proto3" json:"readKeyReplaces,omitempty"`
+type ACLChange_UserRemove struct {
+	Identity        string                      `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	ReadKeyReplaces []*ACLChange_ReadKeyReplace `protobuf:"bytes,3,rep,name=readKeyReplaces,proto3" json:"readKeyReplaces,omitempty"`
 }
 
-func (m *ACLChangeUserRemove) Reset()         { *m = ACLChangeUserRemove{} }
-func (m *ACLChangeUserRemove) String() string { return proto.CompactTextString(m) }
-func (*ACLChangeUserRemove) ProtoMessage()    {}
-func (*ACLChangeUserRemove) Descriptor() ([]byte, []int) {
+func (m *ACLChange_UserRemove) Reset()         { *m = ACLChange_UserRemove{} }
+func (m *ACLChange_UserRemove) String() string { return proto.CompactTextString(m) }
+func (*ACLChange_UserRemove) ProtoMessage()    {}
+func (*ACLChange_UserRemove) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1, 9}
 }
-func (m *ACLChangeUserRemove) XXX_Unmarshal(b []byte) error {
+func (m *ACLChange_UserRemove) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChangeUserRemove) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLChange_UserRemove) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChangeUserRemove.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLChange_UserRemove.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -885,50 +886,50 @@ func (m *ACLChangeUserRemove) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return b[:n], nil
 	}
 }
-func (m *ACLChangeUserRemove) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChangeUserRemove.Merge(m, src)
+func (m *ACLChange_UserRemove) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLChange_UserRemove.Merge(m, src)
 }
-func (m *ACLChangeUserRemove) XXX_Size() int {
+func (m *ACLChange_UserRemove) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChangeUserRemove) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChangeUserRemove.DiscardUnknown(m)
+func (m *ACLChange_UserRemove) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLChange_UserRemove.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChangeUserRemove proto.InternalMessageInfo
+var xxx_messageInfo_ACLChange_UserRemove proto.InternalMessageInfo
 
-func (m *ACLChangeUserRemove) GetIdentity() string {
+func (m *ACLChange_UserRemove) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
 	return ""
 }
 
-func (m *ACLChangeUserRemove) GetReadKeyReplaces() []*ACLChangeReadKeyReplace {
+func (m *ACLChange_UserRemove) GetReadKeyReplaces() []*ACLChange_ReadKeyReplace {
 	if m != nil {
 		return m.ReadKeyReplaces
 	}
 	return nil
 }
 
-type ACLChangeReadKeyReplace struct {
+type ACLChange_ReadKeyReplace struct {
 	Identity         string `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	EncryptionKey    []byte `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
 	EncryptedReadKey []byte `protobuf:"bytes,3,opt,name=encryptedReadKey,proto3" json:"encryptedReadKey,omitempty"`
 }
 
-func (m *ACLChangeReadKeyReplace) Reset()         { *m = ACLChangeReadKeyReplace{} }
-func (m *ACLChangeReadKeyReplace) String() string { return proto.CompactTextString(m) }
-func (*ACLChangeReadKeyReplace) ProtoMessage()    {}
-func (*ACLChangeReadKeyReplace) Descriptor() ([]byte, []int) {
+func (m *ACLChange_ReadKeyReplace) Reset()         { *m = ACLChange_ReadKeyReplace{} }
+func (m *ACLChange_ReadKeyReplace) String() string { return proto.CompactTextString(m) }
+func (*ACLChange_ReadKeyReplace) ProtoMessage()    {}
+func (*ACLChange_ReadKeyReplace) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1, 10}
 }
-func (m *ACLChangeReadKeyReplace) XXX_Unmarshal(b []byte) error {
+func (m *ACLChange_ReadKeyReplace) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChangeReadKeyReplace) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLChange_ReadKeyReplace) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChangeReadKeyReplace.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLChange_ReadKeyReplace.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -938,56 +939,56 @@ func (m *ACLChangeReadKeyReplace) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return b[:n], nil
 	}
 }
-func (m *ACLChangeReadKeyReplace) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChangeReadKeyReplace.Merge(m, src)
+func (m *ACLChange_ReadKeyReplace) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLChange_ReadKeyReplace.Merge(m, src)
 }
-func (m *ACLChangeReadKeyReplace) XXX_Size() int {
+func (m *ACLChange_ReadKeyReplace) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChangeReadKeyReplace) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChangeReadKeyReplace.DiscardUnknown(m)
+func (m *ACLChange_ReadKeyReplace) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLChange_ReadKeyReplace.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChangeReadKeyReplace proto.InternalMessageInfo
+var xxx_messageInfo_ACLChange_ReadKeyReplace proto.InternalMessageInfo
 
-func (m *ACLChangeReadKeyReplace) GetIdentity() string {
+func (m *ACLChange_ReadKeyReplace) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
 	return ""
 }
 
-func (m *ACLChangeReadKeyReplace) GetEncryptionKey() []byte {
+func (m *ACLChange_ReadKeyReplace) GetEncryptionKey() []byte {
 	if m != nil {
 		return m.EncryptionKey
 	}
 	return nil
 }
 
-func (m *ACLChangeReadKeyReplace) GetEncryptedReadKey() []byte {
+func (m *ACLChange_ReadKeyReplace) GetEncryptedReadKey() []byte {
 	if m != nil {
 		return m.EncryptedReadKey
 	}
 	return nil
 }
 
-type ACLChangeUserPermissionChange struct {
-	Identity    string                   `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	Permissions ACLChangeUserPermissions `protobuf:"varint,2,opt,name=permissions,proto3,enum=acl.ACLChangeUserPermissions" json:"permissions,omitempty"`
+type ACLChange_UserPermissionChange struct {
+	Identity    string                    `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Permissions ACLChange_UserPermissions `protobuf:"varint,2,opt,name=permissions,proto3,enum=acl.ACLChange_UserPermissions" json:"permissions,omitempty"`
 }
 
-func (m *ACLChangeUserPermissionChange) Reset()         { *m = ACLChangeUserPermissionChange{} }
-func (m *ACLChangeUserPermissionChange) String() string { return proto.CompactTextString(m) }
-func (*ACLChangeUserPermissionChange) ProtoMessage()    {}
-func (*ACLChangeUserPermissionChange) Descriptor() ([]byte, []int) {
+func (m *ACLChange_UserPermissionChange) Reset()         { *m = ACLChange_UserPermissionChange{} }
+func (m *ACLChange_UserPermissionChange) String() string { return proto.CompactTextString(m) }
+func (*ACLChange_UserPermissionChange) ProtoMessage()    {}
+func (*ACLChange_UserPermissionChange) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1, 11}
 }
-func (m *ACLChangeUserPermissionChange) XXX_Unmarshal(b []byte) error {
+func (m *ACLChange_UserPermissionChange) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChangeUserPermissionChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLChange_UserPermissionChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChangeUserPermissionChange.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLChange_UserPermissionChange.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -997,26 +998,26 @@ func (m *ACLChangeUserPermissionChange) XXX_Marshal(b []byte, deterministic bool
 		return b[:n], nil
 	}
 }
-func (m *ACLChangeUserPermissionChange) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChangeUserPermissionChange.Merge(m, src)
+func (m *ACLChange_UserPermissionChange) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLChange_UserPermissionChange.Merge(m, src)
 }
-func (m *ACLChangeUserPermissionChange) XXX_Size() int {
+func (m *ACLChange_UserPermissionChange) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChangeUserPermissionChange) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChangeUserPermissionChange.DiscardUnknown(m)
+func (m *ACLChange_UserPermissionChange) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLChange_UserPermissionChange.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChangeUserPermissionChange proto.InternalMessageInfo
+var xxx_messageInfo_ACLChange_UserPermissionChange proto.InternalMessageInfo
 
-func (m *ACLChangeUserPermissionChange) GetIdentity() string {
+func (m *ACLChange_UserPermissionChange) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
 	return ""
 }
 
-func (m *ACLChangeUserPermissionChange) GetPermissions() ACLChangeUserPermissions {
+func (m *ACLChange_UserPermissionChange) GetPermissions() ACLChange_UserPermissions {
 	if m != nil {
 		return m.Permissions
 	}
@@ -1024,22 +1025,22 @@ func (m *ACLChangeUserPermissionChange) GetPermissions() ACLChangeUserPermission
 }
 
 func init() {
-	proto.RegisterEnum("acl.ACLChangeUserPermissions", ACLChangeUserPermissions_name, ACLChangeUserPermissions_value)
+	proto.RegisterEnum("acl.ACLChange_UserPermissions", ACLChange_UserPermissions_name, ACLChange_UserPermissions_value)
 	proto.RegisterType((*RawChange)(nil), "acl.RawChange")
 	proto.RegisterType((*ACLChange)(nil), "acl.ACLChange")
-	proto.RegisterType((*ACLChangeACLContentValue)(nil), "acl.ACLChange.ACLContentValue")
-	proto.RegisterType((*ACLChangeACLData)(nil), "acl.ACLChange.ACLData")
-	proto.RegisterType((*ACLChangeACLSnapshot)(nil), "acl.ACLChange.ACLSnapshot")
-	proto.RegisterType((*ACLChangeACLState)(nil), "acl.ACLChange.ACLState")
-	proto.RegisterMapType((map[string]*ACLChangeUserInvite)(nil), "acl.ACLChange.ACLState.InvitesEntry")
-	proto.RegisterType((*ACLChangeUserState)(nil), "acl.ACLChange.UserState")
-	proto.RegisterType((*ACLChangeUserAdd)(nil), "acl.ACLChange.UserAdd")
-	proto.RegisterType((*ACLChangeUserConfirm)(nil), "acl.ACLChange.UserConfirm")
-	proto.RegisterType((*ACLChangeUserInvite)(nil), "acl.ACLChange.UserInvite")
-	proto.RegisterType((*ACLChangeUserJoin)(nil), "acl.ACLChange.UserJoin")
-	proto.RegisterType((*ACLChangeUserRemove)(nil), "acl.ACLChange.UserRemove")
-	proto.RegisterType((*ACLChangeReadKeyReplace)(nil), "acl.ACLChange.ReadKeyReplace")
-	proto.RegisterType((*ACLChangeUserPermissionChange)(nil), "acl.ACLChange.UserPermissionChange")
+	proto.RegisterType((*ACLChange_ACLContentValue)(nil), "acl.ACLChange.ACLContentValue")
+	proto.RegisterType((*ACLChange_ACLData)(nil), "acl.ACLChange.ACLData")
+	proto.RegisterType((*ACLChange_ACLSnapshot)(nil), "acl.ACLChange.ACLSnapshot")
+	proto.RegisterType((*ACLChange_ACLState)(nil), "acl.ACLChange.ACLState")
+	proto.RegisterMapType((map[string]*ACLChange_UserInvite)(nil), "acl.ACLChange.ACLState.InvitesEntry")
+	proto.RegisterType((*ACLChange_UserState)(nil), "acl.ACLChange.UserState")
+	proto.RegisterType((*ACLChange_UserAdd)(nil), "acl.ACLChange.UserAdd")
+	proto.RegisterType((*ACLChange_UserConfirm)(nil), "acl.ACLChange.UserConfirm")
+	proto.RegisterType((*ACLChange_UserInvite)(nil), "acl.ACLChange.UserInvite")
+	proto.RegisterType((*ACLChange_UserJoin)(nil), "acl.ACLChange.UserJoin")
+	proto.RegisterType((*ACLChange_UserRemove)(nil), "acl.ACLChange.UserRemove")
+	proto.RegisterType((*ACLChange_ReadKeyReplace)(nil), "acl.ACLChange.ReadKeyReplace")
+	proto.RegisterType((*ACLChange_UserPermissionChange)(nil), "acl.ACLChange.UserPermissionChange")
 }
 
 func init() {
@@ -1238,7 +1239,7 @@ func (m *ACLChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChangeACLContentValue) Marshal() (dAtA []byte, err error) {
+func (m *ACLChange_ACLContentValue) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1248,12 +1249,12 @@ func (m *ACLChangeACLContentValue) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChangeACLContentValue) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContentValue) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeACLContentValue) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContentValue) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1270,12 +1271,12 @@ func (m *ACLChangeACLContentValue) MarshalToSizedBuffer(dAtA []byte) (int, error
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChangeACLContentValueValueOfUserAdd) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContent_Value_UserAdd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeACLContentValueValueOfUserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContent_Value_UserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserAdd != nil {
 		{
@@ -1291,12 +1292,12 @@ func (m *ACLChangeACLContentValueValueOfUserAdd) MarshalToSizedBuffer(dAtA []byt
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLChangeACLContentValueValueOfUserRemove) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContent_Value_UserRemove) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeACLContentValueValueOfUserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContent_Value_UserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserRemove != nil {
 		{
@@ -1312,12 +1313,12 @@ func (m *ACLChangeACLContentValueValueOfUserRemove) MarshalToSizedBuffer(dAtA []
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLChangeACLContentValueValueOfUserPermissionChange) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContent_Value_UserPermissionChange) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeACLContentValueValueOfUserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContent_Value_UserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserPermissionChange != nil {
 		{
@@ -1333,12 +1334,12 @@ func (m *ACLChangeACLContentValueValueOfUserPermissionChange) MarshalToSizedBuff
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLChangeACLContentValueValueOfUserInvite) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContent_Value_UserInvite) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeACLContentValueValueOfUserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContent_Value_UserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserInvite != nil {
 		{
@@ -1354,12 +1355,12 @@ func (m *ACLChangeACLContentValueValueOfUserInvite) MarshalToSizedBuffer(dAtA []
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLChangeACLContentValueValueOfUserJoin) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContent_Value_UserJoin) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeACLContentValueValueOfUserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContent_Value_UserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserJoin != nil {
 		{
@@ -1375,12 +1376,12 @@ func (m *ACLChangeACLContentValueValueOfUserJoin) MarshalToSizedBuffer(dAtA []by
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLChangeACLContentValueValueOfUserConfirm) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContent_Value_UserConfirm) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeACLContentValueValueOfUserConfirm) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLContent_Value_UserConfirm) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserConfirm != nil {
 		{
@@ -1396,7 +1397,7 @@ func (m *ACLChangeACLContentValueValueOfUserConfirm) MarshalToSizedBuffer(dAtA [
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLChangeACLData) Marshal() (dAtA []byte, err error) {
+func (m *ACLChange_ACLData) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1406,12 +1407,12 @@ func (m *ACLChangeACLData) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChangeACLData) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLData) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeACLData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1445,7 +1446,7 @@ func (m *ACLChangeACLData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChangeACLSnapshot) Marshal() (dAtA []byte, err error) {
+func (m *ACLChange_ACLSnapshot) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1455,12 +1456,12 @@ func (m *ACLChangeACLSnapshot) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChangeACLSnapshot) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLSnapshot) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeACLSnapshot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLSnapshot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1480,7 +1481,7 @@ func (m *ACLChangeACLSnapshot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChangeACLState) Marshal() (dAtA []byte, err error) {
+func (m *ACLChange_ACLState) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1490,12 +1491,12 @@ func (m *ACLChangeACLState) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChangeACLState) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLState) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeACLState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_ACLState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1561,7 +1562,7 @@ func (m *ACLChangeACLState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChangeUserState) Marshal() (dAtA []byte, err error) {
+func (m *ACLChange_UserState) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1571,12 +1572,12 @@ func (m *ACLChangeUserState) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChangeUserState) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_UserState) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeUserState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_UserState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1622,7 +1623,7 @@ func (m *ACLChangeUserState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChangeUserAdd) Marshal() (dAtA []byte, err error) {
+func (m *ACLChange_UserAdd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1632,12 +1633,12 @@ func (m *ACLChangeUserAdd) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChangeUserAdd) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_UserAdd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeUserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_UserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1673,7 +1674,7 @@ func (m *ACLChangeUserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChangeUserConfirm) Marshal() (dAtA []byte, err error) {
+func (m *ACLChange_UserConfirm) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1683,12 +1684,12 @@ func (m *ACLChangeUserConfirm) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChangeUserConfirm) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_UserConfirm) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeUserConfirm) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_UserConfirm) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1710,7 +1711,7 @@ func (m *ACLChangeUserConfirm) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChangeUserInvite) Marshal() (dAtA []byte, err error) {
+func (m *ACLChange_UserInvite) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1720,12 +1721,12 @@ func (m *ACLChangeUserInvite) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChangeUserInvite) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_UserInvite) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeUserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_UserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1768,7 +1769,7 @@ func (m *ACLChangeUserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChangeUserJoin) Marshal() (dAtA []byte, err error) {
+func (m *ACLChange_UserJoin) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1778,12 +1779,12 @@ func (m *ACLChangeUserJoin) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChangeUserJoin) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_UserJoin) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeUserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_UserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1828,7 +1829,7 @@ func (m *ACLChangeUserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChangeUserRemove) Marshal() (dAtA []byte, err error) {
+func (m *ACLChange_UserRemove) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1838,12 +1839,12 @@ func (m *ACLChangeUserRemove) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChangeUserRemove) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_UserRemove) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeUserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_UserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1872,7 +1873,7 @@ func (m *ACLChangeUserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChangeReadKeyReplace) Marshal() (dAtA []byte, err error) {
+func (m *ACLChange_ReadKeyReplace) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1882,12 +1883,12 @@ func (m *ACLChangeReadKeyReplace) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChangeReadKeyReplace) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_ReadKeyReplace) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeReadKeyReplace) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_ReadKeyReplace) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1916,7 +1917,7 @@ func (m *ACLChangeReadKeyReplace) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChangeUserPermissionChange) Marshal() (dAtA []byte, err error) {
+func (m *ACLChange_UserPermissionChange) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1926,12 +1927,12 @@ func (m *ACLChangeUserPermissionChange) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChangeUserPermissionChange) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLChange_UserPermissionChange) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChangeUserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLChange_UserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -2026,7 +2027,7 @@ func (m *ACLChange) Size() (n int) {
 	return n
 }
 
-func (m *ACLChangeACLContentValue) Size() (n int) {
+func (m *ACLChange_ACLContentValue) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2038,7 +2039,7 @@ func (m *ACLChangeACLContentValue) Size() (n int) {
 	return n
 }
 
-func (m *ACLChangeACLContentValueValueOfUserAdd) Size() (n int) {
+func (m *ACLChange_ACLContent_Value_UserAdd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2050,7 +2051,7 @@ func (m *ACLChangeACLContentValueValueOfUserAdd) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLChangeACLContentValueValueOfUserRemove) Size() (n int) {
+func (m *ACLChange_ACLContent_Value_UserRemove) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2062,7 +2063,7 @@ func (m *ACLChangeACLContentValueValueOfUserRemove) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLChangeACLContentValueValueOfUserPermissionChange) Size() (n int) {
+func (m *ACLChange_ACLContent_Value_UserPermissionChange) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2074,7 +2075,7 @@ func (m *ACLChangeACLContentValueValueOfUserPermissionChange) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLChangeACLContentValueValueOfUserInvite) Size() (n int) {
+func (m *ACLChange_ACLContent_Value_UserInvite) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2086,7 +2087,7 @@ func (m *ACLChangeACLContentValueValueOfUserInvite) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLChangeACLContentValueValueOfUserJoin) Size() (n int) {
+func (m *ACLChange_ACLContent_Value_UserJoin) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2098,7 +2099,7 @@ func (m *ACLChangeACLContentValueValueOfUserJoin) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLChangeACLContentValueValueOfUserConfirm) Size() (n int) {
+func (m *ACLChange_ACLContent_Value_UserConfirm) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2110,7 +2111,7 @@ func (m *ACLChangeACLContentValueValueOfUserConfirm) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLChangeACLData) Size() (n int) {
+func (m *ACLChange_ACLData) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2129,7 +2130,7 @@ func (m *ACLChangeACLData) Size() (n int) {
 	return n
 }
 
-func (m *ACLChangeACLSnapshot) Size() (n int) {
+func (m *ACLChange_ACLSnapshot) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2142,7 +2143,7 @@ func (m *ACLChangeACLSnapshot) Size() (n int) {
 	return n
 }
 
-func (m *ACLChangeACLState) Size() (n int) {
+func (m *ACLChange_ACLState) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2177,7 +2178,7 @@ func (m *ACLChangeACLState) Size() (n int) {
 	return n
 }
 
-func (m *ACLChangeUserState) Size() (n int) {
+func (m *ACLChange_UserState) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2206,7 +2207,7 @@ func (m *ACLChangeUserState) Size() (n int) {
 	return n
 }
 
-func (m *ACLChangeUserAdd) Size() (n int) {
+func (m *ACLChange_UserAdd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2232,7 +2233,7 @@ func (m *ACLChangeUserAdd) Size() (n int) {
 	return n
 }
 
-func (m *ACLChangeUserConfirm) Size() (n int) {
+func (m *ACLChange_UserConfirm) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2249,7 +2250,7 @@ func (m *ACLChangeUserConfirm) Size() (n int) {
 	return n
 }
 
-func (m *ACLChangeUserInvite) Size() (n int) {
+func (m *ACLChange_UserInvite) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2279,7 +2280,7 @@ func (m *ACLChangeUserInvite) Size() (n int) {
 	return n
 }
 
-func (m *ACLChangeUserJoin) Size() (n int) {
+func (m *ACLChange_UserJoin) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2310,7 +2311,7 @@ func (m *ACLChangeUserJoin) Size() (n int) {
 	return n
 }
 
-func (m *ACLChangeUserRemove) Size() (n int) {
+func (m *ACLChange_UserRemove) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2329,7 +2330,7 @@ func (m *ACLChangeUserRemove) Size() (n int) {
 	return n
 }
 
-func (m *ACLChangeReadKeyReplace) Size() (n int) {
+func (m *ACLChange_ReadKeyReplace) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2350,7 +2351,7 @@ func (m *ACLChangeReadKeyReplace) Size() (n int) {
 	return n
 }
 
-func (m *ACLChangeUserPermissionChange) Size() (n int) {
+func (m *ACLChange_UserPermissionChange) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2677,7 +2678,7 @@ func (m *ACLChange) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.AclData == nil {
-				m.AclData = &ACLChangeACLData{}
+				m.AclData = &ACLChange_ACLData{}
 			}
 			if err := m.AclData.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -2808,7 +2809,7 @@ func (m *ACLChange) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChangeACLContentValue) Unmarshal(dAtA []byte) error {
+func (m *ACLChange_ACLContentValue) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2866,11 +2867,11 @@ func (m *ACLChangeACLContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ACLChangeUserAdd{}
+			v := &ACLChange_UserAdd{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLChangeACLContentValueValueOfUserAdd{v}
+			m.Value = &ACLChange_ACLContent_Value_UserAdd{v}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -2901,11 +2902,11 @@ func (m *ACLChangeACLContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ACLChangeUserRemove{}
+			v := &ACLChange_UserRemove{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLChangeACLContentValueValueOfUserRemove{v}
+			m.Value = &ACLChange_ACLContent_Value_UserRemove{v}
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -2936,11 +2937,11 @@ func (m *ACLChangeACLContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ACLChangeUserPermissionChange{}
+			v := &ACLChange_UserPermissionChange{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLChangeACLContentValueValueOfUserPermissionChange{v}
+			m.Value = &ACLChange_ACLContent_Value_UserPermissionChange{v}
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
@@ -2971,11 +2972,11 @@ func (m *ACLChangeACLContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ACLChangeUserInvite{}
+			v := &ACLChange_UserInvite{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLChangeACLContentValueValueOfUserInvite{v}
+			m.Value = &ACLChange_ACLContent_Value_UserInvite{v}
 			iNdEx = postIndex
 		case 5:
 			if wireType != 2 {
@@ -3006,11 +3007,11 @@ func (m *ACLChangeACLContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ACLChangeUserJoin{}
+			v := &ACLChange_UserJoin{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLChangeACLContentValueValueOfUserJoin{v}
+			m.Value = &ACLChange_ACLContent_Value_UserJoin{v}
 			iNdEx = postIndex
 		case 6:
 			if wireType != 2 {
@@ -3041,11 +3042,11 @@ func (m *ACLChangeACLContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ACLChangeUserConfirm{}
+			v := &ACLChange_UserConfirm{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLChangeACLContentValueValueOfUserConfirm{v}
+			m.Value = &ACLChange_ACLContent_Value_UserConfirm{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -3068,7 +3069,7 @@ func (m *ACLChangeACLContentValue) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChangeACLData) Unmarshal(dAtA []byte) error {
+func (m *ACLChange_ACLData) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3127,7 +3128,7 @@ func (m *ACLChangeACLData) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.AclSnapshot == nil {
-				m.AclSnapshot = &ACLChangeACLSnapshot{}
+				m.AclSnapshot = &ACLChange_ACLSnapshot{}
 			}
 			if err := m.AclSnapshot.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -3162,7 +3163,7 @@ func (m *ACLChangeACLData) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.AclContent = append(m.AclContent, &ACLChangeACLContentValue{})
+			m.AclContent = append(m.AclContent, &ACLChange_ACLContentValue{})
 			if err := m.AclContent[len(m.AclContent)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -3188,7 +3189,7 @@ func (m *ACLChangeACLData) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChangeACLSnapshot) Unmarshal(dAtA []byte) error {
+func (m *ACLChange_ACLSnapshot) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3247,7 +3248,7 @@ func (m *ACLChangeACLSnapshot) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.AclState == nil {
-				m.AclState = &ACLChangeACLState{}
+				m.AclState = &ACLChange_ACLState{}
 			}
 			if err := m.AclState.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -3274,7 +3275,7 @@ func (m *ACLChangeACLSnapshot) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChangeACLState) Unmarshal(dAtA []byte) error {
+func (m *ACLChange_ACLState) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3408,7 +3409,7 @@ func (m *ACLChangeACLState) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.UserStates = append(m.UserStates, &ACLChangeUserState{})
+			m.UserStates = append(m.UserStates, &ACLChange_UserState{})
 			if err := m.UserStates[len(m.UserStates)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -3443,10 +3444,10 @@ func (m *ACLChangeACLState) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Invites == nil {
-				m.Invites = make(map[string]*ACLChangeUserInvite)
+				m.Invites = make(map[string]*ACLChange_UserInvite)
 			}
 			var mapkey string
-			var mapvalue *ACLChangeUserInvite
+			var mapvalue *ACLChange_UserInvite
 			for iNdEx < postIndex {
 				entryPreIndex := iNdEx
 				var wire uint64
@@ -3520,7 +3521,7 @@ func (m *ACLChangeACLState) Unmarshal(dAtA []byte) error {
 					if postmsgIndex > l {
 						return io.ErrUnexpectedEOF
 					}
-					mapvalue = &ACLChangeUserInvite{}
+					mapvalue = &ACLChange_UserInvite{}
 					if err := mapvalue.Unmarshal(dAtA[iNdEx:postmsgIndex]); err != nil {
 						return err
 					}
@@ -3563,7 +3564,7 @@ func (m *ACLChangeACLState) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChangeUserState) Unmarshal(dAtA []byte) error {
+func (m *ACLChange_UserState) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3704,7 +3705,7 @@ func (m *ACLChangeUserState) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Permissions |= ACLChangeUserPermissions(b&0x7F) << shift
+				m.Permissions |= ACLChange_UserPermissions(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -3750,7 +3751,7 @@ func (m *ACLChangeUserState) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChangeUserAdd) Unmarshal(dAtA []byte) error {
+func (m *ACLChange_UserAdd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3891,7 +3892,7 @@ func (m *ACLChangeUserAdd) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Permissions |= ACLChangeUserPermissions(b&0x7F) << shift
+				m.Permissions |= ACLChange_UserPermissions(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -3917,7 +3918,7 @@ func (m *ACLChangeUserAdd) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChangeUserConfirm) Unmarshal(dAtA []byte) error {
+func (m *ACLChange_UserConfirm) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4031,7 +4032,7 @@ func (m *ACLChangeUserConfirm) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChangeUserInvite) Unmarshal(dAtA []byte) error {
+func (m *ACLChange_UserInvite) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4174,7 +4175,7 @@ func (m *ACLChangeUserInvite) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Permissions |= ACLChangeUserPermissions(b&0x7F) << shift
+				m.Permissions |= ACLChange_UserPermissions(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -4232,7 +4233,7 @@ func (m *ACLChangeUserInvite) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChangeUserJoin) Unmarshal(dAtA []byte) error {
+func (m *ACLChange_UserJoin) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4446,7 +4447,7 @@ func (m *ACLChangeUserJoin) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChangeUserRemove) Unmarshal(dAtA []byte) error {
+func (m *ACLChange_UserRemove) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4536,7 +4537,7 @@ func (m *ACLChangeUserRemove) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ReadKeyReplaces = append(m.ReadKeyReplaces, &ACLChangeReadKeyReplace{})
+			m.ReadKeyReplaces = append(m.ReadKeyReplaces, &ACLChange_ReadKeyReplace{})
 			if err := m.ReadKeyReplaces[len(m.ReadKeyReplaces)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -4562,7 +4563,7 @@ func (m *ACLChangeUserRemove) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChangeReadKeyReplace) Unmarshal(dAtA []byte) error {
+func (m *ACLChange_ReadKeyReplace) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4712,7 +4713,7 @@ func (m *ACLChangeReadKeyReplace) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChangeUserPermissionChange) Unmarshal(dAtA []byte) error {
+func (m *ACLChange_UserPermissionChange) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4787,7 +4788,7 @@ func (m *ACLChangeUserPermissionChange) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Permissions |= ACLChangeUserPermissions(b&0x7F) << shift
+				m.Permissions |= ACLChange_UserPermissions(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
