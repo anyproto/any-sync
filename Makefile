@@ -13,7 +13,7 @@ endif
 export PATH=$(GOPATH)/bin:$(shell echo $$PATH)
 
 # TODO: folders were changed, so we should update Makefile and protos generation
-protos-go:
+protos:
 	@echo 'Generating protobuf packages (Go)...'
 #   Uncomment if needed
 	@$(eval ROOT_PKG := pkg)
