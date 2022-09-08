@@ -268,9 +268,11 @@ func (r *requestHandler) createTree(
 	return r.treeCache.Add(
 		ctx,
 		treeId,
-		treecache.TreePayload{
+		storage.TreeStorageCreatePayload{
+			TreeId:  treeId,
 			Header:  header,
 			Changes: response.Changes,
+			Heads:   response.Heads,
 		})
 }
 
@@ -283,7 +285,8 @@ func (r *requestHandler) createACLList(
 	return r.treeCache.Add(
 		ctx,
 		treeId,
-		treecache.ACLListPayload{
+		storage.ACLListStorageCreatePayload{
+			ListId:  treeId,
 			Header:  header,
 			Records: req.Records,
 		})
