@@ -103,7 +103,7 @@ func (s *service) UpdateDocumentTree(ctx context.Context, id, text string) (err 
 				Identity:   s.account.Account().Identity,
 				IsSnapshot: false,
 			}
-			ch, err = docTree.AddContent(ctx, aclTree, signable)
+			ch, err = docTree.AddContent(ctx, signable)
 			if err != nil {
 				return err
 			}

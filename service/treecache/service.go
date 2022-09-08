@@ -21,19 +21,9 @@ type ObjFunc = func(obj interface{}) error
 
 var log = logger.NewNamed("treecache")
 
-type TreePayload struct {
-	Header  *aclpb.Header
-	Changes []*aclpb.RawChange
-}
-
-type ACLListPayload struct {
-	Header  *aclpb.Header
-	Records []*aclpb.RawRecord
-}
-
 type Service interface {
 	Do(ctx context.Context, id string, f ObjFunc) error
-	Add(ctx context.Context, id string, payload interface{}) error
+	Add(ctx context.Context, id string, payload any) error
 }
 
 type service struct {
@@ -59,23 +49,23 @@ func (s *service) Do(ctx context.Context, treeId string, f ObjFunc) error {
 	return f(t)
 }
 
-func (s *service) Add(ctx context.Context, treeId string, payload interface{}) error {
+func (s *service) Add(ctx context.Context, treeId string, payload any) error {
 	switch pl := payload.(type) {
-	case TreePayload:
+	case aclstorage.TreeStorageCreatePayload:
 		log.
 			With(zap.String("treeId", treeId), zap.Int("len(changes)", len(pl.Changes))).
 			Debug("adding Tree with changes")
 
-		_, err := s.storage.CreateTreeStorage(treeId, pl.Header, pl.Changes)
+		_, err := s.storage.CreateTreeStorage(payload.(aclstorage.TreeStorageCreatePayload))
 		if err != nil {
 			return err
 		}
-	case ACLListPayload:
+	case aclstorage.ACLListStorageCreatePayload:
 		log.
 			With(zap.String("treeId", treeId), zap.Int("len(changes)", len(pl.Records))).
 			Debug("adding ACLList with records")
 
-		_, err := s.storage.CreateACLListStorage(treeId, pl.Header, pl.Records)
+		_, err := s.storage.CreateACLListStorage(payload.(aclstorage.ACLListStorageCreatePayload))
 		if err != nil {
 			return err
 		}
@@ -123,19 +113,15 @@ func (s *service) loadTree(ctx context.Context, id string) (ocache.Object, error
 		return nil, fmt.Errorf("incorrect type")
 	}
 	log.Info("got header", zap.String("header", header.String()))
-	var docTree tree.ObjectTree
-	// TODO: it is a question if we need to use ACLList on the first tree build, because we can think that the tree is already validated
+	var objTree tree.ObjectTree
 	err = s.Do(ctx, header.AclListId, func(obj interface{}) error {
-		aclTree := obj.(list.ACLList)
-		aclTree.RLock()
-		defer aclTree.RUnlock()
-
-		docTree, err = tree.BuildDocTreeWithIdentity(t.(aclstorage.TreeStorage), s.account.Account(), nil, aclTree)
+		aclList := obj.(list.ACLList)
+		objTree, err = tree.BuildObjectTree(t.(aclstorage.TreeStorage), nil, aclList)
 		if err != nil {
 			return err
 		}
 		return nil
 	})
 
-	return docTree, err
+	return objTree, err
 }
