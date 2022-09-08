@@ -45,6 +45,12 @@ var WithGCPeriod = func(gcPeriod time.Duration) Option {
 	}
 }
 
+var WithRefCounter = func(enable bool) Option {
+	return func(cache *oCache) {
+		cache.noRefCounter = !enable
+	}
+}
+
 func New(loadFunc LoadFunc, opts ...Option) OCache {
 	c := &oCache{
 		data:     make(map[string]*entry),
@@ -124,15 +130,16 @@ type OCache interface {
 }
 
 type oCache struct {
-	mu       sync.Mutex
-	data     map[string]*entry
-	loadFunc LoadFunc
-	timeNow  func() time.Time
-	ttl      time.Duration
-	gc       time.Duration
-	closed   bool
-	closeCh  chan struct{}
-	log      *zap.SugaredLogger
+	mu           sync.Mutex
+	data         map[string]*entry
+	loadFunc     LoadFunc
+	timeNow      func() time.Time
+	ttl          time.Duration
+	gc           time.Duration
+	closed       bool
+	closeCh      chan struct{}
+	log          *zap.SugaredLogger
+	noRefCounter bool
 }
 
 func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
@@ -155,7 +162,9 @@ func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
 		c.data[id] = e
 	}
 	e.lastUsage = c.timeNow()
-	e.refCount++
+	if !c.noRefCounter {
+		e.refCount++
+	}
 	c.mu.Unlock()
 
 	if load {
@@ -206,7 +215,7 @@ func (c *oCache) Release(id string) bool {
 		return false
 	}
 	if e, ok := c.data[id]; ok {
-		if e.refCount > 0 {
+		if !c.noRefCounter && e.refCount > 0 {
 			e.refCount--
 			return true
 		}

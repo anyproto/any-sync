@@ -35,7 +35,7 @@ type service struct {
 	key crypto.PrivKey
 }
 
-func (s *service) Init(ctx context.Context, a *app.App) (err error) {
+func (s *service) Init(a *app.App) (err error) {
 	account := a.MustComponent(config.CName).(*config.Config).Account
 	decoder := signingkey.NewEDPrivKeyDecoder()
 	pkb, err := decoder.DecodeFromStringIntoBytes(account.SigningKey)

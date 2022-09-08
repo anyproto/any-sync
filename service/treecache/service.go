@@ -4,12 +4,12 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 	"go.uber.org/zap"
 )
 
@@ -80,7 +80,7 @@ func (s *service) Add(ctx context.Context, treeId string, header *treepb.TreeHea
 	return s.Do(ctx, treeId, f)
 }
 
-func (s *service) Init(ctx context.Context, a *app.App) (err error) {
+func (s *service) Init(a *app.App) (err error) {
 	s.cache = ocache.New(s.loadTree)
 	s.account = a.MustComponent(account.CName).(account.Service)
 	s.treeProvider = treestorage.NewInMemoryTreeStorageProvider()

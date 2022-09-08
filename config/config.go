@@ -1,7 +1,6 @@
 package config
 
 import (
-	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
@@ -32,7 +31,7 @@ type Config struct {
 	Space      Space      `yaml:"space"`
 }
 
-func (c *Config) Init(ctx context.Context, a *app.App) (err error) {
+func (c *Config) Init(a *app.App) (err error) {
 	logger.NewNamed("config").Info(fmt.Sprint(c.Space))
 	return
 }

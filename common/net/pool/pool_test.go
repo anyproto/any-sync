@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/dialer"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/peer"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/dialer"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"storj.io/drpc"
@@ -160,7 +160,7 @@ func (d *dialerMock) UpdateAddrs(addrs map[string][]string) {
 	return
 }
 
-func (d *dialerMock) Init(ctx context.Context, a *app.App) (err error) {
+func (d *dialerMock) Init(a *app.App) (err error) {
 	return
 }
 

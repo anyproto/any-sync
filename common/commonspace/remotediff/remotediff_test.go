@@ -3,8 +3,8 @@ package remotediff
 import (
 	"context"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/space/spacesync"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -36,6 +36,6 @@ type mockClient struct {
 	l ldiff.Diff
 }
 
-func (m *mockClient) HeadSync(ctx context.Context, in *spacesync.HeadSyncRequest) (*spacesync.HeadSyncResponse, error) {
+func (m *mockClient) HeadSync(ctx context.Context, in *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
 	return HandlerRangeRequest(ctx, m.l, in)
 }

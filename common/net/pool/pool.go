@@ -5,9 +5,9 @@ import (
 	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/dialer"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/dialer"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/peer"
 	"math/rand"
 	"time"
 )
@@ -40,11 +40,17 @@ type pool struct {
 	cache ocache.OCache
 }
 
-func (p *pool) Init(ctx context.Context, a *app.App) (err error) {
+func (p *pool) Init(a *app.App) (err error) {
 	dialer := a.MustComponent(dialer.CName).(dialer.Dialer)
-	p.cache = ocache.New(func(ctx context.Context, id string) (value ocache.Object, err error) {
-		return dialer.Dial(ctx, id)
-	}, ocache.WithLogger(log.Sugar()), ocache.WithGCPeriod(time.Minute), ocache.WithTTL(time.Minute*5))
+	p.cache = ocache.New(
+		func(ctx context.Context, id string) (value ocache.Object, err error) {
+			return dialer.Dial(ctx, id)
+		},
+		ocache.WithLogger(log.Sugar()),
+		ocache.WithGCPeriod(time.Minute),
+		ocache.WithTTL(time.Minute*5),
+		ocache.WithRefCounter(false),
+	)
 	return nil
 }
 
