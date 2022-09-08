@@ -7,12 +7,13 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/secure"
+	"github.com/zeebo/errs"
 	"go.uber.org/zap"
+	"io"
 	"net"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
-	"strings"
 	"time"
 )
 
@@ -103,7 +104,7 @@ func (s *drpcServer) serveConn(ctx context.Context, conn net.Conn) {
 	l := log.With(zap.String("remoteAddr", conn.RemoteAddr().String())).With(zap.String("localAddr", conn.LocalAddr().String()))
 	l.Debug("connection opened")
 	if err := s.drpcServer.ServeOne(ctx, conn); err != nil {
-		if err == context.Canceled || strings.Contains(err.Error(), "EOF") {
+		if errs.Is(err, context.Canceled) || errs.Is(err, io.EOF) {
 			l.Debug("connection closed")
 		} else {
 			l.Warn("serve connection error", zap.Error(err))

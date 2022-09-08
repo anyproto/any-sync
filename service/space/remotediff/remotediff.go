@@ -74,7 +74,7 @@ func HandlerRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesync.HeadS
 		return
 	}
 
-	var rangeResp = &spacesync.HeadSyncResponse{
+	resp = &spacesync.HeadSyncResponse{
 		Results: make([]*spacesync.HeadSyncResult, 0, len(res)),
 	}
 	for _, rangeRes := range res {
@@ -88,11 +88,11 @@ func HandlerRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesync.HeadS
 				})
 			}
 		}
-		rangeResp.Results = append(rangeResp.Results, &spacesync.HeadSyncResult{
+		resp.Results = append(resp.Results, &spacesync.HeadSyncResult{
 			Hash:     rangeRes.Hash,
 			Elements: elements,
 			Count:    uint32(rangeRes.Count),
 		})
 	}
-	return rangeResp, nil
+	return
 }

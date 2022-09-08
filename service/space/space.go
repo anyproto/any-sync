@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/configuration"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/space/remotediff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/space/spacesync"
 	"go.uber.org/zap"
 	"math/rand"
 	"sync"
@@ -14,6 +16,9 @@ import (
 
 type Space interface {
 	Id() string
+
+	HeadSync(ctx context.Context, req *spacesync.HeadSyncRequest) (*spacesync.HeadSyncResponse, error)
+
 	Close() error
 }
 
@@ -44,21 +49,26 @@ func (s *space) Run(ctx context.Context) error {
 	return nil
 }
 
+func (s *space) HeadSync(ctx context.Context, req *spacesync.HeadSyncRequest) (*spacesync.HeadSyncResponse, error) {
+	return remotediff.HandlerRangeRequest(ctx, s.diff, req)
+}
+
 func (s *space) testFill() {
 	var n = 1000
 	var els = make([]ldiff.Element, 0, n)
 	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < n; i++ {
 		if rand.Intn(n) > 2 {
-			id := fmt.Sprintf("%s.%d", s.id, n)
+			id := fmt.Sprintf("%s.%d", s.id, i)
 			head := "head." + id
-			if rand.Intn(n) > 2 {
+			if rand.Intn(n) > n-100 {
 				head += ".modified"
 			}
-			els = append(els, ldiff.Element{
+			el := ldiff.Element{
 				Id:   id,
 				Head: head,
-			})
+			}
+			els = append(els, el)
 		}
 	}
 	s.diff.Set(els...)
@@ -80,6 +90,7 @@ func (s *space) syncLoop() {
 		for {
 			select {
 			case <-s.syncCtx.Done():
+				return
 			case <-ticker.C:
 				doSync()
 			}
@@ -88,45 +99,40 @@ func (s *space) syncLoop() {
 }
 
 func (s *space) sync(ctx context.Context) error {
-	peerIds, err := s.peerIds(ctx)
+	peers, err := s.getPeers(ctx)
 	if err != nil {
 		return err
 	}
-	for _, peerId := range peerIds {
-		if err := s.syncWithPeer(ctx, peerId); err != nil {
-			log.Error("can't sync with peer", zap.String("peer", peerId), zap.Error(err))
+	for _, p := range peers {
+		if err := s.syncWithPeer(ctx, p); err != nil {
+			log.Error("can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
 		}
 	}
 	return nil
 }
 
-func (s *space) syncWithPeer(ctx context.Context, peerId string) (err error) {
-	rdiff := remotediff.NewRemoteDiff(s.s.pool, peerId, s.id)
+func (s *space) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
+	cl := spacesync.NewDRPCSpaceClient(p)
+	rdiff := remotediff.NewRemoteDiff(s.id, cl)
 	newIds, changedIds, removedIds, err := s.diff.Diff(ctx, rdiff)
 	if err != nil {
 		return nil
 	}
-	log.Info("sync done:", zap.Strings("newIds", newIds), zap.Strings("changedIds", changedIds), zap.Strings("removedIds", removedIds))
+	log.Info("sync done:", zap.Int("newIds", len(newIds)), zap.Int("changedIds", len(changedIds)), zap.Int("removedIds", len(removedIds)))
 	return
 }
 
-func (s *space) peerIds(ctx context.Context) (peerIds []string, err error) {
+func (s *space) getPeers(ctx context.Context) (peers []peer.Peer, err error) {
 	if s.conf.IsResponsible(s.id) {
-		peers, err := s.conf.AllPeers(ctx, s.id)
-		if err != nil {
-			return nil, err
-		}
-		for _, p := range peers {
-			peerIds = append(peerIds, p.Id())
-		}
+		return s.conf.AllPeers(ctx, s.id)
 	} else {
-		peer, err := s.conf.OnePeer(ctx, s.id)
+		var p peer.Peer
+		p, err = s.conf.OnePeer(ctx, s.id)
 		if err != nil {
 			return nil, err
 		}
-		peerIds = append(peerIds, peer.Id())
+		return []peer.Peer{p}, nil
 	}
-	return
 }
 
 func (s *space) Close() error {
