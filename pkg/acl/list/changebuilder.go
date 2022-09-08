@@ -124,7 +124,7 @@ func (c *aclChangeBuilder) BuildAndApply() (*Record, []byte, error) {
 		return nil, nil, err
 	}
 	ch := NewRecord(id, aclRecord)
-	ch.ParsedModel = c.aclData
+	ch.Model = c.aclData
 	ch.Sign = signature
 
 	return ch, fullMarshalledChange, nil
