@@ -19,8 +19,6 @@ type Space interface {
 	Close() error
 }
 
-//
-
 type space struct {
 	id           string
 	conf         configuration.Configuration

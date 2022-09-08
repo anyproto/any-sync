@@ -61,7 +61,7 @@ func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 		Identity: identity,
 		SignKey:  signKey,
 		EncKey:   decodedEncryptionKey.(encryptionkey.PrivKey),
-		Decoder:  signingkey.NewEd25519PubKeyDecoder(),
+		Decoder:  signingkey.NewEDPubKeyDecoder(),
 	}
 	s.peerId = acc.PeerId
 

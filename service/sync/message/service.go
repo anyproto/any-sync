@@ -2,6 +2,7 @@ package message
 
 import (
 	"context"
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
@@ -85,7 +86,7 @@ func (s *service) SendMessageAsync(peerId string, msg *syncproto.Sync) (err erro
 		return
 	}
 
-	go s.sendAsync(peerId, msgType(msg), marshalled)
+	go s.sendAsync(peerId, msgInfo(msg), marshalled)
 	return
 }
 
@@ -108,15 +109,16 @@ func (s *service) sendAsync(peerId string, msgTypeStr string, marshalled []byte)
 	})
 }
 
-func msgType(content *syncproto.Sync) string {
+func msgInfo(content *syncproto.Sync) (syncMethod string) {
 	msg := content.GetMessage()
 	switch {
 	case msg.GetFullSyncRequest() != nil:
-		return "FullSyncRequest"
+		syncMethod = "FullSyncRequest"
 	case msg.GetFullSyncResponse() != nil:
-		return "FullSyncResponse"
+		syncMethod = "FullSyncResponse"
 	case msg.GetHeadUpdate() != nil:
-		return "HeadUpdate"
+		syncMethod = "HeadUpdate"
 	}
-	return "UnknownMessage"
+	syncMethod = fmt.Sprintf("method: %s, treeType: %s", syncMethod, content.TreeHeader.DocType.String())
+	return
 }

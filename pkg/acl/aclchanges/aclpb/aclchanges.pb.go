@@ -50,7 +50,32 @@ func (x ACLChangeUserPermissions) String() string {
 }
 
 func (ACLChangeUserPermissions) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 0}
+	return fileDescriptor_37a022c841a51877, []int{2, 0}
+}
+
+type HeaderDocType int32
+
+const (
+	Header_ACL     HeaderDocType = 0
+	Header_DocTree HeaderDocType = 1
+)
+
+var HeaderDocType_name = map[int32]string{
+	0: "ACL",
+	1: "DocTree",
+}
+
+var HeaderDocType_value = map[string]int32{
+	"ACL":     0,
+	"DocTree": 1,
+}
+
+func (x HeaderDocType) String() string {
+	return proto.EnumName(HeaderDocType_name, int32(x))
+}
+
+func (HeaderDocType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{5, 0}
 }
 
 type RawChange struct {
@@ -113,6 +138,66 @@ func (m *RawChange) GetId() string {
 	return ""
 }
 
+type RawRecord struct {
+	Payload   []byte `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
+	Signature []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+	Id        string `protobuf:"bytes,3,opt,name=id,proto3" json:"id,omitempty"`
+}
+
+func (m *RawRecord) Reset()         { *m = RawRecord{} }
+func (m *RawRecord) String() string { return proto.CompactTextString(m) }
+func (*RawRecord) ProtoMessage()    {}
+func (*RawRecord) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{1}
+}
+func (m *RawRecord) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *RawRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_RawRecord.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *RawRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RawRecord.Merge(m, src)
+}
+func (m *RawRecord) XXX_Size() int {
+	return m.Size()
+}
+func (m *RawRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_RawRecord.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_RawRecord proto.InternalMessageInfo
+
+func (m *RawRecord) GetPayload() []byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
+func (m *RawRecord) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+func (m *RawRecord) GetId() string {
+	if m != nil {
+		return m.Id
+	}
+	return ""
+}
+
 // the element of change tree used to store and internal apply smartBlock history
 type ACLChange struct {
 	TreeHeadIds    []string          `protobuf:"bytes,1,rep,name=treeHeadIds,proto3" json:"treeHeadIds,omitempty"`
@@ -130,7 +215,7 @@ func (m *ACLChange) Reset()         { *m = ACLChange{} }
 func (m *ACLChange) String() string { return proto.CompactTextString(m) }
 func (*ACLChange) ProtoMessage()    {}
 func (*ACLChange) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1}
+	return fileDescriptor_37a022c841a51877, []int{2}
 }
 func (m *ACLChange) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -230,7 +315,7 @@ func (m *ACLChangeACLContentValue) Reset()         { *m = ACLChangeACLContentVal
 func (m *ACLChangeACLContentValue) String() string { return proto.CompactTextString(m) }
 func (*ACLChangeACLContentValue) ProtoMessage()    {}
 func (*ACLChangeACLContentValue) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 0}
+	return fileDescriptor_37a022c841a51877, []int{2, 0}
 }
 func (m *ACLChangeACLContentValue) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -361,7 +446,7 @@ func (m *ACLChangeACLData) Reset()         { *m = ACLChangeACLData{} }
 func (m *ACLChangeACLData) String() string { return proto.CompactTextString(m) }
 func (*ACLChangeACLData) ProtoMessage()    {}
 func (*ACLChangeACLData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 1}
+	return fileDescriptor_37a022c841a51877, []int{2, 1}
 }
 func (m *ACLChangeACLData) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -413,7 +498,7 @@ func (m *ACLChangeACLSnapshot) Reset()         { *m = ACLChangeACLSnapshot{} }
 func (m *ACLChangeACLSnapshot) String() string { return proto.CompactTextString(m) }
 func (*ACLChangeACLSnapshot) ProtoMessage()    {}
 func (*ACLChangeACLSnapshot) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 2}
+	return fileDescriptor_37a022c841a51877, []int{2, 2}
 }
 func (m *ACLChangeACLSnapshot) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -459,7 +544,7 @@ func (m *ACLChangeACLState) Reset()         { *m = ACLChangeACLState{} }
 func (m *ACLChangeACLState) String() string { return proto.CompactTextString(m) }
 func (*ACLChangeACLState) ProtoMessage()    {}
 func (*ACLChangeACLState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 3}
+	return fileDescriptor_37a022c841a51877, []int{2, 3}
 }
 func (m *ACLChangeACLState) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -521,7 +606,7 @@ func (m *ACLChangeUserState) Reset()         { *m = ACLChangeUserState{} }
 func (m *ACLChangeUserState) String() string { return proto.CompactTextString(m) }
 func (*ACLChangeUserState) ProtoMessage()    {}
 func (*ACLChangeUserState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 4}
+	return fileDescriptor_37a022c841a51877, []int{2, 4}
 }
 func (m *ACLChangeUserState) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -597,7 +682,7 @@ func (m *ACLChangeUserAdd) Reset()         { *m = ACLChangeUserAdd{} }
 func (m *ACLChangeUserAdd) String() string { return proto.CompactTextString(m) }
 func (*ACLChangeUserAdd) ProtoMessage()    {}
 func (*ACLChangeUserAdd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 5}
+	return fileDescriptor_37a022c841a51877, []int{2, 5}
 }
 func (m *ACLChangeUserAdd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -664,7 +749,7 @@ func (m *ACLChangeUserConfirm) Reset()         { *m = ACLChangeUserConfirm{} }
 func (m *ACLChangeUserConfirm) String() string { return proto.CompactTextString(m) }
 func (*ACLChangeUserConfirm) ProtoMessage()    {}
 func (*ACLChangeUserConfirm) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 6}
+	return fileDescriptor_37a022c841a51877, []int{2, 6}
 }
 func (m *ACLChangeUserConfirm) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -719,7 +804,7 @@ func (m *ACLChangeUserInvite) Reset()         { *m = ACLChangeUserInvite{} }
 func (m *ACLChangeUserInvite) String() string { return proto.CompactTextString(m) }
 func (*ACLChangeUserInvite) ProtoMessage()    {}
 func (*ACLChangeUserInvite) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 7}
+	return fileDescriptor_37a022c841a51877, []int{2, 7}
 }
 func (m *ACLChangeUserInvite) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -795,7 +880,7 @@ func (m *ACLChangeUserJoin) Reset()         { *m = ACLChangeUserJoin{} }
 func (m *ACLChangeUserJoin) String() string { return proto.CompactTextString(m) }
 func (*ACLChangeUserJoin) ProtoMessage()    {}
 func (*ACLChangeUserJoin) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 8}
+	return fileDescriptor_37a022c841a51877, []int{2, 8}
 }
 func (m *ACLChangeUserJoin) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -868,7 +953,7 @@ func (m *ACLChangeUserRemove) Reset()         { *m = ACLChangeUserRemove{} }
 func (m *ACLChangeUserRemove) String() string { return proto.CompactTextString(m) }
 func (*ACLChangeUserRemove) ProtoMessage()    {}
 func (*ACLChangeUserRemove) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 9}
+	return fileDescriptor_37a022c841a51877, []int{2, 9}
 }
 func (m *ACLChangeUserRemove) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -921,7 +1006,7 @@ func (m *ACLChangeReadKeyReplace) Reset()         { *m = ACLChangeReadKeyReplace
 func (m *ACLChangeReadKeyReplace) String() string { return proto.CompactTextString(m) }
 func (*ACLChangeReadKeyReplace) ProtoMessage()    {}
 func (*ACLChangeReadKeyReplace) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 10}
+	return fileDescriptor_37a022c841a51877, []int{2, 10}
 }
 func (m *ACLChangeReadKeyReplace) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -980,7 +1065,7 @@ func (m *ACLChangeUserPermissionChange) Reset()         { *m = ACLChangeUserPerm
 func (m *ACLChangeUserPermissionChange) String() string { return proto.CompactTextString(m) }
 func (*ACLChangeUserPermissionChange) ProtoMessage()    {}
 func (*ACLChangeUserPermissionChange) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 11}
+	return fileDescriptor_37a022c841a51877, []int{2, 11}
 }
 func (m *ACLChangeUserPermissionChange) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1023,9 +1108,255 @@ func (m *ACLChangeUserPermissionChange) GetPermissions() ACLChangeUserPermission
 	return ACLChange_Admin
 }
 
+type Change struct {
+	TreeHeadIds        []string `protobuf:"bytes,1,rep,name=treeHeadIds,proto3" json:"treeHeadIds,omitempty"`
+	AclHeadId          string   `protobuf:"bytes,2,opt,name=aclHeadId,proto3" json:"aclHeadId,omitempty"`
+	SnapshotBaseId     string   `protobuf:"bytes,3,opt,name=snapshotBaseId,proto3" json:"snapshotBaseId,omitempty"`
+	ChangesData        []byte   `protobuf:"bytes,4,opt,name=changesData,proto3" json:"changesData,omitempty"`
+	CurrentReadKeyHash uint64   `protobuf:"varint,5,opt,name=currentReadKeyHash,proto3" json:"currentReadKeyHash,omitempty"`
+	Timestamp          int64    `protobuf:"varint,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Identity           string   `protobuf:"bytes,7,opt,name=identity,proto3" json:"identity,omitempty"`
+	IsSnapshot         bool     `protobuf:"varint,8,opt,name=isSnapshot,proto3" json:"isSnapshot,omitempty"`
+}
+
+func (m *Change) Reset()         { *m = Change{} }
+func (m *Change) String() string { return proto.CompactTextString(m) }
+func (*Change) ProtoMessage()    {}
+func (*Change) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{3}
+}
+func (m *Change) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Change) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Change.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Change) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Change.Merge(m, src)
+}
+func (m *Change) XXX_Size() int {
+	return m.Size()
+}
+func (m *Change) XXX_DiscardUnknown() {
+	xxx_messageInfo_Change.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Change proto.InternalMessageInfo
+
+func (m *Change) GetTreeHeadIds() []string {
+	if m != nil {
+		return m.TreeHeadIds
+	}
+	return nil
+}
+
+func (m *Change) GetAclHeadId() string {
+	if m != nil {
+		return m.AclHeadId
+	}
+	return ""
+}
+
+func (m *Change) GetSnapshotBaseId() string {
+	if m != nil {
+		return m.SnapshotBaseId
+	}
+	return ""
+}
+
+func (m *Change) GetChangesData() []byte {
+	if m != nil {
+		return m.ChangesData
+	}
+	return nil
+}
+
+func (m *Change) GetCurrentReadKeyHash() uint64 {
+	if m != nil {
+		return m.CurrentReadKeyHash
+	}
+	return 0
+}
+
+func (m *Change) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
+func (m *Change) GetIdentity() string {
+	if m != nil {
+		return m.Identity
+	}
+	return ""
+}
+
+func (m *Change) GetIsSnapshot() bool {
+	if m != nil {
+		return m.IsSnapshot
+	}
+	return false
+}
+
+type Record struct {
+	PrevId             string `protobuf:"bytes,1,opt,name=prevId,proto3" json:"prevId,omitempty"`
+	Identity           string `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	Data               []byte `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	CurrentReadKeyHash uint64 `protobuf:"varint,4,opt,name=currentReadKeyHash,proto3" json:"currentReadKeyHash,omitempty"`
+	Timestamp          int64  `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+}
+
+func (m *Record) Reset()         { *m = Record{} }
+func (m *Record) String() string { return proto.CompactTextString(m) }
+func (*Record) ProtoMessage()    {}
+func (*Record) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{4}
+}
+func (m *Record) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Record) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Record.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Record) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Record.Merge(m, src)
+}
+func (m *Record) XXX_Size() int {
+	return m.Size()
+}
+func (m *Record) XXX_DiscardUnknown() {
+	xxx_messageInfo_Record.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Record proto.InternalMessageInfo
+
+func (m *Record) GetPrevId() string {
+	if m != nil {
+		return m.PrevId
+	}
+	return ""
+}
+
+func (m *Record) GetIdentity() string {
+	if m != nil {
+		return m.Identity
+	}
+	return ""
+}
+
+func (m *Record) GetData() []byte {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+func (m *Record) GetCurrentReadKeyHash() uint64 {
+	if m != nil {
+		return m.CurrentReadKeyHash
+	}
+	return 0
+}
+
+func (m *Record) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
+type Header struct {
+	FirstId     string        `protobuf:"bytes,1,opt,name=firstId,proto3" json:"firstId,omitempty"`
+	AclListId   string        `protobuf:"bytes,2,opt,name=aclListId,proto3" json:"aclListId,omitempty"`
+	WorkspaceId string        `protobuf:"bytes,3,opt,name=workspaceId,proto3" json:"workspaceId,omitempty"`
+	DocType     HeaderDocType `protobuf:"varint,4,opt,name=docType,proto3,enum=acl.HeaderDocType" json:"docType,omitempty"`
+}
+
+func (m *Header) Reset()         { *m = Header{} }
+func (m *Header) String() string { return proto.CompactTextString(m) }
+func (*Header) ProtoMessage()    {}
+func (*Header) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{5}
+}
+func (m *Header) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Header) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Header.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Header) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Header.Merge(m, src)
+}
+func (m *Header) XXX_Size() int {
+	return m.Size()
+}
+func (m *Header) XXX_DiscardUnknown() {
+	xxx_messageInfo_Header.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Header proto.InternalMessageInfo
+
+func (m *Header) GetFirstId() string {
+	if m != nil {
+		return m.FirstId
+	}
+	return ""
+}
+
+func (m *Header) GetAclListId() string {
+	if m != nil {
+		return m.AclListId
+	}
+	return ""
+}
+
+func (m *Header) GetWorkspaceId() string {
+	if m != nil {
+		return m.WorkspaceId
+	}
+	return ""
+}
+
+func (m *Header) GetDocType() HeaderDocType {
+	if m != nil {
+		return m.DocType
+	}
+	return Header_ACL
+}
+
 func init() {
 	proto.RegisterEnum("acl.ACLChangeUserPermissions", ACLChangeUserPermissions_name, ACLChangeUserPermissions_value)
+	proto.RegisterEnum("acl.HeaderDocType", HeaderDocType_name, HeaderDocType_value)
 	proto.RegisterType((*RawChange)(nil), "acl.RawChange")
+	proto.RegisterType((*RawRecord)(nil), "acl.RawRecord")
 	proto.RegisterType((*ACLChange)(nil), "acl.ACLChange")
 	proto.RegisterType((*ACLChangeACLContentValue)(nil), "acl.ACLChange.ACLContentValue")
 	proto.RegisterType((*ACLChangeACLData)(nil), "acl.ACLChange.ACLData")
@@ -1040,6 +1371,9 @@ func init() {
 	proto.RegisterType((*ACLChangeUserRemove)(nil), "acl.ACLChange.UserRemove")
 	proto.RegisterType((*ACLChangeReadKeyReplace)(nil), "acl.ACLChange.ReadKeyReplace")
 	proto.RegisterType((*ACLChangeUserPermissionChange)(nil), "acl.ACLChange.UserPermissionChange")
+	proto.RegisterType((*Change)(nil), "acl.Change")
+	proto.RegisterType((*Record)(nil), "acl.Record")
+	proto.RegisterType((*Header)(nil), "acl.Header")
 }
 
 func init() {
@@ -1047,67 +1381,78 @@ func init() {
 }
 
 var fileDescriptor_37a022c841a51877 = []byte{
-	// 948 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xd4, 0x56, 0x4f, 0x6f, 0xe3, 0x44,
-	0x14, 0xf7, 0xc4, 0x4d, 0x1d, 0x3f, 0x87, 0x36, 0x0c, 0x2b, 0xd6, 0x58, 0x4b, 0x88, 0xca, 0x0a,
-	0x45, 0x08, 0xa5, 0xab, 0xac, 0x90, 0x56, 0x80, 0x2a, 0xda, 0x82, 0x36, 0xa1, 0x1c, 0x56, 0x53,
-	0x2d, 0x08, 0x6e, 0x53, 0x7b, 0x68, 0xad, 0x75, 0x6c, 0xe3, 0x99, 0x14, 0xe5, 0x82, 0xc4, 0x89,
-	0x2b, 0x67, 0xbe, 0x0a, 0x5f, 0x60, 0x8f, 0x7b, 0xe4, 0x06, 0x6a, 0xef, 0x5c, 0xf8, 0x02, 0x68,
-	0xfe, 0xd8, 0x71, 0x12, 0x6f, 0x24, 0xa4, 0x15, 0x12, 0x87, 0x4a, 0x33, 0xbf, 0xf7, 0x7b, 0xd3,
-	0xf7, 0xde, 0xef, 0xbd, 0x17, 0xc3, 0x83, 0xfc, 0xd9, 0xe5, 0x21, 0x0d, 0x13, 0xf9, 0x17, 0x5e,
-	0xd1, 0xf4, 0x92, 0x71, 0x79, 0xcc, 0x2f, 0x0e, 0xf3, 0x22, 0x13, 0x19, 0xaf, 0xe1, 0x23, 0x85,
-	0x60, 0x9b, 0x86, 0xc9, 0xc1, 0x39, 0xb8, 0x84, 0xfe, 0x70, 0xaa, 0x0c, 0xd8, 0x07, 0x27, 0xa7,
-	0x8b, 0x24, 0xa3, 0x91, 0x8f, 0x06, 0x68, 0xd8, 0x25, 0xe5, 0x15, 0xdf, 0x03, 0x97, 0xc7, 0x97,
-	0x29, 0x15, 0xf3, 0x82, 0xf9, 0x2d, 0x65, 0x5b, 0x02, 0x78, 0x0f, 0x5a, 0x71, 0xe4, 0xdb, 0x03,
-	0x34, 0x74, 0x49, 0x2b, 0x8e, 0x0e, 0xfe, 0x7e, 0x03, 0xdc, 0xe3, 0xd3, 0x2f, 0xcd, 0xab, 0x03,
-	0xf0, 0x44, 0xc1, 0xd8, 0x84, 0xd1, 0x68, 0x1a, 0x71, 0x1f, 0x0d, 0xec, 0xa1, 0x4b, 0xea, 0x10,
-	0xee, 0x03, 0xd0, 0x30, 0x29, 0x09, 0x2d, 0x45, 0xa8, 0x21, 0xf8, 0x3d, 0xd8, 0xe3, 0x29, 0xcd,
-	0xf9, 0x55, 0x26, 0x4e, 0x28, 0x67, 0xd3, 0xf2, 0x7f, 0xad, 0xa1, 0xf8, 0x01, 0x38, 0x34, 0x4c,
-	0x3e, 0xa3, 0x82, 0xfa, 0x3b, 0x03, 0x34, 0xf4, 0xc6, 0x6f, 0x8e, 0x68, 0x98, 0x8c, 0xaa, 0x50,
-	0xe4, 0x49, 0x5a, 0x49, 0x49, 0x93, 0xb1, 0x99, 0xa2, 0x28, 0xaf, 0xb6, 0xca, 0xac, 0x0e, 0xe1,
-	0x11, 0xe0, 0x70, 0x5e, 0x14, 0x2c, 0x15, 0x84, 0xd1, 0xe8, 0x8c, 0x2d, 0x26, 0x94, 0x5f, 0xf9,
-	0xbb, 0x03, 0x34, 0xdc, 0x21, 0x0d, 0x16, 0x59, 0x29, 0x11, 0xcf, 0x18, 0x17, 0x74, 0x96, 0xfb,
-	0xce, 0x00, 0x0d, 0x6d, 0xb2, 0x04, 0x70, 0x00, 0x9d, 0x38, 0x62, 0xa9, 0x88, 0xc5, 0xc2, 0xef,
-	0xa8, 0x1c, 0xaa, 0x7b, 0xf0, 0xab, 0x0d, 0xfb, 0x32, 0xd4, 0x2c, 0x15, 0x2c, 0x15, 0x5f, 0xd1,
-	0x64, 0xce, 0xf0, 0x18, 0x9c, 0x39, 0x67, 0xc5, 0x71, 0xa4, 0x15, 0xd9, 0xcc, 0xe8, 0xa9, 0xb6,
-	0x4e, 0x2c, 0x52, 0x12, 0xf1, 0xc7, 0x00, 0xf2, 0x48, 0xd8, 0x2c, 0xbb, 0xd6, 0x62, 0x79, 0xe3,
-	0xb7, 0x1a, 0xdc, 0x34, 0x61, 0x62, 0x91, 0x1a, 0x1d, 0x7f, 0x03, 0x77, 0xe4, 0xed, 0x09, 0x2b,
-	0x66, 0x31, 0xe7, 0x71, 0x96, 0x6a, 0x07, 0x55, 0x70, 0x6f, 0xfc, 0x6e, 0xc3, 0x33, 0xeb, 0xd4,
-	0x89, 0x45, 0x1a, 0x9f, 0x28, 0xe3, 0x9a, 0xa6, 0xd7, 0xb1, 0x60, 0x46, 0xa0, 0xa6, 0xb8, 0x34,
-	0xa1, 0x8c, 0x4b, 0xdf, 0xf0, 0x87, 0xd0, 0x91, 0xb7, 0x2f, 0xb2, 0x38, 0x55, 0x2a, 0x79, 0xe3,
-	0xbb, 0x0d, 0xae, 0xd2, 0x3c, 0xb1, 0x48, 0x45, 0xc5, 0x47, 0xe0, 0xc9, 0xf3, 0x69, 0x96, 0x7e,
-	0x17, 0x17, 0x33, 0x25, 0x9b, 0x37, 0x0e, 0x1a, 0x3c, 0x0d, 0x63, 0x62, 0x91, 0xba, 0xc3, 0x89,
-	0x03, 0xed, 0x6b, 0x29, 0x44, 0xf0, 0x33, 0x02, 0xc7, 0x74, 0x0f, 0xfe, 0x04, 0x3c, 0x1a, 0x26,
-	0xe7, 0xa6, 0xf7, 0x8c, 0x30, 0xc1, 0x66, 0xab, 0x95, 0x0c, 0x52, 0xa7, 0xe3, 0x23, 0xd5, 0xec,
-	0x46, 0x65, 0xd5, 0xec, 0xde, 0xb8, 0xbf, 0xe9, 0x5c, 0x6f, 0x03, 0x52, 0xf3, 0x08, 0x4e, 0xc0,
-	0xab, 0xbd, 0x8d, 0x1f, 0x42, 0x47, 0xbe, 0x2e, 0xa8, 0x60, 0x26, 0x92, 0xbb, 0x0d, 0x91, 0x48,
-	0x33, 0xa9, 0x88, 0xc1, 0x4f, 0x2d, 0xe8, 0x94, 0x30, 0xbe, 0x0f, 0xaf, 0x15, 0xcb, 0x06, 0x66,
-	0x7a, 0x42, 0x77, 0xc8, 0x2a, 0x88, 0x1f, 0x69, 0xf5, 0x94, 0x0b, 0x37, 0x61, 0xfb, 0x0d, 0x85,
-	0xd4, 0xff, 0xaa, 0xc6, 0xc5, 0x47, 0xe0, 0xc4, 0x4a, 0x44, 0xee, 0xdb, 0xca, 0xed, 0xfe, 0x4b,
-	0x02, 0x1c, 0x69, 0xad, 0xf9, 0xe7, 0xa9, 0x28, 0x16, 0xa4, 0x74, 0x0a, 0x9e, 0x42, 0xb7, 0x6e,
-	0xc0, 0x3d, 0xb0, 0x9f, 0xb1, 0x85, 0x4a, 0xd6, 0x25, 0xf2, 0x88, 0x0f, 0x8d, 0x4a, 0x5b, 0x9a,
-	0x5d, 0xbf, 0x40, 0x34, 0xef, 0xa3, 0xd6, 0x23, 0x14, 0xfc, 0x81, 0xc0, 0xad, 0x02, 0x5e, 0x19,
-	0x4c, 0xb4, 0x3a, 0x98, 0xb2, 0x40, 0x2c, 0x0d, 0x8b, 0x45, 0x2e, 0xe2, 0x2c, 0x3d, 0x63, 0x0b,
-	0xb3, 0x00, 0x57, 0x41, 0xfc, 0x01, 0xbc, 0x6e, 0x00, 0x16, 0x99, 0x85, 0xa0, 0x13, 0xee, 0x92,
-	0x4d, 0x03, 0xfe, 0x14, 0xbc, 0xbc, 0x1a, 0x10, 0xae, 0xa6, 0x61, 0x6f, 0xa3, 0x0d, 0x56, 0xc7,
-	0x8b, 0x93, 0xba, 0x8b, 0x5c, 0x5d, 0x53, 0x6e, 0xfa, 0x94, 0x45, 0x6a, 0x28, 0x3a, 0xa4, 0x0e,
-	0x05, 0xbf, 0x21, 0x70, 0xcc, 0x7e, 0xf8, 0xff, 0xe5, 0x17, 0x3c, 0x06, 0xaf, 0x36, 0x98, 0x5b,
-	0x13, 0xb8, 0x07, 0xae, 0x59, 0x7e, 0xd3, 0x48, 0x05, 0xef, 0x92, 0x25, 0x10, 0xfc, 0x85, 0x00,
-	0x96, 0x2d, 0x80, 0x87, 0xb0, 0x4f, 0xc3, 0x90, 0xe5, 0xe2, 0xc9, 0xfc, 0x22, 0x89, 0xc3, 0x33,
-	0xd3, 0x4a, 0x5d, 0xb2, 0x0e, 0xe3, 0xf7, 0xa1, 0x67, 0x12, 0x5b, 0x52, 0x75, 0x69, 0x36, 0xf0,
-	0xff, 0x5c, 0xfd, 0x00, 0x3a, 0x3a, 0x9f, 0xa9, 0x96, 0xde, 0x25, 0xd5, 0x3d, 0x78, 0x8e, 0xa0,
-	0x53, 0x6e, 0xc3, 0x57, 0x20, 0x7c, 0x55, 0xb0, 0xf3, 0xea, 0x0b, 0xc0, 0xae, 0x17, 0xac, 0x82,
-	0xf1, 0x01, 0x74, 0x97, 0x2b, 0x7b, 0x1a, 0xa9, 0xbc, 0x5c, 0xb2, 0x82, 0x35, 0x17, 0xaa, 0xfd,
-	0x92, 0x42, 0x05, 0xdf, 0x6b, 0xe9, 0xcc, 0x8f, 0xd3, 0xb6, 0x5c, 0x1e, 0xc3, 0xbe, 0x59, 0x58,
-	0x84, 0xe5, 0x09, 0x0d, 0xab, 0x6d, 0xf3, 0xf6, 0x5a, 0x59, 0xc9, 0x0a, 0x8b, 0xac, 0x7b, 0x05,
-	0x3f, 0xc2, 0xde, 0x2a, 0xe5, 0x15, 0x94, 0x70, 0xd9, 0x49, 0x55, 0x6e, 0xa6, 0x86, 0x1b, 0x78,
-	0x20, 0xe0, 0x4e, 0xd3, 0xcf, 0xea, 0xd6, 0x28, 0xd6, 0xfa, 0xa9, 0xf5, 0xaf, 0xfb, 0xe9, 0xe0,
-	0x18, 0xf6, 0xd7, 0xec, 0xd8, 0x85, 0xf6, 0x71, 0x34, 0x8b, 0xd3, 0x9e, 0x85, 0x01, 0x76, 0xbf,
-	0x2e, 0x62, 0xc1, 0x8a, 0x1e, 0x92, 0x67, 0x19, 0x2a, 0x2b, 0x7a, 0x2d, 0xec, 0x81, 0xa3, 0xa5,
-	0x89, 0x7a, 0xf6, 0xc9, 0x3b, 0xcf, 0x6f, 0xfa, 0xe8, 0xc5, 0x4d, 0x1f, 0xfd, 0x79, 0xd3, 0x47,
-	0xbf, 0xdc, 0xf6, 0xad, 0x17, 0xb7, 0x7d, 0xeb, 0xf7, 0xdb, 0xbe, 0xf5, 0x6d, 0x5b, 0x7d, 0x88,
-	0x5e, 0xec, 0xaa, 0xef, 0xce, 0x87, 0xff, 0x04, 0x00, 0x00, 0xff, 0xff, 0x2a, 0xe8, 0x23, 0x71,
-	0xab, 0x0a, 0x00, 0x00,
+	// 1131 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xd4, 0x57, 0x4f, 0x6f, 0x1b, 0x45,
+	0x14, 0xf7, 0xf8, 0xdf, 0x7a, 0xdf, 0x86, 0xc4, 0x4c, 0xab, 0xd6, 0xac, 0x8a, 0x6b, 0x99, 0x0a,
+	0x59, 0x08, 0x9c, 0xca, 0x15, 0x52, 0x05, 0x28, 0x22, 0x49, 0x51, 0x6d, 0x92, 0x43, 0x35, 0xa1,
+	0x20, 0xb8, 0x4d, 0x76, 0xa7, 0xc9, 0x2a, 0xf6, 0xee, 0xb2, 0x33, 0x49, 0xe5, 0x0b, 0x12, 0x27,
+	0xae, 0x9c, 0x11, 0xe2, 0x43, 0x70, 0xe5, 0x0b, 0xf4, 0xd8, 0x23, 0x37, 0x50, 0x72, 0xe7, 0xc2,
+	0x17, 0x40, 0xf3, 0x67, 0xd7, 0xeb, 0xf5, 0x26, 0x0a, 0x52, 0x84, 0xc4, 0x21, 0xd2, 0xcc, 0xef,
+	0xfd, 0xde, 0xf8, 0xbd, 0xf7, 0x7b, 0xf3, 0x32, 0x0b, 0x0f, 0xe3, 0x93, 0xa3, 0x4d, 0xea, 0x4d,
+	0xe5, 0x9f, 0x77, 0x4c, 0xc3, 0x23, 0xc6, 0xe5, 0x32, 0x3e, 0xdc, 0x8c, 0x93, 0x48, 0x44, 0x3c,
+	0x87, 0x0f, 0x15, 0x82, 0x6b, 0xd4, 0x9b, 0xf6, 0x0f, 0xc0, 0x26, 0xf4, 0xe5, 0xae, 0x32, 0xe0,
+	0x0e, 0x58, 0x31, 0x9d, 0x4f, 0x23, 0xea, 0x77, 0x50, 0x0f, 0x0d, 0xd6, 0x48, 0xba, 0xc5, 0xf7,
+	0xc0, 0xe6, 0xc1, 0x51, 0x48, 0xc5, 0x69, 0xc2, 0x3a, 0x55, 0x65, 0x5b, 0x00, 0x78, 0x1d, 0xaa,
+	0x81, 0xdf, 0xa9, 0xf5, 0xd0, 0xc0, 0x26, 0xd5, 0xc0, 0x37, 0x87, 0x12, 0xe6, 0x45, 0x89, 0x7f,
+	0x63, 0x87, 0xfe, 0x7d, 0x0b, 0xec, 0xed, 0xdd, 0x7d, 0x13, 0x6a, 0x0f, 0x1c, 0x91, 0x30, 0x36,
+	0x66, 0xd4, 0x9f, 0xf8, 0xbc, 0x83, 0x7a, 0xb5, 0x81, 0x4d, 0xf2, 0x10, 0xee, 0x02, 0x50, 0x6f,
+	0x9a, 0x12, 0xaa, 0x8a, 0x90, 0x43, 0xf0, 0xbb, 0xb0, 0xce, 0x43, 0x1a, 0xf3, 0xe3, 0x48, 0xec,
+	0x50, 0xce, 0x26, 0xe9, 0x6f, 0x15, 0x50, 0xfc, 0x10, 0x2c, 0xea, 0x4d, 0x9f, 0x50, 0x41, 0x3b,
+	0xf5, 0x1e, 0x1a, 0x38, 0xa3, 0x3b, 0x43, 0xea, 0x4d, 0x87, 0x59, 0x28, 0x72, 0x25, 0xad, 0x24,
+	0xa5, 0xc9, 0xd8, 0x4c, 0xa5, 0x95, 0x57, 0x43, 0x65, 0x96, 0x87, 0xf0, 0x10, 0xb0, 0x77, 0x9a,
+	0x24, 0x2c, 0x14, 0x84, 0x51, 0x7f, 0x8f, 0xcd, 0xc7, 0x94, 0x1f, 0x77, 0x9a, 0x3d, 0x34, 0xa8,
+	0x93, 0x12, 0x8b, 0xac, 0x94, 0x08, 0x66, 0x8c, 0x0b, 0x3a, 0x8b, 0x3b, 0x56, 0x0f, 0x0d, 0x6a,
+	0x64, 0x01, 0x60, 0x17, 0x5a, 0x81, 0xcf, 0x42, 0x11, 0x88, 0x79, 0xa7, 0xa5, 0x72, 0xc8, 0xf6,
+	0xee, 0x4f, 0x35, 0xd8, 0x90, 0xa1, 0x46, 0xa1, 0x60, 0xa1, 0xf8, 0x92, 0x4e, 0x4f, 0x19, 0x1e,
+	0x81, 0x75, 0xca, 0x59, 0xb2, 0xed, 0x6b, 0x45, 0x56, 0x33, 0x7a, 0xae, 0xad, 0xe3, 0x0a, 0x49,
+	0x89, 0xf8, 0x63, 0x00, 0xb9, 0x24, 0x6c, 0x16, 0x9d, 0x69, 0xb1, 0x9c, 0xd1, 0x5b, 0x25, 0x6e,
+	0x9a, 0x30, 0xae, 0x90, 0x1c, 0x1d, 0x7f, 0x0d, 0xb7, 0xe5, 0xee, 0x19, 0x4b, 0x66, 0x01, 0xe7,
+	0x41, 0x14, 0x6a, 0x07, 0x55, 0x70, 0x67, 0xf4, 0x4e, 0xc9, 0x31, 0x45, 0xea, 0xb8, 0x42, 0x4a,
+	0x8f, 0x48, 0xe3, 0x9a, 0x84, 0x67, 0x81, 0x60, 0x46, 0xa0, 0xb2, 0xb8, 0x34, 0x21, 0x8d, 0x4b,
+	0xef, 0xf0, 0x87, 0xd0, 0x92, 0xbb, 0xcf, 0xa3, 0x20, 0x54, 0x2a, 0x39, 0xa3, 0xbb, 0x25, 0xae,
+	0xd2, 0x3c, 0xae, 0x90, 0x8c, 0x8a, 0xb7, 0xc0, 0x91, 0xeb, 0xdd, 0x28, 0x7c, 0x11, 0x24, 0x33,
+	0x25, 0x9b, 0x33, 0x72, 0x4b, 0x3c, 0x0d, 0x63, 0x5c, 0x21, 0x79, 0x87, 0x1d, 0x0b, 0x1a, 0x67,
+	0x52, 0x08, 0xf7, 0x07, 0x04, 0x96, 0xe9, 0x1e, 0xfc, 0x09, 0x38, 0xd4, 0x9b, 0x1e, 0x98, 0xde,
+	0x33, 0xc2, 0xb8, 0xab, 0xad, 0x96, 0x32, 0x48, 0x9e, 0x8e, 0xb7, 0x54, 0xb3, 0x1b, 0x95, 0x55,
+	0xb3, 0x3b, 0xa3, 0xee, 0xaa, 0x73, 0xbe, 0x0d, 0x48, 0xce, 0xc3, 0xdd, 0x01, 0x27, 0x77, 0x36,
+	0x7e, 0x04, 0x2d, 0x79, 0xba, 0xa0, 0x82, 0x99, 0x48, 0xee, 0x96, 0x44, 0x22, 0xcd, 0x24, 0x23,
+	0xba, 0xdf, 0x57, 0xa1, 0x95, 0xc2, 0xf8, 0x01, 0xbc, 0x91, 0x2c, 0x1a, 0x98, 0xe9, 0x1b, 0x5a,
+	0x27, 0xcb, 0x20, 0x7e, 0xac, 0xd5, 0x53, 0x2e, 0xdc, 0x84, 0xdd, 0x29, 0x29, 0xa4, 0xfe, 0xa9,
+	0x1c, 0x17, 0x6f, 0x81, 0x15, 0x28, 0x11, 0x79, 0xa7, 0xa6, 0xdc, 0x1e, 0x5c, 0x12, 0xe0, 0x50,
+	0x6b, 0xcd, 0x3f, 0x0b, 0x45, 0x32, 0x27, 0xa9, 0x93, 0xfb, 0x1c, 0xd6, 0xf2, 0x06, 0xdc, 0x86,
+	0xda, 0x09, 0x9b, 0xab, 0x64, 0x6d, 0x22, 0x97, 0x78, 0xd3, 0xa8, 0x74, 0x45, 0xb3, 0xeb, 0x13,
+	0x88, 0xe6, 0x7d, 0x54, 0x7d, 0x8c, 0xdc, 0x3f, 0x10, 0xd8, 0x59, 0xc0, 0x4b, 0x17, 0x13, 0x2d,
+	0x5f, 0x4c, 0x59, 0x20, 0x16, 0x7a, 0xc9, 0x3c, 0x16, 0x41, 0x14, 0xee, 0xb1, 0xb9, 0x19, 0x80,
+	0xcb, 0x20, 0x7e, 0x1f, 0xde, 0x34, 0x00, 0xf3, 0xcd, 0x40, 0xd0, 0x09, 0xaf, 0x91, 0x55, 0x03,
+	0xfe, 0x14, 0x9c, 0x38, 0xbb, 0x20, 0x5c, 0xdd, 0x86, 0xf5, 0x95, 0x36, 0x58, 0xbe, 0x5e, 0x9c,
+	0xe4, 0x5d, 0xe4, 0xe8, 0x9a, 0x70, 0xd3, 0xa7, 0xcc, 0x57, 0x97, 0xa2, 0x45, 0xf2, 0x90, 0xfb,
+	0x1b, 0x02, 0xcb, 0xcc, 0x87, 0xff, 0x5f, 0x7e, 0xee, 0x53, 0x70, 0x72, 0x17, 0xf3, 0xca, 0x04,
+	0xee, 0x81, 0x6d, 0x86, 0xdf, 0xc4, 0x57, 0xc1, 0xdb, 0x64, 0x01, 0xb8, 0x7f, 0x21, 0x80, 0x45,
+	0x0b, 0xe0, 0x01, 0x6c, 0x50, 0xcf, 0x63, 0xb1, 0x78, 0x76, 0x7a, 0x38, 0x0d, 0xbc, 0x3d, 0xd3,
+	0x4a, 0x6b, 0xa4, 0x08, 0xe3, 0xf7, 0xa0, 0x6d, 0x12, 0x5b, 0x50, 0x75, 0x69, 0x56, 0xf0, 0xff,
+	0x5c, 0x7d, 0x17, 0x5a, 0x3a, 0x9f, 0x89, 0x96, 0xde, 0x26, 0xd9, 0xde, 0x7d, 0x85, 0xa0, 0x95,
+	0x4e, 0xc3, 0x1b, 0x10, 0x3e, 0x2b, 0xd8, 0x41, 0xf6, 0x02, 0xa8, 0xe5, 0x0b, 0x96, 0xc1, 0xb8,
+	0x0f, 0x6b, 0x8b, 0x91, 0x3d, 0xf1, 0x55, 0x5e, 0x36, 0x59, 0xc2, 0xca, 0x0b, 0xd5, 0xb8, 0xa4,
+	0x50, 0xee, 0xb7, 0x5a, 0x3a, 0xf3, 0xcf, 0xe9, 0xaa, 0x5c, 0x9e, 0xc2, 0x86, 0x19, 0x58, 0x84,
+	0xc5, 0x53, 0xea, 0x65, 0xd3, 0xe6, 0xed, 0x42, 0x59, 0xc9, 0x12, 0x8b, 0x14, 0xbd, 0xdc, 0xef,
+	0x60, 0x7d, 0x99, 0x72, 0x03, 0x25, 0x5c, 0x74, 0x52, 0x96, 0x9b, 0xa9, 0xe1, 0x0a, 0xee, 0x0a,
+	0xb8, 0x5d, 0xf6, 0x6f, 0xf5, 0xca, 0x28, 0x0a, 0xfd, 0x54, 0xfd, 0xd7, 0xfd, 0xd4, 0xdf, 0x86,
+	0x8d, 0x82, 0x1d, 0xdb, 0xd0, 0xd8, 0xf6, 0x67, 0x41, 0xd8, 0xae, 0x60, 0x80, 0xe6, 0x57, 0x49,
+	0x20, 0x58, 0xd2, 0x46, 0x72, 0x2d, 0x43, 0x65, 0x49, 0xbb, 0x8a, 0x1d, 0xb0, 0xb4, 0x34, 0x7e,
+	0xbb, 0xd6, 0xff, 0xb9, 0x0a, 0xcd, 0x6b, 0x3f, 0xf9, 0xee, 0x81, 0x9d, 0x3d, 0xf0, 0xd2, 0x2b,
+	0x9b, 0x01, 0xd7, 0x7e, 0xf0, 0x15, 0x9e, 0x6f, 0xf5, 0xeb, 0x3e, 0xdf, 0x1a, 0xd7, 0x7b, 0xbe,
+	0x35, 0xaf, 0x7a, 0xbe, 0x59, 0x05, 0x0d, 0xba, 0x00, 0x01, 0xcf, 0x1e, 0x05, 0x2d, 0x35, 0x8e,
+	0x73, 0x48, 0xff, 0x17, 0x24, 0x0b, 0xa7, 0xde, 0xd9, 0x77, 0xa0, 0x19, 0x27, 0xec, 0x6c, 0xe2,
+	0x1b, 0x21, 0xcd, 0x6e, 0xe9, 0xf8, 0x6a, 0xe1, 0x78, 0x0c, 0x75, 0x5f, 0xe6, 0xa8, 0xdb, 0x46,
+	0xad, 0x2f, 0x49, 0xae, 0x7e, 0xbd, 0xe4, 0x1a, 0x85, 0xe4, 0xfa, 0xbf, 0x22, 0x68, 0x8e, 0x95,
+	0xb2, 0xf2, 0x43, 0xe0, 0x45, 0x90, 0x70, 0x91, 0x45, 0x98, 0x6e, 0x8d, 0x6e, 0xfb, 0x81, 0xb2,
+	0x2d, 0x74, 0xd3, 0x80, 0xd4, 0xe3, 0x65, 0x94, 0x9c, 0xf0, 0x98, 0x7a, 0x0b, 0xd1, 0xf2, 0x10,
+	0xfe, 0x00, 0x2c, 0x3f, 0xf2, 0xbe, 0x98, 0xc7, 0xcc, 0x4c, 0xbd, 0x5b, 0xaa, 0x4b, 0xf5, 0xef,
+	0x0e, 0x9f, 0x68, 0x13, 0x49, 0x39, 0xfd, 0xfb, 0x60, 0x19, 0x0c, 0x5b, 0x50, 0xdb, 0xde, 0xdd,
+	0x6f, 0x57, 0x64, 0xd3, 0x49, 0x2c, 0x61, 0xac, 0x8d, 0x76, 0xee, 0xbf, 0x3a, 0xef, 0xa2, 0xd7,
+	0xe7, 0x5d, 0xf4, 0xe7, 0x79, 0x17, 0xfd, 0x78, 0xd1, 0xad, 0xbc, 0xbe, 0xe8, 0x56, 0x7e, 0xbf,
+	0xe8, 0x56, 0xbe, 0x69, 0xa8, 0x4f, 0xaa, 0xc3, 0xa6, 0xfa, 0x82, 0x7a, 0xf4, 0x4f, 0x00, 0x00,
+	0x00, 0xff, 0xff, 0x14, 0x6d, 0xee, 0xf8, 0x75, 0x0d, 0x00, 0x00,
 }
 
 func (m *RawChange) Marshal() (dAtA []byte, err error) {
@@ -1126,6 +1471,50 @@ func (m *RawChange) MarshalTo(dAtA []byte) (int, error) {
 }
 
 func (m *RawChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Id) > 0 {
+		i -= len(m.Id)
+		copy(dAtA[i:], m.Id)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Id)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Signature) > 0 {
+		i -= len(m.Signature)
+		copy(dAtA[i:], m.Signature)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Signature)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Payload) > 0 {
+		i -= len(m.Payload)
+		copy(dAtA[i:], m.Payload)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Payload)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *RawRecord) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *RawRecord) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *RawRecord) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1951,6 +2340,189 @@ func (m *ACLChangeUserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, 
 	return len(dAtA) - i, nil
 }
 
+func (m *Change) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Change) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Change) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.IsSnapshot {
+		i--
+		if m.IsSnapshot {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x40
+	}
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Identity)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if m.Timestamp != 0 {
+		i = encodeVarintAclchanges(dAtA, i, uint64(m.Timestamp))
+		i--
+		dAtA[i] = 0x30
+	}
+	if m.CurrentReadKeyHash != 0 {
+		i = encodeVarintAclchanges(dAtA, i, uint64(m.CurrentReadKeyHash))
+		i--
+		dAtA[i] = 0x28
+	}
+	if len(m.ChangesData) > 0 {
+		i -= len(m.ChangesData)
+		copy(dAtA[i:], m.ChangesData)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.ChangesData)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.SnapshotBaseId) > 0 {
+		i -= len(m.SnapshotBaseId)
+		copy(dAtA[i:], m.SnapshotBaseId)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.SnapshotBaseId)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.AclHeadId) > 0 {
+		i -= len(m.AclHeadId)
+		copy(dAtA[i:], m.AclHeadId)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.AclHeadId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.TreeHeadIds) > 0 {
+		for iNdEx := len(m.TreeHeadIds) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.TreeHeadIds[iNdEx])
+			copy(dAtA[i:], m.TreeHeadIds[iNdEx])
+			i = encodeVarintAclchanges(dAtA, i, uint64(len(m.TreeHeadIds[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *Record) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Record) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Record) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Timestamp != 0 {
+		i = encodeVarintAclchanges(dAtA, i, uint64(m.Timestamp))
+		i--
+		dAtA[i] = 0x28
+	}
+	if m.CurrentReadKeyHash != 0 {
+		i = encodeVarintAclchanges(dAtA, i, uint64(m.CurrentReadKeyHash))
+		i--
+		dAtA[i] = 0x20
+	}
+	if len(m.Data) > 0 {
+		i -= len(m.Data)
+		copy(dAtA[i:], m.Data)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Data)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Identity)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.PrevId) > 0 {
+		i -= len(m.PrevId)
+		copy(dAtA[i:], m.PrevId)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.PrevId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *Header) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Header) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Header) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.DocType != 0 {
+		i = encodeVarintAclchanges(dAtA, i, uint64(m.DocType))
+		i--
+		dAtA[i] = 0x20
+	}
+	if len(m.WorkspaceId) > 0 {
+		i -= len(m.WorkspaceId)
+		copy(dAtA[i:], m.WorkspaceId)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.WorkspaceId)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.AclListId) > 0 {
+		i -= len(m.AclListId)
+		copy(dAtA[i:], m.AclListId)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.AclListId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.FirstId) > 0 {
+		i -= len(m.FirstId)
+		copy(dAtA[i:], m.FirstId)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.FirstId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintAclchanges(dAtA []byte, offset int, v uint64) int {
 	offset -= sovAclchanges(v)
 	base := offset
@@ -1963,6 +2535,27 @@ func encodeVarintAclchanges(dAtA []byte, offset int, v uint64) int {
 	return base
 }
 func (m *RawChange) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Payload)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.Signature)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.Id)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	return n
+}
+
+func (m *RawRecord) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2366,6 +2959,97 @@ func (m *ACLChangeUserPermissionChange) Size() (n int) {
 	return n
 }
 
+func (m *Change) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.TreeHeadIds) > 0 {
+		for _, s := range m.TreeHeadIds {
+			l = len(s)
+			n += 1 + l + sovAclchanges(uint64(l))
+		}
+	}
+	l = len(m.AclHeadId)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.SnapshotBaseId)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.ChangesData)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	if m.CurrentReadKeyHash != 0 {
+		n += 1 + sovAclchanges(uint64(m.CurrentReadKeyHash))
+	}
+	if m.Timestamp != 0 {
+		n += 1 + sovAclchanges(uint64(m.Timestamp))
+	}
+	l = len(m.Identity)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	if m.IsSnapshot {
+		n += 2
+	}
+	return n
+}
+
+func (m *Record) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.PrevId)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.Identity)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.Data)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	if m.CurrentReadKeyHash != 0 {
+		n += 1 + sovAclchanges(uint64(m.CurrentReadKeyHash))
+	}
+	if m.Timestamp != 0 {
+		n += 1 + sovAclchanges(uint64(m.Timestamp))
+	}
+	return n
+}
+
+func (m *Header) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.FirstId)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.AclListId)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.WorkspaceId)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	if m.DocType != 0 {
+		n += 1 + sovAclchanges(uint64(m.DocType))
+	}
+	return n
+}
+
 func sovAclchanges(x uint64) (n int) {
 	return (math_bits.Len64(x|1) + 6) / 7
 }
@@ -2399,6 +3083,156 @@ func (m *RawChange) Unmarshal(dAtA []byte) error {
 		}
 		if fieldNum <= 0 {
 			return fmt.Errorf("proto: RawChange: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Payload", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Payload = append(m.Payload[:0], dAtA[iNdEx:postIndex]...)
+			if m.Payload == nil {
+				m.Payload = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Id = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclchanges(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *RawRecord) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclchanges
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: RawRecord: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: RawRecord: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -4788,6 +5622,627 @@ func (m *ACLChangeUserPermissionChange) Unmarshal(dAtA []byte) error {
 				b := dAtA[iNdEx]
 				iNdEx++
 				m.Permissions |= ACLChangeUserPermissions(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclchanges(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Change) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclchanges
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Change: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Change: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TreeHeadIds", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.TreeHeadIds = append(m.TreeHeadIds, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AclHeadId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AclHeadId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SnapshotBaseId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SnapshotBaseId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChangesData", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ChangesData = append(m.ChangesData[:0], dAtA[iNdEx:postIndex]...)
+			if m.ChangesData == nil {
+				m.ChangesData = []byte{}
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CurrentReadKeyHash", wireType)
+			}
+			m.CurrentReadKeyHash = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.CurrentReadKeyHash |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
+			}
+			m.Timestamp = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Timestamp |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 8:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsSnapshot", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsSnapshot = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclchanges(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Record) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclchanges
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Record: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Record: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PrevId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PrevId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Data = append(m.Data[:0], dAtA[iNdEx:postIndex]...)
+			if m.Data == nil {
+				m.Data = []byte{}
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CurrentReadKeyHash", wireType)
+			}
+			m.CurrentReadKeyHash = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.CurrentReadKeyHash |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
+			}
+			m.Timestamp = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Timestamp |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclchanges(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Header) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclchanges
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Header: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Header: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FirstId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.FirstId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AclListId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AclListId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field WorkspaceId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.WorkspaceId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DocType", wireType)
+			}
+			m.DocType = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.DocType |= HeaderDocType(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}

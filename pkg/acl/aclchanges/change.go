@@ -1,11 +1,11 @@
 package aclchanges
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/gogo/protobuf/proto"
 )
 
 type Change interface {
-	ProtoChange() *aclpb.ACLChange
+	ProtoChange() proto.Marshaler
 	DecryptedChangeContent() []byte
 	Signature() []byte
 	CID() string
