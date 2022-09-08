@@ -27,3 +27,21 @@ OuterLoop:
 	}
 	return ourPath[i+1], nil
 }
+
+func discardFromSlice[T any](elements []T, isDiscarded func(T) bool) []T {
+	var (
+		finishedIdx = 0
+		currentIdx  = 0
+	)
+	for currentIdx < len(elements) {
+		if !isDiscarded(elements[currentIdx]) {
+			if finishedIdx != currentIdx {
+				elements[finishedIdx] = elements[currentIdx]
+			}
+			finishedIdx++
+		}
+		currentIdx++
+	}
+	elements = elements[:finishedIdx]
+	return elements
+}

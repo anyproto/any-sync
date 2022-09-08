@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/common"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
@@ -112,7 +113,7 @@ func defaultObjectTreeDeps(
 	listener ObjectTreeUpdateListener,
 	aclList list.ACLList) objectTreeDeps {
 
-	keychain := newKeychain()
+	keychain := common.NewKeychain()
 	changeBuilder := newChangeBuilder(keychain)
 	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
 	return objectTreeDeps{

@@ -2,6 +2,7 @@ package tree
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/common"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
@@ -30,10 +31,10 @@ type ChangeBuilder interface {
 }
 
 type changeBuilder struct {
-	keys *keychain
+	keys *common.Keychain
 }
 
-func newChangeBuilder(keys *keychain) *changeBuilder {
+func newChangeBuilder(keys *common.Keychain) *changeBuilder {
 	return &changeBuilder{keys: keys}
 }
 
@@ -55,7 +56,7 @@ func (c *changeBuilder) ConvertFromRawAndVerify(rawChange *aclpb.RawChange) (ch 
 		return nil, err
 	}
 
-	identityKey, err := c.keys.getOrAdd(unmarshalled.Identity)
+	identityKey, err := c.keys.GetOrAdd(unmarshalled.Identity)
 	if err != nil {
 		return
 	}

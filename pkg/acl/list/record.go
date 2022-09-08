@@ -6,10 +6,10 @@ import (
 )
 
 type Record struct {
-	Id          string
-	Content     *aclpb.Record
-	ParsedModel interface{}
-	Sign        []byte
+	Id      string
+	Content *aclpb.Record
+	Model   interface{}
+	Sign    []byte
 }
 
 func NewRecord(id string, aclRecord *aclpb.Record) *Record {

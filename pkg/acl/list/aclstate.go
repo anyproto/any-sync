@@ -1,11 +1,11 @@
 package list
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/common"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
@@ -25,6 +25,7 @@ var ErrUserAlreadyExists = errors.New("user already exists")
 var ErrNoSuchRecord = errors.New("no such record")
 var ErrInsufficientPermissions = errors.New("insufficient permissions")
 var ErrNoReadKey = errors.New("acl state doesn't have a read key")
+var ErrInvalidSignature = errors.New("signature is invalid")
 
 type UserPermissionPair struct {
 	Identity   string
@@ -32,14 +33,18 @@ type UserPermissionPair struct {
 }
 
 type ACLState struct {
-	currentReadKeyHash   uint64
-	userReadKeys         map[uint64]*symmetric.Key
-	userStates           map[string]*aclpb.ACLChangeUserState
-	userInvites          map[string]*aclpb.ACLChangeUserInvite
+	currentReadKeyHash uint64
+	userReadKeys       map[uint64]*symmetric.Key
+	userStates         map[string]*aclpb.ACLChangeUserState
+	userInvites        map[string]*aclpb.ACLChangeUserInvite
+
 	signingPubKeyDecoder keys.Decoder
 	encryptionKey        encryptionkey.PrivKey
-	identity             string
-	permissionsAtRecord  map[string][]UserPermissionPair
+
+	identity            string
+	permissionsAtRecord map[string][]UserPermissionPair
+
+	keychain *common.Keychain
 }
 
 func newACLStateWithIdentity(
@@ -54,6 +59,7 @@ func newACLStateWithIdentity(
 		userInvites:          make(map[string]*aclpb.ACLChangeUserInvite),
 		signingPubKeyDecoder: decoder,
 		permissionsAtRecord:  make(map[string][]UserPermissionPair),
+		keychain:             common.NewKeychain(),
 	}
 }
 
@@ -64,6 +70,7 @@ func newACLState(decoder keys.Decoder) *ACLState {
 		userStates:           make(map[string]*aclpb.ACLChangeUserState),
 		userInvites:          make(map[string]*aclpb.ACLChangeUserInvite),
 		permissionsAtRecord:  make(map[string][]UserPermissionPair),
+		keychain:             common.NewKeychain(),
 	}
 }
 
@@ -99,7 +106,6 @@ func (st *ACLState) PermissionsAtRecord(id string, identity string) (UserPermiss
 }
 
 func (st *ACLState) applyRecord(record *aclpb.Record) (err error) {
-	// TODO: this should be probably changed
 	aclData := &aclpb.ACLChangeACLData{}
 
 	err = proto.Unmarshal(record.Data, aclData)
@@ -107,35 +113,37 @@ func (st *ACLState) applyRecord(record *aclpb.Record) (err error) {
 		return
 	}
 
-	defer func() {
-		if err != nil {
-			return
-		}
-		st.currentReadKeyHash = record.CurrentReadKeyHash
-	}()
+	err = st.applyChangeData(aclData, record.CurrentReadKeyHash, record.Identity)
+	if err != nil {
+		return
+	}
 
-	return st.applyChangeData(aclData, record.CurrentReadKeyHash, record.Identity)
+	st.currentReadKeyHash = record.CurrentReadKeyHash
+	return
 }
 
 func (st *ACLState) applyChangeAndUpdate(recordWrapper *Record) (err error) {
-	change := recordWrapper.Content
-	aclData := &aclpb.ACLChangeACLData{}
+	var (
+		change  = recordWrapper.Content
+		aclData = &aclpb.ACLChangeACLData{}
+	)
 
-	if recordWrapper.ParsedModel != nil {
-		aclData = recordWrapper.ParsedModel.(*aclpb.ACLChangeACLData)
+	if recordWrapper.Model != nil {
+		aclData = recordWrapper.Model.(*aclpb.ACLChangeACLData)
 	} else {
 		err = proto.Unmarshal(change.Data, aclData)
 		if err != nil {
 			return
 		}
-		recordWrapper.ParsedModel = aclData
+		recordWrapper.Model = aclData
 	}
 
 	err = st.applyChangeData(aclData, recordWrapper.Content.CurrentReadKeyHash, recordWrapper.Content.Identity)
 	if err != nil {
-		return err
+		return
 	}
 
+	// getting all permissions for users at record
 	var permissions []UserPermissionPair
 	for _, state := range st.userStates {
 		permission := UserPermissionPair{
@@ -144,8 +152,8 @@ func (st *ACLState) applyChangeAndUpdate(recordWrapper *Record) (err error) {
 		}
 		permissions = append(permissions, permission)
 	}
+
 	st.permissionsAtRecord[recordWrapper.Id] = permissions
-	log.Infof("adding permissions at record %s", recordWrapper.Id)
 	return nil
 }
 
@@ -243,7 +251,7 @@ func (st *ACLState) applyUserJoin(ch *aclpb.ACLChangeUserJoin) error {
 		return fmt.Errorf("verification returned error: %w", err)
 	}
 	if !res {
-		return fmt.Errorf("signature is invalid")
+		return ErrInvalidSignature
 	}
 
 	// if ourselves -> we need to decrypt the read keys
@@ -374,87 +382,6 @@ func (st *ACLState) isUserAdd(data *aclpb.ACLChangeACLData, identity string) boo
 	return data.GetAclContent() != nil && userAdd != nil && userAdd.GetIdentity() == identity
 }
 
-func (st *ACLState) getPermissionDecreasedUsers(ch *aclpb.ACLChange) (identities []*aclpb.ACLChangeUserPermissionChange) {
-	// this should be called after general checks are completed
-	if ch.GetAclData().GetAclContent() == nil {
-		return nil
-	}
-
-	contents := ch.GetAclData().GetAclContent()
-	for _, c := range contents {
-		if c.GetUserPermissionChange() != nil {
-			content := c.GetUserPermissionChange()
-
-			currentState := st.userStates[content.Identity]
-			// the comparison works in different direction :-)
-			if content.Permissions > currentState.Permissions {
-				identities = append(identities, &aclpb.ACLChangeUserPermissionChange{
-					Identity:    content.Identity,
-					Permissions: content.Permissions,
-				})
-			}
-		}
-		if c.GetUserRemove() != nil {
-			content := c.GetUserRemove()
-			identities = append(identities, &aclpb.ACLChangeUserPermissionChange{
-				Identity:    content.Identity,
-				Permissions: aclpb.ACLChange_Removed,
-			})
-		}
-	}
-
-	return identities
-}
-
-func (st *ACLState) equal(other *ACLState) bool {
-	if st == nil && other == nil {
-		return true
-	}
-
-	if st == nil || other == nil {
-		return false
-	}
-
-	if st.currentReadKeyHash != other.currentReadKeyHash {
-		return false
-	}
-
-	if st.identity != other.identity {
-		return false
-	}
-
-	if len(st.userStates) != len(other.userStates) {
-		return false
-	}
-
-	for _, st := range st.userStates {
-		otherSt, exists := other.userStates[st.Identity]
-		if !exists {
-			return false
-		}
-
-		if st.Permissions != otherSt.Permissions {
-			return false
-		}
-
-		if bytes.Compare(st.EncryptionKey, otherSt.EncryptionKey) != 0 {
-			return false
-		}
-	}
-
-	if len(st.userInvites) != len(other.userInvites) {
-		return false
-	}
-
-	// TODO: add detailed user invites comparison + compare other stuff
-	return true
-}
-
 func (st *ACLState) GetUserStates() map[string]*aclpb.ACLChangeUserState {
-	// TODO: we should provide better API that would not allow to change this map from the outside
 	return st.userStates
-}
-
-func (st *ACLState) isNodeIdentity() bool {
-	return st.identity == ""
 }

@@ -56,42 +56,6 @@ func (ch *Change) DecryptContents(key *symmetric.Key) error {
 	return nil
 }
 
-func NewChangeFromRaw(rawChange *aclpb.RawChange) (*Change, error) {
-	unmarshalled := &aclpb.Change{}
-	err := proto.Unmarshal(rawChange.Payload, unmarshalled)
-	if err != nil {
-		return nil, err
-	}
-
-	ch := NewChange(rawChange.Id, unmarshalled, rawChange.Signature)
-	return ch, nil
-}
-
-func newVerifiedChangeFromRaw(
-	rawChange *aclpb.RawChange,
-	kch *keychain) (*Change, error) {
-	unmarshalled := &aclpb.Change{}
-	ch, err := NewChangeFromRaw(rawChange)
-	if err != nil {
-		return nil, err
-	}
-
-	identityKey, err := kch.getOrAdd(unmarshalled.Identity)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := identityKey.Verify(rawChange.Payload, rawChange.Signature)
-	if err != nil {
-		return nil, err
-	}
-	if !res {
-		return nil, ErrIncorrectSignature
-	}
-
-	return ch, nil
-}
-
 func NewChange(id string, ch *aclpb.Change, signature []byte) *Change {
 	return &Change{
 		Next:        nil,
