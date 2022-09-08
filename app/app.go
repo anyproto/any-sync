@@ -27,7 +27,7 @@ var (
 type Component interface {
 	// Init will be called first
 	// When returned error is not nil - app start will be aborted
-	Init(ctx context.Context, a *App) (err error)
+	Init(a *App) (err error)
 	// Name must return unique service name
 	Name() (name string)
 }
@@ -157,7 +157,7 @@ func (app *App) Start(ctx context.Context) (err error) {
 	}
 
 	for i, s := range app.components {
-		if err = s.Init(ctx, app); err != nil {
+		if err = s.Init(app); err != nil {
 			closeServices(i)
 			return fmt.Errorf("can't init service '%s': %v", s.Name(), err)
 		}

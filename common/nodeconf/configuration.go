@@ -1,10 +1,10 @@
-package configuration
+package nodeconf
 
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/peer"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-chash"
 )
 
@@ -13,7 +13,7 @@ func New() Service {
 }
 
 type Configuration interface {
-	// Id returns current configuration id
+	// Id returns current nodeconf id
 	Id() string
 	// AllPeers returns all peers by spaceId except current account
 	AllPeers(ctx context.Context, spaceId string) (peers []peer.Peer, err error)

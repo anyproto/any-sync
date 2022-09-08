@@ -2,12 +2,12 @@ package remotediff
 
 import (
 	"context"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/space/spacesync"
 )
 
 type Client interface {
-	HeadSync(ctx context.Context, in *spacesync.HeadSyncRequest) (*spacesync.HeadSyncResponse, error)
+	HeadSync(ctx context.Context, in *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error)
 }
 
 func NewRemoteDiff(spaceId string, client Client) ldiff.Remote {
@@ -24,15 +24,15 @@ type remote struct {
 
 func (r remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error) {
 	results = resBuf[:0]
-	pbRanges := make([]*spacesync.HeadSyncRange, 0, len(ranges))
+	pbRanges := make([]*spacesyncproto.HeadSyncRange, 0, len(ranges))
 	for _, rg := range ranges {
-		pbRanges = append(pbRanges, &spacesync.HeadSyncRange{
+		pbRanges = append(pbRanges, &spacesyncproto.HeadSyncRange{
 			From:  rg.From,
 			To:    rg.To,
 			Limit: uint32(rg.Limit),
 		})
 	}
-	req := &spacesync.HeadSyncRequest{
+	req := &spacesyncproto.HeadSyncRequest{
 		SpaceId: r.spaceId,
 		Ranges:  pbRanges,
 	}
@@ -60,7 +60,7 @@ func (r remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff
 	return
 }
 
-func HandlerRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesync.HeadSyncRequest) (resp *spacesync.HeadSyncResponse, err error) {
+func HandlerRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
 	ranges := make([]ldiff.Range, 0, len(req.Ranges))
 	for _, reqRange := range req.Ranges {
 		ranges = append(ranges, ldiff.Range{
@@ -74,21 +74,21 @@ func HandlerRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesync.HeadS
 		return
 	}
 
-	resp = &spacesync.HeadSyncResponse{
-		Results: make([]*spacesync.HeadSyncResult, 0, len(res)),
+	resp = &spacesyncproto.HeadSyncResponse{
+		Results: make([]*spacesyncproto.HeadSyncResult, 0, len(res)),
 	}
 	for _, rangeRes := range res {
-		var elements []*spacesync.HeadSyncResultElement
+		var elements []*spacesyncproto.HeadSyncResultElement
 		if len(rangeRes.Elements) > 0 {
-			elements = make([]*spacesync.HeadSyncResultElement, 0, len(rangeRes.Elements))
+			elements = make([]*spacesyncproto.HeadSyncResultElement, 0, len(rangeRes.Elements))
 			for _, el := range rangeRes.Elements {
-				elements = append(elements, &spacesync.HeadSyncResultElement{
+				elements = append(elements, &spacesyncproto.HeadSyncResultElement{
 					Id:   el.Id,
 					Head: el.Head,
 				})
 			}
 		}
-		resp.Results = append(resp.Results, &spacesync.HeadSyncResult{
+		resp.Results = append(resp.Results, &spacesyncproto.HeadSyncResult{
 			Hash:     rangeRes.Hash,
 			Elements: elements,
 			Count:    uint32(rangeRes.Count),

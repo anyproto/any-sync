@@ -4,9 +4,9 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
+	secure2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/secure"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"io"
@@ -33,16 +33,16 @@ type DRPCServer interface {
 type drpcServer struct {
 	config     config.GrpcServer
 	drpcServer *drpcserver.Server
-	transport  secure.Service
-	listeners  []secure.ContextListener
+	transport  secure2.Service
+	listeners  []secure2.ContextListener
 	pool       pool.Pool
 	cancel     func()
 	*drpcmux.Mux
 }
 
-func (s *drpcServer) Init(ctx context.Context, a *app.App) (err error) {
+func (s *drpcServer) Init(a *app.App) (err error) {
 	s.config = a.MustComponent(config.CName).(*config.Config).GrpcServer
-	s.transport = a.MustComponent(secure.CName).(secure.Service)
+	s.transport = a.MustComponent(secure2.CName).(secure2.Service)
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	return nil
 }
@@ -65,7 +65,7 @@ func (s *drpcServer) Run(ctx context.Context) (err error) {
 	return
 }
 
-func (s *drpcServer) serve(ctx context.Context, lis secure.ContextListener) {
+func (s *drpcServer) serve(ctx context.Context, lis secure2.ContextListener) {
 	l := log.With(zap.String("localAddr", lis.Addr().String()))
 	l.Info("drpc listener started")
 	defer func() {
@@ -89,7 +89,7 @@ func (s *drpcServer) serve(ctx context.Context, lis secure.ContextListener) {
 				}
 				continue
 			}
-			if _, ok := err.(secure.HandshakeError); ok {
+			if _, ok := err.(secure2.HandshakeError); ok {
 				l.Warn("listener handshake error", zap.Error(err))
 				continue
 			}

@@ -4,11 +4,11 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/testchanges/testchangepb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/message"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
@@ -38,7 +38,7 @@ func New() app.Component {
 	return &service{}
 }
 
-func (s *service) Init(ctx context.Context, a *app.App) (err error) {
+func (s *service) Init(a *app.App) (err error) {
 	s.account = a.MustComponent(account.CName).(account.Service)
 	s.messageService = a.MustComponent(message.CName).(message.Service)
 	s.treeCache = a.MustComponent(treecache.CName).(treecache.Service)

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/peer"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/secure"
 	"github.com/libp2p/go-libp2p-core/sec"
 	"go.uber.org/zap"
 	"net"
@@ -39,7 +39,7 @@ type dialer struct {
 	mu sync.RWMutex
 }
 
-func (d *dialer) Init(ctx context.Context, a *app.App) (err error) {
+func (d *dialer) Init(a *app.App) (err error) {
 	d.transport = a.MustComponent(secure.CName).(secure.Service)
 	nodes := a.MustComponent(config.CName).(*config.Config).Nodes
 	d.peerAddrs = map[string][]string{}

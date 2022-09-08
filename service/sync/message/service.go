@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	pool2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/requesthandler"
@@ -21,7 +22,7 @@ const CName = "MessageService"
 type service struct {
 	nodes          []*node.Node
 	requestHandler requesthandler.RequestHandler
-	pool           pool.Pool
+	pool           pool2.Pool
 	sync.RWMutex
 }
 
@@ -34,10 +35,10 @@ type Service interface {
 	SendToSpaceAsync(spaceId string, msg *syncproto.Sync) error
 }
 
-func (s *service) Init(ctx context.Context, a *app.App) (err error) {
+func (s *service) Init(a *app.App) (err error) {
 	s.requestHandler = a.MustComponent(requesthandler.CName).(requesthandler.RequestHandler)
 	s.nodes = a.MustComponent(node.CName).(node.Service).Nodes()
-	s.pool = a.MustComponent(pool.CName).(pool.Pool)
+	s.pool = a.MustComponent(pool2.CName).(pool2.Pool)
 	s.pool.AddHandler(syncproto.MessageType_MessageTypeSync, s.HandleMessage)
 	return nil
 }

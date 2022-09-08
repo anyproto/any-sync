@@ -1,7 +1,6 @@
 package account
 
 import (
-	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
@@ -33,7 +32,7 @@ func New() app.Component {
 	return &service{}
 }
 
-func (s *service) Init(ctx context.Context, a *app.App) (err error) {
+func (s *service) Init(a *app.App) (err error) {
 	cfg := a.MustComponent(config.CName).(*config.Config)
 
 	// decoding our keys

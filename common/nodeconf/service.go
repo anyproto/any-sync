@@ -1,16 +1,15 @@
-package configuration
+package nodeconf
 
 import (
-	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
 	"github.com/anytypeio/go-chash"
 )
 
-const CName = "configuration"
+const CName = "common.nodeconf"
 
 const (
 	partitionCount    = 3000
@@ -32,7 +31,7 @@ type service struct {
 	last Configuration
 }
 
-func (s *service) Init(ctx context.Context, a *app.App) (err error) {
+func (s *service) Init(a *app.App) (err error) {
 	conf := a.MustComponent(config.CName).(*config.Config)
 	s.accountId = conf.Account.PeerId
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)

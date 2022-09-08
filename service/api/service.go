@@ -30,7 +30,7 @@ type service struct {
 	cfg             *config.Config
 }
 
-func (s *service) Init(ctx context.Context, a *app.App) (err error) {
+func (s *service) Init(a *app.App) (err error) {
 	s.treeCache = a.MustComponent(treecache.CName).(treecache.Service)
 	s.documentService = a.MustComponent(document.CName).(document.Service)
 	s.cfg = a.MustComponent(config.CName).(*config.Config)

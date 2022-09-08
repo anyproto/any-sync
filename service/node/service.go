@@ -44,7 +44,7 @@ type service struct {
 	nodes []*Node
 }
 
-func (s *service) Init(ctx context.Context, a *app.App) (err error) {
+func (s *service) Init(a *app.App) (err error) {
 	cfg := a.MustComponent(config.CName).(*config.Config)
 	signDecoder := signingkey.NewEDPrivKeyDecoder()
 	rsaDecoder := encryptionkey.NewRSAPrivKeyDecoder()

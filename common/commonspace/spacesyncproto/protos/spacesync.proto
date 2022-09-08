@@ -1,15 +1,23 @@
 syntax = "proto3";
 package anySpace;
-option go_package = "service/space/spacesync";
+option go_package = "common/commonspace/spacesyncproto";
 
 enum ErrCodes {
     Unexpected = 0;
 }
 
+
 service Space {
     // HeadSync compares all objects and their hashes in a space
     rpc HeadSync(HeadSyncRequest) returns (HeadSyncResponse);
+    rpc Stream( stream Msg) returns (stream Msg);
 }
+
+// TODO: temporary mock message
+message Msg {
+    string spaceId = 1;
+}
+
 
 
 // HeadSyncRange presenting a request for one range
