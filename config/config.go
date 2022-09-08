@@ -33,7 +33,7 @@ type Config struct {
 }
 
 func (c *Config) Init(ctx context.Context, a *app.App) (err error) {
-	logger.NewNamed("config").Info(fmt.Sprint(*c))
+	logger.NewNamed("config").Info(fmt.Sprint(c.Space))
 	return
 }
 

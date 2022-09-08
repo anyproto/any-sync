@@ -27,9 +27,9 @@ type LoadFunc func(ctx context.Context, id string) (value Object, err error)
 
 type Option func(*oCache)
 
-var WithLogServiceName = func(name string) Option {
+var WithLogger = func(l *zap.SugaredLogger) Option {
 	return func(cache *oCache) {
-		cache.log = cache.log.With("service_name", name)
+		cache.log = l
 	}
 }
 

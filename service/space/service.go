@@ -2,7 +2,6 @@ package space
 
 import (
 	"context"
-	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
@@ -11,7 +10,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/space/spacesync"
-	"storj.io/drpc/drpcerr"
 	"time"
 )
 
@@ -24,7 +22,6 @@ func New() Service {
 }
 
 type Service interface {
-	spacesync.DRPCSpaceServer
 	app.ComponentRunnable
 }
 
@@ -40,9 +37,8 @@ func (s *service) Init(ctx context.Context, a *app.App) (err error) {
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.confService = a.MustComponent(configuration.CName).(configuration.Service)
 	ttlSec := time.Second * time.Duration(s.conf.GCTTL)
-	s.cache = ocache.New(s.loadSpace, ocache.WithTTL(ttlSec), ocache.WithGCPeriod(time.Minute))
-	spacesync.DRPCRegisterSpace(a.MustComponent(server.CName).(server.DRPCServer), s)
-
+	s.cache = ocache.New(s.loadSpace, ocache.WithTTL(ttlSec), ocache.WithGCPeriod(time.Minute), ocache.WithLogger(log.Sugar()))
+	spacesync.DRPCRegisterSpace(a.MustComponent(server.CName).(server.DRPCServer), rpcServer{s})
 	return nil
 }
 
@@ -51,6 +47,10 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
+	go func() {
+		time.Sleep(time.Second * 10)
+		s.get(ctx, "testSpace")
+	}()
 	return
 }
 
@@ -69,10 +69,6 @@ func (s *service) get(ctx context.Context, id string) (Space, error) {
 		return nil, err
 	}
 	return obj.(Space), nil
-}
-
-func (s *service) HeadSync(ctx context.Context, request *spacesync.HeadSyncRequest) (*spacesync.HeadSyncResponse, error) {
-	return nil, drpcerr.WithCode(fmt.Errorf("check"), 42)
 }
 
 func (s *service) Close(ctx context.Context) (err error) {

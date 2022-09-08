@@ -9,6 +9,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/dialer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/peer"
 	"math/rand"
+	"time"
 )
 
 const (
@@ -43,7 +44,7 @@ func (p *pool) Init(ctx context.Context, a *app.App) (err error) {
 	dialer := a.MustComponent(dialer.CName).(dialer.Dialer)
 	p.cache = ocache.New(func(ctx context.Context, id string) (value ocache.Object, err error) {
 		return dialer.Dial(ctx, id)
-	})
+	}, ocache.WithLogger(log.Sugar()), ocache.WithGCPeriod(time.Minute), ocache.WithTTL(time.Minute*5))
 	return nil
 }
 
