@@ -82,9 +82,11 @@ func (t *Tree) AddMergedHead(c *Change) error {
 }
 
 func (t *Tree) Add(changes ...*Change) (mode Mode) {
-	var beforeHeadIds = t.headIds
-	var attached bool
-	var empty = t.Len() == 0
+	var (
+		beforeHeadIds = t.headIds
+		attached      bool
+		empty         = t.Len() == 0
+	)
 	for _, c := range changes {
 		// ignore existing
 		if _, ok := t.attached[c.Id]; ok {
@@ -103,16 +105,28 @@ func (t *Tree) Add(changes ...*Change) (mode Mode) {
 	if empty {
 		return Rebuild
 	}
-	for _, hid := range beforeHeadIds {
-		for _, newCh := range changes {
-			if _, ok := t.attached[newCh.Id]; ok {
-				if !t.after(newCh.Id, hid) {
-					return Rebuild
+
+	stack := make([]*Change, len(beforeHeadIds), len(beforeHeadIds))
+	for i, hid := range beforeHeadIds {
+		stack[i] = t.attached[hid]
+	}
+
+	mode = Append
+	t.dfsNext(stack,
+		func(_ *Change) (isContinue bool) {
+			return true
+		},
+		func(_ []*Change) {
+			// checking if some new changes were not visited
+			for _, ch := range changes {
+				if !ch.visited {
+					mode = Rebuild
+					break
 				}
 			}
-		}
-	}
-	return Append
+		})
+
+	return mode
 }
 
 // RemoveInvalidChange removes all the changes that are descendants of id
@@ -303,6 +317,37 @@ func (t *Tree) dfsPrev(stack []*Change, breakpoints []string, visit func(ch *Cha
 			prevCh := t.attached[prevId]
 			if !prevCh.visited {
 				stack = append(stack, prevCh)
+			}
+		}
+		if !visit(ch) {
+			return
+		}
+	}
+}
+
+func (t *Tree) dfsNext(stack []*Change, visit func(ch *Change) (isContinue bool), afterVisit func([]*Change)) {
+	t.visitedBuf = t.visitedBuf[:0]
+
+	defer func() {
+		afterVisit(t.visitedBuf)
+		for _, ch := range t.visitedBuf {
+			ch.visited = false
+		}
+	}()
+
+	for len(stack) > 0 {
+		ch := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		if ch.visited {
+			continue
+		}
+
+		ch.visited = true
+		t.visitedBuf = append(t.visitedBuf, ch)
+
+		for _, next := range ch.Next {
+			if !next.visited {
+				stack = append(stack, next)
 			}
 		}
 		if !visit(ch) {
