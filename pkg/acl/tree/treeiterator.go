@@ -46,20 +46,20 @@ func (i *iterator) topSort(start *Change) {
 		ch := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
 
-		// this looks a bit clumsy, but the idea is that we will go through the change again as soon as we finished
-		// going through its branches
+		// here we visit the change second time to add it to results
+		// all next changes at this point were visited
 		if ch.branchesFinished {
 			i.resBuf = append(i.resBuf, ch)
 			ch.branchesFinished = false
 			continue
 		}
 
-		// in theory, it may be the case that we add the change two times
-		// but probably due to the way how we build the tree, we won't need it
 		if ch.visited {
 			continue
 		}
 
+		// put the change again into stack, so we can add it to results
+		// after all the next changes
 		stack = append(stack, ch)
 		ch.visited = true
 		ch.branchesFinished = true
