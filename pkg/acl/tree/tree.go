@@ -106,11 +106,14 @@ func (t *Tree) Add(changes ...*Change) (mode Mode) {
 		return Rebuild
 	}
 
+	// beforeHeadsIds is definitely not empty, because the tree is not empty
 	stack := make([]*Change, len(beforeHeadIds), len(beforeHeadIds))
 	for i, hid := range beforeHeadIds {
 		stack[i] = t.attached[hid]
 	}
 
+	// mode is Append for cases when we can safely start iterating
+	// from old heads to append the state
 	mode = Append
 	t.dfsNext(stack,
 		func(_ *Change) (isContinue bool) {
@@ -119,6 +122,12 @@ func (t *Tree) Add(changes ...*Change) (mode Mode) {
 		func(_ []*Change) {
 			// checking if some new changes were not visited
 			for _, ch := range changes {
+				// if the change was not added, then skipping
+				if _, ok := t.attached[ch.Id]; !ok {
+					continue
+				}
+				// if some new change was not visited,
+				// then we can't start from old heads, we need to start from root, so Rebuild
 				if !ch.visited {
 					mode = Rebuild
 					break
@@ -297,7 +306,9 @@ func (t *Tree) dfsPrev(stack []*Change, breakpoints []string, visit func(ch *Cha
 	}
 
 	defer func() {
-		afterVisit(t.visitedBuf)
+		if afterVisit != nil {
+			afterVisit(t.visitedBuf)
+		}
 		for _, ch := range t.visitedBuf {
 			ch.visited = false
 		}
@@ -329,7 +340,9 @@ func (t *Tree) dfsNext(stack []*Change, visit func(ch *Change) (isContinue bool)
 	t.visitedBuf = t.visitedBuf[:0]
 
 	defer func() {
-		afterVisit(t.visitedBuf)
+		if afterVisit != nil {
+			afterVisit(t.visitedBuf)
+		}
 		for _, ch := range t.visitedBuf {
 			ch.visited = false
 		}
@@ -358,12 +371,15 @@ func (t *Tree) dfsNext(stack []*Change, visit func(ch *Change) (isContinue bool)
 
 func (t *Tree) updateHeads() {
 	var newHeadIds []string
-	t.iterate(t.root, func(c *Change) (isContinue bool) {
-		if len(c.Next) == 0 {
-			newHeadIds = append(newHeadIds, c.Id)
-		}
-		return true
-	})
+	t.dfsNext(
+		[]*Change{t.root},
+		func(ch *Change) (isContinue bool) {
+			if len(ch.Next) == 0 {
+				newHeadIds = append(newHeadIds, ch.Id)
+			}
+			return true
+		},
+		nil)
 	t.headIds = newHeadIds
 	sort.Strings(t.headIds)
 }
