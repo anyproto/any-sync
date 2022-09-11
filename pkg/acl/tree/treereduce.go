@@ -51,7 +51,7 @@ func (t *Tree) makeRootAndRemove(start *Change) {
 		},
 		func(changes []*Change) {
 			for _, ch := range changes {
-				delete(t.unAttached, ch.Id)
+				delete(t.attached, ch.Id)
 			}
 		},
 	)

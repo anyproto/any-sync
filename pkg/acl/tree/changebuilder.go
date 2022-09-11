@@ -28,13 +28,14 @@ type ChangeBuilder interface {
 	ConvertFromRaw(rawChange *aclpb.RawChange) (ch *Change, err error)
 	ConvertFromRawAndVerify(rawChange *aclpb.RawChange) (ch *Change, err error)
 	BuildContent(payload BuilderContent) (ch *Change, raw *aclpb.RawChange, err error)
+	BuildRaw(ch *Change) (*aclpb.RawChange, error)
 }
 
 type changeBuilder struct {
 	keys *common.Keychain
 }
 
-func newChangeBuilder(keys *common.Keychain) *changeBuilder {
+func newChangeBuilder(keys *common.Keychain) ChangeBuilder {
 	return &changeBuilder{keys: keys}
 }
 
@@ -122,6 +123,21 @@ func (c *changeBuilder) BuildContent(payload BuilderContent) (ch *Change, raw *a
 		Payload:   fullMarshalledChange,
 		Signature: signature,
 		Id:        id,
+	}
+	return
+}
+
+func (c *changeBuilder) BuildRaw(ch *Change) (raw *aclpb.RawChange, err error) {
+	var marshalled []byte
+	marshalled, err = ch.Content.Marshal()
+	if err != nil {
+		return
+	}
+
+	raw = &aclpb.RawChange{
+		Payload:   marshalled,
+		Signature: ch.Signature(),
+		Id:        ch.Id,
 	}
 	return
 }

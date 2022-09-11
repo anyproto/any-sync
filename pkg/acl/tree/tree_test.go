@@ -29,19 +29,22 @@ func newSnapshot(id, snapshotId string, prevIds ...string) *Change {
 func TestTree_Add(t *testing.T) {
 	t.Run("add first el", func(t *testing.T) {
 		tr := new(Tree)
-		assert.Equal(t, Rebuild, tr.Add(newSnapshot("root", "")))
+		res, _ := tr.Add(newSnapshot("root", ""))
+		assert.Equal(t, Rebuild, res)
 		assert.Equal(t, tr.root.Id, "root")
 		assert.Equal(t, []string{"root"}, tr.Heads())
 	})
 	t.Run("linear add", func(t *testing.T) {
 		tr := new(Tree)
-		assert.Equal(t, Rebuild, tr.Add(
+		res, _ := tr.Add(
 			newSnapshot("root", ""),
 			newChange("one", "root", "root"),
 			newChange("two", "root", "one"),
-		))
+		)
+		assert.Equal(t, Rebuild, res)
 		assert.Equal(t, []string{"two"}, tr.Heads())
-		assert.Equal(t, Append, tr.Add(newChange("three", "root", "two")))
+		res, _ = tr.Add(newChange("three", "root", "two"))
+		assert.Equal(t, Append, res)
 		el := tr.root
 		var ids []string
 		for el != nil {
@@ -57,17 +60,19 @@ func TestTree_Add(t *testing.T) {
 	})
 	t.Run("branch", func(t *testing.T) {
 		tr := new(Tree)
-		assert.Equal(t, Rebuild, tr.Add(
+		res, _ := tr.Add(
 			newSnapshot("root", ""),
 			newChange("1", "root", "root"),
 			newChange("2", "root", "1"),
-		))
+		)
+		assert.Equal(t, Rebuild, res)
 		assert.Equal(t, []string{"2"}, tr.Heads())
-		assert.Equal(t, Rebuild, tr.Add(
+		res, _ = tr.Add(
 			newChange("1.2", "root", "1.1"),
 			newChange("1.3", "root", "1.2"),
 			newChange("1.1", "root", "1"),
-		))
+		)
+		assert.Equal(t, Rebuild, res)
 		assert.Len(t, tr.attached["1"].Next, 2)
 		assert.Len(t, tr.unAttached, 0)
 		assert.Len(t, tr.attached, 6)
@@ -75,7 +80,7 @@ func TestTree_Add(t *testing.T) {
 	})
 	t.Run("branch union", func(t *testing.T) {
 		tr := new(Tree)
-		assert.Equal(t, Rebuild, tr.Add(
+		res, _ := tr.Add(
 			newSnapshot("root", ""),
 			newChange("1", "root", "root"),
 			newChange("2", "root", "1"),
@@ -84,7 +89,8 @@ func TestTree_Add(t *testing.T) {
 			newChange("1.1", "root", "1"),
 			newChange("3", "root", "2", "1.3"),
 			newChange("4", "root", "3"),
-		))
+		)
+		assert.Equal(t, Rebuild, res)
 		assert.Len(t, tr.unAttached, 0)
 		assert.Len(t, tr.attached, 8)
 		assert.Equal(t, []string{"4"}, tr.Heads())

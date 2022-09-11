@@ -16,11 +16,12 @@ const (
 )
 
 type Tree struct {
-	root        *Change
-	headIds     []string
-	metaHeadIds []string
-	attached    map[string]*Change
-	unAttached  map[string]*Change
+	root               *Change
+	headIds            []string
+	lastIteratedHeadId string
+	metaHeadIds        []string
+	attached           map[string]*Change
+	unAttached         map[string]*Change
 	// missed id -> list of dependency ids
 	waitList       map[string][]string
 	invalidChanges map[string]struct{}
@@ -29,6 +30,7 @@ type Tree struct {
 	// bufs
 	visitedBuf []*Change
 	stackBuf   []*Change
+	addedBuf   []*Change
 
 	duplicateEvents int
 }
@@ -44,7 +46,8 @@ func (t *Tree) Root() *Change {
 	return t.root
 }
 
-func (t *Tree) AddFast(changes ...*Change) {
+func (t *Tree) AddFast(changes ...*Change) []*Change {
+	t.addedBuf = t.addedBuf[:0]
 	for _, c := range changes {
 		// ignore existing
 		if _, ok := t.attached[c.Id]; ok {
@@ -55,6 +58,7 @@ func (t *Tree) AddFast(changes ...*Change) {
 		t.add(c)
 	}
 	t.updateHeads()
+	return t.addedBuf
 }
 
 func (t *Tree) AddMergedHead(c *Change) error {
@@ -81,11 +85,12 @@ func (t *Tree) AddMergedHead(c *Change) error {
 	return nil
 }
 
-func (t *Tree) Add(changes ...*Change) (mode Mode) {
+func (t *Tree) Add(changes ...*Change) (mode Mode, added []*Change) {
+	t.addedBuf = t.addedBuf[:0]
 	var (
-		beforeHeadIds = t.headIds
-		attached      bool
-		empty         = t.Len() == 0
+		// this is previous head id which should have been iterated last
+		lastIteratedHeadId = t.lastIteratedHeadId
+		empty              = t.Len() == 0
 	)
 	for _, c := range changes {
 		// ignore existing
@@ -94,40 +99,43 @@ func (t *Tree) Add(changes ...*Change) (mode Mode) {
 		} else if _, ok := t.unAttached[c.Id]; ok {
 			continue
 		}
-		if t.add(c) {
-			attached = true
-		}
+		t.add(c)
 	}
-	if !attached {
-		return Nothing
+	if len(t.addedBuf) == 0 {
+		mode = Nothing
+		return
 	}
 	t.updateHeads()
+	added = t.addedBuf
+
 	if empty {
-		return Rebuild
+		mode = Rebuild
+		return
 	}
 
-	// beforeHeadsIds is definitely not empty, because the tree is not empty
-	stack := make([]*Change, len(beforeHeadIds), len(beforeHeadIds))
-	for i, hid := range beforeHeadIds {
-		stack[i] = t.attached[hid]
-	}
-
-	// mode is Append for cases when we can safely start iterating
-	// from old heads to append the state
+	// mode is Append for cases when we can safely start iterating from lastIteratedHeadId to build state
+	// the idea here is that if all new changes have lastIteratedHeadId as previous,
+	// then according to topological sorting order they will be looked at later than lastIteratedHeadId
+	//
+	// one important consideration is that if some unattached changes were added to the tree
+	// as a result of adding new changes, then each of these unattached changes
+	// will also have at least one of new changes as ancestor
+	// and that means they will also be iterated later than lastIteratedHeadId
 	mode = Append
-	t.dfsNext(stack,
+	t.dfsNext([]*Change{t.attached[lastIteratedHeadId]},
 		func(_ *Change) (isContinue bool) {
 			return true
 		},
 		func(_ []*Change) {
 			// checking if some new changes were not visited
 			for _, ch := range changes {
-				// if the change was not added, then skipping
+				// if the change was not added to the tree, then skipping
 				if _, ok := t.attached[ch.Id]; !ok {
 					continue
 				}
 				// if some new change was not visited,
-				// then we can't start from old heads, we need to start from root, so Rebuild
+				// then we can't start from lastIteratedHeadId,
+				// we need to start from root, so Rebuild
 				if !ch.visited {
 					mode = Rebuild
 					break
@@ -135,7 +143,7 @@ func (t *Tree) Add(changes ...*Change) (mode Mode) {
 			}
 		})
 
-	return mode
+	return
 }
 
 // RemoveInvalidChange removes all the changes that are descendants of id
@@ -190,6 +198,7 @@ func (t *Tree) add(c *Change) (attached bool) {
 
 	if t.root == nil { // first element
 		t.root = c
+		t.lastIteratedHeadId = t.root.Id
 		t.attached = map[string]*Change{
 			c.Id: c,
 		}
@@ -197,6 +206,7 @@ func (t *Tree) add(c *Change) (attached bool) {
 		t.waitList = make(map[string][]string)
 		t.invalidChanges = make(map[string]struct{})
 		t.possibleRoots = make([]*Change, 0, 10)
+		t.addedBuf = append(t.addedBuf, c)
 		return true
 	}
 	if len(c.PreviousIds) > 1 {
@@ -238,6 +248,7 @@ func (t *Tree) canAttach(c *Change) (attach bool) {
 
 func (t *Tree) attach(c *Change, newEl bool) {
 	t.attached[c.Id] = c
+	t.addedBuf = append(t.addedBuf, c)
 	if !newEl {
 		delete(t.unAttached, c.Id)
 	}
@@ -371,16 +382,16 @@ func (t *Tree) dfsNext(stack []*Change, visit func(ch *Change) (isContinue bool)
 
 func (t *Tree) updateHeads() {
 	var newHeadIds []string
-	t.dfsNext(
-		[]*Change{t.root},
-		func(ch *Change) (isContinue bool) {
-			if len(ch.Next) == 0 {
-				newHeadIds = append(newHeadIds, ch.Id)
-			}
-			return true
-		},
-		nil)
+	t.iterate(t.root, func(c *Change) (isContinue bool) {
+		if len(c.Next) == 0 {
+			newHeadIds = append(newHeadIds, c.Id)
+		}
+		return true
+	})
 	t.headIds = newHeadIds
+	// the lastIteratedHeadId is the id of the head which was iterated last according to the order
+	t.lastIteratedHeadId = newHeadIds[len(newHeadIds)-1]
+	// TODO: check why do we need sorting here
 	sort.Strings(t.headIds)
 }
 
