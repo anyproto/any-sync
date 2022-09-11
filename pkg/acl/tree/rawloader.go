@@ -37,16 +37,10 @@ func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*aclpb.
 
 	convert := func(chs []*Change) (rawChanges []*aclpb.RawChange, err error) {
 		for _, ch := range chs {
-			var marshalled []byte
-			marshalled, err = ch.Content.Marshal()
+			var raw *aclpb.RawChange
+			raw, err = r.changeBuilder.BuildRaw(ch)
 			if err != nil {
 				return
-			}
-
-			raw := &aclpb.RawChange{
-				Payload:   marshalled,
-				Signature: ch.Signature(),
-				Id:        ch.Id,
 			}
 			rawChanges = append(rawChanges, raw)
 		}

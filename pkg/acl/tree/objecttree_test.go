@@ -7,7 +7,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/acllistbuilder"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
-	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -43,29 +42,33 @@ func (c *mockChangeCreator) createNewTreeStorage(treeId, aclListId, aclHeadId, f
 	return treeStorage
 }
 
-type mockChangeBuilder struct{}
+type mockChangeBuilder struct {
+	originalBuilder ChangeBuilder
+}
 
 func (c *mockChangeBuilder) ConvertFromRaw(rawChange *aclpb.RawChange) (ch *Change, err error) {
-	unmarshalled := &aclpb.Change{}
-	err = proto.Unmarshal(rawChange.Payload, unmarshalled)
-	if err != nil {
-		return nil, err
-	}
-
-	ch = NewChange(rawChange.Id, unmarshalled, rawChange.Signature)
-	return
+	return c.originalBuilder.ConvertFromRaw(rawChange)
 }
+
 func (c *mockChangeBuilder) ConvertFromRawAndVerify(rawChange *aclpb.RawChange) (ch *Change, err error) {
-	return c.ConvertFromRaw(rawChange)
+	return c.originalBuilder.ConvertFromRaw(rawChange)
 }
 
 func (c *mockChangeBuilder) BuildContent(payload BuilderContent) (ch *Change, raw *aclpb.RawChange, err error) {
 	panic("implement me")
 }
 
+func (c *mockChangeBuilder) BuildRaw(ch *Change) (raw *aclpb.RawChange, err error) {
+	return c.originalBuilder.BuildRaw(ch)
+}
+
 type mockChangeValidator struct{}
 
-func (m *mockChangeValidator) ValidateTree(tree *Tree, aclList list.ACLList) error {
+func (m *mockChangeValidator) ValidateNewChanges(tree *Tree, aclList list.ACLList, newChanges []*Change) error {
+	return nil
+}
+
+func (m *mockChangeValidator) ValidateFullTree(tree *Tree, aclList list.ACLList) error {
 	return nil
 }
 
@@ -90,7 +93,9 @@ func prepareACLList(t *testing.T) list.ACLList {
 func prepareTreeContext(t *testing.T, aclList list.ACLList) testTreeContext {
 	changeCreator := &mockChangeCreator{}
 	treeStorage := changeCreator.createNewTreeStorage("treeId", aclList.ID(), aclList.Head().Id, "0")
-	changeBuilder := &mockChangeBuilder{}
+	changeBuilder := &mockChangeBuilder{
+		originalBuilder: newChangeBuilder(nil),
+	}
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,
 		treeBuilder:     newTreeBuilder(treeStorage, changeBuilder),
@@ -142,7 +147,7 @@ func TestObjectTree(t *testing.T) {
 		assert.Equal(t, []string{"0"}, res.OldHeads)
 		assert.Equal(t, []string{"2"}, res.Heads)
 		assert.Equal(t, len(rawChanges), len(res.Added))
-		assert.Equal(t, AddResultSummaryAppend, res.Summary)
+		assert.Equal(t, Append, res.Mode)
 
 		// check tree heads
 		assert.Equal(t, []string{"2"}, objTree.Heads())
@@ -202,7 +207,7 @@ func TestObjectTree(t *testing.T) {
 		assert.Equal(t, []string{"0"}, res.OldHeads)
 		assert.Equal(t, []string{"0"}, res.Heads)
 		assert.Equal(t, 0, len(res.Added))
-		assert.Equal(t, AddResultSummaryNothing, res.Summary)
+		assert.Equal(t, Nothing, res.Mode)
 
 		// check tree heads
 		assert.Equal(t, []string{"0"}, objTree.Heads())
@@ -227,7 +232,7 @@ func TestObjectTree(t *testing.T) {
 		assert.Equal(t, []string{"0"}, res.OldHeads)
 		assert.Equal(t, []string{"4"}, res.Heads)
 		assert.Equal(t, len(rawChanges), len(res.Added))
-		assert.Equal(t, AddResultSummaryAppend, res.Summary)
+		assert.Equal(t, Append, res.Mode)
 
 		// check tree heads
 		assert.Equal(t, []string{"4"}, objTree.Heads())
@@ -448,7 +453,7 @@ func TestObjectTree(t *testing.T) {
 		assert.Equal(t, []string{"3"}, res.OldHeads)
 		assert.Equal(t, []string{"6"}, res.Heads)
 		assert.Equal(t, len(rawChanges), len(res.Added))
-		assert.Equal(t, AddResultSummaryRebuild, res.Summary)
+		assert.Equal(t, Rebuild, res.Mode)
 
 		// check tree heads
 		assert.Equal(t, []string{"6"}, objTree.Heads())
