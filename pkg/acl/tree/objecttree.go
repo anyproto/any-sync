@@ -31,18 +31,12 @@ var (
 
 type AddResultSummary int
 
-const (
-	AddResultSummaryNothing AddResultSummary = iota
-	AddResultSummaryAppend
-	AddResultSummaryRebuild
-)
-
 type AddResult struct {
 	OldHeads []string
 	Heads    []string
 	Added    []*aclpb.RawChange
 
-	Summary AddResultSummary
+	Mode Mode
 }
 
 type ChangeIterateFunc = func(change *Change) bool
@@ -198,7 +192,9 @@ func (ot *objectTree) rebuildFromStorage(newChanges []*Change) (err error) {
 	// but obviously they are not roots, because of the way how we construct the tree
 	ot.tree.clearPossibleRoots()
 
-	return ot.validateTree()
+	// it is a good question whether we need to validate everything
+	// because maybe we can trust the stuff that is already in the storage
+	return ot.validateTree(nil)
 }
 
 func (ot *objectTree) ID() string {
@@ -324,7 +320,11 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 
 	// filtering changes, verifying and unmarshalling them
 	for idx, ch := range rawChanges {
-		if ot.HasChange(ch.Id) {
+		// not unmarshalling the changes if they were already added either as unattached or attached
+		if _, exists := ot.tree.attached[ch.Id]; exists {
+			continue
+		}
+		if _, exists := ot.tree.unAttached[ch.Id]; exists {
 			continue
 		}
 
@@ -346,29 +346,54 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 		addResult = AddResult{
 			OldHeads: prevHeadsCopy,
 			Heads:    prevHeadsCopy,
-			Summary:  AddResultSummaryNothing,
+			Mode:     Nothing,
 		}
 		return
 	}
 
-	// returns changes that we added to the tree
-	getAddedChanges := func() []*aclpb.RawChange {
-		var added []*aclpb.RawChange
+	// returns changes that we added to the tree as attached this round
+	// they can include not only the changes that were added now,
+	// but also the changes that were previously in the tree
+	getAddedChanges := func(toConvert []*Change) (added []*aclpb.RawChange, err error) {
+		alreadyConverted := make(map[*Change]struct{})
+
+		// first we see if we have already unmarshalled those changes
 		for _, idx := range ot.notSeenIdxBuf {
 			rawChange := rawChanges[idx]
-			if _, exists := ot.tree.attached[rawChange.Id]; exists {
+			if ch, exists := ot.tree.attached[rawChange.Id]; exists {
+				if len(toConvert) != 0 {
+					alreadyConverted[ch] = struct{}{}
+				}
 				added = append(added, rawChange)
 			}
 		}
-		return added
+		// this will happen in case we called rebuild from storage
+		// or if all the changes that we added were contained in current add request
+		// (this what would happen in most cases)
+		if len(toConvert) == 0 || len(added) == len(toConvert) {
+			return
+		}
+
+		// but in some cases it may happen that the changes that were added this round
+		// were contained in unattached from previous requests
+		for _, ch := range toConvert {
+			// if we got some changes that we need to convert to raw
+			if _, exists := alreadyConverted[ch]; !exists {
+				var raw *aclpb.RawChange
+				raw, err = ot.changeBuilder.BuildRaw(ch)
+				if err != nil {
+					return
+				}
+				added = append(added, raw)
+			}
+		}
+		return
 	}
 
-	rollback := func() {
-		for _, ch := range ot.tmpChangesBuf {
+	rollback := func(changes []*Change) {
+		for _, ch := range changes {
 			if _, exists := ot.tree.attached[ch.Id]; exists {
 				delete(ot.tree.attached, ch.Id)
-			} else if _, exists := ot.tree.unAttached[ch.Id]; exists {
-				delete(ot.tree.unAttached, ch.Id)
 			}
 		}
 	}
@@ -396,43 +421,56 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 				ot.rebuildFromStorage(nil)
 				return
 			}
+			var added []*aclpb.RawChange
+			added, err = getAddedChanges(nil)
+			// we shouldn't get any error in this case
+			if err != nil {
+				panic(err)
+			}
 
 			addResult = AddResult{
 				OldHeads: prevHeadsCopy,
 				Heads:    headsCopy(),
-				Added:    getAddedChanges(),
-				Summary:  AddResultSummaryRebuild,
+				Added:    added,
+				Mode:     Rebuild,
 			}
 			return
 		}
 	}
 
 	// normal mode of operation, where we don't need to rebuild from database
-	mode = ot.tree.Add(ot.tmpChangesBuf...)
+	mode, treeChangesAdded := ot.tree.Add(ot.tmpChangesBuf...)
 	switch mode {
 	case Nothing:
 		addResult = AddResult{
 			OldHeads: prevHeadsCopy,
 			Heads:    prevHeadsCopy,
-			Summary:  AddResultSummaryNothing,
+			Mode:     mode,
 		}
 		return
 
 	default:
-		// just rebuilding the state from start without reloading everything from tree storage
-		// as an optimization we could've started from current heads, but I didn't implement that
-		err = ot.validateTree()
+		// we need to validate only newly added changes
+		err = ot.validateTree(treeChangesAdded)
 		if err != nil {
-			rollback()
+			rollback(treeChangesAdded)
 			err = ErrHasInvalidChanges
+			return
+		}
+		var added []*aclpb.RawChange
+		added, err = getAddedChanges(treeChangesAdded)
+		if err != nil {
+			// that means that some unattached changes were somehow corrupted in memory
+			// this shouldn't happen but if that happens, then rebuilding from storage
+			ot.rebuildFromStorage(nil)
 			return
 		}
 
 		addResult = AddResult{
 			OldHeads: prevHeadsCopy,
 			Heads:    headsCopy(),
-			Added:    getAddedChanges(),
-			Summary:  AddResultSummaryAppend,
+			Added:    added,
+			Mode:     mode,
 		}
 	}
 	return
@@ -478,8 +516,7 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 
 func (ot *objectTree) HasChange(s string) bool {
 	_, attachedExists := ot.tree.attached[s]
-	_, unattachedExists := ot.tree.unAttached[s]
-	return attachedExists || unattachedExists
+	return attachedExists
 }
 
 func (ot *objectTree) Heads() []string {
@@ -552,7 +589,7 @@ func (ot *objectTree) snapshotPathIsActual() bool {
 	return len(ot.snapshotPath) != 0 && ot.snapshotPath[0] == ot.tree.RootId()
 }
 
-func (ot *objectTree) validateTree() error {
+func (ot *objectTree) validateTree(newChanges []*Change) error {
 	ot.aclList.RLock()
 	defer ot.aclList.RUnlock()
 	state := ot.aclList.ACLState()
@@ -563,8 +600,11 @@ func (ot *objectTree) validateTree() error {
 			ot.keys[key] = value
 		}
 	}
+	if len(newChanges) == 0 {
+		return ot.validator.ValidateFullTree(ot.tree, ot.aclList)
+	}
 
-	return ot.validator.ValidateTree(ot.tree, ot.aclList)
+	return ot.validator.ValidateNewChanges(ot.tree, ot.aclList, newChanges)
 }
 
 func (ot *objectTree) DebugDump() (string, error) {
