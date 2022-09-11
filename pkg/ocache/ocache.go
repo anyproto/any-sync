@@ -27,9 +27,9 @@ type LoadFunc func(ctx context.Context, id string) (value Object, err error)
 
 type Option func(*oCache)
 
-var WithLogServiceName = func(name string) Option {
+var WithLogger = func(l *zap.SugaredLogger) Option {
 	return func(cache *oCache) {
-		cache.log = cache.log.With("service_name", name)
+		cache.log = l
 	}
 }
 
@@ -42,6 +42,12 @@ var WithTTL = func(ttl time.Duration) Option {
 var WithGCPeriod = func(gcPeriod time.Duration) Option {
 	return func(cache *oCache) {
 		cache.gc = gcPeriod
+	}
+}
+
+var WithRefCounter = func(enable bool) Option {
+	return func(cache *oCache) {
+		cache.noRefCounter = !enable
 	}
 }
 
@@ -69,8 +75,11 @@ type Object interface {
 }
 
 type ObjectLocker interface {
-	Object
 	Locked() bool
+}
+
+type ObjectLastUsage interface {
+	LastUsage() time.Time
 }
 
 type entry struct {
@@ -99,7 +108,7 @@ type OCache interface {
 	// When 'loadFunc' returns a non-nil error, an object will not be stored to cache
 	Get(ctx context.Context, id string) (value Object, err error)
 	// Pick returns value if it's presents in cache (will not call loadFunc)
-	Pick(id string) (value Object, err error)
+	Pick(ctx context.Context, id string) (value Object, err error)
 	// Add adds new object to cache
 	// Returns error when object exists
 	Add(id string, value Object) (err error)
@@ -121,15 +130,16 @@ type OCache interface {
 }
 
 type oCache struct {
-	mu       sync.Mutex
-	data     map[string]*entry
-	loadFunc LoadFunc
-	timeNow  func() time.Time
-	ttl      time.Duration
-	gc       time.Duration
-	closed   bool
-	closeCh  chan struct{}
-	log      *zap.SugaredLogger
+	mu           sync.Mutex
+	data         map[string]*entry
+	loadFunc     LoadFunc
+	timeNow      func() time.Time
+	ttl          time.Duration
+	gc           time.Duration
+	closed       bool
+	closeCh      chan struct{}
+	log          *zap.SugaredLogger
+	noRefCounter bool
 }
 
 func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
@@ -152,7 +162,9 @@ func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
 		c.data[id] = e
 	}
 	e.lastUsage = c.timeNow()
-	e.refCount++
+	if !c.noRefCounter {
+		e.refCount++
+	}
 	c.mu.Unlock()
 
 	if load {
@@ -166,12 +178,17 @@ func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
 	return e.value, e.loadErr
 }
 
-func (c *oCache) Pick(id string) (value Object, err error) {
+func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) {
 	c.mu.Lock()
 	val, ok := c.data[id]
 	c.mu.Unlock()
 	if !ok {
 		return nil, ErrNotExists
+	}
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-val.load:
 	}
 	<-val.load
 	return val.value, val.loadErr
@@ -198,7 +215,7 @@ func (c *oCache) Release(id string) bool {
 		return false
 	}
 	if e, ok := c.data[id]; ok {
-		if e.refCount > 0 {
+		if !c.noRefCounter && e.refCount > 0 {
 			e.refCount--
 			return true
 		}
@@ -307,7 +324,11 @@ func (c *oCache) GC() {
 	deadline := c.timeNow().Add(-c.ttl)
 	var toClose []*entry
 	for k, e := range c.data {
-		if !e.locked() && e.refCount <= 0 && e.lastUsage.Before(deadline) {
+		lu := e.lastUsage
+		if lug, ok := e.value.(ObjectLastUsage); ok {
+			lu = lug.LastUsage()
+		}
+		if !e.locked() && e.refCount <= 0 && lu.Before(deadline) {
 			delete(c.data, k)
 			toClose = append(toClose, e)
 		}

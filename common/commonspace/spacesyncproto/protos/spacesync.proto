@@ -1,0 +1,52 @@
+syntax = "proto3";
+package anySpace;
+option go_package = "common/commonspace/spacesyncproto";
+
+enum ErrCodes {
+    Unexpected = 0;
+}
+
+
+service Space {
+    // HeadSync compares all objects and their hashes in a space
+    rpc HeadSync(HeadSyncRequest) returns (HeadSyncResponse);
+    rpc Stream( stream Msg) returns (stream Msg);
+}
+
+// TODO: temporary mock message
+message Msg {
+    string spaceId = 1;
+}
+
+
+
+// HeadSyncRange presenting a request for one range
+message HeadSyncRange {
+    uint64 from = 1;
+    uint64 to = 2;
+    uint32 limit = 3;
+}
+
+// HeadSyncResult presenting a response for one range
+message HeadSyncResult {
+    bytes hash = 1;
+    repeated HeadSyncResultElement elements = 2;
+    uint32 count = 3;
+}
+
+// HeadSyncResultElement presenting state of one object
+message HeadSyncResultElement {
+    string id = 1;
+    string head = 2;
+}
+
+// HeadSyncRequest is a request for HeadSync
+message HeadSyncRequest {
+    string spaceId = 1;
+    repeated HeadSyncRange ranges = 2;
+}
+
+// HeadSyncResponse is a response for HeadSync
+message HeadSyncResponse {
+    repeated HeadSyncResult results = 1;
+}

@@ -6,20 +6,16 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/dialer"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/api"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/configuration"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/document"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/dialer"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/pool"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/rpc/server"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/net/secure"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/message"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/sync/requesthandler"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/treecache"
 	"go.uber.org/zap"
 	"net/http"
 	_ "net/http/pprof"
@@ -95,15 +91,17 @@ func main() {
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
 		Register(node.New()).
+		Register(nodeconf.New()).
 		Register(secure.New()).
-		Register(server.New()).
 		Register(dialer.New()).
-		Register(pool.NewPool()).
-		Register(storage.New()).
-		Register(configuration.New()).
-		Register(document.New()).
-		Register(message.New()).
-		Register(requesthandler.New()).
-		Register(treecache.New()).
-		Register(api.New())
+		Register(pool.New()).
+		Register(nodespace.New()).
+		Register(commonspace.New()).
+		Register(server.New())
+
+	//Register(document.New()).
+	//Register(message.New()).
+	//Register(requesthandler.New()).
+	//Register(treecache.New()).
+	//Register(api.New())
 }
