@@ -14,7 +14,7 @@ import (
 type MarshalledChange = []byte
 
 type ACLChangeBuilder interface {
-	UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions aclpb.ACLChangeUserPermissions) error
+	UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions aclpb.ACLUserPermissions) error
 	AddId(id string) // TODO: this is only for testing
 }
 
@@ -23,7 +23,7 @@ type aclChangeBuilder struct {
 	list     ACLList
 	acc      *account.AccountData
 
-	aclData     *aclpb.ACLChangeACLData
+	aclData     *aclpb.ACLData
 	id          string
 	readKey     *symmetric.Key
 	readKeyHash uint64
@@ -38,7 +38,7 @@ func (c *aclChangeBuilder) Init(state *ACLState, list ACLList, acc *account.Acco
 	c.list = list
 	c.acc = acc
 
-	c.aclData = &aclpb.ACLChangeACLData{}
+	c.aclData = &aclpb.ACLData{}
 	// setting read key for further encryption etc
 	if state.currentReadKeyHash == 0 {
 		c.readKey, _ = symmetric.NewRandom()
@@ -56,7 +56,7 @@ func (c *aclChangeBuilder) AddId(id string) {
 	c.id = id
 }
 
-func (c *aclChangeBuilder) UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions aclpb.ACLChangeUserPermissions) error {
+func (c *aclChangeBuilder) UserAdd(identity string, encryptionKey encryptionkey.PubKey, permissions aclpb.ACLUserPermissions) error {
 	var allKeys []*symmetric.Key
 	if c.aclState.currentReadKeyHash != 0 {
 		for _, key := range c.aclState.userReadKeys {
@@ -79,10 +79,10 @@ func (c *aclChangeBuilder) UserAdd(identity string, encryptionKey encryptionkey.
 	if err != nil {
 		return err
 	}
-	ch := &aclpb.ACLChangeACLContentValue{
-		Value: &aclpb.ACLChangeACLContentValueValueOfUserAdd{
-			UserAdd: &aclpb.ACLChangeUserAdd{
-				Identity:          identity,
+	ch := &aclpb.ACLContentValue{
+		Value: &aclpb.ACLContentValue_UserAdd{
+			UserAdd: &aclpb.ACLUserAdd{
+				Identity:          []byte(identity),
 				EncryptionKey:     rawKey,
 				EncryptedReadKeys: encryptedKeys,
 				Permissions:       permissions,
@@ -93,8 +93,8 @@ func (c *aclChangeBuilder) UserAdd(identity string, encryptionKey encryptionkey.
 	return nil
 }
 
-func (c *aclChangeBuilder) BuildAndApply() (*Record, []byte, error) {
-	aclRecord := &aclpb.Record{
+func (c *aclChangeBuilder) BuildAndApply() (*ACLRecord, []byte, error) {
+	aclRecord := &aclpb.ACLRecord{
 		PrevId:             c.list.Head().Id,
 		CurrentReadKeyHash: c.readKeyHash,
 		Timestamp:          int64(time.Now().Nanosecond()),

@@ -5,6 +5,7 @@ package spacesyncproto
 
 import (
 	fmt "fmt"
+	aclpb "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	proto "github.com/gogo/protobuf/proto"
 	io "io"
 	math "math"
@@ -362,6 +363,349 @@ func (m *HeadSyncResponse) GetResults() []*HeadSyncResult {
 	return nil
 }
 
+// ObjectSyncMessage is a message sent on object sync
+type ObjectSyncMessage struct {
+	SpaceId    string                  `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	Content    *ObjectSyncContentValue `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	TreeHeader *aclpb.TreeHeader       `protobuf:"bytes,3,opt,name=treeHeader,proto3" json:"treeHeader,omitempty"`
+	TreeId     string                  `protobuf:"bytes,4,opt,name=treeId,proto3" json:"treeId,omitempty"`
+}
+
+func (m *ObjectSyncMessage) Reset()         { *m = ObjectSyncMessage{} }
+func (m *ObjectSyncMessage) String() string { return proto.CompactTextString(m) }
+func (*ObjectSyncMessage) ProtoMessage()    {}
+func (*ObjectSyncMessage) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5855f4ef9cf24cdb, []int{6}
+}
+func (m *ObjectSyncMessage) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ObjectSyncMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ObjectSyncMessage.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ObjectSyncMessage) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ObjectSyncMessage.Merge(m, src)
+}
+func (m *ObjectSyncMessage) XXX_Size() int {
+	return m.Size()
+}
+func (m *ObjectSyncMessage) XXX_DiscardUnknown() {
+	xxx_messageInfo_ObjectSyncMessage.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ObjectSyncMessage proto.InternalMessageInfo
+
+func (m *ObjectSyncMessage) GetSpaceId() string {
+	if m != nil {
+		return m.SpaceId
+	}
+	return ""
+}
+
+func (m *ObjectSyncMessage) GetContent() *ObjectSyncContentValue {
+	if m != nil {
+		return m.Content
+	}
+	return nil
+}
+
+func (m *ObjectSyncMessage) GetTreeHeader() *aclpb.TreeHeader {
+	if m != nil {
+		return m.TreeHeader
+	}
+	return nil
+}
+
+func (m *ObjectSyncMessage) GetTreeId() string {
+	if m != nil {
+		return m.TreeId
+	}
+	return ""
+}
+
+// ObjectSyncContentValue provides different types for object sync
+type ObjectSyncContentValue struct {
+	// Types that are valid to be assigned to Value:
+	//	*ObjectSyncContentValue_HeadUpdate
+	//	*ObjectSyncContentValue_FullSyncRequest
+	//	*ObjectSyncContentValue_FullSyncResponse
+	Value isObjectSyncContentValue_Value `protobuf_oneof:"value"`
+}
+
+func (m *ObjectSyncContentValue) Reset()         { *m = ObjectSyncContentValue{} }
+func (m *ObjectSyncContentValue) String() string { return proto.CompactTextString(m) }
+func (*ObjectSyncContentValue) ProtoMessage()    {}
+func (*ObjectSyncContentValue) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5855f4ef9cf24cdb, []int{7}
+}
+func (m *ObjectSyncContentValue) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ObjectSyncContentValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ObjectSyncContentValue.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ObjectSyncContentValue) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ObjectSyncContentValue.Merge(m, src)
+}
+func (m *ObjectSyncContentValue) XXX_Size() int {
+	return m.Size()
+}
+func (m *ObjectSyncContentValue) XXX_DiscardUnknown() {
+	xxx_messageInfo_ObjectSyncContentValue.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ObjectSyncContentValue proto.InternalMessageInfo
+
+type isObjectSyncContentValue_Value interface {
+	isObjectSyncContentValue_Value()
+	MarshalTo([]byte) (int, error)
+	Size() int
+}
+
+type ObjectSyncContentValue_HeadUpdate struct {
+	HeadUpdate *ObjectHeadUpdate `protobuf:"bytes,1,opt,name=headUpdate,proto3,oneof" json:"headUpdate,omitempty"`
+}
+type ObjectSyncContentValue_FullSyncRequest struct {
+	FullSyncRequest *ObjectFullSyncRequest `protobuf:"bytes,2,opt,name=fullSyncRequest,proto3,oneof" json:"fullSyncRequest,omitempty"`
+}
+type ObjectSyncContentValue_FullSyncResponse struct {
+	FullSyncResponse *ObjectFullSyncResponse `protobuf:"bytes,3,opt,name=fullSyncResponse,proto3,oneof" json:"fullSyncResponse,omitempty"`
+}
+
+func (*ObjectSyncContentValue_HeadUpdate) isObjectSyncContentValue_Value()       {}
+func (*ObjectSyncContentValue_FullSyncRequest) isObjectSyncContentValue_Value()  {}
+func (*ObjectSyncContentValue_FullSyncResponse) isObjectSyncContentValue_Value() {}
+
+func (m *ObjectSyncContentValue) GetValue() isObjectSyncContentValue_Value {
+	if m != nil {
+		return m.Value
+	}
+	return nil
+}
+
+func (m *ObjectSyncContentValue) GetHeadUpdate() *ObjectHeadUpdate {
+	if x, ok := m.GetValue().(*ObjectSyncContentValue_HeadUpdate); ok {
+		return x.HeadUpdate
+	}
+	return nil
+}
+
+func (m *ObjectSyncContentValue) GetFullSyncRequest() *ObjectFullSyncRequest {
+	if x, ok := m.GetValue().(*ObjectSyncContentValue_FullSyncRequest); ok {
+		return x.FullSyncRequest
+	}
+	return nil
+}
+
+func (m *ObjectSyncContentValue) GetFullSyncResponse() *ObjectFullSyncResponse {
+	if x, ok := m.GetValue().(*ObjectSyncContentValue_FullSyncResponse); ok {
+		return x.FullSyncResponse
+	}
+	return nil
+}
+
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*ObjectSyncContentValue) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
+		(*ObjectSyncContentValue_HeadUpdate)(nil),
+		(*ObjectSyncContentValue_FullSyncRequest)(nil),
+		(*ObjectSyncContentValue_FullSyncResponse)(nil),
+	}
+}
+
+// ObjectHeadUpdate is a message sent on document head update
+type ObjectHeadUpdate struct {
+	Heads        []string                     `protobuf:"bytes,1,rep,name=heads,proto3" json:"heads,omitempty"`
+	Changes      []*aclpb.RawTreeChangeWithId `protobuf:"bytes,2,rep,name=changes,proto3" json:"changes,omitempty"`
+	SnapshotPath []string                     `protobuf:"bytes,3,rep,name=snapshotPath,proto3" json:"snapshotPath,omitempty"`
+}
+
+func (m *ObjectHeadUpdate) Reset()         { *m = ObjectHeadUpdate{} }
+func (m *ObjectHeadUpdate) String() string { return proto.CompactTextString(m) }
+func (*ObjectHeadUpdate) ProtoMessage()    {}
+func (*ObjectHeadUpdate) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5855f4ef9cf24cdb, []int{8}
+}
+func (m *ObjectHeadUpdate) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ObjectHeadUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ObjectHeadUpdate.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ObjectHeadUpdate) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ObjectHeadUpdate.Merge(m, src)
+}
+func (m *ObjectHeadUpdate) XXX_Size() int {
+	return m.Size()
+}
+func (m *ObjectHeadUpdate) XXX_DiscardUnknown() {
+	xxx_messageInfo_ObjectHeadUpdate.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ObjectHeadUpdate proto.InternalMessageInfo
+
+func (m *ObjectHeadUpdate) GetHeads() []string {
+	if m != nil {
+		return m.Heads
+	}
+	return nil
+}
+
+func (m *ObjectHeadUpdate) GetChanges() []*aclpb.RawTreeChangeWithId {
+	if m != nil {
+		return m.Changes
+	}
+	return nil
+}
+
+func (m *ObjectHeadUpdate) GetSnapshotPath() []string {
+	if m != nil {
+		return m.SnapshotPath
+	}
+	return nil
+}
+
+// ObjectHeadUpdate is a message sent when document needs full sync
+type ObjectFullSyncRequest struct {
+	Heads        []string `protobuf:"bytes,1,rep,name=heads,proto3" json:"heads,omitempty"`
+	SnapshotPath []string `protobuf:"bytes,2,rep,name=snapshotPath,proto3" json:"snapshotPath,omitempty"`
+}
+
+func (m *ObjectFullSyncRequest) Reset()         { *m = ObjectFullSyncRequest{} }
+func (m *ObjectFullSyncRequest) String() string { return proto.CompactTextString(m) }
+func (*ObjectFullSyncRequest) ProtoMessage()    {}
+func (*ObjectFullSyncRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5855f4ef9cf24cdb, []int{9}
+}
+func (m *ObjectFullSyncRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ObjectFullSyncRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ObjectFullSyncRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ObjectFullSyncRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ObjectFullSyncRequest.Merge(m, src)
+}
+func (m *ObjectFullSyncRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *ObjectFullSyncRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ObjectFullSyncRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ObjectFullSyncRequest proto.InternalMessageInfo
+
+func (m *ObjectFullSyncRequest) GetHeads() []string {
+	if m != nil {
+		return m.Heads
+	}
+	return nil
+}
+
+func (m *ObjectFullSyncRequest) GetSnapshotPath() []string {
+	if m != nil {
+		return m.SnapshotPath
+	}
+	return nil
+}
+
+// ObjectFullSyncResponse is a message sent as a response for a specific full sync
+type ObjectFullSyncResponse struct {
+	Heads        []string                     `protobuf:"bytes,1,rep,name=heads,proto3" json:"heads,omitempty"`
+	Changes      []*aclpb.RawTreeChangeWithId `protobuf:"bytes,2,rep,name=changes,proto3" json:"changes,omitempty"`
+	SnapshotPath []string                     `protobuf:"bytes,3,rep,name=snapshotPath,proto3" json:"snapshotPath,omitempty"`
+}
+
+func (m *ObjectFullSyncResponse) Reset()         { *m = ObjectFullSyncResponse{} }
+func (m *ObjectFullSyncResponse) String() string { return proto.CompactTextString(m) }
+func (*ObjectFullSyncResponse) ProtoMessage()    {}
+func (*ObjectFullSyncResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5855f4ef9cf24cdb, []int{10}
+}
+func (m *ObjectFullSyncResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ObjectFullSyncResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ObjectFullSyncResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ObjectFullSyncResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ObjectFullSyncResponse.Merge(m, src)
+}
+func (m *ObjectFullSyncResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *ObjectFullSyncResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ObjectFullSyncResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ObjectFullSyncResponse proto.InternalMessageInfo
+
+func (m *ObjectFullSyncResponse) GetHeads() []string {
+	if m != nil {
+		return m.Heads
+	}
+	return nil
+}
+
+func (m *ObjectFullSyncResponse) GetChanges() []*aclpb.RawTreeChangeWithId {
+	if m != nil {
+		return m.Changes
+	}
+	return nil
+}
+
+func (m *ObjectFullSyncResponse) GetSnapshotPath() []string {
+	if m != nil {
+		return m.SnapshotPath
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterEnum("anySpace.ErrCodes", ErrCodes_name, ErrCodes_value)
 	proto.RegisterType((*Msg)(nil), "anySpace.Msg")
@@ -370,6 +714,11 @@ func init() {
 	proto.RegisterType((*HeadSyncResultElement)(nil), "anySpace.HeadSyncResultElement")
 	proto.RegisterType((*HeadSyncRequest)(nil), "anySpace.HeadSyncRequest")
 	proto.RegisterType((*HeadSyncResponse)(nil), "anySpace.HeadSyncResponse")
+	proto.RegisterType((*ObjectSyncMessage)(nil), "anySpace.ObjectSyncMessage")
+	proto.RegisterType((*ObjectSyncContentValue)(nil), "anySpace.ObjectSyncContentValue")
+	proto.RegisterType((*ObjectHeadUpdate)(nil), "anySpace.ObjectHeadUpdate")
+	proto.RegisterType((*ObjectFullSyncRequest)(nil), "anySpace.ObjectFullSyncRequest")
+	proto.RegisterType((*ObjectFullSyncResponse)(nil), "anySpace.ObjectFullSyncResponse")
 }
 
 func init() {
@@ -377,32 +726,50 @@ func init() {
 }
 
 var fileDescriptor_5855f4ef9cf24cdb = []byte{
-	// 400 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x52, 0xcd, 0xce, 0xd2, 0x40,
-	0x14, 0xed, 0x94, 0xbf, 0x72, 0x15, 0x24, 0x13, 0x8d, 0xb5, 0x8b, 0x82, 0x5d, 0x35, 0x2c, 0xa8,
-	0xc1, 0x8d, 0x09, 0x2b, 0x35, 0x18, 0x59, 0xb0, 0x19, 0xe2, 0xc6, 0xb8, 0xa9, 0xed, 0x08, 0x4d,
-	0xe8, 0x4c, 0xed, 0x0c, 0x2a, 0x6f, 0xe1, 0x63, 0xb9, 0x64, 0xe9, 0xd2, 0xc0, 0x8b, 0x98, 0xde,
-	0x7e, 0x85, 0x8f, 0xa4, 0xe4, 0xdb, 0xcc, 0xfd, 0xe9, 0x39, 0xe7, 0x9e, 0x7b, 0x53, 0x78, 0x13,
-	0xc9, 0x34, 0x95, 0x22, 0x28, 0x83, 0xca, 0xc2, 0x88, 0x07, 0xf8, 0xaa, 0xbd, 0x88, 0xb2, 0x5c,
-	0x6a, 0x19, 0xe0, 0xab, 0x2e, 0xdd, 0x09, 0x36, 0xa8, 0x15, 0x8a, 0xfd, 0xaa, 0xe8, 0x79, 0x43,
-	0x68, 0x2c, 0xd5, 0x9a, 0xda, 0xd0, 0x41, 0xcc, 0x22, 0xb6, 0xc9, 0x88, 0xf8, 0x5d, 0x56, 0x95,
-	0xde, 0x02, 0x7a, 0x1f, 0x79, 0x18, 0xaf, 0xf6, 0x22, 0x62, 0xa1, 0x58, 0x73, 0x4a, 0xa1, 0xf9,
-	0x2d, 0x97, 0x29, 0xe2, 0x9a, 0x0c, 0x73, 0xda, 0x07, 0x53, 0x4b, 0xdb, 0xc4, 0x8e, 0xa9, 0x25,
-	0x7d, 0x0a, 0xad, 0x6d, 0x92, 0x26, 0xda, 0x6e, 0x8c, 0x88, 0xdf, 0x63, 0x65, 0xe1, 0xfd, 0x84,
-	0xfe, 0x59, 0x8a, 0xab, 0xdd, 0x56, 0x17, 0x5a, 0x9b, 0x50, 0x6d, 0x50, 0xeb, 0x31, 0xc3, 0x9c,
-	0xce, 0xc0, 0xe2, 0x5b, 0x9e, 0x72, 0xa1, 0x95, 0x6d, 0x8e, 0x1a, 0xfe, 0xa3, 0xe9, 0x70, 0x52,
-	0xd9, 0x9d, 0x5c, 0xf3, 0xe7, 0x25, 0x8e, 0x9d, 0x09, 0xc5, 0xe0, 0x48, 0xee, 0xc4, 0x79, 0x30,
-	0x16, 0xde, 0x0c, 0x9e, 0xd5, 0x12, 0x0b, 0xdf, 0x49, 0xb5, 0xb1, 0x99, 0xc4, 0xe8, 0x87, 0x87,
-	0x31, 0x6e, 0xd2, 0x65, 0x98, 0x7b, 0x5f, 0xe0, 0xc9, 0x85, 0xfc, 0x7d, 0xc7, 0x95, 0xbe, 0x7d,
-	0x2d, 0x1a, 0x40, 0x3b, 0x2f, 0xae, 0x54, 0x59, 0x7f, 0x5e, 0x63, 0xbd, 0xf8, 0xce, 0xee, 0x60,
-	0xde, 0x07, 0x18, 0xdc, 0xb3, 0x96, 0x49, 0xa1, 0x38, 0x9d, 0x42, 0x27, 0x47, 0x9b, 0xca, 0x26,
-	0xa8, 0x62, 0xdf, 0x3a, 0x00, 0xab, 0x80, 0x63, 0x07, 0xac, 0x79, 0x9e, 0xbf, 0x97, 0x31, 0x57,
-	0xb4, 0x0f, 0xf0, 0x49, 0xf0, 0x5f, 0x19, 0x8f, 0x34, 0x8f, 0x07, 0xc6, 0xf4, 0x07, 0xb4, 0x90,
-	0x4c, 0xdf, 0x82, 0x55, 0xf1, 0xe9, 0x8b, 0x3a, 0x4d, 0x5c, 0xcf, 0x71, 0x6a, 0xc7, 0x95, 0xde,
-	0xc6, 0xd0, 0x5e, 0xe9, 0x9c, 0x87, 0x29, 0xed, 0x5d, 0x50, 0x4b, 0xb5, 0x76, 0xae, 0x4b, 0x9f,
-	0xbc, 0x22, 0xef, 0x66, 0x7f, 0x8e, 0x2e, 0x39, 0x1c, 0x5d, 0xf2, 0xef, 0xe8, 0x92, 0xdf, 0x27,
-	0xd7, 0x38, 0x9c, 0x5c, 0xe3, 0xef, 0xc9, 0x35, 0x3e, 0xbf, 0x7c, 0xf0, 0xcf, 0xfd, 0xda, 0xc6,
-	0xf0, 0xfa, 0x7f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x5a, 0xf6, 0x94, 0x21, 0xe5, 0x02, 0x00, 0x00,
+	// 674 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x55, 0x4d, 0x6f, 0xd3, 0x40,
+	0x10, 0xf5, 0x26, 0x6d, 0x92, 0x4e, 0xfa, 0x11, 0x56, 0xb4, 0x98, 0x20, 0xa5, 0xc1, 0xa7, 0x88,
+	0x43, 0x52, 0x85, 0x0b, 0xa2, 0x5c, 0x68, 0xd5, 0x2a, 0x11, 0x2a, 0x1f, 0x5b, 0x0a, 0x12, 0xe2,
+	0xb2, 0xb5, 0xb7, 0x49, 0xc0, 0xf1, 0x1a, 0xef, 0x86, 0xd2, 0x1b, 0x27, 0xce, 0x88, 0x9f, 0xc2,
+	0xaf, 0xe0, 0xd8, 0x23, 0x47, 0xd4, 0xfe, 0x0d, 0x0e, 0x68, 0xc7, 0x76, 0x92, 0x06, 0xa7, 0xdc,
+	0x38, 0xc4, 0xde, 0x99, 0x7d, 0xf3, 0xf6, 0xbd, 0x59, 0x8f, 0x02, 0x0f, 0x5c, 0x39, 0x1c, 0xca,
+	0xa0, 0x15, 0xbf, 0x54, 0xc8, 0x5d, 0xd1, 0xc2, 0xa7, 0x3a, 0x0b, 0xdc, 0x30, 0x92, 0x5a, 0xb6,
+	0xf0, 0xa9, 0x26, 0xd9, 0x26, 0x26, 0x68, 0x89, 0x07, 0x67, 0x87, 0x26, 0x57, 0xdd, 0x0a, 0xdf,
+	0xf7, 0x5a, 0xdc, 0xf5, 0xcd, 0xcf, 0xed, 0xf3, 0xa0, 0x27, 0x94, 0x59, 0x86, 0xc7, 0x69, 0xe9,
+	0x24, 0x1f, 0xd7, 0x3a, 0x9b, 0x90, 0x3f, 0x50, 0x3d, 0x6a, 0x43, 0x11, 0x59, 0xbb, 0x9e, 0x4d,
+	0xea, 0xa4, 0xb1, 0xc4, 0xd2, 0xd0, 0xe9, 0xc2, 0x4a, 0x47, 0x70, 0xef, 0xf0, 0x2c, 0x70, 0x99,
+	0x29, 0xa4, 0x14, 0x16, 0x4e, 0x22, 0x39, 0x44, 0xdc, 0x02, 0xc3, 0x35, 0x5d, 0x85, 0x9c, 0x96,
+	0x76, 0x0e, 0x33, 0x39, 0x2d, 0xe9, 0x4d, 0x58, 0xf4, 0x07, 0xc3, 0x81, 0xb6, 0xf3, 0x75, 0xd2,
+	0x58, 0x61, 0x71, 0xe0, 0x9c, 0xc2, 0xea, 0x98, 0x4a, 0xa8, 0x91, 0xaf, 0x0d, 0x57, 0x9f, 0xab,
+	0x3e, 0x72, 0x2d, 0x33, 0x5c, 0xd3, 0x6d, 0x28, 0x09, 0x5f, 0x0c, 0x45, 0xa0, 0x95, 0x9d, 0xab,
+	0xe7, 0x1b, 0xe5, 0xf6, 0x66, 0x33, 0x35, 0xd8, 0xbc, 0x5a, 0xbf, 0x17, 0xe3, 0xd8, 0xb8, 0xc0,
+	0x1c, 0xec, 0xca, 0x51, 0x30, 0x3e, 0x18, 0x03, 0x67, 0x1b, 0xd6, 0x33, 0x0b, 0x8d, 0xee, 0x41,
+	0xea, 0x38, 0x37, 0xf0, 0x50, 0x8f, 0xe0, 0x1e, 0x3a, 0x59, 0x62, 0xb8, 0x76, 0xde, 0xc2, 0xda,
+	0xa4, 0xf8, 0xc3, 0x48, 0x28, 0x3d, 0xbf, 0x5b, 0xb4, 0x05, 0x85, 0x08, 0xdb, 0x9b, 0x48, 0xbf,
+	0x95, 0x21, 0xdd, 0xec, 0xb3, 0x04, 0xe6, 0xec, 0x43, 0x65, 0x4a, 0x5a, 0x28, 0x03, 0x25, 0x68,
+	0x1b, 0x8a, 0x11, 0xca, 0x54, 0x36, 0x41, 0x16, 0x7b, 0x5e, 0x03, 0x58, 0x0a, 0x74, 0xbe, 0x13,
+	0xb8, 0xf1, 0xec, 0xf8, 0x9d, 0x70, 0xb5, 0xd9, 0x3d, 0x10, 0x4a, 0xf1, 0x9e, 0xb8, 0x46, 0xe8,
+	0x43, 0x28, 0xba, 0x32, 0xd0, 0x22, 0xd0, 0x68, 0xb6, 0xdc, 0xae, 0x4f, 0xce, 0x98, 0xf0, 0xec,
+	0xc6, 0x90, 0x57, 0xdc, 0x1f, 0x09, 0x96, 0x16, 0xd0, 0x16, 0x80, 0x8e, 0x84, 0x30, 0x52, 0x44,
+	0x84, 0x9d, 0x2e, 0xb7, 0xd7, 0x9a, 0xdc, 0xf5, 0x9b, 0x2f, 0xc7, 0x69, 0x36, 0x05, 0xa1, 0x1b,
+	0x50, 0x30, 0x51, 0xd7, 0xb3, 0x17, 0x50, 0x45, 0x12, 0x39, 0xbf, 0x09, 0x6c, 0x64, 0x1f, 0x46,
+	0x1f, 0x01, 0x98, 0xee, 0x1f, 0x85, 0x1e, 0xd7, 0x02, 0xc5, 0x97, 0xdb, 0xd5, 0x59, 0x89, 0x9d,
+	0x31, 0xa2, 0x63, 0xb1, 0x29, 0x3c, 0x7d, 0x02, 0x6b, 0x27, 0x23, 0xdf, 0x9f, 0xba, 0xb3, 0xc4,
+	0xe5, 0xe6, 0x2c, 0xc5, 0xfe, 0x55, 0x58, 0xc7, 0x62, 0xb3, 0x95, 0xf4, 0x29, 0x54, 0x26, 0xa9,
+	0xf8, 0x8a, 0x12, 0xd3, 0xf5, 0xf9, 0x6c, 0x31, 0xae, 0x63, 0xb1, 0xbf, 0x6a, 0x77, 0x8a, 0xb0,
+	0xf8, 0xd1, 0x78, 0x74, 0x3e, 0x13, 0xa8, 0xcc, 0x1a, 0x31, 0x5f, 0xb0, 0x31, 0x12, 0x5f, 0xfd,
+	0x12, 0x8b, 0x03, 0xf3, 0x49, 0x24, 0x73, 0x9b, 0x7c, 0x58, 0x36, 0xf6, 0x9b, 0xf1, 0x53, 0xd3,
+	0xf2, 0x5d, 0xdc, 0x7a, 0x3d, 0xd0, 0xfd, 0xae, 0xc7, 0x52, 0x20, 0x75, 0x60, 0x59, 0x05, 0x3c,
+	0x54, 0x7d, 0xa9, 0x9f, 0x73, 0xdd, 0xb7, 0xf3, 0x48, 0x78, 0x25, 0xe7, 0xbc, 0x80, 0xf5, 0xcc,
+	0x3e, 0xcc, 0x91, 0x31, 0x4b, 0x99, 0xcb, 0xa0, 0xfc, 0x32, 0xbe, 0xd4, 0xd9, 0x6e, 0xfc, 0x5f,
+	0x6f, 0xf7, 0xaa, 0x50, 0xda, 0x8b, 0xa2, 0x5d, 0xe9, 0x09, 0x45, 0x57, 0x01, 0x8e, 0x02, 0xf1,
+	0x29, 0x14, 0xae, 0x16, 0x5e, 0xc5, 0x6a, 0x7f, 0x23, 0xb0, 0x88, 0x17, 0x47, 0x1f, 0x43, 0x29,
+	0x9d, 0x29, 0x7a, 0x3b, 0x6b, 0xce, 0xb0, 0x1f, 0xd5, 0x6a, 0xe6, 0x08, 0xc6, 0xb6, 0xf6, 0xa1,
+	0x70, 0xa8, 0x23, 0xc1, 0x87, 0xf4, 0x4e, 0xd6, 0x10, 0x25, 0xc3, 0x58, 0xbd, 0x6e, 0xb3, 0x41,
+	0xb6, 0xc8, 0xce, 0xf6, 0x8f, 0x8b, 0x1a, 0x39, 0xbf, 0xa8, 0x91, 0x5f, 0x17, 0x35, 0xf2, 0xf5,
+	0xb2, 0x66, 0x9d, 0x5f, 0xd6, 0xac, 0x9f, 0x97, 0x35, 0xeb, 0xcd, 0xdd, 0x7f, 0xfe, 0x37, 0x1c,
+	0x17, 0xf0, 0x75, 0xff, 0x4f, 0x00, 0x00, 0x00, 0xff, 0xff, 0xd7, 0x51, 0x60, 0x63, 0x47, 0x06,
+	0x00, 0x00,
 }
 
 func (m *Msg) Marshal() (dAtA []byte, err error) {
@@ -640,6 +1007,313 @@ func (m *HeadSyncResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *ObjectSyncMessage) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ObjectSyncMessage) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ObjectSyncMessage) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.TreeId) > 0 {
+		i -= len(m.TreeId)
+		copy(dAtA[i:], m.TreeId)
+		i = encodeVarintSpacesync(dAtA, i, uint64(len(m.TreeId)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.TreeHeader != nil {
+		{
+			size, err := m.TreeHeader.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSpacesync(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.Content != nil {
+		{
+			size, err := m.Content.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSpacesync(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.SpaceId) > 0 {
+		i -= len(m.SpaceId)
+		copy(dAtA[i:], m.SpaceId)
+		i = encodeVarintSpacesync(dAtA, i, uint64(len(m.SpaceId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ObjectSyncContentValue) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ObjectSyncContentValue) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ObjectSyncContentValue) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Value != nil {
+		{
+			size := m.Value.Size()
+			i -= size
+			if _, err := m.Value.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ObjectSyncContentValue_HeadUpdate) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ObjectSyncContentValue_HeadUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.HeadUpdate != nil {
+		{
+			size, err := m.HeadUpdate.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSpacesync(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+func (m *ObjectSyncContentValue_FullSyncRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ObjectSyncContentValue_FullSyncRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.FullSyncRequest != nil {
+		{
+			size, err := m.FullSyncRequest.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSpacesync(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	return len(dAtA) - i, nil
+}
+func (m *ObjectSyncContentValue_FullSyncResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ObjectSyncContentValue_FullSyncResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.FullSyncResponse != nil {
+		{
+			size, err := m.FullSyncResponse.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSpacesync(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	return len(dAtA) - i, nil
+}
+func (m *ObjectHeadUpdate) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ObjectHeadUpdate) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ObjectHeadUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.SnapshotPath) > 0 {
+		for iNdEx := len(m.SnapshotPath) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.SnapshotPath[iNdEx])
+			copy(dAtA[i:], m.SnapshotPath[iNdEx])
+			i = encodeVarintSpacesync(dAtA, i, uint64(len(m.SnapshotPath[iNdEx])))
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
+	if len(m.Changes) > 0 {
+		for iNdEx := len(m.Changes) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Changes[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintSpacesync(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Heads) > 0 {
+		for iNdEx := len(m.Heads) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Heads[iNdEx])
+			copy(dAtA[i:], m.Heads[iNdEx])
+			i = encodeVarintSpacesync(dAtA, i, uint64(len(m.Heads[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ObjectFullSyncRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ObjectFullSyncRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ObjectFullSyncRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.SnapshotPath) > 0 {
+		for iNdEx := len(m.SnapshotPath) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.SnapshotPath[iNdEx])
+			copy(dAtA[i:], m.SnapshotPath[iNdEx])
+			i = encodeVarintSpacesync(dAtA, i, uint64(len(m.SnapshotPath[iNdEx])))
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Heads) > 0 {
+		for iNdEx := len(m.Heads) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Heads[iNdEx])
+			copy(dAtA[i:], m.Heads[iNdEx])
+			i = encodeVarintSpacesync(dAtA, i, uint64(len(m.Heads[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ObjectFullSyncResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ObjectFullSyncResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ObjectFullSyncResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.SnapshotPath) > 0 {
+		for iNdEx := len(m.SnapshotPath) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.SnapshotPath[iNdEx])
+			copy(dAtA[i:], m.SnapshotPath[iNdEx])
+			i = encodeVarintSpacesync(dAtA, i, uint64(len(m.SnapshotPath[iNdEx])))
+			i--
+			dAtA[i] = 0x1a
+		}
+	}
+	if len(m.Changes) > 0 {
+		for iNdEx := len(m.Changes) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Changes[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintSpacesync(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Heads) > 0 {
+		for iNdEx := len(m.Heads) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Heads[iNdEx])
+			copy(dAtA[i:], m.Heads[iNdEx])
+			i = encodeVarintSpacesync(dAtA, i, uint64(len(m.Heads[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintSpacesync(dAtA []byte, offset int, v uint64) int {
 	offset -= sovSpacesync(v)
 	base := offset
@@ -749,6 +1423,154 @@ func (m *HeadSyncResponse) Size() (n int) {
 	if len(m.Results) > 0 {
 		for _, e := range m.Results {
 			l = e.Size()
+			n += 1 + l + sovSpacesync(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *ObjectSyncMessage) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.SpaceId)
+	if l > 0 {
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	if m.Content != nil {
+		l = m.Content.Size()
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	if m.TreeHeader != nil {
+		l = m.TreeHeader.Size()
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	l = len(m.TreeId)
+	if l > 0 {
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	return n
+}
+
+func (m *ObjectSyncContentValue) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Value != nil {
+		n += m.Value.Size()
+	}
+	return n
+}
+
+func (m *ObjectSyncContentValue_HeadUpdate) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.HeadUpdate != nil {
+		l = m.HeadUpdate.Size()
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	return n
+}
+func (m *ObjectSyncContentValue_FullSyncRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.FullSyncRequest != nil {
+		l = m.FullSyncRequest.Size()
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	return n
+}
+func (m *ObjectSyncContentValue_FullSyncResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.FullSyncResponse != nil {
+		l = m.FullSyncResponse.Size()
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	return n
+}
+func (m *ObjectHeadUpdate) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Heads) > 0 {
+		for _, s := range m.Heads {
+			l = len(s)
+			n += 1 + l + sovSpacesync(uint64(l))
+		}
+	}
+	if len(m.Changes) > 0 {
+		for _, e := range m.Changes {
+			l = e.Size()
+			n += 1 + l + sovSpacesync(uint64(l))
+		}
+	}
+	if len(m.SnapshotPath) > 0 {
+		for _, s := range m.SnapshotPath {
+			l = len(s)
+			n += 1 + l + sovSpacesync(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *ObjectFullSyncRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Heads) > 0 {
+		for _, s := range m.Heads {
+			l = len(s)
+			n += 1 + l + sovSpacesync(uint64(l))
+		}
+	}
+	if len(m.SnapshotPath) > 0 {
+		for _, s := range m.SnapshotPath {
+			l = len(s)
+			n += 1 + l + sovSpacesync(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *ObjectFullSyncResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Heads) > 0 {
+		for _, s := range m.Heads {
+			l = len(s)
+			n += 1 + l + sovSpacesync(uint64(l))
+		}
+	}
+	if len(m.Changes) > 0 {
+		for _, e := range m.Changes {
+			l = e.Size()
+			n += 1 + l + sovSpacesync(uint64(l))
+		}
+	}
+	if len(m.SnapshotPath) > 0 {
+		for _, s := range m.SnapshotPath {
+			l = len(s)
 			n += 1 + l + sovSpacesync(uint64(l))
 		}
 	}
@@ -1379,6 +2201,757 @@ func (m *HeadSyncResponse) Unmarshal(dAtA []byte) error {
 			if err := m.Results[len(m.Results)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSpacesync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ObjectSyncMessage) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSpacesync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ObjectSyncMessage: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ObjectSyncMessage: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SpaceId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Content", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Content == nil {
+				m.Content = &ObjectSyncContentValue{}
+			}
+			if err := m.Content.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TreeHeader", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.TreeHeader == nil {
+				m.TreeHeader = &aclpb.TreeHeader{}
+			}
+			if err := m.TreeHeader.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TreeId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.TreeId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSpacesync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ObjectSyncContentValue) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSpacesync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ObjectSyncContentValue: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ObjectSyncContentValue: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HeadUpdate", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &ObjectHeadUpdate{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &ObjectSyncContentValue_HeadUpdate{v}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FullSyncRequest", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &ObjectFullSyncRequest{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &ObjectSyncContentValue_FullSyncRequest{v}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FullSyncResponse", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &ObjectFullSyncResponse{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &ObjectSyncContentValue_FullSyncResponse{v}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSpacesync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ObjectHeadUpdate) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSpacesync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ObjectHeadUpdate: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ObjectHeadUpdate: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Heads", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Heads = append(m.Heads, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Changes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Changes = append(m.Changes, &aclpb.RawTreeChangeWithId{})
+			if err := m.Changes[len(m.Changes)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SnapshotPath", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SnapshotPath = append(m.SnapshotPath, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSpacesync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ObjectFullSyncRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSpacesync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ObjectFullSyncRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ObjectFullSyncRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Heads", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Heads = append(m.Heads, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SnapshotPath", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SnapshotPath = append(m.SnapshotPath, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSpacesync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ObjectFullSyncResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSpacesync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ObjectFullSyncResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ObjectFullSyncResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Heads", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Heads = append(m.Heads, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Changes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Changes = append(m.Changes, &aclpb.RawTreeChangeWithId{})
+			if err := m.Changes[len(m.Changes)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SnapshotPath", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SnapshotPath = append(m.SnapshotPath, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

@@ -19,8 +19,8 @@ import (
 
 type ACLListStorageBuilder struct {
 	aclList    string
-	records    []*aclpb.Record
-	rawRecords []*aclpb.RawRecord
+	records    []*aclpb.ACLRecord
+	rawRecords []*aclpb.RawACLRecord
 	indexes    map[string]int
 	keychain   *Keychain
 	header     *aclpb.Header
@@ -29,7 +29,7 @@ type ACLListStorageBuilder struct {
 
 func NewACLListStorageBuilder(keychain *Keychain) *ACLListStorageBuilder {
 	return &ACLListStorageBuilder{
-		records:  make([]*aclpb.Record, 0),
+		records:  make([]*aclpb.ACLRecord, 0),
 		indexes:  make(map[string]int),
 		keychain: keychain,
 	}
@@ -58,7 +58,7 @@ func NewACLListStorageBuilderFromFile(file string) (*ACLListStorageBuilder, erro
 	return tb, nil
 }
 
-func (t *ACLListStorageBuilder) createRaw(rec *aclpb.Record) *aclpb.RawRecord {
+func (t *ACLListStorageBuilder) createRaw(rec *aclpb.ACLRecord) *aclpb.RawACLRecord {
 	aclMarshaled, err := proto.Marshal(rec)
 	if err != nil {
 		panic("should be able to marshal final acl message!")
@@ -71,18 +71,18 @@ func (t *ACLListStorageBuilder) createRaw(rec *aclpb.Record) *aclpb.RawRecord {
 
 	id, _ := cid.NewCIDFromBytes(aclMarshaled)
 
-	return &aclpb.RawRecord{
+	return &aclpb.RawACLRecord{
 		Payload:   aclMarshaled,
 		Signature: signature,
 		Id:        id,
 	}
 }
 
-func (t *ACLListStorageBuilder) getRecord(idx int) *aclpb.RawRecord {
+func (t *ACLListStorageBuilder) getRecord(idx int) *aclpb.RawACLRecord {
 	return t.rawRecords[idx]
 }
 
-func (t *ACLListStorageBuilder) Head() (*aclpb.RawRecord, error) {
+func (t *ACLListStorageBuilder) Head() (*aclpb.RawACLRecord, error) {
 	return t.getRecord(len(t.records) - 1), nil
 }
 
@@ -90,7 +90,7 @@ func (t *ACLListStorageBuilder) Header() (*aclpb.Header, error) {
 	return t.header, nil
 }
 
-func (t *ACLListStorageBuilder) GetRawRecord(ctx context.Context, id string) (*aclpb.RawRecord, error) {
+func (t *ACLListStorageBuilder) GetRawRecord(ctx context.Context, id string) (*aclpb.RawACLRecord, error) {
 	recIdx, ok := t.indexes[id]
 	if !ok {
 		return nil, fmt.Errorf("no such record")
@@ -98,7 +98,7 @@ func (t *ACLListStorageBuilder) GetRawRecord(ctx context.Context, id string) (*a
 	return t.getRecord(recIdx), nil
 }
 
-func (t *ACLListStorageBuilder) AddRawRecord(ctx context.Context, rec *aclpb.RawRecord) error {
+func (t *ACLListStorageBuilder) AddRawRecord(ctx context.Context, rec *aclpb.RawACLRecord) error {
 	panic("implement me")
 }
 
@@ -106,7 +106,7 @@ func (t *ACLListStorageBuilder) ID() (string, error) {
 	return t.id, nil
 }
 
-func (t *ACLListStorageBuilder) GetRawRecords() []*aclpb.RawRecord {
+func (t *ACLListStorageBuilder) GetRawRecords() []*aclpb.RawACLRecord {
 	return t.rawRecords
 }
 
@@ -132,7 +132,7 @@ func (t *ACLListStorageBuilder) Parse(tree *YMLList) {
 	t.createHeaderAndId()
 }
 
-func (t *ACLListStorageBuilder) parseRecord(rec *Record, prevId string) *aclpb.Record {
+func (t *ACLListStorageBuilder) parseRecord(rec *Record, prevId string) *aclpb.ACLRecord {
 	k := t.keychain.GetKey(rec.ReadKey).(*SymKey)
 	var aclChangeContents []*aclpb.ACLChangeACLContentValue
 	for _, ch := range rec.AclChanges {
@@ -144,7 +144,7 @@ func (t *ACLListStorageBuilder) parseRecord(rec *Record, prevId string) *aclpb.R
 	}
 	bytes, _ := data.Marshal()
 
-	return &aclpb.Record{
+	return &aclpb.ACLRecord{
 		PrevId:             prevId,
 		Identity:           t.keychain.GetIdentity(rec.Identity),
 		Data:               bytes,
@@ -163,7 +163,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 
 		convCh = &aclpb.ACLChangeACLContentValue{
 			Value: &aclpb.ACLChangeACLContentValueValueOfUserAdd{
-				UserAdd: &aclpb.ACLChangeUserAdd{
+				UserAdd: &aclpb.ACLUserPermissionsAdd{
 					Identity:          t.keychain.GetIdentity(add.Identity),
 					EncryptionKey:     rawKey,
 					EncryptedReadKeys: t.encryptReadKeys(add.EncryptedReadKeys, encKey),
@@ -187,7 +187,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 
 		convCh = &aclpb.ACLChangeACLContentValue{
 			Value: &aclpb.ACLChangeACLContentValueValueOfUserJoin{
-				UserJoin: &aclpb.ACLChangeUserJoin{
+				UserJoin: &aclpb.ACLUserPermissionsJoin{
 					Identity:          t.keychain.GetIdentity(join.Identity),
 					EncryptionKey:     rawKey,
 					AcceptSignature:   signature,
@@ -205,7 +205,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 
 		convCh = &aclpb.ACLChangeACLContentValue{
 			Value: &aclpb.ACLChangeACLContentValueValueOfUserInvite{
-				UserInvite: &aclpb.ACLChangeUserInvite{
+				UserInvite: &aclpb.ACLUserPermissionsInvite{
 					AcceptPublicKey:   rawAcceptKey,
 					EncryptPublicKey:  rawEncKey,
 					EncryptedReadKeys: t.encryptReadKeys(invite.EncryptedReadKeys, encKey),
@@ -219,7 +219,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 
 		convCh = &aclpb.ACLChangeACLContentValue{
 			Value: &aclpb.ACLChangeACLContentValueValueOfUserConfirm{
-				UserConfirm: &aclpb.ACLChangeUserConfirm{
+				UserConfirm: &aclpb.ACLUserPermissionsConfirm{
 					Identity:  t.keychain.GetIdentity(confirm.Identity),
 					UserAddId: confirm.UserAddId,
 				},
@@ -230,7 +230,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 
 		convCh = &aclpb.ACLChangeACLContentValue{
 			Value: &aclpb.ACLChangeACLContentValueValueOfUserPermissionChange{
-				UserPermissionChange: &aclpb.ACLChangeUserPermissionChange{
+				UserPermissionChange: &aclpb.ACLUserPermissionsPermissionChange{
 					Identity:    t.keychain.GetIdentity(permissionChange.Identity),
 					Permissions: t.convertPermission(permissionChange.Permission),
 				},
@@ -259,7 +259,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 
 		convCh = &aclpb.ACLChangeACLContentValue{
 			Value: &aclpb.ACLChangeACLContentValueValueOfUserRemove{
-				UserRemove: &aclpb.ACLChangeUserRemove{
+				UserRemove: &aclpb.ACLUserPermissionsRemove{
 					Identity:        t.keychain.GetIdentity(remove.RemovedIdentity),
 					ReadKeyReplaces: replaces,
 				},
@@ -286,7 +286,7 @@ func (t *ACLListStorageBuilder) encryptReadKeys(keys []string, encKey encryption
 	return
 }
 
-func (t *ACLListStorageBuilder) convertPermission(perm string) aclpb.ACLChangeUserPermissions {
+func (t *ACLListStorageBuilder) convertPermission(perm string) aclpb.ACLUserPermissions {
 	switch perm {
 	case "admin":
 		return aclpb.ACLChange_Admin
@@ -299,7 +299,7 @@ func (t *ACLListStorageBuilder) convertPermission(perm string) aclpb.ACLChangeUs
 	}
 }
 
-func (t *ACLListStorageBuilder) traverseFromHead(f func(rec *aclpb.Record, id string) error) (err error) {
+func (t *ACLListStorageBuilder) traverseFromHead(f func(rec *aclpb.ACLRecord, id string) error) (err error) {
 	for i := len(t.records) - 1; i >= 0; i-- {
 		err = f(t.records[i], t.rawRecords[i].Id)
 		if err != nil {

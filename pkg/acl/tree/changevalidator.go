@@ -48,7 +48,7 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.ACLList, c
 		return
 	}
 
-	if perm.Permission != aclpb.ACLChange_Writer && perm.Permission != aclpb.ACLChange_Admin {
+	if perm.Permission != aclpb.ACLUserPermissions_Writer && perm.Permission != aclpb.ACLUserPermissions_Admin {
 		err = list.ErrInsufficientPermissions
 		return
 	}

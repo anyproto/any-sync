@@ -9,15 +9,15 @@ var ErrUnknownTreeId = errors.New("tree does not exist")
 
 type TreeStorageCreatePayload struct {
 	TreeId  string
-	Header  *aclpb.Header
-	Changes []*aclpb.RawChange
+	Header  *aclpb.TreeHeader
+	Changes []*aclpb.RawTreeChangeWithId
 	Heads   []string
 }
 
 type ACLListStorageCreatePayload struct {
 	ListId  string
-	Header  *aclpb.Header
-	Records []*aclpb.RawRecord
+	Header  *aclpb.ACLHeader
+	Records []*aclpb.RawACLRecord
 }
 
 type Provider interface {

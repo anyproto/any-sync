@@ -15,7 +15,7 @@ import (
 type mockChangeCreator struct{}
 
 func (c *mockChangeCreator) createRaw(id, aclId, snapshotId string, isSnapshot bool, prevIds ...string) *aclpb.RawChange {
-	aclChange := &aclpb.Change{
+	aclChange := &aclpb.TreeChange{
 		TreeHeadIds:    prevIds,
 		AclHeadId:      aclId,
 		SnapshotBaseId: snapshotId,
@@ -23,22 +23,27 @@ func (c *mockChangeCreator) createRaw(id, aclId, snapshotId string, isSnapshot b
 		IsSnapshot:     isSnapshot,
 	}
 	res, _ := aclChange.Marshal()
-	return &aclpb.RawChange{
+
+	raw := &aclpb.RawTreeChange{
 		Payload:   res,
 		Signature: nil,
+	}
+	rawMarshalled, _ := raw.Marshal()
+
+	return &aclpb.RawTreeChangeWithId{
+		RawChange: rawMarshalled,
 		Id:        id,
 	}
 }
 
 func (c *mockChangeCreator) createNewTreeStorage(treeId, aclListId, aclHeadId, firstChangeId string) storage.TreeStorage {
 	firstChange := c.createRaw(firstChangeId, aclHeadId, "", true)
-	header := &aclpb.Header{
-		FirstId:     firstChangeId,
-		AclListId:   aclListId,
-		WorkspaceId: "",
-		DocType:     aclpb.Header_DocTree,
+	header := &aclpb.TreeHeader{
+		FirstId:        firstChangeId,
+		AclId:          aclListId,
+		TreeHeaderType: aclpb.TreeHeaderType_Object,
 	}
-	treeStorage, _ := storage.NewInMemoryTreeStorage(treeId, header, []string{firstChangeId}, []*aclpb.RawChange{firstChange})
+	treeStorage, _ := storage.NewInMemoryTreeStorage(treeId, header, []string{firstChangeId}, []*aclpb.RawTreeChangeWithId{firstChange})
 	return treeStorage
 }
 

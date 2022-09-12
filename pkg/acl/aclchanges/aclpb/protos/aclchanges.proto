@@ -2,147 +2,142 @@ syntax = "proto3";
 package acl;
 option go_package = "aclpb";
 
-message RawChange {
+// ACL protos
+
+message RawACLRecord {
   bytes payload = 1;
   bytes signature = 2;
-  string id = 3;
+  string id = 3; // this field is only used on user side for convenience, it should be empty when saving to db
 }
 
-message RawRecord {
-  bytes payload = 1;
-  bytes signature = 2;
-  string id = 3;
-}
-
-// the element of change tree used to store and internal apply smartBlock history
-message ACLChange {
-  repeated string treeHeadIds = 1;
-  repeated string aclHeadIds = 2;
-  string snapshotBaseId = 3; // we will only have one base snapshot for both
-  ACLData aclData = 4;
-  // the data is encoded with read key and should be read in ChangesData format
-  bytes changesData = 5;
-  uint64 currentReadKeyHash = 6;
-  int64 timestamp = 7;
-  string identity = 8;
-
-  message ACLContentValue {
-    oneof value {
-      UserAdd userAdd = 1;
-      UserRemove userRemove = 2;
-      UserPermissionChange userPermissionChange = 3;
-      UserInvite userInvite = 4;
-      UserJoin userJoin = 5;
-      UserConfirm userConfirm = 6;
-    }
-  }
-
-  message ACLData {
-    ACLSnapshot aclSnapshot = 1;
-    repeated ACLContentValue aclContent = 2;
-  }
-
-  message ACLSnapshot {
-    // We don't need ACLState as a separate message now, because we simplified the snapshot model
-    ACLState aclState = 1;
-  }
-
-  message ACLState {
-    repeated uint64 readKeyHashes = 1;
-    repeated UserState userStates = 2;
-    map<string, UserInvite> invites = 3; // TODO: later
-    //    repeated string unconfirmedUsers = 4; // TODO: later
-  }
-
-  message UserState {
-    string identity = 1;
-    bytes encryptionKey = 2;
-    repeated bytes encryptedReadKeys = 3; // all read keys that we know
-    UserPermissions permissions = 4;
-    bool IsConfirmed = 5;
-  }
-
-  // we already know identity and encryptionKey
-  message UserAdd {
-    string identity = 1; // public signing key
-    bytes encryptionKey = 2; // public encryption key
-    repeated bytes encryptedReadKeys = 3; // all read keys that we know for the user
-    UserPermissions permissions = 4;
-  }
-
-  // TODO: this is not used as of now
-  message UserConfirm { // not needed for read permissions
-    string identity = 1; // not needed
-    string userAddId = 2;
-  }
-
-  message UserInvite {
-    bytes acceptPublicKey = 1;
-    bytes encryptPublicKey = 2;
-    repeated bytes encryptedReadKeys = 3; // all read keys that we know for the user
-    UserPermissions permissions = 4;
-    string InviteId = 5;
-  }
-
-  message UserJoin {
-    string identity = 1;
-    bytes encryptionKey = 2;
-    bytes acceptSignature = 3; // sign acceptPublicKey
-    string userInviteId = 4;
-    repeated bytes encryptedReadKeys = 5; // the idea is that user should itself reencrypt the keys with the pub key
-  }
-
-  message UserRemove {
-    string identity = 1;
-    repeated ReadKeyReplace readKeyReplaces = 3; // new read key encrypted for all users
-  }
-
-  message ReadKeyReplace {
-    string identity = 1;
-    bytes encryptionKey = 2;
-    bytes encryptedReadKey = 3;
-  }
-
-  message UserPermissionChange {
-    string identity = 1;
-    UserPermissions permissions = 2;
-  }
-
-  enum UserPermissions {
-    Admin = 0;
-    Writer = 1;
-    Reader = 2;
-    Removed = 3;
+message ACLContentValue {
+  oneof value {
+    ACLUserAdd userAdd = 1;
+    ACLUserRemove userRemove = 2;
+    ACLUserPermissionChange userPermissionChange = 3;
+    ACLUserInvite userInvite = 4;
+    ACLUserJoin userJoin = 5;
+    ACLUserConfirm userConfirm = 6;
   }
 }
 
-message Change {
-  repeated string treeHeadIds = 1;
-  string aclHeadId = 2;
-  string snapshotBaseId = 3; // we will only have one base snapshot for both
-  bytes changesData = 4;
-  uint64 currentReadKeyHash = 5;
-  int64 timestamp = 6;
-  string identity = 7;
-  bool isSnapshot = 8;
+message ACLData {
+  repeated ACLContentValue aclContent = 1;
 }
 
-message Record {
+message ACLState {
+  repeated uint64 readKeyHashes = 1;
+  repeated ACLUserState userStates = 2;
+  map<string, ACLUserInvite> invites = 3; // TODO: later
+  // repeated string unconfirmedUsers = 4; // TODO: later
+}
+
+message ACLUserState {
+  bytes identity = 1;
+  bytes encryptionKey = 2;
+  repeated bytes encryptedReadKeys = 3; // all read keys that we know
+  ACLUserPermissions permissions = 4;
+  bool isConfirmed = 5;
+}
+
+// we already know identity and encryptionKey
+message ACLUserAdd {
+  bytes identity = 1; // public signing key
+  bytes encryptionKey = 2; // public encryption key
+  repeated bytes encryptedReadKeys = 3; // all read keys that we know for the user
+  ACLUserPermissions permissions = 4;
+}
+
+// TODO: this is not used as of now
+message ACLUserConfirm { // not needed for read permissions
+  bytes identity = 1; // not needed
+  string userAddId = 2;
+}
+
+message ACLUserInvite {
+  bytes acceptPublicKey = 1;
+  bytes encryptPublicKey = 2;
+  repeated bytes encryptedReadKeys = 3; // all read keys that we know for the user
+  ACLUserPermissions permissions = 4;
+  string inviteId = 5;
+}
+
+message ACLUserJoin {
+  bytes identity = 1;
+  bytes encryptionKey = 2;
+  bytes acceptSignature = 3; // sign acceptPublicKey
+  string userInviteId = 4;
+  repeated bytes encryptedReadKeys = 5; // the idea is that user should itself reencrypt the keys with the pub key
+}
+
+message ACLUserRemove {
+  bytes identity = 1;
+  repeated ACLReadKeyReplace readKeyReplaces = 3; // new read key encrypted for all users
+}
+
+message ACLReadKeyReplace {
+  bytes identity = 1;
+  bytes encryptionKey = 2;
+  bytes encryptedReadKey = 3;
+}
+
+message ACLUserPermissionChange {
+  bytes identity = 1;
+  ACLUserPermissions permissions = 2;
+}
+
+enum ACLUserPermissions {
+  Admin = 0;
+  Writer = 1;
+  Reader = 2;
+  Removed = 3;
+}
+
+message ACLRecord {
   string prevId = 1;
-  string identity = 2;
+  bytes identity = 2;
   bytes data = 3;
   uint64 currentReadKeyHash = 4;
   int64 timestamp = 5;
 }
 
-message Header {
+message ACLHeader {
   string firstId = 1;
-  string aclListId = 2;
-  string workspaceId = 3;
-  DocType docType = 4;
+  bytes identity = 2; // the identity of the creator
+}
 
-  enum DocType {
-    ACL = 0;
-    DocTree = 1;
-  }
+// Tree protos
+
+message RawTreeChange {
+  bytes payload = 1;
+  bytes signature = 2;
+}
+
+message RawTreeChangeWithId {
+  bytes rawChange = 1;
+  string id = 2;
+}
+
+message TreeChange {
+  repeated string treeHeadIds = 1;
+  string aclHeadId = 2;
+  string snapshotBaseId = 3;
+  bytes changesData = 4;
+  uint64 currentReadKeyHash = 5;
+  int64 timestamp = 6;
+  bytes identity = 7;
+  bool isSnapshot = 8;
+}
+
+enum TreeHeaderType {
+  Object = 0;
+  Space = 1;
+}
+
+message TreeHeader {
+  string firstId = 1;
+  string aclId = 2;
+  TreeHeaderType treeHeaderType = 3;
+  bytes identity = 4;
+  bytes data = 5; // this should be reserved for the client to add the data it needs
 }

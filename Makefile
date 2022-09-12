@@ -30,7 +30,7 @@ proto:
 	$(GOGO_START) protoc --gogofaster_out=:. $(P_TEST_CHANGES_PATH_PB)/proto/*.proto
 	$(eval PKGMAP := $$(P_ACL_CHANGES))
 	$(GOGO_START) protoc --gogofaster_out=$(PKGMAP):. $(P_SYNC_CHANGES_PATH_PB)/proto/*.proto
-	$(GOGO_START) protoc --gogofaster_out=$(PKGMAP):. service/space/spacesync/protos/*.proto
+	$(GOGO_START) protoc --gogofaster_out=$(PKGMAP):. common/commonspace/spacesyncproto/protos/*.proto
 
 build:
 	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/app))

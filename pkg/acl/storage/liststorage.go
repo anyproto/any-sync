@@ -7,8 +7,8 @@ import (
 
 type ListStorage interface {
 	Storage
-	Head() (*aclpb.RawRecord, error)
+	Head() (*aclpb.RawACLRecord, error)
 
-	GetRawRecord(ctx context.Context, id string) (*aclpb.RawRecord, error)
-	AddRawRecord(ctx context.Context, rec *aclpb.RawRecord) error
+	GetRawRecord(ctx context.Context, id string) (*aclpb.RawACLRecord, error)
+	AddRawRecord(ctx context.Context, rec *aclpb.RawACLRecord) error
 }

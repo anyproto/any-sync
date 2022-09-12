@@ -28,8 +28,8 @@ func TestAclList_ACLState_UserInviteAndJoin(t *testing.T) {
 	assert.Equal(t, aclpb.ACLChange_Reader, aclList.ACLState().GetUserStates()[idC].Permissions)
 	assert.Equal(t, aclList.Head().Content.CurrentReadKeyHash, aclList.ACLState().CurrentReadKeyHash())
 
-	var records []*Record
-	aclList.Iterate(func(record *Record) (IsContinue bool) {
+	var records []*ACLRecord
+	aclList.Iterate(func(record *ACLRecord) (IsContinue bool) {
 		records = append(records, record)
 		return true
 	})
@@ -69,8 +69,8 @@ func TestAclList_ACLState_UserJoinAndRemove(t *testing.T) {
 	_, exists := aclList.ACLState().GetUserStates()[idB]
 	assert.Equal(t, false, exists)
 
-	var records []*Record
-	aclList.Iterate(func(record *Record) (IsContinue bool) {
+	var records []*ACLRecord
+	aclList.Iterate(func(record *ACLRecord) (IsContinue bool) {
 		records = append(records, record)
 		return true
 	})

@@ -15,7 +15,7 @@ var log = logger.NewNamed("storage").Sugar()
 type ImportedACLSyncData struct {
 	Id      string
 	Header  *aclpb.Header
-	Records []*aclpb.RawRecord
+	Records []*aclpb.RawACLRecord
 }
 
 type Service interface {

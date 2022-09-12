@@ -16,7 +16,7 @@ var (
 
 type ChangeContent struct {
 	ChangesData proto.Marshaler
-	ACLData     *aclpb.ACLChangeACLData
+	ACLData     *aclpb.ACLData
 	Id          string // TODO: this is just for testing, because id should be created automatically from content
 }
 
@@ -34,8 +34,9 @@ type Change struct {
 	visited          bool
 	branchesFinished bool
 
-	Content *aclpb.Change
-	Sign    []byte
+	Content  *aclpb.TreeChange
+	Identity string
+	Sign     []byte
 }
 
 func (ch *Change) ProtoChange() proto.Marshaler {
@@ -56,7 +57,7 @@ func (ch *Change) DecryptContents(key *symmetric.Key) error {
 	return nil
 }
 
-func NewChange(id string, ch *aclpb.Change, signature []byte) *Change {
+func NewChange(id string, ch *aclpb.TreeChange, signature []byte) *Change {
 	return &Change{
 		Next:        nil,
 		PreviousIds: ch.TreeHeadIds,
@@ -64,6 +65,7 @@ func NewChange(id string, ch *aclpb.Change, signature []byte) *Change {
 		Content:     ch,
 		SnapshotId:  ch.SnapshotBaseId,
 		IsSnapshot:  ch.IsSnapshot,
+		Identity:    string(ch.Identity),
 		Sign:        signature,
 	}
 }
