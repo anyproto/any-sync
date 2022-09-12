@@ -23,9 +23,9 @@ func TestAclList_ACLState_UserInviteAndJoin(t *testing.T) {
 	idC := keychain.GetIdentity("C")
 
 	// checking final state
-	assert.Equal(t, aclpb.ACLChange_Admin, aclList.ACLState().GetUserStates()[idA].Permissions)
-	assert.Equal(t, aclpb.ACLChange_Writer, aclList.ACLState().GetUserStates()[idB].Permissions)
-	assert.Equal(t, aclpb.ACLChange_Reader, aclList.ACLState().GetUserStates()[idC].Permissions)
+	assert.Equal(t, aclpb.ACLUserPermissions_Admin, aclList.ACLState().GetUserStates()[idA].Permissions)
+	assert.Equal(t, aclpb.ACLUserPermissions_Writer, aclList.ACLState().GetUserStates()[idB].Permissions)
+	assert.Equal(t, aclpb.ACLUserPermissions_Reader, aclList.ACLState().GetUserStates()[idC].Permissions)
 	assert.Equal(t, aclList.Head().Content.CurrentReadKeyHash, aclList.ACLState().CurrentReadKeyHash())
 
 	var records []*ACLRecord
@@ -44,7 +44,7 @@ func TestAclList_ACLState_UserInviteAndJoin(t *testing.T) {
 	assert.NoError(t, err, "should have no error with permissions of B in the record 2")
 	assert.Equal(t, UserPermissionPair{
 		Identity:   idB,
-		Permission: aclpb.ACLChange_Writer,
+		Permission: aclpb.ACLUserPermissions_Writer,
 	}, perm)
 }
 
@@ -62,8 +62,8 @@ func TestAclList_ACLState_UserJoinAndRemove(t *testing.T) {
 	idC := keychain.GetIdentity("C")
 
 	// checking final state
-	assert.Equal(t, aclpb.ACLChange_Admin, aclList.ACLState().GetUserStates()[idA].Permissions)
-	assert.Equal(t, aclpb.ACLChange_Reader, aclList.ACLState().GetUserStates()[idC].Permissions)
+	assert.Equal(t, aclpb.ACLUserPermissions_Admin, aclList.ACLState().GetUserStates()[idA].Permissions)
+	assert.Equal(t, aclpb.ACLUserPermissions_Reader, aclList.ACLState().GetUserStates()[idC].Permissions)
 	assert.Equal(t, aclList.Head().Content.CurrentReadKeyHash, aclList.ACLState().CurrentReadKeyHash())
 
 	_, exists := aclList.ACLState().GetUserStates()[idB]
@@ -84,7 +84,7 @@ func TestAclList_ACLState_UserJoinAndRemove(t *testing.T) {
 	assert.NoError(t, err, "should have no error with permissions of B in the record 2")
 	assert.Equal(t, UserPermissionPair{
 		Identity:   idB,
-		Permission: aclpb.ACLChange_Writer,
+		Permission: aclpb.ACLUserPermissions_Writer,
 	}, perm)
 
 	_, err = aclList.ACLState().PermissionsAtRecord(records[3].Id, idB)

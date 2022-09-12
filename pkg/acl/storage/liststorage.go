@@ -7,6 +7,7 @@ import (
 
 type ListStorage interface {
 	Storage
+	Header() (*aclpb.ACLHeader, error)
 	Head() (*aclpb.RawACLRecord, error)
 
 	GetRawRecord(ctx context.Context, id string) (*aclpb.RawACLRecord, error)

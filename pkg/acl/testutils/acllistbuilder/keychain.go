@@ -99,12 +99,14 @@ func (k *Keychain) AddSigningKey(key *Key) {
 	}
 
 	k.SigningKeys[key.Name] = newPrivKey
-	res, err := k.coder.EncodeToString(pubKey)
+	rawPubKey, err := pubKey.Raw()
 	if err != nil {
 		panic(err)
 	}
-	k.SigningKeysByIdentity[res] = newPrivKey
-	k.GeneratedIdentities[key.Name] = res
+	encoded := string(rawPubKey)
+
+	k.SigningKeysByIdentity[encoded] = newPrivKey
+	k.GeneratedIdentities[key.Name] = encoded
 }
 
 func (k *Keychain) AddReadKey(key *Key) {
