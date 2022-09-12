@@ -13,7 +13,7 @@ import (
 	"sync"
 )
 
-type IterFunc = func(record *Record) (IsContinue bool)
+type IterFunc = func(record *ACLRecord) (IsContinue bool)
 
 var ErrIncorrectCID = errors.New("incorrect CID")
 
@@ -26,20 +26,20 @@ type RWLocker interface {
 type ACLList interface {
 	RWLocker
 	ID() string
-	Header() *aclpb.Header
-	Records() []*Record
+	Header() *aclpb.ACLHeader
+	Records() []*ACLRecord
 	ACLState() *ACLState
 	IsAfter(first string, second string) (bool, error)
-	Head() *Record
-	Get(id string) (*Record, error)
+	Head() *ACLRecord
+	Get(id string) (*ACLRecord, error)
 	Iterate(iterFunc IterFunc)
 	IterateFrom(startId string, iterFunc IterFunc)
 	Close() (err error)
 }
 
 type aclList struct {
-	header  *aclpb.Header
-	records []*Record
+	header  *aclpb.ACLHeader
+	records []*ACLRecord
 	indexes map[string]int
 	id      string
 
@@ -84,7 +84,7 @@ func buildWithACLStateBuilder(builder *aclStateBuilder, storage storage.ListStor
 	if err != nil {
 		return
 	}
-	records := []*Record{record}
+	records := []*ACLRecord{record}
 
 	for record.Content.PrevId != "" {
 		rawRecord, err = storage.GetRawRecord(context.Background(), record.Content.PrevId)
@@ -131,7 +131,7 @@ func buildWithACLStateBuilder(builder *aclStateBuilder, storage storage.ListStor
 	return
 }
 
-func (a *aclList) Records() []*Record {
+func (a *aclList) Records() []*ACLRecord {
 	return a.records
 }
 
@@ -139,7 +139,7 @@ func (a *aclList) ID() string {
 	return a.id
 }
 
-func (a *aclList) Header() *aclpb.Header {
+func (a *aclList) Header() *aclpb.ACLHeader {
 	return a.header
 }
 
@@ -156,11 +156,11 @@ func (a *aclList) IsAfter(first string, second string) (bool, error) {
 	return firstRec >= secondRec, nil
 }
 
-func (a *aclList) Head() *Record {
+func (a *aclList) Head() *ACLRecord {
 	return a.records[len(a.records)-1]
 }
 
-func (a *aclList) Get(id string) (*Record, error) {
+func (a *aclList) Get(id string) (*ACLRecord, error) {
 	recIdx, ok := a.indexes[id]
 	if !ok {
 		return nil, fmt.Errorf("no such record")
@@ -192,8 +192,8 @@ func (a *aclList) Close() (err error) {
 	return nil
 }
 
-func verifyRecord(keychain *common.Keychain, rawRecord *aclpb.RawRecord, record *Record) (err error) {
-	identityKey, err := keychain.GetOrAdd(record.Content.Identity)
+func verifyRecord(keychain *common.Keychain, rawRecord *aclpb.RawACLRecord, record *ACLRecord) (err error) {
+	identityKey, err := keychain.GetOrAdd(record.Identity)
 	if err != nil {
 		return
 	}

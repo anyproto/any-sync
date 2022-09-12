@@ -18,7 +18,7 @@ type rawChangeLoader struct {
 
 type rawCacheEntry struct {
 	change    *Change
-	rawChange *aclpb.RawChange
+	rawChange *aclpb.RawTreeChangeWithId
 	position  int
 }
 
@@ -29,15 +29,15 @@ func newRawChangeLoader(treeStorage storage.TreeStorage, changeBuilder ChangeBui
 	}
 }
 
-func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*aclpb.RawChange, error) {
+func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*aclpb.RawTreeChangeWithId, error) {
 	var stack []*Change
 	for _, h := range t.headIds {
 		stack = append(stack, t.attached[h])
 	}
 
-	convert := func(chs []*Change) (rawChanges []*aclpb.RawChange, err error) {
+	convert := func(chs []*Change) (rawChanges []*aclpb.RawTreeChangeWithId, err error) {
 		for _, ch := range chs {
-			var raw *aclpb.RawChange
+			var raw *aclpb.RawTreeChangeWithId
 			raw, err = r.changeBuilder.BuildRaw(ch)
 			if err != nil {
 				return
@@ -95,7 +95,7 @@ func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*aclpb.
 	return convert(results)
 }
 
-func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoints []string) ([]*aclpb.RawChange, error) {
+func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoints []string) ([]*aclpb.RawTreeChangeWithId, error) {
 	// resetting cache
 	r.cache = make(map[string]rawCacheEntry)
 	defer func() {
@@ -162,7 +162,7 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 
 	// preparing first pass
 	r.idStack = append(r.idStack, heads...)
-	var buffer []*aclpb.RawChange
+	var buffer []*aclpb.RawTreeChangeWithId
 
 	rootVisited := dfs(commonSnapshot, heads, 0,
 		func(counter int, mapExists bool) bool {
@@ -203,7 +203,7 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 		})
 
 	// discarding visited
-	buffer = discardFromSlice(buffer, func(change *aclpb.RawChange) bool {
+	buffer = discardFromSlice(buffer, func(change *aclpb.RawTreeChangeWithId) bool {
 		return change == nil
 	})
 
@@ -219,7 +219,7 @@ func (r *rawChangeLoader) loadEntry(id string) (entry rawCacheEntry, err error) 
 		return
 	}
 
-	change, err := r.changeBuilder.ConvertFromRaw(rawChange)
+	change, err := r.changeBuilder.ConvertFromRaw(rawChange, false)
 	if err != nil {
 		return
 	}

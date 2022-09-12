@@ -33,7 +33,7 @@ func (t *ACLListStorageBuilder) Graph() (string, error) {
 	graph.SetDir(true)
 	var nodes = make(map[string]struct{})
 
-	var addNodes = func(r *aclpb.Record, id string) error {
+	var addNodes = func(r *aclpb.ACLRecord, id string) error {
 		style := "solid"
 
 		var chSymbs []string
@@ -92,7 +92,7 @@ func (t *ACLListStorageBuilder) Graph() (string, error) {
 		return nil
 	}
 
-	var addLinks = func(r *aclpb.Record, id string) error {
+	var addLinks = func(r *aclpb.ACLRecord, id string) error {
 		if r.PrevId == "" {
 			return nil
 		}

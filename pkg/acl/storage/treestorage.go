@@ -10,8 +10,8 @@ type TreeStorage interface {
 	Heads() ([]string, error)
 	SetHeads(heads []string) error
 
-	AddRawChange(change *aclpb.RawChange) error
-	GetRawChange(ctx context.Context, recordID string) (*aclpb.RawChange, error)
+	AddRawChange(change *aclpb.RawTreeChangeWithId) error
+	GetRawChange(ctx context.Context, recordID string) (*aclpb.RawTreeChangeWithId, error)
 }
 
 type TreeStorageCreatorFunc = func(payload TreeStorageCreatePayload) (TreeStorage, error)

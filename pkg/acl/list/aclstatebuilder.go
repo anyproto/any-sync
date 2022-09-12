@@ -15,7 +15,7 @@ type aclStateBuilder struct {
 func newACLStateBuilderWithIdentity(decoder keys.Decoder, accountData *account.AccountData) *aclStateBuilder {
 	return &aclStateBuilder{
 		decoder:  decoder,
-		identity: accountData.Identity,
+		identity: string(accountData.Identity),
 		key:      accountData.EncKey,
 	}
 }
@@ -26,7 +26,7 @@ func newACLStateBuilder(decoder keys.Decoder) *aclStateBuilder {
 	}
 }
 
-func (sb *aclStateBuilder) Build(records []*Record) (*ACLState, error) {
+func (sb *aclStateBuilder) Build(records []*ACLRecord) (*ACLState, error) {
 	var (
 		err   error
 		state *ACLState

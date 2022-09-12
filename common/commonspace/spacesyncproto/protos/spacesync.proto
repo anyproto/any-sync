@@ -1,24 +1,23 @@
 syntax = "proto3";
 package anySpace;
+
 option go_package = "common/commonspace/spacesyncproto";
+import "pkg/acl/aclchanges/aclpb/protos/aclchanges.proto";
 
 enum ErrCodes {
     Unexpected = 0;
 }
 
-
 service Space {
     // HeadSync compares all objects and their hashes in a space
     rpc HeadSync(HeadSyncRequest) returns (HeadSyncResponse);
-    rpc Stream( stream Msg) returns (stream Msg);
+    rpc Stream(stream ObjectSyncMessage) returns (stream ObjectSyncMessage);
 }
 
 // TODO: temporary mock message
 message Msg {
     string spaceId = 1;
 }
-
-
 
 // HeadSyncRange presenting a request for one range
 message HeadSyncRange {
@@ -49,4 +48,41 @@ message HeadSyncRequest {
 // HeadSyncResponse is a response for HeadSync
 message HeadSyncResponse {
     repeated HeadSyncResult results = 1;
+}
+
+// ObjectSyncMessage is a message sent on object sync
+message ObjectSyncMessage {
+    string spaceId = 1;
+    ObjectSyncContentValue content = 2;
+    acl.TreeHeader treeHeader = 3;
+    string treeId = 4;
+}
+
+// ObjectSyncContentValue provides different types for object sync
+message ObjectSyncContentValue {
+    oneof value {
+        ObjectHeadUpdate headUpdate = 1;
+        ObjectFullSyncRequest fullSyncRequest = 2;
+        ObjectFullSyncResponse fullSyncResponse = 3;
+    }
+}
+
+// ObjectHeadUpdate is a message sent on document head update
+message ObjectHeadUpdate {
+    repeated string heads = 1;
+    repeated acl.RawTreeChangeWithId changes = 2;
+    repeated string snapshotPath = 3;
+}
+
+// ObjectHeadUpdate is a message sent when document needs full sync
+message ObjectFullSyncRequest {
+    repeated string heads = 1;
+    repeated string snapshotPath = 2;
+}
+
+// ObjectFullSyncResponse is a message sent as a response for a specific full sync
+message ObjectFullSyncResponse {
+    repeated string heads = 1;
+    repeated acl.RawTreeChangeWithId changes = 2;
+    repeated string snapshotPath = 3;
 }

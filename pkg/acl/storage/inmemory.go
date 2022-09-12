@@ -8,8 +8,8 @@ import (
 )
 
 type inMemoryACLListStorage struct {
-	header  *aclpb.Header
-	records []*aclpb.RawRecord
+	header  *aclpb.ACLHeader
+	records []*aclpb.RawACLRecord
 
 	id string
 
@@ -18,8 +18,8 @@ type inMemoryACLListStorage struct {
 
 func NewInMemoryACLListStorage(
 	id string,
-	header *aclpb.Header,
-	records []*aclpb.RawRecord) (ListStorage, error) {
+	header *aclpb.ACLHeader,
+	records []*aclpb.RawACLRecord) (ListStorage, error) {
 	return &inMemoryACLListStorage{
 		id:      id,
 		header:  header,
@@ -28,19 +28,19 @@ func NewInMemoryACLListStorage(
 	}, nil
 }
 
-func (i *inMemoryACLListStorage) Header() (*aclpb.Header, error) {
+func (i *inMemoryACLListStorage) Header() (*aclpb.ACLHeader, error) {
 	i.RLock()
 	defer i.RUnlock()
 	return i.header, nil
 }
 
-func (i *inMemoryACLListStorage) Head() (*aclpb.RawRecord, error) {
+func (i *inMemoryACLListStorage) Head() (*aclpb.RawACLRecord, error) {
 	i.RLock()
 	defer i.RUnlock()
 	return i.records[len(i.records)-1], nil
 }
 
-func (i *inMemoryACLListStorage) GetRawRecord(ctx context.Context, id string) (*aclpb.RawRecord, error) {
+func (i *inMemoryACLListStorage) GetRawRecord(ctx context.Context, id string) (*aclpb.RawACLRecord, error) {
 	i.RLock()
 	defer i.RUnlock()
 	for _, rec := range i.records {
@@ -51,7 +51,7 @@ func (i *inMemoryACLListStorage) GetRawRecord(ctx context.Context, id string) (*
 	return nil, fmt.Errorf("no such record")
 }
 
-func (i *inMemoryACLListStorage) AddRawRecord(ctx context.Context, rec *aclpb.RawRecord) error {
+func (i *inMemoryACLListStorage) AddRawRecord(ctx context.Context, rec *aclpb.RawACLRecord) error {
 	panic("implement me")
 }
 
@@ -63,19 +63,19 @@ func (i *inMemoryACLListStorage) ID() (string, error) {
 
 type inMemoryTreeStorage struct {
 	id      string
-	header  *aclpb.Header
+	header  *aclpb.TreeHeader
 	heads   []string
-	changes map[string]*aclpb.RawChange
+	changes map[string]*aclpb.RawTreeChangeWithId
 
 	sync.RWMutex
 }
 
 func NewInMemoryTreeStorage(
 	treeId string,
-	header *aclpb.Header,
+	header *aclpb.TreeHeader,
 	heads []string,
-	changes []*aclpb.RawChange) (TreeStorage, error) {
-	allChanges := make(map[string]*aclpb.RawChange)
+	changes []*aclpb.RawTreeChangeWithId) (TreeStorage, error) {
+	allChanges := make(map[string]*aclpb.RawTreeChangeWithId)
 	for _, ch := range changes {
 		allChanges[ch.Id] = ch
 	}
@@ -95,7 +95,7 @@ func (t *inMemoryTreeStorage) ID() (string, error) {
 	return t.id, nil
 }
 
-func (t *inMemoryTreeStorage) Header() (*aclpb.Header, error) {
+func (t *inMemoryTreeStorage) Header() (*aclpb.TreeHeader, error) {
 	t.RLock()
 	defer t.RUnlock()
 	return t.header, nil
@@ -118,7 +118,7 @@ func (t *inMemoryTreeStorage) SetHeads(heads []string) error {
 	return nil
 }
 
-func (t *inMemoryTreeStorage) AddRawChange(change *aclpb.RawChange) error {
+func (t *inMemoryTreeStorage) AddRawChange(change *aclpb.RawTreeChangeWithId) error {
 	t.Lock()
 	defer t.Unlock()
 	// TODO: better to do deep copy
@@ -126,7 +126,7 @@ func (t *inMemoryTreeStorage) AddRawChange(change *aclpb.RawChange) error {
 	return nil
 }
 
-func (t *inMemoryTreeStorage) GetRawChange(ctx context.Context, changeId string) (*aclpb.RawChange, error) {
+func (t *inMemoryTreeStorage) GetRawChange(ctx context.Context, changeId string) (*aclpb.RawTreeChangeWithId, error) {
 	t.RLock()
 	defer t.RUnlock()
 	if res, exists := t.changes[changeId]; exists {

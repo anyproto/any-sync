@@ -1,135 +1,190 @@
-package acltree
+package list
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/common"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
+	"github.com/gogo/protobuf/proto"
+	"go.uber.org/zap"
 	"hash/fnv"
 )
+
+var log = logger.NewNamed("acllist").Sugar()
 
 var ErrNoSuchUser = errors.New("no such user")
 var ErrFailedToDecrypt = errors.New("failed to decrypt key")
 var ErrUserRemoved = errors.New("user was removed from the document")
 var ErrDocumentForbidden = errors.New("your user was forbidden access to the document")
 var ErrUserAlreadyExists = errors.New("user already exists")
+var ErrNoSuchRecord = errors.New("no such record")
+var ErrInsufficientPermissions = errors.New("insufficient permissions")
+var ErrNoReadKey = errors.New("acl state doesn't have a read key")
+var ErrInvalidSignature = errors.New("signature is invalid")
 
-type ACLState struct {
-	currentReadKeyHash   uint64
-	userReadKeys         map[uint64]*symmetric.Key
-	userStates           map[string]*aclpb.ACLChange_UserState
-	userInvites          map[string]*aclpb.ACLChange_UserInvite
-	signingPubKeyDecoder signingkey.PubKeyDecoder
-	encryptionKey        encryptionkey.PrivKey
-	identity             string
+type UserPermissionPair struct {
+	Identity   string
+	Permission aclpb.ACLUserPermissions
 }
 
-func newACLState(
+type ACLState struct {
+	currentReadKeyHash uint64
+	userReadKeys       map[uint64]*symmetric.Key
+	userStates         map[string]*aclpb.ACLUserState
+	userInvites        map[string]*aclpb.ACLUserInvite
+
+	signingPubKeyDecoder keys.Decoder
+	encryptionKey        encryptionkey.PrivKey
+
+	identity            string
+	permissionsAtRecord map[string][]UserPermissionPair
+
+	keychain *common.Keychain
+}
+
+func newACLStateWithIdentity(
 	identity string,
 	encryptionKey encryptionkey.PrivKey,
-	signingPubKeyDecoder signingkey.PubKeyDecoder) *ACLState {
+	decoder keys.Decoder) *ACLState {
 	return &ACLState{
 		identity:             identity,
 		encryptionKey:        encryptionKey,
 		userReadKeys:         make(map[uint64]*symmetric.Key),
-		userStates:           make(map[string]*aclpb.ACLChange_UserState),
-		userInvites:          make(map[string]*aclpb.ACLChange_UserInvite),
-		signingPubKeyDecoder: signingPubKeyDecoder,
+		userStates:           make(map[string]*aclpb.ACLUserState),
+		userInvites:          make(map[string]*aclpb.ACLUserInvite),
+		signingPubKeyDecoder: decoder,
+		permissionsAtRecord:  make(map[string][]UserPermissionPair),
+		keychain:             common.NewKeychain(),
 	}
 }
 
-func newACLStateFromSnapshotChange(
-	snapshotChange *aclpb.ACLChange,
-	identity string,
-	encryptionKey encryptionkey.PrivKey,
-	signingPubKeyDecoder signingkey.PubKeyDecoder) (*ACLState, error) {
-	st := &ACLState{
-		identity:             identity,
-		encryptionKey:        encryptionKey,
+func newACLState(decoder keys.Decoder) *ACLState {
+	return &ACLState{
+		signingPubKeyDecoder: decoder,
 		userReadKeys:         make(map[uint64]*symmetric.Key),
-		userStates:           make(map[string]*aclpb.ACLChange_UserState),
-		userInvites:          make(map[string]*aclpb.ACLChange_UserInvite),
-		signingPubKeyDecoder: signingPubKeyDecoder,
+		userStates:           make(map[string]*aclpb.ACLUserState),
+		userInvites:          make(map[string]*aclpb.ACLUserInvite),
+		permissionsAtRecord:  make(map[string][]UserPermissionPair),
+		keychain:             common.NewKeychain(),
 	}
-	err := st.recreateFromSnapshotChange(snapshotChange)
-	if err != nil {
-		return nil, err
-	}
-	return st, nil
 }
 
-func (st *ACLState) recreateFromSnapshotChange(snapshotChange *aclpb.ACLChange) error {
-	snapshot := snapshotChange.GetAclData().GetAclSnapshot()
-	if snapshot == nil {
-		return fmt.Errorf("could not create state from snapshot, because it is nil")
-	}
-	state := snapshot.AclState
-	for _, userState := range state.UserStates {
-		st.userStates[userState.Identity] = userState
-	}
+func (st *ACLState) CurrentReadKeyHash() uint64 {
+	return st.currentReadKeyHash
+}
 
-	userState, exists := st.userStates[st.identity]
+func (st *ACLState) CurrentReadKey() (*symmetric.Key, error) {
+	key, exists := st.userReadKeys[st.currentReadKeyHash]
 	if !exists {
-		return ErrNoSuchUser
+		return nil, ErrNoReadKey
 	}
-	for _, key := range userState.EncryptedReadKeys {
-		key, hash, err := st.decryptReadKeyAndHash(key)
-		if err != nil {
-			return ErrFailedToDecrypt
-		}
+	return key, nil
+}
 
-		st.userReadKeys[hash] = key
+func (st *ACLState) UserReadKeys() map[uint64]*symmetric.Key {
+	return st.userReadKeys
+}
+
+func (st *ACLState) PermissionsAtRecord(id string, identity string) (UserPermissionPair, error) {
+	permissions, ok := st.permissionsAtRecord[id]
+	if !ok {
+		log.Errorf("missing record at id %s", id)
+		return UserPermissionPair{}, ErrNoSuchRecord
 	}
-	st.currentReadKeyHash = snapshotChange.CurrentReadKeyHash
-	if snapshot.GetAclState().GetInvites() != nil {
-		st.userInvites = snapshot.GetAclState().GetInvites()
+
+	for _, perm := range permissions {
+		if perm.Identity == identity {
+			return perm, nil
+		}
 	}
+	return UserPermissionPair{}, ErrNoSuchUser
+}
+
+func (st *ACLState) applyRecord(record *aclpb.ACLRecord) (err error) {
+	aclData := &aclpb.ACLData{}
+
+	err = proto.Unmarshal(record.Data, aclData)
+	if err != nil {
+		return
+	}
+
+	err = st.applyChangeData(aclData, record.CurrentReadKeyHash, record.Identity)
+	if err != nil {
+		return
+	}
+
+	st.currentReadKeyHash = record.CurrentReadKeyHash
+	return
+}
+
+func (st *ACLState) applyChangeAndUpdate(recordWrapper *ACLRecord) (err error) {
+	var (
+		change  = recordWrapper.Content
+		aclData = &aclpb.ACLData{}
+	)
+
+	if recordWrapper.Model != nil {
+		aclData = recordWrapper.Model.(*aclpb.ACLData)
+	} else {
+		err = proto.Unmarshal(change.Data, aclData)
+		if err != nil {
+			return
+		}
+		recordWrapper.Model = aclData
+	}
+
+	err = st.applyChangeData(aclData, recordWrapper.Content.CurrentReadKeyHash, recordWrapper.Content.Identity)
+	if err != nil {
+		return
+	}
+
+	// getting all permissions for users at record
+	var permissions []UserPermissionPair
+	for _, state := range st.userStates {
+		permission := UserPermissionPair{
+			Identity:   string(state.Identity),
+			Permission: state.Permissions,
+		}
+		permissions = append(permissions, permission)
+	}
+
+	st.permissionsAtRecord[recordWrapper.Id] = permissions
 	return nil
 }
 
-func (st *ACLState) makeSnapshot() *aclpb.ACLChange_ACLSnapshot {
-	var userStates []*aclpb.ACLChange_UserState
-	for _, st := range st.userStates {
-		userStates = append(userStates, st)
-	}
-
-	return &aclpb.ACLChange_ACLSnapshot{AclState: &aclpb.ACLChange_ACLState{
-		ReadKeyHashes: nil,
-		UserStates:    userStates, // TODO: make states and invites in same format
-		Invites:       st.userInvites,
-	}}
-}
-
-func (st *ACLState) applyChange(change *aclpb.ACLChange) (err error) {
+func (st *ACLState) applyChangeData(changeData *aclpb.ACLData, hash uint64, identity []byte) (err error) {
 	defer func() {
 		if err != nil {
 			return
 		}
-		st.currentReadKeyHash = change.CurrentReadKeyHash
+		st.currentReadKeyHash = hash
 	}()
 
 	// we can't check this for the user which is joining, because it will not be in our list
 	// the same is for the first change to be added
-	skipIdentityCheck := st.isUserJoin(change) || (st.currentReadKeyHash == 0 && st.isUserAdd(change))
+	skipIdentityCheck := st.isUserJoin(changeData) || (st.currentReadKeyHash == 0 && st.isUserAdd(changeData, identity))
 	if !skipIdentityCheck {
 		// we check signature when we add this to the Tree, so no need to do it here
-		if _, exists := st.userStates[change.Identity]; !exists {
+		if _, exists := st.userStates[string(identity)]; !exists {
 			err = ErrNoSuchUser
 			return
 		}
 
-		if !st.hasPermission(change.Identity, aclpb.ACLChange_Admin) {
-			err = fmt.Errorf("user %s must have admin permissions", change.Identity)
+		if !st.hasPermission(identity, aclpb.ACLUserPermissions_Admin) {
+			err = fmt.Errorf("user %s must have admin permissions", identity)
 			return
 		}
 	}
 
-	for _, ch := range change.GetAclData().GetAclContent() {
+	for _, ch := range changeData.GetAclContent() {
 		if err = st.applyChangeContent(ch); err != nil {
-			//log.Infof("error while applying changes: %v; ignore", err)
+			log.Info("error while applying changes: %v; ignore", zap.Error(err))
 			return err
 		}
 	}
@@ -137,8 +192,7 @@ func (st *ACLState) applyChange(change *aclpb.ACLChange) (err error) {
 	return nil
 }
 
-// TODO: remove changeId, because it is not needed
-func (st *ACLState) applyChangeContent(ch *aclpb.ACLChange_ACLContentValue) error {
+func (st *ACLState) applyChangeContent(ch *aclpb.ACLContentValue) error {
 	switch {
 	case ch.GetUserPermissionChange() != nil:
 		return st.applyUserPermissionChange(ch.GetUserPermissionChange())
@@ -157,27 +211,29 @@ func (st *ACLState) applyChangeContent(ch *aclpb.ACLChange_ACLContentValue) erro
 	}
 }
 
-func (st *ACLState) applyUserPermissionChange(ch *aclpb.ACLChange_UserPermissionChange) error {
-	if _, exists := st.userStates[ch.Identity]; !exists {
+func (st *ACLState) applyUserPermissionChange(ch *aclpb.ACLUserPermissionChange) error {
+	chIdentity := string(ch.Identity)
+	if _, exists := st.userStates[chIdentity]; !exists {
 		return ErrNoSuchUser
 	}
 
-	st.userStates[ch.Identity].Permissions = ch.Permissions
+	st.userStates[chIdentity].Permissions = ch.Permissions
 	return nil
 }
 
-func (st *ACLState) applyUserInvite(ch *aclpb.ACLChange_UserInvite) error {
+func (st *ACLState) applyUserInvite(ch *aclpb.ACLUserInvite) error {
 	st.userInvites[ch.InviteId] = ch
 	return nil
 }
 
-func (st *ACLState) applyUserJoin(ch *aclpb.ACLChange_UserJoin) error {
+func (st *ACLState) applyUserJoin(ch *aclpb.ACLUserJoin) error {
 	invite, exists := st.userInvites[ch.UserInviteId]
 	if !exists {
 		return fmt.Errorf("no such invite with id %s", ch.UserInviteId)
 	}
+	chIdentity := string(ch.Identity)
 
-	if _, exists = st.userStates[ch.Identity]; exists {
+	if _, exists = st.userStates[chIdentity]; exists {
 		return ErrUserAlreadyExists
 	}
 
@@ -188,21 +244,16 @@ func (st *ACLState) applyUserJoin(ch *aclpb.ACLChange_UserJoin) error {
 		return fmt.Errorf("public key verifying invite accepts is given in incorrect format: %v", err)
 	}
 
-	rawSignedId, err := st.signingPubKeyDecoder.DecodeFromStringIntoBytes(ch.Identity)
-	if err != nil {
-		return fmt.Errorf("failed to decode signing identity as bytes")
-	}
-
-	res, err := verificationKey.Verify(rawSignedId, signature)
+	res, err := verificationKey.(signingkey.PubKey).Verify(ch.Identity, signature)
 	if err != nil {
 		return fmt.Errorf("verification returned error: %w", err)
 	}
 	if !res {
-		return fmt.Errorf("signature is invalid")
+		return ErrInvalidSignature
 	}
 
 	// if ourselves -> we need to decrypt the read keys
-	if st.identity == ch.Identity {
+	if st.identity == chIdentity {
 		for _, key := range ch.EncryptedReadKeys {
 			key, hash, err := st.decryptReadKeyAndHash(key)
 			if err != nil {
@@ -214,30 +265,31 @@ func (st *ACLState) applyUserJoin(ch *aclpb.ACLChange_UserJoin) error {
 	}
 
 	// adding user to the list
-	userState := &aclpb.ACLChange_UserState{
+	userState := &aclpb.ACLUserState{
 		Identity:          ch.Identity,
 		EncryptionKey:     ch.EncryptionKey,
 		EncryptedReadKeys: ch.EncryptedReadKeys,
 		Permissions:       invite.Permissions,
 		IsConfirmed:       true,
 	}
-	st.userStates[ch.Identity] = userState
+	st.userStates[chIdentity] = userState
 	return nil
 }
 
-func (st *ACLState) applyUserAdd(ch *aclpb.ACLChange_UserAdd) error {
-	if _, exists := st.userStates[ch.Identity]; exists {
+func (st *ACLState) applyUserAdd(ch *aclpb.ACLUserAdd) error {
+	chIdentity := string(ch.Identity)
+	if _, exists := st.userStates[chIdentity]; exists {
 		return ErrUserAlreadyExists
 	}
 
-	st.userStates[ch.Identity] = &aclpb.ACLChange_UserState{
+	st.userStates[chIdentity] = &aclpb.ACLUserState{
 		Identity:          ch.Identity,
 		EncryptionKey:     ch.EncryptionKey,
 		Permissions:       ch.Permissions,
 		EncryptedReadKeys: ch.EncryptedReadKeys,
 	}
 
-	if ch.Identity == st.identity {
+	if chIdentity == st.identity {
 		for _, key := range ch.EncryptedReadKeys {
 			key, hash, err := st.decryptReadKeyAndHash(key)
 			if err != nil {
@@ -251,26 +303,28 @@ func (st *ACLState) applyUserAdd(ch *aclpb.ACLChange_UserAdd) error {
 	return nil
 }
 
-func (st *ACLState) applyUserRemove(ch *aclpb.ACLChange_UserRemove) error {
-	if ch.Identity == st.identity {
+func (st *ACLState) applyUserRemove(ch *aclpb.ACLUserRemove) error {
+	chIdentity := string(ch.Identity)
+	if chIdentity == st.identity {
 		return ErrDocumentForbidden
 	}
 
-	if _, exists := st.userStates[ch.Identity]; !exists {
+	if _, exists := st.userStates[chIdentity]; !exists {
 		return ErrNoSuchUser
 	}
 
-	delete(st.userStates, ch.Identity)
+	delete(st.userStates, chIdentity)
 
 	for _, replace := range ch.ReadKeyReplaces {
-		userState, exists := st.userStates[replace.Identity]
+		repIdentity := string(replace.Identity)
+		userState, exists := st.userStates[repIdentity]
 		if !exists {
 			continue
 		}
 
 		userState.EncryptedReadKeys = append(userState.EncryptedReadKeys, replace.EncryptedReadKey)
 		// if this is our identity then we have to decrypt the key
-		if replace.Identity == st.identity {
+		if repIdentity == st.identity {
 			key, hash, err := st.decryptReadKeyAndHash(replace.EncryptedReadKey)
 			if err != nil {
 				return ErrFailedToDecrypt
@@ -283,12 +337,13 @@ func (st *ACLState) applyUserRemove(ch *aclpb.ACLChange_UserRemove) error {
 	return nil
 }
 
-func (st *ACLState) applyUserConfirm(ch *aclpb.ACLChange_UserConfirm) error {
-	if _, exists := st.userStates[ch.Identity]; !exists {
+func (st *ACLState) applyUserConfirm(ch *aclpb.ACLUserConfirm) error {
+	chIdentity := string(ch.Identity)
+	if _, exists := st.userStates[chIdentity]; !exists {
 		return ErrNoSuchUser
 	}
 
-	userState := st.userStates[ch.Identity]
+	userState := st.userStates[chIdentity]
 	userState.IsConfirmed = true
 	return nil
 }
@@ -309,8 +364,8 @@ func (st *ACLState) decryptReadKeyAndHash(msg []byte) (*symmetric.Key, uint64, e
 	return key, hasher.Sum64(), nil
 }
 
-func (st *ACLState) hasPermission(identity string, permission aclpb.ACLChange_UserPermissions) bool {
-	state, exists := st.userStates[identity]
+func (st *ACLState) hasPermission(identity []byte, permission aclpb.ACLUserPermissions) bool {
+	state, exists := st.userStates[string(identity)]
 	if !exists {
 		return false
 	}
@@ -318,94 +373,17 @@ func (st *ACLState) hasPermission(identity string, permission aclpb.ACLChange_Us
 	return state.Permissions == permission
 }
 
-func (st *ACLState) isUserJoin(ch *aclpb.ACLChange) bool {
+func (st *ACLState) isUserJoin(data *aclpb.ACLData) bool {
 	// if we have a UserJoin, then it should always be the first one applied
-	return ch.AclData.GetAclContent() != nil && ch.AclData.GetAclContent()[0].GetUserJoin() != nil
+	return data.GetAclContent() != nil && data.GetAclContent()[0].GetUserJoin() != nil
 }
 
-func (st *ACLState) isUserAdd(ch *aclpb.ACLChange) bool {
+func (st *ACLState) isUserAdd(data *aclpb.ACLData, identity []byte) bool {
 	// if we have a UserAdd, then it should always be the first one applied
-	userAdd := ch.AclData.GetAclContent()[0].GetUserAdd()
-	return ch.AclData.GetAclContent() != nil && userAdd != nil && userAdd.GetIdentity() == ch.Identity
+	userAdd := data.GetAclContent()[0].GetUserAdd()
+	return data.GetAclContent() != nil && userAdd != nil && bytes.Compare(userAdd.GetIdentity(), identity) == 0
 }
 
-func (st *ACLState) getPermissionDecreasedUsers(ch *aclpb.ACLChange) (identities []*aclpb.ACLChange_UserPermissionChange) {
-	// this should be called after general checks are completed
-	if ch.GetAclData().GetAclContent() == nil {
-		return nil
-	}
-
-	contents := ch.GetAclData().GetAclContent()
-	for _, c := range contents {
-		if c.GetUserPermissionChange() != nil {
-			content := c.GetUserPermissionChange()
-
-			currentState := st.userStates[content.Identity]
-			// the comparison works in different direction :-)
-			if content.Permissions > currentState.Permissions {
-				identities = append(identities, &aclpb.ACLChange_UserPermissionChange{
-					Identity:    content.Identity,
-					Permissions: content.Permissions,
-				})
-			}
-		}
-		if c.GetUserRemove() != nil {
-			content := c.GetUserRemove()
-			identities = append(identities, &aclpb.ACLChange_UserPermissionChange{
-				Identity:    content.Identity,
-				Permissions: aclpb.ACLChange_Removed,
-			})
-		}
-	}
-
-	return identities
-}
-
-func (st *ACLState) equal(other *ACLState) bool {
-	if st == nil && other == nil {
-		return true
-	}
-
-	if st == nil || other == nil {
-		return false
-	}
-
-	if st.currentReadKeyHash != other.currentReadKeyHash {
-		return false
-	}
-
-	if st.identity != other.identity {
-		return false
-	}
-
-	if len(st.userStates) != len(other.userStates) {
-		return false
-	}
-
-	for _, st := range st.userStates {
-		otherSt, exists := other.userStates[st.Identity]
-		if !exists {
-			return false
-		}
-
-		if st.Permissions != otherSt.Permissions {
-			return false
-		}
-
-		if bytes.Compare(st.EncryptionKey, otherSt.EncryptionKey) != 0 {
-			return false
-		}
-	}
-
-	if len(st.userInvites) != len(other.userInvites) {
-		return false
-	}
-
-	// TODO: add detailed user invites comparison + compare other stuff
-	return true
-}
-
-func (st *ACLState) GetUserStates() map[string]*aclpb.ACLChange_UserState {
-	// TODO: we should provide better API that would not allow to change this map from the outside
+func (st *ACLState) GetUserStates() map[string]*aclpb.ACLUserState {
 	return st.userStates
 }

@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/common"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
@@ -10,25 +11,24 @@ import (
 	"time"
 )
 
-const componentBuilder = "tree.changebuilder"
+var ErrEmptyChange = errors.New("change payload should not be empty")
 
 type BuilderContent struct {
 	treeHeadIds        []string
 	aclHeadId          string
 	snapshotBaseId     string
 	currentReadKeyHash uint64
-	identity           string
+	identity           []byte
 	isSnapshot         bool
 	signingKey         signingkey.PrivKey
 	readKey            *symmetric.Key
-	content            proto.Marshaler
+	content            []byte
 }
 
 type ChangeBuilder interface {
-	ConvertFromRaw(rawChange *aclpb.RawChange) (ch *Change, err error)
-	ConvertFromRawAndVerify(rawChange *aclpb.RawChange) (ch *Change, err error)
-	BuildContent(payload BuilderContent) (ch *Change, raw *aclpb.RawChange, err error)
-	BuildRaw(ch *Change) (*aclpb.RawChange, error)
+	ConvertFromRaw(rawIdChange *aclpb.RawTreeChangeWithId, verify bool) (ch *Change, err error)
+	BuildContent(payload BuilderContent) (ch *Change, raw *aclpb.RawTreeChangeWithId, err error)
+	BuildRaw(ch *Change) (*aclpb.RawTreeChangeWithId, error)
 }
 
 type changeBuilder struct {
@@ -39,49 +39,55 @@ func newChangeBuilder(keys *common.Keychain) ChangeBuilder {
 	return &changeBuilder{keys: keys}
 }
 
-func (c *changeBuilder) ConvertFromRaw(rawChange *aclpb.RawChange) (ch *Change, err error) {
-	unmarshalled := &aclpb.Change{}
-	err = proto.Unmarshal(rawChange.Payload, unmarshalled)
-	if err != nil {
-		return nil, err
+func (c *changeBuilder) ConvertFromRaw(rawIdChange *aclpb.RawTreeChangeWithId, verify bool) (ch *Change, err error) {
+	if rawIdChange.GetRawChange() == nil {
+		err = ErrEmptyChange
+		return
 	}
 
-	ch = NewChange(rawChange.Id, unmarshalled, rawChange.Signature)
+	if verify {
+		// verifying ID
+		if !cid.VerifyCID(rawIdChange.RawChange, rawIdChange.Id) {
+			err = ErrIncorrectCID
+			return
+		}
+	}
+
+	raw := &aclpb.RawTreeChange{}
+	err = proto.Unmarshal(rawIdChange.GetRawChange(), raw)
+	if err != nil {
+		return
+	}
+
+	if verify {
+		identityKey, err := c.keys.GetOrAdd(ch.Identity)
+		if err != nil {
+			return
+		}
+
+		// verifying signature
+		res, err := identityKey.Verify(raw.Payload, raw.Signature)
+		if err != nil {
+			return
+		}
+		if !res {
+			err = ErrIncorrectSignature
+			return
+		}
+	}
+
+	unmarshalled := &aclpb.TreeChange{}
+	err = proto.Unmarshal(raw.Payload, unmarshalled)
+	if err != nil {
+		return
+	}
+
+	ch = NewChange(rawIdChange.Id, unmarshalled, raw.Signature)
 	return
 }
 
-func (c *changeBuilder) ConvertFromRawAndVerify(rawChange *aclpb.RawChange) (ch *Change, err error) {
-	unmarshalled := &aclpb.Change{}
-	ch, err = c.ConvertFromRaw(rawChange)
-	if err != nil {
-		return nil, err
-	}
-
-	identityKey, err := c.keys.GetOrAdd(unmarshalled.Identity)
-	if err != nil {
-		return
-	}
-
-	// verifying signature
-	res, err := identityKey.Verify(rawChange.Payload, rawChange.Signature)
-	if err != nil {
-		return
-	}
-	if !res {
-		err = ErrIncorrectSignature
-		return
-	}
-
-	// verifying ID
-	if !cid.VerifyCID(rawChange.Payload, rawChange.Id) {
-		err = ErrIncorrectCID
-	}
-
-	return
-}
-
-func (c *changeBuilder) BuildContent(payload BuilderContent) (ch *Change, raw *aclpb.RawChange, err error) {
-	aclChange := &aclpb.Change{
+func (c *changeBuilder) BuildContent(payload BuilderContent) (ch *Change, rawIdChange *aclpb.RawTreeChangeWithId, err error) {
+	change := &aclpb.TreeChange{
 		TreeHeadIds:        payload.treeHeadIds,
 		AclHeadId:          payload.aclHeadId,
 		SnapshotBaseId:     payload.snapshotBaseId,
@@ -90,53 +96,65 @@ func (c *changeBuilder) BuildContent(payload BuilderContent) (ch *Change, raw *a
 		Identity:           payload.identity,
 		IsSnapshot:         payload.isSnapshot,
 	}
-	marshalledData, err := payload.content.Marshal()
+
+	encrypted, err := payload.readKey.Encrypt(payload.content)
+	if err != nil {
+		return
+	}
+	change.ChangesData = encrypted
+
+	marshalledChange, err := proto.Marshal(change)
 	if err != nil {
 		return
 	}
 
-	encrypted, err := payload.readKey.Encrypt(marshalledData)
-	if err != nil {
-		return
-	}
-	aclChange.ChangesData = encrypted
-
-	fullMarshalledChange, err := proto.Marshal(aclChange)
+	signature, err := payload.signingKey.Sign(marshalledChange)
 	if err != nil {
 		return
 	}
 
-	signature, err := payload.signingKey.Sign(fullMarshalledChange)
+	raw := &aclpb.RawTreeChange{
+		Payload:   marshalledChange,
+		Signature: signature,
+	}
+
+	marshalledRawChange, err := proto.Marshal(raw)
 	if err != nil {
 		return
 	}
 
-	id, err := cid.NewCIDFromBytes(fullMarshalledChange)
+	id, err := cid.NewCIDFromBytes(marshalledRawChange)
 	if err != nil {
 		return
 	}
 
-	ch = NewChange(id, aclChange, signature)
+	ch = NewChange(id, change, signature)
 	ch.ParsedModel = payload.content
 
-	raw = &aclpb.RawChange{
-		Payload:   fullMarshalledChange,
-		Signature: signature,
+	rawIdChange = &aclpb.RawTreeChangeWithId{
+		RawChange: marshalledRawChange,
 		Id:        id,
 	}
 	return
 }
 
-func (c *changeBuilder) BuildRaw(ch *Change) (raw *aclpb.RawChange, err error) {
+func (c *changeBuilder) BuildRaw(ch *Change) (raw *aclpb.RawTreeChangeWithId, err error) {
 	var marshalled []byte
 	marshalled, err = ch.Content.Marshal()
 	if err != nil {
 		return
 	}
 
-	raw = &aclpb.RawChange{
+	marshalledRawChange, err := proto.Marshal(&aclpb.RawTreeChange{
 		Payload:   marshalled,
-		Signature: ch.Signature(),
+		Signature: ch.Sign,
+	})
+	if err != nil {
+		return
+	}
+
+	raw = &aclpb.RawTreeChangeWithId{
+		RawChange: marshalledRawChange,
 		Id:        ch.Id,
 	}
 	return

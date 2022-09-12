@@ -22,55 +22,80 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type ACLChange_UserPermissions int32
+type ACLUserPermissions int32
 
 const (
-	ACLChange_Admin   ACLChange_UserPermissions = 0
-	ACLChange_Writer  ACLChange_UserPermissions = 1
-	ACLChange_Reader  ACLChange_UserPermissions = 2
-	ACLChange_Removed ACLChange_UserPermissions = 3
+	ACLUserPermissions_Admin   ACLUserPermissions = 0
+	ACLUserPermissions_Writer  ACLUserPermissions = 1
+	ACLUserPermissions_Reader  ACLUserPermissions = 2
+	ACLUserPermissions_Removed ACLUserPermissions = 3
 )
 
-var ACLChange_UserPermissions_name = map[int32]string{
+var ACLUserPermissions_name = map[int32]string{
 	0: "Admin",
 	1: "Writer",
 	2: "Reader",
 	3: "Removed",
 }
 
-var ACLChange_UserPermissions_value = map[string]int32{
+var ACLUserPermissions_value = map[string]int32{
 	"Admin":   0,
 	"Writer":  1,
 	"Reader":  2,
 	"Removed": 3,
 }
 
-func (x ACLChange_UserPermissions) String() string {
-	return proto.EnumName(ACLChange_UserPermissions_name, int32(x))
+func (x ACLUserPermissions) String() string {
+	return proto.EnumName(ACLUserPermissions_name, int32(x))
 }
 
-func (ACLChange_UserPermissions) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 0}
+func (ACLUserPermissions) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{0}
 }
 
-type RawChange struct {
+type TreeHeaderType int32
+
+const (
+	TreeHeaderType_Object TreeHeaderType = 0
+	TreeHeaderType_Space  TreeHeaderType = 1
+)
+
+var TreeHeaderType_name = map[int32]string{
+	0: "Object",
+	1: "Space",
+}
+
+var TreeHeaderType_value = map[string]int32{
+	"Object": 0,
+	"Space":  1,
+}
+
+func (x TreeHeaderType) String() string {
+	return proto.EnumName(TreeHeaderType_name, int32(x))
+}
+
+func (TreeHeaderType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{1}
+}
+
+type RawACLRecord struct {
 	Payload   []byte `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
 	Signature []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
 	Id        string `protobuf:"bytes,3,opt,name=id,proto3" json:"id,omitempty"`
 }
 
-func (m *RawChange) Reset()         { *m = RawChange{} }
-func (m *RawChange) String() string { return proto.CompactTextString(m) }
-func (*RawChange) ProtoMessage()    {}
-func (*RawChange) Descriptor() ([]byte, []int) {
+func (m *RawACLRecord) Reset()         { *m = RawACLRecord{} }
+func (m *RawACLRecord) String() string { return proto.CompactTextString(m) }
+func (*RawACLRecord) ProtoMessage()    {}
+func (*RawACLRecord) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{0}
 }
-func (m *RawChange) XXX_Unmarshal(b []byte) error {
+func (m *RawACLRecord) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *RawChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *RawACLRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_RawChange.Marshal(b, m, deterministic)
+		return xxx_messageInfo_RawACLRecord.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -80,64 +105,62 @@ func (m *RawChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *RawChange) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RawChange.Merge(m, src)
+func (m *RawACLRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RawACLRecord.Merge(m, src)
 }
-func (m *RawChange) XXX_Size() int {
+func (m *RawACLRecord) XXX_Size() int {
 	return m.Size()
 }
-func (m *RawChange) XXX_DiscardUnknown() {
-	xxx_messageInfo_RawChange.DiscardUnknown(m)
+func (m *RawACLRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_RawACLRecord.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_RawChange proto.InternalMessageInfo
+var xxx_messageInfo_RawACLRecord proto.InternalMessageInfo
 
-func (m *RawChange) GetPayload() []byte {
+func (m *RawACLRecord) GetPayload() []byte {
 	if m != nil {
 		return m.Payload
 	}
 	return nil
 }
 
-func (m *RawChange) GetSignature() []byte {
+func (m *RawACLRecord) GetSignature() []byte {
 	if m != nil {
 		return m.Signature
 	}
 	return nil
 }
 
-func (m *RawChange) GetId() string {
+func (m *RawACLRecord) GetId() string {
 	if m != nil {
 		return m.Id
 	}
 	return ""
 }
 
-// the element of change tree used to store and internal apply smartBlock history
-type ACLChange struct {
-	TreeHeadIds    []string           `protobuf:"bytes,1,rep,name=treeHeadIds,proto3" json:"treeHeadIds,omitempty"`
-	AclHeadIds     []string           `protobuf:"bytes,2,rep,name=aclHeadIds,proto3" json:"aclHeadIds,omitempty"`
-	SnapshotBaseId string             `protobuf:"bytes,3,opt,name=snapshotBaseId,proto3" json:"snapshotBaseId,omitempty"`
-	AclData        *ACLChange_ACLData `protobuf:"bytes,4,opt,name=aclData,proto3" json:"aclData,omitempty"`
-	// the data is encoded with read key and should be read in ChangesData format
-	ChangesData        []byte `protobuf:"bytes,5,opt,name=changesData,proto3" json:"changesData,omitempty"`
-	CurrentReadKeyHash uint64 `protobuf:"varint,6,opt,name=currentReadKeyHash,proto3" json:"currentReadKeyHash,omitempty"`
-	Timestamp          int64  `protobuf:"varint,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	Identity           string `protobuf:"bytes,8,opt,name=identity,proto3" json:"identity,omitempty"`
+type ACLContentValue struct {
+	// Types that are valid to be assigned to Value:
+	//	*ACLContentValue_UserAdd
+	//	*ACLContentValue_UserRemove
+	//	*ACLContentValue_UserPermissionChange
+	//	*ACLContentValue_UserInvite
+	//	*ACLContentValue_UserJoin
+	//	*ACLContentValue_UserConfirm
+	Value isACLContentValue_Value `protobuf_oneof:"value"`
 }
 
-func (m *ACLChange) Reset()         { *m = ACLChange{} }
-func (m *ACLChange) String() string { return proto.CompactTextString(m) }
-func (*ACLChange) ProtoMessage()    {}
-func (*ACLChange) Descriptor() ([]byte, []int) {
+func (m *ACLContentValue) Reset()         { *m = ACLContentValue{} }
+func (m *ACLContentValue) String() string { return proto.CompactTextString(m) }
+func (*ACLContentValue) ProtoMessage()    {}
+func (*ACLContentValue) Descriptor() ([]byte, []int) {
 	return fileDescriptor_37a022c841a51877, []int{1}
 }
-func (m *ACLChange) XXX_Unmarshal(b []byte) error {
+func (m *ACLContentValue) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLContentValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChange.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLContentValue.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -147,229 +170,127 @@ func (m *ACLChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *ACLChange) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChange.Merge(m, src)
+func (m *ACLContentValue) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLContentValue.Merge(m, src)
 }
-func (m *ACLChange) XXX_Size() int {
+func (m *ACLContentValue) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChange) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChange.DiscardUnknown(m)
+func (m *ACLContentValue) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLContentValue.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChange proto.InternalMessageInfo
+var xxx_messageInfo_ACLContentValue proto.InternalMessageInfo
 
-func (m *ACLChange) GetTreeHeadIds() []string {
-	if m != nil {
-		return m.TreeHeadIds
-	}
-	return nil
-}
-
-func (m *ACLChange) GetAclHeadIds() []string {
-	if m != nil {
-		return m.AclHeadIds
-	}
-	return nil
-}
-
-func (m *ACLChange) GetSnapshotBaseId() string {
-	if m != nil {
-		return m.SnapshotBaseId
-	}
-	return ""
-}
-
-func (m *ACLChange) GetAclData() *ACLChange_ACLData {
-	if m != nil {
-		return m.AclData
-	}
-	return nil
-}
-
-func (m *ACLChange) GetChangesData() []byte {
-	if m != nil {
-		return m.ChangesData
-	}
-	return nil
-}
-
-func (m *ACLChange) GetCurrentReadKeyHash() uint64 {
-	if m != nil {
-		return m.CurrentReadKeyHash
-	}
-	return 0
-}
-
-func (m *ACLChange) GetTimestamp() int64 {
-	if m != nil {
-		return m.Timestamp
-	}
-	return 0
-}
-
-func (m *ACLChange) GetIdentity() string {
-	if m != nil {
-		return m.Identity
-	}
-	return ""
-}
-
-type ACLChange_ACLContentValue struct {
-	// Types that are valid to be assigned to Value:
-	//
-	//	*ACLChange_ACLContentValue_UserAdd
-	//	*ACLChange_ACLContentValue_UserRemove
-	//	*ACLChange_ACLContentValue_UserPermissionChange
-	//	*ACLChange_ACLContentValue_UserInvite
-	//	*ACLChange_ACLContentValue_UserJoin
-	//	*ACLChange_ACLContentValue_UserConfirm
-	Value isACLChange_ACLContentValue_Value `protobuf_oneof:"value"`
-}
-
-func (m *ACLChange_ACLContentValue) Reset()         { *m = ACLChange_ACLContentValue{} }
-func (m *ACLChange_ACLContentValue) String() string { return proto.CompactTextString(m) }
-func (*ACLChange_ACLContentValue) ProtoMessage()    {}
-func (*ACLChange_ACLContentValue) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 0}
-}
-func (m *ACLChange_ACLContentValue) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ACLChange_ACLContentValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ACLChange_ACLContentValue.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ACLChange_ACLContentValue) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChange_ACLContentValue.Merge(m, src)
-}
-func (m *ACLChange_ACLContentValue) XXX_Size() int {
-	return m.Size()
-}
-func (m *ACLChange_ACLContentValue) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChange_ACLContentValue.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ACLChange_ACLContentValue proto.InternalMessageInfo
-
-type isACLChange_ACLContentValue_Value interface {
-	isACLChange_ACLContentValue_Value()
+type isACLContentValue_Value interface {
+	isACLContentValue_Value()
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
 
-type ACLChange_ACLContentValue_UserAdd struct {
-	UserAdd *ACLChange_UserAdd `protobuf:"bytes,1,opt,name=userAdd,proto3,oneof" json:"userAdd,omitempty"`
+type ACLContentValue_UserAdd struct {
+	UserAdd *ACLUserAdd `protobuf:"bytes,1,opt,name=userAdd,proto3,oneof" json:"userAdd,omitempty"`
 }
-type ACLChange_ACLContentValue_UserRemove struct {
-	UserRemove *ACLChange_UserRemove `protobuf:"bytes,2,opt,name=userRemove,proto3,oneof" json:"userRemove,omitempty"`
+type ACLContentValue_UserRemove struct {
+	UserRemove *ACLUserRemove `protobuf:"bytes,2,opt,name=userRemove,proto3,oneof" json:"userRemove,omitempty"`
 }
-type ACLChange_ACLContentValue_UserPermissionChange struct {
-	UserPermissionChange *ACLChange_UserPermissionChange `protobuf:"bytes,3,opt,name=userPermissionChange,proto3,oneof" json:"userPermissionChange,omitempty"`
+type ACLContentValue_UserPermissionChange struct {
+	UserPermissionChange *ACLUserPermissionChange `protobuf:"bytes,3,opt,name=userPermissionChange,proto3,oneof" json:"userPermissionChange,omitempty"`
 }
-type ACLChange_ACLContentValue_UserInvite struct {
-	UserInvite *ACLChange_UserInvite `protobuf:"bytes,4,opt,name=userInvite,proto3,oneof" json:"userInvite,omitempty"`
+type ACLContentValue_UserInvite struct {
+	UserInvite *ACLUserInvite `protobuf:"bytes,4,opt,name=userInvite,proto3,oneof" json:"userInvite,omitempty"`
 }
-type ACLChange_ACLContentValue_UserJoin struct {
-	UserJoin *ACLChange_UserJoin `protobuf:"bytes,5,opt,name=userJoin,proto3,oneof" json:"userJoin,omitempty"`
+type ACLContentValue_UserJoin struct {
+	UserJoin *ACLUserJoin `protobuf:"bytes,5,opt,name=userJoin,proto3,oneof" json:"userJoin,omitempty"`
 }
-type ACLChange_ACLContentValue_UserConfirm struct {
-	UserConfirm *ACLChange_UserConfirm `protobuf:"bytes,6,opt,name=userConfirm,proto3,oneof" json:"userConfirm,omitempty"`
+type ACLContentValue_UserConfirm struct {
+	UserConfirm *ACLUserConfirm `protobuf:"bytes,6,opt,name=userConfirm,proto3,oneof" json:"userConfirm,omitempty"`
 }
 
-func (*ACLChange_ACLContentValue_UserAdd) isACLChange_ACLContentValue_Value()              {}
-func (*ACLChange_ACLContentValue_UserRemove) isACLChange_ACLContentValue_Value()           {}
-func (*ACLChange_ACLContentValue_UserPermissionChange) isACLChange_ACLContentValue_Value() {}
-func (*ACLChange_ACLContentValue_UserInvite) isACLChange_ACLContentValue_Value()           {}
-func (*ACLChange_ACLContentValue_UserJoin) isACLChange_ACLContentValue_Value()             {}
-func (*ACLChange_ACLContentValue_UserConfirm) isACLChange_ACLContentValue_Value()          {}
+func (*ACLContentValue_UserAdd) isACLContentValue_Value()              {}
+func (*ACLContentValue_UserRemove) isACLContentValue_Value()           {}
+func (*ACLContentValue_UserPermissionChange) isACLContentValue_Value() {}
+func (*ACLContentValue_UserInvite) isACLContentValue_Value()           {}
+func (*ACLContentValue_UserJoin) isACLContentValue_Value()             {}
+func (*ACLContentValue_UserConfirm) isACLContentValue_Value()          {}
 
-func (m *ACLChange_ACLContentValue) GetValue() isACLChange_ACLContentValue_Value {
+func (m *ACLContentValue) GetValue() isACLContentValue_Value {
 	if m != nil {
 		return m.Value
 	}
 	return nil
 }
 
-func (m *ACLChange_ACLContentValue) GetUserAdd() *ACLChange_UserAdd {
-	if x, ok := m.GetValue().(*ACLChange_ACLContentValue_UserAdd); ok {
+func (m *ACLContentValue) GetUserAdd() *ACLUserAdd {
+	if x, ok := m.GetValue().(*ACLContentValue_UserAdd); ok {
 		return x.UserAdd
 	}
 	return nil
 }
 
-func (m *ACLChange_ACLContentValue) GetUserRemove() *ACLChange_UserRemove {
-	if x, ok := m.GetValue().(*ACLChange_ACLContentValue_UserRemove); ok {
+func (m *ACLContentValue) GetUserRemove() *ACLUserRemove {
+	if x, ok := m.GetValue().(*ACLContentValue_UserRemove); ok {
 		return x.UserRemove
 	}
 	return nil
 }
 
-func (m *ACLChange_ACLContentValue) GetUserPermissionChange() *ACLChange_UserPermissionChange {
-	if x, ok := m.GetValue().(*ACLChange_ACLContentValue_UserPermissionChange); ok {
+func (m *ACLContentValue) GetUserPermissionChange() *ACLUserPermissionChange {
+	if x, ok := m.GetValue().(*ACLContentValue_UserPermissionChange); ok {
 		return x.UserPermissionChange
 	}
 	return nil
 }
 
-func (m *ACLChange_ACLContentValue) GetUserInvite() *ACLChange_UserInvite {
-	if x, ok := m.GetValue().(*ACLChange_ACLContentValue_UserInvite); ok {
+func (m *ACLContentValue) GetUserInvite() *ACLUserInvite {
+	if x, ok := m.GetValue().(*ACLContentValue_UserInvite); ok {
 		return x.UserInvite
 	}
 	return nil
 }
 
-func (m *ACLChange_ACLContentValue) GetUserJoin() *ACLChange_UserJoin {
-	if x, ok := m.GetValue().(*ACLChange_ACLContentValue_UserJoin); ok {
+func (m *ACLContentValue) GetUserJoin() *ACLUserJoin {
+	if x, ok := m.GetValue().(*ACLContentValue_UserJoin); ok {
 		return x.UserJoin
 	}
 	return nil
 }
 
-func (m *ACLChange_ACLContentValue) GetUserConfirm() *ACLChange_UserConfirm {
-	if x, ok := m.GetValue().(*ACLChange_ACLContentValue_UserConfirm); ok {
+func (m *ACLContentValue) GetUserConfirm() *ACLUserConfirm {
+	if x, ok := m.GetValue().(*ACLContentValue_UserConfirm); ok {
 		return x.UserConfirm
 	}
 	return nil
 }
 
 // XXX_OneofWrappers is for the internal use of the proto package.
-func (*ACLChange_ACLContentValue) XXX_OneofWrappers() []interface{} {
+func (*ACLContentValue) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
-		(*ACLChange_ACLContentValue_UserAdd)(nil),
-		(*ACLChange_ACLContentValue_UserRemove)(nil),
-		(*ACLChange_ACLContentValue_UserPermissionChange)(nil),
-		(*ACLChange_ACLContentValue_UserInvite)(nil),
-		(*ACLChange_ACLContentValue_UserJoin)(nil),
-		(*ACLChange_ACLContentValue_UserConfirm)(nil),
+		(*ACLContentValue_UserAdd)(nil),
+		(*ACLContentValue_UserRemove)(nil),
+		(*ACLContentValue_UserPermissionChange)(nil),
+		(*ACLContentValue_UserInvite)(nil),
+		(*ACLContentValue_UserJoin)(nil),
+		(*ACLContentValue_UserConfirm)(nil),
 	}
 }
 
-type ACLChange_ACLData struct {
-	AclSnapshot *ACLChange_ACLSnapshot       `protobuf:"bytes,1,opt,name=aclSnapshot,proto3" json:"aclSnapshot,omitempty"`
-	AclContent  []*ACLChange_ACLContentValue `protobuf:"bytes,2,rep,name=aclContent,proto3" json:"aclContent,omitempty"`
+type ACLData struct {
+	AclContent []*ACLContentValue `protobuf:"bytes,1,rep,name=aclContent,proto3" json:"aclContent,omitempty"`
 }
 
-func (m *ACLChange_ACLData) Reset()         { *m = ACLChange_ACLData{} }
-func (m *ACLChange_ACLData) String() string { return proto.CompactTextString(m) }
-func (*ACLChange_ACLData) ProtoMessage()    {}
-func (*ACLChange_ACLData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 1}
+func (m *ACLData) Reset()         { *m = ACLData{} }
+func (m *ACLData) String() string { return proto.CompactTextString(m) }
+func (*ACLData) ProtoMessage()    {}
+func (*ACLData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{2}
 }
-func (m *ACLChange_ACLData) XXX_Unmarshal(b []byte) error {
+func (m *ACLData) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChange_ACLData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChange_ACLData.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLData.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -379,49 +300,43 @@ func (m *ACLChange_ACLData) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
-func (m *ACLChange_ACLData) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChange_ACLData.Merge(m, src)
+func (m *ACLData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLData.Merge(m, src)
 }
-func (m *ACLChange_ACLData) XXX_Size() int {
+func (m *ACLData) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChange_ACLData) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChange_ACLData.DiscardUnknown(m)
+func (m *ACLData) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLData.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChange_ACLData proto.InternalMessageInfo
+var xxx_messageInfo_ACLData proto.InternalMessageInfo
 
-func (m *ACLChange_ACLData) GetAclSnapshot() *ACLChange_ACLSnapshot {
-	if m != nil {
-		return m.AclSnapshot
-	}
-	return nil
-}
-
-func (m *ACLChange_ACLData) GetAclContent() []*ACLChange_ACLContentValue {
+func (m *ACLData) GetAclContent() []*ACLContentValue {
 	if m != nil {
 		return m.AclContent
 	}
 	return nil
 }
 
-type ACLChange_ACLSnapshot struct {
-	// We don't need ACLState as a separate message now, because we simplified the snapshot model
-	AclState *ACLChange_ACLState `protobuf:"bytes,1,opt,name=aclState,proto3" json:"aclState,omitempty"`
+type ACLState struct {
+	ReadKeyHashes []uint64                  `protobuf:"varint,1,rep,packed,name=readKeyHashes,proto3" json:"readKeyHashes,omitempty"`
+	UserStates    []*ACLUserState           `protobuf:"bytes,2,rep,name=userStates,proto3" json:"userStates,omitempty"`
+	Invites       map[string]*ACLUserInvite `protobuf:"bytes,3,rep,name=invites,proto3" json:"invites,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
-func (m *ACLChange_ACLSnapshot) Reset()         { *m = ACLChange_ACLSnapshot{} }
-func (m *ACLChange_ACLSnapshot) String() string { return proto.CompactTextString(m) }
-func (*ACLChange_ACLSnapshot) ProtoMessage()    {}
-func (*ACLChange_ACLSnapshot) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 2}
+func (m *ACLState) Reset()         { *m = ACLState{} }
+func (m *ACLState) String() string { return proto.CompactTextString(m) }
+func (*ACLState) ProtoMessage()    {}
+func (*ACLState) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{3}
 }
-func (m *ACLChange_ACLSnapshot) XXX_Unmarshal(b []byte) error {
+func (m *ACLState) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChange_ACLSnapshot) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChange_ACLSnapshot.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLState.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -431,105 +346,59 @@ func (m *ACLChange_ACLSnapshot) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		return b[:n], nil
 	}
 }
-func (m *ACLChange_ACLSnapshot) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChange_ACLSnapshot.Merge(m, src)
+func (m *ACLState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLState.Merge(m, src)
 }
-func (m *ACLChange_ACLSnapshot) XXX_Size() int {
+func (m *ACLState) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChange_ACLSnapshot) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChange_ACLSnapshot.DiscardUnknown(m)
+func (m *ACLState) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLState.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChange_ACLSnapshot proto.InternalMessageInfo
+var xxx_messageInfo_ACLState proto.InternalMessageInfo
 
-func (m *ACLChange_ACLSnapshot) GetAclState() *ACLChange_ACLState {
-	if m != nil {
-		return m.AclState
-	}
-	return nil
-}
-
-type ACLChange_ACLState struct {
-	ReadKeyHashes []uint64                         `protobuf:"varint,1,rep,packed,name=readKeyHashes,proto3" json:"readKeyHashes,omitempty"`
-	UserStates    []*ACLChange_UserState           `protobuf:"bytes,2,rep,name=userStates,proto3" json:"userStates,omitempty"`
-	Invites       map[string]*ACLChange_UserInvite `protobuf:"bytes,3,rep,name=invites,proto3" json:"invites,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-}
-
-func (m *ACLChange_ACLState) Reset()         { *m = ACLChange_ACLState{} }
-func (m *ACLChange_ACLState) String() string { return proto.CompactTextString(m) }
-func (*ACLChange_ACLState) ProtoMessage()    {}
-func (*ACLChange_ACLState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 3}
-}
-func (m *ACLChange_ACLState) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *ACLChange_ACLState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_ACLChange_ACLState.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *ACLChange_ACLState) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChange_ACLState.Merge(m, src)
-}
-func (m *ACLChange_ACLState) XXX_Size() int {
-	return m.Size()
-}
-func (m *ACLChange_ACLState) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChange_ACLState.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ACLChange_ACLState proto.InternalMessageInfo
-
-func (m *ACLChange_ACLState) GetReadKeyHashes() []uint64 {
+func (m *ACLState) GetReadKeyHashes() []uint64 {
 	if m != nil {
 		return m.ReadKeyHashes
 	}
 	return nil
 }
 
-func (m *ACLChange_ACLState) GetUserStates() []*ACLChange_UserState {
+func (m *ACLState) GetUserStates() []*ACLUserState {
 	if m != nil {
 		return m.UserStates
 	}
 	return nil
 }
 
-func (m *ACLChange_ACLState) GetInvites() map[string]*ACLChange_UserInvite {
+func (m *ACLState) GetInvites() map[string]*ACLUserInvite {
 	if m != nil {
 		return m.Invites
 	}
 	return nil
 }
 
-type ACLChange_UserState struct {
-	Identity          string                    `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	EncryptionKey     []byte                    `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
-	EncryptedReadKeys [][]byte                  `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
-	Permissions       ACLChange_UserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLChange_UserPermissions" json:"permissions,omitempty"`
-	IsConfirmed       bool                      `protobuf:"varint,5,opt,name=IsConfirmed,proto3" json:"IsConfirmed,omitempty"`
+type ACLUserState struct {
+	Identity          []byte             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	EncryptionKey     []byte             `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
+	EncryptedReadKeys [][]byte           `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
+	Permissions       ACLUserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLUserPermissions" json:"permissions,omitempty"`
+	IsConfirmed       bool               `protobuf:"varint,5,opt,name=isConfirmed,proto3" json:"isConfirmed,omitempty"`
 }
 
-func (m *ACLChange_UserState) Reset()         { *m = ACLChange_UserState{} }
-func (m *ACLChange_UserState) String() string { return proto.CompactTextString(m) }
-func (*ACLChange_UserState) ProtoMessage()    {}
-func (*ACLChange_UserState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 4}
+func (m *ACLUserState) Reset()         { *m = ACLUserState{} }
+func (m *ACLUserState) String() string { return proto.CompactTextString(m) }
+func (*ACLUserState) ProtoMessage()    {}
+func (*ACLUserState) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{4}
 }
-func (m *ACLChange_UserState) XXX_Unmarshal(b []byte) error {
+func (m *ACLUserState) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChange_UserState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLUserState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChange_UserState.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLUserState.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -539,47 +408,47 @@ func (m *ACLChange_UserState) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return b[:n], nil
 	}
 }
-func (m *ACLChange_UserState) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChange_UserState.Merge(m, src)
+func (m *ACLUserState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLUserState.Merge(m, src)
 }
-func (m *ACLChange_UserState) XXX_Size() int {
+func (m *ACLUserState) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChange_UserState) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChange_UserState.DiscardUnknown(m)
+func (m *ACLUserState) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLUserState.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChange_UserState proto.InternalMessageInfo
+var xxx_messageInfo_ACLUserState proto.InternalMessageInfo
 
-func (m *ACLChange_UserState) GetIdentity() string {
+func (m *ACLUserState) GetIdentity() []byte {
 	if m != nil {
 		return m.Identity
 	}
-	return ""
+	return nil
 }
 
-func (m *ACLChange_UserState) GetEncryptionKey() []byte {
+func (m *ACLUserState) GetEncryptionKey() []byte {
 	if m != nil {
 		return m.EncryptionKey
 	}
 	return nil
 }
 
-func (m *ACLChange_UserState) GetEncryptedReadKeys() [][]byte {
+func (m *ACLUserState) GetEncryptedReadKeys() [][]byte {
 	if m != nil {
 		return m.EncryptedReadKeys
 	}
 	return nil
 }
 
-func (m *ACLChange_UserState) GetPermissions() ACLChange_UserPermissions {
+func (m *ACLUserState) GetPermissions() ACLUserPermissions {
 	if m != nil {
 		return m.Permissions
 	}
-	return ACLChange_Admin
+	return ACLUserPermissions_Admin
 }
 
-func (m *ACLChange_UserState) GetIsConfirmed() bool {
+func (m *ACLUserState) GetIsConfirmed() bool {
 	if m != nil {
 		return m.IsConfirmed
 	}
@@ -587,25 +456,25 @@ func (m *ACLChange_UserState) GetIsConfirmed() bool {
 }
 
 // we already know identity and encryptionKey
-type ACLChange_UserAdd struct {
-	Identity          string                    `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	EncryptionKey     []byte                    `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
-	EncryptedReadKeys [][]byte                  `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
-	Permissions       ACLChange_UserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLChange_UserPermissions" json:"permissions,omitempty"`
+type ACLUserAdd struct {
+	Identity          []byte             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	EncryptionKey     []byte             `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
+	EncryptedReadKeys [][]byte           `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
+	Permissions       ACLUserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLUserPermissions" json:"permissions,omitempty"`
 }
 
-func (m *ACLChange_UserAdd) Reset()         { *m = ACLChange_UserAdd{} }
-func (m *ACLChange_UserAdd) String() string { return proto.CompactTextString(m) }
-func (*ACLChange_UserAdd) ProtoMessage()    {}
-func (*ACLChange_UserAdd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 5}
+func (m *ACLUserAdd) Reset()         { *m = ACLUserAdd{} }
+func (m *ACLUserAdd) String() string { return proto.CompactTextString(m) }
+func (*ACLUserAdd) ProtoMessage()    {}
+func (*ACLUserAdd) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{5}
 }
-func (m *ACLChange_UserAdd) XXX_Unmarshal(b []byte) error {
+func (m *ACLUserAdd) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChange_UserAdd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLUserAdd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChange_UserAdd.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLUserAdd.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -615,64 +484,64 @@ func (m *ACLChange_UserAdd) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
-func (m *ACLChange_UserAdd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChange_UserAdd.Merge(m, src)
+func (m *ACLUserAdd) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLUserAdd.Merge(m, src)
 }
-func (m *ACLChange_UserAdd) XXX_Size() int {
+func (m *ACLUserAdd) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChange_UserAdd) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChange_UserAdd.DiscardUnknown(m)
+func (m *ACLUserAdd) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLUserAdd.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChange_UserAdd proto.InternalMessageInfo
+var xxx_messageInfo_ACLUserAdd proto.InternalMessageInfo
 
-func (m *ACLChange_UserAdd) GetIdentity() string {
+func (m *ACLUserAdd) GetIdentity() []byte {
 	if m != nil {
 		return m.Identity
 	}
-	return ""
+	return nil
 }
 
-func (m *ACLChange_UserAdd) GetEncryptionKey() []byte {
+func (m *ACLUserAdd) GetEncryptionKey() []byte {
 	if m != nil {
 		return m.EncryptionKey
 	}
 	return nil
 }
 
-func (m *ACLChange_UserAdd) GetEncryptedReadKeys() [][]byte {
+func (m *ACLUserAdd) GetEncryptedReadKeys() [][]byte {
 	if m != nil {
 		return m.EncryptedReadKeys
 	}
 	return nil
 }
 
-func (m *ACLChange_UserAdd) GetPermissions() ACLChange_UserPermissions {
+func (m *ACLUserAdd) GetPermissions() ACLUserPermissions {
 	if m != nil {
 		return m.Permissions
 	}
-	return ACLChange_Admin
+	return ACLUserPermissions_Admin
 }
 
 // TODO: this is not used as of now
-type ACLChange_UserConfirm struct {
-	Identity  string `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+type ACLUserConfirm struct {
+	Identity  []byte `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	UserAddId string `protobuf:"bytes,2,opt,name=userAddId,proto3" json:"userAddId,omitempty"`
 }
 
-func (m *ACLChange_UserConfirm) Reset()         { *m = ACLChange_UserConfirm{} }
-func (m *ACLChange_UserConfirm) String() string { return proto.CompactTextString(m) }
-func (*ACLChange_UserConfirm) ProtoMessage()    {}
-func (*ACLChange_UserConfirm) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 6}
+func (m *ACLUserConfirm) Reset()         { *m = ACLUserConfirm{} }
+func (m *ACLUserConfirm) String() string { return proto.CompactTextString(m) }
+func (*ACLUserConfirm) ProtoMessage()    {}
+func (*ACLUserConfirm) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{6}
 }
-func (m *ACLChange_UserConfirm) XXX_Unmarshal(b []byte) error {
+func (m *ACLUserConfirm) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChange_UserConfirm) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLUserConfirm) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChange_UserConfirm.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLUserConfirm.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -682,52 +551,52 @@ func (m *ACLChange_UserConfirm) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		return b[:n], nil
 	}
 }
-func (m *ACLChange_UserConfirm) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChange_UserConfirm.Merge(m, src)
+func (m *ACLUserConfirm) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLUserConfirm.Merge(m, src)
 }
-func (m *ACLChange_UserConfirm) XXX_Size() int {
+func (m *ACLUserConfirm) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChange_UserConfirm) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChange_UserConfirm.DiscardUnknown(m)
+func (m *ACLUserConfirm) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLUserConfirm.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChange_UserConfirm proto.InternalMessageInfo
+var xxx_messageInfo_ACLUserConfirm proto.InternalMessageInfo
 
-func (m *ACLChange_UserConfirm) GetIdentity() string {
+func (m *ACLUserConfirm) GetIdentity() []byte {
 	if m != nil {
 		return m.Identity
 	}
-	return ""
+	return nil
 }
 
-func (m *ACLChange_UserConfirm) GetUserAddId() string {
+func (m *ACLUserConfirm) GetUserAddId() string {
 	if m != nil {
 		return m.UserAddId
 	}
 	return ""
 }
 
-type ACLChange_UserInvite struct {
-	AcceptPublicKey   []byte                    `protobuf:"bytes,1,opt,name=acceptPublicKey,proto3" json:"acceptPublicKey,omitempty"`
-	EncryptPublicKey  []byte                    `protobuf:"bytes,2,opt,name=encryptPublicKey,proto3" json:"encryptPublicKey,omitempty"`
-	EncryptedReadKeys [][]byte                  `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
-	Permissions       ACLChange_UserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLChange_UserPermissions" json:"permissions,omitempty"`
-	InviteId          string                    `protobuf:"bytes,5,opt,name=InviteId,proto3" json:"InviteId,omitempty"`
+type ACLUserInvite struct {
+	AcceptPublicKey   []byte             `protobuf:"bytes,1,opt,name=acceptPublicKey,proto3" json:"acceptPublicKey,omitempty"`
+	EncryptPublicKey  []byte             `protobuf:"bytes,2,opt,name=encryptPublicKey,proto3" json:"encryptPublicKey,omitempty"`
+	EncryptedReadKeys [][]byte           `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
+	Permissions       ACLUserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLUserPermissions" json:"permissions,omitempty"`
+	InviteId          string             `protobuf:"bytes,5,opt,name=inviteId,proto3" json:"inviteId,omitempty"`
 }
 
-func (m *ACLChange_UserInvite) Reset()         { *m = ACLChange_UserInvite{} }
-func (m *ACLChange_UserInvite) String() string { return proto.CompactTextString(m) }
-func (*ACLChange_UserInvite) ProtoMessage()    {}
-func (*ACLChange_UserInvite) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 7}
+func (m *ACLUserInvite) Reset()         { *m = ACLUserInvite{} }
+func (m *ACLUserInvite) String() string { return proto.CompactTextString(m) }
+func (*ACLUserInvite) ProtoMessage()    {}
+func (*ACLUserInvite) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{7}
 }
-func (m *ACLChange_UserInvite) XXX_Unmarshal(b []byte) error {
+func (m *ACLUserInvite) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChange_UserInvite) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLUserInvite) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChange_UserInvite.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLUserInvite.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -737,73 +606,73 @@ func (m *ACLChange_UserInvite) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
-func (m *ACLChange_UserInvite) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChange_UserInvite.Merge(m, src)
+func (m *ACLUserInvite) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLUserInvite.Merge(m, src)
 }
-func (m *ACLChange_UserInvite) XXX_Size() int {
+func (m *ACLUserInvite) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChange_UserInvite) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChange_UserInvite.DiscardUnknown(m)
+func (m *ACLUserInvite) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLUserInvite.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChange_UserInvite proto.InternalMessageInfo
+var xxx_messageInfo_ACLUserInvite proto.InternalMessageInfo
 
-func (m *ACLChange_UserInvite) GetAcceptPublicKey() []byte {
+func (m *ACLUserInvite) GetAcceptPublicKey() []byte {
 	if m != nil {
 		return m.AcceptPublicKey
 	}
 	return nil
 }
 
-func (m *ACLChange_UserInvite) GetEncryptPublicKey() []byte {
+func (m *ACLUserInvite) GetEncryptPublicKey() []byte {
 	if m != nil {
 		return m.EncryptPublicKey
 	}
 	return nil
 }
 
-func (m *ACLChange_UserInvite) GetEncryptedReadKeys() [][]byte {
+func (m *ACLUserInvite) GetEncryptedReadKeys() [][]byte {
 	if m != nil {
 		return m.EncryptedReadKeys
 	}
 	return nil
 }
 
-func (m *ACLChange_UserInvite) GetPermissions() ACLChange_UserPermissions {
+func (m *ACLUserInvite) GetPermissions() ACLUserPermissions {
 	if m != nil {
 		return m.Permissions
 	}
-	return ACLChange_Admin
+	return ACLUserPermissions_Admin
 }
 
-func (m *ACLChange_UserInvite) GetInviteId() string {
+func (m *ACLUserInvite) GetInviteId() string {
 	if m != nil {
 		return m.InviteId
 	}
 	return ""
 }
 
-type ACLChange_UserJoin struct {
-	Identity          string   `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+type ACLUserJoin struct {
+	Identity          []byte   `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	EncryptionKey     []byte   `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
 	AcceptSignature   []byte   `protobuf:"bytes,3,opt,name=acceptSignature,proto3" json:"acceptSignature,omitempty"`
 	UserInviteId      string   `protobuf:"bytes,4,opt,name=userInviteId,proto3" json:"userInviteId,omitempty"`
 	EncryptedReadKeys [][]byte `protobuf:"bytes,5,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
 }
 
-func (m *ACLChange_UserJoin) Reset()         { *m = ACLChange_UserJoin{} }
-func (m *ACLChange_UserJoin) String() string { return proto.CompactTextString(m) }
-func (*ACLChange_UserJoin) ProtoMessage()    {}
-func (*ACLChange_UserJoin) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 8}
+func (m *ACLUserJoin) Reset()         { *m = ACLUserJoin{} }
+func (m *ACLUserJoin) String() string { return proto.CompactTextString(m) }
+func (*ACLUserJoin) ProtoMessage()    {}
+func (*ACLUserJoin) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{8}
 }
-func (m *ACLChange_UserJoin) XXX_Unmarshal(b []byte) error {
+func (m *ACLUserJoin) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChange_UserJoin) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLUserJoin) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChange_UserJoin.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLUserJoin.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -813,70 +682,70 @@ func (m *ACLChange_UserJoin) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return b[:n], nil
 	}
 }
-func (m *ACLChange_UserJoin) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChange_UserJoin.Merge(m, src)
+func (m *ACLUserJoin) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLUserJoin.Merge(m, src)
 }
-func (m *ACLChange_UserJoin) XXX_Size() int {
+func (m *ACLUserJoin) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChange_UserJoin) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChange_UserJoin.DiscardUnknown(m)
+func (m *ACLUserJoin) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLUserJoin.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChange_UserJoin proto.InternalMessageInfo
+var xxx_messageInfo_ACLUserJoin proto.InternalMessageInfo
 
-func (m *ACLChange_UserJoin) GetIdentity() string {
+func (m *ACLUserJoin) GetIdentity() []byte {
 	if m != nil {
 		return m.Identity
 	}
-	return ""
+	return nil
 }
 
-func (m *ACLChange_UserJoin) GetEncryptionKey() []byte {
+func (m *ACLUserJoin) GetEncryptionKey() []byte {
 	if m != nil {
 		return m.EncryptionKey
 	}
 	return nil
 }
 
-func (m *ACLChange_UserJoin) GetAcceptSignature() []byte {
+func (m *ACLUserJoin) GetAcceptSignature() []byte {
 	if m != nil {
 		return m.AcceptSignature
 	}
 	return nil
 }
 
-func (m *ACLChange_UserJoin) GetUserInviteId() string {
+func (m *ACLUserJoin) GetUserInviteId() string {
 	if m != nil {
 		return m.UserInviteId
 	}
 	return ""
 }
 
-func (m *ACLChange_UserJoin) GetEncryptedReadKeys() [][]byte {
+func (m *ACLUserJoin) GetEncryptedReadKeys() [][]byte {
 	if m != nil {
 		return m.EncryptedReadKeys
 	}
 	return nil
 }
 
-type ACLChange_UserRemove struct {
-	Identity        string                      `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	ReadKeyReplaces []*ACLChange_ReadKeyReplace `protobuf:"bytes,3,rep,name=readKeyReplaces,proto3" json:"readKeyReplaces,omitempty"`
+type ACLUserRemove struct {
+	Identity        []byte               `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	ReadKeyReplaces []*ACLReadKeyReplace `protobuf:"bytes,3,rep,name=readKeyReplaces,proto3" json:"readKeyReplaces,omitempty"`
 }
 
-func (m *ACLChange_UserRemove) Reset()         { *m = ACLChange_UserRemove{} }
-func (m *ACLChange_UserRemove) String() string { return proto.CompactTextString(m) }
-func (*ACLChange_UserRemove) ProtoMessage()    {}
-func (*ACLChange_UserRemove) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 9}
+func (m *ACLUserRemove) Reset()         { *m = ACLUserRemove{} }
+func (m *ACLUserRemove) String() string { return proto.CompactTextString(m) }
+func (*ACLUserRemove) ProtoMessage()    {}
+func (*ACLUserRemove) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{9}
 }
-func (m *ACLChange_UserRemove) XXX_Unmarshal(b []byte) error {
+func (m *ACLUserRemove) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChange_UserRemove) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLUserRemove) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChange_UserRemove.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLUserRemove.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -886,50 +755,50 @@ func (m *ACLChange_UserRemove) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
-func (m *ACLChange_UserRemove) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChange_UserRemove.Merge(m, src)
+func (m *ACLUserRemove) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLUserRemove.Merge(m, src)
 }
-func (m *ACLChange_UserRemove) XXX_Size() int {
+func (m *ACLUserRemove) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChange_UserRemove) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChange_UserRemove.DiscardUnknown(m)
+func (m *ACLUserRemove) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLUserRemove.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChange_UserRemove proto.InternalMessageInfo
+var xxx_messageInfo_ACLUserRemove proto.InternalMessageInfo
 
-func (m *ACLChange_UserRemove) GetIdentity() string {
+func (m *ACLUserRemove) GetIdentity() []byte {
 	if m != nil {
 		return m.Identity
 	}
-	return ""
+	return nil
 }
 
-func (m *ACLChange_UserRemove) GetReadKeyReplaces() []*ACLChange_ReadKeyReplace {
+func (m *ACLUserRemove) GetReadKeyReplaces() []*ACLReadKeyReplace {
 	if m != nil {
 		return m.ReadKeyReplaces
 	}
 	return nil
 }
 
-type ACLChange_ReadKeyReplace struct {
-	Identity         string `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+type ACLReadKeyReplace struct {
+	Identity         []byte `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	EncryptionKey    []byte `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
 	EncryptedReadKey []byte `protobuf:"bytes,3,opt,name=encryptedReadKey,proto3" json:"encryptedReadKey,omitempty"`
 }
 
-func (m *ACLChange_ReadKeyReplace) Reset()         { *m = ACLChange_ReadKeyReplace{} }
-func (m *ACLChange_ReadKeyReplace) String() string { return proto.CompactTextString(m) }
-func (*ACLChange_ReadKeyReplace) ProtoMessage()    {}
-func (*ACLChange_ReadKeyReplace) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 10}
+func (m *ACLReadKeyReplace) Reset()         { *m = ACLReadKeyReplace{} }
+func (m *ACLReadKeyReplace) String() string { return proto.CompactTextString(m) }
+func (*ACLReadKeyReplace) ProtoMessage()    {}
+func (*ACLReadKeyReplace) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{10}
 }
-func (m *ACLChange_ReadKeyReplace) XXX_Unmarshal(b []byte) error {
+func (m *ACLReadKeyReplace) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChange_ReadKeyReplace) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLReadKeyReplace) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChange_ReadKeyReplace.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLReadKeyReplace.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -939,56 +808,56 @@ func (m *ACLChange_ReadKeyReplace) XXX_Marshal(b []byte, deterministic bool) ([]
 		return b[:n], nil
 	}
 }
-func (m *ACLChange_ReadKeyReplace) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChange_ReadKeyReplace.Merge(m, src)
+func (m *ACLReadKeyReplace) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLReadKeyReplace.Merge(m, src)
 }
-func (m *ACLChange_ReadKeyReplace) XXX_Size() int {
+func (m *ACLReadKeyReplace) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChange_ReadKeyReplace) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChange_ReadKeyReplace.DiscardUnknown(m)
+func (m *ACLReadKeyReplace) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLReadKeyReplace.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChange_ReadKeyReplace proto.InternalMessageInfo
+var xxx_messageInfo_ACLReadKeyReplace proto.InternalMessageInfo
 
-func (m *ACLChange_ReadKeyReplace) GetIdentity() string {
+func (m *ACLReadKeyReplace) GetIdentity() []byte {
 	if m != nil {
 		return m.Identity
 	}
-	return ""
+	return nil
 }
 
-func (m *ACLChange_ReadKeyReplace) GetEncryptionKey() []byte {
+func (m *ACLReadKeyReplace) GetEncryptionKey() []byte {
 	if m != nil {
 		return m.EncryptionKey
 	}
 	return nil
 }
 
-func (m *ACLChange_ReadKeyReplace) GetEncryptedReadKey() []byte {
+func (m *ACLReadKeyReplace) GetEncryptedReadKey() []byte {
 	if m != nil {
 		return m.EncryptedReadKey
 	}
 	return nil
 }
 
-type ACLChange_UserPermissionChange struct {
-	Identity    string                    `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	Permissions ACLChange_UserPermissions `protobuf:"varint,2,opt,name=permissions,proto3,enum=acl.ACLChange_UserPermissions" json:"permissions,omitempty"`
+type ACLUserPermissionChange struct {
+	Identity    []byte             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Permissions ACLUserPermissions `protobuf:"varint,2,opt,name=permissions,proto3,enum=acl.ACLUserPermissions" json:"permissions,omitempty"`
 }
 
-func (m *ACLChange_UserPermissionChange) Reset()         { *m = ACLChange_UserPermissionChange{} }
-func (m *ACLChange_UserPermissionChange) String() string { return proto.CompactTextString(m) }
-func (*ACLChange_UserPermissionChange) ProtoMessage()    {}
-func (*ACLChange_UserPermissionChange) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37a022c841a51877, []int{1, 11}
+func (m *ACLUserPermissionChange) Reset()         { *m = ACLUserPermissionChange{} }
+func (m *ACLUserPermissionChange) String() string { return proto.CompactTextString(m) }
+func (*ACLUserPermissionChange) ProtoMessage()    {}
+func (*ACLUserPermissionChange) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{11}
 }
-func (m *ACLChange_UserPermissionChange) XXX_Unmarshal(b []byte) error {
+func (m *ACLUserPermissionChange) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ACLChange_UserPermissionChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ACLUserPermissionChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ACLChange_UserPermissionChange.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ACLUserPermissionChange.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -998,49 +867,462 @@ func (m *ACLChange_UserPermissionChange) XXX_Marshal(b []byte, deterministic boo
 		return b[:n], nil
 	}
 }
-func (m *ACLChange_UserPermissionChange) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ACLChange_UserPermissionChange.Merge(m, src)
+func (m *ACLUserPermissionChange) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLUserPermissionChange.Merge(m, src)
 }
-func (m *ACLChange_UserPermissionChange) XXX_Size() int {
+func (m *ACLUserPermissionChange) XXX_Size() int {
 	return m.Size()
 }
-func (m *ACLChange_UserPermissionChange) XXX_DiscardUnknown() {
-	xxx_messageInfo_ACLChange_UserPermissionChange.DiscardUnknown(m)
+func (m *ACLUserPermissionChange) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLUserPermissionChange.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ACLChange_UserPermissionChange proto.InternalMessageInfo
+var xxx_messageInfo_ACLUserPermissionChange proto.InternalMessageInfo
 
-func (m *ACLChange_UserPermissionChange) GetIdentity() string {
+func (m *ACLUserPermissionChange) GetIdentity() []byte {
 	if m != nil {
 		return m.Identity
+	}
+	return nil
+}
+
+func (m *ACLUserPermissionChange) GetPermissions() ACLUserPermissions {
+	if m != nil {
+		return m.Permissions
+	}
+	return ACLUserPermissions_Admin
+}
+
+type ACLRecord struct {
+	PrevId             string `protobuf:"bytes,1,opt,name=prevId,proto3" json:"prevId,omitempty"`
+	Identity           []byte `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	Data               []byte `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	CurrentReadKeyHash uint64 `protobuf:"varint,4,opt,name=currentReadKeyHash,proto3" json:"currentReadKeyHash,omitempty"`
+	Timestamp          int64  `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+}
+
+func (m *ACLRecord) Reset()         { *m = ACLRecord{} }
+func (m *ACLRecord) String() string { return proto.CompactTextString(m) }
+func (*ACLRecord) ProtoMessage()    {}
+func (*ACLRecord) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{12}
+}
+func (m *ACLRecord) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ACLRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ACLRecord.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ACLRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLRecord.Merge(m, src)
+}
+func (m *ACLRecord) XXX_Size() int {
+	return m.Size()
+}
+func (m *ACLRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLRecord.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ACLRecord proto.InternalMessageInfo
+
+func (m *ACLRecord) GetPrevId() string {
+	if m != nil {
+		return m.PrevId
 	}
 	return ""
 }
 
-func (m *ACLChange_UserPermissionChange) GetPermissions() ACLChange_UserPermissions {
+func (m *ACLRecord) GetIdentity() []byte {
 	if m != nil {
-		return m.Permissions
+		return m.Identity
 	}
-	return ACLChange_Admin
+	return nil
+}
+
+func (m *ACLRecord) GetData() []byte {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+func (m *ACLRecord) GetCurrentReadKeyHash() uint64 {
+	if m != nil {
+		return m.CurrentReadKeyHash
+	}
+	return 0
+}
+
+func (m *ACLRecord) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
+type ACLHeader struct {
+	FirstId  string `protobuf:"bytes,1,opt,name=firstId,proto3" json:"firstId,omitempty"`
+	Identity []byte `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+}
+
+func (m *ACLHeader) Reset()         { *m = ACLHeader{} }
+func (m *ACLHeader) String() string { return proto.CompactTextString(m) }
+func (*ACLHeader) ProtoMessage()    {}
+func (*ACLHeader) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{13}
+}
+func (m *ACLHeader) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ACLHeader) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ACLHeader.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ACLHeader) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ACLHeader.Merge(m, src)
+}
+func (m *ACLHeader) XXX_Size() int {
+	return m.Size()
+}
+func (m *ACLHeader) XXX_DiscardUnknown() {
+	xxx_messageInfo_ACLHeader.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ACLHeader proto.InternalMessageInfo
+
+func (m *ACLHeader) GetFirstId() string {
+	if m != nil {
+		return m.FirstId
+	}
+	return ""
+}
+
+func (m *ACLHeader) GetIdentity() []byte {
+	if m != nil {
+		return m.Identity
+	}
+	return nil
+}
+
+type RawTreeChange struct {
+	Payload   []byte `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
+	Signature []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+}
+
+func (m *RawTreeChange) Reset()         { *m = RawTreeChange{} }
+func (m *RawTreeChange) String() string { return proto.CompactTextString(m) }
+func (*RawTreeChange) ProtoMessage()    {}
+func (*RawTreeChange) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{14}
+}
+func (m *RawTreeChange) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *RawTreeChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_RawTreeChange.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *RawTreeChange) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RawTreeChange.Merge(m, src)
+}
+func (m *RawTreeChange) XXX_Size() int {
+	return m.Size()
+}
+func (m *RawTreeChange) XXX_DiscardUnknown() {
+	xxx_messageInfo_RawTreeChange.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_RawTreeChange proto.InternalMessageInfo
+
+func (m *RawTreeChange) GetPayload() []byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
+func (m *RawTreeChange) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+type RawTreeChangeWithId struct {
+	RawChange []byte `protobuf:"bytes,1,opt,name=rawChange,proto3" json:"rawChange,omitempty"`
+	Id        string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+}
+
+func (m *RawTreeChangeWithId) Reset()         { *m = RawTreeChangeWithId{} }
+func (m *RawTreeChangeWithId) String() string { return proto.CompactTextString(m) }
+func (*RawTreeChangeWithId) ProtoMessage()    {}
+func (*RawTreeChangeWithId) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{15}
+}
+func (m *RawTreeChangeWithId) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *RawTreeChangeWithId) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_RawTreeChangeWithId.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *RawTreeChangeWithId) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RawTreeChangeWithId.Merge(m, src)
+}
+func (m *RawTreeChangeWithId) XXX_Size() int {
+	return m.Size()
+}
+func (m *RawTreeChangeWithId) XXX_DiscardUnknown() {
+	xxx_messageInfo_RawTreeChangeWithId.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_RawTreeChangeWithId proto.InternalMessageInfo
+
+func (m *RawTreeChangeWithId) GetRawChange() []byte {
+	if m != nil {
+		return m.RawChange
+	}
+	return nil
+}
+
+func (m *RawTreeChangeWithId) GetId() string {
+	if m != nil {
+		return m.Id
+	}
+	return ""
+}
+
+type TreeChange struct {
+	TreeHeadIds        []string `protobuf:"bytes,1,rep,name=treeHeadIds,proto3" json:"treeHeadIds,omitempty"`
+	AclHeadId          string   `protobuf:"bytes,2,opt,name=aclHeadId,proto3" json:"aclHeadId,omitempty"`
+	SnapshotBaseId     string   `protobuf:"bytes,3,opt,name=snapshotBaseId,proto3" json:"snapshotBaseId,omitempty"`
+	ChangesData        []byte   `protobuf:"bytes,4,opt,name=changesData,proto3" json:"changesData,omitempty"`
+	CurrentReadKeyHash uint64   `protobuf:"varint,5,opt,name=currentReadKeyHash,proto3" json:"currentReadKeyHash,omitempty"`
+	Timestamp          int64    `protobuf:"varint,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Identity           []byte   `protobuf:"bytes,7,opt,name=identity,proto3" json:"identity,omitempty"`
+	IsSnapshot         bool     `protobuf:"varint,8,opt,name=isSnapshot,proto3" json:"isSnapshot,omitempty"`
+}
+
+func (m *TreeChange) Reset()         { *m = TreeChange{} }
+func (m *TreeChange) String() string { return proto.CompactTextString(m) }
+func (*TreeChange) ProtoMessage()    {}
+func (*TreeChange) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{16}
+}
+func (m *TreeChange) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *TreeChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_TreeChange.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *TreeChange) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TreeChange.Merge(m, src)
+}
+func (m *TreeChange) XXX_Size() int {
+	return m.Size()
+}
+func (m *TreeChange) XXX_DiscardUnknown() {
+	xxx_messageInfo_TreeChange.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TreeChange proto.InternalMessageInfo
+
+func (m *TreeChange) GetTreeHeadIds() []string {
+	if m != nil {
+		return m.TreeHeadIds
+	}
+	return nil
+}
+
+func (m *TreeChange) GetAclHeadId() string {
+	if m != nil {
+		return m.AclHeadId
+	}
+	return ""
+}
+
+func (m *TreeChange) GetSnapshotBaseId() string {
+	if m != nil {
+		return m.SnapshotBaseId
+	}
+	return ""
+}
+
+func (m *TreeChange) GetChangesData() []byte {
+	if m != nil {
+		return m.ChangesData
+	}
+	return nil
+}
+
+func (m *TreeChange) GetCurrentReadKeyHash() uint64 {
+	if m != nil {
+		return m.CurrentReadKeyHash
+	}
+	return 0
+}
+
+func (m *TreeChange) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
+func (m *TreeChange) GetIdentity() []byte {
+	if m != nil {
+		return m.Identity
+	}
+	return nil
+}
+
+func (m *TreeChange) GetIsSnapshot() bool {
+	if m != nil {
+		return m.IsSnapshot
+	}
+	return false
+}
+
+type TreeHeader struct {
+	FirstId        string         `protobuf:"bytes,1,opt,name=firstId,proto3" json:"firstId,omitempty"`
+	AclId          string         `protobuf:"bytes,2,opt,name=aclId,proto3" json:"aclId,omitempty"`
+	TreeHeaderType TreeHeaderType `protobuf:"varint,3,opt,name=treeHeaderType,proto3,enum=acl.TreeHeaderType" json:"treeHeaderType,omitempty"`
+	Identity       []byte         `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
+	Data           []byte         `protobuf:"bytes,5,opt,name=data,proto3" json:"data,omitempty"`
+}
+
+func (m *TreeHeader) Reset()         { *m = TreeHeader{} }
+func (m *TreeHeader) String() string { return proto.CompactTextString(m) }
+func (*TreeHeader) ProtoMessage()    {}
+func (*TreeHeader) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37a022c841a51877, []int{17}
+}
+func (m *TreeHeader) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *TreeHeader) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_TreeHeader.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *TreeHeader) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TreeHeader.Merge(m, src)
+}
+func (m *TreeHeader) XXX_Size() int {
+	return m.Size()
+}
+func (m *TreeHeader) XXX_DiscardUnknown() {
+	xxx_messageInfo_TreeHeader.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TreeHeader proto.InternalMessageInfo
+
+func (m *TreeHeader) GetFirstId() string {
+	if m != nil {
+		return m.FirstId
+	}
+	return ""
+}
+
+func (m *TreeHeader) GetAclId() string {
+	if m != nil {
+		return m.AclId
+	}
+	return ""
+}
+
+func (m *TreeHeader) GetTreeHeaderType() TreeHeaderType {
+	if m != nil {
+		return m.TreeHeaderType
+	}
+	return TreeHeaderType_Object
+}
+
+func (m *TreeHeader) GetIdentity() []byte {
+	if m != nil {
+		return m.Identity
+	}
+	return nil
+}
+
+func (m *TreeHeader) GetData() []byte {
+	if m != nil {
+		return m.Data
+	}
+	return nil
 }
 
 func init() {
-	proto.RegisterEnum("acl.ACLChange_UserPermissions", ACLChange_UserPermissions_name, ACLChange_UserPermissions_value)
-	proto.RegisterType((*RawChange)(nil), "acl.RawChange")
-	proto.RegisterType((*ACLChange)(nil), "acl.ACLChange")
-	proto.RegisterType((*ACLChange_ACLContentValue)(nil), "acl.ACLChange.ACLContentValue")
-	proto.RegisterType((*ACLChange_ACLData)(nil), "acl.ACLChange.ACLData")
-	proto.RegisterType((*ACLChange_ACLSnapshot)(nil), "acl.ACLChange.ACLSnapshot")
-	proto.RegisterType((*ACLChange_ACLState)(nil), "acl.ACLChange.ACLState")
-	proto.RegisterMapType((map[string]*ACLChange_UserInvite)(nil), "acl.ACLChange.ACLState.InvitesEntry")
-	proto.RegisterType((*ACLChange_UserState)(nil), "acl.ACLChange.UserState")
-	proto.RegisterType((*ACLChange_UserAdd)(nil), "acl.ACLChange.UserAdd")
-	proto.RegisterType((*ACLChange_UserConfirm)(nil), "acl.ACLChange.UserConfirm")
-	proto.RegisterType((*ACLChange_UserInvite)(nil), "acl.ACLChange.UserInvite")
-	proto.RegisterType((*ACLChange_UserJoin)(nil), "acl.ACLChange.UserJoin")
-	proto.RegisterType((*ACLChange_UserRemove)(nil), "acl.ACLChange.UserRemove")
-	proto.RegisterType((*ACLChange_ReadKeyReplace)(nil), "acl.ACLChange.ReadKeyReplace")
-	proto.RegisterType((*ACLChange_UserPermissionChange)(nil), "acl.ACLChange.UserPermissionChange")
+	proto.RegisterEnum("acl.ACLUserPermissions", ACLUserPermissions_name, ACLUserPermissions_value)
+	proto.RegisterEnum("acl.TreeHeaderType", TreeHeaderType_name, TreeHeaderType_value)
+	proto.RegisterType((*RawACLRecord)(nil), "acl.RawACLRecord")
+	proto.RegisterType((*ACLContentValue)(nil), "acl.ACLContentValue")
+	proto.RegisterType((*ACLData)(nil), "acl.ACLData")
+	proto.RegisterType((*ACLState)(nil), "acl.ACLState")
+	proto.RegisterMapType((map[string]*ACLUserInvite)(nil), "acl.ACLState.InvitesEntry")
+	proto.RegisterType((*ACLUserState)(nil), "acl.ACLUserState")
+	proto.RegisterType((*ACLUserAdd)(nil), "acl.ACLUserAdd")
+	proto.RegisterType((*ACLUserConfirm)(nil), "acl.ACLUserConfirm")
+	proto.RegisterType((*ACLUserInvite)(nil), "acl.ACLUserInvite")
+	proto.RegisterType((*ACLUserJoin)(nil), "acl.ACLUserJoin")
+	proto.RegisterType((*ACLUserRemove)(nil), "acl.ACLUserRemove")
+	proto.RegisterType((*ACLReadKeyReplace)(nil), "acl.ACLReadKeyReplace")
+	proto.RegisterType((*ACLUserPermissionChange)(nil), "acl.ACLUserPermissionChange")
+	proto.RegisterType((*ACLRecord)(nil), "acl.ACLRecord")
+	proto.RegisterType((*ACLHeader)(nil), "acl.ACLHeader")
+	proto.RegisterType((*RawTreeChange)(nil), "acl.RawTreeChange")
+	proto.RegisterType((*RawTreeChangeWithId)(nil), "acl.RawTreeChangeWithId")
+	proto.RegisterType((*TreeChange)(nil), "acl.TreeChange")
+	proto.RegisterType((*TreeHeader)(nil), "acl.TreeHeader")
 }
 
 func init() {
@@ -1048,70 +1330,78 @@ func init() {
 }
 
 var fileDescriptor_37a022c841a51877 = []byte{
-	// 948 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xd4, 0x56, 0x4f, 0x6f, 0xe3, 0x44,
-	0x14, 0xf7, 0xc4, 0x4d, 0x1d, 0x3f, 0x87, 0x36, 0x0c, 0x2b, 0xd6, 0x58, 0x4b, 0x88, 0xca, 0x0a,
-	0x45, 0x08, 0xa5, 0xab, 0xac, 0x90, 0x56, 0x80, 0x2a, 0xda, 0x82, 0x36, 0xa1, 0x1c, 0x56, 0x53,
-	0x2d, 0x08, 0x6e, 0x53, 0x7b, 0x68, 0xad, 0x75, 0x6c, 0xe3, 0x99, 0x14, 0xe5, 0x82, 0xc4, 0x89,
-	0x2b, 0x67, 0xbe, 0x0a, 0x5f, 0x60, 0x8f, 0x7b, 0xe4, 0x06, 0x6a, 0xef, 0x5c, 0xf8, 0x02, 0x68,
-	0xfe, 0xd8, 0x71, 0x12, 0x6f, 0x24, 0xa4, 0x15, 0x12, 0x87, 0x4a, 0x33, 0xbf, 0xf7, 0x7b, 0xd3,
-	0xf7, 0xde, 0xef, 0xbd, 0x17, 0xc3, 0x83, 0xfc, 0xd9, 0xe5, 0x21, 0x0d, 0x13, 0xf9, 0x17, 0x5e,
-	0xd1, 0xf4, 0x92, 0x71, 0x79, 0xcc, 0x2f, 0x0e, 0xf3, 0x22, 0x13, 0x19, 0xaf, 0xe1, 0x23, 0x85,
-	0x60, 0x9b, 0x86, 0xc9, 0xc1, 0x39, 0xb8, 0x84, 0xfe, 0x70, 0xaa, 0x0c, 0xd8, 0x07, 0x27, 0xa7,
-	0x8b, 0x24, 0xa3, 0x91, 0x8f, 0x06, 0x68, 0xd8, 0x25, 0xe5, 0x15, 0xdf, 0x03, 0x97, 0xc7, 0x97,
-	0x29, 0x15, 0xf3, 0x82, 0xf9, 0x2d, 0x65, 0x5b, 0x02, 0x78, 0x0f, 0x5a, 0x71, 0xe4, 0xdb, 0x03,
-	0x34, 0x74, 0x49, 0x2b, 0x8e, 0x0e, 0xfe, 0x7e, 0x03, 0xdc, 0xe3, 0xd3, 0x2f, 0xcd, 0xab, 0x03,
-	0xf0, 0x44, 0xc1, 0xd8, 0x84, 0xd1, 0x68, 0x1a, 0x71, 0x1f, 0x0d, 0xec, 0xa1, 0x4b, 0xea, 0x10,
-	0xee, 0x03, 0xd0, 0x30, 0x29, 0x09, 0x2d, 0x45, 0xa8, 0x21, 0xf8, 0x3d, 0xd8, 0xe3, 0x29, 0xcd,
-	0xf9, 0x55, 0x26, 0x4e, 0x28, 0x67, 0xd3, 0xf2, 0x7f, 0xad, 0xa1, 0xf8, 0x01, 0x38, 0x34, 0x4c,
-	0x3e, 0xa3, 0x82, 0xfa, 0x3b, 0x03, 0x34, 0xf4, 0xc6, 0x6f, 0x8e, 0x68, 0x98, 0x8c, 0xaa, 0x50,
-	0xe4, 0x49, 0x5a, 0x49, 0x49, 0x93, 0xb1, 0x99, 0xa2, 0x28, 0xaf, 0xb6, 0xca, 0xac, 0x0e, 0xe1,
-	0x11, 0xe0, 0x70, 0x5e, 0x14, 0x2c, 0x15, 0x84, 0xd1, 0xe8, 0x8c, 0x2d, 0x26, 0x94, 0x5f, 0xf9,
-	0xbb, 0x03, 0x34, 0xdc, 0x21, 0x0d, 0x16, 0x59, 0x29, 0x11, 0xcf, 0x18, 0x17, 0x74, 0x96, 0xfb,
-	0xce, 0x00, 0x0d, 0x6d, 0xb2, 0x04, 0x70, 0x00, 0x9d, 0x38, 0x62, 0xa9, 0x88, 0xc5, 0xc2, 0xef,
-	0xa8, 0x1c, 0xaa, 0x7b, 0xf0, 0xab, 0x0d, 0xfb, 0x32, 0xd4, 0x2c, 0x15, 0x2c, 0x15, 0x5f, 0xd1,
-	0x64, 0xce, 0xf0, 0x18, 0x9c, 0x39, 0x67, 0xc5, 0x71, 0xa4, 0x15, 0xd9, 0xcc, 0xe8, 0xa9, 0xb6,
-	0x4e, 0x2c, 0x52, 0x12, 0xf1, 0xc7, 0x00, 0xf2, 0x48, 0xd8, 0x2c, 0xbb, 0xd6, 0x62, 0x79, 0xe3,
-	0xb7, 0x1a, 0xdc, 0x34, 0x61, 0x62, 0x91, 0x1a, 0x1d, 0x7f, 0x03, 0x77, 0xe4, 0xed, 0x09, 0x2b,
-	0x66, 0x31, 0xe7, 0x71, 0x96, 0x6a, 0x07, 0x55, 0x70, 0x6f, 0xfc, 0x6e, 0xc3, 0x33, 0xeb, 0xd4,
-	0x89, 0x45, 0x1a, 0x9f, 0x28, 0xe3, 0x9a, 0xa6, 0xd7, 0xb1, 0x60, 0x46, 0xa0, 0xa6, 0xb8, 0x34,
-	0xa1, 0x8c, 0x4b, 0xdf, 0xf0, 0x87, 0xd0, 0x91, 0xb7, 0x2f, 0xb2, 0x38, 0x55, 0x2a, 0x79, 0xe3,
-	0xbb, 0x0d, 0xae, 0xd2, 0x3c, 0xb1, 0x48, 0x45, 0xc5, 0x47, 0xe0, 0xc9, 0xf3, 0x69, 0x96, 0x7e,
-	0x17, 0x17, 0x33, 0x25, 0x9b, 0x37, 0x0e, 0x1a, 0x3c, 0x0d, 0x63, 0x62, 0x91, 0xba, 0xc3, 0x89,
-	0x03, 0xed, 0x6b, 0x29, 0x44, 0xf0, 0x33, 0x02, 0xc7, 0x74, 0x0f, 0xfe, 0x04, 0x3c, 0x1a, 0x26,
-	0xe7, 0xa6, 0xf7, 0x8c, 0x30, 0xc1, 0x66, 0xab, 0x95, 0x0c, 0x52, 0xa7, 0xe3, 0x23, 0xd5, 0xec,
-	0x46, 0x65, 0xd5, 0xec, 0xde, 0xb8, 0xbf, 0xe9, 0x5c, 0x6f, 0x03, 0x52, 0xf3, 0x08, 0x4e, 0xc0,
-	0xab, 0xbd, 0x8d, 0x1f, 0x42, 0x47, 0xbe, 0x2e, 0xa8, 0x60, 0x26, 0x92, 0xbb, 0x0d, 0x91, 0x48,
-	0x33, 0xa9, 0x88, 0xc1, 0x4f, 0x2d, 0xe8, 0x94, 0x30, 0xbe, 0x0f, 0xaf, 0x15, 0xcb, 0x06, 0x66,
-	0x7a, 0x42, 0x77, 0xc8, 0x2a, 0x88, 0x1f, 0x69, 0xf5, 0x94, 0x0b, 0x37, 0x61, 0xfb, 0x0d, 0x85,
-	0xd4, 0xff, 0xaa, 0xc6, 0xc5, 0x47, 0xe0, 0xc4, 0x4a, 0x44, 0xee, 0xdb, 0xca, 0xed, 0xfe, 0x4b,
-	0x02, 0x1c, 0x69, 0xad, 0xf9, 0xe7, 0xa9, 0x28, 0x16, 0xa4, 0x74, 0x0a, 0x9e, 0x42, 0xb7, 0x6e,
-	0xc0, 0x3d, 0xb0, 0x9f, 0xb1, 0x85, 0x4a, 0xd6, 0x25, 0xf2, 0x88, 0x0f, 0x8d, 0x4a, 0x5b, 0x9a,
-	0x5d, 0xbf, 0x40, 0x34, 0xef, 0xa3, 0xd6, 0x23, 0x14, 0xfc, 0x81, 0xc0, 0xad, 0x02, 0x5e, 0x19,
-	0x4c, 0xb4, 0x3a, 0x98, 0xb2, 0x40, 0x2c, 0x0d, 0x8b, 0x45, 0x2e, 0xe2, 0x2c, 0x3d, 0x63, 0x0b,
-	0xb3, 0x00, 0x57, 0x41, 0xfc, 0x01, 0xbc, 0x6e, 0x00, 0x16, 0x99, 0x85, 0xa0, 0x13, 0xee, 0x92,
-	0x4d, 0x03, 0xfe, 0x14, 0xbc, 0xbc, 0x1a, 0x10, 0xae, 0xa6, 0x61, 0x6f, 0xa3, 0x0d, 0x56, 0xc7,
-	0x8b, 0x93, 0xba, 0x8b, 0x5c, 0x5d, 0x53, 0x6e, 0xfa, 0x94, 0x45, 0x6a, 0x28, 0x3a, 0xa4, 0x0e,
-	0x05, 0xbf, 0x21, 0x70, 0xcc, 0x7e, 0xf8, 0xff, 0xe5, 0x17, 0x3c, 0x06, 0xaf, 0x36, 0x98, 0x5b,
-	0x13, 0xb8, 0x07, 0xae, 0x59, 0x7e, 0xd3, 0x48, 0x05, 0xef, 0x92, 0x25, 0x10, 0xfc, 0x85, 0x00,
-	0x96, 0x2d, 0x80, 0x87, 0xb0, 0x4f, 0xc3, 0x90, 0xe5, 0xe2, 0xc9, 0xfc, 0x22, 0x89, 0xc3, 0x33,
-	0xd3, 0x4a, 0x5d, 0xb2, 0x0e, 0xe3, 0xf7, 0xa1, 0x67, 0x12, 0x5b, 0x52, 0x75, 0x69, 0x36, 0xf0,
-	0xff, 0x5c, 0xfd, 0x00, 0x3a, 0x3a, 0x9f, 0xa9, 0x96, 0xde, 0x25, 0xd5, 0x3d, 0x78, 0x8e, 0xa0,
-	0x53, 0x6e, 0xc3, 0x57, 0x20, 0x7c, 0x55, 0xb0, 0xf3, 0xea, 0x0b, 0xc0, 0xae, 0x17, 0xac, 0x82,
-	0xf1, 0x01, 0x74, 0x97, 0x2b, 0x7b, 0x1a, 0xa9, 0xbc, 0x5c, 0xb2, 0x82, 0x35, 0x17, 0xaa, 0xfd,
-	0x92, 0x42, 0x05, 0xdf, 0x6b, 0xe9, 0xcc, 0x8f, 0xd3, 0xb6, 0x5c, 0x1e, 0xc3, 0xbe, 0x59, 0x58,
-	0x84, 0xe5, 0x09, 0x0d, 0xab, 0x6d, 0xf3, 0xf6, 0x5a, 0x59, 0xc9, 0x0a, 0x8b, 0xac, 0x7b, 0x05,
-	0x3f, 0xc2, 0xde, 0x2a, 0xe5, 0x15, 0x94, 0x70, 0xd9, 0x49, 0x55, 0x6e, 0xa6, 0x86, 0x1b, 0x78,
-	0x20, 0xe0, 0x4e, 0xd3, 0xcf, 0xea, 0xd6, 0x28, 0xd6, 0xfa, 0xa9, 0xf5, 0xaf, 0xfb, 0xe9, 0xe0,
-	0x18, 0xf6, 0xd7, 0xec, 0xd8, 0x85, 0xf6, 0x71, 0x34, 0x8b, 0xd3, 0x9e, 0x85, 0x01, 0x76, 0xbf,
-	0x2e, 0x62, 0xc1, 0x8a, 0x1e, 0x92, 0x67, 0x19, 0x2a, 0x2b, 0x7a, 0x2d, 0xec, 0x81, 0xa3, 0xa5,
-	0x89, 0x7a, 0xf6, 0xc9, 0x3b, 0xcf, 0x6f, 0xfa, 0xe8, 0xc5, 0x4d, 0x1f, 0xfd, 0x79, 0xd3, 0x47,
-	0xbf, 0xdc, 0xf6, 0xad, 0x17, 0xb7, 0x7d, 0xeb, 0xf7, 0xdb, 0xbe, 0xf5, 0x6d, 0x5b, 0x7d, 0x88,
-	0x5e, 0xec, 0xaa, 0xef, 0xce, 0x87, 0xff, 0x04, 0x00, 0x00, 0xff, 0xff, 0x2a, 0xe8, 0x23, 0x71,
-	0xab, 0x0a, 0x00, 0x00,
+	// 1078 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xd4, 0x56, 0xcd, 0x6e, 0x23, 0x45,
+	0x10, 0xf6, 0x8c, 0xe3, 0x38, 0x2e, 0x3b, 0x8e, 0xd3, 0x1b, 0xed, 0x8e, 0xa2, 0xc8, 0x44, 0x23,
+	0x04, 0x51, 0x40, 0x5e, 0x08, 0x2b, 0xf1, 0x77, 0x00, 0xc7, 0x8b, 0xb0, 0x37, 0x11, 0xac, 0x3a,
+	0x61, 0x57, 0xe2, 0xd6, 0x99, 0xe9, 0x4d, 0x9a, 0xb5, 0x67, 0x46, 0xd3, 0x9d, 0x44, 0x3e, 0xf2,
+	0x06, 0x3c, 0x02, 0x1c, 0x79, 0x02, 0x5e, 0x01, 0x89, 0xcb, 0x1e, 0x91, 0xb8, 0xa0, 0xe4, 0x04,
+	0x27, 0x1e, 0x01, 0xf5, 0xcf, 0xcc, 0xf4, 0xd8, 0x4e, 0xf8, 0xd1, 0x0a, 0x89, 0xc3, 0x48, 0xdd,
+	0x5f, 0x55, 0x75, 0x57, 0x7d, 0x55, 0x53, 0x5d, 0xf0, 0x56, 0xf2, 0xfc, 0xf4, 0x3e, 0x09, 0xc6,
+	0xf2, 0x0b, 0xce, 0x48, 0x74, 0x4a, 0xb9, 0x5c, 0x26, 0x27, 0xf7, 0x93, 0x34, 0x16, 0x31, 0xb7,
+	0xf0, 0x9e, 0x42, 0x50, 0x95, 0x04, 0x63, 0xff, 0x09, 0xb4, 0x30, 0xb9, 0xec, 0x0f, 0x0e, 0x31,
+	0x0d, 0xe2, 0x34, 0x44, 0x1e, 0xd4, 0x13, 0x32, 0x1d, 0xc7, 0x24, 0xf4, 0x9c, 0x6d, 0x67, 0xa7,
+	0x85, 0xb3, 0x2d, 0xda, 0x82, 0x06, 0x67, 0xa7, 0x11, 0x11, 0xe7, 0x29, 0xf5, 0x5c, 0x25, 0x2b,
+	0x00, 0xd4, 0x06, 0x97, 0x85, 0x5e, 0x75, 0xdb, 0xd9, 0x69, 0x60, 0x97, 0x85, 0xfe, 0x1f, 0x2e,
+	0xac, 0xf5, 0x07, 0x87, 0x83, 0x38, 0x12, 0x34, 0x12, 0x4f, 0xc8, 0xf8, 0x9c, 0xa2, 0x37, 0xa0,
+	0x7e, 0xce, 0x69, 0xda, 0x0f, 0xf5, 0xd9, 0xcd, 0xbd, 0xb5, 0x1e, 0x09, 0xc6, 0xbd, 0xfe, 0xe0,
+	0xf0, 0x0b, 0x0d, 0x0f, 0x2b, 0x38, 0xd3, 0x40, 0x0f, 0x00, 0xe4, 0x12, 0xd3, 0x49, 0x7c, 0xa1,
+	0xef, 0x6b, 0xee, 0x21, 0x5b, 0x5f, 0x4b, 0x86, 0x15, 0x6c, 0xe9, 0x21, 0x0c, 0x1b, 0x72, 0xf7,
+	0x98, 0xa6, 0x13, 0xc6, 0x39, 0x8b, 0xa3, 0x81, 0x0a, 0x59, 0x39, 0xd6, 0xdc, 0xdb, 0xb2, 0xed,
+	0x67, 0x75, 0x86, 0x15, 0xbc, 0xd0, 0x36, 0xf3, 0x64, 0x14, 0x5d, 0x30, 0x41, 0xbd, 0xa5, 0x79,
+	0x4f, 0xb4, 0x24, 0xf3, 0x44, 0xef, 0x50, 0x0f, 0x56, 0xe4, 0xee, 0x51, 0xcc, 0x22, 0xaf, 0xa6,
+	0x6c, 0x3a, 0xb6, 0x8d, 0xc4, 0x87, 0x15, 0x9c, 0xeb, 0xa0, 0x77, 0xa1, 0x29, 0xd7, 0x83, 0x38,
+	0x7a, 0xc6, 0xd2, 0x89, 0xb7, 0xac, 0x4c, 0xee, 0xd8, 0x26, 0x46, 0x34, 0xac, 0x60, 0x5b, 0x73,
+	0xbf, 0x0e, 0xb5, 0x0b, 0x49, 0xaf, 0xff, 0x11, 0xd4, 0xfb, 0x83, 0xc3, 0x87, 0x44, 0x10, 0xe9,
+	0x32, 0x09, 0xc6, 0x86, 0x7c, 0xcf, 0xd9, 0xae, 0xee, 0x34, 0xf7, 0x36, 0xb2, 0xb3, 0xec, 0x9c,
+	0x60, 0x4b, 0xcf, 0xff, 0xcd, 0x81, 0x95, 0xfe, 0xe0, 0xf0, 0x48, 0x10, 0x41, 0xd1, 0xab, 0xb0,
+	0x9a, 0x52, 0x12, 0x1e, 0xd0, 0xe9, 0x90, 0xf0, 0x33, 0xca, 0xd5, 0x29, 0x4b, 0xb8, 0x0c, 0xa2,
+	0xb7, 0x35, 0x37, 0xca, 0x84, 0x7b, 0xae, 0xba, 0x68, 0xdd, 0x76, 0x5a, 0x49, 0xb0, 0xa5, 0x84,
+	0x1e, 0x40, 0x9d, 0x29, 0x8a, 0xb8, 0x57, 0x55, 0xfa, 0x9b, 0x99, 0xbe, 0x52, 0xe8, 0x69, 0xfe,
+	0xf8, 0x27, 0x91, 0x48, 0xa7, 0x38, 0x53, 0xdd, 0xfc, 0x0c, 0x5a, 0xb6, 0x00, 0x75, 0xa0, 0xfa,
+	0x9c, 0x4e, 0x55, 0x1d, 0x35, 0xb0, 0x5c, 0xa2, 0x1d, 0xc3, 0xc3, 0xa2, 0x5a, 0xd1, 0xa6, 0x58,
+	0x2b, 0x7c, 0xe0, 0xbe, 0xe7, 0xf8, 0xbf, 0x38, 0xd0, 0xb2, 0x5d, 0x44, 0x9b, 0xb0, 0xc2, 0x42,
+	0x1a, 0x09, 0x26, 0xa6, 0xa6, 0xf2, 0xf3, 0xbd, 0xe4, 0x82, 0x46, 0x41, 0x3a, 0x4d, 0x04, 0x8b,
+	0xa3, 0x03, 0x3a, 0x35, 0xe5, 0x5f, 0x06, 0xd1, 0x9b, 0xb0, 0x6e, 0x00, 0x1a, 0x62, 0xcd, 0x92,
+	0x0e, 0xb1, 0x85, 0xe7, 0x05, 0xe8, 0x7d, 0x68, 0x26, 0x79, 0xa5, 0x71, 0x55, 0x56, 0xed, 0xbd,
+	0x7b, 0x8b, 0x0b, 0x94, 0x63, 0x5b, 0x17, 0x6d, 0x43, 0x93, 0x71, 0x93, 0x7e, 0x1a, 0xaa, 0xea,
+	0x5a, 0xc1, 0x36, 0xe4, 0xff, 0xe0, 0x00, 0x14, 0xbf, 0xd5, 0xff, 0x28, 0x36, 0xff, 0x11, 0xb4,
+	0xcb, 0xe5, 0x7e, 0xab, 0xf3, 0x5b, 0xd0, 0x30, 0xfd, 0x62, 0x14, 0x2a, 0xc7, 0x1b, 0xb8, 0x00,
+	0xfc, 0xdf, 0x1d, 0x58, 0x2d, 0x15, 0x00, 0xda, 0x81, 0x35, 0x12, 0x04, 0x34, 0x11, 0x8f, 0xcf,
+	0x4f, 0xc6, 0x2c, 0x38, 0xa0, 0xd9, 0x91, 0xb3, 0x30, 0xda, 0x85, 0x8e, 0x89, 0xab, 0x50, 0xd5,
+	0xcc, 0xcc, 0xe1, 0xff, 0x5d, 0xe2, 0x25, 0x15, 0x2a, 0x90, 0x91, 0xce, 0x7a, 0x03, 0xe7, 0x7b,
+	0xff, 0x27, 0x07, 0x9a, 0x56, 0x6f, 0x79, 0x09, 0x39, 0xcf, 0xc9, 0x3a, 0xca, 0xdb, 0x7e, 0xd5,
+	0x26, 0x2b, 0x87, 0x91, 0x0f, 0xad, 0xa2, 0xf3, 0x8d, 0x42, 0x15, 0x53, 0x03, 0x97, 0xb0, 0xc5,
+	0x24, 0xd5, 0x6e, 0x20, 0xc9, 0x9f, 0xe4, 0x99, 0x33, 0x8d, 0xfd, 0xb6, 0x70, 0x3e, 0x86, 0x35,
+	0xd3, 0x95, 0x30, 0x4d, 0xc6, 0x24, 0xc8, 0x3b, 0xcb, 0xdd, 0x8c, 0x55, 0x5c, 0x12, 0xe3, 0x59,
+	0x75, 0xff, 0x6b, 0x07, 0xd6, 0xe7, 0xd4, 0x5e, 0x02, 0x85, 0x45, 0x15, 0xe5, 0xb1, 0x19, 0x0e,
+	0xe7, 0x70, 0x3f, 0x81, 0x7b, 0x37, 0xbc, 0x4c, 0xb7, 0x3a, 0x32, 0x53, 0x4e, 0xee, 0x3f, 0xf8,
+	0xd7, 0xbe, 0x73, 0xa0, 0x51, 0xbc, 0xfc, 0x77, 0x61, 0x39, 0x49, 0xe9, 0xc5, 0x28, 0x34, 0x4d,
+	0xd5, 0xec, 0x4a, 0x97, 0xbb, 0x33, 0x97, 0x23, 0x58, 0x0a, 0x89, 0x20, 0x26, 0x26, 0xb5, 0x46,
+	0x3d, 0x40, 0xc1, 0x79, 0x9a, 0xd2, 0x48, 0xe0, 0xe2, 0xa9, 0x50, 0x25, 0xb1, 0x84, 0x17, 0x48,
+	0xe4, 0x3f, 0x2c, 0xd8, 0x84, 0x72, 0x41, 0x26, 0x89, 0xaa, 0xea, 0x2a, 0x2e, 0x00, 0xbf, 0xaf,
+	0x5c, 0x1c, 0x52, 0x12, 0xd2, 0x54, 0x0e, 0x27, 0xcf, 0x58, 0xca, 0x45, 0xee, 0x63, 0xb6, 0xbd,
+	0xcd, 0x49, 0xff, 0x53, 0x58, 0xc5, 0xe4, 0xf2, 0x38, 0xa5, 0xd4, 0xd0, 0xf9, 0x2f, 0x67, 0x1c,
+	0x7f, 0x00, 0x77, 0x4a, 0x07, 0x3d, 0x65, 0xe2, 0x6c, 0xa4, 0x8c, 0x52, 0x72, 0x69, 0x06, 0x0d,
+	0x7d, 0x60, 0x01, 0x98, 0xc1, 0xc8, 0xcd, 0x07, 0xa3, 0x6f, 0x5d, 0x00, 0xcb, 0x97, 0x6d, 0x68,
+	0x8a, 0x94, 0x52, 0x19, 0xe0, 0x28, 0xd4, 0x8f, 0x6c, 0x03, 0xdb, 0x90, 0x3c, 0x9e, 0x04, 0x63,
+	0xbd, 0xcb, 0x7a, 0x5c, 0x0e, 0xa0, 0xd7, 0xa0, 0xcd, 0x23, 0x92, 0xf0, 0xb3, 0x58, 0xec, 0x13,
+	0x2e, 0x7f, 0x3e, 0x3d, 0x83, 0xcd, 0xa0, 0xf2, 0x1e, 0x33, 0xfd, 0xc9, 0x01, 0x41, 0xa5, 0xa3,
+	0x85, 0x6d, 0xe8, 0x86, 0xbc, 0xd5, 0xfe, 0x5e, 0xde, 0x96, 0x67, 0xf2, 0x56, 0x4a, 0x48, 0x7d,
+	0xa6, 0x6a, 0xba, 0x00, 0x8c, 0x1f, 0x19, 0xff, 0xbc, 0x15, 0xf5, 0x7c, 0x59, 0x88, 0xff, 0xbd,
+	0xa3, 0x29, 0xfa, 0xcb, 0xac, 0x6f, 0x40, 0x8d, 0x04, 0xe3, 0x9c, 0x16, 0xbd, 0x41, 0x1f, 0x42,
+	0x5b, 0xe4, 0xd6, 0xc7, 0xd3, 0x44, 0xb7, 0xad, 0xb6, 0x19, 0xa6, 0x8e, 0x4b, 0x22, 0x3c, 0xa3,
+	0x5a, 0xf2, 0x7b, 0xe9, 0x86, 0x6a, 0xaf, 0x15, 0xd5, 0xbe, 0xfb, 0x10, 0xd0, 0xfc, 0x6f, 0x86,
+	0x1a, 0x50, 0xeb, 0x87, 0x13, 0x16, 0x75, 0x2a, 0x08, 0x60, 0xf9, 0x69, 0xca, 0x04, 0x4d, 0x3b,
+	0x8e, 0x5c, 0x63, 0x75, 0x55, 0xc7, 0x45, 0x4d, 0xa8, 0xeb, 0xd6, 0x16, 0x76, 0xaa, 0xbb, 0xaf,
+	0x43, 0xbb, 0xec, 0x97, 0x54, 0xfd, 0xfc, 0xe4, 0x2b, 0x1a, 0x88, 0x4e, 0x45, 0x9e, 0x76, 0x94,
+	0x90, 0x80, 0x76, 0x9c, 0xfd, 0x57, 0x7e, 0xbc, 0xea, 0x3a, 0x2f, 0xae, 0xba, 0xce, 0xaf, 0x57,
+	0x5d, 0xe7, 0x9b, 0xeb, 0x6e, 0xe5, 0xc5, 0x75, 0xb7, 0xf2, 0xf3, 0x75, 0xb7, 0xf2, 0x65, 0x4d,
+	0x0d, 0xfb, 0x27, 0xcb, 0x6a, 0xb6, 0x7f, 0xe7, 0xcf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x8c, 0x25,
+	0x31, 0x18, 0x0f, 0x0c, 0x00, 0x00,
 }
 
-func (m *RawChange) Marshal() (dAtA []byte, err error) {
+func (m *RawACLRecord) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1121,12 +1411,12 @@ func (m *RawChange) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *RawChange) MarshalTo(dAtA []byte) (int, error) {
+func (m *RawACLRecord) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *RawChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *RawACLRecord) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1155,7 +1445,7 @@ func (m *RawChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChange) Marshal() (dAtA []byte, err error) {
+func (m *ACLContentValue) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1165,96 +1455,12 @@ func (m *ACLChange) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChange) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLContentValue) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Identity) > 0 {
-		i -= len(m.Identity)
-		copy(dAtA[i:], m.Identity)
-		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Identity)))
-		i--
-		dAtA[i] = 0x42
-	}
-	if m.Timestamp != 0 {
-		i = encodeVarintAclchanges(dAtA, i, uint64(m.Timestamp))
-		i--
-		dAtA[i] = 0x38
-	}
-	if m.CurrentReadKeyHash != 0 {
-		i = encodeVarintAclchanges(dAtA, i, uint64(m.CurrentReadKeyHash))
-		i--
-		dAtA[i] = 0x30
-	}
-	if len(m.ChangesData) > 0 {
-		i -= len(m.ChangesData)
-		copy(dAtA[i:], m.ChangesData)
-		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.ChangesData)))
-		i--
-		dAtA[i] = 0x2a
-	}
-	if m.AclData != nil {
-		{
-			size, err := m.AclData.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintAclchanges(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.SnapshotBaseId) > 0 {
-		i -= len(m.SnapshotBaseId)
-		copy(dAtA[i:], m.SnapshotBaseId)
-		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.SnapshotBaseId)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.AclHeadIds) > 0 {
-		for iNdEx := len(m.AclHeadIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.AclHeadIds[iNdEx])
-			copy(dAtA[i:], m.AclHeadIds[iNdEx])
-			i = encodeVarintAclchanges(dAtA, i, uint64(len(m.AclHeadIds[iNdEx])))
-			i--
-			dAtA[i] = 0x12
-		}
-	}
-	if len(m.TreeHeadIds) > 0 {
-		for iNdEx := len(m.TreeHeadIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.TreeHeadIds[iNdEx])
-			copy(dAtA[i:], m.TreeHeadIds[iNdEx])
-			i = encodeVarintAclchanges(dAtA, i, uint64(len(m.TreeHeadIds[iNdEx])))
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ACLChange_ACLContentValue) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ACLChange_ACLContentValue) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ACLChange_ACLContentValue) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLContentValue) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1271,12 +1477,12 @@ func (m *ACLChange_ACLContentValue) MarshalToSizedBuffer(dAtA []byte) (int, erro
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChange_ACLContentValue_UserAdd) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserAdd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_ACLContentValue_UserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserAdd != nil {
 		{
@@ -1292,12 +1498,12 @@ func (m *ACLChange_ACLContentValue_UserAdd) MarshalToSizedBuffer(dAtA []byte) (i
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLChange_ACLContentValue_UserRemove) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserRemove) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_ACLContentValue_UserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserRemove != nil {
 		{
@@ -1313,12 +1519,12 @@ func (m *ACLChange_ACLContentValue_UserRemove) MarshalToSizedBuffer(dAtA []byte)
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLChange_ACLContentValue_UserPermissionChange) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserPermissionChange) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_ACLContentValue_UserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserPermissionChange != nil {
 		{
@@ -1334,12 +1540,12 @@ func (m *ACLChange_ACLContentValue_UserPermissionChange) MarshalToSizedBuffer(dA
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLChange_ACLContentValue_UserInvite) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserInvite) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_ACLContentValue_UserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserInvite != nil {
 		{
@@ -1355,12 +1561,12 @@ func (m *ACLChange_ACLContentValue_UserInvite) MarshalToSizedBuffer(dAtA []byte)
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLChange_ACLContentValue_UserJoin) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserJoin) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_ACLContentValue_UserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserJoin != nil {
 		{
@@ -1376,12 +1582,12 @@ func (m *ACLChange_ACLContentValue_UserJoin) MarshalToSizedBuffer(dAtA []byte) (
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLChange_ACLContentValue_UserConfirm) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserConfirm) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_ACLContentValue_UserConfirm) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserConfirm) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserConfirm != nil {
 		{
@@ -1397,7 +1603,7 @@ func (m *ACLChange_ACLContentValue_UserConfirm) MarshalToSizedBuffer(dAtA []byte
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLChange_ACLData) Marshal() (dAtA []byte, err error) {
+func (m *ACLData) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1407,12 +1613,12 @@ func (m *ACLChange_ACLData) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChange_ACLData) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLData) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_ACLData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1428,25 +1634,13 @@ func (m *ACLChange_ACLData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 				i = encodeVarintAclchanges(dAtA, i, uint64(size))
 			}
 			i--
-			dAtA[i] = 0x12
+			dAtA[i] = 0xa
 		}
-	}
-	if m.AclSnapshot != nil {
-		{
-			size, err := m.AclSnapshot.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintAclchanges(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChange_ACLSnapshot) Marshal() (dAtA []byte, err error) {
+func (m *ACLState) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1456,47 +1650,12 @@ func (m *ACLChange_ACLSnapshot) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChange_ACLSnapshot) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLState) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_ACLSnapshot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.AclState != nil {
-		{
-			size, err := m.AclState.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintAclchanges(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ACLChange_ACLState) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ACLChange_ACLState) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ACLChange_ACLState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1542,27 +1701,27 @@ func (m *ACLChange_ACLState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		}
 	}
 	if len(m.ReadKeyHashes) > 0 {
-		dAtA12 := make([]byte, len(m.ReadKeyHashes)*10)
-		var j11 int
+		dAtA9 := make([]byte, len(m.ReadKeyHashes)*10)
+		var j8 int
 		for _, num := range m.ReadKeyHashes {
 			for num >= 1<<7 {
-				dAtA12[j11] = uint8(uint64(num)&0x7f | 0x80)
+				dAtA9[j8] = uint8(uint64(num)&0x7f | 0x80)
 				num >>= 7
-				j11++
+				j8++
 			}
-			dAtA12[j11] = uint8(num)
-			j11++
+			dAtA9[j8] = uint8(num)
+			j8++
 		}
-		i -= j11
-		copy(dAtA[i:], dAtA12[:j11])
-		i = encodeVarintAclchanges(dAtA, i, uint64(j11))
+		i -= j8
+		copy(dAtA[i:], dAtA9[:j8])
+		i = encodeVarintAclchanges(dAtA, i, uint64(j8))
 		i--
 		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChange_UserState) Marshal() (dAtA []byte, err error) {
+func (m *ACLUserState) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1572,12 +1731,12 @@ func (m *ACLChange_UserState) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChange_UserState) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLUserState) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_UserState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLUserState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1623,7 +1782,7 @@ func (m *ACLChange_UserState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChange_UserAdd) Marshal() (dAtA []byte, err error) {
+func (m *ACLUserAdd) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1633,12 +1792,12 @@ func (m *ACLChange_UserAdd) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChange_UserAdd) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLUserAdd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_UserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLUserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1674,7 +1833,7 @@ func (m *ACLChange_UserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChange_UserConfirm) Marshal() (dAtA []byte, err error) {
+func (m *ACLUserConfirm) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1684,12 +1843,12 @@ func (m *ACLChange_UserConfirm) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChange_UserConfirm) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLUserConfirm) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_UserConfirm) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLUserConfirm) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1711,7 +1870,7 @@ func (m *ACLChange_UserConfirm) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChange_UserInvite) Marshal() (dAtA []byte, err error) {
+func (m *ACLUserInvite) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1721,12 +1880,12 @@ func (m *ACLChange_UserInvite) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChange_UserInvite) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLUserInvite) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_UserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLUserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1769,7 +1928,7 @@ func (m *ACLChange_UserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChange_UserJoin) Marshal() (dAtA []byte, err error) {
+func (m *ACLUserJoin) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1779,12 +1938,12 @@ func (m *ACLChange_UserJoin) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChange_UserJoin) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLUserJoin) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_UserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLUserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1829,7 +1988,7 @@ func (m *ACLChange_UserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChange_UserRemove) Marshal() (dAtA []byte, err error) {
+func (m *ACLUserRemove) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1839,12 +1998,12 @@ func (m *ACLChange_UserRemove) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChange_UserRemove) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLUserRemove) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_UserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLUserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1873,7 +2032,7 @@ func (m *ACLChange_UserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChange_ReadKeyReplace) Marshal() (dAtA []byte, err error) {
+func (m *ACLReadKeyReplace) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1883,12 +2042,12 @@ func (m *ACLChange_ReadKeyReplace) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChange_ReadKeyReplace) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLReadKeyReplace) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_ReadKeyReplace) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLReadKeyReplace) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1917,7 +2076,7 @@ func (m *ACLChange_ReadKeyReplace) MarshalToSizedBuffer(dAtA []byte) (int, error
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLChange_UserPermissionChange) Marshal() (dAtA []byte, err error) {
+func (m *ACLUserPermissionChange) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1927,12 +2086,12 @@ func (m *ACLChange_UserPermissionChange) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ACLChange_UserPermissionChange) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLUserPermissionChange) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLChange_UserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLUserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1952,6 +2111,307 @@ func (m *ACLChange_UserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int,
 	return len(dAtA) - i, nil
 }
 
+func (m *ACLRecord) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ACLRecord) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ACLRecord) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Timestamp != 0 {
+		i = encodeVarintAclchanges(dAtA, i, uint64(m.Timestamp))
+		i--
+		dAtA[i] = 0x28
+	}
+	if m.CurrentReadKeyHash != 0 {
+		i = encodeVarintAclchanges(dAtA, i, uint64(m.CurrentReadKeyHash))
+		i--
+		dAtA[i] = 0x20
+	}
+	if len(m.Data) > 0 {
+		i -= len(m.Data)
+		copy(dAtA[i:], m.Data)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Data)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Identity)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.PrevId) > 0 {
+		i -= len(m.PrevId)
+		copy(dAtA[i:], m.PrevId)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.PrevId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ACLHeader) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ACLHeader) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ACLHeader) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Identity)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.FirstId) > 0 {
+		i -= len(m.FirstId)
+		copy(dAtA[i:], m.FirstId)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.FirstId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *RawTreeChange) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *RawTreeChange) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *RawTreeChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Signature) > 0 {
+		i -= len(m.Signature)
+		copy(dAtA[i:], m.Signature)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Signature)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Payload) > 0 {
+		i -= len(m.Payload)
+		copy(dAtA[i:], m.Payload)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Payload)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *RawTreeChangeWithId) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *RawTreeChangeWithId) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *RawTreeChangeWithId) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Id) > 0 {
+		i -= len(m.Id)
+		copy(dAtA[i:], m.Id)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Id)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.RawChange) > 0 {
+		i -= len(m.RawChange)
+		copy(dAtA[i:], m.RawChange)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.RawChange)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *TreeChange) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *TreeChange) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TreeChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.IsSnapshot {
+		i--
+		if m.IsSnapshot {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x40
+	}
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Identity)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if m.Timestamp != 0 {
+		i = encodeVarintAclchanges(dAtA, i, uint64(m.Timestamp))
+		i--
+		dAtA[i] = 0x30
+	}
+	if m.CurrentReadKeyHash != 0 {
+		i = encodeVarintAclchanges(dAtA, i, uint64(m.CurrentReadKeyHash))
+		i--
+		dAtA[i] = 0x28
+	}
+	if len(m.ChangesData) > 0 {
+		i -= len(m.ChangesData)
+		copy(dAtA[i:], m.ChangesData)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.ChangesData)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.SnapshotBaseId) > 0 {
+		i -= len(m.SnapshotBaseId)
+		copy(dAtA[i:], m.SnapshotBaseId)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.SnapshotBaseId)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.AclHeadId) > 0 {
+		i -= len(m.AclHeadId)
+		copy(dAtA[i:], m.AclHeadId)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.AclHeadId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.TreeHeadIds) > 0 {
+		for iNdEx := len(m.TreeHeadIds) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.TreeHeadIds[iNdEx])
+			copy(dAtA[i:], m.TreeHeadIds[iNdEx])
+			i = encodeVarintAclchanges(dAtA, i, uint64(len(m.TreeHeadIds[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *TreeHeader) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *TreeHeader) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TreeHeader) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Data) > 0 {
+		i -= len(m.Data)
+		copy(dAtA[i:], m.Data)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Data)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.Identity)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.TreeHeaderType != 0 {
+		i = encodeVarintAclchanges(dAtA, i, uint64(m.TreeHeaderType))
+		i--
+		dAtA[i] = 0x18
+	}
+	if len(m.AclId) > 0 {
+		i -= len(m.AclId)
+		copy(dAtA[i:], m.AclId)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.AclId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.FirstId) > 0 {
+		i -= len(m.FirstId)
+		copy(dAtA[i:], m.FirstId)
+		i = encodeVarintAclchanges(dAtA, i, uint64(len(m.FirstId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintAclchanges(dAtA []byte, offset int, v uint64) int {
 	offset -= sovAclchanges(v)
 	base := offset
@@ -1963,7 +2423,7 @@ func encodeVarintAclchanges(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *RawChange) Size() (n int) {
+func (m *RawACLRecord) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1984,50 +2444,7 @@ func (m *RawChange) Size() (n int) {
 	return n
 }
 
-func (m *ACLChange) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.TreeHeadIds) > 0 {
-		for _, s := range m.TreeHeadIds {
-			l = len(s)
-			n += 1 + l + sovAclchanges(uint64(l))
-		}
-	}
-	if len(m.AclHeadIds) > 0 {
-		for _, s := range m.AclHeadIds {
-			l = len(s)
-			n += 1 + l + sovAclchanges(uint64(l))
-		}
-	}
-	l = len(m.SnapshotBaseId)
-	if l > 0 {
-		n += 1 + l + sovAclchanges(uint64(l))
-	}
-	if m.AclData != nil {
-		l = m.AclData.Size()
-		n += 1 + l + sovAclchanges(uint64(l))
-	}
-	l = len(m.ChangesData)
-	if l > 0 {
-		n += 1 + l + sovAclchanges(uint64(l))
-	}
-	if m.CurrentReadKeyHash != 0 {
-		n += 1 + sovAclchanges(uint64(m.CurrentReadKeyHash))
-	}
-	if m.Timestamp != 0 {
-		n += 1 + sovAclchanges(uint64(m.Timestamp))
-	}
-	l = len(m.Identity)
-	if l > 0 {
-		n += 1 + l + sovAclchanges(uint64(l))
-	}
-	return n
-}
-
-func (m *ACLChange_ACLContentValue) Size() (n int) {
+func (m *ACLContentValue) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2039,7 +2456,7 @@ func (m *ACLChange_ACLContentValue) Size() (n int) {
 	return n
 }
 
-func (m *ACLChange_ACLContentValue_UserAdd) Size() (n int) {
+func (m *ACLContentValue_UserAdd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2051,7 +2468,7 @@ func (m *ACLChange_ACLContentValue_UserAdd) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLChange_ACLContentValue_UserRemove) Size() (n int) {
+func (m *ACLContentValue_UserRemove) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2063,7 +2480,7 @@ func (m *ACLChange_ACLContentValue_UserRemove) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLChange_ACLContentValue_UserPermissionChange) Size() (n int) {
+func (m *ACLContentValue_UserPermissionChange) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2075,7 +2492,7 @@ func (m *ACLChange_ACLContentValue_UserPermissionChange) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLChange_ACLContentValue_UserInvite) Size() (n int) {
+func (m *ACLContentValue_UserInvite) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2087,7 +2504,7 @@ func (m *ACLChange_ACLContentValue_UserInvite) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLChange_ACLContentValue_UserJoin) Size() (n int) {
+func (m *ACLContentValue_UserJoin) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2099,7 +2516,7 @@ func (m *ACLChange_ACLContentValue_UserJoin) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLChange_ACLContentValue_UserConfirm) Size() (n int) {
+func (m *ACLContentValue_UserConfirm) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2111,16 +2528,12 @@ func (m *ACLChange_ACLContentValue_UserConfirm) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLChange_ACLData) Size() (n int) {
+func (m *ACLData) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.AclSnapshot != nil {
-		l = m.AclSnapshot.Size()
-		n += 1 + l + sovAclchanges(uint64(l))
-	}
 	if len(m.AclContent) > 0 {
 		for _, e := range m.AclContent {
 			l = e.Size()
@@ -2130,20 +2543,7 @@ func (m *ACLChange_ACLData) Size() (n int) {
 	return n
 }
 
-func (m *ACLChange_ACLSnapshot) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.AclState != nil {
-		l = m.AclState.Size()
-		n += 1 + l + sovAclchanges(uint64(l))
-	}
-	return n
-}
-
-func (m *ACLChange_ACLState) Size() (n int) {
+func (m *ACLState) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2178,7 +2578,7 @@ func (m *ACLChange_ACLState) Size() (n int) {
 	return n
 }
 
-func (m *ACLChange_UserState) Size() (n int) {
+func (m *ACLUserState) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2207,7 +2607,7 @@ func (m *ACLChange_UserState) Size() (n int) {
 	return n
 }
 
-func (m *ACLChange_UserAdd) Size() (n int) {
+func (m *ACLUserAdd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2233,7 +2633,7 @@ func (m *ACLChange_UserAdd) Size() (n int) {
 	return n
 }
 
-func (m *ACLChange_UserConfirm) Size() (n int) {
+func (m *ACLUserConfirm) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2250,7 +2650,7 @@ func (m *ACLChange_UserConfirm) Size() (n int) {
 	return n
 }
 
-func (m *ACLChange_UserInvite) Size() (n int) {
+func (m *ACLUserInvite) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2280,7 +2680,7 @@ func (m *ACLChange_UserInvite) Size() (n int) {
 	return n
 }
 
-func (m *ACLChange_UserJoin) Size() (n int) {
+func (m *ACLUserJoin) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2311,7 +2711,7 @@ func (m *ACLChange_UserJoin) Size() (n int) {
 	return n
 }
 
-func (m *ACLChange_UserRemove) Size() (n int) {
+func (m *ACLUserRemove) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2330,7 +2730,7 @@ func (m *ACLChange_UserRemove) Size() (n int) {
 	return n
 }
 
-func (m *ACLChange_ReadKeyReplace) Size() (n int) {
+func (m *ACLReadKeyReplace) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2351,7 +2751,7 @@ func (m *ACLChange_ReadKeyReplace) Size() (n int) {
 	return n
 }
 
-func (m *ACLChange_UserPermissionChange) Size() (n int) {
+func (m *ACLUserPermissionChange) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2367,13 +2767,159 @@ func (m *ACLChange_UserPermissionChange) Size() (n int) {
 	return n
 }
 
+func (m *ACLRecord) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.PrevId)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.Identity)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.Data)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	if m.CurrentReadKeyHash != 0 {
+		n += 1 + sovAclchanges(uint64(m.CurrentReadKeyHash))
+	}
+	if m.Timestamp != 0 {
+		n += 1 + sovAclchanges(uint64(m.Timestamp))
+	}
+	return n
+}
+
+func (m *ACLHeader) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.FirstId)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.Identity)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	return n
+}
+
+func (m *RawTreeChange) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Payload)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.Signature)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	return n
+}
+
+func (m *RawTreeChangeWithId) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.RawChange)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.Id)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	return n
+}
+
+func (m *TreeChange) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.TreeHeadIds) > 0 {
+		for _, s := range m.TreeHeadIds {
+			l = len(s)
+			n += 1 + l + sovAclchanges(uint64(l))
+		}
+	}
+	l = len(m.AclHeadId)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.SnapshotBaseId)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.ChangesData)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	if m.CurrentReadKeyHash != 0 {
+		n += 1 + sovAclchanges(uint64(m.CurrentReadKeyHash))
+	}
+	if m.Timestamp != 0 {
+		n += 1 + sovAclchanges(uint64(m.Timestamp))
+	}
+	l = len(m.Identity)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	if m.IsSnapshot {
+		n += 2
+	}
+	return n
+}
+
+func (m *TreeHeader) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.FirstId)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.AclId)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	if m.TreeHeaderType != 0 {
+		n += 1 + sovAclchanges(uint64(m.TreeHeaderType))
+	}
+	l = len(m.Identity)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	l = len(m.Data)
+	if l > 0 {
+		n += 1 + l + sovAclchanges(uint64(l))
+	}
+	return n
+}
+
 func sovAclchanges(x uint64) (n int) {
 	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozAclchanges(x uint64) (n int) {
 	return sovAclchanges(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *RawChange) Unmarshal(dAtA []byte) error {
+func (m *RawACLRecord) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2396,10 +2942,10 @@ func (m *RawChange) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: RawChange: wiretype end group for non-group")
+			return fmt.Errorf("proto: RawACLRecord: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: RawChange: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: RawACLRecord: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2523,293 +3069,7 @@ func (m *RawChange) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChange) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAclchanges
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ACLChange: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ACLChange: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TreeHeadIds", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclchanges
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.TreeHeadIds = append(m.TreeHeadIds, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AclHeadIds", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclchanges
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.AclHeadIds = append(m.AclHeadIds, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SnapshotBaseId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclchanges
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.SnapshotBaseId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AclData", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclchanges
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.AclData == nil {
-				m.AclData = &ACLChange_ACLData{}
-			}
-			if err := m.AclData.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ChangesData", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclchanges
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ChangesData = append(m.ChangesData[:0], dAtA[iNdEx:postIndex]...)
-			if m.ChangesData == nil {
-				m.ChangesData = []byte{}
-			}
-			iNdEx = postIndex
-		case 6:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CurrentReadKeyHash", wireType)
-			}
-			m.CurrentReadKeyHash = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclchanges
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.CurrentReadKeyHash |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 7:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
-			}
-			m.Timestamp = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclchanges
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Timestamp |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 8:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclchanges
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Identity = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAclchanges(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ACLChange_ACLContentValue) Unmarshal(dAtA []byte) error {
+func (m *ACLContentValue) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2867,11 +3127,11 @@ func (m *ACLChange_ACLContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ACLChange_UserAdd{}
+			v := &ACLUserAdd{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLChange_ACLContentValue_UserAdd{v}
+			m.Value = &ACLContentValue_UserAdd{v}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -2902,11 +3162,11 @@ func (m *ACLChange_ACLContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ACLChange_UserRemove{}
+			v := &ACLUserRemove{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLChange_ACLContentValue_UserRemove{v}
+			m.Value = &ACLContentValue_UserRemove{v}
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -2937,11 +3197,11 @@ func (m *ACLChange_ACLContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ACLChange_UserPermissionChange{}
+			v := &ACLUserPermissionChange{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLChange_ACLContentValue_UserPermissionChange{v}
+			m.Value = &ACLContentValue_UserPermissionChange{v}
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
@@ -2972,11 +3232,11 @@ func (m *ACLChange_ACLContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ACLChange_UserInvite{}
+			v := &ACLUserInvite{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLChange_ACLContentValue_UserInvite{v}
+			m.Value = &ACLContentValue_UserInvite{v}
 			iNdEx = postIndex
 		case 5:
 			if wireType != 2 {
@@ -3007,11 +3267,11 @@ func (m *ACLChange_ACLContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ACLChange_UserJoin{}
+			v := &ACLUserJoin{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLChange_ACLContentValue_UserJoin{v}
+			m.Value = &ACLContentValue_UserJoin{v}
 			iNdEx = postIndex
 		case 6:
 			if wireType != 2 {
@@ -3042,11 +3302,11 @@ func (m *ACLChange_ACLContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ACLChange_UserConfirm{}
+			v := &ACLUserConfirm{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLChange_ACLContentValue_UserConfirm{v}
+			m.Value = &ACLContentValue_UserConfirm{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -3069,7 +3329,7 @@ func (m *ACLChange_ACLContentValue) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChange_ACLData) Unmarshal(dAtA []byte) error {
+func (m *ACLData) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3100,42 +3360,6 @@ func (m *ACLChange_ACLData) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AclSnapshot", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclchanges
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.AclSnapshot == nil {
-				m.AclSnapshot = &ACLChange_ACLSnapshot{}
-			}
-			if err := m.AclSnapshot.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field AclContent", wireType)
 			}
 			var msglen int
@@ -3163,7 +3387,7 @@ func (m *ACLChange_ACLData) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.AclContent = append(m.AclContent, &ACLChange_ACLContentValue{})
+			m.AclContent = append(m.AclContent, &ACLContentValue{})
 			if err := m.AclContent[len(m.AclContent)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -3189,93 +3413,7 @@ func (m *ACLChange_ACLData) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChange_ACLSnapshot) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAclchanges
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ACLSnapshot: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ACLSnapshot: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AclState", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclchanges
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.AclState == nil {
-				m.AclState = &ACLChange_ACLState{}
-			}
-			if err := m.AclState.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAclchanges(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthAclchanges
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ACLChange_ACLState) Unmarshal(dAtA []byte) error {
+func (m *ACLState) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3409,7 +3547,7 @@ func (m *ACLChange_ACLState) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.UserStates = append(m.UserStates, &ACLChange_UserState{})
+			m.UserStates = append(m.UserStates, &ACLUserState{})
 			if err := m.UserStates[len(m.UserStates)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -3444,10 +3582,10 @@ func (m *ACLChange_ACLState) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Invites == nil {
-				m.Invites = make(map[string]*ACLChange_UserInvite)
+				m.Invites = make(map[string]*ACLUserInvite)
 			}
 			var mapkey string
-			var mapvalue *ACLChange_UserInvite
+			var mapvalue *ACLUserInvite
 			for iNdEx < postIndex {
 				entryPreIndex := iNdEx
 				var wire uint64
@@ -3521,7 +3659,7 @@ func (m *ACLChange_ACLState) Unmarshal(dAtA []byte) error {
 					if postmsgIndex > l {
 						return io.ErrUnexpectedEOF
 					}
-					mapvalue = &ACLChange_UserInvite{}
+					mapvalue = &ACLUserInvite{}
 					if err := mapvalue.Unmarshal(dAtA[iNdEx:postmsgIndex]); err != nil {
 						return err
 					}
@@ -3564,7 +3702,7 @@ func (m *ACLChange_ACLState) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChange_UserState) Unmarshal(dAtA []byte) error {
+func (m *ACLUserState) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3587,17 +3725,17 @@ func (m *ACLChange_UserState) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: UserState: wiretype end group for non-group")
+			return fmt.Errorf("proto: ACLUserState: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: UserState: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ACLUserState: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var stringLen uint64
+			var byteLen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -3607,23 +3745,25 @@ func (m *ACLChange_UserState) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if byteLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + byteLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = string(dAtA[iNdEx:postIndex])
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -3705,7 +3845,7 @@ func (m *ACLChange_UserState) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Permissions |= ACLChange_UserPermissions(b&0x7F) << shift
+				m.Permissions |= ACLUserPermissions(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -3751,7 +3891,7 @@ func (m *ACLChange_UserState) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChange_UserAdd) Unmarshal(dAtA []byte) error {
+func (m *ACLUserAdd) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3774,17 +3914,17 @@ func (m *ACLChange_UserAdd) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: UserAdd: wiretype end group for non-group")
+			return fmt.Errorf("proto: ACLUserAdd: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: UserAdd: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ACLUserAdd: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var stringLen uint64
+			var byteLen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -3794,23 +3934,25 @@ func (m *ACLChange_UserAdd) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if byteLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + byteLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = string(dAtA[iNdEx:postIndex])
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -3892,7 +4034,7 @@ func (m *ACLChange_UserAdd) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Permissions |= ACLChange_UserPermissions(b&0x7F) << shift
+				m.Permissions |= ACLUserPermissions(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -3918,7 +4060,7 @@ func (m *ACLChange_UserAdd) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChange_UserConfirm) Unmarshal(dAtA []byte) error {
+func (m *ACLUserConfirm) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3941,17 +4083,17 @@ func (m *ACLChange_UserConfirm) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: UserConfirm: wiretype end group for non-group")
+			return fmt.Errorf("proto: ACLUserConfirm: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: UserConfirm: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ACLUserConfirm: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var stringLen uint64
+			var byteLen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -3961,23 +4103,25 @@ func (m *ACLChange_UserConfirm) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if byteLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + byteLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = string(dAtA[iNdEx:postIndex])
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -4032,7 +4176,7 @@ func (m *ACLChange_UserConfirm) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChange_UserInvite) Unmarshal(dAtA []byte) error {
+func (m *ACLUserInvite) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4055,10 +4199,10 @@ func (m *ACLChange_UserInvite) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: UserInvite: wiretype end group for non-group")
+			return fmt.Errorf("proto: ACLUserInvite: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: UserInvite: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ACLUserInvite: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -4175,7 +4319,7 @@ func (m *ACLChange_UserInvite) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Permissions |= ACLChange_UserPermissions(b&0x7F) << shift
+				m.Permissions |= ACLUserPermissions(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -4233,7 +4377,7 @@ func (m *ACLChange_UserInvite) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChange_UserJoin) Unmarshal(dAtA []byte) error {
+func (m *ACLUserJoin) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4256,17 +4400,17 @@ func (m *ACLChange_UserJoin) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: UserJoin: wiretype end group for non-group")
+			return fmt.Errorf("proto: ACLUserJoin: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: UserJoin: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ACLUserJoin: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var stringLen uint64
+			var byteLen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -4276,23 +4420,25 @@ func (m *ACLChange_UserJoin) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if byteLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + byteLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = string(dAtA[iNdEx:postIndex])
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -4447,7 +4593,7 @@ func (m *ACLChange_UserJoin) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChange_UserRemove) Unmarshal(dAtA []byte) error {
+func (m *ACLUserRemove) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4470,17 +4616,17 @@ func (m *ACLChange_UserRemove) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: UserRemove: wiretype end group for non-group")
+			return fmt.Errorf("proto: ACLUserRemove: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: UserRemove: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ACLUserRemove: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var stringLen uint64
+			var byteLen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -4490,23 +4636,25 @@ func (m *ACLChange_UserRemove) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if byteLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + byteLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = string(dAtA[iNdEx:postIndex])
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -4537,7 +4685,7 @@ func (m *ACLChange_UserRemove) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ReadKeyReplaces = append(m.ReadKeyReplaces, &ACLChange_ReadKeyReplace{})
+			m.ReadKeyReplaces = append(m.ReadKeyReplaces, &ACLReadKeyReplace{})
 			if err := m.ReadKeyReplaces[len(m.ReadKeyReplaces)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -4563,7 +4711,7 @@ func (m *ACLChange_UserRemove) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChange_ReadKeyReplace) Unmarshal(dAtA []byte) error {
+func (m *ACLReadKeyReplace) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4586,17 +4734,17 @@ func (m *ACLChange_ReadKeyReplace) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ReadKeyReplace: wiretype end group for non-group")
+			return fmt.Errorf("proto: ACLReadKeyReplace: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ReadKeyReplace: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ACLReadKeyReplace: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var stringLen uint64
+			var byteLen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -4606,23 +4754,25 @@ func (m *ACLChange_ReadKeyReplace) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if byteLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + byteLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = string(dAtA[iNdEx:postIndex])
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -4713,7 +4863,7 @@ func (m *ACLChange_ReadKeyReplace) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ACLChange_UserPermissionChange) Unmarshal(dAtA []byte) error {
+func (m *ACLUserPermissionChange) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4736,15 +4886,118 @@ func (m *ACLChange_UserPermissionChange) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: UserPermissionChange: wiretype end group for non-group")
+			return fmt.Errorf("proto: ACLUserPermissionChange: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: UserPermissionChange: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ACLUserPermissionChange: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permissions", wireType)
+			}
+			m.Permissions = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Permissions |= ACLUserPermissions(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclchanges(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ACLRecord) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclchanges
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ACLRecord: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ACLRecord: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PrevId", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -4772,13 +5025,13 @@ func (m *ACLChange_UserPermissionChange) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = string(dAtA[iNdEx:postIndex])
+			m.PrevId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Permissions", wireType)
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			m.Permissions = 0
+			var byteLen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -4788,11 +5041,921 @@ func (m *ACLChange_UserPermissionChange) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Permissions |= ACLChange_UserPermissions(b&0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Data = append(m.Data[:0], dAtA[iNdEx:postIndex]...)
+			if m.Data == nil {
+				m.Data = []byte{}
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CurrentReadKeyHash", wireType)
+			}
+			m.CurrentReadKeyHash = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.CurrentReadKeyHash |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
+			}
+			m.Timestamp = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Timestamp |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclchanges(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ACLHeader) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclchanges
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ACLHeader: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ACLHeader: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FirstId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.FirstId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclchanges(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *RawTreeChange) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclchanges
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: RawTreeChange: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: RawTreeChange: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Payload", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Payload = append(m.Payload[:0], dAtA[iNdEx:postIndex]...)
+			if m.Payload == nil {
+				m.Payload = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclchanges(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *RawTreeChangeWithId) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclchanges
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: RawTreeChangeWithId: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: RawTreeChangeWithId: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RawChange", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RawChange = append(m.RawChange[:0], dAtA[iNdEx:postIndex]...)
+			if m.RawChange == nil {
+				m.RawChange = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Id = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclchanges(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *TreeChange) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclchanges
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: TreeChange: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: TreeChange: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TreeHeadIds", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.TreeHeadIds = append(m.TreeHeadIds, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AclHeadId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AclHeadId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SnapshotBaseId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SnapshotBaseId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChangesData", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ChangesData = append(m.ChangesData[:0], dAtA[iNdEx:postIndex]...)
+			if m.ChangesData == nil {
+				m.ChangesData = []byte{}
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CurrentReadKeyHash", wireType)
+			}
+			m.CurrentReadKeyHash = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.CurrentReadKeyHash |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
+			}
+			m.Timestamp = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Timestamp |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
+			iNdEx = postIndex
+		case 8:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsSnapshot", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsSnapshot = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclchanges(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *TreeHeader) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclchanges
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: TreeHeader: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: TreeHeader: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FirstId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.FirstId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AclId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AclId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TreeHeaderType", wireType)
+			}
+			m.TreeHeaderType = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TreeHeaderType |= TreeHeaderType(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclchanges
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclchanges
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Data = append(m.Data[:0], dAtA[iNdEx:postIndex]...)
+			if m.Data == nil {
+				m.Data = []byte{}
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAclchanges(dAtA[iNdEx:])
