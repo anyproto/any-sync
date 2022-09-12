@@ -7,6 +7,7 @@ import (
 
 type TreeStorage interface {
 	Storage
+	Header() (*aclpb.TreeHeader, error)
 	Heads() ([]string, error)
 	SetHeads(heads []string) error
 

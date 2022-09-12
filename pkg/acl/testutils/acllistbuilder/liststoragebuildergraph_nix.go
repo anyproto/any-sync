@@ -37,7 +37,7 @@ func (t *ACLListStorageBuilder) Graph() (string, error) {
 		style := "solid"
 
 		var chSymbs []string
-		aclData := &aclpb.ACLChangeACLData{}
+		aclData := &aclpb.ACLData{}
 		err := proto.Unmarshal(r.GetData(), aclData)
 		if err != nil {
 			return err

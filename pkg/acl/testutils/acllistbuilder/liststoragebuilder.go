@@ -23,7 +23,7 @@ type ACLListStorageBuilder struct {
 	rawRecords []*aclpb.RawACLRecord
 	indexes    map[string]int
 	keychain   *Keychain
-	header     *aclpb.Header
+	header     *aclpb.ACLHeader
 	id         string
 }
 
@@ -64,7 +64,7 @@ func (t *ACLListStorageBuilder) createRaw(rec *aclpb.ACLRecord) *aclpb.RawACLRec
 		panic("should be able to marshal final acl message!")
 	}
 
-	signature, err := t.keychain.SigningKeysByIdentity[rec.Identity].Sign(aclMarshaled)
+	signature, err := t.keychain.SigningKeysByIdentity[string(rec.Identity)].Sign(aclMarshaled)
 	if err != nil {
 		panic("should be able to sign final acl message!")
 	}
@@ -86,7 +86,7 @@ func (t *ACLListStorageBuilder) Head() (*aclpb.RawACLRecord, error) {
 	return t.getRecord(len(t.records) - 1), nil
 }
 
-func (t *ACLListStorageBuilder) Header() (*aclpb.Header, error) {
+func (t *ACLListStorageBuilder) Header() (*aclpb.ACLHeader, error) {
 	return t.header, nil
 }
 
@@ -134,26 +134,26 @@ func (t *ACLListStorageBuilder) Parse(tree *YMLList) {
 
 func (t *ACLListStorageBuilder) parseRecord(rec *Record, prevId string) *aclpb.ACLRecord {
 	k := t.keychain.GetKey(rec.ReadKey).(*SymKey)
-	var aclChangeContents []*aclpb.ACLChangeACLContentValue
+	var aclChangeContents []*aclpb.ACLContentValue
 	for _, ch := range rec.AclChanges {
 		aclChangeContent := t.parseACLChange(ch)
 		aclChangeContents = append(aclChangeContents, aclChangeContent)
 	}
-	data := &aclpb.ACLChangeACLData{
+	data := &aclpb.ACLData{
 		AclContent: aclChangeContents,
 	}
 	bytes, _ := data.Marshal()
 
 	return &aclpb.ACLRecord{
 		PrevId:             prevId,
-		Identity:           t.keychain.GetIdentity(rec.Identity),
+		Identity:           []byte(t.keychain.GetIdentity(rec.Identity)),
 		Data:               bytes,
 		CurrentReadKeyHash: k.Hash,
 		Timestamp:          time.Now().Unix(),
 	}
 }
 
-func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACLChangeACLContentValue) {
+func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACLContentValue) {
 	switch {
 	case ch.UserAdd != nil:
 		add := ch.UserAdd
@@ -161,10 +161,10 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 		encKey := t.keychain.GetKey(add.EncryptionKey).(encryptionkey.PrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 
-		convCh = &aclpb.ACLChangeACLContentValue{
-			Value: &aclpb.ACLChangeACLContentValueValueOfUserAdd{
-				UserAdd: &aclpb.ACLUserPermissionsAdd{
-					Identity:          t.keychain.GetIdentity(add.Identity),
+		convCh = &aclpb.ACLContentValue{
+			Value: &aclpb.ACLContentValue_UserAdd{
+				UserAdd: &aclpb.ACLUserAdd{
+					Identity:          []byte(t.keychain.GetIdentity(add.Identity)),
 					EncryptionKey:     rawKey,
 					EncryptedReadKeys: t.encryptReadKeys(add.EncryptedReadKeys, encKey),
 					Permissions:       t.convertPermission(add.Permission),
@@ -185,10 +185,10 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 			panic(err)
 		}
 
-		convCh = &aclpb.ACLChangeACLContentValue{
-			Value: &aclpb.ACLChangeACLContentValueValueOfUserJoin{
-				UserJoin: &aclpb.ACLUserPermissionsJoin{
-					Identity:          t.keychain.GetIdentity(join.Identity),
+		convCh = &aclpb.ACLContentValue{
+			Value: &aclpb.ACLContentValue_UserJoin{
+				UserJoin: &aclpb.ACLUserJoin{
+					Identity:          []byte(t.keychain.GetIdentity(join.Identity)),
 					EncryptionKey:     rawKey,
 					AcceptSignature:   signature,
 					UserInviteId:      join.InviteId,
@@ -203,9 +203,9 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 			GetKey(invite.EncryptionKey).(encryptionkey.PrivKey)
 		rawEncKey, _ := encKey.GetPublic().Raw()
 
-		convCh = &aclpb.ACLChangeACLContentValue{
-			Value: &aclpb.ACLChangeACLContentValueValueOfUserInvite{
-				UserInvite: &aclpb.ACLUserPermissionsInvite{
+		convCh = &aclpb.ACLContentValue{
+			Value: &aclpb.ACLContentValue_UserInvite{
+				UserInvite: &aclpb.ACLUserInvite{
 					AcceptPublicKey:   rawAcceptKey,
 					EncryptPublicKey:  rawEncKey,
 					EncryptedReadKeys: t.encryptReadKeys(invite.EncryptedReadKeys, encKey),
@@ -217,10 +217,10 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 	case ch.UserConfirm != nil:
 		confirm := ch.UserConfirm
 
-		convCh = &aclpb.ACLChangeACLContentValue{
-			Value: &aclpb.ACLChangeACLContentValueValueOfUserConfirm{
-				UserConfirm: &aclpb.ACLUserPermissionsConfirm{
-					Identity:  t.keychain.GetIdentity(confirm.Identity),
+		convCh = &aclpb.ACLContentValue{
+			Value: &aclpb.ACLContentValue_UserConfirm{
+				UserConfirm: &aclpb.ACLUserConfirm{
+					Identity:  []byte(t.keychain.GetIdentity(confirm.Identity)),
 					UserAddId: confirm.UserAddId,
 				},
 			},
@@ -228,10 +228,10 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 	case ch.UserPermissionChange != nil:
 		permissionChange := ch.UserPermissionChange
 
-		convCh = &aclpb.ACLChangeACLContentValue{
-			Value: &aclpb.ACLChangeACLContentValueValueOfUserPermissionChange{
-				UserPermissionChange: &aclpb.ACLUserPermissionsPermissionChange{
-					Identity:    t.keychain.GetIdentity(permissionChange.Identity),
+		convCh = &aclpb.ACLContentValue{
+			Value: &aclpb.ACLContentValue_UserPermissionChange{
+				UserPermissionChange: &aclpb.ACLUserPermissionChange{
+					Identity:    []byte(t.keychain.GetIdentity(permissionChange.Identity)),
 					Permissions: t.convertPermission(permissionChange.Permission),
 				},
 			},
@@ -241,7 +241,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 
 		newReadKey := t.keychain.GetKey(remove.NewReadKey).(*SymKey)
 
-		var replaces []*aclpb.ACLChangeReadKeyReplace
+		var replaces []*aclpb.ACLReadKeyReplace
 		for _, id := range remove.IdentitiesLeft {
 			identity := t.keychain.GetIdentity(id)
 			encKey := t.keychain.EncryptionKeys[id]
@@ -250,17 +250,17 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 			if err != nil {
 				panic(err)
 			}
-			replaces = append(replaces, &aclpb.ACLChangeReadKeyReplace{
-				Identity:         identity,
+			replaces = append(replaces, &aclpb.ACLReadKeyReplace{
+				Identity:         []byte(identity),
 				EncryptionKey:    rawEncKey,
 				EncryptedReadKey: encReadKey,
 			})
 		}
 
-		convCh = &aclpb.ACLChangeACLContentValue{
-			Value: &aclpb.ACLChangeACLContentValueValueOfUserRemove{
-				UserRemove: &aclpb.ACLUserPermissionsRemove{
-					Identity:        t.keychain.GetIdentity(remove.RemovedIdentity),
+		convCh = &aclpb.ACLContentValue{
+			Value: &aclpb.ACLContentValue_UserRemove{
+				UserRemove: &aclpb.ACLUserRemove{
+					Identity:        []byte(t.keychain.GetIdentity(remove.RemovedIdentity)),
 					ReadKeyReplaces: replaces,
 				},
 			},
@@ -289,11 +289,11 @@ func (t *ACLListStorageBuilder) encryptReadKeys(keys []string, encKey encryption
 func (t *ACLListStorageBuilder) convertPermission(perm string) aclpb.ACLUserPermissions {
 	switch perm {
 	case "admin":
-		return aclpb.ACLChange_Admin
+		return aclpb.ACLUserPermissions_Admin
 	case "writer":
-		return aclpb.ACLChange_Writer
+		return aclpb.ACLUserPermissions_Writer
 	case "reader":
-		return aclpb.ACLChange_Reader
+		return aclpb.ACLUserPermissions_Reader
 	default:
 		panic(fmt.Sprintf("incorrect permission: %s", perm))
 	}
@@ -310,11 +310,8 @@ func (t *ACLListStorageBuilder) traverseFromHead(f func(rec *aclpb.ACLRecord, id
 }
 
 func (t *ACLListStorageBuilder) createHeaderAndId() {
-	t.header = &aclpb.Header{
-		FirstId:     t.rawRecords[0].Id,
-		AclListId:   "",
-		WorkspaceId: "",
-		DocType:     aclpb.Header_ACL,
+	t.header = &aclpb.ACLHeader{
+		FirstId: t.rawRecords[0].Id,
 	}
 	bytes, _ := t.header.Marshal()
 	id, _ := cid.NewCIDFromBytes(bytes)
