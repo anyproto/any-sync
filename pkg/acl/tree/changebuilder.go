@@ -53,7 +53,7 @@ func (c *changeBuilder) ConvertFromRaw(rawIdChange *aclpb.RawTreeChangeWithId, v
 		}
 	}
 
-	raw := &aclpb.RawTreeChange{}
+	raw := &aclpb.RawTreeChange{} // TODO: sync pool
 	err = proto.Unmarshal(rawIdChange.GetRawChange(), raw)
 	if err != nil {
 		return

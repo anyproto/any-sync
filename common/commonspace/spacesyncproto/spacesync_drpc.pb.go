@@ -74,27 +74,27 @@ func (c *drpcSpaceClient) Stream(ctx context.Context) (DRPCSpace_StreamClient, e
 
 type DRPCSpace_StreamClient interface {
 	drpc.Stream
-	Send(*Msg) error
-	Recv() (*Msg, error)
+	Send(*ObjectSyncMessage) error
+	Recv() (*ObjectSyncMessage, error)
 }
 
 type drpcSpace_StreamClient struct {
 	drpc.Stream
 }
 
-func (x *drpcSpace_StreamClient) Send(m *Msg) error {
+func (x *drpcSpace_StreamClient) Send(m *ObjectSyncMessage) error {
 	return x.MsgSend(m, drpcEncoding_File_common_commonspace_spacesyncproto_protos_spacesync_proto{})
 }
 
-func (x *drpcSpace_StreamClient) Recv() (*Msg, error) {
-	m := new(Msg)
+func (x *drpcSpace_StreamClient) Recv() (*ObjectSyncMessage, error) {
+	m := new(ObjectSyncMessage)
 	if err := x.MsgRecv(m, drpcEncoding_File_common_commonspace_spacesyncproto_protos_spacesync_proto{}); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (x *drpcSpace_StreamClient) RecvMsg(m *Msg) error {
+func (x *drpcSpace_StreamClient) RecvMsg(m *ObjectSyncMessage) error {
 	return x.MsgRecv(m, drpcEncoding_File_common_commonspace_spacesyncproto_protos_spacesync_proto{})
 }
 
@@ -163,26 +163,26 @@ func (x *drpcSpace_HeadSyncStream) SendAndClose(m *HeadSyncResponse) error {
 
 type DRPCSpace_StreamStream interface {
 	drpc.Stream
-	Send(*Msg) error
-	Recv() (*Msg, error)
+	Send(*ObjectSyncMessage) error
+	Recv() (*ObjectSyncMessage, error)
 }
 
 type drpcSpace_StreamStream struct {
 	drpc.Stream
 }
 
-func (x *drpcSpace_StreamStream) Send(m *Msg) error {
+func (x *drpcSpace_StreamStream) Send(m *ObjectSyncMessage) error {
 	return x.MsgSend(m, drpcEncoding_File_common_commonspace_spacesyncproto_protos_spacesync_proto{})
 }
 
-func (x *drpcSpace_StreamStream) Recv() (*Msg, error) {
-	m := new(Msg)
+func (x *drpcSpace_StreamStream) Recv() (*ObjectSyncMessage, error) {
+	m := new(ObjectSyncMessage)
 	if err := x.MsgRecv(m, drpcEncoding_File_common_commonspace_spacesyncproto_protos_spacesync_proto{}); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (x *drpcSpace_StreamStream) RecvMsg(m *Msg) error {
+func (x *drpcSpace_StreamStream) RecvMsg(m *ObjectSyncMessage) error {
 	return x.MsgRecv(m, drpcEncoding_File_common_commonspace_spacesyncproto_protos_spacesync_proto{})
 }

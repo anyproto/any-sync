@@ -213,11 +213,12 @@ func (st *ACLState) applyChangeContent(ch *aclpb.ACLContentValue) error {
 
 func (st *ACLState) applyUserPermissionChange(ch *aclpb.ACLUserPermissionChange) error {
 	chIdentity := string(ch.Identity)
-	if _, exists := st.userStates[chIdentity]; !exists {
+	state, exists := st.userStates[chIdentity]
+	if !exists {
 		return ErrNoSuchUser
 	}
 
-	st.userStates[chIdentity].Permissions = ch.Permissions
+	state.Permissions = ch.Permissions
 	return nil
 }
 
@@ -339,12 +340,12 @@ func (st *ACLState) applyUserRemove(ch *aclpb.ACLUserRemove) error {
 
 func (st *ACLState) applyUserConfirm(ch *aclpb.ACLUserConfirm) error {
 	chIdentity := string(ch.Identity)
-	if _, exists := st.userStates[chIdentity]; !exists {
+	state, exists := st.userStates[chIdentity]
+	if !exists {
 		return ErrNoSuchUser
 	}
 
-	userState := st.userStates[chIdentity]
-	userState.IsConfirmed = true
+	state.IsConfirmed = true
 	return nil
 }
 
