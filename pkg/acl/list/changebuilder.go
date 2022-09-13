@@ -82,7 +82,7 @@ func (c *aclChangeBuilder) UserAdd(identity string, encryptionKey encryptionkey.
 	ch := &aclpb.ACLContentValue{
 		Value: &aclpb.ACLContentValue_UserAdd{
 			UserAdd: &aclpb.ACLUserAdd{
-				Identity:          []byte(identity),
+				Identity:          identity,
 				EncryptionKey:     rawKey,
 				EncryptedReadKeys: encryptedKeys,
 				Permissions:       permissions,
@@ -98,7 +98,7 @@ func (c *aclChangeBuilder) BuildAndApply() (*ACLRecord, []byte, error) {
 		PrevId:             c.list.Head().Id,
 		CurrentReadKeyHash: c.readKeyHash,
 		Timestamp:          int64(time.Now().Nanosecond()),
-		Identity:           c.acc.Identity,
+		Identity:           string(c.acc.Identity),
 	}
 
 	marshalledData, err := proto.Marshal(c.aclData)

@@ -7,7 +7,8 @@ import (
 )
 
 type AccountData struct { // TODO: create a convenient constructor for this
-	Identity []byte // TODO: this is essentially the same as sign key
+	// Identity is non utf8 encoded, but we use this type, to eliminate copying between []byte to string conversions
+	Identity string
 	SignKey  signingkey.PrivKey
 	EncKey   encryptionkey.PrivKey
 	Decoder  keys.Decoder
