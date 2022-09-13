@@ -14,11 +14,6 @@ service Space {
     rpc Stream(stream ObjectSyncMessage) returns (stream ObjectSyncMessage);
 }
 
-// TODO: temporary mock message
-message Msg {
-    string spaceId = 1;
-}
-
 // HeadSyncRange presenting a request for one range
 message HeadSyncRange {
     uint64 from = 1;

@@ -58,7 +58,7 @@ type ObjectTree interface {
 	Storage() storage.TreeStorage
 	DebugDump() (string, error)
 
-	AddContent(ctx context.Context, content SignableChangeContent) (*aclpb.RawTreeChangeWithId, error)
+	AddContent(ctx context.Context, content SignableChangeContent) (AddResult, error)
 	AddRawChanges(ctx context.Context, changes ...*aclpb.RawTreeChangeWithId) (AddResult, error)
 
 	Close() error
@@ -67,11 +67,11 @@ type ObjectTree interface {
 type objectTree struct {
 	treeStorage     storage.TreeStorage
 	changeBuilder   ChangeBuilder
-	updateListener  ObjectTreeUpdateListener
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
 	treeBuilder     *treeBuilder
 	aclList         list.ACLList
+	updateListener  ObjectTreeUpdateListener
 
 	id     string
 	header *aclpb.TreeHeader
@@ -148,7 +148,7 @@ func (ot *objectTree) Storage() storage.TreeStorage {
 	return ot.treeStorage
 }
 
-func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeContent) (rawChange *aclpb.RawTreeChangeWithId, err error) {
+func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeContent) (res AddResult, err error) {
 	defer func() {
 		if err == nil && ot.updateListener != nil {
 			ot.updateListener.Update(ot)
@@ -160,9 +160,13 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 		return
 	}
 
+	// saving old heads
+	oldHeads := make([]string, 0, len(ot.tree.Heads()))
+	oldHeads = append(oldHeads, ot.tree.Heads()...)
+
 	objChange, rawChange, err := ot.changeBuilder.BuildContent(payload)
 	if content.IsSnapshot {
-		// clearing tree, because we already fixed everything in the last snapshot
+		// clearing tree, because we already saved everything in the last snapshot
 		ot.tree = &Tree{}
 	}
 	err = ot.tree.AddMergedHead(objChange)
@@ -176,6 +180,16 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 	}
 
 	err = ot.treeStorage.SetHeads([]string{objChange.Id})
+	if err != nil {
+		return
+	}
+
+	res = AddResult{
+		OldHeads: oldHeads,
+		Heads:    []string{objChange.Id},
+		Added:    []*aclpb.RawTreeChangeWithId{rawChange},
+		Mode:     Append,
+	}
 	return
 }
 
