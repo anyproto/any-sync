@@ -14,7 +14,7 @@ import (
 
 type mockChangeCreator struct{}
 
-func (c *mockChangeCreator) createRaw(id, aclId, snapshotId string, isSnapshot bool, prevIds ...string) *aclpb.RawChange {
+func (c *mockChangeCreator) createRaw(id, aclId, snapshotId string, isSnapshot bool, prevIds ...string) *aclpb.RawTreeChangeWithId {
 	aclChange := &aclpb.TreeChange{
 		TreeHeadIds:    prevIds,
 		AclHeadId:      aclId,
@@ -51,19 +51,15 @@ type mockChangeBuilder struct {
 	originalBuilder ChangeBuilder
 }
 
-func (c *mockChangeBuilder) ConvertFromRaw(rawChange *aclpb.RawChange) (ch *Change, err error) {
-	return c.originalBuilder.ConvertFromRaw(rawChange)
+func (c *mockChangeBuilder) ConvertFromRaw(rawChange *aclpb.RawTreeChangeWithId, verify bool) (ch *Change, err error) {
+	return c.originalBuilder.ConvertFromRaw(rawChange, false)
 }
 
-func (c *mockChangeBuilder) ConvertFromRawAndVerify(rawChange *aclpb.RawChange) (ch *Change, err error) {
-	return c.originalBuilder.ConvertFromRaw(rawChange)
-}
-
-func (c *mockChangeBuilder) BuildContent(payload BuilderContent) (ch *Change, raw *aclpb.RawChange, err error) {
+func (c *mockChangeBuilder) BuildContent(payload BuilderContent) (ch *Change, raw *aclpb.RawTreeChangeWithId, err error) {
 	panic("implement me")
 }
 
-func (c *mockChangeBuilder) BuildRaw(ch *Change) (raw *aclpb.RawChange, err error) {
+func (c *mockChangeBuilder) BuildRaw(ch *Change) (raw *aclpb.RawTreeChangeWithId, err error) {
 	return c.originalBuilder.BuildRaw(ch)
 }
 
@@ -141,7 +137,7 @@ func TestObjectTree(t *testing.T) {
 		changeCreator := ctx.changeCreator
 		objTree := ctx.objTree
 
-		rawChanges := []*aclpb.RawChange{
+		rawChanges := []*aclpb.RawTreeChangeWithId{
 			changeCreator.createRaw("1", aclList.Head().Id, "0", false, "0"),
 			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
 		}
@@ -182,7 +178,7 @@ func TestObjectTree(t *testing.T) {
 		changeCreator := ctx.changeCreator
 		objTree := ctx.objTree
 
-		rawChanges := []*aclpb.RawChange{
+		rawChanges := []*aclpb.RawTreeChangeWithId{
 			changeCreator.createRaw("0", aclList.Head().Id, "", true, ""),
 		}
 		res, err := objTree.AddRawChanges(context.Background(), rawChanges...)
@@ -202,7 +198,7 @@ func TestObjectTree(t *testing.T) {
 		changeCreator := ctx.changeCreator
 		objTree := ctx.objTree
 
-		rawChanges := []*aclpb.RawChange{
+		rawChanges := []*aclpb.RawTreeChangeWithId{
 			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
 		}
 		res, err := objTree.AddRawChanges(context.Background(), rawChanges...)
@@ -224,7 +220,7 @@ func TestObjectTree(t *testing.T) {
 		changeCreator := ctx.changeCreator
 		objTree := ctx.objTree
 
-		rawChanges := []*aclpb.RawChange{
+		rawChanges := []*aclpb.RawTreeChangeWithId{
 			changeCreator.createRaw("1", aclList.Head().Id, "0", false, "0"),
 			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
 			changeCreator.createRaw("3", aclList.Head().Id, "0", true, "2"),
@@ -268,7 +264,7 @@ func TestObjectTree(t *testing.T) {
 		changeCreator := ctx.changeCreator
 		objTree := ctx.objTree
 
-		rawChanges := []*aclpb.RawChange{
+		rawChanges := []*aclpb.RawTreeChangeWithId{
 			changeCreator.createRaw("1", aclList.Head().Id, "0", false, "0"),
 			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
 			changeCreator.createRaw("3", aclList.Head().Id, "0", true, "2"),
@@ -287,7 +283,7 @@ func TestObjectTree(t *testing.T) {
 		changeCreator := ctx.changeCreator
 		objTree := ctx.objTree
 
-		rawChanges := []*aclpb.RawChange{
+		rawChanges := []*aclpb.RawTreeChangeWithId{
 			changeCreator.createRaw("1", aclList.Head().Id, "0", false, "0"),
 			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
 			changeCreator.createRaw("3", aclList.Head().Id, "0", true, "2"),
@@ -361,7 +357,7 @@ func TestObjectTree(t *testing.T) {
 		changeCreator := ctx.changeCreator
 		objTree := ctx.objTree
 
-		rawChanges := []*aclpb.RawChange{
+		rawChanges := []*aclpb.RawTreeChangeWithId{
 			changeCreator.createRaw("1", aclList.Head().Id, "0", false, "0"),
 			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
 			changeCreator.createRaw("3", aclList.Head().Id, "0", true, "2"),
@@ -437,7 +433,7 @@ func TestObjectTree(t *testing.T) {
 		changeCreator := ctx.changeCreator
 		objTree := ctx.objTree
 
-		rawChanges := []*aclpb.RawChange{
+		rawChanges := []*aclpb.RawTreeChangeWithId{
 			changeCreator.createRaw("1", aclList.Head().Id, "0", false, "0"),
 			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
 			changeCreator.createRaw("3", aclList.Head().Id, "0", true, "2"),
@@ -446,7 +442,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err, "adding changes should be without error")
 		require.Equal(t, "3", objTree.Root().Id)
 
-		rawChanges = []*aclpb.RawChange{
+		rawChanges = []*aclpb.RawTreeChangeWithId{
 			changeCreator.createRaw("4", aclList.Head().Id, "0", false, "2"),
 			changeCreator.createRaw("5", aclList.Head().Id, "0", false, "1"),
 			changeCreator.createRaw("6", aclList.Head().Id, "0", false, "3", "4", "5"),
