@@ -142,7 +142,7 @@ func createTreeHeaderAndId(
 	raw *aclpb.RawTreeChangeWithId,
 	treeType aclpb.TreeHeaderType,
 	aclId string,
-	identity []byte,
+	identity string,
 	headerData []byte) (header *aclpb.TreeHeader, treeId string, err error) {
 	header = &aclpb.TreeHeader{
 		FirstId:        raw.Id,

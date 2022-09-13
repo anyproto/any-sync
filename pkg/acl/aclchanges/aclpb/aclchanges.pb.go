@@ -380,7 +380,7 @@ func (m *ACLState) GetInvites() map[string]*ACLUserInvite {
 }
 
 type ACLUserState struct {
-	Identity          []byte             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Identity          string             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	EncryptionKey     []byte             `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
 	EncryptedReadKeys [][]byte           `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
 	Permissions       ACLUserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLUserPermissions" json:"permissions,omitempty"`
@@ -420,11 +420,11 @@ func (m *ACLUserState) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ACLUserState proto.InternalMessageInfo
 
-func (m *ACLUserState) GetIdentity() []byte {
+func (m *ACLUserState) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
-	return nil
+	return ""
 }
 
 func (m *ACLUserState) GetEncryptionKey() []byte {
@@ -457,7 +457,7 @@ func (m *ACLUserState) GetIsConfirmed() bool {
 
 // we already know identity and encryptionKey
 type ACLUserAdd struct {
-	Identity          []byte             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Identity          string             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	EncryptionKey     []byte             `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
 	EncryptedReadKeys [][]byte           `protobuf:"bytes,3,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
 	Permissions       ACLUserPermissions `protobuf:"varint,4,opt,name=permissions,proto3,enum=acl.ACLUserPermissions" json:"permissions,omitempty"`
@@ -496,11 +496,11 @@ func (m *ACLUserAdd) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ACLUserAdd proto.InternalMessageInfo
 
-func (m *ACLUserAdd) GetIdentity() []byte {
+func (m *ACLUserAdd) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
-	return nil
+	return ""
 }
 
 func (m *ACLUserAdd) GetEncryptionKey() []byte {
@@ -526,7 +526,7 @@ func (m *ACLUserAdd) GetPermissions() ACLUserPermissions {
 
 // TODO: this is not used as of now
 type ACLUserConfirm struct {
-	Identity  []byte `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Identity  string `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	UserAddId string `protobuf:"bytes,2,opt,name=userAddId,proto3" json:"userAddId,omitempty"`
 }
 
@@ -563,11 +563,11 @@ func (m *ACLUserConfirm) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ACLUserConfirm proto.InternalMessageInfo
 
-func (m *ACLUserConfirm) GetIdentity() []byte {
+func (m *ACLUserConfirm) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
-	return nil
+	return ""
 }
 
 func (m *ACLUserConfirm) GetUserAddId() string {
@@ -654,7 +654,7 @@ func (m *ACLUserInvite) GetInviteId() string {
 }
 
 type ACLUserJoin struct {
-	Identity          []byte   `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Identity          string   `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	EncryptionKey     []byte   `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
 	AcceptSignature   []byte   `protobuf:"bytes,3,opt,name=acceptSignature,proto3" json:"acceptSignature,omitempty"`
 	UserInviteId      string   `protobuf:"bytes,4,opt,name=userInviteId,proto3" json:"userInviteId,omitempty"`
@@ -694,11 +694,11 @@ func (m *ACLUserJoin) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ACLUserJoin proto.InternalMessageInfo
 
-func (m *ACLUserJoin) GetIdentity() []byte {
+func (m *ACLUserJoin) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
-	return nil
+	return ""
 }
 
 func (m *ACLUserJoin) GetEncryptionKey() []byte {
@@ -730,7 +730,7 @@ func (m *ACLUserJoin) GetEncryptedReadKeys() [][]byte {
 }
 
 type ACLUserRemove struct {
-	Identity        []byte               `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Identity        string               `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	ReadKeyReplaces []*ACLReadKeyReplace `protobuf:"bytes,3,rep,name=readKeyReplaces,proto3" json:"readKeyReplaces,omitempty"`
 }
 
@@ -767,11 +767,11 @@ func (m *ACLUserRemove) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ACLUserRemove proto.InternalMessageInfo
 
-func (m *ACLUserRemove) GetIdentity() []byte {
+func (m *ACLUserRemove) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
-	return nil
+	return ""
 }
 
 func (m *ACLUserRemove) GetReadKeyReplaces() []*ACLReadKeyReplace {
@@ -782,7 +782,7 @@ func (m *ACLUserRemove) GetReadKeyReplaces() []*ACLReadKeyReplace {
 }
 
 type ACLReadKeyReplace struct {
-	Identity         []byte `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Identity         string `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	EncryptionKey    []byte `protobuf:"bytes,2,opt,name=encryptionKey,proto3" json:"encryptionKey,omitempty"`
 	EncryptedReadKey []byte `protobuf:"bytes,3,opt,name=encryptedReadKey,proto3" json:"encryptedReadKey,omitempty"`
 }
@@ -820,11 +820,11 @@ func (m *ACLReadKeyReplace) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ACLReadKeyReplace proto.InternalMessageInfo
 
-func (m *ACLReadKeyReplace) GetIdentity() []byte {
+func (m *ACLReadKeyReplace) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
-	return nil
+	return ""
 }
 
 func (m *ACLReadKeyReplace) GetEncryptionKey() []byte {
@@ -842,7 +842,7 @@ func (m *ACLReadKeyReplace) GetEncryptedReadKey() []byte {
 }
 
 type ACLUserPermissionChange struct {
-	Identity    []byte             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Identity    string             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	Permissions ACLUserPermissions `protobuf:"varint,2,opt,name=permissions,proto3,enum=acl.ACLUserPermissions" json:"permissions,omitempty"`
 }
 
@@ -879,11 +879,11 @@ func (m *ACLUserPermissionChange) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ACLUserPermissionChange proto.InternalMessageInfo
 
-func (m *ACLUserPermissionChange) GetIdentity() []byte {
+func (m *ACLUserPermissionChange) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
-	return nil
+	return ""
 }
 
 func (m *ACLUserPermissionChange) GetPermissions() ACLUserPermissions {
@@ -895,7 +895,7 @@ func (m *ACLUserPermissionChange) GetPermissions() ACLUserPermissions {
 
 type ACLRecord struct {
 	PrevId             string `protobuf:"bytes,1,opt,name=prevId,proto3" json:"prevId,omitempty"`
-	Identity           []byte `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	Identity           string `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
 	Data               []byte `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
 	CurrentReadKeyHash uint64 `protobuf:"varint,4,opt,name=currentReadKeyHash,proto3" json:"currentReadKeyHash,omitempty"`
 	Timestamp          int64  `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
@@ -941,11 +941,11 @@ func (m *ACLRecord) GetPrevId() string {
 	return ""
 }
 
-func (m *ACLRecord) GetIdentity() []byte {
+func (m *ACLRecord) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
-	return nil
+	return ""
 }
 
 func (m *ACLRecord) GetData() []byte {
@@ -971,7 +971,7 @@ func (m *ACLRecord) GetTimestamp() int64 {
 
 type ACLHeader struct {
 	FirstId  string `protobuf:"bytes,1,opt,name=firstId,proto3" json:"firstId,omitempty"`
-	Identity []byte `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	Identity string `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
 }
 
 func (m *ACLHeader) Reset()         { *m = ACLHeader{} }
@@ -1014,11 +1014,11 @@ func (m *ACLHeader) GetFirstId() string {
 	return ""
 }
 
-func (m *ACLHeader) GetIdentity() []byte {
+func (m *ACLHeader) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
-	return nil
+	return ""
 }
 
 type RawTreeChange struct {
@@ -1132,7 +1132,7 @@ type TreeChange struct {
 	ChangesData        []byte   `protobuf:"bytes,4,opt,name=changesData,proto3" json:"changesData,omitempty"`
 	CurrentReadKeyHash uint64   `protobuf:"varint,5,opt,name=currentReadKeyHash,proto3" json:"currentReadKeyHash,omitempty"`
 	Timestamp          int64    `protobuf:"varint,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	Identity           []byte   `protobuf:"bytes,7,opt,name=identity,proto3" json:"identity,omitempty"`
+	Identity           string   `protobuf:"bytes,7,opt,name=identity,proto3" json:"identity,omitempty"`
 	IsSnapshot         bool     `protobuf:"varint,8,opt,name=isSnapshot,proto3" json:"isSnapshot,omitempty"`
 }
 
@@ -1211,11 +1211,11 @@ func (m *TreeChange) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *TreeChange) GetIdentity() []byte {
+func (m *TreeChange) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
-	return nil
+	return ""
 }
 
 func (m *TreeChange) GetIsSnapshot() bool {
@@ -1229,7 +1229,7 @@ type TreeHeader struct {
 	FirstId        string         `protobuf:"bytes,1,opt,name=firstId,proto3" json:"firstId,omitempty"`
 	AclId          string         `protobuf:"bytes,2,opt,name=aclId,proto3" json:"aclId,omitempty"`
 	TreeHeaderType TreeHeaderType `protobuf:"varint,3,opt,name=treeHeaderType,proto3,enum=acl.TreeHeaderType" json:"treeHeaderType,omitempty"`
-	Identity       []byte         `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
+	Identity       string         `protobuf:"bytes,4,opt,name=identity,proto3" json:"identity,omitempty"`
 	Data           []byte         `protobuf:"bytes,5,opt,name=data,proto3" json:"data,omitempty"`
 }
 
@@ -1287,11 +1287,11 @@ func (m *TreeHeader) GetTreeHeaderType() TreeHeaderType {
 	return TreeHeaderType_Object
 }
 
-func (m *TreeHeader) GetIdentity() []byte {
+func (m *TreeHeader) GetIdentity() string {
 	if m != nil {
 		return m.Identity
 	}
-	return nil
+	return ""
 }
 
 func (m *TreeHeader) GetData() []byte {
@@ -1361,44 +1361,44 @@ var fileDescriptor_37a022c841a51877 = []byte{
 	0xf8, 0x27, 0x91, 0x48, 0xa7, 0x38, 0x53, 0xdd, 0xfc, 0x0c, 0x5a, 0xb6, 0x00, 0x75, 0xa0, 0xfa,
 	0x9c, 0x4e, 0x55, 0x1d, 0x35, 0xb0, 0x5c, 0xa2, 0x1d, 0xc3, 0xc3, 0xa2, 0x5a, 0xd1, 0xa6, 0x58,
 	0x2b, 0x7c, 0xe0, 0xbe, 0xe7, 0xf8, 0xbf, 0x38, 0xd0, 0xb2, 0x5d, 0x44, 0x9b, 0xb0, 0xc2, 0x42,
-	0x1a, 0x09, 0x26, 0xa6, 0xa6, 0xf2, 0xf3, 0xbd, 0xe4, 0x82, 0x46, 0x41, 0x3a, 0x4d, 0x04, 0x8b,
-	0xa3, 0x03, 0x3a, 0x35, 0xe5, 0x5f, 0x06, 0xd1, 0x9b, 0xb0, 0x6e, 0x00, 0x1a, 0x62, 0xcd, 0x92,
-	0x0e, 0xb1, 0x85, 0xe7, 0x05, 0xe8, 0x7d, 0x68, 0x26, 0x79, 0xa5, 0x71, 0x55, 0x56, 0xed, 0xbd,
-	0x7b, 0x8b, 0x0b, 0x94, 0x63, 0x5b, 0x17, 0x6d, 0x43, 0x93, 0x71, 0x93, 0x7e, 0x1a, 0xaa, 0xea,
-	0x5a, 0xc1, 0x36, 0xe4, 0xff, 0xe0, 0x00, 0x14, 0xbf, 0xd5, 0xff, 0x28, 0x36, 0xff, 0x11, 0xb4,
-	0xcb, 0xe5, 0x7e, 0xab, 0xf3, 0x5b, 0xd0, 0x30, 0xfd, 0x62, 0x14, 0x2a, 0xc7, 0x1b, 0xb8, 0x00,
-	0xfc, 0xdf, 0x1d, 0x58, 0x2d, 0x15, 0x00, 0xda, 0x81, 0x35, 0x12, 0x04, 0x34, 0x11, 0x8f, 0xcf,
-	0x4f, 0xc6, 0x2c, 0x38, 0xa0, 0xd9, 0x91, 0xb3, 0x30, 0xda, 0x85, 0x8e, 0x89, 0xab, 0x50, 0xd5,
-	0xcc, 0xcc, 0xe1, 0xff, 0x5d, 0xe2, 0x25, 0x15, 0x2a, 0x90, 0x91, 0xce, 0x7a, 0x03, 0xe7, 0x7b,
-	0xff, 0x27, 0x07, 0x9a, 0x56, 0x6f, 0x79, 0x09, 0x39, 0xcf, 0xc9, 0x3a, 0xca, 0xdb, 0x7e, 0xd5,
-	0x26, 0x2b, 0x87, 0x91, 0x0f, 0xad, 0xa2, 0xf3, 0x8d, 0x42, 0x15, 0x53, 0x03, 0x97, 0xb0, 0xc5,
-	0x24, 0xd5, 0x6e, 0x20, 0xc9, 0x9f, 0xe4, 0x99, 0x33, 0x8d, 0xfd, 0xb6, 0x70, 0x3e, 0x86, 0x35,
-	0xd3, 0x95, 0x30, 0x4d, 0xc6, 0x24, 0xc8, 0x3b, 0xcb, 0xdd, 0x8c, 0x55, 0x5c, 0x12, 0xe3, 0x59,
-	0x75, 0xff, 0x6b, 0x07, 0xd6, 0xe7, 0xd4, 0x5e, 0x02, 0x85, 0x45, 0x15, 0xe5, 0xb1, 0x19, 0x0e,
-	0xe7, 0x70, 0x3f, 0x81, 0x7b, 0x37, 0xbc, 0x4c, 0xb7, 0x3a, 0x32, 0x53, 0x4e, 0xee, 0x3f, 0xf8,
-	0xd7, 0xbe, 0x73, 0xa0, 0x51, 0xbc, 0xfc, 0x77, 0x61, 0x39, 0x49, 0xe9, 0xc5, 0x28, 0x34, 0x4d,
-	0xd5, 0xec, 0x4a, 0x97, 0xbb, 0x33, 0x97, 0x23, 0x58, 0x0a, 0x89, 0x20, 0x26, 0x26, 0xb5, 0x46,
-	0x3d, 0x40, 0xc1, 0x79, 0x9a, 0xd2, 0x48, 0xe0, 0xe2, 0xa9, 0x50, 0x25, 0xb1, 0x84, 0x17, 0x48,
-	0xe4, 0x3f, 0x2c, 0xd8, 0x84, 0x72, 0x41, 0x26, 0x89, 0xaa, 0xea, 0x2a, 0x2e, 0x00, 0xbf, 0xaf,
-	0x5c, 0x1c, 0x52, 0x12, 0xd2, 0x54, 0x0e, 0x27, 0xcf, 0x58, 0xca, 0x45, 0xee, 0x63, 0xb6, 0xbd,
-	0xcd, 0x49, 0xff, 0x53, 0x58, 0xc5, 0xe4, 0xf2, 0x38, 0xa5, 0xd4, 0xd0, 0xf9, 0x2f, 0x67, 0x1c,
-	0x7f, 0x00, 0x77, 0x4a, 0x07, 0x3d, 0x65, 0xe2, 0x6c, 0xa4, 0x8c, 0x52, 0x72, 0x69, 0x06, 0x0d,
-	0x7d, 0x60, 0x01, 0x98, 0xc1, 0xc8, 0xcd, 0x07, 0xa3, 0x6f, 0x5d, 0x00, 0xcb, 0x97, 0x6d, 0x68,
-	0x8a, 0x94, 0x52, 0x19, 0xe0, 0x28, 0xd4, 0x8f, 0x6c, 0x03, 0xdb, 0x90, 0x3c, 0x9e, 0x04, 0x63,
-	0xbd, 0xcb, 0x7a, 0x5c, 0x0e, 0xa0, 0xd7, 0xa0, 0xcd, 0x23, 0x92, 0xf0, 0xb3, 0x58, 0xec, 0x13,
-	0x2e, 0x7f, 0x3e, 0x3d, 0x83, 0xcd, 0xa0, 0xf2, 0x1e, 0x33, 0xfd, 0xc9, 0x01, 0x41, 0xa5, 0xa3,
-	0x85, 0x6d, 0xe8, 0x86, 0xbc, 0xd5, 0xfe, 0x5e, 0xde, 0x96, 0x67, 0xf2, 0x56, 0x4a, 0x48, 0x7d,
-	0xa6, 0x6a, 0xba, 0x00, 0x8c, 0x1f, 0x19, 0xff, 0xbc, 0x15, 0xf5, 0x7c, 0x59, 0x88, 0xff, 0xbd,
-	0xa3, 0x29, 0xfa, 0xcb, 0xac, 0x6f, 0x40, 0x8d, 0x04, 0xe3, 0x9c, 0x16, 0xbd, 0x41, 0x1f, 0x42,
-	0x5b, 0xe4, 0xd6, 0xc7, 0xd3, 0x44, 0xb7, 0xad, 0xb6, 0x19, 0xa6, 0x8e, 0x4b, 0x22, 0x3c, 0xa3,
-	0x5a, 0xf2, 0x7b, 0xe9, 0x86, 0x6a, 0xaf, 0x15, 0xd5, 0xbe, 0xfb, 0x10, 0xd0, 0xfc, 0x6f, 0x86,
-	0x1a, 0x50, 0xeb, 0x87, 0x13, 0x16, 0x75, 0x2a, 0x08, 0x60, 0xf9, 0x69, 0xca, 0x04, 0x4d, 0x3b,
-	0x8e, 0x5c, 0x63, 0x75, 0x55, 0xc7, 0x45, 0x4d, 0xa8, 0xeb, 0xd6, 0x16, 0x76, 0xaa, 0xbb, 0xaf,
-	0x43, 0xbb, 0xec, 0x97, 0x54, 0xfd, 0xfc, 0xe4, 0x2b, 0x1a, 0x88, 0x4e, 0x45, 0x9e, 0x76, 0x94,
-	0x90, 0x80, 0x76, 0x9c, 0xfd, 0x57, 0x7e, 0xbc, 0xea, 0x3a, 0x2f, 0xae, 0xba, 0xce, 0xaf, 0x57,
-	0x5d, 0xe7, 0x9b, 0xeb, 0x6e, 0xe5, 0xc5, 0x75, 0xb7, 0xf2, 0xf3, 0x75, 0xb7, 0xf2, 0x65, 0x4d,
-	0x0d, 0xfb, 0x27, 0xcb, 0x6a, 0xb6, 0x7f, 0xe7, 0xcf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x8c, 0x25,
-	0x31, 0x18, 0x0f, 0x0c, 0x00, 0x00,
+	0x1a, 0x09, 0x26, 0xb2, 0x53, 0xf3, 0xbd, 0xe4, 0x82, 0x46, 0x41, 0x3a, 0x4d, 0x04, 0x8b, 0xa3,
+	0x03, 0x3a, 0x35, 0xe5, 0x5f, 0x06, 0xd1, 0x9b, 0xb0, 0x6e, 0x00, 0x1a, 0x62, 0xcd, 0x92, 0x0e,
+	0xb1, 0x85, 0xe7, 0x05, 0xe8, 0x7d, 0x68, 0x26, 0x79, 0xa5, 0x71, 0x55, 0x56, 0xed, 0xbd, 0x7b,
+	0x8b, 0x0b, 0x94, 0x63, 0x5b, 0x17, 0x6d, 0x43, 0x93, 0x71, 0x93, 0x7e, 0x1a, 0xaa, 0xea, 0x5a,
+	0xc1, 0x36, 0xe4, 0xff, 0xe0, 0x00, 0x14, 0xbf, 0xd5, 0xff, 0x28, 0x36, 0xff, 0x11, 0xb4, 0xcb,
+	0xe5, 0x7e, 0xab, 0xf3, 0x5b, 0xd0, 0x30, 0xfd, 0x62, 0x14, 0x2a, 0xc7, 0x1b, 0xb8, 0x00, 0xfc,
+	0xdf, 0x1d, 0x58, 0x2d, 0x15, 0x00, 0xda, 0x81, 0x35, 0x12, 0x04, 0x34, 0x11, 0x8f, 0xcf, 0x4f,
+	0xc6, 0x2c, 0x38, 0x30, 0x15, 0xd4, 0xc2, 0xb3, 0x30, 0xda, 0x85, 0x8e, 0x89, 0xab, 0x50, 0xd5,
+	0xcc, 0xcc, 0xe1, 0xff, 0x5d, 0xe2, 0x25, 0x15, 0x2a, 0x90, 0x91, 0xce, 0xba, 0xa4, 0xc2, 0xec,
+	0xfd, 0x9f, 0x1c, 0x68, 0x5a, 0xbd, 0xe5, 0x25, 0xe4, 0x3c, 0x27, 0xeb, 0x28, 0x6f, 0xfb, 0x55,
+	0x9b, 0xac, 0x1c, 0x46, 0x3e, 0xb4, 0x8a, 0xce, 0x37, 0x0a, 0x55, 0x4c, 0x0d, 0x5c, 0xc2, 0x16,
+	0x93, 0x54, 0xbb, 0x81, 0x24, 0x7f, 0x92, 0x67, 0xce, 0x34, 0xf6, 0xdb, 0xc2, 0xf9, 0x18, 0xd6,
+	0x4c, 0x57, 0xc2, 0x34, 0x19, 0x93, 0x20, 0xef, 0x2c, 0x77, 0x33, 0x56, 0x71, 0x49, 0x8c, 0x67,
+	0xd5, 0xfd, 0xaf, 0x1d, 0x58, 0x9f, 0x53, 0x7b, 0x09, 0x14, 0x16, 0x55, 0x94, 0xc7, 0x66, 0x38,
+	0x9c, 0xc3, 0xfd, 0x04, 0xee, 0xdd, 0xf0, 0x32, 0xdd, 0xea, 0xc8, 0x4c, 0x39, 0xb9, 0xff, 0xe0,
+	0x5f, 0xfb, 0xce, 0x81, 0x46, 0xf1, 0xf2, 0xdf, 0x85, 0xe5, 0x24, 0xa5, 0x17, 0xa3, 0xd0, 0x5c,
+	0x61, 0x76, 0xa5, 0xcb, 0xdd, 0x99, 0xcb, 0x11, 0x2c, 0x85, 0x44, 0x10, 0x13, 0x93, 0x5a, 0xa3,
+	0x1e, 0xa0, 0xe0, 0x3c, 0x4d, 0x69, 0x24, 0x70, 0xf1, 0x54, 0xa8, 0x92, 0x58, 0xc2, 0x0b, 0x24,
+	0xf2, 0x1f, 0x16, 0x6c, 0x42, 0xb9, 0x20, 0x93, 0x44, 0x55, 0x75, 0x15, 0x17, 0x80, 0xdf, 0x57,
+	0x2e, 0x0e, 0x29, 0x09, 0x69, 0x2a, 0x87, 0x93, 0x67, 0x2c, 0xe5, 0x22, 0xf7, 0x31, 0xdb, 0xde,
+	0xe6, 0xa4, 0xff, 0x29, 0xac, 0x62, 0x72, 0x79, 0x9c, 0x52, 0x6a, 0xe8, 0xfc, 0x97, 0x33, 0x8e,
+	0x3f, 0x80, 0x3b, 0xa5, 0x83, 0x9e, 0x32, 0x71, 0x36, 0x52, 0x46, 0x29, 0xb9, 0x34, 0x83, 0x86,
+	0x3e, 0xb0, 0x00, 0xcc, 0x60, 0xe4, 0xe6, 0x83, 0xd1, 0xb7, 0x2e, 0x80, 0xe5, 0xcb, 0x36, 0x34,
+	0x45, 0x4a, 0xa9, 0x0c, 0x70, 0x14, 0xea, 0x47, 0xb6, 0x81, 0x6d, 0x48, 0x1e, 0x4f, 0x82, 0xb1,
+	0xde, 0x65, 0x3d, 0x2e, 0x07, 0xd0, 0x6b, 0xd0, 0xe6, 0x11, 0x49, 0xf8, 0x59, 0x2c, 0xf6, 0x09,
+	0x97, 0x3f, 0x9f, 0x9e, 0xc1, 0x66, 0x50, 0x79, 0x8f, 0x99, 0xfe, 0xe4, 0x80, 0xa0, 0xd2, 0xd1,
+	0xc2, 0x36, 0x74, 0x43, 0xde, 0x6a, 0x7f, 0x2f, 0x6f, 0xcb, 0x33, 0x79, 0x2b, 0x25, 0xa4, 0x3e,
+	0x53, 0x35, 0x5d, 0x00, 0xc6, 0x8f, 0x8c, 0x7f, 0xde, 0x8a, 0x7a, 0xbe, 0x2c, 0xc4, 0xff, 0xde,
+	0xd1, 0x14, 0xfd, 0x65, 0xd6, 0x37, 0xa0, 0x46, 0x82, 0x71, 0x4e, 0x8b, 0xde, 0xa0, 0x0f, 0xa1,
+	0x2d, 0x72, 0xeb, 0xe3, 0x69, 0xa2, 0xdb, 0x56, 0xdb, 0x0c, 0x53, 0xc7, 0x25, 0x11, 0x9e, 0x51,
+	0x2d, 0xf9, 0xbd, 0x74, 0x43, 0xb5, 0xd7, 0x8a, 0x6a, 0xdf, 0x7d, 0x08, 0x68, 0xfe, 0x37, 0x43,
+	0x0d, 0xa8, 0xf5, 0xc3, 0x09, 0x8b, 0x3a, 0x15, 0x04, 0xb0, 0xfc, 0x34, 0x65, 0x82, 0xa6, 0x1d,
+	0x47, 0xae, 0xb1, 0xba, 0xaa, 0xe3, 0xa2, 0x26, 0xd4, 0x75, 0x6b, 0x0b, 0x3b, 0xd5, 0xdd, 0xd7,
+	0xa1, 0x5d, 0xf6, 0x4b, 0xaa, 0x7e, 0x7e, 0xf2, 0x15, 0x0d, 0x44, 0xa7, 0x22, 0x4f, 0x3b, 0x4a,
+	0x48, 0x40, 0x3b, 0xce, 0xfe, 0x2b, 0x3f, 0x5e, 0x75, 0x9d, 0x17, 0x57, 0x5d, 0xe7, 0xd7, 0xab,
+	0xae, 0xf3, 0xcd, 0x75, 0xb7, 0xf2, 0xe2, 0xba, 0x5b, 0xf9, 0xf9, 0xba, 0x5b, 0xf9, 0xb2, 0xa6,
+	0x86, 0xfd, 0x93, 0x65, 0x35, 0xdb, 0xbf, 0xf3, 0x67, 0x00, 0x00, 0x00, 0xff, 0xff, 0x7e, 0xb7,
+	0x4f, 0x73, 0x0f, 0x0c, 0x00, 0x00,
 }
 
 func (m *RawACLRecord) Marshal() (dAtA []byte, err error) {
@@ -3735,7 +3735,7 @@ func (m *ACLUserState) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -3745,25 +3745,23 @@ func (m *ACLUserState) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -3924,7 +3922,7 @@ func (m *ACLUserAdd) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -3934,25 +3932,23 @@ func (m *ACLUserAdd) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -4093,7 +4089,7 @@ func (m *ACLUserConfirm) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -4103,25 +4099,23 @@ func (m *ACLUserConfirm) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -4410,7 +4404,7 @@ func (m *ACLUserJoin) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -4420,25 +4414,23 @@ func (m *ACLUserJoin) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -4626,7 +4618,7 @@ func (m *ACLUserRemove) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -4636,25 +4628,23 @@ func (m *ACLUserRemove) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -4744,7 +4734,7 @@ func (m *ACLReadKeyReplace) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -4754,25 +4744,23 @@ func (m *ACLReadKeyReplace) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -4896,7 +4884,7 @@ func (m *ACLUserPermissionChange) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -4906,25 +4894,23 @@ func (m *ACLUserPermissionChange) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 0 {
@@ -5031,7 +5017,7 @@ func (m *ACLRecord) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -5041,25 +5027,23 @@ func (m *ACLRecord) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -5219,7 +5203,7 @@ func (m *ACLHeader) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -5229,25 +5213,23 @@ func (m *ACLHeader) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -5705,7 +5687,7 @@ func (m *TreeChange) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -5715,25 +5697,23 @@ func (m *TreeChange) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 8:
 			if wireType != 0 {
@@ -5892,7 +5872,7 @@ func (m *TreeHeader) Unmarshal(dAtA []byte) error {
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
 			}
-			var byteLen int
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAclchanges
@@ -5902,25 +5882,23 @@ func (m *TreeHeader) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= int(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if byteLen < 0 {
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
 				return ErrInvalidLengthAclchanges
 			}
-			postIndex := iNdEx + byteLen
+			postIndex := iNdEx + intStringLen
 			if postIndex < 0 {
 				return ErrInvalidLengthAclchanges
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 5:
 			if wireType != 2 {
