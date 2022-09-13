@@ -60,13 +60,15 @@ func (c *changeBuilder) ConvertFromRaw(rawIdChange *aclpb.RawTreeChangeWithId, v
 	}
 
 	if verify {
-		identityKey, err := c.keys.GetOrAdd(ch.Identity)
+		var identityKey signingkey.PubKey
+		identityKey, err = c.keys.GetOrAdd(ch.Identity)
 		if err != nil {
 			return
 		}
 
 		// verifying signature
-		res, err := identityKey.Verify(raw.Payload, raw.Signature)
+		var res bool
+		res, err = identityKey.Verify(raw.Payload, raw.Signature)
 		if err != nil {
 			return
 		}

@@ -21,7 +21,7 @@ func (k *Keychain) GetOrAdd(identity string) (signingkey.PubKey, error) {
 	if key, exists := k.keys[identity]; exists {
 		return key, nil
 	}
-	res, err := k.decoder.DecodeFromString(identity)
+	res, err := k.decoder.DecodeFromBytes([]byte(identity))
 	if err != nil {
 		return nil, err
 	}
