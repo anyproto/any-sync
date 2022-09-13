@@ -7,6 +7,6 @@ import (
 type SignableChangeContent struct {
 	Data       []byte
 	Key        signingkey.PrivKey
-	Identity   string
+	Identity   []byte
 	IsSnapshot bool
 }
