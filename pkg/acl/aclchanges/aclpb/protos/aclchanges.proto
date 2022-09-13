@@ -33,7 +33,7 @@ message ACLState {
 }
 
 message ACLUserState {
-  string identity = 1;
+  bytes identity = 1;
   bytes encryptionKey = 2;
   repeated bytes encryptedReadKeys = 3; // all read keys that we know
   ACLUserPermissions permissions = 4;
@@ -42,7 +42,7 @@ message ACLUserState {
 
 // we already know identity and encryptionKey
 message ACLUserAdd {
-  string identity = 1; // public signing key
+  bytes identity = 1; // public signing key
   bytes encryptionKey = 2; // public encryption key
   repeated bytes encryptedReadKeys = 3; // all read keys that we know for the user
   ACLUserPermissions permissions = 4;
@@ -50,7 +50,7 @@ message ACLUserAdd {
 
 // TODO: this is not used as of now
 message ACLUserConfirm { // not needed for read permissions
-  string identity = 1; // not needed
+  bytes identity = 1; // not needed
   string userAddId = 2;
 }
 
@@ -63,7 +63,7 @@ message ACLUserInvite {
 }
 
 message ACLUserJoin {
-  string identity = 1;
+  bytes identity = 1;
   bytes encryptionKey = 2;
   bytes acceptSignature = 3; // sign acceptPublicKey
   string userInviteId = 4;
@@ -71,18 +71,18 @@ message ACLUserJoin {
 }
 
 message ACLUserRemove {
-  string identity = 1;
+  bytes identity = 1;
   repeated ACLReadKeyReplace readKeyReplaces = 3; // new read key encrypted for all users
 }
 
 message ACLReadKeyReplace {
-  string identity = 1;
+  bytes identity = 1;
   bytes encryptionKey = 2;
   bytes encryptedReadKey = 3;
 }
 
 message ACLUserPermissionChange {
-  string identity = 1;
+  bytes identity = 1;
   ACLUserPermissions permissions = 2;
 }
 
@@ -95,7 +95,7 @@ enum ACLUserPermissions {
 
 message ACLRecord {
   string prevId = 1;
-  string identity = 2;
+  bytes identity = 2;
   bytes data = 3;
   uint64 currentReadKeyHash = 4;
   int64 timestamp = 5;
@@ -103,7 +103,7 @@ message ACLRecord {
 
 message ACLHeader {
   string firstId = 1;
-  string identity = 2; // the identity of the creator
+  bytes identity = 2; // the identity of the creator
 }
 
 // Tree protos
@@ -125,7 +125,7 @@ message TreeChange {
   bytes changesData = 4;
   uint64 currentReadKeyHash = 5;
   int64 timestamp = 6;
-  string identity = 7;
+  bytes identity = 7;
   bool isSnapshot = 8;
 }
 
@@ -138,6 +138,6 @@ message TreeHeader {
   string firstId = 1;
   string aclId = 2;
   TreeHeaderType treeHeaderType = 3;
-  string identity = 4;
+  bytes identity = 4;
   bytes data = 5; // this should be reserved for the client to add the data it needs
 }

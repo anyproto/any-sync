@@ -146,7 +146,7 @@ func (t *ACLListStorageBuilder) parseRecord(rec *Record, prevId string) *aclpb.A
 
 	return &aclpb.ACLRecord{
 		PrevId:             prevId,
-		Identity:           t.keychain.GetIdentity(rec.Identity),
+		Identity:           []byte(t.keychain.GetIdentity(rec.Identity)),
 		Data:               bytes,
 		CurrentReadKeyHash: k.Hash,
 		Timestamp:          time.Now().Unix(),
@@ -164,7 +164,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 		convCh = &aclpb.ACLContentValue{
 			Value: &aclpb.ACLContentValue_UserAdd{
 				UserAdd: &aclpb.ACLUserAdd{
-					Identity:          t.keychain.GetIdentity(add.Identity),
+					Identity:          []byte(t.keychain.GetIdentity(add.Identity)),
 					EncryptionKey:     rawKey,
 					EncryptedReadKeys: t.encryptReadKeys(add.EncryptedReadKeys, encKey),
 					Permissions:       t.convertPermission(add.Permission),
@@ -188,7 +188,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 		convCh = &aclpb.ACLContentValue{
 			Value: &aclpb.ACLContentValue_UserJoin{
 				UserJoin: &aclpb.ACLUserJoin{
-					Identity:          t.keychain.GetIdentity(join.Identity),
+					Identity:          []byte(t.keychain.GetIdentity(join.Identity)),
 					EncryptionKey:     rawKey,
 					AcceptSignature:   signature,
 					UserInviteId:      join.InviteId,
@@ -220,7 +220,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 		convCh = &aclpb.ACLContentValue{
 			Value: &aclpb.ACLContentValue_UserConfirm{
 				UserConfirm: &aclpb.ACLUserConfirm{
-					Identity:  t.keychain.GetIdentity(confirm.Identity),
+					Identity:  []byte(t.keychain.GetIdentity(confirm.Identity)),
 					UserAddId: confirm.UserAddId,
 				},
 			},
@@ -231,7 +231,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 		convCh = &aclpb.ACLContentValue{
 			Value: &aclpb.ACLContentValue_UserPermissionChange{
 				UserPermissionChange: &aclpb.ACLUserPermissionChange{
-					Identity:    t.keychain.GetIdentity(permissionChange.Identity),
+					Identity:    []byte(t.keychain.GetIdentity(permissionChange.Identity)),
 					Permissions: t.convertPermission(permissionChange.Permission),
 				},
 			},
@@ -251,7 +251,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 				panic(err)
 			}
 			replaces = append(replaces, &aclpb.ACLReadKeyReplace{
-				Identity:         identity,
+				Identity:         []byte(identity),
 				EncryptionKey:    rawEncKey,
 				EncryptedReadKey: encReadKey,
 			})
@@ -260,7 +260,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 		convCh = &aclpb.ACLContentValue{
 			Value: &aclpb.ACLContentValue_UserRemove{
 				UserRemove: &aclpb.ACLUserRemove{
-					Identity:        t.keychain.GetIdentity(remove.RemovedIdentity),
+					Identity:        []byte(t.keychain.GetIdentity(remove.RemovedIdentity)),
 					ReadKeyReplaces: replaces,
 				},
 			},

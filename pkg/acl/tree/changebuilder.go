@@ -18,7 +18,7 @@ type BuilderContent struct {
 	aclHeadId          string
 	snapshotBaseId     string
 	currentReadKeyHash uint64
-	identity           string
+	identity           []byte
 	isSnapshot         bool
 	signingKey         signingkey.PrivKey
 	readKey            *symmetric.Key

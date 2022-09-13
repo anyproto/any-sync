@@ -65,6 +65,7 @@ func NewChange(id string, ch *aclpb.TreeChange, signature []byte) *Change {
 		Content:     ch,
 		SnapshotId:  ch.SnapshotBaseId,
 		IsSnapshot:  ch.IsSnapshot,
+		Identity:    string(ch.Identity),
 		Sign:        signature,
 	}
 }
