@@ -65,8 +65,6 @@ func (r *requestHandler) HandleSyncMessage(ctx context.Context, senderId string,
 		return r.HandleFullSyncResponse(ctx, senderId, msg.GetFullSyncResponse(), content.GetTreeHeader(), content.GetTreeId())
 	case msg.GetHeadUpdate() != nil:
 		return r.HandleHeadUpdate(ctx, senderId, msg.GetHeadUpdate(), content.GetTreeHeader(), content.GetTreeId())
-	case msg.GetAclList() != nil:
-		return r.HandleACLList(ctx, senderId, msg.GetAclList(), content.GetTreeHeader(), content.GetTreeId())
 	}
 	return nil
 }
