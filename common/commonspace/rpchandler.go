@@ -21,5 +21,6 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 }
 
 func (r *rpcHandler) Stream(stream spacesyncproto.DRPCSpace_StreamStream) error {
+
 	return fmt.Errorf("not implemented")
 }

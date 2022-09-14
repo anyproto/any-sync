@@ -19,10 +19,6 @@ type SyncHandler interface {
 	HandleSyncMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error)
 }
 
-type SyncClient interface {
-	SendSyncMessage(peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error)
-}
-
 func newSyncHandler(treeCache cache.TreeCache, syncClient SyncClient) *syncHandler {
 	return &syncHandler{
 		treeCache:  treeCache,
@@ -96,7 +92,7 @@ func (s *syncHandler) HandleHeadUpdate(
 	}
 	// if we have incompatible heads, or we haven't seen the tree at all
 	if fullRequest != nil {
-		return s.syncClient.SendSyncMessage(senderId, spacesyncproto.WrapFullRequest(fullRequest, header, treeId))
+		return s.syncClient.SendAsync(senderId, spacesyncproto.WrapFullRequest(fullRequest, header, treeId))
 	}
 	// if error or nothing has changed
 	if err != nil || len(result.Added) == 0 {
@@ -109,7 +105,7 @@ func (s *syncHandler) HandleHeadUpdate(
 		Changes:      result.Added,
 		SnapshotPath: snapshotPath,
 	}
-	return s.syncClient.SendSyncMessage("", spacesyncproto.WrapHeadUpdate(newUpdate, header, treeId))
+	return s.syncClient.BroadcastAsync(spacesyncproto.WrapHeadUpdate(newUpdate, header, treeId))
 }
 
 func (s *syncHandler) HandleFullSyncRequest(
@@ -142,7 +138,7 @@ func (s *syncHandler) HandleFullSyncRequest(
 	if err != nil {
 		return err
 	}
-	return s.syncClient.SendSyncMessage(senderId, spacesyncproto.WrapFullResponse(fullResponse, header, treeId))
+	return s.syncClient.SendAsync(senderId, spacesyncproto.WrapFullResponse(fullResponse, header, treeId))
 }
 
 func (s *syncHandler) HandleFullSyncResponse(
@@ -163,21 +159,24 @@ func (s *syncHandler) HandleFullSyncResponse(
 	}
 
 	err = func() error {
-		objTree := res.Tree
-		objTree.Lock()
+		syncTree := res.Tree
+		syncTree.Lock()
 		defer res.Release()
-		defer objTree.Unlock()
+		defer syncTree.Unlock()
 
 		// if we already have the heads for whatever reason
-		if slice.UnsortedEquals(response.Heads, objTree.Heads()) {
+		if slice.UnsortedEquals(response.Heads, syncTree.Heads()) {
 			return nil
 		}
 
-		result, err = objTree.AddRawChanges(ctx, response.Changes...)
+		// syncTree -> syncService: HeadUpdate()
+		// AddRawChanges -> syncTree.addRawChanges(); syncService.HeadUpdate()
+		result, err = syncTree.AddRawChanges(ctx, response.Changes...)
+
 		if err != nil {
 			return err
 		}
-		snapshotPath = objTree.SnapshotPath()
+		snapshotPath = syncTree.SnapshotPath()
 		return nil
 	}()
 
@@ -203,7 +202,7 @@ func (s *syncHandler) HandleFullSyncResponse(
 		Changes:      result.Added,
 		SnapshotPath: snapshotPath,
 	}
-	return s.syncClient.SendSyncMessage("", spacesyncproto.WrapHeadUpdate(newUpdate, header, treeId))
+	return s.syncClient.BroadcastAsync(spacesyncproto.WrapHeadUpdate(newUpdate, header, treeId))
 }
 
 func (s *syncHandler) prepareFullSyncRequest(t tree.ObjectTree, sendOwnChanges bool) (*spacesyncproto.ObjectFullSyncRequest, error) {
