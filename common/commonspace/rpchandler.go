@@ -2,7 +2,6 @@ package commonspace
 
 import (
 	"context"
-	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 )
@@ -21,6 +20,5 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 }
 
 func (r *rpcHandler) Stream(stream spacesyncproto.DRPCSpace_StreamStream) error {
-
-	return fmt.Errorf("not implemented")
+	return r.s.SyncService().StreamPool().AddStream(stream)
 }

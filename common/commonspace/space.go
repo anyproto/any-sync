@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
@@ -19,18 +20,21 @@ type Space interface {
 	Id() string
 
 	SpaceSyncRpc() RpcHandler
+	SyncService() syncservice.SyncService
 
 	Close() error
 }
 
 type space struct {
-	id           string
-	nconf        nodeconf.Configuration
-	conf         config.Space
-	diff         ldiff.Diff
+	id    string
+	nconf nodeconf.Configuration
+	conf  config.Space
+	diff  ldiff.Diff
+	mu    sync.RWMutex
+
 	rpc          *rpcHandler
 	periodicSync *periodicSync
-	mu           sync.RWMutex
+	syncService  syncservice.SyncService
 }
 
 func (s *space) Id() string {
@@ -47,6 +51,10 @@ func (s *space) Init(ctx context.Context) error {
 
 func (s *space) SpaceSyncRpc() RpcHandler {
 	return s.rpc
+}
+
+func (s *space) SyncService() syncservice.SyncService {
+	return s.syncService
 }
 
 func (s *space) testFill() {

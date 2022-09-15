@@ -16,7 +16,7 @@ type syncHandler struct {
 }
 
 type SyncHandler interface {
-	HandleSyncMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error)
+	HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error)
 }
 
 func newSyncHandler(treeCache cache.TreeCache, syncClient SyncClient) *syncHandler {
@@ -26,7 +26,7 @@ func newSyncHandler(treeCache cache.TreeCache, syncClient SyncClient) *syncHandl
 	}
 }
 
-func (s *syncHandler) HandleSyncMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) error {
+func (s *syncHandler) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) error {
 	msg := message.GetContent()
 	switch {
 	case msg.GetFullSyncRequest() != nil:
