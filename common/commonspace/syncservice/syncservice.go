@@ -11,6 +11,7 @@ import (
 type SyncService interface {
 	NotifyHeadUpdate(ctx context.Context, treeId string, header *aclpb.TreeHeader, update *spacesyncproto.ObjectHeadUpdate) (err error)
 	StreamPool() StreamPool
+	Close() (err error)
 }
 
 type syncService struct {
@@ -20,6 +21,10 @@ type syncService struct {
 	spaceId       string
 }
 
+func (s *syncService) Close() (err error) {
+	return s.streamPool.Close()
+}
+
 func (s *syncService) NotifyHeadUpdate(ctx context.Context, treeId string, header *aclpb.TreeHeader, update *spacesyncproto.ObjectHeadUpdate) (err error) {
 	msg := spacesyncproto.WrapHeadUpdate(update, header, treeId)
 	peers, err := s.configuration.AllPeers(context.Background(), s.spaceId)
@@ -27,17 +32,18 @@ func (s *syncService) NotifyHeadUpdate(ctx context.Context, treeId string, heade
 		return
 	}
 	for _, peer := range peers {
-		if !s.streamPool.HasStream(peer.Id()) {
-			cl := spacesyncproto.NewDRPCSpaceClient(peer)
-			stream, err := cl.Stream(ctx)
-			if err != nil {
-				continue
-			}
+		if s.streamPool.HasStream(peer.Id()) {
+			continue
+		}
+		cl := spacesyncproto.NewDRPCSpaceClient(peer)
+		stream, err := cl.Stream(ctx)
+		if err != nil {
+			continue
+		}
 
-			s.streamPool.AddStream(stream)
-			if err != nil {
-				continue
-			}
+		err = s.streamPool.AddAndReadStream(stream)
+		if err != nil {
+			continue
 		}
 	}
 	return s.streamPool.BroadcastAsync(msg)
