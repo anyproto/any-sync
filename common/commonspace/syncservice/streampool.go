@@ -18,9 +18,10 @@ const maxSimultaneousOperationsPerStream = 10
 
 // StreamPool can be made generic to work with different streams
 type StreamPool interface {
-	AddStream(stream spacesyncproto.SpaceStream) (err error)
+	AddAndReadStream(stream spacesyncproto.SpaceStream) (err error)
 	HasStream(peerId string) bool
 	SyncClient
+	Close() (err error)
 }
 
 type SyncClient interface {
@@ -34,12 +35,14 @@ type streamPool struct {
 	sync.Mutex
 	peerStreams    map[string]spacesyncproto.SpaceStream
 	messageHandler MessageHandler
+	wg             *sync.WaitGroup
 }
 
 func newStreamPool(messageHandler MessageHandler) StreamPool {
 	return &streamPool{
 		peerStreams:    make(map[string]spacesyncproto.SpaceStream),
 		messageHandler: messageHandler,
+		wg:             &sync.WaitGroup{},
 	}
 }
 
@@ -104,7 +107,7 @@ func (s *streamPool) BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (
 	return nil
 }
 
-func (s *streamPool) AddStream(stream spacesyncproto.SpaceStream) (err error) {
+func (s *streamPool) AddAndReadStream(stream spacesyncproto.SpaceStream) (err error) {
 	s.Lock()
 	peerId, err := getPeerIdFromStream(stream)
 	if err != nil {
@@ -113,12 +116,25 @@ func (s *streamPool) AddStream(stream spacesyncproto.SpaceStream) (err error) {
 	}
 
 	s.peerStreams[peerId] = stream
+	s.wg.Add(1)
 	s.Unlock()
 
-	return s.readPeerLoop(peerId, stream)
+	go s.readPeerLoop(peerId, stream)
+	return
+}
+
+func (s *streamPool) Close() (err error) {
+	s.Lock()
+	wg := s.wg
+	s.Unlock()
+	if wg != nil {
+		wg.Wait()
+	}
+	return nil
 }
 
 func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStream) (err error) {
+	defer s.wg.Done()
 	limiter := make(chan struct{}, maxSimultaneousOperationsPerStream)
 	for i := 0; i < maxSimultaneousOperationsPerStream; i++ {
 		limiter <- struct{}{}

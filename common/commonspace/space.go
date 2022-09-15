@@ -151,5 +151,5 @@ func (s *space) getPeers(ctx context.Context) (peers []peer.Peer, err error) {
 
 func (s *space) Close() error {
 	s.periodicSync.Close()
-	return nil
+	return s.syncService.Close()
 }

@@ -19,6 +19,12 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 	return remotediff.HandlerRangeRequest(ctx, r.s.diff, req)
 }
 
-func (r *rpcHandler) Stream(stream spacesyncproto.DRPCSpace_StreamStream) error {
-	return r.s.SyncService().StreamPool().AddStream(stream)
+func (r *rpcHandler) Stream(stream spacesyncproto.DRPCSpace_StreamStream) (err error) {
+	err = r.s.SyncService().StreamPool().AddAndReadStream(stream)
+	if err != nil {
+		return
+	}
+
+	<-stream.Context().Done()
+	return
 }
