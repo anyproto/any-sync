@@ -27,8 +27,8 @@ type Space interface {
 	SpaceSyncRpc() RpcHandler
 	SyncService() syncservice.SyncService
 
-	CreateTree(payload tree.ObjectTreeCreatePayload, listener tree.ObjectTreeUpdateListener) (tree.ObjectTree, error)
-	BuildTree(id string, listener tree.ObjectTreeUpdateListener) (tree.ObjectTree, error)
+	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener tree.ObjectTreeUpdateListener) (tree.ObjectTree, error)
+	BuildTree(ctx context.Context, id string, listener tree.ObjectTreeUpdateListener) (tree.ObjectTree, error)
 
 	Close() error
 }
@@ -47,16 +47,51 @@ type space struct {
 	cache        cache.TreeCache
 }
 
-func (s *space) CreateTree(payload tree.ObjectTreeCreatePayload, listener tree.ObjectTreeUpdateListener) (tree.ObjectTree, error) {
+func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener tree.ObjectTreeUpdateListener) (tree.ObjectTree, error) {
 	return synctree.CreateSyncTree(payload, s.syncService, listener, nil, s.storage.CreateTreeStorage)
 }
 
-func (s *space) BuildTree(id string, listener tree.ObjectTreeUpdateListener) (t tree.ObjectTree, err error) {
+func (s *space) BuildTree(ctx context.Context, id string, listener tree.ObjectTreeUpdateListener) (t tree.ObjectTree, err error) {
+	getTreeRemote := func() (*spacesyncproto.ObjectSyncMessage, error) {
+		// TODO: add empty context handling (when this is not happening due to head update)
+		peerId, err := syncservice.GetPeerIdFromStreamContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return s.syncService.StreamPool().SendSync(
+			peerId,
+			spacesyncproto.WrapFullRequest(&spacesyncproto.ObjectFullSyncRequest{}, nil, id),
+			func(syncMessage *spacesyncproto.ObjectSyncMessage) bool {
+				return syncMessage.GetContent().GetFullSyncResponse() != nil
+			},
+		)
+	}
+
 	store, err := s.storage.Storage(id)
-	if err != nil {
+	if err != nil && err != treestorage.ErrUnknownTreeId {
 		return
 	}
 
+	if err == treestorage.ErrUnknownTreeId {
+		var resp *spacesyncproto.ObjectSyncMessage
+		resp, err = getTreeRemote()
+		if err != nil {
+			return
+		}
+		fullSyncResp := resp.GetContent().GetFullSyncResponse()
+
+		payload := treestorage.TreeStorageCreatePayload{
+			TreeId:  resp.TreeId,
+			Header:  resp.TreeHeader,
+			Changes: fullSyncResp.Changes,
+			Heads:   fullSyncResp.Heads,
+		}
+		store, err = s.storage.CreateTreeStorage(payload)
+		if err != nil {
+			return
+		}
+	}
 	return synctree.BuildSyncTree(s.syncService, store.(treestorage.TreeStorage), listener, nil)
 }
 

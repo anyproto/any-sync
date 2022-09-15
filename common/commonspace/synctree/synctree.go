@@ -11,7 +11,7 @@ import (
 )
 
 type SyncTree struct {
-	objTree     tree.ObjectTree
+	tree.ObjectTree
 	syncService syncservice.SyncService
 }
 
@@ -60,68 +60,8 @@ func buildSyncTree(
 	return
 }
 
-func (s *SyncTree) Lock() {
-	s.objTree.Lock()
-}
-
-func (s *SyncTree) Unlock() {
-	s.objTree.Unlock()
-}
-
-func (s *SyncTree) RLock() {
-	s.objTree.RLock()
-}
-
-func (s *SyncTree) RUnlock() {
-	s.objTree.RUnlock()
-}
-
-func (s *SyncTree) ID() string {
-	return s.objTree.ID()
-}
-
-func (s *SyncTree) Header() *aclpb.TreeHeader {
-	return s.objTree.Header()
-}
-
-func (s *SyncTree) Heads() []string {
-	return s.objTree.Heads()
-}
-
-func (s *SyncTree) Root() *tree.Change {
-	return s.objTree.Root()
-}
-
-func (s *SyncTree) HasChange(id string) bool {
-	return s.objTree.HasChange(id)
-}
-
-func (s *SyncTree) Iterate(convert tree.ChangeConvertFunc, iterate tree.ChangeIterateFunc) error {
-	return s.objTree.Iterate(convert, iterate)
-}
-
-func (s *SyncTree) IterateFrom(id string, convert tree.ChangeConvertFunc, iterate tree.ChangeIterateFunc) error {
-	return s.objTree.IterateFrom(id, convert, iterate)
-}
-
-func (s *SyncTree) SnapshotPath() []string {
-	return s.objTree.SnapshotPath()
-}
-
-func (s *SyncTree) ChangesAfterCommonSnapshot(snapshotPath, heads []string) ([]*aclpb.RawTreeChangeWithId, error) {
-	return s.objTree.ChangesAfterCommonSnapshot(snapshotPath, heads)
-}
-
-func (s *SyncTree) Storage() storage.TreeStorage {
-	return s.objTree.Storage()
-}
-
-func (s *SyncTree) DebugDump() (string, error) {
-	return s.objTree.DebugDump()
-}
-
 func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeContent) (res tree.AddResult, err error) {
-	res, err = s.objTree.AddContent(ctx, content)
+	res, err = s.AddContent(ctx, content)
 	if err != nil {
 		return
 	}
@@ -134,7 +74,7 @@ func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 }
 
 func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*aclpb.RawTreeChangeWithId) (res tree.AddResult, err error) {
-	res, err = s.objTree.AddRawChanges(ctx, changes...)
+	res, err = s.AddRawChanges(ctx, changes...)
 	if err != nil || res.Mode == tree.Nothing {
 		return
 	}
@@ -144,8 +84,4 @@ func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*aclpb.RawTreeC
 		SnapshotPath: s.SnapshotPath(),
 	})
 	return
-}
-
-func (s *SyncTree) Close() error {
-	return s.objTree.Close()
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/libp2p/go-libp2p-core/sec"
-	"storj.io/drpc"
 	"storj.io/drpc/drpcctx"
 	"sync"
 )
@@ -25,17 +24,27 @@ type StreamPool interface {
 }
 
 type SyncClient interface {
+	SendSync(peerId string,
+		message *spacesyncproto.ObjectSyncMessage,
+		msgCheck func(syncMessage *spacesyncproto.ObjectSyncMessage) bool) (reply *spacesyncproto.ObjectSyncMessage, err error)
 	SendAsync(peerId string, message *spacesyncproto.ObjectSyncMessage) (err error)
 	BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (err error)
 }
 
 type MessageHandler func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error)
 
+type responseWaiter struct {
+	ch       chan *spacesyncproto.ObjectSyncMessage
+	msgCheck func(message *spacesyncproto.ObjectSyncMessage) bool
+}
+
 type streamPool struct {
 	sync.Mutex
 	peerStreams    map[string]spacesyncproto.SpaceStream
 	messageHandler MessageHandler
 	wg             *sync.WaitGroup
+	waiters        map[string]responseWaiter
+	waitersMx      sync.Mutex
 }
 
 func newStreamPool(messageHandler MessageHandler) StreamPool {
@@ -49,6 +58,41 @@ func newStreamPool(messageHandler MessageHandler) StreamPool {
 func (s *streamPool) HasStream(peerId string) (res bool) {
 	_, err := s.getStream(peerId)
 	return err == nil
+}
+
+func (s *streamPool) SendSync(
+	peerId string,
+	message *spacesyncproto.ObjectSyncMessage,
+	msgCheck func(syncMessage *spacesyncproto.ObjectSyncMessage) bool) (reply *spacesyncproto.ObjectSyncMessage, err error) {
+
+	sendAndWait := func(waiter responseWaiter) (err error) {
+		err = s.SendAsync(peerId, message)
+		if err != nil {
+			return
+		}
+
+		reply = <-waiter.ch
+		return
+	}
+
+	key := fmt.Sprintf("%s.%s", peerId, message.TreeId)
+	s.waitersMx.Lock()
+	waiter, exists := s.waiters[key]
+	if exists {
+		s.waitersMx.Unlock()
+
+		err = sendAndWait(waiter)
+		return
+	}
+
+	waiter = responseWaiter{
+		ch:       make(chan *spacesyncproto.ObjectSyncMessage),
+		msgCheck: msgCheck,
+	}
+	s.waiters[key] = waiter
+	s.waitersMx.Unlock()
+	err = sendAndWait(waiter)
+	return
 }
 
 func (s *streamPool) SendAsync(peerId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
@@ -109,7 +153,7 @@ func (s *streamPool) BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (
 
 func (s *streamPool) AddAndReadStream(stream spacesyncproto.SpaceStream) (err error) {
 	s.Lock()
-	peerId, err := getPeerIdFromStream(stream)
+	peerId, err := GetPeerIdFromStreamContext(stream.Context())
 	if err != nil {
 		s.Unlock()
 		return
@@ -119,8 +163,7 @@ func (s *streamPool) AddAndReadStream(stream spacesyncproto.SpaceStream) (err er
 	s.wg.Add(1)
 	s.Unlock()
 
-	go s.readPeerLoop(peerId, stream)
-	return
+	return s.readPeerLoop(peerId, stream)
 }
 
 func (s *streamPool) Close() (err error) {
@@ -140,6 +183,22 @@ func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStre
 		limiter <- struct{}{}
 	}
 
+	process := func(msg *spacesyncproto.ObjectSyncMessage) {
+		key := fmt.Sprintf("%s.%s", peerId, msg.TreeId)
+		s.waitersMx.Lock()
+		waiter, exists := s.waiters[key]
+
+		if !exists || !waiter.msgCheck(msg) {
+			s.waitersMx.Unlock()
+			s.messageHandler(stream.Context(), peerId, msg)
+			return
+		}
+
+		delete(s.waiters, key)
+		s.waitersMx.Unlock()
+		waiter.ch <- msg
+	}
+
 Loop:
 	for {
 		msg, err := stream.Recv()
@@ -155,8 +214,7 @@ Loop:
 			defer func() {
 				limiter <- struct{}{}
 			}()
-
-			s.messageHandler(context.Background(), peerId, msg)
+			process(msg)
 		}()
 	}
 	return s.removePeer(peerId)
@@ -173,8 +231,7 @@ func (s *streamPool) removePeer(peerId string) (err error) {
 	return
 }
 
-func getPeerIdFromStream(stream drpc.Stream) (string, error) {
-	ctx := stream.Context()
+func GetPeerIdFromStreamContext(ctx context.Context) (string, error) {
 	conn, ok := ctx.Value(drpcctx.TransportKey{}).(sec.SecureConn)
 	if !ok {
 		return "", fmt.Errorf("incorrect connection type in stream")
