@@ -1,6 +1,7 @@
 package syncservice
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
@@ -18,6 +19,7 @@ const maxSimultaneousOperationsPerStream = 10
 // StreamPool can be made generic to work with different streams
 type StreamPool interface {
 	AddStream(stream spacesyncproto.SpaceStream) (err error)
+	HasStream(peerId string) bool
 	SyncClient
 }
 
@@ -26,9 +28,7 @@ type SyncClient interface {
 	BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (err error)
 }
 
-type MessageHandler interface {
-	HandleMessage(peerId string, message *spacesyncproto.ObjectSyncMessage)
-}
+type MessageHandler func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error)
 
 type streamPool struct {
 	sync.Mutex
@@ -41,6 +41,11 @@ func newStreamPool(messageHandler MessageHandler) StreamPool {
 		peerStreams:    make(map[string]spacesyncproto.SpaceStream),
 		messageHandler: messageHandler,
 	}
+}
+
+func (s *streamPool) HasStream(peerId string) (res bool) {
+	_, err := s.getStream(peerId)
+	return err == nil
 }
 
 func (s *streamPool) SendAsync(peerId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
@@ -101,15 +106,16 @@ func (s *streamPool) BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (
 
 func (s *streamPool) AddStream(stream spacesyncproto.SpaceStream) (err error) {
 	s.Lock()
-	defer s.Unlock()
 	peerId, err := getPeerIdFromStream(stream)
 	if err != nil {
+		s.Unlock()
 		return
 	}
 
 	s.peerStreams[peerId] = stream
-	go s.readPeerLoop(peerId, stream)
-	return
+	s.Unlock()
+
+	return s.readPeerLoop(peerId, stream)
 }
 
 func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStream) (err error) {
@@ -134,13 +140,10 @@ Loop:
 				limiter <- struct{}{}
 			}()
 
-			s.messageHandler.HandleMessage(peerId, msg)
+			s.messageHandler(context.Background(), peerId, msg)
 		}()
 	}
-	if err = s.removePeer(peerId); err != nil {
-		// TODO: log something
-	}
-	return
+	return s.removePeer(peerId)
 }
 
 func (s *streamPool) removePeer(peerId string) (err error) {
