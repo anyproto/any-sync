@@ -149,12 +149,6 @@ func (ot *objectTree) Storage() storage.TreeStorage {
 }
 
 func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeContent) (res AddResult, err error) {
-	defer func() {
-		if err == nil && ot.updateListener != nil {
-			ot.updateListener.Update(ot)
-		}
-	}()
-
 	payload, err := ot.prepareBuilderContent(content)
 	if err != nil {
 		return
