@@ -3,12 +3,17 @@ package commonspace
 import (
 	"context"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
+	treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
 	"go.uber.org/zap"
 	"math/rand"
@@ -21,6 +26,9 @@ type Space interface {
 
 	SpaceSyncRpc() RpcHandler
 	SyncService() syncservice.SyncService
+
+	CreateTree(payload tree.ObjectTreeCreatePayload, listener tree.ObjectTreeUpdateListener) (tree.ObjectTree, error)
+	BuildTree(id string, listener tree.ObjectTreeUpdateListener) (tree.ObjectTree, error)
 
 	Close() error
 }
@@ -35,6 +43,21 @@ type space struct {
 	rpc          *rpcHandler
 	periodicSync *periodicSync
 	syncService  syncservice.SyncService
+	storage      storage.Storage
+	cache        cache.TreeCache
+}
+
+func (s *space) CreateTree(payload tree.ObjectTreeCreatePayload, listener tree.ObjectTreeUpdateListener) (tree.ObjectTree, error) {
+	return synctree.CreateSyncTree(payload, s.syncService, listener, nil, s.storage.CreateTreeStorage)
+}
+
+func (s *space) BuildTree(id string, listener tree.ObjectTreeUpdateListener) (t tree.ObjectTree, err error) {
+	store, err := s.storage.Storage(id)
+	if err != nil {
+		return
+	}
+
+	return synctree.BuildSyncTree(s.syncService, store.(treestorage.TreeStorage), listener, nil)
 }
 
 func (s *space) Id() string {
@@ -100,8 +123,17 @@ func (s *space) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	if err != nil {
 		return nil
 	}
+	s.pingTreesInCache(ctx, newIds)
+	s.pingTreesInCache(ctx, changedIds)
+
 	log.Info("sync done:", zap.Int("newIds", len(newIds)), zap.Int("changedIds", len(changedIds)), zap.Int("removedIds", len(removedIds)))
 	return
+}
+
+func (s *space) pingTreesInCache(ctx context.Context, trees []string) {
+	for _, tId := range trees {
+		_, _ = s.cache.GetTree(ctx, tId)
+	}
 }
 
 func (s *space) getPeers(ctx context.Context) (peers []peer.Peer, err error) {

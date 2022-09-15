@@ -59,7 +59,7 @@ func (s *syncHandler) HandleHeadUpdate(
 	}
 
 	err = func() error {
-		objTree := res.Tree
+		objTree := res.TreeContainer.Tree()
 		objTree.Lock()
 		defer res.Release()
 		defer objTree.Unlock()
@@ -111,7 +111,7 @@ func (s *syncHandler) HandleFullSyncRequest(
 
 	// TODO: check if sync request contains changes and add them (also do head update in this case)
 	err = func() error {
-		objTree := res.Tree
+		objTree := res.TreeContainer.Tree()
 		objTree.Lock()
 		defer res.Release()
 		defer objTree.Unlock()
@@ -143,7 +143,7 @@ func (s *syncHandler) HandleFullSyncResponse(
 	}
 
 	err = func() error {
-		objTree := res.Tree
+		objTree := res.TreeContainer.Tree()
 		objTree.Lock()
 		defer res.Release()
 		defer objTree.Unlock()

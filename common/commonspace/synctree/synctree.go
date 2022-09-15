@@ -16,8 +16,8 @@ type SyncTree struct {
 }
 
 func CreateSyncTree(
-	syncService syncservice.SyncService,
 	payload tree.ObjectTreeCreatePayload,
+	syncService syncservice.SyncService,
 	listener tree.ObjectTreeUpdateListener,
 	aclList list.ACLList,
 	createStorage storage.TreeStorageCreatorFunc) (t tree.ObjectTree, err error) {
