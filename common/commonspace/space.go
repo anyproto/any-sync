@@ -148,7 +148,8 @@ func (s *space) testFill() {
 
 func (s *space) sync(ctx context.Context) error {
 	st := time.Now()
-	peers, err := s.getPeers(ctx)
+	// diffing with responsible peers according to configuration
+	peers, err := s.nconf.ResponsiblePeers(ctx, s.id)
 	if err != nil {
 		return err
 	}
@@ -168,6 +169,7 @@ func (s *space) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	if err != nil {
 		return nil
 	}
+
 	s.pingTreesInCache(ctx, newIds)
 	s.pingTreesInCache(ctx, changedIds)
 
@@ -178,19 +180,6 @@ func (s *space) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 func (s *space) pingTreesInCache(ctx context.Context, trees []string) {
 	for _, tId := range trees {
 		_, _ = s.cache.GetTree(ctx, tId)
-	}
-}
-
-func (s *space) getPeers(ctx context.Context) (peers []peer.Peer, err error) {
-	if s.nconf.IsResponsible(s.id) {
-		return s.nconf.AllPeers(ctx, s.id)
-	} else {
-		var p peer.Peer
-		p, err = s.nconf.OnePeer(ctx, s.id)
-		if err != nil {
-			return nil, err
-		}
-		return []peer.Peer{p}, nil
 	}
 }
 

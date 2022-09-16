@@ -19,6 +19,8 @@ type Configuration interface {
 	AllPeers(ctx context.Context, spaceId string) (peers []peer.Peer, err error)
 	// OnePeer returns one of peer for spaceId
 	OnePeer(ctx context.Context, spaceId string) (p peer.Peer, err error)
+	// ResponsiblePeers returns peers for the space id that are responsible for the space
+	ResponsiblePeers(ctx context.Context, spaceId string) (peers []peer.Peer, err error)
 	// NodeIds returns list of peerId for given spaceId
 	NodeIds(spaceId string) []string
 	// IsResponsible checks if current account responsible for given spaceId
@@ -49,6 +51,20 @@ func (c *configuration) AllPeers(ctx context.Context, spaceId string) (peers []p
 		return nil, fmt.Errorf("unable to connect to any node")
 	}
 	return
+}
+
+func (c *configuration) ResponsiblePeers(ctx context.Context, spaceId string) (peers []peer.Peer, err error) {
+	if c.IsResponsible(spaceId) {
+		return c.AllPeers(ctx, spaceId)
+	} else {
+		var one peer.Peer
+		one, err = c.OnePeer(ctx, spaceId)
+		if err != nil {
+			return
+		}
+		peers = []peer.Peer{one}
+		return
+	}
 }
 
 func (c *configuration) OnePeer(ctx context.Context, spaceId string) (p peer.Peer, err error) {

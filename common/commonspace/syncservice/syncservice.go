@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"time"
 )
 
 type SyncService interface {
@@ -14,39 +15,56 @@ type SyncService interface {
 	Close() (err error)
 }
 
+const respPeersStreamCheckInterval = time.Second * 10
+
 type syncService struct {
-	syncHandler   SyncHandler
-	streamPool    StreamPool
-	configuration nodeconf.Configuration
-	spaceId       string
+	syncHandler    SyncHandler
+	streamPool     StreamPool
+	configuration  nodeconf.Configuration
+	spaceId        string
+	streamLoopCtx  context.Context
+	stopStreamLoop context.CancelFunc
+}
+
+func (s *syncService) Run() {
+	s.streamLoopCtx, s.stopStreamLoop = context.WithCancel(context.Background())
+	s.streamCheckLoop(s.streamLoopCtx)
 }
 
 func (s *syncService) Close() (err error) {
+	s.stopStreamLoop()
 	return s.streamPool.Close()
 }
 
 func (s *syncService) NotifyHeadUpdate(ctx context.Context, treeId string, header *aclpb.TreeHeader, update *spacesyncproto.ObjectHeadUpdate) (err error) {
-	msg := spacesyncproto.WrapHeadUpdate(update, header, treeId)
-	peers, err := s.configuration.AllPeers(context.Background(), s.spaceId)
-	if err != nil {
-		return
-	}
-	for _, peer := range peers {
-		if s.streamPool.HasStream(peer.Id()) {
-			continue
-		}
-		cl := spacesyncproto.NewDRPCSpaceClient(peer)
-		stream, err := cl.Stream(ctx)
-		if err != nil {
-			continue
-		}
+	return s.streamPool.BroadcastAsync(spacesyncproto.WrapHeadUpdate(update, header, treeId))
+}
 
-		err = s.streamPool.AddAndReadStream(stream)
+func (s *syncService) streamCheckLoop(ctx context.Context) {
+	for {
+		respPeers, err := s.configuration.ResponsiblePeers(ctx, s.spaceId)
 		if err != nil {
 			continue
 		}
+		for _, peer := range respPeers {
+			if s.streamPool.HasStream(peer.Id()) {
+				continue
+			}
+			cl := spacesyncproto.NewDRPCSpaceClient(peer)
+			stream, err := cl.Stream(ctx)
+			if err != nil {
+				continue
+			}
+
+			s.streamPool.AddAndReadStreamAsync(stream)
+		}
+		select {
+		case <-time.After(respPeersStreamCheckInterval):
+			break
+		case <-ctx.Done():
+			return
+		}
 	}
-	return s.streamPool.BroadcastAsync(msg)
 }
 
 func (s *syncService) StreamPool() StreamPool {

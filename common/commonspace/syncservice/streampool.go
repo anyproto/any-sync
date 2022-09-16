@@ -17,7 +17,8 @@ const maxSimultaneousOperationsPerStream = 10
 
 // StreamPool can be made generic to work with different streams
 type StreamPool interface {
-	AddAndReadStream(stream spacesyncproto.SpaceStream) (err error)
+	AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (err error)
+	AddAndReadStreamAsync(stream spacesyncproto.SpaceStream)
 	HasStream(peerId string) bool
 	SyncClient
 	Close() (err error)
@@ -151,7 +152,11 @@ func (s *streamPool) BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (
 	return nil
 }
 
-func (s *streamPool) AddAndReadStream(stream spacesyncproto.SpaceStream) (err error) {
+func (s *streamPool) AddAndReadStreamAsync(stream spacesyncproto.SpaceStream) {
+	go s.AddAndReadStreamSync(stream)
+}
+
+func (s *streamPool) AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (err error) {
 	s.Lock()
 	peerId, err := GetPeerIdFromStreamContext(stream.Context())
 	if err != nil {
