@@ -12,6 +12,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
@@ -45,6 +46,7 @@ type space struct {
 	syncService  syncservice.SyncService
 	storage      storage.Storage
 	cache        cache.TreeCache
+	aclList      list.ACLList
 }
 
 func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener tree.ObjectTreeUpdateListener) (tree.ObjectTree, error) {
@@ -63,7 +65,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener tree.ObjectTr
 			peerId,
 			spacesyncproto.WrapFullRequest(&spacesyncproto.ObjectFullSyncRequest{}, nil, id),
 			func(syncMessage *spacesyncproto.ObjectSyncMessage) bool {
-				return syncMessage.GetContent().GetFullSyncResponse() != nil
+				return syncMessage.TreeId == id && syncMessage.GetContent().GetFullSyncResponse() != nil
 			},
 		)
 	}
@@ -87,12 +89,20 @@ func (s *space) BuildTree(ctx context.Context, id string, listener tree.ObjectTr
 			Changes: fullSyncResp.Changes,
 			Heads:   fullSyncResp.Heads,
 		}
+
+		// basically building tree with inmemory storage and validating that it was without errors
+		err = tree.ValidateRawTree(payload, s.aclList)
+		if err != nil {
+			return
+		}
+		// TODO: maybe it is better to use the tree that we already built and just replace the storage
+		// now we are sure that we can save it to the storage
 		store, err = s.storage.CreateTreeStorage(payload)
 		if err != nil {
 			return
 		}
 	}
-	return synctree.BuildSyncTree(s.syncService, store.(treestorage.TreeStorage), listener, nil)
+	return synctree.BuildSyncTree(s.syncService, store.(treestorage.TreeStorage), listener, s.aclList)
 }
 
 func (s *space) Id() string {
