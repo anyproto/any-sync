@@ -51,6 +51,9 @@ message ObjectSyncMessage {
     ObjectSyncContentValue content = 2;
     acl.TreeHeader treeHeader = 3;
     string treeId = 4;
+
+    string identity = 5;
+    string peerSignature = 6;
 }
 
 // ObjectSyncContentValue provides different types for object sync
@@ -72,7 +75,8 @@ message ObjectHeadUpdate {
 // ObjectHeadUpdate is a message sent when document needs full sync
 message ObjectFullSyncRequest {
     repeated string heads = 1;
-    repeated string snapshotPath = 2;
+    repeated acl.RawTreeChangeWithId changes = 2;
+    repeated string snapshotPath = 3;
 }
 
 // ObjectFullSyncResponse is a message sent as a response for a specific full sync

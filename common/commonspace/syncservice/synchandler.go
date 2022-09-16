@@ -5,7 +5,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 )
@@ -49,8 +48,6 @@ func (s *syncHandler) HandleHeadUpdate(
 	var (
 		fullRequest *spacesyncproto.ObjectFullSyncRequest
 		result      tree.AddResult
-		// in case update changes are empty then we want to sync the whole tree
-		sendChangesOnFullSync = len(update.Changes) == 0
 	)
 
 	res, err := s.treeCache.GetTree(ctx, treeId)
@@ -74,9 +71,8 @@ func (s *syncHandler) HandleHeadUpdate(
 		}
 
 		// if we couldn't add all the changes
-		shouldFullSync := len(update.Changes) != len(result.Added)
-		if shouldFullSync {
-			fullRequest, err = s.prepareFullSyncRequest(objTree, sendChangesOnFullSync)
+		if len(update.Changes) != len(result.Added) {
+			fullRequest, err = s.prepareFullSyncRequest(objTree, update)
 			if err != nil {
 				return err
 			}
@@ -84,11 +80,6 @@ func (s *syncHandler) HandleHeadUpdate(
 		return nil
 	}()
 
-	// if there are no such tree
-	if err == storage.ErrUnknownTreeId {
-		fullRequest = &spacesyncproto.ObjectFullSyncRequest{}
-	}
-	// if we have incompatible heads, or we haven't seen the tree at all
 	if fullRequest != nil {
 		return s.syncClient.SendAsync(senderId, spacesyncproto.WrapFullRequest(fullRequest, header, treeId))
 	}
@@ -109,21 +100,23 @@ func (s *syncHandler) HandleFullSyncRequest(
 		return
 	}
 
-	// TODO: check if sync request contains changes and add them (also do head update in this case)
 	err = func() error {
 		objTree := res.TreeContainer.Tree()
 		objTree.Lock()
 		defer res.Release()
 		defer objTree.Unlock()
-		fullResponse, err = s.prepareFullSyncResponse(treeId, request.SnapshotPath, request.Heads, objTree)
+
+		_, err = objTree.AddRawChanges(ctx, request.Changes...)
 		if err != nil {
 			return err
 		}
-		return nil
+
+		fullResponse, err = s.prepareFullSyncResponse(treeId, request.SnapshotPath, request.Heads, objTree)
+		return err
 	}()
 
 	if err != nil {
-		return err
+		return
 	}
 	return s.syncClient.SendAsync(senderId, spacesyncproto.WrapFullResponse(fullResponse, header, treeId))
 }
@@ -134,8 +127,6 @@ func (s *syncHandler) HandleFullSyncResponse(
 	response *spacesyncproto.ObjectFullSyncResponse,
 	header *aclpb.TreeHeader,
 	treeId string) (err error) {
-
-	var result tree.AddResult
 
 	res, err := s.treeCache.GetTree(ctx, treeId)
 	if err != nil {
@@ -153,27 +144,28 @@ func (s *syncHandler) HandleFullSyncResponse(
 			return nil
 		}
 
-		result, err = objTree.AddRawChanges(ctx, response.Changes...)
-
-		if err != nil {
-			return err
-		}
-		return nil
+		_, err = objTree.AddRawChanges(ctx, response.Changes...)
+		return err
 	}()
 
-	// if error or nothing has changed
-	if (err != nil || len(result.Added) == 0) && err != storage.ErrUnknownTreeId {
-		return err
-	}
-	// if we have a new tree
-	if err == storage.ErrUnknownTreeId {
-		return s.addTree(ctx, response, header, treeId)
-	}
 	return
 }
 
-func (s *syncHandler) prepareFullSyncRequest(t tree.ObjectTree, sendOwnChanges bool) (*spacesyncproto.ObjectFullSyncRequest, error) {
-	// TODO: add send own changes logic
+func (s *syncHandler) prepareFullSyncRequest(
+	t tree.ObjectTree,
+	update *spacesyncproto.ObjectHeadUpdate) (req *spacesyncproto.ObjectFullSyncRequest, err error) {
+	req = &spacesyncproto.ObjectFullSyncRequest{
+		Heads:        t.Heads(),
+		SnapshotPath: t.SnapshotPath(),
+	}
+	if len(update.Changes) != 0 {
+		var changesAfterSnapshot []*aclpb.RawTreeChangeWithId
+		changesAfterSnapshot, err = t.ChangesAfterCommonSnapshot(update.SnapshotPath, update.Heads)
+		if err != nil {
+			return
+		}
+		req.Changes = changesAfterSnapshot
+	}
 	return &spacesyncproto.ObjectFullSyncRequest{
 		Heads:        t.Heads(),
 		SnapshotPath: t.SnapshotPath(),
@@ -182,7 +174,8 @@ func (s *syncHandler) prepareFullSyncRequest(t tree.ObjectTree, sendOwnChanges b
 
 func (s *syncHandler) prepareFullSyncResponse(
 	treeId string,
-	theirPath, theirHeads []string,
+	theirPath,
+	theirHeads []string,
 	t tree.ObjectTree) (*spacesyncproto.ObjectFullSyncResponse, error) {
 	ourChanges, err := t.ChangesAfterCommonSnapshot(theirPath, theirHeads)
 	if err != nil {
@@ -194,20 +187,4 @@ func (s *syncHandler) prepareFullSyncResponse(
 		Changes:      ourChanges,
 		SnapshotPath: t.SnapshotPath(),
 	}, nil
-}
-
-func (s *syncHandler) addTree(
-	ctx context.Context,
-	response *spacesyncproto.ObjectFullSyncResponse,
-	header *aclpb.TreeHeader,
-	treeId string) error {
-
-	return s.treeCache.AddTree(
-		ctx,
-		storage.TreeStorageCreatePayload{
-			TreeId:  treeId,
-			Header:  header,
-			Changes: response.Changes,
-			Heads:   response.Heads,
-		})
 }
