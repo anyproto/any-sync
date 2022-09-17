@@ -60,7 +60,7 @@ func (r remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff
 	return
 }
 
-func HandlerRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
+func HandleRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
 	ranges := make([]ldiff.Range, 0, len(req.Ranges))
 	for _, reqRange := range req.Ranges {
 		ranges = append(ranges, ldiff.Range{

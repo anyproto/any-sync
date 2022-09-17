@@ -51,9 +51,10 @@ message ObjectSyncMessage {
     ObjectSyncContentValue content = 2;
     acl.TreeHeader treeHeader = 3;
     string treeId = 4;
-
-    string identity = 5;
-    string peerSignature = 6;
+    string trackingId = 5;
+//
+//    string identity = 5;
+//    string peerSignature = 6;
 }
 
 // ObjectSyncContentValue provides different types for object sync
@@ -62,6 +63,7 @@ message ObjectSyncContentValue {
         ObjectHeadUpdate headUpdate = 1;
         ObjectFullSyncRequest fullSyncRequest = 2;
         ObjectFullSyncResponse fullSyncResponse = 3;
+        ObjectErrorResponse errorResponse = 4;
     }
 }
 
@@ -84,4 +86,8 @@ message ObjectFullSyncResponse {
     repeated string heads = 1;
     repeated acl.RawTreeChangeWithId changes = 2;
     repeated string snapshotPath = 3;
+}
+
+message ObjectErrorResponse {
+    string error = 1;
 }
