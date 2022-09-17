@@ -120,6 +120,7 @@ Loop:
 			delete(s.peerStreams, id)
 			continue Loop
 		default:
+			break
 		}
 		streams = append(streams, stream)
 	}

@@ -11,11 +11,6 @@ import (
 	"sync"
 )
 
-type ObjectTreeUpdateListener interface {
-	Update(tree ObjectTree)
-	Rebuild(tree ObjectTree)
-}
-
 type RWLocker interface {
 	sync.Locker
 	RLock()
@@ -71,7 +66,6 @@ type objectTree struct {
 	rawChangeLoader *rawChangeLoader
 	treeBuilder     *treeBuilder
 	aclList         list.ACLList
-	updateListener  ObjectTreeUpdateListener
 
 	id     string
 	header *aclpb.TreeHeader
@@ -94,7 +88,6 @@ type objectTreeDeps struct {
 	changeBuilder   ChangeBuilder
 	treeBuilder     *treeBuilder
 	treeStorage     storage.TreeStorage
-	updateListener  ObjectTreeUpdateListener
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
 	aclList         list.ACLList
@@ -102,7 +95,6 @@ type objectTreeDeps struct {
 
 func defaultObjectTreeDeps(
 	treeStorage storage.TreeStorage,
-	listener ObjectTreeUpdateListener,
 	aclList list.ACLList) objectTreeDeps {
 
 	keychain := common.NewKeychain()
@@ -112,7 +104,6 @@ func defaultObjectTreeDeps(
 		changeBuilder:   changeBuilder,
 		treeBuilder:     treeBuilder,
 		treeStorage:     treeStorage,
-		updateListener:  listener,
 		validator:       newTreeValidator(),
 		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
 		aclList:         aclList,
@@ -211,8 +202,7 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 }
 
 func (ot *objectTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawTreeChangeWithId) (addResult AddResult, err error) {
-	var mode Mode
-	mode, addResult, err = ot.addRawChanges(ctx, rawChanges...)
+	addResult, err = ot.addRawChanges(ctx, rawChanges...)
 	if err != nil {
 		return
 	}
@@ -230,26 +220,10 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 
 	// setting heads
 	err = ot.treeStorage.SetHeads(ot.tree.Heads())
-	if err != nil {
-		return
-	}
-
-	if ot.updateListener == nil {
-		return
-	}
-
-	switch mode {
-	case Append:
-		ot.updateListener.Update(ot)
-	case Rebuild:
-		ot.updateListener.Rebuild(ot)
-	default:
-		break
-	}
 	return
 }
 
-func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.RawTreeChangeWithId) (mode Mode, addResult AddResult, err error) {
+func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.RawTreeChangeWithId) (addResult AddResult, err error) {
 	// resetting buffers
 	ot.tmpChangesBuf = ot.tmpChangesBuf[:0]
 	ot.notSeenIdxBuf = ot.notSeenIdxBuf[:0]
