@@ -37,5 +37,5 @@ type mockClient struct {
 }
 
 func (m *mockClient) HeadSync(ctx context.Context, in *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
-	return HandlerRangeRequest(ctx, m.l, in)
+	return HandleRangeRequest(ctx, m.l, in)
 }

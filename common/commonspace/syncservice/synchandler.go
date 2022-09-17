@@ -25,15 +25,15 @@ func newSyncHandler(treeCache cache.TreeCache, syncClient SyncClient) *syncHandl
 	}
 }
 
-func (s *syncHandler) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) error {
-	msg := message.GetContent()
+func (s *syncHandler) HandleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) error {
+	content := msg.GetContent()
 	switch {
-	case msg.GetFullSyncRequest() != nil:
-		return s.HandleFullSyncRequest(ctx, senderId, msg.GetFullSyncRequest(), message.GetTreeHeader(), message.GetTreeId())
-	case msg.GetFullSyncResponse() != nil:
-		return s.HandleFullSyncResponse(ctx, senderId, msg.GetFullSyncResponse(), message.GetTreeHeader(), message.GetTreeId())
-	case msg.GetHeadUpdate() != nil:
-		return s.HandleHeadUpdate(ctx, senderId, msg.GetHeadUpdate(), message.GetTreeHeader(), message.GetTreeId())
+	case content.GetFullSyncRequest() != nil:
+		return s.HandleFullSyncRequest(ctx, senderId, content.GetFullSyncRequest(), msg)
+	case content.GetFullSyncResponse() != nil:
+		return s.HandleFullSyncResponse(ctx, senderId, content.GetFullSyncResponse(), msg)
+	case content.GetHeadUpdate() != nil:
+		return s.HandleHeadUpdate(ctx, senderId, content.GetHeadUpdate(), msg)
 	}
 	return nil
 }
@@ -42,15 +42,13 @@ func (s *syncHandler) HandleHeadUpdate(
 	ctx context.Context,
 	senderId string,
 	update *spacesyncproto.ObjectHeadUpdate,
-	header *aclpb.TreeHeader,
-	treeId string) (err error) {
+	msg *spacesyncproto.ObjectSyncMessage) (err error) {
 
 	var (
 		fullRequest *spacesyncproto.ObjectFullSyncRequest
 		result      tree.AddResult
 	)
-
-	res, err := s.treeCache.GetTree(ctx, treeId)
+	res, err := s.treeCache.GetTree(ctx, msg.TreeId)
 	if err != nil {
 		return
 	}
@@ -81,7 +79,8 @@ func (s *syncHandler) HandleHeadUpdate(
 	}()
 
 	if fullRequest != nil {
-		return s.syncClient.SendAsync(senderId, spacesyncproto.WrapFullRequest(fullRequest, header, treeId))
+		return s.syncClient.SendAsync(senderId,
+			spacesyncproto.WrapFullRequest(fullRequest, msg.TreeHeader, msg.TreeId, msg.TrackingId))
 	}
 	return
 }
@@ -90,12 +89,18 @@ func (s *syncHandler) HandleFullSyncRequest(
 	ctx context.Context,
 	senderId string,
 	request *spacesyncproto.ObjectFullSyncRequest,
-	header *aclpb.TreeHeader,
-	treeId string) (err error) {
+	msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	var (
+		fullResponse *spacesyncproto.ObjectFullSyncResponse
+		header       = msg.TreeHeader
+	)
+	defer func() {
+		if err != nil {
+			s.syncClient.SendAsync(senderId, spacesyncproto.WrapError(err, header, msg.TreeId, msg.TrackingId))
+		}
+	}()
 
-	var fullResponse *spacesyncproto.ObjectFullSyncResponse
-
-	res, err := s.treeCache.GetTree(ctx, treeId)
+	res, err := s.treeCache.GetTree(ctx, msg.TreeId)
 	if err != nil {
 		return
 	}
@@ -106,29 +111,32 @@ func (s *syncHandler) HandleFullSyncRequest(
 		defer res.Release()
 		defer objTree.Unlock()
 
+		if header == nil {
+			header = objTree.Header()
+		}
+
 		_, err = objTree.AddRawChanges(ctx, request.Changes...)
 		if err != nil {
 			return err
 		}
 
-		fullResponse, err = s.prepareFullSyncResponse(treeId, request.SnapshotPath, request.Heads, objTree)
+		fullResponse, err = s.prepareFullSyncResponse(request.SnapshotPath, request.Heads, objTree)
 		return err
 	}()
 
 	if err != nil {
 		return
 	}
-	return s.syncClient.SendAsync(senderId, spacesyncproto.WrapFullResponse(fullResponse, header, treeId))
+	return s.syncClient.SendAsync(senderId,
+		spacesyncproto.WrapFullResponse(fullResponse, header, msg.TreeId, msg.TrackingId))
 }
 
 func (s *syncHandler) HandleFullSyncResponse(
 	ctx context.Context,
 	senderId string,
 	response *spacesyncproto.ObjectFullSyncResponse,
-	header *aclpb.TreeHeader,
-	treeId string) (err error) {
-
-	res, err := s.treeCache.GetTree(ctx, treeId)
+	msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	res, err := s.treeCache.GetTree(ctx, msg.TreeId)
 	if err != nil {
 		return
 	}
@@ -173,7 +181,6 @@ func (s *syncHandler) prepareFullSyncRequest(
 }
 
 func (s *syncHandler) prepareFullSyncResponse(
-	treeId string,
 	theirPath,
 	theirHeads []string,
 	t tree.ObjectTree) (*spacesyncproto.ObjectFullSyncResponse, error) {

@@ -8,6 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/sec"
 	"storj.io/drpc/drpcctx"
 	"sync"
+	"sync/atomic"
 )
 
 var ErrEmptyPeer = errors.New("don't have such a peer")
@@ -17,17 +18,15 @@ const maxSimultaneousOperationsPerStream = 10
 
 // StreamPool can be made generic to work with different streams
 type StreamPool interface {
+	SyncClient
 	AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (err error)
 	AddAndReadStreamAsync(stream spacesyncproto.SpaceStream)
 	HasStream(peerId string) bool
-	SyncClient
 	Close() (err error)
 }
 
 type SyncClient interface {
-	SendSync(peerId string,
-		message *spacesyncproto.ObjectSyncMessage,
-		msgCheck func(syncMessage *spacesyncproto.ObjectSyncMessage) bool) (reply *spacesyncproto.ObjectSyncMessage, err error)
+	SendSync(peerId string, message *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error)
 	SendAsync(peerId string, message *spacesyncproto.ObjectSyncMessage) (err error)
 	BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (err error)
 }
@@ -35,8 +34,7 @@ type SyncClient interface {
 type MessageHandler func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error)
 
 type responseWaiter struct {
-	ch       chan *spacesyncproto.ObjectSyncMessage
-	msgCheck func(message *spacesyncproto.ObjectSyncMessage) bool
+	ch chan *spacesyncproto.ObjectSyncMessage
 }
 
 type streamPool struct {
@@ -46,6 +44,7 @@ type streamPool struct {
 	wg             *sync.WaitGroup
 	waiters        map[string]responseWaiter
 	waitersMx      sync.Mutex
+	counter        uint64
 }
 
 func newStreamPool(messageHandler MessageHandler) StreamPool {
@@ -63,36 +62,23 @@ func (s *streamPool) HasStream(peerId string) (res bool) {
 
 func (s *streamPool) SendSync(
 	peerId string,
-	message *spacesyncproto.ObjectSyncMessage,
-	msgCheck func(syncMessage *spacesyncproto.ObjectSyncMessage) bool) (reply *spacesyncproto.ObjectSyncMessage, err error) {
+	msg *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
+	newCounter := atomic.AddUint64(&s.counter, 1)
+	msg.TrackingId = genStreamPoolKey(peerId, msg.TreeId, newCounter)
 
-	sendAndWait := func(waiter responseWaiter) (err error) {
-		err = s.SendAsync(peerId, message)
-		if err != nil {
-			return
-		}
-
-		reply = <-waiter.ch
-		return
-	}
-
-	key := fmt.Sprintf("%s.%s", peerId, message.TreeId)
 	s.waitersMx.Lock()
-	waiter, exists := s.waiters[key]
-	if exists {
-		s.waitersMx.Unlock()
+	waiter := responseWaiter{
+		ch: make(chan *spacesyncproto.ObjectSyncMessage),
+	}
+	s.waiters[msg.TrackingId] = waiter
+	s.waitersMx.Unlock()
 
-		err = sendAndWait(waiter)
+	err = s.SendAsync(peerId, msg)
+	if err != nil {
 		return
 	}
 
-	waiter = responseWaiter{
-		ch:       make(chan *spacesyncproto.ObjectSyncMessage),
-		msgCheck: msgCheck,
-	}
-	s.waiters[key] = waiter
-	s.waitersMx.Unlock()
-	err = sendAndWait(waiter)
+	reply = <-waiter.ch
 	return
 }
 
@@ -189,17 +175,21 @@ func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStre
 	}
 
 	process := func(msg *spacesyncproto.ObjectSyncMessage) {
-		key := fmt.Sprintf("%s.%s", peerId, msg.TreeId)
-		s.waitersMx.Lock()
-		waiter, exists := s.waiters[key]
+		if msg.TrackingId == "" {
+			s.messageHandler(stream.Context(), peerId, msg)
+			return
+		}
 
-		if !exists || !waiter.msgCheck(msg) {
+		s.waitersMx.Lock()
+		waiter, exists := s.waiters[msg.TrackingId]
+
+		if !exists {
 			s.waitersMx.Unlock()
 			s.messageHandler(stream.Context(), peerId, msg)
 			return
 		}
 
-		delete(s.waiters, key)
+		delete(s.waiters, msg.TrackingId)
 		s.waitersMx.Unlock()
 		waiter.ch <- msg
 	}
@@ -216,10 +206,8 @@ Loop:
 			break Loop
 		}
 		go func() {
-			defer func() {
-				limiter <- struct{}{}
-			}()
 			process(msg)
+			limiter <- struct{}{}
 		}()
 	}
 	return s.removePeer(peerId)
@@ -243,4 +231,8 @@ func GetPeerIdFromStreamContext(ctx context.Context) (string, error) {
 	}
 
 	return conn.RemotePeer().String(), nil
+}
+
+func genStreamPoolKey(peerId, treeId string, counter uint64) string {
+	return fmt.Sprintf("%s.%s.%d", peerId, treeId, counter)
 }

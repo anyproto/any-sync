@@ -5,6 +5,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
@@ -44,12 +45,14 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) CreateSpace(ctx context.Context, id string) (Space, error) {
-	syncService := syncservice.NewSyncService(id, nil, s.configurationService.GetLast())
+	lastConfiguration := s.configurationService.GetLast()
+	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, s.storage, lastConfiguration, s.cache, log)
+	syncService := syncservice.NewSyncService(id, diffService, s.cache, lastConfiguration)
 	sp := &space{
 		id:          id,
-		nconf:       s.configurationService.GetLast(),
 		conf:        s.config,
 		syncService: syncService,
+		diffService: diffService,
 		cache:       s.cache,
 		storage:     s.storage,
 	}

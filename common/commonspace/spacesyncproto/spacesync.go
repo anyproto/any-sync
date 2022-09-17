@@ -4,7 +4,7 @@ import "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclch
 
 type SpaceStream = DRPCSpace_StreamStream
 
-func WrapHeadUpdate(update *ObjectHeadUpdate, header *aclpb.TreeHeader, treeId string) *ObjectSyncMessage {
+func WrapHeadUpdate(update *ObjectHeadUpdate, header *aclpb.TreeHeader, treeId, trackingId string) *ObjectSyncMessage {
 	return &ObjectSyncMessage{
 		Content: &ObjectSyncContentValue{
 			Value: &ObjectSyncContentValue_HeadUpdate{HeadUpdate: update},
@@ -14,7 +14,7 @@ func WrapHeadUpdate(update *ObjectHeadUpdate, header *aclpb.TreeHeader, treeId s
 	}
 }
 
-func WrapFullRequest(request *ObjectFullSyncRequest, header *aclpb.TreeHeader, treeId string) *ObjectSyncMessage {
+func WrapFullRequest(request *ObjectFullSyncRequest, header *aclpb.TreeHeader, treeId, trackingId string) *ObjectSyncMessage {
 	return &ObjectSyncMessage{
 		Content: &ObjectSyncContentValue{
 			Value: &ObjectSyncContentValue_FullSyncRequest{FullSyncRequest: request},
@@ -24,10 +24,20 @@ func WrapFullRequest(request *ObjectFullSyncRequest, header *aclpb.TreeHeader, t
 	}
 }
 
-func WrapFullResponse(response *ObjectFullSyncResponse, header *aclpb.TreeHeader, treeId string) *ObjectSyncMessage {
+func WrapFullResponse(response *ObjectFullSyncResponse, header *aclpb.TreeHeader, treeId, trackingId string) *ObjectSyncMessage {
 	return &ObjectSyncMessage{
 		Content: &ObjectSyncContentValue{
 			Value: &ObjectSyncContentValue_FullSyncResponse{FullSyncResponse: response},
+		},
+		TreeHeader: header,
+		TreeId:     treeId,
+	}
+}
+
+func WrapError(err error, header *aclpb.TreeHeader, treeId, trackingId string) *ObjectSyncMessage {
+	return &ObjectSyncMessage{
+		Content: &ObjectSyncContentValue{
+			Value: &ObjectSyncContentValue_ErrorResponse{ErrorResponse: &ObjectErrorResponse{Error: err.Error()}},
 		},
 		TreeHeader: header,
 		TreeId:     treeId,

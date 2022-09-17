@@ -1,4 +1,4 @@
-package commonspace
+package diffservice
 
 import (
 	"context"

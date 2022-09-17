@@ -2,7 +2,6 @@ package commonspace
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 )
 
@@ -16,7 +15,7 @@ type rpcHandler struct {
 }
 
 func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
-	return remotediff.HandlerRangeRequest(ctx, r.s.diff, req)
+	return r.s.DiffService().HandleRangeRequest(ctx, req)
 }
 
 func (r *rpcHandler) Stream(stream spacesyncproto.DRPCSpace_StreamStream) (err error) {
