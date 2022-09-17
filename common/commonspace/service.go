@@ -21,22 +21,23 @@ func New() Service {
 }
 
 type Service interface {
-	CreateSpace(ctx context.Context, id string) (sp Space, err error)
+	CreateSpace(ctx context.Context, id string, deps SpaceDeps) (sp Space, err error)
 	app.Component
 }
 
 type service struct {
 	config               config.Space
 	configurationService nodeconf.Service
-	storage              storage.Storage
-	cache                cache.TreeCache
+}
+
+type SpaceDeps struct {
+	Cache   cache.TreeCache
+	Storage storage.Storage
 }
 
 func (s *service) Init(a *app.App) (err error) {
 	s.config = a.MustComponent(config.CName).(*config.Config).Space
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
-	s.storage = a.MustComponent(storage.CName).(storage.Storage)
-	s.cache = a.MustComponent(cache.CName).(cache.TreeCache)
 	return nil
 }
 
@@ -44,17 +45,17 @@ func (s *service) Name() (name string) {
 	return CName
 }
 
-func (s *service) CreateSpace(ctx context.Context, id string) (Space, error) {
+func (s *service) CreateSpace(ctx context.Context, id string, deps SpaceDeps) (Space, error) {
 	lastConfiguration := s.configurationService.GetLast()
-	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, s.storage, lastConfiguration, s.cache, log)
-	syncService := syncservice.NewSyncService(id, diffService, s.cache, lastConfiguration)
+	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, deps.Storage, lastConfiguration, deps.Cache, log)
+	syncService := syncservice.NewSyncService(id, diffService, deps.Cache, lastConfiguration)
 	sp := &space{
 		id:          id,
 		conf:        s.config,
 		syncService: syncService,
 		diffService: diffService,
-		cache:       s.cache,
-		storage:     s.storage,
+		cache:       deps.Cache,
+		storage:     deps.Storage,
 	}
 	if err := sp.Init(ctx); err != nil {
 		return nil, err

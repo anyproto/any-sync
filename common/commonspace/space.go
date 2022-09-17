@@ -50,6 +50,7 @@ func (s *space) Init(ctx context.Context) error {
 	s.rpc = &rpcHandler{s: s}
 	s.diffService.Init(s.getObjectIds())
 	s.syncService.Init()
+	s.cache.SetBuildFunc(s.BuildTree)
 	return nil
 }
 
@@ -125,5 +126,6 @@ func (s *space) getObjectIds() []string {
 
 func (s *space) Close() error {
 	s.diffService.Close()
+	s.cache.Close()
 	return s.syncService.Close()
 }
