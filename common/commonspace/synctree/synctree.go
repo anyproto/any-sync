@@ -10,24 +10,35 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 )
 
+type UpdateListener interface {
+	Update(tree tree.ObjectTree)
+	Rebuild(tree tree.ObjectTree)
+}
+
 type SyncTree struct {
 	tree.ObjectTree
 	syncService syncservice.SyncService
+	listener    UpdateListener
 }
 
 func CreateSyncTree(
+	ctx context.Context,
 	payload tree.ObjectTreeCreatePayload,
 	syncService syncservice.SyncService,
-	listener tree.ObjectTreeUpdateListener,
+	listener UpdateListener,
 	aclList list.ACLList,
 	createStorage storage.TreeStorageCreatorFunc) (t tree.ObjectTree, err error) {
-	t, err = tree.CreateObjectTree(payload, listener, aclList, createStorage)
+	t, err = tree.CreateObjectTree(payload, aclList, createStorage)
 	if err != nil {
 		return
 	}
+	t = &SyncTree{
+		ObjectTree:  t,
+		syncService: syncService,
+		listener:    listener,
+	}
 
-	// TODO: use context where it is needed
-	err = syncService.NotifyHeadUpdate(context.Background(), t.ID(), t.Header(), &spacesyncproto.ObjectHeadUpdate{
+	err = syncService.NotifyHeadUpdate(ctx, t.ID(), t.Header(), &spacesyncproto.ObjectHeadUpdate{
 		Heads:        t.Heads(),
 		SnapshotPath: t.SnapshotPath(),
 	})
@@ -35,25 +46,31 @@ func CreateSyncTree(
 }
 
 func BuildSyncTree(
+	ctx context.Context,
 	syncService syncservice.SyncService,
 	treeStorage storage.TreeStorage,
-	listener tree.ObjectTreeUpdateListener,
+	listener UpdateListener,
 	aclList list.ACLList) (t tree.ObjectTree, err error) {
-	return buildSyncTree(syncService, treeStorage, listener, aclList)
+	return buildSyncTree(ctx, syncService, treeStorage, listener, aclList)
 }
 
 func buildSyncTree(
+	ctx context.Context,
 	syncService syncservice.SyncService,
 	treeStorage storage.TreeStorage,
-	listener tree.ObjectTreeUpdateListener,
+	listener UpdateListener,
 	aclList list.ACLList) (t tree.ObjectTree, err error) {
-	t, err = tree.BuildObjectTree(treeStorage, listener, aclList)
+	t, err = tree.BuildObjectTree(treeStorage, aclList)
 	if err != nil {
 		return
 	}
+	t = &SyncTree{
+		ObjectTree:  t,
+		syncService: syncService,
+		listener:    listener,
+	}
 
-	// TODO: use context where it is needed
-	err = syncService.NotifyHeadUpdate(context.Background(), t.ID(), t.Header(), &spacesyncproto.ObjectHeadUpdate{
+	err = syncService.NotifyHeadUpdate(ctx, t.ID(), t.Header(), &spacesyncproto.ObjectHeadUpdate{
 		Heads:        t.Heads(),
 		SnapshotPath: t.SnapshotPath(),
 	})
@@ -75,13 +92,26 @@ func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 
 func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*aclpb.RawTreeChangeWithId) (res tree.AddResult, err error) {
 	res, err = s.AddRawChanges(ctx, changes...)
-	if err != nil || res.Mode == tree.Nothing {
+	if err != nil {
 		return
 	}
+	switch res.Mode {
+	case tree.Nothing:
+		return
+	case tree.Append:
+		s.listener.Update(s)
+	case tree.Rebuild:
+		s.listener.Rebuild(s)
+	}
+
 	err = s.syncService.NotifyHeadUpdate(ctx, s.ID(), s.Header(), &spacesyncproto.ObjectHeadUpdate{
 		Heads:        res.Heads,
 		Changes:      res.Added,
 		SnapshotPath: s.SnapshotPath(),
 	})
 	return
+}
+
+func (s *SyncTree) Tree() tree.ObjectTree {
+	return s
 }

@@ -22,8 +22,8 @@ type Space interface {
 	SyncService() syncservice.SyncService
 	DiffService() diffservice.DiffService
 
-	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener tree.ObjectTreeUpdateListener) (tree.ObjectTree, error)
-	BuildTree(ctx context.Context, id string, listener tree.ObjectTreeUpdateListener) (tree.ObjectTree, error)
+	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener synctree.UpdateListener) (tree.ObjectTree, error)
+	BuildTree(ctx context.Context, id string, listener synctree.UpdateListener) (tree.ObjectTree, error)
 
 	Close() error
 }
@@ -65,11 +65,11 @@ func (s *space) DiffService() diffservice.DiffService {
 	return s.diffService
 }
 
-func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener tree.ObjectTreeUpdateListener) (tree.ObjectTree, error) {
-	return synctree.CreateSyncTree(payload, s.syncService, listener, nil, s.storage.CreateTreeStorage)
+func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener synctree.UpdateListener) (tree.ObjectTree, error) {
+	return synctree.CreateSyncTree(ctx, payload, s.syncService, listener, nil, s.storage.CreateTreeStorage)
 }
 
-func (s *space) BuildTree(ctx context.Context, id string, listener tree.ObjectTreeUpdateListener) (t tree.ObjectTree, err error) {
+func (s *space) BuildTree(ctx context.Context, id string, listener synctree.UpdateListener) (t tree.ObjectTree, err error) {
 	getTreeRemote := func() (*spacesyncproto.ObjectSyncMessage, error) {
 		// TODO: add empty context handling (when this is not happening due to head update)
 		peerId, err := syncservice.GetPeerIdFromStreamContext(ctx)
@@ -115,7 +115,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener tree.ObjectTr
 			return
 		}
 	}
-	return synctree.BuildSyncTree(s.syncService, store.(treestorage.TreeStorage), listener, s.aclList)
+	return synctree.BuildSyncTree(ctx, s.syncService, store.(treestorage.TreeStorage), listener, s.aclList)
 }
 
 func (s *space) getObjectIds() []string {

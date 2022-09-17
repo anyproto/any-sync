@@ -3,7 +3,6 @@ package cache
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 )
 
@@ -21,5 +20,4 @@ type TreeResult struct {
 type TreeCache interface {
 	app.ComponentRunnable
 	GetTree(ctx context.Context, id string) (TreeResult, error)
-	AddTree(ctx context.Context, payload storage.TreeStorageCreatePayload) error
 }

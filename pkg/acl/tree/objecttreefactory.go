@@ -19,19 +19,18 @@ type ObjectTreeCreatePayload struct {
 	TreeType    aclpb.TreeHeaderType
 }
 
-func BuildObjectTree(treeStorage storage.TreeStorage, listener ObjectTreeUpdateListener, aclList list.ACLList) (ObjectTree, error) {
-	deps := defaultObjectTreeDeps(treeStorage, listener, aclList)
+func BuildObjectTree(treeStorage storage.TreeStorage, aclList list.ACLList) (ObjectTree, error) {
+	deps := defaultObjectTreeDeps(treeStorage, aclList)
 	return buildObjectTree(deps)
 }
 
 func CreateObjectTree(
 	payload ObjectTreeCreatePayload,
-	listener ObjectTreeUpdateListener,
 	aclList list.ACLList,
 	createStorage storage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
 	aclList.RLock()
 	var (
-		deps        = defaultObjectTreeDeps(nil, listener, aclList)
+		deps        = defaultObjectTreeDeps(nil, aclList)
 		state       = aclList.ACLState()
 		aclId       = aclList.ID()
 		aclHeadId   = aclList.Head().Id
@@ -91,7 +90,6 @@ func CreateObjectTree(
 func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 	objTree := &objectTree{
 		treeStorage:     deps.treeStorage,
-		updateListener:  deps.updateListener,
 		treeBuilder:     deps.treeBuilder,
 		validator:       deps.validator,
 		aclList:         deps.aclList,
