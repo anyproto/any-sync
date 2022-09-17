@@ -8,6 +8,8 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace/nodecache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
 	"time"
 )
@@ -27,16 +29,20 @@ type Service interface {
 
 type service struct {
 	conf        config.Space
-	cache       ocache.OCache
+	spaceCache  ocache.OCache
 	commonSpace commonspace.Service
 }
 
 func (s *service) Init(a *app.App) (err error) {
 	s.conf = a.MustComponent(config.CName).(*config.Config).Space
 	s.commonSpace = a.MustComponent(commonspace.CName).(commonspace.Service)
-	s.cache = ocache.New(
+	s.spaceCache = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
-			return s.commonSpace.CreateSpace(ctx, id)
+			deps := commonspace.SpaceDeps{
+				Cache:   nodecache.NewNodeCache(s.conf.GCTTL),
+				Storage: storage.NewInMemoryTreeStorageProvider(),
+			}
+			return s.commonSpace.CreateSpace(ctx, id, deps)
 		},
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
@@ -59,7 +65,7 @@ func (s *service) Run(ctx context.Context) (err error) {
 }
 
 func (s *service) GetSpace(ctx context.Context, id string) (commonspace.Space, error) {
-	v, err := s.cache.Get(ctx, id)
+	v, err := s.spaceCache.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -67,5 +73,5 @@ func (s *service) GetSpace(ctx context.Context, id string) (commonspace.Space, e
 }
 
 func (s *service) Close(ctx context.Context) (err error) {
-	return s.cache.Close()
+	return s.spaceCache.Close()
 }
