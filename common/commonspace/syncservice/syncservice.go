@@ -85,7 +85,7 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 			return
 		}
 		for _, peer := range respPeers {
-			if s.streamPool.HasStream(peer.Id()) {
+			if s.streamPool.HasActiveStream(peer.Id()) {
 				continue
 			}
 			cl := spacesyncproto.NewDRPCSpaceClient(peer)

@@ -43,6 +43,7 @@ type ObjectTree interface {
 	Heads() []string
 	Root() *Change
 	HasChange(string) bool
+	DebugDump() (string, error)
 
 	Iterate(convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
@@ -51,7 +52,6 @@ type ObjectTree interface {
 	ChangesAfterCommonSnapshot(snapshotPath, heads []string) ([]*aclpb.RawTreeChangeWithId, error)
 
 	Storage() storage.TreeStorage
-	DebugDump() (string, error)
 
 	AddContent(ctx context.Context, content SignableChangeContent) (AddResult, error)
 	AddRawChanges(ctx context.Context, changes ...*aclpb.RawTreeChangeWithId) (AddResult, error)

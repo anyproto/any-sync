@@ -50,6 +50,7 @@ func (s *space) Init(ctx context.Context) error {
 	s.rpc = &rpcHandler{s: s}
 	s.diffService.Init(s.getObjectIds())
 	s.syncService.Init()
+	// basically this provides access for the external cache to use space's tree building functions
 	s.cache.SetBuildFunc(s.BuildTree)
 	return nil
 }
@@ -67,7 +68,7 @@ func (s *space) DiffService() diffservice.DiffService {
 }
 
 func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener synctree.UpdateListener) (tree.ObjectTree, error) {
-	return synctree.CreateSyncTree(ctx, payload, s.syncService, listener, nil, s.storage.CreateTreeStorage)
+	return synctree.CreateSyncTree(ctx, payload, s.syncService, listener, s.aclList, s.storage.CreateTreeStorage)
 }
 
 func (s *space) BuildTree(ctx context.Context, id string, listener synctree.UpdateListener) (t tree.ObjectTree, err error) {
@@ -109,7 +110,6 @@ func (s *space) BuildTree(ctx context.Context, id string, listener synctree.Upda
 		if err != nil {
 			return
 		}
-		// TODO: maybe it is better to use the tree that we already built and just replace the storage
 		// now we are sure that we can save it to the storage
 		store, err = s.storage.CreateTreeStorage(payload)
 		if err != nil {

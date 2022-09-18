@@ -15,6 +15,7 @@ type UpdateListener interface {
 	Rebuild(tree tree.ObjectTree)
 }
 
+// SyncTree sends head updates to sync service and also sends new changes to update listener
 type SyncTree struct {
 	tree.ObjectTree
 	syncService syncservice.SyncService
