@@ -21,7 +21,7 @@ type StreamPool interface {
 	SyncClient
 	AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (err error)
 	AddAndReadStreamAsync(stream spacesyncproto.SpaceStream)
-	HasStream(peerId string) bool
+	HasActiveStream(peerId string) bool
 	Close() (err error)
 }
 
@@ -55,8 +55,8 @@ func newStreamPool(messageHandler MessageHandler) StreamPool {
 	}
 }
 
-func (s *streamPool) HasStream(peerId string) (res bool) {
-	_, err := s.getStream(peerId)
+func (s *streamPool) HasActiveStream(peerId string) (res bool) {
+	_, err := s.getOrDeleteStream(peerId)
 	return err == nil
 }
 
@@ -83,7 +83,7 @@ func (s *streamPool) SendSync(
 }
 
 func (s *streamPool) SendAsync(peerId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
-	stream, err := s.getStream(peerId)
+	stream, err := s.getOrDeleteStream(peerId)
 	if err != nil {
 		return
 	}
@@ -91,7 +91,7 @@ func (s *streamPool) SendAsync(peerId string, message *spacesyncproto.ObjectSync
 	return stream.Send(message)
 }
 
-func (s *streamPool) getStream(id string) (stream spacesyncproto.SpaceStream, err error) {
+func (s *streamPool) getOrDeleteStream(id string) (stream spacesyncproto.SpaceStream, err error) {
 	s.Lock()
 	defer s.Unlock()
 	stream, exists := s.peerStreams[id]

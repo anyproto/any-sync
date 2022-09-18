@@ -12,6 +12,6 @@ func ValidateRawTree(payload storage.TreeStorageCreatePayload, aclList list.ACLL
 		return
 	}
 
-	_, err = BuildObjectTree(treeStorage, nil, aclList)
+	_, err = BuildObjectTree(treeStorage, aclList)
 	return
 }
