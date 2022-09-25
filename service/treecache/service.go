@@ -2,88 +2,82 @@ package treecache
 
 import (
 	"context"
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/acltree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treestorage/treepb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
+	aclstorage "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/storage"
 	"go.uber.org/zap"
 )
 
 const CName = "treecache"
 
-// TODO: add context
-type ACLTreeFunc = func(tree acltree.ACLTree) error
-type ChangeBuildFunc = func(builder acltree.ChangeBuilder) error
+type ObjFunc = func(obj interface{}) error
 
 var log = logger.NewNamed("treecache")
 
 type Service interface {
-	Do(ctx context.Context, treeId string, f ACLTreeFunc) error
-	Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange, f ACLTreeFunc) error
-	Create(ctx context.Context, build ChangeBuildFunc, f ACLTreeFunc) error
+	Do(ctx context.Context, id string, f ObjFunc) error
+	Add(ctx context.Context, id string, payload any) error
 }
 
 type service struct {
-	treeProvider treestorage.Provider
-	account      account.Service
-	cache        ocache.OCache
+	storage storage.Service
+	account account.Service
+	cache   ocache.OCache
 }
 
 func New() app.ComponentRunnable {
 	return &service{}
 }
 
-func (s *service) Create(ctx context.Context, build ChangeBuildFunc, f ACLTreeFunc) error {
-	acc := s.account.Account()
-	st, err := acltree.CreateNewTreeStorageWithACL(acc, build, s.treeProvider.CreateTreeStorage)
-	if err != nil {
-		return err
-	}
-
-	id, err := st.TreeID()
-	if err != nil {
-		return err
-	}
-
-	return s.Do(ctx, id, f)
-}
-
-func (s *service) Do(ctx context.Context, treeId string, f ACLTreeFunc) error {
+func (s *service) Do(ctx context.Context, treeId string, f ObjFunc) error {
 	log.
 		With(zap.String("treeId", treeId)).
 		Debug("requesting tree from cache to perform operation")
 
-	tree, err := s.cache.Get(ctx, treeId)
+	t, err := s.cache.Get(ctx, treeId)
 	defer s.cache.Release(treeId)
 	if err != nil {
 		return err
 	}
-	aclTree := tree.(acltree.ACLTree)
-	aclTree.Lock()
-	defer aclTree.Unlock()
-	return f(tree.(acltree.ACLTree))
+	return f(t)
 }
 
-func (s *service) Add(ctx context.Context, treeId string, header *treepb.TreeHeader, changes []*aclpb.RawChange, f ACLTreeFunc) error {
-	log.
-		With(zap.String("treeId", treeId), zap.Int("len(changes)", len(changes))).
-		Debug("adding tree with changes")
+func (s *service) Add(ctx context.Context, treeId string, payload any) error {
+	switch pl := payload.(type) {
+	case aclstorage.TreeStorageCreatePayload:
+		log.
+			With(zap.String("treeId", treeId), zap.Int("len(changes)", len(pl.Changes))).
+			Debug("adding Tree with changes")
 
-	_, err := s.treeProvider.CreateTreeStorage(treeId, header, changes)
-	if err != nil {
-		return err
+		_, err := s.storage.CreateTreeStorage(payload.(aclstorage.TreeStorageCreatePayload))
+		if err != nil {
+			return err
+		}
+	case aclstorage.ACLListStorageCreatePayload:
+		log.
+			With(zap.String("treeId", treeId), zap.Int("len(changes)", len(pl.Records))).
+			Debug("adding ACLList with records")
+
+		_, err := s.storage.CreateACLListStorage(payload.(aclstorage.ACLListStorageCreatePayload))
+		if err != nil {
+			return err
+		}
+
 	}
-	return s.Do(ctx, treeId, f)
+	return nil
 }
 
 func (s *service) Init(a *app.App) (err error) {
 	s.cache = ocache.New(s.loadTree)
 	s.account = a.MustComponent(account.CName).(account.Service)
-	s.treeProvider = treestorage.NewInMemoryTreeStorageProvider()
+	s.storage = a.MustComponent(storage.CName).(storage.Service)
 	// TODO: for test we should load some predefined keys
 	return nil
 }
@@ -101,11 +95,33 @@ func (s *service) Close(ctx context.Context) (err error) {
 }
 
 func (s *service) loadTree(ctx context.Context, id string) (ocache.Object, error) {
-	tree, err := s.treeProvider.TreeStorage(id)
+	t, err := s.storage.Storage(id)
 	if err != nil {
 		return nil, err
 	}
-	// TODO: should probably accept nil listeners
-	aclTree, err := acltree.BuildACLTree(tree, s.account.Account(), acltree.NoOpListener{})
-	return aclTree, err
+	header, err := t.Header()
+	if err != nil {
+		return nil, err
+	}
+
+	switch header.DocType { // handler
+	case aclpb.Header_ACL:
+		return list.BuildACLListWithIdentity(s.account.Account(), t.(aclstorage.ListStorage))
+	case aclpb.Header_DocTree:
+		break
+	default:
+		return nil, fmt.Errorf("incorrect type")
+	}
+	log.Info("got header", zap.String("header", header.String()))
+	var objTree tree.ObjectTree
+	err = s.Do(ctx, header.AclListId, func(obj interface{}) error {
+		aclList := obj.(list.ACLList)
+		objTree, err = tree.BuildObjectTree(t.(aclstorage.TreeStorage), nil, aclList)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	return objTree, err
 }

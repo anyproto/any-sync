@@ -2,17 +2,17 @@ package storage
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 )
 
 type TreeStorage interface {
 	Storage
-	Header() (*aclpb.TreeHeader, error)
+	Root() (*treechangeproto.RawTreeChangeWithId, error)
 	Heads() ([]string, error)
 	SetHeads(heads []string) error
 
-	AddRawChange(change *aclpb.RawTreeChangeWithId) error
-	GetRawChange(ctx context.Context, recordID string) (*aclpb.RawTreeChangeWithId, error)
+	AddRawChange(change *treechangeproto.RawTreeChangeWithId) error
+	GetRawChange(ctx context.Context, id string) (*treechangeproto.RawTreeChangeWithId, error)
 }
 
 type TreeStorageCreatorFunc = func(payload TreeStorageCreatePayload) (TreeStorage, error)

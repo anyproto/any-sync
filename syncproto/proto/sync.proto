@@ -2,7 +2,7 @@ syntax = "proto3";
 package anytype;
 option go_package = "/syncproto";
 
-import "pkg/acl/aclchanges/aclpb/protos/aclchanges.proto";
+import "pkg/acl/aclrecordproto/aclpb/protos/aclrecordproto.proto";
 
 message Message {
     Header header = 1;

@@ -1,0 +1,55 @@
+syntax = "proto3";
+package treechange;
+option go_package = "pkg/acl/treechangeproto";
+
+// RootChange is a root of a tree
+message RootChange {
+  // AclHeadId is a cid of latest acl record at the time of tree creation
+  string aclHeadId = 1;
+  // SpaceId is an id of space where the document is placed
+  string spaceId = 2;
+  // ChangeType is a type of tree which this RootChange is a root of
+  string changeType = 3;
+  // Timestamp is this change creation timestamp
+  int64 timestamp = 4;
+  // Seed is a random bytes to make root change unique
+  bytes seed = 5;
+  // Identity is a public key of the tree's creator
+  bytes identity = 6;
+}
+
+// TreeChange is a change of a tree
+message TreeChange {
+  // TreeHeadIds are previous ids for this TreeChange
+  repeated string treeHeadIds = 1;
+  // AclHeadId is a cid of latest acl record at the time of this change
+  string aclHeadId = 2;
+  // SnapshotBaseId is a snapshot (root) of the tree where this change is added
+  string snapshotBaseId = 3;
+  // ChangesData is an arbitrary payload to be read by the client
+  bytes changesData = 4;
+  // CurrentReadKeyHash is the hash of the read key which is used to encrypt this change
+  uint64 currentReadKeyHash = 5;
+  // Timestamp is this change creation timestamp
+  int64 timestamp = 6;
+  // Identity is a public key with which the raw payload of this change is signed
+  bytes identity = 7;
+  // IsSnapshot indicates whether this change contains a snapshot of state
+  bool isSnapshot = 8;
+}
+
+// RawTreeChange is a marshalled TreeChange (or RootChange) payload and a signature of this payload
+message RawTreeChange {
+  // Payload is a byte payload containing TreeChange
+  bytes payload = 1;
+  // Signature is a signature made by identity indicated in the TreeChange payload
+  bytes signature = 2;
+}
+
+// RawTreeChangeWithId is a marshalled RawTreeChange with CID
+message RawTreeChangeWithId {
+  // RawChange is a byte payload of RawTreeChange
+  bytes rawChange = 1;
+  // Id is a cid made from rawChange payload
+  string id = 2;
+}

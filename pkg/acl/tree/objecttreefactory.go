@@ -1,11 +1,10 @@
 package tree
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"github.com/gogo/protobuf/proto"
@@ -13,14 +12,19 @@ import (
 )
 
 type ObjectTreeCreatePayload struct {
-	AccountData *account.AccountData
-	HeaderData  []byte
-	ChangeData  []byte
-	TreeType    aclpb.TreeHeaderType
+	SignKey    signingkey.PrivKey
+	ChangeType string
+	Seed       []byte
+	SpaceId    string
+	Identity   []byte
 }
 
 func BuildObjectTree(treeStorage storage.TreeStorage, aclList list.ACLList) (ObjectTree, error) {
-	deps := defaultObjectTreeDeps(treeStorage, aclList)
+	rootChange, err := treeStorage.Root()
+	if err != nil {
+		return nil, err
+	}
+	deps := defaultObjectTreeDeps(rootChange, treeStorage, aclList)
 	return buildObjectTree(deps)
 }
 
@@ -30,54 +34,35 @@ func CreateObjectTree(
 	createStorage storage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
 	aclList.RLock()
 	var (
-		deps        = defaultObjectTreeDeps(nil, aclList)
-		state       = aclList.ACLState()
-		aclId       = aclList.ID()
-		aclHeadId   = aclList.Head().Id
-		readKeyHash = state.CurrentReadKeyHash()
+		deps      = defaultObjectTreeDeps(nil, nil, aclList)
+		aclHeadId = aclList.Head().Id
 	)
-	readKey, err := state.CurrentReadKey()
 	aclList.RUnlock()
 
 	if err != nil {
 		return
 	}
-
-	// create first change
-	cnt := BuilderContent{
-		treeHeadIds:        nil,
-		aclHeadId:          aclHeadId,
-		snapshotBaseId:     "",
-		currentReadKeyHash: readKeyHash,
-		isSnapshot:         true,
-		readKey:            readKey,
-		identity:           payload.AccountData.Identity,
-		signingKey:         payload.AccountData.SignKey,
-		content:            payload.ChangeData,
+	cnt := InitialContent{
+		AclHeadId:  aclHeadId,
+		Identity:   payload.Identity,
+		SigningKey: payload.SignKey,
+		SpaceId:    payload.SpaceId,
+		Seed:       payload.Seed,
+		ChangeType: payload.ChangeType,
 	}
 
-	_, raw, err := deps.changeBuilder.BuildContent(cnt)
+	_, raw, err := deps.changeBuilder.BuildInitialContent(cnt)
 	if err != nil {
 		return
 	}
-
-	// create header
-	header, id, err := createTreeHeaderAndId(
-		raw,
-		payload.TreeType,
-		aclId,
-		payload.AccountData.Identity,
-		payload.HeaderData)
-	if err != nil {
-		return
-	}
+	deps.changeBuilder.SetRootRawChange(raw)
 
 	// create storage
 	st, err := createStorage(storage.TreeStorageCreatePayload{
-		TreeId:  id,
-		Header:  header,
-		Changes: []*aclpb.RawTreeChangeWithId{raw},
-		Heads:   []string{raw.Id},
+		TreeId:        raw.Id,
+		RootRawChange: raw,
+		Changes:       []*treechangeproto.RawTreeChangeWithId{raw},
+		Heads:         []string{raw.Id},
 	})
 	if err != nil {
 		return
@@ -98,7 +83,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		tree:            nil,
 		keys:            make(map[uint64]*symmetric.Key),
 		tmpChangesBuf:   make([]*Change, 0, 10),
-		difSnapshotBuf:  make([]*aclpb.RawTreeChangeWithId, 0, 10),
+		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
 		notSeenIdxBuf:   make([]int, 0, 10),
 		newSnapshotsBuf: make([]*Change, 0, 10),
 	}
@@ -128,32 +113,23 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 	if err != nil {
 		return nil, err
 	}
-	objTree.header, err = objTree.treeStorage.Header()
+
+	rawRootWithId, err := objTree.treeStorage.Root()
+	if err != nil {
+		return nil, err
+	}
+
+	rawRoot := &treechangeproto.RawTreeChange{}
+	err = proto.Unmarshal(rawRootWithId.RawChange, rawRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	objTree.root = &treechangeproto.RootChange{}
+	err = proto.Unmarshal(rawRoot.Payload, objTree.root)
 	if err != nil {
 		return nil, err
 	}
 
 	return objTree, nil
-}
-
-func createTreeHeaderAndId(
-	raw *aclpb.RawTreeChangeWithId,
-	treeType aclpb.TreeHeaderType,
-	aclId string,
-	identity []byte,
-	headerData []byte) (header *aclpb.TreeHeader, treeId string, err error) {
-	header = &aclpb.TreeHeader{
-		FirstId:        raw.Id,
-		TreeHeaderType: treeType,
-		AclId:          aclId,
-		Identity:       identity,
-		Data:           headerData,
-	}
-	marshalledHeader, err := proto.Marshal(header)
-	if err != nil {
-		return
-	}
-
-	treeId, err = cid.NewCIDFromBytes(marshalledHeader)
-	return
 }

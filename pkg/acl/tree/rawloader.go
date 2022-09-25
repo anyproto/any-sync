@@ -2,8 +2,8 @@ package tree
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 	"time"
 )
 
@@ -18,7 +18,7 @@ type rawChangeLoader struct {
 
 type rawCacheEntry struct {
 	change    *Change
-	rawChange *aclpb.RawTreeChangeWithId
+	rawChange *treechangeproto.RawTreeChangeWithId
 	position  int
 }
 
@@ -29,15 +29,15 @@ func newRawChangeLoader(treeStorage storage.TreeStorage, changeBuilder ChangeBui
 	}
 }
 
-func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*aclpb.RawTreeChangeWithId, error) {
+func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
 	var stack []*Change
 	for _, h := range t.headIds {
 		stack = append(stack, t.attached[h])
 	}
 
-	convert := func(chs []*Change) (rawChanges []*aclpb.RawTreeChangeWithId, err error) {
+	convert := func(chs []*Change) (rawChanges []*treechangeproto.RawTreeChangeWithId, err error) {
 		for _, ch := range chs {
-			var raw *aclpb.RawTreeChangeWithId
+			var raw *treechangeproto.RawTreeChangeWithId
 			raw, err = r.changeBuilder.BuildRaw(ch)
 			if err != nil {
 				return
@@ -95,7 +95,7 @@ func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*aclpb.
 	return convert(results)
 }
 
-func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoints []string) ([]*aclpb.RawTreeChangeWithId, error) {
+func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoints []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
 	// resetting cache
 	r.cache = make(map[string]rawCacheEntry)
 	defer func() {
@@ -162,7 +162,7 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 
 	// preparing first pass
 	r.idStack = append(r.idStack, heads...)
-	var buffer []*aclpb.RawTreeChangeWithId
+	var buffer []*treechangeproto.RawTreeChangeWithId
 
 	rootVisited := dfs(commonSnapshot, heads, 0,
 		func(counter int, mapExists bool) bool {
@@ -203,7 +203,7 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 		})
 
 	// discarding visited
-	buffer = discardFromSlice(buffer, func(change *aclpb.RawTreeChangeWithId) bool {
+	buffer = discardFromSlice(buffer, func(change *treechangeproto.RawTreeChangeWithId) bool {
 		return change == nil
 	})
 
