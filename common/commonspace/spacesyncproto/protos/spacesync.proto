@@ -2,7 +2,7 @@ syntax = "proto3";
 package anySpace;
 
 option go_package = "common/commonspace/spacesyncproto";
-import "pkg/acl/aclchanges/aclpb/protos/aclchanges.proto";
+import "pkg/acl/treechangeproto/protos/treechange.proto";
 
 enum ErrCodes {
     Unexpected = 0;
@@ -49,7 +49,7 @@ message HeadSyncResponse {
 message ObjectSyncMessage {
     string spaceId = 1;
     ObjectSyncContentValue content = 2;
-    acl.TreeHeader treeHeader = 3;
+    treechange.RootChange treeHeader = 3;
     string treeId = 4;
     string trackingId = 5;
 //
@@ -70,24 +70,32 @@ message ObjectSyncContentValue {
 // ObjectHeadUpdate is a message sent on document head update
 message ObjectHeadUpdate {
     repeated string heads = 1;
-    repeated acl.RawTreeChangeWithId changes = 2;
+    repeated treechange.RawTreeChangeWithId changes = 2;
     repeated string snapshotPath = 3;
 }
 
 // ObjectHeadUpdate is a message sent when document needs full sync
 message ObjectFullSyncRequest {
     repeated string heads = 1;
-    repeated acl.RawTreeChangeWithId changes = 2;
+    repeated treechange.RawTreeChangeWithId changes = 2;
     repeated string snapshotPath = 3;
 }
 
 // ObjectFullSyncResponse is a message sent as a response for a specific full sync
 message ObjectFullSyncResponse {
     repeated string heads = 1;
-    repeated acl.RawTreeChangeWithId changes = 2;
+    repeated treechange.RawTreeChangeWithId changes = 2;
     repeated string snapshotPath = 3;
 }
 
 message ObjectErrorResponse {
     string error = 1;
+}
+
+message SpaceHeader {
+    bytes identity = 1;
+    int64 timestamp = 2;
+    string spaceType = 3;
+    uint64 replicationKey = 4;
+    bytes seed = 5;
 }

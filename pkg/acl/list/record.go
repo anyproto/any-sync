@@ -1,19 +1,19 @@
 package list
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
 	"github.com/gogo/protobuf/proto"
 )
 
 type ACLRecord struct {
 	Id       string
-	Content  *aclpb.ACLRecord
+	Content  *aclrecordproto.ACLRecord
 	Identity string
 	Model    interface{}
 	Sign     []byte
 }
 
-func NewRecord(id string, aclRecord *aclpb.ACLRecord) *ACLRecord {
+func NewRecord(id string, aclRecord *aclrecordproto.ACLRecord) *ACLRecord {
 	return &ACLRecord{
 		Id:       id,
 		Content:  aclRecord,
@@ -21,17 +21,45 @@ func NewRecord(id string, aclRecord *aclpb.ACLRecord) *ACLRecord {
 	}
 }
 
-func NewFromRawRecord(rawRec *aclpb.RawACLRecord) (*ACLRecord, error) {
-	aclRec := &aclpb.ACLRecord{}
-	err := proto.Unmarshal(rawRec.Payload, aclRec)
+func NewFromRawRecord(rawRecWithId *aclrecordproto.RawACLRecordWithId) (aclRec *ACLRecord, err error) {
+	rawRec := &aclrecordproto.RawACLRecord{}
+	err = proto.Unmarshal(rawRecWithId.Payload, rawRec)
 	if err != nil {
-		return nil, err
+		return
+	}
+
+	protoAclRec := &aclrecordproto.ACLRecord{}
+	err = proto.Unmarshal(rawRec.Payload, protoAclRec)
+	if err != nil {
+		return
 	}
 
 	return &ACLRecord{
-		Id:       rawRec.Id,
-		Content:  aclRec,
+		Id:       rawRecWithId.Id,
+		Content:  protoAclRec,
 		Sign:     rawRec.Signature,
-		Identity: string(aclRec.Identity),
+		Identity: string(protoAclRec.Identity),
 	}, nil
 }
+
+func NewFromRawRoot(rawRecWithId *aclrecordproto.RawACLRecordWithId) (aclRec *ACLRecord, err error) {
+	rawRec := &aclrecordproto.RawACLRecord{}
+	err = proto.Unmarshal(rawRecWithId.Payload, rawRec)
+	if err != nil {
+		return
+	}
+
+	protoAclRec := &aclrecordproto.ACLRecord{}
+	err = proto.Unmarshal(rawRec.Payload, protoAclRec)
+	if err != nil {
+		return
+	}
+
+	return &ACLRecord{
+		Id:       rawRecWithId.Id,
+		Content:  protoAclRec,
+		Sign:     rawRec.Signature,
+		Identity: string(protoAclRec.Identity),
+	}, nil
+}
+

@@ -1,6 +1,6 @@
 package spacesyncproto
 
-import "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+import "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto/aclpb"
 
 type SpaceStream = DRPCSpace_StreamStream
 

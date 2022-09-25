@@ -59,7 +59,7 @@ func (t *Tree) Graph(parser DescriptionParser) (data string, err error) {
 		label := fmt.Sprintf("Id: %s\nOrd: %s\nTime: %s\nChanges: %s\n",
 			shortId,
 			ord,
-			time.Unix(c.Content.Timestamp, 0).Format("02.01.06 15:04:05"),
+			time.Unix(c.Timestamp, 0).Format("02.01.06 15:04:05"),
 			strings.Join(chSymbs, ","),
 		)
 		n.SetLabel(label)
