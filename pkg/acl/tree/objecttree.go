@@ -39,7 +39,7 @@ type ObjectTree interface {
 	RWLocker
 
 	ID() string
-	Header() *treechangeproto.RootChange
+	Header() *treechangeproto.RawTreeChangeWithId
 	Heads() []string
 	Root() *Change
 	HasChange(string) bool
@@ -68,7 +68,7 @@ type objectTree struct {
 	aclList         list.ACLList
 
 	id   string
-	root *treechangeproto.RootChange
+	root *treechangeproto.RawTreeChangeWithId
 	tree *Tree
 
 	keys map[uint64]*symmetric.Key
@@ -132,7 +132,7 @@ func (ot *objectTree) ID() string {
 	return ot.id
 }
 
-func (ot *objectTree) Header() *treechangeproto.RootChange {
+func (ot *objectTree) Header() *treechangeproto.RawTreeChangeWithId {
 	return ot.root
 }
 

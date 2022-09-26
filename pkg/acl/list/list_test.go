@@ -3,7 +3,6 @@ package list
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/acllistbuilder"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -15,7 +14,7 @@ func TestAclList_ACLState_UserInviteAndJoin(t *testing.T) {
 
 	keychain := st.(*acllistbuilder.ACLListStorageBuilder).GetKeychain()
 
-	aclList, err := BuildACLList(signingkey.NewEDPubKeyDecoder(), st)
+	aclList, err := BuildACLList(st)
 	require.NoError(t, err, "building acl list should be without error")
 
 	idA := keychain.GetIdentity("A")
@@ -54,7 +53,7 @@ func TestAclList_ACLState_UserJoinAndRemove(t *testing.T) {
 
 	keychain := st.(*acllistbuilder.ACLListStorageBuilder).GetKeychain()
 
-	aclList, err := BuildACLList(signingkey.NewEDPubKeyDecoder(), st)
+	aclList, err := BuildACLList(st)
 	require.NoError(t, err, "building acl list should be without error")
 
 	idA := keychain.GetIdentity("A")

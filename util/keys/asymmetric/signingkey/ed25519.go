@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"io"
-
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/strkey"
 )
 
 // Ed25519PrivateKey is an ed25519 private key.
@@ -146,44 +144,4 @@ func UnmarshalEd25519PrivateKey(data []byte) (PrivKey, error) {
 	return &Ed25519PrivateKey{
 		k: ed25519.PrivateKey(data),
 	}, nil
-}
-
-// TODO: remove this one in favor of new one
-type Ed25519SigningPubKeyDecoder struct{}
-
-func NewEd25519PubKeyDecoder() PubKeyDecoder {
-	return &Ed25519SigningPubKeyDecoder{}
-}
-
-func (e *Ed25519SigningPubKeyDecoder) DecodeFromBytes(bytes []byte) (PubKey, error) {
-	return NewSigningEd25519PubKeyFromBytes(bytes)
-}
-
-func (e *Ed25519SigningPubKeyDecoder) DecodeFromString(identity string) (PubKey, error) {
-	pubKeyRaw, err := strkey.Decode(0x5b, identity)
-	if err != nil {
-		return nil, err
-	}
-
-	return e.DecodeFromBytes(pubKeyRaw)
-}
-
-func (e *Ed25519SigningPubKeyDecoder) DecodeFromStringIntoBytes(identity string) ([]byte, error) {
-	return strkey.Decode(0x5b, identity)
-}
-
-func (e *Ed25519SigningPubKeyDecoder) EncodeToString(pubkey PubKey) (string, error) {
-	raw, err := pubkey.Raw()
-	if err != nil {
-		return "", err
-	}
-	return strkey.Encode(0x5b, raw)
-}
-
-func NewEDPrivKeyDecoder() keys.Decoder {
-	return keys.NewKeyDecoder(NewSigningEd25519PrivKeyFromBytes)
-}
-
-func NewEDPubKeyDecoder() keys.Decoder {
-	return keys.NewKeyDecoder(NewSigningEd25519PubKeyFromBytes)
 }

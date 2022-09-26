@@ -5,12 +5,16 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 	"time"
 )
 
 type SyncService interface {
-	NotifyHeadUpdate(ctx context.Context, treeId string, header *aclpb.TreeHeader, update *spacesyncproto.ObjectHeadUpdate) (err error)
+	NotifyHeadUpdate(
+		ctx context.Context,
+		treeId string,
+		root *treechangeproto.RawTreeChangeWithId,
+		update *spacesyncproto.ObjectHeadUpdate) (err error)
 	StreamPool() StreamPool
 
 	Init()
@@ -72,7 +76,11 @@ func (s *syncService) Close() (err error) {
 	return s.streamPool.Close()
 }
 
-func (s *syncService) NotifyHeadUpdate(ctx context.Context, treeId string, header *aclpb.TreeHeader, update *spacesyncproto.ObjectHeadUpdate) (err error) {
+func (s *syncService) NotifyHeadUpdate(
+	ctx context.Context,
+	treeId string,
+	header *treechangeproto.RawTreeChangeWithId,
+	update *spacesyncproto.ObjectHeadUpdate) (err error) {
 	s.headNotifiable.UpdateHeads(treeId, update.Heads)
 	return s.streamPool.BroadcastAsync(spacesyncproto.WrapHeadUpdate(update, header, treeId, ""))
 }

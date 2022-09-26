@@ -49,7 +49,7 @@ message HeadSyncResponse {
 message ObjectSyncMessage {
     string spaceId = 1;
     ObjectSyncContentValue content = 2;
-    treechange.RootChange treeHeader = 3;
+    treechange.RawTreeChangeWithId rootChange = 3;
     string treeId = 4;
     string trackingId = 5;
 //

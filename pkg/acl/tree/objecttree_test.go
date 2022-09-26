@@ -2,13 +2,10 @@ package tree
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/acllistbuilder"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -108,7 +105,7 @@ func prepareACLList(t *testing.T) list.ACLList {
 	st, err := acllistbuilder.NewListStorageWithTestName("userjoinexample.yml")
 	require.NoError(t, err, "building storage should not result in error")
 
-	aclList, err := list.BuildACLList(signingkey.NewEDPubKeyDecoder(), st)
+	aclList, err := list.BuildACLList(st)
 	require.NoError(t, err, "building acl list should be without error")
 
 	return aclList
@@ -149,18 +146,6 @@ func prepareTreeContext(t *testing.T, aclList list.ACLList) testTreeContext {
 		changeCreator: changeCreator,
 		objTree:       objTree,
 	}
-}
-
-func TestSameSignature(t *testing.T) {
-	privKey, _, err := signingkey.GenerateEd25519Key(rand.Reader)
-	require.NoError(t, err)
-	bytes := []byte("asefhiosahjfoiesjgioesajgihs")
-	for i := 0; i < 5; i++ {
-		signed, err := privKey.Sign(bytes)
-		require.NoError(t, err)
-		t.Log(hex.EncodeToString(signed))
-	}
-	// kitten step voyage hand cover funny timber auction differ mushroom update pulp
 }
 
 func TestObjectTree(t *testing.T) {
