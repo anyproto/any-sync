@@ -1,6 +1,7 @@
 package acllistbuilder
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"hash/fnv"
@@ -21,6 +22,7 @@ type Keychain struct {
 	ReadKeys              map[string]*SymKey
 	ReadKeysByHash        map[uint64]*SymKey
 	GeneratedIdentities   map[string]string
+	DerivedIdentity       string
 	coder                 signingkey.PubKeyDecoder
 }
 
@@ -37,6 +39,7 @@ func NewKeychain() *Keychain {
 }
 
 func (k *Keychain) ParseKeys(keys *Keys) {
+	k.DerivedIdentity = keys.Derived
 	for _, encKey := range keys.Enc {
 		k.AddEncryptionKey(encKey)
 	}
@@ -123,6 +126,13 @@ func (k *Keychain) AddReadKey(key *Key) {
 		if err != nil {
 			panic("should be able to generate symmetric key")
 		}
+	} else if key.Value == "derived" {
+		signKey, _ := k.SigningKeys[k.DerivedIdentity].Raw()
+		encKey, _ := k.EncryptionKeys[k.DerivedIdentity].Raw()
+		rkey, err = aclrecordproto.ACLReadKeyDerive(signKey, encKey)
+		if err != nil {
+			panic("should be able to derive symmetric key")
+		}
 	} else {
 		rkey, err = symmetric.FromString(key.Value)
 		if err != nil {
@@ -150,7 +160,7 @@ func (k *Keychain) AddKey(key *Key) {
 	}
 
 	switch parts[1] {
-	case "Sign":
+	case "Signature":
 		k.AddSigningKey(key)
 	case "Enc":
 		k.AddEncryptionKey(key)

@@ -1,4 +1,4 @@
-package list
+package aclrecordproto
 
 import "github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 

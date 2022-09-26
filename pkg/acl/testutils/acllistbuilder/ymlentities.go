@@ -6,9 +6,10 @@ type Key struct {
 }
 
 type Keys struct {
-	Enc  []*Key `yaml:"Enc"`
-	Sign []*Key `yaml:"Sign"`
-	Read []*Key `yaml:"Read"`
+	Derived string `yaml:"Derived"`
+	Enc     []*Key `yaml:"Enc"`
+	Sign    []*Key `yaml:"Sign"`
+	Read    []*Key `yaml:"Read"`
 }
 
 type ACLChange struct {
@@ -35,11 +36,6 @@ type ACLChange struct {
 		InviteId          string   `yaml:"inviteId"`
 	} `yaml:"userInvite"`
 
-	UserConfirm *struct {
-		Identity  string `yaml:"identity"`
-		UserAddId string `yaml:"UserAddId"`
-	} `yaml:"userConfirm"`
-
 	UserRemove *struct {
 		RemovedIdentity string   `yaml:"removedIdentity"`
 		NewReadKey      string   `yaml:"newReadKey"`
@@ -63,7 +59,14 @@ type Header struct {
 	IsWorkspace   bool   `yaml:"isWorkspace"`
 }
 
+type Root struct {
+	Identity      string `yaml:"identity"`
+	EncryptionKey string `yaml:"encryptionKey"`
+	SpaceId       string `yaml:"spaceId"`
+}
+
 type YMLList struct {
+	Root    *Root
 	Records []*Record `yaml:"records"`
 
 	Keys Keys `yaml:"keys"`

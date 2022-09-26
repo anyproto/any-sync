@@ -1,12 +1,8 @@
-records:
+root:
   - identity: A
-    aclChanges:
-      - userAdd:
-          identity: A
-          permission: admin
-          encryptionKey: key.Enc.A
-          encryptedReadKeys: [key.Read.1]
-    readKey: key.Read.1
+    encryptionKey: key.Enc.A
+    spaceId: space
+records:
   - identity: A
     aclChanges:
       - userInvite:
@@ -31,6 +27,7 @@ records:
           encryptedReadKeys: [key.Read.1]
     readKey: key.Read.1
 keys:
+  Derived: A
   Enc:
     - name: A
       value: generated
@@ -51,4 +48,4 @@ keys:
       value: generated
   Read:
     - name: 1
-      value: generated
+      value: derived

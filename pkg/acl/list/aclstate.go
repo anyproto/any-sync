@@ -173,7 +173,7 @@ func (st *ACLState) saveReadKeyFromRoot(root *aclrecordproto.ACLRoot) (err error
 			return
 		}
 
-		readKey, err = ACLReadKeyDerive([]byte(st.identity), encPubKey)
+		readKey, err = aclrecordproto.ACLReadKeyDerive([]byte(st.identity), encPubKey)
 		if err != nil {
 			return
 		}

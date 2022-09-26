@@ -9,7 +9,7 @@ package acllistbuilder
 
 import (
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
 
 	"github.com/gogo/protobuf/proto"
 	"strings"
@@ -33,11 +33,11 @@ func (t *ACLListStorageBuilder) Graph() (string, error) {
 	graph.SetDir(true)
 	var nodes = make(map[string]struct{})
 
-	var addNodes = func(r *aclpb.ACLRecord, id string) error {
+	var addNodes = func(r *aclrecordproto.ACLRecord, id string) error {
 		style := "solid"
 
 		var chSymbs []string
-		aclData := &aclpb.ACLData{}
+		aclData := &aclrecordproto.ACLData{}
 		err := proto.Unmarshal(r.GetData(), aclData)
 		if err != nil {
 			return err
@@ -92,7 +92,7 @@ func (t *ACLListStorageBuilder) Graph() (string, error) {
 		return nil
 	}
 
-	var addLinks = func(r *aclpb.ACLRecord, id string) error {
+	var addLinks = func(r *aclrecordproto.ACLRecord, id string) error {
 		if r.PrevId == "" {
 			return nil
 		}
