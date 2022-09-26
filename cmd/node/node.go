@@ -15,7 +15,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
 	"go.uber.org/zap"
 	"net/http"
 	_ "net/http/pprof"
@@ -90,7 +89,6 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
-		Register(node.New()).
 		Register(nodeconf.New()).
 		Register(secure.New()).
 		Register(dialer.New()).

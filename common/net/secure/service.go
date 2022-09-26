@@ -6,7 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/sec"
@@ -37,8 +37,7 @@ type service struct {
 
 func (s *service) Init(a *app.App) (err error) {
 	account := a.MustComponent(config.CName).(*config.Config).Account
-	decoder := signingkey.NewEDPrivKeyDecoder()
-	pkb, err := decoder.DecodeFromStringIntoBytes(account.SigningKey)
+	pkb, err := keys.DecodeBytesFromString(account.SigningKey)
 	if err != nil {
 		return
 	}
