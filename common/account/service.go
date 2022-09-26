@@ -4,6 +4,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 )
@@ -34,33 +35,34 @@ func New() app.Component {
 
 func (s *service) Init(a *app.App) (err error) {
 	cfg := a.MustComponent(config.CName).(*config.Config)
-
-	// decoding our keys
-	privateEncryptionDecoder := encryptionkey.NewRSAPrivKeyDecoder()
-	privateSigningDecoder := signingkey.NewEDPrivKeyDecoder()
-	publicSigningDecoder := signingkey.NewEDPubKeyDecoder()
+	// TODO: add deviceKey
 	acc := cfg.Account
 
-	decodedEncryptionKey, err := privateEncryptionDecoder.DecodeFromString(acc.EncryptionKey)
-	if err != nil {
-		return err
-	}
-	decodedSigningKey, err := privateSigningDecoder.DecodeFromString(acc.SigningKey)
-	if err != nil {
-		return err
-	}
-	signKey := decodedSigningKey.(signingkey.PrivKey)
-	identity, err := publicSigningDecoder.EncodeToString(signKey.GetPublic())
+	decodedEncryptionKey, err := keys.DecodeKeyFromString(
+		acc.EncryptionKey,
+		encryptionkey.NewEncryptionRsaPrivKeyFromBytes,
+		nil)
 	if err != nil {
 		return err
 	}
 
-	// TODO: using acl lib format basically, but we should simplify this
+	decodedSigningKey, err := keys.DecodeKeyFromString(
+		acc.SigningKey,
+		signingkey.NewSigningEd25519PrivKeyFromBytes,
+		nil)
+	if err != nil {
+		return err
+	}
+
+	identity, err := decodedSigningKey.GetPublic().Raw()
+	if err != nil {
+		return err
+	}
+
 	s.accountData = &account.AccountData{
 		Identity: identity,
-		SignKey:  signKey,
-		EncKey:   decodedEncryptionKey.(encryptionkey.PrivKey),
-		Decoder:  signingkey.NewEDPubKeyDecoder(),
+		SignKey:  decodedSigningKey,
+		EncKey:   decodedEncryptionKey,
 	}
 	s.peerId = acc.PeerId
 

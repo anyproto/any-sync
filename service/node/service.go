@@ -5,7 +5,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"go.uber.org/zap"
@@ -83,9 +82,7 @@ func (s *service) Nodes() []*Node {
 
 func nodeFromConfigNode(
 	n config.Node,
-	peerId string,
-	privateSigningDecoder keys.Decoder,
-	privateEncryptionDecoder keys.Decoder) (*Node, error) {
+	peerId string) (*Node, error) {
 	decodedSigningKey, err := privateSigningDecoder.DecodeFromString(n.SigningKey)
 	if err != nil {
 		return nil, err

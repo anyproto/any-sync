@@ -8,7 +8,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/common"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"sync"
 )
 
@@ -58,7 +57,7 @@ func BuildACLListWithIdentity(acc *account.AccountData, storage storage.ListStor
 	return build(id, builder, newACLRecordBuilder(id, common.NewKeychain()), storage)
 }
 
-func BuildACLList(decoder keys.Decoder, storage storage.ListStorage) (ACLList, error) {
+func BuildACLList(storage storage.ListStorage) (ACLList, error) {
 	id, err := storage.ID()
 	if err != nil {
 		return nil, err

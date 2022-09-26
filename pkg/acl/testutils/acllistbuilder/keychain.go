@@ -2,6 +2,7 @@ package acllistbuilder
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"hash/fnv"
@@ -23,7 +24,6 @@ type YAMLKeychain struct {
 	ReadKeysByHash               map[uint64]*SymKey
 	GeneratedIdentities          map[string]string
 	DerivedIdentity              string
-	coder                        signingkey.PubKeyDecoder
 }
 
 func NewKeychain() *YAMLKeychain {
@@ -34,7 +34,6 @@ func NewKeychain() *YAMLKeychain {
 		GeneratedIdentities:          map[string]string{},
 		ReadKeysByYAMLIdentity:       map[string]*SymKey{},
 		ReadKeysByHash:               map[uint64]*SymKey{},
-		coder:                        signingkey.NewEd25519PubKeyDecoder(),
 	}
 }
 
@@ -67,12 +66,10 @@ func (k *YAMLKeychain) AddEncryptionKey(key *Key) {
 			panic(err)
 		}
 	} else {
-		decoder := encryptionkey.NewRSAPrivKeyDecoder()
-		privKey, err := decoder.DecodeFromString(key.Value)
+		newPrivKey, err = keys.DecodeKeyFromString(key.Value, encryptionkey.NewEncryptionRsaPrivKeyFromBytes, nil)
 		if err != nil {
 			panic(err)
 		}
-		newPrivKey = privKey.(encryptionkey.PrivKey)
 	}
 	k.EncryptionKeysByYAMLIdentity[key.Name] = newPrivKey
 }
@@ -92,12 +89,10 @@ func (k *YAMLKeychain) AddSigningKey(key *Key) {
 			panic(err)
 		}
 	} else {
-		decoder := signingkey.NewEDPrivKeyDecoder()
-		privKey, err := decoder.DecodeFromString(key.Value)
+		newPrivKey, err = keys.DecodeKeyFromString(key.Value, signingkey.NewSigningEd25519PrivKeyFromBytes, nil)
 		if err != nil {
 			panic(err)
 		}
-		newPrivKey = privKey.(signingkey.PrivKey)
 		pubKey = newPrivKey.GetPublic()
 	}
 

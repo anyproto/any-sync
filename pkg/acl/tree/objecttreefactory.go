@@ -7,7 +7,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
-	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 )
 
@@ -114,19 +113,13 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		return nil, err
 	}
 
-	rawRootWithId, err := objTree.treeStorage.Root()
+	objTree.root, err = objTree.treeStorage.Root()
 	if err != nil {
 		return nil, err
 	}
 
-	rawRoot := &treechangeproto.RawTreeChange{}
-	err = proto.Unmarshal(rawRootWithId.RawChange, rawRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	objTree.root = &treechangeproto.RootChange{}
-	err = proto.Unmarshal(rawRoot.Payload, objTree.root)
+	// verifying root
+	_, err = objTree.changeBuilder.ConvertFromRaw(objTree.root, true)
 	if err != nil {
 		return nil, err
 	}

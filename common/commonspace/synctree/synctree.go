@@ -4,10 +4,10 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 )
 
 type UpdateListener interface {
@@ -91,7 +91,7 @@ func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 	return
 }
 
-func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*aclpb.RawTreeChangeWithId) (res tree.AddResult, err error) {
+func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (res tree.AddResult, err error) {
 	res, err = s.AddRawChanges(ctx, changes...)
 	if err != nil {
 		return

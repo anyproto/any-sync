@@ -15,10 +15,3 @@ type PubKey interface {
 
 	Verify(data []byte, sig []byte) (bool, error)
 }
-
-type PubKeyDecoder interface {
-	DecodeFromBytes(bytes []byte) (PubKey, error)
-	DecodeFromString(identity string) (PubKey, error)
-	DecodeFromStringIntoBytes(identity string) ([]byte, error)
-	EncodeToString(pubkey PubKey) (string, error)
-}
