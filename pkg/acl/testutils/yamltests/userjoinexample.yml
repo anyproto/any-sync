@@ -1,7 +1,6 @@
 root:
-  - identity: A
-    encryptionKey: key.Enc.A
-    spaceId: space
+  identity: A
+  spaceId: space
 records:
   - identity: A
     aclChanges:

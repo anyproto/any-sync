@@ -23,13 +23,13 @@ type ACLListStorageBuilder struct {
 	records    []*aclrecordproto.ACLRecord
 	rawRecords []*aclrecordproto.RawACLRecordWithId
 	indexes    map[string]int
-	keychain   *Keychain
+	keychain   *YAMLKeychain
 	rawRoot    *aclrecordproto.RawACLRecordWithId
 	root       *aclrecordproto.ACLRoot
 	id         string
 }
 
-func NewACLListStorageBuilder(keychain *Keychain) *ACLListStorageBuilder {
+func NewACLListStorageBuilder(keychain *YAMLKeychain) *ACLListStorageBuilder {
 	return &ACLListStorageBuilder{
 		records:  make([]*aclrecordproto.ACLRecord, 0),
 		indexes:  make(map[string]int),
@@ -66,7 +66,7 @@ func (t *ACLListStorageBuilder) createRaw(rec proto.Marshaler, identity []byte) 
 		panic("should be able to marshal final acl message!")
 	}
 
-	signature, err := t.keychain.SigningKeysByIdentity[string(identity)].Sign(protoMarshalled)
+	signature, err := t.keychain.SigningKeysByRealIdentity[string(identity)].Sign(protoMarshalled)
 	if err != nil {
 		panic("should be able to sign final acl message!")
 	}
@@ -89,17 +89,10 @@ func (t *ACLListStorageBuilder) createRaw(rec proto.Marshaler, identity []byte) 
 	}
 }
 
-func (t *ACLListStorageBuilder) getRecord(idx int) *aclrecordproto.RawACLRecordWithId {
-	if idx > 0 {
-		return t.rawRecords[idx-1]
-	}
-	return t.rawRoot
-}
-
 func (t *ACLListStorageBuilder) Head() (*aclrecordproto.RawACLRecordWithId, error) {
 	l := len(t.records)
-	if l > 1 {
-		return t.rawRecords[l-2], nil
+	if l > 0 {
+		return t.rawRecords[l-1], nil
 	}
 	return t.rawRoot, nil
 }
@@ -116,7 +109,7 @@ func (t *ACLListStorageBuilder) GetRawRecord(ctx context.Context, id string) (*a
 		}
 		return nil, fmt.Errorf("no such record")
 	}
-	return t.getRecord(recIdx), nil
+	return t.rawRecords[recIdx], nil
 }
 
 func (t *ACLListStorageBuilder) AddRawRecord(ctx context.Context, rec *aclrecordproto.RawACLRecordWithId) error {
@@ -131,7 +124,7 @@ func (t *ACLListStorageBuilder) GetRawRecords() []*aclrecordproto.RawACLRecordWi
 	return t.rawRecords
 }
 
-func (t *ACLListStorageBuilder) GetKeychain() *Keychain {
+func (t *ACLListStorageBuilder) GetKeychain() *YAMLKeychain {
 	return t.keychain
 }
 
@@ -140,7 +133,8 @@ func (t *ACLListStorageBuilder) Parse(tree *YMLList) {
 	// are specified in the yml file, because our identities should be Ed25519
 	// the same thing is happening for the encryption keys
 	t.keychain.ParseKeys(&tree.Keys)
-	prevId := ""
+	t.parseRoot(tree.Root)
+	prevId := t.id
 	for idx, rec := range tree.Records {
 		newRecord := t.parseRecord(rec, prevId)
 		rawRecord := t.createRaw(newRecord, newRecord.Identity)
@@ -149,8 +143,6 @@ func (t *ACLListStorageBuilder) Parse(tree *YMLList) {
 		t.indexes[rawRecord.Id] = idx
 		prevId = rawRecord.Id
 	}
-
-	t.parseRoot(tree.Root)
 }
 
 func (t *ACLListStorageBuilder) parseRecord(rec *Record, prevId string) *aclrecordproto.ACLRecord {
@@ -199,7 +191,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 			GetKey(join.EncryptionKey).(encryptionkey.PrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 
-		idKey, _ := t.keychain.SigningKeys[join.Identity].GetPublic().Raw()
+		idKey, _ := t.keychain.SigningKeysByYAMLIdentity[join.Identity].GetPublic().Raw()
 		signKey := t.keychain.GetKey(join.AcceptSignature).(signingkey.PrivKey)
 		signature, err := signKey.Sign(idKey)
 		if err != nil {
@@ -253,15 +245,14 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 
 		var replaces []*aclrecordproto.ACLReadKeyReplace
 		for _, id := range remove.IdentitiesLeft {
-			identity := t.keychain.GetIdentity(id)
-			encKey := t.keychain.EncryptionKeys[id]
+			encKey := t.keychain.EncryptionKeysByYAMLIdentity[id]
 			rawEncKey, _ := encKey.GetPublic().Raw()
 			encReadKey, err := encKey.GetPublic().Encrypt(newReadKey.Key.Bytes())
 			if err != nil {
 				panic(err)
 			}
 			replaces = append(replaces, &aclrecordproto.ACLReadKeyReplace{
-				Identity:         []byte(identity),
+				Identity:         []byte(t.keychain.GetIdentity(id)),
 				EncryptionKey:    rawEncKey,
 				EncryptedReadKey: encReadKey,
 			})
@@ -320,8 +311,8 @@ func (t *ACLListStorageBuilder) traverseFromHead(f func(rec *aclrecordproto.ACLR
 }
 
 func (t *ACLListStorageBuilder) parseRoot(root *Root) {
-	rawSignKey, _ := t.keychain.GetKey(root.Identity).(signingkey.PrivKey).GetPublic().Raw()
-	rawEncKey, _ := t.keychain.GetKey(root.EncryptionKey).(encryptionkey.PrivKey).GetPublic().Raw()
+	rawSignKey, _ := t.keychain.SigningKeysByYAMLIdentity[root.Identity].GetPublic().Raw()
+	rawEncKey, _ := t.keychain.EncryptionKeysByYAMLIdentity[root.Identity].GetPublic().Raw()
 	readKey, _ := aclrecordproto.ACLReadKeyDerive(rawSignKey, rawEncKey)
 	hasher := fnv.New64()
 	hasher.Write(readKey.Bytes())
@@ -334,7 +325,5 @@ func (t *ACLListStorageBuilder) parseRoot(root *Root) {
 		CurrentReadKeyHash: hasher.Sum64(),
 	}
 	t.rawRoot = t.createRaw(t.root, rawSignKey)
-	bytes, _ := t.rawRoot.Marshal()
-	id, _ := cid.NewCIDFromBytes(bytes)
-	t.id = id
+	t.id = t.rawRoot.Id
 }

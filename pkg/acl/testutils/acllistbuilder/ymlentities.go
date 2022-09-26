@@ -60,9 +60,8 @@ type Header struct {
 }
 
 type Root struct {
-	Identity      string `yaml:"identity"`
-	EncryptionKey string `yaml:"encryptionKey"`
-	SpaceId       string `yaml:"spaceId"`
+	Identity string `yaml:"identity"`
+	SpaceId  string `yaml:"spaceId"`
 }
 
 type YMLList struct {
