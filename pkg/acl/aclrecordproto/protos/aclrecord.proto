@@ -26,6 +26,8 @@ message ACLRoot {
   string spaceId = 3;
   bytes encryptedReadKey = 4;
   string derivationScheme = 5;
+  uint64 currentReadKeyHash = 6;
+  int64 timestamp = 7;
 }
 
 message ACLContentValue {
@@ -51,9 +53,7 @@ message ACLState {
 message ACLUserState {
   bytes identity = 1;
   bytes encryptionKey = 2;
-  repeated bytes encryptedReadKeys = 3;
-  ACLUserPermissions permissions = 4;
-  bool isConfirmed = 5;
+  ACLUserPermissions permissions = 3;
 }
 
 message ACLUserAdd {
