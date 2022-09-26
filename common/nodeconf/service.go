@@ -5,7 +5,9 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/service/node"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-chash"
 )
 
@@ -31,11 +33,26 @@ type service struct {
 	last Configuration
 }
 
+type Node struct {
+	Address       string
+	PeerId        string
+	SigningKey    signingkey.PubKey
+	EncryptionKey encryptionkey.PubKey
+}
+
+func (n *Node) Id() string {
+	return n.PeerId
+}
+
+func (n *Node) Capacity() float64 {
+	return 1
+}
+
 func (s *service) Init(a *app.App) (err error) {
 	conf := a.MustComponent(config.CName).(*config.Config)
 	s.accountId = conf.Account.PeerId
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
-	configNodes := a.MustComponent(node.CName).(node.Service).Nodes()
+
 	config := &configuration{
 		id:        "config",
 		accountId: s.accountId,
@@ -47,9 +64,18 @@ func (s *service) Init(a *app.App) (err error) {
 	}); err != nil {
 		return
 	}
-	members := make([]chash.Member, 0, len(configNodes))
-	for _, n := range configNodes {
-		members = append(members, n)
+	members := make([]chash.Member, 0, len(conf.Nodes)-1)
+	for _, n := range conf.Nodes {
+		if n.PeerId == conf.Account.PeerId {
+			continue
+		}
+		var member *Node
+		member, err = nodeFromConfigNode(n)
+		if err != nil {
+			return
+		}
+
+		members = append(members, member)
 	}
 	if err = config.chash.AddMembers(members...); err != nil {
 		return
@@ -69,4 +95,30 @@ func (s *service) GetLast() Configuration {
 func (s *service) GetById(id string) Configuration {
 	//TODO implement me
 	panic("implement me")
+}
+
+func nodeFromConfigNode(
+	n config.Node) (*Node, error) {
+	decodedSigningKey, err := keys.DecodeKeyFromString(
+		n.SigningKey,
+		signingkey.UnmarshalEd25519PrivateKey,
+		nil)
+	if err != nil {
+		return nil, err
+	}
+
+	decodedEncryptionKey, err := keys.DecodeKeyFromString(
+		n.SigningKey,
+		encryptionkey.NewEncryptionRsaPrivKeyFromBytes,
+		nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Node{
+		Address:       n.Address,
+		PeerId:        n.PeerId,
+		SigningKey:    decodedSigningKey.GetPublic(),
+		EncryptionKey: decodedEncryptionKey.GetPublic(),
+	}, nil
 }

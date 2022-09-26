@@ -99,10 +99,10 @@ func (s *space) BuildTree(ctx context.Context, id string, listener synctree.Upda
 		fullSyncResp := resp.GetContent().GetFullSyncResponse()
 
 		payload := treestorage.TreeStorageCreatePayload{
-			TreeId:  resp.TreeId,
-			Header:  resp.TreeHeader,
-			Changes: fullSyncResp.Changes,
-			Heads:   fullSyncResp.Heads,
+			TreeId:        resp.TreeId,
+			RootRawChange: resp.RootChange,
+			Changes:       fullSyncResp.Changes,
+			Heads:         fullSyncResp.Heads,
 		}
 
 		// basically building tree with inmemory storage and validating that it was without errors
