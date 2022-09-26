@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"fmt"
+	"github.com/minio/sha256-simd"
 
 	mbase "github.com/multiformats/go-multibase"
 )
@@ -19,6 +20,12 @@ const (
 
 type Key struct {
 	raw []byte
+}
+
+func DeriveFromBytes(bytes []byte) (*Key, error) {
+	bArray := sha256.Sum256(bytes)
+	bSlice := bArray[:]
+	return FromBytes(bSlice)
 }
 
 func (k *Key) Equals(otherKey *Key) bool {
