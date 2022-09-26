@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 )
 
@@ -80,7 +80,7 @@ func (s *syncHandler) HandleHeadUpdate(
 
 	if fullRequest != nil {
 		return s.syncClient.SendAsync(senderId,
-			spacesyncproto.WrapFullRequest(fullRequest, msg.TreeHeader, msg.TreeId, msg.TrackingId))
+			spacesyncproto.WrapFullRequest(fullRequest, msg.RootChange, msg.TreeId, msg.TrackingId))
 	}
 	return
 }
@@ -92,7 +92,7 @@ func (s *syncHandler) HandleFullSyncRequest(
 	msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	var (
 		fullResponse *spacesyncproto.ObjectFullSyncResponse
-		header       = msg.TreeHeader
+		header       = msg.RootChange
 	)
 	defer func() {
 		if err != nil {
@@ -167,7 +167,7 @@ func (s *syncHandler) prepareFullSyncRequest(
 		SnapshotPath: t.SnapshotPath(),
 	}
 	if len(update.Changes) != 0 {
-		var changesAfterSnapshot []*aclpb.RawTreeChangeWithId
+		var changesAfterSnapshot []*treechangeproto.RawTreeChangeWithId
 		changesAfterSnapshot, err = t.ChangesAfterCommonSnapshot(update.SnapshotPath, update.Heads)
 		if err != nil {
 			return
