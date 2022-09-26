@@ -54,7 +54,7 @@ func BuildACLListWithIdentity(acc *account.AccountData, storage storage.ListStor
 	if err != nil {
 		return nil, err
 	}
-	builder := newACLStateBuilderWithIdentity(acc.Decoder, acc)
+	builder := newACLStateBuilderWithIdentity(acc)
 	return build(id, builder, newACLRecordBuilder(id, common.NewKeychain()), storage)
 }
 
@@ -63,7 +63,7 @@ func BuildACLList(decoder keys.Decoder, storage storage.ListStorage) (ACLList, e
 	if err != nil {
 		return nil, err
 	}
-	return build(id, newACLStateBuilder(decoder), newACLRecordBuilder(id, common.NewKeychain()), storage)
+	return build(id, newACLStateBuilder(), newACLRecordBuilder(id, common.NewKeychain()), storage)
 }
 
 func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder, storage storage.ListStorage) (list ACLList, err error) {
@@ -87,7 +87,7 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 	}
 	records := []*ACLRecord{record}
 
-	for record.PrevId != "" {
+	for record.PrevId != "" && record.PrevId != id {
 		rawRecordWithId, err = storage.GetRawRecord(context.Background(), record.PrevId)
 		if err != nil {
 			return
@@ -99,6 +99,8 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 		}
 		records = append(records, record)
 	}
+	// adding root in the end, because we already parsed it
+	records = append(records, aclRecRoot)
 
 	indexes := make(map[string]int)
 	for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
@@ -111,6 +113,7 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 		indexes[records[len(records)/2].Id] = len(records) / 2
 	}
 
+	stateBuilder.Init(id)
 	state, err := stateBuilder.Build(records)
 	if err != nil {
 		return

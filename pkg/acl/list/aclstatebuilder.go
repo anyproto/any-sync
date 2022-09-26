@@ -2,7 +2,6 @@ package list
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 )
@@ -10,31 +9,32 @@ import (
 type aclStateBuilder struct {
 	signPrivKey signingkey.PrivKey
 	encPrivKey  encryptionkey.PrivKey
-	decoder     keys.Decoder
+	id          string
 }
 
-func newACLStateBuilderWithIdentity(decoder keys.Decoder, accountData *account.AccountData) *aclStateBuilder {
+func newACLStateBuilderWithIdentity(accountData *account.AccountData) *aclStateBuilder {
 	return &aclStateBuilder{
-		decoder:     decoder,
 		signPrivKey: accountData.SignKey,
 		encPrivKey:  accountData.EncKey,
 	}
 }
 
-func newACLStateBuilder(decoder keys.Decoder) *aclStateBuilder {
-	return &aclStateBuilder{
-		decoder: decoder,
-	}
+func newACLStateBuilder() *aclStateBuilder {
+	return &aclStateBuilder{}
+}
+
+func (sb *aclStateBuilder) Init(id string) {
+	sb.id = id
 }
 
 func (sb *aclStateBuilder) Build(records []*ACLRecord) (state *ACLState, err error) {
 	if sb.encPrivKey != nil && sb.signPrivKey != nil {
-		state, err = newACLStateWithKeys(sb.signPrivKey, sb.encPrivKey)
+		state, err = newACLStateWithKeys(sb.id, sb.signPrivKey, sb.encPrivKey)
 		if err != nil {
 			return
 		}
 	} else {
-		state = newACLState(sb.decoder)
+		state = newACLState(sb.id)
 	}
 	for _, rec := range records {
 		err = state.applyRecord(rec)

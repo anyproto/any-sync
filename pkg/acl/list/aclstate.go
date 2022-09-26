@@ -7,7 +7,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/common"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
@@ -50,6 +49,7 @@ type ACLState struct {
 }
 
 func newACLStateWithKeys(
+	id string,
 	signingKey signingkey.PrivKey,
 	encryptionKey encryptionkey.PrivKey) (*ACLState, error) {
 	identity, err := signingKey.Raw()
@@ -57,6 +57,7 @@ func newACLStateWithKeys(
 		return nil, err
 	}
 	return &ACLState{
+		id:                  id,
 		identity:            string(identity),
 		signingKey:          signingKey,
 		encryptionKey:       encryptionKey,
@@ -67,8 +68,9 @@ func newACLStateWithKeys(
 	}, nil
 }
 
-func newACLState(decoder keys.Decoder) *ACLState {
+func newACLState(id string) *ACLState {
 	return &ACLState{
+		id:                  id,
 		userReadKeys:        make(map[uint64]*symmetric.Key),
 		userStates:          make(map[string]*aclrecordproto.ACLUserState),
 		userInvites:         make(map[string]*aclrecordproto.ACLUserInvite),
