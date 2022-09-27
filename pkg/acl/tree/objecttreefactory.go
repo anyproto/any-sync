@@ -8,12 +8,13 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 	"go.uber.org/zap"
+	"math/rand"
+	"time"
 )
 
 type ObjectTreeCreatePayload struct {
 	SignKey    signingkey.PrivKey
 	ChangeType string
-	Seed       []byte
 	SpaceId    string
 	Identity   []byte
 }
@@ -27,8 +28,29 @@ func BuildObjectTree(treeStorage storage.TreeStorage, aclList list.ACLList) (Obj
 	return buildObjectTree(deps)
 }
 
+func CreateDerivedObjectTree(
+	payload ObjectTreeCreatePayload,
+	aclList list.ACLList,
+	createStorage storage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
+	return createObjectTree(payload, 0, nil, aclList, createStorage)
+}
+
 func CreateObjectTree(
 	payload ObjectTreeCreatePayload,
+	aclList list.ACLList,
+	createStorage storage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
+	bytes := make([]byte, 32)
+	_, err = rand.Read(bytes)
+	if err != nil {
+		return
+	}
+	return createObjectTree(payload, time.Now().UnixNano(), bytes, aclList, createStorage)
+}
+
+func createObjectTree(
+	payload ObjectTreeCreatePayload,
+	timestamp int64,
+	seed []byte,
 	aclList list.ACLList,
 	createStorage storage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
 	aclList.RLock()
@@ -46,8 +68,9 @@ func CreateObjectTree(
 		Identity:   payload.Identity,
 		SigningKey: payload.SignKey,
 		SpaceId:    payload.SpaceId,
-		Seed:       payload.Seed,
 		ChangeType: payload.ChangeType,
+		Timestamp:  timestamp,
+		Seed:       seed,
 	}
 
 	_, raw, err := deps.changeBuilder.BuildInitialContent(cnt)

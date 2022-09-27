@@ -41,6 +41,7 @@ type DRPCSpaceClient interface {
 	DRPCConn() drpc.Conn
 
 	HeadSync(ctx context.Context, in *HeadSyncRequest) (*HeadSyncResponse, error)
+	PushSpace(ctx context.Context, in *PushSpaceRequest) (*PushSpaceResponse, error)
 	Stream(ctx context.Context) (DRPCSpace_StreamClient, error)
 }
 
@@ -57,6 +58,15 @@ func (c *drpcSpaceClient) DRPCConn() drpc.Conn { return c.cc }
 func (c *drpcSpaceClient) HeadSync(ctx context.Context, in *HeadSyncRequest) (*HeadSyncResponse, error) {
 	out := new(HeadSyncResponse)
 	err := c.cc.Invoke(ctx, "/anySpace.Space/HeadSync", drpcEncoding_File_common_commonspace_spacesyncproto_protos_spacesync_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcSpaceClient) PushSpace(ctx context.Context, in *PushSpaceRequest) (*PushSpaceResponse, error) {
+	out := new(PushSpaceResponse)
+	err := c.cc.Invoke(ctx, "/anySpace.Space/PushSpace", drpcEncoding_File_common_commonspace_spacesyncproto_protos_spacesync_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -100,6 +110,7 @@ func (x *drpcSpace_StreamClient) RecvMsg(m *ObjectSyncMessage) error {
 
 type DRPCSpaceServer interface {
 	HeadSync(context.Context, *HeadSyncRequest) (*HeadSyncResponse, error)
+	PushSpace(context.Context, *PushSpaceRequest) (*PushSpaceResponse, error)
 	Stream(DRPCSpace_StreamStream) error
 }
 
@@ -109,13 +120,17 @@ func (s *DRPCSpaceUnimplementedServer) HeadSync(context.Context, *HeadSyncReques
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCSpaceUnimplementedServer) PushSpace(context.Context, *PushSpaceRequest) (*PushSpaceResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 func (s *DRPCSpaceUnimplementedServer) Stream(DRPCSpace_StreamStream) error {
 	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
 type DRPCSpaceDescription struct{}
 
-func (DRPCSpaceDescription) NumMethods() int { return 2 }
+func (DRPCSpaceDescription) NumMethods() int { return 3 }
 
 func (DRPCSpaceDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -129,6 +144,15 @@ func (DRPCSpaceDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver,
 					)
 			}, DRPCSpaceServer.HeadSync, true
 	case 1:
+		return "/anySpace.Space/PushSpace", drpcEncoding_File_common_commonspace_spacesyncproto_protos_spacesync_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCSpaceServer).
+					PushSpace(
+						ctx,
+						in1.(*PushSpaceRequest),
+					)
+			}, DRPCSpaceServer.PushSpace, true
+	case 2:
 		return "/anySpace.Space/Stream", drpcEncoding_File_common_commonspace_spacesyncproto_protos_spacesync_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return nil, srv.(DRPCSpaceServer).
@@ -155,6 +179,22 @@ type drpcSpace_HeadSyncStream struct {
 }
 
 func (x *drpcSpace_HeadSyncStream) SendAndClose(m *HeadSyncResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_common_commonspace_spacesyncproto_protos_spacesync_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCSpace_PushSpaceStream interface {
+	drpc.Stream
+	SendAndClose(*PushSpaceResponse) error
+}
+
+type drpcSpace_PushSpaceStream struct {
+	drpc.Stream
+}
+
+func (x *drpcSpace_PushSpaceStream) SendAndClose(m *PushSpaceResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_common_commonspace_spacesyncproto_protos_spacesync_proto{}); err != nil {
 		return err
 	}

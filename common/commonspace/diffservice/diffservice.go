@@ -27,7 +27,7 @@ type DiffService interface {
 type diffService struct {
 	spaceId      string
 	periodicSync *periodicSync
-	storage      storage.Storage
+	storage      storage.SpaceStorage
 	nconf        nodeconf.Configuration
 	diff         ldiff.Diff
 	cache        cache.TreeCache
@@ -39,7 +39,7 @@ type diffService struct {
 func NewDiffService(
 	spaceId string,
 	syncPeriod int,
-	storage storage.Storage,
+	storage storage.SpaceStorage,
 	nconf nodeconf.Configuration,
 	cache cache.TreeCache,
 	log *zap.Logger) DiffService {

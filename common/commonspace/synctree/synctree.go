@@ -22,6 +22,30 @@ type SyncTree struct {
 	listener    UpdateListener
 }
 
+func DeriveSyncTree(
+	ctx context.Context,
+	payload tree.ObjectTreeCreatePayload,
+	syncService syncservice.SyncService,
+	listener UpdateListener,
+	aclList list.ACLList,
+	createStorage storage.TreeStorageCreatorFunc) (t tree.ObjectTree, err error) {
+	t, err = tree.CreateDerivedObjectTree(payload, aclList, createStorage)
+	if err != nil {
+		return
+	}
+	t = &SyncTree{
+		ObjectTree:  t,
+		syncService: syncService,
+		listener:    listener,
+	}
+
+	err = syncService.NotifyHeadUpdate(ctx, t.ID(), t.Header(), &spacesyncproto.ObjectHeadUpdate{
+		Heads:        t.Heads(),
+		SnapshotPath: t.SnapshotPath(),
+	})
+	return
+}
+
 func CreateSyncTree(
 	ctx context.Context,
 	payload tree.ObjectTreeCreatePayload,

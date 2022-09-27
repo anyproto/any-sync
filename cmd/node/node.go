@@ -89,6 +89,7 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
+		// TODO: add space storage provider from node side
 		Register(nodeconf.New()).
 		Register(secure.New()).
 		Register(dialer.New()).

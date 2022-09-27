@@ -9,7 +9,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace/nodecache"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
 	"time"
 )
@@ -38,11 +37,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.commonSpace = a.MustComponent(commonspace.CName).(commonspace.Service)
 	s.spaceCache = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
-			deps := commonspace.SpaceDeps{
-				Cache:   nodecache.NewNodeCache(s.conf.GCTTL),
-				Storage: storage.NewInMemoryTreeStorageProvider(),
-			}
-			return s.commonSpace.CreateSpace(ctx, id, deps)
+			return s.commonSpace.GetSpace(ctx, id, nodecache.NewNodeCache(s.conf.GCTTL))
 		},
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
