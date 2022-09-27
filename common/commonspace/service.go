@@ -51,7 +51,6 @@ func (s *service) CreateSpace(ctx context.Context, id string, deps SpaceDeps) (S
 	syncService := syncservice.NewSyncService(id, diffService, deps.Cache, lastConfiguration)
 	sp := &space{
 		id:          id,
-		conf:        s.config,
 		syncService: syncService,
 		diffService: diffService,
 		cache:       deps.Cache,

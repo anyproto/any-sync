@@ -2,6 +2,7 @@ package nodecache
 
 import (
 	"context"
+	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
@@ -9,6 +10,7 @@ import (
 )
 
 var log = logger.NewNamed("treecache")
+var ErrCacheObjectWithoutTree = errors.New("cache object contains no tree")
 
 type treeCache struct {
 	gcttl int
@@ -44,11 +46,17 @@ func (c *treeCache) GetTree(ctx context.Context, id string) (res cache.TreeResul
 		return cache.TreeResult{}, err
 	}
 
+	treeContainer, ok := cacheRes.(cache.TreeContainer)
+	if !ok {
+		err = ErrCacheObjectWithoutTree
+		return
+	}
+
 	res = cache.TreeResult{
 		Release: func() {
 			c.cache.Release(id)
 		},
-		TreeContainer: cacheRes.(cache.TreeContainer),
+		TreeContainer: treeContainer,
 	}
 	return
 }

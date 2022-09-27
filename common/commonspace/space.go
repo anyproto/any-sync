@@ -8,7 +8,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
@@ -29,9 +28,8 @@ type Space interface {
 }
 
 type space struct {
-	id   string
-	conf config.Space
-	mu   sync.RWMutex
+	id string
+	mu sync.RWMutex
 
 	rpc *rpcHandler
 
@@ -46,9 +44,13 @@ func (s *space) Id() string {
 	return s.id
 }
 
-func (s *space) Init(ctx context.Context) error {
+func (s *space) Init(ctx context.Context) (err error) {
 	s.rpc = &rpcHandler{s: s}
-	s.diffService.Init(s.getObjectIds())
+	initialIds, err := s.storage.StoredIds()
+	if err != nil {
+		return
+	}
+	s.diffService.Init(initialIds)
 	s.syncService.Init()
 	// basically this provides access for the external cache to use space's tree building functions
 	s.cache.SetBuildFunc(s.BuildTree)
@@ -117,11 +119,6 @@ func (s *space) BuildTree(ctx context.Context, id string, listener synctree.Upda
 		}
 	}
 	return synctree.BuildSyncTree(ctx, s.syncService, store.(treestorage.TreeStorage), listener, s.aclList)
-}
-
-func (s *space) getObjectIds() []string {
-	// TODO: add space object logic
-	return nil
 }
 
 func (s *space) Close() error {
