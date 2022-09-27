@@ -32,6 +32,7 @@ type InitialContent struct {
 	SpaceId    string
 	Seed       []byte
 	ChangeType string
+	Timestamp  int64
 }
 
 type ChangeBuilder interface {
@@ -100,7 +101,7 @@ func (c *changeBuilder) SetRootRawChange(rawIdChange *treechangeproto.RawTreeCha
 func (c *changeBuilder) BuildInitialContent(payload InitialContent) (ch *Change, rawIdChange *treechangeproto.RawTreeChangeWithId, err error) {
 	change := &treechangeproto.RootChange{
 		AclHeadId:  payload.AclHeadId,
-		Timestamp:  int64(time.Now().Nanosecond()),
+		Timestamp:  payload.Timestamp,
 		Identity:   payload.Identity,
 		ChangeType: payload.ChangeType,
 		SpaceId:    payload.SpaceId,

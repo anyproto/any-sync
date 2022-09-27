@@ -101,7 +101,8 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 			if err != nil {
 				continue
 			}
-
+			// sending empty message for the server to understand from which space is it coming
+			stream.Send(&spacesyncproto.ObjectSyncMessage{SpaceId: s.spaceId})
 			s.streamPool.AddAndReadStreamAsync(stream)
 		}
 	}

@@ -9,6 +9,10 @@ type rpcHandler struct {
 	s *service
 }
 
+func (r *rpcHandler) PushSpace(ctx context.Context, request *spacesyncproto.PushSpaceRequest) (*spacesyncproto.PushSpaceResponse, error) {
+	return nil, nil
+}
+
 func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
 	sp, err := r.s.GetSpace(ctx, req.SpaceId)
 	if err != nil {

@@ -2,6 +2,7 @@ package commonspace
 
 import (
 	"context"
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
@@ -11,8 +12,29 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"sync"
 )
+
+type SpaceCreatePayload struct {
+	SigningKey     signingkey.PrivKey
+	EncryptionKey  encryptionkey.PrivKey
+	SpaceType      string
+	ReadKey        []byte
+	ReplicationKey uint64
+}
+
+const SpaceTypeDerived = "derived.space"
+
+type SpaceDerivePayload struct {
+	SigningKey    signingkey.PrivKey
+	EncryptionKey encryptionkey.PrivKey
+}
+
+func NewSpaceId(id string, repKey uint64) string {
+	return fmt.Sprintf("%s.%d", id, repKey)
+}
 
 type Space interface {
 	Id() string
@@ -21,6 +43,7 @@ type Space interface {
 	SyncService() syncservice.SyncService
 	DiffService() diffservice.DiffService
 
+	DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener synctree.UpdateListener) (tree.ObjectTree, error)
 	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener synctree.UpdateListener) (tree.ObjectTree, error)
 	BuildTree(ctx context.Context, id string, listener synctree.UpdateListener) (tree.ObjectTree, error)
 
@@ -35,7 +58,7 @@ type space struct {
 
 	syncService syncservice.SyncService
 	diffService diffservice.DiffService
-	storage     storage.Storage
+	storage     storage.SpaceStorage
 	cache       cache.TreeCache
 	aclList     list.ACLList
 }
@@ -67,6 +90,10 @@ func (s *space) SyncService() syncservice.SyncService {
 
 func (s *space) DiffService() diffservice.DiffService {
 	return s.diffService
+}
+
+func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener synctree.UpdateListener) (tree.ObjectTree, error) {
+	return synctree.DeriveSyncTree(ctx, payload, s.syncService, listener, s.aclList, s.storage.CreateTreeStorage)
 }
 
 func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener synctree.UpdateListener) (tree.ObjectTree, error) {
