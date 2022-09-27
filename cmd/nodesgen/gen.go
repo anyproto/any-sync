@@ -76,8 +76,8 @@ func main() {
 		}
 		createDir()
 	}
-	for _, cfg := range configs {
-		path := fmt.Sprintf("%s/%s.yml", configsPath, cfg.Account.PeerId)
+	for idx, cfg := range configs {
+		path := fmt.Sprintf("%s/config%d.yml", configsPath, idx+1)
 		bytes, err := yaml.Marshal(cfg)
 		if err != nil {
 			panic(fmt.Sprintf("could not marshal the keys: %v", err))
@@ -129,6 +129,10 @@ func genConfig(addresses []string, apiPort string) (config.Config, error) {
 		},
 		APIServer: config.APIServer{
 			Port: apiPort,
+		},
+		Space: config.Space{
+			GCTTL:      60,
+			SyncPeriod: 10,
 		},
 	}, nil
 }
