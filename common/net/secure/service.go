@@ -2,13 +2,11 @@ package secure
 
 import (
 	"context"
-	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/sec"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	"go.uber.org/zap"
@@ -43,28 +41,6 @@ func (s *service) Init(a *app.App) (err error) {
 	}
 	if s.key, err = crypto.UnmarshalEd25519PrivateKey(pkb); err != nil {
 		return
-	}
-
-	pid, err := peer.Decode(account.PeerId)
-	if err != nil {
-		return
-	}
-
-	var testData = []byte("test data")
-	sign, err := s.key.Sign(testData)
-	if err != nil {
-		return
-	}
-	pubKey, err := pid.ExtractPublicKey()
-	if err != nil {
-		return
-	}
-	ok, err := pubKey.Verify(testData, sign)
-	if err != nil {
-		return
-	}
-	if !ok {
-		return fmt.Errorf("peerId and privateKey mismatched")
 	}
 
 	log.Info("secure service init", zap.String("peerId", account.PeerId))
