@@ -10,6 +10,7 @@ import (
 )
 
 type syncHandler struct {
+	spaceId    string
 	treeCache  cache.TreeCache
 	syncClient SyncClient
 }
@@ -18,8 +19,9 @@ type SyncHandler interface {
 	HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error)
 }
 
-func newSyncHandler(treeCache cache.TreeCache, syncClient SyncClient) *syncHandler {
+func newSyncHandler(spaceId string, treeCache cache.TreeCache, syncClient SyncClient) *syncHandler {
 	return &syncHandler{
+		spaceId:    spaceId,
 		treeCache:  treeCache,
 		syncClient: syncClient,
 	}
@@ -48,7 +50,7 @@ func (s *syncHandler) HandleHeadUpdate(
 		fullRequest *spacesyncproto.ObjectFullSyncRequest
 		result      tree.AddResult
 	)
-	res, err := s.treeCache.GetTree(ctx, msg.TreeId)
+	res, err := s.treeCache.GetTree(ctx, s.spaceId, msg.TreeId)
 	if err != nil {
 		return
 	}
@@ -100,7 +102,7 @@ func (s *syncHandler) HandleFullSyncRequest(
 		}
 	}()
 
-	res, err := s.treeCache.GetTree(ctx, msg.TreeId)
+	res, err := s.treeCache.GetTree(ctx, s.spaceId, msg.TreeId)
 	if err != nil {
 		return
 	}
@@ -136,7 +138,7 @@ func (s *syncHandler) HandleFullSyncResponse(
 	senderId string,
 	response *spacesyncproto.ObjectFullSyncResponse,
 	msg *spacesyncproto.ObjectSyncMessage) (err error) {
-	res, err := s.treeCache.GetTree(ctx, msg.TreeId)
+	res, err := s.treeCache.GetTree(ctx, s.spaceId, msg.TreeId)
 	if err != nil {
 		return
 	}

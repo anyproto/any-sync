@@ -30,7 +30,7 @@ func New() Service {
 type Service interface {
 	CreateSpace(ctx context.Context, cache cache.TreeCache, payload SpaceCreatePayload) (Space, error)
 	DeriveSpace(ctx context.Context, cache cache.TreeCache, payload SpaceDerivePayload) (Space, error)
-	GetSpace(ctx context.Context, id string, cache cache.TreeCache) (sp Space, err error)
+	GetSpace(ctx context.Context, id string) (sp Space, err error)
 	app.Component
 }
 
@@ -38,12 +38,14 @@ type service struct {
 	config               config.Space
 	configurationService nodeconf.Service
 	storageProvider      storage.SpaceStorageProvider
+	cache                cache.TreeCache
 }
 
 func (s *service) Init(a *app.App) (err error) {
 	s.config = a.MustComponent(config.CName).(*config.Config).Space
 	s.storageProvider = a.MustComponent(storage.CName).(storage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
+	s.cache = a.MustComponent(cache.CName).(cache.TreeCache)
 	return nil
 }
 
@@ -127,7 +129,7 @@ func (s *service) CreateSpace(
 		return
 	}
 
-	return s.GetSpace(ctx, spaceId, cache)
+	return s.GetSpace(ctx, spaceId)
 }
 
 func (s *service) DeriveSpace(
@@ -219,22 +221,22 @@ func (s *service) DeriveSpace(
 		return
 	}
 
-	return s.GetSpace(ctx, spaceId, cache)
+	return s.GetSpace(ctx, spaceId)
 }
 
-func (s *service) GetSpace(ctx context.Context, id string, cache cache.TreeCache) (Space, error) {
+func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {
 	st, err := s.storageProvider.SpaceStorage(id)
 	if err != nil {
 		return nil, err
 	}
 	lastConfiguration := s.configurationService.GetLast()
-	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, st, lastConfiguration, cache, log)
-	syncService := syncservice.NewSyncService(id, diffService, cache, lastConfiguration)
+	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, st, lastConfiguration, s.cache, log)
+	syncService := syncservice.NewSyncService(id, diffService, s.cache, lastConfiguration)
 	sp := &space{
 		id:          id,
 		syncService: syncService,
 		diffService: diffService,
-		cache:       cache,
+		cache:       s.cache,
 		storage:     st,
 	}
 	if err := sp.Init(ctx); err != nil {
