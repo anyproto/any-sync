@@ -114,7 +114,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener synctree.Upda
 		)
 	}
 
-	store, err := s.storage.Storage(id)
+	store, err := s.storage.TreeStorage(id)
 	if err != nil && err != treestorage.ErrUnknownTreeId {
 		return
 	}

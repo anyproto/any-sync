@@ -7,6 +7,8 @@ import "pkg/acl/aclrecordproto/protos/aclrecord.proto";
 
 enum ErrCodes {
     Unexpected = 0;
+    SpaceMissing = 1;
+    ErrorOffset = 16;
 }
 
 service Space {

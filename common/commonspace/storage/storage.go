@@ -11,6 +11,8 @@ const CName = "commonspace.storage"
 
 type SpaceStorage interface {
 	storage.Provider
+	ACLStorage() (storage.ListStorage, error)
+	SpaceHeader() (*spacesyncproto.SpaceHeader, error)
 	StoredIds() ([]string, error)
 }
 
