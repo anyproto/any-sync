@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace/nodecache"
@@ -27,14 +28,16 @@ type Service interface {
 }
 
 type service struct {
-	conf        config.Space
-	spaceCache  ocache.OCache
-	commonSpace commonspace.Service
+	conf                 config.Space
+	spaceCache           ocache.OCache
+	commonSpace          commonspace.Service
+	spaceStorageProvider storage.SpaceStorageProvider
 }
 
 func (s *service) Init(a *app.App) (err error) {
 	s.conf = a.MustComponent(config.CName).(*config.Config).Space
 	s.commonSpace = a.MustComponent(commonspace.CName).(commonspace.Service)
+	s.spaceStorageProvider = a.MustComponent(storage.CName).(storage.SpaceStorageProvider)
 	s.spaceCache = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
 			return s.commonSpace.GetSpace(ctx, id, nodecache.NewNodeCache(s.conf.GCTTL))

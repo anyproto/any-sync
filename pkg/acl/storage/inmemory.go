@@ -134,22 +134,11 @@ func (t *inMemoryTreeStorage) GetRawChange(ctx context.Context, changeId string)
 }
 
 type inMemoryStorageProvider struct {
-	objects map[string]Storage
+	objects map[string]TreeStorage
 	sync.RWMutex
 }
 
-func (i *inMemoryStorageProvider) AddStorage(id string, st Storage) error {
-	i.Lock()
-	defer i.Unlock()
-	if _, exists := i.objects[id]; exists {
-		return fmt.Errorf("storage already exists")
-	}
-
-	i.objects[id] = st
-	return nil
-}
-
-func (i *inMemoryStorageProvider) Storage(id string) (Storage, error) {
+func (i *inMemoryStorageProvider) TreeStorage(id string) (TreeStorage, error) {
 	i.RLock()
 	defer i.RUnlock()
 	if tree, exists := i.objects[id]; exists {
@@ -170,20 +159,8 @@ func (i *inMemoryStorageProvider) CreateTreeStorage(payload TreeStorageCreatePay
 	return res, nil
 }
 
-func (i *inMemoryStorageProvider) CreateACLListStorage(payload ACLListStorageCreatePayload) (ListStorage, error) {
-	i.Lock()
-	defer i.Unlock()
-	res, err := NewInMemoryACLListStorage(payload.ListId, payload.Records)
-	if err != nil {
-		return nil, err
-	}
-
-	i.objects[payload.ListId] = res
-	return res, nil
-}
-
 func NewInMemoryTreeStorageProvider() Provider {
 	return &inMemoryStorageProvider{
-		objects: make(map[string]Storage),
+		objects: make(map[string]TreeStorage),
 	}
 }

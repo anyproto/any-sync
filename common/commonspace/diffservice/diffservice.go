@@ -7,8 +7,8 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
 	"go.uber.org/zap"
 	"strings"
@@ -100,8 +100,12 @@ func (d *diffService) syncWithPeer(ctx context.Context, p peer.Peer) (err error)
 	cl := spacesyncproto.NewDRPCSpaceClient(p)
 	rdiff := remotediff.NewRemoteDiff(d.spaceId, cl)
 	newIds, changedIds, removedIds, err := d.diff.Diff(ctx, rdiff)
-	if err != nil {
-		return nil
+	err = rpcerr.Unwrap(err)
+	if err != nil && err != spacesyncproto.ErrSpaceMissing {
+		return err
+	}
+	if err == spacesyncproto.ErrSpaceMissing {
+		return d.sendPushSpaceRequest(ctx, cl)
 	}
 
 	d.pingTreesInCache(ctx, newIds)
@@ -122,11 +126,11 @@ func (d *diffService) pingTreesInCache(ctx context.Context, trees []string) {
 func (d *diffService) fillDiff(objectIds []string) {
 	var els = make([]ldiff.Element, 0, len(objectIds))
 	for _, id := range objectIds {
-		st, err := d.storage.Storage(id)
+		st, err := d.storage.TreeStorage(id)
 		if err != nil {
 			continue
 		}
-		heads, err := st.(treestorage.TreeStorage).Heads()
+		heads, err := st.Heads()
 		if err != nil {
 			continue
 		}
@@ -136,6 +140,30 @@ func (d *diffService) fillDiff(objectIds []string) {
 		})
 	}
 	d.diff.Set(els...)
+}
+
+func (d *diffService) sendPushSpaceRequest(ctx context.Context, cl spacesyncproto.DRPCSpaceClient) (err error) {
+	aclStorage, err := d.storage.ACLStorage()
+	if err != nil {
+		return
+	}
+
+	root, err := aclStorage.Root()
+	if err != nil {
+		return
+	}
+
+	header, err := d.storage.SpaceHeader()
+	if err != nil {
+		return
+	}
+
+	_, err = cl.PushSpace(ctx, &spacesyncproto.PushSpaceRequest{
+		SpaceId:     d.spaceId,
+		SpaceHeader: header,
+		AclRoot:     root,
+	})
+	return
 }
 
 func concatStrings(strs []string) string {

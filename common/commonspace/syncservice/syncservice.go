@@ -99,6 +99,8 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 			cl := spacesyncproto.NewDRPCSpaceClient(peer)
 			stream, err := cl.Stream(ctx)
 			if err != nil {
+				// so here probably the request is failed because there is no such space,
+				// but diffService should handle such cases by sending pushSpace
 				continue
 			}
 			// sending empty message for the server to understand from which space is it coming

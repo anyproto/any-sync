@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 )
 
@@ -15,13 +14,7 @@ type TreeStorageCreatePayload struct {
 	Heads         []string
 }
 
-type ACLListStorageCreatePayload struct {
-	ListId  string
-	Records []*aclrecordproto.RawACLRecordWithId
-}
-
 type Provider interface {
-	Storage(id string) (Storage, error)
+	TreeStorage(id string) (TreeStorage, error)
 	CreateTreeStorage(payload TreeStorageCreatePayload) (TreeStorage, error)
-	CreateACLListStorage(payload ACLListStorageCreatePayload) (ListStorage, error)
 }
