@@ -2,6 +2,7 @@ package nodespace
 
 import (
 	"context"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 )
@@ -13,9 +14,14 @@ type rpcHandler struct {
 func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpaceRequest) (resp *spacesyncproto.PushSpaceResponse, err error) {
 	_, err = r.s.GetSpace(ctx, req.SpaceId)
 	if err == nil {
-		resp = &spacesyncproto.PushSpaceResponse{}
+		err = spacesyncproto.ErrSpaceExists
 		return
 	}
+	if err != cache.ErrSpaceNotFound {
+		err = spacesyncproto.ErrUnexpected
+		return
+	}
+
 	payload := storage.SpaceStorageCreatePayload{
 		RecWithId:   req.AclRoot,
 		SpaceHeader: req.SpaceHeader,
@@ -24,6 +30,9 @@ func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpac
 	_, err = r.s.spaceStorageProvider.CreateSpaceStorage(payload)
 	if err != nil {
 		err = spacesyncproto.ErrUnexpected
+		if err == storage.ErrSpaceStorageExists {
+			err = spacesyncproto.ErrSpaceExists
+		}
 		return
 	}
 	return

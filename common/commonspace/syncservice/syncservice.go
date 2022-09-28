@@ -2,12 +2,16 @@ package syncservice
 
 import (
 	"context"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 	"time"
 )
+
+var log = logger.NewNamed("syncservice").Sugar()
 
 type SyncService interface {
 	NotifyHeadUpdate(
@@ -104,7 +108,12 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 				continue
 			}
 			// sending empty message for the server to understand from which space is it coming
-			stream.Send(&spacesyncproto.ObjectSyncMessage{SpaceId: s.spaceId})
+			err = stream.Send(&spacesyncproto.ObjectSyncMessage{SpaceId: s.spaceId})
+			if err != nil {
+				err = rpcerr.Unwrap(err)
+				log.With("spaceId", s.spaceId).Errorf("failed to open stream: %v", err)
+				continue
+			}
 			s.streamPool.AddAndReadStreamAsync(stream)
 		}
 	}
