@@ -73,8 +73,6 @@ func (s *space) Init(ctx context.Context) (err error) {
 	}
 	s.diffService.Init(initialIds)
 	s.syncService.Init()
-	// basically this provides access for the external cache to use space's tree building functions
-	s.cache.SetBuildFunc(s.BuildTree)
 	return nil
 }
 
@@ -148,6 +146,5 @@ func (s *space) BuildTree(ctx context.Context, id string, listener synctree.Upda
 
 func (s *space) Close() error {
 	s.diffService.Close()
-	s.cache.Close()
 	return s.syncService.Close()
 }

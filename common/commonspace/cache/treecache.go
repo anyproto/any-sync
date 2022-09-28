@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"errors"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 )
@@ -23,8 +24,6 @@ type TreeResult struct {
 type BuildFunc = func(ctx context.Context, id string, listener synctree.UpdateListener) (tree.ObjectTree, error)
 
 type TreeCache interface {
-	GetTree(ctx context.Context, id string) (TreeResult, error)
-	SetBuildFunc(f BuildFunc)
-
-	Close() error
+	app.ComponentRunnable
+	GetTree(ctx context.Context, spaceId, treeId string) (TreeResult, error)
 }

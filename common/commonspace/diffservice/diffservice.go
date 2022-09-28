@@ -119,7 +119,7 @@ func (d *diffService) syncWithPeer(ctx context.Context, p peer.Peer) (err error)
 
 func (d *diffService) pingTreesInCache(ctx context.Context, trees []string) {
 	for _, tId := range trees {
-		_, _ = d.cache.GetTree(ctx, tId)
+		_, _ = d.cache.GetTree(ctx, d.spaceId, tId)
 	}
 }
 
