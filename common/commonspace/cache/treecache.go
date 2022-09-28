@@ -2,11 +2,14 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 )
 
 const CName = "commonspace.cache"
+
+var ErrSpaceNotFound = errors.New("space not found")
 
 type TreeContainer interface {
 	Tree() tree.ObjectTree

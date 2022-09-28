@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
@@ -8,6 +9,8 @@ import (
 )
 
 const CName = "commonspace.storage"
+
+var ErrSpaceStorageExists = errors.New("space storage exists")
 
 type SpaceStorage interface {
 	storage.Provider

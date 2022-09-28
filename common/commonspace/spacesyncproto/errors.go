@@ -8,6 +8,7 @@ import (
 var (
 	errGroup = rpcerr.ErrGroup(ErrCodes_ErrorOffset)
 
-	ErrUnexpected   = errGroup.Register(errors.New("Unexpected error"), uint64(ErrCodes_Unexpected))
-	ErrSpaceMissing = errGroup.Register(errors.New("Space is missing"), uint64(ErrCodes_SpaceMissing))
+	ErrUnexpected   = errGroup.Register(errors.New("unexpected error"), uint64(ErrCodes_Unexpected))
+	ErrSpaceMissing = errGroup.Register(errors.New("space is missing"), uint64(ErrCodes_SpaceMissing))
+	ErrSpaceExists  = errGroup.Register(errors.New("space exists"), uint64(ErrCodes_SpaceMissing))
 )

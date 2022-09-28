@@ -40,8 +40,6 @@ type Space interface {
 	Id() string
 
 	SpaceSyncRpc() RpcHandler
-	SyncService() syncservice.SyncService
-	DiffService() diffservice.DiffService
 
 	DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener synctree.UpdateListener) (tree.ObjectTree, error)
 	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener synctree.UpdateListener) (tree.ObjectTree, error)
