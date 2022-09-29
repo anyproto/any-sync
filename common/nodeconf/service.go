@@ -108,7 +108,7 @@ func nodeFromConfigNode(
 	}
 
 	decodedEncryptionKey, err := keys.DecodeKeyFromString(
-		n.SigningKey,
+		n.EncryptionKey,
 		encryptionkey.NewEncryptionRsaPrivKeyFromBytes,
 		nil)
 	if err != nil {
