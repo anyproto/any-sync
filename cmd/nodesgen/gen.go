@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/peer"
@@ -75,8 +76,8 @@ func main() {
 		}
 		createDir()
 	}
-	for _, cfg := range configs {
-		path := fmt.Sprintf("%s/%s.yml", configsPath, cfg.Account.PeerId)
+	for idx, cfg := range configs {
+		path := fmt.Sprintf("%s/config%d.yml", configsPath, idx+1)
 		bytes, err := yaml.Marshal(cfg)
 		if err != nil {
 			panic(fmt.Sprintf("could not marshal the keys: %v", err))
@@ -100,15 +101,12 @@ func genConfig(addresses []string, apiPort string) (config.Config, error) {
 		return config.Config{}, err
 	}
 
-	encKeyDecoder := encryptionkey.NewRSAPrivKeyDecoder()
-	signKeyDecoder := signingkey.NewEDPrivKeyDecoder()
-
-	encEncKey, err := encKeyDecoder.EncodeToString(encKey)
+	encEncKey, err := keys.EncodeKeyToString(encKey)
 	if err != nil {
 		return config.Config{}, err
 	}
 
-	encSignKey, err := signKeyDecoder.EncodeToString(signKey)
+	encSignKey, err := keys.EncodeKeyToString(signKey)
 	if err != nil {
 		return config.Config{}, err
 	}
@@ -131,6 +129,10 @@ func genConfig(addresses []string, apiPort string) (config.Config, error) {
 		},
 		APIServer: config.APIServer{
 			Port: apiPort,
+		},
+		Space: config.Space{
+			GCTTL:      60,
+			SyncPeriod: 10,
 		},
 	}, nil
 }

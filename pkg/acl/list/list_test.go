@@ -1,9 +1,8 @@
 package list
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/acllistbuilder"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -15,7 +14,7 @@ func TestAclList_ACLState_UserInviteAndJoin(t *testing.T) {
 
 	keychain := st.(*acllistbuilder.ACLListStorageBuilder).GetKeychain()
 
-	aclList, err := BuildACLList(signingkey.NewEDPubKeyDecoder(), st)
+	aclList, err := BuildACLList(st)
 	require.NoError(t, err, "building acl list should be without error")
 
 	idA := keychain.GetIdentity("A")
@@ -23,13 +22,13 @@ func TestAclList_ACLState_UserInviteAndJoin(t *testing.T) {
 	idC := keychain.GetIdentity("C")
 
 	// checking final state
-	assert.Equal(t, aclpb.ACLChange_Admin, aclList.ACLState().GetUserStates()[idA].Permissions)
-	assert.Equal(t, aclpb.ACLChange_Writer, aclList.ACLState().GetUserStates()[idB].Permissions)
-	assert.Equal(t, aclpb.ACLChange_Reader, aclList.ACLState().GetUserStates()[idC].Permissions)
-	assert.Equal(t, aclList.Head().Content.CurrentReadKeyHash, aclList.ACLState().CurrentReadKeyHash())
+	assert.Equal(t, aclrecordproto.ACLUserPermissions_Admin, aclList.ACLState().GetUserStates()[idA].Permissions)
+	assert.Equal(t, aclrecordproto.ACLUserPermissions_Writer, aclList.ACLState().GetUserStates()[idB].Permissions)
+	assert.Equal(t, aclrecordproto.ACLUserPermissions_Reader, aclList.ACLState().GetUserStates()[idC].Permissions)
+	assert.Equal(t, aclList.Head().CurrentReadKeyHash, aclList.ACLState().CurrentReadKeyHash())
 
-	var records []*Record
-	aclList.Iterate(func(record *Record) (IsContinue bool) {
+	var records []*ACLRecord
+	aclList.Iterate(func(record *ACLRecord) (IsContinue bool) {
 		records = append(records, record)
 		return true
 	})
@@ -44,7 +43,7 @@ func TestAclList_ACLState_UserInviteAndJoin(t *testing.T) {
 	assert.NoError(t, err, "should have no error with permissions of B in the record 2")
 	assert.Equal(t, UserPermissionPair{
 		Identity:   idB,
-		Permission: aclpb.ACLChange_Writer,
+		Permission: aclrecordproto.ACLUserPermissions_Writer,
 	}, perm)
 }
 
@@ -54,7 +53,7 @@ func TestAclList_ACLState_UserJoinAndRemove(t *testing.T) {
 
 	keychain := st.(*acllistbuilder.ACLListStorageBuilder).GetKeychain()
 
-	aclList, err := BuildACLList(signingkey.NewEDPubKeyDecoder(), st)
+	aclList, err := BuildACLList(st)
 	require.NoError(t, err, "building acl list should be without error")
 
 	idA := keychain.GetIdentity("A")
@@ -62,15 +61,15 @@ func TestAclList_ACLState_UserJoinAndRemove(t *testing.T) {
 	idC := keychain.GetIdentity("C")
 
 	// checking final state
-	assert.Equal(t, aclpb.ACLChange_Admin, aclList.ACLState().GetUserStates()[idA].Permissions)
-	assert.Equal(t, aclpb.ACLChange_Reader, aclList.ACLState().GetUserStates()[idC].Permissions)
-	assert.Equal(t, aclList.Head().Content.CurrentReadKeyHash, aclList.ACLState().CurrentReadKeyHash())
+	assert.Equal(t, aclrecordproto.ACLUserPermissions_Admin, aclList.ACLState().GetUserStates()[idA].Permissions)
+	assert.Equal(t, aclrecordproto.ACLUserPermissions_Reader, aclList.ACLState().GetUserStates()[idC].Permissions)
+	assert.Equal(t, aclList.Head().CurrentReadKeyHash, aclList.ACLState().CurrentReadKeyHash())
 
 	_, exists := aclList.ACLState().GetUserStates()[idB]
 	assert.Equal(t, false, exists)
 
-	var records []*Record
-	aclList.Iterate(func(record *Record) (IsContinue bool) {
+	var records []*ACLRecord
+	aclList.Iterate(func(record *ACLRecord) (IsContinue bool) {
 		records = append(records, record)
 		return true
 	})
@@ -78,13 +77,13 @@ func TestAclList_ACLState_UserJoinAndRemove(t *testing.T) {
 	// checking permissions at specific records
 	assert.Equal(t, 4, len(records))
 
-	assert.NotEqual(t, records[2].Content.CurrentReadKeyHash, aclList.ACLState().CurrentReadKeyHash())
+	assert.NotEqual(t, records[2].CurrentReadKeyHash, aclList.ACLState().CurrentReadKeyHash())
 
 	perm, err := aclList.ACLState().PermissionsAtRecord(records[2].Id, idB)
 	assert.NoError(t, err, "should have no error with permissions of B in the record 2")
 	assert.Equal(t, UserPermissionPair{
 		Identity:   idB,
-		Permission: aclpb.ACLChange_Writer,
+		Permission: aclrecordproto.ACLUserPermissions_Writer,
 	}, perm)
 
 	_, err = aclList.ACLState().PermissionsAtRecord(records[3].Id, idB)

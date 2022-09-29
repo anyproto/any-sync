@@ -3,12 +3,13 @@ package acllistbuilder
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/testutils/yamltests"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
+	"hash/fnv"
 	"io/ioutil"
 	"path"
 	"time"
@@ -19,17 +20,18 @@ import (
 
 type ACLListStorageBuilder struct {
 	aclList    string
-	records    []*aclpb.Record
-	rawRecords []*aclpb.RawRecord
+	records    []*aclrecordproto.ACLRecord
+	rawRecords []*aclrecordproto.RawACLRecordWithId
 	indexes    map[string]int
-	keychain   *Keychain
-	header     *aclpb.Header
+	keychain   *YAMLKeychain
+	rawRoot    *aclrecordproto.RawACLRecordWithId
+	root       *aclrecordproto.ACLRoot
 	id         string
 }
 
-func NewACLListStorageBuilder(keychain *Keychain) *ACLListStorageBuilder {
+func NewACLListStorageBuilder(keychain *YAMLKeychain) *ACLListStorageBuilder {
 	return &ACLListStorageBuilder{
-		records:  make([]*aclpb.Record, 0),
+		records:  make([]*aclrecordproto.ACLRecord, 0),
 		indexes:  make(map[string]int),
 		keychain: keychain,
 	}
@@ -58,47 +60,59 @@ func NewACLListStorageBuilderFromFile(file string) (*ACLListStorageBuilder, erro
 	return tb, nil
 }
 
-func (t *ACLListStorageBuilder) createRaw(rec *aclpb.Record) *aclpb.RawRecord {
-	aclMarshaled, err := proto.Marshal(rec)
+func (t *ACLListStorageBuilder) createRaw(rec proto.Marshaler, identity []byte) *aclrecordproto.RawACLRecordWithId {
+	protoMarshalled, err := rec.Marshal()
 	if err != nil {
 		panic("should be able to marshal final acl message!")
 	}
 
-	signature, err := t.keychain.SigningKeysByIdentity[rec.Identity].Sign(aclMarshaled)
+	signature, err := t.keychain.SigningKeysByRealIdentity[string(identity)].Sign(protoMarshalled)
 	if err != nil {
 		panic("should be able to sign final acl message!")
 	}
 
-	id, _ := cid.NewCIDFromBytes(aclMarshaled)
-
-	return &aclpb.RawRecord{
-		Payload:   aclMarshaled,
+	rawRec := &aclrecordproto.RawACLRecord{
+		Payload:   protoMarshalled,
 		Signature: signature,
-		Id:        id,
+	}
+
+	rawMarshalled, err := proto.Marshal(rawRec)
+	if err != nil {
+		panic(err)
+	}
+
+	id, _ := cid.NewCIDFromBytes(rawMarshalled)
+
+	return &aclrecordproto.RawACLRecordWithId{
+		Payload: rawMarshalled,
+		Id:      id,
 	}
 }
 
-func (t *ACLListStorageBuilder) getRecord(idx int) *aclpb.RawRecord {
-	return t.rawRecords[idx]
+func (t *ACLListStorageBuilder) Head() (*aclrecordproto.RawACLRecordWithId, error) {
+	l := len(t.records)
+	if l > 0 {
+		return t.rawRecords[l-1], nil
+	}
+	return t.rawRoot, nil
 }
 
-func (t *ACLListStorageBuilder) Head() (*aclpb.RawRecord, error) {
-	return t.getRecord(len(t.records) - 1), nil
+func (t *ACLListStorageBuilder) Root() (*aclrecordproto.RawACLRecordWithId, error) {
+	return t.rawRoot, nil
 }
 
-func (t *ACLListStorageBuilder) Header() (*aclpb.Header, error) {
-	return t.header, nil
-}
-
-func (t *ACLListStorageBuilder) GetRawRecord(ctx context.Context, id string) (*aclpb.RawRecord, error) {
+func (t *ACLListStorageBuilder) GetRawRecord(ctx context.Context, id string) (*aclrecordproto.RawACLRecordWithId, error) {
 	recIdx, ok := t.indexes[id]
 	if !ok {
+		if id == t.rawRoot.Id {
+			return t.rawRoot, nil
+		}
 		return nil, fmt.Errorf("no such record")
 	}
-	return t.getRecord(recIdx), nil
+	return t.rawRecords[recIdx], nil
 }
 
-func (t *ACLListStorageBuilder) AddRawRecord(ctx context.Context, rec *aclpb.RawRecord) error {
+func (t *ACLListStorageBuilder) AddRawRecord(ctx context.Context, rec *aclrecordproto.RawACLRecordWithId) error {
 	panic("implement me")
 }
 
@@ -106,11 +120,11 @@ func (t *ACLListStorageBuilder) ID() (string, error) {
 	return t.id, nil
 }
 
-func (t *ACLListStorageBuilder) GetRawRecords() []*aclpb.RawRecord {
+func (t *ACLListStorageBuilder) GetRawRecords() []*aclrecordproto.RawACLRecordWithId {
 	return t.rawRecords
 }
 
-func (t *ACLListStorageBuilder) GetKeychain() *Keychain {
+func (t *ACLListStorageBuilder) GetKeychain() *YAMLKeychain {
 	return t.keychain
 }
 
@@ -119,41 +133,40 @@ func (t *ACLListStorageBuilder) Parse(tree *YMLList) {
 	// are specified in the yml file, because our identities should be Ed25519
 	// the same thing is happening for the encryption keys
 	t.keychain.ParseKeys(&tree.Keys)
-	prevId := ""
+	t.parseRoot(tree.Root)
+	prevId := t.id
 	for idx, rec := range tree.Records {
 		newRecord := t.parseRecord(rec, prevId)
-		rawRecord := t.createRaw(newRecord)
+		rawRecord := t.createRaw(newRecord, newRecord.Identity)
 		t.records = append(t.records, newRecord)
-		t.rawRecords = append(t.rawRecords, t.createRaw(newRecord))
+		t.rawRecords = append(t.rawRecords, rawRecord)
 		t.indexes[rawRecord.Id] = idx
 		prevId = rawRecord.Id
 	}
-
-	t.createHeaderAndId()
 }
 
-func (t *ACLListStorageBuilder) parseRecord(rec *Record, prevId string) *aclpb.Record {
+func (t *ACLListStorageBuilder) parseRecord(rec *Record, prevId string) *aclrecordproto.ACLRecord {
 	k := t.keychain.GetKey(rec.ReadKey).(*SymKey)
-	var aclChangeContents []*aclpb.ACLChangeACLContentValue
+	var aclChangeContents []*aclrecordproto.ACLContentValue
 	for _, ch := range rec.AclChanges {
 		aclChangeContent := t.parseACLChange(ch)
 		aclChangeContents = append(aclChangeContents, aclChangeContent)
 	}
-	data := &aclpb.ACLChangeACLData{
+	data := &aclrecordproto.ACLData{
 		AclContent: aclChangeContents,
 	}
 	bytes, _ := data.Marshal()
 
-	return &aclpb.Record{
+	return &aclrecordproto.ACLRecord{
 		PrevId:             prevId,
-		Identity:           t.keychain.GetIdentity(rec.Identity),
+		Identity:           []byte(t.keychain.GetIdentity(rec.Identity)),
 		Data:               bytes,
 		CurrentReadKeyHash: k.Hash,
 		Timestamp:          time.Now().Unix(),
 	}
 }
 
-func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACLChangeACLContentValue) {
+func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecordproto.ACLContentValue) {
 	switch {
 	case ch.UserAdd != nil:
 		add := ch.UserAdd
@@ -161,10 +174,10 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 		encKey := t.keychain.GetKey(add.EncryptionKey).(encryptionkey.PrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 
-		convCh = &aclpb.ACLChangeACLContentValue{
-			Value: &aclpb.ACLChangeACLContentValueValueOfUserAdd{
-				UserAdd: &aclpb.ACLChangeUserAdd{
-					Identity:          t.keychain.GetIdentity(add.Identity),
+		convCh = &aclrecordproto.ACLContentValue{
+			Value: &aclrecordproto.ACLContentValue_UserAdd{
+				UserAdd: &aclrecordproto.ACLUserAdd{
+					Identity:          []byte(t.keychain.GetIdentity(add.Identity)),
 					EncryptionKey:     rawKey,
 					EncryptedReadKeys: t.encryptReadKeys(add.EncryptedReadKeys, encKey),
 					Permissions:       t.convertPermission(add.Permission),
@@ -178,20 +191,20 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 			GetKey(join.EncryptionKey).(encryptionkey.PrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 
-		idKey, _ := t.keychain.SigningKeys[join.Identity].GetPublic().Raw()
+		idKey, _ := t.keychain.SigningKeysByYAMLIdentity[join.Identity].GetPublic().Raw()
 		signKey := t.keychain.GetKey(join.AcceptSignature).(signingkey.PrivKey)
 		signature, err := signKey.Sign(idKey)
 		if err != nil {
 			panic(err)
 		}
 
-		convCh = &aclpb.ACLChangeACLContentValue{
-			Value: &aclpb.ACLChangeACLContentValueValueOfUserJoin{
-				UserJoin: &aclpb.ACLChangeUserJoin{
-					Identity:          t.keychain.GetIdentity(join.Identity),
+		convCh = &aclrecordproto.ACLContentValue{
+			Value: &aclrecordproto.ACLContentValue_UserJoin{
+				UserJoin: &aclrecordproto.ACLUserJoin{
+					Identity:          []byte(t.keychain.GetIdentity(join.Identity)),
 					EncryptionKey:     rawKey,
 					AcceptSignature:   signature,
-					UserInviteId:      join.InviteId,
+					InviteId:          join.InviteId,
 					EncryptedReadKeys: t.encryptReadKeys(join.EncryptedReadKeys, encKey),
 				},
 			},
@@ -203,9 +216,9 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 			GetKey(invite.EncryptionKey).(encryptionkey.PrivKey)
 		rawEncKey, _ := encKey.GetPublic().Raw()
 
-		convCh = &aclpb.ACLChangeACLContentValue{
-			Value: &aclpb.ACLChangeACLContentValueValueOfUserInvite{
-				UserInvite: &aclpb.ACLChangeUserInvite{
+		convCh = &aclrecordproto.ACLContentValue{
+			Value: &aclrecordproto.ACLContentValue_UserInvite{
+				UserInvite: &aclrecordproto.ACLUserInvite{
 					AcceptPublicKey:   rawAcceptKey,
 					EncryptPublicKey:  rawEncKey,
 					EncryptedReadKeys: t.encryptReadKeys(invite.EncryptedReadKeys, encKey),
@@ -214,24 +227,13 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 				},
 			},
 		}
-	case ch.UserConfirm != nil:
-		confirm := ch.UserConfirm
-
-		convCh = &aclpb.ACLChangeACLContentValue{
-			Value: &aclpb.ACLChangeACLContentValueValueOfUserConfirm{
-				UserConfirm: &aclpb.ACLChangeUserConfirm{
-					Identity:  t.keychain.GetIdentity(confirm.Identity),
-					UserAddId: confirm.UserAddId,
-				},
-			},
-		}
 	case ch.UserPermissionChange != nil:
 		permissionChange := ch.UserPermissionChange
 
-		convCh = &aclpb.ACLChangeACLContentValue{
-			Value: &aclpb.ACLChangeACLContentValueValueOfUserPermissionChange{
-				UserPermissionChange: &aclpb.ACLChangeUserPermissionChange{
-					Identity:    t.keychain.GetIdentity(permissionChange.Identity),
+		convCh = &aclrecordproto.ACLContentValue{
+			Value: &aclrecordproto.ACLContentValue_UserPermissionChange{
+				UserPermissionChange: &aclrecordproto.ACLUserPermissionChange{
+					Identity:    []byte(t.keychain.GetIdentity(permissionChange.Identity)),
 					Permissions: t.convertPermission(permissionChange.Permission),
 				},
 			},
@@ -241,26 +243,25 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclpb.ACL
 
 		newReadKey := t.keychain.GetKey(remove.NewReadKey).(*SymKey)
 
-		var replaces []*aclpb.ACLChangeReadKeyReplace
+		var replaces []*aclrecordproto.ACLReadKeyReplace
 		for _, id := range remove.IdentitiesLeft {
-			identity := t.keychain.GetIdentity(id)
-			encKey := t.keychain.EncryptionKeys[id]
+			encKey := t.keychain.EncryptionKeysByYAMLIdentity[id]
 			rawEncKey, _ := encKey.GetPublic().Raw()
 			encReadKey, err := encKey.GetPublic().Encrypt(newReadKey.Key.Bytes())
 			if err != nil {
 				panic(err)
 			}
-			replaces = append(replaces, &aclpb.ACLChangeReadKeyReplace{
-				Identity:         identity,
+			replaces = append(replaces, &aclrecordproto.ACLReadKeyReplace{
+				Identity:         []byte(t.keychain.GetIdentity(id)),
 				EncryptionKey:    rawEncKey,
 				EncryptedReadKey: encReadKey,
 			})
 		}
 
-		convCh = &aclpb.ACLChangeACLContentValue{
-			Value: &aclpb.ACLChangeACLContentValueValueOfUserRemove{
-				UserRemove: &aclpb.ACLChangeUserRemove{
-					Identity:        t.keychain.GetIdentity(remove.RemovedIdentity),
+		convCh = &aclrecordproto.ACLContentValue{
+			Value: &aclrecordproto.ACLContentValue_UserRemove{
+				UserRemove: &aclrecordproto.ACLUserRemove{
+					Identity:        []byte(t.keychain.GetIdentity(remove.RemovedIdentity)),
 					ReadKeyReplaces: replaces,
 				},
 			},
@@ -286,20 +287,20 @@ func (t *ACLListStorageBuilder) encryptReadKeys(keys []string, encKey encryption
 	return
 }
 
-func (t *ACLListStorageBuilder) convertPermission(perm string) aclpb.ACLChangeUserPermissions {
+func (t *ACLListStorageBuilder) convertPermission(perm string) aclrecordproto.ACLUserPermissions {
 	switch perm {
 	case "admin":
-		return aclpb.ACLChange_Admin
+		return aclrecordproto.ACLUserPermissions_Admin
 	case "writer":
-		return aclpb.ACLChange_Writer
+		return aclrecordproto.ACLUserPermissions_Writer
 	case "reader":
-		return aclpb.ACLChange_Reader
+		return aclrecordproto.ACLUserPermissions_Reader
 	default:
 		panic(fmt.Sprintf("incorrect permission: %s", perm))
 	}
 }
 
-func (t *ACLListStorageBuilder) traverseFromHead(f func(rec *aclpb.Record, id string) error) (err error) {
+func (t *ACLListStorageBuilder) traverseFromHead(f func(rec *aclrecordproto.ACLRecord, id string) error) (err error) {
 	for i := len(t.records) - 1; i >= 0; i-- {
 		err = f(t.records[i], t.rawRecords[i].Id)
 		if err != nil {
@@ -309,14 +310,20 @@ func (t *ACLListStorageBuilder) traverseFromHead(f func(rec *aclpb.Record, id st
 	return nil
 }
 
-func (t *ACLListStorageBuilder) createHeaderAndId() {
-	t.header = &aclpb.Header{
-		FirstId:     t.rawRecords[0].Id,
-		AclListId:   "",
-		WorkspaceId: "",
-		DocType:     aclpb.Header_ACL,
+func (t *ACLListStorageBuilder) parseRoot(root *Root) {
+	rawSignKey, _ := t.keychain.SigningKeysByYAMLIdentity[root.Identity].GetPublic().Raw()
+	rawEncKey, _ := t.keychain.EncryptionKeysByYAMLIdentity[root.Identity].GetPublic().Raw()
+	readKey, _ := aclrecordproto.ACLReadKeyDerive(rawSignKey, rawEncKey)
+	hasher := fnv.New64()
+	hasher.Write(readKey.Bytes())
+	t.root = &aclrecordproto.ACLRoot{
+		Identity:           rawSignKey,
+		EncryptionKey:      rawEncKey,
+		SpaceId:            root.SpaceId,
+		EncryptedReadKey:   nil,
+		DerivationScheme:   "scheme",
+		CurrentReadKeyHash: hasher.Sum64(),
 	}
-	bytes, _ := t.header.Marshal()
-	id, _ := cid.NewCIDFromBytes(bytes)
-	t.id = id
+	t.rawRoot = t.createRaw(t.root, rawSignKey)
+	t.id = t.rawRoot.Id
 }

@@ -3,20 +3,13 @@ package tree
 import (
 	"context"
 	"errors"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/common"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
-	"go.uber.org/zap"
 	"sync"
 )
-
-type ObjectTreeUpdateListener interface {
-	Update(tree ObjectTree)
-	Rebuild(tree ObjectTree)
-}
 
 type RWLocker interface {
 	sync.Locker
@@ -34,7 +27,7 @@ type AddResultSummary int
 type AddResult struct {
 	OldHeads []string
 	Heads    []string
-	Added    []*aclpb.RawChange
+	Added    []*treechangeproto.RawTreeChangeWithId
 
 	Mode Mode
 }
@@ -46,22 +39,22 @@ type ObjectTree interface {
 	RWLocker
 
 	ID() string
-	Header() *aclpb.Header
+	Header() *treechangeproto.RawTreeChangeWithId
 	Heads() []string
 	Root() *Change
 	HasChange(string) bool
+	DebugDump() (string, error)
 
 	Iterate(convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 
 	SnapshotPath() []string
-	ChangesAfterCommonSnapshot(snapshotPath, heads []string) ([]*aclpb.RawChange, error)
+	ChangesAfterCommonSnapshot(snapshotPath, heads []string) ([]*treechangeproto.RawTreeChangeWithId, error)
 
 	Storage() storage.TreeStorage
-	DebugDump() (string, error)
 
-	AddContent(ctx context.Context, content SignableChangeContent) (*aclpb.RawChange, error)
-	AddRawChanges(ctx context.Context, changes ...*aclpb.RawChange) (AddResult, error)
+	AddContent(ctx context.Context, content SignableChangeContent) (AddResult, error)
+	AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (AddResult, error)
 
 	Close() error
 }
@@ -69,20 +62,19 @@ type ObjectTree interface {
 type objectTree struct {
 	treeStorage     storage.TreeStorage
 	changeBuilder   ChangeBuilder
-	updateListener  ObjectTreeUpdateListener
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
 	treeBuilder     *treeBuilder
 	aclList         list.ACLList
 
-	id     string
-	header *aclpb.Header
-	tree   *Tree
+	id   string
+	root *treechangeproto.RawTreeChangeWithId
+	tree *Tree
 
 	keys map[uint64]*symmetric.Key
 
 	// buffers
-	difSnapshotBuf  []*aclpb.RawChange
+	difSnapshotBuf  []*treechangeproto.RawTreeChangeWithId
 	tmpChangesBuf   []*Change
 	newSnapshotsBuf []*Change
 	notSeenIdxBuf   []int
@@ -96,88 +88,27 @@ type objectTreeDeps struct {
 	changeBuilder   ChangeBuilder
 	treeBuilder     *treeBuilder
 	treeStorage     storage.TreeStorage
-	updateListener  ObjectTreeUpdateListener
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
 	aclList         list.ACLList
 }
 
 func defaultObjectTreeDeps(
+	rootChange *treechangeproto.RawTreeChangeWithId,
 	treeStorage storage.TreeStorage,
-	listener ObjectTreeUpdateListener,
 	aclList list.ACLList) objectTreeDeps {
 
 	keychain := common.NewKeychain()
-	changeBuilder := newChangeBuilder(keychain)
+	changeBuilder := newChangeBuilder(keychain, rootChange)
 	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
 	return objectTreeDeps{
 		changeBuilder:   changeBuilder,
 		treeBuilder:     treeBuilder,
 		treeStorage:     treeStorage,
-		updateListener:  listener,
 		validator:       newTreeValidator(),
 		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
 		aclList:         aclList,
 	}
-}
-
-func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
-	objTree := &objectTree{
-		treeStorage:     deps.treeStorage,
-		updateListener:  deps.updateListener,
-		treeBuilder:     deps.treeBuilder,
-		validator:       deps.validator,
-		aclList:         deps.aclList,
-		changeBuilder:   deps.changeBuilder,
-		rawChangeLoader: deps.rawChangeLoader,
-		tree:            nil,
-		keys:            make(map[uint64]*symmetric.Key),
-		tmpChangesBuf:   make([]*Change, 0, 10),
-		difSnapshotBuf:  make([]*aclpb.RawChange, 0, 10),
-		notSeenIdxBuf:   make([]int, 0, 10),
-		newSnapshotsBuf: make([]*Change, 0, 10),
-	}
-
-	err := objTree.rebuildFromStorage(nil)
-	if err != nil {
-		return nil, err
-	}
-	storageHeads, err := objTree.treeStorage.Heads()
-	if err != nil {
-		return nil, err
-	}
-
-	// comparing rebuilt heads with heads in storage
-	// in theory it can happen that we didn't set heads because the process has crashed
-	// therefore we want to set them later
-	if !slice.UnsortedEquals(storageHeads, objTree.tree.Heads()) {
-		log.With(zap.Strings("storage", storageHeads), zap.Strings("rebuilt", objTree.tree.Heads())).
-			Errorf("the heads in storage and objTree are different")
-		err = objTree.treeStorage.SetHeads(objTree.tree.Heads())
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	objTree.id, err = objTree.treeStorage.ID()
-	if err != nil {
-		return nil, err
-	}
-	objTree.header, err = objTree.treeStorage.Header()
-	if err != nil {
-		return nil, err
-	}
-
-	if objTree.updateListener != nil {
-		objTree.updateListener.Rebuild(objTree)
-	}
-
-	return objTree, nil
-}
-
-func BuildObjectTree(treeStorage storage.TreeStorage, listener ObjectTreeUpdateListener, aclList list.ACLList) (ObjectTree, error) {
-	deps := defaultObjectTreeDeps(treeStorage, listener, aclList)
-	return buildObjectTree(deps)
 }
 
 func (ot *objectTree) rebuildFromStorage(newChanges []*Change) (err error) {
@@ -201,29 +132,27 @@ func (ot *objectTree) ID() string {
 	return ot.id
 }
 
-func (ot *objectTree) Header() *aclpb.Header {
-	return ot.header
+func (ot *objectTree) Header() *treechangeproto.RawTreeChangeWithId {
+	return ot.root
 }
 
 func (ot *objectTree) Storage() storage.TreeStorage {
 	return ot.treeStorage
 }
 
-func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeContent) (rawChange *aclpb.RawChange, err error) {
-	defer func() {
-		if err == nil && ot.updateListener != nil {
-			ot.updateListener.Update(ot)
-		}
-	}()
-
+func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeContent) (res AddResult, err error) {
 	payload, err := ot.prepareBuilderContent(content)
 	if err != nil {
 		return
 	}
 
+	// saving old heads
+	oldHeads := make([]string, 0, len(ot.tree.Heads()))
+	oldHeads = append(oldHeads, ot.tree.Heads()...)
+
 	objChange, rawChange, err := ot.changeBuilder.BuildContent(payload)
 	if content.IsSnapshot {
-		// clearing tree, because we already fixed everything in the last snapshot
+		// clearing tree, because we already saved everything in the last snapshot
 		ot.tree = &Tree{}
 	}
 	err = ot.tree.AddMergedHead(objChange)
@@ -237,6 +166,16 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 	}
 
 	err = ot.treeStorage.SetHeads([]string{objChange.Id})
+	if err != nil {
+		return
+	}
+
+	res = AddResult{
+		OldHeads: oldHeads,
+		Heads:    []string{objChange.Id},
+		Added:    []*treechangeproto.RawTreeChangeWithId{rawChange},
+		Mode:     Append,
+	}
 	return
 }
 
@@ -250,22 +189,21 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 		return
 	}
 	cnt = BuilderContent{
-		treeHeadIds:        ot.tree.Heads(),
-		aclHeadId:          ot.aclList.Head().Id,
-		snapshotBaseId:     ot.tree.RootId(),
-		currentReadKeyHash: state.CurrentReadKeyHash(),
-		identity:           content.Identity,
-		isSnapshot:         content.IsSnapshot,
-		signingKey:         content.Key,
-		readKey:            readKey,
-		content:            content.Proto,
+		TreeHeadIds:        ot.tree.Heads(),
+		AclHeadId:          ot.aclList.Head().Id,
+		SnapshotBaseId:     ot.tree.RootId(),
+		CurrentReadKeyHash: state.CurrentReadKeyHash(),
+		Identity:           content.Identity,
+		IsSnapshot:         content.IsSnapshot,
+		SigningKey:         content.Key,
+		ReadKey:            readKey,
+		Content:            content.Data,
 	}
 	return
 }
 
-func (ot *objectTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.RawChange) (addResult AddResult, err error) {
-	var mode Mode
-	mode, addResult, err = ot.addRawChanges(ctx, rawChanges...)
+func (ot *objectTree) AddRawChanges(ctx context.Context, rawChanges ...*treechangeproto.RawTreeChangeWithId) (addResult AddResult, err error) {
+	addResult, err = ot.addRawChanges(ctx, rawChanges...)
 	if err != nil {
 		return
 	}
@@ -283,26 +221,10 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 
 	// setting heads
 	err = ot.treeStorage.SetHeads(ot.tree.Heads())
-	if err != nil {
-		return
-	}
-
-	if ot.updateListener == nil {
-		return
-	}
-
-	switch mode {
-	case Append:
-		ot.updateListener.Update(ot)
-	case Rebuild:
-		ot.updateListener.Rebuild(ot)
-	default:
-		break
-	}
 	return
 }
 
-func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.RawChange) (mode Mode, addResult AddResult, err error) {
+func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*treechangeproto.RawTreeChangeWithId) (addResult AddResult, err error) {
 	// resetting buffers
 	ot.tmpChangesBuf = ot.tmpChangesBuf[:0]
 	ot.notSeenIdxBuf = ot.notSeenIdxBuf[:0]
@@ -329,7 +251,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 		}
 
 		var change *Change
-		change, err = ot.changeBuilder.ConvertFromRawAndVerify(ch)
+		change, err = ot.changeBuilder.ConvertFromRaw(ch, true)
 		if err != nil {
 			return
 		}
@@ -354,7 +276,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 	// returns changes that we added to the tree as attached this round
 	// they can include not only the changes that were added now,
 	// but also the changes that were previously in the tree
-	getAddedChanges := func(toConvert []*Change) (added []*aclpb.RawChange, err error) {
+	getAddedChanges := func(toConvert []*Change) (added []*treechangeproto.RawTreeChangeWithId, err error) {
 		alreadyConverted := make(map[*Change]struct{})
 
 		// first we see if we have already unmarshalled those changes
@@ -379,7 +301,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 		for _, ch := range toConvert {
 			// if we got some changes that we need to convert to raw
 			if _, exists := alreadyConverted[ch]; !exists {
-				var raw *aclpb.RawChange
+				var raw *treechangeproto.RawTreeChangeWithId
 				raw, err = ot.changeBuilder.BuildRaw(ch)
 				if err != nil {
 					return
@@ -421,7 +343,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 				ot.rebuildFromStorage(nil)
 				return
 			}
-			var added []*aclpb.RawChange
+			var added []*treechangeproto.RawTreeChangeWithId
 			added, err = getAddedChanges(nil)
 			// we shouldn't get any error in this case
 			if err != nil {
@@ -457,7 +379,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*aclpb.Ra
 			err = ErrHasInvalidChanges
 			return
 		}
-		var added []*aclpb.RawChange
+		var added []*treechangeproto.RawTreeChangeWithId
 		added, err = getAddedChanges(treeChangesAdded)
 		if err != nil {
 			// that means that some unattached changes were somehow corrupted in memory
@@ -488,17 +410,21 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 
 	ot.tree.Iterate(ot.tree.RootId(), func(c *Change) (isContinue bool) {
 		var model any
-		if c.ParsedModel != nil {
+		if c.Model != nil {
 			return iterate(c)
 		}
-		readKey, exists := ot.keys[c.Content.CurrentReadKeyHash]
+		// if this is a root change
+		if c.Id == ot.id {
+			return iterate(c)
+		}
+		readKey, exists := ot.keys[c.ReadKeyHash]
 		if !exists {
 			err = list.ErrNoReadKey
 			return false
 		}
 
 		var decrypted []byte
-		decrypted, err = readKey.Decrypt(c.Content.GetChangesData())
+		decrypted, err = readKey.Decrypt(c.Data)
 		if err != nil {
 			return false
 		}
@@ -508,7 +434,7 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 			return false
 		}
 
-		c.ParsedModel = model
+		c.Model = model
 		return iterate(c)
 	})
 	return
@@ -553,7 +479,7 @@ func (ot *objectTree) SnapshotPath() []string {
 	return path
 }
 
-func (ot *objectTree) ChangesAfterCommonSnapshot(theirPath, theirHeads []string) ([]*aclpb.RawChange, error) {
+func (ot *objectTree) ChangesAfterCommonSnapshot(theirPath, theirHeads []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
 	var (
 		needFullDocument = len(theirPath) == 0
 		ourPath          = ot.SnapshotPath()
@@ -577,11 +503,11 @@ func (ot *objectTree) ChangesAfterCommonSnapshot(theirPath, theirHeads []string)
 	}
 }
 
-func (ot *objectTree) getChangesFromTree(theirHeads []string) (rawChanges []*aclpb.RawChange, err error) {
+func (ot *objectTree) getChangesFromTree(theirHeads []string) (rawChanges []*treechangeproto.RawTreeChangeWithId, err error) {
 	return ot.rawChangeLoader.LoadFromTree(ot.tree, theirHeads)
 }
 
-func (ot *objectTree) getChangesFromDB(commonSnapshot string, theirHeads []string) (rawChanges []*aclpb.RawChange, err error) {
+func (ot *objectTree) getChangesFromDB(commonSnapshot string, theirHeads []string) (rawChanges []*treechangeproto.RawTreeChangeWithId, err error) {
 	return ot.rawChangeLoader.LoadFromStorage(commonSnapshot, ot.tree.headIds, theirHeads)
 }
 

@@ -5,15 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/common"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cid"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"sync"
 )
 
-type IterFunc = func(record *Record) (IsContinue bool)
+type IterFunc = func(record *ACLRecord) (IsContinue bool)
 
 var ErrIncorrectCID = errors.New("incorrect CID")
 
@@ -26,20 +24,20 @@ type RWLocker interface {
 type ACLList interface {
 	RWLocker
 	ID() string
-	Header() *aclpb.Header
-	Records() []*Record
+	Root() *aclrecordproto.ACLRoot
+	Records() []*ACLRecord
 	ACLState() *ACLState
 	IsAfter(first string, second string) (bool, error)
-	Head() *Record
-	Get(id string) (*Record, error)
+	Head() *ACLRecord
+	Get(id string) (*ACLRecord, error)
 	Iterate(iterFunc IterFunc)
 	IterateFrom(startId string, iterFunc IterFunc)
 	Close() (err error)
 }
 
 type aclList struct {
-	header  *aclpb.Header
-	records []*Record
+	root    *aclrecordproto.ACLRoot
+	records []*ACLRecord
 	indexes map[string]int
 	id      string
 
@@ -51,57 +49,57 @@ type aclList struct {
 }
 
 func BuildACLListWithIdentity(acc *account.AccountData, storage storage.ListStorage) (ACLList, error) {
-	builder := newACLStateBuilderWithIdentity(acc.Decoder, acc)
-	return buildWithACLStateBuilder(builder, storage)
-}
-
-func BuildACLList(decoder keys.Decoder, storage storage.ListStorage) (ACLList, error) {
-	return buildWithACLStateBuilder(newACLStateBuilder(decoder), storage)
-}
-
-func buildWithACLStateBuilder(builder *aclStateBuilder, storage storage.ListStorage) (list ACLList, err error) {
-	header, err := storage.Header()
-	if err != nil {
-		return
-	}
-
 	id, err := storage.ID()
 	if err != nil {
+		return nil, err
+	}
+	builder := newACLStateBuilderWithIdentity(acc)
+	return build(id, builder, newACLRecordBuilder(id, common.NewKeychain()), storage)
+}
+
+func BuildACLList(storage storage.ListStorage) (ACLList, error) {
+	id, err := storage.ID()
+	if err != nil {
+		return nil, err
+	}
+	return build(id, newACLStateBuilder(), newACLRecordBuilder(id, common.NewKeychain()), storage)
+}
+
+func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder, storage storage.ListStorage) (list ACLList, err error) {
+	rootWithId, err := storage.Root()
+	if err != nil {
 		return
 	}
-
-	rawRecord, err := storage.Head()
+	aclRecRoot, err := recBuilder.ConvertFromRaw(rootWithId)
 	if err != nil {
 		return
 	}
 
-	keychain := common.NewKeychain()
-	record, err := NewFromRawRecord(rawRecord)
+	rawRecordWithId, err := storage.Head()
 	if err != nil {
 		return
 	}
-	err = verifyRecord(keychain, rawRecord, record)
-	if err != nil {
-		return
-	}
-	records := []*Record{record}
 
-	for record.Content.PrevId != "" {
-		rawRecord, err = storage.GetRawRecord(context.Background(), record.Content.PrevId)
+	record, err := recBuilder.ConvertFromRaw(rawRecordWithId)
+	if err != nil {
+		return
+	}
+	records := []*ACLRecord{record}
+
+	for record.PrevId != "" && record.PrevId != id {
+		rawRecordWithId, err = storage.GetRawRecord(context.Background(), record.PrevId)
 		if err != nil {
 			return
 		}
 
-		record, err = NewFromRawRecord(rawRecord)
-		if err != nil {
-			return
-		}
-		err = verifyRecord(keychain, rawRecord, record)
+		record, err = recBuilder.ConvertFromRaw(rawRecordWithId)
 		if err != nil {
 			return
 		}
 		records = append(records, record)
 	}
+	// adding root in the end, because we already parsed it
+	records = append(records, aclRecRoot)
 
 	indexes := make(map[string]int)
 	for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
@@ -114,16 +112,17 @@ func buildWithACLStateBuilder(builder *aclStateBuilder, storage storage.ListStor
 		indexes[records[len(records)/2].Id] = len(records) / 2
 	}
 
-	state, err := builder.Build(records)
+	stateBuilder.Init(id)
+	state, err := stateBuilder.Build(records)
 	if err != nil {
 		return
 	}
 
 	list = &aclList{
-		header:   header,
+		root:     aclRecRoot.Model.(*aclrecordproto.ACLRoot),
 		records:  records,
 		indexes:  indexes,
-		builder:  builder,
+		builder:  stateBuilder,
 		aclState: state,
 		id:       id,
 		RWMutex:  sync.RWMutex{},
@@ -131,7 +130,7 @@ func buildWithACLStateBuilder(builder *aclStateBuilder, storage storage.ListStor
 	return
 }
 
-func (a *aclList) Records() []*Record {
+func (a *aclList) Records() []*ACLRecord {
 	return a.records
 }
 
@@ -139,8 +138,8 @@ func (a *aclList) ID() string {
 	return a.id
 }
 
-func (a *aclList) Header() *aclpb.Header {
-	return a.header
+func (a *aclList) Root() *aclrecordproto.ACLRoot {
+	return a.root
 }
 
 func (a *aclList) ACLState() *ACLState {
@@ -156,11 +155,11 @@ func (a *aclList) IsAfter(first string, second string) (bool, error) {
 	return firstRec >= secondRec, nil
 }
 
-func (a *aclList) Head() *Record {
+func (a *aclList) Head() *ACLRecord {
 	return a.records[len(a.records)-1]
 }
 
-func (a *aclList) Get(id string) (*Record, error) {
+func (a *aclList) Get(id string) (*ACLRecord, error) {
 	recIdx, ok := a.indexes[id]
 	if !ok {
 		return nil, fmt.Errorf("no such record")
@@ -190,27 +189,4 @@ func (a *aclList) IterateFrom(startId string, iterFunc IterFunc) {
 
 func (a *aclList) Close() (err error) {
 	return nil
-}
-
-func verifyRecord(keychain *common.Keychain, rawRecord *aclpb.RawRecord, record *Record) (err error) {
-	identityKey, err := keychain.GetOrAdd(record.Content.Identity)
-	if err != nil {
-		return
-	}
-
-	// verifying signature
-	res, err := identityKey.Verify(rawRecord.Payload, rawRecord.Signature)
-	if err != nil {
-		return
-	}
-	if !res {
-		err = ErrInvalidSignature
-		return
-	}
-
-	// verifying ID
-	if !cid.VerifyCID(rawRecord.Payload, rawRecord.Id) {
-		err = ErrIncorrectCID
-	}
-	return
 }

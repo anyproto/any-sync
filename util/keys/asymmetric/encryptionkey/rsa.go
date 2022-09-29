@@ -107,14 +107,6 @@ func NewEncryptionRsaPubKeyFromBytes(bytes []byte) (PubKey, error) {
 	return &EncryptionRsaPubKey{pubKey: *pk}, nil
 }
 
-func NewRSAPrivKeyDecoder() keys.Decoder {
-	return keys.NewKeyDecoder(NewEncryptionRsaPrivKeyFromBytes)
-}
-
-func NewRSAPubKeyDecoder() keys.Decoder {
-	return keys.NewKeyDecoder(NewEncryptionRsaPubKeyFromBytes)
-}
-
 func keyEquals(k1, k2 keys.Key) bool {
 	a, err := k1.Raw()
 	if err != nil {

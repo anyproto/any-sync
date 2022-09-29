@@ -1,6 +1,8 @@
 package acllistbuilder
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
 	"hash/fnv"
@@ -14,29 +16,29 @@ type SymKey struct {
 	Key  *symmetric.Key
 }
 
-type Keychain struct {
-	SigningKeys           map[string]signingkey.PrivKey
-	SigningKeysByIdentity map[string]signingkey.PrivKey
-	EncryptionKeys        map[string]encryptionkey.PrivKey
-	ReadKeys              map[string]*SymKey
-	ReadKeysByHash        map[uint64]*SymKey
-	GeneratedIdentities   map[string]string
-	coder                 signingkey.PubKeyDecoder
+type YAMLKeychain struct {
+	SigningKeysByYAMLIdentity    map[string]signingkey.PrivKey
+	SigningKeysByRealIdentity    map[string]signingkey.PrivKey
+	EncryptionKeysByYAMLIdentity map[string]encryptionkey.PrivKey
+	ReadKeysByYAMLIdentity       map[string]*SymKey
+	ReadKeysByHash               map[uint64]*SymKey
+	GeneratedIdentities          map[string]string
+	DerivedIdentity              string
 }
 
-func NewKeychain() *Keychain {
-	return &Keychain{
-		SigningKeys:           map[string]signingkey.PrivKey{},
-		SigningKeysByIdentity: map[string]signingkey.PrivKey{},
-		EncryptionKeys:        map[string]encryptionkey.PrivKey{},
-		GeneratedIdentities:   map[string]string{},
-		ReadKeys:              map[string]*SymKey{},
-		ReadKeysByHash:        map[uint64]*SymKey{},
-		coder:                 signingkey.NewEd25519PubKeyDecoder(),
+func NewKeychain() *YAMLKeychain {
+	return &YAMLKeychain{
+		SigningKeysByYAMLIdentity:    map[string]signingkey.PrivKey{},
+		SigningKeysByRealIdentity:    map[string]signingkey.PrivKey{},
+		EncryptionKeysByYAMLIdentity: map[string]encryptionkey.PrivKey{},
+		GeneratedIdentities:          map[string]string{},
+		ReadKeysByYAMLIdentity:       map[string]*SymKey{},
+		ReadKeysByHash:               map[uint64]*SymKey{},
 	}
 }
 
-func (k *Keychain) ParseKeys(keys *Keys) {
+func (k *YAMLKeychain) ParseKeys(keys *Keys) {
+	k.DerivedIdentity = keys.Derived
 	for _, encKey := range keys.Enc {
 		k.AddEncryptionKey(encKey)
 	}
@@ -50,8 +52,8 @@ func (k *Keychain) ParseKeys(keys *Keys) {
 	}
 }
 
-func (k *Keychain) AddEncryptionKey(key *Key) {
-	if _, exists := k.EncryptionKeys[key.Name]; exists {
+func (k *YAMLKeychain) AddEncryptionKey(key *Key) {
+	if _, exists := k.EncryptionKeysByYAMLIdentity[key.Name]; exists {
 		return
 	}
 	var (
@@ -64,18 +66,16 @@ func (k *Keychain) AddEncryptionKey(key *Key) {
 			panic(err)
 		}
 	} else {
-		decoder := encryptionkey.NewRSAPrivKeyDecoder()
-		privKey, err := decoder.DecodeFromString(key.Value)
+		newPrivKey, err = keys.DecodeKeyFromString(key.Value, encryptionkey.NewEncryptionRsaPrivKeyFromBytes, nil)
 		if err != nil {
 			panic(err)
 		}
-		newPrivKey = privKey.(encryptionkey.PrivKey)
 	}
-	k.EncryptionKeys[key.Name] = newPrivKey
+	k.EncryptionKeysByYAMLIdentity[key.Name] = newPrivKey
 }
 
-func (k *Keychain) AddSigningKey(key *Key) {
-	if _, exists := k.SigningKeys[key.Name]; exists {
+func (k *YAMLKeychain) AddSigningKey(key *Key) {
+	if _, exists := k.SigningKeysByYAMLIdentity[key.Name]; exists {
 		return
 	}
 	var (
@@ -89,26 +89,26 @@ func (k *Keychain) AddSigningKey(key *Key) {
 			panic(err)
 		}
 	} else {
-		decoder := signingkey.NewEDPrivKeyDecoder()
-		privKey, err := decoder.DecodeFromString(key.Value)
+		newPrivKey, err = keys.DecodeKeyFromString(key.Value, signingkey.NewSigningEd25519PrivKeyFromBytes, nil)
 		if err != nil {
 			panic(err)
 		}
-		newPrivKey = privKey.(signingkey.PrivKey)
 		pubKey = newPrivKey.GetPublic()
 	}
 
-	k.SigningKeys[key.Name] = newPrivKey
-	res, err := k.coder.EncodeToString(pubKey)
+	k.SigningKeysByYAMLIdentity[key.Name] = newPrivKey
+	rawPubKey, err := pubKey.Raw()
 	if err != nil {
 		panic(err)
 	}
-	k.SigningKeysByIdentity[res] = newPrivKey
-	k.GeneratedIdentities[key.Name] = res
+	encoded := string(rawPubKey)
+
+	k.SigningKeysByRealIdentity[encoded] = newPrivKey
+	k.GeneratedIdentities[key.Name] = encoded
 }
 
-func (k *Keychain) AddReadKey(key *Key) {
-	if _, exists := k.ReadKeys[key.Name]; exists {
+func (k *YAMLKeychain) AddReadKey(key *Key) {
+	if _, exists := k.ReadKeysByYAMLIdentity[key.Name]; exists {
 		return
 	}
 
@@ -121,6 +121,13 @@ func (k *Keychain) AddReadKey(key *Key) {
 		if err != nil {
 			panic("should be able to generate symmetric key")
 		}
+	} else if key.Value == "derived" {
+		signKey, _ := k.SigningKeysByYAMLIdentity[k.DerivedIdentity].Raw()
+		encKey, _ := k.EncryptionKeysByYAMLIdentity[k.DerivedIdentity].Raw()
+		rkey, err = aclrecordproto.ACLReadKeyDerive(signKey, encKey)
+		if err != nil {
+			panic("should be able to derive symmetric key")
+		}
 	} else {
 		rkey, err = symmetric.FromString(key.Value)
 		if err != nil {
@@ -131,7 +138,7 @@ func (k *Keychain) AddReadKey(key *Key) {
 	hasher := fnv.New64()
 	hasher.Write(rkey.Bytes())
 
-	k.ReadKeys[key.Name] = &SymKey{
+	k.ReadKeysByYAMLIdentity[key.Name] = &SymKey{
 		Hash: hasher.Sum64(),
 		Key:  rkey,
 	}
@@ -141,14 +148,14 @@ func (k *Keychain) AddReadKey(key *Key) {
 	}
 }
 
-func (k *Keychain) AddKey(key *Key) {
+func (k *YAMLKeychain) AddKey(key *Key) {
 	parts := strings.Split(key.Name, ".")
 	if len(parts) != 3 {
 		panic("cannot parse a key")
 	}
 
 	switch parts[1] {
-	case "Sign":
+	case "Signature":
 		k.AddSigningKey(key)
 	case "Enc":
 		k.AddEncryptionKey(key)
@@ -159,7 +166,7 @@ func (k *Keychain) AddKey(key *Key) {
 	}
 }
 
-func (k *Keychain) GetKey(key string) interface{} {
+func (k *YAMLKeychain) GetKey(key string) interface{} {
 	parts := strings.Split(key, ".")
 	if len(parts) != 3 {
 		panic("cannot parse a key")
@@ -168,15 +175,15 @@ func (k *Keychain) GetKey(key string) interface{} {
 
 	switch parts[1] {
 	case "Sign":
-		if key, exists := k.SigningKeys[name]; exists {
+		if key, exists := k.SigningKeysByYAMLIdentity[name]; exists {
 			return key
 		}
 	case "Enc":
-		if key, exists := k.EncryptionKeys[name]; exists {
+		if key, exists := k.EncryptionKeysByYAMLIdentity[name]; exists {
 			return key
 		}
 	case "Read":
-		if key, exists := k.ReadKeys[name]; exists {
+		if key, exists := k.ReadKeysByYAMLIdentity[name]; exists {
 			return key
 		}
 	default:
@@ -185,6 +192,6 @@ func (k *Keychain) GetKey(key string) interface{} {
 	return nil
 }
 
-func (k *Keychain) GetIdentity(name string) string {
+func (k *YAMLKeychain) GetIdentity(name string) string {
 	return k.GeneratedIdentities[name]
 }

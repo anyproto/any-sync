@@ -131,7 +131,7 @@ type testComponent struct {
 	ids  testIds
 }
 
-func (t *testComponent) Init(ctx context.Context, a *App) error {
+func (t *testComponent) Init(a *App) error {
 	t.ids.initId = t.seq.New()
 	return t.err
 }

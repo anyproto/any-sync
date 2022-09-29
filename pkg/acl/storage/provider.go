@@ -2,27 +2,19 @@ package storage
 
 import (
 	"errors"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 )
 
 var ErrUnknownTreeId = errors.New("tree does not exist")
 
 type TreeStorageCreatePayload struct {
-	TreeId  string
-	Header  *aclpb.Header
-	Changes []*aclpb.RawChange
-	Heads   []string
-}
-
-type ACLListStorageCreatePayload struct {
-	ListId  string
-	Header  *aclpb.Header
-	Records []*aclpb.RawRecord
+	TreeId        string
+	RootRawChange *treechangeproto.RawTreeChangeWithId
+	Changes       []*treechangeproto.RawTreeChangeWithId
+	Heads         []string
 }
 
 type Provider interface {
-	Storage(id string) (Storage, error)
-	AddStorage(id string, st Storage) error
+	TreeStorage(id string) (TreeStorage, error)
 	CreateTreeStorage(payload TreeStorageCreatePayload) (TreeStorage, error)
-	CreateACLListStorage(payload ACLListStorageCreatePayload) (ListStorage, error)
 }

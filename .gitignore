@@ -11,5 +11,15 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# Golang vendor folder
+vendor
+
+# Intelli-J files
+.idea
+
+# MacOS file that stores custom attributes of its containing folder,
+# such as folder view options, icon positions, and other visual information
+.DS_Store
+
 # Dependency directories (remove the comment below to include it)
 # vendor/

@@ -2,11 +2,7 @@ package tree
 
 import (
 	"errors"
-	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
-	"github.com/gogo/protobuf/proto"
-
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/symmetric"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 )
 
 var (
@@ -14,66 +10,52 @@ var (
 	ErrIncorrectCID       = errors.New("change has incorrect CID")
 )
 
-type ChangeContent struct {
-	ChangesData proto.Marshaler
-	ACLData     *aclpb.ACLChangeACLData
-	Id          string // TODO: this is just for testing, because id should be created automatically from content
-}
-
 // Change is an abstract type for all types of changes
 type Change struct {
-	Next            []*Change
-	PreviousIds     []string
-	Id              string
-	SnapshotId      string
-	IsSnapshot      bool
-	DecryptedChange []byte      // TODO: check if we need it
-	ParsedModel     interface{} // TODO: check if we need it
+	Next        []*Change
+	PreviousIds []string
+	AclHeadId   string
+	Id          string
+	SnapshotId  string
+	IsSnapshot  bool
+	Timestamp   int64
+	ReadKeyHash uint64
+	Identity    string
+	Data        []byte
+	Model       interface{}
 
 	// iterator helpers
 	visited          bool
 	branchesFinished bool
 
-	Content *aclpb.Change
-	Sign    []byte
+	Signature []byte
 }
 
-func (ch *Change) ProtoChange() proto.Marshaler {
-	return ch.Content
-}
-
-func (ch *Change) DecryptContents(key *symmetric.Key) error {
-	// if the document is already decrypted
-	if ch.Content.CurrentReadKeyHash == 0 {
-		return nil
-	}
-	decrypted, err := key.Decrypt(ch.Content.ChangesData)
-	if err != nil {
-		return fmt.Errorf("failed to decrypt changes data: %w", err)
-	}
-
-	ch.DecryptedChange = decrypted
-	return nil
-}
-
-func NewChange(id string, ch *aclpb.Change, signature []byte) *Change {
+func NewChange(id string, ch *treechangeproto.TreeChange, signature []byte) *Change {
 	return &Change{
 		Next:        nil,
 		PreviousIds: ch.TreeHeadIds,
+		AclHeadId:   ch.AclHeadId,
+		Timestamp:   ch.Timestamp,
+		ReadKeyHash: ch.CurrentReadKeyHash,
 		Id:          id,
-		Content:     ch,
+		Data:        ch.ChangesData,
 		SnapshotId:  ch.SnapshotBaseId,
 		IsSnapshot:  ch.IsSnapshot,
-		Sign:        signature,
+		Identity:    string(ch.Identity),
+		Signature:   signature,
 	}
 }
 
-func (ch *Change) DecryptedChangeContent() []byte {
-	return ch.DecryptedChange
-}
-
-func (ch *Change) Signature() []byte {
-	return ch.Sign
+func NewChangeFromRoot(id string, ch *treechangeproto.RootChange, signature []byte) *Change {
+	return &Change{
+		Next:       nil,
+		AclHeadId:  ch.AclHeadId,
+		Id:         id,
+		IsSnapshot: true,
+		Identity:   string(ch.Identity),
+		Signature:  signature,
+	}
 }
 
 func (ch *Change) CID() string {

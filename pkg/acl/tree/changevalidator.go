@@ -2,7 +2,7 @@ package tree
 
 import (
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclchanges/aclpb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
 )
 
@@ -43,12 +43,12 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.ACLList, c
 		state = aclList.ACLState()
 	)
 	// checking if the user could write
-	perm, err = state.PermissionsAtRecord(c.Content.AclHeadId, c.Content.Identity)
+	perm, err = state.PermissionsAtRecord(c.AclHeadId, c.Identity)
 	if err != nil {
 		return
 	}
 
-	if perm.Permission != aclpb.ACLChange_Writer && perm.Permission != aclpb.ACLChange_Admin {
+	if perm.Permission != aclrecordproto.ACLUserPermissions_Writer && perm.Permission != aclrecordproto.ACLUserPermissions_Admin {
 		err = list.ErrInsufficientPermissions
 		return
 	}
@@ -56,16 +56,16 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.ACLList, c
 	// checking if the change refers to later acl heads than its previous ids
 	for _, id := range c.PreviousIds {
 		prevChange := tree.attached[id]
-		if prevChange.Content.AclHeadId == c.Content.AclHeadId {
+		if prevChange.AclHeadId == c.AclHeadId {
 			continue
 		}
 		var after bool
-		after, err = aclList.IsAfter(c.Content.AclHeadId, prevChange.Content.AclHeadId)
+		after, err = aclList.IsAfter(c.AclHeadId, prevChange.AclHeadId)
 		if err != nil {
 			return
 		}
 		if !after {
-			err = fmt.Errorf("current acl head id (%s) should be after each of the previous ones (%s)", c.Content.AclHeadId, prevChange.Content.AclHeadId)
+			err = fmt.Errorf("current acl head id (%s) should be after each of the previous ones (%s)", c.AclHeadId, prevChange.AclHeadId)
 			return
 		}
 	}
