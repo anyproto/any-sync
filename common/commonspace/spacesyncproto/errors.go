@@ -10,5 +10,5 @@ var (
 
 	ErrUnexpected   = errGroup.Register(errors.New("unexpected error"), uint64(ErrCodes_Unexpected))
 	ErrSpaceMissing = errGroup.Register(errors.New("space is missing"), uint64(ErrCodes_SpaceMissing))
-	ErrSpaceExists  = errGroup.Register(errors.New("space exists"), uint64(ErrCodes_SpaceMissing))
+	ErrSpaceExists  = errGroup.Register(errors.New("space exists"), uint64(ErrCodes_SpaceExists))
 )

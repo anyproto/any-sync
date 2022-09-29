@@ -17,7 +17,7 @@ var (
 
 func RegisterErr(err error, code uint64) error {
 	if e, ok := errsMap[code]; ok {
-		panic(fmt.Errorf("attempt to register error with exiswting code: %d; registered error: %v", code, e))
+		panic(fmt.Errorf("attempt to register error with existing code: %d; registered error: %v", code, e))
 	}
 	errWithCode := drpcerr.WithCode(err, code)
 	errsMap[code] = errWithCode
