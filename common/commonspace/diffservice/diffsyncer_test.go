@@ -2,6 +2,7 @@ package diffservice
 
 import (
 	"context"
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache/mock_cache"
@@ -18,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"storj.io/drpc"
 	"testing"
+	"time"
 )
 
 type pushSpaceRequestMatcher struct {
@@ -37,6 +39,35 @@ func (p pushSpaceRequestMatcher) Matches(x interface{}) bool {
 
 func (p pushSpaceRequestMatcher) String() string {
 	return ""
+}
+
+type mockPeer struct{}
+
+func (m mockPeer) Id() string {
+	return "mockId"
+}
+
+func (m mockPeer) LastUsage() time.Time {
+	return time.Time{}
+}
+
+func (m mockPeer) UpdateLastUsage() {
+}
+
+func (m mockPeer) Close() error {
+	return nil
+}
+
+func (m mockPeer) Closed() <-chan struct{} {
+	return make(chan struct{})
+}
+
+func (m mockPeer) Invoke(ctx context.Context, rpc string, enc drpc.Encoding, in, out drpc.Message) error {
+	return nil
+}
+
+func (m mockPeer) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) (drpc.Stream, error) {
+	return nil, nil
 }
 
 func newPushSpaceRequestMatcher(
@@ -71,7 +102,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	t.Run("diff syncer sync simple", func(t *testing.T) {
 		nconfMock.EXPECT().
 			ResponsiblePeers(gomock.Any(), spaceId).
-			Return([]peer.Peer{nil}, nil)
+			Return([]peer.Peer{mockPeer{}}, nil)
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).
 			Return([]string{"new"}, []string{"changed"}, nil, nil)
@@ -83,6 +114,14 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		require.NoError(t, diffSyncer.Sync(ctx))
 	})
 
+	t.Run("diff syncer sync conf error", func(t *testing.T) {
+		nconfMock.EXPECT().
+			ResponsiblePeers(gomock.Any(), spaceId).
+			Return(nil, fmt.Errorf("some error"))
+
+		require.Error(t, diffSyncer.Sync(ctx))
+	})
+
 	t.Run("diff syncer sync space missing", func(t *testing.T) {
 		aclStorageMock := mock_aclstorage.NewMockListStorage(ctrl)
 		aclRoot := &aclrecordproto.RawACLRecordWithId{}
@@ -90,7 +129,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 
 		nconfMock.EXPECT().
 			ResponsiblePeers(gomock.Any(), spaceId).
-			Return([]peer.Peer{nil}, nil)
+			Return([]peer.Peer{mockPeer{}}, nil)
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).
 			Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing)
@@ -110,29 +149,13 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		require.NoError(t, diffSyncer.Sync(ctx))
 	})
 
-	t.Run("diff syncer sync space missing", func(t *testing.T) {
-		aclStorageMock := mock_aclstorage.NewMockListStorage(ctrl)
-		aclRoot := &aclrecordproto.RawACLRecordWithId{}
-		spaceHeader := &spacesyncproto.SpaceHeader{}
-
+	t.Run("diff syncer sync other error", func(t *testing.T) {
 		nconfMock.EXPECT().
 			ResponsiblePeers(gomock.Any(), spaceId).
-			Return([]peer.Peer{nil}, nil)
+			Return([]peer.Peer{mockPeer{}}, nil)
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).
-			Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing)
-		stMock.EXPECT().
-			ACLStorage().
-			Return(aclStorageMock, nil)
-		stMock.EXPECT().
-			SpaceHeader().
-			Return(spaceHeader, nil)
-		aclStorageMock.EXPECT().
-			Root().
-			Return(aclRoot, nil)
-		clientMock.EXPECT().
-			PushSpace(gomock.Any(), newPushSpaceRequestMatcher(spaceId, aclRoot, spaceHeader)).
-			Return(nil, nil)
+			Return(nil, nil, nil, spacesyncproto.ErrUnexpected)
 
 		require.NoError(t, diffSyncer.Sync(ctx))
 	})
