@@ -10,7 +10,6 @@ import (
 
 func TestPeriodicSync_Run(t *testing.T) {
 	// setup
-	//ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
