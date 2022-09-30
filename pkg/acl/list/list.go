@@ -1,4 +1,4 @@
-//go:generate mockgen -package list -destination list_mock.go github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list ACLList
+//go:generate mockgen -destination mock_list/mock_list.go github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list ACLList
 package list
 
 import (
