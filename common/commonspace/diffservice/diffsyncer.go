@@ -24,6 +24,7 @@ func newDiffSyncer(
 	nconf nodeconf.Configuration,
 	cache cache.TreeCache,
 	storage storage.SpaceStorage,
+	clientFactory spacesyncproto.ClientFactory,
 	log *zap.Logger) DiffSyncer {
 	return &diffSyncer{
 		diff:    diff,
@@ -36,12 +37,13 @@ func newDiffSyncer(
 }
 
 type diffSyncer struct {
-	diff    ldiff.Diff
-	nconf   nodeconf.Configuration
-	spaceId string
-	cache   cache.TreeCache
-	storage storage.SpaceStorage
-	log     *zap.Logger
+	spaceId       string
+	diff          ldiff.Diff
+	nconf         nodeconf.Configuration
+	cache         cache.TreeCache
+	storage       storage.SpaceStorage
+	clientFactory spacesyncproto.ClientFactory
+	log           *zap.Logger
 }
 
 func (d *diffSyncer) Sync(ctx context.Context) error {
@@ -61,7 +63,7 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 }
 
 func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
-	cl := spacesyncproto.NewDRPCSpaceClient(p)
+	cl := d.clientFactory.Client(p)
 	rdiff := remotediff.NewRemoteDiff(d.spaceId, cl)
 	newIds, changedIds, removedIds, err := d.diff.Diff(ctx, rdiff)
 	err = rpcerr.Unwrap(err)

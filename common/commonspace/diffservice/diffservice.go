@@ -38,9 +38,11 @@ func NewDiffService(
 	conf nodeconf.Configuration,
 	cache cache.TreeCache,
 	log *zap.Logger) DiffService {
+
 	diff := ldiff.New(16, 16)
 	l := log.With(zap.String("spaceId", spaceId))
-	syncer := newDiffSyncer(spaceId, diff, conf, cache, storage, l)
+	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient)
+	syncer := newDiffSyncer(spaceId, diff, conf, cache, storage, factory, l)
 	periodicSync := newPeriodicSync(syncPeriod, syncer, l)
 
 	return &diffService{
