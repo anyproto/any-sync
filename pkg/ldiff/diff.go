@@ -1,4 +1,4 @@
-//go:generate mockgen -package ldiff -destination diff_mock.go github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff Diff,Remote
+//go:generate mockgen -destination mock_ldiff/mock_ldiff.go github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff Diff,Remote
 // Package ldiff provides a container of elements with fixed id and changeable content.
 // Diff can calculate the difference with another diff container (you can make it remote) with minimum hops and traffic.
 package ldiff
