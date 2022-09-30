@@ -13,6 +13,7 @@ import (
 	storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 	"storj.io/drpc"
 	"testing"
 )
@@ -77,7 +78,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 				GetTree(gomock.Any(), spaceId, arg).
 				Return(cache.TreeResult{}, nil)
 		}
-		_ = diffSyncer.Sync(ctx)
+		require.NoError(t, diffSyncer.Sync(ctx))
 	})
 
 	t.Run("diff syncer sync space missing", func(t *testing.T) {
@@ -104,6 +105,6 @@ func TestDiffSyncer_Sync(t *testing.T) {
 			PushSpace(gomock.Any(), newPushSpaceRequestMatcher(spaceId, aclRoot, spaceHeader)).
 			Return(nil, nil)
 
-		_ = diffSyncer.Sync(ctx)
+		require.NoError(t, diffSyncer.Sync(ctx))
 	})
 }
