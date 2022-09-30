@@ -29,6 +29,8 @@ proto:
 	$(GOGO_START) protoc --gogofaster_out=:. $(P_TEST_CHANGES_PATH_PB)/proto/*.proto
 	$(eval PKGMAP := $$(P_TREE_CHANGES),$$(P_ACL_RECORDS))
 	$(GOGO_START) protoc --gogofaster_out=$(PKGMAP):. --go-drpc_out=protolib=github.com/gogo/protobuf:. common/commonspace/spacesyncproto/protos/*.proto
+	$(GOGO_START) protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. consensus/consensusproto/protos/*.proto
+
 
 
 build:
