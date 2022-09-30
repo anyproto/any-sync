@@ -27,12 +27,13 @@ func newDiffSyncer(
 	clientFactory spacesyncproto.ClientFactory,
 	log *zap.Logger) DiffSyncer {
 	return &diffSyncer{
-		diff:    diff,
-		nconf:   nconf,
-		spaceId: spaceId,
-		cache:   cache,
-		storage: storage,
-		log:     log,
+		diff:          diff,
+		nconf:         nconf,
+		spaceId:       spaceId,
+		cache:         cache,
+		storage:       storage,
+		clientFactory: clientFactory,
+		log:           log,
 	}
 }
 
