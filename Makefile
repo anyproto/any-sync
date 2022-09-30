@@ -34,3 +34,8 @@ proto:
 build:
 	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/app))
 	go build -v -o bin/anytype-node -ldflags "$(FLAGS)" cmd/node/node.go
+
+test-deps:
+	@echo 'Generating test mocks...'
+	@go install github.com/golang/mock/mockgen
+	@go generate ./...

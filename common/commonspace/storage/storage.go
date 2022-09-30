@@ -1,3 +1,4 @@
+//go:generate mockgen -package storage -destination storage_mock.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage SpaceStorageProvider,SpaceStorage
 package storage
 
 import (

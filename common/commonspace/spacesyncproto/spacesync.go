@@ -1,3 +1,4 @@
+//go:generate mockgen -package spacesyncproto -destination drpcspaceclient_mock.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto DRPCSpaceClient
 package spacesyncproto
 
 import (
