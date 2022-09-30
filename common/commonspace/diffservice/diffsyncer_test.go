@@ -9,11 +9,43 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
+	storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
 	"github.com/golang/mock/gomock"
 	"storj.io/drpc"
 	"testing"
 )
+
+type pushSpaceRequestMatcher struct {
+	spaceId     string
+	aclRoot     *aclrecordproto.RawACLRecordWithId
+	spaceHeader *spacesyncproto.SpaceHeader
+}
+
+func (p pushSpaceRequestMatcher) Matches(x interface{}) bool {
+	res, ok := x.(*spacesyncproto.PushSpaceRequest)
+	if !ok {
+		return false
+	}
+
+	return res.SpaceId == p.spaceId && res.AclRoot == p.aclRoot && res.SpaceHeader == p.spaceHeader
+}
+
+func (p pushSpaceRequestMatcher) String() string {
+	return ""
+}
+
+func newPushSpaceRequestMatcher(
+	spaceId string,
+	aclRoot *aclrecordproto.RawACLRecordWithId,
+	spaceHeader *spacesyncproto.SpaceHeader) *pushSpaceRequestMatcher {
+	return &pushSpaceRequestMatcher{
+		spaceId:     spaceId,
+		aclRoot:     aclRoot,
+		spaceHeader: spaceHeader,
+	}
+}
 
 func TestDiffSyncer_Sync(t *testing.T) {
 	// setup
@@ -40,12 +72,38 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).
 			Return([]string{"new"}, []string{"changed"}, nil, nil)
-		cacheMock.EXPECT().
-			GetTree(gomock.Any(), spaceId, "new").
-			Return(cache.TreeResult{}, nil)
-		cacheMock.EXPECT().
-			GetTree(gomock.Any(), spaceId, "changed").
-			Return(cache.TreeResult{}, nil)
+		for _, arg := range []string{"new", "changed"} {
+			cacheMock.EXPECT().
+				GetTree(gomock.Any(), spaceId, arg).
+				Return(cache.TreeResult{}, nil)
+		}
+		_ = diffSyncer.Sync(ctx)
+	})
+
+	t.Run("diff syncer sync space missing", func(t *testing.T) {
+		aclStorageMock := storage2.NewMockListStorage(ctrl)
+		aclRoot := &aclrecordproto.RawACLRecordWithId{}
+		spaceHeader := &spacesyncproto.SpaceHeader{}
+
+		nconfMock.EXPECT().
+			ResponsiblePeers(gomock.Any(), spaceId).
+			Return([]peer.Peer{nil}, nil)
+		diffMock.EXPECT().
+			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).
+			Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing)
+		stMock.EXPECT().
+			ACLStorage().
+			Return(aclStorageMock, nil)
+		stMock.EXPECT().
+			SpaceHeader().
+			Return(spaceHeader, nil)
+		aclStorageMock.EXPECT().
+			Root().
+			Return(aclRoot, nil)
+		clientMock.EXPECT().
+			PushSpace(gomock.Any(), newPushSpaceRequestMatcher(spaceId, aclRoot, spaceHeader)).
+			Return(nil, nil)
+
 		_ = diffSyncer.Sync(ctx)
 	})
 }
