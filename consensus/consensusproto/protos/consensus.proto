@@ -1,0 +1,55 @@
+syntax = "proto3";
+package anyConsensus;
+
+option go_package = "consensus/consensusproto";
+
+enum ErrCodes {
+    Unexpected = 0;
+    LogExists = 1;
+    LogNotFound = 2;
+    RecordConflict = 3;
+    ErrorOffset = 300;
+}
+
+
+message Log {
+    bytes id = 1;
+    repeated Record records = 2;
+    uint64 createdUnix = 3;
+}
+
+message Record {
+    bytes id = 1;
+    bytes prevId = 2;
+    bytes payload = 3;
+    uint64 createdUnix = 4;
+}
+
+service Consensus {
+    // AddLog adds new log to consensus
+    rpc AddLog(AddLogRequest) returns (Ok);
+    // AddRecord adds new record to log
+    rpc AddRecord(AddRecordRequest) returns (Ok);
+    // WatchLog fetches log and subscribes for a changes
+    rpc WatchLog(WatchLogRequest) returns (stream WatchLogEvent);
+}
+
+message Ok {}
+
+message AddLogRequest {
+    Log log = 1;
+}
+
+message AddRecordRequest {
+    bytes logId = 1;
+    Record record = 2;
+}
+
+message WatchLogRequest {
+    bytes logId = 1;
+}
+
+message WatchLogEvent {
+    bytes logId = 1;
+    repeated Record records = 2;
+}
