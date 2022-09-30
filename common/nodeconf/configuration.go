@@ -1,3 +1,4 @@
+//go:generate mockgen -package nodeconf -destination configuration_mock.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf Configuration
 package nodeconf
 
 import (
