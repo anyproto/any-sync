@@ -1,3 +1,4 @@
+//go:generate mockgen -package storage -destination liststorage_mock.go github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage ListStorage
 package storage
 
 import (
