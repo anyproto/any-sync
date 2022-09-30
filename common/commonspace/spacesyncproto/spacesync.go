@@ -1,8 +1,21 @@
 package spacesyncproto
 
-import "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
+import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
+	"storj.io/drpc"
+)
 
 type SpaceStream = DRPCSpace_StreamStream
+
+type ClientFactoryFunc func(cc drpc.Conn) DRPCSpaceClient
+
+func (c ClientFactoryFunc) Client(cc drpc.Conn) DRPCSpaceClient {
+	return c(cc)
+}
+
+type ClientFactory interface {
+	Client(cc drpc.Conn) DRPCSpaceClient
+}
 
 func WrapHeadUpdate(update *ObjectHeadUpdate, rootChange *treechangeproto.RawTreeChangeWithId, treeId, trackingId string) *ObjectSyncMessage {
 	return &ObjectSyncMessage{

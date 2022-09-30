@@ -38,6 +38,7 @@ type syncService struct {
 	streamPool     StreamPool
 	headNotifiable HeadNotifiable
 	configuration  nodeconf.Configuration
+	clientFactory  spacesyncproto.ClientFactory
 
 	streamLoopCtx  context.Context
 	stopStreamLoop context.CancelFunc
@@ -50,7 +51,13 @@ func NewSyncService(spaceId string, headNotifiable HeadNotifiable, cache cache.T
 		return syncHandler.HandleMessage(ctx, senderId, message)
 	})
 	syncHandler = newSyncHandler(spaceId, cache, streamPool)
-	return newSyncService(spaceId, headNotifiable, syncHandler, streamPool, configuration)
+	return newSyncService(
+		spaceId,
+		headNotifiable,
+		syncHandler,
+		streamPool,
+		spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient),
+		configuration)
 }
 
 func newSyncService(
@@ -58,12 +65,14 @@ func newSyncService(
 	headNotifiable HeadNotifiable,
 	syncHandler SyncHandler,
 	streamPool StreamPool,
+	clientFactory spacesyncproto.ClientFactory,
 	configuration nodeconf.Configuration) *syncService {
 	return &syncService{
 		syncHandler:    syncHandler,
 		streamPool:     streamPool,
 		headNotifiable: headNotifiable,
 		configuration:  configuration,
+		clientFactory:  clientFactory,
 		spaceId:        spaceId,
 		streamLoopDone: make(chan struct{}),
 	}
@@ -100,8 +109,7 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 			if s.streamPool.HasActiveStream(peer.Id()) {
 				continue
 			}
-			cl := spacesyncproto.NewDRPCSpaceClient(peer)
-			stream, err := cl.Stream(ctx)
+			stream, err := s.clientFactory.Client(peer).Stream(ctx)
 			if err != nil {
 				err = rpcerr.Unwrap(err)
 				log.With("spaceId", s.spaceId).Errorf("failed to open stream: %v", err)
