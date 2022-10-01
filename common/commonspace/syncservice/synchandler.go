@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_syncservice/mock_syncservice.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice SyncClient
 package syncservice
 
 import (
@@ -31,16 +32,16 @@ func (s *syncHandler) HandleMessage(ctx context.Context, senderId string, msg *s
 	content := msg.GetContent()
 	switch {
 	case content.GetFullSyncRequest() != nil:
-		return s.HandleFullSyncRequest(ctx, senderId, content.GetFullSyncRequest(), msg)
+		return s.handleFullSyncRequest(ctx, senderId, content.GetFullSyncRequest(), msg)
 	case content.GetFullSyncResponse() != nil:
-		return s.HandleFullSyncResponse(ctx, senderId, content.GetFullSyncResponse(), msg)
+		return s.handleFullSyncResponse(ctx, senderId, content.GetFullSyncResponse(), msg)
 	case content.GetHeadUpdate() != nil:
-		return s.HandleHeadUpdate(ctx, senderId, content.GetHeadUpdate(), msg)
+		return s.handleHeadUpdate(ctx, senderId, content.GetHeadUpdate(), msg)
 	}
 	return nil
 }
 
-func (s *syncHandler) HandleHeadUpdate(
+func (s *syncHandler) handleHeadUpdate(
 	ctx context.Context,
 	senderId string,
 	update *spacesyncproto.ObjectHeadUpdate,
@@ -70,12 +71,14 @@ func (s *syncHandler) HandleHeadUpdate(
 			return err
 		}
 
-		// if we couldn't add all the changes
-		if len(update.Changes) != len(result.Added) {
-			fullRequest, err = s.prepareFullSyncRequest(objTree, update)
-			if err != nil {
-				return err
-			}
+		// if after the heads are equal, or we have them locally
+		if slice.UnsortedEquals(update.Heads, result.Heads) || objTree.HasChanges(update.Heads...) {
+			return nil
+		}
+
+		fullRequest, err = s.prepareFullSyncRequest(objTree, update)
+		if err != nil {
+			return err
 		}
 		return nil
 	}()
@@ -87,7 +90,7 @@ func (s *syncHandler) HandleHeadUpdate(
 	return
 }
 
-func (s *syncHandler) HandleFullSyncRequest(
+func (s *syncHandler) handleFullSyncRequest(
 	ctx context.Context,
 	senderId string,
 	request *spacesyncproto.ObjectFullSyncRequest,
@@ -133,7 +136,7 @@ func (s *syncHandler) HandleFullSyncRequest(
 		spacesyncproto.WrapFullResponse(fullResponse, header, msg.TreeId, msg.TrackingId))
 }
 
-func (s *syncHandler) HandleFullSyncResponse(
+func (s *syncHandler) handleFullSyncResponse(
 	ctx context.Context,
 	senderId string,
 	response *spacesyncproto.ObjectFullSyncResponse,

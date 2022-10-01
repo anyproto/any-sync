@@ -43,7 +43,7 @@ type ObjectTree interface {
 	Header() *treechangeproto.RawTreeChangeWithId
 	Heads() []string
 	Root() *Change
-	HasChange(string) bool
+	HasChanges(...string) bool
 	DebugDump() (string, error)
 
 	Iterate(convert ChangeConvertFunc, iterate ChangeIterateFunc) error
@@ -76,7 +76,7 @@ type objectTree struct {
 
 	// buffers
 	difSnapshotBuf  []*treechangeproto.RawTreeChangeWithId
-	tmpChangesBuf   []*Change
+	newChangesBuf   []*Change
 	newSnapshotsBuf []*Change
 	notSeenIdxBuf   []int
 
@@ -227,7 +227,7 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, rawChanges ...*treechan
 
 func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*treechangeproto.RawTreeChangeWithId) (addResult AddResult, err error) {
 	// resetting buffers
-	ot.tmpChangesBuf = ot.tmpChangesBuf[:0]
+	ot.newChangesBuf = ot.newChangesBuf[:0]
 	ot.notSeenIdxBuf = ot.notSeenIdxBuf[:0]
 	ot.difSnapshotBuf = ot.difSnapshotBuf[:0]
 	ot.newSnapshotsBuf = ot.newSnapshotsBuf[:0]
@@ -247,20 +247,21 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*treechan
 		if _, exists := ot.tree.attached[ch.Id]; exists {
 			continue
 		}
-		if _, exists := ot.tree.unAttached[ch.Id]; exists {
-			continue
-		}
 
 		var change *Change
-		change, err = ot.changeBuilder.ConvertFromRaw(ch, true)
-		if err != nil {
-			return
+		if unAttached, exists := ot.tree.unAttached[ch.Id]; exists {
+			change = unAttached
+		} else {
+			change, err = ot.changeBuilder.ConvertFromRaw(ch, true)
+			if err != nil {
+				return
+			}
 		}
 
 		if change.IsSnapshot {
 			ot.newSnapshotsBuf = append(ot.newSnapshotsBuf, change)
 		}
-		ot.tmpChangesBuf = append(ot.tmpChangesBuf, change)
+		ot.newChangesBuf = append(ot.newChangesBuf, change)
 		ot.notSeenIdxBuf = append(ot.notSeenIdxBuf, idx)
 	}
 
@@ -272,6 +273,106 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*treechan
 			Mode:     Nothing,
 		}
 		return
+	}
+
+	rollback := func(changes []*Change) {
+		for _, ch := range changes {
+			if _, exists := ot.tree.attached[ch.Id]; exists {
+				delete(ot.tree.attached, ch.Id)
+			}
+		}
+	}
+
+	// checks if we need to go to database
+	isOldSnapshot := func(ch *Change) bool {
+		if ch.SnapshotId == ot.tree.RootId() {
+			return false
+		}
+		for _, sn := range ot.newSnapshotsBuf {
+			// if change refers to newly received snapshot
+			if ch.SnapshotId == sn.Id {
+				return false
+			}
+		}
+		return true
+	}
+
+	shouldRebuildFromStorage := false
+	// checking if we have some changes with different snapshot and then rebuilding
+	for idx, ch := range ot.newChangesBuf {
+		if isOldSnapshot(ch) {
+			var exists bool
+			// checking if it exists in the storage, if yes, then at some point it was added to the tree
+			// thus we don't need to look at this change
+			exists, err = ot.treeStorage.HasChange(ctx, ch.Id)
+			if err != nil {
+				return
+			}
+			if exists {
+				// marking as nil to delete after
+				ot.newChangesBuf[idx] = nil
+				continue
+			}
+			// we haven't seen the change, and it refers to old snapshot, so we should rebuild
+			shouldRebuildFromStorage = true
+		}
+	}
+	// discarding all previously seen changes
+	ot.newChangesBuf = discardFromSlice(ot.newChangesBuf, func(ch *Change) bool { return ch == nil })
+
+	if shouldRebuildFromStorage {
+		err = ot.rebuildFromStorage(ot.newChangesBuf)
+		if err != nil {
+			// rebuilding without new changes
+			ot.rebuildFromStorage(nil)
+			return
+		}
+		addResult, err = ot.createAddResult(prevHeadsCopy, Rebuild, nil, rawChanges)
+		if err != nil {
+			// that means that some unattached changes were somehow corrupted in memory
+			// this shouldn't happen but if that happens, then rebuilding from storage
+			ot.rebuildFromStorage(nil)
+			return
+		}
+		return
+	}
+
+	// normal mode of operation, where we don't need to rebuild from database
+	mode, treeChangesAdded := ot.tree.Add(ot.newChangesBuf...)
+	switch mode {
+	case Nothing:
+		addResult = AddResult{
+			OldHeads: prevHeadsCopy,
+			Heads:    prevHeadsCopy,
+			Mode:     mode,
+		}
+		return
+
+	default:
+		// we need to validate only newly added changes
+		err = ot.validateTree(treeChangesAdded)
+		if err != nil {
+			rollback(treeChangesAdded)
+			err = ErrHasInvalidChanges
+			return
+		}
+		addResult, err = ot.createAddResult(prevHeadsCopy, mode, treeChangesAdded, rawChanges)
+		if err != nil {
+			// that means that some unattached changes were somehow corrupted in memory
+			// this shouldn't happen but if that happens, then rebuilding from storage
+			ot.rebuildFromStorage(nil)
+			return
+		}
+		return
+	}
+	return
+}
+
+func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesAdded []*Change, rawChanges []*treechangeproto.RawTreeChangeWithId) (addResult AddResult, err error) {
+	headsCopy := func() []string {
+		newHeads := make([]string, 0, len(ot.tree.Heads()))
+		newHeads = append(newHeads, ot.tree.Heads()...)
+		return newHeads
 	}
 
 	// returns changes that we added to the tree as attached this round
@@ -313,88 +414,16 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*treechan
 		return
 	}
 
-	rollback := func(changes []*Change) {
-		for _, ch := range changes {
-			if _, exists := ot.tree.attached[ch.Id]; exists {
-				delete(ot.tree.attached, ch.Id)
-			}
-		}
-	}
-
-	// checks if we need to go to database
-	isOldSnapshot := func(ch *Change) bool {
-		if ch.SnapshotId == ot.tree.RootId() {
-			return false
-		}
-		for _, sn := range ot.newSnapshotsBuf {
-			// if change refers to newly received snapshot
-			if ch.SnapshotId == sn.Id {
-				return false
-			}
-		}
-		return true
-	}
-
-	// checking if we have some changes with different snapshot and then rebuilding
-	for _, ch := range ot.tmpChangesBuf {
-		if isOldSnapshot(ch) {
-			err = ot.rebuildFromStorage(ot.tmpChangesBuf)
-			if err != nil {
-				// rebuilding without new changes
-				ot.rebuildFromStorage(nil)
-				return
-			}
-			var added []*treechangeproto.RawTreeChangeWithId
-			added, err = getAddedChanges(nil)
-			// we shouldn't get any error in this case
-			if err != nil {
-				panic(err)
-			}
-
-			addResult = AddResult{
-				OldHeads: prevHeadsCopy,
-				Heads:    headsCopy(),
-				Added:    added,
-				Mode:     Rebuild,
-			}
-			return
-		}
-	}
-
-	// normal mode of operation, where we don't need to rebuild from database
-	mode, treeChangesAdded := ot.tree.Add(ot.tmpChangesBuf...)
-	switch mode {
-	case Nothing:
-		addResult = AddResult{
-			OldHeads: prevHeadsCopy,
-			Heads:    prevHeadsCopy,
-			Mode:     mode,
-		}
+	var added []*treechangeproto.RawTreeChangeWithId
+	added, err = getAddedChanges(treeChangesAdded)
+	if err != nil {
 		return
-
-	default:
-		// we need to validate only newly added changes
-		err = ot.validateTree(treeChangesAdded)
-		if err != nil {
-			rollback(treeChangesAdded)
-			err = ErrHasInvalidChanges
-			return
-		}
-		var added []*treechangeproto.RawTreeChangeWithId
-		added, err = getAddedChanges(treeChangesAdded)
-		if err != nil {
-			// that means that some unattached changes were somehow corrupted in memory
-			// this shouldn't happen but if that happens, then rebuilding from storage
-			ot.rebuildFromStorage(nil)
-			return
-		}
-
-		addResult = AddResult{
-			OldHeads: prevHeadsCopy,
-			Heads:    headsCopy(),
-			Added:    added,
-			Mode:     mode,
-		}
+	}
+	addResult = AddResult{
+		OldHeads: oldHeads,
+		Heads:    headsCopy(),
+		Added:    added,
+		Mode:     mode,
 	}
 	return
 }
@@ -441,9 +470,28 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 	return
 }
 
-func (ot *objectTree) HasChange(s string) bool {
-	_, attachedExists := ot.tree.attached[s]
-	return attachedExists
+func (ot *objectTree) HasChanges(chs ...string) bool {
+	hasChange := func(s string) bool {
+		_, attachedExists := ot.tree.attached[s]
+		if attachedExists {
+			return attachedExists
+		}
+
+		has, err := ot.treeStorage.HasChange(context.Background(), s)
+		if err != nil {
+			return false
+		}
+
+		return has
+	}
+
+	for _, ch := range chs {
+		if !hasChange(ch) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (ot *objectTree) Heads() []string {
