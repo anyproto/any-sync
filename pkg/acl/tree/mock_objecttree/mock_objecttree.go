@@ -116,18 +116,22 @@ func (mr *MockObjectTreeMockRecorder) DebugDump() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DebugDump", reflect.TypeOf((*MockObjectTree)(nil).DebugDump))
 }
 
-// HasChange mocks base method.
-func (m *MockObjectTree) HasChange(arg0 string) bool {
+// HasChanges mocks base method.
+func (m *MockObjectTree) HasChanges(arg0 ...string) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasChange", arg0)
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "HasChanges", varargs...)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// HasChange indicates an expected call of HasChange.
-func (mr *MockObjectTreeMockRecorder) HasChange(arg0 interface{}) *gomock.Call {
+// HasChanges indicates an expected call of HasChanges.
+func (mr *MockObjectTreeMockRecorder) HasChanges(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasChange", reflect.TypeOf((*MockObjectTree)(nil).HasChange), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasChanges", reflect.TypeOf((*MockObjectTree)(nil).HasChanges), arg0...)
 }
 
 // Header mocks base method.

@@ -87,6 +87,11 @@ func NewInMemoryTreeStorage(
 	}, nil
 }
 
+func (t *inMemoryTreeStorage) HasChange(ctx context.Context, id string) (bool, error) {
+	_, exists := t.changes[id]
+	return exists, nil
+}
+
 func (t *inMemoryTreeStorage) ID() (string, error) {
 	t.RLock()
 	defer t.RUnlock()

@@ -162,6 +162,21 @@ func (mr *MockTreeStorageMockRecorder) GetRawChange(arg0, arg1 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRawChange", reflect.TypeOf((*MockTreeStorage)(nil).GetRawChange), arg0, arg1)
 }
 
+// HasChange mocks base method.
+func (m *MockTreeStorage) HasChange(arg0 context.Context, arg1 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasChange", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HasChange indicates an expected call of HasChange.
+func (mr *MockTreeStorageMockRecorder) HasChange(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasChange", reflect.TypeOf((*MockTreeStorage)(nil).HasChange), arg0, arg1)
+}
+
 // Heads mocks base method.
 func (m *MockTreeStorage) Heads() ([]string, error) {
 	m.ctrl.T.Helper()
