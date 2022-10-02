@@ -8,6 +8,8 @@ import (
 	reflect "reflect"
 
 	spacesyncproto "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	tree "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
+	treechangeproto "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -34,6 +36,32 @@ func (m *MockSyncClient) EXPECT() *MockSyncClientMockRecorder {
 	return m.recorder
 }
 
+// AddAndReadStreamAsync mocks base method.
+func (m *MockSyncClient) AddAndReadStreamAsync(arg0 spacesyncproto.DRPCSpace_StreamStream) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddAndReadStreamAsync", arg0)
+}
+
+// AddAndReadStreamAsync indicates an expected call of AddAndReadStreamAsync.
+func (mr *MockSyncClientMockRecorder) AddAndReadStreamAsync(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAndReadStreamAsync", reflect.TypeOf((*MockSyncClient)(nil).AddAndReadStreamAsync), arg0)
+}
+
+// AddAndReadStreamSync mocks base method.
+func (m *MockSyncClient) AddAndReadStreamSync(arg0 spacesyncproto.DRPCSpace_StreamStream) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddAndReadStreamSync", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddAndReadStreamSync indicates an expected call of AddAndReadStreamSync.
+func (mr *MockSyncClientMockRecorder) AddAndReadStreamSync(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAndReadStreamSync", reflect.TypeOf((*MockSyncClient)(nil).AddAndReadStreamSync), arg0)
+}
+
 // BroadcastAsync mocks base method.
 func (m *MockSyncClient) BroadcastAsync(arg0 *spacesyncproto.ObjectSyncMessage) error {
 	m.ctrl.T.Helper()
@@ -48,8 +76,108 @@ func (mr *MockSyncClientMockRecorder) BroadcastAsync(arg0 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BroadcastAsync", reflect.TypeOf((*MockSyncClient)(nil).BroadcastAsync), arg0)
 }
 
+// BroadcastAsyncOrSendResponsible mocks base method.
+func (m *MockSyncClient) BroadcastAsyncOrSendResponsible(arg0 *spacesyncproto.ObjectSyncMessage) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BroadcastAsyncOrSendResponsible", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// BroadcastAsyncOrSendResponsible indicates an expected call of BroadcastAsyncOrSendResponsible.
+func (mr *MockSyncClientMockRecorder) BroadcastAsyncOrSendResponsible(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BroadcastAsyncOrSendResponsible", reflect.TypeOf((*MockSyncClient)(nil).BroadcastAsyncOrSendResponsible), arg0)
+}
+
+// Close mocks base method.
+func (m *MockSyncClient) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockSyncClientMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockSyncClient)(nil).Close))
+}
+
+// CreateFullSyncRequest mocks base method.
+func (m *MockSyncClient) CreateFullSyncRequest(arg0 tree.ObjectTree, arg1, arg2 []string, arg3 string) (*spacesyncproto.ObjectSyncMessage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateFullSyncRequest", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*spacesyncproto.ObjectSyncMessage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateFullSyncRequest indicates an expected call of CreateFullSyncRequest.
+func (mr *MockSyncClientMockRecorder) CreateFullSyncRequest(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFullSyncRequest", reflect.TypeOf((*MockSyncClient)(nil).CreateFullSyncRequest), arg0, arg1, arg2, arg3)
+}
+
+// CreateFullSyncResponse mocks base method.
+func (m *MockSyncClient) CreateFullSyncResponse(arg0 tree.ObjectTree, arg1, arg2 []string, arg3 string) (*spacesyncproto.ObjectSyncMessage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateFullSyncResponse", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*spacesyncproto.ObjectSyncMessage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateFullSyncResponse indicates an expected call of CreateFullSyncResponse.
+func (mr *MockSyncClientMockRecorder) CreateFullSyncResponse(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFullSyncResponse", reflect.TypeOf((*MockSyncClient)(nil).CreateFullSyncResponse), arg0, arg1, arg2, arg3)
+}
+
+// CreateHeadUpdate mocks base method.
+func (m *MockSyncClient) CreateHeadUpdate(arg0 tree.ObjectTree, arg1 []*treechangeproto.RawTreeChangeWithId) *spacesyncproto.ObjectSyncMessage {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateHeadUpdate", arg0, arg1)
+	ret0, _ := ret[0].(*spacesyncproto.ObjectSyncMessage)
+	return ret0
+}
+
+// CreateHeadUpdate indicates an expected call of CreateHeadUpdate.
+func (mr *MockSyncClientMockRecorder) CreateHeadUpdate(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateHeadUpdate", reflect.TypeOf((*MockSyncClient)(nil).CreateHeadUpdate), arg0, arg1)
+}
+
+// CreateNewTreeRequest mocks base method.
+func (m *MockSyncClient) CreateNewTreeRequest(arg0 string) *spacesyncproto.ObjectSyncMessage {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateNewTreeRequest", arg0)
+	ret0, _ := ret[0].(*spacesyncproto.ObjectSyncMessage)
+	return ret0
+}
+
+// CreateNewTreeRequest indicates an expected call of CreateNewTreeRequest.
+func (mr *MockSyncClientMockRecorder) CreateNewTreeRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNewTreeRequest", reflect.TypeOf((*MockSyncClient)(nil).CreateNewTreeRequest), arg0)
+}
+
+// HasActiveStream mocks base method.
+func (m *MockSyncClient) HasActiveStream(arg0 string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasActiveStream", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasActiveStream indicates an expected call of HasActiveStream.
+func (mr *MockSyncClientMockRecorder) HasActiveStream(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasActiveStream", reflect.TypeOf((*MockSyncClient)(nil).HasActiveStream), arg0)
+}
+
 // SendAsync mocks base method.
-func (m *MockSyncClient) SendAsync(arg0 string, arg1 *spacesyncproto.ObjectSyncMessage) error {
+func (m *MockSyncClient) SendAsync(arg0 []string, arg1 *spacesyncproto.ObjectSyncMessage) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendAsync", arg0, arg1)
 	ret0, _ := ret[0].(error)

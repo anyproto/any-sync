@@ -18,16 +18,16 @@ const maxSimultaneousOperationsPerStream = 10
 
 // StreamPool can be made generic to work with different streams
 type StreamPool interface {
-	SyncClient
+	Sender
 	AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (err error)
 	AddAndReadStreamAsync(stream spacesyncproto.SpaceStream)
 	HasActiveStream(peerId string) bool
 	Close() (err error)
 }
 
-type SyncClient interface {
+type Sender interface {
 	SendSync(peerId string, message *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error)
-	SendAsync(peerId string, message *spacesyncproto.ObjectSyncMessage) (err error)
+	SendAsync(peers []string, message *spacesyncproto.ObjectSyncMessage) (err error)
 	BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (err error)
 }
 
@@ -56,6 +56,8 @@ func newStreamPool(messageHandler MessageHandler) StreamPool {
 }
 
 func (s *streamPool) HasActiveStream(peerId string) (res bool) {
+	s.Lock()
+	defer s.Unlock()
 	_, err := s.getOrDeleteStream(peerId)
 	return err == nil
 }
@@ -73,7 +75,7 @@ func (s *streamPool) SendSync(
 	s.waiters[msg.TrackingId] = waiter
 	s.waitersMx.Unlock()
 
-	err = s.SendAsync(peerId, msg)
+	err = s.SendAsync([]string{peerId}, msg)
 	if err != nil {
 		return
 	}
@@ -82,18 +84,31 @@ func (s *streamPool) SendSync(
 	return
 }
 
-func (s *streamPool) SendAsync(peerId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
-	stream, err := s.getOrDeleteStream(peerId)
-	if err != nil {
-		return
+func (s *streamPool) SendAsync(peers []string, message *spacesyncproto.ObjectSyncMessage) (err error) {
+	getStreams := func() (streams []spacesyncproto.SpaceStream) {
+		for _, pId := range peers {
+			stream, err := s.getOrDeleteStream(pId)
+			if err != nil {
+				continue
+			}
+			streams = append(streams, stream)
+		}
+		return streams
 	}
 
-	return stream.Send(message)
+	s.Lock()
+	streams := getStreams()
+	s.Unlock()
+
+	for _, s := range streams {
+		if len(peers) == 1 {
+			err = s.Send(message)
+		}
+	}
+	return err
 }
 
 func (s *streamPool) getOrDeleteStream(id string) (stream spacesyncproto.SpaceStream, err error) {
-	s.Lock()
-	defer s.Unlock()
 	stream, exists := s.peerStreams[id]
 	if !exists {
 		err = ErrEmptyPeer

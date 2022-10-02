@@ -90,11 +90,11 @@ func (s *space) DiffService() diffservice.DiffService {
 }
 
 func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error) {
-	return synctree.DeriveSyncTree(ctx, payload, s.syncService, listener, s.aclList, s.storage.CreateTreeStorage)
+	return synctree.DeriveSyncTree(ctx, payload, s.syncService.SyncClient(), listener, s.aclList, s.storage.CreateTreeStorage)
 }
 
 func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error) {
-	return synctree.CreateSyncTree(ctx, payload, s.syncService, listener, s.aclList, s.storage.CreateTreeStorage)
+	return synctree.CreateSyncTree(ctx, payload, s.syncService.SyncClient(), listener, s.aclList, s.storage.CreateTreeStorage)
 }
 
 func (s *space) BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (t tree.ObjectTree, err error) {
@@ -104,10 +104,9 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		if err != nil {
 			return nil, err
 		}
-
-		return s.syncService.StreamPool().SendSync(
+		return s.syncService.SyncClient().SendSync(
 			peerId,
-			spacesyncproto.WrapFullRequest(&spacesyncproto.ObjectFullSyncRequest{}, nil, id, ""),
+			s.syncService.SyncClient().CreateNewTreeRequest(id),
 		)
 	}
 
@@ -142,7 +141,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 			return
 		}
 	}
-	return synctree.BuildSyncTree(ctx, s.syncService, store.(treestorage.TreeStorage), listener, s.aclList)
+	return synctree.BuildSyncTree(ctx, s.syncService.SyncClient(), store.(treestorage.TreeStorage), listener, s.aclList)
 }
 
 func (s *space) Close() error {

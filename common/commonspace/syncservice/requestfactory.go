@@ -1,6 +1,7 @@
 package syncservice
 
 import (
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
@@ -8,8 +9,10 @@ import (
 )
 
 type RequestFactory interface {
-	FullSyncRequest(t tree.ObjectTree, theirHeads, theirSnapshotPath []string, trackingId string) (req *spacesyncproto.ObjectSyncMessage, err error)
-	FullSyncResponse(t tree.ObjectTree, theirHeads, theirSnapshotPath []string, trackingId string) (*spacesyncproto.ObjectSyncMessage, error)
+	CreateHeadUpdate(t tree.ObjectTree, added []*treechangeproto.RawTreeChangeWithId) (msg *spacesyncproto.ObjectSyncMessage)
+	CreateNewTreeRequest(id string) (msg *spacesyncproto.ObjectSyncMessage)
+	CreateFullSyncRequest(t tree.ObjectTree, theirHeads, theirSnapshotPath []string, trackingId string) (req *spacesyncproto.ObjectSyncMessage, err error)
+	CreateFullSyncResponse(t tree.ObjectTree, theirHeads, theirSnapshotPath []string, trackingId string) (*spacesyncproto.ObjectSyncMessage, error)
 }
 
 func newRequestFactory() RequestFactory {
@@ -18,11 +21,22 @@ func newRequestFactory() RequestFactory {
 
 type requestFactory struct{}
 
-func (r *requestFactory) FullSyncRequest(t tree.ObjectTree, theirHeads, theirSnapshotPath []string, trackingId string) (msg *spacesyncproto.ObjectSyncMessage, err error) {
+func (r *requestFactory) CreateHeadUpdate(t tree.ObjectTree, added []*treechangeproto.RawTreeChangeWithId) (msg *spacesyncproto.ObjectSyncMessage) {
+	return spacesyncproto.WrapHeadUpdate(&spacesyncproto.ObjectHeadUpdate{
+		Heads:        t.Heads(),
+		Changes:      added,
+		SnapshotPath: t.SnapshotPath(),
+	}, t.Header(), t.ID(), "")
+}
+
+func (r *requestFactory) CreateNewTreeRequest(id string) (msg *spacesyncproto.ObjectSyncMessage) {
+	return spacesyncproto.WrapFullRequest(&spacesyncproto.ObjectFullSyncRequest{}, nil, id, "")
+}
+
+func (r *requestFactory) CreateFullSyncRequest(t tree.ObjectTree, theirHeads, theirSnapshotPath []string, trackingId string) (msg *spacesyncproto.ObjectSyncMessage, err error) {
 	req := &spacesyncproto.ObjectFullSyncRequest{}
 	if t == nil {
-		msg = spacesyncproto.WrapFullRequest(req, t.Header(), t.ID(), trackingId)
-		return
+		return nil, fmt.Errorf("tree should not be empty")
 	}
 
 	req.Heads = t.Heads()
@@ -39,7 +53,7 @@ func (r *requestFactory) FullSyncRequest(t tree.ObjectTree, theirHeads, theirSna
 	return
 }
 
-func (r *requestFactory) FullSyncResponse(t tree.ObjectTree, theirHeads, theirSnapshotPath []string, trackingId string) (msg *spacesyncproto.ObjectSyncMessage, err error) {
+func (r *requestFactory) CreateFullSyncResponse(t tree.ObjectTree, theirHeads, theirSnapshotPath []string, trackingId string) (msg *spacesyncproto.ObjectSyncMessage, err error) {
 	resp := &spacesyncproto.ObjectFullSyncResponse{
 		Heads:        t.Heads(),
 		SnapshotPath: t.SnapshotPath(),
