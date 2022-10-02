@@ -48,9 +48,12 @@ func TestSyncHandler_HandleMessage(t *testing.T) {
 			Release:       func() {},
 			TreeContainer: treeContainer{objectTreeMock},
 		}, nil)
-	objectTreeMock.EXPECT().Lock()
-	objectTreeMock.EXPECT().Heads().Return([]string{"h2"})
-	objectTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq([]*treechangeproto.RawTreeChangeWithId{chWithId})).
+	objectTreeMock.EXPECT().
+		Lock()
+	objectTreeMock.EXPECT().
+		Heads().Return([]string{"h2"})
+	objectTreeMock.EXPECT().
+		AddRawChanges(gomock.Any(), gomock.Eq([]*treechangeproto.RawTreeChangeWithId{chWithId})).
 		Return(tree.AddResult{}, nil)
 	objectTreeMock.EXPECT().Unlock()
 	err := syncHandler.HandleMessage(ctx, senderId, msg)

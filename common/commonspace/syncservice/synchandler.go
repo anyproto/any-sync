@@ -1,4 +1,3 @@
-//go:generate mockgen -destination mock_syncservice/mock_syncservice.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice SyncClient
 package syncservice
 
 import (
@@ -13,19 +12,17 @@ type syncHandler struct {
 	spaceId    string
 	treeCache  cache.TreeCache
 	syncClient SyncClient
-	factory    RequestFactory
 }
 
 type SyncHandler interface {
 	HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error)
 }
 
-func newSyncHandler(spaceId string, treeCache cache.TreeCache, syncClient SyncClient, factory RequestFactory) *syncHandler {
+func newSyncHandler(spaceId string, treeCache cache.TreeCache, syncClient SyncClient) *syncHandler {
 	return &syncHandler{
 		spaceId:    spaceId,
 		treeCache:  treeCache,
 		syncClient: syncClient,
-		factory:    factory,
 	}
 }
 
@@ -48,7 +45,10 @@ func (s *syncHandler) handleHeadUpdate(
 	update *spacesyncproto.ObjectHeadUpdate,
 	msg *spacesyncproto.ObjectSyncMessage) (err error) {
 
-	var fullRequest *spacesyncproto.ObjectSyncMessage
+	var (
+		fullRequest   *spacesyncproto.ObjectSyncMessage
+		isEmptyUpdate = len(update.Changes) == 0
+	)
 	res, err := s.treeCache.GetTree(ctx, s.spaceId, msg.TreeId)
 	if err != nil {
 		return
@@ -60,7 +60,14 @@ func (s *syncHandler) handleHeadUpdate(
 		defer res.Release()
 		defer objTree.Unlock()
 
-		if s.alreadyHaveHeads(objTree, update.Heads) {
+		// isEmptyUpdate is sent when the tree is brought up from cache
+		if isEmptyUpdate {
+			// we need to sync in any case
+			fullRequest, err = s.syncClient.CreateFullSyncRequest(objTree, update.Heads, update.SnapshotPath, msg.TrackingId)
+			return err
+		}
+
+		if s.alreadyHasHeads(objTree, update.Heads) {
 			return nil
 		}
 
@@ -69,19 +76,16 @@ func (s *syncHandler) handleHeadUpdate(
 			return err
 		}
 
-		if s.alreadyHaveHeads(objTree, update.Heads) {
+		if s.alreadyHasHeads(objTree, update.Heads) {
 			return nil
 		}
 
-		fullRequest, err = s.factory.FullSyncRequest(objTree, update.Heads, update.SnapshotPath, msg.TrackingId)
-		if err != nil {
-			return err
-		}
-		return nil
+		fullRequest, err = s.syncClient.CreateFullSyncRequest(objTree, update.Heads, update.SnapshotPath, msg.TrackingId)
+		return err
 	}()
 
 	if fullRequest != nil {
-		return s.syncClient.SendAsync(senderId, fullRequest)
+		return s.syncClient.SendAsync([]string{senderId}, fullRequest)
 	}
 	return
 }
@@ -97,7 +101,7 @@ func (s *syncHandler) handleFullSyncRequest(
 	)
 	defer func() {
 		if err != nil {
-			s.syncClient.SendAsync(senderId, spacesyncproto.WrapError(err, header, msg.TreeId, msg.TrackingId))
+			s.syncClient.SendAsync([]string{senderId}, spacesyncproto.WrapError(err, header, msg.TreeId, msg.TrackingId))
 		}
 	}()
 
@@ -116,21 +120,21 @@ func (s *syncHandler) handleFullSyncRequest(
 			header = objTree.Header()
 		}
 
-		if !s.alreadyHaveHeads(objTree, request.Heads) {
+		if !s.alreadyHasHeads(objTree, request.Heads) {
 			_, err = objTree.AddRawChanges(ctx, request.Changes...)
 			if err != nil {
 				return err
 			}
 		}
 
-		fullResponse, err = s.factory.FullSyncResponse(objTree, request.Heads, request.SnapshotPath, msg.TrackingId)
+		fullResponse, err = s.syncClient.CreateFullSyncResponse(objTree, request.Heads, request.SnapshotPath, msg.TrackingId)
 		return err
 	}()
 
 	if err != nil {
 		return
 	}
-	return s.syncClient.SendAsync(senderId, fullResponse)
+	return s.syncClient.SendAsync([]string{senderId}, fullResponse)
 }
 
 func (s *syncHandler) handleFullSyncResponse(
@@ -149,7 +153,7 @@ func (s *syncHandler) handleFullSyncResponse(
 		defer res.Release()
 		defer objTree.Unlock()
 
-		if s.alreadyHaveHeads(objTree, response.Heads) {
+		if s.alreadyHasHeads(objTree, response.Heads) {
 			return nil
 		}
 
@@ -160,6 +164,6 @@ func (s *syncHandler) handleFullSyncResponse(
 	return
 }
 
-func (s *syncHandler) alreadyHaveHeads(t tree.ObjectTree, heads []string) bool {
+func (s *syncHandler) alreadyHasHeads(t tree.ObjectTree, heads []string) bool {
 	return slice.UnsortedEquals(t.Heads(), heads) || t.HasChanges(heads...)
 }

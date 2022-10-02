@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_syncservice/mock_syncservice.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice SyncClient
 package syncservice
 
 import (
@@ -7,19 +8,13 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 	"time"
 )
 
 var log = logger.NewNamed("syncservice").Sugar()
 
 type SyncService interface {
-	NotifyHeadUpdate(
-		ctx context.Context,
-		treeId string,
-		root *treechangeproto.RawTreeChangeWithId,
-		update *spacesyncproto.ObjectHeadUpdate) (err error)
-	StreamPool() StreamPool
+	SyncClient() SyncClient
 
 	Init()
 	Close() (err error)
@@ -34,11 +29,9 @@ const respPeersStreamCheckInterval = time.Second * 10
 type syncService struct {
 	spaceId string
 
-	syncHandler    SyncHandler
-	streamPool     StreamPool
-	headNotifiable HeadNotifiable
-	configuration  nodeconf.Configuration
-	clientFactory  spacesyncproto.ClientFactory
+	syncClient    SyncClient
+	configuration nodeconf.Configuration
+	clientFactory spacesyncproto.ClientFactory
 
 	streamLoopCtx  context.Context
 	stopStreamLoop context.CancelFunc
@@ -47,30 +40,26 @@ type syncService struct {
 
 func NewSyncService(spaceId string, headNotifiable HeadNotifiable, cache cache.TreeCache, configuration nodeconf.Configuration) SyncService {
 	var syncHandler SyncHandler
-	streamPool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
+	pool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
 		return syncHandler.HandleMessage(ctx, senderId, message)
 	})
-	syncHandler = newSyncHandler(spaceId, cache, streamPool, newRequestFactory())
+	factory := newRequestFactory()
+	syncClient := newSyncClient(spaceId, pool, headNotifiable, factory, configuration)
+	syncHandler = newSyncHandler(spaceId, cache, syncClient)
 	return newSyncService(
 		spaceId,
-		headNotifiable,
-		syncHandler,
-		streamPool,
+		syncClient,
 		spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient),
 		configuration)
 }
 
 func newSyncService(
 	spaceId string,
-	headNotifiable HeadNotifiable,
-	syncHandler SyncHandler,
-	streamPool StreamPool,
+	syncClient SyncClient,
 	clientFactory spacesyncproto.ClientFactory,
 	configuration nodeconf.Configuration) *syncService {
 	return &syncService{
-		syncHandler:    syncHandler,
-		streamPool:     streamPool,
-		headNotifiable: headNotifiable,
+		syncClient:     syncClient,
 		configuration:  configuration,
 		clientFactory:  clientFactory,
 		spaceId:        spaceId,
@@ -86,16 +75,7 @@ func (s *syncService) Init() {
 func (s *syncService) Close() (err error) {
 	s.stopStreamLoop()
 	<-s.streamLoopDone
-	return s.streamPool.Close()
-}
-
-func (s *syncService) NotifyHeadUpdate(
-	ctx context.Context,
-	treeId string,
-	header *treechangeproto.RawTreeChangeWithId,
-	update *spacesyncproto.ObjectHeadUpdate) (err error) {
-	s.headNotifiable.UpdateHeads(treeId, update.Heads)
-	return s.streamPool.BroadcastAsync(spacesyncproto.WrapHeadUpdate(update, header, treeId, ""))
+	return s.syncClient.Close()
 }
 
 func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
@@ -106,7 +86,7 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 			return
 		}
 		for _, peer := range respPeers {
-			if s.streamPool.HasActiveStream(peer.Id()) {
+			if s.syncClient.HasActiveStream(peer.Id()) {
 				continue
 			}
 			stream, err := s.clientFactory.Client(peer).Stream(ctx)
@@ -124,7 +104,7 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 				log.With("spaceId", s.spaceId).Errorf("failed to send first message to stream: %v", err)
 				continue
 			}
-			s.streamPool.AddAndReadStreamAsync(stream)
+			s.syncClient.AddAndReadStreamAsync(stream)
 		}
 	}
 
@@ -141,6 +121,6 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 	}
 }
 
-func (s *syncService) StreamPool() StreamPool {
-	return s.streamPool
+func (s *syncService) SyncClient() SyncClient {
+	return s.syncClient
 }
