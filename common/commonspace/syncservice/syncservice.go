@@ -50,7 +50,7 @@ func NewSyncService(spaceId string, headNotifiable HeadNotifiable, cache cache.T
 	streamPool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
 		return syncHandler.HandleMessage(ctx, senderId, message)
 	})
-	syncHandler = newSyncHandler(spaceId, cache, streamPool)
+	syncHandler = newSyncHandler(spaceId, cache, streamPool, newRequestFactory())
 	return newSyncService(
 		spaceId,
 		headNotifiable,
