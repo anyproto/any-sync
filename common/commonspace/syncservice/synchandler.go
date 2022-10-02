@@ -62,6 +62,9 @@ func (s *syncHandler) handleHeadUpdate(
 
 		// isEmptyUpdate is sent when the tree is brought up from cache
 		if isEmptyUpdate {
+			if slice.UnsortedEquals(objTree.Heads(), update.Heads) {
+				return nil
+			}
 			// we need to sync in any case
 			fullRequest, err = s.syncClient.CreateFullSyncRequest(objTree, update.Heads, update.SnapshotPath, msg.TrackingId)
 			return err
