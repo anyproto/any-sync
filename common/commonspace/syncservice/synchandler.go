@@ -123,7 +123,7 @@ func (s *syncHandler) handleFullSyncRequest(
 			header = objTree.Header()
 		}
 
-		if !s.alreadyHasHeads(objTree, request.Heads) {
+		if len(request.Changes) != 0 && !s.alreadyHasHeads(objTree, request.Heads) {
 			_, err = objTree.AddRawChanges(ctx, request.Changes...)
 			if err != nil {
 				return err
