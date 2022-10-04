@@ -1,0 +1,31 @@
+anytype:
+    swarmKey: /key/swarm/psk/1.0.0/base16/209992e611c27d5dce8fbd2e7389f6b51da9bee980992ef60739460b536139ec
+grpcServer:
+    listenAddrs:
+        - 127.0.0.1:4430
+    tls: false
+account:
+    peerId: 12D3KooWFVGSu8MfoUnPmUGPpJKNpxaM7mezZ98V1ERGEQbTWjnE
+    signingKey: b3+g3PNCtwX4YCLd+hTmqjub8R4yxCJJ9J7DJHgCw2hUQZ3tjkCDiuSfsdf2O//9jk81gVQ5ky8AHUpIxpGmzw==
+    encryptionKey: MIIEpAIBAAKCAQEAwDr0KIpH00tfbebj7FDGNbBWIBWxXdwD6M+P3DeAnHUkgK3kgOzkPGvI6gG7h+VzuqcSY566kgvykNd4WdBD0AUmijFi9sKbgw/TplXj2as5V84hwsAcx/DADMQqD14F/GFw54IALhaQhItYJO4eaxKspuxdrVRhJI91b3hRqlLBYgA15M4fYcoHaLSkoHTXuht2vC0qzFniXmJnR7sy2Z4qinTjGwsIo7bR42SjsBnvxx/50sowOAKQ2xjr3G7rBA3YHPxgTG6rWa4+QZabQelaKZaiMIow4ytEggRgFI/ooyvFDPy75XAQooAJCT4CfU3xv3cs3GteYrYlqyhzRwIDAQABAoIBAQCdqDxTe4YI/4pW4sUQLfdCVUttqRz889Oo/4LnhAXRTCoR94yvSJqwC16OvbkGbeOKtDfayHYQDgh1TqMAVlUnqPHA6VxXMajFxxc5Frx2631uTDtYNKPmP8fjMIembuDN60TkOrTXF96TNo2mTD1aZ8h+ZuE1pTy+9YHFWJLx8tvaQ4XcHNDHPuGT/HxeXqD7/COmmoxUMFccasfwlmPtb4uSHDmPl0bzFbhWholf138L/M27Nu8PMCFN6Et73gTdQar2YkAR3NTLDsXtMAEEgmOTI1cjg5nw5E8M3luloR7UoBfDybhnYpN2FEG9nrpSiJyglkF2PBKbvlvfvaLRAoGBAPR5c4NORx5aXCjOj2b15T/S2yFvFejciCHqljvFfe3W7ys5s1oMQlidIAIlQlEYBigjZQMQ3BRegGorlv/DI6B7cdw3JWIiqrfxls3K5guY8SRA7nYJnTozKnwdcJYldE96yG34yL1w6mKEgNDHhu5Xm+dBssO71Jg5LaDOQTD9AoGBAMlK+Iuv8DqXgVX92+RoULVkQAomeSNT3QOrtpVSaOnQOqWnHasaYdF6VM1NkOy05cRdf7nD4TNIMKNsQkGUojpG48lpd9IRldC3CDjmrqojgm0mYNpmQfj2NwWPgJyBrw1VPVc7XX76g41J9XdnAW0XU5H8qa5/8Tcn0tbjIDqTAoGBAJ0AglaJJtMvZJAwV5ffwuJCH8hQ9tkdB7AAX4rzQfREXER+QdhKlzEhdzTpiLVboFiWooBdi3jpV77XT5nhUDf4Dx9FqxRi/xAybo6rByHbjsGhkYLsmbSOt3IN1ggW9aM1TxKQ+xnuMhgi0DdEbDsUuGLDpnJdZiJ8Vfk3fFZhAoGAPMik0Rmpwyeo6Jyl4A0YAg5pwCbqAZ77aHZbxi+CeshkTU1vihGHZEg6f1xi3PerQmaxgRkDUgcEmPTB9Se67Tom4tU0V3zz7ni2xOfz6nCam/cw3AJw/YrsBoPU5G3MvIv23/aPPx7KxsmElC/IoHagx76yRn1gC7W81yLywn0CgYBiHYiEIS0DHXkjTNHV7oAyxdQN2SJ22Zu/6N1cP2sXVirss6JEKEHTzvVT1+qtTHxGyliyJaTiP4+ujNAJS0g6/U0F3v9Nba0/uGPLCI9FaYRxyMgNZAKTtImauMuSmaS93kgsz1Xm8CJhTJwvQaD5EHP4UqVe70G4UwwH10tS9w==
+apiServer:
+    port: "8080"
+nodes:
+    - peerId: 12D3KooWFVGSu8MfoUnPmUGPpJKNpxaM7mezZ98V1ERGEQbTWjnE
+      address: 127.0.0.1:4430
+    - peerId: 12D3KooWMPgKGCLtNkmANzwHAnymEMCggS6csXuDroUFqb63FizD
+      address: 127.0.0.1:4431
+    - peerId: 12D3KooWG7bXBK1NdyyWT4bnGUQjbe9kpVzsZSm97MQVR13zRx4M
+      address: 127.0.0.1:4432
+    - peerId: 12D3KooWKZcPNMmMqi6PZFjUkZqrFXXUYLpzoHBjbHLPojkuj4xp
+      address: 127.0.0.1:4530
+      isConsensus: true
+    - peerId: 12D3KooWGVroVVTuhc7GcnYZ3T9RmvuB4LWwqQRgvEMWQWPQqTy8
+      address: 127.0.0.1:4531
+      isConsensus: true
+    - peerId: 12D3KooWDLvgBnuUnuLea8QZBEA8MSffmWoNj8JFto3N5AqUDV44
+      address: 127.0.0.1:4532
+      isConsensus: true
+space:
+    gcTTL: 60
+    syncPeriod: 10
