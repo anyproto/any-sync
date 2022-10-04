@@ -15,6 +15,10 @@ github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1 h1:q0rUy8C/TYNBQS1+CGKw68tLOF
 github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1/go.mod h1:7SFka0XMvUgj3hfZtydOrQY2mwhPclbT2snogU7SQQc=
 github.com/cespare/xxhash v1.1.0 h1:a6HrQnmkObjyL+Gs60czilIUGqrzKutQD6XZog3p+ko=
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
+github.com/cheggaaa/mb v1.0.3 h1:03ksWum+6kHclB+kjwKMaBtgl5gtNYUwNpxsHQciKe8=
+github.com/cheggaaa/mb v1.0.3/go.mod h1:NUl0GBtFLlfg2o6iZwxzcG7Lslc2wV/ADTFbLXtVPE4=
+github.com/cheggaaa/mb/v2 v2.0.1 h1:gn0khbEbKlw3i5VOYi0VnHEHayjZKfUDOyGSpHAybBs=
+github.com/cheggaaa/mb/v2 v2.0.1/go.mod h1:XGeZw20Iqgjky26KL0mvCwk3+4NyZCUbshSo6ALne+c=
 github.com/corona10/goimagehash v1.0.2 h1:pUfB0LnsJASMPGEZLj7tGY251vF+qLGqOgEP4rUs6kA=
 github.com/corona10/goimagehash v1.0.2/go.mod h1:/l9umBhvcHQXVtQO1V6Gp1yD20STawkhRnnX0D1bvVI=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
