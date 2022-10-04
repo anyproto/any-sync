@@ -153,7 +153,7 @@ type streamResult struct {
 	UpdateDescription struct {
 		UpdateFields struct {
 			Records []consensus.Record `bson:"records"`
-		} `bson:"updatedFields""`
+		} `bson:"updatedFields"`
 	} `bson:"updateDescription"`
 }
 

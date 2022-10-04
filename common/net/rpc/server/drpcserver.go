@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	secure2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/zeebo/errs"
@@ -30,20 +29,22 @@ type DRPCServer interface {
 	drpc.Mux
 }
 
+type configGetter interface {
+	GetGRPCServer() config.GrpcServer
+}
+
 type drpcServer struct {
 	config     config.GrpcServer
 	drpcServer *drpcserver.Server
 	transport  secure2.Service
 	listeners  []secure2.ContextListener
-	pool       pool.Pool
 	cancel     func()
 	*drpcmux.Mux
 }
 
 func (s *drpcServer) Init(a *app.App) (err error) {
-	s.config = a.MustComponent(config.CName).(*config.Config).GrpcServer
+	s.config = a.MustComponent(config.CName).(configGetter).GetGRPCServer()
 	s.transport = a.MustComponent(secure2.CName).(secure2.Service)
-	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	return nil
 }
 

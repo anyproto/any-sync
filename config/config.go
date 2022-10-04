@@ -39,3 +39,15 @@ func (c *Config) Init(a *app.App) (err error) {
 func (c Config) Name() (name string) {
 	return CName
 }
+
+func (c Config) GetAnytype() Anytype {
+	return c.Anytype
+}
+
+func (c Config) GetGRPCServer() GrpcServer {
+	return c.GrpcServer
+}
+
+func (c Config) GetAccount() Account {
+	return c.Account
+}
