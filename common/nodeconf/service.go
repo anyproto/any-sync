@@ -23,6 +23,7 @@ var log = logger.NewNamed(CName)
 type Service interface {
 	GetLast() Configuration
 	GetById(id string) Configuration
+	ConsensusPeers() []string
 	app.Component
 }
 
@@ -30,7 +31,8 @@ type service struct {
 	accountId string
 	pool      pool.Pool
 
-	last Configuration
+	consensusPeers []string
+	last           Configuration
 }
 
 type Node struct {
@@ -67,6 +69,7 @@ func (s *service) Init(a *app.App) (err error) {
 	members := make([]chash.Member, 0, len(conf.Nodes))
 	for _, n := range conf.Nodes {
 		if n.IsConsensus {
+			s.consensusPeers = append(s.consensusPeers, n.PeerId)
 			continue
 		}
 		var member *Node
@@ -94,6 +97,10 @@ func (s *service) GetLast() Configuration {
 func (s *service) GetById(id string) Configuration {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (s *service) ConsensusPeers() []string {
+	return s.consensusPeers
 }
 
 func nodeFromConfigNode(
