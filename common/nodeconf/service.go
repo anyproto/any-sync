@@ -64,9 +64,9 @@ func (s *service) Init(a *app.App) (err error) {
 	}); err != nil {
 		return
 	}
-	members := make([]chash.Member, 0, len(conf.Nodes)-1)
+	members := make([]chash.Member, 0, len(conf.Nodes))
 	for _, n := range conf.Nodes {
-		if n.PeerId == conf.Account.PeerId {
+		if n.IsConsensus {
 			continue
 		}
 		var member *Node
@@ -74,7 +74,6 @@ func (s *service) Init(a *app.App) (err error) {
 		if err != nil {
 			return
 		}
-
 		members = append(members, member)
 	}
 	if err = config.chash.AddMembers(members...); err != nil {
