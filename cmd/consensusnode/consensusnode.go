@@ -15,6 +15,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/account"
 	"go.uber.org/zap"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"

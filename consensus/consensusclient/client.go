@@ -2,15 +2,12 @@ package consensusclient
 
 import (
 	"context"
-	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
-	"go.uber.org/zap"
-	"math/rand"
-	"sync"
 )
 
 const CName = "consensus.client"
@@ -31,8 +28,6 @@ type Service interface {
 type service struct {
 	pool     pool.Pool
 	nodeconf nodeconf.Service
-	client   consensusproto.DRPCConsensusClient
-	mu       sync.Mutex
 }
 
 func (s *service) Init(a *app.App) (err error) {
@@ -46,27 +41,19 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) getClient(ctx context.Context) (consensusproto.DRPCConsensusClient, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.client != nil {
-		return s.client, nil
+	peer, err := s.pool.GetOneOf(ctx, s.nodeconf.ConsensusPeers())
+	if err != nil {
+		return nil, err
 	}
-	peers := s.nodeconf.ConsensusPeers()
-	rand.Shuffle(len(peers), func(i, j int) {
-		peers[i], peers[j] = peers[j], peers[i]
-	})
+	return consensusproto.NewDRPCConsensusClient(peer), nil
+}
 
-	for _, peerId := range peers {
-		peer, err := s.pool.Get(ctx, peerId)
-		if err != nil {
-			log.Warn("can't connect to peer", zap.String("peerId", peerId), zap.Error(err))
-			continue
-		} else {
-			s.client = consensusproto.NewDRPCConsensusClient(peer)
-			return s.client, nil
-		}
+func (s *service) dialClient(ctx context.Context) (consensusproto.DRPCConsensusClient, error) {
+	peer, err := s.pool.DialOneOf(ctx, s.nodeconf.ConsensusPeers())
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("unable to connect any consensus node")
+	return consensusproto.NewDRPCConsensusClient(peer), nil
 }
 
 func (s *service) AddLog(ctx context.Context, clog *consensusproto.Log) (err error) {
@@ -74,9 +61,11 @@ func (s *service) AddLog(ctx context.Context, clog *consensusproto.Log) (err err
 	if err != nil {
 		return
 	}
-	_, err = cl.AddLog(ctx, &consensusproto.AddLogRequest{
+	if _, err = cl.AddLog(ctx, &consensusproto.AddLogRequest{
 		Log: clog,
-	})
+	}); err != nil {
+		return rpcerr.Unwrap(err)
+	}
 	return
 }
 
@@ -85,19 +74,24 @@ func (s *service) AddRecord(ctx context.Context, logId []byte, clog *consensuspr
 	if err != nil {
 		return
 	}
-	_, err = cl.AddRecord(ctx, &consensusproto.AddRecordRequest{
+	if _, err = cl.AddRecord(ctx, &consensusproto.AddRecordRequest{
 		LogId:  logId,
 		Record: clog,
-	})
+	}); err != nil {
+		return rpcerr.Unwrap(err)
+	}
 	return
 }
 
 func (s *service) WatchLog(ctx context.Context, logId []byte) (stream consensusproto.DRPCConsensus_WatchLogClient, err error) {
-	cl, err := s.getClient(ctx)
+	cl, err := s.dialClient(ctx)
 	if err != nil {
 		return
 	}
-	return cl.WatchLog(ctx, &consensusproto.WatchLogRequest{
+	if stream, err = cl.WatchLog(ctx, &consensusproto.WatchLogRequest{
 		LogId: logId,
-	})
+	}); err != nil {
+		return nil, rpcerr.Unwrap(err)
+	}
+	return
 }

@@ -52,8 +52,10 @@ func main() {
 		configs = append(configs, cfg)
 
 		node := config.Node{
-			PeerId:  cfg.Account.PeerId,
-			Address: cfg.GrpcServer.ListenAddrs[0],
+			PeerId:        cfg.Account.PeerId,
+			Address:       cfg.GrpcServer.ListenAddrs[0],
+			SigningKey:    cfg.Account.SigningKey,
+			EncryptionKey: cfg.Account.EncryptionKey,
 		}
 		nodes = append(nodes, node)
 	}
@@ -67,9 +69,11 @@ func main() {
 		consConfigs = append(consConfigs, cfg)
 
 		node := config.Node{
-			PeerId:      cfg.Account.PeerId,
-			Address:     cfg.GrpcServer.ListenAddrs[0],
-			IsConsensus: true,
+			PeerId:        cfg.Account.PeerId,
+			Address:       cfg.GrpcServer.ListenAddrs[0],
+			SigningKey:    cfg.Account.SigningKey,
+			EncryptionKey: cfg.Account.EncryptionKey,
+			IsConsensus:   true,
 		}
 		nodes = append(nodes, node)
 	}
