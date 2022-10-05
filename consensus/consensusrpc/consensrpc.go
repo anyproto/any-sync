@@ -61,6 +61,7 @@ func (c *consensusRpc) WatchLog(req *consensusproto.WatchLogRequest, rpcStream c
 			}); err != nil {
 				return err
 			}
+			logSent = true
 		} else {
 			recs := stream.WaitRecords()
 			if len(recs) == 0 {
