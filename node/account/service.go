@@ -24,8 +24,7 @@ func New() app.Component {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	cfg := a.MustComponent(config.CName).(*config.Config)
-	acc := cfg.Account
+	acc := a.MustComponent(config.CName).(commonaccount.ConfigGetter).GetAccount()
 
 	decodedEncryptionKey, err := keys.DecodeKeyFromString(
 		acc.EncryptionKey,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	commonaccount "github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -34,7 +35,7 @@ type service struct {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	account := a.MustComponent(config.CName).(*config.Config).Account
+	account := a.MustComponent(config.CName).(commonaccount.ConfigGetter).GetAccount()
 	pkb, err := keys.DecodeBytesFromString(account.SigningKey)
 	if err != nil {
 		return

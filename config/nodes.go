@@ -3,6 +3,7 @@ package config
 type Node struct {
 	PeerId        string `yaml:"peerId"`
 	Address       string `yaml:"address"`
-	SigningKey    string `yaml:"signingKey"`
-	EncryptionKey string `yaml:"encryptionKey"`
+	SigningKey    string `yaml:"signingKey,omitempty"`
+	EncryptionKey string `yaml:"encryptionKey,omitempty"`
+	IsConsensus   bool   `yaml:"isConsensus,omitempty"`
 }
