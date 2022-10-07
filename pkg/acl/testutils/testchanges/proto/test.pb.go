@@ -60,6 +60,7 @@ var xxx_messageInfo_PlainTextChange proto.InternalMessageInfo
 
 type PlainTextChange_Content struct {
 	// Types that are valid to be assigned to Value:
+	//
 	//	*PlainTextChange_Content_TextAppend
 	Value isPlainTextChange_Content_Value `protobuf_oneof:"value"`
 }

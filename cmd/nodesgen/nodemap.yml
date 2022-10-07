@@ -5,3 +5,13 @@ nodes:
   - grpcAddresses:
       - "127.0.0.1:4431"
     apiPort: "8081"
+  - grpcAddresses:
+      - "127.0.0.1:4432"
+    apiPort: "8082"
+consensus:
+  - grpcAddresses:
+      - "127.0.0.1:4530"
+  - grpcAddresses:
+      - "127.0.0.1:4531"
+  - grpcAddresses:
+      - "127.0.0.1:4532"

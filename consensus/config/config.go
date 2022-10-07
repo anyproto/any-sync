@@ -1,9 +1,8 @@
 package config
 
 import (
-	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 )
@@ -23,16 +22,12 @@ func NewFromFile(path string) (c *Config, err error) {
 }
 
 type Config struct {
-	Anytype    Anytype    `yaml:"anytype"`
-	GrpcServer GrpcServer `yaml:"grpcServer"`
-	Account    Account    `yaml:"account"`
-	APIServer  APIServer  `yaml:"apiServer"`
-	Nodes      []Node     `yaml:"nodes"`
-	Space      Space      `yaml:"space"`
+	GrpcServer config.GrpcServer `yaml:"grpcServer"`
+	Account    config.Account    `yaml:"account"`
+	Mongo      Mongo             `yaml:"mongo"`
 }
 
 func (c *Config) Init(a *app.App) (err error) {
-	logger.NewNamed("config").Info(fmt.Sprint(c.Space))
 	return
 }
 
@@ -40,14 +35,14 @@ func (c Config) Name() (name string) {
 	return CName
 }
 
-func (c Config) GetAnytype() Anytype {
-	return c.Anytype
+func (c Config) GetMongo() Mongo {
+	return c.Mongo
 }
 
-func (c Config) GetGRPCServer() GrpcServer {
+func (c Config) GetGRPCServer() config.GrpcServer {
 	return c.GrpcServer
 }
 
-func (c Config) GetAccount() Account {
+func (c Config) GetAccount() config.Account {
 	return c.Account
 }
