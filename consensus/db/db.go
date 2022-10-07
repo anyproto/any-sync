@@ -7,7 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto/consensuserrs"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto/consensuserr"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.uber.org/zap"
@@ -24,9 +24,14 @@ func New() Service {
 type ChangeReceiver func(logId []byte, records []consensus.Record)
 
 type Service interface {
+	// AddLog adds new log db
 	AddLog(ctx context.Context, log consensus.Log) (err error)
+	// AddRecord adds new record to existing log
+	// returns consensuserr.ErrConflict if record didn't match or log not found
 	AddRecord(ctx context.Context, logId []byte, record consensus.Record) (err error)
+	// FetchLog gets log by id
 	FetchLog(ctx context.Context, logId []byte) (log consensus.Log, err error)
+	// SetChangeReceiver sets the receiver for updates, it must be called before app.Run stage
 	SetChangeReceiver(receiver ChangeReceiver) (err error)
 	app.ComponentRunnable
 }
@@ -69,7 +74,7 @@ func (s *service) Run(ctx context.Context) (err error) {
 func (s *service) AddLog(ctx context.Context, l consensus.Log) (err error) {
 	_, err = s.logColl.InsertOne(ctx, l)
 	if mongo.IsDuplicateKeyError(err) {
-		return consensuserrs.ErrLogExists
+		return consensuserr.ErrLogExists
 	}
 	return
 }
@@ -101,10 +106,10 @@ func (s *service) AddRecord(ctx context.Context, logId []byte, record consensus.
 	}, upd)
 	if err != nil {
 		log.Error("addRecord update error", zap.Error(err))
-		return consensuserrs.ErrUnexpected
+		return consensuserr.ErrUnexpected
 	}
 	if result.ModifiedCount == 0 {
-		return consensuserrs.ErrConflict
+		return consensuserr.ErrConflict
 	}
 	return
 }
@@ -112,7 +117,7 @@ func (s *service) AddRecord(ctx context.Context, logId []byte, record consensus.
 func (s *service) FetchLog(ctx context.Context, logId []byte) (l consensus.Log, err error) {
 	if err = s.logColl.FindOne(ctx, findLogQuery{Id: logId}).Decode(&l); err != nil {
 		if err == mongo.ErrNoDocuments {
-			err = consensuserrs.ErrLogNotFound
+			err = consensuserr.ErrLogNotFound
 		}
 		return
 	}
@@ -162,7 +167,9 @@ func (s *service) streamListener(stream *mongo.ChangeStream) {
 	for stream.Next(s.streamCtx) {
 		var res streamResult
 		if err := stream.Decode(&res); err != nil {
-			log.Error("stream decode error:", zap.Error(err))
+			// mongo driver maintains connections and handles reconnects so that the stream will work as usual in these cases
+			// here we have an unexpected error and should stop any operations to avoid an inconsistent state between db and cache
+			log.Fatal("stream decode error:", zap.Error(err))
 		}
 		s.changeReceiver(res.DocumentKey.Id, res.UpdateDescription.UpdateFields.Records)
 	}

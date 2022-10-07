@@ -15,7 +15,6 @@ enum ErrCodes {
 message Log {
     bytes id = 1;
     repeated Record records = 2;
-    uint64 createdUnix = 3;
 }
 
 message Record {

@@ -8,6 +8,7 @@ import (
 	"sync"
 )
 
+// Stream is a buffer that receives updates from object and gives back to a client
 type Stream struct {
 	id     uint64
 	logIds map[string]struct{}
@@ -16,6 +17,7 @@ type Stream struct {
 	s      *service
 }
 
+// LogIds returns watched log ids
 func (s *Stream) LogIds() [][]byte {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -26,14 +28,18 @@ func (s *Stream) LogIds() [][]byte {
 	return logIds
 }
 
+// AddRecords adds new records to stream, called by objects
 func (s *Stream) AddRecords(logId []byte, records []consensus.Record) (err error) {
 	return s.mb.Add(consensus.Log{Id: logId, Records: records})
 }
 
+// WaitLogs wait for new log records
+// empty returned slice means that stream is closed
 func (s *Stream) WaitLogs() []consensus.Log {
 	return s.mb.Wait()
 }
 
+// WatchIds adds given ids to subscription
 func (s *Stream) WatchIds(ctx context.Context, logIds [][]byte) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -49,6 +55,7 @@ func (s *Stream) WatchIds(ctx context.Context, logIds [][]byte) {
 	return
 }
 
+// UnwatchIds removes given ids from subscription
 func (s *Stream) UnwatchIds(ctx context.Context, logIds [][]byte) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -64,6 +71,7 @@ func (s *Stream) UnwatchIds(ctx context.Context, logIds [][]byte) {
 	return
 }
 
+// Close closes stream and unsubscribes all ids
 func (s *Stream) Close() {
 	_ = s.mb.Close()
 	s.mu.Lock()
