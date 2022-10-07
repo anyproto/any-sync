@@ -42,7 +42,7 @@ type DRPCConsensusClient interface {
 
 	AddLog(ctx context.Context, in *AddLogRequest) (*Ok, error)
 	AddRecord(ctx context.Context, in *AddRecordRequest) (*Ok, error)
-	WatchLog(ctx context.Context, in *WatchLogRequest) (DRPCConsensus_WatchLogClient, error)
+	WatchLog(ctx context.Context) (DRPCConsensus_WatchLogClient, error)
 }
 
 type drpcConsensusClient struct {
@@ -73,28 +73,27 @@ func (c *drpcConsensusClient) AddRecord(ctx context.Context, in *AddRecordReques
 	return out, nil
 }
 
-func (c *drpcConsensusClient) WatchLog(ctx context.Context, in *WatchLogRequest) (DRPCConsensus_WatchLogClient, error) {
+func (c *drpcConsensusClient) WatchLog(ctx context.Context) (DRPCConsensus_WatchLogClient, error) {
 	stream, err := c.cc.NewStream(ctx, "/anyConsensus.Consensus/WatchLog", drpcEncoding_File_consensus_consensusproto_protos_consensus_proto{})
 	if err != nil {
 		return nil, err
 	}
 	x := &drpcConsensus_WatchLogClient{stream}
-	if err := x.MsgSend(in, drpcEncoding_File_consensus_consensusproto_protos_consensus_proto{}); err != nil {
-		return nil, err
-	}
-	if err := x.CloseSend(); err != nil {
-		return nil, err
-	}
 	return x, nil
 }
 
 type DRPCConsensus_WatchLogClient interface {
 	drpc.Stream
+	Send(*WatchLogRequest) error
 	Recv() (*WatchLogEvent, error)
 }
 
 type drpcConsensus_WatchLogClient struct {
 	drpc.Stream
+}
+
+func (x *drpcConsensus_WatchLogClient) Send(m *WatchLogRequest) error {
+	return x.MsgSend(m, drpcEncoding_File_consensus_consensusproto_protos_consensus_proto{})
 }
 
 func (x *drpcConsensus_WatchLogClient) Recv() (*WatchLogEvent, error) {
@@ -112,7 +111,7 @@ func (x *drpcConsensus_WatchLogClient) RecvMsg(m *WatchLogEvent) error {
 type DRPCConsensusServer interface {
 	AddLog(context.Context, *AddLogRequest) (*Ok, error)
 	AddRecord(context.Context, *AddRecordRequest) (*Ok, error)
-	WatchLog(*WatchLogRequest, DRPCConsensus_WatchLogStream) error
+	WatchLog(DRPCConsensus_WatchLogStream) error
 }
 
 type DRPCConsensusUnimplementedServer struct{}
@@ -125,7 +124,7 @@ func (s *DRPCConsensusUnimplementedServer) AddRecord(context.Context, *AddRecord
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCConsensusUnimplementedServer) WatchLog(*WatchLogRequest, DRPCConsensus_WatchLogStream) error {
+func (s *DRPCConsensusUnimplementedServer) WatchLog(DRPCConsensus_WatchLogStream) error {
 	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
@@ -158,8 +157,7 @@ func (DRPCConsensusDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return nil, srv.(DRPCConsensusServer).
 					WatchLog(
-						in1.(*WatchLogRequest),
-						&drpcConsensus_WatchLogStream{in2.(drpc.Stream)},
+						&drpcConsensus_WatchLogStream{in1.(drpc.Stream)},
 					)
 			}, DRPCConsensusServer.WatchLog, true
 	default:
@@ -206,6 +204,7 @@ func (x *drpcConsensus_AddRecordStream) SendAndClose(m *Ok) error {
 type DRPCConsensus_WatchLogStream interface {
 	drpc.Stream
 	Send(*WatchLogEvent) error
+	Recv() (*WatchLogRequest, error)
 }
 
 type drpcConsensus_WatchLogStream struct {
@@ -214,4 +213,16 @@ type drpcConsensus_WatchLogStream struct {
 
 func (x *drpcConsensus_WatchLogStream) Send(m *WatchLogEvent) error {
 	return x.MsgSend(m, drpcEncoding_File_consensus_consensusproto_protos_consensus_proto{})
+}
+
+func (x *drpcConsensus_WatchLogStream) Recv() (*WatchLogRequest, error) {
+	m := new(WatchLogRequest)
+	if err := x.MsgRecv(m, drpcEncoding_File_consensus_consensusproto_protos_consensus_proto{}); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (x *drpcConsensus_WatchLogStream) RecvMsg(m *WatchLogRequest) error {
+	return x.MsgRecv(m, drpcEncoding_File_consensus_consensusproto_protos_consensus_proto{})
 }

@@ -2,7 +2,6 @@ package stream
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus"
-	"github.com/cheggaaa/mb/v2"
 	"sync"
 )
 
@@ -10,9 +9,7 @@ type object struct {
 	logId   []byte
 	records []consensus.Record
 
-	streams map[uint32]*stream
-
-	lastStreamId uint32
+	streams map[uint64]*Stream
 
 	mu sync.Mutex
 }
@@ -27,7 +24,7 @@ func (o *object) AddRecords(recs []consensus.Record) {
 	diff := recs[0 : len(recs)-len(o.records)]
 	o.records = recs
 	for _, st := range o.streams {
-		st.AddRecords(diff)
+		_ = st.AddRecords(o.logId, diff)
 	}
 }
 
@@ -37,18 +34,12 @@ func (o *object) Records() []consensus.Record {
 	return o.records
 }
 
-func (o *object) NewStream() Stream {
+func (o *object) AddStream(s *Stream) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	o.lastStreamId++
-	st := &stream{
-		id:      o.lastStreamId,
-		obj:     o,
-		records: o.records,
-		mb:      mb.New(consensus.Record{}, 100),
-	}
-	o.streams[st.id] = st
-	return st
+	o.streams[s.id] = s
+	_ = s.AddRecords(o.logId, o.records)
+	return
 }
 
 func (o *object) Locked() bool {
@@ -57,7 +48,7 @@ func (o *object) Locked() bool {
 	return len(o.streams) > 0
 }
 
-func (o *object) removeStream(id uint32) {
+func (o *object) RemoveStream(id uint64) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	delete(o.streams, id)

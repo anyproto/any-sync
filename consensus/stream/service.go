@@ -7,8 +7,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/db"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
+	"github.com/cheggaaa/mb/v2"
 	"github.com/mr-tron/base58"
 	"go.uber.org/zap"
+	"sync/atomic"
 	"time"
 )
 
@@ -30,21 +32,15 @@ func New() Service {
 	return &service{}
 }
 
-type Stream interface {
-	LogId() []byte
-	Records() []consensus.Record
-	WaitRecords() []consensus.Record
-	Close()
-}
-
 type Service interface {
-	Subscribe(ctx context.Context, logId []byte) (stream Stream, err error)
+	NewStream() *Stream
 	app.ComponentRunnable
 }
 
 type service struct {
-	db    db.Service
-	cache ocache.OCache
+	db           db.Service
+	cache        ocache.OCache
+	lastStreamId uint64
 }
 
 func (s *service) Init(a *app.App) (err error) {
@@ -58,14 +54,6 @@ func (s *service) Init(a *app.App) (err error) {
 	return s.db.SetChangeReceiver(s.receiveChange)
 }
 
-func (s *service) Subscribe(ctx context.Context, logId []byte) (Stream, error) {
-	obj, err := s.getObject(ctx, logId)
-	if err != nil {
-		return nil, err
-	}
-	return obj.NewStream(), nil
-}
-
 func (s *service) Name() (name string) {
 	return CName
 }
@@ -74,12 +62,39 @@ func (s *service) Run(ctx context.Context) (err error) {
 	return nil
 }
 
+func (s *service) NewStream() *Stream {
+	return &Stream{
+		id:     atomic.AddUint64(&s.lastStreamId, 1),
+		logIds: make(map[string]struct{}),
+		mb:     mb.New(consensus.Log{}, 100),
+		s:      s,
+	}
+}
+
+func (s *service) AddStream(ctx context.Context, logId []byte, stream *Stream) (err error) {
+	obj, err := s.getObject(ctx, logId)
+	if err != nil {
+		return err
+	}
+	obj.AddStream(stream)
+	return
+}
+
+func (s *service) RemoveStream(ctx context.Context, logId []byte, streamId uint64) (err error) {
+	obj, err := s.getObject(ctx, logId)
+	if err != nil {
+		return err
+	}
+	obj.RemoveStream(streamId)
+	return
+}
+
 func (s *service) loadLog(ctx context.Context, id string) (value ocache.Object, err error) {
 	if ctxLog := ctx.Value(ctxLogKey); ctxLog != nil {
 		return &object{
 			logId:   ctxLog.(consensus.Log).Id,
 			records: ctxLog.(consensus.Log).Records,
-			streams: make(map[uint32]*stream),
+			streams: make(map[uint64]*Stream),
 		}, nil
 	}
 	logId := logIdFromString(id)
@@ -90,7 +105,7 @@ func (s *service) loadLog(ctx context.Context, id string) (value ocache.Object, 
 	return &object{
 		logId:   dbLog.Id,
 		records: dbLog.Records,
-		streams: make(map[uint32]*stream),
+		streams: make(map[uint64]*Stream),
 	}, nil
 }
 

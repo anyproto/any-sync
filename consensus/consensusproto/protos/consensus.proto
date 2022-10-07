@@ -31,7 +31,7 @@ service Consensus {
     // AddRecord adds new record to log
     rpc AddRecord(AddRecordRequest) returns (Ok);
     // WatchLog fetches log and subscribes for a changes
-    rpc WatchLog(WatchLogRequest) returns (stream WatchLogEvent);
+    rpc WatchLog(stream WatchLogRequest) returns (stream WatchLogEvent);
 }
 
 message Ok {}
@@ -46,7 +46,8 @@ message AddRecordRequest {
 }
 
 message WatchLogRequest {
-    bytes logId = 1;
+    repeated bytes watchIds = 1;
+    repeated bytes unwatchIds = 2;
 }
 
 message WatchLogEvent {
