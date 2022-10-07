@@ -14,7 +14,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusclient"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto/consensuserrs"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto/consensuserr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/account"
 	"go.uber.org/zap"
 	"gopkg.in/mgo.v2/bson"
@@ -154,7 +154,7 @@ func testCreateLogAndRecord(service consensusclient.Service) (err error) {
 			},
 		},
 	})
-	if err != consensuserrs.ErrLogExists {
+	if err != consensuserr.ErrLogExists {
 		return fmt.Errorf("unexpected error: '%v' want LogExists", zap.Error(err))
 	}
 	err = nil
@@ -181,7 +181,7 @@ func testCreateLogAndRecord(service consensusclient.Service) (err error) {
 		PrevId:      []byte(bson.NewObjectId()),
 		CreatedUnix: uint64(time.Now().Unix()),
 	})
-	if err != consensuserrs.ErrConflict {
+	if err != consensuserr.ErrConflict {
 		return fmt.Errorf("unexpected error: '%v' want Conflict", zap.Error(err))
 	}
 	err = nil

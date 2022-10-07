@@ -5,7 +5,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto/consensuserrs"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto/consensuserr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -100,7 +100,7 @@ func TestService_FetchLog(t *testing.T) {
 		defer fx.Finish(t)
 		l, err := fx.FetchLog(ctx, []byte("not exists"))
 		assert.Empty(t, l)
-		assert.ErrorIs(t, err, consensuserrs.ErrLogNotFound)
+		assert.ErrorIs(t, err, consensuserr.ErrLogNotFound)
 	})
 }
 

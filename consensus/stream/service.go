@@ -32,7 +32,9 @@ func New() Service {
 	return &service{}
 }
 
+// Service maintains a cache for logs (receive updates from db) and creates new stream objects with able to subscribe/unsubscribe to log ids
 type Service interface {
+	// NewStream creates new stream with able to watch and unwatch log ids
 	NewStream() *Stream
 	app.ComponentRunnable
 }
@@ -71,6 +73,7 @@ func (s *service) NewStream() *Stream {
 	}
 }
 
+// AddStream to object with given logId
 func (s *service) AddStream(ctx context.Context, logId []byte, stream *Stream) (err error) {
 	obj, err := s.getObject(ctx, logId)
 	if err != nil {
@@ -80,6 +83,7 @@ func (s *service) AddStream(ctx context.Context, logId []byte, stream *Stream) (
 	return
 }
 
+// RemoveStream from object with five logId
 func (s *service) RemoveStream(ctx context.Context, logId []byte, streamId uint64) (err error) {
 	obj, err := s.getObject(ctx, logId)
 	if err != nil {

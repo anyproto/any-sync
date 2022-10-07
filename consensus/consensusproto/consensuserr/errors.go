@@ -1,4 +1,4 @@
-package consensuserrs
+package consensuserr
 
 import (
 	"fmt"

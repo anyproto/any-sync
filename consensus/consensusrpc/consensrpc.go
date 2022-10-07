@@ -17,6 +17,7 @@ func New() app.Component {
 	return &consensusRpc{}
 }
 
+// consensusRpc implements consensus rpc server
 type consensusRpc struct {
 	db     db.Service
 	stream stream.Service
