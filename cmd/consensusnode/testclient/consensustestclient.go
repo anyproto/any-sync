@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -17,10 +18,12 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/account"
 	"go.uber.org/zap"
 	"gopkg.in/mgo.v2/bson"
+	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -76,6 +79,9 @@ func main() {
 	} else {
 		log.Info("test success!")
 	}
+
+	b := &bench{service: a.MustComponent(consensusclient.CName).(consensusclient.Service)}
+	b.run()
 
 	// wait exit signal
 	exit := make(chan os.Signal, 1)
@@ -206,11 +212,18 @@ func testStream(service consensusclient.Service) (err error) {
 	}
 	log.Info("log created", zap.String("id", bson.ObjectId(newLogId).Hex()), zap.Duration("dur", time.Since(st)))
 
-	stream, err := service.WatchLog(ctx, newLogId)
+	stream, err := service.WatchLog(ctx)
 	if err != nil {
 		return err
 	}
 	defer stream.Close()
+
+	st = time.Now()
+	if err = stream.WatchIds([][]byte{newLogId}); err != nil {
+		return err
+	}
+	log.Info("watch", zap.String("id", bson.ObjectId(newLogId).Hex()), zap.Duration("dur", time.Since(st)))
+
 	sr := readStream(stream)
 	for i := 0; i < 10; i++ {
 		st = time.Now()
@@ -226,35 +239,129 @@ func testStream(service consensusclient.Service) (err error) {
 		lastRecId = recId
 		log.Info("record created", zap.String("id", bson.ObjectId(lastRecId).Hex()), zap.Duration("dur", time.Since(st)))
 	}
-	fmt.Println(sr.log.Records)
+	sr.validate()
 	return nil
 }
 
-func readStream(stream consensusproto.DRPCConsensus_WatchLogClient) *streamReader {
-	sr := &streamReader{stream: stream}
+func readStream(stream consensusclient.Stream) *streamReader {
+	sr := &streamReader{stream: stream, logs: map[string]*consensusproto.Log{}}
 	go sr.read()
 	return sr
 }
 
 type streamReader struct {
-	stream consensusproto.DRPCConsensus_WatchLogClient
-	log    *consensusproto.Log
+	stream consensusclient.Stream
+	logs   map[string]*consensusproto.Log
 }
 
 func (sr *streamReader) read() {
 	for {
-		event, err := sr.stream.Recv()
-		if err != nil {
+		recs := sr.stream.WaitLogs()
+		if len(recs) == 0 {
 			return
 		}
-		fmt.Println("received event", event)
-		if sr.log == nil {
-			sr.log = &consensusproto.Log{
-				Id:      event.LogId,
-				Records: event.Records,
+		for _, rec := range recs {
+			if el, ok := sr.logs[string(rec.Id)]; !ok {
+				sr.logs[string(rec.Id)] = &consensusproto.Log{
+					Id:      rec.Id,
+					Records: rec.Records,
+				}
+			} else {
+				el.Records = append(rec.Records, el.Records...)
+				sr.logs[string(rec.Id)] = el
 			}
-		} else {
-			sr.log.Records = append(event.Records, sr.log.Records...)
 		}
+	}
+}
+
+func (sr *streamReader) validate() {
+	var lc, rc int
+	for _, log := range sr.logs {
+		lc++
+		rc += len(log.Records)
+		validateLog(log)
+	}
+	fmt.Println("logs valid; log count:", lc, "records:", rc)
+}
+
+func validateLog(log *consensusproto.Log) {
+	var prevId []byte
+	for _, rec := range log.Records {
+		if len(prevId) != 0 {
+			if !bytes.Equal(prevId, rec.Id) {
+				panic(fmt.Sprintf("invalid log: %+v", log))
+			}
+		}
+		prevId = rec.PrevId
+	}
+}
+
+type bench struct {
+	service consensusclient.Service
+	stream  consensusclient.Stream
+}
+
+func (b *bench) run() {
+	var err error
+	b.stream, err = b.service.WatchLog(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	defer b.stream.Close()
+	sr := readStream(b.stream)
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		time.Sleep(time.Second / 100)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			b.client()
+		}()
+		fmt.Println("total streams:", i+1)
+	}
+	wg.Wait()
+	sr.validate()
+}
+
+func (b *bench) client() {
+	ctx := context.Background()
+
+	// create log
+	newLogId := []byte(bson.NewObjectId())
+	lastRecId := []byte(bson.NewObjectId())
+	err := b.service.AddLog(ctx, &consensusproto.Log{
+		Id: newLogId,
+		Records: []*consensusproto.Record{
+			{
+				Id:          lastRecId,
+				Payload:     []byte("test"),
+				CreatedUnix: uint64(time.Now().Unix()),
+			},
+		},
+	})
+	for i := 0; i < 5; i++ {
+		fmt.Println("watch", bson.ObjectId(newLogId).Hex())
+		if err = b.stream.WatchIds([][]byte{newLogId}); err != nil {
+			panic(err)
+		}
+		for i := 0; i < rand.Intn(20); i++ {
+			time.Sleep(time.Millisecond * time.Duration(rand.Intn(10000)))
+			recId := []byte(bson.NewObjectId())
+			err = b.service.AddRecord(ctx, newLogId, &consensusproto.Record{
+				Id:          recId,
+				PrevId:      lastRecId,
+				Payload:     []byte("some payload 1 2 3 4 5  6 6 7     oijoj"),
+				CreatedUnix: uint64(time.Now().Unix()),
+			})
+			if err != nil {
+				panic(err)
+			}
+			lastRecId = recId
+		}
+		if err = b.stream.UnwatchIds([][]byte{newLogId}); err != nil {
+			panic(err)
+		}
+		fmt.Println("unwatch", bson.ObjectId(newLogId).Hex())
+		time.Sleep(time.Minute * 1)
 	}
 }

@@ -21,7 +21,7 @@ func New() Service {
 type Service interface {
 	AddLog(ctx context.Context, clog *consensusproto.Log) (err error)
 	AddRecord(ctx context.Context, logId []byte, clog *consensusproto.Record) (err error)
-	WatchLog(ctx context.Context, logId []byte) (stream consensusproto.DRPCConsensus_WatchLogClient, err error)
+	WatchLog(ctx context.Context) (stream Stream, err error)
 	app.Component
 }
 
@@ -83,15 +83,14 @@ func (s *service) AddRecord(ctx context.Context, logId []byte, clog *consensuspr
 	return
 }
 
-func (s *service) WatchLog(ctx context.Context, logId []byte) (stream consensusproto.DRPCConsensus_WatchLogClient, err error) {
+func (s *service) WatchLog(ctx context.Context) (st Stream, err error) {
 	cl, err := s.dialClient(ctx)
 	if err != nil {
 		return
 	}
-	if stream, err = cl.WatchLog(ctx, &consensusproto.WatchLogRequest{
-		LogId: logId,
-	}); err != nil {
+	rpcStream, err := cl.WatchLog(ctx)
+	if err != nil {
 		return nil, rpcerr.Unwrap(err)
 	}
-	return
+	return runStream(rpcStream), nil
 }

@@ -46,34 +46,35 @@ func (c *consensusRpc) AddRecord(ctx context.Context, req *consensusproto.AddRec
 	return &consensusproto.Ok{}, nil
 }
 
-func (c *consensusRpc) WatchLog(req *consensusproto.WatchLogRequest, rpcStream consensusproto.DRPCConsensus_WatchLogStream) error {
-	stream, err := c.stream.Subscribe(rpcStream.Context(), req.LogId)
-	if err != nil {
-		return err
-	}
+func (c *consensusRpc) WatchLog(rpcStream consensusproto.DRPCConsensus_WatchLogStream) error {
+	stream := c.stream.NewStream()
 	defer stream.Close()
-	var logSent bool
+	go c.readStream(stream, rpcStream)
 	for {
-		if !logSent {
-			if err = rpcStream.Send(&consensusproto.WatchLogEvent{
-				LogId:   req.LogId,
-				Records: recordsToProto(stream.Records()),
-			}); err != nil {
-				return err
-			}
-			logSent = true
-		} else {
-			recs := stream.WaitRecords()
-			if len(recs) == 0 {
-				return rpcStream.Close()
-			}
-			if err = rpcStream.Send(&consensusproto.WatchLogEvent{
-				LogId:   req.LogId,
-				Records: recordsToProto(recs),
+		recs := stream.WaitLogs()
+		if len(recs) == 0 {
+			return rpcStream.Close()
+		}
+		for _, rec := range recs {
+			if err := rpcStream.Send(&consensusproto.WatchLogEvent{
+				LogId:   rec.Id,
+				Records: recordsToProto(rec.Records),
 			}); err != nil {
 				return err
 			}
 		}
+	}
+}
+
+func (c *consensusRpc) readStream(st *stream.Stream, rpcStream consensusproto.DRPCConsensus_WatchLogStream) {
+	defer st.Close()
+	for {
+		req, err := rpcStream.Recv()
+		if err != nil {
+			return
+		}
+		st.UnwatchIds(rpcStream.Context(), req.UnwatchIds)
+		st.WatchIds(rpcStream.Context(), req.WatchIds)
 	}
 }
 

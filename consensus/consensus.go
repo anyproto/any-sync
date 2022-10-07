@@ -13,10 +13,3 @@ type Record struct {
 	Payload []byte    `bson:"payload"`
 	Created time.Time `bson:"created"'`
 }
-
-func (l Log) CopyRecords() Log {
-	l2 := l
-	l2.Records = make([]Record, len(l.Records))
-	copy(l2.Records, l.Records)
-	return l2
-}
