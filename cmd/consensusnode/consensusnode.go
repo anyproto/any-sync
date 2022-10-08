@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/config"
@@ -86,7 +87,8 @@ func main() {
 }
 
 func Bootstrap(a *app.App) {
-	a.Register(account.New()).
+	a.Register(metric.New()).
+		Register(account.New()).
 		Register(secure.New()).
 		Register(server.New()).
 		Register(db.New()).

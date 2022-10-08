@@ -25,6 +25,7 @@ type Config struct {
 	GrpcServer config.GrpcServer `yaml:"grpcServer"`
 	Account    config.Account    `yaml:"account"`
 	Mongo      Mongo             `yaml:"mongo"`
+	Metric     config.Metric     `yaml:"metric"`
 }
 
 func (c *Config) Init(a *app.App) (err error) {
@@ -45,4 +46,8 @@ func (c Config) GetGRPCServer() config.GrpcServer {
 
 func (c Config) GetAccount() config.Account {
 	return c.Account
+}
+
+func (c Config) GetMetric() config.Metric {
+	return c.Metric
 }
