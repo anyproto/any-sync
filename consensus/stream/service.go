@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/db"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
@@ -51,6 +52,7 @@ func (s *service) Init(a *app.App) (err error) {
 		ocache.WithTTL(cacheTTL),
 		ocache.WithRefCounter(false),
 		ocache.WithLogger(log.Named("cache").Sugar()),
+		ocache.WithPrometheus(a.MustComponent(metric.CName).(metric.Metric).Registry(), "consensus", "logcache"),
 	)
 
 	return s.db.SetChangeReceiver(s.receiveChange)

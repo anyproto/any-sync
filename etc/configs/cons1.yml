@@ -10,3 +10,5 @@ mongo:
     connect: mongodb://localhost:27017/?w=majority
     database: consensus
     logCollection: log
+metric:
+    addr: "127.0.0.1:4000"
