@@ -88,7 +88,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	defer ctrl.Finish()
 
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
-	nconfMock := mock_nodeconf.NewMockConfiguration(ctrl)
+	connectorMock := mock_nodeconf.NewMockConfConnector(ctrl)
 	cacheMock := mock_cache.NewMockTreeCache(ctrl)
 	stMock := mock_storage.NewMockSpaceStorage(ctrl)
 	clientMock := mock_spacesyncproto.NewMockDRPCSpaceClient(ctrl)
@@ -97,11 +97,11 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	})
 	spaceId := "spaceId"
 	l := logger.NewNamed(spaceId)
-	diffSyncer := newDiffSyncer(spaceId, diffMock, nconfMock, cacheMock, stMock, factory, l)
+	diffSyncer := newDiffSyncer(spaceId, diffMock, connectorMock, cacheMock, stMock, factory, l)
 
 	t.Run("diff syncer sync simple", func(t *testing.T) {
-		nconfMock.EXPECT().
-			ResponsiblePeers(gomock.Any(), spaceId).
+		connectorMock.EXPECT().
+			GetResponsiblePeers(gomock.Any(), spaceId).
 			Return([]peer.Peer{mockPeer{}}, nil)
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).
@@ -115,8 +115,8 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	})
 
 	t.Run("diff syncer sync conf error", func(t *testing.T) {
-		nconfMock.EXPECT().
-			ResponsiblePeers(gomock.Any(), spaceId).
+		connectorMock.EXPECT().
+			GetResponsiblePeers(gomock.Any(), spaceId).
 			Return(nil, fmt.Errorf("some error"))
 
 		require.Error(t, diffSyncer.Sync(ctx))
@@ -127,8 +127,8 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		aclRoot := &aclrecordproto.RawACLRecordWithId{}
 		spaceHeader := &spacesyncproto.SpaceHeader{}
 
-		nconfMock.EXPECT().
-			ResponsiblePeers(gomock.Any(), spaceId).
+		connectorMock.EXPECT().
+			GetResponsiblePeers(gomock.Any(), spaceId).
 			Return([]peer.Peer{mockPeer{}}, nil)
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).
@@ -150,8 +150,8 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	})
 
 	t.Run("diff syncer sync other error", func(t *testing.T) {
-		nconfMock.EXPECT().
-			ResponsiblePeers(gomock.Any(), spaceId).
+		connectorMock.EXPECT().
+			GetResponsiblePeers(gomock.Any(), spaceId).
 			Return([]peer.Peer{mockPeer{}}, nil)
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).

@@ -30,37 +30,42 @@ type syncService struct {
 	spaceId string
 
 	syncClient    SyncClient
-	configuration nodeconf.Configuration
 	clientFactory spacesyncproto.ClientFactory
 
 	streamLoopCtx  context.Context
 	stopStreamLoop context.CancelFunc
+	connector      nodeconf.ConfConnector
 	streamLoopDone chan struct{}
 }
 
-func NewSyncService(spaceId string, headNotifiable HeadNotifiable, cache cache.TreeCache, configuration nodeconf.Configuration) SyncService {
+func NewSyncService(
+	spaceId string,
+	headNotifiable HeadNotifiable,
+	cache cache.TreeCache,
+	configuration nodeconf.Configuration,
+	confConnector nodeconf.ConfConnector) SyncService {
 	var syncHandler SyncHandler
-	pool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
+	streamPool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
 		return syncHandler.HandleMessage(ctx, senderId, message)
 	})
 	factory := newRequestFactory()
-	syncClient := newSyncClient(spaceId, pool, headNotifiable, factory, configuration)
+	syncClient := newSyncClient(spaceId, streamPool, headNotifiable, factory, configuration)
 	syncHandler = newSyncHandler(spaceId, cache, syncClient)
 	return newSyncService(
 		spaceId,
 		syncClient,
 		spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient),
-		configuration)
+		confConnector)
 }
 
 func newSyncService(
 	spaceId string,
 	syncClient SyncClient,
 	clientFactory spacesyncproto.ClientFactory,
-	configuration nodeconf.Configuration) *syncService {
+	connector nodeconf.ConfConnector) *syncService {
 	return &syncService{
 		syncClient:     syncClient,
-		configuration:  configuration,
+		connector:      connector,
 		clientFactory:  clientFactory,
 		spaceId:        spaceId,
 		streamLoopDone: make(chan struct{}),
@@ -81,7 +86,7 @@ func (s *syncService) Close() (err error) {
 func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 	defer close(s.streamLoopDone)
 	checkResponsiblePeers := func() {
-		respPeers, err := s.configuration.ResponsiblePeers(ctx, s.spaceId)
+		respPeers, err := s.connector.DialResponsiblePeers(ctx, s.spaceId)
 		if err != nil {
 			return
 		}

@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 )
@@ -32,6 +33,7 @@ type service struct {
 	configurationService nodeconf.Service
 	storageProvider      storage.SpaceStorageProvider
 	cache                cache.TreeCache
+	pool                 pool.Pool
 }
 
 func (s *service) Init(a *app.App) (err error) {
@@ -39,6 +41,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.storageProvider = a.MustComponent(storage.CName).(storage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.cache = a.MustComponent(cache.CName).(cache.TreeCache)
+	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	return nil
 }
 
@@ -84,8 +87,9 @@ func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {
 		return nil, err
 	}
 	lastConfiguration := s.configurationService.GetLast()
-	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, st, lastConfiguration, s.cache, log)
-	syncService := syncservice.NewSyncService(id, diffService, s.cache, lastConfiguration)
+	confConnector := nodeconf.NewConfConnector(lastConfiguration, s.pool)
+	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, st, confConnector, s.cache, log)
+	syncService := syncservice.NewSyncService(id, diffService, s.cache, lastConfiguration, confConnector)
 	sp := &space{
 		id:          id,
 		syncService: syncService,

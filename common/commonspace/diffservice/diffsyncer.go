@@ -21,17 +21,17 @@ type DiffSyncer interface {
 func newDiffSyncer(
 	spaceId string,
 	diff ldiff.Diff,
-	nconf nodeconf.Configuration,
+	confConnector nodeconf.ConfConnector,
 	cache cache.TreeCache,
 	storage storage.SpaceStorage,
 	clientFactory spacesyncproto.ClientFactory,
 	log *zap.Logger) DiffSyncer {
 	return &diffSyncer{
 		diff:          diff,
-		nconf:         nconf,
 		spaceId:       spaceId,
 		cache:         cache,
 		storage:       storage,
+		confConnector: confConnector,
 		clientFactory: clientFactory,
 		log:           log,
 	}
@@ -40,7 +40,7 @@ func newDiffSyncer(
 type diffSyncer struct {
 	spaceId       string
 	diff          ldiff.Diff
-	nconf         nodeconf.Configuration
+	confConnector nodeconf.ConfConnector
 	cache         cache.TreeCache
 	storage       storage.SpaceStorage
 	clientFactory spacesyncproto.ClientFactory
@@ -50,7 +50,7 @@ type diffSyncer struct {
 func (d *diffSyncer) Sync(ctx context.Context) error {
 	st := time.Now()
 	// diffing with responsible peers according to configuration
-	peers, err := d.nconf.ResponsiblePeers(ctx, d.spaceId)
+	peers, err := d.confConnector.GetResponsiblePeers(ctx, d.spaceId)
 	if err != nil {
 		return err
 	}
