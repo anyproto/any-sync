@@ -58,7 +58,7 @@ func main() {
 	if err != nil {
 		log.Fatal("can't open config file", zap.Error(err))
 	}
-
+	conf.Log.ApplyGlobal()
 	// bootstrap components
 	a.Register(conf)
 	Bootstrap(a)

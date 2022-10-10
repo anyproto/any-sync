@@ -26,6 +26,7 @@ type Config struct {
 	Account    config.Account    `yaml:"account"`
 	Mongo      Mongo             `yaml:"mongo"`
 	Metric     config.Metric     `yaml:"metric"`
+	Log        config.Log        `yaml:"log"`
 }
 
 func (c *Config) Init(a *app.App) (err error) {

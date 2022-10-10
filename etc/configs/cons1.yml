@@ -12,3 +12,7 @@ mongo:
     logCollection: log
 metric:
     addr: "127.0.0.1:4000"
+log:
+  production: true
+  defaultLevel: debug
+
