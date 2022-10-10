@@ -10,7 +10,7 @@ type treeKeys struct {
 }
 
 func (t treeKeys) HeadsKey() string {
-	return fmt.Sprintf("%s/heads", t.id)
+	return fmt.Sprintf("t/%s/heads", t.id)
 }
 
 func (t treeKeys) RootKey() string {
@@ -18,7 +18,7 @@ func (t treeKeys) RootKey() string {
 }
 
 func (t treeKeys) RawChangeKey(id string) string {
-	return fmt.Sprintf("%s/%s", t.id, id)
+	return fmt.Sprintf("t/%s/%s", t.id, id)
 }
 
 type spaceKeys struct {
@@ -33,5 +33,5 @@ func (s spaceKeys) ACLKey() string {
 }
 
 func isTreeKey(path string) bool {
-	return strings.HasPrefix(path, "t/")
+	return strings.HasPrefix(path, "t/") && len(strings.Split(path, "/")) > 2
 }

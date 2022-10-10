@@ -62,7 +62,7 @@ func (s *service) CreateSpace(
 		return
 	}
 
-	return s.GetSpace(ctx, storageCreate.Id)
+	return s.GetSpace(ctx, storageCreate.SpaceHeaderWithId.GetId())
 }
 
 func (s *service) DeriveSpace(
@@ -78,7 +78,7 @@ func (s *service) DeriveSpace(
 		return
 	}
 
-	return s.GetSpace(ctx, storageCreate.Id)
+	return s.GetSpace(ctx, storageCreate.SpaceHeaderWithId.GetId())
 }
 
 func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {

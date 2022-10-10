@@ -39,11 +39,21 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload st
 	if err != nil {
 		return
 	}
-	id, err := cid.NewCIDFromBytes(marshalled)
+	signature, err := payload.SigningKey.Sign(marshalled)
 	if err != nil {
 		return
 	}
+	rawHeader := &spacesyncproto.RawSpaceHeader{SpaceHeader: marshalled, Signature: signature}
+	marshalled, err = rawHeader.Marshal()
+	if err != nil {
+		return
+	}
+	id, err := cid.NewCIDFromBytes(marshalled)
 	spaceId := NewSpaceId(id, payload.ReplicationKey)
+	rawHeaderWithId := &spacesyncproto.RawSpaceHeaderWithId{
+		RawHeader: marshalled,
+		Id:        spaceId,
+	}
 
 	// encrypting read key
 	hasher := fnv.New64()
@@ -74,9 +84,8 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload st
 
 	// creating storage
 	storagePayload = storage.SpaceStorageCreatePayload{
-		RecWithId:   rawWithId,
-		SpaceHeader: header,
-		Id:          id,
+		RecWithId:         rawWithId,
+		SpaceHeaderWithId: rawHeaderWithId,
 	}
 	return
 }
@@ -118,11 +127,21 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload st
 	if err != nil {
 		return
 	}
-	id, err := cid.NewCIDFromBytes(marshalled)
+	signature, err := payload.SigningKey.Sign(marshalled)
 	if err != nil {
 		return
 	}
+	rawHeader := &spacesyncproto.RawSpaceHeader{SpaceHeader: marshalled, Signature: signature}
+	marshalled, err = rawHeader.Marshal()
+	if err != nil {
+		return
+	}
+	id, err := cid.NewCIDFromBytes(marshalled)
 	spaceId := NewSpaceId(id, repKey)
+	rawHeaderWithId := &spacesyncproto.RawSpaceHeaderWithId{
+		RawHeader: marshalled,
+		Id:        spaceId,
+	}
 
 	// deriving and encrypting read key
 	readKey, err := aclrecordproto.ACLReadKeyDerive(signPrivKey, encPrivKey)
@@ -157,9 +176,8 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload st
 
 	// creating storage
 	storagePayload = storage.SpaceStorageCreatePayload{
-		RecWithId:   rawWithId,
-		SpaceHeader: header,
-		Id:          id,
+		RecWithId:         rawWithId,
+		SpaceHeaderWithId: rawHeaderWithId,
 	}
 	return
 }

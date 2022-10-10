@@ -28,9 +28,17 @@ func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err e
 	if err != nil {
 		return
 	}
+	if heads == nil {
+		err = storage.ErrUnknownTreeId
+		return
+	}
 
 	res, err := db.Get([]byte(path.RootKey()))
 	if err != nil {
+		return
+	}
+	if res == nil {
+		err = storage.ErrUnknownTreeId
 		return
 	}
 
@@ -53,31 +61,46 @@ func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err e
 }
 
 func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
-	path := treeKeys{payload.TreeId}
+	keys := treeKeys{id: payload.TreeId}
+	has, err := db.Has([]byte(keys.RootKey()))
+	if err != nil {
+		return
+	}
+	if !has {
+		err = storage.ErrUnknownTreeId
+		return
+	}
+
 	heads := createHeadsPayload(payload.Heads)
 
 	for _, ch := range payload.Changes {
-		err = db.Put([]byte(path.RawChangeKey(ch.Id)), ch.GetRawChange())
+		err = db.Put([]byte(keys.RawChangeKey(ch.Id)), ch.GetRawChange())
 		if err != nil {
 			return
 		}
 	}
 
-	err = db.Put([]byte(path.HeadsKey()), heads)
+	err = db.Put([]byte(keys.HeadsKey()), heads)
 	if err != nil {
 		return
 	}
 
-	err = db.Put([]byte(path.RootKey()), payload.RootRawChange.GetRawChange())
+	// duplicating same change in raw changes
+	err = db.Put([]byte(keys.RawChangeKey(payload.TreeId)), payload.RootRawChange.GetRawChange())
+	if err != nil {
+		return
+	}
+
+	err = db.Put([]byte(keys.RootKey()), payload.RootRawChange.GetRawChange())
 	if err != nil {
 		return
 	}
 
 	ts = &treeStorage{
 		db:        db,
-		path:      path,
-		rootPath:  []byte(path.RootKey()),
-		headsPath: []byte(path.HeadsKey()),
+		path:      keys,
+		rootPath:  []byte(keys.RootKey()),
+		headsPath: []byte(keys.HeadsKey()),
 		id:        payload.TreeId,
 		heads:     payload.Heads,
 		root:      payload.RootRawChange,

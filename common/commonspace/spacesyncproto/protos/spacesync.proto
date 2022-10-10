@@ -102,8 +102,7 @@ message ObjectErrorResponse {
 
 // PushSpaceRequest is a request to add space on a node containing only one acl record
 message PushSpaceRequest {
-    string spaceId = 1;
-    SpaceHeader spaceHeader = 2;
+    RawSpaceHeaderWithId spaceHeader = 2;
     aclrecord.RawACLRecordWithId aclRoot = 3;
 }
 
@@ -117,4 +116,14 @@ message SpaceHeader {
     string spaceType = 3;
     uint64 replicationKey = 4;
     bytes seed = 5;
+}
+
+message RawSpaceHeader {
+    bytes spaceHeader = 1;
+    bytes signature = 2;
+}
+
+message RawSpaceHeaderWithId {
+    bytes rawHeader = 1;
+    string id = 2;
 }

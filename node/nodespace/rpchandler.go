@@ -12,7 +12,7 @@ type rpcHandler struct {
 }
 
 func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpaceRequest) (resp *spacesyncproto.PushSpaceResponse, err error) {
-	_, err = r.s.GetSpace(ctx, req.SpaceId)
+	_, err = r.s.GetSpace(ctx, req.SpaceHeader.Id)
 	if err == nil {
 		err = spacesyncproto.ErrSpaceExists
 		return
@@ -23,9 +23,8 @@ func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpac
 	}
 
 	payload := storage.SpaceStorageCreatePayload{
-		RecWithId:   req.AclRoot,
-		SpaceHeader: req.SpaceHeader,
-		Id:          req.SpaceId,
+		RecWithId:         req.AclRoot,
+		SpaceHeaderWithId: req.SpaceHeader,
 	}
 	_, err = r.s.spaceStorageProvider.CreateSpaceStorage(payload)
 	if err != nil {

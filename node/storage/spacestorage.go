@@ -49,7 +49,8 @@ func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceS
 }
 
 func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreatePayload) (store spacestorage.SpaceStorage, err error) {
-	dbPath := path.Join(rootPath, payload.Id)
+	// TODO: add payload verification
+	dbPath := path.Join(rootPath, payload.SpaceHeaderWithId.Id)
 	db, err := pogreb.Open(dbPath, nil)
 	if err != nil {
 		return
@@ -65,19 +66,24 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 		return
 	}
 
-	err = db.Put([]byte(payload.RecWithId.Id), payload.RecWithId.Payload)
+	marshalledRec, err := payload.RecWithId.Marshal()
+	if err != nil {
+		return
+	}
+	err = db.Put([]byte(keys.ACLKey()), marshalledRec)
 	if err != nil {
 		return
 	}
 
-	marshalled, err := payload.SpaceHeader.Marshal()
+	marshalledHeader, err := payload.SpaceHeaderWithId.Marshal()
 	if err != nil {
 		return
 	}
-	err = db.Put([]byte(payload.Id), marshalled)
+	err = db.Put([]byte(keys.HeaderKey()), marshalledHeader)
 	if err != nil {
 		return
 	}
+
 	store = &spaceStorage{
 		objDb: db,
 		keys:  keys,
@@ -100,6 +106,7 @@ func (s *spaceStorage) CreateTreeStorage(payload storage.TreeStorageCreatePayloa
 		err = spacestorage.ErrSpaceStorageExists
 		return
 	}
+
 	return createTreeStorage(s.objDb, payload)
 }
 
@@ -107,19 +114,20 @@ func (s *spaceStorage) ACLStorage() (storage.ListStorage, error) {
 	return nil, nil
 }
 
-func (s *spaceStorage) SpaceHeader() (header *spacesyncproto.SpaceHeader, err error) {
+func (s *spaceStorage) SpaceHeader() (header *spacesyncproto.RawSpaceHeaderWithId, err error) {
 	res, err := s.objDb.Get([]byte(s.keys.HeaderKey()))
 	if err != nil {
 		return
 	}
 
-	header = &spacesyncproto.SpaceHeader{}
+	header = &spacesyncproto.RawSpaceHeaderWithId{}
 	err = proto.Unmarshal(res, header)
 	return
 }
 
 func (s *spaceStorage) StoredIds() (ids []string, err error) {
 	index := s.objDb.Items()
+
 	_, value, err := index.Next()
 	for err == nil {
 		strVal := string(value)
@@ -128,6 +136,7 @@ func (s *spaceStorage) StoredIds() (ids []string, err error) {
 		}
 		_, value, err = index.Next()
 	}
+
 	if err != pogreb.ErrIterationDone {
 		return
 	}
