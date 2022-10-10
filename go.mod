@@ -3,6 +3,7 @@ module github.com/anytypeio/go-anytype-infrastructure-experiments
 go 1.18
 
 require (
+	github.com/akrylysov/pogreb v0.10.1
 	github.com/anytypeio/go-chash v0.0.0-20220629194632-4ad1154fe232
 	github.com/awalterschulze/gographviz v0.0.0-20190522210029-fa59802746ab
 	github.com/cespare/xxhash v1.1.0
@@ -61,12 +62,9 @@ require (
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
 	golang.org/x/image v0.0.0-20200119044424-58c23975cae1 // indirect
-	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/tools v0.1.5 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	lukechampine.com/blake3 v1.1.6 // indirect
