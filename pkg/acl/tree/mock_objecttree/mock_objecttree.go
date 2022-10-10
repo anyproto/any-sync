@@ -137,7 +137,7 @@ func (mr *MockObjectTreeMockRecorder) HasChanges(arg0 ...interface{}) *gomock.Ca
 // Header mocks base method.
 func (m *MockObjectTree) Header() *treechangeproto.RawTreeChangeWithId {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HeaderKey")
+	ret := m.ctrl.Call(m, "Header")
 	ret0, _ := ret[0].(*treechangeproto.RawTreeChangeWithId)
 	return ret0
 }
@@ -145,7 +145,7 @@ func (m *MockObjectTree) Header() *treechangeproto.RawTreeChangeWithId {
 // Header indicates an expected call of Header.
 func (mr *MockObjectTreeMockRecorder) Header() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeaderKey", reflect.TypeOf((*MockObjectTree)(nil).Header))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockObjectTree)(nil).Header))
 }
 
 // Heads mocks base method.

@@ -25,7 +25,7 @@ import (
 type pushSpaceRequestMatcher struct {
 	spaceId     string
 	aclRoot     *aclrecordproto.RawACLRecordWithId
-	spaceHeader *spacesyncproto.SpaceHeader
+	spaceHeader *spacesyncproto.RawSpaceHeaderWithId
 }
 
 func (p pushSpaceRequestMatcher) Matches(x interface{}) bool {
@@ -34,7 +34,7 @@ func (p pushSpaceRequestMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	return res.SpaceId == p.spaceId && res.AclRoot == p.aclRoot && res.SpaceHeader == p.spaceHeader
+	return res.AclRoot == p.aclRoot && res.SpaceHeader == p.spaceHeader
 }
 
 func (p pushSpaceRequestMatcher) String() string {
@@ -73,7 +73,7 @@ func (m mockPeer) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) 
 func newPushSpaceRequestMatcher(
 	spaceId string,
 	aclRoot *aclrecordproto.RawACLRecordWithId,
-	spaceHeader *spacesyncproto.SpaceHeader) *pushSpaceRequestMatcher {
+	spaceHeader *spacesyncproto.RawSpaceHeaderWithId) *pushSpaceRequestMatcher {
 	return &pushSpaceRequestMatcher{
 		spaceId:     spaceId,
 		aclRoot:     aclRoot,
@@ -125,7 +125,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	t.Run("diff syncer sync space missing", func(t *testing.T) {
 		aclStorageMock := mock_aclstorage.NewMockListStorage(ctrl)
 		aclRoot := &aclrecordproto.RawACLRecordWithId{}
-		spaceHeader := &spacesyncproto.SpaceHeader{}
+		spaceHeader := &spacesyncproto.RawSpaceHeaderWithId{}
 
 		connectorMock.EXPECT().
 			GetResponsiblePeers(gomock.Any(), spaceId).

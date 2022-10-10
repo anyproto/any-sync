@@ -149,10 +149,10 @@ func (mr *MockSpaceStorageMockRecorder) CreateTreeStorage(arg0 interface{}) *gom
 }
 
 // SpaceHeader mocks base method.
-func (m *MockSpaceStorage) SpaceHeader() (*spacesyncproto.SpaceHeader, error) {
+func (m *MockSpaceStorage) SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SpaceHeader")
-	ret0, _ := ret[0].(*spacesyncproto.SpaceHeader)
+	ret0, _ := ret[0].(*spacesyncproto.RawSpaceHeaderWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
