@@ -104,7 +104,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		rawChangeLoader: deps.rawChangeLoader,
 		tree:            nil,
 		keys:            make(map[uint64]*symmetric.Key),
-		tmpChangesBuf:   make([]*Change, 0, 10),
+		newChangesBuf:   make([]*Change, 0, 10),
 		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
 		notSeenIdxBuf:   make([]int, 0, 10),
 		newSnapshotsBuf: make([]*Change, 0, 10),

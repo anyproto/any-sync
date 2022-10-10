@@ -5,7 +5,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
 )
 
@@ -31,24 +30,24 @@ func (s *syncHandler) HandleMessage(ctx context.Context, senderId string, msg *s
 	content := msg.GetContent()
 	switch {
 	case content.GetFullSyncRequest() != nil:
-		return s.HandleFullSyncRequest(ctx, senderId, content.GetFullSyncRequest(), msg)
+		return s.handleFullSyncRequest(ctx, senderId, content.GetFullSyncRequest(), msg)
 	case content.GetFullSyncResponse() != nil:
-		return s.HandleFullSyncResponse(ctx, senderId, content.GetFullSyncResponse(), msg)
+		return s.handleFullSyncResponse(ctx, senderId, content.GetFullSyncResponse(), msg)
 	case content.GetHeadUpdate() != nil:
-		return s.HandleHeadUpdate(ctx, senderId, content.GetHeadUpdate(), msg)
+		return s.handleHeadUpdate(ctx, senderId, content.GetHeadUpdate(), msg)
 	}
 	return nil
 }
 
-func (s *syncHandler) HandleHeadUpdate(
+func (s *syncHandler) handleHeadUpdate(
 	ctx context.Context,
 	senderId string,
 	update *spacesyncproto.ObjectHeadUpdate,
 	msg *spacesyncproto.ObjectSyncMessage) (err error) {
 
 	var (
-		fullRequest *spacesyncproto.ObjectFullSyncRequest
-		result      tree.AddResult
+		fullRequest   *spacesyncproto.ObjectSyncMessage
+		isEmptyUpdate = len(update.Changes) == 0
 	)
 	res, err := s.treeCache.GetTree(ctx, s.spaceId, msg.TreeId)
 	if err != nil {
@@ -61,44 +60,51 @@ func (s *syncHandler) HandleHeadUpdate(
 		defer res.Release()
 		defer objTree.Unlock()
 
-		if slice.UnsortedEquals(update.Heads, objTree.Heads()) {
+		// isEmptyUpdate is sent when the tree is brought up from cache
+		if isEmptyUpdate {
+			if slice.UnsortedEquals(objTree.Heads(), update.Heads) {
+				return nil
+			}
+			// we need to sync in any case
+			fullRequest, err = s.syncClient.CreateFullSyncRequest(objTree, update.Heads, update.SnapshotPath, msg.TrackingId)
+			return err
+		}
+
+		if s.alreadyHasHeads(objTree, update.Heads) {
 			return nil
 		}
 
-		result, err = objTree.AddRawChanges(ctx, update.Changes...)
+		_, err = objTree.AddRawChanges(ctx, update.Changes...)
 		if err != nil {
 			return err
 		}
 
-		// if we couldn't add all the changes
-		if len(update.Changes) != len(result.Added) {
-			fullRequest, err = s.prepareFullSyncRequest(objTree, update)
-			if err != nil {
-				return err
-			}
+		if s.alreadyHasHeads(objTree, update.Heads) {
+			return nil
 		}
-		return nil
+
+		fullRequest, err = s.syncClient.CreateFullSyncRequest(objTree, update.Heads, update.SnapshotPath, msg.TrackingId)
+		return err
 	}()
 
 	if fullRequest != nil {
-		return s.syncClient.SendAsync(senderId,
-			spacesyncproto.WrapFullRequest(fullRequest, msg.RootChange, msg.TreeId, msg.TrackingId))
+		return s.syncClient.SendAsync([]string{senderId}, fullRequest)
 	}
 	return
 }
 
-func (s *syncHandler) HandleFullSyncRequest(
+func (s *syncHandler) handleFullSyncRequest(
 	ctx context.Context,
 	senderId string,
 	request *spacesyncproto.ObjectFullSyncRequest,
 	msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	var (
-		fullResponse *spacesyncproto.ObjectFullSyncResponse
+		fullResponse *spacesyncproto.ObjectSyncMessage
 		header       = msg.RootChange
 	)
 	defer func() {
 		if err != nil {
-			s.syncClient.SendAsync(senderId, spacesyncproto.WrapError(err, header, msg.TreeId, msg.TrackingId))
+			s.syncClient.SendAsync([]string{senderId}, spacesyncproto.WrapError(err, header, msg.TreeId, msg.TrackingId))
 		}
 	}()
 
@@ -117,23 +123,24 @@ func (s *syncHandler) HandleFullSyncRequest(
 			header = objTree.Header()
 		}
 
-		_, err = objTree.AddRawChanges(ctx, request.Changes...)
-		if err != nil {
-			return err
+		if len(request.Changes) != 0 && !s.alreadyHasHeads(objTree, request.Heads) {
+			_, err = objTree.AddRawChanges(ctx, request.Changes...)
+			if err != nil {
+				return err
+			}
 		}
 
-		fullResponse, err = s.prepareFullSyncResponse(request.SnapshotPath, request.Heads, objTree)
+		fullResponse, err = s.syncClient.CreateFullSyncResponse(objTree, request.Heads, request.SnapshotPath, msg.TrackingId)
 		return err
 	}()
 
 	if err != nil {
 		return
 	}
-	return s.syncClient.SendAsync(senderId,
-		spacesyncproto.WrapFullResponse(fullResponse, header, msg.TreeId, msg.TrackingId))
+	return s.syncClient.SendAsync([]string{senderId}, fullResponse)
 }
 
-func (s *syncHandler) HandleFullSyncResponse(
+func (s *syncHandler) handleFullSyncResponse(
 	ctx context.Context,
 	senderId string,
 	response *spacesyncproto.ObjectFullSyncResponse,
@@ -149,8 +156,7 @@ func (s *syncHandler) HandleFullSyncResponse(
 		defer res.Release()
 		defer objTree.Unlock()
 
-		// if we already have the heads for whatever reason
-		if slice.UnsortedEquals(response.Heads, objTree.Heads()) {
+		if s.alreadyHasHeads(objTree, response.Heads) {
 			return nil
 		}
 
@@ -161,39 +167,6 @@ func (s *syncHandler) HandleFullSyncResponse(
 	return
 }
 
-func (s *syncHandler) prepareFullSyncRequest(
-	t tree.ObjectTree,
-	update *spacesyncproto.ObjectHeadUpdate) (req *spacesyncproto.ObjectFullSyncRequest, err error) {
-	req = &spacesyncproto.ObjectFullSyncRequest{
-		Heads:        t.Heads(),
-		SnapshotPath: t.SnapshotPath(),
-	}
-	if len(update.Changes) != 0 {
-		var changesAfterSnapshot []*treechangeproto.RawTreeChangeWithId
-		changesAfterSnapshot, err = t.ChangesAfterCommonSnapshot(update.SnapshotPath, update.Heads)
-		if err != nil {
-			return
-		}
-		req.Changes = changesAfterSnapshot
-	}
-	return &spacesyncproto.ObjectFullSyncRequest{
-		Heads:        t.Heads(),
-		SnapshotPath: t.SnapshotPath(),
-	}, nil
-}
-
-func (s *syncHandler) prepareFullSyncResponse(
-	theirPath,
-	theirHeads []string,
-	t tree.ObjectTree) (*spacesyncproto.ObjectFullSyncResponse, error) {
-	ourChanges, err := t.ChangesAfterCommonSnapshot(theirPath, theirHeads)
-	if err != nil {
-		return nil, err
-	}
-
-	return &spacesyncproto.ObjectFullSyncResponse{
-		Heads:        t.Heads(),
-		Changes:      ourChanges,
-		SnapshotPath: t.SnapshotPath(),
-	}, nil
+func (s *syncHandler) alreadyHasHeads(t tree.ObjectTree, heads []string) bool {
+	return slice.UnsortedEquals(t.Heads(), heads) || t.HasChanges(heads...)
 }

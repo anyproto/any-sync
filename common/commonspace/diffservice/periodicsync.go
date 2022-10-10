@@ -6,25 +6,34 @@ import (
 	"time"
 )
 
-func newPeriodicSync(periodSeconds int, sync func(ctx context.Context) error, l *zap.Logger) *periodicSync {
+type PeriodicSync interface {
+	Run()
+	Close()
+}
+
+func newPeriodicSync(periodSeconds int, syncer DiffSyncer, l *zap.Logger) *periodicSync {
 	ctx, cancel := context.WithCancel(context.Background())
-	ps := &periodicSync{
-		log:          l,
-		sync:         sync,
-		syncCtx:      ctx,
-		syncCancel:   cancel,
-		syncLoopDone: make(chan struct{}),
+	return &periodicSync{
+		syncer:        syncer,
+		log:           l,
+		syncCtx:       ctx,
+		syncCancel:    cancel,
+		syncLoopDone:  make(chan struct{}),
+		periodSeconds: periodSeconds,
 	}
-	go ps.syncLoop(periodSeconds)
-	return ps
 }
 
 type periodicSync struct {
-	log          *zap.Logger
-	sync         func(ctx context.Context) error
-	syncCtx      context.Context
-	syncCancel   context.CancelFunc
-	syncLoopDone chan struct{}
+	log           *zap.Logger
+	syncer        DiffSyncer
+	syncCtx       context.Context
+	syncCancel    context.CancelFunc
+	syncLoopDone  chan struct{}
+	periodSeconds int
+}
+
+func (p *periodicSync) Run() {
+	go p.syncLoop(p.periodSeconds)
 }
 
 func (p *periodicSync) syncLoop(periodSeconds int) {
@@ -33,7 +42,7 @@ func (p *periodicSync) syncLoop(periodSeconds int) {
 	doSync := func() {
 		ctx, cancel := context.WithTimeout(p.syncCtx, time.Minute)
 		defer cancel()
-		if err := p.sync(ctx); err != nil {
+		if err := p.syncer.Sync(ctx); err != nil {
 			p.log.Warn("periodic sync error", zap.Error(err))
 		}
 	}

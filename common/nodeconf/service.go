@@ -3,7 +3,6 @@ package nodeconf
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
@@ -29,7 +28,6 @@ type Service interface {
 
 type service struct {
 	accountId string
-	pool      pool.Pool
 
 	consensusPeers []string
 	last           Configuration
@@ -53,12 +51,10 @@ func (n *Node) Capacity() float64 {
 func (s *service) Init(a *app.App) (err error) {
 	conf := a.MustComponent(config.CName).(*config.Config)
 	s.accountId = conf.Account.PeerId
-	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 
 	config := &configuration{
 		id:        "config",
 		accountId: s.accountId,
-		pool:      s.pool,
 	}
 	if config.chash, err = chash.New(chash.Config{
 		PartitionCount:    partitionCount,

@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_syncservice/mock_syncservice.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice SyncClient
 package syncservice
 
 import (
@@ -7,19 +8,13 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 	"time"
 )
 
 var log = logger.NewNamed("syncservice").Sugar()
 
 type SyncService interface {
-	NotifyHeadUpdate(
-		ctx context.Context,
-		treeId string,
-		root *treechangeproto.RawTreeChangeWithId,
-		update *spacesyncproto.ObjectHeadUpdate) (err error)
-	StreamPool() StreamPool
+	SyncClient() SyncClient
 
 	Init()
 	Close() (err error)
@@ -34,36 +29,44 @@ const respPeersStreamCheckInterval = time.Second * 10
 type syncService struct {
 	spaceId string
 
-	syncHandler    SyncHandler
-	streamPool     StreamPool
-	headNotifiable HeadNotifiable
-	configuration  nodeconf.Configuration
+	syncClient    SyncClient
+	clientFactory spacesyncproto.ClientFactory
 
 	streamLoopCtx  context.Context
 	stopStreamLoop context.CancelFunc
+	connector      nodeconf.ConfConnector
 	streamLoopDone chan struct{}
 }
 
-func NewSyncService(spaceId string, headNotifiable HeadNotifiable, cache cache.TreeCache, configuration nodeconf.Configuration) SyncService {
+func NewSyncService(
+	spaceId string,
+	headNotifiable HeadNotifiable,
+	cache cache.TreeCache,
+	configuration nodeconf.Configuration,
+	confConnector nodeconf.ConfConnector) SyncService {
 	var syncHandler SyncHandler
 	streamPool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
 		return syncHandler.HandleMessage(ctx, senderId, message)
 	})
-	syncHandler = newSyncHandler(spaceId, cache, streamPool)
-	return newSyncService(spaceId, headNotifiable, syncHandler, streamPool, configuration)
+	factory := newRequestFactory()
+	syncClient := newSyncClient(spaceId, streamPool, headNotifiable, factory, configuration)
+	syncHandler = newSyncHandler(spaceId, cache, syncClient)
+	return newSyncService(
+		spaceId,
+		syncClient,
+		spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient),
+		confConnector)
 }
 
 func newSyncService(
 	spaceId string,
-	headNotifiable HeadNotifiable,
-	syncHandler SyncHandler,
-	streamPool StreamPool,
-	configuration nodeconf.Configuration) *syncService {
+	syncClient SyncClient,
+	clientFactory spacesyncproto.ClientFactory,
+	connector nodeconf.ConfConnector) *syncService {
 	return &syncService{
-		syncHandler:    syncHandler,
-		streamPool:     streamPool,
-		headNotifiable: headNotifiable,
-		configuration:  configuration,
+		syncClient:     syncClient,
+		connector:      connector,
+		clientFactory:  clientFactory,
 		spaceId:        spaceId,
 		streamLoopDone: make(chan struct{}),
 	}
@@ -77,32 +80,24 @@ func (s *syncService) Init() {
 func (s *syncService) Close() (err error) {
 	s.stopStreamLoop()
 	<-s.streamLoopDone
-	return s.streamPool.Close()
-}
-
-func (s *syncService) NotifyHeadUpdate(
-	ctx context.Context,
-	treeId string,
-	header *treechangeproto.RawTreeChangeWithId,
-	update *spacesyncproto.ObjectHeadUpdate) (err error) {
-	s.headNotifiable.UpdateHeads(treeId, update.Heads)
-	return s.streamPool.BroadcastAsync(spacesyncproto.WrapHeadUpdate(update, header, treeId, ""))
+	return s.syncClient.Close()
 }
 
 func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 	defer close(s.streamLoopDone)
 	checkResponsiblePeers := func() {
-		respPeers, err := s.configuration.ResponsiblePeers(ctx, s.spaceId)
+		respPeers, err := s.connector.DialResponsiblePeers(ctx, s.spaceId)
 		if err != nil {
 			return
 		}
 		for _, peer := range respPeers {
-			if s.streamPool.HasActiveStream(peer.Id()) {
+			if s.syncClient.HasActiveStream(peer.Id()) {
 				continue
 			}
-			cl := spacesyncproto.NewDRPCSpaceClient(peer)
-			stream, err := cl.Stream(ctx)
+			stream, err := s.clientFactory.Client(peer).Stream(ctx)
 			if err != nil {
+				err = rpcerr.Unwrap(err)
+				log.With("spaceId", s.spaceId).Errorf("failed to open stream: %v", err)
 				// so here probably the request is failed because there is no such space,
 				// but diffService should handle such cases by sending pushSpace
 				continue
@@ -111,10 +106,10 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 			err = stream.Send(&spacesyncproto.ObjectSyncMessage{SpaceId: s.spaceId})
 			if err != nil {
 				err = rpcerr.Unwrap(err)
-				log.With("spaceId", s.spaceId).Errorf("failed to open stream: %v", err)
+				log.With("spaceId", s.spaceId).Errorf("failed to send first message to stream: %v", err)
 				continue
 			}
-			s.streamPool.AddAndReadStreamAsync(stream)
+			s.syncClient.AddAndReadStreamAsync(stream)
 		}
 	}
 
@@ -131,6 +126,6 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 	}
 }
 
-func (s *syncService) StreamPool() StreamPool {
-	return s.streamPool
+func (s *syncService) SyncClient() SyncClient {
+	return s.syncClient
 }

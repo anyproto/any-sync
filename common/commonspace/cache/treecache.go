@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_cache/mock_cache.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache TreeCache
 package cache
 
 import (
