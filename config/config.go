@@ -30,6 +30,7 @@ type Config struct {
 	Nodes      []Node     `yaml:"nodes"`
 	Space      Space      `yaml:"space"`
 	Metric     Metric     `yaml:"metric"`
+	Log        Log        `yaml:"log"`
 }
 
 func (c *Config) Init(a *app.App) (err error) {

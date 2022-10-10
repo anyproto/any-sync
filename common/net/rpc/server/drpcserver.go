@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const CName = "net/drpcserver"
+const CName = "common.net.drpcserver"
 
 var log = logger.NewNamed(CName)
 

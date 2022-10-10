@@ -16,7 +16,7 @@ import (
 	"sync"
 )
 
-const CName = "net/dialer"
+const CName = "common.net.dialer"
 
 var ErrArrdsNotFound = errors.New("addrs for peer not found")
 
