@@ -91,7 +91,7 @@ type findRecordQuery struct {
 type updateOp struct {
 	Push struct {
 		Records struct {
-			Each []consensus.Record `bson:"$each""`
+			Each []consensus.Record `bson:"$each"`
 			Pos  int                `bson:"$position"`
 		} `bson:"records"`
 	} `bson:"$push"`
