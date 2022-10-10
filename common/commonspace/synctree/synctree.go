@@ -17,6 +17,10 @@ type SyncTree struct {
 	listener   updatelistener.UpdateListener
 }
 
+var createDerivedObjectTree = tree.CreateDerivedObjectTree
+var createObjectTree = tree.CreateObjectTree
+var buildObjectTree = tree.BuildObjectTree
+
 func DeriveSyncTree(
 	ctx context.Context,
 	payload tree.ObjectTreeCreatePayload,
@@ -24,7 +28,7 @@ func DeriveSyncTree(
 	listener updatelistener.UpdateListener,
 	aclList list.ACLList,
 	createStorage storage.TreeStorageCreatorFunc) (t tree.ObjectTree, err error) {
-	t, err = tree.CreateDerivedObjectTree(payload, aclList, createStorage)
+	t, err = createDerivedObjectTree(payload, aclList, createStorage)
 	if err != nil {
 		return
 	}
@@ -46,7 +50,7 @@ func CreateSyncTree(
 	listener updatelistener.UpdateListener,
 	aclList list.ACLList,
 	createStorage storage.TreeStorageCreatorFunc) (t tree.ObjectTree, err error) {
-	t, err = tree.CreateObjectTree(payload, aclList, createStorage)
+	t, err = createObjectTree(payload, aclList, createStorage)
 	if err != nil {
 		return
 	}
@@ -76,7 +80,7 @@ func buildSyncTree(
 	treeStorage storage.TreeStorage,
 	listener updatelistener.UpdateListener,
 	aclList list.ACLList) (t tree.ObjectTree, err error) {
-	t, err = tree.BuildObjectTree(treeStorage, aclList)
+	t, err = buildObjectTree(treeStorage, aclList)
 	if err != nil {
 		return
 	}
@@ -93,7 +97,7 @@ func buildSyncTree(
 }
 
 func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeContent) (res tree.AddResult, err error) {
-	res, err = s.AddContent(ctx, content)
+	res, err = s.ObjectTree.AddContent(ctx, content)
 	if err != nil {
 		return
 	}
@@ -103,7 +107,7 @@ func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 }
 
 func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (res tree.AddResult, err error) {
-	res, err = s.AddRawChanges(ctx, changes...)
+	res, err = s.ObjectTree.AddRawChanges(ctx, changes...)
 	if err != nil {
 		return
 	}
