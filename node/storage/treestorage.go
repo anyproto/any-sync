@@ -123,11 +123,11 @@ func (t *treeStorage) Heads() ([]string, error) {
 }
 
 func (t *treeStorage) SetHeads(heads []string) (err error) {
+	t.headsMx.Lock()
+	defer t.headsMx.Unlock()
 	defer func() {
 		if err == nil {
-			t.headsMx.Lock()
 			t.heads = heads
-			t.headsMx.Unlock()
 		}
 	}()
 	payload := createHeadsPayload(heads)
