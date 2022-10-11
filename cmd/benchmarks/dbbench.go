@@ -12,17 +12,10 @@ import (
 )
 
 func main() {
-	//bench(db.NewPogrebSpaceCreator, options{
-	//	numSpaces:         100,
-	//	numEntriesInSpace: 100,
-	//	numChangesInTree:  10,
-	//	numHeadUpdates:    100,
-	//	defValueSize:      1000,
-	//	lenHeadUpdate:     10,
-	//})
 	go func() {
 		fmt.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
+	//bench(db.NewBadgerSpaceCreator, options{
 	bench(db.NewPogrebSpaceCreator, options{
 		numSpaces:         1000,
 		numEntriesInSpace: 100,
@@ -43,13 +36,13 @@ type options struct {
 }
 
 func bench(factory db.SpaceCreatorFactory, opts options) {
-	spaceIdGetter := func(n int) string {
+	spaceIdKey := func(n int) string {
 		return fmt.Sprintf("space%d", n)
 	}
-	treeIdGetter := func(n int) string {
+	treeIdKey := func(n int) string {
 		return fmt.Sprintf("tree%d", n)
 	}
-	changeIdGetter := func(n int) string {
+	changeIdKey := func(n int) string {
 		return fmt.Sprintf("change%d", n)
 	}
 
@@ -68,7 +61,7 @@ func bench(factory db.SpaceCreatorFactory, opts options) {
 	now := time.Now()
 	var spaces []db.Space
 	for i := 0; i < opts.numSpaces; i++ {
-		sp, err := creator.CreateSpace(spaceIdGetter(i))
+		sp, err := creator.CreateSpace(spaceIdKey(i))
 		if err != nil {
 			panic(err)
 		}
@@ -82,13 +75,13 @@ func bench(factory db.SpaceCreatorFactory, opts options) {
 	// creating trees
 	var trees []db.Tree
 	for i := 0; i < opts.numSpaces; i++ {
-		space, err := creator.GetSpace(spaceIdGetter(i))
+		space, err := creator.GetSpace(spaceIdKey(i))
 		if err != nil {
 			panic(err)
 		}
 		spaces = append(spaces, space)
 		for j := 0; j < opts.numEntriesInSpace; j++ {
-			tr, err := space.CreateTree(treeIdGetter(j))
+			tr, err := space.CreateTree(treeIdKey(j))
 			if err != nil {
 				panic(err)
 			}
@@ -101,7 +94,7 @@ func bench(factory db.SpaceCreatorFactory, opts options) {
 	// filling entries and updating heads
 	for _, t := range trees {
 		for i := 0; i < opts.numChangesInTree; i++ {
-			err := t.AddChange(changeIdGetter(i), byteSlice)
+			err := t.AddChange(changeIdKey(i), byteSlice)
 			if err != nil {
 				panic(err)
 			}
@@ -120,7 +113,7 @@ func bench(factory db.SpaceCreatorFactory, opts options) {
 	// getting some values from tree
 	for _, t := range trees {
 		for i := 0; i < opts.numChangesInTree; i++ {
-			res, err := t.GetChange(changeIdGetter(i))
+			res, err := t.GetChange(changeIdKey(i))
 			if err != nil {
 				panic(err)
 			}
@@ -135,7 +128,7 @@ func bench(factory db.SpaceCreatorFactory, opts options) {
 	// getting some values from tree
 	for _, t := range trees {
 		for i := 0; i < opts.numChangesInTree; i++ {
-			b, err := t.HasChange(changeIdGetter(i))
+			b, err := t.HasChange(changeIdKey(i))
 			if err != nil {
 				panic(err)
 			}
