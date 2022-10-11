@@ -23,6 +23,10 @@ import (
 	"time"
 )
 
+var (
+	Version = app.Version()
+)
+
 var log = logger.NewNamed("main")
 
 var (
