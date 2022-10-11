@@ -60,7 +60,7 @@ func (s *drpcServer) Run(ctx context.Context) (err error) {
 	histVec := prometheus.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace: "drpc",
 		Subsystem: "server",
-		Name:      "duration",
+		Name:      "duration_seconds",
 		Objectives: map[float64]float64{
 			0.5:  0.5,
 			0.85: 0.01,
