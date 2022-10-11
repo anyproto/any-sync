@@ -24,6 +24,12 @@ type treeCache struct {
 	nodeService nodespace.Service
 }
 
+func New(ttl int) cache.TreeCache {
+	return &treeCache{
+		gcttl: ttl,
+	}
+}
+
 func (c *treeCache) Run(ctx context.Context) (err error) {
 	return nil
 }
@@ -53,12 +59,6 @@ func (c *treeCache) Init(a *app.App) (err error) {
 
 func (c *treeCache) Name() (name string) {
 	return cache.CName
-}
-
-func NewNodeCache(ttl int) cache.TreeCache {
-	return &treeCache{
-		gcttl: ttl,
-	}
 }
 
 func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (res cache.TreeResult, err error) {

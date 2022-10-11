@@ -23,7 +23,7 @@ func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceS
 		return
 	}
 	keys := spaceKeys{}
-	has, err := objDb.Has([]byte(keys.HeaderKey()))
+	has, err := objDb.Has(keys.HeaderKey())
 	if err != nil {
 		return
 	}
@@ -32,7 +32,7 @@ func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceS
 		return
 	}
 
-	has, err = objDb.Has([]byte(keys.ACLKey()))
+	has, err = objDb.Has(keys.ACLKey())
 	if err != nil {
 		return
 	}
@@ -57,7 +57,7 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 	}
 
 	keys := spaceKeys{}
-	has, err := db.Has([]byte(keys.HeaderKey()))
+	has, err := db.Has(keys.HeaderKey())
 	if err != nil {
 		return
 	}
@@ -70,7 +70,7 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 	if err != nil {
 		return
 	}
-	err = db.Put([]byte(keys.ACLKey()), marshalledRec)
+	err = db.Put(keys.ACLKey(), marshalledRec)
 	if err != nil {
 		return
 	}
@@ -79,7 +79,7 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 	if err != nil {
 		return
 	}
-	err = db.Put([]byte(keys.HeaderKey()), marshalledHeader)
+	err = db.Put(keys.HeaderKey(), marshalledHeader)
 	if err != nil {
 		return
 	}
@@ -100,7 +100,7 @@ func (s *spaceStorage) CreateTreeStorage(payload storage.TreeStorageCreatePayloa
 	defer s.mx.Unlock()
 
 	treeKeys := treeKeys{payload.TreeId}
-	has, err := s.objDb.Has([]byte(treeKeys.RootKey()))
+	has, err := s.objDb.Has(treeKeys.RootKey())
 	if err != nil {
 		return
 	}
@@ -117,7 +117,7 @@ func (s *spaceStorage) ACLStorage() (storage.ListStorage, error) {
 }
 
 func (s *spaceStorage) SpaceHeader() (header *spacesyncproto.RawSpaceHeaderWithId, err error) {
-	res, err := s.objDb.Get([]byte(s.keys.HeaderKey()))
+	res, err := s.objDb.Get(s.keys.HeaderKey())
 	if err != nil {
 		return
 	}
@@ -133,7 +133,7 @@ func (s *spaceStorage) StoredIds() (ids []string, err error) {
 	_, value, err := index.Next()
 	for err == nil {
 		strVal := string(value)
-		if isTreeKey(strVal) {
+		if isRootKey(strVal) {
 			ids = append(ids, string(value))
 		}
 		_, value, err = index.Next()

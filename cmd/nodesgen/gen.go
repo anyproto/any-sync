@@ -156,6 +156,7 @@ func genNodeConfig(addresses []string, apiPort string) (config.Config, error) {
 			ListenAddrs: addresses,
 			TLS:         false,
 		},
+		Storage: config.Storage{Path: "db"},
 		Account: config.Account{
 			PeerId:        peerID.String(),
 			SigningKey:    encSignKey,
