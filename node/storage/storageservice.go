@@ -3,15 +3,21 @@ package storage
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 )
 
 type storageService struct {
 	rootPath string
 }
 
+func New() storage.SpaceStorageProvider {
+	return &storageService{}
+}
+
 func (s *storageService) Init(a *app.App) (err error) {
-	//TODO implement me
-	panic("implement me")
+	cfg := a.MustComponent(config.CName).(*config.Config)
+	s.rootPath = cfg.Storage.Path
+	return nil
 }
 
 func (s *storageService) Name() (name string) {

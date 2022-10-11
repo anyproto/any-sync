@@ -29,6 +29,7 @@ type Config struct {
 	APIServer  APIServer  `yaml:"apiServer"`
 	Nodes      []Node     `yaml:"nodes"`
 	Space      Space      `yaml:"space"`
+	Storage    Storage    `yaml:"storage"`
 }
 
 func (c *Config) Init(a *app.App) (err error) {

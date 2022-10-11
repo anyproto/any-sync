@@ -15,6 +15,8 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace/nodecache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/storage"
 	"go.uber.org/zap"
 	"net/http"
 	_ "net/http/pprof"
@@ -89,7 +91,8 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
-		// TODO: add space storage provider from node side
+		Register(storage.New()).
+		Register(nodecache.New(200)).
 		Register(nodeconf.New()).
 		Register(secure.New()).
 		Register(dialer.New()).
