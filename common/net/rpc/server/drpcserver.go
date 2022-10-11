@@ -57,16 +57,24 @@ func (s *drpcServer) Name() (name string) {
 }
 
 func (s *drpcServer) Run(ctx context.Context) (err error) {
-	histVec := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+	histVec := prometheus.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace: "drpc",
 		Subsystem: "server",
-		Name:      "method",
+		Name:      "duration",
+		Objectives: map[float64]float64{
+			0.5:  0.5,
+			0.85: 0.01,
+			0.95: 0.0005,
+			0.99: 0.0001,
+		},
 	}, []string{"rpc"})
 	s.drpcServer = drpcserver.New(&metric.PrometheusDRPC{
-		Handler:      s.Mux,
-		HistogramVec: histVec,
+		Handler:    s.Mux,
+		SummaryVec: histVec,
 	})
-	s.metric.Registry().Register(histVec)
+	if err = s.metric.Registry().Register(histVec); err != nil {
+		return
+	}
 	ctx, s.cancel = context.WithCancel(ctx)
 	for _, addr := range s.config.ListenAddrs {
 		tcpList, err := net.Listen("tcp", addr)

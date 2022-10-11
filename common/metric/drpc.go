@@ -8,13 +8,13 @@ import (
 
 type PrometheusDRPC struct {
 	drpc.Handler
-	HistogramVec *prometheus.HistogramVec
+	SummaryVec *prometheus.SummaryVec
 }
 
 func (ph *PrometheusDRPC) HandleRPC(stream drpc.Stream, rpc string) (err error) {
 	st := time.Now()
 	defer func() {
-		ph.HistogramVec.WithLabelValues(rpc).Observe(time.Since(st).Seconds())
+		ph.SummaryVec.WithLabelValues(rpc).Observe(time.Since(st).Seconds())
 	}()
 	return ph.Handler.HandleRPC(stream, rpc)
 }
