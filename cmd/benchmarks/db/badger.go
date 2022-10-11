@@ -29,6 +29,35 @@ func (b *badgerTree) AddChange(key string, value []byte) (err error) {
 	})
 }
 
+func (b *badgerTree) GetChange(key string) (val []byte, err error) {
+	badgerKey := fmt.Sprintf("space/%s/tree/%s/change/%s", b.spaceId, b.id, key)
+	err = b.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(badgerKey))
+		if err != nil {
+			return err
+		}
+		val, err = item.ValueCopy(val)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return
+}
+
+func (b *badgerTree) HasChange(key string) (has bool, err error) {
+	badgerKey := fmt.Sprintf("space/%s/tree/%s/change/%s", b.spaceId, b.id, key)
+	err = b.db.View(func(txn *badger.Txn) error {
+		_, err := txn.Get([]byte(badgerKey))
+		return err
+	})
+	if err != nil {
+		return
+	}
+	has = true
+	return
+}
+
 type badgerSpace struct {
 	id string
 	db *badger.DB

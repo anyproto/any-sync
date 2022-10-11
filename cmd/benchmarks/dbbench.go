@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/cmd/benchmarks/db"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,6 +20,9 @@ func main() {
 	//	defValueSize:      1000,
 	//	lenHeadUpdate:     10,
 	//})
+	go func() {
+		fmt.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 	bench(db.NewPogrebSpaceCreator, options{
 		numSpaces:         1000,
 		numEntriesInSpace: 100,
@@ -108,7 +113,38 @@ func bench(factory db.SpaceCreatorFactory, opts options) {
 			}
 		}
 	}
-	fmt.Println(opts.numSpaces*opts.numEntriesInSpace*opts.numChangesInTree, "changes creation, spent ms", time.Now().Sub(now).Milliseconds())
+	total := opts.numSpaces * opts.numEntriesInSpace * opts.numChangesInTree
+	fmt.Println(total, "changes creation, spent ms", time.Now().Sub(now).Milliseconds())
+	now = time.Now()
+
+	// getting some values from tree
+	for _, t := range trees {
+		for i := 0; i < opts.numChangesInTree; i++ {
+			res, err := t.GetChange(changeIdGetter(i))
+			if err != nil {
+				panic(err)
+			}
+			if res == nil {
+				panic("shouldn't be empty")
+			}
+		}
+	}
+	fmt.Println(total, "changes getting, spent ms", time.Now().Sub(now).Milliseconds())
+	now = time.Now()
+
+	// getting some values from tree
+	for _, t := range trees {
+		for i := 0; i < opts.numChangesInTree; i++ {
+			b, err := t.HasChange(changeIdGetter(i))
+			if err != nil {
+				panic(err)
+			}
+			if !b {
+				panic("should be able to check with has")
+			}
+		}
+	}
+	fmt.Println(total, "changes checking, spent ms", time.Now().Sub(now).Milliseconds())
 
 	exit := make(chan os.Signal, 1)
 	signal.Notify(exit, os.Interrupt, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT)
