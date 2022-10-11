@@ -98,7 +98,9 @@ func (s *spaceStorage) TreeStorage(id string) (storage.TreeStorage, error) {
 func (s *spaceStorage) CreateTreeStorage(payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	has, err := s.objDb.Has([]byte(payload.TreeId))
+
+	treeKeys := treeKeys{payload.TreeId}
+	has, err := s.objDb.Has([]byte(treeKeys.RootKey()))
 	if err != nil {
 		return
 	}
