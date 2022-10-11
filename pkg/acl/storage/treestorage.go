@@ -13,6 +13,7 @@ type TreeStorage interface {
 
 	AddRawChange(change *treechangeproto.RawTreeChangeWithId) error
 	GetRawChange(ctx context.Context, id string) (*treechangeproto.RawTreeChangeWithId, error)
+	HasChange(ctx context.Context, id string) (bool, error)
 }
 
 type TreeStorageCreatorFunc = func(payload TreeStorageCreatePayload) (TreeStorage, error)

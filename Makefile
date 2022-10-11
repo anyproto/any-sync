@@ -31,11 +31,14 @@ proto:
 	$(GOGO_START) protoc --gogofaster_out=$(PKGMAP):. --go-drpc_out=protolib=github.com/gogo/protobuf:. common/commonspace/spacesyncproto/protos/*.proto
 	$(GOGO_START) protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. consensus/consensusproto/protos/*.proto
 
-
-
 build:
 	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/app))
 	go build -v -o bin/anytype-node -ldflags "$(FLAGS)" cmd/node/node.go
+
+test-deps:
+	@echo 'Generating test mocks...'
+	@go install github.com/golang/mock/mockgen
+	@go generate ./...
 
 build-consensus:
 	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/app))

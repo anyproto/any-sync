@@ -48,12 +48,16 @@ type service struct {
 
 func (s *service) Init(a *app.App) (err error) {
 	s.db = a.MustComponent(db.CName).(db.Service)
-	s.cache = ocache.New(s.loadLog,
+
+	cacheOpts := []ocache.Option{
 		ocache.WithTTL(cacheTTL),
 		ocache.WithRefCounter(false),
 		ocache.WithLogger(log.Named("cache").Sugar()),
-		ocache.WithPrometheus(a.MustComponent(metric.CName).(metric.Metric).Registry(), "consensus", "logcache"),
-	)
+	}
+	if ms := a.Component(metric.CName); ms != nil {
+		cacheOpts = append(cacheOpts, ocache.WithPrometheus(ms.(metric.Metric).Registry(), "consensus", "logcache"))
+	}
+	s.cache = ocache.New(s.loadLog, cacheOpts...)
 
 	return s.db.SetChangeReceiver(s.receiveChange)
 }
