@@ -20,7 +20,18 @@ func (p *pogrebTree) UpdateHead(head string) (err error) {
 }
 
 func (p *pogrebTree) AddChange(key string, value []byte) (err error) {
-	return p.db.Put([]byte(fmt.Sprintf("t/%s/%s", p.id, key)), value)
+	changeKey := fmt.Sprintf("t/%s/%s", p.id, key)
+	return p.db.Put([]byte(changeKey), value)
+}
+
+func (p *pogrebTree) GetChange(key string) (val []byte, err error) {
+	changeKey := fmt.Sprintf("t/%s/%s", p.id, key)
+	return p.db.Get([]byte(changeKey))
+}
+
+func (p *pogrebTree) HasChange(key string) (has bool, err error) {
+	changeKey := fmt.Sprintf("t/%s/%s", p.id, key)
+	return p.db.Has([]byte(changeKey))
 }
 
 type pogrebSpace struct {
@@ -54,8 +65,7 @@ type pogrebSpaceCreator struct {
 func (p *pogrebSpaceCreator) CreateSpace(id string) (Space, error) {
 	dbPath := path.Join(p.rootPath, id)
 	db, err := pogreb.Open(dbPath, &pogreb.Options{
-		BackgroundSyncInterval:       0,
-		BackgroundCompactionInterval: 20000,
+		BackgroundCompactionInterval: 200000,
 	})
 	if err != nil {
 		return nil, err
