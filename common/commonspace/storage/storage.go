@@ -19,6 +19,7 @@ type SpaceStorage interface {
 	ACLStorage() (storage.ListStorage, error)
 	SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error)
 	StoredIds() ([]string, error)
+	Close() error
 }
 
 type SpaceStorageCreatePayload struct {
