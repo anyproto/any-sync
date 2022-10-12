@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/cmd/benchmarks/db"
+	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -15,15 +16,18 @@ func main() {
 	go func() {
 		fmt.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
-	//bench(db.NewBadgerSpaceCreator, options{
-	bench(db.NewPogrebSpaceCreator, options{
+	opts := options{
 		numSpaces:         1000,
 		numEntriesInSpace: 100,
 		numChangesInTree:  10,
 		numHeadUpdates:    100,
 		defValueSize:      1000,
-		lenHeadUpdate:     10,
-	})
+		lenHeadUpdate:     1000,
+	}
+	fmt.Println("badger")
+	bench(db.NewBadgerSpaceCreator, opts)
+	fmt.Println("pogreb")
+	bench(db.NewPogrebSpaceCreator, opts)
 }
 
 type options struct {
@@ -46,14 +50,16 @@ func bench(factory db.SpaceCreatorFactory, opts options) {
 		return fmt.Sprintf("change%d", n)
 	}
 
-	var byteSlice []byte
-	for i := 0; i < opts.defValueSize; i++ {
-		byteSlice = append(byteSlice, byte('a'))
+	var byteSlice = func() []byte {
+		var buf = make([]byte, opts.defValueSize)
+		rand.Read(buf)
+		return buf
 	}
 
-	var headUpdate string
-	for i := 0; i < opts.lenHeadUpdate; i++ {
-		headUpdate += "a"
+	var headUpdate = func() []byte {
+		var buf = make([]byte, opts.lenHeadUpdate)
+		rand.Read(buf)
+		return buf
 	}
 
 	creator := factory()
@@ -94,13 +100,13 @@ func bench(factory db.SpaceCreatorFactory, opts options) {
 	// filling entries and updating heads
 	for _, t := range trees {
 		for i := 0; i < opts.numChangesInTree; i++ {
-			err := t.AddChange(changeIdKey(i), byteSlice)
+			err := t.AddChange(changeIdKey(i), byteSlice())
 			if err != nil {
 				panic(err)
 			}
 		}
 		for i := 0; i < opts.numHeadUpdates; i++ {
-			err := t.UpdateHead(headUpdate)
+			err := t.UpdateHead(string(headUpdate()))
 			if err != nil {
 				panic(err)
 			}

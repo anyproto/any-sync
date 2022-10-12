@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/akrylysov/pogreb"
 	"path"
+	"time"
 )
 
 type pogrebTree struct {
@@ -65,7 +66,8 @@ type pogrebSpaceCreator struct {
 func (p *pogrebSpaceCreator) CreateSpace(id string) (Space, error) {
 	dbPath := path.Join(p.rootPath, id)
 	db, err := pogreb.Open(dbPath, &pogreb.Options{
-		BackgroundCompactionInterval: 200000,
+		BackgroundSyncInterval:       time.Second * 30,
+		BackgroundCompactionInterval: time.Minute * 2,
 	})
 	if err != nil {
 		return nil, err
