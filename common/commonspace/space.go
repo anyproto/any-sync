@@ -146,5 +146,6 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 
 func (s *space) Close() error {
 	s.diffService.Close()
-	return s.syncService.Close()
+	s.syncService.Close()
+	return s.storage.Close()
 }

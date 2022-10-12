@@ -8,7 +8,12 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"path"
 	"sync"
+	"time"
 )
+
+var defPogrebOptions = &pogreb.Options{
+	BackgroundCompactionInterval: time.Minute * 5,
+}
 
 type spaceStorage struct {
 	objDb *pogreb.DB
@@ -18,7 +23,7 @@ type spaceStorage struct {
 
 func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceStorage, err error) {
 	dbPath := path.Join(rootPath, spaceId)
-	objDb, err := pogreb.Open(dbPath, nil)
+	objDb, err := pogreb.Open(dbPath, defPogrebOptions)
 	if err != nil {
 		return
 	}
@@ -51,10 +56,16 @@ func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceS
 func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreatePayload) (store spacestorage.SpaceStorage, err error) {
 	// TODO: add payload verification
 	dbPath := path.Join(rootPath, payload.SpaceHeaderWithId.Id)
-	db, err := pogreb.Open(dbPath, nil)
+	db, err := pogreb.Open(dbPath, defPogrebOptions)
 	if err != nil {
 		return
 	}
+
+	defer func() {
+		if err != nil {
+			db.Close()
+		}
+	}()
 
 	keys := spaceKeys{}
 	has, err := db.Has(keys.HeaderKey())
@@ -144,4 +155,8 @@ func (s *spaceStorage) StoredIds() (ids []string, err error) {
 	}
 	err = nil
 	return
+}
+
+func (s *spaceStorage) Close() (err error) {
+	return s.objDb.Close()
 }
