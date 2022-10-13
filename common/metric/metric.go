@@ -50,8 +50,9 @@ func (m *metric) Run(ctx context.Context) (err error) {
 	}
 	if m.config.Addr != "" {
 		var errCh = make(chan error)
+		http.Handle("/metrics", promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{}))
 		go func() {
-			errCh <- http.ListenAndServe(m.config.Addr, promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{}))
+			errCh <- http.ListenAndServe(m.config.Addr, nil)
 		}()
 		select {
 		case err = <-errCh:
