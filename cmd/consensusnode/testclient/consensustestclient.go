@@ -38,7 +38,7 @@ var (
 
 func main() {
 	flag.Parse()
-
+	rand.Seed(time.Now().UnixNano())
 	if *flagVersion {
 		fmt.Println(app.VersionDescription())
 		return
