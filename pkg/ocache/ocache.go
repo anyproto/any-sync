@@ -86,10 +86,10 @@ type entry struct {
 	id        string
 	lastUsage time.Time
 	refCount  uint32
+	isClosing bool
 	load      chan struct{}
 	loadErr   error
 	value     Object
-	isClosing bool
 	close     chan struct{}
 }
 
