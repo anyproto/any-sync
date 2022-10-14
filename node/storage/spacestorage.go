@@ -54,7 +54,6 @@ func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceS
 }
 
 func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreatePayload) (store spacestorage.SpaceStorage, err error) {
-	// TODO: add payload verification
 	dbPath := path.Join(rootPath, payload.SpaceHeaderWithId.Id)
 	db, err := pogreb.Open(dbPath, defPogrebOptions)
 	if err != nil {
