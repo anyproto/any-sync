@@ -29,21 +29,17 @@ type Service interface {
 type service struct {
 	conf                 config.Space
 	spaceCache           ocache.OCache
-	closeWaiter          *ocache.CloseWaiter
 	commonSpace          commonspace.Service
 	spaceStorageProvider storage.SpaceStorageProvider
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.closeWaiter = ocache.NewCloseWaiter(func(ctx context.Context, id string) (value ocache.Object, err error) {
-		return s.commonSpace.GetSpace(ctx, id)
-	})
 	s.conf = a.MustComponent(config.CName).(*config.Config).Space
 	s.commonSpace = a.MustComponent(commonspace.CName).(commonspace.Service)
 	s.spaceStorageProvider = a.MustComponent(storage.CName).(storage.SpaceStorageProvider)
 	s.spaceCache = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
-			return s.closeWaiter.Load(ctx, id)
+			return s.commonSpace.GetSpace(ctx, id)
 		},
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
@@ -70,7 +66,7 @@ func (s *service) GetSpace(ctx context.Context, id string) (commonspace.Space, e
 	if err != nil {
 		return nil, err
 	}
-	return v.(*ocache.CloseWrapper).Value.(commonspace.Space), nil
+	return v.(commonspace.Space), nil
 }
 
 func (s *service) Close(ctx context.Context) (err error) {

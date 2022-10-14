@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"fmt"
+	"bytes"
 	"strings"
 )
 
@@ -10,15 +10,15 @@ type treeKeys struct {
 }
 
 func (t treeKeys) HeadsKey() []byte {
-	return []byte(fmt.Sprintf("t/%s/heads", t.id))
+	return joinStringsToBytes("t", t.id, "heads")
 }
 
 func (t treeKeys) RootKey() []byte {
-	return []byte(fmt.Sprintf("t/%s", t.id))
+	return joinStringsToBytes("t", t.id)
 }
 
 func (t treeKeys) RawChangeKey(id string) []byte {
-	return []byte(fmt.Sprintf("t/%s/%s", t.id, id))
+	return joinStringsToBytes("t", t.id, id)
 }
 
 type spaceKeys struct {
@@ -36,5 +36,25 @@ func (s spaceKeys) ACLKey() []byte {
 }
 
 func isRootKey(key string) bool {
-	return strings.HasPrefix(key, "t/") && len(strings.Split(key, "/")) == 2
+	return strings.HasPrefix(key, "t/") && strings.Count(key, "/") == 2
+}
+
+func joinStringsToBytes(strs ...string) []byte {
+	var (
+		b        bytes.Buffer
+		totalLen int
+	)
+	for _, s := range strs {
+		totalLen += len(s)
+	}
+	// adding separators
+	totalLen += len(strs) - 1
+	b.Grow(totalLen)
+	for idx, s := range strs {
+		if idx > 0 {
+			b.WriteString("/")
+		}
+		b.WriteString(s)
+	}
+	return b.Bytes()
 }
