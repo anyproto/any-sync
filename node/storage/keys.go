@@ -5,6 +5,24 @@ import (
 	"strings"
 )
 
+type aclKeys struct {
+}
+
+var aclHeadIdKey = []byte("a/headId")
+var aclRootIdKey = []byte("a/rootId")
+
+func (a aclKeys) HeadIdKey() []byte {
+	return aclHeadIdKey
+}
+
+func (a aclKeys) RootIdKey() []byte {
+	return aclRootIdKey
+}
+
+func (a aclKeys) RawRecordKey(id string) []byte {
+	return joinStringsToBytes("a", id)
+}
+
 type treeKeys struct {
 	id string
 }
@@ -13,8 +31,8 @@ func (t treeKeys) HeadsKey() []byte {
 	return joinStringsToBytes("t", t.id, "heads")
 }
 
-func (t treeKeys) RootKey() []byte {
-	return joinStringsToBytes("t", t.id)
+func (t treeKeys) RootIdKey() []byte {
+	return joinStringsToBytes("t", t.id, "rootId")
 }
 
 func (t treeKeys) RawChangeKey(id string) []byte {
@@ -22,21 +40,25 @@ func (t treeKeys) RawChangeKey(id string) []byte {
 }
 
 type spaceKeys struct {
+	headerKey []byte
 }
 
-var headerKey = []byte("header")
-var aclKey = []byte("acl")
+func newSpaceKeys(spaceId string) spaceKeys {
+	return spaceKeys{headerKey: joinStringsToBytes("s", spaceId)}
+}
+
+var spaceIdKey = []byte("spaceId")
+
+func (s spaceKeys) SpaceIdKey() []byte {
+	return spaceIdKey
+}
 
 func (s spaceKeys) HeaderKey() []byte {
-	return headerKey
+	return s.headerKey
 }
 
-func (s spaceKeys) ACLKey() []byte {
-	return aclKey
-}
-
-func isRootKey(key string) bool {
-	return strings.HasPrefix(key, "t/") && strings.Count(key, "/") == 2
+func isRootIdKey(key string) bool {
+	return strings.HasPrefix(key, "t/") && strings.HasSuffix(key, "rootId")
 }
 
 func joinStringsToBytes(strs ...string) []byte {

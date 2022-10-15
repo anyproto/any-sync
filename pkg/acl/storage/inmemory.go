@@ -31,10 +31,10 @@ func (i *inMemoryACLListStorage) Root() (*aclrecordproto.RawACLRecordWithId, err
 	return i.records[0], nil
 }
 
-func (i *inMemoryACLListStorage) Head() (*aclrecordproto.RawACLRecordWithId, error) {
+func (i *inMemoryACLListStorage) Head() (string, error) {
 	i.RLock()
 	defer i.RUnlock()
-	return i.records[len(i.records)-1], nil
+	return i.records[len(i.records)-1].Id, nil
 }
 
 func (i *inMemoryACLListStorage) GetRawRecord(ctx context.Context, id string) (*aclrecordproto.RawACLRecordWithId, error) {

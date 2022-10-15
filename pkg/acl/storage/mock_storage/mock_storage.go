@@ -66,10 +66,10 @@ func (mr *MockListStorageMockRecorder) GetRawRecord(arg0, arg1 interface{}) *gom
 }
 
 // Head mocks base method.
-func (m *MockListStorage) Head() (*aclrecordproto.RawACLRecordWithId, error) {
+func (m *MockListStorage) Head() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Head")
-	ret0, _ := ret[0].(*aclrecordproto.RawACLRecordWithId)
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
