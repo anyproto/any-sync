@@ -10,15 +10,14 @@ import (
 )
 
 type treeStorage struct {
-	db       *pogreb.DB
-	keys     treeKeys
-	id       string
-	headsKey []byte
-	root     *treechangeproto.RawTreeChangeWithId
+	db   *pogreb.DB
+	keys treeKeys
+	id   string
+	root *treechangeproto.RawTreeChangeWithId
 }
 
 func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err error) {
-	keys := treeKeys{treeId}
+	keys := newTreeKeys(treeId)
 	has, err := db.Has(keys.RootIdKey())
 	if err != nil {
 		return
@@ -55,17 +54,16 @@ func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err e
 	}
 
 	ts = &treeStorage{
-		db:       db,
-		keys:     keys,
-		headsKey: keys.HeadsKey(),
-		id:       treeId,
-		root:     rootWithId,
+		db:   db,
+		keys: keys,
+		id:   treeId,
+		root: rootWithId,
 	}
 	return
 }
 
 func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
-	keys := treeKeys{id: payload.TreeId}
+	keys := newTreeKeys(payload.TreeId)
 	has, err := db.Has(keys.RootIdKey())
 	if err != nil {
 		return
@@ -100,11 +98,10 @@ func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) 
 	}
 
 	ts = &treeStorage{
-		db:       db,
-		keys:     keys,
-		headsKey: keys.HeadsKey(),
-		id:       payload.RootRawChange.Id,
-		root:     payload.RootRawChange,
+		db:   db,
+		keys: keys,
+		id:   payload.RootRawChange.Id,
+		root: payload.RootRawChange,
 	}
 	return
 }
@@ -132,7 +129,7 @@ func (t *treeStorage) Heads() (heads []string, err error) {
 
 func (t *treeStorage) SetHeads(heads []string) (err error) {
 	payload := createHeadsPayload(heads)
-	return t.db.Put(t.headsKey, payload)
+	return t.db.Put(t.keys.HeadsKey(), payload)
 }
 
 func (t *treeStorage) AddRawChange(change *treechangeproto.RawTreeChangeWithId) (err error) {
