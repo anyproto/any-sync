@@ -5,7 +5,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
-	"github.com/gogo/protobuf/proto"
 	"path"
 	"sync"
 	"time"
@@ -16,9 +15,11 @@ var defPogrebOptions = &pogreb.Options{
 }
 
 type spaceStorage struct {
-	objDb *pogreb.DB
-	keys  spaceKeys
-	mx    sync.Mutex
+	objDb      *pogreb.DB
+	keys       spaceKeys
+	aclStorage storage.ListStorage
+	header     *spacesyncproto.RawSpaceHeaderWithId
+	mx         sync.Mutex
 }
 
 func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceStorage, err error) {
@@ -27,8 +28,15 @@ func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceS
 	if err != nil {
 		return
 	}
-	keys := spaceKeys{}
-	has, err := objDb.Has(keys.HeaderKey())
+
+	defer func() {
+		if err != nil {
+			objDb.Close()
+		}
+	}()
+
+	keys := newSpaceKeys(spaceId)
+	has, err := objDb.Has(keys.SpaceIdKey())
 	if err != nil {
 		return
 	}
@@ -37,18 +45,28 @@ func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceS
 		return
 	}
 
-	has, err = objDb.Has(keys.ACLKey())
+	header, err := objDb.Get(keys.HeaderKey())
 	if err != nil {
 		return
 	}
-	if !has {
+	if header == nil {
 		err = spacestorage.ErrSpaceStorageMissing
+		return
+	}
+
+	aclStorage, err := newListStorage(objDb)
+	if err != nil {
 		return
 	}
 
 	store = &spaceStorage{
 		objDb: objDb,
 		keys:  keys,
+		header: &spacesyncproto.RawSpaceHeaderWithId{
+			RawHeader: header,
+			Id:        spaceId,
+		},
+		aclStorage: aclStorage,
 	}
 	return
 }
@@ -66,37 +84,36 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 		}
 	}()
 
-	keys := spaceKeys{}
-	has, err := db.Has(keys.HeaderKey())
+	keys := newSpaceKeys(payload.SpaceHeaderWithId.Id)
+	has, err := db.Has(keys.SpaceIdKey())
 	if err != nil {
 		return
 	}
 	if has {
-		err = spacestorage.ErrSpaceStorageExists
+		err = spacesyncproto.ErrSpaceExists
 		return
 	}
 
-	marshalledRec, err := payload.RecWithId.Marshal()
-	if err != nil {
-		return
-	}
-	err = db.Put(keys.ACLKey(), marshalledRec)
+	aclStorage, err := createListStorage(db, payload.RecWithId)
 	if err != nil {
 		return
 	}
 
-	marshalledHeader, err := payload.SpaceHeaderWithId.Marshal()
+	err = db.Put(keys.HeaderKey(), payload.SpaceHeaderWithId.RawHeader)
 	if err != nil {
 		return
 	}
-	err = db.Put(keys.HeaderKey(), marshalledHeader)
+
+	err = db.Put(keys.SpaceIdKey(), []byte(payload.SpaceHeaderWithId.Id))
 	if err != nil {
 		return
 	}
 
 	store = &spaceStorage{
-		objDb: db,
-		keys:  keys,
+		objDb:      db,
+		keys:       keys,
+		aclStorage: aclStorage,
+		header:     payload.SpaceHeaderWithId,
 	}
 	return
 }
@@ -106,47 +123,31 @@ func (s *spaceStorage) TreeStorage(id string) (storage.TreeStorage, error) {
 }
 
 func (s *spaceStorage) CreateTreeStorage(payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
+	// we have mutex here, so we prevent overwriting the heads of a tree on concurrent creation
 	s.mx.Lock()
 	defer s.mx.Unlock()
-
-	treeKeys := treeKeys{payload.TreeId}
-	has, err := s.objDb.Has(treeKeys.RootKey())
-	if err != nil {
-		return
-	}
-	if has {
-		err = spacestorage.ErrSpaceStorageExists
-		return
-	}
 
 	return createTreeStorage(s.objDb, payload)
 }
 
 func (s *spaceStorage) ACLStorage() (storage.ListStorage, error) {
-	return nil, nil
+	return s.aclStorage, nil
 }
 
 func (s *spaceStorage) SpaceHeader() (header *spacesyncproto.RawSpaceHeaderWithId, err error) {
-	res, err := s.objDb.Get(s.keys.HeaderKey())
-	if err != nil {
-		return
-	}
-
-	header = &spacesyncproto.RawSpaceHeaderWithId{}
-	err = proto.Unmarshal(res, header)
-	return
+	return s.header, nil
 }
 
 func (s *spaceStorage) StoredIds() (ids []string, err error) {
 	index := s.objDb.Items()
 
-	_, value, err := index.Next()
+	key, val, err := index.Next()
 	for err == nil {
-		strVal := string(value)
-		if isRootKey(strVal) {
-			ids = append(ids, string(value))
+		strKey := string(key)
+		if isRootIdKey(strKey) {
+			ids = append(ids, string(val))
 		}
-		_, value, err = index.Next()
+		key, val, err = index.Next()
 	}
 
 	if err != pogreb.ErrIterationDone {

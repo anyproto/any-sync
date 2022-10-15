@@ -6,24 +6,28 @@ import (
 	"github.com/akrylysov/pogreb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
-	"github.com/gogo/protobuf/proto"
 	"strings"
-	"sync"
 )
 
 type treeStorage struct {
 	db       *pogreb.DB
 	keys     treeKeys
 	id       string
-	rootKey  []byte
 	headsKey []byte
-	heads    []string
 	root     *treechangeproto.RawTreeChangeWithId
-	headsMx  sync.Mutex
 }
 
 func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err error) {
 	keys := treeKeys{treeId}
+	has, err := db.Has(keys.RootIdKey())
+	if err != nil {
+		return
+	}
+	if !has {
+		err = storage.ErrUnknownTreeId
+		return
+	}
+
 	heads, err := db.Get(keys.HeadsKey())
 	if err != nil {
 		return
@@ -33,17 +37,19 @@ func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err e
 		return
 	}
 
-	res, err := db.Get(keys.RootKey())
+	root, err := db.Get(keys.RawChangeKey(treeId))
 	if err != nil {
 		return
 	}
-	if res == nil {
+	if root == nil {
 		err = storage.ErrUnknownTreeId
 		return
 	}
 
-	root := &treechangeproto.RawTreeChangeWithId{}
-	err = proto.Unmarshal(res, root)
+	rootWithId := &treechangeproto.RawTreeChangeWithId{
+		RawChange: root,
+		Id:        treeId,
+	}
 	if err != nil {
 		return
 	}
@@ -51,23 +57,21 @@ func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err e
 	ts = &treeStorage{
 		db:       db,
 		keys:     keys,
-		rootKey:  keys.RootKey(),
 		headsKey: keys.HeadsKey(),
 		id:       treeId,
-		heads:    parseHeads(heads),
-		root:     root,
+		root:     rootWithId,
 	}
 	return
 }
 
 func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
 	keys := treeKeys{id: payload.TreeId}
-	has, err := db.Has(keys.RootKey())
+	has, err := db.Has(keys.RootIdKey())
 	if err != nil {
 		return
 	}
-	if !has {
-		err = storage.ErrUnknownTreeId
+	if has {
+		err = storage.ErrTreeExists
 		return
 	}
 
@@ -80,18 +84,17 @@ func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) 
 		}
 	}
 
+	err = db.Put(keys.RawChangeKey(payload.RootRawChange.Id), payload.RootRawChange.GetRawChange())
+	if err != nil {
+		return
+	}
+
 	err = db.Put(keys.HeadsKey(), heads)
 	if err != nil {
 		return
 	}
 
-	// duplicating same change in raw changes
-	err = db.Put(keys.RawChangeKey(payload.TreeId), payload.RootRawChange.GetRawChange())
-	if err != nil {
-		return
-	}
-
-	err = db.Put(keys.RootKey(), payload.RootRawChange.GetRawChange())
+	err = db.Put(keys.RootIdKey(), []byte(payload.RootRawChange.Id))
 	if err != nil {
 		return
 	}
@@ -99,10 +102,8 @@ func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) 
 	ts = &treeStorage{
 		db:       db,
 		keys:     keys,
-		rootKey:  keys.RootKey(),
 		headsKey: keys.HeadsKey(),
-		id:       payload.TreeId,
-		heads:    payload.Heads,
+		id:       payload.RootRawChange.Id,
 		root:     payload.RootRawChange,
 	}
 	return
@@ -116,20 +117,20 @@ func (t *treeStorage) Root() (raw *treechangeproto.RawTreeChangeWithId, err erro
 	return t.root, nil
 }
 
-func (t *treeStorage) Heads() ([]string, error) {
-	t.headsMx.Lock()
-	defer t.headsMx.Unlock()
-	return t.heads, nil
+func (t *treeStorage) Heads() (heads []string, err error) {
+	headsBytes, err := t.db.Get(t.keys.HeadsKey())
+	if err != nil {
+		return
+	}
+	if heads == nil {
+		err = storage.ErrUnknownTreeId
+		return
+	}
+	heads = parseHeads(headsBytes)
+	return
 }
 
 func (t *treeStorage) SetHeads(heads []string) (err error) {
-	t.headsMx.Lock()
-	defer t.headsMx.Unlock()
-	defer func() {
-		if err == nil {
-			t.heads = heads
-		}
-	}()
 	payload := createHeadsPayload(heads)
 	return t.db.Put(t.headsKey, payload)
 }
@@ -142,6 +143,9 @@ func (t *treeStorage) GetRawChange(ctx context.Context, id string) (raw *treecha
 	res, err := t.db.Get(t.keys.RawChangeKey(id))
 	if err != nil {
 		return
+	}
+	if res == nil {
+		err = storage.ErrUnkownChange
 	}
 
 	raw = &treechangeproto.RawTreeChangeWithId{

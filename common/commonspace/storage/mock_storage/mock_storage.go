@@ -133,6 +133,20 @@ func (mr *MockSpaceStorageMockRecorder) ACLStorage() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACLStorage", reflect.TypeOf((*MockSpaceStorage)(nil).ACLStorage))
 }
 
+// Close mocks base method.
+func (m *MockSpaceStorage) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockSpaceStorageMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockSpaceStorage)(nil).Close))
+}
+
 // CreateTreeStorage mocks base method.
 func (m *MockSpaceStorage) CreateTreeStorage(arg0 storage0.TreeStorageCreatePayload) (storage0.TreeStorage, error) {
 	m.ctrl.T.Helper()

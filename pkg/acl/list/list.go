@@ -67,6 +67,7 @@ func BuildACLList(storage storage.ListStorage) (ACLList, error) {
 }
 
 func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder, storage storage.ListStorage) (list ACLList, err error) {
+	// TODO: need to add context here
 	rootWithId, err := storage.Root()
 	if err != nil {
 		return
@@ -76,7 +77,12 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 		return
 	}
 
-	rawRecordWithId, err := storage.Head()
+	head, err := storage.Head()
+	if err != nil {
+		return
+	}
+
+	rawRecordWithId, err := storage.GetRawRecord(context.Background(), head)
 	if err != nil {
 		return
 	}
