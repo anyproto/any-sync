@@ -24,15 +24,25 @@ func (a aclKeys) RawRecordKey(id string) []byte {
 }
 
 type treeKeys struct {
-	id string
+	id       string
+	headsKey []byte
+	rootKey  []byte
+}
+
+func newTreeKeys(id string) treeKeys {
+	return treeKeys{
+		id:       id,
+		headsKey: joinStringsToBytes("t", id, "heads"),
+		rootKey:  joinStringsToBytes("t", id, "rootId"),
+	}
 }
 
 func (t treeKeys) HeadsKey() []byte {
-	return joinStringsToBytes("t", t.id, "heads")
+	return t.headsKey
 }
 
 func (t treeKeys) RootIdKey() []byte {
-	return joinStringsToBytes("t", t.id, "rootId")
+	return t.rootKey
 }
 
 func (t treeKeys) RawChangeKey(id string) []byte {
