@@ -2,36 +2,47 @@ package storage
 
 import (
 	"bytes"
-	"strings"
 )
 
 type aclKeys struct {
+	spaceId string
+	rootKey []byte
+	headKey []byte
 }
 
-var aclHeadIdKey = []byte("a/headId")
-var aclRootIdKey = []byte("a/rootId")
+func newACLKeys(spaceId string) aclKeys {
+	return aclKeys{
+		spaceId: spaceId,
+		rootKey: joinStringsToBytes("space", spaceId, "a", "rootId"),
+		headKey: joinStringsToBytes("space", spaceId, "a", "headId"),
+	}
+}
 
 func (a aclKeys) HeadIdKey() []byte {
-	return aclHeadIdKey
+	return a.headKey
 }
 
 func (a aclKeys) RootIdKey() []byte {
-	return aclRootIdKey
+	return a.rootKey
 }
 
 func (a aclKeys) RawRecordKey(id string) []byte {
-	return joinStringsToBytes("a", id)
+	return joinStringsToBytes("space", a.spaceId, "a", id)
 }
 
 type treeKeys struct {
 	id       string
+	spaceId  string
 	headsKey []byte
+	rootKey  []byte
 }
 
-func newTreeKeys(id string) treeKeys {
+func newTreeKeys(spaceId, id string) treeKeys {
 	return treeKeys{
 		id:       id,
-		headsKey: joinStringsToBytes("t", id, "heads"),
+		spaceId:  spaceId,
+		headsKey: joinStringsToBytes("space", spaceId, "t", id, "heads"),
+		rootKey:  joinStringsToBytes("space", spaceId, "t", id),
 	}
 }
 
@@ -39,8 +50,12 @@ func (t treeKeys) HeadsKey() []byte {
 	return t.headsKey
 }
 
+func (t treeKeys) RootIdKey() []byte {
+	return t.rootKey
+}
+
 func (t treeKeys) RawChangeKey(id string) []byte {
-	return joinStringsToBytes("t", t.id, id)
+	return joinStringsToBytes("space", t.spaceId, "t", t.id, id)
 }
 
 type spaceKeys struct {
@@ -48,21 +63,11 @@ type spaceKeys struct {
 }
 
 func newSpaceKeys(spaceId string) spaceKeys {
-	return spaceKeys{headerKey: joinStringsToBytes("s", spaceId)}
-}
-
-var spaceIdKey = []byte("spaceId")
-
-func (s spaceKeys) SpaceIdKey() []byte {
-	return spaceIdKey
+	return spaceKeys{headerKey: joinStringsToBytes("space", spaceId)}
 }
 
 func (s spaceKeys) HeaderKey() []byte {
 	return s.headerKey
-}
-
-func isRootIdKey(key string) bool {
-	return strings.HasPrefix(key, "t/") && strings.HasSuffix(key, "rootId")
 }
 
 func joinStringsToBytes(strs ...string) []byte {

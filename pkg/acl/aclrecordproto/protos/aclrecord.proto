@@ -63,6 +63,15 @@ message ACLUserAdd {
   ACLUserPermissions permissions = 4;
 }
 
+// signing accept key
+// rsa encryption key -> read keys
+
+// accept key, encrypt key, invite id
+// GetSpace(id) -> ... (space header + acl root) -> diff
+// Join(ACLJoinRecord) -> Ok
+
+// 
+
 message ACLUserInvite {
   bytes acceptPublicKey = 1;
   bytes encryptPublicKey = 2;
