@@ -18,6 +18,15 @@ type treeStorage struct {
 
 func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err error) {
 	keys := newTreeKeys(treeId)
+	has, err := db.Has(keys.RootIdKey())
+	if err != nil {
+		return
+	}
+	if !has {
+		err = storage.ErrUnknownTreeId
+		return
+	}
+
 	heads, err := db.Get(keys.HeadsKey())
 	if err != nil {
 		return
@@ -55,7 +64,7 @@ func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err e
 
 func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
 	keys := newTreeKeys(payload.TreeId)
-	has, err := db.Has(keys.HeadsKey())
+	has, err := db.Has(keys.RootIdKey())
 	if err != nil {
 		return
 	}
@@ -79,6 +88,11 @@ func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) 
 	}
 
 	err = db.Put(keys.HeadsKey(), heads)
+	if err != nil {
+		return
+	}
+
+	err = db.Put(keys.RootIdKey(), []byte(payload.RootRawChange.Id))
 	if err != nil {
 		return
 	}
