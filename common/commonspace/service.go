@@ -22,8 +22,8 @@ func New() Service {
 }
 
 type Service interface {
-	CreateSpace(ctx context.Context, cache cache.TreeCache, payload SpaceCreatePayload) (Space, error)
-	DeriveSpace(ctx context.Context, cache cache.TreeCache, payload SpaceDerivePayload) (Space, error)
+	DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (Space, error)
+	CreateSpace(ctx context.Context, payload SpaceCreatePayload) (Space, error)
 	GetSpace(ctx context.Context, id string) (sp Space, err error)
 	app.Component
 }
@@ -51,7 +51,6 @@ func (s *service) Name() (name string) {
 
 func (s *service) CreateSpace(
 	ctx context.Context,
-	cache cache.TreeCache,
 	payload SpaceCreatePayload) (sp Space, err error) {
 	storageCreate, err := storagePayloadForSpaceCreate(payload)
 	if err != nil {
@@ -67,7 +66,6 @@ func (s *service) CreateSpace(
 
 func (s *service) DeriveSpace(
 	ctx context.Context,
-	cache cache.TreeCache,
 	payload SpaceDerivePayload) (sp Space, err error) {
 	storageCreate, err := storagePayloadForSpaceDerive(payload)
 	if err != nil {
