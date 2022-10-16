@@ -55,8 +55,7 @@ func createListStorage(db *pogreb.DB, root *aclrecordproto.RawACLRecordWithId) (
 		return
 	}
 	if has {
-		err = storage.ErrACLExists
-		return
+		return newListStorage(db)
 	}
 
 	err = db.Put(keys.HeadIdKey(), []byte(root.Id))

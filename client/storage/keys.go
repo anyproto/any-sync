@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"bytes"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 )
 
 type aclKeys struct {
@@ -13,8 +13,8 @@ type aclKeys struct {
 func newACLKeys(spaceId string) aclKeys {
 	return aclKeys{
 		spaceId: spaceId,
-		rootKey: joinStringsToBytes("space", spaceId, "a", "rootId"),
-		headKey: joinStringsToBytes("space", spaceId, "a", "headId"),
+		rootKey: storage.JoinStringsToBytes("space", spaceId, "a", "rootId"),
+		headKey: storage.JoinStringsToBytes("space", spaceId, "a", "headId"),
 	}
 }
 
@@ -27,7 +27,7 @@ func (a aclKeys) RootIdKey() []byte {
 }
 
 func (a aclKeys) RawRecordKey(id string) []byte {
-	return joinStringsToBytes("space", a.spaceId, "a", id)
+	return storage.JoinStringsToBytes("space", a.spaceId, "a", id)
 }
 
 type treeKeys struct {
@@ -41,8 +41,8 @@ func newTreeKeys(spaceId, id string) treeKeys {
 	return treeKeys{
 		id:       id,
 		spaceId:  spaceId,
-		headsKey: joinStringsToBytes("space", spaceId, "t", id, "heads"),
-		rootKey:  joinStringsToBytes("space", spaceId, "t", id),
+		headsKey: storage.JoinStringsToBytes("space", spaceId, "t", id, "heads"),
+		rootKey:  storage.JoinStringsToBytes("space", spaceId, "t", "rootId", id),
 	}
 }
 
@@ -55,37 +55,25 @@ func (t treeKeys) RootIdKey() []byte {
 }
 
 func (t treeKeys) RawChangeKey(id string) []byte {
-	return joinStringsToBytes("space", t.spaceId, "t", t.id, id)
+	return storage.JoinStringsToBytes("space", t.spaceId, "t", t.id, id)
 }
 
 type spaceKeys struct {
-	headerKey []byte
+	headerKey     []byte
+	treePrefixKey []byte
 }
 
 func newSpaceKeys(spaceId string) spaceKeys {
-	return spaceKeys{headerKey: joinStringsToBytes("space", spaceId)}
+	return spaceKeys{
+		headerKey:     storage.JoinStringsToBytes("space", spaceId),
+		treePrefixKey: storage.JoinStringsToBytes("space", spaceId, "t", "rootId"),
+	}
 }
 
 func (s spaceKeys) HeaderKey() []byte {
 	return s.headerKey
 }
 
-func joinStringsToBytes(strs ...string) []byte {
-	var (
-		b        bytes.Buffer
-		totalLen int
-	)
-	for _, s := range strs {
-		totalLen += len(s)
-	}
-	// adding separators
-	totalLen += len(strs) - 1
-	b.Grow(totalLen)
-	for idx, s := range strs {
-		if idx > 0 {
-			b.WriteString("/")
-		}
-		b.WriteString(s)
-	}
-	return b.Bytes()
+func (s spaceKeys) TreeRootPrefix() []byte {
+	return s.treePrefixKey
 }

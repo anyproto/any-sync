@@ -26,9 +26,9 @@ func (s *storageService) Name() (name string) {
 }
 
 func (s *storageService) SpaceStorage(id string) (storage.SpaceStorage, error) {
-	return newSpaceStorage(s.rootPath, id)
+	return newSpaceStorage(s.db, id)
 }
 
 func (s *storageService) CreateSpaceStorage(payload storage.SpaceStorageCreatePayload) (storage.SpaceStorage, error) {
-	return createSpaceStorage(s.rootPath, payload)
+	return createSpaceStorage(s.db, payload)
 }

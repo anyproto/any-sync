@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"bytes"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"strings"
 )
 
@@ -20,7 +20,7 @@ func (a aclKeys) RootIdKey() []byte {
 }
 
 func (a aclKeys) RawRecordKey(id string) []byte {
-	return joinStringsToBytes("a", id)
+	return storage.JoinStringsToBytes("a", id)
 }
 
 type treeKeys struct {
@@ -31,7 +31,7 @@ type treeKeys struct {
 func newTreeKeys(id string) treeKeys {
 	return treeKeys{
 		id:       id,
-		headsKey: joinStringsToBytes("t", id, "heads"),
+		headsKey: storage.JoinStringsToBytes("t", id, "heads"),
 	}
 }
 
@@ -40,7 +40,7 @@ func (t treeKeys) HeadsKey() []byte {
 }
 
 func (t treeKeys) RawChangeKey(id string) []byte {
-	return joinStringsToBytes("t", t.id, id)
+	return storage.JoinStringsToBytes("t", t.id, id)
 }
 
 type spaceKeys struct {
@@ -48,7 +48,7 @@ type spaceKeys struct {
 }
 
 func newSpaceKeys(spaceId string) spaceKeys {
-	return spaceKeys{headerKey: joinStringsToBytes("s", spaceId)}
+	return spaceKeys{headerKey: storage.JoinStringsToBytes("s", spaceId)}
 }
 
 var spaceIdKey = []byte("spaceId")
@@ -63,24 +63,4 @@ func (s spaceKeys) HeaderKey() []byte {
 
 func isRootIdKey(key string) bool {
 	return strings.HasPrefix(key, "t/") && strings.HasSuffix(key, "rootId")
-}
-
-func joinStringsToBytes(strs ...string) []byte {
-	var (
-		b        bytes.Buffer
-		totalLen int
-	)
-	for _, s := range strs {
-		totalLen += len(s)
-	}
-	// adding separators
-	totalLen += len(strs) - 1
-	b.Grow(totalLen)
-	for idx, s := range strs {
-		if idx > 0 {
-			b.WriteString("/")
-		}
-		b.WriteString(s)
-	}
-	return b.Bytes()
 }
