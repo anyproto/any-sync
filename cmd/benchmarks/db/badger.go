@@ -11,6 +11,33 @@ type badgerTree struct {
 	db      *badger.DB
 }
 
+type badgerTransaction struct {
+	spaceId string
+	id      string
+	txn     *badger.Txn
+}
+
+func (b *badgerTransaction) AddChange(key string, value []byte) (err error) {
+	badgerKey := fmt.Sprintf("space/%s/tree/%s/change/%s", b.spaceId, b.id, key)
+	return b.txn.Set([]byte(badgerKey), value)
+}
+
+func (b *badgerTransaction) GetChange(key string) (val []byte, err error) {
+	badgerKey := fmt.Sprintf("space/%s/tree/%s/change/%s", b.spaceId, b.id, key)
+	it, err := b.txn.Get([]byte(badgerKey))
+	if err != nil {
+		return
+	}
+	return it.ValueCopy(val)
+}
+
+func (b *badgerTree) Perform(f func(txn Transaction) error) error {
+	return b.db.Update(func(txn *badger.Txn) error {
+		bTxn := &badgerTransaction{b.spaceId, b.id, txn}
+		return f(bTxn)
+	})
+}
+
 func (b *badgerTree) Id() string {
 	return b.id
 }

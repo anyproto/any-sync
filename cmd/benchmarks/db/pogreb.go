@@ -12,6 +12,10 @@ type pogrebTree struct {
 	db *pogreb.DB
 }
 
+func (p *pogrebTree) Perform(f func(txn Transaction) error) error {
+	return f(p)
+}
+
 func (p *pogrebTree) Id() string {
 	return p.id
 }

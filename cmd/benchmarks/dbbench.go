@@ -17,9 +17,9 @@ func main() {
 		fmt.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 	opts := options{
-		numSpaces:         1000,
+		numSpaces:         10,
 		numEntriesInSpace: 100,
-		numChangesInTree:  10,
+		numChangesInTree:  1000,
 		numHeadUpdates:    100,
 		defValueSize:      1000,
 		lenHeadUpdate:     1000,
@@ -105,6 +105,15 @@ func bench(factory db.SpaceCreatorFactory, opts options) {
 				panic(err)
 			}
 		}
+		//t.Perform(func(txn db.Transaction) error {
+		//	for i := 0; i < opts.numChangesInTree; i++ {
+		//		err := t.AddChange(changeIdKey(i), byteSlice())
+		//		if err != nil {
+		//			panic(err)
+		//		}
+		//	}
+		//	return nil
+		//})
 		for i := 0; i < opts.numHeadUpdates; i++ {
 			err := t.UpdateHead(string(headUpdate()))
 			if err != nil {
@@ -114,6 +123,25 @@ func bench(factory db.SpaceCreatorFactory, opts options) {
 	}
 	total := opts.numSpaces * opts.numEntriesInSpace * opts.numChangesInTree
 	fmt.Println(total, "changes creation, spent ms", time.Now().Sub(now).Milliseconds())
+	now = time.Now()
+
+	// getting some values from tree
+	for _, t := range trees {
+		err := t.Perform(func(txn db.Transaction) error {
+			for i := 0; i < opts.numChangesInTree; i++ {
+				_, err := t.GetChange(changeIdKey(i))
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	fmt.Println(total, "changes getting perform, spent ms", time.Now().Sub(now).Milliseconds())
 	now = time.Now()
 
 	// getting some values from tree
