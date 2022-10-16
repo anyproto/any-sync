@@ -1,11 +1,17 @@
 package db
 
+type Transaction interface {
+	AddChange(key string, value []byte) (err error)
+	GetChange(key string) ([]byte, error)
+}
+
 type Tree interface {
 	Id() string
 	UpdateHead(head string) (err error)
 	AddChange(key string, value []byte) (err error)
 	GetChange(key string) ([]byte, error)
 	HasChange(key string) (has bool, err error)
+	Perform(func(txn Transaction) error) error
 }
 
 type Space interface {
