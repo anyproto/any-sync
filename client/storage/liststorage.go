@@ -20,23 +20,13 @@ type listStorage struct {
 
 func newListStorage(spaceId string, db *badger.DB, txn *badger.Txn) (ls storage.ListStorage, err error) {
 	keys := newACLKeys(spaceId)
-	rootId, err := provider.GetKeySuffix(txn, keys.RootIdKey())
+	rootId, err := provider.GetAndCopy(txn, keys.RootIdKey())
 	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			err = storage.ErrUnknownACLId
-		}
 		return
 	}
+
 	stringId := string(rootId)
-	rootItem, err := txn.Get(keys.RawRecordKey(stringId))
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			err = storage.ErrUnknownACLId
-		}
-		return
-	}
-	var value []byte
-	value, err = rootItem.ValueCopy(value)
+	value, err := provider.GetAndCopy(txn, keys.RawRecordKey(stringId))
 	if err != nil {
 		return
 	}
@@ -57,19 +47,11 @@ func newListStorage(spaceId string, db *badger.DB, txn *badger.Txn) (ls storage.
 
 func createListStorage(spaceId string, db *badger.DB, txn *badger.Txn, root *aclrecordproto.RawACLRecordWithId) (ls storage.ListStorage, err error) {
 	keys := newACLKeys(spaceId)
-	_, err = provider.GetKeySuffix(txn, keys.RootIdKey())
-	if err != nil && err != badger.ErrKeyNotFound {
-		return
-	}
-	if err == nil {
-		err = storage.ErrACLExists
-		return
-	}
-	aclRootKey := append(keys.RootIdKey(), '/')
-	aclRootKey = append(aclRootKey, []byte(root.Id)...)
-
-	err = txn.Set(aclRootKey, nil)
-	if err != nil {
+	_, err = provider.GetAndCopy(txn, keys.RootIdKey())
+	if err != badger.ErrKeyNotFound {
+		if err == nil {
+			return newListStorage(spaceId, db, txn)
+		}
 		return
 	}
 
@@ -79,6 +61,10 @@ func createListStorage(spaceId string, db *badger.DB, txn *badger.Txn, root *acl
 	}
 
 	err = txn.Set(keys.RawRecordKey(root.Id), root.Payload)
+	if err != nil {
+		return
+	}
+	err = txn.Set(keys.RootIdKey(), []byte(root.Id))
 	if err != nil {
 		return
 	}
@@ -110,12 +96,11 @@ func (l *listStorage) Head() (head string, err error) {
 }
 
 func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *aclrecordproto.RawACLRecordWithId, err error) {
-	res, err := l.db.Get(l.keys.RawRecordKey(id))
+	res, err := provider.Get(l.db, l.keys.RawRecordKey(id))
 	if err != nil {
-		return
-	}
-	if res == nil {
-		err = storage.ErrUnknownRecord
+		if err == badger.ErrKeyNotFound {
+			err = storage.ErrUnknownRecord
+		}
 		return
 	}
 
@@ -127,5 +112,5 @@ func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *aclreco
 }
 
 func (l *listStorage) AddRawRecord(ctx context.Context, rec *aclrecordproto.RawACLRecordWithId) error {
-	return l.db.Put([]byte(rec.Id), rec.Payload)
+	return provider.Put(l.db, []byte(rec.Id), rec.Payload)
 }

@@ -1,23 +1,17 @@
 package storage
 
 import (
-	"github.com/akrylysov/pogreb"
 	provider "github.com/anytypeio/go-anytype-infrastructure-experiments/client/badgerprovider"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/dgraph-io/badger/v3"
-	"path"
 	"sync"
-	"time"
 )
 
-var defPogrebOptions = &pogreb.Options{
-	BackgroundCompactionInterval: time.Minute * 5,
-}
-
 type spaceStorage struct {
-	objDb      *pogreb.DB
+	spaceId    string
+	objDb      *badger.DB
 	keys       spaceKeys
 	aclStorage storage.ListStorage
 	header     *spacesyncproto.RawSpaceHeaderWithId
@@ -26,97 +20,66 @@ type spaceStorage struct {
 
 func newSpaceStorage(objDb *badger.DB, spaceId string) (store spacestorage.SpaceStorage, err error) {
 	keys := newSpaceKeys(spaceId)
-	err = objDb.Update(func(txn *badger.Txn) error {
-		header, err := txn.Get(keys.HeaderKey())
+	err = objDb.View(func(txn *badger.Txn) error {
+		header, err := provider.GetAndCopy(txn, keys.HeaderKey())
 		if err != nil {
 			return err
 		}
 
+		aclStorage, err := newListStorage(spaceId, objDb, txn)
+		if err != nil {
+			return err
+		}
+
+		store = &spaceStorage{
+			spaceId: spaceId,
+			objDb:   objDb,
+			keys:    keys,
+			header: &spacesyncproto.RawSpaceHeaderWithId{
+				RawHeader: header,
+				Id:        spaceId,
+			},
+			aclStorage: aclStorage,
+		}
+		return nil
 	})
-	has, err := provider.Has(obj)
-	if err != nil {
-		return
-	}
-	if !has {
-		err = spacestorage.ErrSpaceStorageMissing
-		return
-	}
-
-	header, err := objDb.Get(keys.HeaderKey())
-	if err != nil {
-		return
-	}
-	if header == nil {
-		err = spacestorage.ErrSpaceStorageMissing
-		return
-	}
-
-	aclStorage, err := newListStorage(objDb)
-	if err != nil {
-		return
-	}
-
-	store = &spaceStorage{
-		objDb: objDb,
-		keys:  keys,
-		header: &spacesyncproto.RawSpaceHeaderWithId{
-			RawHeader: header,
-			Id:        spaceId,
-		},
-		aclStorage: aclStorage,
+	if err == badger.ErrKeyNotFound {
+		err = spacesyncproto.ErrSpaceMissing
 	}
 	return
 }
 
-func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreatePayload) (store spacestorage.SpaceStorage, err error) {
-	dbPath := path.Join(rootPath, payload.SpaceHeaderWithId.Id)
-	db, err := pogreb.Open(dbPath, defPogrebOptions)
-	if err != nil {
-		return
-	}
-
-	defer func() {
-		if err != nil {
-			db.Close()
-		}
-	}()
-
+func createSpaceStorage(db *badger.DB, payload spacestorage.SpaceStorageCreatePayload) (store spacestorage.SpaceStorage, err error) {
 	keys := newSpaceKeys(payload.SpaceHeaderWithId.Id)
-	has, err := db.Has(keys.SpaceIdKey())
-	if err != nil {
-		return
-	}
-	if has {
+	if provider.Has(db, keys.HeaderKey()) {
 		err = spacesyncproto.ErrSpaceExists
 		return
 	}
+	err = db.Update(func(txn *badger.Txn) error {
+		aclStorage, err := createListStorage(payload.SpaceHeaderWithId.Id, db, txn, payload.RecWithId)
+		if err != nil {
+			return err
+		}
 
-	aclStorage, err := createListStorage(db, payload.RecWithId)
-	if err != nil {
-		return
-	}
+		err = txn.Set(keys.HeaderKey(), payload.SpaceHeaderWithId.RawHeader)
+		if err != nil {
+			return err
+		}
 
-	err = db.Put(keys.HeaderKey(), payload.SpaceHeaderWithId.RawHeader)
-	if err != nil {
-		return
-	}
-
-	err = db.Put(keys.SpaceIdKey(), []byte(payload.SpaceHeaderWithId.Id))
-	if err != nil {
-		return
-	}
-
-	store = &spaceStorage{
-		objDb:      db,
-		keys:       keys,
-		aclStorage: aclStorage,
-		header:     payload.SpaceHeaderWithId,
-	}
+		store = &spaceStorage{
+			spaceId:    payload.SpaceHeaderWithId.Id,
+			objDb:      db,
+			keys:       keys,
+			aclStorage: aclStorage,
+			header:     payload.SpaceHeaderWithId,
+		}
+		return nil
+	})
 	return
 }
 
 func (s *spaceStorage) TreeStorage(id string) (storage.TreeStorage, error) {
-	return newTreeStorage(s.objDb, id)
+	return newTreeStorage(s.objDb, s.spaceId, id)
 }
 
 func (s *spaceStorage) CreateTreeStorage(payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
@@ -124,7 +87,7 @@ func (s *spaceStorage) CreateTreeStorage(payload storage.TreeStorageCreatePayloa
 	s.mx.Lock()
 	defer s.mx.Unlock()
 
-	return createTreeStorage(s.objDb, payload)
+	return createTreeStorage(s.objDb, s.spaceId, payload)
 }
 
 func (s *spaceStorage) ACLStorage() (storage.ListStorage, error) {
@@ -136,21 +99,25 @@ func (s *spaceStorage) SpaceHeader() (header *spacesyncproto.RawSpaceHeaderWithI
 }
 
 func (s *spaceStorage) StoredIds() (ids []string, err error) {
-	index := s.objDb.Items()
+	err = s.objDb.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		opts.Prefix = s.keys.TreeRootPrefix()
 
-	key, val, err := index.Next()
-	for err == nil {
-		strKey := string(key)
-		if isRootIdKey(strKey) {
-			ids = append(ids, string(val))
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			id := item.Key()
+			if len(id) <= len(s.keys.TreeRootPrefix())+1 {
+				continue
+			}
+			id = id[len(s.keys.TreeRootPrefix())+1:]
+			ids = append(ids, string(id))
 		}
-		key, val, err = index.Next()
-	}
-
-	if err != pogreb.ErrIterationDone {
-		return
-	}
-	err = nil
+		return nil
+	})
 	return
 }
 

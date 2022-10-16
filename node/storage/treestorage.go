@@ -1,12 +1,10 @@
 package storage
 
 import (
-	"bytes"
 	"context"
 	"github.com/akrylysov/pogreb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
-	"strings"
 )
 
 type treeStorage struct {
@@ -40,10 +38,6 @@ func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err e
 		RawChange: root,
 		Id:        treeId,
 	}
-	if err != nil {
-		return
-	}
-
 	ts = &treeStorage{
 		db:   db,
 		keys: keys,
@@ -64,7 +58,7 @@ func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) 
 		return
 	}
 
-	heads := createHeadsPayload(payload.Heads)
+	heads := storage.CreateHeadsPayload(payload.Heads)
 
 	for _, ch := range payload.Changes {
 		err = db.Put(keys.RawChangeKey(ch.Id), ch.GetRawChange())
@@ -109,17 +103,17 @@ func (t *treeStorage) Heads() (heads []string, err error) {
 		err = storage.ErrUnknownTreeId
 		return
 	}
-	heads = parseHeads(headsBytes)
+	heads = storage.ParseHeads(headsBytes)
 	return
 }
 
 func (t *treeStorage) SetHeads(heads []string) (err error) {
-	payload := createHeadsPayload(heads)
+	payload := storage.CreateHeadsPayload(heads)
 	return t.db.Put(t.keys.HeadsKey(), payload)
 }
 
 func (t *treeStorage) AddRawChange(change *treechangeproto.RawTreeChangeWithId) (err error) {
-	return t.db.Put([]byte(change.Id), change.RawChange)
+	return t.db.Put(t.keys.RawChangeKey(change.Id), change.RawChange)
 }
 
 func (t *treeStorage) GetRawChange(ctx context.Context, id string) (raw *treechangeproto.RawTreeChangeWithId, err error) {
@@ -140,28 +134,4 @@ func (t *treeStorage) GetRawChange(ctx context.Context, id string) (raw *treecha
 
 func (t *treeStorage) HasChange(ctx context.Context, id string) (bool, error) {
 	return t.db.Has(t.keys.RawChangeKey(id))
-}
-
-func parseHeads(headsPayload []byte) []string {
-	return strings.Split(string(headsPayload), "/")
-}
-
-func createHeadsPayload(heads []string) []byte {
-	var (
-		b        bytes.Buffer
-		totalLen int
-	)
-	for _, s := range heads {
-		totalLen += len(s)
-	}
-	// adding separators
-	totalLen += len(heads) - 1
-	b.Grow(totalLen)
-	for idx, s := range heads {
-		if idx > 0 {
-			b.WriteString("/")
-		}
-		b.WriteString(s)
-	}
-	return b.Bytes()
 }
