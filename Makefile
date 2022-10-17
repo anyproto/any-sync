@@ -42,4 +42,4 @@ test-deps:
 
 build-consensus:
 	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/app))
-	go build -v -o bin/consensus-node -ldflags "$(FLAGS)" cmd/consensusnode/consensusnode.go
+	go build -v -o bin/consensus-node -ldflags "$(FLAGS)" github.com/anytypeio/go-anytype-infrastructure-experiments/cmd/consensusnode

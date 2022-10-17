@@ -12,7 +12,6 @@ import (
 var (
 	ErrClosed    = errors.New("object cache closed")
 	ErrExists    = errors.New("object exists")
-	ErrTimeout   = errors.New("loading object timed out")
 	ErrNotExists = errors.New("object not exists")
 )
 
@@ -141,6 +140,7 @@ type oCache struct {
 	closed       bool
 	closeCh      chan struct{}
 	log          *zap.SugaredLogger
+	metrics      *metrics
 	noRefCounter bool
 }
 
@@ -180,6 +180,13 @@ Load:
 	if load {
 		go c.load(ctx, id, e)
 	}
+	if c.metrics != nil {
+		if load {
+			c.metrics.miss.Inc()
+		} else {
+			c.metrics.hit.Inc()
+		}
+	}
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -196,6 +203,10 @@ func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) 
 		return nil, ErrNotExists
 	}
 	c.mu.Unlock()
+
+	if c.metrics != nil {
+		c.metrics.hit.Inc()
+	}
 
 	select {
 	case <-ctx.Done():
@@ -364,7 +375,6 @@ func (c *oCache) GC() {
 	size := len(c.data)
 	c.mu.Unlock()
 
-	c.log.Infof("GC: removed %d; cache size: %d", len(toClose), size)
 	for _, e := range toClose {
 		<-e.load
 		if e.value != nil {
@@ -373,7 +383,10 @@ func (c *oCache) GC() {
 			}
 		}
 	}
-
+	c.log.Infof("GC: removed %d; cache size: %d", len(toClose), size)
+	if len(toClose) > 0 && c.metrics != nil {
+		c.metrics.gc.Add(float64(len(toClose)))
+	}
 	c.mu.Lock()
 	for _, e := range toClose {
 		close(e.close)

@@ -16,7 +16,7 @@ import (
 
 type HandshakeError error
 
-const CName = "net/secure"
+const CName = "common.net.secure"
 
 var log = logger.NewNamed(CName)
 
