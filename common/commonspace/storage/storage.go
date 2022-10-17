@@ -12,18 +12,20 @@ import (
 const CName = "commonspace.storage"
 
 var ErrSpaceStorageExists = errors.New("space storage exists")
+var ErrSpaceStorageMissing = errors.New("space storage missing")
 
 type SpaceStorage interface {
+	storage.Storage
 	storage.Provider
 	ACLStorage() (storage.ListStorage, error)
-	SpaceHeader() (*spacesyncproto.SpaceHeader, error)
+	SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error)
 	StoredIds() ([]string, error)
+	Close() error
 }
 
 type SpaceStorageCreatePayload struct {
-	RecWithId   *aclrecordproto.RawACLRecordWithId
-	SpaceHeader *spacesyncproto.SpaceHeader
-	Id          string
+	RecWithId         *aclrecordproto.RawACLRecordWithId
+	SpaceHeaderWithId *spacesyncproto.RawSpaceHeaderWithId
 }
 
 type SpaceStorageProvider interface {

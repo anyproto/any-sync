@@ -89,12 +89,16 @@ func (t *ACLListStorageBuilder) createRaw(rec proto.Marshaler, identity []byte) 
 	}
 }
 
-func (t *ACLListStorageBuilder) Head() (*aclrecordproto.RawACLRecordWithId, error) {
+func (t *ACLListStorageBuilder) Head() (string, error) {
 	l := len(t.records)
 	if l > 0 {
-		return t.rawRecords[l-1], nil
+		return t.rawRecords[l-1].Id, nil
 	}
-	return t.rawRoot, nil
+	return t.rawRoot.Id, nil
+}
+
+func (t *ACLListStorageBuilder) SetHead(headId string) error {
+	panic("SetHead is not implemented")
 }
 
 func (t *ACLListStorageBuilder) Root() (*aclrecordproto.RawACLRecordWithId, error) {

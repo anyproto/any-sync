@@ -66,10 +66,10 @@ func (mr *MockListStorageMockRecorder) GetRawRecord(arg0, arg1 interface{}) *gom
 }
 
 // Head mocks base method.
-func (m *MockListStorage) Head() (*aclrecordproto.RawACLRecordWithId, error) {
+func (m *MockListStorage) Head() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Head")
-	ret0, _ := ret[0].(*aclrecordproto.RawACLRecordWithId)
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -108,6 +108,20 @@ func (m *MockListStorage) Root() (*aclrecordproto.RawACLRecordWithId, error) {
 func (mr *MockListStorageMockRecorder) Root() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Root", reflect.TypeOf((*MockListStorage)(nil).Root))
+}
+
+// SetHead mocks base method.
+func (m *MockListStorage) SetHead(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetHead", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetHead indicates an expected call of SetHead.
+func (mr *MockListStorageMockRecorder) SetHead(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHead", reflect.TypeOf((*MockListStorage)(nil).SetHead), arg0)
 }
 
 // MockTreeStorage is a mock of TreeStorage interface.

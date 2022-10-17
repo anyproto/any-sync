@@ -324,7 +324,6 @@ func (m *ACLRoot) GetTimestamp() int64 {
 
 type ACLContentValue struct {
 	// Types that are valid to be assigned to Value:
-	//
 	//	*ACLContentValue_UserAdd
 	//	*ACLContentValue_UserRemove
 	//	*ACLContentValue_UserPermissionChange

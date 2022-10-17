@@ -19,10 +19,15 @@ import (
 )
 
 type SpaceCreatePayload struct {
-	SigningKey     signingkey.PrivKey
-	EncryptionKey  encryptionkey.PrivKey
-	SpaceType      string
-	ReadKey        []byte
+	// SigningKey is the signing key of the owner
+	SigningKey signingkey.PrivKey
+	// EncryptionKey is the encryption key of the owner
+	EncryptionKey encryptionkey.PrivKey
+	// SpaceType is an arbitrary string
+	SpaceType string
+	// ReadKey is a first symmetric encryption key for a space
+	ReadKey []byte
+	// ReplicationKey is a key which is to be used to determine the node where the space should be held
 	ReplicationKey uint64
 }
 
@@ -146,5 +151,6 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 
 func (s *space) Close() error {
 	s.diffService.Close()
-	return s.syncService.Close()
+	s.syncService.Close()
+	return s.storage.Close()
 }
