@@ -3,7 +3,7 @@ module github.com/anytypeio/go-anytype-infrastructure-experiments/common
 go 1.19
 
 require (
-	github.com/anytypeio/go-chash v1.0.0
+	github.com/anytypeio/go-chash v0.0.0-20220629194632-4ad1154fe232
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/cespare/xxhash v1.1.0
 	github.com/goccy/go-graphviz v0.0.9
