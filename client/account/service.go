@@ -1,13 +1,13 @@
 package account
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	commonaccount "github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 )
 
 type service struct {

@@ -4,30 +4,30 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	tree2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 )
 
 // SyncTree sends head updates to sync service and also sends new changes to update listener
 type SyncTree struct {
-	tree.ObjectTree
+	tree2.ObjectTree
 	syncClient syncservice.SyncClient
 	listener   updatelistener.UpdateListener
 }
 
-var createDerivedObjectTree = tree.CreateDerivedObjectTree
-var createObjectTree = tree.CreateObjectTree
-var buildObjectTree = tree.BuildObjectTree
+var createDerivedObjectTree = tree2.CreateDerivedObjectTree
+var createObjectTree = tree2.CreateObjectTree
+var buildObjectTree = tree2.BuildObjectTree
 
 func DeriveSyncTree(
 	ctx context.Context,
-	payload tree.ObjectTreeCreatePayload,
+	payload tree2.ObjectTreeCreatePayload,
 	syncClient syncservice.SyncClient,
 	listener updatelistener.UpdateListener,
 	aclList list.ACLList,
-	createStorage storage.TreeStorageCreatorFunc) (t tree.ObjectTree, err error) {
+	createStorage storage.TreeStorageCreatorFunc) (t tree2.ObjectTree, err error) {
 	t, err = createDerivedObjectTree(payload, aclList, createStorage)
 	if err != nil {
 		return
@@ -45,11 +45,11 @@ func DeriveSyncTree(
 
 func CreateSyncTree(
 	ctx context.Context,
-	payload tree.ObjectTreeCreatePayload,
+	payload tree2.ObjectTreeCreatePayload,
 	syncClient syncservice.SyncClient,
 	listener updatelistener.UpdateListener,
 	aclList list.ACLList,
-	createStorage storage.TreeStorageCreatorFunc) (t tree.ObjectTree, err error) {
+	createStorage storage.TreeStorageCreatorFunc) (t tree2.ObjectTree, err error) {
 	t, err = createObjectTree(payload, aclList, createStorage)
 	if err != nil {
 		return
@@ -70,7 +70,7 @@ func BuildSyncTree(
 	syncClient syncservice.SyncClient,
 	treeStorage storage.TreeStorage,
 	listener updatelistener.UpdateListener,
-	aclList list.ACLList) (t tree.ObjectTree, err error) {
+	aclList list.ACLList) (t tree2.ObjectTree, err error) {
 	return buildSyncTree(ctx, syncClient, treeStorage, listener, aclList)
 }
 
@@ -79,7 +79,7 @@ func buildSyncTree(
 	syncClient syncservice.SyncClient,
 	treeStorage storage.TreeStorage,
 	listener updatelistener.UpdateListener,
-	aclList list.ACLList) (t tree.ObjectTree, err error) {
+	aclList list.ACLList) (t tree2.ObjectTree, err error) {
 	t, err = buildObjectTree(treeStorage, aclList)
 	if err != nil {
 		return
@@ -96,7 +96,7 @@ func buildSyncTree(
 	return
 }
 
-func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeContent) (res tree.AddResult, err error) {
+func (s *SyncTree) AddContent(ctx context.Context, content tree2.SignableChangeContent) (res tree2.AddResult, err error) {
 	res, err = s.ObjectTree.AddContent(ctx, content)
 	if err != nil {
 		return
@@ -106,17 +106,17 @@ func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 	return
 }
 
-func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (res tree.AddResult, err error) {
+func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (res tree2.AddResult, err error) {
 	res, err = s.ObjectTree.AddRawChanges(ctx, changes...)
 	if err != nil {
 		return
 	}
 	switch res.Mode {
-	case tree.Nothing:
+	case tree2.Nothing:
 		return
-	case tree.Append:
+	case tree2.Append:
 		s.listener.Update(s)
-	case tree.Rebuild:
+	case tree2.Rebuild:
 		s.listener.Rebuild(s)
 	}
 
@@ -125,6 +125,6 @@ func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeprot
 	return
 }
 
-func (s *SyncTree) Tree() tree.ObjectTree {
+func (s *SyncTree) Tree() tree2.ObjectTree {
 	return s
 }

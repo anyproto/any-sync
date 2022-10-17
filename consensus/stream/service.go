@@ -2,12 +2,12 @@ package stream
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
+	ocache2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/db"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
 	"github.com/cheggaaa/mb/v2"
 	"github.com/mr-tron/base58"
 	"go.uber.org/zap"
@@ -42,22 +42,22 @@ type Service interface {
 
 type service struct {
 	db           db.Service
-	cache        ocache.OCache
+	cache        ocache2.OCache
 	lastStreamId uint64
 }
 
 func (s *service) Init(a *app.App) (err error) {
 	s.db = a.MustComponent(db.CName).(db.Service)
 
-	cacheOpts := []ocache.Option{
-		ocache.WithTTL(cacheTTL),
-		ocache.WithRefCounter(false),
-		ocache.WithLogger(log.Named("cache").Sugar()),
+	cacheOpts := []ocache2.Option{
+		ocache2.WithTTL(cacheTTL),
+		ocache2.WithRefCounter(false),
+		ocache2.WithLogger(log.Named("cache").Sugar()),
 	}
 	if ms := a.Component(metric.CName); ms != nil {
-		cacheOpts = append(cacheOpts, ocache.WithPrometheus(ms.(metric.Metric).Registry(), "consensus", "logcache"))
+		cacheOpts = append(cacheOpts, ocache2.WithPrometheus(ms.(metric.Metric).Registry(), "consensus", "logcache"))
 	}
-	s.cache = ocache.New(s.loadLog, cacheOpts...)
+	s.cache = ocache2.New(s.loadLog, cacheOpts...)
 
 	return s.db.SetChangeReceiver(s.receiveChange)
 }
@@ -99,7 +99,7 @@ func (s *service) RemoveStream(ctx context.Context, logId []byte, streamId uint6
 	return
 }
 
-func (s *service) loadLog(ctx context.Context, id string) (value ocache.Object, err error) {
+func (s *service) loadLog(ctx context.Context, id string) (value ocache2.Object, err error) {
 	if ctxLog := ctx.Value(ctxLogKey); ctxLog != nil {
 		return &object{
 			logId:   ctxLog.(consensus.Log).Id,

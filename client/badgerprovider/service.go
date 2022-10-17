@@ -2,8 +2,8 @@ package badgerprovider
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/dgraph-io/badger/v3"
 )
 

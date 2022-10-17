@@ -8,7 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
 	"go.uber.org/zap"
 	"strings"
 )

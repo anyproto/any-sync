@@ -3,11 +3,11 @@ package pool
 import (
 	"context"
 	"errors"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/dialer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"math/rand"
 	"time"
 )

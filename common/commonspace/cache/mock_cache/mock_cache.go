@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	app "github.com/anytypeio/go-anytype-infrastructure-experiments/app"
+	app "github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	cache "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	gomock "github.com/golang/mock/gomock"
 )

@@ -5,11 +5,11 @@
 package mock_syncservice
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	reflect "reflect"
 
 	spacesyncproto "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	tree "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
-	treechangeproto "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 	gomock "github.com/golang/mock/gomock"
 )
 

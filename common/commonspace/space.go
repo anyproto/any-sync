@@ -10,11 +10,11 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/list"
-	treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
+	storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	tree2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"sync"
 )
 
@@ -47,9 +47,9 @@ type Space interface {
 
 	SpaceSyncRpc() RpcHandler
 
-	DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
-	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
-	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
+	DeriveTree(ctx context.Context, payload tree2.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree2.ObjectTree, error)
+	CreateTree(ctx context.Context, payload tree2.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree2.ObjectTree, error)
+	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (tree2.ObjectTree, error)
 
 	Close() error
 }
@@ -94,15 +94,15 @@ func (s *space) DiffService() diffservice.DiffService {
 	return s.diffService
 }
 
-func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error) {
+func (s *space) DeriveTree(ctx context.Context, payload tree2.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree2.ObjectTree, error) {
 	return synctree.DeriveSyncTree(ctx, payload, s.syncService.SyncClient(), listener, s.aclList, s.storage.CreateTreeStorage)
 }
 
-func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error) {
+func (s *space) CreateTree(ctx context.Context, payload tree2.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree2.ObjectTree, error) {
 	return synctree.CreateSyncTree(ctx, payload, s.syncService.SyncClient(), listener, s.aclList, s.storage.CreateTreeStorage)
 }
 
-func (s *space) BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (t tree.ObjectTree, err error) {
+func (s *space) BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (t tree2.ObjectTree, err error) {
 	getTreeRemote := func() (*spacesyncproto.ObjectSyncMessage, error) {
 		// TODO: add empty context handling (when this is not happening due to head update)
 		peerId, err := syncservice.GetPeerIdFromStreamContext(ctx)
@@ -116,11 +116,11 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 	}
 
 	store, err := s.storage.TreeStorage(id)
-	if err != nil && err != treestorage.ErrUnknownTreeId {
+	if err != nil && err != storage2.ErrUnknownTreeId {
 		return
 	}
 
-	if err == treestorage.ErrUnknownTreeId {
+	if err == storage2.ErrUnknownTreeId {
 		var resp *spacesyncproto.ObjectSyncMessage
 		resp, err = getTreeRemote()
 		if err != nil {
@@ -128,7 +128,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		}
 		fullSyncResp := resp.GetContent().GetFullSyncResponse()
 
-		payload := treestorage.TreeStorageCreatePayload{
+		payload := storage2.TreeStorageCreatePayload{
 			TreeId:        resp.TreeId,
 			RootRawChange: resp.RootChange,
 			Changes:       fullSyncResp.Changes,
@@ -136,7 +136,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		}
 
 		// basically building tree with inmemory storage and validating that it was without errors
-		err = tree.ValidateRawTree(payload, s.aclList)
+		err = tree2.ValidateRawTree(payload, s.aclList)
 		if err != nil {
 			return
 		}
@@ -146,7 +146,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 			return
 		}
 	}
-	return synctree.BuildSyncTree(ctx, s.syncService.SyncClient(), store.(treestorage.TreeStorage), listener, s.aclList)
+	return synctree.BuildSyncTree(ctx, s.syncService.SyncClient(), store.(storage2.TreeStorage), listener, s.aclList)
 }
 
 func (s *space) Close() error {

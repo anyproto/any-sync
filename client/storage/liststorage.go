@@ -3,8 +3,8 @@ package storage
 import (
 	"context"
 	"errors"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/dgraph-io/badger/v3"
 )
 

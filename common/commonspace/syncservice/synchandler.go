@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/slice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/slice"
 )
 
 type syncHandler struct {

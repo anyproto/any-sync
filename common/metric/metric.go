@@ -2,8 +2,8 @@ package metric
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	config2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -24,16 +24,16 @@ type Metric interface {
 
 type metric struct {
 	registry *prometheus.Registry
-	config   config.Metric
+	config   config2.Metric
 }
 
 type configSource interface {
-	GetMetric() config.Metric
+	GetMetric() config2.Metric
 }
 
 func (m *metric) Init(a *app.App) (err error) {
 	m.registry = prometheus.NewRegistry()
-	m.config = a.MustComponent(config.CName).(configSource).GetMetric()
+	m.config = a.MustComponent(config2.CName).(configSource).GetMetric()
 	return nil
 }
 

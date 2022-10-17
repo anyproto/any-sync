@@ -3,7 +3,7 @@ package remotediff
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
 )
 
 type Client interface {
