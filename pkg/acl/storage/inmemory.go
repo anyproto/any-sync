@@ -31,6 +31,10 @@ func (i *inMemoryACLListStorage) Root() (*aclrecordproto.RawACLRecordWithId, err
 	return i.records[0], nil
 }
 
+func (i *inMemoryACLListStorage) SetHead(headId string) error {
+	panic("implement me")
+}
+
 func (i *inMemoryACLListStorage) Head() (string, error) {
 	i.RLock()
 	defer i.RUnlock()

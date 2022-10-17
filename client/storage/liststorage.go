@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"errors"
-	provider "github.com/anytypeio/go-anytype-infrastructure-experiments/client/badgerprovider"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/dgraph-io/badger/v3"
@@ -20,13 +19,13 @@ type listStorage struct {
 
 func newListStorage(spaceId string, db *badger.DB, txn *badger.Txn) (ls storage.ListStorage, err error) {
 	keys := newACLKeys(spaceId)
-	rootId, err := provider.GetAndCopy(txn, keys.RootIdKey())
+	rootId, err := getTxn(txn, keys.RootIdKey())
 	if err != nil {
 		return
 	}
 
 	stringId := string(rootId)
-	value, err := provider.GetAndCopy(txn, keys.RawRecordKey(stringId))
+	value, err := getTxn(txn, keys.RawRecordKey(stringId))
 	if err != nil {
 		return
 	}
@@ -47,7 +46,7 @@ func newListStorage(spaceId string, db *badger.DB, txn *badger.Txn) (ls storage.
 
 func createListStorage(spaceId string, db *badger.DB, txn *badger.Txn, root *aclrecordproto.RawACLRecordWithId) (ls storage.ListStorage, err error) {
 	keys := newACLKeys(spaceId)
-	_, err = provider.GetAndCopy(txn, keys.RootIdKey())
+	_, err = getTxn(txn, keys.RootIdKey())
 	if err != badger.ErrKeyNotFound {
 		if err == nil {
 			return newListStorage(spaceId, db, txn)
@@ -87,7 +86,7 @@ func (l *listStorage) Root() (*aclrecordproto.RawACLRecordWithId, error) {
 }
 
 func (l *listStorage) Head() (head string, err error) {
-	bytes, err := provider.Get(l.db, l.keys.HeadIdKey())
+	bytes, err := getDB(l.db, l.keys.HeadIdKey())
 	if err != nil {
 		return
 	}
@@ -96,7 +95,7 @@ func (l *listStorage) Head() (head string, err error) {
 }
 
 func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *aclrecordproto.RawACLRecordWithId, err error) {
-	res, err := provider.Get(l.db, l.keys.RawRecordKey(id))
+	res, err := getDB(l.db, l.keys.RawRecordKey(id))
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
 			err = storage.ErrUnknownRecord
@@ -111,6 +110,10 @@ func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *aclreco
 	return
 }
 
+func (l *listStorage) SetHead(headId string) (err error) {
+	return putDB(l.db, l.keys.HeadIdKey(), []byte(headId))
+}
+
 func (l *listStorage) AddRawRecord(ctx context.Context, rec *aclrecordproto.RawACLRecordWithId) error {
-	return provider.Put(l.db, []byte(rec.Id), rec.Payload)
+	return putDB(l.db, l.keys.RawRecordKey(rec.Id), rec.Payload)
 }

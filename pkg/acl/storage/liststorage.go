@@ -15,6 +15,7 @@ type ListStorage interface {
 	Storage
 	Root() (*aclrecordproto.RawACLRecordWithId, error)
 	Head() (string, error)
+	SetHead(headId string) error
 
 	GetRawRecord(ctx context.Context, id string) (*aclrecordproto.RawACLRecordWithId, error)
 	AddRawRecord(ctx context.Context, rec *aclrecordproto.RawACLRecordWithId) error

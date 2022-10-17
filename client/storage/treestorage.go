@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	provider "github.com/anytypeio/go-anytype-infrastructure-experiments/client/badgerprovider"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
 	"github.com/dgraph-io/badger/v3"
@@ -23,7 +22,7 @@ func newTreeStorage(db *badger.DB, spaceId, treeId string) (ts storage.TreeStora
 			return err
 		}
 
-		root, err := provider.GetAndCopy(txn, keys.RawChangeKey(treeId))
+		root, err := getTxn(txn, keys.RawChangeKey(treeId))
 		if err != nil {
 			return err
 		}
@@ -46,7 +45,7 @@ func newTreeStorage(db *badger.DB, spaceId, treeId string) (ts storage.TreeStora
 
 func createTreeStorage(db *badger.DB, spaceId string, payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
 	keys := newTreeKeys(spaceId, payload.TreeId)
-	if provider.Has(db, keys.RootIdKey()) {
+	if hasDB(db, keys.RootIdKey()) {
 		err = storage.ErrTreeExists
 		return
 	}
@@ -95,7 +94,7 @@ func (t *treeStorage) Root() (raw *treechangeproto.RawTreeChangeWithId, err erro
 }
 
 func (t *treeStorage) Heads() (heads []string, err error) {
-	headsBytes, err := provider.Get(t.db, t.keys.HeadsKey())
+	headsBytes, err := getDB(t.db, t.keys.HeadsKey())
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
 			err = storage.ErrUnknownTreeId
@@ -108,15 +107,15 @@ func (t *treeStorage) Heads() (heads []string, err error) {
 
 func (t *treeStorage) SetHeads(heads []string) (err error) {
 	payload := storage.CreateHeadsPayload(heads)
-	return provider.Put(t.db, t.keys.HeadsKey(), payload)
+	return putDB(t.db, t.keys.HeadsKey(), payload)
 }
 
 func (t *treeStorage) AddRawChange(change *treechangeproto.RawTreeChangeWithId) (err error) {
-	return provider.Put(t.db, t.keys.RawChangeKey(change.Id), change.RawChange)
+	return putDB(t.db, t.keys.RawChangeKey(change.Id), change.RawChange)
 }
 
 func (t *treeStorage) GetRawChange(ctx context.Context, id string) (raw *treechangeproto.RawTreeChangeWithId, err error) {
-	res, err := provider.Get(t.db, t.keys.RawChangeKey(id))
+	res, err := getDB(t.db, t.keys.RawChangeKey(id))
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
 			err = storage.ErrUnknownTreeId
@@ -132,5 +131,5 @@ func (t *treeStorage) GetRawChange(ctx context.Context, id string) (raw *treecha
 }
 
 func (t *treeStorage) HasChange(ctx context.Context, id string) (bool, error) {
-	return provider.Has(t.db, t.keys.RawChangeKey(id)), nil
+	return hasDB(t.db, t.keys.RawChangeKey(id)), nil
 }

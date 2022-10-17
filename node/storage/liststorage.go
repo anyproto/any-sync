@@ -120,6 +120,10 @@ func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *aclreco
 	return
 }
 
+func (l *listStorage) SetHead(headId string) (err error) {
+	return l.db.Put(l.keys.HeadIdKey(), []byte(headId))
+}
+
 func (l *listStorage) AddRawRecord(ctx context.Context, rec *aclrecordproto.RawACLRecordWithId) error {
-	return l.db.Put([]byte(rec.Id), rec.Payload)
+	return l.db.Put(l.keys.RawRecordKey(rec.Id), rec.Payload)
 }

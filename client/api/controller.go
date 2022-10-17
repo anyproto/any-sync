@@ -1,7 +1,9 @@
 package api
 
 type Controller interface {
-	CreateDerivedSpace() (id string, err error)
+	// DeriveSpace derives the space from current account
+	DeriveSpace() (id string, err error)
+	// CreateSpace creates new space with random data
 	CreateSpace() (id string, err error)
 	GetAllSpacesIds() (ids []string, err error)
 	// LoadSpace asks node to load a particular space

@@ -162,6 +162,21 @@ func (mr *MockSpaceStorageMockRecorder) CreateTreeStorage(arg0 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTreeStorage", reflect.TypeOf((*MockSpaceStorage)(nil).CreateTreeStorage), arg0)
 }
 
+// ID mocks base method.
+func (m *MockSpaceStorage) ID() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ID")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ID indicates an expected call of ID.
+func (mr *MockSpaceStorageMockRecorder) ID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ID", reflect.TypeOf((*MockSpaceStorage)(nil).ID))
+}
+
 // SpaceHeader mocks base method.
 func (m *MockSpaceStorage) SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error) {
 	m.ctrl.T.Helper()

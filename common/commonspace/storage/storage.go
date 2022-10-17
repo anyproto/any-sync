@@ -15,6 +15,7 @@ var ErrSpaceStorageExists = errors.New("space storage exists")
 var ErrSpaceStorageMissing = errors.New("space storage missing")
 
 type SpaceStorage interface {
+	storage.Storage
 	storage.Provider
 	ACLStorage() (storage.ListStorage, error)
 	SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error)

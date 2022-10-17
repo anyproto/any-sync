@@ -7,7 +7,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
 	"time"
 )
@@ -40,7 +39,7 @@ func (c *treeCache) Close(ctx context.Context) (err error) {
 }
 
 func (c *treeCache) Init(a *app.App) (err error) {
-	c.clientService = a.MustComponent(nodespace.CName).(nodespace.Service)
+	c.clientService = a.MustComponent(clientspace.CName).(clientspace.Service)
 	c.cache = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
 			spaceId := ctx.Value(spaceKey).(string)
