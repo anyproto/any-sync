@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/db"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
@@ -47,11 +48,16 @@ type service struct {
 
 func (s *service) Init(a *app.App) (err error) {
 	s.db = a.MustComponent(db.CName).(db.Service)
-	s.cache = ocache.New(s.loadLog,
+
+	cacheOpts := []ocache.Option{
 		ocache.WithTTL(cacheTTL),
 		ocache.WithRefCounter(false),
 		ocache.WithLogger(log.Named("cache").Sugar()),
-	)
+	}
+	if ms := a.Component(metric.CName); ms != nil {
+		cacheOpts = append(cacheOpts, ocache.WithPrometheus(ms.(metric.Metric).Registry(), "consensus", "logcache"))
+	}
+	s.cache = ocache.New(s.loadLog, cacheOpts...)
 
 	return s.db.SetChangeReceiver(s.receiveChange)
 }

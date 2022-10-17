@@ -4,8 +4,10 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
 	secure2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"io"
@@ -16,7 +18,7 @@ import (
 	"time"
 )
 
-const CName = "net/drpcserver"
+const CName = "common.net.drpcserver"
 
 var log = logger.NewNamed(CName)
 
@@ -38,6 +40,7 @@ type drpcServer struct {
 	drpcServer *drpcserver.Server
 	transport  secure2.Service
 	listeners  []secure2.ContextListener
+	metric     metric.Metric
 	cancel     func()
 	*drpcmux.Mux
 }
@@ -45,6 +48,7 @@ type drpcServer struct {
 func (s *drpcServer) Init(a *app.App) (err error) {
 	s.config = a.MustComponent(config.CName).(configGetter).GetGRPCServer()
 	s.transport = a.MustComponent(secure2.CName).(secure2.Service)
+	s.metric = a.MustComponent(metric.CName).(metric.Metric)
 	return nil
 }
 
@@ -53,7 +57,24 @@ func (s *drpcServer) Name() (name string) {
 }
 
 func (s *drpcServer) Run(ctx context.Context) (err error) {
-	s.drpcServer = drpcserver.New(s.Mux)
+	histVec := prometheus.NewSummaryVec(prometheus.SummaryOpts{
+		Namespace: "drpc",
+		Subsystem: "server",
+		Name:      "duration_seconds",
+		Objectives: map[float64]float64{
+			0.5:  0.5,
+			0.85: 0.01,
+			0.95: 0.0005,
+			0.99: 0.0001,
+		},
+	}, []string{"rpc"})
+	s.drpcServer = drpcserver.New(&metric.PrometheusDRPC{
+		Handler:    s.Mux,
+		SummaryVec: histVec,
+	})
+	if err = s.metric.Registry().Register(histVec); err != nil {
+		return
+	}
 	ctx, s.cancel = context.WithCancel(ctx)
 	for _, addr := range s.config.ListenAddrs {
 		tcpList, err := net.Listen("tcp", addr)

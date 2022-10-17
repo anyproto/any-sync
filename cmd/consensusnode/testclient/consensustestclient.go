@@ -38,7 +38,7 @@ var (
 
 func main() {
 	flag.Parse()
-
+	rand.Seed(time.Now().UnixNano())
 	if *flagVersion {
 		fmt.Println(app.VersionDescription())
 		return
@@ -310,7 +310,7 @@ func (b *bench) run() {
 	defer b.stream.Close()
 	sr := readStream(b.stream)
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1000; i++ {
 		time.Sleep(time.Second / 100)
 		wg.Add(1)
 		go func() {

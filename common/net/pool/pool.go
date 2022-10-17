@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	CName = "net.pool"
+	CName = "common.net.pool"
 )
 
 var log = logger.NewNamed(CName)
