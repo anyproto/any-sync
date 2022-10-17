@@ -97,6 +97,10 @@ func (t *ACLListStorageBuilder) Head() (string, error) {
 	return t.rawRoot.Id, nil
 }
 
+func (t *ACLListStorageBuilder) SetHead(headId string) error {
+	panic("SetHead is not implemented")
+}
+
 func (t *ACLListStorageBuilder) Root() (*aclrecordproto.RawACLRecordWithId, error) {
 	return t.rawRoot, nil
 }

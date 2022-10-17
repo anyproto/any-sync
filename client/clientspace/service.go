@@ -23,6 +23,8 @@ func New() Service {
 
 type Service interface {
 	GetSpace(ctx context.Context, id string) (commonspace.Space, error)
+	CreateSpace(ctx context.Context, payload commonspace.SpaceCreatePayload) (commonspace.Space, error)
+	DeriveSpace(ctx context.Context, payload commonspace.SpaceDerivePayload) (commonspace.Space, error)
 	app.ComponentRunnable
 }
 
@@ -59,6 +61,32 @@ func (s *service) Run(ctx context.Context) (err error) {
 		_, _ = s.GetSpace(ctx, "testDSpace")
 	}()
 	return
+}
+
+func (s *service) CreateSpace(ctx context.Context, payload commonspace.SpaceCreatePayload) (space commonspace.Space, err error) {
+	id, err := s.commonSpace.CreateSpace(ctx, payload)
+	if err != nil {
+		return
+	}
+
+	obj, err := s.commonSpace.GetSpace(ctx, id)
+	if err != nil {
+		return
+	}
+	return obj.(commonspace.Space), nil
+}
+
+func (s *service) DeriveSpace(ctx context.Context, payload commonspace.SpaceDerivePayload) (space commonspace.Space, err error) {
+	id, err := s.commonSpace.DeriveSpace(ctx, payload)
+	if err != nil {
+		return
+	}
+
+	obj, err := s.commonSpace.GetSpace(ctx, id)
+	if err != nil {
+		return
+	}
+	return obj.(commonspace.Space), nil
 }
 
 func (s *service) GetSpace(ctx context.Context, id string) (commonspace.Space, error) {

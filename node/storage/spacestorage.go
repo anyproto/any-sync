@@ -15,6 +15,7 @@ var defPogrebOptions = &pogreb.Options{
 }
 
 type spaceStorage struct {
+	spaceId    string
 	objDb      *pogreb.DB
 	keys       spaceKeys
 	aclStorage storage.ListStorage
@@ -60,8 +61,9 @@ func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceS
 	}
 
 	store = &spaceStorage{
-		objDb: objDb,
-		keys:  keys,
+		spaceId: spaceId,
+		objDb:   objDb,
+		keys:    keys,
 		header: &spacesyncproto.RawSpaceHeaderWithId{
 			RawHeader: header,
 			Id:        spaceId,
@@ -110,12 +112,17 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 	}
 
 	store = &spaceStorage{
+		spaceId:    payload.SpaceHeaderWithId.Id,
 		objDb:      db,
 		keys:       keys,
 		aclStorage: aclStorage,
 		header:     payload.SpaceHeaderWithId,
 	}
 	return
+}
+
+func (s *spaceStorage) ID() (string, error) {
+	return s.spaceId, nil
 }
 
 func (s *spaceStorage) TreeStorage(id string) (storage.TreeStorage, error) {

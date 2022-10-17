@@ -1,7 +1,6 @@
 package storage
 
 import (
-	provider "github.com/anytypeio/go-anytype-infrastructure-experiments/client/badgerprovider"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
@@ -21,7 +20,7 @@ type spaceStorage struct {
 func newSpaceStorage(objDb *badger.DB, spaceId string) (store spacestorage.SpaceStorage, err error) {
 	keys := newSpaceKeys(spaceId)
 	err = objDb.View(func(txn *badger.Txn) error {
-		header, err := provider.GetAndCopy(txn, keys.HeaderKey())
+		header, err := getTxn(txn, keys.HeaderKey())
 		if err != nil {
 			return err
 		}
@@ -51,7 +50,7 @@ func newSpaceStorage(objDb *badger.DB, spaceId string) (store spacestorage.Space
 
 func createSpaceStorage(db *badger.DB, payload spacestorage.SpaceStorageCreatePayload) (store spacestorage.SpaceStorage, err error) {
 	keys := newSpaceKeys(payload.SpaceHeaderWithId.Id)
-	if provider.Has(db, keys.HeaderKey()) {
+	if hasDB(db, keys.HeaderKey()) {
 		err = spacesyncproto.ErrSpaceExists
 		return
 	}
@@ -76,6 +75,10 @@ func createSpaceStorage(db *badger.DB, payload spacestorage.SpaceStorageCreatePa
 		return nil
 	})
 	return
+}
+
+func (s *spaceStorage) ID() (string, error) {
+	return s.spaceId, nil
 }
 
 func (s *spaceStorage) TreeStorage(id string) (storage.TreeStorage, error) {
