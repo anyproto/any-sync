@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_objecttree/mock_objecttree.go github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/tree ObjectTree
+//go:generate mockgen -destination mock_objecttree/mock_objecttree.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree ObjectTree
 package tree
 
 import (

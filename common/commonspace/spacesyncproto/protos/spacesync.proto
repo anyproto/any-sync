@@ -1,7 +1,7 @@
 syntax = "proto3";
 package anySpace;
 
-option go_package = "common/commonspace/spacesyncproto";
+option go_package = "commonspace/spacesyncproto";
 import "pkg/acl/treechangeproto/protos/treechange.proto";
 import "pkg/acl/aclrecordproto/protos/aclrecord.proto";
 
