@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_storage/mock_storage.go github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage ListStorage,TreeStorage
+//go:generate mockgen -destination mock_storage/mock_storage.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage ListStorage,TreeStorage
 package storage
 
 import (

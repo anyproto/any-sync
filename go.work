@@ -1,0 +1,9 @@
+go 1.19
+
+use (
+	./common
+	./consensus
+	./node
+	./client
+	./util
+)

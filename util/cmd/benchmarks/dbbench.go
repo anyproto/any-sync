@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/cmd/benchmarks/db"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/benchmarks/db"
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"

@@ -1,7 +1,7 @@
 syntax = "proto3";
 package anyConsensus;
 
-option go_package = "consensus/consensusproto";
+option go_package = "/consensusproto";
 
 enum ErrCodes {
     Unexpected = 0;
