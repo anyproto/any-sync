@@ -1,7 +1,7 @@
 package diffservice
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice/mock_diffservice"
 	"github.com/golang/mock/gomock"
 	"testing"

@@ -3,8 +3,8 @@ package storage
 import (
 	"context"
 	"github.com/akrylysov/pogreb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
+	storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 )
 
 type treeStorage struct {
@@ -14,14 +14,14 @@ type treeStorage struct {
 	root *treechangeproto.RawTreeChangeWithId
 }
 
-func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err error) {
+func newTreeStorage(db *pogreb.DB, treeId string) (ts storage2.TreeStorage, err error) {
 	keys := newTreeKeys(treeId)
 	heads, err := db.Get(keys.HeadsKey())
 	if err != nil {
 		return
 	}
 	if heads == nil {
-		err = storage.ErrUnknownTreeId
+		err = storage2.ErrUnknownTreeId
 		return
 	}
 
@@ -30,7 +30,7 @@ func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err e
 		return
 	}
 	if root == nil {
-		err = storage.ErrUnknownTreeId
+		err = storage2.ErrUnknownTreeId
 		return
 	}
 
@@ -47,18 +47,18 @@ func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err e
 	return
 }
 
-func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
+func createTreeStorage(db *pogreb.DB, payload storage2.TreeStorageCreatePayload) (ts storage2.TreeStorage, err error) {
 	keys := newTreeKeys(payload.TreeId)
 	has, err := db.Has(keys.HeadsKey())
 	if err != nil {
 		return
 	}
 	if has {
-		err = storage.ErrTreeExists
+		err = storage2.ErrTreeExists
 		return
 	}
 
-	heads := storage.CreateHeadsPayload(payload.Heads)
+	heads := storage2.CreateHeadsPayload(payload.Heads)
 
 	for _, ch := range payload.Changes {
 		err = db.Put(keys.RawChangeKey(ch.Id), ch.GetRawChange())
@@ -100,15 +100,15 @@ func (t *treeStorage) Heads() (heads []string, err error) {
 		return
 	}
 	if heads == nil {
-		err = storage.ErrUnknownTreeId
+		err = storage2.ErrUnknownTreeId
 		return
 	}
-	heads = storage.ParseHeads(headsBytes)
+	heads = storage2.ParseHeads(headsBytes)
 	return
 }
 
 func (t *treeStorage) SetHeads(heads []string) (err error) {
-	payload := storage.CreateHeadsPayload(heads)
+	payload := storage2.CreateHeadsPayload(heads)
 	return t.db.Put(t.keys.HeadsKey(), payload)
 }
 
@@ -122,7 +122,7 @@ func (t *treeStorage) GetRawChange(ctx context.Context, id string) (raw *treecha
 		return
 	}
 	if res == nil {
-		err = storage.ErrUnkownChange
+		err = storage2.ErrUnkownChange
 	}
 
 	raw = &treechangeproto.RawTreeChangeWithId{

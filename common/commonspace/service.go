@@ -2,15 +2,15 @@ package commonspace
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
+	config2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 )
 
 const CName = "common.commonspace"
@@ -29,7 +29,7 @@ type Service interface {
 }
 
 type service struct {
-	config               config.Space
+	config               config2.Space
 	configurationService nodeconf.Service
 	storageProvider      storage.SpaceStorageProvider
 	cache                cache.TreeCache
@@ -37,7 +37,7 @@ type service struct {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.config = a.MustComponent(config.CName).(*config.Config).Space
+	s.config = a.MustComponent(config2.CName).(*config2.Config).Space
 	s.storageProvider = a.MustComponent(storage.CName).(storage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.cache = a.MustComponent(cache.CName).(cache.TreeCache)

@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"strings"
 )
 

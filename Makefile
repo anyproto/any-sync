@@ -34,9 +34,9 @@ proto:
 
 
 build:
-	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/app))
+	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/common/app))
 	go build -v -o bin/anytype-node -ldflags "$(FLAGS)" cmd/node/node.go
 
 build-consensus:
-	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/app))
+	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/common/app))
 	go build -v -o bin/consensus-node -ldflags "$(FLAGS)" github.com/anytypeio/go-anytype-infrastructure-experiments/cmd/consensusnode

@@ -1,6 +1,6 @@
 package document
 
-import "github.com/anytypeio/go-anytype-infrastructure-experiments/app"
+import "github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 
 type Service interface {
 	app.Component

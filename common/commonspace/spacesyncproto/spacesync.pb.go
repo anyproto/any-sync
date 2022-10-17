@@ -5,8 +5,8 @@ package spacesyncproto
 
 import (
 	fmt "fmt"
-	aclrecordproto "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/aclrecordproto"
-	treechangeproto "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	proto "github.com/gogo/protobuf/proto"
 	io "io"
 	math "math"

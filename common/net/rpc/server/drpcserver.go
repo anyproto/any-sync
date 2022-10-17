@@ -2,11 +2,11 @@ package server
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	config2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
 	secure2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
@@ -32,11 +32,11 @@ type DRPCServer interface {
 }
 
 type configGetter interface {
-	GetGRPCServer() config.GrpcServer
+	GetGRPCServer() config2.GrpcServer
 }
 
 type drpcServer struct {
-	config     config.GrpcServer
+	config     config2.GrpcServer
 	drpcServer *drpcserver.Server
 	transport  secure2.Service
 	listeners  []secure2.ContextListener
@@ -46,7 +46,7 @@ type drpcServer struct {
 }
 
 func (s *drpcServer) Init(a *app.App) (err error) {
-	s.config = a.MustComponent(config.CName).(configGetter).GetGRPCServer()
+	s.config = a.MustComponent(config2.CName).(configGetter).GetGRPCServer()
 	s.transport = a.MustComponent(secure2.CName).(secure2.Service)
 	s.metric = a.MustComponent(metric.CName).(metric.Metric)
 	return nil

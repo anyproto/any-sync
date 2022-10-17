@@ -9,7 +9,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
 	"go.uber.org/zap"
 	"time"
 )

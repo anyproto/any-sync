@@ -1,12 +1,12 @@
 package diffservice
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice/mock_diffservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
-	mock_storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/storage/mock_storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ldiff/mock_ldiff"
+	mock_storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage/mock_storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff/mock_ldiff"
 	"github.com/golang/mock/gomock"
 	"testing"
 )

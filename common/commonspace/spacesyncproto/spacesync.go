@@ -2,7 +2,7 @@
 package spacesyncproto
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/acl/treechangeproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"storj.io/drpc"
 )
 

@@ -1,12 +1,12 @@
 package nodeconf
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/encryptionkey"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	config2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys"
+	encryptionkey2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
+	signingkey2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-chash"
 )
 
@@ -36,8 +36,8 @@ type service struct {
 type Node struct {
 	Address       string
 	PeerId        string
-	SigningKey    signingkey.PubKey
-	EncryptionKey encryptionkey.PubKey
+	SigningKey    signingkey2.PubKey
+	EncryptionKey encryptionkey2.PubKey
 }
 
 func (n *Node) Id() string {
@@ -49,7 +49,7 @@ func (n *Node) Capacity() float64 {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	conf := a.MustComponent(config.CName).(*config.Config)
+	conf := a.MustComponent(config2.CName).(*config2.Config)
 	s.accountId = conf.Account.PeerId
 
 	config := &configuration{
@@ -100,10 +100,10 @@ func (s *service) ConsensusPeers() []string {
 }
 
 func nodeFromConfigNode(
-	n config.Node) (*Node, error) {
+	n config2.Node) (*Node, error) {
 	decodedSigningKey, err := keys.DecodeKeyFromString(
 		n.SigningKey,
-		signingkey.UnmarshalEd25519PrivateKey,
+		signingkey2.UnmarshalEd25519PrivateKey,
 		nil)
 	if err != nil {
 		return nil, err
@@ -111,7 +111,7 @@ func nodeFromConfigNode(
 
 	decodedEncryptionKey, err := keys.DecodeKeyFromString(
 		n.EncryptionKey,
-		encryptionkey.NewEncryptionRsaPrivKeyFromBytes,
+		encryptionkey2.NewEncryptionRsaPrivKeyFromBytes,
 		nil)
 	if err != nil {
 		return nil, err

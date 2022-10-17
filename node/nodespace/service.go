@@ -2,14 +2,14 @@ package nodespace
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
+	config2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/pkg/ocache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"time"
 )
 
@@ -27,14 +27,14 @@ type Service interface {
 }
 
 type service struct {
-	conf                 config.Space
+	conf                 config2.Space
 	spaceCache           ocache.OCache
 	commonSpace          commonspace.Service
 	spaceStorageProvider storage.SpaceStorageProvider
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.conf = a.MustComponent(config.CName).(*config.Config).Space
+	s.conf = a.MustComponent(config2.CName).(*config2.Config).Space
 	s.commonSpace = a.MustComponent(commonspace.CName).(commonspace.Service)
 	s.spaceStorageProvider = a.MustComponent(storage.CName).(storage.SpaceStorageProvider)
 	s.spaceCache = ocache.New(
