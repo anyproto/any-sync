@@ -2,23 +2,21 @@ syntax = "proto3";
 package anytype;
 option go_package = "testchanges";
 
-message PlainTextChange {
-  message Content {
-    oneof value {
-      TextAppend textAppend = 1;
-    }
+message TextContent {
+  oneof value {
+    TextAppend textAppend = 1;
   }
+}
 
-  message TextAppend {
-    string text = 1;
-  }
+message TextAppend {
+  string text = 1;
+}
 
-  message Snapshot {
-    string text = 1;
-  }
+message TextSnapshot {
+  string text = 1;
+}
 
-  message Data {
-    repeated Content content = 1;
-    Snapshot snapshot = 2;
-  }
+message TextData {
+  repeated TextContent content = 1;
+  TextSnapshot snapshot = 2;
 }

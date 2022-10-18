@@ -1,6 +1,7 @@
-//go:generate mockgen -destination mock_ldiff/mock_ldiff.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff Diff,Remote
 // Package ldiff provides a container of elements with fixed id and changeable content.
 // Diff can calculate the difference with another diff container (you can make it remote) with minimum hops and traffic.
+//
+//go:generate mockgen -destination mock_ldiff/mock_ldiff.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff Diff,Remote
 package ldiff
 
 import (
@@ -84,6 +85,10 @@ type Diff interface {
 	RemoveId(id string) error
 	// Diff makes diff with remote container
 	Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error)
+	// Elements retrieves all elements in the Diff
+	Elements() []Element
+	// Ids retrieves ids of all elements in the Diff
+	Ids() []string
 }
 
 // Remote interface for using in the Diff
@@ -132,6 +137,34 @@ func (d *diff) Set(elements ...Element) {
 		d.sl.Remove(el)
 		d.sl.Set(el, nil)
 	}
+}
+
+func (d *diff) Ids() (ids []string) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	ids = make([]string, 0, d.sl.Len())
+
+	cur := d.sl.Front()
+	for cur != nil {
+		el := cur.Key().(*element).Element
+		ids = append(ids, el.Id)
+	}
+	return
+}
+
+func (d *diff) Elements() (elements []Element) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	elements = make([]Element, 0, d.sl.Len())
+
+	cur := d.sl.Front()
+	for cur != nil {
+		el := cur.Key().(*element).Element
+		elements = append(elements, el)
+	}
+	return
 }
 
 // RemoveId removes element by id

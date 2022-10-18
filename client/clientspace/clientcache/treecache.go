@@ -3,9 +3,10 @@ package clientcache
 import (
 	"context"
 	"errors"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/document"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"time"
@@ -21,6 +22,7 @@ const spaceKey ctxKey = 0
 type treeCache struct {
 	gcttl         int
 	cache         ocache.OCache
+	docService    document.Service
 	clientService clientspace.Service
 }
 
@@ -40,14 +42,16 @@ func (c *treeCache) Close(ctx context.Context) (err error) {
 
 func (c *treeCache) Init(a *app.App) (err error) {
 	c.clientService = a.MustComponent(clientspace.CName).(clientspace.Service)
+	c.docService = a.MustComponent(document.CName).(document.Service)
 	c.cache = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
 			spaceId := ctx.Value(spaceKey).(string)
-			space, err := c.clientService.GetSpace(ctx, spaceId)
+			container, err := c.clientService.GetSpace(ctx, spaceId)
 			if err != nil {
 				return
 			}
-			return space.BuildTree(ctx, id, nil)
+			defer container.Release()
+			return document.NewTextDocument(context.Background(), container.Object, id, c.docService)
 		},
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
