@@ -2,10 +2,6 @@ module github.com/anytypeio/go-anytype-infrastructure-experiments/util
 
 go 1.19
 
-replace github.com/anytypeio/go-anytype-infrastructure-experiments/common => ../common
-
-replace github.com/anytypeio/go-anytype-infrastructure-experiments/consensus => ../consensus
-
 require (
 	github.com/akrylysov/pogreb v0.10.1
 	github.com/anytypeio/go-anytype-infrastructure-experiments/common v0.0.0-00010101000000-000000000000

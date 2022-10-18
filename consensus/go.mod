@@ -2,8 +2,6 @@ module github.com/anytypeio/go-anytype-infrastructure-experiments/consensus
 
 go 1.19
 
-replace github.com/anytypeio/go-anytype-infrastructure-experiments/common => ../common
-
 require (
 	github.com/cheggaaa/mb/v2 v2.0.1
 	github.com/gogo/protobuf v1.3.2
