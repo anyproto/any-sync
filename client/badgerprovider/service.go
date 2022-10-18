@@ -18,6 +18,10 @@ type service struct {
 	db *badger.DB
 }
 
+func New() BadgerProvider {
+	return &service{}
+}
+
 func (s *service) Init(a *app.App) (err error) {
 	cfg := a.MustComponent(config.CName).(*config.Config)
 	s.db, err = badger.Open(badger.DefaultOptions(cfg.Storage.Path))
