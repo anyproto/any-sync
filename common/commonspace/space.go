@@ -44,6 +44,7 @@ func NewSpaceId(id string, repKey uint64) string {
 
 type Space interface {
 	Id() string
+	StoredIds() []string
 
 	SpaceSyncRpc() RpcHandler
 
@@ -92,6 +93,10 @@ func (s *space) SyncService() syncservice.SyncService {
 
 func (s *space) DiffService() diffservice.DiffService {
 	return s.diffService
+}
+
+func (s *space) StoredIds() []string {
+	return s.diffService.AllIds()
 }
 
 func (s *space) DeriveTree(ctx context.Context, payload tree2.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree2.ObjectTree, error) {

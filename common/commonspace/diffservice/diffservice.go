@@ -17,6 +17,7 @@ type DiffService interface {
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
 	UpdateHeads(id string, heads []string)
 	RemoveObject(id string)
+	AllIds() []string
 
 	Init(objectIds []string)
 	Close() (err error)
@@ -70,6 +71,10 @@ func (d *diffService) UpdateHeads(id string, heads []string) {
 		Id:   id,
 		Head: concatStrings(heads),
 	})
+}
+
+func (d *diffService) AllIds() []string {
+	return d.diff.Ids()
 }
 
 func (d *diffService) RemoveObject(id string) {
