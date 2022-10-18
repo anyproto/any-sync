@@ -1,5 +1,8 @@
 module github.com/anytypeio/go-anytype-infrastructure-experiments/client
 
+replace github.com/anytypeio/go-anytype-infrastructure-experiments/common => ../common
+
+
 go 1.19
 
 require (
