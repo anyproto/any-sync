@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/badgerprovider"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
@@ -14,6 +15,7 @@ type storageService struct {
 
 type ClientStorage interface {
 	storage.SpaceStorageProvider
+	app.ComponentRunnable
 	AllSpaceIds() (ids []string, err error)
 }
 
@@ -61,4 +63,12 @@ func (s *storageService) AllSpaceIds() (ids []string, err error) {
 		return nil
 	})
 	return
+}
+
+func (s *storageService) Run(ctx context.Context) (err error) {
+	return nil
+}
+
+func (s *storageService) Close(ctx context.Context) (err error) {
+	return s.db.Close()
 }
