@@ -2,6 +2,7 @@ package commonspace
 
 import (
 	"context"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
@@ -30,6 +31,7 @@ type Service interface {
 
 type service struct {
 	config               config2.Space
+	account              account.Service
 	configurationService nodeconf.Service
 	storageProvider      storage.SpaceStorageProvider
 	cache                treegetter.TreeGetter
@@ -38,6 +40,7 @@ type service struct {
 
 func (s *service) Init(a *app.App) (err error) {
 	s.config = a.MustComponent(config2.CName).(*config2.Config).Space
+	s.account = a.MustComponent(account.CName).(account.Service)
 	s.storageProvider = a.MustComponent(storage.CName).(storage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.cache = a.MustComponent(treegetter.CName).(treegetter.TreeGetter)
@@ -93,6 +96,7 @@ func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {
 		syncService: syncService,
 		diffService: diffService,
 		cache:       s.cache,
+		account:     s.account,
 		storage:     st,
 	}
 	if err := sp.Init(ctx); err != nil {

@@ -38,7 +38,7 @@ func (s *syncClient) LastUsage() time.Time {
 
 func (s *syncClient) BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (err error) {
 	s.notifyIfNeeded(message)
-	return s.BroadcastAsync(message)
+	return s.StreamPool.BroadcastAsync(message)
 }
 
 func (s *syncClient) BroadcastAsyncOrSendResponsible(message *spacesyncproto.ObjectSyncMessage) (err error) {
