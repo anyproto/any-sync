@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 )
 
 type rpcHandler struct {
@@ -17,7 +16,7 @@ func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpac
 		err = spacesyncproto.ErrSpaceExists
 		return
 	}
-	if err != treegetter.ErrSpaceNotFound {
+	if err != storage.ErrSpaceStorageMissing {
 		err = spacesyncproto.ErrUnexpected
 		return
 	}

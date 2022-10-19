@@ -356,7 +356,6 @@ func (c *oCache) GC() {
 		c.mu.Unlock()
 		return
 	}
-	deadline := c.timeNow().Add(-c.ttl)
 	var toClose []*entry
 	for _, e := range c.data {
 		if e.isClosing {
@@ -366,7 +365,8 @@ func (c *oCache) GC() {
 		if lug, ok := e.value.(ObjectLastUsage); ok {
 			lu = lug.LastUsage()
 		}
-		if !e.locked() && e.refCount <= 0 && lu.Before(deadline) {
+		deadline := lu.Add(c.ttl)
+		if !e.locked() && e.refCount <= 0 && c.timeNow().After(deadline) {
 			e.isClosing = true
 			e.close = make(chan struct{})
 			toClose = append(toClose, e)

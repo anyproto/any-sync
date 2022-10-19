@@ -52,11 +52,13 @@ type streamPool struct {
 }
 
 func newStreamPool(messageHandler MessageHandler) StreamPool {
-	return &streamPool{
+	s := &streamPool{
 		peerStreams:    make(map[string]spacesyncproto.SpaceStream),
 		messageHandler: messageHandler,
 		wg:             &sync.WaitGroup{},
 	}
+	s.lastUsage.Store(time.Now().Unix())
+	return s
 }
 
 func (s *streamPool) LastUsage() time.Time {
