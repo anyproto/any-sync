@@ -55,6 +55,7 @@ func newStreamPool(messageHandler MessageHandler) StreamPool {
 	s := &streamPool{
 		peerStreams:    make(map[string]spacesyncproto.SpaceStream),
 		messageHandler: messageHandler,
+		waiters:        make(map[string]responseWaiter),
 		wg:             &sync.WaitGroup{},
 	}
 	s.lastUsage.Store(time.Now().Unix())
