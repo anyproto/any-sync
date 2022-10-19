@@ -7,7 +7,8 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/document"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"time"
 )
@@ -26,7 +27,12 @@ type treeCache struct {
 	clientService clientspace.Service
 }
 
-func New(ttl int) cache.TreeCache {
+type TreeCache interface {
+	treegetter.TreeGetter
+	GetDocument(ctx context.Context, spaceId, id string) (doc document.TextDocument, err error)
+}
+
+func New(ttl int) TreeCache {
 	return &treeCache{
 		gcttl: ttl,
 	}
@@ -46,44 +52,38 @@ func (c *treeCache) Init(a *app.App) (err error) {
 	c.cache = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
 			spaceId := ctx.Value(spaceKey).(string)
-			container, err := c.clientService.GetSpace(ctx, spaceId)
+			space, err := c.clientService.GetSpace(ctx, spaceId)
 			if err != nil {
 				return
 			}
-			defer container.Release()
-			return document.NewTextDocument(context.Background(), container.Object, id, c.docService)
+			return document.NewTextDocument(context.Background(), space, id, c.docService)
 		},
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
 		ocache.WithTTL(time.Duration(c.gcttl)*time.Second),
-		ocache.WithRefCounter(false),
 	)
 	return nil
 }
 
 func (c *treeCache) Name() (name string) {
-	return cache.CName
+	return treegetter.CName
 }
 
-func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (res cache.TreeResult, err error) {
-	var cacheRes ocache.Object
+func (c *treeCache) GetDocument(ctx context.Context, spaceId, id string) (doc document.TextDocument, err error) {
 	ctx = context.WithValue(ctx, spaceKey, spaceId)
-	cacheRes, err = c.cache.Get(ctx, id)
+	v, err := c.cache.Get(ctx, id)
 	if err != nil {
-		return cache.TreeResult{}, err
-	}
-
-	treeContainer, ok := cacheRes.(cache.TreeContainer)
-	if !ok {
-		err = ErrCacheObjectWithoutTree
 		return
 	}
+	doc = v.(document.TextDocument)
+	return
+}
 
-	res = cache.TreeResult{
-		Release: func() {
-			c.cache.Release(id)
-		},
-		TreeContainer: treeContainer,
+func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (tr tree.ObjectTree, err error) {
+	doc, err := c.GetDocument(ctx, spaceId, id)
+	if err != nil {
+		return
 	}
+	tr = doc.Tree()
 	return
 }

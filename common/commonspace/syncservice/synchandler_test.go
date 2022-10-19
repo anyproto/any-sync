@@ -3,10 +3,9 @@ package syncservice
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache/mock_cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/mock_syncservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter/mock_treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree/mock_objecttree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
@@ -49,7 +48,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 
 	ctx := context.Background()
 	spaceId := "spaceId"
-	cacheMock := mock_cache.NewMockTreeCache(ctrl)
+	cacheMock := mock_treegetter.NewMockTreeGetter(ctrl)
 	syncClientMock := mock_syncservice.NewMockSyncClient(ctrl)
 	objectTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
 
@@ -66,10 +65,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		msg := spacesyncproto.WrapHeadUpdate(headUpdate, chWithId, treeId, "")
 		cacheMock.EXPECT().
 			GetTree(gomock.Any(), spaceId, treeId).
-			Return(cache.TreeResult{
-				Release:       func() {},
-				TreeContainer: treeContainer{objectTreeMock},
-			}, nil)
+			Return(objectTreeMock, nil)
 		objectTreeMock.EXPECT().
 			Heads().
 			Return([]string{"h2"})
@@ -103,10 +99,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		msg := spacesyncproto.WrapHeadUpdate(headUpdate, chWithId, treeId, "")
 		cacheMock.EXPECT().
 			GetTree(gomock.Any(), spaceId, treeId).
-			Return(cache.TreeResult{
-				Release:       func() {},
-				TreeContainer: treeContainer{objectTreeMock},
-			}, nil)
+			Return(objectTreeMock, nil)
 		objectTreeMock.EXPECT().
 			Heads().
 			Return([]string{"h2"})
@@ -143,10 +136,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		msg := spacesyncproto.WrapHeadUpdate(headUpdate, chWithId, treeId, "")
 		cacheMock.EXPECT().
 			GetTree(gomock.Any(), spaceId, treeId).
-			Return(cache.TreeResult{
-				Release:       func() {},
-				TreeContainer: treeContainer{objectTreeMock},
-			}, nil)
+			Return(objectTreeMock, nil)
 		objectTreeMock.EXPECT().
 			Heads().
 			Return([]string{"h1"})
@@ -168,10 +158,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		msg := spacesyncproto.WrapHeadUpdate(headUpdate, chWithId, treeId, "")
 		cacheMock.EXPECT().
 			GetTree(gomock.Any(), spaceId, treeId).
-			Return(cache.TreeResult{
-				Release:       func() {},
-				TreeContainer: treeContainer{objectTreeMock},
-			}, nil)
+			Return(objectTreeMock, nil)
 		objectTreeMock.EXPECT().
 			Heads().
 			Return([]string{"h2"})
@@ -196,10 +183,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		msg := spacesyncproto.WrapHeadUpdate(headUpdate, chWithId, treeId, "")
 		cacheMock.EXPECT().
 			GetTree(gomock.Any(), spaceId, treeId).
-			Return(cache.TreeResult{
-				Release:       func() {},
-				TreeContainer: treeContainer{objectTreeMock},
-			}, nil)
+			Return(objectTreeMock, nil)
 
 		objectTreeMock.EXPECT().
 			Heads().
@@ -216,7 +200,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 
 	ctx := context.Background()
 	spaceId := "spaceId"
-	cacheMock := mock_cache.NewMockTreeCache(ctrl)
+	cacheMock := mock_treegetter.NewMockTreeGetter(ctrl)
 	syncClientMock := mock_syncservice.NewMockSyncClient(ctrl)
 	objectTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
 
@@ -234,10 +218,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 
 		cacheMock.EXPECT().
 			GetTree(gomock.Any(), spaceId, treeId).
-			Return(cache.TreeResult{
-				Release:       func() {},
-				TreeContainer: treeContainer{objectTreeMock},
-			}, nil)
+			Return(objectTreeMock, nil)
 		objectTreeMock.EXPECT().
 			Heads().
 			Return([]string{"h2"})
@@ -269,10 +250,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 
 		cacheMock.EXPECT().
 			GetTree(gomock.Any(), spaceId, treeId).
-			Return(cache.TreeResult{
-				Release:       func() {},
-				TreeContainer: treeContainer{objectTreeMock},
-			}, nil)
+			Return(objectTreeMock, nil)
 		objectTreeMock.EXPECT().
 			Heads().
 			Return([]string{"h2"})
@@ -297,10 +275,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 
 		cacheMock.EXPECT().
 			GetTree(gomock.Any(), spaceId, treeId).
-			Return(cache.TreeResult{
-				Release:       func() {},
-				TreeContainer: treeContainer{objectTreeMock},
-			}, nil)
+			Return(objectTreeMock, nil)
 		syncClientMock.EXPECT().
 			CreateFullSyncResponse(gomock.Eq(objectTreeMock), gomock.Eq([]string{"h1"}), gomock.Eq([]string{"h1"}), gomock.Eq("")).
 			Return(fullRequest, nil)
@@ -321,7 +296,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 
 		cacheMock.EXPECT().
 			GetTree(gomock.Any(), spaceId, treeId).
-			Return(cache.TreeResult{}, fmt.Errorf("some"))
+			Return(nil, fmt.Errorf("some"))
 
 		syncClientMock.EXPECT().
 			SendAsync(gomock.Eq([]string{senderId}), gomock.Any())
@@ -336,7 +311,7 @@ func TestSyncHandler_HandleFullSyncResponse(t *testing.T) {
 
 	ctx := context.Background()
 	spaceId := "spaceId"
-	cacheMock := mock_cache.NewMockTreeCache(ctrl)
+	cacheMock := mock_treegetter.NewMockTreeGetter(ctrl)
 	syncClientMock := mock_syncservice.NewMockSyncClient(ctrl)
 	objectTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
 
@@ -353,10 +328,7 @@ func TestSyncHandler_HandleFullSyncResponse(t *testing.T) {
 
 		cacheMock.EXPECT().
 			GetTree(gomock.Any(), spaceId, treeId).
-			Return(cache.TreeResult{
-				Release:       func() {},
-				TreeContainer: treeContainer{objectTreeMock},
-			}, nil)
+			Return(objectTreeMock, nil)
 		objectTreeMock.EXPECT().
 			Heads().
 			Return([]string{"h2"})
@@ -383,10 +355,7 @@ func TestSyncHandler_HandleFullSyncResponse(t *testing.T) {
 
 		cacheMock.EXPECT().
 			GetTree(gomock.Any(), spaceId, treeId).
-			Return(cache.TreeResult{
-				Release:       func() {},
-				TreeContainer: treeContainer{objectTreeMock},
-			}, nil)
+			Return(objectTreeMock, nil)
 		objectTreeMock.EXPECT().
 			Heads().
 			Return([]string{"h1"})

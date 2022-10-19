@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"github.com/libp2p/go-libp2p-core/sec"
 	"storj.io/drpc/drpcctx"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 var ErrEmptyPeer = errors.New("don't have such a peer")
@@ -19,6 +21,7 @@ const maxSimultaneousOperationsPerStream = 10
 // StreamPool can be made generic to work with different streams
 type StreamPool interface {
 	Sender
+	ocache.ObjectLastUsage
 	AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (err error)
 	AddAndReadStreamAsync(stream spacesyncproto.SpaceStream)
 	HasActiveStream(peerId string) bool
@@ -44,7 +47,8 @@ type streamPool struct {
 	wg             *sync.WaitGroup
 	waiters        map[string]responseWaiter
 	waitersMx      sync.Mutex
-	counter        uint64
+	counter        atomic.Uint64
+	lastUsage      atomic.Int64
 }
 
 func newStreamPool(messageHandler MessageHandler) StreamPool {
@@ -53,6 +57,10 @@ func newStreamPool(messageHandler MessageHandler) StreamPool {
 		messageHandler: messageHandler,
 		wg:             &sync.WaitGroup{},
 	}
+}
+
+func (s *streamPool) LastUsage() time.Time {
+	return time.Unix(s.lastUsage.Load(), 0)
 }
 
 func (s *streamPool) HasActiveStream(peerId string) (res bool) {
@@ -65,7 +73,7 @@ func (s *streamPool) HasActiveStream(peerId string) (res bool) {
 func (s *streamPool) SendSync(
 	peerId string,
 	msg *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
-	newCounter := atomic.AddUint64(&s.counter, 1)
+	newCounter := s.counter.Add(1)
 	msg.TrackingId = genStreamPoolKey(peerId, msg.TreeId, newCounter)
 
 	s.waitersMx.Lock()
@@ -85,6 +93,7 @@ func (s *streamPool) SendSync(
 }
 
 func (s *streamPool) SendAsync(peers []string, message *spacesyncproto.ObjectSyncMessage) (err error) {
+	s.lastUsage.Store(time.Now().Unix())
 	getStreams := func() (streams []spacesyncproto.SpaceStream) {
 		for _, pId := range peers {
 			stream, err := s.getOrDeleteStream(pId)
@@ -101,9 +110,10 @@ func (s *streamPool) SendAsync(peers []string, message *spacesyncproto.ObjectSyn
 	s.Unlock()
 
 	for _, s := range streams {
-		if len(peers) == 1 {
-			err = s.Send(message)
-		}
+		err = s.Send(message)
+	}
+	if len(peers) != 1 {
+		err = nil
 	}
 	return err
 }
@@ -191,6 +201,7 @@ func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStre
 	}
 
 	process := func(msg *spacesyncproto.ObjectSyncMessage) {
+		s.lastUsage.Store(time.Now().Unix())
 		if msg.TrackingId == "" {
 			s.messageHandler(stream.Context(), peerId, msg)
 			return
@@ -213,6 +224,7 @@ func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStre
 Loop:
 	for {
 		msg, err := stream.Recv()
+		s.lastUsage.Store(time.Now().Unix())
 		if err != nil {
 			break
 		}

@@ -324,12 +324,13 @@ func (m *ACLRoot) GetTimestamp() int64 {
 
 type ACLContentValue struct {
 	// Types that are valid to be assigned to Value:
-	//	*ACLContentValueValueOfUserAdd
-	//	*ACLContentValueValueOfUserRemove
-	//	*ACLContentValueValueOfUserPermissionChange
-	//	*ACLContentValueValueOfUserInvite
-	//	*ACLContentValueValueOfUserJoin
-	Value IsACLContentValueValue `protobuf_oneof:"value"`
+	//
+	//	*ACLContentValue_UserAdd
+	//	*ACLContentValue_UserRemove
+	//	*ACLContentValue_UserPermissionChange
+	//	*ACLContentValue_UserInvite
+	//	*ACLContentValue_UserJoin
+	Value isACLContentValue_Value `protobuf_oneof:"value"`
 }
 
 func (m *ACLContentValue) Reset()         { *m = ACLContentValue{} }
@@ -365,35 +366,35 @@ func (m *ACLContentValue) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ACLContentValue proto.InternalMessageInfo
 
-type IsACLContentValueValue interface {
-	IsACLContentValueValue()
+type isACLContentValue_Value interface {
+	isACLContentValue_Value()
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
 
-type ACLContentValueValueOfUserAdd struct {
+type ACLContentValue_UserAdd struct {
 	UserAdd *ACLUserAdd `protobuf:"bytes,1,opt,name=userAdd,proto3,oneof" json:"userAdd,omitempty"`
 }
-type ACLContentValueValueOfUserRemove struct {
+type ACLContentValue_UserRemove struct {
 	UserRemove *ACLUserRemove `protobuf:"bytes,2,opt,name=userRemove,proto3,oneof" json:"userRemove,omitempty"`
 }
-type ACLContentValueValueOfUserPermissionChange struct {
+type ACLContentValue_UserPermissionChange struct {
 	UserPermissionChange *ACLUserPermissionChange `protobuf:"bytes,3,opt,name=userPermissionChange,proto3,oneof" json:"userPermissionChange,omitempty"`
 }
-type ACLContentValueValueOfUserInvite struct {
+type ACLContentValue_UserInvite struct {
 	UserInvite *ACLUserInvite `protobuf:"bytes,4,opt,name=userInvite,proto3,oneof" json:"userInvite,omitempty"`
 }
-type ACLContentValueValueOfUserJoin struct {
+type ACLContentValue_UserJoin struct {
 	UserJoin *ACLUserJoin `protobuf:"bytes,5,opt,name=userJoin,proto3,oneof" json:"userJoin,omitempty"`
 }
 
-func (*ACLContentValueValueOfUserAdd) IsACLContentValueValue()              {}
-func (*ACLContentValueValueOfUserRemove) IsACLContentValueValue()           {}
-func (*ACLContentValueValueOfUserPermissionChange) IsACLContentValueValue() {}
-func (*ACLContentValueValueOfUserInvite) IsACLContentValueValue()           {}
-func (*ACLContentValueValueOfUserJoin) IsACLContentValueValue()             {}
+func (*ACLContentValue_UserAdd) isACLContentValue_Value()              {}
+func (*ACLContentValue_UserRemove) isACLContentValue_Value()           {}
+func (*ACLContentValue_UserPermissionChange) isACLContentValue_Value() {}
+func (*ACLContentValue_UserInvite) isACLContentValue_Value()           {}
+func (*ACLContentValue_UserJoin) isACLContentValue_Value()             {}
 
-func (m *ACLContentValue) GetValue() IsACLContentValueValue {
+func (m *ACLContentValue) GetValue() isACLContentValue_Value {
 	if m != nil {
 		return m.Value
 	}
@@ -401,35 +402,35 @@ func (m *ACLContentValue) GetValue() IsACLContentValueValue {
 }
 
 func (m *ACLContentValue) GetUserAdd() *ACLUserAdd {
-	if x, ok := m.GetValue().(*ACLContentValueValueOfUserAdd); ok {
+	if x, ok := m.GetValue().(*ACLContentValue_UserAdd); ok {
 		return x.UserAdd
 	}
 	return nil
 }
 
 func (m *ACLContentValue) GetUserRemove() *ACLUserRemove {
-	if x, ok := m.GetValue().(*ACLContentValueValueOfUserRemove); ok {
+	if x, ok := m.GetValue().(*ACLContentValue_UserRemove); ok {
 		return x.UserRemove
 	}
 	return nil
 }
 
 func (m *ACLContentValue) GetUserPermissionChange() *ACLUserPermissionChange {
-	if x, ok := m.GetValue().(*ACLContentValueValueOfUserPermissionChange); ok {
+	if x, ok := m.GetValue().(*ACLContentValue_UserPermissionChange); ok {
 		return x.UserPermissionChange
 	}
 	return nil
 }
 
 func (m *ACLContentValue) GetUserInvite() *ACLUserInvite {
-	if x, ok := m.GetValue().(*ACLContentValueValueOfUserInvite); ok {
+	if x, ok := m.GetValue().(*ACLContentValue_UserInvite); ok {
 		return x.UserInvite
 	}
 	return nil
 }
 
 func (m *ACLContentValue) GetUserJoin() *ACLUserJoin {
-	if x, ok := m.GetValue().(*ACLContentValueValueOfUserJoin); ok {
+	if x, ok := m.GetValue().(*ACLContentValue_UserJoin); ok {
 		return x.UserJoin
 	}
 	return nil
@@ -438,11 +439,11 @@ func (m *ACLContentValue) GetUserJoin() *ACLUserJoin {
 // XXX_OneofWrappers is for the internal use of the proto package.
 func (*ACLContentValue) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
-		(*ACLContentValueValueOfUserAdd)(nil),
-		(*ACLContentValueValueOfUserRemove)(nil),
-		(*ACLContentValueValueOfUserPermissionChange)(nil),
-		(*ACLContentValueValueOfUserInvite)(nil),
-		(*ACLContentValueValueOfUserJoin)(nil),
+		(*ACLContentValue_UserAdd)(nil),
+		(*ACLContentValue_UserRemove)(nil),
+		(*ACLContentValue_UserPermissionChange)(nil),
+		(*ACLContentValue_UserInvite)(nil),
+		(*ACLContentValue_UserJoin)(nil),
 	}
 }
 
@@ -1303,12 +1304,12 @@ func (m *ACLContentValue) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ACLContentValueValueOfUserAdd) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserAdd) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLContentValueValueOfUserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserAdd != nil {
 		{
@@ -1324,12 +1325,12 @@ func (m *ACLContentValueValueOfUserAdd) MarshalToSizedBuffer(dAtA []byte) (int, 
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLContentValueValueOfUserRemove) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserRemove) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLContentValueValueOfUserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserRemove != nil {
 		{
@@ -1345,12 +1346,12 @@ func (m *ACLContentValueValueOfUserRemove) MarshalToSizedBuffer(dAtA []byte) (in
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLContentValueValueOfUserPermissionChange) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserPermissionChange) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLContentValueValueOfUserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserPermissionChange != nil {
 		{
@@ -1366,12 +1367,12 @@ func (m *ACLContentValueValueOfUserPermissionChange) MarshalToSizedBuffer(dAtA [
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLContentValueValueOfUserInvite) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserInvite) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLContentValueValueOfUserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserInvite != nil {
 		{
@@ -1387,12 +1388,12 @@ func (m *ACLContentValueValueOfUserInvite) MarshalToSizedBuffer(dAtA []byte) (in
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ACLContentValueValueOfUserJoin) MarshalTo(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserJoin) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ACLContentValueValueOfUserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ACLContentValue_UserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.UserJoin != nil {
 		{
@@ -1979,7 +1980,7 @@ func (m *ACLContentValue) Size() (n int) {
 	return n
 }
 
-func (m *ACLContentValueValueOfUserAdd) Size() (n int) {
+func (m *ACLContentValue_UserAdd) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1991,7 +1992,7 @@ func (m *ACLContentValueValueOfUserAdd) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLContentValueValueOfUserRemove) Size() (n int) {
+func (m *ACLContentValue_UserRemove) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2003,7 +2004,7 @@ func (m *ACLContentValueValueOfUserRemove) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLContentValueValueOfUserPermissionChange) Size() (n int) {
+func (m *ACLContentValue_UserPermissionChange) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2015,7 +2016,7 @@ func (m *ACLContentValueValueOfUserPermissionChange) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLContentValueValueOfUserInvite) Size() (n int) {
+func (m *ACLContentValue_UserInvite) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2027,7 +2028,7 @@ func (m *ACLContentValueValueOfUserInvite) Size() (n int) {
 	}
 	return n
 }
-func (m *ACLContentValueValueOfUserJoin) Size() (n int) {
+func (m *ACLContentValue_UserJoin) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2996,7 +2997,7 @@ func (m *ACLContentValue) Unmarshal(dAtA []byte) error {
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLContentValueValueOfUserAdd{v}
+			m.Value = &ACLContentValue_UserAdd{v}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -3031,7 +3032,7 @@ func (m *ACLContentValue) Unmarshal(dAtA []byte) error {
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLContentValueValueOfUserRemove{v}
+			m.Value = &ACLContentValue_UserRemove{v}
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -3066,7 +3067,7 @@ func (m *ACLContentValue) Unmarshal(dAtA []byte) error {
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLContentValueValueOfUserPermissionChange{v}
+			m.Value = &ACLContentValue_UserPermissionChange{v}
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
@@ -3101,7 +3102,7 @@ func (m *ACLContentValue) Unmarshal(dAtA []byte) error {
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLContentValueValueOfUserInvite{v}
+			m.Value = &ACLContentValue_UserInvite{v}
 			iNdEx = postIndex
 		case 5:
 			if wireType != 2 {
@@ -3136,7 +3137,7 @@ func (m *ACLContentValue) Unmarshal(dAtA []byte) error {
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &ACLContentValueValueOfUserJoin{v}
+			m.Value = &ACLContentValue_UserJoin{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

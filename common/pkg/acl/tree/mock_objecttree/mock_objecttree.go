@@ -6,11 +6,11 @@ package mock_tree
 
 import (
 	context "context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
-	tree2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	reflect "reflect"
 
+	storage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	tree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	treechangeproto "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -38,10 +38,10 @@ func (m *MockObjectTree) EXPECT() *MockObjectTreeMockRecorder {
 }
 
 // AddContent mocks base method.
-func (m *MockObjectTree) AddContent(arg0 context.Context, arg1 tree2.SignableChangeContent) (tree2.AddResult, error) {
+func (m *MockObjectTree) AddContent(arg0 context.Context, arg1 tree.SignableChangeContent) (tree.AddResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddContent", arg0, arg1)
-	ret0, _ := ret[0].(tree2.AddResult)
+	ret0, _ := ret[0].(tree.AddResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -53,14 +53,14 @@ func (mr *MockObjectTreeMockRecorder) AddContent(arg0, arg1 interface{}) *gomock
 }
 
 // AddRawChanges mocks base method.
-func (m *MockObjectTree) AddRawChanges(arg0 context.Context, arg1 ...*treechangeproto.RawTreeChangeWithId) (tree2.AddResult, error) {
+func (m *MockObjectTree) AddRawChanges(arg0 context.Context, arg1 ...*treechangeproto.RawTreeChangeWithId) (tree.AddResult, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
 	for _, a := range arg1 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "AddRawChanges", varargs...)
-	ret0, _ := ret[0].(tree2.AddResult)
+	ret0, _ := ret[0].(tree.AddResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -177,7 +177,7 @@ func (mr *MockObjectTreeMockRecorder) ID() *gomock.Call {
 }
 
 // Iterate mocks base method.
-func (m *MockObjectTree) Iterate(arg0 func([]byte) (interface{}, error), arg1 func(*tree2.Change) bool) error {
+func (m *MockObjectTree) Iterate(arg0 func([]byte) (interface{}, error), arg1 func(*tree.Change) bool) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Iterate", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -191,7 +191,7 @@ func (mr *MockObjectTreeMockRecorder) Iterate(arg0, arg1 interface{}) *gomock.Ca
 }
 
 // IterateFrom mocks base method.
-func (m *MockObjectTree) IterateFrom(arg0 string, arg1 func([]byte) (interface{}, error), arg2 func(*tree2.Change) bool) error {
+func (m *MockObjectTree) IterateFrom(arg0 string, arg1 func([]byte) (interface{}, error), arg2 func(*tree.Change) bool) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IterateFrom", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -241,10 +241,10 @@ func (mr *MockObjectTreeMockRecorder) RUnlock() *gomock.Call {
 }
 
 // Root mocks base method.
-func (m *MockObjectTree) Root() *tree2.Change {
+func (m *MockObjectTree) Root() *tree.Change {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Root")
-	ret0, _ := ret[0].(*tree2.Change)
+	ret0, _ := ret[0].(*tree.Change)
 	return ret0
 }
 

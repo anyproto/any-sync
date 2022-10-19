@@ -3,12 +3,14 @@ package document
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace/clientcache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"go.uber.org/zap"
 )
 
 type Service interface {
@@ -27,7 +29,7 @@ var log = logger.NewNamed(CName)
 type service struct {
 	account      account.Service
 	spaceService clientspace.Service
-	cache        cache.TreeCache
+	cache        clientcache.TreeCache
 }
 
 func New() Service {
@@ -37,7 +39,7 @@ func New() Service {
 func (s *service) Init(a *app.App) (err error) {
 	s.account = a.MustComponent(account.CName).(account.Service)
 	s.spaceService = a.MustComponent(clientspace.CName).(clientspace.Service)
-	s.cache = a.MustComponent(cache.CName).(cache.TreeCache)
+	s.cache = a.MustComponent(treegetter.CName).(clientcache.TreeCache)
 	return
 }
 
@@ -46,12 +48,11 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) CreateDocument(spaceId string) (id string, err error) {
-	spaceRef, err := s.spaceService.GetSpace(context.Background(), spaceId)
+	space, err := s.spaceService.GetSpace(context.Background(), spaceId)
 	if err != nil {
 		return
 	}
-	defer spaceRef.Release()
-	doc, err := createTextDocument(context.Background(), spaceRef.Object, s.account, s)
+	doc, err := createTextDocument(context.Background(), space, s.account, s)
 	if err != nil {
 		return
 	}
@@ -60,38 +61,40 @@ func (s *service) CreateDocument(spaceId string) (id string, err error) {
 }
 
 func (s *service) GetAllDocumentIds(spaceId string) (ids []string, err error) {
-	spaceRef, err := s.spaceService.GetSpace(context.Background(), spaceId)
+	space, err := s.spaceService.GetSpace(context.Background(), spaceId)
 	if err != nil {
 		return
 	}
-	defer spaceRef.Release()
-	ids = spaceRef.Object.StoredIds()
+	ids = space.StoredIds()
 	return
 }
 
 func (s *service) AddText(spaceId, documentId, text string) (err error) {
-	doc, err := s.cache.GetTree(context.Background(), spaceId, documentId)
+	doc, err := s.cache.GetDocument(context.Background(), spaceId, documentId)
 	if err != nil {
 		return
 	}
-	defer doc.Release()
-	return doc.TreeContainer.(TextDocument).AddText(text)
+	return doc.AddText(text)
 }
 
 func (s *service) DumpDocumentTree(spaceId, documentId string) (dump string, err error) {
-	doc, err := s.cache.GetTree(context.Background(), spaceId, documentId)
+	doc, err := s.cache.GetDocument(context.Background(), spaceId, documentId)
 	if err != nil {
 		return
 	}
-	defer doc.Release()
-	return doc.TreeContainer.Tree().DebugDump()
+	return doc.Tree().DebugDump()
 }
 
 func (s *service) Update(tree tree.ObjectTree) {
-
+	log.With(
+		zap.Strings("heads", tree.Heads()),
+		zap.String("tree id", tree.ID())).
+		Debug("updating tree")
 }
 
 func (s *service) Rebuild(tree tree.ObjectTree) {
-	//TODO implement me
-	panic("implement me")
+	log.With(
+		zap.Strings("heads", tree.Heads()),
+		zap.String("tree id", tree.ID())).
+		Debug("rebuilding tree")
 }

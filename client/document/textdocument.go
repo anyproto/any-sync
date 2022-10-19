@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	testchanges "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/testutils/testchanges/proto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
@@ -12,7 +11,7 @@ import (
 )
 
 type TextDocument interface {
-	cache.TreeContainer
+	Tree() tree.ObjectTree
 	AddText(text string) error
 	Text() (string, error)
 	TreeDump() string

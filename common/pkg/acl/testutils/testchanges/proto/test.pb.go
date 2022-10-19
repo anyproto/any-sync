@@ -24,8 +24,9 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type TextContent struct {
 	// Types that are valid to be assigned to Value:
-	//	*TextContentValueOfTextAppend
-	Value IsTextContentValue `protobuf_oneof:"value"`
+	//
+	//	*TextContent_TextAppend
+	Value isTextContent_Value `protobuf_oneof:"value"`
 }
 
 func (m *TextContent) Reset()         { *m = TextContent{} }
@@ -61,19 +62,19 @@ func (m *TextContent) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_TextContent proto.InternalMessageInfo
 
-type IsTextContentValue interface {
-	IsTextContentValue()
+type isTextContent_Value interface {
+	isTextContent_Value()
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
 
-type TextContentValueOfTextAppend struct {
+type TextContent_TextAppend struct {
 	TextAppend *TextAppend `protobuf:"bytes,1,opt,name=textAppend,proto3,oneof" json:"textAppend,omitempty"`
 }
 
-func (*TextContentValueOfTextAppend) IsTextContentValue() {}
+func (*TextContent_TextAppend) isTextContent_Value() {}
 
-func (m *TextContent) GetValue() IsTextContentValue {
+func (m *TextContent) GetValue() isTextContent_Value {
 	if m != nil {
 		return m.Value
 	}
@@ -81,7 +82,7 @@ func (m *TextContent) GetValue() IsTextContentValue {
 }
 
 func (m *TextContent) GetTextAppend() *TextAppend {
-	if x, ok := m.GetValue().(*TextContentValueOfTextAppend); ok {
+	if x, ok := m.GetValue().(*TextContent_TextAppend); ok {
 		return x.TextAppend
 	}
 	return nil
@@ -90,7 +91,7 @@ func (m *TextContent) GetTextAppend() *TextAppend {
 // XXX_OneofWrappers is for the internal use of the proto package.
 func (*TextContent) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
-		(*TextContentValueOfTextAppend)(nil),
+		(*TextContent_TextAppend)(nil),
 	}
 }
 
@@ -297,12 +298,12 @@ func (m *TextContent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *TextContentValueOfTextAppend) MarshalTo(dAtA []byte) (int, error) {
+func (m *TextContent_TextAppend) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *TextContentValueOfTextAppend) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *TextContent_TextAppend) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.TextAppend != nil {
 		{
@@ -450,7 +451,7 @@ func (m *TextContent) Size() (n int) {
 	return n
 }
 
-func (m *TextContentValueOfTextAppend) Size() (n int) {
+func (m *TextContent_TextAppend) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -575,7 +576,7 @@ func (m *TextContent) Unmarshal(dAtA []byte) error {
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &TextContentValueOfTextAppend{v}
+			m.Value = &TextContent_TextAppend{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

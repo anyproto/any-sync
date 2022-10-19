@@ -5,11 +5,12 @@
 package mock_syncservice
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	reflect "reflect"
+	time "time"
 
 	spacesyncproto "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	tree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	treechangeproto "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -174,6 +175,20 @@ func (m *MockSyncClient) HasActiveStream(arg0 string) bool {
 func (mr *MockSyncClientMockRecorder) HasActiveStream(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasActiveStream", reflect.TypeOf((*MockSyncClient)(nil).HasActiveStream), arg0)
+}
+
+// LastUsage mocks base method.
+func (m *MockSyncClient) LastUsage() time.Time {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LastUsage")
+	ret0, _ := ret[0].(time.Time)
+	return ret0
+}
+
+// LastUsage indicates an expected call of LastUsage.
+func (mr *MockSyncClientMockRecorder) LastUsage() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastUsage", reflect.TypeOf((*MockSyncClient)(nil).LastUsage))
 }
 
 // SendAsync mocks base method.

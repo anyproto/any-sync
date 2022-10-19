@@ -4,16 +4,18 @@ package syncservice
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"time"
 )
 
 var log = logger.NewNamed("syncservice").Sugar()
 
 type SyncService interface {
+	ocache.ObjectLastUsage
 	SyncClient() SyncClient
 
 	Init()
@@ -41,7 +43,7 @@ type syncService struct {
 func NewSyncService(
 	spaceId string,
 	headNotifiable HeadNotifiable,
-	cache cache.TreeCache,
+	cache treegetter.TreeGetter,
 	configuration nodeconf.Configuration,
 	confConnector nodeconf.ConfConnector) SyncService {
 	var syncHandler SyncHandler
@@ -56,6 +58,10 @@ func NewSyncService(
 		syncClient,
 		spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient),
 		confConnector)
+}
+
+func (s *syncService) LastUsage() time.Time {
+	return s.syncClient.LastUsage()
 }
 
 func newSyncService(

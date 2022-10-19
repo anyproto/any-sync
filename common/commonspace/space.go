@@ -2,21 +2,26 @@ package commonspace
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
 	storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	tree2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"sync"
+	"sync/atomic"
+	"time"
 )
+
+var ErrSpaceClosed = errors.New("space is closed")
 
 type SpaceCreatePayload struct {
 	// SigningKey is the signing key of the owner
@@ -64,8 +69,14 @@ type space struct {
 	syncService syncservice.SyncService
 	diffService diffservice.DiffService
 	storage     storage.SpaceStorage
-	cache       cache.TreeCache
+	cache       treegetter.TreeGetter
 	aclList     list.ACLList
+
+	isClosed atomic.Bool
+}
+
+func (s *space) LastUsage() time.Time {
+	return s.syncService.LastUsage()
 }
 
 func (s *space) Id() string {
@@ -99,15 +110,27 @@ func (s *space) StoredIds() []string {
 	return s.diffService.AllIds()
 }
 
-func (s *space) DeriveTree(ctx context.Context, payload tree2.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree2.ObjectTree, error) {
+func (s *space) DeriveTree(ctx context.Context, payload tree2.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tr tree2.ObjectTree, err error) {
+	if s.isClosed.Load() {
+		err = ErrSpaceClosed
+		return
+	}
 	return synctree.DeriveSyncTree(ctx, payload, s.syncService.SyncClient(), listener, s.aclList, s.storage.CreateTreeStorage)
 }
 
-func (s *space) CreateTree(ctx context.Context, payload tree2.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree2.ObjectTree, error) {
+func (s *space) CreateTree(ctx context.Context, payload tree2.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tr tree2.ObjectTree, err error) {
+	if s.isClosed.Load() {
+		err = ErrSpaceClosed
+		return
+	}
 	return synctree.CreateSyncTree(ctx, payload, s.syncService.SyncClient(), listener, s.aclList, s.storage.CreateTreeStorage)
 }
 
 func (s *space) BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (t tree2.ObjectTree, err error) {
+	if s.isClosed.Load() {
+		err = ErrSpaceClosed
+		return
+	}
 	getTreeRemote := func() (*spacesyncproto.ObjectSyncMessage, error) {
 		// TODO: add empty context handling (when this is not happening due to head update)
 		peerId, err := syncservice.GetPeerIdFromStreamContext(ctx)
@@ -155,6 +178,9 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 }
 
 func (s *space) Close() error {
+	defer func() {
+		s.isClosed.Store(true)
+	}()
 	s.diffService.Close()
 	s.syncService.Close()
 	return s.storage.Close()
