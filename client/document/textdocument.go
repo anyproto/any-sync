@@ -58,7 +58,7 @@ func (t *textDocument) Tree() tree.ObjectTree {
 }
 
 func (t *textDocument) AddText(text string) (err error) {
-	content := &testchanges.TextContentValueOfTextAppend{
+	content := &testchanges.TextContent_TextAppend{
 		TextAppend: &testchanges.TextAppend{Text: text},
 	}
 	change := &testchanges.TextData{
