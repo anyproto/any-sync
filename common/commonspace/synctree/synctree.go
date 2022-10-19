@@ -2,6 +2,7 @@ package synctree
 
 import (
 	"context"
+	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
@@ -10,11 +11,14 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 )
 
+var ErrSyncTreeClosed = errors.New("sync tree is closed")
+
 // SyncTree sends head updates to sync service and also sends new changes to update listener
 type SyncTree struct {
 	tree2.ObjectTree
 	syncClient syncservice.SyncClient
 	listener   updatelistener.UpdateListener
+	isClosed   bool
 }
 
 var createDerivedObjectTree = tree2.CreateDerivedObjectTree
@@ -97,6 +101,10 @@ func buildSyncTree(
 }
 
 func (s *SyncTree) AddContent(ctx context.Context, content tree2.SignableChangeContent) (res tree2.AddResult, err error) {
+	if s.isClosed {
+		err = ErrSyncTreeClosed
+		return
+	}
 	res, err = s.ObjectTree.AddContent(ctx, content)
 	if err != nil {
 		return
@@ -107,6 +115,10 @@ func (s *SyncTree) AddContent(ctx context.Context, content tree2.SignableChangeC
 }
 
 func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (res tree2.AddResult, err error) {
+	if s.isClosed {
+		err = ErrSyncTreeClosed
+		return
+	}
 	res, err = s.ObjectTree.AddRawChanges(ctx, changes...)
 	if err != nil {
 		return
@@ -122,6 +134,17 @@ func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeprot
 
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
 	err = s.syncClient.BroadcastAsync(headUpdate)
+	return
+}
+
+func (s *SyncTree) Close() (err error) {
+	s.Lock()
+	defer s.Unlock()
+	if s.isClosed {
+		err = ErrSyncTreeClosed
+		return
+	}
+	s.isClosed = true
 	return
 }
 

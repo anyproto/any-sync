@@ -18,3 +18,61 @@ type Controller interface {
 	GenerateInvite(spaceId string) (invite string, err error)
 	JoinSpace(invite string) (err error)
 }
+
+type controller struct {
+}
+
+func (c *controller) DeriveSpace() (id string, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *controller) CreateSpace() (id string, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *controller) GetAllSpacesIds() (ids []string, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *controller) LoadSpace(id string) (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *controller) CreateDocument(spaceId string) (id string, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *controller) GetAllDocumentIds(spaceId string) (ids []string, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *controller) AddText(documentId, text string) (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *controller) DumpDocumentTree(documentId string) (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *controller) GetValidInvites(spaceId string) (invites []string, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *controller) GenerateInvite(spaceId string) (invite string, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *controller) JoinSpace(invite string) (err error) {
+	//TODO implement me
+	panic("implement me")
+}

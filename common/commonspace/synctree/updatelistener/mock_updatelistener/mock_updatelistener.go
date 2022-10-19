@@ -5,9 +5,9 @@
 package mock_updatelistener
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	reflect "reflect"
 
+	tree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	gomock "github.com/golang/mock/gomock"
 )
 

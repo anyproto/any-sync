@@ -3,11 +3,14 @@ package syncservice
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
+	"time"
 )
 
 type SyncClient interface {
 	StreamPool
 	RequestFactory
+	ocache.ObjectLastUsage
 	BroadcastAsyncOrSendResponsible(message *spacesyncproto.ObjectSyncMessage) (err error)
 }
 
@@ -27,6 +30,10 @@ func newSyncClient(spaceId string, pool StreamPool, notifiable HeadNotifiable, f
 		configuration:  configuration,
 		spaceId:        spaceId,
 	}
+}
+
+func (s *syncClient) LastUsage() time.Time {
+	return s.StreamPool.LastUsage()
 }
 
 func (s *syncClient) BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (err error) {

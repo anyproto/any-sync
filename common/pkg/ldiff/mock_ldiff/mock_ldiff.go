@@ -6,9 +6,9 @@ package mock_ldiff
 
 import (
 	context "context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
 	reflect "reflect"
 
+	ldiff "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -50,6 +50,34 @@ func (m *MockDiff) Diff(arg0 context.Context, arg1 ldiff.Remote) ([]string, []st
 func (mr *MockDiffMockRecorder) Diff(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Diff", reflect.TypeOf((*MockDiff)(nil).Diff), arg0, arg1)
+}
+
+// Elements mocks base method.
+func (m *MockDiff) Elements() []ldiff.Element {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Elements")
+	ret0, _ := ret[0].([]ldiff.Element)
+	return ret0
+}
+
+// Elements indicates an expected call of Elements.
+func (mr *MockDiffMockRecorder) Elements() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Elements", reflect.TypeOf((*MockDiff)(nil).Elements))
+}
+
+// Ids mocks base method.
+func (m *MockDiff) Ids() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Ids")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// Ids indicates an expected call of Ids.
+func (mr *MockDiffMockRecorder) Ids() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ids", reflect.TypeOf((*MockDiff)(nil).Ids))
 }
 
 // Ranges mocks base method.

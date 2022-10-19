@@ -2,15 +2,15 @@ package syncservice
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/slice"
 )
 
 type syncHandler struct {
 	spaceId    string
-	treeCache  cache.TreeCache
+	treeCache  treegetter.TreeGetter
 	syncClient SyncClient
 }
 
@@ -18,7 +18,7 @@ type SyncHandler interface {
 	HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error)
 }
 
-func newSyncHandler(spaceId string, treeCache cache.TreeCache, syncClient SyncClient) *syncHandler {
+func newSyncHandler(spaceId string, treeCache treegetter.TreeGetter, syncClient SyncClient) *syncHandler {
 	return &syncHandler{
 		spaceId:    spaceId,
 		treeCache:  treeCache,
@@ -49,15 +49,13 @@ func (s *syncHandler) handleHeadUpdate(
 		fullRequest   *spacesyncproto.ObjectSyncMessage
 		isEmptyUpdate = len(update.Changes) == 0
 	)
-	res, err := s.treeCache.GetTree(ctx, s.spaceId, msg.TreeId)
+	objTree, err := s.treeCache.GetTree(ctx, s.spaceId, msg.TreeId)
 	if err != nil {
 		return
 	}
 
 	err = func() error {
-		objTree := res.TreeContainer.Tree()
 		objTree.Lock()
-		defer res.Release()
 		defer objTree.Unlock()
 
 		// isEmptyUpdate is sent when the tree is brought up from cache
@@ -108,15 +106,13 @@ func (s *syncHandler) handleFullSyncRequest(
 		}
 	}()
 
-	res, err := s.treeCache.GetTree(ctx, s.spaceId, msg.TreeId)
+	objTree, err := s.treeCache.GetTree(ctx, s.spaceId, msg.TreeId)
 	if err != nil {
 		return
 	}
 
 	err = func() error {
-		objTree := res.TreeContainer.Tree()
 		objTree.Lock()
-		defer res.Release()
 		defer objTree.Unlock()
 
 		if header == nil {
@@ -145,15 +141,13 @@ func (s *syncHandler) handleFullSyncResponse(
 	senderId string,
 	response *spacesyncproto.ObjectFullSyncResponse,
 	msg *spacesyncproto.ObjectSyncMessage) (err error) {
-	res, err := s.treeCache.GetTree(ctx, s.spaceId, msg.TreeId)
+	objTree, err := s.treeCache.GetTree(ctx, s.spaceId, msg.TreeId)
 	if err != nil {
 		return
 	}
 
 	err = func() error {
-		objTree := res.TreeContainer.Tree()
 		objTree.Lock()
-		defer res.Release()
 		defer objTree.Unlock()
 
 		if s.alreadyHasHeads(objTree, response.Heads) {

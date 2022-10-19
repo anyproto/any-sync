@@ -5,7 +5,8 @@ import (
 	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace"
 	"time"
@@ -24,7 +25,7 @@ type treeCache struct {
 	nodeService nodespace.Service
 }
 
-func New(ttl int) cache.TreeCache {
+func New(ttl int) treegetter.TreeGetter {
 	return &treeCache{
 		gcttl: ttl,
 	}
@@ -52,34 +53,20 @@ func (c *treeCache) Init(a *app.App) (err error) {
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
 		ocache.WithTTL(time.Duration(c.gcttl)*time.Second),
-		ocache.WithRefCounter(false),
 	)
 	return nil
 }
 
 func (c *treeCache) Name() (name string) {
-	return cache.CName
+	return treegetter.CName
 }
 
-func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (res cache.TreeResult, err error) {
-	var cacheRes ocache.Object
+func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (tr tree.ObjectTree, err error) {
 	ctx = context.WithValue(ctx, spaceKey, spaceId)
-	cacheRes, err = c.cache.Get(ctx, id)
+	value, err := c.cache.Get(ctx, id)
 	if err != nil {
-		return cache.TreeResult{}, err
-	}
-
-	treeContainer, ok := cacheRes.(cache.TreeContainer)
-	if !ok {
-		err = ErrCacheObjectWithoutTree
 		return
 	}
-
-	res = cache.TreeResult{
-		Release: func() {
-			c.cache.Release(id)
-		},
-		TreeContainer: treeContainer,
-	}
+	tr = value.(tree.ObjectTree)
 	return
 }

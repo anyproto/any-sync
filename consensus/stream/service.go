@@ -51,7 +51,6 @@ func (s *service) Init(a *app.App) (err error) {
 
 	cacheOpts := []ocache2.Option{
 		ocache2.WithTTL(cacheTTL),
-		ocache2.WithRefCounter(false),
 		ocache2.WithLogger(log.Named("cache").Sugar()),
 	}
 	if ms := a.Component(metric.CName); ms != nil {

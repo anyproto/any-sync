@@ -54,7 +54,6 @@ func (p *pool) Init(a *app.App) (err error) {
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
 		ocache.WithTTL(time.Minute*5),
-		ocache.WithRefCounter(false),
 	)
 	return nil
 }
