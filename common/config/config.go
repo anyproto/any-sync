@@ -53,3 +53,7 @@ func (c Config) GetGRPCServer() GrpcServer {
 func (c Config) GetAccount() Account {
 	return c.Account
 }
+
+func (c Config) GetMetric() Metric {
+	return c.Metric
+}

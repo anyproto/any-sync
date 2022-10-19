@@ -8,6 +8,7 @@ require (
 	github.com/anytypeio/go-anytype-infrastructure-experiments/common v0.0.0-00010101000000-000000000000
 	github.com/dgraph-io/badger/v3 v3.2103.3
 	github.com/gogo/protobuf v1.3.2
+	go.uber.org/zap v1.23.0
 )
 
 require (
@@ -59,7 +60,6 @@ require (
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	go.uber.org/zap v1.23.0 // indirect
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e // indirect
 	golang.org/x/image v0.0.0-20200119044424-58c23975cae1 // indirect
 	golang.org/x/net v0.0.0-20220920183852-bf014ff85ad5 // indirect
