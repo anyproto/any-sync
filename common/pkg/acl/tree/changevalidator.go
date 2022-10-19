@@ -53,6 +53,10 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list2.ACLList, 
 		return
 	}
 
+	if c.Id == tree.RootId() {
+		return
+	}
+
 	// checking if the change refers to later acl heads than its previous ids
 	for _, id := range c.PreviousIds {
 		prevChange := tree.attached[id]

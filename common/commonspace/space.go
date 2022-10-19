@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
@@ -70,6 +71,7 @@ type space struct {
 	diffService diffservice.DiffService
 	storage     storage.SpaceStorage
 	cache       treegetter.TreeGetter
+	account     account.Service
 	aclList     list.ACLList
 
 	isClosed atomic.Bool
@@ -93,7 +95,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	s.aclList, err = list.BuildACLList(aclStorage)
+	s.aclList, err = list.BuildACLListWithIdentity(s.account.Account(), aclStorage)
 	if err != nil {
 		return
 	}
