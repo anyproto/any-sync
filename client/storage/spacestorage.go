@@ -125,5 +125,5 @@ func (s *spaceStorage) StoredIds() (ids []string, err error) {
 }
 
 func (s *spaceStorage) Close() (err error) {
-	return s.objDb.Close()
+	return nil
 }

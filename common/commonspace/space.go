@@ -89,6 +89,14 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
+	aclStorage, err := s.storage.ACLStorage()
+	if err != nil {
+		return
+	}
+	s.aclList, err = list.BuildACLList(aclStorage)
+	if err != nil {
+		return
+	}
 	s.diffService.Init(initialIds)
 	s.syncService.Init()
 	return nil
