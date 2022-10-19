@@ -55,10 +55,6 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
-	go func() {
-		time.Sleep(time.Second * 5)
-		_, _ = s.GetSpace(ctx, "testDSpace")
-	}()
 	return
 }
 

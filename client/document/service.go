@@ -17,7 +17,7 @@ type Service interface {
 	app.Component
 	updatelistener.UpdateListener
 	CreateDocument(spaceId string) (id string, err error)
-	GetAllDocumentIds(spaceId string) (ids []string, err error)
+	AllDocumentIds(spaceId string) (ids []string, err error)
 	AddText(spaceId, documentId, text string) (err error)
 	DumpDocumentTree(spaceId, documentId string) (dump string, err error)
 }
@@ -60,7 +60,7 @@ func (s *service) CreateDocument(spaceId string) (id string, err error) {
 	return
 }
 
-func (s *service) GetAllDocumentIds(spaceId string) (ids []string, err error) {
+func (s *service) AllDocumentIds(spaceId string) (ids []string, err error) {
 	space, err := s.spaceService.GetSpace(context.Background(), spaceId)
 	if err != nil {
 		return
