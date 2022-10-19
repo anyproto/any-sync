@@ -17,7 +17,7 @@ type Controller interface {
 	// CreateSpace creates new space with random data
 	CreateSpace() (id string, err error)
 	// AllSpaceIds returns ids of all spaces
-	AllSpaceIds(spaceId string) (ids []string, err error)
+	AllSpaceIds() (ids []string, err error)
 	// LoadSpace asks node to load a particular space
 	LoadSpace(id string) (err error)
 
@@ -40,6 +40,18 @@ type controller struct {
 	storageService storage.ClientStorage
 	docService     document.Service
 	account        account.Service
+}
+
+func newController(spaceService clientspace.Service,
+	storageService storage.ClientStorage,
+	docService document.Service,
+	account account.Service) Controller {
+	return &controller{
+		spaceService:   spaceService,
+		storageService: storageService,
+		docService:     docService,
+		account:        account,
+	}
 }
 
 func (c *controller) DeriveSpace() (id string, err error) {
@@ -72,7 +84,7 @@ func (c *controller) CreateSpace() (id string, err error) {
 	return
 }
 
-func (c *controller) AllSpaceIds(spaceId string) (ids []string, err error) {
+func (c *controller) AllSpaceIds() (ids []string, err error) {
 	return c.storageService.AllSpaceIds()
 }
 
