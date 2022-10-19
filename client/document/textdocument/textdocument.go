@@ -1,4 +1,4 @@
-package document
+package textdocument
 
 import (
 	"context"
@@ -23,7 +23,7 @@ type textDocument struct {
 	account account.Service
 }
 
-func createTextDocument(
+func CreateTextDocument(
 	ctx context.Context,
 	space commonspace.Space,
 	account account.Service,

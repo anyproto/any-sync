@@ -34,8 +34,9 @@ var log = logger.NewNamed("main")
 
 var (
 	flagConfigFile = flag.String("c", "etc/client.yml", "path to config file")
-	flagVersion    = flag.Bool("v", false, "show version and exit")
-	flagHelp       = flag.Bool("h", false, "show help and exit")
+	// we can't use "v" here because of glog init (through badger) setting flag.Bool with "v"
+	flagVersion = flag.Bool("ver", false, "show version and exit")
+	flagHelp    = flag.Bool("h", false, "show help and exit")
 )
 
 func main() {

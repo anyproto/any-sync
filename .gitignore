@@ -14,6 +14,9 @@
 # Golang vendor folder
 vendor
 
+# database
+db
+
 # Intelli-J files
 .idea
 
