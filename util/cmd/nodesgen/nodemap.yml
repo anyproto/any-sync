@@ -15,3 +15,10 @@ consensus:
       - "127.0.0.1:4531"
   - grpcAddresses:
       - "127.0.0.1:4532"
+clients:
+  - grpcAddresses:
+      - "127.0.0.1:4630"
+    apiPort: "8090"
+  - grpcAddresses:
+      - "127.0.0.1:4631"
+    apiPort: "8091"
