@@ -5,18 +5,10 @@ import (
 	"github.com/cheggaaa/mb/v2"
 )
 
-type Stream interface {
-	WatchIds(logIds [][]byte) (err error)
-	UnwatchIds(logIds [][]byte) (err error)
-	WaitLogs() []*consensusproto.Log
-	Err() error
-	Close() error
-}
-
-func runStream(rpcStream consensusproto.DRPCConsensus_WatchLogClient) Stream {
+func runStream(rpcStream consensusproto.DRPCConsensus_WatchLogClient) *stream {
 	st := &stream{
 		rpcStream: rpcStream,
-		mb:        mb.New((*consensusproto.Log)(nil), 100),
+		mb:        mb.New((*consensusproto.WatchLogEvent)(nil), 100),
 	}
 	go st.readStream()
 	return st
@@ -24,7 +16,7 @@ func runStream(rpcStream consensusproto.DRPCConsensus_WatchLogClient) Stream {
 
 type stream struct {
 	rpcStream consensusproto.DRPCConsensus_WatchLogClient
-	mb        *mb.MB[*consensusproto.Log]
+	mb        *mb.MB[*consensusproto.WatchLogEvent]
 	err       error
 }
 
@@ -40,7 +32,7 @@ func (s *stream) UnwatchIds(logIds [][]byte) (err error) {
 	})
 }
 
-func (s *stream) WaitLogs() []*consensusproto.Log {
+func (s *stream) WaitLogs() []*consensusproto.WatchLogEvent {
 	return s.mb.Wait()
 }
 
@@ -56,10 +48,7 @@ func (s *stream) readStream() {
 			s.err = err
 			return
 		}
-		if err = s.mb.Add(&consensusproto.Log{
-			Id:      event.LogId,
-			Records: event.Records,
-		}); err != nil {
+		if err = s.mb.Add(event); err != nil {
 			return
 		}
 	}

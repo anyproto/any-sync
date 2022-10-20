@@ -12,7 +12,6 @@ require (
 	github.com/huandu/skiplist v1.2.0
 	github.com/ipfs/go-cid v0.3.2
 	github.com/libp2p/go-libp2p v0.23.2
-	github.com/libp2p/go-libp2p-core v0.20.1
 	github.com/minio/sha256-simd v1.0.0
 	github.com/multiformats/go-multibase v0.1.1
 	github.com/multiformats/go-multihash v0.2.1
