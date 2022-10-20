@@ -48,7 +48,11 @@ func (s *Stream) WatchIds(ctx context.Context, logIds [][]byte) {
 		if _, ok := s.logIds[logIdKey]; !ok {
 			s.logIds[logIdKey] = struct{}{}
 			if addErr := s.s.AddStream(ctx, logId, s); addErr != nil {
-				log.Warn("can't add stream for log", zap.Binary("logId", logId), zap.Error(addErr))
+				log.Info("can't add stream for log", zap.Binary("logId", logId), zap.Error(addErr))
+				_ = s.mb.Add(consensus.Log{
+					Id:  logId,
+					Err: addErr,
+				})
 			}
 		}
 	}

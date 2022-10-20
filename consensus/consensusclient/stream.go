@@ -9,6 +9,7 @@ type Stream interface {
 	WatchIds(logIds [][]byte) (err error)
 	UnwatchIds(logIds [][]byte) (err error)
 	WaitLogs() []*consensusproto.Log
+	Err() error
 	Close() error
 }
 
@@ -24,6 +25,7 @@ func runStream(rpcStream consensusproto.DRPCConsensus_WatchLogClient) Stream {
 type stream struct {
 	rpcStream consensusproto.DRPCConsensus_WatchLogClient
 	mb        *mb.MB[*consensusproto.Log]
+	err       error
 }
 
 func (s *stream) WatchIds(logIds [][]byte) (err error) {
@@ -42,11 +44,16 @@ func (s *stream) WaitLogs() []*consensusproto.Log {
 	return s.mb.Wait()
 }
 
+func (s *stream) Err() error {
+	return s.err
+}
+
 func (s *stream) readStream() {
 	defer s.Close()
 	for {
 		event, err := s.rpcStream.Recv()
 		if err != nil {
+			s.err = err
 			return
 		}
 		if err = s.mb.Add(&consensusproto.Log{
