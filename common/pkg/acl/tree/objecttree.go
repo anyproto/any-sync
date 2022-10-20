@@ -177,6 +177,8 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 		Added:    []*treechangeproto.RawTreeChangeWithId{rawChange},
 		Mode:     Append,
 	}
+	log.With("treeId", ot.id).With("head", objChange.Id).
+		Debug("finished adding content")
 	return
 }
 
