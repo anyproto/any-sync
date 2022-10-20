@@ -71,7 +71,8 @@ func (t *textDocument) AddText(text string) (err error) {
 	if err != nil {
 		return
 	}
-
+	t.objTree.Lock()
+	defer t.objTree.Unlock()
 	_, err = t.objTree.AddContent(context.Background(), tree.SignableChangeContent{
 		Data:       res,
 		Key:        t.account.Account().SignKey,

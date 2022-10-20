@@ -90,7 +90,7 @@ func (s *streamPool) SendSync(
 	if err != nil {
 		return
 	}
-
+	// TODO: limit wait time here and remove the waiter
 	reply = <-waiter.ch
 	return
 }
@@ -112,6 +112,9 @@ func (s *streamPool) SendAsync(peers []string, message *spacesyncproto.ObjectSyn
 	streams := getStreams()
 	s.Unlock()
 
+	log.With("description", spacesyncproto.MessageDescription(message)).
+		With("treeId", message.TreeId).
+		Debugf("sending message to %d peers", len(streams))
 	for _, s := range streams {
 		err = s.Send(message)
 	}
@@ -158,6 +161,9 @@ Loop:
 
 func (s *streamPool) BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (err error) {
 	streams := s.getAllStreams()
+	log.With("description", spacesyncproto.MessageDescription(message)).
+		With("treeId", message.TreeId).
+		Debugf("broadcasting message to %d peers", len(streams))
 	for _, stream := range streams {
 		if err = stream.Send(message); err != nil {
 			// TODO: add logging

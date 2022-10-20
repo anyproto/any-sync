@@ -2,6 +2,7 @@
 package spacesyncproto
 
 import (
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"storj.io/drpc"
 )
@@ -25,6 +26,7 @@ func WrapHeadUpdate(update *ObjectHeadUpdate, rootChange *treechangeproto.RawTre
 		},
 		RootChange: rootChange,
 		TreeId:     treeId,
+		TrackingId: trackingId,
 	}
 }
 
@@ -35,6 +37,7 @@ func WrapFullRequest(request *ObjectFullSyncRequest, rootChange *treechangeproto
 		},
 		RootChange: rootChange,
 		TreeId:     treeId,
+		TrackingId: trackingId,
 	}
 }
 
@@ -45,6 +48,7 @@ func WrapFullResponse(response *ObjectFullSyncResponse, rootChange *treechangepr
 		},
 		RootChange: rootChange,
 		TreeId:     treeId,
+		TrackingId: trackingId,
 	}
 }
 
@@ -55,5 +59,21 @@ func WrapError(err error, rootChange *treechangeproto.RawTreeChangeWithId, treeI
 		},
 		RootChange: rootChange,
 		TreeId:     treeId,
+		TrackingId: trackingId,
 	}
+}
+
+func MessageDescription(msg *ObjectSyncMessage) string {
+	content := msg.GetContent()
+	switch {
+	case content.GetHeadUpdate() != nil:
+		return fmt.Sprintf("head update/%v", content.GetHeadUpdate().Heads)
+	case content.GetFullSyncRequest() != nil:
+		return fmt.Sprintf("fullsync request/%v", content.GetFullSyncRequest().Heads)
+	case content.GetFullSyncResponse() != nil:
+		return fmt.Sprintf("fullsync response/%v", content.GetFullSyncResponse().Heads)
+	case content.GetErrorResponse() != nil:
+		return fmt.Sprintf("error response/%v", content.GetErrorResponse().Error)
+	}
+	return ""
 }
