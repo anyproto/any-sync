@@ -62,5 +62,5 @@ func (s spaceKeys) HeaderKey() []byte {
 }
 
 func isRootIdKey(key string) bool {
-	return strings.HasPrefix(key, "t/") && strings.HasSuffix(key, "rootId")
+	return strings.HasPrefix(key, "t/") && strings.HasSuffix(key, "heads")
 }
