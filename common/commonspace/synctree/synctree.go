@@ -134,13 +134,15 @@ func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeprot
 	if err != nil {
 		return
 	}
-	switch res.Mode {
-	case tree2.Nothing:
-		return
-	case tree2.Append:
-		s.listener.Update(s)
-	case tree2.Rebuild:
-		s.listener.Rebuild(s)
+	if s.listener != nil {
+		switch res.Mode {
+		case tree2.Nothing:
+			return
+		case tree2.Append:
+			s.listener.Update(s)
+		case tree2.Rebuild:
+			s.listener.Rebuild(s)
+		}
 	}
 
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)

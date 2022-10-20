@@ -149,6 +149,7 @@ func (d *diff) Ids() (ids []string) {
 	for cur != nil {
 		el := cur.Key().(*element).Element
 		ids = append(ids, el.Id)
+		cur = cur.Next()
 	}
 	return
 }
@@ -163,6 +164,7 @@ func (d *diff) Elements() (elements []Element) {
 	for cur != nil {
 		el := cur.Key().(*element).Element
 		elements = append(elements, el)
+		cur = cur.Next()
 	}
 	return
 }
