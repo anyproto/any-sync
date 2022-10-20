@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/document/textdocument"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
@@ -24,6 +25,7 @@ const spaceKey ctxKey = 0
 type treeCache struct {
 	gcttl         int
 	cache         ocache.OCache
+	account       account.Service
 	clientService clientspace.Service
 }
 
@@ -65,6 +67,7 @@ func (c *treeCache) Close(ctx context.Context) (err error) {
 
 func (c *treeCache) Init(a *app.App) (err error) {
 	c.clientService = a.MustComponent(clientspace.CName).(clientspace.Service)
+	c.account = a.MustComponent(account.CName).(account.Service)
 	c.cache = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
 			spaceId := ctx.Value(spaceKey).(string)
@@ -72,7 +75,7 @@ func (c *treeCache) Init(a *app.App) (err error) {
 			if err != nil {
 				return
 			}
-			return textdocument.NewTextDocument(context.Background(), space, id, &updateListener{})
+			return textdocument.NewTextDocument(context.Background(), space, id, &updateListener{}, c.account)
 		},
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),

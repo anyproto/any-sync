@@ -40,16 +40,18 @@ func CreateTextDocument(
 
 	return &textDocument{
 		objTree: t,
+		account: account,
 	}, nil
 }
 
-func NewTextDocument(ctx context.Context, space commonspace.Space, id string, listener updatelistener.UpdateListener) (doc TextDocument, err error) {
+func NewTextDocument(ctx context.Context, space commonspace.Space, id string, listener updatelistener.UpdateListener, account account.Service) (doc TextDocument, err error) {
 	t, err := space.BuildTree(ctx, id, listener)
 	if err != nil {
 		return
 	}
 	return &textDocument{
 		objTree: t,
+		account: account,
 	}, nil
 }
 
