@@ -15,14 +15,6 @@ import (
 	"testing"
 )
 
-type treeContainer struct {
-	objTree tree.ObjectTree
-}
-
-func (t treeContainer) Tree() tree.ObjectTree {
-	return t.objTree
-}
-
 type testObjTreeMock struct {
 	*mock_tree.MockObjectTree
 	m sync.Mutex

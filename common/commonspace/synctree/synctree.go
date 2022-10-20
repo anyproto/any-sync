@@ -77,8 +77,9 @@ func BuildSyncTree(
 	syncClient syncservice.SyncClient,
 	treeStorage storage.TreeStorage,
 	listener updatelistener.UpdateListener,
-	aclList list.ACLList) (t tree2.ObjectTree, err error) {
-	return buildSyncTree(ctx, syncClient, treeStorage, listener, aclList)
+	aclList list.ACLList,
+	isFirstBuild bool) (t tree2.ObjectTree, err error) {
+	return buildSyncTree(ctx, syncClient, treeStorage, listener, aclList, isFirstBuild)
 }
 
 func buildSyncTree(
@@ -86,7 +87,8 @@ func buildSyncTree(
 	syncClient syncservice.SyncClient,
 	treeStorage storage.TreeStorage,
 	listener updatelistener.UpdateListener,
-	aclList list.ACLList) (t tree2.ObjectTree, err error) {
+	aclList list.ACLList,
+	isFirstBuild bool) (t tree2.ObjectTree, err error) {
 	t, err = buildObjectTree(treeStorage, aclList)
 	if err != nil {
 		return
@@ -99,7 +101,13 @@ func buildSyncTree(
 
 	headUpdate := syncClient.CreateHeadUpdate(t, nil)
 	// here we will have different behaviour based on who is sending this update
-	err = syncClient.BroadcastAsyncOrSendResponsible(headUpdate)
+	if isFirstBuild {
+		// send to everybody, because everybody should know that the node or client got new tree
+		err = syncClient.BroadcastAsync(headUpdate)
+	} else {
+		// send either to everybody if client or to replica set if node
+		err = syncClient.BroadcastAsyncOrSendResponsible(headUpdate)
+	}
 	return
 }
 

@@ -13,8 +13,8 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
-	storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
-	tree2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	aclstorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	tree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"sync"
@@ -54,9 +54,9 @@ type Space interface {
 
 	SpaceSyncRpc() RpcHandler
 
-	DeriveTree(ctx context.Context, payload tree2.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree2.ObjectTree, error)
-	CreateTree(ctx context.Context, payload tree2.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree2.ObjectTree, error)
-	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (tree2.ObjectTree, error)
+	DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
+	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
+	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
 
 	Close() error
 }
@@ -120,7 +120,7 @@ func (s *space) StoredIds() []string {
 	return s.diffService.AllIds()
 }
 
-func (s *space) DeriveTree(ctx context.Context, payload tree2.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tr tree2.ObjectTree, err error) {
+func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tr tree.ObjectTree, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
@@ -128,7 +128,7 @@ func (s *space) DeriveTree(ctx context.Context, payload tree2.ObjectTreeCreatePa
 	return synctree.DeriveSyncTree(ctx, payload, s.syncService.SyncClient(), listener, s.aclList, s.storage.CreateTreeStorage)
 }
 
-func (s *space) CreateTree(ctx context.Context, payload tree2.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tr tree2.ObjectTree, err error) {
+func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tr tree.ObjectTree, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
@@ -136,7 +136,7 @@ func (s *space) CreateTree(ctx context.Context, payload tree2.ObjectTreeCreatePa
 	return synctree.CreateSyncTree(ctx, payload, s.syncService.SyncClient(), listener, s.aclList, s.storage.CreateTreeStorage)
 }
 
-func (s *space) BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (t tree2.ObjectTree, err error) {
+func (s *space) BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (t tree.ObjectTree, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
@@ -154,11 +154,13 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 	}
 
 	store, err := s.storage.TreeStorage(id)
-	if err != nil && err != storage2.ErrUnknownTreeId {
+	if err != nil && err != aclstorage.ErrUnknownTreeId {
 		return
 	}
 
-	if err == storage2.ErrUnknownTreeId {
+	isFirstBuild := false
+	if err == aclstorage.ErrUnknownTreeId {
+		isFirstBuild = true
 		var resp *spacesyncproto.ObjectSyncMessage
 		resp, err = getTreeRemote()
 		if err != nil {
@@ -166,7 +168,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		}
 		fullSyncResp := resp.GetContent().GetFullSyncResponse()
 
-		payload := storage2.TreeStorageCreatePayload{
+		payload := aclstorage.TreeStorageCreatePayload{
 			TreeId:        resp.TreeId,
 			RootRawChange: resp.RootChange,
 			Changes:       fullSyncResp.Changes,
@@ -174,7 +176,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		}
 
 		// basically building tree with inmemory storage and validating that it was without errors
-		err = tree2.ValidateRawTree(payload, s.aclList)
+		err = tree.ValidateRawTree(payload, s.aclList)
 		if err != nil {
 			return
 		}
@@ -184,7 +186,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 			return
 		}
 	}
-	return synctree.BuildSyncTree(ctx, s.syncService.SyncClient(), store.(storage2.TreeStorage), listener, s.aclList)
+	return synctree.BuildSyncTree(ctx, s.syncService.SyncClient(), store.(aclstorage.TreeStorage), listener, s.aclList, isFirstBuild)
 }
 
 func (s *space) Close() error {
