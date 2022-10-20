@@ -52,4 +52,9 @@ message WatchLogRequest {
 message WatchLogEvent {
     bytes logId = 1;
     repeated Record records = 2;
+    Err error = 3;
+}
+
+message Err {
+    ErrCodes error = 1;
 }
