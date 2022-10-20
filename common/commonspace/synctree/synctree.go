@@ -3,6 +3,7 @@ package synctree
 import (
 	"context"
 	"errors"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
@@ -20,6 +21,8 @@ type SyncTree struct {
 	listener   updatelistener.UpdateListener
 	isClosed   bool
 }
+
+var log = logger.NewNamed("commonspace.synctree").Sugar()
 
 var createDerivedObjectTree = tree2.CreateDerivedObjectTree
 var createObjectTree = tree2.CreateObjectTree
@@ -138,8 +141,10 @@ func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeprot
 }
 
 func (s *SyncTree) Close() (err error) {
+	log.With("id", s.ID()).Debug("closing sync tree")
 	s.Lock()
 	defer s.Unlock()
+	log.With("id", s.ID()).Debug("taken lock on sync tree")
 	if s.isClosed {
 		err = ErrSyncTreeClosed
 		return

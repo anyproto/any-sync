@@ -99,7 +99,7 @@ func (t *treeStorage) Heads() (heads []string, err error) {
 	if err != nil {
 		return
 	}
-	if heads == nil {
+	if headsBytes == nil {
 		err = storage2.ErrUnknownTreeId
 		return
 	}
