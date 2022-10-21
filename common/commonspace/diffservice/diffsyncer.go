@@ -77,6 +77,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 
 	d.pingTreesInCache(ctx, newIds)
 	d.pingTreesInCache(ctx, changedIds)
+	d.pingTreesInCache(ctx, removedIds)
 
 	d.log.Info("sync done:", zap.Int("newIds", len(newIds)),
 		zap.Int("changedIds", len(changedIds)),

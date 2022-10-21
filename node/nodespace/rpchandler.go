@@ -25,7 +25,7 @@ func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpac
 		RecWithId:         req.AclRoot,
 		SpaceHeaderWithId: req.SpaceHeader,
 	}
-	_, err = r.s.spaceStorageProvider.CreateSpaceStorage(payload)
+	st, err := r.s.spaceStorageProvider.CreateSpaceStorage(payload)
 	if err != nil {
 		err = spacesyncproto.ErrUnexpected
 		if err == storage.ErrSpaceStorageExists {
@@ -33,6 +33,7 @@ func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpac
 		}
 		return
 	}
+	st.Close()
 	return
 }
 

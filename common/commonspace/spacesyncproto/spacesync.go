@@ -63,17 +63,18 @@ func WrapError(err error, rootChange *treechangeproto.RawTreeChangeWithId, treeI
 	}
 }
 
-func MessageDescription(msg *ObjectSyncMessage) string {
+func MessageDescription(msg *ObjectSyncMessage) (res string) {
 	content := msg.GetContent()
 	switch {
 	case content.GetHeadUpdate() != nil:
-		return fmt.Sprintf("head update/%v", content.GetHeadUpdate().Heads)
+		res = fmt.Sprintf("head update/%v", content.GetHeadUpdate().Heads)
 	case content.GetFullSyncRequest() != nil:
-		return fmt.Sprintf("fullsync request/%v", content.GetFullSyncRequest().Heads)
+		res = fmt.Sprintf("fullsync request/%v", content.GetFullSyncRequest().Heads)
 	case content.GetFullSyncResponse() != nil:
-		return fmt.Sprintf("fullsync response/%v", content.GetFullSyncResponse().Heads)
+		res = fmt.Sprintf("fullsync response/%v", content.GetFullSyncResponse().Heads)
 	case content.GetErrorResponse() != nil:
-		return fmt.Sprintf("error response/%v", content.GetErrorResponse().Error)
+		res = fmt.Sprintf("error response/%v", content.GetErrorResponse().Error)
 	}
-	return ""
+	res = fmt.Sprintf("%s/tracking=[%s]", res, msg.TrackingId)
+	return res
 }
