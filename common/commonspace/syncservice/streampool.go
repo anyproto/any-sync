@@ -16,7 +16,10 @@ import (
 var ErrEmptyPeer = errors.New("don't have such a peer")
 var ErrStreamClosed = errors.New("stream is already closed")
 
-const maxSimultaneousOperationsPerStream = 10
+var maxSimultaneousOperationsPerStream = 10
+var syncWaitPeriod = 2 * time.Second
+
+var ErrSyncTimeout = errors.New("too long wait on sync receive")
 
 // StreamPool can be made generic to work with different streams
 type StreamPool interface {
@@ -79,7 +82,7 @@ func (s *streamPool) SendSync(
 
 	s.waitersMx.Lock()
 	waiter := responseWaiter{
-		ch: make(chan *spacesyncproto.ObjectSyncMessage),
+		ch: make(chan *spacesyncproto.ObjectSyncMessage, 1),
 	}
 	s.waiters[msg.TrackingId] = waiter
 	s.waitersMx.Unlock()
@@ -88,10 +91,20 @@ func (s *streamPool) SendSync(
 	if err != nil {
 		return
 	}
-	log.With("trackingId", msg.TrackingId).Debug("waiting for id")
-	// TODO: limit wait time here and remove the waiter
-	reply = <-waiter.ch
-	log.With("trackingId", msg.TrackingId).Debug("finished waiting for id")
+	delay := time.NewTimer(syncWaitPeriod)
+	select {
+	case <-delay.C:
+		s.waitersMx.Lock()
+		delete(s.waiters, msg.TrackingId)
+		s.waitersMx.Unlock()
+
+		log.With("trackingId", msg.TrackingId).Error("time elapsed when waiting")
+		err = ErrSyncTimeout
+	case reply = <-waiter.ch:
+		if !delay.Stop() {
+			<-delay.C
+		}
+	}
 	return
 }
 

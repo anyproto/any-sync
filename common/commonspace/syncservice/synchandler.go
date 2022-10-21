@@ -90,7 +90,7 @@ func (s *syncHandler) handleHeadUpdate(
 
 	if fullRequest != nil {
 		log.With("senderId", senderId).
-			With("heads", update.Heads).
+			With("heads", fullRequest.GetContent().GetFullSyncRequest().Heads).
 			With("treeId", msg.TreeId).
 			Debug("sending full sync request")
 		return s.syncClient.SendAsync([]string{senderId}, fullRequest)
