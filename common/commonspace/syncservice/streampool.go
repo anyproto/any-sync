@@ -20,18 +20,16 @@ const maxSimultaneousOperationsPerStream = 10
 
 // StreamPool can be made generic to work with different streams
 type StreamPool interface {
-	Sender
 	ocache.ObjectLastUsage
 	AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (err error)
 	AddAndReadStreamAsync(stream spacesyncproto.SpaceStream)
-	HasActiveStream(peerId string) bool
-	Close() (err error)
-}
 
-type Sender interface {
 	SendSync(peerId string, message *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error)
 	SendAsync(peers []string, message *spacesyncproto.ObjectSyncMessage) (err error)
 	BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (err error)
+
+	HasActiveStream(peerId string) bool
+	Close() (err error)
 }
 
 type MessageHandler func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error)
@@ -90,8 +88,10 @@ func (s *streamPool) SendSync(
 	if err != nil {
 		return
 	}
+	log.With("trackingId", msg.TrackingId).Debug("waiting for id")
 	// TODO: limit wait time here and remove the waiter
 	reply = <-waiter.ch
+	log.With("trackingId", msg.TrackingId).Debug("finished waiting for id")
 	return
 }
 
@@ -215,15 +215,17 @@ func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStre
 			s.messageHandler(stream.Context(), peerId, msg)
 			return
 		}
-
+		log.With("trackingId", msg.TrackingId).Debug("getting message with tracking id")
 		s.waitersMx.Lock()
 		waiter, exists := s.waiters[msg.TrackingId]
 
 		if !exists {
+			log.With("trackingId", msg.TrackingId).Debug("tracking id not exists")
 			s.waitersMx.Unlock()
 			s.messageHandler(stream.Context(), peerId, msg)
 			return
 		}
+		log.With("trackingId", msg.TrackingId).Debug("tracking id exists")
 
 		delete(s.waiters, msg.TrackingId)
 		s.waitersMx.Unlock()

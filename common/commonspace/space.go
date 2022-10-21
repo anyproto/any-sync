@@ -17,6 +17,7 @@ import (
 	tree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
+	"go.uber.org/zap"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -190,8 +191,10 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 }
 
 func (s *space) Close() error {
+	log.With(zap.String("id", s.id)).Debug("space is closing")
 	defer func() {
 		s.isClosed.Store(true)
+		log.With(zap.String("id", s.id)).Debug("space closed")
 	}()
 	s.diffService.Close()
 	s.syncService.Close()

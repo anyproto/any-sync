@@ -2,9 +2,11 @@ package storage
 
 import (
 	"github.com/akrylysov/pogreb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"go.uber.org/zap"
 	"path"
 	"sync"
 	"time"
@@ -13,6 +15,8 @@ import (
 var defPogrebOptions = &pogreb.Options{
 	BackgroundCompactionInterval: time.Minute * 5,
 }
+
+var log = logger.NewNamed("storage.spacestorage")
 
 type spaceStorage struct {
 	spaceId    string
@@ -24,6 +28,7 @@ type spaceStorage struct {
 }
 
 func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceStorage, err error) {
+	log.With(zap.String("id", spaceId)).Debug("space storage opened with new")
 	dbPath := path.Join(rootPath, spaceId)
 	objDb, err := pogreb.Open(dbPath, defPogrebOptions)
 	if err != nil {
@@ -74,6 +79,7 @@ func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceS
 }
 
 func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreatePayload) (store spacestorage.SpaceStorage, err error) {
+	log.With(zap.String("id", payload.SpaceHeaderWithId.Id)).Debug("space storage opened with create")
 	dbPath := path.Join(rootPath, payload.SpaceHeaderWithId.Id)
 	db, err := pogreb.Open(dbPath, defPogrebOptions)
 	if err != nil {
@@ -165,5 +171,6 @@ func (s *spaceStorage) StoredIds() (ids []string, err error) {
 }
 
 func (s *spaceStorage) Close() (err error) {
+	log.With(zap.String("id", s.spaceId)).Debug("space storage closed")
 	return s.objDb.Close()
 }
