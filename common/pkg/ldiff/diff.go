@@ -218,10 +218,6 @@ func (d *diff) Ranges(ctx context.Context, ranges []Range, resBuf []RangeResult)
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
-	return d.ranges(ranges, resBuf)
-}
-
-func (d *diff) ranges(ranges []Range, resBuf []RangeResult) (results []RangeResult, err error) {
 	results = resBuf[:0]
 	for _, r := range ranges {
 		results = append(results, d.getRange(r))
@@ -240,9 +236,6 @@ var errMismatched = errors.New("query and results mismatched")
 
 // Diff makes diff with remote container
 func (d *diff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error) {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-
 	dctx := &diffCtx{}
 	dctx.toSend = append(dctx.toSend, Range{
 		From:  0,
@@ -256,10 +249,10 @@ func (d *diff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, removed
 			return
 		default:
 		}
-		if dctx.myRes, err = d.ranges(dctx.toSend, dctx.myRes); err != nil {
+		if dctx.otherRes, err = dl.Ranges(ctx, dctx.toSend, dctx.otherRes); err != nil {
 			return
 		}
-		if dctx.otherRes, err = dl.Ranges(ctx, dctx.toSend, dctx.otherRes); err != nil {
+		if dctx.myRes, err = d.Ranges(ctx, dctx.toSend, dctx.myRes); err != nil {
 			return
 		}
 		if len(dctx.otherRes) != len(dctx.toSend) || len(dctx.myRes) != len(dctx.toSend) {
