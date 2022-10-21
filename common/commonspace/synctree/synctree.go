@@ -8,7 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
-	tree2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 )
 
@@ -16,7 +16,7 @@ var ErrSyncTreeClosed = errors.New("sync tree is closed")
 
 // SyncTree sends head updates to sync service and also sends new changes to update listener
 type SyncTree struct {
-	tree2.ObjectTree
+	tree.ObjectTree
 	syncClient syncservice.SyncClient
 	listener   updatelistener.UpdateListener
 	isClosed   bool
@@ -24,17 +24,17 @@ type SyncTree struct {
 
 var log = logger.NewNamed("commonspace.synctree").Sugar()
 
-var createDerivedObjectTree = tree2.CreateDerivedObjectTree
-var createObjectTree = tree2.CreateObjectTree
-var buildObjectTree = tree2.BuildObjectTree
+var createDerivedObjectTree = tree.CreateDerivedObjectTree
+var createObjectTree = tree.CreateObjectTree
+var buildObjectTree = tree.BuildObjectTree
 
 func DeriveSyncTree(
 	ctx context.Context,
-	payload tree2.ObjectTreeCreatePayload,
+	payload tree.ObjectTreeCreatePayload,
 	syncClient syncservice.SyncClient,
 	listener updatelistener.UpdateListener,
 	aclList list.ACLList,
-	createStorage storage.TreeStorageCreatorFunc) (t tree2.ObjectTree, err error) {
+	createStorage storage.TreeStorageCreatorFunc) (t tree.ObjectTree, err error) {
 	t, err = createDerivedObjectTree(payload, aclList, createStorage)
 	if err != nil {
 		return
@@ -52,11 +52,11 @@ func DeriveSyncTree(
 
 func CreateSyncTree(
 	ctx context.Context,
-	payload tree2.ObjectTreeCreatePayload,
+	payload tree.ObjectTreeCreatePayload,
 	syncClient syncservice.SyncClient,
 	listener updatelistener.UpdateListener,
 	aclList list.ACLList,
-	createStorage storage.TreeStorageCreatorFunc) (t tree2.ObjectTree, err error) {
+	createStorage storage.TreeStorageCreatorFunc) (t tree.ObjectTree, err error) {
 	t, err = createObjectTree(payload, aclList, createStorage)
 	if err != nil {
 		return
@@ -78,7 +78,7 @@ func BuildSyncTree(
 	treeStorage storage.TreeStorage,
 	listener updatelistener.UpdateListener,
 	aclList list.ACLList,
-	isFirstBuild bool) (t tree2.ObjectTree, err error) {
+	isFirstBuild bool) (t tree.ObjectTree, err error) {
 	return buildSyncTree(ctx, syncClient, treeStorage, listener, aclList, isFirstBuild)
 }
 
@@ -88,7 +88,7 @@ func buildSyncTree(
 	treeStorage storage.TreeStorage,
 	listener updatelistener.UpdateListener,
 	aclList list.ACLList,
-	isFirstBuild bool) (t tree2.ObjectTree, err error) {
+	isFirstBuild bool) (t tree.ObjectTree, err error) {
 	t, err = buildObjectTree(treeStorage, aclList)
 	if err != nil {
 		return
@@ -111,7 +111,7 @@ func buildSyncTree(
 	return
 }
 
-func (s *SyncTree) AddContent(ctx context.Context, content tree2.SignableChangeContent) (res tree2.AddResult, err error) {
+func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeContent) (res tree.AddResult, err error) {
 	if s.isClosed {
 		err = ErrSyncTreeClosed
 		return
@@ -125,7 +125,7 @@ func (s *SyncTree) AddContent(ctx context.Context, content tree2.SignableChangeC
 	return
 }
 
-func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (res tree2.AddResult, err error) {
+func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (res tree.AddResult, err error) {
 	if s.isClosed {
 		err = ErrSyncTreeClosed
 		return
@@ -136,17 +136,18 @@ func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeprot
 	}
 	if s.listener != nil {
 		switch res.Mode {
-		case tree2.Nothing:
+		case tree.Nothing:
 			return
-		case tree2.Append:
+		case tree.Append:
 			s.listener.Update(s)
-		case tree2.Rebuild:
+		case tree.Rebuild:
 			s.listener.Rebuild(s)
 		}
 	}
-
-	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
-	err = s.syncClient.BroadcastAsync(headUpdate)
+	if res.Mode != tree.Nothing {
+		headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
+		err = s.syncClient.BroadcastAsync(headUpdate)
+	}
 	return
 }
 
@@ -163,6 +164,6 @@ func (s *SyncTree) Close() (err error) {
 	return
 }
 
-func (s *SyncTree) Tree() tree2.ObjectTree {
+func (s *SyncTree) Tree() tree.ObjectTree {
 	return s
 }
