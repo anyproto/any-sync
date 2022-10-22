@@ -3,7 +3,6 @@ package synctree
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/mock_syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener/mock_updatelistener"
@@ -21,7 +20,7 @@ import (
 
 type syncTreeMatcher struct {
 	objTree  tree2.ObjectTree
-	client   syncservice.SyncClient
+	client   SyncClient
 	listener updatelistener.UpdateListener
 }
 

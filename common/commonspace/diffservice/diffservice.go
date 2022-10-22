@@ -14,8 +14,8 @@ import (
 )
 
 type DiffService interface {
+	HeadNotifiable
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
-	UpdateHeads(id string, heads []string)
 	RemoveObject(id string)
 	AllIds() []string
 

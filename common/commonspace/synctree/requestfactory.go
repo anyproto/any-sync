@@ -1,4 +1,4 @@
-package syncservice
+package synctree
 
 import (
 	"fmt"
@@ -15,8 +15,10 @@ type RequestFactory interface {
 	CreateFullSyncResponse(t tree.ObjectTree, theirHeads, theirSnapshotPath []string, trackingId string) (*spacesyncproto.ObjectSyncMessage, error)
 }
 
-func newRequestFactory() RequestFactory {
-	return &requestFactory{}
+var factory = &requestFactory{}
+
+func GetRequestFactory() RequestFactory {
+	return factory
 }
 
 type requestFactory struct{}
