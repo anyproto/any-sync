@@ -84,7 +84,7 @@ func (s *syncService) LastUsage() time.Time {
 }
 
 func (s *syncService) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
-	obj, err := s.objectGetter.GetObject(ctx, message.TreeId)
+	obj, err := s.objectGetter.GetObject(ctx, message.ObjectId)
 	if err != nil {
 		return
 	}

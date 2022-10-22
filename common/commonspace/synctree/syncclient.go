@@ -5,15 +5,17 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"time"
 )
 
 type SyncClient interface {
-	syncservice.StreamPool
 	RequestFactory
 	ocache.ObjectLastUsage
-	BroadcastAsyncOrSendResponsible(message *spacesyncproto.ObjectSyncMessage) (err error)
+	BroadcastAsync(message *treechangeproto.TreeSyncMessage) (err error)
+	BroadcastAsyncOrSendResponsible(message *treechangeproto.TreeSyncMessage) (err error)
+	SendAsync(peerId string, message *treechangeproto.TreeSyncMessage, replyId string) (err error)
 }
 
 type syncClient struct {
@@ -43,21 +45,51 @@ func (s *syncClient) LastUsage() time.Time {
 	return s.StreamPool.LastUsage()
 }
 
-func (s *syncClient) BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (err error) {
+func (s *syncClient) BroadcastAsync(message *treechangeproto.TreeSyncMessage) (err error) {
 	s.notifyIfNeeded(message)
-	return s.StreamPool.BroadcastAsync(message)
+	objMsg, err := marshallTreeMessage(message, message.RootChange.Id, "")
+	if err != nil {
+		return
+	}
+	return s.StreamPool.BroadcastAsync(objMsg)
 }
 
-func (s *syncClient) BroadcastAsyncOrSendResponsible(message *spacesyncproto.ObjectSyncMessage) (err error) {
+func (s *syncClient) SendAsync(peerId string, message *treechangeproto.TreeSyncMessage, replyId string) (err error) {
+	objMsg, err := marshallTreeMessage(message, message.RootChange.Id, replyId)
+	if err != nil {
+		return
+	}
+	return s.StreamPool.SendAsync([]string{peerId}, objMsg)
+}
+
+func (s *syncClient) BroadcastAsyncOrSendResponsible(message *treechangeproto.TreeSyncMessage) (err error) {
+	s.notifyIfNeeded(message)
+	objMsg, err := marshallTreeMessage(message, message.RootChange.Id, "")
+	if err != nil {
+		return
+	}
 	if s.configuration.IsResponsible(s.spaceId) {
-		return s.SendAsync(s.configuration.NodeIds(s.spaceId), message)
+		return s.StreamPool.SendAsync(s.configuration.NodeIds(s.spaceId), objMsg)
 	}
 	return s.BroadcastAsync(message)
 }
 
-func (s *syncClient) notifyIfNeeded(message *spacesyncproto.ObjectSyncMessage) {
+func (s *syncClient) notifyIfNeeded(message *treechangeproto.TreeSyncMessage) {
 	if message.GetContent().GetHeadUpdate() != nil {
 		update := message.GetContent().GetHeadUpdate()
-		s.notifiable.UpdateHeads(message.TreeId, update.Heads)
+		s.notifiable.UpdateHeads(message.RootChange.Id, update.Heads)
 	}
+}
+
+func marshallTreeMessage(message *treechangeproto.TreeSyncMessage, id, replyId string) (objMsg *spacesyncproto.ObjectSyncMessage, err error) {
+	payload, err := message.Marshal()
+	if err != nil {
+		return
+	}
+	objMsg = &spacesyncproto.ObjectSyncMessage{
+		ReplyId:  replyId,
+		Payload:  payload,
+		ObjectId: id,
+	}
+	return
 }

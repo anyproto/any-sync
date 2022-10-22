@@ -53,3 +53,44 @@ message RawTreeChangeWithId {
   // Id is a cid made from rawChange payload
   string id = 2;
 }
+
+message TreeSyncMessage {
+  TreeSyncContentValue content = 1;
+  RawTreeChangeWithId rootChange = 2;
+}
+
+// TreeSyncContentValue provides different types for tree sync
+message TreeSyncContentValue {
+  oneof value {
+    TreeHeadUpdate headUpdate = 1;
+    TreeFullSyncRequest fullSyncRequest = 2;
+    TreeFullSyncResponse fullSyncResponse = 3;
+    TreeErrorResponse errorResponse = 4;
+  }
+}
+
+// TreeHeadUpdate is a message sent on document head update
+message TreeHeadUpdate {
+  repeated string heads = 1;
+  repeated RawTreeChangeWithId changes = 2;
+  repeated string snapshotPath = 3;
+}
+
+// TreeHeadUpdate is a message sent when document needs full sync
+message TreeFullSyncRequest {
+  repeated string heads = 1;
+  repeated RawTreeChangeWithId changes = 2;
+  repeated string snapshotPath = 3;
+}
+
+// TreeFullSyncResponse is a message sent as a response for a specific full sync
+message TreeFullSyncResponse {
+  repeated string heads = 1;
+  repeated RawTreeChangeWithId changes = 2;
+  repeated string snapshotPath = 3;
+}
+
+// TreeErrorResponse is an error sent as a response for a full sync request
+message TreeErrorResponse {
+  string error = 1;
+}
