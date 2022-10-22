@@ -103,7 +103,7 @@ func Test_BuildSyncTree(t *testing.T) {
 	syncClientMock.EXPECT().CreateHeadUpdate(syncTreeMatcher{objTreeMock, syncClientMock, updateListenerMock}, gomock.Nil()).Return(headUpdate)
 	syncClientMock.EXPECT().BroadcastAsyncOrSendResponsible(gomock.Eq(headUpdate)).Return(nil)
 
-	tr, err := BuildSyncTree(ctx, syncClientMock, storageMock, updateListenerMock, aclListMock, false)
+	tr, err := buildSyncTree(ctx, syncClientMock, storageMock, updateListenerMock, aclListMock, false)
 	require.NoError(t, err)
 
 	t.Run("AddRawChanges update", func(t *testing.T) {
