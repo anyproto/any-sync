@@ -132,45 +132,42 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 		return
 	}
 
-	store, err := deps.SpaceStorage.TreeStorage(id)
+	deps.TreeStorage, err = deps.SpaceStorage.TreeStorage(id)
+	if err == nil {
+		return buildSyncTree(ctx, false, deps)
+	}
+
 	if err != nil && err != storage.ErrUnknownTreeId {
 		return
 	}
 
-	isFirstBuild := false
-	if err == storage.ErrUnknownTreeId {
-		isFirstBuild = true
-
-		var resp *treechangeproto.TreeSyncMessage
-		resp, err = getTreeRemote()
-		if err != nil {
-			return
-		}
-		fullSyncResp := resp.GetContent().GetFullSyncResponse()
-
-		payload := storage.TreeStorageCreatePayload{
-			TreeId:        id,
-			RootRawChange: resp.RootChange,
-			Changes:       fullSyncResp.Changes,
-			Heads:         fullSyncResp.Heads,
-		}
-
-		// basically building tree with inmemory storage and validating that it was without errors
-		err = tree.ValidateRawTree(payload, deps.AclList)
-		if err != nil {
-			return
-		}
-		// now we are sure that we can save it to the storage
-		store, err = deps.SpaceStorage.CreateTreeStorage(payload)
-		if err != nil {
-			return
-		}
+	resp, err := getTreeRemote()
+	if err != nil {
+		return
 	}
-	deps.TreeStorage = store
-	return BuildSyncTree(ctx, isFirstBuild, deps)
+	fullSyncResp := resp.GetContent().GetFullSyncResponse()
+
+	payload := storage.TreeStorageCreatePayload{
+		TreeId:        id,
+		RootRawChange: resp.RootChange,
+		Changes:       fullSyncResp.Changes,
+		Heads:         fullSyncResp.Heads,
+	}
+
+	// basically building tree with in-memory storage and validating that it was without errors
+	err = tree.ValidateRawTree(payload, deps.AclList)
+	if err != nil {
+		return
+	}
+	// now we are sure that we can save it to the storage
+	deps.TreeStorage, err = deps.SpaceStorage.CreateTreeStorage(payload)
+	if err != nil {
+		return
+	}
+	return buildSyncTree(ctx, true, deps)
 }
 
-func BuildSyncTree(
+func buildSyncTree(
 	ctx context.Context,
 	isFirstBuild bool,
 	deps BuildDeps) (t tree.ObjectTree, err error) {
