@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
@@ -17,6 +18,7 @@ var ErrSyncTreeClosed = errors.New("sync tree is closed")
 // SyncTree sends head updates to sync service and also sends new changes to update listener
 type SyncTree struct {
 	tree.ObjectTree
+	synchandler.SyncHandler
 	syncClient syncservice.SyncClient
 	listener   updatelistener.UpdateListener
 	isClosed   bool
@@ -28,85 +30,89 @@ var createDerivedObjectTree = tree.CreateDerivedObjectTree
 var createObjectTree = tree.CreateObjectTree
 var buildObjectTree = tree.BuildObjectTree
 
+type SyncTreeCreateDeps struct {
+	Payload       tree.ObjectTreeCreatePayload
+	SyncClient    syncservice.SyncClient
+	Listener      updatelistener.UpdateListener
+	AclList       list.ACLList
+	CreateStorage storage.TreeStorageCreatorFunc
+}
+
+type SyncTreeBuildDeps struct {
+	SyncClient syncservice.SyncClient
+	Listener   updatelistener.UpdateListener
+	AclList    list.ACLList
+	Storage    storage.TreeStorage
+}
+
 func DeriveSyncTree(
 	ctx context.Context,
-	payload tree.ObjectTreeCreatePayload,
-	syncClient syncservice.SyncClient,
-	listener updatelistener.UpdateListener,
-	aclList list.ACLList,
-	createStorage storage.TreeStorageCreatorFunc) (t tree.ObjectTree, err error) {
-	t, err = createDerivedObjectTree(payload, aclList, createStorage)
+	deps SyncTreeCreateDeps) (t tree.ObjectTree, err error) {
+	t, err = createDerivedObjectTree(deps.Payload, deps.AclList, deps.CreateStorage)
 	if err != nil {
 		return
 	}
-	t = &SyncTree{
+	syncTree := &SyncTree{
 		ObjectTree: t,
-		syncClient: syncClient,
-		listener:   listener,
+		syncClient: deps.SyncClient,
+		listener:   deps.Listener,
 	}
+	syncHandler := newSyncTreeHandler(syncTree, deps.SyncClient)
+	syncTree.SyncHandler = syncHandler
+	t = syncTree
 
-	headUpdate := syncClient.CreateHeadUpdate(t, nil)
-	err = syncClient.BroadcastAsync(headUpdate)
+	headUpdate := deps.SyncClient.CreateHeadUpdate(t, nil)
+	err = deps.SyncClient.BroadcastAsync(headUpdate)
 	return
 }
 
 func CreateSyncTree(
 	ctx context.Context,
-	payload tree.ObjectTreeCreatePayload,
-	syncClient syncservice.SyncClient,
-	listener updatelistener.UpdateListener,
-	aclList list.ACLList,
-	createStorage storage.TreeStorageCreatorFunc) (t tree.ObjectTree, err error) {
-	t, err = createObjectTree(payload, aclList, createStorage)
+	deps SyncTreeCreateDeps) (t tree.ObjectTree, err error) {
+	t, err = createObjectTree(deps.Payload, deps.AclList, deps.CreateStorage)
 	if err != nil {
 		return
 	}
-	t = &SyncTree{
+	syncTree := &SyncTree{
 		ObjectTree: t,
-		syncClient: syncClient,
-		listener:   listener,
+		syncClient: deps.SyncClient,
+		listener:   deps.Listener,
 	}
+	syncHandler := newSyncTreeHandler(syncTree, deps.SyncClient)
+	syncTree.SyncHandler = syncHandler
+	t = syncTree
 
-	headUpdate := syncClient.CreateHeadUpdate(t, nil)
-	err = syncClient.BroadcastAsync(headUpdate)
+	headUpdate := deps.SyncClient.CreateHeadUpdate(t, nil)
+	err = deps.SyncClient.BroadcastAsync(headUpdate)
 	return
 }
 
 func BuildSyncTree(
 	ctx context.Context,
-	syncClient syncservice.SyncClient,
-	treeStorage storage.TreeStorage,
-	listener updatelistener.UpdateListener,
-	aclList list.ACLList,
-	isFirstBuild bool) (t tree.ObjectTree, err error) {
-	return buildSyncTree(ctx, syncClient, treeStorage, listener, aclList, isFirstBuild)
-}
+	isFirstBuild bool,
+	deps SyncTreeBuildDeps) (t tree.ObjectTree, err error) {
 
-func buildSyncTree(
-	ctx context.Context,
-	syncClient syncservice.SyncClient,
-	treeStorage storage.TreeStorage,
-	listener updatelistener.UpdateListener,
-	aclList list.ACLList,
-	isFirstBuild bool) (t tree.ObjectTree, err error) {
-	t, err = buildObjectTree(treeStorage, aclList)
+	t, err = buildObjectTree(deps.Storage, deps.AclList)
 	if err != nil {
 		return
 	}
-	t = &SyncTree{
+	syncTree := &SyncTree{
 		ObjectTree: t,
-		syncClient: syncClient,
-		listener:   listener,
+		syncClient: deps.SyncClient,
+		listener:   deps.Listener,
 	}
+	syncHandler := newSyncTreeHandler(syncTree, deps.SyncClient)
+	syncTree.SyncHandler = syncHandler
+	t = syncTree
 
-	headUpdate := syncClient.CreateHeadUpdate(t, nil)
+	headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 	// here we will have different behaviour based on who is sending this update
 	if isFirstBuild {
 		// send to everybody, because everybody should know that the node or client got new tree
-		err = syncClient.BroadcastAsync(headUpdate)
+		err = syncTree.syncClient.BroadcastAsync(headUpdate)
 	} else {
 		// send either to everybody if client or to replica set if node
-		err = syncClient.BroadcastAsyncOrSendResponsible(headUpdate)
+		err = syncTree.syncClient.BroadcastAsyncOrSendResponsible(headUpdate)
 	}
 	return
 }
