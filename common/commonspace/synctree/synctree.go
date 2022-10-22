@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
+	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
@@ -13,6 +14,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
+	"github.com/gogo/protobuf/proto"
 )
 
 var ErrSyncTreeClosed = errors.New("sync tree is closed")
@@ -50,7 +52,8 @@ type BuildDeps struct {
 	HeadNotifiable diffservice.HeadNotifiable
 	Listener       updatelistener.UpdateListener
 	AclList        list.ACLList
-	Storage        storage.TreeStorage
+	SpaceStorage   spacestorage.SpaceStorage
+	TreeStorage    storage.TreeStorage
 }
 
 func DeriveSyncTree(
@@ -107,12 +110,72 @@ func CreateSyncTree(
 	return
 }
 
+func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t tree.ObjectTree, err error) {
+	getTreeRemote := func() (msg *treechangeproto.TreeSyncMessage, err error) {
+		// TODO: add empty context handling (when this is not happening due to head update)
+		peerId, err := syncservice.GetPeerIdFromStreamContext(ctx)
+		if err != nil {
+			return
+		}
+		newTreeRequest := GetRequestFactory().CreateNewTreeRequest()
+		objMsg, err := marshallTreeMessage(newTreeRequest, id, "")
+		if err != nil {
+			return
+		}
+
+		resp, err := deps.StreamPool.SendSync(peerId, objMsg)
+		if resp != nil {
+			return
+		}
+		msg = &treechangeproto.TreeSyncMessage{}
+		err = proto.Unmarshal(resp.Payload, msg)
+		return
+	}
+
+	store, err := deps.SpaceStorage.TreeStorage(id)
+	if err != nil && err != storage.ErrUnknownTreeId {
+		return
+	}
+
+	isFirstBuild := false
+	if err == storage.ErrUnknownTreeId {
+		isFirstBuild = true
+
+		var resp *treechangeproto.TreeSyncMessage
+		resp, err = getTreeRemote()
+		if err != nil {
+			return
+		}
+		fullSyncResp := resp.GetContent().GetFullSyncResponse()
+
+		payload := storage.TreeStorageCreatePayload{
+			TreeId:        id,
+			RootRawChange: resp.RootChange,
+			Changes:       fullSyncResp.Changes,
+			Heads:         fullSyncResp.Heads,
+		}
+
+		// basically building tree with inmemory storage and validating that it was without errors
+		err = tree.ValidateRawTree(payload, deps.AclList)
+		if err != nil {
+			return
+		}
+		// now we are sure that we can save it to the storage
+		store, err = deps.SpaceStorage.CreateTreeStorage(payload)
+		if err != nil {
+			return
+		}
+	}
+	deps.TreeStorage = store
+	return BuildSyncTree(ctx, isFirstBuild, deps)
+}
+
 func BuildSyncTree(
 	ctx context.Context,
 	isFirstBuild bool,
 	deps BuildDeps) (t tree.ObjectTree, err error) {
 
-	t, err = buildObjectTree(deps.Storage, deps.AclList)
+	t, err = buildObjectTree(deps.TreeStorage, deps.AclList)
 	if err != nil {
 		return
 	}

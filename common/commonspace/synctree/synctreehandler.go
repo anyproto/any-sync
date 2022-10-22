@@ -5,7 +5,9 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/slice"
+	"github.com/gogo/protobuf/proto"
 )
 
 type syncTreeHandler struct {
@@ -20,15 +22,21 @@ func newSyncTreeHandler(objTree tree.ObjectTree, syncClient SyncClient) synchand
 	}
 }
 
-func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) error {
-	content := msg.GetContent()
+func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	unmarshalled := &treechangeproto.TreeSyncMessage{}
+	err = proto.Unmarshal(msg.Payload, unmarshalled)
+	if err != nil {
+		return
+	}
+
+	content := unmarshalled.GetContent()
 	switch {
-	case content.GetFullSyncRequest() != nil:
-		return s.handleFullSyncRequest(ctx, senderId, content.GetFullSyncRequest(), msg)
-	case content.GetFullSyncResponse() != nil:
-		return s.handleFullSyncResponse(ctx, senderId, content.GetFullSyncResponse(), msg)
 	case content.GetHeadUpdate() != nil:
-		return s.handleHeadUpdate(ctx, senderId, content.GetHeadUpdate(), msg)
+		return s.handleHeadUpdate(ctx, senderId, content.GetHeadUpdate(), msg.ReplyId)
+	case content.GetFullSyncRequest() != nil:
+		return s.handleFullSyncRequest(ctx, senderId, content.GetFullSyncRequest(), msg.ReplyId)
+	case content.GetFullSyncResponse() != nil:
+		return s.handleFullSyncResponse(ctx, senderId, content.GetFullSyncResponse())
 	}
 	return nil
 }
@@ -36,14 +44,14 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 func (s *syncTreeHandler) handleHeadUpdate(
 	ctx context.Context,
 	senderId string,
-	update *spacesyncproto.ObjectHeadUpdate,
-	msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	update *treechangeproto.TreeHeadUpdate,
+	replyId string) (err error) {
 	log.With("senderId", senderId).
 		With("heads", update.Heads).
-		With("treeId", msg.TreeId).
+		With("treeId", s.objTree.ID()).
 		Debug("received head update message")
 	var (
-		fullRequest   *spacesyncproto.ObjectSyncMessage
+		fullRequest   *treechangeproto.TreeSyncMessage
 		isEmptyUpdate = len(update.Changes) == 0
 		objTree       = s.objTree
 	)
@@ -54,12 +62,12 @@ func (s *syncTreeHandler) handleHeadUpdate(
 
 		// isEmptyUpdate is sent when the tree is brought up from cache
 		if isEmptyUpdate {
-			log.With("treeId", msg.TreeId).Debug("is empty update")
+			log.With("treeId", objTree.ID()).Debug("is empty update")
 			if slice.UnsortedEquals(objTree.Heads(), update.Heads) {
 				return nil
 			}
 			// we need to sync in any case
-			fullRequest, err = s.syncClient.CreateFullSyncRequest(objTree, update.Heads, update.SnapshotPath, msg.TrackingId)
+			fullRequest, err = s.syncClient.CreateFullSyncRequest(objTree, update.Heads, update.SnapshotPath)
 			return err
 		}
 
@@ -76,20 +84,20 @@ func (s *syncTreeHandler) handleHeadUpdate(
 			return nil
 		}
 
-		fullRequest, err = s.syncClient.CreateFullSyncRequest(objTree, update.Heads, update.SnapshotPath, msg.TrackingId)
+		fullRequest, err = s.syncClient.CreateFullSyncRequest(objTree, update.Heads, update.SnapshotPath)
 		return err
 	}()
 
 	if fullRequest != nil {
 		log.With("senderId", senderId).
 			With("heads", fullRequest.GetContent().GetFullSyncRequest().Heads).
-			With("treeId", msg.TreeId).
+			With("treeId", objTree.ID()).
 			Debug("sending full sync request")
-		return s.syncClient.SendAsync([]string{senderId}, fullRequest)
+		return s.syncClient.SendAsync(senderId, fullRequest, replyId)
 	}
 	log.With("senderId", senderId).
 		With("heads", update.Heads).
-		With("treeId", msg.TreeId).
+		With("treeId", objTree.ID()).
 		Debug("head update finished correctly")
 	return
 }
@@ -97,21 +105,21 @@ func (s *syncTreeHandler) handleHeadUpdate(
 func (s *syncTreeHandler) handleFullSyncRequest(
 	ctx context.Context,
 	senderId string,
-	request *spacesyncproto.ObjectFullSyncRequest,
-	msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	request *treechangeproto.TreeFullSyncRequest,
+	replyId string) (err error) {
 	log.With("senderId", senderId).
 		With("heads", request.Heads).
-		With("treeId", msg.TreeId).
-		With("trackingId", msg.TrackingId).
+		With("treeId", s.objTree.ID()).
+		With("trackingId", replyId).
 		Debug("received full sync request message")
 	var (
-		fullResponse *spacesyncproto.ObjectSyncMessage
-		header       = msg.RootChange
+		fullResponse *treechangeproto.TreeSyncMessage
+		header       = s.objTree.Header()
 		objTree      = s.objTree
 	)
 	defer func() {
 		if err != nil {
-			s.syncClient.SendAsync([]string{senderId}, spacesyncproto.WrapError(err, header, msg.TreeId, msg.TrackingId))
+			s.syncClient.SendAsync(senderId, treechangeproto.WrapError(err, header), replyId)
 		}
 	}()
 
@@ -130,30 +138,29 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 			}
 		}
 
-		fullResponse, err = s.syncClient.CreateFullSyncResponse(objTree, request.Heads, request.SnapshotPath, msg.TrackingId)
+		fullResponse, err = s.syncClient.CreateFullSyncResponse(objTree, request.Heads, request.SnapshotPath)
 		return err
 	}()
 
 	if err != nil {
 		return
 	}
-	return s.syncClient.SendAsync([]string{senderId}, fullResponse)
+	return s.syncClient.SendAsync(senderId, fullResponse, replyId)
 }
 
 func (s *syncTreeHandler) handleFullSyncResponse(
 	ctx context.Context,
 	senderId string,
-	response *spacesyncproto.ObjectFullSyncResponse,
-	msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	response *treechangeproto.TreeFullSyncResponse) (err error) {
 	log.With("senderId", senderId).
 		With("heads", response.Heads).
-		With("treeId", msg.TreeId).
+		With("treeId", s.objTree.ID()).
 		Debug("received full sync response message")
 	objTree := s.objTree
 	if err != nil {
 		log.With("senderId", senderId).
 			With("heads", response.Heads).
-			With("treeId", msg.TreeId).
+			With("treeId", s.objTree.ID()).
 			Debug("failed to find the tree in full sync response")
 		return
 	}
@@ -170,7 +177,7 @@ func (s *syncTreeHandler) handleFullSyncResponse(
 	}()
 	log.With("error", err != nil).
 		With("heads", response.Heads).
-		With("treeId", msg.TreeId).
+		With("treeId", s.objTree.ID()).
 		Debug("finished full sync response")
 
 	return

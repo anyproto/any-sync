@@ -78,13 +78,13 @@ func (s *streamPool) SendSync(
 	peerId string,
 	msg *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
 	newCounter := s.counter.Add(1)
-	msg.TrackingId = genStreamPoolKey(peerId, msg.TreeId, newCounter)
+	msg.ReplyId = genStreamPoolKey(peerId, msg.ObjectId, newCounter)
 
 	s.waitersMx.Lock()
 	waiter := responseWaiter{
 		ch: make(chan *spacesyncproto.ObjectSyncMessage, 1),
 	}
-	s.waiters[msg.TrackingId] = waiter
+	s.waiters[msg.ReplyId] = waiter
 	s.waitersMx.Unlock()
 
 	err = s.SendAsync([]string{peerId}, msg)
@@ -95,10 +95,10 @@ func (s *streamPool) SendSync(
 	select {
 	case <-delay.C:
 		s.waitersMx.Lock()
-		delete(s.waiters, msg.TrackingId)
+		delete(s.waiters, msg.ReplyId)
 		s.waitersMx.Unlock()
 
-		log.With("trackingId", msg.TrackingId).Error("time elapsed when waiting")
+		log.With("trackingId", msg.ReplyId).Error("time elapsed when waiting")
 		err = ErrSyncTimeout
 	case reply = <-waiter.ch:
 		if !delay.Stop() {
@@ -125,8 +125,7 @@ func (s *streamPool) SendAsync(peers []string, message *spacesyncproto.ObjectSyn
 	streams := getStreams()
 	s.Unlock()
 
-	log.With("description", spacesyncproto.MessageDescription(message)).
-		With("treeId", message.TreeId).
+	log.With("objectId", message.ObjectId).
 		Debugf("sending message to %d peers", len(streams))
 	for _, s := range streams {
 		err = s.Send(message)
@@ -174,8 +173,7 @@ Loop:
 
 func (s *streamPool) BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (err error) {
 	streams := s.getAllStreams()
-	log.With("description", spacesyncproto.MessageDescription(message)).
-		With("treeId", message.TreeId).
+	log.With("objectId", message.ObjectId).
 		Debugf("broadcasting message to %d peers", len(streams))
 	for _, stream := range streams {
 		if err = stream.Send(message); err != nil {
@@ -224,23 +222,23 @@ func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStre
 
 	process := func(msg *spacesyncproto.ObjectSyncMessage) {
 		s.lastUsage.Store(time.Now().Unix())
-		if msg.TrackingId == "" {
+		if msg.ReplyId == "" {
 			s.messageHandler(stream.Context(), peerId, msg)
 			return
 		}
-		log.With("trackingId", msg.TrackingId).Debug("getting message with tracking id")
+		log.With("trackingId", msg.ReplyId).Debug("getting message with tracking id")
 		s.waitersMx.Lock()
-		waiter, exists := s.waiters[msg.TrackingId]
+		waiter, exists := s.waiters[msg.ReplyId]
 
 		if !exists {
-			log.With("trackingId", msg.TrackingId).Debug("tracking id not exists")
+			log.With("trackingId", msg.ReplyId).Debug("tracking id not exists")
 			s.waitersMx.Unlock()
 			s.messageHandler(stream.Context(), peerId, msg)
 			return
 		}
-		log.With("trackingId", msg.TrackingId).Debug("tracking id exists")
+		log.With("trackingId", msg.ReplyId).Debug("tracking id exists")
 
-		delete(s.waiters, msg.TrackingId)
+		delete(s.waiters, msg.ReplyId)
 		s.waitersMx.Unlock()
 		waiter.ch <- msg
 	}

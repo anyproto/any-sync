@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncacl"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
@@ -15,7 +14,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
-	aclstorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	tree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
@@ -167,51 +165,6 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		err = ErrSpaceClosed
 		return
 	}
-	getTreeRemote := func() (*spacesyncproto.ObjectSyncMessage, error) {
-		// TODO: add empty context handling (when this is not happening due to head update)
-		peerId, err := syncservice.GetPeerIdFromStreamContext(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return s.syncService.StreamPool().SendSync(
-			peerId,
-			synctree.GetRequestFactory().CreateNewTreeRequest(id),
-		)
-	}
-
-	store, err := s.storage.TreeStorage(id)
-	if err != nil && err != aclstorage.ErrUnknownTreeId {
-		return
-	}
-
-	isFirstBuild := false
-	if err == aclstorage.ErrUnknownTreeId {
-		isFirstBuild = true
-		var resp *spacesyncproto.ObjectSyncMessage
-		resp, err = getTreeRemote()
-		if err != nil {
-			return
-		}
-		fullSyncResp := resp.GetContent().GetFullSyncResponse()
-
-		payload := aclstorage.TreeStorageCreatePayload{
-			TreeId:        resp.TreeId,
-			RootRawChange: resp.RootChange,
-			Changes:       fullSyncResp.Changes,
-			Heads:         fullSyncResp.Heads,
-		}
-
-		// basically building tree with inmemory storage and validating that it was without errors
-		err = tree.ValidateRawTree(payload, s.aclList)
-		if err != nil {
-			return
-		}
-		// now we are sure that we can save it to the storage
-		store, err = s.storage.CreateTreeStorage(payload)
-		if err != nil {
-			return
-		}
-	}
 	deps := synctree.BuildDeps{
 		SpaceId:        s.id,
 		StreamPool:     s.syncService.StreamPool(),
@@ -219,9 +172,9 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		HeadNotifiable: s.diffService,
 		Listener:       listener,
 		AclList:        s.aclList,
-		Storage:        store,
+		SpaceStorage:   s.storage,
 	}
-	return synctree.BuildSyncTree(ctx, isFirstBuild, deps)
+	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
 }
 
 func (s *space) Close() error {
