@@ -4,8 +4,9 @@ package syncservice
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectgetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
@@ -16,9 +17,10 @@ var log = logger.NewNamed("syncservice").Sugar()
 
 type SyncService interface {
 	ocache.ObjectLastUsage
+	synchandler.SyncHandler
 	SyncClient() SyncClient
 
-	Init()
+	Init(getter objectgetter.ObjectGetter)
 	Close() (err error)
 }
 
@@ -33,6 +35,7 @@ type syncService struct {
 
 	syncClient    SyncClient
 	clientFactory spacesyncproto.ClientFactory
+	objectGetter  objectgetter.ObjectGetter
 
 	streamLoopCtx  context.Context
 	stopStreamLoop context.CancelFunc
@@ -43,25 +46,19 @@ type syncService struct {
 func NewSyncService(
 	spaceId string,
 	headNotifiable HeadNotifiable,
-	cache treegetter.TreeGetter,
 	configuration nodeconf.Configuration,
-	confConnector nodeconf.ConfConnector) SyncService {
-	var syncHandler SyncHandler
+	confConnector nodeconf.ConfConnector) (syncService SyncService) {
 	streamPool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
-		return syncHandler.HandleMessage(ctx, senderId, message)
+		return syncService.HandleMessage(ctx, senderId, message)
 	})
 	factory := newRequestFactory()
 	syncClient := newSyncClient(spaceId, streamPool, headNotifiable, factory, configuration)
-	syncHandler = newSyncHandler(spaceId, cache, syncClient)
-	return newSyncService(
+	syncService = newSyncService(
 		spaceId,
 		syncClient,
 		spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient),
 		confConnector)
-}
-
-func (s *syncService) LastUsage() time.Time {
-	return s.syncClient.LastUsage()
+	return
 }
 
 func newSyncService(
@@ -78,7 +75,8 @@ func newSyncService(
 	}
 }
 
-func (s *syncService) Init() {
+func (s *syncService) Init(objectGetter objectgetter.ObjectGetter) {
+	s.objectGetter = objectGetter
 	s.streamLoopCtx, s.stopStreamLoop = context.WithCancel(context.Background())
 	go s.responsibleStreamCheckLoop(s.streamLoopCtx)
 }
@@ -87,6 +85,18 @@ func (s *syncService) Close() (err error) {
 	s.stopStreamLoop()
 	<-s.streamLoopDone
 	return s.syncClient.Close()
+}
+
+func (s *syncService) LastUsage() time.Time {
+	return s.syncClient.LastUsage()
+}
+
+func (s *syncService) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
+	obj, err := s.objectGetter.GetObject(ctx, message.TreeId)
+	if err != nil {
+		return
+	}
+	return obj.HandleMessage(ctx, senderId, message)
 }
 
 func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {

@@ -1,4 +1,4 @@
-package syncservice
+package synctree
 
 import (
 	"context"
@@ -44,7 +44,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 	syncClientMock := mock_syncservice.NewMockSyncClient(ctrl)
 	objectTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
 
-	syncHandler := newSyncHandler(spaceId, cacheMock, syncClientMock)
+	syncHandler := newSyncTreeHandler(spaceId, cacheMock, syncClientMock)
 	t.Run("head update non empty all heads added", func(t *testing.T) {
 		treeId := "treeId"
 		senderId := "senderId"
@@ -196,7 +196,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 	syncClientMock := mock_syncservice.NewMockSyncClient(ctrl)
 	objectTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
 
-	syncHandler := newSyncHandler(spaceId, cacheMock, syncClientMock)
+	syncHandler := newSyncTreeHandler(spaceId, cacheMock, syncClientMock)
 	t.Run("full sync request with change", func(t *testing.T) {
 		treeId := "treeId"
 		senderId := "senderId"
@@ -307,7 +307,7 @@ func TestSyncHandler_HandleFullSyncResponse(t *testing.T) {
 	syncClientMock := mock_syncservice.NewMockSyncClient(ctrl)
 	objectTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
 
-	syncHandler := newSyncHandler(spaceId, cacheMock, syncClientMock)
+	syncHandler := newSyncTreeHandler(spaceId, cacheMock, syncClientMock)
 	t.Run("full sync response with change", func(t *testing.T) {
 		treeId := "treeId"
 		senderId := "senderId"

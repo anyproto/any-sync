@@ -87,10 +87,11 @@ func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	lastConfiguration := s.configurationService.GetLast()
 	confConnector := nodeconf.NewConfConnector(lastConfiguration, s.pool)
 	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, st, confConnector, s.cache, log)
-	syncService := syncservice.NewSyncService(id, diffService, s.cache, lastConfiguration, confConnector)
+	syncService := syncservice.NewSyncService(id, diffService, lastConfiguration, confConnector)
 	sp := &space{
 		id:          id,
 		syncService: syncService,
