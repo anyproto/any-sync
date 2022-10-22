@@ -18,14 +18,10 @@ var log = logger.NewNamed("syncservice").Sugar()
 type SyncService interface {
 	ocache.ObjectLastUsage
 	synchandler.SyncHandler
-	SyncClient() SyncClient
+	StreamPool() StreamPool
 
 	Init(getter objectgetter.ObjectGetter)
 	Close() (err error)
-}
-
-type HeadNotifiable interface {
-	UpdateHeads(id string, heads []string)
 }
 
 const respPeersStreamCheckInterval = time.Second * 10
@@ -33,7 +29,7 @@ const respPeersStreamCheckInterval = time.Second * 10
 type syncService struct {
 	spaceId string
 
-	syncClient    SyncClient
+	streamPool    StreamPool
 	clientFactory spacesyncproto.ClientFactory
 	objectGetter  objectgetter.ObjectGetter
 
@@ -45,17 +41,13 @@ type syncService struct {
 
 func NewSyncService(
 	spaceId string,
-	headNotifiable HeadNotifiable,
-	configuration nodeconf.Configuration,
 	confConnector nodeconf.ConfConnector) (syncService SyncService) {
 	streamPool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
 		return syncService.HandleMessage(ctx, senderId, message)
 	})
-	factory := newRequestFactory()
-	syncClient := newSyncClient(spaceId, streamPool, headNotifiable, factory, configuration)
 	syncService = newSyncService(
 		spaceId,
-		syncClient,
+		streamPool,
 		spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient),
 		confConnector)
 	return
@@ -63,11 +55,11 @@ func NewSyncService(
 
 func newSyncService(
 	spaceId string,
-	syncClient SyncClient,
+	streamPool StreamPool,
 	clientFactory spacesyncproto.ClientFactory,
 	connector nodeconf.ConfConnector) *syncService {
 	return &syncService{
-		syncClient:     syncClient,
+		streamPool:     streamPool,
 		connector:      connector,
 		clientFactory:  clientFactory,
 		spaceId:        spaceId,
@@ -84,11 +76,11 @@ func (s *syncService) Init(objectGetter objectgetter.ObjectGetter) {
 func (s *syncService) Close() (err error) {
 	s.stopStreamLoop()
 	<-s.streamLoopDone
-	return s.syncClient.Close()
+	return s.streamPool.Close()
 }
 
 func (s *syncService) LastUsage() time.Time {
-	return s.syncClient.LastUsage()
+	return s.streamPool.LastUsage()
 }
 
 func (s *syncService) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
@@ -107,7 +99,7 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 			return
 		}
 		for _, peer := range respPeers {
-			if s.syncClient.HasActiveStream(peer.Id()) {
+			if s.streamPool.HasActiveStream(peer.Id()) {
 				continue
 			}
 			stream, err := s.clientFactory.Client(peer).Stream(ctx)
@@ -125,7 +117,7 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 				log.With("spaceId", s.spaceId).Errorf("failed to send first message to stream: %v", err)
 				continue
 			}
-			s.syncClient.AddAndReadStreamAsync(stream)
+			s.streamPool.AddAndReadStreamAsync(stream)
 		}
 	}
 
@@ -142,6 +134,6 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 	}
 }
 
-func (s *syncService) SyncClient() SyncClient {
-	return s.syncClient
+func (s *syncService) StreamPool() StreamPool {
+	return s.streamPool
 }

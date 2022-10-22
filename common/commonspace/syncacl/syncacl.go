@@ -8,14 +8,14 @@ import (
 
 type SyncACL struct {
 	list.ACLList
-	syncservice.SyncClient
 	synchandler.SyncHandler
+	streamPool syncservice.StreamPool
 }
 
-func NewSyncACL(aclList list.ACLList, syncClient syncservice.SyncClient) *SyncACL {
+func NewSyncACL(aclList list.ACLList, streamPool syncservice.StreamPool) *SyncACL {
 	return &SyncACL{
 		ACLList:     aclList,
-		SyncClient:  syncClient,
 		SyncHandler: nil,
+		streamPool:  streamPool,
 	}
 }

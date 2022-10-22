@@ -13,6 +13,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
 	aclstorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	tree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
@@ -69,12 +70,13 @@ type space struct {
 
 	rpc *rpcHandler
 
-	syncService syncservice.SyncService
-	diffService diffservice.DiffService
-	storage     storage.SpaceStorage
-	cache       treegetter.TreeGetter
-	account     account.Service
-	aclList     *syncacl.SyncACL
+	syncService   syncservice.SyncService
+	diffService   diffservice.DiffService
+	storage       storage.SpaceStorage
+	cache         treegetter.TreeGetter
+	account       account.Service
+	aclList       *syncacl.SyncACL
+	configuration nodeconf.Configuration
 
 	isClosed atomic.Bool
 }
@@ -101,7 +103,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	s.aclList = syncacl.NewSyncACL(aclList, s.syncService.SyncClient())
+	s.aclList = syncacl.NewSyncACL(aclList, s.syncService.StreamPool())
 	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache)
 	s.syncService.Init(objectGetter)
 	s.diffService.Init(initialIds)
@@ -129,12 +131,15 @@ func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		err = ErrSpaceClosed
 		return
 	}
-	deps := synctree.SyncTreeCreateDeps{
-		Payload:       payload,
-		SyncClient:    s.syncService.SyncClient(),
-		Listener:      listener,
-		AclList:       s.aclList,
-		CreateStorage: s.storage.CreateTreeStorage,
+	deps := synctree.CreateDeps{
+		SpaceId:        s.id,
+		Payload:        payload,
+		StreamPool:     s.syncService.StreamPool(),
+		Configuration:  s.configuration,
+		HeadNotifiable: s.diffService,
+		Listener:       listener,
+		AclList:        s.aclList,
+		CreateStorage:  s.storage.CreateTreeStorage,
 	}
 	return synctree.DeriveSyncTree(ctx, deps)
 }
@@ -144,12 +149,15 @@ func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		err = ErrSpaceClosed
 		return
 	}
-	deps := synctree.SyncTreeCreateDeps{
-		Payload:       payload,
-		SyncClient:    s.syncService.SyncClient(),
-		Listener:      listener,
-		AclList:       s.aclList,
-		CreateStorage: s.storage.CreateTreeStorage,
+	deps := synctree.CreateDeps{
+		SpaceId:        s.id,
+		Payload:        payload,
+		StreamPool:     s.syncService.StreamPool(),
+		Configuration:  s.configuration,
+		HeadNotifiable: s.diffService,
+		Listener:       listener,
+		AclList:        s.aclList,
+		CreateStorage:  s.storage.CreateTreeStorage,
 	}
 	return synctree.CreateSyncTree(ctx, deps)
 }
@@ -165,9 +173,9 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		if err != nil {
 			return nil, err
 		}
-		return s.syncService.SyncClient().SendSync(
+		return s.syncService.StreamPool().SendSync(
 			peerId,
-			s.syncService.SyncClient().CreateNewTreeRequest(id),
+			synctree.GetRequestFactory().CreateNewTreeRequest(id),
 		)
 	}
 
@@ -204,11 +212,14 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 			return
 		}
 	}
-	deps := synctree.SyncTreeBuildDeps{
-		SyncClient: s.syncService.SyncClient(),
-		Listener:   listener,
-		AclList:    s.aclList,
-		Storage:    store,
+	deps := synctree.BuildDeps{
+		SpaceId:        s.id,
+		StreamPool:     s.syncService.StreamPool(),
+		Configuration:  s.configuration,
+		HeadNotifiable: s.diffService,
+		Listener:       listener,
+		AclList:        s.aclList,
+		Storage:        store,
 	}
 	return synctree.BuildSyncTree(ctx, isFirstBuild, deps)
 }

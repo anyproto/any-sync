@@ -1,28 +1,35 @@
-package syncservice
+package synctree
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"time"
 )
 
 type SyncClient interface {
-	StreamPool
+	syncservice.StreamPool
 	RequestFactory
 	ocache.ObjectLastUsage
 	BroadcastAsyncOrSendResponsible(message *spacesyncproto.ObjectSyncMessage) (err error)
 }
 
 type syncClient struct {
-	StreamPool
+	syncservice.StreamPool
 	RequestFactory
 	spaceId       string
-	notifiable    HeadNotifiable
+	notifiable    diffservice.HeadNotifiable
 	configuration nodeconf.Configuration
 }
 
-func newSyncClient(spaceId string, pool StreamPool, notifiable HeadNotifiable, factory RequestFactory, configuration nodeconf.Configuration) SyncClient {
+func newSyncClient(
+	spaceId string,
+	pool syncservice.StreamPool,
+	notifiable diffservice.HeadNotifiable,
+	factory RequestFactory,
+	configuration nodeconf.Configuration) SyncClient {
 	return &syncClient{
 		StreamPool:     pool,
 		RequestFactory: factory,
