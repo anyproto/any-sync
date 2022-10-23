@@ -90,7 +90,7 @@ func (s *syncTreeHandler) handleHeadUpdate(
 
 	if fullRequest != nil {
 		log.With("senderId", senderId).
-			With("heads", fullRequest.GetContent().GetFullSyncRequest().Heads).
+			With("heads", objTree.Heads()).
 			With("treeId", objTree.ID()).
 			Debug("sending full sync request")
 		return s.syncClient.SendAsync(senderId, fullRequest, replyId)
@@ -126,10 +126,6 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 	err = func() error {
 		objTree.Lock()
 		defer objTree.Unlock()
-
-		if header == nil {
-			header = objTree.Header()
-		}
 
 		if len(request.Changes) != 0 && !s.alreadyHasHeads(objTree, request.Heads) {
 			_, err = objTree.AddRawChanges(ctx, request.Changes...)
