@@ -19,5 +19,5 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 }
 
 func (r *rpcHandler) Stream(stream spacesyncproto.DRPCSpace_StreamStream) (err error) {
-	return r.s.SyncService().SyncClient().AddAndReadStreamSync(stream)
+	return r.s.SyncService().StreamPool().AddAndReadStreamSync(stream)
 }

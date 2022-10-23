@@ -271,7 +271,7 @@ func (mr *MockObjectTreeMockRecorder) SnapshotPath() *gomock.Call {
 // Storage mocks base method.
 func (m *MockObjectTree) Storage() storage.TreeStorage {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpaceStorage")
+	ret := m.ctrl.Call(m, "Storage")
 	ret0, _ := ret[0].(storage.TreeStorage)
 	return ret0
 }
@@ -279,7 +279,7 @@ func (m *MockObjectTree) Storage() storage.TreeStorage {
 // Storage indicates an expected call of Storage.
 func (mr *MockObjectTreeMockRecorder) Storage() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceStorage", reflect.TypeOf((*MockObjectTree)(nil).Storage))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Storage", reflect.TypeOf((*MockObjectTree)(nil).Storage))
 }
 
 // Unlock mocks base method.
