@@ -1,4 +1,3 @@
-//go:generate mockgen -destination mock_syncservice/mock_syncservice.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice SyncClient
 package syncservice
 
 import (

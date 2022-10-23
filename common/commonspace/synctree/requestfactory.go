@@ -14,10 +14,10 @@ type RequestFactory interface {
 	CreateFullSyncResponse(t tree.ObjectTree, theirHeads, theirSnapshotPath []string) (*treechangeproto.TreeSyncMessage, error)
 }
 
-var factory = &requestFactory{}
+var sharedFactory = &requestFactory{}
 
 func GetRequestFactory() RequestFactory {
-	return factory
+	return sharedFactory
 }
 
 type requestFactory struct{}

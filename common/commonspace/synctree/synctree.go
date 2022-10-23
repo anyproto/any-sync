@@ -33,6 +33,7 @@ var log = logger.NewNamed("commonspace.synctree").Sugar()
 var createDerivedObjectTree = tree.CreateDerivedObjectTree
 var createObjectTree = tree.CreateObjectTree
 var buildObjectTree = tree.BuildObjectTree
+var createSyncClient = newSyncClient
 
 type CreateDeps struct {
 	SpaceId        string
@@ -63,11 +64,11 @@ func DeriveSyncTree(
 	if err != nil {
 		return
 	}
-	syncClient := newSyncClient(
+	syncClient := createSyncClient(
 		deps.SpaceId,
 		deps.StreamPool,
 		deps.HeadNotifiable,
-		GetRequestFactory(),
+		sharedFactory,
 		deps.Configuration)
 	syncTree := &SyncTree{
 		ObjectTree: t,
@@ -90,7 +91,7 @@ func CreateSyncTree(
 	if err != nil {
 		return
 	}
-	syncClient := newSyncClient(
+	syncClient := createSyncClient(
 		deps.SpaceId,
 		deps.StreamPool,
 		deps.HeadNotifiable,
@@ -176,7 +177,7 @@ func buildSyncTree(
 	if err != nil {
 		return
 	}
-	syncClient := newSyncClient(
+	syncClient := createSyncClient(
 		deps.SpaceId,
 		deps.StreamPool,
 		deps.HeadNotifiable,
@@ -236,10 +237,10 @@ func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeprot
 			s.listener.Rebuild(s)
 		}
 	}
-	if res.Mode != tree.Nothing {
-		headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
-		err = s.syncClient.BroadcastAsync(headUpdate)
-	}
+	//if res.Mode != tree.Nothing {
+	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
+	err = s.syncClient.BroadcastAsync(headUpdate)
+	//}
 	return
 }
 
@@ -254,8 +255,4 @@ func (s *SyncTree) Close() (err error) {
 	}
 	s.isClosed = true
 	return
-}
-
-func (s *SyncTree) Tree() tree.ObjectTree {
-	return s
 }
