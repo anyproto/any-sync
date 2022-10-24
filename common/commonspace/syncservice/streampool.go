@@ -98,7 +98,7 @@ func (s *streamPool) SendSync(
 		delete(s.waiters, msg.ReplyId)
 		s.waitersMx.Unlock()
 
-		log.With("trackingId", msg.ReplyId).Error("time elapsed when waiting")
+		log.With("replyId", msg.ReplyId).Error("time elapsed when waiting")
 		err = ErrSyncTimeout
 	case reply = <-waiter.ch:
 		if !delay.Stop() {
@@ -226,17 +226,17 @@ func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStre
 			s.messageHandler(stream.Context(), peerId, msg)
 			return
 		}
-		log.With("trackingId", msg.ReplyId).Debug("getting message with tracking id")
+		log.With("replyId", msg.ReplyId).Debug("getting message with reply id")
 		s.waitersMx.Lock()
 		waiter, exists := s.waiters[msg.ReplyId]
 
 		if !exists {
-			log.With("trackingId", msg.ReplyId).Debug("tracking id not exists")
+			log.With("replyId", msg.ReplyId).Debug("reply id not exists")
 			s.waitersMx.Unlock()
 			s.messageHandler(stream.Context(), peerId, msg)
 			return
 		}
-		log.With("trackingId", msg.ReplyId).Debug("tracking id exists")
+		log.With("replyId", msg.ReplyId).Debug("reply id exists")
 
 		delete(s.waiters, msg.ReplyId)
 		s.waitersMx.Unlock()
