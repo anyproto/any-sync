@@ -28,7 +28,7 @@ type spaceStorage struct {
 }
 
 func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceStorage, err error) {
-	log.With(zap.String("id", spaceId)).Debug("space storage opened with new")
+	log.With(zap.String("id", spaceId)).Debug("space storage opening with new")
 	dbPath := path.Join(rootPath, spaceId)
 	objDb, err := pogreb.Open(dbPath, defPogrebOptions)
 	if err != nil {
@@ -37,6 +37,7 @@ func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceS
 
 	defer func() {
 		if err != nil {
+			log.With(zap.String("id", spaceId), zap.Error(err)).Warn("failed to open storage")
 			objDb.Close()
 		}
 	}()
@@ -79,7 +80,7 @@ func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceS
 }
 
 func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreatePayload) (store spacestorage.SpaceStorage, err error) {
-	log.With(zap.String("id", payload.SpaceHeaderWithId.Id)).Debug("space storage opened with create")
+	log.With(zap.String("id", payload.SpaceHeaderWithId.Id)).Debug("space storage creating")
 	dbPath := path.Join(rootPath, payload.SpaceHeaderWithId.Id)
 	db, err := pogreb.Open(dbPath, defPogrebOptions)
 	if err != nil {
@@ -87,6 +88,7 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 	}
 
 	defer func() {
+		log.With(zap.String("id", payload.SpaceHeaderWithId.Id), zap.Error(err)).Warn("failed to create storage")
 		if err != nil {
 			db.Close()
 		}
