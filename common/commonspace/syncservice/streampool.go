@@ -245,7 +245,8 @@ func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStre
 
 Loop:
 	for {
-		msg, err := stream.Recv()
+		var msg *spacesyncproto.ObjectSyncMessage
+		msg, err = stream.Recv()
 		s.lastUsage.Store(time.Now().Unix())
 		if err != nil {
 			break
@@ -260,7 +261,8 @@ Loop:
 			limiter <- struct{}{}
 		}()
 	}
-	return s.removePeer(peerId)
+	s.removePeer(peerId)
+	return
 }
 
 func (s *streamPool) removePeer(peerId string) (err error) {
