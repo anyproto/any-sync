@@ -3,6 +3,7 @@ package synctree
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
@@ -15,6 +16,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/gogo/protobuf/proto"
+	"go.uber.org/zap"
 )
 
 var ErrSyncTreeClosed = errors.New("sync tree is closed")
@@ -146,6 +148,10 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 	if err != nil {
 		return
 	}
+	if resp.GetContent().GetFullSyncResponse() == nil {
+		err = fmt.Errorf("expected to get full sync response, but got something else")
+		return
+	}
 	fullSyncResp := resp.GetContent().GetFullSyncResponse()
 
 	payload := storage.TreeStorageCreatePayload{
@@ -156,6 +162,7 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 	}
 
 	// basically building tree with in-memory storage and validating that it was without errors
+	log.With(zap.String("id", id)).Debug("validating tree")
 	err = tree.ValidateRawTree(payload, deps.AclList)
 	if err != nil {
 		return

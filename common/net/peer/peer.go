@@ -2,7 +2,7 @@ package peer
 
 import (
 	"context"
-	"github.com/libp2p/go-libp2p-core/sec"
+	"github.com/libp2p/go-libp2p/core/sec"
 	"storj.io/drpc"
 	"sync/atomic"
 	"time"

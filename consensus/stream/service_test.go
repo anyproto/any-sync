@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto/consensuserr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,93 +15,111 @@ import (
 var ctx = context.Background()
 
 func TestService_NewStream(t *testing.T) {
-	fx := newFixture(t)
-	defer fx.Finish(t)
+	t.Run("watch/unwatch", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish(t)
 
-	var expLogId = []byte("logId")
-	var preloadLogId = []byte("preloadId")
+		var expLogId = []byte("logId")
+		var preloadLogId = []byte("preloadId")
 
-	fx.mockDB.fetchLog = func(ctx context.Context, logId []byte) (log consensus.Log, err error) {
-		require.Equal(t, expLogId, logId)
-		return consensus.Log{
-			Id: logId,
-			Records: []consensus.Record{
-				{
-					Id: []byte{'1'},
+		fx.mockDB.fetchLog = func(ctx context.Context, logId []byte) (log consensus.Log, err error) {
+			require.Equal(t, expLogId, logId)
+			return consensus.Log{
+				Id: logId,
+				Records: []consensus.Record{
+					{
+						Id: []byte{'1'},
+					},
 				},
-			},
-		}, nil
-	}
-
-	fx.mockDB.receiver(preloadLogId, []consensus.Record{
-		{
-			Id:     []byte{'2'},
-			PrevId: []byte{'1'},
-		},
-		{
-			Id: []byte{'1'},
-		},
-	})
-
-	st1 := fx.NewStream()
-	sr1 := readStream(st1)
-	assert.Equal(t, uint64(1), sr1.id)
-	st1.WatchIds(ctx, [][]byte{expLogId, preloadLogId})
-	st1.UnwatchIds(ctx, [][]byte{preloadLogId})
-	assert.Equal(t, [][]byte{expLogId}, st1.LogIds())
-
-	st2 := fx.NewStream()
-	sr2 := readStream(st2)
-	assert.Equal(t, uint64(2), sr2.id)
-	st2.WatchIds(ctx, [][]byte{expLogId, preloadLogId})
-
-	fx.mockDB.receiver(expLogId, []consensus.Record{
-		{
-			Id: []byte{'1'},
-		},
-	})
-	fx.mockDB.receiver(expLogId, []consensus.Record{
-		{
-			Id:     []byte{'2'},
-			PrevId: []byte{'1'},
-		},
-		{
-			Id: []byte{'1'},
-		},
-	})
-	fx.mockDB.receiver(preloadLogId, []consensus.Record{
-		{
-			Id:     []byte{'3'},
-			PrevId: []byte{'4'},
-		},
-		{
-			Id:     []byte{'2'},
-			PrevId: []byte{'1'},
-		},
-		{
-			Id: []byte{'1'},
-		},
-	})
-	st1.Close()
-	st2.Close()
-
-	for _, sr := range []*streamReader{sr1, sr2} {
-		select {
-		case <-time.After(time.Second / 3):
-			require.False(t, true, "timeout")
-		case <-sr.finished:
+			}, nil
 		}
-	}
 
-	require.Len(t, sr1.logs, 2)
-	assert.Len(t, sr1.logs[string(expLogId)].Records, 2)
-	assert.Equal(t, []byte{'2'}, sr1.logs[string(expLogId)].Records[0].Id)
-	assert.Equal(t, []byte{'2'}, sr1.logs[string(preloadLogId)].Records[0].Id)
+		fx.mockDB.receiver(preloadLogId, []consensus.Record{
+			{
+				Id:     []byte{'2'},
+				PrevId: []byte{'1'},
+			},
+			{
+				Id: []byte{'1'},
+			},
+		})
 
-	require.Len(t, sr2.logs, 2)
-	assert.Len(t, sr2.logs[string(expLogId)].Records, 2)
-	assert.Equal(t, []byte{'2'}, sr2.logs[string(expLogId)].Records[0].Id)
-	assert.Equal(t, []byte{'3'}, sr2.logs[string(preloadLogId)].Records[0].Id)
+		st1 := fx.NewStream()
+		sr1 := readStream(st1)
+		assert.Equal(t, uint64(1), sr1.id)
+		st1.WatchIds(ctx, [][]byte{expLogId, preloadLogId})
+		st1.UnwatchIds(ctx, [][]byte{preloadLogId})
+		assert.Equal(t, [][]byte{expLogId}, st1.LogIds())
+
+		st2 := fx.NewStream()
+		sr2 := readStream(st2)
+		assert.Equal(t, uint64(2), sr2.id)
+		st2.WatchIds(ctx, [][]byte{expLogId, preloadLogId})
+
+		fx.mockDB.receiver(expLogId, []consensus.Record{
+			{
+				Id: []byte{'1'},
+			},
+		})
+		fx.mockDB.receiver(expLogId, []consensus.Record{
+			{
+				Id:     []byte{'2'},
+				PrevId: []byte{'1'},
+			},
+			{
+				Id: []byte{'1'},
+			},
+		})
+		fx.mockDB.receiver(preloadLogId, []consensus.Record{
+			{
+				Id:     []byte{'3'},
+				PrevId: []byte{'4'},
+			},
+			{
+				Id:     []byte{'2'},
+				PrevId: []byte{'1'},
+			},
+			{
+				Id: []byte{'1'},
+			},
+		})
+		st1.Close()
+		st2.Close()
+
+		for _, sr := range []*streamReader{sr1, sr2} {
+			select {
+			case <-time.After(time.Second / 3):
+				require.False(t, true, "timeout")
+			case <-sr.finished:
+			}
+		}
+
+		require.Len(t, sr1.logs, 2)
+		assert.Len(t, sr1.logs[string(expLogId)].Records, 2)
+		assert.Equal(t, []byte{'2'}, sr1.logs[string(expLogId)].Records[0].Id)
+		assert.Equal(t, []byte{'2'}, sr1.logs[string(preloadLogId)].Records[0].Id)
+
+		require.Len(t, sr2.logs, 2)
+		assert.Len(t, sr2.logs[string(expLogId)].Records, 2)
+		assert.Equal(t, []byte{'2'}, sr2.logs[string(expLogId)].Records[0].Id)
+		assert.Equal(t, []byte{'3'}, sr2.logs[string(preloadLogId)].Records[0].Id)
+	})
+	t.Run("error", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish(t)
+		fx.mockDB.fetchLog = func(ctx context.Context, logId []byte) (log consensus.Log, err error) {
+			return log, consensuserr.ErrLogNotFound
+		}
+		st1 := fx.NewStream()
+		sr1 := readStream(st1)
+		id := []byte("nonExists")
+		assert.Equal(t, uint64(1), sr1.id)
+		st1.WatchIds(ctx, [][]byte{id})
+		st1.Close()
+		<-sr1.finished
+		require.Len(t, sr1.logs, 1)
+		assert.Equal(t, consensuserr.ErrLogNotFound, sr1.logs[string(id)].Err)
+	})
 }
 
 func newFixture(t *testing.T) *fixture {
