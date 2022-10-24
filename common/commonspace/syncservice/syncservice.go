@@ -104,7 +104,7 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 			stream, err := s.clientFactory.Client(peer).Stream(ctx)
 			if err != nil {
 				err = rpcerr.Unwrap(err)
-				log.With("spaceId", s.spaceId).Errorf("failed to open stream: %v", err)
+				log.With("spaceId", s.spaceId).Errorf("failed to open clientStream: %v", err)
 				// so here probably the request is failed because there is no such space,
 				// but diffService should handle such cases by sending pushSpace
 				continue
@@ -113,7 +113,7 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 			err = stream.Send(&spacesyncproto.ObjectSyncMessage{SpaceId: s.spaceId})
 			if err != nil {
 				err = rpcerr.Unwrap(err)
-				log.With("spaceId", s.spaceId).Errorf("failed to send first message to stream: %v", err)
+				log.With("spaceId", s.spaceId).Errorf("failed to send first message to clientStream: %v", err)
 				continue
 			}
 			s.streamPool.AddAndReadStreamAsync(stream)
