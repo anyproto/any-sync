@@ -125,7 +125,7 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 		}
 
 		resp, err := deps.StreamPool.SendSync(peerId, objMsg)
-		if resp != nil {
+		if err != nil {
 			return
 		}
 		msg = &treechangeproto.TreeSyncMessage{}
