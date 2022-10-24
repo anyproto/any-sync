@@ -108,8 +108,9 @@ func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, cl spacesyncproto
 	}
 
 	_, err = cl.PushSpace(ctx, &spacesyncproto.PushSpaceRequest{
-		SpaceHeader: header,
-		AclRoot:     root,
+		SpaceHeader:  header,
+		AclPayload:   root.Payload,
+		AclPayloadId: root.Id,
 	})
 	return
 }

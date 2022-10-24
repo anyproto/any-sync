@@ -5,6 +5,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
 )
 
 type rpcHandler struct {
@@ -23,7 +24,10 @@ func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpac
 	}
 
 	payload := storage.SpaceStorageCreatePayload{
-		RecWithId:         req.AclRoot,
+		RecWithId: &aclrecordproto.RawACLRecordWithId{
+			Payload: req.AclPayload,
+			Id:      req.AclPayloadId,
+		},
 		SpaceHeaderWithId: req.SpaceHeader,
 	}
 	st, err := r.s.spaceStorageProvider.CreateSpaceStorage(payload)
