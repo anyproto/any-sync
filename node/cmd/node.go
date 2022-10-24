@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/dialer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
@@ -91,6 +92,7 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(account.New()).
+		Register(metric.New()).
 		Register(storage.New()).
 		Register(nodecache.New(200)).
 		Register(nodeconf.New()).
@@ -100,10 +102,4 @@ func Bootstrap(a *app.App) {
 		Register(nodespace.New()).
 		Register(commonspace.New()).
 		Register(server.New())
-
-	//Register(document.New()).
-	//Register(message.New()).
-	//Register(requesthandler.New()).
-	//Register(treecache.New()).
-	//Register(api.New())
 }

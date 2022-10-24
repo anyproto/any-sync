@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache/mock_cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto/mock_spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter/mock_treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf/mock_nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
@@ -24,7 +23,7 @@ import (
 
 type pushSpaceRequestMatcher struct {
 	spaceId     string
-	aclRoot     *aclrecordproto.RawACLRecordWithId
+	aclRootId   string
 	spaceHeader *spacesyncproto.RawSpaceHeaderWithId
 }
 
@@ -34,7 +33,7 @@ func (p pushSpaceRequestMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	return res.AclRoot == p.aclRoot && res.SpaceHeader == p.spaceHeader
+	return res.AclPayloadId == p.aclRootId && res.SpaceHeader == p.spaceHeader
 }
 
 func (p pushSpaceRequestMatcher) String() string {
@@ -72,11 +71,11 @@ func (m mockPeer) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) 
 
 func newPushSpaceRequestMatcher(
 	spaceId string,
-	aclRoot *aclrecordproto.RawACLRecordWithId,
+	aclRootId string,
 	spaceHeader *spacesyncproto.RawSpaceHeaderWithId) *pushSpaceRequestMatcher {
 	return &pushSpaceRequestMatcher{
 		spaceId:     spaceId,
-		aclRoot:     aclRoot,
+		aclRootId:   aclRootId,
 		spaceHeader: spaceHeader,
 	}
 }
@@ -89,13 +88,14 @@ func TestDiffSyncer_Sync(t *testing.T) {
 
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
 	connectorMock := mock_nodeconf.NewMockConfConnector(ctrl)
-	cacheMock := mock_cache.NewMockTreeCache(ctrl)
+	cacheMock := mock_treegetter.NewMockTreeGetter(ctrl)
 	stMock := mock_storage.NewMockSpaceStorage(ctrl)
 	clientMock := mock_spacesyncproto.NewMockDRPCSpaceClient(ctrl)
 	factory := spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceClient {
 		return clientMock
 	})
 	spaceId := "spaceId"
+	aclRootId := "aclRootId"
 	l := logger.NewNamed(spaceId)
 	diffSyncer := newDiffSyncer(spaceId, diffMock, connectorMock, cacheMock, stMock, factory, l)
 
@@ -109,7 +109,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		for _, arg := range []string{"new", "changed"} {
 			cacheMock.EXPECT().
 				GetTree(gomock.Any(), spaceId, arg).
-				Return(cache.TreeResult{}, nil)
+				Return(nil, nil)
 		}
 		require.NoError(t, diffSyncer.Sync(ctx))
 	})
@@ -124,7 +124,9 @@ func TestDiffSyncer_Sync(t *testing.T) {
 
 	t.Run("diff syncer sync space missing", func(t *testing.T) {
 		aclStorageMock := mock_aclstorage.NewMockListStorage(ctrl)
-		aclRoot := &aclrecordproto.RawACLRecordWithId{}
+		aclRoot := &aclrecordproto.RawACLRecordWithId{
+			Id: aclRootId,
+		}
 		spaceHeader := &spacesyncproto.RawSpaceHeaderWithId{}
 
 		connectorMock.EXPECT().
@@ -143,7 +145,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 			Root().
 			Return(aclRoot, nil)
 		clientMock.EXPECT().
-			PushSpace(gomock.Any(), newPushSpaceRequestMatcher(spaceId, aclRoot, spaceHeader)).
+			PushSpace(gomock.Any(), newPushSpaceRequestMatcher(spaceId, aclRootId, spaceHeader)).
 			Return(nil, nil)
 
 		require.NoError(t, diffSyncer.Sync(ctx))

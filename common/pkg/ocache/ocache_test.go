@@ -119,7 +119,7 @@ func TestOCache_GC(t *testing.T) {
 	t.Run("test without close wait", func(t *testing.T) {
 		c := New(func(ctx context.Context, id string) (value Object, err error) {
 			return &testObject{name: id}, nil
-		}, WithTTL(time.Millisecond*10))
+		}, WithTTL(time.Millisecond*10), WithRefCounter(true))
 		val, err := c.Get(context.TODO(), "id")
 		require.NoError(t, err)
 		require.NotNil(t, val)
@@ -140,7 +140,7 @@ func TestOCache_GC(t *testing.T) {
 
 		c := New(func(ctx context.Context, id string) (value Object, err error) {
 			return NewTestObject(id, closeCh), nil
-		}, WithTTL(time.Millisecond*10))
+		}, WithTTL(time.Millisecond*10), WithRefCounter(true))
 		val, err := c.Get(context.TODO(), "id")
 		require.NoError(t, err)
 		require.NotNil(t, val)

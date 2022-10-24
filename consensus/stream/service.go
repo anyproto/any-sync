@@ -48,10 +48,8 @@ type service struct {
 
 func (s *service) Init(a *app.App) (err error) {
 	s.db = a.MustComponent(db.CName).(db.Service)
-
 	cacheOpts := []ocache.Option{
 		ocache.WithTTL(cacheTTL),
-		ocache.WithRefCounter(false),
 		ocache.WithLogger(log.Named("cache").Sugar()),
 	}
 	if ms := a.Component(metric.CName); ms != nil {

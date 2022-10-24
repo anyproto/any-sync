@@ -22,61 +22,25 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type PlainTextChange struct {
-}
-
-func (m *PlainTextChange) Reset()         { *m = PlainTextChange{} }
-func (m *PlainTextChange) String() string { return proto.CompactTextString(m) }
-func (*PlainTextChange) ProtoMessage()    {}
-func (*PlainTextChange) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37f33c266ada4318, []int{0}
-}
-func (m *PlainTextChange) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *PlainTextChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_PlainTextChange.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *PlainTextChange) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PlainTextChange.Merge(m, src)
-}
-func (m *PlainTextChange) XXX_Size() int {
-	return m.Size()
-}
-func (m *PlainTextChange) XXX_DiscardUnknown() {
-	xxx_messageInfo_PlainTextChange.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_PlainTextChange proto.InternalMessageInfo
-
-type PlainTextChange_Content struct {
+type TextContent struct {
 	// Types that are valid to be assigned to Value:
 	//
-	//	*PlainTextChange_Content_TextAppend
-	Value isPlainTextChange_Content_Value `protobuf_oneof:"value"`
+	//	*TextContent_TextAppend
+	Value isTextContent_Value `protobuf_oneof:"value"`
 }
 
-func (m *PlainTextChange_Content) Reset()         { *m = PlainTextChange_Content{} }
-func (m *PlainTextChange_Content) String() string { return proto.CompactTextString(m) }
-func (*PlainTextChange_Content) ProtoMessage()    {}
-func (*PlainTextChange_Content) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37f33c266ada4318, []int{0, 0}
+func (m *TextContent) Reset()         { *m = TextContent{} }
+func (m *TextContent) String() string { return proto.CompactTextString(m) }
+func (*TextContent) ProtoMessage()    {}
+func (*TextContent) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37f33c266ada4318, []int{0}
 }
-func (m *PlainTextChange_Content) XXX_Unmarshal(b []byte) error {
+func (m *TextContent) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *PlainTextChange_Content) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *TextContent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_PlainTextChange_Content.Marshal(b, m, deterministic)
+		return xxx_messageInfo_TextContent.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -86,67 +50,67 @@ func (m *PlainTextChange_Content) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return b[:n], nil
 	}
 }
-func (m *PlainTextChange_Content) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PlainTextChange_Content.Merge(m, src)
+func (m *TextContent) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TextContent.Merge(m, src)
 }
-func (m *PlainTextChange_Content) XXX_Size() int {
+func (m *TextContent) XXX_Size() int {
 	return m.Size()
 }
-func (m *PlainTextChange_Content) XXX_DiscardUnknown() {
-	xxx_messageInfo_PlainTextChange_Content.DiscardUnknown(m)
+func (m *TextContent) XXX_DiscardUnknown() {
+	xxx_messageInfo_TextContent.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_PlainTextChange_Content proto.InternalMessageInfo
+var xxx_messageInfo_TextContent proto.InternalMessageInfo
 
-type isPlainTextChange_Content_Value interface {
-	isPlainTextChange_Content_Value()
+type isTextContent_Value interface {
+	isTextContent_Value()
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
 
-type PlainTextChange_Content_TextAppend struct {
-	TextAppend *PlainTextChange_TextAppend `protobuf:"bytes,1,opt,name=textAppend,proto3,oneof" json:"textAppend,omitempty"`
+type TextContent_TextAppend struct {
+	TextAppend *TextAppend `protobuf:"bytes,1,opt,name=textAppend,proto3,oneof" json:"textAppend,omitempty"`
 }
 
-func (*PlainTextChange_Content_TextAppend) isPlainTextChange_Content_Value() {}
+func (*TextContent_TextAppend) isTextContent_Value() {}
 
-func (m *PlainTextChange_Content) GetValue() isPlainTextChange_Content_Value {
+func (m *TextContent) GetValue() isTextContent_Value {
 	if m != nil {
 		return m.Value
 	}
 	return nil
 }
 
-func (m *PlainTextChange_Content) GetTextAppend() *PlainTextChange_TextAppend {
-	if x, ok := m.GetValue().(*PlainTextChange_Content_TextAppend); ok {
+func (m *TextContent) GetTextAppend() *TextAppend {
+	if x, ok := m.GetValue().(*TextContent_TextAppend); ok {
 		return x.TextAppend
 	}
 	return nil
 }
 
 // XXX_OneofWrappers is for the internal use of the proto package.
-func (*PlainTextChange_Content) XXX_OneofWrappers() []interface{} {
+func (*TextContent) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
-		(*PlainTextChange_Content_TextAppend)(nil),
+		(*TextContent_TextAppend)(nil),
 	}
 }
 
-type PlainTextChange_TextAppend struct {
+type TextAppend struct {
 	Text string `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
 }
 
-func (m *PlainTextChange_TextAppend) Reset()         { *m = PlainTextChange_TextAppend{} }
-func (m *PlainTextChange_TextAppend) String() string { return proto.CompactTextString(m) }
-func (*PlainTextChange_TextAppend) ProtoMessage()    {}
-func (*PlainTextChange_TextAppend) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37f33c266ada4318, []int{0, 1}
+func (m *TextAppend) Reset()         { *m = TextAppend{} }
+func (m *TextAppend) String() string { return proto.CompactTextString(m) }
+func (*TextAppend) ProtoMessage()    {}
+func (*TextAppend) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37f33c266ada4318, []int{1}
 }
-func (m *PlainTextChange_TextAppend) XXX_Unmarshal(b []byte) error {
+func (m *TextAppend) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *PlainTextChange_TextAppend) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *TextAppend) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_PlainTextChange_TextAppend.Marshal(b, m, deterministic)
+		return xxx_messageInfo_TextAppend.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -156,41 +120,41 @@ func (m *PlainTextChange_TextAppend) XXX_Marshal(b []byte, deterministic bool) (
 		return b[:n], nil
 	}
 }
-func (m *PlainTextChange_TextAppend) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PlainTextChange_TextAppend.Merge(m, src)
+func (m *TextAppend) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TextAppend.Merge(m, src)
 }
-func (m *PlainTextChange_TextAppend) XXX_Size() int {
+func (m *TextAppend) XXX_Size() int {
 	return m.Size()
 }
-func (m *PlainTextChange_TextAppend) XXX_DiscardUnknown() {
-	xxx_messageInfo_PlainTextChange_TextAppend.DiscardUnknown(m)
+func (m *TextAppend) XXX_DiscardUnknown() {
+	xxx_messageInfo_TextAppend.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_PlainTextChange_TextAppend proto.InternalMessageInfo
+var xxx_messageInfo_TextAppend proto.InternalMessageInfo
 
-func (m *PlainTextChange_TextAppend) GetText() string {
+func (m *TextAppend) GetText() string {
 	if m != nil {
 		return m.Text
 	}
 	return ""
 }
 
-type PlainTextChange_Snapshot struct {
+type TextSnapshot struct {
 	Text string `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
 }
 
-func (m *PlainTextChange_Snapshot) Reset()         { *m = PlainTextChange_Snapshot{} }
-func (m *PlainTextChange_Snapshot) String() string { return proto.CompactTextString(m) }
-func (*PlainTextChange_Snapshot) ProtoMessage()    {}
-func (*PlainTextChange_Snapshot) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37f33c266ada4318, []int{0, 2}
+func (m *TextSnapshot) Reset()         { *m = TextSnapshot{} }
+func (m *TextSnapshot) String() string { return proto.CompactTextString(m) }
+func (*TextSnapshot) ProtoMessage()    {}
+func (*TextSnapshot) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37f33c266ada4318, []int{2}
 }
-func (m *PlainTextChange_Snapshot) XXX_Unmarshal(b []byte) error {
+func (m *TextSnapshot) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *PlainTextChange_Snapshot) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *TextSnapshot) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_PlainTextChange_Snapshot.Marshal(b, m, deterministic)
+		return xxx_messageInfo_TextSnapshot.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -200,42 +164,42 @@ func (m *PlainTextChange_Snapshot) XXX_Marshal(b []byte, deterministic bool) ([]
 		return b[:n], nil
 	}
 }
-func (m *PlainTextChange_Snapshot) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PlainTextChange_Snapshot.Merge(m, src)
+func (m *TextSnapshot) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TextSnapshot.Merge(m, src)
 }
-func (m *PlainTextChange_Snapshot) XXX_Size() int {
+func (m *TextSnapshot) XXX_Size() int {
 	return m.Size()
 }
-func (m *PlainTextChange_Snapshot) XXX_DiscardUnknown() {
-	xxx_messageInfo_PlainTextChange_Snapshot.DiscardUnknown(m)
+func (m *TextSnapshot) XXX_DiscardUnknown() {
+	xxx_messageInfo_TextSnapshot.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_PlainTextChange_Snapshot proto.InternalMessageInfo
+var xxx_messageInfo_TextSnapshot proto.InternalMessageInfo
 
-func (m *PlainTextChange_Snapshot) GetText() string {
+func (m *TextSnapshot) GetText() string {
 	if m != nil {
 		return m.Text
 	}
 	return ""
 }
 
-type PlainTextChange_Data struct {
-	Content  []*PlainTextChange_Content `protobuf:"bytes,1,rep,name=content,proto3" json:"content,omitempty"`
-	Snapshot *PlainTextChange_Snapshot  `protobuf:"bytes,2,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
+type TextData struct {
+	Content  []*TextContent `protobuf:"bytes,1,rep,name=content,proto3" json:"content,omitempty"`
+	Snapshot *TextSnapshot  `protobuf:"bytes,2,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 }
 
-func (m *PlainTextChange_Data) Reset()         { *m = PlainTextChange_Data{} }
-func (m *PlainTextChange_Data) String() string { return proto.CompactTextString(m) }
-func (*PlainTextChange_Data) ProtoMessage()    {}
-func (*PlainTextChange_Data) Descriptor() ([]byte, []int) {
-	return fileDescriptor_37f33c266ada4318, []int{0, 3}
+func (m *TextData) Reset()         { *m = TextData{} }
+func (m *TextData) String() string { return proto.CompactTextString(m) }
+func (*TextData) ProtoMessage()    {}
+func (*TextData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_37f33c266ada4318, []int{3}
 }
-func (m *PlainTextChange_Data) XXX_Unmarshal(b []byte) error {
+func (m *TextData) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *PlainTextChange_Data) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *TextData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_PlainTextChange_Data.Marshal(b, m, deterministic)
+		return xxx_messageInfo_TextData.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -245,26 +209,26 @@ func (m *PlainTextChange_Data) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
-func (m *PlainTextChange_Data) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PlainTextChange_Data.Merge(m, src)
+func (m *TextData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TextData.Merge(m, src)
 }
-func (m *PlainTextChange_Data) XXX_Size() int {
+func (m *TextData) XXX_Size() int {
 	return m.Size()
 }
-func (m *PlainTextChange_Data) XXX_DiscardUnknown() {
-	xxx_messageInfo_PlainTextChange_Data.DiscardUnknown(m)
+func (m *TextData) XXX_DiscardUnknown() {
+	xxx_messageInfo_TextData.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_PlainTextChange_Data proto.InternalMessageInfo
+var xxx_messageInfo_TextData proto.InternalMessageInfo
 
-func (m *PlainTextChange_Data) GetContent() []*PlainTextChange_Content {
+func (m *TextData) GetContent() []*TextContent {
 	if m != nil {
 		return m.Content
 	}
 	return nil
 }
 
-func (m *PlainTextChange_Data) GetSnapshot() *PlainTextChange_Snapshot {
+func (m *TextData) GetSnapshot() *TextSnapshot {
 	if m != nil {
 		return m.Snapshot
 	}
@@ -272,11 +236,10 @@ func (m *PlainTextChange_Data) GetSnapshot() *PlainTextChange_Snapshot {
 }
 
 func init() {
-	proto.RegisterType((*PlainTextChange)(nil), "anytype.PlainTextChange")
-	proto.RegisterType((*PlainTextChange_Content)(nil), "anytype.PlainTextChange.Content")
-	proto.RegisterType((*PlainTextChange_TextAppend)(nil), "anytype.PlainTextChange.TextAppend")
-	proto.RegisterType((*PlainTextChange_Snapshot)(nil), "anytype.PlainTextChange.Snapshot")
-	proto.RegisterType((*PlainTextChange_Data)(nil), "anytype.PlainTextChange.Data")
+	proto.RegisterType((*TextContent)(nil), "anytype.TextContent")
+	proto.RegisterType((*TextAppend)(nil), "anytype.TextAppend")
+	proto.RegisterType((*TextSnapshot)(nil), "anytype.TextSnapshot")
+	proto.RegisterType((*TextData)(nil), "anytype.TextData")
 }
 
 func init() {
@@ -284,27 +247,26 @@ func init() {
 }
 
 var fileDescriptor_37f33c266ada4318 = []byte{
-	// 266 bytes of a gzipped FileDescriptorProto
+	// 252 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xd2, 0x2b, 0xc8, 0x4e, 0xd7,
 	0x4f, 0x4c, 0xce, 0xd1, 0x2f, 0x49, 0x2d, 0x2e, 0x29, 0x2d, 0xc9, 0xcc, 0x29, 0x06, 0xb3, 0x92,
 	0x33, 0x12, 0xf3, 0xd2, 0x53, 0x8b, 0xf5, 0x0b, 0x8a, 0xf2, 0x4b, 0xf2, 0xc1, 0x22, 0x7a, 0x60,
-	0xa6, 0x10, 0x7b, 0x62, 0x5e, 0x65, 0x49, 0x65, 0x41, 0xaa, 0xd2, 0x26, 0x26, 0x2e, 0xfe, 0x80,
-	0x9c, 0xc4, 0xcc, 0xbc, 0x90, 0xd4, 0x8a, 0x12, 0x67, 0xb0, 0x72, 0xa9, 0x48, 0x2e, 0x76, 0xe7,
-	0xfc, 0xbc, 0x92, 0xd4, 0xbc, 0x12, 0x21, 0x57, 0x2e, 0xae, 0x92, 0xd4, 0x8a, 0x12, 0xc7, 0x82,
-	0x82, 0xd4, 0xbc, 0x14, 0x09, 0x46, 0x05, 0x46, 0x0d, 0x6e, 0x23, 0x65, 0x3d, 0xa8, 0x66, 0x3d,
-	0x34, 0x8d, 0x7a, 0x21, 0x70, 0xa5, 0x1e, 0x0c, 0x41, 0x48, 0x1a, 0x9d, 0xd8, 0xb9, 0x58, 0xcb,
-	0x12, 0x73, 0x4a, 0x53, 0xa5, 0x14, 0xb8, 0xb8, 0x10, 0x8a, 0x84, 0x84, 0xb8, 0x58, 0x40, 0x8a,
-	0xc0, 0xe6, 0x72, 0x06, 0x81, 0xd9, 0x52, 0x72, 0x5c, 0x1c, 0xc1, 0x79, 0x89, 0x05, 0xc5, 0x19,
-	0xf9, 0x25, 0x58, 0xe5, 0x1b, 0x19, 0xb9, 0x58, 0x5c, 0x12, 0x4b, 0x12, 0x85, 0xac, 0xb8, 0xd8,
-	0x93, 0x21, 0xae, 0x94, 0x60, 0x54, 0x60, 0xd6, 0xe0, 0x36, 0x52, 0xc0, 0xe9, 0x2e, 0xa8, 0x6f,
-	0x82, 0x60, 0x1a, 0x84, 0x6c, 0xb9, 0x38, 0x8a, 0xa1, 0x96, 0x48, 0x30, 0x81, 0x3d, 0xa5, 0x88,
-	0x53, 0x33, 0xcc, 0x35, 0x41, 0x70, 0x2d, 0x4e, 0xaa, 0x27, 0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24,
-	0xc7, 0xf8, 0xe0, 0x91, 0x1c, 0xe3, 0x84, 0xc7, 0x72, 0x0c, 0x17, 0x1e, 0xcb, 0x31, 0xdc, 0x78,
-	0x2c, 0xc7, 0x10, 0xc5, 0x8d, 0x14, 0xea, 0x49, 0x6c, 0xe0, 0xb0, 0x36, 0x06, 0x04, 0x00, 0x00,
-	0xff, 0xff, 0xf8, 0x8c, 0x6a, 0x1d, 0x9d, 0x01, 0x00, 0x00,
+	0xa6, 0x10, 0x7b, 0x62, 0x5e, 0x65, 0x49, 0x65, 0x41, 0xaa, 0x92, 0x2f, 0x17, 0x77, 0x48, 0x6a,
+	0x45, 0x89, 0x73, 0x7e, 0x5e, 0x49, 0x6a, 0x5e, 0x89, 0x90, 0x29, 0x17, 0x57, 0x49, 0x6a, 0x45,
+	0x89, 0x63, 0x41, 0x41, 0x6a, 0x5e, 0x8a, 0x04, 0xa3, 0x02, 0xa3, 0x06, 0xb7, 0x91, 0xb0, 0x1e,
+	0x54, 0xb1, 0x5e, 0x08, 0x5c, 0xca, 0x83, 0x21, 0x08, 0x49, 0xa1, 0x13, 0x3b, 0x17, 0x6b, 0x59,
+	0x62, 0x4e, 0x69, 0xaa, 0x92, 0x02, 0x17, 0x17, 0x42, 0x91, 0x90, 0x10, 0x17, 0x0b, 0x48, 0x11,
+	0xd8, 0x1c, 0xce, 0x20, 0x30, 0x5b, 0x49, 0x89, 0x8b, 0x07, 0xa4, 0x22, 0x38, 0x2f, 0xb1, 0xa0,
+	0x38, 0x23, 0xbf, 0x04, 0xab, 0x9a, 0x5c, 0x2e, 0x0e, 0x90, 0x1a, 0x97, 0xc4, 0x92, 0x44, 0x21,
+	0x3d, 0x2e, 0xf6, 0x64, 0x88, 0xe3, 0x24, 0x18, 0x15, 0x98, 0x35, 0xb8, 0x8d, 0x44, 0x50, 0x9c,
+	0x03, 0x75, 0x78, 0x10, 0x4c, 0x91, 0x90, 0x21, 0x17, 0x47, 0x31, 0xd4, 0x6c, 0x09, 0x26, 0xb0,
+	0xfb, 0x45, 0x51, 0x34, 0xc0, 0x2c, 0x0e, 0x82, 0x2b, 0x73, 0x52, 0x3d, 0xf1, 0x48, 0x8e, 0xf1,
+	0xc2, 0x23, 0x39, 0xc6, 0x07, 0x8f, 0xe4, 0x18, 0x27, 0x3c, 0x96, 0x63, 0xb8, 0xf0, 0x58, 0x8e,
+	0xe1, 0xc6, 0x63, 0x39, 0x86, 0x28, 0x6e, 0xa4, 0x40, 0x4c, 0x62, 0x03, 0x07, 0x9d, 0x31, 0x20,
+	0x00, 0x00, 0xff, 0xff, 0xdc, 0xbf, 0x78, 0xe5, 0x6c, 0x01, 0x00, 0x00,
 }
 
-func (m *PlainTextChange) Marshal() (dAtA []byte, err error) {
+func (m *TextContent) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -314,35 +276,12 @@ func (m *PlainTextChange) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *PlainTextChange) MarshalTo(dAtA []byte) (int, error) {
+func (m *TextContent) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *PlainTextChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	return len(dAtA) - i, nil
-}
-
-func (m *PlainTextChange_Content) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *PlainTextChange_Content) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *PlainTextChange_Content) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *TextContent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -359,12 +298,12 @@ func (m *PlainTextChange_Content) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	return len(dAtA) - i, nil
 }
 
-func (m *PlainTextChange_Content_TextAppend) MarshalTo(dAtA []byte) (int, error) {
+func (m *TextContent_TextAppend) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *PlainTextChange_Content_TextAppend) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *TextContent_TextAppend) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	if m.TextAppend != nil {
 		{
@@ -380,7 +319,7 @@ func (m *PlainTextChange_Content_TextAppend) MarshalToSizedBuffer(dAtA []byte) (
 	}
 	return len(dAtA) - i, nil
 }
-func (m *PlainTextChange_TextAppend) Marshal() (dAtA []byte, err error) {
+func (m *TextAppend) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -390,12 +329,12 @@ func (m *PlainTextChange_TextAppend) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *PlainTextChange_TextAppend) MarshalTo(dAtA []byte) (int, error) {
+func (m *TextAppend) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *PlainTextChange_TextAppend) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *TextAppend) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -410,7 +349,7 @@ func (m *PlainTextChange_TextAppend) MarshalToSizedBuffer(dAtA []byte) (int, err
 	return len(dAtA) - i, nil
 }
 
-func (m *PlainTextChange_Snapshot) Marshal() (dAtA []byte, err error) {
+func (m *TextSnapshot) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -420,12 +359,12 @@ func (m *PlainTextChange_Snapshot) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *PlainTextChange_Snapshot) MarshalTo(dAtA []byte) (int, error) {
+func (m *TextSnapshot) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *PlainTextChange_Snapshot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *TextSnapshot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -440,7 +379,7 @@ func (m *PlainTextChange_Snapshot) MarshalToSizedBuffer(dAtA []byte) (int, error
 	return len(dAtA) - i, nil
 }
 
-func (m *PlainTextChange_Data) Marshal() (dAtA []byte, err error) {
+func (m *TextData) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -450,12 +389,12 @@ func (m *PlainTextChange_Data) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *PlainTextChange_Data) MarshalTo(dAtA []byte) (int, error) {
+func (m *TextData) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *PlainTextChange_Data) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *TextData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -500,16 +439,7 @@ func encodeVarintTest(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *PlainTextChange) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	return n
-}
-
-func (m *PlainTextChange_Content) Size() (n int) {
+func (m *TextContent) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -521,7 +451,7 @@ func (m *PlainTextChange_Content) Size() (n int) {
 	return n
 }
 
-func (m *PlainTextChange_Content_TextAppend) Size() (n int) {
+func (m *TextContent_TextAppend) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -533,7 +463,7 @@ func (m *PlainTextChange_Content_TextAppend) Size() (n int) {
 	}
 	return n
 }
-func (m *PlainTextChange_TextAppend) Size() (n int) {
+func (m *TextAppend) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -546,7 +476,7 @@ func (m *PlainTextChange_TextAppend) Size() (n int) {
 	return n
 }
 
-func (m *PlainTextChange_Snapshot) Size() (n int) {
+func (m *TextSnapshot) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -559,7 +489,7 @@ func (m *PlainTextChange_Snapshot) Size() (n int) {
 	return n
 }
 
-func (m *PlainTextChange_Data) Size() (n int) {
+func (m *TextData) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -584,7 +514,7 @@ func sovTest(x uint64) (n int) {
 func sozTest(x uint64) (n int) {
 	return sovTest(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *PlainTextChange) Unmarshal(dAtA []byte) error {
+func (m *TextContent) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -607,60 +537,10 @@ func (m *PlainTextChange) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: PlainTextChange: wiretype end group for non-group")
+			return fmt.Errorf("proto: TextContent: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: PlainTextChange: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipTest(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthTest
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *PlainTextChange_Content) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowTest
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Content: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Content: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: TextContent: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -692,11 +572,11 @@ func (m *PlainTextChange_Content) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &PlainTextChange_TextAppend{}
+			v := &TextAppend{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &PlainTextChange_Content_TextAppend{v}
+			m.Value = &TextContent_TextAppend{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -719,7 +599,7 @@ func (m *PlainTextChange_Content) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *PlainTextChange_TextAppend) Unmarshal(dAtA []byte) error {
+func (m *TextAppend) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -801,7 +681,7 @@ func (m *PlainTextChange_TextAppend) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *PlainTextChange_Snapshot) Unmarshal(dAtA []byte) error {
+func (m *TextSnapshot) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -824,10 +704,10 @@ func (m *PlainTextChange_Snapshot) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Snapshot: wiretype end group for non-group")
+			return fmt.Errorf("proto: TextSnapshot: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Snapshot: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: TextSnapshot: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -883,7 +763,7 @@ func (m *PlainTextChange_Snapshot) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *PlainTextChange_Data) Unmarshal(dAtA []byte) error {
+func (m *TextData) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -906,10 +786,10 @@ func (m *PlainTextChange_Data) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Data: wiretype end group for non-group")
+			return fmt.Errorf("proto: TextData: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Data: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: TextData: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -941,7 +821,7 @@ func (m *PlainTextChange_Data) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Content = append(m.Content, &PlainTextChange_Content{})
+			m.Content = append(m.Content, &TextContent{})
 			if err := m.Content[len(m.Content)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -976,7 +856,7 @@ func (m *PlainTextChange_Data) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Snapshot == nil {
-				m.Snapshot = &PlainTextChange_Snapshot{}
+				m.Snapshot = &TextSnapshot{}
 			}
 			if err := m.Snapshot.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err

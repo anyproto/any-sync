@@ -8,11 +8,18 @@
 # Test binary, built with `go test -c`
 *.test
 
+
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
 # Golang vendor folder
 vendor
+
+# database
+db
+
+# artefacts for Intelli-J fleet
+.fleet
 
 # Intelli-J files
 .idea

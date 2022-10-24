@@ -65,7 +65,7 @@ type spaceKeys struct {
 
 func newSpaceKeys(spaceId string) spaceKeys {
 	return spaceKeys{
-		headerKey:     storage.JoinStringsToBytes("space", spaceId),
+		headerKey:     storage.JoinStringsToBytes("space", "header", spaceId),
 		treePrefixKey: storage.JoinStringsToBytes("space", spaceId, "t", "rootId"),
 	}
 }
@@ -76,4 +76,16 @@ func (s spaceKeys) HeaderKey() []byte {
 
 func (s spaceKeys) TreeRootPrefix() []byte {
 	return s.treePrefixKey
+}
+
+type storageServiceKeys struct {
+	spacePrefix []byte
+}
+
+func newStorageServiceKeys() storageServiceKeys {
+	return storageServiceKeys{spacePrefix: []byte("space/header")}
+}
+
+func (s storageServiceKeys) SpacePrefix() []byte {
+	return s.spacePrefix
 }

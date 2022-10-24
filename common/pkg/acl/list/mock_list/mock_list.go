@@ -5,10 +5,10 @@
 package mock_list
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
-	list2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
 	reflect "reflect"
 
+	aclrecordproto "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
+	list "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -36,10 +36,10 @@ func (m *MockACLList) EXPECT() *MockACLListMockRecorder {
 }
 
 // ACLState mocks base method.
-func (m *MockACLList) ACLState() *list2.ACLState {
+func (m *MockACLList) ACLState() *list.ACLState {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ACLState")
-	ret0, _ := ret[0].(*list2.ACLState)
+	ret0, _ := ret[0].(*list.ACLState)
 	return ret0
 }
 
@@ -64,10 +64,10 @@ func (mr *MockACLListMockRecorder) Close() *gomock.Call {
 }
 
 // Get mocks base method.
-func (m *MockACLList) Get(arg0 string) (*list2.ACLRecord, error) {
+func (m *MockACLList) Get(arg0 string) (*list.ACLRecord, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0)
-	ret0, _ := ret[0].(*list2.ACLRecord)
+	ret0, _ := ret[0].(*list.ACLRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -79,10 +79,10 @@ func (mr *MockACLListMockRecorder) Get(arg0 interface{}) *gomock.Call {
 }
 
 // Head mocks base method.
-func (m *MockACLList) Head() *list2.ACLRecord {
+func (m *MockACLList) Head() *list.ACLRecord {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Head")
-	ret0, _ := ret[0].(*list2.ACLRecord)
+	ret0, _ := ret[0].(*list.ACLRecord)
 	return ret0
 }
 
@@ -122,7 +122,7 @@ func (mr *MockACLListMockRecorder) IsAfter(arg0, arg1 interface{}) *gomock.Call 
 }
 
 // Iterate mocks base method.
-func (m *MockACLList) Iterate(arg0 func(*list2.ACLRecord) bool) {
+func (m *MockACLList) Iterate(arg0 func(*list.ACLRecord) bool) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Iterate", arg0)
 }
@@ -134,7 +134,7 @@ func (mr *MockACLListMockRecorder) Iterate(arg0 interface{}) *gomock.Call {
 }
 
 // IterateFrom mocks base method.
-func (m *MockACLList) IterateFrom(arg0 string, arg1 func(*list2.ACLRecord) bool) {
+func (m *MockACLList) IterateFrom(arg0 string, arg1 func(*list.ACLRecord) bool) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "IterateFrom", arg0, arg1)
 }
@@ -182,10 +182,10 @@ func (mr *MockACLListMockRecorder) RUnlock() *gomock.Call {
 }
 
 // Records mocks base method.
-func (m *MockACLList) Records() []*list2.ACLRecord {
+func (m *MockACLList) Records() []*list.ACLRecord {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Records")
-	ret0, _ := ret[0].([]*list2.ACLRecord)
+	ret0, _ := ret[0].([]*list.ACLRecord)
 	return ret0
 }
 

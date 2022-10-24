@@ -5,12 +5,12 @@
 package mock_storage
 
 import (
-	storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	reflect "reflect"
 
 	app "github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	spacesyncproto "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	storage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
+	storage0 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -119,10 +119,10 @@ func (m *MockSpaceStorage) EXPECT() *MockSpaceStorageMockRecorder {
 }
 
 // ACLStorage mocks base method.
-func (m *MockSpaceStorage) ACLStorage() (storage2.ListStorage, error) {
+func (m *MockSpaceStorage) ACLStorage() (storage0.ListStorage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ACLStorage")
-	ret0, _ := ret[0].(storage2.ListStorage)
+	ret0, _ := ret[0].(storage0.ListStorage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -148,10 +148,10 @@ func (mr *MockSpaceStorageMockRecorder) Close() *gomock.Call {
 }
 
 // CreateTreeStorage mocks base method.
-func (m *MockSpaceStorage) CreateTreeStorage(arg0 storage2.TreeStorageCreatePayload) (storage2.TreeStorage, error) {
+func (m *MockSpaceStorage) CreateTreeStorage(arg0 storage0.TreeStorageCreatePayload) (storage0.TreeStorage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateTreeStorage", arg0)
-	ret0, _ := ret[0].(storage2.TreeStorage)
+	ret0, _ := ret[0].(storage0.TreeStorage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -208,10 +208,10 @@ func (mr *MockSpaceStorageMockRecorder) StoredIds() *gomock.Call {
 }
 
 // TreeStorage mocks base method.
-func (m *MockSpaceStorage) TreeStorage(arg0 string) (storage2.TreeStorage, error) {
+func (m *MockSpaceStorage) TreeStorage(arg0 string) (storage0.TreeStorage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TreeStorage", arg0)
-	ret0, _ := ret[0].(storage2.TreeStorage)
+	ret0, _ := ret[0].(storage0.TreeStorage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

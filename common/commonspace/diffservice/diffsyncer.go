@@ -2,10 +2,10 @@ package diffservice
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
@@ -22,7 +22,7 @@ func newDiffSyncer(
 	spaceId string,
 	diff ldiff.Diff,
 	confConnector nodeconf.ConfConnector,
-	cache cache.TreeCache,
+	cache treegetter.TreeGetter,
 	storage storage.SpaceStorage,
 	clientFactory spacesyncproto.ClientFactory,
 	log *zap.Logger) DiffSyncer {
@@ -41,7 +41,7 @@ type diffSyncer struct {
 	spaceId       string
 	diff          ldiff.Diff
 	confConnector nodeconf.ConfConnector
-	cache         cache.TreeCache
+	cache         treegetter.TreeGetter
 	storage       storage.SpaceStorage
 	clientFactory spacesyncproto.ClientFactory
 	log           *zap.Logger
@@ -77,6 +77,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 
 	d.pingTreesInCache(ctx, newIds)
 	d.pingTreesInCache(ctx, changedIds)
+	d.pingTreesInCache(ctx, removedIds)
 
 	d.log.Info("sync done:", zap.Int("newIds", len(newIds)),
 		zap.Int("changedIds", len(changedIds)),
@@ -107,8 +108,9 @@ func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, cl spacesyncproto
 	}
 
 	_, err = cl.PushSpace(ctx, &spacesyncproto.PushSpaceRequest{
-		SpaceHeader: header,
-		AclRoot:     root,
+		SpaceHeader:  header,
+		AclPayload:   root.Payload,
+		AclPayloadId: root.Id,
 	})
 	return
 }

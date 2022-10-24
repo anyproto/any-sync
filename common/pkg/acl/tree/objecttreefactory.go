@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/common"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
 	storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
@@ -54,10 +55,7 @@ func createObjectTree(
 	aclList list.ACLList,
 	createStorage storage2.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
 	aclList.RLock()
-	var (
-		deps      = defaultObjectTreeDeps(nil, nil, aclList)
-		aclHeadId = aclList.Head().Id
-	)
+	aclHeadId := aclList.Head().Id
 	aclList.RUnlock()
 
 	if err != nil {
@@ -73,11 +71,10 @@ func createObjectTree(
 		Seed:       seed,
 	}
 
-	_, raw, err := deps.changeBuilder.BuildInitialContent(cnt)
+	_, raw, err := newChangeBuilder(common.NewKeychain(), nil).BuildInitialContent(cnt)
 	if err != nil {
 		return
 	}
-	deps.changeBuilder.SetRootRawChange(raw)
 
 	// create storage
 	st, err := createStorage(storage2.TreeStorageCreatePayload{
@@ -90,8 +87,7 @@ func createObjectTree(
 		return
 	}
 
-	deps.treeStorage = st
-	return buildObjectTree(deps)
+	return BuildObjectTree(st, aclList)
 }
 
 func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {

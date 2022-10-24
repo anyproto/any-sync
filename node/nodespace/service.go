@@ -44,7 +44,6 @@ func (s *service) Init(a *app.App) (err error) {
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
 		ocache.WithTTL(time.Duration(s.conf.GCTTL)*time.Second),
-		ocache.WithRefCounter(false),
 	)
 	return spacesyncproto.DRPCRegisterSpace(a.MustComponent(server.CName).(server.DRPCServer), &rpcHandler{s})
 }
@@ -54,10 +53,6 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
-	go func() {
-		time.Sleep(time.Second * 5)
-		_, _ = s.GetSpace(ctx, "testDSpace")
-	}()
 	return
 }
 

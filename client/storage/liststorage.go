@@ -37,7 +37,7 @@ func newListStorage(spaceId string, db *badger.DB, txn *badger.Txn) (ls storage.
 
 	ls = &listStorage{
 		db:   db,
-		keys: aclKeys{},
+		keys: newACLKeys(spaceId),
 		id:   stringId,
 		root: rootWithId,
 	}
@@ -70,7 +70,7 @@ func createListStorage(spaceId string, db *badger.DB, txn *badger.Txn, root *acl
 
 	ls = &listStorage{
 		db:   db,
-		keys: aclKeys{},
+		keys: newACLKeys(spaceId),
 		id:   root.Id,
 		root: root,
 	}

@@ -3,10 +3,10 @@ package diffservice
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
 	"go.uber.org/zap"
@@ -14,9 +14,10 @@ import (
 )
 
 type DiffService interface {
+	HeadNotifiable
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
-	UpdateHeads(id string, heads []string)
 	RemoveObject(id string)
+	AllIds() []string
 
 	Init(objectIds []string)
 	Close() (err error)
@@ -37,7 +38,7 @@ func NewDiffService(
 	syncPeriod int,
 	storage storage.SpaceStorage,
 	confConnector nodeconf.ConfConnector,
-	cache cache.TreeCache,
+	cache treegetter.TreeGetter,
 	log *zap.Logger) DiffService {
 
 	diff := ldiff.New(16, 16)
@@ -70,6 +71,10 @@ func (d *diffService) UpdateHeads(id string, heads []string) {
 		Id:   id,
 		Head: concatStrings(heads),
 	})
+}
+
+func (d *diffService) AllIds() []string {
+	return d.diff.Ids()
 }
 
 func (d *diffService) RemoveObject(id string) {
