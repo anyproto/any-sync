@@ -34,7 +34,7 @@ type service struct {
 	account              account.Service
 	configurationService nodeconf.Service
 	storageProvider      storage.SpaceStorageProvider
-	cache                treegetter.TreeGetter
+	treeGetter           treegetter.TreeGetter
 	pool                 pool.Pool
 }
 
@@ -43,7 +43,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.account = a.MustComponent(account.CName).(account.Service)
 	s.storageProvider = a.MustComponent(storage.CName).(storage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
-	s.cache = a.MustComponent(treegetter.CName).(treegetter.TreeGetter)
+	s.treeGetter = a.MustComponent(treegetter.CName).(treegetter.TreeGetter)
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	return nil
 }
@@ -90,13 +90,13 @@ func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {
 
 	lastConfiguration := s.configurationService.GetLast()
 	confConnector := nodeconf.NewConfConnector(lastConfiguration, s.pool)
-	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, st, confConnector, s.cache, log)
+	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, st, confConnector, s.treeGetter, log)
 	syncService := syncservice.NewSyncService(id, confConnector)
 	sp := &space{
 		id:            id,
 		syncService:   syncService,
 		diffService:   diffService,
-		cache:         s.cache,
+		cache:         s.treeGetter,
 		account:       s.account,
 		configuration: lastConfiguration,
 		storage:       st,

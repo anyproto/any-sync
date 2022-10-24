@@ -2,7 +2,6 @@ syntax = "proto3";
 package anySpace;
 
 option go_package = "commonspace/spacesyncproto";
-import "pkg/acl/aclrecordproto/protos/aclrecord.proto";
 
 enum ErrCodes {
     Unexpected = 0;
@@ -63,8 +62,9 @@ message ObjectSyncMessage {
 
 // PushSpaceRequest is a request to add space on a node containing only one acl record
 message PushSpaceRequest {
-    RawSpaceHeaderWithId spaceHeader = 2;
-    aclrecord.RawACLRecordWithId aclRoot = 3;
+    RawSpaceHeaderWithId spaceHeader = 1;
+    bytes aclPayload = 2;
+    string aclPayloadId = 3;
 }
 
 // PushSpaceResponse is an empty response
