@@ -7,13 +7,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
-	"time"
 )
 
 type SyncClient interface {
 	RequestFactory
-	ocache.ObjectLastUsage
 	BroadcastAsync(message *treechangeproto.TreeSyncMessage) (err error)
 	BroadcastAsyncOrSendResponsible(message *treechangeproto.TreeSyncMessage) (err error)
 	SendAsync(peerId string, message *treechangeproto.TreeSyncMessage, replyId string) (err error)
@@ -40,10 +37,6 @@ func newSyncClient(
 		configuration:  configuration,
 		spaceId:        spaceId,
 	}
-}
-
-func (s *syncClient) LastUsage() time.Time {
-	return s.StreamPool.LastUsage()
 }
 
 func (s *syncClient) BroadcastAsync(message *treechangeproto.TreeSyncMessage) (err error) {
