@@ -4,9 +4,9 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	config2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
-	secure2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
@@ -32,22 +32,22 @@ type DRPCServer interface {
 }
 
 type configGetter interface {
-	GetGRPCServer() config2.GrpcServer
+	GetGRPCServer() config.GrpcServer
 }
 
 type drpcServer struct {
-	config     config2.GrpcServer
+	config     config.GrpcServer
 	drpcServer *drpcserver.Server
-	transport  secure2.Service
-	listeners  []secure2.ContextListener
+	transport  secure.Service
+	listeners  []secure.ContextListener
 	metric     metric.Metric
 	cancel     func()
 	*drpcmux.Mux
 }
 
 func (s *drpcServer) Init(a *app.App) (err error) {
-	s.config = a.MustComponent(config2.CName).(configGetter).GetGRPCServer()
-	s.transport = a.MustComponent(secure2.CName).(secure2.Service)
+	s.config = a.MustComponent(config.CName).(configGetter).GetGRPCServer()
+	s.transport = a.MustComponent(secure.CName).(secure.Service)
 	s.metric = a.MustComponent(metric.CName).(metric.Metric)
 	return nil
 }
@@ -87,7 +87,7 @@ func (s *drpcServer) Run(ctx context.Context) (err error) {
 	return
 }
 
-func (s *drpcServer) serve(ctx context.Context, lis secure2.ContextListener) {
+func (s *drpcServer) serve(ctx context.Context, lis secure.ContextListener) {
 	l := log.With(zap.String("localAddr", lis.Addr().String()))
 	l.Info("drpc listener started")
 	defer func() {
@@ -111,7 +111,7 @@ func (s *drpcServer) serve(ctx context.Context, lis secure2.ContextListener) {
 				}
 				continue
 			}
-			if _, ok := err.(secure2.HandshakeError); ok {
+			if _, ok := err.(secure.HandshakeError); ok {
 				l.Warn("listener handshake error", zap.Error(err))
 				continue
 			}

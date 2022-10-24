@@ -6,8 +6,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto/consensuserr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/db"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/stream"
+	"storj.io/drpc/drpcerr"
 	"time"
 )
 
@@ -57,11 +59,26 @@ func (c *consensusRpc) WatchLog(rpcStream consensusproto.DRPCConsensus_WatchLogS
 			return rpcStream.Close()
 		}
 		for _, rec := range recs {
-			if err := rpcStream.Send(&consensusproto.WatchLogEvent{
-				LogId:   rec.Id,
-				Records: recordsToProto(rec.Records),
-			}); err != nil {
-				return err
+			if rec.Err == nil {
+				if err := rpcStream.Send(&consensusproto.WatchLogEvent{
+					LogId:   rec.Id,
+					Records: recordsToProto(rec.Records),
+				}); err != nil {
+					return err
+				}
+			} else {
+				errCode := consensusproto.ErrCodes(drpcerr.Code(rec.Err))
+				if errCode == 0 {
+					errCode = consensusproto.ErrCodes(drpcerr.Code(consensuserr.ErrUnexpected))
+				}
+				if err := rpcStream.Send(&consensusproto.WatchLogEvent{
+					LogId: rec.Id,
+					Error: &consensusproto.Err{
+						Error: errCode,
+					},
+				}); err != nil {
+					return err
+				}
 			}
 		}
 	}

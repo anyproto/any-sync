@@ -5,6 +5,7 @@ import "time"
 type Log struct {
 	Id      []byte   `bson:"_id"`
 	Records []Record `bson:"records"`
+	Err     error    `bson:"-"`
 }
 
 type Record struct {

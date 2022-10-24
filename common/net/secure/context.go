@@ -3,7 +3,7 @@ package secure
 import (
 	"context"
 	"errors"
-	"github.com/libp2p/go-libp2p-core/sec"
+	"github.com/libp2p/go-libp2p/core/sec"
 )
 
 var (
