@@ -2,9 +2,10 @@ package clientspace
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/cache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
 )
 
 type rpcHandler struct {
@@ -17,16 +18,19 @@ func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpac
 		err = spacesyncproto.ErrSpaceExists
 		return
 	}
-	if err != cache.ErrSpaceNotFound {
+	if err != treegetter.ErrSpaceNotFound {
 		err = spacesyncproto.ErrUnexpected
 		return
 	}
 
 	payload := storage.SpaceStorageCreatePayload{
-		RecWithId:         req.AclRoot,
+		RecWithId: &aclrecordproto.RawACLRecordWithId{
+			Payload: req.AclPayload,
+			Id:      req.AclPayloadId,
+		},
 		SpaceHeaderWithId: req.SpaceHeader,
 	}
-	_, err = r.s.spaceStorageProvider.CreateSpaceStorage(payload)
+	st, err := r.s.spaceStorageProvider.CreateSpaceStorage(payload)
 	if err != nil {
 		err = spacesyncproto.ErrUnexpected
 		if err == storage.ErrSpaceStorageExists {
@@ -34,6 +38,7 @@ func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpac
 		}
 		return
 	}
+	st.Close()
 	return
 }
 

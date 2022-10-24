@@ -71,6 +71,10 @@ func (c *changeBuilder) ConvertFromRaw(rawIdChange *treechangeproto.RawTreeChang
 	if err != nil {
 		return
 	}
+	ch, err = c.unmarshallRawChange(raw, rawIdChange.Id)
+	if err != nil {
+		return
+	}
 
 	if verify {
 		var identityKey signingkey.PubKey
@@ -90,8 +94,7 @@ func (c *changeBuilder) ConvertFromRaw(rawIdChange *treechangeproto.RawTreeChang
 			return
 		}
 	}
-
-	return c.unmarshallRawChange(raw, rawIdChange.Id)
+	return
 }
 
 func (c *changeBuilder) SetRootRawChange(rawIdChange *treechangeproto.RawTreeChangeWithId) {

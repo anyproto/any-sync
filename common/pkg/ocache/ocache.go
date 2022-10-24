@@ -46,7 +46,7 @@ var WithGCPeriod = func(gcPeriod time.Duration) Option {
 
 var WithRefCounter = func(enable bool) Option {
 	return func(cache *oCache) {
-		cache.noRefCounter = !enable
+		cache.refCounter = enable
 	}
 }
 
@@ -131,17 +131,17 @@ type OCache interface {
 }
 
 type oCache struct {
-	mu           sync.Mutex
-	data         map[string]*entry
-	loadFunc     LoadFunc
-	timeNow      func() time.Time
-	ttl          time.Duration
-	gc           time.Duration
-	closed       bool
-	closeCh      chan struct{}
-	log          *zap.SugaredLogger
-	metrics      *metrics
-	noRefCounter bool
+	mu         sync.Mutex
+	data       map[string]*entry
+	loadFunc   LoadFunc
+	timeNow    func() time.Time
+	ttl        time.Duration
+	gc         time.Duration
+	closed     bool
+	closeCh    chan struct{}
+	log        *zap.SugaredLogger
+	metrics    *metrics
+	refCounter bool
 }
 
 func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
@@ -167,7 +167,7 @@ Load:
 	closing := e.isClosing
 	if !e.isClosing {
 		e.lastUsage = c.timeNow()
-		if !c.noRefCounter {
+		if c.refCounter {
 			e.refCount++
 		}
 	}
@@ -237,7 +237,7 @@ func (c *oCache) Release(id string) bool {
 		return false
 	}
 	if e, ok := c.data[id]; ok {
-		if !c.noRefCounter && e.refCount > 0 {
+		if c.refCounter && e.refCount > 0 {
 			e.refCount--
 			return true
 		}

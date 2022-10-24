@@ -73,7 +73,9 @@ func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*treech
 	// now starting from breakpoints
 	stack = stack[:0]
 	for _, h := range breakpoints {
-		stack = append(stack, t.attached[h])
+		if c, exists := t.attached[h]; exists {
+			stack = append(stack, c)
+		}
 	}
 
 	// doing another dfs to get all changes before breakpoints, we need to exclude them from results

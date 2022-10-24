@@ -2,8 +2,6 @@ syntax = "proto3";
 package anySpace;
 
 option go_package = "commonspace/spacesyncproto";
-import "pkg/acl/treechangeproto/protos/treechange.proto";
-import "pkg/acl/aclrecordproto/protos/aclrecord.proto";
 
 enum ErrCodes {
     Unexpected = 0;
@@ -55,55 +53,18 @@ message HeadSyncResponse {
 // ObjectSyncMessage is a message sent on object sync
 message ObjectSyncMessage {
     string spaceId = 1;
-    ObjectSyncContentValue content = 2;
-    treechange.RawTreeChangeWithId rootChange = 3;
-    string treeId = 4;
-    string trackingId = 5;
-
+    string replyId = 2;
+    bytes payload = 3;
+    string objectId = 4;
 //  string identity = 5;
 //  string peerSignature = 6;
 }
 
-// ObjectSyncContentValue provides different types for object sync
-message ObjectSyncContentValue {
-    oneof value {
-        ObjectHeadUpdate headUpdate = 1;
-        ObjectFullSyncRequest fullSyncRequest = 2;
-        ObjectFullSyncResponse fullSyncResponse = 3;
-        ObjectErrorResponse errorResponse = 4;
-    }
-}
-
-// ObjectHeadUpdate is a message sent on document head update
-message ObjectHeadUpdate {
-    repeated string heads = 1;
-    repeated treechange.RawTreeChangeWithId changes = 2;
-    repeated string snapshotPath = 3;
-}
-
-// ObjectHeadUpdate is a message sent when document needs full sync
-message ObjectFullSyncRequest {
-    repeated string heads = 1;
-    repeated treechange.RawTreeChangeWithId changes = 2;
-    repeated string snapshotPath = 3;
-}
-
-// ObjectFullSyncResponse is a message sent as a response for a specific full sync
-message ObjectFullSyncResponse {
-    repeated string heads = 1;
-    repeated treechange.RawTreeChangeWithId changes = 2;
-    repeated string snapshotPath = 3;
-}
-
-// ObjectErrorResponse is an error sent as a response for a full sync request
-message ObjectErrorResponse {
-    string error = 1;
-}
-
 // PushSpaceRequest is a request to add space on a node containing only one acl record
 message PushSpaceRequest {
-    RawSpaceHeaderWithId spaceHeader = 2;
-    aclrecord.RawACLRecordWithId aclRoot = 3;
+    RawSpaceHeaderWithId spaceHeader = 1;
+    bytes aclPayload = 2;
+    string aclPayloadId = 3;
 }
 
 // PushSpaceResponse is an empty response

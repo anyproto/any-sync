@@ -46,7 +46,6 @@ func (s *service) Init(a *app.App) (err error) {
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
 		ocache.WithTTL(time.Duration(s.conf.GCTTL)*time.Second),
-		ocache.WithRefCounter(false),
 	)
 	return spacesyncproto.DRPCRegisterSpace(a.MustComponent(server.CName).(server.DRPCServer), &rpcHandler{s})
 }
@@ -56,43 +55,39 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
-	go func() {
-		time.Sleep(time.Second * 5)
-		_, _ = s.GetSpace(ctx, "testDSpace")
-	}()
 	return
 }
 
-func (s *service) CreateSpace(ctx context.Context, payload commonspace.SpaceCreatePayload) (space commonspace.Space, err error) {
+func (s *service) CreateSpace(ctx context.Context, payload commonspace.SpaceCreatePayload) (container commonspace.Space, err error) {
 	id, err := s.commonSpace.CreateSpace(ctx, payload)
 	if err != nil {
 		return
 	}
 
-	obj, err := s.commonSpace.GetSpace(ctx, id)
+	obj, err := s.spaceCache.Get(ctx, id)
 	if err != nil {
 		return
 	}
 	return obj.(commonspace.Space), nil
 }
 
-func (s *service) DeriveSpace(ctx context.Context, payload commonspace.SpaceDerivePayload) (space commonspace.Space, err error) {
+func (s *service) DeriveSpace(ctx context.Context, payload commonspace.SpaceDerivePayload) (container commonspace.Space, err error) {
 	id, err := s.commonSpace.DeriveSpace(ctx, payload)
 	if err != nil {
 		return
 	}
 
-	obj, err := s.commonSpace.GetSpace(ctx, id)
+	obj, err := s.spaceCache.Get(ctx, id)
 	if err != nil {
 		return
 	}
 	return obj.(commonspace.Space), nil
 }
 
-func (s *service) GetSpace(ctx context.Context, id string) (commonspace.Space, error) {
+func (s *service) GetSpace(ctx context.Context, id string) (container commonspace.Space, err error) {
 	v, err := s.spaceCache.Get(ctx, id)
 	if err != nil {
-		return nil, err
+		return
 	}
 	return v.(commonspace.Space), nil
 }

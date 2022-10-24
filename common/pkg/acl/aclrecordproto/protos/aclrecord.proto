@@ -63,20 +63,17 @@ message ACLUserAdd {
   ACLUserPermissions permissions = 4;
 }
 
-// signing accept key
-// rsa encryption key -> read keys
-
 // accept key, encrypt key, invite id
 // GetSpace(id) -> ... (space header + acl root) -> diff
 // Join(ACLJoinRecord) -> Ok
 
-// 
-
 message ACLUserInvite {
   bytes acceptPublicKey = 1;
+  // TODO: change to read key
   bytes encryptPublicKey = 2;
   repeated bytes encryptedReadKeys = 3;
   ACLUserPermissions permissions = 4;
+  // TODO: either derive inviteId from pub keys or think if it is possible to just use ACL record id
   string inviteId = 5;
 }
 
