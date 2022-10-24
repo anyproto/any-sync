@@ -188,7 +188,6 @@ func (t *testServer) AddRecord(ctx context.Context, req *consensusproto.AddRecor
 }
 
 func (t *testServer) WatchLog(stream consensusproto.DRPCConsensus_WatchLogStream) error {
-	fmt.Println("watchLog", t.watchErrOnce)
 	if t.watchErrOnce {
 		t.watchErrOnce = false
 		return fmt.Errorf("error")
