@@ -409,9 +409,13 @@ func (c *oCache) Close() (err error) {
 	}
 	c.closed = true
 	close(c.closeCh)
-	var toClose []*entry
+	var toClose, alreadyClosing []*entry
 	for _, e := range c.data {
-		toClose = append(toClose, e)
+		if e.isClosing {
+			alreadyClosing = append(alreadyClosing, e)
+		} else {
+			toClose = append(toClose, e)
+		}
 	}
 	c.mu.Unlock()
 	for _, e := range toClose {
@@ -421,6 +425,9 @@ func (c *oCache) Close() (err error) {
 				c.log.With("object_id", e.id).Warnf("cache close: object close error: %v", clErr)
 			}
 		}
+	}
+	for _, e := range alreadyClosing {
+		<-e.close
 	}
 	return nil
 }
