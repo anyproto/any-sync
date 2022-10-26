@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func (fx *fixture) testListInDB(t *testing.T, store storage.ListStorage, root *aclrecordproto.RawACLRecordWithId, head string) {
+func testListInDB(t *testing.T, store storage.ListStorage, root *aclrecordproto.RawACLRecordWithId, head string) {
 	require.Equal(t, store.ID(), root.Id)
 
 	aclRoot, err := store.Root()
@@ -28,7 +28,7 @@ func TestListStorage_Create(t *testing.T) {
 	aclRoot := &aclrecordproto.RawACLRecordWithId{Payload: []byte("root"), Id: "someRootId"}
 	listStore, err := createListStorage(fx.db, aclRoot)
 	require.NoError(t, err)
-	fx.testListInDB(t, listStore, aclRoot, aclRoot.Id)
+	testListInDB(t, listStore, aclRoot, aclRoot.Id)
 }
 
 func TestListStorage_Methods(t *testing.T) {
@@ -43,7 +43,7 @@ func TestListStorage_Methods(t *testing.T) {
 	defer fx.stop(t)
 	listStore, err := newListStorage(fx.db)
 	require.NoError(t, err)
-	fx.testListInDB(t, listStore, aclRoot, aclRoot.Id)
+	testListInDB(t, listStore, aclRoot, aclRoot.Id)
 
 	t.Run("set head", func(t *testing.T) {
 		head := "newHead"
