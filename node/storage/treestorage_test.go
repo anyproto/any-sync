@@ -10,45 +10,107 @@ import (
 	"testing"
 )
 
+func treeTestPayload() storage.TreeStorageCreatePayload {
+	rootRawChange := &treechangeproto.RawTreeChangeWithId{RawChange: []byte("some"), Id: "rootId"}
+	otherChange := &treechangeproto.RawTreeChangeWithId{RawChange: []byte("some other"), Id: "otherId"}
+	changes := []*treechangeproto.RawTreeChangeWithId{rootRawChange, otherChange}
+	return storage.TreeStorageCreatePayload{
+		RootRawChange: rootRawChange,
+		Changes:       changes,
+		Heads:         []string{rootRawChange.Id},
+	}
+}
+
 type fixture struct {
-	db *pogreb.DB
+	dir string
+	db  *pogreb.DB
 }
 
 func newFixture(t *testing.T) *fixture {
 	dir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
-	db, err := pogreb.Open(dir, nil)
+	return &fixture{dir: dir}
+}
+
+func (fx *fixture) open(t *testing.T) {
+	var err error
+	fx.db, err = pogreb.Open(fx.dir, nil)
 	require.NoError(t, err)
-	return &fixture{db: db}
+}
+
+func (fx *fixture) testPayloadInDB(t *testing.T, store storage.TreeStorage, payload storage.TreeStorageCreatePayload) {
+	require.Equal(t, payload.RootRawChange.Id, store.ID())
+
+	root, err := store.Root()
+	require.NoError(t, err)
+	require.Equal(t, root, payload.RootRawChange)
+
+	heads, err := store.Heads()
+	require.NoError(t, err)
+	require.Equal(t, payload.Heads, heads)
+
+	for _, ch := range payload.Changes {
+		dbCh, err := store.GetRawChange(context.Background(), ch.Id)
+		require.NoError(t, err)
+		require.Equal(t, ch, dbCh)
+	}
+	return
 }
 
 func (fx *fixture) stop(t *testing.T) {
 	require.NoError(t, fx.db.Close())
 }
 
-func TestTreeStorage_CreateTreeStorage(t *testing.T) {
+func TestTreeStorage(t *testing.T) {
 	fx := newFixture(t)
+	fx.open(t)
 	defer fx.stop(t)
 
-	rootRawChange := &treechangeproto.RawTreeChangeWithId{RawChange: []byte("some"), Id: "rootId"}
-	otherChange := &treechangeproto.RawTreeChangeWithId{RawChange: []byte("some other"), Id: "otherId"}
-	changes := []*treechangeproto.RawTreeChangeWithId{rootRawChange, otherChange}
-	payload := storage.TreeStorageCreatePayload{
-		RootRawChange: rootRawChange,
-		Changes:       changes,
-		Heads:         []string{rootRawChange.Id},
-	}
+	payload := treeTestPayload()
 	store, err := createTreeStorage(fx.db, payload)
 	require.NoError(t, err)
-	require.Equal(t, payload.RootRawChange.Id, store.ID())
+	fx.testPayloadInDB(t, store, payload)
+}
 
-	root, err := store.Root()
+func TestTreeStorage_Methods(t *testing.T) {
+	fx := newFixture(t)
+	fx.open(t)
+	payload := treeTestPayload()
+	_, err := createTreeStorage(fx.db, payload)
 	require.NoError(t, err)
-	require.Equal(t, root, rootRawChange)
+	fx.stop(t)
 
-	for _, ch := range changes {
-		dbCh, err := store.GetRawChange(context.Background(), ch.Id)
+	fx.open(t)
+	defer fx.stop(t)
+	store, err := newTreeStorage(fx.db, payload.RootRawChange.Id)
+	require.NoError(t, err)
+	fx.testPayloadInDB(t, store, payload)
+
+	t.Run("update heads", func(t *testing.T) {
+		newHeads := []string{"a", "b"}
+		require.NoError(t, store.SetHeads(newHeads))
+		heads, err := store.Heads()
 		require.NoError(t, err)
-		require.Equal(t, ch, dbCh)
-	}
+		require.Equal(t, newHeads, heads)
+	})
+
+	t.Run("add raw change, get change and has change", func(t *testing.T) {
+		newChange := &treechangeproto.RawTreeChangeWithId{RawChange: []byte("ab"), Id: "newId"}
+		require.NoError(t, store.AddRawChange(newChange))
+		rawCh, err := store.GetRawChange(context.Background(), newChange.Id)
+		require.NoError(t, err)
+		require.Equal(t, newChange, rawCh)
+		has, err := store.HasChange(context.Background(), newChange.Id)
+		require.NoError(t, err)
+		require.True(t, has)
+	})
+
+	t.Run("get and has for unknown change", func(t *testing.T) {
+		incorrectId := "incorrectId"
+		_, err := store.GetRawChange(context.Background(), incorrectId)
+		require.Error(t, err)
+		has, err := store.HasChange(context.Background(), incorrectId)
+		require.NoError(t, err)
+		require.False(t, has)
+	})
 }
