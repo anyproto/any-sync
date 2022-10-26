@@ -42,11 +42,14 @@ func TestSpaceStorage_Create(t *testing.T) {
 	payload := spaceTestPayload()
 	store, err := createSpaceStorage(fx.db, payload)
 	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, store.Close())
-	}()
 
 	testSpaceInDB(t, store, payload)
+	require.NoError(t, store.Close())
+
+	t.Run("create same storage returns error", func(t *testing.T) {
+		_, err := createSpaceStorage(fx.db, payload)
+		require.Error(t, err)
+	})
 }
 
 func TestSpaceStorage_NewAndCreateTree(t *testing.T) {
@@ -103,4 +106,3 @@ func TestSpaceStorage_StoredIds(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, ids, storedIds)
 }
-

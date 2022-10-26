@@ -42,11 +42,14 @@ func TestSpaceStorage_Create(t *testing.T) {
 	payload := spaceTestPayload()
 	store, err := createSpaceStorage(dir, payload)
 	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, store.Close())
-	}()
 
 	testSpaceInDB(t, store, payload)
+	require.NoError(t, store.Close())
+
+	t.Run("create same storage returns error", func(t *testing.T) {
+		_, err := createSpaceStorage(dir, payload)
+		require.Error(t, err)
+	})
 }
 
 func TestSpaceStorage_NewAndCreateTree(t *testing.T) {
@@ -97,7 +100,7 @@ func TestSpaceStorage_StoredIds(t *testing.T) {
 		_, err := store.CreateTreeStorage(treePayload)
 		require.NoError(t, err)
 	}
-	
+
 	storedIds, err := store.StoredIds()
 	require.NoError(t, err)
 	require.Equal(t, ids, storedIds)

@@ -71,6 +71,11 @@ func TestTreeStorage_Create(t *testing.T) {
 	store, err := createTreeStorage(fx.db, spaceId, payload)
 	require.NoError(t, err)
 	testTreePayloadInDB(t, store, payload)
+
+	t.Run("create same storage returns error", func(t *testing.T) {
+		_, err := createTreeStorage(fx.db, spaceId, payload)
+		require.Error(t, err)
+	})
 }
 
 func TestTreeStorage_Methods(t *testing.T) {

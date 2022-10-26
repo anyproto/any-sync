@@ -43,6 +43,17 @@ func TestListStorage(t *testing.T) {
 		return nil
 	})
 
+	t.Run("create same storage returns no error", func(t *testing.T) {
+		fx.db.View(func(txn *badger.Txn) error {
+			// this is ok, because we only create new list storage when we create space storage
+			listStore, err := createListStorage(spaceId, fx.db, txn, aclRoot)
+			require.NoError(t, err)
+			testListInDB(t, listStore, aclRoot, aclRoot.Id)
+
+			return nil
+		})
+	})
+
 	t.Run("set head", func(t *testing.T) {
 		head := "newHead"
 		require.NoError(t, listStore.SetHead(head))

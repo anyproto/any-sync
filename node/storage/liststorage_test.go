@@ -29,6 +29,13 @@ func TestListStorage_Create(t *testing.T) {
 	listStore, err := createListStorage(fx.db, aclRoot)
 	require.NoError(t, err)
 	testListInDB(t, listStore, aclRoot, aclRoot.Id)
+
+	t.Run("create same list storage returns nil", func(t *testing.T) {
+		// this is ok, because we only create new list storage when we create space storage
+		listStore, err := createListStorage(fx.db, aclRoot)
+		require.NoError(t, err)
+		testListInDB(t, listStore, aclRoot, aclRoot.Id)
+	})
 }
 
 func TestListStorage_Methods(t *testing.T) {
