@@ -25,11 +25,10 @@ type RWLocker interface {
 type ACLList interface {
 	RWLocker
 	ID() string
-	Root() *aclrecordproto.RawACLRecordWithId
+	Root() *aclrecordproto.ACLRoot
 	Records() []*ACLRecord
 	ACLState() *ACLState
 	IsAfter(first string, second string) (bool, error)
-	AddRawRecords(ctx context.Context, rec []*aclrecordproto.RawACLRecordWithId) (err error)
 	Head() *ACLRecord
 	Get(id string) (*ACLRecord, error)
 	Iterate(iterFunc IterFunc)
@@ -38,32 +37,38 @@ type ACLList interface {
 }
 
 type aclList struct {
-	root    *aclrecordproto.RawACLRecordWithId
+	root    *aclrecordproto.ACLRoot
 	records []*ACLRecord
 	indexes map[string]int
 	id      string
 
-	stateBuilder  *aclStateBuilder
-	recordBuilder ACLRecordBuilder
-	aclState      *ACLState
-	keychain      *common.Keychain
-	storage       storage.ListStorage
+	builder  *aclStateBuilder
+	aclState *ACLState
+	keychain *common.Keychain
 
 	sync.RWMutex
 }
 
 func BuildACLListWithIdentity(acc *account.AccountData, storage storage.ListStorage) (ACLList, error) {
-	id := storage.ID()
 	builder := newACLStateBuilderWithIdentity(acc)
-	return build(id, builder, newACLRecordBuilder(id, common.NewKeychain()), storage)
+	return build(storage.Id(), builder, newACLRecordBuilder(storage.Id(), common.NewKeychain()), storage)
 }
 
 func BuildACLList(storage storage.ListStorage) (ACLList, error) {
-	id := storage.ID()
-	return build(id, newACLStateBuilder(), newACLRecordBuilder(id, common.NewKeychain()), storage)
+	return build(storage.Id(), newACLStateBuilder(), newACLRecordBuilder(storage.Id(), common.NewKeychain()), storage)
 }
 
 func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder, storage storage.ListStorage) (list ACLList, err error) {
+	// TODO: need to add context here
+	rootWithId, err := storage.Root()
+	if err != nil {
+		return
+	}
+	aclRecRoot, err := recBuilder.ConvertFromRaw(rootWithId)
+	if err != nil {
+		return
+	}
+
 	head, err := storage.Head()
 	if err != nil {
 		return
@@ -80,7 +85,7 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 	}
 	records := []*ACLRecord{record}
 
-	for record.PrevId != "" {
+	for record.PrevId != "" && record.PrevId != id {
 		rawRecordWithId, err = storage.GetRawRecord(context.Background(), record.PrevId)
 		if err != nil {
 			return
@@ -92,6 +97,8 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 		}
 		records = append(records, record)
 	}
+	// adding root in the end, because we already parsed it
+	records = append(records, aclRecRoot)
 
 	indexes := make(map[string]int)
 	for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
@@ -110,21 +117,14 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 		return
 	}
 
-	rootWithId, err := storage.Root()
-	if err != nil {
-		return
-	}
-
 	list = &aclList{
-		root:          rootWithId,
-		records:       records,
-		indexes:       indexes,
-		stateBuilder:  stateBuilder,
-		recordBuilder: recBuilder,
-		aclState:      state,
-		storage:       storage,
-		id:            id,
-		RWMutex:       sync.RWMutex{},
+		root:     aclRecRoot.Model.(*aclrecordproto.ACLRoot),
+		records:  records,
+		indexes:  indexes,
+		builder:  stateBuilder,
+		aclState: state,
+		id:       id,
+		RWMutex:  sync.RWMutex{},
 	}
 	return
 }
@@ -137,42 +137,8 @@ func (a *aclList) ID() string {
 	return a.id
 }
 
-func (a *aclList) Root() *aclrecordproto.RawACLRecordWithId {
+func (a *aclList) Root() *aclrecordproto.ACLRoot {
 	return a.root
-}
-
-func (a *aclList) AddRawRecords(ctx context.Context, records []*aclrecordproto.RawACLRecordWithId) (err error) {
-	if len(records) == 0 {
-		return
-	}
-	// converting and verifying
-	var aclRecords []*ACLRecord
-	for _, rec := range records {
-		var record *ACLRecord
-		record, err = a.recordBuilder.ConvertFromRaw(rec)
-		if err != nil {
-			return
-		}
-		aclRecords = append(aclRecords, record)
-	}
-
-	// trying to append them to state
-	err = a.stateBuilder.Append(a.aclState, aclRecords)
-	if err != nil {
-		return
-	}
-
-	// saving to storage
-	for _, rec := range records {
-		err = a.storage.AddRawRecord(ctx, rec)
-		if err != nil {
-			return
-		}
-	}
-
-	// setting new head
-	err = a.storage.SetHead(records[len(records)-1].Id)
-	return
 }
 
 func (a *aclList) ACLState() *ACLState {

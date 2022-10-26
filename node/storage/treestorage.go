@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"github.com/akrylysov/pogreb"
-	storage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 )
 
@@ -48,7 +48,7 @@ func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err e
 }
 
 func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
-	keys := newTreeKeys(payload.RootRawChange.Id)
+	keys := newTreeKeys(payload.TreeId)
 	has, err := db.Has(keys.HeadsKey())
 	if err != nil {
 		return
@@ -86,7 +86,7 @@ func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) 
 	return
 }
 
-func (t *treeStorage) ID() string {
+func (t *treeStorage) Id() string {
 	return t.id
 }
 

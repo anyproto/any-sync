@@ -6,7 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
-	storage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 )
 
 const CName = "commonspace.storage"
@@ -16,7 +16,7 @@ var ErrSpaceStorageMissing = errors.New("space storage missing")
 
 type SpaceStorage interface {
 	storage.Provider
-	ID() string
+	Id() string
 	ACLStorage() (storage.ListStorage, error)
 	SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error)
 	StoredIds() ([]string, error)

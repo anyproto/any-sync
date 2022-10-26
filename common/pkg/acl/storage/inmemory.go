@@ -9,10 +9,8 @@ import (
 )
 
 type inMemoryACLListStorage struct {
+	records []*aclrecordproto.RawACLRecordWithId
 	id      string
-	root    *aclrecordproto.RawACLRecordWithId
-	head    string
-	records map[string]*aclrecordproto.RawACLRecordWithId
 
 	sync.RWMutex
 }
@@ -20,63 +18,48 @@ type inMemoryACLListStorage struct {
 func NewInMemoryACLListStorage(
 	id string,
 	records []*aclrecordproto.RawACLRecordWithId) (ListStorage, error) {
-
-	allRecords := make(map[string]*aclrecordproto.RawACLRecordWithId)
-	for _, ch := range records {
-		allRecords[ch.Id] = ch
-	}
-	root := records[0]
-	head := records[len(records)-1]
-
 	return &inMemoryACLListStorage{
-		id:      root.Id,
-		root:    root,
-		head:    head.Id,
-		records: allRecords,
+		id:      id,
+		records: records,
 		RWMutex: sync.RWMutex{},
 	}, nil
 }
 
-func (t *inMemoryACLListStorage) ID() string {
-	t.RLock()
-	defer t.RUnlock()
-	return t.id
+func (i *inMemoryACLListStorage) Root() (*aclrecordproto.RawACLRecordWithId, error) {
+	i.RLock()
+	defer i.RUnlock()
+	return i.records[0], nil
 }
 
-func (t *inMemoryACLListStorage) Root() (*aclrecordproto.RawACLRecordWithId, error) {
-	t.RLock()
-	defer t.RUnlock()
-	return t.root, nil
+func (i *inMemoryACLListStorage) SetHead(headId string) error {
+	panic("implement me")
 }
 
-func (t *inMemoryACLListStorage) Head() (string, error) {
-	t.RLock()
-	defer t.RUnlock()
-	return t.head, nil
+func (i *inMemoryACLListStorage) Head() (string, error) {
+	i.RLock()
+	defer i.RUnlock()
+	return i.records[len(i.records)-1].Id, nil
 }
 
-func (t *inMemoryACLListStorage) SetHead(head string) error {
-	t.Lock()
-	defer t.Unlock()
-	t.head = head
-	return nil
-}
-
-func (t *inMemoryACLListStorage) AddRawRecord(ctx context.Context, record *aclrecordproto.RawACLRecordWithId) error {
-	t.Lock()
-	defer t.Unlock()
-	// TODO: better to do deep copy
-	t.records[record.Id] = record
-	return nil
-}
-
-func (t *inMemoryACLListStorage) GetRawRecord(ctx context.Context, recordId string) (*aclrecordproto.RawACLRecordWithId, error) {
-	t.RLock()
-	defer t.RUnlock()
-	if res, exists := t.records[recordId]; exists {
-		return res, nil
+func (i *inMemoryACLListStorage) GetRawRecord(ctx context.Context, id string) (*aclrecordproto.RawACLRecordWithId, error) {
+	i.RLock()
+	defer i.RUnlock()
+	for _, rec := range i.records {
+		if rec.Id == id {
+			return rec, nil
+		}
 	}
-	return nil, fmt.Errorf("could not get record with id: %s", recordId)
+	return nil, fmt.Errorf("no such record")
+}
+
+func (i *inMemoryACLListStorage) AddRawRecord(ctx context.Context, rec *aclrecordproto.RawACLRecordWithId) error {
+	panic("implement me")
+}
+
+func (i *inMemoryACLListStorage) Id() string {
+	i.RLock()
+	defer i.RUnlock()
+	return i.id
 }
 
 type inMemoryTreeStorage struct {
@@ -89,6 +72,7 @@ type inMemoryTreeStorage struct {
 }
 
 func NewInMemoryTreeStorage(
+	treeId string,
 	root *treechangeproto.RawTreeChangeWithId,
 	heads []string,
 	changes []*treechangeproto.RawTreeChangeWithId) (TreeStorage, error) {
@@ -96,10 +80,10 @@ func NewInMemoryTreeStorage(
 	for _, ch := range changes {
 		allChanges[ch.Id] = ch
 	}
-	allChanges[root.Id] = root
+	allChanges[treeId] = root
 
 	return &inMemoryTreeStorage{
-		id:      root.Id,
+		id:      treeId,
 		root:    root,
 		heads:   heads,
 		changes: allChanges,
@@ -112,7 +96,7 @@ func (t *inMemoryTreeStorage) HasChange(ctx context.Context, id string) (bool, e
 	return exists, nil
 }
 
-func (t *inMemoryTreeStorage) ID() string {
+func (t *inMemoryTreeStorage) Id() string {
 	t.RLock()
 	defer t.RUnlock()
 	return t.id
@@ -175,12 +159,12 @@ func (i *inMemoryStorageProvider) TreeStorage(id string) (TreeStorage, error) {
 func (i *inMemoryStorageProvider) CreateTreeStorage(payload TreeStorageCreatePayload) (TreeStorage, error) {
 	i.Lock()
 	defer i.Unlock()
-	res, err := NewInMemoryTreeStorage(payload.RootRawChange, payload.Heads, payload.Changes)
+	res, err := NewInMemoryTreeStorage(payload.TreeId, payload.RootRawChange, payload.Heads, payload.Changes)
 	if err != nil {
 		return nil, err
 	}
 
-	i.objects[payload.RootRawChange.Id] = res
+	i.objects[payload.TreeId] = res
 	return res, nil
 }
 
