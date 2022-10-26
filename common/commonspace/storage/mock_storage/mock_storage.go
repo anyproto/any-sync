@@ -163,12 +163,11 @@ func (mr *MockSpaceStorageMockRecorder) CreateTreeStorage(arg0 interface{}) *gom
 }
 
 // ID mocks base method.
-func (m *MockSpaceStorage) ID() (string, error) {
+func (m *MockSpaceStorage) ID() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ID")
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // ID indicates an expected call of ID.
