@@ -120,8 +120,8 @@ func (t *ACLListStorageBuilder) AddRawRecord(ctx context.Context, rec *aclrecord
 	panic("implement me")
 }
 
-func (t *ACLListStorageBuilder) ID() (string, error) {
-	return t.id, nil
+func (t *ACLListStorageBuilder) ID() string {
+	return t.id
 }
 
 func (t *ACLListStorageBuilder) GetRawRecords() []*aclrecordproto2.RawACLRecordWithId {

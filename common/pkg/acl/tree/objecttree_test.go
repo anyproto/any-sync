@@ -3,7 +3,7 @@ package tree
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
-	storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	storage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/testutils/acllistbuilder"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/stretchr/testify/assert"
@@ -53,9 +53,9 @@ func (c *mockChangeCreator) createRaw(id, aclId, snapshotId string, isSnapshot b
 	}
 }
 
-func (c *mockChangeCreator) createNewTreeStorage(treeId, aclHeadId string) storage2.TreeStorage {
+func (c *mockChangeCreator) createNewTreeStorage(treeId, aclHeadId string) storage.TreeStorage {
 	root := c.createRoot(treeId, aclHeadId)
-	treeStorage, _ := storage2.NewInMemoryTreeStorage(treeId, root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
+	treeStorage, _ := storage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
 	return treeStorage
 }
 
@@ -95,7 +95,7 @@ func (m *mockChangeValidator) ValidateFullTree(tree *Tree, aclList list.ACLList)
 
 type testTreeContext struct {
 	aclList       list.ACLList
-	treeStorage   storage2.TreeStorage
+	treeStorage   storage.TreeStorage
 	changeBuilder *mockChangeBuilder
 	changeCreator *mockChangeCreator
 	objTree       ObjectTree
