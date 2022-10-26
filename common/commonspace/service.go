@@ -64,7 +64,7 @@ func (s *service) CreateSpace(
 		return
 	}
 
-	return store.ID()
+	return store.ID(), nil
 }
 
 func (s *service) DeriveSpace(
@@ -79,7 +79,7 @@ func (s *service) DeriveSpace(
 		return
 	}
 
-	return store.ID()
+	return store.ID(), nil
 }
 
 func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {

@@ -50,20 +50,14 @@ type aclList struct {
 }
 
 func BuildACLListWithIdentity(acc *account.AccountData, storage storage.ListStorage) (ACLList, error) {
-	id, err := storage.ID()
-	if err != nil {
-		return nil, err
-	}
+	id := storage.ID()
 	builder := newACLStateBuilderWithIdentity(acc)
 	return build(id, builder, newACLRecordBuilder(id, common.NewKeychain()), storage)
 }
 
 func BuildACLList(storage storage.ListStorage) (ACLList, error) {
-	id, err := storage.ID()
-	if err != nil {
-		return nil, err
-	}
-	return build(id, newACLStateBuilder(), newACLRecordBuilder(id, common.NewKeychain()), storage)
+	id := storage.ID()
+	return build(storage.ID(), newACLStateBuilder(), newACLRecordBuilder(id, common.NewKeychain()), storage)
 }
 
 func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder, storage storage.ListStorage) (list ACLList, err error) {

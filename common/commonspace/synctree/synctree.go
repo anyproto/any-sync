@@ -149,7 +149,6 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 	fullSyncResp := resp.GetContent().GetFullSyncResponse()
 
 	payload := storage.TreeStorageCreatePayload{
-		TreeId:        id,
 		RootRawChange: resp.RootChange,
 		Changes:       fullSyncResp.Changes,
 		Heads:         fullSyncResp.Heads,

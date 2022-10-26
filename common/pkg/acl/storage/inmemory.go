@@ -56,10 +56,10 @@ func (i *inMemoryACLListStorage) AddRawRecord(ctx context.Context, rec *aclrecor
 	panic("implement me")
 }
 
-func (i *inMemoryACLListStorage) ID() (string, error) {
+func (i *inMemoryACLListStorage) ID() string {
 	i.RLock()
 	defer i.RUnlock()
-	return i.id, nil
+	return i.id
 }
 
 type inMemoryTreeStorage struct {
@@ -72,7 +72,6 @@ type inMemoryTreeStorage struct {
 }
 
 func NewInMemoryTreeStorage(
-	treeId string,
 	root *treechangeproto.RawTreeChangeWithId,
 	heads []string,
 	changes []*treechangeproto.RawTreeChangeWithId) (TreeStorage, error) {
@@ -80,10 +79,10 @@ func NewInMemoryTreeStorage(
 	for _, ch := range changes {
 		allChanges[ch.Id] = ch
 	}
-	allChanges[treeId] = root
+	allChanges[root.Id] = root
 
 	return &inMemoryTreeStorage{
-		id:      treeId,
+		id:      root.Id,
 		root:    root,
 		heads:   heads,
 		changes: allChanges,
@@ -96,10 +95,10 @@ func (t *inMemoryTreeStorage) HasChange(ctx context.Context, id string) (bool, e
 	return exists, nil
 }
 
-func (t *inMemoryTreeStorage) ID() (string, error) {
+func (t *inMemoryTreeStorage) ID() string {
 	t.RLock()
 	defer t.RUnlock()
-	return t.id, nil
+	return t.id
 }
 
 func (t *inMemoryTreeStorage) Root() (*treechangeproto.RawTreeChangeWithId, error) {
@@ -159,12 +158,12 @@ func (i *inMemoryStorageProvider) TreeStorage(id string) (TreeStorage, error) {
 func (i *inMemoryStorageProvider) CreateTreeStorage(payload TreeStorageCreatePayload) (TreeStorage, error) {
 	i.Lock()
 	defer i.Unlock()
-	res, err := NewInMemoryTreeStorage(payload.TreeId, payload.RootRawChange, payload.Heads, payload.Changes)
+	res, err := NewInMemoryTreeStorage(payload.RootRawChange, payload.Heads, payload.Changes)
 	if err != nil {
 		return nil, err
 	}
 
-	i.objects[payload.TreeId] = res
+	i.objects[payload.RootRawChange.Id] = res
 	return res, nil
 }
 

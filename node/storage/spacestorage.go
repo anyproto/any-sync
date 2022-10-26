@@ -129,8 +129,8 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 	return
 }
 
-func (s *spaceStorage) ID() (string, error) {
-	return s.spaceId, nil
+func (s *spaceStorage) ID() string {
+	return s.spaceId
 }
 
 func (s *spaceStorage) TreeStorage(id string) (storage2.TreeStorage, error) {

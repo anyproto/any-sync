@@ -77,8 +77,8 @@ func createSpaceStorage(db *badger.DB, payload spacestorage.SpaceStorageCreatePa
 	return
 }
 
-func (s *spaceStorage) ID() (string, error) {
-	return s.spaceId, nil
+func (s *spaceStorage) ID() string {
+	return s.spaceId
 }
 
 func (s *spaceStorage) TreeStorage(id string) (storage2.TreeStorage, error) {
