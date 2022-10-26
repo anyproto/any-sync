@@ -80,19 +80,18 @@ func (mr *MockListStorageMockRecorder) Head() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Head", reflect.TypeOf((*MockListStorage)(nil).Head))
 }
 
-// ID mocks base method.
-func (m *MockListStorage) ID() (string, error) {
+// Id mocks base method.
+func (m *MockListStorage) Id() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ID")
+	ret := m.ctrl.Call(m, "Id")
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
-// ID indicates an expected call of ID.
-func (mr *MockListStorageMockRecorder) ID() *gomock.Call {
+// Id indicates an expected call of Id.
+func (mr *MockListStorageMockRecorder) Id() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ID", reflect.TypeOf((*MockListStorage)(nil).ID))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Id", reflect.TypeOf((*MockListStorage)(nil).Id))
 }
 
 // Root mocks base method.
@@ -206,19 +205,18 @@ func (mr *MockTreeStorageMockRecorder) Heads() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Heads", reflect.TypeOf((*MockTreeStorage)(nil).Heads))
 }
 
-// ID mocks base method.
-func (m *MockTreeStorage) ID() (string, error) {
+// Id mocks base method.
+func (m *MockTreeStorage) Id() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ID")
+	ret := m.ctrl.Call(m, "Id")
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
-// ID indicates an expected call of ID.
-func (mr *MockTreeStorageMockRecorder) ID() *gomock.Call {
+// Id indicates an expected call of Id.
+func (mr *MockTreeStorageMockRecorder) Id() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ID", reflect.TypeOf((*MockTreeStorage)(nil).ID))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Id", reflect.TypeOf((*MockTreeStorage)(nil).Id))
 }
 
 // Root mocks base method.

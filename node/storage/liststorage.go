@@ -82,8 +82,8 @@ func createListStorage(db *pogreb.DB, root *aclrecordproto.RawACLRecordWithId) (
 	return
 }
 
-func (l *listStorage) ID() (string, error) {
-	return l.id, nil
+func (l *listStorage) Id() string {
+	return l.id
 }
 
 func (l *listStorage) Root() (*aclrecordproto.RawACLRecordWithId, error) {

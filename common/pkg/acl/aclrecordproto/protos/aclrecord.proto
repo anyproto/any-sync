@@ -3,64 +3,66 @@ package aclrecord;
 option go_package = "pkg/acl/aclrecordproto";
 
 message RawACLRecord {
-  bytes payload = 1;
-  bytes signature = 2;
+    bytes payload = 1;
+    bytes signature = 2;
 }
 
 message RawACLRecordWithId {
-  bytes payload = 1;
-  string id = 2;
+    bytes payload = 1;
+    string id = 2;
+    bytes acceptorIdentity = 3;
+    bytes acceptorSignature = 4;
 }
 
 message ACLRecord {
-  string prevId = 1;
-  bytes identity = 2;
-  bytes data = 3;
-  uint64 currentReadKeyHash = 4;
-  int64 timestamp = 5;
+    string prevId = 1;
+    bytes identity = 2;
+    bytes data = 3;
+    uint64 currentReadKeyHash = 4;
+    int64 timestamp = 5;
 }
 
 message ACLRoot {
-  bytes identity = 1;
-  bytes encryptionKey = 2;
-  string spaceId = 3;
-  bytes encryptedReadKey = 4;
-  string derivationScheme = 5;
-  uint64 currentReadKeyHash = 6;
-  int64 timestamp = 7;
+    bytes identity = 1;
+    bytes encryptionKey = 2;
+    string spaceId = 3;
+    bytes encryptedReadKey = 4;
+    string derivationScheme = 5;
+    uint64 currentReadKeyHash = 6;
+    int64 timestamp = 7;
 }
 
 message ACLContentValue {
-  oneof value {
-    ACLUserAdd userAdd = 1;
-    ACLUserRemove userRemove = 2;
-    ACLUserPermissionChange userPermissionChange = 3;
-    ACLUserInvite userInvite = 4;
-    ACLUserJoin userJoin = 5;
-  }
+    oneof value {
+        ACLUserAdd userAdd = 1;
+        ACLUserRemove userRemove = 2;
+        ACLUserPermissionChange userPermissionChange = 3;
+        ACLUserInvite userInvite = 4;
+        ACLUserJoin userJoin = 5;
+    }
 }
 
 message ACLData {
-  repeated ACLContentValue aclContent = 1;
+    repeated ACLContentValue aclContent = 1;
 }
 
 message ACLState {
-  repeated uint64 readKeyHashes = 1;
-  repeated ACLUserState userStates = 2;
-  map<string, ACLUserInvite> invites = 3;
+    repeated uint64 readKeyHashes = 1;
+    repeated ACLUserState userStates = 2;
+    map<string, ACLUserInvite> invites = 3;
 }
 
 message ACLUserState {
-  bytes identity = 1;
-  bytes encryptionKey = 2;
-  ACLUserPermissions permissions = 3;
+    bytes identity = 1;
+    bytes encryptionKey = 2;
+    ACLUserPermissions permissions = 3;
 }
 
 message ACLUserAdd {
-  bytes identity = 1;
-  bytes encryptionKey = 2;
-  repeated bytes encryptedReadKeys = 3;
-  ACLUserPermissions permissions = 4;
+    bytes identity = 1;
+    bytes encryptionKey = 2;
+    repeated bytes encryptedReadKeys = 3;
+    ACLUserPermissions permissions = 4;
 }
 
 // accept key, encrypt key, invite id
@@ -68,41 +70,57 @@ message ACLUserAdd {
 // Join(ACLJoinRecord) -> Ok
 
 message ACLUserInvite {
-  bytes acceptPublicKey = 1;
-  // TODO: change to read key
-  bytes encryptPublicKey = 2;
-  repeated bytes encryptedReadKeys = 3;
-  ACLUserPermissions permissions = 4;
-  // TODO: either derive inviteId from pub keys or think if it is possible to just use ACL record id
-  string inviteId = 5;
+    bytes acceptPublicKey = 1;
+    // TODO: change to read key
+    bytes encryptPublicKey = 2;
+    repeated bytes encryptedReadKeys = 3;
+    ACLUserPermissions permissions = 4;
+    // TODO: either derive inviteId from pub keys or think if it is possible to just use ACL record id
+    string inviteId = 5;
 }
 
 message ACLUserJoin {
-  bytes identity = 1;
-  bytes encryptionKey = 2;
-  bytes acceptSignature = 3;
-  string inviteId = 4;
-  repeated bytes encryptedReadKeys = 5;
+    bytes identity = 1;
+    bytes encryptionKey = 2;
+    bytes acceptSignature = 3;
+    string inviteId = 4;
+    repeated bytes encryptedReadKeys = 5;
 }
 
 message ACLUserRemove {
-  bytes identity = 1;
-  repeated ACLReadKeyReplace readKeyReplaces = 3;
+    bytes identity = 1;
+    repeated ACLReadKeyReplace readKeyReplaces = 3;
 }
 
 message ACLReadKeyReplace {
-  bytes identity = 1;
-  bytes encryptionKey = 2;
-  bytes encryptedReadKey = 3;
+    bytes identity = 1;
+    bytes encryptionKey = 2;
+    bytes encryptedReadKey = 3;
 }
 
 message ACLUserPermissionChange {
-  bytes identity = 1;
-  ACLUserPermissions permissions = 2;
+    bytes identity = 1;
+    ACLUserPermissions permissions = 2;
 }
 
 enum ACLUserPermissions {
-  Admin = 0;
-  Writer = 1;
-  Reader = 2;
+    Admin = 0;
+    Writer = 1;
+    Reader = 2;
+}
+
+
+message ACLSyncMessage {
+    ACLSyncContentValue content = 2;
+}
+
+// ACLSyncContentValue provides different types for acl sync
+message ACLSyncContentValue {
+    oneof value {
+        ACLAddRecords addRecords = 1;
+    }
+}
+
+message ACLAddRecords {
+    repeated RawACLRecordWithId records = 1;
 }

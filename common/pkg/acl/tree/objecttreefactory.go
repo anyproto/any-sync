@@ -127,10 +127,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		}
 	}
 
-	objTree.id, err = objTree.treeStorage.ID()
-	if err != nil {
-		return nil, err
-	}
+	objTree.id = objTree.treeStorage.Id()
 
 	objTree.root, err = objTree.treeStorage.Root()
 	if err != nil {

@@ -3,7 +3,7 @@ package storage
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	storage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/dgraph-io/badger/v3"
 	"sync"
 )
@@ -12,7 +12,7 @@ type spaceStorage struct {
 	spaceId    string
 	objDb      *badger.DB
 	keys       spaceKeys
-	aclStorage storage2.ListStorage
+	aclStorage storage.ListStorage
 	header     *spacesyncproto.RawSpaceHeaderWithId
 	mx         sync.Mutex
 }
@@ -77,15 +77,15 @@ func createSpaceStorage(db *badger.DB, payload spacestorage.SpaceStorageCreatePa
 	return
 }
 
-func (s *spaceStorage) ID() (string, error) {
-	return s.spaceId, nil
+func (s *spaceStorage) Id() string {
+	return s.spaceId
 }
 
-func (s *spaceStorage) TreeStorage(id string) (storage2.TreeStorage, error) {
+func (s *spaceStorage) TreeStorage(id string) (storage.TreeStorage, error) {
 	return newTreeStorage(s.objDb, s.spaceId, id)
 }
 
-func (s *spaceStorage) CreateTreeStorage(payload storage2.TreeStorageCreatePayload) (ts storage2.TreeStorage, err error) {
+func (s *spaceStorage) CreateTreeStorage(payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
 	// we have mutex here, so we prevent overwriting the heads of a tree on concurrent creation
 	s.mx.Lock()
 	defer s.mx.Unlock()
@@ -93,7 +93,7 @@ func (s *spaceStorage) CreateTreeStorage(payload storage2.TreeStorageCreatePaylo
 	return createTreeStorage(s.objDb, s.spaceId, payload)
 }
 
-func (s *spaceStorage) ACLStorage() (storage2.ListStorage, error) {
+func (s *spaceStorage) ACLStorage() (storage.ListStorage, error) {
 	return s.aclStorage, nil
 }
 

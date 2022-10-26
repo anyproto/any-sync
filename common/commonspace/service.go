@@ -9,7 +9,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
-	config2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 )
@@ -30,7 +30,7 @@ type Service interface {
 }
 
 type service struct {
-	config               config2.Space
+	config               config.Space
 	account              account.Service
 	configurationService nodeconf.Service
 	storageProvider      storage.SpaceStorageProvider
@@ -39,7 +39,7 @@ type service struct {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.config = a.MustComponent(config2.CName).(*config2.Config).Space
+	s.config = a.MustComponent(config.CName).(*config.Config).Space
 	s.account = a.MustComponent(account.CName).(account.Service)
 	s.storageProvider = a.MustComponent(storage.CName).(storage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
@@ -52,9 +52,7 @@ func (s *service) Name() (name string) {
 	return CName
 }
 
-func (s *service) CreateSpace(
-	ctx context.Context,
-	payload SpaceCreatePayload) (id string, err error) {
+func (s *service) CreateSpace(ctx context.Context, payload SpaceCreatePayload) (id string, err error) {
 	storageCreate, err := storagePayloadForSpaceCreate(payload)
 	if err != nil {
 		return
@@ -64,12 +62,10 @@ func (s *service) CreateSpace(
 		return
 	}
 
-	return store.ID()
+	return store.Id(), nil
 }
 
-func (s *service) DeriveSpace(
-	ctx context.Context,
-	payload SpaceDerivePayload) (id string, err error) {
+func (s *service) DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (id string, err error) {
 	storageCreate, err := storagePayloadForSpaceDerive(payload)
 	if err != nil {
 		return
@@ -79,7 +75,7 @@ func (s *service) DeriveSpace(
 		return
 	}
 
-	return store.ID()
+	return store.Id(), nil
 }
 
 func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {
