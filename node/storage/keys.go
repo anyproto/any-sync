@@ -62,5 +62,17 @@ func (s spaceKeys) HeaderKey() []byte {
 }
 
 func isRootIdKey(key string) bool {
-	return strings.HasPrefix(key, "t/") && strings.HasSuffix(key, "heads")
+	return strings.HasPrefix(key, "t/") && strings.HasSuffix(key, "/heads")
+}
+
+func getRootId(key string) string {
+	prefixLen := 2 // len("t/")
+	suffixLen := 6 // len("/heads")
+	rootLen := len(key) - suffixLen - prefixLen
+	sBuf := strings.Builder{}
+	sBuf.Grow(rootLen)
+	for i := prefixLen; i < prefixLen+rootLen; i++ {
+		sBuf.WriteByte(key[i])
+	}
+	return sBuf.String()
 }

@@ -38,7 +38,11 @@ func (fx *fixture) open(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func (fx *fixture) testTreePayloadInDB(t *testing.T, store storage.TreeStorage, payload storage.TreeStorageCreatePayload) {
+func (fx *fixture) stop(t *testing.T) {
+	require.NoError(t, fx.db.Close())
+}
+
+func testTreePayloadInDB(t *testing.T, store storage.TreeStorage, payload storage.TreeStorageCreatePayload) {
 	require.Equal(t, payload.RootRawChange.Id, store.ID())
 
 	root, err := store.Root()
@@ -57,10 +61,6 @@ func (fx *fixture) testTreePayloadInDB(t *testing.T, store storage.TreeStorage, 
 	return
 }
 
-func (fx *fixture) stop(t *testing.T) {
-	require.NoError(t, fx.db.Close())
-}
-
 func TestTreeStorage_Create(t *testing.T) {
 	fx := newFixture(t)
 	fx.open(t)
@@ -69,7 +69,7 @@ func TestTreeStorage_Create(t *testing.T) {
 	payload := treeTestPayload()
 	store, err := createTreeStorage(fx.db, payload)
 	require.NoError(t, err)
-	fx.testTreePayloadInDB(t, store, payload)
+	testTreePayloadInDB(t, store, payload)
 }
 
 func TestTreeStorage_Methods(t *testing.T) {
@@ -84,7 +84,7 @@ func TestTreeStorage_Methods(t *testing.T) {
 	defer fx.stop(t)
 	store, err := newTreeStorage(fx.db, payload.RootRawChange.Id)
 	require.NoError(t, err)
-	fx.testTreePayloadInDB(t, store, payload)
+	testTreePayloadInDB(t, store, payload)
 
 	t.Run("update heads", func(t *testing.T) {
 		newHeads := []string{"a", "b"}
