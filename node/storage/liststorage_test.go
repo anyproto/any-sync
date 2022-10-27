@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func testListInDB(t *testing.T, store storage.ListStorage, root *aclrecordproto.RawACLRecordWithId, head string) {
+func testList(t *testing.T, store storage.ListStorage, root *aclrecordproto.RawACLRecordWithId, head string) {
 	require.Equal(t, store.ID(), root.Id)
 
 	aclRoot, err := store.Root()
@@ -28,13 +28,13 @@ func TestListStorage_Create(t *testing.T) {
 	aclRoot := &aclrecordproto.RawACLRecordWithId{Payload: []byte("root"), Id: "someRootId"}
 	listStore, err := createListStorage(fx.db, aclRoot)
 	require.NoError(t, err)
-	testListInDB(t, listStore, aclRoot, aclRoot.Id)
+	testList(t, listStore, aclRoot, aclRoot.Id)
 
 	t.Run("create same list storage returns nil", func(t *testing.T) {
 		// this is ok, because we only create new list storage when we create space storage
 		listStore, err := createListStorage(fx.db, aclRoot)
 		require.NoError(t, err)
-		testListInDB(t, listStore, aclRoot, aclRoot.Id)
+		testList(t, listStore, aclRoot, aclRoot.Id)
 	})
 }
 
@@ -50,7 +50,7 @@ func TestListStorage_Methods(t *testing.T) {
 	defer fx.stop(t)
 	listStore, err := newListStorage(fx.db)
 	require.NoError(t, err)
-	testListInDB(t, listStore, aclRoot, aclRoot.Id)
+	testList(t, listStore, aclRoot, aclRoot.Id)
 
 	t.Run("set head", func(t *testing.T) {
 		head := "newHead"

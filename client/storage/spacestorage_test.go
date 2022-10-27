@@ -24,14 +24,14 @@ func spaceTestPayload() spacestorage.SpaceStorageCreatePayload {
 	}
 }
 
-func testSpaceInDB(t *testing.T, store spacestorage.SpaceStorage, payload spacestorage.SpaceStorageCreatePayload) {
+func testSpace(t *testing.T, store spacestorage.SpaceStorage, payload spacestorage.SpaceStorageCreatePayload) {
 	header, err := store.SpaceHeader()
 	require.NoError(t, err)
 	require.Equal(t, payload.SpaceHeaderWithId, header)
 
 	aclStorage, err := store.ACLStorage()
 	require.NoError(t, err)
-	testListInDB(t, aclStorage, payload.RecWithId, payload.RecWithId.Id)
+	testList(t, aclStorage, payload.RecWithId, payload.RecWithId.Id)
 }
 
 func TestSpaceStorage_Create(t *testing.T) {
@@ -43,7 +43,7 @@ func TestSpaceStorage_Create(t *testing.T) {
 	store, err := createSpaceStorage(fx.db, payload)
 	require.NoError(t, err)
 
-	testSpaceInDB(t, store, payload)
+	testSpace(t, store, payload)
 	require.NoError(t, store.Close())
 
 	t.Run("create same storage returns error", func(t *testing.T) {
@@ -66,17 +66,17 @@ func TestSpaceStorage_NewAndCreateTree(t *testing.T) {
 	defer fx.stop(t)
 	store, err = newSpaceStorage(fx.db, payload.SpaceHeaderWithId.Id)
 	require.NoError(t, err)
-	testSpaceInDB(t, store, payload)
+	testSpace(t, store, payload)
 
 	t.Run("create tree and get tree", func(t *testing.T) {
 		payload := treeTestPayload()
 		treeStore, err := store.CreateTreeStorage(payload)
 		require.NoError(t, err)
-		testTreePayloadInDB(t, treeStore, payload)
+		testTreePayload(t, treeStore, payload)
 
 		otherStore, err := store.TreeStorage(payload.RootRawChange.Id)
 		require.NoError(t, err)
-		testTreePayloadInDB(t, otherStore, payload)
+		testTreePayload(t, otherStore, payload)
 	})
 }
 
