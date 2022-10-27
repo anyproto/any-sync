@@ -6,10 +6,9 @@ records:
     aclChanges:
       - userInvite:
           acceptKey: key.Sign.Onetime1
-          encryptionKey: key.Enc.Onetime1
+          encryptionKey: key.Read.EncKey
           encryptedReadKeys: [key.Read.1]
           permissions: writer
-          inviteId: A.1.2
       - userAdd:
           identity: C
           permission: reader
@@ -21,8 +20,7 @@ records:
       - userJoin:
           identity: B
           encryptionKey: key.Enc.B
-          acceptSignature: key.Sign.Onetime1
-          inviteId: A.1.2
+          acceptKey: key.Sign.Onetime1
           encryptedReadKeys: [key.Read.1]
     readKey: key.Read.1
 keys:
@@ -48,3 +46,5 @@ keys:
   Read:
     - name: 1
       value: derived
+    - name: EncKey
+      value: generated

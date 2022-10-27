@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/common"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/symmetric"
@@ -23,6 +24,8 @@ var ErrUserRemoved = errors.New("user was removed from the document")
 var ErrDocumentForbidden = errors.New("your user was forbidden access to the document")
 var ErrUserAlreadyExists = errors.New("user already exists")
 var ErrNoSuchRecord = errors.New("no such record")
+var ErrNoSuchInvite = errors.New("no such invite")
+var ErrOldInvite = errors.New("invite is too old")
 var ErrInsufficientPermissions = errors.New("insufficient permissions")
 var ErrNoReadKey = errors.New("acl state doesn't have a read key")
 var ErrInvalidSignature = errors.New("signature is invalid")
@@ -41,6 +44,7 @@ type ACLState struct {
 	userInvites        map[string]*aclrecordproto.ACLUserInvite
 	encryptionKey      encryptionkey.PrivKey
 	signingKey         signingkey.PrivKey
+	totalReadKeys      int
 
 	identity            string
 	permissionsAtRecord map[string][]UserPermissionPair
@@ -199,6 +203,8 @@ func (st *ACLState) saveReadKeyFromRoot(root *aclrecordproto.ACLRoot) (err error
 	}
 	st.currentReadKeyHash = root.CurrentReadKeyHash
 	st.userReadKeys[root.CurrentReadKeyHash] = readKey
+	st.totalReadKeys++
+
 	return
 }
 
@@ -207,7 +213,10 @@ func (st *ACLState) applyChangeData(changeData *aclrecordproto.ACLData, hash uin
 		if err != nil {
 			return
 		}
-		st.currentReadKeyHash = hash
+		if hash != st.currentReadKeyHash {
+			st.totalReadKeys++
+			st.currentReadKeyHash = hash
+		}
 	}()
 
 	if !st.isUserJoin(changeData) {
@@ -262,14 +271,14 @@ func (st *ACLState) applyUserPermissionChange(ch *aclrecordproto.ACLUserPermissi
 }
 
 func (st *ACLState) applyUserInvite(ch *aclrecordproto.ACLUserInvite) error {
-	st.userInvites[ch.InviteId] = ch
+	st.userInvites[string(ch.AcceptPublicKey)] = ch
 	return nil
 }
 
 func (st *ACLState) applyUserJoin(ch *aclrecordproto.ACLUserJoin) error {
-	invite, exists := st.userInvites[ch.InviteId]
+	invite, exists := st.userInvites[string(ch.AcceptPubKey)]
 	if !exists {
-		return fmt.Errorf("no such invite with id %s", ch.InviteId)
+		return fmt.Errorf("no such invite with such public key %s", keys.EncodeBytesToString(ch.AcceptPubKey))
 	}
 	chIdentity := string(ch.Identity)
 
@@ -284,7 +293,7 @@ func (st *ACLState) applyUserJoin(ch *aclrecordproto.ACLUserJoin) error {
 		return fmt.Errorf("public key verifying invite accepts is given in incorrect format: %v", err)
 	}
 
-	res, err := verificationKey.(signingkey.PubKey).Verify(ch.Identity, signature)
+	res, err := verificationKey.Verify(ch.Identity, signature)
 	if err != nil {
 		return fmt.Errorf("verification returned error: %w", err)
 	}
@@ -361,8 +370,8 @@ func (st *ACLState) applyUserRemove(ch *aclrecordproto.ACLUserRemove) error {
 				return ErrFailedToDecrypt
 			}
 
-			st.currentReadKeyHash = hash
-			st.userReadKeys[st.currentReadKeyHash] = key
+			st.userReadKeys[hash] = key
+			break
 		}
 	}
 	return nil
@@ -404,6 +413,26 @@ func (st *ACLState) isUserAdd(data *aclrecordproto.ACLData, identity []byte) boo
 	return data.GetAclContent() != nil && userAdd != nil && bytes.Compare(userAdd.GetIdentity(), identity) == 0
 }
 
-func (st *ACLState) GetUserStates() map[string]*aclrecordproto.ACLUserState {
+func (st *ACLState) UserStates() map[string]*aclrecordproto.ACLUserState {
 	return st.userStates
+}
+
+func (st *ACLState) Invite(acceptPubKey []byte) (invite *aclrecordproto.ACLUserInvite, err error) {
+	invite, exists := st.userInvites[string(acceptPubKey)]
+	if !exists {
+		err = ErrNoSuchInvite
+		return
+	}
+	if len(invite.EncryptedReadKeys) != st.totalReadKeys {
+		err = ErrOldInvite
+	}
+	return
+}
+
+func (st *ACLState) UserKeys() (encKey encryptionkey.PrivKey, signKey signingkey.PrivKey) {
+	return st.encryptionKey, st.signingKey
+}
+
+func (st *ACLState) Identity() []byte {
+	return []byte(st.identity)
 }

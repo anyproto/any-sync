@@ -23,8 +23,7 @@ type ACLChange struct {
 	UserJoin *struct {
 		Identity          string   `yaml:"identity"`
 		EncryptionKey     string   `yaml:"encryptionKey"`
-		AcceptSignature   string   `yaml:"acceptSignature"`
-		InviteId          string   `yaml:"inviteId"`
+		AcceptKey         string   `yaml:"acceptKey"`
 		EncryptedReadKeys []string `yaml:"encryptedReadKeys"`
 	} `yaml:"userJoin"`
 
@@ -33,7 +32,6 @@ type ACLChange struct {
 		EncryptionKey     string   `yaml:"encryptionKey"`
 		EncryptedReadKeys []string `yaml:"encryptedReadKeys"`
 		Permissions       string   `yaml:"permissions"`
-		InviteId          string   `yaml:"inviteId"`
 	} `yaml:"userInvite"`
 
 	UserRemove *struct {

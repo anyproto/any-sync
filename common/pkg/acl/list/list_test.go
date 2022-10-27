@@ -22,9 +22,9 @@ func TestAclList_ACLState_UserInviteAndJoin(t *testing.T) {
 	idC := keychain.GetIdentity("C")
 
 	// checking final state
-	assert.Equal(t, aclrecordproto.ACLUserPermissions_Admin, aclList.ACLState().GetUserStates()[idA].Permissions)
-	assert.Equal(t, aclrecordproto.ACLUserPermissions_Writer, aclList.ACLState().GetUserStates()[idB].Permissions)
-	assert.Equal(t, aclrecordproto.ACLUserPermissions_Reader, aclList.ACLState().GetUserStates()[idC].Permissions)
+	assert.Equal(t, aclrecordproto.ACLUserPermissions_Admin, aclList.ACLState().UserStates()[idA].Permissions)
+	assert.Equal(t, aclrecordproto.ACLUserPermissions_Writer, aclList.ACLState().UserStates()[idB].Permissions)
+	assert.Equal(t, aclrecordproto.ACLUserPermissions_Reader, aclList.ACLState().UserStates()[idC].Permissions)
 	assert.Equal(t, aclList.Head().CurrentReadKeyHash, aclList.ACLState().CurrentReadKeyHash())
 
 	var records []*ACLRecord
@@ -61,11 +61,11 @@ func TestAclList_ACLState_UserJoinAndRemove(t *testing.T) {
 	idC := keychain.GetIdentity("C")
 
 	// checking final state
-	assert.Equal(t, aclrecordproto.ACLUserPermissions_Admin, aclList.ACLState().GetUserStates()[idA].Permissions)
-	assert.Equal(t, aclrecordproto.ACLUserPermissions_Reader, aclList.ACLState().GetUserStates()[idC].Permissions)
+	assert.Equal(t, aclrecordproto.ACLUserPermissions_Admin, aclList.ACLState().UserStates()[idA].Permissions)
+	assert.Equal(t, aclrecordproto.ACLUserPermissions_Reader, aclList.ACLState().UserStates()[idC].Permissions)
 	assert.Equal(t, aclList.Head().CurrentReadKeyHash, aclList.ACLState().CurrentReadKeyHash())
 
-	_, exists := aclList.ACLState().GetUserStates()[idB]
+	_, exists := aclList.ACLState().UserStates()[idB]
 	assert.Equal(t, false, exists)
 
 	var records []*ACLRecord
