@@ -4,6 +4,8 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/common"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/cid"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/symmetric"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -21,6 +23,69 @@ func newACLRecordBuilder(id string, keychain *common.Keychain) ACLRecordBuilder 
 		id:       id,
 		keychain: keychain,
 	}
+}
+
+func (a *aclRecordBuilder) BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyBytes []byte, state *ACLState) (rec *aclrecordproto.RawACLRecord, err error) {
+	acceptPrivKey, err := signingkey.NewSigningEd25519PrivKeyFromBytes(acceptPrivKeyBytes)
+	if err != nil {
+		return
+	}
+	acceptPubKeyBytes, err := acceptPrivKey.GetPublic().Raw()
+	if err != nil {
+		return
+	}
+	encSymKey, err := symmetric.DeriveFromBytes(encSymKeyBytes)
+	if err != nil {
+		return
+	}
+
+	invite, err := state.Invite(acceptPubKeyBytes)
+	if err != nil {
+		return
+	}
+
+	encPrivKey, signPrivKey := state.UserKeys()
+	var symKeys [][]byte
+	for _, rk := range invite.EncryptedReadKeys {
+		dec, err := encSymKey.Decrypt(rk)
+		if err != nil {
+			return nil, err
+		}
+		newEnc, err := encPrivKey.GetPublic().Encrypt(dec)
+		if err != nil {
+			return nil, err
+		}
+		symKeys = append(symKeys, newEnc)
+	}
+	idSignature, err := acceptPrivKey.Sign(state.Identity())
+	if err != nil {
+		return
+	}
+	encPubKeyBytes, err := encPrivKey.GetPublic().Raw()
+	if err != nil {
+		return
+	}
+
+	userJoin := &aclrecordproto.ACLUserJoin{
+		Identity:          state.Identity(),
+		EncryptionKey:     encPubKeyBytes,
+		AcceptSignature:   idSignature,
+		AcceptPubKey:      acceptPubKeyBytes,
+		EncryptedReadKeys: symKeys,
+	}
+	marshalledJoin, err := userJoin.Marshal()
+	if err != nil {
+		return
+	}
+	joinSignature, err := signPrivKey.Sign(marshalledJoin)
+	if err != nil {
+		return
+	}
+	rec = &aclrecordproto.RawACLRecord{
+		Payload:   marshalledJoin,
+		Signature: joinSignature,
+	}
+	return
 }
 
 func (a *aclRecordBuilder) ConvertFromRaw(rawIdRecord *aclrecordproto.RawACLRecordWithId) (rec *ACLRecord, err error) {

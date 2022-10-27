@@ -9,6 +9,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/symmetric"
 	"hash/fnv"
 	"io/ioutil"
 	"path"
@@ -183,7 +184,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 				UserAdd: &aclrecordproto2.ACLUserAdd{
 					Identity:          []byte(t.keychain.GetIdentity(add.Identity)),
 					EncryptionKey:     rawKey,
-					EncryptedReadKeys: t.encryptReadKeys(add.EncryptedReadKeys, encKey),
+					EncryptedReadKeys: t.encryptReadKeysWithPubKey(add.EncryptedReadKeys, encKey),
 					Permissions:       t.convertPermission(add.Permission),
 				},
 			},
@@ -191,16 +192,16 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 	case ch.UserJoin != nil:
 		join := ch.UserJoin
 
-		encKey := t.keychain.
-			GetKey(join.EncryptionKey).(encryptionkey.PrivKey)
+		encKey := t.keychain.GetKey(join.EncryptionKey).(encryptionkey.PrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 
 		idKey, _ := t.keychain.SigningKeysByYAMLIdentity[join.Identity].GetPublic().Raw()
-		signKey := t.keychain.GetKey(join.AcceptSignature).(signingkey.PrivKey)
+		signKey := t.keychain.GetKey(join.AcceptKey).(signingkey.PrivKey)
 		signature, err := signKey.Sign(idKey)
 		if err != nil {
 			panic(err)
 		}
+		acceptPubKey, _ := signKey.GetPublic().Raw()
 
 		convCh = &aclrecordproto2.ACLContentValue{
 			Value: &aclrecordproto2.ACLContentValue_UserJoin{
@@ -208,26 +209,24 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 					Identity:          []byte(t.keychain.GetIdentity(join.Identity)),
 					EncryptionKey:     rawKey,
 					AcceptSignature:   signature,
-					InviteId:          join.InviteId,
-					EncryptedReadKeys: t.encryptReadKeys(join.EncryptedReadKeys, encKey),
+					AcceptPubKey:      acceptPubKey,
+					EncryptedReadKeys: t.encryptReadKeysWithPubKey(join.EncryptedReadKeys, encKey),
 				},
 			},
 		}
 	case ch.UserInvite != nil:
 		invite := ch.UserInvite
 		rawAcceptKey, _ := t.keychain.GetKey(invite.AcceptKey).(signingkey.PrivKey).GetPublic().Raw()
-		encKey := t.keychain.
-			GetKey(invite.EncryptionKey).(encryptionkey.PrivKey)
-		rawEncKey, _ := encKey.GetPublic().Raw()
+		hash := t.keychain.GetKey(invite.EncryptionKey).(*SymKey).Hash
+		encKey := t.keychain.ReadKeysByHash[hash]
 
 		convCh = &aclrecordproto2.ACLContentValue{
 			Value: &aclrecordproto2.ACLContentValue_UserInvite{
 				UserInvite: &aclrecordproto2.ACLUserInvite{
 					AcceptPublicKey:   rawAcceptKey,
-					EncryptPublicKey:  rawEncKey,
-					EncryptedReadKeys: t.encryptReadKeys(invite.EncryptedReadKeys, encKey),
+					EncryptSymKeyHash: hash,
+					EncryptedReadKeys: t.encryptReadKeysWithSymKey(invite.EncryptedReadKeys, encKey.Key),
 					Permissions:       t.convertPermission(invite.Permissions),
-					InviteId:          invite.InviteId,
 				},
 			},
 		}
@@ -278,10 +277,23 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 	return convCh
 }
 
-func (t *ACLListStorageBuilder) encryptReadKeys(keys []string, encKey encryptionkey.PrivKey) (enc [][]byte) {
+func (t *ACLListStorageBuilder) encryptReadKeysWithPubKey(keys []string, encKey encryptionkey.PrivKey) (enc [][]byte) {
 	for _, k := range keys {
 		realKey := t.keychain.GetKey(k).(*SymKey).Key.Bytes()
 		res, err := encKey.GetPublic().Encrypt(realKey)
+		if err != nil {
+			panic(err)
+		}
+
+		enc = append(enc, res)
+	}
+	return
+}
+
+func (t *ACLListStorageBuilder) encryptReadKeysWithSymKey(keys []string, key *symmetric.Key) (enc [][]byte) {
+	for _, k := range keys {
+		realKey := t.keychain.GetKey(k).(*SymKey).Key.Bytes()
+		res, err := key.Encrypt(realKey)
 		if err != nil {
 			panic(err)
 		}
