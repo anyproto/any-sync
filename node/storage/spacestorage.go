@@ -88,8 +88,8 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 	}
 
 	defer func() {
-		log.With(zap.String("id", payload.SpaceHeaderWithId.Id), zap.Error(err)).Warn("failed to create storage")
 		if err != nil {
+			log.With(zap.String("id", payload.SpaceHeaderWithId.Id), zap.Error(err)).Warn("failed to create storage")
 			db.Close()
 		}
 	}()
@@ -129,8 +129,8 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 	return
 }
 
-func (s *spaceStorage) ID() (string, error) {
-	return s.spaceId, nil
+func (s *spaceStorage) ID() string {
+	return s.spaceId
 }
 
 func (s *spaceStorage) TreeStorage(id string) (storage2.TreeStorage, error) {
@@ -156,13 +156,13 @@ func (s *spaceStorage) SpaceHeader() (header *spacesyncproto.RawSpaceHeaderWithI
 func (s *spaceStorage) StoredIds() (ids []string, err error) {
 	index := s.objDb.Items()
 
-	key, val, err := index.Next()
+	key, _, err := index.Next()
 	for err == nil {
 		strKey := string(key)
 		if isRootIdKey(strKey) {
-			ids = append(ids, string(val))
+			ids = append(ids, getRootId(strKey))
 		}
-		key, val, err = index.Next()
+		key, _, err = index.Next()
 	}
 
 	if err != pogreb.ErrIterationDone {

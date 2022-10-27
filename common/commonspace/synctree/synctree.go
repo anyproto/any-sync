@@ -59,9 +59,7 @@ type BuildDeps struct {
 	TreeStorage    storage.TreeStorage
 }
 
-func DeriveSyncTree(
-	ctx context.Context,
-	deps CreateDeps) (t tree.ObjectTree, err error) {
+func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, err error) {
 	t, err = createDerivedObjectTree(deps.Payload, deps.AclList, deps.CreateStorage)
 	if err != nil {
 		return
@@ -86,9 +84,7 @@ func DeriveSyncTree(
 	return
 }
 
-func CreateSyncTree(
-	ctx context.Context,
-	deps CreateDeps) (t tree.ObjectTree, err error) {
+func CreateSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, err error) {
 	t, err = createObjectTree(deps.Payload, deps.AclList, deps.CreateStorage)
 	if err != nil {
 		return
@@ -155,7 +151,6 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 	fullSyncResp := resp.GetContent().GetFullSyncResponse()
 
 	payload := storage.TreeStorageCreatePayload{
-		TreeId:        id,
 		RootRawChange: resp.RootChange,
 		Changes:       fullSyncResp.Changes,
 		Heads:         fullSyncResp.Heads,
@@ -175,10 +170,7 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 	return buildSyncTree(ctx, true, deps)
 }
 
-func buildSyncTree(
-	ctx context.Context,
-	isFirstBuild bool,
-	deps BuildDeps) (t tree.ObjectTree, err error) {
+func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t tree.ObjectTree, err error) {
 
 	t, err = buildObjectTree(deps.TreeStorage, deps.AclList)
 	if err != nil {

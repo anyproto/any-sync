@@ -6,7 +6,6 @@ package mock_synctree
 
 import (
 	reflect "reflect"
-	time "time"
 
 	tree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	treechangeproto "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
@@ -120,20 +119,6 @@ func (m *MockSyncClient) CreateNewTreeRequest() *treechangeproto.TreeSyncMessage
 func (mr *MockSyncClientMockRecorder) CreateNewTreeRequest() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNewTreeRequest", reflect.TypeOf((*MockSyncClient)(nil).CreateNewTreeRequest))
-}
-
-// LastUsage mocks base method.
-func (m *MockSyncClient) LastUsage() time.Time {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LastUsage")
-	ret0, _ := ret[0].(time.Time)
-	return ret0
-}
-
-// LastUsage indicates an expected call of LastUsage.
-func (mr *MockSyncClientMockRecorder) LastUsage() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastUsage", reflect.TypeOf((*MockSyncClient)(nil).LastUsage))
 }
 
 // SendAsync mocks base method.

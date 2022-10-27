@@ -81,12 +81,11 @@ func (mr *MockListStorageMockRecorder) Head() *gomock.Call {
 }
 
 // ID mocks base method.
-func (m *MockListStorage) ID() (string, error) {
+func (m *MockListStorage) ID() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ID")
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // ID indicates an expected call of ID.
@@ -207,12 +206,11 @@ func (mr *MockTreeStorageMockRecorder) Heads() *gomock.Call {
 }
 
 // ID mocks base method.
-func (m *MockTreeStorage) ID() (string, error) {
+func (m *MockTreeStorage) ID() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ID")
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // ID indicates an expected call of ID.

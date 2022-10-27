@@ -6,7 +6,7 @@ import (
 )
 
 type TreeStorage interface {
-	Storage
+	ID() string
 	Root() (*treechangeproto.RawTreeChangeWithId, error)
 	Heads() ([]string, error)
 	SetHeads(heads []string) error
