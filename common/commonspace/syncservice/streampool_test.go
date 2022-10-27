@@ -7,25 +7,9 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
-	"storj.io/drpc"
 	"testing"
 	"time"
 )
-
-type testPeer struct {
-	id string
-	drpc.Conn
-}
-
-func (t testPeer) Id() string {
-	return t.id
-}
-
-func (t testPeer) LastUsage() time.Time {
-	return time.Now()
-}
-
-func (t testPeer) UpdateLastUsage() {}
 
 type testServer struct {
 	stream        chan spacesyncproto.DRPCSpace_StreamStream
@@ -79,8 +63,7 @@ func newFixture(t *testing.T, localId, remoteId peer.ID, handler MessageHandler)
 	fx.testServer.stream = make(chan spacesyncproto.DRPCSpace_StreamStream, 1)
 	require.NoError(t, spacesyncproto.DRPCRegisterSpace(fx.drpcTS.Mux, fx.testServer))
 	clientWrapper := rpctest.NewSecConnWrapper(nil, nil, localId, remoteId)
-	p := &testPeer{id: localId.String(), Conn: fx.drpcTS.DialWrapConn(nil, clientWrapper)}
-	fx.client = spacesyncproto.NewDRPCSpaceClient(p)
+	fx.client = spacesyncproto.NewDRPCSpaceClient(fx.drpcTS.DialWrapConn(nil, clientWrapper))
 
 	var err error
 	fx.clientStream, err = fx.client.Stream(context.Background())
