@@ -57,7 +57,7 @@ func BuildACLListWithIdentity(acc *account.AccountData, storage storage.ListStor
 
 func BuildACLList(storage storage.ListStorage) (ACLList, error) {
 	id := storage.ID()
-	return build(storage.ID(), newACLStateBuilder(), newACLRecordBuilder(id, common.NewKeychain()), storage)
+	return build(id, newACLStateBuilder(), newACLRecordBuilder(id, common.NewKeychain()), storage)
 }
 
 func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder, storage storage.ListStorage) (list ACLList, err error) {
