@@ -29,6 +29,7 @@ type ACLList interface {
 	Records() []*ACLRecord
 	ACLState() *ACLState
 	IsAfter(first string, second string) (bool, error)
+	AddRawRecords(ctx context.Context, rec []*aclrecordproto.RawACLRecordWithId) (err error)
 	Head() *ACLRecord
 	Get(id string) (*ACLRecord, error)
 	Iterate(iterFunc IterFunc)
@@ -42,9 +43,11 @@ type aclList struct {
 	indexes map[string]int
 	id      string
 
-	builder  *aclStateBuilder
-	aclState *ACLState
-	keychain *common.Keychain
+	stateBuilder  *aclStateBuilder
+	recordBuilder ACLRecordBuilder
+	aclState      *ACLState
+	keychain      *common.Keychain
+	storage       storage.ListStorage
 
 	sync.RWMutex
 }
@@ -120,13 +123,15 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 	}
 
 	list = &aclList{
-		root:     aclRecRoot.Model.(*aclrecordproto.ACLRoot),
-		records:  records,
-		indexes:  indexes,
-		builder:  stateBuilder,
-		aclState: state,
-		id:       id,
-		RWMutex:  sync.RWMutex{},
+		root:          aclRecRoot.Model.(*aclrecordproto.ACLRoot),
+		records:       records,
+		indexes:       indexes,
+		stateBuilder:  stateBuilder,
+		recordBuilder: recBuilder,
+		aclState:      state,
+		storage:       storage,
+		id:            id,
+		RWMutex:       sync.RWMutex{},
 	}
 	return
 }
@@ -141,6 +146,40 @@ func (a *aclList) ID() string {
 
 func (a *aclList) Root() *aclrecordproto.ACLRoot {
 	return a.root
+}
+
+func (a *aclList) AddRawRecords(ctx context.Context, records []*aclrecordproto.RawACLRecordWithId) (err error) {
+	if len(records) == 0 {
+		return
+	}
+	// converting and verifying
+	var aclRecords []*ACLRecord
+	for _, rec := range records {
+		var record *ACLRecord
+		record, err = a.recordBuilder.ConvertFromRaw(rec)
+		if err != nil {
+			return
+		}
+		aclRecords = append(aclRecords, record)
+	}
+
+	// trying to append them to state
+	err = a.stateBuilder.Append(a.aclState, aclRecords)
+	if err != nil {
+		return
+	}
+
+	// saving to storage
+	for _, rec := range records {
+		err = a.storage.AddRawRecord(ctx, rec)
+		if err != nil {
+			return
+		}
+	}
+
+	// setting new head
+	err = a.storage.SetHead(records[len(records)-1].Id)
+	return
 }
 
 func (a *aclList) ACLState() *ACLState {
