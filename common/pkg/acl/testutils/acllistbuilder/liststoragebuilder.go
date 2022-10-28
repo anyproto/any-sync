@@ -10,7 +10,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/symmetric"
-	"hash/fnv"
 	"io/ioutil"
 	"path"
 	"time"
@@ -127,7 +126,7 @@ func (t *ACLListStorageBuilder) parseRecord(rec *Record, prevId string) *aclreco
 		Identity:           []byte(t.keychain.GetIdentity(rec.Identity)),
 		Data:               bytes,
 		CurrentReadKeyHash: k.Hash,
-		Timestamp:          time.Now().Unix(),
+		Timestamp:          time.Now().UnixNano(),
 	}
 }
 
@@ -155,7 +154,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 		encKey := t.keychain.GetKey(join.EncryptionKey).(encryptionkey.PrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 
-		idKey, _ := t.keychain.SigningKeysByYAMLIdentity[join.Identity].GetPublic().Raw()
+		idKey, _ := t.keychain.SigningKeysByYAMLName[join.Identity].GetPublic().Raw()
 		signKey := t.keychain.GetKey(join.AcceptKey).(signingkey.PrivKey)
 		signature, err := signKey.Sign(idKey)
 		if err != nil {
@@ -208,7 +207,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 
 		var replaces []*aclrecordproto.ACLReadKeyReplace
 		for _, id := range remove.IdentitiesLeft {
-			encKey := t.keychain.EncryptionKeysByYAMLIdentity[id]
+			encKey := t.keychain.EncryptionKeysByYAMLName[id]
 			rawEncKey, _ := encKey.GetPublic().Raw()
 			encReadKey, err := encKey.GetPublic().Encrypt(newReadKey.Key.Bytes())
 			if err != nil {
@@ -281,18 +280,16 @@ func (t *ACLListStorageBuilder) traverseFromHead(f func(rec *aclrecordproto.ACLR
 }
 
 func (t *ACLListStorageBuilder) parseRoot(root *Root) (rawRoot *aclrecordproto.RawACLRecordWithId) {
-	rawSignKey, _ := t.keychain.SigningKeysByYAMLIdentity[root.Identity].GetPublic().Raw()
-	rawEncKey, _ := t.keychain.EncryptionKeysByYAMLIdentity[root.Identity].GetPublic().Raw()
-	readKey, _ := aclrecordproto.ACLReadKeyDerive(rawSignKey, rawEncKey)
-	hasher := fnv.New64()
-	hasher.Write(readKey.Bytes())
+	rawSignKey, _ := t.keychain.SigningKeysByYAMLName[root.Identity].GetPublic().Raw()
+	rawEncKey, _ := t.keychain.EncryptionKeysByYAMLName[root.Identity].GetPublic().Raw()
+	readKey := t.keychain.ReadKeysByYAMLName[root.Identity]
 	aclRoot := &aclrecordproto.ACLRoot{
 		Identity:           rawSignKey,
 		EncryptionKey:      rawEncKey,
 		SpaceId:            root.SpaceId,
 		EncryptedReadKey:   nil,
 		DerivationScheme:   "scheme",
-		CurrentReadKeyHash: hasher.Sum64(),
+		CurrentReadKeyHash: readKey.Hash,
 	}
 	return t.createRaw(aclRoot, rawSignKey)
 }

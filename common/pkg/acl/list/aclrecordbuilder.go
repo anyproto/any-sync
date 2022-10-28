@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/symmetric"
 	"github.com/gogo/protobuf/proto"
+	"time"
 )
 
 type ACLRecordBuilder interface {
@@ -35,7 +36,7 @@ func (a *aclRecordBuilder) BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyByt
 	if err != nil {
 		return
 	}
-	encSymKey, err := symmetric.DeriveFromBytes(encSymKeyBytes)
+	encSymKey, err := symmetric.FromBytes(encSymKeyBytes)
 	if err != nil {
 		return
 	}
@@ -74,17 +75,31 @@ func (a *aclRecordBuilder) BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyByt
 		AcceptPubKey:      acceptPubKeyBytes,
 		EncryptedReadKeys: symKeys,
 	}
-	marshalledJoin, err := userJoin.Marshal()
+	aclData := &aclrecordproto.ACLData{AclContent: []*aclrecordproto.ACLContentValue{
+		{Value: &aclrecordproto.ACLContentValue_UserJoin{UserJoin: userJoin}},
+	}}
+	marshalledJoin, err := aclData.Marshal()
 	if err != nil {
 		return
 	}
-	joinSignature, err := signPrivKey.Sign(marshalledJoin)
+	aclRecord := &aclrecordproto.ACLRecord{
+		PrevId:             state.LastRecordId(),
+		Identity:           state.Identity(),
+		Data:               marshalledJoin,
+		CurrentReadKeyHash: state.CurrentReadKeyHash(),
+		Timestamp:          time.Now().UnixNano(),
+	}
+	marshalledRecord, err := aclRecord.Marshal()
+	if err != nil {
+		return
+	}
+	recSignature, err := signPrivKey.Sign(marshalledRecord)
 	if err != nil {
 		return
 	}
 	rec = &aclrecordproto.RawACLRecord{
-		Payload:   marshalledJoin,
-		Signature: joinSignature,
+		Payload:   marshalledRecord,
+		Signature: recSignature,
 	}
 	return
 }

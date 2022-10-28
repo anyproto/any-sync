@@ -184,6 +184,7 @@ func (st *ACLState) applyRoot(root *aclrecordproto.ACLRoot) (err error) {
 		EncryptionKey: root.EncryptionKey,
 		Permissions:   aclrecordproto.ACLUserPermissions_Admin,
 	}
+	st.currentReadKeyHash = root.CurrentReadKeyHash
 	st.userStates[string(root.Identity)] = userState
 	st.totalReadKeys++
 	return
@@ -192,13 +193,18 @@ func (st *ACLState) applyRoot(root *aclrecordproto.ACLRoot) (err error) {
 func (st *ACLState) saveReadKeyFromRoot(root *aclrecordproto.ACLRoot) (err error) {
 	var readKey *symmetric.Key
 	if len(root.GetDerivationScheme()) != 0 {
-		var encPubKey []byte
-		encPubKey, err = st.encryptionKey.GetPublic().Raw()
+		var encPrivKey []byte
+		encPrivKey, err = st.encryptionKey.Raw()
+		if err != nil {
+			return
+		}
+		var signPrivKey []byte
+		signPrivKey, err = st.signingKey.Raw()
 		if err != nil {
 			return
 		}
 
-		readKey, err = aclrecordproto.ACLReadKeyDerive([]byte(st.identity), encPubKey)
+		readKey, err = aclrecordproto.ACLReadKeyDerive(signPrivKey, encPrivKey)
 		if err != nil {
 			return
 		}
@@ -217,7 +223,6 @@ func (st *ACLState) saveReadKeyFromRoot(root *aclrecordproto.ACLRoot) (err error
 	if hasher.Sum64() != root.CurrentReadKeyHash {
 		return ErrIncorrectRoot
 	}
-	st.currentReadKeyHash = root.CurrentReadKeyHash
 	st.userReadKeys[root.CurrentReadKeyHash] = readKey
 
 	return
@@ -450,4 +455,8 @@ func (st *ACLState) UserKeys() (encKey encryptionkey.PrivKey, signKey signingkey
 
 func (st *ACLState) Identity() []byte {
 	return []byte(st.identity)
+}
+
+func (st *ACLState) LastRecordId() string {
+	return st.lastRecordId
 }

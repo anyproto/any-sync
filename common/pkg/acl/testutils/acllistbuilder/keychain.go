@@ -16,28 +16,26 @@ type SymKey struct {
 }
 
 type YAMLKeychain struct {
-	SigningKeysByYAMLIdentity    map[string]signingkey2.PrivKey
-	SigningKeysByRealIdentity    map[string]signingkey2.PrivKey
-	EncryptionKeysByYAMLIdentity map[string]encryptionkey2.PrivKey
-	ReadKeysByYAMLIdentity       map[string]*SymKey
-	ReadKeysByHash               map[uint64]*SymKey
-	GeneratedIdentities          map[string]string
-	DerivedIdentity              string
+	SigningKeysByYAMLName     map[string]signingkey2.PrivKey
+	SigningKeysByRealIdentity map[string]signingkey2.PrivKey
+	EncryptionKeysByYAMLName  map[string]encryptionkey2.PrivKey
+	ReadKeysByYAMLName        map[string]*SymKey
+	ReadKeysByHash            map[uint64]*SymKey
+	GeneratedIdentities       map[string]string
 }
 
 func NewKeychain() *YAMLKeychain {
 	return &YAMLKeychain{
-		SigningKeysByYAMLIdentity:    map[string]signingkey2.PrivKey{},
-		SigningKeysByRealIdentity:    map[string]signingkey2.PrivKey{},
-		EncryptionKeysByYAMLIdentity: map[string]encryptionkey2.PrivKey{},
-		GeneratedIdentities:          map[string]string{},
-		ReadKeysByYAMLIdentity:       map[string]*SymKey{},
-		ReadKeysByHash:               map[uint64]*SymKey{},
+		SigningKeysByYAMLName:     map[string]signingkey2.PrivKey{},
+		SigningKeysByRealIdentity: map[string]signingkey2.PrivKey{},
+		EncryptionKeysByYAMLName:  map[string]encryptionkey2.PrivKey{},
+		GeneratedIdentities:       map[string]string{},
+		ReadKeysByYAMLName:        map[string]*SymKey{},
+		ReadKeysByHash:            map[uint64]*SymKey{},
 	}
 }
 
 func (k *YAMLKeychain) ParseKeys(keys *Keys) {
-	k.DerivedIdentity = keys.Derived
 	for _, encKey := range keys.Enc {
 		k.AddEncryptionKey(encKey)
 	}
@@ -52,7 +50,7 @@ func (k *YAMLKeychain) ParseKeys(keys *Keys) {
 }
 
 func (k *YAMLKeychain) AddEncryptionKey(key *Key) {
-	if _, exists := k.EncryptionKeysByYAMLIdentity[key.Name]; exists {
+	if _, exists := k.EncryptionKeysByYAMLName[key.Name]; exists {
 		return
 	}
 	var (
@@ -70,11 +68,11 @@ func (k *YAMLKeychain) AddEncryptionKey(key *Key) {
 			panic(err)
 		}
 	}
-	k.EncryptionKeysByYAMLIdentity[key.Name] = newPrivKey
+	k.EncryptionKeysByYAMLName[key.Name] = newPrivKey
 }
 
 func (k *YAMLKeychain) AddSigningKey(key *Key) {
-	if _, exists := k.SigningKeysByYAMLIdentity[key.Name]; exists {
+	if _, exists := k.SigningKeysByYAMLName[key.Name]; exists {
 		return
 	}
 	var (
@@ -95,7 +93,7 @@ func (k *YAMLKeychain) AddSigningKey(key *Key) {
 		pubKey = newPrivKey.GetPublic()
 	}
 
-	k.SigningKeysByYAMLIdentity[key.Name] = newPrivKey
+	k.SigningKeysByYAMLName[key.Name] = newPrivKey
 	rawPubKey, err := pubKey.Raw()
 	if err != nil {
 		panic(err)
@@ -107,7 +105,7 @@ func (k *YAMLKeychain) AddSigningKey(key *Key) {
 }
 
 func (k *YAMLKeychain) AddReadKey(key *Key) {
-	if _, exists := k.ReadKeysByYAMLIdentity[key.Name]; exists {
+	if _, exists := k.ReadKeysByYAMLName[key.Name]; exists {
 		return
 	}
 
@@ -121,8 +119,8 @@ func (k *YAMLKeychain) AddReadKey(key *Key) {
 			panic("should be able to generate symmetric key")
 		}
 	} else if key.Value == "derived" {
-		signKey, _ := k.SigningKeysByYAMLIdentity[k.DerivedIdentity].Raw()
-		encKey, _ := k.EncryptionKeysByYAMLIdentity[k.DerivedIdentity].Raw()
+		signKey, _ := k.SigningKeysByYAMLName[key.Name].Raw()
+		encKey, _ := k.EncryptionKeysByYAMLName[key.Name].Raw()
 		rkey, err = aclrecordproto.ACLReadKeyDerive(signKey, encKey)
 		if err != nil {
 			panic("should be able to derive symmetric key")
@@ -137,7 +135,7 @@ func (k *YAMLKeychain) AddReadKey(key *Key) {
 	hasher := fnv.New64()
 	hasher.Write(rkey.Bytes())
 
-	k.ReadKeysByYAMLIdentity[key.Name] = &SymKey{
+	k.ReadKeysByYAMLName[key.Name] = &SymKey{
 		Hash: hasher.Sum64(),
 		Key:  rkey,
 	}
@@ -174,15 +172,15 @@ func (k *YAMLKeychain) GetKey(key string) interface{} {
 
 	switch parts[1] {
 	case "Sign":
-		if key, exists := k.SigningKeysByYAMLIdentity[name]; exists {
+		if key, exists := k.SigningKeysByYAMLName[name]; exists {
 			return key
 		}
 	case "Enc":
-		if key, exists := k.EncryptionKeysByYAMLIdentity[name]; exists {
+		if key, exists := k.EncryptionKeysByYAMLName[name]; exists {
 			return key
 		}
 	case "Read":
-		if key, exists := k.ReadKeysByYAMLIdentity[name]; exists {
+		if key, exists := k.ReadKeysByYAMLName[name]; exists {
 			return key
 		}
 	default:

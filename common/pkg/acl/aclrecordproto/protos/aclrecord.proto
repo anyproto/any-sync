@@ -80,7 +80,7 @@ message ACLUserJoin {
 
 message ACLUserRemove {
   bytes identity = 1;
-  repeated ACLReadKeyReplace readKeyReplaces = 3;
+  repeated ACLReadKeyReplace readKeyReplaces = 2;
 }
 
 message ACLReadKeyReplace {
