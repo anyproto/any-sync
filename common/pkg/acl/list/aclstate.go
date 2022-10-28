@@ -30,6 +30,7 @@ var ErrInsufficientPermissions = errors.New("insufficient permissions")
 var ErrNoReadKey = errors.New("acl state doesn't have a read key")
 var ErrInvalidSignature = errors.New("signature is invalid")
 var ErrIncorrectRoot = errors.New("incorrect root")
+var ErrIncorrectRecordSequence = errors.New("incorrect prev id of a record")
 
 type UserPermissionPair struct {
 	Identity   string
@@ -48,6 +49,7 @@ type ACLState struct {
 
 	identity            string
 	permissionsAtRecord map[string][]UserPermissionPair
+	lastRecordId        string
 
 	keychain *common.Keychain
 }
@@ -114,15 +116,28 @@ func (st *ACLState) PermissionsAtRecord(id string, identity string) (UserPermiss
 }
 
 func (st *ACLState) applyRecord(record *ACLRecord) (err error) {
+	defer func() {
+		if err == nil {
+			st.lastRecordId = record.Id
+		}
+	}()
+	if st.lastRecordId != record.PrevId {
+		err = ErrIncorrectRecordSequence
+		return
+	}
 	if record.Id == st.id {
 		root, ok := record.Model.(*aclrecordproto.ACLRoot)
 		if !ok {
 			return ErrIncorrectRoot
 		}
+		err = st.applyRoot(root)
+		if err != nil {
+			return
+		}
 		st.permissionsAtRecord[record.Id] = []UserPermissionPair{
 			{Identity: string(root.Identity), Permission: aclrecordproto.ACLUserPermissions_Admin},
 		}
-		return st.applyRoot(root)
+		return
 	}
 	aclData := &aclrecordproto.ACLData{}
 
@@ -152,7 +167,7 @@ func (st *ACLState) applyRecord(record *ACLRecord) (err error) {
 	}
 
 	st.permissionsAtRecord[record.Id] = permissions
-	return nil
+	return
 }
 
 func (st *ACLState) applyRoot(root *aclrecordproto.ACLRoot) (err error) {
@@ -170,6 +185,7 @@ func (st *ACLState) applyRoot(root *aclrecordproto.ACLRoot) (err error) {
 		Permissions:   aclrecordproto.ACLUserPermissions_Admin,
 	}
 	st.userStates[string(root.Identity)] = userState
+	st.totalReadKeys++
 	return
 }
 
@@ -203,7 +219,6 @@ func (st *ACLState) saveReadKeyFromRoot(root *aclrecordproto.ACLRoot) (err error
 	}
 	st.currentReadKeyHash = root.CurrentReadKeyHash
 	st.userReadKeys[root.CurrentReadKeyHash] = readKey
-	st.totalReadKeys++
 
 	return
 }
