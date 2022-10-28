@@ -64,16 +64,6 @@ func BuildACLList(storage storage.ListStorage) (ACLList, error) {
 }
 
 func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder, storage storage.ListStorage) (list ACLList, err error) {
-	// TODO: need to add context here
-	rootWithId, err := storage.Root()
-	if err != nil {
-		return
-	}
-	aclRecRoot, err := recBuilder.ConvertFromRaw(rootWithId)
-	if err != nil {
-		return
-	}
-
 	head, err := storage.Head()
 	if err != nil {
 		return
@@ -90,7 +80,7 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 	}
 	records := []*ACLRecord{record}
 
-	for record.PrevId != "" && record.PrevId != id {
+	for record.PrevId != "" {
 		rawRecordWithId, err = storage.GetRawRecord(context.Background(), record.PrevId)
 		if err != nil {
 			return
@@ -102,8 +92,6 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 		}
 		records = append(records, record)
 	}
-	// adding root in the end, because we already parsed it
-	records = append(records, aclRecRoot)
 
 	indexes := make(map[string]int)
 	for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
@@ -118,6 +106,15 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 
 	stateBuilder.Init(id)
 	state, err := stateBuilder.Build(records)
+	if err != nil {
+		return
+	}
+
+	rootWithId, err := storage.Root()
+	if err != nil {
+		return
+	}
+	aclRecRoot, err := recBuilder.ConvertFromRaw(rootWithId)
 	if err != nil {
 		return
 	}
