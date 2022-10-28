@@ -7,30 +7,31 @@ records:
       - userInvite:
           acceptKey: key.Sign.Onetime1
           encryptionKey: key.Read.EncKey
-          encryptedReadKeys: [key.Read.1]
+          encryptedReadKeys: [key.Read.A]
           permissions: writer
       - userAdd:
           identity: C
           permission: reader
           encryptionKey: key.Enc.C
-          encryptedReadKeys: [key.Read.1]
-    readKey: key.Read.1
+          encryptedReadKeys: [key.Read.A]
+    readKey: key.Read.A
   - identity: B
     aclChanges:
       - userJoin:
           identity: B
           encryptionKey: key.Enc.B
           acceptKey: key.Sign.Onetime1
-          encryptedReadKeys: [key.Read.1]
-    readKey: key.Read.1
+          encryptedReadKeys: [key.Read.A]
+    readKey: key.Read.A
 keys:
-  Derived: A
   Enc:
     - name: A
       value: generated
     - name: B
       value: generated
     - name: C
+      value: generated
+    - name: D
       value: generated
     - name: Onetime1
       value: generated
@@ -41,10 +42,12 @@ keys:
       value: generated
     - name: C
       value: generated
+    - name: D
+      value: generated
     - name: Onetime1
       value: generated
   Read:
-    - name: 1
+    - name: A
       value: derived
     - name: EncKey
       value: generated
