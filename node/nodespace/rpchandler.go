@@ -2,43 +2,42 @@ package nodespace
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
 )
 
 type rpcHandler struct {
 	s *service
 }
 
-func (r *rpcHandler) PullSpace(ctx context.Context, request *spacesyncproto.PullSpaceRequest) (resp *spacesyncproto.PullSpaceResponse, err error) {
-	sp, err := r.s.GetSpace(ctx, request.Id)
+func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpaceRequest) (resp *spacesyncproto.PushSpaceResponse, err error) {
+	_, err = r.s.GetSpace(ctx, req.SpaceHeader.Id)
+	if err == nil {
+		err = spacesyncproto.ErrSpaceExists
+		return
+	}
+	if err != storage.ErrSpaceStorageMissing {
+		err = spacesyncproto.ErrUnexpected
+		return
+	}
+
+	payload := storage.SpaceStorageCreatePayload{
+		RecWithId: &aclrecordproto.RawACLRecordWithId{
+			Payload: req.AclPayload,
+			Id:      req.AclPayloadId,
+		},
+		SpaceHeaderWithId: req.SpaceHeader,
+	}
+	st, err := r.s.spaceStorageProvider.CreateSpaceStorage(payload)
 	if err != nil {
-		if err != spacesyncproto.ErrSpaceMissing {
-			err = spacesyncproto.ErrUnexpected
+		err = spacesyncproto.ErrUnexpected
+		if err == storage.ErrSpaceStorageExists {
+			err = spacesyncproto.ErrSpaceExists
 		}
 		return
 	}
-
-	description := sp.Description()
-	resp = &spacesyncproto.PullSpaceResponse{
-		SpaceHeader:  description.SpaceHeader,
-		AclPayload:   description.AclPayload,
-		AclPayloadId: description.AclId,
-	}
-	return
-}
-
-func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpaceRequest) (resp *spacesyncproto.PushSpaceResponse, err error) {
-	description := commonspace.SpaceDescription{
-		SpaceHeader: req.SpaceHeader,
-		AclId:       req.AclPayloadId,
-		AclPayload:  req.AclPayload,
-	}
-	err = r.s.AddSpace(ctx, description)
-	if err != nil {
-		return
-	}
-	resp = &spacesyncproto.PushSpaceResponse{}
+	err = st.Close()
 	return
 }
 

@@ -5,13 +5,13 @@ option go_package = "pkg/acl/aclrecordproto";
 message RawACLRecord {
     bytes payload = 1;
     bytes signature = 2;
+    bytes acceptorIdentity = 3;
+    bytes acceptorSignature = 4;
 }
 
 message RawACLRecordWithId {
     bytes payload = 1;
     string id = 2;
-    bytes acceptorIdentity = 3;
-    bytes acceptorSignature = 4;
 }
 
 message ACLRecord {

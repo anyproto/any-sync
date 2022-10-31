@@ -25,7 +25,7 @@ func New() Service {
 type Service interface {
 	DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (string, error)
 	CreateSpace(ctx context.Context, payload SpaceCreatePayload) (string, error)
-	GetSpace(ctx context.Context, id string) (sp Space, err error)
+	NewSpace(ctx context.Context, id string) (sp Space, err error)
 	app.Component
 }
 
@@ -78,7 +78,7 @@ func (s *service) DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (
 	return store.Id(), nil
 }
 
-func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {
+func (s *service) NewSpace(ctx context.Context, id string) (Space, error) {
 	st, err := s.storageProvider.SpaceStorage(id)
 	if err != nil {
 		return nil, err
@@ -96,9 +96,6 @@ func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {
 		account:       s.account,
 		configuration: lastConfiguration,
 		storage:       st,
-	}
-	if err := sp.Init(ctx); err != nil {
-		return nil, err
 	}
 	return sp, nil
 }
