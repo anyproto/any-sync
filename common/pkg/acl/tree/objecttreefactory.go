@@ -3,7 +3,7 @@ package tree
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/common"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
-	storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	storage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/symmetric"
@@ -20,7 +20,7 @@ type ObjectTreeCreatePayload struct {
 	Identity   []byte
 }
 
-func BuildObjectTree(treeStorage storage2.TreeStorage, aclList list.ACLList) (ObjectTree, error) {
+func BuildObjectTree(treeStorage storage.TreeStorage, aclList list.ACLList) (ObjectTree, error) {
 	rootChange, err := treeStorage.Root()
 	if err != nil {
 		return nil, err
@@ -32,14 +32,14 @@ func BuildObjectTree(treeStorage storage2.TreeStorage, aclList list.ACLList) (Ob
 func CreateDerivedObjectTree(
 	payload ObjectTreeCreatePayload,
 	aclList list.ACLList,
-	createStorage storage2.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
+	createStorage storage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
 	return createObjectTree(payload, 0, nil, aclList, createStorage)
 }
 
 func CreateObjectTree(
 	payload ObjectTreeCreatePayload,
 	aclList list.ACLList,
-	createStorage storage2.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
+	createStorage storage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
 	bytes := make([]byte, 32)
 	_, err = rand.Read(bytes)
 	if err != nil {
@@ -53,7 +53,7 @@ func createObjectTree(
 	timestamp int64,
 	seed []byte,
 	aclList list.ACLList,
-	createStorage storage2.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
+	createStorage storage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
 	aclList.RLock()
 	aclHeadId := aclList.Head().Id
 	aclList.RUnlock()
@@ -77,8 +77,7 @@ func createObjectTree(
 	}
 
 	// create storage
-	st, err := createStorage(storage2.TreeStorageCreatePayload{
-		TreeId:        raw.Id,
+	st, err := createStorage(storage.TreeStorageCreatePayload{
 		RootRawChange: raw,
 		Changes:       []*treechangeproto.RawTreeChangeWithId{raw},
 		Heads:         []string{raw.Id},
@@ -129,6 +128,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 
 	objTree.id = objTree.treeStorage.Id()
 
+	objTree.id = objTree.treeStorage.Id()
 	objTree.root, err = objTree.treeStorage.Root()
 	if err != nil {
 		return nil, err

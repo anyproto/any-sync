@@ -10,7 +10,6 @@ var ErrTreeExists = errors.New("tree already exists")
 var ErrUnkownChange = errors.New("change doesn't exist")
 
 type TreeStorageCreatePayload struct {
-	TreeId        string
 	RootRawChange *treechangeproto.RawTreeChangeWithId
 	Changes       []*treechangeproto.RawTreeChangeWithId
 	Heads         []string

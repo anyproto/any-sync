@@ -72,7 +72,6 @@ type inMemoryTreeStorage struct {
 }
 
 func NewInMemoryTreeStorage(
-	treeId string,
 	root *treechangeproto.RawTreeChangeWithId,
 	heads []string,
 	changes []*treechangeproto.RawTreeChangeWithId) (TreeStorage, error) {
@@ -80,10 +79,10 @@ func NewInMemoryTreeStorage(
 	for _, ch := range changes {
 		allChanges[ch.Id] = ch
 	}
-	allChanges[treeId] = root
+	allChanges[root.Id] = root
 
 	return &inMemoryTreeStorage{
-		id:      treeId,
+		id:      root.Id,
 		root:    root,
 		heads:   heads,
 		changes: allChanges,
@@ -159,12 +158,12 @@ func (i *inMemoryStorageProvider) TreeStorage(id string) (TreeStorage, error) {
 func (i *inMemoryStorageProvider) CreateTreeStorage(payload TreeStorageCreatePayload) (TreeStorage, error) {
 	i.Lock()
 	defer i.Unlock()
-	res, err := NewInMemoryTreeStorage(payload.TreeId, payload.RootRawChange, payload.Heads, payload.Changes)
+	res, err := NewInMemoryTreeStorage(payload.RootRawChange, payload.Heads, payload.Changes)
 	if err != nil {
 		return nil, err
 	}
 
-	i.objects[payload.TreeId] = res
+	i.objects[payload.RootRawChange.Id] = res
 	return res, nil
 }
 

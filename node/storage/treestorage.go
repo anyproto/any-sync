@@ -48,7 +48,7 @@ func newTreeStorage(db *pogreb.DB, treeId string) (ts storage.TreeStorage, err e
 }
 
 func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
-	keys := newTreeKeys(payload.TreeId)
+	keys := newTreeKeys(payload.RootRawChange.Id)
 	has, err := db.Has(keys.HeadsKey())
 	if err != nil {
 		return

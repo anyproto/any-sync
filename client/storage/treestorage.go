@@ -44,7 +44,7 @@ func newTreeStorage(db *badger.DB, spaceId, treeId string) (ts storage.TreeStora
 }
 
 func createTreeStorage(db *badger.DB, spaceId string, payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
-	keys := newTreeKeys(spaceId, payload.TreeId)
+	keys := newTreeKeys(spaceId, payload.RootRawChange.Id)
 	if hasDB(db, keys.RootIdKey()) {
 		err = storage.ErrTreeExists
 		return
