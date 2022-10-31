@@ -14,9 +14,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
-	tree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
+	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"sync"
 	"sync/atomic"
@@ -51,6 +52,8 @@ func NewSpaceId(id string, repKey uint64) string {
 
 type Space interface {
 	Id() string
+	Init(ctx context.Context) error
+
 	StoredIds() []string
 
 	SpaceSyncRpc() RpcHandler
@@ -183,7 +186,18 @@ func (s *space) Close() error {
 		s.isClosed.Store(true)
 		log.With(zap.String("id", s.id)).Debug("space closed")
 	}()
-	s.diffService.Close()
-	s.syncService.Close()
-	return s.storage.Close()
+	var mError errs.Group
+	if err := s.diffService.Close(); err != nil {
+		mError.Add(err)
+	}
+	if err := s.syncService.Close(); err != nil {
+		mError.Add(err)
+	}
+	if err := s.aclList.Close(); err != nil {
+		mError.Add(err)
+	}
+	if err := s.storage.Close(); err != nil {
+		mError.Add(err)
+	}
+	return mError.Err()
 }

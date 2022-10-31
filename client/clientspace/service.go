@@ -41,7 +41,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.spaceStorageProvider = a.MustComponent(storage.CName).(storage.SpaceStorageProvider)
 	s.spaceCache = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
-			return s.commonSpace.GetSpace(ctx, id)
+			return s.commonSpace.NewSpace(ctx, id)
 		},
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),

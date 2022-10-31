@@ -7,7 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	config2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"time"
@@ -27,20 +27,18 @@ type Service interface {
 }
 
 type service struct {
-	conf                 config2.Space
+	conf                 config.Space
 	spaceCache           ocache.OCache
 	commonSpace          commonspace.Service
 	spaceStorageProvider storage.SpaceStorageProvider
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.conf = a.MustComponent(config2.CName).(*config2.Config).Space
+	s.conf = a.MustComponent(config.CName).(*config.Config).Space
 	s.commonSpace = a.MustComponent(commonspace.CName).(commonspace.Service)
 	s.spaceStorageProvider = a.MustComponent(storage.CName).(storage.SpaceStorageProvider)
 	s.spaceCache = ocache.New(
-		func(ctx context.Context, id string) (value ocache.Object, err error) {
-			return s.commonSpace.GetSpace(ctx, id)
-		},
+		s.loadSpace,
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
 		ocache.WithTTL(time.Duration(s.conf.GCTTL)*time.Second),
@@ -62,6 +60,21 @@ func (s *service) GetSpace(ctx context.Context, id string) (commonspace.Space, e
 		return nil, err
 	}
 	return v.(commonspace.Space), nil
+}
+
+func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object, err error) {
+	cc, err := s.commonSpace.NewSpace(ctx, id)
+	if err != nil {
+		return
+	}
+	ns, err := newNodeSpace(cc)
+	if err != nil {
+		return
+	}
+	if err = ns.Init(ctx); err != nil {
+		return
+	}
+	return ns, nil
 }
 
 func (s *service) Close(ctx context.Context) (err error) {

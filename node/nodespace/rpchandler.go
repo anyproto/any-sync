@@ -37,7 +37,7 @@ func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpac
 		}
 		return
 	}
-	st.Close()
+	err = st.Close()
 	return
 }
 

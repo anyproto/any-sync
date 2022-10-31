@@ -44,11 +44,6 @@ func (s *service) CreateLog(ctx context.Context, aclId string, rec *aclrecordpro
 	if err != nil {
 		return
 	}
-	acc := s.account.Account()
-	rec.AcceptorIdentity = acc.Identity
-	if rec.AcceptorSignature, err = acc.SignKey.Sign(rec.Payload); err != nil {
-		return
-	}
 	recPayload, err := rec.Marshal()
 	if err != nil {
 		return
@@ -74,11 +69,7 @@ func (s *service) AddRecord(ctx context.Context, aclId string, rec *aclrecordpro
 	if err != nil {
 		return
 	}
-	acc := s.account.Account()
-	rec.AcceptorIdentity = acc.Identity
-	if rec.AcceptorSignature, err = acc.SignKey.Sign(rec.Payload); err != nil {
-		return
-	}
+
 	recPayload, err := rec.Marshal()
 	if err != nil {
 		return

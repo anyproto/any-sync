@@ -86,9 +86,7 @@ func DeriveSyncTree(
 	return
 }
 
-func CreateSyncTree(
-	ctx context.Context,
-	deps CreateDeps) (t tree.ObjectTree, err error) {
+func CreateSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, err error) {
 	t, err = createObjectTree(deps.Payload, deps.AclList, deps.CreateStorage)
 	if err != nil {
 		return
