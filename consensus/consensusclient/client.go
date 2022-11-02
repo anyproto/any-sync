@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_consensusclient/mock_consensusclient.go github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusclient Service
 package consensusclient
 
 import (
