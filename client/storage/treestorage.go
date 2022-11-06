@@ -40,6 +40,9 @@ func newTreeStorage(db *badger.DB, spaceId, treeId string) (ts storage.TreeStora
 		}
 		return nil
 	})
+	if err == badger.ErrKeyNotFound {
+		err = storage.ErrUnknownTreeId
+	}
 	return
 }
 
