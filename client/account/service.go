@@ -42,6 +42,14 @@ func (s *service) Init(a *app.App) (err error) {
 		return err
 	}
 
+	decodedPeerKey, err := keys.DecodeKeyFromString(
+		acc.PeerKey,
+		signingkey.NewSigningEd25519PrivKeyFromBytes,
+		nil)
+	if err != nil {
+		return err
+	}
+
 	identity, err := decodedSigningKey.GetPublic().Raw()
 	if err != nil {
 		return err
@@ -49,6 +57,7 @@ func (s *service) Init(a *app.App) (err error) {
 
 	s.accountData = &account.AccountData{
 		Identity: identity,
+		PeerKey:  decodedPeerKey,
 		SignKey:  decodedSigningKey,
 		EncKey:   decodedEncryptionKey,
 	}

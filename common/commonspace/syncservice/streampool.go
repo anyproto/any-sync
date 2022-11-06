@@ -199,7 +199,7 @@ func (s *streamPool) AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (er
 	s.peerStreams[peerId] = stream
 	s.wg.Add(1)
 	s.Unlock()
-
+	log.With("peerId", peerId).Debug("reading stream from peer")
 	return s.readPeerLoop(peerId, stream)
 }
 
@@ -261,6 +261,7 @@ Loop:
 			limiter <- struct{}{}
 		}()
 	}
+	log.With("peerId", peerId).Debug("stopped reading stream from peer")
 	s.removePeer(peerId)
 	return
 }

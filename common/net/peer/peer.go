@@ -21,6 +21,7 @@ type Peer interface {
 	Id() string
 	LastUsage() time.Time
 	UpdateLastUsage()
+	Secure() sec.SecureConn
 	drpc.Conn
 }
 
@@ -33,6 +34,10 @@ type peer struct {
 
 func (p *peer) Id() string {
 	return p.id
+}
+
+func (p *peer) Secure() sec.SecureConn {
+	return p.sc
 }
 
 func (p *peer) LastUsage() time.Time {
