@@ -6,12 +6,15 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	config2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
 )
 
 const CName = "common.commonspace"
@@ -26,6 +29,7 @@ type Service interface {
 	DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (string, error)
 	CreateSpace(ctx context.Context, payload SpaceCreatePayload) (string, error)
 	GetSpace(ctx context.Context, id string) (sp Space, err error)
+	AddSpace(ctx context.Context, spaceDescription SpaceDescription) (err error)
 	app.Component
 }
 
@@ -82,10 +86,48 @@ func (s *service) DeriveSpace(
 	return store.ID(), nil
 }
 
+func (s *service) AddSpace(ctx context.Context, spaceDescription SpaceDescription) (err error) {
+	_, err = s.storageProvider.SpaceStorage(spaceDescription.SpaceHeader.Id)
+	if err == nil {
+		err = spacesyncproto.ErrSpaceExists
+		return
+	}
+	if err != storage.ErrSpaceStorageMissing {
+		err = spacesyncproto.ErrUnexpected
+		return
+	}
+
+	payload := storage.SpaceStorageCreatePayload{
+		RecWithId: &aclrecordproto.RawACLRecordWithId{
+			Payload: spaceDescription.AclPayload,
+			Id:      spaceDescription.AclId,
+		},
+		SpaceHeaderWithId: spaceDescription.SpaceHeader,
+	}
+	st, err := s.storageProvider.CreateSpaceStorage(payload)
+	if err != nil {
+		err = spacesyncproto.ErrUnexpected
+		if err == storage.ErrSpaceStorageExists {
+			err = spacesyncproto.ErrSpaceExists
+		}
+		return
+	}
+	err = st.Close()
+	return
+}
+
 func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {
 	st, err := s.storageProvider.SpaceStorage(id)
 	if err != nil {
-		return nil, err
+		if err != storage.ErrSpaceStorageMissing {
+			return nil, err
+		}
+
+		st, err = s.getSpaceStorageFromRemote(ctx, id)
+		if err != nil {
+			err = storage.ErrSpaceStorageMissing
+			return nil, err
+		}
 	}
 
 	lastConfiguration := s.configurationService.GetLast()
@@ -105,4 +147,39 @@ func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {
 		return nil, err
 	}
 	return sp, nil
+}
+
+func (s *service) getSpaceStorageFromRemote(ctx context.Context, id string) (st storage.SpaceStorage, err error) {
+	var p peer.Peer
+	peerId, err := syncservice.GetPeerIdFromStreamContext(ctx)
+	if err == nil {
+		p, err = s.pool.Dial(ctx, peerId)
+		if err != nil {
+			return
+		}
+	} else {
+		lastConfiguration := s.configurationService.GetLast()
+		// for nodes we always get remote space only if we have id in the context
+		if lastConfiguration.IsResponsible(id) {
+			err = spacesyncproto.ErrSpaceMissing
+			return
+		}
+		p, err = s.pool.DialOneOf(ctx, lastConfiguration.NodeIds(id))
+		if err != nil {
+			return
+		}
+	}
+	cl := spacesyncproto.NewDRPCSpaceClient(p)
+	res, err := cl.PullSpace(ctx, &spacesyncproto.PullSpaceRequest{Id: id})
+	if err != nil {
+		return
+	}
+	st, err = s.storageProvider.CreateSpaceStorage(storage.SpaceStorageCreatePayload{
+		RecWithId: &aclrecordproto.RawACLRecordWithId{
+			Payload: res.AclPayload,
+			Id:      res.AclPayloadId,
+		},
+		SpaceHeaderWithId: res.SpaceHeader,
+	})
+	return
 }

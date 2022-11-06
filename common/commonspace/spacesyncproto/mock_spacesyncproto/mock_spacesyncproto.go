@@ -65,6 +65,21 @@ func (mr *MockDRPCSpaceClientMockRecorder) HeadSync(arg0, arg1 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadSync", reflect.TypeOf((*MockDRPCSpaceClient)(nil).HeadSync), arg0, arg1)
 }
 
+// PullSpace mocks base method.
+func (m *MockDRPCSpaceClient) PullSpace(arg0 context.Context, arg1 *spacesyncproto.PullSpaceRequest) (*spacesyncproto.PullSpaceResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PullSpace", arg0, arg1)
+	ret0, _ := ret[0].(*spacesyncproto.PullSpaceResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PullSpace indicates an expected call of PullSpace.
+func (mr *MockDRPCSpaceClientMockRecorder) PullSpace(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PullSpace", reflect.TypeOf((*MockDRPCSpaceClient)(nil).PullSpace), arg0, arg1)
+}
+
 // PushSpace mocks base method.
 func (m *MockDRPCSpaceClient) PushSpace(arg0 context.Context, arg1 *spacesyncproto.PushSpaceRequest) (*spacesyncproto.PushSpaceResponse, error) {
 	m.ctrl.T.Helper()
