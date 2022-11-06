@@ -119,7 +119,7 @@ func (s *service) AddSpace(ctx context.Context, spaceDescription SpaceDescriptio
 func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {
 	st, err := s.storageProvider.SpaceStorage(id)
 	if err != nil {
-		if err != storage.ErrSpaceStorageMissing {
+		if err != spacesyncproto.ErrSpaceMissing {
 			return nil, err
 		}
 
