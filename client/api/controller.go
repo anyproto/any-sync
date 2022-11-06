@@ -89,8 +89,8 @@ func (c *controller) AllSpaceIds() (ids []string, err error) {
 }
 
 func (c *controller) LoadSpace(id string) (err error) {
-	//TODO implement me
-	panic("implement me")
+	_, err = c.spaceService.GetSpace(context.Background(), id)
+	return
 }
 
 func (c *controller) CreateDocument(spaceId string) (id string, err error) {

@@ -62,6 +62,7 @@ func (s *service) Run(ctx context.Context) (err error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/deriveSpace", s.deriveSpace)
 	mux.HandleFunc("/createSpace", s.createSpace)
+	mux.HandleFunc("/loadSpace", s.loadSpace)
 	mux.HandleFunc("/allSpaceIds", s.allSpaceIds)
 	mux.HandleFunc("/createDocument", s.createDocument)
 	mux.HandleFunc("/allDocumentIds", s.allDocumentIds)
@@ -91,6 +92,17 @@ func (s *service) deriveSpace(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	sendText(w, http.StatusOK, id)
+}
+
+func (s *service) loadSpace(w http.ResponseWriter, req *http.Request) {
+	query := req.URL.Query()
+	spaceId := query.Get("spaceId")
+	err := s.controller.LoadSpace(query.Get("spaceId"))
+	if err != nil {
+		sendText(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	sendText(w, http.StatusOK, spaceId)
 }
 
 func (s *service) createSpace(w http.ResponseWriter, req *http.Request) {
