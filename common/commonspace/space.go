@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncacl"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
@@ -45,6 +46,12 @@ type SpaceDerivePayload struct {
 	EncryptionKey encryptionkey.PrivKey
 }
 
+type SpaceDescription struct {
+	SpaceHeader *spacesyncproto.RawSpaceHeaderWithId
+	AclId       string
+	AclPayload  []byte
+}
+
 func NewSpaceId(id string, repKey uint64) string {
 	return fmt.Sprintf("%s.%d", id, repKey)
 }
@@ -52,6 +59,7 @@ func NewSpaceId(id string, repKey uint64) string {
 type Space interface {
 	Id() string
 	StoredIds() []string
+	Description() SpaceDescription
 
 	SpaceSyncRpc() RpcHandler
 
@@ -63,8 +71,9 @@ type Space interface {
 }
 
 type space struct {
-	id string
-	mu sync.RWMutex
+	id     string
+	mu     sync.RWMutex
+	header *spacesyncproto.RawSpaceHeaderWithId
 
 	rpc *rpcHandler
 
@@ -87,7 +96,21 @@ func (s *space) Id() string {
 	return s.id
 }
 
+func (s *space) Description() SpaceDescription {
+	root := s.aclList.Root()
+	return SpaceDescription{
+		SpaceHeader: s.header,
+		AclId:       root.Id,
+		AclPayload:  root.Payload,
+	}
+}
+
 func (s *space) Init(ctx context.Context) (err error) {
+	header, err := s.storage.SpaceHeader()
+	if err != nil {
+		return
+	}
+	s.header = header
 	s.rpc = &rpcHandler{s: s}
 	initialIds, err := s.storage.StoredIds()
 	if err != nil {

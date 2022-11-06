@@ -211,10 +211,10 @@ func (mr *MockACLListMockRecorder) Records() *gomock.Call {
 }
 
 // Root mocks base method.
-func (m *MockACLList) Root() *aclrecordproto.ACLRoot {
+func (m *MockACLList) Root() *aclrecordproto.RawACLRecordWithId {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Root")
-	ret0, _ := ret[0].(*aclrecordproto.ACLRoot)
+	ret0, _ := ret[0].(*aclrecordproto.RawACLRecordWithId)
 	return ret0
 }
 

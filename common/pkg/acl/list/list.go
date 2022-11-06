@@ -25,7 +25,7 @@ type RWLocker interface {
 type ACLList interface {
 	RWLocker
 	ID() string
-	Root() *aclrecordproto.ACLRoot
+	Root() *aclrecordproto.RawACLRecordWithId
 	Records() []*ACLRecord
 	ACLState() *ACLState
 	IsAfter(first string, second string) (bool, error)
@@ -38,7 +38,7 @@ type ACLList interface {
 }
 
 type aclList struct {
-	root    *aclrecordproto.ACLRoot
+	root    *aclrecordproto.RawACLRecordWithId
 	records []*ACLRecord
 	indexes map[string]int
 	id      string
@@ -114,13 +114,9 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 	if err != nil {
 		return
 	}
-	aclRecRoot, err := recBuilder.ConvertFromRaw(rootWithId)
-	if err != nil {
-		return
-	}
 
 	list = &aclList{
-		root:          aclRecRoot.Model.(*aclrecordproto.ACLRoot),
+		root:          rootWithId,
 		records:       records,
 		indexes:       indexes,
 		stateBuilder:  stateBuilder,
@@ -141,7 +137,7 @@ func (a *aclList) ID() string {
 	return a.id
 }
 
-func (a *aclList) Root() *aclrecordproto.ACLRoot {
+func (a *aclList) Root() *aclrecordproto.RawACLRecordWithId {
 	return a.root
 }
 

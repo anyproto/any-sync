@@ -27,6 +27,10 @@ func (t *testServer) PushSpace(ctx context.Context, request *spacesyncproto.Push
 	panic("implement me")
 }
 
+func (t *testServer) PullSpace(ctx context.Context, request *spacesyncproto.PullSpaceRequest) (*spacesyncproto.PullSpaceResponse, error) {
+	panic("implement me")
+}
+
 func (t *testServer) Stream(stream spacesyncproto.DRPCSpace_StreamStream) error {
 	t.stream <- stream
 	return <-t.releaseStream
