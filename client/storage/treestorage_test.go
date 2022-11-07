@@ -27,7 +27,7 @@ type fixture struct {
 }
 
 func testTreePayload(t *testing.T, store storage.TreeStorage, payload storage.TreeStorageCreatePayload) {
-	require.Equal(t, payload.RootRawChange.Id, store.ID())
+	require.Equal(t, payload.RootRawChange.Id, store.Id())
 
 	root, err := store.Root()
 	require.NoError(t, err)

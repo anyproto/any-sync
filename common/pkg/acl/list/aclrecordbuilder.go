@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// remove interface
 type ACLRecordBuilder interface {
 	ConvertFromRaw(rawIdRecord *aclrecordproto.RawACLRecordWithId) (rec *ACLRecord, err error)
 	BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyBytes []byte, state *ACLState) (rec *aclrecordproto.RawACLRecord, err error)

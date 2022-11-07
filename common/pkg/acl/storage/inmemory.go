@@ -33,11 +33,10 @@ func NewInMemoryACLListStorage(
 		root:    root,
 		head:    head.Id,
 		records: allRecords,
-		RWMutex: sync.RWMutex{},
 	}, nil
 }
 
-func (t *inMemoryACLListStorage) ID() string {
+func (t *inMemoryACLListStorage) Id() string {
 	t.RLock()
 	defer t.RUnlock()
 	return t.id
@@ -112,7 +111,7 @@ func (t *inMemoryTreeStorage) HasChange(ctx context.Context, id string) (bool, e
 	return exists, nil
 }
 
-func (t *inMemoryTreeStorage) ID() string {
+func (t *inMemoryTreeStorage) Id() string {
 	t.RLock()
 	defer t.RUnlock()
 	return t.id

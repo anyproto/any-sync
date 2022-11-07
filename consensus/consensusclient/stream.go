@@ -3,6 +3,7 @@ package consensusclient
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
 	"github.com/cheggaaa/mb/v2"
+	"sync"
 )
 
 func runStream(rpcStream consensusproto.DRPCConsensus_WatchLogClient) *stream {
@@ -17,6 +18,7 @@ func runStream(rpcStream consensusproto.DRPCConsensus_WatchLogClient) *stream {
 type stream struct {
 	rpcStream consensusproto.DRPCConsensus_WatchLogClient
 	mb        *mb.MB[*consensusproto.WatchLogEvent]
+	mu        sync.Mutex
 	err       error
 }
 
@@ -37,6 +39,8 @@ func (s *stream) WaitLogs() []*consensusproto.WatchLogEvent {
 }
 
 func (s *stream) Err() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return s.err
 }
 
@@ -45,7 +49,9 @@ func (s *stream) readStream() {
 	for {
 		event, err := s.rpcStream.Recv()
 		if err != nil {
+			s.mu.Lock()
 			s.err = err
+			s.mu.Unlock()
 			return
 		}
 		if err = s.mb.Add(event); err != nil {

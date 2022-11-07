@@ -89,3 +89,7 @@ func TestAclList_ACLState_UserJoinAndRemove(t *testing.T) {
 	_, err = aclList.ACLState().PermissionsAtRecord(records[3].Id, idB)
 	assert.Error(t, err, "B should have no permissions at record 3, because user should be removed")
 }
+
+func TestAclList_AddRawRecord(t *testing.T) {
+
+}

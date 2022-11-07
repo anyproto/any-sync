@@ -2,7 +2,7 @@ package storage
 
 import (
 	"context"
-	storage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/dgraph-io/badger/v3"
 )
@@ -88,7 +88,7 @@ func createTreeStorage(db *badger.DB, spaceId string, payload storage.TreeStorag
 	return
 }
 
-func (t *treeStorage) ID() string {
+func (t *treeStorage) Id() string {
 	return t.id
 }
 

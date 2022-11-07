@@ -10,7 +10,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
-	config2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
@@ -28,13 +28,13 @@ func New() Service {
 type Service interface {
 	DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (string, error)
 	CreateSpace(ctx context.Context, payload SpaceCreatePayload) (string, error)
-	GetSpace(ctx context.Context, id string) (sp Space, err error)
+	NewSpace(ctx context.Context, id string) (sp Space, err error)
 	AddSpace(ctx context.Context, spaceDescription SpaceDescription) (err error)
 	app.Component
 }
 
 type service struct {
-	config               config2.Space
+	config               config.Space
 	account              account.Service
 	configurationService nodeconf.Service
 	storageProvider      storage.SpaceStorageProvider
@@ -43,7 +43,7 @@ type service struct {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.config = a.MustComponent(config2.CName).(*config2.Config).Space
+	s.config = a.MustComponent(config.CName).(*config.Config).Space
 	s.account = a.MustComponent(account.CName).(account.Service)
 	s.storageProvider = a.MustComponent(storage.CName).(storage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
@@ -56,9 +56,7 @@ func (s *service) Name() (name string) {
 	return CName
 }
 
-func (s *service) CreateSpace(
-	ctx context.Context,
-	payload SpaceCreatePayload) (id string, err error) {
+func (s *service) CreateSpace(ctx context.Context, payload SpaceCreatePayload) (id string, err error) {
 	storageCreate, err := storagePayloadForSpaceCreate(payload)
 	if err != nil {
 		return
@@ -68,12 +66,10 @@ func (s *service) CreateSpace(
 		return
 	}
 
-	return store.ID(), nil
+	return store.Id(), nil
 }
 
-func (s *service) DeriveSpace(
-	ctx context.Context,
-	payload SpaceDerivePayload) (id string, err error) {
+func (s *service) DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (id string, err error) {
 	storageCreate, err := storagePayloadForSpaceDerive(payload)
 	if err != nil {
 		return
@@ -83,7 +79,7 @@ func (s *service) DeriveSpace(
 		return
 	}
 
-	return store.ID(), nil
+	return store.Id(), nil
 }
 
 func (s *service) AddSpace(ctx context.Context, spaceDescription SpaceDescription) (err error) {
@@ -116,7 +112,7 @@ func (s *service) AddSpace(ctx context.Context, spaceDescription SpaceDescriptio
 	return
 }
 
-func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {
+func (s *service) NewSpace(ctx context.Context, id string) (Space, error) {
 	st, err := s.storageProvider.SpaceStorage(id)
 	if err != nil {
 		if err != spacesyncproto.ErrSpaceMissing {
@@ -143,32 +139,23 @@ func (s *service) GetSpace(ctx context.Context, id string) (Space, error) {
 		configuration: lastConfiguration,
 		storage:       st,
 	}
-	if err := sp.Init(ctx); err != nil {
-		return nil, err
-	}
 	return sp, nil
 }
 
 func (s *service) getSpaceStorageFromRemote(ctx context.Context, id string) (st storage.SpaceStorage, err error) {
 	var p peer.Peer
-	peerId, err := syncservice.GetPeerIdFromStreamContext(ctx)
-	if err == nil {
-		p, err = s.pool.Dial(ctx, peerId)
-		if err != nil {
-			return
-		}
-	} else {
-		lastConfiguration := s.configurationService.GetLast()
-		// for nodes we always get remote space only if we have id in the context
-		if lastConfiguration.IsResponsible(id) {
-			err = spacesyncproto.ErrSpaceMissing
-			return
-		}
-		p, err = s.pool.DialOneOf(ctx, lastConfiguration.NodeIds(id))
-		if err != nil {
-			return
-		}
+	lastConfiguration := s.configurationService.GetLast()
+	// for nodes we always get remote space only if we have id in the context
+	if lastConfiguration.IsResponsible(id) {
+		err = spacesyncproto.ErrSpaceMissing
+		return
 	}
+
+	p, err = s.pool.DialOneOf(ctx, lastConfiguration.NodeIds(id))
+	if err != nil {
+		return
+	}
+
 	cl := spacesyncproto.NewDRPCSpaceClient(p)
 	res, err := cl.PullSpace(ctx, &spacesyncproto.PullSpaceRequest{Id: id})
 	if err != nil {

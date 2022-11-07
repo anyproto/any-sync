@@ -13,6 +13,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"sync"
 	"testing"
 	"time"
 )
@@ -22,7 +23,7 @@ func TestService_Watch(t *testing.T) {
 		fx := newFixture(t).run(t)
 		defer fx.Finish()
 		var logId = []byte{'1'}
-		w := &testWatcher{}
+		w := &testWatcher{ready: make(chan struct{})}
 		require.NoError(t, fx.Watch(logId, w))
 		st := fx.testServer.waitStream(t)
 		req, err := st.Recv()
@@ -34,6 +35,7 @@ func TestService_Watch(t *testing.T) {
 				Error: consensusproto.ErrCodes_ErrorOffset + consensusproto.ErrCodes_LogNotFound,
 			},
 		}))
+		<-w.ready
 		assert.Equal(t, consensuserr.ErrLogNotFound, w.err)
 		fx.testServer.releaseStream <- nil
 	})
@@ -188,7 +190,6 @@ func (t *testServer) AddRecord(ctx context.Context, req *consensusproto.AddRecor
 }
 
 func (t *testServer) WatchLog(stream consensusproto.DRPCConsensus_WatchLogStream) error {
-	fmt.Println("watchLog", t.watchErrOnce)
 	if t.watchErrOnce {
 		t.watchErrOnce = false
 		return fmt.Errorf("error")
@@ -208,14 +209,22 @@ func (t *testServer) waitStream(test *testing.T) consensusproto.DRPCConsensus_Wa
 }
 
 type testWatcher struct {
-	recs [][]*consensusproto.Record
-	err  error
+	recs  [][]*consensusproto.Record
+	err   error
+	ready chan struct{}
+	once  sync.Once
 }
 
 func (t *testWatcher) AddConsensusRecords(recs []*consensusproto.Record) {
 	t.recs = append(t.recs, recs)
+	t.once.Do(func() {
+		close(t.ready)
+	})
 }
 
 func (t *testWatcher) AddConsensusError(err error) {
 	t.err = err
+	t.once.Do(func() {
+		close(t.ready)
+	})
 }
