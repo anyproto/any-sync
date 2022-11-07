@@ -11,7 +11,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
 	"go.uber.org/zap"
-	"storj.io/drpc/drpcctx"
 	"time"
 )
 
@@ -76,7 +75,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 		return d.sendPushSpaceRequest(ctx, cl)
 	}
 
-	ctx = context.WithValue(ctx, drpcctx.TransportKey{}, p.Secure())
+	ctx = peer.CtxWithPeerId(ctx, p.Id())
 	d.pingTreesInCache(ctx, newIds)
 	d.pingTreesInCache(ctx, changedIds)
 	d.pingTreesInCache(ctx, removedIds)

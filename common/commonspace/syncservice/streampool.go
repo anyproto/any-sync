@@ -5,9 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
-	"github.com/libp2p/go-libp2p/core/sec"
-	"storj.io/drpc/drpcctx"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -190,7 +189,7 @@ func (s *streamPool) AddAndReadStreamAsync(stream spacesyncproto.SpaceStream) {
 
 func (s *streamPool) AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (err error) {
 	s.Lock()
-	peerId, err := GetPeerIdFromStreamContext(stream.Context())
+	peerId, err := peer.CtxPeerId(stream.Context())
 	if err != nil {
 		s.Unlock()
 		return
@@ -275,15 +274,6 @@ func (s *streamPool) removePeer(peerId string) (err error) {
 	}
 	delete(s.peerStreams, peerId)
 	return
-}
-
-func GetPeerIdFromStreamContext(ctx context.Context) (string, error) {
-	conn, ok := ctx.Value(drpcctx.TransportKey{}).(sec.SecureConn)
-	if !ok {
-		return "", fmt.Errorf("incorrect connection type in stream")
-	}
-
-	return conn.RemotePeer().String(), nil
 }
 
 func genStreamPoolKey(peerId, treeId string, counter uint64) string {

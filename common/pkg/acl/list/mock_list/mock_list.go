@@ -5,7 +5,6 @@
 package mock_list
 
 import (
-	context "context"
 	reflect "reflect"
 
 	aclrecordproto "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
@@ -50,18 +49,19 @@ func (mr *MockACLListMockRecorder) ACLState() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACLState", reflect.TypeOf((*MockACLList)(nil).ACLState))
 }
 
-// AddRawRecords mocks base method.
-func (m *MockACLList) AddRawRecords(arg0 context.Context, arg1 []*aclrecordproto.RawACLRecordWithId) error {
+// AddRawRecord mocks base method.
+func (m *MockACLList) AddRawRecord(arg0 *aclrecordproto.RawACLRecordWithId) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRawRecords", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "AddRawRecord", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// AddRawRecords indicates an expected call of AddRawRecords.
-func (mr *MockACLListMockRecorder) AddRawRecords(arg0, arg1 interface{}) *gomock.Call {
+// AddRawRecord indicates an expected call of AddRawRecord.
+func (mr *MockACLListMockRecorder) AddRawRecord(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecords", reflect.TypeOf((*MockACLList)(nil).AddRawRecords), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecord", reflect.TypeOf((*MockACLList)(nil).AddRawRecord), arg0)
 }
 
 // Close mocks base method.
