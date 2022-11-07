@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"github.com/akrylysov/pogreb"
-	storage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 )
 
@@ -86,7 +86,7 @@ func createTreeStorage(db *pogreb.DB, payload storage.TreeStorageCreatePayload) 
 	return
 }
 
-func (t *treeStorage) ID() string {
+func (t *treeStorage) Id() string {
 	return t.id
 }
 

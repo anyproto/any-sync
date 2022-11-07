@@ -21,19 +21,19 @@ func NewConfConnector(conf Configuration, pool pool.Pool) ConfConnector {
 }
 
 func (s *confConnector) GetResponsiblePeers(ctx context.Context, spaceId string) ([]peer.Peer, error) {
-	return s.dialOrConnect(ctx, spaceId, s.pool.Get, s.pool.GetOneOf)
+	return s.connectOneOrMany(ctx, spaceId, s.pool.Get, s.pool.GetOneOf)
 }
 
 func (s *confConnector) DialResponsiblePeers(ctx context.Context, spaceId string) ([]peer.Peer, error) {
-	return s.dialOrConnect(ctx, spaceId, s.pool.Dial, s.pool.DialOneOf)
+	return s.connectOneOrMany(ctx, spaceId, s.pool.Dial, s.pool.DialOneOf)
 }
 
-func (s *confConnector) dialOrConnect(
+func (s *confConnector) connectOneOrMany(
 	ctx context.Context, spaceId string,
 	connectOne func(context.Context, string) (peer.Peer, error),
 	connectOneOf func(context.Context, []string) (peer.Peer, error)) (peers []peer.Peer, err error) {
 	allNodes := s.conf.NodeIds(spaceId)
-	if !s.conf.IsResponsible(spaceId) {
+	if s.conf.IsResponsible(spaceId) {
 		for _, id := range allNodes {
 			var p peer.Peer
 			p, err = connectOne(ctx, id)

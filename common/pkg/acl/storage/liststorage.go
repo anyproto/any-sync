@@ -12,7 +12,7 @@ var ErrACLExists = errors.New("acl already exists")
 var ErrUnknownRecord = errors.New("record doesn't exist")
 
 type ListStorage interface {
-	ID() string
+	Id() string
 	Root() (*aclrecordproto.RawACLRecordWithId, error)
 	Head() (string, error)
 	SetHead(headId string) error

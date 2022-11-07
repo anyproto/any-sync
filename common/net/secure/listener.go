@@ -2,6 +2,7 @@ package secure
 
 import (
 	"context"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	"net"
@@ -45,6 +46,6 @@ func (p *tlsListener) upgradeConn(ctx context.Context, conn net.Conn) (context.C
 	if err != nil {
 		return nil, nil, HandshakeError(err)
 	}
-	ctx = ctxWithSecureConn(ctx, secure)
+	ctx = peer.CtxWithPeerId(ctx, secure.RemotePeer().String())
 	return ctx, secure, nil
 }

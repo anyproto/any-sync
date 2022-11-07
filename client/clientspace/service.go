@@ -23,6 +23,7 @@ func New() Service {
 
 type Service interface {
 	GetSpace(ctx context.Context, id string) (commonspace.Space, error)
+	AddSpace(ctx context.Context, description commonspace.SpaceDescription) (err error)
 	CreateSpace(ctx context.Context, payload commonspace.SpaceCreatePayload) (commonspace.Space, error)
 	DeriveSpace(ctx context.Context, payload commonspace.SpaceDerivePayload) (commonspace.Space, error)
 	app.ComponentRunnable
@@ -40,9 +41,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.commonSpace = a.MustComponent(commonspace.CName).(commonspace.Service)
 	s.spaceStorageProvider = a.MustComponent(storage.CName).(storage.SpaceStorageProvider)
 	s.spaceCache = ocache.New(
-		func(ctx context.Context, id string) (value ocache.Object, err error) {
-			return s.commonSpace.GetSpace(ctx, id)
-		},
+		s.loadSpace,
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
 		ocache.WithTTL(time.Duration(s.conf.GCTTL)*time.Second),
@@ -90,6 +89,25 @@ func (s *service) GetSpace(ctx context.Context, id string) (container commonspac
 		return
 	}
 	return v.(commonspace.Space), nil
+}
+
+func (s *service) AddSpace(ctx context.Context, description commonspace.SpaceDescription) (err error) {
+	return s.commonSpace.AddSpace(ctx, description)
+}
+
+func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object, err error) {
+	cc, err := s.commonSpace.NewSpace(ctx, id)
+	if err != nil {
+		return
+	}
+	ns, err := newClientSpace(cc)
+	if err != nil {
+		return
+	}
+	if err = ns.Init(ctx); err != nil {
+		return
+	}
+	return ns, nil
 }
 
 func (s *service) Close(ctx context.Context) (err error) {

@@ -75,7 +75,7 @@ func (c *treeCache) Init(a *app.App) (err error) {
 			if err != nil {
 				return
 			}
-			return textdocument.NewTextDocument(context.Background(), space, id, &updateListener{}, c.account)
+			return textdocument.NewTextDocument(ctx, space, id, &updateListener{}, c.account)
 		},
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),

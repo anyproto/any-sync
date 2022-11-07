@@ -75,6 +75,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 		return d.sendPushSpaceRequest(ctx, cl)
 	}
 
+	ctx = peer.CtxWithPeerId(ctx, p.Id())
 	d.pingTreesInCache(ctx, newIds)
 	d.pingTreesInCache(ctx, changedIds)
 	d.pingTreesInCache(ctx, removedIds)

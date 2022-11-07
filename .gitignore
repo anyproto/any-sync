@@ -8,6 +8,11 @@
 # Test binary, built with `go test -c`
 *.test
 
+# playground folder for testing different clients
+playground
+
+# .paw folder for macos paw client
+.paw
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out

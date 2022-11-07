@@ -10,7 +10,7 @@ import (
 )
 
 func testList(t *testing.T, store storage.ListStorage, root *aclrecordproto.RawACLRecordWithId, head string) {
-	require.Equal(t, store.ID(), root.Id)
+	require.Equal(t, store.Id(), root.Id)
 
 	aclRoot, err := store.Root()
 	require.NoError(t, err)

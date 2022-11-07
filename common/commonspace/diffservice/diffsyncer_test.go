@@ -15,6 +15,7 @@ import (
 	mock_aclstorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage/mock_storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff/mock_ldiff"
 	"github.com/golang/mock/gomock"
+	"github.com/libp2p/go-libp2p/core/sec"
 	"github.com/stretchr/testify/require"
 	"storj.io/drpc"
 	"testing"
@@ -48,6 +49,10 @@ func (m mockPeer) Id() string {
 
 func (m mockPeer) LastUsage() time.Time {
 	return time.Time{}
+}
+
+func (m mockPeer) Secure() sec.SecureConn {
+	return nil
 }
 
 func (m mockPeer) UpdateLastUsage() {

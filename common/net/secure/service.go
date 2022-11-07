@@ -36,7 +36,7 @@ type service struct {
 
 func (s *service) Init(a *app.App) (err error) {
 	account := a.MustComponent(config.CName).(commonaccount.ConfigGetter).GetAccount()
-	pkb, err := keys.DecodeBytesFromString(account.SigningKey)
+	pkb, err := keys.DecodeBytesFromString(account.PeerKey)
 	if err != nil {
 		return
 	}

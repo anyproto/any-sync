@@ -49,6 +49,21 @@ func (mr *MockACLListMockRecorder) ACLState() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACLState", reflect.TypeOf((*MockACLList)(nil).ACLState))
 }
 
+// AddRawRecord mocks base method.
+func (m *MockACLList) AddRawRecord(arg0 *aclrecordproto.RawACLRecordWithId) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddRawRecord", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddRawRecord indicates an expected call of AddRawRecord.
+func (mr *MockACLListMockRecorder) AddRawRecord(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecord", reflect.TypeOf((*MockACLList)(nil).AddRawRecord), arg0)
+}
+
 // Close mocks base method.
 func (m *MockACLList) Close() error {
 	m.ctrl.T.Helper()
@@ -196,10 +211,10 @@ func (mr *MockACLListMockRecorder) Records() *gomock.Call {
 }
 
 // Root mocks base method.
-func (m *MockACLList) Root() *aclrecordproto.ACLRoot {
+func (m *MockACLList) Root() *aclrecordproto.RawACLRecordWithId {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Root")
-	ret0, _ := ret[0].(*aclrecordproto.ACLRoot)
+	ret0, _ := ret[0].(*aclrecordproto.RawACLRecordWithId)
 	return ret0
 }
 

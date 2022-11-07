@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	config2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	config "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
@@ -46,8 +46,8 @@ func main() {
 	}
 	flag.Parse()
 
-	var configs []config2.Config
-	var nodes []config2.Node
+	var configs []config.Config
+	var nodes []config.Node
 	for _, n := range nodesMap.Nodes {
 		cfg, err := genNodeConfig(n.Addresses, n.APIPort)
 		if err != nil {
@@ -55,7 +55,7 @@ func main() {
 		}
 		configs = append(configs, cfg)
 
-		node := config2.Node{
+		node := config.Node{
 			PeerId:        cfg.Account.PeerId,
 			Address:       cfg.GrpcServer.ListenAddrs[0],
 			SigningKey:    cfg.Account.SigningKey,
@@ -64,7 +64,7 @@ func main() {
 		nodes = append(nodes, node)
 	}
 
-	var clientConfigs []config2.Config
+	var clientConfigs []config.Config
 	for _, c := range nodesMap.Clients {
 		cfg, err := genClientConfig(c.Addresses, c.APIPort)
 		if err != nil {
@@ -143,96 +143,108 @@ func main() {
 	}
 }
 
-func genNodeConfig(addresses []string, apiPort string) (config2.Config, error) {
+func genNodeConfig(addresses []string, apiPort string) (config.Config, error) {
 	encKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
 	if err != nil {
-		return config2.Config{}, err
+		return config.Config{}, err
 	}
 
 	signKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
 	if err != nil {
-		return config2.Config{}, err
+		return config.Config{}, err
 	}
 
 	encEncKey, err := keys.EncodeKeyToString(encKey)
 	if err != nil {
-		return config2.Config{}, err
+		return config.Config{}, err
 	}
 
 	encSignKey, err := keys.EncodeKeyToString(signKey)
 	if err != nil {
-		return config2.Config{}, err
+		return config.Config{}, err
 	}
 
 	peerID, err := peer.IDFromSigningPubKey(signKey.GetPublic())
 	if err != nil {
-		return config2.Config{}, err
+		return config.Config{}, err
 	}
 
-	return config2.Config{
-		Anytype: config2.Anytype{SwarmKey: "/key/swarm/psk/1.0.0/base16/209992e611c27d5dce8fbd2e7389f6b51da9bee980992ef60739460b536139ec"},
-		GrpcServer: config2.GrpcServer{
+	return config.Config{
+		Anytype: config.Anytype{SwarmKey: "/key/swarm/psk/1.0.0/base16/209992e611c27d5dce8fbd2e7389f6b51da9bee980992ef60739460b536139ec"},
+		GrpcServer: config.GrpcServer{
 			ListenAddrs: addresses,
 			TLS:         false,
 		},
-		Storage: config2.Storage{Path: "db"},
-		Account: config2.Account{
+		Storage: config.Storage{Path: "db"},
+		Account: config.Account{
 			PeerId:        peerID.String(),
+			PeerKey:       encSignKey,
 			SigningKey:    encSignKey,
 			EncryptionKey: encEncKey,
 		},
-		APIServer: config2.APIServer{
+		APIServer: config.APIServer{
 			Port: apiPort,
 		},
-		Space: config2.Space{
+		Space: config.Space{
 			GCTTL:      60,
 			SyncPeriod: 10,
 		},
 	}, nil
 }
 
-func genClientConfig(addresses []string, apiPort string) (config2.Config, error) {
+func genClientConfig(addresses []string, apiPort string) (config.Config, error) {
 	encKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
 	if err != nil {
-		return config2.Config{}, err
+		return config.Config{}, err
 	}
 
 	signKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
 	if err != nil {
-		return config2.Config{}, err
+		return config.Config{}, err
+	}
+
+	peerKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
+	if err != nil {
+		return config.Config{}, err
 	}
 
 	encEncKey, err := keys.EncodeKeyToString(encKey)
 	if err != nil {
-		return config2.Config{}, err
+		return config.Config{}, err
 	}
 
 	encSignKey, err := keys.EncodeKeyToString(signKey)
 	if err != nil {
-		return config2.Config{}, err
+		return config.Config{}, err
 	}
 
-	peerID, err := peer.IDFromSigningPubKey(signKey.GetPublic())
+	encPeerKey, err := keys.EncodeKeyToString(peerKey)
 	if err != nil {
-		return config2.Config{}, err
+		return config.Config{}, err
 	}
 
-	return config2.Config{
-		Anytype: config2.Anytype{SwarmKey: "/key/swarm/psk/1.0.0/base16/209992e611c27d5dce8fbd2e7389f6b51da9bee980992ef60739460b536139ec"},
-		GrpcServer: config2.GrpcServer{
+	peerID, err := peer.IDFromSigningPubKey(peerKey.GetPublic())
+	if err != nil {
+		return config.Config{}, err
+	}
+
+	return config.Config{
+		Anytype: config.Anytype{SwarmKey: "/key/swarm/psk/1.0.0/base16/209992e611c27d5dce8fbd2e7389f6b51da9bee980992ef60739460b536139ec"},
+		GrpcServer: config.GrpcServer{
 			ListenAddrs: addresses,
 			TLS:         false,
 		},
-		Storage: config2.Storage{Path: "db"},
-		Account: config2.Account{
+		Storage: config.Storage{Path: "db"},
+		Account: config.Account{
 			PeerId:        peerID.String(),
+			PeerKey:       encPeerKey,
 			SigningKey:    encSignKey,
 			EncryptionKey: encEncKey,
 		},
-		APIServer: config2.APIServer{
+		APIServer: config.APIServer{
 			Port: apiPort,
 		},
-		Space: config2.Space{
+		Space: config.Space{
 			GCTTL:      60,
 			SyncPeriod: 10,
 		},
@@ -266,12 +278,13 @@ func genConsensusConfig(addresses []string) (cconfig.Config, error) {
 	}
 
 	return cconfig.Config{
-		GrpcServer: config2.GrpcServer{
+		GrpcServer: config.GrpcServer{
 			ListenAddrs: addresses,
 			TLS:         false,
 		},
-		Account: config2.Account{
+		Account: config.Account{
 			PeerId:        peerID.String(),
+			PeerKey:       encSignKey,
 			SigningKey:    encSignKey,
 			EncryptionKey: encEncKey,
 		},

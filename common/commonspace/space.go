@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncacl"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
@@ -14,9 +15,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
-	tree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
+	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"sync"
 	"sync/atomic"
@@ -45,13 +47,22 @@ type SpaceDerivePayload struct {
 	EncryptionKey encryptionkey.PrivKey
 }
 
+type SpaceDescription struct {
+	SpaceHeader *spacesyncproto.RawSpaceHeaderWithId
+	AclId       string
+	AclPayload  []byte
+}
+
 func NewSpaceId(id string, repKey uint64) string {
 	return fmt.Sprintf("%s.%d", id, repKey)
 }
 
 type Space interface {
 	Id() string
+	Init(ctx context.Context) error
+
 	StoredIds() []string
+	Description() SpaceDescription
 
 	SpaceSyncRpc() RpcHandler
 
@@ -63,8 +74,9 @@ type Space interface {
 }
 
 type space struct {
-	id string
-	mu sync.RWMutex
+	id     string
+	mu     sync.RWMutex
+	header *spacesyncproto.RawSpaceHeaderWithId
 
 	rpc *rpcHandler
 
@@ -87,7 +99,21 @@ func (s *space) Id() string {
 	return s.id
 }
 
+func (s *space) Description() SpaceDescription {
+	root := s.aclList.Root()
+	return SpaceDescription{
+		SpaceHeader: s.header,
+		AclId:       root.Id,
+		AclPayload:  root.Payload,
+	}
+}
+
 func (s *space) Init(ctx context.Context) (err error) {
+	header, err := s.storage.SpaceHeader()
+	if err != nil {
+		return
+	}
+	s.header = header
 	s.rpc = &rpcHandler{s: s}
 	initialIds, err := s.storage.StoredIds()
 	if err != nil {
@@ -183,7 +209,18 @@ func (s *space) Close() error {
 		s.isClosed.Store(true)
 		log.With(zap.String("id", s.id)).Debug("space closed")
 	}()
-	s.diffService.Close()
-	s.syncService.Close()
-	return s.storage.Close()
+	var mError errs.Group
+	if err := s.diffService.Close(); err != nil {
+		mError.Add(err)
+	}
+	if err := s.syncService.Close(); err != nil {
+		mError.Add(err)
+	}
+	if err := s.aclList.Close(); err != nil {
+		mError.Add(err)
+	}
+	if err := s.storage.Close(); err != nil {
+		mError.Add(err)
+	}
+	return mError.Err()
 }

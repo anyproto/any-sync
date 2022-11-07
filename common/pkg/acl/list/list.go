@@ -25,7 +25,7 @@ type RWLocker interface {
 type ACLList interface {
 	RWLocker
 	ID() string
-	Root() *aclrecordproto.ACLRoot
+	Root() *aclrecordproto.RawACLRecordWithId
 	Records() []*ACLRecord
 	ACLState() *ACLState
 	IsAfter(first string, second string) (bool, error)
@@ -33,44 +33,37 @@ type ACLList interface {
 	Get(id string) (*ACLRecord, error)
 	Iterate(iterFunc IterFunc)
 	IterateFrom(startId string, iterFunc IterFunc)
+
+	AddRawRecord(rawRec *aclrecordproto.RawACLRecordWithId) (added bool, err error)
+
 	Close() (err error)
 }
 
 type aclList struct {
-	root    *aclrecordproto.ACLRoot
+	root    *aclrecordproto.RawACLRecordWithId
 	records []*ACLRecord
 	indexes map[string]int
 	id      string
 
-	builder  *aclStateBuilder
-	aclState *ACLState
-	keychain *common.Keychain
+	stateBuilder  *aclStateBuilder
+	recordBuilder ACLRecordBuilder
+	aclState      *ACLState
+	keychain      *common.Keychain
+	storage       storage.ListStorage
 
 	sync.RWMutex
 }
 
 func BuildACLListWithIdentity(acc *account.AccountData, storage storage.ListStorage) (ACLList, error) {
-	id := storage.ID()
 	builder := newACLStateBuilderWithIdentity(acc)
-	return build(id, builder, newACLRecordBuilder(id, common.NewKeychain()), storage)
+	return build(storage.Id(), builder, newACLRecordBuilder(storage.Id(), common.NewKeychain()), storage)
 }
 
 func BuildACLList(storage storage.ListStorage) (ACLList, error) {
-	id := storage.ID()
-	return build(id, newACLStateBuilder(), newACLRecordBuilder(id, common.NewKeychain()), storage)
+	return build(storage.Id(), newACLStateBuilder(), newACLRecordBuilder(storage.Id(), common.NewKeychain()), storage)
 }
 
 func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder, storage storage.ListStorage) (list ACLList, err error) {
-	// TODO: need to add context here
-	rootWithId, err := storage.Root()
-	if err != nil {
-		return
-	}
-	aclRecRoot, err := recBuilder.ConvertFromRaw(rootWithId)
-	if err != nil {
-		return
-	}
-
 	head, err := storage.Head()
 	if err != nil {
 		return
@@ -87,7 +80,7 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 	}
 	records := []*ACLRecord{record}
 
-	for record.PrevId != "" && record.PrevId != id {
+	for record.PrevId != "" {
 		rawRecordWithId, err = storage.GetRawRecord(context.Background(), record.PrevId)
 		if err != nil {
 			return
@@ -99,8 +92,6 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 		}
 		records = append(records, record)
 	}
-	// adding root in the end, because we already parsed it
-	records = append(records, aclRecRoot)
 
 	indexes := make(map[string]int)
 	for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
@@ -119,14 +110,21 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 		return
 	}
 
+	// TODO: check if this is correct (raw model instead of unmarshalled)
+	rootWithId, err := storage.Root()
+	if err != nil {
+		return
+	}
+
 	list = &aclList{
-		root:     aclRecRoot.Model.(*aclrecordproto.ACLRoot),
-		records:  records,
-		indexes:  indexes,
-		builder:  stateBuilder,
-		aclState: state,
-		id:       id,
-		RWMutex:  sync.RWMutex{},
+		root:          rootWithId,
+		records:       records,
+		indexes:       indexes,
+		stateBuilder:  stateBuilder,
+		recordBuilder: recBuilder,
+		aclState:      state,
+		storage:       storage,
+		id:            id,
 	}
 	return
 }
@@ -135,11 +133,42 @@ func (a *aclList) Records() []*ACLRecord {
 	return a.records
 }
 
+func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawACLRecordWithId) (added bool, err error) {
+	if _, ok := a.indexes[rawRec.Id]; ok {
+		return
+	}
+	record, err := a.recordBuilder.ConvertFromRaw(rawRec)
+	if err != nil {
+		return
+	}
+	if err = a.aclState.applyRecord(record); err != nil {
+		return
+	}
+	a.records = append(a.records, record)
+	a.indexes[record.Id] = len(a.records) - 1
+	if err = a.storage.AddRawRecord(context.Background(), rawRec); err != nil {
+		return
+	}
+	if err = a.storage.SetHead(rawRec.Id); err != nil {
+		return
+	}
+	return true, nil
+}
+
+func (a *aclList) IsValidNext(rawRec *aclrecordproto.RawACLRecordWithId) (err error) {
+	_, err = a.recordBuilder.ConvertFromRaw(rawRec)
+	if err != nil {
+		return
+	}
+	// TODO: change state and add "check" method for records
+	return
+}
+
 func (a *aclList) ID() string {
 	return a.id
 }
 
-func (a *aclList) Root() *aclrecordproto.ACLRoot {
+func (a *aclList) Root() *aclrecordproto.RawACLRecordWithId {
 	return a.root
 }
 

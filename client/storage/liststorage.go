@@ -77,7 +77,7 @@ func createListStorage(spaceId string, db *badger.DB, txn *badger.Txn, root *acl
 	return
 }
 
-func (l *listStorage) ID() string {
+func (l *listStorage) Id() string {
 	return l.id
 }
 

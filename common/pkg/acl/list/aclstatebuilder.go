@@ -45,3 +45,13 @@ func (sb *aclStateBuilder) Build(records []*ACLRecord) (state *ACLState, err err
 
 	return state, err
 }
+
+func (sb *aclStateBuilder) Append(state *ACLState, records []*ACLRecord) (err error) {
+	for _, rec := range records {
+		err = state.applyRecord(rec)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
