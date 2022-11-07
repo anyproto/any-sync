@@ -14,7 +14,10 @@ import (
 
 type IterFunc = func(record *ACLRecord) (IsContinue bool)
 
-var ErrIncorrectCID = errors.New("incorrect CID")
+var (
+	ErrIncorrectCID = errors.New("incorrect CID")
+	ErrInconsistent = errors.New("inconsistent record")
+)
 
 type RWLocker interface {
 	sync.Locker
@@ -33,6 +36,9 @@ type ACLList interface {
 	Get(id string) (*ACLRecord, error)
 	Iterate(iterFunc IterFunc)
 	IterateFrom(startId string, iterFunc IterFunc)
+
+	AddRawRecord(rawRec *aclrecordproto.RawACLRecordWithId) (added bool, err error)
+
 	Close() (err error)
 }
 
@@ -42,9 +48,10 @@ type aclList struct {
 	indexes map[string]int
 	id      string
 
-	builder  *aclStateBuilder
-	aclState *ACLState
-	keychain *common.Keychain
+	recBuilder ACLRecordBuilder
+	builder    *aclStateBuilder
+	aclState   *ACLState
+	keychain   *common.Keychain
 
 	sync.RWMutex
 }
@@ -118,19 +125,54 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder ACLRecordBuilder
 	}
 
 	list = &aclList{
-		root:     aclRecRoot.Model.(*aclrecordproto.ACLRoot),
-		records:  records,
-		indexes:  indexes,
-		builder:  stateBuilder,
-		aclState: state,
-		id:       id,
-		RWMutex:  sync.RWMutex{},
+		root:       aclRecRoot.Model.(*aclrecordproto.ACLRoot),
+		records:    records,
+		indexes:    indexes,
+		builder:    stateBuilder,
+		recBuilder: recBuilder,
+		aclState:   state,
+		id:         id,
 	}
 	return
 }
 
 func (a *aclList) Records() []*ACLRecord {
 	return a.records
+}
+
+func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawACLRecordWithId) (added bool, err error) {
+	if _, ok := a.indexes[rawRec.Id]; ok {
+		return
+	}
+	record, err := a.recBuilder.ConvertFromRaw(rawRec)
+	if err != nil {
+		return
+	}
+	var lastId string
+	if len(a.records) > 0 {
+		lastId = a.records[len(a.records)-1].Id
+	}
+	if record.PrevId != lastId {
+		return false, ErrInconsistent
+	}
+	a.records = append(a.records, record)
+	a.indexes[record.Id] = len(a.records) - 1
+	return true, nil
+}
+
+func (a *aclList) IsValidNext(rawRec *aclrecordproto.RawACLRecordWithId) (err error) {
+	rec, err := a.recBuilder.ConvertFromRaw(rawRec)
+	if err != nil {
+		return
+	}
+	var lastId string
+	if len(a.records) > 0 {
+		lastId = a.records[len(a.records)-1].Id
+	}
+	if rec.PrevId != lastId {
+		return ErrInconsistent
+	}
+	return
 }
 
 func (a *aclList) ID() string {
