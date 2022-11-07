@@ -36,7 +36,7 @@ func (t *TestPool) Get(ctx context.Context, id string) (peer.Peer, error) {
 	if t.ts == nil {
 		return nil, ErrCantConnect
 	}
-	return &testPeer{id: id, Conn: t.ts.Dial()}, nil
+	return &testPeer{id: id, Conn: t.ts.Dial(ctx)}, nil
 }
 
 func (t *TestPool) Dial(ctx context.Context, id string) (peer.Peer, error) {
@@ -45,7 +45,7 @@ func (t *TestPool) Dial(ctx context.Context, id string) (peer.Peer, error) {
 	if t.ts == nil {
 		return nil, ErrCantConnect
 	}
-	return &testPeer{id: id, Conn: t.ts.Dial()}, nil
+	return &testPeer{id: id, Conn: t.ts.Dial(ctx)}, nil
 }
 
 func (t *TestPool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
@@ -54,7 +54,7 @@ func (t *TestPool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, e
 	if t.ts == nil {
 		return nil, ErrCantConnect
 	}
-	return &testPeer{id: peerIds[rand.Intn(len(peerIds))], Conn: t.ts.Dial()}, nil
+	return &testPeer{id: peerIds[rand.Intn(len(peerIds))], Conn: t.ts.Dial(ctx)}, nil
 }
 
 func (t *TestPool) DialOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
@@ -63,7 +63,7 @@ func (t *TestPool) DialOneOf(ctx context.Context, peerIds []string) (peer.Peer, 
 	if t.ts == nil {
 		return nil, ErrCantConnect
 	}
-	return &testPeer{id: peerIds[rand.Intn(len(peerIds))], Conn: t.ts.Dial()}, nil
+	return &testPeer{id: peerIds[rand.Intn(len(peerIds))], Conn: t.ts.Dial(ctx)}, nil
 }
 
 func (t *TestPool) Init(a *app.App) (err error) {

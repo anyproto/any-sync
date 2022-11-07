@@ -3,9 +3,9 @@ package syncservice
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpctest"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -53,24 +53,23 @@ type fixture struct {
 	clientStream spacesyncproto.DRPCSpace_StreamStream
 	serverStream spacesyncproto.DRPCSpace_StreamStream
 	pool         *streamPool
-	localId      peer.ID
-	remoteId     peer.ID
+	clientId     string
+	serverId     string
 }
 
-func newFixture(t *testing.T, localId, remoteId peer.ID, handler MessageHandler) *fixture {
+func newFixture(t *testing.T, clientId, serverId string, handler MessageHandler) *fixture {
 	fx := &fixture{
 		testServer: &testServer{},
 		drpcTS:     rpctest.NewTestServer(),
-		localId:    localId,
-		remoteId:   remoteId,
+		clientId:   clientId,
+		serverId:   serverId,
 	}
 	fx.testServer.stream = make(chan spacesyncproto.DRPCSpace_StreamStream, 1)
 	require.NoError(t, spacesyncproto.DRPCRegisterSpace(fx.drpcTS.Mux, fx.testServer))
-	clientWrapper := rpctest.NewSecConnWrapper(nil, nil, localId, remoteId)
-	fx.client = spacesyncproto.NewDRPCSpaceClient(fx.drpcTS.DialWrapConn(nil, clientWrapper))
+	fx.client = spacesyncproto.NewDRPCSpaceClient(fx.drpcTS.Dial(peer.CtxWithPeerId(context.Background(), clientId)))
 
 	var err error
-	fx.clientStream, err = fx.client.Stream(context.Background())
+	fx.clientStream, err = fx.client.Stream(peer.CtxWithPeerId(context.Background(), serverId))
 	require.NoError(t, err)
 	fx.serverStream = fx.testServer.waitStream(t)
 	fx.pool = newStreamPool(handler).(*streamPool)
@@ -87,14 +86,14 @@ func (fx *fixture) run(t *testing.T) chan error {
 
 	time.Sleep(time.Millisecond * 10)
 	fx.pool.Lock()
-	require.Equal(t, fx.pool.peerStreams[fx.remoteId.String()], fx.clientStream)
+	require.Equal(t, fx.pool.peerStreams[fx.serverId], fx.clientStream)
 	fx.pool.Unlock()
 
 	return waitCh
 }
 
 func TestStreamPool_AddAndReadStreamAsync(t *testing.T) {
-	remId := peer.ID("remoteId")
+	remId := "remoteId"
 
 	t.Run("client close", func(t *testing.T) {
 		fx := newFixture(t, "", remId, nil)
@@ -105,7 +104,7 @@ func TestStreamPool_AddAndReadStreamAsync(t *testing.T) {
 		err = <-waitCh
 
 		require.Error(t, err)
-		require.Nil(t, fx.pool.peerStreams[remId.String()])
+		require.Nil(t, fx.pool.peerStreams[remId])
 	})
 	t.Run("server close", func(t *testing.T) {
 		fx := newFixture(t, "", remId, nil)
@@ -116,12 +115,12 @@ func TestStreamPool_AddAndReadStreamAsync(t *testing.T) {
 
 		err = <-waitCh
 		require.Error(t, err)
-		require.Nil(t, fx.pool.peerStreams[remId.String()])
+		require.Nil(t, fx.pool.peerStreams[remId])
 	})
 }
 
 func TestStreamPool_Close(t *testing.T) {
-	remId := peer.ID("remoteId")
+	remId := "remoteId"
 
 	t.Run("client close", func(t *testing.T) {
 		fx := newFixture(t, "", remId, nil)
@@ -160,7 +159,7 @@ func TestStreamPool_Close(t *testing.T) {
 }
 
 func TestStreamPool_ReceiveMessage(t *testing.T) {
-	remId := peer.ID("remoteId")
+	remId := "remoteId"
 	t.Run("pool receive message from server", func(t *testing.T) {
 		objectId := "objectId"
 		msg := &spacesyncproto.ObjectSyncMessage{
@@ -182,23 +181,23 @@ func TestStreamPool_ReceiveMessage(t *testing.T) {
 		err = <-waitCh
 
 		require.Error(t, err)
-		require.Nil(t, fx.pool.peerStreams[remId.String()])
+		require.Nil(t, fx.pool.peerStreams[remId])
 	})
 }
 
 func TestStreamPool_HasActiveStream(t *testing.T) {
-	remId := peer.ID("remoteId")
+	remId := "remoteId"
 	t.Run("pool has active stream", func(t *testing.T) {
 		fx := newFixture(t, "", remId, nil)
 		waitCh := fx.run(t)
-		require.True(t, fx.pool.HasActiveStream(remId.String()))
+		require.True(t, fx.pool.HasActiveStream(remId))
 
 		err := fx.clientStream.Close()
 		require.NoError(t, err)
 		err = <-waitCh
 
 		require.Error(t, err)
-		require.Nil(t, fx.pool.peerStreams[remId.String()])
+		require.Nil(t, fx.pool.peerStreams[remId])
 	})
 	t.Run("pool has no active stream", func(t *testing.T) {
 		fx := newFixture(t, "", remId, nil)
@@ -207,13 +206,13 @@ func TestStreamPool_HasActiveStream(t *testing.T) {
 		require.NoError(t, err)
 		err = <-waitCh
 		require.Error(t, err)
-		require.False(t, fx.pool.HasActiveStream(remId.String()))
-		require.Nil(t, fx.pool.peerStreams[remId.String()])
+		require.False(t, fx.pool.HasActiveStream(remId))
+		require.Nil(t, fx.pool.peerStreams[remId])
 	})
 }
 
 func TestStreamPool_SendAsync(t *testing.T) {
-	remId := peer.ID("remoteId")
+	remId := "remoteId"
 	t.Run("pool send async to server", func(t *testing.T) {
 		objectId := "objectId"
 		msg := &spacesyncproto.ObjectSyncMessage{
@@ -229,7 +228,7 @@ func TestStreamPool_SendAsync(t *testing.T) {
 		}()
 		waitCh := fx.run(t)
 
-		err := fx.pool.SendAsync([]string{remId.String()}, msg)
+		err := fx.pool.SendAsync([]string{remId}, msg)
 		require.NoError(t, err)
 		<-recvChan
 		err = fx.clientStream.Close()
@@ -237,12 +236,12 @@ func TestStreamPool_SendAsync(t *testing.T) {
 		err = <-waitCh
 
 		require.Error(t, err)
-		require.Nil(t, fx.pool.peerStreams[remId.String()])
+		require.Nil(t, fx.pool.peerStreams[remId])
 	})
 }
 
 func TestStreamPool_SendSync(t *testing.T) {
-	remId := peer.ID("remoteId")
+	remId := "remoteId"
 	t.Run("pool send sync to server", func(t *testing.T) {
 		objectId := "objectId"
 		payload := []byte("payload")
@@ -260,7 +259,7 @@ func TestStreamPool_SendSync(t *testing.T) {
 			require.NoError(t, err)
 		}()
 		waitCh := fx.run(t)
-		res, err := fx.pool.SendSync(remId.String(), msg)
+		res, err := fx.pool.SendSync(remId, msg)
 		require.NoError(t, err)
 		require.Equal(t, payload, res.Payload)
 		err = fx.clientStream.Close()
@@ -268,7 +267,7 @@ func TestStreamPool_SendSync(t *testing.T) {
 		err = <-waitCh
 
 		require.Error(t, err)
-		require.Nil(t, fx.pool.peerStreams[remId.String()])
+		require.Nil(t, fx.pool.peerStreams[remId])
 	})
 
 	t.Run("pool send sync timeout", func(t *testing.T) {
@@ -285,19 +284,19 @@ func TestStreamPool_SendSync(t *testing.T) {
 			require.NotEmpty(t, message.ReplyId)
 		}()
 		waitCh := fx.run(t)
-		_, err := fx.pool.SendSync(remId.String(), msg)
+		_, err := fx.pool.SendSync(remId, msg)
 		require.Equal(t, ErrSyncTimeout, err)
 		err = fx.clientStream.Close()
 		require.NoError(t, err)
 		err = <-waitCh
 
 		require.Error(t, err)
-		require.Nil(t, fx.pool.peerStreams[remId.String()])
+		require.Nil(t, fx.pool.peerStreams[remId])
 	})
 }
 
 func TestStreamPool_BroadcastAsync(t *testing.T) {
-	remId := peer.ID("remoteId")
+	remId := "remoteId"
 	t.Run("pool broadcast async to server", func(t *testing.T) {
 		objectId := "objectId"
 		msg := &spacesyncproto.ObjectSyncMessage{
@@ -321,6 +320,6 @@ func TestStreamPool_BroadcastAsync(t *testing.T) {
 		err = <-waitCh
 
 		require.Error(t, err)
-		require.Nil(t, fx.pool.peerStreams[remId.String()])
+		require.Nil(t, fx.pool.peerStreams[remId])
 	})
 }

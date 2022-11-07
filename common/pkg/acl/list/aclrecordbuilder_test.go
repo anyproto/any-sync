@@ -1,7 +1,6 @@
 package list
 
 import (
-	"context"
 	account "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/common"
@@ -44,7 +43,8 @@ func TestAclRecordBuilder_BuildUserJoin(t *testing.T) {
 		Payload: marshalledJoin,
 		Id:      id,
 	}
-	err = aclList.AddRawRecords(context.Background(), []*aclrecordproto.RawACLRecordWithId{rawRec})
+	res, err := aclList.AddRawRecord(rawRec)
+	require.True(t, res)
 	require.NoError(t, err)
 	require.Equal(t, aclrecordproto.ACLUserPermissions_Writer, aclList.ACLState().UserStates()[identity].Permissions)
 }

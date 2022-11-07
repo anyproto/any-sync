@@ -97,11 +97,11 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 		if err != nil {
 			return
 		}
-		for _, peer := range respPeers {
-			if s.streamPool.HasActiveStream(peer.Id()) {
+		for _, p := range respPeers {
+			if s.streamPool.HasActiveStream(p.Id()) {
 				continue
 			}
-			stream, err := s.clientFactory.Client(peer).Stream(ctx)
+			stream, err := s.clientFactory.Client(p).Stream(ctx)
 			if err != nil {
 				err = rpcerr.Unwrap(err)
 				log.With("spaceId", s.spaceId).Errorf("failed to open stream: %v", err)

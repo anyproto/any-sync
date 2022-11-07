@@ -66,23 +66,23 @@ message ACLUserAdd {
 }
 
 message ACLUserInvite {
-  bytes acceptPublicKey = 1;
-  uint64 encryptSymKeyHash = 2;
-  repeated bytes encryptedReadKeys = 3;
-  ACLUserPermissions permissions = 4;
+    bytes acceptPublicKey = 1;
+    uint64 encryptSymKeyHash = 2;
+    repeated bytes encryptedReadKeys = 3;
+    ACLUserPermissions permissions = 4;
 }
 
 message ACLUserJoin {
-  bytes identity = 1;
-  bytes encryptionKey = 2;
-  bytes acceptSignature = 3;
-  bytes acceptPubKey = 4;
-  repeated bytes encryptedReadKeys = 5;
+    bytes identity = 1;
+    bytes encryptionKey = 2;
+    bytes acceptSignature = 3;
+    bytes acceptPubKey = 4;
+    repeated bytes encryptedReadKeys = 5;
 }
 
 message ACLUserRemove {
-  bytes identity = 1;
-  repeated ACLReadKeyReplace readKeyReplaces = 2;
+    bytes identity = 1;
+    repeated ACLReadKeyReplace readKeyReplaces = 2;
 }
 
 message ACLReadKeyReplace {
