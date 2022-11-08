@@ -1,0 +1,104 @@
+syntax = "proto3";
+package anySpace;
+
+option go_package = "commonspace/spacesyncproto";
+
+enum ErrCodes {
+    Unexpected = 0;
+    SpaceMissing = 1;
+    SpaceExists = 2;
+    ErrorOffset = 100;
+}
+
+service Space {
+    // HeadSync compares all objects and their hashes in a space
+    rpc HeadSync(HeadSyncRequest) returns (HeadSyncResponse);
+    // PushSpace sends new space to the node
+    rpc PushSpace(PushSpaceRequest) returns (PushSpaceResponse);
+    // PullSpace gets space from the remote peer
+    rpc PullSpace(PullSpaceRequest) returns (PullSpaceResponse);
+    // Stream opens object sync stream with node or client
+    rpc Stream(stream ObjectSyncMessage) returns (stream ObjectSyncMessage);
+}
+
+// HeadSyncRange presenting a request for one range
+message HeadSyncRange {
+    uint64 from = 1;
+    uint64 to = 2;
+    uint32 limit = 3;
+}
+
+// HeadSyncResult presenting a response for one range
+message HeadSyncResult {
+    bytes hash = 1;
+    repeated HeadSyncResultElement elements = 2;
+    uint32 count = 3;
+}
+
+// HeadSyncResultElement presenting state of one object
+message HeadSyncResultElement {
+    string id = 1;
+    string head = 2;
+}
+
+// HeadSyncRequest is a request for HeadSync
+message HeadSyncRequest {
+    string spaceId = 1;
+    repeated HeadSyncRange ranges = 2;
+}
+
+// HeadSyncResponse is a response for HeadSync
+message HeadSyncResponse {
+    repeated HeadSyncResult results = 1;
+}
+
+// ObjectSyncMessage is a message sent on object sync
+message ObjectSyncMessage {
+    string spaceId = 1;
+    string replyId = 2;
+    bytes payload = 3;
+    string objectId = 4;
+//  string identity = 5;
+//  string peerSignature = 6;
+}
+
+// PushSpaceRequest is a request to add space on a node containing only one acl record
+message PushSpaceRequest {
+    RawSpaceHeaderWithId spaceHeader = 1;
+    bytes aclPayload = 2;
+    string aclPayloadId = 3;
+}
+
+// PushSpaceResponse is an empty response
+message PushSpaceResponse {}
+
+// PullSpaceRequest is a request to request a space on a node that doesn't have it
+message PullSpaceRequest {
+    string id = 1;
+}
+
+// PullSpaceResponse is a response with header and acl root
+message PullSpaceResponse {
+    RawSpaceHeaderWithId spaceHeader = 1;
+    bytes aclPayload = 2;
+    string aclPayloadId = 3;
+}
+
+// SpaceHeader is a header for a space
+message SpaceHeader {
+    bytes identity = 1;
+    int64 timestamp = 2;
+    string spaceType = 3;
+    uint64 replicationKey = 4;
+    bytes seed = 5;
+}
+
+message RawSpaceHeader {
+    bytes spaceHeader = 1;
+    bytes signature = 2;
+}
+
+message RawSpaceHeaderWithId {
+    bytes rawHeader = 1;
+    string id = 2;
+}

@@ -1,0 +1,19 @@
+grpcServer:
+    listenAddrs:
+        - 127.0.0.1:4531
+    tls: false
+account:
+    peerId: 12D3KooWKyYmekF5ongQGMwBgx4ZsPDQiyFjHtd5ZfKGsoXTYY7h
+    peerKey: jRWkSxzPtg8SF3rJ7oqhby6UvS6fnWGOO2GlAePHqkWW7xWHE1XC2R8Wt0E/4sFVhpam5OKqyIm9aDsWiILHmA==
+    signingKey: jRWkSxzPtg8SF3rJ7oqhby6UvS6fnWGOO2GlAePHqkWW7xWHE1XC2R8Wt0E/4sFVhpam5OKqyIm9aDsWiILHmA==
+    encryptionKey: MIIEpAIBAAKCAQEAy3UBKE5OifVxeU60KbYUQ9OFob6uixxauUVn8cn24ZX9C2qPAMLQGTYBcWp0GKILqRMgcDmDV1DXF4dNzSYQE4qFDvQ0C5ltoV9vDBAxhyDEN6nftD4K2vvn+fBVYYAXJp//I/2YcdZpOzu7KFHPst74tnFZB1+7LX0oGToGzevFKgqmvoQ1LUj7OqWnINBz4jA61h2WMp11j6/BO71kEeMdeMJyhmO+w6oFlLhd3b6Vsqd/nIc4SKh0yS3jdn+OchgQEMHvNL0KrvExPwdnzQGtU9E2nrf193loeFoCZayX29x+aDgTah2V8JlcN2do40q9h3dJJ6FCgJkk5gBz8wIDAQABAoIBADy0Ym4GP0TGaN8K7pJrc0xxdjO2UxnKkf8piEQKQJE6UU/wsU5G0hRTmsaePpmC7/u4aztQzbFlu2eXxUzqiG1sLRszHbxAQQefE+EDi+OHkUQSeV6sDE0eUC6w2KjIsR+jKVsxtSRyFt/HiKYVEuWJxaeZ1jhvBcgiya4NNC6IG/wS4JYG5iPs8QZZPDT+geR2y1jVQdttchVGxKbthMxDBPfSlG05QFhb/8frCfS+jqBHla1e3UhBfdlA6elZW+IxOoxoKvLLZtMrI5+3D162ZBsfoIGXuME3YqovMBdISnRQBbQ9gsSZlYQsosWofSd2JPxVOm7YdOmOIo4sEcECgYEA3F2W2vQLdxtJ+RaLPrGICtNTXwkP3Fi5KGT/QFGCguJpGo1Z3sGgL6dvD0iKBBCTcmyDj3eBGYW80B/2J+tRiAt/0ME413Pfa6txl7LgKNDlFgAb4/ycth0TocQQE2oL1OawHBr+BiE2b5IbIOyi8wsaQNdtORYzRLS9clieWKMCgYEA7Ft1H2/HAQMBOLeyyn2LMaPkewe5TM/6K+CoDA9orcoRmZ+B3ht2iBkcJE3Efa0c2YDDbL3GENfUzzntF91auyC/aKI3A8MxBZg/6QEiTytgcvbCSeXkwZUCJeNr+BAFLiWOE26sg8P2cJPT5JfjgPkqA4dLWvqwvMFe9LcInHECgYEArVoGSToAJvNVrthYM7puva1egX1cd8dn6OoCjjNQyuuXKOcXUo/ZFoPNbyVuRSJRC4tntx2Ydl5pmQP7nY2VdsMtCihmMb8ae9XDp0V050blX/g3+JKJKQ4YmoHk75DVu+a5lXJ6cJICA6TZKH5e9Xi/b1DIwEbBkAPqoCAseKcCgYEAxSTj5HzPeMCQ3EYdE1j0KUuS4CvpG3C+MqsIgEa6AXtygrjREfnGPG71UjKrmkgysBj+6EzCUHo2P0MJx8YST9NY1GW5jaHZ2djMNgWEIJUFtd6s4Aapb+5iBEhVXmu+ZmdcwkimDKH/hJdJPnqSgJlTue23pQNFN6vzEBs7S4ECgYBhY2YJL22+btVAYR6g/pOkn+50h8S/TtEH+NUL0SKnv8N96WvoBjUJapgNNrWPzzUgmGzS+uSweSTGM5LFeidNU4tEHZ1yNt7nrlnaJP2anGgVp3JcvNQiy1Ffwvs1efo0c8Tc+fORj9V4fhdctpSAoISETDtoGcZbQjUtB/aqYQ==
+mongo:
+    connect: mongodb://localhost:27017/?w=majority
+    database: consensus
+    logCollection: log
+metric:
+    addr: ""
+log:
+    production: false
+    defaultLevel: ""
+    namedLevels: {}

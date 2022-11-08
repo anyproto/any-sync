@@ -1,0 +1,58 @@
+root:
+  identity: A
+  spaceId: space
+records:
+  - identity: A
+    aclChanges:
+      - userInvite:
+          acceptKey: key.Sign.Onetime1
+          encryptionKey: key.Read.EncKey
+          encryptedReadKeys: [key.Read.A]
+          permissions: writer
+      - userAdd:
+          identity: C
+          permission: reader
+          encryptionKey: key.Enc.C
+          encryptedReadKeys: [key.Read.A]
+    readKey: key.Read.A
+  - identity: B
+    aclChanges:
+      - userJoin:
+          identity: B
+          encryptionKey: key.Enc.B
+          acceptKey: key.Sign.Onetime1
+          encryptedReadKeys: [key.Read.A]
+    readKey: key.Read.A
+  - identity: A
+    aclChanges:
+      - userRemove:
+          removedIdentity: B
+          newReadKey: key.Read.2
+          identitiesLeft: [A, C]
+    readKey: key.Read.2
+keys:
+  Enc:
+    - name: A
+      value: generated
+    - name: B
+      value: generated
+    - name: C
+      value: generated
+    - name: Onetime1
+      value: generated
+  Sign:
+    - name: A
+      value: generated
+    - name: B
+      value: generated
+    - name: C
+      value: generated
+    - name: Onetime1
+      value: generated
+  Read:
+    - name: A
+      value: derived
+    - name: 2
+      value: generated
+    - name: EncKey
+      value: generated

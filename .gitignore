@@ -8,8 +8,30 @@
 # Test binary, built with `go test -c`
 *.test
 
+# playground folder for testing different clients
+playground
+
+# .paw folder for macos paw client
+.paw
+
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Golang vendor folder
+vendor
+
+# database
+db
+
+# artefacts for Intelli-J fleet
+.fleet
+
+# Intelli-J files
+.idea
+
+# MacOS file that stores custom attributes of its containing folder,
+# such as folder view options, icon positions, and other visual information
+.DS_Store
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
