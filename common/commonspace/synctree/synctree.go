@@ -171,7 +171,6 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 }
 
 func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t tree.ObjectTree, err error) {
-
 	t, err = buildObjectTree(deps.TreeStorage, deps.AclList)
 	if err != nil {
 		return
@@ -204,7 +203,7 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t tr
 }
 
 func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeContent) (res tree.AddResult, err error) {
-	if s.isClosed {
+	if s.isClosed { // checkAlive err
 		err = ErrSyncTreeClosed
 		return
 	}

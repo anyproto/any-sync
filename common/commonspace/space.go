@@ -48,9 +48,11 @@ type SpaceDerivePayload struct {
 }
 
 type SpaceDescription struct {
-	SpaceHeader *spacesyncproto.RawSpaceHeaderWithId
-	AclId       string
-	AclPayload  []byte
+	SpaceHeader          *spacesyncproto.RawSpaceHeaderWithId
+	AclId                string
+	AclPayload           []byte
+	SpaceSettingsId      string
+	SpaceSettingsPayload []byte
 }
 
 func NewSpaceId(id string, repKey uint64) string {
@@ -62,7 +64,7 @@ type Space interface {
 	Init(ctx context.Context) error
 
 	StoredIds() []string
-	Description() SpaceDescription
+	Description() (SpaceDescription, error)
 
 	SpaceSyncRpc() RpcHandler
 
@@ -99,13 +101,25 @@ func (s *space) Id() string {
 	return s.id
 }
 
-func (s *space) Description() SpaceDescription {
+func (s *space) Description() (desc SpaceDescription, err error) {
 	root := s.aclList.Root()
-	return SpaceDescription{
-		SpaceHeader: s.header,
-		AclId:       root.Id,
-		AclPayload:  root.Payload,
+	settingsStorage, err := s.storage.TreeStorage(s.storage.SpaceSettingsId())
+	if err != nil {
+		return
 	}
+	settingsRoot, err := settingsStorage.Root()
+	if err != nil {
+		return
+	}
+
+	desc = SpaceDescription{
+		SpaceHeader:          s.header,
+		AclId:                root.Id,
+		AclPayload:           root.Payload,
+		SpaceSettingsId:      settingsRoot.Id,
+		SpaceSettingsPayload: settingsRoot.RawChange,
+	}
+	return
 }
 
 func (s *space) Init(ctx context.Context) (err error) {

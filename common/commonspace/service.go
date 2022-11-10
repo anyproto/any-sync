@@ -15,6 +15,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 )
 
 const CName = "common.commonspace"
@@ -161,12 +162,17 @@ func (s *service) getSpaceStorageFromRemote(ctx context.Context, id string) (st 
 	if err != nil {
 		return
 	}
+
 	st, err = s.storageProvider.CreateSpaceStorage(storage.SpaceStorageCreatePayload{
 		AclWithId: &aclrecordproto.RawACLRecordWithId{
-			Payload: res.AclPayload,
-			Id:      res.AclPayloadId,
+			Payload: res.Payload.AclPayload,
+			Id:      res.Payload.AclPayloadId,
 		},
-		SpaceHeaderWithId: res.SpaceHeader,
+		SpaceSettingsWithId: &treechangeproto.RawTreeChangeWithId{
+			RawChange: res.Payload.SpaceSettingsPayload,
+			Id:        res.Payload.SpaceSettingsPayloadId,
+		},
+		SpaceHeaderWithId: res.Payload.SpaceHeader,
 	})
 	return
 }
