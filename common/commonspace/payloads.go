@@ -84,7 +84,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload st
 
 	// creating storage
 	storagePayload = storage.SpaceStorageCreatePayload{
-		RecWithId:         rawWithId,
+		AclWithId:         rawWithId,
 		SpaceHeaderWithId: rawHeaderWithId,
 	}
 	return
@@ -176,7 +176,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload st
 
 	// creating storage
 	storagePayload = storage.SpaceStorageCreatePayload{
-		RecWithId:         rawWithId,
+		AclWithId:         rawWithId,
 		SpaceHeaderWithId: rawHeaderWithId,
 	}
 	return

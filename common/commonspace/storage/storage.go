@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 )
 
 const CName = "commonspace.storage"
@@ -17,6 +18,7 @@ var ErrSpaceStorageMissing = errors.New("space storage missing")
 type SpaceStorage interface {
 	storage.Provider
 	Id() string
+	SpaceSettingsId() string
 	ACLStorage() (storage.ListStorage, error)
 	SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error)
 	StoredIds() ([]string, error)
@@ -24,12 +26,18 @@ type SpaceStorage interface {
 }
 
 type SpaceStorageCreatePayload struct {
-	RecWithId         *aclrecordproto.RawACLRecordWithId
-	SpaceHeaderWithId *spacesyncproto.RawSpaceHeaderWithId
+	AclWithId           *aclrecordproto.RawACLRecordWithId
+	SpaceHeaderWithId   *spacesyncproto.RawSpaceHeaderWithId
+	SpaceSettingsWithId *treechangeproto.RawTreeChangeWithId
 }
 
 type SpaceStorageProvider interface {
 	app.Component
 	SpaceStorage(id string) (SpaceStorage, error)
 	CreateSpaceStorage(payload SpaceStorageCreatePayload) (SpaceStorage, error)
+}
+
+func ValidateSpaceStorageCreatePayload(payload SpaceStorageCreatePayload) (err error) {
+	// TODO: add proper validation
+	return nil
 }
