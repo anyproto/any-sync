@@ -19,7 +19,7 @@ func spaceTestPayload() spacestorage.SpaceStorageCreatePayload {
 		Id:      "aclRootId",
 	}
 	return spacestorage.SpaceStorageCreatePayload{
-		RecWithId:         aclRoot,
+		AclWithId:         aclRoot,
 		SpaceHeaderWithId: header,
 	}
 }
@@ -31,7 +31,7 @@ func testSpace(t *testing.T, store spacestorage.SpaceStorage, payload spacestora
 
 	aclStorage, err := store.ACLStorage()
 	require.NoError(t, err)
-	testList(t, aclStorage, payload.RecWithId, payload.RecWithId.Id)
+	testList(t, aclStorage, payload.AclWithId, payload.AclWithId.Id)
 }
 
 func TestSpaceStorage_Create(t *testing.T) {

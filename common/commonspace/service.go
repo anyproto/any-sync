@@ -94,7 +94,7 @@ func (s *service) AddSpace(ctx context.Context, spaceDescription SpaceDescriptio
 	}
 
 	payload := storage.SpaceStorageCreatePayload{
-		RecWithId: &aclrecordproto.RawACLRecordWithId{
+		AclWithId: &aclrecordproto.RawACLRecordWithId{
 			Payload: spaceDescription.AclPayload,
 			Id:      spaceDescription.AclId,
 		},
@@ -162,7 +162,7 @@ func (s *service) getSpaceStorageFromRemote(ctx context.Context, id string) (st 
 		return
 	}
 	st, err = s.storageProvider.CreateSpaceStorage(storage.SpaceStorageCreatePayload{
-		RecWithId: &aclrecordproto.RawACLRecordWithId{
+		AclWithId: &aclrecordproto.RawACLRecordWithId{
 			Payload: res.AclPayload,
 			Id:      res.AclPayloadId,
 		},

@@ -59,14 +59,16 @@ func (t treeKeys) RawChangeKey(id string) []byte {
 }
 
 type spaceKeys struct {
-	headerKey     []byte
-	treePrefixKey []byte
+	headerKey          []byte
+	treePrefixKey      []byte
+	spaceSettingsIdKey []byte
 }
 
 func newSpaceKeys(spaceId string) spaceKeys {
 	return spaceKeys{
-		headerKey:     storage.JoinStringsToBytes("space", "header", spaceId),
-		treePrefixKey: storage.JoinStringsToBytes("space", spaceId, "t", "rootId"),
+		headerKey:          storage.JoinStringsToBytes("space", "header", spaceId),
+		treePrefixKey:      storage.JoinStringsToBytes("space", spaceId, "t", "rootId"),
+		spaceSettingsIdKey: storage.JoinStringsToBytes("space", spaceId, "spaceSettingsId"),
 	}
 }
 
@@ -76,6 +78,10 @@ func (s spaceKeys) HeaderKey() []byte {
 
 func (s spaceKeys) TreeRootPrefix() []byte {
 	return s.treePrefixKey
+}
+
+func (s spaceKeys) SpaceSettingsId() []byte {
+	return s.spaceSettingsIdKey
 }
 
 type storageServiceKeys struct {

@@ -99,10 +99,5 @@ func (c *treeCache) GetDocument(ctx context.Context, spaceId, id string) (doc te
 }
 
 func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (tr tree.ObjectTree, err error) {
-	doc, err := c.GetDocument(ctx, spaceId, id)
-	if err != nil {
-		return
-	}
-	tr = doc.Tree()
-	return
+	return c.GetDocument(ctx, spaceId, id)
 }

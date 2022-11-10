@@ -11,7 +11,7 @@ import (
 )
 
 type TextDocument interface {
-	Tree() tree.ObjectTree
+	tree.ObjectTree
 	AddText(text string) error
 	Text() (string, error)
 	TreeDump() string
@@ -19,7 +19,7 @@ type TextDocument interface {
 }
 
 type textDocument struct {
-	objTree tree.ObjectTree
+	tree.ObjectTree
 	account account.Service
 }
 
@@ -39,8 +39,8 @@ func CreateTextDocument(
 	}
 
 	return &textDocument{
-		objTree: t,
-		account: account,
+		ObjectTree: t,
+		account:    account,
 	}, nil
 }
 
@@ -50,13 +50,9 @@ func NewTextDocument(ctx context.Context, space commonspace.Space, id string, li
 		return
 	}
 	return &textDocument{
-		objTree: t,
-		account: account,
+		ObjectTree: t,
+		account:    account,
 	}, nil
-}
-
-func (t *textDocument) Tree() tree.ObjectTree {
-	return t.objTree
 }
 
 func (t *textDocument) AddText(text string) (err error) {
@@ -73,9 +69,9 @@ func (t *textDocument) AddText(text string) (err error) {
 	if err != nil {
 		return
 	}
-	t.objTree.Lock()
-	defer t.objTree.Unlock()
-	_, err = t.objTree.AddContent(context.Background(), tree.SignableChangeContent{
+	t.Lock()
+	defer t.Unlock()
+	_, err = t.AddContent(context.Background(), tree.SignableChangeContent{
 		Data:       res,
 		Key:        t.account.Account().SignKey,
 		Identity:   t.account.Account().Identity,
@@ -85,10 +81,10 @@ func (t *textDocument) AddText(text string) (err error) {
 }
 
 func (t *textDocument) Text() (text string, err error) {
-	t.objTree.RLock()
-	defer t.objTree.RUnlock()
+	t.RLock()
+	defer t.RUnlock()
 
-	err = t.objTree.Iterate(
+	err = t.Iterate(
 		func(decrypted []byte) (any, error) {
 			textChange := &testchanges.TextData{}
 			err = proto.Unmarshal(decrypted, textChange)

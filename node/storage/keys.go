@@ -51,7 +51,10 @@ func newSpaceKeys(spaceId string) spaceKeys {
 	return spaceKeys{headerKey: storage.JoinStringsToBytes("s", spaceId)}
 }
 
-var spaceIdKey = []byte("spaceId")
+var (
+	spaceIdKey         = []byte("spaceId")
+	spaceSettingsIdKey = []byte("spaceSettingsId")
+)
 
 func (s spaceKeys) SpaceIdKey() []byte {
 	return spaceIdKey
@@ -61,7 +64,11 @@ func (s spaceKeys) HeaderKey() []byte {
 	return s.headerKey
 }
 
-func isRootIdKey(key string) bool {
+func (s spaceKeys) SpaceSettingsIdKey() []byte {
+	return spaceSettingsIdKey
+}
+
+func isTreeHeadsKey(key string) bool {
 	return strings.HasPrefix(key, "t/") && strings.HasSuffix(key, "/heads")
 }
 
