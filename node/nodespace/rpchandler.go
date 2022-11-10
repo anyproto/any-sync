@@ -2,42 +2,54 @@ package nodespace
 
 import (
 	"context"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
 )
 
 type rpcHandler struct {
 	s *service
 }
 
-func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpaceRequest) (resp *spacesyncproto.PushSpaceResponse, err error) {
-	_, err = r.s.GetSpace(ctx, req.SpaceHeader.Id)
-	if err == nil {
-		err = spacesyncproto.ErrSpaceExists
+func (r *rpcHandler) PullSpace(ctx context.Context, request *spacesyncproto.PullSpaceRequest) (resp *spacesyncproto.PullSpaceResponse, err error) {
+	sp, err := r.s.GetSpace(ctx, request.Id)
+	if err != nil {
+		if err != spacesyncproto.ErrSpaceMissing {
+			err = spacesyncproto.ErrUnexpected
+		}
 		return
 	}
-	if err != storage.ErrSpaceStorageMissing {
+
+	spaceDesc, err := sp.Description()
+	if err != nil {
 		err = spacesyncproto.ErrUnexpected
 		return
 	}
 
-	payload := storage.SpaceStorageCreatePayload{
-		RecWithId: &aclrecordproto.RawACLRecordWithId{
-			Payload: req.AclPayload,
-			Id:      req.AclPayloadId,
+	resp = &spacesyncproto.PullSpaceResponse{
+		Payload: &spacesyncproto.SpacePayload{
+			SpaceHeader:            spaceDesc.SpaceHeader,
+			AclPayloadId:           spaceDesc.AclId,
+			AclPayload:             spaceDesc.AclPayload,
+			SpaceSettingsPayload:   spaceDesc.SpaceSettingsPayload,
+			SpaceSettingsPayloadId: spaceDesc.SpaceSettingsId,
 		},
-		SpaceHeaderWithId: req.SpaceHeader,
 	}
-	st, err := r.s.spaceStorageProvider.CreateSpaceStorage(payload)
+	return
+}
+
+func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpaceRequest) (resp *spacesyncproto.PushSpaceResponse, err error) {
+	description := commonspace.SpaceDescription{
+		SpaceHeader:          req.Payload.SpaceHeader,
+		AclId:                req.Payload.AclPayloadId,
+		AclPayload:           req.Payload.AclPayload,
+		SpaceSettingsPayload: req.Payload.SpaceSettingsPayload,
+		SpaceSettingsId:      req.Payload.SpaceSettingsPayloadId,
+	}
+	err = r.s.AddSpace(ctx, description)
 	if err != nil {
-		err = spacesyncproto.ErrUnexpected
-		if err == storage.ErrSpaceStorageExists {
-			err = spacesyncproto.ErrSpaceExists
-		}
 		return
 	}
-	err = st.Close()
+	resp = &spacesyncproto.PushSpaceResponse{}
 	return
 }
 

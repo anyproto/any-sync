@@ -108,10 +108,24 @@ func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, cl spacesyncproto
 		return
 	}
 
+	spaceSettingsTreeStorage, err := d.storage.TreeStorage(d.storage.SpaceSettingsId())
+	if err != nil {
+		return
+	}
+	spaceSettingsRoot, err := spaceSettingsTreeStorage.Root()
+	if err != nil {
+		return
+	}
+
+	spacePayload := &spacesyncproto.SpacePayload{
+		SpaceHeader:            header,
+		AclPayload:             root.Payload,
+		AclPayloadId:           root.Id,
+		SpaceSettingsPayload:   spaceSettingsRoot.RawChange,
+		SpaceSettingsPayloadId: spaceSettingsRoot.Id,
+	}
 	_, err = cl.PushSpace(ctx, &spacesyncproto.PushSpaceRequest{
-		SpaceHeader:  header,
-		AclPayload:   root.Payload,
-		AclPayloadId: root.Id,
+		Payload: spacePayload,
 	})
 	return
 }
