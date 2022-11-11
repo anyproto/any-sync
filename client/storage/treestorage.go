@@ -133,3 +133,45 @@ func (t *treeStorage) GetRawChange(ctx context.Context, id string) (raw *treecha
 func (t *treeStorage) HasChange(ctx context.Context, id string) (bool, error) {
 	return hasDB(t.db, t.keys.RawChangeKey(id)), nil
 }
+
+func (t *treeStorage) Delete() (err error) {
+	storedKeys, err := t.storedKeys()
+	if err != nil {
+		return
+	}
+	err = t.db.Update(func(txn *badger.Txn) error {
+		for _, k := range storedKeys {
+			err = txn.Delete(k)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return
+}
+
+func (t *treeStorage) storedKeys() (keys [][]byte, err error) {
+	err = t.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		opts.Prefix = t.keys.RawChangePrefix()
+
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			key := item.Key()
+			// if it is a heads key
+			if len(key) <= len(t.keys.HeadsKey()) {
+				continue
+			}
+			keyCopy := make([]byte, 0, len(key))
+			keyCopy = item.KeyCopy(key)
+			keys = append(keys, keyCopy)
+		}
+		return nil
+	})
+	return
+}

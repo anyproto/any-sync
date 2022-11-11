@@ -135,3 +135,36 @@ func (t *treeStorage) GetRawChange(ctx context.Context, id string) (raw *treecha
 func (t *treeStorage) HasChange(ctx context.Context, id string) (bool, error) {
 	return t.db.Has(t.keys.RawChangeKey(id))
 }
+
+func (t *treeStorage) Delete() (err error) {
+	storedKeys, err := t.storedKeys()
+	if err != nil {
+		return
+	}
+	for _, k := range storedKeys {
+		err = t.db.Delete(k)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (t *treeStorage) storedKeys() (keys [][]byte, err error) {
+	index := t.db.Items()
+
+	key, _, err := index.Next()
+	for err == nil {
+		strKey := string(key)
+		if t.keys.isTreeRecordKey(strKey) {
+			keys = append(keys, key)
+		}
+		key, _, err = index.Next()
+	}
+
+	if err != pogreb.ErrIterationDone {
+		return
+	}
+	err = nil
+	return
+}

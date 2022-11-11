@@ -141,6 +141,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
+
 	s.aclList = syncacl.NewSyncACL(aclList, s.syncService.StreamPool())
 	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache)
 	s.syncService.Init(objectGetter)

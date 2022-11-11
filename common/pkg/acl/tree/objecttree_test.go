@@ -116,7 +116,7 @@ func prepareTreeContext(t *testing.T, aclList list.ACLList) testTreeContext {
 	treeStorage := changeCreator.createNewTreeStorage("0", aclList.Head().Id)
 	root, _ := treeStorage.Root()
 	changeBuilder := &mockChangeBuilder{
-		originalBuilder: newChangeBuilder(nil, root),
+		originalBuilder: NewChangeBuilder(nil, root),
 	}
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,

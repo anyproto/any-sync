@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsservice"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
@@ -18,15 +19,20 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-var ErrSyncTreeClosed = errors.New("sync tree is closed")
+var (
+	ErrSyncTreeClosed  = errors.New("sync tree is closed")
+	ErrSyncTreeDeleted = errors.New("sync tree is deleted")
+)
 
 // SyncTree sends head updates to sync service and also sends new changes to update listener
 type SyncTree struct {
 	tree.ObjectTree
 	synchandler.SyncHandler
-	syncClient SyncClient
-	listener   updatelistener.UpdateListener
-	isClosed   bool
+	syncClient        SyncClient
+	listener          updatelistener.UpdateListener
+	deletedNotifiable settingsservice.DeletedDocumentNotifiable
+	isClosed          bool
+	isDeleted         bool
 }
 
 var log = logger.NewNamed("commonspace.synctree").Sugar()
@@ -37,25 +43,27 @@ var buildObjectTree = tree.BuildObjectTree
 var createSyncClient = newSyncClient
 
 type CreateDeps struct {
-	SpaceId        string
-	Payload        tree.ObjectTreeCreatePayload
-	Configuration  nodeconf.Configuration
-	HeadNotifiable diffservice.HeadNotifiable
-	StreamPool     syncservice.StreamPool
-	Listener       updatelistener.UpdateListener
-	AclList        list.ACLList
-	CreateStorage  storage.TreeStorageCreatorFunc
+	SpaceId           string
+	Payload           tree.ObjectTreeCreatePayload
+	Configuration     nodeconf.Configuration
+	HeadNotifiable    diffservice.HeadNotifiable
+	StreamPool        syncservice.StreamPool
+	Listener          updatelistener.UpdateListener
+	AclList           list.ACLList
+	CreateStorage     storage.TreeStorageCreatorFunc
+	DeletedNotifiable settingsservice.DeletedDocumentNotifiable
 }
 
 type BuildDeps struct {
-	SpaceId        string
-	StreamPool     syncservice.StreamPool
-	Configuration  nodeconf.Configuration
-	HeadNotifiable diffservice.HeadNotifiable
-	Listener       updatelistener.UpdateListener
-	AclList        list.ACLList
-	SpaceStorage   spacestorage.SpaceStorage
-	TreeStorage    storage.TreeStorage
+	SpaceId           string
+	StreamPool        syncservice.StreamPool
+	Configuration     nodeconf.Configuration
+	HeadNotifiable    diffservice.HeadNotifiable
+	Listener          updatelistener.UpdateListener
+	AclList           list.ACLList
+	SpaceStorage      spacestorage.SpaceStorage
+	TreeStorage       storage.TreeStorage
+	DeletedNotifiable settingsservice.DeletedDocumentNotifiable
 }
 
 func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, err error) {
@@ -70,9 +78,10 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, er
 		sharedFactory,
 		deps.Configuration)
 	syncTree := &SyncTree{
-		ObjectTree: t,
-		syncClient: syncClient,
-		listener:   deps.Listener,
+		ObjectTree:        t,
+		syncClient:        syncClient,
+		listener:          deps.Listener,
+		deletedNotifiable: deps.DeletedNotifiable,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
@@ -95,9 +104,10 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, er
 		GetRequestFactory(),
 		deps.Configuration)
 	syncTree := &SyncTree{
-		ObjectTree: t,
-		syncClient: syncClient,
-		listener:   deps.Listener,
+		ObjectTree:        t,
+		syncClient:        syncClient,
+		listener:          deps.Listener,
+		deletedNotifiable: deps.DeletedNotifiable,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
@@ -175,9 +185,10 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t tr
 		GetRequestFactory(),
 		deps.Configuration)
 	syncTree := &SyncTree{
-		ObjectTree: t,
-		syncClient: syncClient,
-		listener:   deps.Listener,
+		ObjectTree:        t,
+		syncClient:        syncClient,
+		listener:          deps.Listener,
+		deletedNotifiable: deps.DeletedNotifiable,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
@@ -196,8 +207,7 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t tr
 }
 
 func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeContent) (res tree.AddResult, err error) {
-	if s.isClosed { // checkAlive err
-		err = ErrSyncTreeClosed
+	if err = s.checkAlive(); err != nil {
 		return
 	}
 	res, err = s.ObjectTree.AddContent(ctx, content)
@@ -210,8 +220,7 @@ func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 }
 
 func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (res tree.AddResult, err error) {
-	if s.isClosed {
-		err = ErrSyncTreeClosed
+	if err = s.checkAlive(); err != nil {
 		return
 	}
 	res, err = s.ObjectTree.AddRawChanges(ctx, changes...)
@@ -235,15 +244,44 @@ func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeprot
 	return
 }
 
+func (s *SyncTree) Delete() (err error) {
+	log.With("id", s.ID()).Debug("deleting sync tree")
+	s.Lock()
+	defer func() {
+		s.Unlock()
+		if err == nil {
+			s.deletedNotifiable.NotifyDeleted(s.ID())
+		}
+	}()
+	if err = s.checkAlive(); err != nil {
+		return
+	}
+	err = s.ObjectTree.Delete()
+	if err != nil {
+		return
+	}
+	s.isDeleted = true
+
+	return
+}
+
 func (s *SyncTree) Close() (err error) {
 	log.With("id", s.ID()).Debug("closing sync tree")
 	s.Lock()
 	defer s.Unlock()
-	log.With("id", s.ID()).Debug("taken lock on sync tree")
-	if s.isClosed {
-		err = ErrSyncTreeClosed
+	if err = s.checkAlive(); err != nil {
 		return
 	}
 	s.isClosed = true
+	return
+}
+
+func (s *SyncTree) checkAlive() (err error) {
+	if s.isClosed {
+		err = ErrSyncTreeClosed
+	}
+	if s.isDeleted {
+		err = ErrSyncTreeDeleted
+	}
 	return
 }
