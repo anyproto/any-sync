@@ -31,18 +31,20 @@ func (a aclKeys) RawRecordKey(id string) []byte {
 }
 
 type treeKeys struct {
-	id       string
-	spaceId  string
-	headsKey []byte
-	rootKey  []byte
+	id              string
+	spaceId         string
+	headsKey        []byte
+	rootKey         []byte
+	rawChangePrefix []byte
 }
 
 func newTreeKeys(spaceId, id string) treeKeys {
 	return treeKeys{
-		id:       id,
-		spaceId:  spaceId,
-		headsKey: storage.JoinStringsToBytes("space", spaceId, "t", id, "heads"),
-		rootKey:  storage.JoinStringsToBytes("space", spaceId, "t", "rootId", id),
+		id:              id,
+		spaceId:         spaceId,
+		headsKey:        storage.JoinStringsToBytes("space", spaceId, "t", id, "heads"),
+		rootKey:         storage.JoinStringsToBytes("space", spaceId, "t", "rootId", id),
+		rawChangePrefix: storage.JoinStringsToBytes("space", spaceId, "t", id),
 	}
 }
 
@@ -56,6 +58,10 @@ func (t treeKeys) RootIdKey() []byte {
 
 func (t treeKeys) RawChangeKey(id string) []byte {
 	return storage.JoinStringsToBytes("space", t.spaceId, "t", t.id, id)
+}
+
+func (t treeKeys) RawChangePrefix() []byte {
+	return t.rawChangePrefix
 }
 
 type spaceKeys struct {

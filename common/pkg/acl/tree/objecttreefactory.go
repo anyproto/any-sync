@@ -71,7 +71,7 @@ func createObjectTree(
 		Seed:       seed,
 	}
 
-	_, raw, err := newChangeBuilder(common.NewKeychain(), nil).BuildInitialContent(cnt)
+	_, raw, err := NewChangeBuilder(common.NewKeychain(), nil).BuildInitialContent(cnt)
 	if err != nil {
 		return
 	}

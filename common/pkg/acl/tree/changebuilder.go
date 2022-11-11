@@ -48,7 +48,7 @@ type changeBuilder struct {
 	keys       *common.Keychain
 }
 
-func newChangeBuilder(keys *common.Keychain, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
+func NewChangeBuilder(keys *common.Keychain, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
 	return &changeBuilder{keys: keys, rootChange: rootChange}
 }
 

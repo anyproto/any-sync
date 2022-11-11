@@ -157,6 +157,10 @@ func (t *inMemoryTreeStorage) GetRawChange(ctx context.Context, changeId string)
 	return nil, fmt.Errorf("could not get change with id: %s", changeId)
 }
 
+func (t *inMemoryTreeStorage) Delete() error {
+	return nil
+}
+
 type inMemoryStorageProvider struct {
 	objects map[string]TreeStorage
 	sync.RWMutex

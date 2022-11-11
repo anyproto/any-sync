@@ -57,6 +57,7 @@ type ObjectTree interface {
 	AddContent(ctx context.Context, content SignableChangeContent) (AddResult, error)
 	AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (AddResult, error)
 
+	Delete() error
 	Close() error
 }
 
@@ -100,7 +101,7 @@ func defaultObjectTreeDeps(
 	aclList list2.ACLList) objectTreeDeps {
 
 	keychain := common.NewKeychain()
-	changeBuilder := newChangeBuilder(keychain, rootChange)
+	changeBuilder := NewChangeBuilder(keychain, rootChange)
 	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
 	return objectTreeDeps{
 		changeBuilder:   changeBuilder,
@@ -505,6 +506,10 @@ func (ot *objectTree) Root() *Change {
 }
 
 func (ot *objectTree) Close() error {
+	return nil
+}
+
+func (ot *objectTree) Delete() error {
 	return nil
 }
 
