@@ -47,7 +47,7 @@ func (t treeKeys) RawChangeKey(id string) []byte {
 }
 
 func (t treeKeys) isTreeRecordKey(key string) bool {
-	return strings.HasPrefix(key, t.prefix) && !strings.HasSuffix(key, "/heads")
+	return strings.HasPrefix(key, t.prefix)
 }
 
 type spaceKeys struct {

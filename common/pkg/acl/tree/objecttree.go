@@ -528,7 +528,7 @@ func (ot *objectTree) Close() error {
 }
 
 func (ot *objectTree) Delete() error {
-	return nil
+	return ot.treeStorage.Delete()
 }
 
 func (ot *objectTree) SnapshotPath() []string {

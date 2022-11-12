@@ -78,7 +78,7 @@ func createSpaceStorage(db *badger.DB, payload spacestorage.SpaceStorageCreatePa
 	_, err = spaceStore.CreateTreeStorage(storage.TreeStorageCreatePayload{
 		RootRawChange: payload.SpaceSettingsWithId,
 		Changes:       []*treechangeproto.RawTreeChangeWithId{payload.SpaceSettingsWithId},
-		Heads:         []string{payload.SpaceHeaderWithId.Id},
+		Heads:         []string{payload.SpaceSettingsWithId.Id},
 	})
 	if err != nil {
 		return

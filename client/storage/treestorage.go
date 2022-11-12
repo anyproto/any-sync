@@ -163,15 +163,15 @@ func (t *treeStorage) storedKeys() (keys [][]byte, err error) {
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
 			key := item.Key()
-			// if it is a heads key
-			if len(key) <= len(t.keys.HeadsKey()) {
-				continue
-			}
 			keyCopy := make([]byte, 0, len(key))
 			keyCopy = item.KeyCopy(key)
 			keys = append(keys, keyCopy)
 		}
 		return nil
 	})
+	if err != nil {
+		return
+	}
+	keys = append(keys, t.keys.RootIdKey())
 	return
 }

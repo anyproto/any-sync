@@ -20,6 +20,7 @@ const (
 
 type SettingsDocument interface {
 	tree.ObjectTree
+	Init(ctx context.Context) (err error)
 	Refresh()
 	DeleteObject(id string) (err error)
 	NotifyObjectUpdate(id string)
@@ -48,10 +49,11 @@ type settingsDocument struct {
 	lastChangeId      string
 	prov              deletedIdsProvider
 	removeNotifyFunc  RemoveObjectsFunc
+	buildFunc         BuildTreeFunc
 	deletionStateLock sync.Mutex
 }
 
-func NewSettingsDocument(ctx context.Context, deps Deps, spaceId string) (doc SettingsDocument, err error) {
+func NewSettingsDocument(deps Deps, spaceId string) (doc SettingsDocument, err error) {
 	s := &settingsDocument{
 		account:          deps.Account,
 		spaceId:          spaceId,
@@ -59,11 +61,9 @@ func NewSettingsDocument(ctx context.Context, deps Deps, spaceId string) (doc Se
 		treeGetter:       deps.TreeGetter,
 		store:            deps.Store,
 		removeNotifyFunc: deps.RemoveFunc,
+		buildFunc:        deps.BuildFunc,
 	}
-	s.ObjectTree, err = deps.BuildFunc(ctx, deps.Store.SpaceSettingsId(), s)
-	if err != nil {
-		return
-	}
+
 	// this is needed mainly for testing
 	if deps.prov == nil {
 		s.prov = &provider{}
@@ -97,6 +97,11 @@ func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
 	}
 	s.lastChangeId = lastId
 	s.toBeDeleted(ids)
+}
+
+func (s *settingsDocument) Init(ctx context.Context) (err error) {
+	s.ObjectTree, err = s.buildFunc(ctx, s.store.SpaceSettingsId(), s)
+	return
 }
 
 func (s *settingsDocument) Refresh() {

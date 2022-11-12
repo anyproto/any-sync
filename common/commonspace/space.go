@@ -150,6 +150,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
+	s.aclList = syncacl.NewSyncACL(aclList, s.syncService.StreamPool())
 
 	deps := settingsdocument.Deps{
 		BuildFunc:  s.BuildTree,
@@ -158,7 +159,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 		Store:      s.storage,
 		RemoveFunc: s.diffService.RemoveObjects,
 	}
-	s.settingsDocument, err = settingsdocument.NewSettingsDocument(context.Background(), deps, s.id)
+	s.settingsDocument, err = settingsdocument.NewSettingsDocument(deps, s.id)
 	if err != nil {
 		return
 	}
@@ -166,8 +167,10 @@ func (s *space) Init(ctx context.Context) (err error) {
 		s.diffService.UpdateHeads(id, heads)
 		s.settingsDocument.NotifyObjectUpdate(id)
 	})
-	s.settingsDocument.Refresh()
-	s.aclList = syncacl.NewSyncACL(aclList, s.syncService.StreamPool())
+	err = s.settingsDocument.Init(ctx)
+	if err != nil {
+		return
+	}
 	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache, s.settingsDocument)
 	s.syncService.Init(objectGetter)
 	s.diffService.Init(initialIds)
@@ -175,6 +178,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 		s.settingsDocument.Refresh()
 		return nil
 	}, log)
+	s.settingsSync.Run()
 	return nil
 }
 

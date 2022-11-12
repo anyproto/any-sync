@@ -156,7 +156,8 @@ func (c *changeBuilder) BuildContent(payload BuilderContent) (ch *Change, rawIdC
 		IsSnapshot:         payload.IsSnapshot,
 	}
 	if payload.ReadKey != nil {
-		encrypted, err := payload.ReadKey.Encrypt(payload.Content)
+		var encrypted []byte
+		encrypted, err = payload.ReadKey.Encrypt(payload.Content)
 		if err != nil {
 			return
 		}
@@ -191,7 +192,6 @@ func (c *changeBuilder) BuildContent(payload BuilderContent) (ch *Change, rawIdC
 	}
 
 	ch = NewChange(id, change, signature)
-	ch.Model = payload.Content
 
 	rawIdChange = &treechangeproto.RawTreeChangeWithId{
 		RawChange: marshalledRawChange,

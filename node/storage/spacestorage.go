@@ -137,7 +137,7 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 	_, err = store.CreateTreeStorage(storage.TreeStorageCreatePayload{
 		RootRawChange: payload.SpaceSettingsWithId,
 		Changes:       []*treechangeproto.RawTreeChangeWithId{payload.SpaceSettingsWithId},
-		Heads:         []string{payload.SpaceHeaderWithId.Id},
+		Heads:         []string{payload.SpaceSettingsWithId.Id},
 	})
 	if err != nil {
 		return
