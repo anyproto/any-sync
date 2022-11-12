@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"sync"
 )
 
 type DeletionState int
@@ -19,7 +20,7 @@ const (
 
 type SettingsDocument interface {
 	tree.ObjectTree
-	Init()
+	Refresh()
 	DeleteObject(id string) (err error)
 }
 
@@ -37,14 +38,15 @@ type Deps struct {
 
 type settingsDocument struct {
 	tree.ObjectTree
-	account          account.Service
-	spaceId          string
-	deletionState    map[string]DeletionState
-	treeGetter       treegetter.TreeGetter
-	store            spacestorage.SpaceStorage
-	lastChangeId     string
-	prov             deletedIdsProvider
-	removeNotifyFunc RemoveObjectsFunc
+	account           account.Service
+	spaceId           string
+	deletionState     map[string]DeletionState
+	treeGetter        treegetter.TreeGetter
+	store             spacestorage.SpaceStorage
+	lastChangeId      string
+	prov              deletedIdsProvider
+	removeNotifyFunc  RemoveObjectsFunc
+	deletionStateLock sync.Mutex
 }
 
 func NewSettingsDocument(ctx context.Context, deps Deps, spaceId string) (doc SettingsDocument, err error) {
@@ -68,6 +70,14 @@ func NewSettingsDocument(ctx context.Context, deps Deps, spaceId string) (doc Se
 	return
 }
 
+func (s *settingsDocument) NotifyHeadsUpdate(id string) {
+	s.deletionStateLock.Lock()
+	if _, exists := s.deletionState[id]; exists {
+		s.deletionState[id] = DeletionStateQueued
+	}
+	s.deletionStateLock.Unlock()
+}
+
 func (s *settingsDocument) Update(tr tree.ObjectTree) {
 	ids, lastId, err := s.prov.ProvideIds(tr, s.lastChangeId)
 	if err != nil {
@@ -86,7 +96,7 @@ func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
 	s.toBeDeleted(ids)
 }
 
-func (s *settingsDocument) Init() {
+func (s *settingsDocument) Refresh() {
 	s.Lock()
 	defer s.Unlock()
 	s.Rebuild(s)
@@ -94,26 +104,37 @@ func (s *settingsDocument) Init() {
 
 func (s *settingsDocument) toBeDeleted(ids []string) {
 	for _, id := range ids {
+		s.deletionStateLock.Lock()
 		if state, exists := s.deletionState[id]; exists && state == DeletionStateDeleted {
+			s.deletionStateLock.Unlock()
 			continue
 		}
 		// if not already deleted
+		// TODO: here we can possibly have problems if the document is synced later, maybe we should block syncing with deleted documents
 		if _, err := s.store.TreeStorage(id); err == nil {
 			s.deletionState[id] = DeletionStateQueued
+			s.deletionStateLock.Unlock()
+			// doing this without lock
 			err := s.treeGetter.DeleteTree(context.Background(), s.spaceId, id)
 			if err != nil {
 				// TODO: some errors may tell us that the tree is actually deleted, so we should have more checks here
 				// TODO: add logging
 				continue
 			}
+			// TODO: add loop to double check that everything that should be deleted is actually deleted
+			s.deletionStateLock.Lock()
 		}
+		
 		s.deletionState[id] = DeletionStateDeleted
+		s.deletionStateLock.Unlock()
 	}
 	// notifying about removal
 	s.removeNotifyFunc(ids)
 }
 
 func (s *settingsDocument) DeleteObject(id string) (err error) {
+	s.Lock()
+	defer s.Unlock()
 	content := &spacesyncproto.SpaceSettingsContent_ObjectDelete{
 		ObjectDelete: &spacesyncproto.ObjectDelete{Id: id},
 	}
@@ -127,8 +148,6 @@ func (s *settingsDocument) DeleteObject(id string) (err error) {
 	if err != nil {
 		return
 	}
-	s.Lock()
-	defer s.Unlock()
 	_, err = s.AddContent(context.Background(), tree.SignableChangeContent{
 		Data:        res,
 		Key:         s.account.Account().SignKey,
