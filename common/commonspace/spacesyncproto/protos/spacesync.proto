@@ -106,3 +106,23 @@ message RawSpaceHeaderWithId {
     bytes rawHeader = 1;
     string id = 2;
 }
+
+message SpaceSettingsContent {
+    oneof value {
+        ObjectDelete objectDelete = 1;
+    }
+}
+
+message ObjectDelete {
+    string id = 1;
+}
+
+message SpaceSettingsSnapshot {
+    repeated string deletedIds = 1;
+}
+
+message SettingsData {
+    repeated SpaceSettingsContent content = 1;
+    SpaceSettingsSnapshot snapshot = 2;
+}
+

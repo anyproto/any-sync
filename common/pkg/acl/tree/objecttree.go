@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/common"
-	list2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
+	list "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/symmetric"
@@ -67,7 +67,7 @@ type objectTree struct {
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
 	treeBuilder     *treeBuilder
-	aclList         list2.ACLList
+	aclList         list.ACLList
 
 	id   string
 	root *treechangeproto.RawTreeChangeWithId
@@ -92,13 +92,13 @@ type objectTreeDeps struct {
 	treeStorage     storage.TreeStorage
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
-	aclList         list2.ACLList
+	aclList         list.ACLList
 }
 
 func defaultObjectTreeDeps(
 	rootChange *treechangeproto.RawTreeChangeWithId,
 	treeStorage storage.TreeStorage,
-	aclList list2.ACLList) objectTreeDeps {
+	aclList list.ACLList) objectTreeDeps {
 
 	keychain := common.NewKeychain()
 	changeBuilder := NewChangeBuilder(keychain, rootChange)
@@ -187,16 +187,23 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 	ot.aclList.RLock()
 	defer ot.aclList.RUnlock()
 
-	state := ot.aclList.ACLState() // special method for own keys
-	readKey, err := state.CurrentReadKey()
-	if err != nil {
-		return
+	var (
+		state       = ot.aclList.ACLState() // special method for own keys
+		readKey     *symmetric.Key
+		readKeyHash uint64
+	)
+	if content.IsEncrypted {
+		readKeyHash = state.CurrentReadKeyHash()
+		readKey, err = state.CurrentReadKey()
+		if err != nil {
+			return
+		}
 	}
 	cnt = BuilderContent{
 		TreeHeadIds:        ot.tree.Heads(),
 		AclHeadId:          ot.aclList.Head().Id,
 		SnapshotBaseId:     ot.tree.RootId(),
-		CurrentReadKeyHash: state.CurrentReadKeyHash(),
+		CurrentReadKeyHash: readKeyHash,
 		Identity:           content.Identity,
 		IsSnapshot:         content.IsSnapshot,
 		SigningKey:         content.Key,
@@ -440,9 +447,25 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 		ot.tree.Iterate(id, iterate)
 		return
 	}
+	decrypt := func(c *Change) (decrypted []byte, err error) {
+		// the change is not encrypted
+		if c.ReadKeyHash == 0 {
+			decrypted = c.Data
+			return
+		}
+		readKey, exists := ot.keys[c.ReadKeyHash]
+		if !exists {
+			err = list.ErrNoReadKey
+			return
+		}
+
+		decrypted, err = readKey.Decrypt(c.Data)
+		return
+	}
 
 	ot.tree.Iterate(ot.tree.RootId(), func(c *Change) (isContinue bool) {
 		var model any
+		// if already saved as a model
 		if c.Model != nil {
 			return iterate(c)
 		}
@@ -450,14 +473,9 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 		if c.Id == ot.id {
 			return iterate(c)
 		}
-		readKey, exists := ot.keys[c.ReadKeyHash]
-		if !exists {
-			err = list2.ErrNoReadKey
-			return false
-		}
 
 		var decrypted []byte
-		decrypted, err = readKey.Decrypt(c.Data)
+		decrypted, err = decrypt(c)
 		if err != nil {
 			return false
 		}

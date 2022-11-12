@@ -155,12 +155,15 @@ func (c *changeBuilder) BuildContent(payload BuilderContent) (ch *Change, rawIdC
 		Identity:           payload.Identity,
 		IsSnapshot:         payload.IsSnapshot,
 	}
-
-	encrypted, err := payload.ReadKey.Encrypt(payload.Content)
-	if err != nil {
-		return
+	if payload.ReadKey != nil {
+		encrypted, err := payload.ReadKey.Encrypt(payload.Content)
+		if err != nil {
+			return
+		}
+		change.ChangesData = encrypted
+	} else {
+		change.ChangesData = payload.Content
 	}
-	change.ChangesData = encrypted
 
 	marshalledChange, err := proto.Marshal(change)
 	if err != nil {

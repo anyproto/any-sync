@@ -15,4 +15,5 @@ var ErrSpaceNotFound = errors.New("space not found")
 type TreeGetter interface {
 	app.ComponentRunnable
 	GetTree(ctx context.Context, spaceId, treeId string) (tree.ObjectTree, error)
+	DeleteTree(ctx context.Context, spaceId, treeId string) error
 }
