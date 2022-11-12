@@ -14,6 +14,7 @@ import (
 type Service interface {
 	app.Component
 	CreateDocument(spaceId string) (id string, err error)
+	DeleteDocument(spaceId, documentId string) (err error)
 	AllDocumentIds(spaceId string) (ids []string, err error)
 	AddText(spaceId, documentId, text string) (err error)
 	DumpDocumentTree(spaceId, documentId string) (dump string, err error)
