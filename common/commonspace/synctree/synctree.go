@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsservice"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
@@ -30,11 +29,10 @@ var (
 type SyncTree struct {
 	tree.ObjectTree
 	synchandler.SyncHandler
-	syncClient        SyncClient
-	listener          updatelistener.UpdateListener
-	deletedNotifiable settingsservice.DeletedDocumentNotifiable
-	isClosed          bool
-	isDeleted         bool
+	syncClient SyncClient
+	listener   updatelistener.UpdateListener
+	isClosed   bool
+	isDeleted  bool
 }
 
 var log = logger.NewNamed("commonspace.synctree").Sugar()
@@ -45,27 +43,25 @@ var buildObjectTree = tree.BuildObjectTree
 var createSyncClient = newSyncClient
 
 type CreateDeps struct {
-	SpaceId           string
-	Payload           tree.ObjectTreeCreatePayload
-	Configuration     nodeconf.Configuration
-	HeadNotifiable    diffservice.HeadNotifiable
-	StreamPool        syncservice.StreamPool
-	Listener          updatelistener.UpdateListener
-	AclList           list.ACLList
-	CreateStorage     storage.TreeStorageCreatorFunc
-	DeletedNotifiable settingsservice.DeletedDocumentNotifiable
+	SpaceId        string
+	Payload        tree.ObjectTreeCreatePayload
+	Configuration  nodeconf.Configuration
+	HeadNotifiable diffservice.HeadNotifiable
+	StreamPool     syncservice.StreamPool
+	Listener       updatelistener.UpdateListener
+	AclList        list.ACLList
+	CreateStorage  storage.TreeStorageCreatorFunc
 }
 
 type BuildDeps struct {
-	SpaceId           string
-	StreamPool        syncservice.StreamPool
-	Configuration     nodeconf.Configuration
-	HeadNotifiable    diffservice.HeadNotifiable
-	Listener          updatelistener.UpdateListener
-	AclList           list.ACLList
-	SpaceStorage      spacestorage.SpaceStorage
-	TreeStorage       storage.TreeStorage
-	DeletedNotifiable settingsservice.DeletedDocumentNotifiable
+	SpaceId        string
+	StreamPool     syncservice.StreamPool
+	Configuration  nodeconf.Configuration
+	HeadNotifiable diffservice.HeadNotifiable
+	Listener       updatelistener.UpdateListener
+	AclList        list.ACLList
+	SpaceStorage   spacestorage.SpaceStorage
+	TreeStorage    storage.TreeStorage
 }
 
 func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, err error) {
@@ -80,10 +76,9 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, er
 		sharedFactory,
 		deps.Configuration)
 	syncTree := &SyncTree{
-		ObjectTree:        t,
-		syncClient:        syncClient,
-		listener:          deps.Listener,
-		deletedNotifiable: deps.DeletedNotifiable,
+		ObjectTree: t,
+		syncClient: syncClient,
+		listener:   deps.Listener,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
@@ -106,10 +101,9 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, er
 		GetRequestFactory(),
 		deps.Configuration)
 	syncTree := &SyncTree{
-		ObjectTree:        t,
-		syncClient:        syncClient,
-		listener:          deps.Listener,
-		deletedNotifiable: deps.DeletedNotifiable,
+		ObjectTree: t,
+		syncClient: syncClient,
+		listener:   deps.Listener,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
@@ -192,10 +186,9 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t tr
 		GetRequestFactory(),
 		deps.Configuration)
 	syncTree := &SyncTree{
-		ObjectTree:        t,
-		syncClient:        syncClient,
-		listener:          deps.Listener,
-		deletedNotifiable: deps.DeletedNotifiable,
+		ObjectTree: t,
+		syncClient: syncClient,
+		listener:   deps.Listener,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
@@ -211,6 +204,20 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t tr
 		err = syncTree.syncClient.BroadcastAsyncOrSendResponsible(headUpdate)
 	}
 	return
+}
+
+func (s *SyncTree) IterateFrom(id string, convert tree.ChangeConvertFunc, iterate tree.ChangeIterateFunc) (err error) {
+	if err = s.checkAlive(); err != nil {
+		return
+	}
+	return s.ObjectTree.IterateFrom(id, convert, iterate)
+}
+
+func (s *SyncTree) Iterate(convert tree.ChangeConvertFunc, iterate tree.ChangeIterateFunc) (err error) {
+	if err = s.checkAlive(); err != nil {
+		return
+	}
+	return s.ObjectTree.Iterate(convert, iterate)
 }
 
 func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeContent) (res tree.AddResult, err error) {
@@ -254,12 +261,7 @@ func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeprot
 func (s *SyncTree) Delete() (err error) {
 	log.With("id", s.ID()).Debug("deleting sync tree")
 	s.Lock()
-	defer func() {
-		s.Unlock()
-		if err == nil {
-			s.deletedNotifiable.NotifyDeleted(s.ID())
-		}
-	}()
+	defer s.Unlock()
 	if err = s.checkAlive(); err != nil {
 		return
 	}
@@ -268,7 +270,6 @@ func (s *SyncTree) Delete() (err error) {
 		return
 	}
 	s.isDeleted = true
-
 	return
 }
 

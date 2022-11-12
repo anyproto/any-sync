@@ -70,3 +70,16 @@ func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (tr tree.Ob
 	tr = value.(tree.ObjectTree)
 	return
 }
+
+func (c *treeCache) DeleteTree(ctx context.Context, spaceId, treeId string) (err error) {
+	tr, err := c.GetTree(ctx, spaceId, treeId)
+	if err != nil {
+		return
+	}
+	err = tr.Delete()
+	if err != nil {
+		return
+	}
+	_, err = c.cache.Remove(treeId)
+	return
+}

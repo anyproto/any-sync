@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncacl"
@@ -82,13 +83,14 @@ type space struct {
 
 	rpc *rpcHandler
 
-	syncService   syncservice.SyncService
-	diffService   diffservice.DiffService
-	storage       storage.SpaceStorage
-	cache         treegetter.TreeGetter
-	account       account.Service
-	aclList       *syncacl.SyncACL
-	configuration nodeconf.Configuration
+	syncService      syncservice.SyncService
+	diffService      diffservice.DiffService
+	storage          storage.SpaceStorage
+	cache            treegetter.TreeGetter
+	account          account.Service
+	aclList          *syncacl.SyncACL
+	configuration    nodeconf.Configuration
+	settingsDocument settingsdocument.SettingsDocument
 
 	isClosed atomic.Bool
 }
@@ -142,8 +144,18 @@ func (s *space) Init(ctx context.Context) (err error) {
 		return
 	}
 
+	deps := settingsdocument.Deps{
+		BuildFunc:  s.BuildTree,
+		Account:    s.account,
+		TreeGetter: s.cache,
+		Store:      s.storage,
+	}
+	s.settingsDocument, err = settingsdocument.NewSettingsDocument(context.Background(), deps, s.id)
+	if err != nil {
+		return
+	}
 	s.aclList = syncacl.NewSyncACL(aclList, s.syncService.StreamPool())
-	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache)
+	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache, s.settingsDocument)
 	s.syncService.Init(objectGetter)
 	s.diffService.Init(initialIds)
 	return nil
@@ -229,6 +241,9 @@ func (s *space) Close() error {
 		mError.Add(err)
 	}
 	if err := s.syncService.Close(); err != nil {
+		mError.Add(err)
+	}
+	if err := s.settingsDocument.Close(); err != nil {
 		mError.Add(err)
 	}
 	if err := s.aclList.Close(); err != nil {
