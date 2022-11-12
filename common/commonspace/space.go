@@ -72,6 +72,7 @@ type Space interface {
 	DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
 	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
 	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
+	DeleteTree(ctx context.Context, id string) (err error)
 
 	Close() error
 }
@@ -149,11 +150,13 @@ func (s *space) Init(ctx context.Context) (err error) {
 		Account:    s.account,
 		TreeGetter: s.cache,
 		Store:      s.storage,
+		RemoveFunc: s.diffService.RemoveObjects,
 	}
 	s.settingsDocument, err = settingsdocument.NewSettingsDocument(context.Background(), deps, s.id)
 	if err != nil {
 		return
 	}
+	s.settingsDocument.Init()
 	s.aclList = syncacl.NewSyncACL(aclList, s.syncService.StreamPool())
 	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache, s.settingsDocument)
 	s.syncService.Init(objectGetter)
@@ -228,6 +231,10 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		SpaceStorage:   s.storage,
 	}
 	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
+}
+
+func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
+	return s.settingsDocument.DeleteObject(id)
 }
 
 func (s *space) Close() error {
