@@ -9,6 +9,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync"
 	"go.uber.org/zap"
 	"strings"
 )
@@ -25,7 +26,7 @@ type DiffService interface {
 
 type diffService struct {
 	spaceId      string
-	periodicSync PeriodicSync
+	periodicSync periodicsync.PeriodicSync
 	storage      storage.SpaceStorage
 	diff         ldiff.Diff
 	log          *zap.Logger
@@ -46,7 +47,7 @@ func NewDiffService(
 	l := log.With(zap.String("spaceId", spaceId))
 	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient)
 	syncer := newDiffSyncer(spaceId, diff, confConnector, cache, storage, factory, l)
-	periodicSync := newPeriodicSync(syncPeriod, syncer, l)
+	periodicSync := periodicsync.NewPeriodicSync(syncPeriod, syncer.Sync, l)
 
 	return &diffService{
 		spaceId:      spaceId,

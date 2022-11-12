@@ -65,6 +65,7 @@ func (s *service) Run(ctx context.Context) (err error) {
 	mux.HandleFunc("/loadSpace", s.loadSpace)
 	mux.HandleFunc("/allSpaceIds", s.allSpaceIds)
 	mux.HandleFunc("/createDocument", s.createDocument)
+	mux.HandleFunc("/deleteDocument", s.deleteDocument)
 	mux.HandleFunc("/allDocumentIds", s.allDocumentIds)
 	mux.HandleFunc("/addText", s.addText)
 	mux.HandleFunc("/dumpDocumentTree", s.dumpDocumentTree)
@@ -132,6 +133,18 @@ func (s *service) createDocument(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	sendText(w, http.StatusOK, id)
+}
+
+func (s *service) deleteDocument(w http.ResponseWriter, req *http.Request) {
+	query := req.URL.Query()
+	spaceId := query.Get("spaceId")
+	documentId := query.Get("documentId")
+	err := s.controller.DeleteDocument(spaceId, documentId)
+	if err != nil {
+		sendText(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	sendText(w, http.StatusOK, documentId)
 }
 
 func (s *service) allDocumentIds(w http.ResponseWriter, req *http.Request) {

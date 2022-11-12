@@ -22,6 +22,7 @@ type SettingsDocument interface {
 	tree.ObjectTree
 	Refresh()
 	DeleteObject(id string) (err error)
+	NotifyObjectUpdate(id string)
 }
 
 type BuildTreeFunc func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t tree.ObjectTree, err error)
@@ -33,7 +34,8 @@ type Deps struct {
 	TreeGetter treegetter.TreeGetter
 	Store      spacestorage.SpaceStorage
 	RemoveFunc RemoveObjectsFunc
-	prov       deletedIdsProvider
+	// prov exists mainly for the ease of testing
+	prov deletedIdsProvider
 }
 
 type settingsDocument struct {
@@ -70,9 +72,10 @@ func NewSettingsDocument(ctx context.Context, deps Deps, spaceId string) (doc Se
 	return
 }
 
-func (s *settingsDocument) NotifyHeadsUpdate(id string) {
+func (s *settingsDocument) NotifyObjectUpdate(id string) {
 	s.deletionStateLock.Lock()
-	if _, exists := s.deletionState[id]; exists {
+	if state, exists := s.deletionState[id]; exists && state == DeletionStateDeleted {
+		// marking the document as queued, that means that document appeared later than we checked the storage for deletion
 		s.deletionState[id] = DeletionStateQueued
 	}
 	s.deletionStateLock.Unlock()
@@ -109,8 +112,7 @@ func (s *settingsDocument) toBeDeleted(ids []string) {
 			s.deletionStateLock.Unlock()
 			continue
 		}
-		// if not already deleted
-		// TODO: here we can possibly have problems if the document is synced later, maybe we should block syncing with deleted documents
+		// if the document is not in storage it can happen that it will appear later, for that we have NotifyObjectUpdate method
 		if _, err := s.store.TreeStorage(id); err == nil {
 			s.deletionState[id] = DeletionStateQueued
 			s.deletionStateLock.Unlock()
@@ -121,14 +123,13 @@ func (s *settingsDocument) toBeDeleted(ids []string) {
 				// TODO: add logging
 				continue
 			}
-			// TODO: add loop to double check that everything that should be deleted is actually deleted
 			s.deletionStateLock.Lock()
 		}
-		
+
 		s.deletionState[id] = DeletionStateDeleted
 		s.deletionStateLock.Unlock()
 	}
-	// notifying about removal
+	// notifying diff service that the ids should not be synced anymore
 	s.removeNotifyFunc(ids)
 }
 

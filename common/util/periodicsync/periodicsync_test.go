@@ -1,9 +1,10 @@
-package diffservice
+package periodicsync
 
 import (
+	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice/mock_diffservice"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
@@ -14,25 +15,34 @@ func TestPeriodicSync_Run(t *testing.T) {
 	defer ctrl.Finish()
 
 	l := logger.NewNamed("sync")
-	diffSyncer := mock_diffservice.NewMockDiffSyncer(ctrl)
+
 	t.Run("diff syncer 1 time", func(t *testing.T) {
 		secs := 0
-		pSync := newPeriodicSync(secs, diffSyncer, l)
-
-		diffSyncer.EXPECT().Sync(gomock.Any()).Times(1).Return(nil)
+		times := 0
+		diffSyncer := func(ctx context.Context) (err error) {
+			times += 1
+			return nil
+		}
+		pSync := NewPeriodicSync(secs, diffSyncer, l)
 
 		pSync.Run()
 		pSync.Close()
+		require.Equal(t, 1, times)
 	})
 
 	t.Run("diff syncer 2 times", func(t *testing.T) {
 		secs := 1
 
-		pSync := newPeriodicSync(secs, diffSyncer, l)
-		diffSyncer.EXPECT().Sync(gomock.Any()).Times(2).Return(nil)
+		times := 0
+		diffSyncer := func(ctx context.Context) (err error) {
+			times += 1
+			return nil
+		}
+		pSync := NewPeriodicSync(secs, diffSyncer, l)
 
 		pSync.Run()
 		time.Sleep(time.Second * time.Duration(secs))
 		pSync.Close()
+		require.Equal(t, 2, times)
 	})
 }
