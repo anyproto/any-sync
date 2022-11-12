@@ -277,8 +277,8 @@ func (s *SyncTree) Close() (err error) {
 	log.With("id", s.ID()).Debug("closing sync tree")
 	s.Lock()
 	defer s.Unlock()
-	if err = s.checkAlive(); err != nil {
-		return
+	if s.isClosed {
+		return ErrSyncTreeClosed
 	}
 	s.isClosed = true
 	return

@@ -106,7 +106,3 @@ func (t *textDocument) Text() (text string, err error) {
 func (t *textDocument) TreeDump() string {
 	return t.TreeDump()
 }
-
-func (t *textDocument) Close() error {
-	return nil
-}
