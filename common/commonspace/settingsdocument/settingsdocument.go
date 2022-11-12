@@ -19,37 +19,42 @@ const (
 
 type SettingsDocument interface {
 	tree.ObjectTree
+	Init()
 	DeleteObject(id string) (err error)
 }
 
 type BuildTreeFunc func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t tree.ObjectTree, err error)
+type RemoveObjectsFunc func([]string)
 
 type Deps struct {
 	BuildFunc  BuildTreeFunc
 	Account    account.Service
 	TreeGetter treegetter.TreeGetter
 	Store      spacestorage.SpaceStorage
+	RemoveFunc RemoveObjectsFunc
 	prov       deletedIdsProvider
 }
 
 type settingsDocument struct {
 	tree.ObjectTree
-	account       account.Service
-	spaceId       string
-	deletionState map[string]DeletionState
-	treeGetter    treegetter.TreeGetter
-	store         spacestorage.SpaceStorage
-	lastChangeId  string
-	prov          deletedIdsProvider
+	account          account.Service
+	spaceId          string
+	deletionState    map[string]DeletionState
+	treeGetter       treegetter.TreeGetter
+	store            spacestorage.SpaceStorage
+	lastChangeId     string
+	prov             deletedIdsProvider
+	removeNotifyFunc RemoveObjectsFunc
 }
 
 func NewSettingsDocument(ctx context.Context, deps Deps, spaceId string) (doc SettingsDocument, err error) {
 	s := &settingsDocument{
-		account:       deps.Account,
-		spaceId:       spaceId,
-		deletionState: map[string]DeletionState{},
-		treeGetter:    deps.TreeGetter,
-		store:         deps.Store,
+		account:          deps.Account,
+		spaceId:          spaceId,
+		deletionState:    map[string]DeletionState{},
+		treeGetter:       deps.TreeGetter,
+		store:            deps.Store,
+		removeNotifyFunc: deps.RemoveFunc,
 	}
 	s.ObjectTree, err = deps.BuildFunc(ctx, deps.Store.SpaceSettingsId(), s)
 	if err != nil {
@@ -104,6 +109,8 @@ func (s *settingsDocument) toBeDeleted(ids []string) {
 		}
 		s.deletionState[id] = DeletionStateDeleted
 	}
+	// notifying about removal
+	s.removeNotifyFunc(ids)
 }
 
 func (s *settingsDocument) DeleteObject(id string) (err error) {

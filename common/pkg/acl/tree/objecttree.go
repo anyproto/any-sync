@@ -463,7 +463,7 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 		return
 	}
 
-	ot.tree.Iterate(ot.tree.RootId(), func(c *Change) (isContinue bool) {
+	ot.tree.Iterate(id, func(c *Change) (isContinue bool) {
 		var model any
 		// if already saved as a model
 		if c.Model != nil {

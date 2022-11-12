@@ -16,7 +16,7 @@ import (
 type DiffService interface {
 	HeadNotifiable
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
-	RemoveObject(id string)
+	RemoveObjects(ids []string)
 	AllIds() []string
 
 	Init(objectIds []string)
@@ -29,6 +29,7 @@ type diffService struct {
 	storage      storage.SpaceStorage
 	diff         ldiff.Diff
 	log          *zap.Logger
+	syncer       DiffSyncer
 
 	syncPeriod int
 }
@@ -50,6 +51,7 @@ func NewDiffService(
 	return &diffService{
 		spaceId:      spaceId,
 		storage:      storage,
+		syncer:       syncer,
 		periodicSync: periodicSync,
 		diff:         diff,
 		log:          log,
@@ -77,9 +79,11 @@ func (d *diffService) AllIds() []string {
 	return d.diff.Ids()
 }
 
-func (d *diffService) RemoveObject(id string) {
-	// TODO: add space document to remove ids
-	d.diff.RemoveId(id)
+func (d *diffService) RemoveObjects(ids []string) {
+	for _, id := range ids {
+		d.diff.RemoveId(id)
+	}
+	d.syncer.RemoveObjects(ids)
 }
 
 func (d *diffService) Close() (err error) {
