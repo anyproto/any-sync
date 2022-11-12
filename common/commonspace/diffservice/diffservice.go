@@ -69,10 +69,7 @@ func (d *diffService) HandleRangeRequest(ctx context.Context, req *spacesyncprot
 }
 
 func (d *diffService) UpdateHeads(id string, heads []string) {
-	d.diff.Set(ldiff.Element{
-		Id:   id,
-		Head: concatStrings(heads),
-	})
+	d.syncer.UpdateHeads(id, heads)
 }
 
 func (d *diffService) AllIds() []string {
@@ -80,9 +77,6 @@ func (d *diffService) AllIds() []string {
 }
 
 func (d *diffService) RemoveObjects(ids []string) {
-	for _, id := range ids {
-		d.diff.RemoveId(id)
-	}
 	d.syncer.RemoveObjects(ids)
 }
 

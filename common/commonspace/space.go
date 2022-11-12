@@ -156,7 +156,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	s.settingsDocument.Init()
+	s.settingsDocument.Refresh()
 	s.aclList = syncacl.NewSyncACL(aclList, s.syncService.StreamPool())
 	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache, s.settingsDocument)
 	s.syncService.Init(objectGetter)

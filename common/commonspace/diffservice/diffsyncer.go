@@ -18,6 +18,7 @@ import (
 type DiffSyncer interface {
 	Sync(ctx context.Context) error
 	RemoveObjects(ids []string)
+	UpdateHeads(id string, heads []string)
 }
 
 func newDiffSyncer(
@@ -56,8 +57,21 @@ func (d *diffSyncer) RemoveObjects(ids []string) {
 	d.Lock()
 	defer d.Unlock()
 	for _, id := range ids {
+		d.diff.RemoveId(id)
 		d.removedIds[id] = struct{}{}
 	}
+}
+
+func (d *diffSyncer) UpdateHeads(id string, heads []string) {
+	d.Lock()
+	defer d.Unlock()
+	if _, exists := d.removedIds[id]; exists {
+		return
+	}
+	d.diff.Set(ldiff.Element{
+		Id:   id,
+		Head: concatStrings(heads),
+	})
 }
 
 func (d *diffSyncer) Sync(ctx context.Context) error {

@@ -53,8 +53,16 @@ func (s *service) CreateDocument(spaceId string) (id string, err error) {
 	if err != nil {
 		return
 	}
-	id = doc.Tree().ID()
+	id = doc.ID()
 	return
+}
+
+func (s *service) DeleteDocument(spaceId, documentId string) (err error) {
+	space, err := s.spaceService.GetSpace(context.Background(), spaceId)
+	if err != nil {
+		return
+	}
+	return space.DeleteTree(context.Background(), documentId)
 }
 
 func (s *service) AllDocumentIds(spaceId string) (ids []string, err error) {
@@ -79,5 +87,5 @@ func (s *service) DumpDocumentTree(spaceId, documentId string) (dump string, err
 	if err != nil {
 		return
 	}
-	return doc.Tree().DebugDump()
+	return doc.DebugDump()
 }
