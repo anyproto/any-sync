@@ -3,6 +3,7 @@ module github.com/anytypeio/go-anytype-infrastructure-experiments/common
 go 1.19
 
 require (
+	github.com/anytypeio/go-anytype-infrastructure-experiments/consensus v0.0.0-20221107145605-92bdf7d57b48
 	github.com/anytypeio/go-chash v0.0.0-20220629194632-4ad1154fe232
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/cespare/xxhash v1.1.0
@@ -10,7 +11,9 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/huandu/skiplist v1.2.0
+	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.3.2
+	github.com/ipfs/go-ipld-format v0.4.0
 	github.com/libp2p/go-libp2p v0.23.2
 	github.com/minio/sha256-simd v1.0.0
 	github.com/multiformats/go-multibase v0.1.1
@@ -33,6 +36,7 @@ require (
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.1.1 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
@@ -55,7 +59,7 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e // indirect
+	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
 	golang.org/x/image v0.0.0-20200119044424-58c23975cae1 // indirect
 	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
