@@ -77,6 +77,7 @@ func (s *settingsDocument) Update(tr tree.ObjectTree) {
 	s.documentIds = append(s.documentIds, ids...)
 	s.lastChangeId = lastId
 	s.queue.add(ids)
+	s.removeNotifyFunc(ids)
 	s.deleteQueued()
 }
 
@@ -88,6 +89,7 @@ func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
 	s.documentIds = ids
 	s.lastChangeId = lastId
 	s.queue.add(ids)
+	s.removeNotifyFunc(ids)
 	s.deleteQueued()
 }
 
