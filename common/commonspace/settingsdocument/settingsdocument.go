@@ -8,14 +8,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
-	"sync"
-)
-
-type DeletionState int
-
-const (
-	DeletionStateQueued DeletionState = iota
-	DeletionStateDeleted
 )
 
 type SettingsDocument interface {
@@ -41,23 +33,24 @@ type Deps struct {
 
 type settingsDocument struct {
 	tree.ObjectTree
-	account           account.Service
-	spaceId           string
-	deletionState     map[string]DeletionState
-	treeGetter        treegetter.TreeGetter
-	store             spacestorage.SpaceStorage
-	lastChangeId      string
-	prov              deletedIdsProvider
-	removeNotifyFunc  RemoveObjectsFunc
-	buildFunc         BuildTreeFunc
-	deletionStateLock sync.Mutex
+	account          account.Service
+	spaceId          string
+	treeGetter       treegetter.TreeGetter
+	store            spacestorage.SpaceStorage
+	prov             deletedIdsProvider
+	removeNotifyFunc RemoveObjectsFunc
+	buildFunc        BuildTreeFunc
+
+	queue        *settingsQueue
+	documentIds  []string
+	lastChangeId string
 }
 
 func NewSettingsDocument(deps Deps, spaceId string) (doc SettingsDocument, err error) {
 	s := &settingsDocument{
 		account:          deps.Account,
 		spaceId:          spaceId,
-		deletionState:    map[string]DeletionState{},
+		queue:            newSettingsQueue(),
 		treeGetter:       deps.TreeGetter,
 		store:            deps.Store,
 		removeNotifyFunc: deps.RemoveFunc,
@@ -73,12 +66,7 @@ func NewSettingsDocument(deps Deps, spaceId string) (doc SettingsDocument, err e
 }
 
 func (s *settingsDocument) NotifyObjectUpdate(id string) {
-	s.deletionStateLock.Lock()
-	if state, exists := s.deletionState[id]; exists && state == DeletionStateDeleted {
-		// marking the document as queued, that means that document appeared later than we checked the storage for deletion
-		s.deletionState[id] = DeletionStateQueued
-	}
-	s.deletionStateLock.Unlock()
+	s.queue.queueIfDeleted(id)
 }
 
 func (s *settingsDocument) Update(tr tree.ObjectTree) {
@@ -86,8 +74,10 @@ func (s *settingsDocument) Update(tr tree.ObjectTree) {
 	if err != nil {
 		return
 	}
+	s.documentIds = append(s.documentIds, ids...)
 	s.lastChangeId = lastId
-	s.toBeDeleted(ids)
+	s.queue.add(ids)
+	s.deleteQueued()
 }
 
 func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
@@ -95,8 +85,10 @@ func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
 	if err != nil {
 		return
 	}
+	s.documentIds = ids
 	s.lastChangeId = lastId
-	s.toBeDeleted(ids)
+	s.queue.add(ids)
+	s.deleteQueued()
 }
 
 func (s *settingsDocument) Init(ctx context.Context) (err error) {
@@ -107,40 +99,35 @@ func (s *settingsDocument) Init(ctx context.Context) (err error) {
 func (s *settingsDocument) Refresh() {
 	s.Lock()
 	defer s.Unlock()
-	s.Rebuild(s)
+	if s.lastChangeId == "" {
+		s.Rebuild(s)
+	} else {
+		s.deleteQueued()
+	}
 }
 
-func (s *settingsDocument) toBeDeleted(ids []string) {
-	for _, id := range ids {
-		s.deletionStateLock.Lock()
-		if state, exists := s.deletionState[id]; exists && state == DeletionStateDeleted {
-			s.deletionStateLock.Unlock()
-			continue
-		}
-		// if the document is not in storage it can happen that it will appear later, for that we have NotifyObjectUpdate method
+func (s *settingsDocument) deleteQueued() {
+	allQueued := s.queue.getQueued()
+	for _, id := range allQueued {
 		if _, err := s.store.TreeStorage(id); err == nil {
-			s.deletionState[id] = DeletionStateQueued
-			s.deletionStateLock.Unlock()
-			// doing this without lock
 			err := s.treeGetter.DeleteTree(context.Background(), s.spaceId, id)
 			if err != nil {
 				// TODO: some errors may tell us that the tree is actually deleted, so we should have more checks here
 				// TODO: add logging
 				continue
 			}
-			s.deletionStateLock.Lock()
 		}
-
-		s.deletionState[id] = DeletionStateDeleted
-		s.deletionStateLock.Unlock()
+		s.queue.delete(id)
 	}
-	// notifying diff service that the ids should not be synced anymore
-	s.removeNotifyFunc(ids)
 }
 
 func (s *settingsDocument) DeleteObject(id string) (err error) {
 	s.Lock()
 	defer s.Unlock()
+	if s.queue.exists(id) {
+		return nil
+	}
+
 	content := &spacesyncproto.SpaceSettingsContent_ObjectDelete{
 		ObjectDelete: &spacesyncproto.ObjectDelete{Id: id},
 	}
