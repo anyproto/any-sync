@@ -42,6 +42,26 @@ func (fx *fixture) stop(t *testing.T) {
 	require.NoError(t, fx.db.Close())
 }
 
+func (fx *fixture) testNoKeysExist(t *testing.T, treeId string) {
+	index := fx.db.Items()
+	treeKeys := newTreeKeys(treeId)
+	var keys [][]byte
+	key, _, err := index.Next()
+	for err == nil {
+		strKey := string(key)
+		if treeKeys.isTreeRelatedKey(strKey) {
+			keys = append(keys, key)
+		}
+		key, _, err = index.Next()
+	}
+	require.Equal(t, pogreb.ErrIterationDone, err)
+	require.Equal(t, 0, len(keys))
+
+	res, err := fx.db.Has(treeKeys.HeadsKey())
+	require.NoError(t, err)
+	require.False(t, res)
+}
+
 func testTreePayload(t *testing.T, store storage.TreeStorage, payload storage.TreeStorageCreatePayload) {
 	require.Equal(t, payload.RootRawChange.Id, store.Id())
 
@@ -117,5 +137,33 @@ func TestTreeStorage_Methods(t *testing.T) {
 		has, err := store.HasChange(context.Background(), incorrectId)
 		require.NoError(t, err)
 		require.False(t, has)
+	})
+}
+
+func TestTreeStorage_Delete(t *testing.T) {
+	fx := newFixture(t)
+	fx.open(t)
+	payload := treeTestPayload()
+	_, err := createTreeStorage(fx.db, payload)
+	require.NoError(t, err)
+	fx.stop(t)
+
+	fx.open(t)
+	defer fx.stop(t)
+	store, err := newTreeStorage(fx.db, payload.RootRawChange.Id)
+	require.NoError(t, err)
+	testTreePayload(t, store, payload)
+
+	t.Run("add raw change, get change and has change", func(t *testing.T) {
+		newChange := &treechangeproto.RawTreeChangeWithId{RawChange: []byte("ab"), Id: "newId"}
+		require.NoError(t, store.AddRawChange(newChange))
+
+		err = store.Delete()
+		require.NoError(t, err)
+
+		_, err = newTreeStorage(fx.db, payload.RootRawChange.Id)
+		require.Equal(t, err, storage.ErrUnknownTreeId)
+
+		fx.testNoKeysExist(t, payload.RootRawChange.Id)
 	})
 }
