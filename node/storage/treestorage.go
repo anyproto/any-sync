@@ -156,7 +156,7 @@ func (t *treeStorage) storedKeys() (keys [][]byte, err error) {
 	key, _, err := index.Next()
 	for err == nil {
 		strKey := string(key)
-		if t.keys.isTreeRecordKey(strKey) {
+		if t.keys.isTreeRelatedKey(strKey) {
 			keys = append(keys, key)
 		}
 		key, _, err = index.Next()

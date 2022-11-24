@@ -46,7 +46,7 @@ func (t treeKeys) RawChangeKey(id string) []byte {
 	return storage.JoinStringsToBytes("t", t.id, id)
 }
 
-func (t treeKeys) isTreeRecordKey(key string) bool {
+func (t treeKeys) isTreeRelatedKey(key string) bool {
 	return strings.HasPrefix(key, t.prefix)
 }
 
@@ -73,6 +73,10 @@ func (s spaceKeys) HeaderKey() []byte {
 
 func (s spaceKeys) SpaceSettingsIdKey() []byte {
 	return spaceSettingsIdKey
+}
+
+func (s spaceKeys) TreeDeletedKey(id string) []byte {
+	return storage.JoinStringsToBytes("del", id)
 }
 
 func isTreeHeadsKey(key string) bool {

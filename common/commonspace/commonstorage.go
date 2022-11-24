@@ -21,7 +21,7 @@ func (c *commonStorage) CreateTreeStorage(payload treestorage.TreeStorageCreateP
 		return
 	}
 	if status == "" {
-		return c.CreateTreeStorage(payload)
+		return c.SpaceStorage.CreateTreeStorage(payload)
 	}
 	err = storage.ErrTreeStorageAlreadyDeleted
 	return

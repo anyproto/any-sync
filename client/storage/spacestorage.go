@@ -6,7 +6,6 @@ import (
 	storage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/dgraph-io/badger/v3"
-	"sync"
 )
 
 type spaceStorage struct {
@@ -16,7 +15,6 @@ type spaceStorage struct {
 	keys            spaceKeys
 	aclStorage      storage.ListStorage
 	header          *spacesyncproto.RawSpaceHeaderWithId
-	mx              sync.Mutex
 }
 
 var spaceValidationFunc = spacestorage.ValidateSpaceStorageCreatePayload
@@ -118,10 +116,6 @@ func (s *spaceStorage) TreeStorage(id string) (storage.TreeStorage, error) {
 }
 
 func (s *spaceStorage) CreateTreeStorage(payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
-	// we have mutex here, so we prevent overwriting the heads of a tree on concurrent creation
-	s.mx.Lock()
-	defer s.mx.Unlock()
-
 	return createTreeStorage(s.objDb, s.spaceId, payload)
 }
 
@@ -153,6 +147,27 @@ func (s *spaceStorage) StoredIds() (ids []string, err error) {
 		}
 		return nil
 	})
+	return
+}
+
+func (s *spaceStorage) SetTreeDeletedStatus(id, status string) (err error) {
+	return s.objDb.Update(func(txn *badger.Txn) error {
+		return txn.Set(s.keys.TreeDeletedKey(id), []byte(status))
+	})
+}
+
+func (s *spaceStorage) TreeDeletedStatus(id string) (status string, err error) {
+	err = s.objDb.View(func(txn *badger.Txn) error {
+		res, err := getTxn(txn, s.keys.TreeDeletedKey(id))
+		if err != nil {
+			return err
+		}
+		status = string(res)
+		return nil
+	})
+	if err == badger.ErrKeyNotFound {
+		err = nil
+	}
 	return
 }
 
