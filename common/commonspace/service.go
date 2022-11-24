@@ -124,16 +124,6 @@ func (s *service) NewSpace(ctx context.Context, id string) (Space, error) {
 }
 
 func (s *service) addSpaceStorage(ctx context.Context, spaceDescription SpaceDescription) (st storage.SpaceStorage, err error) {
-	_, err = s.storageProvider.SpaceStorage(spaceDescription.SpaceHeader.Id)
-	if err == nil {
-		err = spacesyncproto.ErrSpaceExists
-		return
-	}
-	if err != storage.ErrSpaceStorageMissing {
-		err = spacesyncproto.ErrUnexpected
-		return
-	}
-
 	payload := storage.SpaceStorageCreatePayload{
 		AclWithId: &aclrecordproto.RawACLRecordWithId{
 			Payload: spaceDescription.AclPayload,

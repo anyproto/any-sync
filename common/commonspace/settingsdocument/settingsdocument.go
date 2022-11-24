@@ -41,7 +41,7 @@ type settingsDocument struct {
 	store      spacestorage.SpaceStorage
 	prov       deletedIdsProvider
 	buildFunc  BuildTreeFunc
-	loop       deleteLoop
+	loop       *deleteLoop
 
 	deletionState *deletionstate.DeletionState
 	lastChangeId  string
@@ -57,6 +57,7 @@ func NewSettingsDocument(deps Deps, spaceId string) (doc SettingsDocument, err e
 	})
 
 	s := &settingsDocument{
+		loop:          loop,
 		spaceId:       spaceId,
 		account:       deps.Account,
 		deletionState: deps.DeletionState,
@@ -74,9 +75,9 @@ func NewSettingsDocument(deps Deps, spaceId string) (doc SettingsDocument, err e
 	return
 }
 
-func (s *settingsDocument) updateIds(lastChangeId string) {
+func (s *settingsDocument) updateIds(tr tree.ObjectTree, lastChangeId string) {
 	s.lastChangeId = lastChangeId
-	ids, lastId, err := s.prov.ProvideIds(s, s.lastChangeId)
+	ids, lastId, err := s.prov.ProvideIds(tr, s.lastChangeId)
 	if err != nil {
 		log.With(zap.Strings("ids", ids), zap.Error(err)).Error("failed to update state")
 		return
@@ -88,11 +89,12 @@ func (s *settingsDocument) updateIds(lastChangeId string) {
 }
 
 func (s *settingsDocument) Update(tr tree.ObjectTree) {
-	s.updateIds(s.lastChangeId)
+	s.updateIds(tr, s.lastChangeId)
 }
 
 func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
-	s.updateIds("")
+	// at initial build "s" may not contain the object tree, so it is safer to provide it from the function parameter
+	s.updateIds(tr, "")
 }
 
 func (s *settingsDocument) Init(ctx context.Context) (err error) {
