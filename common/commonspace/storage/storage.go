@@ -12,12 +12,23 @@ import (
 
 const CName = "commonspace.storage"
 
-var ErrSpaceStorageExists = errors.New("space storage exists")
-var ErrSpaceStorageMissing = errors.New("space storage missing")
+var (
+	ErrSpaceStorageExists  = errors.New("space storage exists")
+	ErrSpaceStorageMissing = errors.New("space storage missing")
+
+	ErrTreeStorageAlreadyDeleted = errors.New("tree storage already deleted")
+)
+
+const (
+	TreeDeletedStatusQueued  = "queued"
+	TreeDeletedStatusDeleted = "deleted"
+)
 
 type SpaceStorage interface {
 	storage.Provider
 	Id() string
+	SetTreeDeletedStatus(id, state string) error
+	TreeDeletedStatus(id string) (string, error)
 	SpaceSettingsId() string
 	ACLStorage() (storage.ListStorage, error)
 	SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error)

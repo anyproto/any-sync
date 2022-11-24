@@ -1,0 +1,36 @@
+package settingsdocument
+
+import (
+	"context"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
+	"go.uber.org/zap"
+)
+
+type deleter struct {
+	st     storage.SpaceStorage
+	state  *deletionstate.DeletionState
+	getter treegetter.TreeGetter
+}
+
+func newDeleter(st storage.SpaceStorage, state *deletionstate.DeletionState, getter treegetter.TreeGetter) *deleter {
+	return &deleter{st, state, getter}
+}
+
+func (d *deleter) delete() {
+	allQueued := d.state.GetQueued()
+	for _, id := range allQueued {
+		if _, err := d.st.TreeStorage(id); err == nil {
+			err := d.getter.DeleteTree(context.Background(), d.st.Id(), id)
+			if err != nil {
+				log.With(zap.String("id", id), zap.Error(err)).Error("failed to delete object")
+				continue
+			}
+		}
+		err := d.state.Delete(id)
+		if err != nil {
+			log.With(zap.String("id", id), zap.Error(err)).Error("failed to mark object as deleted")
+		}
+	}
+}

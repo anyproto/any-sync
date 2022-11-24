@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncacl"
@@ -19,7 +20,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"sync"
@@ -96,8 +96,6 @@ type space struct {
 	aclList          *syncacl.SyncACL
 	configuration    nodeconf.Configuration
 	settingsDocument settingsdocument.SettingsDocument
-	settingsSync     periodicsync.PeriodicSync
-	headNotifiable   diffservice.HeadNotifiable
 
 	isClosed atomic.Bool
 }
@@ -132,6 +130,8 @@ func (s *space) Description() (desc SpaceDescription, err error) {
 }
 
 func (s *space) Init(ctx context.Context) (err error) {
+	s.storage = newCommonStorage(s.storage)
+
 	header, err := s.storage.SpaceHeader()
 	if err != nil {
 		return
@@ -152,33 +152,27 @@ func (s *space) Init(ctx context.Context) (err error) {
 	}
 	s.aclList = syncacl.NewSyncACL(aclList, s.syncService.StreamPool())
 
+	deletionState := deletionstate.NewDeletionState(s.storage)
 	deps := settingsdocument.Deps{
-		BuildFunc:  s.BuildTree,
-		Account:    s.account,
-		TreeGetter: s.cache,
-		Store:      s.storage,
-		RemoveFunc: s.diffService.RemoveObjects,
+		BuildFunc:     s.BuildTree,
+		Account:       s.account,
+		TreeGetter:    s.cache,
+		Store:         s.storage,
+		DeletionState: deletionState,
 	}
 	s.settingsDocument, err = settingsdocument.NewSettingsDocument(deps, s.id)
 	if err != nil {
 		return
 	}
-	s.headNotifiable = diffservice.HeadNotifiableFunc(func(id string, heads []string) {
-		s.diffService.UpdateHeads(id, heads)
-		s.settingsDocument.NotifyObjectUpdate(id)
-	})
+
+	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache, s.settingsDocument)
+	s.syncService.Init(objectGetter)
+	s.diffService.Init(initialIds, deletionState)
 	err = s.settingsDocument.Init(ctx)
 	if err != nil {
 		return
 	}
-	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache, s.settingsDocument)
-	s.syncService.Init(objectGetter)
-	s.diffService.Init(initialIds)
-	s.settingsSync = periodicsync.NewPeriodicSync(SettingsSyncPeriodSeconds, func(ctx context.Context) error {
-		s.settingsDocument.Refresh()
-		return nil
-	}, log)
-	s.settingsSync.Run()
+
 	return nil
 }
 
@@ -208,10 +202,10 @@ func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		Payload:        payload,
 		StreamPool:     s.syncService.StreamPool(),
 		Configuration:  s.configuration,
-		HeadNotifiable: s.headNotifiable,
+		HeadNotifiable: s.diffService,
 		Listener:       listener,
 		AclList:        s.aclList,
-		CreateStorage:  s.storage.CreateTreeStorage,
+		SpaceStorage:   s.storage,
 	}
 	return synctree.DeriveSyncTree(ctx, deps)
 }
@@ -226,10 +220,10 @@ func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		Payload:        payload,
 		StreamPool:     s.syncService.StreamPool(),
 		Configuration:  s.configuration,
-		HeadNotifiable: s.headNotifiable,
+		HeadNotifiable: s.diffService,
 		Listener:       listener,
 		AclList:        s.aclList,
-		CreateStorage:  s.storage.CreateTreeStorage,
+		SpaceStorage:   s.storage,
 	}
 	return synctree.CreateSyncTree(ctx, deps)
 }
@@ -243,7 +237,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		SpaceId:        s.id,
 		StreamPool:     s.syncService.StreamPool(),
 		Configuration:  s.configuration,
-		HeadNotifiable: s.headNotifiable,
+		HeadNotifiable: s.diffService,
 		Listener:       listener,
 		AclList:        s.aclList,
 		SpaceStorage:   s.storage,
@@ -268,7 +262,6 @@ func (s *space) Close() error {
 	if err := s.syncService.Close(); err != nil {
 		mError.Add(err)
 	}
-	s.settingsSync.Close()
 	if err := s.settingsDocument.Close(); err != nil {
 		mError.Add(err)
 	}

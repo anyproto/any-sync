@@ -122,7 +122,7 @@ func (t *treeStorage) GetRawChange(ctx context.Context, id string) (raw *treecha
 		return
 	}
 	if res == nil {
-		err = storage.ErrUnkownChange
+		err = storage.ErrUnknownChange
 	}
 
 	raw = &treechangeproto.RawTreeChangeWithId{

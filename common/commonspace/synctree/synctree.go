@@ -48,7 +48,7 @@ type CreateDeps struct {
 	StreamPool     syncservice.StreamPool
 	Listener       updatelistener.UpdateListener
 	AclList        list.ACLList
-	CreateStorage  storage.TreeStorageCreatorFunc
+	SpaceStorage   spacestorage.SpaceStorage
 }
 
 type BuildDeps struct {
@@ -63,7 +63,7 @@ type BuildDeps struct {
 }
 
 func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, err error) {
-	t, err = createDerivedObjectTree(deps.Payload, deps.AclList, deps.CreateStorage)
+	t, err = createDerivedObjectTree(deps.Payload, deps.AclList, deps.SpaceStorage.CreateTreeStorage)
 	if err != nil {
 		return
 	}
@@ -81,6 +81,9 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, er
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
 	t = syncTree
+	syncTree.Lock()
+	defer syncTree.Unlock()
+	syncTree.listener.Rebuild(syncTree)
 
 	headUpdate := syncClient.CreateHeadUpdate(t, nil)
 	err = syncClient.BroadcastAsync(headUpdate)
@@ -88,7 +91,7 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, er
 }
 
 func CreateSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, err error) {
-	t, err = createObjectTree(deps.Payload, deps.AclList, deps.CreateStorage)
+	t, err = createObjectTree(deps.Payload, deps.AclList, deps.SpaceStorage.CreateTreeStorage)
 	if err != nil {
 		return
 	}
@@ -106,6 +109,9 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, er
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
 	t = syncTree
+	syncTree.Lock()
+	defer syncTree.Unlock()
+	syncTree.listener.Rebuild(syncTree)
 
 	headUpdate := syncClient.CreateHeadUpdate(t, nil)
 	err = syncClient.BroadcastAsync(headUpdate)
@@ -186,6 +192,9 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t tr
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
 	t = syncTree
+	syncTree.Lock()
+	defer syncTree.Unlock()
+	syncTree.listener.Rebuild(syncTree)
 
 	headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 	// here we will have different behaviour based on who is sending this update
