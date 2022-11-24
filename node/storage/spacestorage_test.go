@@ -4,8 +4,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/stretchr/testify/require"
 	"os"
+	"sort"
 	"strconv"
 	"testing"
 )
@@ -19,9 +21,14 @@ func spaceTestPayload() spacestorage.SpaceStorageCreatePayload {
 		Payload: []byte("aclRoot"),
 		Id:      "aclRootId",
 	}
+	settings := &treechangeproto.RawTreeChangeWithId{
+		RawChange: []byte("settings"),
+		Id:        "settingsId",
+	}
 	return spacestorage.SpaceStorageCreatePayload{
-		AclWithId:         aclRoot,
-		SpaceHeaderWithId: header,
+		AclWithId:           aclRoot,
+		SpaceHeaderWithId:   header,
+		SpaceSettingsWithId: settings,
 	}
 }
 
@@ -68,7 +75,7 @@ func TestSpaceStorage_NewAndCreateTree(t *testing.T) {
 	}()
 	testSpace(t, store, payload)
 
-	t.Run("create tree and get tree", func(t *testing.T) {
+	t.Run("create tree, get tree and mark deleted", func(t *testing.T) {
 		payload := treeTestPayload()
 		treeStore, err := store.CreateTreeStorage(payload)
 		require.NoError(t, err)
@@ -77,6 +84,14 @@ func TestSpaceStorage_NewAndCreateTree(t *testing.T) {
 		otherStore, err := store.TreeStorage(payload.RootRawChange.Id)
 		require.NoError(t, err)
 		testTreePayload(t, otherStore, payload)
+
+		initialStatus := "deleted"
+		err = store.SetTreeDeletedStatus(otherStore.Id(), initialStatus)
+		require.NoError(t, err)
+
+		status, err := store.TreeDeletedStatus(otherStore.Id())
+		require.NoError(t, err)
+		require.Equal(t, initialStatus, status)
 	})
 }
 
@@ -100,8 +115,11 @@ func TestSpaceStorage_StoredIds(t *testing.T) {
 		_, err := store.CreateTreeStorage(treePayload)
 		require.NoError(t, err)
 	}
+	ids = append(ids, payload.SpaceSettingsWithId.Id)
+	sort.Strings(ids)
 
 	storedIds, err := store.StoredIds()
+	sort.Strings(storedIds)
 	require.NoError(t, err)
 	require.Equal(t, ids, storedIds)
 }
