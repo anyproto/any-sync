@@ -18,7 +18,6 @@ var log = logger.NewNamed("commonspace.settingsdocument")
 type SettingsDocument interface {
 	tree.ObjectTree
 	Init(ctx context.Context) (err error)
-	Refresh()
 	DeleteObject(id string) (err error)
 }
 
@@ -75,8 +74,9 @@ func NewSettingsDocument(deps Deps, spaceId string) (doc SettingsDocument, err e
 	return
 }
 
-func (s *settingsDocument) Update(tr tree.ObjectTree) {
-	ids, lastId, err := s.prov.ProvideIds(tr, s.lastChangeId)
+func (s *settingsDocument) updateIds(lastChangeId string) {
+	s.lastChangeId = lastChangeId
+	ids, lastId, err := s.prov.ProvideIds(s, s.lastChangeId)
 	if err != nil {
 		log.With(zap.Strings("ids", ids), zap.Error(err)).Error("failed to update state")
 		return
@@ -87,16 +87,12 @@ func (s *settingsDocument) Update(tr tree.ObjectTree) {
 	}
 }
 
+func (s *settingsDocument) Update(tr tree.ObjectTree) {
+	s.updateIds(s.lastChangeId)
+}
+
 func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
-	ids, lastId, err := s.prov.ProvideIds(tr, "")
-	if err != nil {
-		log.With(zap.Strings("ids", ids), zap.Error(err)).Error("failed to rebuild state")
-		return
-	}
-	s.lastChangeId = lastId
-	if err = s.deletionState.Add(ids); err != nil {
-		log.With(zap.Strings("ids", ids), zap.Error(err)).Error("failed to queue ids to delete")
-	}
+	s.updateIds("")
 }
 
 func (s *settingsDocument) Init(ctx context.Context) (err error) {
@@ -106,16 +102,6 @@ func (s *settingsDocument) Init(ctx context.Context) (err error) {
 	}
 	s.loop.Run()
 	return
-}
-
-func (s *settingsDocument) Refresh() {
-	s.Lock()
-	defer s.Unlock()
-	if s.lastChangeId == "" {
-		s.Rebuild(s)
-	} else {
-		s.Update(s)
-	}
 }
 
 func (s *settingsDocument) Close() error {

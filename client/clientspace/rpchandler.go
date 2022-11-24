@@ -45,7 +45,8 @@ func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpac
 		SpaceSettingsPayload: req.Payload.SpaceSettingsPayload,
 		SpaceSettingsId:      req.Payload.SpaceSettingsPayloadId,
 	}
-	err = r.s.AddSpace(ctx, description)
+	ctx = context.WithValue(ctx, commonspace.AddSpaceCtxKey, description)
+	_, err = r.s.GetSpace(ctx, description.SpaceHeader.GetId())
 	if err != nil {
 		return
 	}

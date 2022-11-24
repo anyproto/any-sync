@@ -21,14 +21,12 @@ func newDeleter(st storage.SpaceStorage, state *deletionstate.DeletionState, get
 func (d *deleter) delete() {
 	allQueued := d.state.GetQueued()
 	for _, id := range allQueued {
-		if _, err := d.st.TreeStorage(id); err == nil {
-			err := d.getter.DeleteTree(context.Background(), d.st.Id(), id)
-			if err != nil {
-				log.With(zap.String("id", id), zap.Error(err)).Error("failed to delete object")
-				continue
-			}
+		err := d.getter.DeleteTree(context.Background(), d.st.Id(), id)
+		if err != nil && err != storage.ErrTreeStorageAlreadyDeleted {
+			log.With(zap.String("id", id), zap.Error(err)).Error("failed to delete object")
+			continue
 		}
-		err := d.state.Delete(id)
+		err = d.state.Delete(id)
 		if err != nil {
 			log.With(zap.String("id", id), zap.Error(err)).Error("failed to mark object as deleted")
 		}

@@ -148,6 +148,15 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 		return
 	}
 
+	status, err := deps.SpaceStorage.TreeDeletedStatus(id)
+	if err != nil {
+		return
+	}
+	if status != "" {
+		err = spacestorage.ErrTreeStorageAlreadyDeleted
+		return
+	}
+
 	resp, err := getTreeRemote()
 	if err != nil {
 		return

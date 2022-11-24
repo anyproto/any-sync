@@ -9,7 +9,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"go.uber.org/zap"
 	"path"
-	"sync"
 	"time"
 )
 
@@ -26,7 +25,6 @@ type spaceStorage struct {
 	keys            spaceKeys
 	aclStorage      storage.ListStorage
 	header          *spacesyncproto.RawSpaceHeaderWithId
-	mx              sync.Mutex
 }
 
 func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceStorage, err error) {
@@ -174,10 +172,6 @@ func (s *spaceStorage) TreeStorage(id string) (storage.TreeStorage, error) {
 }
 
 func (s *spaceStorage) CreateTreeStorage(payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
-	// we have mutex here, so we prevent overwriting the heads of a tree on concurrent creation
-	s.mx.Lock()
-	defer s.mx.Unlock()
-
 	return createTreeStorage(s.objDb, payload)
 }
 
@@ -187,6 +181,19 @@ func (s *spaceStorage) ACLStorage() (storage.ListStorage, error) {
 
 func (s *spaceStorage) SpaceHeader() (header *spacesyncproto.RawSpaceHeaderWithId, err error) {
 	return s.header, nil
+}
+
+func (s *spaceStorage) SetTreeDeletedStatus(id, state string) (err error) {
+	return s.objDb.Put(s.keys.TreeDeletedKey(id), []byte(state))
+}
+
+func (s *spaceStorage) TreeDeletedStatus(id string) (status string, err error) {
+	res, err := s.objDb.Get(s.keys.TreeDeletedKey(id))
+	if err != nil {
+		return
+	}
+	status = string(res)
+	return
 }
 
 func (s *spaceStorage) StoredIds() (ids []string, err error) {
