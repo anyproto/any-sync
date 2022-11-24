@@ -34,7 +34,7 @@ func (p pushSpaceRequestMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	return res.AclPayloadId == p.aclRootId && res.SpaceHeader == p.spaceHeader
+	return res.Payload.AclPayloadId == p.aclRootId && res.Payload.SpaceHeader == p.spaceHeader
 }
 
 func (p pushSpaceRequestMatcher) String() string {

@@ -4,6 +4,7 @@ package diffservice
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
@@ -20,7 +21,7 @@ type DiffService interface {
 	RemoveObjects(ids []string)
 	AllIds() []string
 
-	Init(objectIds []string)
+	Init(objectIds []string, deletionState *deletionstate.DeletionState)
 	Close() (err error)
 }
 
@@ -60,8 +61,9 @@ func NewDiffService(
 	}
 }
 
-func (d *diffService) Init(objectIds []string) {
+func (d *diffService) Init(objectIds []string, deletionState *deletionstate.DeletionState) {
 	d.fillDiff(objectIds)
+	d.syncer.Init(deletionState)
 	d.periodicSync.Run()
 }
 
