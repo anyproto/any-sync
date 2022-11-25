@@ -12,6 +12,7 @@ import (
 
 type TextDocument interface {
 	tree.ObjectTree
+	InnerTree() tree.ObjectTree
 	AddText(text string) error
 	Text() (string, error)
 	TreeDump() string
@@ -53,6 +54,10 @@ func NewTextDocument(ctx context.Context, space commonspace.Space, id string, li
 		ObjectTree: t,
 		account:    account,
 	}, nil
+}
+
+func (t *textDocument) InnerTree() tree.ObjectTree {
+	return t.ObjectTree
 }
 
 func (t *textDocument) AddText(text string) (err error) {

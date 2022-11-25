@@ -30,5 +30,6 @@ func (d *deleter) delete() {
 		if err != nil {
 			log.With(zap.String("id", id), zap.Error(err)).Error("failed to mark object as deleted")
 		}
+		log.With(zap.String("id", id), zap.Error(err)).Debug("object successfully deleted")
 	}
 }

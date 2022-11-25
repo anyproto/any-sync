@@ -89,7 +89,7 @@ func (s *service) DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (
 func (s *service) NewSpace(ctx context.Context, id string) (Space, error) {
 	st, err := s.storageProvider.SpaceStorage(id)
 	if err != nil {
-		if err != spacesyncproto.ErrSpaceMissing {
+		if err != storage.ErrSpaceStorageMissing {
 			return nil, err
 		}
 
@@ -101,7 +101,6 @@ func (s *service) NewSpace(ctx context.Context, id string) (Space, error) {
 		} else {
 			st, err = s.getSpaceStorageFromRemote(ctx, id)
 			if err != nil {
-				err = storage.ErrSpaceStorageMissing
 				return nil, err
 			}
 		}
@@ -130,6 +129,10 @@ func (s *service) addSpaceStorage(ctx context.Context, spaceDescription SpaceDes
 			Id:      spaceDescription.AclId,
 		},
 		SpaceHeaderWithId: spaceDescription.SpaceHeader,
+		SpaceSettingsWithId: &treechangeproto.RawTreeChangeWithId{
+			RawChange: spaceDescription.SpaceSettingsPayload,
+			Id:        spaceDescription.SpaceSettingsId,
+		},
 	}
 	st, err = s.storageProvider.CreateSpaceStorage(payload)
 	if err != nil {

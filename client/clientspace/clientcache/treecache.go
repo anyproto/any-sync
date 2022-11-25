@@ -99,7 +99,13 @@ func (c *treeCache) GetDocument(ctx context.Context, spaceId, id string) (doc te
 }
 
 func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (tr tree.ObjectTree, err error) {
-	return c.GetDocument(ctx, spaceId, id)
+	doc, err := c.GetDocument(ctx, spaceId, id)
+	if err != nil {
+		return
+	}
+	// we have to do this trick, otherwise the compiler won't understand that TextDocument conforms to SyncHandler interface
+	tr = doc.InnerTree()
+	return
 }
 
 func (c *treeCache) DeleteTree(ctx context.Context, spaceId, treeId string) (err error) {

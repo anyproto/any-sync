@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
@@ -34,7 +35,7 @@ type Deps struct {
 }
 
 type settingsDocument struct {
-	tree.ObjectTree
+	*synctree.SyncTree
 	account    account.Service
 	spaceId    string
 	treeGetter treegetter.TreeGetter
@@ -98,10 +99,11 @@ func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
 }
 
 func (s *settingsDocument) Init(ctx context.Context) (err error) {
-	s.ObjectTree, err = s.buildFunc(ctx, s.store.SpaceSettingsId(), s)
+	syncTree, err := s.buildFunc(ctx, s.store.SpaceSettingsId(), s)
 	if err != nil {
 		return
 	}
+	s.SyncTree = syncTree.(*synctree.SyncTree)
 	s.loop.Run()
 	return
 }
