@@ -83,7 +83,9 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, er
 	t = syncTree
 	syncTree.Lock()
 	defer syncTree.Unlock()
-	syncTree.listener.Rebuild(syncTree)
+	if syncTree.listener != nil {
+		syncTree.listener.Rebuild(syncTree)
+	}
 
 	headUpdate := syncClient.CreateHeadUpdate(t, nil)
 	err = syncClient.BroadcastAsync(headUpdate)
@@ -111,7 +113,10 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, er
 	t = syncTree
 	syncTree.Lock()
 	defer syncTree.Unlock()
-	syncTree.listener.Rebuild(syncTree)
+	// TODO: refactor here because the code is duplicated, when we create a tree we should only create a storage and then build a tree
+	if syncTree.listener != nil {
+		syncTree.listener.Rebuild(syncTree)
+	}
 
 	headUpdate := syncClient.CreateHeadUpdate(t, nil)
 	err = syncClient.BroadcastAsync(headUpdate)
@@ -203,7 +208,9 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t tr
 	t = syncTree
 	syncTree.Lock()
 	defer syncTree.Unlock()
-	syncTree.listener.Rebuild(syncTree)
+	if syncTree.listener != nil {
+		syncTree.listener.Rebuild(syncTree)
+	}
 
 	headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 	// here we will have different behaviour based on who is sending this update
