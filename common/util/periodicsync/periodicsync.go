@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_periodicsync/mock_periodicsync.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync PeriodicSync
 package periodicsync
 
 import (

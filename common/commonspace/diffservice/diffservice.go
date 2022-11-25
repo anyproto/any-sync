@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_diffservice/mock_diffservice.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice DiffSyncer,PeriodicSync
+//go:generate mockgen -destination mock_diffservice/mock_diffservice.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice DiffSyncer
 package diffservice
 
 import (
