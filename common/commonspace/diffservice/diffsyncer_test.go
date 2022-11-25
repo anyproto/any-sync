@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto/mock_spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter/mock_treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
@@ -16,6 +17,7 @@ import (
 	mock_aclstorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage/mock_storage"
 	mock_treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage/mock_storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff/mock_ldiff"
 	"github.com/golang/mock/gomock"
 	"github.com/libp2p/go-libp2p/core/sec"
@@ -112,6 +114,13 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	diffSyncer := newDiffSyncer(spaceId, diffMock, connectorMock, cacheMock, stMock, factory, l)
 	diffSyncer.Init(delState)
 
+	delStateAdd := func(deletedId string) {
+		stMock.EXPECT().TreeDeletedStatus(deletedId).Return("", nil)
+		stMock.EXPECT().SetTreeDeletedStatus(deletedId, storage.TreeDeletedStatusQueued)
+		diffMock.EXPECT().RemoveId(deletedId)
+		require.NoError(t, delState.Add([]string{deletedId}))
+	}
+
 	t.Run("diff syncer sync simple", func(t *testing.T) {
 		connectorMock.EXPECT().
 			GetResponsiblePeers(gomock.Any(), spaceId).
@@ -127,12 +136,46 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		require.NoError(t, diffSyncer.Sync(ctx))
 	})
 
+	t.Run("diff syncer sync filtered", func(t *testing.T) {
+		delStateAdd("changed")
+		connectorMock.EXPECT().
+			GetResponsiblePeers(gomock.Any(), spaceId).
+			Return([]peer.Peer{mockPeer{}}, nil)
+		diffMock.EXPECT().
+			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).
+			Return([]string{"new1", "new2"}, []string{"changed"}, nil, nil)
+		for _, arg := range []string{"new1", "new2"} {
+			cacheMock.EXPECT().
+				GetTree(gomock.Any(), spaceId, arg).
+				Return(nil, nil)
+		}
+		require.NoError(t, diffSyncer.Sync(ctx))
+	})
+
 	t.Run("diff syncer sync conf error", func(t *testing.T) {
 		connectorMock.EXPECT().
 			GetResponsiblePeers(gomock.Any(), spaceId).
 			Return(nil, fmt.Errorf("some error"))
 
 		require.Error(t, diffSyncer.Sync(ctx))
+	})
+
+	t.Run("deletion state remove objects", func(t *testing.T) {
+		deletedId := "id"
+		delStateAdd(deletedId)
+
+		// this should not result in any mock being called
+		diffSyncer.UpdateHeads(deletedId, []string{"someHead"})
+	})
+
+	t.Run("update heads updates diff", func(t *testing.T) {
+		newId := "newId"
+		newHeads := []string{"h1", "h2"}
+		diffMock.EXPECT().Set(ldiff.Element{
+			Id:   newId,
+			Head: concatStrings(newHeads),
+		})
+		diffSyncer.UpdateHeads(newId, newHeads)
 	})
 
 	t.Run("diff syncer sync space missing", func(t *testing.T) {
