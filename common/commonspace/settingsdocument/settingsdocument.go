@@ -7,7 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
@@ -17,12 +17,12 @@ import (
 var log = logger.NewNamed("commonspace.settingsdocument")
 
 type SettingsDocument interface {
-	tree.ObjectTree
+	synctree.SyncTree
 	Init(ctx context.Context) (err error)
 	DeleteObject(id string) (err error)
 }
 
-type BuildTreeFunc func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t tree.ObjectTree, err error)
+type BuildTreeFunc func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error)
 
 type Deps struct {
 	BuildFunc     BuildTreeFunc
@@ -31,17 +31,16 @@ type Deps struct {
 	Store         spacestorage.SpaceStorage
 	DeletionState *deletionstate.DeletionState
 	// prov exists mainly for the ease of testing
-	prov deletedIdsProvider
+	prov DeletedIdsProvider
 }
 
 type settingsDocument struct {
-	tree.ObjectTree
-	synchandler.SyncHandler
+	synctree.SyncTree
 	account    account.Service
 	spaceId    string
 	treeGetter treegetter.TreeGetter
 	store      spacestorage.SpaceStorage
-	prov       deletedIdsProvider
+	prov       DeletedIdsProvider
 	buildFunc  BuildTreeFunc
 	loop       *deleteLoop
 
@@ -100,19 +99,17 @@ func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
 }
 
 func (s *settingsDocument) Init(ctx context.Context) (err error) {
-	s.ObjectTree, err = s.buildFunc(ctx, s.store.SpaceSettingsId(), s)
+	s.SyncTree, err = s.buildFunc(ctx, s.store.SpaceSettingsId(), s)
 	if err != nil {
 		return
 	}
-	// this is needed, so we would easily convert the object to synchandler interface in objectgetter
-	s.SyncHandler = s.ObjectTree.(synchandler.SyncHandler)
 	s.loop.Run()
 	return
 }
 
 func (s *settingsDocument) Close() error {
 	s.loop.Close()
-	return s.ObjectTree.Close()
+	return s.SyncTree.Close()
 }
 
 func (s *settingsDocument) DeleteObject(id string) (err error) {

@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_settingsdocument/mock_settingsdocument.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument DeletedIdsProvider
 package settingsdocument
 
 import (
@@ -6,7 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-type deletedIdsProvider interface {
+type DeletedIdsProvider interface {
 	ProvideIds(tr tree.ObjectTree, startId string) (ids []string, lastId string, err error)
 }
 

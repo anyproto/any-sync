@@ -27,7 +27,7 @@ type syncTreeMatcher struct {
 }
 
 func (s syncTreeMatcher) Matches(x interface{}) bool {
-	t, ok := x.(*SyncTree)
+	t, ok := x.(*syncTree)
 	if !ok {
 		return false
 	}
@@ -118,7 +118,7 @@ func Test_BuildSyncTree(t *testing.T) {
 	updateListenerMock := mock_updatelistener.NewMockUpdateListener(ctrl)
 	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
 	objTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
-	tr := &SyncTree{
+	tr := &syncTree{
 		ObjectTree:  objTreeMock,
 		SyncHandler: nil,
 		syncClient:  syncClientMock,
