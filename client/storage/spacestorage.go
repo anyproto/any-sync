@@ -138,7 +138,8 @@ func (s *spaceStorage) StoredIds() (ids []string, err error) {
 
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
-			id := item.Key()
+			id := make([]byte, 0, len(item.Key()))
+			id = item.KeyCopy(id)
 			if len(id) <= len(s.keys.TreeRootPrefix())+1 {
 				continue
 			}
