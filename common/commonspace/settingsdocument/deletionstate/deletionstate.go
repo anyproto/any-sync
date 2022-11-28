@@ -86,7 +86,7 @@ func (st *DeletionState) Delete(id string) (err error) {
 	defer st.Unlock()
 	delete(st.queued, id)
 	st.deleted[id] = struct{}{}
-	err = st.storage.SetTreeDeletedStatus(id, storage.TreeDeletedStatusQueued)
+	err = st.storage.SetTreeDeletedStatus(id, storage.TreeDeletedStatusDeleted)
 	if err != nil {
 		return
 	}

@@ -155,6 +155,7 @@ func (t *treeStorage) storedKeys() (keys [][]byte, err error) {
 	err = t.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchValues = false
+		// this will get all raw changes and also "heads"
 		opts.Prefix = t.keys.RawChangePrefix()
 
 		it := txn.NewIterator(opts)
@@ -164,7 +165,7 @@ func (t *treeStorage) storedKeys() (keys [][]byte, err error) {
 			item := it.Item()
 			key := item.Key()
 			keyCopy := make([]byte, 0, len(key))
-			keyCopy = item.KeyCopy(key)
+			keyCopy = item.KeyCopy(keyCopy)
 			keys = append(keys, keyCopy)
 		}
 		return nil

@@ -7,7 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
@@ -35,7 +35,8 @@ type Deps struct {
 }
 
 type settingsDocument struct {
-	*synctree.SyncTree
+	tree.ObjectTree
+	synchandler.SyncHandler
 	account    account.Service
 	spaceId    string
 	treeGetter treegetter.TreeGetter
@@ -99,11 +100,12 @@ func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
 }
 
 func (s *settingsDocument) Init(ctx context.Context) (err error) {
-	syncTree, err := s.buildFunc(ctx, s.store.SpaceSettingsId(), s)
+	s.ObjectTree, err = s.buildFunc(ctx, s.store.SpaceSettingsId(), s)
 	if err != nil {
 		return
 	}
-	s.SyncTree = syncTree.(*synctree.SyncTree)
+	// this is needed, so we would easily convert the object to synchandler interface in objectgetter
+	s.SyncHandler = s.ObjectTree.(synchandler.SyncHandler)
 	s.loop.Run()
 	return
 }
