@@ -154,7 +154,14 @@ func (s *space) Init(ctx context.Context) (err error) {
 
 	deletionState := deletionstate.NewDeletionState(s.storage)
 	deps := settingsdocument.Deps{
-		BuildFunc:     s.BuildTree,
+		BuildFunc: func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error) {
+			res, err := s.BuildTree(ctx, id, listener)
+			if err != nil {
+				return
+			}
+			t = res.(synctree.SyncTree)
+			return
+		},
 		Account:       s.account,
 		TreeGetter:    s.cache,
 		Store:         s.storage,
