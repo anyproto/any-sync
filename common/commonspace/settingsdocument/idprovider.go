@@ -12,16 +12,7 @@ type DeletedIdsProvider interface {
 
 type provider struct{}
 
-func (p *provider) convert(decrypted []byte) (res any, err error) {
-	deleteChange := &spacesyncproto.SettingsData{}
-	err = proto.Unmarshal(decrypted, deleteChange)
-	if err != nil {
-		return nil, err
-	}
-	return deleteChange, nil
-}
-
-func (p *provider) processChange(change *tree.Change, tr tree.ObjectTree, startId string, ids []string) []string {
+func (p *provider) processChange(change *tree.Change, rootId, startId string, ids []string) []string {
 	// ignoring root change which has empty model or startId change
 	if change.Model == nil || (change.Id == startId && startId != "") {
 		return ids
@@ -29,7 +20,7 @@ func (p *provider) processChange(change *tree.Change, tr tree.ObjectTree, startI
 
 	deleteChange := change.Model.(*spacesyncproto.SettingsData)
 	// getting data from snapshot if we start from it
-	if change.Id == tr.Root().Id {
+	if change.Id == rootId {
 		ids = deleteChange.Snapshot.DeletedIds
 		return ids
 	}
@@ -44,15 +35,25 @@ func (p *provider) processChange(change *tree.Change, tr tree.ObjectTree, startI
 }
 
 func (p *provider) ProvideIds(tr tree.ObjectTree, startId string) (ids []string, lastId string, err error) {
+	rootId := tr.Root().Id
 	process := func(change *tree.Change) bool {
 		lastId = change.Id
-		ids = p.processChange(change, tr, startId, ids)
+		ids = p.processChange(change, rootId, startId, ids)
 		return true
 	}
+	convert := func(decrypted []byte) (res any, err error) {
+		deleteChange := &spacesyncproto.SettingsData{}
+		err = proto.Unmarshal(decrypted, deleteChange)
+		if err != nil {
+			return nil, err
+		}
+		return deleteChange, nil
+	}
+
 	if startId == "" {
-		err = tr.IterateFrom(tr.ID(), p.convert, process)
+		err = tr.IterateFrom(tr.ID(), convert, process)
 	} else {
-		err = tr.IterateFrom(startId, p.convert, process)
+		err = tr.IterateFrom(startId, convert, process)
 	}
 	return
 }
