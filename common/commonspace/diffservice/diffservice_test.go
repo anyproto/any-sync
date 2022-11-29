@@ -3,7 +3,7 @@ package diffservice
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice/mock_diffservice"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate/mock_deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
 	mock_storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage/mock_storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
@@ -24,7 +24,7 @@ func TestDiffService(t *testing.T) {
 	treeStorageMock := mock_storage2.NewMockTreeStorage(ctrl)
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
 	syncer := mock_diffservice.NewMockDiffSyncer(ctrl)
-	delState := deletionstate.NewDeletionState(storageMock)
+	delState := mock_deletionstate.NewMockDeletionState(ctrl)
 	syncPeriod := 1
 	initId := "initId"
 

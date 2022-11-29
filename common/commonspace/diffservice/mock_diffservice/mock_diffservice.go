@@ -36,7 +36,7 @@ func (m *MockDiffSyncer) EXPECT() *MockDiffSyncerMockRecorder {
 }
 
 // Init mocks base method.
-func (m *MockDiffSyncer) Init(arg0 *deletionstate.DeletionState) {
+func (m *MockDiffSyncer) Init(arg0 deletionstate.DeletionState) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Init", arg0)
 }
