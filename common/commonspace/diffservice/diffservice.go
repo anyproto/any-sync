@@ -21,7 +21,7 @@ type DiffService interface {
 	RemoveObjects(ids []string)
 	AllIds() []string
 
-	Init(objectIds []string, deletionState *deletionstate.DeletionState)
+	Init(objectIds []string, deletionState deletionstate.DeletionState)
 	Close() (err error)
 }
 
@@ -61,7 +61,7 @@ func NewDiffService(
 	}
 }
 
-func (d *diffService) Init(objectIds []string, deletionState *deletionstate.DeletionState) {
+func (d *diffService) Init(objectIds []string, deletionState deletionstate.DeletionState) {
 	d.fillDiff(objectIds)
 	d.syncer.Init(deletionState)
 	d.periodicSync.Run()

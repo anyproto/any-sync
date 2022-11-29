@@ -167,10 +167,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 		Store:         s.storage,
 		DeletionState: deletionState,
 	}
-	s.settingsDocument, err = settingsdocument.NewSettingsDocument(deps, s.id)
-	if err != nil {
-		return
-	}
+	s.settingsDocument = settingsdocument.NewSettingsDocument(deps, s.id)
 
 	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache, s.settingsDocument)
 	s.syncService.Init(objectGetter)
