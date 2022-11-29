@@ -1,6 +1,8 @@
+//go:generate mockgen -destination mock_deletionstate/mock_deletionstate.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate DeletionState
 package deletionstate
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"sync"
 )
@@ -14,6 +16,7 @@ type DeletionState interface {
 	Delete(id string) (err error)
 	Exists(id string) bool
 	FilterJoin(ids ...[]string) (filtered []string)
+	CreateDeleteChange(id string, isSnapshot bool) (res []byte, err error)
 }
 
 type deletionState struct {
@@ -121,6 +124,21 @@ func (st *deletionState) FilterJoin(ids ...[]string) (filtered []string) {
 	for _, arr := range ids {
 		filter(arr)
 	}
+	return
+}
+
+func (st *deletionState) CreateDeleteChange(id string, isSnapshot bool) (res []byte, err error) {
+	content := &spacesyncproto.SpaceSettingsContent_ObjectDelete{
+		ObjectDelete: &spacesyncproto.ObjectDelete{Id: id},
+	}
+	change := &spacesyncproto.SettingsData{
+		Content: []*spacesyncproto.SpaceSettingsContent{
+			{content},
+		},
+		Snapshot: nil,
+	}
+	// TODO: add snapshot logic
+	res, err = change.Marshal()
 	return
 }
 

@@ -6,7 +6,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
@@ -78,6 +77,8 @@ func NewSettingsDocument(deps Deps, spaceId string) (doc SettingsDocument) {
 	// this is needed mainly for testing
 	if deps.prov == nil {
 		s.prov = &provider{}
+	} else {
+		s.prov = deps.prov
 	}
 
 	doc = s
@@ -113,6 +114,7 @@ func (s *settingsDocument) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
+
 	s.loop.Run()
 	return
 }
@@ -129,29 +131,24 @@ func (s *settingsDocument) DeleteObject(id string) (err error) {
 		return nil
 	}
 
-	content := &spacesyncproto.SpaceSettingsContent_ObjectDelete{
-		ObjectDelete: &spacesyncproto.ObjectDelete{Id: id},
-	}
-	change := &spacesyncproto.SettingsData{
-		Content: []*spacesyncproto.SpaceSettingsContent{
-			{content},
-		},
-		Snapshot: nil,
-	}
 	// TODO: add snapshot logic
-	res, err := change.Marshal()
+	res, err := s.deletionState.CreateDeleteChange(id, false)
 	if err != nil {
 		return
 	}
+
+	accountData := s.account.Account()
 	_, err = s.AddContent(context.Background(), tree.SignableChangeContent{
 		Data:        res,
-		Key:         s.account.Account().SignKey,
-		Identity:    s.account.Account().Identity,
+		Key:         accountData.SignKey,
+		Identity:    accountData.Identity,
 		IsSnapshot:  false,
 		IsEncrypted: false,
 	})
-	if err == nil {
-		s.Update(s)
+	if err != nil {
+		return
 	}
+
+	s.Update(s)
 	return
 }
