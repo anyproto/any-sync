@@ -7,7 +7,16 @@ import (
 
 type StateUpdateObserver func(ids []string)
 
-type DeletionState struct {
+type DeletionState interface {
+	AddObserver(observer StateUpdateObserver)
+	Add(ids []string) (err error)
+	GetQueued() (ids []string)
+	Delete(id string) (err error)
+	Exists(id string) bool
+	FilterJoin(ids ...[]string) (filtered []string)
+}
+
+type deletionState struct {
 	sync.RWMutex
 	queued               map[string]struct{}
 	deleted              map[string]struct{}
@@ -15,21 +24,21 @@ type DeletionState struct {
 	storage              storage.SpaceStorage
 }
 
-func NewDeletionState(storage storage.SpaceStorage) *DeletionState {
-	return &DeletionState{
+func NewDeletionState(storage storage.SpaceStorage) DeletionState {
+	return &deletionState{
 		queued:  map[string]struct{}{},
 		deleted: map[string]struct{}{},
 		storage: storage,
 	}
 }
 
-func (st *DeletionState) AddObserver(observer StateUpdateObserver) {
+func (st *deletionState) AddObserver(observer StateUpdateObserver) {
 	st.Lock()
 	defer st.Unlock()
 	st.stateUpdateObservers = append(st.stateUpdateObservers, observer)
 }
 
-func (st *DeletionState) Add(ids []string) (err error) {
+func (st *deletionState) Add(ids []string) (err error) {
 	st.Lock()
 	defer func() {
 		st.Unlock()
@@ -71,7 +80,7 @@ func (st *DeletionState) Add(ids []string) (err error) {
 	return
 }
 
-func (st *DeletionState) GetQueued() (ids []string) {
+func (st *deletionState) GetQueued() (ids []string) {
 	st.RLock()
 	defer st.RUnlock()
 	ids = make([]string, 0, len(st.queued))
@@ -81,7 +90,7 @@ func (st *DeletionState) GetQueued() (ids []string) {
 	return
 }
 
-func (st *DeletionState) Delete(id string) (err error) {
+func (st *deletionState) Delete(id string) (err error) {
 	st.Lock()
 	defer st.Unlock()
 	delete(st.queued, id)
@@ -93,13 +102,13 @@ func (st *DeletionState) Delete(id string) (err error) {
 	return
 }
 
-func (st *DeletionState) Exists(id string) bool {
+func (st *deletionState) Exists(id string) bool {
 	st.RLock()
 	defer st.RUnlock()
 	return st.exists(id)
 }
 
-func (st *DeletionState) FilterJoin(ids ...[]string) (filtered []string) {
+func (st *deletionState) FilterJoin(ids ...[]string) (filtered []string) {
 	st.RLock()
 	defer st.RUnlock()
 	filter := func(ids []string) {
@@ -115,7 +124,7 @@ func (st *DeletionState) FilterJoin(ids ...[]string) (filtered []string) {
 	return
 }
 
-func (st *DeletionState) exists(id string) bool {
+func (st *deletionState) exists(id string) bool {
 	if _, exists := st.deleted[id]; exists {
 		return true
 	}

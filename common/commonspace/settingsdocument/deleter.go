@@ -8,17 +8,21 @@ import (
 	"go.uber.org/zap"
 )
 
+type Deleter interface {
+	Delete()
+}
+
 type deleter struct {
 	st     storage.SpaceStorage
-	state  *deletionstate.DeletionState
+	state  deletionstate.DeletionState
 	getter treegetter.TreeGetter
 }
 
-func newDeleter(st storage.SpaceStorage, state *deletionstate.DeletionState, getter treegetter.TreeGetter) *deleter {
+func newDeleter(st storage.SpaceStorage, state deletionstate.DeletionState, getter treegetter.TreeGetter) Deleter {
 	return &deleter{st, state, getter}
 }
 
-func (d *deleter) delete() {
+func (d *deleter) Delete() {
 	allQueued := d.state.GetQueued()
 	for _, id := range allQueued {
 		err := d.getter.DeleteTree(context.Background(), d.st.Id(), id)

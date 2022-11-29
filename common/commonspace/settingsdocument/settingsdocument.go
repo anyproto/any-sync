@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_settingsdocument/mock_settingsdocument.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument DeletedIdsProvider,Deleter
 package settingsdocument
 
 import (
@@ -29,9 +30,10 @@ type Deps struct {
 	Account       account.Service
 	TreeGetter    treegetter.TreeGetter
 	Store         spacestorage.SpaceStorage
-	DeletionState *deletionstate.DeletionState
-	// prov exists mainly for the ease of testing
+	DeletionState deletionstate.DeletionState
+	// testing dependencies
 	prov DeletedIdsProvider
+	del  Deleter
 }
 
 type settingsDocument struct {
@@ -44,14 +46,20 @@ type settingsDocument struct {
 	buildFunc  BuildTreeFunc
 	loop       *deleteLoop
 
-	deletionState *deletionstate.DeletionState
+	deletionState deletionstate.DeletionState
 	lastChangeId  string
 }
 
-func NewSettingsDocument(deps Deps, spaceId string) (doc SettingsDocument, err error) {
-	deleter := newDeleter(deps.Store, deps.DeletionState, deps.TreeGetter)
+func NewSettingsDocument(deps Deps, spaceId string) (doc SettingsDocument) {
+	var deleter Deleter
+	if deps.del == nil {
+		deleter = newDeleter(deps.Store, deps.DeletionState, deps.TreeGetter)
+	} else {
+		deleter = deps.del
+	}
+
 	loop := newDeleteLoop(func() {
-		deleter.delete()
+		deleter.Delete()
 	})
 	deps.DeletionState.AddObserver(func(ids []string) {
 		loop.notify()
@@ -89,10 +97,12 @@ func (s *settingsDocument) updateIds(tr tree.ObjectTree, lastChangeId string) {
 	}
 }
 
+// Update is called as part of UpdateListener interface
 func (s *settingsDocument) Update(tr tree.ObjectTree) {
 	s.updateIds(tr, s.lastChangeId)
 }
 
+// Rebuild is called as part of UpdateListener interface (including when the object is built for the first time, e.g. on Init call)
 func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
 	// at initial build "s" may not contain the object tree, so it is safer to provide it from the function parameter
 	s.updateIds(tr, "")
@@ -128,6 +138,7 @@ func (s *settingsDocument) DeleteObject(id string) (err error) {
 		},
 		Snapshot: nil,
 	}
+	// TODO: add snapshot logic
 	res, err := change.Marshal()
 	if err != nil {
 		return

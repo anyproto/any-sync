@@ -19,7 +19,7 @@ type DiffSyncer interface {
 	Sync(ctx context.Context) error
 	RemoveObjects(ids []string)
 	UpdateHeads(id string, heads []string)
-	Init(deletionState *deletionstate.DeletionState)
+	Init(deletionState deletionstate.DeletionState)
 }
 
 func newDiffSyncer(
@@ -49,10 +49,10 @@ type diffSyncer struct {
 	storage       storage.SpaceStorage
 	clientFactory spacesyncproto.ClientFactory
 	log           *zap.Logger
-	deletionState *deletionstate.DeletionState
+	deletionState deletionstate.DeletionState
 }
 
-func (d *diffSyncer) Init(deletionState *deletionstate.DeletionState) {
+func (d *diffSyncer) Init(deletionState deletionstate.DeletionState) {
 	d.deletionState = deletionState
 	d.deletionState.AddObserver(d.RemoveObjects)
 }
