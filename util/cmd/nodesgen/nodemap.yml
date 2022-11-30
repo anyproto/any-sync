@@ -1,13 +1,16 @@
 nodes:
   - grpcAddresses:
       - "127.0.0.1:4430"
-    apiPort: "8080"
+    apiAddresses:
+      - "127.0.0.1:8080"
   - grpcAddresses:
       - "127.0.0.1:4431"
-    apiPort: "8081"
+    apiAddresses:
+      - "127.0.0.1:8081"
   - grpcAddresses:
       - "127.0.0.1:4432"
-    apiPort: "8082"
+    apiAddresses:
+      - "127.0.0.1:8082"
 consensus:
   - grpcAddresses:
       - "127.0.0.1:4530"
@@ -18,7 +21,9 @@ consensus:
 clients:
   - grpcAddresses:
       - "127.0.0.1:4630"
-    apiPort: "8090"
+    apiAddresses:
+      - "127.0.0.1:8090"
   - grpcAddresses:
       - "127.0.0.1:4631"
-    apiPort: "8091"
+    apiAddresses:
+      - "127.0.0.1:8091"

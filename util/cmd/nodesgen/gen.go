@@ -21,15 +21,15 @@ var (
 
 type NodesMap struct {
 	Nodes []struct {
-		Addresses []string `yaml:"grpcAddresses"`
-		APIPort   string   `yaml:"apiPort"`
+		Addresses    []string `yaml:"grpcAddresses"`
+		APIAddresses []string `yaml:"apiAddresses"`
 	} `yaml:"nodes"`
 	Consensus []struct {
 		Addresses []string `yaml:"grpcAddresses"`
 	}
 	Clients []struct {
-		Addresses []string `yaml:"grpcAddresses"`
-		APIPort   string   `yaml:"apiPort"`
+		Addresses    []string `yaml:"grpcAddresses"`
+		APIAddresses []string `yaml:"apiAddresses"`
 	}
 }
 
@@ -49,7 +49,7 @@ func main() {
 	var configs []config.Config
 	var nodes []config.Node
 	for _, n := range nodesMap.Nodes {
-		cfg, err := genNodeConfig(n.Addresses, n.APIPort)
+		cfg, err := genNodeConfig(n.Addresses, n.APIAddresses)
 		if err != nil {
 			panic(fmt.Sprintf("could not generate the config file: %s", err.Error()))
 		}
@@ -66,7 +66,7 @@ func main() {
 
 	var clientConfigs []config.Config
 	for _, c := range nodesMap.Clients {
-		cfg, err := genClientConfig(c.Addresses, c.APIPort)
+		cfg, err := genClientConfig(c.Addresses, c.APIAddresses)
 		if err != nil {
 			panic(fmt.Sprintf("could not generate the config file: %s", err.Error()))
 		}
@@ -143,7 +143,7 @@ func main() {
 	}
 }
 
-func genNodeConfig(addresses []string, apiPort string) (config.Config, error) {
+func genNodeConfig(addresses []string, apiAddresses []string) (config.Config, error) {
 	encKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
 	if err != nil {
 		return config.Config{}, err
@@ -182,8 +182,9 @@ func genNodeConfig(addresses []string, apiPort string) (config.Config, error) {
 			SigningKey:    encSignKey,
 			EncryptionKey: encEncKey,
 		},
-		APIServer: config.APIServer{
-			Port: apiPort,
+		APIServer: config.GrpcServer{
+			ListenAddrs: apiAddresses,
+			TLS:         false,
 		},
 		Space: config.Space{
 			GCTTL:      60,
@@ -192,7 +193,7 @@ func genNodeConfig(addresses []string, apiPort string) (config.Config, error) {
 	}, nil
 }
 
-func genClientConfig(addresses []string, apiPort string) (config.Config, error) {
+func genClientConfig(addresses []string, apiAddresses []string) (config.Config, error) {
 	encKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
 	if err != nil {
 		return config.Config{}, err
@@ -241,8 +242,9 @@ func genClientConfig(addresses []string, apiPort string) (config.Config, error) 
 			SigningKey:    encSignKey,
 			EncryptionKey: encEncKey,
 		},
-		APIServer: config.APIServer{
-			Port: apiPort,
+		APIServer: config.GrpcServer{
+			ListenAddrs: apiAddresses,
+			TLS:         false,
 		},
 		Space: config.Space{
 			GCTTL:      60,

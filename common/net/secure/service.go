@@ -26,6 +26,7 @@ func New() Service {
 
 type Service interface {
 	TLSListener(lis net.Listener) ContextListener
+	BasicListener(lis net.Listener) ContextListener
 	TLSConn(ctx context.Context, conn net.Conn) (sec.SecureConn, error)
 	app.Component
 }
@@ -55,6 +56,10 @@ func (s *service) Name() (name string) {
 
 func (s *service) TLSListener(lis net.Listener) ContextListener {
 	return newTLSListener(s.key, lis)
+}
+
+func (s *service) BasicListener(lis net.Listener) ContextListener {
+	return newBasicListener(lis)
 }
 
 func (s *service) TLSConn(ctx context.Context, conn net.Conn) (sec.SecureConn, error) {

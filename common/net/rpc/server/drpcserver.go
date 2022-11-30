@@ -29,15 +29,16 @@ type configGetter interface {
 }
 
 type drpcServer struct {
-	config config.GrpcServer
-	metric metric.Metric
+	config    config.GrpcServer
+	metric    metric.Metric
+	transport secure.Service
 	*BaseDrpcServer
 }
 
 func (s *drpcServer) Init(a *app.App) (err error) {
 	s.config = a.MustComponent(config.CName).(configGetter).GetGRPCServer()
 	s.metric = a.MustComponent(metric.CName).(metric.Metric)
-	s.BaseDrpcServer.Init(a.MustComponent(secure.CName).(secure.Service))
+	s.transport = a.MustComponent(secure.CName).(secure.Service)
 	return nil
 }
 
@@ -60,12 +61,15 @@ func (s *drpcServer) Run(ctx context.Context) (err error) {
 	if err = s.metric.Registry().Register(histVec); err != nil {
 		return
 	}
-	return s.BaseDrpcServer.Run(ctx, s.config.ListenAddrs, func(handler drpc.Handler) drpc.Handler {
-		return &metric.PrometheusDRPC{
-			Handler:    handler,
-			SummaryVec: histVec,
-		}
-	})
+	return s.BaseDrpcServer.Run(ctx,
+		s.config.ListenAddrs,
+		func(handler drpc.Handler) drpc.Handler {
+			return &metric.PrometheusDRPC{
+				Handler:    handler,
+				SummaryVec: histVec,
+			}
+		},
+		s.transport.TLSListener)
 }
 
 func (s *drpcServer) Close(ctx context.Context) (err error) {
