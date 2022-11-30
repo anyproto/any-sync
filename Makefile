@@ -15,6 +15,7 @@ export PATH=$(GOPATH)/bin:$(shell echo $$PATH)
 proto:
 	$(MAKE) -C common proto
 	$(MAKE) -C consensus proto
+	$(MAKE) -C client proto
 
 build:
 	$(MAKE) -C node build
