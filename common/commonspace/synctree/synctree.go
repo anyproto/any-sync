@@ -20,15 +20,24 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrSyncTreeClosed = errors.New("sync tree is closed")
+var (
+	ErrSyncTreeClosed  = errors.New("sync tree is closed")
+	ErrSyncTreeDeleted = errors.New("sync tree is deleted")
+)
+
+type SyncTree interface {
+	tree.ObjectTree
+	synchandler.SyncHandler
+}
 
 // SyncTree sends head updates to sync service and also sends new changes to update listener
-type SyncTree struct {
+type syncTree struct {
 	tree.ObjectTree
 	synchandler.SyncHandler
 	syncClient SyncClient
 	listener   updatelistener.UpdateListener
 	isClosed   bool
+	isDeleted  bool
 }
 
 var log = logger.NewNamed("commonspace.synctree").Sugar()
@@ -46,7 +55,7 @@ type CreateDeps struct {
 	StreamPool     syncservice.StreamPool
 	Listener       updatelistener.UpdateListener
 	AclList        list.ACLList
-	CreateStorage  storage.TreeStorageCreatorFunc
+	SpaceStorage   spacestorage.SpaceStorage
 }
 
 type BuildDeps struct {
@@ -60,8 +69,8 @@ type BuildDeps struct {
 	TreeStorage    storage.TreeStorage
 }
 
-func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, err error) {
-	t, err = createDerivedObjectTree(deps.Payload, deps.AclList, deps.CreateStorage)
+func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error) {
+	objTree, err := createDerivedObjectTree(deps.Payload, deps.AclList, deps.SpaceStorage.CreateTreeStorage)
 	if err != nil {
 		return
 	}
@@ -71,22 +80,27 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, er
 		deps.HeadNotifiable,
 		sharedFactory,
 		deps.Configuration)
-	syncTree := &SyncTree{
-		ObjectTree: t,
+	syncTree := &syncTree{
+		ObjectTree: objTree,
 		syncClient: syncClient,
 		listener:   deps.Listener,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
 	t = syncTree
+	syncTree.Lock()
+	defer syncTree.Unlock()
+	if syncTree.listener != nil {
+		syncTree.listener.Rebuild(syncTree)
+	}
 
 	headUpdate := syncClient.CreateHeadUpdate(t, nil)
 	err = syncClient.BroadcastAsync(headUpdate)
 	return
 }
 
-func CreateSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, err error) {
-	t, err = createObjectTree(deps.Payload, deps.AclList, deps.CreateStorage)
+func CreateSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error) {
+	objTree, err := createObjectTree(deps.Payload, deps.AclList, deps.SpaceStorage.CreateTreeStorage)
 	if err != nil {
 		return
 	}
@@ -96,21 +110,27 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (t tree.ObjectTree, er
 		deps.HeadNotifiable,
 		GetRequestFactory(),
 		deps.Configuration)
-	syncTree := &SyncTree{
-		ObjectTree: t,
+	syncTree := &syncTree{
+		ObjectTree: objTree,
 		syncClient: syncClient,
 		listener:   deps.Listener,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
 	t = syncTree
+	syncTree.Lock()
+	defer syncTree.Unlock()
+	// TODO: refactor here because the code is duplicated, when we create a tree we should only create a storage and then build a tree
+	if syncTree.listener != nil {
+		syncTree.listener.Rebuild(syncTree)
+	}
 
 	headUpdate := syncClient.CreateHeadUpdate(t, nil)
 	err = syncClient.BroadcastAsync(headUpdate)
 	return
 }
 
-func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t tree.ObjectTree, err error) {
+func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {
 	getTreeRemote := func() (msg *treechangeproto.TreeSyncMessage, err error) {
 		peerId, err := peer.CtxPeerId(ctx)
 		if err != nil {
@@ -137,6 +157,15 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 	}
 
 	if err != nil && err != storage.ErrUnknownTreeId {
+		return
+	}
+
+	status, err := deps.SpaceStorage.TreeDeletedStatus(id)
+	if err != nil {
+		return
+	}
+	if status != "" {
+		err = spacestorage.ErrTreeStorageAlreadyDeleted
 		return
 	}
 
@@ -170,9 +199,8 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 	return buildSyncTree(ctx, true, deps)
 }
 
-func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t tree.ObjectTree, err error) {
-
-	t, err = buildObjectTree(deps.TreeStorage, deps.AclList)
+func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t SyncTree, err error) {
+	objTree, err := buildObjectTree(deps.TreeStorage, deps.AclList)
 	if err != nil {
 		return
 	}
@@ -182,14 +210,19 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t tr
 		deps.HeadNotifiable,
 		GetRequestFactory(),
 		deps.Configuration)
-	syncTree := &SyncTree{
-		ObjectTree: t,
+	syncTree := &syncTree{
+		ObjectTree: objTree,
 		syncClient: syncClient,
 		listener:   deps.Listener,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
 	t = syncTree
+	syncTree.Lock()
+	defer syncTree.Unlock()
+	if syncTree.listener != nil {
+		syncTree.listener.Rebuild(syncTree)
+	}
 
 	headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 	// here we will have different behaviour based on who is sending this update
@@ -203,9 +236,22 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t tr
 	return
 }
 
-func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeContent) (res tree.AddResult, err error) {
-	if s.isClosed {
-		err = ErrSyncTreeClosed
+func (s *syncTree) IterateFrom(id string, convert tree.ChangeConvertFunc, iterate tree.ChangeIterateFunc) (err error) {
+	if err = s.checkAlive(); err != nil {
+		return
+	}
+	return s.ObjectTree.IterateFrom(id, convert, iterate)
+}
+
+func (s *syncTree) Iterate(convert tree.ChangeConvertFunc, iterate tree.ChangeIterateFunc) (err error) {
+	if err = s.checkAlive(); err != nil {
+		return
+	}
+	return s.ObjectTree.Iterate(convert, iterate)
+}
+
+func (s *syncTree) AddContent(ctx context.Context, content tree.SignableChangeContent) (res tree.AddResult, err error) {
+	if err = s.checkAlive(); err != nil {
 		return
 	}
 	res, err = s.ObjectTree.AddContent(ctx, content)
@@ -217,9 +263,8 @@ func (s *SyncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 	return
 }
 
-func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (res tree.AddResult, err error) {
-	if s.isClosed {
-		err = ErrSyncTreeClosed
+func (s *syncTree) AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (res tree.AddResult, err error) {
+	if err = s.checkAlive(); err != nil {
 		return
 	}
 	res, err = s.ObjectTree.AddRawChanges(ctx, changes...)
@@ -243,15 +288,38 @@ func (s *SyncTree) AddRawChanges(ctx context.Context, changes ...*treechangeprot
 	return
 }
 
-func (s *SyncTree) Close() (err error) {
+func (s *syncTree) Delete() (err error) {
+	log.With("id", s.ID()).Debug("deleting sync tree")
+	s.Lock()
+	defer s.Unlock()
+	if err = s.checkAlive(); err != nil {
+		return
+	}
+	err = s.ObjectTree.Delete()
+	if err != nil {
+		return
+	}
+	s.isDeleted = true
+	return
+}
+
+func (s *syncTree) Close() (err error) {
 	log.With("id", s.ID()).Debug("closing sync tree")
 	s.Lock()
 	defer s.Unlock()
-	log.With("id", s.ID()).Debug("taken lock on sync tree")
 	if s.isClosed {
-		err = ErrSyncTreeClosed
-		return
+		return ErrSyncTreeClosed
 	}
 	s.isClosed = true
+	return
+}
+
+func (s *syncTree) checkAlive() (err error) {
+	if s.isClosed {
+		err = ErrSyncTreeClosed
+	}
+	if s.isDeleted {
+		err = ErrSyncTreeDeleted
+	}
 	return
 }

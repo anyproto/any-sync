@@ -160,6 +160,20 @@ func (mr *MockTreeStorageMockRecorder) AddRawChange(arg0 interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChange", reflect.TypeOf((*MockTreeStorage)(nil).AddRawChange), arg0)
 }
 
+// Delete mocks base method.
+func (m *MockTreeStorage) Delete() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockTreeStorageMockRecorder) Delete() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockTreeStorage)(nil).Delete))
+}
+
 // GetRawChange mocks base method.
 func (m *MockTreeStorage) GetRawChange(arg0 context.Context, arg1 string) (*treechangeproto.RawTreeChangeWithId, error) {
 	m.ctrl.T.Helper()

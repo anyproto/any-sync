@@ -1,4 +1,5 @@
-package diffservice
+//go:generate mockgen -destination mock_periodicsync/mock_periodicsync.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync PeriodicSync
+package periodicsync
 
 import (
 	"context"
@@ -11,7 +12,9 @@ type PeriodicSync interface {
 	Close()
 }
 
-func newPeriodicSync(periodSeconds int, syncer DiffSyncer, l *zap.Logger) *periodicSync {
+type SyncerFunc func(ctx context.Context) error
+
+func NewPeriodicSync(periodSeconds int, syncer SyncerFunc, l *zap.Logger) PeriodicSync {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &periodicSync{
 		syncer:        syncer,
@@ -25,7 +28,7 @@ func newPeriodicSync(periodSeconds int, syncer DiffSyncer, l *zap.Logger) *perio
 
 type periodicSync struct {
 	log           *zap.Logger
-	syncer        DiffSyncer
+	syncer        SyncerFunc
 	syncCtx       context.Context
 	syncCancel    context.CancelFunc
 	syncLoopDone  chan struct{}
@@ -42,7 +45,7 @@ func (p *periodicSync) syncLoop(periodSeconds int) {
 	doSync := func() {
 		ctx, cancel := context.WithTimeout(p.syncCtx, time.Minute)
 		defer cancel()
-		if err := p.syncer.Sync(ctx); err != nil {
+		if err := p.syncer(ctx); err != nil {
 			p.log.Warn("periodic sync error", zap.Error(err))
 		}
 	}

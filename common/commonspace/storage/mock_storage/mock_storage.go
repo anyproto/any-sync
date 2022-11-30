@@ -176,6 +176,20 @@ func (mr *MockSpaceStorageMockRecorder) Id() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Id", reflect.TypeOf((*MockSpaceStorage)(nil).Id))
 }
 
+// SetTreeDeletedStatus mocks base method.
+func (m *MockSpaceStorage) SetTreeDeletedStatus(arg0, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetTreeDeletedStatus", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetTreeDeletedStatus indicates an expected call of SetTreeDeletedStatus.
+func (mr *MockSpaceStorageMockRecorder) SetTreeDeletedStatus(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTreeDeletedStatus", reflect.TypeOf((*MockSpaceStorage)(nil).SetTreeDeletedStatus), arg0, arg1)
+}
+
 // SpaceHeader mocks base method.
 func (m *MockSpaceStorage) SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error) {
 	m.ctrl.T.Helper()
@@ -191,6 +205,20 @@ func (mr *MockSpaceStorageMockRecorder) SpaceHeader() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceHeader", reflect.TypeOf((*MockSpaceStorage)(nil).SpaceHeader))
 }
 
+// SpaceSettingsId mocks base method.
+func (m *MockSpaceStorage) SpaceSettingsId() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SpaceSettingsId")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// SpaceSettingsId indicates an expected call of SpaceSettingsId.
+func (mr *MockSpaceStorageMockRecorder) SpaceSettingsId() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceSettingsId", reflect.TypeOf((*MockSpaceStorage)(nil).SpaceSettingsId))
+}
+
 // StoredIds mocks base method.
 func (m *MockSpaceStorage) StoredIds() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -204,6 +232,21 @@ func (m *MockSpaceStorage) StoredIds() ([]string, error) {
 func (mr *MockSpaceStorageMockRecorder) StoredIds() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoredIds", reflect.TypeOf((*MockSpaceStorage)(nil).StoredIds))
+}
+
+// TreeDeletedStatus mocks base method.
+func (m *MockSpaceStorage) TreeDeletedStatus(arg0 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TreeDeletedStatus", arg0)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TreeDeletedStatus indicates an expected call of TreeDeletedStatus.
+func (mr *MockSpaceStorageMockRecorder) TreeDeletedStatus(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TreeDeletedStatus", reflect.TypeOf((*MockSpaceStorage)(nil).TreeDeletedStatus), arg0)
 }
 
 // TreeStorage mocks base method.

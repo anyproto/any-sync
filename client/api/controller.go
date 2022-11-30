@@ -23,6 +23,8 @@ type Controller interface {
 
 	// CreateDocument creates new document in space
 	CreateDocument(spaceId string) (id string, err error)
+	// DeleteDocument deletes a document from space
+	DeleteDocument(spaceId, documentId string) (err error)
 	// AllDocumentIds gets all ids of documents in space
 	AllDocumentIds(spaceId string) (ids []string, err error)
 	// AddText adds text to space document
@@ -95,6 +97,10 @@ func (c *controller) LoadSpace(id string) (err error) {
 
 func (c *controller) CreateDocument(spaceId string) (id string, err error) {
 	return c.docService.CreateDocument(spaceId)
+}
+
+func (c *controller) DeleteDocument(spaceId, documentId string) (err error) {
+	return c.docService.DeleteDocument(spaceId, documentId)
 }
 
 func (c *controller) AllDocumentIds(spaceId string) (ids []string, err error) {

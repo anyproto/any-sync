@@ -3,6 +3,7 @@ package synctree
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/mock_synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
@@ -26,7 +27,7 @@ type syncTreeMatcher struct {
 }
 
 func (s syncTreeMatcher) Matches(x interface{}) bool {
-	t, ok := x.(*SyncTree)
+	t, ok := x.(*syncTree)
 	if !ok {
 		return false
 	}
@@ -45,7 +46,8 @@ func Test_DeriveSyncTree(t *testing.T) {
 	updateListenerMock := mock_updatelistener.NewMockUpdateListener(ctrl)
 	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
 	aclListMock := mock_list.NewMockACLList(ctrl)
-	objTreeMock := mock_tree.NewMockObjectTree(ctrl)
+	objTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
+	spaceStorageMock := mock_storage.NewMockSpaceStorage(ctrl)
 	spaceId := "spaceId"
 	expectedPayload := tree.ObjectTreeCreatePayload{SpaceId: spaceId}
 	createDerivedObjectTree = func(payload tree.ObjectTreeCreatePayload, l list.ACLList, create storage2.TreeStorageCreatorFunc) (objTree tree.ObjectTree, err error) {
@@ -59,7 +61,14 @@ func Test_DeriveSyncTree(t *testing.T) {
 	headUpdate := &treechangeproto.TreeSyncMessage{}
 	syncClientMock.EXPECT().CreateHeadUpdate(syncTreeMatcher{objTreeMock, syncClientMock, updateListenerMock}, gomock.Nil()).Return(headUpdate)
 	syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
-	deps := CreateDeps{AclList: aclListMock, SpaceId: spaceId, Payload: expectedPayload, Listener: updateListenerMock}
+	updateListenerMock.EXPECT().Rebuild(gomock.Any())
+	deps := CreateDeps{
+		AclList:      aclListMock,
+		SpaceId:      spaceId,
+		Payload:      expectedPayload,
+		Listener:     updateListenerMock,
+		SpaceStorage: spaceStorageMock,
+	}
 
 	_, err := DeriveSyncTree(ctx, deps)
 	require.NoError(t, err)
@@ -73,7 +82,8 @@ func Test_CreateSyncTree(t *testing.T) {
 	updateListenerMock := mock_updatelistener.NewMockUpdateListener(ctrl)
 	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
 	aclListMock := mock_list.NewMockACLList(ctrl)
-	objTreeMock := mock_tree.NewMockObjectTree(ctrl)
+	objTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
+	spaceStorageMock := mock_storage.NewMockSpaceStorage(ctrl)
 	spaceId := "spaceId"
 	expectedPayload := tree.ObjectTreeCreatePayload{SpaceId: spaceId}
 	createObjectTree = func(payload tree.ObjectTreeCreatePayload, l list.ACLList, create storage2.TreeStorageCreatorFunc) (objTree tree.ObjectTree, err error) {
@@ -87,7 +97,14 @@ func Test_CreateSyncTree(t *testing.T) {
 	headUpdate := &treechangeproto.TreeSyncMessage{}
 	syncClientMock.EXPECT().CreateHeadUpdate(syncTreeMatcher{objTreeMock, syncClientMock, updateListenerMock}, gomock.Nil()).Return(headUpdate)
 	syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
-	deps := CreateDeps{AclList: aclListMock, SpaceId: spaceId, Payload: expectedPayload, Listener: updateListenerMock}
+	updateListenerMock.EXPECT().Rebuild(gomock.Any())
+	deps := CreateDeps{
+		AclList:      aclListMock,
+		SpaceId:      spaceId,
+		Payload:      expectedPayload,
+		Listener:     updateListenerMock,
+		SpaceStorage: spaceStorageMock,
+	}
 
 	_, err := CreateSyncTree(ctx, deps)
 	require.NoError(t, err)
@@ -100,8 +117,8 @@ func Test_BuildSyncTree(t *testing.T) {
 
 	updateListenerMock := mock_updatelistener.NewMockUpdateListener(ctrl)
 	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
-	objTreeMock := mock_tree.NewMockObjectTree(ctrl)
-	tr := &SyncTree{
+	objTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
+	tr := &syncTree{
 		ObjectTree:  objTreeMock,
 		SyncHandler: nil,
 		syncClient:  syncClientMock,

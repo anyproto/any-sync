@@ -14,10 +14,11 @@ import (
 )
 
 type ObjectTreeCreatePayload struct {
-	SignKey    signingkey.PrivKey
-	ChangeType string
-	SpaceId    string
-	Identity   []byte
+	SignKey     signingkey.PrivKey
+	ChangeType  string
+	SpaceId     string
+	Identity    []byte
+	IsEncrypted bool
 }
 
 func BuildObjectTree(treeStorage storage.TreeStorage, aclList list.ACLList) (ObjectTree, error) {
@@ -71,7 +72,7 @@ func createObjectTree(
 		Seed:       seed,
 	}
 
-	_, raw, err := newChangeBuilder(common.NewKeychain(), nil).BuildInitialContent(cnt)
+	_, raw, err := NewChangeBuilder(common.NewKeychain(), nil).BuildInitialContent(cnt)
 	if err != nil {
 		return
 	}

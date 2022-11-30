@@ -48,7 +48,7 @@ type changeBuilder struct {
 	keys       *common.Keychain
 }
 
-func newChangeBuilder(keys *common.Keychain, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
+func NewChangeBuilder(keys *common.Keychain, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
 	return &changeBuilder{keys: keys, rootChange: rootChange}
 }
 
@@ -155,12 +155,16 @@ func (c *changeBuilder) BuildContent(payload BuilderContent) (ch *Change, rawIdC
 		Identity:           payload.Identity,
 		IsSnapshot:         payload.IsSnapshot,
 	}
-
-	encrypted, err := payload.ReadKey.Encrypt(payload.Content)
-	if err != nil {
-		return
+	if payload.ReadKey != nil {
+		var encrypted []byte
+		encrypted, err = payload.ReadKey.Encrypt(payload.Content)
+		if err != nil {
+			return
+		}
+		change.ChangesData = encrypted
+	} else {
+		change.ChangesData = payload.Content
 	}
-	change.ChangesData = encrypted
 
 	marshalledChange, err := proto.Marshal(change)
 	if err != nil {
@@ -188,7 +192,6 @@ func (c *changeBuilder) BuildContent(payload BuilderContent) (ch *Change, rawIdC
 	}
 
 	ch = NewChange(id, change, signature)
-	ch.Model = payload.Content
 
 	rawIdChange = &treechangeproto.RawTreeChangeWithId{
 		RawChange: marshalledRawChange,

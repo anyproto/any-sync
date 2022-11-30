@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate/mock_deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto/mock_spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
@@ -13,6 +14,9 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf/mock_nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
 	mock_aclstorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage/mock_storage"
+	mock_treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage/mock_storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff/mock_ldiff"
 	"github.com/golang/mock/gomock"
 	"github.com/libp2p/go-libp2p/core/sec"
@@ -25,6 +29,7 @@ import (
 type pushSpaceRequestMatcher struct {
 	spaceId     string
 	aclRootId   string
+	settingsId  string
 	spaceHeader *spacesyncproto.RawSpaceHeaderWithId
 }
 
@@ -34,7 +39,7 @@ func (p pushSpaceRequestMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	return res.AclPayloadId == p.aclRootId && res.SpaceHeader == p.spaceHeader
+	return res.Payload.AclPayloadId == p.aclRootId && res.Payload.SpaceHeader == p.spaceHeader && res.Payload.SpaceSettingsPayloadId == p.settingsId
 }
 
 func (p pushSpaceRequestMatcher) String() string {
@@ -77,10 +82,12 @@ func (m mockPeer) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) 
 func newPushSpaceRequestMatcher(
 	spaceId string,
 	aclRootId string,
+	settingsId string,
 	spaceHeader *spacesyncproto.RawSpaceHeaderWithId) *pushSpaceRequestMatcher {
 	return &pushSpaceRequestMatcher{
 		spaceId:     spaceId,
 		aclRootId:   aclRootId,
+		settingsId:  settingsId,
 		spaceHeader: spaceHeader,
 	}
 }
@@ -99,18 +106,22 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	factory := spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceClient {
 		return clientMock
 	})
+	delState := mock_deletionstate.NewMockDeletionState(ctrl)
 	spaceId := "spaceId"
 	aclRootId := "aclRootId"
 	l := logger.NewNamed(spaceId)
 	diffSyncer := newDiffSyncer(spaceId, diffMock, connectorMock, cacheMock, stMock, factory, l)
+	delState.EXPECT().AddObserver(gomock.Any())
+	diffSyncer.Init(delState)
 
-	t.Run("diff syncer sync simple", func(t *testing.T) {
+	t.Run("diff syncer sync", func(t *testing.T) {
 		connectorMock.EXPECT().
 			GetResponsiblePeers(gomock.Any(), spaceId).
 			Return([]peer.Peer{mockPeer{}}, nil)
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).
 			Return([]string{"new"}, []string{"changed"}, nil, nil)
+		delState.EXPECT().FilterJoin(gomock.Any()).Return([]string{"new", "changed"})
 		for _, arg := range []string{"new", "changed"} {
 			cacheMock.EXPECT().
 				GetTree(gomock.Any(), spaceId, arg).
@@ -127,12 +138,37 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		require.Error(t, diffSyncer.Sync(ctx))
 	})
 
+	t.Run("deletion state remove objects", func(t *testing.T) {
+		deletedId := "id"
+		delState.EXPECT().Exists(deletedId).Return(true)
+
+		// this should not result in any mock being called
+		diffSyncer.UpdateHeads(deletedId, []string{"someHead"})
+	})
+
+	t.Run("update heads updates diff", func(t *testing.T) {
+		newId := "newId"
+		newHeads := []string{"h1", "h2"}
+		diffMock.EXPECT().Set(ldiff.Element{
+			Id:   newId,
+			Head: concatStrings(newHeads),
+		})
+		delState.EXPECT().Exists(newId).Return(false)
+		diffSyncer.UpdateHeads(newId, newHeads)
+	})
+
 	t.Run("diff syncer sync space missing", func(t *testing.T) {
 		aclStorageMock := mock_aclstorage.NewMockListStorage(ctrl)
+		settingsStorage := mock_treestorage.NewMockTreeStorage(ctrl)
+		settingsId := "settingsId"
 		aclRoot := &aclrecordproto.RawACLRecordWithId{
 			Id: aclRootId,
 		}
+		settingsRoot := &treechangeproto.RawTreeChangeWithId{
+			Id: settingsId,
+		}
 		spaceHeader := &spacesyncproto.RawSpaceHeaderWithId{}
+		spaceSettingsId := "spaceSettingsId"
 
 		connectorMock.EXPECT().
 			GetResponsiblePeers(gomock.Any(), spaceId).
@@ -140,17 +176,18 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).
 			Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing)
-		stMock.EXPECT().
-			ACLStorage().
-			Return(aclStorageMock, nil)
-		stMock.EXPECT().
-			SpaceHeader().
-			Return(spaceHeader, nil)
+
+		stMock.EXPECT().ACLStorage().Return(aclStorageMock, nil)
+		stMock.EXPECT().SpaceHeader().Return(spaceHeader, nil)
+		stMock.EXPECT().SpaceSettingsId().Return(spaceSettingsId)
+		stMock.EXPECT().TreeStorage(spaceSettingsId).Return(settingsStorage, nil)
+
+		settingsStorage.EXPECT().Root().Return(settingsRoot, nil)
 		aclStorageMock.EXPECT().
 			Root().
 			Return(aclRoot, nil)
 		clientMock.EXPECT().
-			PushSpace(gomock.Any(), newPushSpaceRequestMatcher(spaceId, aclRootId, spaceHeader)).
+			PushSpace(gomock.Any(), newPushSpaceRequestMatcher(spaceId, aclRootId, settingsId, spaceHeader)).
 			Return(nil, nil)
 
 		require.NoError(t, diffSyncer.Sync(ctx))

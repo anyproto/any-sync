@@ -5,8 +5,9 @@ import (
 )
 
 type SignableChangeContent struct {
-	Data       []byte
-	Key        signingkey.PrivKey
-	Identity   []byte
-	IsSnapshot bool
+	Data        []byte
+	Key         signingkey.PrivKey
+	Identity    []byte
+	IsSnapshot  bool
+	IsEncrypted bool
 }

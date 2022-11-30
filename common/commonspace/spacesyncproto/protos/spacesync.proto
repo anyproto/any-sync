@@ -64,9 +64,7 @@ message ObjectSyncMessage {
 
 // PushSpaceRequest is a request to add space on a node containing only one acl record
 message PushSpaceRequest {
-    RawSpaceHeaderWithId spaceHeader = 1;
-    bytes aclPayload = 2;
-    string aclPayloadId = 3;
+    SpacePayload payload = 1;
 }
 
 // PushSpaceResponse is an empty response
@@ -79,9 +77,15 @@ message PullSpaceRequest {
 
 // PullSpaceResponse is a response with header and acl root
 message PullSpaceResponse {
+    SpacePayload payload = 1;
+}
+
+message SpacePayload {
     RawSpaceHeaderWithId spaceHeader = 1;
     bytes aclPayload = 2;
     string aclPayloadId = 3;
+    bytes spaceSettingsPayload = 4;
+    string spaceSettingsPayloadId = 5;
 }
 
 // SpaceHeader is a header for a space
@@ -102,3 +106,23 @@ message RawSpaceHeaderWithId {
     bytes rawHeader = 1;
     string id = 2;
 }
+
+message SpaceSettingsContent {
+    oneof value {
+        ObjectDelete objectDelete = 1;
+    }
+}
+
+message ObjectDelete {
+    string id = 1;
+}
+
+message SpaceSettingsSnapshot {
+    repeated string deletedIds = 1;
+}
+
+message SettingsData {
+    repeated SpaceSettingsContent content = 1;
+    SpaceSettingsSnapshot snapshot = 2;
+}
+

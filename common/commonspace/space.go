@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncacl"
@@ -40,7 +42,10 @@ type SpaceCreatePayload struct {
 	ReplicationKey uint64
 }
 
-const SpaceTypeDerived = "derived.space"
+const (
+	SpaceTypeDerived          = "derived.space"
+	SettingsSyncPeriodSeconds = 10
+)
 
 type SpaceDerivePayload struct {
 	SigningKey    signingkey.PrivKey
@@ -48,9 +53,11 @@ type SpaceDerivePayload struct {
 }
 
 type SpaceDescription struct {
-	SpaceHeader *spacesyncproto.RawSpaceHeaderWithId
-	AclId       string
-	AclPayload  []byte
+	SpaceHeader          *spacesyncproto.RawSpaceHeaderWithId
+	AclId                string
+	AclPayload           []byte
+	SpaceSettingsId      string
+	SpaceSettingsPayload []byte
 }
 
 func NewSpaceId(id string, repKey uint64) string {
@@ -62,13 +69,14 @@ type Space interface {
 	Init(ctx context.Context) error
 
 	StoredIds() []string
-	Description() SpaceDescription
+	Description() (SpaceDescription, error)
 
 	SpaceSyncRpc() RpcHandler
 
 	DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
 	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
 	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
+	DeleteTree(ctx context.Context, id string) (err error)
 
 	Close() error
 }
@@ -80,13 +88,14 @@ type space struct {
 
 	rpc *rpcHandler
 
-	syncService   syncservice.SyncService
-	diffService   diffservice.DiffService
-	storage       storage.SpaceStorage
-	cache         treegetter.TreeGetter
-	account       account.Service
-	aclList       *syncacl.SyncACL
-	configuration nodeconf.Configuration
+	syncService      syncservice.SyncService
+	diffService      diffservice.DiffService
+	storage          storage.SpaceStorage
+	cache            treegetter.TreeGetter
+	account          account.Service
+	aclList          *syncacl.SyncACL
+	configuration    nodeconf.Configuration
+	settingsDocument settingsdocument.SettingsDocument
 
 	isClosed atomic.Bool
 }
@@ -99,16 +108,30 @@ func (s *space) Id() string {
 	return s.id
 }
 
-func (s *space) Description() SpaceDescription {
+func (s *space) Description() (desc SpaceDescription, err error) {
 	root := s.aclList.Root()
-	return SpaceDescription{
-		SpaceHeader: s.header,
-		AclId:       root.Id,
-		AclPayload:  root.Payload,
+	settingsStorage, err := s.storage.TreeStorage(s.storage.SpaceSettingsId())
+	if err != nil {
+		return
 	}
+	settingsRoot, err := settingsStorage.Root()
+	if err != nil {
+		return
+	}
+
+	desc = SpaceDescription{
+		SpaceHeader:          s.header,
+		AclId:                root.Id,
+		AclPayload:           root.Payload,
+		SpaceSettingsId:      settingsRoot.Id,
+		SpaceSettingsPayload: settingsRoot.RawChange,
+	}
+	return
 }
 
 func (s *space) Init(ctx context.Context) (err error) {
+	s.storage = newCommonStorage(s.storage)
+
 	header, err := s.storage.SpaceHeader()
 	if err != nil {
 		return
@@ -128,9 +151,32 @@ func (s *space) Init(ctx context.Context) (err error) {
 		return
 	}
 	s.aclList = syncacl.NewSyncACL(aclList, s.syncService.StreamPool())
-	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache)
+
+	deletionState := deletionstate.NewDeletionState(s.storage)
+	deps := settingsdocument.Deps{
+		BuildFunc: func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error) {
+			res, err := s.BuildTree(ctx, id, listener)
+			if err != nil {
+				return
+			}
+			t = res.(synctree.SyncTree)
+			return
+		},
+		Account:       s.account,
+		TreeGetter:    s.cache,
+		Store:         s.storage,
+		DeletionState: deletionState,
+	}
+	s.settingsDocument = settingsdocument.NewSettingsDocument(deps, s.id)
+
+	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache, s.settingsDocument)
 	s.syncService.Init(objectGetter)
-	s.diffService.Init(initialIds)
+	s.diffService.Init(initialIds, deletionState)
+	err = s.settingsDocument.Init(ctx)
+	if err != nil {
+		return
+	}
+
 	return nil
 }
 
@@ -163,7 +209,7 @@ func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		HeadNotifiable: s.diffService,
 		Listener:       listener,
 		AclList:        s.aclList,
-		CreateStorage:  s.storage.CreateTreeStorage,
+		SpaceStorage:   s.storage,
 	}
 	return synctree.DeriveSyncTree(ctx, deps)
 }
@@ -181,7 +227,7 @@ func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		HeadNotifiable: s.diffService,
 		Listener:       listener,
 		AclList:        s.aclList,
-		CreateStorage:  s.storage.CreateTreeStorage,
+		SpaceStorage:   s.storage,
 	}
 	return synctree.CreateSyncTree(ctx, deps)
 }
@@ -203,6 +249,10 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
 }
 
+func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
+	return s.settingsDocument.DeleteObject(id)
+}
+
 func (s *space) Close() error {
 	log.With(zap.String("id", s.id)).Debug("space is closing")
 	defer func() {
@@ -214,6 +264,9 @@ func (s *space) Close() error {
 		mError.Add(err)
 	}
 	if err := s.syncService.Close(); err != nil {
+		mError.Add(err)
+	}
+	if err := s.settingsDocument.Close(); err != nil {
 		mError.Add(err)
 	}
 	if err := s.aclList.Close(); err != nil {

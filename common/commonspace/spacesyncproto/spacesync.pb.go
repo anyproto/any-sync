@@ -397,9 +397,7 @@ func (m *ObjectSyncMessage) GetObjectId() string {
 
 // PushSpaceRequest is a request to add space on a node containing only one acl record
 type PushSpaceRequest struct {
-	SpaceHeader  *RawSpaceHeaderWithId `protobuf:"bytes,1,opt,name=spaceHeader,proto3" json:"spaceHeader,omitempty"`
-	AclPayload   []byte                `protobuf:"bytes,2,opt,name=aclPayload,proto3" json:"aclPayload,omitempty"`
-	AclPayloadId string                `protobuf:"bytes,3,opt,name=aclPayloadId,proto3" json:"aclPayloadId,omitempty"`
+	Payload *SpacePayload `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
 }
 
 func (m *PushSpaceRequest) Reset()         { *m = PushSpaceRequest{} }
@@ -435,25 +433,11 @@ func (m *PushSpaceRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_PushSpaceRequest proto.InternalMessageInfo
 
-func (m *PushSpaceRequest) GetSpaceHeader() *RawSpaceHeaderWithId {
+func (m *PushSpaceRequest) GetPayload() *SpacePayload {
 	if m != nil {
-		return m.SpaceHeader
+		return m.Payload
 	}
 	return nil
-}
-
-func (m *PushSpaceRequest) GetAclPayload() []byte {
-	if m != nil {
-		return m.AclPayload
-	}
-	return nil
-}
-
-func (m *PushSpaceRequest) GetAclPayloadId() string {
-	if m != nil {
-		return m.AclPayloadId
-	}
-	return ""
 }
 
 // PushSpaceResponse is an empty response
@@ -540,9 +524,7 @@ func (m *PullSpaceRequest) GetId() string {
 
 // PullSpaceResponse is a response with header and acl root
 type PullSpaceResponse struct {
-	SpaceHeader  *RawSpaceHeaderWithId `protobuf:"bytes,1,opt,name=spaceHeader,proto3" json:"spaceHeader,omitempty"`
-	AclPayload   []byte                `protobuf:"bytes,2,opt,name=aclPayload,proto3" json:"aclPayload,omitempty"`
-	AclPayloadId string                `protobuf:"bytes,3,opt,name=aclPayloadId,proto3" json:"aclPayloadId,omitempty"`
+	Payload *SpacePayload `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
 }
 
 func (m *PullSpaceResponse) Reset()         { *m = PullSpaceResponse{} }
@@ -578,23 +560,85 @@ func (m *PullSpaceResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_PullSpaceResponse proto.InternalMessageInfo
 
-func (m *PullSpaceResponse) GetSpaceHeader() *RawSpaceHeaderWithId {
+func (m *PullSpaceResponse) GetPayload() *SpacePayload {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
+type SpacePayload struct {
+	SpaceHeader            *RawSpaceHeaderWithId `protobuf:"bytes,1,opt,name=spaceHeader,proto3" json:"spaceHeader,omitempty"`
+	AclPayload             []byte                `protobuf:"bytes,2,opt,name=aclPayload,proto3" json:"aclPayload,omitempty"`
+	AclPayloadId           string                `protobuf:"bytes,3,opt,name=aclPayloadId,proto3" json:"aclPayloadId,omitempty"`
+	SpaceSettingsPayload   []byte                `protobuf:"bytes,4,opt,name=spaceSettingsPayload,proto3" json:"spaceSettingsPayload,omitempty"`
+	SpaceSettingsPayloadId string                `protobuf:"bytes,5,opt,name=spaceSettingsPayloadId,proto3" json:"spaceSettingsPayloadId,omitempty"`
+}
+
+func (m *SpacePayload) Reset()         { *m = SpacePayload{} }
+func (m *SpacePayload) String() string { return proto.CompactTextString(m) }
+func (*SpacePayload) ProtoMessage()    {}
+func (*SpacePayload) Descriptor() ([]byte, []int) {
+	return fileDescriptor_80e49f1f4ac27799, []int{10}
+}
+func (m *SpacePayload) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SpacePayload) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SpacePayload.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SpacePayload) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SpacePayload.Merge(m, src)
+}
+func (m *SpacePayload) XXX_Size() int {
+	return m.Size()
+}
+func (m *SpacePayload) XXX_DiscardUnknown() {
+	xxx_messageInfo_SpacePayload.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SpacePayload proto.InternalMessageInfo
+
+func (m *SpacePayload) GetSpaceHeader() *RawSpaceHeaderWithId {
 	if m != nil {
 		return m.SpaceHeader
 	}
 	return nil
 }
 
-func (m *PullSpaceResponse) GetAclPayload() []byte {
+func (m *SpacePayload) GetAclPayload() []byte {
 	if m != nil {
 		return m.AclPayload
 	}
 	return nil
 }
 
-func (m *PullSpaceResponse) GetAclPayloadId() string {
+func (m *SpacePayload) GetAclPayloadId() string {
 	if m != nil {
 		return m.AclPayloadId
+	}
+	return ""
+}
+
+func (m *SpacePayload) GetSpaceSettingsPayload() []byte {
+	if m != nil {
+		return m.SpaceSettingsPayload
+	}
+	return nil
+}
+
+func (m *SpacePayload) GetSpaceSettingsPayloadId() string {
+	if m != nil {
+		return m.SpaceSettingsPayloadId
 	}
 	return ""
 }
@@ -612,7 +656,7 @@ func (m *SpaceHeader) Reset()         { *m = SpaceHeader{} }
 func (m *SpaceHeader) String() string { return proto.CompactTextString(m) }
 func (*SpaceHeader) ProtoMessage()    {}
 func (*SpaceHeader) Descriptor() ([]byte, []int) {
-	return fileDescriptor_80e49f1f4ac27799, []int{10}
+	return fileDescriptor_80e49f1f4ac27799, []int{11}
 }
 func (m *SpaceHeader) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -685,7 +729,7 @@ func (m *RawSpaceHeader) Reset()         { *m = RawSpaceHeader{} }
 func (m *RawSpaceHeader) String() string { return proto.CompactTextString(m) }
 func (*RawSpaceHeader) ProtoMessage()    {}
 func (*RawSpaceHeader) Descriptor() ([]byte, []int) {
-	return fileDescriptor_80e49f1f4ac27799, []int{11}
+	return fileDescriptor_80e49f1f4ac27799, []int{12}
 }
 func (m *RawSpaceHeader) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -737,7 +781,7 @@ func (m *RawSpaceHeaderWithId) Reset()         { *m = RawSpaceHeaderWithId{} }
 func (m *RawSpaceHeaderWithId) String() string { return proto.CompactTextString(m) }
 func (*RawSpaceHeaderWithId) ProtoMessage()    {}
 func (*RawSpaceHeaderWithId) Descriptor() ([]byte, []int) {
-	return fileDescriptor_80e49f1f4ac27799, []int{12}
+	return fileDescriptor_80e49f1f4ac27799, []int{13}
 }
 func (m *RawSpaceHeaderWithId) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -780,6 +824,219 @@ func (m *RawSpaceHeaderWithId) GetId() string {
 	return ""
 }
 
+type SpaceSettingsContent struct {
+	// Types that are valid to be assigned to Value:
+	//
+	//	*SpaceSettingsContent_ObjectDelete
+	Value isSpaceSettingsContent_Value `protobuf_oneof:"value"`
+}
+
+func (m *SpaceSettingsContent) Reset()         { *m = SpaceSettingsContent{} }
+func (m *SpaceSettingsContent) String() string { return proto.CompactTextString(m) }
+func (*SpaceSettingsContent) ProtoMessage()    {}
+func (*SpaceSettingsContent) Descriptor() ([]byte, []int) {
+	return fileDescriptor_80e49f1f4ac27799, []int{14}
+}
+func (m *SpaceSettingsContent) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SpaceSettingsContent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SpaceSettingsContent.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SpaceSettingsContent) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SpaceSettingsContent.Merge(m, src)
+}
+func (m *SpaceSettingsContent) XXX_Size() int {
+	return m.Size()
+}
+func (m *SpaceSettingsContent) XXX_DiscardUnknown() {
+	xxx_messageInfo_SpaceSettingsContent.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SpaceSettingsContent proto.InternalMessageInfo
+
+type isSpaceSettingsContent_Value interface {
+	isSpaceSettingsContent_Value()
+	MarshalTo([]byte) (int, error)
+	Size() int
+}
+
+type SpaceSettingsContent_ObjectDelete struct {
+	ObjectDelete *ObjectDelete `protobuf:"bytes,1,opt,name=objectDelete,proto3,oneof" json:"objectDelete,omitempty"`
+}
+
+func (*SpaceSettingsContent_ObjectDelete) isSpaceSettingsContent_Value() {}
+
+func (m *SpaceSettingsContent) GetValue() isSpaceSettingsContent_Value {
+	if m != nil {
+		return m.Value
+	}
+	return nil
+}
+
+func (m *SpaceSettingsContent) GetObjectDelete() *ObjectDelete {
+	if x, ok := m.GetValue().(*SpaceSettingsContent_ObjectDelete); ok {
+		return x.ObjectDelete
+	}
+	return nil
+}
+
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*SpaceSettingsContent) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
+		(*SpaceSettingsContent_ObjectDelete)(nil),
+	}
+}
+
+type ObjectDelete struct {
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+}
+
+func (m *ObjectDelete) Reset()         { *m = ObjectDelete{} }
+func (m *ObjectDelete) String() string { return proto.CompactTextString(m) }
+func (*ObjectDelete) ProtoMessage()    {}
+func (*ObjectDelete) Descriptor() ([]byte, []int) {
+	return fileDescriptor_80e49f1f4ac27799, []int{15}
+}
+func (m *ObjectDelete) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ObjectDelete) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ObjectDelete.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ObjectDelete) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ObjectDelete.Merge(m, src)
+}
+func (m *ObjectDelete) XXX_Size() int {
+	return m.Size()
+}
+func (m *ObjectDelete) XXX_DiscardUnknown() {
+	xxx_messageInfo_ObjectDelete.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ObjectDelete proto.InternalMessageInfo
+
+func (m *ObjectDelete) GetId() string {
+	if m != nil {
+		return m.Id
+	}
+	return ""
+}
+
+type SpaceSettingsSnapshot struct {
+	DeletedIds []string `protobuf:"bytes,1,rep,name=deletedIds,proto3" json:"deletedIds,omitempty"`
+}
+
+func (m *SpaceSettingsSnapshot) Reset()         { *m = SpaceSettingsSnapshot{} }
+func (m *SpaceSettingsSnapshot) String() string { return proto.CompactTextString(m) }
+func (*SpaceSettingsSnapshot) ProtoMessage()    {}
+func (*SpaceSettingsSnapshot) Descriptor() ([]byte, []int) {
+	return fileDescriptor_80e49f1f4ac27799, []int{16}
+}
+func (m *SpaceSettingsSnapshot) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SpaceSettingsSnapshot) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SpaceSettingsSnapshot.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SpaceSettingsSnapshot) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SpaceSettingsSnapshot.Merge(m, src)
+}
+func (m *SpaceSettingsSnapshot) XXX_Size() int {
+	return m.Size()
+}
+func (m *SpaceSettingsSnapshot) XXX_DiscardUnknown() {
+	xxx_messageInfo_SpaceSettingsSnapshot.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SpaceSettingsSnapshot proto.InternalMessageInfo
+
+func (m *SpaceSettingsSnapshot) GetDeletedIds() []string {
+	if m != nil {
+		return m.DeletedIds
+	}
+	return nil
+}
+
+type SettingsData struct {
+	Content  []*SpaceSettingsContent `protobuf:"bytes,1,rep,name=content,proto3" json:"content,omitempty"`
+	Snapshot *SpaceSettingsSnapshot  `protobuf:"bytes,2,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
+}
+
+func (m *SettingsData) Reset()         { *m = SettingsData{} }
+func (m *SettingsData) String() string { return proto.CompactTextString(m) }
+func (*SettingsData) ProtoMessage()    {}
+func (*SettingsData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_80e49f1f4ac27799, []int{17}
+}
+func (m *SettingsData) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SettingsData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SettingsData.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SettingsData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SettingsData.Merge(m, src)
+}
+func (m *SettingsData) XXX_Size() int {
+	return m.Size()
+}
+func (m *SettingsData) XXX_DiscardUnknown() {
+	xxx_messageInfo_SettingsData.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SettingsData proto.InternalMessageInfo
+
+func (m *SettingsData) GetContent() []*SpaceSettingsContent {
+	if m != nil {
+		return m.Content
+	}
+	return nil
+}
+
+func (m *SettingsData) GetSnapshot() *SpaceSettingsSnapshot {
+	if m != nil {
+		return m.Snapshot
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterEnum("anySpace.ErrCodes", ErrCodes_name, ErrCodes_value)
 	proto.RegisterType((*HeadSyncRange)(nil), "anySpace.HeadSyncRange")
@@ -792,9 +1049,14 @@ func init() {
 	proto.RegisterType((*PushSpaceResponse)(nil), "anySpace.PushSpaceResponse")
 	proto.RegisterType((*PullSpaceRequest)(nil), "anySpace.PullSpaceRequest")
 	proto.RegisterType((*PullSpaceResponse)(nil), "anySpace.PullSpaceResponse")
+	proto.RegisterType((*SpacePayload)(nil), "anySpace.SpacePayload")
 	proto.RegisterType((*SpaceHeader)(nil), "anySpace.SpaceHeader")
 	proto.RegisterType((*RawSpaceHeader)(nil), "anySpace.RawSpaceHeader")
 	proto.RegisterType((*RawSpaceHeaderWithId)(nil), "anySpace.RawSpaceHeaderWithId")
+	proto.RegisterType((*SpaceSettingsContent)(nil), "anySpace.SpaceSettingsContent")
+	proto.RegisterType((*ObjectDelete)(nil), "anySpace.ObjectDelete")
+	proto.RegisterType((*SpaceSettingsSnapshot)(nil), "anySpace.SpaceSettingsSnapshot")
+	proto.RegisterType((*SettingsData)(nil), "anySpace.SettingsData")
 }
 
 func init() {
@@ -802,53 +1064,63 @@ func init() {
 }
 
 var fileDescriptor_80e49f1f4ac27799 = []byte{
-	// 721 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x55, 0xcd, 0x6e, 0xd3, 0x4a,
-	0x14, 0x8e, 0xdd, 0xb4, 0x4d, 0x4e, 0xd2, 0x34, 0x9d, 0xdb, 0xab, 0xeb, 0x1b, 0x90, 0x89, 0xbc,
-	0x40, 0x11, 0x8b, 0x16, 0x02, 0xbb, 0x6e, 0xf8, 0x69, 0x2a, 0x22, 0x54, 0x5a, 0x4d, 0x40, 0x48,
-	0x88, 0xcd, 0xd4, 0x9e, 0x26, 0x46, 0xfe, 0xc3, 0x33, 0x51, 0xeb, 0x05, 0xef, 0xc0, 0x12, 0x36,
-	0x48, 0xbc, 0x0d, 0xcb, 0x2e, 0x59, 0xa2, 0xf6, 0x45, 0xd0, 0x9c, 0xd8, 0xb1, 0x9d, 0xa6, 0x5d,
-	0xb3, 0x71, 0xe7, 0x7c, 0xe7, 0xef, 0x9b, 0x6f, 0xce, 0x69, 0xe0, 0x91, 0x1d, 0xfa, 0x7e, 0x18,
-	0x88, 0x88, 0xd9, 0x7c, 0x17, 0xbf, 0x22, 0x09, 0xec, 0x28, 0x0e, 0x65, 0xb8, 0x8b, 0x5f, 0x91,
-	0xa3, 0x3b, 0x08, 0x90, 0x1a, 0x0b, 0x92, 0x91, 0xc2, 0xac, 0x21, 0x6c, 0xbc, 0xe4, 0xcc, 0x19,
-	0x25, 0x81, 0x4d, 0x59, 0x30, 0xe6, 0x84, 0x40, 0xf5, 0x34, 0x0e, 0x7d, 0x43, 0xeb, 0x6a, 0xbd,
-	0x2a, 0xc5, 0x33, 0x69, 0x81, 0x2e, 0x43, 0x43, 0x47, 0x44, 0x97, 0x21, 0xd9, 0x86, 0x55, 0xcf,
-	0xf5, 0x5d, 0x69, 0xac, 0x74, 0xb5, 0xde, 0x06, 0x9d, 0x19, 0xd6, 0x19, 0xb4, 0xe6, 0xa5, 0xb8,
-	0x98, 0x7a, 0x52, 0xd5, 0x9a, 0x30, 0x31, 0xc1, 0x5a, 0x4d, 0x8a, 0x67, 0xb2, 0x07, 0x35, 0xee,
-	0x71, 0x9f, 0x07, 0x52, 0x18, 0x7a, 0x77, 0xa5, 0xd7, 0xe8, 0xdf, 0xdb, 0xc9, 0xd8, 0xec, 0x94,
-	0xf3, 0x07, 0xb3, 0x38, 0x3a, 0x4f, 0x50, 0x8d, 0xed, 0x70, 0x1a, 0xcc, 0x1b, 0xa3, 0x61, 0xed,
-	0xc1, 0xbf, 0x4b, 0x13, 0x15, 0x6f, 0xd7, 0xc1, 0xee, 0x75, 0xaa, 0xbb, 0x0e, 0xf2, 0xe1, 0xcc,
-	0xc1, 0x9b, 0xd4, 0x29, 0x9e, 0xad, 0x0f, 0xb0, 0x99, 0x27, 0x7f, 0x9a, 0x72, 0x21, 0x89, 0x01,
-	0xeb, 0x28, 0xd8, 0x30, 0xcb, 0xcd, 0x4c, 0xb2, 0x0b, 0x6b, 0xb1, 0x52, 0x29, 0xa3, 0xfe, 0xdf,
-	0x12, 0xea, 0xca, 0x4f, 0xd3, 0x30, 0xeb, 0x00, 0xda, 0x05, 0x6a, 0x51, 0x18, 0x08, 0x4e, 0xfa,
-	0xb0, 0x1e, 0x23, 0x4d, 0x61, 0x68, 0x58, 0xc5, 0xb8, 0x49, 0x00, 0x9a, 0x05, 0x5a, 0x9f, 0x61,
-	0xeb, 0xe8, 0xe4, 0x23, 0xb7, 0xa5, 0x72, 0x1e, 0x72, 0x21, 0xd8, 0x98, 0xdf, 0xc2, 0xd3, 0x50,
-	0x2d, 0x22, 0x2f, 0x19, 0x66, 0x77, 0xcd, 0x4c, 0xe5, 0x89, 0x58, 0xe2, 0x85, 0xcc, 0x41, 0x0d,
-	0x9b, 0x34, 0x33, 0x49, 0x07, 0x6a, 0x21, 0xb6, 0x18, 0x3a, 0x46, 0x15, 0x93, 0xe6, 0xb6, 0xf5,
-	0x55, 0x83, 0xf6, 0xf1, 0x54, 0x4c, 0x90, 0x64, 0x26, 0xd3, 0x53, 0x68, 0x60, 0x3f, 0xc5, 0x99,
-	0xc7, 0x48, 0xa1, 0xd1, 0x37, 0xf3, 0xbb, 0x50, 0x76, 0x36, 0xca, 0xfd, 0xef, 0x5c, 0x39, 0x19,
-	0x3a, 0xb4, 0x98, 0x42, 0x4c, 0x00, 0x66, 0x7b, 0xc7, 0x29, 0x1f, 0x1d, 0xf9, 0x14, 0x10, 0x62,
-	0x41, 0x33, 0xb7, 0x86, 0x33, 0xc6, 0x75, 0x5a, 0xc2, 0xac, 0x7f, 0x60, 0xab, 0xc0, 0x6c, 0x26,
-	0xb1, 0x65, 0x29, 0xba, 0x9e, 0x57, 0xa2, 0xbb, 0x30, 0x0c, 0xd6, 0x37, 0x4d, 0x65, 0xce, 0x83,
-	0xd2, 0xc7, 0xf9, 0x3b, 0x2e, 0xf5, 0x43, 0x83, 0x46, 0xa1, 0x8d, 0x7a, 0x1b, 0xd7, 0xe1, 0x81,
-	0x74, 0x65, 0x92, 0x2e, 0xd3, 0xdc, 0x26, 0x77, 0xa1, 0x2e, 0x5d, 0x9f, 0x0b, 0xc9, 0xfc, 0x08,
-	0xdb, 0xad, 0xd0, 0x1c, 0x50, 0x5e, 0x24, 0xf7, 0x26, 0x89, 0x78, 0xda, 0x2a, 0x07, 0xc8, 0x7d,
-	0x68, 0xa9, 0xc1, 0x70, 0x6d, 0x26, 0xdd, 0x30, 0x78, 0xc5, 0x13, 0x7c, 0xf9, 0x2a, 0x5d, 0x40,
-	0xd5, 0xe2, 0x08, 0xce, 0x1d, 0x63, 0x75, 0xb6, 0xc8, 0xea, 0x6c, 0x1d, 0x43, 0xab, 0x2c, 0x06,
-	0xe9, 0x5e, 0xd7, 0xae, 0x59, 0xd6, 0x46, 0xb1, 0x71, 0xc7, 0x01, 0x93, 0xd3, 0x98, 0xa7, 0xd2,
-	0xe4, 0x80, 0xb5, 0x0f, 0xdb, 0xcb, 0xe4, 0x55, 0x59, 0x31, 0x3b, 0x2b, 0x55, 0xcd, 0x81, 0xf4,
-	0x5d, 0xf5, 0xec, 0x5d, 0x1f, 0xbc, 0x86, 0xda, 0x20, 0x8e, 0x5f, 0x84, 0x0e, 0x17, 0xa4, 0x05,
-	0xf0, 0x36, 0xe0, 0xe7, 0x11, 0xb7, 0x25, 0x77, 0xda, 0x15, 0xd2, 0x86, 0x26, 0x96, 0x3f, 0x74,
-	0x85, 0x70, 0x83, 0x71, 0x5b, 0x23, 0x9b, 0xa9, 0xd0, 0x83, 0x73, 0x57, 0x48, 0xd1, 0xd6, 0x15,
-	0x30, 0x88, 0xe3, 0x30, 0x3e, 0x3a, 0x3d, 0x15, 0x5c, 0xb6, 0x9d, 0xfe, 0x77, 0x1d, 0x56, 0x31,
-	0x84, 0x3c, 0x83, 0x5a, 0xb6, 0x9f, 0xe4, 0xff, 0x65, 0x3b, 0x8b, 0x83, 0xd6, 0xe9, 0x2c, 0x5d,
-	0xe7, 0xd9, 0x78, 0xed, 0x43, 0x7d, 0x3e, 0xad, 0xa4, 0x10, 0xb8, 0xb8, 0x5c, 0x9d, 0x3b, 0x4b,
-	0x7d, 0xc5, 0x2a, 0xe9, 0xe4, 0x96, 0xab, 0x94, 0x67, 0xbe, 0x5c, 0x65, 0x71, 0xd4, 0x0f, 0x60,
-	0x6d, 0x24, 0x63, 0xce, 0x7c, 0x52, 0x08, 0xbb, 0xf6, 0x5f, 0xa6, 0x73, 0x9b, 0xb3, 0xa7, 0x3d,
-	0xd4, 0x9e, 0x3f, 0xf9, 0x79, 0x69, 0x6a, 0x17, 0x97, 0xa6, 0xf6, 0xfb, 0xd2, 0xd4, 0xbe, 0x5c,
-	0x99, 0x95, 0x8b, 0x2b, 0xb3, 0xf2, 0xeb, 0xca, 0xac, 0xbc, 0xef, 0xdc, 0xfc, 0xcb, 0x74, 0xb2,
-	0x86, 0x7f, 0x1e, 0xff, 0x09, 0x00, 0x00, 0xff, 0xff, 0xf7, 0x95, 0x5b, 0xbc, 0xbe, 0x06, 0x00,
-	0x00,
+	// 882 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x56, 0x4f, 0x6f, 0x1b, 0x45,
+	0x14, 0xf7, 0x6e, 0x9c, 0xc4, 0x7e, 0xd9, 0xba, 0xee, 0x90, 0x96, 0xc5, 0x45, 0x4b, 0x34, 0x07,
+	0x14, 0x71, 0x48, 0x8a, 0x41, 0x80, 0x54, 0x0e, 0xd0, 0xda, 0x55, 0x2d, 0x54, 0x12, 0x8d, 0x41,
+	0x48, 0x08, 0x0e, 0xd3, 0xdd, 0x89, 0xbd, 0x68, 0xbd, 0xb3, 0xec, 0x8c, 0x49, 0x7d, 0x40, 0xe2,
+	0xc2, 0x9d, 0x4f, 0x80, 0xc4, 0xb7, 0xe1, 0xd8, 0x23, 0x47, 0x94, 0x7c, 0x11, 0x34, 0x6f, 0xff,
+	0x3b, 0x9b, 0x4a, 0x5c, 0xd6, 0xf3, 0xfe, 0xfd, 0xde, 0x9f, 0x79, 0xf3, 0x93, 0xe1, 0x43, 0x5f,
+	0xae, 0x56, 0x32, 0x56, 0x09, 0xf7, 0xc5, 0x29, 0x7e, 0xd5, 0x26, 0xf6, 0x93, 0x54, 0x6a, 0x79,
+	0x8a, 0x5f, 0x55, 0x69, 0x4f, 0x50, 0x41, 0x7a, 0x3c, 0xde, 0xcc, 0x8d, 0x8e, 0xce, 0xe0, 0xce,
+	0x73, 0xc1, 0x83, 0xf9, 0x26, 0xf6, 0x19, 0x8f, 0x17, 0x82, 0x10, 0xe8, 0x5e, 0xa4, 0x72, 0xe5,
+	0x5a, 0x47, 0xd6, 0x71, 0x97, 0xe1, 0x99, 0x0c, 0xc0, 0xd6, 0xd2, 0xb5, 0x51, 0x63, 0x6b, 0x49,
+	0x0e, 0x61, 0x37, 0x0a, 0x57, 0xa1, 0x76, 0x77, 0x8e, 0xac, 0xe3, 0x3b, 0x2c, 0x13, 0xe8, 0x25,
+	0x0c, 0x4a, 0x28, 0xa1, 0xd6, 0x91, 0x36, 0x58, 0x4b, 0xae, 0x96, 0x88, 0xe5, 0x30, 0x3c, 0x93,
+	0xc7, 0xd0, 0x13, 0x91, 0x58, 0x89, 0x58, 0x2b, 0xd7, 0x3e, 0xda, 0x39, 0x3e, 0x18, 0xbf, 0x77,
+	0x52, 0x54, 0x73, 0xd2, 0x8c, 0x9f, 0x66, 0x7e, 0xac, 0x0c, 0x30, 0x89, 0x7d, 0xb9, 0x8e, 0xcb,
+	0xc4, 0x28, 0xd0, 0xc7, 0x70, 0xbf, 0x35, 0xd0, 0xd4, 0x1d, 0x06, 0x98, 0xbd, 0xcf, 0xec, 0x30,
+	0xc0, 0x7a, 0x04, 0x0f, 0xb0, 0x93, 0x3e, 0xc3, 0x33, 0xfd, 0x01, 0xee, 0x56, 0xc1, 0x3f, 0xaf,
+	0x85, 0xd2, 0xc4, 0x85, 0x7d, 0x1c, 0xd8, 0xac, 0x88, 0x2d, 0x44, 0x72, 0x0a, 0x7b, 0xa9, 0x99,
+	0x52, 0x51, 0xfa, 0xdb, 0x2d, 0xa5, 0x1b, 0x3b, 0xcb, 0xdd, 0xe8, 0x33, 0x18, 0xd6, 0x4a, 0x4b,
+	0x64, 0xac, 0x04, 0x19, 0xc3, 0x7e, 0x8a, 0x65, 0x2a, 0xd7, 0x42, 0x14, 0xf7, 0xb6, 0x01, 0xb0,
+	0xc2, 0x91, 0xfe, 0x0a, 0xf7, 0xce, 0x5e, 0xfe, 0x24, 0x7c, 0x6d, 0x8c, 0x2f, 0x84, 0x52, 0x7c,
+	0x21, 0xde, 0x50, 0xa7, 0x6b, 0x52, 0x24, 0xd1, 0x66, 0x56, 0xf4, 0x5a, 0x88, 0xc6, 0x92, 0xf0,
+	0x4d, 0x24, 0x79, 0x80, 0x33, 0x74, 0x58, 0x21, 0x92, 0x11, 0xf4, 0x24, 0xa6, 0x98, 0x05, 0x6e,
+	0x17, 0x83, 0x4a, 0x99, 0x4e, 0x60, 0x78, 0xbe, 0x56, 0x4b, 0xac, 0xb1, 0x98, 0xd2, 0xa3, 0x0a,
+	0xc9, 0x64, 0x3f, 0x18, 0x3f, 0xa8, 0xda, 0xc0, 0xef, 0x79, 0x66, 0x2d, 0x33, 0xd0, 0xb7, 0xe0,
+	0x5e, 0x0d, 0x25, 0x9b, 0x06, 0xa5, 0x06, 0x3a, 0x8a, 0x1a, 0xd0, 0x5b, 0xf7, 0x46, 0xa7, 0x26,
+	0xb0, 0xf4, 0xc9, 0xc7, 0xf8, 0xff, 0xf3, 0xff, 0x66, 0x83, 0x53, 0xb7, 0x90, 0x2f, 0xe0, 0x00,
+	0x27, 0x66, 0xa6, 0x2e, 0xd2, 0x1c, 0xc6, 0xab, 0x60, 0x18, 0xbf, 0x9c, 0x57, 0xf6, 0xef, 0x42,
+	0xbd, 0x9c, 0x05, 0xac, 0x1e, 0x42, 0x3c, 0x00, 0xee, 0x47, 0x39, 0x1e, 0xce, 0xda, 0x61, 0x35,
+	0x0d, 0xa1, 0xe0, 0x54, 0xd2, 0x2c, 0x9b, 0x79, 0x9f, 0x35, 0x74, 0x64, 0x0c, 0x87, 0x08, 0x39,
+	0x17, 0x5a, 0x87, 0xf1, 0x42, 0x15, 0x68, 0x5d, 0x44, 0x6b, 0xb5, 0x91, 0x4f, 0xe0, 0x41, 0x9b,
+	0x7e, 0x16, 0xb8, 0xbb, 0x98, 0xe1, 0x16, 0x2b, 0xfd, 0xcb, 0x82, 0x83, 0x5a, 0x4b, 0xe6, 0xd2,
+	0xc3, 0x40, 0xc4, 0x3a, 0xd4, 0x9b, 0xfc, 0x95, 0x96, 0x32, 0x79, 0x17, 0xfa, 0x3a, 0x5c, 0x09,
+	0xa5, 0xf9, 0x2a, 0xc1, 0xd6, 0x76, 0x58, 0xa5, 0x30, 0x56, 0xcc, 0xf1, 0xcd, 0x26, 0x11, 0x79,
+	0x5b, 0x95, 0x82, 0xbc, 0x0f, 0x03, 0xb3, 0x71, 0xa1, 0xcf, 0x75, 0x28, 0xe3, 0xaf, 0xc4, 0x06,
+	0xbb, 0xe9, 0xb2, 0x2d, 0xad, 0x79, 0x91, 0x4a, 0x88, 0xac, 0x6a, 0x87, 0xe1, 0x99, 0x9e, 0xc3,
+	0xa0, 0x39, 0x78, 0x72, 0x74, 0xf3, 0x9e, 0x9c, 0xe6, 0x3d, 0x98, 0x6a, 0xc2, 0x45, 0xcc, 0xf5,
+	0x3a, 0x15, 0xf9, 0x35, 0x54, 0x0a, 0x3a, 0x81, 0xc3, 0xb6, 0xab, 0x34, 0x51, 0x29, 0xbf, 0x6c,
+	0xa0, 0x56, 0x8a, 0x7c, 0x0b, 0xed, 0x72, 0x0b, 0x7f, 0x84, 0xc3, 0x79, 0x7d, 0xaa, 0x4f, 0x65,
+	0xac, 0x0d, 0xcb, 0x7c, 0x0e, 0x4e, 0xf6, 0x50, 0x26, 0x22, 0x12, 0x5a, 0xdc, 0xdc, 0xc6, 0xb3,
+	0x9a, 0xf5, 0x79, 0x87, 0x35, 0xbc, 0x9f, 0xec, 0xc3, 0xee, 0x2f, 0x3c, 0x5a, 0x0b, 0xea, 0x81,
+	0x53, 0x77, 0xbc, 0xf1, 0x08, 0x3e, 0x85, 0xfb, 0x8d, 0xf4, 0xf3, 0x98, 0x27, 0x6a, 0x29, 0xb5,
+	0xd9, 0xc1, 0x00, 0x43, 0x82, 0x59, 0x90, 0x51, 0x4a, 0x9f, 0xd5, 0x34, 0xf4, 0x77, 0x0b, 0x9c,
+	0x22, 0x68, 0xc2, 0x35, 0x27, 0x9f, 0xc1, 0xbe, 0x9f, 0xd5, 0x9e, 0x13, 0x90, 0xb7, 0xf5, 0x72,
+	0xb6, 0x3a, 0x64, 0x85, 0xbb, 0x21, 0x6f, 0x95, 0xa7, 0xc5, 0xc1, 0x34, 0xc8, 0xbb, 0xb5, 0x3a,
+	0x56, 0x06, 0x7c, 0xf0, 0x35, 0xf4, 0xa6, 0x69, 0xfa, 0x54, 0x06, 0x42, 0x91, 0x01, 0xc0, 0xb7,
+	0xb1, 0x78, 0x95, 0x08, 0x5f, 0x8b, 0x60, 0xd8, 0x21, 0xc3, 0xfc, 0x65, 0xbe, 0x08, 0x95, 0x0a,
+	0xe3, 0xc5, 0xd0, 0x22, 0x77, 0xf3, 0x45, 0x9d, 0xbe, 0x0a, 0x95, 0x56, 0x43, 0xdb, 0x28, 0xa6,
+	0x69, 0x2a, 0xd3, 0xb3, 0x8b, 0x0b, 0x25, 0xf4, 0x30, 0x18, 0xff, 0x69, 0xc3, 0x2e, 0xba, 0x90,
+	0x2f, 0xa1, 0x57, 0x10, 0x27, 0x79, 0xa7, 0x8d, 0x4c, 0x91, 0x56, 0x46, 0xa3, 0x56, 0x9e, 0xcd,
+	0xd8, 0x64, 0x02, 0xfd, 0x92, 0x9b, 0x48, 0xcd, 0x71, 0x9b, 0xf6, 0x46, 0x0f, 0x5b, 0x6d, 0x75,
+	0x94, 0x9c, 0xa8, 0x9a, 0x28, 0x4d, 0x86, 0x6b, 0xa2, 0x6c, 0x33, 0xdb, 0x33, 0xd8, 0x9b, 0xeb,
+	0x54, 0xf0, 0x15, 0x79, 0xb8, 0xbd, 0x44, 0x35, 0xfa, 0x1f, 0xbd, 0xc9, 0x78, 0x6c, 0x3d, 0xb2,
+	0x9e, 0x7c, 0xfc, 0xf7, 0x95, 0x67, 0xbd, 0xbe, 0xf2, 0xac, 0x7f, 0xaf, 0x3c, 0xeb, 0x8f, 0x6b,
+	0xaf, 0xf3, 0xfa, 0xda, 0xeb, 0xfc, 0x73, 0xed, 0x75, 0xbe, 0x1f, 0xdd, 0xfe, 0x97, 0xe1, 0xe5,
+	0x1e, 0xfe, 0x7c, 0xf4, 0x5f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x4e, 0x86, 0xe7, 0xfa, 0x57, 0x08,
+	0x00, 0x00,
 }
 
 func (m *HeadSyncRange) Marshal() (dAtA []byte, err error) {
@@ -1127,23 +1399,9 @@ func (m *PushSpaceRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.AclPayloadId) > 0 {
-		i -= len(m.AclPayloadId)
-		copy(dAtA[i:], m.AclPayloadId)
-		i = encodeVarintSpacesync(dAtA, i, uint64(len(m.AclPayloadId)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.AclPayload) > 0 {
-		i -= len(m.AclPayload)
-		copy(dAtA[i:], m.AclPayload)
-		i = encodeVarintSpacesync(dAtA, i, uint64(len(m.AclPayload)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if m.SpaceHeader != nil {
+	if m.Payload != nil {
 		{
-			size, err := m.SpaceHeader.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.Payload.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -1229,6 +1487,55 @@ func (m *PullSpaceResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.Payload != nil {
+		{
+			size, err := m.Payload.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSpacesync(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SpacePayload) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SpacePayload) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SpacePayload) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.SpaceSettingsPayloadId) > 0 {
+		i -= len(m.SpaceSettingsPayloadId)
+		copy(dAtA[i:], m.SpaceSettingsPayloadId)
+		i = encodeVarintSpacesync(dAtA, i, uint64(len(m.SpaceSettingsPayloadId)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.SpaceSettingsPayload) > 0 {
+		i -= len(m.SpaceSettingsPayload)
+		copy(dAtA[i:], m.SpaceSettingsPayload)
+		i = encodeVarintSpacesync(dAtA, i, uint64(len(m.SpaceSettingsPayload)))
+		i--
+		dAtA[i] = 0x22
+	}
 	if len(m.AclPayloadId) > 0 {
 		i -= len(m.AclPayloadId)
 		copy(dAtA[i:], m.AclPayloadId)
@@ -1386,6 +1693,170 @@ func (m *RawSpaceHeaderWithId) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *SpaceSettingsContent) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SpaceSettingsContent) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SpaceSettingsContent) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Value != nil {
+		{
+			size := m.Value.Size()
+			i -= size
+			if _, err := m.Value.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SpaceSettingsContent_ObjectDelete) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SpaceSettingsContent_ObjectDelete) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.ObjectDelete != nil {
+		{
+			size, err := m.ObjectDelete.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSpacesync(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+func (m *ObjectDelete) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ObjectDelete) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ObjectDelete) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Id) > 0 {
+		i -= len(m.Id)
+		copy(dAtA[i:], m.Id)
+		i = encodeVarintSpacesync(dAtA, i, uint64(len(m.Id)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SpaceSettingsSnapshot) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SpaceSettingsSnapshot) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SpaceSettingsSnapshot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.DeletedIds) > 0 {
+		for iNdEx := len(m.DeletedIds) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.DeletedIds[iNdEx])
+			copy(dAtA[i:], m.DeletedIds[iNdEx])
+			i = encodeVarintSpacesync(dAtA, i, uint64(len(m.DeletedIds[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SettingsData) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SettingsData) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SettingsData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Snapshot != nil {
+		{
+			size, err := m.Snapshot.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintSpacesync(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Content) > 0 {
+		for iNdEx := len(m.Content) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Content[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintSpacesync(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintSpacesync(dAtA []byte, offset int, v uint64) int {
 	offset -= sovSpacesync(v)
 	base := offset
@@ -1519,16 +1990,8 @@ func (m *PushSpaceRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.SpaceHeader != nil {
-		l = m.SpaceHeader.Size()
-		n += 1 + l + sovSpacesync(uint64(l))
-	}
-	l = len(m.AclPayload)
-	if l > 0 {
-		n += 1 + l + sovSpacesync(uint64(l))
-	}
-	l = len(m.AclPayloadId)
-	if l > 0 {
+	if m.Payload != nil {
+		l = m.Payload.Size()
 		n += 1 + l + sovSpacesync(uint64(l))
 	}
 	return n
@@ -1562,6 +2025,19 @@ func (m *PullSpaceResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.Payload != nil {
+		l = m.Payload.Size()
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	return n
+}
+
+func (m *SpacePayload) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
 	if m.SpaceHeader != nil {
 		l = m.SpaceHeader.Size()
 		n += 1 + l + sovSpacesync(uint64(l))
@@ -1571,6 +2047,14 @@ func (m *PullSpaceResponse) Size() (n int) {
 		n += 1 + l + sovSpacesync(uint64(l))
 	}
 	l = len(m.AclPayloadId)
+	if l > 0 {
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	l = len(m.SpaceSettingsPayload)
+	if l > 0 {
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	l = len(m.SpaceSettingsPayloadId)
 	if l > 0 {
 		n += 1 + l + sovSpacesync(uint64(l))
 	}
@@ -1633,6 +2117,77 @@ func (m *RawSpaceHeaderWithId) Size() (n int) {
 	}
 	l = len(m.Id)
 	if l > 0 {
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	return n
+}
+
+func (m *SpaceSettingsContent) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Value != nil {
+		n += m.Value.Size()
+	}
+	return n
+}
+
+func (m *SpaceSettingsContent_ObjectDelete) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.ObjectDelete != nil {
+		l = m.ObjectDelete.Size()
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	return n
+}
+func (m *ObjectDelete) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Id)
+	if l > 0 {
+		n += 1 + l + sovSpacesync(uint64(l))
+	}
+	return n
+}
+
+func (m *SpaceSettingsSnapshot) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.DeletedIds) > 0 {
+		for _, s := range m.DeletedIds {
+			l = len(s)
+			n += 1 + l + sovSpacesync(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *SettingsData) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Content) > 0 {
+		for _, e := range m.Content {
+			l = e.Size()
+			n += 1 + l + sovSpacesync(uint64(l))
+		}
+	}
+	if m.Snapshot != nil {
+		l = m.Snapshot.Size()
 		n += 1 + l + sovSpacesync(uint64(l))
 	}
 	return n
@@ -2413,7 +2968,7 @@ func (m *PushSpaceRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SpaceHeader", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Payload", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -2440,78 +2995,12 @@ func (m *PushSpaceRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.SpaceHeader == nil {
-				m.SpaceHeader = &RawSpaceHeaderWithId{}
+			if m.Payload == nil {
+				m.Payload = &SpacePayload{}
 			}
-			if err := m.SpaceHeader.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.Payload.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AclPayload", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSpacesync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.AclPayload = append(m.AclPayload[:0], dAtA[iNdEx:postIndex]...)
-			if m.AclPayload == nil {
-				m.AclPayload = []byte{}
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AclPayloadId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowSpacesync
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthSpacesync
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.AclPayloadId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2697,6 +3186,92 @@ func (m *PullSpaceResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Payload", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Payload == nil {
+				m.Payload = &SpacePayload{}
+			}
+			if err := m.Payload.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSpacesync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SpacePayload) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSpacesync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SpacePayload: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SpacePayload: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field SpaceHeader", wireType)
 			}
 			var msglen int
@@ -2796,6 +3371,72 @@ func (m *PullSpaceResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.AclPayloadId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceSettingsPayload", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SpaceSettingsPayload = append(m.SpaceSettingsPayload[:0], dAtA[iNdEx:postIndex]...)
+			if m.SpaceSettingsPayload == nil {
+				m.SpaceSettingsPayload = []byte{}
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceSettingsPayloadId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SpaceSettingsPayloadId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -3218,6 +3859,375 @@ func (m *RawSpaceHeaderWithId) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Id = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSpacesync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SpaceSettingsContent) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSpacesync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SpaceSettingsContent: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SpaceSettingsContent: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectDelete", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &ObjectDelete{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &SpaceSettingsContent_ObjectDelete{v}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSpacesync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ObjectDelete) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSpacesync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ObjectDelete: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ObjectDelete: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Id = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSpacesync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SpaceSettingsSnapshot) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSpacesync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SpaceSettingsSnapshot: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SpaceSettingsSnapshot: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DeletedIds", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.DeletedIds = append(m.DeletedIds, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipSpacesync(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SettingsData) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowSpacesync
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SettingsData: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SettingsData: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Content", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Content = append(m.Content, &SpaceSettingsContent{})
+			if err := m.Content[len(m.Content)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Snapshot", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowSpacesync
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthSpacesync
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Snapshot == nil {
+				m.Snapshot = &SpaceSettingsSnapshot{}
+			}
+			if err := m.Snapshot.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

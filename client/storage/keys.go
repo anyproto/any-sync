@@ -31,18 +31,20 @@ func (a aclKeys) RawRecordKey(id string) []byte {
 }
 
 type treeKeys struct {
-	id       string
-	spaceId  string
-	headsKey []byte
-	rootKey  []byte
+	id              string
+	spaceId         string
+	headsKey        []byte
+	rootKey         []byte
+	rawChangePrefix []byte
 }
 
 func newTreeKeys(spaceId, id string) treeKeys {
 	return treeKeys{
-		id:       id,
-		spaceId:  spaceId,
-		headsKey: storage.JoinStringsToBytes("space", spaceId, "t", id, "heads"),
-		rootKey:  storage.JoinStringsToBytes("space", spaceId, "t", "rootId", id),
+		id:              id,
+		spaceId:         spaceId,
+		headsKey:        storage.JoinStringsToBytes("space", spaceId, "t", id, "heads"),
+		rootKey:         storage.JoinStringsToBytes("space", spaceId, "t", "rootId", id),
+		rawChangePrefix: storage.JoinStringsToBytes("space", spaceId, "t", id),
 	}
 }
 
@@ -58,15 +60,23 @@ func (t treeKeys) RawChangeKey(id string) []byte {
 	return storage.JoinStringsToBytes("space", t.spaceId, "t", t.id, id)
 }
 
+func (t treeKeys) RawChangePrefix() []byte {
+	return t.rawChangePrefix
+}
+
 type spaceKeys struct {
-	headerKey     []byte
-	treePrefixKey []byte
+	spaceId            string
+	headerKey          []byte
+	treePrefixKey      []byte
+	spaceSettingsIdKey []byte
 }
 
 func newSpaceKeys(spaceId string) spaceKeys {
 	return spaceKeys{
-		headerKey:     storage.JoinStringsToBytes("space", "header", spaceId),
-		treePrefixKey: storage.JoinStringsToBytes("space", spaceId, "t", "rootId"),
+		spaceId:            spaceId,
+		headerKey:          storage.JoinStringsToBytes("space", "header", spaceId),
+		treePrefixKey:      storage.JoinStringsToBytes("space", spaceId, "t", "rootId"),
+		spaceSettingsIdKey: storage.JoinStringsToBytes("space", spaceId, "spaceSettingsId"),
 	}
 }
 
@@ -76,6 +86,14 @@ func (s spaceKeys) HeaderKey() []byte {
 
 func (s spaceKeys) TreeRootPrefix() []byte {
 	return s.treePrefixKey
+}
+
+func (s spaceKeys) SpaceSettingsId() []byte {
+	return s.spaceSettingsIdKey
+}
+
+func (s spaceKeys) TreeDeletedKey(id string) []byte {
+	return storage.JoinStringsToBytes("space", s.spaceId, "deleted", id)
 }
 
 type storageServiceKeys struct {

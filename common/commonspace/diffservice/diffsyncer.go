@@ -3,6 +3,7 @@ package diffservice
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
@@ -16,6 +17,9 @@ import (
 
 type DiffSyncer interface {
 	Sync(ctx context.Context) error
+	RemoveObjects(ids []string)
+	UpdateHeads(id string, heads []string)
+	Init(deletionState deletionstate.DeletionState)
 }
 
 func newDiffSyncer(
@@ -45,6 +49,28 @@ type diffSyncer struct {
 	storage       storage.SpaceStorage
 	clientFactory spacesyncproto.ClientFactory
 	log           *zap.Logger
+	deletionState deletionstate.DeletionState
+}
+
+func (d *diffSyncer) Init(deletionState deletionstate.DeletionState) {
+	d.deletionState = deletionState
+	d.deletionState.AddObserver(d.RemoveObjects)
+}
+
+func (d *diffSyncer) RemoveObjects(ids []string) {
+	for _, id := range ids {
+		d.diff.RemoveId(id)
+	}
+}
+
+func (d *diffSyncer) UpdateHeads(id string, heads []string) {
+	if d.deletionState.Exists(id) {
+		return
+	}
+	d.diff.Set(ldiff.Element{
+		Id:   id,
+		Head: concatStrings(heads),
+	})
 }
 
 func (d *diffSyncer) Sync(ctx context.Context) error {
@@ -74,15 +100,17 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	if err == spacesyncproto.ErrSpaceMissing {
 		return d.sendPushSpaceRequest(ctx, cl)
 	}
+	totalLen := len(newIds) + len(changedIds) + len(removedIds)
+	// not syncing ids which were removed through settings document
+	filteredIds := d.deletionState.FilterJoin(newIds, changedIds, removedIds)
 
 	ctx = peer.CtxWithPeerId(ctx, p.Id())
-	d.pingTreesInCache(ctx, newIds)
-	d.pingTreesInCache(ctx, changedIds)
-	d.pingTreesInCache(ctx, removedIds)
+	d.pingTreesInCache(ctx, filteredIds)
 
 	d.log.Info("sync done:", zap.Int("newIds", len(newIds)),
 		zap.Int("changedIds", len(changedIds)),
-		zap.Int("removedIds", len(removedIds)))
+		zap.Int("removedIds", len(removedIds)),
+		zap.Int("already deleted ids", totalLen-len(filteredIds)))
 	return
 }
 
@@ -108,10 +136,24 @@ func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, cl spacesyncproto
 		return
 	}
 
+	settingsStorage, err := d.storage.TreeStorage(d.storage.SpaceSettingsId())
+	if err != nil {
+		return
+	}
+	spaceSettingsRoot, err := settingsStorage.Root()
+	if err != nil {
+		return
+	}
+
+	spacePayload := &spacesyncproto.SpacePayload{
+		SpaceHeader:            header,
+		AclPayload:             root.Payload,
+		AclPayloadId:           root.Id,
+		SpaceSettingsPayload:   spaceSettingsRoot.RawChange,
+		SpaceSettingsPayloadId: spaceSettingsRoot.Id,
+	}
 	_, err = cl.PushSpace(ctx, &spacesyncproto.PushSpaceRequest{
-		SpaceHeader:  header,
-		AclPayload:   root.Payload,
-		AclPayloadId: root.Id,
+		Payload: spacePayload,
 	})
 	return
 }
