@@ -26,7 +26,7 @@ type Config struct {
 	Anytype    Anytype    `yaml:"anytype"`
 	GrpcServer GrpcServer `yaml:"grpcServer"`
 	Account    Account    `yaml:"account"`
-	APIServer  APIServer  `yaml:"apiServer"`
+	APIServer  GrpcServer `yaml:"apiServer"`
 	Nodes      []Node     `yaml:"nodes"`
 	Space      Space      `yaml:"space"`
 	Metric     Metric     `yaml:"metric"`
