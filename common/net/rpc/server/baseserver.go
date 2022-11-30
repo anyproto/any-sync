@@ -22,16 +22,13 @@ type BaseDrpcServer struct {
 }
 
 type DRPCHandlerWrapper func(handler drpc.Handler) drpc.Handler
+type ListenerConverter func(listener net.Listener) secure.ContextListener
 
 func NewBaseDrpcServer() *BaseDrpcServer {
 	return &BaseDrpcServer{Mux: drpcmux.New()}
 }
 
-func (s *BaseDrpcServer) Init(transport secure.Service) {
-	s.transport = transport
-}
-
-func (s *BaseDrpcServer) Run(ctx context.Context, listenAddrs []string, wrapper DRPCHandlerWrapper) (err error) {
+func (s *BaseDrpcServer) Run(ctx context.Context, listenAddrs []string, wrapper DRPCHandlerWrapper, converter ListenerConverter) (err error) {
 	s.drpcServer = drpcserver.New(wrapper(s.Mux))
 	ctx, s.cancel = context.WithCancel(ctx)
 	for _, addr := range listenAddrs {
@@ -39,7 +36,7 @@ func (s *BaseDrpcServer) Run(ctx context.Context, listenAddrs []string, wrapper 
 		if err != nil {
 			return err
 		}
-		tlsList := s.transport.TLSListener(tcpList)
+		tlsList := converter(tcpList)
 		go s.serve(ctx, tlsList)
 	}
 	return

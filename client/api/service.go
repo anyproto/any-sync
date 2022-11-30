@@ -19,7 +19,7 @@ import (
 
 const CName = "api.service"
 
-var log = logger.NewNamed("api")
+var log = logger.NewNamed(CName)
 
 func New() Service {
 	return &service{BaseDrpcServer: server.NewBaseDrpcServer()}
@@ -32,6 +32,7 @@ type Service interface {
 
 type service struct {
 	controller Controller
+	transport  secure.Service
 	srv        *http.Server
 	cfg        *config.Config
 	*server.BaseDrpcServer
@@ -44,7 +45,7 @@ func (s *service) Init(a *app.App) (err error) {
 		a.MustComponent(document.CName).(document.Service),
 		a.MustComponent(account.CName).(account.Service))
 	s.cfg = a.MustComponent(config.CName).(*config.Config)
-	s.BaseDrpcServer.Init(a.MustComponent(secure.CName).(secure.Service))
+	s.transport = a.MustComponent(secure.CName).(secure.Service)
 	return nil
 }
 
@@ -53,9 +54,12 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
-	err = s.BaseDrpcServer.Run(ctx, s.cfg.APIServer.ListenAddrs, func(handler drpc.Handler) drpc.Handler {
-		return handler
-	})
+	err = s.BaseDrpcServer.Run(
+		ctx,
+		s.cfg.APIServer.ListenAddrs, func(handler drpc.Handler) drpc.Handler {
+			return handler
+		},
+		s.transport.BasicListener)
 	if err != nil {
 		return
 	}
