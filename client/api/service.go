@@ -56,7 +56,8 @@ func (s *service) Name() (name string) {
 func (s *service) Run(ctx context.Context) (err error) {
 	err = s.BaseDrpcServer.Run(
 		ctx,
-		s.cfg.APIServer.ListenAddrs, func(handler drpc.Handler) drpc.Handler {
+		s.cfg.APIServer.ListenAddrs,
+		func(handler drpc.Handler) drpc.Handler {
 			return handler
 		},
 		s.transport.BasicListener)
