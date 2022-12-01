@@ -3,12 +3,14 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/api/apiproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api/client"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api/node"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/peers"
+	"strconv"
 )
 
 const CName = "debug.api"
@@ -25,29 +27,55 @@ type Command struct {
 	Cmd func(server peers.Peer, params []string) (string, error)
 }
 
+type Script struct {
+	Cmd func(params []string) (string, error)
+}
+
 type Service interface {
 	app.Component
 	Call(server peers.Peer, cmdName string, params []string) (string, error)
+	Script(scriptName string, params []string) (res string, err error)
 }
 
 type service struct {
 	clientCommands map[string]Command
 	nodeCommands   map[string]Command
+	scripts        map[string]Script
+	client         client.Service
+	node           node.Service
+	peers          peers.Service
 }
 
 func New() Service {
-	return &service{clientCommands: map[string]Command{}, nodeCommands: map[string]Command{}}
+	return &service{
+		clientCommands: map[string]Command{},
+		nodeCommands:   map[string]Command{},
+		scripts:        map[string]Script{},
+	}
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.registerClientCommands(a.MustComponent(client.CName).(client.Service))
-	s.registerNodeCommands(a.MustComponent(node.CName).(node.Service))
+	s.client = a.MustComponent(client.CName).(client.Service)
+	s.node = a.MustComponent(node.CName).(node.Service)
+	s.peers = a.MustComponent(peers.CName).(peers.Service)
+	s.registerClientCommands()
+	s.registerNodeCommands()
+	s.registerScripts()
 
 	return nil
 }
 
 func (s *service) Name() (name string) {
 	return CName
+}
+
+func (s *service) Script(scriptName string, params []string) (res string, err error) {
+	script, ok := s.scripts[scriptName]
+	if !ok {
+		err = ErrNoSuchCommand
+		return
+	}
+	return script.Cmd(params)
 }
 
 func (s *service) Call(server peers.Peer, cmdName string, params []string) (res string, err error) {
@@ -69,7 +97,8 @@ func (s *service) Call(server peers.Peer, cmdName string, params []string) (res 
 	return cmd.Cmd(server, params)
 }
 
-func (s *service) registerClientCommands(client client.Service) {
+func (s *service) registerClientCommands() {
+	client := s.client
 	s.clientCommands["create-space"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
 		if len(params) != 0 {
 			err = ErrIncorrectParamsCount
@@ -141,5 +170,38 @@ func (s *service) registerClientCommands(client client.Service) {
 	}}
 }
 
-func (s *service) registerNodeCommands(node node.Service) {
+func (s *service) registerNodeCommands() {
+}
+
+func (s *service) registerScripts() {
+	s.scripts["create-many"] = Script{Cmd: func(params []string) (res string, err error) {
+		if len(params) != 5 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		peer, err := s.peers.Get(params[0])
+		if err != nil {
+			return
+		}
+		last, err := strconv.Atoi(params[4])
+		if err != nil {
+			return
+		}
+		if last <= 0 {
+			err = fmt.Errorf("incorrect number of steps")
+			return
+		}
+
+		for i := 0; i < last; i++ {
+			_, err := s.client.AddText(context.Background(), peer.Address, &apiproto.AddTextRequest{
+				SpaceId:    params[1],
+				DocumentId: params[2],
+				Text:       params[3],
+			})
+			if err != nil {
+				return "", err
+			}
+		}
+		return
+	}}
 }

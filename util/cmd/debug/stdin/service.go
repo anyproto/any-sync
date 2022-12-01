@@ -50,6 +50,7 @@ func (s *service) Close(ctx context.Context) (err error) {
 
 func (s *service) readStdin() {
 	reader := bufio.NewReader(os.Stdin)
+Loop:
 	for {
 		fmt.Print("> ")
 		str, err := reader.ReadString('\n')
@@ -65,16 +66,31 @@ func (s *service) readStdin() {
 			fmt.Println("incorrect number of arguments")
 			continue
 		}
+		switch split[0] {
+		case "script":
+			res, err := s.api.Script(split[1], split[2:])
+			if err != nil {
+				fmt.Println("error in performing script:", err)
+				continue Loop
+			}
+			fmt.Println(res)
+			continue Loop
+		case "cmd":
+			break
+		default:
+			fmt.Println("incorrect input")
+			continue Loop
+		}
 
-		peer, err := s.peers.Get(split[0])
+		peer, err := s.peers.Get(split[1])
 		if err != nil {
 			fmt.Println("no such peer", err)
 			continue
 		}
 
-		res, err := s.api.Call(peer, split[1], split[2:])
+		res, err := s.api.Call(peer, split[2], split[3:])
 		if err != nil {
-			fmt.Println("error in performing request:", err)
+			fmt.Println("error in performing command:", err)
 			continue
 		}
 		fmt.Println(res)
