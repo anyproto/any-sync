@@ -7,7 +7,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/client"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api/client"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api/node"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/drpcclient"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/peers"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/stdin"
 	"go.uber.org/zap"
 	"net/http"
@@ -71,7 +74,10 @@ func main() {
 }
 
 func Bootstrap(a *app.App) {
-	a.Register(client.New()).
+	a.Register(drpcclient.New()).
+		Register(peers.New()).
+		Register(client.New()).
+		Register(node.New()).
 		Register(api.New()).
 		Register(stdin.New())
 }

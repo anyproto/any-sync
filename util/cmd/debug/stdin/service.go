@@ -3,11 +3,12 @@ package stdin
 import (
 	"bufio"
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/api/apiproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/peers"
 	"os"
+	"strings"
 )
 
 const CName = "debug.stdin"
@@ -19,7 +20,8 @@ type Service interface {
 }
 
 type service struct {
-	api api.Service
+	api   api.Service
+	peers peers.Service
 }
 
 func New() Service {
@@ -28,6 +30,7 @@ func New() Service {
 
 func (s *service) Init(a *app.App) (err error) {
 	s.api = a.MustComponent(api.CName).(api.Service)
+	s.peers = a.MustComponent(peers.CName).(peers.Service)
 	return
 }
 
@@ -45,21 +48,29 @@ func (s *service) Close(ctx context.Context) (err error) {
 }
 
 func (s *service) readStdin() {
-	// create new reader from stdin
 	reader := bufio.NewReader(os.Stdin)
-	// start infinite loop to continuously listen to input
 	for {
-		// read by one line (enter pressed)
 		str, err := reader.ReadString('\n')
-		// check for errors
 		if err != nil {
-			// close channel just to inform others
 			log.Errorf("Error in read string: %s", err)
 			return
 		}
-		log.Debug(str)
+		// trimming newline
+		str = str[:len(str)-1]
 
-		res, err := s.api.CreateSpace(context.Background(), "127.0.0.1:8090", &apiproto.CreateSpaceRequest{})
+		log.Debug(str)
+		split := strings.Split(str, " ")
+		if len(split) < 2 {
+			log.Error("incorrect number of arguments")
+			continue
+		}
+
+		peer, err := s.peers.Get(split[0])
+		if err != nil {
+			log.Error("no such peer")
+			continue
+		}
+		res, err := s.api.Call(peer, split[1], split[2:])
 		if err != nil {
 			log.Errorf("Error in performing request: %s", err)
 			return
