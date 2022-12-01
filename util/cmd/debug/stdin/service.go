@@ -3,6 +3,7 @@ package stdin
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api"
@@ -13,7 +14,7 @@ import (
 
 const CName = "debug.stdin"
 
-var log = logger.NewNamed(CName).Sugar()
+var log = logger.NewNamed(CName)
 
 type Service interface {
 	app.ComponentRunnable
@@ -50,31 +51,32 @@ func (s *service) Close(ctx context.Context) (err error) {
 func (s *service) readStdin() {
 	reader := bufio.NewReader(os.Stdin)
 	for {
+		fmt.Print("> ")
 		str, err := reader.ReadString('\n')
 		if err != nil {
-			log.Errorf("Error in read string: %s", err)
+			fmt.Println("error in read string:", err)
 			return
 		}
 		// trimming newline
 		str = str[:len(str)-1]
 
-		log.Debug(str)
 		split := strings.Split(str, " ")
 		if len(split) < 2 {
-			log.Error("incorrect number of arguments")
+			fmt.Println("incorrect number of arguments")
 			continue
 		}
 
 		peer, err := s.peers.Get(split[0])
 		if err != nil {
-			log.Error("no such peer")
+			fmt.Println("no such peer", err)
 			continue
 		}
+
 		res, err := s.api.Call(peer, split[1], split[2:])
 		if err != nil {
-			log.Errorf("Error in performing request: %s", err)
-			return
+			fmt.Println("error in performing request:", err)
+			continue
 		}
-		log.Debug(res)
+		fmt.Println(res)
 	}
 }
