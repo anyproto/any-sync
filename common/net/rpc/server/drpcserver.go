@@ -61,7 +61,8 @@ func (s *drpcServer) Run(ctx context.Context) (err error) {
 	if err = s.metric.Registry().Register(histVec); err != nil {
 		return
 	}
-	return s.BaseDrpcServer.Run(ctx,
+	return s.BaseDrpcServer.Run(
+		ctx,
 		s.config.ListenAddrs,
 		func(handler drpc.Handler) drpc.Handler {
 			return &metric.PrometheusDRPC{
