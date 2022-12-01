@@ -13,6 +13,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/peers"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/stdin"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,6 +28,19 @@ var (
 	flagVersion = flag.Bool("ver", false, "show version and exit")
 	flagHelp    = flag.Bool("h", false, "show help and exit")
 )
+
+func init() {
+	config := zap.NewProductionEncoderConfig()
+	config.EncodeTime = zapcore.ISO8601TimeEncoder
+
+	logFile, err := os.OpenFile("debug.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	core := zapcore.NewCore(zapcore.NewJSONEncoder(config), zapcore.AddSync(logFile), zapcore.DebugLevel)
+	logger.SetDefault(zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel)))
+}
 
 func main() {
 	flag.Parse()

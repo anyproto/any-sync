@@ -55,7 +55,6 @@ func (s *service) Call(server peers.Peer, cmdName string, params []string) (res 
 		cmd      Command
 		commands map[string]Command
 	)
-
 	switch server.PeerType {
 	case peers.PeerTypeClient:
 		commands = s.clientCommands
@@ -81,6 +80,63 @@ func (s *service) registerClientCommands(client client.Service) {
 			return
 		}
 		res = resp.Id
+		return
+	}}
+	s.clientCommands["derive-space"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
+		if len(params) != 0 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		resp, err := client.DeriveSpace(context.Background(), server.Address, &apiproto.DeriveSpaceRequest{})
+		if err != nil {
+			return
+		}
+		res = resp.Id
+		return
+	}}
+	s.clientCommands["create-document"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
+		if len(params) != 1 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		resp, err := client.CreateDocument(context.Background(), server.Address, &apiproto.CreateDocumentRequest{
+			SpaceId: params[0],
+		})
+		if err != nil {
+			return
+		}
+		res = resp.Id
+		return
+	}}
+	s.clientCommands["delete-document"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
+		if len(params) != 2 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		_, err = client.DeleteDocument(context.Background(), server.Address, &apiproto.DeleteDocumentRequest{
+			SpaceId:    params[0],
+			DocumentId: params[1],
+		})
+		if err != nil {
+			return
+		}
+		res = "deleted"
+		return
+	}}
+	s.clientCommands["add-text"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
+		if len(params) != 3 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		resp, err := client.AddText(context.Background(), server.Address, &apiproto.AddTextRequest{
+			SpaceId:    params[0],
+			DocumentId: params[1],
+			Text:       params[2],
+		})
+		if err != nil {
+			return
+		}
+		res = resp.DocumentId
 		return
 	}}
 }
