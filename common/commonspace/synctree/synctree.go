@@ -33,6 +33,7 @@ type syncTree struct {
 	tree.ObjectTree
 	synchandler.SyncHandler
 	syncClient SyncClient
+	notifiable diffservice.HeadNotifiable
 	listener   updatelistener.UpdateListener
 	isClosed   bool
 	isDeleted  bool
@@ -75,12 +76,12 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error
 	syncClient := createSyncClient(
 		deps.SpaceId,
 		deps.StreamPool,
-		deps.HeadNotifiable,
 		sharedFactory,
 		deps.Configuration)
 	syncTree := &syncTree{
 		ObjectTree: objTree,
 		syncClient: syncClient,
+		notifiable: deps.HeadNotifiable,
 		listener:   deps.Listener,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
@@ -105,12 +106,12 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error
 	syncClient := createSyncClient(
 		deps.SpaceId,
 		deps.StreamPool,
-		deps.HeadNotifiable,
 		GetRequestFactory(),
 		deps.Configuration)
 	syncTree := &syncTree{
 		ObjectTree: objTree,
 		syncClient: syncClient,
+		notifiable: deps.HeadNotifiable,
 		listener:   deps.Listener,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
@@ -200,12 +201,12 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	syncClient := createSyncClient(
 		deps.SpaceId,
 		deps.StreamPool,
-		deps.HeadNotifiable,
 		GetRequestFactory(),
 		deps.Configuration)
 	syncTree := &syncTree{
 		ObjectTree: objTree,
 		syncClient: syncClient,
+		notifiable: deps.HeadNotifiable,
 		listener:   deps.Listener,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
@@ -251,6 +252,9 @@ func (s *syncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 	if err != nil {
 		return
 	}
+	if s.notifiable != nil {
+		s.notifiable.UpdateHeads(s.ID(), res.Heads)
+	}
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
 	err = s.syncClient.BroadcastAsync(headUpdate)
 	return
@@ -274,10 +278,13 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changes ...*treechangeprot
 			s.listener.Rebuild(s)
 		}
 	}
-	//if res.Mode != tree.Nothing {
-	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
-	err = s.syncClient.BroadcastAsync(headUpdate)
-	//}
+	if res.Mode != tree.Nothing {
+		if s.notifiable != nil {
+			s.notifiable.UpdateHeads(s.ID(), res.Heads)
+		}
+		headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
+		err = s.syncClient.BroadcastAsync(headUpdate)
+	}
 	return
 }
 
