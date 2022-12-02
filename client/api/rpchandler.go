@@ -55,13 +55,13 @@ func (r *rpcHandler) DeleteDocument(ctx context.Context, request *apiproto.Delet
 }
 
 func (r *rpcHandler) AddText(ctx context.Context, request *apiproto.AddTextRequest) (resp *apiproto.AddTextResponse, err error) {
-	err = r.controller.AddText(request.SpaceId, request.DocumentId, request.Text)
+	head, err := r.controller.AddText(request.SpaceId, request.DocumentId, request.Text)
 	if err != nil {
 		return
 	}
-	// TODO: update controller to add head
 	resp = &apiproto.AddTextResponse{
 		DocumentId: request.DocumentId,
+		HeadId:     head,
 	}
 	return
 }
@@ -78,15 +78,15 @@ func (r *rpcHandler) DumpTree(ctx context.Context, request *apiproto.DumpTreeReq
 }
 
 func (r *rpcHandler) AllTrees(ctx context.Context, request *apiproto.AllTreesRequest) (resp *apiproto.AllTreesResponse, err error) {
-	ids, err := r.controller.AllDocumentIds(request.SpaceId)
+	heads, err := r.controller.AllDocumentHeads(request.SpaceId)
 	if err != nil {
 		return
 	}
-	// TODO: add getting heads to controller
 	var trees []*apiproto.Tree
-	for _, id := range ids {
+	for _, head := range heads {
 		trees = append(trees, &apiproto.Tree{
-			Id: id,
+			Id:    head.Id,
+			Heads: head.Heads,
 		})
 	}
 	resp = &apiproto.AllTreesResponse{Trees: trees}

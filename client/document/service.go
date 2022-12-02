@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 )
 
@@ -16,7 +17,8 @@ type Service interface {
 	CreateDocument(spaceId string) (id string, err error)
 	DeleteDocument(spaceId, documentId string) (err error)
 	AllDocumentIds(spaceId string) (ids []string, err error)
-	AddText(spaceId, documentId, text string) (err error)
+	AllDocumentHeads(spaceId string) (ids []diffservice.TreeHeads, err error)
+	AddText(spaceId, documentId, text string) (head string, err error)
 	DumpDocumentTree(spaceId, documentId string) (dump string, err error)
 }
 
@@ -75,7 +77,16 @@ func (s *service) AllDocumentIds(spaceId string) (ids []string, err error) {
 	return
 }
 
-func (s *service) AddText(spaceId, documentId, text string) (err error) {
+func (s *service) AllDocumentHeads(spaceId string) (ids []diffservice.TreeHeads, err error) {
+	space, err := s.spaceService.GetSpace(context.Background(), spaceId)
+	if err != nil {
+		return
+	}
+	ids = space.DebugAllHeads()
+	return
+}
+
+func (s *service) AddText(spaceId, documentId, text string) (head string, err error) {
 	doc, err := s.cache.GetDocument(context.Background(), spaceId, documentId)
 	if err != nil {
 		return

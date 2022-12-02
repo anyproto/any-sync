@@ -15,11 +15,17 @@ import (
 	"strings"
 )
 
+type TreeHeads struct {
+	Id    string
+	Heads []string
+}
+
 type DiffService interface {
 	HeadNotifiable
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
 	RemoveObjects(ids []string)
 	AllIds() []string
+	DebugAllHeads() (res []TreeHeads)
 
 	Init(objectIds []string, deletionState deletionstate.DeletionState)
 	Close() (err error)
@@ -79,6 +85,18 @@ func (d *diffService) AllIds() []string {
 	return d.diff.Ids()
 }
 
+func (d *diffService) DebugAllHeads() (res []TreeHeads) {
+	els := d.diff.Elements()
+	for _, el := range els {
+		idHead := TreeHeads{
+			Id:    el.Id,
+			Heads: splitString(el.Head),
+		}
+		res = append(res, idHead)
+	}
+	return
+}
+
 func (d *diffService) RemoveObjects(ids []string) {
 	d.syncer.RemoveObjects(ids)
 }
@@ -121,4 +139,12 @@ func concatStrings(strs []string) string {
 		b.WriteString(s)
 	}
 	return b.String()
+}
+
+func splitString(str string) (res []string) {
+	const cidLen = 59
+	for i := 0; i < len(str); i += cidLen {
+		res = append(res, str[i:i+cidLen])
+	}
+	return
 }

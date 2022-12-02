@@ -13,7 +13,7 @@ import (
 type TextDocument interface {
 	tree.ObjectTree
 	InnerTree() tree.ObjectTree
-	AddText(text string) error
+	AddText(text string) (string, error)
 	Text() (string, error)
 	TreeDump() string
 	Close() error
@@ -60,7 +60,7 @@ func (t *textDocument) InnerTree() tree.ObjectTree {
 	return t.ObjectTree
 }
 
-func (t *textDocument) AddText(text string) (err error) {
+func (t *textDocument) AddText(text string) (head string, err error) {
 	content := &testchanges.TextContent_TextAppend{
 		TextAppend: &testchanges.TextAppend{Text: text},
 	}
@@ -76,12 +76,16 @@ func (t *textDocument) AddText(text string) (err error) {
 	}
 	t.Lock()
 	defer t.Unlock()
-	_, err = t.AddContent(context.Background(), tree.SignableChangeContent{
+	addRes, err := t.AddContent(context.Background(), tree.SignableChangeContent{
 		Data:       res,
 		Key:        t.account.Account().SignKey,
 		Identity:   t.account.Account().Identity,
 		IsSnapshot: false,
 	})
+	if err != nil {
+		return
+	}
+	head = addRes.Heads[0]
 	return
 }
 

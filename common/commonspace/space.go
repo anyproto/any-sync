@@ -69,6 +69,7 @@ type Space interface {
 	Init(ctx context.Context) error
 
 	StoredIds() []string
+	DebugAllHeads() []diffservice.TreeHeads
 	Description() (SpaceDescription, error)
 
 	SpaceSyncRpc() RpcHandler
@@ -194,6 +195,10 @@ func (s *space) DiffService() diffservice.DiffService {
 
 func (s *space) StoredIds() []string {
 	return s.diffService.AllIds()
+}
+
+func (s *space) DebugAllHeads() []diffservice.TreeHeads {
+	return s.diffService.DebugAllHeads()
 }
 
 func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tr tree.ObjectTree, err error) {

@@ -165,7 +165,7 @@ func (s *service) registerClientCommands() {
 		if err != nil {
 			return
 		}
-		res = resp.DocumentId
+		res = resp.DocumentId + "->" + resp.HeadId
 		return
 	}}
 	s.clientCommands["load-space"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
@@ -180,6 +180,33 @@ func (s *service) registerClientCommands() {
 			return
 		}
 		res = params[0]
+		return
+	}}
+	s.clientCommands["all-trees"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
+		if len(params) != 1 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		resp, err := client.AllTrees(context.Background(), server.Address, &apiproto.AllTreesRequest{
+			SpaceId: params[0],
+		})
+		if err != nil {
+			return
+		}
+		for treeIdx, tree := range resp.Trees {
+			treeStr := tree.Id + ":["
+			for headIdx, head := range tree.Heads {
+				treeStr += head
+				if headIdx != len(tree.Heads)-1 {
+					treeStr += ","
+				}
+			}
+			treeStr += "]"
+			res += treeStr
+			if treeIdx != len(resp.Trees)-1 {
+				res += "\n"
+			}
+		}
 		return
 	}}
 }

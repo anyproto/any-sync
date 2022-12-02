@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/symmetric"
 	"math/rand"
 )
@@ -27,8 +28,10 @@ type Controller interface {
 	DeleteDocument(spaceId, documentId string) (err error)
 	// AllDocumentIds gets all ids of documents in space
 	AllDocumentIds(spaceId string) (ids []string, err error)
+	// AllDocumentHeads gets heads of all documents
+	AllDocumentHeads(spaceId string) (ids []diffservice.TreeHeads, err error)
 	// AddText adds text to space document
-	AddText(spaceId, documentId, text string) (err error)
+	AddText(spaceId, documentId, text string) (head string, err error)
 	// DumpDocumentTree dumps the tree data into string
 	DumpDocumentTree(spaceId, documentId string) (dump string, err error)
 
@@ -107,7 +110,11 @@ func (c *controller) AllDocumentIds(spaceId string) (ids []string, err error) {
 	return c.docService.AllDocumentIds(spaceId)
 }
 
-func (c *controller) AddText(spaceId, documentId, text string) (err error) {
+func (c *controller) AllDocumentHeads(spaceId string) (ids []diffservice.TreeHeads, err error) {
+	return c.docService.AllDocumentHeads(spaceId)
+}
+
+func (c *controller) AddText(spaceId, documentId, text string) (head string, err error) {
 	return c.docService.AddText(spaceId, documentId, text)
 }
 
