@@ -20,6 +20,7 @@ type Service interface {
 	AddText(ctx context.Context, ip string, request *apiproto.AddTextRequest) (resp *apiproto.AddTextResponse, err error)
 	AllTrees(ctx context.Context, ip string, request *apiproto.AllTreesRequest) (resp *apiproto.AllTreesResponse, err error)
 	AllSpaces(ctx context.Context, ip string, request *apiproto.AllSpacesRequest) (resp *apiproto.AllSpacesResponse, err error)
+	LoadSpace(ctx context.Context, ip string, request *apiproto.LoadSpaceRequest) (res *apiproto.LoadSpaceResponse, err error)
 	app.Component
 }
 
@@ -94,4 +95,12 @@ func (s *service) AllSpaces(ctx context.Context, ip string, request *apiproto.Al
 		return
 	}
 	return cl.AllSpaces(ctx, request)
+}
+
+func (s *service) LoadSpace(ctx context.Context, ip string, request *apiproto.LoadSpaceRequest) (res *apiproto.LoadSpaceResponse, err error) {
+	cl, err := s.client.GetClient(ctx, ip)
+	if err != nil {
+		return
+	}
+	return cl.LoadSpace(ctx, request)
 }

@@ -50,7 +50,7 @@ func newSpaceStorage(objDb *badger.DB, spaceId string) (store spacestorage.Space
 		return nil
 	})
 	if err == badger.ErrKeyNotFound {
-		err = spacesyncproto.ErrSpaceMissing
+		err = spacestorage.ErrSpaceStorageMissing
 	}
 	return
 }
@@ -58,7 +58,7 @@ func newSpaceStorage(objDb *badger.DB, spaceId string) (store spacestorage.Space
 func createSpaceStorage(db *badger.DB, payload spacestorage.SpaceStorageCreatePayload) (store spacestorage.SpaceStorage, err error) {
 	keys := newSpaceKeys(payload.SpaceHeaderWithId.Id)
 	if hasDB(db, keys.HeaderKey()) {
-		err = spacesyncproto.ErrSpaceExists
+		err = spacestorage.ErrSpaceStorageExists
 		return
 	}
 	err = spaceValidationFunc(payload)

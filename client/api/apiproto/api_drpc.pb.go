@@ -48,6 +48,7 @@ type DRPCClientApiClient interface {
 	DumpTree(ctx context.Context, in *DumpTreeRequest) (*DumpTreeResponse, error)
 	AllTrees(ctx context.Context, in *AllTreesRequest) (*AllTreesResponse, error)
 	AllSpaces(ctx context.Context, in *AllSpacesRequest) (*AllSpacesResponse, error)
+	LoadSpace(ctx context.Context, in *LoadSpaceRequest) (*LoadSpaceResponse, error)
 }
 
 type drpcClientApiClient struct {
@@ -132,6 +133,15 @@ func (c *drpcClientApiClient) AllSpaces(ctx context.Context, in *AllSpacesReques
 	return out, nil
 }
 
+func (c *drpcClientApiClient) LoadSpace(ctx context.Context, in *LoadSpaceRequest) (*LoadSpaceResponse, error) {
+	out := new(LoadSpaceResponse)
+	err := c.cc.Invoke(ctx, "/api.ClientApi/LoadSpace", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCClientApiServer interface {
 	CreateSpace(context.Context, *CreateSpaceRequest) (*CreateSpaceResponse, error)
 	DeriveSpace(context.Context, *DeriveSpaceRequest) (*DeriveSpaceResponse, error)
@@ -141,6 +151,7 @@ type DRPCClientApiServer interface {
 	DumpTree(context.Context, *DumpTreeRequest) (*DumpTreeResponse, error)
 	AllTrees(context.Context, *AllTreesRequest) (*AllTreesResponse, error)
 	AllSpaces(context.Context, *AllSpacesRequest) (*AllSpacesResponse, error)
+	LoadSpace(context.Context, *LoadSpaceRequest) (*LoadSpaceResponse, error)
 }
 
 type DRPCClientApiUnimplementedServer struct{}
@@ -177,9 +188,13 @@ func (s *DRPCClientApiUnimplementedServer) AllSpaces(context.Context, *AllSpaces
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCClientApiUnimplementedServer) LoadSpace(context.Context, *LoadSpaceRequest) (*LoadSpaceResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCClientApiDescription struct{}
 
-func (DRPCClientApiDescription) NumMethods() int { return 8 }
+func (DRPCClientApiDescription) NumMethods() int { return 9 }
 
 func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -255,6 +270,15 @@ func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 						in1.(*AllSpacesRequest),
 					)
 			}, DRPCClientApiServer.AllSpaces, true
+	case 8:
+		return "/api.ClientApi/LoadSpace", drpcEncoding_File_api_apiproto_protos_api_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCClientApiServer).
+					LoadSpace(
+						ctx,
+						in1.(*LoadSpaceRequest),
+					)
+			}, DRPCClientApiServer.LoadSpace, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -386,6 +410,22 @@ type drpcClientApi_AllSpacesStream struct {
 }
 
 func (x *drpcClientApi_AllSpacesStream) SendAndClose(m *AllSpacesResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_api_apiproto_protos_api_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCClientApi_LoadSpaceStream interface {
+	drpc.Stream
+	SendAndClose(*LoadSpaceResponse) error
+}
+
+type drpcClientApi_LoadSpaceStream struct {
+	drpc.Stream
+}
+
+func (x *drpcClientApi_LoadSpaceStream) SendAndClose(m *LoadSpaceResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_api_apiproto_protos_api_proto{}); err != nil {
 		return err
 	}
