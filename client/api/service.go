@@ -13,7 +13,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
-	"net/http"
 	"storj.io/drpc"
 )
 
@@ -33,7 +32,6 @@ type Service interface {
 type service struct {
 	controller Controller
 	transport  secure.Service
-	srv        *http.Server
 	cfg        *config.Config
 	*server.BaseDrpcServer
 }

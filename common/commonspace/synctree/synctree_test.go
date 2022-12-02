@@ -2,7 +2,6 @@ package synctree
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/mock_synctree"
@@ -55,7 +54,7 @@ func Test_DeriveSyncTree(t *testing.T) {
 		require.Equal(t, expectedPayload, payload)
 		return objTreeMock, nil
 	}
-	createSyncClient = func(spaceId string, pool syncservice.StreamPool, notifiable diffservice.HeadNotifiable, factory RequestFactory, configuration nodeconf.Configuration) SyncClient {
+	createSyncClient = func(spaceId string, pool syncservice.StreamPool, factory RequestFactory, configuration nodeconf.Configuration) SyncClient {
 		return syncClientMock
 	}
 	headUpdate := &treechangeproto.TreeSyncMessage{}
@@ -91,7 +90,7 @@ func Test_CreateSyncTree(t *testing.T) {
 		require.Equal(t, expectedPayload, payload)
 		return objTreeMock, nil
 	}
-	createSyncClient = func(spaceId string, pool syncservice.StreamPool, notifiable diffservice.HeadNotifiable, factory RequestFactory, configuration nodeconf.Configuration) SyncClient {
+	createSyncClient = func(spaceId string, pool syncservice.StreamPool, factory RequestFactory, configuration nodeconf.Configuration) SyncClient {
 		return syncClientMock
 	}
 	headUpdate := &treechangeproto.TreeSyncMessage{}
