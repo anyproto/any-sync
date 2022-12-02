@@ -168,6 +168,20 @@ func (s *service) registerClientCommands() {
 		res = resp.DocumentId
 		return
 	}}
+	s.clientCommands["load-space"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
+		if len(params) != 1 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		_, err = client.LoadSpace(context.Background(), server.Address, &apiproto.LoadSpaceRequest{
+			SpaceId: params[0],
+		})
+		if err != nil {
+			return
+		}
+		res = params[0]
+		return
+	}}
 }
 
 func (s *service) registerNodeCommands() {

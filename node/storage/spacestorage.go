@@ -110,7 +110,7 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 		return
 	}
 	if has {
-		err = spacesyncproto.ErrSpaceExists
+		err = spacestorage.ErrSpaceStorageExists
 		return
 	}
 	err = spaceValidationFunc(payload)

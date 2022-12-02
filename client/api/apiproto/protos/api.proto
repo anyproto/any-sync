@@ -12,6 +12,7 @@ service ClientApi {
     rpc DumpTree(DumpTreeRequest) returns(DumpTreeResponse);
     rpc AllTrees(AllTreesRequest) returns(AllTreesResponse);
     rpc AllSpaces(AllSpacesRequest) returns(AllSpacesResponse);
+    rpc LoadSpace(LoadSpaceRequest) returns(LoadSpaceResponse);
 }
 
 message CreateSpaceRequest {
@@ -82,4 +83,11 @@ message AllSpacesRequest {
 
 message AllSpacesResponse {
     repeated string spaceIds = 1;
+}
+
+message LoadSpaceRequest {
+    string spaceId = 1;
+}
+
+message LoadSpaceResponse {
 }

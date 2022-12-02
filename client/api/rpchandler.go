@@ -9,6 +9,15 @@ type rpcHandler struct {
 	controller Controller
 }
 
+func (r *rpcHandler) LoadSpace(ctx context.Context, request *apiproto.LoadSpaceRequest) (resp *apiproto.LoadSpaceResponse, err error) {
+	err = r.controller.LoadSpace(request.SpaceId)
+	if err != nil {
+		return
+	}
+	resp = &apiproto.LoadSpaceResponse{}
+	return
+}
+
 func (r *rpcHandler) CreateSpace(ctx context.Context, request *apiproto.CreateSpaceRequest) (resp *apiproto.CreateSpaceResponse, err error) {
 	id, err := r.controller.CreateSpace()
 	if err != nil {
