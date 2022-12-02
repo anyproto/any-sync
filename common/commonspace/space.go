@@ -18,6 +18,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"github.com/zeebo/errs"
@@ -65,6 +66,9 @@ func NewSpaceId(id string, repKey uint64) string {
 }
 
 type Space interface {
+	ocache.ObjectLocker
+	ocache.ObjectLastUsage
+
 	Id() string
 	Init(ctx context.Context) error
 
@@ -98,11 +102,27 @@ type space struct {
 	configuration    nodeconf.Configuration
 	settingsDocument settingsdocument.SettingsDocument
 
-	isClosed atomic.Bool
+	isClosed  atomic.Bool
+	treesUsed atomic.Int32
+}
+
+func (s *space) StartTree() {
+	s.treesUsed.Add(1)
+	log.With(zap.Int32("trees used", s.treesUsed.Load())).Debug("starting tree")
+}
+
+func (s *space) CloseTree() {
+	s.treesUsed.Add(-1)
+	log.With(zap.Int32("trees used", s.treesUsed.Load())).Debug("closing tree")
 }
 
 func (s *space) LastUsage() time.Time {
 	return s.syncService.LastUsage()
+}
+
+func (s *space) Locked() bool {
+	log.With(zap.Bool("locked", s.treesUsed.Load() > 1)).Debug("space lock status check")
+	return s.treesUsed.Load() > 1
 }
 
 func (s *space) Id() string {
@@ -131,6 +151,7 @@ func (s *space) Description() (desc SpaceDescription, err error) {
 }
 
 func (s *space) Init(ctx context.Context) (err error) {
+	log.With(zap.String("spaceId", s.id)).Debug("initializing space")
 	s.storage = newCommonStorage(s.storage)
 
 	header, err := s.storage.SpaceHeader()
@@ -207,14 +228,15 @@ func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		return
 	}
 	deps := synctree.CreateDeps{
-		SpaceId:        s.id,
-		Payload:        payload,
-		StreamPool:     s.syncService.StreamPool(),
-		Configuration:  s.configuration,
-		HeadNotifiable: s.diffService,
-		Listener:       listener,
-		AclList:        s.aclList,
-		SpaceStorage:   s.storage,
+		SpaceId:             s.id,
+		Payload:             payload,
+		StreamPool:          s.syncService.StreamPool(),
+		Configuration:       s.configuration,
+		HeadNotifiable:      s.diffService,
+		Listener:            listener,
+		AclList:             s.aclList,
+		SpaceStorage:        s.storage,
+		TreeUsageController: s,
 	}
 	return synctree.DeriveSyncTree(ctx, deps)
 }
@@ -225,14 +247,15 @@ func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		return
 	}
 	deps := synctree.CreateDeps{
-		SpaceId:        s.id,
-		Payload:        payload,
-		StreamPool:     s.syncService.StreamPool(),
-		Configuration:  s.configuration,
-		HeadNotifiable: s.diffService,
-		Listener:       listener,
-		AclList:        s.aclList,
-		SpaceStorage:   s.storage,
+		SpaceId:             s.id,
+		Payload:             payload,
+		StreamPool:          s.syncService.StreamPool(),
+		Configuration:       s.configuration,
+		HeadNotifiable:      s.diffService,
+		Listener:            listener,
+		AclList:             s.aclList,
+		SpaceStorage:        s.storage,
+		TreeUsageController: s,
 	}
 	return synctree.CreateSyncTree(ctx, deps)
 }
@@ -243,13 +266,14 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		return
 	}
 	deps := synctree.BuildDeps{
-		SpaceId:        s.id,
-		StreamPool:     s.syncService.StreamPool(),
-		Configuration:  s.configuration,
-		HeadNotifiable: s.diffService,
-		Listener:       listener,
-		AclList:        s.aclList,
-		SpaceStorage:   s.storage,
+		SpaceId:             s.id,
+		StreamPool:          s.syncService.StreamPool(),
+		Configuration:       s.configuration,
+		HeadNotifiable:      s.diffService,
+		Listener:            listener,
+		AclList:             s.aclList,
+		SpaceStorage:        s.storage,
+		TreeUsageController: s,
 	}
 	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
 }
