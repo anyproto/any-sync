@@ -28,15 +28,21 @@ type SyncTree interface {
 	synchandler.SyncHandler
 }
 
+type TreeUsageController interface {
+	StartTree()
+	CloseTree()
+}
+
 // SyncTree sends head updates to sync service and also sends new changes to update listener
 type syncTree struct {
 	tree.ObjectTree
 	synchandler.SyncHandler
-	syncClient SyncClient
-	notifiable diffservice.HeadNotifiable
-	listener   updatelistener.UpdateListener
-	isClosed   bool
-	isDeleted  bool
+	syncClient      SyncClient
+	notifiable      diffservice.HeadNotifiable
+	listener        updatelistener.UpdateListener
+	usageController TreeUsageController
+	isClosed        bool
+	isDeleted       bool
 }
 
 var log = logger.NewNamed("commonspace.synctree").Sugar()
@@ -47,25 +53,27 @@ var buildObjectTree = tree.BuildObjectTree
 var createSyncClient = newSyncClient
 
 type CreateDeps struct {
-	SpaceId        string
-	Payload        tree.ObjectTreeCreatePayload
-	Configuration  nodeconf.Configuration
-	HeadNotifiable diffservice.HeadNotifiable
-	StreamPool     syncservice.StreamPool
-	Listener       updatelistener.UpdateListener
-	AclList        list.ACLList
-	SpaceStorage   spacestorage.SpaceStorage
+	SpaceId             string
+	Payload             tree.ObjectTreeCreatePayload
+	Configuration       nodeconf.Configuration
+	HeadNotifiable      diffservice.HeadNotifiable
+	StreamPool          syncservice.StreamPool
+	Listener            updatelistener.UpdateListener
+	AclList             list.ACLList
+	SpaceStorage        spacestorage.SpaceStorage
+	TreeUsageController TreeUsageController
 }
 
 type BuildDeps struct {
-	SpaceId        string
-	StreamPool     syncservice.StreamPool
-	Configuration  nodeconf.Configuration
-	HeadNotifiable diffservice.HeadNotifiable
-	Listener       updatelistener.UpdateListener
-	AclList        list.ACLList
-	SpaceStorage   spacestorage.SpaceStorage
-	TreeStorage    storage.TreeStorage
+	SpaceId             string
+	StreamPool          syncservice.StreamPool
+	Configuration       nodeconf.Configuration
+	HeadNotifiable      diffservice.HeadNotifiable
+	Listener            updatelistener.UpdateListener
+	AclList             list.ACLList
+	SpaceStorage        spacestorage.SpaceStorage
+	TreeStorage         storage.TreeStorage
+	TreeUsageController TreeUsageController
 }
 
 func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error) {
@@ -79,10 +87,11 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error
 		sharedFactory,
 		deps.Configuration)
 	syncTree := &syncTree{
-		ObjectTree: objTree,
-		syncClient: syncClient,
-		notifiable: deps.HeadNotifiable,
-		listener:   deps.Listener,
+		ObjectTree:      objTree,
+		syncClient:      syncClient,
+		notifiable:      deps.HeadNotifiable,
+		usageController: deps.TreeUsageController,
+		listener:        deps.Listener,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
@@ -91,6 +100,9 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error
 	defer syncTree.Unlock()
 	if syncTree.listener != nil {
 		syncTree.listener.Rebuild(syncTree)
+	}
+	if syncTree.usageController != nil {
+		syncTree.usageController.StartTree()
 	}
 
 	headUpdate := syncClient.CreateHeadUpdate(t, nil)
@@ -109,10 +121,11 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error
 		GetRequestFactory(),
 		deps.Configuration)
 	syncTree := &syncTree{
-		ObjectTree: objTree,
-		syncClient: syncClient,
-		notifiable: deps.HeadNotifiable,
-		listener:   deps.Listener,
+		ObjectTree:      objTree,
+		syncClient:      syncClient,
+		notifiable:      deps.HeadNotifiable,
+		usageController: deps.TreeUsageController,
+		listener:        deps.Listener,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
@@ -122,6 +135,9 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error
 	// TODO: refactor here because the code is duplicated, when we create a tree we should only create a storage and then build a tree
 	if syncTree.listener != nil {
 		syncTree.listener.Rebuild(syncTree)
+	}
+	if syncTree.usageController != nil {
+		syncTree.usageController.StartTree()
 	}
 
 	headUpdate := syncClient.CreateHeadUpdate(t, nil)
@@ -204,10 +220,11 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 		GetRequestFactory(),
 		deps.Configuration)
 	syncTree := &syncTree{
-		ObjectTree: objTree,
-		syncClient: syncClient,
-		notifiable: deps.HeadNotifiable,
-		listener:   deps.Listener,
+		ObjectTree:      objTree,
+		syncClient:      syncClient,
+		notifiable:      deps.HeadNotifiable,
+		usageController: deps.TreeUsageController,
+		listener:        deps.Listener,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
 	syncTree.SyncHandler = syncHandler
@@ -216,6 +233,9 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	defer syncTree.Unlock()
 	if syncTree.listener != nil {
 		syncTree.listener.Rebuild(syncTree)
+	}
+	if syncTree.usageController != nil {
+		syncTree.usageController.StartTree()
 	}
 
 	headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
@@ -309,6 +329,9 @@ func (s *syncTree) Close() (err error) {
 	defer s.Unlock()
 	if s.isClosed {
 		return ErrSyncTreeClosed
+	}
+	if s.usageController != nil {
+		s.usageController.CloseTree()
 	}
 	s.isClosed = true
 	return
