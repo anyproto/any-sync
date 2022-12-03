@@ -43,6 +43,10 @@ func (s *service) Init(a *app.App) (err error) {
 		PeerType: PeerTypeClient,
 		Address:  "127.0.0.1:8091",
 	}
+	s.peerMap["node1"] = Peer{
+		PeerType: PeerTypeNode,
+		Address:  "127.0.0.1:8080",
+	}
 	return
 }
 
