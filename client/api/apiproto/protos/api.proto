@@ -10,6 +10,7 @@ service ClientApi {
     rpc DeleteDocument(DeleteDocumentRequest) returns(DeleteDocumentResponse);
     rpc AddText(AddTextRequest) returns(AddTextResponse);
     rpc DumpTree(DumpTreeRequest) returns(DumpTreeResponse);
+    rpc TreeParams(TreeParamsRequest) returns(TreeParamsResponse);
     rpc AllTrees(AllTreesRequest) returns(AllTreesResponse);
     rpc AllSpaces(AllSpacesRequest) returns(AllSpacesResponse);
     rpc LoadSpace(LoadSpaceRequest) returns(LoadSpaceResponse);
@@ -49,11 +50,13 @@ message AddTextRequest {
     string spaceId = 1;
     string documentId = 2;
     string text = 3;
+    bool isSnapshot = 4;
 }
 
 message AddTextResponse {
     string documentId = 1;
     string headId = 2;
+    string rootId = 3;
 }
 
 message DumpTreeRequest {
@@ -90,4 +93,14 @@ message LoadSpaceRequest {
 }
 
 message LoadSpaceResponse {
+}
+
+message TreeParamsRequest {
+    string spaceId = 1;
+    string documentId = 2;
+}
+
+message TreeParamsResponse {
+    string rootId = 1;
+    repeated string headIds = 2;
 }

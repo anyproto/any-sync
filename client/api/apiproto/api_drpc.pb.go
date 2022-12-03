@@ -46,6 +46,7 @@ type DRPCClientApiClient interface {
 	DeleteDocument(ctx context.Context, in *DeleteDocumentRequest) (*DeleteDocumentResponse, error)
 	AddText(ctx context.Context, in *AddTextRequest) (*AddTextResponse, error)
 	DumpTree(ctx context.Context, in *DumpTreeRequest) (*DumpTreeResponse, error)
+	TreeParams(ctx context.Context, in *TreeParamsRequest) (*TreeParamsResponse, error)
 	AllTrees(ctx context.Context, in *AllTreesRequest) (*AllTreesResponse, error)
 	AllSpaces(ctx context.Context, in *AllSpacesRequest) (*AllSpacesResponse, error)
 	LoadSpace(ctx context.Context, in *LoadSpaceRequest) (*LoadSpaceResponse, error)
@@ -115,6 +116,15 @@ func (c *drpcClientApiClient) DumpTree(ctx context.Context, in *DumpTreeRequest)
 	return out, nil
 }
 
+func (c *drpcClientApiClient) TreeParams(ctx context.Context, in *TreeParamsRequest) (*TreeParamsResponse, error) {
+	out := new(TreeParamsResponse)
+	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/TreeParams", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *drpcClientApiClient) AllTrees(ctx context.Context, in *AllTreesRequest) (*AllTreesResponse, error) {
 	out := new(AllTreesResponse)
 	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/AllTrees", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
@@ -149,6 +159,7 @@ type DRPCClientApiServer interface {
 	DeleteDocument(context.Context, *DeleteDocumentRequest) (*DeleteDocumentResponse, error)
 	AddText(context.Context, *AddTextRequest) (*AddTextResponse, error)
 	DumpTree(context.Context, *DumpTreeRequest) (*DumpTreeResponse, error)
+	TreeParams(context.Context, *TreeParamsRequest) (*TreeParamsResponse, error)
 	AllTrees(context.Context, *AllTreesRequest) (*AllTreesResponse, error)
 	AllSpaces(context.Context, *AllSpacesRequest) (*AllSpacesResponse, error)
 	LoadSpace(context.Context, *LoadSpaceRequest) (*LoadSpaceResponse, error)
@@ -180,6 +191,10 @@ func (s *DRPCClientApiUnimplementedServer) DumpTree(context.Context, *DumpTreeRe
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCClientApiUnimplementedServer) TreeParams(context.Context, *TreeParamsRequest) (*TreeParamsResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 func (s *DRPCClientApiUnimplementedServer) AllTrees(context.Context, *AllTreesRequest) (*AllTreesResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
@@ -194,7 +209,7 @@ func (s *DRPCClientApiUnimplementedServer) LoadSpace(context.Context, *LoadSpace
 
 type DRPCClientApiDescription struct{}
 
-func (DRPCClientApiDescription) NumMethods() int { return 9 }
+func (DRPCClientApiDescription) NumMethods() int { return 10 }
 
 func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -253,6 +268,15 @@ func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 					)
 			}, DRPCClientApiServer.DumpTree, true
 	case 6:
+		return "/clientapi.ClientApi/TreeParams", drpcEncoding_File_api_apiproto_protos_api_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCClientApiServer).
+					TreeParams(
+						ctx,
+						in1.(*TreeParamsRequest),
+					)
+			}, DRPCClientApiServer.TreeParams, true
+	case 7:
 		return "/clientapi.ClientApi/AllTrees", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCClientApiServer).
@@ -261,7 +285,7 @@ func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 						in1.(*AllTreesRequest),
 					)
 			}, DRPCClientApiServer.AllTrees, true
-	case 7:
+	case 8:
 		return "/clientapi.ClientApi/AllSpaces", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCClientApiServer).
@@ -270,7 +294,7 @@ func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 						in1.(*AllSpacesRequest),
 					)
 			}, DRPCClientApiServer.AllSpaces, true
-	case 8:
+	case 9:
 		return "/clientapi.ClientApi/LoadSpace", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCClientApiServer).
@@ -378,6 +402,22 @@ type drpcClientApi_DumpTreeStream struct {
 }
 
 func (x *drpcClientApi_DumpTreeStream) SendAndClose(m *DumpTreeResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_api_apiproto_protos_api_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCClientApi_TreeParamsStream interface {
+	drpc.Stream
+	SendAndClose(*TreeParamsResponse) error
+}
+
+type drpcClientApi_TreeParamsStream struct {
+	drpc.Stream
+}
+
+func (x *drpcClientApi_TreeParamsStream) SendAndClose(m *TreeParamsResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_api_apiproto_protos_api_proto{}); err != nil {
 		return err
 	}
