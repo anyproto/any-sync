@@ -97,17 +97,24 @@ func (s *syncService) HandleMessage(ctx context.Context, senderId string, messag
 func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 	defer close(s.streamLoopDone)
 	checkResponsiblePeers := func() {
-		s.log.Debug("dialing responsible peers")
-		respPeers, err := s.connector.DialResponsiblePeers(ctx, s.spaceId)
+		var (
+			activeNodeIds []string
+			configuration = s.connector.Configuration()
+		)
+		for _, nodeId := range configuration.NodeIds(s.spaceId) {
+			if s.streamPool.HasActiveStream(nodeId) {
+				s.log.Debug("has active stream for", zap.String("id", nodeId))
+				activeNodeIds = append(activeNodeIds, nodeId)
+				continue
+			}
+		}
+		newPeers, err := s.connector.DialResponsiblePeers(ctx, s.spaceId, activeNodeIds)
 		if err != nil {
 			s.log.Error("failed to dial peers", zap.Error(err))
 			return
 		}
-		for _, p := range respPeers {
-			if s.streamPool.HasActiveStream(p.Id()) {
-				s.log.Debug("has active stream for", zap.String("id", p.Id()))
-				continue
-			}
+
+		for _, p := range newPeers {
 			stream, err := s.clientFactory.Client(p).Stream(ctx)
 			if err != nil {
 				err = rpcerr.Unwrap(err)
@@ -123,7 +130,7 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 				s.log.Errorf("failed to send first message to stream: %v", err)
 				continue
 			}
-			s.log.Debug("continue reading stream for", zap.String("id", p.Id()))
+			s.log.Debug("reading stream for", zap.String("id", p.Id()))
 			s.streamPool.AddAndReadStreamAsync(stream)
 		}
 	}
