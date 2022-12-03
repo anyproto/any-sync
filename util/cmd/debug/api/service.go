@@ -153,7 +153,7 @@ func (s *service) registerClientCommands() {
 		return
 	}}
 	s.clientCommands["add-text"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
-		if len(params) != 3 {
+		if len(params) != 3 && len(params) != 4 {
 			err = ErrIncorrectParamsCount
 			return
 		}
@@ -161,11 +161,12 @@ func (s *service) registerClientCommands() {
 			SpaceId:    params[0],
 			DocumentId: params[1],
 			Text:       params[2],
+			IsSnapshot: len(params) == 4,
 		})
 		if err != nil {
 			return
 		}
-		res = resp.DocumentId + "->" + resp.HeadId
+		res = resp.DocumentId + "->" + resp.RootId + "->" + resp.HeadId
 		return
 	}}
 	s.clientCommands["load-space"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
@@ -222,6 +223,27 @@ func (s *service) registerClientCommands() {
 			return
 		}
 		res = resp.Dump
+		return
+	}}
+	s.clientCommands["tree-params"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
+		if len(params) != 2 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		resp, err := s.client.TreeParams(context.Background(), server.Address, &clientproto.TreeParamsRequest{
+			SpaceId:    params[0],
+			DocumentId: params[1],
+		})
+		if err != nil {
+			return
+		}
+		res = resp.RootId + "->"
+		for headIdx, head := range resp.HeadIds {
+			res += head
+			if headIdx != len(resp.HeadIds)-1 {
+				res += ","
+			}
+		}
 		return
 	}}
 	s.clientCommands["all-spaces"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
@@ -284,6 +306,27 @@ func (s *service) registerNodeCommands() {
 			return
 		}
 		res = resp.Dump
+		return
+	}}
+	s.nodeCommands["tree-params"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
+		if len(params) != 2 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		resp, err := s.node.TreeParams(context.Background(), server.Address, &nodeproto.TreeParamsRequest{
+			SpaceId:    params[0],
+			DocumentId: params[1],
+		})
+		if err != nil {
+			return
+		}
+		res = resp.RootId + "->"
+		for headIdx, head := range resp.HeadIds {
+			res += head
+			if headIdx != len(resp.HeadIds)-1 {
+				res += ","
+			}
+		}
 		return
 	}}
 	s.nodeCommands["all-spaces"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {

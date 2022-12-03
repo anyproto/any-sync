@@ -20,6 +20,7 @@ type Service interface {
 	DeleteDocument(ctx context.Context, ip string, request *apiproto.DeleteDocumentRequest) (resp *apiproto.DeleteDocumentResponse, err error)
 	AddText(ctx context.Context, ip string, request *apiproto.AddTextRequest) (resp *apiproto.AddTextResponse, err error)
 	DumpTree(ctx context.Context, ip string, request *apiproto.DumpTreeRequest) (resp *apiproto.DumpTreeResponse, err error)
+	TreeParams(ctx context.Context, ip string, request *apiproto.TreeParamsRequest) (resp *apiproto.TreeParamsResponse, err error)
 	AllTrees(ctx context.Context, ip string, request *apiproto.AllTreesRequest) (resp *apiproto.AllTreesResponse, err error)
 	AllSpaces(ctx context.Context, ip string, request *apiproto.AllSpacesRequest) (resp *apiproto.AllSpacesResponse, err error)
 	LoadSpace(ctx context.Context, ip string, request *apiproto.LoadSpaceRequest) (res *apiproto.LoadSpaceResponse, err error)
@@ -88,6 +89,14 @@ func (s *service) DumpTree(ctx context.Context, ip string, request *apiproto.Dum
 		return
 	}
 	return cl.DumpTree(ctx, request)
+}
+
+func (s *service) TreeParams(ctx context.Context, ip string, request *apiproto.TreeParamsRequest) (resp *apiproto.TreeParamsResponse, err error) {
+	cl, err := s.client.GetClient(ctx, ip)
+	if err != nil {
+		return
+	}
+	return cl.TreeParams(ctx, request)
 }
 
 func (s *service) AllTrees(ctx context.Context, ip string, request *apiproto.AllTreesRequest) (resp *apiproto.AllTreesResponse, err error) {

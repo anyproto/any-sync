@@ -5,6 +5,7 @@ option go_package = "api/apiproto";
 
 service NodeApi {
     rpc DumpTree(DumpTreeRequest) returns(DumpTreeResponse);
+    rpc TreeParams(TreeParamsRequest) returns(TreeParamsResponse);
     rpc AllTrees(AllTreesRequest) returns(AllTreesResponse);
     rpc AllSpaces(AllSpacesRequest) returns(AllSpacesResponse);
 }
@@ -36,4 +37,14 @@ message AllSpacesRequest {
 
 message AllSpacesResponse {
     repeated string spaceIds = 1;
+}
+
+message TreeParamsRequest {
+    string spaceId = 1;
+    string documentId = 2;
+}
+
+message TreeParamsResponse {
+    string rootId = 1;
+    repeated string headIds = 2;
 }
