@@ -63,7 +63,7 @@ func (c *drpcClientApiClient) DRPCConn() drpc.Conn { return c.cc }
 
 func (c *drpcClientApiClient) CreateSpace(ctx context.Context, in *CreateSpaceRequest) (*CreateSpaceResponse, error) {
 	out := new(CreateSpaceResponse)
-	err := c.cc.Invoke(ctx, "/api.ClientApi/CreateSpace", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/CreateSpace", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (c *drpcClientApiClient) CreateSpace(ctx context.Context, in *CreateSpaceRe
 
 func (c *drpcClientApiClient) DeriveSpace(ctx context.Context, in *DeriveSpaceRequest) (*DeriveSpaceResponse, error) {
 	out := new(DeriveSpaceResponse)
-	err := c.cc.Invoke(ctx, "/api.ClientApi/DeriveSpace", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/DeriveSpace", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (c *drpcClientApiClient) DeriveSpace(ctx context.Context, in *DeriveSpaceRe
 
 func (c *drpcClientApiClient) CreateDocument(ctx context.Context, in *CreateDocumentRequest) (*CreateDocumentResponse, error) {
 	out := new(CreateDocumentResponse)
-	err := c.cc.Invoke(ctx, "/api.ClientApi/CreateDocument", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/CreateDocument", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (c *drpcClientApiClient) CreateDocument(ctx context.Context, in *CreateDocu
 
 func (c *drpcClientApiClient) DeleteDocument(ctx context.Context, in *DeleteDocumentRequest) (*DeleteDocumentResponse, error) {
 	out := new(DeleteDocumentResponse)
-	err := c.cc.Invoke(ctx, "/api.ClientApi/DeleteDocument", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/DeleteDocument", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (c *drpcClientApiClient) DeleteDocument(ctx context.Context, in *DeleteDocu
 
 func (c *drpcClientApiClient) AddText(ctx context.Context, in *AddTextRequest) (*AddTextResponse, error) {
 	out := new(AddTextResponse)
-	err := c.cc.Invoke(ctx, "/api.ClientApi/AddText", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/AddText", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (c *drpcClientApiClient) AddText(ctx context.Context, in *AddTextRequest) (
 
 func (c *drpcClientApiClient) DumpTree(ctx context.Context, in *DumpTreeRequest) (*DumpTreeResponse, error) {
 	out := new(DumpTreeResponse)
-	err := c.cc.Invoke(ctx, "/api.ClientApi/DumpTree", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/DumpTree", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (c *drpcClientApiClient) DumpTree(ctx context.Context, in *DumpTreeRequest)
 
 func (c *drpcClientApiClient) AllTrees(ctx context.Context, in *AllTreesRequest) (*AllTreesResponse, error) {
 	out := new(AllTreesResponse)
-	err := c.cc.Invoke(ctx, "/api.ClientApi/AllTrees", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/AllTrees", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (c *drpcClientApiClient) AllTrees(ctx context.Context, in *AllTreesRequest)
 
 func (c *drpcClientApiClient) AllSpaces(ctx context.Context, in *AllSpacesRequest) (*AllSpacesResponse, error) {
 	out := new(AllSpacesResponse)
-	err := c.cc.Invoke(ctx, "/api.ClientApi/AllSpaces", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/AllSpaces", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (c *drpcClientApiClient) AllSpaces(ctx context.Context, in *AllSpacesReques
 
 func (c *drpcClientApiClient) LoadSpace(ctx context.Context, in *LoadSpaceRequest) (*LoadSpaceResponse, error) {
 	out := new(LoadSpaceResponse)
-	err := c.cc.Invoke(ctx, "/api.ClientApi/LoadSpace", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/LoadSpace", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (DRPCClientApiDescription) NumMethods() int { return 9 }
 func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
 	case 0:
-		return "/api.ClientApi/CreateSpace", drpcEncoding_File_api_apiproto_protos_api_proto{},
+		return "/clientapi.ClientApi/CreateSpace", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCClientApiServer).
 					CreateSpace(
@@ -208,7 +208,7 @@ func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 					)
 			}, DRPCClientApiServer.CreateSpace, true
 	case 1:
-		return "/api.ClientApi/DeriveSpace", drpcEncoding_File_api_apiproto_protos_api_proto{},
+		return "/clientapi.ClientApi/DeriveSpace", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCClientApiServer).
 					DeriveSpace(
@@ -217,7 +217,7 @@ func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 					)
 			}, DRPCClientApiServer.DeriveSpace, true
 	case 2:
-		return "/api.ClientApi/CreateDocument", drpcEncoding_File_api_apiproto_protos_api_proto{},
+		return "/clientapi.ClientApi/CreateDocument", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCClientApiServer).
 					CreateDocument(
@@ -226,7 +226,7 @@ func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 					)
 			}, DRPCClientApiServer.CreateDocument, true
 	case 3:
-		return "/api.ClientApi/DeleteDocument", drpcEncoding_File_api_apiproto_protos_api_proto{},
+		return "/clientapi.ClientApi/DeleteDocument", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCClientApiServer).
 					DeleteDocument(
@@ -235,7 +235,7 @@ func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 					)
 			}, DRPCClientApiServer.DeleteDocument, true
 	case 4:
-		return "/api.ClientApi/AddText", drpcEncoding_File_api_apiproto_protos_api_proto{},
+		return "/clientapi.ClientApi/AddText", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCClientApiServer).
 					AddText(
@@ -244,7 +244,7 @@ func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 					)
 			}, DRPCClientApiServer.AddText, true
 	case 5:
-		return "/api.ClientApi/DumpTree", drpcEncoding_File_api_apiproto_protos_api_proto{},
+		return "/clientapi.ClientApi/DumpTree", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCClientApiServer).
 					DumpTree(
@@ -253,7 +253,7 @@ func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 					)
 			}, DRPCClientApiServer.DumpTree, true
 	case 6:
-		return "/api.ClientApi/AllTrees", drpcEncoding_File_api_apiproto_protos_api_proto{},
+		return "/clientapi.ClientApi/AllTrees", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCClientApiServer).
 					AllTrees(
@@ -262,7 +262,7 @@ func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 					)
 			}, DRPCClientApiServer.AllTrees, true
 	case 7:
-		return "/api.ClientApi/AllSpaces", drpcEncoding_File_api_apiproto_protos_api_proto{},
+		return "/clientapi.ClientApi/AllSpaces", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCClientApiServer).
 					AllSpaces(
@@ -271,7 +271,7 @@ func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 					)
 			}, DRPCClientApiServer.AllSpaces, true
 	case 8:
-		return "/api.ClientApi/LoadSpace", drpcEncoding_File_api_apiproto_protos_api_proto{},
+		return "/clientapi.ClientApi/LoadSpace", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCClientApiServer).
 					LoadSpace(

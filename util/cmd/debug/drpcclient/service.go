@@ -2,18 +2,19 @@ package drpcclient
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/api/apiproto"
+	clientproto "github.com/anytypeio/go-anytype-infrastructure-experiments/client/api/apiproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
+	nodeproto "github.com/anytypeio/go-anytype-infrastructure-experiments/node/api/apiproto"
 	"net"
 	"storj.io/drpc/drpcconn"
 	"time"
 )
 
 type Service interface {
-	GetClient(ctx context.Context, ip string) (apiproto.DRPCClientApiClient, error)
-	GetNode(ctx context.Context, ip string) (apiproto.DRPCClientApiClient, error)
+	GetClient(ctx context.Context, ip string) (clientproto.DRPCClientApiClient, error)
+	GetNode(ctx context.Context, ip string) (nodeproto.DRPCNodeApiClient, error)
 	app.ComponentRunnable
 }
 
@@ -54,7 +55,7 @@ func (s *service) Run(ctx context.Context) (err error) {
 	return nil
 }
 
-func (s *service) GetClient(ctx context.Context, ip string) (apiproto.DRPCClientApiClient, error) {
+func (s *service) GetClient(ctx context.Context, ip string) (clientproto.DRPCClientApiClient, error) {
 	v, err := s.cache.Get(ctx, ip)
 	if err != nil {
 		return nil, err
@@ -63,13 +64,13 @@ func (s *service) GetClient(ctx context.Context, ip string) (apiproto.DRPCClient
 	select {
 	case <-conn.Closed():
 	default:
-		return apiproto.NewDRPCClientApiClient(conn), nil
+		return clientproto.NewDRPCClientApiClient(conn), nil
 	}
 	s.cache.Remove(ip)
 	return s.GetClient(ctx, ip)
 }
 
-func (s *service) GetNode(ctx context.Context, ip string) (apiproto.DRPCClientApiClient, error) {
+func (s *service) GetNode(ctx context.Context, ip string) (nodeproto.DRPCNodeApiClient, error) {
 	v, err := s.cache.Get(ctx, ip)
 	if err != nil {
 		return nil, err
@@ -78,11 +79,10 @@ func (s *service) GetNode(ctx context.Context, ip string) (apiproto.DRPCClientAp
 	select {
 	case <-conn.Closed():
 	default:
-		panic("should return node")
-		return apiproto.NewDRPCClientApiClient(conn), nil
+		return nodeproto.NewDRPCNodeApiClient(conn), nil
 	}
 	s.cache.Remove(ip)
-	return s.GetClient(ctx, ip)
+	return s.GetNode(ctx, ip)
 }
 
 func (s *service) Close(ctx context.Context) (err error) {

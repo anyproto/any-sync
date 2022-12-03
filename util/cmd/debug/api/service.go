@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/api/apiproto"
+	clientproto "github.com/anytypeio/go-anytype-infrastructure-experiments/client/api/apiproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	nodeproto "github.com/anytypeio/go-anytype-infrastructure-experiments/node/api/apiproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api/client"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api/node"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/peers"
@@ -98,13 +99,12 @@ func (s *service) Call(server peers.Peer, cmdName string, params []string) (res 
 }
 
 func (s *service) registerClientCommands() {
-	client := s.client
 	s.clientCommands["create-space"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
 		if len(params) != 0 {
 			err = ErrIncorrectParamsCount
 			return
 		}
-		resp, err := client.CreateSpace(context.Background(), server.Address, &apiproto.CreateSpaceRequest{})
+		resp, err := s.client.CreateSpace(context.Background(), server.Address, &clientproto.CreateSpaceRequest{})
 		if err != nil {
 			return
 		}
@@ -116,7 +116,7 @@ func (s *service) registerClientCommands() {
 			err = ErrIncorrectParamsCount
 			return
 		}
-		resp, err := client.DeriveSpace(context.Background(), server.Address, &apiproto.DeriveSpaceRequest{})
+		resp, err := s.client.DeriveSpace(context.Background(), server.Address, &clientproto.DeriveSpaceRequest{})
 		if err != nil {
 			return
 		}
@@ -128,7 +128,7 @@ func (s *service) registerClientCommands() {
 			err = ErrIncorrectParamsCount
 			return
 		}
-		resp, err := client.CreateDocument(context.Background(), server.Address, &apiproto.CreateDocumentRequest{
+		resp, err := s.client.CreateDocument(context.Background(), server.Address, &clientproto.CreateDocumentRequest{
 			SpaceId: params[0],
 		})
 		if err != nil {
@@ -142,7 +142,7 @@ func (s *service) registerClientCommands() {
 			err = ErrIncorrectParamsCount
 			return
 		}
-		_, err = client.DeleteDocument(context.Background(), server.Address, &apiproto.DeleteDocumentRequest{
+		_, err = s.client.DeleteDocument(context.Background(), server.Address, &clientproto.DeleteDocumentRequest{
 			SpaceId:    params[0],
 			DocumentId: params[1],
 		})
@@ -157,7 +157,7 @@ func (s *service) registerClientCommands() {
 			err = ErrIncorrectParamsCount
 			return
 		}
-		resp, err := client.AddText(context.Background(), server.Address, &apiproto.AddTextRequest{
+		resp, err := s.client.AddText(context.Background(), server.Address, &clientproto.AddTextRequest{
 			SpaceId:    params[0],
 			DocumentId: params[1],
 			Text:       params[2],
@@ -173,7 +173,7 @@ func (s *service) registerClientCommands() {
 			err = ErrIncorrectParamsCount
 			return
 		}
-		_, err = client.LoadSpace(context.Background(), server.Address, &apiproto.LoadSpaceRequest{
+		_, err = s.client.LoadSpace(context.Background(), server.Address, &clientproto.LoadSpaceRequest{
 			SpaceId: params[0],
 		})
 		if err != nil {
@@ -187,7 +187,7 @@ func (s *service) registerClientCommands() {
 			err = ErrIncorrectParamsCount
 			return
 		}
-		resp, err := client.AllTrees(context.Background(), server.Address, &apiproto.AllTreesRequest{
+		resp, err := s.client.AllTrees(context.Background(), server.Address, &clientproto.AllTreesRequest{
 			SpaceId: params[0],
 		})
 		if err != nil {
@@ -209,12 +209,27 @@ func (s *service) registerClientCommands() {
 		}
 		return
 	}}
+	s.clientCommands["dump-tree"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
+		if len(params) != 2 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		resp, err := s.client.DumpTree(context.Background(), server.Address, &clientproto.DumpTreeRequest{
+			SpaceId:    params[0],
+			DocumentId: params[1],
+		})
+		if err != nil {
+			return
+		}
+		res = resp.Dump
+		return
+	}}
 	s.clientCommands["all-spaces"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
 		if len(params) != 0 {
 			err = ErrIncorrectParamsCount
 			return
 		}
-		resp, err := client.AllSpaces(context.Background(), server.Address, &apiproto.AllSpacesRequest{})
+		resp, err := s.client.AllSpaces(context.Background(), server.Address, &clientproto.AllSpacesRequest{})
 		if err != nil {
 			return
 		}
@@ -229,6 +244,65 @@ func (s *service) registerClientCommands() {
 }
 
 func (s *service) registerNodeCommands() {
+	s.nodeCommands["all-trees"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
+		if len(params) != 1 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		resp, err := s.node.AllTrees(context.Background(), server.Address, &nodeproto.AllTreesRequest{
+			SpaceId: params[0],
+		})
+		if err != nil {
+			return
+		}
+		for treeIdx, tree := range resp.Trees {
+			treeStr := tree.Id + ":["
+			for headIdx, head := range tree.Heads {
+				treeStr += head
+				if headIdx != len(tree.Heads)-1 {
+					treeStr += ","
+				}
+			}
+			treeStr += "]"
+			res += treeStr
+			if treeIdx != len(resp.Trees)-1 {
+				res += "\n"
+			}
+		}
+		return
+	}}
+	s.nodeCommands["dump-tree"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
+		if len(params) != 2 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		resp, err := s.node.DumpTree(context.Background(), server.Address, &nodeproto.DumpTreeRequest{
+			SpaceId:    params[0],
+			DocumentId: params[1],
+		})
+		if err != nil {
+			return
+		}
+		res = resp.Dump
+		return
+	}}
+	s.nodeCommands["all-spaces"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
+		if len(params) != 0 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		resp, err := s.node.AllSpaces(context.Background(), server.Address, &nodeproto.AllSpacesRequest{})
+		if err != nil {
+			return
+		}
+		for treeIdx, spaceId := range resp.SpaceIds {
+			res += spaceId
+			if treeIdx != len(resp.SpaceIds)-1 {
+				res += "\n"
+			}
+		}
+		return
+	}}
 }
 
 func (s *service) registerScripts() {
@@ -251,7 +325,7 @@ func (s *service) registerScripts() {
 		}
 
 		for i := 0; i < last; i++ {
-			_, err := s.client.AddText(context.Background(), peer.Address, &apiproto.AddTextRequest{
+			_, err := s.client.AddText(context.Background(), peer.Address, &clientproto.AddTextRequest{
 				SpaceId:    params[1],
 				DocumentId: params[2],
 				Text:       params[3],

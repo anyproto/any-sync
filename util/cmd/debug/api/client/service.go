@@ -13,15 +13,16 @@ const CName = "api.client"
 var log = logger.NewNamed(CName)
 
 type Service interface {
+	app.Component
 	CreateSpace(ctx context.Context, ip string, request *apiproto.CreateSpaceRequest) (resp *apiproto.CreateSpaceResponse, err error)
 	DeriveSpace(ctx context.Context, ip string, request *apiproto.DeriveSpaceRequest) (resp *apiproto.DeriveSpaceResponse, err error)
 	CreateDocument(ctx context.Context, ip string, request *apiproto.CreateDocumentRequest) (resp *apiproto.CreateDocumentResponse, err error)
 	DeleteDocument(ctx context.Context, ip string, request *apiproto.DeleteDocumentRequest) (resp *apiproto.DeleteDocumentResponse, err error)
 	AddText(ctx context.Context, ip string, request *apiproto.AddTextRequest) (resp *apiproto.AddTextResponse, err error)
+	DumpTree(ctx context.Context, ip string, request *apiproto.DumpTreeRequest) (resp *apiproto.DumpTreeResponse, err error)
 	AllTrees(ctx context.Context, ip string, request *apiproto.AllTreesRequest) (resp *apiproto.AllTreesResponse, err error)
 	AllSpaces(ctx context.Context, ip string, request *apiproto.AllSpacesRequest) (resp *apiproto.AllSpacesResponse, err error)
 	LoadSpace(ctx context.Context, ip string, request *apiproto.LoadSpaceRequest) (res *apiproto.LoadSpaceResponse, err error)
-	app.Component
 }
 
 type service struct {
@@ -79,6 +80,14 @@ func (s *service) AddText(ctx context.Context, ip string, request *apiproto.AddT
 		return
 	}
 	return cl.AddText(ctx, request)
+}
+
+func (s *service) DumpTree(ctx context.Context, ip string, request *apiproto.DumpTreeRequest) (resp *apiproto.DumpTreeResponse, err error) {
+	cl, err := s.client.GetClient(ctx, ip)
+	if err != nil {
+		return
+	}
+	return cl.DumpTree(ctx, request)
 }
 
 func (s *service) AllTrees(ctx context.Context, ip string, request *apiproto.AllTreesRequest) (resp *apiproto.AllTreesResponse, err error) {

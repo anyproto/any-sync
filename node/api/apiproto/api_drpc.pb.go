@@ -57,7 +57,7 @@ func (c *drpcNodeApiClient) DRPCConn() drpc.Conn { return c.cc }
 
 func (c *drpcNodeApiClient) DumpTree(ctx context.Context, in *DumpTreeRequest) (*DumpTreeResponse, error) {
 	out := new(DumpTreeResponse)
-	err := c.cc.Invoke(ctx, "/api.NodeApi/DumpTree", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/nodeapi.NodeApi/DumpTree", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (c *drpcNodeApiClient) DumpTree(ctx context.Context, in *DumpTreeRequest) (
 
 func (c *drpcNodeApiClient) AllTrees(ctx context.Context, in *AllTreesRequest) (*AllTreesResponse, error) {
 	out := new(AllTreesResponse)
-	err := c.cc.Invoke(ctx, "/api.NodeApi/AllTrees", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/nodeapi.NodeApi/AllTrees", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (c *drpcNodeApiClient) AllTrees(ctx context.Context, in *AllTreesRequest) (
 
 func (c *drpcNodeApiClient) AllSpaces(ctx context.Context, in *AllSpacesRequest) (*AllSpacesResponse, error) {
 	out := new(AllSpacesResponse)
-	err := c.cc.Invoke(ctx, "/api.NodeApi/AllSpaces", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/nodeapi.NodeApi/AllSpaces", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func (DRPCNodeApiDescription) NumMethods() int { return 3 }
 func (DRPCNodeApiDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
 	case 0:
-		return "/api.NodeApi/DumpTree", drpcEncoding_File_api_apiproto_protos_api_proto{},
+		return "/nodeapi.NodeApi/DumpTree", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCNodeApiServer).
 					DumpTree(
@@ -118,7 +118,7 @@ func (DRPCNodeApiDescription) Method(n int) (string, drpc.Encoding, drpc.Receive
 					)
 			}, DRPCNodeApiServer.DumpTree, true
 	case 1:
-		return "/api.NodeApi/AllTrees", drpcEncoding_File_api_apiproto_protos_api_proto{},
+		return "/nodeapi.NodeApi/AllTrees", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCNodeApiServer).
 					AllTrees(
@@ -127,7 +127,7 @@ func (DRPCNodeApiDescription) Method(n int) (string, drpc.Encoding, drpc.Receive
 					)
 			}, DRPCNodeApiServer.AllTrees, true
 	case 2:
-		return "/api.NodeApi/AllSpaces", drpcEncoding_File_api_apiproto_protos_api_proto{},
+		return "/nodeapi.NodeApi/AllSpaces", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCNodeApiServer).
 					AllSpaces(
