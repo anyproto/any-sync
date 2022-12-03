@@ -209,6 +209,23 @@ func (s *service) registerClientCommands() {
 		}
 		return
 	}}
+	s.clientCommands["all-spaces"] = Command{Cmd: func(server peers.Peer, params []string) (res string, err error) {
+		if len(params) != 0 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		resp, err := client.AllSpaces(context.Background(), server.Address, &apiproto.AllSpacesRequest{})
+		if err != nil {
+			return
+		}
+		for treeIdx, spaceId := range resp.SpaceIds {
+			res += spaceId
+			if treeIdx != len(resp.SpaceIds)-1 {
+				res += "\n"
+			}
+		}
+		return
+	}}
 }
 
 func (s *service) registerNodeCommands() {

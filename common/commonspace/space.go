@@ -106,16 +106,6 @@ type space struct {
 	treesUsed atomic.Int32
 }
 
-func (s *space) StartTree() {
-	s.treesUsed.Add(1)
-	log.With(zap.Int32("trees used", s.treesUsed.Load())).Debug("starting tree")
-}
-
-func (s *space) CloseTree() {
-	s.treesUsed.Add(-1)
-	log.With(zap.Int32("trees used", s.treesUsed.Load())).Debug("closing tree")
-}
-
 func (s *space) LastUsage() time.Time {
 	return s.syncService.LastUsage()
 }
@@ -228,15 +218,15 @@ func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		return
 	}
 	deps := synctree.CreateDeps{
-		SpaceId:             s.id,
-		Payload:             payload,
-		StreamPool:          s.syncService.StreamPool(),
-		Configuration:       s.configuration,
-		HeadNotifiable:      s.diffService,
-		Listener:            listener,
-		AclList:             s.aclList,
-		SpaceStorage:        s.storage,
-		TreeUsageController: s,
+		SpaceId:        s.id,
+		Payload:        payload,
+		StreamPool:     s.syncService.StreamPool(),
+		Configuration:  s.configuration,
+		HeadNotifiable: s.diffService,
+		Listener:       listener,
+		AclList:        s.aclList,
+		SpaceStorage:   s.storage,
+		TreeUsage:      &s.treesUsed,
 	}
 	return synctree.DeriveSyncTree(ctx, deps)
 }
@@ -247,15 +237,15 @@ func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		return
 	}
 	deps := synctree.CreateDeps{
-		SpaceId:             s.id,
-		Payload:             payload,
-		StreamPool:          s.syncService.StreamPool(),
-		Configuration:       s.configuration,
-		HeadNotifiable:      s.diffService,
-		Listener:            listener,
-		AclList:             s.aclList,
-		SpaceStorage:        s.storage,
-		TreeUsageController: s,
+		SpaceId:        s.id,
+		Payload:        payload,
+		StreamPool:     s.syncService.StreamPool(),
+		Configuration:  s.configuration,
+		HeadNotifiable: s.diffService,
+		Listener:       listener,
+		AclList:        s.aclList,
+		SpaceStorage:   s.storage,
+		TreeUsage:      &s.treesUsed,
 	}
 	return synctree.CreateSyncTree(ctx, deps)
 }
@@ -266,14 +256,14 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		return
 	}
 	deps := synctree.BuildDeps{
-		SpaceId:             s.id,
-		StreamPool:          s.syncService.StreamPool(),
-		Configuration:       s.configuration,
-		HeadNotifiable:      s.diffService,
-		Listener:            listener,
-		AclList:             s.aclList,
-		SpaceStorage:        s.storage,
-		TreeUsageController: s,
+		SpaceId:        s.id,
+		StreamPool:     s.syncService.StreamPool(),
+		Configuration:  s.configuration,
+		HeadNotifiable: s.diffService,
+		Listener:       listener,
+		AclList:        s.aclList,
+		SpaceStorage:   s.storage,
+		TreeUsage:      &s.treesUsed,
 	}
 	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
 }
