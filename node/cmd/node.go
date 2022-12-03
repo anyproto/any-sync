@@ -15,6 +15,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/api"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace/nodecache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/storage"
@@ -101,5 +102,6 @@ func Bootstrap(a *app.App) {
 		Register(pool.New()).
 		Register(nodespace.New()).
 		Register(commonspace.New()).
-		Register(server.New())
+		Register(server.New()).
+		Register(api.New())
 }

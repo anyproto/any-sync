@@ -43,10 +43,7 @@ type SpaceCreatePayload struct {
 	ReplicationKey uint64
 }
 
-const (
-	SpaceTypeDerived          = "derived.space"
-	SettingsSyncPeriodSeconds = 10
-)
+const SpaceTypeDerived = "derived.space"
 
 type SpaceDerivePayload struct {
 	SigningKey    signingkey.PrivKey
