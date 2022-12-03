@@ -18,8 +18,9 @@ type Service interface {
 	DeleteDocument(spaceId, documentId string) (err error)
 	AllDocumentIds(spaceId string) (ids []string, err error)
 	AllDocumentHeads(spaceId string) (ids []diffservice.TreeHeads, err error)
-	AddText(spaceId, documentId, text string) (head string, err error)
+	AddText(spaceId, documentId, text string, isSnapshot bool) (root, head string, err error)
 	DumpDocumentTree(spaceId, documentId string) (dump string, err error)
+	TreeParams(spaceId, documentId string) (root string, head []string, err error)
 }
 
 const CName = "client.document"
@@ -86,12 +87,12 @@ func (s *service) AllDocumentHeads(spaceId string) (ids []diffservice.TreeHeads,
 	return
 }
 
-func (s *service) AddText(spaceId, documentId, text string) (head string, err error) {
+func (s *service) AddText(spaceId, documentId, text string, isSnapshot bool) (root, head string, err error) {
 	doc, err := s.cache.GetDocument(context.Background(), spaceId, documentId)
 	if err != nil {
 		return
 	}
-	return doc.AddText(text)
+	return doc.AddText(text, isSnapshot)
 }
 
 func (s *service) DumpDocumentTree(spaceId, documentId string) (dump string, err error) {
@@ -100,4 +101,12 @@ func (s *service) DumpDocumentTree(spaceId, documentId string) (dump string, err
 		return
 	}
 	return doc.DebugDump()
+}
+
+func (s *service) TreeParams(spaceId, documentId string) (root string, heads []string, err error) {
+	tr, err := s.cache.GetTree(context.Background(), spaceId, documentId)
+	if err != nil {
+		return
+	}
+	return tr.Root().Id, tr.Heads(), nil
 }

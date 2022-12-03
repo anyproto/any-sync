@@ -3,14 +3,24 @@ package api
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/api/apiproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/document"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/symmetric"
+	"math/rand"
 )
 
 type rpcHandler struct {
-	controller Controller
+	spaceService   clientspace.Service
+	storageService storage.ClientStorage
+	docService     document.Service
+	account        account.Service
 }
 
 func (r *rpcHandler) LoadSpace(ctx context.Context, request *apiproto.LoadSpaceRequest) (resp *apiproto.LoadSpaceResponse, err error) {
-	err = r.controller.LoadSpace(request.SpaceId)
+	_, err = r.spaceService.GetSpace(context.Background(), request.SpaceId)
 	if err != nil {
 		return
 	}
@@ -19,7 +29,20 @@ func (r *rpcHandler) LoadSpace(ctx context.Context, request *apiproto.LoadSpaceR
 }
 
 func (r *rpcHandler) CreateSpace(ctx context.Context, request *apiproto.CreateSpaceRequest) (resp *apiproto.CreateSpaceResponse, err error) {
-	id, err := r.controller.CreateSpace()
+	key, err := symmetric.NewRandom()
+	if err != nil {
+		return
+	}
+	sp, err := r.spaceService.CreateSpace(context.Background(), commonspace.SpaceCreatePayload{
+		SigningKey:     r.account.Account().SignKey,
+		EncryptionKey:  r.account.Account().EncKey,
+		ReadKey:        key.Bytes(),
+		ReplicationKey: rand.Uint64(),
+	})
+	if err != nil {
+		return
+	}
+	id := sp.Id()
 	if err != nil {
 		return
 	}
@@ -28,7 +51,14 @@ func (r *rpcHandler) CreateSpace(ctx context.Context, request *apiproto.CreateSp
 }
 
 func (r *rpcHandler) DeriveSpace(ctx context.Context, request *apiproto.DeriveSpaceRequest) (resp *apiproto.DeriveSpaceResponse, err error) {
-	id, err := r.controller.DeriveSpace()
+	sp, err := r.spaceService.DeriveSpace(context.Background(), commonspace.SpaceDerivePayload{
+		SigningKey:    r.account.Account().SignKey,
+		EncryptionKey: r.account.Account().EncKey,
+	})
+	if err != nil {
+		return
+	}
+	id := sp.Id()
 	if err != nil {
 		return
 	}
@@ -37,7 +67,7 @@ func (r *rpcHandler) DeriveSpace(ctx context.Context, request *apiproto.DeriveSp
 }
 
 func (r *rpcHandler) CreateDocument(ctx context.Context, request *apiproto.CreateDocumentRequest) (resp *apiproto.CreateDocumentResponse, err error) {
-	id, err := r.controller.CreateDocument(request.SpaceId)
+	id, err := r.docService.CreateDocument(request.SpaceId)
 	if err != nil {
 		return
 	}
@@ -46,7 +76,7 @@ func (r *rpcHandler) CreateDocument(ctx context.Context, request *apiproto.Creat
 }
 
 func (r *rpcHandler) DeleteDocument(ctx context.Context, request *apiproto.DeleteDocumentRequest) (resp *apiproto.DeleteDocumentResponse, err error) {
-	err = r.controller.DeleteDocument(request.SpaceId, request.DocumentId)
+	err = r.docService.DeleteDocument(request.SpaceId, request.DocumentId)
 	if err != nil {
 		return
 	}
@@ -55,19 +85,20 @@ func (r *rpcHandler) DeleteDocument(ctx context.Context, request *apiproto.Delet
 }
 
 func (r *rpcHandler) AddText(ctx context.Context, request *apiproto.AddTextRequest) (resp *apiproto.AddTextResponse, err error) {
-	head, err := r.controller.AddText(request.SpaceId, request.DocumentId, request.Text)
+	root, head, err := r.docService.AddText(request.SpaceId, request.DocumentId, request.Text, request.IsSnapshot)
 	if err != nil {
 		return
 	}
 	resp = &apiproto.AddTextResponse{
 		DocumentId: request.DocumentId,
 		HeadId:     head,
+		RootId:     root,
 	}
 	return
 }
 
 func (r *rpcHandler) DumpTree(ctx context.Context, request *apiproto.DumpTreeRequest) (resp *apiproto.DumpTreeResponse, err error) {
-	dump, err := r.controller.DumpDocumentTree(request.SpaceId, request.DocumentId)
+	dump, err := r.docService.DumpDocumentTree(request.SpaceId, request.DocumentId)
 	if err != nil {
 		return
 	}
@@ -78,7 +109,7 @@ func (r *rpcHandler) DumpTree(ctx context.Context, request *apiproto.DumpTreeReq
 }
 
 func (r *rpcHandler) AllTrees(ctx context.Context, request *apiproto.AllTreesRequest) (resp *apiproto.AllTreesResponse, err error) {
-	heads, err := r.controller.AllDocumentHeads(request.SpaceId)
+	heads, err := r.docService.AllDocumentHeads(request.SpaceId)
 	if err != nil {
 		return
 	}
@@ -94,10 +125,24 @@ func (r *rpcHandler) AllTrees(ctx context.Context, request *apiproto.AllTreesReq
 }
 
 func (r *rpcHandler) AllSpaces(ctx context.Context, request *apiproto.AllSpacesRequest) (resp *apiproto.AllSpacesResponse, err error) {
-	ids, err := r.controller.AllSpaceIds()
+	ids, err := r.storageService.AllSpaceIds()
 	if err != nil {
 		return
 	}
 	resp = &apiproto.AllSpacesResponse{SpaceIds: ids}
 	return
 }
+
+func (r *rpcHandler) TreeParams(ctx context.Context, request *apiproto.TreeParamsRequest) (resp *apiproto.TreeParamsResponse, err error) {
+	root, heads, err := r.docService.TreeParams(request.SpaceId, request.DocumentId)
+	if err != nil {
+		return
+	}
+	resp = &apiproto.TreeParamsResponse{
+		RootId:  root,
+		HeadIds: heads,
+	}
+	return
+}
+
+//TreeParams(spaceId, documentId string) (root string, head []string, err error)

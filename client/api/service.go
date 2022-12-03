@@ -30,18 +30,20 @@ type Service interface {
 }
 
 type service struct {
-	controller Controller
-	transport  secure.Service
-	cfg        *config.Config
+	transport      secure.Service
+	cfg            *config.Config
+	spaceService   clientspace.Service
+	storageService clientstorage.ClientStorage
+	docService     document.Service
+	account        account.Service
 	*server.BaseDrpcServer
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.controller = newController(
-		a.MustComponent(clientspace.CName).(clientspace.Service),
-		a.MustComponent(storage.CName).(clientstorage.ClientStorage),
-		a.MustComponent(document.CName).(document.Service),
-		a.MustComponent(account.CName).(account.Service))
+	s.spaceService = a.MustComponent(clientspace.CName).(clientspace.Service)
+	s.storageService = a.MustComponent(storage.CName).(clientstorage.ClientStorage)
+	s.docService = a.MustComponent(document.CName).(document.Service)
+	s.account = a.MustComponent(account.CName).(account.Service)
 	s.cfg = a.MustComponent(config.CName).(*config.Config)
 	s.transport = a.MustComponent(secure.CName).(secure.Service)
 	return nil
@@ -62,7 +64,7 @@ func (s *service) Run(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	return apiproto.DRPCRegisterClientApi(s, &rpcHandler{s.controller})
+	return apiproto.DRPCRegisterClientApi(s, &rpcHandler{s.spaceService, s.storageService, s.docService, s.account})
 }
 
 func (s *service) Close(ctx context.Context) (err error) {
