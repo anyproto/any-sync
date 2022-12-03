@@ -41,6 +41,7 @@ type DRPCNodeApiClient interface {
 	DRPCConn() drpc.Conn
 
 	DumpTree(ctx context.Context, in *DumpTreeRequest) (*DumpTreeResponse, error)
+	TreeParams(ctx context.Context, in *TreeParamsRequest) (*TreeParamsResponse, error)
 	AllTrees(ctx context.Context, in *AllTreesRequest) (*AllTreesResponse, error)
 	AllSpaces(ctx context.Context, in *AllSpacesRequest) (*AllSpacesResponse, error)
 }
@@ -58,6 +59,15 @@ func (c *drpcNodeApiClient) DRPCConn() drpc.Conn { return c.cc }
 func (c *drpcNodeApiClient) DumpTree(ctx context.Context, in *DumpTreeRequest) (*DumpTreeResponse, error) {
 	out := new(DumpTreeResponse)
 	err := c.cc.Invoke(ctx, "/nodeapi.NodeApi/DumpTree", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcNodeApiClient) TreeParams(ctx context.Context, in *TreeParamsRequest) (*TreeParamsResponse, error) {
+	out := new(TreeParamsResponse)
+	err := c.cc.Invoke(ctx, "/nodeapi.NodeApi/TreeParams", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +94,7 @@ func (c *drpcNodeApiClient) AllSpaces(ctx context.Context, in *AllSpacesRequest)
 
 type DRPCNodeApiServer interface {
 	DumpTree(context.Context, *DumpTreeRequest) (*DumpTreeResponse, error)
+	TreeParams(context.Context, *TreeParamsRequest) (*TreeParamsResponse, error)
 	AllTrees(context.Context, *AllTreesRequest) (*AllTreesResponse, error)
 	AllSpaces(context.Context, *AllSpacesRequest) (*AllSpacesResponse, error)
 }
@@ -91,6 +102,10 @@ type DRPCNodeApiServer interface {
 type DRPCNodeApiUnimplementedServer struct{}
 
 func (s *DRPCNodeApiUnimplementedServer) DumpTree(context.Context, *DumpTreeRequest) (*DumpTreeResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCNodeApiUnimplementedServer) TreeParams(context.Context, *TreeParamsRequest) (*TreeParamsResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
@@ -104,7 +119,7 @@ func (s *DRPCNodeApiUnimplementedServer) AllSpaces(context.Context, *AllSpacesRe
 
 type DRPCNodeApiDescription struct{}
 
-func (DRPCNodeApiDescription) NumMethods() int { return 3 }
+func (DRPCNodeApiDescription) NumMethods() int { return 4 }
 
 func (DRPCNodeApiDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -118,6 +133,15 @@ func (DRPCNodeApiDescription) Method(n int) (string, drpc.Encoding, drpc.Receive
 					)
 			}, DRPCNodeApiServer.DumpTree, true
 	case 1:
+		return "/nodeapi.NodeApi/TreeParams", drpcEncoding_File_api_apiproto_protos_api_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCNodeApiServer).
+					TreeParams(
+						ctx,
+						in1.(*TreeParamsRequest),
+					)
+			}, DRPCNodeApiServer.TreeParams, true
+	case 2:
 		return "/nodeapi.NodeApi/AllTrees", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCNodeApiServer).
@@ -126,7 +150,7 @@ func (DRPCNodeApiDescription) Method(n int) (string, drpc.Encoding, drpc.Receive
 						in1.(*AllTreesRequest),
 					)
 			}, DRPCNodeApiServer.AllTrees, true
-	case 2:
+	case 3:
 		return "/nodeapi.NodeApi/AllSpaces", drpcEncoding_File_api_apiproto_protos_api_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCNodeApiServer).
@@ -154,6 +178,22 @@ type drpcNodeApi_DumpTreeStream struct {
 }
 
 func (x *drpcNodeApi_DumpTreeStream) SendAndClose(m *DumpTreeResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_api_apiproto_protos_api_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCNodeApi_TreeParamsStream interface {
+	drpc.Stream
+	SendAndClose(*TreeParamsResponse) error
+}
+
+type drpcNodeApi_TreeParamsStream struct {
+	drpc.Stream
+}
+
+func (x *drpcNodeApi_TreeParamsStream) SendAndClose(m *TreeParamsResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_api_apiproto_protos_api_proto{}); err != nil {
 		return err
 	}

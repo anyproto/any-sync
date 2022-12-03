@@ -144,5 +144,3 @@ func (r *rpcHandler) TreeParams(ctx context.Context, request *apiproto.TreeParam
 	}
 	return
 }
-
-//TreeParams(spaceId, documentId string) (root string, head []string, err error)

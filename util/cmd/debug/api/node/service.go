@@ -15,6 +15,7 @@ var log = logger.NewNamed(CName)
 type Service interface {
 	app.Component
 	DumpTree(ctx context.Context, ip string, request *apiproto.DumpTreeRequest) (resp *apiproto.DumpTreeResponse, err error)
+	TreeParams(ctx context.Context, ip string, request *apiproto.TreeParamsRequest) (resp *apiproto.TreeParamsResponse, err error)
 	AllTrees(ctx context.Context, ip string, request *apiproto.AllTreesRequest) (resp *apiproto.AllTreesResponse, err error)
 	AllSpaces(ctx context.Context, ip string, request *apiproto.AllSpacesRequest) (resp *apiproto.AllSpacesResponse, err error)
 }
@@ -42,6 +43,14 @@ func (s *service) DumpTree(ctx context.Context, ip string, request *apiproto.Dum
 		return
 	}
 	return cl.DumpTree(ctx, request)
+}
+
+func (s *service) TreeParams(ctx context.Context, ip string, request *apiproto.TreeParamsRequest) (resp *apiproto.TreeParamsResponse, err error) {
+	cl, err := s.client.GetNode(ctx, ip)
+	if err != nil {
+		return
+	}
+	return cl.TreeParams(ctx, request)
 }
 
 func (s *service) AllTrees(ctx context.Context, ip string, request *apiproto.AllTreesRequest) (resp *apiproto.AllTreesResponse, err error) {

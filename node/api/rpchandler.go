@@ -54,3 +54,15 @@ func (r *rpcHandler) AllSpaces(ctx context.Context, request *apiproto.AllSpacesR
 	resp = &apiproto.AllSpacesResponse{SpaceIds: ids}
 	return
 }
+
+func (r *rpcHandler) TreeParams(ctx context.Context, request *apiproto.TreeParamsRequest) (resp *apiproto.TreeParamsResponse, err error) {
+	tree, err := r.treeCache.GetTree(context.Background(), request.SpaceId, request.DocumentId)
+	if err != nil {
+		return
+	}
+	resp = &apiproto.TreeParamsResponse{
+		RootId:  tree.Root().Id,
+		HeadIds: tree.Heads(),
+	}
+	return
+}

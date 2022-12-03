@@ -338,6 +338,110 @@ func (m *AllSpacesResponse) GetSpaceIds() []string {
 	return nil
 }
 
+type TreeParamsRequest struct {
+	SpaceId    string `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	DocumentId string `protobuf:"bytes,2,opt,name=documentId,proto3" json:"documentId,omitempty"`
+}
+
+func (m *TreeParamsRequest) Reset()         { *m = TreeParamsRequest{} }
+func (m *TreeParamsRequest) String() string { return proto.CompactTextString(m) }
+func (*TreeParamsRequest) ProtoMessage()    {}
+func (*TreeParamsRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_fc31080c27db9707, []int{7}
+}
+func (m *TreeParamsRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *TreeParamsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_TreeParamsRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *TreeParamsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TreeParamsRequest.Merge(m, src)
+}
+func (m *TreeParamsRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *TreeParamsRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_TreeParamsRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TreeParamsRequest proto.InternalMessageInfo
+
+func (m *TreeParamsRequest) GetSpaceId() string {
+	if m != nil {
+		return m.SpaceId
+	}
+	return ""
+}
+
+func (m *TreeParamsRequest) GetDocumentId() string {
+	if m != nil {
+		return m.DocumentId
+	}
+	return ""
+}
+
+type TreeParamsResponse struct {
+	RootId  string   `protobuf:"bytes,1,opt,name=rootId,proto3" json:"rootId,omitempty"`
+	HeadIds []string `protobuf:"bytes,2,rep,name=headIds,proto3" json:"headIds,omitempty"`
+}
+
+func (m *TreeParamsResponse) Reset()         { *m = TreeParamsResponse{} }
+func (m *TreeParamsResponse) String() string { return proto.CompactTextString(m) }
+func (*TreeParamsResponse) ProtoMessage()    {}
+func (*TreeParamsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_fc31080c27db9707, []int{8}
+}
+func (m *TreeParamsResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *TreeParamsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_TreeParamsResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *TreeParamsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TreeParamsResponse.Merge(m, src)
+}
+func (m *TreeParamsResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *TreeParamsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_TreeParamsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TreeParamsResponse proto.InternalMessageInfo
+
+func (m *TreeParamsResponse) GetRootId() string {
+	if m != nil {
+		return m.RootId
+	}
+	return ""
+}
+
+func (m *TreeParamsResponse) GetHeadIds() []string {
+	if m != nil {
+		return m.HeadIds
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*DumpTreeRequest)(nil), "nodeapi.DumpTreeRequest")
 	proto.RegisterType((*DumpTreeResponse)(nil), "nodeapi.DumpTreeResponse")
@@ -346,34 +450,39 @@ func init() {
 	proto.RegisterType((*AllTreesResponse)(nil), "nodeapi.AllTreesResponse")
 	proto.RegisterType((*AllSpacesRequest)(nil), "nodeapi.AllSpacesRequest")
 	proto.RegisterType((*AllSpacesResponse)(nil), "nodeapi.AllSpacesResponse")
+	proto.RegisterType((*TreeParamsRequest)(nil), "nodeapi.TreeParamsRequest")
+	proto.RegisterType((*TreeParamsResponse)(nil), "nodeapi.TreeParamsResponse")
 }
 
 func init() { proto.RegisterFile("api/apiproto/protos/api.proto", fileDescriptor_fc31080c27db9707) }
 
 var fileDescriptor_fc31080c27db9707 = []byte{
-	// 339 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x92, 0xc1, 0x4e, 0xf2, 0x40,
-	0x10, 0xc7, 0xd9, 0x02, 0x1f, 0x74, 0x3e, 0x15, 0xdc, 0x78, 0x58, 0x9b, 0xb8, 0x21, 0x6b, 0x42,
-	0x48, 0x34, 0x90, 0xe0, 0xc1, 0x23, 0x81, 0x78, 0x21, 0x26, 0x1e, 0xaa, 0x27, 0x6f, 0x95, 0xdd,
-	0xc4, 0x4d, 0x80, 0x5d, 0xd9, 0xf6, 0x3d, 0x7c, 0x2c, 0x6f, 0x72, 0xf4, 0x68, 0xe0, 0x45, 0x4c,
-	0xb7, 0x5b, 0x28, 0x48, 0xe2, 0xa5, 0x9d, 0x99, 0xff, 0xf4, 0x37, 0xff, 0x99, 0x14, 0x2e, 0x22,
-	0x2d, 0x7b, 0x91, 0x96, 0x7a, 0xa1, 0x62, 0xd5, 0xb3, 0x4f, 0x93, 0xe6, 0x5d, 0x1b, 0xe2, 0xda,
-	0x5c, 0x71, 0x11, 0x69, 0xc9, 0xee, 0xa1, 0x71, 0x97, 0xcc, 0xf4, 0xd3, 0x42, 0x88, 0x50, 0xbc,
-	0x25, 0xc2, 0xc4, 0x98, 0x40, 0xcd, 0xe8, 0x68, 0x22, 0xc6, 0x9c, 0xa0, 0x16, 0xea, 0xf8, 0x61,
-	0x9e, 0x62, 0x0a, 0xc0, 0xd5, 0x24, 0x99, 0x89, 0x79, 0x3c, 0xe6, 0xc4, 0xb3, 0x62, 0xa1, 0xc2,
-	0xda, 0xd0, 0xdc, 0xc2, 0x8c, 0x56, 0x73, 0x23, 0x30, 0x86, 0x0a, 0x4f, 0x66, 0xda, 0xa1, 0x6c,
-	0xcc, 0xae, 0xa0, 0x31, 0x9c, 0x4e, 0xd3, 0x36, 0xf3, 0xe7, 0x50, 0x76, 0x0d, 0x95, 0xb4, 0x13,
-	0x9f, 0x80, 0x27, 0x73, 0xd1, 0x93, 0x1c, 0x9f, 0x41, 0xf5, 0x55, 0x44, 0xdc, 0x10, 0xaf, 0x55,
-	0xee, 0xf8, 0x61, 0x96, 0xb0, 0x5b, 0x68, 0x6e, 0xd1, 0xce, 0xc2, 0x25, 0x54, 0xe3, 0xb4, 0x40,
-	0x50, 0xab, 0xdc, 0xf9, 0xdf, 0x3f, 0xee, 0xba, 0xe5, 0xbb, 0xd6, 0x68, 0xa6, 0x31, 0x6c, 0x3f,
-	0x7c, 0x4c, 0x87, 0xe6, 0xa6, 0x58, 0x0f, 0x4e, 0x0b, 0x35, 0x47, 0x0b, 0xa0, 0xee, 0xac, 0x65,
-	0x40, 0x3f, 0xdc, 0xe4, 0xfd, 0x4f, 0x04, 0xb5, 0x07, 0xc5, 0xc5, 0x50, 0x4b, 0x3c, 0x80, 0x7a,
-	0x7e, 0x0c, 0x4c, 0x36, 0x23, 0xf7, 0x8e, 0x1d, 0x9c, 0x1f, 0x50, 0xdc, 0xa0, 0x01, 0xd4, 0xf3,
-	0x55, 0x0a, 0x80, 0xbd, 0xc3, 0x15, 0x00, 0xbf, 0xf6, 0x1e, 0x81, 0xbf, 0xb1, 0x8f, 0x77, 0xfa,
-	0x76, 0xd6, 0x0c, 0x82, 0x43, 0x52, 0xc6, 0x18, 0xb5, 0x3f, 0x56, 0x14, 0x2d, 0x57, 0x14, 0x7d,
-	0xaf, 0x28, 0x7a, 0x5f, 0xd3, 0xd2, 0x72, 0x4d, 0x4b, 0x5f, 0x6b, 0x5a, 0x7a, 0x3e, 0x2a, 0xfe,
-	0x61, 0x2f, 0xff, 0xec, 0xeb, 0xe6, 0x27, 0x00, 0x00, 0xff, 0xff, 0xf4, 0x75, 0x8c, 0xa4, 0x78,
-	0x02, 0x00, 0x00,
+	// 394 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x53, 0xcd, 0x4a, 0xf3, 0x40,
+	0x14, 0x6d, 0xd2, 0xdf, 0xdc, 0xef, 0xa7, 0xed, 0x20, 0x12, 0x23, 0x86, 0x32, 0x42, 0x29, 0x28,
+	0x2d, 0xd4, 0x85, 0xcb, 0xd2, 0xa2, 0x42, 0x11, 0x45, 0xa2, 0x2b, 0x77, 0xb1, 0x33, 0x60, 0xa0,
+	0xe9, 0x8c, 0x99, 0xe4, 0x3d, 0x5c, 0xf9, 0x4c, 0x2e, 0xbb, 0x74, 0x29, 0xed, 0x8b, 0xc8, 0x24,
+	0x93, 0x34, 0xa9, 0x05, 0x17, 0x6e, 0x92, 0x39, 0x73, 0x6e, 0xce, 0x3d, 0x73, 0xcf, 0x04, 0x8e,
+	0x5c, 0xee, 0x0d, 0x5c, 0xee, 0xf1, 0x80, 0x85, 0x6c, 0x10, 0x3f, 0x85, 0xc4, 0xfd, 0x78, 0x89,
+	0xea, 0x0b, 0x46, 0xa8, 0xcb, 0x3d, 0x7c, 0x0d, 0xcd, 0x8b, 0xc8, 0xe7, 0x0f, 0x01, 0xa5, 0x0e,
+	0x7d, 0x89, 0xa8, 0x08, 0x91, 0x09, 0x75, 0xc1, 0xdd, 0x19, 0x9d, 0x12, 0x53, 0xeb, 0x68, 0x3d,
+	0xc3, 0x49, 0x21, 0xb2, 0x01, 0x08, 0x9b, 0x45, 0x3e, 0x5d, 0x84, 0x53, 0x62, 0xea, 0x31, 0x99,
+	0xdb, 0xc1, 0x5d, 0x68, 0x6d, 0xc4, 0x04, 0x67, 0x0b, 0x41, 0x11, 0x82, 0x0a, 0x89, 0x7c, 0xae,
+	0xa4, 0xe2, 0x35, 0x3e, 0x81, 0xe6, 0x78, 0x3e, 0x97, 0x65, 0xe2, 0xc7, 0xa6, 0xf8, 0x14, 0x2a,
+	0xb2, 0x12, 0xfd, 0x07, 0xdd, 0x4b, 0x49, 0xdd, 0x23, 0x68, 0x0f, 0xaa, 0xcf, 0xd4, 0x25, 0xc2,
+	0xd4, 0x3b, 0xe5, 0x9e, 0xe1, 0x24, 0x00, 0x9f, 0x43, 0x6b, 0x23, 0xad, 0x2c, 0x1c, 0x43, 0x35,
+	0x94, 0x1b, 0xa6, 0xd6, 0x29, 0xf7, 0xfe, 0x0c, 0xff, 0xf5, 0xd5, 0xe1, 0xfb, 0xb1, 0xd1, 0x84,
+	0xc3, 0x28, 0xfe, 0xf0, 0x5e, 0x36, 0x4d, 0x4d, 0xe1, 0x01, 0xb4, 0x73, 0x7b, 0x4a, 0xcd, 0x82,
+	0x86, 0xb2, 0x96, 0x08, 0x1a, 0x4e, 0x86, 0xf1, 0x0d, 0xb4, 0xa5, 0xe6, 0x9d, 0x1b, 0xb8, 0xbe,
+	0xf8, 0xfd, 0x3c, 0xaf, 0x00, 0xe5, 0xe5, 0x94, 0x81, 0x7d, 0xa8, 0x05, 0x8c, 0x85, 0x99, 0x9c,
+	0x42, 0xb2, 0x8f, 0x9c, 0xc1, 0x34, 0x1b, 0x49, 0x0a, 0x87, 0x6f, 0x3a, 0xd4, 0x6f, 0x19, 0xa1,
+	0x63, 0xee, 0xa1, 0x11, 0x34, 0xd2, 0x8c, 0x90, 0x99, 0x4d, 0x62, 0xeb, 0x0e, 0x58, 0x07, 0x3b,
+	0x18, 0xd5, 0xfe, 0x12, 0x60, 0x63, 0x0a, 0x59, 0x85, 0x61, 0x16, 0x0e, 0x6e, 0x1d, 0xee, 0xe4,
+	0x94, 0xcc, 0x08, 0x1a, 0x69, 0x50, 0x39, 0x1f, 0x5b, 0xd7, 0x22, 0xe7, 0xe3, 0x5b, 0xaa, 0x13,
+	0x30, 0xb2, 0x70, 0x50, 0xa1, 0xae, 0x10, 0xa2, 0x65, 0xed, 0xa2, 0x12, 0x8d, 0x49, 0xf7, 0x7d,
+	0x65, 0x6b, 0xcb, 0x95, 0xad, 0x7d, 0xae, 0x6c, 0xed, 0x75, 0x6d, 0x97, 0x96, 0x6b, 0xbb, 0xf4,
+	0xb1, 0xb6, 0x4b, 0x8f, 0x7f, 0xf3, 0xff, 0xcf, 0x53, 0x2d, 0x7e, 0x9d, 0x7d, 0x05, 0x00, 0x00,
+	0xff, 0xff, 0xb6, 0x98, 0xe5, 0x1d, 0x56, 0x03, 0x00, 0x00,
 }
 
 func (m *DumpTreeRequest) Marshal() (dAtA []byte, err error) {
@@ -604,6 +713,82 @@ func (m *AllSpacesResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *TreeParamsRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *TreeParamsRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TreeParamsRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.DocumentId) > 0 {
+		i -= len(m.DocumentId)
+		copy(dAtA[i:], m.DocumentId)
+		i = encodeVarintApi(dAtA, i, uint64(len(m.DocumentId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.SpaceId) > 0 {
+		i -= len(m.SpaceId)
+		copy(dAtA[i:], m.SpaceId)
+		i = encodeVarintApi(dAtA, i, uint64(len(m.SpaceId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *TreeParamsResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *TreeParamsResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TreeParamsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.HeadIds) > 0 {
+		for iNdEx := len(m.HeadIds) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.HeadIds[iNdEx])
+			copy(dAtA[i:], m.HeadIds[iNdEx])
+			i = encodeVarintApi(dAtA, i, uint64(len(m.HeadIds[iNdEx])))
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.RootId) > 0 {
+		i -= len(m.RootId)
+		copy(dAtA[i:], m.RootId)
+		i = encodeVarintApi(dAtA, i, uint64(len(m.RootId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintApi(dAtA []byte, offset int, v uint64) int {
 	offset -= sovApi(v)
 	base := offset
@@ -709,6 +894,42 @@ func (m *AllSpacesResponse) Size() (n int) {
 	_ = l
 	if len(m.SpaceIds) > 0 {
 		for _, s := range m.SpaceIds {
+			l = len(s)
+			n += 1 + l + sovApi(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *TreeParamsRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.SpaceId)
+	if l > 0 {
+		n += 1 + l + sovApi(uint64(l))
+	}
+	l = len(m.DocumentId)
+	if l > 0 {
+		n += 1 + l + sovApi(uint64(l))
+	}
+	return n
+}
+
+func (m *TreeParamsResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.RootId)
+	if l > 0 {
+		n += 1 + l + sovApi(uint64(l))
+	}
+	if len(m.HeadIds) > 0 {
+		for _, s := range m.HeadIds {
 			l = len(s)
 			n += 1 + l + sovApi(uint64(l))
 		}
@@ -1308,6 +1529,234 @@ func (m *AllSpacesResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.SpaceIds = append(m.SpaceIds, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipApi(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthApi
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *TreeParamsRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowApi
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: TreeParamsRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: TreeParamsRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthApi
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthApi
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SpaceId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DocumentId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthApi
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthApi
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.DocumentId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipApi(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthApi
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *TreeParamsResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowApi
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: TreeParamsResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: TreeParamsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RootId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthApi
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthApi
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RootId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HeadIds", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthApi
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthApi
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.HeadIds = append(m.HeadIds, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
