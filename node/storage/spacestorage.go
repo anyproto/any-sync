@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"go.uber.org/zap"
+	"os"
 	"path"
 	"time"
 )
@@ -30,6 +31,11 @@ type spaceStorage struct {
 func newSpaceStorage(rootPath string, spaceId string) (store spacestorage.SpaceStorage, err error) {
 	log.With(zap.String("id", spaceId)).Debug("space storage opening with new")
 	dbPath := path.Join(rootPath, spaceId)
+	if _, err = os.Stat(dbPath); err != nil {
+		err = spacestorage.ErrSpaceStorageMissing
+		return
+	}
+
 	objDb, err := pogreb.Open(dbPath, defPogrebOptions)
 	if err != nil {
 		return
