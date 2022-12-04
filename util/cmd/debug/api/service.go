@@ -11,7 +11,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api/client"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api/node"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/peers"
+	"github.com/zeebo/errs"
+	"math/rand"
 	"strconv"
+	"sync"
 )
 
 const CName = "debug.api"
@@ -376,6 +379,55 @@ func (s *service) registerScripts() {
 			if err != nil {
 				return "", err
 			}
+		}
+		return
+	}}
+	s.scripts["create-many-two-clients"] = Script{Cmd: func(params []string) (res string, err error) {
+		if len(params) != 6 {
+			err = ErrIncorrectParamsCount
+			return
+		}
+		peer1, err := s.peers.Get(params[0])
+		if err != nil {
+			return
+		}
+		peer2, err := s.peers.Get(params[1])
+		if err != nil {
+			return
+		}
+		last, err := strconv.Atoi(params[5])
+		if err != nil {
+			return
+		}
+		if last <= 0 {
+			err = fmt.Errorf("incorrect number of steps")
+			return
+		}
+		wg := &sync.WaitGroup{}
+		var mError errs.Group
+		createMany := func(peer peers.Peer) {
+			defer wg.Done()
+			for i := 0; i < last; i++ {
+				_, err := s.client.AddText(context.Background(), peer.Address, &clientproto.AddTextRequest{
+					SpaceId:    params[2],
+					DocumentId: params[3],
+					Text:       params[4],
+					IsSnapshot: rand.Int()%2 == 0,
+				})
+				if err != nil {
+					mError.Add(err)
+					return
+				}
+			}
+		}
+		for _, p := range []peers.Peer{peer1, peer2} {
+			wg.Add(1)
+			createMany(p)
+		}
+		wg.Wait()
+		if mError.Err() != nil {
+			err = mError.Err()
+			return
 		}
 		return
 	}}

@@ -108,7 +108,7 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 				continue
 			}
 		}
-		newPeers, err := s.connector.DialResponsiblePeers(ctx, s.spaceId, activeNodeIds)
+		newPeers, err := s.connector.DialInactiveResponsiblePeers(ctx, s.spaceId, activeNodeIds)
 		if err != nil {
 			s.log.Error("failed to dial peers", zap.Error(err))
 			return
