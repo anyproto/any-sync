@@ -10,7 +10,7 @@ import (
 type ConfConnector interface {
 	Configuration() Configuration
 	GetResponsiblePeers(ctx context.Context, spaceId string) ([]peer.Peer, error)
-	DialResponsiblePeers(ctx context.Context, spaceId string, activeNodeIds []string) ([]peer.Peer, error)
+	DialInactiveResponsiblePeers(ctx context.Context, spaceId string, activeNodeIds []string) ([]peer.Peer, error)
 }
 
 type confConnector struct {
@@ -30,7 +30,7 @@ func (s *confConnector) GetResponsiblePeers(ctx context.Context, spaceId string)
 	return s.connectOneOrMany(ctx, spaceId, nil, s.pool.Get, s.pool.GetOneOf)
 }
 
-func (s *confConnector) DialResponsiblePeers(ctx context.Context, spaceId string, activeNodeIds []string) ([]peer.Peer, error) {
+func (s *confConnector) DialInactiveResponsiblePeers(ctx context.Context, spaceId string, activeNodeIds []string) ([]peer.Peer, error) {
 	return s.connectOneOrMany(ctx, spaceId, activeNodeIds, s.pool.Dial, s.pool.DialOneOf)
 }
 
