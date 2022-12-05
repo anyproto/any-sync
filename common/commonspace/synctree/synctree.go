@@ -100,13 +100,7 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error
 	t = syncTree
 	syncTree.Lock()
 	defer syncTree.Unlock()
-	if syncTree.listener != nil {
-		syncTree.listener.Rebuild(syncTree)
-	}
-	syncTree.treeUsage.Add(1)
-	if syncTree.notifiable != nil {
-		syncTree.notifiable.UpdateHeads(objTree.ID(), objTree.Heads())
-	}
+	syncTree.afterBuild()
 
 	headUpdate := syncClient.CreateHeadUpdate(t, nil)
 	err = syncClient.BroadcastAsync(headUpdate)
@@ -136,13 +130,7 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error
 	syncTree.Lock()
 	defer syncTree.Unlock()
 	// TODO: refactor here because the code is duplicated, when we create a tree we should only create a storage and then build a tree
-	if syncTree.listener != nil {
-		syncTree.listener.Rebuild(syncTree)
-	}
-	syncTree.treeUsage.Add(1)
-	if syncTree.notifiable != nil {
-		syncTree.notifiable.UpdateHeads(objTree.ID(), objTree.Heads())
-	}
+	syncTree.afterBuild()
 
 	headUpdate := syncClient.CreateHeadUpdate(t, nil)
 	err = syncClient.BroadcastAsync(headUpdate)
@@ -240,10 +228,7 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	t = syncTree
 	syncTree.Lock()
 	defer syncTree.Unlock()
-	if syncTree.listener != nil {
-		syncTree.listener.Rebuild(syncTree)
-	}
-	syncTree.treeUsage.Add(1)
+	syncTree.afterBuild()
 
 	headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 	// here we will have different behaviour based on who is sending this update
@@ -352,4 +337,14 @@ func (s *syncTree) checkAlive() (err error) {
 func (s *syncTree) Ping() (err error) {
 	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
 	return s.syncClient.BroadcastAsyncOrSendResponsible(headUpdate)
+}
+
+func (s *syncTree) afterBuild() {
+	if s.listener != nil {
+		s.listener.Rebuild(s)
+	}
+	s.treeUsage.Add(1)
+	if s.notifiable != nil {
+		s.notifiable.UpdateHeads(s.ID(), s.Heads())
+	}
 }
