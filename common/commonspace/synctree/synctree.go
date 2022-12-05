@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
@@ -26,9 +25,14 @@ var (
 	ErrSyncTreeDeleted = errors.New("sync tree is deleted")
 )
 
+type HeadNotifiable interface {
+	UpdateHeads(id string, heads []string)
+}
+
 type SyncTree interface {
 	tree.ObjectTree
 	synchandler.SyncHandler
+	Ping() (err error)
 }
 
 // SyncTree sends head updates to sync service and also sends new changes to update listener
@@ -36,7 +40,7 @@ type syncTree struct {
 	tree.ObjectTree
 	synchandler.SyncHandler
 	syncClient SyncClient
-	notifiable diffservice.HeadNotifiable
+	notifiable HeadNotifiable
 	listener   updatelistener.UpdateListener
 	treeUsage  *atomic.Int32
 	isClosed   bool
@@ -54,7 +58,7 @@ type CreateDeps struct {
 	SpaceId        string
 	Payload        tree.ObjectTreeCreatePayload
 	Configuration  nodeconf.Configuration
-	HeadNotifiable diffservice.HeadNotifiable
+	HeadNotifiable HeadNotifiable
 	StreamPool     syncservice.StreamPool
 	Listener       updatelistener.UpdateListener
 	AclList        list.ACLList
@@ -66,7 +70,7 @@ type BuildDeps struct {
 	SpaceId        string
 	StreamPool     syncservice.StreamPool
 	Configuration  nodeconf.Configuration
-	HeadNotifiable diffservice.HeadNotifiable
+	HeadNotifiable HeadNotifiable
 	Listener       updatelistener.UpdateListener
 	AclList        list.ACLList
 	SpaceStorage   spacestorage.SpaceStorage
@@ -246,9 +250,6 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	if isFirstBuild {
 		// send to everybody, because everybody should know that the node or client got new tree
 		err = syncTree.syncClient.BroadcastAsync(headUpdate)
-	} else {
-		// send either to everybody if client or to replica set if node
-		err = syncTree.syncClient.BroadcastAsyncOrSendResponsible(headUpdate)
 	}
 	return
 }
@@ -346,4 +347,9 @@ func (s *syncTree) checkAlive() (err error) {
 		err = ErrSyncTreeDeleted
 	}
 	return
+}
+
+func (s *syncTree) Ping() (err error) {
+	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
+	return s.syncClient.BroadcastAsyncOrSendResponsible(headUpdate)
 }

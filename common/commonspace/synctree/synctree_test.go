@@ -16,6 +16,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"sync/atomic"
 	"testing"
 )
 
@@ -67,6 +68,7 @@ func Test_DeriveSyncTree(t *testing.T) {
 		Payload:      expectedPayload,
 		Listener:     updateListenerMock,
 		SpaceStorage: spaceStorageMock,
+		TreeUsage:    &atomic.Int32{},
 	}
 
 	_, err := DeriveSyncTree(ctx, deps)
@@ -103,6 +105,7 @@ func Test_CreateSyncTree(t *testing.T) {
 		Payload:      expectedPayload,
 		Listener:     updateListenerMock,
 		SpaceStorage: spaceStorageMock,
+		TreeUsage:    &atomic.Int32{},
 	}
 
 	_, err := CreateSyncTree(ctx, deps)
