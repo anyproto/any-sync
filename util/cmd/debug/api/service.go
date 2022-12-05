@@ -12,6 +12,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/peers"
 	"github.com/spf13/cobra"
 	_ "github.com/spf13/cobra"
+	"github.com/zeebo/errs"
+	"math/rand"
+	"strings"
+	"sync"
 )
 
 const CName = "debug.api"
@@ -38,7 +42,7 @@ func New() Service {
 func (s *service) Run(ctx context.Context) (err error) {
 	rootCmd := &cobra.Command{Use: "debug"}
 
-	clientCmd := &cobra.Command{Use: "client commands"}
+	clientCmd := &cobra.Command{Use: "client commands to be executed on a specified client"}
 	clientCmd.PersistentFlags().StringP("client", "c", "", "the alias of the client")
 	clientCmd.MarkFlagRequired("client")
 	for _, cmd := range s.clientCommands {
@@ -46,13 +50,19 @@ func (s *service) Run(ctx context.Context) (err error) {
 	}
 	rootCmd.AddCommand(clientCmd)
 
-	nodeCmd := &cobra.Command{Use: "node commands"}
+	nodeCmd := &cobra.Command{Use: "node commands to be executed on a node"}
 	nodeCmd.PersistentFlags().StringP("node", "n", "", "the alias of the node")
 	nodeCmd.MarkFlagRequired("node")
 	for _, cmd := range s.nodeCommands {
 		nodeCmd.AddCommand(cmd)
 	}
 	rootCmd.AddCommand(nodeCmd)
+
+	scriptsCmd := &cobra.Command{Use: "script which can have arbitrary params and can include mutliple clients and nodes"}
+	for _, cmd := range s.scripts {
+		scriptsCmd.AddCommand(cmd)
+	}
+	rootCmd.AddCommand(scriptsCmd)
 
 	return rootCmd.Execute()
 }
@@ -67,7 +77,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.peers = a.MustComponent(peers.CName).(peers.Service)
 	s.registerClientCommands()
 	s.registerNodeCommands()
-	//s.registerScripts()
+	s.registerScripts()
 
 	return nil
 }
@@ -78,7 +88,7 @@ func (s *service) Name() (name string) {
 
 func (s *service) registerClientCommands() {
 	cmdCreateSpace := &cobra.Command{
-		Use:   "create-space [params]",
+		Use:   "create-space",
 		Short: "create the space",
 		Args:  cobra.RangeArgs(0, 0),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -99,7 +109,7 @@ func (s *service) registerClientCommands() {
 	s.clientCommands = append(s.clientCommands, cmdCreateSpace)
 
 	cmdLoadSpace := &cobra.Command{
-		Use:   "load-space [params]",
+		Use:   "load-space [space]",
 		Short: "load the space",
 		Args:  cobra.RangeArgs(1, 1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -122,7 +132,7 @@ func (s *service) registerClientCommands() {
 	s.clientCommands = append(s.clientCommands, cmdLoadSpace)
 
 	cmdDeriveSpace := &cobra.Command{
-		Use:   "derive-space [params]",
+		Use:   "derive-space",
 		Short: "derive the space from account data",
 		Args:  cobra.RangeArgs(0, 0),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -143,7 +153,7 @@ func (s *service) registerClientCommands() {
 	s.clientCommands = append(s.clientCommands, cmdDeriveSpace)
 
 	cmdCreateDocument := &cobra.Command{
-		Use:   "create-document [params]",
+		Use:   "create-document [space]",
 		Short: "create the document in a particular space",
 		Args:  cobra.RangeArgs(1, 1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -166,7 +176,7 @@ func (s *service) registerClientCommands() {
 	s.clientCommands = append(s.clientCommands, cmdCreateDocument)
 
 	cmdDeleteDocument := &cobra.Command{
-		Use:   "delete-document [params]",
+		Use:   "delete-document [document]",
 		Short: "delete the document in a particular space",
 		Args:  cobra.RangeArgs(1, 1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -193,13 +203,14 @@ func (s *service) registerClientCommands() {
 	s.clientCommands = append(s.clientCommands, cmdDeleteDocument)
 
 	cmdAddText := &cobra.Command{
-		Use:   "add-text [params]",
+		Use:   "add-text [text]",
 		Short: "add text to the document in the particular space",
 		Args:  cobra.RangeArgs(1, 1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cli, _ := cmd.Flags().GetString("client")
 			space, _ := cmd.Flags().GetString("space")
 			document, _ := cmd.Flags().GetString("document")
+			snapshot, _ := cmd.Flags().GetBool("snapshot")
 			server, err := s.peers.Get(cli)
 			if err != nil {
 				fmt.Println("no such client")
@@ -209,6 +220,7 @@ func (s *service) registerClientCommands() {
 				SpaceId:    space,
 				DocumentId: document,
 				Text:       args[0],
+				IsSnapshot: snapshot,
 			})
 			if err != nil {
 				fmt.Println("couldn't add text to the document", err)
@@ -219,12 +231,13 @@ func (s *service) registerClientCommands() {
 	}
 	cmdAddText.Flags().String("space", "", "the space where something is happening :-)")
 	cmdAddText.Flags().String("document", "", "the document where something is happening :-)")
+	cmdAddText.Flags().Bool("snapshot", false, "tells if the snapshot should be created")
 	cmdAddText.MarkFlagRequired("space")
 	cmdAddText.MarkFlagRequired("document")
 	s.clientCommands = append(s.clientCommands, cmdAddText)
 
 	cmdAllTrees := &cobra.Command{
-		Use:   "all-trees [params]",
+		Use:   "all-trees [space]",
 		Short: "print all trees in space and their heads",
 		Args:  cobra.RangeArgs(1, 1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -262,7 +275,7 @@ func (s *service) registerClientCommands() {
 	s.clientCommands = append(s.clientCommands, cmdAllTrees)
 
 	cmdDumpTree := &cobra.Command{
-		Use:   "dump-tree [params]",
+		Use:   "dump-tree [document]",
 		Short: "get graphviz description of the tree",
 		Args:  cobra.RangeArgs(1, 1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -290,7 +303,7 @@ func (s *service) registerClientCommands() {
 	s.clientCommands = append(s.clientCommands, cmdDumpTree)
 
 	cmdTreeParams := &cobra.Command{
-		Use:   "tree-params [params]",
+		Use:   "tree-params [document]",
 		Short: "print heads and root of the tree",
 		Args:  cobra.RangeArgs(1, 1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -325,7 +338,7 @@ func (s *service) registerClientCommands() {
 	s.clientCommands = append(s.clientCommands, cmdTreeParams)
 
 	cmdAllSpaces := &cobra.Command{
-		Use:   "all-spaces [params]",
+		Use:   "all-spaces",
 		Short: "print all spaces",
 		Args:  cobra.RangeArgs(0, 0),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -355,7 +368,7 @@ func (s *service) registerClientCommands() {
 
 func (s *service) registerNodeCommands() {
 	cmdAllTrees := &cobra.Command{
-		Use:   "all-trees [params]",
+		Use:   "all-trees [space]",
 		Short: "print all trees in space and their heads",
 		Args:  cobra.RangeArgs(1, 1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -393,7 +406,7 @@ func (s *service) registerNodeCommands() {
 	s.nodeCommands = append(s.nodeCommands, cmdAllTrees)
 
 	cmdDumpTree := &cobra.Command{
-		Use:   "dump-tree [params]",
+		Use:   "dump-tree [space]",
 		Short: "get graphviz description of the tree",
 		Args:  cobra.RangeArgs(1, 1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -421,7 +434,7 @@ func (s *service) registerNodeCommands() {
 	s.nodeCommands = append(s.nodeCommands, cmdDumpTree)
 
 	cmdTreeParams := &cobra.Command{
-		Use:   "tree-params [params]",
+		Use:   "tree-params [document]",
 		Short: "print heads and root of the tree",
 		Args:  cobra.RangeArgs(1, 1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -456,7 +469,7 @@ func (s *service) registerNodeCommands() {
 	s.nodeCommands = append(s.nodeCommands, cmdTreeParams)
 
 	cmdAllSpaces := &cobra.Command{
-		Use:   "all-spaces [params]",
+		Use:   "all-spaces",
 		Short: "print all spaces",
 		Args:  cobra.RangeArgs(0, 0),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -484,85 +497,68 @@ func (s *service) registerNodeCommands() {
 	s.nodeCommands = append(s.nodeCommands, cmdAllSpaces)
 }
 
-//
-//func (s *service) registerScripts() {
-//	s.scripts["create-many"] = Script{Cmd: func(params []string) (res string, err error) {
-//		if len(params) != 5 {
-//			err = ErrIncorrectParamsCount
-//			return
-//		}
-//		peer, err := s.peers.Get(params[0])
-//		if err != nil {
-//			return
-//		}
-//		last, err := strconv.Atoi(params[4])
-//		if err != nil {
-//			return
-//		}
-//		if last <= 0 {
-//			err = fmt.Errorf("incorrect number of steps")
-//			return
-//		}
-//
-//		for i := 0; i < last; i++ {
-//			_, err := s.client.AddText(context.Background(), peer.Address, &clientproto.AddTextRequest{
-//				SpaceId:    params[1],
-//				DocumentId: params[2],
-//				Text:       params[3],
-//			})
-//			if err != nil {
-//				return "", err
-//			}
-//		}
-//		return
-//	}}
-//	s.scripts["create-many-two-clients"] = Script{Cmd: func(params []string) (res string, err error) {
-//		if len(params) != 6 {
-//			err = ErrIncorrectParamsCount
-//			return
-//		}
-//		peer1, err := s.peers.Get(params[0])
-//		if err != nil {
-//			return
-//		}
-//		peer2, err := s.peers.Get(params[1])
-//		if err != nil {
-//			return
-//		}
-//		last, err := strconv.Atoi(params[5])
-//		if err != nil {
-//			return
-//		}
-//		if last <= 0 {
-//			err = fmt.Errorf("incorrect number of steps")
-//			return
-//		}
-//		wg := &sync.WaitGroup{}
-//		var mError errs.Group
-//		createMany := func(peer peers.Peer) {
-//			defer wg.Done()
-//			for i := 0; i < last; i++ {
-//				_, err := s.client.AddText(context.Background(), peer.Address, &clientproto.AddTextRequest{
-//					SpaceId:    params[2],
-//					DocumentId: params[3],
-//					Text:       params[4],
-//					IsSnapshot: rand.Int()%2 == 0,
-//				})
-//				if err != nil {
-//					mError.Add(err)
-//					return
-//				}
-//			}
-//		}
-//		for _, p := range []peers.Peer{peer1, peer2} {
-//			wg.Add(1)
-//			createMany(p)
-//		}
-//		wg.Wait()
-//		if mError.Err() != nil {
-//			err = mError.Err()
-//			return
-//		}
-//		return
-//	}}
-//}
+func (s *service) registerScripts() {
+	cmdAddTextMany := &cobra.Command{
+		Use:   "add-text-many [text]",
+		Short: "add text to the document in the particular space in many clients at the same time with randomized snapshots",
+		Args:  cobra.RangeArgs(1, 1),
+		Run: func(cmd *cobra.Command, args []string) {
+			clients, _ := cmd.Flags().GetString("clients")
+			space, _ := cmd.Flags().GetString("space")
+			document, _ := cmd.Flags().GetString("document")
+			times, _ := cmd.Flags().GetInt("times")
+			if times <= 0 {
+				fmt.Println("the times parameter should be more than 0")
+				return
+			}
+			var addresses []string
+			for _, cl := range strings.Split(clients, ",") {
+				if len(cl) == 0 {
+					continue
+				}
+				server, err := s.peers.Get(cl)
+				if err != nil {
+					fmt.Println("no such client")
+					return
+				}
+				addresses = append(addresses, server.Address)
+			}
+
+			wg := &sync.WaitGroup{}
+			var mError errs.Group
+			createMany := func(address string) {
+				defer wg.Done()
+				for i := 0; i < times; i++ {
+					_, err := s.client.AddText(context.Background(), address, &clientproto.AddTextRequest{
+						SpaceId:    space,
+						DocumentId: document,
+						Text:       args[0],
+						IsSnapshot: rand.Int()%2 == 0,
+					})
+					if err != nil {
+						mError.Add(err)
+						return
+					}
+				}
+			}
+			for _, p := range addresses {
+				wg.Add(1)
+				createMany(p)
+			}
+			wg.Wait()
+			if mError.Err() != nil {
+				fmt.Println("got errors while executing add many", mError.Err())
+				return
+			}
+			return
+		},
+	}
+	cmdAddTextMany.Flags().String("space", "", "the space where something is happening :-)")
+	cmdAddTextMany.Flags().String("document", "", "the document where something is happening :-)")
+	cmdAddTextMany.Flags().String("clients", "", "the aliases of clients with value separated by comma")
+	cmdAddTextMany.Flags().Int("times", 1, "how many times we should add the change")
+	cmdAddTextMany.MarkFlagRequired("space")
+	cmdAddTextMany.MarkFlagRequired("document")
+	cmdAddTextMany.MarkFlagRequired("clients")
+	s.scripts = append(s.scripts, cmdAddTextMany)
+}
