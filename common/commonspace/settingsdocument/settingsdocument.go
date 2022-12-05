@@ -110,8 +110,9 @@ func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
 }
 
 func (s *settingsDocument) Init(ctx context.Context) (err error) {
-	log.Debug("space settings id", zap.String("id", s.store.SpaceSettingsId()))
-	s.SyncTree, err = s.buildFunc(ctx, s.store.SpaceSettingsId(), s)
+	settingsId := s.store.SpaceSettingsId()
+	log.Debug("space settings id", zap.String("id", settingsId))
+	s.SyncTree, err = s.buildFunc(ctx, settingsId, s)
 	if err != nil {
 		return
 	}

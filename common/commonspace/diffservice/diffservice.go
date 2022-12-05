@@ -21,7 +21,7 @@ type TreeHeads struct {
 }
 
 type DiffService interface {
-	HeadNotifiable
+	UpdateHeads(id string, heads []string)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
 	RemoveObjects(ids []string)
 	AllIds() []string

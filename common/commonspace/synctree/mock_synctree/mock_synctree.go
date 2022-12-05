@@ -368,6 +368,20 @@ func (mr *MockSyncTreeMockRecorder) Lock() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lock", reflect.TypeOf((*MockSyncTree)(nil).Lock))
 }
 
+// Ping mocks base method.
+func (m *MockSyncTree) Ping() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Ping")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Ping indicates an expected call of Ping.
+func (mr *MockSyncTreeMockRecorder) Ping() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockSyncTree)(nil).Ping))
+}
+
 // RLock mocks base method.
 func (m *MockSyncTree) RLock() {
 	m.ctrl.T.Helper()
