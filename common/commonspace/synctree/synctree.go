@@ -100,6 +100,9 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error
 		syncTree.listener.Rebuild(syncTree)
 	}
 	syncTree.treeUsage.Add(1)
+	if syncTree.notifiable != nil {
+		syncTree.notifiable.UpdateHeads(objTree.ID(), objTree.Heads())
+	}
 
 	headUpdate := syncClient.CreateHeadUpdate(t, nil)
 	err = syncClient.BroadcastAsync(headUpdate)
@@ -133,6 +136,9 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error
 		syncTree.listener.Rebuild(syncTree)
 	}
 	syncTree.treeUsage.Add(1)
+	if syncTree.notifiable != nil {
+		syncTree.notifiable.UpdateHeads(objTree.ID(), objTree.Heads())
+	}
 
 	headUpdate := syncClient.CreateHeadUpdate(t, nil)
 	err = syncClient.BroadcastAsync(headUpdate)
