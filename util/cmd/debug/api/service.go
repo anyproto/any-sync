@@ -195,7 +195,7 @@ func (s *service) registerClientCommands() {
 				fmt.Println("couldn't delete the document", err)
 				return
 			}
-			fmt.Println("deleted", args[1])
+			fmt.Println("deleted", args[0])
 		},
 	}
 	cmdDeleteDocument.Flags().String("space", "", "the space where something is happening :-)")
