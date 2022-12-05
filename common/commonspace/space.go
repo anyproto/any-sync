@@ -108,7 +108,7 @@ func (s *space) LastUsage() time.Time {
 }
 
 func (s *space) Locked() bool {
-	log.With(zap.Bool("locked", s.treesUsed.Load() > 1)).Debug("space lock status check")
+	log.With(zap.Int32("trees used", s.treesUsed.Load())).Debug("space lock status check")
 	return s.treesUsed.Load() > 1
 }
 
