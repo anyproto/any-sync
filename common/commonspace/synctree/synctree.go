@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
@@ -18,6 +17,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
+	"sync/atomic"
 )
 
 var (
@@ -25,9 +25,14 @@ var (
 	ErrSyncTreeDeleted = errors.New("sync tree is deleted")
 )
 
+type HeadNotifiable interface {
+	UpdateHeads(id string, heads []string)
+}
+
 type SyncTree interface {
 	tree.ObjectTree
 	synchandler.SyncHandler
+	Ping() (err error)
 }
 
 // SyncTree sends head updates to sync service and also sends new changes to update listener
@@ -35,7 +40,9 @@ type syncTree struct {
 	tree.ObjectTree
 	synchandler.SyncHandler
 	syncClient SyncClient
+	notifiable HeadNotifiable
 	listener   updatelistener.UpdateListener
+	treeUsage  *atomic.Int32
 	isClosed   bool
 	isDeleted  bool
 }
@@ -48,58 +55,45 @@ var buildObjectTree = tree.BuildObjectTree
 var createSyncClient = newSyncClient
 
 type CreateDeps struct {
-	SpaceId        string
-	Payload        tree.ObjectTreeCreatePayload
-	Configuration  nodeconf.Configuration
-	HeadNotifiable diffservice.HeadNotifiable
-	StreamPool     syncservice.StreamPool
-	Listener       updatelistener.UpdateListener
-	AclList        list.ACLList
-	SpaceStorage   spacestorage.SpaceStorage
+	SpaceId       string
+	Payload       tree.ObjectTreeCreatePayload
+	Configuration nodeconf.Configuration
+	StreamPool    syncservice.StreamPool
+	AclList       list.ACLList
+	SpaceStorage  spacestorage.SpaceStorage
 }
 
 type BuildDeps struct {
 	SpaceId        string
 	StreamPool     syncservice.StreamPool
 	Configuration  nodeconf.Configuration
-	HeadNotifiable diffservice.HeadNotifiable
+	HeadNotifiable HeadNotifiable
 	Listener       updatelistener.UpdateListener
 	AclList        list.ACLList
 	SpaceStorage   spacestorage.SpaceStorage
 	TreeStorage    storage.TreeStorage
+	TreeUsage      *atomic.Int32
 }
 
-func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error) {
+func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error) {
 	objTree, err := createDerivedObjectTree(deps.Payload, deps.AclList, deps.SpaceStorage.CreateTreeStorage)
 	if err != nil {
 		return
 	}
+
 	syncClient := createSyncClient(
 		deps.SpaceId,
 		deps.StreamPool,
-		deps.HeadNotifiable,
 		sharedFactory,
 		deps.Configuration)
-	syncTree := &syncTree{
-		ObjectTree: objTree,
-		syncClient: syncClient,
-		listener:   deps.Listener,
-	}
-	syncHandler := newSyncTreeHandler(syncTree, syncClient)
-	syncTree.SyncHandler = syncHandler
-	t = syncTree
-	syncTree.Lock()
-	defer syncTree.Unlock()
-	if syncTree.listener != nil {
-		syncTree.listener.Rebuild(syncTree)
-	}
 
-	headUpdate := syncClient.CreateHeadUpdate(t, nil)
-	err = syncClient.BroadcastAsync(headUpdate)
+	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
+	syncClient.BroadcastAsync(headUpdate)
+	id = objTree.ID()
 	return
 }
 
-func CreateSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error) {
+func CreateSyncTree(ctx context.Context, deps CreateDeps) (id string, err error) {
 	objTree, err := createObjectTree(deps.Payload, deps.AclList, deps.SpaceStorage.CreateTreeStorage)
 	if err != nil {
 		return
@@ -107,26 +101,12 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error
 	syncClient := createSyncClient(
 		deps.SpaceId,
 		deps.StreamPool,
-		deps.HeadNotifiable,
 		GetRequestFactory(),
 		deps.Configuration)
-	syncTree := &syncTree{
-		ObjectTree: objTree,
-		syncClient: syncClient,
-		listener:   deps.Listener,
-	}
-	syncHandler := newSyncTreeHandler(syncTree, syncClient)
-	syncTree.SyncHandler = syncHandler
-	t = syncTree
-	syncTree.Lock()
-	defer syncTree.Unlock()
-	// TODO: refactor here because the code is duplicated, when we create a tree we should only create a storage and then build a tree
-	if syncTree.listener != nil {
-		syncTree.listener.Rebuild(syncTree)
-	}
 
-	headUpdate := syncClient.CreateHeadUpdate(t, nil)
-	err = syncClient.BroadcastAsync(headUpdate)
+	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
+	syncClient.BroadcastAsync(headUpdate)
+	id = objTree.ID()
 	return
 }
 
@@ -207,12 +187,13 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	syncClient := createSyncClient(
 		deps.SpaceId,
 		deps.StreamPool,
-		deps.HeadNotifiable,
 		GetRequestFactory(),
 		deps.Configuration)
 	syncTree := &syncTree{
 		ObjectTree: objTree,
 		syncClient: syncClient,
+		notifiable: deps.HeadNotifiable,
+		treeUsage:  deps.TreeUsage,
 		listener:   deps.Listener,
 	}
 	syncHandler := newSyncTreeHandler(syncTree, syncClient)
@@ -220,18 +201,13 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	t = syncTree
 	syncTree.Lock()
 	defer syncTree.Unlock()
-	if syncTree.listener != nil {
-		syncTree.listener.Rebuild(syncTree)
-	}
+	syncTree.afterBuild()
 
 	headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 	// here we will have different behaviour based on who is sending this update
 	if isFirstBuild {
 		// send to everybody, because everybody should know that the node or client got new tree
 		err = syncTree.syncClient.BroadcastAsync(headUpdate)
-	} else {
-		// send either to everybody if client or to replica set if node
-		err = syncTree.syncClient.BroadcastAsyncOrSendResponsible(headUpdate)
 	}
 	return
 }
@@ -258,6 +234,9 @@ func (s *syncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 	if err != nil {
 		return
 	}
+	if s.notifiable != nil {
+		s.notifiable.UpdateHeads(s.ID(), res.Heads)
+	}
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
 	err = s.syncClient.BroadcastAsync(headUpdate)
 	return
@@ -281,10 +260,13 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changes ...*treechangeprot
 			s.listener.Rebuild(s)
 		}
 	}
-	//if res.Mode != tree.Nothing {
-	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
-	err = s.syncClient.BroadcastAsync(headUpdate)
-	//}
+	if res.Mode != tree.Nothing {
+		if s.notifiable != nil {
+			s.notifiable.UpdateHeads(s.ID(), res.Heads)
+		}
+		headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
+		err = s.syncClient.BroadcastAsync(headUpdate)
+	}
 	return
 }
 
@@ -310,6 +292,7 @@ func (s *syncTree) Close() (err error) {
 	if s.isClosed {
 		return ErrSyncTreeClosed
 	}
+	s.treeUsage.Add(-1)
 	s.isClosed = true
 	return
 }
@@ -322,4 +305,19 @@ func (s *syncTree) checkAlive() (err error) {
 		err = ErrSyncTreeDeleted
 	}
 	return
+}
+
+func (s *syncTree) Ping() (err error) {
+	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
+	return s.syncClient.BroadcastAsyncOrSendResponsible(headUpdate)
+}
+
+func (s *syncTree) afterBuild() {
+	if s.listener != nil {
+		s.listener.Rebuild(s)
+	}
+	s.treeUsage.Add(1)
+	if s.notifiable != nil {
+		s.notifiable.UpdateHeads(s.ID(), s.Heads())
+	}
 }

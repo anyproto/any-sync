@@ -3,6 +3,7 @@ package settingsdocument
 
 import (
 	"context"
+	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
@@ -21,6 +22,12 @@ type SettingsDocument interface {
 	Init(ctx context.Context) (err error)
 	DeleteObject(id string) (err error)
 }
+
+var (
+	ErrDeleteSelf      = errors.New("cannot delete seld")
+	ErrAlreadyDeleted  = errors.New("the document is already deleted")
+	ErrDocDoesNotExist = errors.New("the document does not exist")
+)
 
 type BuildTreeFunc func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error)
 
@@ -110,7 +117,9 @@ func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
 }
 
 func (s *settingsDocument) Init(ctx context.Context) (err error) {
-	s.SyncTree, err = s.buildFunc(ctx, s.store.SpaceSettingsId(), s)
+	settingsId := s.store.SpaceSettingsId()
+	log.Debug("space settings id", zap.String("id", settingsId))
+	s.SyncTree, err = s.buildFunc(ctx, settingsId, s)
 	if err != nil {
 		return
 	}
@@ -127,8 +136,18 @@ func (s *settingsDocument) Close() error {
 func (s *settingsDocument) DeleteObject(id string) (err error) {
 	s.Lock()
 	defer s.Unlock()
+	if s.ID() == id {
+		err = ErrDeleteSelf
+		return
+	}
 	if s.deletionState.Exists(id) {
+		err = ErrAlreadyDeleted
 		return nil
+	}
+	_, err = s.store.TreeStorage(id)
+	if err != nil {
+		err = ErrDocDoesNotExist
+		return
 	}
 
 	// TODO: add snapshot logic

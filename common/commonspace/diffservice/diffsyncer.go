@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
@@ -116,7 +117,19 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 
 func (d *diffSyncer) pingTreesInCache(ctx context.Context, trees []string) {
 	for _, tId := range trees {
-		_, _ = d.cache.GetTree(ctx, d.spaceId, tId)
+		tree, err := d.cache.GetTree(ctx, d.spaceId, tId)
+		if err != nil {
+			continue
+		}
+		syncTree, ok := tree.(synctree.SyncTree)
+		if !ok {
+			continue
+		}
+		// the idea why we call it directly is that if we try to get it from cache
+		// it may be already there (i.e. loaded)
+		// and build func will not be called, thus we won't sync the tree
+		// therefore we just do it manually
+		syncTree.Ping()
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -36,6 +37,7 @@ type syncService struct {
 	stopStreamLoop context.CancelFunc
 	connector      nodeconf.ConfConnector
 	streamLoopDone chan struct{}
+	log            *zap.SugaredLogger // TODO: change to logger
 }
 
 func NewSyncService(
@@ -62,6 +64,7 @@ func newSyncService(
 		connector:      connector,
 		clientFactory:  clientFactory,
 		spaceId:        spaceId,
+		log:            log.With(zap.String("id", spaceId)),
 		streamLoopDone: make(chan struct{}),
 	}
 }
@@ -83,6 +86,7 @@ func (s *syncService) LastUsage() time.Time {
 }
 
 func (s *syncService) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
+	s.log.With(zap.String("peerId", senderId), zap.String("objectId", message.ObjectId)).Debug("handling message")
 	obj, err := s.objectGetter.GetObject(ctx, message.ObjectId)
 	if err != nil {
 		return
@@ -93,18 +97,28 @@ func (s *syncService) HandleMessage(ctx context.Context, senderId string, messag
 func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 	defer close(s.streamLoopDone)
 	checkResponsiblePeers := func() {
-		respPeers, err := s.connector.DialResponsiblePeers(ctx, s.spaceId)
-		if err != nil {
-			return
-		}
-		for _, p := range respPeers {
-			if s.streamPool.HasActiveStream(p.Id()) {
+		var (
+			activeNodeIds []string
+			configuration = s.connector.Configuration()
+		)
+		for _, nodeId := range configuration.NodeIds(s.spaceId) {
+			if s.streamPool.HasActiveStream(nodeId) {
+				s.log.Debug("has active stream for", zap.String("id", nodeId))
+				activeNodeIds = append(activeNodeIds, nodeId)
 				continue
 			}
+		}
+		newPeers, err := s.connector.DialInactiveResponsiblePeers(ctx, s.spaceId, activeNodeIds)
+		if err != nil {
+			s.log.Error("failed to dial peers", zap.Error(err))
+			return
+		}
+
+		for _, p := range newPeers {
 			stream, err := s.clientFactory.Client(p).Stream(ctx)
 			if err != nil {
 				err = rpcerr.Unwrap(err)
-				log.With("spaceId", s.spaceId).Errorf("failed to open stream: %v", err)
+				s.log.Errorf("failed to open stream: %v", err)
 				// so here probably the request is failed because there is no such space,
 				// but diffService should handle such cases by sending pushSpace
 				continue
@@ -113,9 +127,10 @@ func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
 			err = stream.Send(&spacesyncproto.ObjectSyncMessage{SpaceId: s.spaceId})
 			if err != nil {
 				err = rpcerr.Unwrap(err)
-				log.With("spaceId", s.spaceId).Errorf("failed to send first message to stream: %v", err)
+				s.log.Errorf("failed to send first message to stream: %v", err)
 				continue
 			}
+			s.log.Debug("reading stream for", zap.String("id", p.Id()))
 			s.streamPool.AddAndReadStreamAsync(stream)
 		}
 	}

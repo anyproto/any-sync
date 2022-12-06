@@ -129,7 +129,9 @@ func TestSettingsDocument_DeleteObject(t *testing.T) {
 
 	delId := "delId"
 
+	fx.syncTree.EXPECT().ID().Return("syncId")
 	fx.delState.EXPECT().Exists(delId).Return(false)
+	fx.spaceStorage.EXPECT().TreeStorage(delId).Return(nil, nil)
 	res := []byte("settingsData")
 	fx.delState.EXPECT().CreateDeleteChange(delId, false).Return(res, nil)
 

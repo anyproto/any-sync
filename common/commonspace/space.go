@@ -18,6 +18,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"github.com/zeebo/errs"
@@ -42,10 +43,7 @@ type SpaceCreatePayload struct {
 	ReplicationKey uint64
 }
 
-const (
-	SpaceTypeDerived          = "derived.space"
-	SettingsSyncPeriodSeconds = 10
-)
+const SpaceTypeDerived = "derived.space"
 
 type SpaceDerivePayload struct {
 	SigningKey    signingkey.PrivKey
@@ -65,16 +63,20 @@ func NewSpaceId(id string, repKey uint64) string {
 }
 
 type Space interface {
+	ocache.ObjectLocker
+	ocache.ObjectLastUsage
+
 	Id() string
 	Init(ctx context.Context) error
 
 	StoredIds() []string
+	DebugAllHeads() []diffservice.TreeHeads
 	Description() (SpaceDescription, error)
 
 	SpaceSyncRpc() RpcHandler
 
-	DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
-	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
+	DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (string, error)
+	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (string, error)
 	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
 	DeleteTree(ctx context.Context, id string) (err error)
 
@@ -97,11 +99,18 @@ type space struct {
 	configuration    nodeconf.Configuration
 	settingsDocument settingsdocument.SettingsDocument
 
-	isClosed atomic.Bool
+	isClosed  atomic.Bool
+	treesUsed atomic.Int32
 }
 
 func (s *space) LastUsage() time.Time {
 	return s.syncService.LastUsage()
+}
+
+func (s *space) Locked() bool {
+	locked := s.treesUsed.Load() > 1
+	log.With(zap.Int32("trees used", s.treesUsed.Load()), zap.Bool("locked", locked)).Debug("space lock status check")
+	return locked
 }
 
 func (s *space) Id() string {
@@ -130,6 +139,7 @@ func (s *space) Description() (desc SpaceDescription, err error) {
 }
 
 func (s *space) Init(ctx context.Context) (err error) {
+	log.With(zap.String("spaceId", s.id)).Debug("initializing space")
 	s.storage = newCommonStorage(s.storage)
 
 	header, err := s.storage.SpaceHeader()
@@ -196,38 +206,38 @@ func (s *space) StoredIds() []string {
 	return s.diffService.AllIds()
 }
 
-func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tr tree.ObjectTree, err error) {
+func (s *space) DebugAllHeads() []diffservice.TreeHeads {
+	return s.diffService.DebugAllHeads()
+}
+
+func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (id string, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
 	}
 	deps := synctree.CreateDeps{
-		SpaceId:        s.id,
-		Payload:        payload,
-		StreamPool:     s.syncService.StreamPool(),
-		Configuration:  s.configuration,
-		HeadNotifiable: s.diffService,
-		Listener:       listener,
-		AclList:        s.aclList,
-		SpaceStorage:   s.storage,
+		SpaceId:       s.id,
+		Payload:       payload,
+		StreamPool:    s.syncService.StreamPool(),
+		Configuration: s.configuration,
+		AclList:       s.aclList,
+		SpaceStorage:  s.storage,
 	}
 	return synctree.DeriveSyncTree(ctx, deps)
 }
 
-func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tr tree.ObjectTree, err error) {
+func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (id string, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
 	}
 	deps := synctree.CreateDeps{
-		SpaceId:        s.id,
-		Payload:        payload,
-		StreamPool:     s.syncService.StreamPool(),
-		Configuration:  s.configuration,
-		HeadNotifiable: s.diffService,
-		Listener:       listener,
-		AclList:        s.aclList,
-		SpaceStorage:   s.storage,
+		SpaceId:       s.id,
+		Payload:       payload,
+		StreamPool:    s.syncService.StreamPool(),
+		Configuration: s.configuration,
+		AclList:       s.aclList,
+		SpaceStorage:  s.storage,
 	}
 	return synctree.CreateSyncTree(ctx, deps)
 }
@@ -245,6 +255,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		Listener:       listener,
 		AclList:        s.aclList,
 		SpaceStorage:   s.storage,
+		TreeUsage:      &s.treesUsed,
 	}
 	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
 }

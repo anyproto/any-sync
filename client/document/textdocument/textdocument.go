@@ -13,7 +13,7 @@ import (
 type TextDocument interface {
 	tree.ObjectTree
 	InnerTree() tree.ObjectTree
-	AddText(text string) error
+	AddText(text string, isSnapshot bool) (string, string, error)
 	Text() (string, error)
 	TreeDump() string
 	Close() error
@@ -27,22 +27,13 @@ type textDocument struct {
 func CreateTextDocument(
 	ctx context.Context,
 	space commonspace.Space,
-	account account.Service,
-	listener updatelistener.UpdateListener) (doc TextDocument, err error) {
+	account account.Service) (id string, err error) {
 	payload := tree.ObjectTreeCreatePayload{
 		SignKey:  account.Account().SignKey,
 		SpaceId:  space.Id(),
 		Identity: account.Account().Identity,
 	}
-	t, err := space.CreateTree(ctx, payload, listener)
-	if err != nil {
-		return
-	}
-
-	return &textDocument{
-		ObjectTree: t,
-		account:    account,
-	}, nil
+	return space.CreateTree(ctx, payload)
 }
 
 func NewTextDocument(ctx context.Context, space commonspace.Space, id string, listener updatelistener.UpdateListener, account account.Service) (doc TextDocument, err error) {
@@ -60,7 +51,7 @@ func (t *textDocument) InnerTree() tree.ObjectTree {
 	return t.ObjectTree
 }
 
-func (t *textDocument) AddText(text string) (err error) {
+func (t *textDocument) AddText(text string, isSnapshot bool) (root, head string, err error) {
 	content := &testchanges.TextContent_TextAppend{
 		TextAppend: &testchanges.TextAppend{Text: text},
 	}
@@ -76,12 +67,17 @@ func (t *textDocument) AddText(text string) (err error) {
 	}
 	t.Lock()
 	defer t.Unlock()
-	_, err = t.AddContent(context.Background(), tree.SignableChangeContent{
+	addRes, err := t.AddContent(context.Background(), tree.SignableChangeContent{
 		Data:       res,
 		Key:        t.account.Account().SignKey,
 		Identity:   t.account.Account().Identity,
-		IsSnapshot: false,
+		IsSnapshot: isSnapshot,
 	})
+	if err != nil {
+		return
+	}
+	root = t.Root().Id
+	head = addRes.Heads[0]
 	return
 }
 
