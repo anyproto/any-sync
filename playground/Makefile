@@ -1,4 +1,4 @@
-.PHONY: client1 client2 node nodes-start nodes-stop clean-db log-node-1 log-node-2 log-node3 log-client-1 log-client-2
+.PHONY: nodes-start nodes-stop clients-start clients-stop clean-all log-node-1 log-node-2 log-node3 log-client-1 log-client-2
 export GOPRIVATE=github.com/anytypeio
 # TODO: make different folders in etc for different programs
 
@@ -8,7 +8,7 @@ nodes-start:
 nodes-stop:
 	./init.sh nodes_stop
 
-clean-db:
+clean-all:
 	rm -rf tmp
 
 clients-start:
@@ -31,3 +31,6 @@ log-client-1:
 
 log-client-2:
 	./init.sh client_log 2
+
+debug:
+	@(echo "To run debug api please run './init.sh debug [params]' with respective args to debug client")

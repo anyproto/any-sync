@@ -5,10 +5,12 @@ export GOPRIVATE=github.com/anytypeio
 
 NODE_GO="../../../node/cmd/node.go"
 CLIENT_GO="../../../client/cmd/client.go"
+DEBUG_GO="../util/cmd/debug/debug.go"
+NODEMAP_YML="../util/cmd/nodesgen/nodemap.yml"
 CONFIGS_DIR="../../../etc/configs"
 
 do_usage() {
-  echo "usage: $0 {nodes_start|nodes_stop|clients_start|clients_stop}"
+  echo "usage: $0 {nodes_start|nodes_stop|clients_start|clients_stop|debug}"
   echo "usage: $0 node_log <N>"
   echo "usage: $0 client_log <N>"
   exit 1
@@ -34,12 +36,12 @@ do_nodes_stop() {
 
 do_node_log() {
   local NODE_NUMBER=$1
-  tail -f tmp/log/node$NODE_NUMBER.log
+  tail -f -n 500 tmp/log/node$NODE_NUMBER.log
 }
 
 do_client_log() {
   local CLIENT_NUMBER=$1
-  tail -f tmp/log/client$CLIENT_NUMBER.log
+  tail -f -n 500 tmp/log/client$CLIENT_NUMBER.log
 }
 
 do_clients_start() {
@@ -60,9 +62,15 @@ do_clients_stop() {
   done
 }
 
+do_debug() {
+  go run $DEBUG_GO --config $NODEMAP_YML $*
+}
+
 case $1 in
-nodes_start | nodes_stop | clients_start | clients_stop)
-  do_$1
+nodes_start | nodes_stop | clients_start | clients_stop | debug)
+  first_arg=$1
+  shift
+  do_$first_arg $*
   ;;
 node_log)
   if [[ -z $2 ]]; then

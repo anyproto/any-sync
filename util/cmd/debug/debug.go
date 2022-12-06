@@ -4,11 +4,10 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api/client"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/api/node"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/commands"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/commands/client"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/commands/node"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/drpcclient"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/peers"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"net/http"
@@ -41,7 +40,7 @@ func main() {
 	ctx := context.Background()
 	a := new(app.App)
 	Bootstrap(a)
-	
+
 	// start app
 	if err := a.Start(ctx); err != nil {
 		log.Fatal("can't start app", zap.Error(err))
@@ -50,8 +49,7 @@ func main() {
 
 func Bootstrap(a *app.App) {
 	a.Register(drpcclient.New()).
-		Register(peers.New()).
 		Register(client.New()).
 		Register(node.New()).
-		Register(api.New())
+		Register(commands.New())
 }

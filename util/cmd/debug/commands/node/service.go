@@ -8,7 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/util/cmd/debug/drpcclient"
 )
 
-const CName = "api.node"
+const CName = "commands.node"
 
 var log = logger.NewNamed(CName)
 
