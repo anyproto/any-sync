@@ -34,6 +34,7 @@ type NodesMap struct {
 }
 
 func main() {
+	flag.Parse()
 	nodesMap := &NodesMap{}
 	data, err := ioutil.ReadFile(*flagNodeMap)
 	if err != nil {
@@ -44,7 +45,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	flag.Parse()
 
 	var configs []config.Config
 	var nodes []config.Node
