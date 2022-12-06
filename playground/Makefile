@@ -1,6 +1,9 @@
-.PHONY: nodes-start nodes-stop clients-start clients-stop clean-all log-node-1 log-node-2 log-node3 log-client-1 log-client-2
+.PHONY: nodes-start nodes-stop clients-start clients-stop clean-all log-node-1 log-node-2 log-node3 log-client-1 log-client-2 gen-configs
 export GOPRIVATE=github.com/anytypeio
 # TODO: make different folders in etc for different programs
+
+gen-configs:
+	./init.sh config_gen
 
 nodes-start:
 	./init.sh nodes_start
