@@ -53,11 +53,7 @@ func (s *service) CreateDocument(spaceId string) (id string, err error) {
 	if err != nil {
 		return
 	}
-	doc, err := textdocument.CreateTextDocument(context.Background(), space, s.account, nil)
-	if err != nil {
-		return
-	}
-	id = doc.ID()
+	id, err = textdocument.CreateTextDocument(context.Background(), space, s.account)
 	return
 }
 

@@ -27,22 +27,13 @@ type textDocument struct {
 func CreateTextDocument(
 	ctx context.Context,
 	space commonspace.Space,
-	account account.Service,
-	listener updatelistener.UpdateListener) (doc TextDocument, err error) {
+	account account.Service) (id string, err error) {
 	payload := tree.ObjectTreeCreatePayload{
 		SignKey:  account.Account().SignKey,
 		SpaceId:  space.Id(),
 		Identity: account.Account().Identity,
 	}
-	t, err := space.CreateTree(ctx, payload, listener)
-	if err != nil {
-		return
-	}
-
-	return &textDocument{
-		ObjectTree: t,
-		account:    account,
-	}, nil
+	return space.CreateTree(ctx, payload)
 }
 
 func NewTextDocument(ctx context.Context, space commonspace.Space, id string, listener updatelistener.UpdateListener, account account.Service) (doc TextDocument, err error) {
