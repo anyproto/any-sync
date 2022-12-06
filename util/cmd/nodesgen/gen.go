@@ -198,7 +198,7 @@ func genNodeConfig(addresses []string, apiAddresses []string) (config.Config, er
 		},
 		Space: config.Space{
 			GCTTL:      60,
-			SyncPeriod: 10,
+			SyncPeriod: 11,
 		},
 	}, nil
 }
@@ -248,7 +248,7 @@ func genClientConfig(addresses []string, apiAddresses []string, encKey encryptio
 		},
 		Space: config.Space{
 			GCTTL:      60,
-			SyncPeriod: 10,
+			SyncPeriod: 11,
 		},
 	}, nil
 }
