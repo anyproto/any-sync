@@ -55,15 +55,12 @@ var buildObjectTree = tree.BuildObjectTree
 var createSyncClient = newSyncClient
 
 type CreateDeps struct {
-	SpaceId        string
-	Payload        tree.ObjectTreeCreatePayload
-	Configuration  nodeconf.Configuration
-	HeadNotifiable HeadNotifiable
-	StreamPool     syncservice.StreamPool
-	Listener       updatelistener.UpdateListener
-	AclList        list.ACLList
-	SpaceStorage   spacestorage.SpaceStorage
-	TreeUsage      *atomic.Int32
+	SpaceId       string
+	Payload       tree.ObjectTreeCreatePayload
+	Configuration nodeconf.Configuration
+	StreamPool    syncservice.StreamPool
+	AclList       list.ACLList
+	SpaceStorage  spacestorage.SpaceStorage
 }
 
 type BuildDeps struct {
@@ -78,36 +75,25 @@ type BuildDeps struct {
 	TreeUsage      *atomic.Int32
 }
 
-func DeriveSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error) {
+func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error) {
 	objTree, err := createDerivedObjectTree(deps.Payload, deps.AclList, deps.SpaceStorage.CreateTreeStorage)
 	if err != nil {
 		return
 	}
+
 	syncClient := createSyncClient(
 		deps.SpaceId,
 		deps.StreamPool,
 		sharedFactory,
 		deps.Configuration)
-	syncTree := &syncTree{
-		ObjectTree: objTree,
-		syncClient: syncClient,
-		notifiable: deps.HeadNotifiable,
-		treeUsage:  deps.TreeUsage,
-		listener:   deps.Listener,
-	}
-	syncHandler := newSyncTreeHandler(syncTree, syncClient)
-	syncTree.SyncHandler = syncHandler
-	t = syncTree
-	syncTree.Lock()
-	defer syncTree.Unlock()
-	syncTree.afterBuild()
 
-	headUpdate := syncClient.CreateHeadUpdate(t, nil)
-	err = syncClient.BroadcastAsync(headUpdate)
+	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
+	syncClient.BroadcastAsync(headUpdate)
+	id = objTree.ID()
 	return
 }
 
-func CreateSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error) {
+func CreateSyncTree(ctx context.Context, deps CreateDeps) (id string, err error) {
 	objTree, err := createObjectTree(deps.Payload, deps.AclList, deps.SpaceStorage.CreateTreeStorage)
 	if err != nil {
 		return
@@ -117,23 +103,10 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (t SyncTree, err error
 		deps.StreamPool,
 		GetRequestFactory(),
 		deps.Configuration)
-	syncTree := &syncTree{
-		ObjectTree: objTree,
-		syncClient: syncClient,
-		notifiable: deps.HeadNotifiable,
-		treeUsage:  deps.TreeUsage,
-		listener:   deps.Listener,
-	}
-	syncHandler := newSyncTreeHandler(syncTree, syncClient)
-	syncTree.SyncHandler = syncHandler
-	t = syncTree
-	syncTree.Lock()
-	defer syncTree.Unlock()
-	// TODO: refactor here because the code is duplicated, when we create a tree we should only create a storage and then build a tree
-	syncTree.afterBuild()
 
-	headUpdate := syncClient.CreateHeadUpdate(t, nil)
-	err = syncClient.BroadcastAsync(headUpdate)
+	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
+	syncClient.BroadcastAsync(headUpdate)
+	id = objTree.ID()
 	return
 }
 

@@ -75,8 +75,8 @@ type Space interface {
 
 	SpaceSyncRpc() RpcHandler
 
-	DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
-	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
+	DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (string, error)
+	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (string, error)
 	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
 	DeleteTree(ctx context.Context, id string) (err error)
 
@@ -210,40 +210,34 @@ func (s *space) DebugAllHeads() []diffservice.TreeHeads {
 	return s.diffService.DebugAllHeads()
 }
 
-func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tr tree.ObjectTree, err error) {
+func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (id string, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
 	}
 	deps := synctree.CreateDeps{
-		SpaceId:        s.id,
-		Payload:        payload,
-		StreamPool:     s.syncService.StreamPool(),
-		Configuration:  s.configuration,
-		HeadNotifiable: s.diffService,
-		Listener:       listener,
-		AclList:        s.aclList,
-		SpaceStorage:   s.storage,
-		TreeUsage:      &s.treesUsed,
+		SpaceId:       s.id,
+		Payload:       payload,
+		StreamPool:    s.syncService.StreamPool(),
+		Configuration: s.configuration,
+		AclList:       s.aclList,
+		SpaceStorage:  s.storage,
 	}
 	return synctree.DeriveSyncTree(ctx, deps)
 }
 
-func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload, listener updatelistener.UpdateListener) (tr tree.ObjectTree, err error) {
+func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (id string, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
 	}
 	deps := synctree.CreateDeps{
-		SpaceId:        s.id,
-		Payload:        payload,
-		StreamPool:     s.syncService.StreamPool(),
-		Configuration:  s.configuration,
-		HeadNotifiable: s.diffService,
-		Listener:       listener,
-		AclList:        s.aclList,
-		SpaceStorage:   s.storage,
-		TreeUsage:      &s.treesUsed,
+		SpaceId:       s.id,
+		Payload:       payload,
+		StreamPool:    s.syncService.StreamPool(),
+		Configuration: s.configuration,
+		AclList:       s.aclList,
+		SpaceStorage:  s.storage,
 	}
 	return synctree.CreateSyncTree(ctx, deps)
 }

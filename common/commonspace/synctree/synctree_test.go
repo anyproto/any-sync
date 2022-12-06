@@ -16,7 +16,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"sync/atomic"
 	"testing"
 )
 
@@ -43,7 +42,6 @@ func Test_DeriveSyncTree(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	updateListenerMock := mock_updatelistener.NewMockUpdateListener(ctrl)
 	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
 	aclListMock := mock_list.NewMockACLList(ctrl)
 	objTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
@@ -59,16 +57,13 @@ func Test_DeriveSyncTree(t *testing.T) {
 		return syncClientMock
 	}
 	headUpdate := &treechangeproto.TreeSyncMessage{}
-	syncClientMock.EXPECT().CreateHeadUpdate(syncTreeMatcher{objTreeMock, syncClientMock, updateListenerMock}, gomock.Nil()).Return(headUpdate)
+	syncClientMock.EXPECT().CreateHeadUpdate(gomock.Any(), gomock.Nil()).Return(headUpdate)
 	syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
-	updateListenerMock.EXPECT().Rebuild(gomock.Any())
 	deps := CreateDeps{
 		AclList:      aclListMock,
 		SpaceId:      spaceId,
 		Payload:      expectedPayload,
-		Listener:     updateListenerMock,
 		SpaceStorage: spaceStorageMock,
-		TreeUsage:    &atomic.Int32{},
 	}
 
 	_, err := DeriveSyncTree(ctx, deps)
@@ -80,7 +75,6 @@ func Test_CreateSyncTree(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	updateListenerMock := mock_updatelistener.NewMockUpdateListener(ctrl)
 	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
 	aclListMock := mock_list.NewMockACLList(ctrl)
 	objTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
@@ -96,16 +90,13 @@ func Test_CreateSyncTree(t *testing.T) {
 		return syncClientMock
 	}
 	headUpdate := &treechangeproto.TreeSyncMessage{}
-	syncClientMock.EXPECT().CreateHeadUpdate(syncTreeMatcher{objTreeMock, syncClientMock, updateListenerMock}, gomock.Nil()).Return(headUpdate)
+	syncClientMock.EXPECT().CreateHeadUpdate(gomock.Any(), gomock.Nil()).Return(headUpdate)
 	syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
-	updateListenerMock.EXPECT().Rebuild(gomock.Any())
 	deps := CreateDeps{
 		AclList:      aclListMock,
 		SpaceId:      spaceId,
 		Payload:      expectedPayload,
-		Listener:     updateListenerMock,
 		SpaceStorage: spaceStorageMock,
-		TreeUsage:    &atomic.Int32{},
 	}
 
 	_, err := CreateSyncTree(ctx, deps)
