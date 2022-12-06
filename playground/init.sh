@@ -8,9 +8,11 @@ CLIENT_GO="../../../client/cmd/client.go"
 DEBUG_GO="../util/cmd/debug/debug.go"
 NODEMAP_YML="../util/cmd/nodesgen/nodemap.yml"
 CONFIGS_DIR="../../../etc/configs"
+NODESGEN_GO="../util/cmd/nodesgen/gen.go"
+ETC_DIR="../etc"
 
 do_usage() {
-  echo "usage: $0 {nodes_start|nodes_stop|clients_start|clients_stop|debug}"
+  echo "usage: $0 {nodes_start|nodes_stop|clients_start|clients_stop|debug|config_gen}"
   echo "usage: $0 node_log <N>"
   echo "usage: $0 client_log <N>"
   exit 1
@@ -44,6 +46,12 @@ do_client_log() {
   tail -f -n 500 tmp/log/client$CLIENT_NUMBER.log
 }
 
+do_config_gen() {
+  go run $NODESGEN_GO -n $NODEMAP_YML -e $ETC_DIR
+  cp -rf $ETC_DIR/configs/node1.yml $ETC_DIR/config.yml
+  cp -rf $ETC_DIR/configs/client1.yml $ETC_DIR/client.yml
+}
+
 do_clients_start() {
   for NUMBER in {1..2}; do
     install -d tmp/client$NUMBER/ tmp/log/
@@ -67,7 +75,10 @@ do_debug() {
 }
 
 case $1 in
-nodes_start | nodes_stop | clients_start | clients_stop | debug)
+nodes_start | nodes_stop | clients_start | clients_stop | config_gen)
+  do_$1
+  ;;
+debug)
   first_arg=$1
   shift
   do_$first_arg $*
