@@ -64,9 +64,19 @@ func main() {
 		nodes = append(nodes, node)
 	}
 
+	encClientKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
+	if err != nil {
+		panic(fmt.Sprintf("could not generate client encryption key: %s", err.Error()))
+	}
+
+	signClientKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
+	if err != nil {
+		panic(fmt.Sprintf("could not generate client signing key: %s", err.Error()))
+	}
+
 	var clientConfigs []config.Config
 	for _, c := range nodesMap.Clients {
-		cfg, err := genClientConfig(c.Addresses, c.APIAddresses)
+		cfg, err := genClientConfig(c.Addresses, c.APIAddresses, encClientKey, signClientKey)
 		if err != nil {
 			panic(fmt.Sprintf("could not generate the config file: %s", err.Error()))
 		}
@@ -193,17 +203,7 @@ func genNodeConfig(addresses []string, apiAddresses []string) (config.Config, er
 	}, nil
 }
 
-func genClientConfig(addresses []string, apiAddresses []string) (config.Config, error) {
-	encKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
-	if err != nil {
-		return config.Config{}, err
-	}
-
-	signKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
-	if err != nil {
-		return config.Config{}, err
-	}
-
+func genClientConfig(addresses []string, apiAddresses []string, encKey encryptionkey.PrivKey, signKey signingkey.PrivKey) (config.Config, error) {
 	peerKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
 	if err != nil {
 		return config.Config{}, err
