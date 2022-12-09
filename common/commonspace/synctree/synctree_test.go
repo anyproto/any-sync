@@ -53,7 +53,7 @@ func Test_DeriveSyncTree(t *testing.T) {
 		require.Equal(t, expectedPayload, payload)
 		return objTreeMock, nil
 	}
-	createSyncClient = func(spaceId string, pool syncservice.StreamPool, factory RequestFactory, configuration nodeconf.Configuration) SyncClient {
+	createSyncClient = func(spaceId string, pool syncservice.StreamPool, factory RequestFactory, configuration nodeconf.Configuration, checker syncservice.StreamChecker) SyncClient {
 		return syncClientMock
 	}
 	headUpdate := &treechangeproto.TreeSyncMessage{}
@@ -86,7 +86,7 @@ func Test_CreateSyncTree(t *testing.T) {
 		require.Equal(t, expectedPayload, payload)
 		return objTreeMock, nil
 	}
-	createSyncClient = func(spaceId string, pool syncservice.StreamPool, factory RequestFactory, configuration nodeconf.Configuration) SyncClient {
+	createSyncClient = func(spaceId string, pool syncservice.StreamPool, factory RequestFactory, configuration nodeconf.Configuration, checker syncservice.StreamChecker) SyncClient {
 		return syncClientMock
 	}
 	headUpdate := &treechangeproto.TreeSyncMessage{}

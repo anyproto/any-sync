@@ -59,6 +59,7 @@ type CreateDeps struct {
 	Payload       tree.ObjectTreeCreatePayload
 	Configuration nodeconf.Configuration
 	StreamPool    syncservice.StreamPool
+	Checker       syncservice.StreamChecker
 	AclList       list.ACLList
 	SpaceStorage  spacestorage.SpaceStorage
 }
@@ -66,6 +67,7 @@ type CreateDeps struct {
 type BuildDeps struct {
 	SpaceId        string
 	StreamPool     syncservice.StreamPool
+	Checker        syncservice.StreamChecker
 	Configuration  nodeconf.Configuration
 	HeadNotifiable HeadNotifiable
 	Listener       updatelistener.UpdateListener
@@ -85,7 +87,8 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 		deps.SpaceId,
 		deps.StreamPool,
 		sharedFactory,
-		deps.Configuration)
+		deps.Configuration,
+		deps.Checker)
 
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
 	syncClient.BroadcastAsync(headUpdate)
@@ -102,7 +105,8 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 		deps.SpaceId,
 		deps.StreamPool,
 		GetRequestFactory(),
-		deps.Configuration)
+		deps.Configuration,
+		deps.Checker)
 
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
 	syncClient.BroadcastAsync(headUpdate)
@@ -188,7 +192,8 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 		deps.SpaceId,
 		deps.StreamPool,
 		GetRequestFactory(),
-		deps.Configuration)
+		deps.Configuration,
+		deps.Checker)
 	syncTree := &syncTree{
 		ObjectTree: objTree,
 		syncClient: syncClient,

@@ -199,7 +199,7 @@ func genNodeConfig(addresses []string, apiAddresses []string, num int) (config.C
 		},
 		Space: config.Space{
 			GCTTL:      60,
-			SyncPeriod: 11,
+			SyncPeriod: 600,
 		},
 		FileStorePogreb: config.FileStorePogreb{
 			Path: fmt.Sprintf("db/node/%d/files", num),
@@ -252,7 +252,7 @@ func genClientConfig(addresses []string, apiAddresses []string, encKey encryptio
 		},
 		Space: config.Space{
 			GCTTL:      60,
-			SyncPeriod: 11,
+			SyncPeriod: 600,
 		},
 	}, nil
 }

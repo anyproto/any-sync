@@ -37,3 +37,8 @@ log-client-2:
 
 debug:
 	@(echo "To run debug api please run './init.sh debug [params]' with respective args to debug client")
+
+run-all: nodes-start clients-start
+	sleep 3000000
+
+run-clean: clean-all run-all
