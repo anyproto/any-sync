@@ -265,6 +265,7 @@ Loop:
 		select {
 		case <-limiter:
 		case <-stream.Context().Done():
+			log.Debug("stream context done")
 			break Loop
 		}
 		go func() {

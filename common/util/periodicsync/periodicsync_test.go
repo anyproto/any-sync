@@ -23,7 +23,7 @@ func TestPeriodicSync_Run(t *testing.T) {
 			times += 1
 			return nil
 		}
-		pSync := NewPeriodicSync(secs, diffSyncer, l)
+		pSync := NewPeriodicSync(secs, 0, diffSyncer, l)
 
 		pSync.Run()
 		pSync.Close()
@@ -38,7 +38,7 @@ func TestPeriodicSync_Run(t *testing.T) {
 			times += 1
 			return nil
 		}
-		pSync := NewPeriodicSync(secs, diffSyncer, l)
+		pSync := NewPeriodicSync(secs, 0, diffSyncer, l)
 
 		pSync.Run()
 		time.Sleep(time.Second * time.Duration(secs))
