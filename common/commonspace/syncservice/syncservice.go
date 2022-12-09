@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-var log = logger.NewNamed("syncservice").Sugar()
+var log = logger.NewNamed("commonspace.syncservice")
 
 type SyncService interface {
 	ocache.ObjectLastUsage
@@ -47,7 +47,7 @@ func NewSyncService(
 		return syncService.HandleMessage(ctx, senderId, message)
 	})
 	clientFactory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient)
-	syncLog := log.Desugar().With(zap.String("id", spaceId))
+	syncLog := log.With(zap.String("id", spaceId))
 	syncCtx, cancel := context.WithCancel(context.Background())
 	checker := NewStreamChecker(
 		spaceId,
