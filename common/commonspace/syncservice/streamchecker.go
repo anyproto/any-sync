@@ -69,8 +69,12 @@ func (s *streamChecker) CheckResponsiblePeers(ctx context.Context) (err error) {
 			s.log.Error("failed to send first message to stream", zap.Error(err))
 			continue
 		}
+		err = s.streamPool.AddAndReadStreamAsync(stream)
+		if err != nil {
+			s.log.Error("failed to read from stream async", zap.Error(err))
+			continue
+		}
 		s.log.Debug("reading stream for", zap.String("id", p.Id()))
-		s.streamPool.AddAndReadStreamAsync(stream)
 	}
 	return
 }

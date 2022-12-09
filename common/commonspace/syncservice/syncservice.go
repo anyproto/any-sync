@@ -38,7 +38,8 @@ type syncService struct {
 
 func NewSyncService(
 	spaceId string,
-	confConnector nodeconf.ConfConnector) (syncService SyncService) {
+	confConnector nodeconf.ConfConnector,
+	periodicSeconds int) (syncService SyncService) {
 	streamPool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
 		return syncService.HandleMessage(ctx, senderId, message)
 	})
@@ -50,7 +51,7 @@ func NewSyncService(
 		streamPool,
 		clientFactory,
 		syncLog)
-	periodicSync := periodicsync.NewPeriodicSync(respPeersStreamCheckInterval, checker.CheckResponsiblePeers, syncLog)
+	periodicSync := periodicsync.NewPeriodicSync(periodicSeconds, checker.CheckResponsiblePeers, syncLog)
 	syncService = newSyncService(
 		spaceId,
 		streamPool,

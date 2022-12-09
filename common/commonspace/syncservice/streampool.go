@@ -24,7 +24,7 @@ var ErrSyncTimeout = errors.New("too long wait on sync receive")
 type StreamPool interface {
 	ocache.ObjectLastUsage
 	AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (err error)
-	AddAndReadStreamAsync(stream spacesyncproto.SpaceStream)
+	AddAndReadStreamAsync(stream spacesyncproto.SpaceStream) (err error)
 
 	SendSync(peerId string, message *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error)
 	SendAsync(peers []string, message *spacesyncproto.ObjectSyncMessage) (err error)
@@ -183,23 +183,34 @@ func (s *streamPool) BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (
 	return nil
 }
 
-func (s *streamPool) AddAndReadStreamAsync(stream spacesyncproto.SpaceStream) {
-	go s.AddAndReadStreamSync(stream)
+func (s *streamPool) AddAndReadStreamAsync(stream spacesyncproto.SpaceStream) (err error) {
+	peerId, err := s.addStream(stream)
+	if err != nil {
+		return
+	}
+	go s.readPeerLoop(peerId, stream)
+	return
 }
 
 func (s *streamPool) AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (err error) {
-	s.Lock()
-	peerId, err := peer.CtxPeerId(stream.Context())
+	peerId, err := s.addStream(stream)
 	if err != nil {
-		s.Unlock()
+		return
+	}
+	return s.readPeerLoop(peerId, stream)
+}
+
+func (s *streamPool) addStream(stream spacesyncproto.SpaceStream) (peerId string, err error) {
+	s.Lock()
+	defer s.Unlock()
+	peerId, err = peer.CtxPeerId(stream.Context())
+	if err != nil {
 		return
 	}
 
 	s.peerStreams[peerId] = stream
 	s.wg.Add(1)
-	s.Unlock()
-	log.With("peerId", peerId).Debug("reading stream from peer")
-	return s.readPeerLoop(peerId, stream)
+	return
 }
 
 func (s *streamPool) Close() (err error) {
@@ -213,6 +224,7 @@ func (s *streamPool) Close() (err error) {
 }
 
 func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStream) (err error) {
+	log.With("peerId", peerId).Debug("reading stream from peer")
 	defer s.wg.Done()
 	limiter := make(chan struct{}, maxSimultaneousOperationsPerStream)
 	for i := 0; i < maxSimultaneousOperationsPerStream; i++ {
