@@ -235,6 +235,7 @@ func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		SpaceId:       s.id,
 		Payload:       payload,
 		StreamPool:    s.syncService.StreamPool(),
+		Checker:       s.syncService.StreamChecker(),
 		Configuration: s.configuration,
 		AclList:       s.aclList,
 		SpaceStorage:  s.storage,
@@ -250,6 +251,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 	deps := synctree.BuildDeps{
 		SpaceId:        s.id,
 		StreamPool:     s.syncService.StreamPool(),
+		Checker:        s.syncService.StreamChecker(),
 		Configuration:  s.configuration,
 		HeadNotifiable: s.diffService,
 		Listener:       listener,
