@@ -13,6 +13,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync"
 	"go.uber.org/zap"
 	"strings"
+	"time"
 )
 
 type TreeHeads struct {
@@ -54,7 +55,7 @@ func NewDiffService(
 	l := log.With(zap.String("spaceId", spaceId))
 	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient)
 	syncer := newDiffSyncer(spaceId, diff, confConnector, cache, storage, factory, l)
-	periodicSync := periodicsync.NewPeriodicSync(syncPeriod, syncer.Sync, l)
+	periodicSync := periodicsync.NewPeriodicSync(syncPeriod, time.Minute, syncer.Sync, l)
 
 	return &diffService{
 		spaceId:      spaceId,

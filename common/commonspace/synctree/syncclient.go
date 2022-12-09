@@ -2,7 +2,6 @@
 package synctree
 
 import (
-	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
@@ -45,7 +44,7 @@ func (s *syncClient) BroadcastAsync(message *treechangeproto.TreeSyncMessage) (e
 	if err != nil {
 		return
 	}
-	s.checker.CheckResponsiblePeers(context.Background())
+	s.checker.CheckResponsiblePeers()
 	return s.StreamPool.BroadcastAsync(objMsg)
 }
 
@@ -63,7 +62,7 @@ func (s *syncClient) BroadcastAsyncOrSendResponsible(message *treechangeproto.Tr
 		return
 	}
 	if s.configuration.IsResponsible(s.spaceId) {
-		s.checker.CheckResponsiblePeers(context.Background())
+		s.checker.CheckResponsiblePeers()
 		return s.StreamPool.SendAsync(s.configuration.NodeIds(s.spaceId), objMsg)
 	}
 	return s.BroadcastAsync(message)

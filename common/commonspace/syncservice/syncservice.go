@@ -34,6 +34,9 @@ type syncService struct {
 	checker      StreamChecker
 	periodicSync periodicsync.PeriodicSync
 	objectGetter objectgetter.ObjectGetter
+
+	syncCtx    context.Context
+	cancelSync context.CancelFunc
 }
 
 func NewSyncService(
@@ -45,18 +48,25 @@ func NewSyncService(
 	})
 	clientFactory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient)
 	syncLog := log.Desugar().With(zap.String("id", spaceId))
+	syncCtx, cancel := context.WithCancel(context.Background())
 	checker := NewStreamChecker(
 		spaceId,
 		confConnector,
 		streamPool,
 		clientFactory,
+		syncCtx,
 		syncLog)
-	periodicSync := periodicsync.NewPeriodicSync(periodicSeconds, checker.CheckResponsiblePeers, syncLog)
+	periodicSync := periodicsync.NewPeriodicSync(periodicSeconds, 0, func(ctx context.Context) error {
+		checker.CheckResponsiblePeers()
+		return nil
+	}, syncLog)
 	syncService = newSyncService(
 		spaceId,
 		streamPool,
 		periodicSync,
-		checker)
+		checker,
+		syncCtx,
+		cancel)
 	return
 }
 
@@ -65,12 +75,16 @@ func newSyncService(
 	streamPool StreamPool,
 	periodicSync periodicsync.PeriodicSync,
 	checker StreamChecker,
+	syncCtx context.Context,
+	cancel context.CancelFunc,
 ) *syncService {
 	return &syncService{
 		periodicSync: periodicSync,
 		streamPool:   streamPool,
 		spaceId:      spaceId,
 		checker:      checker,
+		syncCtx:      syncCtx,
+		cancelSync:   cancel,
 	}
 }
 
@@ -81,6 +95,7 @@ func (s *syncService) Init(objectGetter objectgetter.ObjectGetter) {
 
 func (s *syncService) Close() (err error) {
 	s.periodicSync.Close()
+	s.cancelSync()
 	return s.streamPool.Close()
 }
 

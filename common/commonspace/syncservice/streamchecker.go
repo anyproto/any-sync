@@ -9,7 +9,7 @@ import (
 )
 
 type StreamChecker interface {
-	CheckResponsiblePeers(ctx context.Context) error
+	CheckResponsiblePeers()
 }
 
 type streamChecker struct {
@@ -18,6 +18,7 @@ type streamChecker struct {
 	streamPool    StreamPool
 	clientFactory spacesyncproto.ClientFactory
 	log           *zap.Logger
+	syncCtx       context.Context
 }
 
 func NewStreamChecker(
@@ -25,6 +26,7 @@ func NewStreamChecker(
 	connector nodeconf.ConfConnector,
 	streamPool StreamPool,
 	clientFactory spacesyncproto.ClientFactory,
+	syncCtx context.Context,
 	log *zap.Logger) StreamChecker {
 	return &streamChecker{
 		spaceId:       spaceId,
@@ -32,10 +34,11 @@ func NewStreamChecker(
 		streamPool:    streamPool,
 		clientFactory: clientFactory,
 		log:           log,
+		syncCtx:       syncCtx,
 	}
 }
 
-func (s *streamChecker) CheckResponsiblePeers(ctx context.Context) (err error) {
+func (s *streamChecker) CheckResponsiblePeers() {
 	var (
 		activeNodeIds []string
 		configuration = s.connector.Configuration()
@@ -47,14 +50,14 @@ func (s *streamChecker) CheckResponsiblePeers(ctx context.Context) (err error) {
 			continue
 		}
 	}
-	newPeers, err := s.connector.DialInactiveResponsiblePeers(ctx, s.spaceId, activeNodeIds)
+	newPeers, err := s.connector.DialInactiveResponsiblePeers(s.syncCtx, s.spaceId, activeNodeIds)
 	if err != nil {
 		s.log.Error("failed to dial peers", zap.Error(err))
 		return
 	}
 
 	for _, p := range newPeers {
-		stream, err := s.clientFactory.Client(p).Stream(ctx)
+		stream, err := s.clientFactory.Client(p).Stream(s.syncCtx)
 		if err != nil {
 			err = rpcerr.Unwrap(err)
 			s.log.Error("failed to open stream", zap.Error(err))
