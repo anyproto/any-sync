@@ -5,10 +5,6 @@ import (
 	"github.com/anytypeio/go-chash"
 )
 
-func New() Service {
-	return new(service)
-}
-
 type Configuration interface {
 	// Id returns current nodeconf id
 	Id() string
@@ -16,12 +12,18 @@ type Configuration interface {
 	NodeIds(spaceId string) []string
 	// IsResponsible checks if current account responsible for given spaceId
 	IsResponsible(spaceId string) bool
+	// FilePeers returns list of filenodes
+	FilePeers() []string
+	// ConsensusPeers returns list of consensusnodes
+	ConsensusPeers() []string
 }
 
 type configuration struct {
-	id        string
-	accountId string
-	chash     chash.CHash
+	id             string
+	accountId      string
+	filePeers      []string
+	consensusPeers []string
+	chash          chash.CHash
 }
 
 func (c *configuration) Id() string {
@@ -46,4 +48,12 @@ func (c *configuration) IsResponsible(spaceId string) bool {
 		}
 	}
 	return false
+}
+
+func (c *configuration) FilePeers() []string {
+	return c.filePeers
+}
+
+func (c *configuration) ConsensusPeers() []string {
+	return c.consensusPeers
 }

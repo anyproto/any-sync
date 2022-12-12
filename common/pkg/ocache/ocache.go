@@ -63,7 +63,7 @@ func New(loadFunc LoadFunc, opts ...Option) OCache {
 	for _, o := range opts {
 		o(c)
 	}
-	if c.ttl != 0 {
+	if c.ttl != 0 && c.gc != 0 {
 		go c.ticker()
 	}
 	return c

@@ -8,7 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/db"
-	"github.com/cheggaaa/mb/v2"
+	"github.com/cheggaaa/mb/v3"
 	"github.com/mr-tron/base58"
 	"go.uber.org/zap"
 	"sync/atomic"
@@ -74,7 +74,7 @@ func (s *service) NewStream() *Stream {
 	return &Stream{
 		id:     atomic.AddUint64(&s.lastStreamId, 1),
 		logIds: make(map[string]struct{}),
-		mb:     mb.New(consensus.Log{}, 100),
+		mb:     mb.New[consensus.Log](100),
 		s:      s,
 	}
 }

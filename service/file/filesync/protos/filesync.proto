@@ -12,27 +12,8 @@ message Msg {
 
 }
 
-service Space {
-    rpc Diff(Msg) returns (Msg);
-
-    // subscription service:
-    //  service.Broadcast(ss)
-    rpc ObjectSyncStream(stream Msg) returns (stream Msg);
-
-
-}
-
 service File {
     rpc GetCID(Msg) returns (Msg);
     rpc PushCID(Msg) returns (Msg);
-}
-
-service StrongLog { // ACL Log
-    rpc PushACL(Msg) returns (Msg);
-    rpc StartTransaction();
-}
-
-service Replication {
-    //
 }
 

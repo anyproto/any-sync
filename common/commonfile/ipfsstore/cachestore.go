@@ -8,8 +8,13 @@ import (
 	"go.uber.org/zap"
 )
 
+type IPFSStoreExistsCIDs interface {
+	IPFSStore
+	ExistsCids(ctx context.Context, ks []cid.Cid) (exists []cid.Cid, err error)
+}
+
 type CacheStore struct {
-	Cache  IPFSStore
+	Cache  IPFSStoreExistsCIDs
 	Origin IPFSStore
 }
 
@@ -88,10 +93,6 @@ func (c *CacheStore) GetMany(ctx context.Context, ks []cid.Cid) <-chan blocks.Bl
 	}()
 
 	return results
-}
-
-func (c *CacheStore) ExistsCids(ctx context.Context, ks []cid.Cid) (exists []cid.Cid, err error) {
-	return c.Cache.ExistsCids(ctx, ks)
 }
 
 func (c *CacheStore) Add(ctx context.Context, b []blocks.Block) error {

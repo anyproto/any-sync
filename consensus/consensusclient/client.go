@@ -75,7 +75,7 @@ func (s *service) Run(_ context.Context) error {
 }
 
 func (s *service) getClient(ctx context.Context) (consensusproto.DRPCConsensusClient, error) {
-	peer, err := s.pool.GetOneOf(ctx, s.nodeconf.ConsensusPeers())
+	peer, err := s.pool.GetOneOf(ctx, s.nodeconf.GetLast().ConsensusPeers())
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (s *service) getClient(ctx context.Context) (consensusproto.DRPCConsensusCl
 }
 
 func (s *service) dialClient(ctx context.Context) (consensusproto.DRPCConsensusClient, error) {
-	peer, err := s.pool.DialOneOf(ctx, s.nodeconf.ConsensusPeers())
+	peer, err := s.pool.DialOneOf(ctx, s.nodeconf.GetLast().ConsensusPeers())
 	if err != nil {
 		return nil, err
 	}
