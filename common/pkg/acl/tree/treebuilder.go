@@ -40,27 +40,32 @@ func (tb *treeBuilder) Reset() {
 	tb.tree = &Tree{}
 }
 
-func (tb *treeBuilder) Build(newChanges []*Change) (*Tree, error) {
-	var headsAndNewChanges []string
+func (tb *treeBuilder) Build(theirHeads []string, newChanges []*Change) (*Tree, error) {
+	var proposedHeads []string
 	heads, err := tb.treeStorage.Heads()
 	if err != nil {
 		return nil, err
 	}
-
-	headsAndNewChanges = append(headsAndNewChanges, heads...)
 	tb.cache = make(map[string]*Change)
+	proposedHeads = append(proposedHeads, heads...)
+	if len(theirHeads) > 0 {
+		proposedHeads = append(proposedHeads, theirHeads...)
+	}
 	for _, ch := range newChanges {
-		headsAndNewChanges = append(headsAndNewChanges, ch.Id)
+		// we don't know what new heads are, so every change can be head
+		if len(theirHeads) == 0 {
+			proposedHeads = append(proposedHeads, ch.Id)
+		}
 		tb.cache[ch.Id] = ch
 	}
 
-	log.With(zap.Strings("heads", heads)).Debug("building tree")
-	breakpoint, err := tb.findBreakpoint(headsAndNewChanges)
+	log.With(zap.Strings("heads", proposedHeads)).Debug("building tree")
+	breakpoint, err := tb.findBreakpoint(proposedHeads)
 	if err != nil {
 		return nil, fmt.Errorf("findBreakpoint error: %v", err)
 	}
 
-	if err = tb.buildTree(headsAndNewChanges, breakpoint); err != nil {
+	if err = tb.buildTree(proposedHeads, breakpoint); err != nil {
 		return nil, fmt.Errorf("buildTree error: %v", err)
 	}
 

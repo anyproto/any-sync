@@ -33,6 +33,11 @@ type AddResult struct {
 	Mode Mode
 }
 
+type RawChangesPayload struct {
+	NewHeads   []string
+	RawChanges []*treechangeproto.RawTreeChangeWithId
+}
+
 type ChangeIterateFunc = func(change *Change) bool
 type ChangeConvertFunc = func(decrypted []byte) (any, error)
 
@@ -55,7 +60,7 @@ type ObjectTree interface {
 	Storage() storage.TreeStorage
 
 	AddContent(ctx context.Context, content SignableChangeContent) (AddResult, error)
-	AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (AddResult, error)
+	AddRawChanges(ctx context.Context, changes RawChangesPayload) (AddResult, error)
 
 	Delete() error
 	Close() error
@@ -113,10 +118,10 @@ func defaultObjectTreeDeps(
 	}
 }
 
-func (ot *objectTree) rebuildFromStorage(newChanges []*Change) (err error) {
+func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Change) (err error) {
 	ot.treeBuilder.Reset()
 
-	ot.tree, err = ot.treeBuilder.Build(newChanges)
+	ot.tree, err = ot.treeBuilder.Build(theirHeads, newChanges)
 	if err != nil {
 		return
 	}
@@ -213,8 +218,8 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 	return
 }
 
-func (ot *objectTree) AddRawChanges(ctx context.Context, rawChanges ...*treechangeproto.RawTreeChangeWithId) (addResult AddResult, err error) {
-	addResult, err = ot.addRawChanges(ctx, rawChanges...)
+func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChangesPayload) (addResult AddResult, err error) {
+	addResult, err = ot.addRawChanges(ctx, changesPayload)
 	if err != nil {
 		return
 	}
@@ -235,7 +240,7 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, rawChanges ...*treechan
 	return
 }
 
-func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*treechangeproto.RawTreeChangeWithId) (addResult AddResult, err error) {
+func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChangesPayload) (addResult AddResult, err error) {
 	// resetting buffers
 	ot.newChangesBuf = ot.newChangesBuf[:0]
 	ot.notSeenIdxBuf = ot.notSeenIdxBuf[:0]
@@ -252,7 +257,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*treechan
 	prevHeadsCopy := headsCopy()
 
 	// filtering changes, verifying and unmarshalling them
-	for idx, ch := range rawChanges {
+	for idx, ch := range changesPayload.RawChanges {
 		// not unmarshalling the changes if they were already added either as unattached or attached
 		if _, exists := ot.tree.attached[ch.Id]; exists {
 			continue
@@ -331,17 +336,17 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*treechan
 	ot.newChangesBuf = discardFromSlice(ot.newChangesBuf, func(ch *Change) bool { return ch == nil })
 
 	if shouldRebuildFromStorage {
-		err = ot.rebuildFromStorage(ot.newChangesBuf)
+		err = ot.rebuildFromStorage(changesPayload.NewHeads, ot.newChangesBuf)
 		if err != nil {
 			// rebuilding without new changes
-			ot.rebuildFromStorage(nil)
+			ot.rebuildFromStorage(nil, nil)
 			return
 		}
-		addResult, err = ot.createAddResult(prevHeadsCopy, Rebuild, nil, rawChanges)
+		addResult, err = ot.createAddResult(prevHeadsCopy, Rebuild, nil, changesPayload.RawChanges)
 		if err != nil {
 			// that means that some unattached changes were somehow corrupted in memory
 			// this shouldn't happen but if that happens, then rebuilding from storage
-			ot.rebuildFromStorage(nil)
+			ot.rebuildFromStorage(nil, nil)
 			return
 		}
 		return
@@ -366,11 +371,11 @@ func (ot *objectTree) addRawChanges(ctx context.Context, rawChanges ...*treechan
 			err = ErrHasInvalidChanges
 			return
 		}
-		addResult, err = ot.createAddResult(prevHeadsCopy, mode, treeChangesAdded, rawChanges)
+		addResult, err = ot.createAddResult(prevHeadsCopy, mode, treeChangesAdded, changesPayload.RawChanges)
 		if err != nil {
 			// that means that some unattached changes were somehow corrupted in memory
 			// this shouldn't happen but if that happens, then rebuilding from storage
-			ot.rebuildFromStorage(nil)
+			ot.rebuildFromStorage(nil, nil)
 			return
 		}
 		return

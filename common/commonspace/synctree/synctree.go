@@ -247,11 +247,11 @@ func (s *syncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 	return
 }
 
-func (s *syncTree) AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (res tree.AddResult, err error) {
+func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload tree.RawChangesPayload) (res tree.AddResult, err error) {
 	if err = s.checkAlive(); err != nil {
 		return
 	}
-	res, err = s.ObjectTree.AddRawChanges(ctx, changes...)
+	res, err = s.ObjectTree.AddRawChanges(ctx, changesPayload)
 	if err != nil {
 		return
 	}
