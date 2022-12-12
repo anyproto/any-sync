@@ -143,6 +143,7 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 			}
 			if !exists {
 				entry, err = r.loadEntry(id)
+				entry.position = -1
 				if err != nil {
 					continue
 				}
@@ -204,7 +205,6 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 			if entry.position != -1 {
 				buffer[entry.position] = nil
 			}
-			entry.position = len(buffer) + 1
 			return entry
 		})
 
