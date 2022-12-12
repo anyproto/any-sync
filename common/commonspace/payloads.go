@@ -3,12 +3,19 @@ package commonspace
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	aclrecordproto2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
+	aclrecordproto "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/common"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/cid"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"hash/fnv"
 	"math/rand"
 	"time"
+)
+
+const (
+	SpaceSettingsChangeType = "reserved.spacesettings"
+	SpaceDerivationScheme   = "derivation.standard"
 )
 
 func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload storage.SpaceStorageCreatePayload, err error) {
@@ -23,8 +30,8 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload st
 	}
 
 	// preparing header and space id
-	bytes := make([]byte, 32)
-	_, err = rand.Read(bytes)
+	spaceHeaderSeed := make([]byte, 32)
+	_, err = rand.Read(spaceHeaderSeed)
 	if err != nil {
 		return
 	}
@@ -33,7 +40,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload st
 		Timestamp:      time.Now().UnixNano(),
 		SpaceType:      payload.SpaceType,
 		ReplicationKey: payload.ReplicationKey,
-		Seed:           bytes,
+		Seed:           spaceHeaderSeed,
 	}
 	marshalled, err := header.Marshal()
 	if err != nil {
@@ -68,12 +75,11 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload st
 	}
 
 	// preparing acl
-	aclRoot := &aclrecordproto2.ACLRoot{
+	aclRoot := &aclrecordproto.ACLRoot{
 		Identity:           identity,
 		EncryptionKey:      encPubKey,
 		SpaceId:            spaceId,
 		EncryptedReadKey:   encReadKey,
-		DerivationScheme:   "",
 		CurrentReadKeyHash: readKeyHash,
 		Timestamp:          time.Now().UnixNano(),
 	}
@@ -82,10 +88,31 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload st
 		return
 	}
 
+	builder := tree.NewChangeBuilder(common.NewKeychain(), nil)
+	spaceSettingsSeed := make([]byte, 32)
+	_, err = rand.Read(spaceSettingsSeed)
+	if err != nil {
+		return
+	}
+
+	_, settingsRoot, err := builder.BuildInitialContent(tree.InitialContent{
+		AclHeadId:  rawWithId.Id,
+		Identity:   aclRoot.Identity,
+		SigningKey: payload.SigningKey,
+		SpaceId:    spaceId,
+		Seed:       spaceSettingsSeed,
+		ChangeType: SpaceSettingsChangeType,
+		Timestamp:  time.Now().UnixNano(),
+	})
+	if err != nil {
+		return
+	}
+
 	// creating storage
 	storagePayload = storage.SpaceStorageCreatePayload{
-		RecWithId:         rawWithId,
-		SpaceHeaderWithId: rawHeaderWithId,
+		AclWithId:           rawWithId,
+		SpaceHeaderWithId:   rawHeaderWithId,
+		SpaceSettingsWithId: settingsRoot,
 	}
 	return
 }
@@ -144,7 +171,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload st
 	}
 
 	// deriving and encrypting read key
-	readKey, err := aclrecordproto2.ACLReadKeyDerive(signPrivKey, encPrivKey)
+	readKey, err := aclrecordproto.ACLReadKeyDerive(signPrivKey, encPrivKey)
 	if err != nil {
 		return
 	}
@@ -160,29 +187,41 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload st
 	}
 
 	// preparing acl
-	aclRoot := &aclrecordproto2.ACLRoot{
+	aclRoot := &aclrecordproto.ACLRoot{
 		Identity:           identity,
 		EncryptionKey:      encPubKey,
 		SpaceId:            spaceId,
 		EncryptedReadKey:   encReadKey,
-		DerivationScheme:   "",
+		DerivationScheme:   SpaceDerivationScheme,
 		CurrentReadKeyHash: readKeyHash,
-		Timestamp:          time.Now().UnixNano(),
 	}
 	rawWithId, err := marshalACLRoot(aclRoot, payload.SigningKey)
 	if err != nil {
 		return
 	}
 
+	builder := tree.NewChangeBuilder(common.NewKeychain(), nil)
+	_, settingsRoot, err := builder.BuildInitialContent(tree.InitialContent{
+		AclHeadId:  rawWithId.Id,
+		Identity:   aclRoot.Identity,
+		SigningKey: payload.SigningKey,
+		SpaceId:    spaceId,
+		ChangeType: SpaceSettingsChangeType,
+	})
+	if err != nil {
+		return
+	}
+
 	// creating storage
 	storagePayload = storage.SpaceStorageCreatePayload{
-		RecWithId:         rawWithId,
-		SpaceHeaderWithId: rawHeaderWithId,
+		AclWithId:           rawWithId,
+		SpaceHeaderWithId:   rawHeaderWithId,
+		SpaceSettingsWithId: settingsRoot,
 	}
 	return
 }
 
-func marshalACLRoot(aclRoot *aclrecordproto2.ACLRoot, key signingkey.PrivKey) (rawWithId *aclrecordproto2.RawACLRecordWithId, err error) {
+func marshalACLRoot(aclRoot *aclrecordproto.ACLRoot, key signingkey.PrivKey) (rawWithId *aclrecordproto.RawACLRecordWithId, err error) {
 	marshalledRoot, err := aclRoot.Marshal()
 	if err != nil {
 		return
@@ -191,7 +230,7 @@ func marshalACLRoot(aclRoot *aclrecordproto2.ACLRoot, key signingkey.PrivKey) (r
 	if err != nil {
 		return
 	}
-	raw := &aclrecordproto2.RawACLRecord{
+	raw := &aclrecordproto.RawACLRecord{
 		Payload:   marshalledRoot,
 		Signature: signature,
 	}
@@ -203,7 +242,7 @@ func marshalACLRoot(aclRoot *aclrecordproto2.ACLRoot, key signingkey.PrivKey) (r
 	if err != nil {
 		return
 	}
-	rawWithId = &aclrecordproto2.RawACLRecordWithId{
+	rawWithId = &aclrecordproto.RawACLRecordWithId{
 		Payload: marshalledRaw,
 		Id:      aclHeadId,
 	}

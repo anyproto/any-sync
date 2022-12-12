@@ -11,37 +11,29 @@ import (
 )
 
 type TextDocument interface {
-	Tree() tree.ObjectTree
-	AddText(text string) error
+	tree.ObjectTree
+	InnerTree() tree.ObjectTree
+	AddText(text string, isSnapshot bool) (string, string, error)
 	Text() (string, error)
 	TreeDump() string
 	Close() error
 }
 
 type textDocument struct {
-	objTree tree.ObjectTree
+	tree.ObjectTree
 	account account.Service
 }
 
 func CreateTextDocument(
 	ctx context.Context,
 	space commonspace.Space,
-	account account.Service,
-	listener updatelistener.UpdateListener) (doc TextDocument, err error) {
+	account account.Service) (id string, err error) {
 	payload := tree.ObjectTreeCreatePayload{
 		SignKey:  account.Account().SignKey,
 		SpaceId:  space.Id(),
 		Identity: account.Account().Identity,
 	}
-	t, err := space.CreateTree(ctx, payload, listener)
-	if err != nil {
-		return
-	}
-
-	return &textDocument{
-		objTree: t,
-		account: account,
-	}, nil
+	return space.CreateTree(ctx, payload)
 }
 
 func NewTextDocument(ctx context.Context, space commonspace.Space, id string, listener updatelistener.UpdateListener, account account.Service) (doc TextDocument, err error) {
@@ -50,16 +42,16 @@ func NewTextDocument(ctx context.Context, space commonspace.Space, id string, li
 		return
 	}
 	return &textDocument{
-		objTree: t,
-		account: account,
+		ObjectTree: t,
+		account:    account,
 	}, nil
 }
 
-func (t *textDocument) Tree() tree.ObjectTree {
-	return t.objTree
+func (t *textDocument) InnerTree() tree.ObjectTree {
+	return t.ObjectTree
 }
 
-func (t *textDocument) AddText(text string) (err error) {
+func (t *textDocument) AddText(text string, isSnapshot bool) (root, head string, err error) {
 	content := &testchanges.TextContent_TextAppend{
 		TextAppend: &testchanges.TextAppend{Text: text},
 	}
@@ -73,22 +65,27 @@ func (t *textDocument) AddText(text string) (err error) {
 	if err != nil {
 		return
 	}
-	t.objTree.Lock()
-	defer t.objTree.Unlock()
-	_, err = t.objTree.AddContent(context.Background(), tree.SignableChangeContent{
+	t.Lock()
+	defer t.Unlock()
+	addRes, err := t.AddContent(context.Background(), tree.SignableChangeContent{
 		Data:       res,
 		Key:        t.account.Account().SignKey,
 		Identity:   t.account.Account().Identity,
-		IsSnapshot: false,
+		IsSnapshot: isSnapshot,
 	})
+	if err != nil {
+		return
+	}
+	root = t.Root().Id
+	head = addRes.Heads[0]
 	return
 }
 
 func (t *textDocument) Text() (text string, err error) {
-	t.objTree.RLock()
-	defer t.objTree.RUnlock()
+	t.RLock()
+	defer t.RUnlock()
 
-	err = t.objTree.Iterate(
+	err = t.Iterate(
 		func(decrypted []byte) (any, error) {
 			textChange := &testchanges.TextData{}
 			err = proto.Unmarshal(decrypted, textChange)
@@ -109,8 +106,4 @@ func (t *textDocument) Text() (text string, err error) {
 
 func (t *textDocument) TreeDump() string {
 	return t.TreeDump()
-}
-
-func (t *textDocument) Close() error {
-	return nil
 }

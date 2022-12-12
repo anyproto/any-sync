@@ -8,8 +8,9 @@
 # Test binary, built with `go test -c`
 *.test
 
-# playground folder for testing different clients
-playground
+# playground/tmp folder for testing different clients
+playground/tmp
+playground/debug.json
 
 # .paw folder for macos paw client
 .paw

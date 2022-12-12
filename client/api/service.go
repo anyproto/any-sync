@@ -2,7 +2,7 @@ package api
 
 import (
 	"context"
-	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/api/apiproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/document"
 	clientstorage "github.com/anytypeio/go-anytype-infrastructure-experiments/client/storage"
@@ -11,37 +11,41 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
-	"go.uber.org/zap"
-	"io"
-	"net/http"
-	"strings"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
+	"storj.io/drpc"
 )
 
 const CName = "api.service"
 
-var log = logger.NewNamed("api")
+var log = logger.NewNamed(CName)
 
 func New() Service {
-	return &service{}
+	return &service{BaseDrpcServer: server.NewBaseDrpcServer()}
 }
 
 type Service interface {
 	app.ComponentRunnable
+	drpc.Mux
 }
 
 type service struct {
-	controller Controller
-	srv        *http.Server
-	cfg        *config.Config
+	transport      secure.Service
+	cfg            *config.Config
+	spaceService   clientspace.Service
+	storageService clientstorage.ClientStorage
+	docService     document.Service
+	account        account.Service
+	*server.BaseDrpcServer
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.controller = newController(
-		a.MustComponent(clientspace.CName).(clientspace.Service),
-		a.MustComponent(storage.CName).(clientstorage.ClientStorage),
-		a.MustComponent(document.CName).(document.Service),
-		a.MustComponent(account.CName).(account.Service))
+	s.spaceService = a.MustComponent(clientspace.CName).(clientspace.Service)
+	s.storageService = a.MustComponent(storage.CName).(clientstorage.ClientStorage)
+	s.docService = a.MustComponent(document.CName).(document.Service)
+	s.account = a.MustComponent(account.CName).(account.Service)
 	s.cfg = a.MustComponent(config.CName).(*config.Config)
+	s.transport = a.MustComponent(secure.CName).(secure.Service)
 	return nil
 }
 
@@ -50,132 +54,19 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
-	defer func() {
-		if err == nil {
-			log.With(zap.String("port", s.cfg.APIServer.Port)).Info("api server started running")
-		}
-	}()
-
-	s.srv = &http.Server{
-		Addr: fmt.Sprintf(":%s", s.cfg.APIServer.Port),
-	}
-	mux := http.NewServeMux()
-	mux.HandleFunc("/deriveSpace", s.deriveSpace)
-	mux.HandleFunc("/createSpace", s.createSpace)
-	mux.HandleFunc("/loadSpace", s.loadSpace)
-	mux.HandleFunc("/allSpaceIds", s.allSpaceIds)
-	mux.HandleFunc("/createDocument", s.createDocument)
-	mux.HandleFunc("/allDocumentIds", s.allDocumentIds)
-	mux.HandleFunc("/addText", s.addText)
-	mux.HandleFunc("/dumpDocumentTree", s.dumpDocumentTree)
-	s.srv.Handler = mux
-
-	go s.runServer()
-	return nil
-}
-
-func (s *service) runServer() {
-	err := s.srv.ListenAndServe()
+	err = s.BaseDrpcServer.Run(
+		ctx,
+		s.cfg.APIServer.ListenAddrs,
+		func(handler drpc.Handler) drpc.Handler {
+			return handler
+		},
+		s.transport.BasicListener)
 	if err != nil {
-		log.With(zap.Error(err)).Error("could not run api server")
+		return
 	}
+	return apiproto.DRPCRegisterClientApi(s, &rpcHandler{s.spaceService, s.storageService, s.docService, s.account})
 }
 
 func (s *service) Close(ctx context.Context) (err error) {
-	return s.srv.Shutdown(ctx)
-}
-
-func (s *service) deriveSpace(w http.ResponseWriter, req *http.Request) {
-	id, err := s.controller.DeriveSpace()
-	if err != nil {
-		sendText(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	sendText(w, http.StatusOK, id)
-}
-
-func (s *service) loadSpace(w http.ResponseWriter, req *http.Request) {
-	query := req.URL.Query()
-	spaceId := query.Get("spaceId")
-	err := s.controller.LoadSpace(query.Get("spaceId"))
-	if err != nil {
-		sendText(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	sendText(w, http.StatusOK, spaceId)
-}
-
-func (s *service) createSpace(w http.ResponseWriter, req *http.Request) {
-	id, err := s.controller.CreateSpace()
-	if err != nil {
-		sendText(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	sendText(w, http.StatusOK, id)
-}
-
-func (s *service) allSpaceIds(w http.ResponseWriter, req *http.Request) {
-	ids, err := s.controller.AllSpaceIds()
-	if err != nil {
-		sendText(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	sendText(w, http.StatusOK, strings.Join(ids, "\n"))
-}
-
-func (s *service) createDocument(w http.ResponseWriter, req *http.Request) {
-	query := req.URL.Query()
-	spaceId := query.Get("spaceId")
-	id, err := s.controller.CreateDocument(spaceId)
-	if err != nil {
-		sendText(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	sendText(w, http.StatusOK, id)
-}
-
-func (s *service) allDocumentIds(w http.ResponseWriter, req *http.Request) {
-	query := req.URL.Query()
-	spaceId := query.Get("spaceId")
-	ids, err := s.controller.AllDocumentIds(spaceId)
-	if err != nil {
-		sendText(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	sendText(w, http.StatusOK, strings.Join(ids, "\n"))
-}
-
-func (s *service) addText(w http.ResponseWriter, req *http.Request) {
-	query := req.URL.Query()
-	spaceId := query.Get("spaceId")
-	documentId := query.Get("documentId")
-	text := query.Get("text")
-	err := s.controller.AddText(spaceId, documentId, text)
-	if err != nil {
-		sendText(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	sendText(w, http.StatusOK, "Text added")
-}
-
-func (s *service) dumpDocumentTree(w http.ResponseWriter, req *http.Request) {
-	query := req.URL.Query()
-	spaceId := query.Get("spaceId")
-	documentId := query.Get("documentId")
-	dump, err := s.controller.DumpDocumentTree(spaceId, documentId)
-	if err != nil {
-		sendText(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	sendText(w, http.StatusOK, dump)
-}
-
-func sendText(r http.ResponseWriter, code int, body string) {
-	r.Header().Set("Content-Type", "text/plain")
-	r.WriteHeader(code)
-
-	_, err := io.WriteString(r, fmt.Sprintf("%s\n", body))
-	if err != nil {
-		log.Error("writing response failed", zap.Error(err))
-	}
+	return s.BaseDrpcServer.Close(ctx)
 }

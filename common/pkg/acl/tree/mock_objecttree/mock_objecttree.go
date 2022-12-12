@@ -116,6 +116,20 @@ func (mr *MockObjectTreeMockRecorder) DebugDump() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DebugDump", reflect.TypeOf((*MockObjectTree)(nil).DebugDump))
 }
 
+// Delete mocks base method.
+func (m *MockObjectTree) Delete() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockObjectTreeMockRecorder) Delete() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockObjectTree)(nil).Delete))
+}
+
 // HasChanges mocks base method.
 func (m *MockObjectTree) HasChanges(arg0 ...string) bool {
 	m.ctrl.T.Helper()

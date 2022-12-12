@@ -209,19 +209,33 @@ func (m *MockConfConnector) EXPECT() *MockConfConnectorMockRecorder {
 	return m.recorder
 }
 
-// DialResponsiblePeers mocks base method.
-func (m *MockConfConnector) DialResponsiblePeers(arg0 context.Context, arg1 string) ([]peer.Peer, error) {
+// Configuration mocks base method.
+func (m *MockConfConnector) Configuration() nodeconf.Configuration {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DialResponsiblePeers", arg0, arg1)
+	ret := m.ctrl.Call(m, "Configuration")
+	ret0, _ := ret[0].(nodeconf.Configuration)
+	return ret0
+}
+
+// Configuration indicates an expected call of Configuration.
+func (mr *MockConfConnectorMockRecorder) Configuration() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Configuration", reflect.TypeOf((*MockConfConnector)(nil).Configuration))
+}
+
+// DialInactiveResponsiblePeers mocks base method.
+func (m *MockConfConnector) DialInactiveResponsiblePeers(arg0 context.Context, arg1 string, arg2 []string) ([]peer.Peer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DialInactiveResponsiblePeers", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]peer.Peer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DialResponsiblePeers indicates an expected call of DialResponsiblePeers.
-func (mr *MockConfConnectorMockRecorder) DialResponsiblePeers(arg0, arg1 interface{}) *gomock.Call {
+// DialInactiveResponsiblePeers indicates an expected call of DialInactiveResponsiblePeers.
+func (mr *MockConfConnectorMockRecorder) DialInactiveResponsiblePeers(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DialResponsiblePeers", reflect.TypeOf((*MockConfConnector)(nil).DialResponsiblePeers), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DialInactiveResponsiblePeers", reflect.TypeOf((*MockConfConnector)(nil).DialInactiveResponsiblePeers), arg0, arg1, arg2)
 }
 
 // GetResponsiblePeers mocks base method.

@@ -8,14 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/zeebo/errs"
-	"go.uber.org/zap"
-	"io"
-	"net"
 	"storj.io/drpc"
-	"storj.io/drpc/drpcmux"
-	"storj.io/drpc/drpcserver"
-	"time"
 )
 
 const CName = "common.net.drpcserver"
@@ -23,7 +16,7 @@ const CName = "common.net.drpcserver"
 var log = logger.NewNamed(CName)
 
 func New() DRPCServer {
-	return &drpcServer{Mux: drpcmux.New()}
+	return &drpcServer{BaseDrpcServer: NewBaseDrpcServer()}
 }
 
 type DRPCServer interface {
@@ -36,19 +29,16 @@ type configGetter interface {
 }
 
 type drpcServer struct {
-	config     config.GrpcServer
-	drpcServer *drpcserver.Server
-	transport  secure.Service
-	listeners  []secure.ContextListener
-	metric     metric.Metric
-	cancel     func()
-	*drpcmux.Mux
+	config    config.GrpcServer
+	metric    metric.Metric
+	transport secure.Service
+	*BaseDrpcServer
 }
 
 func (s *drpcServer) Init(a *app.App) (err error) {
 	s.config = a.MustComponent(config.CName).(configGetter).GetGRPCServer()
-	s.transport = a.MustComponent(secure.CName).(secure.Service)
 	s.metric = a.MustComponent(metric.CName).(metric.Metric)
+	s.transport = a.MustComponent(secure.CName).(secure.Service)
 	return nil
 }
 
@@ -68,80 +58,21 @@ func (s *drpcServer) Run(ctx context.Context) (err error) {
 			0.99: 0.0001,
 		},
 	}, []string{"rpc"})
-	s.drpcServer = drpcserver.New(&metric.PrometheusDRPC{
-		Handler:    s.Mux,
-		SummaryVec: histVec,
-	})
 	if err = s.metric.Registry().Register(histVec); err != nil {
 		return
 	}
-	ctx, s.cancel = context.WithCancel(ctx)
-	for _, addr := range s.config.ListenAddrs {
-		tcpList, err := net.Listen("tcp", addr)
-		if err != nil {
-			return err
-		}
-		tlsList := s.transport.TLSListener(tcpList)
-		go s.serve(ctx, tlsList)
-	}
-	return
-}
-
-func (s *drpcServer) serve(ctx context.Context, lis secure.ContextListener) {
-	l := log.With(zap.String("localAddr", lis.Addr().String()))
-	l.Info("drpc listener started")
-	defer func() {
-		l.Debug("drpc listener stopped")
-	}()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-		ctx, conn, err := lis.Accept(ctx)
-		if err != nil {
-			if isTemporary(err) {
-				l.Debug("listener temporary accept error", zap.Error(err))
-				t := time.NewTimer(500 * time.Millisecond)
-				select {
-				case <-t.C:
-				case <-ctx.Done():
-					return
-				}
-				continue
+	return s.BaseDrpcServer.Run(
+		ctx,
+		s.config.ListenAddrs,
+		func(handler drpc.Handler) drpc.Handler {
+			return &metric.PrometheusDRPC{
+				Handler:    handler,
+				SummaryVec: histVec,
 			}
-			if _, ok := err.(secure.HandshakeError); ok {
-				l.Warn("listener handshake error", zap.Error(err))
-				continue
-			}
-			l.Error("listener accept error", zap.Error(err))
-			return
-		}
-		go s.serveConn(ctx, conn)
-	}
-}
-
-func (s *drpcServer) serveConn(ctx context.Context, conn net.Conn) {
-	l := log.With(zap.String("remoteAddr", conn.RemoteAddr().String())).With(zap.String("localAddr", conn.LocalAddr().String()))
-	l.Debug("connection opened")
-	if err := s.drpcServer.ServeOne(ctx, conn); err != nil {
-		if errs.Is(err, context.Canceled) || errs.Is(err, io.EOF) {
-			l.Debug("connection closed")
-		} else {
-			l.Warn("serve connection error", zap.Error(err))
-		}
-	}
+		},
+		s.transport.TLSListener)
 }
 
 func (s *drpcServer) Close(ctx context.Context) (err error) {
-	if s.cancel != nil {
-		s.cancel()
-	}
-	for _, l := range s.listeners {
-		if e := l.Close(); e != nil {
-			log.Warn("close listener error", zap.Error(e))
-		}
-	}
-	return
+	return s.BaseDrpcServer.Close(ctx)
 }

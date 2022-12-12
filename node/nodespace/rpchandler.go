@@ -19,22 +19,34 @@ func (r *rpcHandler) PullSpace(ctx context.Context, request *spacesyncproto.Pull
 		return
 	}
 
-	description := sp.Description()
+	spaceDesc, err := sp.Description()
+	if err != nil {
+		err = spacesyncproto.ErrUnexpected
+		return
+	}
+
 	resp = &spacesyncproto.PullSpaceResponse{
-		SpaceHeader:  description.SpaceHeader,
-		AclPayload:   description.AclPayload,
-		AclPayloadId: description.AclId,
+		Payload: &spacesyncproto.SpacePayload{
+			SpaceHeader:            spaceDesc.SpaceHeader,
+			AclPayloadId:           spaceDesc.AclId,
+			AclPayload:             spaceDesc.AclPayload,
+			SpaceSettingsPayload:   spaceDesc.SpaceSettingsPayload,
+			SpaceSettingsPayloadId: spaceDesc.SpaceSettingsId,
+		},
 	}
 	return
 }
 
 func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.PushSpaceRequest) (resp *spacesyncproto.PushSpaceResponse, err error) {
 	description := commonspace.SpaceDescription{
-		SpaceHeader: req.SpaceHeader,
-		AclId:       req.AclPayloadId,
-		AclPayload:  req.AclPayload,
+		SpaceHeader:          req.Payload.SpaceHeader,
+		AclId:                req.Payload.AclPayloadId,
+		AclPayload:           req.Payload.AclPayload,
+		SpaceSettingsPayload: req.Payload.SpaceSettingsPayload,
+		SpaceSettingsId:      req.Payload.SpaceSettingsPayloadId,
 	}
-	err = r.s.AddSpace(ctx, description)
+	ctx = context.WithValue(ctx, commonspace.AddSpaceCtxKey, description)
+	_, err = r.s.GetSpace(ctx, description.SpaceHeader.GetId())
 	if err != nil {
 		return
 	}

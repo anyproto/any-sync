@@ -22,7 +22,6 @@ func New() Service {
 }
 
 type Service interface {
-	AddSpace(ctx context.Context, description commonspace.SpaceDescription) (err error)
 	GetSpace(ctx context.Context, id string) (commonspace.Space, error)
 	app.ComponentRunnable
 }
@@ -61,10 +60,6 @@ func (s *service) GetSpace(ctx context.Context, id string) (commonspace.Space, e
 		return nil, err
 	}
 	return v.(commonspace.Space), nil
-}
-
-func (s *service) AddSpace(ctx context.Context, description commonspace.SpaceDescription) (err error) {
-	return s.commonSpace.AddSpace(ctx, description)
 }
 
 func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object, err error) {

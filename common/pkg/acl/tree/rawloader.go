@@ -137,23 +137,27 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 			if !shouldVisit(entry.position, exists) {
 				continue
 			}
+			if id == commonSnapshot {
+				commonSnapshotVisited = true
+				continue
+			}
 			if !exists {
 				entry, err = r.loadEntry(id)
 				if err != nil {
 					continue
 				}
 			}
-
 			// setting the counter when we visit
-			r.cache[id] = visit(entry)
+			entry = visit(entry)
+			r.cache[id] = entry
 
 			for _, prev := range entry.change.PreviousIds {
 				if prev == commonSnapshot {
 					commonSnapshotVisited = true
 					break
 				}
-				entry, exists = r.cache[prev]
-				if !shouldVisit(entry.position, exists) {
+				prevEntry, exists := r.cache[prev]
+				if !shouldVisit(prevEntry.position, exists) {
 					continue
 				}
 				r.idStack = append(r.idStack, prev)

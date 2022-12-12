@@ -15,6 +15,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 )
 
 const CName = "common.commonspace"
@@ -25,11 +26,14 @@ func New() Service {
 	return &service{}
 }
 
+type ctxKey int
+
+const AddSpaceCtxKey ctxKey = 0
+
 type Service interface {
 	DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (string, error)
 	CreateSpace(ctx context.Context, payload SpaceCreatePayload) (string, error)
 	NewSpace(ctx context.Context, id string) (sp Space, err error)
-	AddSpace(ctx context.Context, spaceDescription SpaceDescription) (err error)
 	app.Component
 }
 
@@ -82,47 +86,23 @@ func (s *service) DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (
 	return store.Id(), nil
 }
 
-func (s *service) AddSpace(ctx context.Context, spaceDescription SpaceDescription) (err error) {
-	_, err = s.storageProvider.SpaceStorage(spaceDescription.SpaceHeader.Id)
-	if err == nil {
-		err = spacesyncproto.ErrSpaceExists
-		return
-	}
-	if err != storage.ErrSpaceStorageMissing {
-		err = spacesyncproto.ErrUnexpected
-		return
-	}
-
-	payload := storage.SpaceStorageCreatePayload{
-		RecWithId: &aclrecordproto.RawACLRecordWithId{
-			Payload: spaceDescription.AclPayload,
-			Id:      spaceDescription.AclId,
-		},
-		SpaceHeaderWithId: spaceDescription.SpaceHeader,
-	}
-	st, err := s.storageProvider.CreateSpaceStorage(payload)
-	if err != nil {
-		err = spacesyncproto.ErrUnexpected
-		if err == storage.ErrSpaceStorageExists {
-			err = spacesyncproto.ErrSpaceExists
-		}
-		return
-	}
-	err = st.Close()
-	return
-}
-
 func (s *service) NewSpace(ctx context.Context, id string) (Space, error) {
 	st, err := s.storageProvider.SpaceStorage(id)
 	if err != nil {
-		if err != spacesyncproto.ErrSpaceMissing {
+		if err != storage.ErrSpaceStorageMissing {
 			return nil, err
 		}
 
-		st, err = s.getSpaceStorageFromRemote(ctx, id)
-		if err != nil {
-			err = storage.ErrSpaceStorageMissing
-			return nil, err
+		if description, ok := ctx.Value(AddSpaceCtxKey).(SpaceDescription); ok {
+			st, err = s.addSpaceStorage(ctx, description)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			st, err = s.getSpaceStorageFromRemote(ctx, id)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -142,10 +122,33 @@ func (s *service) NewSpace(ctx context.Context, id string) (Space, error) {
 	return sp, nil
 }
 
+func (s *service) addSpaceStorage(ctx context.Context, spaceDescription SpaceDescription) (st storage.SpaceStorage, err error) {
+	payload := storage.SpaceStorageCreatePayload{
+		AclWithId: &aclrecordproto.RawACLRecordWithId{
+			Payload: spaceDescription.AclPayload,
+			Id:      spaceDescription.AclId,
+		},
+		SpaceHeaderWithId: spaceDescription.SpaceHeader,
+		SpaceSettingsWithId: &treechangeproto.RawTreeChangeWithId{
+			RawChange: spaceDescription.SpaceSettingsPayload,
+			Id:        spaceDescription.SpaceSettingsId,
+		},
+	}
+	st, err = s.storageProvider.CreateSpaceStorage(payload)
+	if err != nil {
+		err = spacesyncproto.ErrUnexpected
+		if err == storage.ErrSpaceStorageExists {
+			err = spacesyncproto.ErrSpaceExists
+		}
+		return
+	}
+	return
+}
+
 func (s *service) getSpaceStorageFromRemote(ctx context.Context, id string) (st storage.SpaceStorage, err error) {
 	var p peer.Peer
 	lastConfiguration := s.configurationService.GetLast()
-	// for nodes we always get remote space only if we have id in the context
+	// we can't connect to client if it is a node
 	if lastConfiguration.IsResponsible(id) {
 		err = spacesyncproto.ErrSpaceMissing
 		return
@@ -161,12 +164,17 @@ func (s *service) getSpaceStorageFromRemote(ctx context.Context, id string) (st 
 	if err != nil {
 		return
 	}
+
 	st, err = s.storageProvider.CreateSpaceStorage(storage.SpaceStorageCreatePayload{
-		RecWithId: &aclrecordproto.RawACLRecordWithId{
-			Payload: res.AclPayload,
-			Id:      res.AclPayloadId,
+		AclWithId: &aclrecordproto.RawACLRecordWithId{
+			Payload: res.Payload.AclPayload,
+			Id:      res.Payload.AclPayloadId,
 		},
-		SpaceHeaderWithId: res.SpaceHeader,
+		SpaceSettingsWithId: &treechangeproto.RawTreeChangeWithId{
+			RawChange: res.Payload.SpaceSettingsPayload,
+			Id:        res.Payload.SpaceSettingsPayloadId,
+		},
+		SpaceHeaderWithId: res.Payload.SpaceHeader,
 	})
 	return
 }

@@ -336,8 +336,9 @@ func (t *Tree) dfsPrev(stack []*Change, breakpoints []string, visit func(ch *Cha
 		t.visitedBuf = append(t.visitedBuf, ch)
 
 		for _, prevId := range ch.PreviousIds {
-			prevCh := t.attached[prevId]
-			if !prevCh.visited {
+			prevCh, exists := t.attached[prevId]
+			// here the only time it wouldn't exist if we are at the tree root
+			if exists && !prevCh.visited {
 				stack = append(stack, prevCh)
 			}
 		}

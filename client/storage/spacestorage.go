@@ -4,18 +4,20 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	storage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/dgraph-io/badger/v3"
-	"sync"
 )
 
 type spaceStorage struct {
-	spaceId    string
-	objDb      *badger.DB
-	keys       spaceKeys
-	aclStorage storage.ListStorage
-	header     *spacesyncproto.RawSpaceHeaderWithId
-	mx         sync.Mutex
+	spaceId         string
+	spaceSettingsId string
+	objDb           *badger.DB
+	keys            spaceKeys
+	aclStorage      storage.ListStorage
+	header          *spacesyncproto.RawSpaceHeaderWithId
 }
+
+var spaceValidationFunc = spacestorage.ValidateSpaceStorageCreatePayload
 
 func newSpaceStorage(objDb *badger.DB, spaceId string) (store spacestorage.SpaceStorage, err error) {
 	keys := newSpaceKeys(spaceId)
@@ -30,10 +32,15 @@ func newSpaceStorage(objDb *badger.DB, spaceId string) (store spacestorage.Space
 			return err
 		}
 
+		spaceSettingsId, err := getTxn(txn, keys.SpaceSettingsId())
+		if err != nil {
+			return err
+		}
 		store = &spaceStorage{
-			spaceId: spaceId,
-			objDb:   objDb,
-			keys:    keys,
+			spaceId:         spaceId,
+			spaceSettingsId: string(spaceSettingsId),
+			objDb:           objDb,
+			keys:            keys,
 			header: &spacesyncproto.RawSpaceHeaderWithId{
 				RawHeader: header,
 				Id:        spaceId,
@@ -43,7 +50,7 @@ func newSpaceStorage(objDb *badger.DB, spaceId string) (store spacestorage.Space
 		return nil
 	})
 	if err == badger.ErrKeyNotFound {
-		err = spacesyncproto.ErrSpaceMissing
+		err = spacestorage.ErrSpaceStorageMissing
 	}
 	return
 }
@@ -51,11 +58,35 @@ func newSpaceStorage(objDb *badger.DB, spaceId string) (store spacestorage.Space
 func createSpaceStorage(db *badger.DB, payload spacestorage.SpaceStorageCreatePayload) (store spacestorage.SpaceStorage, err error) {
 	keys := newSpaceKeys(payload.SpaceHeaderWithId.Id)
 	if hasDB(db, keys.HeaderKey()) {
-		err = spacesyncproto.ErrSpaceExists
+		err = spacestorage.ErrSpaceStorageExists
+		return
+	}
+	err = spaceValidationFunc(payload)
+	if err != nil {
+		return
+	}
+
+	spaceStore := &spaceStorage{
+		spaceId:         payload.SpaceHeaderWithId.Id,
+		objDb:           db,
+		keys:            keys,
+		spaceSettingsId: payload.SpaceSettingsWithId.Id,
+		header:          payload.SpaceHeaderWithId,
+	}
+	_, err = spaceStore.CreateTreeStorage(storage.TreeStorageCreatePayload{
+		RootRawChange: payload.SpaceSettingsWithId,
+		Changes:       []*treechangeproto.RawTreeChangeWithId{payload.SpaceSettingsWithId},
+		Heads:         []string{payload.SpaceSettingsWithId.Id},
+	})
+	if err != nil {
 		return
 	}
 	err = db.Update(func(txn *badger.Txn) error {
-		aclStorage, err := createListStorage(payload.SpaceHeaderWithId.Id, db, txn, payload.RecWithId)
+		err = txn.Set(keys.SpaceSettingsId(), []byte(payload.SpaceSettingsWithId.Id))
+		if err != nil {
+			return err
+		}
+		aclStorage, err := createListStorage(payload.SpaceHeaderWithId.Id, db, txn, payload.AclWithId)
 		if err != nil {
 			return err
 		}
@@ -65,15 +96,10 @@ func createSpaceStorage(db *badger.DB, payload spacestorage.SpaceStorageCreatePa
 			return err
 		}
 
-		store = &spaceStorage{
-			spaceId:    payload.SpaceHeaderWithId.Id,
-			objDb:      db,
-			keys:       keys,
-			aclStorage: aclStorage,
-			header:     payload.SpaceHeaderWithId,
-		}
+		spaceStore.aclStorage = aclStorage
 		return nil
 	})
+	store = spaceStore
 	return
 }
 
@@ -81,15 +107,15 @@ func (s *spaceStorage) Id() string {
 	return s.spaceId
 }
 
+func (s *spaceStorage) SpaceSettingsId() string {
+	return s.spaceSettingsId
+}
+
 func (s *spaceStorage) TreeStorage(id string) (storage.TreeStorage, error) {
 	return newTreeStorage(s.objDb, s.spaceId, id)
 }
 
 func (s *spaceStorage) CreateTreeStorage(payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
-	// we have mutex here, so we prevent overwriting the heads of a tree on concurrent creation
-	s.mx.Lock()
-	defer s.mx.Unlock()
-
 	return createTreeStorage(s.objDb, s.spaceId, payload)
 }
 
@@ -112,7 +138,8 @@ func (s *spaceStorage) StoredIds() (ids []string, err error) {
 
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
-			id := item.Key()
+			id := make([]byte, 0, len(item.Key()))
+			id = item.KeyCopy(id)
 			if len(id) <= len(s.keys.TreeRootPrefix())+1 {
 				continue
 			}
@@ -121,6 +148,27 @@ func (s *spaceStorage) StoredIds() (ids []string, err error) {
 		}
 		return nil
 	})
+	return
+}
+
+func (s *spaceStorage) SetTreeDeletedStatus(id, status string) (err error) {
+	return s.objDb.Update(func(txn *badger.Txn) error {
+		return txn.Set(s.keys.TreeDeletedKey(id), []byte(status))
+	})
+}
+
+func (s *spaceStorage) TreeDeletedStatus(id string) (status string, err error) {
+	err = s.objDb.View(func(txn *badger.Txn) error {
+		res, err := getTxn(txn, s.keys.TreeDeletedKey(id))
+		if err != nil {
+			return err
+		}
+		status = string(res)
+		return nil
+	})
+	if err == badger.ErrKeyNotFound {
+		err = nil
+	}
 	return
 }
 

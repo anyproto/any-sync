@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_account/mock_account.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/account Service
 package account
 
 import (

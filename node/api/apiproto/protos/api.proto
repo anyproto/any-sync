@@ -1,0 +1,50 @@
+syntax = "proto3";
+package nodeapi;
+
+option go_package = "api/apiproto";
+
+service NodeApi {
+    rpc DumpTree(DumpTreeRequest) returns(DumpTreeResponse);
+    rpc TreeParams(TreeParamsRequest) returns(TreeParamsResponse);
+    rpc AllTrees(AllTreesRequest) returns(AllTreesResponse);
+    rpc AllSpaces(AllSpacesRequest) returns(AllSpacesResponse);
+}
+
+message DumpTreeRequest {
+    string spaceId = 1;
+    string documentId = 2;
+}
+
+message DumpTreeResponse {
+    string dump = 1;
+}
+
+message AllTreesRequest {
+    string spaceId = 1;
+}
+
+message Tree {
+    string id = 1;
+    repeated string heads = 2;
+}
+
+message AllTreesResponse {
+    repeated Tree trees = 1;
+}
+
+message AllSpacesRequest {
+}
+
+message AllSpacesResponse {
+    repeated string spaceIds = 1;
+}
+
+message TreeParamsRequest {
+    string spaceId = 1;
+    string documentId = 2;
+}
+
+message TreeParamsResponse {
+    string rootId = 1;
+    repeated string headIds = 2;
+}

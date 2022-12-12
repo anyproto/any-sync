@@ -3,7 +3,7 @@ export GOPRIVATE=github.com/anytypeio
 
 proto:
 	@echo 'Generating protobuf packages (Go)...'
-#   Uncomment if needed
+
 	@$(eval GOGO_START := GOGO_NO_UNDERSCORE=1 GOGO_EXPORT_ONEOF_INTERFACE=1)
 	@$(eval P_ACL_RECORDS_PATH_PB := pkg/acl/aclrecordproto)
 	@$(eval P_TREE_CHANGES_PATH_PB := pkg/acl/treechangeproto)
