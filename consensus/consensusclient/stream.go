@@ -1,15 +1,16 @@
 package consensusclient
 
 import (
+	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
-	"github.com/cheggaaa/mb/v2"
+	"github.com/cheggaaa/mb/v3"
 	"sync"
 )
 
 func runStream(rpcStream consensusproto.DRPCConsensus_WatchLogClient) *stream {
 	st := &stream{
 		rpcStream: rpcStream,
-		mb:        mb.New((*consensusproto.WatchLogEvent)(nil), 100),
+		mb:        mb.New[*consensusproto.WatchLogEvent](100),
 	}
 	go st.readStream()
 	return st
@@ -35,7 +36,8 @@ func (s *stream) UnwatchIds(logIds [][]byte) (err error) {
 }
 
 func (s *stream) WaitLogs() []*consensusproto.WatchLogEvent {
-	return s.mb.Wait()
+	events, _ := s.mb.Wait(context.TODO())
+	return events
 }
 
 func (s *stream) Err() error {
@@ -54,7 +56,7 @@ func (s *stream) readStream() {
 			s.mu.Unlock()
 			return
 		}
-		if err = s.mb.Add(event); err != nil {
+		if err = s.mb.Add(s.rpcStream.Context(), event); err != nil {
 			return
 		}
 	}

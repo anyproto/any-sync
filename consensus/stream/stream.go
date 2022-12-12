@@ -3,7 +3,7 @@ package stream
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus"
-	"github.com/cheggaaa/mb/v2"
+	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
 	"sync"
 )
@@ -30,13 +30,14 @@ func (s *Stream) LogIds() [][]byte {
 
 // AddRecords adds new records to stream, called by objects
 func (s *Stream) AddRecords(logId []byte, records []consensus.Record) (err error) {
-	return s.mb.Add(consensus.Log{Id: logId, Records: records})
+	return s.mb.Add(context.TODO(), consensus.Log{Id: logId, Records: records})
 }
 
 // WaitLogs wait for new log records
 // empty returned slice means that stream is closed
 func (s *Stream) WaitLogs() []consensus.Log {
-	return s.mb.Wait()
+	logs, _ := s.mb.Wait(context.TODO())
+	return logs
 }
 
 // WatchIds adds given ids to subscription
@@ -49,7 +50,7 @@ func (s *Stream) WatchIds(ctx context.Context, logIds [][]byte) {
 			s.logIds[logIdKey] = struct{}{}
 			if addErr := s.s.AddStream(ctx, logId, s); addErr != nil {
 				log.Info("can't add stream for log", zap.Binary("logId", logId), zap.Error(addErr))
-				_ = s.mb.Add(consensus.Log{
+				_ = s.mb.Add(ctx, consensus.Log{
 					Id:  logId,
 					Err: addErr,
 				})

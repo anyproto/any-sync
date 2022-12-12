@@ -1,9 +1,10 @@
 go 1.19
 
 use (
+	./client
 	./common
 	./consensus
+	./filenode
 	./node
-	./client
 	./util
 )
