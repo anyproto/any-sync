@@ -75,7 +75,10 @@ func (s *syncTreeHandler) handleHeadUpdate(
 			return nil
 		}
 
-		_, err = objTree.AddRawChanges(ctx, update.Changes...)
+		_, err = objTree.AddRawChanges(ctx, tree.RawChangesPayload{
+			NewHeads:   update.Heads,
+			RawChanges: update.Changes,
+		})
 		if err != nil {
 			return err
 		}
@@ -128,7 +131,10 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 		defer objTree.Unlock()
 
 		if len(request.Changes) != 0 && !s.alreadyHasHeads(objTree, request.Heads) {
-			_, err = objTree.AddRawChanges(ctx, request.Changes...)
+			_, err = objTree.AddRawChanges(ctx, tree.RawChangesPayload{
+				NewHeads:   request.Heads,
+				RawChanges: request.Changes,
+			})
 			if err != nil {
 				return err
 			}
@@ -168,7 +174,10 @@ func (s *syncTreeHandler) handleFullSyncResponse(
 			return nil
 		}
 
-		_, err = objTree.AddRawChanges(ctx, response.Changes...)
+		_, err = objTree.AddRawChanges(ctx, tree.RawChangesPayload{
+			NewHeads:   response.Heads,
+			RawChanges: response.Changes,
+		})
 		return err
 	}()
 	log.With("error", err != nil).
