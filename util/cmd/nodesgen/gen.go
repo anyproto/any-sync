@@ -48,8 +48,8 @@ func main() {
 
 	var configs []config.Config
 	var nodes []config.Node
-	for i, n := range nodesMap.Nodes {
-		cfg, err := genNodeConfig(n.Addresses, n.APIAddresses, i+1)
+	for _, n := range nodesMap.Nodes {
+		cfg, err := genNodeConfig(n.Addresses, n.APIAddresses)
 		if err != nil {
 			panic(fmt.Sprintf("could not generate the config file: %s", err.Error()))
 		}
@@ -60,7 +60,6 @@ func main() {
 			Address:       cfg.GrpcServer.ListenAddrs[0],
 			SigningKey:    cfg.Account.SigningKey,
 			EncryptionKey: cfg.Account.EncryptionKey,
-			Types:         []config.NodeType{config.NodeTypeTree, config.NodeTypeFile},
 		}
 		nodes = append(nodes, node)
 	}
@@ -76,8 +75,8 @@ func main() {
 	}
 
 	var clientConfigs []config.Config
-	for i, c := range nodesMap.Clients {
-		cfg, err := genClientConfig(c.Addresses, c.APIAddresses, encClientKey, signClientKey, i+1)
+	for _, c := range nodesMap.Clients {
+		cfg, err := genClientConfig(c.Addresses, c.APIAddresses, encClientKey, signClientKey)
 		if err != nil {
 			panic(fmt.Sprintf("could not generate the config file: %s", err.Error()))
 		}
@@ -154,7 +153,7 @@ func main() {
 	}
 }
 
-func genNodeConfig(addresses []string, apiAddresses []string, num int) (config.Config, error) {
+func genNodeConfig(addresses []string, apiAddresses []string) (config.Config, error) {
 	encKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
 	if err != nil {
 		return config.Config{}, err
@@ -186,7 +185,7 @@ func genNodeConfig(addresses []string, apiAddresses []string, num int) (config.C
 			ListenAddrs: addresses,
 			TLS:         false,
 		},
-		Storage: config.Storage{Path: fmt.Sprintf("db/node/%d/data", num)},
+		Storage: config.Storage{Path: "db"},
 		Account: config.Account{
 			PeerId:        peerID.String(),
 			PeerKey:       encSignKey,
@@ -201,13 +200,14 @@ func genNodeConfig(addresses []string, apiAddresses []string, num int) (config.C
 			GCTTL:      60,
 			SyncPeriod: 600,
 		},
-		FileStorePogreb: config.FileStorePogreb{
-			Path: fmt.Sprintf("db/node/%d/files", num),
+		Stream: config.Stream{
+			TimeoutMilliseconds: 1000,
+			MaxMsgSizeMb:        256,
 		},
 	}, nil
 }
 
-func genClientConfig(addresses []string, apiAddresses []string, encKey encryptionkey.PrivKey, signKey signingkey.PrivKey, num int) (config.Config, error) {
+func genClientConfig(addresses []string, apiAddresses []string, encKey encryptionkey.PrivKey, signKey signingkey.PrivKey) (config.Config, error) {
 	peerKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
 	if err != nil {
 		return config.Config{}, err
@@ -239,7 +239,7 @@ func genClientConfig(addresses []string, apiAddresses []string, encKey encryptio
 			ListenAddrs: addresses,
 			TLS:         false,
 		},
-		Storage: config.Storage{Path: fmt.Sprintf("db/client/%d", num)},
+		Storage: config.Storage{Path: "db"},
 		Account: config.Account{
 			PeerId:        peerID.String(),
 			PeerKey:       encPeerKey,
@@ -252,7 +252,11 @@ func genClientConfig(addresses []string, apiAddresses []string, encKey encryptio
 		},
 		Space: config.Space{
 			GCTTL:      60,
-			SyncPeriod: 600,
+			SyncPeriod: 20,
+		},
+		Stream: config.Stream{
+			TimeoutMilliseconds: 1000,
+			MaxMsgSizeMb:        256,
 		},
 	}, nil
 }
@@ -298,6 +302,10 @@ func genConsensusConfig(addresses []string) (cconfig.Config, error) {
 			Connect:       "mongodb://localhost:27017/?w=majority",
 			Database:      "consensus",
 			LogCollection: "log",
+		},
+		Stream: config.Stream{
+			TimeoutMilliseconds: 1000,
+			MaxMsgSizeMb:        256,
 		},
 	}, nil
 }

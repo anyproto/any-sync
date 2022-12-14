@@ -127,8 +127,11 @@ func (s *streamPool) SendAsync(peers []string, message *spacesyncproto.ObjectSyn
 
 	log.With(zap.String("objectId", message.ObjectId), zap.Int("peers", len(streams))).
 		Debug("sending message to peers")
-	for _, s := range streams {
-		err = s.Send(message)
+	for _, stream := range streams {
+		err = stream.Send(message)
+		if err != nil {
+			log.Debug("error sending message to stream", zap.Error(err))
+		}
 	}
 	if len(peers) != 1 {
 		err = nil
@@ -165,6 +168,7 @@ Loop:
 		default:
 			break
 		}
+		log.With(zap.String("id", id)).Debug("getting peer stream")
 		streams = append(streams, stream)
 	}
 
@@ -177,7 +181,7 @@ func (s *streamPool) BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (
 		Debug("broadcasting message to peers")
 	for _, stream := range streams {
 		if err = stream.Send(message); err != nil {
-			// TODO: add logging
+			log.Debug("error sending message to stream", zap.Error(err))
 		}
 	}
 
@@ -203,14 +207,23 @@ func (s *streamPool) AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (er
 
 func (s *streamPool) addStream(stream spacesyncproto.SpaceStream) (peerId string, err error) {
 	s.Lock()
-	defer s.Unlock()
 	peerId, err = peer.CtxPeerId(stream.Context())
 	if err != nil {
+		s.Unlock()
 		return
+	}
+	log.With(zap.String("peer id", peerId)).Debug("adding stream")
+
+	if oldStream, ok := s.peerStreams[peerId]; ok {
+		s.Unlock()
+		oldStream.Close()
+		s.Lock()
+		log.With(zap.String("peer id", peerId)).Debug("closed old stream before adding")
 	}
 
 	s.peerStreams[peerId] = stream
 	s.wg.Add(1)
+	s.Unlock()
 	return
 }
 
@@ -218,6 +231,14 @@ func (s *streamPool) Close() (err error) {
 	s.Lock()
 	wg := s.wg
 	s.Unlock()
+	streams := s.getAllStreams()
+
+	log.Debug("closing streams on lock")
+	for _, stream := range streams {
+		stream.Close()
+	}
+	log.Debug("closed streams")
+
 	if wg != nil {
 		wg.Wait()
 	}
@@ -234,11 +255,12 @@ func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStre
 
 	process := func(msg *spacesyncproto.ObjectSyncMessage) {
 		s.lastUsage.Store(time.Now().Unix())
+		log.With(zap.String("replyId", msg.ReplyId), zap.String("object id", msg.ObjectId)).
+			Debug("getting message with reply id")
 		if msg.ReplyId == "" {
 			s.messageHandler(stream.Context(), peerId, msg)
 			return
 		}
-		log.With(zap.String("replyId", msg.ReplyId)).Debug("getting message with reply id")
 		s.waitersMx.Lock()
 		waiter, exists := s.waiters[msg.ReplyId]
 
@@ -275,18 +297,22 @@ Loop:
 		}()
 	}
 	log.With(zap.String("peerId", peerId)).Debug("stopped reading stream from peer")
-	s.removePeer(peerId)
+	s.removePeer(peerId, stream)
 	return
 }
 
-func (s *streamPool) removePeer(peerId string) (err error) {
+func (s *streamPool) removePeer(peerId string, stream spacesyncproto.SpaceStream) (err error) {
 	s.Lock()
 	defer s.Unlock()
-	_, ok := s.peerStreams[peerId]
+	mapStream, ok := s.peerStreams[peerId]
 	if !ok {
 		return ErrEmptyPeer
 	}
-	delete(s.peerStreams, peerId)
+
+	// it can be the case that the stream was already replaced
+	if mapStream == stream {
+		delete(s.peerStreams, peerId)
+	}
 	return
 }
 

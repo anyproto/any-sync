@@ -25,8 +25,8 @@ func New() Service {
 }
 
 type Service interface {
-	TLSListener(lis net.Listener) ContextListener
-	BasicListener(lis net.Listener) ContextListener
+	TLSListener(lis net.Listener, timeoutMillis int) ContextListener
+	BasicListener(lis net.Listener, timeoutMillis int) ContextListener
 	TLSConn(ctx context.Context, conn net.Conn) (sec.SecureConn, error)
 	app.Component
 }
@@ -54,12 +54,12 @@ func (s *service) Name() (name string) {
 	return CName
 }
 
-func (s *service) TLSListener(lis net.Listener) ContextListener {
-	return newTLSListener(s.key, lis)
+func (s *service) TLSListener(lis net.Listener, timeoutMillis int) ContextListener {
+	return newTLSListener(s.key, lis, timeoutMillis)
 }
 
-func (s *service) BasicListener(lis net.Listener) ContextListener {
-	return newBasicListener(lis)
+func (s *service) BasicListener(lis net.Listener, timeoutMillis int) ContextListener {
+	return newBasicListener(lis, timeoutMillis)
 }
 
 func (s *service) TLSConn(ctx context.Context, conn net.Conn) (sec.SecureConn, error) {

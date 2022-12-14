@@ -20,6 +20,7 @@ do_usage() {
 do_nodes_start() {
   for NUMBER in {1..3}; do
     install -d tmp/node$NUMBER/ tmp/log/
+    export ANYPROF="127.0.0.1:607$NUMBER"
     (cd tmp/node$NUMBER && go run $NODE_GO -c $CONFIGS_DIR/node$NUMBER.yml &>../log/node$NUMBER.log) &
     NODE_PID=$!
     echo $NODE_PID >tmp/node$NUMBER.pid
@@ -53,6 +54,7 @@ do_config_gen() {
 
 do_clients_start() {
   for NUMBER in {1..2}; do
+    export ANYPROF="127.0.0.1:606$NUMBER"
     install -d tmp/client$NUMBER/ tmp/log/
     (cd tmp/client$NUMBER && go run $CLIENT_GO -c $CONFIGS_DIR/client$NUMBER.yml &>../log/client$NUMBER.log) &
     CLIENT_PID=$!

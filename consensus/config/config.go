@@ -2,12 +2,12 @@ package config
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	config2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 )
 
-const CName = config.CName
+const CName = "config"
 
 func NewFromFile(path string) (c *Config, err error) {
 	c = &Config{}
@@ -22,11 +22,12 @@ func NewFromFile(path string) (c *Config, err error) {
 }
 
 type Config struct {
-	GrpcServer config.GrpcServer `yaml:"grpcServer"`
-	Account    config.Account    `yaml:"account"`
-	Mongo      Mongo             `yaml:"mongo"`
-	Metric     config.Metric     `yaml:"metric"`
-	Log        config.Log        `yaml:"log"`
+	GrpcServer config2.GrpcServer `yaml:"grpcServer"`
+	Account    config2.Account    `yaml:"account"`
+	Mongo      Mongo              `yaml:"mongo"`
+	Metric     config2.Metric     `yaml:"metric"`
+	Log        config2.Log        `yaml:"log"`
+	Stream     config2.Stream     `yaml:"stream"`
 }
 
 func (c *Config) Init(a *app.App) (err error) {
@@ -41,14 +42,18 @@ func (c Config) GetMongo() Mongo {
 	return c.Mongo
 }
 
-func (c Config) GetGRPCServer() config.GrpcServer {
+func (c Config) GetGRPCServer() config2.GrpcServer {
 	return c.GrpcServer
 }
 
-func (c Config) GetAccount() config.Account {
+func (c Config) GetStream() config2.Stream {
+	return c.Stream
+}
+
+func (c Config) GetAccount() config2.Account {
 	return c.Account
 }
 
-func (c Config) GetMetric() config.Metric {
+func (c Config) GetMetric() config2.Metric {
 	return c.Metric
 }

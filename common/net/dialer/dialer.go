@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	timeoutconn "github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/conn"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
 	"github.com/libp2p/go-libp2p/core/sec"
@@ -13,7 +14,10 @@ import (
 	"net"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcconn"
+	"storj.io/drpc/drpcmanager"
+	"storj.io/drpc/drpcwire"
 	"sync"
+	"time"
 )
 
 const CName = "common.net.dialer"
@@ -34,6 +38,7 @@ type Dialer interface {
 
 type dialer struct {
 	transport secure.Service
+	config    *config.Config
 	peerAddrs map[string][]string
 
 	mu sync.RWMutex
@@ -41,9 +46,9 @@ type dialer struct {
 
 func (d *dialer) Init(a *app.App) (err error) {
 	d.transport = a.MustComponent(secure.CName).(secure.Service)
-	nodes := a.MustComponent(config.CName).(*config.Config).Nodes
+	d.config = a.MustComponent(config.CName).(*config.Config)
 	d.peerAddrs = map[string][]string{}
-	for _, n := range nodes {
+	for _, n := range d.config.Nodes {
 		d.peerAddrs[n.PeerId] = []string{n.Address}
 	}
 	return
@@ -90,11 +95,15 @@ func (d *dialer) handshake(ctx context.Context, addr string) (conn drpc.Conn, sc
 	if err != nil {
 		return
 	}
-	sc, err = d.transport.TLSConn(ctx, tcpConn)
+
+	timeoutConn := timeoutconn.NewConn(tcpConn, time.Millisecond*time.Duration(d.config.Stream.TimeoutMilliseconds))
+	sc, err = d.transport.TLSConn(ctx, timeoutConn)
 	if err != nil {
 		return
 	}
 	log.Info("connected with remote host", zap.String("serverPeer", sc.RemotePeer().String()), zap.String("per", sc.LocalPeer().String()))
-	conn = drpcconn.New(sc)
+	conn = drpcconn.NewWithOptions(sc, drpcconn.Options{Manager: drpcmanager.Options{
+		Reader: drpcwire.ReaderOptions{MaximumBufferSize: d.config.Stream.MaxMsgSizeMb * (1 << 20)},
+	}})
 	return conn, sc, err
 }
