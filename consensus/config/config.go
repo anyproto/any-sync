@@ -27,6 +27,7 @@ type Config struct {
 	Mongo      Mongo              `yaml:"mongo"`
 	Metric     config2.Metric     `yaml:"metric"`
 	Log        config2.Log        `yaml:"log"`
+	Stream     config2.Stream     `yaml:"stream"`
 }
 
 func (c *Config) Init(a *app.App) (err error) {
@@ -43,6 +44,10 @@ func (c Config) GetMongo() Mongo {
 
 func (c Config) GetGRPCServer() config2.GrpcServer {
 	return c.GrpcServer
+}
+
+func (c Config) GetStream() config2.Stream {
+	return c.Stream
 }
 
 func (c Config) GetAccount() config2.Account {

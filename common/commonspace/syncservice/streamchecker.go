@@ -43,13 +43,15 @@ func (s *streamChecker) CheckResponsiblePeers() {
 		activeNodeIds []string
 		configuration = s.connector.Configuration()
 	)
-	for _, nodeId := range configuration.NodeIds(s.spaceId) {
+	nodeIds := configuration.NodeIds(s.spaceId)
+	for _, nodeId := range nodeIds {
 		if s.streamPool.HasActiveStream(nodeId) {
 			s.log.Debug("has active stream for", zap.String("id", nodeId))
 			activeNodeIds = append(activeNodeIds, nodeId)
 			continue
 		}
 	}
+	s.log.Debug("total streams", zap.Int("total", len(activeNodeIds)))
 	newPeers, err := s.connector.DialInactiveResponsiblePeers(s.syncCtx, s.spaceId, activeNodeIds)
 	if err != nil {
 		s.log.Error("failed to dial peers", zap.Error(err))

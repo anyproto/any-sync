@@ -8,8 +8,10 @@ import (
 	"io"
 	"net"
 	"storj.io/drpc"
+	"storj.io/drpc/drpcmanager"
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
+	"storj.io/drpc/drpcwire"
 	"time"
 )
 
@@ -22,21 +24,31 @@ type BaseDrpcServer struct {
 }
 
 type DRPCHandlerWrapper func(handler drpc.Handler) drpc.Handler
-type ListenerConverter func(listener net.Listener) secure.ContextListener
+type ListenerConverter func(listener net.Listener, timeoutMillis int) secure.ContextListener
+
+type Params struct {
+	BufferSizeMb  int
+	ListenAddrs   []string
+	Wrapper       DRPCHandlerWrapper
+	Converter     ListenerConverter
+	TimeoutMillis int
+}
 
 func NewBaseDrpcServer() *BaseDrpcServer {
 	return &BaseDrpcServer{Mux: drpcmux.New()}
 }
 
-func (s *BaseDrpcServer) Run(ctx context.Context, listenAddrs []string, wrapper DRPCHandlerWrapper, converter ListenerConverter) (err error) {
-	s.drpcServer = drpcserver.New(wrapper(s.Mux))
+func (s *BaseDrpcServer) Run(ctx context.Context, params Params) (err error) {
+	s.drpcServer = drpcserver.NewWithOptions(params.Wrapper(s.Mux), drpcserver.Options{Manager: drpcmanager.Options{
+		Reader: drpcwire.ReaderOptions{MaximumBufferSize: params.BufferSizeMb * (1 << 20)},
+	}})
 	ctx, s.cancel = context.WithCancel(ctx)
-	for _, addr := range listenAddrs {
+	for _, addr := range params.ListenAddrs {
 		tcpList, err := net.Listen("tcp", addr)
 		if err != nil {
 			return err
 		}
-		tlsList := converter(tcpList)
+		tlsList := params.Converter(tcpList, params.TimeoutMillis)
 		go s.serve(ctx, tlsList)
 	}
 	return
