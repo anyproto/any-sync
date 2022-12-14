@@ -3,7 +3,7 @@ package rpcstore
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/ipfsstore"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 )
@@ -17,7 +17,7 @@ func New() Service {
 }
 
 type Service interface {
-	NewStore() ipfsstore.IPFSStore
+	NewStore() fileblockstore.BlockStore
 	app.Component
 }
 
@@ -36,7 +36,7 @@ func (s *service) Name() (name string) {
 	return CName
 }
 
-func (s *service) NewStore() ipfsstore.IPFSStore {
+func (s *service) NewStore() fileblockstore.BlockStore {
 	cm := newClientManager(s)
 	return &store{
 		s:  s,

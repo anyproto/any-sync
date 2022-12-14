@@ -19,9 +19,13 @@ proto:
 
 build:
 	$(MAKE) -C node build
+	$(MAKE) -C filenode build
 	$(MAKE) -C consensus build
+	$(MAKE) -C client build
 
 test:
 	$(MAKE) -C node test
+	$(MAKE) -C filenode test
 	$(MAKE) -C consensus test
 	$(MAKE) -C common test
+	$(MAKE) -C client test

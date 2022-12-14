@@ -1,7 +1,8 @@
-package ipfsstore
+package cachestore
 
 import (
 	"context"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
 	format "github.com/ipfs/go-ipld-format"
@@ -9,13 +10,13 @@ import (
 )
 
 type IPFSStoreExistsCIDs interface {
-	IPFSStore
+	fileblockstore.BlockStore
 	ExistsCids(ctx context.Context, ks []cid.Cid) (exists []cid.Cid, err error)
 }
 
 type CacheStore struct {
 	Cache  IPFSStoreExistsCIDs
-	Origin IPFSStore
+	Origin fileblockstore.BlockStore
 }
 
 func (c *CacheStore) Get(ctx context.Context, k cid.Cid) (b blocks.Block, err error) {
@@ -32,7 +33,7 @@ func (c *CacheStore) Get(ctx context.Context, k cid.Cid) (b blocks.Block, err er
 		return
 	}
 	if addErr := c.Cache.Add(ctx, []blocks.Block{b}); addErr != nil {
-		log.Error("block fetched from origin but got error for add to cache", zap.Error(addErr))
+		fileblockstore.log.Error("block fetched from origin but got error for add to cache", zap.Error(addErr))
 	}
 	return
 }
@@ -41,7 +42,7 @@ func (c *CacheStore) GetMany(ctx context.Context, ks []cid.Cid) <-chan blocks.Bl
 	cachedCids, localErr := c.Cache.ExistsCids(ctx, ks)
 	var originCids []cid.Cid
 	if localErr != nil {
-		log.Error("hasCIDs error", zap.Error(localErr))
+		fileblockstore.log.Error("hasCIDs error", zap.Error(localErr))
 		originCids = ks
 	} else {
 		if len(cachedCids) != len(ks) {
@@ -79,7 +80,7 @@ func (c *CacheStore) GetMany(ctx context.Context, ks []cid.Cid) <-chan blocks.Bl
 			case ob, oOk = <-originResults:
 				if oOk {
 					if addErr := c.Cache.Add(ctx, []blocks.Block{ob}); addErr != nil {
-						log.Error("add block to cache error", zap.Error(addErr))
+						fileblockstore.log.Error("add block to cache error", zap.Error(addErr))
 					}
 					results <- ob
 				}
@@ -97,7 +98,7 @@ func (c *CacheStore) GetMany(ctx context.Context, ks []cid.Cid) <-chan blocks.Bl
 
 func (c *CacheStore) Add(ctx context.Context, b []blocks.Block) error {
 	if localErr := c.Cache.Add(ctx, b); localErr != nil {
-		log.Error("cache add error", zap.Error(localErr))
+		fileblockstore.log.Error("cache add error", zap.Error(localErr))
 	}
 	return c.Origin.Add(ctx, b)
 }
@@ -105,7 +106,7 @@ func (c *CacheStore) Add(ctx context.Context, b []blocks.Block) error {
 func (c *CacheStore) Delete(ctx context.Context, k cid.Cid) error {
 	if localErr := c.Cache.Delete(ctx, k); localErr != nil {
 		if !format.IsNotFound(localErr) {
-			log.Error("error while delete block", zap.Error(localErr))
+			fileblockstore.log.Error("error while delete block", zap.Error(localErr))
 		}
 	}
 	return c.Origin.Delete(ctx, k)
@@ -113,7 +114,7 @@ func (c *CacheStore) Delete(ctx context.Context, k cid.Cid) error {
 
 func (c *CacheStore) Close() (err error) {
 	if localErr := c.Cache.Close(); localErr != nil {
-		log.Error("error while closing cache store", zap.Error(localErr))
+		fileblockstore.log.Error("error while closing cache store", zap.Error(localErr))
 	}
 	return c.Origin.Close()
 }

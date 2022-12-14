@@ -1,4 +1,4 @@
-package ipfsstore
+package cachestore
 
 import (
 	"context"
