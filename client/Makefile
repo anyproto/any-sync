@@ -7,7 +7,7 @@ proto:
 
 build:
 	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/client))
-	go build -v -o ../bin/cient -ldflags "$(FLAGS)" github.com/anytypeio/go-anytype-infrastructure-experiments/client/cmd
+	go build -v -o ../bin/client -ldflags "$(FLAGS)" github.com/anytypeio/go-anytype-infrastructure-experiments/client/cmd
 
 test:
 	go test ./... --cover

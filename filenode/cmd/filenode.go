@@ -11,7 +11,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/filenode/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/filenode/filepogreb"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/filepogreb"
 	"go.uber.org/zap"
 	"net/http"
 	_ "net/http/pprof"

@@ -47,5 +47,5 @@ func (bs *blockService) DeleteBlock(ctx context.Context, c cid.Cid) error {
 }
 
 func (bs *blockService) Close() error {
-	return bs.store.Close()
+	return nil
 }
