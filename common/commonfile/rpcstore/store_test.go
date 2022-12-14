@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpctest"
@@ -70,7 +71,7 @@ func TestStore_Get(t *testing.T) {
 		}
 		b, err := fx.Get(ctx, bs[0].Cid())
 		assert.Nil(t, b)
-		assert.ErrorIs(t, err, ErrCIDNotFound)
+		assert.ErrorIs(t, err, fileblockstore.ErrCIDNotFound)
 	})
 }
 

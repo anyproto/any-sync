@@ -22,11 +22,10 @@ func NewFromFile(path string) (c *Config, err error) {
 }
 
 type Config struct {
-	GrpcServer config.GrpcServer `yaml:"grpcServer"`
-	Account    config.Account    `yaml:"account"`
-	Mongo      Mongo             `yaml:"mongo"`
-	Metric     config.Metric     `yaml:"metric"`
-	Log        config.Log        `yaml:"log"`
+	Account         config.Account         `yaml:"account"`
+	GrpcServer      config.GrpcServer      `yaml:"grpcServer"`
+	Metric          config.Metric          `yaml:"metric"`
+	FileStorePogreb config.FileStorePogreb `yaml:"fileStorePogreb"`
 }
 
 func (c *Config) Init(a *app.App) (err error) {
@@ -37,16 +36,16 @@ func (c Config) Name() (name string) {
 	return CName
 }
 
-func (c Config) GetMongo() Mongo {
-	return c.Mongo
+func (c Config) GetAccount() config.Account {
+	return c.Account
+}
+
+func (c Config) GetFileStorePogreb() config.FileStorePogreb {
+	return c.FileStorePogreb
 }
 
 func (c Config) GetGRPCServer() config.GrpcServer {
 	return c.GrpcServer
-}
-
-func (c Config) GetAccount() config.Account {
-	return c.Account
 }
 
 func (c Config) GetMetric() config.Metric {

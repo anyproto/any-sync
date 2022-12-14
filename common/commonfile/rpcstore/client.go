@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileproto"
+	_ "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileproto/fileprotoerr"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/slice"
 	"github.com/cheggaaa/mb/v3"
 	"github.com/ipfs/go-cid"
@@ -14,9 +17,7 @@ import (
 )
 
 var (
-	ErrCIDNotFound   = errors.New("CID not found")
-	ErrCIDUnexpected = errors.New("CID unexpected error")
-	ErrClientClosed  = errors.New("file client closed")
+	ErrClientClosed = errors.New("file client closed")
 )
 
 const defaultMaxInFlightCIDs = 10
@@ -104,7 +105,7 @@ func (c *client) delete(ctx context.Context, t *task) (err error) {
 		SpaceId: t.spaceId,
 		Cid:     [][]byte{t.cid.Bytes()},
 	}); err != nil {
-		return
+		return rpcerr.Unwrap(err)
 	}
 	t.ready <- t
 	c.stat.UpdateLastUsage()
@@ -122,7 +123,7 @@ func (c *client) put(ctx context.Context, t *task) (err error) {
 		Cid:     t.cid.Bytes(),
 		Data:    t.data,
 	}); err != nil {
-		return
+		return rpcerr.Unwrap(err)
 	}
 	t.ready <- t
 	c.stat.Add(st, len(t.data))
@@ -158,7 +159,7 @@ func (c *client) get(ctx context.Context, t *task) (err error) {
 		SpaceId: t.spaceId,
 		Cid:     t.cid.Bytes(),
 	}); err != nil {
-		return
+		return rpcerr.Unwrap(err)
 	}
 	return
 }
@@ -204,9 +205,9 @@ func (c *client) receiveCID(resp *fileproto.GetBlockResponse) (t *task, err erro
 		t.data = resp.Data
 		t.err = nil
 	case fileproto.CIDError_CIDErrorNotFound:
-		t.err = ErrCIDNotFound
+		t.err = fileblockstore.ErrCIDNotFound
 	default:
-		t.err = ErrCIDUnexpected
+		t.err = fileblockstore.ErrCIDUnexpected
 	}
 	delete(c.waitCIDs, rCid.String())
 	if t.err == nil {

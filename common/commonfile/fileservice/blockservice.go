@@ -2,15 +2,20 @@ package fileservice
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/ipfsstore"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
 	blocks "github.com/ipfs/go-block-format"
+	"github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-cid"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
 	exchange "github.com/ipfs/go-ipfs-exchange-interface"
 )
 
+func newBlockService(store fileblockstore.BlockStore) blockservice.BlockService {
+	return &blockService{store: store}
+}
+
 type blockService struct {
-	store ipfsstore.IPFSStore
+	store fileblockstore.BlockStore
 }
 
 func (bs *blockService) GetBlock(ctx context.Context, c cid.Cid) (blocks.Block, error) {
