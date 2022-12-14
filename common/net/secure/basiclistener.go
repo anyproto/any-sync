@@ -2,7 +2,7 @@ package secure
 
 import (
 	"context"
-	timeoutconn "github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/conn"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/timeoutconn"
 	"net"
 	"time"
 )

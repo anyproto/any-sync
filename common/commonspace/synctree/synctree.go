@@ -205,12 +205,11 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	syncTree.SyncHandler = syncHandler
 	t = syncTree
 	syncTree.Lock()
-	defer syncTree.Unlock()
 	syncTree.afterBuild()
+	syncTree.Unlock()
 
-	headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
-	// here we will have different behaviour based on who is sending this update
 	if isFirstBuild {
+		headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 		// send to everybody, because everybody should know that the node or client got new tree
 		err = syncTree.syncClient.BroadcastAsync(headUpdate)
 	}
@@ -242,6 +241,7 @@ func (s *syncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 	if s.notifiable != nil {
 		s.notifiable.UpdateHeads(s.ID(), res.Heads)
 	}
+	// it is more or less safe to send head updates when creating content (under lock)
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
 	err = s.syncClient.BroadcastAsync(headUpdate)
 	return
@@ -269,8 +269,8 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload tree.RawCha
 		if s.notifiable != nil {
 			s.notifiable.UpdateHeads(s.ID(), res.Heads)
 		}
-		headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
-		err = s.syncClient.BroadcastAsync(headUpdate)
+		// we removed the sending head updates from here, because this method can be called under a lock
+		// thus this can block access to the tree
 	}
 	return
 }
