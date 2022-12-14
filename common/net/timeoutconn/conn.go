@@ -1,4 +1,4 @@
-package conn
+package timeoutconn
 
 import (
 	"errors"
@@ -31,6 +31,7 @@ func (c *Conn) Write(p []byte) (n int, err error) {
 			c.Conn.SetWriteDeadline(time.Time{})
 		}
 		if err != nil {
+			// if the connection is timed out and we should close it
 			c.Conn.Close()
 		}
 		return n, err

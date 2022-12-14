@@ -52,8 +52,10 @@ func (s *syncTreeHandler) handleHeadUpdate(
 		Debug("received head update message")
 	var (
 		fullRequest   *treechangeproto.TreeSyncMessage
+		headUpdate    *treechangeproto.TreeSyncMessage
 		isEmptyUpdate = len(update.Changes) == 0
 		objTree       = s.objTree
+		addResult     tree.AddResult
 	)
 
 	err = func() error {
@@ -75,12 +77,15 @@ func (s *syncTreeHandler) handleHeadUpdate(
 			return nil
 		}
 
-		_, err = objTree.AddRawChanges(ctx, tree.RawChangesPayload{
+		addResult, err = objTree.AddRawChanges(ctx, tree.RawChangesPayload{
 			NewHeads:   update.Heads,
 			RawChanges: update.Changes,
 		})
 		if err != nil {
 			return err
+		}
+		if addResult.Mode != tree.Nothing {
+			headUpdate = s.syncClient.CreateHeadUpdate(objTree, addResult.Added)
 		}
 
 		if s.alreadyHasHeads(objTree, update.Heads) {
@@ -90,6 +95,10 @@ func (s *syncTreeHandler) handleHeadUpdate(
 		fullRequest, err = s.syncClient.CreateFullSyncRequest(objTree, update.Heads, update.SnapshotPath)
 		return err
 	}()
+
+	if headUpdate != nil {
+		s.syncClient.BroadcastAsync(headUpdate)
+	}
 
 	if fullRequest != nil {
 		log.With("senderId", senderId).
@@ -117,6 +126,8 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 		Debug("received full sync request message")
 	var (
 		fullResponse *treechangeproto.TreeSyncMessage
+		headUpdate   *treechangeproto.TreeSyncMessage
+		addResult    tree.AddResult
 		header       = s.objTree.Header()
 		objTree      = s.objTree
 	)
@@ -131,18 +142,23 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 		defer objTree.Unlock()
 
 		if len(request.Changes) != 0 && !s.alreadyHasHeads(objTree, request.Heads) {
-			_, err = objTree.AddRawChanges(ctx, tree.RawChangesPayload{
+			addResult, err = objTree.AddRawChanges(ctx, tree.RawChangesPayload{
 				NewHeads:   request.Heads,
 				RawChanges: request.Changes,
 			})
 			if err != nil {
 				return err
 			}
+			if addResult.Mode != tree.Nothing {
+				headUpdate = s.syncClient.CreateHeadUpdate(objTree, addResult.Added)
+			}
 		}
-
 		fullResponse, err = s.syncClient.CreateFullSyncResponse(objTree, request.Heads, request.SnapshotPath)
 		return err
 	}()
+	if headUpdate != nil {
+		s.syncClient.BroadcastAsync(headUpdate)
+	}
 
 	if err != nil {
 		return
@@ -158,14 +174,11 @@ func (s *syncTreeHandler) handleFullSyncResponse(
 		With("heads", response.Heads).
 		With("treeId", s.objTree.ID()).
 		Debug("received full sync response message")
-	objTree := s.objTree
-	if err != nil {
-		log.With("senderId", senderId).
-			With("heads", response.Heads).
-			With("treeId", s.objTree.ID()).
-			Debug("failed to find the tree in full sync response")
-		return
-	}
+	var (
+		objTree    = s.objTree
+		addResult  tree.AddResult
+		headUpdate *treechangeproto.TreeSyncMessage
+	)
 	err = func() error {
 		objTree.Lock()
 		defer objTree.Unlock()
@@ -174,12 +187,22 @@ func (s *syncTreeHandler) handleFullSyncResponse(
 			return nil
 		}
 
-		_, err = objTree.AddRawChanges(ctx, tree.RawChangesPayload{
+		addResult, err = objTree.AddRawChanges(ctx, tree.RawChangesPayload{
 			NewHeads:   response.Heads,
 			RawChanges: response.Changes,
 		})
+		if err != nil {
+			return err
+		}
+		if addResult.Mode != tree.Nothing {
+			headUpdate = s.syncClient.CreateHeadUpdate(objTree, addResult.Added)
+		}
 		return err
 	}()
+	if headUpdate != nil {
+		s.syncClient.BroadcastAsync(headUpdate)
+	}
+
 	log.With("error", err != nil).
 		With("heads", response.Heads).
 		With("treeId", s.objTree.ID()).
