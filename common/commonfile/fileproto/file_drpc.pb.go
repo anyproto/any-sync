@@ -57,7 +57,7 @@ func NewDRPCFileClient(cc drpc.Conn) DRPCFileClient {
 func (c *drpcFileClient) DRPCConn() drpc.Conn { return c.cc }
 
 func (c *drpcFileClient) GetBlocks(ctx context.Context) (DRPCFile_GetBlocksClient, error) {
-	stream, err := c.cc.NewStream(ctx, "/anySpace.File/GetBlocks", drpcEncoding_File_commonfile_fileproto_protos_file_proto{})
+	stream, err := c.cc.NewStream(ctx, "/anyFile.File/GetBlocks", drpcEncoding_File_commonfile_fileproto_protos_file_proto{})
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (x *drpcFile_GetBlocksClient) RecvMsg(m *GetBlockResponse) error {
 
 func (c *drpcFileClient) PushBlock(ctx context.Context, in *PushBlockRequest) (*PushBlockResponse, error) {
 	out := new(PushBlockResponse)
-	err := c.cc.Invoke(ctx, "/anySpace.File/PushBlock", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/anyFile.File/PushBlock", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (c *drpcFileClient) PushBlock(ctx context.Context, in *PushBlockRequest) (*
 
 func (c *drpcFileClient) DeleteBlocks(ctx context.Context, in *DeleteBlocksRequest) (*DeleteBlocksResponse, error) {
 	out := new(DeleteBlocksResponse)
-	err := c.cc.Invoke(ctx, "/anySpace.File/DeleteBlocks", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/anyFile.File/DeleteBlocks", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (c *drpcFileClient) DeleteBlocks(ctx context.Context, in *DeleteBlocksReque
 
 func (c *drpcFileClient) Check(ctx context.Context, in *CheckRequest) (*CheckResponse, error) {
 	out := new(CheckResponse)
-	err := c.cc.Invoke(ctx, "/anySpace.File/Check", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/anyFile.File/Check", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +150,7 @@ func (DRPCFileDescription) NumMethods() int { return 4 }
 func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
 	case 0:
-		return "/anySpace.File/GetBlocks", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/anyFile.File/GetBlocks", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return nil, srv.(DRPCFileServer).
 					GetBlocks(
@@ -158,7 +158,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 					)
 			}, DRPCFileServer.GetBlocks, true
 	case 1:
-		return "/anySpace.File/PushBlock", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/anyFile.File/PushBlock", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
 					PushBlock(
@@ -167,7 +167,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 					)
 			}, DRPCFileServer.PushBlock, true
 	case 2:
-		return "/anySpace.File/DeleteBlocks", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/anyFile.File/DeleteBlocks", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
 					DeleteBlocks(
@@ -176,7 +176,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 					)
 			}, DRPCFileServer.DeleteBlocks, true
 	case 3:
-		return "/anySpace.File/Check", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/anyFile.File/Check", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
 					Check(

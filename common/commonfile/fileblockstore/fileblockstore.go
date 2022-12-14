@@ -30,6 +30,11 @@ type BlockStore interface {
 	Delete(ctx context.Context, c cid.Cid) error
 }
 
+type BlockStoreExistsCIDs interface {
+	BlockStore
+	ExistsCids(ctx context.Context, ks []cid.Cid) (exists []cid.Cid, err error)
+}
+
 type BlockStoreSpaceIds interface {
 	SpaceIds() []string
 }

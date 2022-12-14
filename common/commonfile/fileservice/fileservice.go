@@ -1,8 +1,19 @@
 package fileservice
 
 import (
+	"context"
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
+	"github.com/ipfs/go-cid"
+	chunker "github.com/ipfs/go-ipfs-chunker"
+	ipld "github.com/ipfs/go-ipld-format"
+	"github.com/ipfs/go-merkledag"
+	"github.com/ipfs/go-unixfs/importer/balanced"
+	"github.com/ipfs/go-unixfs/importer/helpers"
+	ufsio "github.com/ipfs/go-unixfs/io"
+	"github.com/multiformats/go-multihash"
+	"io"
 )
 
 const CName = "common.commonfile.fileservice"
@@ -12,13 +23,32 @@ func New() FileService {
 }
 
 type FileService interface {
-	NewProvider(store fileblockstore.BlockStore) (Provider, error)
+	// GetFile gets file from ipfs storage
+	GetFile(ctx context.Context, c cid.Cid) (ufsio.ReadSeekCloser, error)
+	// AddFile adds file to ipfs storage
+	AddFile(ctx context.Context, r io.Reader) (ipld.Node, error)
 	app.Component
 }
 
-type fileService struct{}
+type fileService struct {
+	merkledag ipld.DAGService
+	prefix    cid.Prefix
+}
 
 func (fs *fileService) Init(a *app.App) (err error) {
+	prefix, err := merkledag.PrefixForCidVersion(1)
+	if err != nil {
+		return fmt.Errorf("bad CID Version: %s", err)
+	}
+	hashFunCode, ok := multihash.Names["sha2-256"]
+	if !ok {
+		return fmt.Errorf("unrecognized hash function")
+	}
+	prefix.MhType = hashFunCode
+	prefix.MhLength = -1
+	bs := newBlockService(a.MustComponent(fileblockstore.CName).(fileblockstore.BlockStore))
+	fs.merkledag = merkledag.NewDAGService(bs)
+	fs.prefix = prefix
 	return
 }
 
@@ -26,6 +56,23 @@ func (fs *fileService) Name() string {
 	return CName
 }
 
-func (fs *fileService) NewProvider(store fileblockstore.BlockStore) (Provider, error) {
-	return newProvider(newBlockService(store))
+func (fs *fileService) AddFile(ctx context.Context, r io.Reader) (ipld.Node, error) {
+	dbp := helpers.DagBuilderParams{
+		Dagserv:    fs.merkledag,
+		Maxlinks:   helpers.DefaultLinksPerBlock,
+		CidBuilder: &fs.prefix,
+	}
+	dbh, err := dbp.New(chunker.DefaultSplitter(r))
+	if err != nil {
+		return nil, err
+	}
+	return balanced.Layout(dbh)
+}
+
+func (fs *fileService) GetFile(ctx context.Context, c cid.Cid) (ufsio.ReadSeekCloser, error) {
+	n, err := fs.merkledag.Get(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	return ufsio.NewDagReader(ctx, n, fs.merkledag)
 }
