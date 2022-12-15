@@ -4,6 +4,7 @@ package tree
 import (
 	"context"
 	"errors"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/common"
 	list "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
@@ -197,6 +198,13 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 		readKey     *symmetric.Key
 		readKeyHash uint64
 	)
+	canWrite := state.HasPermission(content.Identity, aclrecordproto.ACLUserPermissions_Writer) ||
+		state.HasPermission(content.Identity, aclrecordproto.ACLUserPermissions_Admin)
+	if !canWrite {
+		err = list.ErrInsufficientPermissions
+		return
+	}
+
 	if content.IsEncrypted {
 		readKeyHash = state.CurrentReadKeyHash()
 		readKey, err = state.CurrentReadKey()

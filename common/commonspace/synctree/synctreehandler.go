@@ -42,7 +42,7 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 	if err != nil {
 		return
 	}
-	
+
 	s.handlerLock.Lock()
 	queue := s.handlerMap[senderId]
 	queueFull := len(queue) >= maxQueueSize

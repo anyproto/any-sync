@@ -129,9 +129,7 @@ func (d *diffSyncer) pingTreesInCache(ctx context.Context, trees []string) {
 		// it may be already there (i.e. loaded)
 		// and build func will not be called, thus we won't sync the tree
 		// therefore we just do it manually
-		syncTree.Lock()
 		syncTree.Ping()
-		syncTree.Unlock()
 	}
 }
 
