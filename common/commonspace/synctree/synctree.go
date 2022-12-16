@@ -313,8 +313,8 @@ func (s *syncTree) checkAlive() (err error) {
 
 func (s *syncTree) Ping() (err error) {
 	s.Lock()
+	defer s.Unlock()
 	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
-	s.Unlock()
 	return s.syncClient.BroadcastAsyncOrSendResponsible(headUpdate)
 }
 

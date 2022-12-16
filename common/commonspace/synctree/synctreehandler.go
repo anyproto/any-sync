@@ -35,6 +35,7 @@ func newSyncTreeHandler(objTree tree.ObjectTree, syncClient SyncClient) synchand
 }
 
 func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	// TODO: when implementing sync status check msg heads before sending into queue
 	unmarshalled := &treechangeproto.TreeSyncMessage{}
 	err = proto.Unmarshal(msg.Payload, unmarshalled)
 	if err != nil {
