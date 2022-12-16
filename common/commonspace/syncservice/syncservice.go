@@ -20,12 +20,11 @@ type SyncService interface {
 	synchandler.SyncHandler
 	StreamPool() StreamPool
 	StreamChecker() StreamChecker
+	ActionQueue() ActionQueue
 
 	Init(getter objectgetter.ObjectGetter)
 	Close() (err error)
 }
-
-const respPeersStreamCheckInterval = 3000
 
 type syncService struct {
 	spaceId string
@@ -34,6 +33,7 @@ type syncService struct {
 	checker      StreamChecker
 	periodicSync periodicsync.PeriodicSync
 	objectGetter objectgetter.ObjectGetter
+	actionQueue  ActionQueue
 
 	syncCtx    context.Context
 	cancelSync context.CancelFunc
@@ -85,15 +85,18 @@ func newSyncService(
 		checker:      checker,
 		syncCtx:      syncCtx,
 		cancelSync:   cancel,
+		actionQueue:  NewActionQueue(),
 	}
 }
 
 func (s *syncService) Init(objectGetter objectgetter.ObjectGetter) {
 	s.objectGetter = objectGetter
+	s.actionQueue.Run()
 	s.periodicSync.Run()
 }
 
 func (s *syncService) Close() (err error) {
+	s.actionQueue.Close()
 	s.periodicSync.Close()
 	s.cancelSync()
 	return s.streamPool.Close()
@@ -118,4 +121,8 @@ func (s *syncService) StreamPool() StreamPool {
 
 func (s *syncService) StreamChecker() StreamChecker {
 	return s.checker
+}
+
+func (s *syncService) ActionQueue() ActionQueue {
+	return s.actionQueue
 }

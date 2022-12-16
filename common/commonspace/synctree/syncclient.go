@@ -21,7 +21,8 @@ type syncClient struct {
 	spaceId       string
 	connector     nodeconf.ConfConnector
 	configuration nodeconf.Configuration
-	checker       syncservice.StreamChecker
+
+	checker syncservice.StreamChecker
 }
 
 func newSyncClient(

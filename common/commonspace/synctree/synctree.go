@@ -52,22 +52,20 @@ var log = logger.NewNamed("commonspace.synctree").Sugar()
 var createDerivedObjectTree = tree.CreateDerivedObjectTree
 var createObjectTree = tree.CreateObjectTree
 var buildObjectTree = tree.BuildObjectTree
-var createSyncClient = newSyncClient
+var createSyncClient = newWrappedSyncClient
 
 type CreateDeps struct {
 	SpaceId       string
 	Payload       tree.ObjectTreeCreatePayload
 	Configuration nodeconf.Configuration
-	StreamPool    syncservice.StreamPool
-	Checker       syncservice.StreamChecker
+	SyncService   syncservice.SyncService
 	AclList       list.ACLList
 	SpaceStorage  spacestorage.SpaceStorage
 }
 
 type BuildDeps struct {
 	SpaceId        string
-	StreamPool     syncservice.StreamPool
-	Checker        syncservice.StreamChecker
+	SyncService    syncservice.SyncService
 	Configuration  nodeconf.Configuration
 	HeadNotifiable HeadNotifiable
 	Listener       updatelistener.UpdateListener
@@ -75,6 +73,11 @@ type BuildDeps struct {
 	SpaceStorage   spacestorage.SpaceStorage
 	TreeStorage    storage.TreeStorage
 	TreeUsage      *atomic.Int32
+}
+
+func newWrappedSyncClient(spaceId string, factory RequestFactory, syncService syncservice.SyncService, configuration nodeconf.Configuration) SyncClient {
+	syncClient := newSyncClient(spaceId, syncService.StreamPool(), factory, configuration, syncService.StreamChecker())
+	return newQueuedClient(syncClient, syncService.ActionQueue())
 }
 
 func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error) {
@@ -85,10 +88,9 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 
 	syncClient := createSyncClient(
 		deps.SpaceId,
-		deps.StreamPool,
 		sharedFactory,
-		deps.Configuration,
-		deps.Checker)
+		deps.SyncService,
+		deps.Configuration)
 
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
 	syncClient.BroadcastAsync(headUpdate)
@@ -103,10 +105,9 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 	}
 	syncClient := createSyncClient(
 		deps.SpaceId,
-		deps.StreamPool,
-		GetRequestFactory(),
-		deps.Configuration,
-		deps.Checker)
+		sharedFactory,
+		deps.SyncService,
+		deps.Configuration)
 
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
 	syncClient.BroadcastAsync(headUpdate)
@@ -126,7 +127,7 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 			return
 		}
 
-		resp, err := deps.StreamPool.SendSync(peerId, objMsg)
+		resp, err := deps.SyncService.StreamPool().SendSync(peerId, objMsg)
 		if err != nil {
 			return
 		}
@@ -190,10 +191,9 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	}
 	syncClient := createSyncClient(
 		deps.SpaceId,
-		deps.StreamPool,
-		GetRequestFactory(),
-		deps.Configuration,
-		deps.Checker)
+		sharedFactory,
+		deps.SyncService,
+		deps.Configuration)
 	syncTree := &syncTree{
 		ObjectTree: objTree,
 		syncClient: syncClient,
@@ -241,7 +241,6 @@ func (s *syncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 	if s.notifiable != nil {
 		s.notifiable.UpdateHeads(s.ID(), res.Heads)
 	}
-	// it is more or less safe to send head updates when creating content (under lock)
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
 	err = s.syncClient.BroadcastAsync(headUpdate)
 	return
@@ -269,8 +268,8 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload tree.RawCha
 		if s.notifiable != nil {
 			s.notifiable.UpdateHeads(s.ID(), res.Heads)
 		}
-		// we removed the sending head updates from here, because this method can be called under a lock
-		// thus this can block access to the tree
+		headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
+		err = s.syncClient.BroadcastAsync(headUpdate)
 	}
 	return
 }
