@@ -21,11 +21,6 @@ type syncTreeHandler struct {
 
 const maxQueueSize = 5
 
-type treeMsg struct {
-	replyId     string
-	syncMessage *treechangeproto.TreeSyncMessage
-}
-
 func newSyncTreeHandler(objTree tree.ObjectTree, syncClient SyncClient) synchandler.SyncHandler {
 	return &syncTreeHandler{
 		objTree:    objTree,
@@ -42,7 +37,7 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 		return
 	}
 
-	queueFull := s.queue.AddMessage(senderId, treeMsg{msg.ReplyId, unmarshalled})
+	queueFull := s.queue.AddMessage(senderId, unmarshalled, msg.ReplyId)
 	if queueFull {
 		return
 	}
@@ -53,19 +48,19 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 func (s *syncTreeHandler) handleMessage(ctx context.Context, senderId string) (err error) {
 	s.objTree.Lock()
 	defer s.objTree.Unlock()
-	msg, err := s.queue.GetMessage(senderId)
+	msg, replyId, err := s.queue.GetMessage(senderId)
 	if err != nil {
 		return
 	}
 
 	defer s.queue.ClearQueue(senderId)
 
-	content := msg.syncMessage.GetContent()
+	content := msg.GetContent()
 	switch {
 	case content.GetHeadUpdate() != nil:
-		return s.handleHeadUpdate(ctx, senderId, content.GetHeadUpdate(), msg.replyId)
+		return s.handleHeadUpdate(ctx, senderId, content.GetHeadUpdate(), replyId)
 	case content.GetFullSyncRequest() != nil:
-		return s.handleFullSyncRequest(ctx, senderId, content.GetFullSyncRequest(), msg.replyId)
+		return s.handleFullSyncRequest(ctx, senderId, content.GetFullSyncRequest(), replyId)
 	case content.GetFullSyncResponse() != nil:
 		return s.handleFullSyncResponse(ctx, senderId, content.GetFullSyncResponse())
 	}
