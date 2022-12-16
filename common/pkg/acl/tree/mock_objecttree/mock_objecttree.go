@@ -53,23 +53,18 @@ func (mr *MockObjectTreeMockRecorder) AddContent(arg0, arg1 interface{}) *gomock
 }
 
 // AddRawChanges mocks base method.
-func (m *MockObjectTree) AddRawChanges(arg0 context.Context, arg1 ...*treechangeproto.RawTreeChangeWithId) (tree.AddResult, error) {
+func (m *MockObjectTree) AddRawChanges(arg0 context.Context, arg1 tree.RawChangesPayload) (tree.AddResult, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0}
-	for _, a := range arg1 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "AddRawChanges", varargs...)
+	ret := m.ctrl.Call(m, "AddRawChanges", arg0, arg1)
 	ret0, _ := ret[0].(tree.AddResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddRawChanges indicates an expected call of AddRawChanges.
-func (mr *MockObjectTreeMockRecorder) AddRawChanges(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+func (mr *MockObjectTreeMockRecorder) AddRawChanges(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0}, arg1...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChanges", reflect.TypeOf((*MockObjectTree)(nil).AddRawChanges), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChanges", reflect.TypeOf((*MockObjectTree)(nil).AddRawChanges), arg0, arg1)
 }
 
 // ChangesAfterCommonSnapshot mocks base method.

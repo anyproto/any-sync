@@ -2,44 +2,50 @@ package synctree
 
 import (
 	"errors"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"sync"
 )
 
 type ReceiveQueue interface {
-	AddMessage(senderId string, msg treeMsg) (queueFull bool)
-	GetMessage(senderId string) (msg treeMsg, err error)
+	AddMessage(senderId string, msg *treechangeproto.TreeSyncMessage, replyId string) (queueFull bool)
+	GetMessage(senderId string) (msg *treechangeproto.TreeSyncMessage, replyId string, err error)
 	ClearQueue(senderId string)
+}
+
+type queueMsg struct {
+	replyId     string
+	syncMessage *treechangeproto.TreeSyncMessage
 }
 
 type receiveQueue struct {
 	sync.Mutex
-	handlerMap map[string][]treeMsg
+	handlerMap map[string][]queueMsg
 	maxSize    int
 }
 
 func newReceiveQueue(maxSize int) ReceiveQueue {
 	return &receiveQueue{
 		Mutex:      sync.Mutex{},
-		handlerMap: map[string][]treeMsg{},
+		handlerMap: map[string][]queueMsg{},
 		maxSize:    maxSize,
 	}
 }
 
 var errEmptyQueue = errors.New("the queue is empty")
 
-func (q *receiveQueue) AddMessage(senderId string, msg treeMsg) (queueFull bool) {
+func (q *receiveQueue) AddMessage(senderId string, msg *treechangeproto.TreeSyncMessage, replyId string) (queueFull bool) {
 	q.Lock()
 	defer q.Unlock()
 
 	queue := q.handlerMap[senderId]
 	queueFull = len(queue) >= maxQueueSize
-	queue = append(queue, msg)
+	queue = append(queue, queueMsg{replyId, msg})
 	q.handlerMap[senderId] = queue
 
 	return
 }
 
-func (q *receiveQueue) GetMessage(senderId string) (msg treeMsg, err error) {
+func (q *receiveQueue) GetMessage(senderId string) (msg *treechangeproto.TreeSyncMessage, replyId string, err error) {
 	q.Lock()
 	defer q.Unlock()
 
@@ -48,7 +54,9 @@ func (q *receiveQueue) GetMessage(senderId string) (msg treeMsg, err error) {
 		return
 	}
 
-	msg = q.handlerMap[senderId][0]
+	qMsg := q.handlerMap[senderId][0]
+	msg = qMsg.syncMessage
+	replyId = qMsg.replyId
 	return
 }
 
