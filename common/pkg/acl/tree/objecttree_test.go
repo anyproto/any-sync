@@ -161,7 +161,11 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.createRaw("1", aclList.Head().Id, "0", false, "0"),
 			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
 		}
-		res, err := objTree.AddRawChanges(context.Background(), rawChanges...)
+		payload := RawChangesPayload{
+			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
+			RawChanges: rawChanges,
+		}
+		res, err := objTree.AddRawChanges(context.Background(), payload)
 		require.NoError(t, err, "adding changes should be without error")
 
 		// check result
@@ -201,7 +205,11 @@ func TestObjectTree(t *testing.T) {
 		rawChanges := []*treechangeproto.RawTreeChangeWithId{
 			changeCreator.createRaw("0", aclList.Head().Id, "", true, ""),
 		}
-		res, err := objTree.AddRawChanges(context.Background(), rawChanges...)
+		payload := RawChangesPayload{
+			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
+			RawChanges: rawChanges,
+		}
+		res, err := objTree.AddRawChanges(context.Background(), payload)
 		require.NoError(t, err, "adding changes should be without error")
 
 		// check result
@@ -221,7 +229,11 @@ func TestObjectTree(t *testing.T) {
 		rawChanges := []*treechangeproto.RawTreeChangeWithId{
 			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
 		}
-		res, err := objTree.AddRawChanges(context.Background(), rawChanges...)
+		payload := RawChangesPayload{
+			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
+			RawChanges: rawChanges,
+		}
+		res, err := objTree.AddRawChanges(context.Background(), payload)
 		require.NoError(t, err, "adding changes should be without error")
 
 		// check result
@@ -246,7 +258,12 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.createRaw("3", aclList.Head().Id, "0", true, "2"),
 			changeCreator.createRaw("4", aclList.Head().Id, "3", false, "3"),
 		}
-		res, err := objTree.AddRawChanges(context.Background(), rawChanges...)
+		payload := RawChangesPayload{
+			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
+			RawChanges: rawChanges,
+		}
+
+		res, err := objTree.AddRawChanges(context.Background(), payload)
 		require.NoError(t, err, "adding changes should be without error")
 
 		// check result
@@ -289,7 +306,12 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
 			changeCreator.createRaw("3", aclList.Head().Id, "0", true, "2"),
 		}
-		_, err := objTree.AddRawChanges(context.Background(), rawChanges...)
+		payload := RawChangesPayload{
+			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
+			RawChanges: rawChanges,
+		}
+
+		_, err := objTree.AddRawChanges(context.Background(), payload)
 		require.NoError(t, err, "adding changes should be without error")
 
 		snapshotPath := objTree.SnapshotPath()
@@ -312,7 +334,12 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.createRaw("6", aclList.Head().Id, "0", false, "3", "4", "5"),
 		}
 
-		_, err := objTree.AddRawChanges(context.Background(), rawChanges...)
+		payload := RawChangesPayload{
+			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
+			RawChanges: rawChanges,
+		}
+
+		_, err := objTree.AddRawChanges(context.Background(), payload)
 		require.NoError(t, err, "adding changes should be without error")
 		require.Equal(t, "0", objTree.Root().Id)
 
@@ -387,7 +414,12 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.createRaw("6", aclList.Head().Id, "0", true, "3", "4", "5"),
 		}
 
-		_, err := objTree.AddRawChanges(context.Background(), rawChanges...)
+		payload := RawChangesPayload{
+			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
+			RawChanges: rawChanges,
+		}
+
+		_, err := objTree.AddRawChanges(context.Background(), payload)
 		require.NoError(t, err, "adding changes should be without error")
 		require.Equal(t, "6", objTree.Root().Id)
 
@@ -458,7 +490,12 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
 			changeCreator.createRaw("3", aclList.Head().Id, "0", true, "2"),
 		}
-		res, err := objTree.AddRawChanges(context.Background(), rawChanges...)
+		payload := RawChangesPayload{
+			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
+			RawChanges: rawChanges,
+		}
+
+		res, err := objTree.AddRawChanges(context.Background(), payload)
 		require.NoError(t, err, "adding changes should be without error")
 		require.Equal(t, "3", objTree.Root().Id)
 
@@ -467,7 +504,12 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.createRaw("5", aclList.Head().Id, "0", false, "1"),
 			changeCreator.createRaw("6", aclList.Head().Id, "0", false, "3", "4", "5"),
 		}
-		res, err = objTree.AddRawChanges(context.Background(), rawChanges...)
+		payload = RawChangesPayload{
+			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
+			RawChanges: rawChanges,
+		}
+
+		res, err = objTree.AddRawChanges(context.Background(), payload)
 		require.NoError(t, err, "adding changes should be without error")
 
 		// check result
