@@ -5,7 +5,9 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"time"
 )
 
 type StreamChecker interface {
@@ -19,7 +21,10 @@ type streamChecker struct {
 	clientFactory spacesyncproto.ClientFactory
 	log           *zap.Logger
 	syncCtx       context.Context
+	lastCheck     *atomic.Time
 }
+
+const streamCheckerInterval = time.Second * 10
 
 func NewStreamChecker(
 	spaceId string,
@@ -35,10 +40,18 @@ func NewStreamChecker(
 		clientFactory: clientFactory,
 		log:           log,
 		syncCtx:       syncCtx,
+		lastCheck:     atomic.NewTime(time.Time{}),
 	}
 }
 
 func (s *streamChecker) CheckResponsiblePeers() {
+	lastCheck := s.lastCheck.Load()
+	now := time.Now()
+	if lastCheck.Add(streamCheckerInterval).After(now) {
+		return
+	}
+	s.lastCheck.Store(now)
+
 	var (
 		activeNodeIds []string
 		configuration = s.connector.Configuration()
