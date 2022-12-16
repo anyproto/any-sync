@@ -16,7 +16,7 @@ type syncTreeHandler struct {
 	objTree     tree.ObjectTree
 	syncClient  SyncClient
 	handlerLock sync.Mutex
-	handlerMap  map[string][]treeMsg
+	queue       ReceiveQueue
 }
 
 const maxQueueSize = 5
@@ -30,7 +30,7 @@ func newSyncTreeHandler(objTree tree.ObjectTree, syncClient SyncClient) synchand
 	return &syncTreeHandler{
 		objTree:    objTree,
 		syncClient: syncClient,
-		handlerMap: map[string][]treeMsg{},
+		queue:      newReceiveQueue(maxQueueSize),
 	}
 }
 
@@ -43,13 +43,7 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 		return
 	}
 
-	s.handlerLock.Lock()
-	queue := s.handlerMap[senderId]
-	queueFull := len(queue) >= maxQueueSize
-	queue = append(queue, treeMsg{msg.ReplyId, unmarshalled})
-	s.handlerMap[senderId] = queue
-	s.handlerLock.Unlock()
-
+	queueFull := s.queue.AddMessage(senderId, treeMsg{msg.ReplyId, unmarshalled})
 	if queueFull {
 		return
 	}
@@ -71,30 +65,19 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 func (s *syncTreeHandler) handleMessage(ctx context.Context, senderId string) (actions []sendFunc, err error) {
 	s.objTree.Lock()
 	defer s.objTree.Unlock()
-	s.handlerLock.Lock()
-	treeMessage := s.handlerMap[senderId][0]
-	unmarshalled := treeMessage.syncMessage
-	replyId := treeMessage.replyId
-	s.handlerLock.Unlock()
+	msg, err := s.queue.GetMessage(senderId)
+	if err != nil {
+		return
+	}
 
-	defer func() {
-		s.handlerLock.Lock()
-		defer s.handlerLock.Unlock()
-		queue := s.handlerMap[senderId]
-		excessLen := len(queue) - maxQueueSize + 1
-		if excessLen <= 0 {
-			excessLen = 1
-		}
-		queue = queue[excessLen:]
-		s.handlerMap[senderId] = queue
-	}()
+	defer s.queue.ClearQueue(senderId)
 
-	content := unmarshalled.GetContent()
+	content := msg.syncMessage.GetContent()
 	switch {
 	case content.GetHeadUpdate() != nil:
-		return s.handleHeadUpdate(ctx, senderId, content.GetHeadUpdate(), replyId)
+		return s.handleHeadUpdate(ctx, senderId, content.GetHeadUpdate(), msg.replyId)
 	case content.GetFullSyncRequest() != nil:
-		return s.handleFullSyncRequest(ctx, senderId, content.GetFullSyncRequest(), replyId)
+		return s.handleFullSyncRequest(ctx, senderId, content.GetFullSyncRequest(), msg.replyId)
 	case content.GetFullSyncResponse() != nil:
 		return s.handleFullSyncResponse(ctx, senderId, content.GetFullSyncResponse())
 	}
