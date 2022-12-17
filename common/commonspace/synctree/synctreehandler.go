@@ -3,6 +3,7 @@ package synctree
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
@@ -13,10 +14,11 @@ import (
 )
 
 type syncTreeHandler struct {
-	objTree     tree.ObjectTree
-	syncClient  SyncClient
-	handlerLock sync.Mutex
-	queue       ReceiveQueue
+	objTree       tree.ObjectTree
+	syncClient    SyncClient
+	statusService statusservice.StatusService
+	handlerLock   sync.Mutex
+	queue         ReceiveQueue
 }
 
 const maxQueueSize = 5
@@ -35,6 +37,10 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 	err = proto.Unmarshal(msg.Payload, unmarshalled)
 	if err != nil {
 		return
+	}
+
+	if s.statusService != nil {
+		s.statusService.HeadsReceive(senderId, msg.ObjectId, treechangeproto.GetHeads(unmarshalled))
 	}
 
 	queueFull := s.queue.AddMessage(senderId, unmarshalled, msg.ReplyId)

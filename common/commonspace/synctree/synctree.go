@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
@@ -39,12 +40,13 @@ type SyncTree interface {
 type syncTree struct {
 	tree.ObjectTree
 	synchandler.SyncHandler
-	syncClient SyncClient
-	notifiable HeadNotifiable
-	listener   updatelistener.UpdateListener
-	treeUsage  *atomic.Int32
-	isClosed   bool
-	isDeleted  bool
+	syncClient    SyncClient
+	statusService statusservice.StatusService
+	notifiable    HeadNotifiable
+	listener      updatelistener.UpdateListener
+	treeUsage     *atomic.Int32
+	isClosed      bool
+	isDeleted     bool
 }
 
 var log = logger.NewNamed("commonspace.synctree").Sugar()
@@ -240,6 +242,9 @@ func (s *syncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 	}
 	if s.notifiable != nil {
 		s.notifiable.UpdateHeads(s.ID(), res.Heads)
+	}
+	if s.statusService != nil {
+		s.statusService.HeadsChange(s.ID(), res.Heads)
 	}
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
 	err = s.syncClient.BroadcastAsync(headUpdate)
