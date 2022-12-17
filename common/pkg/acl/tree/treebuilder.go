@@ -48,8 +48,10 @@ func (tb *treeBuilder) Build(theirHeads []string, newChanges []*Change) (*Tree, 
 		return nil, err
 	}
 
-	// TODO: we can actually get this from database
-	// getting old common snapshot
+	// TODO: we can actually get this from tree (though not sure, that there would always be
+	//  an invariant where the tree has the closest common snapshot of heads)
+	//  so if optimization is critical we can change this to inject from tree directly
+	//  but then we have to be sure that invariant stays true
 	oldBreakpoint, err := tb.findBreakpoint(heads, true)
 	if err != nil {
 		// this should never error out, because otherwise we have broken data

@@ -174,12 +174,11 @@ func Test_BuildSyncTree(t *testing.T) {
 			NewHeads:   nil,
 			RawChanges: changes,
 		}
-
 		expectedRes := tree.AddResult{
 			Added: changes,
 			Mode:  tree.Nothing,
 		}
-		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(changes)).
+		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(payload)).
 			Return(expectedRes, nil)
 
 		res, err := tr.AddRawChanges(ctx, payload)
