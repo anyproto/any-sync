@@ -9,6 +9,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncacl"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
@@ -80,6 +81,8 @@ type Space interface {
 	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
 	DeleteTree(ctx context.Context, id string) (err error)
 
+	StatusService() statusservice.StatusService
+
 	Close() error
 }
 
@@ -92,6 +95,7 @@ type space struct {
 
 	syncService      syncservice.SyncService
 	diffService      diffservice.DiffService
+	statusService    statusservice.StatusService
 	storage          storage.SpaceStorage
 	cache            treegetter.TreeGetter
 	account          account.Service
@@ -202,6 +206,10 @@ func (s *space) DiffService() diffservice.DiffService {
 	return s.diffService
 }
 
+func (s *space) StatusService() statusservice.StatusService {
+	return s.statusService
+}
+
 func (s *space) StoredIds() []string {
 	return s.diffService.AllIds()
 }
@@ -222,6 +230,7 @@ func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		Configuration: s.configuration,
 		AclList:       s.aclList,
 		SpaceStorage:  s.storage,
+		StatusService: s.statusService,
 	}
 	return synctree.DeriveSyncTree(ctx, deps)
 }
@@ -238,6 +247,7 @@ func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		Configuration: s.configuration,
 		AclList:       s.aclList,
 		SpaceStorage:  s.storage,
+		StatusService: s.statusService,
 	}
 	return synctree.CreateSyncTree(ctx, deps)
 }
@@ -256,6 +266,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		AclList:        s.aclList,
 		SpaceStorage:   s.storage,
 		TreeUsage:      &s.treesUsed,
+		StatusService:  s.statusService,
 	}
 	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
 }
@@ -285,6 +296,11 @@ func (s *space) Close() error {
 	}
 	if err := s.storage.Close(); err != nil {
 		mError.Add(err)
+	}
+	if s.statusService != nil {
+		if err := s.statusService.Close(); err != nil {
+			mError.Add(err)
+		}
 	}
 	return mError.Err()
 }

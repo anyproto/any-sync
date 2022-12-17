@@ -23,11 +23,12 @@ type syncTreeHandler struct {
 
 const maxQueueSize = 5
 
-func newSyncTreeHandler(objTree tree.ObjectTree, syncClient SyncClient) synchandler.SyncHandler {
+func newSyncTreeHandler(objTree tree.ObjectTree, syncClient SyncClient, statusService statusservice.StatusService) synchandler.SyncHandler {
 	return &syncTreeHandler{
-		objTree:    objTree,
-		syncClient: syncClient,
-		queue:      newReceiveQueue(maxQueueSize),
+		objTree:       objTree,
+		syncClient:    syncClient,
+		statusService: statusService,
+		queue:         newReceiveQueue(maxQueueSize),
 	}
 }
 

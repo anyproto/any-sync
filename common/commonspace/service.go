@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
@@ -108,12 +109,20 @@ func (s *service) NewSpace(ctx context.Context, id string) (Space, error) {
 
 	lastConfiguration := s.configurationService.GetLast()
 	confConnector := nodeconf.NewConfConnector(lastConfiguration, s.pool)
+
+	var statusService statusservice.StatusService
+	// this will work only for clients, not the best solution, but...
+	if !lastConfiguration.IsResponsible(st.Id()) {
+		statusService = statusservice.NewStatusService(st.Id(), lastConfiguration)
+	}
+
 	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, st, confConnector, s.treeGetter, log)
 	syncService := syncservice.NewSyncService(id, confConnector, s.config.SyncPeriod)
 	sp := &space{
 		id:            id,
 		syncService:   syncService,
 		diffService:   diffService,
+		statusService: statusService,
 		cache:         s.treeGetter,
 		account:       s.account,
 		configuration: lastConfiguration,

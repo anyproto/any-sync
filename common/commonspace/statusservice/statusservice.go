@@ -17,6 +17,7 @@ type StatusService interface {
 	Unwatch(treeId string)
 	StateCounter() uint64
 	RemoveAllExcept(senderId string, differentRemoteIds []string, stateCounter uint64)
+	Close() error
 }
 
 type statusEntry struct {
@@ -31,6 +32,7 @@ type statusService struct {
 	watchers      map[string]chan bool
 	configuration nodeconf.Configuration
 	stateCounter  uint64
+	closed        bool
 }
 
 func NewStatusService(spaceId string, configuration nodeconf.Configuration) StatusService {
@@ -46,6 +48,10 @@ func NewStatusService(spaceId string, configuration nodeconf.Configuration) Stat
 func (s *statusService) HeadsChange(treeId string, heads []string) {
 	s.Lock()
 	defer s.Unlock()
+	if s.closed {
+		return
+	}
+
 	s.treeHeads[treeId] = statusEntry{
 		head:         heads[0],
 		stateCounter: s.stateCounter,
@@ -62,6 +68,10 @@ func (s *statusService) HeadsChange(treeId string, heads []string) {
 func (s *statusService) HeadsReceive(senderId, treeId string, heads []string) {
 	s.Lock()
 	defer s.Unlock()
+	if s.closed {
+		return
+	}
+
 	curHead, ok := s.treeHeads[treeId]
 	if !ok {
 		return
@@ -84,19 +94,40 @@ func (s *statusService) HeadsReceive(senderId, treeId string, heads []string) {
 func (s *statusService) Watch(treeId string, ch chan bool) {
 	s.Lock()
 	defer s.Unlock()
+	if s.closed {
+		return
+	}
 	s.watchers[treeId] = ch
 }
 
 func (s *statusService) Unwatch(treeId string) {
 	s.Lock()
 	defer s.Unlock()
-	delete(s.watchers, treeId)
+	if s.closed {
+		return
+	}
+	if ch, ok := s.watchers[treeId]; ok {
+		close(ch)
+		delete(s.watchers, treeId)
+	}
 }
 
 func (s *statusService) StateCounter() uint64 {
 	s.Lock()
 	defer s.Unlock()
 	return s.stateCounter
+}
+
+func (s *statusService) Close() (err error) {
+	s.Lock()
+	defer s.Unlock()
+	if s.closed {
+		return
+	}
+	for _, ch := range s.watchers {
+		close(ch)
+	}
+	return
 }
 
 func (s *statusService) RemoveAllExcept(senderId string, differentRemoteIds []string, stateCounter uint64) {
