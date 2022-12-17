@@ -58,7 +58,7 @@ func (s *service) registerScripts() {
 			}
 			for _, p := range addresses {
 				wg.Add(1)
-				createMany(p)
+				go createMany(p)
 			}
 			wg.Wait()
 			if mError.Err() != nil {

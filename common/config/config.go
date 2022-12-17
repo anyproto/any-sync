@@ -32,6 +32,7 @@ type Config struct {
 	Storage    Storage    `yaml:"storage"`
 	Metric     Metric     `yaml:"metric"`
 	Log        Log        `yaml:"log"`
+	Stream     Stream     `yaml:"stream"`
 }
 
 func (c *Config) Init(a *app.App) (err error) {
@@ -49,6 +50,10 @@ func (c Config) GetAnytype() Anytype {
 
 func (c Config) GetGRPCServer() GrpcServer {
 	return c.GrpcServer
+}
+
+func (c Config) GetStream() Stream {
+	return c.Stream
 }
 
 func (c Config) GetAccount() Account {

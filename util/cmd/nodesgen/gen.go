@@ -198,7 +198,11 @@ func genNodeConfig(addresses []string, apiAddresses []string) (config.Config, er
 		},
 		Space: config.Space{
 			GCTTL:      60,
-			SyncPeriod: 11,
+			SyncPeriod: 600,
+		},
+		Stream: config.Stream{
+			TimeoutMilliseconds: 1000,
+			MaxMsgSizeMb:        256,
 		},
 	}, nil
 }
@@ -248,7 +252,11 @@ func genClientConfig(addresses []string, apiAddresses []string, encKey encryptio
 		},
 		Space: config.Space{
 			GCTTL:      60,
-			SyncPeriod: 11,
+			SyncPeriod: 20,
+		},
+		Stream: config.Stream{
+			TimeoutMilliseconds: 1000,
+			MaxMsgSizeMb:        256,
 		},
 	}, nil
 }
@@ -294,6 +302,10 @@ func genConsensusConfig(addresses []string) (cconfig.Config, error) {
 			Connect:       "mongodb://localhost:27017/?w=majority",
 			Database:      "consensus",
 			LogCollection: "log",
+		},
+		Stream: config.Stream{
+			TimeoutMilliseconds: 1000,
+			MaxMsgSizeMb:        256,
 		},
 	}, nil
 }

@@ -246,7 +246,7 @@ func (st *ACLState) applyChangeData(changeData *aclrecordproto.ACLData, hash uin
 			return
 		}
 
-		if !st.hasPermission(identity, aclrecordproto.ACLUserPermissions_Admin) {
+		if !st.HasPermission(identity, aclrecordproto.ACLUserPermissions_Admin) {
 			err = fmt.Errorf("user %s must have admin permissions", identity)
 			return
 		}
@@ -413,7 +413,7 @@ func (st *ACLState) decryptReadKeyAndHash(msg []byte) (*symmetric.Key, uint64, e
 	return key, hasher.Sum64(), nil
 }
 
-func (st *ACLState) hasPermission(identity []byte, permission aclrecordproto.ACLUserPermissions) bool {
+func (st *ACLState) HasPermission(identity []byte, permission aclrecordproto.ACLUserPermissions) bool {
 	state, exists := st.userStates[string(identity)]
 	if !exists {
 		return false

@@ -218,7 +218,7 @@ func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 	deps := synctree.CreateDeps{
 		SpaceId:       s.id,
 		Payload:       payload,
-		StreamPool:    s.syncService.StreamPool(),
+		SyncService:   s.syncService,
 		Configuration: s.configuration,
 		AclList:       s.aclList,
 		SpaceStorage:  s.storage,
@@ -234,7 +234,7 @@ func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 	deps := synctree.CreateDeps{
 		SpaceId:       s.id,
 		Payload:       payload,
-		StreamPool:    s.syncService.StreamPool(),
+		SyncService:   s.syncService,
 		Configuration: s.configuration,
 		AclList:       s.aclList,
 		SpaceStorage:  s.storage,
@@ -249,7 +249,7 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 	}
 	deps := synctree.BuildDeps{
 		SpaceId:        s.id,
-		StreamPool:     s.syncService.StreamPool(),
+		SyncService:    s.syncService,
 		Configuration:  s.configuration,
 		HeadNotifiable: s.diffService,
 		Listener:       listener,

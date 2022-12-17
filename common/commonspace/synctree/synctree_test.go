@@ -37,6 +37,12 @@ func (s syncTreeMatcher) String() string {
 	return ""
 }
 
+func syncClientFuncCreator(client SyncClient) func(spaceId string, factory RequestFactory, syncService syncservice.SyncService, configuration nodeconf.Configuration) SyncClient {
+	return func(spaceId string, factory RequestFactory, syncService syncservice.SyncService, configuration nodeconf.Configuration) SyncClient {
+		return client
+	}
+}
+
 func Test_DeriveSyncTree(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
@@ -53,9 +59,7 @@ func Test_DeriveSyncTree(t *testing.T) {
 		require.Equal(t, expectedPayload, payload)
 		return objTreeMock, nil
 	}
-	createSyncClient = func(spaceId string, pool syncservice.StreamPool, factory RequestFactory, configuration nodeconf.Configuration) SyncClient {
-		return syncClientMock
-	}
+	createSyncClient = syncClientFuncCreator(syncClientMock)
 	headUpdate := &treechangeproto.TreeSyncMessage{}
 	syncClientMock.EXPECT().CreateHeadUpdate(gomock.Any(), gomock.Nil()).Return(headUpdate)
 	syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
@@ -65,6 +69,7 @@ func Test_DeriveSyncTree(t *testing.T) {
 		Payload:      expectedPayload,
 		SpaceStorage: spaceStorageMock,
 	}
+	objTreeMock.EXPECT().ID().Return("id")
 
 	_, err := DeriveSyncTree(ctx, deps)
 	require.NoError(t, err)
@@ -86,12 +91,12 @@ func Test_CreateSyncTree(t *testing.T) {
 		require.Equal(t, expectedPayload, payload)
 		return objTreeMock, nil
 	}
-	createSyncClient = func(spaceId string, pool syncservice.StreamPool, factory RequestFactory, configuration nodeconf.Configuration) SyncClient {
-		return syncClientMock
-	}
+
+	createSyncClient = syncClientFuncCreator(syncClientMock)
 	headUpdate := &treechangeproto.TreeSyncMessage{}
 	syncClientMock.EXPECT().CreateHeadUpdate(gomock.Any(), gomock.Nil()).Return(headUpdate)
 	syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
+	objTreeMock.EXPECT().ID().Return("id")
 	deps := CreateDeps{
 		AclList:      aclListMock,
 		SpaceId:      spaceId,
@@ -122,48 +127,61 @@ func Test_BuildSyncTree(t *testing.T) {
 	headUpdate := &treechangeproto.TreeSyncMessage{}
 	t.Run("AddRawChanges update", func(t *testing.T) {
 		changes := []*treechangeproto.RawTreeChangeWithId{{Id: "some"}}
+		payload := tree.RawChangesPayload{
+			NewHeads:   nil,
+			RawChanges: changes,
+		}
 		expectedRes := tree.AddResult{
 			Added: changes,
 			Mode:  tree.Append,
 		}
-		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(changes)).
+		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(payload)).
 			Return(expectedRes, nil)
 		updateListenerMock.EXPECT().Update(tr)
 
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
 		syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
-		res, err := tr.AddRawChanges(ctx, changes...)
+		res, err := tr.AddRawChanges(ctx, payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
 	})
 
 	t.Run("AddRawChanges rebuild", func(t *testing.T) {
 		changes := []*treechangeproto.RawTreeChangeWithId{{Id: "some"}}
+		payload := tree.RawChangesPayload{
+			NewHeads:   nil,
+			RawChanges: changes,
+		}
+
 		expectedRes := tree.AddResult{
 			Added: changes,
 			Mode:  tree.Rebuild,
 		}
-		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(changes)).
+		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(payload)).
 			Return(expectedRes, nil)
 		updateListenerMock.EXPECT().Rebuild(tr)
 
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
 		syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
-		res, err := tr.AddRawChanges(ctx, changes...)
+		res, err := tr.AddRawChanges(ctx, payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
 	})
 
 	t.Run("AddRawChanges nothing", func(t *testing.T) {
 		changes := []*treechangeproto.RawTreeChangeWithId{{Id: "some"}}
+		payload := tree.RawChangesPayload{
+			NewHeads:   nil,
+			RawChanges: changes,
+		}
 		expectedRes := tree.AddResult{
 			Added: changes,
 			Mode:  tree.Nothing,
 		}
-		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(changes)).
+		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(payload)).
 			Return(expectedRes, nil)
 
-		res, err := tr.AddRawChanges(ctx, changes...)
+		res, err := tr.AddRawChanges(ctx, payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
 	})

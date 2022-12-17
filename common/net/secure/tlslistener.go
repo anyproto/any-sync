@@ -3,9 +3,11 @@ package secure
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/timeoutconn"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	"net"
+	"time"
 )
 
 type ContextListener interface {
@@ -20,17 +22,19 @@ type ContextListener interface {
 	Addr() net.Addr
 }
 
-func newTLSListener(key crypto.PrivKey, lis net.Listener) ContextListener {
+func newTLSListener(key crypto.PrivKey, lis net.Listener, timeoutMillis int) ContextListener {
 	tr, _ := libp2ptls.New(key)
 	return &tlsListener{
-		tr:       tr,
-		Listener: lis,
+		tr:            tr,
+		Listener:      lis,
+		timeoutMillis: timeoutMillis,
 	}
 }
 
 type tlsListener struct {
 	net.Listener
-	tr *libp2ptls.Transport
+	tr            *libp2ptls.Transport
+	timeoutMillis int
 }
 
 func (p *tlsListener) Accept(ctx context.Context) (context.Context, net.Conn, error) {
@@ -38,7 +42,8 @@ func (p *tlsListener) Accept(ctx context.Context) (context.Context, net.Conn, er
 	if err != nil {
 		return nil, nil, err
 	}
-	return p.upgradeConn(ctx, conn)
+	timeoutConn := timeoutconn.NewConn(conn, time.Duration(p.timeoutMillis)*time.Millisecond)
+	return p.upgradeConn(ctx, timeoutConn)
 }
 
 func (p *tlsListener) upgradeConn(ctx context.Context, conn net.Conn) (context.Context, net.Conn, error) {

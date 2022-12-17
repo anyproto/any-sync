@@ -26,17 +26,18 @@ type DRPCServer interface {
 
 type configGetter interface {
 	GetGRPCServer() config.GrpcServer
+	GetStream() config.Stream
 }
 
 type drpcServer struct {
-	config    config.GrpcServer
+	config    configGetter
 	metric    metric.Metric
 	transport secure.Service
 	*BaseDrpcServer
 }
 
 func (s *drpcServer) Init(a *app.App) (err error) {
-	s.config = a.MustComponent(config.CName).(configGetter).GetGRPCServer()
+	s.config = a.MustComponent(config.CName).(configGetter)
 	s.metric = a.MustComponent(metric.CName).(metric.Metric)
 	s.transport = a.MustComponent(secure.CName).(secure.Service)
 	return nil
@@ -61,16 +62,19 @@ func (s *drpcServer) Run(ctx context.Context) (err error) {
 	if err = s.metric.Registry().Register(histVec); err != nil {
 		return
 	}
-	return s.BaseDrpcServer.Run(
-		ctx,
-		s.config.ListenAddrs,
-		func(handler drpc.Handler) drpc.Handler {
+	params := Params{
+		BufferSizeMb:  s.config.GetStream().MaxMsgSizeMb,
+		TimeoutMillis: s.config.GetStream().TimeoutMilliseconds,
+		ListenAddrs:   s.config.GetGRPCServer().ListenAddrs,
+		Wrapper: func(handler drpc.Handler) drpc.Handler {
 			return &metric.PrometheusDRPC{
 				Handler:    handler,
 				SummaryVec: histVec,
 			}
 		},
-		s.transport.TLSListener)
+		Converter: s.transport.TLSListener,
+	}
+	return s.BaseDrpcServer.Run(ctx, params)
 }
 
 func (s *drpcServer) Close(ctx context.Context) (err error) {

@@ -52,20 +52,20 @@ var log = logger.NewNamed("commonspace.synctree").Sugar()
 var createDerivedObjectTree = tree.CreateDerivedObjectTree
 var createObjectTree = tree.CreateObjectTree
 var buildObjectTree = tree.BuildObjectTree
-var createSyncClient = newSyncClient
+var createSyncClient = newWrappedSyncClient
 
 type CreateDeps struct {
 	SpaceId       string
 	Payload       tree.ObjectTreeCreatePayload
 	Configuration nodeconf.Configuration
-	StreamPool    syncservice.StreamPool
+	SyncService   syncservice.SyncService
 	AclList       list.ACLList
 	SpaceStorage  spacestorage.SpaceStorage
 }
 
 type BuildDeps struct {
 	SpaceId        string
-	StreamPool     syncservice.StreamPool
+	SyncService    syncservice.SyncService
 	Configuration  nodeconf.Configuration
 	HeadNotifiable HeadNotifiable
 	Listener       updatelistener.UpdateListener
@@ -73,6 +73,11 @@ type BuildDeps struct {
 	SpaceStorage   spacestorage.SpaceStorage
 	TreeStorage    storage.TreeStorage
 	TreeUsage      *atomic.Int32
+}
+
+func newWrappedSyncClient(spaceId string, factory RequestFactory, syncService syncservice.SyncService, configuration nodeconf.Configuration) SyncClient {
+	syncClient := newSyncClient(spaceId, syncService.StreamPool(), factory, configuration, syncService.StreamChecker())
+	return newQueuedClient(syncClient, syncService.ActionQueue())
 }
 
 func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error) {
@@ -83,8 +88,8 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 
 	syncClient := createSyncClient(
 		deps.SpaceId,
-		deps.StreamPool,
 		sharedFactory,
+		deps.SyncService,
 		deps.Configuration)
 
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
@@ -100,8 +105,8 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 	}
 	syncClient := createSyncClient(
 		deps.SpaceId,
-		deps.StreamPool,
-		GetRequestFactory(),
+		sharedFactory,
+		deps.SyncService,
 		deps.Configuration)
 
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
@@ -122,7 +127,7 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 			return
 		}
 
-		resp, err := deps.StreamPool.SendSync(peerId, objMsg)
+		resp, err := deps.SyncService.StreamPool().SendSync(peerId, objMsg)
 		if err != nil {
 			return
 		}
@@ -186,8 +191,8 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	}
 	syncClient := createSyncClient(
 		deps.SpaceId,
-		deps.StreamPool,
-		GetRequestFactory(),
+		sharedFactory,
+		deps.SyncService,
 		deps.Configuration)
 	syncTree := &syncTree{
 		ObjectTree: objTree,
@@ -200,12 +205,11 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	syncTree.SyncHandler = syncHandler
 	t = syncTree
 	syncTree.Lock()
-	defer syncTree.Unlock()
 	syncTree.afterBuild()
+	syncTree.Unlock()
 
-	headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
-	// here we will have different behaviour based on who is sending this update
 	if isFirstBuild {
+		headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 		// send to everybody, because everybody should know that the node or client got new tree
 		err = syncTree.syncClient.BroadcastAsync(headUpdate)
 	}
@@ -242,11 +246,11 @@ func (s *syncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 	return
 }
 
-func (s *syncTree) AddRawChanges(ctx context.Context, changes ...*treechangeproto.RawTreeChangeWithId) (res tree.AddResult, err error) {
+func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload tree.RawChangesPayload) (res tree.AddResult, err error) {
 	if err = s.checkAlive(); err != nil {
 		return
 	}
-	res, err = s.ObjectTree.AddRawChanges(ctx, changes...)
+	res, err = s.ObjectTree.AddRawChanges(ctx, changesPayload)
 	if err != nil {
 		return
 	}
@@ -308,6 +312,8 @@ func (s *syncTree) checkAlive() (err error) {
 }
 
 func (s *syncTree) Ping() (err error) {
+	s.Lock()
+	defer s.Unlock()
 	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
 	return s.syncClient.BroadcastAsyncOrSendResponsible(headUpdate)
 }
