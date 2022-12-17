@@ -7,14 +7,10 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/document"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/symmetric"
-	"github.com/ipfs/go-cid"
-	"go.uber.org/zap"
-	"io"
 	"math/rand"
-	"os"
+	"sync"
 )
 
 type rpcHandler struct {
@@ -22,7 +18,49 @@ type rpcHandler struct {
 	storageService storage.ClientStorage
 	docService     document.Service
 	account        account.Service
-	file           fileservice.FileService
+	treeWatcher    *watcher
+	sync.Mutex
+}
+
+func (r *rpcHandler) Watch(ctx context.Context, request *apiproto.WatchRequest) (resp *apiproto.WatchResponse, err error) {
+	space, err := r.spaceService.GetSpace(context.Background(), request.SpaceId)
+	if err != nil {
+		return
+	}
+	r.Lock()
+	defer r.Unlock()
+
+	ch := make(chan bool)
+	r.treeWatcher = newWatcher(request.SpaceId, request.TreeId, ch)
+	space.StatusService().Watch(request.TreeId, ch)
+	go r.treeWatcher.run()
+	resp = &apiproto.WatchResponse{}
+	return
+}
+
+func (r *rpcHandler) Unwatch(ctx context.Context, request *apiproto.UnwatchRequest) (resp *apiproto.UnwatchResponse, err error) {
+	space, err := r.spaceService.GetSpace(context.Background(), request.SpaceId)
+	if err != nil {
+		return
+	}
+	var treeWatcher *watcher
+	space.StatusService().Unwatch(request.TreeId)
+
+	r.Lock()
+	if r.treeWatcher != nil {
+		treeWatcher = r.treeWatcher
+	}
+	r.Unlock()
+
+	treeWatcher.close()
+
+	r.Lock()
+	if r.treeWatcher == treeWatcher {
+		r.treeWatcher = nil
+	}
+	r.Unlock()
+	resp = &apiproto.UnwatchResponse{}
+	return
 }
 
 func (r *rpcHandler) LoadSpace(ctx context.Context, request *apiproto.LoadSpaceRequest) (resp *apiproto.LoadSpaceResponse, err error) {
@@ -149,51 +187,4 @@ func (r *rpcHandler) TreeParams(ctx context.Context, request *apiproto.TreeParam
 		HeadIds: heads,
 	}
 	return
-}
-
-func (r *rpcHandler) PutFile(ctx context.Context, request *apiproto.PutFileRequest) (*apiproto.PutFileResponse, error) {
-	f, err := os.Open(request.Path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	n, err := r.file.AddFile(ctx, f)
-	if err != nil {
-		return nil, err
-	}
-	return &apiproto.PutFileResponse{
-		Hash: n.Cid().String(),
-	}, nil
-}
-
-func (r *rpcHandler) GetFile(ctx context.Context, request *apiproto.GetFileRequest) (*apiproto.GetFileResponse, error) {
-	c, err := cid.Parse(request.Hash)
-	if err != nil {
-		return nil, err
-	}
-
-	f, err := os.Create(request.Path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	rd, err := r.file.GetFile(ctx, c)
-	if err != nil {
-		return nil, err
-	}
-	defer rd.Close()
-	wr, err := io.Copy(f, rd)
-	if err != nil && err != io.EOF {
-		return nil, err
-	}
-	log.Info("copied bytes", zap.Int64("size", wr))
-	return &apiproto.GetFileResponse{
-		Path: request.Path,
-	}, nil
-}
-
-func (r *rpcHandler) DeleteFile(ctx context.Context, request *apiproto.DeleteFileRequest) (*apiproto.DeleteFileResponse, error) {
-	//TODO implement me
-	panic("implement me")
 }

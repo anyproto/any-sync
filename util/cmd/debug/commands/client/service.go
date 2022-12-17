@@ -24,9 +24,8 @@ type Service interface {
 	AllTrees(ctx context.Context, ip string, request *apiproto.AllTreesRequest) (resp *apiproto.AllTreesResponse, err error)
 	AllSpaces(ctx context.Context, ip string, request *apiproto.AllSpacesRequest) (resp *apiproto.AllSpacesResponse, err error)
 	LoadSpace(ctx context.Context, ip string, request *apiproto.LoadSpaceRequest) (res *apiproto.LoadSpaceResponse, err error)
-	PutFile(ctx context.Context, ip string, request *apiproto.PutFileRequest) (resp *apiproto.PutFileResponse, err error)
-	GetFile(ctx context.Context, ip string, request *apiproto.GetFileRequest) (resp *apiproto.GetFileResponse, err error)
-	DeleteFile(ctx context.Context, ip string, request *apiproto.DeleteFileRequest) (resp *apiproto.DeleteFileResponse, err error)
+	Watch(ctx context.Context, ip string, request *apiproto.WatchRequest) (res *apiproto.WatchResponse, err error)
+	Unwatch(ctx context.Context, ip string, request *apiproto.UnwatchRequest) (res *apiproto.UnwatchResponse, err error)
 }
 
 type service struct {
@@ -126,26 +125,18 @@ func (s *service) LoadSpace(ctx context.Context, ip string, request *apiproto.Lo
 	return cl.LoadSpace(ctx, request)
 }
 
-func (s *service) PutFile(ctx context.Context, ip string, request *apiproto.PutFileRequest) (resp *apiproto.PutFileResponse, err error) {
+func (s *service) Watch(ctx context.Context, ip string, request *apiproto.WatchRequest) (res *apiproto.WatchResponse, err error) {
 	cl, err := s.client.GetClient(ctx, ip)
 	if err != nil {
 		return
 	}
-	return cl.PutFile(ctx, request)
+	return cl.Watch(ctx, request)
 }
 
-func (s *service) GetFile(ctx context.Context, ip string, request *apiproto.GetFileRequest) (resp *apiproto.GetFileResponse, err error) {
+func (s *service) Unwatch(ctx context.Context, ip string, request *apiproto.UnwatchRequest) (res *apiproto.UnwatchResponse, err error) {
 	cl, err := s.client.GetClient(ctx, ip)
 	if err != nil {
 		return
 	}
-	return cl.GetFile(ctx, request)
-}
-
-func (s *service) DeleteFile(ctx context.Context, ip string, request *apiproto.DeleteFileRequest) (resp *apiproto.DeleteFileResponse, err error) {
-	cl, err := s.client.GetClient(ctx, ip)
-	if err != nil {
-		return
-	}
-	return cl.DeleteFile(ctx, request)
+	return cl.Unwatch(ctx, request)
 }

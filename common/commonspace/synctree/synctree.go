@@ -63,6 +63,7 @@ type CreateDeps struct {
 	SyncService   syncservice.SyncService
 	AclList       list.ACLList
 	SpaceStorage  spacestorage.SpaceStorage
+	StatusService statusservice.StatusService
 }
 
 type BuildDeps struct {
@@ -75,9 +76,14 @@ type BuildDeps struct {
 	SpaceStorage   spacestorage.SpaceStorage
 	TreeStorage    storage.TreeStorage
 	TreeUsage      *atomic.Int32
+	StatusService  statusservice.StatusService
 }
 
-func newWrappedSyncClient(spaceId string, factory RequestFactory, syncService syncservice.SyncService, configuration nodeconf.Configuration) SyncClient {
+func newWrappedSyncClient(
+	spaceId string,
+	factory RequestFactory,
+	syncService syncservice.SyncService,
+	configuration nodeconf.Configuration) SyncClient {
 	syncClient := newSyncClient(spaceId, syncService.StreamPool(), factory, configuration, syncService.StreamChecker())
 	return newQueuedClient(syncClient, syncService.ActionQueue())
 }
@@ -95,6 +101,7 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 		deps.Configuration)
 
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
+	deps.StatusService.HeadsChange(objTree.ID(), objTree.Heads())
 	syncClient.BroadcastAsync(headUpdate)
 	id = objTree.ID()
 	return
@@ -112,6 +119,7 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 		deps.Configuration)
 
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
+	deps.StatusService.HeadsChange(objTree.ID(), objTree.Heads())
 	syncClient.BroadcastAsync(headUpdate)
 	id = objTree.ID()
 	return
@@ -197,13 +205,14 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 		deps.SyncService,
 		deps.Configuration)
 	syncTree := &syncTree{
-		ObjectTree: objTree,
-		syncClient: syncClient,
-		notifiable: deps.HeadNotifiable,
-		treeUsage:  deps.TreeUsage,
-		listener:   deps.Listener,
+		ObjectTree:    objTree,
+		syncClient:    syncClient,
+		notifiable:    deps.HeadNotifiable,
+		treeUsage:     deps.TreeUsage,
+		listener:      deps.Listener,
+		statusService: deps.StatusService,
 	}
-	syncHandler := newSyncTreeHandler(syncTree, syncClient)
+	syncHandler := newSyncTreeHandler(syncTree, syncClient, deps.StatusService)
 	syncTree.SyncHandler = syncHandler
 	t = syncTree
 	syncTree.Lock()

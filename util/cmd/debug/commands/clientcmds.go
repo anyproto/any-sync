@@ -291,57 +291,59 @@ func (s *service) registerClientCommands() {
 	}
 	s.clientCommands = append(s.clientCommands, cmdAllSpaces)
 
-	cmdPutFile := &cobra.Command{
-		Use:   "put-file",
-		Short: "put new file by path",
+	cmdTreeWatch := &cobra.Command{
+		Use:   "tree-watch [document]",
+		Short: "start watching the tree (prints in logs the status on the client side)",
+		Args:  cobra.RangeArgs(1, 1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cli, _ := cmd.Flags().GetString("client")
+			space, _ := cmd.Flags().GetString("space")
 			addr, ok := s.peers[cli]
 			if !ok {
 				fmt.Println("no such client")
 				return
 			}
-			path, _ := cmd.Flags().GetString("path")
-			spaceId, _ := cmd.Flags().GetString("spaceId")
-			resp, err := s.client.PutFile(context.Background(), addr, &clientproto.PutFileRequest{
-				Path:    path,
-				SpaceId: spaceId,
-			})
-			if err != nil {
-				fmt.Println("error:", err)
-				return
-			}
-			fmt.Println("hash:", resp.Hash)
-		},
-	}
-	cmdPutFile.Flags().String("path", "", "path to file")
-	cmdPutFile.Flags().String("spaceId", "", "spaceId")
-	s.clientCommands = append(s.clientCommands, cmdPutFile)
 
-	cmdGetFile := &cobra.Command{
-		Use:   "get-file",
-		Short: "get file by hash and save",
+			_, err := s.client.Watch(context.Background(), addr, &clientproto.WatchRequest{
+				SpaceId: space,
+				TreeId:  args[0],
+			})
+			if err != nil {
+				fmt.Println("couldn't start watching tree", err)
+				return
+			}
+			fmt.Println(args[0])
+		},
+	}
+	cmdTreeWatch.Flags().String("space", "", "the space where something is happening :-)")
+	cmdTreeWatch.MarkFlagRequired("space")
+	s.clientCommands = append(s.clientCommands, cmdTreeWatch)
+
+	cmdTreeUnwatch := &cobra.Command{
+		Use:   "tree-unwatch [document]",
+		Short: "stop watching the tree (prints in logs the status on the client side)",
+		Args:  cobra.RangeArgs(1, 1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cli, _ := cmd.Flags().GetString("client")
+			space, _ := cmd.Flags().GetString("space")
 			addr, ok := s.peers[cli]
 			if !ok {
 				fmt.Println("no such client")
 				return
 			}
-			hash, _ := cmd.Flags().GetString("hash")
-			path, _ := cmd.Flags().GetString("path")
-			resp, err := s.client.GetFile(context.Background(), addr, &clientproto.GetFileRequest{
-				Hash: hash,
-				Path: path,
+
+			_, err := s.client.Unwatch(context.Background(), addr, &clientproto.UnwatchRequest{
+				SpaceId: space,
+				TreeId:  args[0],
 			})
 			if err != nil {
-				fmt.Println("error:", err)
+				fmt.Println("couldn't stop watching tree", err)
 				return
 			}
-			fmt.Println("path:", resp.Path)
+			fmt.Println(args[0])
 		},
 	}
-	cmdGetFile.Flags().String("path", "", "path to file")
-	cmdGetFile.Flags().String("hash", "", "CID")
-	s.clientCommands = append(s.clientCommands, cmdGetFile)
+	cmdTreeUnwatch.Flags().String("space", "", "the space where something is happening :-)")
+	cmdTreeUnwatch.MarkFlagRequired("space")
+	s.clientCommands = append(s.clientCommands, cmdTreeUnwatch)
 }
