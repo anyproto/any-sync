@@ -112,6 +112,8 @@ func (s *service) NewSpace(ctx context.Context, id string) (Space, error) {
 
 	var statusService statusservice.StatusService
 	// this will work only for clients, not the best solution, but...
+	// TODO: maybe change this to dependency injection where we would inject the method `ProvideStatusService`
+	//  and for nodes there would be NoOpStatusService
 	if !lastConfiguration.IsResponsible(st.Id()) {
 		statusService = statusservice.NewStatusService(st.Id(), lastConfiguration)
 	}
