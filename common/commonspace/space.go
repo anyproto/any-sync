@@ -190,6 +190,9 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
+	if s.statusService != nil {
+		s.statusService.Run()
+	}
 
 	return nil
 }

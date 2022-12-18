@@ -10,6 +10,7 @@ import (
 	config2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -99,6 +100,10 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	if err != nil {
 		return
 	}
+	ns.StatusService().SetUpdater(func(ctx context.Context, treeId string, status bool) (err error) {
+		log.With(zap.String("treeId", treeId), zap.Bool("synced", status)).Debug("updating sync status")
+		return
+	})
 	if err = ns.Init(ctx); err != nil {
 		return
 	}
