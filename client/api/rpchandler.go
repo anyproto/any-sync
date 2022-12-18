@@ -10,7 +10,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/symmetric"
 	"math/rand"
-	"sync"
 )
 
 type rpcHandler struct {
@@ -18,8 +17,6 @@ type rpcHandler struct {
 	storageService storage.ClientStorage
 	docService     document.Service
 	account        account.Service
-	treeWatcher    *watcher
-	sync.Mutex
 }
 
 func (r *rpcHandler) Watch(ctx context.Context, request *apiproto.WatchRequest) (resp *apiproto.WatchResponse, err error) {
@@ -27,13 +24,8 @@ func (r *rpcHandler) Watch(ctx context.Context, request *apiproto.WatchRequest) 
 	if err != nil {
 		return
 	}
-	r.Lock()
-	defer r.Unlock()
 
-	ch := make(chan bool)
-	r.treeWatcher = newWatcher(request.SpaceId, request.TreeId, ch)
-	space.StatusService().Watch(request.TreeId, ch)
-	go r.treeWatcher.run()
+	space.StatusService().Watch(request.TreeId)
 	resp = &apiproto.WatchResponse{}
 	return
 }
@@ -43,22 +35,7 @@ func (r *rpcHandler) Unwatch(ctx context.Context, request *apiproto.UnwatchReque
 	if err != nil {
 		return
 	}
-	var treeWatcher *watcher
 	space.StatusService().Unwatch(request.TreeId)
-
-	r.Lock()
-	if r.treeWatcher != nil {
-		treeWatcher = r.treeWatcher
-	}
-	r.Unlock()
-
-	treeWatcher.close()
-
-	r.Lock()
-	if r.treeWatcher == treeWatcher {
-		r.treeWatcher = nil
-	}
-	r.Unlock()
 	resp = &apiproto.UnwatchResponse{}
 	return
 }
