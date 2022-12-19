@@ -62,6 +62,7 @@ func Test_DeriveSyncTree(t *testing.T) {
 	}
 	createSyncClient = syncClientFuncCreator(syncClientMock)
 	headUpdate := &treechangeproto.TreeSyncMessage{}
+	objTreeMock.EXPECT().Heads().AnyTimes().Return([]string{"h1"})
 	syncClientMock.EXPECT().CreateHeadUpdate(gomock.Any(), gomock.Nil()).Return(headUpdate)
 	syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
 	deps := CreateDeps{
@@ -95,6 +96,7 @@ func Test_CreateSyncTree(t *testing.T) {
 	}
 
 	createSyncClient = syncClientFuncCreator(syncClientMock)
+	objTreeMock.EXPECT().Heads().AnyTimes().Return([]string{"h1"})
 	headUpdate := &treechangeproto.TreeSyncMessage{}
 	syncClientMock.EXPECT().CreateHeadUpdate(gomock.Any(), gomock.Nil()).Return(headUpdate)
 	syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
@@ -199,6 +201,7 @@ func Test_BuildSyncTree(t *testing.T) {
 			Mode:  tree.Append,
 			Added: changes,
 		}
+		objTreeMock.EXPECT().ID().Return("id").AnyTimes()
 		objTreeMock.EXPECT().AddContent(gomock.Any(), gomock.Eq(content)).
 			Return(expectedRes, nil)
 
