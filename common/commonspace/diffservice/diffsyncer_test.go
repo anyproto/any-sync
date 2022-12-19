@@ -110,7 +110,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	spaceId := "spaceId"
 	aclRootId := "aclRootId"
 	l := logger.NewNamed(spaceId)
-	diffSyncer := newDiffSyncer(spaceId, diffMock, connectorMock, cacheMock, stMock, factory, l)
+	diffSyncer := newDiffSyncer(spaceId, diffMock, connectorMock, cacheMock, stMock, factory, nil, l)
 	delState.EXPECT().AddObserver(gomock.Any())
 	diffSyncer.Init(delState)
 

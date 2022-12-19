@@ -10,6 +10,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/symmetric"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/slice"
 	"sync"
 )
 
@@ -341,7 +342,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 		}
 	}
 	// discarding all previously seen changes
-	ot.newChangesBuf = discardFromSlice(ot.newChangesBuf, func(ch *Change) bool { return ch == nil })
+	ot.newChangesBuf = slice.DiscardFromSlice(ot.newChangesBuf, func(ch *Change) bool { return ch == nil })
 
 	if shouldRebuildFromStorage {
 		err = ot.rebuildFromStorage(changesPayload.NewHeads, ot.newChangesBuf)

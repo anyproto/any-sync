@@ -31,6 +31,7 @@ func newDiffSyncer(
 	cache treegetter.TreeGetter,
 	storage storage.SpaceStorage,
 	clientFactory spacesyncproto.ClientFactory,
+	statusService statusservice.StatusService,
 	log *zap.Logger) DiffSyncer {
 	return &diffSyncer{
 		diff:          diff,
@@ -40,6 +41,7 @@ func newDiffSyncer(
 		confConnector: confConnector,
 		clientFactory: clientFactory,
 		log:           log,
+		statusService: statusService,
 	}
 }
 
