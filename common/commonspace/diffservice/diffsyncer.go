@@ -100,14 +100,14 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 		rdiff               = remotediff.NewRemoteDiff(d.spaceId, cl)
 		stateCounter uint64 = 0
 	)
-	if d.statusService != nil {
-		stateCounter = d.statusService.StateCounter()
-	}
+	stateCounter = d.statusService.StateCounter()
 	newIds, changedIds, removedIds, err := d.diff.Diff(ctx, rdiff)
 	err = rpcerr.Unwrap(err)
 	if err != nil && err != spacesyncproto.ErrSpaceMissing {
+		d.statusService.SetNodesOnline(p.Id(), false)
 		return err
 	}
+	d.statusService.SetNodesOnline(p.Id(), true)
 	if err == spacesyncproto.ErrSpaceMissing {
 		return d.sendPushSpaceRequest(ctx, cl)
 	}
@@ -115,9 +115,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	// not syncing ids which were removed through settings document
 	filteredIds := d.deletionState.FilterJoin(newIds, changedIds, removedIds)
 
-	if d.statusService != nil {
-		d.statusService.RemoveAllExcept(p.Id(), filteredIds, stateCounter)
-	}
+	d.statusService.RemoveAllExcept(p.Id(), filteredIds, stateCounter)
 
 	ctx = peer.CtxWithPeerId(ctx, p.Id())
 	d.pingTreesInCache(ctx, filteredIds)

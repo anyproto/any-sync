@@ -101,10 +101,7 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 		deps.Configuration)
 
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
-	if deps.StatusService != nil {
-		// TODO: maybe change to no-op status service
-		deps.StatusService.HeadsChange(objTree.ID(), objTree.Heads())
-	}
+	deps.StatusService.HeadsChange(objTree.ID(), objTree.Heads())
 	syncClient.BroadcastAsync(headUpdate)
 	id = objTree.ID()
 	return
@@ -123,9 +120,7 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
 
-	if deps.StatusService != nil {
-		deps.StatusService.HeadsChange(objTree.ID(), objTree.Heads())
-	}
+	deps.StatusService.HeadsChange(objTree.ID(), objTree.Heads())
 	syncClient.BroadcastAsync(headUpdate)
 	id = objTree.ID()
 	return
@@ -258,9 +253,7 @@ func (s *syncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 	if s.notifiable != nil {
 		s.notifiable.UpdateHeads(s.ID(), res.Heads)
 	}
-	if s.statusService != nil {
-		s.statusService.HeadsChange(s.ID(), res.Heads)
-	}
+	s.statusService.HeadsChange(s.ID(), res.Heads)
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
 	err = s.syncClient.BroadcastAsync(headUpdate)
 	return

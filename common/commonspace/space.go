@@ -190,9 +190,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	if s.statusService != nil {
-		s.statusService.Run()
-	}
+	s.statusService.Run()
 
 	return nil
 }
@@ -300,10 +298,9 @@ func (s *space) Close() error {
 	if err := s.storage.Close(); err != nil {
 		mError.Add(err)
 	}
-	if s.statusService != nil {
-		if err := s.statusService.Close(); err != nil {
-			mError.Add(err)
-		}
+	if err := s.statusService.Close(); err != nil {
+		mError.Add(err)
 	}
+
 	return mError.Err()
 }
