@@ -40,9 +40,7 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 		return
 	}
 
-	if s.statusService != nil {
-		s.statusService.HeadsReceive(senderId, msg.ObjectId, treechangeproto.GetHeads(unmarshalled))
-	}
+	s.statusService.HeadsReceive(senderId, msg.ObjectId, treechangeproto.GetHeads(unmarshalled))
 
 	queueFull := s.queue.AddMessage(senderId, unmarshalled, msg.ReplyId)
 	if queueFull {

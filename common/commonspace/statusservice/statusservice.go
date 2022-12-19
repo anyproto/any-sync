@@ -9,7 +9,6 @@ import (
 	treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/slice"
-	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"sync"
 	"time"
@@ -22,17 +21,21 @@ const (
 
 var log = logger.NewNamed("commonspace.statusservice")
 
-type Updater func(ctx context.Context, treeId string, status SyncStatus) (err error)
+type UpdateReceiver interface {
+	UpdateTree(ctx context.Context, treeId string, status SyncStatus) (err error)
+	UpdateNodeConnection(online bool)
+}
 
 type StatusService interface {
 	HeadsChange(treeId string, heads []string)
 	HeadsReceive(senderId, treeId string, heads []string)
 	Watch(treeId string) (err error)
 	Unwatch(treeId string)
+	SetNodesOnline(senderId string, online bool)
 	StateCounter() uint64
 	RemoveAllExcept(senderId string, differentRemoteIds []string, stateCounter uint64)
 
-	SetUpdater(updater Updater)
+	SetUpdateReceiver(updater UpdateReceiver)
 	Run()
 	Close() error
 }
@@ -59,16 +62,16 @@ type treeStatus struct {
 
 type statusService struct {
 	sync.Mutex
-	configuration nodeconf.Configuration
-	periodicSync  periodicsync.PeriodicSync
-	updater       Updater
-	storage       storage.SpaceStorage
+	configuration  nodeconf.Configuration
+	periodicSync   periodicsync.PeriodicSync
+	updateReceiver UpdateReceiver
+	storage        storage.SpaceStorage
 
 	spaceId      string
 	treeHeads    map[string]treeHeadsEntry
 	watchers     map[string]struct{}
 	stateCounter uint64
-	closed       bool
+	nodesOnline  bool
 
 	treeStatusBuf []treeStatus
 }
@@ -84,11 +87,11 @@ func NewStatusService(spaceId string, configuration nodeconf.Configuration, stor
 	}
 }
 
-func (s *statusService) SetUpdater(updater Updater) {
+func (s *statusService) SetUpdateReceiver(updater UpdateReceiver) {
 	s.Lock()
 	defer s.Unlock()
 
-	s.updater = updater
+	s.updateReceiver = updater
 }
 
 func (s *statusService) Run() {
@@ -115,11 +118,22 @@ func (s *statusService) HeadsChange(treeId string, heads []string) {
 	s.stateCounter++
 }
 
+func (s *statusService) SetNodesOnline(senderId string, online bool) {
+	if !s.isSenderResponsible(senderId) {
+		return
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	s.nodesOnline = online
+}
+
 func (s *statusService) update(ctx context.Context) (err error) {
 	s.treeStatusBuf = s.treeStatusBuf[:0]
 
 	s.Lock()
-	if s.updater == nil {
+	if s.updateReceiver == nil {
 		s.Unlock()
 		return
 	}
@@ -134,10 +148,9 @@ func (s *statusService) update(ctx context.Context) (err error) {
 		s.treeStatusBuf = append(s.treeStatusBuf, treeStatus{treeId, treeHeads.syncStatus, treeHeads.heads})
 	}
 	s.Unlock()
-
+	s.updateReceiver.UpdateNodeConnection(s.nodesOnline)
 	for _, entry := range s.treeStatusBuf {
-		log.With(zap.Bool("status", entry.status == SyncStatusSynced), zap.Strings("heads", entry.heads)).Debug("updating status")
-		err = s.updater(ctx, entry.treeId, entry.status)
+		err = s.updateReceiver.UpdateTree(ctx, entry.treeId, entry.status)
 		if err != nil {
 			return
 		}
@@ -155,7 +168,7 @@ func (s *statusService) HeadsReceive(senderId, treeId string, heads []string) {
 	}
 
 	// checking if other node is responsible
-	if len(heads) == 0 || !slices.Contains(s.configuration.NodeIds(s.spaceId), senderId) {
+	if len(heads) == 0 || !s.isSenderResponsible(senderId) {
 		return
 	}
 
@@ -227,7 +240,7 @@ func (s *statusService) StateCounter() uint64 {
 
 func (s *statusService) RemoveAllExcept(senderId string, differentRemoteIds []string, stateCounter uint64) {
 	// if sender is not a responsible node, then this should have no effect
-	if !slices.Contains(s.configuration.NodeIds(s.spaceId), senderId) {
+	if !s.isSenderResponsible(senderId) {
 		return
 	}
 
@@ -246,4 +259,8 @@ func (s *statusService) RemoveAllExcept(senderId string, differentRemoteIds []st
 			s.treeHeads[treeId] = entry
 		}
 	}
+}
+
+func (s *statusService) isSenderResponsible(senderId string) bool {
+	return slices.Contains(s.configuration.NodeIds(s.spaceId), senderId)
 }
