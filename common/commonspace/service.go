@@ -115,10 +115,10 @@ func (s *service) NewSpace(ctx context.Context, id string) (Space, error) {
 	// TODO: maybe change this to dependency injection where we would inject the method `ProvideStatusService`
 	//  and for nodes there would be NoOpStatusService
 	if !lastConfiguration.IsResponsible(st.Id()) {
-		statusService = statusservice.NewStatusService(st.Id(), lastConfiguration)
+		statusService = statusservice.NewStatusService(st.Id(), lastConfiguration, st)
 	}
 
-	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, st, confConnector, s.treeGetter, log)
+	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, st, confConnector, s.treeGetter, statusService, log)
 	syncService := syncservice.NewSyncService(id, confConnector, s.config.SyncPeriod)
 	sp := &space{
 		id:            id,
