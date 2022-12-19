@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate/mock_deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto/mock_spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter/mock_treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
@@ -110,7 +111,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	spaceId := "spaceId"
 	aclRootId := "aclRootId"
 	l := logger.NewNamed(spaceId)
-	diffSyncer := newDiffSyncer(spaceId, diffMock, connectorMock, cacheMock, stMock, factory, nil, l)
+	diffSyncer := newDiffSyncer(spaceId, diffMock, connectorMock, cacheMock, stMock, factory, statusservice.NewNoOpStatusService(), l)
 	delState.EXPECT().AddObserver(gomock.Any())
 	diffSyncer.Init(delState)
 

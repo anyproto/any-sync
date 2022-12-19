@@ -100,10 +100,10 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 		deps.SyncService,
 		deps.Configuration)
 
-	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
-	deps.StatusService.HeadsChange(objTree.ID(), objTree.Heads())
-	syncClient.BroadcastAsync(headUpdate)
 	id = objTree.ID()
+	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
+	deps.StatusService.HeadsChange(id, objTree.Heads())
+	syncClient.BroadcastAsync(headUpdate)
 	return
 }
 
@@ -118,11 +118,10 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 		deps.SyncService,
 		deps.Configuration)
 
-	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
-
-	deps.StatusService.HeadsChange(objTree.ID(), objTree.Heads())
-	syncClient.BroadcastAsync(headUpdate)
 	id = objTree.ID()
+	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
+	deps.StatusService.HeadsChange(id, objTree.Heads())
+	syncClient.BroadcastAsync(headUpdate)
 	return
 }
 
