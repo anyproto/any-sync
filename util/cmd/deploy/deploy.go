@@ -15,7 +15,7 @@ import (
 
 var log = logger.NewNamed("cmd.deploy")
 
-type absolutePaths struct {
+type rootArgs struct {
 	configPath       string
 	nodePkgPath      string
 	nodeBinaryPath   string
@@ -26,13 +26,17 @@ type absolutePaths struct {
 
 	nodePkgName   string
 	clientPkgName string
+
+	isDebug bool
 }
 
 type appPath struct {
-	wdPath     string
-	binaryPath string
-	configPath string
-	logPath    string
+	wdPath       string
+	binaryPath   string
+	configPath   string
+	logPath      string
+	debugPortNum int
+	isDebug      bool
 }
 
 const (
@@ -43,107 +47,73 @@ const (
 var rootCmd = &cobra.Command{
 	Use: "deploy",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		absolute := absolutePaths{}
+		rootArguments := rootArgs{}
 
-		// checking package names
-		nodePkgName, err := cmd.Flags().GetString("node-pkg")
-		if err != nil {
-			log.With(zap.Error(err)).Fatal("node package is not specified")
-		}
-		absolute.nodePkgName = nodePkgName
-
-		clientPkgName, err := cmd.Flags().GetString("client-pkg")
-		if err != nil {
-			log.With(zap.Error(err)).Fatal("client package is not specified")
-		}
-		absolute.clientPkgName = clientPkgName
+		rootArguments.nodePkgName, _ = cmd.Flags().GetString("node-pkg")
+		rootArguments.clientPkgName, _ = cmd.Flags().GetString("client-pkg")
 
 		// checking configs
-		cfgPath, err := cmd.Flags().GetString("config-dir")
-		if err != nil {
-			log.With(zap.Error(err)).Fatal("no config-dir flag is registered")
-		}
-
+		cfgPath, _ := cmd.Flags().GetString("config-dir")
 		if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
 			log.With(zap.Error(err)).Fatal("the config directory doesn't exist")
 		}
-		absolute.configPath, _ = filepath.Abs(cfgPath)
+		rootArguments.configPath, _ = filepath.Abs(cfgPath)
 
 		// checking node package
-		nodePath, err := cmd.Flags().GetString("node-path")
-		if err != nil {
-			log.With(zap.Error(err)).Fatal("no node-path flag is registered")
-		}
-
+		nodePath, _ := cmd.Flags().GetString("node-path")
 		if _, err := os.Stat(path.Join(nodePath, "go.mod")); os.IsNotExist(err) {
 			log.With(zap.Error(err)).Fatal("the path to node does not contain a go module")
 		}
-		absolute.nodePkgPath, _ = filepath.Abs(nodePath)
+		rootArguments.nodePkgPath, _ = filepath.Abs(nodePath)
 
 		// checking client package
-		clientPath, err := cmd.Flags().GetString("client-path")
-		if err != nil {
-			log.With(zap.Error(err)).Fatal("no client-path flag is registered")
-		}
-
+		clientPath, _ := cmd.Flags().GetString("client-path")
 		if _, err := os.Stat(path.Join(clientPath, "go.mod")); os.IsNotExist(err) {
 			log.With(zap.Error(err)).Fatal("the path to client does not contain a go module")
 		}
-		absolute.clientPkgPath, _ = filepath.Abs(clientPath)
+		rootArguments.clientPkgPath, _ = filepath.Abs(clientPath)
 
 		// checking binary path
-		binaryPath, err := cmd.Flags().GetString("bin")
-		if err != nil {
-			log.With(zap.Error(err)).Fatal("no bin flag is registered")
-		}
-
-		err = createDirectoryIfNotExists(binaryPath)
+		binaryPath, _ := cmd.Flags().GetString("bin")
+		err := createDirectoryIfNotExists(binaryPath)
 		if err != nil {
 			log.With(zap.Error(err)).Fatal("failed to create directory")
 		}
+
 		absoluteBinPath, _ := filepath.Abs(binaryPath)
-		absolute.clientBinaryPath = path.Join(absoluteBinPath, anytypeClientBinaryName)
-		absolute.nodeBinaryPath = path.Join(absoluteBinPath, anytypeNodeBinaryName)
+		rootArguments.clientBinaryPath = path.Join(absoluteBinPath, anytypeClientBinaryName)
+		rootArguments.nodeBinaryPath = path.Join(absoluteBinPath, anytypeNodeBinaryName)
+
+		// getting debug mode
+		rootArguments.isDebug, _ = cmd.Flags().GetBool("debug")
 
 		// checking db path
-		dbPath, err := cmd.Flags().GetString("db-path")
-		if err != nil {
-			log.With(zap.Error(err)).Fatal("no db-path flag is registered")
-		}
+		dbPath, _ := cmd.Flags().GetString("db-path")
 		err = createDirectoryIfNotExists(dbPath)
 		if err != nil {
 			log.With(zap.Error(err)).Fatal("failed to create directory")
 		}
-		absolute.dbPath, _ = filepath.Abs(dbPath)
+		rootArguments.dbPath, _ = filepath.Abs(dbPath)
 
-		ctx := context.WithValue(context.Background(), "paths", absolute)
+		ctx := context.WithValue(context.Background(), "rootArguments", rootArguments)
 		cmd.SetContext(ctx)
 	},
 }
 
 var buildRunAllCmd = &cobra.Command{
-	Use:  "build-and-run",
+	Use:  "build-run-all",
 	Long: "build and then run all clients and nodes",
 	Run: func(cmd *cobra.Command, args []string) {
-		paths, ok := cmd.Context().Value("paths").(absolutePaths)
+		rootArguments, ok := cmd.Context().Value("rootArguments").(rootArgs)
 		if !ok {
 			log.Fatal("did not get context")
 		}
 
-		// checking number of nodes to deploy
-		numNodes, err := cmd.Flags().GetUint("nodes")
-		if err != nil {
-			log.With(zap.Error(err)).Fatal("number of nodes is not specified")
-		}
-
-		// checking number of clients to deploy
-		numClients, err := cmd.Flags().GetUint("clients")
-		if err != nil {
-			log.With(zap.Error(err)).Fatal("number of clients is not specified")
-		}
+		numNodes, _ := cmd.Flags().GetUint("nodes")
+		numClients, _ := cmd.Flags().GetUint("clients")
 
 		// running the script
-		err = buildRunAll(paths, numClients, numNodes)
+		err := buildRunAll(rootArguments, numClients, numNodes)
 		if err != nil {
 			log.With(zap.Error(err)).Fatal("failed to run the command")
 		}
@@ -154,12 +124,12 @@ var buildAllCmd = &cobra.Command{
 	Use:  "build-all",
 	Long: "builds both the clients and nodes",
 	Run: func(cmd *cobra.Command, args []string) {
-		paths, ok := cmd.Context().Value("paths").(absolutePaths)
+		rootArguments, ok := cmd.Context().Value("rootArguments").(rootArgs)
 		if !ok {
 			log.Fatal("did not get context")
 		}
 
-		err := buildAll(paths)
+		err := buildAll(rootArguments)
 		if err != nil {
 			log.With(zap.Error(err)).Fatal("failed to run the command")
 			return
@@ -171,24 +141,15 @@ var runAllCmd = &cobra.Command{
 	Use:  "run-all",
 	Long: "runs all clients and nodes",
 	Run: func(cmd *cobra.Command, args []string) {
-		paths, ok := cmd.Context().Value("paths").(absolutePaths)
+		rootArguments, ok := cmd.Context().Value("rootArguments").(rootArgs)
 		if !ok {
 			log.Fatal("did not get context")
 		}
 
-		// checking number of nodes to deploy
-		numNodes, err := cmd.Flags().GetUint("nodes")
-		if err != nil {
-			log.With(zap.Error(err)).Fatal("number of nodes is not specified")
-		}
+		numNodes, _ := cmd.Flags().GetUint("nodes")
+		numClients, _ := cmd.Flags().GetUint("clients")
 
-		// checking number of clients to deploy
-		numClients, err := cmd.Flags().GetUint("clients")
-		if err != nil {
-			log.With(zap.Error(err)).Fatal("number of clients is not specified")
-		}
-
-		err = runAll(paths, numClients, numNodes)
+		err := runAll(rootArguments, numClients, numNodes)
 		if err != nil {
 			log.With(zap.Error(err)).Fatal("failed to run the command")
 			return
@@ -204,6 +165,7 @@ func init() {
 	rootCmd.PersistentFlags().String("client-path", "client", "path to client go.mod")
 	rootCmd.PersistentFlags().String("bin", "bin", "path to folder where all the binaries are")
 	rootCmd.PersistentFlags().String("db-path", "db", "path to folder where the working directories should be placed")
+	rootCmd.PersistentFlags().Bool("debug", false, "this tells if we should run the profiler")
 
 	buildRunAllCmd.Flags().UintP("nodes", "n", 3, "number of nodes to be generated")
 	buildRunAllCmd.Flags().UintP("clients", "c", 2, "number of clients to be generated")
@@ -229,8 +191,8 @@ func createDirectoryIfNotExists(dirPath string) (err error) {
 	return os.Mkdir(dirPath, os.ModePerm)
 }
 
-func createAppPaths(paths absolutePaths, binaryPath, appName string, num int) (appPaths []appPath, err error) {
-	appTypePath := path.Join(paths.dbPath, appName)
+func createAppPaths(args rootArgs, binaryPath, appName string, portNum, num int) (appPaths []appPath, err error) {
+	appTypePath := path.Join(args.dbPath, appName)
 	err = createDirectoryIfNotExists(appTypePath)
 	if err != nil {
 		return
@@ -238,7 +200,7 @@ func createAppPaths(paths absolutePaths, binaryPath, appName string, num int) (a
 
 	for i := 0; i < num; i++ {
 		// checking if relevant config exists
-		cfgPath := path.Join(paths.configPath, fmt.Sprintf("%s%d.yml", appName, i+1))
+		cfgPath := path.Join(args.configPath, fmt.Sprintf("%s%d.yml", appName, i+1))
 		if _, err = os.Stat(cfgPath); os.IsNotExist(err) {
 			err = fmt.Errorf("not enough %s configs are generated: %w", appName, err)
 			return
@@ -252,33 +214,35 @@ func createAppPaths(paths absolutePaths, binaryPath, appName string, num int) (a
 		}
 
 		appPaths = append(appPaths, appPath{
-			wdPath:     resPath,
-			binaryPath: binaryPath,
-			configPath: cfgPath,
-			logPath:    path.Join(resPath, "app.log"),
+			wdPath:       resPath,
+			binaryPath:   binaryPath,
+			configPath:   cfgPath,
+			logPath:      path.Join(resPath, "app.log"),
+			debugPortNum: portNum + i + 1,
+			isDebug:      args.isDebug,
 		})
 	}
 	return
 }
 
-func buildRunAll(paths absolutePaths, numClients, numNodes uint) (err error) {
-	err = buildAll(paths)
+func buildRunAll(args rootArgs, numClients, numNodes uint) (err error) {
+	err = buildAll(args)
 	if err != nil {
 		err = fmt.Errorf("failed to build all: %w", err)
 		return
 	}
 
-	return runAll(paths, numClients, numNodes)
+	return runAll(args, numClients, numNodes)
 }
 
-func runAll(paths absolutePaths, numClients uint, numNodes uint) (err error) {
-	nodePaths, err := createAppPaths(paths, paths.nodeBinaryPath, "node", int(numNodes))
+func runAll(args rootArgs, numClients uint, numNodes uint) (err error) {
+	nodePaths, err := createAppPaths(args, args.nodeBinaryPath, "node", 6060, int(numNodes))
 	if err != nil {
 		err = fmt.Errorf("failed to create working directories for nodes: %w", err)
 		return
 	}
 
-	clientPaths, err := createAppPaths(paths, paths.clientBinaryPath, "client", int(numClients))
+	clientPaths, err := createAppPaths(args, args.clientBinaryPath, "client", 6070, int(numClients))
 	if err != nil {
 		err = fmt.Errorf("failed to create working directories for clients: %w", err)
 		return
@@ -306,14 +270,14 @@ func runAll(paths absolutePaths, numClients uint, numNodes uint) (err error) {
 	return
 }
 
-func buildAll(paths absolutePaths) (err error) {
-	err = build(paths.nodePkgPath, paths.nodeBinaryPath, paths.nodePkgName)
+func buildAll(args rootArgs) (err error) {
+	err = build(args.nodePkgPath, args.nodeBinaryPath, args.nodePkgName)
 	if err != nil {
 		err = fmt.Errorf("failed to build node: %w", err)
 		return
 	}
 
-	err = build(paths.clientPkgPath, paths.clientBinaryPath, paths.clientPkgName)
+	err = build(args.clientPkgPath, args.clientBinaryPath, args.clientPkgName)
 	if err != nil {
 		err = fmt.Errorf("failed to build client: %w", err)
 		return
@@ -337,6 +301,13 @@ func build(dirPath, binaryPath, packageName string) (err error) {
 func runApp(app appPath, wg *sync.WaitGroup) (err error) {
 	cmd := exec.Command(app.binaryPath, "-c", app.configPath)
 	cmd.Dir = app.wdPath
+	log := log
+	if app.isDebug {
+		log = log.With(zap.String("debug on", fmt.Sprintf("localhost:%d/debug/pprof", app.debugPortNum)))
+		cmd.Env = os.Environ()
+		cmd.Env = append(cmd.Env, fmt.Sprintf("ANYPROF=127.0.0.1:%d", app.debugPortNum))
+	}
+
 	file, err := os.OpenFile(app.logPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, os.ModePerm)
 	if err != nil {
 		return
