@@ -121,12 +121,13 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-var runCmd = &cobra.Command{
-	Use: "build-and-run",
+var buildRunAllCmd = &cobra.Command{
+	Use:  "build-and-run",
+	Long: "build and then run all clients and nodes",
 	Run: func(cmd *cobra.Command, args []string) {
 		paths, ok := cmd.Context().Value("paths").(absolutePaths)
 		if !ok {
-			log.Fatal("did not get parent context")
+			log.Fatal("did not get context")
 		}
 
 		// checking number of nodes to deploy
@@ -142,10 +143,55 @@ var runCmd = &cobra.Command{
 		}
 
 		// running the script
-		err = runAll(paths, numClients, numNodes)
-
+		err = buildRunAll(paths, numClients, numNodes)
 		if err != nil {
 			log.With(zap.Error(err)).Fatal("failed to run the command")
+		}
+	},
+}
+
+var buildAllCmd = &cobra.Command{
+	Use:  "build-all",
+	Long: "builds both the clients and nodes",
+	Run: func(cmd *cobra.Command, args []string) {
+		paths, ok := cmd.Context().Value("paths").(absolutePaths)
+		if !ok {
+			log.Fatal("did not get context")
+		}
+
+		err := buildAll(paths)
+		if err != nil {
+			log.With(zap.Error(err)).Fatal("failed to run the command")
+			return
+		}
+	},
+}
+
+var runAllCmd = &cobra.Command{
+	Use:  "run-all",
+	Long: "runs all clients and nodes",
+	Run: func(cmd *cobra.Command, args []string) {
+		paths, ok := cmd.Context().Value("paths").(absolutePaths)
+		if !ok {
+			log.Fatal("did not get context")
+		}
+
+		// checking number of nodes to deploy
+		numNodes, err := cmd.Flags().GetUint("nodes")
+		if err != nil {
+			log.With(zap.Error(err)).Fatal("number of nodes is not specified")
+		}
+
+		// checking number of clients to deploy
+		numClients, err := cmd.Flags().GetUint("clients")
+		if err != nil {
+			log.With(zap.Error(err)).Fatal("number of clients is not specified")
+		}
+
+		err = runAll(paths, numClients, numNodes)
+		if err != nil {
+			log.With(zap.Error(err)).Fatal("failed to run the command")
+			return
 		}
 	},
 }
@@ -159,9 +205,14 @@ func init() {
 	rootCmd.PersistentFlags().String("bin", "bin", "path to folder where all the binaries are")
 	rootCmd.PersistentFlags().String("db-path", "db", "path to folder where the working directories should be placed")
 
-	runCmd.Flags().UintP("nodes", "n", 3, "number of nodes to be generated")
-	runCmd.Flags().UintP("clients", "c", 2, "number of clients to be generated")
-	rootCmd.AddCommand(runCmd)
+	buildRunAllCmd.Flags().UintP("nodes", "n", 3, "number of nodes to be generated")
+	buildRunAllCmd.Flags().UintP("clients", "c", 2, "number of clients to be generated")
+	runAllCmd.Flags().UintP("nodes", "n", 3, "number of nodes to be generated")
+	runAllCmd.Flags().UintP("clients", "c", 2, "number of clients to be generated")
+
+	rootCmd.AddCommand(buildRunAllCmd)
+	rootCmd.AddCommand(buildAllCmd)
+	rootCmd.AddCommand(runAllCmd)
 }
 
 func main() {
@@ -186,17 +237,17 @@ func createAppPaths(paths absolutePaths, binaryPath, appName string, num int) (a
 	}
 
 	for i := 0; i < num; i++ {
-		// creating directory for each app
-		resPath := path.Join(appTypePath, fmt.Sprintf("%d", i+1))
-		err = createDirectoryIfNotExists(resPath)
-		if err != nil {
-			return
-		}
-
 		// checking if relevant config exists
 		cfgPath := path.Join(paths.configPath, fmt.Sprintf("%s%d.yml", appName, i+1))
 		if _, err = os.Stat(cfgPath); os.IsNotExist(err) {
 			err = fmt.Errorf("not enough %s configs are generated: %w", appName, err)
+			return
+		}
+
+		// creating directory for each app
+		resPath := path.Join(appTypePath, fmt.Sprintf("%d", i+1))
+		err = createDirectoryIfNotExists(resPath)
+		if err != nil {
 			return
 		}
 
@@ -210,19 +261,17 @@ func createAppPaths(paths absolutePaths, binaryPath, appName string, num int) (a
 	return
 }
 
-func runAll(paths absolutePaths, numClients, numNodes uint) (err error) {
-	err = build(paths.nodePkgPath, paths.nodeBinaryPath, paths.nodePkgName)
+func buildRunAll(paths absolutePaths, numClients, numNodes uint) (err error) {
+	err = buildAll(paths)
 	if err != nil {
-		err = fmt.Errorf("failed to build node: %w", err)
+		err = fmt.Errorf("failed to build all: %w", err)
 		return
 	}
 
-	err = build(paths.clientPkgPath, paths.clientBinaryPath, paths.clientPkgName)
-	if err != nil {
-		err = fmt.Errorf("failed to build client: %w", err)
-		return
-	}
+	return runAll(paths, numClients, numNodes)
+}
 
+func runAll(paths absolutePaths, numClients uint, numNodes uint) (err error) {
 	nodePaths, err := createAppPaths(paths, paths.nodeBinaryPath, "node", int(numNodes))
 	if err != nil {
 		err = fmt.Errorf("failed to create working directories for nodes: %w", err)
@@ -254,6 +303,21 @@ func runAll(paths absolutePaths, numClients, numNodes uint) (err error) {
 		}(clientPath)
 	}
 	wg.Wait()
+	return
+}
+
+func buildAll(paths absolutePaths) (err error) {
+	err = build(paths.nodePkgPath, paths.nodeBinaryPath, paths.nodePkgName)
+	if err != nil {
+		err = fmt.Errorf("failed to build node: %w", err)
+		return
+	}
+
+	err = build(paths.clientPkgPath, paths.clientBinaryPath, paths.clientPkgName)
+	if err != nil {
+		err = fmt.Errorf("failed to build client: %w", err)
+		return
+	}
 	return
 }
 
