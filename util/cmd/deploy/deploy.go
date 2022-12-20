@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/spf13/cobra"
@@ -41,23 +42,8 @@ const (
 
 var rootCmd = &cobra.Command{
 	Use: "deploy",
-	Run: func(cmd *cobra.Command, args []string) {
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		absolute := absolutePaths{}
-		// saving working directory
-		wd, _ := os.Getwd()
-		absolute.initialPath, _ = filepath.Abs(wd)
-
-		// checking number of nodes to deploy
-		numNodes, err := cmd.Flags().GetUint("n")
-		if err != nil {
-			log.With(zap.Error(err)).Fatal("number of nodes is not specified")
-		}
-
-		// checking number of clients to deploy
-		numClients, err := cmd.Flags().GetUint("c")
-		if err != nil {
-			log.With(zap.Error(err)).Fatal("number of clients is not specified")
-		}
 
 		// checking package names
 		nodePkgName, err := cmd.Flags().GetString("node-pkg")
@@ -82,22 +68,6 @@ var rootCmd = &cobra.Command{
 			log.With(zap.Error(err)).Fatal("the config directory doesn't exist")
 		}
 		absolute.configPath, _ = filepath.Abs(cfgPath)
-
-		// check if all configs really exist for nodes and clients to be deployed
-		for i := 0; i < int(numNodes); i++ {
-			configName := fmt.Sprintf("node%d.yml", i+1)
-			configPath := path.Join(absolute.configPath, configName)
-			if _, err := os.Stat(configPath); os.IsNotExist(err) {
-				log.With(zap.Error(err)).Fatal("not enough node configs are generated")
-			}
-		}
-		for i := 0; i < int(numClients); i++ {
-			configName := fmt.Sprintf("client%d.yml", i+1)
-			configPath := path.Join(absolute.configPath, configName)
-			if _, err := os.Stat(configPath); os.IsNotExist(err) {
-				log.With(zap.Error(err)).Fatal("not enough client configs are generated")
-			}
-		}
 
 		// checking node package
 		nodePath, err := cmd.Flags().GetString("node-path")
@@ -127,7 +97,10 @@ var rootCmd = &cobra.Command{
 			log.With(zap.Error(err)).Fatal("no bin flag is registered")
 		}
 
-		createDirectoryIfNotExists(binaryPath)
+		err = createDirectoryIfNotExists(binaryPath)
+		if err != nil {
+			log.With(zap.Error(err)).Fatal("failed to create directory")
+		}
 		absoluteBinPath, _ := filepath.Abs(binaryPath)
 		absolute.clientBinaryPath = path.Join(absoluteBinPath, anytypeClientBinaryName)
 		absolute.nodeBinaryPath = path.Join(absoluteBinPath, anytypeNodeBinaryName)
@@ -137,11 +110,40 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			log.With(zap.Error(err)).Fatal("no db-path flag is registered")
 		}
-		createDirectoryIfNotExists(dbPath)
+		err = createDirectoryIfNotExists(dbPath)
+		if err != nil {
+			log.With(zap.Error(err)).Fatal("failed to create directory")
+		}
 		absolute.dbPath, _ = filepath.Abs(dbPath)
 
+		ctx := context.WithValue(context.Background(), "paths", absolute)
+		cmd.SetContext(ctx)
+	},
+}
+
+var runCmd = &cobra.Command{
+	Use: "build-and-run",
+	Run: func(cmd *cobra.Command, args []string) {
+		paths, ok := cmd.Context().Value("paths").(absolutePaths)
+		if !ok {
+			log.Fatal("did not get parent context")
+		}
+
+		// checking number of nodes to deploy
+		numNodes, err := cmd.Flags().GetUint("nodes")
+		if err != nil {
+			log.With(zap.Error(err)).Fatal("number of nodes is not specified")
+		}
+
+		// checking number of clients to deploy
+		numClients, err := cmd.Flags().GetUint("clients")
+		if err != nil {
+			log.With(zap.Error(err)).Fatal("number of clients is not specified")
+		}
+
 		// running the script
-		err = runAll(absolute, numClients, numNodes)
+		err = runAll(paths, numClients, numNodes)
+
 		if err != nil {
 			log.With(zap.Error(err)).Fatal("failed to run the command")
 		}
@@ -149,15 +151,17 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().String("config-dir", "etc/configs", "generated configs")
-	rootCmd.Flags().Uint("n", 3, "number of nodes to be generated")
-	rootCmd.Flags().Uint("c", 2, "number of clients to be generated")
-	rootCmd.Flags().String("node-pkg", "github.com/anytypeio/go-anytype-infrastructure-experiments/node/cmd", "node package")
-	rootCmd.Flags().String("client-pkg", "github.com/anytypeio/go-anytype-infrastructure-experiments/client/cmd", "client package")
-	rootCmd.Flags().String("node-path", "node", "path to node go.mod")
-	rootCmd.Flags().String("client-path", "client", "path to client go.mod")
-	rootCmd.Flags().String("bin", "bin", "path to folder where all the binaries are")
-	rootCmd.Flags().String("db-path", "db", "path to folder where the working directories should be placed")
+	rootCmd.PersistentFlags().String("config-dir", "etc/configs", "generated configs")
+	rootCmd.PersistentFlags().String("node-pkg", "github.com/anytypeio/go-anytype-infrastructure-experiments/node/cmd", "node package")
+	rootCmd.PersistentFlags().String("client-pkg", "github.com/anytypeio/go-anytype-infrastructure-experiments/client/cmd", "client package")
+	rootCmd.PersistentFlags().String("node-path", "node", "path to node go.mod")
+	rootCmd.PersistentFlags().String("client-path", "client", "path to client go.mod")
+	rootCmd.PersistentFlags().String("bin", "bin", "path to folder where all the binaries are")
+	rootCmd.PersistentFlags().String("db-path", "db", "path to folder where the working directories should be placed")
+
+	runCmd.Flags().UintP("nodes", "n", 3, "number of nodes to be generated")
+	runCmd.Flags().UintP("clients", "c", 2, "number of clients to be generated")
+	rootCmd.AddCommand(runCmd)
 }
 
 func main() {
@@ -167,42 +171,39 @@ func main() {
 	}
 }
 
-func createDirectoryIfNotExists(dirPath string) {
-	if _, err := os.Stat(dirPath); !os.IsNotExist(err) {
+func createDirectoryIfNotExists(dirPath string) (err error) {
+	if _, err = os.Stat(dirPath); !os.IsNotExist(err) {
 		return
 	}
-	err := os.Mkdir(dirPath, os.ModePerm)
+	return os.Mkdir(dirPath, os.ModePerm)
+}
+
+func createAppPaths(paths absolutePaths, binaryPath, appName string, num int) (appPaths []appPath, err error) {
+	appTypePath := path.Join(paths.dbPath, appName)
+	err = createDirectoryIfNotExists(appTypePath)
 	if err != nil {
-		log.With(zap.Error(err)).Fatal("failed to create directory")
+		return
 	}
-}
 
-func createNodePaths(paths absolutePaths, num int) (appPaths []appPath, err error) {
-	prefixPath := path.Join(paths.dbPath, "node")
-	createDirectoryIfNotExists(prefixPath)
 	for i := 0; i < num; i++ {
-		resPath := path.Join(prefixPath, fmt.Sprintf("%d", i+1))
-		createDirectoryIfNotExists(resPath)
+		// creating directory for each app
+		resPath := path.Join(appTypePath, fmt.Sprintf("%d", i+1))
+		err = createDirectoryIfNotExists(resPath)
+		if err != nil {
+			return
+		}
+
+		// checking if relevant config exists
+		cfgPath := path.Join(paths.configPath, fmt.Sprintf("%s%d.yml", appName, i+1))
+		if _, err = os.Stat(cfgPath); os.IsNotExist(err) {
+			err = fmt.Errorf("not enough %s configs are generated: %w", appName, err)
+			return
+		}
+
 		appPaths = append(appPaths, appPath{
 			wdPath:     resPath,
-			binaryPath: paths.nodeBinaryPath,
-			configPath: path.Join(paths.configPath, fmt.Sprintf("node%d.yml", i+1)),
-			logPath:    path.Join(resPath, "app.log"),
-		})
-	}
-	return
-}
-
-func createClientPaths(paths absolutePaths, num int) (appPaths []appPath, err error) {
-	prefixPath := path.Join(paths.dbPath, "client")
-	createDirectoryIfNotExists(prefixPath)
-	for i := 0; i < num; i++ {
-		resPath := path.Join(prefixPath, fmt.Sprintf("%d", i+1))
-		createDirectoryIfNotExists(resPath)
-		appPaths = append(appPaths, appPath{
-			wdPath:     resPath,
-			binaryPath: paths.clientBinaryPath,
-			configPath: path.Join(paths.configPath, fmt.Sprintf("client%d.yml", i+1)),
+			binaryPath: binaryPath,
+			configPath: cfgPath,
 			logPath:    path.Join(resPath, "app.log"),
 		})
 	}
@@ -222,13 +223,13 @@ func runAll(paths absolutePaths, numClients, numNodes uint) (err error) {
 		return
 	}
 
-	nodePaths, err := createNodePaths(paths, int(numNodes))
+	nodePaths, err := createAppPaths(paths, paths.nodeBinaryPath, "node", int(numNodes))
 	if err != nil {
 		err = fmt.Errorf("failed to create working directories for nodes: %w", err)
 		return
 	}
 
-	clientPaths, err := createClientPaths(paths, int(numClients))
+	clientPaths, err := createAppPaths(paths, paths.clientBinaryPath, "client", int(numClients))
 	if err != nil {
 		err = fmt.Errorf("failed to create working directories for clients: %w", err)
 		return
@@ -253,12 +254,10 @@ func runAll(paths absolutePaths, numClients, numNodes uint) (err error) {
 		}(clientPath)
 	}
 	wg.Wait()
-	log.Info("running finished")
 	return
 }
 
 func build(dirPath, binaryPath, packageName string) (err error) {
-	fmt.Println(dirPath, binaryPath, packageName)
 	cmd := exec.Command("go", "build", "-v", "-o", binaryPath, packageName)
 	cmd.Dir = dirPath
 	cmd.Stdout = os.Stdout
@@ -267,6 +266,7 @@ func build(dirPath, binaryPath, packageName string) (err error) {
 	if err != nil {
 		return
 	}
+	log.With(zap.String("binary path", binaryPath), zap.String("package name", packageName)).Info("building the app")
 	return cmd.Wait()
 }
 
@@ -281,7 +281,7 @@ func runApp(app appPath, wg *sync.WaitGroup) (err error) {
 	cmd.Stdout = file
 	cmd.Stderr = file
 	err = cmd.Start()
-	log.With(zap.String("working directory", app.wdPath)).Info("run the app")
+	log.With(zap.String("working directory", app.wdPath), zap.String("log path", app.logPath)).Info("running the app")
 	if err != nil {
 		return
 	}
