@@ -225,13 +225,14 @@ func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		return
 	}
 	deps := synctree.CreateDeps{
-		SpaceId:       s.id,
-		Payload:       payload,
-		SyncService:   s.syncService,
-		Configuration: s.configuration,
-		AclList:       s.aclList,
-		SpaceStorage:  s.storage,
-		StatusService: s.statusService,
+		SpaceId:        s.id,
+		Payload:        payload,
+		SyncService:    s.syncService,
+		Configuration:  s.configuration,
+		AclList:        s.aclList,
+		SpaceStorage:   s.storage,
+		StatusService:  s.statusService,
+		HeadNotifiable: s.diffService,
 	}
 	return synctree.DeriveSyncTree(ctx, deps)
 }
@@ -242,13 +243,14 @@ func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 		return
 	}
 	deps := synctree.CreateDeps{
-		SpaceId:       s.id,
-		Payload:       payload,
-		SyncService:   s.syncService,
-		Configuration: s.configuration,
-		AclList:       s.aclList,
-		SpaceStorage:  s.storage,
-		StatusService: s.statusService,
+		SpaceId:        s.id,
+		Payload:        payload,
+		SyncService:    s.syncService,
+		Configuration:  s.configuration,
+		AclList:        s.aclList,
+		SpaceStorage:   s.storage,
+		StatusService:  s.statusService,
+		HeadNotifiable: s.diffService,
 	}
 	return synctree.CreateSyncTree(ctx, deps)
 }

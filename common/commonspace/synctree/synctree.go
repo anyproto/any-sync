@@ -57,13 +57,14 @@ var buildObjectTree = tree.BuildObjectTree
 var createSyncClient = newWrappedSyncClient
 
 type CreateDeps struct {
-	SpaceId       string
-	Payload       tree.ObjectTreeCreatePayload
-	Configuration nodeconf.Configuration
-	SyncService   syncservice.SyncService
-	AclList       list.ACLList
-	SpaceStorage  spacestorage.SpaceStorage
-	StatusService statusservice.StatusService
+	SpaceId        string
+	Payload        tree.ObjectTreeCreatePayload
+	Configuration  nodeconf.Configuration
+	SyncService    syncservice.SyncService
+	AclList        list.ACLList
+	SpaceStorage   spacestorage.SpaceStorage
+	StatusService  statusservice.StatusService
+	HeadNotifiable HeadNotifiable
 }
 
 type BuildDeps struct {
@@ -101,8 +102,11 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 		deps.Configuration)
 
 	id = objTree.ID()
+	heads := objTree.Heads()
+
+	deps.HeadNotifiable.UpdateHeads(id, heads)
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
-	deps.StatusService.HeadsChange(id, objTree.Heads())
+	deps.StatusService.HeadsChange(id, heads)
 	syncClient.BroadcastAsync(headUpdate)
 	return
 }
@@ -119,8 +123,11 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 		deps.Configuration)
 
 	id = objTree.ID()
+	heads := objTree.Heads()
+
+	deps.HeadNotifiable.UpdateHeads(id, heads)
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
-	deps.StatusService.HeadsChange(id, objTree.Heads())
+	deps.StatusService.HeadsChange(id, heads)
 	syncClient.BroadcastAsync(headUpdate)
 	return
 }
