@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/slice"
 	"time"
 )
 
@@ -87,7 +88,7 @@ func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*treech
 			return true
 		},
 		func(visited []*Change) {
-			results = discardFromSlice(results, func(change *Change) bool {
+			results = slice.DiscardFromSlice(results, func(change *Change) bool {
 				return change.visited
 			})
 		},
@@ -209,7 +210,7 @@ func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoi
 		})
 
 	// discarding visited
-	buffer = discardFromSlice(buffer, func(change *treechangeproto.RawTreeChangeWithId) bool {
+	buffer = slice.DiscardFromSlice(buffer, func(change *treechangeproto.RawTreeChangeWithId) bool {
 		return change == nil
 	})
 

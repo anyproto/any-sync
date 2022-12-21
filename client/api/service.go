@@ -67,7 +67,12 @@ func (s *service) Run(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	return apiproto.DRPCRegisterClientApi(s, &rpcHandler{s.spaceService, s.storageService, s.docService, s.account})
+	return apiproto.DRPCRegisterClientApi(s, &rpcHandler{
+		spaceService:   s.spaceService,
+		storageService: s.storageService,
+		docService:     s.docService,
+		account:        s.account,
+	})
 }
 
 func (s *service) Close(ctx context.Context) (err error) {

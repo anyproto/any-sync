@@ -19,6 +19,27 @@ type rpcHandler struct {
 	account        account.Service
 }
 
+func (r *rpcHandler) Watch(ctx context.Context, request *apiproto.WatchRequest) (resp *apiproto.WatchResponse, err error) {
+	space, err := r.spaceService.GetSpace(context.Background(), request.SpaceId)
+	if err != nil {
+		return
+	}
+
+	space.StatusService().Watch(request.TreeId)
+	resp = &apiproto.WatchResponse{}
+	return
+}
+
+func (r *rpcHandler) Unwatch(ctx context.Context, request *apiproto.UnwatchRequest) (resp *apiproto.UnwatchResponse, err error) {
+	space, err := r.spaceService.GetSpace(context.Background(), request.SpaceId)
+	if err != nil {
+		return
+	}
+	space.StatusService().Unwatch(request.TreeId)
+	resp = &apiproto.UnwatchResponse{}
+	return
+}
+
 func (r *rpcHandler) LoadSpace(ctx context.Context, request *apiproto.LoadSpaceRequest) (resp *apiproto.LoadSpaceResponse, err error) {
 	_, err = r.spaceService.GetSpace(context.Background(), request.SpaceId)
 	if err != nil {

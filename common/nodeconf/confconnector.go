@@ -9,6 +9,7 @@ import (
 
 type ConfConnector interface {
 	Configuration() Configuration
+	Pool() pool.Pool
 	GetResponsiblePeers(ctx context.Context, spaceId string) ([]peer.Peer, error)
 	DialInactiveResponsiblePeers(ctx context.Context, spaceId string, activeNodeIds []string) ([]peer.Peer, error)
 }
@@ -23,7 +24,12 @@ func NewConfConnector(conf Configuration, pool pool.Pool) ConfConnector {
 }
 
 func (s *confConnector) Configuration() Configuration {
+	// TODO: think about rewriting this, because these deps should not be exposed
 	return s.conf
+}
+
+func (s *confConnector) Pool() pool.Pool {
+	return s.pool
 }
 
 func (s *confConnector) GetResponsiblePeers(ctx context.Context, spaceId string) ([]peer.Peer, error) {
@@ -62,7 +68,14 @@ func (s *confConnector) connectOneOrMany(
 	} else if len(activeNodeIds) == 0 {
 		// that means that all connected ids
 		var p peer.Peer
-		p, err = connectOneOf(ctx, allNodes)
+		p, err = s.pool.GetOneOf(ctx, allNodes)
+		if err != nil {
+			return
+		}
+
+		// if we are dialling someone, we want to dial to the same peer which we cached
+		// thus communication through streams and through diff will go to the same node
+		p, err = connectOne(ctx, p.Id())
 		if err != nil {
 			return
 		}

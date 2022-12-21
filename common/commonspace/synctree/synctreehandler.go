@@ -3,6 +3,7 @@ package synctree
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
@@ -13,19 +14,21 @@ import (
 )
 
 type syncTreeHandler struct {
-	objTree     tree.ObjectTree
-	syncClient  SyncClient
-	handlerLock sync.Mutex
-	queue       ReceiveQueue
+	objTree       tree.ObjectTree
+	syncClient    SyncClient
+	statusService statusservice.StatusService
+	handlerLock   sync.Mutex
+	queue         ReceiveQueue
 }
 
 const maxQueueSize = 5
 
-func newSyncTreeHandler(objTree tree.ObjectTree, syncClient SyncClient) synchandler.SyncHandler {
+func newSyncTreeHandler(objTree tree.ObjectTree, syncClient SyncClient, statusService statusservice.StatusService) synchandler.SyncHandler {
 	return &syncTreeHandler{
-		objTree:    objTree,
-		syncClient: syncClient,
-		queue:      newReceiveQueue(maxQueueSize),
+		objTree:       objTree,
+		syncClient:    syncClient,
+		statusService: statusService,
+		queue:         newReceiveQueue(maxQueueSize),
 	}
 }
 
@@ -36,6 +39,8 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 	if err != nil {
 		return
 	}
+
+	s.statusService.HeadsReceive(senderId, msg.ObjectId, treechangeproto.GetHeads(unmarshalled))
 
 	queueFull := s.queue.AddMessage(senderId, unmarshalled, msg.ReplyId)
 	if queueFull {

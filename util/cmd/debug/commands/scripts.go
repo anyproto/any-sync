@@ -48,7 +48,7 @@ func (s *service) registerScripts() {
 						SpaceId:    space,
 						DocumentId: document,
 						Text:       args[0],
-						IsSnapshot: rand.Int()%2 == 0,
+						IsSnapshot: rand.Int()%10 == 0,
 					})
 					if err != nil {
 						mError.Add(err)

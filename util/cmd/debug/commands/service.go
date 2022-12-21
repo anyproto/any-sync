@@ -50,7 +50,7 @@ func (s *service) Init(a *app.App) (err error) {
 
 func (s *service) Run(ctx context.Context) (err error) {
 	rootCmd := &cobra.Command{Use: "debug", PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		cfgPath, err := cmd.Flags().GetString("config")
+		cfgPath, err := cmd.Flags().GetString("nodemap")
 		if err != nil {
 			panic(fmt.Sprintf("no config flag is registered: %s", err.Error()))
 		}
@@ -59,7 +59,7 @@ func (s *service) Run(ctx context.Context) (err error) {
 			panic(fmt.Sprintf("couldn't load config with addresses of nodes: %s", err.Error()))
 		}
 	}}
-	rootCmd.PersistentFlags().String("config", "util/cmd/nodesgen/nodemap.yml", "nodes configuration")
+	rootCmd.PersistentFlags().String("nodemap", "util/cmd/nodesgen/nodemap.yml", "nodes configuration")
 
 	clientCmd := &cobra.Command{Use: "client commands to be executed on a specified client"}
 	clientCmd.PersistentFlags().StringP("client", "c", "", "the alias of the client")

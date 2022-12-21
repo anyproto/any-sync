@@ -290,4 +290,60 @@ func (s *service) registerClientCommands() {
 		},
 	}
 	s.clientCommands = append(s.clientCommands, cmdAllSpaces)
+
+	cmdTreeWatch := &cobra.Command{
+		Use:   "tree-watch [document]",
+		Short: "start watching the tree (prints in logs the status on the client side)",
+		Args:  cobra.RangeArgs(1, 1),
+		Run: func(cmd *cobra.Command, args []string) {
+			cli, _ := cmd.Flags().GetString("client")
+			space, _ := cmd.Flags().GetString("space")
+			addr, ok := s.peers[cli]
+			if !ok {
+				fmt.Println("no such client")
+				return
+			}
+
+			_, err := s.client.Watch(context.Background(), addr, &clientproto.WatchRequest{
+				SpaceId: space,
+				TreeId:  args[0],
+			})
+			if err != nil {
+				fmt.Println("couldn't start watching tree", err)
+				return
+			}
+			fmt.Println(args[0])
+		},
+	}
+	cmdTreeWatch.Flags().String("space", "", "the space where something is happening :-)")
+	cmdTreeWatch.MarkFlagRequired("space")
+	s.clientCommands = append(s.clientCommands, cmdTreeWatch)
+
+	cmdTreeUnwatch := &cobra.Command{
+		Use:   "tree-unwatch [document]",
+		Short: "stop watching the tree (prints in logs the status on the client side)",
+		Args:  cobra.RangeArgs(1, 1),
+		Run: func(cmd *cobra.Command, args []string) {
+			cli, _ := cmd.Flags().GetString("client")
+			space, _ := cmd.Flags().GetString("space")
+			addr, ok := s.peers[cli]
+			if !ok {
+				fmt.Println("no such client")
+				return
+			}
+
+			_, err := s.client.Unwatch(context.Background(), addr, &clientproto.UnwatchRequest{
+				SpaceId: space,
+				TreeId:  args[0],
+			})
+			if err != nil {
+				fmt.Println("couldn't stop watching tree", err)
+				return
+			}
+			fmt.Println(args[0])
+		},
+	}
+	cmdTreeUnwatch.Flags().String("space", "", "the space where something is happening :-)")
+	cmdTreeUnwatch.MarkFlagRequired("space")
+	s.clientCommands = append(s.clientCommands, cmdTreeUnwatch)
 }
