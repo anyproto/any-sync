@@ -53,7 +53,7 @@ var rootCmd = &cobra.Command{
 		rootArguments.clientPkgName, _ = cmd.Flags().GetString("client-pkg")
 
 		// checking configs
-		cfgPath, _ := cmd.Flags().GetString("config-dir")
+		cfgPath, _ := cmd.Flags().GetString("config-path")
 		if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
 			log.With(zap.Error(err)).Fatal("the config directory doesn't exist")
 		}
@@ -74,7 +74,7 @@ var rootCmd = &cobra.Command{
 		rootArguments.clientPkgPath, _ = filepath.Abs(clientPath)
 
 		// checking binary path
-		binaryPath, _ := cmd.Flags().GetString("bin")
+		binaryPath, _ := cmd.Flags().GetString("bin-path")
 		err := createDirectoryIfNotExists(binaryPath)
 		if err != nil {
 			log.With(zap.Error(err)).Fatal("failed to create directory")
@@ -158,12 +158,12 @@ var runAllCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().String("config-dir", "etc/configs", "generated configs")
+	rootCmd.PersistentFlags().String("config-path", "etc/configs", "generated configs")
 	rootCmd.PersistentFlags().String("node-pkg", "github.com/anytypeio/go-anytype-infrastructure-experiments/node/cmd", "node package")
 	rootCmd.PersistentFlags().String("client-pkg", "github.com/anytypeio/go-anytype-infrastructure-experiments/client/cmd", "client package")
 	rootCmd.PersistentFlags().String("node-path", "node", "path to node go.mod")
 	rootCmd.PersistentFlags().String("client-path", "client", "path to client go.mod")
-	rootCmd.PersistentFlags().String("bin", "bin", "path to folder where all the binaries are")
+	rootCmd.PersistentFlags().String("bin-path", "bin", "path to folder where all the binaries are")
 	rootCmd.PersistentFlags().String("db-path", "db", "path to folder where the working directories should be placed")
 	rootCmd.PersistentFlags().Bool("debug", false, "this tells if we should run the profiler")
 
