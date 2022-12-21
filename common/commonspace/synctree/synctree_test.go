@@ -53,6 +53,7 @@ func Test_DeriveSyncTree(t *testing.T) {
 	aclListMock := mock_list.NewMockACLList(ctrl)
 	objTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
 	spaceStorageMock := mock_storage.NewMockSpaceStorage(ctrl)
+	headNotifiableMock := mock_synctree.NewMockHeadNotifiable(ctrl)
 	spaceId := "spaceId"
 	expectedPayload := tree.ObjectTreeCreatePayload{SpaceId: spaceId}
 	createDerivedObjectTree = func(payload tree.ObjectTreeCreatePayload, l list.ACLList, create storage2.TreeStorageCreatorFunc) (objTree tree.ObjectTree, err error) {
@@ -63,14 +64,16 @@ func Test_DeriveSyncTree(t *testing.T) {
 	createSyncClient = syncClientFuncCreator(syncClientMock)
 	headUpdate := &treechangeproto.TreeSyncMessage{}
 	objTreeMock.EXPECT().Heads().AnyTimes().Return([]string{"h1"})
+	headNotifiableMock.EXPECT().UpdateHeads("id", []string{"h1"})
 	syncClientMock.EXPECT().CreateHeadUpdate(gomock.Any(), gomock.Nil()).Return(headUpdate)
 	syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
 	deps := CreateDeps{
-		AclList:       aclListMock,
-		SpaceId:       spaceId,
-		Payload:       expectedPayload,
-		SpaceStorage:  spaceStorageMock,
-		StatusService: statusservice.NewNoOpStatusService(),
+		AclList:        aclListMock,
+		SpaceId:        spaceId,
+		Payload:        expectedPayload,
+		SpaceStorage:   spaceStorageMock,
+		StatusService:  statusservice.NewNoOpStatusService(),
+		HeadNotifiable: headNotifiableMock,
 	}
 	objTreeMock.EXPECT().ID().Return("id")
 
@@ -87,6 +90,7 @@ func Test_CreateSyncTree(t *testing.T) {
 	aclListMock := mock_list.NewMockACLList(ctrl)
 	objTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
 	spaceStorageMock := mock_storage.NewMockSpaceStorage(ctrl)
+	headNotifiableMock := mock_synctree.NewMockHeadNotifiable(ctrl)
 	spaceId := "spaceId"
 	expectedPayload := tree.ObjectTreeCreatePayload{SpaceId: spaceId}
 	createObjectTree = func(payload tree.ObjectTreeCreatePayload, l list.ACLList, create storage2.TreeStorageCreatorFunc) (objTree tree.ObjectTree, err error) {
@@ -98,15 +102,17 @@ func Test_CreateSyncTree(t *testing.T) {
 	createSyncClient = syncClientFuncCreator(syncClientMock)
 	objTreeMock.EXPECT().Heads().AnyTimes().Return([]string{"h1"})
 	headUpdate := &treechangeproto.TreeSyncMessage{}
+	headNotifiableMock.EXPECT().UpdateHeads("id", []string{"h1"})
 	syncClientMock.EXPECT().CreateHeadUpdate(gomock.Any(), gomock.Nil()).Return(headUpdate)
 	syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
 	objTreeMock.EXPECT().ID().Return("id")
 	deps := CreateDeps{
-		AclList:       aclListMock,
-		SpaceId:       spaceId,
-		Payload:       expectedPayload,
-		SpaceStorage:  spaceStorageMock,
-		StatusService: statusservice.NewNoOpStatusService(),
+		AclList:        aclListMock,
+		SpaceId:        spaceId,
+		Payload:        expectedPayload,
+		SpaceStorage:   spaceStorageMock,
+		StatusService:  statusservice.NewNoOpStatusService(),
+		HeadNotifiable: headNotifiableMock,
 	}
 
 	_, err := CreateSyncTree(ctx, deps)

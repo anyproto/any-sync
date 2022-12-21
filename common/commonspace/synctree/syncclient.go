@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_synctree/mock_synctree.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree SyncClient,SyncTree,ReceiveQueue
+//go:generate mockgen -destination mock_synctree/mock_synctree.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree SyncClient,SyncTree,ReceiveQueue,HeadNotifiable
 package synctree
 
 import (
