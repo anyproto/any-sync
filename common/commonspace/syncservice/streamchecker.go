@@ -2,16 +2,20 @@ package syncservice
 
 import (
 	"context"
+	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 	"time"
 )
 
 type StreamChecker interface {
 	CheckResponsiblePeers()
+	CheckPeerConnection(peerId string) (err error)
 }
 
 type streamChecker struct {
@@ -72,27 +76,58 @@ func (s *streamChecker) CheckResponsiblePeers() {
 	}
 
 	for _, p := range newPeers {
-		stream, err := s.clientFactory.Client(p).Stream(s.syncCtx)
+		err := s.createStream(p)
 		if err != nil {
-			err = rpcerr.Unwrap(err)
-			s.log.Error("failed to open stream", zap.Error(err))
-			// so here probably the request is failed because there is no such space,
-			// but diffService should handle such cases by sending pushSpace
-			continue
-		}
-		// sending empty message for the server to understand from which space is it coming
-		err = stream.Send(&spacesyncproto.ObjectSyncMessage{SpaceId: s.spaceId})
-		if err != nil {
-			err = rpcerr.Unwrap(err)
-			s.log.Error("failed to send first message to stream", zap.Error(err))
-			continue
-		}
-		err = s.streamPool.AddAndReadStreamAsync(stream)
-		if err != nil {
-			s.log.Error("failed to read from stream async", zap.Error(err))
+			log.With(zap.Error(err)).Error("failed to create stream")
 			continue
 		}
 		s.log.Debug("reading stream for", zap.String("id", p.Id()))
+	}
+	return
+}
+
+func (s *streamChecker) CheckPeerConnection(peerId string) (err error) {
+	if s.streamPool.HasActiveStream(peerId) {
+		return
+	}
+
+	var (
+		configuration = s.connector.Configuration()
+		pool          = s.connector.Pool()
+	)
+	nodeIds := configuration.NodeIds(s.spaceId)
+	// we don't know the address of the peer
+	if !slices.Contains(nodeIds, peerId) {
+		err = fmt.Errorf("don't know the address of peer %s", peerId)
+		return
+	}
+
+	newPeer, err := pool.Dial(s.syncCtx, peerId)
+	if err != nil {
+		return
+	}
+	return s.createStream(newPeer)
+}
+
+func (s *streamChecker) createStream(p peer.Peer) (err error) {
+	stream, err := s.clientFactory.Client(p).Stream(s.syncCtx)
+	if err != nil {
+		// so here probably the request is failed because there is no such space,
+		// but diffService should handle such cases by sending pushSpace
+		err = fmt.Errorf("failed to open stream: %w", rpcerr.Unwrap(err))
+		return
+	}
+
+	// sending empty message for the server to understand from which space is it coming
+	err = stream.Send(&spacesyncproto.ObjectSyncMessage{SpaceId: s.spaceId})
+	if err != nil {
+		err = fmt.Errorf("failed to send first message to stream: %w", rpcerr.Unwrap(err))
+		return
+	}
+	err = s.streamPool.AddAndReadStreamAsync(stream)
+	if err != nil {
+		err = fmt.Errorf("failed to read from stream async: %w", err)
+		return
 	}
 	return
 }
