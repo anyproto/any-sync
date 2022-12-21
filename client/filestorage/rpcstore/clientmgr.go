@@ -13,7 +13,7 @@ import (
 
 const (
 	maxConnections = 10
-	maxTasks       = 1000
+	maxTasks       = 100
 )
 
 var (

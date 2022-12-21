@@ -14,6 +14,9 @@ service ClientApi {
     rpc AllTrees(AllTreesRequest) returns(AllTreesResponse);
     rpc AllSpaces(AllSpacesRequest) returns(AllSpacesResponse);
     rpc LoadSpace(LoadSpaceRequest) returns(LoadSpaceResponse);
+    rpc PutFile(PutFileRequest) returns(PutFileResponse);
+    rpc GetFile(GetFileRequest) returns(GetFileResponse);
+    rpc DeleteFile(DeleteFileRequest) returns(DeleteFileResponse);
 }
 
 message CreateSpaceRequest {
@@ -104,3 +107,27 @@ message TreeParamsResponse {
     string rootId = 1;
     repeated string headIds = 2;
 }
+
+message PutFileRequest {
+    string path = 1;
+    string spaceId = 2;
+}
+
+message PutFileResponse {
+    string hash = 1;
+}
+
+message GetFileRequest {
+    string hash = 1;
+    string path = 2;
+}
+
+message GetFileResponse {
+    string path = 1;
+}
+
+message DeleteFileRequest {
+    string hash = 1;
+}
+
+message DeleteFileResponse {}

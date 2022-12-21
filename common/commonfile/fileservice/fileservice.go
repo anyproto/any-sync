@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
 	"github.com/ipfs/go-cid"
 	chunker "github.com/ipfs/go-ipfs-chunker"
@@ -13,10 +14,13 @@ import (
 	"github.com/ipfs/go-unixfs/importer/helpers"
 	ufsio "github.com/ipfs/go-unixfs/io"
 	"github.com/multiformats/go-multihash"
+	"go.uber.org/zap"
 	"io"
 )
 
 const CName = "common.commonfile.fileservice"
+
+var log = logger.NewNamed(CName)
 
 func New() FileService {
 	return &fileService{}
@@ -66,10 +70,16 @@ func (fs *fileService) AddFile(ctx context.Context, r io.Reader) (ipld.Node, err
 	if err != nil {
 		return nil, err
 	}
-	return balanced.Layout(dbh)
+	n, err := balanced.Layout(dbh)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug("add file", zap.String("cid", n.Cid().String()))
+	return n, nil
 }
 
 func (fs *fileService) GetFile(ctx context.Context, c cid.Cid) (ufsio.ReadSeekCloser, error) {
+	log.Debug("get file", zap.String("cid", c.String()))
 	n, err := fs.merkledag.Get(ctx, c)
 	if err != nil {
 		return nil, err

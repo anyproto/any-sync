@@ -60,6 +60,7 @@ func main() {
 			Address:       cfg.GrpcServer.ListenAddrs[0],
 			SigningKey:    cfg.Account.SigningKey,
 			EncryptionKey: cfg.Account.EncryptionKey,
+			Types:         []config.NodeType{config.NodeTypeTree, config.NodeTypeFile},
 		}
 		nodes = append(nodes, node)
 	}

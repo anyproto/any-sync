@@ -50,6 +50,9 @@ type DRPCClientApiClient interface {
 	AllTrees(ctx context.Context, in *AllTreesRequest) (*AllTreesResponse, error)
 	AllSpaces(ctx context.Context, in *AllSpacesRequest) (*AllSpacesResponse, error)
 	LoadSpace(ctx context.Context, in *LoadSpaceRequest) (*LoadSpaceResponse, error)
+	PutFile(ctx context.Context, in *PutFileRequest) (*PutFileResponse, error)
+	GetFile(ctx context.Context, in *GetFileRequest) (*GetFileResponse, error)
+	DeleteFile(ctx context.Context, in *DeleteFileRequest) (*DeleteFileResponse, error)
 }
 
 type drpcClientApiClient struct {
@@ -152,6 +155,33 @@ func (c *drpcClientApiClient) LoadSpace(ctx context.Context, in *LoadSpaceReques
 	return out, nil
 }
 
+func (c *drpcClientApiClient) PutFile(ctx context.Context, in *PutFileRequest) (*PutFileResponse, error) {
+	out := new(PutFileResponse)
+	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/PutFile", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcClientApiClient) GetFile(ctx context.Context, in *GetFileRequest) (*GetFileResponse, error) {
+	out := new(GetFileResponse)
+	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/GetFile", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcClientApiClient) DeleteFile(ctx context.Context, in *DeleteFileRequest) (*DeleteFileResponse, error) {
+	out := new(DeleteFileResponse)
+	err := c.cc.Invoke(ctx, "/clientapi.ClientApi/DeleteFile", drpcEncoding_File_api_apiproto_protos_api_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCClientApiServer interface {
 	CreateSpace(context.Context, *CreateSpaceRequest) (*CreateSpaceResponse, error)
 	DeriveSpace(context.Context, *DeriveSpaceRequest) (*DeriveSpaceResponse, error)
@@ -163,6 +193,9 @@ type DRPCClientApiServer interface {
 	AllTrees(context.Context, *AllTreesRequest) (*AllTreesResponse, error)
 	AllSpaces(context.Context, *AllSpacesRequest) (*AllSpacesResponse, error)
 	LoadSpace(context.Context, *LoadSpaceRequest) (*LoadSpaceResponse, error)
+	PutFile(context.Context, *PutFileRequest) (*PutFileResponse, error)
+	GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error)
+	DeleteFile(context.Context, *DeleteFileRequest) (*DeleteFileResponse, error)
 }
 
 type DRPCClientApiUnimplementedServer struct{}
@@ -207,9 +240,21 @@ func (s *DRPCClientApiUnimplementedServer) LoadSpace(context.Context, *LoadSpace
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCClientApiUnimplementedServer) PutFile(context.Context, *PutFileRequest) (*PutFileResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCClientApiUnimplementedServer) GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCClientApiUnimplementedServer) DeleteFile(context.Context, *DeleteFileRequest) (*DeleteFileResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCClientApiDescription struct{}
 
-func (DRPCClientApiDescription) NumMethods() int { return 10 }
+func (DRPCClientApiDescription) NumMethods() int { return 13 }
 
 func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -303,6 +348,33 @@ func (DRPCClientApiDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 						in1.(*LoadSpaceRequest),
 					)
 			}, DRPCClientApiServer.LoadSpace, true
+	case 10:
+		return "/clientapi.ClientApi/PutFile", drpcEncoding_File_api_apiproto_protos_api_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCClientApiServer).
+					PutFile(
+						ctx,
+						in1.(*PutFileRequest),
+					)
+			}, DRPCClientApiServer.PutFile, true
+	case 11:
+		return "/clientapi.ClientApi/GetFile", drpcEncoding_File_api_apiproto_protos_api_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCClientApiServer).
+					GetFile(
+						ctx,
+						in1.(*GetFileRequest),
+					)
+			}, DRPCClientApiServer.GetFile, true
+	case 12:
+		return "/clientapi.ClientApi/DeleteFile", drpcEncoding_File_api_apiproto_protos_api_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCClientApiServer).
+					DeleteFile(
+						ctx,
+						in1.(*DeleteFileRequest),
+					)
+			}, DRPCClientApiServer.DeleteFile, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -466,6 +538,54 @@ type drpcClientApi_LoadSpaceStream struct {
 }
 
 func (x *drpcClientApi_LoadSpaceStream) SendAndClose(m *LoadSpaceResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_api_apiproto_protos_api_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCClientApi_PutFileStream interface {
+	drpc.Stream
+	SendAndClose(*PutFileResponse) error
+}
+
+type drpcClientApi_PutFileStream struct {
+	drpc.Stream
+}
+
+func (x *drpcClientApi_PutFileStream) SendAndClose(m *PutFileResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_api_apiproto_protos_api_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCClientApi_GetFileStream interface {
+	drpc.Stream
+	SendAndClose(*GetFileResponse) error
+}
+
+type drpcClientApi_GetFileStream struct {
+	drpc.Stream
+}
+
+func (x *drpcClientApi_GetFileStream) SendAndClose(m *GetFileResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_api_apiproto_protos_api_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCClientApi_DeleteFileStream interface {
+	drpc.Stream
+	SendAndClose(*DeleteFileResponse) error
+}
+
+type drpcClientApi_DeleteFileStream struct {
+	drpc.Stream
+}
+
+func (x *drpcClientApi_DeleteFileStream) SendAndClose(m *DeleteFileResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_api_apiproto_protos_api_proto{}); err != nil {
 		return err
 	}

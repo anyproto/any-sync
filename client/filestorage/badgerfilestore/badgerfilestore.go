@@ -1,4 +1,4 @@
-package filebadgerstore
+package badgerfilestore
 
 import (
 	"context"
@@ -6,11 +6,12 @@ import (
 	"github.com/dgraph-io/badger/v3"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
+	format "github.com/ipfs/go-ipld-format"
 )
 
 const keyPrefix = "files/blocks/"
 
-func NewBadgerStorage(db *badger.DB) fileblockstore.BlockStoreExistsCIDs {
+func NewBadgerStorage(db *badger.DB) fileblockstore.BlockStoreLocal {
 	return &badgerStorage{db: db}
 }
 
@@ -19,16 +20,19 @@ type badgerStorage struct {
 }
 
 func (f *badgerStorage) Get(ctx context.Context, k cid.Cid) (b blocks.Block, err error) {
-	err = f.db.View(func(txn *badger.Txn) error {
-		it, gerr := txn.Get(key(k))
-		if gerr != nil {
-			return gerr
+	err = f.db.View(func(txn *badger.Txn) (e error) {
+		it, e := txn.Get(key(k))
+		if e != nil {
+			return e
 		}
-		return it.Value(func(val []byte) error {
-			b = blocks.NewBlock(val)
-			return nil
-		})
+		if b, e = blockFromItem(it); e != nil {
+			return e
+		}
+		return
 	})
+	if err == badger.ErrKeyNotFound {
+		err = &format.ErrNotFound{Cid: k}
+	}
 	return
 }
 
@@ -43,10 +47,11 @@ func (f *badgerStorage) GetMany(ctx context.Context, ks []cid.Cid) <-chan blocks
 				if gerr != nil {
 					return gerr
 				}
-				_ = it.Value(func(val []byte) error {
-					res <- blocks.NewBlock(val)
-					return nil
-				})
+				b, berr := blockFromItem(it)
+				if berr != nil {
+					return berr
+				}
+				res <- b
 			}
 			return nil
 		})
@@ -85,4 +90,27 @@ func (f *badgerStorage) ExistsCids(ctx context.Context, ks []cid.Cid) (exists []
 
 func key(c cid.Cid) []byte {
 	return []byte(keyPrefix + c.String())
+}
+
+func parseCID(key []byte) (cid.Cid, error) {
+	if len(key) <= len(keyPrefix) {
+		return cid.Cid{}, errInvalidKey
+	}
+	return cid.Decode(string(key[len(keyPrefix):]))
+}
+
+func blockFromItem(it *badger.Item) (b blocks.Block, err error) {
+	c, err := parseCID(it.Key())
+	if err != nil {
+		return nil, err
+	}
+	if err = it.Value(func(val []byte) error {
+		if b, err = blocks.NewBlockWithCid(val, c); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return
+	}
+	return
 }
