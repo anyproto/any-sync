@@ -125,7 +125,7 @@ func (s *streamPool) SendAsync(peers []string, message *spacesyncproto.ObjectSyn
 	streams := getStreams()
 	s.Unlock()
 
-	log.With(zap.String("objectId", message.ObjectId), zap.Int("peers", len(streams))).
+	log.With(zap.String("objectId", message.ObjectId), zap.Int("existing peers len", len(streams)), zap.Strings("wanted peers", peers)).
 		Debug("sending message to peers")
 	for _, stream := range streams {
 		err = stream.Send(message)

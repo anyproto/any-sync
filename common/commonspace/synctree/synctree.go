@@ -138,8 +138,14 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 		if err != nil {
 			return
 		}
+
 		newTreeRequest := GetRequestFactory().CreateNewTreeRequest()
 		objMsg, err := marshallTreeMessage(newTreeRequest, id, "")
+		if err != nil {
+			return
+		}
+
+		err = deps.SyncService.StreamChecker().CheckPeerConnection(peerId)
 		if err != nil {
 			return
 		}
@@ -148,6 +154,7 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 		if err != nil {
 			return
 		}
+
 		msg = &treechangeproto.TreeSyncMessage{}
 		err = proto.Unmarshal(resp.Payload, msg)
 		return
