@@ -11,10 +11,11 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace/clientcache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/document"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/filestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/filestorage/rpcstore"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/rpcstore"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
@@ -111,6 +112,7 @@ func Bootstrap(a *app.App) {
 		Register(server.New()).
 		Register(document.New()).
 		Register(rpcstore.New()).
+		Register(fileservice.New()).
 		Register(filestorage.New()).
 		Register(api.New())
 }

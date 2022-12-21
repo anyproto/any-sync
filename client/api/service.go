@@ -9,6 +9,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
@@ -36,6 +37,7 @@ type service struct {
 	storageService clientstorage.ClientStorage
 	docService     document.Service
 	account        account.Service
+	file           fileservice.FileService
 	*server.BaseDrpcServer
 }
 
@@ -46,6 +48,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.account = a.MustComponent(account.CName).(account.Service)
 	s.cfg = a.MustComponent(config.CName).(*config.Config)
 	s.transport = a.MustComponent(secure.CName).(secure.Service)
+	s.file = a.MustComponent(fileservice.CName).(fileservice.FileService)
 	return nil
 }
 
@@ -64,7 +67,7 @@ func (s *service) Run(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	return apiproto.DRPCRegisterClientApi(s, &rpcHandler{s.spaceService, s.storageService, s.docService, s.account})
+	return apiproto.DRPCRegisterClientApi(s, &rpcHandler{s.spaceService, s.storageService, s.docService, s.account, s.file})
 }
 
 func (s *service) Close(ctx context.Context) (err error) {

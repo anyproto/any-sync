@@ -4,13 +4,17 @@ import (
 	"context"
 	"github.com/akrylysov/pogreb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
+	"go.uber.org/zap"
 )
 
 const CName = fileblockstore.CName
+
+var log = logger.NewNamed(CName)
 
 func New() Store {
 	return &store{}
@@ -75,6 +79,7 @@ func (s *store) GetMany(ctx context.Context, ks []cid.Cid) <-chan blocks.Block {
 
 func (s *store) Add(ctx context.Context, bs []blocks.Block) error {
 	for _, b := range bs {
+		log.Debug("put cid", zap.String("cid", b.Cid().String()))
 		if err := s.db.Put(b.Cid().Bytes(), b.RawData()); err != nil {
 			return err
 		}

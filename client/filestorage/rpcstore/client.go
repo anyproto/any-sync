@@ -125,6 +125,7 @@ func (c *client) put(ctx context.Context, t *task) (err error) {
 	}); err != nil {
 		return rpcerr.Unwrap(err)
 	}
+	log.Debug("put cid", zap.String("cid", t.cid.String()))
 	t.ready <- t
 	c.stat.Add(st, len(t.data))
 	return
@@ -164,7 +165,7 @@ func (c *client) get(ctx context.Context, t *task) (err error) {
 	return
 }
 
-func (c *client) readStream() {
+func (c *client) readStream(stream fileproto.DRPCFile_GetBlocksClient) {
 	var err error
 	defer func() {
 		log.Info("readStream closed", zap.String("peerId", c.peerId), zap.Error(err))
@@ -174,7 +175,7 @@ func (c *client) readStream() {
 	}()
 	for {
 		var resp *fileproto.GetBlockResponse
-		resp, err = c.blocksStream.Recv()
+		resp, err = stream.Recv()
 		if err != nil {
 			return
 		}
@@ -230,7 +231,7 @@ func (c *client) getStream(ctx context.Context) (fileproto.DRPCFile_GetBlocksCli
 	if c.blocksStream, err = fileproto.NewDRPCFileClient(peer).GetBlocks(context.Background()); err != nil {
 		return nil, err
 	}
-	go c.readStream()
+	go c.readStream(c.blocksStream)
 	return c.blocksStream, nil
 }
 

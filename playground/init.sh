@@ -1,5 +1,4 @@
 #!/bin/bash
-PATH=/bin:/sbin:/usr/bin:/usr/sbin:/Users/mikhailrakhmanov/go/go1.19.2/bin
 
 export GOPRIVATE=github.com/anytypeio
 
