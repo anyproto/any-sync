@@ -160,6 +160,18 @@ type testStore struct {
 	mu    sync.Mutex
 }
 
+func (t *testStore) NotExistsBlocks(ctx context.Context, bs []blocks.Block) (notExists []blocks.Block, err error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	notExists = bs[:0]
+	for _, b := range bs {
+		if _, ok := t.store[b.Cid().String()]; !ok {
+			notExists = append(notExists, b)
+		}
+	}
+	return
+}
+
 func (t *testStore) Get(ctx context.Context, k cid.Cid) (blocks.Block, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()

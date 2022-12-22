@@ -126,7 +126,11 @@ func (c *client) put(ctx context.Context, t *task) (err error) {
 		return rpcerr.Unwrap(err)
 	}
 	log.Debug("put cid", zap.String("cid", t.cid.String()))
-	t.ready <- t
+	select {
+	case t.ready <- t:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 	c.stat.Add(st, len(t.data))
 	return
 }
@@ -184,7 +188,11 @@ func (c *client) readStream(stream fileproto.DRPCFile_GetBlocksClient) {
 		if err != nil {
 			log.Warn("cid receive error", zap.Error(err))
 		} else {
-			t.ready <- t
+			select {
+			case t.ready <- t:
+			case <-t.ctx.Done():
+			}
+
 		}
 	}
 }
@@ -269,7 +277,11 @@ func (c *client) Close() error {
 	c.waitCIDMu.Lock()
 	for id, t := range c.waitCIDs {
 		t.err = ErrClientClosed
-		t.ready <- t
+		select {
+		case t.ready <- t:
+		case <-t.ctx.Done():
+		}
+
 		delete(c.waitCIDs, id)
 	}
 	c.waitCIDMu.Unlock()

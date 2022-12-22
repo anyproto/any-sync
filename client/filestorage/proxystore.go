@@ -95,26 +95,32 @@ func (c *proxyStore) GetMany(ctx context.Context, ks []cid.Cid) <-chan blocks.Bl
 	return results
 }
 
-func (c *proxyStore) Add(ctx context.Context, bs []blocks.Block) error {
+func (c *proxyStore) Add(ctx context.Context, bs []blocks.Block) (err error) {
+	if bs, err = c.cache.NotExistsBlocks(ctx, bs); err != nil {
+		return
+	}
+	if len(bs) == 0 {
+		return nil
+	}
+	if err = c.cache.Add(ctx, bs); err != nil {
+		return
+	}
 	indexCids := badgerfilestore.NewCids()
 	defer indexCids.Release()
 	for _, b := range bs {
 		indexCids.Add(fileblockstore.CtxGetSpaceId(ctx), badgerfilestore.OpAdd, b.Cid())
 	}
-	if err := c.index.Add(indexCids); err != nil {
-		return err
-	}
-	return c.cache.Add(ctx, bs)
+	return c.index.Add(indexCids)
 }
 
 func (c *proxyStore) Delete(ctx context.Context, k cid.Cid) error {
+	if err := c.cache.Delete(ctx, k); err != nil {
+		return err
+	}
 	indexCids := badgerfilestore.NewCids()
 	defer indexCids.Release()
 	indexCids.Add(fileblockstore.CtxGetSpaceId(ctx), badgerfilestore.OpDelete, k)
-	if err := c.index.Add(indexCids); err != nil {
-		return err
-	}
-	return c.cache.Delete(ctx, k)
+	return c.index.Add(indexCids)
 }
 
 func (c *proxyStore) Close() (err error) {
