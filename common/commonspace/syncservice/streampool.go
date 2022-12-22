@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
+	"go.uber.org/zap"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,7 +25,7 @@ var ErrSyncTimeout = errors.New("too long wait on sync receive")
 type StreamPool interface {
 	ocache.ObjectLastUsage
 	AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (err error)
-	AddAndReadStreamAsync(stream spacesyncproto.SpaceStream)
+	AddAndReadStreamAsync(stream spacesyncproto.SpaceStream) (err error)
 
 	SendSync(peerId string, message *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error)
 	SendAsync(peers []string, message *spacesyncproto.ObjectSyncMessage) (err error)
@@ -97,7 +98,7 @@ func (s *streamPool) SendSync(
 		delete(s.waiters, msg.ReplyId)
 		s.waitersMx.Unlock()
 
-		log.With("replyId", msg.ReplyId).Error("time elapsed when waiting")
+		log.With(zap.String("replyId", msg.ReplyId)).Error("time elapsed when waiting")
 		err = ErrSyncTimeout
 	case reply = <-waiter.ch:
 		if !delay.Stop() {
@@ -124,10 +125,13 @@ func (s *streamPool) SendAsync(peers []string, message *spacesyncproto.ObjectSyn
 	streams := getStreams()
 	s.Unlock()
 
-	log.With("objectId", message.ObjectId).
-		Debugf("sending message to %d peers", len(streams))
-	for _, s := range streams {
-		err = s.Send(message)
+	log.With(zap.String("objectId", message.ObjectId), zap.Int("existing peers len", len(streams)), zap.Strings("wanted peers", peers)).
+		Debug("sending message to peers")
+	for _, stream := range streams {
+		err = stream.Send(message)
+		if err != nil {
+			log.Debug("error sending message to stream", zap.Error(err))
+		}
 	}
 	if len(peers) != 1 {
 		err = nil
@@ -164,6 +168,7 @@ Loop:
 		default:
 			break
 		}
+		log.With(zap.String("id", id)).Debug("getting peer stream")
 		streams = append(streams, stream)
 	}
 
@@ -172,40 +177,68 @@ Loop:
 
 func (s *streamPool) BroadcastAsync(message *spacesyncproto.ObjectSyncMessage) (err error) {
 	streams := s.getAllStreams()
-	log.With("objectId", message.ObjectId).
-		Debugf("broadcasting message to %d peers", len(streams))
+	log.With(zap.String("objectId", message.ObjectId), zap.Int("peers", len(streams))).
+		Debug("broadcasting message to peers")
 	for _, stream := range streams {
 		if err = stream.Send(message); err != nil {
-			// TODO: add logging
+			log.Debug("error sending message to stream", zap.Error(err))
 		}
 	}
 
 	return nil
 }
 
-func (s *streamPool) AddAndReadStreamAsync(stream spacesyncproto.SpaceStream) {
-	go s.AddAndReadStreamSync(stream)
+func (s *streamPool) AddAndReadStreamAsync(stream spacesyncproto.SpaceStream) (err error) {
+	peerId, err := s.addStream(stream)
+	if err != nil {
+		return
+	}
+	go s.readPeerLoop(peerId, stream)
+	return
 }
 
 func (s *streamPool) AddAndReadStreamSync(stream spacesyncproto.SpaceStream) (err error) {
+	peerId, err := s.addStream(stream)
+	if err != nil {
+		return
+	}
+	return s.readPeerLoop(peerId, stream)
+}
+
+func (s *streamPool) addStream(stream spacesyncproto.SpaceStream) (peerId string, err error) {
 	s.Lock()
-	peerId, err := peer.CtxPeerId(stream.Context())
+	peerId, err = peer.CtxPeerId(stream.Context())
 	if err != nil {
 		s.Unlock()
 		return
+	}
+	log.With(zap.String("peer id", peerId)).Debug("adding stream")
+
+	if oldStream, ok := s.peerStreams[peerId]; ok {
+		s.Unlock()
+		oldStream.Close()
+		s.Lock()
+		log.With(zap.String("peer id", peerId)).Debug("closed old stream before adding")
 	}
 
 	s.peerStreams[peerId] = stream
 	s.wg.Add(1)
 	s.Unlock()
-	log.With("peerId", peerId).Debug("reading stream from peer")
-	return s.readPeerLoop(peerId, stream)
+	return
 }
 
 func (s *streamPool) Close() (err error) {
 	s.Lock()
 	wg := s.wg
 	s.Unlock()
+	streams := s.getAllStreams()
+
+	log.Debug("closing streams on lock")
+	for _, stream := range streams {
+		stream.Close()
+	}
+	log.Debug("closed streams")
+
 	if wg != nil {
 		wg.Wait()
 	}
@@ -213,6 +246,7 @@ func (s *streamPool) Close() (err error) {
 }
 
 func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStream) (err error) {
+	log.With(zap.String("replyId", peerId)).Debug("reading stream from peer")
 	defer s.wg.Done()
 	limiter := make(chan struct{}, maxSimultaneousOperationsPerStream)
 	for i := 0; i < maxSimultaneousOperationsPerStream; i++ {
@@ -221,21 +255,22 @@ func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.SpaceStre
 
 	process := func(msg *spacesyncproto.ObjectSyncMessage) {
 		s.lastUsage.Store(time.Now().Unix())
+		log.With(zap.String("replyId", msg.ReplyId), zap.String("object id", msg.ObjectId)).
+			Debug("getting message with reply id")
 		if msg.ReplyId == "" {
 			s.messageHandler(stream.Context(), peerId, msg)
 			return
 		}
-		log.With("replyId", msg.ReplyId).Debug("getting message with reply id")
 		s.waitersMx.Lock()
 		waiter, exists := s.waiters[msg.ReplyId]
 
 		if !exists {
-			log.With("replyId", msg.ReplyId).Debug("reply id not exists")
+			log.With(zap.String("replyId", msg.ReplyId)).Debug("reply id not exists")
 			s.waitersMx.Unlock()
 			s.messageHandler(stream.Context(), peerId, msg)
 			return
 		}
-		log.With("replyId", msg.ReplyId).Debug("reply id exists")
+		log.With(zap.String("replyId", msg.ReplyId)).Debug("reply id exists")
 
 		delete(s.waiters, msg.ReplyId)
 		s.waitersMx.Unlock()
@@ -253,6 +288,7 @@ Loop:
 		select {
 		case <-limiter:
 		case <-stream.Context().Done():
+			log.Debug("stream context done")
 			break Loop
 		}
 		go func() {
@@ -260,19 +296,23 @@ Loop:
 			limiter <- struct{}{}
 		}()
 	}
-	log.With("peerId", peerId).Debug("stopped reading stream from peer")
-	s.removePeer(peerId)
+	log.With(zap.String("peerId", peerId)).Debug("stopped reading stream from peer")
+	s.removePeer(peerId, stream)
 	return
 }
 
-func (s *streamPool) removePeer(peerId string) (err error) {
+func (s *streamPool) removePeer(peerId string, stream spacesyncproto.SpaceStream) (err error) {
 	s.Lock()
 	defer s.Unlock()
-	_, ok := s.peerStreams[peerId]
+	mapStream, ok := s.peerStreams[peerId]
 	if !ok {
 		return ErrEmptyPeer
 	}
-	delete(s.peerStreams, peerId)
+
+	// it can be the case that the stream was already replaced
+	if mapStream == stream {
+		delete(s.peerStreams, peerId)
+	}
 	return
 }
 

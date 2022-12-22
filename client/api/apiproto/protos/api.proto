@@ -14,6 +14,8 @@ service ClientApi {
     rpc AllTrees(AllTreesRequest) returns(AllTreesResponse);
     rpc AllSpaces(AllSpacesRequest) returns(AllSpacesResponse);
     rpc LoadSpace(LoadSpaceRequest) returns(LoadSpaceResponse);
+    rpc Watch(WatchRequest) returns(WatchResponse);
+    rpc Unwatch(UnwatchRequest) returns(UnwatchResponse);
     rpc PutFile(PutFileRequest) returns(PutFileResponse);
     rpc GetFile(GetFileRequest) returns(GetFileResponse);
     rpc DeleteFile(DeleteFileRequest) returns(DeleteFileResponse);
@@ -106,6 +108,22 @@ message TreeParamsRequest {
 message TreeParamsResponse {
     string rootId = 1;
     repeated string headIds = 2;
+}
+
+message WatchRequest {
+    string spaceId = 1;
+    string treeId = 2;
+}
+
+message WatchResponse {
+}
+
+message UnwatchRequest {
+    string spaceId = 1;
+    string treeId = 2;
+}
+
+message UnwatchResponse {
 }
 
 message PutFileRequest {

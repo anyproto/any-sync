@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
@@ -13,6 +14,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync"
 	"go.uber.org/zap"
 	"strings"
+	"time"
 )
 
 type TreeHeads struct {
@@ -48,13 +50,14 @@ func NewDiffService(
 	storage storage.SpaceStorage,
 	confConnector nodeconf.ConfConnector,
 	cache treegetter.TreeGetter,
+	statusService statusservice.StatusService,
 	log *zap.Logger) DiffService {
 
 	diff := ldiff.New(16, 16)
 	l := log.With(zap.String("spaceId", spaceId))
 	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient)
-	syncer := newDiffSyncer(spaceId, diff, confConnector, cache, storage, factory, l)
-	periodicSync := periodicsync.NewPeriodicSync(syncPeriod, syncer.Sync, l)
+	syncer := newDiffSyncer(spaceId, diff, confConnector, cache, storage, factory, statusService, l)
+	periodicSync := periodicsync.NewPeriodicSync(syncPeriod, time.Minute, syncer.Sync, l)
 
 	return &diffService{
 		spaceId:      spaceId,

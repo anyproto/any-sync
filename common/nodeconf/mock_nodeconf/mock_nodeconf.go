@@ -10,6 +10,7 @@ import (
 
 	app "github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	peer "github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
+	pool "github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	nodeconf "github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -251,4 +252,18 @@ func (m *MockConfConnector) GetResponsiblePeers(arg0 context.Context, arg1 strin
 func (mr *MockConfConnectorMockRecorder) GetResponsiblePeers(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResponsiblePeers", reflect.TypeOf((*MockConfConnector)(nil).GetResponsiblePeers), arg0, arg1)
+}
+
+// Pool mocks base method.
+func (m *MockConfConnector) Pool() pool.Pool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Pool")
+	ret0, _ := ret[0].(pool.Pool)
+	return ret0
+}
+
+// Pool indicates an expected call of Pool.
+func (mr *MockConfConnectorMockRecorder) Pool() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pool", reflect.TypeOf((*MockConfConnector)(nil).Pool))
 }

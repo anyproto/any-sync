@@ -5,6 +5,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
@@ -30,6 +31,7 @@ func newDiffSyncer(
 	cache treegetter.TreeGetter,
 	storage storage.SpaceStorage,
 	clientFactory spacesyncproto.ClientFactory,
+	statusService statusservice.StatusService,
 	log *zap.Logger) DiffSyncer {
 	return &diffSyncer{
 		diff:          diff,
@@ -39,6 +41,7 @@ func newDiffSyncer(
 		confConnector: confConnector,
 		clientFactory: clientFactory,
 		log:           log,
+		statusService: statusService,
 	}
 }
 
@@ -51,6 +54,7 @@ type diffSyncer struct {
 	clientFactory spacesyncproto.ClientFactory
 	log           *zap.Logger
 	deletionState deletionstate.DeletionState
+	statusService statusservice.StatusService
 }
 
 func (d *diffSyncer) Init(deletionState deletionstate.DeletionState) {
@@ -91,19 +95,27 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 }
 
 func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
-	cl := d.clientFactory.Client(p)
-	rdiff := remotediff.NewRemoteDiff(d.spaceId, cl)
+	var (
+		cl                  = d.clientFactory.Client(p)
+		rdiff               = remotediff.NewRemoteDiff(d.spaceId, cl)
+		stateCounter uint64 = 0
+	)
+	stateCounter = d.statusService.StateCounter()
 	newIds, changedIds, removedIds, err := d.diff.Diff(ctx, rdiff)
 	err = rpcerr.Unwrap(err)
 	if err != nil && err != spacesyncproto.ErrSpaceMissing {
+		d.statusService.SetNodesOnline(p.Id(), false)
 		return err
 	}
+	d.statusService.SetNodesOnline(p.Id(), true)
 	if err == spacesyncproto.ErrSpaceMissing {
 		return d.sendPushSpaceRequest(ctx, cl)
 	}
 	totalLen := len(newIds) + len(changedIds) + len(removedIds)
 	// not syncing ids which were removed through settings document
 	filteredIds := d.deletionState.FilterJoin(newIds, changedIds, removedIds)
+
+	d.statusService.RemoveAllExcept(p.Id(), filteredIds, stateCounter)
 
 	ctx = peer.CtxWithPeerId(ctx, p.Id())
 	d.pingTreesInCache(ctx, filteredIds)

@@ -122,39 +122,16 @@ func TestStreamPool_AddAndReadStreamAsync(t *testing.T) {
 func TestStreamPool_Close(t *testing.T) {
 	remId := "remoteId"
 
-	t.Run("client close", func(t *testing.T) {
+	t.Run("close", func(t *testing.T) {
 		fx := newFixture(t, "", remId, nil)
 		fx.run(t)
-		var events []string
-		recvChan := make(chan struct{})
-		go func() {
-			fx.pool.Close()
-			events = append(events, "pool_close")
-			recvChan <- struct{}{}
-		}()
-		time.Sleep(50 * time.Millisecond) //err = <-waitCh
-		events = append(events, "stream_close")
-		err := fx.clientStream.Close()
-		require.NoError(t, err)
-		<-recvChan
-		require.Equal(t, []string{"stream_close", "pool_close"}, events)
-	})
-	t.Run("server close", func(t *testing.T) {
-		fx := newFixture(t, "", remId, nil)
-		fx.run(t)
-		var events []string
-		recvChan := make(chan struct{})
-		go func() {
-			fx.pool.Close()
-			events = append(events, "pool_close")
-			recvChan <- struct{}{}
-		}()
-		time.Sleep(50 * time.Millisecond) //err = <-waitCh
-		events = append(events, "stream_close")
-		err := fx.clientStream.Close()
-		require.NoError(t, err)
-		<-recvChan
-		require.Equal(t, []string{"stream_close", "pool_close"}, events)
+		fx.pool.Close()
+		select {
+		case <-fx.clientStream.Context().Done():
+			break
+		case <-time.After(time.Millisecond * 100):
+			t.Fatal("context should be closed")
+		}
 	})
 }
 

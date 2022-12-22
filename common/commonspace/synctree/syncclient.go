@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_synctree/mock_synctree.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree SyncClient,SyncTree
+//go:generate mockgen -destination mock_synctree/mock_synctree.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree SyncClient,SyncTree,ReceiveQueue,HeadNotifiable
 package synctree
 
 import (
@@ -19,18 +19,23 @@ type syncClient struct {
 	syncservice.StreamPool
 	RequestFactory
 	spaceId       string
+	connector     nodeconf.ConfConnector
 	configuration nodeconf.Configuration
+
+	checker syncservice.StreamChecker
 }
 
 func newSyncClient(
 	spaceId string,
 	pool syncservice.StreamPool,
 	factory RequestFactory,
-	configuration nodeconf.Configuration) SyncClient {
+	configuration nodeconf.Configuration,
+	checker syncservice.StreamChecker) SyncClient {
 	return &syncClient{
 		StreamPool:     pool,
 		RequestFactory: factory,
 		configuration:  configuration,
+		checker:        checker,
 		spaceId:        spaceId,
 	}
 }
@@ -40,10 +45,16 @@ func (s *syncClient) BroadcastAsync(message *treechangeproto.TreeSyncMessage) (e
 	if err != nil {
 		return
 	}
+	s.checker.CheckResponsiblePeers()
 	return s.StreamPool.BroadcastAsync(objMsg)
 }
 
 func (s *syncClient) SendAsync(peerId string, message *treechangeproto.TreeSyncMessage, replyId string) (err error) {
+	err = s.checker.CheckPeerConnection(peerId)
+	if err != nil {
+		return
+	}
+
 	objMsg, err := marshallTreeMessage(message, message.RootChange.Id, replyId)
 	if err != nil {
 		return
@@ -56,7 +67,9 @@ func (s *syncClient) BroadcastAsyncOrSendResponsible(message *treechangeproto.Tr
 	if err != nil {
 		return
 	}
+
 	if s.configuration.IsResponsible(s.spaceId) {
+		s.checker.CheckResponsiblePeers()
 		return s.StreamPool.SendAsync(s.configuration.NodeIds(s.spaceId), objMsg)
 	}
 	return s.BroadcastAsync(message)

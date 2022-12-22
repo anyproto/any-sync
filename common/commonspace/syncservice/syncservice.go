@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_syncservice/mock_syncservice.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice ActionQueue
 package syncservice
 
 import (
@@ -6,78 +7,99 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectgetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync"
 	"go.uber.org/zap"
 	"time"
 )
 
-var log = logger.NewNamed("syncservice").Sugar()
+var log = logger.NewNamed("commonspace.syncservice")
 
 type SyncService interface {
 	ocache.ObjectLastUsage
 	synchandler.SyncHandler
 	StreamPool() StreamPool
+	StreamChecker() StreamChecker
+	ActionQueue() ActionQueue
 
 	Init(getter objectgetter.ObjectGetter)
 	Close() (err error)
 }
 
-const respPeersStreamCheckInterval = time.Second * 10
-
 type syncService struct {
 	spaceId string
 
-	streamPool    StreamPool
-	clientFactory spacesyncproto.ClientFactory
-	objectGetter  objectgetter.ObjectGetter
+	streamPool   StreamPool
+	checker      StreamChecker
+	periodicSync periodicsync.PeriodicSync
+	objectGetter objectgetter.ObjectGetter
+	actionQueue  ActionQueue
 
-	streamLoopCtx  context.Context
-	stopStreamLoop context.CancelFunc
-	connector      nodeconf.ConfConnector
-	streamLoopDone chan struct{}
-	log            *zap.SugaredLogger // TODO: change to logger
+	syncCtx    context.Context
+	cancelSync context.CancelFunc
 }
 
 func NewSyncService(
 	spaceId string,
-	confConnector nodeconf.ConfConnector) (syncService SyncService) {
+	confConnector nodeconf.ConfConnector,
+	periodicSeconds int) (syncService SyncService) {
 	streamPool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
 		return syncService.HandleMessage(ctx, senderId, message)
 	})
+	clientFactory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient)
+	syncLog := log.With(zap.String("id", spaceId))
+	syncCtx, cancel := context.WithCancel(context.Background())
+	checker := NewStreamChecker(
+		spaceId,
+		confConnector,
+		streamPool,
+		clientFactory,
+		syncCtx,
+		syncLog)
+	periodicSync := periodicsync.NewPeriodicSync(periodicSeconds, 0, func(ctx context.Context) error {
+		checker.CheckResponsiblePeers()
+		return nil
+	}, syncLog)
 	syncService = newSyncService(
 		spaceId,
 		streamPool,
-		spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient),
-		confConnector)
+		periodicSync,
+		checker,
+		syncCtx,
+		cancel)
 	return
 }
 
 func newSyncService(
 	spaceId string,
 	streamPool StreamPool,
-	clientFactory spacesyncproto.ClientFactory,
-	connector nodeconf.ConfConnector) *syncService {
+	periodicSync periodicsync.PeriodicSync,
+	checker StreamChecker,
+	syncCtx context.Context,
+	cancel context.CancelFunc,
+) *syncService {
 	return &syncService{
-		streamPool:     streamPool,
-		connector:      connector,
-		clientFactory:  clientFactory,
-		spaceId:        spaceId,
-		log:            log.With(zap.String("id", spaceId)),
-		streamLoopDone: make(chan struct{}),
+		periodicSync: periodicSync,
+		streamPool:   streamPool,
+		spaceId:      spaceId,
+		checker:      checker,
+		syncCtx:      syncCtx,
+		cancelSync:   cancel,
+		actionQueue:  NewActionQueue(),
 	}
 }
 
 func (s *syncService) Init(objectGetter objectgetter.ObjectGetter) {
 	s.objectGetter = objectGetter
-	s.streamLoopCtx, s.stopStreamLoop = context.WithCancel(context.Background())
-	go s.responsibleStreamCheckLoop(s.streamLoopCtx)
+	s.actionQueue.Run()
+	s.periodicSync.Run()
 }
 
 func (s *syncService) Close() (err error) {
-	s.stopStreamLoop()
-	<-s.streamLoopDone
+	s.actionQueue.Close()
+	s.periodicSync.Close()
+	s.cancelSync()
 	return s.streamPool.Close()
 }
 
@@ -86,7 +108,7 @@ func (s *syncService) LastUsage() time.Time {
 }
 
 func (s *syncService) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
-	s.log.With(zap.String("peerId", senderId), zap.String("objectId", message.ObjectId)).Debug("handling message")
+	log.With(zap.String("peerId", senderId), zap.String("objectId", message.ObjectId)).Debug("handling message")
 	obj, err := s.objectGetter.GetObject(ctx, message.ObjectId)
 	if err != nil {
 		return
@@ -94,60 +116,14 @@ func (s *syncService) HandleMessage(ctx context.Context, senderId string, messag
 	return obj.HandleMessage(ctx, senderId, message)
 }
 
-func (s *syncService) responsibleStreamCheckLoop(ctx context.Context) {
-	defer close(s.streamLoopDone)
-	checkResponsiblePeers := func() {
-		var (
-			activeNodeIds []string
-			configuration = s.connector.Configuration()
-		)
-		for _, nodeId := range configuration.NodeIds(s.spaceId) {
-			if s.streamPool.HasActiveStream(nodeId) {
-				s.log.Debug("has active stream for", zap.String("id", nodeId))
-				activeNodeIds = append(activeNodeIds, nodeId)
-				continue
-			}
-		}
-		newPeers, err := s.connector.DialInactiveResponsiblePeers(ctx, s.spaceId, activeNodeIds)
-		if err != nil {
-			s.log.Error("failed to dial peers", zap.Error(err))
-			return
-		}
-
-		for _, p := range newPeers {
-			stream, err := s.clientFactory.Client(p).Stream(ctx)
-			if err != nil {
-				err = rpcerr.Unwrap(err)
-				s.log.Errorf("failed to open stream: %v", err)
-				// so here probably the request is failed because there is no such space,
-				// but diffService should handle such cases by sending pushSpace
-				continue
-			}
-			// sending empty message for the server to understand from which space is it coming
-			err = stream.Send(&spacesyncproto.ObjectSyncMessage{SpaceId: s.spaceId})
-			if err != nil {
-				err = rpcerr.Unwrap(err)
-				s.log.Errorf("failed to send first message to stream: %v", err)
-				continue
-			}
-			s.log.Debug("reading stream for", zap.String("id", p.Id()))
-			s.streamPool.AddAndReadStreamAsync(stream)
-		}
-	}
-
-	checkResponsiblePeers()
-	ticker := time.NewTicker(respPeersStreamCheckInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-s.streamLoopCtx.Done():
-			return
-		case <-ticker.C:
-			checkResponsiblePeers()
-		}
-	}
-}
-
 func (s *syncService) StreamPool() StreamPool {
 	return s.streamPool
+}
+
+func (s *syncService) StreamChecker() StreamChecker {
+	return s.checker
+}
+
+func (s *syncService) ActionQueue() ActionQueue {
+	return s.actionQueue
 }

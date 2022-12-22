@@ -35,3 +35,17 @@ func WrapError(err error, rootChange *RawTreeChangeWithId) *TreeSyncMessage {
 		RootChange: rootChange,
 	}
 }
+
+func GetHeads(msg *TreeSyncMessage) (heads []string) {
+	content := msg.GetContent()
+	switch {
+	case content.GetHeadUpdate() != nil:
+		return content.GetHeadUpdate().Heads
+	case content.GetFullSyncRequest() != nil:
+		return content.GetFullSyncRequest().Heads
+	case content.GetFullSyncResponse() != nil:
+		return content.GetFullSyncResponse().Heads
+	default:
+		return nil
+	}
+}

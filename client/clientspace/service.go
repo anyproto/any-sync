@@ -99,6 +99,7 @@ func (s *service) loadSpace(ctx context.Context, id string) (value ocache.Object
 	if err != nil {
 		return
 	}
+	ns.StatusService().SetUpdateReceiver(&statusReceiver{})
 	if err = ns.Init(ctx); err != nil {
 		return
 	}

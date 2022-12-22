@@ -57,17 +57,26 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(ctx context.Context) (err error) {
-	err = s.BaseDrpcServer.Run(
-		ctx,
-		s.cfg.APIServer.ListenAddrs,
-		func(handler drpc.Handler) drpc.Handler {
+	params := server.Params{
+		BufferSizeMb:  s.cfg.Stream.MaxMsgSizeMb,
+		TimeoutMillis: s.cfg.Stream.TimeoutMilliseconds,
+		ListenAddrs:   s.cfg.APIServer.ListenAddrs,
+		Wrapper: func(handler drpc.Handler) drpc.Handler {
 			return handler
 		},
-		s.transport.BasicListener)
+		Converter: s.transport.BasicListener,
+	}
+	err = s.BaseDrpcServer.Run(ctx, params)
 	if err != nil {
 		return
 	}
-	return apiproto.DRPCRegisterClientApi(s, &rpcHandler{s.spaceService, s.storageService, s.docService, s.account, s.file})
+	return apiproto.DRPCRegisterClientApi(s, &rpcHandler{
+		spaceService:   s.spaceService,
+		storageService: s.storageService,
+		docService:     s.docService,
+		account:        s.account,
+		file:           s.file,
+	})
 }
 
 func (s *service) Close(ctx context.Context) (err error) {

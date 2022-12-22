@@ -106,7 +106,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		newSnapshotsBuf: make([]*Change, 0, 10),
 	}
 
-	err := objTree.rebuildFromStorage(nil)
+	err := objTree.rebuildFromStorage(nil, nil)
 	if err != nil {
 		return nil, err
 	}

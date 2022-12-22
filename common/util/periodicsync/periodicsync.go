@@ -14,7 +14,7 @@ type PeriodicSync interface {
 
 type SyncerFunc func(ctx context.Context) error
 
-func NewPeriodicSync(periodSeconds int, syncer SyncerFunc, l *zap.Logger) PeriodicSync {
+func NewPeriodicSync(periodSeconds int, timeout time.Duration, syncer SyncerFunc, l *zap.Logger) PeriodicSync {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &periodicSync{
 		syncer:        syncer,
@@ -23,6 +23,7 @@ func NewPeriodicSync(periodSeconds int, syncer SyncerFunc, l *zap.Logger) Period
 		syncCancel:    cancel,
 		syncLoopDone:  make(chan struct{}),
 		periodSeconds: periodSeconds,
+		timeout:       timeout,
 	}
 }
 
@@ -33,6 +34,7 @@ type periodicSync struct {
 	syncCancel    context.CancelFunc
 	syncLoopDone  chan struct{}
 	periodSeconds int
+	timeout       time.Duration
 }
 
 func (p *periodicSync) Run() {
@@ -43,8 +45,12 @@ func (p *periodicSync) syncLoop(periodSeconds int) {
 	period := time.Duration(periodSeconds) * time.Second
 	defer close(p.syncLoopDone)
 	doSync := func() {
-		ctx, cancel := context.WithTimeout(p.syncCtx, time.Minute)
-		defer cancel()
+		ctx := p.syncCtx
+		if p.timeout != 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(p.syncCtx, p.timeout)
+			defer cancel()
+		}
 		if err := p.syncer(ctx); err != nil {
 			p.log.Warn("periodic sync error", zap.Error(err))
 		}

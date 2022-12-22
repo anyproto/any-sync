@@ -3,7 +3,6 @@ module github.com/anytypeio/go-anytype-infrastructure-experiments/common
 go 1.19
 
 require (
-	github.com/VividCortex/ewma v1.2.0
 	github.com/anytypeio/go-anytype-infrastructure-experiments/consensus v0.0.0-20221107145605-92bdf7d57b48
 	github.com/anytypeio/go-chash v0.0.0-20220629194632-4ad1154fe232
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
@@ -19,7 +18,6 @@ require (
 	github.com/ipfs/go-ipfs-blockstore v1.2.0
 	github.com/ipfs/go-ipfs-chunker v0.0.5
 	github.com/ipfs/go-ipfs-exchange-interface v0.2.0
-	github.com/ipfs/go-ipld-cbor v0.0.6
 	github.com/ipfs/go-ipld-format v0.4.0
 	github.com/ipfs/go-merkledag v0.8.1
 	github.com/ipfs/go-unixfs v0.4.1
@@ -31,8 +29,9 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/zeebo/blake3 v0.2.3
 	github.com/zeebo/errs v1.3.0
-	go.uber.org/multierr v1.9.0
+	go.uber.org/atomic v1.10.0
 	go.uber.org/zap v1.24.0
+	golang.org/x/exp v0.0.0-20220916125017-b168a2c6b86b
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.32
@@ -58,6 +57,7 @@ require (
 	github.com/ipfs/go-ipfs-files v0.0.3 // indirect
 	github.com/ipfs/go-ipfs-posinfo v0.0.1 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
+	github.com/ipfs/go-ipld-cbor v0.0.6 // indirect
 	github.com/ipfs/go-ipld-legacy v0.1.1 // indirect
 	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
@@ -91,7 +91,7 @@ require (
 	github.com/whyrusleeping/chunker v0.0.0-20181014151217-fe64bd25879f // indirect
 	go.opentelemetry.io/otel v1.11.2 // indirect
 	go.opentelemetry.io/otel/trace v1.11.2 // indirect
-	go.uber.org/atomic v1.10.0 // indirect
+	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/crypto v0.4.0 // indirect
 	golang.org/x/image v0.0.0-20200119044424-58c23975cae1 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect

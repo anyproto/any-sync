@@ -40,27 +40,49 @@ func (tb *treeBuilder) Reset() {
 	tb.tree = &Tree{}
 }
 
-func (tb *treeBuilder) Build(newChanges []*Change) (*Tree, error) {
-	var headsAndNewChanges []string
+func (tb *treeBuilder) Build(theirHeads []string, newChanges []*Change) (*Tree, error) {
+	var proposedHeads []string
+	tb.cache = make(map[string]*Change)
 	heads, err := tb.treeStorage.Heads()
 	if err != nil {
 		return nil, err
 	}
 
-	headsAndNewChanges = append(headsAndNewChanges, heads...)
-	tb.cache = make(map[string]*Change)
-	for _, ch := range newChanges {
-		headsAndNewChanges = append(headsAndNewChanges, ch.Id)
-		tb.cache[ch.Id] = ch
-	}
-
-	log.With(zap.Strings("heads", heads)).Debug("building tree")
-	breakpoint, err := tb.findBreakpoint(headsAndNewChanges)
+	// TODO: we can actually get this from tree (though not sure, that there would always be
+	//  an invariant where the tree has the closest common snapshot of heads)
+	//  so if optimization is critical we can change this to inject from tree directly
+	//  but then we have to be sure that invariant stays true
+	oldBreakpoint, err := tb.findBreakpoint(heads, true)
 	if err != nil {
+		// this should never error out, because otherwise we have broken data
 		return nil, fmt.Errorf("findBreakpoint error: %v", err)
 	}
 
-	if err = tb.buildTree(headsAndNewChanges, breakpoint); err != nil {
+	if len(theirHeads) > 0 {
+		proposedHeads = append(proposedHeads, theirHeads...)
+	}
+	for _, ch := range newChanges {
+		if len(theirHeads) == 0 {
+			// in this case we don't know what new heads are, so every change can be head
+			proposedHeads = append(proposedHeads, ch.Id)
+		}
+		tb.cache[ch.Id] = ch
+	}
+
+	// getting common snapshot for new heads
+	breakpoint, err := tb.findBreakpoint(proposedHeads, false)
+	if err != nil {
+		breakpoint = oldBreakpoint
+	} else {
+		breakpoint, err = tb.findCommonForTwoSnapshots(oldBreakpoint, breakpoint)
+		if err != nil {
+			breakpoint = oldBreakpoint
+		}
+	}
+	proposedHeads = append(proposedHeads, heads...)
+
+	log.With(zap.Strings("heads", proposedHeads)).Debug("building tree")
+	if err = tb.buildTree(proposedHeads, breakpoint); err != nil {
 		return nil, fmt.Errorf("buildTree error: %v", err)
 	}
 
@@ -73,13 +95,12 @@ func (tb *treeBuilder) buildTree(heads []string, breakpoint string) (err error) 
 		return
 	}
 	tb.tree.AddFast(ch)
-	changes, err := tb.dfs(heads, breakpoint)
-
+	changes := tb.dfs(heads, breakpoint)
 	tb.tree.AddFast(changes...)
 	return
 }
 
-func (tb *treeBuilder) dfs(heads []string, breakpoint string) (buf []*Change, err error) {
+func (tb *treeBuilder) dfs(heads []string, breakpoint string) []*Change {
 	// initializing buffers
 	tb.idStack = tb.idStack[:0]
 	tb.loadBuffer = tb.loadBuffer[:0]
@@ -113,7 +134,7 @@ func (tb *treeBuilder) dfs(heads []string, breakpoint string) (buf []*Change, er
 			tb.idStack = append(tb.idStack, prev)
 		}
 	}
-	return tb.loadBuffer, nil
+	return tb.loadBuffer
 }
 
 func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
@@ -138,18 +159,34 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 	return ch, nil
 }
 
-func (tb *treeBuilder) findBreakpoint(heads []string) (breakpoint string, err error) {
+func (tb *treeBuilder) findBreakpoint(heads []string, noError bool) (breakpoint string, err error) {
 	var (
 		ch          *Change
 		snapshotIds []string
 	)
 	for _, head := range heads {
 		if ch, err = tb.loadChange(head); err != nil {
-			return
+			if noError {
+				return
+			}
+
+			log.With(zap.String("head", head), zap.Error(err)).Debug("couldn't find head")
+			continue
 		}
+
 		shId := ch.SnapshotId
 		if ch.IsSnapshot {
 			shId = ch.Id
+		} else {
+			_, err = tb.loadChange(shId)
+			if err != nil {
+				if noError {
+					return
+				}
+
+				log.With(zap.String("snapshot id", shId), zap.Error(err)).Debug("couldn't find head's snapshot")
+				continue
+			}
 		}
 		if slice.FindPos(snapshotIds, shId) == -1 {
 			snapshotIds = append(snapshotIds, shId)
@@ -165,6 +202,7 @@ func (tb *treeBuilder) findCommonSnapshot(snapshotIds []string) (snapshotId stri
 		return "", fmt.Errorf("snapshots not found")
 	}
 
+	// TODO: use divide and conquer to find the snapshot, then we will have only logN findCommonForTwoSnapshots calls
 	for len(snapshotIds) > 1 {
 		l := len(snapshotIds)
 		shId, e := tb.findCommonForTwoSnapshots(snapshotIds[l-2], snapshotIds[l-1])
