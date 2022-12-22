@@ -79,8 +79,27 @@ func (f *badgerStorage) Delete(ctx context.Context, c cid.Cid) error {
 func (f *badgerStorage) ExistsCids(ctx context.Context, ks []cid.Cid) (exists []cid.Cid, err error) {
 	err = f.db.View(func(txn *badger.Txn) error {
 		for _, k := range ks {
-			if _, e := txn.Get(key(k)); e == nil {
+			_, e := txn.Get(key(k))
+			if e == nil {
 				exists = append(exists, k)
+			} else if e != badger.ErrKeyNotFound {
+				return e
+			}
+		}
+		return nil
+	})
+	return
+}
+
+func (f *badgerStorage) NotExistsBlocks(ctx context.Context, bs []blocks.Block) (notExists []blocks.Block, err error) {
+	notExists = bs[:0]
+	err = f.db.View(func(txn *badger.Txn) error {
+		for _, b := range bs {
+			_, e := txn.Get(key(b.Cid()))
+			if e == badger.ErrKeyNotFound {
+				notExists = append(notExists, b)
+			} else if e != nil {
+				return e
 			}
 		}
 		return nil

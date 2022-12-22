@@ -7,6 +7,7 @@ import (
 	blocks "github.com/ipfs/go-block-format"
 	"go.uber.org/zap"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -31,14 +32,14 @@ func (s *syncer) run(ctx context.Context) {
 	}
 }
 
-func (s *syncer) sync(ctx context.Context) (l int) {
+func (s *syncer) sync(ctx context.Context) (doneCount int32) {
 	cids, err := s.ps.index.List(syncerOpBatch)
 	if err != nil {
 		log.Error("index list error", zap.Error(err))
 		return
 	}
 	defer cids.Release()
-	l = cids.Len()
+	l := cids.Len()
 	log.Debug("remote file sync, got tasks to sync", zap.Int("count", l))
 	if l == 0 {
 		return
@@ -47,34 +48,35 @@ func (s *syncer) sync(ctx context.Context) (l int) {
 	ctx, cancel = context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	var wg sync.WaitGroup
+	var doneAtomic atomic.Int32
 	for _, sOps := range cids.SpaceOps {
 		if len(sOps.Load) > 0 {
 			wg.Add(1)
 			go func(opt badgerfilestore.SpaceCidOps) {
 				defer wg.Done()
-				s.load(ctx, opt)
+				doneAtomic.Add(s.load(ctx, opt))
 			}(sOps)
 		}
 		if len(sOps.Delete) > 0 {
 			wg.Add(1)
 			go func(opt badgerfilestore.SpaceCidOps) {
 				defer wg.Done()
-				s.delete(ctx, opt)
+				doneAtomic.Add(s.delete(ctx, opt))
 			}(sOps)
 		}
 		if len(sOps.Add) > 0 {
 			wg.Add(1)
 			go func(opt badgerfilestore.SpaceCidOps) {
 				defer wg.Done()
-				s.add(ctx, opt)
+				doneAtomic.Add(s.add(ctx, opt))
 			}(sOps)
 		}
 	}
 	wg.Wait()
-	return
+	return doneAtomic.Load()
 }
 
-func (s *syncer) load(ctx context.Context, spaceOps badgerfilestore.SpaceCidOps) {
+func (s *syncer) load(ctx context.Context, spaceOps badgerfilestore.SpaceCidOps) (doneCount int32) {
 	ctx = fileblockstore.CtxWithSpaceId(ctx, spaceOps.SpaceId)
 	res := s.ps.origin.GetMany(ctx, spaceOps.Load)
 	doneCids := badgerfilestore.NewCids()
@@ -90,10 +92,12 @@ func (s *syncer) load(ctx context.Context, spaceOps badgerfilestore.SpaceCidOps)
 		log.Error("syncer: index.Done error", zap.Error(err))
 		return
 	}
-	log.Info("successfully loaded cids", zap.Int("count", doneCids.Len()))
+	doneCount = int32(doneCids.Len())
+	log.Info("successfully loaded cids", zap.Int32("count", doneCount))
+	return
 }
 
-func (s *syncer) add(ctx context.Context, spaceOps badgerfilestore.SpaceCidOps) {
+func (s *syncer) add(ctx context.Context, spaceOps badgerfilestore.SpaceCidOps) (doneCount int32) {
 	doneCids := badgerfilestore.NewCids()
 	defer doneCids.Release()
 	res := s.ps.cache.GetMany(ctx, spaceOps.Add)
@@ -112,10 +116,12 @@ func (s *syncer) add(ctx context.Context, spaceOps badgerfilestore.SpaceCidOps) 
 		log.Error("syncer: index.Done error", zap.Error(err))
 		return
 	}
-	log.Info("successfully added cids", zap.Int("count", doneCids.Len()), zap.Stringers("cids", doneCids.SpaceOps[0].Add))
+	doneCount = int32(doneCids.Len())
+	log.Info("successfully added cids", zap.Int32("count", doneCount), zap.Stringers("cids", doneCids.SpaceOps[0].Add))
+	return
 }
 
-func (s *syncer) delete(ctx context.Context, spaceOps badgerfilestore.SpaceCidOps) {
+func (s *syncer) delete(ctx context.Context, spaceOps badgerfilestore.SpaceCidOps) (doneCount int32) {
 	doneCids := badgerfilestore.NewCids()
 	defer doneCids.Release()
 	ctx = fileblockstore.CtxWithSpaceId(ctx, spaceOps.SpaceId)
@@ -129,5 +135,7 @@ func (s *syncer) delete(ctx context.Context, spaceOps badgerfilestore.SpaceCidOp
 	if err := s.ps.index.Done(doneCids); err != nil {
 		log.Error("syncer: index.Done error", zap.Error(err))
 	}
-	log.Info("successfully removed cids", zap.Int("count", doneCids.Len()))
+	doneCount = int32(doneCids.Len())
+	log.Info("successfully removed cids", zap.Int32("count", doneCount))
+	return
 }

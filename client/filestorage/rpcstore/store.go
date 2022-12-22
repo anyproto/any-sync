@@ -77,9 +77,13 @@ func (s *store) Add(ctx context.Context, bs []blocks.Block) error {
 	}
 	var errs []error
 	for i := 0; i < len(tasks); i++ {
-		t := <-readyCh
-		if t.err != nil {
-			errs = append(errs, t.err)
+		select {
+		case t := <-readyCh:
+			if t.err != nil {
+				errs = append(errs, t.err)
+			}
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 	return multierr.Combine(errs...)
@@ -90,8 +94,12 @@ func (s *store) Delete(ctx context.Context, c cid.Cid) error {
 	if err := s.cm.Add(ctx, t); err != nil {
 		return err
 	}
-	<-t.ready
-	return t.err
+	select {
+	case t := <-t.ready:
+		return t.err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (s *store) Close() (err error) {

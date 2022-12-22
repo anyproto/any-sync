@@ -33,6 +33,7 @@ type BlockStore interface {
 type BlockStoreLocal interface {
 	BlockStore
 	ExistsCids(ctx context.Context, ks []cid.Cid) (exists []cid.Cid, err error)
+	NotExistsBlocks(ctx context.Context, bs []blocks.Block) (notExists []blocks.Block, err error)
 }
 
 type BlockStoreSpaceIds interface {
