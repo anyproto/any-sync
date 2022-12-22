@@ -11,6 +11,7 @@
 # playground/tmp folder for testing different clients
 playground/tmp
 playground/debug.json
+debug.json
 
 # .paw folder for macos paw client
 .paw
