@@ -9,6 +9,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/peer"
 	cconfig "github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/config"
+	fconfig "github.com/anytypeio/go-anytype-infrastructure-experiments/filenode/config"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
@@ -27,6 +28,9 @@ type NodesMap struct {
 	Consensus []struct {
 		Addresses []string `yaml:"grpcAddresses"`
 	}
+	FileNodes []struct {
+		Addresses []string `yaml:"grpcAddresses"`
+	} `yaml:"fileNodes""`
 	Clients []struct {
 		Addresses    []string `yaml:"grpcAddresses"`
 		APIAddresses []string `yaml:"apiAddresses"`
@@ -48,8 +52,8 @@ func main() {
 
 	var configs []config.Config
 	var nodes []config.Node
-	for _, n := range nodesMap.Nodes {
-		cfg, err := genNodeConfig(n.Addresses, n.APIAddresses)
+	for i, n := range nodesMap.Nodes {
+		cfg, err := genNodeConfig(n.Addresses, n.APIAddresses, i+1)
 		if err != nil {
 			panic(fmt.Sprintf("could not generate the config file: %s", err.Error()))
 		}
@@ -60,6 +64,7 @@ func main() {
 			Address:       cfg.GrpcServer.ListenAddrs[0],
 			SigningKey:    cfg.Account.SigningKey,
 			EncryptionKey: cfg.Account.EncryptionKey,
+			Types:         []config.NodeType{config.NodeTypeTree},
 		}
 		nodes = append(nodes, node)
 	}
@@ -75,8 +80,8 @@ func main() {
 	}
 
 	var clientConfigs []config.Config
-	for _, c := range nodesMap.Clients {
-		cfg, err := genClientConfig(c.Addresses, c.APIAddresses, encClientKey, signClientKey)
+	for i, c := range nodesMap.Clients {
+		cfg, err := genClientConfig(c.Addresses, c.APIAddresses, encClientKey, signClientKey, i+1)
 		if err != nil {
 			panic(fmt.Sprintf("could not generate the config file: %s", err.Error()))
 		}
@@ -90,7 +95,26 @@ func main() {
 			panic(fmt.Sprintf("could not generate the config file: %s", err.Error()))
 		}
 		consConfigs = append(consConfigs, cfg)
+		nodes = append(nodes, config.Node{
+			PeerId:  cfg.Account.PeerId,
+			Address: n.Addresses[0],
+			Types:   []config.NodeType{config.NodeTypeConsensus},
+		})
 	}
+	var fileConfigs []fconfig.Config
+	for i, n := range nodesMap.FileNodes {
+		cfg, err := getFileNodeConfig(n.Addresses, i+1)
+		if err != nil {
+			panic(fmt.Sprintf("could not generate the config file: %s", err.Error()))
+		}
+		fileConfigs = append(fileConfigs, cfg)
+		nodes = append(nodes, config.Node{
+			PeerId:  cfg.Account.PeerId,
+			Address: n.Addresses[0],
+			Types:   []config.NodeType{config.NodeTypeFile},
+		})
+	}
+
 	for idx := range configs {
 		configs[idx].Nodes = nodes
 	}
@@ -151,9 +175,21 @@ func main() {
 			panic(fmt.Sprintf("could not write the config to file: %v", err))
 		}
 	}
+	for idx, cfg := range fileConfigs {
+		path := fmt.Sprintf("%s/file%d.yml", configsPath, idx+1)
+		bytes, err := yaml.Marshal(cfg)
+		if err != nil {
+			panic(fmt.Sprintf("could not marshal the keys: %v", err))
+		}
+
+		err = os.WriteFile(path, bytes, os.ModePerm)
+		if err != nil {
+			panic(fmt.Sprintf("could not write the config to file: %v", err))
+		}
+	}
 }
 
-func genNodeConfig(addresses []string, apiAddresses []string) (config.Config, error) {
+func genNodeConfig(addresses []string, apiAddresses []string, num int) (config.Config, error) {
 	encKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
 	if err != nil {
 		return config.Config{}, err
@@ -185,7 +221,7 @@ func genNodeConfig(addresses []string, apiAddresses []string) (config.Config, er
 			ListenAddrs: addresses,
 			TLS:         false,
 		},
-		Storage: config.Storage{Path: "db"},
+		Storage: config.Storage{Path: fmt.Sprintf("db/node/%d/data", num)},
 		Account: config.Account{
 			PeerId:        peerID.String(),
 			PeerKey:       encSignKey,
@@ -207,7 +243,7 @@ func genNodeConfig(addresses []string, apiAddresses []string) (config.Config, er
 	}, nil
 }
 
-func genClientConfig(addresses []string, apiAddresses []string, encKey encryptionkey.PrivKey, signKey signingkey.PrivKey) (config.Config, error) {
+func genClientConfig(addresses []string, apiAddresses []string, encKey encryptionkey.PrivKey, signKey signingkey.PrivKey, num int) (config.Config, error) {
 	peerKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
 	if err != nil {
 		return config.Config{}, err
@@ -239,7 +275,7 @@ func genClientConfig(addresses []string, apiAddresses []string, encKey encryptio
 			ListenAddrs: addresses,
 			TLS:         false,
 		},
-		Storage: config.Storage{Path: "db"},
+		Storage: config.Storage{Path: fmt.Sprintf("db/client/%d", num)},
 		Account: config.Account{
 			PeerId:        peerID.String(),
 			PeerKey:       encPeerKey,
@@ -302,6 +338,51 @@ func genConsensusConfig(addresses []string) (cconfig.Config, error) {
 			Connect:       "mongodb://localhost:27017/?w=majority",
 			Database:      "consensus",
 			LogCollection: "log",
+		},
+		Stream: config.Stream{
+			TimeoutMilliseconds: 1000,
+			MaxMsgSizeMb:        256,
+		},
+	}, nil
+}
+
+func getFileNodeConfig(addresses []string, num int) (fconfig.Config, error) {
+	encKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
+	if err != nil {
+		return fconfig.Config{}, err
+	}
+
+	signKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
+	if err != nil {
+		return fconfig.Config{}, err
+	}
+
+	encEncKey, err := keys.EncodeKeyToString(encKey)
+	if err != nil {
+		return fconfig.Config{}, err
+	}
+
+	encSignKey, err := keys.EncodeKeyToString(signKey)
+	if err != nil {
+		return fconfig.Config{}, err
+	}
+
+	peerID, err := peer.IDFromSigningPubKey(signKey.GetPublic())
+	if err != nil {
+		return fconfig.Config{}, err
+	}
+	return fconfig.Config{
+		GrpcServer: config.GrpcServer{
+			ListenAddrs: addresses,
+		},
+		Account: config.Account{
+			PeerId:        peerID.String(),
+			PeerKey:       encSignKey,
+			SigningKey:    encSignKey,
+			EncryptionKey: encEncKey,
+		},
+		FileStorePogreb: fconfig.FileStorePogreb{
+			Path: fmt.Sprintf("db/file/%d", num),
 		},
 		Stream: config.Stream{
 			TimeoutMilliseconds: 1000,

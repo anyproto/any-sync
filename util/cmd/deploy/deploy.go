@@ -16,16 +16,19 @@ import (
 var log = logger.NewNamed("cmd.deploy")
 
 type rootArgs struct {
-	configPath       string
-	nodePkgPath      string
-	nodeBinaryPath   string
-	clientPkgPath    string
-	clientBinaryPath string
-	dbPath           string
-	initialPath      string
+	configPath         string
+	nodePkgPath        string
+	nodeBinaryPath     string
+	clientPkgPath      string
+	clientBinaryPath   string
+	fileNodePkgPath    string
+	fileNodeBinaryPath string
+	dbPath             string
+	initialPath        string
 
-	nodePkgName   string
-	clientPkgName string
+	nodePkgName     string
+	clientPkgName   string
+	fileNodePkgName string
 
 	isDebug bool
 }
@@ -40,8 +43,9 @@ type appPath struct {
 }
 
 const (
-	anytypeClientBinaryName = "anytype-client"
-	anytypeNodeBinaryName   = "anytype-node"
+	anytypeClientBinaryName   = "anytype-client"
+	anytypeNodeBinaryName     = "anytype-node"
+	anytypeFileNodeBinaryName = "anytype-file"
 )
 
 var rootCmd = &cobra.Command{
@@ -51,6 +55,7 @@ var rootCmd = &cobra.Command{
 
 		rootArguments.nodePkgName, _ = cmd.Flags().GetString("node-pkg")
 		rootArguments.clientPkgName, _ = cmd.Flags().GetString("client-pkg")
+		rootArguments.fileNodePkgName, _ = cmd.Flags().GetString("filenode-pkg")
 
 		// checking configs
 		cfgPath, _ := cmd.Flags().GetString("config-path")
@@ -73,6 +78,13 @@ var rootCmd = &cobra.Command{
 		}
 		rootArguments.clientPkgPath, _ = filepath.Abs(clientPath)
 
+		// checking file-node package
+		fileNodePath, _ := cmd.Flags().GetString("file-node-path")
+		if _, err := os.Stat(path.Join(clientPath, "go.mod")); os.IsNotExist(err) {
+			log.With(zap.Error(err)).Fatal("the path to file-node does not contain a go module")
+		}
+		rootArguments.fileNodePkgPath, _ = filepath.Abs(fileNodePath)
+
 		// checking binary path
 		binaryPath, _ := cmd.Flags().GetString("bin-path")
 		err := createDirectoryIfNotExists(binaryPath)
@@ -83,6 +95,7 @@ var rootCmd = &cobra.Command{
 		absoluteBinPath, _ := filepath.Abs(binaryPath)
 		rootArguments.clientBinaryPath = path.Join(absoluteBinPath, anytypeClientBinaryName)
 		rootArguments.nodeBinaryPath = path.Join(absoluteBinPath, anytypeNodeBinaryName)
+		rootArguments.fileNodeBinaryPath = path.Join(absoluteBinPath, anytypeFileNodeBinaryName)
 
 		// getting debug mode
 		rootArguments.isDebug, _ = cmd.Flags().GetBool("debug")
@@ -111,9 +124,10 @@ var buildRunAllCmd = &cobra.Command{
 
 		numNodes, _ := cmd.Flags().GetUint("nodes")
 		numClients, _ := cmd.Flags().GetUint("clients")
+		numFileNodes, _ := cmd.Flags().GetUint("filenodes")
 
 		// running the script
-		err := buildRunAll(rootArguments, numClients, numNodes)
+		err := buildRunAll(rootArguments, numClients, numNodes, numFileNodes)
 		if err != nil {
 			log.With(zap.Error(err)).Fatal("failed to run the command")
 		}
@@ -148,8 +162,9 @@ var runAllCmd = &cobra.Command{
 
 		numNodes, _ := cmd.Flags().GetUint("nodes")
 		numClients, _ := cmd.Flags().GetUint("clients")
+		numFileNodes, _ := cmd.Flags().GetUint("filenodes")
 
-		err := runAll(rootArguments, numClients, numNodes)
+		err := runAll(rootArguments, numClients, numNodes, numFileNodes)
 		if err != nil {
 			log.With(zap.Error(err)).Fatal("failed to run the command")
 			return
@@ -161,16 +176,21 @@ func init() {
 	rootCmd.PersistentFlags().String("config-path", "etc/configs", "generated configs")
 	rootCmd.PersistentFlags().String("node-pkg", "github.com/anytypeio/go-anytype-infrastructure-experiments/node/cmd", "node package")
 	rootCmd.PersistentFlags().String("client-pkg", "github.com/anytypeio/go-anytype-infrastructure-experiments/client/cmd", "client package")
+	rootCmd.PersistentFlags().String("filenode-pkg", "github.com/anytypeio/go-anytype-infrastructure-experiments/filenode/cmd", "client package")
 	rootCmd.PersistentFlags().String("node-path", "node", "path to node go.mod")
 	rootCmd.PersistentFlags().String("client-path", "client", "path to client go.mod")
+	rootCmd.PersistentFlags().String("filenode-path", "filenode", "path to client go.mod")
 	rootCmd.PersistentFlags().String("bin-path", "bin", "path to folder where all the binaries are")
 	rootCmd.PersistentFlags().String("db-path", "db", "path to folder where the working directories should be placed")
 	rootCmd.PersistentFlags().Bool("debug", false, "this tells if we should run the profiler")
 
 	buildRunAllCmd.Flags().UintP("nodes", "n", 3, "number of nodes to be generated")
 	buildRunAllCmd.Flags().UintP("clients", "c", 2, "number of clients to be generated")
+	buildRunAllCmd.Flags().UintP("filenodes", "f", 1, "number of filenodes to be generated")
+
 	runAllCmd.Flags().UintP("nodes", "n", 3, "number of nodes to be generated")
 	runAllCmd.Flags().UintP("clients", "c", 2, "number of clients to be generated")
+	runAllCmd.Flags().UintP("filenodes", "f", 1, "number of clients to be generated")
 
 	rootCmd.AddCommand(buildRunAllCmd)
 	rootCmd.AddCommand(buildAllCmd)
@@ -225,17 +245,17 @@ func createAppPaths(args rootArgs, binaryPath, appName string, portNum, num int)
 	return
 }
 
-func buildRunAll(args rootArgs, numClients, numNodes uint) (err error) {
+func buildRunAll(args rootArgs, numClients, numNodes, numFileNodes uint) (err error) {
 	err = buildAll(args)
 	if err != nil {
 		err = fmt.Errorf("failed to build all: %w", err)
 		return
 	}
 
-	return runAll(args, numClients, numNodes)
+	return runAll(args, numClients, numNodes, numFileNodes)
 }
 
-func runAll(args rootArgs, numClients uint, numNodes uint) (err error) {
+func runAll(args rootArgs, numClients, numNodes, numFileNodes uint) (err error) {
 	nodePaths, err := createAppPaths(args, args.nodeBinaryPath, "node", 6060, int(numNodes))
 	if err != nil {
 		err = fmt.Errorf("failed to create working directories for nodes: %w", err)
@@ -243,6 +263,12 @@ func runAll(args rootArgs, numClients uint, numNodes uint) (err error) {
 	}
 
 	clientPaths, err := createAppPaths(args, args.clientBinaryPath, "client", 6070, int(numClients))
+	if err != nil {
+		err = fmt.Errorf("failed to create working directories for clients: %w", err)
+		return
+	}
+
+	filePaths, err := createAppPaths(args, args.fileNodeBinaryPath, "file", 6070, int(numFileNodes))
 	if err != nil {
 		err = fmt.Errorf("failed to create working directories for clients: %w", err)
 		return
@@ -262,9 +288,18 @@ func runAll(args rootArgs, numClients uint, numNodes uint) (err error) {
 		go func(path appPath) {
 			err = runApp(path, &wg)
 			if err != nil {
-				log.With(zap.Error(err)).Error("running node failed with error")
+				log.With(zap.Error(err)).Error("running client failed with error")
 			}
 		}(clientPath)
+	}
+	for _, filePath := range filePaths {
+		wg.Add(1)
+		go func(path appPath) {
+			err = runApp(path, &wg)
+			if err != nil {
+				log.With(zap.Error(err)).Error("running filenode failed with error")
+			}
+		}(filePath)
 	}
 	wg.Wait()
 	return
@@ -282,6 +317,12 @@ func buildAll(args rootArgs) (err error) {
 		err = fmt.Errorf("failed to build client: %w", err)
 		return
 	}
+
+	err = build(args.fileNodePkgPath, args.fileNodeBinaryPath, args.fileNodePkgName)
+	if err != nil {
+		err = fmt.Errorf("failed to build filenode: %w", err)
+		return
+	}
 	return
 }
 
@@ -294,7 +335,7 @@ func build(dirPath, binaryPath, packageName string) (err error) {
 	if err != nil {
 		return
 	}
-	log.With(zap.String("binary path", binaryPath), zap.String("package name", packageName)).Info("building the app")
+	log.With(zap.String("cmd", cmd.String())).Info("building the app")
 	return cmd.Wait()
 }
 
