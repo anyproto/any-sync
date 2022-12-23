@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpctest"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf/mock_nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto/consensuserr"
 	"github.com/golang/mock/gomock"
@@ -131,22 +131,34 @@ func newFixture(t *testing.T) *fixture {
 			stream:        make(chan consensusproto.DRPCConsensus_WatchLogStream),
 			releaseStream: make(chan error),
 		},
+		nodeconf: nodeconf.New(),
 	}
-	fx.nodeconf = mock_nodeconf.NewMockService(fx.ctrl)
-	fx.nodeconf.EXPECT().Init(gomock.Any())
-	fx.nodeconf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
-	fx.nodeconf.EXPECT().ConsensusPeers().Return([]string{"c1", "c2"}).AnyTimes()
+
 	fx.drpcTS = rpctest.NewTestServer()
 	require.NoError(t, consensusproto.DRPCRegisterConsensus(fx.drpcTS.Mux, fx.testServer))
 	fx.a.Register(fx.Service).
 		Register(fx.nodeconf).
-		Register(rpctest.NewTestPool().WithServer(fx.drpcTS))
+		Register(rpctest.NewTestPool().WithServer(fx.drpcTS)).
+		Register(&config.Config{Nodes: []config.Node{
+			{
+				PeerId: "c1",
+				Types:  []config.NodeType{config.NodeTypeConsensus},
+			},
+			{
+				PeerId: "c2",
+				Types:  []config.NodeType{config.NodeTypeConsensus},
+			},
+			{
+				PeerId: "c3",
+				Types:  []config.NodeType{config.NodeTypeConsensus},
+			},
+		}})
 	return fx
 }
 
 type fixture struct {
 	Service
-	nodeconf   *mock_nodeconf.MockService
+	nodeconf   nodeconf.Service
 	a          *app.App
 	ctrl       *gomock.Controller
 	testServer *testServer

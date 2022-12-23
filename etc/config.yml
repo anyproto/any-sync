@@ -37,6 +37,8 @@ log:
     production: false
     defaultLevel: ""
     namedLevels: {}
+fileStorePogreb:
+  path: /tmp/pogreb
 stream:
     timeoutMilliseconds: 1000
     maxMsgSizeMb: 256

@@ -1,0 +1,60 @@
+syntax = "proto3";
+package anyFile;
+
+option go_package = "commonfile/fileproto";
+
+enum ErrCodes {
+    Unexpected = 0;
+    CIDNotFound = 1;
+    ErrorOffset = 200;
+}
+
+service File {
+    // GetBlocks streams ipfs blocks from server to client
+    rpc GetBlocks(stream GetBlockRequest) returns (stream GetBlockResponse);
+    // PushBlock pushes one block to server
+    rpc PushBlock(PushBlockRequest) returns (PushBlockResponse);
+    // DeleteBlock deletes block from space
+    rpc DeleteBlocks(DeleteBlocksRequest) returns (DeleteBlocksResponse);
+    // Ping checks the connection
+    rpc Check(CheckRequest) returns (CheckResponse);
+}
+
+message GetBlockRequest {
+    string spaceId = 1;
+    bytes cid = 2;
+}
+
+message GetBlockResponse {
+    bytes cid = 1;
+    bytes data = 2;
+    CIDError code = 3;
+}
+
+message PushBlockRequest {
+    string spaceId = 1;
+    bytes cid = 2;
+    bytes data = 3;
+}
+
+message PushBlockResponse {}
+
+message DeleteBlocksRequest {
+    string spaceId = 1;
+    repeated bytes cid = 2;
+}
+
+message DeleteBlocksResponse {}
+
+message CheckRequest {}
+
+message CheckResponse {
+    repeated string spaceIds = 1;
+}
+
+
+enum CIDError {
+    CIDErrorOk = 0;
+    CIDErrorNotFound = 1;
+    CIDErrorUnexpected = 2;
+}

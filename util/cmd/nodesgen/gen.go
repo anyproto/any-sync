@@ -48,8 +48,8 @@ func main() {
 
 	var configs []config.Config
 	var nodes []config.Node
-	for _, n := range nodesMap.Nodes {
-		cfg, err := genNodeConfig(n.Addresses, n.APIAddresses)
+	for i, n := range nodesMap.Nodes {
+		cfg, err := genNodeConfig(n.Addresses, n.APIAddresses, i+1)
 		if err != nil {
 			panic(fmt.Sprintf("could not generate the config file: %s", err.Error()))
 		}
@@ -60,6 +60,7 @@ func main() {
 			Address:       cfg.GrpcServer.ListenAddrs[0],
 			SigningKey:    cfg.Account.SigningKey,
 			EncryptionKey: cfg.Account.EncryptionKey,
+			Types:         []config.NodeType{config.NodeTypeTree, config.NodeTypeFile},
 		}
 		nodes = append(nodes, node)
 	}
@@ -75,8 +76,8 @@ func main() {
 	}
 
 	var clientConfigs []config.Config
-	for _, c := range nodesMap.Clients {
-		cfg, err := genClientConfig(c.Addresses, c.APIAddresses, encClientKey, signClientKey)
+	for i, c := range nodesMap.Clients {
+		cfg, err := genClientConfig(c.Addresses, c.APIAddresses, encClientKey, signClientKey, i+1)
 		if err != nil {
 			panic(fmt.Sprintf("could not generate the config file: %s", err.Error()))
 		}
@@ -153,7 +154,7 @@ func main() {
 	}
 }
 
-func genNodeConfig(addresses []string, apiAddresses []string) (config.Config, error) {
+func genNodeConfig(addresses []string, apiAddresses []string, num int) (config.Config, error) {
 	encKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
 	if err != nil {
 		return config.Config{}, err
@@ -185,7 +186,7 @@ func genNodeConfig(addresses []string, apiAddresses []string) (config.Config, er
 			ListenAddrs: addresses,
 			TLS:         false,
 		},
-		Storage: config.Storage{Path: "db"},
+		Storage: config.Storage{Path: fmt.Sprintf("db/node/%d/data", num)},
 		Account: config.Account{
 			PeerId:        peerID.String(),
 			PeerKey:       encSignKey,
@@ -204,10 +205,13 @@ func genNodeConfig(addresses []string, apiAddresses []string) (config.Config, er
 			TimeoutMilliseconds: 1000,
 			MaxMsgSizeMb:        256,
 		},
+		FileStorePogreb: config.FileStorePogreb{
+			Path: fmt.Sprintf("db/node/%d/files", num),
+		},
 	}, nil
 }
 
-func genClientConfig(addresses []string, apiAddresses []string, encKey encryptionkey.PrivKey, signKey signingkey.PrivKey) (config.Config, error) {
+func genClientConfig(addresses []string, apiAddresses []string, encKey encryptionkey.PrivKey, signKey signingkey.PrivKey, num int) (config.Config, error) {
 	peerKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
 	if err != nil {
 		return config.Config{}, err
@@ -239,7 +243,7 @@ func genClientConfig(addresses []string, apiAddresses []string, encKey encryptio
 			ListenAddrs: addresses,
 			TLS:         false,
 		},
-		Storage: config.Storage{Path: "db"},
+		Storage: config.Storage{Path: fmt.Sprintf("db/client/%d", num)},
 		Account: config.Account{
 			PeerId:        peerID.String(),
 			PeerKey:       encPeerKey,

@@ -19,18 +19,19 @@ const (
 
 var log = logger.NewNamed(CName)
 
+func New() Service {
+	return new(service)
+}
+
 type Service interface {
 	GetLast() Configuration
 	GetById(id string) Configuration
-	ConsensusPeers() []string
 	app.Component
 }
 
 type service struct {
 	accountId string
-
-	consensusPeers []string
-	last           Configuration
+	last      Configuration
 }
 
 type Node struct {
@@ -52,11 +53,11 @@ func (s *service) Init(a *app.App) (err error) {
 	conf := a.MustComponent(config.CName).(*config.Config)
 	s.accountId = conf.Account.PeerId
 
-	config := &configuration{
+	fileConfig := &configuration{
 		id:        "config",
 		accountId: s.accountId,
 	}
-	if config.chash, err = chash.New(chash.Config{
+	if fileConfig.chash, err = chash.New(chash.Config{
 		PartitionCount:    partitionCount,
 		ReplicationFactor: replicationFactor,
 	}); err != nil {
@@ -64,21 +65,28 @@ func (s *service) Init(a *app.App) (err error) {
 	}
 	members := make([]chash.Member, 0, len(conf.Nodes))
 	for _, n := range conf.Nodes {
-		if n.IsConsensus {
-			s.consensusPeers = append(s.consensusPeers, n.PeerId)
+		if n.HasType(config.NodeTypeTree) {
+			var member *Node
+			member, err = nodeFromConfigNode(n)
+			if err != nil {
+				return
+			}
+			members = append(members, member)
+		}
+		if n.PeerId == s.accountId {
 			continue
 		}
-		var member *Node
-		member, err = nodeFromConfigNode(n)
-		if err != nil {
-			return
+		if n.HasType(config.NodeTypeConsensus) {
+			fileConfig.consensusPeers = append(fileConfig.consensusPeers, n.PeerId)
 		}
-		members = append(members, member)
+		if n.HasType(config.NodeTypeFile) {
+			fileConfig.filePeers = append(fileConfig.filePeers, n.PeerId)
+		}
 	}
-	if err = config.chash.AddMembers(members...); err != nil {
+	if err = fileConfig.chash.AddMembers(members...); err != nil {
 		return
 	}
-	s.last = config
+	s.last = fileConfig
 	return
 }
 
@@ -93,10 +101,6 @@ func (s *service) GetLast() Configuration {
 func (s *service) GetById(id string) Configuration {
 	//TODO implement me
 	panic("implement me")
-}
-
-func (s *service) ConsensusPeers() []string {
-	return s.consensusPeers
 }
 
 func nodeFromConfigNode(

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileserver"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
@@ -16,6 +17,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/api"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/filepogreb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace/nodecache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/storage"
@@ -102,6 +104,8 @@ func Bootstrap(a *app.App) {
 		Register(pool.New()).
 		Register(nodespace.New()).
 		Register(commonspace.New()).
+		Register(filepogreb.New()).
+		Register(fileserver.New()).
 		Register(server.New()).
 		Register(api.New())
 }

@@ -38,20 +38,6 @@ func (m *MockService) EXPECT() *MockServiceMockRecorder {
 	return m.recorder
 }
 
-// ConsensusPeers mocks base method.
-func (m *MockService) ConsensusPeers() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ConsensusPeers")
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// ConsensusPeers indicates an expected call of ConsensusPeers.
-func (mr *MockServiceMockRecorder) ConsensusPeers() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConsensusPeers", reflect.TypeOf((*MockService)(nil).ConsensusPeers))
-}
-
 // GetById mocks base method.
 func (m *MockService) GetById(arg0 string) nodeconf.Configuration {
 	m.ctrl.T.Helper()
@@ -129,6 +115,34 @@ func NewMockConfiguration(ctrl *gomock.Controller) *MockConfiguration {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockConfiguration) EXPECT() *MockConfigurationMockRecorder {
 	return m.recorder
+}
+
+// ConsensusPeers mocks base method.
+func (m *MockConfiguration) ConsensusPeers() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ConsensusPeers")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// ConsensusPeers indicates an expected call of ConsensusPeers.
+func (mr *MockConfigurationMockRecorder) ConsensusPeers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConsensusPeers", reflect.TypeOf((*MockConfiguration)(nil).ConsensusPeers))
+}
+
+// FilePeers mocks base method.
+func (m *MockConfiguration) FilePeers() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FilePeers")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// FilePeers indicates an expected call of FilePeers.
+func (mr *MockConfigurationMockRecorder) FilePeers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilePeers", reflect.TypeOf((*MockConfiguration)(nil).FilePeers))
 }
 
 // Id mocks base method.
