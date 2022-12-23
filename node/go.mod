@@ -12,7 +12,6 @@ require (
 	github.com/anytypeio/go-anytype-infrastructure-experiments/consensus v0.0.0-20221107145605-92bdf7d57b48
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
-	github.com/ipfs/go-block-format v0.0.3
 	github.com/ipfs/go-cid v0.3.2
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.24.0
@@ -32,7 +31,6 @@ require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/huandu/skiplist v1.2.0 // indirect
-	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.2 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect

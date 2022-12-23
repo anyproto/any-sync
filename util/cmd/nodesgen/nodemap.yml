@@ -27,3 +27,6 @@ clients:
       - "127.0.0.1:4631"
     apiAddresses:
       - "127.0.0.1:8091"
+fileNodes:
+  - grpcAddresses:
+      - "127.0.0.1:4730"

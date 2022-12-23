@@ -22,10 +22,11 @@ func NewFromFile(path string) (c *Config, err error) {
 }
 
 type Config struct {
-	Account         config.Account         `yaml:"account"`
-	GrpcServer      config.GrpcServer      `yaml:"grpcServer"`
-	Metric          config.Metric          `yaml:"metric"`
-	FileStorePogreb config.FileStorePogreb `yaml:"fileStorePogreb"`
+	Account         config.Account    `yaml:"account"`
+	GrpcServer      config.GrpcServer `yaml:"grpcServer"`
+	Metric          config.Metric     `yaml:"metric"`
+	FileStorePogreb FileStorePogreb   `yaml:"fileStorePogreb"`
+	Stream          config.Stream     `yaml:"stream"`
 }
 
 func (c *Config) Init(a *app.App) (err error) {
@@ -40,7 +41,7 @@ func (c Config) GetAccount() config.Account {
 	return c.Account
 }
 
-func (c Config) GetFileStorePogreb() config.FileStorePogreb {
+func (c Config) GetFileStorePogreb() FileStorePogreb {
 	return c.FileStorePogreb
 }
 
@@ -50,4 +51,8 @@ func (c Config) GetGRPCServer() config.GrpcServer {
 
 func (c Config) GetMetric() config.Metric {
 	return c.Metric
+}
+
+func (c Config) GetStream() config.Stream {
+	return c.Stream
 }
