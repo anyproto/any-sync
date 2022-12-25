@@ -12,7 +12,7 @@ import (
 )
 
 type testServer struct {
-	stream        chan spacesyncproto.DRPCSpace_StreamStream
+	stream        chan spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream
 	addLog        func(ctx context.Context, req *consensusproto.AddLogRequest) error
 	addRecord     func(ctx context.Context, req *consensusproto.AddRecordRequest) error
 	releaseStream chan error
@@ -23,20 +23,20 @@ func (t *testServer) HeadSync(ctx context.Context, request *spacesyncproto.HeadS
 	panic("implement me")
 }
 
-func (t *testServer) PushSpace(ctx context.Context, request *spacesyncproto.PushSpaceRequest) (*spacesyncproto.PushSpaceResponse, error) {
+func (t *testServer) SpacePush(ctx context.Context, request *spacesyncproto.SpacePushRequest) (*spacesyncproto.SpacePushResponse, error) {
 	panic("implement me")
 }
 
-func (t *testServer) PullSpace(ctx context.Context, request *spacesyncproto.PullSpaceRequest) (*spacesyncproto.PullSpaceResponse, error) {
+func (t *testServer) SpacePull(ctx context.Context, request *spacesyncproto.SpacePullRequest) (*spacesyncproto.SpacePullResponse, error) {
 	panic("implement me")
 }
 
-func (t *testServer) Stream(stream spacesyncproto.DRPCSpace_StreamStream) error {
+func (t *testServer) ObjectSyncStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error {
 	t.stream <- stream
 	return <-t.releaseStream
 }
 
-func (t *testServer) waitStream(test *testing.T) spacesyncproto.DRPCSpace_StreamStream {
+func (t *testServer) waitStream(test *testing.T) spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream {
 	select {
 	case <-time.After(time.Second * 5):
 		test.Fatalf("waiteStream timeout")
@@ -49,9 +49,9 @@ func (t *testServer) waitStream(test *testing.T) spacesyncproto.DRPCSpace_Stream
 type fixture struct {
 	testServer   *testServer
 	drpcTS       *rpctest.TesServer
-	client       spacesyncproto.DRPCSpaceClient
-	clientStream spacesyncproto.DRPCSpace_StreamStream
-	serverStream spacesyncproto.DRPCSpace_StreamStream
+	client       spacesyncproto.DRPCSpaceSyncClient
+	clientStream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream
+	serverStream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream
 	pool         *streamPool
 	clientId     string
 	serverId     string
@@ -64,12 +64,12 @@ func newFixture(t *testing.T, clientId, serverId string, handler MessageHandler)
 		clientId:   clientId,
 		serverId:   serverId,
 	}
-	fx.testServer.stream = make(chan spacesyncproto.DRPCSpace_StreamStream, 1)
-	require.NoError(t, spacesyncproto.DRPCRegisterSpace(fx.drpcTS.Mux, fx.testServer))
-	fx.client = spacesyncproto.NewDRPCSpaceClient(fx.drpcTS.Dial(peer.CtxWithPeerId(context.Background(), clientId)))
+	fx.testServer.stream = make(chan spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream, 1)
+	require.NoError(t, spacesyncproto.DRPCRegisterSpaceSync(fx.drpcTS.Mux, fx.testServer))
+	fx.client = spacesyncproto.NewDRPCSpaceSyncClient(fx.drpcTS.Dial(peer.CtxWithPeerId(context.Background(), clientId)))
 
 	var err error
-	fx.clientStream, err = fx.client.Stream(peer.CtxWithPeerId(context.Background(), serverId))
+	fx.clientStream, err = fx.client.ObjectSyncStream(peer.CtxWithPeerId(context.Background(), serverId))
 	require.NoError(t, err)
 	fx.serverStream = fx.testServer.waitStream(t)
 	fx.pool = newStreamPool(handler).(*streamPool)

@@ -146,7 +146,7 @@ func (d *diffSyncer) pingTreesInCache(ctx context.Context, trees []string) {
 	}
 }
 
-func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, cl spacesyncproto.DRPCSpaceClient) (err error) {
+func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, cl spacesyncproto.DRPCSpaceSyncClient) (err error) {
 	aclStorage, err := d.storage.ACLStorage()
 	if err != nil {
 		return
@@ -178,7 +178,7 @@ func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, cl spacesyncproto
 		SpaceSettingsPayload:   spaceSettingsRoot.RawChange,
 		SpaceSettingsPayloadId: spaceSettingsRoot.Id,
 	}
-	_, err = cl.PushSpace(ctx, &spacesyncproto.PushSpaceRequest{
+	_, err = cl.SpacePush(ctx, &spacesyncproto.SpacePushRequest{
 		Payload: spacePayload,
 	})
 	return

@@ -37,76 +37,76 @@ func (drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto) JSONU
 	return jsonpb.Unmarshal(bytes.NewReader(buf), msg.(proto.Message))
 }
 
-type DRPCSpaceClient interface {
+type DRPCSpaceSyncClient interface {
 	DRPCConn() drpc.Conn
 
 	HeadSync(ctx context.Context, in *HeadSyncRequest) (*HeadSyncResponse, error)
-	PushSpace(ctx context.Context, in *PushSpaceRequest) (*PushSpaceResponse, error)
-	PullSpace(ctx context.Context, in *PullSpaceRequest) (*PullSpaceResponse, error)
-	Stream(ctx context.Context) (DRPCSpace_StreamClient, error)
+	SpacePush(ctx context.Context, in *SpacePushRequest) (*SpacePushResponse, error)
+	SpacePull(ctx context.Context, in *SpacePullRequest) (*SpacePullResponse, error)
+	ObjectSyncStream(ctx context.Context) (DRPCSpaceSync_ObjectSyncStreamClient, error)
 }
 
-type drpcSpaceClient struct {
+type drpcSpaceSyncClient struct {
 	cc drpc.Conn
 }
 
-func NewDRPCSpaceClient(cc drpc.Conn) DRPCSpaceClient {
-	return &drpcSpaceClient{cc}
+func NewDRPCSpaceSyncClient(cc drpc.Conn) DRPCSpaceSyncClient {
+	return &drpcSpaceSyncClient{cc}
 }
 
-func (c *drpcSpaceClient) DRPCConn() drpc.Conn { return c.cc }
+func (c *drpcSpaceSyncClient) DRPCConn() drpc.Conn { return c.cc }
 
-func (c *drpcSpaceClient) HeadSync(ctx context.Context, in *HeadSyncRequest) (*HeadSyncResponse, error) {
+func (c *drpcSpaceSyncClient) HeadSync(ctx context.Context, in *HeadSyncRequest) (*HeadSyncResponse, error) {
 	out := new(HeadSyncResponse)
-	err := c.cc.Invoke(ctx, "/anySpace.Space/HeadSync", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/spacesync.SpaceSync/HeadSync", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *drpcSpaceClient) PushSpace(ctx context.Context, in *PushSpaceRequest) (*PushSpaceResponse, error) {
-	out := new(PushSpaceResponse)
-	err := c.cc.Invoke(ctx, "/anySpace.Space/PushSpace", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}, in, out)
+func (c *drpcSpaceSyncClient) SpacePush(ctx context.Context, in *SpacePushRequest) (*SpacePushResponse, error) {
+	out := new(SpacePushResponse)
+	err := c.cc.Invoke(ctx, "/spacesync.SpaceSync/SpacePush", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *drpcSpaceClient) PullSpace(ctx context.Context, in *PullSpaceRequest) (*PullSpaceResponse, error) {
-	out := new(PullSpaceResponse)
-	err := c.cc.Invoke(ctx, "/anySpace.Space/PullSpace", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}, in, out)
+func (c *drpcSpaceSyncClient) SpacePull(ctx context.Context, in *SpacePullRequest) (*SpacePullResponse, error) {
+	out := new(SpacePullResponse)
+	err := c.cc.Invoke(ctx, "/spacesync.SpaceSync/SpacePull", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *drpcSpaceClient) Stream(ctx context.Context) (DRPCSpace_StreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, "/anySpace.Space/Stream", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{})
+func (c *drpcSpaceSyncClient) ObjectSyncStream(ctx context.Context) (DRPCSpaceSync_ObjectSyncStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, "/spacesync.SpaceSync/ObjectSyncStream", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{})
 	if err != nil {
 		return nil, err
 	}
-	x := &drpcSpace_StreamClient{stream}
+	x := &drpcSpaceSync_ObjectSyncStreamClient{stream}
 	return x, nil
 }
 
-type DRPCSpace_StreamClient interface {
+type DRPCSpaceSync_ObjectSyncStreamClient interface {
 	drpc.Stream
 	Send(*ObjectSyncMessage) error
 	Recv() (*ObjectSyncMessage, error)
 }
 
-type drpcSpace_StreamClient struct {
+type drpcSpaceSync_ObjectSyncStreamClient struct {
 	drpc.Stream
 }
 
-func (x *drpcSpace_StreamClient) Send(m *ObjectSyncMessage) error {
+func (x *drpcSpaceSync_ObjectSyncStreamClient) Send(m *ObjectSyncMessage) error {
 	return x.MsgSend(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{})
 }
 
-func (x *drpcSpace_StreamClient) Recv() (*ObjectSyncMessage, error) {
+func (x *drpcSpaceSync_ObjectSyncStreamClient) Recv() (*ObjectSyncMessage, error) {
 	m := new(ObjectSyncMessage)
 	if err := x.MsgRecv(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}); err != nil {
 		return nil, err
@@ -114,148 +114,148 @@ func (x *drpcSpace_StreamClient) Recv() (*ObjectSyncMessage, error) {
 	return m, nil
 }
 
-func (x *drpcSpace_StreamClient) RecvMsg(m *ObjectSyncMessage) error {
+func (x *drpcSpaceSync_ObjectSyncStreamClient) RecvMsg(m *ObjectSyncMessage) error {
 	return x.MsgRecv(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{})
 }
 
-type DRPCSpaceServer interface {
+type DRPCSpaceSyncServer interface {
 	HeadSync(context.Context, *HeadSyncRequest) (*HeadSyncResponse, error)
-	PushSpace(context.Context, *PushSpaceRequest) (*PushSpaceResponse, error)
-	PullSpace(context.Context, *PullSpaceRequest) (*PullSpaceResponse, error)
-	Stream(DRPCSpace_StreamStream) error
+	SpacePush(context.Context, *SpacePushRequest) (*SpacePushResponse, error)
+	SpacePull(context.Context, *SpacePullRequest) (*SpacePullResponse, error)
+	ObjectSyncStream(DRPCSpaceSync_ObjectSyncStreamStream) error
 }
 
-type DRPCSpaceUnimplementedServer struct{}
+type DRPCSpaceSyncUnimplementedServer struct{}
 
-func (s *DRPCSpaceUnimplementedServer) HeadSync(context.Context, *HeadSyncRequest) (*HeadSyncResponse, error) {
+func (s *DRPCSpaceSyncUnimplementedServer) HeadSync(context.Context, *HeadSyncRequest) (*HeadSyncResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCSpaceUnimplementedServer) PushSpace(context.Context, *PushSpaceRequest) (*PushSpaceResponse, error) {
+func (s *DRPCSpaceSyncUnimplementedServer) SpacePush(context.Context, *SpacePushRequest) (*SpacePushResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCSpaceUnimplementedServer) PullSpace(context.Context, *PullSpaceRequest) (*PullSpaceResponse, error) {
+func (s *DRPCSpaceSyncUnimplementedServer) SpacePull(context.Context, *SpacePullRequest) (*SpacePullResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCSpaceUnimplementedServer) Stream(DRPCSpace_StreamStream) error {
+func (s *DRPCSpaceSyncUnimplementedServer) ObjectSyncStream(DRPCSpaceSync_ObjectSyncStreamStream) error {
 	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-type DRPCSpaceDescription struct{}
+type DRPCSpaceSyncDescription struct{}
 
-func (DRPCSpaceDescription) NumMethods() int { return 4 }
+func (DRPCSpaceSyncDescription) NumMethods() int { return 4 }
 
-func (DRPCSpaceDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
+func (DRPCSpaceSyncDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
 	case 0:
-		return "/anySpace.Space/HeadSync", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{},
+		return "/spacesync.SpaceSync/HeadSync", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCSpaceServer).
+				return srv.(DRPCSpaceSyncServer).
 					HeadSync(
 						ctx,
 						in1.(*HeadSyncRequest),
 					)
-			}, DRPCSpaceServer.HeadSync, true
+			}, DRPCSpaceSyncServer.HeadSync, true
 	case 1:
-		return "/anySpace.Space/PushSpace", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{},
+		return "/spacesync.SpaceSync/SpacePush", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCSpaceServer).
-					PushSpace(
+				return srv.(DRPCSpaceSyncServer).
+					SpacePush(
 						ctx,
-						in1.(*PushSpaceRequest),
+						in1.(*SpacePushRequest),
 					)
-			}, DRPCSpaceServer.PushSpace, true
+			}, DRPCSpaceSyncServer.SpacePush, true
 	case 2:
-		return "/anySpace.Space/PullSpace", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{},
+		return "/spacesync.SpaceSync/SpacePull", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCSpaceServer).
-					PullSpace(
+				return srv.(DRPCSpaceSyncServer).
+					SpacePull(
 						ctx,
-						in1.(*PullSpaceRequest),
+						in1.(*SpacePullRequest),
 					)
-			}, DRPCSpaceServer.PullSpace, true
+			}, DRPCSpaceSyncServer.SpacePull, true
 	case 3:
-		return "/anySpace.Space/Stream", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{},
+		return "/spacesync.SpaceSync/ObjectSyncStream", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return nil, srv.(DRPCSpaceServer).
-					Stream(
-						&drpcSpace_StreamStream{in1.(drpc.Stream)},
+				return nil, srv.(DRPCSpaceSyncServer).
+					ObjectSyncStream(
+						&drpcSpaceSync_ObjectSyncStreamStream{in1.(drpc.Stream)},
 					)
-			}, DRPCSpaceServer.Stream, true
+			}, DRPCSpaceSyncServer.ObjectSyncStream, true
 	default:
 		return "", nil, nil, nil, false
 	}
 }
 
-func DRPCRegisterSpace(mux drpc.Mux, impl DRPCSpaceServer) error {
-	return mux.Register(impl, DRPCSpaceDescription{})
+func DRPCRegisterSpaceSync(mux drpc.Mux, impl DRPCSpaceSyncServer) error {
+	return mux.Register(impl, DRPCSpaceSyncDescription{})
 }
 
-type DRPCSpace_HeadSyncStream interface {
+type DRPCSpaceSync_HeadSyncStream interface {
 	drpc.Stream
 	SendAndClose(*HeadSyncResponse) error
 }
 
-type drpcSpace_HeadSyncStream struct {
+type drpcSpaceSync_HeadSyncStream struct {
 	drpc.Stream
 }
 
-func (x *drpcSpace_HeadSyncStream) SendAndClose(m *HeadSyncResponse) error {
+func (x *drpcSpaceSync_HeadSyncStream) SendAndClose(m *HeadSyncResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}); err != nil {
 		return err
 	}
 	return x.CloseSend()
 }
 
-type DRPCSpace_PushSpaceStream interface {
+type DRPCSpaceSync_SpacePushStream interface {
 	drpc.Stream
-	SendAndClose(*PushSpaceResponse) error
+	SendAndClose(*SpacePushResponse) error
 }
 
-type drpcSpace_PushSpaceStream struct {
+type drpcSpaceSync_SpacePushStream struct {
 	drpc.Stream
 }
 
-func (x *drpcSpace_PushSpaceStream) SendAndClose(m *PushSpaceResponse) error {
+func (x *drpcSpaceSync_SpacePushStream) SendAndClose(m *SpacePushResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}); err != nil {
 		return err
 	}
 	return x.CloseSend()
 }
 
-type DRPCSpace_PullSpaceStream interface {
+type DRPCSpaceSync_SpacePullStream interface {
 	drpc.Stream
-	SendAndClose(*PullSpaceResponse) error
+	SendAndClose(*SpacePullResponse) error
 }
 
-type drpcSpace_PullSpaceStream struct {
+type drpcSpaceSync_SpacePullStream struct {
 	drpc.Stream
 }
 
-func (x *drpcSpace_PullSpaceStream) SendAndClose(m *PullSpaceResponse) error {
+func (x *drpcSpaceSync_SpacePullStream) SendAndClose(m *SpacePullResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}); err != nil {
 		return err
 	}
 	return x.CloseSend()
 }
 
-type DRPCSpace_StreamStream interface {
+type DRPCSpaceSync_ObjectSyncStreamStream interface {
 	drpc.Stream
 	Send(*ObjectSyncMessage) error
 	Recv() (*ObjectSyncMessage, error)
 }
 
-type drpcSpace_StreamStream struct {
+type drpcSpaceSync_ObjectSyncStreamStream struct {
 	drpc.Stream
 }
 
-func (x *drpcSpace_StreamStream) Send(m *ObjectSyncMessage) error {
+func (x *drpcSpaceSync_ObjectSyncStreamStream) Send(m *ObjectSyncMessage) error {
 	return x.MsgSend(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{})
 }
 
-func (x *drpcSpace_StreamStream) Recv() (*ObjectSyncMessage, error) {
+func (x *drpcSpaceSync_ObjectSyncStreamStream) Recv() (*ObjectSyncMessage, error) {
 	m := new(ObjectSyncMessage)
 	if err := x.MsgRecv(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}); err != nil {
 		return nil, err
@@ -263,6 +263,6 @@ func (x *drpcSpace_StreamStream) Recv() (*ObjectSyncMessage, error) {
 	return m, nil
 }
 
-func (x *drpcSpace_StreamStream) RecvMsg(m *ObjectSyncMessage) error {
+func (x *drpcSpaceSync_ObjectSyncStreamStream) RecvMsg(m *ObjectSyncMessage) error {
 	return x.MsgRecv(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{})
 }

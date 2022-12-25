@@ -47,7 +47,7 @@ func NewObjectSync(
 	streamPool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
 		return objectSync.HandleMessage(ctx, senderId, message)
 	})
-	clientFactory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient)
+	clientFactory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
 	syncLog := log.With(zap.String("id", spaceId))
 	syncCtx, cancel := context.WithCancel(context.Background())
 	checker := NewStreamChecker(

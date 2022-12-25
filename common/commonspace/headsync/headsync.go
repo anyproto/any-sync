@@ -54,7 +54,7 @@ func NewHeadSync(
 
 	diff := ldiff.New(16, 16)
 	l := log.With(zap.String("spaceId", spaceId))
-	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient)
+	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
 	syncer := newDiffSyncer(spaceId, diff, confConnector, cache, storage, factory, syncStatus, l)
 	periodicSync := periodicsync.NewPeriodicSync(syncPeriod, time.Minute, syncer.Sync, l)
 

@@ -1,6 +1,6 @@
 syntax = "proto3";
 package treechange;
-option go_package = "pkg/acl/treechangeproto";
+option go_package = "commonspace/object/tree/treechangeproto";
 
 // RootChange is a root of a tree
 message RootChange {
