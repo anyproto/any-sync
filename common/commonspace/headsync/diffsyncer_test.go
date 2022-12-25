@@ -1,15 +1,14 @@
-package diffservice
+package headsync
 
 import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate/mock_deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate/mock_deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto/mock_spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter/mock_treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf/mock_nodeconf"
@@ -111,7 +110,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	spaceId := "spaceId"
 	aclRootId := "aclRootId"
 	l := logger.NewNamed(spaceId)
-	diffSyncer := newDiffSyncer(spaceId, diffMock, connectorMock, cacheMock, stMock, factory, statusservice.NewNoOpStatusService(), l)
+	diffSyncer := newDiffSyncer(spaceId, diffMock, connectorMock, cacheMock, stMock, factory, syncstatus.NewNoOpSyncStatus(), l)
 	delState.EXPECT().AddObserver(gomock.Any())
 	diffSyncer.Init(delState)
 
@@ -120,7 +119,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 			GetResponsiblePeers(gomock.Any(), spaceId).
 			Return([]peer.Peer{mockPeer{}}, nil)
 		diffMock.EXPECT().
-			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).
+			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(spaceId, clientMock))).
 			Return([]string{"new"}, []string{"changed"}, nil, nil)
 		delState.EXPECT().FilterJoin(gomock.Any()).Return([]string{"new", "changed"})
 		for _, arg := range []string{"new", "changed"} {
@@ -175,7 +174,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 			GetResponsiblePeers(gomock.Any(), spaceId).
 			Return([]peer.Peer{mockPeer{}}, nil)
 		diffMock.EXPECT().
-			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).
+			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(spaceId, clientMock))).
 			Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing)
 
 		stMock.EXPECT().ACLStorage().Return(aclStorageMock, nil)
@@ -199,7 +198,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 			GetResponsiblePeers(gomock.Any(), spaceId).
 			Return([]peer.Peer{mockPeer{}}, nil)
 		diffMock.EXPECT().
-			Diff(gomock.Any(), gomock.Eq(remotediff.NewRemoteDiff(spaceId, clientMock))).
+			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(spaceId, clientMock))).
 			Return(nil, nil, nil, spacesyncproto.ErrUnexpected)
 
 		require.NoError(t, diffSyncer.Sync(ctx))

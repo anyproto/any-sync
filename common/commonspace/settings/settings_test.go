@@ -1,10 +1,10 @@
-package settingsdocument
+package settings
 
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account/mock_account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate/mock_deletionstate"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/mock_settingsdocument"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate/mock_deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/mock_settings"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/mock_synctree"
@@ -42,12 +42,12 @@ func (t *testSyncTreeMock) Unlock() {
 type settingsFixture struct {
 	spaceId      string
 	docId        string
-	doc          *settingsDocument
+	doc          *settingsObject
 	ctrl         *gomock.Controller
 	treeGetter   *mock_treegetter.MockTreeGetter
 	spaceStorage *mock_storage.MockSpaceStorage
-	provider     *mock_settingsdocument.MockDeletedIdsProvider
-	deleter      *mock_settingsdocument.MockDeleter
+	provider     *mock_settings.MockDeletedIdsProvider
+	deleter      *mock_settings.MockDeleter
 	syncTree     *mock_synctree.MockSyncTree
 	delState     *mock_deletionstate.MockDeletionState
 	account      *mock_account.MockService
@@ -55,21 +55,21 @@ type settingsFixture struct {
 
 func newSettingsFixture(t *testing.T) *settingsFixture {
 	spaceId := "spaceId"
-	docId := "documentId"
+	objectId := "objectId"
 
 	ctrl := gomock.NewController(t)
 	acc := mock_account.NewMockService(ctrl)
 	treeGetter := mock_treegetter.NewMockTreeGetter(ctrl)
 	st := mock_storage.NewMockSpaceStorage(ctrl)
 	delState := mock_deletionstate.NewMockDeletionState(ctrl)
-	prov := mock_settingsdocument.NewMockDeletedIdsProvider(ctrl)
+	prov := mock_settings.NewMockDeletedIdsProvider(ctrl)
 	syncTree := mock_synctree.NewMockSyncTree(ctrl)
-	del := mock_settingsdocument.NewMockDeleter(ctrl)
+	del := mock_settings.NewMockDeleter(ctrl)
 
 	delState.EXPECT().AddObserver(gomock.Any())
 
 	buildFunc := BuildTreeFunc(func(ctx context.Context, id string, listener updatelistener.UpdateListener) (synctree.SyncTree, error) {
-		require.Equal(t, docId, id)
+		require.Equal(t, objectId, id)
 		return newTestObjMock(syncTree), nil
 	})
 
@@ -82,10 +82,10 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 		prov:          prov,
 		del:           del,
 	}
-	doc := NewSettingsDocument(deps, spaceId).(*settingsDocument)
+	doc := NewSettingsObject(deps, spaceId).(*settingsObject)
 	return &settingsFixture{
 		spaceId:      spaceId,
-		docId:        docId,
+		docId:        objectId,
 		doc:          doc,
 		ctrl:         ctrl,
 		treeGetter:   treeGetter,
@@ -102,7 +102,7 @@ func (fx *settingsFixture) stop() {
 	fx.ctrl.Finish()
 }
 
-func TestSettingsDocument_Init(t *testing.T) {
+func TestSettingsObject_Init(t *testing.T) {
 	fx := newSettingsFixture(t)
 	defer fx.stop()
 
@@ -116,7 +116,7 @@ func TestSettingsDocument_Init(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestSettingsDocument_DeleteObject(t *testing.T) {
+func TestSettingsObject_DeleteObject(t *testing.T) {
 	fx := newSettingsFixture(t)
 	defer fx.stop()
 
@@ -164,7 +164,7 @@ func TestSettingsDocument_DeleteObject(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestSettingsDocument_Rebuild(t *testing.T) {
+func TestSettingsObject_Rebuild(t *testing.T) {
 	fx := newSettingsFixture(t)
 	defer fx.stop()
 

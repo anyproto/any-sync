@@ -1,9 +1,9 @@
-package diffservice
+package headsync
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice/mock_diffservice"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate/mock_deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/headsync/mock_headsync"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate/mock_deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
 	mock_storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage/mock_storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
@@ -23,12 +23,12 @@ func TestDiffService(t *testing.T) {
 	storageMock := mock_storage.NewMockSpaceStorage(ctrl)
 	treeStorageMock := mock_storage2.NewMockTreeStorage(ctrl)
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
-	syncer := mock_diffservice.NewMockDiffSyncer(ctrl)
+	syncer := mock_headsync.NewMockDiffSyncer(ctrl)
 	delState := mock_deletionstate.NewMockDeletionState(ctrl)
 	syncPeriod := 1
 	initId := "initId"
 
-	service := &diffService{
+	service := &headSync{
 		spaceId:      spaceId,
 		storage:      storageMock,
 		periodicSync: pSyncMock,

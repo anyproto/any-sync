@@ -2,9 +2,9 @@ package synctree
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/mock_synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener/mock_updatelistener"
@@ -72,7 +72,7 @@ func Test_DeriveSyncTree(t *testing.T) {
 		SpaceId:        spaceId,
 		Payload:        expectedPayload,
 		SpaceStorage:   spaceStorageMock,
-		StatusService:  statusservice.NewNoOpStatusService(),
+		SyncStatus:     syncstatus.NewNoOpSyncStatus(),
 		HeadNotifiable: headNotifiableMock,
 	}
 	objTreeMock.EXPECT().ID().Return("id")
@@ -111,7 +111,7 @@ func Test_CreateSyncTree(t *testing.T) {
 		SpaceId:        spaceId,
 		Payload:        expectedPayload,
 		SpaceStorage:   spaceStorageMock,
-		StatusService:  statusservice.NewNoOpStatusService(),
+		SyncStatus:     syncstatus.NewNoOpSyncStatus(),
 		HeadNotifiable: headNotifiableMock,
 	}
 
@@ -128,12 +128,12 @@ func Test_BuildSyncTree(t *testing.T) {
 	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
 	objTreeMock := newTestObjMock(mock_tree.NewMockObjectTree(ctrl))
 	tr := &syncTree{
-		ObjectTree:    objTreeMock,
-		SyncHandler:   nil,
-		syncClient:    syncClientMock,
-		listener:      updateListenerMock,
-		isClosed:      false,
-		statusService: statusservice.NewNoOpStatusService(),
+		ObjectTree:  objTreeMock,
+		SyncHandler: nil,
+		syncClient:  syncClientMock,
+		listener:    updateListenerMock,
+		isClosed:    false,
+		syncStatus:  syncstatus.NewNoOpSyncStatus(),
 	}
 
 	headUpdate := &treechangeproto.TreeSyncMessage{}

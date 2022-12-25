@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_deletionstate/mock_deletionstate.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate DeletionState
+//go:generate mockgen -destination mock_deletionstate/mock_deletionstate.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate DeletionState
 package deletionstate
 
 import (

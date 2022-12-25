@@ -15,10 +15,10 @@ type rpcHandler struct {
 }
 
 func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
-	return r.s.DiffService().HandleRangeRequest(ctx, req)
+	return r.s.HeadSync().HandleRangeRequest(ctx, req)
 }
 
 func (r *rpcHandler) Stream(stream spacesyncproto.DRPCSpace_StreamStream) (err error) {
 	// TODO: if needed we can launch full sync here
-	return r.s.SyncService().StreamPool().AddAndReadStreamSync(stream)
+	return r.s.ObjectSync().StreamPool().AddAndReadStreamSync(stream)
 }

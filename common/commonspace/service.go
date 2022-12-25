@@ -5,11 +5,11 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/headsync"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
@@ -110,19 +110,20 @@ func (s *service) NewSpace(ctx context.Context, id string) (Space, error) {
 	lastConfiguration := s.configurationService.GetLast()
 	confConnector := nodeconf.NewConfConnector(lastConfiguration, s.pool)
 
-	statusService := statusservice.NewNoOpStatusService()
+	syncStatus := syncstatus.NewNoOpSyncStatus()
 	// this will work only for clients, not the best solution, but...
 	if !lastConfiguration.IsResponsible(st.Id()) {
-		statusService = statusservice.NewStatusService(st.Id(), lastConfiguration, st)
+		// TODO: move it to the client package and add possibility to inject SyncStatusProvider from the client
+		syncStatus = syncstatus.NewSyncStatusProvider(st.Id(), syncstatus.DefaultDeps(lastConfiguration, st))
 	}
 
-	diffService := diffservice.NewDiffService(id, s.config.SyncPeriod, st, confConnector, s.treeGetter, statusService, log)
-	syncService := syncservice.NewSyncService(id, confConnector, s.config.SyncPeriod)
+	headSync := headsync.NewHeadSync(id, s.config.SyncPeriod, st, confConnector, s.treeGetter, syncStatus, log)
+	objectSync := syncservice.NewSyncService(id, confConnector, s.config.SyncPeriod)
 	sp := &space{
 		id:            id,
-		syncService:   syncService,
-		diffService:   diffService,
-		statusService: statusService,
+		objectSync:    objectSync,
+		headSync:      headSync,
+		syncStatus:    syncStatus,
 		cache:         s.treeGetter,
 		account:       s.account,
 		configuration: lastConfiguration,

@@ -1,13 +1,12 @@
-//go:generate mockgen -destination mock_diffservice/mock_diffservice.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice DiffSyncer
-package diffservice
+//go:generate mockgen -destination mock_headsync/mock_headsync.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/headsync DiffSyncer
+package headsync
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/remotediff"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
@@ -22,7 +21,7 @@ type TreeHeads struct {
 	Heads []string
 }
 
-type DiffService interface {
+type HeadSync interface {
 	UpdateHeads(id string, heads []string)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
 	RemoveObjects(ids []string)
@@ -33,7 +32,7 @@ type DiffService interface {
 	Close() (err error)
 }
 
-type diffService struct {
+type headSync struct {
 	spaceId      string
 	periodicSync periodicsync.PeriodicSync
 	storage      storage.SpaceStorage
@@ -44,22 +43,22 @@ type diffService struct {
 	syncPeriod int
 }
 
-func NewDiffService(
+func NewHeadSync(
 	spaceId string,
 	syncPeriod int,
 	storage storage.SpaceStorage,
 	confConnector nodeconf.ConfConnector,
 	cache treegetter.TreeGetter,
-	statusService statusservice.StatusService,
-	log *zap.Logger) DiffService {
+	syncStatus syncstatus.SyncStatusUpdater,
+	log *zap.Logger) HeadSync {
 
 	diff := ldiff.New(16, 16)
 	l := log.With(zap.String("spaceId", spaceId))
 	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceClient)
-	syncer := newDiffSyncer(spaceId, diff, confConnector, cache, storage, factory, statusService, l)
+	syncer := newDiffSyncer(spaceId, diff, confConnector, cache, storage, factory, syncStatus, l)
 	periodicSync := periodicsync.NewPeriodicSync(syncPeriod, time.Minute, syncer.Sync, l)
 
-	return &diffService{
+	return &headSync{
 		spaceId:      spaceId,
 		storage:      storage,
 		syncer:       syncer,
@@ -70,25 +69,25 @@ func NewDiffService(
 	}
 }
 
-func (d *diffService) Init(objectIds []string, deletionState deletionstate.DeletionState) {
+func (d *headSync) Init(objectIds []string, deletionState deletionstate.DeletionState) {
 	d.fillDiff(objectIds)
 	d.syncer.Init(deletionState)
 	d.periodicSync.Run()
 }
 
-func (d *diffService) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
-	return remotediff.HandleRangeRequest(ctx, d.diff, req)
+func (d *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
+	return HandleRangeRequest(ctx, d.diff, req)
 }
 
-func (d *diffService) UpdateHeads(id string, heads []string) {
+func (d *headSync) UpdateHeads(id string, heads []string) {
 	d.syncer.UpdateHeads(id, heads)
 }
 
-func (d *diffService) AllIds() []string {
+func (d *headSync) AllIds() []string {
 	return d.diff.Ids()
 }
 
-func (d *diffService) DebugAllHeads() (res []TreeHeads) {
+func (d *headSync) DebugAllHeads() (res []TreeHeads) {
 	els := d.diff.Elements()
 	for _, el := range els {
 		idHead := TreeHeads{
@@ -100,16 +99,16 @@ func (d *diffService) DebugAllHeads() (res []TreeHeads) {
 	return
 }
 
-func (d *diffService) RemoveObjects(ids []string) {
+func (d *headSync) RemoveObjects(ids []string) {
 	d.syncer.RemoveObjects(ids)
 }
 
-func (d *diffService) Close() (err error) {
+func (d *headSync) Close() (err error) {
 	d.periodicSync.Close()
 	return nil
 }
 
-func (d *diffService) fillDiff(objectIds []string) {
+func (d *headSync) fillDiff(objectIds []string) {
 	var els = make([]ldiff.Element, 0, len(objectIds))
 	for _, id := range objectIds {
 		st, err := d.storage.TreeStorage(id)
