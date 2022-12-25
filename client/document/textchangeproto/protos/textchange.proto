@@ -1,6 +1,6 @@
 syntax = "proto3";
 package textchange;
-option go_package = "textchange";
+option go_package = "document/textchangeproto";
 
 message TextContent {
   oneof value {

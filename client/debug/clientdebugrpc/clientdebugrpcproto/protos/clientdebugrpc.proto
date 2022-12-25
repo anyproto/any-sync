@@ -1,7 +1,7 @@
 syntax = "proto3";
-package clientapi;
+package clientdebugrpc;
 
-option go_package = "api/apiproto";
+option go_package = "debug/clientdebugrpc/clientdebugrpcproto";
 
 service ClientApi {
     rpc CreateSpace(CreateSpaceRequest) returns(CreateSpaceResponse);
