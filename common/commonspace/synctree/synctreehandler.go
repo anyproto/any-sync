@@ -3,8 +3,8 @@ package synctree
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/slice"
@@ -14,33 +14,32 @@ import (
 )
 
 type syncTreeHandler struct {
-	objTree       tree.ObjectTree
-	syncClient    SyncClient
-	statusService statusservice.StatusService
-	handlerLock   sync.Mutex
-	queue         ReceiveQueue
+	objTree     tree.ObjectTree
+	syncClient  SyncClient
+	syncStatus  syncstatus.SyncStatusUpdater
+	handlerLock sync.Mutex
+	queue       ReceiveQueue
 }
 
 const maxQueueSize = 5
 
-func newSyncTreeHandler(objTree tree.ObjectTree, syncClient SyncClient, statusService statusservice.StatusService) synchandler.SyncHandler {
+func newSyncTreeHandler(objTree tree.ObjectTree, syncClient SyncClient, syncStatus syncstatus.SyncStatusUpdater) synchandler.SyncHandler {
 	return &syncTreeHandler{
-		objTree:       objTree,
-		syncClient:    syncClient,
-		statusService: statusService,
-		queue:         newReceiveQueue(maxQueueSize),
+		objTree:    objTree,
+		syncClient: syncClient,
+		syncStatus: syncStatus,
+		queue:      newReceiveQueue(maxQueueSize),
 	}
 }
 
 func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
-	// TODO: when implementing sync status check msg heads before sending into queue
 	unmarshalled := &treechangeproto.TreeSyncMessage{}
 	err = proto.Unmarshal(msg.Payload, unmarshalled)
 	if err != nil {
 		return
 	}
 
-	s.statusService.HeadsReceive(senderId, msg.ObjectId, treechangeproto.GetHeads(unmarshalled))
+	s.syncStatus.HeadsReceive(senderId, msg.ObjectId, treechangeproto.GetHeads(unmarshalled))
 
 	queueFull := s.queue.AddMessage(senderId, unmarshalled, msg.ReplyId)
 	if queueFull {

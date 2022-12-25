@@ -1,4 +1,4 @@
-package statusservice
+package syncstatus
 
 import (
 	"context"
@@ -15,29 +15,38 @@ import (
 )
 
 const (
-	statusServiceUpdateInterval = 5
-	statusServiceTimeout        = time.Second
+	syncUpdateInterval = 5
+	syncTimeout        = time.Second
 )
 
-var log = logger.NewNamed("commonspace.statusservice")
+var log = logger.NewNamed("commonspace.syncstatus")
 
 type UpdateReceiver interface {
 	UpdateTree(ctx context.Context, treeId string, status SyncStatus) (err error)
 	UpdateNodeConnection(online bool)
 }
 
-type StatusService interface {
+type SyncStatusUpdater interface {
 	HeadsChange(treeId string, heads []string)
 	HeadsReceive(senderId, treeId string, heads []string)
-	Watch(treeId string) (err error)
-	Unwatch(treeId string)
+
 	SetNodesOnline(senderId string, online bool)
 	StateCounter() uint64
 	RemoveAllExcept(senderId string, differentRemoteIds []string, stateCounter uint64)
 
-	SetUpdateReceiver(updater UpdateReceiver)
 	Run()
 	Close() error
+}
+
+type SyncStatusWatcher interface {
+	Watch(treeId string) (err error)
+	Unwatch(treeId string)
+	SetUpdateReceiver(updater UpdateReceiver)
+}
+
+type SyncStatusProvider interface {
+	SyncStatusUpdater
+	SyncStatusWatcher
 }
 
 type SyncStatus int
@@ -60,7 +69,7 @@ type treeStatus struct {
 	heads  []string
 }
 
-type statusService struct {
+type syncStatusProvider struct {
 	sync.Mutex
 	configuration  nodeconf.Configuration
 	periodicSync   periodicsync.PeriodicSync
@@ -74,36 +83,57 @@ type statusService struct {
 	nodesOnline  bool
 
 	treeStatusBuf []treeStatus
+
+	updateIntervalSecs int
+	updateTimeout      time.Duration
 }
 
-func NewStatusService(spaceId string, configuration nodeconf.Configuration, store storage.SpaceStorage) StatusService {
-	return &statusService{
-		spaceId:       spaceId,
-		treeHeads:     map[string]treeHeadsEntry{},
-		watchers:      map[string]struct{}{},
-		configuration: configuration,
-		storage:       store,
-		stateCounter:  0,
+type SyncStatusDeps struct {
+	UpdateIntervalSecs int
+	UpdateTimeout      time.Duration
+	Configuration      nodeconf.Configuration
+	Storage            storage.SpaceStorage
+}
+
+func DefaultDeps(configuration nodeconf.Configuration, store storage.SpaceStorage) SyncStatusDeps {
+	return SyncStatusDeps{
+		UpdateIntervalSecs: syncUpdateInterval,
+		UpdateTimeout:      syncTimeout,
+		Configuration:      configuration,
+		Storage:            store,
 	}
 }
 
-func (s *statusService) SetUpdateReceiver(updater UpdateReceiver) {
+func NewSyncStatusProvider(spaceId string, deps SyncStatusDeps) SyncStatusProvider {
+	return &syncStatusProvider{
+		spaceId:            spaceId,
+		treeHeads:          map[string]treeHeadsEntry{},
+		watchers:           map[string]struct{}{},
+		updateIntervalSecs: deps.UpdateIntervalSecs,
+		updateTimeout:      deps.UpdateTimeout,
+		configuration:      deps.Configuration,
+		storage:            deps.Storage,
+		stateCounter:       0,
+	}
+}
+
+func (s *syncStatusProvider) SetUpdateReceiver(updater UpdateReceiver) {
 	s.Lock()
 	defer s.Unlock()
 
 	s.updateReceiver = updater
 }
 
-func (s *statusService) Run() {
+func (s *syncStatusProvider) Run() {
 	s.periodicSync = periodicsync.NewPeriodicSync(
-		statusServiceUpdateInterval,
-		statusServiceTimeout,
+		s.updateIntervalSecs,
+		s.updateTimeout,
 		s.update,
 		log)
 	s.periodicSync.Run()
 }
 
-func (s *statusService) HeadsChange(treeId string, heads []string) {
+func (s *syncStatusProvider) HeadsChange(treeId string, heads []string) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -118,7 +148,7 @@ func (s *statusService) HeadsChange(treeId string, heads []string) {
 	s.stateCounter++
 }
 
-func (s *statusService) SetNodesOnline(senderId string, online bool) {
+func (s *syncStatusProvider) SetNodesOnline(senderId string, online bool) {
 	if !s.isSenderResponsible(senderId) {
 		return
 	}
@@ -129,7 +159,7 @@ func (s *statusService) SetNodesOnline(senderId string, online bool) {
 	s.nodesOnline = online
 }
 
-func (s *statusService) update(ctx context.Context) (err error) {
+func (s *syncStatusProvider) update(ctx context.Context) (err error) {
 	s.treeStatusBuf = s.treeStatusBuf[:0]
 
 	s.Lock()
@@ -158,7 +188,7 @@ func (s *statusService) update(ctx context.Context) (err error) {
 	return
 }
 
-func (s *statusService) HeadsReceive(senderId, treeId string, heads []string) {
+func (s *syncStatusProvider) HeadsReceive(senderId, treeId string, heads []string) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -187,7 +217,7 @@ func (s *statusService) HeadsReceive(senderId, treeId string, heads []string) {
 	s.treeHeads[treeId] = curTreeHeads
 }
 
-func (s *statusService) Watch(treeId string) (err error) {
+func (s *syncStatusProvider) Watch(treeId string) (err error) {
 	s.Lock()
 	defer s.Unlock()
 	_, ok := s.treeHeads[treeId]
@@ -217,7 +247,7 @@ func (s *statusService) Watch(treeId string) (err error) {
 	return
 }
 
-func (s *statusService) Unwatch(treeId string) {
+func (s *syncStatusProvider) Unwatch(treeId string) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -226,19 +256,19 @@ func (s *statusService) Unwatch(treeId string) {
 	}
 }
 
-func (s *statusService) Close() (err error) {
+func (s *syncStatusProvider) Close() (err error) {
 	s.periodicSync.Close()
 	return
 }
 
-func (s *statusService) StateCounter() uint64 {
+func (s *syncStatusProvider) StateCounter() uint64 {
 	s.Lock()
 	defer s.Unlock()
 
 	return s.stateCounter
 }
 
-func (s *statusService) RemoveAllExcept(senderId string, differentRemoteIds []string, stateCounter uint64) {
+func (s *syncStatusProvider) RemoveAllExcept(senderId string, differentRemoteIds []string, stateCounter uint64) {
 	// if sender is not a responsible node, then this should have no effect
 	if !s.isSenderResponsible(senderId) {
 		return
@@ -261,6 +291,6 @@ func (s *statusService) RemoveAllExcept(senderId string, differentRemoteIds []st
 	}
 }
 
-func (s *statusService) isSenderResponsible(senderId string) bool {
+func (s *syncStatusProvider) isSenderResponsible(senderId string) bool {
 	return slices.Contains(s.configuration.NodeIds(s.spaceId), senderId)
 }

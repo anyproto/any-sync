@@ -1,8 +1,8 @@
-package settingsdocument
+package settings
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"go.uber.org/zap"

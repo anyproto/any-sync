@@ -3,7 +3,7 @@ package synctree
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/mock_synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree/mock_objecttree"
@@ -50,10 +50,10 @@ func newSyncHandlerFixture(t *testing.T) *syncHandlerFixture {
 	receiveQueueMock := mock_synctree.NewMockReceiveQueue(ctrl)
 
 	syncHandler := &syncTreeHandler{
-		objTree:       objectTreeMock,
-		syncClient:    syncClientMock,
-		queue:         receiveQueueMock,
-		statusService: statusservice.NewNoOpStatusService(),
+		objTree:    objectTreeMock,
+		syncClient: syncClientMock,
+		queue:      receiveQueueMock,
+		syncStatus: syncstatus.NewNoOpSyncStatus(),
 	}
 	return &syncHandlerFixture{
 		ctrl:             ctrl,

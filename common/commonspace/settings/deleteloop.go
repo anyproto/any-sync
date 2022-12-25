@@ -1,4 +1,4 @@
-package settingsdocument
+package settings
 
 import (
 	"context"

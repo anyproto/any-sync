@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
@@ -40,13 +40,13 @@ type SyncTree interface {
 type syncTree struct {
 	tree.ObjectTree
 	synchandler.SyncHandler
-	syncClient    SyncClient
-	statusService statusservice.StatusService
-	notifiable    HeadNotifiable
-	listener      updatelistener.UpdateListener
-	treeUsage     *atomic.Int32
-	isClosed      bool
-	isDeleted     bool
+	syncClient SyncClient
+	syncStatus syncstatus.SyncStatusUpdater
+	notifiable HeadNotifiable
+	listener   updatelistener.UpdateListener
+	treeUsage  *atomic.Int32
+	isClosed   bool
+	isDeleted  bool
 }
 
 var log = logger.NewNamed("commonspace.synctree").Sugar()
@@ -63,7 +63,7 @@ type CreateDeps struct {
 	SyncService    syncservice.SyncService
 	AclList        list.ACLList
 	SpaceStorage   spacestorage.SpaceStorage
-	StatusService  statusservice.StatusService
+	SyncStatus     syncstatus.SyncStatusUpdater
 	HeadNotifiable HeadNotifiable
 }
 
@@ -77,7 +77,7 @@ type BuildDeps struct {
 	SpaceStorage   spacestorage.SpaceStorage
 	TreeStorage    storage.TreeStorage
 	TreeUsage      *atomic.Int32
-	StatusService  statusservice.StatusService
+	SyncStatus     syncstatus.SyncStatusUpdater
 }
 
 func newWrappedSyncClient(
@@ -106,7 +106,7 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 
 	deps.HeadNotifiable.UpdateHeads(id, heads)
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
-	deps.StatusService.HeadsChange(id, heads)
+	deps.SyncStatus.HeadsChange(id, heads)
 	syncClient.BroadcastAsync(headUpdate)
 	return
 }
@@ -127,7 +127,7 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 
 	deps.HeadNotifiable.UpdateHeads(id, heads)
 	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
-	deps.StatusService.HeadsChange(id, heads)
+	deps.SyncStatus.HeadsChange(id, heads)
 	syncClient.BroadcastAsync(headUpdate)
 	return
 }
@@ -219,14 +219,14 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 		deps.SyncService,
 		deps.Configuration)
 	syncTree := &syncTree{
-		ObjectTree:    objTree,
-		syncClient:    syncClient,
-		notifiable:    deps.HeadNotifiable,
-		treeUsage:     deps.TreeUsage,
-		listener:      deps.Listener,
-		statusService: deps.StatusService,
+		ObjectTree: objTree,
+		syncClient: syncClient,
+		notifiable: deps.HeadNotifiable,
+		treeUsage:  deps.TreeUsage,
+		listener:   deps.Listener,
+		syncStatus: deps.SyncStatus,
 	}
-	syncHandler := newSyncTreeHandler(syncTree, syncClient, deps.StatusService)
+	syncHandler := newSyncTreeHandler(syncTree, syncClient, deps.SyncStatus)
 	syncTree.SyncHandler = syncHandler
 	t = syncTree
 	syncTree.Lock()
@@ -266,7 +266,7 @@ func (s *syncTree) AddContent(ctx context.Context, content tree.SignableChangeCo
 	if s.notifiable != nil {
 		s.notifiable.UpdateHeads(s.ID(), res.Heads)
 	}
-	s.statusService.HeadsChange(s.ID(), res.Heads)
+	s.syncStatus.HeadsChange(s.ID(), res.Heads)
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
 	err = s.syncClient.BroadcastAsync(headUpdate)
 	return

@@ -2,15 +2,15 @@ package clientspace
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
 	"go.uber.org/zap"
 )
 
 type statusReceiver struct {
 }
 
-func (s *statusReceiver) UpdateTree(ctx context.Context, treeId string, status statusservice.SyncStatus) (err error) {
-	log.With(zap.String("treeId", treeId), zap.Bool("synced", status == statusservice.SyncStatusSynced)).
+func (s *statusReceiver) UpdateTree(ctx context.Context, treeId string, status syncstatus.SyncStatus) (err error) {
+	log.With(zap.String("treeId", treeId), zap.Bool("synced", status == syncstatus.SyncStatusSynced)).
 		Debug("updating sync status")
 	return nil
 }

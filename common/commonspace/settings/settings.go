@@ -1,12 +1,12 @@
-//go:generate mockgen -destination mock_settingsdocument/mock_settingsdocument.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument DeletedIdsProvider,Deleter
-package settingsdocument
+//go:generate mockgen -destination mock_settings/mock_settings.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings DeletedIdsProvider,Deleter
+package settings
 
 import (
 	"context"
 	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate"
 	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
@@ -15,18 +15,18 @@ import (
 	"go.uber.org/zap"
 )
 
-var log = logger.NewNamed("commonspace.settingsdocument")
+var log = logger.NewNamed("commonspace.settings")
 
-type SettingsDocument interface {
+type SettingsObject interface {
 	synctree.SyncTree
 	Init(ctx context.Context) (err error)
 	DeleteObject(id string) (err error)
 }
 
 var (
-	ErrDeleteSelf      = errors.New("cannot delete seld")
-	ErrAlreadyDeleted  = errors.New("the document is already deleted")
-	ErrDocDoesNotExist = errors.New("the document does not exist")
+	ErrDeleteSelf      = errors.New("cannot delete self")
+	ErrAlreadyDeleted  = errors.New("the object is already deleted")
+	ErrObjDoesNotExist = errors.New("the object does not exist")
 )
 
 type BuildTreeFunc func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error)
@@ -42,7 +42,7 @@ type Deps struct {
 	del  Deleter
 }
 
-type settingsDocument struct {
+type settingsObject struct {
 	synctree.SyncTree
 	account    account.Service
 	spaceId    string
@@ -56,7 +56,7 @@ type settingsDocument struct {
 	lastChangeId  string
 }
 
-func NewSettingsDocument(deps Deps, spaceId string) (doc SettingsDocument) {
+func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 	var deleter Deleter
 	if deps.del == nil {
 		deleter = newDeleter(deps.Store, deps.DeletionState, deps.TreeGetter)
@@ -71,7 +71,7 @@ func NewSettingsDocument(deps Deps, spaceId string) (doc SettingsDocument) {
 		loop.notify()
 	})
 
-	s := &settingsDocument{
+	s := &settingsObject{
 		loop:          loop,
 		spaceId:       spaceId,
 		account:       deps.Account,
@@ -88,11 +88,11 @@ func NewSettingsDocument(deps Deps, spaceId string) (doc SettingsDocument) {
 		s.prov = deps.prov
 	}
 
-	doc = s
+	obj = s
 	return
 }
 
-func (s *settingsDocument) updateIds(tr tree.ObjectTree, lastChangeId string) {
+func (s *settingsObject) updateIds(tr tree.ObjectTree, lastChangeId string) {
 	s.lastChangeId = lastChangeId
 	ids, lastId, err := s.prov.ProvideIds(tr, s.lastChangeId)
 	if err != nil {
@@ -106,17 +106,17 @@ func (s *settingsDocument) updateIds(tr tree.ObjectTree, lastChangeId string) {
 }
 
 // Update is called as part of UpdateListener interface
-func (s *settingsDocument) Update(tr tree.ObjectTree) {
+func (s *settingsObject) Update(tr tree.ObjectTree) {
 	s.updateIds(tr, s.lastChangeId)
 }
 
 // Rebuild is called as part of UpdateListener interface (including when the object is built for the first time, e.g. on Init call)
-func (s *settingsDocument) Rebuild(tr tree.ObjectTree) {
+func (s *settingsObject) Rebuild(tr tree.ObjectTree) {
 	// at initial build "s" may not contain the object tree, so it is safer to provide it from the function parameter
 	s.updateIds(tr, "")
 }
 
-func (s *settingsDocument) Init(ctx context.Context) (err error) {
+func (s *settingsObject) Init(ctx context.Context) (err error) {
 	settingsId := s.store.SpaceSettingsId()
 	log.Debug("space settings id", zap.String("id", settingsId))
 	s.SyncTree, err = s.buildFunc(ctx, settingsId, s)
@@ -128,12 +128,12 @@ func (s *settingsDocument) Init(ctx context.Context) (err error) {
 	return
 }
 
-func (s *settingsDocument) Close() error {
+func (s *settingsObject) Close() error {
 	s.loop.Close()
 	return s.SyncTree.Close()
 }
 
-func (s *settingsDocument) DeleteObject(id string) (err error) {
+func (s *settingsObject) DeleteObject(id string) (err error) {
 	s.Lock()
 	defer s.Unlock()
 	if s.ID() == id {
@@ -146,7 +146,7 @@ func (s *settingsDocument) DeleteObject(id string) (err error) {
 	}
 	_, err = s.store.TreeStorage(id)
 	if err != nil {
-		err = ErrDocDoesNotExist
+		err = ErrObjDoesNotExist
 		return
 	}
 

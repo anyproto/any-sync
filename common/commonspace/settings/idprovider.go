@@ -1,4 +1,4 @@
-package settingsdocument
+package settings
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"

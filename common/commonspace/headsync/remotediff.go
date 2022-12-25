@@ -1,4 +1,4 @@
-package remotediff
+package headsync
 
 import (
 	"context"
