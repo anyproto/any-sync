@@ -2,13 +2,13 @@ package storage
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/liststorage"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func testList(t *testing.T, store storage.ListStorage, root *aclrecordproto.RawACLRecordWithId, head string) {
+func testList(t *testing.T, store liststorage.ListStorage, root *aclrecordproto.RawACLRecordWithId, head string) {
 	require.Equal(t, store.Id(), root.Id)
 
 	aclRoot, err := store.Root()

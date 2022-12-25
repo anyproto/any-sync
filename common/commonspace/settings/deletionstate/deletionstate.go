@@ -2,8 +2,8 @@
 package deletionstate
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"sync"
 )
 
@@ -24,10 +24,10 @@ type deletionState struct {
 	queued               map[string]struct{}
 	deleted              map[string]struct{}
 	stateUpdateObservers []StateUpdateObserver
-	storage              storage.SpaceStorage
+	storage              spacestorage.SpaceStorage
 }
 
-func NewDeletionState(storage storage.SpaceStorage) DeletionState {
+func NewDeletionState(storage spacestorage.SpaceStorage) DeletionState {
 	return &deletionState{
 		queued:  map[string]struct{}{},
 		deleted: map[string]struct{}{},
@@ -68,13 +68,13 @@ func (st *deletionState) Add(ids []string) (err error) {
 		}
 
 		switch status {
-		case storage.TreeDeletedStatusQueued:
+		case spacestorage.TreeDeletedStatusQueued:
 			st.queued[id] = struct{}{}
-		case storage.TreeDeletedStatusDeleted:
+		case spacestorage.TreeDeletedStatusDeleted:
 			st.deleted[id] = struct{}{}
 		default:
 			st.queued[id] = struct{}{}
-			err = st.storage.SetTreeDeletedStatus(id, storage.TreeDeletedStatusQueued)
+			err = st.storage.SetTreeDeletedStatus(id, spacestorage.TreeDeletedStatusQueued)
 			if err != nil {
 				return
 			}
@@ -98,7 +98,7 @@ func (st *deletionState) Delete(id string) (err error) {
 	defer st.Unlock()
 	delete(st.queued, id)
 	st.deleted[id] = struct{}{}
-	err = st.storage.SetTreeDeletedStatus(id, storage.TreeDeletedStatusDeleted)
+	err = st.storage.SetTreeDeletedStatus(id, spacestorage.TreeDeletedStatusDeleted)
 	if err != nil {
 		return
 	}

@@ -3,8 +3,8 @@ package storage
 import (
 	"context"
 	"github.com/akrylysov/pogreb"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/liststorage"
 )
 
 type listStorage struct {
@@ -14,14 +14,14 @@ type listStorage struct {
 	root *aclrecordproto.RawACLRecordWithId
 }
 
-func newListStorage(db *pogreb.DB) (ls storage.ListStorage, err error) {
+func newListStorage(db *pogreb.DB) (ls liststorage.ListStorage, err error) {
 	keys := aclKeys{}
 	rootId, err := db.Get(keys.RootIdKey())
 	if err != nil {
 		return
 	}
 	if rootId == nil {
-		err = storage.ErrUnknownACLId
+		err = liststorage.ErrUnknownACLId
 		return
 	}
 
@@ -30,7 +30,7 @@ func newListStorage(db *pogreb.DB) (ls storage.ListStorage, err error) {
 		return
 	}
 	if root == nil {
-		err = storage.ErrUnknownACLId
+		err = liststorage.ErrUnknownACLId
 		return
 	}
 
@@ -48,7 +48,7 @@ func newListStorage(db *pogreb.DB) (ls storage.ListStorage, err error) {
 	return
 }
 
-func createListStorage(db *pogreb.DB, root *aclrecordproto.RawACLRecordWithId) (ls storage.ListStorage, err error) {
+func createListStorage(db *pogreb.DB, root *aclrecordproto.RawACLRecordWithId) (ls liststorage.ListStorage, err error) {
 	keys := aclKeys{}
 	has, err := db.Has(keys.RootIdKey())
 	if err != nil {
@@ -96,7 +96,7 @@ func (l *listStorage) Head() (head string, err error) {
 		return
 	}
 	if bytes == nil {
-		err = storage.ErrUnknownACLId
+		err = liststorage.ErrUnknownACLId
 		return
 	}
 	head = string(bytes)
@@ -109,7 +109,7 @@ func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *aclreco
 		return
 	}
 	if res == nil {
-		err = storage.ErrUnknownRecord
+		err = liststorage.ErrUnknownRecord
 		return
 	}
 

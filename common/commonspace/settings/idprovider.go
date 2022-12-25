@@ -1,18 +1,18 @@
 package settings
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
 	"github.com/gogo/protobuf/proto"
 )
 
 type DeletedIdsProvider interface {
-	ProvideIds(tr tree.ObjectTree, startId string) (ids []string, lastId string, err error)
+	ProvideIds(tr objecttree.ObjectTree, startId string) (ids []string, lastId string, err error)
 }
 
 type provider struct{}
 
-func (p *provider) processChange(change *tree.Change, rootId, startId string, ids []string) []string {
+func (p *provider) processChange(change *objecttree.Change, rootId, startId string, ids []string) []string {
 	// ignoring root change which has empty model or startId change
 	if change.Model == nil || (change.Id == startId && startId != "") {
 		return ids
@@ -34,9 +34,9 @@ func (p *provider) processChange(change *tree.Change, rootId, startId string, id
 	return ids
 }
 
-func (p *provider) ProvideIds(tr tree.ObjectTree, startId string) (ids []string, lastId string, err error) {
+func (p *provider) ProvideIds(tr objecttree.ObjectTree, startId string) (ids []string, lastId string, err error) {
 	rootId := tr.Root().Id
-	process := func(change *tree.Change) bool {
+	process := func(change *objecttree.Change) bool {
 		lastId = change.Id
 		ids = p.processChange(change, rootId, startId, ids)
 		return true

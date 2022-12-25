@@ -3,7 +3,7 @@ package rpcstore
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ocache"
 	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
 	"math/rand"

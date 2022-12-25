@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secureservice"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"io"
@@ -17,14 +17,14 @@ import (
 
 type BaseDrpcServer struct {
 	drpcServer *drpcserver.Server
-	transport  secure.Service
-	listeners  []secure.ContextListener
+	transport  secureservice.SecureService
+	listeners  []secureservice.ContextListener
 	cancel     func()
 	*drpcmux.Mux
 }
 
 type DRPCHandlerWrapper func(handler drpc.Handler) drpc.Handler
-type ListenerConverter func(listener net.Listener, timeoutMillis int) secure.ContextListener
+type ListenerConverter func(listener net.Listener, timeoutMillis int) secureservice.ContextListener
 
 type Params struct {
 	BufferSizeMb  int
@@ -54,7 +54,7 @@ func (s *BaseDrpcServer) Run(ctx context.Context, params Params) (err error) {
 	return
 }
 
-func (s *BaseDrpcServer) serve(ctx context.Context, lis secure.ContextListener) {
+func (s *BaseDrpcServer) serve(ctx context.Context, lis secureservice.ContextListener) {
 	l := log.With(zap.String("localAddr", lis.Addr().String()))
 	l.Info("drpc listener started")
 	defer func() {
@@ -78,7 +78,7 @@ func (s *BaseDrpcServer) serve(ctx context.Context, lis secure.ContextListener) 
 				}
 				continue
 			}
-			if _, ok := err.(secure.HandshakeError); ok {
+			if _, ok := err.(secureservice.HandshakeError); ok {
 				l.Warn("listener handshake error", zap.Error(err))
 				continue
 			}

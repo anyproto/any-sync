@@ -3,13 +3,13 @@ package headsync
 
 import (
 	"context"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ldiff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync"
 	"go.uber.org/zap"
 	"strings"
@@ -35,7 +35,7 @@ type HeadSync interface {
 type headSync struct {
 	spaceId      string
 	periodicSync periodicsync.PeriodicSync
-	storage      storage.SpaceStorage
+	storage      spacestorage.SpaceStorage
 	diff         ldiff.Diff
 	log          *zap.Logger
 	syncer       DiffSyncer
@@ -46,7 +46,7 @@ type headSync struct {
 func NewHeadSync(
 	spaceId string,
 	syncPeriod int,
-	storage storage.SpaceStorage,
+	storage spacestorage.SpaceStorage,
 	confConnector nodeconf.ConfConnector,
 	cache treegetter.TreeGetter,
 	syncStatus syncstatus.SyncStatusUpdater,

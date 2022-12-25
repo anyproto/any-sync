@@ -1,15 +1,15 @@
 package commonspace
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 )
 
 type commonStorage struct {
-	storage.SpaceStorage
+	spacestorage.SpaceStorage
 }
 
-func newCommonStorage(spaceStorage storage.SpaceStorage) storage.SpaceStorage {
+func newCommonStorage(spaceStorage spacestorage.SpaceStorage) spacestorage.SpaceStorage {
 	return &commonStorage{
 		SpaceStorage: spaceStorage,
 	}
@@ -23,6 +23,6 @@ func (c *commonStorage) CreateTreeStorage(payload treestorage.TreeStorageCreateP
 	if status == "" {
 		return c.SpaceStorage.CreateTreeStorage(payload)
 	}
-	err = storage.ErrTreeStorageAlreadyDeleted
+	err = spacestorage.ErrTreeStorageAlreadyDeleted
 	return
 }

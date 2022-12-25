@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage"
 )
 
 type aclKeys struct {
@@ -13,8 +13,8 @@ type aclKeys struct {
 func newACLKeys(spaceId string) aclKeys {
 	return aclKeys{
 		spaceId: spaceId,
-		rootKey: storage.JoinStringsToBytes("space", spaceId, "a", "rootId"),
-		headKey: storage.JoinStringsToBytes("space", spaceId, "a", "headId"),
+		rootKey: treestorage.JoinStringsToBytes("space", spaceId, "a", "rootId"),
+		headKey: treestorage.JoinStringsToBytes("space", spaceId, "a", "headId"),
 	}
 }
 
@@ -27,7 +27,7 @@ func (a aclKeys) RootIdKey() []byte {
 }
 
 func (a aclKeys) RawRecordKey(id string) []byte {
-	return storage.JoinStringsToBytes("space", a.spaceId, "a", id)
+	return treestorage.JoinStringsToBytes("space", a.spaceId, "a", id)
 }
 
 type treeKeys struct {
@@ -42,9 +42,9 @@ func newTreeKeys(spaceId, id string) treeKeys {
 	return treeKeys{
 		id:              id,
 		spaceId:         spaceId,
-		headsKey:        storage.JoinStringsToBytes("space", spaceId, "t", id, "heads"),
-		rootKey:         storage.JoinStringsToBytes("space", spaceId, "t", "rootId", id),
-		rawChangePrefix: storage.JoinStringsToBytes("space", spaceId, "t", id),
+		headsKey:        treestorage.JoinStringsToBytes("space", spaceId, "t", id, "heads"),
+		rootKey:         treestorage.JoinStringsToBytes("space", spaceId, "t", "rootId", id),
+		rawChangePrefix: treestorage.JoinStringsToBytes("space", spaceId, "t", id),
 	}
 }
 
@@ -57,7 +57,7 @@ func (t treeKeys) RootIdKey() []byte {
 }
 
 func (t treeKeys) RawChangeKey(id string) []byte {
-	return storage.JoinStringsToBytes("space", t.spaceId, "t", t.id, id)
+	return treestorage.JoinStringsToBytes("space", t.spaceId, "t", t.id, id)
 }
 
 func (t treeKeys) RawChangePrefix() []byte {
@@ -74,9 +74,9 @@ type spaceKeys struct {
 func newSpaceKeys(spaceId string) spaceKeys {
 	return spaceKeys{
 		spaceId:            spaceId,
-		headerKey:          storage.JoinStringsToBytes("space", "header", spaceId),
-		treePrefixKey:      storage.JoinStringsToBytes("space", spaceId, "t", "rootId"),
-		spaceSettingsIdKey: storage.JoinStringsToBytes("space", spaceId, "spaceSettingsId"),
+		headerKey:          treestorage.JoinStringsToBytes("space", "header", spaceId),
+		treePrefixKey:      treestorage.JoinStringsToBytes("space", spaceId, "t", "rootId"),
+		spaceSettingsIdKey: treestorage.JoinStringsToBytes("space", spaceId, "spaceSettingsId"),
 	}
 }
 
@@ -93,7 +93,7 @@ func (s spaceKeys) SpaceSettingsId() []byte {
 }
 
 func (s spaceKeys) TreeDeletedKey(id string) []byte {
-	return storage.JoinStringsToBytes("space", s.spaceId, "deleted", id)
+	return treestorage.JoinStringsToBytes("space", s.spaceId, "deleted", id)
 }
 
 type storageServiceKeys struct {

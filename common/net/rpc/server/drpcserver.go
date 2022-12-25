@@ -6,7 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secureservice"
 	"github.com/prometheus/client_golang/prometheus"
 	"storj.io/drpc"
 )
@@ -32,14 +32,14 @@ type configGetter interface {
 type drpcServer struct {
 	config    configGetter
 	metric    metric.Metric
-	transport secure.Service
+	transport secureservice.SecureService
 	*BaseDrpcServer
 }
 
 func (s *drpcServer) Init(a *app.App) (err error) {
 	s.config = a.MustComponent(config.CName).(configGetter)
 	s.metric = a.MustComponent(metric.CName).(metric.Metric)
-	s.transport = a.MustComponent(secure.CName).(secure.Service)
+	s.transport = a.MustComponent(secureservice.CName).(secureservice.SecureService)
 	return nil
 }
 
