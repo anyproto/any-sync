@@ -4,14 +4,14 @@ package settings
 import (
 	"context"
 	"errors"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree/updatelistener"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate"
-	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"go.uber.org/zap"
 )
 
@@ -33,7 +33,7 @@ type BuildTreeFunc func(ctx context.Context, id string, listener updatelistener.
 
 type Deps struct {
 	BuildFunc     BuildTreeFunc
-	Account       account.Service
+	Account       accountservice.Service
 	TreeGetter    treegetter.TreeGetter
 	Store         spacestorage.SpaceStorage
 	DeletionState deletionstate.DeletionState
@@ -44,7 +44,7 @@ type Deps struct {
 
 type settingsObject struct {
 	synctree.SyncTree
-	account    account.Service
+	account    accountservice.Service
 	spaceId    string
 	treeGetter treegetter.TreeGetter
 	store      spacestorage.SpaceStorage
@@ -92,7 +92,7 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 	return
 }
 
-func (s *settingsObject) updateIds(tr tree.ObjectTree, lastChangeId string) {
+func (s *settingsObject) updateIds(tr objecttree.ObjectTree, lastChangeId string) {
 	s.lastChangeId = lastChangeId
 	ids, lastId, err := s.prov.ProvideIds(tr, s.lastChangeId)
 	if err != nil {
@@ -106,12 +106,12 @@ func (s *settingsObject) updateIds(tr tree.ObjectTree, lastChangeId string) {
 }
 
 // Update is called as part of UpdateListener interface
-func (s *settingsObject) Update(tr tree.ObjectTree) {
+func (s *settingsObject) Update(tr objecttree.ObjectTree) {
 	s.updateIds(tr, s.lastChangeId)
 }
 
 // Rebuild is called as part of UpdateListener interface (including when the object is built for the first time, e.g. on Init call)
-func (s *settingsObject) Rebuild(tr tree.ObjectTree) {
+func (s *settingsObject) Rebuild(tr objecttree.ObjectTree) {
 	// at initial build "s" may not contain the object tree, so it is safer to provide it from the function parameter
 	s.updateIds(tr, "")
 }
@@ -157,7 +157,7 @@ func (s *settingsObject) DeleteObject(id string) (err error) {
 	}
 
 	accountData := s.account.Account()
-	_, err = s.AddContent(context.Background(), tree.SignableChangeContent{
+	_, err = s.AddContent(context.Background(), objecttree.SignableChangeContent{
 		Data:        res,
 		Key:         accountData.SignKey,
 		Identity:    accountData.Identity,

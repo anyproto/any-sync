@@ -3,10 +3,11 @@ package storage
 import (
 	"github.com/akrylysov/pogreb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/liststorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treechangeproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage"
+	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"go.uber.org/zap"
 	"os"
 	"path"
@@ -24,7 +25,7 @@ type spaceStorage struct {
 	spaceSettingsId string
 	objDb           *pogreb.DB
 	keys            spaceKeys
-	aclStorage      storage.ListStorage
+	aclStorage      liststorage.ListStorage
 	header          *spacesyncproto.RawSpaceHeaderWithId
 }
 
@@ -138,7 +139,7 @@ func createSpaceStorage(rootPath string, payload spacestorage.SpaceStorageCreate
 		header:          payload.SpaceHeaderWithId,
 	}
 
-	_, err = store.CreateTreeStorage(storage.TreeStorageCreatePayload{
+	_, err = store.CreateTreeStorage(treestorage.TreeStorageCreatePayload{
 		RootRawChange: payload.SpaceSettingsWithId,
 		Changes:       []*treechangeproto.RawTreeChangeWithId{payload.SpaceSettingsWithId},
 		Heads:         []string{payload.SpaceSettingsWithId.Id},
@@ -173,15 +174,15 @@ func (s *spaceStorage) SpaceSettingsId() string {
 	return s.spaceSettingsId
 }
 
-func (s *spaceStorage) TreeStorage(id string) (storage.TreeStorage, error) {
+func (s *spaceStorage) TreeStorage(id string) (treestorage.TreeStorage, error) {
 	return newTreeStorage(s.objDb, id)
 }
 
-func (s *spaceStorage) CreateTreeStorage(payload storage.TreeStorageCreatePayload) (ts storage.TreeStorage, err error) {
+func (s *spaceStorage) CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (ts treestorage.TreeStorage, err error) {
 	return createTreeStorage(s.objDb, payload)
 }
 
-func (s *spaceStorage) ACLStorage() (storage.ListStorage, error) {
+func (s *spaceStorage) ACLStorage() (liststorage.ListStorage, error) {
 	return s.aclStorage, nil
 }
 

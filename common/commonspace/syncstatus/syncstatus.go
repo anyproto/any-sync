@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
+	treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/slice"
 	"golang.org/x/exp/slices"
@@ -74,7 +74,7 @@ type syncStatusProvider struct {
 	configuration  nodeconf.Configuration
 	periodicSync   periodicsync.PeriodicSync
 	updateReceiver UpdateReceiver
-	storage        storage.SpaceStorage
+	storage        spacestorage.SpaceStorage
 
 	spaceId      string
 	treeHeads    map[string]treeHeadsEntry
@@ -92,10 +92,10 @@ type SyncStatusDeps struct {
 	UpdateIntervalSecs int
 	UpdateTimeout      time.Duration
 	Configuration      nodeconf.Configuration
-	Storage            storage.SpaceStorage
+	Storage            spacestorage.SpaceStorage
 }
 
-func DefaultDeps(configuration nodeconf.Configuration, store storage.SpaceStorage) SyncStatusDeps {
+func DefaultDeps(configuration nodeconf.Configuration, store spacestorage.SpaceStorage) SyncStatusDeps {
 	return SyncStatusDeps{
 		UpdateIntervalSecs: syncUpdateInterval,
 		UpdateTimeout:      syncTimeout,

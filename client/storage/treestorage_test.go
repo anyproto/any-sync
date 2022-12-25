@@ -2,19 +2,19 @@ package storage
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treechangeproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage"
 	"github.com/dgraph-io/badger/v3"
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 )
 
-func treeTestPayload() storage.TreeStorageCreatePayload {
+func treeTestPayload() treestorage.TreeStorageCreatePayload {
 	rootRawChange := &treechangeproto.RawTreeChangeWithId{RawChange: []byte("some"), Id: "someRootId"}
 	otherChange := &treechangeproto.RawTreeChangeWithId{RawChange: []byte("some other"), Id: "otherId"}
 	changes := []*treechangeproto.RawTreeChangeWithId{rootRawChange, otherChange}
-	return storage.TreeStorageCreatePayload{
+	return treestorage.TreeStorageCreatePayload{
 		RootRawChange: rootRawChange,
 		Changes:       changes,
 		Heads:         []string{rootRawChange.Id},
@@ -26,8 +26,8 @@ type fixture struct {
 	db  *badger.DB
 }
 
-func testTreePayload(t *testing.T, store storage.TreeStorage, payload storage.TreeStorageCreatePayload) {
-	require.Equal(t, payload.RootRawChange.Id, store.ID())
+func testTreePayload(t *testing.T, store treestorage.TreeStorage, payload treestorage.TreeStorageCreatePayload) {
+	require.Equal(t, payload.RootRawChange.Id, store.Id())
 
 	root, err := store.Root()
 	require.NoError(t, err)
@@ -181,7 +181,7 @@ func TestTreeStorage_Delete(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = newTreeStorage(fx.db, spaceId, payload.RootRawChange.Id)
-		require.Equal(t, err, storage.ErrUnknownTreeId)
+		require.Equal(t, err, treestorage.ErrUnknownTreeId)
 
 		fx.testNoKeysExist(t, spaceId, payload.RootRawChange.Id)
 	})

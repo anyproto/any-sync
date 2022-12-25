@@ -3,8 +3,8 @@ package storage
 import (
 	"context"
 	"errors"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/liststorage"
 	"github.com/dgraph-io/badger/v3"
 )
 
@@ -17,7 +17,7 @@ type listStorage struct {
 	root *aclrecordproto.RawACLRecordWithId
 }
 
-func newListStorage(spaceId string, db *badger.DB, txn *badger.Txn) (ls storage.ListStorage, err error) {
+func newListStorage(spaceId string, db *badger.DB, txn *badger.Txn) (ls liststorage.ListStorage, err error) {
 	keys := newACLKeys(spaceId)
 	rootId, err := getTxn(txn, keys.RootIdKey())
 	if err != nil {
@@ -44,7 +44,7 @@ func newListStorage(spaceId string, db *badger.DB, txn *badger.Txn) (ls storage.
 	return
 }
 
-func createListStorage(spaceId string, db *badger.DB, txn *badger.Txn, root *aclrecordproto.RawACLRecordWithId) (ls storage.ListStorage, err error) {
+func createListStorage(spaceId string, db *badger.DB, txn *badger.Txn, root *aclrecordproto.RawACLRecordWithId) (ls liststorage.ListStorage, err error) {
 	keys := newACLKeys(spaceId)
 	_, err = getTxn(txn, keys.RootIdKey())
 	if err != badger.ErrKeyNotFound {
@@ -98,7 +98,7 @@ func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *aclreco
 	res, err := getDB(l.db, l.keys.RawRecordKey(id))
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
-			err = storage.ErrUnknownRecord
+			err = liststorage.ErrUnknownRecord
 		}
 		return
 	}

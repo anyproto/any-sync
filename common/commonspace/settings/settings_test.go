@@ -2,16 +2,16 @@ package settings
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account/mock_account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice/mock_accountservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/accountdata"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree/mock_synctree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree/updatelistener"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter/mock_treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate/mock_deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/mock_settings"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/mock_synctree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter/mock_treegetter"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage/mock_spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -45,12 +45,12 @@ type settingsFixture struct {
 	doc          *settingsObject
 	ctrl         *gomock.Controller
 	treeGetter   *mock_treegetter.MockTreeGetter
-	spaceStorage *mock_storage.MockSpaceStorage
+	spaceStorage *mock_spacestorage.MockSpaceStorage
 	provider     *mock_settings.MockDeletedIdsProvider
 	deleter      *mock_settings.MockDeleter
 	syncTree     *mock_synctree.MockSyncTree
 	delState     *mock_deletionstate.MockDeletionState
-	account      *mock_account.MockService
+	account      *mock_accountservice.MockService
 }
 
 func newSettingsFixture(t *testing.T) *settingsFixture {
@@ -58,9 +58,9 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 	objectId := "objectId"
 
 	ctrl := gomock.NewController(t)
-	acc := mock_account.NewMockService(ctrl)
+	acc := mock_accountservice.NewMockService(ctrl)
 	treeGetter := mock_treegetter.NewMockTreeGetter(ctrl)
-	st := mock_storage.NewMockSpaceStorage(ctrl)
+	st := mock_spacestorage.NewMockSpaceStorage(ctrl)
 	delState := mock_deletionstate.NewMockDeletionState(ctrl)
 	prov := mock_settings.NewMockDeletedIdsProvider(ctrl)
 	syncTree := mock_synctree.NewMockSyncTree(ctrl)
@@ -135,20 +135,20 @@ func TestSettingsObject_DeleteObject(t *testing.T) {
 	res := []byte("settingsData")
 	fx.delState.EXPECT().CreateDeleteChange(delId, false).Return(res, nil)
 
-	accountData := &account.AccountData{
+	accountData := &accountdata.AccountData{
 		Identity: []byte("id"),
 		PeerKey:  nil,
 		SignKey:  &signingkey.Ed25519PrivateKey{},
 		EncKey:   nil,
 	}
 	fx.account.EXPECT().Account().Return(accountData)
-	fx.syncTree.EXPECT().AddContent(gomock.Any(), tree.SignableChangeContent{
+	fx.syncTree.EXPECT().AddContent(gomock.Any(), objecttree.SignableChangeContent{
 		Data:        res,
 		Key:         accountData.SignKey,
 		Identity:    accountData.Identity,
 		IsSnapshot:  false,
 		IsEncrypted: false,
-	}).Return(tree.AddResult{}, nil)
+	}).Return(objecttree.AddResult{}, nil)
 
 	lastChangeId := "someId"
 	retIds := []string{"id1", "id2"}

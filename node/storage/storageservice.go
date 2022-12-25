@@ -2,7 +2,7 @@ package storage
 
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"os"
 )
@@ -12,7 +12,7 @@ type storageService struct {
 }
 
 type NodeStorage interface {
-	storage.SpaceStorageProvider
+	spacestorage.SpaceStorageProvider
 	AllSpaceIds() (ids []string, err error)
 }
 
@@ -27,14 +27,14 @@ func (s *storageService) Init(a *app.App) (err error) {
 }
 
 func (s *storageService) Name() (name string) {
-	return storage.CName
+	return spacestorage.CName
 }
 
-func (s *storageService) SpaceStorage(id string) (storage.SpaceStorage, error) {
+func (s *storageService) SpaceStorage(id string) (spacestorage.SpaceStorage, error) {
 	return newSpaceStorage(s.rootPath, id)
 }
 
-func (s *storageService) CreateSpaceStorage(payload storage.SpaceStorageCreatePayload) (storage.SpaceStorage, error) {
+func (s *storageService) CreateSpaceStorage(payload spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {
 	return createSpaceStorage(s.rootPath, payload)
 }
 

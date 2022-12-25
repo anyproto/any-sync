@@ -7,7 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secureservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/timeoutconn"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"go.uber.org/zap"
@@ -37,7 +37,7 @@ type Dialer interface {
 }
 
 type dialer struct {
-	transport secure.Service
+	transport secureservice.SecureService
 	config    *config.Config
 	peerAddrs map[string][]string
 
@@ -45,7 +45,7 @@ type dialer struct {
 }
 
 func (d *dialer) Init(a *app.App) (err error) {
-	d.transport = a.MustComponent(secure.CName).(secure.Service)
+	d.transport = a.MustComponent(secureservice.CName).(secureservice.SecureService)
 	d.config = a.MustComponent(config.CName).(*config.Config)
 	d.peerAddrs = map[string][]string{}
 	for _, n := range d.config.Nodes {

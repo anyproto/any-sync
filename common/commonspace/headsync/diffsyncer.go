@@ -2,16 +2,16 @@ package headsync
 
 import (
 	"context"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ldiff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
 	"go.uber.org/zap"
 	"time"
 )
@@ -28,7 +28,7 @@ func newDiffSyncer(
 	diff ldiff.Diff,
 	confConnector nodeconf.ConfConnector,
 	cache treegetter.TreeGetter,
-	storage storage.SpaceStorage,
+	storage spacestorage.SpaceStorage,
 	clientFactory spacesyncproto.ClientFactory,
 	syncStatus syncstatus.SyncStatusUpdater,
 	log *zap.Logger) DiffSyncer {
@@ -49,7 +49,7 @@ type diffSyncer struct {
 	diff          ldiff.Diff
 	confConnector nodeconf.ConfConnector
 	cache         treegetter.TreeGetter
-	storage       storage.SpaceStorage
+	storage       spacestorage.SpaceStorage
 	clientFactory spacesyncproto.ClientFactory
 	log           *zap.Logger
 	deletionState deletionstate.DeletionState

@@ -2,12 +2,12 @@ package acl
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/cid"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectsync/synchandler"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/cidutil"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusclient"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
 	"time"
@@ -31,12 +31,12 @@ type Service interface {
 
 type service struct {
 	consService consensusclient.Service
-	account     account.Service
+	account     accountservice.Service
 }
 
 func (s *service) Init(a *app.App) (err error) {
 	s.consService = a.MustComponent(consensusclient.CName).(consensusclient.Service)
-	s.account = a.MustComponent(account.CName).(account.Service)
+	s.account = a.MustComponent(accountservice.CName).(accountservice.Service)
 	return
 }
 
@@ -125,7 +125,7 @@ func (s *service) signAndMarshal(rawRec *aclrecordproto.RawACLRecord) (recId, pr
 	if payload, err = rawRec.Marshal(); err != nil {
 		return
 	}
-	recCid, err := cid.NewCIDFromBytes(payload)
+	recCid, err := cidutil.NewCIDFromBytes(payload)
 	if err != nil {
 		return
 	}

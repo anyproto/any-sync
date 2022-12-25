@@ -3,21 +3,20 @@ package headsync
 import (
 	"context"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ldiff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ldiff/mock_ldiff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treechangeproto"
+	mock_treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage/mock_treestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter/mock_treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate/mock_deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage/mock_spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto/mock_spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter/mock_treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf/mock_nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
-	mock_aclstorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage/mock_storage"
-	mock_treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage/mock_storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff/mock_ldiff"
 	"github.com/golang/mock/gomock"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"github.com/stretchr/testify/require"
@@ -101,7 +100,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
 	connectorMock := mock_nodeconf.NewMockConfConnector(ctrl)
 	cacheMock := mock_treegetter.NewMockTreeGetter(ctrl)
-	stMock := mock_storage.NewMockSpaceStorage(ctrl)
+	stMock := mock_spacestorage.NewMockSpaceStorage(ctrl)
 	clientMock := mock_spacesyncproto.NewMockDRPCSpaceClient(ctrl)
 	factory := spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceClient {
 		return clientMock
@@ -158,7 +157,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	})
 
 	t.Run("diff syncer sync space missing", func(t *testing.T) {
-		aclStorageMock := mock_aclstorage.NewMockListStorage(ctrl)
+		aclStorageMock := mock_treestorage.NewMockListStorage(ctrl)
 		settingsStorage := mock_treestorage.NewMockTreeStorage(ctrl)
 		settingsId := "settingsId"
 		aclRoot := &aclrecordproto.RawACLRecordWithId{

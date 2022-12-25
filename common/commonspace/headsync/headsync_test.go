@@ -1,13 +1,13 @@
 package headsync
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ldiff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ldiff/mock_ldiff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/headsync/mock_headsync"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage/mock_treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate/mock_deletionstate"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
-	mock_storage2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage/mock_storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff/mock_ldiff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage/mock_spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync/mock_periodicsync"
 	"github.com/golang/mock/gomock"
 	"testing"
@@ -20,8 +20,8 @@ func TestDiffService(t *testing.T) {
 	spaceId := "spaceId"
 	l := logger.NewNamed("sync")
 	pSyncMock := mock_periodicsync.NewMockPeriodicSync(ctrl)
-	storageMock := mock_storage.NewMockSpaceStorage(ctrl)
-	treeStorageMock := mock_storage2.NewMockTreeStorage(ctrl)
+	storageMock := mock_spacestorage.NewMockSpaceStorage(ctrl)
+	treeStorageMock := mock_treestorage.NewMockTreeStorage(ctrl)
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
 	syncer := mock_headsync.NewMockDiffSyncer(ctrl)
 	delState := mock_deletionstate.NewMockDeletionState(ctrl)

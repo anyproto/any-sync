@@ -4,22 +4,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/headsync"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/list"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/syncacl"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree/updatelistener"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectsync"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncacl"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"github.com/zeebo/errs"
@@ -76,12 +76,12 @@ type Space interface {
 
 	SpaceSyncRpc() RpcHandler
 
-	DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (string, error)
-	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (string, error)
-	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
+	DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (string, error)
+	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (string, error)
+	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (objecttree.ObjectTree, error)
 	DeleteTree(ctx context.Context, id string) (err error)
 
-	StatusService() syncstatus.SyncStatusUpdater
+	SyncStatus() syncstatus.SyncStatusUpdater
 
 	Close() error
 }
@@ -93,12 +93,12 @@ type space struct {
 
 	rpc *rpcHandler
 
-	objectSync     syncservice.SyncService
+	objectSync     objectsync.ObjectSync
 	headSync       headsync.HeadSync
 	syncStatus     syncstatus.SyncStatusUpdater
-	storage        storage.SpaceStorage
+	storage        spacestorage.SpaceStorage
 	cache          treegetter.TreeGetter
-	account        account.Service
+	account        accountservice.Service
 	aclList        *syncacl.SyncACL
 	configuration  nodeconf.Configuration
 	settingsObject settings.SettingsObject
@@ -199,7 +199,7 @@ func (s *space) SpaceSyncRpc() RpcHandler {
 	return s.rpc
 }
 
-func (s *space) ObjectSync() syncservice.SyncService {
+func (s *space) ObjectSync() objectsync.ObjectSync {
 	return s.objectSync
 }
 
@@ -207,7 +207,7 @@ func (s *space) HeadSync() headsync.HeadSync {
 	return s.headSync
 }
 
-func (s *space) StatusService() syncstatus.SyncStatusUpdater {
+func (s *space) SyncStatus() syncstatus.SyncStatusUpdater {
 	return s.syncStatus
 }
 
@@ -219,7 +219,7 @@ func (s *space) DebugAllHeads() []headsync.TreeHeads {
 	return s.headSync.DebugAllHeads()
 }
 
-func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (id string, err error) {
+func (s *space) DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (id string, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
@@ -227,7 +227,7 @@ func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 	deps := synctree.CreateDeps{
 		SpaceId:        s.id,
 		Payload:        payload,
-		SyncService:    s.objectSync,
+		ObjectSync:     s.objectSync,
 		Configuration:  s.configuration,
 		AclList:        s.aclList,
 		SpaceStorage:   s.storage,
@@ -237,7 +237,7 @@ func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 	return synctree.DeriveSyncTree(ctx, deps)
 }
 
-func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (id string, err error) {
+func (s *space) CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (id string, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
@@ -245,7 +245,7 @@ func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 	deps := synctree.CreateDeps{
 		SpaceId:        s.id,
 		Payload:        payload,
-		SyncService:    s.objectSync,
+		ObjectSync:     s.objectSync,
 		Configuration:  s.configuration,
 		AclList:        s.aclList,
 		SpaceStorage:   s.storage,
@@ -255,14 +255,14 @@ func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 	return synctree.CreateSyncTree(ctx, deps)
 }
 
-func (s *space) BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (t tree.ObjectTree, err error) {
+func (s *space) BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
 	}
 	deps := synctree.BuildDeps{
 		SpaceId:        s.id,
-		SyncService:    s.objectSync,
+		ObjectSync:     s.objectSync,
 		Configuration:  s.configuration,
 		HeadNotifiable: s.headSync,
 		Listener:       listener,

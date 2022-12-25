@@ -8,7 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secureservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusrpc"
@@ -89,7 +89,7 @@ func main() {
 func Bootstrap(a *app.App) {
 	a.Register(metric.New()).
 		Register(account.New()).
-		Register(secure.New()).
+		Register(secureservice.New()).
 		Register(server.New()).
 		Register(db.New()).
 		Register(stream.New()).

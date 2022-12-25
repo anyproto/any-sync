@@ -2,10 +2,10 @@ package settings
 
 import (
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter/mock_treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate/mock_deletionstate"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage/mock_storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter/mock_treegetter"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage/mock_spacestorage"
 	"github.com/golang/mock/gomock"
 	"testing"
 )
@@ -13,7 +13,7 @@ import (
 func TestDeleter_Delete(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	treeGetter := mock_treegetter.NewMockTreeGetter(ctrl)
-	st := mock_storage.NewMockSpaceStorage(ctrl)
+	st := mock_spacestorage.NewMockSpaceStorage(ctrl)
 	delState := mock_deletionstate.NewMockDeletionState(ctrl)
 
 	deleter := newDeleter(st, delState, treeGetter)
@@ -34,7 +34,7 @@ func TestDeleter_Delete(t *testing.T) {
 		spaceId := "spaceId"
 		delState.EXPECT().GetQueued().Return([]string{id})
 		st.EXPECT().Id().Return(spaceId)
-		treeGetter.EXPECT().DeleteTree(gomock.Any(), spaceId, id).Return(storage.ErrTreeStorageAlreadyDeleted)
+		treeGetter.EXPECT().DeleteTree(gomock.Any(), spaceId, id).Return(spacestorage.ErrTreeStorageAlreadyDeleted)
 		delState.EXPECT().Delete(id).Return(nil)
 
 		deleter.Delete()

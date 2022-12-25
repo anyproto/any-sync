@@ -2,10 +2,10 @@ package commonspace
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectgetter"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/syncacl"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/syncobjectgetter"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncacl"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
 )
 
 type commonSpaceGetter struct {
@@ -15,7 +15,7 @@ type commonSpaceGetter struct {
 	settings   settings.SettingsObject
 }
 
-func newCommonSpaceGetter(spaceId string, aclList *syncacl.SyncACL, treeGetter treegetter.TreeGetter, settings settings.SettingsObject) objectgetter.ObjectGetter {
+func newCommonSpaceGetter(spaceId string, aclList *syncacl.SyncACL, treeGetter treegetter.TreeGetter, settings settings.SettingsObject) syncobjectgetter.SyncObjectGetter {
 	return &commonSpaceGetter{
 		spaceId:    spaceId,
 		aclList:    aclList,
@@ -24,19 +24,19 @@ func newCommonSpaceGetter(spaceId string, aclList *syncacl.SyncACL, treeGetter t
 	}
 }
 
-func (c *commonSpaceGetter) GetObject(ctx context.Context, objectId string) (obj objectgetter.Object, err error) {
+func (c *commonSpaceGetter) GetObject(ctx context.Context, objectId string) (obj syncobjectgetter.SyncObject, err error) {
 	if c.aclList.ID() == objectId {
 		obj = c.aclList
 		return
 	}
 	if c.settings.ID() == objectId {
-		obj = c.settings.(objectgetter.Object)
+		obj = c.settings.(syncobjectgetter.SyncObject)
 		return
 	}
 	t, err := c.treeGetter.GetTree(ctx, c.spaceId, objectId)
 	if err != nil {
 		return
 	}
-	obj = t.(objectgetter.Object)
+	obj = t.(syncobjectgetter.SyncObject)
 	return
 }

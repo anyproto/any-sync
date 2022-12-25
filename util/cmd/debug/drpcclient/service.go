@@ -2,11 +2,11 @@ package drpcclient
 
 import (
 	"context"
-	clientproto "github.com/anytypeio/go-anytype-infrastructure-experiments/client/api/apiproto"
+	clientproto "github.com/anytypeio/go-anytype-infrastructure-experiments/client/debug/clientdebugrpc/clientdebugrpcproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
-	nodeproto "github.com/anytypeio/go-anytype-infrastructure-experiments/node/api/apiproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ocache"
+	nodeproto "github.com/anytypeio/go-anytype-infrastructure-experiments/node/debug/nodedebugrpc/nodedebugrpcproto"
 	"net"
 	"storj.io/drpc/drpcconn"
 	"time"

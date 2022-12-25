@@ -1,9 +1,9 @@
 package settings
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree/mock_objecttree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
-	mock_tree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree/mock_objecttree"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -16,7 +16,7 @@ func TestProvider_ProcessChange(t *testing.T) {
 	//defer ctrl.Finish()
 
 	t.Run("empty model", func(t *testing.T) {
-		ch := &tree.Change{}
+		ch := &objecttree.Change{}
 		startId := "startId"
 		rootId := "rootId"
 		ids := []string{startId}
@@ -25,7 +25,7 @@ func TestProvider_ProcessChange(t *testing.T) {
 	})
 
 	t.Run("changeId is equal to startId", func(t *testing.T) {
-		ch := &tree.Change{}
+		ch := &objecttree.Change{}
 		ch.Model = &spacesyncproto.SettingsData{}
 		ch.Id = "startId"
 
@@ -37,7 +37,7 @@ func TestProvider_ProcessChange(t *testing.T) {
 	})
 
 	t.Run("changeId is equal to rootId, startId is empty", func(t *testing.T) {
-		ch := &tree.Change{}
+		ch := &objecttree.Change{}
 		ch.Model = &spacesyncproto.SettingsData{
 			Snapshot: &spacesyncproto.SpaceSettingsSnapshot{
 				DeletedIds: []string{"id1", "id2"},
@@ -52,7 +52,7 @@ func TestProvider_ProcessChange(t *testing.T) {
 	})
 
 	t.Run("changeId is equal to rootId, startId is empty", func(t *testing.T) {
-		ch := &tree.Change{}
+		ch := &objecttree.Change{}
 		ch.Model = &spacesyncproto.SettingsData{
 			Content: []*spacesyncproto.SpaceSettingsContent{
 				{&spacesyncproto.SpaceSettingsContent_ObjectDelete{
@@ -71,12 +71,12 @@ func TestProvider_ProcessChange(t *testing.T) {
 
 func TestProvider_ProvideIds(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	objTree := mock_tree.NewMockObjectTree(ctrl)
+	objTree := mock_objecttree.NewMockObjectTree(ctrl)
 	prov := &provider{}
 	defer ctrl.Finish()
 
 	t.Run("startId is empty", func(t *testing.T) {
-		ch := &tree.Change{Id: "rootId"}
+		ch := &objecttree.Change{Id: "rootId"}
 		objTree.EXPECT().Root().Return(ch)
 		objTree.EXPECT().ID().Return("id")
 		objTree.EXPECT().IterateFrom("id", gomock.Any(), gomock.Any()).Return(nil)
@@ -85,7 +85,7 @@ func TestProvider_ProvideIds(t *testing.T) {
 	})
 
 	t.Run("startId is not empty", func(t *testing.T) {
-		ch := &tree.Change{Id: "rootId"}
+		ch := &objecttree.Change{Id: "rootId"}
 		objTree.EXPECT().Root().Return(ch)
 		objTree.EXPECT().IterateFrom("startId", gomock.Any(), gomock.Any()).Return(nil)
 		_, _, err := prov.ProvideIds(objTree, "startId")

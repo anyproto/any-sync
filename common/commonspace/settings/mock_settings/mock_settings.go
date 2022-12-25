@@ -7,7 +7,7 @@ package mock_settings
 import (
 	reflect "reflect"
 
-	tree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	objecttree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -35,7 +35,7 @@ func (m *MockDeletedIdsProvider) EXPECT() *MockDeletedIdsProviderMockRecorder {
 }
 
 // ProvideIds mocks base method.
-func (m *MockDeletedIdsProvider) ProvideIds(arg0 tree.ObjectTree, arg1 string) ([]string, string, error) {
+func (m *MockDeletedIdsProvider) ProvideIds(arg0 objecttree.ObjectTree, arg1 string) ([]string, string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ProvideIds", arg0, arg1)
 	ret0, _ := ret[0].([]string)

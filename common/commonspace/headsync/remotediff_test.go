@@ -3,8 +3,8 @@ package headsync
 import (
 	"context"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ldiff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ldiff"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"

@@ -1,21 +1,21 @@
 package account
 
 import (
-	commonaccount "github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
+	commonaccount "github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/accountdata"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/account"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 )
 
 type service struct {
-	accountData *account.AccountData
+	accountData *accountdata.AccountData
 	peerId      string
 }
 
-func (s *service) Account() *account.AccountData {
+func (s *service) Account() *accountdata.AccountData {
 	return s.accountData
 }
 
@@ -47,7 +47,7 @@ func (s *service) Init(a *app.App) (err error) {
 		return err
 	}
 
-	s.accountData = &account.AccountData{
+	s.accountData = &accountdata.AccountData{
 		Identity: identity,
 		SignKey:  decodedSigningKey,
 		EncKey:   decodedEncryptionKey,
