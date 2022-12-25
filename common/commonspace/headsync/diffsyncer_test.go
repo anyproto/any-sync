@@ -33,7 +33,7 @@ type pushSpaceRequestMatcher struct {
 }
 
 func (p pushSpaceRequestMatcher) Matches(x interface{}) bool {
-	res, ok := x.(*spacesyncproto.PushSpaceRequest)
+	res, ok := x.(*spacesyncproto.SpacePushRequest)
 	if !ok {
 		return false
 	}
@@ -101,8 +101,8 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	connectorMock := mock_nodeconf.NewMockConfConnector(ctrl)
 	cacheMock := mock_treegetter.NewMockTreeGetter(ctrl)
 	stMock := mock_spacestorage.NewMockSpaceStorage(ctrl)
-	clientMock := mock_spacesyncproto.NewMockDRPCSpaceClient(ctrl)
-	factory := spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceClient {
+	clientMock := mock_spacesyncproto.NewMockDRPCSpaceSyncClient(ctrl)
+	factory := spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceSyncClient {
 		return clientMock
 	})
 	delState := mock_deletionstate.NewMockDeletionState(ctrl)
@@ -186,7 +186,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 			Root().
 			Return(aclRoot, nil)
 		clientMock.EXPECT().
-			PushSpace(gomock.Any(), newPushSpaceRequestMatcher(spaceId, aclRootId, settingsId, spaceHeader)).
+			SpacePush(gomock.Any(), newPushSpaceRequestMatcher(spaceId, aclRootId, settingsId, spaceHeader)).
 			Return(nil, nil)
 
 		require.NoError(t, diffSyncer.Sync(ctx))

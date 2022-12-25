@@ -1,5 +1,5 @@
 syntax = "proto3";
-package anySpace;
+package spacesync;
 
 option go_package = "commonspace/spacesyncproto";
 
@@ -10,15 +10,15 @@ enum ErrCodes {
     ErrorOffset = 100;
 }
 
-service Space {
+service SpaceSync {
     // HeadSync compares all objects and their hashes in a space
     rpc HeadSync(HeadSyncRequest) returns (HeadSyncResponse);
     // PushSpace sends new space to the node
-    rpc PushSpace(PushSpaceRequest) returns (PushSpaceResponse);
+    rpc SpacePush(SpacePushRequest) returns (SpacePushResponse);
     // PullSpace gets space from the remote peer
-    rpc PullSpace(PullSpaceRequest) returns (PullSpaceResponse);
+    rpc SpacePull(SpacePullRequest) returns (SpacePullResponse);
     // Stream opens object sync stream with node or client
-    rpc Stream(stream ObjectSyncMessage) returns (stream ObjectSyncMessage);
+    rpc ObjectSyncStream(stream ObjectSyncMessage) returns (stream ObjectSyncMessage);
 }
 
 // HeadSyncRange presenting a request for one range
@@ -63,20 +63,20 @@ message ObjectSyncMessage {
 }
 
 // PushSpaceRequest is a request to add space on a node containing only one acl record
-message PushSpaceRequest {
+message SpacePushRequest {
     SpacePayload payload = 1;
 }
 
 // PushSpaceResponse is an empty response
-message PushSpaceResponse {}
+message SpacePushResponse {}
 
 // PullSpaceRequest is a request to request a space on a node that doesn't have it
-message PullSpaceRequest {
+message SpacePullRequest {
     string id = 1;
 }
 
 // PullSpaceResponse is a response with header and acl root
-message PullSpaceResponse {
+message SpacePullResponse {
     SpacePayload payload = 1;
 }
 

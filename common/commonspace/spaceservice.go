@@ -169,8 +169,8 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 		return
 	}
 
-	cl := spacesyncproto.NewDRPCSpaceClient(p)
-	res, err := cl.PullSpace(ctx, &spacesyncproto.PullSpaceRequest{Id: id})
+	cl := spacesyncproto.NewDRPCSpaceSyncClient(p)
+	res, err := cl.SpacePull(ctx, &spacesyncproto.SpacePullRequest{Id: id})
 	if err != nil {
 		return
 	}

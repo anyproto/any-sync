@@ -110,7 +110,7 @@ func (s *streamChecker) CheckPeerConnection(peerId string) (err error) {
 }
 
 func (s *streamChecker) createStream(p peer.Peer) (err error) {
-	stream, err := s.clientFactory.Client(p).Stream(s.syncCtx)
+	stream, err := s.clientFactory.Client(p).ObjectSyncStream(s.syncCtx)
 	if err != nil {
 		// so here probably the request is failed because there is no such space,
 		// but diffService should handle such cases by sending pushSpace

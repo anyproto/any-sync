@@ -1,6 +1,6 @@
 syntax = "proto3";
 package aclrecord;
-option go_package = "pkg/acl/aclrecordproto";
+option go_package = "commonspace/object/acl/aclrecordproto";
 
 message RawACLRecord {
     bytes payload = 1;
