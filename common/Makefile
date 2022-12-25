@@ -7,7 +7,6 @@ proto:
 	@$(eval GOGO_START := GOGO_NO_UNDERSCORE=1 GOGO_EXPORT_ONEOF_INTERFACE=1)
 	@$(eval P_ACL_RECORDS_PATH_PB := commonspace/object/acl/aclrecordproto)
 	@$(eval P_TREE_CHANGES_PATH_PB := commonspace/object/tree/treechangeproto)
-	@$(eval P_SYNC_CHANGES_PATH_PB := syncproto)
 	@$(eval P_ACL_RECORDS := M$(P_ACL_RECORDS_PATH_PB)/protos/aclrecord.proto=github.com/anytypeio/go-anytype-infrastructure-experiments/common/$(P_ACL_RECORDS_PATH_PB))
 	@$(eval P_TREE_CHANGES := M$(P_TREE_CHANGES_PATH_PB)/protos/treechange.proto=github.com/anytypeio/go-anytype-infrastructure-experiments/common/$(P_TREE_CHANGES_PATH_PB))
 
