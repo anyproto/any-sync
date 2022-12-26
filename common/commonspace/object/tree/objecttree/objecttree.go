@@ -46,7 +46,7 @@ type ChangeConvertFunc = func(decrypted []byte) (any, error)
 type ObjectTree interface {
 	RWLocker
 
-	ID() string
+	Id() string
 	Header() *treechangeproto.RawTreeChangeWithId
 	Heads() []string
 	Root() *Change
@@ -137,7 +137,7 @@ func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Chan
 	return ot.validateTree(nil)
 }
 
-func (ot *objectTree) ID() string {
+func (ot *objectTree) Id() string {
 	return ot.id
 }
 

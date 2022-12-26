@@ -25,11 +25,11 @@ func newCommonSpaceGetter(spaceId string, aclList *syncacl.SyncAcl, treeGetter t
 }
 
 func (c *commonSpaceGetter) GetObject(ctx context.Context, objectId string) (obj syncobjectgetter.SyncObject, err error) {
-	if c.aclList.ID() == objectId {
+	if c.aclList.Id() == objectId {
 		obj = c.aclList
 		return
 	}
-	if c.settings.ID() == objectId {
+	if c.settings.Id() == objectId {
 		obj = c.settings.(syncobjectgetter.SyncObject)
 		return
 	}

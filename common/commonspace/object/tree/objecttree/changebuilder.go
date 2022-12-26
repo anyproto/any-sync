@@ -60,8 +60,8 @@ func (c *changeBuilder) ConvertFromRaw(rawIdChange *treechangeproto.RawTreeChang
 
 	if verify {
 		// verifying ID
-		if !cidutil.VerifyCID(rawIdChange.RawChange, rawIdChange.Id) {
-			err = ErrIncorrectCID
+		if !cidutil.VerifyCid(rawIdChange.RawChange, rawIdChange.Id) {
+			err = ErrIncorrectCid
 			return
 		}
 	}
@@ -131,7 +131,7 @@ func (c *changeBuilder) BuildInitialContent(payload InitialContent) (ch *Change,
 		return
 	}
 
-	id, err := cidutil.NewCIDFromBytes(marshalledRawChange)
+	id, err := cidutil.NewCidFromBytes(marshalledRawChange)
 	if err != nil {
 		return
 	}
@@ -186,7 +186,7 @@ func (c *changeBuilder) BuildContent(payload BuilderContent) (ch *Change, rawIdC
 		return
 	}
 
-	id, err := cidutil.NewCIDFromBytes(marshalledRawChange)
+	id, err := cidutil.NewCidFromBytes(marshalledRawChange)
 	if err != nil {
 		return
 	}

@@ -73,7 +73,7 @@ func (t *AclListStorageBuilder) createRaw(rec proto.Marshaler, identity []byte) 
 		panic(err)
 	}
 
-	id, _ := cidutil.NewCIDFromBytes(rawMarshalled)
+	id, _ := cidutil.NewCidFromBytes(rawMarshalled)
 
 	return &aclrecordproto.RawAclRecordWithId{
 		Payload: rawMarshalled,

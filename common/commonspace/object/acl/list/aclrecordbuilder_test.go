@@ -27,7 +27,7 @@ func TestAclRecordBuilder_BuildUserJoin(t *testing.T) {
 
 	aclList, err := BuildAclListWithIdentity(acc, st)
 	require.NoError(t, err, "building acl list should be without error")
-	recordBuilder := newAclRecordBuilder(aclList.ID(), keychain.NewKeychain())
+	recordBuilder := newAclRecordBuilder(aclList.Id(), keychain.NewKeychain())
 	rk, err := testKeychain.GetKey("key.Read.EncKey").(*acllistbuilder2.SymKey).Key.Raw()
 	require.NoError(t, err)
 	privKey, err := testKeychain.GetKey("key.Sign.Onetime1").(signingkey.PrivKey).Raw()
@@ -37,7 +37,7 @@ func TestAclRecordBuilder_BuildUserJoin(t *testing.T) {
 	require.NoError(t, err)
 	marshalledJoin, err := userJoin.Marshal()
 	require.NoError(t, err)
-	id, err := cidutil.NewCIDFromBytes(marshalledJoin)
+	id, err := cidutil.NewCidFromBytes(marshalledJoin)
 	require.NoError(t, err)
 	rawRec := &aclrecordproto.RawAclRecordWithId{
 		Payload: marshalledJoin,

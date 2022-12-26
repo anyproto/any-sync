@@ -28,7 +28,7 @@ func TestService_CreateLog(t *testing.T) {
 		clog = l
 	})
 
-	aclId, _ := cidutil.NewCIDFromBytes([]byte("aclId"))
+	aclId, _ := cidutil.NewCidFromBytes([]byte("aclId"))
 
 	rec := &aclrecordproto.AclRecord{
 		PrevId:    "",
@@ -63,7 +63,7 @@ func TestService_AddRecord(t *testing.T) {
 		clog = l
 	})
 
-	aclId, _ := cidutil.NewCIDFromBytes([]byte("aclId"))
+	aclId, _ := cidutil.NewCidFromBytes([]byte("aclId"))
 
 	rec := &aclrecordproto.AclRecord{
 		PrevId:    "",
@@ -108,7 +108,7 @@ func TestService_Watch(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish(t)
 		var expErr = fmt.Errorf("error")
-		aclId, _ := cidutil.NewCIDFromBytes([]byte("aclId"))
+		aclId, _ := cidutil.NewCidFromBytes([]byte("aclId"))
 		aclIdBytes, _ := cidToByte(aclId)
 		fx.mockClient.EXPECT().Watch(aclIdBytes, gomock.Any()).Do(func(aid []byte, w consensusclient.Watcher) {
 			assert.Equal(t, aclIdBytes, aid)
@@ -125,14 +125,14 @@ func TestService_Watch(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish(t)
-		aclId, _ := cidutil.NewCIDFromBytes([]byte("aclId"))
+		aclId, _ := cidutil.NewCidFromBytes([]byte("aclId"))
 		aclIdBytes, _ := cidToByte(aclId)
 		fx.mockClient.EXPECT().Watch(aclIdBytes, gomock.Any()).Do(func(aid []byte, w consensusclient.Watcher) {
 			assert.Equal(t, aclIdBytes, aid)
 			go func() {
 				time.Sleep(time.Millisecond * 10)
-				r1cid, _ := cidutil.NewCIDFromBytes([]byte("r1"))
-				r2cid, _ := cidutil.NewCIDFromBytes([]byte("r2"))
+				r1cid, _ := cidutil.NewCidFromBytes([]byte("r1"))
+				r2cid, _ := cidutil.NewCidFromBytes([]byte("r2"))
 				r1cidB, _ := cidToByte(r1cid)
 				r2cidB, _ := cidToByte(r2cid)
 				w.AddConsensusRecords([]*consensusproto.Record{

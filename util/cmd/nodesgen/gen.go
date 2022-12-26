@@ -210,7 +210,7 @@ func genNodeConfig(addresses []string, apiAddresses []string, num int) (config.C
 		return config.Config{}, err
 	}
 
-	peerID, err := peer.IDFromSigningPubKey(signKey.GetPublic())
+	peerID, err := peer.IdFromSigningPubKey(signKey.GetPublic())
 	if err != nil {
 		return config.Config{}, err
 	}
@@ -264,7 +264,7 @@ func genClientConfig(addresses []string, apiAddresses []string, encKey encryptio
 		return config.Config{}, err
 	}
 
-	peerID, err := peer.IDFromSigningPubKey(peerKey.GetPublic())
+	peerID, err := peer.IdFromSigningPubKey(peerKey.GetPublic())
 	if err != nil {
 		return config.Config{}, err
 	}
@@ -318,7 +318,7 @@ func genConsensusConfig(addresses []string) (cconfig.Config, error) {
 		return cconfig.Config{}, err
 	}
 
-	peerID, err := peer.IDFromSigningPubKey(signKey.GetPublic())
+	peerID, err := peer.IdFromSigningPubKey(signKey.GetPublic())
 	if err != nil {
 		return cconfig.Config{}, err
 	}
@@ -367,7 +367,7 @@ func getFileNodeConfig(addresses []string, num int) (fconfig.Config, error) {
 		return fconfig.Config{}, err
 	}
 
-	peerID, err := peer.IDFromSigningPubKey(signKey.GetPublic())
+	peerID, err := peer.IdFromSigningPubKey(signKey.GetPublic())
 	if err != nil {
 		return fconfig.Config{}, err
 	}

@@ -75,7 +75,7 @@ func Test_DeriveSyncTree(t *testing.T) {
 		SyncStatus:     syncstatus.NewNoOpSyncStatus(),
 		HeadNotifiable: headNotifiableMock,
 	}
-	objTreeMock.EXPECT().ID().Return("id")
+	objTreeMock.EXPECT().Id().Return("id")
 
 	_, err := DeriveSyncTree(ctx, deps)
 	require.NoError(t, err)
@@ -105,7 +105,7 @@ func Test_CreateSyncTree(t *testing.T) {
 	headNotifiableMock.EXPECT().UpdateHeads("id", []string{"h1"})
 	syncClientMock.EXPECT().CreateHeadUpdate(gomock.Any(), gomock.Nil()).Return(headUpdate)
 	syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
-	objTreeMock.EXPECT().ID().Return("id")
+	objTreeMock.EXPECT().Id().Return("id")
 	deps := CreateDeps{
 		AclList:        aclListMock,
 		SpaceId:        spaceId,
@@ -207,7 +207,7 @@ func Test_BuildSyncTree(t *testing.T) {
 			Mode:  objecttree.Append,
 			Added: changes,
 		}
-		objTreeMock.EXPECT().ID().Return("id").AnyTimes()
+		objTreeMock.EXPECT().Id().Return("id").AnyTimes()
 		objTreeMock.EXPECT().AddContent(gomock.Any(), gomock.Eq(content)).
 			Return(expectedRes, nil)
 

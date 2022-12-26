@@ -84,7 +84,7 @@ func (s *syncTreeHandler) handleHeadUpdate(
 
 	log := log.With("senderId", senderId).
 		With("heads", objTree.Heads()).
-		With("treeId", objTree.ID())
+		With("treeId", objTree.Id())
 	log.Debug("received head update message")
 
 	defer func() {
@@ -101,7 +101,7 @@ func (s *syncTreeHandler) handleHeadUpdate(
 
 	// isEmptyUpdate is sent when the tree is brought up from cache
 	if isEmptyUpdate {
-		log.With("treeId", objTree.ID()).Debug("is empty update")
+		log.With("treeId", objTree.Id()).Debug("is empty update")
 		if slice.UnsortedEquals(objTree.Heads(), update.Heads) {
 			return
 		}
@@ -151,7 +151,7 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 
 	log := log.With("senderId", senderId).
 		With("heads", request.Heads).
-		With("treeId", s.objTree.ID()).
+		With("treeId", s.objTree.Id()).
 		With("replyId", replyId)
 	log.Debug("received full sync request message")
 
@@ -192,7 +192,7 @@ func (s *syncTreeHandler) handleFullSyncResponse(
 	)
 	log := log.With("senderId", senderId).
 		With("heads", response.Heads).
-		With("treeId", s.objTree.ID())
+		With("treeId", s.objTree.Id())
 	log.Debug("received full sync response message")
 
 	defer func() {

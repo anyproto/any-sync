@@ -51,7 +51,7 @@ func (p *provider) ProvideIds(tr objecttree.ObjectTree, startId string) (ids []s
 	}
 
 	if startId == "" {
-		err = tr.IterateFrom(tr.ID(), convert, process)
+		err = tr.IterateFrom(tr.Id(), convert, process)
 	} else {
 		err = tr.IterateFrom(startId, convert, process)
 	}

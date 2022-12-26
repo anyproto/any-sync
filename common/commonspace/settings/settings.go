@@ -136,7 +136,7 @@ func (s *settingsObject) Close() error {
 func (s *settingsObject) DeleteObject(id string) (err error) {
 	s.Lock()
 	defer s.Unlock()
-	if s.ID() == id {
+	if s.Id() == id {
 		err = ErrDeleteSelf
 		return
 	}

@@ -170,7 +170,7 @@ func verifyRaw(
 	}
 
 	// verifying ID
-	if !cidutil.VerifyCID(recWithId.Payload, recWithId.Id) {
+	if !cidutil.VerifyCid(recWithId.Payload, recWithId.Id) {
 		err = ErrIncorrectCID
 	}
 	return

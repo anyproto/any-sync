@@ -171,18 +171,18 @@ func (mr *MockObjectTreeMockRecorder) Heads() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Heads", reflect.TypeOf((*MockObjectTree)(nil).Heads))
 }
 
-// ID mocks base method.
-func (m *MockObjectTree) ID() string {
+// Id mocks base method.
+func (m *MockObjectTree) Id() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ID")
+	ret := m.ctrl.Call(m, "Id")
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
-// ID indicates an expected call of ID.
-func (mr *MockObjectTreeMockRecorder) ID() *gomock.Call {
+// Id indicates an expected call of Id.
+func (mr *MockObjectTreeMockRecorder) Id() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ID", reflect.TypeOf((*MockObjectTree)(nil).ID))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Id", reflect.TypeOf((*MockObjectTree)(nil).Id))
 }
 
 // Iterate mocks base method.

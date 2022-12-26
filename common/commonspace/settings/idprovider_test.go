@@ -78,7 +78,7 @@ func TestProvider_ProvideIds(t *testing.T) {
 	t.Run("startId is empty", func(t *testing.T) {
 		ch := &objecttree.Change{Id: "rootId"}
 		objTree.EXPECT().Root().Return(ch)
-		objTree.EXPECT().ID().Return("id")
+		objTree.EXPECT().Id().Return("id")
 		objTree.EXPECT().IterateFrom("id", gomock.Any(), gomock.Any()).Return(nil)
 		_, _, err := prov.ProvideIds(objTree, "")
 		require.NoError(t, err)

@@ -5,7 +5,7 @@ import (
 	mh "github.com/multiformats/go-multihash"
 )
 
-func NewCIDFromBytes(data []byte) (string, error) {
+func NewCidFromBytes(data []byte) (string, error) {
 	hash, err := mh.Sum(data, mh.SHA2_256, -1)
 	if err != nil {
 		return "", err
@@ -13,7 +13,7 @@ func NewCIDFromBytes(data []byte) (string, error) {
 	return cid.NewCidV1(cid.DagCBOR, hash).String(), nil
 }
 
-func VerifyCID(data []byte, id string) bool {
+func VerifyCid(data []byte, id string) bool {
 	hash, err := mh.Sum(data, mh.SHA2_256, -1)
 	if err != nil {
 		return false

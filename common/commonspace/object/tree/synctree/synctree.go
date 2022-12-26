@@ -101,7 +101,7 @@ func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 		deps.ObjectSync,
 		deps.Configuration)
 
-	id = objTree.ID()
+	id = objTree.Id()
 	heads := objTree.Heads()
 
 	deps.HeadNotifiable.UpdateHeads(id, heads)
@@ -122,7 +122,7 @@ func CreateSyncTree(ctx context.Context, deps CreateDeps) (id string, err error)
 		deps.ObjectSync,
 		deps.Configuration)
 
-	id = objTree.ID()
+	id = objTree.Id()
 	heads := objTree.Heads()
 
 	deps.HeadNotifiable.UpdateHeads(id, heads)
@@ -264,9 +264,9 @@ func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableCh
 		return
 	}
 	if s.notifiable != nil {
-		s.notifiable.UpdateHeads(s.ID(), res.Heads)
+		s.notifiable.UpdateHeads(s.Id(), res.Heads)
 	}
-	s.syncStatus.HeadsChange(s.ID(), res.Heads)
+	s.syncStatus.HeadsChange(s.Id(), res.Heads)
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
 	err = s.syncClient.BroadcastAsync(headUpdate)
 	return
@@ -292,7 +292,7 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload objecttree.
 	}
 	if res.Mode != objecttree.Nothing {
 		if s.notifiable != nil {
-			s.notifiable.UpdateHeads(s.ID(), res.Heads)
+			s.notifiable.UpdateHeads(s.Id(), res.Heads)
 		}
 		headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
 		err = s.syncClient.BroadcastAsync(headUpdate)
@@ -301,7 +301,7 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload objecttree.
 }
 
 func (s *syncTree) Delete() (err error) {
-	log.With("id", s.ID()).Debug("deleting sync tree")
+	log.With("id", s.Id()).Debug("deleting sync tree")
 	s.Lock()
 	defer s.Unlock()
 	if err = s.checkAlive(); err != nil {
@@ -316,7 +316,7 @@ func (s *syncTree) Delete() (err error) {
 }
 
 func (s *syncTree) Close() (err error) {
-	log.With("id", s.ID()).Debug("closing sync tree")
+	log.With("id", s.Id()).Debug("closing sync tree")
 	s.Lock()
 	defer s.Unlock()
 	if s.isClosed {
@@ -350,6 +350,6 @@ func (s *syncTree) afterBuild() {
 	}
 	s.treeUsage.Add(1)
 	if s.notifiable != nil {
-		s.notifiable.UpdateHeads(s.ID(), s.Heads())
+		s.notifiable.UpdateHeads(s.Id(), s.Heads())
 	}
 }

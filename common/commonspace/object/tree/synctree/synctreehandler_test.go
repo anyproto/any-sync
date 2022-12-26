@@ -89,7 +89,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		fx.receiveQueueMock.EXPECT().AddMessage(senderId, gomock.Eq(treeMsg), "").Return(false)
 		fx.receiveQueueMock.EXPECT().GetMessage(senderId).Return(treeMsg, "", nil)
 
-		fx.objectTreeMock.EXPECT().ID().AnyTimes().Return(treeId)
+		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2"}).Times(2)
 		fx.objectTreeMock.EXPECT().HasChanges(gomock.Eq([]string{"h1"})).Return(false)
 		fx.objectTreeMock.EXPECT().
@@ -123,7 +123,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		fx.receiveQueueMock.EXPECT().AddMessage(senderId, gomock.Eq(treeMsg), "").Return(false)
 		fx.receiveQueueMock.EXPECT().GetMessage(senderId).Return(treeMsg, "", nil)
 
-		fx.objectTreeMock.EXPECT().ID().AnyTimes().Return(treeId)
+		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2"}).AnyTimes()
 		fx.objectTreeMock.EXPECT().HasChanges(gomock.Eq([]string{"h1"})).Return(false)
 		fx.objectTreeMock.EXPECT().
@@ -159,7 +159,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		fx.receiveQueueMock.EXPECT().AddMessage(senderId, gomock.Eq(treeMsg), "").Return(false)
 		fx.receiveQueueMock.EXPECT().GetMessage(senderId).Return(treeMsg, "", nil)
 
-		fx.objectTreeMock.EXPECT().ID().AnyTimes().Return(treeId)
+		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h1"}).AnyTimes()
 
 		fx.receiveQueueMock.EXPECT().ClearQueue(senderId)
@@ -184,7 +184,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		fx.receiveQueueMock.EXPECT().AddMessage(senderId, gomock.Eq(treeMsg), "").Return(false)
 		fx.receiveQueueMock.EXPECT().GetMessage(senderId).Return(treeMsg, "", nil)
 
-		fx.objectTreeMock.EXPECT().ID().AnyTimes().Return(treeId)
+		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2"}).AnyTimes()
 		fx.syncClientMock.EXPECT().
 			CreateFullSyncRequest(gomock.Eq(fx.objectTreeMock), gomock.Eq([]string{"h1"}), gomock.Eq([]string{"h1"})).
@@ -212,7 +212,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		fx.receiveQueueMock.EXPECT().AddMessage(senderId, gomock.Eq(treeMsg), "").Return(false)
 		fx.receiveQueueMock.EXPECT().GetMessage(senderId).Return(treeMsg, "", nil)
 
-		fx.objectTreeMock.EXPECT().ID().AnyTimes().Return(treeId)
+		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h1"}).AnyTimes()
 
 		fx.receiveQueueMock.EXPECT().ClearQueue(senderId)
@@ -242,7 +242,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 		fx.receiveQueueMock.EXPECT().AddMessage(senderId, gomock.Eq(treeMsg), "").Return(false)
 		fx.receiveQueueMock.EXPECT().GetMessage(senderId).Return(treeMsg, "", nil)
 
-		fx.objectTreeMock.EXPECT().ID().AnyTimes().Return(treeId)
+		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Header().Return(nil)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2"}).AnyTimes()
 		fx.objectTreeMock.EXPECT().HasChanges(gomock.Eq([]string{"h1"})).Return(false)
@@ -280,7 +280,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 		fx.receiveQueueMock.EXPECT().GetMessage(senderId).Return(treeMsg, "", nil)
 
 		fx.objectTreeMock.EXPECT().
-			ID().AnyTimes().Return(treeId)
+			Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Header().Return(nil)
 		fx.objectTreeMock.EXPECT().
 			Heads().
@@ -313,7 +313,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 		fx.receiveQueueMock.EXPECT().GetMessage(senderId).Return(treeMsg, replyId, nil)
 
 		fx.objectTreeMock.EXPECT().
-			ID().AnyTimes().Return(treeId)
+			Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Header().Return(nil)
 		fx.syncClientMock.EXPECT().
 			CreateFullSyncResponse(gomock.Eq(fx.objectTreeMock), gomock.Eq([]string{"h1"}), gomock.Eq([]string{"h1"})).
@@ -342,7 +342,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 		fx.receiveQueueMock.EXPECT().GetMessage(senderId).Return(treeMsg, "", nil)
 
 		fx.objectTreeMock.EXPECT().
-			ID().AnyTimes().Return(treeId)
+			Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Header().Return(nil)
 		fx.objectTreeMock.EXPECT().
 			Heads().
@@ -385,7 +385,7 @@ func TestSyncHandler_HandleFullSyncResponse(t *testing.T) {
 		fx.receiveQueueMock.EXPECT().AddMessage(senderId, gomock.Eq(treeMsg), replyId).Return(false)
 		fx.receiveQueueMock.EXPECT().GetMessage(senderId).Return(treeMsg, replyId, nil)
 
-		fx.objectTreeMock.EXPECT().ID().AnyTimes().Return(treeId)
+		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().
 			Heads().
 			Return([]string{"h2"}).AnyTimes()
@@ -421,7 +421,7 @@ func TestSyncHandler_HandleFullSyncResponse(t *testing.T) {
 		fx.receiveQueueMock.EXPECT().AddMessage(senderId, gomock.Eq(treeMsg), replyId).Return(false)
 		fx.receiveQueueMock.EXPECT().GetMessage(senderId).Return(treeMsg, replyId, nil)
 
-		fx.objectTreeMock.EXPECT().ID().AnyTimes().Return(treeId)
+		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().
 			Heads().
 			Return([]string{"h1"}).AnyTimes()

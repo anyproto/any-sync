@@ -6,7 +6,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-func IDFromSigningPubKey(pubKey signingkey.PubKey) (peer.ID, error) {
+func IdFromSigningPubKey(pubKey signingkey.PubKey) (peer.ID, error) {
 	rawSigning, err := pubKey.Raw()
 	if err != nil {
 		return "", err
