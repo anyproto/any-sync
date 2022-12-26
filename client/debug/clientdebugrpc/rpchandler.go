@@ -31,7 +31,7 @@ func (r *rpcHandler) Watch(ctx context.Context, request *clientdebugrpcproto.Wat
 	if err != nil {
 		return
 	}
-	watcher := space.SyncStatus().(syncstatus.SyncStatusWatcher)
+	watcher := space.SyncStatus().(syncstatus.StatusWatcher)
 	watcher.Watch(request.TreeId)
 	resp = &clientdebugrpcproto.WatchResponse{}
 	return
@@ -42,7 +42,7 @@ func (r *rpcHandler) Unwatch(ctx context.Context, request *clientdebugrpcproto.U
 	if err != nil {
 		return
 	}
-	watcher := space.SyncStatus().(syncstatus.SyncStatusWatcher)
+	watcher := space.SyncStatus().(syncstatus.StatusWatcher)
 	watcher.Unwatch(request.TreeId)
 	resp = &clientdebugrpcproto.UnwatchResponse{}
 	return

@@ -7,7 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
 )
 
-const CName = "object.treegetter"
+const CName = "common.object.treegetter"
 
 type TreeGetter interface {
 	app.ComponentRunnable

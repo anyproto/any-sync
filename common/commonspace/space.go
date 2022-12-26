@@ -81,7 +81,7 @@ type Space interface {
 	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (objecttree.ObjectTree, error)
 	DeleteTree(ctx context.Context, id string) (err error)
 
-	SyncStatus() syncstatus.SyncStatusUpdater
+	SyncStatus() syncstatus.StatusUpdater
 
 	Close() error
 }
@@ -95,7 +95,7 @@ type space struct {
 
 	objectSync     objectsync.ObjectSync
 	headSync       headsync.HeadSync
-	syncStatus     syncstatus.SyncStatusUpdater
+	syncStatus     syncstatus.StatusUpdater
 	storage        spacestorage.SpaceStorage
 	cache          treegetter.TreeGetter
 	account        accountservice.Service
@@ -207,7 +207,7 @@ func (s *space) HeadSync() headsync.HeadSync {
 	return s.headSync
 }
 
-func (s *space) SyncStatus() syncstatus.SyncStatusUpdater {
+func (s *space) SyncStatus() syncstatus.StatusUpdater {
 	return s.syncStatus
 }
 

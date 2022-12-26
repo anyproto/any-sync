@@ -7,7 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 )
 
-const CName = "common.account"
+const CName = "common.accountservice"
 
 type Service interface {
 	app.Component

@@ -41,7 +41,7 @@ type syncTree struct {
 	objecttree.ObjectTree
 	synchandler.SyncHandler
 	syncClient SyncClient
-	syncStatus syncstatus.SyncStatusUpdater
+	syncStatus syncstatus.StatusUpdater
 	notifiable HeadNotifiable
 	listener   updatelistener.UpdateListener
 	treeUsage  *atomic.Int32
@@ -63,7 +63,7 @@ type CreateDeps struct {
 	ObjectSync     objectsync.ObjectSync
 	AclList        list.ACLList
 	SpaceStorage   spacestorage.SpaceStorage
-	SyncStatus     syncstatus.SyncStatusUpdater
+	SyncStatus     syncstatus.StatusUpdater
 	HeadNotifiable HeadNotifiable
 }
 
@@ -77,7 +77,7 @@ type BuildDeps struct {
 	SpaceStorage   spacestorage.SpaceStorage
 	TreeStorage    treestorage.TreeStorage
 	TreeUsage      *atomic.Int32
-	SyncStatus     syncstatus.SyncStatusUpdater
+	SyncStatus     syncstatus.StatusUpdater
 }
 
 func newWrappedSyncClient(

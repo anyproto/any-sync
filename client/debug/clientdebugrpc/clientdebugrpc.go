@@ -17,7 +17,7 @@ import (
 	"storj.io/drpc"
 )
 
-const CName = "debug.clientdebugrpc"
+const CName = "common.debug.clientdebugrpc"
 
 var log = logger.NewNamed(CName)
 

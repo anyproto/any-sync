@@ -113,7 +113,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 	syncStatus := syncstatus.NewNoOpSyncStatus()
 	// this will work only for clients, not the best solution, but...
 	if !lastConfiguration.IsResponsible(st.Id()) {
-		// TODO: move it to the client package and add possibility to inject SyncStatusProvider from the client
+		// TODO: move it to the client package and add possibility to inject StatusProvider from the client
 		syncStatus = syncstatus.NewSyncStatusProvider(st.Id(), syncstatus.DefaultDeps(lastConfiguration, st))
 	}
 

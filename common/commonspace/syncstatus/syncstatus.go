@@ -26,7 +26,7 @@ type UpdateReceiver interface {
 	UpdateNodeConnection(online bool)
 }
 
-type SyncStatusUpdater interface {
+type StatusUpdater interface {
 	HeadsChange(treeId string, heads []string)
 	HeadsReceive(senderId, treeId string, heads []string)
 
@@ -38,23 +38,23 @@ type SyncStatusUpdater interface {
 	Close() error
 }
 
-type SyncStatusWatcher interface {
+type StatusWatcher interface {
 	Watch(treeId string) (err error)
 	Unwatch(treeId string)
 	SetUpdateReceiver(updater UpdateReceiver)
 }
 
-type SyncStatusProvider interface {
-	SyncStatusUpdater
-	SyncStatusWatcher
+type StatusProvider interface {
+	StatusUpdater
+	StatusWatcher
 }
 
 type SyncStatus int
 
 const (
-	SyncStatusUnknown SyncStatus = iota
-	SyncStatusSynced
-	SyncStatusNotSynced
+	StatusUnknown SyncStatus = iota
+	StatusSynced
+	StatusNotSynced
 )
 
 type treeHeadsEntry struct {
@@ -104,7 +104,7 @@ func DefaultDeps(configuration nodeconf.Configuration, store spacestorage.SpaceS
 	}
 }
 
-func NewSyncStatusProvider(spaceId string, deps SyncStatusDeps) SyncStatusProvider {
+func NewSyncStatusProvider(spaceId string, deps SyncStatusDeps) StatusProvider {
 	return &syncStatusProvider{
 		spaceId:            spaceId,
 		treeHeads:          map[string]treeHeadsEntry{},
@@ -143,7 +143,7 @@ func (s *syncStatusProvider) HeadsChange(treeId string, heads []string) {
 	s.treeHeads[treeId] = treeHeadsEntry{
 		heads:        headsCopy,
 		stateCounter: s.stateCounter,
-		syncStatus:   SyncStatusNotSynced,
+		syncStatus:   StatusNotSynced,
 	}
 	s.stateCounter++
 }
@@ -193,7 +193,7 @@ func (s *syncStatusProvider) HeadsReceive(senderId, treeId string, heads []strin
 	defer s.Unlock()
 
 	curTreeHeads, ok := s.treeHeads[treeId]
-	if !ok || curTreeHeads.syncStatus == SyncStatusSynced {
+	if !ok || curTreeHeads.syncStatus == StatusSynced {
 		return
 	}
 
@@ -212,7 +212,7 @@ func (s *syncStatusProvider) HeadsReceive(senderId, treeId string, heads []strin
 		return h == ""
 	})
 	if len(curTreeHeads.heads) == 0 {
-		curTreeHeads.syncStatus = SyncStatusSynced
+		curTreeHeads.syncStatus = StatusSynced
 	}
 	s.treeHeads[treeId] = curTreeHeads
 }
@@ -239,7 +239,7 @@ func (s *syncStatusProvider) Watch(treeId string) (err error) {
 		s.treeHeads[treeId] = treeHeadsEntry{
 			heads:        heads,
 			stateCounter: s.stateCounter,
-			syncStatus:   SyncStatusUnknown,
+			syncStatus:   StatusUnknown,
 		}
 	}
 
@@ -285,7 +285,7 @@ func (s *syncStatusProvider) RemoveAllExcept(senderId string, differentRemoteIds
 		}
 		// if we didn't find our treeId in heads ids which are different from us and node
 		if _, found := slices.BinarySearch(differentRemoteIds, treeId); !found {
-			entry.syncStatus = SyncStatusSynced
+			entry.syncStatus = StatusSynced
 			s.treeHeads[treeId] = entry
 		}
 	}

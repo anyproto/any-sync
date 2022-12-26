@@ -11,7 +11,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 )
 
-const CName = "commonspace.spacestorage"
+const CName = "common.commonspace.spacestorage"
 
 var (
 	ErrSpaceStorageExists  = errors.New("space storage exists")
@@ -25,6 +25,7 @@ const (
 	TreeDeletedStatusDeleted = "deleted"
 )
 
+// TODO: consider moving to some file with all common interfaces etc
 type SpaceStorage interface {
 	treestorage.Provider
 	Id() string

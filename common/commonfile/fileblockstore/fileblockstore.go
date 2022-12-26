@@ -8,7 +8,7 @@ import (
 	"github.com/ipfs/go-cid"
 )
 
-var log = logger.NewNamed("filenode.fileblockstore")
+var log = logger.NewNamed(CName)
 
 var (
 	ErrCIDNotFound   = fileprotoerr.ErrCIDNotFound
