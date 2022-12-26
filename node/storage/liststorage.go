@@ -11,7 +11,7 @@ type listStorage struct {
 	db   *pogreb.DB
 	keys aclKeys
 	id   string
-	root *aclrecordproto.RawACLRecordWithId
+	root *aclrecordproto.RawAclRecordWithId
 }
 
 func newListStorage(db *pogreb.DB) (ls liststorage.ListStorage, err error) {
@@ -21,7 +21,7 @@ func newListStorage(db *pogreb.DB) (ls liststorage.ListStorage, err error) {
 		return
 	}
 	if rootId == nil {
-		err = liststorage.ErrUnknownACLId
+		err = liststorage.ErrUnknownAclId
 		return
 	}
 
@@ -30,11 +30,11 @@ func newListStorage(db *pogreb.DB) (ls liststorage.ListStorage, err error) {
 		return
 	}
 	if root == nil {
-		err = liststorage.ErrUnknownACLId
+		err = liststorage.ErrUnknownAclId
 		return
 	}
 
-	rootWithId := &aclrecordproto.RawACLRecordWithId{
+	rootWithId := &aclrecordproto.RawAclRecordWithId{
 		Payload: root,
 		Id:      string(rootId),
 	}
@@ -48,7 +48,7 @@ func newListStorage(db *pogreb.DB) (ls liststorage.ListStorage, err error) {
 	return
 }
 
-func createListStorage(db *pogreb.DB, root *aclrecordproto.RawACLRecordWithId) (ls liststorage.ListStorage, err error) {
+func createListStorage(db *pogreb.DB, root *aclrecordproto.RawAclRecordWithId) (ls liststorage.ListStorage, err error) {
 	keys := aclKeys{}
 	has, err := db.Has(keys.RootIdKey())
 	if err != nil {
@@ -86,7 +86,7 @@ func (l *listStorage) Id() string {
 	return l.id
 }
 
-func (l *listStorage) Root() (*aclrecordproto.RawACLRecordWithId, error) {
+func (l *listStorage) Root() (*aclrecordproto.RawAclRecordWithId, error) {
 	return l.root, nil
 }
 
@@ -96,14 +96,14 @@ func (l *listStorage) Head() (head string, err error) {
 		return
 	}
 	if bytes == nil {
-		err = liststorage.ErrUnknownACLId
+		err = liststorage.ErrUnknownAclId
 		return
 	}
 	head = string(bytes)
 	return
 }
 
-func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *aclrecordproto.RawACLRecordWithId, err error) {
+func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *aclrecordproto.RawAclRecordWithId, err error) {
 	res, err := l.db.Get(l.keys.RawRecordKey(id))
 	if err != nil {
 		return
@@ -113,7 +113,7 @@ func (l *listStorage) GetRawRecord(ctx context.Context, id string) (raw *aclreco
 		return
 	}
 
-	raw = &aclrecordproto.RawACLRecordWithId{
+	raw = &aclrecordproto.RawAclRecordWithId{
 		Payload: res,
 		Id:      id,
 	}
@@ -124,6 +124,6 @@ func (l *listStorage) SetHead(headId string) (err error) {
 	return l.db.Put(l.keys.HeadIdKey(), []byte(headId))
 }
 
-func (l *listStorage) AddRawRecord(ctx context.Context, rec *aclrecordproto.RawACLRecordWithId) error {
+func (l *listStorage) AddRawRecord(ctx context.Context, rec *aclrecordproto.RawAclRecordWithId) error {
 	return l.db.Put(l.keys.RawRecordKey(rec.Id), rec.Payload)
 }

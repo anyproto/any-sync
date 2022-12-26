@@ -25,18 +25,18 @@ type EdgeParameters struct {
 	label string
 }
 
-func (t *ACLListStorageBuilder) Graph() (string, error) {
+func (t *AclListStorageBuilder) Graph() (string, error) {
 	// TODO: check updates on https://github.com/goccy/go-graphviz/issues/52 or make a fix yourself to use better library here
 	graph := gographviz.NewGraph()
 	graph.SetName("G")
 	graph.SetDir(true)
 	var nodes = make(map[string]struct{})
 
-	var addNodes = func(r *aclrecordproto.ACLRecord, id string) error {
+	var addNodes = func(r *aclrecordproto.AclRecord, id string) error {
 		style := "solid"
 
 		var chSymbs []string
-		aclData := &aclrecordproto.ACLData{}
+		aclData := &aclrecordproto.AclData{}
 		err := proto.Unmarshal(r.GetData(), aclData)
 		if err != nil {
 			return err
@@ -44,7 +44,7 @@ func (t *ACLListStorageBuilder) Graph() (string, error) {
 
 		for _, chc := range aclData.AclContent {
 			tp := fmt.Sprintf("%T", chc.Value)
-			tp = strings.Replace(tp, "ACLChangeACLContentValueValueOf", "", 1)
+			tp = strings.Replace(tp, "AclChangeAclContentValueValueOf", "", 1)
 			res := ""
 			for _, ts := range tp {
 				if unicode.IsUpper(ts) {
@@ -91,7 +91,7 @@ func (t *ACLListStorageBuilder) Graph() (string, error) {
 		return nil
 	}
 
-	var addLinks = func(r *aclrecordproto.ACLRecord, id string) error {
+	var addLinks = func(r *aclrecordproto.AclRecord, id string) error {
 		if r.PrevId == "" {
 			return nil
 		}

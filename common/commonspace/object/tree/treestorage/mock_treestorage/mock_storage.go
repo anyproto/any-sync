@@ -37,7 +37,7 @@ func (m *MockListStorage) EXPECT() *MockListStorageMockRecorder {
 }
 
 // AddRawRecord mocks base method.
-func (m *MockListStorage) AddRawRecord(arg0 context.Context, arg1 *aclrecordproto.RawACLRecordWithId) error {
+func (m *MockListStorage) AddRawRecord(arg0 context.Context, arg1 *aclrecordproto.RawAclRecordWithId) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddRawRecord", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -51,10 +51,10 @@ func (mr *MockListStorageMockRecorder) AddRawRecord(arg0, arg1 interface{}) *gom
 }
 
 // GetRawRecord mocks base method.
-func (m *MockListStorage) GetRawRecord(arg0 context.Context, arg1 string) (*aclrecordproto.RawACLRecordWithId, error) {
+func (m *MockListStorage) GetRawRecord(arg0 context.Context, arg1 string) (*aclrecordproto.RawAclRecordWithId, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRawRecord", arg0, arg1)
-	ret0, _ := ret[0].(*aclrecordproto.RawACLRecordWithId)
+	ret0, _ := ret[0].(*aclrecordproto.RawAclRecordWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -95,10 +95,10 @@ func (mr *MockListStorageMockRecorder) Id() *gomock.Call {
 }
 
 // Root mocks base method.
-func (m *MockListStorage) Root() (*aclrecordproto.RawACLRecordWithId, error) {
+func (m *MockListStorage) Root() (*aclrecordproto.RawAclRecordWithId, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Root")
-	ret0, _ := ret[0].(*aclrecordproto.RawACLRecordWithId)
+	ret0, _ := ret[0].(*aclrecordproto.RawAclRecordWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

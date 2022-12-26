@@ -85,33 +85,33 @@ func (c *mockChangeBuilder) BuildRaw(ch *Change) (raw *treechangeproto.RawTreeCh
 
 type mockChangeValidator struct{}
 
-func (m *mockChangeValidator) ValidateNewChanges(tree *Tree, aclList list.ACLList, newChanges []*Change) error {
+func (m *mockChangeValidator) ValidateNewChanges(tree *Tree, aclList list.AclList, newChanges []*Change) error {
 	return nil
 }
 
-func (m *mockChangeValidator) ValidateFullTree(tree *Tree, aclList list.ACLList) error {
+func (m *mockChangeValidator) ValidateFullTree(tree *Tree, aclList list.AclList) error {
 	return nil
 }
 
 type testTreeContext struct {
-	aclList       list.ACLList
+	aclList       list.AclList
 	treeStorage   treestorage.TreeStorage
 	changeBuilder *mockChangeBuilder
 	changeCreator *mockChangeCreator
 	objTree       ObjectTree
 }
 
-func prepareACLList(t *testing.T) list.ACLList {
+func prepareAclList(t *testing.T) list.AclList {
 	st, err := acllistbuilder.NewListStorageWithTestName("userjoinexample.yml")
 	require.NoError(t, err, "building storage should not result in error")
 
-	aclList, err := list.BuildACLList(st)
+	aclList, err := list.BuildAclList(st)
 	require.NoError(t, err, "building acl list should be without error")
 
 	return aclList
 }
 
-func prepareTreeContext(t *testing.T, aclList list.ACLList) testTreeContext {
+func prepareTreeContext(t *testing.T, aclList list.AclList) testTreeContext {
 	changeCreator := &mockChangeCreator{}
 	treeStorage := changeCreator.createNewTreeStorage("0", aclList.Head().Id)
 	root, _ := treeStorage.Root()
@@ -149,7 +149,7 @@ func prepareTreeContext(t *testing.T, aclList list.ACLList) testTreeContext {
 }
 
 func TestObjectTree(t *testing.T) {
-	aclList := prepareACLList(t)
+	aclList := prepareAclList(t)
 
 	t.Run("add simple", func(t *testing.T) {
 		ctx := prepareTreeContext(t, aclList)

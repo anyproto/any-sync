@@ -160,7 +160,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		aclStorageMock := mock_treestorage.NewMockListStorage(ctrl)
 		settingsStorage := mock_treestorage.NewMockTreeStorage(ctrl)
 		settingsId := "settingsId"
-		aclRoot := &aclrecordproto.RawACLRecordWithId{
+		aclRoot := &aclrecordproto.RawAclRecordWithId{
 			Id: aclRootId,
 		}
 		settingsRoot := &treechangeproto.RawTreeChangeWithId{
@@ -176,7 +176,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(spaceId, clientMock))).
 			Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing)
 
-		stMock.EXPECT().ACLStorage().Return(aclStorageMock, nil)
+		stMock.EXPECT().AclStorage().Return(aclStorageMock, nil)
 		stMock.EXPECT().SpaceHeader().Return(spaceHeader, nil)
 		stMock.EXPECT().SpaceSettingsId().Return(spaceSettingsId)
 		stMock.EXPECT().TreeStorage(spaceSettingsId).Return(settingsStorage, nil)

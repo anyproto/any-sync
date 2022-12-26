@@ -147,7 +147,7 @@ func (d *diffSyncer) pingTreesInCache(ctx context.Context, trees []string) {
 }
 
 func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, cl spacesyncproto.DRPCSpaceSyncClient) (err error) {
-	aclStorage, err := d.storage.ACLStorage()
+	aclStorage, err := d.storage.AclStorage()
 	if err != nil {
 		return
 	}

@@ -120,7 +120,7 @@ func (s *spaceStorage) CreateTreeStorage(payload storage.TreeStorageCreatePayloa
 	return createTreeStorage(s.objDb, s.spaceId, payload)
 }
 
-func (s *spaceStorage) ACLStorage() (liststorage.ListStorage, error) {
+func (s *spaceStorage) AclStorage() (liststorage.ListStorage, error) {
 	return s.aclStorage, nil
 }
 

@@ -74,7 +74,7 @@ type objectTree struct {
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
 	treeBuilder     *treeBuilder
-	aclList         list2.ACLList
+	aclList         list2.AclList
 
 	id   string
 	root *treechangeproto.RawTreeChangeWithId
@@ -99,13 +99,13 @@ type objectTreeDeps struct {
 	treeStorage     treestorage.TreeStorage
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
-	aclList         list2.ACLList
+	aclList         list2.AclList
 }
 
 func defaultObjectTreeDeps(
 	rootChange *treechangeproto.RawTreeChangeWithId,
 	treeStorage treestorage.TreeStorage,
-	aclList list2.ACLList) objectTreeDeps {
+	aclList list2.AclList) objectTreeDeps {
 
 	keychain := keychain.NewKeychain()
 	changeBuilder := NewChangeBuilder(keychain, rootChange)
@@ -195,12 +195,12 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 	defer ot.aclList.RUnlock()
 
 	var (
-		state       = ot.aclList.ACLState() // special method for own keys
+		state       = ot.aclList.AclState() // special method for own keys
 		readKey     *symmetric.Key
 		readKeyHash uint64
 	)
-	canWrite := state.HasPermission(content.Identity, aclrecordproto.ACLUserPermissions_Writer) ||
-		state.HasPermission(content.Identity, aclrecordproto.ACLUserPermissions_Admin)
+	canWrite := state.HasPermission(content.Identity, aclrecordproto.AclUserPermissions_Writer) ||
+		state.HasPermission(content.Identity, aclrecordproto.AclUserPermissions_Admin)
 	if !canWrite {
 		err = list2.ErrInsufficientPermissions
 		return
@@ -606,7 +606,7 @@ func (ot *objectTree) snapshotPathIsActual() bool {
 func (ot *objectTree) validateTree(newChanges []*Change) error {
 	ot.aclList.RLock()
 	defer ot.aclList.RUnlock()
-	state := ot.aclList.ACLState()
+	state := ot.aclList.AclState()
 
 	// just not to take lock many times, updating the key map from aclList
 	if len(ot.keys) != len(state.UserReadKeys()) {

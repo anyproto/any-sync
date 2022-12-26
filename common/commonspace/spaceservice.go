@@ -134,7 +134,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 
 func (s *spaceService) addSpaceStorage(ctx context.Context, spaceDescription SpaceDescription) (st spacestorage.SpaceStorage, err error) {
 	payload := spacestorage.SpaceStorageCreatePayload{
-		AclWithId: &aclrecordproto.RawACLRecordWithId{
+		AclWithId: &aclrecordproto.RawAclRecordWithId{
 			Payload: spaceDescription.AclPayload,
 			Id:      spaceDescription.AclId,
 		},
@@ -176,7 +176,7 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 	}
 
 	st, err = s.storageProvider.CreateSpaceStorage(spacestorage.SpaceStorageCreatePayload{
-		AclWithId: &aclrecordproto.RawACLRecordWithId{
+		AclWithId: &aclrecordproto.RawAclRecordWithId{
 			Payload: res.Payload.AclPayload,
 			Id:      res.Payload.AclPayloadId,
 		},

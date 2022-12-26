@@ -12,14 +12,14 @@ type aclStateBuilder struct {
 	id          string
 }
 
-func newACLStateBuilderWithIdentity(accountData *accountdata.AccountData) *aclStateBuilder {
+func newAclStateBuilderWithIdentity(accountData *accountdata.AccountData) *aclStateBuilder {
 	return &aclStateBuilder{
 		signPrivKey: accountData.SignKey,
 		encPrivKey:  accountData.EncKey,
 	}
 }
 
-func newACLStateBuilder() *aclStateBuilder {
+func newAclStateBuilder() *aclStateBuilder {
 	return &aclStateBuilder{}
 }
 
@@ -27,14 +27,14 @@ func (sb *aclStateBuilder) Init(id string) {
 	sb.id = id
 }
 
-func (sb *aclStateBuilder) Build(records []*ACLRecord) (state *ACLState, err error) {
+func (sb *aclStateBuilder) Build(records []*AclRecord) (state *AclState, err error) {
 	if sb.encPrivKey != nil && sb.signPrivKey != nil {
-		state, err = newACLStateWithKeys(sb.id, sb.signPrivKey, sb.encPrivKey)
+		state, err = newAclStateWithKeys(sb.id, sb.signPrivKey, sb.encPrivKey)
 		if err != nil {
 			return
 		}
 	} else {
-		state = newACLState(sb.id)
+		state = newAclState(sb.id)
 	}
 	for _, rec := range records {
 		err = state.applyRecord(rec)
@@ -46,7 +46,7 @@ func (sb *aclStateBuilder) Build(records []*ACLRecord) (state *ACLState, err err
 	return state, err
 }
 
-func (sb *aclStateBuilder) Append(state *ACLState, records []*ACLRecord) (err error) {
+func (sb *aclStateBuilder) Append(state *AclState, records []*AclRecord) (err error) {
 	for _, rec := range records {
 		err = state.applyRecord(rec)
 		if err != nil {

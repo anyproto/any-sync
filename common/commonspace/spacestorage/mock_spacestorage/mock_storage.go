@@ -119,19 +119,19 @@ func (m *MockSpaceStorage) EXPECT() *MockSpaceStorageMockRecorder {
 	return m.recorder
 }
 
-// ACLStorage mocks base method.
-func (m *MockSpaceStorage) ACLStorage() (liststorage.ListStorage, error) {
+// AclStorage mocks base method.
+func (m *MockSpaceStorage) AclStorage() (liststorage.ListStorage, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ACLStorage")
+	ret := m.ctrl.Call(m, "AclStorage")
 	ret0, _ := ret[0].(liststorage.ListStorage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ACLStorage indicates an expected call of ACLStorage.
-func (mr *MockSpaceStorageMockRecorder) ACLStorage() *gomock.Call {
+// AclStorage indicates an expected call of AclStorage.
+func (mr *MockSpaceStorageMockRecorder) AclStorage() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACLStorage", reflect.TypeOf((*MockSpaceStorage)(nil).ACLStorage))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclStorage", reflect.TypeOf((*MockSpaceStorage)(nil).AclStorage))
 }
 
 // Close mocks base method.

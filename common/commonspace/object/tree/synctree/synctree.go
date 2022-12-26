@@ -61,7 +61,7 @@ type CreateDeps struct {
 	Payload        objecttree.ObjectTreeCreatePayload
 	Configuration  nodeconf.Configuration
 	ObjectSync     objectsync.ObjectSync
-	AclList        list.ACLList
+	AclList        list.AclList
 	SpaceStorage   spacestorage.SpaceStorage
 	SyncStatus     syncstatus.StatusUpdater
 	HeadNotifiable HeadNotifiable
@@ -73,7 +73,7 @@ type BuildDeps struct {
 	Configuration  nodeconf.Configuration
 	HeadNotifiable HeadNotifiable
 	Listener       updatelistener.UpdateListener
-	AclList        list.ACLList
+	AclList        list.AclList
 	SpaceStorage   spacestorage.SpaceStorage
 	TreeStorage    treestorage.TreeStorage
 	TreeUsage      *atomic.Int32

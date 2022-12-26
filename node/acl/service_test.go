@@ -30,7 +30,7 @@ func TestService_CreateLog(t *testing.T) {
 
 	aclId, _ := cidutil.NewCIDFromBytes([]byte("aclId"))
 
-	rec := &aclrecordproto.ACLRecord{
+	rec := &aclrecordproto.AclRecord{
 		PrevId:    "",
 		Identity:  fx.account.Account().Identity,
 		Data:      []byte{'1', '2', '3'},
@@ -38,7 +38,7 @@ func TestService_CreateLog(t *testing.T) {
 	}
 	pl, _ := rec.Marshal()
 
-	firstRecId, err := fx.CreateLog(ctx, aclId, &aclrecordproto.RawACLRecord{
+	firstRecId, err := fx.CreateLog(ctx, aclId, &aclrecordproto.RawAclRecord{
 		Payload: pl,
 	})
 	require.NoError(t, err)
@@ -48,7 +48,7 @@ func TestService_CreateLog(t *testing.T) {
 	assert.NotEmpty(t, firstRecIdBytes)
 	require.Len(t, clog.Records, 1)
 
-	var resultRawAcl = &aclrecordproto.RawACLRecord{}
+	var resultRawAcl = &aclrecordproto.RawAclRecord{}
 	require.NoError(t, resultRawAcl.Unmarshal(clog.Records[0].Payload))
 	valid, err := fx.account.Account().SignKey.GetPublic().Verify(resultRawAcl.Payload, resultRawAcl.AcceptorSignature)
 	require.NoError(t, err)
@@ -65,7 +65,7 @@ func TestService_AddRecord(t *testing.T) {
 
 	aclId, _ := cidutil.NewCIDFromBytes([]byte("aclId"))
 
-	rec := &aclrecordproto.ACLRecord{
+	rec := &aclrecordproto.AclRecord{
 		PrevId:    "",
 		Identity:  fx.account.Account().Identity,
 		Data:      []byte{'1', '2', '3'},
@@ -73,7 +73,7 @@ func TestService_AddRecord(t *testing.T) {
 	}
 	pl, _ := rec.Marshal()
 
-	firstRecId, err := fx.CreateLog(ctx, aclId, &aclrecordproto.RawACLRecord{
+	firstRecId, err := fx.CreateLog(ctx, aclId, &aclrecordproto.RawAclRecord{
 		Payload: pl,
 	})
 	require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestService_AddRecord(t *testing.T) {
 	fx.mockClient.EXPECT().AddRecord(ctx, aclIdBytes, gomock.Any()).Do(func(ctx context.Context, logId []byte, rec *consensusproto.Record) {
 		addRec = rec
 	})
-	rec = &aclrecordproto.ACLRecord{
+	rec = &aclrecordproto.AclRecord{
 		PrevId:    firstRecId,
 		Identity:  fx.account.Account().Identity,
 		Data:      []byte{'1', '2', '3', '4'},
@@ -93,7 +93,7 @@ func TestService_AddRecord(t *testing.T) {
 	}
 	pl, _ = rec.Marshal()
 
-	newRecId, err := fx.AddRecord(ctx, aclId, &aclrecordproto.RawACLRecord{
+	newRecId, err := fx.AddRecord(ctx, aclId, &aclrecordproto.RawAclRecord{
 		Payload: pl,
 	})
 	require.NoError(t, err)
