@@ -91,7 +91,11 @@ func (c *client) opLoop(ctx context.Context) {
 		}
 		if err != nil {
 			t.err = err
-			t.ready <- t
+			select {
+			case t.ready <- t:
+			case <-t.ctx.Done():
+			case <-ctx.Done():
+			}
 		}
 	}
 }
@@ -107,7 +111,13 @@ func (c *client) delete(ctx context.Context, t *task) (err error) {
 	}); err != nil {
 		return rpcerr.Unwrap(err)
 	}
-	t.ready <- t
+	select {
+	case t.ready <- t:
+	case <-t.ctx.Done():
+		return t.ctx.Err()
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 	c.stat.UpdateLastUsage()
 	return
 }
@@ -128,6 +138,8 @@ func (c *client) put(ctx context.Context, t *task) (err error) {
 	log.Debug("put cid", zap.String("cid", t.cid.String()))
 	select {
 	case t.ready <- t:
+	case <-t.ctx.Done():
+		return t.ctx.Err()
 	case <-ctx.Done():
 		return ctx.Err()
 	}
