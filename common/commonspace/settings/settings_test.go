@@ -129,7 +129,7 @@ func TestSettingsObject_DeleteObject(t *testing.T) {
 
 	delId := "delId"
 
-	fx.syncTree.EXPECT().ID().Return("syncId")
+	fx.syncTree.EXPECT().Id().Return("syncId")
 	fx.delState.EXPECT().Exists(delId).Return(false)
 	fx.spaceStorage.EXPECT().TreeStorage(delId).Return(nil, nil)
 	res := []byte("settingsData")

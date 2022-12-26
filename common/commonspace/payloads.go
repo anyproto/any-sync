@@ -55,7 +55,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 	if err != nil {
 		return
 	}
-	id, err := cidutil.NewCIDFromBytes(marshalled)
+	id, err := cidutil.NewCidFromBytes(marshalled)
 	spaceId := NewSpaceId(id, payload.ReplicationKey)
 	rawHeaderWithId := &spacesyncproto.RawSpaceHeaderWithId{
 		RawHeader: marshalled,
@@ -163,7 +163,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 	if err != nil {
 		return
 	}
-	id, err := cidutil.NewCIDFromBytes(marshalled)
+	id, err := cidutil.NewCidFromBytes(marshalled)
 	spaceId := NewSpaceId(id, repKey)
 	rawHeaderWithId := &spacesyncproto.RawSpaceHeaderWithId{
 		RawHeader: marshalled,
@@ -238,7 +238,7 @@ func marshalAclRoot(aclRoot *aclrecordproto2.AclRoot, key signingkey.PrivKey) (r
 	if err != nil {
 		return
 	}
-	aclHeadId, err := cidutil.NewCIDFromBytes(marshalledRaw)
+	aclHeadId, err := cidutil.NewCidFromBytes(marshalledRaw)
 	if err != nil {
 		return
 	}

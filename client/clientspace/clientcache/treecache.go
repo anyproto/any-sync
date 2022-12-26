@@ -40,14 +40,14 @@ type updateListener struct {
 func (u *updateListener) Update(tree objecttree.ObjectTree) {
 	log.With(
 		zap.Strings("heads", tree.Heads()),
-		zap.String("tree id", tree.ID())).
+		zap.String("tree id", tree.Id())).
 		Debug("updating tree")
 }
 
 func (u *updateListener) Rebuild(tree objecttree.ObjectTree) {
 	log.With(
 		zap.Strings("heads", tree.Heads()),
-		zap.String("tree id", tree.ID())).
+		zap.String("tree id", tree.Id())).
 		Debug("rebuilding tree")
 }
 

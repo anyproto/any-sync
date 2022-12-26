@@ -24,7 +24,7 @@ type RWLocker interface {
 
 type AclList interface {
 	RWLocker
-	ID() string
+	Id() string
 	Root() *aclrecordproto.RawAclRecordWithId
 	Records() []*AclRecord
 	AclState() *AclState
@@ -164,7 +164,7 @@ func (a *aclList) IsValidNext(rawRec *aclrecordproto.RawAclRecordWithId) (err er
 	return
 }
 
-func (a *aclList) ID() string {
+func (a *aclList) Id() string {
 	return a.id
 }
 

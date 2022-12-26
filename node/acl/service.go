@@ -125,7 +125,7 @@ func (s *service) signAndMarshal(rawRec *aclrecordproto.RawAclRecord) (recId, pr
 	if payload, err = rawRec.Marshal(); err != nil {
 		return
 	}
-	recCid, err := cidutil.NewCIDFromBytes(payload)
+	recCid, err := cidutil.NewCidFromBytes(payload)
 	if err != nil {
 		return
 	}

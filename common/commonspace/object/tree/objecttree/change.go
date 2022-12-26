@@ -7,7 +7,7 @@ import (
 
 var (
 	ErrIncorrectSignature = errors.New("change has incorrect signature")
-	ErrIncorrectCID       = errors.New("change has incorrect CID")
+	ErrIncorrectCid       = errors.New("change has incorrect CID")
 )
 
 // Change is an abstract type for all types of changes
@@ -58,6 +58,6 @@ func NewChangeFromRoot(id string, ch *treechangeproto.RootChange, signature []by
 	}
 }
 
-func (ch *Change) CID() string {
+func (ch *Change) Cid() string {
 	return ch.Id
 }
