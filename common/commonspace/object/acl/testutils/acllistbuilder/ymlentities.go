@@ -12,7 +12,7 @@ type Keys struct {
 	Read    []*Key `yaml:"Read"`
 }
 
-type ACLChange struct {
+type AclChange struct {
 	UserAdd *struct {
 		Identity          string   `yaml:"identity"`
 		EncryptionKey     string   `yaml:"encryptionKey"`
@@ -48,7 +48,7 @@ type ACLChange struct {
 
 type Record struct {
 	Identity   string       `yaml:"identity"`
-	AclChanges []*ACLChange `yaml:"aclChanges"`
+	AclChanges []*AclChange `yaml:"aclChanges"`
 	ReadKey    string       `yaml:"readKey"`
 }
 

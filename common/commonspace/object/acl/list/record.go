@@ -1,6 +1,6 @@
 package list
 
-type ACLRecord struct {
+type AclRecord struct {
 	Id                 string
 	PrevId             string
 	CurrentReadKeyHash uint64

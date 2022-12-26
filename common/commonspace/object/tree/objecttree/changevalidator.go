@@ -7,10 +7,10 @@ import (
 )
 
 type ObjectTreeValidator interface {
-	// ValidateFullTree should always be entered while holding a read lock on ACLList
-	ValidateFullTree(tree *Tree, aclList list.ACLList) error
-	// ValidateNewChanges should always be entered while holding a read lock on ACLList
-	ValidateNewChanges(tree *Tree, aclList list.ACLList, newChanges []*Change) error
+	// ValidateFullTree should always be entered while holding a read lock on AclList
+	ValidateFullTree(tree *Tree, aclList list.AclList) error
+	// ValidateNewChanges should always be entered while holding a read lock on AclList
+	ValidateNewChanges(tree *Tree, aclList list.AclList, newChanges []*Change) error
 }
 
 type objectTreeValidator struct{}
@@ -19,7 +19,7 @@ func newTreeValidator() ObjectTreeValidator {
 	return &objectTreeValidator{}
 }
 
-func (v *objectTreeValidator) ValidateFullTree(tree *Tree, aclList list.ACLList) (err error) {
+func (v *objectTreeValidator) ValidateFullTree(tree *Tree, aclList list.AclList) (err error) {
 	tree.Iterate(tree.RootId(), func(c *Change) (isContinue bool) {
 		err = v.validateChange(tree, aclList, c)
 		return err == nil
@@ -27,7 +27,7 @@ func (v *objectTreeValidator) ValidateFullTree(tree *Tree, aclList list.ACLList)
 	return err
 }
 
-func (v *objectTreeValidator) ValidateNewChanges(tree *Tree, aclList list.ACLList, newChanges []*Change) (err error) {
+func (v *objectTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclList, newChanges []*Change) (err error) {
 	for _, c := range newChanges {
 		err = v.validateChange(tree, aclList, c)
 		if err != nil {
@@ -37,10 +37,10 @@ func (v *objectTreeValidator) ValidateNewChanges(tree *Tree, aclList list.ACLLis
 	return
 }
 
-func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.ACLList, c *Change) (err error) {
+func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c *Change) (err error) {
 	var (
 		perm  list.UserPermissionPair
-		state = aclList.ACLState()
+		state = aclList.AclState()
 	)
 	// checking if the user could write
 	perm, err = state.PermissionsAtRecord(c.AclHeadId, c.Identity)
@@ -48,7 +48,7 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.ACLList, c
 		return
 	}
 
-	if perm.Permission != aclrecordproto.ACLUserPermissions_Writer && perm.Permission != aclrecordproto.ACLUserPermissions_Admin {
+	if perm.Permission != aclrecordproto.AclUserPermissions_Writer && perm.Permission != aclrecordproto.AclUserPermissions_Admin {
 		err = list.ErrInsufficientPermissions
 		return
 	}

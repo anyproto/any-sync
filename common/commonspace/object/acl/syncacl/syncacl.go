@@ -6,15 +6,15 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectsync/synchandler"
 )
 
-type SyncACL struct {
-	list.ACLList
+type SyncAcl struct {
+	list.AclList
 	synchandler.SyncHandler
 	streamPool objectsync.StreamPool
 }
 
-func NewSyncACL(aclList list.ACLList, streamPool objectsync.StreamPool) *SyncACL {
-	return &SyncACL{
-		ACLList:     aclList,
+func NewSyncAcl(aclList list.AclList, streamPool objectsync.StreamPool) *SyncAcl {
+	return &SyncAcl{
+		AclList:     aclList,
 		SyncHandler: nil,
 		streamPool:  streamPool,
 	}

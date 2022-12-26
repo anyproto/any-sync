@@ -21,7 +21,7 @@ type ObjectTreeCreatePayload struct {
 	IsEncrypted bool
 }
 
-func BuildObjectTree(treeStorage treestorage.TreeStorage, aclList list.ACLList) (ObjectTree, error) {
+func BuildObjectTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
 	rootChange, err := treeStorage.Root()
 	if err != nil {
 		return nil, err
@@ -32,14 +32,14 @@ func BuildObjectTree(treeStorage treestorage.TreeStorage, aclList list.ACLList) 
 
 func CreateDerivedObjectTree(
 	payload ObjectTreeCreatePayload,
-	aclList list.ACLList,
+	aclList list.AclList,
 	createStorage treestorage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
 	return createObjectTree(payload, 0, nil, aclList, createStorage)
 }
 
 func CreateObjectTree(
 	payload ObjectTreeCreatePayload,
-	aclList list.ACLList,
+	aclList list.AclList,
 	createStorage treestorage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
 	bytes := make([]byte, 32)
 	_, err = rand.Read(bytes)
@@ -53,7 +53,7 @@ func createObjectTree(
 	payload ObjectTreeCreatePayload,
 	timestamp int64,
 	seed []byte,
-	aclList list.ACLList,
+	aclList list.AclList,
 	createStorage treestorage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
 	aclList.RLock()
 	aclHeadId := aclList.Head().Id

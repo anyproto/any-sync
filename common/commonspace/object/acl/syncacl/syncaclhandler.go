@@ -9,11 +9,11 @@ import (
 )
 
 type syncAclHandler struct {
-	acl list.ACLList
+	acl list.AclList
 }
 
 func (s *syncAclHandler) HandleMessage(ctx context.Context, senderId string, req *spacesyncproto.ObjectSyncMessage) (err error) {
-	aclMsg := &aclrecordproto.ACLSyncMessage{}
+	aclMsg := &aclrecordproto.AclSyncMessage{}
 	if err = aclMsg.Unmarshal(req.Payload); err != nil {
 		return
 	}
@@ -26,6 +26,6 @@ func (s *syncAclHandler) HandleMessage(ctx context.Context, senderId string, req
 	}
 }
 
-func (s *syncAclHandler) handleAddRecords(ctx context.Context, senderId string, addRecord *aclrecordproto.ACLAddRecords) (err error) {
+func (s *syncAclHandler) handleAddRecords(ctx context.Context, senderId string, addRecord *aclrecordproto.AclAddRecords) (err error) {
 	return
 }

@@ -10,12 +10,12 @@ import (
 
 type commonSpaceGetter struct {
 	spaceId    string
-	aclList    *syncacl.SyncACL
+	aclList    *syncacl.SyncAcl
 	treeGetter treegetter.TreeGetter
 	settings   settings.SettingsObject
 }
 
-func newCommonSpaceGetter(spaceId string, aclList *syncacl.SyncACL, treeGetter treegetter.TreeGetter, settings settings.SettingsObject) syncobjectgetter.SyncObjectGetter {
+func newCommonSpaceGetter(spaceId string, aclList *syncacl.SyncAcl, treeGetter treegetter.TreeGetter, settings settings.SettingsObject) syncobjectgetter.SyncObjectGetter {
 	return &commonSpaceGetter{
 		spaceId:    spaceId,
 		aclList:    aclList,

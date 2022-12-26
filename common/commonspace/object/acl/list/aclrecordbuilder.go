@@ -11,9 +11,9 @@ import (
 )
 
 // remove interface
-type ACLRecordBuilder interface {
-	ConvertFromRaw(rawIdRecord *aclrecordproto.RawACLRecordWithId) (rec *ACLRecord, err error)
-	BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyBytes []byte, state *ACLState) (rec *aclrecordproto.RawACLRecord, err error)
+type AclRecordBuilder interface {
+	ConvertFromRaw(rawIdRecord *aclrecordproto.RawAclRecordWithId) (rec *AclRecord, err error)
+	BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyBytes []byte, state *AclState) (rec *aclrecordproto.RawAclRecord, err error)
 }
 
 type aclRecordBuilder struct {
@@ -21,14 +21,14 @@ type aclRecordBuilder struct {
 	keychain *keychain.Keychain
 }
 
-func newACLRecordBuilder(id string, keychain *keychain.Keychain) ACLRecordBuilder {
+func newAclRecordBuilder(id string, keychain *keychain.Keychain) AclRecordBuilder {
 	return &aclRecordBuilder{
 		id:       id,
 		keychain: keychain,
 	}
 }
 
-func (a *aclRecordBuilder) BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyBytes []byte, state *ACLState) (rec *aclrecordproto.RawACLRecord, err error) {
+func (a *aclRecordBuilder) BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyBytes []byte, state *AclState) (rec *aclrecordproto.RawAclRecord, err error) {
 	acceptPrivKey, err := signingkey.NewSigningEd25519PrivKeyFromBytes(acceptPrivKeyBytes)
 	if err != nil {
 		return
@@ -69,21 +69,21 @@ func (a *aclRecordBuilder) BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyByt
 		return
 	}
 
-	userJoin := &aclrecordproto.ACLUserJoin{
+	userJoin := &aclrecordproto.AclUserJoin{
 		Identity:          state.Identity(),
 		EncryptionKey:     encPubKeyBytes,
 		AcceptSignature:   idSignature,
 		AcceptPubKey:      acceptPubKeyBytes,
 		EncryptedReadKeys: symKeys,
 	}
-	aclData := &aclrecordproto.ACLData{AclContent: []*aclrecordproto.ACLContentValue{
-		{Value: &aclrecordproto.ACLContentValue_UserJoin{UserJoin: userJoin}},
+	aclData := &aclrecordproto.AclData{AclContent: []*aclrecordproto.AclContentValue{
+		{Value: &aclrecordproto.AclContentValue_UserJoin{UserJoin: userJoin}},
 	}}
 	marshalledJoin, err := aclData.Marshal()
 	if err != nil {
 		return
 	}
-	aclRecord := &aclrecordproto.ACLRecord{
+	aclRecord := &aclrecordproto.AclRecord{
 		PrevId:             state.LastRecordId(),
 		Identity:           state.Identity(),
 		Data:               marshalledJoin,
@@ -98,28 +98,28 @@ func (a *aclRecordBuilder) BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyByt
 	if err != nil {
 		return
 	}
-	rec = &aclrecordproto.RawACLRecord{
+	rec = &aclrecordproto.RawAclRecord{
 		Payload:   marshalledRecord,
 		Signature: recSignature,
 	}
 	return
 }
 
-func (a *aclRecordBuilder) ConvertFromRaw(rawIdRecord *aclrecordproto.RawACLRecordWithId) (rec *ACLRecord, err error) {
-	rawRec := &aclrecordproto.RawACLRecord{}
+func (a *aclRecordBuilder) ConvertFromRaw(rawIdRecord *aclrecordproto.RawAclRecordWithId) (rec *AclRecord, err error) {
+	rawRec := &aclrecordproto.RawAclRecord{}
 	err = proto.Unmarshal(rawIdRecord.Payload, rawRec)
 	if err != nil {
 		return
 	}
 
 	if rawIdRecord.Id == a.id {
-		aclRoot := &aclrecordproto.ACLRoot{}
+		aclRoot := &aclrecordproto.AclRoot{}
 		err = proto.Unmarshal(rawRec.Payload, aclRoot)
 		if err != nil {
 			return
 		}
 
-		rec = &ACLRecord{
+		rec = &AclRecord{
 			Id:                 rawIdRecord.Id,
 			CurrentReadKeyHash: aclRoot.CurrentReadKeyHash,
 			Timestamp:          aclRoot.Timestamp,
@@ -128,13 +128,13 @@ func (a *aclRecordBuilder) ConvertFromRaw(rawIdRecord *aclrecordproto.RawACLReco
 			Model:              aclRoot,
 		}
 	} else {
-		aclRecord := &aclrecordproto.ACLRecord{}
+		aclRecord := &aclrecordproto.AclRecord{}
 		err = proto.Unmarshal(rawRec.Payload, aclRecord)
 		if err != nil {
 			return
 		}
 
-		rec = &ACLRecord{
+		rec = &AclRecord{
 			Id:                 rawIdRecord.Id,
 			PrevId:             aclRecord.PrevId,
 			CurrentReadKeyHash: aclRecord.CurrentReadKeyHash,
@@ -151,8 +151,8 @@ func (a *aclRecordBuilder) ConvertFromRaw(rawIdRecord *aclrecordproto.RawACLReco
 
 func verifyRaw(
 	keychain *keychain.Keychain,
-	rawRec *aclrecordproto.RawACLRecord,
-	recWithId *aclrecordproto.RawACLRecordWithId,
+	rawRec *aclrecordproto.RawAclRecord,
+	recWithId *aclrecordproto.RawAclRecordWithId,
 	identity []byte) (err error) {
 	identityKey, err := keychain.GetOrAdd(string(identity))
 	if err != nil {

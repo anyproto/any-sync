@@ -32,14 +32,14 @@ type SpaceStorage interface {
 	SetTreeDeletedStatus(id, state string) error
 	TreeDeletedStatus(id string) (string, error)
 	SpaceSettingsId() string
-	ACLStorage() (liststorage.ListStorage, error)
+	AclStorage() (liststorage.ListStorage, error)
 	SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error)
 	StoredIds() ([]string, error)
 	Close() error
 }
 
 type SpaceStorageCreatePayload struct {
-	AclWithId           *aclrecordproto.RawACLRecordWithId
+	AclWithId           *aclrecordproto.RawAclRecordWithId
 	SpaceHeaderWithId   *spacesyncproto.RawSpaceHeaderWithId
 	SpaceSettingsWithId *treechangeproto.RawTreeChangeWithId
 }

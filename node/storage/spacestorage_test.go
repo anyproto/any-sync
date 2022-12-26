@@ -17,7 +17,7 @@ func spaceTestPayload() spacestorage.SpaceStorageCreatePayload {
 		RawHeader: []byte("header"),
 		Id:        "headerId",
 	}
-	aclRoot := &aclrecordproto.RawACLRecordWithId{
+	aclRoot := &aclrecordproto.RawAclRecordWithId{
 		Payload: []byte("aclRoot"),
 		Id:      "aclRootId",
 	}
@@ -37,7 +37,7 @@ func testSpace(t *testing.T, store spacestorage.SpaceStorage, payload spacestora
 	require.NoError(t, err)
 	require.Equal(t, payload.SpaceHeaderWithId, header)
 
-	aclStorage, err := store.ACLStorage()
+	aclStorage, err := store.AclStorage()
 	require.NoError(t, err)
 	testList(t, aclStorage, payload.AclWithId, payload.AclWithId.Id)
 }

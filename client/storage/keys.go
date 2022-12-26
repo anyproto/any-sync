@@ -10,7 +10,7 @@ type aclKeys struct {
 	headKey []byte
 }
 
-func newACLKeys(spaceId string) aclKeys {
+func newAclKeys(spaceId string) aclKeys {
 	return aclKeys{
 		spaceId: spaceId,
 		rootKey: treestorage.JoinStringsToBytes("space", spaceId, "a", "rootId"),

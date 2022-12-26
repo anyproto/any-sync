@@ -18,23 +18,23 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type ACLListStorageBuilder struct {
+type AclListStorageBuilder struct {
 	liststorage.ListStorage
 	keychain *YAMLKeychain
 }
 
-func NewACLListStorageBuilder(keychain *YAMLKeychain) *ACLListStorageBuilder {
-	return &ACLListStorageBuilder{
+func NewAclListStorageBuilder(keychain *YAMLKeychain) *AclListStorageBuilder {
+	return &AclListStorageBuilder{
 		keychain: keychain,
 	}
 }
 
 func NewListStorageWithTestName(name string) (liststorage.ListStorage, error) {
 	filePath := path.Join(yamltests.Path(), name)
-	return NewACLListStorageBuilderFromFile(filePath)
+	return NewAclListStorageBuilderFromFile(filePath)
 }
 
-func NewACLListStorageBuilderFromFile(file string) (*ACLListStorageBuilder, error) {
+func NewAclListStorageBuilderFromFile(file string) (*AclListStorageBuilder, error) {
 	content, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err
@@ -46,13 +46,13 @@ func NewACLListStorageBuilderFromFile(file string) (*ACLListStorageBuilder, erro
 		return nil, err
 	}
 
-	tb := NewACLListStorageBuilder(NewKeychain())
+	tb := NewAclListStorageBuilder(NewKeychain())
 	tb.Parse(&ymlTree)
 
 	return tb, nil
 }
 
-func (t *ACLListStorageBuilder) createRaw(rec proto.Marshaler, identity []byte) *aclrecordproto.RawACLRecordWithId {
+func (t *AclListStorageBuilder) createRaw(rec proto.Marshaler, identity []byte) *aclrecordproto.RawAclRecordWithId {
 	protoMarshalled, err := rec.Marshal()
 	if err != nil {
 		panic("should be able to marshal final acl message!")
@@ -63,7 +63,7 @@ func (t *ACLListStorageBuilder) createRaw(rec proto.Marshaler, identity []byte) 
 		panic("should be able to sign final acl message!")
 	}
 
-	rawRec := &aclrecordproto.RawACLRecord{
+	rawRec := &aclrecordproto.RawAclRecord{
 		Payload:   protoMarshalled,
 		Signature: signature,
 	}
@@ -75,24 +75,24 @@ func (t *ACLListStorageBuilder) createRaw(rec proto.Marshaler, identity []byte) 
 
 	id, _ := cidutil.NewCIDFromBytes(rawMarshalled)
 
-	return &aclrecordproto.RawACLRecordWithId{
+	return &aclrecordproto.RawAclRecordWithId{
 		Payload: rawMarshalled,
 		Id:      id,
 	}
 }
 
-func (t *ACLListStorageBuilder) GetKeychain() *YAMLKeychain {
+func (t *AclListStorageBuilder) GetKeychain() *YAMLKeychain {
 	return t.keychain
 }
 
-func (t *ACLListStorageBuilder) Parse(l *YMLList) {
+func (t *AclListStorageBuilder) Parse(l *YMLList) {
 	// Just to clarify - we are generating new identities for the ones that
 	// are specified in the yml file, because our identities should be Ed25519
 	// the same thing is happening for the encryption keys
 	t.keychain.ParseKeys(&l.Keys)
 	rawRoot := t.parseRoot(l.Root)
 	var err error
-	t.ListStorage, err = liststorage.NewInMemoryACLListStorage(rawRoot.Id, []*aclrecordproto.RawACLRecordWithId{rawRoot})
+	t.ListStorage, err = liststorage.NewInMemoryAclListStorage(rawRoot.Id, []*aclrecordproto.RawAclRecordWithId{rawRoot})
 	if err != nil {
 		panic(err)
 	}
@@ -109,19 +109,19 @@ func (t *ACLListStorageBuilder) Parse(l *YMLList) {
 	t.SetHead(prevId)
 }
 
-func (t *ACLListStorageBuilder) parseRecord(rec *Record, prevId string) *aclrecordproto.ACLRecord {
+func (t *AclListStorageBuilder) parseRecord(rec *Record, prevId string) *aclrecordproto.AclRecord {
 	k := t.keychain.GetKey(rec.ReadKey).(*SymKey)
-	var aclChangeContents []*aclrecordproto.ACLContentValue
+	var aclChangeContents []*aclrecordproto.AclContentValue
 	for _, ch := range rec.AclChanges {
-		aclChangeContent := t.parseACLChange(ch)
+		aclChangeContent := t.parseAclChange(ch)
 		aclChangeContents = append(aclChangeContents, aclChangeContent)
 	}
-	data := &aclrecordproto.ACLData{
+	data := &aclrecordproto.AclData{
 		AclContent: aclChangeContents,
 	}
 	bytes, _ := data.Marshal()
 
-	return &aclrecordproto.ACLRecord{
+	return &aclrecordproto.AclRecord{
 		PrevId:             prevId,
 		Identity:           []byte(t.keychain.GetIdentity(rec.Identity)),
 		Data:               bytes,
@@ -130,7 +130,7 @@ func (t *ACLListStorageBuilder) parseRecord(rec *Record, prevId string) *aclreco
 	}
 }
 
-func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecordproto.ACLContentValue) {
+func (t *AclListStorageBuilder) parseAclChange(ch *AclChange) (convCh *aclrecordproto.AclContentValue) {
 	switch {
 	case ch.UserAdd != nil:
 		add := ch.UserAdd
@@ -138,9 +138,9 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 		encKey := t.keychain.GetKey(add.EncryptionKey).(encryptionkey.PrivKey)
 		rawKey, _ := encKey.GetPublic().Raw()
 
-		convCh = &aclrecordproto.ACLContentValue{
-			Value: &aclrecordproto.ACLContentValue_UserAdd{
-				UserAdd: &aclrecordproto.ACLUserAdd{
+		convCh = &aclrecordproto.AclContentValue{
+			Value: &aclrecordproto.AclContentValue_UserAdd{
+				UserAdd: &aclrecordproto.AclUserAdd{
 					Identity:          []byte(t.keychain.GetIdentity(add.Identity)),
 					EncryptionKey:     rawKey,
 					EncryptedReadKeys: t.encryptReadKeysWithPubKey(add.EncryptedReadKeys, encKey),
@@ -162,9 +162,9 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 		}
 		acceptPubKey, _ := signKey.GetPublic().Raw()
 
-		convCh = &aclrecordproto.ACLContentValue{
-			Value: &aclrecordproto.ACLContentValue_UserJoin{
-				UserJoin: &aclrecordproto.ACLUserJoin{
+		convCh = &aclrecordproto.AclContentValue{
+			Value: &aclrecordproto.AclContentValue_UserJoin{
+				UserJoin: &aclrecordproto.AclUserJoin{
 					Identity:          []byte(t.keychain.GetIdentity(join.Identity)),
 					EncryptionKey:     rawKey,
 					AcceptSignature:   signature,
@@ -179,9 +179,9 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 		hash := t.keychain.GetKey(invite.EncryptionKey).(*SymKey).Hash
 		encKey := t.keychain.ReadKeysByHash[hash]
 
-		convCh = &aclrecordproto.ACLContentValue{
-			Value: &aclrecordproto.ACLContentValue_UserInvite{
-				UserInvite: &aclrecordproto.ACLUserInvite{
+		convCh = &aclrecordproto.AclContentValue{
+			Value: &aclrecordproto.AclContentValue_UserInvite{
+				UserInvite: &aclrecordproto.AclUserInvite{
 					AcceptPublicKey:   rawAcceptKey,
 					EncryptSymKeyHash: hash,
 					EncryptedReadKeys: t.encryptReadKeysWithSymKey(invite.EncryptedReadKeys, encKey.Key),
@@ -192,9 +192,9 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 	case ch.UserPermissionChange != nil:
 		permissionChange := ch.UserPermissionChange
 
-		convCh = &aclrecordproto.ACLContentValue{
-			Value: &aclrecordproto.ACLContentValue_UserPermissionChange{
-				UserPermissionChange: &aclrecordproto.ACLUserPermissionChange{
+		convCh = &aclrecordproto.AclContentValue{
+			Value: &aclrecordproto.AclContentValue_UserPermissionChange{
+				UserPermissionChange: &aclrecordproto.AclUserPermissionChange{
 					Identity:    []byte(t.keychain.GetIdentity(permissionChange.Identity)),
 					Permissions: t.convertPermission(permissionChange.Permission),
 				},
@@ -205,7 +205,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 
 		newReadKey := t.keychain.GetKey(remove.NewReadKey).(*SymKey)
 
-		var replaces []*aclrecordproto.ACLReadKeyReplace
+		var replaces []*aclrecordproto.AclReadKeyReplace
 		for _, id := range remove.IdentitiesLeft {
 			encKey := t.keychain.EncryptionKeysByYAMLName[id]
 			rawEncKey, _ := encKey.GetPublic().Raw()
@@ -213,16 +213,16 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 			if err != nil {
 				panic(err)
 			}
-			replaces = append(replaces, &aclrecordproto.ACLReadKeyReplace{
+			replaces = append(replaces, &aclrecordproto.AclReadKeyReplace{
 				Identity:         []byte(t.keychain.GetIdentity(id)),
 				EncryptionKey:    rawEncKey,
 				EncryptedReadKey: encReadKey,
 			})
 		}
 
-		convCh = &aclrecordproto.ACLContentValue{
-			Value: &aclrecordproto.ACLContentValue_UserRemove{
-				UserRemove: &aclrecordproto.ACLUserRemove{
+		convCh = &aclrecordproto.AclContentValue{
+			Value: &aclrecordproto.AclContentValue_UserRemove{
+				UserRemove: &aclrecordproto.AclUserRemove{
 					Identity:        []byte(t.keychain.GetIdentity(remove.RemovedIdentity)),
 					ReadKeyReplaces: replaces,
 				},
@@ -236,7 +236,7 @@ func (t *ACLListStorageBuilder) parseACLChange(ch *ACLChange) (convCh *aclrecord
 	return convCh
 }
 
-func (t *ACLListStorageBuilder) encryptReadKeysWithPubKey(keys []string, encKey encryptionkey.PrivKey) (enc [][]byte) {
+func (t *AclListStorageBuilder) encryptReadKeysWithPubKey(keys []string, encKey encryptionkey.PrivKey) (enc [][]byte) {
 	for _, k := range keys {
 		realKey := t.keychain.GetKey(k).(*SymKey).Key.Bytes()
 		res, err := encKey.GetPublic().Encrypt(realKey)
@@ -249,7 +249,7 @@ func (t *ACLListStorageBuilder) encryptReadKeysWithPubKey(keys []string, encKey 
 	return
 }
 
-func (t *ACLListStorageBuilder) encryptReadKeysWithSymKey(keys []string, key *symmetric.Key) (enc [][]byte) {
+func (t *AclListStorageBuilder) encryptReadKeysWithSymKey(keys []string, key *symmetric.Key) (enc [][]byte) {
 	for _, k := range keys {
 		realKey := t.keychain.GetKey(k).(*SymKey).Key.Bytes()
 		res, err := key.Encrypt(realKey)
@@ -262,28 +262,28 @@ func (t *ACLListStorageBuilder) encryptReadKeysWithSymKey(keys []string, key *sy
 	return
 }
 
-func (t *ACLListStorageBuilder) convertPermission(perm string) aclrecordproto.ACLUserPermissions {
+func (t *AclListStorageBuilder) convertPermission(perm string) aclrecordproto.AclUserPermissions {
 	switch perm {
 	case "admin":
-		return aclrecordproto.ACLUserPermissions_Admin
+		return aclrecordproto.AclUserPermissions_Admin
 	case "writer":
-		return aclrecordproto.ACLUserPermissions_Writer
+		return aclrecordproto.AclUserPermissions_Writer
 	case "reader":
-		return aclrecordproto.ACLUserPermissions_Reader
+		return aclrecordproto.AclUserPermissions_Reader
 	default:
 		panic(fmt.Sprintf("incorrect permission: %s", perm))
 	}
 }
 
-func (t *ACLListStorageBuilder) traverseFromHead(f func(rec *aclrecordproto.ACLRecord, id string) error) (err error) {
+func (t *AclListStorageBuilder) traverseFromHead(f func(rec *aclrecordproto.AclRecord, id string) error) (err error) {
 	panic("this was removed, add if needed")
 }
 
-func (t *ACLListStorageBuilder) parseRoot(root *Root) (rawRoot *aclrecordproto.RawACLRecordWithId) {
+func (t *AclListStorageBuilder) parseRoot(root *Root) (rawRoot *aclrecordproto.RawAclRecordWithId) {
 	rawSignKey, _ := t.keychain.SigningKeysByYAMLName[root.Identity].GetPublic().Raw()
 	rawEncKey, _ := t.keychain.EncryptionKeysByYAMLName[root.Identity].GetPublic().Raw()
 	readKey := t.keychain.ReadKeysByYAMLName[root.Identity]
-	aclRoot := &aclrecordproto.ACLRoot{
+	aclRoot := &aclrecordproto.AclRoot{
 		Identity:           rawSignKey,
 		EncryptionKey:      rawEncKey,
 		SpaceId:            root.SpaceId,

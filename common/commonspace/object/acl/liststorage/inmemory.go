@@ -7,27 +7,27 @@ import (
 	"sync"
 )
 
-type inMemoryACLListStorage struct {
+type inMemoryAclListStorage struct {
 	id      string
-	root    *aclrecordproto.RawACLRecordWithId
+	root    *aclrecordproto.RawAclRecordWithId
 	head    string
-	records map[string]*aclrecordproto.RawACLRecordWithId
+	records map[string]*aclrecordproto.RawAclRecordWithId
 
 	sync.RWMutex
 }
 
-func NewInMemoryACLListStorage(
+func NewInMemoryAclListStorage(
 	id string,
-	records []*aclrecordproto.RawACLRecordWithId) (ListStorage, error) {
+	records []*aclrecordproto.RawAclRecordWithId) (ListStorage, error) {
 
-	allRecords := make(map[string]*aclrecordproto.RawACLRecordWithId)
+	allRecords := make(map[string]*aclrecordproto.RawAclRecordWithId)
 	for _, ch := range records {
 		allRecords[ch.Id] = ch
 	}
 	root := records[0]
 	head := records[len(records)-1]
 
-	return &inMemoryACLListStorage{
+	return &inMemoryAclListStorage{
 		id:      root.Id,
 		root:    root,
 		head:    head.Id,
@@ -35,32 +35,32 @@ func NewInMemoryACLListStorage(
 	}, nil
 }
 
-func (t *inMemoryACLListStorage) Id() string {
+func (t *inMemoryAclListStorage) Id() string {
 	t.RLock()
 	defer t.RUnlock()
 	return t.id
 }
 
-func (t *inMemoryACLListStorage) Root() (*aclrecordproto.RawACLRecordWithId, error) {
+func (t *inMemoryAclListStorage) Root() (*aclrecordproto.RawAclRecordWithId, error) {
 	t.RLock()
 	defer t.RUnlock()
 	return t.root, nil
 }
 
-func (t *inMemoryACLListStorage) Head() (string, error) {
+func (t *inMemoryAclListStorage) Head() (string, error) {
 	t.RLock()
 	defer t.RUnlock()
 	return t.head, nil
 }
 
-func (t *inMemoryACLListStorage) SetHead(head string) error {
+func (t *inMemoryAclListStorage) SetHead(head string) error {
 	t.Lock()
 	defer t.Unlock()
 	t.head = head
 	return nil
 }
 
-func (t *inMemoryACLListStorage) AddRawRecord(ctx context.Context, record *aclrecordproto.RawACLRecordWithId) error {
+func (t *inMemoryAclListStorage) AddRawRecord(ctx context.Context, record *aclrecordproto.RawAclRecordWithId) error {
 	t.Lock()
 	defer t.Unlock()
 	// TODO: better to do deep copy
@@ -68,7 +68,7 @@ func (t *inMemoryACLListStorage) AddRawRecord(ctx context.Context, record *aclre
 	return nil
 }
 
-func (t *inMemoryACLListStorage) GetRawRecord(ctx context.Context, recordId string) (*aclrecordproto.RawACLRecordWithId, error) {
+func (t *inMemoryAclListStorage) GetRawRecord(ctx context.Context, recordId string) (*aclrecordproto.RawAclRecordWithId, error) {
 	t.RLock()
 	defer t.RUnlock()
 	if res, exists := t.records[recordId]; exists {

@@ -15,7 +15,7 @@ func TestAclRecordBuilder_BuildUserJoin(t *testing.T) {
 	st, err := acllistbuilder2.NewListStorageWithTestName("userjoinexample.yml")
 	require.NoError(t, err, "building storage should not result in error")
 
-	testKeychain := st.(*acllistbuilder2.ACLListStorageBuilder).GetKeychain()
+	testKeychain := st.(*acllistbuilder2.AclListStorageBuilder).GetKeychain()
 	identity := testKeychain.GeneratedIdentities["D"]
 	signPrivKey := testKeychain.SigningKeysByYAMLName["D"]
 	encPrivKey := testKeychain.EncryptionKeysByYAMLName["D"]
@@ -25,26 +25,26 @@ func TestAclRecordBuilder_BuildUserJoin(t *testing.T) {
 		EncKey:   encPrivKey,
 	}
 
-	aclList, err := BuildACLListWithIdentity(acc, st)
+	aclList, err := BuildAclListWithIdentity(acc, st)
 	require.NoError(t, err, "building acl list should be without error")
-	recordBuilder := newACLRecordBuilder(aclList.ID(), keychain.NewKeychain())
+	recordBuilder := newAclRecordBuilder(aclList.ID(), keychain.NewKeychain())
 	rk, err := testKeychain.GetKey("key.Read.EncKey").(*acllistbuilder2.SymKey).Key.Raw()
 	require.NoError(t, err)
 	privKey, err := testKeychain.GetKey("key.Sign.Onetime1").(signingkey.PrivKey).Raw()
 	require.NoError(t, err)
 
-	userJoin, err := recordBuilder.BuildUserJoin(privKey, rk, aclList.ACLState())
+	userJoin, err := recordBuilder.BuildUserJoin(privKey, rk, aclList.AclState())
 	require.NoError(t, err)
 	marshalledJoin, err := userJoin.Marshal()
 	require.NoError(t, err)
 	id, err := cidutil.NewCIDFromBytes(marshalledJoin)
 	require.NoError(t, err)
-	rawRec := &aclrecordproto.RawACLRecordWithId{
+	rawRec := &aclrecordproto.RawAclRecordWithId{
 		Payload: marshalledJoin,
 		Id:      id,
 	}
 	res, err := aclList.AddRawRecord(rawRec)
 	require.True(t, res)
 	require.NoError(t, err)
-	require.Equal(t, aclrecordproto.ACLUserPermissions_Writer, aclList.ACLState().UserStates()[identity].Permissions)
+	require.Equal(t, aclrecordproto.AclUserPermissions_Writer, aclList.AclState().UserStates()[identity].Permissions)
 }

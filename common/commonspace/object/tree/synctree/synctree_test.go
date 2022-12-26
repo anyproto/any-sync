@@ -50,13 +50,13 @@ func Test_DeriveSyncTree(t *testing.T) {
 	defer ctrl.Finish()
 
 	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
-	aclListMock := mock_list.NewMockACLList(ctrl)
+	aclListMock := mock_list.NewMockAclList(ctrl)
 	objTreeMock := newTestObjMock(mock_objecttree.NewMockObjectTree(ctrl))
 	spaceStorageMock := mock_spacestorage.NewMockSpaceStorage(ctrl)
 	headNotifiableMock := mock_synctree.NewMockHeadNotifiable(ctrl)
 	spaceId := "spaceId"
 	expectedPayload := objecttree.ObjectTreeCreatePayload{SpaceId: spaceId}
-	createDerivedObjectTree = func(payload objecttree.ObjectTreeCreatePayload, l list.ACLList, create treestorage.TreeStorageCreatorFunc) (objTree objecttree.ObjectTree, err error) {
+	createDerivedObjectTree = func(payload objecttree.ObjectTreeCreatePayload, l list.AclList, create treestorage.TreeStorageCreatorFunc) (objTree objecttree.ObjectTree, err error) {
 		require.Equal(t, l, aclListMock)
 		require.Equal(t, expectedPayload, payload)
 		return objTreeMock, nil
@@ -87,13 +87,13 @@ func Test_CreateSyncTree(t *testing.T) {
 	defer ctrl.Finish()
 
 	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
-	aclListMock := mock_list.NewMockACLList(ctrl)
+	aclListMock := mock_list.NewMockAclList(ctrl)
 	objTreeMock := newTestObjMock(mock_objecttree.NewMockObjectTree(ctrl))
 	spaceStorageMock := mock_spacestorage.NewMockSpaceStorage(ctrl)
 	headNotifiableMock := mock_synctree.NewMockHeadNotifiable(ctrl)
 	spaceId := "spaceId"
 	expectedPayload := objecttree.ObjectTreeCreatePayload{SpaceId: spaceId}
-	createObjectTree = func(payload objecttree.ObjectTreeCreatePayload, l list.ACLList, create treestorage.TreeStorageCreatorFunc) (objTree objecttree.ObjectTree, err error) {
+	createObjectTree = func(payload objecttree.ObjectTreeCreatePayload, l list.AclList, create treestorage.TreeStorageCreatorFunc) (objTree objecttree.ObjectTree, err error) {
 		require.Equal(t, l, aclListMock)
 		require.Equal(t, expectedPayload, payload)
 		return objTreeMock, nil

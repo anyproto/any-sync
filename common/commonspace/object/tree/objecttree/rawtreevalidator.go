@@ -5,7 +5,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage"
 )
 
-func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.ACLList) (err error) {
+func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList) (err error) {
 	provider := treestorage.NewInMemoryTreeStorageProvider()
 	treeStorage, err := provider.CreateTreeStorage(payload)
 	if err != nil {

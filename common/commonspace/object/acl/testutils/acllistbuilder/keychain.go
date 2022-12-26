@@ -121,7 +121,7 @@ func (k *YAMLKeychain) AddReadKey(key *Key) {
 	} else if key.Value == "derived" {
 		signKey, _ := k.SigningKeysByYAMLName[key.Name].Raw()
 		encKey, _ := k.EncryptionKeysByYAMLName[key.Name].Raw()
-		rkey, err = aclrecordproto.ACLReadKeyDerive(signKey, encKey)
+		rkey, err = aclrecordproto.AclReadKeyDerive(signKey, encKey)
 		if err != nil {
 			panic("should be able to derive symmetric key")
 		}

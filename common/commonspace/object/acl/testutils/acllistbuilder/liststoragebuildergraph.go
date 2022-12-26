@@ -6,6 +6,6 @@ package acllistbuilder
 
 import "fmt"
 
-func (t *ACLListStorageBuilder) Graph() (string, error) {
+func (t *AclListStorageBuilder) Graph() (string, error) {
 	return "", fmt.Errorf("building graphs is not supported")
 }

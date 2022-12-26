@@ -99,7 +99,7 @@ type space struct {
 	storage        spacestorage.SpaceStorage
 	cache          treegetter.TreeGetter
 	account        accountservice.Service
-	aclList        *syncacl.SyncACL
+	aclList        *syncacl.SyncAcl
 	configuration  nodeconf.Configuration
 	settingsObject settings.SettingsObject
 
@@ -156,15 +156,15 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	aclStorage, err := s.storage.ACLStorage()
+	aclStorage, err := s.storage.AclStorage()
 	if err != nil {
 		return
 	}
-	aclList, err := list.BuildACLListWithIdentity(s.account.Account(), aclStorage)
+	aclList, err := list.BuildAclListWithIdentity(s.account.Account(), aclStorage)
 	if err != nil {
 		return
 	}
-	s.aclList = syncacl.NewSyncACL(aclList, s.objectSync.StreamPool())
+	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.StreamPool())
 
 	deletionState := deletionstate.NewDeletionState(s.storage)
 	deps := settings.Deps{

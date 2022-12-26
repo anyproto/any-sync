@@ -10,7 +10,7 @@ type rpcHandler struct {
 	s *service
 }
 
-func (r *rpcHandler) PullSpace(ctx context.Context, request *spacesyncproto.SpacePullRequest) (resp *spacesyncproto.SpacePullResponse, err error) {
+func (r *rpcHandler) SpacePull(ctx context.Context, request *spacesyncproto.SpacePullRequest) (resp *spacesyncproto.SpacePullResponse, err error) {
 	sp, err := r.s.GetSpace(ctx, request.Id)
 	if err != nil {
 		if err != spacesyncproto.ErrSpaceMissing {
@@ -37,7 +37,7 @@ func (r *rpcHandler) PullSpace(ctx context.Context, request *spacesyncproto.Spac
 	return
 }
 
-func (r *rpcHandler) PushSpace(ctx context.Context, req *spacesyncproto.SpacePushRequest) (resp *spacesyncproto.SpacePushResponse, err error) {
+func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePushRequest) (resp *spacesyncproto.SpacePushResponse, err error) {
 	description := commonspace.SpaceDescription{
 		SpaceHeader:          req.Payload.SpaceHeader,
 		AclId:                req.Payload.AclPayloadId,
@@ -62,7 +62,7 @@ func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncR
 	return sp.SpaceSyncRpc().HeadSync(ctx, req)
 }
 
-func (r *rpcHandler) Stream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error {
+func (r *rpcHandler) ObjectSyncStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error {
 	msg, err := stream.Recv()
 	if err != nil {
 		return err
