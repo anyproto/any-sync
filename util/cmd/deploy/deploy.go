@@ -268,7 +268,7 @@ func runAll(args rootArgs, numClients, numNodes, numFileNodes uint) (err error) 
 		return
 	}
 
-	filePaths, err := createAppPaths(args, args.fileNodeBinaryPath, "file", 6070, int(numFileNodes))
+	filePaths, err := createAppPaths(args, args.fileNodeBinaryPath, "file", 6080, int(numFileNodes))
 	if err != nil {
 		err = fmt.Errorf("failed to create working directories for clients: %w", err)
 		return
