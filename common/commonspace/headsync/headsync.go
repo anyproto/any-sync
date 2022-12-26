@@ -49,7 +49,7 @@ func NewHeadSync(
 	storage spacestorage.SpaceStorage,
 	confConnector nodeconf.ConfConnector,
 	cache treegetter.TreeGetter,
-	syncStatus syncstatus.SyncStatusUpdater,
+	syncStatus syncstatus.StatusUpdater,
 	log *zap.Logger) HeadSync {
 
 	diff := ldiff.New(16, 16)

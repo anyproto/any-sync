@@ -30,7 +30,7 @@ func newDiffSyncer(
 	cache treegetter.TreeGetter,
 	storage spacestorage.SpaceStorage,
 	clientFactory spacesyncproto.ClientFactory,
-	syncStatus syncstatus.SyncStatusUpdater,
+	syncStatus syncstatus.StatusUpdater,
 	log *zap.Logger) DiffSyncer {
 	return &diffSyncer{
 		diff:          diff,
@@ -53,7 +53,7 @@ type diffSyncer struct {
 	clientFactory spacesyncproto.ClientFactory
 	log           *zap.Logger
 	deletionState deletionstate.DeletionState
-	syncStatus    syncstatus.SyncStatusUpdater
+	syncStatus    syncstatus.StatusUpdater
 }
 
 func (d *diffSyncer) Init(deletionState deletionstate.DeletionState) {

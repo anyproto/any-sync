@@ -16,14 +16,14 @@ import (
 type syncTreeHandler struct {
 	objTree     objecttree.ObjectTree
 	syncClient  SyncClient
-	syncStatus  syncstatus.SyncStatusUpdater
+	syncStatus  syncstatus.StatusUpdater
 	handlerLock sync.Mutex
 	queue       ReceiveQueue
 }
 
 const maxQueueSize = 5
 
-func newSyncTreeHandler(objTree objecttree.ObjectTree, syncClient SyncClient, syncStatus syncstatus.SyncStatusUpdater) synchandler.SyncHandler {
+func newSyncTreeHandler(objTree objecttree.ObjectTree, syncClient SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
 	return &syncTreeHandler{
 		objTree:    objTree,
 		syncClient: syncClient,

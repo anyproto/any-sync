@@ -10,7 +10,7 @@ type statusReceiver struct {
 }
 
 func (s *statusReceiver) UpdateTree(ctx context.Context, treeId string, status syncstatus.SyncStatus) (err error) {
-	log.With(zap.String("treeId", treeId), zap.Bool("synced", status == syncstatus.SyncStatusSynced)).
+	log.With(zap.String("treeId", treeId), zap.Bool("synced", status == syncstatus.StatusSynced)).
 		Debug("updating sync status")
 	return nil
 }

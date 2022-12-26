@@ -395,7 +395,7 @@ func (m *ObjectSyncMessage) GetObjectId() string {
 	return ""
 }
 
-// PushSpaceRequest is a request to add space on a node containing only one acl record
+// SpacePushRequest is a request to add space on a node containing only one acl record
 type SpacePushRequest struct {
 	Payload *SpacePayload `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
 }
@@ -440,7 +440,7 @@ func (m *SpacePushRequest) GetPayload() *SpacePayload {
 	return nil
 }
 
-// PushSpaceResponse is an empty response
+// SpacePushResponse is an empty response
 type SpacePushResponse struct {
 }
 
@@ -477,7 +477,7 @@ func (m *SpacePushResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_SpacePushResponse proto.InternalMessageInfo
 
-// PullSpaceRequest is a request to request a space on a node that doesn't have it
+// SpacePullRequest is a request to request a space on a node that doesn't have it
 type SpacePullRequest struct {
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 }
@@ -522,7 +522,7 @@ func (m *SpacePullRequest) GetId() string {
 	return ""
 }
 
-// PullSpaceResponse is a response with header and acl root
+// SpacePullResponse is a response with header and acl root
 type SpacePullResponse struct {
 	Payload *SpacePayload `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
 }
@@ -567,6 +567,7 @@ func (m *SpacePullResponse) GetPayload() *SpacePayload {
 	return nil
 }
 
+// SpacePayload is a payload for pushing a space
 type SpacePayload struct {
 	SpaceHeader            *RawSpaceHeaderWithId `protobuf:"bytes,1,opt,name=spaceHeader,proto3" json:"spaceHeader,omitempty"`
 	AclPayload             []byte                `protobuf:"bytes,2,opt,name=aclPayload,proto3" json:"aclPayload,omitempty"`
@@ -720,6 +721,7 @@ func (m *SpaceHeader) GetSeed() []byte {
 	return nil
 }
 
+// RawSpaceHeader is raw header for SpaceHeader
 type RawSpaceHeader struct {
 	SpaceHeader []byte `protobuf:"bytes,1,opt,name=spaceHeader,proto3" json:"spaceHeader,omitempty"`
 	Signature   []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
@@ -772,6 +774,7 @@ func (m *RawSpaceHeader) GetSignature() []byte {
 	return nil
 }
 
+// RawSpaceHeaderWithId is a marshalled RawSpaceHeader with its content id
 type RawSpaceHeaderWithId struct {
 	RawHeader []byte `protobuf:"bytes,1,opt,name=rawHeader,proto3" json:"rawHeader,omitempty"`
 	Id        string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
@@ -824,6 +827,7 @@ func (m *RawSpaceHeaderWithId) GetId() string {
 	return ""
 }
 
+// SpaceSettingsContent is a payload for a space settings object
 type SpaceSettingsContent struct {
 	// Types that are valid to be assigned to Value:
 	//
@@ -897,6 +901,7 @@ func (*SpaceSettingsContent) XXX_OneofWrappers() []interface{} {
 	}
 }
 
+// ObjectDelete is a message containing an object id which should be deleted
 type ObjectDelete struct {
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 }
@@ -941,6 +946,7 @@ func (m *ObjectDelete) GetId() string {
 	return ""
 }
 
+// SpaceSettingsSnapshot contains all the deleted ids in a snapshot
 type SpaceSettingsSnapshot struct {
 	DeletedIds []string `protobuf:"bytes,1,rep,name=deletedIds,proto3" json:"deletedIds,omitempty"`
 }
@@ -985,6 +991,7 @@ func (m *SpaceSettingsSnapshot) GetDeletedIds() []string {
 	return nil
 }
 
+// SettingsData contains ObjectTree change payload
 type SettingsData struct {
 	Content  []*SpaceSettingsContent `protobuf:"bytes,1,rep,name=content,proto3" json:"content,omitempty"`
 	Snapshot *SpaceSettingsSnapshot  `protobuf:"bytes,2,opt,name=snapshot,proto3" json:"snapshot,omitempty"`

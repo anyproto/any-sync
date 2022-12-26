@@ -2,7 +2,7 @@ package syncstatus
 
 type noOpSyncStatus struct{}
 
-func NewNoOpSyncStatus() SyncStatusUpdater {
+func NewNoOpSyncStatus() StatusUpdater {
 	return &noOpSyncStatus{}
 }
 

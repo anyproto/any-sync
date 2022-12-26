@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var log = logger.NewNamed("commonspace.settings")
+var log = logger.NewNamed("common.commonspace.settings")
 
 type SettingsObject interface {
 	synctree.SyncTree
