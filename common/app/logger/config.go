@@ -1,17 +1,14 @@
-package config
+package logger
 
-import (
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"go.uber.org/zap"
-)
+import "go.uber.org/zap"
 
-type Log struct {
+type Config struct {
 	Production   bool              `yaml:"production"`
 	DefaultLevel string            `yaml:"defaultLevel"`
 	NamedLevels  map[string]string `yaml:"namedLevels"`
 }
 
-func (l Log) ApplyGlobal() {
+func (l Config) ApplyGlobal() {
 	var conf zap.Config
 	if l.Production {
 		conf = zap.NewProductionConfig()
@@ -29,8 +26,8 @@ func (l Log) ApplyGlobal() {
 	}
 	defaultLogger, err := conf.Build()
 	if err != nil {
-		logger.Default().Fatal("can't build logger", zap.Error(err))
+		Default().Fatal("can't build logger", zap.Error(err))
 	}
-	logger.SetDefault(defaultLogger)
-	logger.SetNamedLevels(levels)
+	SetDefault(defaultLogger)
+	SetNamedLevels(levels)
 }

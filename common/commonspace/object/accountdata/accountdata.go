@@ -10,4 +10,5 @@ type AccountData struct { // TODO: create a convenient constructor for this
 	PeerKey  signingkey.PrivKey
 	SignKey  signingkey.PrivKey
 	EncKey   encryptionkey.PrivKey
+	PeerId   string
 }

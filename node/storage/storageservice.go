@@ -3,7 +3,6 @@ package storage
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"os"
 )
 
@@ -21,8 +20,8 @@ func New() NodeStorage {
 }
 
 func (s *storageService) Init(a *app.App) (err error) {
-	cfg := a.MustComponent(config.CName).(*config.Config)
-	s.rootPath = cfg.Storage.Path
+	cfg := a.MustComponent("config").(configGetter).GetStorage()
+	s.rootPath = cfg.Path
 	return nil
 }
 

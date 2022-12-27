@@ -5,6 +5,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/confconnector"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/headsync"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treechangeproto"
@@ -13,7 +14,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
@@ -39,7 +39,7 @@ type SpaceService interface {
 }
 
 type spaceService struct {
-	config               config.Space
+	config               Config
 	account              accountservice.Service
 	configurationService nodeconf.Service
 	storageProvider      spacestorage.SpaceStorageProvider
@@ -48,7 +48,7 @@ type spaceService struct {
 }
 
 func (s *spaceService) Init(a *app.App) (err error) {
-	s.config = a.MustComponent(config.CName).(*config.Config).Space
+	s.config = a.MustComponent("config").(ConfigGetter).GetSpace()
 	s.account = a.MustComponent(accountservice.CName).(accountservice.Service)
 	s.storageProvider = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
@@ -108,7 +108,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 	}
 
 	lastConfiguration := s.configurationService.GetLast()
-	confConnector := nodeconf.NewConfConnector(lastConfiguration, s.pool)
+	confConnector := confconnector.NewConfConnector(lastConfiguration, s.pool)
 
 	syncStatus := syncstatus.NewNoOpSyncStatus()
 	// this will work only for clients, not the best solution, but...

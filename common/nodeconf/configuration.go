@@ -16,6 +16,8 @@ type Configuration interface {
 	FilePeers() []string
 	// ConsensusPeers returns list of consensusnodes
 	ConsensusPeers() []string
+	// Addresses returns map[peerId][]addr with connection addresses for all known nodes
+	Addresses() map[string][]string
 }
 
 type configuration struct {
@@ -24,6 +26,7 @@ type configuration struct {
 	filePeers      []string
 	consensusPeers []string
 	chash          chash.CHash
+	allMembers     []NodeConfig
 }
 
 func (c *configuration) Id() string {
@@ -56,4 +59,12 @@ func (c *configuration) FilePeers() []string {
 
 func (c *configuration) ConsensusPeers() []string {
 	return c.consensusPeers
+}
+
+func (c *configuration) Addresses() map[string][]string {
+	res := make(map[string][]string)
+	for _, m := range c.allMembers {
+		res[m.PeerId] = m.Addresses
+	}
+	return res
 }

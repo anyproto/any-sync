@@ -4,10 +4,10 @@ import (
 	commonaccount "github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/accountdata"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/config"
 )
 
 type service struct {
@@ -60,6 +60,7 @@ func (s *service) Init(a *app.App) (err error) {
 		PeerKey:  decodedPeerKey,
 		SignKey:  decodedSigningKey,
 		EncKey:   decodedEncryptionKey,
+		PeerId:   acc.PeerId,
 	}
 
 	return nil

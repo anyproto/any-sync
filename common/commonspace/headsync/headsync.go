@@ -4,12 +4,12 @@ package headsync
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ldiff"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/confconnector"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync"
 	"go.uber.org/zap"
 	"strings"
@@ -47,7 +47,7 @@ func NewHeadSync(
 	spaceId string,
 	syncPeriod int,
 	storage spacestorage.SpaceStorage,
-	confConnector nodeconf.ConfConnector,
+	confConnector confconnector.ConfConnector,
 	cache treegetter.TreeGetter,
 	syncStatus syncstatus.StatusUpdater,
 	log *zap.Logger) HeadSync {

@@ -5,10 +5,11 @@ import (
 	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	net2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/net"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secureservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/timeoutconn"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"go.uber.org/zap"
 	"net"
@@ -38,7 +39,7 @@ type Dialer interface {
 
 type dialer struct {
 	transport secureservice.SecureService
-	config    *config.Config
+	config    net2.Config
 	peerAddrs map[string][]string
 
 	mu sync.RWMutex
@@ -46,11 +47,8 @@ type dialer struct {
 
 func (d *dialer) Init(a *app.App) (err error) {
 	d.transport = a.MustComponent(secureservice.CName).(secureservice.SecureService)
-	d.config = a.MustComponent(config.CName).(*config.Config)
-	d.peerAddrs = map[string][]string{}
-	for _, n := range d.config.Nodes {
-		d.peerAddrs[n.PeerId] = []string{n.Address}
-	}
+	d.peerAddrs = a.MustComponent(nodeconf.CName).(nodeconf.Service).GetLast().Addresses()
+	d.config = a.MustComponent("config").(net2.ConfigGetter).GetNet()
 	return
 }
 

@@ -2,6 +2,7 @@
 package synctree
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/confconnector"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectsync"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
@@ -19,7 +20,7 @@ type syncClient struct {
 	objectsync.StreamPool
 	RequestFactory
 	spaceId       string
-	connector     nodeconf.ConfConnector
+	connector     confconnector.ConfConnector
 	configuration nodeconf.Configuration
 
 	checker objectsync.StreamChecker

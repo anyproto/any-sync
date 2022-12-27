@@ -5,7 +5,6 @@ import (
 	commonaccount "github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/sec"
@@ -36,7 +35,7 @@ type secureService struct {
 }
 
 func (s *secureService) Init(a *app.App) (err error) {
-	account := a.MustComponent(config.CName).(commonaccount.ConfigGetter).GetAccount()
+	account := a.MustComponent("config").(commonaccount.ConfigGetter).GetAccount()
 	pkb, err := keys.DecodeBytesFromString(account.PeerKey)
 	if err != nil {
 		return

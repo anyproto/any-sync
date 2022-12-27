@@ -11,7 +11,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secureservice"
 	"storj.io/drpc"
@@ -25,6 +25,10 @@ func New() ClientDebugRpc {
 	return &service{BaseDrpcServer: server.NewBaseDrpcServer()}
 }
 
+type configGetter interface {
+	GetDebugNet() net.Config
+}
+
 type ClientDebugRpc interface {
 	app.ComponentRunnable
 	drpc.Mux
@@ -32,7 +36,7 @@ type ClientDebugRpc interface {
 
 type service struct {
 	transport      secureservice.SecureService
-	cfg            *config.Config
+	cfg            net.Config
 	spaceService   clientspace.Service
 	storageService clientstorage.ClientStorage
 	docService     document.Service
@@ -46,7 +50,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.storageService = a.MustComponent(spacestorage.CName).(clientstorage.ClientStorage)
 	s.docService = a.MustComponent(document.CName).(document.Service)
 	s.account = a.MustComponent(accountservice.CName).(accountservice.Service)
-	s.cfg = a.MustComponent(config.CName).(*config.Config)
+	s.cfg = a.MustComponent("config").(configGetter).GetDebugNet()
 	s.transport = a.MustComponent(secureservice.CName).(secureservice.SecureService)
 	s.file = a.MustComponent(fileservice.CName).(fileservice.FileService)
 	return nil
@@ -60,7 +64,7 @@ func (s *service) Run(ctx context.Context) (err error) {
 	params := server.Params{
 		BufferSizeMb:  s.cfg.Stream.MaxMsgSizeMb,
 		TimeoutMillis: s.cfg.Stream.TimeoutMilliseconds,
-		ListenAddrs:   s.cfg.APIServer.ListenAddrs,
+		ListenAddrs:   s.cfg.Server.ListenAddrs,
 		Wrapper: func(handler drpc.Handler) drpc.Handler {
 			return handler
 		},

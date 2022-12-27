@@ -5,10 +5,10 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ocache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/confconnector"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/syncobjectgetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectsync/synchandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync"
 	"go.uber.org/zap"
 	"time"
@@ -42,7 +42,7 @@ type objectSync struct {
 
 func NewObjectSync(
 	spaceId string,
-	confConnector nodeconf.ConfConnector,
+	confConnector confconnector.ConfConnector,
 	periodicSeconds int) (objectSync ObjectSync) {
 	streamPool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
 		return objectSync.HandleMessage(ctx, senderId, message)

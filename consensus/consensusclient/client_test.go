@@ -3,8 +3,9 @@ package consensusclient
 import (
 	"context"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice/mock_accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/accountdata"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpctest"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
@@ -137,20 +138,21 @@ func newFixture(t *testing.T) *fixture {
 	fx.drpcTS = rpctest.NewTestServer()
 	require.NoError(t, consensusproto.DRPCRegisterConsensus(fx.drpcTS.Mux, fx.testServer))
 	fx.a.Register(fx.Service).
+		Register(mock_accountservice.NewAccountServiceWithAccount(fx.ctrl, &accountdata.AccountData{})).
 		Register(fx.nodeconf).
 		Register(rpctest.NewTestPool().WithServer(fx.drpcTS)).
-		Register(&config.Config{Nodes: []config.Node{
+		Register(&testConfig{Nodes: []nodeconf.NodeConfig{
 			{
 				PeerId: "c1",
-				Types:  []config.NodeType{config.NodeTypeConsensus},
+				Types:  []nodeconf.NodeType{nodeconf.NodeTypeConsensus},
 			},
 			{
 				PeerId: "c2",
-				Types:  []config.NodeType{config.NodeTypeConsensus},
+				Types:  []nodeconf.NodeType{nodeconf.NodeTypeConsensus},
 			},
 			{
 				PeerId: "c3",
-				Types:  []config.NodeType{config.NodeTypeConsensus},
+				Types:  []nodeconf.NodeType{nodeconf.NodeTypeConsensus},
 			},
 		}})
 	return fx
@@ -240,3 +242,14 @@ func (t *testWatcher) AddConsensusError(err error) {
 		close(t.ready)
 	})
 }
+
+type testConfig struct {
+	Nodes []nodeconf.NodeConfig
+}
+
+func (t testConfig) GetNodes() []nodeconf.NodeConfig {
+	return t.Nodes
+}
+
+func (t *testConfig) Init(a *app.App) error { return nil }
+func (t *testConfig) Name() string          { return "config" }
