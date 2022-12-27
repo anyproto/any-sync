@@ -4,7 +4,6 @@ package accountservice
 import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/accountdata"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 )
 
 const CName = "common.accountservice"
@@ -14,6 +13,13 @@ type Service interface {
 	Account() *accountdata.AccountData
 }
 
+type Config struct {
+	PeerId        string `yaml:"peerId"`
+	PeerKey       string `yaml:"peerKey"`
+	SigningKey    string `yaml:"signingKey"`
+	EncryptionKey string `yaml:"encryptionKey"`
+}
+
 type ConfigGetter interface {
-	GetAccount() config.Account
+	GetAccount() Config
 }

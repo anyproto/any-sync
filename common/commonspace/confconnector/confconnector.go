@@ -1,29 +1,30 @@
-package nodeconf
+package confconnector
 
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/slice"
 )
 
 type ConfConnector interface {
-	Configuration() Configuration
+	Configuration() nodeconf.Configuration
 	Pool() pool.Pool
 	GetResponsiblePeers(ctx context.Context, spaceId string) ([]peer.Peer, error)
 	DialInactiveResponsiblePeers(ctx context.Context, spaceId string, activeNodeIds []string) ([]peer.Peer, error)
 }
 
 type confConnector struct {
-	conf Configuration
+	conf nodeconf.Configuration
 	pool pool.Pool
 }
 
-func NewConfConnector(conf Configuration, pool pool.Pool) ConfConnector {
+func NewConfConnector(conf nodeconf.Configuration, pool pool.Pool) ConfConnector {
 	return &confConnector{conf: conf, pool: pool}
 }
 
-func (s *confConnector) Configuration() Configuration {
+func (s *confConnector) Configuration() nodeconf.Configuration {
 	// TODO: think about rewriting this, because these deps should not be exposed
 	return s.conf
 }

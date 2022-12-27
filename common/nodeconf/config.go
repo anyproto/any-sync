@@ -1,4 +1,4 @@
-package config
+package nodeconf
 
 type NodeType string
 
@@ -8,15 +8,19 @@ const (
 	NodeTypeFile      NodeType = "file"
 )
 
-type Node struct {
+type configGetter interface {
+	GetNodes() []NodeConfig
+}
+
+type NodeConfig struct {
 	PeerId        string     `yaml:"peerId"`
-	Address       string     `yaml:"address"`
+	Addresses     []string   `yaml:"address"`
 	SigningKey    string     `yaml:"signingKey,omitempty"`
 	EncryptionKey string     `yaml:"encryptionKey,omitempty"`
 	Types         []NodeType `yaml:"types,omitempty"`
 }
 
-func (n Node) HasType(t NodeType) bool {
+func (n NodeConfig) HasType(t NodeType) bool {
 	for _, nt := range n.Types {
 		if nt == t {
 			return true

@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secureservice"
 	"github.com/prometheus/client_golang/prometheus"
 	"storj.io/drpc"
@@ -24,20 +24,15 @@ type DRPCServer interface {
 	drpc.Mux
 }
 
-type configGetter interface {
-	GetGRPCServer() config.GrpcServer
-	GetStream() config.Stream
-}
-
 type drpcServer struct {
-	config    configGetter
+	config    net.Config
 	metric    metric.Metric
 	transport secureservice.SecureService
 	*BaseDrpcServer
 }
 
 func (s *drpcServer) Init(a *app.App) (err error) {
-	s.config = a.MustComponent(config.CName).(configGetter)
+	s.config = a.MustComponent("config").(net.ConfigGetter).GetNet()
 	s.metric = a.MustComponent(metric.CName).(metric.Metric)
 	s.transport = a.MustComponent(secureservice.CName).(secureservice.SecureService)
 	return nil
@@ -63,9 +58,9 @@ func (s *drpcServer) Run(ctx context.Context) (err error) {
 		return
 	}
 	params := Params{
-		BufferSizeMb:  s.config.GetStream().MaxMsgSizeMb,
-		TimeoutMillis: s.config.GetStream().TimeoutMilliseconds,
-		ListenAddrs:   s.config.GetGRPCServer().ListenAddrs,
+		BufferSizeMb:  s.config.Stream.MaxMsgSizeMb,
+		TimeoutMillis: s.config.Stream.TimeoutMilliseconds,
+		ListenAddrs:   s.config.Server.ListenAddrs,
 		Wrapper: func(handler drpc.Handler) drpc.Handler {
 			return &metric.PrometheusDRPC{
 				Handler:    handler,

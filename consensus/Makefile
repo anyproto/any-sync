@@ -6,7 +6,7 @@ proto:
 
 build:
 	@$(eval FLAGS := $$(shell govvv -flags -pkg github.com/anytypeio/go-anytype-infrastructure-experiments/consensus))
-	go build -v -o ../bin/consensus-node -ldflags "$(FLAGS)" github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/cmd
+	go build -v -o ../bin/anytype-consensus -ldflags "$(FLAGS)" github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/cmd
 
 test:
 	go test ./... --cover

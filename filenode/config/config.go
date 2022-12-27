@@ -1,17 +1,19 @@
 package config
 
 import (
+	commonaccount "github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
+	"os"
 )
 
-const CName = config.CName
+const CName = "config"
 
 func NewFromFile(path string) (c *Config, err error) {
 	c = &Config{}
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -22,11 +24,10 @@ func NewFromFile(path string) (c *Config, err error) {
 }
 
 type Config struct {
-	Account         config.Account    `yaml:"account"`
-	GrpcServer      config.GrpcServer `yaml:"grpcServer"`
-	Metric          config.Metric     `yaml:"metric"`
-	FileStorePogreb FileStorePogreb   `yaml:"fileStorePogreb"`
-	Stream          config.Stream     `yaml:"stream"`
+	Account         commonaccount.Config `yaml:"account"`
+	GrpcServer      net.Config           `yaml:"grpcServer"`
+	Metric          metric.Config        `yaml:"metric"`
+	FileStorePogreb FileStorePogreb      `yaml:"fileStorePogreb"`
 }
 
 func (c *Config) Init(a *app.App) (err error) {
@@ -37,7 +38,7 @@ func (c Config) Name() (name string) {
 	return CName
 }
 
-func (c Config) GetAccount() config.Account {
+func (c Config) GetAccount() commonaccount.Config {
 	return c.Account
 }
 
@@ -45,14 +46,10 @@ func (c Config) GetFileStorePogreb() FileStorePogreb {
 	return c.FileStorePogreb
 }
 
-func (c Config) GetGRPCServer() config.GrpcServer {
+func (c Config) GetNet() net.Config {
 	return c.GrpcServer
 }
 
-func (c Config) GetMetric() config.Metric {
+func (c Config) GetMetric() metric.Config {
 	return c.Metric
-}
-
-func (c Config) GetStream() config.Stream {
-	return c.Stream
 }

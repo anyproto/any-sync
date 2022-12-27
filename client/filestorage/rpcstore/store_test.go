@@ -3,12 +3,15 @@ package rpcstore
 import (
 	"context"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice/mock_accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/accountdata"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpctest"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
+	"github.com/golang/mock/gomock"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/assert"
@@ -115,14 +118,16 @@ func newFixture(t *testing.T) *fixture {
 	conf := &config.Config{}
 
 	for i := 0; i < 11; i++ {
-		conf.Nodes = append(conf.Nodes, config.Node{
+		conf.Nodes = append(conf.Nodes, nodeconf.NodeConfig{
 			PeerId: fmt.Sprint(i),
-			Types:  []config.NodeType{config.NodeTypeFile},
+			Types:  []nodeconf.NodeType{nodeconf.NodeTypeFile},
 		})
 	}
 	rserv := rpctest.NewTestServer()
 	require.NoError(t, fileproto.DRPCRegisterFile(rserv.Mux, fx.serv))
+	fx.ctrl = gomock.NewController(t)
 	fx.a.Register(fx.s).
+		Register(mock_accountservice.NewAccountServiceWithAccount(fx.ctrl, &accountdata.AccountData{})).
 		Register(rpctest.NewTestPool().WithServer(rserv)).
 		Register(nodeconf.New()).
 		Register(conf)
@@ -136,11 +141,13 @@ type fixture struct {
 	s    *service
 	a    *app.App
 	serv *testServer
+	ctrl *gomock.Controller
 }
 
 func (fx *fixture) Finish(t *testing.T) {
 	assert.NoError(t, fx.store.Close())
 	assert.NoError(t, fx.a.Close(ctx))
+	fx.ctrl.Finish()
 }
 
 type testServer struct {

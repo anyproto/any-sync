@@ -1,9 +1,9 @@
 package nodeconf
 
 import (
+	commonaccount "github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
@@ -35,7 +35,7 @@ type service struct {
 }
 
 type Node struct {
-	Address       string
+	Addresses     []string
 	PeerId        string
 	SigningKey    signingkey.PubKey
 	EncryptionKey encryptionkey.PubKey
@@ -50,8 +50,8 @@ func (n *Node) Capacity() float64 {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	conf := a.MustComponent(config.CName).(*config.Config)
-	s.accountId = conf.Account.PeerId
+	nodesConf := a.MustComponent("config").(configGetter).GetNodes()
+	s.accountId = a.MustComponent(commonaccount.CName).(commonaccount.Service).Account().PeerId
 
 	fileConfig := &configuration{
 		id:        "config",
@@ -63,9 +63,10 @@ func (s *service) Init(a *app.App) (err error) {
 	}); err != nil {
 		return
 	}
-	members := make([]chash.Member, 0, len(conf.Nodes))
-	for _, n := range conf.Nodes {
-		if n.HasType(config.NodeTypeTree) {
+
+	members := make([]chash.Member, 0, len(nodesConf))
+	for _, n := range nodesConf {
+		if n.HasType(NodeTypeTree) {
 			var member *Node
 			member, err = nodeFromConfigNode(n)
 			if err != nil {
@@ -76,12 +77,13 @@ func (s *service) Init(a *app.App) (err error) {
 		if n.PeerId == s.accountId {
 			continue
 		}
-		if n.HasType(config.NodeTypeConsensus) {
+		if n.HasType(NodeTypeConsensus) {
 			fileConfig.consensusPeers = append(fileConfig.consensusPeers, n.PeerId)
 		}
-		if n.HasType(config.NodeTypeFile) {
+		if n.HasType(NodeTypeFile) {
 			fileConfig.filePeers = append(fileConfig.filePeers, n.PeerId)
 		}
+		fileConfig.allMembers = append(fileConfig.allMembers, n)
 	}
 	if err = fileConfig.chash.AddMembers(members...); err != nil {
 		return
@@ -103,8 +105,7 @@ func (s *service) GetById(id string) Configuration {
 	panic("implement me")
 }
 
-func nodeFromConfigNode(
-	n config.Node) (*Node, error) {
+func nodeFromConfigNode(n NodeConfig) (*Node, error) {
 	decodedSigningKey, err := keys.DecodeKeyFromString(
 		n.SigningKey,
 		signingkey.UnmarshalEd25519PrivateKey,
@@ -122,7 +123,7 @@ func nodeFromConfigNode(
 	}
 
 	return &Node{
-		Address:       n.Address,
+		Addresses:     n.Addresses,
 		PeerId:        n.PeerId,
 		SigningKey:    decodedSigningKey.GetPublic(),
 		EncryptionKey: decodedEncryptionKey.GetPublic(),

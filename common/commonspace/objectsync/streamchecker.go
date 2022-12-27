@@ -3,10 +3,10 @@ package objectsync
 import (
 	"context"
 	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/confconnector"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/rpcerr"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -20,7 +20,7 @@ type StreamChecker interface {
 
 type streamChecker struct {
 	spaceId       string
-	connector     nodeconf.ConfConnector
+	connector     confconnector.ConfConnector
 	streamPool    StreamPool
 	clientFactory spacesyncproto.ClientFactory
 	log           *zap.Logger
@@ -32,7 +32,7 @@ const streamCheckerInterval = time.Second * 10
 
 func NewStreamChecker(
 	spaceId string,
-	connector nodeconf.ConfConnector,
+	connector confconnector.ConfConnector,
 	streamPool StreamPool,
 	clientFactory spacesyncproto.ClientFactory,
 	syncCtx context.Context,

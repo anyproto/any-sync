@@ -3,7 +3,6 @@ package badgerprovider
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/dgraph-io/badger/v3"
 )
 
@@ -23,8 +22,8 @@ func New() BadgerProvider {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	cfg := a.MustComponent(config.CName).(*config.Config)
-	s.db, err = badger.Open(badger.DefaultOptions(cfg.Storage.Path))
+	cfg := a.MustComponent("config").(configGetter).GetStorage()
+	s.db, err = badger.Open(badger.DefaultOptions(cfg.Path))
 	return
 }
 
