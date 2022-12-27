@@ -164,15 +164,15 @@ func (s *service) registerScripts() {
 				return space.Id
 			}
 
-			doesNodesContainDocument := func(docId string, spaceId string) map[string]bool {
-				var dictionary = map[string]bool{}
+			nodesDocumentHeads := func(docId string, spaceId string) map[string][]string {
+				var dictionary = map[string][]string{}
 				for _, node := range nodes {
 					resp, _ := s.node.TreeParams(context.Background(), node.address, &nodeproto.TreeParamsRequest{
 						SpaceId:    spaceId,
 						DocumentId: docId,
 					})
 
-					dictionary[node.name] = resp.GetHeadIds() != nil
+					dictionary[node.name] = resp.GetHeadIds()
 				}
 
 				return dictionary
@@ -211,7 +211,7 @@ func (s *service) registerScripts() {
 
 				if !contains {
 					print(fmt.Sprintf("%s doesn't contain a document %s", client.name, documentId))
-					fmt.Println(doesNodesContainDocument(documentId, spaceId))
+					fmt.Println(nodesDocumentHeads(documentId, spaceId))
 				} else {
 					print(fmt.Sprintf("%s contains a document %s", client.name, documentId))
 				}
@@ -289,6 +289,7 @@ func (s *service) registerScripts() {
 				print(fmt.Sprintf("%s document %s head is %v", client2.name, docId, rs2.GetHeadIds()))
 
 				if rs1.GetHeadIds() == nil || rs1.GetHeadIds() == nil {
+					fmt.Println(nodesDocumentHeads(docId, spaceId))
 					print("Some head is nil")
 					return false
 				}
