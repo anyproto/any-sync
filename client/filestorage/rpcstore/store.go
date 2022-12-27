@@ -2,9 +2,9 @@ package rpcstore
 
 import (
 	"context"
+	"fmt"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
-	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"sync"
 )
@@ -27,7 +27,12 @@ func (s *store) Get(ctx context.Context, k cid.Cid) (b blocks.Block, err error) 
 	if err = s.cm.Add(ctx, t); err != nil {
 		return
 	}
-	<-t.ready
+	select {
+	case <-t.ready:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+
 	if err = t.Validate(); err != nil {
 		return
 	}
@@ -75,18 +80,26 @@ func (s *store) Add(ctx context.Context, bs []blocks.Block) error {
 	if err := s.cm.Add(ctx, tasks...); err != nil {
 		return err
 	}
-	var errs []error
+	var errs = &ErrPartial{}
 	for i := 0; i < len(tasks); i++ {
 		select {
 		case t := <-readyCh:
 			if t.err != nil {
-				errs = append(errs, t.err)
+				errs.ErrorCids = append(errs.ErrorCids, ErrCid{Cid: t.cid, Err: t.err})
+			} else {
+				errs.SuccessCids = append(errs.SuccessCids, t.cid)
 			}
 		case <-ctx.Done():
+			if len(errs.SuccessCids) > 0 {
+				return errs
+			}
 			return ctx.Err()
 		}
 	}
-	return multierr.Combine(errs...)
+	if len(errs.ErrorCids) > 0 {
+		return errs
+	}
+	return nil
 }
 
 func (s *store) Delete(ctx context.Context, c cid.Cid) error {
@@ -104,4 +117,18 @@ func (s *store) Delete(ctx context.Context, c cid.Cid) error {
 
 func (s *store) Close() (err error) {
 	return s.cm.Close()
+}
+
+type ErrPartial struct {
+	SuccessCids []cid.Cid
+	ErrorCids   []ErrCid
+}
+
+func (e ErrPartial) Error() string {
+	return fmt.Sprintf("cid errors; success: %d; error: %d", len(e.SuccessCids), len(e.ErrorCids))
+}
+
+type ErrCid struct {
+	Cid cid.Cid
+	Err error
 }
