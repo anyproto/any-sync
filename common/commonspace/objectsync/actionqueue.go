@@ -42,13 +42,13 @@ func (q *actionQueue) Run() {
 }
 
 func (q *actionQueue) read() {
-	limiter := make(chan struct{}, maxSimultaneousOperationsPerStream)
-	for i := 0; i < maxSimultaneousOperationsPerStream; i++ {
+	limiter := make(chan struct{}, maxStreamReaders)
+	for i := 0; i < maxStreamReaders; i++ {
 		limiter <- struct{}{}
 	}
 	defer func() {
 		// wait until all operations are done
-		for i := 0; i < maxSimultaneousOperationsPerStream; i++ {
+		for i := 0; i < maxStreamReaders; i++ {
 			<-limiter
 		}
 		close(q.queueDone)
