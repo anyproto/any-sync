@@ -61,6 +61,12 @@ func (q *actionQueue) read() {
 			return
 		}
 		for _, msg := range actions {
+			select {
+			case <-q.ctx.Done():
+				return
+			default:
+			}
+			
 			<-limiter
 			go func(action ActionFunc) {
 				err = action()
