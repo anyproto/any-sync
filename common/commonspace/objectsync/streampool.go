@@ -248,7 +248,7 @@ func (s *streamPool) Close() (err error) {
 func (s *streamPool) readPeerLoop(peerId string, stream spacesyncproto.ObjectSyncStream) (err error) {
 	var (
 		log   = log.With(zap.String("peerId", peerId))
-		queue = NewActionQueue()
+		queue = NewActionQueue(maxStreamReaders, 100)
 	)
 	queue.Run()
 
