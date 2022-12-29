@@ -25,7 +25,6 @@ func NewConfConnector(conf nodeconf.Configuration, pool pool.Pool) ConfConnector
 }
 
 func (s *confConnector) Configuration() nodeconf.Configuration {
-	// TODO: think about rewriting this, because these deps should not be exposed
 	return s.conf
 }
 
@@ -34,19 +33,18 @@ func (s *confConnector) Pool() pool.Pool {
 }
 
 func (s *confConnector) GetResponsiblePeers(ctx context.Context, spaceId string) ([]peer.Peer, error) {
-	return s.connectOneOrMany(ctx, spaceId, nil, s.pool.Get, s.pool.GetOneOf)
+	return s.connectOneOrMany(ctx, spaceId, nil, s.pool.Get)
 }
 
 func (s *confConnector) DialInactiveResponsiblePeers(ctx context.Context, spaceId string, activeNodeIds []string) ([]peer.Peer, error) {
-	return s.connectOneOrMany(ctx, spaceId, activeNodeIds, s.pool.Dial, s.pool.DialOneOf)
+	return s.connectOneOrMany(ctx, spaceId, activeNodeIds, s.pool.Dial)
 }
 
 func (s *confConnector) connectOneOrMany(
 	ctx context.Context,
 	spaceId string,
 	activeNodeIds []string,
-	connectOne func(context.Context, string) (peer.Peer, error),
-	connectOneOf func(context.Context, []string) (peer.Peer, error)) (peers []peer.Peer, err error) {
+	connectOne func(context.Context, string) (peer.Peer, error)) (peers []peer.Peer, err error) {
 	var (
 		inactiveNodeIds []string
 		allNodes        = s.conf.NodeIds(spaceId)
