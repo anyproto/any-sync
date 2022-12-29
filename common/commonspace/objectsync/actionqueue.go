@@ -21,6 +21,10 @@ type actionQueue struct {
 	readers     chan struct{}
 }
 
+func NewDefaultActionQueue() ActionQueue {
+	return NewActionQueue(10, 200)
+}
+
 func NewActionQueue(maxReaders int, maxQueueLen int) ActionQueue {
 	return &actionQueue{
 		batcher:     mb.New[ActionFunc](maxQueueLen),
@@ -37,7 +41,7 @@ func (q *actionQueue) Send(action ActionFunc) (err error) {
 	}
 	log.With(zap.Error(err)).Debug("queue returned error")
 	actions := q.batcher.GetAll()
-	actions = actions[len(actions)/2:]
+	actions = append(actions[len(actions)/2:], action)
 	return q.batcher.Add(context.Background(), actions...)
 }
 
@@ -66,6 +70,7 @@ func (q *actionQueue) startReading() {
 }
 
 func (q *actionQueue) Close() {
+	log.Debug("closing the queue")
 	q.batcher.Close()
 	for i := 0; i < q.maxReaders; i++ {
 		<-q.readers
