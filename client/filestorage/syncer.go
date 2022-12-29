@@ -3,6 +3,7 @@ package filestorage
 import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/filestorage/badgerfilestore"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/filestorage/rpcstore"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
 	blocks "github.com/ipfs/go-block-format"
 	"go.uber.org/zap"
@@ -104,19 +105,35 @@ func (s *syncer) add(ctx context.Context, spaceOps badgerfilestore.SpaceCidOps) 
 	var bs []blocks.Block
 	for b := range res {
 		bs = append(bs, b)
-		doneCids.Add(spaceOps.SpaceId, badgerfilestore.OpAdd, b.Cid())
 	}
 	ctx = fileblockstore.CtxWithSpaceId(ctx, spaceOps.SpaceId)
-	if err := s.ps.origin.Add(ctx, bs); err != nil {
+	err := s.ps.origin.Add(ctx, bs)
+	if err != nil {
 		log.Debug("syncer: can't add to remote store", zap.Error(err))
+		if cerrs, ok := err.(*rpcstore.ErrPartial); ok {
+			log.Debug("partial sync", zap.Int("success", len(cerrs.SuccessCids)), zap.Int("error", len(cerrs.ErrorCids)))
+			if len(cerrs.SuccessCids) == 0 {
+				return
+			}
+			for _, doneCid := range cerrs.SuccessCids {
+				doneCids.Add(spaceOps.SpaceId, badgerfilestore.OpAdd, doneCid)
+			}
+		}
+	} else {
+		for _, b := range bs {
+			doneCids.Add(spaceOps.SpaceId, badgerfilestore.OpAdd, b.Cid())
+		}
+	}
+
+	doneCount = int32(doneCids.Len())
+	if doneCount == 0 {
 		return
 	}
 
-	if err := s.ps.index.Done(doneCids); err != nil {
+	if err = s.ps.index.Done(doneCids); err != nil {
 		log.Error("syncer: index.Done error", zap.Error(err))
 		return
 	}
-	doneCount = int32(doneCids.Len())
 	log.Info("successfully added cids", zap.Int32("count", doneCount), zap.Stringers("cids", doneCids.SpaceOps[0].Add))
 	return
 }
