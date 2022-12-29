@@ -15,79 +15,59 @@ type ActionQueue interface {
 }
 
 type actionQueue struct {
-	batcher   *mb.MB[ActionFunc]
-	ctx       context.Context
-	cancel    context.CancelFunc
-	queueDone chan struct{}
+	batcher     *mb.MB[ActionFunc]
+	maxReaders  int
+	maxQueueLen int
+	readers     chan struct{}
 }
 
-func NewActionQueue() ActionQueue {
+func NewActionQueue(maxReaders int, maxQueueLen int) ActionQueue {
 	return &actionQueue{
-		batcher:   mb.New[ActionFunc](0),
-		ctx:       nil,
-		cancel:    nil,
-		queueDone: make(chan struct{}),
+		batcher:     mb.New[ActionFunc](maxQueueLen),
+		maxReaders:  maxReaders,
+		maxQueueLen: maxQueueLen,
 	}
 }
 
 func (q *actionQueue) Send(action ActionFunc) (err error) {
 	log.Debug("adding action to batcher")
-	return q.batcher.Add(q.ctx, action)
+	err = q.batcher.TryAdd(action)
+	if err == nil {
+		return
+	}
+	log.With(zap.Error(err)).Debug("queue returned error")
+	actions := q.batcher.GetAll()
+	actions = actions[len(actions)/2:]
+	return q.batcher.Add(context.Background(), actions...)
 }
 
 func (q *actionQueue) Run() {
 	log.Debug("running the queue")
-	q.ctx, q.cancel = context.WithCancel(context.Background())
-	go q.read()
+	q.readers = make(chan struct{}, q.maxReaders)
+	for i := 0; i < q.maxReaders; i++ {
+		go q.startReading()
+	}
 }
 
-func (q *actionQueue) read() {
-	limiter := make(chan struct{}, maxStreamReaders)
-	for i := 0; i < maxStreamReaders; i++ {
-		limiter <- struct{}{}
-	}
+func (q *actionQueue) startReading() {
 	defer func() {
-		// wait until all operations are done
-		for i := 0; i < maxStreamReaders; i++ {
-			<-limiter
-		}
-		close(q.queueDone)
+		q.readers <- struct{}{}
 	}()
-	doSendActions := func() {
-		actions, err := q.batcher.Wait(q.ctx)
-		log.Debug("reading from batcher")
-		if err != nil {
-			log.With(zap.Error(err)).Error("queue finished")
-			return
-		}
-		for _, msg := range actions {
-			select {
-			case <-q.ctx.Done():
-				return
-			default:
-			}
-			
-			<-limiter
-			go func(action ActionFunc) {
-				err = action()
-				if err != nil {
-					log.With(zap.Error(err)).Debug("action errored out")
-				}
-				limiter <- struct{}{}
-			}(msg)
-		}
-	}
 	for {
-		select {
-		case <-q.ctx.Done():
+		action, err := q.batcher.WaitOne(context.Background())
+		if err != nil {
 			return
-		default:
-			doSendActions()
+		}
+		err = action()
+		if err != nil {
+			log.With(zap.Error(err)).Debug("action errored out")
 		}
 	}
 }
 
 func (q *actionQueue) Close() {
-	q.cancel()
-	<-q.queueDone
+	q.batcher.Close()
+	for i := 0; i < q.maxReaders; i++ {
+		<-q.readers
+	}
 }
