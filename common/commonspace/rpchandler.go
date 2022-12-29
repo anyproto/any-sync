@@ -7,7 +7,7 @@ import (
 
 type RpcHandler interface {
 	HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error)
-	Stream(stream spacesyncproto.DRPCSpace_StreamStream) error
+	Stream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error
 }
 
 type rpcHandler struct {
@@ -15,10 +15,10 @@ type rpcHandler struct {
 }
 
 func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
-	return r.s.DiffService().HandleRangeRequest(ctx, req)
+	return r.s.HeadSync().HandleRangeRequest(ctx, req)
 }
 
-func (r *rpcHandler) Stream(stream spacesyncproto.DRPCSpace_StreamStream) (err error) {
+func (r *rpcHandler) Stream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) (err error) {
 	// TODO: if needed we can launch full sync here
-	return r.s.SyncService().StreamPool().AddAndReadStreamSync(stream)
+	return r.s.ObjectSync().StreamPool().AddAndReadStreamSync(stream)
 }

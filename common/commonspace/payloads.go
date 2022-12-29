@@ -1,12 +1,12 @@
 package commonspace
 
 import (
+	aclrecordproto2 "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/keychain"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	aclrecordproto "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/common"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/cid"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/cidutil"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"hash/fnv"
 	"math/rand"
@@ -18,7 +18,7 @@ const (
 	SpaceDerivationScheme   = "derivation.standard"
 )
 
-func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload storage.SpaceStorageCreatePayload, err error) {
+func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
 	// unmarshalling signing and encryption keys
 	identity, err := payload.SigningKey.GetPublic().Raw()
 	if err != nil {
@@ -55,7 +55,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload st
 	if err != nil {
 		return
 	}
-	id, err := cid.NewCIDFromBytes(marshalled)
+	id, err := cidutil.NewCidFromBytes(marshalled)
 	spaceId := NewSpaceId(id, payload.ReplicationKey)
 	rawHeaderWithId := &spacesyncproto.RawSpaceHeaderWithId{
 		RawHeader: marshalled,
@@ -75,7 +75,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload st
 	}
 
 	// preparing acl
-	aclRoot := &aclrecordproto.ACLRoot{
+	aclRoot := &aclrecordproto2.AclRoot{
 		Identity:           identity,
 		EncryptionKey:      encPubKey,
 		SpaceId:            spaceId,
@@ -83,19 +83,19 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload st
 		CurrentReadKeyHash: readKeyHash,
 		Timestamp:          time.Now().UnixNano(),
 	}
-	rawWithId, err := marshalACLRoot(aclRoot, payload.SigningKey)
+	rawWithId, err := marshalAclRoot(aclRoot, payload.SigningKey)
 	if err != nil {
 		return
 	}
 
-	builder := tree.NewChangeBuilder(common.NewKeychain(), nil)
+	builder := objecttree.NewChangeBuilder(keychain.NewKeychain(), nil)
 	spaceSettingsSeed := make([]byte, 32)
 	_, err = rand.Read(spaceSettingsSeed)
 	if err != nil {
 		return
 	}
 
-	_, settingsRoot, err := builder.BuildInitialContent(tree.InitialContent{
+	_, settingsRoot, err := builder.BuildInitialContent(objecttree.InitialContent{
 		AclHeadId:  rawWithId.Id,
 		Identity:   aclRoot.Identity,
 		SigningKey: payload.SigningKey,
@@ -109,7 +109,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload st
 	}
 
 	// creating storage
-	storagePayload = storage.SpaceStorageCreatePayload{
+	storagePayload = spacestorage.SpaceStorageCreatePayload{
 		AclWithId:           rawWithId,
 		SpaceHeaderWithId:   rawHeaderWithId,
 		SpaceSettingsWithId: settingsRoot,
@@ -117,7 +117,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload st
 	return
 }
 
-func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload storage.SpaceStorageCreatePayload, err error) {
+func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
 	// unmarshalling signing and encryption keys
 	identity, err := payload.SigningKey.GetPublic().Raw()
 	if err != nil {
@@ -163,7 +163,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload st
 	if err != nil {
 		return
 	}
-	id, err := cid.NewCIDFromBytes(marshalled)
+	id, err := cidutil.NewCidFromBytes(marshalled)
 	spaceId := NewSpaceId(id, repKey)
 	rawHeaderWithId := &spacesyncproto.RawSpaceHeaderWithId{
 		RawHeader: marshalled,
@@ -171,7 +171,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload st
 	}
 
 	// deriving and encrypting read key
-	readKey, err := aclrecordproto.ACLReadKeyDerive(signPrivKey, encPrivKey)
+	readKey, err := aclrecordproto2.AclReadKeyDerive(signPrivKey, encPrivKey)
 	if err != nil {
 		return
 	}
@@ -187,7 +187,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload st
 	}
 
 	// preparing acl
-	aclRoot := &aclrecordproto.ACLRoot{
+	aclRoot := &aclrecordproto2.AclRoot{
 		Identity:           identity,
 		EncryptionKey:      encPubKey,
 		SpaceId:            spaceId,
@@ -195,13 +195,13 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload st
 		DerivationScheme:   SpaceDerivationScheme,
 		CurrentReadKeyHash: readKeyHash,
 	}
-	rawWithId, err := marshalACLRoot(aclRoot, payload.SigningKey)
+	rawWithId, err := marshalAclRoot(aclRoot, payload.SigningKey)
 	if err != nil {
 		return
 	}
 
-	builder := tree.NewChangeBuilder(common.NewKeychain(), nil)
-	_, settingsRoot, err := builder.BuildInitialContent(tree.InitialContent{
+	builder := objecttree.NewChangeBuilder(keychain.NewKeychain(), nil)
+	_, settingsRoot, err := builder.BuildInitialContent(objecttree.InitialContent{
 		AclHeadId:  rawWithId.Id,
 		Identity:   aclRoot.Identity,
 		SigningKey: payload.SigningKey,
@@ -213,7 +213,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload st
 	}
 
 	// creating storage
-	storagePayload = storage.SpaceStorageCreatePayload{
+	storagePayload = spacestorage.SpaceStorageCreatePayload{
 		AclWithId:           rawWithId,
 		SpaceHeaderWithId:   rawHeaderWithId,
 		SpaceSettingsWithId: settingsRoot,
@@ -221,7 +221,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload st
 	return
 }
 
-func marshalACLRoot(aclRoot *aclrecordproto.ACLRoot, key signingkey.PrivKey) (rawWithId *aclrecordproto.RawACLRecordWithId, err error) {
+func marshalAclRoot(aclRoot *aclrecordproto2.AclRoot, key signingkey.PrivKey) (rawWithId *aclrecordproto2.RawAclRecordWithId, err error) {
 	marshalledRoot, err := aclRoot.Marshal()
 	if err != nil {
 		return
@@ -230,7 +230,7 @@ func marshalACLRoot(aclRoot *aclrecordproto.ACLRoot, key signingkey.PrivKey) (ra
 	if err != nil {
 		return
 	}
-	raw := &aclrecordproto.RawACLRecord{
+	raw := &aclrecordproto2.RawAclRecord{
 		Payload:   marshalledRoot,
 		Signature: signature,
 	}
@@ -238,11 +238,11 @@ func marshalACLRoot(aclRoot *aclrecordproto.ACLRoot, key signingkey.PrivKey) (ra
 	if err != nil {
 		return
 	}
-	aclHeadId, err := cid.NewCIDFromBytes(marshalledRaw)
+	aclHeadId, err := cidutil.NewCidFromBytes(marshalledRaw)
 	if err != nil {
 		return
 	}
-	rawWithId = &aclrecordproto.RawACLRecordWithId{
+	rawWithId = &aclrecordproto2.RawAclRecordWithId{
 		Payload: marshalledRaw,
 		Id:      aclHeadId,
 	}

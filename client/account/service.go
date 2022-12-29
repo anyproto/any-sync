@@ -1,22 +1,17 @@
 package account
 
 import (
-	commonaccount "github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
+	commonaccount "github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/accountdata"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 )
 
 type service struct {
-	accountData *account.AccountData
+	accountData *accountdata.AccountData
 	peerId      string
-}
-
-func (s *service) Account() *account.AccountData {
-	return s.accountData
 }
 
 func New() app.Component {
@@ -24,7 +19,7 @@ func New() app.Component {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	acc := a.MustComponent(config.CName).(commonaccount.ConfigGetter).GetAccount()
+	acc := a.MustComponent("config").(commonaccount.ConfigGetter).GetAccount()
 
 	decodedEncryptionKey, err := keys.DecodeKeyFromString(
 		acc.EncryptionKey,
@@ -55,11 +50,12 @@ func (s *service) Init(a *app.App) (err error) {
 		return err
 	}
 
-	s.accountData = &account.AccountData{
+	s.accountData = &accountdata.AccountData{
 		Identity: identity,
 		PeerKey:  decodedPeerKey,
 		SignKey:  decodedSigningKey,
 		EncKey:   decodedEncryptionKey,
+		PeerId:   acc.PeerId,
 	}
 	s.peerId = acc.PeerId
 
@@ -68,4 +64,8 @@ func (s *service) Init(a *app.App) (err error) {
 
 func (s *service) Name() (name string) {
 	return commonaccount.CName
+}
+
+func (s *service) Account() *accountdata.AccountData {
+	return s.accountData
 }

@@ -5,10 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/api"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/badgerprovider"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace/clientcache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/debug/clientdebugrpc"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/document"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/filestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/filestorage/rpcstore"
@@ -17,12 +18,11 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/dialer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secureservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"go.uber.org/zap"
 	"net/http"
@@ -104,7 +104,7 @@ func Bootstrap(a *app.App) {
 		Register(badgerprovider.New()).
 		Register(storage.New()).
 		Register(clientcache.New(200)).
-		Register(secure.New()).
+		Register(secureservice.New()).
 		Register(dialer.New()).
 		Register(pool.New()).
 		Register(commonspace.New()).
@@ -114,5 +114,5 @@ func Bootstrap(a *app.App) {
 		Register(rpcstore.New()).
 		Register(fileservice.New()).
 		Register(filestorage.New()).
-		Register(api.New())
+		Register(clientdebugrpc.New())
 }

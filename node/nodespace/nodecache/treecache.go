@@ -5,9 +5,9 @@ import (
 	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ocache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace"
 	"time"
 )
@@ -61,13 +61,13 @@ func (c *treeCache) Name() (name string) {
 	return treegetter.CName
 }
 
-func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (tr tree.ObjectTree, err error) {
+func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (tr objecttree.ObjectTree, err error) {
 	ctx = context.WithValue(ctx, spaceKey, spaceId)
 	value, err := c.cache.Get(ctx, id)
 	if err != nil {
 		return
 	}
-	tr = value.(tree.ObjectTree)
+	tr = value.(objecttree.ObjectTree)
 	return
 }
 

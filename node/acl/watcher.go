@@ -2,9 +2,9 @@ package acl
 
 import (
 	"context"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectsync/synchandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice/synchandler"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
 	"go.uber.org/zap"
 	"sync"
@@ -37,7 +37,7 @@ func (w *watcher) AddConsensusRecords(recs []*consensusproto.Record) {
 	w.isReady.Do(func() {
 		close(w.ready)
 	})
-	records := make([]*aclrecordproto.RawACLRecordWithId, 0, len(recs))
+	records := make([]*aclrecordproto.RawAclRecordWithId, 0, len(recs))
 
 	for _, rec := range recs {
 		recId, err := cidToString(rec.Id)
@@ -45,16 +45,16 @@ func (w *watcher) AddConsensusRecords(recs []*consensusproto.Record) {
 			log.Error("received invalid id from consensus node", zap.Error(err))
 			continue
 		}
-		records = append(records, &aclrecordproto.RawACLRecordWithId{
+		records = append(records, &aclrecordproto.RawAclRecordWithId{
 			Payload: rec.Payload,
 			Id:      recId,
 		})
 	}
 
-	aclReq := &aclrecordproto.ACLSyncMessage{
-		Content: &aclrecordproto.ACLSyncContentValue{
-			Value: &aclrecordproto.ACLSyncContentValue_AddRecords{
-				AddRecords: &aclrecordproto.ACLAddRecords{
+	aclReq := &aclrecordproto.AclSyncMessage{
+		Content: &aclrecordproto.AclSyncContentValue{
+			Value: &aclrecordproto.AclSyncContentValue_AddRecords{
+				AddRecords: &aclrecordproto.AclAddRecords{
 					Records: records,
 				},
 			},

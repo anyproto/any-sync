@@ -4,22 +4,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settingsdocument/deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ocache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/headsync"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/list"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/syncacl"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree/updatelistener"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectsync"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings/deletionstate"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/statusservice"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncacl"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncservice"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/list"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/keys/asymmetric/signingkey"
 	"github.com/zeebo/errs"
@@ -71,17 +71,17 @@ type Space interface {
 	Init(ctx context.Context) error
 
 	StoredIds() []string
-	DebugAllHeads() []diffservice.TreeHeads
+	DebugAllHeads() []headsync.TreeHeads
 	Description() (SpaceDescription, error)
 
 	SpaceSyncRpc() RpcHandler
 
-	DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (string, error)
-	CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (string, error)
-	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (tree.ObjectTree, error)
+	DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (string, error)
+	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (string, error)
+	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (objecttree.ObjectTree, error)
 	DeleteTree(ctx context.Context, id string) (err error)
 
-	StatusService() statusservice.StatusService
+	SyncStatus() syncstatus.StatusUpdater
 
 	Close() error
 }
@@ -93,22 +93,22 @@ type space struct {
 
 	rpc *rpcHandler
 
-	syncService      syncservice.SyncService
-	diffService      diffservice.DiffService
-	statusService    statusservice.StatusService
-	storage          storage.SpaceStorage
-	cache            treegetter.TreeGetter
-	account          account.Service
-	aclList          *syncacl.SyncACL
-	configuration    nodeconf.Configuration
-	settingsDocument settingsdocument.SettingsDocument
+	objectSync     objectsync.ObjectSync
+	headSync       headsync.HeadSync
+	syncStatus     syncstatus.StatusUpdater
+	storage        spacestorage.SpaceStorage
+	cache          treegetter.TreeGetter
+	account        accountservice.Service
+	aclList        *syncacl.SyncAcl
+	configuration  nodeconf.Configuration
+	settingsObject settings.SettingsObject
 
 	isClosed  atomic.Bool
 	treesUsed atomic.Int32
 }
 
 func (s *space) LastUsage() time.Time {
-	return s.syncService.LastUsage()
+	return s.objectSync.LastUsage()
 }
 
 func (s *space) Locked() bool {
@@ -156,18 +156,18 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	aclStorage, err := s.storage.ACLStorage()
+	aclStorage, err := s.storage.AclStorage()
 	if err != nil {
 		return
 	}
-	aclList, err := list.BuildACLListWithIdentity(s.account.Account(), aclStorage)
+	aclList, err := list.BuildAclListWithIdentity(s.account.Account(), aclStorage)
 	if err != nil {
 		return
 	}
-	s.aclList = syncacl.NewSyncACL(aclList, s.syncService.StreamPool())
+	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.StreamPool())
 
 	deletionState := deletionstate.NewDeletionState(s.storage)
-	deps := settingsdocument.Deps{
+	deps := settings.Deps{
 		BuildFunc: func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error) {
 			res, err := s.BuildTree(ctx, id, listener)
 			if err != nil {
@@ -181,16 +181,16 @@ func (s *space) Init(ctx context.Context) (err error) {
 		Store:         s.storage,
 		DeletionState: deletionState,
 	}
-	s.settingsDocument = settingsdocument.NewSettingsDocument(deps, s.id)
+	s.settingsObject = settings.NewSettingsObject(deps, s.id)
 
-	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache, s.settingsDocument)
-	s.syncService.Init(objectGetter)
-	s.diffService.Init(initialIds, deletionState)
-	err = s.settingsDocument.Init(ctx)
+	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache, s.settingsObject)
+	s.objectSync.Init(objectGetter)
+	s.headSync.Init(initialIds, deletionState)
+	err = s.settingsObject.Init(ctx)
 	if err != nil {
 		return
 	}
-	s.statusService.Run()
+	s.syncStatus.Run()
 
 	return nil
 }
@@ -199,27 +199,27 @@ func (s *space) SpaceSyncRpc() RpcHandler {
 	return s.rpc
 }
 
-func (s *space) SyncService() syncservice.SyncService {
-	return s.syncService
+func (s *space) ObjectSync() objectsync.ObjectSync {
+	return s.objectSync
 }
 
-func (s *space) DiffService() diffservice.DiffService {
-	return s.diffService
+func (s *space) HeadSync() headsync.HeadSync {
+	return s.headSync
 }
 
-func (s *space) StatusService() statusservice.StatusService {
-	return s.statusService
+func (s *space) SyncStatus() syncstatus.StatusUpdater {
+	return s.syncStatus
 }
 
 func (s *space) StoredIds() []string {
-	return s.diffService.AllIds()
+	return s.headSync.AllIds()
 }
 
-func (s *space) DebugAllHeads() []diffservice.TreeHeads {
-	return s.diffService.DebugAllHeads()
+func (s *space) DebugAllHeads() []headsync.TreeHeads {
+	return s.headSync.DebugAllHeads()
 }
 
-func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (id string, err error) {
+func (s *space) DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (id string, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
@@ -227,17 +227,17 @@ func (s *space) DeriveTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 	deps := synctree.CreateDeps{
 		SpaceId:        s.id,
 		Payload:        payload,
-		SyncService:    s.syncService,
+		ObjectSync:     s.objectSync,
 		Configuration:  s.configuration,
 		AclList:        s.aclList,
 		SpaceStorage:   s.storage,
-		StatusService:  s.statusService,
-		HeadNotifiable: s.diffService,
+		SyncStatus:     s.syncStatus,
+		HeadNotifiable: s.headSync,
 	}
 	return synctree.DeriveSyncTree(ctx, deps)
 }
 
-func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePayload) (id string, err error) {
+func (s *space) CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (id string, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
@@ -245,37 +245,37 @@ func (s *space) CreateTree(ctx context.Context, payload tree.ObjectTreeCreatePay
 	deps := synctree.CreateDeps{
 		SpaceId:        s.id,
 		Payload:        payload,
-		SyncService:    s.syncService,
+		ObjectSync:     s.objectSync,
 		Configuration:  s.configuration,
 		AclList:        s.aclList,
 		SpaceStorage:   s.storage,
-		StatusService:  s.statusService,
-		HeadNotifiable: s.diffService,
+		SyncStatus:     s.syncStatus,
+		HeadNotifiable: s.headSync,
 	}
 	return synctree.CreateSyncTree(ctx, deps)
 }
 
-func (s *space) BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (t tree.ObjectTree, err error) {
+func (s *space) BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
 	}
 	deps := synctree.BuildDeps{
 		SpaceId:        s.id,
-		SyncService:    s.syncService,
+		ObjectSync:     s.objectSync,
 		Configuration:  s.configuration,
-		HeadNotifiable: s.diffService,
+		HeadNotifiable: s.headSync,
 		Listener:       listener,
 		AclList:        s.aclList,
 		SpaceStorage:   s.storage,
 		TreeUsage:      &s.treesUsed,
-		StatusService:  s.statusService,
+		SyncStatus:     s.syncStatus,
 	}
 	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
 }
 
 func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
-	return s.settingsDocument.DeleteObject(id)
+	return s.settingsObject.DeleteObject(id)
 }
 
 func (s *space) Close() error {
@@ -285,13 +285,13 @@ func (s *space) Close() error {
 		log.With(zap.String("id", s.id)).Debug("space closed")
 	}()
 	var mError errs.Group
-	if err := s.diffService.Close(); err != nil {
+	if err := s.headSync.Close(); err != nil {
 		mError.Add(err)
 	}
-	if err := s.syncService.Close(); err != nil {
+	if err := s.objectSync.Close(); err != nil {
 		mError.Add(err)
 	}
-	if err := s.settingsDocument.Close(); err != nil {
+	if err := s.settingsObject.Close(); err != nil {
 		mError.Add(err)
 	}
 	if err := s.aclList.Close(); err != nil {
@@ -300,7 +300,7 @@ func (s *space) Close() error {
 	if err := s.storage.Close(); err != nil {
 		mError.Add(err)
 	}
-	if err := s.statusService.Close(); err != nil {
+	if err := s.syncStatus.Close(); err != nil {
 		mError.Add(err)
 	}
 

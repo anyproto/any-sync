@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/testutil/testaccount"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/cid"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/testutil/accounttest"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/cidutil"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusclient"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusclient/mock_consensusclient"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
@@ -28,9 +28,9 @@ func TestService_CreateLog(t *testing.T) {
 		clog = l
 	})
 
-	aclId, _ := cid.NewCIDFromBytes([]byte("aclId"))
+	aclId, _ := cidutil.NewCidFromBytes([]byte("aclId"))
 
-	rec := &aclrecordproto.ACLRecord{
+	rec := &aclrecordproto.AclRecord{
 		PrevId:    "",
 		Identity:  fx.account.Account().Identity,
 		Data:      []byte{'1', '2', '3'},
@@ -38,7 +38,7 @@ func TestService_CreateLog(t *testing.T) {
 	}
 	pl, _ := rec.Marshal()
 
-	firstRecId, err := fx.CreateLog(ctx, aclId, &aclrecordproto.RawACLRecord{
+	firstRecId, err := fx.CreateLog(ctx, aclId, &aclrecordproto.RawAclRecord{
 		Payload: pl,
 	})
 	require.NoError(t, err)
@@ -48,7 +48,7 @@ func TestService_CreateLog(t *testing.T) {
 	assert.NotEmpty(t, firstRecIdBytes)
 	require.Len(t, clog.Records, 1)
 
-	var resultRawAcl = &aclrecordproto.RawACLRecord{}
+	var resultRawAcl = &aclrecordproto.RawAclRecord{}
 	require.NoError(t, resultRawAcl.Unmarshal(clog.Records[0].Payload))
 	valid, err := fx.account.Account().SignKey.GetPublic().Verify(resultRawAcl.Payload, resultRawAcl.AcceptorSignature)
 	require.NoError(t, err)
@@ -63,9 +63,9 @@ func TestService_AddRecord(t *testing.T) {
 		clog = l
 	})
 
-	aclId, _ := cid.NewCIDFromBytes([]byte("aclId"))
+	aclId, _ := cidutil.NewCidFromBytes([]byte("aclId"))
 
-	rec := &aclrecordproto.ACLRecord{
+	rec := &aclrecordproto.AclRecord{
 		PrevId:    "",
 		Identity:  fx.account.Account().Identity,
 		Data:      []byte{'1', '2', '3'},
@@ -73,7 +73,7 @@ func TestService_AddRecord(t *testing.T) {
 	}
 	pl, _ := rec.Marshal()
 
-	firstRecId, err := fx.CreateLog(ctx, aclId, &aclrecordproto.RawACLRecord{
+	firstRecId, err := fx.CreateLog(ctx, aclId, &aclrecordproto.RawAclRecord{
 		Payload: pl,
 	})
 	require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestService_AddRecord(t *testing.T) {
 	fx.mockClient.EXPECT().AddRecord(ctx, aclIdBytes, gomock.Any()).Do(func(ctx context.Context, logId []byte, rec *consensusproto.Record) {
 		addRec = rec
 	})
-	rec = &aclrecordproto.ACLRecord{
+	rec = &aclrecordproto.AclRecord{
 		PrevId:    firstRecId,
 		Identity:  fx.account.Account().Identity,
 		Data:      []byte{'1', '2', '3', '4'},
@@ -93,7 +93,7 @@ func TestService_AddRecord(t *testing.T) {
 	}
 	pl, _ = rec.Marshal()
 
-	newRecId, err := fx.AddRecord(ctx, aclId, &aclrecordproto.RawACLRecord{
+	newRecId, err := fx.AddRecord(ctx, aclId, &aclrecordproto.RawAclRecord{
 		Payload: pl,
 	})
 	require.NoError(t, err)
@@ -108,7 +108,7 @@ func TestService_Watch(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish(t)
 		var expErr = fmt.Errorf("error")
-		aclId, _ := cid.NewCIDFromBytes([]byte("aclId"))
+		aclId, _ := cidutil.NewCidFromBytes([]byte("aclId"))
 		aclIdBytes, _ := cidToByte(aclId)
 		fx.mockClient.EXPECT().Watch(aclIdBytes, gomock.Any()).Do(func(aid []byte, w consensusclient.Watcher) {
 			assert.Equal(t, aclIdBytes, aid)
@@ -125,14 +125,14 @@ func TestService_Watch(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish(t)
-		aclId, _ := cid.NewCIDFromBytes([]byte("aclId"))
+		aclId, _ := cidutil.NewCidFromBytes([]byte("aclId"))
 		aclIdBytes, _ := cidToByte(aclId)
 		fx.mockClient.EXPECT().Watch(aclIdBytes, gomock.Any()).Do(func(aid []byte, w consensusclient.Watcher) {
 			assert.Equal(t, aclIdBytes, aid)
 			go func() {
 				time.Sleep(time.Millisecond * 10)
-				r1cid, _ := cid.NewCIDFromBytes([]byte("r1"))
-				r2cid, _ := cid.NewCIDFromBytes([]byte("r2"))
+				r1cid, _ := cidutil.NewCidFromBytes([]byte("r1"))
+				r2cid, _ := cidutil.NewCidFromBytes([]byte("r2"))
 				r1cidB, _ := cidToByte(r1cid)
 				r2cidB, _ := cidToByte(r2cid)
 				w.AddConsensusRecords([]*consensusproto.Record{
@@ -159,7 +159,7 @@ func newFixture(t *testing.T) *fixture {
 	fx := &fixture{
 		a:       new(app.App),
 		ctrl:    gomock.NewController(t),
-		account: &testaccount.AccountTestService{},
+		account: &accounttest.AccountTestService{},
 	}
 	fx.mockClient = mock_consensusclient.NewMockService(fx.ctrl)
 	fx.mockClient.EXPECT().Name().Return(consensusclient.CName).AnyTimes()
@@ -177,7 +177,7 @@ type fixture struct {
 	mockClient *mock_consensusclient.MockService
 	ctrl       *gomock.Controller
 	a          *app.App
-	account    *testaccount.AccountTestService
+	account    *accounttest.AccountTestService
 }
 
 func (fx *fixture) Finish(t *testing.T) {

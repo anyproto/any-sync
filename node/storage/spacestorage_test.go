@@ -1,10 +1,10 @@
 package storage
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treechangeproto"
+	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/aclrecordproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/stretchr/testify/require"
 	"os"
 	"sort"
@@ -17,7 +17,7 @@ func spaceTestPayload() spacestorage.SpaceStorageCreatePayload {
 		RawHeader: []byte("header"),
 		Id:        "headerId",
 	}
-	aclRoot := &aclrecordproto.RawACLRecordWithId{
+	aclRoot := &aclrecordproto.RawAclRecordWithId{
 		Payload: []byte("aclRoot"),
 		Id:      "aclRootId",
 	}
@@ -37,7 +37,7 @@ func testSpace(t *testing.T, store spacestorage.SpaceStorage, payload spacestora
 	require.NoError(t, err)
 	require.Equal(t, payload.SpaceHeaderWithId, header)
 
-	aclStorage, err := store.ACLStorage()
+	aclStorage, err := store.AclStorage()
 	require.NoError(t, err)
 	testList(t, aclStorage, payload.AclWithId, payload.AclWithId.Id)
 }

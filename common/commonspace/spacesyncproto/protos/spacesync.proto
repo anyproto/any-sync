@@ -1,5 +1,5 @@
 syntax = "proto3";
-package anySpace;
+package spacesync;
 
 option go_package = "commonspace/spacesyncproto";
 
@@ -10,15 +10,15 @@ enum ErrCodes {
     ErrorOffset = 100;
 }
 
-service Space {
+service SpaceSync {
     // HeadSync compares all objects and their hashes in a space
     rpc HeadSync(HeadSyncRequest) returns (HeadSyncResponse);
-    // PushSpace sends new space to the node
-    rpc PushSpace(PushSpaceRequest) returns (PushSpaceResponse);
-    // PullSpace gets space from the remote peer
-    rpc PullSpace(PullSpaceRequest) returns (PullSpaceResponse);
-    // Stream opens object sync stream with node or client
-    rpc Stream(stream ObjectSyncMessage) returns (stream ObjectSyncMessage);
+    // SpacePush sends new space to the node
+    rpc SpacePush(SpacePushRequest) returns (SpacePushResponse);
+    // SpacePull gets space from the remote peer
+    rpc SpacePull(SpacePullRequest) returns (SpacePullResponse);
+    // ObjectSyncStream opens object sync stream with node or client
+    rpc ObjectSyncStream(stream ObjectSyncMessage) returns (stream ObjectSyncMessage);
 }
 
 // HeadSyncRange presenting a request for one range
@@ -62,24 +62,25 @@ message ObjectSyncMessage {
 //  string peerSignature = 6;
 }
 
-// PushSpaceRequest is a request to add space on a node containing only one acl record
-message PushSpaceRequest {
+// SpacePushRequest is a request to add space on a node containing only one acl record
+message SpacePushRequest {
     SpacePayload payload = 1;
 }
 
-// PushSpaceResponse is an empty response
-message PushSpaceResponse {}
+// SpacePushResponse is an empty response
+message SpacePushResponse {}
 
-// PullSpaceRequest is a request to request a space on a node that doesn't have it
-message PullSpaceRequest {
+// SpacePullRequest is a request to request a space on a node that doesn't have it
+message SpacePullRequest {
     string id = 1;
 }
 
-// PullSpaceResponse is a response with header and acl root
-message PullSpaceResponse {
+// SpacePullResponse is a response with header and acl root
+message SpacePullResponse {
     SpacePayload payload = 1;
 }
 
+// SpacePayload is a payload for pushing a space
 message SpacePayload {
     RawSpaceHeaderWithId spaceHeader = 1;
     bytes aclPayload = 2;
@@ -97,30 +98,36 @@ message SpaceHeader {
     bytes seed = 5;
 }
 
+// RawSpaceHeader is raw header for SpaceHeader
 message RawSpaceHeader {
     bytes spaceHeader = 1;
     bytes signature = 2;
 }
 
+// RawSpaceHeaderWithId is a marshalled RawSpaceHeader with its content id
 message RawSpaceHeaderWithId {
     bytes rawHeader = 1;
     string id = 2;
 }
 
+// SpaceSettingsContent is a payload for a space settings object
 message SpaceSettingsContent {
     oneof value {
         ObjectDelete objectDelete = 1;
     }
 }
 
+// ObjectDelete is a message containing an object id which should be deleted
 message ObjectDelete {
     string id = 1;
 }
 
+// SpaceSettingsSnapshot contains all the deleted ids in a snapshot
 message SpaceSettingsSnapshot {
     repeated string deletedIds = 1;
 }
 
+// SettingsData contains ObjectTree change payload
 message SettingsData {
     repeated SpaceSettingsContent content = 1;
     SpaceSettingsSnapshot snapshot = 2;

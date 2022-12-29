@@ -1,0 +1,118 @@
+syntax = "proto3";
+package aclrecord;
+option go_package = "commonspace/object/acl/aclrecordproto";
+
+message RawAclRecord {
+    bytes payload = 1;
+    bytes signature = 2;
+    bytes acceptorIdentity = 3;
+    bytes acceptorSignature = 4;
+}
+
+message RawAclRecordWithId {
+    bytes payload = 1;
+    string id = 2;
+}
+
+message AclRecord {
+    string prevId = 1;
+    bytes identity = 2;
+    bytes data = 3;
+    uint64 currentReadKeyHash = 4;
+    int64 timestamp = 5;
+}
+
+message AclRoot {
+    bytes identity = 1;
+    bytes encryptionKey = 2;
+    string spaceId = 3;
+    bytes encryptedReadKey = 4;
+    string derivationScheme = 5;
+    uint64 currentReadKeyHash = 6;
+    int64 timestamp = 7;
+}
+
+message AclContentValue {
+    oneof value {
+        AclUserAdd userAdd = 1;
+        AclUserRemove userRemove = 2;
+        AclUserPermissionChange userPermissionChange = 3;
+        AclUserInvite userInvite = 4;
+        AclUserJoin userJoin = 5;
+    }
+}
+
+message AclData {
+    repeated AclContentValue aclContent = 1;
+}
+
+message AclState {
+    repeated uint64 readKeyHashes = 1;
+    repeated AclUserState userStates = 2;
+    map<string, AclUserInvite> invites = 3;
+}
+
+message AclUserState {
+    bytes identity = 1;
+    bytes encryptionKey = 2;
+    AclUserPermissions permissions = 3;
+}
+
+message AclUserAdd {
+    bytes identity = 1;
+    bytes encryptionKey = 2;
+    repeated bytes encryptedReadKeys = 3;
+    AclUserPermissions permissions = 4;
+}
+
+message AclUserInvite {
+    bytes acceptPublicKey = 1;
+    uint64 encryptSymKeyHash = 2;
+    repeated bytes encryptedReadKeys = 3;
+    AclUserPermissions permissions = 4;
+}
+
+message AclUserJoin {
+    bytes identity = 1;
+    bytes encryptionKey = 2;
+    bytes acceptSignature = 3;
+    bytes acceptPubKey = 4;
+    repeated bytes encryptedReadKeys = 5;
+}
+
+message AclUserRemove {
+    bytes identity = 1;
+    repeated AclReadKeyReplace readKeyReplaces = 2;
+}
+
+message AclReadKeyReplace {
+    bytes identity = 1;
+    bytes encryptionKey = 2;
+    bytes encryptedReadKey = 3;
+}
+
+message AclUserPermissionChange {
+    bytes identity = 1;
+    AclUserPermissions permissions = 2;
+}
+
+enum AclUserPermissions {
+    Admin = 0;
+    Writer = 1;
+    Reader = 2;
+}
+
+message AclSyncMessage {
+    AclSyncContentValue content = 2;
+}
+
+// AclSyncContentValue provides different types for acl sync
+message AclSyncContentValue {
+    oneof value {
+        AclAddRecords addRecords = 1;
+    }
+}
+
+message AclAddRecords {
+    repeated RawAclRecordWithId records = 1;
+}

@@ -5,12 +5,12 @@ import (
 	"errors"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/document/textdocument"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/ocache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ocache"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
 	"go.uber.org/zap"
 	"time"
 )
@@ -25,7 +25,7 @@ const spaceKey ctxKey = 0
 type treeCache struct {
 	gcttl         int
 	cache         ocache.OCache
-	account       account.Service
+	account       accountservice.Service
 	clientService clientspace.Service
 }
 
@@ -37,17 +37,17 @@ type TreeCache interface {
 type updateListener struct {
 }
 
-func (u *updateListener) Update(tree tree.ObjectTree) {
+func (u *updateListener) Update(tree objecttree.ObjectTree) {
 	log.With(
 		zap.Strings("heads", tree.Heads()),
-		zap.String("tree id", tree.ID())).
+		zap.String("tree id", tree.Id())).
 		Debug("updating tree")
 }
 
-func (u *updateListener) Rebuild(tree tree.ObjectTree) {
+func (u *updateListener) Rebuild(tree objecttree.ObjectTree) {
 	log.With(
 		zap.Strings("heads", tree.Heads()),
-		zap.String("tree id", tree.ID())).
+		zap.String("tree id", tree.Id())).
 		Debug("rebuilding tree")
 }
 
@@ -67,7 +67,7 @@ func (c *treeCache) Close(ctx context.Context) (err error) {
 
 func (c *treeCache) Init(a *app.App) (err error) {
 	c.clientService = a.MustComponent(clientspace.CName).(clientspace.Service)
-	c.account = a.MustComponent(account.CName).(account.Service)
+	c.account = a.MustComponent(accountservice.CName).(accountservice.Service)
 	c.cache = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
 			spaceId := ctx.Value(spaceKey).(string)
@@ -98,7 +98,7 @@ func (c *treeCache) GetDocument(ctx context.Context, spaceId, id string) (doc te
 	return
 }
 
-func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (tr tree.ObjectTree, err error) {
+func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (tr objecttree.ObjectTree, err error) {
 	doc, err := c.GetDocument(ctx, spaceId, id)
 	if err != nil {
 		return

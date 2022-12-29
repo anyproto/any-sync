@@ -2,17 +2,17 @@ package textdocument
 
 import (
 	"context"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
+	textchange "github.com/anytypeio/go-anytype-infrastructure-experiments/client/document/textchangeproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/synctree/updatelistener"
-	testchanges "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/testutils/testchanges/proto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/tree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree/updatelistener"
 	"github.com/gogo/protobuf/proto"
 )
 
 type TextDocument interface {
-	tree.ObjectTree
-	InnerTree() tree.ObjectTree
+	objecttree.ObjectTree
+	InnerTree() objecttree.ObjectTree
 	AddText(text string, isSnapshot bool) (string, string, error)
 	Text() (string, error)
 	TreeDump() string
@@ -20,15 +20,15 @@ type TextDocument interface {
 }
 
 type textDocument struct {
-	tree.ObjectTree
-	account account.Service
+	objecttree.ObjectTree
+	account accountservice.Service
 }
 
 func CreateTextDocument(
 	ctx context.Context,
 	space commonspace.Space,
-	account account.Service) (id string, err error) {
-	payload := tree.ObjectTreeCreatePayload{
+	account accountservice.Service) (id string, err error) {
+	payload := objecttree.ObjectTreeCreatePayload{
 		SignKey:  account.Account().SignKey,
 		SpaceId:  space.Id(),
 		Identity: account.Account().Identity,
@@ -36,7 +36,7 @@ func CreateTextDocument(
 	return space.CreateTree(ctx, payload)
 }
 
-func NewTextDocument(ctx context.Context, space commonspace.Space, id string, listener updatelistener.UpdateListener, account account.Service) (doc TextDocument, err error) {
+func NewTextDocument(ctx context.Context, space commonspace.Space, id string, listener updatelistener.UpdateListener, account accountservice.Service) (doc TextDocument, err error) {
 	t, err := space.BuildTree(ctx, id, listener)
 	if err != nil {
 		return
@@ -47,16 +47,16 @@ func NewTextDocument(ctx context.Context, space commonspace.Space, id string, li
 	}, nil
 }
 
-func (t *textDocument) InnerTree() tree.ObjectTree {
+func (t *textDocument) InnerTree() objecttree.ObjectTree {
 	return t.ObjectTree
 }
 
 func (t *textDocument) AddText(text string, isSnapshot bool) (root, head string, err error) {
-	content := &testchanges.TextContent_TextAppend{
-		TextAppend: &testchanges.TextAppend{Text: text},
+	content := &textchange.TextContent_TextAppend{
+		TextAppend: &textchange.TextAppend{Text: text},
 	}
-	change := &testchanges.TextData{
-		Content: []*testchanges.TextContent{
+	change := &textchange.TextData{
+		Content: []*textchange.TextContent{
 			{content},
 		},
 		Snapshot: nil,
@@ -67,7 +67,7 @@ func (t *textDocument) AddText(text string, isSnapshot bool) (root, head string,
 	}
 	t.Lock()
 	defer t.Unlock()
-	addRes, err := t.AddContent(context.Background(), tree.SignableChangeContent{
+	addRes, err := t.AddContent(context.Background(), objecttree.SignableChangeContent{
 		Data:       res,
 		Key:        t.account.Account().SignKey,
 		Identity:   t.account.Account().Identity,
@@ -87,7 +87,7 @@ func (t *textDocument) Text() (text string, err error) {
 
 	err = t.Iterate(
 		func(decrypted []byte) (any, error) {
-			textChange := &testchanges.TextData{}
+			textChange := &textchange.TextData{}
 			err = proto.Unmarshal(decrypted, textChange)
 			if err != nil {
 				return nil, err
@@ -98,7 +98,7 @@ func (t *textDocument) Text() (text string, err error) {
 				}
 			}
 			return textChange, nil
-		}, func(change *tree.Change) bool {
+		}, func(change *objecttree.Change) bool {
 			return true
 		})
 	return

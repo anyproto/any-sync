@@ -8,7 +8,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secureservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/filenode/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/filenode/filepogreb"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/filenode/fileserver"
@@ -85,7 +85,7 @@ func main() {
 }
 
 func Bootstrap(a *app.App) {
-	a.Register(secure.New()).
+	a.Register(secureservice.New()).
 		Register(server.New()).
 		Register(filepogreb.New()).
 		Register(fileserver.New()).

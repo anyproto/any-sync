@@ -2,7 +2,7 @@ package storage
 
 import (
 	"fmt"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage"
 	"strings"
 )
 
@@ -21,7 +21,7 @@ func (a aclKeys) RootIdKey() []byte {
 }
 
 func (a aclKeys) RawRecordKey(id string) []byte {
-	return storage.JoinStringsToBytes("a", id)
+	return treestorage.JoinStringsToBytes("a", id)
 }
 
 type treeKeys struct {
@@ -33,7 +33,7 @@ type treeKeys struct {
 func newTreeKeys(id string) treeKeys {
 	return treeKeys{
 		id:       id,
-		headsKey: storage.JoinStringsToBytes("t", id, "heads"),
+		headsKey: treestorage.JoinStringsToBytes("t", id, "heads"),
 		prefix:   fmt.Sprintf("t/%s", id),
 	}
 }
@@ -43,7 +43,7 @@ func (t treeKeys) HeadsKey() []byte {
 }
 
 func (t treeKeys) RawChangeKey(id string) []byte {
-	return storage.JoinStringsToBytes("t", t.id, id)
+	return treestorage.JoinStringsToBytes("t", t.id, id)
 }
 
 func (t treeKeys) isTreeRelatedKey(key string) bool {
@@ -55,7 +55,7 @@ type spaceKeys struct {
 }
 
 func newSpaceKeys(spaceId string) spaceKeys {
-	return spaceKeys{headerKey: storage.JoinStringsToBytes("s", spaceId)}
+	return spaceKeys{headerKey: treestorage.JoinStringsToBytes("s", spaceId)}
 }
 
 var (
@@ -76,7 +76,7 @@ func (s spaceKeys) SpaceSettingsIdKey() []byte {
 }
 
 func (s spaceKeys) TreeDeletedKey(id string) []byte {
-	return storage.JoinStringsToBytes("del", id)
+	return treestorage.JoinStringsToBytes("del", id)
 }
 
 func isTreeHeadsKey(key string) bool {

@@ -3,7 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
-	clientproto "github.com/anytypeio/go-anytype-infrastructure-experiments/client/api/apiproto"
+	clientproto "github.com/anytypeio/go-anytype-infrastructure-experiments/client/debug/clientdebugrpc/clientdebugrpcproto"
 	"github.com/spf13/cobra"
 )
 

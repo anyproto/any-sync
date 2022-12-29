@@ -15,6 +15,7 @@ require (
 	github.com/ipfs/go-cid v0.3.2
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.24.0
+	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.32
 )
 
@@ -65,6 +66,5 @@ require (
 	golang.org/x/image v0.0.0-20200119044424-58c23975cae1 // indirect
 	golang.org/x/sys v0.3.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )

@@ -7,15 +7,15 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/config"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/metric"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/dialer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/rpc/server"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secure"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/secureservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/account"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/api"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/config"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/debug/nodedebugrpc"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/nodespace/nodecache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/node/storage"
@@ -97,11 +97,11 @@ func Bootstrap(a *app.App) {
 		Register(storage.New()).
 		Register(nodecache.New(200)).
 		Register(nodeconf.New()).
-		Register(secure.New()).
+		Register(secureservice.New()).
 		Register(dialer.New()).
 		Register(pool.New()).
 		Register(nodespace.New()).
 		Register(commonspace.New()).
 		Register(server.New()).
-		Register(api.New())
+		Register(nodedebugrpc.New())
 }

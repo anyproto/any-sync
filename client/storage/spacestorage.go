@@ -1,10 +1,11 @@
 package storage
 
 import (
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/liststorage"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treechangeproto"
+	storage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage"
+	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	spacestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/storage"
-	storage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/storage"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/pkg/acl/treechangeproto"
 	"github.com/dgraph-io/badger/v3"
 )
 
@@ -13,7 +14,7 @@ type spaceStorage struct {
 	spaceSettingsId string
 	objDb           *badger.DB
 	keys            spaceKeys
-	aclStorage      storage.ListStorage
+	aclStorage      liststorage.ListStorage
 	header          *spacesyncproto.RawSpaceHeaderWithId
 }
 
@@ -119,7 +120,7 @@ func (s *spaceStorage) CreateTreeStorage(payload storage.TreeStorageCreatePayloa
 	return createTreeStorage(s.objDb, s.spaceId, payload)
 }
 
-func (s *spaceStorage) ACLStorage() (storage.ListStorage, error) {
+func (s *spaceStorage) AclStorage() (liststorage.ListStorage, error) {
 	return s.aclStorage, nil
 }
 

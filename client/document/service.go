@@ -5,11 +5,11 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace/clientcache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/document/textdocument"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/account"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/diffservice"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/treegetter"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/headsync"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
 )
 
 type Service interface {
@@ -17,7 +17,7 @@ type Service interface {
 	CreateDocument(spaceId string) (id string, err error)
 	DeleteDocument(spaceId, documentId string) (err error)
 	AllDocumentIds(spaceId string) (ids []string, err error)
-	AllDocumentHeads(spaceId string) (ids []diffservice.TreeHeads, err error)
+	AllDocumentHeads(spaceId string) (ids []headsync.TreeHeads, err error)
 	AddText(spaceId, documentId, text string, isSnapshot bool) (root, head string, err error)
 	DumpDocumentTree(spaceId, documentId string) (dump string, err error)
 	TreeParams(spaceId, documentId string) (root string, head []string, err error)
@@ -28,7 +28,7 @@ const CName = "client.document"
 var log = logger.NewNamed(CName)
 
 type service struct {
-	account      account.Service
+	account      accountservice.Service
 	spaceService clientspace.Service
 	cache        clientcache.TreeCache
 }
@@ -38,7 +38,7 @@ func New() Service {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.account = a.MustComponent(account.CName).(account.Service)
+	s.account = a.MustComponent(accountservice.CName).(accountservice.Service)
 	s.spaceService = a.MustComponent(clientspace.CName).(clientspace.Service)
 	s.cache = a.MustComponent(treegetter.CName).(clientcache.TreeCache)
 	return
@@ -74,7 +74,7 @@ func (s *service) AllDocumentIds(spaceId string) (ids []string, err error) {
 	return
 }
 
-func (s *service) AllDocumentHeads(spaceId string) (ids []diffservice.TreeHeads, err error) {
+func (s *service) AllDocumentHeads(spaceId string) (ids []headsync.TreeHeads, err error) {
 	space, err := s.spaceService.GetSpace(context.Background(), spaceId)
 	if err != nil {
 		return
