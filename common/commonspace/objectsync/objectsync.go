@@ -86,7 +86,7 @@ func newObjectSync(
 		checker:      checker,
 		syncCtx:      syncCtx,
 		cancelSync:   cancel,
-		actionQueue:  NewActionQueue(maxStreamReaders, 100),
+		actionQueue:  NewDefaultActionQueue(),
 	}
 }
 
