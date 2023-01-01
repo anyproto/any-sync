@@ -12,6 +12,8 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree/updatelistener"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treechangeproto"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectsync"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/settings"
@@ -43,6 +45,10 @@ type SpaceCreatePayload struct {
 	// ReplicationKey is a key which is to be used to determine the node where the space should be held
 	ReplicationKey uint64
 }
+
+type spaceCtxKey int
+
+const treePayloadKey spaceCtxKey = 0
 
 const SpaceTypeDerived = "derived.space"
 
@@ -76,8 +82,8 @@ type Space interface {
 
 	SpaceSyncRpc() RpcHandler
 
-	DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (string, error)
-	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (string, error)
+	DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (objecttree.ObjectTree, error)
+	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (objecttree.ObjectTree, error)
 	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (objecttree.ObjectTree, error)
 	DeleteTree(ctx context.Context, id string) (err error)
 
@@ -219,40 +225,43 @@ func (s *space) DebugAllHeads() []headsync.TreeHeads {
 	return s.headSync.DebugAllHeads()
 }
 
-func (s *space) DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (id string, err error) {
+func (s *space) DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (t objecttree.ObjectTree, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
 	}
-	deps := synctree.CreateDeps{
-		SpaceId:        s.id,
-		Payload:        payload,
-		ObjectSync:     s.objectSync,
-		Configuration:  s.configuration,
-		AclList:        s.aclList,
-		SpaceStorage:   s.storage,
-		SyncStatus:     s.syncStatus,
-		HeadNotifiable: s.headSync,
+	root, err := objecttree.DeriveObjectTreeRoot(payload, s.aclList)
+	if err != nil {
+		return
 	}
-	return synctree.DeriveSyncTree(ctx, deps)
+	res := treestorage.TreeStorageCreatePayload{
+		RootRawChange: root,
+		Changes:       []*treechangeproto.RawTreeChangeWithId{root},
+		Heads:         []string{root.Id},
+	}
+	ctx = context.WithValue(ctx, treePayloadKey, res)
+	// here we must be sure that the object is created synchronously,
+	// so there won't be any conflicts, therefore we do it through cache
+	return s.cache.GetTree(ctx, s.id, root.Id)
 }
 
-func (s *space) CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (id string, err error) {
+func (s *space) CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (t objecttree.ObjectTree, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
 	}
-	deps := synctree.CreateDeps{
-		SpaceId:        s.id,
-		Payload:        payload,
-		ObjectSync:     s.objectSync,
-		Configuration:  s.configuration,
-		AclList:        s.aclList,
-		SpaceStorage:   s.storage,
-		SyncStatus:     s.syncStatus,
-		HeadNotifiable: s.headSync,
+	root, err := objecttree.CreateObjectTreeRoot(payload, s.aclList)
+	if err != nil {
+		return
 	}
-	return synctree.CreateSyncTree(ctx, deps)
+
+	res := treestorage.TreeStorageCreatePayload{
+		RootRawChange: root,
+		Changes:       []*treechangeproto.RawTreeChangeWithId{root},
+		Heads:         []string{root.Id},
+	}
+	ctx = context.WithValue(ctx, treePayloadKey, res)
+	return s.cache.GetTree(ctx, s.id, root.Id)
 }
 
 func (s *space) BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error) {
@@ -260,6 +269,10 @@ func (s *space) BuildTree(ctx context.Context, id string, listener updatelistene
 		err = ErrSpaceClosed
 		return
 	}
+	if payload, exists := ctx.Value(treePayloadKey).(treestorage.TreeStorageCreatePayload); exists {
+		return s.putTree(ctx, payload, listener)
+	}
+
 	deps := synctree.BuildDeps{
 		SpaceId:        s.id,
 		ObjectSync:     s.objectSync,
@@ -305,4 +318,29 @@ func (s *space) Close() error {
 	}
 
 	return mError.Err()
+}
+
+func (s *space) putTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error) {
+	if s.isClosed.Load() {
+		err = ErrSpaceClosed
+		return
+	}
+	deps := synctree.BuildDeps{
+		SpaceId:        s.id,
+		ObjectSync:     s.objectSync,
+		Configuration:  s.configuration,
+		HeadNotifiable: s.headSync,
+		Listener:       listener,
+		AclList:        s.aclList,
+		SpaceStorage:   s.storage,
+		TreeUsage:      &s.treesUsed,
+		SyncStatus:     s.syncStatus,
+	}
+	t, err = synctree.PutSyncTree(ctx, payload, deps)
+	// this can happen only for derived trees, when we've synced same tree already
+	if err == treestorage.ErrTreeExists {
+		ctx = context.WithValue(ctx, treePayloadKey, nil)
+		return synctree.BuildSyncTreeOrGetRemote(ctx, payload.RootRawChange.Id, deps)
+	}
+	return
 }

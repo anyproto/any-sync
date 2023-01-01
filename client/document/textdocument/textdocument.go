@@ -33,7 +33,12 @@ func CreateTextDocument(
 		SpaceId:  space.Id(),
 		Identity: account.Account().Identity,
 	}
-	return space.CreateTree(ctx, payload)
+	obj, err := space.CreateTree(ctx, payload)
+	if err != nil {
+		return
+	}
+	id = obj.Id()
+	return
 }
 
 func NewTextDocument(ctx context.Context, space commonspace.Space, id string, listener updatelistener.UpdateListener, account accountservice.Service) (doc TextDocument, err error) {

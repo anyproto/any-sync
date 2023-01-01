@@ -21,6 +21,19 @@ type ObjectTreeCreatePayload struct {
 	IsEncrypted bool
 }
 
+func CreateObjectTreeRoot(payload ObjectTreeCreatePayload, aclList list.AclList) (root *treechangeproto.RawTreeChangeWithId, err error) {
+	bytes := make([]byte, 32)
+	_, err = rand.Read(bytes)
+	if err != nil {
+		return
+	}
+	return createObjectTreeRoot(payload, time.Now().UnixNano(), bytes, aclList)
+}
+
+func DeriveObjectTreeRoot(payload ObjectTreeCreatePayload, aclList list.AclList) (root *treechangeproto.RawTreeChangeWithId, err error) {
+	return createObjectTreeRoot(payload, 0, nil, aclList)
+}
+
 func BuildObjectTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
 	rootChange, err := treeStorage.Root()
 	if err != nil {
@@ -55,6 +68,29 @@ func createObjectTree(
 	seed []byte,
 	aclList list.AclList,
 	createStorage treestorage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
+	raw, err := createObjectTreeRoot(payload, timestamp, seed, aclList)
+	if err != nil {
+		return
+	}
+
+	// create storage
+	st, err := createStorage(treestorage.TreeStorageCreatePayload{
+		RootRawChange: raw,
+		Changes:       []*treechangeproto.RawTreeChangeWithId{raw},
+		Heads:         []string{raw.Id},
+	})
+	if err != nil {
+		return
+	}
+
+	return BuildObjectTree(st, aclList)
+}
+
+func createObjectTreeRoot(
+	payload ObjectTreeCreatePayload,
+	timestamp int64,
+	seed []byte,
+	aclList list.AclList) (root *treechangeproto.RawTreeChangeWithId, err error) {
 	aclList.RLock()
 	aclHeadId := aclList.Head().Id
 	aclList.RUnlock()
@@ -72,22 +108,8 @@ func createObjectTree(
 		Seed:       seed,
 	}
 
-	_, raw, err := NewChangeBuilder(keychain.NewKeychain(), nil).BuildInitialContent(cnt)
-	if err != nil {
-		return
-	}
-
-	// create storage
-	st, err := createStorage(treestorage.TreeStorageCreatePayload{
-		RootRawChange: raw,
-		Changes:       []*treechangeproto.RawTreeChangeWithId{raw},
-		Heads:         []string{raw.Id},
-	})
-	if err != nil {
-		return
-	}
-
-	return BuildObjectTree(st, aclList)
+	_, root, err = NewChangeBuilder(keychain.NewKeychain(), nil).BuildInitialContent(cnt)
+	return
 }
 
 func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
