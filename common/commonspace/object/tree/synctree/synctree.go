@@ -51,21 +51,8 @@ type syncTree struct {
 
 var log = logger.NewNamed("commonspace.synctree").Sugar()
 
-var createDerivedObjectTree = objecttree.CreateDerivedObjectTree
-var createObjectTree = objecttree.CreateObjectTree
 var buildObjectTree = objecttree.BuildObjectTree
 var createSyncClient = newWrappedSyncClient
-
-type CreateDeps struct {
-	SpaceId        string
-	Payload        objecttree.ObjectTreeCreatePayload
-	Configuration  nodeconf.Configuration
-	ObjectSync     objectsync.ObjectSync
-	AclList        list.AclList
-	SpaceStorage   spacestorage.SpaceStorage
-	SyncStatus     syncstatus.StatusUpdater
-	HeadNotifiable HeadNotifiable
-}
 
 type BuildDeps struct {
 	SpaceId        string
@@ -87,49 +74,6 @@ func newWrappedSyncClient(
 	configuration nodeconf.Configuration) SyncClient {
 	syncClient := newSyncClient(spaceId, objectSync.StreamPool(), factory, configuration, objectSync.StreamChecker())
 	return newQueuedClient(syncClient, objectSync.ActionQueue())
-}
-
-func DeriveSyncTree(ctx context.Context, deps CreateDeps) (id string, err error) {
-	objTree, err := createDerivedObjectTree(deps.Payload, deps.AclList, deps.SpaceStorage.CreateTreeStorage)
-	if err != nil {
-		return
-	}
-
-	syncClient := createSyncClient(
-		deps.SpaceId,
-		sharedFactory,
-		deps.ObjectSync,
-		deps.Configuration)
-
-	id = objTree.Id()
-	heads := objTree.Heads()
-
-	deps.HeadNotifiable.UpdateHeads(id, heads)
-	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
-	deps.SyncStatus.HeadsChange(id, heads)
-	syncClient.BroadcastAsync(headUpdate)
-	return
-}
-
-func CreateSyncTree(ctx context.Context, deps CreateDeps) (id string, err error) {
-	objTree, err := createObjectTree(deps.Payload, deps.AclList, deps.SpaceStorage.CreateTreeStorage)
-	if err != nil {
-		return
-	}
-	syncClient := createSyncClient(
-		deps.SpaceId,
-		sharedFactory,
-		deps.ObjectSync,
-		deps.Configuration)
-
-	id = objTree.Id()
-	heads := objTree.Heads()
-
-	deps.HeadNotifiable.UpdateHeads(id, heads)
-	headUpdate := syncClient.CreateHeadUpdate(objTree, nil)
-	deps.SyncStatus.HeadsChange(id, heads)
-	syncClient.BroadcastAsync(headUpdate)
-	return
 }
 
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {
@@ -201,6 +145,14 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 		return
 	}
 	// now we are sure that we can save it to the storage
+	deps.TreeStorage, err = deps.SpaceStorage.CreateTreeStorage(payload)
+	if err != nil {
+		return
+	}
+	return buildSyncTree(ctx, true, deps)
+}
+
+func PutSyncTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, deps BuildDeps) (t SyncTree, err error) {
 	deps.TreeStorage, err = deps.SpaceStorage.CreateTreeStorage(payload)
 	if err != nil {
 		return
