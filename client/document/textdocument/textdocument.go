@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/synctree/updatelistener"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -27,18 +28,17 @@ type textDocument struct {
 func CreateTextDocument(
 	ctx context.Context,
 	space commonspace.Space,
-	account accountservice.Service) (id string, err error) {
-	payload := objecttree.ObjectTreeCreatePayload{
-		SignKey:  account.Account().SignKey,
-		SpaceId:  space.Id(),
-		Identity: account.Account().Identity,
-	}
-	obj, err := space.CreateTree(ctx, payload)
+	payload treestorage.TreeStorageCreatePayload,
+	listener updatelistener.UpdateListener,
+	account accountservice.Service) (doc TextDocument, err error) {
+	t, err := space.PutTree(ctx, payload, listener)
 	if err != nil {
 		return
 	}
-	id = obj.Id()
-	return
+	return &textDocument{
+		ObjectTree: t,
+		account:    account,
+	}, nil
 }
 
 func NewTextDocument(ctx context.Context, space commonspace.Space, id string, listener updatelistener.UpdateListener, account accountservice.Service) (doc TextDocument, err error) {

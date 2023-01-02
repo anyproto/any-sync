@@ -81,6 +81,20 @@ func (mr *MockSpaceStorageProviderMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockSpaceStorageProvider)(nil).Name))
 }
 
+// SpaceExists mocks base method.
+func (m *MockSpaceStorageProvider) SpaceExists(arg0 string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SpaceExists", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// SpaceExists indicates an expected call of SpaceExists.
+func (mr *MockSpaceStorageProviderMockRecorder) SpaceExists(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceExists", reflect.TypeOf((*MockSpaceStorageProvider)(nil).SpaceExists), arg0)
+}
+
 // SpaceStorage mocks base method.
 func (m *MockSpaceStorageProvider) SpaceStorage(arg0 string) (spacestorage.SpaceStorage, error) {
 	m.ctrl.T.Helper()
