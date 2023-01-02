@@ -339,7 +339,6 @@ func (s *space) putTree(ctx context.Context, payload treestorage.TreeStorageCrea
 	t, err = synctree.PutSyncTree(ctx, payload, deps)
 	// this can happen only for derived trees, when we've synced same tree already
 	if err == treestorage.ErrTreeExists {
-		ctx = context.WithValue(ctx, treePayloadKey, nil)
 		return synctree.BuildSyncTreeOrGetRemote(ctx, payload.RootRawChange.Id, deps)
 	}
 	return
