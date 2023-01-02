@@ -2,6 +2,7 @@ package nodespace
 
 import (
 	"context"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
 )
@@ -54,10 +55,17 @@ func (r *rpcHandler) SpacePush(ctx context.Context, req *spacesyncproto.SpacePus
 	return
 }
 
-func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
-	sp, err := r.s.GetSpace(ctx, req.SpaceId)
+func (r *rpcHandler) HeadSync(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
+	sp, err := r.s.GetOrPickSpace(ctx, req.SpaceId)
 	if err != nil {
-		return nil, spacesyncproto.ErrSpaceMissing
+		switch err {
+		case ocache.ErrNotExists:
+			err = spacesyncproto.ErrSpaceNotInCache
+		case spacesyncproto.ErrSpaceMissing:
+		default:
+			err = spacesyncproto.ErrUnexpected
+		}
+		return
 	}
 	return sp.SpaceSyncRpc().HeadSync(ctx, req)
 }

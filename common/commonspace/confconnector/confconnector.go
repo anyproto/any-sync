@@ -5,7 +5,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/pool"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/slice"
+	"golang.org/x/exp/slices"
 )
 
 type ConfConnector interface {
@@ -50,7 +50,7 @@ func (s *confConnector) connectOneOrMany(
 		allNodes        = s.conf.NodeIds(spaceId)
 	)
 	for _, id := range allNodes {
-		if slice.FindPos(activeNodeIds, id) == -1 {
+		if !slices.Contains(activeNodeIds, id) {
 			inactiveNodeIds = append(inactiveNodeIds, id)
 		}
 	}

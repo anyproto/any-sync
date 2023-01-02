@@ -4,6 +4,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage"
 	"os"
+	"path"
 )
 
 type storageService struct {
@@ -31,6 +32,14 @@ func (s *storageService) Name() (name string) {
 
 func (s *storageService) SpaceStorage(id string) (spacestorage.SpaceStorage, error) {
 	return newSpaceStorage(s.rootPath, id)
+}
+
+func (s *storageService) SpaceExists(id string) bool {
+	dbPath := path.Join(s.rootPath, id)
+	if _, err := os.Stat(dbPath); err != nil {
+		return false
+	}
+	return true
 }
 
 func (s *storageService) CreateSpaceStorage(payload spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {

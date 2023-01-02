@@ -118,7 +118,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 	}
 
 	headSync := headsync.NewHeadSync(id, s.config.SyncPeriod, st, confConnector, s.treeGetter, syncStatus, log)
-	objectSync := objectsync.NewObjectSync(id, confConnector, s.config.SyncPeriod)
+	objectSync := objectsync.NewObjectSync(id, confConnector)
 	sp := &space{
 		id:            id,
 		objectSync:    objectSync,

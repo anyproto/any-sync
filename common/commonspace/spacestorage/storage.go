@@ -47,6 +47,7 @@ type SpaceStorageCreatePayload struct {
 type SpaceStorageProvider interface {
 	app.Component
 	SpaceStorage(id string) (SpaceStorage, error)
+	SpaceExists(id string) bool
 	CreateSpaceStorage(payload SpaceStorageCreatePayload) (SpaceStorage, error)
 }
 
