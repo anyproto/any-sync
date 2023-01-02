@@ -188,7 +188,7 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	if isFirstBuild {
 		headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 		// send to everybody, because everybody should know that the node or client got new tree
-		err = syncTree.syncClient.BroadcastAsync(headUpdate)
+		syncTree.syncClient.BroadcastAsync(headUpdate)
 	}
 	return
 }
