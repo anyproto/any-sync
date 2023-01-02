@@ -9,7 +9,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/syncobjectgetter"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/objectsync/synchandler"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/util/periodicsync"
 	"go.uber.org/zap"
 	"time"
 )
@@ -32,7 +31,6 @@ type objectSync struct {
 
 	streamPool   StreamPool
 	checker      StreamChecker
-	periodicSync periodicsync.PeriodicSync
 	objectGetter syncobjectgetter.SyncObjectGetter
 	actionQueue  ActionQueue
 
@@ -42,8 +40,7 @@ type objectSync struct {
 
 func NewObjectSync(
 	spaceId string,
-	confConnector confconnector.ConfConnector,
-	periodicSeconds int) (objectSync ObjectSync) {
+	confConnector confconnector.ConfConnector) (objectSync ObjectSync) {
 	streamPool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
 		return objectSync.HandleMessage(ctx, senderId, message)
 	})
@@ -57,14 +54,9 @@ func NewObjectSync(
 		clientFactory,
 		syncCtx,
 		syncLog)
-	periodicSync := periodicsync.NewPeriodicSync(periodicSeconds, 0, func(ctx context.Context) error {
-		checker.CheckResponsiblePeers()
-		return nil
-	}, syncLog)
 	objectSync = newObjectSync(
 		spaceId,
 		streamPool,
-		periodicSync,
 		checker,
 		syncCtx,
 		cancel)
@@ -74,31 +66,28 @@ func NewObjectSync(
 func newObjectSync(
 	spaceId string,
 	streamPool StreamPool,
-	periodicSync periodicsync.PeriodicSync,
 	checker StreamChecker,
 	syncCtx context.Context,
 	cancel context.CancelFunc,
 ) *objectSync {
 	return &objectSync{
-		periodicSync: periodicSync,
-		streamPool:   streamPool,
-		spaceId:      spaceId,
-		checker:      checker,
-		syncCtx:      syncCtx,
-		cancelSync:   cancel,
-		actionQueue:  NewDefaultActionQueue(),
+		streamPool:  streamPool,
+		spaceId:     spaceId,
+		checker:     checker,
+		syncCtx:     syncCtx,
+		cancelSync:  cancel,
+		actionQueue: NewDefaultActionQueue(),
 	}
 }
 
 func (s *objectSync) Init(objectGetter syncobjectgetter.SyncObjectGetter) {
 	s.objectGetter = objectGetter
 	s.actionQueue.Run()
-	s.periodicSync.Run()
+	go s.checker.CheckResponsiblePeers()
 }
 
 func (s *objectSync) Close() (err error) {
 	s.actionQueue.Close()
-	s.periodicSync.Close()
 	s.cancelSync()
 	return s.streamPool.Close()
 }

@@ -61,7 +61,7 @@ nodes:
         - file
 space:
     gcTTL: 60
-    syncPeriod: 600
+    syncPeriod: 20
 storage:
     path: db/node/1/data
 metric:
