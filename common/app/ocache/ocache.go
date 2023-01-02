@@ -74,6 +74,7 @@ type Object interface {
 }
 
 type ObjectLocker interface {
+	Object
 	Locked() bool
 }
 
@@ -87,9 +88,9 @@ type entry struct {
 	refCount  uint32
 	isClosing bool
 	load      chan struct{}
-	loadErr error
-	value   Object
-	close   chan struct{}
+	loadErr   error
+	value     Object
+	close     chan struct{}
 }
 
 func (e *entry) locked() bool {
