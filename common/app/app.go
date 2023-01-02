@@ -128,6 +128,19 @@ func (app *App) MustComponent(name string) Component {
 	return s
 }
 
+// MustComponent - generic version of app.MustComponent
+func MustComponent[i any](app *App) i {
+	app.mu.RLock()
+	defer app.mu.RUnlock()
+	for _, s := range app.components {
+		if v, ok := s.(i); ok {
+			return v
+		}
+	}
+	empty := new(i)
+	panic(fmt.Errorf("component with interface %T is not found", empty))
+}
+
 // ComponentNames returns all registered names
 func (app *App) ComponentNames() (names []string) {
 	app.mu.RLock()
