@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_confconnector/mock_confconnector.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/confconnector ConfConnector
 package confconnector
 
 import (

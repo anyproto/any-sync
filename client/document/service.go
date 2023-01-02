@@ -4,11 +4,11 @@ import (
 	"context"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/clientspace/clientcache"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/client/document/textdocument"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/accountservice"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/headsync"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
 )
 
@@ -53,7 +53,17 @@ func (s *service) CreateDocument(spaceId string) (id string, err error) {
 	if err != nil {
 		return
 	}
-	return textdocument.CreateTextDocument(context.Background(), space, s.account)
+	payload := objecttree.ObjectTreeCreatePayload{
+		SignKey:  s.account.Account().SignKey,
+		SpaceId:  space.Id(),
+		Identity: s.account.Account().Identity,
+	}
+	tree, err := space.CreateTree(context.Background(), payload)
+	if err != nil {
+		return
+	}
+	id = tree.Id()
+	return
 }
 
 func (s *service) DeleteDocument(spaceId, documentId string) (err error) {

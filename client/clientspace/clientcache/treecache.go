@@ -10,6 +10,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ocache"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/treegetter"
 	"go.uber.org/zap"
 	"time"
@@ -20,7 +21,10 @@ var ErrCacheObjectWithoutTree = errors.New("cache object contains no tree")
 
 type ctxKey int
 
-const spaceKey ctxKey = 0
+const (
+	spaceKey ctxKey = iota
+	treeCreateKey
+)
 
 type treeCache struct {
 	gcttl         int
@@ -31,6 +35,7 @@ type treeCache struct {
 
 type TreeCache interface {
 	treegetter.TreeGetter
+	treegetter.TreePutter
 	GetDocument(ctx context.Context, spaceId, id string) (doc textdocument.TextDocument, err error)
 }
 
@@ -75,6 +80,10 @@ func (c *treeCache) Init(a *app.App) (err error) {
 			if err != nil {
 				return
 			}
+			createPayload, exists := ctx.Value(treeCreateKey).(treestorage.TreeStorageCreatePayload)
+			if exists {
+				return textdocument.CreateTextDocument(ctx, space, createPayload, &updateListener{}, c.account)
+			}
 			return textdocument.NewTextDocument(ctx, space, id, &updateListener{}, c.account)
 		},
 		ocache.WithLogger(log.Sugar()),
@@ -106,6 +115,16 @@ func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (tr objectt
 	// we have to do this trick, otherwise the compiler won't understand that TextDocument conforms to SyncHandler interface
 	tr = doc.InnerTree()
 	return
+}
+
+func (c *treeCache) PutTree(ctx context.Context, spaceId string, payload treestorage.TreeStorageCreatePayload) (ot objecttree.ObjectTree, err error) {
+	ctx = context.WithValue(ctx, spaceKey, spaceId)
+	ctx = context.WithValue(ctx, treeCreateKey, payload)
+	v, err := c.cache.Get(ctx, payload.RootRawChange.Id)
+	if err != nil {
+		return
+	}
+	return v.(objecttree.ObjectTree), nil
 }
 
 func (c *treeCache) DeleteTree(ctx context.Context, spaceId, treeId string) (err error) {
