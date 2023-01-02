@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_storage/mock_storage.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage SpaceStorageProvider,SpaceStorage
+//go:generate mockgen -destination mock_spacestorage/mock_spacestorage.go github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacestorage SpaceStorage
 package spacestorage
 
 import (
@@ -27,7 +27,6 @@ const (
 
 // TODO: consider moving to some file with all common interfaces etc
 type SpaceStorage interface {
-	treestorage.Provider
 	Id() string
 	SetTreeDeletedStatus(id, state string) error
 	TreeDeletedStatus(id string) (string, error)
@@ -36,6 +35,9 @@ type SpaceStorage interface {
 	SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error)
 	StoredIds() ([]string, error)
 	Close() error
+	TreeRoot(id string) (*treechangeproto.RawTreeChangeWithId, error)
+	TreeStorage(id string) (treestorage.TreeStorage, error)
+	CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (treestorage.TreeStorage, error)
 }
 
 type SpaceStorageCreatePayload struct {

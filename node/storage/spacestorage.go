@@ -178,6 +178,10 @@ func (s *spaceStorage) TreeStorage(id string) (treestorage.TreeStorage, error) {
 	return newTreeStorage(s.objDb, id)
 }
 
+func (s *spaceStorage) TreeRoot(id string) (*treechangeproto.RawTreeChangeWithId, error) {
+	panic("should not be implemented")
+}
+
 func (s *spaceStorage) CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (ts treestorage.TreeStorage, err error) {
 	return createTreeStorage(s.objDb, payload)
 }

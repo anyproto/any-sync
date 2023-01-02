@@ -10,7 +10,6 @@ import (
 
 	app "github.com/anytypeio/go-anytype-infrastructure-experiments/common/app"
 	objecttree "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/objecttree"
-	treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -106,21 +105,6 @@ func (m *MockTreeGetter) Name() string {
 func (mr *MockTreeGetterMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockTreeGetter)(nil).Name))
-}
-
-// PutTree mocks base method.
-func (m *MockTreeGetter) PutTree(arg0 context.Context, arg1 string, arg2 treestorage.TreeStorageCreatePayload) (objecttree.ObjectTree, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PutTree", arg0, arg1, arg2)
-	ret0, _ := ret[0].(objecttree.ObjectTree)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PutTree indicates an expected call of PutTree.
-func (mr *MockTreeGetterMockRecorder) PutTree(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutTree", reflect.TypeOf((*MockTreeGetter)(nil).PutTree), arg0, arg1, arg2)
 }
 
 // Run mocks base method.
