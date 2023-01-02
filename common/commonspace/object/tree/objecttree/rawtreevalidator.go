@@ -6,8 +6,7 @@ import (
 )
 
 func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList) (err error) {
-	provider := treestorage.NewInMemoryTreeStorageProvider()
-	treeStorage, err := provider.CreateTreeStorage(payload)
+	treeStorage, err := treestorage.NewInMemoryTreeStorage(payload.RootRawChange, payload.Heads, payload.Changes)
 	if err != nil {
 		return
 	}

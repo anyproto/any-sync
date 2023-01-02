@@ -89,35 +89,3 @@ func (t *inMemoryTreeStorage) GetRawChange(ctx context.Context, changeId string)
 func (t *inMemoryTreeStorage) Delete() error {
 	return nil
 }
-
-type inMemoryStorageProvider struct {
-	objects map[string]TreeStorage
-	sync.RWMutex
-}
-
-func (i *inMemoryStorageProvider) TreeStorage(id string) (TreeStorage, error) {
-	i.RLock()
-	defer i.RUnlock()
-	if tree, exists := i.objects[id]; exists {
-		return tree, nil
-	}
-	return nil, ErrUnknownTreeId
-}
-
-func (i *inMemoryStorageProvider) CreateTreeStorage(payload TreeStorageCreatePayload) (TreeStorage, error) {
-	i.Lock()
-	defer i.Unlock()
-	res, err := NewInMemoryTreeStorage(payload.RootRawChange, payload.Heads, payload.Changes)
-	if err != nil {
-		return nil, err
-	}
-
-	i.objects[payload.RootRawChange.Id] = res
-	return res, nil
-}
-
-func NewInMemoryTreeStorageProvider() Provider {
-	return &inMemoryStorageProvider{
-		objects: make(map[string]TreeStorage),
-	}
-}
