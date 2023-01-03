@@ -2,9 +2,10 @@ package rpcstore
 
 import (
 	"context"
-	"fmt"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonfile/fileblockstore"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"sync"
 )
@@ -14,6 +15,11 @@ var closedBlockChan chan blocks.Block
 func init() {
 	closedBlockChan = make(chan blocks.Block)
 	close(closedBlockChan)
+}
+
+type RpcStore interface {
+	fileblockstore.BlockStore
+	AddAsync(ctx context.Context, bs []blocks.Block) (successCh chan cid.Cid)
 }
 
 type store struct {
@@ -80,26 +86,51 @@ func (s *store) Add(ctx context.Context, bs []blocks.Block) error {
 	if err := s.cm.Add(ctx, tasks...); err != nil {
 		return err
 	}
-	var errs = &ErrPartial{}
+	var errs []error
 	for i := 0; i < len(tasks); i++ {
 		select {
 		case t := <-readyCh:
 			if t.err != nil {
-				errs.ErrorCids = append(errs.ErrorCids, ErrCid{Cid: t.cid, Err: t.err})
-			} else {
-				errs.SuccessCids = append(errs.SuccessCids, t.cid)
+				errs = append(errs, t.err)
 			}
 		case <-ctx.Done():
-			if len(errs.SuccessCids) > 0 {
-				return errs
-			}
 			return ctx.Err()
 		}
 	}
-	if len(errs.ErrorCids) > 0 {
-		return errs
+	if len(errs) > 0 {
+		return multierr.Combine(errs...)
 	}
 	return nil
+}
+
+func (s *store) AddAsync(ctx context.Context, bs []blocks.Block) (successCh chan cid.Cid) {
+	successCh = make(chan cid.Cid, len(bs))
+	go func() {
+		defer close(successCh)
+		var readyCh = make(chan *task)
+		var tasks = make([]*task, len(bs))
+		for i, b := range bs {
+			tasks[i] = newTask(ctx, taskOpPut, b.Cid(), readyCh)
+			tasks[i].data = b.RawData()
+		}
+		if err := s.cm.Add(ctx, tasks...); err != nil {
+			log.Info("addAsync: can't add tasks", zap.Error(err))
+			return
+		}
+		for i := 0; i < len(tasks); i++ {
+			select {
+			case t := <-readyCh:
+				if t.err == nil {
+					successCh <- t.cid
+				} else {
+					log.Info("addAsync: task error", zap.Error(t.err))
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return
 }
 
 func (s *store) Delete(ctx context.Context, c cid.Cid) error {
@@ -117,18 +148,4 @@ func (s *store) Delete(ctx context.Context, c cid.Cid) error {
 
 func (s *store) Close() (err error) {
 	return s.cm.Close()
-}
-
-type ErrPartial struct {
-	SuccessCids []cid.Cid
-	ErrorCids   []ErrCid
-}
-
-func (e ErrPartial) Error() string {
-	return fmt.Sprintf("cid errors; success: %d; error: %d", len(e.SuccessCids), len(e.ErrorCids))
-}
-
-type ErrCid struct {
-	Cid cid.Cid
-	Err error
 }

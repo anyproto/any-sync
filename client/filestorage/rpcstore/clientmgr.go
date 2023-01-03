@@ -32,7 +32,8 @@ func newClientManager(s *service) *clientManager {
 			ocache.WithLogger(log.Sugar()),
 			ocache.WithGCPeriod(0),
 		),
-		s: s,
+		checkPeersCh: make(chan struct{}),
+		s:            s,
 	}
 	cm.ctx, cm.ctxCancel = context.WithCancel(context.Background())
 	go cm.checkPeerLoop()
@@ -41,16 +42,27 @@ func newClientManager(s *service) *clientManager {
 
 // clientManager manages clients, removes unused ones, and adds new ones if necessary
 type clientManager struct {
-	mb        *mb.MB[*task]
-	ctx       context.Context
-	ctxCancel context.CancelFunc
-	ocache    ocache.OCache
+	mb           *mb.MB[*task]
+	ctx          context.Context
+	ctxCancel    context.CancelFunc
+	ocache       ocache.OCache
+	checkPeersCh chan struct{}
 
 	s  *service
 	mu sync.RWMutex
 }
 
 func (m *clientManager) Add(ctx context.Context, ts ...*task) (err error) {
+	defer func() {
+		m.mu.Lock()
+		if m.ocache.Len() == 0 {
+			select {
+			case m.checkPeersCh <- struct{}{}:
+			default:
+			}
+		}
+		m.mu.Unlock()
+	}()
 	return m.mb.Add(ctx, ts...)
 }
 
@@ -62,6 +74,8 @@ func (m *clientManager) checkPeerLoop() {
 		select {
 		case <-m.ctx.Done():
 			return
+		case <-m.checkPeersCh:
+			m.checkPeers()
 		case <-ticker.C:
 			m.checkPeers()
 		}
@@ -75,7 +89,7 @@ func (m *clientManager) checkPeers() {
 		// reached connection limit, can't add new peers
 		return
 	}
-	if m.ocache.Len() != 0 && m.mb.Len() == 0 {
+	if m.mb.Len() == 0 {
 		// has empty queue, no need new peers
 		return
 	}

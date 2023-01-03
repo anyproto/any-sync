@@ -219,6 +219,19 @@ func (t *testStore) Add(ctx context.Context, bs []blocks.Block) error {
 	return nil
 }
 
+func (t *testStore) AddAsync(ctx context.Context, bs []blocks.Block) (successCh chan cid.Cid) {
+	successCh = make(chan cid.Cid, len(bs))
+	go func() {
+		defer close(successCh)
+		for _, b := range bs {
+			if err := t.Add(ctx, []blocks.Block{b}); err == nil {
+				successCh <- b.Cid()
+			}
+		}
+	}()
+	return successCh
+}
+
 func (t *testStore) Delete(ctx context.Context, c cid.Cid) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
