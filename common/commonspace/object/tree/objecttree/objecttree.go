@@ -48,6 +48,7 @@ type ObjectTree interface {
 
 	Id() string
 	Header() *treechangeproto.RawTreeChangeWithId
+	UnmarshalledHeader() *Change
 	Heads() []string
 	Root() *Change
 	HasChanges(...string) bool
@@ -76,9 +77,10 @@ type objectTree struct {
 	treeBuilder     *treeBuilder
 	aclList         list2.AclList
 
-	id   string
-	root *treechangeproto.RawTreeChangeWithId
-	tree *Tree
+	id      string
+	rawRoot *treechangeproto.RawTreeChangeWithId
+	root    *Change
+	tree    *Tree
 
 	keys map[uint64]*symmetric.Key
 
@@ -142,6 +144,10 @@ func (ot *objectTree) Id() string {
 }
 
 func (ot *objectTree) Header() *treechangeproto.RawTreeChangeWithId {
+	return ot.rawRoot
+}
+
+func (ot *objectTree) UnmarshalledHeader() *Change {
 	return ot.root
 }
 

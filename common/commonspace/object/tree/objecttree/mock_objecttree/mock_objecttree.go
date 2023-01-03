@@ -302,3 +302,17 @@ func (mr *MockObjectTreeMockRecorder) Unlock() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unlock", reflect.TypeOf((*MockObjectTree)(nil).Unlock))
 }
+
+// UnmarshalledHeader mocks base method.
+func (m *MockObjectTree) UnmarshalledHeader() *objecttree.Change {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnmarshalledHeader")
+	ret0, _ := ret[0].(*objecttree.Change)
+	return ret0
+}
+
+// UnmarshalledHeader indicates an expected call of UnmarshalledHeader.
+func (mr *MockObjectTreeMockRecorder) UnmarshalledHeader() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnmarshalledHeader", reflect.TypeOf((*MockObjectTree)(nil).UnmarshalledHeader))
+}

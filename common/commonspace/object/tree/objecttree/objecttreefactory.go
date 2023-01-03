@@ -150,18 +150,17 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 	}
 
 	objTree.id = objTree.treeStorage.Id()
-
-	objTree.id = objTree.treeStorage.Id()
-	objTree.root, err = objTree.treeStorage.Root()
+	objTree.rawRoot, err = objTree.treeStorage.Root()
 	if err != nil {
 		return nil, err
 	}
 
 	// verifying root
-	_, err = objTree.changeBuilder.ConvertFromRaw(objTree.root, true)
+	header, err := objTree.changeBuilder.ConvertFromRaw(objTree.rawRoot, true)
 	if err != nil {
 		return nil, err
 	}
+	objTree.root = header
 
 	return objTree, nil
 }
