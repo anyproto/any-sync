@@ -455,6 +455,20 @@ func (mr *MockSyncTreeMockRecorder) Unlock() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unlock", reflect.TypeOf((*MockSyncTree)(nil).Unlock))
 }
 
+// UnmarshalledHeader mocks base method.
+func (m *MockSyncTree) UnmarshalledHeader() *objecttree.Change {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnmarshalledHeader")
+	ret0, _ := ret[0].(*objecttree.Change)
+	return ret0
+}
+
+// UnmarshalledHeader indicates an expected call of UnmarshalledHeader.
+func (mr *MockSyncTreeMockRecorder) UnmarshalledHeader() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnmarshalledHeader", reflect.TypeOf((*MockSyncTree)(nil).UnmarshalledHeader))
+}
+
 // MockReceiveQueue is a mock of ReceiveQueue interface.
 type MockReceiveQueue struct {
 	ctrl     *gomock.Controller
