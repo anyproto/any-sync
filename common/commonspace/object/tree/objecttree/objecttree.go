@@ -54,7 +54,7 @@ type ObjectTree interface {
 	HasChanges(...string) bool
 	DebugDump() (string, error)
 
-	Iterate(convert ChangeConvertFunc, iterate ChangeIterateFunc) error
+	IterateRoot(convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 
 	SnapshotPath() []string
@@ -458,7 +458,7 @@ func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesA
 	return
 }
 
-func (ot *objectTree) Iterate(convert ChangeConvertFunc, iterate ChangeIterateFunc) (err error) {
+func (ot *objectTree) IterateRoot(convert ChangeConvertFunc, iterate ChangeIterateFunc) (err error) {
 	return ot.IterateFrom(ot.tree.RootId(), convert, iterate)
 }
 

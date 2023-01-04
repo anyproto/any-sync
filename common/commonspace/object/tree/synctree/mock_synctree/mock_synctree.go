@@ -323,20 +323,6 @@ func (mr *MockSyncTreeMockRecorder) Id() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Id", reflect.TypeOf((*MockSyncTree)(nil).Id))
 }
 
-// Iterate mocks base method.
-func (m *MockSyncTree) Iterate(arg0 func([]byte) (interface{}, error), arg1 func(*objecttree.Change) bool) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Iterate", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Iterate indicates an expected call of Iterate.
-func (mr *MockSyncTreeMockRecorder) Iterate(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Iterate", reflect.TypeOf((*MockSyncTree)(nil).Iterate), arg0, arg1)
-}
-
 // IterateFrom mocks base method.
 func (m *MockSyncTree) IterateFrom(arg0 string, arg1 func([]byte) (interface{}, error), arg2 func(*objecttree.Change) bool) error {
 	m.ctrl.T.Helper()
@@ -349,6 +335,20 @@ func (m *MockSyncTree) IterateFrom(arg0 string, arg1 func([]byte) (interface{}, 
 func (mr *MockSyncTreeMockRecorder) IterateFrom(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateFrom", reflect.TypeOf((*MockSyncTree)(nil).IterateFrom), arg0, arg1, arg2)
+}
+
+// IterateRoot mocks base method.
+func (m *MockSyncTree) IterateRoot(arg0 func([]byte) (interface{}, error), arg1 func(*objecttree.Change) bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IterateRoot", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// IterateRoot indicates an expected call of IterateRoot.
+func (mr *MockSyncTreeMockRecorder) IterateRoot(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateRoot", reflect.TypeOf((*MockSyncTree)(nil).IterateRoot), arg0, arg1)
 }
 
 // Lock mocks base method.

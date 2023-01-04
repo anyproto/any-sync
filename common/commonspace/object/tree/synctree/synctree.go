@@ -200,11 +200,11 @@ func (s *syncTree) IterateFrom(id string, convert objecttree.ChangeConvertFunc, 
 	return s.ObjectTree.IterateFrom(id, convert, iterate)
 }
 
-func (s *syncTree) Iterate(convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) (err error) {
+func (s *syncTree) IterateRoot(convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) (err error) {
 	if err = s.checkAlive(); err != nil {
 		return
 	}
-	return s.ObjectTree.Iterate(convert, iterate)
+	return s.ObjectTree.IterateRoot(convert, iterate)
 }
 
 func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableChangeContent) (res objecttree.AddResult, err error) {

@@ -90,7 +90,7 @@ func (t *textDocument) Text() (text string, err error) {
 	t.RLock()
 	defer t.RUnlock()
 
-	err = t.Iterate(
+	err = t.IterateRoot(
 		func(decrypted []byte) (any, error) {
 			textChange := &textchange.TextData{}
 			err = proto.Unmarshal(decrypted, textChange)
