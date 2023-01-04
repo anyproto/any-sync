@@ -133,7 +133,7 @@ func prepareTreeContext(t *testing.T, aclList list.AclList) testTreeContext {
 
 	// check tree iterate
 	var iterChangesId []string
-	err = objTree.Iterate(nil, func(change *Change) bool {
+	err = objTree.IterateRoot(nil, func(change *Change) bool {
 		iterChangesId = append(iterChangesId, change.Id)
 		return true
 	})
@@ -179,7 +179,7 @@ func TestObjectTree(t *testing.T) {
 
 		// check tree iterate
 		var iterChangesId []string
-		err = objTree.Iterate(nil, func(change *Change) bool {
+		err = objTree.IterateRoot(nil, func(change *Change) bool {
 			iterChangesId = append(iterChangesId, change.Id)
 			return true
 		})
@@ -277,7 +277,7 @@ func TestObjectTree(t *testing.T) {
 
 		// check tree iterate
 		var iterChangesId []string
-		err = objTree.Iterate(nil, func(change *Change) bool {
+		err = objTree.IterateRoot(nil, func(change *Change) bool {
 			iterChangesId = append(iterChangesId, change.Id)
 			return true
 		})
@@ -523,7 +523,7 @@ func TestObjectTree(t *testing.T) {
 
 		// check tree iterate
 		var iterChangesId []string
-		err = objTree.Iterate(nil, func(change *Change) bool {
+		err = objTree.IterateRoot(nil, func(change *Change) bool {
 			iterChangesId = append(iterChangesId, change.Id)
 			return true
 		})
