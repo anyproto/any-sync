@@ -1,31 +1,20 @@
+.PHONY: proto test
 export GOPRIVATE=github.com/anytypeio
 
-ifndef $(GOPATH)
-    GOPATH=$(shell go env GOPATH)
-    export GOPATH
-endif
-
-ifndef $(GOROOT)
-    GOROOT=$(shell go env GOROOT)
-    export GOROOT
-endif
-
-export PATH=$(GOPATH)/bin:$(shell echo $$PATH)
-
 proto:
-	$(MAKE) -C common proto
-	$(MAKE) -C consensus proto
-	$(MAKE) -C client proto
+	@echo 'Generating protobuf packages (Go)...'
 
-build:
-	$(MAKE) -C node build
-	$(MAKE) -C filenode build
-	$(MAKE) -C consensus build
-	$(MAKE) -C client build
+	@$(eval GOGO_START := GOGO_NO_UNDERSCORE=1 GOGO_EXPORT_ONEOF_INTERFACE=1)
+	@$(eval P_ACL_RECORDS_PATH_PB := commonspace/object/acl/aclrecordproto)
+	@$(eval P_TREE_CHANGES_PATH_PB := commonspace/object/tree/treechangeproto)
+	@$(eval P_ACL_RECORDS := M$(P_ACL_RECORDS_PATH_PB)/protos/aclrecord.proto=github.com/anytypeio/any-sync/$(P_ACL_RECORDS_PATH_PB))
+	@$(eval P_TREE_CHANGES := M$(P_TREE_CHANGES_PATH_PB)/protos/treechange.proto=github.com/anytypeio/any-sync/$(P_TREE_CHANGES_PATH_PB))
+
+	$(GOGO_START) protoc --gogofaster_out=:. $(P_ACL_RECORDS_PATH_PB)/protos/*.proto
+	$(GOGO_START) protoc --gogofaster_out=:. $(P_TREE_CHANGES_PATH_PB)/protos/*.proto
+	$(eval PKGMAP := $$(P_TREE_CHANGES),$$(P_ACL_RECORDS))
+	$(GOGO_START) protoc --gogofaster_out=$(PKGMAP):. --go-drpc_out=protolib=github.com/gogo/protobuf:. commonspace/spacesyncproto/protos/*.proto
+	$(GOGO_START) protoc --gogofaster_out=$(PKGMAP):. --go-drpc_out=protolib=github.com/gogo/protobuf:. commonfile/fileproto/protos/*.proto
 
 test:
-	$(MAKE) -C node test
-	$(MAKE) -C filenode test
-	$(MAKE) -C consensus test
-	$(MAKE) -C common test
-	$(MAKE) -C client test
+	go test ./... --cover
