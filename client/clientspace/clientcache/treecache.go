@@ -35,8 +35,8 @@ type treeCache struct {
 
 type TreeCache interface {
 	treegetter.TreeGetter
-	treegetter.TreePutter
 	GetDocument(ctx context.Context, spaceId, id string) (doc textdocument.TextDocument, err error)
+	CreateDocument(ctx context.Context, spaceId string, payload objecttree.ObjectTreeCreatePayload) (ot textdocument.TextDocument, err error)
 }
 
 type updateListener struct {
@@ -117,14 +117,22 @@ func (c *treeCache) GetTree(ctx context.Context, spaceId, id string) (tr objectt
 	return
 }
 
-func (c *treeCache) PutTree(ctx context.Context, spaceId string, payload treestorage.TreeStorageCreatePayload) (ot objecttree.ObjectTree, err error) {
-	ctx = context.WithValue(ctx, spaceKey, spaceId)
-	ctx = context.WithValue(ctx, treeCreateKey, payload)
-	v, err := c.cache.Get(ctx, payload.RootRawChange.Id)
+func (c *treeCache) CreateDocument(ctx context.Context, spaceId string, payload objecttree.ObjectTreeCreatePayload) (ot textdocument.TextDocument, err error) {
+	space, err := c.clientService.GetSpace(ctx, spaceId)
 	if err != nil {
 		return
 	}
-	return v.(objecttree.ObjectTree), nil
+	create, err := space.CreateTree(context.Background(), payload)
+	if err != nil {
+		return
+	}
+	ctx = context.WithValue(ctx, spaceKey, spaceId)
+	ctx = context.WithValue(ctx, treeCreateKey, create)
+	v, err := c.cache.Get(ctx, create.RootRawChange.Id)
+	if err != nil {
+		return
+	}
+	return v.(textdocument.TextDocument), nil
 }
 
 func (c *treeCache) DeleteTree(ctx context.Context, spaceId, treeId string) (err error) {
