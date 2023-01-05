@@ -81,8 +81,8 @@ type Space interface {
 
 	SpaceSyncRpc() RpcHandler
 
-	DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (objecttree.ObjectTree, error)
-	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (objecttree.ObjectTree, error)
+	DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
+	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error)
 	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (objecttree.ObjectTree, error)
 	DeleteTree(ctx context.Context, id string) (err error)
@@ -230,38 +230,26 @@ func (s *space) DebugAllHeads() []headsync.TreeHeads {
 	return s.headSync.DebugAllHeads()
 }
 
-func (s *space) DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (t objecttree.ObjectTree, err error) {
+func (s *space) DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
-		return
-	}
-	treePutter, conforms := s.cache.(treegetter.TreePutter)
-	if !conforms {
-		err = ErrPutNotImplemented
 		return
 	}
 	root, err := objecttree.DeriveObjectTreeRoot(payload, s.aclList)
 	if err != nil {
 		return
 	}
-	res := treestorage.TreeStorageCreatePayload{
+	res = treestorage.TreeStorageCreatePayload{
 		RootRawChange: root,
 		Changes:       []*treechangeproto.RawTreeChangeWithId{root},
 		Heads:         []string{root.Id},
 	}
-	// here we must be sure that the object is created synchronously,
-	// so there won't be any conflicts, therefore we do it through cache
-	return treePutter.PutTree(ctx, s.id, res)
+	return
 }
 
-func (s *space) CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (t objecttree.ObjectTree, err error) {
+func (s *space) CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
-		return
-	}
-	treePutter, conforms := s.cache.(treegetter.TreePutter)
-	if !conforms {
-		err = ErrPutNotImplemented
 		return
 	}
 	root, err := objecttree.CreateObjectTreeRoot(payload, s.aclList)
@@ -269,12 +257,12 @@ func (s *space) CreateTree(ctx context.Context, payload objecttree.ObjectTreeCre
 		return
 	}
 
-	res := treestorage.TreeStorageCreatePayload{
+	res = treestorage.TreeStorageCreatePayload{
 		RootRawChange: root,
 		Changes:       []*treechangeproto.RawTreeChangeWithId{root},
 		Heads:         []string{root.Id},
 	}
-	return treePutter.PutTree(ctx, s.id, res)
+	return
 }
 
 func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error) {
