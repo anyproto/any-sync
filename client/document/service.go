@@ -58,11 +58,11 @@ func (s *service) CreateDocument(spaceId string) (id string, err error) {
 		SpaceId:  space.Id(),
 		Identity: s.account.Account().Identity,
 	}
-	tree, err := space.CreateTree(context.Background(), payload)
+	doc, err := s.cache.CreateDocument(context.Background(), space.Id(), payload)
 	if err != nil {
 		return
 	}
-	id = tree.Id()
+	id = doc.Id()
 	return
 }
 
