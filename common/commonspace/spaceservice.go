@@ -68,6 +68,9 @@ func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePaylo
 	}
 	store, err := s.storageProvider.CreateSpaceStorage(storageCreate)
 	if err != nil {
+		if err == spacestorage.ErrSpaceStorageExists {
+			return storageCreate.SpaceHeaderWithId.Id, nil
+		}
 		return
 	}
 
@@ -81,6 +84,9 @@ func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePaylo
 	}
 	store, err := s.storageProvider.CreateSpaceStorage(storageCreate)
 	if err != nil {
+		if err == spacestorage.ErrSpaceStorageExists {
+			return storageCreate.SpaceHeaderWithId.Id, nil
+		}
 		return
 	}
 

@@ -185,20 +185,6 @@ func (mr *MockObjectTreeMockRecorder) Id() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Id", reflect.TypeOf((*MockObjectTree)(nil).Id))
 }
 
-// Iterate mocks base method.
-func (m *MockObjectTree) Iterate(arg0 func([]byte) (interface{}, error), arg1 func(*objecttree.Change) bool) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Iterate", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Iterate indicates an expected call of Iterate.
-func (mr *MockObjectTreeMockRecorder) Iterate(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Iterate", reflect.TypeOf((*MockObjectTree)(nil).Iterate), arg0, arg1)
-}
-
 // IterateFrom mocks base method.
 func (m *MockObjectTree) IterateFrom(arg0 string, arg1 func([]byte) (interface{}, error), arg2 func(*objecttree.Change) bool) error {
 	m.ctrl.T.Helper()
@@ -211,6 +197,20 @@ func (m *MockObjectTree) IterateFrom(arg0 string, arg1 func([]byte) (interface{}
 func (mr *MockObjectTreeMockRecorder) IterateFrom(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateFrom", reflect.TypeOf((*MockObjectTree)(nil).IterateFrom), arg0, arg1, arg2)
+}
+
+// IterateRoot mocks base method.
+func (m *MockObjectTree) IterateRoot(arg0 func([]byte) (interface{}, error), arg1 func(*objecttree.Change) bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IterateRoot", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// IterateRoot indicates an expected call of IterateRoot.
+func (mr *MockObjectTreeMockRecorder) IterateRoot(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateRoot", reflect.TypeOf((*MockObjectTree)(nil).IterateRoot), arg0, arg1)
 }
 
 // Lock mocks base method.
@@ -301,4 +301,18 @@ func (m *MockObjectTree) Unlock() {
 func (mr *MockObjectTreeMockRecorder) Unlock() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unlock", reflect.TypeOf((*MockObjectTree)(nil).Unlock))
+}
+
+// UnmarshalledHeader mocks base method.
+func (m *MockObjectTree) UnmarshalledHeader() *objecttree.Change {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnmarshalledHeader")
+	ret0, _ := ret[0].(*objecttree.Change)
+	return ret0
+}
+
+// UnmarshalledHeader indicates an expected call of UnmarshalledHeader.
+func (mr *MockObjectTreeMockRecorder) UnmarshalledHeader() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnmarshalledHeader", reflect.TypeOf((*MockObjectTree)(nil).UnmarshalledHeader))
 }

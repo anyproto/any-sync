@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ldiff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/ldiff/mock_ldiff"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/app/logger"
+	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/confconnector/mock_confconnector"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treechangeproto"
 	mock_treestorage "github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/object/tree/treestorage/mock_treestorage"
@@ -16,7 +17,6 @@ import (
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/spacesyncproto/mock_spacesyncproto"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/commonspace/syncstatus"
 	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/net/peer"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/common/nodeconf/mock_nodeconf"
 	"github.com/golang/mock/gomock"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"github.com/stretchr/testify/require"
@@ -98,7 +98,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	defer ctrl.Finish()
 
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
-	connectorMock := mock_nodeconf.NewMockConfConnector(ctrl)
+	connectorMock := mock_confconnector.NewMockConfConnector(ctrl)
 	cacheMock := mock_treegetter.NewMockTreeGetter(ctrl)
 	stMock := mock_spacestorage.NewMockSpaceStorage(ctrl)
 	clientMock := mock_spacesyncproto.NewMockDRPCSpaceSyncClient(ctrl)
