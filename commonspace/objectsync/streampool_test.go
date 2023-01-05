@@ -5,7 +5,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/rpc/rpctest"
-	"github.com/anytypeio/go-anytype-infrastructure-experiments/consensus/consensusproto"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -13,8 +12,6 @@ import (
 
 type testServer struct {
 	stream        chan spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream
-	addLog        func(ctx context.Context, req *consensusproto.AddLogRequest) error
-	addRecord     func(ctx context.Context, req *consensusproto.AddRecordRequest) error
 	releaseStream chan error
 	watchErrOnce  bool
 }
