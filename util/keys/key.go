@@ -3,8 +3,6 @@ package keys
 import "crypto/subtle"
 
 type Key interface {
-	Equals(Key) bool
-
 	Raw() ([]byte, error)
 }
 
