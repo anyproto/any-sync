@@ -61,7 +61,7 @@ func (s *secureService) BasicListener(lis net.Listener, timeoutMillis int) Conte
 }
 
 func (s *secureService) TLSConn(ctx context.Context, conn net.Conn) (sec.SecureConn, error) {
-	tr, err := libp2ptls.New(s.key)
+	tr, err := libp2ptls.New(libp2ptls.ID, s.key, nil)
 	if err != nil {
 		return nil, err
 	}
