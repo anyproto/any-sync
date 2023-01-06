@@ -23,7 +23,7 @@ type ContextListener interface {
 }
 
 func newTLSListener(key crypto.PrivKey, lis net.Listener, timeoutMillis int) ContextListener {
-	tr, _ := libp2ptls.New(key)
+	tr, _ := libp2ptls.New(libp2ptls.ID, key, nil)
 	return &tlsListener{
 		tr:            tr,
 		Listener:      lis,
