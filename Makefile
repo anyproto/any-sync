@@ -1,4 +1,4 @@
-.PHONY: proto test
+.PHONY: proto test test-coverage
 export GOPRIVATE=github.com/anytypeio
 
 proto:
@@ -18,3 +18,7 @@ proto:
 
 test:
 	go test ./... --cover
+
+test-coverage:
+	go test ./... -coverprofile coverage.out -covermode count
+	go tool cover -func coverage.out

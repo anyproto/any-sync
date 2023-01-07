@@ -17,8 +17,7 @@ jobs:
           go vet ./...
       - name: Unit tests
         run: |
-          sudo go test ./... -coverprofile coverage.out -covermode count
-          sudo go tool cover -func coverage.out
+          sudo make test-coverage
       - name: Quality Gate - Test coverage shall be above threshold
         env:
           TESTCOVERAGE_THRESHOLD: 0
