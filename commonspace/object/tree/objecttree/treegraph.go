@@ -6,6 +6,6 @@ package objecttree
 
 import "fmt"
 
-func (t *Tree) Graph(parser DescriptionParser) (data []string, err error) {
+func (t *Tree) Graph(parser DescriptionParser) (data string, err error) {
 	return "", fmt.Errorf("not supported")
 }
