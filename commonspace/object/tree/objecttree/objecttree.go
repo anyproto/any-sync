@@ -395,7 +395,6 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 		}
 		return
 	}
-	return
 }
 
 func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesAdded []*Change, rawChanges []*treechangeproto.RawTreeChangeWithId) (addResult AddResult, err error) {

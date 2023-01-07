@@ -133,7 +133,7 @@ func (st *deletionState) CreateDeleteChange(id string, isSnapshot bool) (res []b
 	}
 	change := &spacesyncproto.SettingsData{
 		Content: []*spacesyncproto.SpaceSettingsContent{
-			{content},
+			{Value: content},
 		},
 		Snapshot: nil,
 	}
