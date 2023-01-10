@@ -1,7 +1,7 @@
 package commonspace
 
 import (
-	aclrecordproto2 "github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
+	aclrecordproto "github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
@@ -75,7 +75,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 	}
 
 	// preparing acl
-	aclRoot := &aclrecordproto2.AclRoot{
+	aclRoot := &aclrecordproto.AclRoot{
 		Identity:           identity,
 		EncryptionKey:      encPubKey,
 		SpaceId:            spaceId,
@@ -171,7 +171,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 	}
 
 	// deriving and encrypting read key
-	readKey, err := aclrecordproto2.AclReadKeyDerive(signPrivKey, encPrivKey)
+	readKey, err := aclrecordproto.AclReadKeyDerive(signPrivKey, encPrivKey)
 	if err != nil {
 		return
 	}
@@ -181,17 +181,12 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 		return
 	}
 	readKeyHash := hasher.Sum64()
-	encReadKey, err := payload.EncryptionKey.GetPublic().Encrypt(readKey.Bytes())
-	if err != nil {
-		return
-	}
 
 	// preparing acl
-	aclRoot := &aclrecordproto2.AclRoot{
+	aclRoot := &aclrecordproto.AclRoot{
 		Identity:           identity,
 		EncryptionKey:      encPubKey,
 		SpaceId:            spaceId,
-		EncryptedReadKey:   encReadKey,
 		DerivationScheme:   SpaceDerivationScheme,
 		CurrentReadKeyHash: readKeyHash,
 	}
@@ -221,7 +216,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 	return
 }
 
-func marshalAclRoot(aclRoot *aclrecordproto2.AclRoot, key signingkey.PrivKey) (rawWithId *aclrecordproto2.RawAclRecordWithId, err error) {
+func marshalAclRoot(aclRoot *aclrecordproto.AclRoot, key signingkey.PrivKey) (rawWithId *aclrecordproto.RawAclRecordWithId, err error) {
 	marshalledRoot, err := aclRoot.Marshal()
 	if err != nil {
 		return
@@ -230,7 +225,7 @@ func marshalAclRoot(aclRoot *aclrecordproto2.AclRoot, key signingkey.PrivKey) (r
 	if err != nil {
 		return
 	}
-	raw := &aclrecordproto2.RawAclRecord{
+	raw := &aclrecordproto.RawAclRecord{
 		Payload:   marshalledRoot,
 		Signature: signature,
 	}
@@ -242,7 +237,7 @@ func marshalAclRoot(aclRoot *aclrecordproto2.AclRoot, key signingkey.PrivKey) (r
 	if err != nil {
 		return
 	}
-	rawWithId = &aclrecordproto2.RawAclRecordWithId{
+	rawWithId = &aclrecordproto.RawAclRecordWithId{
 		Payload: marshalledRaw,
 		Id:      aclHeadId,
 	}
