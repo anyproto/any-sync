@@ -14,6 +14,12 @@ jobs:
         with:
           go-version: '^1.19.0'
 
+      - name: Checkout private
+        uses: actions/checkout@v3
+        with:
+          repository: github.com/anytypeio/go-chash
+          path: go-chash
+
       - name: test go install
         run: |
           go install github.com/anytypeio/go-chash@latest
