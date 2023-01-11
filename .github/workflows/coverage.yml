@@ -13,10 +13,12 @@ jobs:
           go-version: '^1.19.0'
 
       - name: Vet
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          git config --global http.extraheader "PRIVATE-TOKEN: ${{ secrets.GITHUB_TOKEN }}"
-          git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
-          export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          #git config --global http.extraheader "PRIVATE-TOKEN: ${{ github.token }}"
+          #git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          #export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
           make vet
       - name: Unit tests
         run: |
