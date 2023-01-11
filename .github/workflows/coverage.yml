@@ -15,6 +15,7 @@ jobs:
       - name: test go install
         run: |
           go install github.com/anytypeio/go-chash@latest
+
       - name: Vet
         run: |
           make vet
