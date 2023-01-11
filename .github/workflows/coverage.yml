@@ -6,19 +6,21 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: github.com/anytypeio
+      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
           go-version: '^1.19.0'
 
-      - name: Vet
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+      - name: test go install
         run: |
-          #git config --global http.extraheader "PRIVATE-TOKEN: ${{ github.token }}"
-          #git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
-          #export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
+          go install github.com/anytypeio/go-chash@v0.0.1
+      - name: Vet
+        run: |
           make vet
       - name: Unit tests
         run: |
