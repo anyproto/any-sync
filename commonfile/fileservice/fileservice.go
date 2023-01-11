@@ -31,6 +31,8 @@ type FileService interface {
 	GetFile(ctx context.Context, c cid.Cid) (ufsio.ReadSeekCloser, error)
 	// AddFile adds file to ipfs storage
 	AddFile(ctx context.Context, r io.Reader) (ipld.Node, error)
+	// DAGService returns ipld.DAGService object
+	DAGService() ipld.DAGService
 	app.Component
 }
 
@@ -58,6 +60,10 @@ func (fs *fileService) Init(a *app.App) (err error) {
 
 func (fs *fileService) Name() string {
 	return CName
+}
+
+func (fs *fileService) DAGService() ipld.DAGService {
+	return fs.merkledag
 }
 
 func (fs *fileService) AddFile(ctx context.Context, r io.Reader) (ipld.Node, error) {
