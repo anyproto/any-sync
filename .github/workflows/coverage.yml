@@ -12,6 +12,9 @@ jobs:
         with:
           go-version: '^1.19.0'
 
+      - name: git config
+        run: |
+          git config --global http.extraheader "PRIVATE-TOKEN: ${{ secrets.GITHUB_TOKEN }}"
       - name: Vet
         run: |
           make vet
