@@ -15,7 +15,7 @@ jobs:
       - name: Vet
         run: |
           git config --global http.extraheader "PRIVATE-TOKEN: ${{ secrets.GITHUB_TOKEN }}"
-          git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://${{ secrets.GITHUB_TOKEN }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           export GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
           make vet
       - name: Unit tests
