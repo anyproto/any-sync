@@ -1,4 +1,4 @@
-.PHONY: proto test test-coverage vet deps
+.PHONY: proto test deps
 export GOPRIVATE=github.com/anytypeio
 export PATH:=deps:$(PATH)
 
@@ -16,17 +16,11 @@ proto:
 	protoc --gogofaster_out=$(PKGMAP):. --go-drpc_out=protolib=github.com/gogo/protobuf:. commonspace/spacesyncproto/protos/*.proto
 	protoc --gogofaster_out=$(PKGMAP):. --go-drpc_out=protolib=github.com/gogo/protobuf:. commonfile/fileproto/protos/*.proto
 
-vet:
-	go vet ./...
-
-test:
-	go test ./... --cover
-
-test-coverage:
-	go test ./... -coverprofile coverage.out -covermode count
-	go tool cover -func coverage.out
-
 deps:
 	go mod download
 	go build -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
 	go build -o deps github.com/gogo/protobuf/protoc-gen-gogofaster
+
+test:
+	go test ./... --cover
+
