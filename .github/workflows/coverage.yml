@@ -17,12 +17,13 @@ jobs:
       - name: git config
         run: git config --global url.https://${{ secrets.ANYTYPE_PAT }}@github.com/.insteadOf https://github.com/
 
-      - name: Vet
-        run: |
-          make vet
-      - name: Unit tests
-        run: |
-          sudo make test-coverage
+      - name: deps
+        run: make deps
+      - name: vet
+        run: make vet
+      - name: unit tests
+        run: make test-coverage
+
       - name: Quality Gate - Test coverage shall be above threshold
         env:
           TESTCOVERAGE_THRESHOLD: 0
