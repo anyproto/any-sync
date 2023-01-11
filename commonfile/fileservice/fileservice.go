@@ -33,10 +33,12 @@ type FileService interface {
 	AddFile(ctx context.Context, r io.Reader) (ipld.Node, error)
 	// DAGService returns ipld.DAGService object
 	DAGService() ipld.DAGService
+	// HasCid checks is CID exists
+	HasCid(ctx context.Context, c cid.Cid) (exists bool, err error)
 	app.Component
 }
-
 type fileService struct {
+	bs        fileblockstore.BlockStoreLocal
 	merkledag ipld.DAGService
 	prefix    cid.Prefix
 }
@@ -52,8 +54,8 @@ func (fs *fileService) Init(a *app.App) (err error) {
 	}
 	prefix.MhType = hashFunCode
 	prefix.MhLength = -1
-	bs := newBlockService(a.MustComponent(fileblockstore.CName).(fileblockstore.BlockStore))
-	fs.merkledag = merkledag.NewDAGService(bs)
+	fs.bs = a.MustComponent(fileblockstore.CName).(fileblockstore.BlockStoreLocal)
+	fs.merkledag = merkledag.NewDAGService(newBlockService(fs.bs))
 	fs.prefix = prefix
 	return
 }
@@ -91,4 +93,12 @@ func (fs *fileService) GetFile(ctx context.Context, c cid.Cid) (ufsio.ReadSeekCl
 		return nil, err
 	}
 	return ufsio.NewDagReader(ctx, n, fs.merkledag)
+}
+
+func (fs *fileService) HasCid(ctx context.Context, c cid.Cid) (exists bool, err error) {
+	res, err := fs.bs.ExistsCids(ctx, []cid.Cid{c})
+	if err != nil {
+		return
+	}
+	return len(res) > 0, nil
 }
