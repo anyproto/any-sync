@@ -17,16 +17,20 @@ jobs:
       - name: git config
         run: git config --global url.https://${{ secrets.ANYTYPE_PAT }}@github.com/.insteadOf https://github.com/
 
+      # cache {{
+      - id: go-cache-paths
+        run: |
+          echo "::set-output name=GOCACHE::$(go env GOCACHE)"
+          echo "::set-output name=GOMODCACHE::$(go env GOMODCACHE)"
       - uses: actions/cache@v3
         with:
           path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-            ~/Library/Caches/go-build
-            ~\AppData\Local\go-build
+            ${{ steps.go-cache-paths.outputs.GOCACHE }}
+            ${{ steps.go-cache-paths.outputs.GOMODCACHE }}
           key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-${{ matrix.go-version }}-
+      # }}
 
       - name: deps
         run: make deps
