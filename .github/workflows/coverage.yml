@@ -6,6 +6,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: github.com/anytypeio
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
