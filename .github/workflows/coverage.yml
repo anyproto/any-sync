@@ -16,7 +16,7 @@ jobs:
 
       - name: Checkout private
         run:
-          git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/anytypeio/go-chash.git
+          git clone https://${{ secrets.ANYTYPE_PAT }}@github.com/anytypeio/go-chash.git
 
       - name: test go install
         run: |
