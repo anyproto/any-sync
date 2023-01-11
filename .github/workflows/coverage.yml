@@ -17,7 +17,7 @@ jobs:
           git config --global http.extraheader "PRIVATE-TOKEN: ${{ secrets.GITHUB_TOKEN }}"
       - name: Vet
         run: |
-          go env -w GOPRIVATE=github.com/anytypeio/*
+          export GOPRIVATE=github.com/anytypeio
           make vet
       - name: Unit tests
         run: |
