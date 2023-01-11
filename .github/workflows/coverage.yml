@@ -17,10 +17,6 @@ jobs:
       - name: git config
         run: git config --global url.https://${{ secrets.ANYTYPE_PAT }}@github.com/.insteadOf https://github.com/
 
-      - name: test go install
-        run: |
-          go install github.com/anytypeio/go-chash@latest
-
       - name: Vet
         run: |
           make vet
