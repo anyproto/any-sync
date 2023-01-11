@@ -1,5 +1,5 @@
 .PHONY: proto test test-coverage vet deps
-export GOPRIVATE=github.com/anytypeio
+export GOPRIVATE=github.com/anytypeio/*
 export GIT_TERMINAL_PROMPT=1
 export PATH:=deps:$(PATH)
 
