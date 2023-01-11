@@ -6,9 +6,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-#    env:
-#      GOPRIVATE: github.com/anytypeio
-#      GH_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -17,7 +14,6 @@ jobs:
 
       - name: test go install
         run: |
-          #git config --global url.https://$GH_ACCESS_TOKEN@github.com/.insteadOf https://github.com/
           go install github.com/anytypeio/go-chash@latest
       - name: Vet
         run: |
