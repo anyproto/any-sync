@@ -50,7 +50,7 @@ func (t *Tree) Graph(parser DescriptionParser) (data string, err error) {
 		if ord == "" {
 			ord = "miss"
 		}
-		chSymbs, err := parser.ParseChange(c)
+		chSymbs, err := parser.ParseChange(c, c.Id == t.RootId())
 		if err != nil {
 			return err
 		}
