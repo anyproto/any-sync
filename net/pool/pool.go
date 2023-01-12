@@ -6,8 +6,10 @@ import (
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/app/ocache"
+	"github.com/anytypeio/any-sync/metric"
 	"github.com/anytypeio/any-sync/net/dialer"
 	"github.com/anytypeio/any-sync/net/peer"
+	"github.com/prometheus/client_golang/prometheus"
 	"math/rand"
 	"time"
 )
@@ -47,6 +49,10 @@ type pool struct {
 
 func (p *pool) Init(a *app.App) (err error) {
 	p.dialer = a.MustComponent(dialer.CName).(dialer.Dialer)
+	var reg *prometheus.Registry
+	if m := a.Component(metric.CName); m != nil {
+		reg = m.(metric.Metric).Registry()
+	}
 	p.cache = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
 			return p.dialer.Dial(ctx, id)
@@ -54,6 +60,7 @@ func (p *pool) Init(a *app.App) (err error) {
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
 		ocache.WithTTL(time.Minute*5),
+		ocache.WithPrometheus(reg, "netpool", "cache"),
 	)
 	return nil
 }
