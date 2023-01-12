@@ -6,6 +6,9 @@ func WithPrometheus(reg *prometheus.Registry, namespace, subsystem string) Optio
 	if subsystem == "" {
 		subsystem = "cache"
 	}
+	if reg == nil {
+		return nil
+	}
 	return func(cache *oCache) {
 		cache.metrics = &metrics{
 			hit: prometheus.NewCounter(prometheus.CounterOpts{
