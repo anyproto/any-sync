@@ -16,6 +16,7 @@ import (
 type StreamChecker interface {
 	CheckResponsiblePeers()
 	CheckPeerConnection(peerId string) (err error)
+	FirstResponsiblePeer() (peerId string, err error)
 }
 
 type streamChecker struct {
@@ -28,7 +29,7 @@ type streamChecker struct {
 	lastCheck     *atomic.Time
 }
 
-const streamCheckerInterval = time.Second * 10
+const streamCheckerInterval = time.Second * 5
 
 func NewStreamChecker(
 	spaceId string,
@@ -129,5 +130,17 @@ func (s *streamChecker) createStream(p peer.Peer) (err error) {
 		err = fmt.Errorf("failed to read from stream async: %w", err)
 		return
 	}
+	return
+}
+
+func (s *streamChecker) FirstResponsiblePeer() (peerId string, err error) {
+	nodeIds := s.connector.Configuration().NodeIds(s.spaceId)
+	for _, nodeId := range nodeIds {
+		if s.streamPool.HasActiveStream(nodeId) {
+			peerId = nodeId
+			return
+		}
+	}
+	err = fmt.Errorf("no responsible peers are connected")
 	return
 }

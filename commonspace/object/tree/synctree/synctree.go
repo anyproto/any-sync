@@ -79,9 +79,14 @@ func newWrappedSyncClient(
 
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {
 	getTreeRemote := func() (msg *treechangeproto.TreeSyncMessage, err error) {
+		streamChecker := deps.ObjectSync.StreamChecker()
 		peerId, err := peer.CtxPeerId(ctx)
 		if err != nil {
-			return
+			streamChecker.CheckResponsiblePeers()
+			peerId, err = streamChecker.FirstResponsiblePeer()
+			if err != nil {
+				return
+			}
 		}
 
 		newTreeRequest := GetRequestFactory().CreateNewTreeRequest()
