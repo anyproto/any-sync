@@ -148,11 +148,14 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	t.Run("update heads updates diff", func(t *testing.T) {
 		newId := "newId"
 		newHeads := []string{"h1", "h2"}
+		hash := "hash"
 		diffMock.EXPECT().Set(ldiff.Element{
 			Id:   newId,
 			Head: concatStrings(newHeads),
 		})
+		diffMock.EXPECT().Hash().Return(hash)
 		delState.EXPECT().Exists(newId).Return(false)
+		stMock.EXPECT().WriteSpaceHash(hash)
 		diffSyncer.UpdateHeads(newId, newHeads)
 	})
 
