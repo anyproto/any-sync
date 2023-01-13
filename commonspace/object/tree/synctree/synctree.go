@@ -55,16 +55,17 @@ var buildObjectTree = objecttree.BuildObjectTree
 var createSyncClient = newWrappedSyncClient
 
 type BuildDeps struct {
-	SpaceId        string
-	ObjectSync     objectsync.ObjectSync
-	Configuration  nodeconf.Configuration
-	HeadNotifiable HeadNotifiable
-	Listener       updatelistener.UpdateListener
-	AclList        list.AclList
-	SpaceStorage   spacestorage.SpaceStorage
-	TreeStorage    treestorage.TreeStorage
-	TreeUsage      *atomic.Int32
-	SyncStatus     syncstatus.StatusUpdater
+	SpaceId            string
+	ObjectSync         objectsync.ObjectSync
+	Configuration      nodeconf.Configuration
+	HeadNotifiable     HeadNotifiable
+	Listener           updatelistener.UpdateListener
+	AclList            list.AclList
+	SpaceStorage       spacestorage.SpaceStorage
+	TreeStorage        treestorage.TreeStorage
+	TreeUsage          *atomic.Int32
+	SyncStatus         syncstatus.StatusUpdater
+	WaitTreeRemoteSync bool
 }
 
 func newWrappedSyncClient(
@@ -104,6 +105,25 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 		return
 	}
 
+	waitTree := func(wait bool) (msg *treechangeproto.TreeSyncMessage, err error) {
+		if !wait {
+			return getTreeRemote()
+		}
+		for {
+			msg, err = getTreeRemote()
+			if err == nil {
+				return
+			}
+			select {
+			case <-ctx.Done():
+				err = fmt.Errorf("waiting for object %s interrupted, context closed", id)
+				return
+			default:
+				break
+			}
+		}
+	}
+
 	deps.TreeStorage, err = deps.SpaceStorage.TreeStorage(id)
 	if err == nil {
 		return buildSyncTree(ctx, false, deps)
@@ -122,7 +142,7 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 		return
 	}
 
-	resp, err := getTreeRemote()
+	resp, err := waitTree(deps.WaitTreeRemoteSync)
 	if err != nil {
 		return
 	}
