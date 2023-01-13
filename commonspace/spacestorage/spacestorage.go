@@ -34,10 +34,13 @@ type SpaceStorage interface {
 	AclStorage() (liststorage.ListStorage, error)
 	SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error)
 	StoredIds() ([]string, error)
-	Close() error
 	TreeRoot(id string) (*treechangeproto.RawTreeChangeWithId, error)
 	TreeStorage(id string) (treestorage.TreeStorage, error)
 	CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (treestorage.TreeStorage, error)
+	WriteSpaceHash(head string) error
+	ReadSpaceHash() (hash string, err error)
+
+	Close() error
 }
 
 type SpaceStorageCreatePayload struct {
