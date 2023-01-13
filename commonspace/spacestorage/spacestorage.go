@@ -37,7 +37,7 @@ type SpaceStorage interface {
 	TreeRoot(id string) (*treechangeproto.RawTreeChangeWithId, error)
 	TreeStorage(id string) (treestorage.TreeStorage, error)
 	CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (treestorage.TreeStorage, error)
-	WriteSpaceHash(head string) error
+	WriteSpaceHash(hash string) error
 	ReadSpaceHash() (hash string, err error)
 
 	Close() error
