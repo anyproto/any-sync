@@ -9,6 +9,7 @@ import (
 
 	app "github.com/anytypeio/any-sync/app"
 	nodeconf "github.com/anytypeio/any-sync/nodeconf"
+	chash "github.com/anytypeio/go-chash"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -126,6 +127,20 @@ func (m *MockConfiguration) Addresses() map[string][]string {
 func (mr *MockConfigurationMockRecorder) Addresses() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Addresses", reflect.TypeOf((*MockConfiguration)(nil).Addresses))
+}
+
+// CHash mocks base method.
+func (m *MockConfiguration) CHash() chash.CHash {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CHash")
+	ret0, _ := ret[0].(chash.CHash)
+	return ret0
+}
+
+// CHash indicates an expected call of CHash.
+func (mr *MockConfigurationMockRecorder) CHash() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CHash", reflect.TypeOf((*MockConfiguration)(nil).CHash))
 }
 
 // ConsensusPeers mocks base method.
