@@ -7,6 +7,7 @@ package ldiff
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"github.com/cespare/xxhash"
 	"github.com/huandu/skiplist"
@@ -89,6 +90,8 @@ type Diff interface {
 	Elements() []Element
 	// Ids retrieves ids of all elements in the Diff
 	Ids() []string
+	// Hash returns hash of all elements in the diff
+	Hash() string
 }
 
 // Remote interface for using in the Diff
@@ -167,6 +170,13 @@ func (d *diff) Elements() (elements []Element) {
 		cur = cur.Next()
 	}
 	return
+}
+
+func (d *diff) Hash() string {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	res := d.getRange(Range{To: math.MaxUint64})
+	return hex.EncodeToString(res.Hash)
 }
 
 // RemoveId removes element by id

@@ -88,6 +88,7 @@ type Space interface {
 	BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error)
 	DeleteTree(ctx context.Context, id string) (err error)
 
+	HeadSync() headsync.HeadSync
 	SyncStatus() syncstatus.StatusUpdater
 	Storage() spacestorage.SpaceStorage
 
