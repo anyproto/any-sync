@@ -29,6 +29,9 @@ type HeadSync interface {
 	DebugAllHeads() (res []TreeHeads)
 
 	Init(objectIds []string, deletionState deletionstate.DeletionState)
+
+	StateHash() string
+
 	Close() (err error)
 }
 
@@ -101,6 +104,10 @@ func (d *headSync) DebugAllHeads() (res []TreeHeads) {
 
 func (d *headSync) RemoveObjects(ids []string) {
 	d.syncer.RemoveObjects(ids)
+}
+
+func (d *headSync) StateHash() string {
+	return d.diff.Hash()
 }
 
 func (d *headSync) Close() (err error) {

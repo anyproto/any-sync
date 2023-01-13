@@ -138,3 +138,13 @@ func BenchmarkDiff_Ranges(b *testing.B) {
 		resBuf = resBuf[:0]
 	}
 }
+
+func TestDiff_Hash(t *testing.T) {
+	d := New(16, 16)
+	h1 := d.Hash()
+	assert.NotEmpty(t, h1)
+	d.Set(Element{Id: "1"})
+	h2 := d.Hash()
+	assert.NotEmpty(t, h2)
+	assert.NotEqual(t, h1, h2)
+}
