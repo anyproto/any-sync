@@ -16,6 +16,8 @@ type Configuration interface {
 	ConsensusPeers() []string
 	// Addresses returns map[peerId][]addr with connection addresses for all known nodes
 	Addresses() map[string][]string
+	// CHash returns nodes consistent table
+	CHash() chash.CHash
 }
 
 type configuration struct {
@@ -65,4 +67,8 @@ func (c *configuration) Addresses() map[string][]string {
 		res[m.PeerId] = m.Addresses
 	}
 	return res
+}
+
+func (c *configuration) CHash() chash.CHash {
+	return c.chash
 }

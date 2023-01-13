@@ -84,7 +84,7 @@ type Space interface {
 	DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error)
-	BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (objecttree.ObjectTree, error)
+	BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error)
 	DeleteTree(ctx context.Context, id string) (err error)
 
 	SyncStatus() syncstatus.StatusUpdater
@@ -176,7 +176,10 @@ func (s *space) Init(ctx context.Context) (err error) {
 	deletionState := deletionstate.NewDeletionState(s.storage)
 	deps := settings.Deps{
 		BuildFunc: func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error) {
-			res, err := s.BuildTree(ctx, id, listener)
+			res, err := s.BuildTree(ctx, id, BuildTreeOpts{
+				Listener:           listener,
+				WaitTreeRemoteSync: false,
+			})
 			if err != nil {
 				return
 			}
@@ -281,30 +284,31 @@ func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCrea
 		TreeUsage:      &s.treesUsed,
 		SyncStatus:     s.syncStatus,
 	}
-	t, err = synctree.PutSyncTree(ctx, payload, deps)
-	// this can happen only for derived trees, when we've synced same tree already
-	if err == treestorage.ErrTreeExists {
-		return synctree.BuildSyncTreeOrGetRemote(ctx, payload.RootRawChange.Id, deps)
-	}
-	return
+	return synctree.PutSyncTree(ctx, payload, deps)
 }
 
-func (s *space) BuildTree(ctx context.Context, id string, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error) {
+type BuildTreeOpts struct {
+	Listener           updatelistener.UpdateListener
+	WaitTreeRemoteSync bool
+}
+
+func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
 		return
 	}
 
 	deps := synctree.BuildDeps{
-		SpaceId:        s.id,
-		ObjectSync:     s.objectSync,
-		Configuration:  s.configuration,
-		HeadNotifiable: s.headSync,
-		Listener:       listener,
-		AclList:        s.aclList,
-		SpaceStorage:   s.storage,
-		TreeUsage:      &s.treesUsed,
-		SyncStatus:     s.syncStatus,
+		SpaceId:            s.id,
+		ObjectSync:         s.objectSync,
+		Configuration:      s.configuration,
+		HeadNotifiable:     s.headSync,
+		Listener:           opts.Listener,
+		AclList:            s.aclList,
+		SpaceStorage:       s.storage,
+		TreeUsage:          &s.treesUsed,
+		SyncStatus:         s.syncStatus,
+		WaitTreeRemoteSync: opts.WaitTreeRemoteSync,
 	}
 	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
 }

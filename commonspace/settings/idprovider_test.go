@@ -55,7 +55,7 @@ func TestProvider_ProcessChange(t *testing.T) {
 		ch := &objecttree.Change{}
 		ch.Model = &spacesyncproto.SettingsData{
 			Content: []*spacesyncproto.SpaceSettingsContent{
-				{&spacesyncproto.SpaceSettingsContent_ObjectDelete{
+				{Value: &spacesyncproto.SpaceSettingsContent_ObjectDelete{
 					ObjectDelete: &spacesyncproto.ObjectDelete{Id: "id1"},
 				}},
 			},

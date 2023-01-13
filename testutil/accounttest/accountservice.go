@@ -4,8 +4,11 @@ import (
 	accountService "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
+	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/anytypeio/any-sync/util/keys"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/any-sync/util/peer"
 )
 
 // AccountTestService provides service for test purposes, generates new random account every Init
@@ -14,6 +17,9 @@ type AccountTestService struct {
 }
 
 func (s *AccountTestService) Init(a *app.App) (err error) {
+	if s.acc != nil {
+		return
+	}
 	encKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
 	if err != nil {
 		return
@@ -27,7 +33,13 @@ func (s *AccountTestService) Init(a *app.App) (err error) {
 	if err != nil {
 		return
 	}
+
+	peerId, err := peer.IdFromSigningPubKey(signKey.GetPublic())
+	if err != nil {
+		return err
+	}
 	s.acc = &accountdata.AccountData{
+		PeerId:   peerId.String(),
 		Identity: ident,
 		SignKey:  signKey,
 		EncKey:   encKey,
@@ -41,4 +53,22 @@ func (s *AccountTestService) Name() (name string) {
 
 func (s *AccountTestService) Account() *accountdata.AccountData {
 	return s.acc
+}
+
+func (s *AccountTestService) NodeConf(addrs []string) nodeconf.NodeConfig {
+	encSk, err := keys.EncodeKeyToString(s.acc.SignKey)
+	if err != nil {
+		panic(err)
+	}
+	encEk, err := keys.EncodeKeyToString(s.acc.EncKey)
+	if err != nil {
+		panic(err)
+	}
+	return nodeconf.NodeConfig{
+		PeerId:        s.acc.PeerId,
+		Addresses:     addrs,
+		SigningKey:    encSk,
+		EncryptionKey: encEk,
+		Types:         []nodeconf.NodeType{nodeconf.NodeTypeTree},
+	}
 }

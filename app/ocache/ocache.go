@@ -61,7 +61,9 @@ func New(loadFunc LoadFunc, opts ...Option) OCache {
 		log:      log.Sugar(),
 	}
 	for _, o := range opts {
-		o(c)
+		if o != nil {
+			o(c)
+		}
 	}
 	if c.ttl != 0 && c.gc != 0 {
 		go c.ticker()

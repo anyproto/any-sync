@@ -5,7 +5,6 @@ import (
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/util/keys"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/sec"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
@@ -35,16 +34,16 @@ type secureService struct {
 }
 
 func (s *secureService) Init(a *app.App) (err error) {
-	account := a.MustComponent("config").(commonaccount.ConfigGetter).GetAccount()
-	pkb, err := keys.DecodeBytesFromString(account.PeerKey)
+	account := a.MustComponent(commonaccount.CName).(commonaccount.Service)
+	peerKey, err := account.Account().PeerKey.Raw()
 	if err != nil {
 		return
 	}
-	if s.key, err = crypto.UnmarshalEd25519PrivateKey(pkb); err != nil {
+	if s.key, err = crypto.UnmarshalEd25519PrivateKey(peerKey); err != nil {
 		return
 	}
 
-	log.Info("secure service init", zap.String("peerId", account.PeerId))
+	log.Info("secure service init", zap.String("peerId", account.Account().PeerId))
 
 	return nil
 }
@@ -62,7 +61,7 @@ func (s *secureService) BasicListener(lis net.Listener, timeoutMillis int) Conte
 }
 
 func (s *secureService) TLSConn(ctx context.Context, conn net.Conn) (sec.SecureConn, error) {
-	tr, err := libp2ptls.New(s.key)
+	tr, err := libp2ptls.New(libp2ptls.ID, s.key, nil)
 	if err != nil {
 		return nil, err
 	}

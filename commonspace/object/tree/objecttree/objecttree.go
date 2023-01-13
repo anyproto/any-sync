@@ -52,7 +52,7 @@ type ObjectTree interface {
 	Heads() []string
 	Root() *Change
 	HasChanges(...string) bool
-	DebugDump() (string, error)
+	DebugDump(parser DescriptionParser) (string, error)
 
 	IterateRoot(convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
@@ -395,7 +395,6 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 		}
 		return
 	}
-	return
 }
 
 func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesAdded []*Change, rawChanges []*treechangeproto.RawTreeChangeWithId) (addResult AddResult, err error) {
@@ -627,6 +626,6 @@ func (ot *objectTree) validateTree(newChanges []*Change) error {
 	return ot.validator.ValidateNewChanges(ot.tree, ot.aclList, newChanges)
 }
 
-func (ot *objectTree) DebugDump() (string, error) {
-	return ot.tree.Graph(NoOpDescriptionParser)
+func (ot *objectTree) DebugDump(parser DescriptionParser) (string, error) {
+	return ot.tree.Graph(parser)
 }
