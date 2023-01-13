@@ -26,6 +26,7 @@ import (
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -65,7 +66,7 @@ type SpaceDescription struct {
 }
 
 func NewSpaceId(id string, repKey uint64) string {
-	return fmt.Sprintf("%s.%d", id, repKey)
+	return fmt.Sprintf("%s.%s", id, strconv.FormatUint(repKey, 36))
 }
 
 type Space interface {
