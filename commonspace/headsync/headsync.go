@@ -23,7 +23,7 @@ type TreeHeads struct {
 
 type HeadSync interface {
 	Init(objectIds []string, deletionState deletionstate.DeletionState)
-	
+
 	UpdateHeads(id string, heads []string)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
 	RemoveObjects(ids []string)
@@ -126,6 +126,9 @@ func (d *headSync) fillDiff(objectIds []string) {
 		})
 	}
 	d.diff.Set(els...)
+	if err := d.storage.WriteSpaceHash(d.diff.Hash()); err != nil {
+		d.log.Error("can't write space hash", zap.Error(err))
+	}
 }
 
 func concatStrings(strs []string) string {

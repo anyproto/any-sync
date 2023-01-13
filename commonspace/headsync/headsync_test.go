@@ -46,6 +46,9 @@ func TestDiffService(t *testing.T) {
 			Id:   initId,
 			Head: "h1h2",
 		})
+		hash := "123"
+		diffMock.EXPECT().Hash().Return(hash)
+		storageMock.EXPECT().WriteSpaceHash(hash)
 		pSyncMock.EXPECT().Run()
 		service.Init([]string{initId}, delState)
 	})
