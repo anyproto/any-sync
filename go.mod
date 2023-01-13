@@ -3,7 +3,7 @@ module github.com/anytypeio/any-sync
 go 1.19
 
 require (
-	github.com/anytypeio/go-chash v0.0.1
+	github.com/anytypeio/go-chash v0.0.2
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/cespare/xxhash v1.1.0
 	github.com/cheggaaa/mb/v3 v3.0.0
