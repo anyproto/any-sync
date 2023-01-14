@@ -24,6 +24,7 @@ import (
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/any-sync/util/slice"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"strconv"
@@ -228,7 +229,9 @@ func (s *space) Storage() spacestorage.SpaceStorage {
 }
 
 func (s *space) StoredIds() []string {
-	return s.headSync.AllIds()
+	return slice.DiscardFromSlice(s.headSync.AllIds(), func(id string) bool {
+		return id == s.settingsObject.Id()
+	})
 }
 
 func (s *space) DebugAllHeads() []headsync.TreeHeads {
