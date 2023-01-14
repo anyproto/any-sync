@@ -1,7 +1,10 @@
 //go:generate mockgen -destination mock_nodeconf/mock_nodeconf.go github.com/anytypeio/any-sync/nodeconf Service,Configuration
 package nodeconf
 
-import "github.com/anytypeio/go-chash"
+import (
+	"github.com/anytypeio/go-chash"
+	"strings"
+)
 
 type Configuration interface {
 	// Id returns current nodeconf id
@@ -18,6 +21,8 @@ type Configuration interface {
 	Addresses() map[string][]string
 	// CHash returns nodes consistent table
 	CHash() chash.CHash
+	// Partition returns partition number by spaceId
+	Partition(spaceId string) (part int)
 }
 
 type configuration struct {
@@ -34,7 +39,7 @@ func (c *configuration) Id() string {
 }
 
 func (c *configuration) NodeIds(spaceId string) []string {
-	members := c.chash.GetMembers(spaceId)
+	members := c.chash.GetMembers(ReplKey(spaceId))
 	res := make([]string, 0, len(members))
 	for _, m := range members {
 		if m.Id() != c.accountId {
@@ -45,7 +50,7 @@ func (c *configuration) NodeIds(spaceId string) []string {
 }
 
 func (c *configuration) IsResponsible(spaceId string) bool {
-	for _, m := range c.chash.GetMembers(spaceId) {
+	for _, m := range c.chash.GetMembers(ReplKey(spaceId)) {
 		if m.Id() == c.accountId {
 			return true
 		}
@@ -71,4 +76,15 @@ func (c *configuration) Addresses() map[string][]string {
 
 func (c *configuration) CHash() chash.CHash {
 	return c.chash
+}
+
+func (c *configuration) Partition(spaceId string) (part int) {
+	return c.chash.GetPartition(ReplKey(spaceId))
+}
+
+func ReplKey(spaceId string) (replKey string) {
+	if i := strings.LastIndex(spaceId, "."); i != -1 {
+		return spaceId[i+1:]
+	}
+	return spaceId
 }

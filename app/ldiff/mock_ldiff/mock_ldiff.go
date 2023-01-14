@@ -66,6 +66,20 @@ func (mr *MockDiffMockRecorder) Elements() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Elements", reflect.TypeOf((*MockDiff)(nil).Elements))
 }
 
+// Hash mocks base method.
+func (m *MockDiff) Hash() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Hash")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Hash indicates an expected call of Hash.
+func (mr *MockDiffMockRecorder) Hash() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Hash", reflect.TypeOf((*MockDiff)(nil).Hash))
+}
+
 // Ids mocks base method.
 func (m *MockDiff) Ids() []string {
 	m.ctrl.T.Helper()

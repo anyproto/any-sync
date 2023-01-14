@@ -22,13 +22,14 @@ type TreeHeads struct {
 }
 
 type HeadSync interface {
+	Init(objectIds []string, deletionState deletionstate.DeletionState)
+	
 	UpdateHeads(id string, heads []string)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
 	RemoveObjects(ids []string)
 	AllIds() []string
 	DebugAllHeads() (res []TreeHeads)
 
-	Init(objectIds []string, deletionState deletionstate.DeletionState)
 	Close() (err error)
 }
 

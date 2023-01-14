@@ -63,7 +63,10 @@ func (d *diffSyncer) Init(deletionState deletionstate.DeletionState) {
 
 func (d *diffSyncer) RemoveObjects(ids []string) {
 	for _, id := range ids {
-		d.diff.RemoveId(id)
+		_ = d.diff.RemoveId(id)
+	}
+	if err := d.storage.WriteSpaceHash(d.diff.Hash()); err != nil {
+		d.log.Error("can't write space hash", zap.Error(err))
 	}
 }
 
@@ -75,6 +78,9 @@ func (d *diffSyncer) UpdateHeads(id string, heads []string) {
 		Id:   id,
 		Head: concatStrings(heads),
 	})
+	if err := d.storage.WriteSpaceHash(d.diff.Hash()); err != nil {
+		d.log.Error("can't write space hash", zap.Error(err))
+	}
 }
 
 func (d *diffSyncer) Sync(ctx context.Context) error {
