@@ -270,7 +270,8 @@ func TestObjectTree(t *testing.T) {
 		assert.Equal(t, []string{"0"}, res.OldHeads)
 		assert.Equal(t, []string{"4"}, res.Heads)
 		assert.Equal(t, len(rawChanges), len(res.Added))
-		assert.Equal(t, Append, res.Mode)
+		// here we have rebuild, because we reduced tree to new snapshot
+		assert.Equal(t, Rebuild, res.Mode)
 
 		// check tree heads
 		assert.Equal(t, []string{"4"}, objTree.Heads())

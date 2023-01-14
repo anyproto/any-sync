@@ -185,11 +185,16 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 		return
 	}
 
+	mode := Append
+	if content.IsSnapshot {
+		mode = Rebuild
+	}
+
 	res = AddResult{
 		OldHeads: oldHeads,
 		Heads:    []string{objChange.Id},
 		Added:    []*treechangeproto.RawTreeChangeWithId{rawChange},
-		Mode:     Append,
+		Mode:     mode,
 	}
 	log.With("treeId", ot.id).With("head", objChange.Id).
 		Debug("finished adding content")
@@ -234,6 +239,7 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 }
 
 func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChangesPayload) (addResult AddResult, err error) {
+	lastHeadId := ot.tree.lastIteratedHeadId
 	addResult, err = ot.addRawChanges(ctx, changesPayload)
 	if err != nil {
 		return
@@ -241,6 +247,11 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChang
 
 	// reducing tree if we have new roots
 	ot.tree.reduceTree()
+
+	// that means that we removed the ids while reducing
+	if _, exists := ot.tree.attached[lastHeadId]; !exists {
+		addResult.Mode = Rebuild
+	}
 
 	// adding to database all the added changes only after they are good
 	for _, ch := range addResult.Added {
