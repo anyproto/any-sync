@@ -16,6 +16,17 @@ type inMemoryTreeStorage struct {
 	sync.RWMutex
 }
 
+func (t *inMemoryTreeStorage) TransactionAdd(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error {
+	t.RLock()
+	defer t.RUnlock()
+
+	for _, ch := range changes {
+		t.changes[ch.Id] = ch
+	}
+	t.heads = append(t.heads[:0], heads...)
+	return nil
+}
+
 func NewInMemoryTreeStorage(
 	root *treechangeproto.RawTreeChangeWithId,
 	heads []string,
@@ -61,11 +72,7 @@ func (t *inMemoryTreeStorage) Heads() ([]string, error) {
 func (t *inMemoryTreeStorage) SetHeads(heads []string) error {
 	t.Lock()
 	defer t.Unlock()
-	t.heads = t.heads[:0]
-
-	for _, h := range heads {
-		t.heads = append(t.heads, h)
-	}
+	t.heads = append(t.heads[:0], heads...)
 	return nil
 }
 

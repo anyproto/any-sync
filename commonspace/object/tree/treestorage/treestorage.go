@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_treestorage/mock_treestorage.go github.com/anytypeio/any-sync/commonspace/object/tree/treestorage TreeStorage
 package treestorage
 
 import (
@@ -25,8 +26,9 @@ type TreeStorage interface {
 	Root() (*treechangeproto.RawTreeChangeWithId, error)
 	Heads() ([]string, error)
 	SetHeads(heads []string) error
-
 	AddRawChange(change *treechangeproto.RawTreeChangeWithId) error
+	TransactionAdd(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error
+
 	GetRawChange(ctx context.Context, id string) (*treechangeproto.RawTreeChangeWithId, error)
 	HasChange(ctx context.Context, id string) (bool, error)
 	Delete() error
