@@ -70,9 +70,8 @@ func (s *BaseDrpcServer) serve(ctx context.Context, lis secureservice.ContextLis
 		if err != nil {
 			if isTemporary(err) {
 				l.Debug("listener temporary accept error", zap.Error(err))
-				t := time.NewTimer(500 * time.Millisecond)
 				select {
-				case <-t.C:
+				case <-time.After(time.Second):
 				case <-ctx.Done():
 					return
 				}
