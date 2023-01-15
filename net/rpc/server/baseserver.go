@@ -66,13 +66,12 @@ func (s *BaseDrpcServer) serve(ctx context.Context, lis secureservice.ContextLis
 			return
 		default:
 		}
-		ctx, conn, err := lis.Accept(ctx)
+		cctx, conn, err := lis.Accept(ctx)
 		if err != nil {
 			if isTemporary(err) {
 				l.Debug("listener temporary accept error", zap.Error(err))
-				t := time.NewTimer(500 * time.Millisecond)
 				select {
-				case <-t.C:
+				case <-time.After(time.Second):
 				case <-ctx.Done():
 					return
 				}
@@ -85,7 +84,7 @@ func (s *BaseDrpcServer) serve(ctx context.Context, lis secureservice.ContextLis
 			l.Error("listener accept error", zap.Error(err))
 			return
 		}
-		go s.serveConn(ctx, conn)
+		go s.serveConn(cctx, conn)
 	}
 }
 

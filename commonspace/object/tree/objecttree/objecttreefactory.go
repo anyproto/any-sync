@@ -7,8 +7,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/any-sync/util/keys/symmetric"
-	"github.com/anytypeio/any-sync/util/slice"
-	"go.uber.org/zap"
 	"math/rand"
 	"time"
 )
@@ -131,22 +129,6 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 	err := objTree.rebuildFromStorage(nil, nil)
 	if err != nil {
 		return nil, err
-	}
-	storageHeads, err := objTree.treeStorage.Heads()
-	if err != nil {
-		return nil, err
-	}
-
-	// comparing rebuilt heads with heads in storage
-	// in theory it can happen that we didn't set heads because the process has crashed
-	// therefore we want to set them later
-	if !slice.UnsortedEquals(storageHeads, objTree.tree.Heads()) {
-		log.With(zap.Strings("storage", storageHeads), zap.Strings("rebuilt", objTree.tree.Heads())).
-			Errorf("the heads in storage and objTree are different")
-		err = objTree.treeStorage.SetHeads(objTree.tree.Heads())
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	objTree.id = objTree.treeStorage.Id()

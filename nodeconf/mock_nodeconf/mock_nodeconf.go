@@ -212,3 +212,17 @@ func (mr *MockConfigurationMockRecorder) NodeIds(arg0 interface{}) *gomock.Call 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeIds", reflect.TypeOf((*MockConfiguration)(nil).NodeIds), arg0)
 }
+
+// Partition mocks base method.
+func (m *MockConfiguration) Partition(arg0 string) int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Partition", arg0)
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// Partition indicates an expected call of Partition.
+func (mr *MockConfigurationMockRecorder) Partition(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Partition", reflect.TypeOf((*MockConfiguration)(nil).Partition), arg0)
+}

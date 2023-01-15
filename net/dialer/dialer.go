@@ -76,9 +76,8 @@ func (d *dialer) Dial(ctx context.Context, peerId string) (p peer.Peer, err erro
 	for _, addr := range addrs {
 		conn, sc, err = d.handshake(ctx, addr)
 		if err != nil {
-			log.Info("can't connect to host", zap.String("addr", addr))
+			log.Info("can't connect to host", zap.String("addr", addr), zap.Error(err))
 		} else {
-			err = nil
 			break
 		}
 	}
@@ -99,7 +98,7 @@ func (d *dialer) handshake(ctx context.Context, addr string) (conn drpc.Conn, sc
 	if err != nil {
 		return
 	}
-	log.Info("connected with remote host", zap.String("serverPeer", sc.RemotePeer().String()), zap.String("per", sc.LocalPeer().String()))
+	log.Info("connected with remote host", zap.String("serverPeer", sc.RemotePeer().String()), zap.String("addr", addr))
 	conn = drpcconn.NewWithOptions(sc, drpcconn.Options{Manager: drpcmanager.Options{
 		Reader: drpcwire.ReaderOptions{MaximumBufferSize: d.config.Stream.MaxMsgSizeMb * (1 << 20)},
 	}})
