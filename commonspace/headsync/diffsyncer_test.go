@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/confconnector/mock_confconnector"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/any-sync/commonspace/object/acl/liststorage/mock_liststorage"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	mock_treestorage "github.com/anytypeio/any-sync/commonspace/object/tree/treestorage/mock_treestorage"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter/mock_treegetter"
@@ -160,7 +161,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	})
 
 	t.Run("diff syncer sync space missing", func(t *testing.T) {
-		aclStorageMock := mock_treestorage.NewMockListStorage(ctrl)
+		aclStorageMock := mock_liststorage.NewMockListStorage(ctrl)
 		settingsStorage := mock_treestorage.NewMockTreeStorage(ctrl)
 		settingsId := "settingsId"
 		aclRoot := &aclrecordproto.RawAclRecordWithId{

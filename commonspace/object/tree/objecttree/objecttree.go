@@ -175,12 +175,7 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 		panic(err)
 	}
 
-	err = ot.treeStorage.AddRawChange(rawChange)
-	if err != nil {
-		return
-	}
-
-	err = ot.treeStorage.SetHeads([]string{objChange.Id})
+	err = ot.treeStorage.TransactionAdd([]*treechangeproto.RawTreeChangeWithId{rawChange}, []string{objChange.Id})
 	if err != nil {
 		return
 	}
@@ -253,16 +248,7 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChang
 		addResult.Mode = Rebuild
 	}
 
-	// adding to database all the added changes only after they are good
-	for _, ch := range addResult.Added {
-		err = ot.treeStorage.AddRawChange(ch)
-		if err != nil {
-			return
-		}
-	}
-
-	// setting heads
-	err = ot.treeStorage.SetHeads(ot.tree.Heads())
+	err = ot.treeStorage.TransactionAdd(addResult.Added, addResult.Heads)
 	return
 }
 
