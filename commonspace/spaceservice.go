@@ -170,7 +170,7 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 		return
 	}
 
-	p, err = s.pool.DialOneOf(ctx, lastConfiguration.NodeIds(id))
+	p, err = s.pool.GetOneOf(ctx, lastConfiguration.NodeIds(id))
 	if err != nil {
 		return
 	}
