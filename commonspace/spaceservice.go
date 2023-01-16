@@ -115,7 +115,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 
 	lastConfiguration := s.configurationService.GetLast()
 	confConnector := confconnector.NewConfConnector(lastConfiguration, s.pool)
-
+	getter := newCommonGetter(st.Id(), s.treeGetter)
 	syncStatus := syncstatus.NewNoOpSyncStatus()
 	// this will work only for clients, not the best solution, but...
 	if !lastConfiguration.IsResponsible(st.Id()) {
@@ -123,14 +123,14 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		syncStatus = syncstatus.NewSyncStatusProvider(st.Id(), syncstatus.DefaultDeps(lastConfiguration, st))
 	}
 
-	headSync := headsync.NewHeadSync(id, s.config.SyncPeriod, st, confConnector, s.treeGetter, syncStatus, log)
-	objectSync := objectsync.NewObjectSync(id, confConnector)
+	headSync := headsync.NewHeadSync(id, s.config.SyncPeriod, st, confConnector, getter, syncStatus, log)
+	objectSync := objectsync.NewObjectSync(id, confConnector, getter)
 	sp := &space{
 		id:            id,
 		objectSync:    objectSync,
 		headSync:      headSync,
 		syncStatus:    syncStatus,
-		cache:         s.treeGetter,
+		cache:         getter,
 		account:       s.account,
 		configuration: lastConfiguration,
 		storage:       st,
