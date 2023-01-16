@@ -2,7 +2,10 @@ package settings
 
 import (
 	"context"
+	"time"
 )
+
+const deleteLoopInterval = time.Second * 20
 
 type deleteLoop struct {
 	deleteCtx    context.Context
@@ -30,11 +33,16 @@ func (dl *deleteLoop) Run() {
 func (dl *deleteLoop) loop() {
 	defer close(dl.loopDone)
 	dl.deleteFunc()
+	ticker := time.NewTicker(deleteLoopInterval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-dl.deleteCtx.Done():
 			return
 		case <-dl.deleteChan:
+			dl.deleteFunc()
+			ticker.Reset(deleteLoopInterval)
+		case <-ticker.C:
 			dl.deleteFunc()
 		}
 	}
