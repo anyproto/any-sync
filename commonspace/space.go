@@ -14,7 +14,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/settings"
 	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
@@ -107,7 +106,7 @@ type space struct {
 	headSync       headsync.HeadSync
 	syncStatus     syncstatus.StatusUpdater
 	storage        spacestorage.SpaceStorage
-	cache          treegetter.TreeGetter
+	cache          *commonGetter
 	account        accountservice.Service
 	aclList        *syncacl.SyncAcl
 	configuration  nodeconf.Configuration
@@ -175,6 +174,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 		return
 	}
 	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.StreamPool())
+	s.cache.AddObject(s.aclList)
 
 	deletionState := deletionstate.NewDeletionState(s.storage)
 	deps := settings.Deps{
@@ -195,9 +195,8 @@ func (s *space) Init(ctx context.Context) (err error) {
 		DeletionState: deletionState,
 	}
 	s.settingsObject = settings.NewSettingsObject(deps, s.id)
-
-	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache, s.settingsObject)
-	s.objectSync.Init(objectGetter)
+	s.cache.AddObject(s.settingsObject)
+	s.objectSync.Init()
 	s.headSync.Init(initialIds, deletionState)
 	err = s.settingsObject.Init(ctx)
 	if err != nil {

@@ -22,7 +22,7 @@ type ObjectSync interface {
 	StreamChecker() StreamChecker
 	ActionQueue() ActionQueue
 
-	Init(getter syncobjectgetter.SyncObjectGetter)
+	Init()
 	Close() (err error)
 }
 
@@ -40,7 +40,8 @@ type objectSync struct {
 
 func NewObjectSync(
 	spaceId string,
-	confConnector confconnector.ConfConnector) (objectSync ObjectSync) {
+	confConnector confconnector.ConfConnector,
+	objectGetter syncobjectgetter.SyncObjectGetter) (objectSync ObjectSync) {
 	streamPool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
 		return objectSync.HandleMessage(ctx, senderId, message)
 	})
@@ -58,6 +59,7 @@ func NewObjectSync(
 		spaceId,
 		streamPool,
 		checker,
+		objectGetter,
 		syncCtx,
 		cancel)
 	return
@@ -67,21 +69,22 @@ func newObjectSync(
 	spaceId string,
 	streamPool StreamPool,
 	checker StreamChecker,
+	objectGetter syncobjectgetter.SyncObjectGetter,
 	syncCtx context.Context,
 	cancel context.CancelFunc,
 ) *objectSync {
 	return &objectSync{
-		streamPool:  streamPool,
-		spaceId:     spaceId,
-		checker:     checker,
-		syncCtx:     syncCtx,
-		cancelSync:  cancel,
-		actionQueue: NewDefaultActionQueue(),
+		objectGetter: objectGetter,
+		streamPool:   streamPool,
+		spaceId:      spaceId,
+		checker:      checker,
+		syncCtx:      syncCtx,
+		cancelSync:   cancel,
+		actionQueue:  NewDefaultActionQueue(),
 	}
 }
 
-func (s *objectSync) Init(objectGetter syncobjectgetter.SyncObjectGetter) {
-	s.objectGetter = objectGetter
+func (s *objectSync) Init() {
 	s.actionQueue.Run()
 	go s.checker.CheckResponsiblePeers()
 }
