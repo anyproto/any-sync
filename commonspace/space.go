@@ -87,6 +87,7 @@ type Space interface {
 	PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error)
 	BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error)
 	DeleteTree(ctx context.Context, id string) (err error)
+	BuildHistoryTree(ctx context.Context, id string, opts HistoryTreeOpts) (t objecttree.HistoryTree, err error)
 
 	HeadSync() headsync.HeadSync
 	SyncStatus() syncstatus.StatusUpdater
@@ -296,6 +297,11 @@ type BuildTreeOpts struct {
 	WaitTreeRemoteSync bool
 }
 
+type HistoryTreeOpts struct {
+	BeforeId string
+	Include  bool
+}
+
 func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
@@ -315,6 +321,24 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 		WaitTreeRemoteSync: opts.WaitTreeRemoteSync,
 	}
 	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
+}
+
+func (s *space) BuildHistoryTree(ctx context.Context, id string, opts HistoryTreeOpts) (t objecttree.HistoryTree, err error) {
+	if s.isClosed.Load() {
+		err = ErrSpaceClosed
+		return
+	}
+
+	params := objecttree.HistoryTreeParams{
+		AclList:         s.aclList,
+		BeforeId:        opts.BeforeId,
+		IncludeBeforeId: opts.Include,
+	}
+	params.TreeStorage, err = s.storage.TreeStorage(id)
+	if err == nil {
+		return
+	}
+	return objecttree.BuildHistoryTree(params)
 }
 
 func (s *space) DeleteTree(ctx context.Context, id string) (err error) {

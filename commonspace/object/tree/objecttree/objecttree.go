@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
-	list2 "github.com/anytypeio/any-sync/commonspace/object/acl/list"
+	list "github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
@@ -75,7 +75,7 @@ type objectTree struct {
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
 	treeBuilder     *treeBuilder
-	aclList         list2.AclList
+	aclList         list.AclList
 
 	id      string
 	rawRoot *treechangeproto.RawTreeChangeWithId
@@ -101,13 +101,13 @@ type objectTreeDeps struct {
 	treeStorage     treestorage.TreeStorage
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
-	aclList         list2.AclList
+	aclList         list.AclList
 }
 
 func defaultObjectTreeDeps(
 	rootChange *treechangeproto.RawTreeChangeWithId,
 	treeStorage treestorage.TreeStorage,
-	aclList list2.AclList) objectTreeDeps {
+	aclList list.AclList) objectTreeDeps {
 
 	keychain := keychain.NewKeychain()
 	changeBuilder := NewChangeBuilder(keychain, rootChange)
@@ -208,7 +208,7 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 	canWrite := state.HasPermission(content.Identity, aclrecordproto.AclUserPermissions_Writer) ||
 		state.HasPermission(content.Identity, aclrecordproto.AclUserPermissions_Admin)
 	if !canWrite {
-		err = list2.ErrInsufficientPermissions
+		err = list.ErrInsufficientPermissions
 		return
 	}
 
@@ -471,7 +471,7 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 		}
 		readKey, exists := ot.keys[c.ReadKeyHash]
 		if !exists {
-			err = list2.ErrNoReadKey
+			err = list.ErrNoReadKey
 			return
 		}
 
