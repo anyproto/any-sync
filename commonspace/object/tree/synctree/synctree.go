@@ -30,9 +30,14 @@ type HeadNotifiable interface {
 	UpdateHeads(id string, heads []string)
 }
 
+type ListenerSetter interface {
+	SetListener(listener updatelistener.UpdateListener)
+}
+
 type SyncTree interface {
 	objecttree.ObjectTree
 	synchandler.SyncHandler
+	ListenerSetter
 	Ping() (err error)
 }
 
@@ -216,6 +221,11 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 		syncTree.syncClient.BroadcastAsync(headUpdate)
 	}
 	return
+}
+
+func (s *syncTree) SetListener(listener updatelistener.UpdateListener) {
+	// this should be called under lock
+	s.listener = listener
 }
 
 func (s *syncTree) IterateFrom(id string, convert objecttree.ChangeConvertFunc, iterate objecttree.ChangeIterateFunc) (err error) {
