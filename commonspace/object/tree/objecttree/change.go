@@ -55,6 +55,7 @@ func NewChangeFromRoot(id string, ch *treechangeproto.RootChange, signature []by
 		IsSnapshot: true,
 		Identity:   string(ch.Identity),
 		Signature:  signature,
+		Data:       []byte(ch.ChangeType),
 	}
 }
 

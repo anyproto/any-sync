@@ -187,5 +187,11 @@ func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht History
 	if err != nil {
 		return nil, err
 	}
+
+	header, err := objTree.changeBuilder.ConvertFromRaw(objTree.rawRoot, false)
+	if err != nil {
+		return nil, err
+	}
+	objTree.root = header
 	return hTree, nil
 }
