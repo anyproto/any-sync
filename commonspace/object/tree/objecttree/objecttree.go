@@ -44,7 +44,7 @@ type RawChangesPayload struct {
 type ChangeIterateFunc = func(change *Change) bool
 type ChangeConvertFunc = func(decrypted []byte) (any, error)
 
-type ObjectTree interface {
+type ReadableObjectTree interface {
 	RWLocker
 
 	Id() string
@@ -59,6 +59,10 @@ type ObjectTree interface {
 	DebugDump(parser DescriptionParser) (string, error)
 	IterateRoot(convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
+}
+
+type ObjectTree interface {
+	ReadableObjectTree
 
 	SnapshotPath() []string
 	ChangesAfterCommonSnapshot(snapshotPath, heads []string) ([]*treechangeproto.RawTreeChangeWithId, error)

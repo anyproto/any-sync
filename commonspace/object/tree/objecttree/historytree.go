@@ -2,21 +2,12 @@ package objecttree
 
 import (
 	"errors"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 )
 
 var ErrLoadBeforeRoot = errors.New("can't load before root")
 
 type HistoryTree interface {
-	RWLocker
-
-	Id() string
-	Root() *Change
-	Heads() []string
-	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
-	GetChange(string) (*Change, error)
-	Header() *treechangeproto.RawTreeChangeWithId
-	UnmarshalledHeader() *Change
+	ReadableObjectTree
 }
 
 type historyTree struct {
