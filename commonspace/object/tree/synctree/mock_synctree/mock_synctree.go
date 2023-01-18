@@ -250,6 +250,21 @@ func (mr *MockSyncTreeMockRecorder) Delete() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSyncTree)(nil).Delete))
 }
 
+// GetChange mocks base method.
+func (m *MockSyncTree) GetChange(arg0 string) (*objecttree.Change, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetChange", arg0)
+	ret0, _ := ret[0].(*objecttree.Change)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetChange indicates an expected call of GetChange.
+func (mr *MockSyncTreeMockRecorder) GetChange(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChange", reflect.TypeOf((*MockSyncTree)(nil).GetChange), arg0)
+}
+
 // HandleMessage mocks base method.
 func (m *MockSyncTree) HandleMessage(arg0 context.Context, arg1 string, arg2 *spacesyncproto.ObjectSyncMessage) error {
 	m.ctrl.T.Helper()
