@@ -1,0 +1,67 @@
+package pool
+
+import (
+	"context"
+	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/app/ocache"
+	"github.com/anytypeio/any-sync/metric"
+	"github.com/anytypeio/any-sync/net/dialer"
+	"github.com/prometheus/client_golang/prometheus"
+	"time"
+)
+
+const (
+	CName = "common.net.pool"
+)
+
+var log = logger.NewNamed(CName)
+
+func New() Service {
+	return &poolService{}
+}
+
+type Service interface {
+	Pool
+	NewPool(name string) Pool
+	app.ComponentRunnable
+}
+
+type poolService struct {
+	*pool
+	dialer    dialer.Dialer
+	metricReg *prometheus.Registry
+}
+
+func (p *poolService) Init(a *app.App) (err error) {
+	p.pool = &pool{}
+	p.dialer = a.MustComponent(dialer.CName).(dialer.Dialer)
+	if m := a.Component(metric.CName); m != nil {
+		p.metricReg = m.(metric.Metric).Registry()
+	}
+	p.pool.cache = ocache.New(
+		func(ctx context.Context, id string) (value ocache.Object, err error) {
+			return p.dialer.Dial(ctx, id)
+		},
+		ocache.WithLogger(log.Sugar()),
+		ocache.WithGCPeriod(time.Minute),
+		ocache.WithTTL(time.Minute*5),
+		ocache.WithPrometheus(p.metricReg, "netpool", "default"),
+	)
+	return nil
+}
+
+func (p *poolService) NewPool(name string) Pool {
+	return &pool{
+		dialer: p.dialer,
+		cache: ocache.New(
+			func(ctx context.Context, id string) (value ocache.Object, err error) {
+				return p.dialer.Dial(ctx, id)
+			},
+			ocache.WithLogger(log.Sugar()),
+			ocache.WithGCPeriod(time.Minute),
+			ocache.WithTTL(time.Minute*5),
+			ocache.WithPrometheus(p.metricReg, "netpool", name),
+		),
+	}
+}
