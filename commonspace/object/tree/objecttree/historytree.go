@@ -36,5 +36,17 @@ func (h *historyTree) rebuildFromStorage(beforeId string, include bool) (err err
 	}
 
 	ot.tree, err = ot.treeBuilder.build(heads, nil, nil)
+	if err != nil {
+		return
+	}
+	ot.aclList.RLock()
+	defer ot.aclList.RUnlock()
+	state := ot.aclList.AclState()
+
+	if len(ot.keys) != len(state.UserReadKeys()) {
+		for key, value := range state.UserReadKeys() {
+			ot.keys[key] = value
+		}
+	}
 	return
 }

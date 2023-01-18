@@ -177,7 +177,7 @@ func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht History
 		newSnapshotsBuf: make([]*Change, 0, 10),
 	}
 
-	hTree := historyTree{objectTree: objTree}
+	hTree := &historyTree{objectTree: objTree}
 	err = hTree.rebuildFromStorage(params.BeforeId, params.IncludeBeforeId)
 	if err != nil {
 		return nil, err
