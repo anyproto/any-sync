@@ -1,0 +1,13 @@
+syntax = "proto3";
+package testService;
+
+option go_package = "net/streampool/testservice";
+
+service Test {
+    rpc TestStream(stream StreamMessage) returns (stream StreamMessage);
+}
+
+
+message StreamMessage {
+    string reqData = 1;
+}
