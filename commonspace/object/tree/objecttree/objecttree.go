@@ -23,6 +23,7 @@ type RWLocker interface {
 var (
 	ErrHasInvalidChanges = errors.New("the change is invalid")
 	ErrNoCommonSnapshot  = errors.New("trees doesn't have a common snapshot")
+	ErrNoChangeInTree    = errors.New("no such change in tree")
 )
 
 type AddResultSummary int
@@ -51,9 +52,11 @@ type ObjectTree interface {
 	UnmarshalledHeader() *Change
 	Heads() []string
 	Root() *Change
-	HasChanges(...string) bool
-	DebugDump(parser DescriptionParser) (string, error)
 
+	HasChanges(...string) bool
+	GetChange(string) (*Change, error)
+
+	DebugDump(parser DescriptionParser) (string, error)
 	IterateRoot(convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 
@@ -153,6 +156,13 @@ func (ot *objectTree) UnmarshalledHeader() *Change {
 
 func (ot *objectTree) Storage() treestorage.TreeStorage {
 	return ot.treeStorage
+}
+
+func (ot *objectTree) GetChange(id string) (*Change, error) {
+	if ch, ok := ot.tree.attached[id]; ok {
+		return ch, nil
+	}
+	return nil, ErrNoChangeInTree
 }
 
 func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeContent) (res AddResult, err error) {

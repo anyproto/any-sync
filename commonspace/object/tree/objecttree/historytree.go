@@ -11,6 +11,7 @@ type HistoryTree interface {
 	Root() *Change
 	Heads() []string
 	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
+	GetChange(string) (*Change, error)
 }
 
 type historyTree struct {
