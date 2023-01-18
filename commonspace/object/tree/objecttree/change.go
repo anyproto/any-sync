@@ -53,6 +53,7 @@ func NewChangeFromRoot(id string, ch *treechangeproto.RootChange, signature []by
 		AclHeadId:  ch.AclHeadId,
 		Id:         id,
 		IsSnapshot: true,
+		Timestamp:  ch.Timestamp,
 		Identity:   string(ch.Identity),
 		Signature:  signature,
 		Data:       []byte(ch.ChangeType),
