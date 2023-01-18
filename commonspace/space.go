@@ -335,7 +335,7 @@ func (s *space) BuildHistoryTree(ctx context.Context, id string, opts HistoryTre
 		IncludeBeforeId: opts.Include,
 	}
 	params.TreeStorage, err = s.storage.TreeStorage(id)
-	if err == nil {
+	if err != nil {
 		return
 	}
 	return objecttree.BuildHistoryTree(params)
