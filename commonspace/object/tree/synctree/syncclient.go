@@ -2,6 +2,7 @@
 package synctree
 
 import (
+	"context"
 	"github.com/anytypeio/any-sync/commonspace/confconnector"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
@@ -11,72 +12,61 @@ import (
 
 type SyncClient interface {
 	RequestFactory
-	BroadcastAsync(message *treechangeproto.TreeSyncMessage) (err error)
-	BroadcastAsyncOrSendResponsible(message *treechangeproto.TreeSyncMessage) (err error)
-	SendAsync(peerId string, message *treechangeproto.TreeSyncMessage, replyId string) (err error)
+	Broadcast(ctx context.Context, msg *treechangeproto.TreeSyncMessage) (err error)
+	BroadcastAsyncOrSendResponsible(ctx context.Context, msg *treechangeproto.TreeSyncMessage) (err error)
+	SendWithReply(ctx context.Context, peerId string, msg *treechangeproto.TreeSyncMessage, replyId string) (err error)
 }
 
 type syncClient struct {
-	objectsync.StreamPool
+	objectsync.MessagePool
 	RequestFactory
 	spaceId       string
 	connector     confconnector.ConfConnector
 	configuration nodeconf.Configuration
-
-	checker objectsync.StreamChecker
 }
 
 func newSyncClient(
 	spaceId string,
-	pool objectsync.StreamPool,
+	pool objectsync.MessagePool,
 	factory RequestFactory,
-	configuration nodeconf.Configuration,
-	checker objectsync.StreamChecker) SyncClient {
+	configuration nodeconf.Configuration) SyncClient {
 	return &syncClient{
-		StreamPool:     pool,
+		MessagePool:    pool,
 		RequestFactory: factory,
 		configuration:  configuration,
-		checker:        checker,
 		spaceId:        spaceId,
 	}
 }
 
-func (s *syncClient) BroadcastAsync(message *treechangeproto.TreeSyncMessage) (err error) {
-	objMsg, err := marshallTreeMessage(message, message.RootChange.Id, "")
+func (s *syncClient) Broadcast(ctx context.Context, msg *treechangeproto.TreeSyncMessage) (err error) {
+	objMsg, err := marshallTreeMessage(msg, s.spaceId, msg.RootChange.Id, "")
 	if err != nil {
 		return
 	}
-	s.checker.CheckResponsiblePeers()
-	return s.StreamPool.BroadcastAsync(objMsg)
+	return s.MessagePool.Broadcast(ctx, objMsg)
 }
 
-func (s *syncClient) SendAsync(peerId string, message *treechangeproto.TreeSyncMessage, replyId string) (err error) {
-	err = s.checker.CheckPeerConnection(peerId)
+func (s *syncClient) SendWithReply(ctx context.Context, peerId string, msg *treechangeproto.TreeSyncMessage, replyId string) (err error) {
+	objMsg, err := marshallTreeMessage(msg, s.spaceId, msg.RootChange.Id, replyId)
 	if err != nil {
 		return
 	}
-
-	objMsg, err := marshallTreeMessage(message, message.RootChange.Id, replyId)
-	if err != nil {
-		return
-	}
-	return s.StreamPool.SendAsync([]string{peerId}, objMsg)
+	return s.MessagePool.SendPeer(ctx, peerId, objMsg)
 }
 
-func (s *syncClient) BroadcastAsyncOrSendResponsible(message *treechangeproto.TreeSyncMessage) (err error) {
-	objMsg, err := marshallTreeMessage(message, message.RootChange.Id, "")
+func (s *syncClient) BroadcastAsyncOrSendResponsible(ctx context.Context, message *treechangeproto.TreeSyncMessage) (err error) {
+	objMsg, err := marshallTreeMessage(message, s.spaceId, message.RootChange.Id, "")
 	if err != nil {
 		return
 	}
 
 	if s.configuration.IsResponsible(s.spaceId) {
-		s.checker.CheckResponsiblePeers()
-		return s.StreamPool.SendAsync(s.configuration.NodeIds(s.spaceId), objMsg)
+		return s.MessagePool.SendResponsible(ctx, objMsg)
 	}
-	return s.BroadcastAsync(message)
+	return s.Broadcast(ctx, message)
 }
 
-func marshallTreeMessage(message *treechangeproto.TreeSyncMessage, id, replyId string) (objMsg *spacesyncproto.ObjectSyncMessage, err error) {
+func marshallTreeMessage(message *treechangeproto.TreeSyncMessage, spaceId, objectId, replyId string) (objMsg *spacesyncproto.ObjectSyncMessage, err error) {
 	payload, err := message.Marshal()
 	if err != nil {
 		return
@@ -84,7 +74,8 @@ func marshallTreeMessage(message *treechangeproto.TreeSyncMessage, id, replyId s
 	objMsg = &spacesyncproto.ObjectSyncMessage{
 		ReplyId:  replyId,
 		Payload:  payload,
-		ObjectId: id,
+		ObjectId: objectId,
+		SpaceId:  spaceId,
 	}
 	return
 }

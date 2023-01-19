@@ -14,6 +14,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/settings"
 	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
@@ -80,16 +81,14 @@ type Space interface {
 	DebugAllHeads() []headsync.TreeHeads
 	Description() (SpaceDescription, error)
 
-	SpaceSyncRpc() RpcHandler
-
 	DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error)
 	BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error)
 	DeleteTree(ctx context.Context, id string) (err error)
-	BuildHistoryTree(ctx context.Context, id string, opts HistoryTreeOpts) (t objecttree.HistoryTree, err error)
 
 	HeadSync() headsync.HeadSync
+	ObjectSync() objectsync.ObjectSync
 	SyncStatus() syncstatus.StatusUpdater
 	Storage() spacestorage.SpaceStorage
 
@@ -101,13 +100,11 @@ type space struct {
 	mu     sync.RWMutex
 	header *spacesyncproto.RawSpaceHeaderWithId
 
-	rpc *rpcHandler
-
 	objectSync     objectsync.ObjectSync
 	headSync       headsync.HeadSync
 	syncStatus     syncstatus.StatusUpdater
 	storage        spacestorage.SpaceStorage
-	cache          *commonGetter
+	cache          treegetter.TreeGetter
 	account        accountservice.Service
 	aclList        *syncacl.SyncAcl
 	configuration  nodeconf.Configuration
@@ -161,7 +158,6 @@ func (s *space) Init(ctx context.Context) (err error) {
 		return
 	}
 	s.header = header
-	s.rpc = &rpcHandler{s: s}
 	initialIds, err := s.storage.StoredIds()
 	if err != nil {
 		return
@@ -174,8 +170,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.StreamPool())
-	s.cache.AddObject(s.aclList)
+	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.MessagePool())
 
 	deletionState := deletionstate.NewDeletionState(s.storage)
 	deps := settings.Deps{
@@ -196,8 +191,9 @@ func (s *space) Init(ctx context.Context) (err error) {
 		DeletionState: deletionState,
 	}
 	s.settingsObject = settings.NewSettingsObject(deps, s.id)
-	s.cache.AddObject(s.settingsObject)
-	s.objectSync.Init()
+
+	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache, s.settingsObject)
+	s.objectSync.Init(objectGetter)
 	s.headSync.Init(initialIds, deletionState)
 	err = s.settingsObject.Init(ctx)
 	if err != nil {
@@ -206,10 +202,6 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.syncStatus.Run()
 
 	return nil
-}
-
-func (s *space) SpaceSyncRpc() RpcHandler {
-	return s.rpc
 }
 
 func (s *space) ObjectSync() objectsync.ObjectSync {
@@ -297,11 +289,6 @@ type BuildTreeOpts struct {
 	WaitTreeRemoteSync bool
 }
 
-type HistoryTreeOpts struct {
-	BeforeId string
-	Include  bool
-}
-
 func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
@@ -321,24 +308,6 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 		WaitTreeRemoteSync: opts.WaitTreeRemoteSync,
 	}
 	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
-}
-
-func (s *space) BuildHistoryTree(ctx context.Context, id string, opts HistoryTreeOpts) (t objecttree.HistoryTree, err error) {
-	if s.isClosed.Load() {
-		err = ErrSpaceClosed
-		return
-	}
-
-	params := objecttree.HistoryTreeParams{
-		AclList:         s.aclList,
-		BeforeId:        opts.BeforeId,
-		IncludeBeforeId: opts.Include,
-	}
-	params.TreeStorage, err = s.storage.TreeStorage(id)
-	if err != nil {
-		return
-	}
-	return objecttree.BuildHistoryTree(params)
 }
 
 func (s *space) DeleteTree(ctx context.Context, id string) (err error) {

@@ -111,7 +111,7 @@ func (s *syncTreeHandler) handleHeadUpdate(
 			return
 		}
 
-		return s.syncClient.SendAsync(senderId, fullRequest, replyId)
+		return s.syncClient.SendWithReply(ctx, senderId, fullRequest, replyId)
 	}
 
 	if s.alreadyHasHeads(objTree, update.Heads) {
@@ -135,7 +135,7 @@ func (s *syncTreeHandler) handleHeadUpdate(
 		return
 	}
 
-	return s.syncClient.SendAsync(senderId, fullRequest, replyId)
+	return s.syncClient.SendWithReply(ctx, senderId, fullRequest, replyId)
 }
 
 func (s *syncTreeHandler) handleFullSyncRequest(
@@ -159,7 +159,7 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 		if err != nil {
 			log.With(zap.Error(err)).Debug("full sync request finished with error")
 
-			s.syncClient.SendAsync(senderId, treechangeproto.WrapError(err, header), replyId)
+			s.syncClient.SendWithReply(ctx, senderId, treechangeproto.WrapError(err, header), replyId)
 			return
 		} else if fullResponse != nil {
 			log.Debug("full sync response sent")
@@ -180,7 +180,7 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 		return
 	}
 
-	return s.syncClient.SendAsync(senderId, fullResponse, replyId)
+	return s.syncClient.SendWithReply(ctx, senderId, fullResponse, replyId)
 }
 
 func (s *syncTreeHandler) handleFullSyncResponse(

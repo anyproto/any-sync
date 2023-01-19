@@ -1,7 +1,9 @@
 package streampool
 
 import (
+	"fmt"
 	"github.com/anytypeio/any-sync/net/peer"
+	"github.com/anytypeio/any-sync/net/pool"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/context"
@@ -21,10 +23,14 @@ type StreamHandler interface {
 
 // StreamPool keeps and read streams
 type StreamPool interface {
-	// AddStream adds new incoming stream into the pool
+	// AddStream adds new outgoing stream into the pool
 	AddStream(peerId string, stream drpc.Stream, tags ...string)
+	// ReadStream adds new incoming stream and synchronously read it
+	ReadStream(peerId string, stream drpc.Stream, tags ...string) (err error)
 	// Send sends a message to given peers. A stream will be opened if it is not cached before. Works async.
 	Send(ctx context.Context, msg drpc.Message, peers ...peer.Peer) (err error)
+	// SendById sends a message to given peerIds. Works only if stream exists
+	SendById(ctx context.Context, msg drpc.Message, peerIds ...string) (err error)
 	// Broadcast sends a message to all peers with given tags. Works async.
 	Broadcast(ctx context.Context, msg drpc.Message, tags ...string) (err error)
 	// Close closes all streams
@@ -42,7 +48,19 @@ type streamPool struct {
 	lastStreamId    uint32
 }
 
+func (s *streamPool) ReadStream(peerId string, drpcStream drpc.Stream, tags ...string) error {
+	st := s.addStream(peerId, drpcStream, tags...)
+	return st.readLoop()
+}
+
 func (s *streamPool) AddStream(peerId string, drpcStream drpc.Stream, tags ...string) {
+	st := s.addStream(peerId, drpcStream, tags...)
+	go func() {
+		_ = st.readLoop()
+	}()
+}
+
+func (s *streamPool) addStream(peerId string, drpcStream drpc.Stream, tags ...string) *stream {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.lastStreamId++
@@ -60,7 +78,8 @@ func (s *streamPool) AddStream(peerId string, drpcStream drpc.Stream, tags ...st
 	for _, tag := range tags {
 		s.streamIdsByTag[tag] = append(s.streamIdsByTag[tag], streamId)
 	}
-	go st.readLoop()
+	st.l.Debug("stream added", zap.Strings("tags", st.tags))
+	return st
 }
 
 func (s *streamPool) Send(ctx context.Context, msg drpc.Message, peers ...peer.Peer) (err error) {
@@ -71,6 +90,30 @@ func (s *streamPool) Send(ctx context.Context, msg drpc.Message, peers ...peer.P
 				log.Info("send peer error", zap.Error(e))
 			}
 		})
+	}
+	return s.exec.Add(ctx, funcs...)
+}
+
+func (s *streamPool) SendById(ctx context.Context, msg drpc.Message, peerIds ...string) (err error) {
+	s.mu.Lock()
+	var streams []*stream
+	for _, peerId := range peerIds {
+		for _, streamId := range s.streamIdsByPeer[peerId] {
+			streams = append(streams, s.streams[streamId])
+		}
+	}
+	s.mu.Unlock()
+	log.Debug("sendById", zap.String("msg", msg.(fmt.Stringer).String()), zap.Int("streams", len(streams)))
+	var funcs []func()
+	for _, st := range streams {
+		funcs = append(funcs, func() {
+			if e := st.write(msg); e != nil {
+				log.Debug("sendById write error", zap.Error(e))
+			}
+		})
+	}
+	if len(funcs) == 0 {
+		return pool.ErrUnableToConnect
 	}
 	return s.exec.Add(ctx, funcs...)
 }
@@ -164,6 +207,9 @@ func (s *streamPool) Broadcast(ctx context.Context, msg drpc.Message, tags ...st
 			}
 		})
 	}
+	if len(funcs) == 0 {
+		return
+	}
 	return s.exec.Add(ctx, funcs...)
 }
 
@@ -195,6 +241,7 @@ func (s *streamPool) removeStream(streamId uint32) {
 	}
 
 	delete(s.streams, streamId)
+	st.l.Debug("stream removed", zap.Strings("tags", st.tags))
 }
 
 func (s *streamPool) Close() (err error) {
