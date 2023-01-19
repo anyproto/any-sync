@@ -20,7 +20,7 @@ type ObjectSync interface {
 	MessagePool() MessagePool
 	ActionQueue() ActionQueue
 
-	Init(getter syncobjectgetter.SyncObjectGetter)
+	Init()
 	Close() (err error)
 }
 
@@ -35,7 +35,10 @@ type objectSync struct {
 	cancelSync context.CancelFunc
 }
 
-func NewObjectSync(streamManager StreamManager, spaceId string) (objectSync ObjectSync) {
+func NewObjectSync(
+	spaceId string,
+	streamManager StreamManager,
+	objectGetter syncobjectgetter.SyncObjectGetter) (objectSync ObjectSync) {
 	msgPool := newMessagePool(streamManager, func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
 		return objectSync.HandleMessage(ctx, senderId, message)
 	})
@@ -43,6 +46,7 @@ func NewObjectSync(streamManager StreamManager, spaceId string) (objectSync Obje
 	objectSync = newObjectSync(
 		spaceId,
 		msgPool,
+		objectGetter,
 		syncCtx,
 		cancel)
 	return
@@ -51,20 +55,21 @@ func NewObjectSync(streamManager StreamManager, spaceId string) (objectSync Obje
 func newObjectSync(
 	spaceId string,
 	streamPool MessagePool,
+	objectGetter syncobjectgetter.SyncObjectGetter,
 	syncCtx context.Context,
 	cancel context.CancelFunc,
 ) *objectSync {
 	return &objectSync{
-		streamPool:  streamPool,
-		spaceId:     spaceId,
+		objectGetter: objectGetter,
+		streamPool:   streamPool,
+		spaceId:      spaceId,
 		syncCtx:     syncCtx,
 		cancelSync:  cancel,
 		actionQueue: NewDefaultActionQueue(),
 	}
 }
 
-func (s *objectSync) Init(objectGetter syncobjectgetter.SyncObjectGetter) {
-	s.objectGetter = objectGetter
+func (s *objectSync) Init() {
 	s.actionQueue.Run()
 }
 

@@ -49,6 +49,7 @@ func (s *BaseDrpcServer) Run(ctx context.Context, params Params) (err error) {
 			return err
 		}
 		tlsList := params.Converter(tcpList, params.TimeoutMillis)
+		s.listeners = append(s.listeners, tlsList)
 		go s.serve(ctx, tlsList)
 	}
 	return

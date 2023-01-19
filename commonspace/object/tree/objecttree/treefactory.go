@@ -41,6 +41,15 @@ func BuildObjectTree(treeStorage treestorage.TreeStorage, aclList list.AclList) 
 	return buildObjectTree(deps)
 }
 
+func BuildHistoryTree(params HistoryTreeParams) (HistoryTree, error) {
+	rootChange, err := params.TreeStorage.Root()
+	if err != nil {
+		return nil, err
+	}
+	deps := defaultObjectTreeDeps(rootChange, params.TreeStorage, params.AclList)
+	return buildHistoryTree(deps, params)
+}
+
 func CreateDerivedObjectTree(
 	payload ObjectTreeCreatePayload,
 	aclList list.AclList,
@@ -118,7 +127,6 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		aclList:         deps.aclList,
 		changeBuilder:   deps.changeBuilder,
 		rawChangeLoader: deps.rawChangeLoader,
-		tree:            nil,
 		keys:            make(map[uint64]*symmetric.Key),
 		newChangesBuf:   make([]*Change, 0, 10),
 		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
@@ -145,4 +153,45 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 	objTree.root = header
 
 	return objTree, nil
+}
+
+type HistoryTreeParams struct {
+	TreeStorage     treestorage.TreeStorage
+	AclList         list.AclList
+	BeforeId        string
+	IncludeBeforeId bool
+}
+
+func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht HistoryTree, err error) {
+	objTree := &objectTree{
+		treeStorage:     deps.treeStorage,
+		treeBuilder:     deps.treeBuilder,
+		validator:       deps.validator,
+		aclList:         deps.aclList,
+		changeBuilder:   deps.changeBuilder,
+		rawChangeLoader: deps.rawChangeLoader,
+		keys:            make(map[uint64]*symmetric.Key),
+		newChangesBuf:   make([]*Change, 0, 10),
+		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
+		notSeenIdxBuf:   make([]int, 0, 10),
+		newSnapshotsBuf: make([]*Change, 0, 10),
+	}
+
+	hTree := &historyTree{objectTree: objTree}
+	err = hTree.rebuildFromStorage(params.BeforeId, params.IncludeBeforeId)
+	if err != nil {
+		return nil, err
+	}
+	objTree.id = objTree.treeStorage.Id()
+	objTree.rawRoot, err = objTree.treeStorage.Root()
+	if err != nil {
+		return nil, err
+	}
+
+	header, err := objTree.changeBuilder.ConvertFromRaw(objTree.rawRoot, false)
+	if err != nil {
+		return nil, err
+	}
+	objTree.root = header
+	return hTree, nil
 }

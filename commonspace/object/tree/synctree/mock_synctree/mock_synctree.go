@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	objecttree "github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
+	updatelistener "github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
 	treechangeproto "github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	treestorage "github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	spacesyncproto "github.com/anytypeio/any-sync/commonspace/spacesyncproto"
@@ -249,6 +250,21 @@ func (mr *MockSyncTreeMockRecorder) Delete() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSyncTree)(nil).Delete))
 }
 
+// GetChange mocks base method.
+func (m *MockSyncTree) GetChange(arg0 string) (*objecttree.Change, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetChange", arg0)
+	ret0, _ := ret[0].(*objecttree.Change)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetChange indicates an expected call of GetChange.
+func (mr *MockSyncTreeMockRecorder) GetChange(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChange", reflect.TypeOf((*MockSyncTree)(nil).GetChange), arg0)
+}
+
 // HandleMessage mocks base method.
 func (m *MockSyncTree) HandleMessage(arg0 context.Context, arg1 string, arg2 *spacesyncproto.ObjectSyncMessage) error {
 	m.ctrl.T.Helper()
@@ -413,6 +429,18 @@ func (m *MockSyncTree) Root() *objecttree.Change {
 func (mr *MockSyncTreeMockRecorder) Root() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Root", reflect.TypeOf((*MockSyncTree)(nil).Root))
+}
+
+// SetListener mocks base method.
+func (m *MockSyncTree) SetListener(arg0 updatelistener.UpdateListener) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetListener", arg0)
+}
+
+// SetListener indicates an expected call of SetListener.
+func (mr *MockSyncTreeMockRecorder) SetListener(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetListener", reflect.TypeOf((*MockSyncTree)(nil).SetListener), arg0)
 }
 
 // SnapshotPath mocks base method.

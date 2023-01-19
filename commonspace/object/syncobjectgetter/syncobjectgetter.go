@@ -6,6 +6,7 @@ import (
 )
 
 type SyncObject interface {
+	Id() string
 	synchandler.SyncHandler
 }
 
