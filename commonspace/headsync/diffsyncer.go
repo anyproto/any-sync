@@ -2,6 +2,7 @@ package headsync
 
 import (
 	"context"
+	"fmt"
 	"github.com/anytypeio/any-sync/app/ldiff"
 	"github.com/anytypeio/any-sync/commonspace/confconnector"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
@@ -91,7 +92,7 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 		return err
 	}
 	for _, p := range peers {
-		if err := d.syncWithPeer(ctx, p); err != nil {
+		if err = d.syncWithPeer(ctx, p); err != nil {
 			d.log.Error("can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
 		}
 	}
@@ -110,7 +111,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	err = rpcerr.Unwrap(err)
 	if err != nil && err != spacesyncproto.ErrSpaceMissing {
 		d.syncStatus.SetNodesOnline(p.Id(), false)
-		return err
+		return fmt.Errorf("diff error: %v", err)
 	}
 	d.syncStatus.SetNodesOnline(p.Id(), true)
 
@@ -148,7 +149,7 @@ func (d *diffSyncer) pingTreesInCache(ctx context.Context, trees []string) {
 		// it may be already there (i.e. loaded)
 		// and build func will not be called, thus we won't sync the tree
 		// therefore we just do it manually
-		syncTree.Ping()
+		_ = syncTree.Ping(ctx)
 	}
 }
 

@@ -1,6 +1,7 @@
 package synctree
 
 import (
+	"context"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
 )
@@ -17,20 +18,20 @@ func newQueuedClient(client SyncClient, queue objectsync.ActionQueue) SyncClient
 	}
 }
 
-func (q *queuedClient) BroadcastAsync(message *treechangeproto.TreeSyncMessage) (err error) {
+func (q *queuedClient) Broadcast(ctx context.Context, message *treechangeproto.TreeSyncMessage) (err error) {
 	return q.queue.Send(func() error {
-		return q.SyncClient.BroadcastAsync(message)
+		return q.SyncClient.Broadcast(ctx, message)
 	})
 }
 
-func (q *queuedClient) SendAsync(peerId string, message *treechangeproto.TreeSyncMessage, replyId string) (err error) {
+func (q *queuedClient) SendWithReply(ctx context.Context, peerId string, message *treechangeproto.TreeSyncMessage, replyId string) (err error) {
 	return q.queue.Send(func() error {
-		return q.SyncClient.SendAsync(peerId, message, replyId)
+		return q.SyncClient.SendWithReply(ctx, peerId, message, replyId)
 	})
 }
 
-func (q *queuedClient) BroadcastAsyncOrSendResponsible(message *treechangeproto.TreeSyncMessage) (err error) {
+func (q *queuedClient) BroadcastAsyncOrSendResponsible(ctx context.Context, message *treechangeproto.TreeSyncMessage) (err error) {
 	return q.queue.Send(func() error {
-		return q.SyncClient.BroadcastAsyncOrSendResponsible(message)
+		return q.SyncClient.BroadcastAsyncOrSendResponsible(ctx, message)
 	})
 }

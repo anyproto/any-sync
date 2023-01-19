@@ -81,8 +81,6 @@ type Space interface {
 	DebugAllHeads() []headsync.TreeHeads
 	Description() (SpaceDescription, error)
 
-	SpaceSyncRpc() RpcHandler
-
 	DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error)
@@ -90,6 +88,7 @@ type Space interface {
 	DeleteTree(ctx context.Context, id string) (err error)
 
 	HeadSync() headsync.HeadSync
+	ObjectSync() objectsync.ObjectSync
 	SyncStatus() syncstatus.StatusUpdater
 	Storage() spacestorage.SpaceStorage
 
@@ -100,8 +99,6 @@ type space struct {
 	id     string
 	mu     sync.RWMutex
 	header *spacesyncproto.RawSpaceHeaderWithId
-
-	rpc *rpcHandler
 
 	objectSync     objectsync.ObjectSync
 	headSync       headsync.HeadSync
@@ -161,7 +158,6 @@ func (s *space) Init(ctx context.Context) (err error) {
 		return
 	}
 	s.header = header
-	s.rpc = &rpcHandler{s: s}
 	initialIds, err := s.storage.StoredIds()
 	if err != nil {
 		return
@@ -174,7 +170,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.StreamPool())
+	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.MessagePool())
 
 	deletionState := deletionstate.NewDeletionState(s.storage)
 	deps := settings.Deps{
@@ -206,10 +202,6 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.syncStatus.Run()
 
 	return nil
-}
-
-func (s *space) SpaceSyncRpc() RpcHandler {
-	return s.rpc
 }
 
 func (s *space) ObjectSync() objectsync.ObjectSync {
