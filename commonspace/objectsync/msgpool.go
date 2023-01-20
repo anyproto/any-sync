@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type StreamManager interface {
@@ -37,7 +38,6 @@ type messagePool struct {
 	waiters        map[string]responseWaiter
 	waitersMx      sync.Mutex
 	counter        atomic.Uint64
-	queue          ActionQueue
 }
 
 func newMessagePool(streamManager StreamManager, messageHandler MessageHandler) MessagePool {
@@ -45,15 +45,17 @@ func newMessagePool(streamManager StreamManager, messageHandler MessageHandler) 
 		StreamManager:  streamManager,
 		messageHandler: messageHandler,
 		waiters:        make(map[string]responseWaiter),
-		queue:          NewDefaultActionQueue(),
 	}
 	return s
 }
 
 func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
 	newCounter := s.counter.Add(1)
 	msg.ReplyId = genReplyKey(peerId, msg.ObjectId, newCounter)
-
+	log.Info("mpool sendSync", zap.String("replyId", msg.ReplyId))
 	s.waitersMx.Lock()
 	waiter := responseWaiter{
 		ch: make(chan *spacesyncproto.ObjectSyncMessage, 1),
@@ -81,19 +83,14 @@ func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyn
 
 func (s *messagePool) HandleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	if msg.ReplyId != "" {
+		log.Info("mpool receive reply", zap.String("replyId", msg.ReplyId))
 		// we got reply, send it to waiter
 		if s.stopWaiter(msg) {
 			return
 		}
 		log.With(zap.String("replyId", msg.ReplyId)).Debug("reply id does not exist")
-		return
 	}
-	return s.queue.Send(func() error {
-		if e := s.messageHandler(ctx, senderId, msg); e != nil {
-			log.Info("handle message error", zap.Error(e))
-		}
-		return nil
-	})
+	return s.messageHandler(ctx, senderId, msg)
 }
 
 func (s *messagePool) stopWaiter(msg *spacesyncproto.ObjectSyncMessage) bool {

@@ -57,7 +57,7 @@ type syncTree struct {
 var log = logger.NewNamed("commonspace.synctree").Sugar()
 
 var buildObjectTree = objecttree.BuildObjectTree
-var createSyncClient = newWrappedSyncClient
+var createSyncClient = newSyncClient
 
 type BuildDeps struct {
 	SpaceId            string
@@ -71,15 +71,6 @@ type BuildDeps struct {
 	TreeUsage          *atomic.Int32
 	SyncStatus         syncstatus.StatusUpdater
 	WaitTreeRemoteSync bool
-}
-
-func newWrappedSyncClient(
-	spaceId string,
-	factory RequestFactory,
-	objectSync objectsync.ObjectSync,
-	configuration nodeconf.Configuration) SyncClient {
-	syncClient := newSyncClient(spaceId, objectSync.MessagePool(), factory, configuration)
-	return newQueuedClient(syncClient, objectSync.ActionQueue())
 }
 
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {
@@ -187,8 +178,8 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	}
 	syncClient := createSyncClient(
 		deps.SpaceId,
+		deps.ObjectSync.MessagePool(),
 		sharedFactory,
-		deps.ObjectSync,
 		deps.Configuration)
 	syncTree := &syncTree{
 		ObjectTree: objTree,

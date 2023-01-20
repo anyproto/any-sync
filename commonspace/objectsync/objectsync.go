@@ -1,4 +1,3 @@
-//go:generate mockgen -destination mock_objectsync/mock_objectsync.go github.com/anytypeio/any-sync/commonspace/objectsync ActionQueue
 package objectsync
 
 import (
@@ -18,7 +17,6 @@ type ObjectSync interface {
 	ocache.ObjectLastUsage
 	synchandler.SyncHandler
 	MessagePool() MessagePool
-	ActionQueue() ActionQueue
 
 	Init()
 	Close() (err error)
@@ -27,9 +25,8 @@ type ObjectSync interface {
 type objectSync struct {
 	spaceId string
 
-	streamPool   MessagePool
+	messagePool  MessagePool
 	objectGetter syncobjectgetter.SyncObjectGetter
-	actionQueue  ActionQueue
 
 	syncCtx    context.Context
 	cancelSync context.CancelFunc
@@ -38,43 +35,39 @@ type objectSync struct {
 func NewObjectSync(
 	spaceId string,
 	streamManager StreamManager,
-	objectGetter syncobjectgetter.SyncObjectGetter) (objectSync ObjectSync) {
-	msgPool := newMessagePool(streamManager, func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
-		return objectSync.HandleMessage(ctx, senderId, message)
-	})
+	objectGetter syncobjectgetter.SyncObjectGetter) ObjectSync {
 	syncCtx, cancel := context.WithCancel(context.Background())
-	objectSync = newObjectSync(
+	os := newObjectSync(
 		spaceId,
-		msgPool,
 		objectGetter,
 		syncCtx,
 		cancel)
-	return
+	msgPool := newMessagePool(streamManager, os.handleMessage)
+	os.messagePool = msgPool
+	return os
 }
 
 func newObjectSync(
 	spaceId string,
-	streamPool MessagePool,
 	objectGetter syncobjectgetter.SyncObjectGetter,
 	syncCtx context.Context,
 	cancel context.CancelFunc,
 ) *objectSync {
 	return &objectSync{
 		objectGetter: objectGetter,
-		streamPool:   streamPool,
 		spaceId:      spaceId,
-		syncCtx:     syncCtx,
-		cancelSync:  cancel,
-		actionQueue: NewDefaultActionQueue(),
+		syncCtx:      syncCtx,
+		cancelSync:   cancel,
+		//actionQueue:  NewDefaultActionQueue(),
 	}
 }
 
 func (s *objectSync) Init() {
-	s.actionQueue.Run()
+	//s.actionQueue.Run()
 }
 
 func (s *objectSync) Close() (err error) {
-	s.actionQueue.Close()
+	//s.actionQueue.Close()
 	s.cancelSync()
 	return
 }
@@ -85,7 +78,11 @@ func (s *objectSync) LastUsage() time.Time {
 }
 
 func (s *objectSync) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
-	log.With(zap.String("peerId", senderId), zap.String("objectId", message.ObjectId)).Debug("handling message")
+	return s.messagePool.HandleMessage(ctx, senderId, message)
+}
+
+func (s *objectSync) handleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
+	log.With(zap.String("peerId", senderId), zap.String("objectId", message.ObjectId), zap.String("replyId", message.ReplyId)).Debug("handling message")
 	obj, err := s.objectGetter.GetObject(ctx, message.ObjectId)
 	if err != nil {
 		return
@@ -94,9 +91,5 @@ func (s *objectSync) HandleMessage(ctx context.Context, senderId string, message
 }
 
 func (s *objectSync) MessagePool() MessagePool {
-	return s.streamPool
-}
-
-func (s *objectSync) ActionQueue() ActionQueue {
-	return s.actionQueue
+	return s.messagePool
 }

@@ -49,7 +49,10 @@ func (p *tlsListener) Accept(ctx context.Context) (context.Context, net.Conn, er
 func (p *tlsListener) upgradeConn(ctx context.Context, conn net.Conn) (context.Context, net.Conn, error) {
 	secure, err := p.tr.SecureInbound(ctx, conn, "")
 	if err != nil {
-		return nil, nil, HandshakeError(err)
+		return nil, nil, HandshakeError{
+			remoteAddr: conn.RemoteAddr().String(),
+			err:        err,
+		}
 	}
 	ctx = peer.CtxWithPeerId(ctx, secure.RemotePeer().String())
 	return ctx, secure, nil
