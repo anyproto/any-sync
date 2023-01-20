@@ -54,6 +54,20 @@ func (p *peer) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) (dr
 	return p.Conn.NewStream(ctx, rpc, enc)
 }
 
+func (p *peer) Read(b []byte) (n int, err error) {
+	if n, err = p.sc.Read(b); err != nil {
+		p.UpdateLastUsage()
+	}
+	return
+}
+
+func (p *peer) Write(b []byte) (n int, err error) {
+	if n, err = p.sc.Write(b); err != nil {
+		p.UpdateLastUsage()
+	}
+	return
+}
+
 func (p *peer) UpdateLastUsage() {
 	atomic.StoreInt64(&p.lastUsage, time.Now().Unix())
 }

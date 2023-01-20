@@ -2,6 +2,7 @@ package objectsync
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"go.uber.org/zap"
@@ -20,6 +21,7 @@ type StreamManager interface {
 
 // MessagePool can be made generic to work with different streams
 type MessagePool interface {
+	ocache.ObjectLastUsage
 	synchandler.SyncHandler
 	StreamManager
 	SendSync(ctx context.Context, peerId string, message *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error)
@@ -38,6 +40,7 @@ type messagePool struct {
 	waiters        map[string]responseWaiter
 	waitersMx      sync.Mutex
 	counter        atomic.Uint64
+	lastUsage      atomic.Int64
 }
 
 func newMessagePool(streamManager StreamManager, messageHandler MessageHandler) MessagePool {
@@ -50,6 +53,7 @@ func newMessagePool(streamManager StreamManager, messageHandler MessageHandler) 
 }
 
 func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
+	s.updateLastUsage()
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
@@ -81,7 +85,22 @@ func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyn
 	return
 }
 
+func (s *messagePool) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	s.updateLastUsage()
+	return s.StreamManager.SendPeer(ctx, peerId, msg)
+}
+
+func (s *messagePool) SendResponsible(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	s.updateLastUsage()
+	return s.StreamManager.SendResponsible(ctx, msg)
+}
+func (s *messagePool) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	s.updateLastUsage()
+	return s.StreamManager.Broadcast(ctx, msg)
+}
+
 func (s *messagePool) HandleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	s.updateLastUsage()
 	if msg.ReplyId != "" {
 		log.Info("mpool receive reply", zap.String("replyId", msg.ReplyId))
 		// we got reply, send it to waiter
@@ -91,6 +110,14 @@ func (s *messagePool) HandleMessage(ctx context.Context, senderId string, msg *s
 		log.With(zap.String("replyId", msg.ReplyId)).Debug("reply id does not exist")
 	}
 	return s.messageHandler(ctx, senderId, msg)
+}
+
+func (s *messagePool) LastUsage() time.Time {
+	return time.Unix(s.lastUsage.Load(), 0)
+}
+
+func (s *messagePool) updateLastUsage() {
+	s.lastUsage.Store(time.Now().Unix())
 }
 
 func (s *messagePool) stopWaiter(msg *spacesyncproto.ObjectSyncMessage) bool {

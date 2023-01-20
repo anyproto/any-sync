@@ -279,11 +279,9 @@ func (s *streamPool) handleMessageLoop() {
 		if err != nil {
 			return
 		}
-		go func() {
-			if err = s.handler.HandleMessage(hm.ctx, hm.peerId, hm.msg); err != nil {
-				log.Warn("handle message error", zap.Error(err))
-			}
-		}()
+		if err = s.handler.HandleMessage(hm.ctx, hm.peerId, hm.msg); err != nil {
+			log.Warn("handle message error", zap.Error(err))
+		}
 	}
 }
 
