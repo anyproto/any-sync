@@ -18,22 +18,23 @@ import (
 
 var ctx = context.Background()
 
+func newClientStream(t *testing.T, fx *fixture, peerId string) (st testservice.DRPCTest_TestStreamClient, p peer.Peer) {
+	p, err := fx.tp.Dial(ctx, peerId)
+	require.NoError(t, err)
+	s, err := testservice.NewDRPCTestClient(p).TestStream(ctx)
+	require.NoError(t, err)
+	return s, p
+}
+
 func TestStreamPool_AddStream(t *testing.T) {
-	newClientStream := func(fx *fixture, peerId string) (st testservice.DRPCTest_TestStreamClient, p peer.Peer) {
-		p, err := fx.tp.Dial(ctx, peerId)
-		require.NoError(t, err)
-		s, err := testservice.NewDRPCTestClient(p).TestStream(ctx)
-		require.NoError(t, err)
-		return s, p
-	}
 
 	t.Run("broadcast incoming", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish(t)
 
-		s1, _ := newClientStream(fx, "p1")
+		s1, _ := newClientStream(t, fx, "p1")
 		fx.AddStream("p1", s1, "space1", "common")
-		s2, _ := newClientStream(fx, "p2")
+		s2, _ := newClientStream(t, fx, "p2")
 		fx.AddStream("p2", s2, "space2", "common")
 
 		require.NoError(t, fx.Broadcast(ctx, &testservice.StreamMessage{ReqData: "space1"}, "space1"))
@@ -61,7 +62,7 @@ func TestStreamPool_AddStream(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish(t)
 
-		s1, p1 := newClientStream(fx, "p1")
+		s1, p1 := newClientStream(t, fx, "p1")
 		defer s1.Close()
 		fx.AddStream("p1", s1, "space1", "common")
 
@@ -122,6 +123,46 @@ func TestStreamPool_Send(t *testing.T) {
 		// make sure that we have only one stream
 		assert.Equal(t, int32(1), fx.tsh.streamsCount.Load())
 	})
+	t.Run("parallel open stream error", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish(t)
+
+		p, err := fx.tp.Dial(ctx, "p1")
+		require.NoError(t, err)
+		_ = p.Close()
+
+		fx.th.streamOpenDelay = time.Second / 3
+
+		var numMsgs = 5
+
+		var wg sync.WaitGroup
+		for i := 0; i < numMsgs; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				assert.Error(t, fx.StreamPool.(*streamPool).sendOne(ctx, p, &testservice.StreamMessage{ReqData: "should open stream"}))
+			}()
+		}
+		wg.Wait()
+	})
+}
+
+func TestStreamPool_SendById(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.Finish(t)
+
+	s1, _ := newClientStream(t, fx, "p1")
+	defer s1.Close()
+	fx.AddStream("p1", s1, "space1", "common")
+
+	require.NoError(t, fx.SendById(ctx, &testservice.StreamMessage{ReqData: "test"}, "p1"))
+	var msg *testservice.StreamMessage
+	select {
+	case msg = <-fx.tsh.receiveCh:
+	case <-time.After(time.Second):
+		require.NoError(t, fmt.Errorf("timeout"))
+	}
+	assert.Equal(t, "test", msg.ReqData)
 }
 
 func newFixture(t *testing.T) *fixture {

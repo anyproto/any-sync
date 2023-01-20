@@ -1,7 +1,6 @@
 package streampool
 
 import (
-	"fmt"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 	"sync/atomic"
@@ -18,11 +17,7 @@ type stream struct {
 }
 
 func (sr *stream) write(msg drpc.Message) (err error) {
-	defer func() {
-		sr.l.Debug("write", zap.String("msg", msg.(fmt.Stringer).String()), zap.Error(err))
-	}()
 	if err = sr.stream.MsgSend(msg, EncodingProto); err != nil {
-		sr.l.Info("stream write error", zap.Error(err))
 		sr.streamClose()
 	}
 	return err
@@ -38,8 +33,7 @@ func (sr *stream) readLoop() error {
 			sr.l.Info("msg receive error", zap.Error(err))
 			return err
 		}
-		sr.l.Debug("read msg", zap.String("msg", msg.(fmt.Stringer).String()))
-		if err := sr.pool.handler.HandleMessage(sr.stream.Context(), sr.peerId, msg); err != nil {
+		if err := sr.pool.HandleMessage(sr.stream.Context(), sr.peerId, msg); err != nil {
 			sr.l.Info("msg handle error", zap.Error(err))
 			return err
 		}

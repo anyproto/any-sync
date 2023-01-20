@@ -12,7 +12,18 @@ import (
 	"net"
 )
 
-type HandshakeError error
+type HandshakeError struct {
+	remoteAddr string
+	err        error
+}
+
+func (he HandshakeError) RemoteAddr() string {
+	return he.remoteAddr
+}
+
+func (he HandshakeError) Error() string {
+	return he.err.Error()
+}
 
 const CName = "common.net.secure"
 

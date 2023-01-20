@@ -1,9 +1,9 @@
 package streampool
 
 import (
-	"fmt"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/pool"
+	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/context"
@@ -42,10 +42,28 @@ type streamPool struct {
 	streamIdsByPeer map[string][]uint32
 	streamIdsByTag  map[string][]uint32
 	streams         map[uint32]*stream
-	opening         map[string]chan struct{}
+	opening         map[string]*openingProcess
 	exec            *sendPool
+	handleQueue     *mb.MB[handleMessage]
 	mu              sync.RWMutex
 	lastStreamId    uint32
+}
+
+type openingProcess struct {
+	ch  chan struct{}
+	err error
+}
+type handleMessage struct {
+	ctx    context.Context
+	msg    drpc.Message
+	peerId string
+}
+
+func (s *streamPool) init() {
+	// TODO: to config
+	for i := 0; i < 10; i++ {
+		go s.handleMessageLoop()
+	}
 }
 
 func (s *streamPool) ReadStream(peerId string, drpcStream drpc.Stream, tags ...string) error {
@@ -78,7 +96,6 @@ func (s *streamPool) addStream(peerId string, drpcStream drpc.Stream, tags ...st
 	for _, tag := range tags {
 		s.streamIdsByTag[tag] = append(s.streamIdsByTag[tag], streamId)
 	}
-	st.l.Debug("stream added", zap.Strings("tags", st.tags))
 	return st
 }
 
@@ -87,7 +104,7 @@ func (s *streamPool) Send(ctx context.Context, msg drpc.Message, peers ...peer.P
 	for _, p := range peers {
 		funcs = append(funcs, func() {
 			if e := s.sendOne(ctx, p, msg); e != nil {
-				log.Info("send peer error", zap.Error(e))
+				log.Info("send peer error", zap.Error(e), zap.String("peerId", p.Id()))
 			}
 		})
 	}
@@ -103,12 +120,11 @@ func (s *streamPool) SendById(ctx context.Context, msg drpc.Message, peerIds ...
 		}
 	}
 	s.mu.Unlock()
-	log.Debug("sendById", zap.String("msg", msg.(fmt.Stringer).String()), zap.Int("streams", len(streams)))
 	var funcs []func()
 	for _, st := range streams {
 		funcs = append(funcs, func() {
 			if e := st.write(msg); e != nil {
-				log.Debug("sendById write error", zap.Error(e))
+				st.l.Debug("sendById write error", zap.Error(e))
 			}
 		})
 	}
@@ -126,7 +142,7 @@ func (s *streamPool) sendOne(ctx context.Context, p peer.Peer, msg drpc.Message)
 	}
 	for _, st := range streams {
 		if err = st.write(msg); err != nil {
-			log.Info("stream write error", zap.Error(err))
+			st.l.Info("sendOne write error", zap.Error(err))
 			// continue with next stream
 			continue
 		} else {
@@ -144,18 +160,21 @@ func (s *streamPool) getStreams(ctx context.Context, p peer.Peer) (streams []*st
 	for _, streamId := range streamIds {
 		streams = append(streams, s.streams[streamId])
 	}
-	var openingCh chan struct{}
+	var op *openingProcess
 	// no cached streams found
 	if len(streams) == 0 {
 		// start opening process
-		openingCh = s.openStream(ctx, p)
+		op = s.openStream(ctx, p)
 	}
 	s.mu.Unlock()
 
 	// not empty openingCh means we should wait for the stream opening and try again
-	if openingCh != nil {
+	if op != nil {
 		select {
-		case <-openingCh:
+		case <-op.ch:
+			if op.err != nil {
+				return nil, op.err
+			}
 			return s.getStreams(ctx, p)
 		case <-ctx.Done():
 			return nil, ctx.Err()
@@ -164,30 +183,32 @@ func (s *streamPool) getStreams(ctx context.Context, p peer.Peer) (streams []*st
 	return streams, nil
 }
 
-func (s *streamPool) openStream(ctx context.Context, p peer.Peer) chan struct{} {
-	if ch, ok := s.opening[p.Id()]; ok {
+func (s *streamPool) openStream(ctx context.Context, p peer.Peer) *openingProcess {
+	if op, ok := s.opening[p.Id()]; ok {
 		// already have an opening process for this stream - return channel
-		return ch
+		return op
 	}
-	ch := make(chan struct{})
-	s.opening[p.Id()] = ch
+	op := &openingProcess{
+		ch: make(chan struct{}),
+	}
+	s.opening[p.Id()] = op
 	go func() {
 		// start stream opening in separate goroutine to avoid lock whole pool
 		defer func() {
 			s.mu.Lock()
 			defer s.mu.Unlock()
-			close(ch)
+			close(op.ch)
 			delete(s.opening, p.Id())
 		}()
 		// open new stream and add to pool
 		st, tags, err := s.handler.OpenStream(ctx, p)
 		if err != nil {
-			log.Warn("stream open error", zap.Error(err))
+			op.err = err
 			return
 		}
 		s.AddStream(p.Id(), st, tags...)
 	}()
-	return ch
+	return op
 }
 
 func (s *streamPool) Broadcast(ctx context.Context, msg drpc.Message, tags ...string) (err error) {
@@ -242,6 +263,28 @@ func (s *streamPool) removeStream(streamId uint32) {
 
 	delete(s.streams, streamId)
 	st.l.Debug("stream removed", zap.Strings("tags", st.tags))
+}
+
+func (s *streamPool) HandleMessage(ctx context.Context, peerId string, msg drpc.Message) (err error) {
+	return s.handleQueue.Add(ctx, handleMessage{
+		ctx:    ctx,
+		msg:    msg,
+		peerId: peerId,
+	})
+}
+
+func (s *streamPool) handleMessageLoop() {
+	for {
+		hm, err := s.handleQueue.WaitOne(context.Background())
+		if err != nil {
+			return
+		}
+		go func() {
+			if err = s.handler.HandleMessage(hm.ctx, hm.peerId, hm.msg); err != nil {
+				log.Warn("handle message error", zap.Error(err))
+			}
+		}()
+	}
 }
 
 func (s *streamPool) Close() (err error) {
