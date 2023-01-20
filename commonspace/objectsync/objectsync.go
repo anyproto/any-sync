@@ -73,8 +73,7 @@ func (s *objectSync) Close() (err error) {
 }
 
 func (s *objectSync) LastUsage() time.Time {
-	// TODO: [che]
-	return time.Now()
+	return s.messagePool.LastUsage()
 }
 
 func (s *objectSync) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
