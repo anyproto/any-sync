@@ -154,7 +154,7 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 		return nil, err
 	}
 
-	ch, err = tb.builder.ConvertFromRaw(change, true)
+	ch, err = tb.builder.Unmarshall(change, true)
 	if err != nil {
 		return nil, err
 	}

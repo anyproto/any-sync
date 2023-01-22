@@ -95,7 +95,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 		return
 	}
 
-	_, settingsRoot, err := builder.BuildInitialContent(objecttree.InitialContent{
+	_, settingsRoot, err := builder.BuildRoot(objecttree.InitialContent{
 		AclHeadId:  rawWithId.Id,
 		Identity:   aclRoot.Identity,
 		SigningKey: payload.SigningKey,
@@ -196,7 +196,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 	}
 
 	builder := objecttree.NewChangeBuilder(keychain.NewKeychain(), nil)
-	_, settingsRoot, err := builder.BuildInitialContent(objecttree.InitialContent{
+	_, settingsRoot, err := builder.BuildRoot(objecttree.InitialContent{
 		AclHeadId:  rawWithId.Id,
 		Identity:   aclRoot.Identity,
 		SigningKey: payload.SigningKey,

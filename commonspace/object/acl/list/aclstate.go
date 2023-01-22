@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/any-sync/app/logger"
-	aclrecordproto2 "github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
+	aclrecordproto "github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/util/keys"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
@@ -36,15 +36,15 @@ var (
 
 type UserPermissionPair struct {
 	Identity   string
-	Permission aclrecordproto2.AclUserPermissions
+	Permission aclrecordproto.AclUserPermissions
 }
 
 type AclState struct {
 	id                 string
 	currentReadKeyHash uint64
 	userReadKeys       map[uint64]*symmetric.Key
-	userStates         map[string]*aclrecordproto2.AclUserState
-	userInvites        map[string]*aclrecordproto2.AclUserInvite
+	userStates         map[string]*aclrecordproto.AclUserState
+	userInvites        map[string]*aclrecordproto.AclUserInvite
 	encryptionKey      encryptionkey.PrivKey
 	signingKey         signingkey.PrivKey
 	totalReadKeys      int
@@ -70,8 +70,8 @@ func newAclStateWithKeys(
 		signingKey:          signingKey,
 		encryptionKey:       encryptionKey,
 		userReadKeys:        make(map[uint64]*symmetric.Key),
-		userStates:          make(map[string]*aclrecordproto2.AclUserState),
-		userInvites:         make(map[string]*aclrecordproto2.AclUserInvite),
+		userStates:          make(map[string]*aclrecordproto.AclUserState),
+		userInvites:         make(map[string]*aclrecordproto.AclUserInvite),
 		permissionsAtRecord: make(map[string][]UserPermissionPair),
 	}, nil
 }
@@ -80,8 +80,8 @@ func newAclState(id string) *AclState {
 	return &AclState{
 		id:                  id,
 		userReadKeys:        make(map[uint64]*symmetric.Key),
-		userStates:          make(map[string]*aclrecordproto2.AclUserState),
-		userInvites:         make(map[string]*aclrecordproto2.AclUserInvite),
+		userStates:          make(map[string]*aclrecordproto.AclUserState),
+		userInvites:         make(map[string]*aclrecordproto.AclUserInvite),
 		permissionsAtRecord: make(map[string][]UserPermissionPair),
 	}
 }
@@ -128,7 +128,7 @@ func (st *AclState) applyRecord(record *AclRecord) (err error) {
 		return
 	}
 	if record.Id == st.id {
-		root, ok := record.Model.(*aclrecordproto2.AclRoot)
+		root, ok := record.Model.(*aclrecordproto.AclRoot)
 		if !ok {
 			return ErrIncorrectRoot
 		}
@@ -137,14 +137,14 @@ func (st *AclState) applyRecord(record *AclRecord) (err error) {
 			return
 		}
 		st.permissionsAtRecord[record.Id] = []UserPermissionPair{
-			{Identity: string(root.Identity), Permission: aclrecordproto2.AclUserPermissions_Admin},
+			{Identity: string(root.Identity), Permission: aclrecordproto.AclUserPermissions_Admin},
 		}
 		return
 	}
-	aclData := &aclrecordproto2.AclData{}
+	aclData := &aclrecordproto.AclData{}
 
 	if record.Model != nil {
-		aclData = record.Model.(*aclrecordproto2.AclData)
+		aclData = record.Model.(*aclrecordproto.AclData)
 	} else {
 		err = proto.Unmarshal(record.Data, aclData)
 		if err != nil {
@@ -172,7 +172,7 @@ func (st *AclState) applyRecord(record *AclRecord) (err error) {
 	return
 }
 
-func (st *AclState) applyRoot(root *aclrecordproto2.AclRoot) (err error) {
+func (st *AclState) applyRoot(root *aclrecordproto.AclRoot) (err error) {
 	if st.signingKey != nil && st.encryptionKey != nil && st.identity == string(root.Identity) {
 		err = st.saveReadKeyFromRoot(root)
 		if err != nil {
@@ -181,10 +181,10 @@ func (st *AclState) applyRoot(root *aclrecordproto2.AclRoot) (err error) {
 	}
 
 	// adding user to the list
-	userState := &aclrecordproto2.AclUserState{
+	userState := &aclrecordproto.AclUserState{
 		Identity:      root.Identity,
 		EncryptionKey: root.EncryptionKey,
-		Permissions:   aclrecordproto2.AclUserPermissions_Admin,
+		Permissions:   aclrecordproto.AclUserPermissions_Admin,
 	}
 	st.currentReadKeyHash = root.CurrentReadKeyHash
 	st.userStates[string(root.Identity)] = userState
@@ -192,7 +192,7 @@ func (st *AclState) applyRoot(root *aclrecordproto2.AclRoot) (err error) {
 	return
 }
 
-func (st *AclState) saveReadKeyFromRoot(root *aclrecordproto2.AclRoot) (err error) {
+func (st *AclState) saveReadKeyFromRoot(root *aclrecordproto.AclRoot) (err error) {
 	var readKey *symmetric.Key
 	if len(root.GetDerivationScheme()) != 0 {
 		var encPrivKey []byte
@@ -206,7 +206,7 @@ func (st *AclState) saveReadKeyFromRoot(root *aclrecordproto2.AclRoot) (err erro
 			return
 		}
 
-		readKey, err = aclrecordproto2.AclReadKeyDerive(signPrivKey, encPrivKey)
+		readKey, err = aclrecordproto.AclReadKeyDerive(signPrivKey, encPrivKey)
 		if err != nil {
 			return
 		}
@@ -230,7 +230,7 @@ func (st *AclState) saveReadKeyFromRoot(root *aclrecordproto2.AclRoot) (err erro
 	return
 }
 
-func (st *AclState) applyChangeData(changeData *aclrecordproto2.AclData, hash uint64, identity []byte) (err error) {
+func (st *AclState) applyChangeData(changeData *aclrecordproto.AclData, hash uint64, identity []byte) (err error) {
 	defer func() {
 		if err != nil {
 			return
@@ -248,7 +248,7 @@ func (st *AclState) applyChangeData(changeData *aclrecordproto2.AclData, hash ui
 			return
 		}
 
-		if !st.HasPermission(identity, aclrecordproto2.AclUserPermissions_Admin) {
+		if !st.HasPermission(identity, aclrecordproto.AclUserPermissions_Admin) {
 			err = fmt.Errorf("user %s must have admin permissions", identity)
 			return
 		}
@@ -264,7 +264,7 @@ func (st *AclState) applyChangeData(changeData *aclrecordproto2.AclData, hash ui
 	return nil
 }
 
-func (st *AclState) applyChangeContent(ch *aclrecordproto2.AclContentValue) error {
+func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue) error {
 	switch {
 	case ch.GetUserPermissionChange() != nil:
 		return st.applyUserPermissionChange(ch.GetUserPermissionChange())
@@ -281,7 +281,7 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto2.AclContentValue) erro
 	}
 }
 
-func (st *AclState) applyUserPermissionChange(ch *aclrecordproto2.AclUserPermissionChange) error {
+func (st *AclState) applyUserPermissionChange(ch *aclrecordproto.AclUserPermissionChange) error {
 	chIdentity := string(ch.Identity)
 	state, exists := st.userStates[chIdentity]
 	if !exists {
@@ -292,12 +292,12 @@ func (st *AclState) applyUserPermissionChange(ch *aclrecordproto2.AclUserPermiss
 	return nil
 }
 
-func (st *AclState) applyUserInvite(ch *aclrecordproto2.AclUserInvite) error {
+func (st *AclState) applyUserInvite(ch *aclrecordproto.AclUserInvite) error {
 	st.userInvites[string(ch.AcceptPublicKey)] = ch
 	return nil
 }
 
-func (st *AclState) applyUserJoin(ch *aclrecordproto2.AclUserJoin) error {
+func (st *AclState) applyUserJoin(ch *aclrecordproto.AclUserJoin) error {
 	invite, exists := st.userInvites[string(ch.AcceptPubKey)]
 	if !exists {
 		return fmt.Errorf("no such invite with such public key %s", keys.EncodeBytesToString(ch.AcceptPubKey))
@@ -336,7 +336,7 @@ func (st *AclState) applyUserJoin(ch *aclrecordproto2.AclUserJoin) error {
 	}
 
 	// adding user to the list
-	userState := &aclrecordproto2.AclUserState{
+	userState := &aclrecordproto.AclUserState{
 		Identity:      ch.Identity,
 		EncryptionKey: ch.EncryptionKey,
 		Permissions:   invite.Permissions,
@@ -345,13 +345,13 @@ func (st *AclState) applyUserJoin(ch *aclrecordproto2.AclUserJoin) error {
 	return nil
 }
 
-func (st *AclState) applyUserAdd(ch *aclrecordproto2.AclUserAdd) error {
+func (st *AclState) applyUserAdd(ch *aclrecordproto.AclUserAdd) error {
 	chIdentity := string(ch.Identity)
 	if _, exists := st.userStates[chIdentity]; exists {
 		return ErrUserAlreadyExists
 	}
 
-	st.userStates[chIdentity] = &aclrecordproto2.AclUserState{
+	st.userStates[chIdentity] = &aclrecordproto.AclUserState{
 		Identity:      ch.Identity,
 		EncryptionKey: ch.EncryptionKey,
 		Permissions:   ch.Permissions,
@@ -371,7 +371,7 @@ func (st *AclState) applyUserAdd(ch *aclrecordproto2.AclUserAdd) error {
 	return nil
 }
 
-func (st *AclState) applyUserRemove(ch *aclrecordproto2.AclUserRemove) error {
+func (st *AclState) applyUserRemove(ch *aclrecordproto.AclUserRemove) error {
 	chIdentity := string(ch.Identity)
 	if chIdentity == st.identity {
 		return ErrDocumentForbidden
@@ -415,7 +415,7 @@ func (st *AclState) decryptReadKeyAndHash(msg []byte) (*symmetric.Key, uint64, e
 	return key, hasher.Sum64(), nil
 }
 
-func (st *AclState) HasPermission(identity []byte, permission aclrecordproto2.AclUserPermissions) bool {
+func (st *AclState) HasPermission(identity []byte, permission aclrecordproto.AclUserPermissions) bool {
 	state, exists := st.userStates[string(identity)]
 	if !exists {
 		return false
@@ -424,22 +424,22 @@ func (st *AclState) HasPermission(identity []byte, permission aclrecordproto2.Ac
 	return state.Permissions == permission
 }
 
-func (st *AclState) isUserJoin(data *aclrecordproto2.AclData) bool {
+func (st *AclState) isUserJoin(data *aclrecordproto.AclData) bool {
 	// if we have a UserJoin, then it should always be the first one applied
 	return data.GetAclContent() != nil && data.GetAclContent()[0].GetUserJoin() != nil
 }
 
-func (st *AclState) isUserAdd(data *aclrecordproto2.AclData, identity []byte) bool {
+func (st *AclState) isUserAdd(data *aclrecordproto.AclData, identity []byte) bool {
 	// if we have a UserAdd, then it should always be the first one applied
 	userAdd := data.GetAclContent()[0].GetUserAdd()
 	return data.GetAclContent() != nil && userAdd != nil && bytes.Compare(userAdd.GetIdentity(), identity) == 0
 }
 
-func (st *AclState) UserStates() map[string]*aclrecordproto2.AclUserState {
+func (st *AclState) UserStates() map[string]*aclrecordproto.AclUserState {
 	return st.userStates
 }
 
-func (st *AclState) Invite(acceptPubKey []byte) (invite *aclrecordproto2.AclUserInvite, err error) {
+func (st *AclState) Invite(acceptPubKey []byte) (invite *aclrecordproto.AclUserInvite, err error) {
 	invite, exists := st.userInvites[string(acceptPubKey)]
 	if !exists {
 		err = ErrNoSuchInvite

@@ -19,6 +19,56 @@ type ObjectTreeCreatePayload struct {
 	IsEncrypted bool
 }
 
+type HistoryTreeParams struct {
+	TreeStorage     treestorage.TreeStorage
+	AclList         list.AclList
+	BeforeId        string
+	IncludeBeforeId bool
+}
+
+type objectTreeDeps struct {
+	changeBuilder   ChangeBuilder
+	treeBuilder     *treeBuilder
+	treeStorage     treestorage.TreeStorage
+	validator       ObjectTreeValidator
+	rawChangeLoader *rawChangeLoader
+	aclList         list.AclList
+}
+
+func defaultObjectTreeDeps(
+	rootChange *treechangeproto.RawTreeChangeWithId,
+	treeStorage treestorage.TreeStorage,
+	aclList list.AclList) objectTreeDeps {
+
+	keychain := keychain.NewKeychain()
+	changeBuilder := NewChangeBuilder(keychain, rootChange)
+	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
+	return objectTreeDeps{
+		changeBuilder:   changeBuilder,
+		treeBuilder:     treeBuilder,
+		treeStorage:     treeStorage,
+		validator:       newTreeValidator(),
+		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
+		aclList:         aclList,
+	}
+}
+
+func nonVerifiableTreeDeps(
+	rootChange *treechangeproto.RawTreeChangeWithId,
+	treeStorage treestorage.TreeStorage,
+	aclList list.AclList) objectTreeDeps {
+	changeBuilder := &nonVerifiableChangeBuilder{NewChangeBuilder(nil, rootChange)}
+	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
+	return objectTreeDeps{
+		changeBuilder:   changeBuilder,
+		treeBuilder:     treeBuilder,
+		treeStorage:     treeStorage,
+		validator:       &noOpTreeValidator{},
+		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
+		aclList:         aclList,
+	}
+}
+
 func CreateObjectTreeRoot(payload ObjectTreeCreatePayload, aclList list.AclList) (root *treechangeproto.RawTreeChangeWithId, err error) {
 	bytes := make([]byte, 32)
 	_, err = rand.Read(bytes)
@@ -38,6 +88,15 @@ func BuildObjectTree(treeStorage treestorage.TreeStorage, aclList list.AclList) 
 		return nil, err
 	}
 	deps := defaultObjectTreeDeps(rootChange, treeStorage, aclList)
+	return buildObjectTree(deps)
+}
+
+func BuildNonVerifiableTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
+	rootChange, err := treeStorage.Root()
+	if err != nil {
+		return nil, err
+	}
+	deps := nonVerifiableTreeDeps(rootChange, treeStorage, aclList)
 	return buildObjectTree(deps)
 }
 
@@ -115,7 +174,7 @@ func createObjectTreeRoot(
 		Seed:       seed,
 	}
 
-	_, root, err = NewChangeBuilder(keychain.NewKeychain(), nil).BuildInitialContent(cnt)
+	_, root, err = NewChangeBuilder(keychain.NewKeychain(), nil).BuildRoot(cnt)
 	return
 }
 
@@ -146,20 +205,13 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 	}
 
 	// verifying root
-	header, err := objTree.changeBuilder.ConvertFromRaw(objTree.rawRoot, true)
+	header, err := objTree.changeBuilder.Unmarshall(objTree.rawRoot, true)
 	if err != nil {
 		return nil, err
 	}
 	objTree.root = header
 
 	return objTree, nil
-}
-
-type HistoryTreeParams struct {
-	TreeStorage     treestorage.TreeStorage
-	AclList         list.AclList
-	BeforeId        string
-	IncludeBeforeId bool
 }
 
 func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht HistoryTree, err error) {
@@ -188,7 +240,7 @@ func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht History
 		return nil, err
 	}
 
-	header, err := objTree.changeBuilder.ConvertFromRaw(objTree.rawRoot, false)
+	header, err := objTree.changeBuilder.Unmarshall(objTree.rawRoot, false)
 	if err != nil {
 		return nil, err
 	}
