@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 )
 
 type ObjectTreeValidator interface {
@@ -11,6 +12,16 @@ type ObjectTreeValidator interface {
 	ValidateFullTree(tree *Tree, aclList list.AclList) error
 	// ValidateNewChanges should always be entered while holding a read lock on AclList
 	ValidateNewChanges(tree *Tree, aclList list.AclList, newChanges []*Change) error
+}
+
+type noOpTreeValidator struct{}
+
+func (n *noOpTreeValidator) ValidateFullTree(tree *Tree, aclList list.AclList) error {
+	return nil
+}
+
+func (n *noOpTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclList, newChanges []*Change) error {
+	return nil
 }
 
 type objectTreeValidator struct{}
@@ -73,5 +84,15 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 			return
 		}
 	}
+	return
+}
+
+func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList) (err error) {
+	treeStorage, err := treestorage.NewInMemoryTreeStorage(payload.RootRawChange, payload.Heads, payload.Changes)
+	if err != nil {
+		return
+	}
+
+	_, err = BuildObjectTree(treeStorage, aclList)
 	return
 }

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	list "github.com/anytypeio/any-sync/commonspace/object/acl/list"
-	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/util/keys/symmetric"
@@ -102,33 +101,6 @@ type objectTree struct {
 	sync.RWMutex
 }
 
-type objectTreeDeps struct {
-	changeBuilder   ChangeBuilder
-	treeBuilder     *treeBuilder
-	treeStorage     treestorage.TreeStorage
-	validator       ObjectTreeValidator
-	rawChangeLoader *rawChangeLoader
-	aclList         list.AclList
-}
-
-func defaultObjectTreeDeps(
-	rootChange *treechangeproto.RawTreeChangeWithId,
-	treeStorage treestorage.TreeStorage,
-	aclList list.AclList) objectTreeDeps {
-
-	keychain := keychain.NewKeychain()
-	changeBuilder := NewChangeBuilder(keychain, rootChange)
-	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
-	return objectTreeDeps{
-		changeBuilder:   changeBuilder,
-		treeBuilder:     treeBuilder,
-		treeStorage:     treeStorage,
-		validator:       newTreeValidator(),
-		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
-		aclList:         aclList,
-	}
-}
-
 func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Change) (err error) {
 	ot.treeBuilder.Reset()
 
@@ -179,7 +151,7 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 	oldHeads := make([]string, 0, len(ot.tree.Heads()))
 	oldHeads = append(oldHeads, ot.tree.Heads()...)
 
-	objChange, rawChange, err := ot.changeBuilder.BuildContent(payload)
+	objChange, rawChange, err := ot.changeBuilder.Build(payload)
 	if content.IsSnapshot {
 		// clearing tree, because we already saved everything in the last snapshot
 		ot.tree = &Tree{}
@@ -293,7 +265,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 		if unAttached, exists := ot.tree.unAttached[ch.Id]; exists {
 			change = unAttached
 		} else {
-			change, err = ot.changeBuilder.ConvertFromRaw(ch, true)
+			change, err = ot.changeBuilder.Unmarshall(ch, true)
 			if err != nil {
 				return
 			}
@@ -444,7 +416,7 @@ func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesA
 			// if we got some changes that we need to convert to raw
 			if _, exists := alreadyConverted[ch]; !exists {
 				var raw *treechangeproto.RawTreeChangeWithId
-				raw, err = ot.changeBuilder.BuildRaw(ch)
+				raw, err = ot.changeBuilder.Marshall(ch)
 				if err != nil {
 					return
 				}

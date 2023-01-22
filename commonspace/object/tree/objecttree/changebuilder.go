@@ -35,12 +35,31 @@ type InitialContent struct {
 	Timestamp  int64
 }
 
+type nonVerifiableChangeBuilder struct {
+	ChangeBuilder
+}
+
+func (c *nonVerifiableChangeBuilder) BuildRoot(payload InitialContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
+	return c.ChangeBuilder.BuildRoot(payload)
+}
+
+func (c *nonVerifiableChangeBuilder) Unmarshall(rawChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error) {
+	return c.ChangeBuilder.Unmarshall(rawChange, false)
+}
+
+func (c *nonVerifiableChangeBuilder) Build(payload BuilderContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
+	return c.ChangeBuilder.Build(payload)
+}
+
+func (c *nonVerifiableChangeBuilder) Marshall(ch *Change) (raw *treechangeproto.RawTreeChangeWithId, err error) {
+	return c.ChangeBuilder.Marshall(ch)
+}
+
 type ChangeBuilder interface {
-	ConvertFromRaw(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error)
-	BuildContent(payload BuilderContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
-	BuildInitialContent(payload InitialContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
-	BuildRaw(ch *Change) (*treechangeproto.RawTreeChangeWithId, error)
-	SetRootRawChange(rawIdChange *treechangeproto.RawTreeChangeWithId)
+	Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error)
+	Build(payload BuilderContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
+	BuildRoot(payload InitialContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
+	Marshall(ch *Change) (*treechangeproto.RawTreeChangeWithId, error)
 }
 
 type changeBuilder struct {
@@ -52,7 +71,7 @@ func NewChangeBuilder(keys *keychain.Keychain, rootChange *treechangeproto.RawTr
 	return &changeBuilder{keys: keys, rootChange: rootChange}
 }
 
-func (c *changeBuilder) ConvertFromRaw(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error) {
+func (c *changeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error) {
 	if rawIdChange.GetRawChange() == nil {
 		err = ErrEmptyChange
 		return
@@ -101,7 +120,7 @@ func (c *changeBuilder) SetRootRawChange(rawIdChange *treechangeproto.RawTreeCha
 	c.rootChange = rawIdChange
 }
 
-func (c *changeBuilder) BuildInitialContent(payload InitialContent) (ch *Change, rawIdChange *treechangeproto.RawTreeChangeWithId, err error) {
+func (c *changeBuilder) BuildRoot(payload InitialContent) (ch *Change, rawIdChange *treechangeproto.RawTreeChangeWithId, err error) {
 	change := &treechangeproto.RootChange{
 		AclHeadId:  payload.AclHeadId,
 		Timestamp:  payload.Timestamp,
@@ -145,7 +164,7 @@ func (c *changeBuilder) BuildInitialContent(payload InitialContent) (ch *Change,
 	return
 }
 
-func (c *changeBuilder) BuildContent(payload BuilderContent) (ch *Change, rawIdChange *treechangeproto.RawTreeChangeWithId, err error) {
+func (c *changeBuilder) Build(payload BuilderContent) (ch *Change, rawIdChange *treechangeproto.RawTreeChangeWithId, err error) {
 	change := &treechangeproto.TreeChange{
 		TreeHeadIds:        payload.TreeHeadIds,
 		AclHeadId:          payload.AclHeadId,
@@ -200,7 +219,7 @@ func (c *changeBuilder) BuildContent(payload BuilderContent) (ch *Change, rawIdC
 	return
 }
 
-func (c *changeBuilder) BuildRaw(ch *Change) (raw *treechangeproto.RawTreeChangeWithId, err error) {
+func (c *changeBuilder) Marshall(ch *Change) (raw *treechangeproto.RawTreeChangeWithId, err error) {
 	if ch.Id == c.rootChange.Id {
 		return c.rootChange, nil
 	}

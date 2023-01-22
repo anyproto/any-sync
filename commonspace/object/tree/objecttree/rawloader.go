@@ -39,7 +39,7 @@ func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*treech
 	convert := func(chs []*Change) (rawChanges []*treechangeproto.RawTreeChangeWithId, err error) {
 		for _, ch := range chs {
 			var raw *treechangeproto.RawTreeChangeWithId
-			raw, err = r.changeBuilder.BuildRaw(ch)
+			raw, err = r.changeBuilder.Marshall(ch)
 			if err != nil {
 				return
 			}
@@ -226,7 +226,7 @@ func (r *rawChangeLoader) loadEntry(id string) (entry rawCacheEntry, err error) 
 		return
 	}
 
-	change, err := r.changeBuilder.ConvertFromRaw(rawChange, false)
+	change, err := r.changeBuilder.Unmarshall(rawChange, false)
 	if err != nil {
 		return
 	}

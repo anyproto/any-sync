@@ -19,6 +19,10 @@ type TreeStorageCreatePayload struct {
 	Heads         []string
 }
 
+type Exporter interface {
+	TreeStorage(root *treechangeproto.RawTreeChangeWithId) (TreeStorage, error)
+}
+
 type TreeStorageCreatorFunc = func(payload TreeStorageCreatePayload) (TreeStorage, error)
 
 type TreeStorage interface {
