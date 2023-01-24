@@ -22,6 +22,9 @@ func newCommonGetter(spaceId string, getter treegetter.TreeGetter) *commonGetter
 }
 
 func (c *commonGetter) AddObject(object syncobjectgetter.SyncObject) {
+	if object == nil {
+		panic("nil object")
+	}
 	c.reservedObjects = append(c.reservedObjects, object)
 }
 

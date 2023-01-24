@@ -4,6 +4,7 @@ package headsync
 import (
 	"context"
 	"github.com/anytypeio/any-sync/app/ldiff"
+	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/confconnector"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
@@ -38,7 +39,7 @@ type headSync struct {
 	periodicSync periodicsync.PeriodicSync
 	storage      spacestorage.SpaceStorage
 	diff         ldiff.Diff
-	log          *zap.Logger
+	log          logger.CtxLogger
 	syncer       DiffSyncer
 
 	syncPeriod int
@@ -51,7 +52,7 @@ func NewHeadSync(
 	confConnector confconnector.ConfConnector,
 	cache treegetter.TreeGetter,
 	syncStatus syncstatus.StatusUpdater,
-	log *zap.Logger) HeadSync {
+	log logger.CtxLogger) HeadSync {
 
 	diff := ldiff.New(16, 16)
 	l := log.With(zap.String("spaceId", spaceId))

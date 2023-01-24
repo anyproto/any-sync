@@ -165,6 +165,28 @@ func TestStreamPool_SendById(t *testing.T) {
 	assert.Equal(t, "test", msg.ReqData)
 }
 
+func TestStreamPool_Tags(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.Finish(t)
+
+	s1, _ := newClientStream(t, fx, "p1")
+	defer s1.Close()
+	fx.AddStream("p1", s1, "t1")
+
+	s2, _ := newClientStream(t, fx, "p2")
+	defer s1.Close()
+	fx.AddStream("p2", s2, "t2")
+
+	err := fx.AddTagsCtx(streamCtx(ctx, 1, "p1"), "t3")
+	require.NoError(t, err)
+	assert.Equal(t, []uint32{1}, fx.StreamPool.(*streamPool).streamIdsByTag["t3"])
+
+	err = fx.RemoveTagsCtx(streamCtx(ctx, 2, "p2"), "t2")
+	require.NoError(t, err)
+	assert.Len(t, fx.StreamPool.(*streamPool).streamIdsByTag["t2"], 0)
+
+}
+
 func newFixture(t *testing.T) *fixture {
 	fx := &fixture{}
 	ts := rpctest.NewTestServer()

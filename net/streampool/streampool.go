@@ -1,6 +1,7 @@
 package streampool
 
 import (
+	"fmt"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/pool"
 	"github.com/cheggaaa/mb/v3"
@@ -33,6 +34,10 @@ type StreamPool interface {
 	SendById(ctx context.Context, msg drpc.Message, peerIds ...string) (err error)
 	// Broadcast sends a message to all peers with given tags. Works async.
 	Broadcast(ctx context.Context, msg drpc.Message, tags ...string) (err error)
+	// AddTagsCtx adds tags to stream, stream will be extracted from ctx
+	AddTagsCtx(ctx context.Context, tags ...string) error
+	// RemoveTagsCtx removes tags from stream, stream will be extracted from ctx
+	RemoveTagsCtx(ctx context.Context, tags ...string) error
 	// Close closes all streams
 	Close() error
 }
@@ -142,7 +147,7 @@ func (s *streamPool) sendOne(ctx context.Context, p peer.Peer, msg drpc.Message)
 	}
 	for _, st := range streams {
 		if err = st.write(msg); err != nil {
-			st.l.Info("sendOne write error", zap.Error(err), zap.Int("streams", len(streams)))
+			st.l.InfoCtx(ctx, "sendOne write error", zap.Error(err), zap.Int("streams", len(streams)))
 			// continue with next stream
 			continue
 		} else {
@@ -224,7 +229,7 @@ func (s *streamPool) Broadcast(ctx context.Context, msg drpc.Message, tags ...st
 	for _, st := range streams {
 		funcs = append(funcs, func() {
 			if e := st.write(msg); e != nil {
-				log.Debug("broadcast write error", zap.Error(e))
+				log.DebugCtx(ctx, "broadcast write error", zap.Error(e))
 			}
 		})
 	}
@@ -232,6 +237,58 @@ func (s *streamPool) Broadcast(ctx context.Context, msg drpc.Message, tags ...st
 		return
 	}
 	return s.exec.Add(ctx, funcs...)
+}
+
+func (s *streamPool) AddTagsCtx(ctx context.Context, tags ...string) error {
+	streamId, ok := ctx.Value(streamCtxKeyStreamId).(uint32)
+	if !ok {
+		return fmt.Errorf("context without streamId")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	st, ok := s.streams[streamId]
+	if !ok {
+		return fmt.Errorf("stream not found")
+	}
+	var newTags = make([]string, 0, len(tags))
+	for _, newTag := range tags {
+		if !slices.Contains(st.tags, newTag) {
+			newTags = append(newTags, newTag)
+		}
+	}
+	st.tags = append(st.tags, newTags...)
+	for _, newTag := range tags {
+		s.streamIdsByTag[newTag] = append(s.streamIdsByTag[newTag], streamId)
+	}
+	return nil
+}
+
+func (s *streamPool) RemoveTagsCtx(ctx context.Context, tags ...string) error {
+	streamId, ok := ctx.Value(streamCtxKeyStreamId).(uint32)
+	if !ok {
+		return fmt.Errorf("context without streamId")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	st, ok := s.streams[streamId]
+	if !ok {
+		return fmt.Errorf("stream not found")
+	}
+
+	var filtered = st.tags[:0]
+	var toRemove = make([]string, 0, len(tags))
+	for _, t := range st.tags {
+		if slices.Contains(tags, t) {
+			toRemove = append(toRemove, t)
+		} else {
+			filtered = append(filtered, t)
+		}
+	}
+	st.tags = filtered
+	for _, t := range toRemove {
+		removeStream(s.streamIdsByTag, t, streamId)
+	}
+	return nil
 }
 
 func (s *streamPool) removeStream(streamId uint32) {
@@ -242,23 +299,9 @@ func (s *streamPool) removeStream(streamId uint32) {
 		log.Fatal("removeStream: stream does not exist", zap.Uint32("streamId", streamId))
 	}
 
-	var removeStream = func(m map[string][]uint32, key string) {
-		streamIds := m[key]
-		idx := slices.Index(streamIds, streamId)
-		if idx == -1 {
-			log.Fatal("removeStream: streamId does not exist", zap.Uint32("streamId", streamId))
-		}
-		streamIds = slices.Delete(streamIds, idx, idx+1)
-		if len(streamIds) == 0 {
-			delete(m, key)
-		} else {
-			m[key] = streamIds
-		}
-	}
-
-	removeStream(s.streamIdsByPeer, st.peerId)
+	removeStream(s.streamIdsByPeer, st.peerId, streamId)
 	for _, tag := range st.tags {
-		removeStream(s.streamIdsByTag, tag)
+		removeStream(s.streamIdsByTag, tag, streamId)
 	}
 
 	delete(s.streams, streamId)
@@ -279,12 +322,26 @@ func (s *streamPool) handleMessageLoop() {
 		if err != nil {
 			return
 		}
-		if err = s.handler.HandleMessage(context.Background(), hm.peerId, hm.msg); err != nil {
-			log.Warn("handle message error", zap.Error(err))
+		if err = s.handler.HandleMessage(hm.ctx, hm.peerId, hm.msg); err != nil {
+			log.WarnCtx(hm.ctx, "handle message error", zap.Error(err))
 		}
 	}
 }
 
 func (s *streamPool) Close() (err error) {
 	return s.exec.Close()
+}
+
+func removeStream(m map[string][]uint32, key string, streamId uint32) {
+	streamIds := m[key]
+	idx := slices.Index(streamIds, streamId)
+	if idx == -1 {
+		log.Fatal("removeStream: streamId does not exist", zap.Uint32("streamId", streamId))
+	}
+	streamIds = slices.Delete(streamIds, idx, idx+1)
+	if len(streamIds) == 0 {
+		delete(m, key)
+	} else {
+		m[key] = streamIds
+	}
 }
