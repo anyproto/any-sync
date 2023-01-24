@@ -59,7 +59,7 @@ func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyn
 	defer cancel()
 	newCounter := s.counter.Add(1)
 	msg.ReplyId = genReplyKey(peerId, msg.ObjectId, newCounter)
-	log.Info("mpool sendSync", zap.String("replyId", msg.ReplyId))
+	log.InfoCtx(ctx, "mpool sendSync", zap.String("replyId", msg.ReplyId))
 	s.waitersMx.Lock()
 	waiter := responseWaiter{
 		ch: make(chan *spacesyncproto.ObjectSyncMessage, 1),
@@ -77,7 +77,7 @@ func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyn
 		delete(s.waiters, msg.ReplyId)
 		s.waitersMx.Unlock()
 
-		log.With(zap.String("replyId", msg.ReplyId)).Info("time elapsed when waiting")
+		log.With(zap.String("replyId", msg.ReplyId)).InfoCtx(ctx, "time elapsed when waiting")
 		err = ctx.Err()
 	case reply = <-waiter.ch:
 		// success
@@ -87,42 +87,27 @@ func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyn
 
 func (s *messagePool) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	s.updateLastUsage()
-	select {
-	case <-ctx.Done():
-		log.Warn("ctx.Done")
-	default:
-	}
 	return s.StreamManager.SendPeer(ctx, peerId, msg)
 }
 
 func (s *messagePool) SendResponsible(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	s.updateLastUsage()
-	select {
-	case <-ctx.Done():
-		log.Warn("ctx.Done")
-	default:
-	}
 	return s.StreamManager.SendResponsible(ctx, msg)
 }
 func (s *messagePool) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	s.updateLastUsage()
-	select {
-	case <-ctx.Done():
-		log.Warn("ctx.Done")
-	default:
-	}
 	return s.StreamManager.Broadcast(ctx, msg)
 }
 
 func (s *messagePool) HandleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	s.updateLastUsage()
 	if msg.ReplyId != "" {
-		log.Info("mpool receive reply", zap.String("replyId", msg.ReplyId))
+		log.InfoCtx(ctx, "mpool receive reply", zap.String("replyId", msg.ReplyId))
 		// we got reply, send it to waiter
 		if s.stopWaiter(msg) {
 			return
 		}
-		log.With(zap.String("replyId", msg.ReplyId)).Debug("reply id does not exist")
+		log.DebugCtx(ctx, "reply id does not exist", zap.String("replyId", msg.ReplyId))
 	}
 	return s.messageHandler(ctx, senderId, msg)
 }

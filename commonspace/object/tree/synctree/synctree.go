@@ -49,7 +49,7 @@ type syncTree struct {
 	isDeleted  bool
 }
 
-var log = logger.NewNamed("commonspace.synctree").Sugar()
+var log = logger.NewNamed("commonspace.synctree")
 
 var buildObjectTree = objecttree.BuildObjectTree
 var createSyncClient = newSyncClient
@@ -145,7 +145,7 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 	}
 
 	// basically building tree with in-memory storage and validating that it was without errors
-	log.With(zap.String("id", id)).Debug("validating tree")
+	log.With(zap.String("id", id)).DebugCtx(ctx, "validating tree")
 	err = objecttree.ValidateRawTree(payload, deps.AclList)
 	if err != nil {
 		return
@@ -195,7 +195,7 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 		headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 		// send to everybody, because everybody should know that the node or client got new tree
 		if e := syncTree.syncClient.Broadcast(ctx, headUpdate); e != nil {
-			log.Error("broadcast error", zap.Error(e))
+			log.ErrorCtx(ctx, "broadcast error", zap.Error(e))
 		}
 	}
 	return
@@ -261,7 +261,7 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload objecttree.
 }
 
 func (s *syncTree) Delete() (err error) {
-	log.With("id", s.Id()).Debug("deleting sync tree")
+	log.With(zap.String("id", s.Id())).Debug("deleting sync tree")
 	s.Lock()
 	defer s.Unlock()
 	if err = s.checkAlive(); err != nil {
@@ -276,7 +276,7 @@ func (s *syncTree) Delete() (err error) {
 }
 
 func (s *syncTree) Close() (err error) {
-	log.With("id", s.Id()).Debug("closing sync tree")
+	log.With(zap.String("id", s.Id())).Debug("closing sync tree")
 	s.Lock()
 	defer s.Unlock()
 	if s.isClosed {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/any-sync/app/ldiff"
+	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/confconnector"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
@@ -32,7 +33,7 @@ func newDiffSyncer(
 	storage spacestorage.SpaceStorage,
 	clientFactory spacesyncproto.ClientFactory,
 	syncStatus syncstatus.StatusUpdater,
-	log *zap.Logger) DiffSyncer {
+	log logger.CtxLogger) DiffSyncer {
 	return &diffSyncer{
 		diff:          diff,
 		spaceId:       spaceId,
@@ -52,7 +53,7 @@ type diffSyncer struct {
 	cache         treegetter.TreeGetter
 	storage       spacestorage.SpaceStorage
 	clientFactory spacesyncproto.ClientFactory
-	log           *zap.Logger
+	log           logger.CtxLogger
 	deletionState deletionstate.DeletionState
 	syncStatus    syncstatus.StatusUpdater
 }
@@ -96,7 +97,7 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 			d.log.Error("can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
 		}
 	}
-	d.log.Info("synced", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
+	d.log.Info("diff done", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
 	return nil
 }
 
@@ -131,18 +132,23 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	d.log.Info("sync done:", zap.Int("newIds", len(newIds)),
 		zap.Int("changedIds", len(changedIds)),
 		zap.Int("removedIds", len(removedIds)),
-		zap.Int("already deleted ids", totalLen-len(filteredIds)))
+		zap.Int("already deleted ids", totalLen-len(filteredIds)),
+		zap.String("peerId", p.Id()),
+	)
 	return
 }
 
 func (d *diffSyncer) pingTreesInCache(ctx context.Context, trees []string) {
+	ctx = logger.CtxWithFields(ctx, zap.String("op", "pingTrees"))
 	for _, tId := range trees {
 		tree, err := d.cache.GetTree(ctx, d.spaceId, tId)
 		if err != nil {
+			d.log.InfoCtx(ctx, "can't load tree", zap.Error(err))
 			continue
 		}
 		syncTree, ok := tree.(synctree.SyncTree)
 		if !ok {
+			d.log.InfoCtx(ctx, "not a sync tree", zap.String("objectId", tId))
 			continue
 		}
 		// the idea why we call it directly is that if we try to get it from cache

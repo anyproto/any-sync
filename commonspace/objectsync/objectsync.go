@@ -81,7 +81,7 @@ func (s *objectSync) HandleMessage(ctx context.Context, senderId string, message
 }
 
 func (s *objectSync) handleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
-	log.With(zap.String("peerId", senderId), zap.String("objectId", message.ObjectId), zap.String("replyId", message.ReplyId)).Debug("handling message")
+	log.With(zap.String("objectId", message.ObjectId), zap.String("replyId", message.ReplyId)).DebugCtx(ctx, "handling message")
 	obj, err := s.objectGetter.GetObject(ctx, message.ObjectId)
 	if err != nil {
 		return
