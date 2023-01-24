@@ -28,6 +28,7 @@ type Service interface {
 }
 
 type poolService struct {
+	// default pool
 	*pool
 	dialer    dialer.Dialer
 	metricReg *prometheus.Registry

@@ -27,6 +27,7 @@ func (sr *stream) readLoop() error {
 	defer func() {
 		sr.streamClose()
 	}()
+	sr.l.Debug("stream read started")
 	for {
 		msg := sr.pool.handler.NewReadMessage()
 		if err := sr.stream.MsgRecv(msg, EncodingProto); err != nil {

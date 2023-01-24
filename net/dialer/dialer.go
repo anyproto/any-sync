@@ -65,6 +65,7 @@ func (d *dialer) UpdateAddrs(addrs map[string][]string) {
 func (d *dialer) Dial(ctx context.Context, peerId string) (p peer.Peer, err error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
+
 	addrs, ok := d.peerAddrs[peerId]
 	if !ok || len(addrs) == 0 {
 		return nil, ErrArrdsNotFound
@@ -73,6 +74,7 @@ func (d *dialer) Dial(ctx context.Context, peerId string) (p peer.Peer, err erro
 		conn drpc.Conn
 		sc   sec.SecureConn
 	)
+	log.Warn("dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
 	for _, addr := range addrs {
 		conn, sc, err = d.handshake(ctx, addr)
 		if err != nil {

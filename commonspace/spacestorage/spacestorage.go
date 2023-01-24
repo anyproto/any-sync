@@ -2,6 +2,7 @@
 package spacestorage
 
 import (
+	"context"
 	"errors"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
@@ -51,7 +52,7 @@ type SpaceStorageCreatePayload struct {
 
 type SpaceStorageProvider interface {
 	app.Component
-	SpaceStorage(id string) (SpaceStorage, error)
+	WaitSpaceStorage(ctx context.Context, id string) (SpaceStorage, error)
 	SpaceExists(id string) bool
 	CreateSpaceStorage(payload SpaceStorageCreatePayload) (SpaceStorage, error)
 }
