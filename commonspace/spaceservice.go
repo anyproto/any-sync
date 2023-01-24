@@ -97,7 +97,7 @@ func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePaylo
 }
 
 func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
-	st, err := s.storageProvider.SpaceStorage(id)
+	st, err := s.storageProvider.WaitSpaceStorage(ctx, id)
 	if err != nil {
 		if err != spacestorage.ErrSpaceStorageMissing {
 			return nil, err

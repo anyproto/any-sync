@@ -67,7 +67,7 @@ func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyn
 	s.waiters[msg.ReplyId] = waiter
 	s.waitersMx.Unlock()
 
-	err = s.SendPeer(ctx, peerId, msg)
+	err = s.SendPeer(context.Background(), peerId, msg)
 	if err != nil {
 		return
 	}
@@ -87,15 +87,30 @@ func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyn
 
 func (s *messagePool) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	s.updateLastUsage()
+	select {
+	case <-ctx.Done():
+		log.Warn("ctx.Done")
+	default:
+	}
 	return s.StreamManager.SendPeer(ctx, peerId, msg)
 }
 
 func (s *messagePool) SendResponsible(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	s.updateLastUsage()
+	select {
+	case <-ctx.Done():
+		log.Warn("ctx.Done")
+	default:
+	}
 	return s.StreamManager.SendResponsible(ctx, msg)
 }
 func (s *messagePool) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	s.updateLastUsage()
+	select {
+	case <-ctx.Done():
+		log.Warn("ctx.Done")
+	default:
+	}
 	return s.StreamManager.Broadcast(ctx, msg)
 }
 

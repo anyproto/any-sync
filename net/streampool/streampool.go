@@ -142,7 +142,7 @@ func (s *streamPool) sendOne(ctx context.Context, p peer.Peer, msg drpc.Message)
 	}
 	for _, st := range streams {
 		if err = st.write(msg); err != nil {
-			st.l.Info("sendOne write error", zap.Error(err))
+			st.l.Info("sendOne write error", zap.Error(err), zap.Int("streams", len(streams)))
 			// continue with next stream
 			continue
 		} else {
@@ -279,7 +279,7 @@ func (s *streamPool) handleMessageLoop() {
 		if err != nil {
 			return
 		}
-		if err = s.handler.HandleMessage(hm.ctx, hm.peerId, hm.msg); err != nil {
+		if err = s.handler.HandleMessage(context.Background(), hm.peerId, hm.msg); err != nil {
 			log.Warn("handle message error", zap.Error(err))
 		}
 	}
