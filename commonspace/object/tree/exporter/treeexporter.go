@@ -8,7 +8,7 @@ import (
 
 type DataConverter interface {
 	Unmarshall(decrypted []byte) (any, error)
-	Convert(model any) (any, error)
+	Marshall(model any) ([]byte, error)
 }
 
 type TreeExporterParams struct {
