@@ -55,7 +55,7 @@ type ReadableObjectTree interface {
 	HasChanges(...string) bool
 	GetChange(string) (*Change, error)
 
-	DebugDump(parser DescriptionParser) (string, error)
+	Debug(parser DescriptionParser) (DebugInfo, error)
 	IterateRoot(convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 }
@@ -609,6 +609,6 @@ func (ot *objectTree) validateTree(newChanges []*Change) error {
 	return ot.validator.ValidateNewChanges(ot.tree, ot.aclList, newChanges)
 }
 
-func (ot *objectTree) DebugDump(parser DescriptionParser) (string, error) {
-	return ot.tree.Graph(parser)
+func (ot *objectTree) Debug(parser DescriptionParser) (DebugInfo, error) {
+	return objectTreeDebug{}.debugInfo(ot, parser)
 }
