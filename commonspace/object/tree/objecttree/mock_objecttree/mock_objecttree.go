@@ -96,19 +96,19 @@ func (mr *MockObjectTreeMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockObjectTree)(nil).Close))
 }
 
-// DebugDump mocks base method.
-func (m *MockObjectTree) DebugDump(arg0 objecttree.DescriptionParser) (string, error) {
+// Debug mocks base method.
+func (m *MockObjectTree) Debug(arg0 objecttree.DescriptionParser) (objecttree.DebugInfo, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DebugDump", arg0)
-	ret0, _ := ret[0].(string)
+	ret := m.ctrl.Call(m, "Debug", arg0)
+	ret0, _ := ret[0].(objecttree.DebugInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DebugDump indicates an expected call of DebugDump.
-func (mr *MockObjectTreeMockRecorder) DebugDump(arg0 interface{}) *gomock.Call {
+// Debug indicates an expected call of Debug.
+func (mr *MockObjectTreeMockRecorder) Debug(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DebugDump", reflect.TypeOf((*MockObjectTree)(nil).DebugDump), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Debug", reflect.TypeOf((*MockObjectTree)(nil).Debug), arg0)
 }
 
 // Delete mocks base method.
