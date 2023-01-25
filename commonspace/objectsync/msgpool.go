@@ -2,6 +2,7 @@ package objectsync
 
 import (
 	"context"
+	"fmt"
 	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
@@ -78,7 +79,7 @@ func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyn
 		s.waitersMx.Unlock()
 
 		log.With(zap.String("replyId", msg.ReplyId)).InfoCtx(ctx, "time elapsed when waiting")
-		err = ctx.Err()
+		err = fmt.Errorf("sendSync context error: %v", ctx.Err())
 	case reply = <-waiter.ch:
 		// success
 	}

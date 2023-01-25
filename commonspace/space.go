@@ -192,13 +192,13 @@ func (s *space) Init(ctx context.Context) (err error) {
 		DeletionState: deletionState,
 	}
 	s.settingsObject = settings.NewSettingsObject(deps, s.id)
-	s.cache.AddObject(s.settingsObject)
 	s.objectSync.Init()
 	s.headSync.Init(initialIds, deletionState)
 	err = s.settingsObject.Init(ctx)
 	if err != nil {
 		return
 	}
+	s.cache.AddObject(s.settingsObject)
 	s.syncStatus.Run()
 
 	return nil
