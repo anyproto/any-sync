@@ -91,13 +91,13 @@ func BuildObjectTree(treeStorage treestorage.TreeStorage, aclList list.AclList) 
 	return buildObjectTree(deps)
 }
 
-func BuildNonVerifiableTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
-	rootChange, err := treeStorage.Root()
+func BuildNonVerifiableHistoryTree(params HistoryTreeParams) (HistoryTree, error) {
+	rootChange, err := params.TreeStorage.Root()
 	if err != nil {
 		return nil, err
 	}
-	deps := nonVerifiableTreeDeps(rootChange, treeStorage, aclList)
-	return buildObjectTree(deps)
+	deps := nonVerifiableTreeDeps(rootChange, params.TreeStorage, params.AclList)
+	return buildHistoryTree(deps, params)
 }
 
 func BuildHistoryTree(params HistoryTreeParams) (HistoryTree, error) {
