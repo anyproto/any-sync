@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	list "github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	objecttree "github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	updatelistener "github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
 	treechangeproto "github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
@@ -160,6 +161,20 @@ func NewMockSyncTree(ctrl *gomock.Controller) *MockSyncTree {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockSyncTree) EXPECT() *MockSyncTreeMockRecorder {
 	return m.recorder
+}
+
+// AclList mocks base method.
+func (m *MockSyncTree) AclList() list.AclList {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AclList")
+	ret0, _ := ret[0].(list.AclList)
+	return ret0
+}
+
+// AclList indicates an expected call of AclList.
+func (mr *MockSyncTreeMockRecorder) AclList() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclList", reflect.TypeOf((*MockSyncTree)(nil).AclList))
 }
 
 // AddContent mocks base method.

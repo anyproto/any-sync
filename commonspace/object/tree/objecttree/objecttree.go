@@ -52,6 +52,8 @@ type ReadableObjectTree interface {
 	Heads() []string
 	Root() *Change
 
+	AclList() list.AclList
+
 	HasChanges(...string) bool
 	GetChange(string) (*Change, error)
 
@@ -120,6 +122,10 @@ func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Chan
 
 func (ot *objectTree) Id() string {
 	return ot.id
+}
+
+func (ot *objectTree) AclList() list.AclList {
+	return ot.aclList
 }
 
 func (ot *objectTree) Header() *treechangeproto.RawTreeChangeWithId {
