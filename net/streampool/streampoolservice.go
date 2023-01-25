@@ -3,7 +3,6 @@ package streampool
 import (
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/cheggaaa/mb/v3"
 )
 
 const CName = "common.net.streampool"
@@ -30,9 +29,7 @@ func (s *service) NewStreamPool(h StreamHandler) StreamPool {
 		streams:         map[uint32]*stream{},
 		opening:         map[string]*openingProcess{},
 		exec:            newStreamSender(10, 100),
-		handleQueue:     mb.New[handleMessage](100),
 	}
-	sp.init()
 	return sp
 }
 

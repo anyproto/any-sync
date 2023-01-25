@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/pool"
-	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/context"
@@ -49,7 +48,6 @@ type streamPool struct {
 	streams         map[uint32]*stream
 	opening         map[string]*openingProcess
 	exec            *sendPool
-	handleQueue     *mb.MB[handleMessage]
 	mu              sync.RWMutex
 	lastStreamId    uint32
 }
@@ -62,13 +60,6 @@ type handleMessage struct {
 	ctx    context.Context
 	msg    drpc.Message
 	peerId string
-}
-
-func (s *streamPool) init() {
-	// TODO: to config
-	for i := 0; i < 10; i++ {
-		go s.handleMessageLoop()
-	}
 }
 
 func (s *streamPool) ReadStream(peerId string, drpcStream drpc.Stream, tags ...string) error {
@@ -306,26 +297,6 @@ func (s *streamPool) removeStream(streamId uint32) {
 
 	delete(s.streams, streamId)
 	st.l.Debug("stream removed", zap.Strings("tags", st.tags))
-}
-
-func (s *streamPool) HandleMessage(ctx context.Context, peerId string, msg drpc.Message) (err error) {
-	return s.handleQueue.Add(ctx, handleMessage{
-		ctx:    ctx,
-		msg:    msg,
-		peerId: peerId,
-	})
-}
-
-func (s *streamPool) handleMessageLoop() {
-	for {
-		hm, err := s.handleQueue.WaitOne(context.Background())
-		if err != nil {
-			return
-		}
-		if err = s.handler.HandleMessage(hm.ctx, hm.peerId, hm.msg); err != nil {
-			log.WarnCtx(hm.ctx, "handle message error", zap.Error(err))
-		}
-	}
 }
 
 func (s *streamPool) Close() (err error) {

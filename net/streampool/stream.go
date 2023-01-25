@@ -2,11 +2,14 @@ package streampool
 
 import (
 	"context"
+	"fmt"
 	"github.com/anytypeio/any-sync/app/logger"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 	"sync/atomic"
 )
+
+var msgCounter atomic.Uint32
 
 type stream struct {
 	peerId   string
@@ -37,8 +40,8 @@ func (sr *stream) readLoop() error {
 			return err
 		}
 		ctx := streamCtx(context.Background(), sr.streamId, sr.peerId)
-		ctx = logger.CtxWithFields(ctx, zap.String("rootOp", "streamMessage"), zap.String("peerId", sr.peerId))
-		if err := sr.pool.HandleMessage(ctx, sr.peerId, msg); err != nil {
+		ctx = logger.CtxWithFields(ctx, zap.String("rootOp", fmt.Sprintf("streamMsg.%d", msgCounter.Add(1))), zap.String("peerId", sr.peerId))
+		if err := sr.pool.handler.HandleMessage(ctx, sr.peerId, msg); err != nil {
 			sr.l.Info("msg handle error", zap.Error(err))
 			return err
 		}

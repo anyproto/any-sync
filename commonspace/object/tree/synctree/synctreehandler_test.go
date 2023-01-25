@@ -3,6 +3,7 @@ package synctree
 import (
 	"context"
 	"fmt"
+	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/mock_synctree"
@@ -70,7 +71,7 @@ func (fx *syncHandlerFixture) stop() {
 
 func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 	ctx := context.Background()
-	log = zap.NewNop().Sugar()
+	log = logger.CtxLogger{Logger: zap.NewNop()}
 
 	t.Run("head update non empty all heads added", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
@@ -207,7 +208,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 
 func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 	ctx := context.Background()
-	log = zap.NewNop().Sugar()
+	log = logger.CtxLogger{Logger: zap.NewNop()}
 
 	t.Run("full sync request with change", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
@@ -338,7 +339,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 
 func TestSyncHandler_HandleFullSyncResponse(t *testing.T) {
 	ctx := context.Background()
-	log = zap.NewNop().Sugar()
+	log = logger.CtxLogger{Logger: zap.NewNop()}
 
 	t.Run("full sync response with change", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)

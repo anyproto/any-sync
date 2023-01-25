@@ -5,7 +5,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/syncobjectgetter"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
-	"golang.org/x/exp/slices"
 )
 
 type commonGetter struct {
@@ -22,9 +21,6 @@ func newCommonGetter(spaceId string, getter treegetter.TreeGetter) *commonGetter
 }
 
 func (c *commonGetter) AddObject(object syncobjectgetter.SyncObject) {
-	if object == nil {
-		panic("nil object")
-	}
 	c.reservedObjects = append(c.reservedObjects, object)
 }
 
@@ -36,13 +32,12 @@ func (c *commonGetter) GetTree(ctx context.Context, spaceId, treeId string) (obj
 }
 
 func (c *commonGetter) getReservedObject(id string) syncobjectgetter.SyncObject {
-	pos := slices.IndexFunc(c.reservedObjects, func(object syncobjectgetter.SyncObject) bool {
-		return object.Id() == id
-	})
-	if pos == -1 {
-		return nil
+	for _, obj := range c.reservedObjects {
+		if obj != nil && obj.Id() == id {
+			return obj
+		}
 	}
-	return c.reservedObjects[pos]
+	return nil
 }
 
 func (c *commonGetter) GetObject(ctx context.Context, objectId string) (obj syncobjectgetter.SyncObject, err error) {
