@@ -73,5 +73,8 @@ func (t *treeExporter) ExportUnencrypted(tree objecttree.ReadableObjectTree) (er
 		err = putStorage(change)
 		return err == nil
 	})
-	return err
+	if err != nil {
+		return
+	}
+	return treeStorage.SetHeads(tree.Heads())
 }
