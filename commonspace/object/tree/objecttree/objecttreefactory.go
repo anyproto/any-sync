@@ -180,6 +180,7 @@ func createObjectTreeRoot(
 
 func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 	objTree := &objectTree{
+		id:              deps.treeStorage.Id(),
 		treeStorage:     deps.treeStorage,
 		treeBuilder:     deps.treeBuilder,
 		validator:       deps.validator,
@@ -198,7 +199,6 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		return nil, err
 	}
 
-	objTree.id = objTree.treeStorage.Id()
 	objTree.rawRoot, err = objTree.treeStorage.Root()
 	if err != nil {
 		return nil, err
@@ -216,6 +216,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 
 func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht HistoryTree, err error) {
 	objTree := &objectTree{
+		id:              deps.treeStorage.Id(),
 		treeStorage:     deps.treeStorage,
 		treeBuilder:     deps.treeBuilder,
 		validator:       deps.validator,
