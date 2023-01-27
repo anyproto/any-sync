@@ -100,7 +100,9 @@ func (s *streamPool) Send(ctx context.Context, msg drpc.Message, peers ...peer.P
 	for _, p := range peers {
 		funcs = append(funcs, func() {
 			if e := s.sendOne(ctx, p, msg); e != nil {
-				log.Info("send peer error", zap.Error(e), zap.String("peerId", p.Id()))
+				log.InfoCtx(ctx, "send peer error", zap.Error(e), zap.String("peerId", p.Id()))
+			} else {
+				log.DebugCtx(ctx, "send success", zap.String("peerId", p.Id()))
 			}
 		})
 	}
@@ -121,6 +123,8 @@ func (s *streamPool) SendById(ctx context.Context, msg drpc.Message, peerIds ...
 		funcs = append(funcs, func() {
 			if e := st.write(msg); e != nil {
 				st.l.Debug("sendById write error", zap.Error(e))
+			} else {
+				st.l.DebugCtx(ctx, "sendById success")
 			}
 		})
 	}
@@ -142,6 +146,7 @@ func (s *streamPool) sendOne(ctx context.Context, p peer.Peer, msg drpc.Message)
 			// continue with next stream
 			continue
 		} else {
+			st.l.DebugCtx(ctx, "sendOne success")
 			// stop sending on success
 			break
 		}
