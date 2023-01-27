@@ -80,13 +80,13 @@ func (s *objectSync) HandleMessage(ctx context.Context, senderId string, message
 	return s.messagePool.HandleMessage(ctx, senderId, message)
 }
 
-func (s *objectSync) handleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
-	log.With(zap.String("objectId", message.ObjectId), zap.String("replyId", message.ReplyId)).DebugCtx(ctx, "handling message")
-	obj, err := s.objectGetter.GetObject(ctx, message.ObjectId)
+func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	log.With(zap.String("objectId", msg.ObjectId), zap.String("replyId", msg.ReplyId)).DebugCtx(ctx, "handling message")
+	obj, err := s.objectGetter.GetObject(ctx, msg.ObjectId)
 	if err != nil {
 		return
 	}
-	return obj.HandleMessage(ctx, senderId, message)
+	return obj.HandleMessage(ctx, senderId, msg)
 }
 
 func (s *objectSync) MessagePool() MessagePool {
