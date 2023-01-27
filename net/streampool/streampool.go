@@ -249,7 +249,12 @@ func (s *streamPool) Broadcast(ctx context.Context, msg drpc.Message, tags ...st
 		}
 	}
 	for _, st := range streams {
-		s.exec.Add(ctx, sendStreamFunc(st))
+		if st == nil {
+			panic("nil stream")
+		}
+		if err = s.exec.Add(ctx, sendStreamFunc(st)); err != nil {
+			return err
+		}
 	}
 	return
 }
@@ -268,11 +273,11 @@ func (s *streamPool) AddTagsCtx(ctx context.Context, tags ...string) error {
 	var newTags = make([]string, 0, len(tags))
 	for _, newTag := range tags {
 		if !slices.Contains(st.tags, newTag) {
+			st.tags = append(st.tags, newTag)
 			newTags = append(newTags, newTag)
 		}
 	}
-	st.tags = append(st.tags, newTags...)
-	for _, newTag := range tags {
+	for _, newTag := range newTags {
 		s.streamIdsByTag[newTag] = append(s.streamIdsByTag[newTag], streamId)
 	}
 	return nil

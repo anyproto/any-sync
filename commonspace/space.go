@@ -214,7 +214,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	}
 	s.cache.AddObject(s.settingsObject)
 	s.syncStatus.Run()
-	s.handleQueue = multiqueue.New[HandleMessage](s.handleMessage, 10)
+	s.handleQueue = multiqueue.New[HandleMessage](s.handleMessage, 100)
 	return nil
 }
 

@@ -177,7 +177,7 @@ func TestStreamPool_Tags(t *testing.T) {
 	defer s1.Close()
 	fx.AddStream("p2", s2, "t2")
 
-	err := fx.AddTagsCtx(streamCtx(ctx, 1, "p1"), "t3")
+	err := fx.AddTagsCtx(streamCtx(ctx, 1, "p1"), "t3", "t3")
 	require.NoError(t, err)
 	assert.Equal(t, []uint32{1}, fx.StreamPool.(*streamPool).streamIdsByTag["t3"])
 
