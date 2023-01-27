@@ -68,7 +68,7 @@ func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyn
 	s.waiters[msg.ReplyId] = waiter
 	s.waitersMx.Unlock()
 
-	err = s.SendPeer(context.Background(), peerId, msg)
+	err = s.SendPeer(ctx, peerId, msg)
 	if err != nil {
 		return
 	}
@@ -78,7 +78,7 @@ func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyn
 		delete(s.waiters, msg.ReplyId)
 		s.waitersMx.Unlock()
 
-		log.With(zap.String("replyId", msg.ReplyId)).InfoCtx(ctx, "time elapsed when waiting")
+		log.With(zap.String("replyId", msg.ReplyId)).WarnCtx(ctx, "time elapsed when waiting")
 		err = fmt.Errorf("sendSync context error: %v", ctx.Err())
 	case reply = <-waiter.ch:
 		// success

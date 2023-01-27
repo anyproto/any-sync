@@ -77,6 +77,7 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 	getTreeRemote := func() (msg *treechangeproto.TreeSyncMessage, err error) {
 		peerId, err := peer.CtxPeerId(ctx)
 		if err != nil {
+			log.WarnCtx(ctx, "peer not found in context, use first responsible")
 			peerId = deps.Configuration.NodeIds(deps.SpaceId)[0]
 		}
 
