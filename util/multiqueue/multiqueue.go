@@ -47,7 +47,7 @@ func (m *multiQueue[T]) Add(ctx context.Context, threadId string, msg T) (err er
 		q = m.startThread(threadId)
 	}
 	m.mu.Unlock()
-	return q.Add(ctx, msg)
+	return q.TryAdd(msg)
 }
 
 func (m *multiQueue[T]) startThread(id string) *mb.MB[T] {
