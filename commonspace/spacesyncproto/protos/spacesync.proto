@@ -56,9 +56,10 @@ message HeadSyncResponse {
 // ObjectSyncMessage is a message sent on object sync
 message ObjectSyncMessage {
     string spaceId = 1;
-    string replyId = 2;
-    bytes payload = 3;
-    string objectId = 4;
+    string requestId = 2;
+    string replyId = 3;
+    bytes payload = 4;
+    string objectId = 5;
     //  string identity = 5;
     //  string peerSignature = 6;
 }
