@@ -286,7 +286,8 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 			SnapshotPath: []string{"h1"},
 		}
 		treeMsg := treechangeproto.WrapFullRequest(fullSyncRequest, chWithId)
-		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, replyId)
+		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg.RequestId = replyId
 		fullResponse := &treechangeproto.TreeSyncMessage{}
 
 		fx.objectTreeMock.EXPECT().
