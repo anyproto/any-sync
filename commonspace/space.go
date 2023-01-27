@@ -352,7 +352,14 @@ func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
 }
 
 func (s *space) HandleMessage(ctx context.Context, hm HandleMessage) (err error) {
-	return s.handleQueue.Add(ctx, hm.Message.ObjectId, hm)
+	threadId := hm.Message.ObjectId
+	if hm.Message.ReplyId != "" {
+		threadId += hm.Message.ReplyId
+		defer func() {
+			_ = s.handleQueue.CloseThread(threadId)
+		}()
+	}
+	return s.handleQueue.Add(ctx, threadId, hm)
 }
 
 func (s *space) handleMessage(msg HandleMessage) {
