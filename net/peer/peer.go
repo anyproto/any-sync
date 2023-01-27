@@ -77,6 +77,6 @@ func (p *peer) UpdateLastUsage() {
 }
 
 func (p *peer) Close() (err error) {
-	log.Warn("peer close", zap.String("peerId", p.id))
+	log.Debug("peer close", zap.String("peerId", p.id))
 	return p.Conn.Close()
 }

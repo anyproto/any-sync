@@ -92,16 +92,22 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	var peerIds = make([]string, 0, len(peers))
 	for _, p := range peers {
-		if err = d.syncWithPeer(ctx, p); err != nil {
-			d.log.Error("can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
+		peerIds = append(peerIds, p.Id())
+	}
+	d.log.DebugCtx(ctx, "start diffsync", zap.Strings("peerIds", peerIds))
+	for _, p := range peers {
+		if err = d.syncWithPeer(peer.CtxWithPeerId(ctx, p.Id()), p); err != nil {
+			d.log.ErrorCtx(ctx, "can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
 		}
 	}
-	d.log.Info("diff done", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
+	d.log.InfoCtx(ctx, "diff done", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
 	return nil
 }
 
 func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
+	ctx = logger.CtxWithFields(ctx, zap.String("peerId", p.Id()))
 	var (
 		cl           = d.clientFactory.Client(p)
 		rdiff        = NewRemoteDiff(d.spaceId, cl)
@@ -126,7 +132,6 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 
 	d.syncStatus.RemoveAllExcept(p.Id(), filteredIds, stateCounter)
 
-	ctx = peer.CtxWithPeerId(ctx, p.Id())
 	d.pingTreesInCache(ctx, filteredIds)
 
 	d.log.Info("sync done:", zap.Int("newIds", len(newIds)),
@@ -139,7 +144,6 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 }
 
 func (d *diffSyncer) pingTreesInCache(ctx context.Context, trees []string) {
-	ctx = logger.CtxWithFields(ctx, zap.String("op", "pingTrees"))
 	for _, tId := range trees {
 		tree, err := d.cache.GetTree(ctx, d.spaceId, tId)
 		if err != nil {

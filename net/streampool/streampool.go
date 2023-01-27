@@ -96,42 +96,60 @@ func (s *streamPool) addStream(peerId string, drpcStream drpc.Stream, tags ...st
 }
 
 func (s *streamPool) Send(ctx context.Context, msg drpc.Message, peers ...peer.Peer) (err error) {
-	var funcs []func()
-	for _, p := range peers {
-		funcs = append(funcs, func() {
-			if e := s.sendOne(ctx, p, msg); e != nil {
-				log.InfoCtx(ctx, "send peer error", zap.Error(e), zap.String("peerId", p.Id()))
+	var sendOneFunc = func(sp peer.Peer) func() {
+		return func() {
+			if e := s.sendOne(ctx, sp, msg); e != nil {
+				log.InfoCtx(ctx, "send peer error", zap.Error(e), zap.String("peerId", sp.Id()))
 			} else {
-				log.DebugCtx(ctx, "send success", zap.String("peerId", p.Id()))
+				log.DebugCtx(ctx, "send success", zap.String("peerId", sp.Id()))
 			}
-		})
+		}
 	}
-	return s.exec.Add(ctx, funcs...)
+
+	for _, p := range peers {
+		if err = s.exec.Add(ctx, sendOneFunc(p)); err != nil {
+			return
+		}
+	}
+	return
 }
 
 func (s *streamPool) SendById(ctx context.Context, msg drpc.Message, peerIds ...string) (err error) {
 	s.mu.Lock()
-	var streams []*stream
+	var streamsByPeer [][]*stream
 	for _, peerId := range peerIds {
+		var streams []*stream
 		for _, streamId := range s.streamIdsByPeer[peerId] {
 			streams = append(streams, s.streams[streamId])
 		}
+		if len(streams) != 0 {
+			streamsByPeer = append(streamsByPeer, streams)
+		}
 	}
 	s.mu.Unlock()
-	var funcs []func()
-	for _, st := range streams {
-		funcs = append(funcs, func() {
-			if e := st.write(msg); e != nil {
-				st.l.Debug("sendById write error", zap.Error(e))
-			} else {
-				st.l.DebugCtx(ctx, "sendById success")
+
+	var sendStreamsFunc = func(streams []*stream) func() {
+		return func() {
+			for _, st := range streams {
+				if e := st.write(msg); e != nil {
+					st.l.Debug("sendById write error", zap.Error(e))
+				} else {
+					st.l.DebugCtx(ctx, "sendById success")
+					return
+				}
 			}
-		})
+		}
 	}
-	if len(funcs) == 0 {
+
+	for _, streams := range streamsByPeer {
+		if err = s.exec.Add(ctx, sendStreamsFunc(streams)); err != nil {
+			return
+		}
+	}
+	if len(streamsByPeer) == 0 {
 		return pool.ErrUnableToConnect
 	}
-	return s.exec.Add(ctx, funcs...)
+	return
 }
 
 func (s *streamPool) sendOne(ctx context.Context, p peer.Peer, msg drpc.Message) (err error) {
@@ -221,18 +239,19 @@ func (s *streamPool) Broadcast(ctx context.Context, msg drpc.Message, tags ...st
 		}
 	}
 	s.mu.Unlock()
-	var funcs []func()
-	for _, st := range streams {
-		funcs = append(funcs, func() {
+	var sendStreamFunc = func(st *stream) func() {
+		return func() {
 			if e := st.write(msg); e != nil {
-				log.DebugCtx(ctx, "broadcast write error", zap.Error(e))
+				st.l.InfoCtx(ctx, "broadcast write error", zap.Error(e))
+			} else {
+				st.l.DebugCtx(ctx, "broadcast success")
 			}
-		})
+		}
 	}
-	if len(funcs) == 0 {
-		return
+	for _, st := range streams {
+		s.exec.Add(ctx, sendStreamFunc(st))
 	}
-	return s.exec.Add(ctx, funcs...)
+	return
 }
 
 func (s *streamPool) AddTagsCtx(ctx context.Context, tags ...string) error {
