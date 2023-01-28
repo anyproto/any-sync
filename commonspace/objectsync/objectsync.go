@@ -1,11 +1,9 @@
-//go:generate mockgen -destination mock_objectsync/mock_objectsync.go github.com/anytypeio/any-sync/commonspace/objectsync ActionQueue
 package objectsync
 
 import (
 	"context"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/app/ocache"
-	"github.com/anytypeio/any-sync/commonspace/confconnector"
 	"github.com/anytypeio/any-sync/commonspace/object/syncobjectgetter"
 	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
@@ -18,9 +16,7 @@ var log = logger.NewNamed("commonspace.objectsync")
 type ObjectSync interface {
 	ocache.ObjectLastUsage
 	synchandler.SyncHandler
-	StreamPool() StreamPool
-	StreamChecker() StreamChecker
-	ActionQueue() ActionQueue
+	MessagePool() MessagePool
 
 	Init()
 	Close() (err error)
@@ -29,10 +25,8 @@ type ObjectSync interface {
 type objectSync struct {
 	spaceId string
 
-	streamPool   StreamPool
-	checker      StreamChecker
+	messagePool  MessagePool
 	objectGetter syncobjectgetter.SyncObjectGetter
-	actionQueue  ActionQueue
 
 	syncCtx    context.Context
 	cancelSync context.CancelFunc
@@ -40,82 +34,61 @@ type objectSync struct {
 
 func NewObjectSync(
 	spaceId string,
-	confConnector confconnector.ConfConnector,
-	objectGetter syncobjectgetter.SyncObjectGetter) (objectSync ObjectSync) {
-	streamPool := newStreamPool(func(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
-		return objectSync.HandleMessage(ctx, senderId, message)
-	})
-	clientFactory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
-	syncLog := log.With(zap.String("id", spaceId))
+	streamManager StreamManager,
+	objectGetter syncobjectgetter.SyncObjectGetter) ObjectSync {
 	syncCtx, cancel := context.WithCancel(context.Background())
-	checker := NewStreamChecker(
+	os := newObjectSync(
 		spaceId,
-		confConnector,
-		streamPool,
-		clientFactory,
-		syncCtx,
-		syncLog)
-	objectSync = newObjectSync(
-		spaceId,
-		streamPool,
-		checker,
 		objectGetter,
 		syncCtx,
 		cancel)
-	return
+	msgPool := newMessagePool(streamManager, os.handleMessage)
+	os.messagePool = msgPool
+	return os
 }
 
 func newObjectSync(
 	spaceId string,
-	streamPool StreamPool,
-	checker StreamChecker,
 	objectGetter syncobjectgetter.SyncObjectGetter,
 	syncCtx context.Context,
 	cancel context.CancelFunc,
 ) *objectSync {
 	return &objectSync{
 		objectGetter: objectGetter,
-		streamPool:   streamPool,
 		spaceId:      spaceId,
-		checker:      checker,
 		syncCtx:      syncCtx,
 		cancelSync:   cancel,
-		actionQueue:  NewDefaultActionQueue(),
+		//actionQueue:  NewDefaultActionQueue(),
 	}
 }
 
 func (s *objectSync) Init() {
-	s.actionQueue.Run()
-	go s.checker.CheckResponsiblePeers()
+	//s.actionQueue.Run()
 }
 
 func (s *objectSync) Close() (err error) {
-	s.actionQueue.Close()
+	//s.actionQueue.Close()
 	s.cancelSync()
-	return s.streamPool.Close()
+	return
 }
 
 func (s *objectSync) LastUsage() time.Time {
-	return s.streamPool.LastUsage()
+	return s.messagePool.LastUsage()
 }
 
 func (s *objectSync) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
-	log.With(zap.String("peerId", senderId), zap.String("objectId", message.ObjectId)).Debug("handling message")
-	obj, err := s.objectGetter.GetObject(ctx, message.ObjectId)
+	return s.messagePool.HandleMessage(ctx, senderId, message)
+}
+
+func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	log.With(zap.String("objectId", msg.ObjectId), zap.String("replyId", msg.ReplyId)).DebugCtx(ctx, "handling message")
+	obj, err := s.objectGetter.GetObject(ctx, msg.ObjectId)
 	if err != nil {
 		return
 	}
-	return obj.HandleMessage(ctx, senderId, message)
+	return obj.HandleMessage(ctx, senderId, msg)
 }
 
-func (s *objectSync) StreamPool() StreamPool {
-	return s.streamPool
-}
-
-func (s *objectSync) StreamChecker() StreamChecker {
-	return s.checker
-}
-
-func (s *objectSync) ActionQueue() ActionQueue {
-	return s.actionQueue
+func (s *objectSync) MessagePool() MessagePool {
+	return s.messagePool
 }

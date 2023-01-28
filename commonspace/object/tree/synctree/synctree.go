@@ -38,7 +38,7 @@ type SyncTree interface {
 	objecttree.ObjectTree
 	synchandler.SyncHandler
 	ListenerSetter
-	Ping() (err error)
+	Ping(ctx context.Context) (err error)
 }
 
 // SyncTree sends head updates to sync service and also sends new changes to update listener
@@ -54,10 +54,10 @@ type syncTree struct {
 	isDeleted  bool
 }
 
-var log = logger.NewNamed("commonspace.synctree").Sugar()
+var log = logger.NewNamed("commonspace.synctree")
 
 var buildObjectTree = objecttree.BuildObjectTree
-var createSyncClient = newWrappedSyncClient
+var createSyncClient = newSyncClient
 
 type BuildDeps struct {
 	SpaceId            string
@@ -73,39 +73,21 @@ type BuildDeps struct {
 	WaitTreeRemoteSync bool
 }
 
-func newWrappedSyncClient(
-	spaceId string,
-	factory RequestFactory,
-	objectSync objectsync.ObjectSync,
-	configuration nodeconf.Configuration) SyncClient {
-	syncClient := newSyncClient(spaceId, objectSync.StreamPool(), factory, configuration, objectSync.StreamChecker())
-	return newQueuedClient(syncClient, objectSync.ActionQueue())
-}
-
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {
 	getTreeRemote := func() (msg *treechangeproto.TreeSyncMessage, err error) {
-		streamChecker := deps.ObjectSync.StreamChecker()
 		peerId, err := peer.CtxPeerId(ctx)
 		if err != nil {
-			streamChecker.CheckResponsiblePeers()
-			peerId, err = streamChecker.FirstResponsiblePeer()
-			if err != nil {
-				return
-			}
+			log.WarnCtx(ctx, "peer not found in context, use first responsible")
+			peerId = deps.Configuration.NodeIds(deps.SpaceId)[0]
 		}
 
 		newTreeRequest := GetRequestFactory().CreateNewTreeRequest()
-		objMsg, err := marshallTreeMessage(newTreeRequest, id, "")
+		objMsg, err := marshallTreeMessage(newTreeRequest, deps.SpaceId, id, "")
 		if err != nil {
 			return
 		}
 
-		err = deps.ObjectSync.StreamChecker().CheckPeerConnection(peerId)
-		if err != nil {
-			return
-		}
-
-		resp, err := deps.ObjectSync.StreamPool().SendSync(peerId, objMsg)
+		resp, err := deps.ObjectSync.MessagePool().SendSync(ctx, peerId, objMsg)
 		if err != nil {
 			return
 		}
@@ -169,7 +151,7 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 	}
 
 	// basically building tree with in-memory storage and validating that it was without errors
-	log.With(zap.String("id", id)).Debug("validating tree")
+	log.With(zap.String("id", id)).DebugCtx(ctx, "validating tree")
 	err = objecttree.ValidateRawTree(payload, deps.AclList)
 	if err != nil {
 		return
@@ -197,8 +179,8 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	}
 	syncClient := createSyncClient(
 		deps.SpaceId,
+		deps.ObjectSync.MessagePool(),
 		sharedFactory,
-		deps.ObjectSync,
 		deps.Configuration)
 	syncTree := &syncTree{
 		ObjectTree: objTree,
@@ -218,7 +200,9 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	if isFirstBuild {
 		headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 		// send to everybody, because everybody should know that the node or client got new tree
-		syncTree.syncClient.BroadcastAsync(headUpdate)
+		if e := syncTree.syncClient.Broadcast(ctx, headUpdate); e != nil {
+			log.ErrorCtx(ctx, "broadcast error", zap.Error(e))
+		}
 	}
 	return
 }
@@ -255,7 +239,7 @@ func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableCh
 	}
 	s.syncStatus.HeadsChange(s.Id(), res.Heads)
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
-	err = s.syncClient.BroadcastAsync(headUpdate)
+	err = s.syncClient.Broadcast(ctx, headUpdate)
 	return
 }
 
@@ -282,13 +266,13 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload objecttree.
 			s.notifiable.UpdateHeads(s.Id(), res.Heads)
 		}
 		headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
-		err = s.syncClient.BroadcastAsync(headUpdate)
+		err = s.syncClient.Broadcast(ctx, headUpdate)
 	}
 	return
 }
 
 func (s *syncTree) Delete() (err error) {
-	log.With("id", s.Id()).Debug("deleting sync tree")
+	log.With(zap.String("id", s.Id())).Debug("deleting sync tree")
 	s.Lock()
 	defer s.Unlock()
 	if err = s.checkAlive(); err != nil {
@@ -303,7 +287,7 @@ func (s *syncTree) Delete() (err error) {
 }
 
 func (s *syncTree) Close() (err error) {
-	log.With("id", s.Id()).Debug("closing sync tree")
+	log.With(zap.String("id", s.Id())).Debug("closing sync tree")
 	s.Lock()
 	defer s.Unlock()
 	if s.isClosed {
@@ -324,11 +308,11 @@ func (s *syncTree) checkAlive() (err error) {
 	return
 }
 
-func (s *syncTree) Ping() (err error) {
+func (s *syncTree) Ping(ctx context.Context) (err error) {
 	s.Lock()
 	defer s.Unlock()
 	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
-	return s.syncClient.BroadcastAsyncOrSendResponsible(headUpdate)
+	return s.syncClient.BroadcastAsyncOrSendResponsible(ctx, headUpdate)
 }
 
 func (s *syncTree) afterBuild() {

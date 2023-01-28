@@ -2,7 +2,9 @@ package headsync
 
 import (
 	"context"
+	"fmt"
 	"github.com/anytypeio/any-sync/app/ldiff"
+	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/confconnector"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
@@ -31,7 +33,7 @@ func newDiffSyncer(
 	storage spacestorage.SpaceStorage,
 	clientFactory spacesyncproto.ClientFactory,
 	syncStatus syncstatus.StatusUpdater,
-	log *zap.Logger) DiffSyncer {
+	log logger.CtxLogger) DiffSyncer {
 	return &diffSyncer{
 		diff:          diff,
 		spaceId:       spaceId,
@@ -51,7 +53,7 @@ type diffSyncer struct {
 	cache         treegetter.TreeGetter
 	storage       spacestorage.SpaceStorage
 	clientFactory spacesyncproto.ClientFactory
-	log           *zap.Logger
+	log           logger.CtxLogger
 	deletionState deletionstate.DeletionState
 	syncStatus    syncstatus.StatusUpdater
 }
@@ -90,16 +92,22 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	var peerIds = make([]string, 0, len(peers))
 	for _, p := range peers {
-		if err := d.syncWithPeer(ctx, p); err != nil {
-			d.log.Error("can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
+		peerIds = append(peerIds, p.Id())
+	}
+	d.log.DebugCtx(ctx, "start diffsync", zap.Strings("peerIds", peerIds))
+	for _, p := range peers {
+		if err = d.syncWithPeer(peer.CtxWithPeerId(ctx, p.Id()), p); err != nil {
+			d.log.ErrorCtx(ctx, "can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
 		}
 	}
-	d.log.Info("synced", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
+	d.log.InfoCtx(ctx, "diff done", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
 	return nil
 }
 
 func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
+	ctx = logger.CtxWithFields(ctx, zap.String("peerId", p.Id()))
 	var (
 		cl           = d.clientFactory.Client(p)
 		rdiff        = NewRemoteDiff(d.spaceId, cl)
@@ -110,7 +118,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	err = rpcerr.Unwrap(err)
 	if err != nil && err != spacesyncproto.ErrSpaceMissing {
 		d.syncStatus.SetNodesOnline(p.Id(), false)
-		return err
+		return fmt.Errorf("diff error: %v", err)
 	}
 	d.syncStatus.SetNodesOnline(p.Id(), true)
 
@@ -124,13 +132,14 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 
 	d.syncStatus.RemoveAllExcept(p.Id(), filteredIds, stateCounter)
 
-	ctx = peer.CtxWithPeerId(ctx, p.Id())
 	d.pingTreesInCache(ctx, filteredIds)
 
 	d.log.Info("sync done:", zap.Int("newIds", len(newIds)),
 		zap.Int("changedIds", len(changedIds)),
 		zap.Int("removedIds", len(removedIds)),
-		zap.Int("already deleted ids", totalLen-len(filteredIds)))
+		zap.Int("already deleted ids", totalLen-len(filteredIds)),
+		zap.String("peerId", p.Id()),
+	)
 	return
 }
 
@@ -138,17 +147,23 @@ func (d *diffSyncer) pingTreesInCache(ctx context.Context, trees []string) {
 	for _, tId := range trees {
 		tree, err := d.cache.GetTree(ctx, d.spaceId, tId)
 		if err != nil {
+			d.log.InfoCtx(ctx, "can't load tree", zap.Error(err))
 			continue
 		}
 		syncTree, ok := tree.(synctree.SyncTree)
 		if !ok {
+			d.log.InfoCtx(ctx, "not a sync tree", zap.String("objectId", tId))
 			continue
 		}
 		// the idea why we call it directly is that if we try to get it from cache
 		// it may be already there (i.e. loaded)
 		// and build func will not be called, thus we won't sync the tree
 		// therefore we just do it manually
-		syncTree.Ping()
+		if err = syncTree.Ping(ctx); err != nil {
+			d.log.WarnCtx(ctx, "synctree.Ping error", zap.Error(err), zap.String("treeId", tId))
+		} else {
+			d.log.DebugCtx(ctx, "success tree ping", zap.String("treeId", tId))
+		}
 	}
 }
 

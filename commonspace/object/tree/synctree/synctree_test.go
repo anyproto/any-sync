@@ -73,7 +73,7 @@ func Test_BuildSyncTree(t *testing.T) {
 		updateListenerMock.EXPECT().Update(tr)
 
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
-		syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
+		syncClientMock.EXPECT().Broadcast(gomock.Any(), gomock.Eq(headUpdate)).Return(nil)
 		res, err := tr.AddRawChanges(ctx, payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
@@ -95,7 +95,7 @@ func Test_BuildSyncTree(t *testing.T) {
 		updateListenerMock.EXPECT().Rebuild(tr)
 
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
-		syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
+		syncClientMock.EXPECT().Broadcast(gomock.Any(), gomock.Eq(headUpdate)).Return(nil)
 		res, err := tr.AddRawChanges(ctx, payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
@@ -133,7 +133,7 @@ func Test_BuildSyncTree(t *testing.T) {
 			Return(expectedRes, nil)
 
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
-		syncClientMock.EXPECT().BroadcastAsync(gomock.Eq(headUpdate)).Return(nil)
+		syncClientMock.EXPECT().Broadcast(gomock.Any(), gomock.Eq(headUpdate)).Return(nil)
 		res, err := tr.AddContent(ctx, content)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)

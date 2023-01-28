@@ -13,6 +13,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anytypeio/any-sync/commonspace/streammanager"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/pool"
@@ -39,12 +40,13 @@ type SpaceService interface {
 }
 
 type spaceService struct {
-	config               Config
-	account              accountservice.Service
-	configurationService nodeconf.Service
-	storageProvider      spacestorage.SpaceStorageProvider
-	treeGetter           treegetter.TreeGetter
-	pool                 pool.Pool
+	config                Config
+	account               accountservice.Service
+	configurationService  nodeconf.Service
+	storageProvider       spacestorage.SpaceStorageProvider
+	streamManagerProvider streammanager.StreamManagerProvider
+	treeGetter            treegetter.TreeGetter
+	pool                  pool.Pool
 }
 
 func (s *spaceService) Init(a *app.App) (err error) {
@@ -53,6 +55,7 @@ func (s *spaceService) Init(a *app.App) (err error) {
 	s.storageProvider = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.treeGetter = a.MustComponent(treegetter.CName).(treegetter.TreeGetter)
+	s.streamManagerProvider = a.MustComponent(streammanager.CName).(streammanager.StreamManagerProvider)
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	return nil
 }
@@ -94,7 +97,7 @@ func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePaylo
 }
 
 func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
-	st, err := s.storageProvider.SpaceStorage(id)
+	st, err := s.storageProvider.WaitSpaceStorage(ctx, id)
 	if err != nil {
 		if err != spacestorage.ErrSpaceStorageMissing {
 			return nil, err
@@ -124,7 +127,13 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 	}
 
 	headSync := headsync.NewHeadSync(id, s.config.SyncPeriod, st, confConnector, getter, syncStatus, log)
-	objectSync := objectsync.NewObjectSync(id, confConnector, getter)
+
+	streamManager, err := s.streamManagerProvider.NewStreamManager(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	objectSync := objectsync.NewObjectSync(id, streamManager, getter)
 	sp := &space{
 		id:            id,
 		objectSync:    objectSync,

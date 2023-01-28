@@ -56,11 +56,12 @@ message HeadSyncResponse {
 // ObjectSyncMessage is a message sent on object sync
 message ObjectSyncMessage {
     string spaceId = 1;
-    string replyId = 2;
-    bytes payload = 3;
-    string objectId = 4;
-//  string identity = 5;
-//  string peerSignature = 6;
+    string requestId = 2;
+    string replyId = 3;
+    bytes payload = 4;
+    string objectId = 5;
+    //  string identity = 5;
+    //  string peerSignature = 6;
 }
 
 // SpacePushRequest is a request to add space on a node containing only one acl record
@@ -134,3 +135,13 @@ message SettingsData {
     SpaceSettingsSnapshot snapshot = 2;
 }
 
+// SpaceSubscription contains in ObjectSyncMessage.Payload and indicates that we need to subscribe or unsubscribe the current stream to this space
+enum SpaceSubscriptionAction {
+    Subscribe = 0;
+    Unsubscribe = 1;
+}
+
+message SpaceSubscription {
+    repeated string spaceIds = 1;
+    SpaceSubscriptionAction action = 2;
+}

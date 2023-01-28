@@ -9,7 +9,7 @@ var (
 	mu            sync.Mutex
 	defaultLogger *zap.Logger
 	levels        = make(map[string]zap.AtomicLevel)
-	loggers       = make(map[string]*zap.Logger)
+	loggers       = make(map[string]CtxLogger)
 )
 
 func init() {
@@ -22,7 +22,7 @@ func SetDefault(l *zap.Logger) {
 	defer mu.Unlock()
 	*defaultLogger = *l
 	for name, l := range loggers {
-		*l = *defaultLogger.Named(name)
+		*l.Logger = *defaultLogger.Named(name)
 	}
 }
 
@@ -38,13 +38,14 @@ func Default() *zap.Logger {
 	return defaultLogger
 }
 
-func NewNamed(name string, fields ...zap.Field) *zap.Logger {
+func NewNamed(name string, fields ...zap.Field) CtxLogger {
 	mu.Lock()
 	defer mu.Unlock()
 	l := defaultLogger.Named(name)
 	if len(fields) > 0 {
 		l = l.With(fields...)
 	}
-	loggers[name] = l
-	return l
+	ctxL := CtxLogger{l}
+	loggers[name] = ctxL
+	return ctxL
 }

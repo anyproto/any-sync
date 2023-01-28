@@ -123,11 +123,11 @@ func TestPool_GetOneOf(t *testing.T) {
 
 func newFixture(t *testing.T) *fixture {
 	fx := &fixture{
-		Pool:   New(),
-		Dialer: &dialerMock{},
+		Service: New(),
+		Dialer:  &dialerMock{},
 	}
 	a := new(app.App)
-	a.Register(fx.Pool)
+	a.Register(fx.Service)
 	a.Register(fx.Dialer)
 	require.NoError(t, a.Start(context.Background()))
 	fx.a = a
@@ -140,7 +140,7 @@ func (fx *fixture) Finish() {
 }
 
 type fixture struct {
-	Pool
+	Service
 	Dialer *dialerMock
 	a      *app.App
 	t      *testing.T

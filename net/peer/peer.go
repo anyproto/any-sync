@@ -2,11 +2,15 @@ package peer
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/libp2p/go-libp2p/core/sec"
+	"go.uber.org/zap"
 	"storj.io/drpc"
 	"sync/atomic"
 	"time"
 )
+
+var log = logger.NewNamed("peer")
 
 func NewPeer(sc sec.SecureConn, conn drpc.Conn) Peer {
 	return &peer{
@@ -54,6 +58,25 @@ func (p *peer) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) (dr
 	return p.Conn.NewStream(ctx, rpc, enc)
 }
 
+func (p *peer) Read(b []byte) (n int, err error) {
+	if n, err = p.sc.Read(b); err != nil {
+		p.UpdateLastUsage()
+	}
+	return
+}
+
+func (p *peer) Write(b []byte) (n int, err error) {
+	if n, err = p.sc.Write(b); err != nil {
+		p.UpdateLastUsage()
+	}
+	return
+}
+
 func (p *peer) UpdateLastUsage() {
 	atomic.StoreInt64(&p.lastUsage, time.Now().Unix())
+}
+
+func (p *peer) Close() (err error) {
+	log.Debug("peer close", zap.String("peerId", p.id))
+	return p.Conn.Close()
 }
