@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/any-sync/accountservice"
+	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace/headsync"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
@@ -14,16 +15,17 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/settings"
 	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
+	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/any-sync/util/multiqueue"
 	"github.com/anytypeio/any-sync/util/slice"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
@@ -49,6 +51,13 @@ type SpaceCreatePayload struct {
 	ReadKey []byte
 	// ReplicationKey is a key which is to be used to determine the node where the space should be held
 	ReplicationKey uint64
+}
+
+type HandleMessage struct {
+	Id       uint64
+	Deadline time.Time
+	SenderId string
+	Message  *spacesyncproto.ObjectSyncMessage
 }
 
 const SpaceTypeDerived = "derived.space"
@@ -81,17 +90,19 @@ type Space interface {
 	DebugAllHeads() []headsync.TreeHeads
 	Description() (SpaceDescription, error)
 
-	SpaceSyncRpc() RpcHandler
-
 	DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error)
 	BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error)
 	DeleteTree(ctx context.Context, id string) (err error)
+	BuildHistoryTree(ctx context.Context, id string, opts HistoryTreeOpts) (t objecttree.HistoryTree, err error)
 
 	HeadSync() headsync.HeadSync
+	ObjectSync() objectsync.ObjectSync
 	SyncStatus() syncstatus.StatusUpdater
 	Storage() spacestorage.SpaceStorage
+
+	HandleMessage(ctx context.Context, msg HandleMessage) (err error)
 
 	Close() error
 }
@@ -101,17 +112,17 @@ type space struct {
 	mu     sync.RWMutex
 	header *spacesyncproto.RawSpaceHeaderWithId
 
-	rpc *rpcHandler
-
 	objectSync     objectsync.ObjectSync
 	headSync       headsync.HeadSync
 	syncStatus     syncstatus.StatusUpdater
 	storage        spacestorage.SpaceStorage
-	cache          treegetter.TreeGetter
+	cache          *commonGetter
 	account        accountservice.Service
 	aclList        *syncacl.SyncAcl
 	configuration  nodeconf.Configuration
 	settingsObject settings.SettingsObject
+
+	handleQueue multiqueue.MultiQueue[HandleMessage]
 
 	isClosed  atomic.Bool
 	treesUsed atomic.Int32
@@ -161,7 +172,6 @@ func (s *space) Init(ctx context.Context) (err error) {
 		return
 	}
 	s.header = header
-	s.rpc = &rpcHandler{s: s}
 	initialIds, err := s.storage.StoredIds()
 	if err != nil {
 		return
@@ -174,7 +184,8 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.StreamPool())
+	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.MessagePool())
+	s.cache.AddObject(s.aclList)
 
 	deletionState := deletionstate.NewDeletionState(s.storage)
 	deps := settings.Deps{
@@ -195,21 +206,16 @@ func (s *space) Init(ctx context.Context) (err error) {
 		DeletionState: deletionState,
 	}
 	s.settingsObject = settings.NewSettingsObject(deps, s.id)
-
-	objectGetter := newCommonSpaceGetter(s.id, s.aclList, s.cache, s.settingsObject)
-	s.objectSync.Init(objectGetter)
+	s.objectSync.Init()
 	s.headSync.Init(initialIds, deletionState)
 	err = s.settingsObject.Init(ctx)
 	if err != nil {
 		return
 	}
+	s.cache.AddObject(s.settingsObject)
 	s.syncStatus.Run()
-
+	s.handleQueue = multiqueue.New[HandleMessage](s.handleMessage, 100)
 	return nil
-}
-
-func (s *space) SpaceSyncRpc() RpcHandler {
-	return s.rpc
 }
 
 func (s *space) ObjectSync() objectsync.ObjectSync {
@@ -297,6 +303,11 @@ type BuildTreeOpts struct {
 	WaitTreeRemoteSync bool
 }
 
+type HistoryTreeOpts struct {
+	BeforeId string
+	Include  bool
+}
+
 func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
@@ -318,17 +329,69 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
 }
 
+func (s *space) BuildHistoryTree(ctx context.Context, id string, opts HistoryTreeOpts) (t objecttree.HistoryTree, err error) {
+	if s.isClosed.Load() {
+		err = ErrSpaceClosed
+		return
+	}
+
+	params := objecttree.HistoryTreeParams{
+		AclList:         s.aclList,
+		BeforeId:        opts.BeforeId,
+		IncludeBeforeId: opts.Include,
+	}
+	params.TreeStorage, err = s.storage.TreeStorage(id)
+	if err != nil {
+		return
+	}
+	return objecttree.BuildHistoryTree(params)
+}
+
 func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
 	return s.settingsObject.DeleteObject(id)
 }
 
+func (s *space) HandleMessage(ctx context.Context, hm HandleMessage) (err error) {
+	threadId := hm.Message.ObjectId
+	if hm.Message.ReplyId != "" {
+		threadId += hm.Message.ReplyId
+		defer func() {
+			_ = s.handleQueue.CloseThread(threadId)
+		}()
+	}
+	return s.handleQueue.Add(ctx, threadId, hm)
+}
+
+func (s *space) handleMessage(msg HandleMessage) {
+	ctx := peer.CtxWithPeerId(context.Background(), msg.SenderId)
+	ctx = logger.CtxWithFields(ctx, zap.Uint64("msgId", msg.Id), zap.String("senderId", msg.SenderId))
+	if !msg.Deadline.IsZero() {
+		now := time.Now()
+		if now.After(msg.Deadline) {
+			log.InfoCtx(ctx, "skip message: deadline exceed")
+			return
+		}
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(ctx, msg.Deadline)
+		defer cancel()
+	}
+
+	if err := s.objectSync.HandleMessage(ctx, msg.SenderId, msg.Message); err != nil {
+		log.InfoCtx(ctx, "handleMessage error", zap.Error(err))
+	}
+}
+
 func (s *space) Close() error {
+	if s.isClosed.Swap(true) {
+		log.Warn("call space.Close on closed space", zap.String("id", s.id))
+		return nil
+	}
 	log.With(zap.String("id", s.id)).Debug("space is closing")
-	defer func() {
-		s.isClosed.Store(true)
-		log.With(zap.String("id", s.id)).Debug("space closed")
-	}()
+
 	var mError errs.Group
+	if err := s.handleQueue.Close(); err != nil {
+		mError.Add(err)
+	}
 	if err := s.headSync.Close(); err != nil {
 		mError.Add(err)
 	}
@@ -347,6 +410,6 @@ func (s *space) Close() error {
 	if err := s.syncStatus.Close(); err != nil {
 		mError.Add(err)
 	}
-
+	log.With(zap.String("id", s.id)).Debug("space closed")
 	return mError.Err()
 }

@@ -9,13 +9,13 @@ import (
 type SyncAcl struct {
 	list.AclList
 	synchandler.SyncHandler
-	streamPool objectsync.StreamPool
+	messagePool objectsync.MessagePool
 }
 
-func NewSyncAcl(aclList list.AclList, streamPool objectsync.StreamPool) *SyncAcl {
+func NewSyncAcl(aclList list.AclList, messagePool objectsync.MessagePool) *SyncAcl {
 	return &SyncAcl{
 		AclList:     aclList,
 		SyncHandler: nil,
-		streamPool:  streamPool,
+		messagePool: messagePool,
 	}
 }

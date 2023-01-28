@@ -2,38 +2,49 @@ package commonspace
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anytypeio/any-sync/commonspace/object/syncobjectgetter"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
-	"github.com/anytypeio/any-sync/commonspace/settings"
 )
 
-type commonSpaceGetter struct {
-	spaceId    string
-	aclList    *syncacl.SyncAcl
-	treeGetter treegetter.TreeGetter
-	settings   settings.SettingsObject
+type commonGetter struct {
+	treegetter.TreeGetter
+	spaceId         string
+	reservedObjects []syncobjectgetter.SyncObject
 }
 
-func newCommonSpaceGetter(spaceId string, aclList *syncacl.SyncAcl, treeGetter treegetter.TreeGetter, settings settings.SettingsObject) syncobjectgetter.SyncObjectGetter {
-	return &commonSpaceGetter{
+func newCommonGetter(spaceId string, getter treegetter.TreeGetter) *commonGetter {
+	return &commonGetter{
+		TreeGetter: getter,
 		spaceId:    spaceId,
-		aclList:    aclList,
-		treeGetter: treeGetter,
-		settings:   settings,
 	}
 }
 
-func (c *commonSpaceGetter) GetObject(ctx context.Context, objectId string) (obj syncobjectgetter.SyncObject, err error) {
-	if c.aclList.Id() == objectId {
-		obj = c.aclList
-		return
+func (c *commonGetter) AddObject(object syncobjectgetter.SyncObject) {
+	c.reservedObjects = append(c.reservedObjects, object)
+}
+
+func (c *commonGetter) GetTree(ctx context.Context, spaceId, treeId string) (objecttree.ObjectTree, error) {
+	if obj := c.getReservedObject(treeId); obj != nil {
+		return obj.(objecttree.ObjectTree), nil
 	}
-	if c.settings.Id() == objectId {
-		obj = c.settings.(syncobjectgetter.SyncObject)
-		return
+	return c.TreeGetter.GetTree(ctx, spaceId, treeId)
+}
+
+func (c *commonGetter) getReservedObject(id string) syncobjectgetter.SyncObject {
+	for _, obj := range c.reservedObjects {
+		if obj != nil && obj.Id() == id {
+			return obj
+		}
 	}
-	t, err := c.treeGetter.GetTree(ctx, c.spaceId, objectId)
+	return nil
+}
+
+func (c *commonGetter) GetObject(ctx context.Context, objectId string) (obj syncobjectgetter.SyncObject, err error) {
+	if obj := c.getReservedObject(objectId); obj != nil {
+		return obj, nil
+	}
+	t, err := c.TreeGetter.GetTree(ctx, c.spaceId, objectId)
 	if err != nil {
 		return
 	}

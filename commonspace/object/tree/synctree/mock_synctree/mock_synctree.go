@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	objecttree "github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
+	updatelistener "github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
 	treechangeproto "github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	treestorage "github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	spacesyncproto "github.com/anytypeio/any-sync/commonspace/spacesyncproto"
@@ -38,32 +39,32 @@ func (m *MockSyncClient) EXPECT() *MockSyncClientMockRecorder {
 	return m.recorder
 }
 
-// BroadcastAsync mocks base method.
-func (m *MockSyncClient) BroadcastAsync(arg0 *treechangeproto.TreeSyncMessage) error {
+// Broadcast mocks base method.
+func (m *MockSyncClient) Broadcast(arg0 context.Context, arg1 *treechangeproto.TreeSyncMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BroadcastAsync", arg0)
+	ret := m.ctrl.Call(m, "Broadcast", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// BroadcastAsync indicates an expected call of BroadcastAsync.
-func (mr *MockSyncClientMockRecorder) BroadcastAsync(arg0 interface{}) *gomock.Call {
+// Broadcast indicates an expected call of Broadcast.
+func (mr *MockSyncClientMockRecorder) Broadcast(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BroadcastAsync", reflect.TypeOf((*MockSyncClient)(nil).BroadcastAsync), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Broadcast", reflect.TypeOf((*MockSyncClient)(nil).Broadcast), arg0, arg1)
 }
 
 // BroadcastAsyncOrSendResponsible mocks base method.
-func (m *MockSyncClient) BroadcastAsyncOrSendResponsible(arg0 *treechangeproto.TreeSyncMessage) error {
+func (m *MockSyncClient) BroadcastAsyncOrSendResponsible(arg0 context.Context, arg1 *treechangeproto.TreeSyncMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BroadcastAsyncOrSendResponsible", arg0)
+	ret := m.ctrl.Call(m, "BroadcastAsyncOrSendResponsible", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // BroadcastAsyncOrSendResponsible indicates an expected call of BroadcastAsyncOrSendResponsible.
-func (mr *MockSyncClientMockRecorder) BroadcastAsyncOrSendResponsible(arg0 interface{}) *gomock.Call {
+func (mr *MockSyncClientMockRecorder) BroadcastAsyncOrSendResponsible(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BroadcastAsyncOrSendResponsible", reflect.TypeOf((*MockSyncClient)(nil).BroadcastAsyncOrSendResponsible), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BroadcastAsyncOrSendResponsible", reflect.TypeOf((*MockSyncClient)(nil).BroadcastAsyncOrSendResponsible), arg0, arg1)
 }
 
 // CreateFullSyncRequest mocks base method.
@@ -124,18 +125,18 @@ func (mr *MockSyncClientMockRecorder) CreateNewTreeRequest() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNewTreeRequest", reflect.TypeOf((*MockSyncClient)(nil).CreateNewTreeRequest))
 }
 
-// SendAsync mocks base method.
-func (m *MockSyncClient) SendAsync(arg0 string, arg1 *treechangeproto.TreeSyncMessage, arg2 string) error {
+// SendWithReply mocks base method.
+func (m *MockSyncClient) SendWithReply(arg0 context.Context, arg1 string, arg2 *treechangeproto.TreeSyncMessage, arg3 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SendAsync", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "SendWithReply", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// SendAsync indicates an expected call of SendAsync.
-func (mr *MockSyncClientMockRecorder) SendAsync(arg0, arg1, arg2 interface{}) *gomock.Call {
+// SendWithReply indicates an expected call of SendWithReply.
+func (mr *MockSyncClientMockRecorder) SendWithReply(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendAsync", reflect.TypeOf((*MockSyncClient)(nil).SendAsync), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendWithReply", reflect.TypeOf((*MockSyncClient)(nil).SendWithReply), arg0, arg1, arg2, arg3)
 }
 
 // MockSyncTree is a mock of SyncTree interface.
@@ -247,6 +248,21 @@ func (m *MockSyncTree) Delete() error {
 func (mr *MockSyncTreeMockRecorder) Delete() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSyncTree)(nil).Delete))
+}
+
+// GetChange mocks base method.
+func (m *MockSyncTree) GetChange(arg0 string) (*objecttree.Change, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetChange", arg0)
+	ret0, _ := ret[0].(*objecttree.Change)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetChange indicates an expected call of GetChange.
+func (mr *MockSyncTreeMockRecorder) GetChange(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChange", reflect.TypeOf((*MockSyncTree)(nil).GetChange), arg0)
 }
 
 // HandleMessage mocks base method.
@@ -364,17 +380,17 @@ func (mr *MockSyncTreeMockRecorder) Lock() *gomock.Call {
 }
 
 // Ping mocks base method.
-func (m *MockSyncTree) Ping() error {
+func (m *MockSyncTree) Ping(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Ping")
+	ret := m.ctrl.Call(m, "Ping", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Ping indicates an expected call of Ping.
-func (mr *MockSyncTreeMockRecorder) Ping() *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) Ping(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockSyncTree)(nil).Ping))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockSyncTree)(nil).Ping), arg0)
 }
 
 // RLock mocks base method.
@@ -413,6 +429,18 @@ func (m *MockSyncTree) Root() *objecttree.Change {
 func (mr *MockSyncTreeMockRecorder) Root() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Root", reflect.TypeOf((*MockSyncTree)(nil).Root))
+}
+
+// SetListener mocks base method.
+func (m *MockSyncTree) SetListener(arg0 updatelistener.UpdateListener) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetListener", arg0)
+}
+
+// SetListener indicates an expected call of SetListener.
+func (mr *MockSyncTreeMockRecorder) SetListener(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetListener", reflect.TypeOf((*MockSyncTree)(nil).SetListener), arg0)
 }
 
 // SnapshotPath mocks base method.

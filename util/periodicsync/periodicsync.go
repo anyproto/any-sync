@@ -3,6 +3,7 @@ package periodicsync
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync/app/logger"
 	"go.uber.org/zap"
 	"time"
 )
@@ -14,8 +15,9 @@ type PeriodicSync interface {
 
 type SyncerFunc func(ctx context.Context) error
 
-func NewPeriodicSync(periodSeconds int, timeout time.Duration, syncer SyncerFunc, l *zap.Logger) PeriodicSync {
+func NewPeriodicSync(periodSeconds int, timeout time.Duration, syncer SyncerFunc, l logger.CtxLogger) PeriodicSync {
 	ctx, cancel := context.WithCancel(context.Background())
+	ctx = logger.CtxWithFields(ctx, zap.String("rootOp", "periodicSync"))
 	return &periodicSync{
 		syncer:        syncer,
 		log:           l,
@@ -28,7 +30,7 @@ func NewPeriodicSync(periodSeconds int, timeout time.Duration, syncer SyncerFunc
 }
 
 type periodicSync struct {
-	log           *zap.Logger
+	log           logger.CtxLogger
 	syncer        SyncerFunc
 	syncCtx       context.Context
 	syncCancel    context.CancelFunc

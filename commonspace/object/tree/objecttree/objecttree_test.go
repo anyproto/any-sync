@@ -111,6 +111,24 @@ func prepareAclList(t *testing.T) list.AclList {
 	return aclList
 }
 
+func prepareTreeDeps(aclList list.AclList) (*mockChangeCreator, objectTreeDeps) {
+	changeCreator := &mockChangeCreator{}
+	treeStorage := changeCreator.createNewTreeStorage("0", aclList.Head().Id)
+	root, _ := treeStorage.Root()
+	changeBuilder := &mockChangeBuilder{
+		originalBuilder: NewChangeBuilder(nil, root),
+	}
+	deps := objectTreeDeps{
+		changeBuilder:   changeBuilder,
+		treeBuilder:     newTreeBuilder(treeStorage, changeBuilder),
+		treeStorage:     treeStorage,
+		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
+		validator:       &mockChangeValidator{},
+		aclList:         aclList,
+	}
+	return changeCreator, deps
+}
+
 func prepareTreeContext(t *testing.T, aclList list.AclList) testTreeContext {
 	changeCreator := &mockChangeCreator{}
 	treeStorage := changeCreator.createNewTreeStorage("0", aclList.Head().Id)
@@ -541,5 +559,88 @@ func TestObjectTree(t *testing.T) {
 			assert.NoError(t, err, "storage should have all the changes")
 			assert.Equal(t, ch, raw, "the changes in the storage should be the same")
 		}
+	})
+
+	t.Run("test history tree not include", func(t *testing.T) {
+		changeCreator, deps := prepareTreeDeps(aclList)
+
+		rawChanges := []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.createRaw("1", aclList.Head().Id, "0", false, "0"),
+			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
+			changeCreator.createRaw("3", aclList.Head().Id, "0", true, "2"),
+			changeCreator.createRaw("4", aclList.Head().Id, "0", false, "2"),
+			changeCreator.createRaw("5", aclList.Head().Id, "0", false, "1"),
+			changeCreator.createRaw("6", aclList.Head().Id, "0", false, "3", "4", "5"),
+		}
+		deps.treeStorage.TransactionAdd(rawChanges, []string{"6"})
+		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
+			BeforeId:        "6",
+			IncludeBeforeId: false,
+		})
+		require.NoError(t, err)
+		// check tree heads
+		assert.Equal(t, []string{"3", "4", "5"}, hTree.Heads())
+
+		// check tree iterate
+		var iterChangesId []string
+		err = hTree.IterateFrom(hTree.Root().Id, nil, func(change *Change) bool {
+			iterChangesId = append(iterChangesId, change.Id)
+			return true
+		})
+		require.NoError(t, err, "iterate should be without error")
+		assert.Equal(t, []string{"0", "1", "2", "3", "4", "5"}, iterChangesId)
+		assert.Equal(t, "0", hTree.Root().Id)
+	})
+
+	t.Run("test history tree include", func(t *testing.T) {
+		changeCreator, deps := prepareTreeDeps(aclList)
+
+		rawChanges := []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.createRaw("1", aclList.Head().Id, "0", false, "0"),
+			changeCreator.createRaw("2", aclList.Head().Id, "0", false, "1"),
+			changeCreator.createRaw("3", aclList.Head().Id, "0", true, "2"),
+			changeCreator.createRaw("4", aclList.Head().Id, "0", false, "2"),
+			changeCreator.createRaw("5", aclList.Head().Id, "0", false, "1"),
+			changeCreator.createRaw("6", aclList.Head().Id, "0", false, "3", "4", "5"),
+		}
+		deps.treeStorage.TransactionAdd(rawChanges, []string{"6"})
+		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
+			BeforeId:        "6",
+			IncludeBeforeId: true,
+		})
+		require.NoError(t, err)
+		// check tree heads
+		assert.Equal(t, []string{"6"}, hTree.Heads())
+
+		// check tree iterate
+		var iterChangesId []string
+		err = hTree.IterateFrom(hTree.Root().Id, nil, func(change *Change) bool {
+			iterChangesId = append(iterChangesId, change.Id)
+			return true
+		})
+		require.NoError(t, err, "iterate should be without error")
+		assert.Equal(t, []string{"0", "1", "2", "3", "4", "5", "6"}, iterChangesId)
+		assert.Equal(t, "0", hTree.Root().Id)
+	})
+
+	t.Run("test history tree root", func(t *testing.T) {
+		_, deps := prepareTreeDeps(aclList)
+		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
+			BeforeId:        "0",
+			IncludeBeforeId: true,
+		})
+		require.NoError(t, err)
+		// check tree heads
+		assert.Equal(t, []string{"0"}, hTree.Heads())
+
+		// check tree iterate
+		var iterChangesId []string
+		err = hTree.IterateFrom(hTree.Root().Id, nil, func(change *Change) bool {
+			iterChangesId = append(iterChangesId, change.Id)
+			return true
+		})
+		require.NoError(t, err, "iterate should be without error")
+		assert.Equal(t, []string{"0"}, iterChangesId)
+		assert.Equal(t, "0", hTree.Root().Id)
 	})
 }

@@ -49,6 +49,7 @@ func (s *BaseDrpcServer) Run(ctx context.Context, params Params) (err error) {
 			return err
 		}
 		tlsList := params.Converter(tcpList, params.TimeoutMillis)
+		s.listeners = append(s.listeners, tlsList)
 		go s.serve(ctx, tlsList)
 	}
 	return
@@ -77,8 +78,8 @@ func (s *BaseDrpcServer) serve(ctx context.Context, lis secureservice.ContextLis
 				}
 				continue
 			}
-			if _, ok := err.(secureservice.HandshakeError); ok {
-				l.Warn("listener handshake error", zap.Error(err))
+			if herr, ok := err.(secureservice.HandshakeError); ok {
+				l.Warn("listener handshake error", zap.Error(herr), zap.String("remoteAddr", herr.RemoteAddr()))
 				continue
 			}
 			l.Error("listener accept error", zap.Error(err))

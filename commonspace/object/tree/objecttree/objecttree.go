@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
-	list2 "github.com/anytypeio/any-sync/commonspace/object/acl/list"
+	list "github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
@@ -23,6 +23,7 @@ type RWLocker interface {
 var (
 	ErrHasInvalidChanges = errors.New("the change is invalid")
 	ErrNoCommonSnapshot  = errors.New("trees doesn't have a common snapshot")
+	ErrNoChangeInTree    = errors.New("no such change in tree")
 )
 
 type AddResultSummary int
@@ -43,7 +44,7 @@ type RawChangesPayload struct {
 type ChangeIterateFunc = func(change *Change) bool
 type ChangeConvertFunc = func(decrypted []byte) (any, error)
 
-type ObjectTree interface {
+type ReadableObjectTree interface {
 	RWLocker
 
 	Id() string
@@ -51,11 +52,17 @@ type ObjectTree interface {
 	UnmarshalledHeader() *Change
 	Heads() []string
 	Root() *Change
-	HasChanges(...string) bool
-	DebugDump(parser DescriptionParser) (string, error)
 
+	HasChanges(...string) bool
+	GetChange(string) (*Change, error)
+
+	DebugDump(parser DescriptionParser) (string, error)
 	IterateRoot(convert ChangeConvertFunc, iterate ChangeIterateFunc) error
 	IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) error
+}
+
+type ObjectTree interface {
+	ReadableObjectTree
 
 	SnapshotPath() []string
 	ChangesAfterCommonSnapshot(snapshotPath, heads []string) ([]*treechangeproto.RawTreeChangeWithId, error)
@@ -75,7 +82,7 @@ type objectTree struct {
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
 	treeBuilder     *treeBuilder
-	aclList         list2.AclList
+	aclList         list.AclList
 
 	id      string
 	rawRoot *treechangeproto.RawTreeChangeWithId
@@ -101,13 +108,13 @@ type objectTreeDeps struct {
 	treeStorage     treestorage.TreeStorage
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
-	aclList         list2.AclList
+	aclList         list.AclList
 }
 
 func defaultObjectTreeDeps(
 	rootChange *treechangeproto.RawTreeChangeWithId,
 	treeStorage treestorage.TreeStorage,
-	aclList list2.AclList) objectTreeDeps {
+	aclList list.AclList) objectTreeDeps {
 
 	keychain := keychain.NewKeychain()
 	changeBuilder := NewChangeBuilder(keychain, rootChange)
@@ -153,6 +160,13 @@ func (ot *objectTree) UnmarshalledHeader() *Change {
 
 func (ot *objectTree) Storage() treestorage.TreeStorage {
 	return ot.treeStorage
+}
+
+func (ot *objectTree) GetChange(id string) (*Change, error) {
+	if ch, ok := ot.tree.attached[id]; ok {
+		return ch, nil
+	}
+	return nil, ErrNoChangeInTree
 }
 
 func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeContent) (res AddResult, err error) {
@@ -208,7 +222,7 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 	canWrite := state.HasPermission(content.Identity, aclrecordproto.AclUserPermissions_Writer) ||
 		state.HasPermission(content.Identity, aclrecordproto.AclUserPermissions_Admin)
 	if !canWrite {
-		err = list2.ErrInsufficientPermissions
+		err = list.ErrInsufficientPermissions
 		return
 	}
 
@@ -471,7 +485,7 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 		}
 		readKey, exists := ot.keys[c.ReadKeyHash]
 		if !exists {
-			err = list2.ErrNoReadKey
+			err = list.ErrNoReadKey
 			return
 		}
 

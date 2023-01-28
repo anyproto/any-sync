@@ -41,7 +41,7 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 
 	s.syncStatus.HeadsReceive(senderId, msg.ObjectId, treechangeproto.GetHeads(unmarshalled))
 
-	queueFull := s.queue.AddMessage(senderId, unmarshalled, msg.ReplyId)
+	queueFull := s.queue.AddMessage(senderId, unmarshalled, msg.RequestId)
 	if queueFull {
 		return
 	}
@@ -82,36 +82,37 @@ func (s *syncTreeHandler) handleHeadUpdate(
 		objTree       = s.objTree
 	)
 
-	log := log.With("senderId", senderId).
-		With("heads", objTree.Heads()).
-		With("treeId", objTree.Id())
-	log.Debug("received head update message")
+	log := log.With(zap.Strings("heads", objTree.Heads()), zap.String("treeId", objTree.Id()))
+	log.DebugCtx(ctx, "received head update message")
 
 	defer func() {
 		if err != nil {
 			log.With(zap.Error(err)).Debug("head update finished with error")
 		} else if fullRequest != nil {
-			log.Debug("sending full sync request")
+			log.DebugCtx(ctx, "sending full sync request")
 		} else {
 			if !isEmptyUpdate {
-				log.Debug("head update finished correctly")
+				log.DebugCtx(ctx, "head update finished correctly")
 			}
 		}
 	}()
 
 	// isEmptyUpdate is sent when the tree is brought up from cache
 	if isEmptyUpdate {
-		log.With("treeId", objTree.Id()).Debug("is empty update")
-		if slice.UnsortedEquals(objTree.Heads(), update.Heads) {
+
+		headEquals := slice.UnsortedEquals(objTree.Heads(), update.Heads)
+		log.DebugCtx(ctx, "is empty update", zap.String("treeId", objTree.Id()), zap.Bool("headEquals", headEquals))
+		if headEquals {
 			return
 		}
+
 		// we need to sync in any case
 		fullRequest, err = s.syncClient.CreateFullSyncRequest(objTree, update.Heads, update.SnapshotPath)
 		if err != nil {
 			return
 		}
 
-		return s.syncClient.SendAsync(senderId, fullRequest, replyId)
+		return s.syncClient.SendWithReply(ctx, senderId, fullRequest, replyId)
 	}
 
 	if s.alreadyHasHeads(objTree, update.Heads) {
@@ -135,7 +136,7 @@ func (s *syncTreeHandler) handleHeadUpdate(
 		return
 	}
 
-	return s.syncClient.SendAsync(senderId, fullRequest, replyId)
+	return s.syncClient.SendWithReply(ctx, senderId, fullRequest, replyId)
 }
 
 func (s *syncTreeHandler) handleFullSyncRequest(
@@ -149,20 +150,17 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 		objTree      = s.objTree
 	)
 
-	log := log.With("senderId", senderId).
-		With("heads", request.Heads).
-		With("treeId", s.objTree.Id()).
-		With("replyId", replyId)
-	log.Debug("received full sync request message")
+	log := log.With(zap.String("senderId", senderId), zap.Strings("heads", request.Heads), zap.String("treeId", s.objTree.Id()), zap.String("replyId", replyId))
+	log.DebugCtx(ctx, "received full sync request message")
 
 	defer func() {
 		if err != nil {
-			log.With(zap.Error(err)).Debug("full sync request finished with error")
+			log.With(zap.Error(err)).DebugCtx(ctx, "full sync request finished with error")
 
-			s.syncClient.SendAsync(senderId, treechangeproto.WrapError(err, header), replyId)
+			s.syncClient.SendWithReply(ctx, senderId, treechangeproto.WrapError(err, header), replyId)
 			return
 		} else if fullResponse != nil {
-			log.Debug("full sync response sent")
+			log.DebugCtx(ctx, "full sync response sent")
 		}
 	}()
 
@@ -180,7 +178,7 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 		return
 	}
 
-	return s.syncClient.SendAsync(senderId, fullResponse, replyId)
+	return s.syncClient.SendWithReply(ctx, senderId, fullResponse, replyId)
 }
 
 func (s *syncTreeHandler) handleFullSyncResponse(
@@ -190,16 +188,14 @@ func (s *syncTreeHandler) handleFullSyncResponse(
 	var (
 		objTree = s.objTree
 	)
-	log := log.With("senderId", senderId).
-		With("heads", response.Heads).
-		With("treeId", s.objTree.Id())
-	log.Debug("received full sync response message")
+	log := log.With(zap.Strings("heads", response.Heads), zap.String("treeId", s.objTree.Id()))
+	log.DebugCtx(ctx, "received full sync response message")
 
 	defer func() {
 		if err != nil {
-			log.With(zap.Error(err)).Debug("full sync response failed")
+			log.With(zap.Error(err)).DebugCtx(ctx, "full sync response failed")
 		} else {
-			log.Debug("full sync response succeeded")
+			log.DebugCtx(ctx, "full sync response succeeded")
 		}
 	}()
 
