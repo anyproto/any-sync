@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
+	"github.com/anytypeio/any-sync/commonspace/peermanager"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"go.uber.org/zap"
 	"strconv"
@@ -14,17 +15,11 @@ import (
 	"time"
 )
 
-type StreamManager interface {
-	SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error)
-	SendResponsible(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error)
-	Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error)
-}
-
 // MessagePool can be made generic to work with different streams
 type MessagePool interface {
 	ocache.ObjectLastUsage
 	synchandler.SyncHandler
-	StreamManager
+	peermanager.PeerManager
 	SendSync(ctx context.Context, peerId string, message *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error)
 }
 
@@ -36,7 +31,7 @@ type responseWaiter struct {
 
 type messagePool struct {
 	sync.Mutex
-	StreamManager
+	peermanager.PeerManager
 	messageHandler MessageHandler
 	waiters        map[string]responseWaiter
 	waitersMx      sync.Mutex
@@ -44,9 +39,9 @@ type messagePool struct {
 	lastUsage      atomic.Int64
 }
 
-func newMessagePool(streamManager StreamManager, messageHandler MessageHandler) MessagePool {
+func newMessagePool(peerManager peermanager.PeerManager, messageHandler MessageHandler) MessagePool {
 	s := &messagePool{
-		StreamManager:  streamManager,
+		PeerManager:    peerManager,
 		messageHandler: messageHandler,
 		waiters:        make(map[string]responseWaiter),
 	}
@@ -88,16 +83,16 @@ func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyn
 
 func (s *messagePool) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	s.updateLastUsage()
-	return s.StreamManager.SendPeer(ctx, peerId, msg)
+	return s.PeerManager.SendPeer(ctx, peerId, msg)
 }
 
 func (s *messagePool) SendResponsible(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	s.updateLastUsage()
-	return s.StreamManager.SendResponsible(ctx, msg)
+	return s.PeerManager.SendResponsible(ctx, msg)
 }
 func (s *messagePool) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	s.updateLastUsage()
-	return s.StreamManager.Broadcast(ctx, msg)
+	return s.PeerManager.Broadcast(ctx, msg)
 }
 
 func (s *messagePool) HandleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
