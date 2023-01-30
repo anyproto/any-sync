@@ -3,7 +3,6 @@ package synctree
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/confconnector"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
@@ -21,7 +20,6 @@ type syncClient struct {
 	objectsync.MessagePool
 	RequestFactory
 	spaceId       string
-	connector     confconnector.ConfConnector
 	configuration nodeconf.Configuration
 }
 

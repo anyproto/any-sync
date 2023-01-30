@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/anytypeio/any-sync/app/ldiff"
 	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/confconnector"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"github.com/anytypeio/any-sync/commonspace/peermanager"
 	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
@@ -28,7 +28,7 @@ type DiffSyncer interface {
 func newDiffSyncer(
 	spaceId string,
 	diff ldiff.Diff,
-	confConnector confconnector.ConfConnector,
+	peerManager peermanager.PeerManager,
 	cache treegetter.TreeGetter,
 	storage spacestorage.SpaceStorage,
 	clientFactory spacesyncproto.ClientFactory,
@@ -39,7 +39,7 @@ func newDiffSyncer(
 		spaceId:       spaceId,
 		cache:         cache,
 		storage:       storage,
-		confConnector: confConnector,
+		peerManager:   peerManager,
 		clientFactory: clientFactory,
 		log:           log,
 		syncStatus:    syncStatus,
@@ -49,7 +49,7 @@ func newDiffSyncer(
 type diffSyncer struct {
 	spaceId       string
 	diff          ldiff.Diff
-	confConnector confconnector.ConfConnector
+	peerManager   peermanager.PeerManager
 	cache         treegetter.TreeGetter
 	storage       spacestorage.SpaceStorage
 	clientFactory spacesyncproto.ClientFactory
@@ -88,7 +88,7 @@ func (d *diffSyncer) UpdateHeads(id string, heads []string) {
 func (d *diffSyncer) Sync(ctx context.Context) error {
 	st := time.Now()
 	// diffing with responsible peers according to configuration
-	peers, err := d.confConnector.GetResponsiblePeers(ctx, d.spaceId)
+	peers, err := d.peerManager.GetResponsiblePeers(ctx)
 	if err != nil {
 		return err
 	}

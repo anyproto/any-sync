@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace/object/syncobjectgetter"
 	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
+	"github.com/anytypeio/any-sync/commonspace/peermanager"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"go.uber.org/zap"
 	"time"
@@ -34,7 +35,7 @@ type objectSync struct {
 
 func NewObjectSync(
 	spaceId string,
-	streamManager StreamManager,
+	peerManager peermanager.PeerManager,
 	objectGetter syncobjectgetter.SyncObjectGetter) ObjectSync {
 	syncCtx, cancel := context.WithCancel(context.Background())
 	os := newObjectSync(
@@ -42,7 +43,7 @@ func NewObjectSync(
 		objectGetter,
 		syncCtx,
 		cancel)
-	msgPool := newMessagePool(streamManager, os.handleMessage)
+	msgPool := newMessagePool(peerManager, os.handleMessage)
 	os.messagePool = msgPool
 	return os
 }
