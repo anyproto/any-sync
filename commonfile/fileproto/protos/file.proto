@@ -1,5 +1,5 @@
 syntax = "proto3";
-package anyFile;
+package filesync;
 
 option go_package = "commonfile/fileproto";
 

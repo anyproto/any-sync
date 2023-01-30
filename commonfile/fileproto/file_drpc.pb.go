@@ -59,7 +59,7 @@ func NewDRPCFileClient(cc drpc.Conn) DRPCFileClient {
 func (c *drpcFileClient) DRPCConn() drpc.Conn { return c.cc }
 
 func (c *drpcFileClient) BlocksGet(ctx context.Context) (DRPCFile_BlocksGetClient, error) {
-	stream, err := c.cc.NewStream(ctx, "/anyFile.File/BlocksGet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{})
+	stream, err := c.cc.NewStream(ctx, "/filesync.File/BlocksGet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{})
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (x *drpcFile_BlocksGetClient) RecvMsg(m *BlockGetResponse) error {
 
 func (c *drpcFileClient) BlockPush(ctx context.Context, in *BlockPushRequest) (*BlockPushResponse, error) {
 	out := new(BlockPushResponse)
-	err := c.cc.Invoke(ctx, "/anyFile.File/BlockPush", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/filesync.File/BlockPush", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (c *drpcFileClient) BlockPush(ctx context.Context, in *BlockPushRequest) (*
 
 func (c *drpcFileClient) BlocksCheck(ctx context.Context, in *BlocksCheckRequest) (*BlocksCheckResponse, error) {
 	out := new(BlocksCheckResponse)
-	err := c.cc.Invoke(ctx, "/anyFile.File/BlocksCheck", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/filesync.File/BlocksCheck", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (c *drpcFileClient) BlocksCheck(ctx context.Context, in *BlocksCheckRequest
 
 func (c *drpcFileClient) BlocksBind(ctx context.Context, in *BlocksBindRequest) (*BlocksBindResponse, error) {
 	out := new(BlocksBindResponse)
-	err := c.cc.Invoke(ctx, "/anyFile.File/BlocksBind", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/filesync.File/BlocksBind", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (c *drpcFileClient) BlocksBind(ctx context.Context, in *BlocksBindRequest) 
 
 func (c *drpcFileClient) BlocksDelete(ctx context.Context, in *BlocksDeleteRequest) (*BlocksDeleteResponse, error) {
 	out := new(BlocksDeleteResponse)
-	err := c.cc.Invoke(ctx, "/anyFile.File/BlocksDelete", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/filesync.File/BlocksDelete", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (c *drpcFileClient) BlocksDelete(ctx context.Context, in *BlocksDeleteReque
 
 func (c *drpcFileClient) Check(ctx context.Context, in *CheckRequest) (*CheckResponse, error) {
 	out := new(CheckResponse)
-	err := c.cc.Invoke(ctx, "/anyFile.File/Check", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/filesync.File/Check", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func (DRPCFileDescription) NumMethods() int { return 6 }
 func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
 	case 0:
-		return "/anyFile.File/BlocksGet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/filesync.File/BlocksGet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return nil, srv.(DRPCFileServer).
 					BlocksGet(
@@ -188,7 +188,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 					)
 			}, DRPCFileServer.BlocksGet, true
 	case 1:
-		return "/anyFile.File/BlockPush", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/filesync.File/BlockPush", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
 					BlockPush(
@@ -197,7 +197,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 					)
 			}, DRPCFileServer.BlockPush, true
 	case 2:
-		return "/anyFile.File/BlocksCheck", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/filesync.File/BlocksCheck", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
 					BlocksCheck(
@@ -206,7 +206,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 					)
 			}, DRPCFileServer.BlocksCheck, true
 	case 3:
-		return "/anyFile.File/BlocksBind", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/filesync.File/BlocksBind", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
 					BlocksBind(
@@ -215,7 +215,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 					)
 			}, DRPCFileServer.BlocksBind, true
 	case 4:
-		return "/anyFile.File/BlocksDelete", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/filesync.File/BlocksDelete", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
 					BlocksDelete(
@@ -224,7 +224,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 					)
 			}, DRPCFileServer.BlocksDelete, true
 	case 5:
-		return "/anyFile.File/Check", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/filesync.File/Check", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
 					Check(
