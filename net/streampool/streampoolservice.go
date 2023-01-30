@@ -28,7 +28,8 @@ func (s *service) NewStreamPool(h StreamHandler) StreamPool {
 		streamIdsByTag:  map[string][]uint32{},
 		streams:         map[uint32]*stream{},
 		opening:         map[string]*openingProcess{},
-		exec:            newStreamSender(10, 100),
+		exec:            newExecPool(10, 100),
+		dial:            newExecPool(4, 100),
 	}
 	return sp
 }

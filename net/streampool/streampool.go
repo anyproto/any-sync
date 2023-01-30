@@ -50,19 +50,15 @@ type streamPool struct {
 	streamIdsByTag  map[string][]uint32
 	streams         map[uint32]*stream
 	opening         map[string]*openingProcess
-	exec            *sendPool
-	mu              sync.RWMutex
+	exec            *execPool
+	dial            *execPool
+	mu              sync.Mutex
 	lastStreamId    uint32
 }
 
 type openingProcess struct {
 	ch  chan struct{}
 	err error
-}
-type handleMessage struct {
-	ctx    context.Context
-	msg    drpc.Message
-	peerId string
 }
 
 func (s *streamPool) ReadStream(peerId string, drpcStream drpc.Stream, tags ...string) error {
@@ -108,7 +104,7 @@ func (s *streamPool) Send(ctx context.Context, msg drpc.Message, peerGetter Peer
 			}
 		}
 	}
-	return s.exec.Add(ctx, func() {
+	return s.dial.Add(ctx, func() {
 		peers, dialErr := peerGetter(ctx)
 		if dialErr != nil {
 			log.InfoCtx(ctx, "can't get peers", zap.Error(dialErr))

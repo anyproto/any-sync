@@ -6,11 +6,11 @@ import (
 	"go.uber.org/zap"
 )
 
-// newStreamSender creates new sendPool
+// newExecPool creates new execPool
 // workers - how many processes will execute tasks
 // maxSize - limit for queue size
-func newStreamSender(workers, maxSize int) *sendPool {
-	ss := &sendPool{
+func newExecPool(workers, maxSize int) *execPool {
+	ss := &execPool{
 		batch: mb.New[func()](maxSize),
 	}
 	for i := 0; i < workers; i++ {
@@ -19,16 +19,16 @@ func newStreamSender(workers, maxSize int) *sendPool {
 	return ss
 }
 
-// sendPool needed for parallel execution of the incoming send tasks
-type sendPool struct {
+// execPool needed for parallel execution of the incoming send tasks
+type execPool struct {
 	batch *mb.MB[func()]
 }
 
-func (ss *sendPool) Add(ctx context.Context, f ...func()) (err error) {
+func (ss *execPool) Add(ctx context.Context, f ...func()) (err error) {
 	return ss.batch.Add(ctx, f...)
 }
 
-func (ss *sendPool) sendLoop() {
+func (ss *execPool) sendLoop() {
 	for {
 		f, err := ss.batch.WaitOne(context.Background())
 		if err != nil {
@@ -39,6 +39,6 @@ func (ss *sendPool) sendLoop() {
 	}
 }
 
-func (ss *sendPool) Close() (err error) {
+func (ss *execPool) Close() (err error) {
 	return ss.batch.Close()
 }

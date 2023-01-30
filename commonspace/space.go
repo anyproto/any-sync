@@ -27,6 +27,7 @@ import (
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/any-sync/util/multiqueue"
 	"github.com/anytypeio/any-sync/util/slice"
+	"github.com/cheggaaa/mb/v3"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"strconv"
@@ -359,7 +360,13 @@ func (s *space) HandleMessage(ctx context.Context, hm HandleMessage) (err error)
 			_ = s.handleQueue.CloseThread(threadId)
 		}()
 	}
-	return s.handleQueue.Add(ctx, threadId, hm)
+	err = s.handleQueue.Add(ctx, threadId, hm)
+	if err == mb.ErrOverflowed {
+		log.InfoCtx(ctx, "queue overflowed", zap.String("spaceId", s.id), zap.String("objectId", threadId))
+		// skip overflowed error
+		return nil
+	}
+	return
 }
 
 func (s *space) handleMessage(msg HandleMessage) {
