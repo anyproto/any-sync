@@ -11,40 +11,72 @@ enum ErrCodes {
 
 service File {
     // GetBlocks streams ipfs blocks from server to client
-    rpc GetBlocks(stream GetBlockRequest) returns (stream GetBlockResponse);
+    rpc BlocksGet(stream BlockGetRequest) returns (stream BlockGetResponse);
     // PushBlock pushes one block to server
-    rpc PushBlock(PushBlockRequest) returns (PushBlockResponse);
+    rpc BlockPush(BlockPushRequest) returns (BlockPushResponse);
+    // BlocksCheck checks is CIDs exists
+    rpc BlocksCheck(BlocksCheckRequest) returns (BlocksCheckResponse);
+    // BlocksBind binds CIDs to space
+    rpc BlocksBind(BlocksBindRequest) returns (BlocksBindResponse);
     // DeleteBlock deletes block from space
-    rpc DeleteBlocks(DeleteBlocksRequest) returns (DeleteBlocksResponse);
+    rpc BlocksDelete(BlocksDeleteRequest) returns (BlocksDeleteResponse);
     // Ping checks the connection
     rpc Check(CheckRequest) returns (CheckResponse);
 }
 
-message GetBlockRequest {
+message BlockGetRequest {
     string spaceId = 1;
     bytes cid = 2;
 }
 
-message GetBlockResponse {
+message BlockGetResponse {
     bytes cid = 1;
     bytes data = 2;
     CIDError code = 3;
 }
 
-message PushBlockRequest {
+message BlockPushRequest {
     string spaceId = 1;
     bytes cid = 2;
     bytes data = 3;
 }
 
-message PushBlockResponse {}
+message BlockPushResponse {}
 
-message DeleteBlocksRequest {
+message BlocksDeleteRequest {
     string spaceId = 1;
-    repeated bytes cid = 2;
+    repeated bytes cids = 2;
 }
 
-message DeleteBlocksResponse {}
+message BlocksDeleteResponse {}
+
+
+message BlocksCheckRequest {
+    string spaceId = 1;
+    repeated bytes cids = 2;
+}
+
+message BlocksCheckResponse {
+    repeated BlockAvailability blocksAvailability = 1;
+}
+
+message BlockAvailability {
+    bytes cid = 1;
+    AvailabilityStatus status = 2;
+}
+
+enum AvailabilityStatus {
+    NotExists = 0;
+    Exists = 1;
+    ExistsInSpace = 2;
+}
+
+message BlocksBindRequest {
+    string spaceId = 1;
+    repeated bytes cids = 2;
+}
+
+message BlocksBindResponse {}
 
 message CheckRequest {}
 

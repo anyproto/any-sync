@@ -40,9 +40,11 @@ func (drpcEncoding_File_commonfile_fileproto_protos_file_proto) JSONUnmarshal(bu
 type DRPCFileClient interface {
 	DRPCConn() drpc.Conn
 
-	GetBlocks(ctx context.Context) (DRPCFile_GetBlocksClient, error)
-	PushBlock(ctx context.Context, in *PushBlockRequest) (*PushBlockResponse, error)
-	DeleteBlocks(ctx context.Context, in *DeleteBlocksRequest) (*DeleteBlocksResponse, error)
+	BlocksGet(ctx context.Context) (DRPCFile_BlocksGetClient, error)
+	BlockPush(ctx context.Context, in *BlockPushRequest) (*BlockPushResponse, error)
+	BlocksCheck(ctx context.Context, in *BlocksCheckRequest) (*BlocksCheckResponse, error)
+	BlocksBind(ctx context.Context, in *BlocksBindRequest) (*BlocksBindResponse, error)
+	BlocksDelete(ctx context.Context, in *BlocksDeleteRequest) (*BlocksDeleteResponse, error)
 	Check(ctx context.Context, in *CheckRequest) (*CheckResponse, error)
 }
 
@@ -56,53 +58,71 @@ func NewDRPCFileClient(cc drpc.Conn) DRPCFileClient {
 
 func (c *drpcFileClient) DRPCConn() drpc.Conn { return c.cc }
 
-func (c *drpcFileClient) GetBlocks(ctx context.Context) (DRPCFile_GetBlocksClient, error) {
-	stream, err := c.cc.NewStream(ctx, "/anyFile.File/GetBlocks", drpcEncoding_File_commonfile_fileproto_protos_file_proto{})
+func (c *drpcFileClient) BlocksGet(ctx context.Context) (DRPCFile_BlocksGetClient, error) {
+	stream, err := c.cc.NewStream(ctx, "/anyFile.File/BlocksGet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{})
 	if err != nil {
 		return nil, err
 	}
-	x := &drpcFile_GetBlocksClient{stream}
+	x := &drpcFile_BlocksGetClient{stream}
 	return x, nil
 }
 
-type DRPCFile_GetBlocksClient interface {
+type DRPCFile_BlocksGetClient interface {
 	drpc.Stream
-	Send(*GetBlockRequest) error
-	Recv() (*GetBlockResponse, error)
+	Send(*BlockGetRequest) error
+	Recv() (*BlockGetResponse, error)
 }
 
-type drpcFile_GetBlocksClient struct {
+type drpcFile_BlocksGetClient struct {
 	drpc.Stream
 }
 
-func (x *drpcFile_GetBlocksClient) Send(m *GetBlockRequest) error {
+func (x *drpcFile_BlocksGetClient) Send(m *BlockGetRequest) error {
 	return x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{})
 }
 
-func (x *drpcFile_GetBlocksClient) Recv() (*GetBlockResponse, error) {
-	m := new(GetBlockResponse)
+func (x *drpcFile_BlocksGetClient) Recv() (*BlockGetResponse, error) {
+	m := new(BlockGetResponse)
 	if err := x.MsgRecv(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (x *drpcFile_GetBlocksClient) RecvMsg(m *GetBlockResponse) error {
+func (x *drpcFile_BlocksGetClient) RecvMsg(m *BlockGetResponse) error {
 	return x.MsgRecv(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{})
 }
 
-func (c *drpcFileClient) PushBlock(ctx context.Context, in *PushBlockRequest) (*PushBlockResponse, error) {
-	out := new(PushBlockResponse)
-	err := c.cc.Invoke(ctx, "/anyFile.File/PushBlock", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+func (c *drpcFileClient) BlockPush(ctx context.Context, in *BlockPushRequest) (*BlockPushResponse, error) {
+	out := new(BlockPushResponse)
+	err := c.cc.Invoke(ctx, "/anyFile.File/BlockPush", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *drpcFileClient) DeleteBlocks(ctx context.Context, in *DeleteBlocksRequest) (*DeleteBlocksResponse, error) {
-	out := new(DeleteBlocksResponse)
-	err := c.cc.Invoke(ctx, "/anyFile.File/DeleteBlocks", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+func (c *drpcFileClient) BlocksCheck(ctx context.Context, in *BlocksCheckRequest) (*BlocksCheckResponse, error) {
+	out := new(BlocksCheckResponse)
+	err := c.cc.Invoke(ctx, "/anyFile.File/BlocksCheck", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcFileClient) BlocksBind(ctx context.Context, in *BlocksBindRequest) (*BlocksBindResponse, error) {
+	out := new(BlocksBindResponse)
+	err := c.cc.Invoke(ctx, "/anyFile.File/BlocksBind", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcFileClient) BlocksDelete(ctx context.Context, in *BlocksDeleteRequest) (*BlocksDeleteResponse, error) {
+	out := new(BlocksDeleteResponse)
+	err := c.cc.Invoke(ctx, "/anyFile.File/BlocksDelete", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -119,23 +139,33 @@ func (c *drpcFileClient) Check(ctx context.Context, in *CheckRequest) (*CheckRes
 }
 
 type DRPCFileServer interface {
-	GetBlocks(DRPCFile_GetBlocksStream) error
-	PushBlock(context.Context, *PushBlockRequest) (*PushBlockResponse, error)
-	DeleteBlocks(context.Context, *DeleteBlocksRequest) (*DeleteBlocksResponse, error)
+	BlocksGet(DRPCFile_BlocksGetStream) error
+	BlockPush(context.Context, *BlockPushRequest) (*BlockPushResponse, error)
+	BlocksCheck(context.Context, *BlocksCheckRequest) (*BlocksCheckResponse, error)
+	BlocksBind(context.Context, *BlocksBindRequest) (*BlocksBindResponse, error)
+	BlocksDelete(context.Context, *BlocksDeleteRequest) (*BlocksDeleteResponse, error)
 	Check(context.Context, *CheckRequest) (*CheckResponse, error)
 }
 
 type DRPCFileUnimplementedServer struct{}
 
-func (s *DRPCFileUnimplementedServer) GetBlocks(DRPCFile_GetBlocksStream) error {
+func (s *DRPCFileUnimplementedServer) BlocksGet(DRPCFile_BlocksGetStream) error {
 	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCFileUnimplementedServer) PushBlock(context.Context, *PushBlockRequest) (*PushBlockResponse, error) {
+func (s *DRPCFileUnimplementedServer) BlockPush(context.Context, *BlockPushRequest) (*BlockPushResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCFileUnimplementedServer) DeleteBlocks(context.Context, *DeleteBlocksRequest) (*DeleteBlocksResponse, error) {
+func (s *DRPCFileUnimplementedServer) BlocksCheck(context.Context, *BlocksCheckRequest) (*BlocksCheckResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCFileUnimplementedServer) BlocksBind(context.Context, *BlocksBindRequest) (*BlocksBindResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCFileUnimplementedServer) BlocksDelete(context.Context, *BlocksDeleteRequest) (*BlocksDeleteResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
@@ -145,37 +175,55 @@ func (s *DRPCFileUnimplementedServer) Check(context.Context, *CheckRequest) (*Ch
 
 type DRPCFileDescription struct{}
 
-func (DRPCFileDescription) NumMethods() int { return 4 }
+func (DRPCFileDescription) NumMethods() int { return 6 }
 
 func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
 	case 0:
-		return "/anyFile.File/GetBlocks", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/anyFile.File/BlocksGet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return nil, srv.(DRPCFileServer).
-					GetBlocks(
-						&drpcFile_GetBlocksStream{in1.(drpc.Stream)},
+					BlocksGet(
+						&drpcFile_BlocksGetStream{in1.(drpc.Stream)},
 					)
-			}, DRPCFileServer.GetBlocks, true
+			}, DRPCFileServer.BlocksGet, true
 	case 1:
-		return "/anyFile.File/PushBlock", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/anyFile.File/BlockPush", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
-					PushBlock(
+					BlockPush(
 						ctx,
-						in1.(*PushBlockRequest),
+						in1.(*BlockPushRequest),
 					)
-			}, DRPCFileServer.PushBlock, true
+			}, DRPCFileServer.BlockPush, true
 	case 2:
-		return "/anyFile.File/DeleteBlocks", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/anyFile.File/BlocksCheck", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
-					DeleteBlocks(
+					BlocksCheck(
 						ctx,
-						in1.(*DeleteBlocksRequest),
+						in1.(*BlocksCheckRequest),
 					)
-			}, DRPCFileServer.DeleteBlocks, true
+			}, DRPCFileServer.BlocksCheck, true
 	case 3:
+		return "/anyFile.File/BlocksBind", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCFileServer).
+					BlocksBind(
+						ctx,
+						in1.(*BlocksBindRequest),
+					)
+			}, DRPCFileServer.BlocksBind, true
+	case 4:
+		return "/anyFile.File/BlocksDelete", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCFileServer).
+					BlocksDelete(
+						ctx,
+						in1.(*BlocksDeleteRequest),
+					)
+			}, DRPCFileServer.BlocksDelete, true
+	case 5:
 		return "/anyFile.File/Check", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -193,58 +241,90 @@ func DRPCRegisterFile(mux drpc.Mux, impl DRPCFileServer) error {
 	return mux.Register(impl, DRPCFileDescription{})
 }
 
-type DRPCFile_GetBlocksStream interface {
+type DRPCFile_BlocksGetStream interface {
 	drpc.Stream
-	Send(*GetBlockResponse) error
-	Recv() (*GetBlockRequest, error)
+	Send(*BlockGetResponse) error
+	Recv() (*BlockGetRequest, error)
 }
 
-type drpcFile_GetBlocksStream struct {
+type drpcFile_BlocksGetStream struct {
 	drpc.Stream
 }
 
-func (x *drpcFile_GetBlocksStream) Send(m *GetBlockResponse) error {
+func (x *drpcFile_BlocksGetStream) Send(m *BlockGetResponse) error {
 	return x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{})
 }
 
-func (x *drpcFile_GetBlocksStream) Recv() (*GetBlockRequest, error) {
-	m := new(GetBlockRequest)
+func (x *drpcFile_BlocksGetStream) Recv() (*BlockGetRequest, error) {
+	m := new(BlockGetRequest)
 	if err := x.MsgRecv(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (x *drpcFile_GetBlocksStream) RecvMsg(m *GetBlockRequest) error {
+func (x *drpcFile_BlocksGetStream) RecvMsg(m *BlockGetRequest) error {
 	return x.MsgRecv(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{})
 }
 
-type DRPCFile_PushBlockStream interface {
+type DRPCFile_BlockPushStream interface {
 	drpc.Stream
-	SendAndClose(*PushBlockResponse) error
+	SendAndClose(*BlockPushResponse) error
 }
 
-type drpcFile_PushBlockStream struct {
+type drpcFile_BlockPushStream struct {
 	drpc.Stream
 }
 
-func (x *drpcFile_PushBlockStream) SendAndClose(m *PushBlockResponse) error {
+func (x *drpcFile_BlockPushStream) SendAndClose(m *BlockPushResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
 		return err
 	}
 	return x.CloseSend()
 }
 
-type DRPCFile_DeleteBlocksStream interface {
+type DRPCFile_BlocksCheckStream interface {
 	drpc.Stream
-	SendAndClose(*DeleteBlocksResponse) error
+	SendAndClose(*BlocksCheckResponse) error
 }
 
-type drpcFile_DeleteBlocksStream struct {
+type drpcFile_BlocksCheckStream struct {
 	drpc.Stream
 }
 
-func (x *drpcFile_DeleteBlocksStream) SendAndClose(m *DeleteBlocksResponse) error {
+func (x *drpcFile_BlocksCheckStream) SendAndClose(m *BlocksCheckResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCFile_BlocksBindStream interface {
+	drpc.Stream
+	SendAndClose(*BlocksBindResponse) error
+}
+
+type drpcFile_BlocksBindStream struct {
+	drpc.Stream
+}
+
+func (x *drpcFile_BlocksBindStream) SendAndClose(m *BlocksBindResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCFile_BlocksDeleteStream interface {
+	drpc.Stream
+	SendAndClose(*BlocksDeleteResponse) error
+}
+
+type drpcFile_BlocksDeleteStream struct {
+	drpc.Stream
+}
+
+func (x *drpcFile_BlocksDeleteStream) SendAndClose(m *BlocksDeleteResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
 		return err
 	}
