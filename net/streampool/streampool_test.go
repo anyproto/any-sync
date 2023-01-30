@@ -200,7 +200,12 @@ func newFixture(t *testing.T) *fixture {
 	require.NoError(t, testservice.DRPCRegisterTest(ts, fx.tsh))
 	fx.tp = rpctest.NewTestPool().WithServer(ts)
 	fx.th = &testHandler{}
-	fx.StreamPool = New().NewStreamPool(fx.th)
+	fx.StreamPool = New().NewStreamPool(fx.th, StreamConfig{
+		SendQueueWorkers: 4,
+		SendQueueSize:    10,
+		DialQueueWorkers: 1,
+		DialQueueSize:    10,
+	})
 	return fx
 }
 
