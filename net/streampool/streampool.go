@@ -332,6 +332,9 @@ func (s *streamPool) removeStream(streamId uint32) {
 }
 
 func (s *streamPool) Close() (err error) {
+	if e := s.dial.Close(); e != nil {
+		log.Warn("dial queue close error", zap.Error(e))
+	}
 	return s.exec.Close()
 }
 
