@@ -21,6 +21,9 @@ type StreamHandler interface {
 	NewReadMessage() drpc.Message
 }
 
+// PeerGetter should dial or return cached peers
+type PeerGetter func(ctx context.Context) (peers []peer.Peer, err error)
+
 // StreamPool keeps and read streams
 type StreamPool interface {
 	// AddStream adds new outgoing stream into the pool
@@ -28,7 +31,7 @@ type StreamPool interface {
 	// ReadStream adds new incoming stream and synchronously read it
 	ReadStream(peerId string, stream drpc.Stream, tags ...string) (err error)
 	// Send sends a message to given peers. A stream will be opened if it is not cached before. Works async.
-	Send(ctx context.Context, msg drpc.Message, peers ...peer.Peer) (err error)
+	Send(ctx context.Context, msg drpc.Message, target PeerGetter) (err error)
 	// SendById sends a message to given peerIds. Works only if stream exists
 	SendById(ctx context.Context, msg drpc.Message, peerIds ...string) (err error)
 	// Broadcast sends a message to all peers with given tags. Works async.
@@ -95,7 +98,7 @@ func (s *streamPool) addStream(peerId string, drpcStream drpc.Stream, tags ...st
 	return st
 }
 
-func (s *streamPool) Send(ctx context.Context, msg drpc.Message, peers ...peer.Peer) (err error) {
+func (s *streamPool) Send(ctx context.Context, msg drpc.Message, peerGetter PeerGetter) (err error) {
 	var sendOneFunc = func(sp peer.Peer) func() {
 		return func() {
 			if e := s.sendOne(ctx, sp, msg); e != nil {
@@ -105,13 +108,17 @@ func (s *streamPool) Send(ctx context.Context, msg drpc.Message, peers ...peer.P
 			}
 		}
 	}
-
-	for _, p := range peers {
-		if err = s.exec.Add(ctx, sendOneFunc(p)); err != nil {
-			return
+	return s.exec.Add(ctx, func() {
+		peers, dialErr := peerGetter(ctx)
+		if dialErr != nil {
+			log.InfoCtx(ctx, "can't get peers", zap.Error(dialErr))
 		}
-	}
-	return
+		for _, p := range peers {
+			if err = s.exec.Add(ctx, sendOneFunc(p)); err != nil {
+				return
+			}
+		}
+	})
 }
 
 func (s *streamPool) SendById(ctx context.Context, msg drpc.Message, peerIds ...string) (err error) {
