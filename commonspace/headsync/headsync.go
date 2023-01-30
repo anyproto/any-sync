@@ -5,8 +5,8 @@ import (
 	"context"
 	"github.com/anytypeio/any-sync/app/ldiff"
 	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/confconnector"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"github.com/anytypeio/any-sync/commonspace/peermanager"
 	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
@@ -49,7 +49,7 @@ func NewHeadSync(
 	spaceId string,
 	syncPeriod int,
 	storage spacestorage.SpaceStorage,
-	confConnector confconnector.ConfConnector,
+	peerManager peermanager.PeerManager,
 	cache treegetter.TreeGetter,
 	syncStatus syncstatus.StatusUpdater,
 	log logger.CtxLogger) HeadSync {
@@ -57,7 +57,7 @@ func NewHeadSync(
 	diff := ldiff.New(16, 16)
 	l := log.With(zap.String("spaceId", spaceId))
 	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
-	syncer := newDiffSyncer(spaceId, diff, confConnector, cache, storage, factory, syncStatus, l)
+	syncer := newDiffSyncer(spaceId, diff, peerManager, cache, storage, factory, syncStatus, l)
 	periodicSync := periodicsync.NewPeriodicSync(syncPeriod, time.Minute*10, syncer.Sync, l)
 
 	return &headSync{

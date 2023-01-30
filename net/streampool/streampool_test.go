@@ -66,7 +66,9 @@ func TestStreamPool_AddStream(t *testing.T) {
 		defer s1.Close()
 		fx.AddStream("p1", s1, "space1", "common")
 
-		require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "test"}, p1))
+		require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "test"}, func(ctx context.Context) (peers []peer.Peer, err error) {
+			return []peer.Peer{p1}, nil
+		}))
 		var msg *testservice.StreamMessage
 		select {
 		case msg = <-fx.tsh.receiveCh:
@@ -85,7 +87,9 @@ func TestStreamPool_Send(t *testing.T) {
 		p, err := fx.tp.Dial(ctx, "p1")
 		require.NoError(t, err)
 
-		require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "should open stream"}, p))
+		require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "should open stream"}, func(ctx context.Context) (peers []peer.Peer, err error) {
+			return []peer.Peer{p}, nil
+		}))
 
 		var msg *testservice.StreamMessage
 		select {
@@ -107,7 +111,9 @@ func TestStreamPool_Send(t *testing.T) {
 		var numMsgs = 5
 
 		for i := 0; i < numMsgs; i++ {
-			go require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "should open stream"}, p))
+			go require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "should open stream"}, func(ctx context.Context) (peers []peer.Peer, err error) {
+				return []peer.Peer{p}, nil
+			}))
 		}
 
 		var msgs []*testservice.StreamMessage
@@ -194,7 +200,12 @@ func newFixture(t *testing.T) *fixture {
 	require.NoError(t, testservice.DRPCRegisterTest(ts, fx.tsh))
 	fx.tp = rpctest.NewTestPool().WithServer(ts)
 	fx.th = &testHandler{}
-	fx.StreamPool = New().NewStreamPool(fx.th)
+	fx.StreamPool = New().NewStreamPool(fx.th, StreamConfig{
+		SendQueueWorkers: 4,
+		SendQueueSize:    10,
+		DialQueueWorkers: 1,
+		DialQueueSize:    10,
+	})
 	return fx
 }
 
