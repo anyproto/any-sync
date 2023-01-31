@@ -10,9 +10,9 @@ enum ErrCodes {
 }
 
 service File {
-    // GetBlocks streams ipfs blocks from server to client
-    rpc BlocksGet(BlockGetRequest) returns (BlockGetResponse);
-    // BlockPush pushes one block to server
+    // BlockGet gets one block from a server
+    rpc BlockGet(BlockGetRequest) returns (BlockGetResponse);
+    // BlockPush pushes one block to a server
     rpc BlockPush(BlockPushRequest) returns (BlockPushResponse);
     // BlocksCheck checks is CIDs exists
     rpc BlocksCheck(BlocksCheckRequest) returns (BlocksCheckResponse);

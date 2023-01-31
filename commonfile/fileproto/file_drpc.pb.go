@@ -40,7 +40,7 @@ func (drpcEncoding_File_commonfile_fileproto_protos_file_proto) JSONUnmarshal(bu
 type DRPCFileClient interface {
 	DRPCConn() drpc.Conn
 
-	BlocksGet(ctx context.Context, in *BlockGetRequest) (*BlockGetResponse, error)
+	BlockGet(ctx context.Context, in *BlockGetRequest) (*BlockGetResponse, error)
 	BlockPush(ctx context.Context, in *BlockPushRequest) (*BlockPushResponse, error)
 	BlocksCheck(ctx context.Context, in *BlocksCheckRequest) (*BlocksCheckResponse, error)
 	BlocksBind(ctx context.Context, in *BlocksBindRequest) (*BlocksBindResponse, error)
@@ -58,9 +58,9 @@ func NewDRPCFileClient(cc drpc.Conn) DRPCFileClient {
 
 func (c *drpcFileClient) DRPCConn() drpc.Conn { return c.cc }
 
-func (c *drpcFileClient) BlocksGet(ctx context.Context, in *BlockGetRequest) (*BlockGetResponse, error) {
+func (c *drpcFileClient) BlockGet(ctx context.Context, in *BlockGetRequest) (*BlockGetResponse, error) {
 	out := new(BlockGetResponse)
-	err := c.cc.Invoke(ctx, "/filesync.File/BlocksGet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/filesync.File/BlockGet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (c *drpcFileClient) Check(ctx context.Context, in *CheckRequest) (*CheckRes
 }
 
 type DRPCFileServer interface {
-	BlocksGet(context.Context, *BlockGetRequest) (*BlockGetResponse, error)
+	BlockGet(context.Context, *BlockGetRequest) (*BlockGetResponse, error)
 	BlockPush(context.Context, *BlockPushRequest) (*BlockPushResponse, error)
 	BlocksCheck(context.Context, *BlocksCheckRequest) (*BlocksCheckResponse, error)
 	BlocksBind(context.Context, *BlocksBindRequest) (*BlocksBindResponse, error)
@@ -123,7 +123,7 @@ type DRPCFileServer interface {
 
 type DRPCFileUnimplementedServer struct{}
 
-func (s *DRPCFileUnimplementedServer) BlocksGet(context.Context, *BlockGetRequest) (*BlockGetResponse, error) {
+func (s *DRPCFileUnimplementedServer) BlockGet(context.Context, *BlockGetRequest) (*BlockGetResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
@@ -154,14 +154,14 @@ func (DRPCFileDescription) NumMethods() int { return 6 }
 func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
 	case 0:
-		return "/filesync.File/BlocksGet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/filesync.File/BlockGet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
-					BlocksGet(
+					BlockGet(
 						ctx,
 						in1.(*BlockGetRequest),
 					)
-			}, DRPCFileServer.BlocksGet, true
+			}, DRPCFileServer.BlockGet, true
 	case 1:
 		return "/filesync.File/BlockPush", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
@@ -216,16 +216,16 @@ func DRPCRegisterFile(mux drpc.Mux, impl DRPCFileServer) error {
 	return mux.Register(impl, DRPCFileDescription{})
 }
 
-type DRPCFile_BlocksGetStream interface {
+type DRPCFile_BlockGetStream interface {
 	drpc.Stream
 	SendAndClose(*BlockGetResponse) error
 }
 
-type drpcFile_BlocksGetStream struct {
+type drpcFile_BlockGetStream struct {
 	drpc.Stream
 }
 
-func (x *drpcFile_BlocksGetStream) SendAndClose(m *BlockGetResponse) error {
+func (x *drpcFile_BlockGetStream) SendAndClose(m *BlockGetResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
 		return err
 	}
