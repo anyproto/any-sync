@@ -59,44 +59,10 @@ func (c *mockChangeCreator) createNewTreeStorage(treeId, aclHeadId string) trees
 	return treeStorage
 }
 
-type mockChangeBuilder struct {
-	originalBuilder ChangeBuilder
-}
-
-func (c *mockChangeBuilder) BuildInitialContent(payload InitialContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
-	panic("implement me")
-}
-
-func (c *mockChangeBuilder) SetRootRawChange(rawIdChange *treechangeproto.RawTreeChangeWithId) {
-	c.originalBuilder.SetRootRawChange(rawIdChange)
-}
-
-func (c *mockChangeBuilder) ConvertFromRaw(rawChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error) {
-	return c.originalBuilder.ConvertFromRaw(rawChange, false)
-}
-
-func (c *mockChangeBuilder) BuildContent(payload BuilderContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
-	panic("implement me")
-}
-
-func (c *mockChangeBuilder) BuildRaw(ch *Change) (raw *treechangeproto.RawTreeChangeWithId, err error) {
-	return c.originalBuilder.BuildRaw(ch)
-}
-
-type mockChangeValidator struct{}
-
-func (m *mockChangeValidator) ValidateNewChanges(tree *Tree, aclList list.AclList, newChanges []*Change) error {
-	return nil
-}
-
-func (m *mockChangeValidator) ValidateFullTree(tree *Tree, aclList list.AclList) error {
-	return nil
-}
-
 type testTreeContext struct {
 	aclList       list.AclList
 	treeStorage   treestorage.TreeStorage
-	changeBuilder *mockChangeBuilder
+	changeBuilder ChangeBuilder
 	changeCreator *mockChangeCreator
 	objTree       ObjectTree
 }
@@ -115,15 +81,15 @@ func prepareTreeDeps(aclList list.AclList) (*mockChangeCreator, objectTreeDeps) 
 	changeCreator := &mockChangeCreator{}
 	treeStorage := changeCreator.createNewTreeStorage("0", aclList.Head().Id)
 	root, _ := treeStorage.Root()
-	changeBuilder := &mockChangeBuilder{
-		originalBuilder: NewChangeBuilder(nil, root),
+	changeBuilder := &nonVerifiableChangeBuilder{
+		ChangeBuilder: NewChangeBuilder(nil, root),
 	}
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,
 		treeBuilder:     newTreeBuilder(treeStorage, changeBuilder),
 		treeStorage:     treeStorage,
 		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
-		validator:       &mockChangeValidator{},
+		validator:       &noOpTreeValidator{},
 		aclList:         aclList,
 	}
 	return changeCreator, deps
@@ -133,15 +99,15 @@ func prepareTreeContext(t *testing.T, aclList list.AclList) testTreeContext {
 	changeCreator := &mockChangeCreator{}
 	treeStorage := changeCreator.createNewTreeStorage("0", aclList.Head().Id)
 	root, _ := treeStorage.Root()
-	changeBuilder := &mockChangeBuilder{
-		originalBuilder: NewChangeBuilder(nil, root),
+	changeBuilder := &nonVerifiableChangeBuilder{
+		ChangeBuilder: NewChangeBuilder(nil, root),
 	}
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,
 		treeBuilder:     newTreeBuilder(treeStorage, changeBuilder),
 		treeStorage:     treeStorage,
 		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
-		validator:       &mockChangeValidator{},
+		validator:       &noOpTreeValidator{},
 		aclList:         aclList,
 	}
 

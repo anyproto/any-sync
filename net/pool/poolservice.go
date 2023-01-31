@@ -35,8 +35,8 @@ type poolService struct {
 }
 
 func (p *poolService) Init(a *app.App) (err error) {
-	p.pool = &pool{}
 	p.dialer = a.MustComponent(dialer.CName).(dialer.Dialer)
+	p.pool = &pool{dialer: p.dialer}
 	if m := a.Component(metric.CName); m != nil {
 		p.metricReg = m.(metric.Metric).Registry()
 	}

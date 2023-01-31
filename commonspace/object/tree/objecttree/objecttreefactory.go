@@ -19,6 +19,56 @@ type ObjectTreeCreatePayload struct {
 	IsEncrypted bool
 }
 
+type HistoryTreeParams struct {
+	TreeStorage     treestorage.TreeStorage
+	AclList         list.AclList
+	BeforeId        string
+	IncludeBeforeId bool
+}
+
+type objectTreeDeps struct {
+	changeBuilder   ChangeBuilder
+	treeBuilder     *treeBuilder
+	treeStorage     treestorage.TreeStorage
+	validator       ObjectTreeValidator
+	rawChangeLoader *rawChangeLoader
+	aclList         list.AclList
+}
+
+func defaultObjectTreeDeps(
+	rootChange *treechangeproto.RawTreeChangeWithId,
+	treeStorage treestorage.TreeStorage,
+	aclList list.AclList) objectTreeDeps {
+
+	keychain := keychain.NewKeychain()
+	changeBuilder := NewChangeBuilder(keychain, rootChange)
+	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
+	return objectTreeDeps{
+		changeBuilder:   changeBuilder,
+		treeBuilder:     treeBuilder,
+		treeStorage:     treeStorage,
+		validator:       newTreeValidator(),
+		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
+		aclList:         aclList,
+	}
+}
+
+func nonVerifiableTreeDeps(
+	rootChange *treechangeproto.RawTreeChangeWithId,
+	treeStorage treestorage.TreeStorage,
+	aclList list.AclList) objectTreeDeps {
+	changeBuilder := &nonVerifiableChangeBuilder{NewChangeBuilder(nil, rootChange)}
+	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
+	return objectTreeDeps{
+		changeBuilder:   changeBuilder,
+		treeBuilder:     treeBuilder,
+		treeStorage:     treeStorage,
+		validator:       &noOpTreeValidator{},
+		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
+		aclList:         aclList,
+	}
+}
+
 func CreateObjectTreeRoot(payload ObjectTreeCreatePayload, aclList list.AclList) (root *treechangeproto.RawTreeChangeWithId, err error) {
 	bytes := make([]byte, 32)
 	_, err = rand.Read(bytes)
@@ -39,6 +89,15 @@ func BuildObjectTree(treeStorage treestorage.TreeStorage, aclList list.AclList) 
 	}
 	deps := defaultObjectTreeDeps(rootChange, treeStorage, aclList)
 	return buildObjectTree(deps)
+}
+
+func BuildNonVerifiableHistoryTree(params HistoryTreeParams) (HistoryTree, error) {
+	rootChange, err := params.TreeStorage.Root()
+	if err != nil {
+		return nil, err
+	}
+	deps := nonVerifiableTreeDeps(rootChange, params.TreeStorage, params.AclList)
+	return buildHistoryTree(deps, params)
 }
 
 func BuildHistoryTree(params HistoryTreeParams) (HistoryTree, error) {
@@ -115,12 +174,13 @@ func createObjectTreeRoot(
 		Seed:       seed,
 	}
 
-	_, root, err = NewChangeBuilder(keychain.NewKeychain(), nil).BuildInitialContent(cnt)
+	_, root, err = NewChangeBuilder(keychain.NewKeychain(), nil).BuildRoot(cnt)
 	return
 }
 
 func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 	objTree := &objectTree{
+		id:              deps.treeStorage.Id(),
 		treeStorage:     deps.treeStorage,
 		treeBuilder:     deps.treeBuilder,
 		validator:       deps.validator,
@@ -139,14 +199,13 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		return nil, err
 	}
 
-	objTree.id = objTree.treeStorage.Id()
 	objTree.rawRoot, err = objTree.treeStorage.Root()
 	if err != nil {
 		return nil, err
 	}
 
 	// verifying root
-	header, err := objTree.changeBuilder.ConvertFromRaw(objTree.rawRoot, true)
+	header, err := objTree.changeBuilder.Unmarshall(objTree.rawRoot, true)
 	if err != nil {
 		return nil, err
 	}
@@ -155,15 +214,9 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 	return objTree, nil
 }
 
-type HistoryTreeParams struct {
-	TreeStorage     treestorage.TreeStorage
-	AclList         list.AclList
-	BeforeId        string
-	IncludeBeforeId bool
-}
-
 func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht HistoryTree, err error) {
 	objTree := &objectTree{
+		id:              deps.treeStorage.Id(),
 		treeStorage:     deps.treeStorage,
 		treeBuilder:     deps.treeBuilder,
 		validator:       deps.validator,
@@ -188,7 +241,7 @@ func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht History
 		return nil, err
 	}
 
-	header, err := objTree.changeBuilder.ConvertFromRaw(objTree.rawRoot, false)
+	header, err := objTree.changeBuilder.Unmarshall(objTree.rawRoot, false)
 	if err != nil {
 		return nil, err
 	}

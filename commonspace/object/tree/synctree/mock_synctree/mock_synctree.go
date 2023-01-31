@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	list "github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	objecttree "github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	updatelistener "github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
 	treechangeproto "github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
@@ -162,6 +163,20 @@ func (m *MockSyncTree) EXPECT() *MockSyncTreeMockRecorder {
 	return m.recorder
 }
 
+// AclList mocks base method.
+func (m *MockSyncTree) AclList() list.AclList {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AclList")
+	ret0, _ := ret[0].(list.AclList)
+	return ret0
+}
+
+// AclList indicates an expected call of AclList.
+func (mr *MockSyncTreeMockRecorder) AclList() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclList", reflect.TypeOf((*MockSyncTree)(nil).AclList))
+}
+
 // AddContent mocks base method.
 func (m *MockSyncTree) AddContent(arg0 context.Context, arg1 objecttree.SignableChangeContent) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
@@ -221,19 +236,19 @@ func (mr *MockSyncTreeMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockSyncTree)(nil).Close))
 }
 
-// DebugDump mocks base method.
-func (m *MockSyncTree) DebugDump(arg0 objecttree.DescriptionParser) (string, error) {
+// Debug mocks base method.
+func (m *MockSyncTree) Debug(arg0 objecttree.DescriptionParser) (objecttree.DebugInfo, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DebugDump", arg0)
-	ret0, _ := ret[0].(string)
+	ret := m.ctrl.Call(m, "Debug", arg0)
+	ret0, _ := ret[0].(objecttree.DebugInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DebugDump indicates an expected call of DebugDump.
-func (mr *MockSyncTreeMockRecorder) DebugDump(arg0 interface{}) *gomock.Call {
+// Debug indicates an expected call of Debug.
+func (mr *MockSyncTreeMockRecorder) Debug(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DebugDump", reflect.TypeOf((*MockSyncTree)(nil).DebugDump), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Debug", reflect.TypeOf((*MockSyncTree)(nil).Debug), arg0)
 }
 
 // Delete mocks base method.

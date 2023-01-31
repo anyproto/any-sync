@@ -13,6 +13,10 @@ var (
 	ErrUnknownRecord = errors.New("record doesn't exist")
 )
 
+type Exporter interface {
+	ListStorage(root *aclrecordproto.RawAclRecordWithId) (ListStorage, error)
+}
+
 type ListStorage interface {
 	Id() string
 	Root() (*aclrecordproto.RawAclRecordWithId, error)
