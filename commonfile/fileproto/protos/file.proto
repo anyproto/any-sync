@@ -81,4 +81,5 @@ message CheckRequest {}
 
 message CheckResponse {
     repeated string spaceIds = 1;
+    bool allowWrite = 2;
 }
