@@ -5,6 +5,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/spacestorage/mock_spacestorage"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"sort"
 	"testing"
 )
 
@@ -70,6 +71,7 @@ func TestDeletionState_GetQueued(t *testing.T) {
 	fx.delState.queued["id2"] = struct{}{}
 
 	queued := fx.delState.GetQueued()
+	sort.Strings(queued)
 	require.Equal(t, []string{"id1", "id2"}, queued)
 }
 
