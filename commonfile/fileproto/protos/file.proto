@@ -11,16 +11,16 @@ enum ErrCodes {
 
 service File {
     // GetBlocks streams ipfs blocks from server to client
-    rpc BlocksGet(stream BlockGetRequest) returns (stream BlockGetResponse);
-    // PushBlock pushes one block to server
+    rpc BlocksGet(BlockGetRequest) returns (BlockGetResponse);
+    // BlockPush pushes one block to server
     rpc BlockPush(BlockPushRequest) returns (BlockPushResponse);
     // BlocksCheck checks is CIDs exists
     rpc BlocksCheck(BlocksCheckRequest) returns (BlocksCheckResponse);
     // BlocksBind binds CIDs to space
     rpc BlocksBind(BlocksBindRequest) returns (BlocksBindResponse);
-    // DeleteBlock deletes block from space
+    // BlocksDelete deletes block from space
     rpc BlocksDelete(BlocksDeleteRequest) returns (BlocksDeleteResponse);
-    // Ping checks the connection
+    // Check checks the connection and credentials
     rpc Check(CheckRequest) returns (CheckResponse);
 }
 
@@ -32,7 +32,6 @@ message BlockGetRequest {
 message BlockGetResponse {
     bytes cid = 1;
     bytes data = 2;
-    CIDError code = 3;
 }
 
 message BlockPushRequest {
@@ -82,11 +81,4 @@ message CheckRequest {}
 
 message CheckResponse {
     repeated string spaceIds = 1;
-}
-
-
-enum CIDError {
-    CIDErrorOk = 0;
-    CIDErrorNotFound = 1;
-    CIDErrorUnexpected = 2;
 }
