@@ -34,6 +34,7 @@ func New() Dialer {
 type Dialer interface {
 	Dial(ctx context.Context, peerId string) (peer peer.Peer, err error)
 	UpdateAddrs(addrs map[string][]string)
+	SetPeerAddrs(peerId string, addrs []string)
 	app.Component
 }
 
@@ -60,6 +61,15 @@ func (d *dialer) UpdateAddrs(addrs map[string][]string) {
 	d.mu.Lock()
 	d.peerAddrs = addrs
 	d.mu.Unlock()
+}
+
+func (d *dialer) SetPeerAddrs(peerId string, addrs []string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.peerAddrs == nil {
+		return
+	}
+	d.peerAddrs[peerId] = addrs
 }
 
 func (d *dialer) Dial(ctx context.Context, peerId string) (p peer.Peer, err error) {
