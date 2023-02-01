@@ -40,6 +40,8 @@ type StreamPool interface {
 	AddTagsCtx(ctx context.Context, tags ...string) error
 	// RemoveTagsCtx removes tags from stream, stream will be extracted from ctx
 	RemoveTagsCtx(ctx context.Context, tags ...string) error
+	// Streams gets all streams for specific tags
+	Streams(tags ...string) (streams []drpc.Stream)
 	// Close closes all streams
 	Close() error
 }
@@ -71,6 +73,17 @@ func (s *streamPool) AddStream(peerId string, drpcStream drpc.Stream, tags ...st
 	go func() {
 		_ = st.readLoop()
 	}()
+}
+
+func (s *streamPool) Streams(tags ...string) (streams []drpc.Stream) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, tag := range tags {
+		for _, id := range s.streamIdsByTag[tag] {
+			streams = append(streams, s.streams[id].stream)
+		}
+	}
+	return
 }
 
 func (s *streamPool) addStream(peerId string, drpcStream drpc.Stream, tags ...string) *stream {
