@@ -179,6 +179,7 @@ func TestDiff_Ids(t *testing.T) {
 	gotIds := d.Ids()
 	sort.Strings(gotIds)
 	assert.Equal(t, ids, gotIds)
+	assert.Equal(t, len(ids), d.Len())
 }
 
 func TestDiff_Elements(t *testing.T) {
