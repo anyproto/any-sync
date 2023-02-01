@@ -51,7 +51,7 @@ var hashersPool = &sync.Pool{
 	},
 }
 
-var ErrElementNotFound = errors.New("element not found")
+var ErrElementNotFound = errors.New("ldiff: element not found")
 
 // Element of data
 type Element struct {
@@ -88,6 +88,8 @@ type Diff interface {
 	Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error)
 	// Elements retrieves all elements in the Diff
 	Elements() []Element
+	// Element returns an element by id
+	Element(id string) (Element, error)
 	// Ids retrieves ids of all elements in the Diff
 	Ids() []string
 	// Hash returns hash of all elements in the diff
@@ -170,6 +172,19 @@ func (d *diff) Elements() (elements []Element) {
 		cur = cur.Next()
 	}
 	return
+}
+
+func (d *diff) Element(id string) (Element, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	el := d.sl.Get(&element{Element: Element{Id: id}, hash: xxhash.Sum64([]byte(id))})
+	if el == nil {
+		return Element{}, ErrElementNotFound
+	}
+	if e, ok := el.Key().(*element); ok {
+		return e.Element, nil
+	}
+	return Element{}, ErrElementNotFound
 }
 
 func (d *diff) Hash() string {
