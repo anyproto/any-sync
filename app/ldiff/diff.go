@@ -94,6 +94,8 @@ type Diff interface {
 	Ids() []string
 	// Hash returns hash of all elements in the diff
 	Hash() string
+	// Len returns count of elements in the diff
+	Len() int
 }
 
 // Remote interface for using in the Diff
@@ -157,6 +159,12 @@ func (d *diff) Ids() (ids []string) {
 		cur = cur.Next()
 	}
 	return
+}
+
+func (d *diff) Len() int {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return d.sl.Len()
 }
 
 func (d *diff) Elements() (elements []Element) {
