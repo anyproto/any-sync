@@ -66,6 +66,10 @@ func (t *TestPool) DialOneOf(ctx context.Context, peerIds []string) (peer.Peer, 
 	return &testPeer{id: peerIds[rand.Intn(len(peerIds))], Conn: t.ts.Dial(ctx)}, nil
 }
 
+func (t *TestPool) NewPool(name string) pool.Pool {
+	return t
+}
+
 func (t *TestPool) Init(a *app.App) (err error) {
 	return nil
 }
