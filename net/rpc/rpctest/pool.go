@@ -48,10 +48,7 @@ func (t *TestPool) Get(ctx context.Context, id string) (peer.Peer, error) {
 func (t *TestPool) Dial(ctx context.Context, id string) (peer.Peer, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if t.ts == nil {
-		return nil, ErrCantConnect
-	}
-	return &testPeer{id: id, Conn: t.ts.Dial(ctx)}, nil
+	return t.Get(ctx, id)
 }
 
 func (t *TestPool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
