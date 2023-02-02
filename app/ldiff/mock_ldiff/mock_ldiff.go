@@ -109,6 +109,20 @@ func (mr *MockDiffMockRecorder) Ids() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ids", reflect.TypeOf((*MockDiff)(nil).Ids))
 }
 
+// Len mocks base method.
+func (m *MockDiff) Len() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Len")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// Len indicates an expected call of Len.
+func (mr *MockDiffMockRecorder) Len() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Len", reflect.TypeOf((*MockDiff)(nil).Len))
+}
+
 // Ranges mocks base method.
 func (m *MockDiff) Ranges(arg0 context.Context, arg1 []ldiff.Range, arg2 []ldiff.RangeResult) ([]ldiff.RangeResult, error) {
 	m.ctrl.T.Helper()
