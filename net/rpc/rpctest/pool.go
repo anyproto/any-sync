@@ -46,8 +46,6 @@ func (t *TestPool) Get(ctx context.Context, id string) (peer.Peer, error) {
 }
 
 func (t *TestPool) Dial(ctx context.Context, id string) (peer.Peer, error) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
 	return t.Get(ctx, id)
 }
 
