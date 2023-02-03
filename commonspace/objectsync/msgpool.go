@@ -86,11 +86,6 @@ func (s *messagePool) SendPeer(ctx context.Context, peerId string, msg *spacesyn
 	return s.PeerManager.SendPeer(ctx, peerId, msg)
 }
 
-func (s *messagePool) SendResponsible(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
-	s.updateLastUsage()
-	return s.PeerManager.SendResponsible(ctx, msg)
-}
-
 func (s *messagePool) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	s.updateLastUsage()
 	return s.PeerManager.Broadcast(ctx, msg)
