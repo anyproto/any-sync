@@ -13,8 +13,6 @@ const CName = "common.commonspace.peermanager"
 type PeerManager interface {
 	// SendPeer sends a message to a stream by peerId
 	SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error)
-	// SendResponsible sends a message to responsible peers streams
-	SendResponsible(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error)
 	// Broadcast sends a message to all subscribed peers
 	Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error)
 	// GetResponsiblePeers dials or gets from cache responsible peers to unary operations
