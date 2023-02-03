@@ -129,6 +129,11 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 			if err == nil {
 				return
 			}
+			// updating peers in case new peers arrived while we were waiting
+			availablePeers, err = getPeers(ctx)
+			if err != nil {
+				return
+			}
 			peerIdx++
 			select {
 			case <-ctx.Done():
