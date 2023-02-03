@@ -54,6 +54,10 @@ var log = logger.NewNamed("commonspace.synctree")
 var buildObjectTree = objecttree.BuildObjectTree
 var createSyncClient = newSyncClient
 
+type ResponsiblePeersGetter interface {
+	GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error)
+}
+
 type BuildDeps struct {
 	SpaceId            string
 	ObjectSync         objectsync.ObjectSync
@@ -65,15 +69,35 @@ type BuildDeps struct {
 	TreeStorage        treestorage.TreeStorage
 	TreeUsage          *atomic.Int32
 	SyncStatus         syncstatus.StatusUpdater
+	PeerGetter         ResponsiblePeersGetter
 	WaitTreeRemoteSync bool
 }
 
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {
-	getTreeRemote := func() (msg *treechangeproto.TreeSyncMessage, err error) {
-		peerId, err := peer.CtxPeerId(ctx)
+	getPeer := func(ctx context.Context) (peerId string, err error) {
+		peerId, err = peer.CtxPeerId(ctx)
+		if err == nil {
+			return
+		}
+		err = nil
+		log.WarnCtx(ctx, "peer not found in context, use responsible")
+		respPeers, err := deps.PeerGetter.GetResponsiblePeers(ctx)
 		if err != nil {
-			log.WarnCtx(ctx, "peer not found in context, use first responsible")
-			peerId = deps.Configuration.NodeIds(deps.SpaceId)[0]
+			return
+		}
+		if len(respPeers) == 0 {
+			err = fmt.Errorf("no responsible peers")
+			return
+		}
+		// TODO: maybe we can check different peers here
+		peerId = respPeers[0].Id()
+		return
+	}
+
+	getTreeRemote := func() (msg *treechangeproto.TreeSyncMessage, err error) {
+		peerId, err := getPeer(ctx)
+		if err != nil {
+			return
 		}
 
 		newTreeRequest := GetRequestFactory().CreateNewTreeRequest()

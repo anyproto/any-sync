@@ -139,6 +139,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		cache:         getter,
 		account:       s.account,
 		configuration: lastConfiguration,
+		peerManager:   peerManager,
 		storage:       st,
 	}
 	return sp, nil
