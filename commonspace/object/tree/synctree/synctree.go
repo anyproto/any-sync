@@ -19,6 +19,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"sync/atomic"
+	"time"
 )
 
 var (
@@ -114,34 +115,35 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 	}
 
 	waitTree := func(wait bool) (msg *treechangeproto.TreeSyncMessage, err error) {
-		availablePeers, err := getPeers(ctx)
-		if err != nil {
-			return
-		}
-
-		if !wait {
-			return getTreeRemote(availablePeers[0])
-		}
 		peerIdx := 0
+	Loop:
 		for {
-			peerIdx = peerIdx % len(availablePeers)
-			msg, err = getTreeRemote(availablePeers[peerIdx])
-			if err == nil {
-				return
-			}
-			// updating peers in case new peers arrived while we were waiting
-			availablePeers, err = getPeers(ctx)
-			if err != nil {
-				return
-			}
-			peerIdx++
 			select {
 			case <-ctx.Done():
-				err = fmt.Errorf("waiting for object %s interrupted, context closed", id)
-				return
+				return nil, fmt.Errorf("waiting for object %s interrupted, context closed", id)
 			default:
 				break
 			}
+			availablePeers, err := getPeers(ctx)
+			if err != nil {
+				if !wait {
+					return nil, err
+				}
+				select {
+				// wait for peers to connect
+				case <-time.After(1 * time.Second):
+					continue Loop
+				case <-ctx.Done():
+					return nil, fmt.Errorf("waiting for object %s interrupted, context closed", id)
+				}
+			}
+
+			peerIdx = peerIdx % len(availablePeers)
+			msg, err = getTreeRemote(availablePeers[peerIdx])
+			if err == nil || !wait {
+				return msg, err
+			}
+			peerIdx++
 		}
 	}
 
