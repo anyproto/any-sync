@@ -90,6 +90,7 @@ func (s *messagePool) SendResponsible(ctx context.Context, msg *spacesyncproto.O
 	s.updateLastUsage()
 	return s.PeerManager.SendResponsible(ctx, msg)
 }
+
 func (s *messagePool) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	s.updateLastUsage()
 	return s.PeerManager.Broadcast(ctx, msg)

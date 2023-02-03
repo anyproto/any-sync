@@ -39,7 +39,7 @@ type SyncTree interface {
 	objecttree.ObjectTree
 	synchandler.SyncHandler
 	ListenerSetter
-	Ping(ctx context.Context) (err error)
+	Ping(ctx context.Context, peerId string) (err error)
 }
 
 // SyncTree sends head updates to sync service and also sends new changes to update listener
@@ -344,11 +344,11 @@ func (s *syncTree) checkAlive() (err error) {
 	return
 }
 
-func (s *syncTree) Ping(ctx context.Context) (err error) {
+func (s *syncTree) Ping(ctx context.Context, peerId string) (err error) {
 	s.Lock()
 	defer s.Unlock()
 	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
-	return s.syncClient.BroadcastAsyncOrSendResponsible(ctx, headUpdate)
+	return s.syncClient.SendWithReply(ctx, peerId, headUpdate, "")
 }
 
 func (s *syncTree) afterBuild() {
