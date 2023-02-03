@@ -79,9 +79,10 @@ type BuildDeps struct {
 }
 
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {
-	getPeer := func(ctx context.Context) (peerId string, err error) {
-		peerId, err = peer.CtxPeerId(ctx)
+	getPeers := func(ctx context.Context) (peerIds []string, err error) {
+		peerId, err := peer.CtxPeerId(ctx)
 		if err == nil {
+			peerIds = []string{peerId}
 			return
 		}
 		err = nil
@@ -94,17 +95,13 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 			err = fmt.Errorf("no responsible peers")
 			return
 		}
-		// TODO: maybe we can check different peers here
-		peerId = respPeers[0].Id()
+		for _, p := range respPeers {
+			peerIds = append(peerIds, p.Id())
+		}
 		return
 	}
 
-	getTreeRemote := func() (msg *treechangeproto.TreeSyncMessage, err error) {
-		peerId, err := getPeer(ctx)
-		if err != nil {
-			return
-		}
-
+	getTreeRemote := func(peerId string) (msg *treechangeproto.TreeSyncMessage, err error) {
 		newTreeRequest := GetRequestFactory().CreateNewTreeRequest()
 		objMsg, err := marshallTreeMessage(newTreeRequest, deps.SpaceId, id, "")
 		if err != nil {
@@ -122,14 +119,22 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 	}
 
 	waitTree := func(wait bool) (msg *treechangeproto.TreeSyncMessage, err error) {
-		if !wait {
-			return getTreeRemote()
+		availablePeers, err := getPeers(ctx)
+		if err != nil {
+			return
 		}
+
+		if !wait {
+			return getTreeRemote(availablePeers[0])
+		}
+		peerIdx := 0
 		for {
-			msg, err = getTreeRemote()
+			peerIdx = peerIdx % len(availablePeers)
+			msg, err = getTreeRemote(availablePeers[peerIdx])
 			if err == nil {
 				return
 			}
+			peerIdx++
 			select {
 			case <-ctx.Done():
 				err = fmt.Errorf("waiting for object %s interrupted, context closed", id)
