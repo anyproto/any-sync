@@ -52,6 +52,21 @@ func (mr *MockDiffMockRecorder) Diff(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Diff", reflect.TypeOf((*MockDiff)(nil).Diff), arg0, arg1)
 }
 
+// Element mocks base method.
+func (m *MockDiff) Element(arg0 string) (ldiff.Element, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Element", arg0)
+	ret0, _ := ret[0].(ldiff.Element)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Element indicates an expected call of Element.
+func (mr *MockDiffMockRecorder) Element(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Element", reflect.TypeOf((*MockDiff)(nil).Element), arg0)
+}
+
 // Elements mocks base method.
 func (m *MockDiff) Elements() []ldiff.Element {
 	m.ctrl.T.Helper()
@@ -92,6 +107,20 @@ func (m *MockDiff) Ids() []string {
 func (mr *MockDiffMockRecorder) Ids() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ids", reflect.TypeOf((*MockDiff)(nil).Ids))
+}
+
+// Len mocks base method.
+func (m *MockDiff) Len() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Len")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// Len indicates an expected call of Len.
+func (mr *MockDiffMockRecorder) Len() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Len", reflect.TypeOf((*MockDiff)(nil).Len))
 }
 
 // Ranges mocks base method.
