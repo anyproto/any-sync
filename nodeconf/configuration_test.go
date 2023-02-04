@@ -17,8 +17,8 @@ func TestReplKey(t *testing.T) {
 
 func TestConfiguration_NodeIds(t *testing.T) {
 	ch, err := chash.New(chash.Config{
-		PartitionCount:    partitionCount,
-		ReplicationFactor: replicationFactor,
+		PartitionCount:    PartitionCount,
+		ReplicationFactor: ReplicationFactor,
 	})
 	require.NoError(t, err)
 	conf := &configuration{

@@ -13,8 +13,8 @@ import (
 const CName = "common.nodeconf"
 
 const (
-	partitionCount    = 3000
-	replicationFactor = 3
+	PartitionCount    = 3000
+	ReplicationFactor = 3
 )
 
 var log = logger.NewNamed(CName)
@@ -58,8 +58,8 @@ func (s *service) Init(a *app.App) (err error) {
 		accountId: s.accountId,
 	}
 	if fileConfig.chash, err = chash.New(chash.Config{
-		PartitionCount:    partitionCount,
-		ReplicationFactor: replicationFactor,
+		PartitionCount:    PartitionCount,
+		ReplicationFactor: ReplicationFactor,
 	}); err != nil {
 		return
 	}
