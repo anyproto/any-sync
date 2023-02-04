@@ -132,7 +132,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 
 	d.syncStatus.RemoveAllExcept(p.Id(), filteredIds, stateCounter)
 
-	d.pingTreesInCache(ctx, p.Id(), filteredIds)
+	d.syncTrees(ctx, p.Id(), filteredIds)
 
 	d.log.Info("sync done:", zap.Int("newIds", len(newIds)),
 		zap.Int("changedIds", len(changedIds)),
@@ -143,7 +143,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	return
 }
 
-func (d *diffSyncer) pingTreesInCache(ctx context.Context, peerId string, trees []string) {
+func (d *diffSyncer) syncTrees(ctx context.Context, peerId string, trees []string) {
 	for _, tId := range trees {
 		tree, err := d.cache.GetTree(ctx, d.spaceId, tId)
 		if err != nil {
@@ -159,10 +159,10 @@ func (d *diffSyncer) pingTreesInCache(ctx context.Context, peerId string, trees 
 		// it may be already there (i.e. loaded)
 		// and build func will not be called, thus we won't sync the tree
 		// therefore we just do it manually
-		if err = syncTree.Ping(ctx, peerId); err != nil {
-			d.log.WarnCtx(ctx, "synctree.Ping error", zap.Error(err), zap.String("treeId", tId))
+		if err = syncTree.SyncWithPeer(ctx, peerId); err != nil {
+			d.log.WarnCtx(ctx, "synctree.SyncWithPeer error", zap.Error(err), zap.String("treeId", tId))
 		} else {
-			d.log.DebugCtx(ctx, "success tree ping", zap.String("treeId", tId))
+			d.log.DebugCtx(ctx, "success synctree.SyncWithPeer", zap.String("treeId", tId))
 		}
 	}
 }
