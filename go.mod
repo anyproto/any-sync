@@ -6,7 +6,7 @@ require (
 	github.com/anytypeio/go-chash v0.0.2
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/cespare/xxhash v1.1.0
-	github.com/cheggaaa/mb/v3 v3.0.0
+	github.com/cheggaaa/mb/v3 v3.0.1
 	github.com/goccy/go-graphviz v0.0.9
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
