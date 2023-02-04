@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/mgo.v2/bson"
 	"math"
+	"sort"
 	"testing"
 )
 
@@ -147,4 +148,52 @@ func TestDiff_Hash(t *testing.T) {
 	h2 := d.Hash()
 	assert.NotEmpty(t, h2)
 	assert.NotEqual(t, h1, h2)
+}
+
+func TestDiff_Element(t *testing.T) {
+	d := New(16, 16)
+	for i := 0; i < 10; i++ {
+		d.Set(Element{Id: fmt.Sprint("id", i), Head: fmt.Sprint("head", i)})
+	}
+	_, err := d.Element("not found")
+	assert.Equal(t, ErrElementNotFound, err)
+
+	el, err := d.Element("id5")
+	require.NoError(t, err)
+	assert.Equal(t, "head5", el.Head)
+
+	d.Set(Element{"id5", "otherHead"})
+	el, err = d.Element("id5")
+	require.NoError(t, err)
+	assert.Equal(t, "otherHead", el.Head)
+}
+
+func TestDiff_Ids(t *testing.T) {
+	d := New(16, 16)
+	var ids []string
+	for i := 0; i < 10; i++ {
+		id := fmt.Sprint("id", i)
+		d.Set(Element{Id: id, Head: fmt.Sprint("head", i)})
+		ids = append(ids, id)
+	}
+	gotIds := d.Ids()
+	sort.Strings(gotIds)
+	assert.Equal(t, ids, gotIds)
+	assert.Equal(t, len(ids), d.Len())
+}
+
+func TestDiff_Elements(t *testing.T) {
+	d := New(16, 16)
+	var els []Element
+	for i := 0; i < 10; i++ {
+		id := fmt.Sprint("id", i)
+		el := Element{Id: id, Head: fmt.Sprint("head", i)}
+		d.Set(el)
+		els = append(els, el)
+	}
+	gotEls := d.Elements()
+	sort.Slice(gotEls, func(i, j int) bool {
+		return gotEls[i].Id < gotEls[j].Id
+	})
+	assert.Equal(t, els, gotEls)
 }
