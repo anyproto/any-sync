@@ -1,6 +1,5 @@
-//go:build ((!linux && !darwin) || android || ios || nographviz) && !amd64
-// +build !linux,!darwin android ios nographviz
-// +build !amd64
+//go:build (!linux && !darwin) || android || ios || nographviz || windows
+// +build !linux,!darwin android ios nographviz windows
 
 package objecttree
 
