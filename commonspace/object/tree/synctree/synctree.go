@@ -3,12 +3,10 @@ package synctree
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
@@ -16,7 +14,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/nodeconf"
-	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"sync/atomic"
 )
@@ -38,7 +35,7 @@ type SyncTree interface {
 	objecttree.ObjectTree
 	synchandler.SyncHandler
 	ListenerSetter
-	Ping(ctx context.Context) (err error)
+	SyncWithPeer(ctx context.Context, peerId string) (err error)
 }
 
 // SyncTree sends head updates to sync service and also sends new changes to update listener
@@ -59,6 +56,10 @@ var log = logger.NewNamed("commonspace.synctree")
 var buildObjectTree = objecttree.BuildObjectTree
 var createSyncClient = newSyncClient
 
+type ResponsiblePeersGetter interface {
+	GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error)
+}
+
 type BuildDeps struct {
 	SpaceId            string
 	ObjectSync         objectsync.ObjectSync
@@ -70,94 +71,13 @@ type BuildDeps struct {
 	TreeStorage        treestorage.TreeStorage
 	TreeUsage          *atomic.Int32
 	SyncStatus         syncstatus.StatusUpdater
+	PeerGetter         ResponsiblePeersGetter
 	WaitTreeRemoteSync bool
 }
 
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {
-	getTreeRemote := func() (msg *treechangeproto.TreeSyncMessage, err error) {
-		peerId, err := peer.CtxPeerId(ctx)
-		if err != nil {
-			log.WarnCtx(ctx, "peer not found in context, use first responsible")
-			peerId = deps.Configuration.NodeIds(deps.SpaceId)[0]
-		}
-
-		newTreeRequest := GetRequestFactory().CreateNewTreeRequest()
-		objMsg, err := marshallTreeMessage(newTreeRequest, deps.SpaceId, id, "")
-		if err != nil {
-			return
-		}
-
-		resp, err := deps.ObjectSync.MessagePool().SendSync(ctx, peerId, objMsg)
-		if err != nil {
-			return
-		}
-
-		msg = &treechangeproto.TreeSyncMessage{}
-		err = proto.Unmarshal(resp.Payload, msg)
-		return
-	}
-
-	waitTree := func(wait bool) (msg *treechangeproto.TreeSyncMessage, err error) {
-		if !wait {
-			return getTreeRemote()
-		}
-		for {
-			msg, err = getTreeRemote()
-			if err == nil {
-				return
-			}
-			select {
-			case <-ctx.Done():
-				err = fmt.Errorf("waiting for object %s interrupted, context closed", id)
-				return
-			default:
-				break
-			}
-		}
-	}
-
-	deps.TreeStorage, err = deps.SpaceStorage.TreeStorage(id)
-	if err == nil {
-		return buildSyncTree(ctx, false, deps)
-	}
-
-	if err != nil && err != treestorage.ErrUnknownTreeId {
-		return
-	}
-
-	status, err := deps.SpaceStorage.TreeDeletedStatus(id)
-	if err != nil {
-		return
-	}
-	if status != "" {
-		err = spacestorage.ErrTreeStorageAlreadyDeleted
-		return
-	}
-
-	resp, err := waitTree(deps.WaitTreeRemoteSync)
-	if err != nil {
-		return
-	}
-	if resp.GetContent().GetFullSyncResponse() == nil {
-		err = fmt.Errorf("expected to get full sync response, but got something else")
-		return
-	}
-	fullSyncResp := resp.GetContent().GetFullSyncResponse()
-
-	payload := treestorage.TreeStorageCreatePayload{
-		RootRawChange: resp.RootChange,
-		Changes:       fullSyncResp.Changes,
-		Heads:         fullSyncResp.Heads,
-	}
-
-	// basically building tree with in-memory storage and validating that it was without errors
-	log.With(zap.String("id", id)).DebugCtx(ctx, "validating tree")
-	err = objecttree.ValidateRawTree(payload, deps.AclList)
-	if err != nil {
-		return
-	}
-	// now we are sure that we can save it to the storage
-	deps.TreeStorage, err = deps.SpaceStorage.CreateTreeStorage(payload)
+	remoteGetter := treeRemoteGetter{treeId: id, deps: deps}
+	deps.TreeStorage, err = remoteGetter.getTree(ctx)
 	if err != nil {
 		return
 	}
@@ -308,11 +228,11 @@ func (s *syncTree) checkAlive() (err error) {
 	return
 }
 
-func (s *syncTree) Ping(ctx context.Context) (err error) {
+func (s *syncTree) SyncWithPeer(ctx context.Context, peerId string) (err error) {
 	s.Lock()
 	defer s.Unlock()
 	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
-	return s.syncClient.BroadcastAsyncOrSendResponsible(ctx, headUpdate)
+	return s.syncClient.SendWithReply(ctx, peerId, headUpdate, "")
 }
 
 func (s *syncTree) afterBuild() {

@@ -12,7 +12,6 @@ import (
 type SyncClient interface {
 	RequestFactory
 	Broadcast(ctx context.Context, msg *treechangeproto.TreeSyncMessage) (err error)
-	BroadcastAsyncOrSendResponsible(ctx context.Context, msg *treechangeproto.TreeSyncMessage) (err error)
 	SendWithReply(ctx context.Context, peerId string, msg *treechangeproto.TreeSyncMessage, replyId string) (err error)
 }
 
@@ -50,18 +49,6 @@ func (s *syncClient) SendWithReply(ctx context.Context, peerId string, msg *tree
 		return
 	}
 	return s.MessagePool.SendPeer(ctx, peerId, objMsg)
-}
-
-func (s *syncClient) BroadcastAsyncOrSendResponsible(ctx context.Context, message *treechangeproto.TreeSyncMessage) (err error) {
-	objMsg, err := marshallTreeMessage(message, s.spaceId, message.RootChange.Id, "")
-	if err != nil {
-		return
-	}
-
-	if s.configuration.IsResponsible(s.spaceId) {
-		return s.MessagePool.SendResponsible(ctx, objMsg)
-	}
-	return s.Broadcast(ctx, message)
 }
 
 func marshallTreeMessage(message *treechangeproto.TreeSyncMessage, spaceId, objectId, replyId string) (objMsg *spacesyncproto.ObjectSyncMessage, err error) {

@@ -16,6 +16,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
+	"github.com/anytypeio/any-sync/commonspace/peermanager"
 	"github.com/anytypeio/any-sync/commonspace/settings"
 	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
@@ -122,6 +123,7 @@ type space struct {
 	aclList        *syncacl.SyncAcl
 	configuration  nodeconf.Configuration
 	settingsObject settings.SettingsObject
+	peerManager    peermanager.PeerManager
 
 	handleQueue multiqueue.MultiQueue[HandleMessage]
 
@@ -295,6 +297,7 @@ func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCrea
 		SpaceStorage:   s.storage,
 		TreeUsage:      &s.treesUsed,
 		SyncStatus:     s.syncStatus,
+		PeerGetter:     s.peerManager,
 	}
 	return synctree.PutSyncTree(ctx, payload, deps)
 }
@@ -326,6 +329,7 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 		TreeUsage:          &s.treesUsed,
 		SyncStatus:         s.syncStatus,
 		WaitTreeRemoteSync: opts.WaitTreeRemoteSync,
+		PeerGetter:         s.peerManager,
 	}
 	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
 }

@@ -160,6 +160,10 @@ func (d *dialerMock) UpdateAddrs(addrs map[string][]string) {
 	return
 }
 
+func (d *dialerMock) SetPeerAddrs(peerId string, addrs []string) {
+	return
+}
+
 func (d *dialerMock) Init(a *app.App) (err error) {
 	return
 }

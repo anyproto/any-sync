@@ -78,17 +78,3 @@ func (mr *MockPeerManagerMockRecorder) SendPeer(arg0, arg1, arg2 interface{}) *g
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendPeer", reflect.TypeOf((*MockPeerManager)(nil).SendPeer), arg0, arg1, arg2)
 }
-
-// SendResponsible mocks base method.
-func (m *MockPeerManager) SendResponsible(arg0 context.Context, arg1 *spacesyncproto.ObjectSyncMessage) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SendResponsible", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SendResponsible indicates an expected call of SendResponsible.
-func (mr *MockPeerManagerMockRecorder) SendResponsible(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendResponsible", reflect.TypeOf((*MockPeerManager)(nil).SendResponsible), arg0, arg1)
-}
