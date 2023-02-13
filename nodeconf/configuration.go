@@ -23,6 +23,8 @@ type Configuration interface {
 	CHash() chash.CHash
 	// Partition returns partition number by spaceId
 	Partition(spaceId string) (part int)
+	// NodeTypes returns list of known nodeTypes by nodeId, if node not registered in configuration will return empty list
+	NodeTypes(nodeId string) []NodeType
 }
 
 type configuration struct {
@@ -80,6 +82,15 @@ func (c *configuration) CHash() chash.CHash {
 
 func (c *configuration) Partition(spaceId string) (part int) {
 	return c.chash.GetPartition(ReplKey(spaceId))
+}
+
+func (c *configuration) NodeTypes(nodeId string) []NodeType {
+	for _, m := range c.allMembers {
+		if m.PeerId == nodeId {
+			return m.Types
+		}
+	}
+	return nil
 }
 
 func ReplKey(spaceId string) (replKey string) {
