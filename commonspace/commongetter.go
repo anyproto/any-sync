@@ -5,18 +5,21 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/syncobjectgetter"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"sync/atomic"
 )
 
 type commonGetter struct {
 	treegetter.TreeGetter
 	spaceId         string
 	reservedObjects []syncobjectgetter.SyncObject
+	spaceIsClosed   *atomic.Bool
 }
 
-func newCommonGetter(spaceId string, getter treegetter.TreeGetter) *commonGetter {
+func newCommonGetter(spaceId string, getter treegetter.TreeGetter, spaceIsClosed *atomic.Bool) *commonGetter {
 	return &commonGetter{
-		TreeGetter: getter,
-		spaceId:    spaceId,
+		TreeGetter:    getter,
+		spaceId:       spaceId,
+		spaceIsClosed: spaceIsClosed,
 	}
 }
 
@@ -25,6 +28,9 @@ func (c *commonGetter) AddObject(object syncobjectgetter.SyncObject) {
 }
 
 func (c *commonGetter) GetTree(ctx context.Context, spaceId, treeId string) (objecttree.ObjectTree, error) {
+	if c.spaceIsClosed.Load() {
+		return nil, ErrSpaceClosed
+	}
 	if obj := c.getReservedObject(treeId); obj != nil {
 		return obj.(objecttree.ObjectTree), nil
 	}
@@ -41,6 +47,9 @@ func (c *commonGetter) getReservedObject(id string) syncobjectgetter.SyncObject 
 }
 
 func (c *commonGetter) GetObject(ctx context.Context, objectId string) (obj syncobjectgetter.SyncObject, err error) {
+	if c.spaceIsClosed.Load() {
+		return nil, ErrSpaceClosed
+	}
 	if obj := c.getReservedObject(objectId); obj != nil {
 		return obj, nil
 	}
