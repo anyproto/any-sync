@@ -11,9 +11,13 @@ type contextKey uint
 
 const (
 	contextKeyPeerId contextKey = iota
+	contextKeyIdentity
 )
 
-var ErrPeerIdNotFoundInContext = errors.New("peer id not found in context")
+var (
+	ErrPeerIdNotFoundInContext   = errors.New("peer id not found in context")
+	ErrIdentityNotFoundInContext = errors.New("identity not found in context")
+)
 
 // CtxPeerId first tries to get peer id under our own key, but if it is not found tries to get through DRPC key
 func CtxPeerId(ctx context.Context) (string, error) {
@@ -29,4 +33,17 @@ func CtxPeerId(ctx context.Context) (string, error) {
 // CtxWithPeerId sets peer id in the context
 func CtxWithPeerId(ctx context.Context, peerId string) context.Context {
 	return context.WithValue(ctx, contextKeyPeerId, peerId)
+}
+
+// CtxIdentity returns identity from context
+func CtxIdentity(ctx context.Context) ([]byte, error) {
+	if identity, ok := ctx.Value(contextKeyIdentity).([]byte); ok {
+		return identity, nil
+	}
+	return nil, ErrIdentityNotFoundInContext
+}
+
+// CtxWithIdentity sets identity in the context
+func CtxWithIdentity(ctx context.Context, identity []byte) context.Context {
+	return context.WithValue(ctx, contextKeyIdentity, identity)
 }

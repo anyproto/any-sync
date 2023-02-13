@@ -5,6 +5,9 @@ import (
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
+	"github.com/anytypeio/any-sync/net/secureservice/handshake"
+	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/sec"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
@@ -41,7 +44,13 @@ type SecureService interface {
 }
 
 type secureService struct {
-	key crypto.PrivKey
+	outboundTr *libp2ptls.Transport
+	account    *accountdata.AccountData
+	key        crypto.PrivKey
+	nodeconf   nodeconf.Service
+
+	noVerifyChecker  handshake.CredentialChecker
+	peerSignVerifier handshake.CredentialChecker
 }
 
 func (s *secureService) Init(a *app.App) (err error) {
@@ -54,8 +63,12 @@ func (s *secureService) Init(a *app.App) (err error) {
 		return
 	}
 
-	log.Info("secure service init", zap.String("peerId", account.Account().PeerId))
+	s.noVerifyChecker = newNoVerifyChecker()
+	s.peerSignVerifier = newPeerSignVerifier(account.Account())
 
+	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
+
+	log.Info("secure service init", zap.String("peerId", account.Account().PeerId))
 	return nil
 }
 
@@ -72,9 +85,22 @@ func (s *secureService) BasicListener(lis net.Listener, timeoutMillis int) Conte
 }
 
 func (s *secureService) TLSConn(ctx context.Context, conn net.Conn) (sec.SecureConn, error) {
-	tr, err := libp2ptls.New(libp2ptls.ID, s.key, nil)
+	sc, err := s.outboundTr.SecureOutbound(ctx, conn, "")
 	if err != nil {
-		return nil, err
+		return nil, HandshakeError{err: err, remoteAddr: conn.RemoteAddr().String()}
 	}
-	return tr.SecureOutbound(ctx, conn, "")
+	peerId := sc.RemotePeer().String()
+	confTypes := s.nodeconf.GetLast().NodeTypes(peerId)
+	var checker handshake.CredentialChecker
+	if len(confTypes) > 0 {
+		checker = s.peerSignVerifier
+	} else {
+		checker = s.noVerifyChecker
+	}
+	// ignore identity for outgoing connection because we don't need it at this moment
+	_, err = handshake.OutgoingHandshake(sc, checker)
+	if err != nil {
+		return nil, HandshakeError{err: err, remoteAddr: conn.RemoteAddr().String()}
+	}
+	return sc, nil
 }

@@ -34,15 +34,21 @@ func (s *AccountTestService) Init(a *app.App) (err error) {
 		return
 	}
 
-	peerId, err := peer.IdFromSigningPubKey(signKey.GetPublic())
+	peerKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
+	if err != nil {
+		return err
+	}
+
+	peerId, err := peer.IdFromSigningPubKey(peerKey.GetPublic())
 	if err != nil {
 		return err
 	}
 	s.acc = &accountdata.AccountData{
-		PeerId:   peerId.String(),
 		Identity: ident,
+		PeerKey:  peerKey,
 		SignKey:  signKey,
 		EncKey:   encKey,
+		PeerId:   peerId.String(),
 	}
 	return nil
 }
