@@ -21,7 +21,6 @@ func NewConn(conn net.Conn, timeout time.Duration) *Conn {
 }
 
 func (c *Conn) Write(p []byte) (n int, err error) {
-	return c.Conn.Write(p)
 	for {
 		if c.timeout != 0 {
 			if e := c.Conn.SetWriteDeadline(time.Now().Add(c.timeout)); e != nil {
