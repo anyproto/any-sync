@@ -47,59 +47,59 @@ var handshakePool = &sync.Pool{New: func() any {
 
 type CredentialChecker interface {
 	MakeCredentials(sc sec.SecureConn) *handshakeproto.Credentials
-	CheckCredential(sc sec.SecureConn, cred *handshakeproto.Credentials) (err error)
+	CheckCredential(sc sec.SecureConn, cred *handshakeproto.Credentials) (identity []byte, err error)
 }
 
-func OutgoingHandshake(sc sec.SecureConn, cc CredentialChecker) (err error) {
+func OutgoingHandshake(sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
 	h := newHandshake()
 	defer h.release()
 	h.conn = sc
 	localCred := cc.MakeCredentials(sc)
 	if err = h.writeCredentials(localCred); err != nil {
 		h.tryWriteErrAndClose(err)
-		return err
+		return
 	}
 	msg, err := h.readMsg()
 	if err != nil {
 		h.tryWriteErrAndClose(err)
-		return err
+		return
 	}
 	if msg.ack != nil {
 		if msg.ack.Error == handshakeproto.Error_InvalidCredentials {
-			return ErrPeerDeclinedCredentials
+			return nil, ErrPeerDeclinedCredentials
 		}
-		return handshakeError{e: msg.ack.Error}
+		return nil, handshakeError{e: msg.ack.Error}
 	}
 
-	if err = cc.CheckCredential(sc, msg.cred); err != nil {
+	if identity, err = cc.CheckCredential(sc, msg.cred); err != nil {
 		h.tryWriteErrAndClose(err)
-		return err
+		return
 	}
 
 	if err = h.writeAck(handshakeproto.Error_Null); err != nil {
 		h.tryWriteErrAndClose(err)
-		return err
+		return nil, err
 	}
 
 	msg, err = h.readMsg()
 	if err != nil {
 		h.tryWriteErrAndClose(err)
-		return err
+		return nil, err
 	}
 	if msg.ack == nil {
 		err = ErrUnexpectedPayload
 		h.tryWriteErrAndClose(err)
-		return err
+		return nil, err
 	}
 	if msg.ack.Error == handshakeproto.Error_Null {
-		return nil
+		return identity, nil
 	} else {
 		_ = h.conn.Close()
-		return handshakeError{e: msg.ack.Error}
+		return nil, handshakeError{e: msg.ack.Error}
 	}
 }
 
-func IncomingHandshake(sc sec.SecureConn, cc CredentialChecker) (err error) {
+func IncomingHandshake(sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
 	h := newHandshake()
 	defer h.release()
 	h.conn = sc
@@ -107,40 +107,40 @@ func IncomingHandshake(sc sec.SecureConn, cc CredentialChecker) (err error) {
 	msg, err := h.readMsg()
 	if err != nil {
 		h.tryWriteErrAndClose(err)
-		return err
+		return
 	}
 	if msg.ack != nil {
-		return ErrUnexpectedPayload
+		return nil, ErrUnexpectedPayload
 	}
-	if err = cc.CheckCredential(sc, msg.cred); err != nil {
+	if identity, err = cc.CheckCredential(sc, msg.cred); err != nil {
 		h.tryWriteErrAndClose(err)
-		return err
+		return
 	}
 
 	if err = h.writeCredentials(cc.MakeCredentials(sc)); err != nil {
 		h.tryWriteErrAndClose(err)
-		return err
+		return nil, err
 	}
 
 	msg, err = h.readMsg()
 	if err != nil {
 		h.tryWriteErrAndClose(err)
-		return err
+		return nil, err
 	}
 	if msg.ack == nil {
 		err = ErrUnexpectedPayload
 		h.tryWriteErrAndClose(err)
-		return err
+		return nil, err
 	}
 	if msg.ack.Error != handshakeproto.Error_Null {
 		if msg.ack.Error == handshakeproto.Error_InvalidCredentials {
-			return ErrPeerDeclinedCredentials
+			return nil, ErrPeerDeclinedCredentials
 		}
-		return handshakeError{e: msg.ack.Error}
+		return nil, handshakeError{e: msg.ack.Error}
 	}
 	if err = h.writeAck(handshakeproto.Error_Null); err != nil {
 		h.tryWriteErrAndClose(err)
-		return err
+		return nil, err
 	}
 	return
 }
