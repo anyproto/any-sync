@@ -127,7 +127,7 @@ type space struct {
 
 	handleQueue multiqueue.MultiQueue[HandleMessage]
 
-	isClosed  atomic.Bool
+	isClosed  *atomic.Bool
 	treesUsed atomic.Int32
 }
 

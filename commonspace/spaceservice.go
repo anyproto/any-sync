@@ -17,6 +17,7 @@ import (
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/pool"
 	"github.com/anytypeio/any-sync/nodeconf"
+	"sync/atomic"
 )
 
 const CName = "common.commonspace"
@@ -116,7 +117,8 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 	}
 
 	lastConfiguration := s.configurationService.GetLast()
-	getter := newCommonGetter(st.Id(), s.treeGetter)
+	var spaceIsClosed = &atomic.Bool{}
+	getter := newCommonGetter(st.Id(), s.treeGetter, spaceIsClosed)
 	syncStatus := syncstatus.NewNoOpSyncStatus()
 	// this will work only for clients, not the best solution, but...
 	if !lastConfiguration.IsResponsible(st.Id()) {
@@ -141,6 +143,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		configuration: lastConfiguration,
 		peerManager:   peerManager,
 		storage:       st,
+		isClosed:      spaceIsClosed,
 	}
 	return sp, nil
 }
