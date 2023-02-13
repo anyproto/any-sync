@@ -472,6 +472,34 @@ func (mr *MockSyncTreeMockRecorder) SyncWithPeer(arg0, arg1 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncWithPeer", reflect.TypeOf((*MockSyncTree)(nil).SyncWithPeer), arg0, arg1)
 }
 
+// TryLock mocks base method.
+func (m *MockSyncTree) TryLock() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryLock")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// TryLock indicates an expected call of TryLock.
+func (mr *MockSyncTreeMockRecorder) TryLock() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryLock", reflect.TypeOf((*MockSyncTree)(nil).TryLock))
+}
+
+// TryRLock mocks base method.
+func (m *MockSyncTree) TryRLock() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryRLock")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// TryRLock indicates an expected call of TryRLock.
+func (mr *MockSyncTreeMockRecorder) TryRLock() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryRLock", reflect.TypeOf((*MockSyncTree)(nil).TryRLock))
+}
+
 // Unlock mocks base method.
 func (m *MockSyncTree) Unlock() {
 	m.ctrl.T.Helper()

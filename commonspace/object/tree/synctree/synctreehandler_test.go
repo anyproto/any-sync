@@ -3,6 +3,9 @@ package synctree
 import (
 	"context"
 	"fmt"
+	"sync"
+	"testing"
+
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
@@ -12,13 +15,11 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"sync"
-	"testing"
 )
 
 type testObjTreeMock struct {
 	*mock_objecttree.MockObjectTree
-	m sync.Mutex
+	m sync.RWMutex
 }
 
 func newTestObjMock(mockTree *mock_objecttree.MockObjectTree) *testObjTreeMock {
@@ -31,8 +32,24 @@ func (t *testObjTreeMock) Lock() {
 	t.m.Lock()
 }
 
+func (t *testObjTreeMock) RLock() {
+	t.m.RLock()
+}
+
 func (t *testObjTreeMock) Unlock() {
 	t.m.Unlock()
+}
+
+func (t *testObjTreeMock) RUnlock() {
+	t.m.RUnlock()
+}
+
+func (t *testObjTreeMock) TryLock() bool {
+	return t.m.TryLock()
+}
+
+func (t *testObjTreeMock) TryRLock() bool {
+	return t.m.TryRLock()
 }
 
 type syncHandlerFixture struct {

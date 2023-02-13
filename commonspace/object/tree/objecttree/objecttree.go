@@ -4,19 +4,22 @@ package objecttree
 import (
 	"context"
 	"errors"
+	"sync"
+
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
-	list "github.com/anytypeio/any-sync/commonspace/object/acl/list"
+	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/util/keys/symmetric"
 	"github.com/anytypeio/any-sync/util/slice"
-	"sync"
 )
 
 type RWLocker interface {
 	sync.Locker
 	RLock()
 	RUnlock()
+	TryRLock() bool
+	TryLock() bool
 }
 
 var (
