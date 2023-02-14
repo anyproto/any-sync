@@ -101,6 +101,13 @@ func (s *BaseDrpcServer) serveConn(ctx context.Context, conn net.Conn) {
 	}
 }
 
+func (s *BaseDrpcServer) ListenAddrs() (addrs []net.Addr) {
+	for _, list := range s.listeners {
+		addrs = append(addrs, list.Addr())
+	}
+	return
+}
+
 func (s *BaseDrpcServer) Close(ctx context.Context) (err error) {
 	if s.cancel != nil {
 		s.cancel()
