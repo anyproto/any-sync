@@ -392,6 +392,10 @@ func (s *space) handleMessage(msg HandleMessage) {
 	}
 
 	if err := s.objectSync.HandleMessage(ctx, msg.SenderId, msg.Message); err != nil {
+		if msg.Message.ObjectId != "" {
+			// cleanup thread on error
+			_ = s.handleQueue.CloseThread(msg.Message.ObjectId)
+		}
 		log.InfoCtx(ctx, "handleMessage error", zap.Error(err))
 	}
 }
