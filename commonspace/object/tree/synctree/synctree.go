@@ -15,7 +15,6 @@ import (
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"go.uber.org/zap"
-	"sync/atomic"
 )
 
 var (
@@ -46,7 +45,7 @@ type syncTree struct {
 	syncStatus syncstatus.StatusUpdater
 	notifiable HeadNotifiable
 	listener   updatelistener.UpdateListener
-	treeUsage  *atomic.Int32
+	onClose    func(id string)
 	isClosed   bool
 	isDeleted  bool
 }
@@ -69,7 +68,7 @@ type BuildDeps struct {
 	AclList            list.AclList
 	SpaceStorage       spacestorage.SpaceStorage
 	TreeStorage        treestorage.TreeStorage
-	TreeUsage          *atomic.Int32
+	OnClose            func(id string)
 	SyncStatus         syncstatus.StatusUpdater
 	PeerGetter         ResponsiblePeersGetter
 	WaitTreeRemoteSync bool
@@ -106,7 +105,7 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 		ObjectTree: objTree,
 		syncClient: syncClient,
 		notifiable: deps.HeadNotifiable,
-		treeUsage:  deps.TreeUsage,
+		onClose:    deps.OnClose,
 		listener:   deps.Listener,
 		syncStatus: deps.SyncStatus,
 	}
@@ -213,7 +212,7 @@ func (s *syncTree) Close() (err error) {
 	if s.isClosed {
 		return ErrSyncTreeClosed
 	}
-	s.treeUsage.Add(-1)
+	s.onClose(s.Id())
 	s.isClosed = true
 	return
 }
@@ -239,7 +238,6 @@ func (s *syncTree) afterBuild() {
 	if s.listener != nil {
 		s.listener.Rebuild(s)
 	}
-	s.treeUsage.Add(1)
 	if s.notifiable != nil {
 		s.notifiable.UpdateHeads(s.Id(), s.Heads())
 	}

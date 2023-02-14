@@ -143,6 +143,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		configuration: lastConfiguration,
 		peerManager:   peerManager,
 		storage:       st,
+		treesUsed:     &atomic.Int32{},
 		isClosed:      spaceIsClosed,
 	}
 	return sp, nil

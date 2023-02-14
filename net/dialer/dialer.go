@@ -100,7 +100,7 @@ func (d *dialer) Dial(ctx context.Context, peerId string) (p peer.Peer, err erro
 }
 
 func (d *dialer) handshake(ctx context.Context, addr string) (conn drpc.Conn, sc sec.SecureConn, err error) {
-	tcpConn, err := net.Dial("tcp", addr)
+	tcpConn, err := net.DialTimeout("tcp", addr, time.Second)
 	if err != nil {
 		return
 	}
