@@ -321,6 +321,34 @@ func (mr *MockObjectTreeMockRecorder) Storage() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Storage", reflect.TypeOf((*MockObjectTree)(nil).Storage))
 }
 
+// TryLock mocks base method.
+func (m *MockObjectTree) TryLock() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryLock")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// TryLock indicates an expected call of TryLock.
+func (mr *MockObjectTreeMockRecorder) TryLock() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryLock", reflect.TypeOf((*MockObjectTree)(nil).TryLock))
+}
+
+// TryRLock mocks base method.
+func (m *MockObjectTree) TryRLock() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryRLock")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// TryRLock indicates an expected call of TryRLock.
+func (mr *MockObjectTreeMockRecorder) TryRLock() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryRLock", reflect.TypeOf((*MockObjectTree)(nil).TryRLock))
+}
+
 // Unlock mocks base method.
 func (m *MockObjectTree) Unlock() {
 	m.ctrl.T.Helper()

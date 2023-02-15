@@ -127,8 +127,8 @@ type space struct {
 
 	handleQueue multiqueue.MultiQueue[HandleMessage]
 
-	isClosed  atomic.Bool
-	treesUsed atomic.Int32
+	isClosed  *atomic.Bool
+	treesUsed *atomic.Int32
 }
 
 func (s *space) LastUsage() time.Time {
@@ -295,7 +295,7 @@ func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCrea
 		Listener:       listener,
 		AclList:        s.aclList,
 		SpaceStorage:   s.storage,
-		TreeUsage:      &s.treesUsed,
+		OnClose:        func(id string) {},
 		SyncStatus:     s.syncStatus,
 		PeerGetter:     s.peerManager,
 	}
@@ -326,12 +326,16 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 		Listener:           opts.Listener,
 		AclList:            s.aclList,
 		SpaceStorage:       s.storage,
-		TreeUsage:          &s.treesUsed,
+		OnClose:            s.onObjectClose,
 		SyncStatus:         s.syncStatus,
 		WaitTreeRemoteSync: opts.WaitTreeRemoteSync,
 		PeerGetter:         s.peerManager,
 	}
-	return synctree.BuildSyncTreeOrGetRemote(ctx, id, deps)
+	if t, err = synctree.BuildSyncTreeOrGetRemote(ctx, id, deps); err != nil {
+		return nil, err
+	}
+	s.treesUsed.Add(1)
+	return
 }
 
 func (s *space) BuildHistoryTree(ctx context.Context, id string, opts HistoryTreeOpts) (t objecttree.HistoryTree, err error) {
@@ -388,8 +392,17 @@ func (s *space) handleMessage(msg HandleMessage) {
 	}
 
 	if err := s.objectSync.HandleMessage(ctx, msg.SenderId, msg.Message); err != nil {
+		if msg.Message.ObjectId != "" {
+			// cleanup thread on error
+			_ = s.handleQueue.CloseThread(msg.Message.ObjectId)
+		}
 		log.InfoCtx(ctx, "handleMessage error", zap.Error(err))
 	}
+}
+
+func (s *space) onObjectClose(id string) {
+	s.treesUsed.Add(-1)
+	_ = s.handleQueue.CloseThread(id)
 }
 
 func (s *space) Close() error {

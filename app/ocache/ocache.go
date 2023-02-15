@@ -176,8 +176,12 @@ Load:
 	}
 	c.mu.Unlock()
 	if closing {
-		<-e.close
-		goto Load
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-e.close:
+			goto Load
+		}
 	}
 
 	if load {

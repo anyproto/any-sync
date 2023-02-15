@@ -3,6 +3,7 @@ package dialer
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	net2 "github.com/anytypeio/any-sync/net"
@@ -100,15 +101,17 @@ func (d *dialer) Dial(ctx context.Context, peerId string) (p peer.Peer, err erro
 }
 
 func (d *dialer) handshake(ctx context.Context, addr string) (conn drpc.Conn, sc sec.SecureConn, err error) {
-	tcpConn, err := net.Dial("tcp", addr)
+	st := time.Now()
+	// TODO: move dial timeout to config
+	tcpConn, err := net.DialTimeout("tcp", addr, time.Second*3)
 	if err != nil {
-		return
+		return nil, nil, fmt.Errorf("dialTimeout error: %v; since start: %v", err, time.Since(st))
 	}
 
 	timeoutConn := timeoutconn.NewConn(tcpConn, time.Millisecond*time.Duration(d.config.Stream.TimeoutMilliseconds))
 	sc, err = d.transport.TLSConn(ctx, timeoutConn)
 	if err != nil {
-		return
+		return nil, nil, fmt.Errorf("tls handshaeke error: %v; since start: %v", err, time.Since(st))
 	}
 	log.Info("connected with remote host", zap.String("serverPeer", sc.RemotePeer().String()), zap.String("addr", addr))
 	conn = drpcconn.NewWithOptions(sc, drpcconn.Options{Manager: drpcmanager.Options{
