@@ -1,6 +1,7 @@
 package handshake
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"github.com/anytypeio/any-sync/net/secureservice/handshake/handshakeproto"
@@ -50,8 +51,26 @@ type CredentialChecker interface {
 	CheckCredential(sc sec.SecureConn, cred *handshakeproto.Credentials) (identity []byte, err error)
 }
 
-func OutgoingHandshake(sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
+func OutgoingHandshake(ctx context.Context, sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	h := newHandshake()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		identity, err = outgoingHandshake(h, sc, cc)
+	}()
+	select {
+	case <-done:
+		return
+	case <-ctx.Done():
+		_ = sc.Close()
+		return nil, ctx.Err()
+	}
+}
+
+func outgoingHandshake(h *handshake, sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
 	defer h.release()
 	h.conn = sc
 	localCred := cc.MakeCredentials(sc)
@@ -99,8 +118,26 @@ func OutgoingHandshake(sc sec.SecureConn, cc CredentialChecker) (identity []byte
 	}
 }
 
-func IncomingHandshake(sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
+func IncomingHandshake(ctx context.Context, sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	h := newHandshake()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		identity, err = incomingHandshake(h, sc, cc)
+	}()
+	select {
+	case <-done:
+		return
+	case <-ctx.Done():
+		_ = sc.Close()
+		return nil, ctx.Err()
+	}
+}
+
+func incomingHandshake(h *handshake, sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
 	defer h.release()
 	h.conn = sc
 

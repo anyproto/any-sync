@@ -37,7 +37,7 @@ func New() SecureService {
 }
 
 type SecureService interface {
-	TLSListener(lis net.Listener, timeoutMillis int) ContextListener
+	TLSListener(lis net.Listener, timeoutMillis int, withIdentityCheck bool) ContextListener
 	BasicListener(lis net.Listener, timeoutMillis int) ContextListener
 	TLSConn(ctx context.Context, conn net.Conn) (sec.SecureConn, error)
 	app.Component
@@ -76,8 +76,12 @@ func (s *secureService) Name() (name string) {
 	return CName
 }
 
-func (s *secureService) TLSListener(lis net.Listener, timeoutMillis int) ContextListener {
-	return newTLSListener(s.key, lis, timeoutMillis)
+func (s *secureService) TLSListener(lis net.Listener, timeoutMillis int, identityHandshake bool) ContextListener {
+	cc := s.noVerifyChecker
+	if identityHandshake {
+		cc = s.peerSignVerifier
+	}
+	return newTLSListener(cc, s.key, lis, timeoutMillis)
 }
 
 func (s *secureService) BasicListener(lis net.Listener, timeoutMillis int) ContextListener {
@@ -98,7 +102,7 @@ func (s *secureService) TLSConn(ctx context.Context, conn net.Conn) (sec.SecureC
 		checker = s.noVerifyChecker
 	}
 	// ignore identity for outgoing connection because we don't need it at this moment
-	_, err = handshake.OutgoingHandshake(sc, checker)
+	_, err = handshake.OutgoingHandshake(ctx, sc, checker)
 	if err != nil {
 		return nil, HandshakeError{err: err, remoteAddr: conn.RemoteAddr().String()}
 	}
