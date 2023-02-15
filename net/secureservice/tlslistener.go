@@ -57,7 +57,7 @@ func (p *tlsListener) upgradeConn(ctx context.Context, conn net.Conn) (context.C
 			err:        err,
 		}
 	}
-	identity, err := handshake.IncomingHandshake(secure, p.cc)
+	identity, err := handshake.IncomingHandshake(nil, secure, p.cc)
 	if err != nil {
 		return nil, nil, HandshakeError{
 			remoteAddr: conn.RemoteAddr().String(),
