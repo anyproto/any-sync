@@ -5,9 +5,10 @@ import (
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/metric"
-	"github.com/anytypeio/any-sync/net"
+	anyNet "github.com/anytypeio/any-sync/net"
 	"github.com/anytypeio/any-sync/net/secureservice"
 	"github.com/prometheus/client_golang/prometheus"
+	"net"
 	"storj.io/drpc"
 )
 
@@ -25,14 +26,14 @@ type DRPCServer interface {
 }
 
 type drpcServer struct {
-	config    net.Config
+	config    anyNet.Config
 	metric    metric.Metric
 	transport secureservice.SecureService
 	*BaseDrpcServer
 }
 
 func (s *drpcServer) Init(a *app.App) (err error) {
-	s.config = a.MustComponent("config").(net.ConfigGetter).GetNet()
+	s.config = a.MustComponent("config").(anyNet.ConfigGetter).GetNet()
 	s.metric = a.MustComponent(metric.CName).(metric.Metric)
 	s.transport = a.MustComponent(secureservice.CName).(secureservice.SecureService)
 	return nil
@@ -67,7 +68,9 @@ func (s *drpcServer) Run(ctx context.Context) (err error) {
 				SummaryVec: histVec,
 			}
 		},
-		Converter: s.transport.TLSListener,
+		Converter: func(listener net.Listener, timeoutMillis int) secureservice.ContextListener {
+			return s.transport.TLSListener(listener, timeoutMillis, s.config.Server.IdentityHandshake)
+		},
 	}
 	return s.BaseDrpcServer.Run(ctx, params)
 }

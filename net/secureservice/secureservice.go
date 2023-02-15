@@ -68,6 +68,10 @@ func (s *secureService) Init(a *app.App) (err error) {
 
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 
+	if s.outboundTr, err = libp2ptls.New(libp2ptls.ID, s.key, nil); err != nil {
+		return
+	}
+
 	log.Info("secure service init", zap.String("peerId", account.Account().PeerId))
 	return nil
 }
