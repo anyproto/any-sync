@@ -10,7 +10,8 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	ListenAddrs []string `yaml:"listenAddrs"`
+	IdentityHandshake bool     `yaml:"identityHandshake"`
+	ListenAddrs       []string `yaml:"listenAddrs"`
 }
 
 type StreamConfig struct {
