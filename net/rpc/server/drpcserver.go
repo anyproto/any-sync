@@ -7,9 +7,11 @@ import (
 	"github.com/anytypeio/any-sync/metric"
 	anyNet "github.com/anytypeio/any-sync/net"
 	"github.com/anytypeio/any-sync/net/secureservice"
+	"github.com/libp2p/go-libp2p/core/sec"
 	"github.com/prometheus/client_golang/prometheus"
 	"net"
 	"storj.io/drpc"
+	"time"
 )
 
 const CName = "common.net.drpcserver"
@@ -68,9 +70,11 @@ func (s *drpcServer) Run(ctx context.Context) (err error) {
 				SummaryVec: histVec,
 			}
 		},
-		Converter: func(listener net.Listener, timeoutMillis int) secureservice.ContextListener {
-			return s.transport.TLSListener(listener, timeoutMillis, s.config.Server.IdentityHandshake)
-		},
+	}
+	s.handshake = func(conn net.Conn) (cCtx context.Context, sc sec.SecureConn, err error) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+		return s.transport.SecureInbound(ctx, conn)
 	}
 	return s.BaseDrpcServer.Run(ctx, params)
 }

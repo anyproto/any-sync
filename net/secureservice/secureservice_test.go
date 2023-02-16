@@ -20,10 +20,8 @@ func TestHandshake(t *testing.T) {
 	fxS := newFixture(t, nc, nc.GetAccountService(0))
 	defer fxS.Finish(t)
 
-	tl := &testListener{conn: make(chan net.Conn, 1)}
-	defer tl.Close()
+	sc, cc := net.Pipe()
 
-	list := fxS.TLSListener(tl, 1000, true)
 	type acceptRes struct {
 		ctx  context.Context
 		conn net.Conn
@@ -32,16 +30,14 @@ func TestHandshake(t *testing.T) {
 	resCh := make(chan acceptRes)
 	go func() {
 		var ar acceptRes
-		ar.ctx, ar.conn, ar.err = list.Accept(ctx)
+		ar.ctx, ar.conn, ar.err = fxS.SecureInbound(ctx, sc)
 		resCh <- ar
 	}()
 
 	fxC := newFixture(t, nc, nc.GetAccountService(1))
 	defer fxC.Finish(t)
 
-	sc, cc := net.Pipe()
-	tl.conn <- sc
-	secConn, err := fxC.TLSConn(ctx, cc)
+	secConn, err := fxC.SecureOutbound(ctx, cc)
 	require.NoError(t, err)
 	assert.Equal(t, nc.GetAccountService(0).Account().PeerId, secConn.RemotePeer().String())
 	res := <-resCh
@@ -61,7 +57,7 @@ func newFixture(t *testing.T, nc *testnodeconf.Config, acc accountservice.Servic
 		a:             new(app.App),
 	}
 
-	fx.a.Register(fx.acc).Register(fx.secureService).Register(nodeconf.New()).Register(nc)
+	fx.a.Register(fx.acc).Register(nc).Register(nodeconf.New()).Register(fx.secureService)
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
 }
@@ -74,25 +70,4 @@ type fixture struct {
 
 func (fx *fixture) Finish(t *testing.T) {
 	require.NoError(t, fx.a.Close(ctx))
-}
-
-type testListener struct {
-	conn chan net.Conn
-}
-
-func (t *testListener) Accept() (net.Conn, error) {
-	conn, ok := <-t.conn
-	if !ok {
-		return nil, net.ErrClosed
-	}
-	return conn, nil
-}
-
-func (t *testListener) Close() error {
-	close(t.conn)
-	return nil
-}
-
-func (t *testListener) Addr() net.Addr {
-	return nil
 }

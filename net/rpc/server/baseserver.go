@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"github.com/anytypeio/any-sync/net/secureservice"
+	"github.com/libp2p/go-libp2p/core/sec"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"io"
@@ -18,19 +19,18 @@ import (
 type BaseDrpcServer struct {
 	drpcServer *drpcserver.Server
 	transport  secureservice.SecureService
-	listeners  []secureservice.ContextListener
+	listeners  []net.Listener
+	handshake  func(conn net.Conn) (cCtx context.Context, sc sec.SecureConn, err error)
 	cancel     func()
 	*drpcmux.Mux
 }
 
 type DRPCHandlerWrapper func(handler drpc.Handler) drpc.Handler
-type ListenerConverter func(listener net.Listener, timeoutMillis int) secureservice.ContextListener
 
 type Params struct {
 	BufferSizeMb  int
 	ListenAddrs   []string
 	Wrapper       DRPCHandlerWrapper
-	Converter     ListenerConverter
 	TimeoutMillis int
 }
 
@@ -44,18 +44,17 @@ func (s *BaseDrpcServer) Run(ctx context.Context, params Params) (err error) {
 	}})
 	ctx, s.cancel = context.WithCancel(ctx)
 	for _, addr := range params.ListenAddrs {
-		tcpList, err := net.Listen("tcp", addr)
+		list, err := net.Listen("tcp", addr)
 		if err != nil {
 			return err
 		}
-		tlsList := params.Converter(tcpList, params.TimeoutMillis)
-		s.listeners = append(s.listeners, tlsList)
-		go s.serve(ctx, tlsList)
+		s.listeners = append(s.listeners, list)
+		go s.serve(ctx, list)
 	}
 	return
 }
 
-func (s *BaseDrpcServer) serve(ctx context.Context, lis secureservice.ContextListener) {
+func (s *BaseDrpcServer) serve(ctx context.Context, lis net.Listener) {
 	l := log.With(zap.String("localAddr", lis.Addr().String()))
 	l.Info("drpc listener started")
 	defer func() {
@@ -67,7 +66,7 @@ func (s *BaseDrpcServer) serve(ctx context.Context, lis secureservice.ContextLis
 			return
 		default:
 		}
-		cctx, conn, err := lis.Accept(ctx)
+		conn, err := lis.Accept()
 		if err != nil {
 			if isTemporary(err) {
 				l.Debug("listener temporary accept error", zap.Error(err))
@@ -85,12 +84,23 @@ func (s *BaseDrpcServer) serve(ctx context.Context, lis secureservice.ContextLis
 			l.Error("listener accept error", zap.Error(err))
 			return
 		}
-		go s.serveConn(cctx, conn)
+		go s.serveConn(conn)
 	}
 }
 
-func (s *BaseDrpcServer) serveConn(ctx context.Context, conn net.Conn) {
+func (s *BaseDrpcServer) serveConn(conn net.Conn) {
 	l := log.With(zap.String("remoteAddr", conn.RemoteAddr().String())).With(zap.String("localAddr", conn.LocalAddr().String()))
+	var (
+		ctx = context.Background()
+		err error
+	)
+	if s.handshake != nil {
+		ctx, conn, err = s.handshake(conn)
+		if err != nil {
+			l.Info("handshake error", zap.Error(err))
+		}
+	}
+
 	l.Debug("connection opened")
 	if err := s.drpcServer.ServeOne(ctx, conn); err != nil {
 		if errs.Is(err, context.Canceled) || errs.Is(err, io.EOF) {

@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
+	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/secureservice/handshake"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -37,20 +38,20 @@ func New() SecureService {
 }
 
 type SecureService interface {
-	TLSListener(lis net.Listener, timeoutMillis int, withIdentityCheck bool) ContextListener
-	BasicListener(lis net.Listener, timeoutMillis int) ContextListener
-	TLSConn(ctx context.Context, conn net.Conn) (sec.SecureConn, error)
+	SecureOutbound(ctx context.Context, conn net.Conn) (sec.SecureConn, error)
+	SecureInbound(ctx context.Context, conn net.Conn) (cctx context.Context, sc sec.SecureConn, err error)
 	app.Component
 }
 
 type secureService struct {
-	outboundTr *libp2ptls.Transport
-	account    *accountdata.AccountData
-	key        crypto.PrivKey
-	nodeconf   nodeconf.Service
+	p2pTr    *libp2ptls.Transport
+	account  *accountdata.AccountData
+	key      crypto.PrivKey
+	nodeconf nodeconf.Service
 
 	noVerifyChecker  handshake.CredentialChecker
 	peerSignVerifier handshake.CredentialChecker
+	inboundChecker   handshake.CredentialChecker
 }
 
 func (s *secureService) Init(a *app.App) (err error) {
@@ -68,7 +69,14 @@ func (s *secureService) Init(a *app.App) (err error) {
 
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 
-	if s.outboundTr, err = libp2ptls.New(libp2ptls.ID, s.key, nil); err != nil {
+	s.inboundChecker = s.noVerifyChecker
+	confTypes := s.nodeconf.GetLast().NodeTypes(account.Account().PeerId)
+	if len(confTypes) > 0 {
+		// require identity verification if we are node
+		s.inboundChecker = s.peerSignVerifier
+	}
+
+	if s.p2pTr, err = libp2ptls.New(libp2ptls.ID, s.key, nil); err != nil {
 		return
 	}
 
@@ -80,20 +88,30 @@ func (s *secureService) Name() (name string) {
 	return CName
 }
 
-func (s *secureService) TLSListener(lis net.Listener, timeoutMillis int, identityHandshake bool) ContextListener {
-	cc := s.noVerifyChecker
-	if identityHandshake {
-		cc = s.peerSignVerifier
+func (s *secureService) SecureInbound(ctx context.Context, conn net.Conn) (cctx context.Context, sc sec.SecureConn, err error) {
+	sc, err = s.p2pTr.SecureInbound(ctx, conn, "")
+	if err != nil {
+		return nil, nil, HandshakeError{
+			remoteAddr: conn.RemoteAddr().String(),
+			err:        err,
+		}
 	}
-	return newTLSListener(cc, s.key, lis, timeoutMillis)
+
+	identity, err := handshake.IncomingHandshake(ctx, sc, s.inboundChecker)
+	if err != nil {
+		return nil, nil, HandshakeError{
+			remoteAddr: conn.RemoteAddr().String(),
+			err:        err,
+		}
+	}
+	cctx = context.Background()
+	cctx = peer.CtxWithPeerId(cctx, sc.RemotePeer().String())
+	cctx = peer.CtxWithIdentity(cctx, identity)
+	return
 }
 
-func (s *secureService) BasicListener(lis net.Listener, timeoutMillis int) ContextListener {
-	return newBasicListener(lis, timeoutMillis)
-}
-
-func (s *secureService) TLSConn(ctx context.Context, conn net.Conn) (sec.SecureConn, error) {
-	sc, err := s.outboundTr.SecureOutbound(ctx, conn, "")
+func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (sec.SecureConn, error) {
+	sc, err := s.p2pTr.SecureOutbound(ctx, conn, "")
 	if err != nil {
 		return nil, HandshakeError{err: err, remoteAddr: conn.RemoteAddr().String()}
 	}
