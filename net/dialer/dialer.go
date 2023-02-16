@@ -74,6 +74,9 @@ func (d *dialer) SetPeerAddrs(peerId string, addrs []string) {
 }
 
 func (d *dialer) Dial(ctx context.Context, peerId string) (p peer.Peer, err error) {
+	var ctxCancel context.CancelFunc
+	ctx, ctxCancel = context.WithTimeout(ctx, time.Second*10)
+	defer ctxCancel()
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
