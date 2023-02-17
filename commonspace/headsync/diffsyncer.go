@@ -123,7 +123,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	d.syncStatus.SetNodesOnline(p.Id(), true)
 
 	if err == spacesyncproto.ErrSpaceMissing {
-		return d.sendPushSpaceRequest(ctx, cl)
+		return d.sendPushSpaceRequest(ctx, p.Id(), cl)
 	}
 
 	totalLen := len(newIds) + len(changedIds) + len(removedIds)
@@ -167,7 +167,7 @@ func (d *diffSyncer) syncTrees(ctx context.Context, peerId string, trees []strin
 	}
 }
 
-func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, cl spacesyncproto.DRPCSpaceSyncClient) (err error) {
+func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, peerId string, cl spacesyncproto.DRPCSpaceSyncClient) (err error) {
 	aclStorage, err := d.storage.AclStorage()
 	if err != nil {
 		return
@@ -202,5 +202,25 @@ func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, cl spacesyncproto
 	_, err = cl.SpacePush(ctx, &spacesyncproto.SpacePushRequest{
 		Payload: spacePayload,
 	})
+	if err != nil {
+		return
+	}
+	if e := d.subscribe(ctx, peerId); e != nil {
+		d.log.WarnCtx(ctx, "error subscribing for space", zap.Error(e))
+	}
 	return
+}
+
+func (d *diffSyncer) subscribe(ctx context.Context, peerId string) (err error) {
+	var msg = &spacesyncproto.SpaceSubscription{
+		SpaceIds: []string{d.spaceId},
+		Action:   spacesyncproto.SpaceSubscriptionAction_Subscribe,
+	}
+	payload, err := msg.Marshal()
+	if err != nil {
+		return
+	}
+	return d.peerManager.SendPeer(ctx, peerId, &spacesyncproto.ObjectSyncMessage{
+		Payload: payload,
+	})
 }
