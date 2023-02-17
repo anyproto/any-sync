@@ -192,6 +192,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		clientMock.EXPECT().
 			SpacePush(gomock.Any(), newPushSpaceRequestMatcher(spaceId, aclRootId, settingsId, spaceHeader)).
 			Return(nil, nil)
+		peerManagerMock.EXPECT().SendPeer(gomock.Any(), "mockId", gomock.Any())
 
 		require.NoError(t, diffSyncer.Sync(ctx))
 	})
