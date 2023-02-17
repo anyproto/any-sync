@@ -5,6 +5,10 @@ import (
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
+	"github.com/anytypeio/any-sync/net/peer"
+	"github.com/anytypeio/any-sync/net/secureservice/handshake"
+	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/sec"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
@@ -34,14 +38,20 @@ func New() SecureService {
 }
 
 type SecureService interface {
-	TLSListener(lis net.Listener, timeoutMillis int) ContextListener
-	BasicListener(lis net.Listener, timeoutMillis int) ContextListener
-	TLSConn(ctx context.Context, conn net.Conn) (sec.SecureConn, error)
+	SecureOutbound(ctx context.Context, conn net.Conn) (sec.SecureConn, error)
+	SecureInbound(ctx context.Context, conn net.Conn) (cctx context.Context, sc sec.SecureConn, err error)
 	app.Component
 }
 
 type secureService struct {
-	key crypto.PrivKey
+	p2pTr    *libp2ptls.Transport
+	account  *accountdata.AccountData
+	key      crypto.PrivKey
+	nodeconf nodeconf.Service
+
+	noVerifyChecker  handshake.CredentialChecker
+	peerSignVerifier handshake.CredentialChecker
+	inboundChecker   handshake.CredentialChecker
 }
 
 func (s *secureService) Init(a *app.App) (err error) {
@@ -54,8 +64,23 @@ func (s *secureService) Init(a *app.App) (err error) {
 		return
 	}
 
-	log.Info("secure service init", zap.String("peerId", account.Account().PeerId))
+	s.noVerifyChecker = newNoVerifyChecker()
+	s.peerSignVerifier = newPeerSignVerifier(account.Account())
 
+	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
+
+	s.inboundChecker = s.noVerifyChecker
+	confTypes := s.nodeconf.GetLast().NodeTypes(account.Account().PeerId)
+	if len(confTypes) > 0 {
+		// require identity verification if we are node
+		s.inboundChecker = s.peerSignVerifier
+	}
+
+	if s.p2pTr, err = libp2ptls.New(libp2ptls.ID, s.key, nil); err != nil {
+		return
+	}
+
+	log.Info("secure service init", zap.String("peerId", account.Account().PeerId))
 	return nil
 }
 
@@ -63,18 +88,45 @@ func (s *secureService) Name() (name string) {
 	return CName
 }
 
-func (s *secureService) TLSListener(lis net.Listener, timeoutMillis int) ContextListener {
-	return newTLSListener(s.key, lis, timeoutMillis)
-}
-
-func (s *secureService) BasicListener(lis net.Listener, timeoutMillis int) ContextListener {
-	return newBasicListener(lis, timeoutMillis)
-}
-
-func (s *secureService) TLSConn(ctx context.Context, conn net.Conn) (sec.SecureConn, error) {
-	tr, err := libp2ptls.New(libp2ptls.ID, s.key, nil)
+func (s *secureService) SecureInbound(ctx context.Context, conn net.Conn) (cctx context.Context, sc sec.SecureConn, err error) {
+	sc, err = s.p2pTr.SecureInbound(ctx, conn, "")
 	if err != nil {
-		return nil, err
+		return nil, nil, HandshakeError{
+			remoteAddr: conn.RemoteAddr().String(),
+			err:        err,
+		}
 	}
-	return tr.SecureOutbound(ctx, conn, "")
+
+	identity, err := handshake.IncomingHandshake(ctx, sc, s.inboundChecker)
+	if err != nil {
+		return nil, nil, HandshakeError{
+			remoteAddr: conn.RemoteAddr().String(),
+			err:        err,
+		}
+	}
+	cctx = context.Background()
+	cctx = peer.CtxWithPeerId(cctx, sc.RemotePeer().String())
+	cctx = peer.CtxWithIdentity(cctx, identity)
+	return
+}
+
+func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (sec.SecureConn, error) {
+	sc, err := s.p2pTr.SecureOutbound(ctx, conn, "")
+	if err != nil {
+		return nil, HandshakeError{err: err, remoteAddr: conn.RemoteAddr().String()}
+	}
+	peerId := sc.RemotePeer().String()
+	confTypes := s.nodeconf.GetLast().NodeTypes(peerId)
+	var checker handshake.CredentialChecker
+	if len(confTypes) > 0 {
+		checker = s.peerSignVerifier
+	} else {
+		checker = s.noVerifyChecker
+	}
+	// ignore identity for outgoing connection because we don't need it at this moment
+	_, err = handshake.OutgoingHandshake(ctx, sc, checker)
+	if err != nil {
+		return nil, HandshakeError{err: err, remoteAddr: conn.RemoteAddr().String()}
+	}
+	return sc, nil
 }

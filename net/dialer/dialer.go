@@ -74,6 +74,9 @@ func (d *dialer) SetPeerAddrs(peerId string, addrs []string) {
 }
 
 func (d *dialer) Dial(ctx context.Context, peerId string) (p peer.Peer, err error) {
+	var ctxCancel context.CancelFunc
+	ctx, ctxCancel = context.WithTimeout(ctx, time.Second*10)
+	defer ctxCancel()
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -109,7 +112,7 @@ func (d *dialer) handshake(ctx context.Context, addr string) (conn drpc.Conn, sc
 	}
 
 	timeoutConn := timeoutconn.NewConn(tcpConn, time.Millisecond*time.Duration(d.config.Stream.TimeoutMilliseconds))
-	sc, err = d.transport.TLSConn(ctx, timeoutConn)
+	sc, err = d.transport.SecureOutbound(ctx, timeoutConn)
 	if err != nil {
 		return nil, nil, fmt.Errorf("tls handshaeke error: %v; since start: %v", err, time.Since(st))
 	}

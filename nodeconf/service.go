@@ -74,9 +74,6 @@ func (s *service) Init(a *app.App) (err error) {
 			}
 			members = append(members, member)
 		}
-		if n.PeerId == s.accountId {
-			continue
-		}
 		if n.HasType(NodeTypeConsensus) {
 			fileConfig.consensusPeers = append(fileConfig.consensusPeers, n.PeerId)
 		}

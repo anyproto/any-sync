@@ -5,10 +5,13 @@ import (
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/metric"
-	"github.com/anytypeio/any-sync/net"
+	anyNet "github.com/anytypeio/any-sync/net"
 	"github.com/anytypeio/any-sync/net/secureservice"
+	"github.com/libp2p/go-libp2p/core/sec"
 	"github.com/prometheus/client_golang/prometheus"
+	"net"
 	"storj.io/drpc"
+	"time"
 )
 
 const CName = "common.net.drpcserver"
@@ -25,14 +28,14 @@ type DRPCServer interface {
 }
 
 type drpcServer struct {
-	config    net.Config
+	config    anyNet.Config
 	metric    metric.Metric
 	transport secureservice.SecureService
 	*BaseDrpcServer
 }
 
 func (s *drpcServer) Init(a *app.App) (err error) {
-	s.config = a.MustComponent("config").(net.ConfigGetter).GetNet()
+	s.config = a.MustComponent("config").(anyNet.ConfigGetter).GetNet()
 	s.metric = a.MustComponent(metric.CName).(metric.Metric)
 	s.transport = a.MustComponent(secureservice.CName).(secureservice.SecureService)
 	return nil
@@ -67,7 +70,11 @@ func (s *drpcServer) Run(ctx context.Context) (err error) {
 				SummaryVec: histVec,
 			}
 		},
-		Converter: s.transport.TLSListener,
+	}
+	s.handshake = func(conn net.Conn) (cCtx context.Context, sc sec.SecureConn, err error) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+		return s.transport.SecureInbound(ctx, conn)
 	}
 	return s.BaseDrpcServer.Run(ctx, params)
 }

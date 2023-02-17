@@ -1,0 +1,69 @@
+syntax = "proto3";
+package anyHandshake;
+
+option go_package = "net/secureservice/handshake/handshakeproto";
+
+/*
+
+Alice opens a new connection with Bob
+1. TLS handshake done successfully; both sides know local and remote peer identifiers.
+
+2. Alice sends a Credentials message to Bob
+
+3. Bob receives Alice's message and validates her credentials
+    3.1 If credentials are valid, Bob sends his credentials to Alice
+    3.2 If credentials are invalid,  Bob sends an Ack message with an error and closes the connection
+
+4. Alice receives Bob's message
+    4.1 If it is a credentials message, Alice validates it
+        4.1.1 If credentials are valid, Alice sends Ack message with error=Null
+        4.1.2 If credentials are invalid, Alice sends an Ack message with an error and closes the connection
+    4.2 If it is an Ack message, Alice has an error about why the handshake was unsuccessful
+
+5. Bob receives an Ack message from Alice
+    5.1 If error == Null, Bob sends Ack with error=Null to Alice - handshake successful
+    5.2 If error != Null, Bob has an error about why the handshake was unsuccessful
+
+
+Successful handshake scheme:
+    Alice -> [CREDENTIALS] -> Bob
+    Bob -> [CREDENTIALS] -> Alice
+    Alice -> [Ack:Error=Null] -> Bob
+    Bob -> [Ack:Error=Null] -> Alice
+
+ */
+
+message Credentials {
+    CredentialsType type = 1;
+    bytes payload = 2;
+}
+
+enum CredentialsType {
+    // SkipVerify using when identity is not required, for example in p2p cases
+    SkipVerify = 0;
+    // SignedPeerIds using a payload containing PayloadSignedPeerIds message
+    SignedPeerIds = 1;
+}
+
+
+message PayloadSignedPeerIds {
+    // account identity
+    bytes identity = 1;
+    // sign of (localPeerId + remotePeerId)
+    bytes sign = 2;
+}
+
+
+message Ack {
+    Error error = 1;
+}
+
+
+enum Error {
+    Null = 0;
+    Unexpected = 1;
+    InvalidCredentials = 2;
+    UnexpectedPayload = 3;
+    SkipVerifyNotAllowed = 4;
+    DeadlineExceeded = 5;
+}
