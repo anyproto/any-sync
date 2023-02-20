@@ -12,4 +12,5 @@ var (
 	ErrSpaceMissing    = errGroup.Register(errors.New("space is missing"), uint64(ErrCodes_SpaceMissing))
 	ErrSpaceExists     = errGroup.Register(errors.New("space exists"), uint64(ErrCodes_SpaceExists))
 	ErrSpaceNotInCache = errGroup.Register(errors.New("space not in cache"), uint64(ErrCodes_SpaceNotInCache))
+	ErrSpaceIsDeleted  = errGroup.Register(errors.New("space is deleted"), uint64(ErrCodes_SpaceIsDeleted))
 )

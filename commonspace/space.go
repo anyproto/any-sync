@@ -128,6 +128,7 @@ type space struct {
 	handleQueue multiqueue.MultiQueue[HandleMessage]
 
 	isClosed  *atomic.Bool
+	isDeleted *atomic.Bool
 	treesUsed *atomic.Int32
 }
 
@@ -208,6 +209,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 		Store:         s.storage,
 		DeletionState: deletionState,
 		Provider:      s.headSync,
+		OnSpaceDelete: s.onSpaceDelete,
 	}
 	s.settingsObject = settings.NewSettingsObject(deps, s.id)
 	s.objectSync.Init()
@@ -296,7 +298,7 @@ func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCrea
 		Listener:       listener,
 		AclList:        s.aclList,
 		SpaceStorage:   s.storage,
-		OnClose:        func(id string) {},
+		OnClose:        s.onObjectClose,
 		SyncStatus:     s.syncStatus,
 		PeerGetter:     s.peerManager,
 	}
@@ -404,6 +406,10 @@ func (s *space) handleMessage(msg HandleMessage) {
 func (s *space) onObjectClose(id string) {
 	s.treesUsed.Add(-1)
 	_ = s.handleQueue.CloseThread(id)
+}
+
+func (s *space) onSpaceDelete() {
+	s.isDeleted.Swap(true)
 }
 
 func (s *space) Close() error {

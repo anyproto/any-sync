@@ -8,6 +8,7 @@ enum ErrCodes {
     SpaceMissing = 1;
     SpaceExists = 2;
     SpaceNotInCache = 3;
+    SpaceIsDeleted = 4;
     ErrorOffset = 100;
 }
 
