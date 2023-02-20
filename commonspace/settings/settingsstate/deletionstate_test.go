@@ -1,4 +1,4 @@
-package deletionstate
+package settingsstate
 
 import (
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
@@ -11,14 +11,14 @@ import (
 
 type fixture struct {
 	ctrl         *gomock.Controller
-	delState     *deletionState
+	delState     *objectDeletionState
 	spaceStorage *mock_spacestorage.MockSpaceStorage
 }
 
 func newFixture(t *testing.T) *fixture {
 	ctrl := gomock.NewController(t)
 	spaceStorage := mock_spacestorage.NewMockSpaceStorage(ctrl)
-	delState := NewDeletionState(spaceStorage).(*deletionState)
+	delState := NewObjectDeletionState(spaceStorage).(*objectDeletionState)
 	return &fixture{
 		ctrl:         ctrl,
 		delState:     delState,

@@ -2,7 +2,7 @@ package settings
 
 import (
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
-	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
+	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"time"
 )
 
@@ -15,13 +15,13 @@ type SpaceDeleter interface {
 }
 
 type DeletionManager interface {
-	UpdateState(state *State) (err error)
+	UpdateState(state *settingsstate.State) (err error)
 }
 
 func newDeletionManager(
 	spaceId string,
 	deletionInterval time.Duration,
-	deletionState deletionstate.DeletionState,
+	deletionState settingsstate.ObjectDeletionState,
 	provider SpaceIdsProvider,
 	onSpaceDelete func()) DeletionManager {
 	return &deletionManager{
@@ -34,7 +34,7 @@ func newDeletionManager(
 }
 
 type deletionManager struct {
-	deletionState    deletionstate.DeletionState
+	deletionState    settingsstate.ObjectDeletionState
 	provider         SpaceIdsProvider
 	treeGetter       treegetter.TreeGetter
 	deletionInterval time.Duration
@@ -42,7 +42,7 @@ type deletionManager struct {
 	onSpaceDelete    func()
 }
 
-func (d *deletionManager) UpdateState(state *State) (err error) {
+func (d *deletionManager) UpdateState(state *settingsstate.State) (err error) {
 	err = d.deletionState.Add(state.DeletedIds)
 	if err != nil {
 		log.Warn("failed to add deleted ids to deletion state")

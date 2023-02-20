@@ -7,7 +7,7 @@ import (
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
-	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
+	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
@@ -24,7 +24,7 @@ type TreeHeads struct {
 }
 
 type HeadSync interface {
-	Init(objectIds []string, deletionState deletionstate.DeletionState)
+	Init(objectIds []string, deletionState settingsstate.ObjectDeletionState)
 
 	UpdateHeads(id string, heads []string)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
@@ -81,7 +81,7 @@ func NewHeadSync(
 	}
 }
 
-func (d *headSync) Init(objectIds []string, deletionState deletionstate.DeletionState) {
+func (d *headSync) Init(objectIds []string, deletionState settingsstate.ObjectDeletionState) {
 	d.fillDiff(objectIds)
 	d.syncer.Init(deletionState)
 	d.periodicSync.Run()

@@ -1,4 +1,4 @@
-package settings
+package settingsstate
 
 import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
@@ -8,24 +8,18 @@ import (
 )
 
 type StateBuilder interface {
-	Build(tree objecttree.ObjectTree, isUpdate bool) (*State, error)
+	Build(tree objecttree.ObjectTree, state *State, isUpdate bool) (*State, error)
 }
 
-func newStateBuilder() StateBuilder {
+func NewStateBuilder() StateBuilder {
 	return &stateBuilder{}
 }
 
 type stateBuilder struct {
-	state *State
 }
 
-func (s *stateBuilder) Build(tr objecttree.ObjectTree, isUpdate bool) (state *State, err error) {
-	state = s.state
-	defer func() {
-		if err == nil {
-			s.state = state
-		}
-	}()
+func (s *stateBuilder) Build(tr objecttree.ObjectTree, oldState *State, isUpdate bool) (state *State, err error) {
+	state = oldState
 
 	if !isUpdate || state == nil {
 		state = &State{}

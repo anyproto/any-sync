@@ -18,7 +18,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
 	"github.com/anytypeio/any-sync/commonspace/settings"
-	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
+	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
@@ -98,6 +98,9 @@ type Space interface {
 	BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error)
 	DeleteTree(ctx context.Context, id string) (err error)
 	BuildHistoryTree(ctx context.Context, id string, opts HistoryTreeOpts) (t objecttree.HistoryTree, err error)
+
+	DeleteSpace(ctx context.Context, t time.Time) (err error)
+	RestoreSpace(ctx context.Context) (err error)
 
 	HeadSync() headsync.HeadSync
 	ObjectSync() objectsync.ObjectSync
@@ -191,7 +194,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.MessagePool())
 	s.cache.AddObject(s.aclList)
 
-	deletionState := deletionstate.NewDeletionState(s.storage)
+	deletionState := settingsstate.NewObjectDeletionState(s.storage)
 	deps := settings.Deps{
 		BuildFunc: func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error) {
 			res, err := s.BuildTree(ctx, id, BuildTreeOpts{
@@ -363,6 +366,14 @@ func (s *space) BuildHistoryTree(ctx context.Context, id string, opts HistoryTre
 
 func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
 	return s.settingsObject.DeleteObject(id)
+}
+
+func (s *space) DeleteSpace(ctx context.Context, t time.Time) (err error) {
+	return s.settingsObject.DeleteSpace(t)
+}
+
+func (s *space) RestoreSpace(ctx context.Context) (err error) {
+	return s.settingsObject.RestoreSpace()
 }
 
 func (s *space) HandleMessage(ctx context.Context, hm HandleMessage) (err error) {
