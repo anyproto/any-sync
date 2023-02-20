@@ -10,7 +10,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
-	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
+	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	spacestorage "github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"go.uber.org/zap"
 	"time"
@@ -24,12 +24,16 @@ type SettingsObject interface {
 	synctree.SyncTree
 	Init(ctx context.Context) (err error)
 	DeleteObject(id string) (err error)
+	DeleteSpace(t time.Time) (err error)
+	RestoreSpace() (err error)
 }
 
 var (
-	ErrDeleteSelf      = errors.New("cannot delete self")
-	ErrAlreadyDeleted  = errors.New("the object is already deleted")
-	ErrObjDoesNotExist = errors.New("the object does not exist")
+	ErrDeleteSelf       = errors.New("cannot delete self")
+	ErrAlreadyDeleted   = errors.New("the object is already deleted")
+	ErrObjDoesNotExist  = errors.New("the object does not exist")
+	ErrMarkedDeleted    = errors.New("this space is already marked deleted")
+	ErrMarkedNotDeleted = errors.New("this space is not marked not deleted")
 )
 
 type BuildTreeFunc func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error)
@@ -39,13 +43,14 @@ type Deps struct {
 	Account       accountservice.Service
 	TreeGetter    treegetter.TreeGetter
 	Store         spacestorage.SpaceStorage
-	DeletionState deletionstate.DeletionState
+	DeletionState settingsstate.ObjectDeletionState
 	Provider      SpaceIdsProvider
 	OnSpaceDelete func()
 	// testing dependencies
-	builder    StateBuilder
-	del        Deleter
-	delManager DeletionManager
+	builder       settingsstate.StateBuilder
+	del           Deleter
+	delManager    DeletionManager
+	changeFactory settingsstate.ChangeFactory
 }
 
 type settingsObject struct {
@@ -54,19 +59,22 @@ type settingsObject struct {
 	spaceId    string
 	treeGetter treegetter.TreeGetter
 	store      spacestorage.SpaceStorage
-	builder    StateBuilder
+	builder    settingsstate.StateBuilder
 	buildFunc  BuildTreeFunc
 	loop       *deleteLoop
 
-	deletionState   deletionstate.DeletionState
+	state           *settingsstate.State
+	deletionState   settingsstate.ObjectDeletionState
 	deletionManager DeletionManager
+	changeFactory   settingsstate.ChangeFactory
 }
 
 func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 	var (
 		deleter         Deleter
 		deletionManager DeletionManager
-		builder         StateBuilder
+		builder         settingsstate.StateBuilder
+		changeFactory   settingsstate.ChangeFactory
 	)
 	if deps.del == nil {
 		deleter = newDeleter(deps.Store, deps.DeletionState, deps.TreeGetter)
@@ -79,9 +87,14 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 		deletionManager = deps.delManager
 	}
 	if deps.builder == nil {
-		builder = newStateBuilder()
+		builder = settingsstate.NewStateBuilder()
 	} else {
 		builder = deps.builder
+	}
+	if deps.changeFactory == nil {
+		changeFactory = settingsstate.NewChangeFactory()
+	} else {
+		changeFactory = deps.changeFactory
 	}
 
 	loop := newDeleteLoop(func() {
@@ -101,18 +114,20 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 		buildFunc:       deps.BuildFunc,
 		builder:         builder,
 		deletionManager: deletionManager,
+		changeFactory:   changeFactory,
 	}
 	obj = s
 	return
 }
 
 func (s *settingsObject) updateIds(tr objecttree.ObjectTree, isUpdate bool) {
-	state, err := s.builder.Build(tr, isUpdate)
+	var err error
+	s.state, err = s.builder.Build(tr, s.state, isUpdate)
 	if err != nil {
 		log.Error("failed to build state", zap.Error(err))
 		return
 	}
-	if err = s.deletionManager.UpdateState(state); err != nil {
+	if err = s.deletionManager.UpdateState(s.state); err != nil {
 		log.Error("failed to update state", zap.Error(err))
 	}
 }
@@ -145,12 +160,36 @@ func (s *settingsObject) Close() error {
 	return s.SyncTree.Close()
 }
 
-func (s *settingsObject) DeleteAccount() (err error) {
-	return nil
+func (s *settingsObject) DeleteSpace(t time.Time) (err error) {
+	s.Lock()
+	defer s.Unlock()
+	if !s.state.SpaceDeletionDate.IsZero() {
+		return ErrMarkedDeleted
+	}
+
+	// TODO: add snapshot logic
+	res, err := s.changeFactory.CreateSpaceDeleteChange(t, s.state, false)
+	if err != nil {
+		return
+	}
+
+	return s.addContent(res)
 }
 
-func (s *settingsObject) RestoreAccount() (err error) {
-	return nil
+func (s *settingsObject) RestoreSpace() (err error) {
+	s.Lock()
+	defer s.Unlock()
+	if s.state.SpaceDeletionDate.IsZero() {
+		return ErrMarkedNotDeleted
+	}
+
+	// TODO: add snapshot logic
+	res, err := s.changeFactory.CreateSpaceRestoreChange(s.state, false)
+	if err != nil {
+		return
+	}
+
+	return s.addContent(res)
 }
 
 func (s *settingsObject) DeleteObject(id string) (err error) {
@@ -171,14 +210,18 @@ func (s *settingsObject) DeleteObject(id string) (err error) {
 	}
 
 	// TODO: add snapshot logic
-	res, err := s.deletionState.CreateDeleteChange(id, false)
+	res, err := s.changeFactory.CreateObjectDeleteChange(id, s.state, false)
 	if err != nil {
 		return
 	}
 
+	return s.addContent(res)
+}
+
+func (s *settingsObject) addContent(data []byte) (err error) {
 	accountData := s.account.Account()
 	_, err = s.AddContent(context.Background(), objecttree.SignableChangeContent{
-		Data:        res,
+		Data:        data,
 		Key:         accountData.SignKey,
 		Identity:    accountData.Identity,
 		IsSnapshot:  false,

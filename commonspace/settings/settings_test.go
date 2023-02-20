@@ -9,7 +9,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter/mock_treegetter"
-	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate/mock_deletionstate"
+	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/settings/mock_settings"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage/mock_spacestorage"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
@@ -49,7 +49,7 @@ type settingsFixture struct {
 	provider     *mock_settings.MockDeletedIdsProvider
 	deleter      *mock_settings.MockDeleter
 	syncTree     *mock_synctree.MockSyncTree
-	delState     *mock_deletionstate.MockDeletionState
+	delState     *mock_settingsstate.MockDeletionState
 	account      *mock_accountservice.MockService
 }
 
@@ -61,7 +61,7 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 	acc := mock_accountservice.NewMockService(ctrl)
 	treeGetter := mock_treegetter.NewMockTreeGetter(ctrl)
 	st := mock_spacestorage.NewMockSpaceStorage(ctrl)
-	delState := mock_deletionstate.NewMockDeletionState(ctrl)
+	delState := mock_settingsstate.NewMockDeletionState(ctrl)
 	prov := mock_settings.NewMockDeletedIdsProvider(ctrl)
 	syncTree := mock_synctree.NewMockSyncTree(ctrl)
 	del := mock_settings.NewMockDeleter(ctrl)

@@ -8,7 +8,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
-	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
+	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
@@ -22,7 +22,7 @@ type DiffSyncer interface {
 	Sync(ctx context.Context) error
 	RemoveObjects(ids []string)
 	UpdateHeads(id string, heads []string)
-	Init(deletionState deletionstate.DeletionState)
+	Init(deletionState settingsstate.ObjectDeletionState)
 }
 
 func newDiffSyncer(
@@ -54,11 +54,11 @@ type diffSyncer struct {
 	storage       spacestorage.SpaceStorage
 	clientFactory spacesyncproto.ClientFactory
 	log           logger.CtxLogger
-	deletionState deletionstate.DeletionState
+	deletionState settingsstate.ObjectDeletionState
 	syncStatus    syncstatus.StatusUpdater
 }
 
-func (d *diffSyncer) Init(deletionState deletionstate.DeletionState) {
+func (d *diffSyncer) Init(deletionState settingsstate.ObjectDeletionState) {
 	d.deletionState = deletionState
 	d.deletionState.AddObserver(d.RemoveObjects)
 }
