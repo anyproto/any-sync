@@ -128,6 +128,7 @@ type space struct {
 	handleQueue multiqueue.MultiQueue[HandleMessage]
 
 	isClosed  *atomic.Bool
+	isDeleted *atomic.Bool
 	treesUsed *atomic.Int32
 }
 
@@ -209,6 +210,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 		Store:         s.storage,
 		DeletionState: deletionState,
 		Provider:      s.headSync,
+		OnSpaceDelete: s.onSpaceDelete,
 	}
 	s.settingsObject = settings.NewSettingsObject(deps, s.id)
 	s.objectSync.Init()
@@ -407,6 +409,10 @@ func (s *space) onObjectClose(id string) {
 	log.Debug("decrementing counter", zap.String("id", id), zap.String("spaceId", s.id))
 	s.treesUsed.Add(-1)
 	_ = s.handleQueue.CloseThread(id)
+}
+
+func (s *space) onSpaceDelete() {
+	s.isDeleted.Swap(true)
 }
 
 func (s *space) Close() error {

@@ -14,6 +14,7 @@ import (
 	"github.com/anytypeio/any-sync/util/periodicsync"
 	"go.uber.org/zap"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -35,18 +36,20 @@ type HeadSync interface {
 }
 
 type headSync struct {
-	spaceId      string
-	periodicSync periodicsync.PeriodicSync
-	storage      spacestorage.SpaceStorage
-	diff         ldiff.Diff
-	log          logger.CtxLogger
-	syncer       DiffSyncer
+	spaceId        string
+	periodicSync   periodicsync.PeriodicSync
+	storage        spacestorage.SpaceStorage
+	diff           ldiff.Diff
+	log            logger.CtxLogger
+	syncer         DiffSyncer
+	spaceIsDeleted *atomic.Bool
 
 	syncPeriod int
 }
 
 func NewHeadSync(
 	spaceId string,
+	spaceIsDeleted *atomic.Bool,
 	syncPeriod int,
 	storage spacestorage.SpaceStorage,
 	peerManager peermanager.PeerManager,
@@ -58,16 +61,23 @@ func NewHeadSync(
 	l := log.With(zap.String("spaceId", spaceId))
 	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
 	syncer := newDiffSyncer(spaceId, diff, peerManager, cache, storage, factory, syncStatus, l)
-	periodicSync := periodicsync.NewPeriodicSync(syncPeriod, time.Minute, syncer.Sync, l)
+	sync := func(ctx context.Context) (err error) {
+		if spaceIsDeleted.Load() {
+			return spacesyncproto.ErrSpaceIsDeleted
+		}
+		return syncer.Sync(ctx)
+	}
+	periodicSync := periodicsync.NewPeriodicSync(syncPeriod, time.Minute, sync, l)
 
 	return &headSync{
-		spaceId:      spaceId,
-		storage:      storage,
-		syncer:       syncer,
-		periodicSync: periodicSync,
-		diff:         diff,
-		log:          log,
-		syncPeriod:   syncPeriod,
+		spaceId:        spaceId,
+		storage:        storage,
+		syncer:         syncer,
+		periodicSync:   periodicSync,
+		diff:           diff,
+		log:            log,
+		syncPeriod:     syncPeriod,
+		spaceIsDeleted: spaceIsDeleted,
 	}
 }
 
@@ -78,6 +88,10 @@ func (d *headSync) Init(objectIds []string, deletionState deletionstate.Deletion
 }
 
 func (d *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
+	if d.spaceIsDeleted.Load() {
+		err = spacesyncproto.ErrSpaceIsDeleted
+		return
+	}
 	return HandleRangeRequest(ctx, d.diff, req)
 }
 

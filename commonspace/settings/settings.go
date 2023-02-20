@@ -41,6 +41,7 @@ type Deps struct {
 	Store         spacestorage.SpaceStorage
 	DeletionState deletionstate.DeletionState
 	Provider      SpaceIdsProvider
+	OnSpaceDelete func()
 	// testing dependencies
 	builder    StateBuilder
 	del        Deleter
@@ -73,7 +74,7 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 		deleter = deps.del
 	}
 	if deps.delManager == nil {
-		deletionManager = newDeletionManager(spaceId, deps.DeletionState, deps.Provider, spaceDeletionInterval)
+		deletionManager = newDeletionManager(spaceId, spaceDeletionInterval, deps.DeletionState, deps.Provider, deps.OnSpaceDelete)
 	} else {
 		deletionManager = deps.delManager
 	}

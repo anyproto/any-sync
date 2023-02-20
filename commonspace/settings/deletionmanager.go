@@ -20,14 +20,16 @@ type DeletionManager interface {
 
 func newDeletionManager(
 	spaceId string,
+	deletionInterval time.Duration,
 	deletionState deletionstate.DeletionState,
 	provider SpaceIdsProvider,
-	deletionInterval time.Duration) DeletionManager {
+	onSpaceDelete func()) DeletionManager {
 	return &deletionManager{
 		spaceId:          spaceId,
 		deletionState:    deletionState,
 		provider:         provider,
 		deletionInterval: deletionInterval,
+		onSpaceDelete:    onSpaceDelete,
 	}
 }
 
@@ -37,6 +39,7 @@ type deletionManager struct {
 	treeGetter       treegetter.TreeGetter
 	deletionInterval time.Duration
 	spaceId          string
+	onSpaceDelete    func()
 }
 
 func (d *deletionManager) UpdateState(state *State) (err error) {
@@ -44,11 +47,14 @@ func (d *deletionManager) UpdateState(state *State) (err error) {
 	if err != nil {
 		log.Warn("failed to add deleted ids to deletion state")
 	}
-	if !state.SpaceDeletionDate.IsZero() && state.SpaceDeletionDate.Add(d.deletionInterval).Before(time.Now()) {
-		err = d.deletionState.Add(d.provider.AllIds())
+	if !state.SpaceDeletionDate.IsZero() {
 		spaceDeleter, ok := d.treeGetter.(SpaceDeleter)
 		if ok {
 			spaceDeleter.DeleteSpace(d.spaceId)
+		}
+		if state.SpaceDeletionDate.Add(d.deletionInterval).Before(time.Now()) {
+			err = d.deletionState.Add(d.provider.AllIds())
+			d.onSpaceDelete()
 		}
 	}
 	return
