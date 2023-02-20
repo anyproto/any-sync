@@ -207,6 +207,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 		TreeGetter:    s.cache,
 		Store:         s.storage,
 		DeletionState: deletionState,
+		Provider:      s.headSync,
 	}
 	s.settingsObject = settings.NewSettingsObject(deps, s.id)
 	s.objectSync.Init()

@@ -60,8 +60,6 @@ message ObjectSyncMessage {
     string replyId = 3;
     bytes payload = 4;
     string objectId = 5;
-    //  string identity = 5;
-    //  string peerSignature = 6;
 }
 
 // SpacePushRequest is a request to add space on a node containing only one acl record
@@ -116,6 +114,7 @@ message RawSpaceHeaderWithId {
 message SpaceSettingsContent {
     oneof value {
         ObjectDelete objectDelete = 1;
+        SpaceDelete spaceDelete = 2;
     }
 }
 
@@ -124,9 +123,15 @@ message ObjectDelete {
     string id = 1;
 }
 
+// SpaceDelete is a message containing timestamp when space was deleted
+message SpaceDelete {
+    int64 timestamp = 1;
+}
+
 // SpaceSettingsSnapshot contains all the deleted ids in a snapshot
 message SpaceSettingsSnapshot {
     repeated string deletedIds = 1;
+    int64 spaceDeletionTimestamp = 2;
 }
 
 // SettingsData contains ObjectTree change payload

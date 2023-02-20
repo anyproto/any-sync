@@ -13,9 +13,12 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
 	spacestorage "github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"go.uber.org/zap"
+	"time"
 )
 
 var log = logger.NewNamed("common.commonspace.settings")
+
+const spaceDeletionInterval = time.Hour * 24 * 7
 
 type SettingsObject interface {
 	synctree.SyncTree
@@ -37,9 +40,11 @@ type Deps struct {
 	TreeGetter    treegetter.TreeGetter
 	Store         spacestorage.SpaceStorage
 	DeletionState deletionstate.DeletionState
+	Provider      SpaceIdsProvider
 	// testing dependencies
-	prov DeletedIdsProvider
-	del  Deleter
+	builder    StateBuilder
+	del        Deleter
+	delManager DeletionManager
 }
 
 type settingsObject struct {
@@ -48,20 +53,34 @@ type settingsObject struct {
 	spaceId    string
 	treeGetter treegetter.TreeGetter
 	store      spacestorage.SpaceStorage
-	prov       DeletedIdsProvider
+	builder    StateBuilder
 	buildFunc  BuildTreeFunc
 	loop       *deleteLoop
 
-	deletionState deletionstate.DeletionState
-	lastChangeId  string
+	deletionState   deletionstate.DeletionState
+	deletionManager DeletionManager
 }
 
 func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
-	var deleter Deleter
+	var (
+		deleter         Deleter
+		deletionManager DeletionManager
+		builder         StateBuilder
+	)
 	if deps.del == nil {
 		deleter = newDeleter(deps.Store, deps.DeletionState, deps.TreeGetter)
 	} else {
 		deleter = deps.del
+	}
+	if deps.delManager == nil {
+		deletionManager = newDeletionManager(spaceId, deps.DeletionState, deps.Provider, spaceDeletionInterval)
+	} else {
+		deletionManager = deps.delManager
+	}
+	if deps.builder == nil {
+		builder = newStateBuilder()
+	} else {
+		builder = deps.builder
 	}
 
 	loop := newDeleteLoop(func() {
@@ -72,48 +91,40 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 	})
 
 	s := &settingsObject{
-		loop:          loop,
-		spaceId:       spaceId,
-		account:       deps.Account,
-		deletionState: deps.DeletionState,
-		treeGetter:    deps.TreeGetter,
-		store:         deps.Store,
-		buildFunc:     deps.BuildFunc,
+		loop:            loop,
+		spaceId:         spaceId,
+		account:         deps.Account,
+		deletionState:   deps.DeletionState,
+		treeGetter:      deps.TreeGetter,
+		store:           deps.Store,
+		buildFunc:       deps.BuildFunc,
+		builder:         builder,
+		deletionManager: deletionManager,
 	}
-
-	// this is needed mainly for testing
-	if deps.prov == nil {
-		s.prov = &provider{}
-	} else {
-		s.prov = deps.prov
-	}
-
 	obj = s
 	return
 }
 
-func (s *settingsObject) updateIds(tr objecttree.ObjectTree, lastChangeId string) {
-	s.lastChangeId = lastChangeId
-	ids, lastId, err := s.prov.ProvideIds(tr, s.lastChangeId)
+func (s *settingsObject) updateIds(tr objecttree.ObjectTree, isUpdate bool) {
+	state, err := s.builder.Build(tr, isUpdate)
 	if err != nil {
-		log.With(zap.Strings("ids", ids), zap.Error(err)).Error("failed to update state")
+		log.Error("failed to build state", zap.Error(err))
 		return
 	}
-	s.lastChangeId = lastId
-	if err = s.deletionState.Add(ids); err != nil {
-		log.With(zap.Strings("ids", ids), zap.Error(err)).Error("failed to queue ids to delete")
+	if err = s.deletionManager.UpdateState(state); err != nil {
+		log.Error("failed to update state", zap.Error(err))
 	}
 }
 
 // Update is called as part of UpdateListener interface
 func (s *settingsObject) Update(tr objecttree.ObjectTree) {
-	s.updateIds(tr, s.lastChangeId)
+	s.updateIds(tr, true)
 }
 
 // Rebuild is called as part of UpdateListener interface (including when the object is built for the first time, e.g. on Init call)
 func (s *settingsObject) Rebuild(tr objecttree.ObjectTree) {
 	// at initial build "s" may not contain the object tree, so it is safer to provide it from the function parameter
-	s.updateIds(tr, "")
+	s.updateIds(tr, false)
 }
 
 func (s *settingsObject) Init(ctx context.Context) (err error) {
@@ -131,6 +142,14 @@ func (s *settingsObject) Init(ctx context.Context) (err error) {
 func (s *settingsObject) Close() error {
 	s.loop.Close()
 	return s.SyncTree.Close()
+}
+
+func (s *settingsObject) DeleteAccount() (err error) {
+	return nil
+}
+
+func (s *settingsObject) RestoreAccount() (err error) {
+	return nil
 }
 
 func (s *settingsObject) DeleteObject(id string) (err error) {
