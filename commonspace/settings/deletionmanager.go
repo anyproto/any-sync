@@ -53,7 +53,8 @@ func (d *deletionManager) UpdateState(state *settingsstate.State) (err error) {
 			spaceDeleter.DeleteSpace(d.spaceId)
 		}
 		if state.SpaceDeletionDate.Add(d.deletionInterval).Before(time.Now()) {
-			err = d.deletionState.Add(d.provider.AllIds())
+			err = d.deletionState.Add(d.provider.AllIds()) // todo: except deletion tree
+			// todo: compaction in pogreb
 			d.onSpaceDelete()
 		}
 	}
