@@ -109,7 +109,7 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 		listener:   deps.Listener,
 		syncStatus: deps.SyncStatus,
 	}
-	syncHandler := newSyncTreeHandler(syncTree, syncClient, deps.SyncStatus)
+	syncHandler := newSyncTreeHandler(deps.SpaceId, syncTree, syncClient, deps.SyncStatus)
 	syncTree.SyncHandler = syncHandler
 	t = syncTree
 	syncTree.Lock()
@@ -191,7 +191,10 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload objecttree.
 }
 
 func (s *syncTree) Delete() (err error) {
-	log.With(zap.String("id", s.Id())).Debug("deleting sync tree")
+	log.Debug("deleting sync tree", zap.String("id", s.Id()))
+	defer func() {
+		log.Debug("deleted sync tree", zap.Error(err), zap.String("id", s.Id()))
+	}()
 	s.Lock()
 	defer s.Unlock()
 	if err = s.checkAlive(); err != nil {
@@ -206,7 +209,10 @@ func (s *syncTree) Delete() (err error) {
 }
 
 func (s *syncTree) Close() (err error) {
-	log.With(zap.String("id", s.Id())).Debug("closing sync tree")
+	log.Debug("closing sync tree", zap.String("id", s.Id()))
+	defer func() {
+		log.Debug("closed sync tree", zap.Error(err), zap.String("id", s.Id()))
+	}()
 	s.Lock()
 	defer s.Unlock()
 	if s.isClosed {
