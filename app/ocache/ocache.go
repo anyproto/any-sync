@@ -178,6 +178,7 @@ Load:
 	if closing {
 		select {
 		case <-ctx.Done():
+			log.DebugCtx(ctx, "ctx done while waiting on object close", zap.String("id", id))
 			return nil, ctx.Err()
 		case <-e.close:
 			goto Load
@@ -196,6 +197,7 @@ Load:
 	}
 	select {
 	case <-ctx.Done():
+		log.DebugCtx(ctx, "ctx done while waiting on object load", zap.String("id", id))
 		return nil, ctx.Err()
 	case <-e.load:
 	}
