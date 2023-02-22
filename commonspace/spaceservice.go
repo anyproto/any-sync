@@ -121,6 +121,11 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		spaceIsClosed  = &atomic.Bool{}
 		spaceIsDeleted = &atomic.Bool{}
 	)
+	isDeleted, err := st.IsSpaceDeleted()
+	if err != nil {
+		return nil, err
+	}
+	spaceIsDeleted.Swap(isDeleted)
 	getter := newCommonGetter(st.Id(), s.treeGetter, spaceIsClosed)
 	syncStatus := syncstatus.NewNoOpSyncStatus()
 	// this will work only for clients, not the best solution, but...
