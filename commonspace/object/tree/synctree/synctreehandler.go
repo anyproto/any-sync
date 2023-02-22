@@ -18,16 +18,18 @@ type syncTreeHandler struct {
 	syncClient  SyncClient
 	syncStatus  syncstatus.StatusUpdater
 	handlerLock sync.Mutex
+	spaceId     string
 	queue       ReceiveQueue
 }
 
 const maxQueueSize = 5
 
-func newSyncTreeHandler(objTree objecttree.ObjectTree, syncClient SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
+func newSyncTreeHandler(spaceId string, objTree objecttree.ObjectTree, syncClient SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
 	return &syncTreeHandler{
 		objTree:    objTree,
 		syncClient: syncClient,
 		syncStatus: syncStatus,
+		spaceId:    spaceId,
 		queue:      newReceiveQueue(maxQueueSize),
 	}
 }
@@ -38,7 +40,6 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 	if err != nil {
 		return
 	}
-
 	s.syncStatus.HeadsReceive(senderId, msg.ObjectId, treechangeproto.GetHeads(unmarshalled))
 
 	queueFull := s.queue.AddMessage(senderId, unmarshalled, msg.RequestId)
@@ -82,7 +83,7 @@ func (s *syncTreeHandler) handleHeadUpdate(
 		objTree       = s.objTree
 	)
 
-	log := log.With(zap.Strings("heads", objTree.Heads()), zap.String("treeId", objTree.Id()))
+	log := log.With(zap.Strings("heads", objTree.Heads()), zap.String("treeId", objTree.Id()), zap.String("spaceId", s.spaceId))
 	log.DebugCtx(ctx, "received head update message")
 
 	defer func() {
@@ -99,7 +100,6 @@ func (s *syncTreeHandler) handleHeadUpdate(
 
 	// isEmptyUpdate is sent when the tree is brought up from cache
 	if isEmptyUpdate {
-
 		headEquals := slice.UnsortedEquals(objTree.Heads(), update.Heads)
 		log.DebugCtx(ctx, "is empty update", zap.String("treeId", objTree.Id()), zap.Bool("headEquals", headEquals))
 		if headEquals {
@@ -150,7 +150,11 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 		objTree      = s.objTree
 	)
 
-	log := log.With(zap.String("senderId", senderId), zap.Strings("heads", request.Heads), zap.String("treeId", s.objTree.Id()), zap.String("replyId", replyId))
+	log := log.With(zap.String("senderId", senderId),
+		zap.Strings("heads", request.Heads),
+		zap.String("treeId", s.objTree.Id()),
+		zap.String("replyId", replyId),
+		zap.String("spaceId", s.spaceId))
 	log.DebugCtx(ctx, "received full sync request message")
 
 	defer func() {
@@ -188,7 +192,7 @@ func (s *syncTreeHandler) handleFullSyncResponse(
 	var (
 		objTree = s.objTree
 	)
-	log := log.With(zap.Strings("heads", response.Heads), zap.String("treeId", s.objTree.Id()))
+	log := log.With(zap.Strings("heads", response.Heads), zap.String("treeId", s.objTree.Id()), zap.String("spaceId", s.spaceId))
 	log.DebugCtx(ctx, "received full sync response message")
 
 	defer func() {

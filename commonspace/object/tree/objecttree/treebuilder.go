@@ -85,7 +85,7 @@ func (tb *treeBuilder) build(heads []string, theirHeads []string, newChanges []*
 	}
 	proposedHeads = append(proposedHeads, heads...)
 
-	log.With(zap.Strings("heads", proposedHeads)).Debug("building tree")
+	log.With(zap.Strings("heads", proposedHeads), zap.String("id", tb.treeStorage.Id())).Debug("building tree")
 	if err = tb.buildTree(proposedHeads, breakpoint); err != nil {
 		return nil, fmt.Errorf("buildTree error: %v", err)
 	}

@@ -70,11 +70,11 @@ func (s *drpcServer) Run(ctx context.Context) (err error) {
 				SummaryVec: histVec,
 			}
 		},
-	}
-	s.handshake = func(conn net.Conn) (cCtx context.Context, sc sec.SecureConn, err error) {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
-		return s.transport.SecureInbound(ctx, conn)
+		Handshake: func(conn net.Conn) (cCtx context.Context, sc sec.SecureConn, err error) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+			defer cancel()
+			return s.transport.SecureInbound(ctx, conn)
+		},
 	}
 	return s.BaseDrpcServer.Run(ctx, params)
 }

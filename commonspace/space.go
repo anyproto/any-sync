@@ -141,7 +141,7 @@ func (s *space) LastUsage() time.Time {
 
 func (s *space) Locked() bool {
 	locked := s.treesUsed.Load() > 1
-	log.With(zap.Int32("trees used", s.treesUsed.Load()), zap.Bool("locked", locked)).Debug("space lock status check")
+	log.With(zap.Int32("trees used", s.treesUsed.Load()), zap.Bool("locked", locked), zap.String("spaceId", s.id)).Debug("space lock status check")
 	return locked
 }
 
@@ -201,6 +201,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 				Listener:           listener,
 				WaitTreeRemoteSync: false,
 			})
+			log.Debug("building settings tree", zap.String("id", id), zap.String("spaceId", s.id))
 			if err != nil {
 				return
 			}
@@ -340,6 +341,7 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 	if t, err = synctree.BuildSyncTreeOrGetRemote(ctx, id, deps); err != nil {
 		return nil, err
 	}
+	log.Debug("incrementing counter", zap.String("id", id), zap.String("spaceId", s.id))
 	s.treesUsed.Add(1)
 	return
 }
@@ -415,6 +417,7 @@ func (s *space) handleMessage(msg HandleMessage) {
 }
 
 func (s *space) onObjectClose(id string) {
+	log.Debug("decrementing counter", zap.String("id", id), zap.String("spaceId", s.id))
 	s.treesUsed.Add(-1)
 	_ = s.handleQueue.CloseThread(id)
 }
