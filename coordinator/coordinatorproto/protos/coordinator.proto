@@ -1,0 +1,52 @@
+syntax = "proto3";
+package coordinator;
+
+option go_package = "coordinator/coordinatorproto";
+
+service Coordinator {
+    // SpaceSign signs a space creation operation
+    rpc SpaceSign(SpaceSignRequest) returns (SpaceSignResponse);
+
+    // FileLimitCheck checks a limit by account and space
+    // can be used only:
+    //  - if a handshake identity matches a given identity
+    //  - if a requester contains in nodeconf list
+    rpc FileLimitCheck(FileLimitCheckRequest) returns (FileLimitCheckResponse);
+}
+
+message SpaceSignRequest {
+    string spaceId = 1;
+}
+
+message SpaceSignResponse {
+    SpaceReceiptWithSignature receipt = 1;
+}
+
+// SpaceReceiptWithSignature contains protobuf encoded receipt and its signature
+message SpaceReceiptWithSignature {
+    bytes spaceReceiptPayload = 1;
+    bytes signature = 2;
+}
+
+// SpaceReceipt contains permission to SpacePush operation
+message SpaceReceipt {
+    string spaceId = 1;
+    // identity of space owner
+    bytes accountIdentity = 2;
+    // identity of control node
+    bytes controlNodeIdentity = 3;
+    // unix-timestamp with a deadline time of receipt validity
+    uint64 validUntil = 4;
+}
+
+// FileLimitCheckRequest contains an account identity and spaceId
+// control node checks that identity owns a given space
+message FileLimitCheckRequest {
+    bytes accountIdentity = 1;
+    string spaceId = 2;
+}
+
+// FileLimitCheckResponse returns a current space limit in bytes
+message FileLimitCheckResponse {
+    uint64 limit = 1;
+}
