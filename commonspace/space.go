@@ -423,6 +423,10 @@ func (s *space) onObjectClose(id string) {
 }
 
 func (s *space) onSpaceDelete() {
+	err := s.storage.SetSpaceDeleted()
+	if err != nil {
+		log.Debug("failed to set space deleted")
+	}
 	s.isDeleted.Swap(true)
 }
 

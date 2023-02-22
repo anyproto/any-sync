@@ -29,6 +29,8 @@ const (
 // TODO: consider moving to some file with all common interfaces etc
 type SpaceStorage interface {
 	Id() string
+	SetSpaceDeleted() error
+	IsSpaceDeleted() (bool, error)
 	SetTreeDeletedStatus(id, state string) error
 	TreeDeletedStatus(id string) (string, error)
 	SpaceSettingsId() string
