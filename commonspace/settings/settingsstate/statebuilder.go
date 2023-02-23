@@ -4,7 +4,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/gogo/protobuf/proto"
-	"time"
 )
 
 type StateBuilder interface {
@@ -59,9 +58,9 @@ func (s *stateBuilder) processChange(change *objecttree.Change, rootId, startId 
 	// getting data from snapshot if we start from it
 	if change.Id == rootId {
 		state = &State{
-			DeletedIds:        deleteChange.Snapshot.DeletedIds,
-			SpaceDeletionDate: time.Unix(0, deleteChange.Snapshot.SpaceDeletionTimestamp),
-			LastIteratedId:    rootId,
+			DeletedIds:     deleteChange.Snapshot.DeletedIds,
+			DeleterId:      deleteChange.Snapshot.DeleterPeerId,
+			LastIteratedId: rootId,
 		}
 		return state
 	}
@@ -72,7 +71,7 @@ func (s *stateBuilder) processChange(change *objecttree.Change, rootId, startId 
 		case cnt.GetObjectDelete() != nil:
 			state.DeletedIds = append(state.DeletedIds, cnt.GetObjectDelete().GetId())
 		case cnt.GetSpaceDelete() != nil:
-			state.SpaceDeletionDate = time.Unix(0, cnt.GetSpaceDelete().GetTimestamp())
+			state.DeleterId = cnt.GetSpaceDelete().GetDeleterPeerId()
 		}
 	}
 	return state

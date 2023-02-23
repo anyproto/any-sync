@@ -3,6 +3,7 @@ package settings
 import (
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
+	"github.com/anytypeio/any-sync/util/slice"
 	"time"
 )
 
@@ -20,12 +21,16 @@ type DeletionManager interface {
 
 func newDeletionManager(
 	spaceId string,
+	settingsId string,
+	isResponsible bool,
 	deletionInterval time.Duration,
 	deletionState settingsstate.ObjectDeletionState,
 	provider SpaceIdsProvider,
 	onSpaceDelete func()) DeletionManager {
 	return &deletionManager{
+		isResponsible:    isResponsible,
 		spaceId:          spaceId,
+		settingsId:       settingsId,
 		deletionState:    deletionState,
 		provider:         provider,
 		deletionInterval: deletionInterval,
@@ -39,6 +44,8 @@ type deletionManager struct {
 	treeGetter       treegetter.TreeGetter
 	deletionInterval time.Duration
 	spaceId          string
+	settingsId       string
+	isResponsible    bool
 	onSpaceDelete    func()
 }
 
@@ -47,15 +54,18 @@ func (d *deletionManager) UpdateState(state *settingsstate.State) (err error) {
 	if err != nil {
 		log.Warn("failed to add deleted ids to deletion state")
 	}
-	if !state.SpaceDeletionDate.IsZero() {
+
+	if state.DeleterId != "" {
 		spaceDeleter, ok := d.treeGetter.(SpaceDeleter)
 		if ok {
 			spaceDeleter.DeleteSpace(d.spaceId)
 		}
-		if state.SpaceDeletionDate.Add(d.deletionInterval).Before(time.Now()) {
-			err = d.deletionState.Add(d.provider.AllIds()) // todo: except deletion tree
-			// todo: compaction in pogreb
-			d.onSpaceDelete()
+		d.onSpaceDelete()
+		if d.isResponsible {
+			allIds := slice.DiscardFromSlice(d.provider.AllIds(), func(s string) bool {
+				return s == d.settingsId
+			})
+			err = d.deletionState.Add(allIds)
 		}
 	}
 	return

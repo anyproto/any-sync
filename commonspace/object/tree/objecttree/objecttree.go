@@ -76,6 +76,9 @@ type ObjectTree interface {
 	AddContent(ctx context.Context, content SignableChangeContent) (AddResult, error)
 	AddRawChanges(ctx context.Context, changes RawChangesPayload) (AddResult, error)
 
+	UnpackChange(raw *treechangeproto.RawTreeChangeWithId) (data []byte, err error)
+	PrepareChange(content SignableChangeContent) (res *treechangeproto.RawTreeChangeWithId, err error)
+
 	Delete() error
 	Close() error
 }
@@ -188,6 +191,24 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 	}
 	log.With("treeId", ot.id).With("head", objChange.Id).
 		Debug("finished adding content")
+	return
+}
+
+func (ot *objectTree) UnpackChange(raw *treechangeproto.RawTreeChangeWithId) (data []byte, err error) {
+	unmarshalled, err := ot.changeBuilder.Unmarshall(raw, true)
+	if err != nil {
+		return
+	}
+	data = unmarshalled.Data
+	return
+}
+
+func (ot *objectTree) PrepareChange(content SignableChangeContent) (res *treechangeproto.RawTreeChangeWithId, err error) {
+	payload, err := ot.prepareBuilderContent(content)
+	if err != nil {
+		return
+	}
+	_, res, err = ot.changeBuilder.Build(payload)
 	return
 }
 

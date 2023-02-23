@@ -99,8 +99,8 @@ type Space interface {
 	DeleteTree(ctx context.Context, id string) (err error)
 	BuildHistoryTree(ctx context.Context, id string, opts HistoryTreeOpts) (t objecttree.HistoryTree, err error)
 
-	DeleteSpace(ctx context.Context, t time.Time) (err error)
-	RestoreSpace(ctx context.Context) (err error)
+	SpaceDeleteRawChange(ctx context.Context, deleterPeer string) (raw *treechangeproto.RawTreeChangeWithId, err error)
+	DeleteSpace(ctx context.Context, deleterPeer string, deleteChange *treechangeproto.RawTreeChangeWithId) (err error)
 
 	HeadSync() headsync.HeadSync
 	ObjectSync() objectsync.ObjectSync
@@ -213,6 +213,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 		Store:         s.storage,
 		DeletionState: deletionState,
 		Provider:      s.headSync,
+		Configuration: s.configuration,
 		OnSpaceDelete: s.onSpaceDelete,
 	}
 	s.settingsObject = settings.NewSettingsObject(deps, s.id)
@@ -368,12 +369,12 @@ func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
 	return s.settingsObject.DeleteObject(id)
 }
 
-func (s *space) DeleteSpace(ctx context.Context, t time.Time) (err error) {
-	return s.settingsObject.DeleteSpace(t)
+func (s *space) SpaceDeleteRawChange(ctx context.Context, deleterPeer string) (raw *treechangeproto.RawTreeChangeWithId, err error) {
+	return s.settingsObject.SpaceDeleteRawChange(deleterPeer)
 }
 
-func (s *space) RestoreSpace(ctx context.Context) (err error) {
-	return s.settingsObject.RestoreSpace()
+func (s *space) DeleteSpace(ctx context.Context, deleterPeer string, deleteChange *treechangeproto.RawTreeChangeWithId) (err error) {
+	return s.settingsObject.DeleteSpace(ctx, deleterPeer, deleteChange)
 }
 
 func (s *space) HandleMessage(ctx context.Context, hm HandleMessage) (err error) {
