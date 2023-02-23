@@ -9,7 +9,6 @@ import (
 
 type SpaceIdsProvider interface {
 	AllIds() []string
-	RemoveObjects(ids []string)
 }
 
 type SpaceDeleter interface {
@@ -69,7 +68,6 @@ func (d *deletionManager) UpdateState(state *settingsstate.State) (err error) {
 			if err != nil {
 				return
 			}
-			d.provider.RemoveObjects(allIds)
 		}
 		d.onSpaceDelete()
 	}
