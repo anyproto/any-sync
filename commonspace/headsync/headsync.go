@@ -11,6 +11,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
+	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/anytypeio/any-sync/util/periodicsync"
 	"go.uber.org/zap"
 	"strings"
@@ -51,6 +52,7 @@ func NewHeadSync(
 	spaceId string,
 	spaceIsDeleted *atomic.Bool,
 	syncPeriod int,
+	configuration nodeconf.Configuration,
 	storage spacestorage.SpaceStorage,
 	peerManager peermanager.PeerManager,
 	cache treegetter.TreeGetter,
@@ -62,7 +64,7 @@ func NewHeadSync(
 	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
 	syncer := newDiffSyncer(spaceId, diff, peerManager, cache, storage, factory, syncStatus, l)
 	sync := func(ctx context.Context) (err error) {
-		if spaceIsDeleted.Load() {
+		if spaceIsDeleted.Load() && !configuration.IsResponsible(spaceId) {
 			return spacesyncproto.ErrSpaceIsDeleted
 		}
 		return syncer.Sync(ctx)
@@ -88,10 +90,6 @@ func (d *headSync) Init(objectIds []string, deletionState settingsstate.ObjectDe
 }
 
 func (d *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
-	if d.spaceIsDeleted.Load() {
-		err = spacesyncproto.ErrSpaceIsDeleted
-		return
-	}
 	return HandleRangeRequest(ctx, d.diff, req)
 }
 
