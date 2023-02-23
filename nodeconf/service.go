@@ -80,6 +80,9 @@ func (s *service) Init(a *app.App) (err error) {
 		if n.HasType(NodeTypeFile) {
 			fileConfig.filePeers = append(fileConfig.filePeers, n.PeerId)
 		}
+		if n.HasType(NodeTypeCoordinator) {
+			fileConfig.coordinatorPeers = append(fileConfig.coordinatorPeers, n.PeerId)
+		}
 		fileConfig.allMembers = append(fileConfig.allMembers, n)
 	}
 	if err = fileConfig.chash.AddMembers(members...); err != nil {

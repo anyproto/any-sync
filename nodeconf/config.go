@@ -6,6 +6,8 @@ const (
 	NodeTypeTree      NodeType = "tree"
 	NodeTypeConsensus NodeType = "consensus"
 	NodeTypeFile      NodeType = "file"
+
+	NodeTypeCoordinator NodeType = "coordinator"
 )
 
 type configGetter interface {
