@@ -30,13 +30,16 @@ message SpaceReceiptWithSignature {
 
 // SpaceReceipt contains permission to SpacePush operation
 message SpaceReceipt {
+    // spaceId
     string spaceId = 1;
+    // peerId of receipt requester
+    string peerId = 2;
     // identity of space owner
-    bytes accountIdentity = 2;
+    bytes accountIdentity = 3;
     // identity of control node
-    bytes controlNodeIdentity = 3;
+    bytes controlNodeIdentity = 4;
     // unix-timestamp with a deadline time of receipt validity
-    uint64 validUntil = 4;
+    uint64 validUntil = 5;
 }
 
 // FileLimitCheckRequest contains an account identity and spaceId
