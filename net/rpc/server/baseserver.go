@@ -32,6 +32,7 @@ type Params struct {
 	ListenAddrs   []string
 	Wrapper       DRPCHandlerWrapper
 	TimeoutMillis int
+	Handshake     func(conn net.Conn) (cCtx context.Context, sc sec.SecureConn, err error)
 }
 
 func NewBaseDrpcServer() *BaseDrpcServer {
@@ -42,6 +43,7 @@ func (s *BaseDrpcServer) Run(ctx context.Context, params Params) (err error) {
 	s.drpcServer = drpcserver.NewWithOptions(params.Wrapper(s.Mux), drpcserver.Options{Manager: drpcmanager.Options{
 		Reader: drpcwire.ReaderOptions{MaximumBufferSize: params.BufferSizeMb * (1 << 20)},
 	}})
+	s.handshake = params.Handshake
 	ctx, s.cancel = context.WithCancel(ctx)
 	for _, addr := range params.ListenAddrs {
 		list, err := net.Listen("tcp", addr)
