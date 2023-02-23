@@ -9,10 +9,15 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	spacestorage "github.com/anytypeio/any-sync/commonspace/spacestorage"
+	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 	"time"
 )
 
@@ -24,16 +29,16 @@ type SettingsObject interface {
 	synctree.SyncTree
 	Init(ctx context.Context) (err error)
 	DeleteObject(id string) (err error)
-	DeleteSpace(t time.Time) (err error)
-	RestoreSpace() (err error)
+	DeleteSpace(ctx context.Context, deleterId string, raw *treechangeproto.RawTreeChangeWithId) (err error)
+	SpaceDeleteRawChange(deleterId string) (raw *treechangeproto.RawTreeChangeWithId, err error)
 }
 
 var (
-	ErrDeleteSelf       = errors.New("cannot delete self")
-	ErrAlreadyDeleted   = errors.New("the object is already deleted")
-	ErrObjDoesNotExist  = errors.New("the object does not exist")
-	ErrMarkedDeleted    = errors.New("this space is already marked deleted")
-	ErrMarkedNotDeleted = errors.New("this space is not marked not deleted")
+	ErrDeleteSelf            = errors.New("cannot delete self")
+	ErrAlreadyDeleted        = errors.New("the object is already deleted")
+	ErrObjDoesNotExist       = errors.New("the object does not exist")
+	ErrCantDeleteSpace       = errors.New("not able to delete space")
+	ErrIncorrectDeleteChange = errors.New("incorrect delete change")
 )
 
 type BuildTreeFunc func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error)
@@ -43,6 +48,7 @@ type Deps struct {
 	Account       accountservice.Service
 	TreeGetter    treegetter.TreeGetter
 	Store         spacestorage.SpaceStorage
+	Configuration nodeconf.Configuration
 	DeletionState settingsstate.ObjectDeletionState
 	Provider      SpaceIdsProvider
 	OnSpaceDelete func()
@@ -82,7 +88,14 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 		deleter = deps.del
 	}
 	if deps.delManager == nil {
-		deletionManager = newDeletionManager(spaceId, spaceDeletionInterval, deps.DeletionState, deps.Provider, deps.OnSpaceDelete)
+		deletionManager = newDeletionManager(
+			spaceId,
+			deps.Store.SpaceSettingsId(),
+			deps.Configuration.IsResponsible(spaceId),
+			spaceDeletionInterval,
+			deps.DeletionState,
+			deps.Provider,
+			deps.OnSpaceDelete)
 	} else {
 		deletionManager = deps.delManager
 	}
@@ -160,36 +173,39 @@ func (s *settingsObject) Close() error {
 	return s.SyncTree.Close()
 }
 
-func (s *settingsObject) DeleteSpace(t time.Time) (err error) {
+func (s *settingsObject) DeleteSpace(ctx context.Context, deleterId string, raw *treechangeproto.RawTreeChangeWithId) (err error) {
 	s.Lock()
 	defer s.Unlock()
-	if !s.state.SpaceDeletionDate.IsZero() {
-		return ErrMarkedDeleted
-	}
-
-	// TODO: add snapshot logic
-	res, err := s.changeFactory.CreateSpaceDeleteChange(t, s.state, false)
+	err = s.verifyDeleteSpace(deleterId, raw)
 	if err != nil {
 		return
 	}
-
-	return s.addContent(res)
+	res, err := s.AddRawChanges(ctx, objecttree.RawChangesPayload{
+		NewHeads:   []string{raw.Id},
+		RawChanges: []*treechangeproto.RawTreeChangeWithId{raw},
+	})
+	if err != nil {
+		return
+	}
+	if !slices.Contains(res.Heads, raw.Id) {
+		return ErrCantDeleteSpace
+	}
+	return
 }
 
-func (s *settingsObject) RestoreSpace() (err error) {
-	s.Lock()
-	defer s.Unlock()
-	if s.state.SpaceDeletionDate.IsZero() {
-		return ErrMarkedNotDeleted
-	}
-
-	// TODO: add snapshot logic
-	res, err := s.changeFactory.CreateSpaceRestoreChange(s.state, false)
+func (s *settingsObject) SpaceDeleteRawChange(deleterId string) (raw *treechangeproto.RawTreeChangeWithId, err error) {
+	data, err := s.changeFactory.CreateSpaceDeleteChange(deleterId, s.state, false)
 	if err != nil {
 		return
 	}
-
-	return s.addContent(res)
+	accountData := s.account.Account()
+	return s.PrepareChange(objecttree.SignableChangeContent{
+		Data:        data,
+		Key:         accountData.SignKey,
+		Identity:    accountData.Identity,
+		IsSnapshot:  false,
+		IsEncrypted: false,
+	})
 }
 
 func (s *settingsObject) DeleteObject(id string) (err error) {
@@ -216,6 +232,24 @@ func (s *settingsObject) DeleteObject(id string) (err error) {
 	}
 
 	return s.addContent(res)
+}
+
+func (s *settingsObject) verifyDeleteSpace(peerId string, raw *treechangeproto.RawTreeChangeWithId) (err error) {
+	data, err := s.UnpackChange(raw)
+	if err != nil {
+		return
+	}
+	content := &spacesyncproto.SettingsData{}
+	err = proto.Unmarshal(data, content)
+	if err != nil {
+		return
+	}
+	if len(content.GetContent()) != 1 ||
+		content.GetContent()[0].GetSpaceDelete() == nil ||
+		content.GetContent()[0].GetSpaceDelete().GetDeleterPeerId() != peerId {
+		return ErrIncorrectDeleteChange
+	}
+	return
 }
 
 func (s *settingsObject) addContent(data []byte) (err error) {

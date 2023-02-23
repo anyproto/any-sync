@@ -124,15 +124,15 @@ message ObjectDelete {
     string id = 1;
 }
 
-// SpaceDelete is a message containing timestamp when space was deleted
+// SpaceDelete is a message containing deleter peer id
 message SpaceDelete {
-    int64 timestamp = 1;
+    string deleterPeerId = 1;
 }
 
 // SpaceSettingsSnapshot contains all the deleted ids in a snapshot
 message SpaceSettingsSnapshot {
     repeated string deletedIds = 1;
-    int64 spaceDeletionTimestamp = 2;
+    string deleterPeerId = 2;
 }
 
 // SettingsData contains ObjectTree change payload
