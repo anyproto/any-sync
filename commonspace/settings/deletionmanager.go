@@ -22,10 +22,12 @@ func newDeletionManager(
 	settingsId string,
 	isResponsible bool,
 	deletionInterval time.Duration,
+	treeGetter treegetter.TreeGetter,
 	deletionState settingsstate.ObjectDeletionState,
 	provider SpaceIdsProvider,
 	onSpaceDelete func()) DeletionManager {
 	return &deletionManager{
+		treeGetter:       treeGetter,
 		isResponsible:    isResponsible,
 		spaceId:          spaceId,
 		settingsId:       settingsId,
