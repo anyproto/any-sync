@@ -141,7 +141,7 @@ func (s *settingsObject) updateIds(tr objecttree.ObjectTree, isUpdate bool) {
 		return
 	}
 	log.Debug("updating object state", zap.String("deleterId", s.state.DeleterId))
-	if err = s.deletionManager.UpdateState(s.state); err != nil {
+	if err = s.deletionManager.UpdateState(context.Background(), s.state); err != nil {
 		log.Error("failed to update state", zap.Error(err))
 	}
 }
