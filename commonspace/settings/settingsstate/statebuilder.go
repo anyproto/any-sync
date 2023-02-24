@@ -44,7 +44,7 @@ func (s *stateBuilder) Build(tr objecttree.ObjectTree, oldState *State, isUpdate
 	if startId == "" {
 		startId = rootId
 	}
-	err = tr.IterateFrom(state.LastIteratedId, convert, process)
+	err = tr.IterateFrom(startId, convert, process)
 	return
 }
 

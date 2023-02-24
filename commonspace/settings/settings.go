@@ -140,6 +140,7 @@ func (s *settingsObject) updateIds(tr objecttree.ObjectTree, isUpdate bool) {
 		log.Error("failed to build state", zap.Error(err))
 		return
 	}
+	log.Debug("updating object state", zap.String("deleterId", s.state.DeleterId))
 	if err = s.deletionManager.UpdateState(s.state); err != nil {
 		log.Error("failed to update state", zap.Error(err))
 	}
@@ -176,6 +177,9 @@ func (s *settingsObject) Close() error {
 func (s *settingsObject) DeleteSpace(ctx context.Context, deleterId string, raw *treechangeproto.RawTreeChangeWithId) (err error) {
 	s.Lock()
 	defer s.Unlock()
+	defer func() {
+		log.Debug("finished adding delete change", zap.Error(err))
+	}()
 	err = s.verifyDeleteSpace(deleterId, raw)
 	if err != nil {
 		return
@@ -188,7 +192,8 @@ func (s *settingsObject) DeleteSpace(ctx context.Context, deleterId string, raw 
 		return
 	}
 	if !slices.Contains(res.Heads, raw.Id) {
-		return ErrCantDeleteSpace
+		err = ErrCantDeleteSpace
+		return
 	}
 	return
 }

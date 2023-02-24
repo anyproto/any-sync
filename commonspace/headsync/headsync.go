@@ -67,7 +67,7 @@ func NewHeadSync(
 	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
 	syncer := newDiffSyncer(spaceId, diff, peerManager, cache, storage, factory, syncStatus, l)
 	sync := func(ctx context.Context) (err error) {
-		// for clients cancelling sync the sync process
+		// for clients cancelling the sync process
 		if spaceIsDeleted.Load() && !configuration.IsResponsible(spaceId) {
 			return spacesyncproto.ErrSpaceIsDeleted
 		}

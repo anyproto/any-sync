@@ -4,6 +4,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/util/slice"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -56,6 +57,7 @@ func (d *deletionManager) UpdateState(state *settingsstate.State) (err error) {
 	}
 
 	if state.DeleterId != "" {
+		log.Debug("deleting space", zap.String("spaceId", d.spaceId))
 		spaceDeleter, ok := d.treeGetter.(SpaceDeleter)
 		if ok {
 			spaceDeleter.DeleteSpace(d.spaceId)
