@@ -93,6 +93,7 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 			deps.Store.SpaceSettingsId(),
 			deps.Configuration.IsResponsible(spaceId),
 			spaceDeletionInterval,
+			deps.TreeGetter,
 			deps.DeletionState,
 			deps.Provider,
 			deps.OnSpaceDelete)
