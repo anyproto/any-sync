@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-chash"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 const CName = "common.nodeconf"
@@ -80,6 +81,9 @@ func (s *service) Init(a *app.App) (err error) {
 		if n.HasType(NodeTypeFile) {
 			fileConfig.filePeers = append(fileConfig.filePeers, n.PeerId)
 		}
+		if n.HasType(NodeTypeCoordinator) {
+			fileConfig.coordinatorPeers = append(fileConfig.coordinatorPeers, n.PeerId)
+		}
 		fileConfig.allMembers = append(fileConfig.allMembers, n)
 	}
 	if err = fileConfig.chash.AddMembers(members...); err != nil {
@@ -103,17 +107,28 @@ func (s *service) GetById(id string) Configuration {
 }
 
 func nodeFromConfigNode(n NodeConfig) (*Node, error) {
-	decodedSigningKey, err := keys.DecodeKeyFromString(
-		n.SigningKey,
-		signingkey.UnmarshalEd25519PrivateKey,
-		nil)
+	p, err := peer.Decode(n.PeerId)
+	if err != nil {
+		return nil, err
+	}
+	ic, err := p.ExtractPublicKey()
 	if err != nil {
 		return nil, err
 	}
 
-	decodedEncryptionKey, err := keys.DecodeKeyFromString(
+	icRaw, err := ic.Raw()
+	if err != nil {
+		return nil, err
+	}
+
+	sigPubKey, err := signingkey.UnmarshalEd25519PublicKey(icRaw)
+	if err != nil {
+		return nil, err
+	}
+
+	encPubKey, err := keys.DecodeKeyFromString(
 		n.EncryptionKey,
-		encryptionkey.NewEncryptionRsaPrivKeyFromBytes,
+		encryptionkey.NewEncryptionRsaPubKeyFromBytes,
 		nil)
 	if err != nil {
 		return nil, err
@@ -122,7 +137,7 @@ func nodeFromConfigNode(n NodeConfig) (*Node, error) {
 	return &Node{
 		Addresses:     n.Addresses,
 		PeerId:        n.PeerId,
-		SigningKey:    decodedSigningKey.GetPublic(),
-		EncryptionKey: decodedEncryptionKey.GetPublic(),
+		SigningKey:    sigPubKey,
+		EncryptionKey: encPubKey,
 	}, nil
 }
