@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"context"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/util/slice"
@@ -12,12 +13,8 @@ type SpaceIdsProvider interface {
 	AllIds() []string
 }
 
-type SpaceDeleter interface {
-	DeleteSpace(spaceId string)
-}
-
 type DeletionManager interface {
-	UpdateState(state *settingsstate.State) (err error)
+	UpdateState(ctx context.Context, state *settingsstate.State) (err error)
 }
 
 func newDeletionManager(
@@ -50,28 +47,29 @@ type deletionManager struct {
 	onSpaceDelete    func()
 }
 
-func (d *deletionManager) UpdateState(state *settingsstate.State) (err error) {
-	err = d.deletionState.Add(state.DeletedIds)
+func (d *deletionManager) UpdateState(ctx context.Context, state *settingsstate.State) error {
+	log := log.With(zap.String("spaceId", d.spaceId))
+	err := d.deletionState.Add(state.DeletedIds)
 	if err != nil {
 		log.Warn("failed to add deleted ids to deletion state")
 	}
-
-	if state.DeleterId != "" {
-		log.Debug("deleting space", zap.String("spaceId", d.spaceId))
-		spaceDeleter, ok := d.treeGetter.(SpaceDeleter)
-		if ok {
-			spaceDeleter.DeleteSpace(d.spaceId)
-		}
-		if d.isResponsible {
-			allIds := slice.DiscardFromSlice(d.provider.AllIds(), func(id string) bool {
-				return id == d.settingsId
-			})
-			err = d.deletionState.Add(allIds)
-			if err != nil {
-				return
-			}
-		}
-		d.onSpaceDelete()
+	if state.DeleterId == "" {
+		return nil
 	}
-	return
+	log.Debug("deleting space")
+	err = d.treeGetter.DeleteSpace(ctx, d.spaceId)
+	if err != nil {
+		log.Debug("failed to notify on space deletion", zap.Error(err))
+	}
+	if d.isResponsible {
+		allIds := slice.DiscardFromSlice(d.provider.AllIds(), func(id string) bool {
+			return id == d.settingsId
+		})
+		err := d.deletionState.Add(allIds)
+		if err != nil {
+			return err
+		}
+	}
+	d.onSpaceDelete()
+	return nil
 }
