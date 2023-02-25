@@ -1,13 +1,14 @@
 package settingsstate
 
 import (
+	"fmt"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/gogo/protobuf/proto"
 )
 
 type StateBuilder interface {
-	Build(tree objecttree.ObjectTree, state *State, isUpdate bool) (*State, error)
+	Build(tree objecttree.ObjectTree, state *State) (*State, error)
 }
 
 func NewStateBuilder() StateBuilder {
@@ -17,19 +18,21 @@ func NewStateBuilder() StateBuilder {
 type stateBuilder struct {
 }
 
-func (s *stateBuilder) Build(tr objecttree.ObjectTree, oldState *State, isUpdate bool) (state *State, err error) {
-	state = oldState
-
-	if !isUpdate || state == nil {
-		state = &State{}
-	}
+func (s *stateBuilder) Build(tr objecttree.ObjectTree, oldState *State) (state *State, err error) {
 	var (
 		rootId  = tr.Root().Id
-		startId = state.LastIteratedId
+		startId = rootId
 	)
+	state = oldState
+	if state == nil {
+		state = &State{}
+	} else if state.LastIteratedId != "" {
+		startId = state.LastIteratedId
+	}
+
 	process := func(change *objecttree.Change) bool {
-		state.LastIteratedId = change.Id
 		state = s.processChange(change, rootId, startId, state)
+		state.LastIteratedId = change.Id
 		return true
 	}
 	convert := func(decrypted []byte) (res any, err error) {
@@ -41,16 +44,13 @@ func (s *stateBuilder) Build(tr objecttree.ObjectTree, oldState *State, isUpdate
 		return deleteChange, nil
 	}
 
-	if startId == "" {
-		startId = rootId
-	}
 	err = tr.IterateFrom(startId, convert, process)
 	return
 }
 
 func (s *stateBuilder) processChange(change *objecttree.Change, rootId, startId string, state *State) *State {
 	// ignoring root change which has empty model or startId change
-	if change.Model == nil || (change.Id == startId && startId != "") {
+	if change.Model == nil || state.LastIteratedId == startId {
 		return state
 	}
 
@@ -67,10 +67,12 @@ func (s *stateBuilder) processChange(change *objecttree.Change, rootId, startId 
 
 	// otherwise getting data from content
 	for _, cnt := range deleteChange.Content {
+		fmt.Println(cnt.GetSpaceDelete() != nil)
 		switch {
 		case cnt.GetObjectDelete() != nil:
 			state.DeletedIds = append(state.DeletedIds, cnt.GetObjectDelete().GetId())
 		case cnt.GetSpaceDelete() != nil:
+			fmt.Println(cnt.GetSpaceDelete().GetDeleterPeerId())
 			state.DeleterId = cnt.GetSpaceDelete().GetDeleterPeerId()
 		}
 	}

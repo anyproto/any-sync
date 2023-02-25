@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_deletionstate/mock_deletionstate.go github.com/anytypeio/any-sync/commonspace/settings/deletionstate DeletionState
+//go:generate mockgen -destination mock_settingsstate/mock_settingsstate.go github.com/anytypeio/any-sync/commonspace/settings/settingsstate ObjectDeletionState,StateBuilder
 package settingsstate
 
 import (

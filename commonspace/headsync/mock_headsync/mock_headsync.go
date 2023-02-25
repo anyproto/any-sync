@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	deletionstate "github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
+	settingsstate "github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -36,7 +36,7 @@ func (m *MockDiffSyncer) EXPECT() *MockDiffSyncerMockRecorder {
 }
 
 // Init mocks base method.
-func (m *MockDiffSyncer) Init(arg0 deletionstate.ObjectDeletionState) {
+func (m *MockDiffSyncer) Init(arg0 settingsstate.ObjectDeletionState) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Init", arg0)
 }
