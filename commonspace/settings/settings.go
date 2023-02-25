@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_settings/mock_settings.go github.com/anytypeio/any-sync/commonspace/settings DeletionManager,Deleter
+//go:generate mockgen -destination mock_settings/mock_settings.go github.com/anytypeio/any-sync/commonspace/settings DeletionManager,Deleter,SpaceIdsProvider
 package settings
 
 import (
@@ -18,12 +18,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
-	"time"
 )
 
 var log = logger.NewNamed("common.commonspace.settings")
-
-const spaceDeletionInterval = time.Hour * 24 * 7
 
 type SettingsObject interface {
 	synctree.SyncTree
@@ -92,7 +89,6 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 			spaceId,
 			deps.Store.SpaceSettingsId(),
 			deps.Configuration.IsResponsible(spaceId),
-			spaceDeletionInterval,
 			deps.TreeGetter,
 			deps.DeletionState,
 			deps.Provider,

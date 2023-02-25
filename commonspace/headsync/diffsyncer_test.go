@@ -106,7 +106,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	factory := spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceSyncClient {
 		return clientMock
 	})
-	delState := mock_settingsstate.NewMockDeletionState(ctrl)
+	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
 	spaceId := "spaceId"
 	aclRootId := "aclRootId"
 	l := logger.NewNamed(spaceId)

@@ -6,7 +6,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/util/slice"
 	"go.uber.org/zap"
-	"time"
 )
 
 type SpaceIdsProvider interface {
@@ -21,39 +20,36 @@ func newDeletionManager(
 	spaceId string,
 	settingsId string,
 	isResponsible bool,
-	deletionInterval time.Duration,
 	treeGetter treegetter.TreeGetter,
 	deletionState settingsstate.ObjectDeletionState,
 	provider SpaceIdsProvider,
 	onSpaceDelete func()) DeletionManager {
 	return &deletionManager{
-		treeGetter:       treeGetter,
-		isResponsible:    isResponsible,
-		spaceId:          spaceId,
-		settingsId:       settingsId,
-		deletionState:    deletionState,
-		provider:         provider,
-		deletionInterval: deletionInterval,
-		onSpaceDelete:    onSpaceDelete,
+		treeGetter:    treeGetter,
+		isResponsible: isResponsible,
+		spaceId:       spaceId,
+		settingsId:    settingsId,
+		deletionState: deletionState,
+		provider:      provider,
+		onSpaceDelete: onSpaceDelete,
 	}
 }
 
 type deletionManager struct {
-	deletionState    settingsstate.ObjectDeletionState
-	provider         SpaceIdsProvider
-	treeGetter       treegetter.TreeGetter
-	deletionInterval time.Duration
-	spaceId          string
-	settingsId       string
-	isResponsible    bool
-	onSpaceDelete    func()
+	deletionState settingsstate.ObjectDeletionState
+	provider      SpaceIdsProvider
+	treeGetter    treegetter.TreeGetter
+	spaceId       string
+	settingsId    string
+	isResponsible bool
+	onSpaceDelete func()
 }
 
 func (d *deletionManager) UpdateState(ctx context.Context, state *settingsstate.State) error {
 	log := log.With(zap.String("spaceId", d.spaceId))
 	err := d.deletionState.Add(state.DeletedIds)
 	if err != nil {
-		log.Warn("failed to add deleted ids to deletion state")
+		log.Debug("failed to add deleted ids to deletion state")
 	}
 	if state.DeleterId == "" {
 		return nil
@@ -69,7 +65,7 @@ func (d *deletionManager) UpdateState(ctx context.Context, state *settingsstate.
 		})
 		err := d.deletionState.Add(allIds)
 		if err != nil {
-			return err
+			log.Debug("failed to add all ids to deletion state")
 		}
 	}
 	d.onSpaceDelete()
