@@ -24,7 +24,7 @@ func TestDiffService(t *testing.T) {
 	treeStorageMock := mock_treestorage.NewMockTreeStorage(ctrl)
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
 	syncer := mock_headsync.NewMockDiffSyncer(ctrl)
-	delState := mock_settingsstate.NewMockDeletionState(ctrl)
+	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
 	syncPeriod := 1
 	initId := "initId"
 
