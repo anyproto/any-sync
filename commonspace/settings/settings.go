@@ -134,7 +134,7 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 	return
 }
 
-func (s *settingsObject) updateIds(tr objecttree.ObjectTree, isUpdate bool) {
+func (s *settingsObject) updateIds(tr objecttree.ObjectTree) {
 	var err error
 	s.state, err = s.builder.Build(tr, s.state, isUpdate)
 	if err != nil {
@@ -149,13 +149,14 @@ func (s *settingsObject) updateIds(tr objecttree.ObjectTree, isUpdate bool) {
 
 // Update is called as part of UpdateListener interface
 func (s *settingsObject) Update(tr objecttree.ObjectTree) {
-	s.updateIds(tr, true)
+	s.updateIds(tr)
 }
 
 // Rebuild is called as part of UpdateListener interface (including when the object is built for the first time, e.g. on Init call)
 func (s *settingsObject) Rebuild(tr objecttree.ObjectTree) {
 	// at initial build "s" may not contain the object tree, so it is safer to provide it from the function parameter
-	s.updateIds(tr, false)
+	s.state = nil
+	s.updateIds(tr)
 }
 
 func (s *settingsObject) Init(ctx context.Context) (err error) {
