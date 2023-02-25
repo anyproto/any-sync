@@ -14,7 +14,7 @@ func TestDeleter_Delete(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	treeGetter := mock_treegetter.NewMockTreeGetter(ctrl)
 	st := mock_spacestorage.NewMockSpaceStorage(ctrl)
-	delState := mock_settingsstate.NewMockDeletionState(ctrl)
+	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
 
 	deleter := newDeleter(st, delState, treeGetter)
 

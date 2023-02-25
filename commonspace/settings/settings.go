@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_settings/mock_settings.go github.com/anytypeio/any-sync/commonspace/settings DeletedIdsProvider,Deleter
+//go:generate mockgen -destination mock_settings/mock_settings.go github.com/anytypeio/any-sync/commonspace/settings DeletionManager,Deleter
 package settings
 
 import (
@@ -136,7 +136,7 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 
 func (s *settingsObject) updateIds(tr objecttree.ObjectTree) {
 	var err error
-	s.state, err = s.builder.Build(tr, s.state, isUpdate)
+	s.state, err = s.builder.Build(tr, s.state)
 	if err != nil {
 		log.Error("failed to build state", zap.Error(err))
 		return
