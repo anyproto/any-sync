@@ -1,7 +1,6 @@
 package settingsstate
 
 import (
-	"fmt"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/gogo/protobuf/proto"
@@ -31,7 +30,7 @@ func (s *stateBuilder) Build(tr objecttree.ObjectTree, oldState *State) (state *
 	}
 
 	process := func(change *objecttree.Change) bool {
-		state = s.processChange(change, rootId, startId, state)
+		state = s.processChange(change, rootId, state)
 		state.LastIteratedId = change.Id
 		return true
 	}
@@ -43,14 +42,13 @@ func (s *stateBuilder) Build(tr objecttree.ObjectTree, oldState *State) (state *
 		}
 		return deleteChange, nil
 	}
-
 	err = tr.IterateFrom(startId, convert, process)
 	return
 }
 
-func (s *stateBuilder) processChange(change *objecttree.Change, rootId, startId string, state *State) *State {
+func (s *stateBuilder) processChange(change *objecttree.Change, rootId string, state *State) *State {
 	// ignoring root change which has empty model or startId change
-	if change.Model == nil || state.LastIteratedId == startId {
+	if change.Model == nil || state.LastIteratedId == change.Id {
 		return state
 	}
 
@@ -67,12 +65,10 @@ func (s *stateBuilder) processChange(change *objecttree.Change, rootId, startId 
 
 	// otherwise getting data from content
 	for _, cnt := range deleteChange.Content {
-		fmt.Println(cnt.GetSpaceDelete() != nil)
 		switch {
 		case cnt.GetObjectDelete() != nil:
 			state.DeletedIds = append(state.DeletedIds, cnt.GetObjectDelete().GetId())
 		case cnt.GetSpaceDelete() != nil:
-			fmt.Println(cnt.GetSpaceDelete().GetDeleterPeerId())
 			state.DeleterId = cnt.GetSpaceDelete().GetDeleterPeerId()
 		}
 	}
