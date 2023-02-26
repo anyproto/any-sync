@@ -17,6 +17,8 @@ type Configuration interface {
 	FilePeers() []string
 	// ConsensusPeers returns list of consensusnodes
 	ConsensusPeers() []string
+	// CoordinatorPeers returns list of coordinator nodes
+	CoordinatorPeers() []string
 	// Addresses returns map[peerId][]addr with connection addresses for all known nodes
 	Addresses() map[string][]string
 	// CHash returns nodes consistent table
@@ -28,12 +30,13 @@ type Configuration interface {
 }
 
 type configuration struct {
-	id             string
-	accountId      string
-	filePeers      []string
-	consensusPeers []string
-	chash          chash.CHash
-	allMembers     []NodeConfig
+	id               string
+	accountId        string
+	filePeers        []string
+	consensusPeers   []string
+	coordinatorPeers []string
+	chash            chash.CHash
+	allMembers       []NodeConfig
 }
 
 func (c *configuration) Id() string {
@@ -66,6 +69,10 @@ func (c *configuration) FilePeers() []string {
 
 func (c *configuration) ConsensusPeers() []string {
 	return c.consensusPeers
+}
+
+func (c *configuration) CoordinatorPeers() []string {
+	return c.coordinatorPeers
 }
 
 func (c *configuration) Addresses() map[string][]string {

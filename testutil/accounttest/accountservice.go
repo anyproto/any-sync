@@ -62,18 +62,13 @@ func (s *AccountTestService) Account() *accountdata.AccountData {
 }
 
 func (s *AccountTestService) NodeConf(addrs []string) nodeconf.NodeConfig {
-	encSk, err := keys.EncodeKeyToString(s.acc.SignKey)
-	if err != nil {
-		panic(err)
-	}
-	encEk, err := keys.EncodeKeyToString(s.acc.EncKey)
+	encEk, err := keys.EncodeKeyToString(s.acc.EncKey.GetPublic())
 	if err != nil {
 		panic(err)
 	}
 	return nodeconf.NodeConfig{
 		PeerId:        s.acc.PeerId,
 		Addresses:     addrs,
-		SigningKey:    encSk,
 		EncryptionKey: encEk,
 		Types:         []nodeconf.NodeType{nodeconf.NodeTypeTree},
 	}

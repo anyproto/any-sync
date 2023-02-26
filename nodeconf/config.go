@@ -6,6 +6,8 @@ const (
 	NodeTypeTree      NodeType = "tree"
 	NodeTypeConsensus NodeType = "consensus"
 	NodeTypeFile      NodeType = "file"
+
+	NodeTypeCoordinator NodeType = "coordinator"
 )
 
 type configGetter interface {
@@ -15,8 +17,7 @@ type configGetter interface {
 type NodeConfig struct {
 	PeerId        string     `yaml:"peerId"`
 	Addresses     []string   `yaml:"address"`
-	SigningKey    string     `yaml:"signingKey,omitempty"`
-	EncryptionKey string     `yaml:"encryptionKey,omitempty"`
+	EncryptionKey string     `yaml:"encryptionPubKey,omitempty"`
 	Types         []NodeType `yaml:"types,omitempty"`
 }
 
