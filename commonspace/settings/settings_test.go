@@ -235,11 +235,11 @@ func TestSettingsObject_DeleteSpace(t *testing.T) {
 		Heads: []string{rawCh.Id},
 	}, nil)
 
-	err = fx.doc.DeleteSpace(context.Background(), deleterId, rawCh)
+	err = fx.doc.DeleteSpace(context.Background(), rawCh)
 	require.NoError(t, err)
 }
 
-func TestSettingsObject_DeleteSpaceIncorrectPeerId(t *testing.T) {
+func TestSettingsObject_DeleteSpaceIncorrectChange(t *testing.T) {
 	fx := newSettingsFixture(t)
 	defer fx.stop()
 
@@ -250,15 +250,29 @@ func TestSettingsObject_DeleteSpaceIncorrectPeerId(t *testing.T) {
 	require.NoError(t, err)
 	time.Sleep(100 * time.Millisecond)
 
-	deleterId := "delId"
-	rawCh := &treechangeproto.RawTreeChangeWithId{
-		RawChange: []byte{1},
-		Id:        "id",
-	}
-	changeFactory := settingsstate.NewChangeFactory()
-	delChange, _ := changeFactory.CreateSpaceDeleteChange("otherId", &settingsstate.State{}, false)
+	t.Run("incorrect change type", func(t *testing.T) {
+		rawCh := &treechangeproto.RawTreeChangeWithId{
+			RawChange: []byte{1},
+			Id:        "id",
+		}
+		changeFactory := settingsstate.NewChangeFactory()
+		delChange, _ := changeFactory.CreateObjectDeleteChange("otherId", &settingsstate.State{}, false)
 
-	fx.syncTree.EXPECT().UnpackChange(rawCh).Return(delChange, nil)
-	err = fx.doc.DeleteSpace(context.Background(), deleterId, rawCh)
-	require.Equal(t, err, ErrIncorrectDeleteChange)
+		fx.syncTree.EXPECT().UnpackChange(rawCh).Return(delChange, nil)
+		err = fx.doc.DeleteSpace(context.Background(), rawCh)
+		require.NotNil(t, err)
+	})
+
+	t.Run("empty peer", func(t *testing.T) {
+		rawCh := &treechangeproto.RawTreeChangeWithId{
+			RawChange: []byte{1},
+			Id:        "id",
+		}
+		changeFactory := settingsstate.NewChangeFactory()
+		delChange, _ := changeFactory.CreateSpaceDeleteChange("", &settingsstate.State{}, false)
+
+		fx.syncTree.EXPECT().UnpackChange(rawCh).Return(delChange, nil)
+		err = fx.doc.DeleteSpace(context.Background(), rawCh)
+		require.NotNil(t, err)
+	})
 }
