@@ -38,8 +38,7 @@ import (
 )
 
 var (
-	ErrSpaceClosed       = errors.New("space is closed")
-	ErrPutNotImplemented = errors.New("put tree is not implemented")
+	ErrSpaceClosed = errors.New("space is closed")
 )
 
 type SpaceCreatePayload struct {
@@ -99,8 +98,8 @@ type Space interface {
 	DeleteTree(ctx context.Context, id string) (err error)
 	BuildHistoryTree(ctx context.Context, id string, opts HistoryTreeOpts) (t objecttree.HistoryTree, err error)
 
-	SpaceDeleteRawChange(ctx context.Context, deleterPeer string) (raw *treechangeproto.RawTreeChangeWithId, err error)
-	DeleteSpace(ctx context.Context, deleterPeer string, deleteChange *treechangeproto.RawTreeChangeWithId) (err error)
+	SpaceDeleteRawChange(ctx context.Context) (raw *treechangeproto.RawTreeChangeWithId, err error)
+	DeleteSpace(ctx context.Context, deleteChange *treechangeproto.RawTreeChangeWithId) (err error)
 
 	HeadSync() headsync.HeadSync
 	ObjectSync() objectsync.ObjectSync
@@ -369,12 +368,12 @@ func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
 	return s.settingsObject.DeleteObject(id)
 }
 
-func (s *space) SpaceDeleteRawChange(ctx context.Context, deleterPeer string) (raw *treechangeproto.RawTreeChangeWithId, err error) {
-	return s.settingsObject.SpaceDeleteRawChange(deleterPeer)
+func (s *space) SpaceDeleteRawChange(ctx context.Context) (raw *treechangeproto.RawTreeChangeWithId, err error) {
+	return s.settingsObject.SpaceDeleteRawChange()
 }
 
-func (s *space) DeleteSpace(ctx context.Context, deleterPeer string, deleteChange *treechangeproto.RawTreeChangeWithId) (err error) {
-	return s.settingsObject.DeleteSpace(ctx, deleterPeer, deleteChange)
+func (s *space) DeleteSpace(ctx context.Context, deleteChange *treechangeproto.RawTreeChangeWithId) (err error) {
+	return s.settingsObject.DeleteSpace(ctx, deleteChange)
 }
 
 func (s *space) HandleMessage(ctx context.Context, hm HandleMessage) (err error) {

@@ -4,6 +4,7 @@ package settings
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
@@ -26,16 +27,15 @@ type SettingsObject interface {
 	synctree.SyncTree
 	Init(ctx context.Context) (err error)
 	DeleteObject(id string) (err error)
-	DeleteSpace(ctx context.Context, deleterId string, raw *treechangeproto.RawTreeChangeWithId) (err error)
-	SpaceDeleteRawChange(deleterId string) (raw *treechangeproto.RawTreeChangeWithId, err error)
+	DeleteSpace(ctx context.Context, raw *treechangeproto.RawTreeChangeWithId) (err error)
+	SpaceDeleteRawChange() (raw *treechangeproto.RawTreeChangeWithId, err error)
 }
 
 var (
-	ErrDeleteSelf            = errors.New("cannot delete self")
-	ErrAlreadyDeleted        = errors.New("the object is already deleted")
-	ErrObjDoesNotExist       = errors.New("the object does not exist")
-	ErrCantDeleteSpace       = errors.New("not able to delete space")
-	ErrIncorrectDeleteChange = errors.New("incorrect delete change")
+	ErrDeleteSelf      = errors.New("cannot delete self")
+	ErrAlreadyDeleted  = errors.New("the object is already deleted")
+	ErrObjDoesNotExist = errors.New("the object does not exist")
+	ErrCantDeleteSpace = errors.New("not able to delete space")
 )
 
 type BuildTreeFunc func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error)
@@ -137,7 +137,7 @@ func (s *settingsObject) updateIds(tr objecttree.ObjectTree) {
 		log.Error("failed to build state", zap.Error(err))
 		return
 	}
-	log.Debug("updating object state", zap.String("deleterId", s.state.DeleterId))
+	log.Debug("updating object state", zap.String("deleted by", s.state.DeleterId))
 	if err = s.deletionManager.UpdateState(context.Background(), s.state); err != nil {
 		log.Error("failed to update state", zap.Error(err))
 	}
@@ -172,13 +172,13 @@ func (s *settingsObject) Close() error {
 	return s.SyncTree.Close()
 }
 
-func (s *settingsObject) DeleteSpace(ctx context.Context, deleterId string, raw *treechangeproto.RawTreeChangeWithId) (err error) {
+func (s *settingsObject) DeleteSpace(ctx context.Context, raw *treechangeproto.RawTreeChangeWithId) (err error) {
 	s.Lock()
 	defer s.Unlock()
 	defer func() {
 		log.Debug("finished adding delete change", zap.Error(err))
 	}()
-	err = s.verifyDeleteSpace(deleterId, raw)
+	err = s.verifyDeleteSpace(raw)
 	if err != nil {
 		return
 	}
@@ -196,12 +196,12 @@ func (s *settingsObject) DeleteSpace(ctx context.Context, deleterId string, raw 
 	return
 }
 
-func (s *settingsObject) SpaceDeleteRawChange(deleterId string) (raw *treechangeproto.RawTreeChangeWithId, err error) {
-	data, err := s.changeFactory.CreateSpaceDeleteChange(deleterId, s.state, false)
+func (s *settingsObject) SpaceDeleteRawChange() (raw *treechangeproto.RawTreeChangeWithId, err error) {
+	accountData := s.account.Account()
+	data, err := s.changeFactory.CreateSpaceDeleteChange(accountData.PeerId, s.state, false)
 	if err != nil {
 		return
 	}
-	accountData := s.account.Account()
 	return s.PrepareChange(objecttree.SignableChangeContent{
 		Data:        data,
 		Key:         accountData.SignKey,
@@ -237,7 +237,7 @@ func (s *settingsObject) DeleteObject(id string) (err error) {
 	return s.addContent(res)
 }
 
-func (s *settingsObject) verifyDeleteSpace(peerId string, raw *treechangeproto.RawTreeChangeWithId) (err error) {
+func (s *settingsObject) verifyDeleteSpace(raw *treechangeproto.RawTreeChangeWithId) (err error) {
 	data, err := s.UnpackChange(raw)
 	if err != nil {
 		return
@@ -249,8 +249,8 @@ func (s *settingsObject) verifyDeleteSpace(peerId string, raw *treechangeproto.R
 	}
 	if len(content.GetContent()) != 1 ||
 		content.GetContent()[0].GetSpaceDelete() == nil ||
-		content.GetContent()[0].GetSpaceDelete().GetDeleterPeerId() != peerId {
-		return ErrIncorrectDeleteChange
+		content.GetContent()[0].GetSpaceDelete().GetDeleterPeerId() == "" {
+		return fmt.Errorf("incorrect delete change payload")
 	}
 	return
 }
