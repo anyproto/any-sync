@@ -12,10 +12,22 @@ service Coordinator {
     //  - if a handshake identity matches a given identity
     //  - if a requester contains in nodeconf list
     rpc FileLimitCheck(FileLimitCheckRequest) returns (FileLimitCheckResponse);
+
+    // SpaceStatusCheck checks the status of space and tells if it is deleted or not
+    rpc SpaceStatusCheck(SpaceStatusCheckRequest) returns (SpaceStatusCheckResponse);
+
+    // SpaceStatusChange changes the status of space
+    rpc SpaceStatusChange(SpaceStatusChangeRequest) returns (SpaceStatusChangeResponse);
 }
 
 message SpaceSignRequest {
     string spaceId = 1;
+}
+
+enum SpaceStatus {
+    SpaceStatusCreated = 0;
+    SpaceStatusPendingDeletion = 1;
+    SpaceStatusDeleted = 2;
 }
 
 message SpaceSignResponse {
@@ -53,3 +65,24 @@ message FileLimitCheckRequest {
 message FileLimitCheckResponse {
     uint64 limit = 1;
 }
+
+// SpaceStatusCheckRequest contains the spaceId of requested space
+message SpaceStatusCheckRequest {
+    string spaceId = 1;
+}
+
+// SpaceStatusCheckResponse contains the status and deletion timestamp if needed
+message SpaceStatusCheckResponse {
+    SpaceStatus status = 1;
+    int64 deletionTimestamp = 2;
+}
+
+// SpaceStatusChangeRequest contains the deletionChange if we want to delete space, or it is empty otherwise
+message SpaceStatusChangeRequest {
+    string spaceId = 1;
+    string deletionChangeId = 2;
+    bytes deletionChangePayload = 3;
+}
+
+// SpaceStatusChangeResponse is always empty, you should check error in case something was wrong
+message SpaceStatusChangeResponse {}
