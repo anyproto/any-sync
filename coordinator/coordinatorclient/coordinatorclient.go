@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_coordinatorclient/mock_coordinatorclient.go github.com/anytypeio/any-sync/coordinator/coordinatorclient CoordinatorClient
 package coordinatorclient
 
 import (
