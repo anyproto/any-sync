@@ -1,25 +1,23 @@
-//go:generate mockgen -destination mock_deletionstate/mock_deletionstate.go github.com/anytypeio/any-sync/commonspace/settings/deletionstate DeletionState
-package deletionstate
+//go:generate mockgen -destination mock_settingsstate/mock_settingsstate.go github.com/anytypeio/any-sync/commonspace/settings/settingsstate ObjectDeletionState,StateBuilder,ChangeFactory
+package settingsstate
 
 import (
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"sync"
 )
 
 type StateUpdateObserver func(ids []string)
 
-type DeletionState interface {
+type ObjectDeletionState interface {
 	AddObserver(observer StateUpdateObserver)
 	Add(ids []string) (err error)
 	GetQueued() (ids []string)
 	Delete(id string) (err error)
 	Exists(id string) bool
 	FilterJoin(ids ...[]string) (filtered []string)
-	CreateDeleteChange(id string, isSnapshot bool) (res []byte, err error)
 }
 
-type deletionState struct {
+type objectDeletionState struct {
 	sync.RWMutex
 	queued               map[string]struct{}
 	deleted              map[string]struct{}
@@ -27,21 +25,21 @@ type deletionState struct {
 	storage              spacestorage.SpaceStorage
 }
 
-func NewDeletionState(storage spacestorage.SpaceStorage) DeletionState {
-	return &deletionState{
+func NewObjectDeletionState(storage spacestorage.SpaceStorage) ObjectDeletionState {
+	return &objectDeletionState{
 		queued:  map[string]struct{}{},
 		deleted: map[string]struct{}{},
 		storage: storage,
 	}
 }
 
-func (st *deletionState) AddObserver(observer StateUpdateObserver) {
+func (st *objectDeletionState) AddObserver(observer StateUpdateObserver) {
 	st.Lock()
 	defer st.Unlock()
 	st.stateUpdateObservers = append(st.stateUpdateObservers, observer)
 }
 
-func (st *deletionState) Add(ids []string) (err error) {
+func (st *objectDeletionState) Add(ids []string) (err error) {
 	st.Lock()
 	defer func() {
 		st.Unlock()
@@ -83,7 +81,7 @@ func (st *deletionState) Add(ids []string) (err error) {
 	return
 }
 
-func (st *deletionState) GetQueued() (ids []string) {
+func (st *objectDeletionState) GetQueued() (ids []string) {
 	st.RLock()
 	defer st.RUnlock()
 	ids = make([]string, 0, len(st.queued))
@@ -93,7 +91,7 @@ func (st *deletionState) GetQueued() (ids []string) {
 	return
 }
 
-func (st *deletionState) Delete(id string) (err error) {
+func (st *objectDeletionState) Delete(id string) (err error) {
 	st.Lock()
 	defer st.Unlock()
 	delete(st.queued, id)
@@ -105,13 +103,13 @@ func (st *deletionState) Delete(id string) (err error) {
 	return
 }
 
-func (st *deletionState) Exists(id string) bool {
+func (st *objectDeletionState) Exists(id string) bool {
 	st.RLock()
 	defer st.RUnlock()
 	return st.exists(id)
 }
 
-func (st *deletionState) FilterJoin(ids ...[]string) (filtered []string) {
+func (st *objectDeletionState) FilterJoin(ids ...[]string) (filtered []string) {
 	st.RLock()
 	defer st.RUnlock()
 	filter := func(ids []string) {
@@ -127,22 +125,7 @@ func (st *deletionState) FilterJoin(ids ...[]string) (filtered []string) {
 	return
 }
 
-func (st *deletionState) CreateDeleteChange(id string, isSnapshot bool) (res []byte, err error) {
-	content := &spacesyncproto.SpaceSettingsContent_ObjectDelete{
-		ObjectDelete: &spacesyncproto.ObjectDelete{Id: id},
-	}
-	change := &spacesyncproto.SettingsData{
-		Content: []*spacesyncproto.SpaceSettingsContent{
-			{Value: content},
-		},
-		Snapshot: nil,
-	}
-	// TODO: add snapshot logic
-	res, err = change.Marshal()
-	return
-}
-
-func (st *deletionState) exists(id string) bool {
+func (st *objectDeletionState) exists(id string) bool {
 	if _, exists := st.deleted[id]; exists {
 		return true
 	}

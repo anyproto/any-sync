@@ -213,6 +213,20 @@ func (mr *MockConfigurationMockRecorder) NodeIds(arg0 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeIds", reflect.TypeOf((*MockConfiguration)(nil).NodeIds), arg0)
 }
 
+// NodeTypes mocks base method.
+func (m *MockConfiguration) NodeTypes(arg0 string) []nodeconf.NodeType {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NodeTypes", arg0)
+	ret0, _ := ret[0].([]nodeconf.NodeType)
+	return ret0
+}
+
+// NodeTypes indicates an expected call of NodeTypes.
+func (mr *MockConfigurationMockRecorder) NodeTypes(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeTypes", reflect.TypeOf((*MockConfiguration)(nil).NodeTypes), arg0)
+}
+
 // Partition mocks base method.
 func (m *MockConfiguration) Partition(arg0 string) int {
 	m.ctrl.T.Helper()

@@ -6,7 +6,7 @@ import (
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/headsync/mock_headsync"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage/mock_treestorage"
-	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate/mock_deletionstate"
+	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage/mock_spacestorage"
 	"github.com/anytypeio/any-sync/util/periodicsync/mock_periodicsync"
 	"github.com/golang/mock/gomock"
@@ -24,7 +24,7 @@ func TestDiffService(t *testing.T) {
 	treeStorageMock := mock_treestorage.NewMockTreeStorage(ctrl)
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
 	syncer := mock_headsync.NewMockDiffSyncer(ctrl)
-	delState := mock_deletionstate.NewMockDeletionState(ctrl)
+	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
 	syncPeriod := 1
 	initId := "initId"
 

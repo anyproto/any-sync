@@ -18,7 +18,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
 	"github.com/anytypeio/any-sync/commonspace/settings"
-	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
+	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
@@ -38,8 +38,7 @@ import (
 )
 
 var (
-	ErrSpaceClosed       = errors.New("space is closed")
-	ErrPutNotImplemented = errors.New("put tree is not implemented")
+	ErrSpaceClosed = errors.New("space is closed")
 )
 
 type SpaceCreatePayload struct {
@@ -99,6 +98,9 @@ type Space interface {
 	DeleteTree(ctx context.Context, id string) (err error)
 	BuildHistoryTree(ctx context.Context, id string, opts HistoryTreeOpts) (t objecttree.HistoryTree, err error)
 
+	SpaceDeleteRawChange(ctx context.Context) (raw *treechangeproto.RawTreeChangeWithId, err error)
+	DeleteSpace(ctx context.Context, deleteChange *treechangeproto.RawTreeChangeWithId) (err error)
+
 	HeadSync() headsync.HeadSync
 	ObjectSync() objectsync.ObjectSync
 	SyncStatus() syncstatus.StatusUpdater
@@ -128,6 +130,7 @@ type space struct {
 	handleQueue multiqueue.MultiQueue[HandleMessage]
 
 	isClosed  *atomic.Bool
+	isDeleted *atomic.Bool
 	treesUsed *atomic.Int32
 }
 
@@ -190,7 +193,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.MessagePool())
 	s.cache.AddObject(s.aclList)
 
-	deletionState := deletionstate.NewDeletionState(s.storage)
+	deletionState := settingsstate.NewObjectDeletionState(s.storage)
 	deps := settings.Deps{
 		BuildFunc: func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error) {
 			res, err := s.BuildTree(ctx, id, BuildTreeOpts{
@@ -208,6 +211,9 @@ func (s *space) Init(ctx context.Context) (err error) {
 		TreeGetter:    s.cache,
 		Store:         s.storage,
 		DeletionState: deletionState,
+		Provider:      s.headSync,
+		Configuration: s.configuration,
+		OnSpaceDelete: s.onSpaceDelete,
 	}
 	s.settingsObject = settings.NewSettingsObject(deps, s.id)
 	s.objectSync.Init()
@@ -362,6 +368,14 @@ func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
 	return s.settingsObject.DeleteObject(id)
 }
 
+func (s *space) SpaceDeleteRawChange(ctx context.Context) (raw *treechangeproto.RawTreeChangeWithId, err error) {
+	return s.settingsObject.SpaceDeleteRawChange()
+}
+
+func (s *space) DeleteSpace(ctx context.Context, deleteChange *treechangeproto.RawTreeChangeWithId) (err error) {
+	return s.settingsObject.DeleteSpace(ctx, deleteChange)
+}
+
 func (s *space) HandleMessage(ctx context.Context, hm HandleMessage) (err error) {
 	threadId := hm.Message.ObjectId
 	if hm.Message.ReplyId != "" {
@@ -406,6 +420,14 @@ func (s *space) onObjectClose(id string) {
 	log.Debug("decrementing counter", zap.String("id", id), zap.String("spaceId", s.id))
 	s.treesUsed.Add(-1)
 	_ = s.handleQueue.CloseThread(id)
+}
+
+func (s *space) onSpaceDelete() {
+	err := s.storage.SetSpaceDeleted()
+	if err != nil {
+		log.Debug("failed to set space deleted")
+	}
+	s.isDeleted.Swap(true)
 }
 
 func (s *space) Close() error {

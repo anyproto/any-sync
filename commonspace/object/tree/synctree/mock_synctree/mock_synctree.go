@@ -380,6 +380,21 @@ func (mr *MockSyncTreeMockRecorder) Lock() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lock", reflect.TypeOf((*MockSyncTree)(nil).Lock))
 }
 
+// PrepareChange mocks base method.
+func (m *MockSyncTree) PrepareChange(arg0 objecttree.SignableChangeContent) (*treechangeproto.RawTreeChangeWithId, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrepareChange", arg0)
+	ret0, _ := ret[0].(*treechangeproto.RawTreeChangeWithId)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PrepareChange indicates an expected call of PrepareChange.
+func (mr *MockSyncTreeMockRecorder) PrepareChange(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareChange", reflect.TypeOf((*MockSyncTree)(nil).PrepareChange), arg0)
+}
+
 // RLock mocks base method.
 func (m *MockSyncTree) RLock() {
 	m.ctrl.T.Helper()
@@ -524,6 +539,21 @@ func (m *MockSyncTree) UnmarshalledHeader() *objecttree.Change {
 func (mr *MockSyncTreeMockRecorder) UnmarshalledHeader() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnmarshalledHeader", reflect.TypeOf((*MockSyncTree)(nil).UnmarshalledHeader))
+}
+
+// UnpackChange mocks base method.
+func (m *MockSyncTree) UnpackChange(arg0 *treechangeproto.RawTreeChangeWithId) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnpackChange", arg0)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UnpackChange indicates an expected call of UnpackChange.
+func (mr *MockSyncTreeMockRecorder) UnpackChange(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnpackChange", reflect.TypeOf((*MockSyncTree)(nil).UnpackChange), arg0)
 }
 
 // MockReceiveQueue is a mock of ReceiveQueue interface.

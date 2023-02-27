@@ -117,7 +117,15 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 	}
 
 	lastConfiguration := s.configurationService.GetLast()
-	var spaceIsClosed = &atomic.Bool{}
+	var (
+		spaceIsClosed  = &atomic.Bool{}
+		spaceIsDeleted = &atomic.Bool{}
+	)
+	isDeleted, err := st.IsSpaceDeleted()
+	if err != nil {
+		return nil, err
+	}
+	spaceIsDeleted.Swap(isDeleted)
 	getter := newCommonGetter(st.Id(), s.treeGetter, spaceIsClosed)
 	syncStatus := syncstatus.NewNoOpSyncStatus()
 	// this will work only for clients, not the best solution, but...
@@ -131,8 +139,8 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		return nil, err
 	}
 
-	headSync := headsync.NewHeadSync(id, s.config.SyncPeriod, st, peerManager, getter, syncStatus, log)
-	objectSync := objectsync.NewObjectSync(id, peerManager, getter)
+	headSync := headsync.NewHeadSync(id, spaceIsDeleted, s.config.SyncPeriod, lastConfiguration, st, peerManager, getter, syncStatus, log)
+	objectSync := objectsync.NewObjectSync(id, spaceIsDeleted, lastConfiguration, peerManager, getter)
 	sp := &space{
 		id:            id,
 		objectSync:    objectSync,
@@ -145,6 +153,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		storage:       st,
 		treesUsed:     &atomic.Int32{},
 		isClosed:      spaceIsClosed,
+		isDeleted:     spaceIsDeleted,
 	}
 	return sp, nil
 }

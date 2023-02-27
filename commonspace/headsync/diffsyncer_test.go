@@ -12,7 +12,7 @@ import (
 	mock_treestorage "github.com/anytypeio/any-sync/commonspace/object/tree/treestorage/mock_treestorage"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter/mock_treegetter"
 	"github.com/anytypeio/any-sync/commonspace/peermanager/mock_peermanager"
-	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate/mock_deletionstate"
+	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage/mock_spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto/mock_spacesyncproto"
@@ -106,7 +106,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	factory := spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceSyncClient {
 		return clientMock
 	})
-	delState := mock_deletionstate.NewMockDeletionState(ctrl)
+	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
 	spaceId := "spaceId"
 	aclRootId := "aclRootId"
 	l := logger.NewNamed(spaceId)

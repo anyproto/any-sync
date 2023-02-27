@@ -50,6 +50,20 @@ func (mr *MockTreeGetterMockRecorder) Close(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockTreeGetter)(nil).Close), arg0)
 }
 
+// DeleteSpace mocks base method.
+func (m *MockTreeGetter) DeleteSpace(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSpace", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteSpace indicates an expected call of DeleteSpace.
+func (mr *MockTreeGetterMockRecorder) DeleteSpace(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSpace", reflect.TypeOf((*MockTreeGetter)(nil).DeleteSpace), arg0, arg1)
+}
+
 // DeleteTree mocks base method.
 func (m *MockTreeGetter) DeleteTree(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()

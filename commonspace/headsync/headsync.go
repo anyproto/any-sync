@@ -7,13 +7,17 @@ import (
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
-	"github.com/anytypeio/any-sync/commonspace/settings/deletionstate"
+	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
+	"github.com/anytypeio/any-sync/net/peer"
+	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/anytypeio/any-sync/util/periodicsync"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -23,7 +27,7 @@ type TreeHeads struct {
 }
 
 type HeadSync interface {
-	Init(objectIds []string, deletionState deletionstate.DeletionState)
+	Init(objectIds []string, deletionState settingsstate.ObjectDeletionState)
 
 	UpdateHeads(id string, heads []string)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
@@ -35,19 +39,23 @@ type HeadSync interface {
 }
 
 type headSync struct {
-	spaceId      string
-	periodicSync periodicsync.PeriodicSync
-	storage      spacestorage.SpaceStorage
-	diff         ldiff.Diff
-	log          logger.CtxLogger
-	syncer       DiffSyncer
+	spaceId        string
+	periodicSync   periodicsync.PeriodicSync
+	storage        spacestorage.SpaceStorage
+	diff           ldiff.Diff
+	log            logger.CtxLogger
+	syncer         DiffSyncer
+	configuration  nodeconf.Configuration
+	spaceIsDeleted *atomic.Bool
 
 	syncPeriod int
 }
 
 func NewHeadSync(
 	spaceId string,
+	spaceIsDeleted *atomic.Bool,
 	syncPeriod int,
+	configuration nodeconf.Configuration,
 	storage spacestorage.SpaceStorage,
 	peerManager peermanager.PeerManager,
 	cache treegetter.TreeGetter,
@@ -58,26 +66,45 @@ func NewHeadSync(
 	l := log.With(zap.String("spaceId", spaceId))
 	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
 	syncer := newDiffSyncer(spaceId, diff, peerManager, cache, storage, factory, syncStatus, l)
-	periodicSync := periodicsync.NewPeriodicSync(syncPeriod, time.Minute, syncer.Sync, l)
+	sync := func(ctx context.Context) (err error) {
+		// for clients cancelling the sync process
+		if spaceIsDeleted.Load() && !configuration.IsResponsible(spaceId) {
+			return spacesyncproto.ErrSpaceIsDeleted
+		}
+		return syncer.Sync(ctx)
+	}
+	periodicSync := periodicsync.NewPeriodicSync(syncPeriod, time.Minute, sync, l)
 
 	return &headSync{
-		spaceId:      spaceId,
-		storage:      storage,
-		syncer:       syncer,
-		periodicSync: periodicSync,
-		diff:         diff,
-		log:          log,
-		syncPeriod:   syncPeriod,
+		spaceId:        spaceId,
+		storage:        storage,
+		syncer:         syncer,
+		periodicSync:   periodicSync,
+		diff:           diff,
+		log:            log,
+		syncPeriod:     syncPeriod,
+		configuration:  configuration,
+		spaceIsDeleted: spaceIsDeleted,
 	}
 }
 
-func (d *headSync) Init(objectIds []string, deletionState deletionstate.DeletionState) {
+func (d *headSync) Init(objectIds []string, deletionState settingsstate.ObjectDeletionState) {
 	d.fillDiff(objectIds)
 	d.syncer.Init(deletionState)
 	d.periodicSync.Run()
 }
 
 func (d *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
+	if d.spaceIsDeleted.Load() {
+		peerId, err := peer.CtxPeerId(ctx)
+		if err != nil {
+			return nil, err
+		}
+		// stop receiving all request for sync from clients
+		if !slices.Contains(d.configuration.NodeIds(d.spaceId), peerId) {
+			return nil, spacesyncproto.ErrSpaceIsDeleted
+		}
+	}
 	return HandleRangeRequest(ctx, d.diff, req)
 }
 
