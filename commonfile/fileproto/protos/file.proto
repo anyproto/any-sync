@@ -87,19 +87,22 @@ message BlocksBindResponse {}
 
 
 message FilesBindRequest {
-    repeated bytes fileCids = 1;
+    string spaceId = 1;
+    repeated bytes fileCids = 2;
 }
 
 message FilesBindResponse {}
 
 message FilesDeleteRequest {
-    repeated bytes fileCids = 1;
+    string spaceId = 1;
+    repeated bytes fileCids = 2;
 }
 
 message FilesDeleteResponse {}
 
 message FilesCheckRequest {
-    repeated bytes fileCids = 1;
+    string spaceId = 1;
+    repeated bytes fileCids = 2;
 }
 
 message FilesCheckResponse {
