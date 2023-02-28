@@ -25,7 +25,7 @@ require (
 	github.com/multiformats/go-multibase v0.1.1
 	github.com/multiformats/go-multihash v0.2.1
 	github.com/prometheus/client_golang v1.14.0
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	github.com/zeebo/blake3 v0.2.3
 	github.com/zeebo/errs v1.3.0
 	go.uber.org/zap v1.24.0
