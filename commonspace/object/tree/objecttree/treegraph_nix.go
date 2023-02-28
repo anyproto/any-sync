@@ -1,8 +1,9 @@
-//go:build (linux || darwin) && !android && !ios && !nographviz && (amd64 || arm64)
+//go:build (linux || darwin) && !android && !ios && !nographviz && cgo && (amd64 || arm64)
 // +build linux darwin
 // +build !android
 // +build !ios
 // +build !nographviz
+// +build cgo
 // +build amd64 arm64
 
 package objecttree
@@ -10,10 +11,11 @@ package objecttree
 import (
 	"bytes"
 	"fmt"
-	"github.com/goccy/go-graphviz"
-	"github.com/goccy/go-graphviz/cgraph"
 	"strings"
 	"time"
+
+	"github.com/goccy/go-graphviz"
+	"github.com/goccy/go-graphviz/cgraph"
 )
 
 func (t *Tree) Graph(parser DescriptionParser) (data string, err error) {
