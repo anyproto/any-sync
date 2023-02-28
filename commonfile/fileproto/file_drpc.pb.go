@@ -44,8 +44,12 @@ type DRPCFileClient interface {
 	BlockPush(ctx context.Context, in *BlockPushRequest) (*BlockPushResponse, error)
 	BlocksCheck(ctx context.Context, in *BlocksCheckRequest) (*BlocksCheckResponse, error)
 	BlocksBind(ctx context.Context, in *BlocksBindRequest) (*BlocksBindResponse, error)
+	FilesBind(ctx context.Context, in *FilesBindRequest) (*FilesBindResponse, error)
+	FilesDelete(ctx context.Context, in *FilesDeleteRequest) (*FilesDeleteResponse, error)
+	FilesCheck(ctx context.Context, in *FilesCheckRequest) (*FilesCheckResponse, error)
 	BlocksDelete(ctx context.Context, in *BlocksDeleteRequest) (*BlocksDeleteResponse, error)
 	Check(ctx context.Context, in *CheckRequest) (*CheckResponse, error)
+	CheckUsage(ctx context.Context, in *CheckUsageRequest) (*CheckUsageResponse, error)
 }
 
 type drpcFileClient struct {
@@ -94,6 +98,33 @@ func (c *drpcFileClient) BlocksBind(ctx context.Context, in *BlocksBindRequest) 
 	return out, nil
 }
 
+func (c *drpcFileClient) FilesBind(ctx context.Context, in *FilesBindRequest) (*FilesBindResponse, error) {
+	out := new(FilesBindResponse)
+	err := c.cc.Invoke(ctx, "/filesync.File/FilesBind", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcFileClient) FilesDelete(ctx context.Context, in *FilesDeleteRequest) (*FilesDeleteResponse, error) {
+	out := new(FilesDeleteResponse)
+	err := c.cc.Invoke(ctx, "/filesync.File/FilesDelete", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcFileClient) FilesCheck(ctx context.Context, in *FilesCheckRequest) (*FilesCheckResponse, error) {
+	out := new(FilesCheckResponse)
+	err := c.cc.Invoke(ctx, "/filesync.File/FilesCheck", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *drpcFileClient) BlocksDelete(ctx context.Context, in *BlocksDeleteRequest) (*BlocksDeleteResponse, error) {
 	out := new(BlocksDeleteResponse)
 	err := c.cc.Invoke(ctx, "/filesync.File/BlocksDelete", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
@@ -112,13 +143,26 @@ func (c *drpcFileClient) Check(ctx context.Context, in *CheckRequest) (*CheckRes
 	return out, nil
 }
 
+func (c *drpcFileClient) CheckUsage(ctx context.Context, in *CheckUsageRequest) (*CheckUsageResponse, error) {
+	out := new(CheckUsageResponse)
+	err := c.cc.Invoke(ctx, "/filesync.File/CheckUsage", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCFileServer interface {
 	BlockGet(context.Context, *BlockGetRequest) (*BlockGetResponse, error)
 	BlockPush(context.Context, *BlockPushRequest) (*BlockPushResponse, error)
 	BlocksCheck(context.Context, *BlocksCheckRequest) (*BlocksCheckResponse, error)
 	BlocksBind(context.Context, *BlocksBindRequest) (*BlocksBindResponse, error)
+	FilesBind(context.Context, *FilesBindRequest) (*FilesBindResponse, error)
+	FilesDelete(context.Context, *FilesDeleteRequest) (*FilesDeleteResponse, error)
+	FilesCheck(context.Context, *FilesCheckRequest) (*FilesCheckResponse, error)
 	BlocksDelete(context.Context, *BlocksDeleteRequest) (*BlocksDeleteResponse, error)
 	Check(context.Context, *CheckRequest) (*CheckResponse, error)
+	CheckUsage(context.Context, *CheckUsageRequest) (*CheckUsageResponse, error)
 }
 
 type DRPCFileUnimplementedServer struct{}
@@ -139,6 +183,18 @@ func (s *DRPCFileUnimplementedServer) BlocksBind(context.Context, *BlocksBindReq
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCFileUnimplementedServer) FilesBind(context.Context, *FilesBindRequest) (*FilesBindResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCFileUnimplementedServer) FilesDelete(context.Context, *FilesDeleteRequest) (*FilesDeleteResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCFileUnimplementedServer) FilesCheck(context.Context, *FilesCheckRequest) (*FilesCheckResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 func (s *DRPCFileUnimplementedServer) BlocksDelete(context.Context, *BlocksDeleteRequest) (*BlocksDeleteResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
@@ -147,9 +203,13 @@ func (s *DRPCFileUnimplementedServer) Check(context.Context, *CheckRequest) (*Ch
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCFileUnimplementedServer) CheckUsage(context.Context, *CheckUsageRequest) (*CheckUsageResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCFileDescription struct{}
 
-func (DRPCFileDescription) NumMethods() int { return 6 }
+func (DRPCFileDescription) NumMethods() int { return 10 }
 
 func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -190,6 +250,33 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 					)
 			}, DRPCFileServer.BlocksBind, true
 	case 4:
+		return "/filesync.File/FilesBind", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCFileServer).
+					FilesBind(
+						ctx,
+						in1.(*FilesBindRequest),
+					)
+			}, DRPCFileServer.FilesBind, true
+	case 5:
+		return "/filesync.File/FilesDelete", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCFileServer).
+					FilesDelete(
+						ctx,
+						in1.(*FilesDeleteRequest),
+					)
+			}, DRPCFileServer.FilesDelete, true
+	case 6:
+		return "/filesync.File/FilesCheck", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCFileServer).
+					FilesCheck(
+						ctx,
+						in1.(*FilesCheckRequest),
+					)
+			}, DRPCFileServer.FilesCheck, true
+	case 7:
 		return "/filesync.File/BlocksDelete", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -198,7 +285,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*BlocksDeleteRequest),
 					)
 			}, DRPCFileServer.BlocksDelete, true
-	case 5:
+	case 8:
 		return "/filesync.File/Check", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -207,6 +294,15 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*CheckRequest),
 					)
 			}, DRPCFileServer.Check, true
+	case 9:
+		return "/filesync.File/CheckUsage", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCFileServer).
+					CheckUsage(
+						ctx,
+						in1.(*CheckUsageRequest),
+					)
+			}, DRPCFileServer.CheckUsage, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -280,6 +376,54 @@ func (x *drpcFile_BlocksBindStream) SendAndClose(m *BlocksBindResponse) error {
 	return x.CloseSend()
 }
 
+type DRPCFile_FilesBindStream interface {
+	drpc.Stream
+	SendAndClose(*FilesBindResponse) error
+}
+
+type drpcFile_FilesBindStream struct {
+	drpc.Stream
+}
+
+func (x *drpcFile_FilesBindStream) SendAndClose(m *FilesBindResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCFile_FilesDeleteStream interface {
+	drpc.Stream
+	SendAndClose(*FilesDeleteResponse) error
+}
+
+type drpcFile_FilesDeleteStream struct {
+	drpc.Stream
+}
+
+func (x *drpcFile_FilesDeleteStream) SendAndClose(m *FilesDeleteResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCFile_FilesCheckStream interface {
+	drpc.Stream
+	SendAndClose(*FilesCheckResponse) error
+}
+
+type drpcFile_FilesCheckStream struct {
+	drpc.Stream
+}
+
+func (x *drpcFile_FilesCheckStream) SendAndClose(m *FilesCheckResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
 type DRPCFile_BlocksDeleteStream interface {
 	drpc.Stream
 	SendAndClose(*BlocksDeleteResponse) error
@@ -306,6 +450,22 @@ type drpcFile_CheckStream struct {
 }
 
 func (x *drpcFile_CheckStream) SendAndClose(m *CheckResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCFile_CheckUsageStream interface {
+	drpc.Stream
+	SendAndClose(*CheckUsageResponse) error
+}
+
+type drpcFile_CheckUsageStream struct {
+	drpc.Stream
+}
+
+func (x *drpcFile_CheckUsageStream) SendAndClose(m *CheckUsageResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
 		return err
 	}

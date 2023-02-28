@@ -18,10 +18,18 @@ service File {
     rpc BlocksCheck(BlocksCheckRequest) returns (BlocksCheckResponse);
     // BlocksBind binds CIDs to space
     rpc BlocksBind(BlocksBindRequest) returns (BlocksBindResponse);
+    // FilesBind binds root file CIDs and their children to space
+    rpc FilesBind(FilesBindRequest) returns (FilesBindResponse);
+    // FilesDelete deletes file CIDs and their children from space
+    rpc FilesDelete(FilesDeleteRequest) returns (FilesDeleteResponse);
+    // FileCheck checks file CIDs and children for exists
+    rpc FilesCheck(FilesCheckRequest) returns (FilesCheckResponse);
     // BlocksDelete deletes block from space
     rpc BlocksDelete(BlocksDeleteRequest) returns (BlocksDeleteResponse);
     // Check checks the connection and credentials
     rpc Check(CheckRequest) returns (CheckResponse);
+    // CheckUsage checks current usage and limits for a space
+    rpc CheckUsage(CheckUsageRequest) returns (CheckUsageResponse);
 }
 
 message BlockGetRequest {
@@ -77,9 +85,41 @@ message BlocksBindRequest {
 
 message BlocksBindResponse {}
 
+
+message FilesBindRequest {
+    repeated bytes fileCids = 1;
+}
+
+message FilesBindResponse {}
+
+message FilesDeleteRequest {
+    repeated bytes fileCids = 1;
+}
+
+message FilesDeleteResponse {}
+
+message FilesCheckRequest {
+    repeated bytes fileCids = 1;
+}
+
+message FilesCheckResponse {
+    repeated BlockAvailability blocksAvailability = 1;
+}
+
 message CheckRequest {}
 
 message CheckResponse {
     repeated string spaceIds = 1;
     bool allowWrite = 2;
 }
+
+message CheckUsageRequest {
+    string spaceId = 1;
+}
+
+message CheckUsageResponse {
+    uint64 limitBytes = 1;
+    uint64 usageBytes = 2;
+    uint64 usageCids = 3;
+}
+
