@@ -18,14 +18,10 @@ service File {
     rpc BlocksCheck(BlocksCheckRequest) returns (BlocksCheckResponse);
     // BlocksBind binds CIDs to space
     rpc BlocksBind(BlocksBindRequest) returns (BlocksBindResponse);
-    // FilesBind binds root file CIDs and their children to space
-    rpc FilesBind(FilesBindRequest) returns (FilesBindResponse);
-    // FilesDelete deletes file CIDs and their children from space
+    // FilesDelete deletes files by id
     rpc FilesDelete(FilesDeleteRequest) returns (FilesDeleteResponse);
     // FileCheck checks file CIDs and children for exists
     rpc FilesCheck(FilesCheckRequest) returns (FilesCheckResponse);
-    // BlocksDelete deletes block from space
-    rpc BlocksDelete(BlocksDeleteRequest) returns (BlocksDeleteResponse);
     // Check checks the connection and credentials
     rpc Check(CheckRequest) returns (CheckResponse);
     // CheckUsage checks current usage and limits for a space
@@ -44,8 +40,9 @@ message BlockGetResponse {
 
 message BlockPushRequest {
     string spaceId = 1;
-    bytes cid = 2;
-    bytes data = 3;
+    string fileId = 2;
+    bytes cid = 3;
+    bytes data = 4;
 }
 
 message BlockPushResponse {}
@@ -80,29 +77,23 @@ enum AvailabilityStatus {
 
 message BlocksBindRequest {
     string spaceId = 1;
-    repeated bytes cids = 2;
+    string fileId = 2;
+    repeated bytes cids = 3;
 }
 
 message BlocksBindResponse {}
 
 
-message FilesBindRequest {
-    string spaceId = 1;
-    repeated bytes fileCids = 2;
-}
-
-message FilesBindResponse {}
-
 message FilesDeleteRequest {
     string spaceId = 1;
-    repeated bytes fileCids = 2;
+    repeated bytes fileIds = 2;
 }
 
 message FilesDeleteResponse {}
 
 message FilesCheckRequest {
     string spaceId = 1;
-    repeated bytes fileCids = 2;
+    repeated bytes fileIds = 2;
 }
 
 message FilesCheckResponse {
