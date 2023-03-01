@@ -263,11 +263,14 @@ func (s *settingsObject) addContent(data []byte) (err error) {
 	return
 }
 
-func VerifyDeleteChange(raw *treechangeproto.RawTreeChangeWithId, peerId string) (err error) {
+func VerifyDeleteChange(raw *treechangeproto.RawTreeChangeWithId, identity []byte, peerId string) (err error) {
 	changeBuilder := objecttree.NewChangeBuilder(keychain.NewKeychain(), nil)
 	res, err := changeBuilder.Unmarshall(raw, true)
 	if err != nil {
 		return
+	}
+	if res.Identity != string(identity) {
+		return fmt.Errorf("incorrect identity")
 	}
 	return verifyDeleteContent(res.Data, peerId)
 }
