@@ -5,6 +5,7 @@ import (
 	"context"
 	"github.com/anytypeio/any-sync/app/ldiff"
 	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/commonspace/credentialprovider"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
@@ -60,12 +61,13 @@ func NewHeadSync(
 	peerManager peermanager.PeerManager,
 	cache treegetter.TreeGetter,
 	syncStatus syncstatus.StatusUpdater,
+	credentialProvider credentialprovider.CredentialProvider,
 	log logger.CtxLogger) HeadSync {
 
 	diff := ldiff.New(16, 16)
 	l := log.With(zap.String("spaceId", spaceId))
 	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
-	syncer := newDiffSyncer(spaceId, diff, peerManager, cache, storage, factory, syncStatus, l)
+	syncer := newDiffSyncer(spaceId, diff, peerManager, cache, storage, factory, syncStatus, credentialProvider, l)
 	sync := func(ctx context.Context) (err error) {
 		// for clients cancelling the sync process
 		if spaceIsDeleted.Load() && !configuration.IsResponsible(spaceId) {

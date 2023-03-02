@@ -157,6 +157,20 @@ func (mr *MockConfigurationMockRecorder) ConsensusPeers() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConsensusPeers", reflect.TypeOf((*MockConfiguration)(nil).ConsensusPeers))
 }
 
+// CoordinatorPeers mocks base method.
+func (m *MockConfiguration) CoordinatorPeers() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CoordinatorPeers")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// CoordinatorPeers indicates an expected call of CoordinatorPeers.
+func (mr *MockConfigurationMockRecorder) CoordinatorPeers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CoordinatorPeers", reflect.TypeOf((*MockConfiguration)(nil).CoordinatorPeers))
+}
+
 // FilePeers mocks base method.
 func (m *MockConfiguration) FilePeers() []string {
 	m.ctrl.T.Helper()
