@@ -220,7 +220,7 @@ func (c *changeBuilder) Build(payload BuilderContent) (ch *Change, rawIdChange *
 }
 
 func (c *changeBuilder) Marshall(ch *Change) (raw *treechangeproto.RawTreeChangeWithId, err error) {
-	if ch.Id == c.rootChange.Id {
+	if c.isRoot(ch.Id) {
 		return c.rootChange, nil
 	}
 	treeChange := &treechangeproto.TreeChange{
@@ -255,7 +255,7 @@ func (c *changeBuilder) Marshall(ch *Change) (raw *treechangeproto.RawTreeChange
 }
 
 func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, id string) (ch *Change, err error) {
-	if c.rootChange.Id == id {
+	if c.isRoot(id) {
 		unmarshalled := &treechangeproto.RootChange{}
 		err = proto.Unmarshal(raw.Payload, unmarshalled)
 		if err != nil {
@@ -273,4 +273,11 @@ func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, 
 
 	ch = NewChange(id, unmarshalled, raw.Signature)
 	return
+}
+
+func (c *changeBuilder) isRoot(id string) bool {
+	if c.rootChange != nil {
+		return c.rootChange.Id == id
+	}
+	return false
 }
