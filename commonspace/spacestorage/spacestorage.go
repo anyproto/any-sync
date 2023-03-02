@@ -2,6 +2,7 @@
 package spacestorage
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"github.com/anytypeio/any-sync/app"
@@ -70,7 +71,7 @@ func ValidateSpaceStorageCreatePayload(payload SpaceStorageCreatePayload) (err e
 	return nil
 }
 
-func ValidateSpaceHeader(spaceId string, header []byte) (err error) {
+func ValidateSpaceHeader(spaceId string, header, identity []byte) (err error) {
 	split := strings.Split(spaceId, ".")
 	if len(split) != 2 {
 		return ErrIncorrectSpaceHeader
@@ -87,6 +88,10 @@ func ValidateSpaceHeader(spaceId string, header []byte) (err error) {
 	payload := &spacesyncproto.SpaceHeader{}
 	err = proto.Unmarshal(raw.SpaceHeader, raw)
 	if err != nil {
+		return
+	}
+	if identity != nil && !bytes.Equal(identity, payload.Identity) {
+		err = ErrIncorrectSpaceHeader
 		return
 	}
 	key, err := signingkey.NewSigningEd25519PubKeyFromBytes(payload.Identity)
