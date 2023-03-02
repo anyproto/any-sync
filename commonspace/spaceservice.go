@@ -58,7 +58,12 @@ func (s *spaceService) Init(a *app.App) (err error) {
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.treeGetter = a.MustComponent(treegetter.CName).(treegetter.TreeGetter)
 	s.peermanagerProvider = a.MustComponent(peermanager.CName).(peermanager.PeerManagerProvider)
-	s.credentialProvider = a.MustComponent(credentialprovider.CName).(credentialprovider.CredentialProvider)
+	credProvider := a.Component(credentialprovider.CName)
+	if credProvider != nil {
+		s.credentialProvider = credProvider.(credentialprovider.CredentialProvider)
+	} else {
+		s.credentialProvider = credentialprovider.NewNoOp()
+	}
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	return nil
 }
