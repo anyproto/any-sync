@@ -22,6 +22,7 @@ service Coordinator {
 
 message SpaceSignRequest {
     string spaceId = 1;
+    bytes header = 2;
 }
 
 enum SpaceStatus {
