@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/any-sync/app/ldiff"
 	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/commonspace/credentialprovider"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
@@ -33,29 +34,32 @@ func newDiffSyncer(
 	storage spacestorage.SpaceStorage,
 	clientFactory spacesyncproto.ClientFactory,
 	syncStatus syncstatus.StatusUpdater,
+	credentialProvider credentialprovider.CredentialProvider,
 	log logger.CtxLogger) DiffSyncer {
 	return &diffSyncer{
-		diff:          diff,
-		spaceId:       spaceId,
-		cache:         cache,
-		storage:       storage,
-		peerManager:   peerManager,
-		clientFactory: clientFactory,
-		log:           log,
-		syncStatus:    syncStatus,
+		diff:               diff,
+		spaceId:            spaceId,
+		cache:              cache,
+		storage:            storage,
+		peerManager:        peerManager,
+		clientFactory:      clientFactory,
+		credentialProvider: credentialProvider,
+		log:                log,
+		syncStatus:         syncStatus,
 	}
 }
 
 type diffSyncer struct {
-	spaceId       string
-	diff          ldiff.Diff
-	peerManager   peermanager.PeerManager
-	cache         treegetter.TreeGetter
-	storage       spacestorage.SpaceStorage
-	clientFactory spacesyncproto.ClientFactory
-	log           logger.CtxLogger
-	deletionState settingsstate.ObjectDeletionState
-	syncStatus    syncstatus.StatusUpdater
+	spaceId            string
+	diff               ldiff.Diff
+	peerManager        peermanager.PeerManager
+	cache              treegetter.TreeGetter
+	storage            spacestorage.SpaceStorage
+	clientFactory      spacesyncproto.ClientFactory
+	log                logger.CtxLogger
+	deletionState      settingsstate.ObjectDeletionState
+	credentialProvider credentialprovider.CredentialProvider
+	syncStatus         syncstatus.StatusUpdater
 }
 
 func (d *diffSyncer) Init(deletionState settingsstate.ObjectDeletionState) {
@@ -192,6 +196,10 @@ func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, peerId string, cl
 		return
 	}
 
+	cred, err := d.credentialProvider.GetCredential(ctx, header)
+	if err != nil {
+		return
+	}
 	spacePayload := &spacesyncproto.SpacePayload{
 		SpaceHeader:            header,
 		AclPayload:             root.Payload,
@@ -200,7 +208,8 @@ func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, peerId string, cl
 		SpaceSettingsPayloadId: spaceSettingsRoot.Id,
 	}
 	_, err = cl.SpacePush(ctx, &spacesyncproto.SpacePushRequest{
-		Payload: spacePayload,
+		Payload:    spacePayload,
+		Credential: cred,
 	})
 	if err != nil {
 		return

@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	app "github.com/anytypeio/any-sync/app"
+	treechangeproto "github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	coordinatorproto "github.com/anytypeio/any-sync/coordinator/coordinatorproto"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -34,6 +35,20 @@ func NewMockCoordinatorClient(ctrl *gomock.Controller) *MockCoordinatorClient {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockCoordinatorClient) EXPECT() *MockCoordinatorClientMockRecorder {
 	return m.recorder
+}
+
+// ChangeStatus mocks base method.
+func (m *MockCoordinatorClient) ChangeStatus(arg0 context.Context, arg1 string, arg2 *treechangeproto.RawTreeChangeWithId) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeStatus", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ChangeStatus indicates an expected call of ChangeStatus.
+func (mr *MockCoordinatorClientMockRecorder) ChangeStatus(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeStatus", reflect.TypeOf((*MockCoordinatorClient)(nil).ChangeStatus), arg0, arg1, arg2)
 }
 
 // FileLimitCheck mocks base method.
@@ -80,16 +95,31 @@ func (mr *MockCoordinatorClientMockRecorder) Name() *gomock.Call {
 }
 
 // SpaceSign mocks base method.
-func (m *MockCoordinatorClient) SpaceSign(arg0 context.Context, arg1 string) (*coordinatorproto.SpaceReceiptWithSignature, error) {
+func (m *MockCoordinatorClient) SpaceSign(arg0 context.Context, arg1 string, arg2 []byte) (*coordinatorproto.SpaceReceiptWithSignature, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpaceSign", arg0, arg1)
+	ret := m.ctrl.Call(m, "SpaceSign", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*coordinatorproto.SpaceReceiptWithSignature)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SpaceSign indicates an expected call of SpaceSign.
-func (mr *MockCoordinatorClientMockRecorder) SpaceSign(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) SpaceSign(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceSign", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceSign), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceSign", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceSign), arg0, arg1, arg2)
+}
+
+// StatusCheck mocks base method.
+func (m *MockCoordinatorClient) StatusCheck(arg0 context.Context, arg1 string) (*coordinatorproto.SpaceStatusCheckResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StatusCheck", arg0, arg1)
+	ret0, _ := ret[0].(*coordinatorproto.SpaceStatusCheckResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StatusCheck indicates an expected call of StatusCheck.
+func (mr *MockCoordinatorClientMockRecorder) StatusCheck(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusCheck", reflect.TypeOf((*MockCoordinatorClient)(nil).StatusCheck), arg0, arg1)
 }
