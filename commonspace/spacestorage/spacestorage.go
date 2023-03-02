@@ -86,7 +86,7 @@ func ValidateSpaceHeader(spaceId string, header, identity []byte) (err error) {
 		return
 	}
 	payload := &spacesyncproto.SpaceHeader{}
-	err = proto.Unmarshal(raw.SpaceHeader, raw)
+	err = proto.Unmarshal(raw.SpaceHeader, payload)
 	if err != nil {
 		return
 	}
