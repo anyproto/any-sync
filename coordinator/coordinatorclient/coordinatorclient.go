@@ -4,6 +4,7 @@ package coordinatorclient
 import (
 	"context"
 	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/coordinator/coordinatorproto"
 	"github.com/anytypeio/any-sync/net/pool"
 	"github.com/anytypeio/any-sync/nodeconf"
@@ -16,7 +17,9 @@ func New() CoordinatorClient {
 }
 
 type CoordinatorClient interface {
-	SpaceSign(ctx context.Context, spaceId string) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error)
+	ChangeStatus(ctx context.Context, spaceId string, deleteRaw *treechangeproto.RawTreeChangeWithId) (err error)
+	StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusCheckResponse, err error)
+	SpaceSign(ctx context.Context, spaceId string, spaceHeader []byte) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error)
 	FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (limit uint64, err error)
 	app.Component
 }
@@ -24,6 +27,29 @@ type CoordinatorClient interface {
 type coordinatorClient struct {
 	pool     pool.Pool
 	nodeConf nodeconf.Service
+}
+
+func (c *coordinatorClient) ChangeStatus(ctx context.Context, spaceId string, deleteRaw *treechangeproto.RawTreeChangeWithId) (err error) {
+	cl, err := c.client(ctx)
+	if err != nil {
+		return
+	}
+	_, err = cl.SpaceStatusChange(ctx, &coordinatorproto.SpaceStatusChangeRequest{
+		SpaceId:               spaceId,
+		DeletionChangeId:      deleteRaw.Id,
+		DeletionChangePayload: deleteRaw.RawChange,
+	})
+	return
+}
+
+func (c *coordinatorClient) StatusCheck(ctx context.Context, spaceId string) (response *coordinatorproto.SpaceStatusCheckResponse, err error) {
+	cl, err := c.client(ctx)
+	if err != nil {
+		return
+	}
+	return cl.SpaceStatusCheck(ctx, &coordinatorproto.SpaceStatusCheckRequest{
+		SpaceId: spaceId,
+	})
 }
 
 func (c *coordinatorClient) Init(a *app.App) (err error) {
@@ -36,13 +62,14 @@ func (c *coordinatorClient) Name() (name string) {
 	return CName
 }
 
-func (c *coordinatorClient) SpaceSign(ctx context.Context, spaceId string) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error) {
+func (c *coordinatorClient) SpaceSign(ctx context.Context, spaceId string, spaceHeader []byte) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error) {
 	cl, err := c.client(ctx)
 	if err != nil {
 		return
 	}
 	resp, err := cl.SpaceSign(ctx, &coordinatorproto.SpaceSignRequest{
 		SpaceId: spaceId,
+		Header:  spaceHeader,
 	})
 	if err != nil {
 		return
