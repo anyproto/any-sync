@@ -28,7 +28,8 @@ message SpaceSignRequest {
 enum SpaceStatus {
     SpaceStatusCreated = 0;
     SpaceStatusPendingDeletion = 1;
-    SpaceStatusDeleted = 2;
+    SpaceStatusDeletionStarted = 2;
+    SpaceStatusDeleted = 3;
 }
 
 message SpaceSignResponse {
