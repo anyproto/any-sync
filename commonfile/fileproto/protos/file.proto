@@ -24,8 +24,8 @@ service File {
     rpc FilesCheck(FilesCheckRequest) returns (FilesCheckResponse);
     // Check checks the connection and credentials
     rpc Check(CheckRequest) returns (CheckResponse);
-    // CheckUsage checks current usage and limits for a space
-    rpc CheckUsage(CheckUsageRequest) returns (CheckUsageResponse);
+    // SpaceInfo returns usage, limit, etc about space
+    rpc SpaceInfo(SpaceInfoRequest) returns (SpaceInfoResponse);
 }
 
 message BlockGetRequest {
@@ -107,13 +107,14 @@ message CheckResponse {
     bool allowWrite = 2;
 }
 
-message CheckUsageRequest {
+message SpaceInfoRequest {
     string spaceId = 1;
 }
 
-message CheckUsageResponse {
+message SpaceInfoResponse {
     uint64 limitBytes = 1;
     uint64 usageBytes = 2;
-    uint64 usageCids = 3;
+    uint64 cidsCount = 3;
+    uint64 filesCount = 4;
 }
 

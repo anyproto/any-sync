@@ -47,7 +47,7 @@ type DRPCFileClient interface {
 	FilesDelete(ctx context.Context, in *FilesDeleteRequest) (*FilesDeleteResponse, error)
 	FilesCheck(ctx context.Context, in *FilesCheckRequest) (*FilesCheckResponse, error)
 	Check(ctx context.Context, in *CheckRequest) (*CheckResponse, error)
-	CheckUsage(ctx context.Context, in *CheckUsageRequest) (*CheckUsageResponse, error)
+	SpaceInfo(ctx context.Context, in *SpaceInfoRequest) (*SpaceInfoResponse, error)
 }
 
 type drpcFileClient struct {
@@ -123,9 +123,9 @@ func (c *drpcFileClient) Check(ctx context.Context, in *CheckRequest) (*CheckRes
 	return out, nil
 }
 
-func (c *drpcFileClient) CheckUsage(ctx context.Context, in *CheckUsageRequest) (*CheckUsageResponse, error) {
-	out := new(CheckUsageResponse)
-	err := c.cc.Invoke(ctx, "/filesync.File/CheckUsage", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+func (c *drpcFileClient) SpaceInfo(ctx context.Context, in *SpaceInfoRequest) (*SpaceInfoResponse, error) {
+	out := new(SpaceInfoResponse)
+	err := c.cc.Invoke(ctx, "/filesync.File/SpaceInfo", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ type DRPCFileServer interface {
 	FilesDelete(context.Context, *FilesDeleteRequest) (*FilesDeleteResponse, error)
 	FilesCheck(context.Context, *FilesCheckRequest) (*FilesCheckResponse, error)
 	Check(context.Context, *CheckRequest) (*CheckResponse, error)
-	CheckUsage(context.Context, *CheckUsageRequest) (*CheckUsageResponse, error)
+	SpaceInfo(context.Context, *SpaceInfoRequest) (*SpaceInfoResponse, error)
 }
 
 type DRPCFileUnimplementedServer struct{}
@@ -173,7 +173,7 @@ func (s *DRPCFileUnimplementedServer) Check(context.Context, *CheckRequest) (*Ch
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCFileUnimplementedServer) CheckUsage(context.Context, *CheckUsageRequest) (*CheckUsageResponse, error) {
+func (s *DRPCFileUnimplementedServer) SpaceInfo(context.Context, *SpaceInfoRequest) (*SpaceInfoResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
@@ -247,14 +247,14 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 					)
 			}, DRPCFileServer.Check, true
 	case 7:
-		return "/filesync.File/CheckUsage", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+		return "/filesync.File/SpaceInfo", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
-					CheckUsage(
+					SpaceInfo(
 						ctx,
-						in1.(*CheckUsageRequest),
+						in1.(*SpaceInfoRequest),
 					)
-			}, DRPCFileServer.CheckUsage, true
+			}, DRPCFileServer.SpaceInfo, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -376,16 +376,16 @@ func (x *drpcFile_CheckStream) SendAndClose(m *CheckResponse) error {
 	return x.CloseSend()
 }
 
-type DRPCFile_CheckUsageStream interface {
+type DRPCFile_SpaceInfoStream interface {
 	drpc.Stream
-	SendAndClose(*CheckUsageResponse) error
+	SendAndClose(*SpaceInfoResponse) error
 }
 
-type drpcFile_CheckUsageStream struct {
+type drpcFile_SpaceInfoStream struct {
 	drpc.Stream
 }
 
-func (x *drpcFile_CheckUsageStream) SendAndClose(m *CheckUsageResponse) error {
+func (x *drpcFile_SpaceInfoStream) SendAndClose(m *SpaceInfoResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
 		return err
 	}
