@@ -32,6 +32,11 @@ enum SpaceStatus {
     SpaceStatusDeleted = 3;
 }
 
+message SpaceStatusPayload {
+    SpaceStatus status = 1;
+    int64 deletionTimestamp = 2;
+}
+
 message SpaceSignResponse {
     SpaceReceiptWithSignature receipt = 1;
 }
@@ -73,10 +78,9 @@ message SpaceStatusCheckRequest {
     string spaceId = 1;
 }
 
-// SpaceStatusCheckResponse contains the status and deletion timestamp if needed
+// SpaceStatusCheckResponse contains the current status of space
 message SpaceStatusCheckResponse {
-    SpaceStatus status = 1;
-    int64 deletionTimestamp = 2;
+    SpaceStatusPayload payload = 1;
 }
 
 // SpaceStatusChangeRequest contains the deletionChange if we want to delete space, or it is empty otherwise
@@ -86,5 +90,7 @@ message SpaceStatusChangeRequest {
     bytes deletionChangePayload = 3;
 }
 
-// SpaceStatusChangeResponse is always empty, you should check error in case something was wrong
-message SpaceStatusChangeResponse {}
+// SpaceStatusChangeResponse contains changed status of space
+message SpaceStatusChangeResponse {
+    SpaceStatusPayload payload = 1;
+}

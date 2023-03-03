@@ -17,8 +17,8 @@ func New() CoordinatorClient {
 }
 
 type CoordinatorClient interface {
-	ChangeStatus(ctx context.Context, spaceId string, deleteRaw *treechangeproto.RawTreeChangeWithId) (err error)
-	StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusCheckResponse, err error)
+	ChangeStatus(ctx context.Context, spaceId string, deleteRaw *treechangeproto.RawTreeChangeWithId) (status *coordinatorproto.SpaceStatusPayload, err error)
+	StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusPayload, err error)
 	SpaceSign(ctx context.Context, spaceId string, spaceHeader []byte) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error)
 	FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (limit uint64, err error)
 	app.Component
@@ -29,27 +29,36 @@ type coordinatorClient struct {
 	nodeConf nodeconf.Service
 }
 
-func (c *coordinatorClient) ChangeStatus(ctx context.Context, spaceId string, deleteRaw *treechangeproto.RawTreeChangeWithId) (err error) {
+func (c *coordinatorClient) ChangeStatus(ctx context.Context, spaceId string, deleteRaw *treechangeproto.RawTreeChangeWithId) (status *coordinatorproto.SpaceStatusPayload, err error) {
 	cl, err := c.client(ctx)
 	if err != nil {
 		return
 	}
-	_, err = cl.SpaceStatusChange(ctx, &coordinatorproto.SpaceStatusChangeRequest{
+	resp, err := cl.SpaceStatusChange(ctx, &coordinatorproto.SpaceStatusChangeRequest{
 		SpaceId:               spaceId,
 		DeletionChangeId:      deleteRaw.Id,
 		DeletionChangePayload: deleteRaw.RawChange,
 	})
+	if err != nil {
+		return
+	}
+	status = resp.Payload
 	return
 }
 
-func (c *coordinatorClient) StatusCheck(ctx context.Context, spaceId string) (response *coordinatorproto.SpaceStatusCheckResponse, err error) {
+func (c *coordinatorClient) StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusPayload, err error) {
 	cl, err := c.client(ctx)
 	if err != nil {
 		return
 	}
-	return cl.SpaceStatusCheck(ctx, &coordinatorproto.SpaceStatusCheckRequest{
+	resp, err := cl.SpaceStatusCheck(ctx, &coordinatorproto.SpaceStatusCheckRequest{
 		SpaceId: spaceId,
 	})
+	if err != nil {
+		return
+	}
+	status = resp.Payload
+	return
 }
 
 func (c *coordinatorClient) Init(a *app.App) (err error) {
