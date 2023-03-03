@@ -20,8 +20,8 @@ service File {
     rpc BlocksBind(BlocksBindRequest) returns (BlocksBindResponse);
     // FilesDelete deletes files by id
     rpc FilesDelete(FilesDeleteRequest) returns (FilesDeleteResponse);
-    // FileCheck checks file CIDs and children for exists
-    rpc FilesCheck(FilesCheckRequest) returns (FilesCheckResponse);
+    // FilesInfo return info by given files id
+    rpc FilesInfo(FilesInfoRequest) returns (FilesInfoResponse);
     // Check checks the connection and credentials
     rpc Check(CheckRequest) returns (CheckResponse);
     // SpaceInfo returns usage, limit, etc about space
@@ -91,13 +91,19 @@ message FilesDeleteRequest {
 
 message FilesDeleteResponse {}
 
-message FilesCheckRequest {
+message FilesInfoRequest {
     string spaceId = 1;
     repeated string fileIds = 2;
 }
 
-message FilesCheckResponse {
-    repeated BlockAvailability blocksAvailability = 1;
+message FilesInfoResponse {
+    repeated FileInfo filesInfo = 1;
+}
+
+message FileInfo {
+    string fileId = 1;
+    uint64 usageBytes = 2;
+    uint32 cidsCount = 3;
 }
 
 message CheckRequest {}
