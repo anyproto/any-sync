@@ -86,7 +86,7 @@ message BlocksBindResponse {}
 
 message FilesDeleteRequest {
     string spaceId = 1;
-    repeated bytes fileIds = 2;
+    repeated string fileIds = 2;
 }
 
 message FilesDeleteResponse {}
