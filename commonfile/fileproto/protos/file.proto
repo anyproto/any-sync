@@ -93,7 +93,7 @@ message FilesDeleteResponse {}
 
 message FilesCheckRequest {
     string spaceId = 1;
-    repeated bytes fileIds = 2;
+    repeated string fileIds = 2;
 }
 
 message FilesCheckResponse {
