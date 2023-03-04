@@ -25,6 +25,15 @@ message SpaceSignRequest {
     bytes header = 2;
 }
 
+enum ErrorCodes {
+    Unexpected = 0;
+    SpaceDeleted = 1;
+    SpaceDeletionPending = 2;
+    SpaceCreated = 3;
+    SpaceNotExists = 4;
+    ErrorOffset = 300;
+}
+
 enum SpaceStatus {
     SpaceStatusCreated = 0;
     SpaceStatusPendingDeletion = 1;
