@@ -90,6 +90,7 @@ func (d *diffSyncer) UpdateHeads(id string, heads []string) {
 }
 
 func (d *diffSyncer) Sync(ctx context.Context) error {
+	// TODO: split diffsyncer into components
 	st := time.Now()
 	// diffing with responsible peers according to configuration
 	peers, err := d.peerManager.GetResponsiblePeers(ctx)
