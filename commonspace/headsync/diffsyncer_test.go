@@ -207,13 +207,28 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		require.NoError(t, diffSyncer.Sync(ctx))
 	})
 
-	t.Run("diff syncer sync other error", func(t *testing.T) {
+	t.Run("diff syncer sync unexpected", func(t *testing.T) {
 		peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
 			Return([]peer.Peer{mockPeer{}}, nil)
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(spaceId, clientMock))).
 			Return(nil, nil, nil, spacesyncproto.ErrUnexpected)
+
+		require.NoError(t, diffSyncer.Sync(ctx))
+	})
+
+	t.Run("diff syncer sync space is deleted error", func(t *testing.T) {
+		peerManagerMock.EXPECT().
+			GetResponsiblePeers(gomock.Any()).
+			Return([]peer.Peer{mockPeer{}}, nil)
+		diffMock.EXPECT().
+			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(spaceId, clientMock))).
+			Return(nil, nil, nil, spacesyncproto.ErrSpaceIsDeleted)
+		stMock.EXPECT().SpaceSettingsId().Return("settingsId")
+		cacheMock.EXPECT().
+			GetTree(gomock.Any(), spaceId, "settingsId").
+			Return(nil, nil)
 
 		require.NoError(t, diffSyncer.Sync(ctx))
 	})
