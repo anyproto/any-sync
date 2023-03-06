@@ -1,11 +1,17 @@
 package logger
 
-import "go.uber.org/zap"
+import (
+	"go.uber.org/zap"
+
+	"github.com/anytypeio/any-sync/util/slice"
+)
 
 type Config struct {
-	Production   bool              `yaml:"production"`
-	DefaultLevel string            `yaml:"defaultLevel"`
-	NamedLevels  map[string]string `yaml:"namedLevels"`
+	Production     bool              `yaml:"production"`
+	DefaultLevel   string            `yaml:"defaultLevel"`
+	NamedLevels    map[string]string `yaml:"namedLevels"`
+	AddOutputPaths []string
+	DisableStdErr  bool
 }
 
 func (l Config) ApplyGlobal() {
@@ -15,19 +21,33 @@ func (l Config) ApplyGlobal() {
 	} else {
 		conf = zap.NewDevelopmentConfig()
 	}
+	if len(l.AddOutputPaths) > 0 {
+		conf.OutputPaths = append(conf.OutputPaths, l.AddOutputPaths...)
+	}
+	if l.DisableStdErr {
+		conf.OutputPaths = slice.Filter(conf.OutputPaths, func(path string) bool {
+			return path != "stderr"
+		})
+	}
+
+	var err error
 	if defaultLevel, err := zap.ParseAtomicLevel(l.DefaultLevel); err == nil {
 		conf.Level = defaultLevel
 	}
-	var levels = make(map[string]zap.AtomicLevel)
+	var lvl = make(map[string]zap.AtomicLevel)
 	for k, v := range l.NamedLevels {
-		if lev, err := zap.ParseAtomicLevel(v); err != nil {
-			levels[k] = lev
+		if lev, err := zap.ParseAtomicLevel(v); err == nil {
+			lvl[k] = lev
+			// we need to have a minimum level of all named loggers for the main logger
+			if lev.Level() < conf.Level.Level() {
+				conf.Level.SetLevel(lev.Level())
+			}
 		}
 	}
-	defaultLogger, err := conf.Build()
+	lg, err := conf.Build()
 	if err != nil {
 		Default().Fatal("can't build logger", zap.Error(err))
 	}
-	SetDefault(defaultLogger)
-	SetNamedLevels(levels)
+	SetDefault(lg)
+	SetNamedLevels(lvl)
 }
