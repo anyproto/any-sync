@@ -36,8 +36,8 @@ func (c *coordinatorClient) ChangeStatus(ctx context.Context, spaceId string, de
 	}
 	resp, err := cl.SpaceStatusChange(ctx, &coordinatorproto.SpaceStatusChangeRequest{
 		SpaceId:               spaceId,
-		DeletionChangeId:      deleteRaw.Id,
-		DeletionChangePayload: deleteRaw.RawChange,
+		DeletionChangeId:      deleteRaw.GetId(),
+		DeletionChangePayload: deleteRaw.GetRawChange(),
 	})
 	if err != nil {
 		return
