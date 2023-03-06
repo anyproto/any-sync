@@ -1,18 +1,20 @@
-//go:build (linux || darwin) && !android && !ios && !nographviz && (amd64 || arm64)
+//go:build (linux || darwin) && !android && !ios && !nographviz && cgo && (amd64 || arm64)
 // +build linux darwin
 // +build !android
 // +build !ios
 // +build !nographviz
+// +build cgo
 // +build amd64 arm64
 
 package acllistbuilder
 
 import (
 	"fmt"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
-	"github.com/gogo/protobuf/proto"
 	"strings"
 	"unicode"
+
+	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/gogo/protobuf/proto"
 
 	"github.com/awalterschulze/gographviz"
 )

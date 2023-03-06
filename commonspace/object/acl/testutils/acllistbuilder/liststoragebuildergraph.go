@@ -1,5 +1,5 @@
-//go:build ((!linux && !darwin) || android || ios || nographviz) && !amd64
-// +build !linux,!darwin android ios nographviz
+//go:build ((!linux && !darwin) || android || ios || nographviz || !cgo) && !amd64
+// +build !linux,!darwin android ios nographviz !cgo
 // +build !amd64
 
 package acllistbuilder
