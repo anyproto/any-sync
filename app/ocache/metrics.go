@@ -1,11 +1,18 @@
 package ocache
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"github.com/prometheus/client_golang/prometheus"
+	"strings"
+)
 
 func WithPrometheus(reg *prometheus.Registry, namespace, subsystem string) Option {
 	if subsystem == "" {
 		subsystem = "cache"
 	}
+	nameSplit := strings.Split(namespace, ".")
+	subSplit := strings.Split(subsystem, ".")
+	namespace = strings.Join(nameSplit, "_")
+	subsystem = strings.Join(subSplit, "_")
 	if reg == nil {
 		return nil
 	}

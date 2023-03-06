@@ -5,6 +5,7 @@ import (
 	"github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/commonspace/credentialprovider"
 	"github.com/anytypeio/any-sync/commonspace/headsync"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
@@ -45,6 +46,7 @@ type spaceService struct {
 	configurationService nodeconf.Service
 	storageProvider      spacestorage.SpaceStorageProvider
 	peermanagerProvider  peermanager.PeerManagerProvider
+	credentialProvider   credentialprovider.CredentialProvider
 	treeGetter           treegetter.TreeGetter
 	pool                 pool.Pool
 }
@@ -56,6 +58,12 @@ func (s *spaceService) Init(a *app.App) (err error) {
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.treeGetter = a.MustComponent(treegetter.CName).(treegetter.TreeGetter)
 	s.peermanagerProvider = a.MustComponent(peermanager.CName).(peermanager.PeerManagerProvider)
+	credProvider := a.Component(credentialprovider.CName)
+	if credProvider != nil {
+		s.credentialProvider = credProvider.(credentialprovider.CredentialProvider)
+	} else {
+		s.credentialProvider = credentialprovider.NewNoOp()
+	}
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	return nil
 }
@@ -139,8 +147,8 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		return nil, err
 	}
 
-	headSync := headsync.NewHeadSync(id, spaceIsDeleted, s.config.SyncPeriod, lastConfiguration, st, peerManager, getter, syncStatus, log)
-	objectSync := objectsync.NewObjectSync(id, spaceIsDeleted, lastConfiguration, peerManager, getter)
+	headSync := headsync.NewHeadSync(id, spaceIsDeleted, s.config.SyncPeriod, lastConfiguration, st, peerManager, getter, syncStatus, s.credentialProvider, log)
+	objectSync := objectsync.NewObjectSync(id, spaceIsDeleted, lastConfiguration, peerManager, getter, st)
 	sp := &space{
 		id:            id,
 		objectSync:    objectSync,
