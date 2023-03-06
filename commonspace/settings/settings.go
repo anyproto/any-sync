@@ -22,7 +22,7 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-var log = logger.NewNamed("common.commonspace.settings")
+var log = logger.NewNamed("commonspace.settings")
 
 type SettingsObject interface {
 	synctree.SyncTree
