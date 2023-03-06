@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/coordinator/coordinatorproto"
 	"github.com/anytypeio/any-sync/net/pool"
+	"github.com/anytypeio/any-sync/net/rpc/rpcerr"
 	"github.com/anytypeio/any-sync/nodeconf"
 )
 
@@ -40,6 +41,7 @@ func (c *coordinatorClient) ChangeStatus(ctx context.Context, spaceId string, de
 		DeletionChangePayload: deleteRaw.GetRawChange(),
 	})
 	if err != nil {
+		err = rpcerr.Unwrap(err)
 		return
 	}
 	status = resp.Payload
@@ -55,6 +57,7 @@ func (c *coordinatorClient) StatusCheck(ctx context.Context, spaceId string) (st
 		SpaceId: spaceId,
 	})
 	if err != nil {
+		err = rpcerr.Unwrap(err)
 		return
 	}
 	status = resp.Payload
@@ -81,6 +84,7 @@ func (c *coordinatorClient) SpaceSign(ctx context.Context, spaceId string, space
 		Header:  spaceHeader,
 	})
 	if err != nil {
+		err = rpcerr.Unwrap(err)
 		return
 	}
 	return resp.Receipt, nil
@@ -96,6 +100,7 @@ func (c *coordinatorClient) FileLimitCheck(ctx context.Context, spaceId string, 
 		SpaceId:         spaceId,
 	})
 	if err != nil {
+		err = rpcerr.Unwrap(err)
 		return
 	}
 	return resp.Limit, nil
