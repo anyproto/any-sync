@@ -3,6 +3,7 @@ package synctree
 import (
 	"context"
 	"errors"
+
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
@@ -10,7 +11,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
-	spacestorage "github.com/anytypeio/any-sync/commonspace/spacestorage"
+	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/nodeconf"
@@ -50,7 +51,7 @@ type syncTree struct {
 	isDeleted  bool
 }
 
-var log = logger.NewNamed("commonspace.synctree")
+var log = logger.NewNamed("common.commonspace.synctree")
 
 var buildObjectTree = objecttree.BuildObjectTree
 var createSyncClient = newSyncClient

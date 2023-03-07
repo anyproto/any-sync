@@ -2,6 +2,9 @@ package objectsync
 
 import (
 	"context"
+	"sync/atomic"
+	"time"
+
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace/object/syncobjectgetter"
@@ -12,11 +15,9 @@ import (
 	"github.com/anytypeio/any-sync/nodeconf"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
-	"sync/atomic"
-	"time"
 )
 
-var log = logger.NewNamed("commonspace.objectsync")
+var log = logger.NewNamed("common.commonspace.objectsync")
 
 type ObjectSync interface {
 	ocache.ObjectLastUsage
