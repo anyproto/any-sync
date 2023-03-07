@@ -57,10 +57,10 @@ func SetNamedLevels(l map[string]zap.AtomicLevel) {
 		logger, _ = loggerConfig.Build()
 	}
 
-	for name, lg := range namedLoggers {
+	for name, nl := range namedLoggers {
 		level := getLevel(name)
 		// this can be racy, but
-		lg.Logger = zap.New(logger.Core()).WithOptions(
+		nl.Logger = zap.New(logger.Core()).WithOptions(
 			zap.IncreaseLevel(level),
 		).Named(name)
 	}

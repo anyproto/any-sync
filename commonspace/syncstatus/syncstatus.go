@@ -3,15 +3,16 @@ package syncstatus
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/anytypeio/any-sync/app/logger"
-	treestorage "github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/anytypeio/any-sync/util/periodicsync"
 	"github.com/anytypeio/any-sync/util/slice"
 	"golang.org/x/exp/slices"
-	"sync"
-	"time"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 	syncTimeout        = time.Second
 )
 
-var log = logger.NewNamed("commonspace.syncstatus")
+var log = logger.NewNamed("common.commonspace.syncstatus")
 
 type UpdateReceiver interface {
 	UpdateTree(ctx context.Context, treeId string, status SyncStatus) (err error)
