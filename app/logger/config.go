@@ -35,7 +35,7 @@ func (l Config) ApplyGlobal() {
 		} else {
 			conf = zap.NewDevelopmentConfig()
 		}
-		var encConfig zapcore.EncoderConfig
+		encConfig := conf.EncoderConfig
 		switch l.Format {
 		case PlaintextOutput:
 			encConfig.EncodeLevel = zapcore.CapitalLevelEncoder
