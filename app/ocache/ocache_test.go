@@ -3,6 +3,7 @@ package ocache
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -12,10 +13,12 @@ import (
 )
 
 type testObject struct {
-	name      string
-	closeErr  error
-	closeCh   chan struct{}
-	tryReturn bool
+	name           string
+	closeErr       error
+	closeCh        chan struct{}
+	tryReturn      bool
+	closeCalled    bool
+	tryCloseCalled bool
 }
 
 func NewTestObject(name string, tryReturn bool, closeCh chan struct{}) *testObject {
@@ -27,6 +30,7 @@ func NewTestObject(name string, tryReturn bool, closeCh chan struct{}) *testObje
 }
 
 func (t *testObject) Close() (err error) {
+	t.closeCalled = true
 	if t.closeCh != nil {
 		<-t.closeCh
 	}
@@ -34,6 +38,7 @@ func (t *testObject) Close() (err error) {
 }
 
 func (t *testObject) TryClose() (res bool, err error) {
+	t.tryCloseCalled = true
 	if t.closeCh != nil {
 		<-t.closeCh
 		return true, t.closeErr
@@ -126,7 +131,7 @@ func TestOCache_Get(t *testing.T) {
 }
 
 func TestOCache_GC(t *testing.T) {
-	t.Run("test without close wait", func(t *testing.T) {
+	t.Run("test gc expired object", func(t *testing.T) {
 		c := New(func(ctx context.Context, id string) (value Object, err error) {
 			return NewTestObject(id, true, nil), nil
 		}, WithTTL(time.Millisecond*10))
@@ -140,7 +145,7 @@ func TestOCache_GC(t *testing.T) {
 		c.GC()
 		assert.Equal(t, 0, c.Len())
 	})
-	t.Run("test with close wait", func(t *testing.T) {
+	t.Run("test gc tryClose true, close before get", func(t *testing.T) {
 		closeCh := make(chan struct{})
 		getCh := make(chan struct{})
 
@@ -173,15 +178,60 @@ func TestOCache_GC(t *testing.T) {
 		<-getCh
 		require.Equal(t, []string{"close", "get"}, events)
 	})
+	t.Run("test gc tryClose false, many get", func(t *testing.T) {
+		timesCalled := &atomic.Int32{}
+		obj := NewTestObject("id", false, nil)
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			timesCalled.Add(1)
+			return obj, nil
+		}, WithTTL(time.Millisecond*10))
+
+		val, err := c.Get(context.TODO(), "id")
+		require.NoError(t, err)
+		require.NotNil(t, val)
+		assert.Equal(t, 1, c.Len())
+		// making ttl pass
+		time.Sleep(time.Millisecond * 40)
+		// first gc will be run after 20 secs, so calling it manually
+		begin := make(chan struct{})
+		wg := sync.WaitGroup{}
+		once := sync.Once{}
+
+		wg.Add(1)
+		go func() {
+			<-begin
+			c.GC()
+			wg.Done()
+		}()
+
+		for i := 0; i < 5; i++ {
+			wg.Add(1)
+			go func(i int) {
+				once.Do(func() {
+					close(begin)
+				})
+				if i > 0 {
+					time.Sleep(time.Duration(i) * time.Millisecond)
+				}
+				_, err := c.Get(context.TODO(), "id")
+				require.NoError(t, err)
+				wg.Done()
+			}(i)
+		}
+		require.NoError(t, err)
+		wg.Wait()
+		require.Equal(t, timesCalled.Load(), int32(1))
+		require.True(t, obj.tryCloseCalled)
+	})
 }
 
 func Test_OCache_Remove(t *testing.T) {
 	closeCh := make(chan struct{})
 	getCh := make(chan struct{})
-
 	c := New(func(ctx context.Context, id string) (value Object, err error) {
 		return NewTestObject(id, false, closeCh), nil
 	}, WithTTL(time.Millisecond*10))
+
 	val, err := c.Get(context.TODO(), "id")
 	require.NoError(t, err)
 	require.NotNil(t, val)
