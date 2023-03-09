@@ -3,6 +3,7 @@ package ocache
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -178,7 +179,7 @@ func TestOCache_GC(t *testing.T) {
 		<-getCh
 		require.Equal(t, []string{"close", "get"}, events)
 	})
-	t.Run("test gc tryClose false, many get", func(t *testing.T) {
+	t.Run("test gc tryClose false, many parallel get", func(t *testing.T) {
 		timesCalled := &atomic.Int32{}
 		obj := NewTestObject("id", false, nil)
 		c := New(func(ctx context.Context, id string) (value Object, err error) {
@@ -190,9 +191,7 @@ func TestOCache_GC(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, val)
 		assert.Equal(t, 1, c.Len())
-		// making ttl pass
 		time.Sleep(time.Millisecond * 40)
-		// first gc will be run after 20 secs, so calling it manually
 		begin := make(chan struct{})
 		wg := sync.WaitGroup{}
 		once := sync.Once{}
@@ -203,15 +202,14 @@ func TestOCache_GC(t *testing.T) {
 			c.GC()
 			wg.Done()
 		}()
-
-		for i := 0; i < 5; i++ {
+		for i := 0; i < 50; i++ {
 			wg.Add(1)
 			go func(i int) {
 				once.Do(func() {
 					close(begin)
 				})
-				if i > 0 {
-					time.Sleep(time.Duration(i) * time.Millisecond)
+				if i%2 != 0 {
+					time.Sleep(time.Millisecond)
 				}
 				_, err := c.Get(context.TODO(), "id")
 				require.NoError(t, err)
@@ -222,6 +220,45 @@ func TestOCache_GC(t *testing.T) {
 		wg.Wait()
 		require.Equal(t, timesCalled.Load(), int32(1))
 		require.True(t, obj.tryCloseCalled)
+	})
+	t.Run("test gc tryClose different, many objects", func(t *testing.T) {
+		tryCloseIds := make(map[string]bool)
+		called := make(map[string]int)
+		max := 1000
+		getId := func(i int) string {
+			return fmt.Sprintf("id%d", i)
+		}
+		for i := 0; i < max; i++ {
+			if i%2 == 1 {
+				tryCloseIds[getId(i)] = true
+			} else {
+				tryCloseIds[getId(i)] = false
+			}
+		}
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			called[id] = called[id] + 1
+			return NewTestObject(id, tryCloseIds[id], nil), nil
+		}, WithTTL(time.Millisecond*10))
+
+		for i := 0; i < max; i++ {
+			val, err := c.Get(context.TODO(), getId(i))
+			require.NoError(t, err)
+			require.NotNil(t, val)
+		}
+		assert.Equal(t, max, c.Len())
+		time.Sleep(time.Millisecond * 40)
+		c.GC()
+		for i := 0; i < max; i++ {
+			val, err := c.Get(context.TODO(), getId(i))
+			require.NoError(t, err)
+			require.NotNil(t, val)
+		}
+		for i := 0; i < max; i++ {
+			val, err := c.Get(context.TODO(), getId(i))
+			require.NoError(t, err)
+			require.NotNil(t, val)
+			require.Equal(t, called[getId(i)], i%2+1)
+		}
 	})
 }
 

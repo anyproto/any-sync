@@ -71,116 +71,6 @@ type Object interface {
 	TryClose() (res bool, err error)
 }
 
-type entryState int
-
-const (
-	entryStateLoading = iota
-	entryStateActive
-	entryStateClosing
-	entryStateClosed
-)
-
-type entry struct {
-	id        string
-	state     entryState
-	lastUsage time.Time
-	load      chan struct{}
-	loadErr   error
-	value     Object
-	close     chan struct{}
-	mx        sync.Mutex
-}
-
-func newEntry(id string, value Object, state entryState) *entry {
-	return &entry{
-		id:        id,
-		load:      make(chan struct{}),
-		lastUsage: time.Now(),
-		state:     state,
-		value:     value,
-	}
-}
-
-func (e *entry) getState() entryState {
-	e.mx.Lock()
-	defer e.mx.Unlock()
-	return e.state
-}
-
-func (e *entry) isClosing() bool {
-	e.mx.Lock()
-	defer e.mx.Unlock()
-	return e.state == entryStateClosed || e.state == entryStateClosing
-}
-
-func (e *entry) waitLoad(ctx context.Context, id string) (value Object, err error) {
-	select {
-	case <-ctx.Done():
-		log.DebugCtx(ctx, "ctx done while waiting on object load", zap.String("id", id))
-		return nil, ctx.Err()
-	case <-e.load:
-		return e.value, e.loadErr
-	}
-}
-
-func (e *entry) waitClose(ctx context.Context, id string) (res bool, err error) {
-	e.mx.Lock()
-	switch e.state {
-	case entryStateClosing:
-		waitCh := e.close
-		e.mx.Unlock()
-		select {
-		case <-ctx.Done():
-			log.DebugCtx(ctx, "ctx done while waiting on object close", zap.String("id", id))
-			return false, ctx.Err()
-		case <-waitCh:
-			return true, nil
-		}
-	case entryStateClosed:
-		e.mx.Unlock()
-		return true, nil
-	default:
-		e.mx.Unlock()
-		return false, nil
-	}
-}
-
-func (e *entry) setClosing(wait bool) (prevState entryState) {
-	e.mx.Lock()
-	prevState = e.state
-	if e.state == entryStateClosing {
-		waitCh := e.close
-		e.mx.Unlock()
-		if !wait {
-			return
-		}
-		<-waitCh
-		e.mx.Lock()
-	}
-	if e.state != entryStateClosed {
-		e.state = entryStateClosing
-		e.close = make(chan struct{})
-	}
-	e.mx.Unlock()
-	return
-}
-
-func (e *entry) setActive(chClose bool) {
-	e.mx.Lock()
-	defer e.mx.Unlock()
-	if chClose {
-		close(e.close)
-	}
-	e.state = entryStateActive
-}
-
-func (e *entry) setClosed() {
-	e.mx.Lock()
-	defer e.mx.Unlock()
-	close(e.close)
-	e.state = entryStateClosed
-}
-
 type OCache interface {
 	// DoLockedIfNotExists does an action if the object with id is not in cache
 	// under a global lock, this will prevent a race which otherwise occurs
@@ -312,8 +202,8 @@ func (c *oCache) remove(e *entry, remData bool) (ok bool, err error) {
 	if e.value == nil {
 		return false, ErrNotExists
 	}
-	prevState := e.setClosing(true)
-	if prevState == entryStateActive {
+	_, curState := e.setClosing(true)
+	if curState == entryStateClosing {
 		err = e.value.Close()
 		e.setClosed()
 	}
@@ -321,7 +211,7 @@ func (c *oCache) remove(e *entry, remData bool) (ok bool, err error) {
 		return
 	}
 	c.mu.Lock()
-	if prevState == entryStateActive {
+	if curState == entryStateClosing {
 		delete(c.data, e.id)
 	}
 	c.mu.Unlock()
@@ -406,7 +296,7 @@ func (c *oCache) GC() {
 	c.mu.Unlock()
 
 	for idx, e := range toClose {
-		prevState := e.setClosing(false)
+		prevState, _ := e.setClosing(false)
 		if prevState == entryStateClosing || prevState == entryStateClosed {
 			toClose[idx] = nil
 			continue
