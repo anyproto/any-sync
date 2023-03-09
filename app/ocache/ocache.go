@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/util/slice"
 	"go.uber.org/zap"
 	"sync"
 	"time"
@@ -143,17 +142,6 @@ Load:
 	return e.waitLoad(ctx, id)
 }
 
-func (c *oCache) metricsGet(hit bool) {
-	if c.metrics == nil {
-		return
-	}
-	if hit {
-		c.metrics.hit.Inc()
-	} else {
-		c.metrics.miss.Inc()
-	}
-}
-
 func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) {
 	c.mu.Lock()
 	val, ok := c.data[id]
@@ -191,13 +179,13 @@ func (c *oCache) Remove(id string) (ok bool, err error) {
 	e, ok := c.data[id]
 	if !ok {
 		c.mu.Unlock()
-		return
+		return false, ErrNotExists
 	}
 	c.mu.Unlock()
-	return c.remove(e, true)
+	return c.remove(e)
 }
 
-func (c *oCache) remove(e *entry, remData bool) (ok bool, err error) {
+func (c *oCache) remove(e *entry) (ok bool, err error) {
 	<-e.load
 	if e.value == nil {
 		return false, ErrNotExists
@@ -205,16 +193,11 @@ func (c *oCache) remove(e *entry, remData bool) (ok bool, err error) {
 	_, curState := e.setClosing(true)
 	if curState == entryStateClosing {
 		err = e.value.Close()
+		c.mu.Lock()
 		e.setClosed()
-	}
-	if !remData {
-		return
-	}
-	c.mu.Lock()
-	if curState == entryStateClosing {
 		delete(c.data, e.id)
+		c.mu.Unlock()
 	}
-	c.mu.Unlock()
 	return
 }
 
@@ -284,47 +267,35 @@ func (c *oCache) GC() {
 	deadline := c.timeNow().Add(-c.ttl)
 	var toClose []*entry
 	for _, e := range c.data {
-		if e.getState() != entryStateActive {
-			continue
-		}
-		if e.lastUsage.Before(deadline) {
+		if e.isActive() && e.lastUsage.Before(deadline) {
 			e.close = make(chan struct{})
 			toClose = append(toClose, e)
 		}
 	}
 	size := len(c.data)
 	c.mu.Unlock()
-
-	for idx, e := range toClose {
+	closedNum := 0
+	for _, e := range toClose {
 		prevState, _ := e.setClosing(false)
 		if prevState == entryStateClosing || prevState == entryStateClosed {
-			toClose[idx] = nil
 			continue
 		}
-		ok, err := e.value.TryClose()
-		if !ok {
-			e.setActive(true)
-			toClose[idx] = nil
-			continue
-		} else {
-			e.setClosed()
-		}
+		closed, err := e.value.TryClose()
 		if err != nil {
 			c.log.With("object_id", e.id).Warnf("GC: object close error: %v", err)
 		}
+		if !closed {
+			e.setActive(true)
+			continue
+		} else {
+			closedNum++
+			c.mu.Lock()
+			e.setClosed()
+			delete(c.data, e.id)
+			c.mu.Unlock()
+		}
 	}
-	toClose = slice.DiscardFromSlice(toClose, func(e *entry) bool {
-		return e == nil
-	})
-	c.log.Infof("GC: removed %d; cache size: %d", len(toClose), size)
-	if len(toClose) > 0 && c.metrics != nil {
-		c.metrics.gc.Add(float64(len(toClose)))
-	}
-	c.mu.Lock()
-	for _, e := range toClose {
-		delete(c.data, e.id)
-	}
-	c.mu.Unlock()
+	c.metricsClosed(closedNum, size)
 }
 
 func (c *oCache) Len() int {
@@ -347,9 +318,28 @@ func (c *oCache) Close() (err error) {
 	}
 	c.mu.Unlock()
 	for _, e := range toClose {
-		if _, err := c.remove(e, false); err != ErrNotExists {
+		if _, err := c.remove(e); err != ErrNotExists {
 			c.log.With("object_id", e.id).Warnf("cache close: object close error: %v", err)
 		}
 	}
 	return nil
+}
+
+func (c *oCache) metricsGet(hit bool) {
+	if c.metrics == nil {
+		return
+	}
+	if hit {
+		c.metrics.hit.Inc()
+	} else {
+		c.metrics.miss.Inc()
+	}
+}
+
+func (c *oCache) metricsClosed(closedLen, size int) {
+	c.log.Infof("GC: removed %d; cache size: %d", closedLen, size)
+	if c.metrics == nil || closedLen == 0 {
+		return
+	}
+	c.metrics.gc.Add(float64(closedLen))
 }
