@@ -388,7 +388,6 @@ func Test_OCache_Remove(t *testing.T) {
 func TestOCacheFuzzy(t *testing.T) {
 	t.Run("test many objects gc, get and remove simultaneously, close after", func(t *testing.T) {
 		tryCloseIds := make(map[string]bool)
-		called := make(map[string]int)
 		max := 2000
 		getId := func(i int) string {
 			return fmt.Sprintf("id%d", i)
@@ -401,7 +400,6 @@ func TestOCacheFuzzy(t *testing.T) {
 			}
 		}
 		c := New(func(ctx context.Context, id string) (value Object, err error) {
-			called[id] = called[id] + 1
 			return NewTestObject(id, tryCloseIds[id], nil), nil
 		}, WithTTL(time.Nanosecond))
 
@@ -445,7 +443,6 @@ func TestOCacheFuzzy(t *testing.T) {
 	})
 	t.Run("test many objects gc, get, remove and close simultaneously", func(t *testing.T) {
 		tryCloseIds := make(map[string]bool)
-		called := make(map[string]int)
 		max := 2000
 		getId := func(i int) string {
 			return fmt.Sprintf("id%d", i)
@@ -458,7 +455,6 @@ func TestOCacheFuzzy(t *testing.T) {
 			}
 		}
 		c := New(func(ctx context.Context, id string) (value Object, err error) {
-			called[id] = called[id] + 1
 			return NewTestObject(id, tryCloseIds[id], nil), nil
 		}, WithTTL(time.Nanosecond))
 
