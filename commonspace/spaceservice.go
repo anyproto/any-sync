@@ -19,6 +19,7 @@ import (
 	"github.com/anytypeio/any-sync/net/pool"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"sync/atomic"
+	"time"
 )
 
 const CName = "common.commonspace"
@@ -162,6 +163,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		treesUsed:     &atomic.Int32{},
 		isClosed:      spaceIsClosed,
 		isDeleted:     spaceIsDeleted,
+		spaceTTL:      time.Duration(s.config.GCTTL) * time.Second,
 	}
 	return sp, nil
 }

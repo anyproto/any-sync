@@ -103,6 +103,10 @@ type testPeer struct {
 	drpc.Conn
 }
 
+func (t testPeer) TryClose() (res bool, err error) {
+	return true, t.Close()
+}
+
 func (t testPeer) Id() string {
 	return t.id
 }

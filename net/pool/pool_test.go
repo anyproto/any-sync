@@ -194,6 +194,10 @@ func (t *testPeer) LastUsage() time.Time {
 
 func (t *testPeer) UpdateLastUsage() {}
 
+func (t *testPeer) TryClose() (res bool, err error) {
+	return true, t.Close()
+}
+
 func (t *testPeer) Close() error {
 	select {
 	case <-t.closed:

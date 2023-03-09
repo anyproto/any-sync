@@ -51,6 +51,10 @@ func (p pushSpaceRequestMatcher) String() string {
 
 type mockPeer struct{}
 
+func (m mockPeer) TryClose() (res bool, err error) {
+	return true, m.Close()
+}
+
 func (m mockPeer) Id() string {
 	return "mockId"
 }

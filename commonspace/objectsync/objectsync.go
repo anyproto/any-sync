@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace/object/syncobjectgetter"
 	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
@@ -20,7 +19,7 @@ import (
 var log = logger.NewNamed("common.commonspace.objectsync")
 
 type ObjectSync interface {
-	ocache.ObjectLastUsage
+	LastUsage
 	synchandler.SyncHandler
 	MessagePool() MessagePool
 
