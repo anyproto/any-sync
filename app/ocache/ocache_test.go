@@ -148,7 +148,7 @@ func TestOCache_GC(t *testing.T) {
 		assert.Equal(t, 1, c.Len())
 		c.GC()
 		assert.Equal(t, 1, c.Len())
-		time.Sleep(time.Millisecond * 30)
+		time.Sleep(time.Millisecond * 20)
 		c.GC()
 		assert.Equal(t, 0, c.Len())
 	})
@@ -164,11 +164,11 @@ func TestOCache_GC(t *testing.T) {
 		require.NotNil(t, val)
 		assert.Equal(t, 1, c.Len())
 		// making ttl pass
-		time.Sleep(time.Millisecond * 40)
+		time.Sleep(time.Millisecond * 20)
 		// first gc will be run after 20 secs, so calling it manually
 		go c.GC()
 		// waiting until all objects are marked as closing
-		time.Sleep(time.Millisecond * 40)
+		time.Sleep(time.Millisecond * 20)
 		var events []string
 		go func() {
 			_, err := c.Get(context.TODO(), "id")
@@ -178,7 +178,7 @@ func TestOCache_GC(t *testing.T) {
 			close(getCh)
 		}()
 		// sleeping to make sure that Get is called
-		time.Sleep(time.Millisecond * 40)
+		time.Sleep(time.Millisecond * 20)
 		events = append(events, "close")
 		close(closeCh)
 
@@ -197,7 +197,7 @@ func TestOCache_GC(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, val)
 		assert.Equal(t, 1, c.Len())
-		time.Sleep(time.Millisecond * 40)
+		time.Sleep(time.Millisecond * 20)
 		begin := make(chan struct{})
 		wg := sync.WaitGroup{}
 		once := sync.Once{}
@@ -252,7 +252,7 @@ func TestOCache_GC(t *testing.T) {
 			require.NotNil(t, val)
 		}
 		assert.Equal(t, max, c.Len())
-		time.Sleep(time.Millisecond * 40)
+		time.Sleep(time.Millisecond * 20)
 		c.GC()
 		for i := 0; i < max; i++ {
 			val, err := c.Get(context.TODO(), getId(i))
@@ -285,7 +285,7 @@ func Test_OCache_Remove(t *testing.T) {
 			_, err := c.Remove("id")
 			require.NoError(t, err)
 		}()
-		time.Sleep(time.Millisecond * 40)
+		time.Sleep(time.Millisecond * 20)
 
 		var events []string
 		go func() {
@@ -296,7 +296,7 @@ func Test_OCache_Remove(t *testing.T) {
 			close(getCh)
 		}()
 		// sleeping to make sure that Get is called
-		time.Sleep(time.Millisecond * 40)
+		time.Sleep(time.Millisecond * 20)
 		events = append(events, "close")
 		close(closeCh)
 
@@ -314,9 +314,9 @@ func Test_OCache_Remove(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, val)
 		assert.Equal(t, 1, c.Len())
-		time.Sleep(time.Millisecond * 40)
+		time.Sleep(time.Millisecond * 20)
 		go c.GC()
-		time.Sleep(time.Millisecond * 40)
+		time.Sleep(time.Millisecond * 20)
 		var events []string
 		go func() {
 			ok, err := c.Remove("id")
@@ -325,7 +325,7 @@ func Test_OCache_Remove(t *testing.T) {
 			events = append(events, "remove")
 			close(removeCh)
 		}()
-		time.Sleep(time.Millisecond * 40)
+		time.Sleep(time.Millisecond * 20)
 		events = append(events, "close")
 		close(closeCh)
 
@@ -343,9 +343,9 @@ func Test_OCache_Remove(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, val)
 		assert.Equal(t, 1, c.Len())
-		time.Sleep(time.Millisecond * 40)
+		time.Sleep(time.Millisecond * 20)
 		go c.GC()
-		time.Sleep(time.Millisecond * 40)
+		time.Sleep(time.Millisecond * 20)
 		var events []string
 		go func() {
 			ok, err := c.Remove("id")
@@ -354,7 +354,7 @@ func Test_OCache_Remove(t *testing.T) {
 			events = append(events, "remove")
 			close(removeCh)
 		}()
-		time.Sleep(time.Millisecond * 40)
+		time.Sleep(time.Millisecond * 20)
 		events = append(events, "close")
 		close(closeCh)
 
