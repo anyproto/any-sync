@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace/headsync"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/syncacl"
@@ -81,9 +80,6 @@ func NewSpaceId(id string, repKey uint64) string {
 }
 
 type Space interface {
-	ocache.ObjectLocker
-	ocache.ObjectLastUsage
-
 	Id() string
 	Init(ctx context.Context) error
 
@@ -112,9 +108,10 @@ type Space interface {
 }
 
 type space struct {
-	id     string
-	mu     sync.RWMutex
-	header *spacesyncproto.RawSpaceHeaderWithId
+	id       string
+	mu       sync.RWMutex
+	header   *spacesyncproto.RawSpaceHeaderWithId
+	spaceTTL time.Duration
 
 	objectSync     objectsync.ObjectSync
 	headSync       headsync.HeadSync
@@ -132,16 +129,6 @@ type space struct {
 	isClosed  *atomic.Bool
 	isDeleted *atomic.Bool
 	treesUsed *atomic.Int32
-}
-
-func (s *space) LastUsage() time.Time {
-	return s.objectSync.LastUsage()
-}
-
-func (s *space) Locked() bool {
-	locked := s.treesUsed.Load() > 1
-	log.With(zap.Int32("trees used", s.treesUsed.Load()), zap.Bool("locked", locked), zap.String("spaceId", s.id)).Debug("space lock status check")
-	return locked
 }
 
 func (s *space) Id() string {
@@ -461,4 +448,16 @@ func (s *space) Close() error {
 	}
 	log.With(zap.String("id", s.id)).Debug("space closed")
 	return mError.Err()
+}
+
+func (s *space) TryClose() (close bool, err error) {
+	if time.Now().Sub(s.objectSync.LastUsage()) < s.spaceTTL {
+		return false, nil
+	}
+	locked := s.treesUsed.Load() > 1
+	log.With(zap.Int32("trees used", s.treesUsed.Load()), zap.Bool("locked", locked), zap.String("spaceId", s.id)).Debug("space lock status check")
+	if locked {
+		return false, nil
+	}
+	return true, s.Close()
 }
