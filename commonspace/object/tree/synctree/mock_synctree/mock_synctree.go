@@ -487,6 +487,21 @@ func (mr *MockSyncTreeMockRecorder) SyncWithPeer(arg0, arg1 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncWithPeer", reflect.TypeOf((*MockSyncTree)(nil).SyncWithPeer), arg0, arg1)
 }
 
+// TryClose mocks base method.
+func (m *MockSyncTree) TryClose() (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryClose")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TryClose indicates an expected call of TryClose.
+func (mr *MockSyncTreeMockRecorder) TryClose() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryClose", reflect.TypeOf((*MockSyncTree)(nil).TryClose))
+}
+
 // TryLock mocks base method.
 func (m *MockSyncTree) TryLock() bool {
 	m.ctrl.T.Helper()

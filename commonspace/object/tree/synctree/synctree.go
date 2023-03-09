@@ -209,6 +209,10 @@ func (s *syncTree) Delete() (err error) {
 	return
 }
 
+func (s *syncTree) TryClose() (bool, error) {
+	return true, s.Close()
+}
+
 func (s *syncTree) Close() (err error) {
 	log.Debug("closing sync tree", zap.String("id", s.Id()))
 	defer func() {

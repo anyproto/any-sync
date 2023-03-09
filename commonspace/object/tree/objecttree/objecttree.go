@@ -81,6 +81,7 @@ type ObjectTree interface {
 
 	Delete() error
 	Close() error
+	TryClose() (bool, error)
 }
 
 type objectTree struct {
@@ -553,6 +554,10 @@ func (ot *objectTree) Heads() []string {
 
 func (ot *objectTree) Root() *Change {
 	return ot.tree.Root()
+}
+
+func (ot *objectTree) TryClose() (bool, error) {
+	return true, ot.Close()
 }
 
 func (ot *objectTree) Close() error {
