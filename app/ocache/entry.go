@@ -37,10 +37,10 @@ func newEntry(id string, value Object, state entryState) *entry {
 	}
 }
 
-func (e *entry) getState() entryState {
+func (e *entry) isActive() bool {
 	e.mx.Lock()
 	defer e.mx.Unlock()
-	return e.state
+	return e.state == entryStateActive
 }
 
 func (e *entry) isClosing() bool {
