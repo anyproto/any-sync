@@ -31,6 +31,9 @@ func NewTestObject(name string, tryReturn bool, closeCh chan struct{}) *testObje
 }
 
 func (t *testObject) Close() (err error) {
+	if t.closeCalled || (t.tryCloseCalled && t.tryReturn) {
+		panic("close called twice")
+	}
 	t.closeCalled = true
 	if t.closeCh != nil {
 		<-t.closeCh
@@ -39,10 +42,13 @@ func (t *testObject) Close() (err error) {
 }
 
 func (t *testObject) TryClose() (res bool, err error) {
+	if t.closeCalled || (t.tryCloseCalled && t.tryReturn) {
+		panic("close called twice")
+	}
 	t.tryCloseCalled = true
 	if t.closeCh != nil {
 		<-t.closeCh
-		return true, t.closeErr
+		return t.tryReturn, t.closeErr
 	}
 	return t.tryReturn, nil
 }
@@ -263,36 +269,226 @@ func TestOCache_GC(t *testing.T) {
 }
 
 func Test_OCache_Remove(t *testing.T) {
-	closeCh := make(chan struct{})
-	getCh := make(chan struct{})
-	c := New(func(ctx context.Context, id string) (value Object, err error) {
-		return NewTestObject(id, false, closeCh), nil
-	}, WithTTL(time.Millisecond*10))
+	t.Run("remove simple", func(t *testing.T) {
+		closeCh := make(chan struct{})
+		getCh := make(chan struct{})
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			return NewTestObject(id, false, closeCh), nil
+		}, WithTTL(time.Millisecond*10))
 
-	val, err := c.Get(context.TODO(), "id")
-	require.NoError(t, err)
-	require.NotNil(t, val)
-	assert.Equal(t, 1, c.Len())
-	// removing the object, so we will wait on closing
-	go func() {
-		_, err := c.Remove("id")
-		require.NoError(t, err)
-	}()
-	time.Sleep(time.Millisecond * 40)
-
-	var events []string
-	go func() {
-		_, err := c.Get(context.TODO(), "id")
+		val, err := c.Get(context.TODO(), "id")
 		require.NoError(t, err)
 		require.NotNil(t, val)
-		events = append(events, "get")
-		close(getCh)
-	}()
-	// sleeping to make sure that Get is called
-	time.Sleep(time.Millisecond * 40)
-	events = append(events, "close")
-	close(closeCh)
+		assert.Equal(t, 1, c.Len())
+		// removing the object, so we will wait on closing
+		go func() {
+			_, err := c.Remove("id")
+			require.NoError(t, err)
+		}()
+		time.Sleep(time.Millisecond * 40)
 
-	<-getCh
-	require.Equal(t, []string{"close", "get"}, events)
+		var events []string
+		go func() {
+			_, err := c.Get(context.TODO(), "id")
+			require.NoError(t, err)
+			require.NotNil(t, val)
+			events = append(events, "get")
+			close(getCh)
+		}()
+		// sleeping to make sure that Get is called
+		time.Sleep(time.Millisecond * 40)
+		events = append(events, "close")
+		close(closeCh)
+
+		<-getCh
+		require.Equal(t, []string{"close", "get"}, events)
+	})
+	t.Run("test remove while gc, tryClose false", func(t *testing.T) {
+		closeCh := make(chan struct{})
+		removeCh := make(chan struct{})
+
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			return NewTestObject(id, false, closeCh), nil
+		}, WithTTL(time.Millisecond*10))
+		val, err := c.Get(context.TODO(), "id")
+		require.NoError(t, err)
+		require.NotNil(t, val)
+		assert.Equal(t, 1, c.Len())
+		time.Sleep(time.Millisecond * 40)
+		go c.GC()
+		time.Sleep(time.Millisecond * 40)
+		var events []string
+		go func() {
+			ok, err := c.Remove("id")
+			require.NoError(t, err)
+			require.True(t, ok)
+			events = append(events, "remove")
+			close(removeCh)
+		}()
+		time.Sleep(time.Millisecond * 40)
+		events = append(events, "close")
+		close(closeCh)
+
+		<-removeCh
+		require.Equal(t, []string{"close", "remove"}, events)
+	})
+	t.Run("test remove while gc, tryClose true", func(t *testing.T) {
+		closeCh := make(chan struct{})
+		removeCh := make(chan struct{})
+
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			return NewTestObject(id, true, closeCh), nil
+		}, WithTTL(time.Millisecond*10))
+		val, err := c.Get(context.TODO(), "id")
+		require.NoError(t, err)
+		require.NotNil(t, val)
+		assert.Equal(t, 1, c.Len())
+		time.Sleep(time.Millisecond * 40)
+		go c.GC()
+		time.Sleep(time.Millisecond * 40)
+		var events []string
+		go func() {
+			ok, err := c.Remove("id")
+			require.NoError(t, err)
+			require.False(t, ok)
+			events = append(events, "remove")
+			close(removeCh)
+		}()
+		time.Sleep(time.Millisecond * 40)
+		events = append(events, "close")
+		close(closeCh)
+
+		<-removeCh
+		require.Equal(t, []string{"close", "remove"}, events)
+	})
+	t.Run("test gc while remove, tryClose true", func(t *testing.T) {
+		closeCh := make(chan struct{})
+		removeCh := make(chan struct{})
+
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			return NewTestObject(id, true, closeCh), nil
+		}, WithTTL(time.Millisecond*10))
+		val, err := c.Get(context.TODO(), "id")
+		require.NoError(t, err)
+		require.NotNil(t, val)
+		assert.Equal(t, 1, c.Len())
+		go func() {
+			ok, err := c.Remove("id")
+			require.NoError(t, err)
+			require.True(t, ok)
+			close(removeCh)
+		}()
+		time.Sleep(20 * time.Millisecond)
+		c.GC()
+		close(closeCh)
+		<-removeCh
+	})
+}
+
+func TestOCacheFuzzy(t *testing.T) {
+	t.Run("test many objects gc, get and remove simultaneously, close after", func(t *testing.T) {
+		tryCloseIds := make(map[string]bool)
+		called := make(map[string]int)
+		max := 2000
+		getId := func(i int) string {
+			return fmt.Sprintf("id%d", i)
+		}
+		for i := 0; i < max; i++ {
+			if i%2 == 1 {
+				tryCloseIds[getId(i)] = true
+			} else {
+				tryCloseIds[getId(i)] = false
+			}
+		}
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			called[id] = called[id] + 1
+			return NewTestObject(id, tryCloseIds[id], nil), nil
+		}, WithTTL(time.Nanosecond))
+
+		stopGC := make(chan struct{})
+		wg := sync.WaitGroup{}
+		go func() {
+			for {
+				select {
+				case <-stopGC:
+					return
+				default:
+					c.GC()
+				}
+			}
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 10; j++ {
+				for i := 0; i < max; i++ {
+					val, err := c.Get(context.TODO(), getId(i))
+					require.NoError(t, err)
+					require.NotNil(t, val)
+				}
+			}
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 10; j++ {
+				for i := 0; i < max; i++ {
+					c.Remove(getId(i))
+				}
+			}
+		}()
+		wg.Wait()
+		close(stopGC)
+		err := c.Close()
+		require.NoError(t, err)
+		require.Equal(t, 0, c.Len())
+	})
+	t.Run("test many objects gc, get, remove and close simultaneously", func(t *testing.T) {
+		tryCloseIds := make(map[string]bool)
+		called := make(map[string]int)
+		max := 2000
+		getId := func(i int) string {
+			return fmt.Sprintf("id%d", i)
+		}
+		for i := 0; i < max; i++ {
+			if i%2 == 1 {
+				tryCloseIds[getId(i)] = true
+			} else {
+				tryCloseIds[getId(i)] = false
+			}
+		}
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			called[id] = called[id] + 1
+			return NewTestObject(id, tryCloseIds[id], nil), nil
+		}, WithTTL(time.Nanosecond))
+
+		go func() {
+			for {
+				c.GC()
+			}
+		}()
+		go func() {
+			for j := 0; j < 10; j++ {
+				for i := 0; i < max; i++ {
+					val, err := c.Get(context.TODO(), getId(i))
+					if err == ErrClosed {
+						return
+					}
+					require.NoError(t, err)
+					require.NotNil(t, val)
+				}
+			}
+		}()
+		go func() {
+			for j := 0; j < 10; j++ {
+				for i := 0; i < max; i++ {
+					c.Remove(getId(i))
+				}
+			}
+		}()
+		time.Sleep(time.Millisecond)
+		err := c.Close()
+		require.NoError(t, err)
+		require.Equal(t, 0, c.Len())
+	})
 }
