@@ -350,6 +350,21 @@ func (mr *MockObjectTreeMockRecorder) Storage() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Storage", reflect.TypeOf((*MockObjectTree)(nil).Storage))
 }
 
+// TryClose mocks base method.
+func (m *MockObjectTree) TryClose() (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryClose")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TryClose indicates an expected call of TryClose.
+func (mr *MockObjectTreeMockRecorder) TryClose() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryClose", reflect.TypeOf((*MockObjectTree)(nil).TryClose))
+}
+
 // TryLock mocks base method.
 func (m *MockObjectTree) TryLock() bool {
 	m.ctrl.T.Helper()
