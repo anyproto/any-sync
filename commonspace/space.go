@@ -104,6 +104,7 @@ type Space interface {
 
 	HandleMessage(ctx context.Context, msg HandleMessage) (err error)
 
+	TryClose() (close bool, err error)
 	Close() error
 }
 
