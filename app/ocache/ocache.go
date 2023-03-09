@@ -192,6 +192,7 @@ func (c *oCache) remove(e *entry) (ok bool, err error) {
 	}
 	_, curState := e.setClosing(true)
 	if curState == entryStateClosing {
+		ok = true
 		err = e.value.Close()
 		c.mu.Lock()
 		e.setClosed()
@@ -318,7 +319,7 @@ func (c *oCache) Close() (err error) {
 	}
 	c.mu.Unlock()
 	for _, e := range toClose {
-		if _, err := c.remove(e); err != ErrNotExists {
+		if _, err := c.remove(e); err != nil && err != ErrNotExists {
 			c.log.With("object_id", e.id).Warnf("cache close: object close error: %v", err)
 		}
 	}
