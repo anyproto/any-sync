@@ -41,7 +41,7 @@ func (t *testObject) Close() (err error) {
 	return t.closeErr
 }
 
-func (t *testObject) TryClose() (res bool, err error) {
+func (t *testObject) TryClose(objectTTL time.Duration) (res bool, err error) {
 	if t.closeCalled || (t.tryCloseCalled && t.tryReturn) {
 		panic("close called twice")
 	}

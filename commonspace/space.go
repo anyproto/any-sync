@@ -106,15 +106,14 @@ type Space interface {
 
 	HandleMessage(ctx context.Context, msg HandleMessage) (err error)
 
-	TryClose() (close bool, err error)
+	TryClose(objectTTL time.Duration) (close bool, err error)
 	Close() error
 }
 
 type space struct {
-	id       string
-	mu       sync.RWMutex
-	header   *spacesyncproto.RawSpaceHeaderWithId
-	spaceTTL time.Duration
+	id     string
+	mu     sync.RWMutex
+	header *spacesyncproto.RawSpaceHeaderWithId
 
 	objectSync     objectsync.ObjectSync
 	headSync       headsync.HeadSync
@@ -453,8 +452,8 @@ func (s *space) Close() error {
 	return mError.Err()
 }
 
-func (s *space) TryClose() (close bool, err error) {
-	if time.Now().Sub(s.objectSync.LastUsage()) < s.spaceTTL {
+func (s *space) TryClose(objectTTL time.Duration) (close bool, err error) {
+	if time.Now().Sub(s.objectSync.LastUsage()) < objectTTL {
 		return false, nil
 	}
 	locked := s.treesUsed.Load() > 1

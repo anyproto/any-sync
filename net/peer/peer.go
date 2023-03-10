@@ -12,11 +12,10 @@ import (
 
 var log = logger.NewNamed("peer")
 
-func NewPeer(sc sec.SecureConn, conn drpc.Conn, ttl time.Duration) Peer {
+func NewPeer(sc sec.SecureConn, conn drpc.Conn) Peer {
 	return &peer{
 		id:        sc.RemotePeer().String(),
 		lastUsage: time.Now().Unix(),
-		ttl:       ttl,
 		sc:        sc,
 		Conn:      conn,
 	}
@@ -26,7 +25,7 @@ type Peer interface {
 	Id() string
 	LastUsage() time.Time
 	UpdateLastUsage()
-	TryClose() (res bool, err error)
+	TryClose(objectTTL time.Duration) (res bool, err error)
 	drpc.Conn
 }
 
@@ -79,8 +78,8 @@ func (p *peer) UpdateLastUsage() {
 	atomic.StoreInt64(&p.lastUsage, time.Now().Unix())
 }
 
-func (p *peer) TryClose() (res bool, err error) {
-	if time.Now().Sub(p.LastUsage()) < p.ttl {
+func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
+	if time.Now().Sub(p.LastUsage()) < objectTTL {
 		return false, nil
 	}
 	return true, p.Close()

@@ -67,7 +67,7 @@ func New(loadFunc LoadFunc, opts ...Option) OCache {
 
 type Object interface {
 	Close() (err error)
-	TryClose() (res bool, err error)
+	TryClose(objectTTL time.Duration) (res bool, err error)
 }
 
 type OCache interface {
@@ -127,6 +127,7 @@ Load:
 		load = true
 		c.data[id] = e
 	}
+	e.lastUsage = time.Now()
 	c.mu.Unlock()
 	reload, err := e.waitClose(ctx, id)
 	if err != nil {
@@ -281,7 +282,7 @@ func (c *oCache) GC() {
 		if prevState == entryStateClosing || prevState == entryStateClosed {
 			continue
 		}
-		closed, err := e.value.TryClose()
+		closed, err := e.value.TryClose(c.ttl)
 		if err != nil {
 			c.log.With("object_id", e.id).Warnf("GC: object close error: %v", err)
 		}

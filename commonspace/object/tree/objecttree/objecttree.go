@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
@@ -82,7 +83,7 @@ type ObjectTree interface {
 
 	Delete() error
 	Close() error
-	TryClose() (bool, error)
+	TryClose(objectTTL time.Duration) (bool, error)
 }
 
 type objectTree struct {
@@ -561,7 +562,7 @@ func (ot *objectTree) Root() *Change {
 	return ot.tree.Root()
 }
 
-func (ot *objectTree) TryClose() (bool, error) {
+func (ot *objectTree) TryClose(objectTTL time.Duration) (bool, error) {
 	return true, ot.Close()
 }
 
