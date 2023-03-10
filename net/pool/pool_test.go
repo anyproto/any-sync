@@ -194,7 +194,7 @@ func (t *testPeer) LastUsage() time.Time {
 
 func (t *testPeer) UpdateLastUsage() {}
 
-func (t *testPeer) TryClose() (res bool, err error) {
+func (t *testPeer) TryClose(objectTTL time.Duration) (res bool, err error) {
 	return true, t.Close()
 }
 
