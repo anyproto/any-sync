@@ -16,6 +16,8 @@ message RootChange {
   bytes seed = 5;
   // Identity is a public key of the tree's creator
   bytes identity = 6;
+  // ChangePayload is a payload related to ChangeType
+  bytes changePayload = 7;
 }
 
 // TreeChange is a change of a tree
@@ -93,4 +95,10 @@ message TreeFullSyncResponse {
 // TreeErrorResponse is an error sent as a response for a full sync request
 message TreeErrorResponse {
   string error = 1;
+}
+
+// TreeChangeInfo is used internally in Tree implementation for ease of marshalling
+message TreeChangeInfo {
+  string changeType = 1;
+  bytes changePayload = 2;
 }

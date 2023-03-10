@@ -82,6 +82,20 @@ func (mr *MockObjectTreeMockRecorder) AddRawChanges(arg0, arg1 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChanges", reflect.TypeOf((*MockObjectTree)(nil).AddRawChanges), arg0, arg1)
 }
 
+// ChangeInfo mocks base method.
+func (m *MockObjectTree) ChangeInfo() *treechangeproto.TreeChangeInfo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeInfo")
+	ret0, _ := ret[0].(*treechangeproto.TreeChangeInfo)
+	return ret0
+}
+
+// ChangeInfo indicates an expected call of ChangeInfo.
+func (mr *MockObjectTreeMockRecorder) ChangeInfo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeInfo", reflect.TypeOf((*MockObjectTree)(nil).ChangeInfo))
+}
+
 // ChangesAfterCommonSnapshot mocks base method.
 func (m *MockObjectTree) ChangesAfterCommonSnapshot(arg0, arg1 []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
 	m.ctrl.T.Helper()

@@ -52,6 +52,7 @@ type ReadableObjectTree interface {
 	Id() string
 	Header() *treechangeproto.RawTreeChangeWithId
 	UnmarshalledHeader() *Change
+	ChangeInfo() *treechangeproto.TreeChangeInfo
 	Heads() []string
 	Root() *Change
 
@@ -140,6 +141,10 @@ func (ot *objectTree) Header() *treechangeproto.RawTreeChangeWithId {
 
 func (ot *objectTree) UnmarshalledHeader() *Change {
 	return ot.root
+}
+
+func (ot *objectTree) ChangeInfo() *treechangeproto.TreeChangeInfo {
+	return ot.root.Model.(*treechangeproto.TreeChangeInfo)
 }
 
 func (ot *objectTree) Storage() treestorage.TreeStorage {
