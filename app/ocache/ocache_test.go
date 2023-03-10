@@ -191,13 +191,12 @@ func TestOCache_GC(t *testing.T) {
 		c := New(func(ctx context.Context, id string) (value Object, err error) {
 			timesCalled.Add(1)
 			return obj, nil
-		}, WithTTL(time.Millisecond*10))
+		}, WithTTL(0))
 
 		val, err := c.Get(context.TODO(), "id")
 		require.NoError(t, err)
 		require.NotNil(t, val)
 		assert.Equal(t, 1, c.Len())
-		time.Sleep(time.Millisecond * 20)
 		begin := make(chan struct{})
 		wg := sync.WaitGroup{}
 		once := sync.Once{}
