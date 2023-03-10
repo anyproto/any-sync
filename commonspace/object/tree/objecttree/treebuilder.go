@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	log      = logger.NewNamedSugared("acltree")
+	log      = logger.NewNamedSugared("common.commonspace.objecttree")
 	ErrEmpty = errors.New("logs empty")
 )
 
