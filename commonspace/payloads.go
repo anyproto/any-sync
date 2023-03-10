@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	SpaceReserved         = "space.reserved"
+	SpaceReserved         = "any-sync.space"
 	SpaceDerivationScheme = "derivation.standard"
 )
 
