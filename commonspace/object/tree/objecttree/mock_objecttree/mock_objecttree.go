@@ -7,6 +7,7 @@ package mock_objecttree
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	list "github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	objecttree "github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
@@ -348,6 +349,21 @@ func (m *MockObjectTree) Storage() treestorage.TreeStorage {
 func (mr *MockObjectTreeMockRecorder) Storage() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Storage", reflect.TypeOf((*MockObjectTree)(nil).Storage))
+}
+
+// TryClose mocks base method.
+func (m *MockObjectTree) TryClose(arg0 time.Duration) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryClose", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TryClose indicates an expected call of TryClose.
+func (mr *MockObjectTreeMockRecorder) TryClose(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryClose", reflect.TypeOf((*MockObjectTree)(nil).TryClose), arg0)
 }
 
 // TryLock mocks base method.
