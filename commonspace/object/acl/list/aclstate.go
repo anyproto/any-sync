@@ -17,7 +17,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var log = logger.NewNamedSugared("acllist")
+var log = logger.NewNamedSugared("common.commonspace.acllist")
 
 var (
 	ErrNoSuchUser              = errors.New("no such user")
