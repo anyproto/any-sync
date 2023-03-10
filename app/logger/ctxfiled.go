@@ -32,6 +32,7 @@ func CtxGetFields(ctx context.Context) (fields []zap.Field) {
 
 type CtxLogger struct {
 	*zap.Logger
+	name string
 }
 
 func (cl CtxLogger) DebugCtx(ctx context.Context, msg string, fields ...zap.Field) {
@@ -51,5 +52,9 @@ func (cl CtxLogger) ErrorCtx(ctx context.Context, msg string, fields ...zap.Fiel
 }
 
 func (cl CtxLogger) With(fields ...zap.Field) CtxLogger {
-	return CtxLogger{cl.Logger.With(fields...)}
+	return CtxLogger{cl.Logger.With(fields...), cl.name}
+}
+
+func (cl CtxLogger) Sugar() *zap.SugaredLogger {
+	return NewNamedSugared(cl.name)
 }
