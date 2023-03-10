@@ -3,6 +3,7 @@ package objecttree
 import (
 	"errors"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/gogo/protobuf/proto"
 )
 
 var (
@@ -48,6 +49,11 @@ func NewChange(id string, ch *treechangeproto.TreeChange, signature []byte) *Cha
 }
 
 func NewChangeFromRoot(id string, ch *treechangeproto.RootChange, signature []byte) *Change {
+	changeInfo := &treechangeproto.TreeChangeInfo{
+		ChangeType:    ch.ChangeType,
+		ChangePayload: ch.ChangePayload,
+	}
+	data, _ := proto.Marshal(changeInfo)
 	return &Change{
 		Next:       nil,
 		AclHeadId:  ch.AclHeadId,
@@ -56,7 +62,8 @@ func NewChangeFromRoot(id string, ch *treechangeproto.RootChange, signature []by
 		Timestamp:  ch.Timestamp,
 		Identity:   string(ch.Identity),
 		Signature:  signature,
-		Data:       []byte(ch.ChangeType),
+		Data:       data,
+		Model:      changeInfo,
 	}
 }
 

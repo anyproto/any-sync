@@ -52,6 +52,8 @@ type SpaceCreatePayload struct {
 	ReadKey []byte
 	// ReplicationKey is a key which is to be used to determine the node where the space should be held
 	ReplicationKey uint64
+	// SpacePayload is an arbitrary payload related to space type
+	SpacePayload []byte
 }
 
 type HandleMessage struct {
@@ -61,11 +63,11 @@ type HandleMessage struct {
 	Message  *spacesyncproto.ObjectSyncMessage
 }
 
-const SpaceTypeDerived = "derived.space"
-
 type SpaceDerivePayload struct {
 	SigningKey    signingkey.PrivKey
 	EncryptionKey encryptionkey.PrivKey
+	SpaceType     string
+	SpacePayload  []byte
 }
 
 type SpaceDescription struct {

@@ -12,11 +12,12 @@ import (
 )
 
 type ObjectTreeCreatePayload struct {
-	SignKey     signingkey.PrivKey
-	ChangeType  string
-	SpaceId     string
-	Identity    []byte
-	IsEncrypted bool
+	SignKey       signingkey.PrivKey
+	ChangeType    string
+	ChangePayload []byte
+	SpaceId       string
+	Identity      []byte
+	IsEncrypted   bool
 }
 
 type HistoryTreeParams struct {
@@ -165,13 +166,14 @@ func createObjectTreeRoot(
 		return
 	}
 	cnt := InitialContent{
-		AclHeadId:  aclHeadId,
-		Identity:   payload.Identity,
-		SigningKey: payload.SignKey,
-		SpaceId:    payload.SpaceId,
-		ChangeType: payload.ChangeType,
-		Timestamp:  timestamp,
-		Seed:       seed,
+		AclHeadId:     aclHeadId,
+		Identity:      payload.Identity,
+		SigningKey:    payload.SignKey,
+		SpaceId:       payload.SpaceId,
+		ChangeType:    payload.ChangeType,
+		ChangePayload: payload.ChangePayload,
+		Timestamp:     timestamp,
+		Seed:          seed,
 	}
 
 	_, root, err = NewChangeBuilder(keychain.NewKeychain(), nil).BuildRoot(cnt)
