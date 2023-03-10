@@ -8,12 +8,13 @@ import (
 )
 
 var (
-	mu           sync.Mutex
-	logger       *zap.Logger
-	loggerConfig zap.Config
-	namedLevels  = make(map[string]zap.AtomicLevel)
-	namedGlobs   = make(map[string]glob.Glob)
-	namedLoggers = make(map[string]CtxLogger)
+	mu                sync.Mutex
+	logger            *zap.Logger
+	loggerConfig      zap.Config
+	namedLevels       = make(map[string]zap.AtomicLevel)
+	namedGlobs        = make(map[string]glob.Glob)
+	namedLoggers      = make(map[string]CtxLogger)
+	namedSugarLoggers = make(map[string]*zap.SugaredLogger)
 )
 
 func init() {
@@ -59,10 +60,18 @@ func SetNamedLevels(l map[string]zap.AtomicLevel) {
 
 	for name, nl := range namedLoggers {
 		level := getLevel(name)
-		// this can be racy, but
-		nl.Logger = zap.New(logger.Core()).WithOptions(
+		newCore := zap.New(logger.Core()).Named(name).WithOptions(
 			zap.IncreaseLevel(level),
-		).Named(name)
+		)
+		*(nl.Logger) = *newCore
+	}
+
+	for name, nl := range namedSugarLoggers {
+		level := getLevel(name)
+		newCore := zap.New(logger.Core()).Named(name).WithOptions(
+			zap.IncreaseLevel(level),
+		).Sugar()
+		*(nl) = *newCore
 	}
 }
 
@@ -100,11 +109,24 @@ func NewNamed(name string, fields ...zap.Field) CtxLogger {
 	}
 
 	level := getLevel(name)
-	l := zap.New(logger.Core()).WithOptions(
-		zap.IncreaseLevel(level),
-	).Named(name)
+	l := zap.New(logger.Core()).Named(name).WithOptions(zap.IncreaseLevel(level),
+		zap.Fields(fields...))
 
-	ctxL := CtxLogger{l}
+	ctxL := CtxLogger{Logger: l, name: name}
 	namedLoggers[name] = ctxL
 	return ctxL
+}
+
+func NewNamedSugared(name string) *zap.SugaredLogger {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if l, nameExists := namedSugarLoggers[name]; nameExists {
+		return l
+	}
+
+	level := getLevel(name)
+	l := zap.New(logger.Core()).Named(name).Sugar().WithOptions(zap.IncreaseLevel(level))
+	namedSugarLoggers[name] = l
+	return l
 }
