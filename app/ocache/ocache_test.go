@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var ctx = context.Background()
+
 type testObject struct {
 	name           string
 	closeErr       error
@@ -281,7 +283,7 @@ func Test_OCache_Remove(t *testing.T) {
 		assert.Equal(t, 1, c.Len())
 		// removing the object, so we will wait on closing
 		go func() {
-			_, err := c.Remove("id")
+			_, err := c.Remove(ctx, "id")
 			require.NoError(t, err)
 		}()
 		time.Sleep(time.Millisecond * 20)
@@ -318,7 +320,7 @@ func Test_OCache_Remove(t *testing.T) {
 		time.Sleep(time.Millisecond * 20)
 		var events []string
 		go func() {
-			ok, err := c.Remove("id")
+			ok, err := c.Remove(ctx, "id")
 			require.NoError(t, err)
 			require.True(t, ok)
 			events = append(events, "remove")
@@ -347,7 +349,7 @@ func Test_OCache_Remove(t *testing.T) {
 		time.Sleep(time.Millisecond * 20)
 		var events []string
 		go func() {
-			ok, err := c.Remove("id")
+			ok, err := c.Remove(ctx, "id")
 			require.NoError(t, err)
 			require.False(t, ok)
 			events = append(events, "remove")
@@ -372,7 +374,7 @@ func Test_OCache_Remove(t *testing.T) {
 		require.NotNil(t, val)
 		assert.Equal(t, 1, c.Len())
 		go func() {
-			ok, err := c.Remove("id")
+			ok, err := c.Remove(ctx, "id")
 			require.NoError(t, err)
 			require.True(t, ok)
 			close(removeCh)
@@ -430,7 +432,7 @@ func TestOCacheFuzzy(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < 10; j++ {
 				for i := 0; i < max; i++ {
-					c.Remove(getId(i))
+					c.Remove(ctx, getId(i))
 				}
 			}
 		}()
@@ -477,7 +479,7 @@ func TestOCacheFuzzy(t *testing.T) {
 		go func() {
 			for j := 0; j < 10; j++ {
 				for i := 0; i < max; i++ {
-					c.Remove(getId(i))
+					c.Remove(ctx, getId(i))
 				}
 			}
 		}()
