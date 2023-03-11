@@ -85,7 +85,7 @@ type OCache interface {
 	// Returns error when object exists
 	Add(id string, value Object) (err error)
 	// Remove closes and removes object
-	Remove(id string) (ok bool, err error)
+	Remove(ctx context.Context, id string) (ok bool, err error)
 	// ForEach iterates over all loaded objects, breaks when callback returns false
 	ForEach(f func(v Object) (isContinue bool))
 	// GC frees not used and expired objects
@@ -170,7 +170,7 @@ func (c *oCache) load(ctx context.Context, id string, e *entry) {
 	}
 }
 
-func (c *oCache) Remove(id string) (ok bool, err error) {
+func (c *oCache) Remove(ctx context.Context, id string) (ok bool, err error) {
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
@@ -183,13 +183,12 @@ func (c *oCache) Remove(id string) (ok bool, err error) {
 		return false, ErrNotExists
 	}
 	c.mu.Unlock()
-	return c.remove(e)
+	return c.remove(ctx, e)
 }
 
-func (c *oCache) remove(e *entry) (ok bool, err error) {
-	<-e.load
-	if e.value == nil {
-		return false, ErrNotExists
+func (c *oCache) remove(ctx context.Context, e *entry) (ok bool, err error) {
+	if _, err = e.waitLoad(ctx, e.id); err != nil {
+		return false, err
 	}
 	_, curState := e.setClosing(true)
 	if curState == entryStateClosing {
@@ -320,7 +319,7 @@ func (c *oCache) Close() (err error) {
 	}
 	c.mu.Unlock()
 	for _, e := range toClose {
-		if _, err := c.remove(e); err != nil && err != ErrNotExists {
+		if _, err := c.remove(context.Background(), e); err != nil && err != ErrNotExists {
 			c.log.With("object_id", e.id).Warnf("cache close: object close error: %v", err)
 		}
 	}
