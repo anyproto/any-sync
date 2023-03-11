@@ -88,7 +88,7 @@ func (a *aclRecordBuilder) BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyByt
 		Identity:           state.Identity(),
 		Data:               marshalledJoin,
 		CurrentReadKeyHash: state.CurrentReadKeyHash(),
-		Timestamp:          time.Now().UnixNano(),
+		Timestamp:          time.Now().Unix(),
 	}
 	marshalledRecord, err := aclRecord.Marshal()
 	if err != nil {

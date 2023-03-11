@@ -37,7 +37,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 	}
 	header := &spacesyncproto.SpaceHeader{
 		Identity:           identity,
-		Timestamp:          time.Now().UnixNano(),
+		Timestamp:          time.Now().Unix(),
 		SpaceType:          payload.SpaceType,
 		SpaceHeaderPayload: payload.SpacePayload,
 		ReplicationKey:     payload.ReplicationKey,
@@ -82,7 +82,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 		SpaceId:            spaceId,
 		EncryptedReadKey:   encReadKey,
 		CurrentReadKeyHash: readKeyHash,
-		Timestamp:          time.Now().UnixNano(),
+		Timestamp:          time.Now().Unix(),
 	}
 	rawWithId, err := marshalAclRoot(aclRoot, payload.SigningKey)
 	if err != nil {
@@ -103,7 +103,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 		SpaceId:    spaceId,
 		Seed:       spaceSettingsSeed,
 		ChangeType: SpaceReserved,
-		Timestamp:  time.Now().UnixNano(),
+		Timestamp:  time.Now().Unix(),
 	})
 	if err != nil {
 		return
