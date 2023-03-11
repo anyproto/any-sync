@@ -165,7 +165,7 @@ func (c *changeBuilder) Build(payload BuilderContent) (ch *Change, rawIdChange *
 		AclHeadId:          payload.AclHeadId,
 		SnapshotBaseId:     payload.SnapshotBaseId,
 		CurrentReadKeyHash: payload.CurrentReadKeyHash,
-		Timestamp:          time.Now().UnixNano(),
+		Timestamp:          time.Now().Unix(),
 		Identity:           payload.Identity,
 		IsSnapshot:         payload.IsSnapshot,
 	}

@@ -76,7 +76,7 @@ func CreateObjectTreeRoot(payload ObjectTreeCreatePayload, aclList list.AclList)
 	if err != nil {
 		return
 	}
-	return createObjectTreeRoot(payload, time.Now().UnixNano(), bytes, aclList)
+	return createObjectTreeRoot(payload, time.Now().Unix(), bytes, aclList)
 }
 
 func DeriveObjectTreeRoot(payload ObjectTreeCreatePayload, aclList list.AclList) (root *treechangeproto.RawTreeChangeWithId, err error) {
@@ -126,7 +126,7 @@ func CreateObjectTree(
 	if err != nil {
 		return
 	}
-	return createObjectTree(payload, time.Now().UnixNano(), bytes, aclList, createStorage)
+	return createObjectTree(payload, time.Now().Unix(), bytes, aclList, createStorage)
 }
 
 func createObjectTree(
