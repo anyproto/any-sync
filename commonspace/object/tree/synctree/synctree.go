@@ -3,6 +3,7 @@ package synctree
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
@@ -207,6 +208,10 @@ func (s *syncTree) Delete() (err error) {
 	}
 	s.isDeleted = true
 	return
+}
+
+func (s *syncTree) TryClose(objectTTL time.Duration) (bool, error) {
+	return true, s.Close()
 }
 
 func (s *syncTree) Close() (err error) {

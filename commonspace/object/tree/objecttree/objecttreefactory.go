@@ -12,11 +12,12 @@ import (
 )
 
 type ObjectTreeCreatePayload struct {
-	SignKey     signingkey.PrivKey
-	ChangeType  string
-	SpaceId     string
-	Identity    []byte
-	IsEncrypted bool
+	SignKey       signingkey.PrivKey
+	ChangeType    string
+	ChangePayload []byte
+	SpaceId       string
+	Identity      []byte
+	IsEncrypted   bool
 }
 
 type HistoryTreeParams struct {
@@ -75,7 +76,7 @@ func CreateObjectTreeRoot(payload ObjectTreeCreatePayload, aclList list.AclList)
 	if err != nil {
 		return
 	}
-	return createObjectTreeRoot(payload, time.Now().UnixNano(), bytes, aclList)
+	return createObjectTreeRoot(payload, time.Now().Unix(), bytes, aclList)
 }
 
 func DeriveObjectTreeRoot(payload ObjectTreeCreatePayload, aclList list.AclList) (root *treechangeproto.RawTreeChangeWithId, err error) {
@@ -125,7 +126,7 @@ func CreateObjectTree(
 	if err != nil {
 		return
 	}
-	return createObjectTree(payload, time.Now().UnixNano(), bytes, aclList, createStorage)
+	return createObjectTree(payload, time.Now().Unix(), bytes, aclList, createStorage)
 }
 
 func createObjectTree(
@@ -165,13 +166,14 @@ func createObjectTreeRoot(
 		return
 	}
 	cnt := InitialContent{
-		AclHeadId:  aclHeadId,
-		Identity:   payload.Identity,
-		SigningKey: payload.SignKey,
-		SpaceId:    payload.SpaceId,
-		ChangeType: payload.ChangeType,
-		Timestamp:  timestamp,
-		Seed:       seed,
+		AclHeadId:     aclHeadId,
+		Identity:      payload.Identity,
+		SigningKey:    payload.SignKey,
+		SpaceId:       payload.SpaceId,
+		ChangeType:    payload.ChangeType,
+		ChangePayload: payload.ChangePayload,
+		Timestamp:     timestamp,
+		Seed:          seed,
 	}
 
 	_, root, err = NewChangeBuilder(keychain.NewKeychain(), nil).BuildRoot(cnt)

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace/headsync"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/syncacl"
@@ -52,6 +51,8 @@ type SpaceCreatePayload struct {
 	ReadKey []byte
 	// ReplicationKey is a key which is to be used to determine the node where the space should be held
 	ReplicationKey uint64
+	// SpacePayload is an arbitrary payload related to space type
+	SpacePayload []byte
 }
 
 type HandleMessage struct {
@@ -61,11 +62,11 @@ type HandleMessage struct {
 	Message  *spacesyncproto.ObjectSyncMessage
 }
 
-const SpaceTypeDerived = "derived.space"
-
 type SpaceDerivePayload struct {
 	SigningKey    signingkey.PrivKey
 	EncryptionKey encryptionkey.PrivKey
+	SpaceType     string
+	SpacePayload  []byte
 }
 
 type SpaceDescription struct {
@@ -81,9 +82,6 @@ func NewSpaceId(id string, repKey uint64) string {
 }
 
 type Space interface {
-	ocache.ObjectLocker
-	ocache.ObjectLastUsage
-
 	Id() string
 	Init(ctx context.Context) error
 
@@ -108,6 +106,7 @@ type Space interface {
 
 	HandleMessage(ctx context.Context, msg HandleMessage) (err error)
 
+	TryClose(objectTTL time.Duration) (close bool, err error)
 	Close() error
 }
 
@@ -132,16 +131,6 @@ type space struct {
 	isClosed  *atomic.Bool
 	isDeleted *atomic.Bool
 	treesUsed *atomic.Int32
-}
-
-func (s *space) LastUsage() time.Time {
-	return s.objectSync.LastUsage()
-}
-
-func (s *space) Locked() bool {
-	locked := s.treesUsed.Load() > 1
-	log.With(zap.Int32("trees used", s.treesUsed.Load()), zap.Bool("locked", locked), zap.String("spaceId", s.id)).Debug("space lock status check")
-	return locked
 }
 
 func (s *space) Id() string {
@@ -461,4 +450,16 @@ func (s *space) Close() error {
 	}
 	log.With(zap.String("id", s.id)).Debug("space closed")
 	return mError.Err()
+}
+
+func (s *space) TryClose(objectTTL time.Duration) (close bool, err error) {
+	if time.Now().Sub(s.objectSync.LastUsage()) < objectTTL {
+		return false, nil
+	}
+	locked := s.treesUsed.Load() > 1
+	log.With(zap.Int32("trees used", s.treesUsed.Load()), zap.Bool("locked", locked), zap.String("spaceId", s.id)).Debug("space lock status check")
+	if locked {
+		return false, nil
+	}
+	return true, s.Close()
 }

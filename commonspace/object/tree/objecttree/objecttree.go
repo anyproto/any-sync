@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
@@ -52,6 +53,7 @@ type ReadableObjectTree interface {
 	Id() string
 	Header() *treechangeproto.RawTreeChangeWithId
 	UnmarshalledHeader() *Change
+	ChangeInfo() *treechangeproto.TreeChangeInfo
 	Heads() []string
 	Root() *Change
 
@@ -81,6 +83,7 @@ type ObjectTree interface {
 
 	Delete() error
 	Close() error
+	TryClose(objectTTL time.Duration) (bool, error)
 }
 
 type objectTree struct {
@@ -140,6 +143,10 @@ func (ot *objectTree) Header() *treechangeproto.RawTreeChangeWithId {
 
 func (ot *objectTree) UnmarshalledHeader() *Change {
 	return ot.root
+}
+
+func (ot *objectTree) ChangeInfo() *treechangeproto.TreeChangeInfo {
+	return ot.root.Model.(*treechangeproto.TreeChangeInfo)
 }
 
 func (ot *objectTree) Storage() treestorage.TreeStorage {
@@ -553,6 +560,10 @@ func (ot *objectTree) Heads() []string {
 
 func (ot *objectTree) Root() *Change {
 	return ot.tree.Root()
+}
+
+func (ot *objectTree) TryClose(objectTTL time.Duration) (bool, error) {
+	return true, ot.Close()
 }
 
 func (ot *objectTree) Close() error {

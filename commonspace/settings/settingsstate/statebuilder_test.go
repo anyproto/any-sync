@@ -42,6 +42,7 @@ func TestStateBuilder_ProcessChange(t *testing.T) {
 
 	t.Run("changeId is equal to rootId", func(t *testing.T) {
 		ch := &objecttree.Change{}
+		ch.PreviousIds = []string{"someId"}
 		ch.Model = &spacesyncproto.SettingsData{
 			Snapshot: &spacesyncproto.SpaceSettingsSnapshot{
 				DeletedIds:    []string{"id1", "id2"},
@@ -56,6 +57,7 @@ func TestStateBuilder_ProcessChange(t *testing.T) {
 
 	t.Run("changeId is not equal to lastIteratedId or rootId", func(t *testing.T) {
 		ch := &objecttree.Change{}
+		ch.PreviousIds = []string{"someId"}
 		ch.Model = &spacesyncproto.SettingsData{
 			Content: []*spacesyncproto.SpaceSettingsContent{
 				{Value: &spacesyncproto.SpaceSettingsContent_ObjectDelete{
