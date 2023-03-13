@@ -3,7 +3,7 @@ package list
 import (
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
-	acllistbuilder2 "github.com/anytypeio/any-sync/commonspace/object/acl/testutils/acllistbuilder"
+	acllistbuilder "github.com/anytypeio/any-sync/commonspace/object/acl/testutils/acllistbuilder"
 	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/util/cidutil"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
@@ -12,10 +12,10 @@ import (
 )
 
 func TestAclRecordBuilder_BuildUserJoin(t *testing.T) {
-	st, err := acllistbuilder2.NewListStorageWithTestName("userjoinexample.yml")
+	st, err := acllistbuilder.NewListStorageWithTestName("userjoinexample.yml")
 	require.NoError(t, err, "building storage should not result in error")
 
-	testKeychain := st.(*acllistbuilder2.AclListStorageBuilder).GetKeychain()
+	testKeychain := st.(*acllistbuilder.AclListStorageBuilder).GetKeychain()
 	identity := testKeychain.GeneratedIdentities["D"]
 	signPrivKey := testKeychain.SigningKeysByYAMLName["D"]
 	encPrivKey := testKeychain.EncryptionKeysByYAMLName["D"]
@@ -28,7 +28,7 @@ func TestAclRecordBuilder_BuildUserJoin(t *testing.T) {
 	aclList, err := BuildAclListWithIdentity(acc, st)
 	require.NoError(t, err, "building acl list should be without error")
 	recordBuilder := newAclRecordBuilder(aclList.Id(), keychain.NewKeychain())
-	rk, err := testKeychain.GetKey("key.Read.EncKey").(*acllistbuilder2.SymKey).Key.Raw()
+	rk, err := testKeychain.GetKey("key.Read.EncKey").(*acllistbuilder.SymKey).Key.Raw()
 	require.NoError(t, err)
 	privKey, err := testKeychain.GetKey("key.Sign.Onetime1").(signingkey.PrivKey).Raw()
 	require.NoError(t, err)
