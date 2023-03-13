@@ -2,15 +2,16 @@ package peer
 
 import (
 	"context"
+	"sync/atomic"
+	"time"
+
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"go.uber.org/zap"
 	"storj.io/drpc"
-	"sync/atomic"
-	"time"
 )
 
-var log = logger.NewNamed("peer")
+var log = logger.NewNamed("common.net.peer")
 
 func NewPeer(sc sec.SecureConn, conn drpc.Conn) Peer {
 	return &peer{

@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"hash/fnv"
+
 	"github.com/anytypeio/any-sync/app/logger"
-	aclrecordproto "github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/util/keys"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
@@ -13,10 +15,9 @@ import (
 	"github.com/anytypeio/any-sync/util/keys/symmetric"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
-	"hash/fnv"
 )
 
-var log = logger.NewNamed("acllist").Sugar()
+var log = logger.NewNamedSugared("common.commonspace.acllist")
 
 var (
 	ErrNoSuchUser              = errors.New("no such user")
