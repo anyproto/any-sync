@@ -11,7 +11,7 @@ import (
 	"storj.io/drpc"
 )
 
-var log = logger.NewNamed("net.peer")
+var log = logger.NewNamed("common.net.peer")
 
 func NewPeer(sc sec.SecureConn, conn drpc.Conn) Peer {
 	return &peer{
