@@ -330,7 +330,7 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 	if t, err = synctree.BuildSyncTreeOrGetRemote(ctx, id, deps); err != nil {
 		return nil, err
 	}
-	log.Debug("incrementing counter", zap.String("id", id), zap.String("spaceId", s.id))
+	log.Debug("incrementing counter", zap.String("id", id), zap.Int32("trees", s.treesUsed.Load()+1), zap.String("spaceId", s.id))
 	s.treesUsed.Add(1)
 	return
 }
@@ -406,7 +406,7 @@ func (s *space) handleMessage(msg HandleMessage) {
 }
 
 func (s *space) onObjectClose(id string) {
-	log.Debug("decrementing counter", zap.String("id", id), zap.String("spaceId", s.id))
+	log.Debug("decrementing counter", zap.String("id", id), zap.Int32("trees", s.treesUsed.Load()+1), zap.String("spaceId", s.id))
 	s.treesUsed.Add(-1)
 	_ = s.handleQueue.CloseThread(id)
 }
