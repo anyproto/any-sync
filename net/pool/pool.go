@@ -67,6 +67,7 @@ func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error
 			default:
 				return pr, nil
 			}
+			_, _ = p.cache.Remove(ctx, peerId)
 		}
 	}
 	// shuffle ids for better consistency
