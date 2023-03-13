@@ -101,8 +101,7 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	syncClient := createSyncClient(
 		deps.SpaceId,
 		deps.ObjectSync.MessagePool(),
-		sharedFactory,
-		deps.Configuration)
+		sharedFactory)
 	syncTree := &syncTree{
 		ObjectTree: objTree,
 		syncClient: syncClient,
