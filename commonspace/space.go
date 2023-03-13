@@ -295,7 +295,13 @@ func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCrea
 		SyncStatus:     s.syncStatus,
 		PeerGetter:     s.peerManager,
 	}
-	return synctree.PutSyncTree(ctx, payload, deps)
+	t, err = synctree.PutSyncTree(ctx, payload, deps)
+	if err != nil {
+		return
+	}
+	s.treesUsed.Add(1)
+	log.Debug("incrementing counter", zap.String("id", payload.RootRawChange.Id), zap.Int32("trees", s.treesUsed.Load()), zap.String("spaceId", s.id))
+	return
 }
 
 type BuildTreeOpts struct {
