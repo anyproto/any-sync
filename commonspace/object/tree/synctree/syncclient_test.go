@@ -12,13 +12,16 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/cheggaaa/mb/v3"
+	"github.com/stretchr/testify/require"
 	"sync"
+	"testing"
 )
 
 type processMsg struct {
 	msg        *spacesyncproto.ObjectSyncMessage
 	senderId   string
 	receiverId string
+	userMsg    *objecttree.RawChangesPayload
 }
 
 type messageLog struct {
@@ -48,11 +51,19 @@ func (p *processSyncHandler) manager() *processPeerManager {
 	return p.SyncHandler.(*syncTreeHandler).syncClient.(*syncClient).PeerManager.(*processPeerManager)
 }
 
+func (p *processSyncHandler) tree() *broadcastTree {
+	return p.SyncHandler.(*syncTreeHandler).objTree.(*broadcastTree)
+}
+
 func (p *processSyncHandler) send(ctx context.Context, msg processMsg) (err error) {
 	return p.batcher.Add(ctx, msg)
 }
 
-func (p *processSyncHandler) run(ctx context.Context, wg *sync.WaitGroup) {
+func (p *processSyncHandler) sendRawChanges(ctx context.Context, changes objecttree.RawChangesPayload) {
+	p.batcher.Add(ctx, processMsg{userMsg: &changes})
+}
+
+func (p *processSyncHandler) run(ctx context.Context, t *testing.T, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -60,6 +71,14 @@ func (p *processSyncHandler) run(ctx context.Context, wg *sync.WaitGroup) {
 			res, err := p.batcher.WaitOne(ctx)
 			if err != nil {
 				return
+			}
+			if res.userMsg != nil {
+				p.tree().Lock()
+				userRes, err := p.tree().AddRawChanges(ctx, *res.userMsg)
+				require.NoError(t, err)
+				fmt.Println("user add result", userRes.Heads)
+				p.tree().Unlock()
+				continue
 			}
 			err = p.SyncHandler.HandleMessage(ctx, res.senderId, res.msg)
 			if err != nil {
@@ -155,12 +174,60 @@ func createTestTree(aclList list.AclList, storage treestorage.TreeStorage) (obje
 	return objecttree.BuildTestableTree(aclList, storage)
 }
 
+type fixtureDeps struct {
+	aclList       list.AclList
+	initStorage   *treestorage.InMemoryTreeStorage
+	connectionMap map[string][]string
+}
+
 type processFixture struct {
-	handlers []*processSyncHandler
+	handlers map[string]*processSyncHandler
 	log      *messageLog
 	wg       *sync.WaitGroup
 	ctx      context.Context
 	cancel   context.CancelFunc
+}
+
+func newProcessFixture(t *testing.T, spaceId string, deps fixtureDeps) *processFixture {
+	var (
+		handlers    = map[string]*processSyncHandler{}
+		log         = newMessageLog()
+		wg          = sync.WaitGroup{}
+		ctx, cancel = context.WithCancel(context.Background())
+	)
+
+	for peerId := range deps.connectionMap {
+		stCopy := deps.initStorage.Copy()
+		testTree, err := createTestTree(deps.aclList, stCopy)
+		require.NoError(t, err)
+		handler := createSyncHandler(peerId, spaceId, testTree, log)
+		handlers[peerId] = handler
+	}
+	for peerId, connectionMap := range deps.connectionMap {
+		handler := handlers[peerId]
+		manager := handler.manager()
+		for _, connectionId := range connectionMap {
+			manager.addHandler(connectionId, handlers[connectionId])
+		}
+	}
+	return &processFixture{
+		handlers: handlers,
+		log:      log,
+		wg:       &wg,
+		ctx:      ctx,
+		cancel:   cancel,
+	}
+}
+
+func (p *processFixture) runProcessFixture(t *testing.T) {
+	for _, handler := range p.handlers {
+		handler.run(p.ctx, t, p.wg)
+	}
+}
+
+func (p *processFixture) stop() {
+	p.cancel()
+	p.wg.Wait()
 }
 
 //func TestSyncProtocol(t *testing.T) {
