@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-type inMemoryTreeStorage struct {
+type InMemoryTreeStorage struct {
 	id      string
 	root    *treechangeproto.RawTreeChangeWithId
 	heads   []string
@@ -16,7 +16,7 @@ type inMemoryTreeStorage struct {
 	sync.RWMutex
 }
 
-func (t *inMemoryTreeStorage) TransactionAdd(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error {
+func (t *InMemoryTreeStorage) TransactionAdd(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error {
 	t.RLock()
 	defer t.RUnlock()
 
@@ -37,46 +37,46 @@ func NewInMemoryTreeStorage(
 	}
 	allChanges[root.Id] = root
 
-	return &inMemoryTreeStorage{
+	return &InMemoryTreeStorage{
 		id:      root.Id,
 		root:    root,
-		heads:   heads,
+		heads:   append([]string(nil), heads...),
 		changes: allChanges,
 		RWMutex: sync.RWMutex{},
 	}, nil
 }
 
-func (t *inMemoryTreeStorage) HasChange(ctx context.Context, id string) (bool, error) {
+func (t *InMemoryTreeStorage) HasChange(ctx context.Context, id string) (bool, error) {
 	_, exists := t.changes[id]
 	return exists, nil
 }
 
-func (t *inMemoryTreeStorage) Id() string {
+func (t *InMemoryTreeStorage) Id() string {
 	t.RLock()
 	defer t.RUnlock()
 	return t.id
 }
 
-func (t *inMemoryTreeStorage) Root() (*treechangeproto.RawTreeChangeWithId, error) {
+func (t *InMemoryTreeStorage) Root() (*treechangeproto.RawTreeChangeWithId, error) {
 	t.RLock()
 	defer t.RUnlock()
 	return t.root, nil
 }
 
-func (t *inMemoryTreeStorage) Heads() ([]string, error) {
+func (t *InMemoryTreeStorage) Heads() ([]string, error) {
 	t.RLock()
 	defer t.RUnlock()
 	return t.heads, nil
 }
 
-func (t *inMemoryTreeStorage) SetHeads(heads []string) error {
+func (t *InMemoryTreeStorage) SetHeads(heads []string) error {
 	t.Lock()
 	defer t.Unlock()
 	t.heads = append(t.heads[:0], heads...)
 	return nil
 }
 
-func (t *inMemoryTreeStorage) AddRawChange(change *treechangeproto.RawTreeChangeWithId) error {
+func (t *InMemoryTreeStorage) AddRawChange(change *treechangeproto.RawTreeChangeWithId) error {
 	t.Lock()
 	defer t.Unlock()
 	// TODO: better to do deep copy
@@ -84,7 +84,7 @@ func (t *inMemoryTreeStorage) AddRawChange(change *treechangeproto.RawTreeChange
 	return nil
 }
 
-func (t *inMemoryTreeStorage) GetRawChange(ctx context.Context, changeId string) (*treechangeproto.RawTreeChangeWithId, error) {
+func (t *InMemoryTreeStorage) GetRawChange(ctx context.Context, changeId string) (*treechangeproto.RawTreeChangeWithId, error) {
 	t.RLock()
 	defer t.RUnlock()
 	if res, exists := t.changes[changeId]; exists {
@@ -93,6 +93,15 @@ func (t *inMemoryTreeStorage) GetRawChange(ctx context.Context, changeId string)
 	return nil, fmt.Errorf("could not get change with id: %s", changeId)
 }
 
-func (t *inMemoryTreeStorage) Delete() error {
+func (t *InMemoryTreeStorage) Delete() error {
 	return nil
+}
+
+func (t *InMemoryTreeStorage) Copy() *InMemoryTreeStorage {
+	var changes []*treechangeproto.RawTreeChangeWithId
+	for _, ch := range t.changes {
+		changes = append(changes, ch)
+	}
+	other, _ := NewInMemoryTreeStorage(t.root, t.heads, changes)
+	return other.(*InMemoryTreeStorage)
 }
