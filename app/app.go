@@ -172,7 +172,7 @@ func (app *App) Start(ctx context.Context) (err error) {
 	for i, s := range app.components {
 		if err = s.Init(app); err != nil {
 			closeServices(i)
-			return fmt.Errorf("can't init service '%s': %v", s.Name(), err)
+			return fmt.Errorf("can't init service '%s': %w", s.Name(), err)
 		}
 	}
 
@@ -181,7 +181,7 @@ func (app *App) Start(ctx context.Context) (err error) {
 			start := time.Now()
 			if err = serviceRun.Run(ctx); err != nil {
 				closeServices(i)
-				return fmt.Errorf("can't run service '%s': %v", serviceRun.Name(), err)
+				return fmt.Errorf("can't run service '%s': %w", serviceRun.Name(), err)
 			}
 			spent := time.Since(start).Milliseconds()
 			app.startStat.SpentMsTotal += spent
