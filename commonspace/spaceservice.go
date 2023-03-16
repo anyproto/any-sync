@@ -17,6 +17,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/pool"
+	"github.com/anytypeio/any-sync/net/rpc/rpcerr"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"sync/atomic"
 )
@@ -216,6 +217,7 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 	cl := spacesyncproto.NewDRPCSpaceSyncClient(p)
 	res, err := cl.SpacePull(ctx, &spacesyncproto.SpacePullRequest{Id: id})
 	if err != nil {
+		err = rpcerr.Unwrap(err)
 		return
 	}
 
