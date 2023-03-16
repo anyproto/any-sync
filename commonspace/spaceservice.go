@@ -35,6 +35,7 @@ const AddSpaceCtxKey ctxKey = 0
 
 type SpaceService interface {
 	DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (string, error)
+	DerivedId(ctx context.Context, payload SpaceDerivePayload) (string, error)
 	CreateSpace(ctx context.Context, payload SpaceCreatePayload) (string, error)
 	NewSpace(ctx context.Context, id string) (sp Space, err error)
 	app.Component
@@ -86,6 +87,15 @@ func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePaylo
 	}
 
 	return store.Id(), nil
+}
+
+func (s *spaceService) DerivedId(ctx context.Context, payload SpaceDerivePayload) (id string, err error) {
+	storageCreate, err := storagePayloadForSpaceDerive(payload)
+	if err != nil {
+		return
+	}
+	id = storageCreate.SpaceHeaderWithId.Id
+	return
 }
 
 func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (id string, err error) {
