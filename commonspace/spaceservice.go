@@ -17,6 +17,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/pool"
+	"github.com/anytypeio/any-sync/net/rpc/rpcerr"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"sync/atomic"
 )
@@ -35,6 +36,7 @@ const AddSpaceCtxKey ctxKey = 0
 
 type SpaceService interface {
 	DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (string, error)
+	DeriveId(ctx context.Context, payload SpaceDerivePayload) (string, error)
 	CreateSpace(ctx context.Context, payload SpaceCreatePayload) (string, error)
 	NewSpace(ctx context.Context, id string) (sp Space, err error)
 	app.Component
@@ -86,6 +88,15 @@ func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePaylo
 	}
 
 	return store.Id(), nil
+}
+
+func (s *spaceService) DeriveId(ctx context.Context, payload SpaceDerivePayload) (id string, err error) {
+	storageCreate, err := storagePayloadForSpaceDerive(payload)
+	if err != nil {
+		return
+	}
+	id = storageCreate.SpaceHeaderWithId.Id
+	return
 }
 
 func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (id string, err error) {
@@ -206,6 +217,7 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 	cl := spacesyncproto.NewDRPCSpaceSyncClient(p)
 	res, err := cl.SpacePull(ctx, &spacesyncproto.SpacePullRequest{Id: id})
 	if err != nil {
+		err = rpcerr.Unwrap(err)
 		return
 	}
 
