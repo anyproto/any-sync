@@ -10,4 +10,5 @@ var (
 	errGroup       = rpcerr.ErrGroup(fileproto.ErrCodes_ErrorOffset)
 	ErrUnexpected  = errGroup.Register(fmt.Errorf("unexpected fileproto error"), uint64(fileproto.ErrCodes_Unexpected))
 	ErrCIDNotFound = errGroup.Register(fmt.Errorf("CID not found"), uint64(fileproto.ErrCodes_CIDNotFound))
+	ErrForbidden   = errGroup.Register(fmt.Errorf("forbidden"), uint64(fileproto.ErrCodes_Forbidden))
 )

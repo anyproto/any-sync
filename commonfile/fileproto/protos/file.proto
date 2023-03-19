@@ -6,6 +6,7 @@ option go_package = "commonfile/fileproto";
 enum ErrCodes {
     Unexpected = 0;
     CIDNotFound = 1;
+    Forbidden = 2;
     ErrorOffset = 200;
 }
 
