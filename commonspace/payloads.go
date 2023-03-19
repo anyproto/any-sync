@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	SpaceSettingsChangeType = "reserved.spacesettings"
-	SpaceDerivationScheme   = "derivation.standard"
+	SpaceReserved         = "any-sync.space"
+	SpaceDerivationScheme = "derivation.standard"
 )
 
 func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
@@ -36,11 +36,12 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 		return
 	}
 	header := &spacesyncproto.SpaceHeader{
-		Identity:       identity,
-		Timestamp:      time.Now().UnixNano(),
-		SpaceType:      payload.SpaceType,
-		ReplicationKey: payload.ReplicationKey,
-		Seed:           spaceHeaderSeed,
+		Identity:           identity,
+		Timestamp:          time.Now().Unix(),
+		SpaceType:          payload.SpaceType,
+		SpaceHeaderPayload: payload.SpacePayload,
+		ReplicationKey:     payload.ReplicationKey,
+		Seed:               spaceHeaderSeed,
 	}
 	marshalled, err := header.Marshal()
 	if err != nil {
@@ -81,7 +82,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 		SpaceId:            spaceId,
 		EncryptedReadKey:   encReadKey,
 		CurrentReadKeyHash: readKeyHash,
-		Timestamp:          time.Now().UnixNano(),
+		Timestamp:          time.Now().Unix(),
 	}
 	rawWithId, err := marshalAclRoot(aclRoot, payload.SigningKey)
 	if err != nil {
@@ -101,8 +102,8 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 		SigningKey: payload.SigningKey,
 		SpaceId:    spaceId,
 		Seed:       spaceSettingsSeed,
-		ChangeType: SpaceSettingsChangeType,
-		Timestamp:  time.Now().UnixNano(),
+		ChangeType: SpaceReserved,
+		Timestamp:  time.Now().Unix(),
 	})
 	if err != nil {
 		return
@@ -146,9 +147,10 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 
 	// preparing header and space id
 	header := &spacesyncproto.SpaceHeader{
-		Identity:       identity,
-		SpaceType:      SpaceTypeDerived,
-		ReplicationKey: repKey,
+		Identity:           identity,
+		SpaceType:          payload.SpaceType,
+		SpaceHeaderPayload: payload.SpacePayload,
+		ReplicationKey:     repKey,
 	}
 	marshalled, err := header.Marshal()
 	if err != nil {
@@ -201,7 +203,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 		Identity:   aclRoot.Identity,
 		SigningKey: payload.SigningKey,
 		SpaceId:    spaceId,
-		ChangeType: SpaceSettingsChangeType,
+		ChangeType: SpaceReserved,
 	})
 	if err != nil {
 		return

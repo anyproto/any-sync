@@ -49,7 +49,7 @@ func (p *pool) Get(ctx context.Context, id string) (peer.Peer, error) {
 	default:
 		return pr, nil
 	}
-	_, _ = p.cache.Remove(id)
+	_, _ = p.cache.Remove(ctx, id)
 	return p.Get(ctx, id)
 }
 
@@ -67,6 +67,7 @@ func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error
 			default:
 				return pr, nil
 			}
+			_, _ = p.cache.Remove(ctx, peerId)
 		}
 	}
 	// shuffle ids for better consistency

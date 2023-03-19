@@ -48,7 +48,7 @@ func (s *stateBuilder) Build(tr objecttree.ObjectTree, oldState *State) (state *
 
 func (s *stateBuilder) processChange(change *objecttree.Change, rootId string, state *State) *State {
 	// ignoring root change which has empty model or startId change
-	if change.Model == nil || state.LastIteratedId == change.Id {
+	if len(change.PreviousIds) == 0 || state.LastIteratedId == change.Id {
 		return state
 	}
 

@@ -44,12 +44,6 @@ var WithGCPeriod = func(gcPeriod time.Duration) Option {
 	}
 }
 
-var WithRefCounter = func(enable bool) Option {
-	return func(cache *oCache) {
-		cache.refCounter = enable
-	}
-}
-
 func New(loadFunc LoadFunc, opts ...Option) OCache {
 	c := &oCache{
 		data:     make(map[string]*entry),
@@ -73,33 +67,7 @@ func New(loadFunc LoadFunc, opts ...Option) OCache {
 
 type Object interface {
 	Close() (err error)
-}
-
-type ObjectLocker interface {
-	Object
-	Locked() bool
-}
-
-type ObjectLastUsage interface {
-	LastUsage() time.Time
-}
-
-type entry struct {
-	id        string
-	lastUsage time.Time
-	refCount  uint32
-	isClosing bool
-	load      chan struct{}
-	loadErr   error
-	value     Object
-	close     chan struct{}
-}
-
-func (e *entry) locked() bool {
-	if locker, ok := e.value.(ObjectLocker); ok {
-		return locker.Locked()
-	}
-	return false
+	TryClose(objectTTL time.Duration) (res bool, err error)
 }
 
 type OCache interface {
@@ -116,12 +84,8 @@ type OCache interface {
 	// Add adds new object to cache
 	// Returns error when object exists
 	Add(id string, value Object) (err error)
-	// Release decreases the refs counter
-	Release(id string) bool
-	// Reset sets refs counter to 0
-	Reset(id string) bool
 	// Remove closes and removes object
-	Remove(id string) (ok bool, err error)
+	Remove(ctx context.Context, id string) (ok bool, err error)
 	// ForEach iterates over all loaded objects, breaks when callback returns false
 	ForEach(f func(v Object) (isContinue bool))
 	// GC frees not used and expired objects
@@ -134,17 +98,16 @@ type OCache interface {
 }
 
 type oCache struct {
-	mu         sync.Mutex
-	data       map[string]*entry
-	loadFunc   LoadFunc
-	timeNow    func() time.Time
-	ttl        time.Duration
-	gc         time.Duration
-	closed     bool
-	closeCh    chan struct{}
-	log        *zap.SugaredLogger
-	metrics    *metrics
-	refCounter bool
+	mu       sync.Mutex
+	data     map[string]*entry
+	loadFunc LoadFunc
+	timeNow  func() time.Time
+	ttl      time.Duration
+	gc       time.Duration
+	closed   bool
+	closeCh  chan struct{}
+	log      *zap.SugaredLogger
+	metrics  *metrics
 }
 
 func (c *oCache) Get(ctx context.Context, id string) (value Object, err error) {
@@ -160,69 +123,36 @@ Load:
 		return nil, ErrClosed
 	}
 	if e, ok = c.data[id]; !ok {
+		e = newEntry(id, nil, entryStateLoading)
 		load = true
-		e = &entry{
-			id:   id,
-			load: make(chan struct{}),
-		}
 		c.data[id] = e
 	}
-	closing := e.isClosing
-	if !e.isClosing {
-		e.lastUsage = c.timeNow()
-		if c.refCounter {
-			e.refCount++
-		}
-	}
+	e.lastUsage = time.Now()
 	c.mu.Unlock()
-	if closing {
-		select {
-		case <-ctx.Done():
-			log.DebugCtx(ctx, "ctx done while waiting on object close", zap.String("id", id))
-			return nil, ctx.Err()
-		case <-e.close:
-			goto Load
-		}
+	reload, err := e.waitClose(ctx, id)
+	if err != nil {
+		return nil, err
 	}
-
+	if reload {
+		goto Load
+	}
 	if load {
 		go c.load(ctx, id, e)
 	}
-	if c.metrics != nil {
-		if load {
-			c.metrics.miss.Inc()
-		} else {
-			c.metrics.hit.Inc()
-		}
-	}
-	select {
-	case <-ctx.Done():
-		log.DebugCtx(ctx, "ctx done while waiting on object load", zap.String("id", id))
-		return nil, ctx.Err()
-	case <-e.load:
-	}
-	return e.value, e.loadErr
+	c.metricsGet(!load)
+	return e.waitLoad(ctx, id)
 }
 
 func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) {
 	c.mu.Lock()
 	val, ok := c.data[id]
-	if !ok || val.isClosing {
+	if !ok || val.isClosing() {
 		c.mu.Unlock()
 		return nil, ErrNotExists
 	}
 	c.mu.Unlock()
-
-	if c.metrics != nil {
-		c.metrics.hit.Inc()
-	}
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-val.load:
-		return val.value, val.loadErr
-	}
+	c.metricsGet(true)
+	return val.waitLoad(ctx, id)
 }
 
 func (c *oCache) load(ctx context.Context, id string, e *entry) {
@@ -236,63 +166,39 @@ func (c *oCache) load(ctx context.Context, id string, e *entry) {
 		delete(c.data, id)
 	} else {
 		e.value = value
+		e.setActive(false)
 	}
 }
 
-func (c *oCache) Release(id string) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.closed {
-		return false
-	}
-	if e, ok := c.data[id]; ok {
-		if c.refCounter && e.refCount > 0 {
-			e.refCount--
-			return true
-		}
-	}
-	return false
-}
-
-func (c *oCache) Reset(id string) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.closed {
-		return false
-	}
-	if e, ok := c.data[id]; ok {
-		e.refCount = 0
-		return true
-	}
-	return false
-}
-
-func (c *oCache) Remove(id string) (ok bool, err error) {
+func (c *oCache) Remove(ctx context.Context, id string) (ok bool, err error) {
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
 		err = ErrClosed
 		return
 	}
-	var e *entry
-	e, ok = c.data[id]
-	if !ok || e.isClosing {
+	e, ok := c.data[id]
+	if !ok {
 		c.mu.Unlock()
-		return
+		return false, ErrNotExists
 	}
-	e.isClosing = true
-	e.close = make(chan struct{})
 	c.mu.Unlock()
+	return c.remove(ctx, e)
+}
 
-	<-e.load
-	if e.value != nil {
+func (c *oCache) remove(ctx context.Context, e *entry) (ok bool, err error) {
+	if _, err = e.waitLoad(ctx, e.id); err != nil {
+		return false, err
+	}
+	_, curState := e.setClosing(true)
+	if curState == entryStateClosing {
+		ok = true
 		err = e.value.Close()
+		c.mu.Lock()
+		e.setClosed()
+		delete(c.data, e.id)
+		c.mu.Unlock()
 	}
-	c.mu.Lock()
-	close(e.close)
-	delete(c.data, e.id)
-	c.mu.Unlock()
-
 	return
 }
 
@@ -314,13 +220,7 @@ func (c *oCache) Add(id string, value Object) (err error) {
 	if _, ok := c.data[id]; ok {
 		return ErrExists
 	}
-	e := &entry{
-		id:        id,
-		lastUsage: time.Now(),
-		refCount:  0,
-		load:      make(chan struct{}),
-		value:     value,
-	}
+	e := newEntry(id, value, entryStateActive)
 	close(e.load)
 	c.data[id] = e
 	return
@@ -332,7 +232,7 @@ func (c *oCache) ForEach(f func(obj Object) (isContinue bool)) {
 	for _, v := range c.data {
 		select {
 		case <-v.load:
-			if v.value != nil && !v.isClosing {
+			if v.value != nil && !v.isClosing() {
 				objects = append(objects, v.value)
 			}
 		default:
@@ -368,40 +268,35 @@ func (c *oCache) GC() {
 	deadline := c.timeNow().Add(-c.ttl)
 	var toClose []*entry
 	for _, e := range c.data {
-		if e.isClosing {
-			continue
-		}
-		lu := e.lastUsage
-		if lug, ok := e.value.(ObjectLastUsage); ok {
-			lu = lug.LastUsage()
-		}
-		if !e.locked() && e.refCount <= 0 && lu.Before(deadline) {
-			e.isClosing = true
+		if e.isActive() && e.lastUsage.Before(deadline) {
 			e.close = make(chan struct{})
 			toClose = append(toClose, e)
 		}
 	}
 	size := len(c.data)
 	c.mu.Unlock()
-
+	closedNum := 0
 	for _, e := range toClose {
-		<-e.load
-		if e.value != nil {
-			if err := e.value.Close(); err != nil {
-				c.log.With("object_id", e.id).Warnf("GC: object close error: %v", err)
-			}
+		prevState, _ := e.setClosing(false)
+		if prevState == entryStateClosing || prevState == entryStateClosed {
+			continue
+		}
+		closed, err := e.value.TryClose(c.ttl)
+		if err != nil {
+			c.log.With("object_id", e.id).Warnf("GC: object close error: %v", err)
+		}
+		if !closed {
+			e.setActive(true)
+			continue
+		} else {
+			closedNum++
+			c.mu.Lock()
+			e.setClosed()
+			delete(c.data, e.id)
+			c.mu.Unlock()
 		}
 	}
-	c.log.Infof("GC: removed %d; cache size: %d", len(toClose), size)
-	if len(toClose) > 0 && c.metrics != nil {
-		c.metrics.gc.Add(float64(len(toClose)))
-	}
-	c.mu.Lock()
-	for _, e := range toClose {
-		close(e.close)
-		delete(c.data, e.id)
-	}
-	c.mu.Unlock()
+	c.metricsClosed(closedNum, size)
 }
 
 func (c *oCache) Len() int {
@@ -418,25 +313,34 @@ func (c *oCache) Close() (err error) {
 	}
 	c.closed = true
 	close(c.closeCh)
-	var toClose, alreadyClosing []*entry
+	var toClose []*entry
 	for _, e := range c.data {
-		if e.isClosing {
-			alreadyClosing = append(alreadyClosing, e)
-		} else {
-			toClose = append(toClose, e)
-		}
+		toClose = append(toClose, e)
 	}
 	c.mu.Unlock()
 	for _, e := range toClose {
-		<-e.load
-		if e.value != nil {
-			if clErr := e.value.Close(); clErr != nil {
-				c.log.With("object_id", e.id).Warnf("cache close: object close error: %v", clErr)
-			}
+		if _, err := c.remove(context.Background(), e); err != nil && err != ErrNotExists {
+			c.log.With("object_id", e.id).Warnf("cache close: object close error: %v", err)
 		}
 	}
-	for _, e := range alreadyClosing {
-		<-e.close
-	}
 	return nil
+}
+
+func (c *oCache) metricsGet(hit bool) {
+	if c.metrics == nil {
+		return
+	}
+	if hit {
+		c.metrics.hit.Inc()
+	} else {
+		c.metrics.miss.Inc()
+	}
+}
+
+func (c *oCache) metricsClosed(closedLen, size int) {
+	c.log.Infof("GC: removed %d; cache size: %d", closedLen, size)
+	if c.metrics == nil || closedLen == 0 {
+		return
+	}
+	c.metrics.gc.Add(float64(closedLen))
 }

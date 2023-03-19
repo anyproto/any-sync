@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/util/slice"
 	"go.uber.org/zap"
-	"time"
 )
 
 var (
-	log      = logger.NewNamed("acltree").Sugar()
+	log      = logger.NewNamedSugared("common.commonspace.objecttree")
 	ErrEmpty = errors.New("logs empty")
 )
 

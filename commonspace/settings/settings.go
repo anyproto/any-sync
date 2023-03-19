@@ -5,15 +5,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
-	spacestorage "github.com/anytypeio/any-sync/commonspace/spacestorage"
+	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/gogo/protobuf/proto"
@@ -242,17 +244,7 @@ func (s *settingsObject) verifyDeleteSpace(raw *treechangeproto.RawTreeChangeWit
 	if err != nil {
 		return
 	}
-	content := &spacesyncproto.SettingsData{}
-	err = proto.Unmarshal(data, content)
-	if err != nil {
-		return
-	}
-	if len(content.GetContent()) != 1 ||
-		content.GetContent()[0].GetSpaceDelete() == nil ||
-		content.GetContent()[0].GetSpaceDelete().GetDeleterPeerId() == "" {
-		return fmt.Errorf("incorrect delete change payload")
-	}
-	return
+	return verifyDeleteContent(data, "")
 }
 
 func (s *settingsObject) addContent(data []byte) (err error) {
@@ -269,5 +261,32 @@ func (s *settingsObject) addContent(data []byte) (err error) {
 	}
 
 	s.Update(s)
+	return
+}
+
+func VerifyDeleteChange(raw *treechangeproto.RawTreeChangeWithId, identity []byte, peerId string) (err error) {
+	changeBuilder := objecttree.NewChangeBuilder(keychain.NewKeychain(), nil)
+	res, err := changeBuilder.Unmarshall(raw, true)
+	if err != nil {
+		return
+	}
+	if res.Identity != string(identity) {
+		return fmt.Errorf("incorrect identity")
+	}
+	return verifyDeleteContent(res.Data, peerId)
+}
+
+func verifyDeleteContent(data []byte, peerId string) (err error) {
+	content := &spacesyncproto.SettingsData{}
+	err = proto.Unmarshal(data, content)
+	if err != nil {
+		return
+	}
+	if len(content.GetContent()) != 1 ||
+		content.GetContent()[0].GetSpaceDelete() == nil ||
+		(peerId == "" && content.GetContent()[0].GetSpaceDelete().GetDeleterPeerId() == "") ||
+		(peerId != "" && content.GetContent()[0].GetSpaceDelete().GetDeleterPeerId() != peerId) {
+		return fmt.Errorf("incorrect delete change payload")
+	}
 	return
 }

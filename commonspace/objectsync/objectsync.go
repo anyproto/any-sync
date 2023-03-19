@@ -2,23 +2,24 @@ package objectsync
 
 import (
 	"context"
+	"sync/atomic"
+	"time"
+
 	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace/object/syncobjectgetter"
 	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
+	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
-	"sync/atomic"
-	"time"
 )
 
-var log = logger.NewNamed("commonspace.objectsync")
+var log = logger.NewNamed("common.commonspace.objectsync")
 
 type ObjectSync interface {
-	ocache.ObjectLastUsage
+	LastUsage
 	synchandler.SyncHandler
 	MessagePool() MessagePool
 
@@ -32,6 +33,7 @@ type objectSync struct {
 	messagePool   MessagePool
 	objectGetter  syncobjectgetter.SyncObjectGetter
 	configuration nodeconf.Configuration
+	spaceStorage  spacestorage.SpaceStorage
 
 	syncCtx        context.Context
 	cancelSync     context.CancelFunc
@@ -43,13 +45,15 @@ func NewObjectSync(
 	spaceIsDeleted *atomic.Bool,
 	configuration nodeconf.Configuration,
 	peerManager peermanager.PeerManager,
-	objectGetter syncobjectgetter.SyncObjectGetter) ObjectSync {
+	objectGetter syncobjectgetter.SyncObjectGetter,
+	storage spacestorage.SpaceStorage) ObjectSync {
 	syncCtx, cancel := context.WithCancel(context.Background())
 	os := newObjectSync(
 		spaceId,
 		spaceIsDeleted,
 		configuration,
 		objectGetter,
+		storage,
 		syncCtx,
 		cancel)
 	msgPool := newMessagePool(peerManager, os.handleMessage)
@@ -62,11 +66,13 @@ func newObjectSync(
 	spaceIsDeleted *atomic.Bool,
 	configuration nodeconf.Configuration,
 	objectGetter syncobjectgetter.SyncObjectGetter,
+	spaceStorage spacestorage.SpaceStorage,
 	syncCtx context.Context,
 	cancel context.CancelFunc,
 ) *objectSync {
 	return &objectSync{
 		objectGetter:   objectGetter,
+		spaceStorage:   spaceStorage,
 		spaceId:        spaceId,
 		syncCtx:        syncCtx,
 		cancelSync:     cancel,
@@ -95,8 +101,8 @@ func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *sp
 	log := log.With(zap.String("objectId", msg.ObjectId), zap.String("replyId", msg.ReplyId))
 	if s.spaceIsDeleted.Load() {
 		log = log.With(zap.Bool("isDeleted", true))
-		// preventing sync with other clients
-		if !slices.Contains(s.configuration.NodeIds(s.spaceId), senderId) {
+		// preventing sync with other clients if they are not just syncing the settings tree
+		if !slices.Contains(s.configuration.NodeIds(s.spaceId), senderId) && msg.ObjectId != s.spaceStorage.SpaceSettingsId() {
 			return spacesyncproto.ErrSpaceIsDeleted
 		}
 	}

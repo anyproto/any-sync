@@ -2,15 +2,16 @@ package peer
 
 import (
 	"context"
+	"sync/atomic"
+	"time"
+
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"go.uber.org/zap"
 	"storj.io/drpc"
-	"sync/atomic"
-	"time"
 )
 
-var log = logger.NewNamed("peer")
+var log = logger.NewNamed("common.net.peer")
 
 func NewPeer(sc sec.SecureConn, conn drpc.Conn) Peer {
 	return &peer{
@@ -25,11 +26,13 @@ type Peer interface {
 	Id() string
 	LastUsage() time.Time
 	UpdateLastUsage()
+	TryClose(objectTTL time.Duration) (res bool, err error)
 	drpc.Conn
 }
 
 type peer struct {
 	id        string
+	ttl       time.Duration
 	lastUsage int64
 	sc        sec.SecureConn
 	drpc.Conn
@@ -74,6 +77,13 @@ func (p *peer) Write(b []byte) (n int, err error) {
 
 func (p *peer) UpdateLastUsage() {
 	atomic.StoreInt64(&p.lastUsage, time.Now().Unix())
+}
+
+func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
+	if time.Now().Sub(p.LastUsage()) < objectTTL {
+		return false, nil
+	}
+	return true, p.Close()
 }
 
 func (p *peer) Close() (err error) {

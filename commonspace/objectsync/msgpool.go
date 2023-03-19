@@ -3,7 +3,6 @@ package objectsync
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
@@ -15,9 +14,13 @@ import (
 	"time"
 )
 
+type LastUsage interface {
+	LastUsage() time.Time
+}
+
 // MessagePool can be made generic to work with different streams
 type MessagePool interface {
-	ocache.ObjectLastUsage
+	LastUsage
 	synchandler.SyncHandler
 	peermanager.PeerManager
 	SendSync(ctx context.Context, peerId string, message *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error)

@@ -2,14 +2,15 @@ package timeoutconn
 
 import (
 	"errors"
-	"github.com/anytypeio/any-sync/app/logger"
-	"go.uber.org/zap"
 	"net"
 	"os"
 	"time"
+
+	"github.com/anytypeio/any-sync/app/logger"
+	"go.uber.org/zap"
 )
 
-var log = logger.NewNamed("net.timeoutconn")
+var log = logger.NewNamed("common.net.timeoutconn")
 
 type Conn struct {
 	net.Conn

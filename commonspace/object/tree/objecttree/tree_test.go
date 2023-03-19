@@ -125,7 +125,7 @@ func TestTree_Hash(t *testing.T) {
 }
 
 func TestTree_AddFuzzy(t *testing.T) {
-	rand.Seed(time.Now().UnixNano())
+	rand.Seed(time.Now().Unix())
 	getChanges := func() []*Change {
 		changes := []*Change{
 			newChange("1", "root", "root"),

@@ -66,6 +66,7 @@ message ObjectSyncMessage {
 // SpacePushRequest is a request to add space on a node containing only one acl record
 message SpacePushRequest {
     SpacePayload payload = 1;
+    bytes Credential = 2;
 }
 
 // SpacePushResponse is an empty response
@@ -97,6 +98,7 @@ message SpaceHeader {
     string spaceType = 3;
     uint64 replicationKey = 4;
     bytes seed = 5;
+    bytes spaceHeaderPayload = 6;
 }
 
 // RawSpaceHeader is raw header for SpaceHeader

@@ -126,7 +126,7 @@ func (t *AclListStorageBuilder) parseRecord(rec *Record, prevId string) *aclreco
 		Identity:           []byte(t.keychain.GetIdentity(rec.Identity)),
 		Data:               bytes,
 		CurrentReadKeyHash: k.Hash,
-		Timestamp:          time.Now().UnixNano(),
+		Timestamp:          time.Now().Unix(),
 	}
 }
 

@@ -42,6 +42,8 @@ type DRPCCoordinatorClient interface {
 
 	SpaceSign(ctx context.Context, in *SpaceSignRequest) (*SpaceSignResponse, error)
 	FileLimitCheck(ctx context.Context, in *FileLimitCheckRequest) (*FileLimitCheckResponse, error)
+	SpaceStatusCheck(ctx context.Context, in *SpaceStatusCheckRequest) (*SpaceStatusCheckResponse, error)
+	SpaceStatusChange(ctx context.Context, in *SpaceStatusChangeRequest) (*SpaceStatusChangeResponse, error)
 }
 
 type drpcCoordinatorClient struct {
@@ -72,9 +74,29 @@ func (c *drpcCoordinatorClient) FileLimitCheck(ctx context.Context, in *FileLimi
 	return out, nil
 }
 
+func (c *drpcCoordinatorClient) SpaceStatusCheck(ctx context.Context, in *SpaceStatusCheckRequest) (*SpaceStatusCheckResponse, error) {
+	out := new(SpaceStatusCheckResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/SpaceStatusCheck", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcCoordinatorClient) SpaceStatusChange(ctx context.Context, in *SpaceStatusChangeRequest) (*SpaceStatusChangeResponse, error) {
+	out := new(SpaceStatusChangeResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/SpaceStatusChange", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCCoordinatorServer interface {
 	SpaceSign(context.Context, *SpaceSignRequest) (*SpaceSignResponse, error)
 	FileLimitCheck(context.Context, *FileLimitCheckRequest) (*FileLimitCheckResponse, error)
+	SpaceStatusCheck(context.Context, *SpaceStatusCheckRequest) (*SpaceStatusCheckResponse, error)
+	SpaceStatusChange(context.Context, *SpaceStatusChangeRequest) (*SpaceStatusChangeResponse, error)
 }
 
 type DRPCCoordinatorUnimplementedServer struct{}
@@ -87,9 +109,17 @@ func (s *DRPCCoordinatorUnimplementedServer) FileLimitCheck(context.Context, *Fi
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCCoordinatorUnimplementedServer) SpaceStatusCheck(context.Context, *SpaceStatusCheckRequest) (*SpaceStatusCheckResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCCoordinatorUnimplementedServer) SpaceStatusChange(context.Context, *SpaceStatusChangeRequest) (*SpaceStatusChangeResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCCoordinatorDescription struct{}
 
-func (DRPCCoordinatorDescription) NumMethods() int { return 2 }
+func (DRPCCoordinatorDescription) NumMethods() int { return 4 }
 
 func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -111,6 +141,24 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*FileLimitCheckRequest),
 					)
 			}, DRPCCoordinatorServer.FileLimitCheck, true
+	case 2:
+		return "/coordinator.Coordinator/SpaceStatusCheck", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					SpaceStatusCheck(
+						ctx,
+						in1.(*SpaceStatusCheckRequest),
+					)
+			}, DRPCCoordinatorServer.SpaceStatusCheck, true
+	case 3:
+		return "/coordinator.Coordinator/SpaceStatusChange", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					SpaceStatusChange(
+						ctx,
+						in1.(*SpaceStatusChangeRequest),
+					)
+			}, DRPCCoordinatorServer.SpaceStatusChange, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -146,6 +194,38 @@ type drpcCoordinator_FileLimitCheckStream struct {
 }
 
 func (x *drpcCoordinator_FileLimitCheckStream) SendAndClose(m *FileLimitCheckResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_SpaceStatusCheckStream interface {
+	drpc.Stream
+	SendAndClose(*SpaceStatusCheckResponse) error
+}
+
+type drpcCoordinator_SpaceStatusCheckStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_SpaceStatusCheckStream) SendAndClose(m *SpaceStatusCheckResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_SpaceStatusChangeStream interface {
+	drpc.Stream
+	SendAndClose(*SpaceStatusChangeResponse) error
+}
+
+type drpcCoordinator_SpaceStatusChangeStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_SpaceStatusChangeStream) SendAndClose(m *SpaceStatusChangeResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
 		return err
 	}

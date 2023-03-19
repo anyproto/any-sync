@@ -1,11 +1,13 @@
 package headsync
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/anytypeio/any-sync/app/ldiff"
 	"github.com/anytypeio/any-sync/app/ldiff/mock_ldiff"
 	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/commonspace/credentialprovider/mock_credentialprovider"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/liststorage/mock_liststorage"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
@@ -30,6 +32,7 @@ type pushSpaceRequestMatcher struct {
 	spaceId     string
 	aclRootId   string
 	settingsId  string
+	credential  []byte
 	spaceHeader *spacesyncproto.RawSpaceHeaderWithId
 }
 
@@ -39,7 +42,7 @@ func (p pushSpaceRequestMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	return res.Payload.AclPayloadId == p.aclRootId && res.Payload.SpaceHeader == p.spaceHeader && res.Payload.SpaceSettingsPayloadId == p.settingsId
+	return res.Payload.AclPayloadId == p.aclRootId && res.Payload.SpaceHeader == p.spaceHeader && res.Payload.SpaceSettingsPayloadId == p.settingsId && bytes.Equal(p.credential, res.Credential)
 }
 
 func (p pushSpaceRequestMatcher) String() string {
@@ -47,6 +50,10 @@ func (p pushSpaceRequestMatcher) String() string {
 }
 
 type mockPeer struct{}
+
+func (m mockPeer) TryClose(objectTTL time.Duration) (res bool, err error) {
+	return true, m.Close()
+}
 
 func (m mockPeer) Id() string {
 	return "mockId"
@@ -83,11 +90,13 @@ func newPushSpaceRequestMatcher(
 	spaceId string,
 	aclRootId string,
 	settingsId string,
+	credential []byte,
 	spaceHeader *spacesyncproto.RawSpaceHeaderWithId) *pushSpaceRequestMatcher {
 	return &pushSpaceRequestMatcher{
 		spaceId:     spaceId,
 		aclRootId:   aclRootId,
 		settingsId:  settingsId,
+		credential:  credential,
 		spaceHeader: spaceHeader,
 	}
 }
@@ -106,11 +115,12 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	factory := spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceSyncClient {
 		return clientMock
 	})
+	credentialProvider := mock_credentialprovider.NewMockCredentialProvider(ctrl)
 	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
 	spaceId := "spaceId"
 	aclRootId := "aclRootId"
 	l := logger.NewNamed(spaceId)
-	diffSyncer := newDiffSyncer(spaceId, diffMock, peerManagerMock, cacheMock, stMock, factory, syncstatus.NewNoOpSyncStatus(), l)
+	diffSyncer := newDiffSyncer(spaceId, diffMock, peerManagerMock, cacheMock, stMock, factory, syncstatus.NewNoOpSyncStatus(), credentialProvider, l)
 	delState.EXPECT().AddObserver(gomock.Any())
 	diffSyncer.Init(delState)
 
@@ -172,6 +182,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		}
 		spaceHeader := &spacesyncproto.RawSpaceHeaderWithId{}
 		spaceSettingsId := "spaceSettingsId"
+		credential := []byte("credential")
 
 		peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
@@ -189,21 +200,39 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		aclStorageMock.EXPECT().
 			Root().
 			Return(aclRoot, nil)
+		credentialProvider.EXPECT().
+			GetCredential(gomock.Any(), spaceHeader).
+			Return(credential, nil)
 		clientMock.EXPECT().
-			SpacePush(gomock.Any(), newPushSpaceRequestMatcher(spaceId, aclRootId, settingsId, spaceHeader)).
+			SpacePush(gomock.Any(), newPushSpaceRequestMatcher(spaceId, aclRootId, settingsId, credential, spaceHeader)).
 			Return(nil, nil)
 		peerManagerMock.EXPECT().SendPeer(gomock.Any(), "mockId", gomock.Any())
 
 		require.NoError(t, diffSyncer.Sync(ctx))
 	})
 
-	t.Run("diff syncer sync other error", func(t *testing.T) {
+	t.Run("diff syncer sync unexpected", func(t *testing.T) {
 		peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
 			Return([]peer.Peer{mockPeer{}}, nil)
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(spaceId, clientMock))).
 			Return(nil, nil, nil, spacesyncproto.ErrUnexpected)
+
+		require.NoError(t, diffSyncer.Sync(ctx))
+	})
+
+	t.Run("diff syncer sync space is deleted error", func(t *testing.T) {
+		peerManagerMock.EXPECT().
+			GetResponsiblePeers(gomock.Any()).
+			Return([]peer.Peer{mockPeer{}}, nil)
+		diffMock.EXPECT().
+			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(spaceId, clientMock))).
+			Return(nil, nil, nil, spacesyncproto.ErrSpaceIsDeleted)
+		stMock.EXPECT().SpaceSettingsId().Return("settingsId")
+		cacheMock.EXPECT().
+			GetTree(gomock.Any(), spaceId, "settingsId").
+			Return(nil, nil)
 
 		require.NoError(t, diffSyncer.Sync(ctx))
 	})

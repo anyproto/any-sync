@@ -7,6 +7,7 @@ package mock_synctree
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	list "github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	objecttree "github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
@@ -191,6 +192,20 @@ func (m *MockSyncTree) AddRawChanges(arg0 context.Context, arg1 objecttree.RawCh
 func (mr *MockSyncTreeMockRecorder) AddRawChanges(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChanges", reflect.TypeOf((*MockSyncTree)(nil).AddRawChanges), arg0, arg1)
+}
+
+// ChangeInfo mocks base method.
+func (m *MockSyncTree) ChangeInfo() *treechangeproto.TreeChangeInfo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeInfo")
+	ret0, _ := ret[0].(*treechangeproto.TreeChangeInfo)
+	return ret0
+}
+
+// ChangeInfo indicates an expected call of ChangeInfo.
+func (mr *MockSyncTreeMockRecorder) ChangeInfo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeInfo", reflect.TypeOf((*MockSyncTree)(nil).ChangeInfo))
 }
 
 // ChangesAfterCommonSnapshot mocks base method.
@@ -485,6 +500,21 @@ func (m *MockSyncTree) SyncWithPeer(arg0 context.Context, arg1 string) error {
 func (mr *MockSyncTreeMockRecorder) SyncWithPeer(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncWithPeer", reflect.TypeOf((*MockSyncTree)(nil).SyncWithPeer), arg0, arg1)
+}
+
+// TryClose mocks base method.
+func (m *MockSyncTree) TryClose(arg0 time.Duration) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryClose", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TryClose indicates an expected call of TryClose.
+func (mr *MockSyncTreeMockRecorder) TryClose(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryClose", reflect.TypeOf((*MockSyncTree)(nil).TryClose), arg0)
 }
 
 // TryLock mocks base method.

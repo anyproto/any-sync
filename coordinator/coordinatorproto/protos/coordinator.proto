@@ -12,10 +12,38 @@ service Coordinator {
     //  - if a handshake identity matches a given identity
     //  - if a requester contains in nodeconf list
     rpc FileLimitCheck(FileLimitCheckRequest) returns (FileLimitCheckResponse);
+
+    // SpaceStatusCheck checks the status of space and tells if it is deleted or not
+    rpc SpaceStatusCheck(SpaceStatusCheckRequest) returns (SpaceStatusCheckResponse);
+
+    // SpaceStatusChange changes the status of space
+    rpc SpaceStatusChange(SpaceStatusChangeRequest) returns (SpaceStatusChangeResponse);
 }
 
 message SpaceSignRequest {
     string spaceId = 1;
+    bytes header = 2;
+}
+
+enum ErrorCodes {
+    Unexpected = 0;
+    SpaceDeleted = 1;
+    SpaceDeletionPending = 2;
+    SpaceCreated = 3;
+    SpaceNotExists = 4;
+    ErrorOffset = 300;
+}
+
+enum SpaceStatus {
+    SpaceStatusCreated = 0;
+    SpaceStatusPendingDeletion = 1;
+    SpaceStatusDeletionStarted = 2;
+    SpaceStatusDeleted = 3;
+}
+
+message SpaceStatusPayload {
+    SpaceStatus status = 1;
+    int64 deletionTimestamp = 2;
 }
 
 message SpaceSignResponse {
@@ -52,4 +80,26 @@ message FileLimitCheckRequest {
 // FileLimitCheckResponse returns a current space limit in bytes
 message FileLimitCheckResponse {
     uint64 limit = 1;
+}
+
+// SpaceStatusCheckRequest contains the spaceId of requested space
+message SpaceStatusCheckRequest {
+    string spaceId = 1;
+}
+
+// SpaceStatusCheckResponse contains the current status of space
+message SpaceStatusCheckResponse {
+    SpaceStatusPayload payload = 1;
+}
+
+// SpaceStatusChangeRequest contains the deletionChange if we want to delete space, or it is empty otherwise
+message SpaceStatusChangeRequest {
+    string spaceId = 1;
+    string deletionChangeId = 2;
+    bytes deletionChangePayload = 3;
+}
+
+// SpaceStatusChangeResponse contains changed status of space
+message SpaceStatusChangeResponse {
+    SpaceStatusPayload payload = 1;
 }

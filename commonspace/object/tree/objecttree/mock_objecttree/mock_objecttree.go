@@ -7,6 +7,7 @@ package mock_objecttree
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	list "github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	objecttree "github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
@@ -80,6 +81,20 @@ func (m *MockObjectTree) AddRawChanges(arg0 context.Context, arg1 objecttree.Raw
 func (mr *MockObjectTreeMockRecorder) AddRawChanges(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChanges", reflect.TypeOf((*MockObjectTree)(nil).AddRawChanges), arg0, arg1)
+}
+
+// ChangeInfo mocks base method.
+func (m *MockObjectTree) ChangeInfo() *treechangeproto.TreeChangeInfo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeInfo")
+	ret0, _ := ret[0].(*treechangeproto.TreeChangeInfo)
+	return ret0
+}
+
+// ChangeInfo indicates an expected call of ChangeInfo.
+func (mr *MockObjectTreeMockRecorder) ChangeInfo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeInfo", reflect.TypeOf((*MockObjectTree)(nil).ChangeInfo))
 }
 
 // ChangesAfterCommonSnapshot mocks base method.
@@ -334,6 +349,21 @@ func (m *MockObjectTree) Storage() treestorage.TreeStorage {
 func (mr *MockObjectTreeMockRecorder) Storage() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Storage", reflect.TypeOf((*MockObjectTree)(nil).Storage))
+}
+
+// TryClose mocks base method.
+func (m *MockObjectTree) TryClose(arg0 time.Duration) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TryClose", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TryClose indicates an expected call of TryClose.
+func (mr *MockObjectTreeMockRecorder) TryClose(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryClose", reflect.TypeOf((*MockObjectTree)(nil).TryClose), arg0)
 }
 
 // TryLock mocks base method.

@@ -2,21 +2,28 @@
 package spacestorage
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/liststorage"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anytypeio/any-sync/util/cidutil"
+	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	"github.com/gogo/protobuf/proto"
+	"strings"
 )
 
 const CName = "common.commonspace.spacestorage"
 
 var (
-	ErrSpaceStorageExists  = errors.New("space storage exists")
-	ErrSpaceStorageMissing = errors.New("space storage missing")
+	ErrSpaceStorageExists   = errors.New("space storage exists")
+	ErrSpaceStorageMissing  = errors.New("space storage missing")
+	ErrIncorrectSpaceHeader = errors.New("incorrect space header")
 
 	ErrTreeStorageAlreadyDeleted = errors.New("tree storage already deleted")
 )
@@ -62,4 +69,39 @@ type SpaceStorageProvider interface {
 func ValidateSpaceStorageCreatePayload(payload SpaceStorageCreatePayload) (err error) {
 	// TODO: add proper validation
 	return nil
+}
+
+func ValidateSpaceHeader(spaceId string, header, identity []byte) (err error) {
+	split := strings.Split(spaceId, ".")
+	if len(split) != 2 {
+		return ErrIncorrectSpaceHeader
+	}
+	if !cidutil.VerifyCid(header, split[0]) {
+		err = objecttree.ErrIncorrectCid
+		return
+	}
+	raw := &spacesyncproto.RawSpaceHeader{}
+	err = proto.Unmarshal(header, raw)
+	if err != nil {
+		return
+	}
+	payload := &spacesyncproto.SpaceHeader{}
+	err = proto.Unmarshal(raw.SpaceHeader, payload)
+	if err != nil {
+		return
+	}
+	if identity != nil && !bytes.Equal(identity, payload.Identity) {
+		err = ErrIncorrectSpaceHeader
+		return
+	}
+	key, err := signingkey.NewSigningEd25519PubKeyFromBytes(payload.Identity)
+	if err != nil {
+		return
+	}
+	res, err := key.Verify(raw.SpaceHeader, raw.Signature)
+	if err != nil || !res {
+		err = ErrIncorrectSpaceHeader
+		return
+	}
+	return
 }
