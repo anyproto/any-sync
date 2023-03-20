@@ -13,6 +13,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/cheggaaa/mb/v3"
+	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/slices"
 	"sync"
@@ -25,6 +26,40 @@ type processMsg struct {
 	senderId   string
 	receiverId string
 	userMsg    *objecttree.RawChangesPayload
+}
+
+type msgDescription struct {
+	name  string
+	from  string
+	to    string
+	heads []string
+}
+
+func (p *processMsg) description() (descr msgDescription) {
+	unmarshalled := &treechangeproto.TreeSyncMessage{}
+	err := proto.Unmarshal(p.msg.Payload, unmarshalled)
+	if err != nil {
+		panic(err)
+	}
+	descr = msgDescription{
+		from: p.senderId,
+		to:   p.receiverId,
+	}
+	switch {
+	case unmarshalled.GetContent().GetHeadUpdate() != nil:
+		cnt := unmarshalled.GetContent().GetHeadUpdate()
+		descr.name = "HeadUpdate"
+		descr.heads = cnt.Heads
+	case unmarshalled.GetContent().GetFullSyncRequest() != nil:
+		cnt := unmarshalled.GetContent().GetFullSyncRequest()
+		descr.name = "FullSyncRequest"
+		descr.heads = cnt.Heads
+	case unmarshalled.GetContent().GetFullSyncResponse() != nil:
+		cnt := unmarshalled.GetContent().GetFullSyncResponse()
+		descr.name = "FullSyncResponse"
+		descr.heads = cnt.Heads
+	}
+	return
 }
 
 type messageLog struct {
@@ -233,7 +268,7 @@ func (p *processFixture) stop() {
 	p.wg.Wait()
 }
 
-func TestSimple(t *testing.T) {
+func TestSimple_TwoPeers(t *testing.T) {
 	aclList, err := createAclList()
 	require.NoError(t, err)
 	treeId := "treeId"
@@ -270,4 +305,52 @@ func TestSimple(t *testing.T) {
 	slices.Sort(secondHeads)
 	require.Equal(t, firstHeads, secondHeads)
 	require.Equal(t, []string{"1", "2"}, firstHeads)
+	logMsgs := fx.log.batcher.GetAll()
+	for _, msg := range logMsgs {
+		fmt.Println(msg.description())
+	}
+}
+
+func TestSimple_ThreePeers(t *testing.T) {
+	aclList, err := createAclList()
+	require.NoError(t, err)
+	treeId := "treeId"
+	spaceId := "spaceId"
+	storage := createStorage(treeId, aclList)
+	changeCreator := objecttree.NewMockChangeCreator()
+	deps := fixtureDeps{
+		aclList:     aclList,
+		initStorage: storage.(*treestorage.InMemoryTreeStorage),
+		connectionMap: map[string][]string{
+			"peer1": []string{"node1"},
+			"peer2": []string{"node1"},
+			"node1": []string{"peer1", "peer2"},
+		},
+	}
+	fx := newProcessFixture(t, spaceId, deps)
+	fx.run(t)
+	fx.handlers["peer1"].sendRawChanges(context.Background(), objecttree.RawChangesPayload{
+		NewHeads: nil,
+		RawChanges: []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("1", aclList.Id(), treeId, false, treeId),
+		},
+	})
+	fx.handlers["peer2"].sendRawChanges(context.Background(), objecttree.RawChangesPayload{
+		NewHeads: nil,
+		RawChanges: []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("2", aclList.Id(), treeId, false, treeId),
+		},
+	})
+	time.Sleep(100 * time.Millisecond)
+	fx.stop()
+	firstHeads := fx.handlers["peer1"].tree().Heads()
+	secondHeads := fx.handlers["peer2"].tree().Heads()
+	slices.Sort(firstHeads)
+	slices.Sort(secondHeads)
+	require.Equal(t, firstHeads, secondHeads)
+	require.Equal(t, []string{"1", "2"}, firstHeads)
+	logMsgs := fx.log.batcher.GetAll()
+	for _, msg := range logMsgs {
+		fmt.Println(msg.description())
+	}
 }
