@@ -6,6 +6,7 @@ option go_package = "commonfile/fileproto";
 enum ErrCodes {
     Unexpected = 0;
     CIDNotFound = 1;
+    Forbidden = 2;
     ErrorOffset = 200;
 }
 
@@ -18,10 +19,14 @@ service File {
     rpc BlocksCheck(BlocksCheckRequest) returns (BlocksCheckResponse);
     // BlocksBind binds CIDs to space
     rpc BlocksBind(BlocksBindRequest) returns (BlocksBindResponse);
-    // BlocksDelete deletes block from space
-    rpc BlocksDelete(BlocksDeleteRequest) returns (BlocksDeleteResponse);
+    // FilesDelete deletes files by id
+    rpc FilesDelete(FilesDeleteRequest) returns (FilesDeleteResponse);
+    // FilesInfo return info by given files id
+    rpc FilesInfo(FilesInfoRequest) returns (FilesInfoResponse);
     // Check checks the connection and credentials
     rpc Check(CheckRequest) returns (CheckResponse);
+    // SpaceInfo returns usage, limit, etc about space
+    rpc SpaceInfo(SpaceInfoRequest) returns (SpaceInfoResponse);
 }
 
 message BlockGetRequest {
@@ -36,8 +41,9 @@ message BlockGetResponse {
 
 message BlockPushRequest {
     string spaceId = 1;
-    bytes cid = 2;
-    bytes data = 3;
+    string fileId = 2;
+    bytes cid = 3;
+    bytes data = 4;
 }
 
 message BlockPushResponse {}
@@ -72,10 +78,34 @@ enum AvailabilityStatus {
 
 message BlocksBindRequest {
     string spaceId = 1;
-    repeated bytes cids = 2;
+    string fileId = 2;
+    repeated bytes cids = 3;
 }
 
 message BlocksBindResponse {}
+
+
+message FilesDeleteRequest {
+    string spaceId = 1;
+    repeated string fileIds = 2;
+}
+
+message FilesDeleteResponse {}
+
+message FilesInfoRequest {
+    string spaceId = 1;
+    repeated string fileIds = 2;
+}
+
+message FilesInfoResponse {
+    repeated FileInfo filesInfo = 1;
+}
+
+message FileInfo {
+    string fileId = 1;
+    uint64 usageBytes = 2;
+    uint32 cidsCount = 3;
+}
 
 message CheckRequest {}
 
@@ -83,3 +113,15 @@ message CheckResponse {
     repeated string spaceIds = 1;
     bool allowWrite = 2;
 }
+
+message SpaceInfoRequest {
+    string spaceId = 1;
+}
+
+message SpaceInfoResponse {
+    uint64 limitBytes = 1;
+    uint64 usageBytes = 2;
+    uint64 cidsCount = 3;
+    uint64 filesCount = 4;
+}
+
