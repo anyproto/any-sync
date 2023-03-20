@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/testutils/acllistbuilder"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
@@ -13,8 +14,10 @@ import (
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/cheggaaa/mb/v3"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 	"sync"
 	"testing"
+	"time"
 )
 
 type processMsg struct {
@@ -219,7 +222,7 @@ func newProcessFixture(t *testing.T, spaceId string, deps fixtureDeps) *processF
 	}
 }
 
-func (p *processFixture) runProcessFixture(t *testing.T) {
+func (p *processFixture) run(t *testing.T) {
 	for _, handler := range p.handlers {
 		handler.run(p.ctx, t, p.wg)
 	}
@@ -230,14 +233,41 @@ func (p *processFixture) stop() {
 	p.wg.Wait()
 }
 
-//func TestSyncProtocol(t *testing.T) {
-//	aclList, err := createAclList()
-//	require.NoError(t, err)
-//	treeId := "treeId"
-//	spaceId := "spaceId"
-//	storage := createStorage(treeId, aclList)
-//	testTree, err := createTestTree(aclList, storage)
-//	require.NoError(t, err)
-//	peerManager := &processPeerManager{}
-//	_ = createSyncHandler(spaceId, testTree, peerManager)
-//}
+func TestSimple(t *testing.T) {
+	aclList, err := createAclList()
+	require.NoError(t, err)
+	treeId := "treeId"
+	spaceId := "spaceId"
+	storage := createStorage(treeId, aclList)
+	changeCreator := objecttree.NewMockChangeCreator()
+	deps := fixtureDeps{
+		aclList:     aclList,
+		initStorage: storage.(*treestorage.InMemoryTreeStorage),
+		connectionMap: map[string][]string{
+			"peer1": []string{"peer2"},
+			"peer2": []string{"peer1"},
+		},
+	}
+	fx := newProcessFixture(t, spaceId, deps)
+	fx.run(t)
+	fx.handlers["peer1"].sendRawChanges(context.Background(), objecttree.RawChangesPayload{
+		NewHeads: nil,
+		RawChanges: []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("1", aclList.Id(), treeId, false, treeId),
+		},
+	})
+	fx.handlers["peer2"].sendRawChanges(context.Background(), objecttree.RawChangesPayload{
+		NewHeads: nil,
+		RawChanges: []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("2", aclList.Id(), treeId, false, treeId),
+		},
+	})
+	time.Sleep(100 * time.Millisecond)
+	fx.stop()
+	firstHeads := fx.handlers["peer1"].tree().Heads()
+	secondHeads := fx.handlers["peer2"].tree().Heads()
+	slices.Sort(firstHeads)
+	slices.Sort(secondHeads)
+	require.Equal(t, firstHeads, secondHeads)
+	require.Equal(t, []string{"1", "2"}, firstHeads)
+}
