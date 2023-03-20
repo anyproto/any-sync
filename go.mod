@@ -24,7 +24,7 @@ require (
 	github.com/libp2p/go-libp2p v0.24.1
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mr-tron/base58 v1.2.0
-	github.com/multiformats/go-multibase v0.1.1
+	github.com/multiformats/go-multibase v0.2.0
 	github.com/multiformats/go-multihash v0.2.1
 	github.com/prometheus/client_golang v1.14.0
 	github.com/stretchr/testify v1.8.2
