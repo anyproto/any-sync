@@ -7,8 +7,9 @@ enum ErrCodes {
     Unexpected = 0;
     CIDNotFound = 1;
     Forbidden = 2;
-    SpaceLimitExceed = 3;
-    BlockSizeExceed = 4;
+    SpaceLimitExceeded = 3;
+    BlockSizeExceeded = 4;
+    WrongHash = 5;
     ErrorOffset = 200;
 }
 
