@@ -20,7 +20,10 @@ var (
 )
 
 var (
-	log = logger.NewNamed("app")
+	log               = logger.NewNamed("app")
+	StopDeadline      = time.Minute
+	StopWarningAfter  = time.Second * 10
+	StartWarningAfter = time.Second * 10
 )
 
 // Component is a minimal interface for a common app.Component
@@ -53,7 +56,8 @@ type ComponentStatable interface {
 type App struct {
 	components  []Component
 	mu          sync.RWMutex
-	startStat   StartStat
+	startStat   Stat
+	stopStat    Stat
 	deviceState int
 }
 
@@ -67,16 +71,23 @@ func (app *App) Version() string {
 	return GitSummary
 }
 
-type StartStat struct {
+type Stat struct {
 	SpentMsPerComp map[string]int64
 	SpentMsTotal   int64
 }
 
-// StartStat returns total time spent per comp
-func (app *App) StartStat() StartStat {
+// StartStat returns total time spent per comp for the last Start
+func (app *App) StartStat() Stat {
 	app.mu.Lock()
 	defer app.mu.Unlock()
 	return app.startStat
+}
+
+// StopStat returns total time spent per comp for the last Close
+func (app *App) StopStat() Stat {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	return app.stopStat
 }
 
 // VersionDescription return the full info about the build
@@ -158,7 +169,17 @@ func (app *App) Start(ctx context.Context) (err error) {
 	app.mu.RLock()
 	defer app.mu.RUnlock()
 	app.startStat.SpentMsPerComp = make(map[string]int64)
-
+	var currentComponentStarting string
+	done := make(chan struct{})
+	go func() {
+		select {
+		case <-done:
+			return
+		case <-time.After(StartWarningAfter):
+			l := statLogger(app.stopStat, log).With(zap.String("in_progress", currentComponentStarting))
+			l.Warn("components start in progress")
+		}
+	}()
 	closeServices := func(idx int) {
 		for i := idx; i >= 0; i-- {
 			if serviceClose, ok := app.components[i].(ComponentRunnable); ok {
@@ -188,7 +209,13 @@ func (app *App) Start(ctx context.Context) (err error) {
 			app.startStat.SpentMsPerComp[s.Name()] = spent
 		}
 	}
-	log.Debug("all components started")
+
+	close(done)
+	l := statLogger(app.stopStat, log)
+	if app.startStat.SpentMsTotal > StartWarningAfter.Milliseconds() {
+		l.Warn("all components started")
+	}
+	l.Debug("all components started")
 	return
 }
 
@@ -203,18 +230,41 @@ func stackAllGoroutines() []byte {
 	}
 }
 
+func statLogger(stat Stat, ctxLogger logger.CtxLogger) logger.CtxLogger {
+	l := ctxLogger
+	for k, v := range stat.SpentMsPerComp {
+		l = l.With(zap.Int64(k, v))
+	}
+	l = l.With(zap.Int64("total", stat.SpentMsTotal))
+
+	return l
+}
+
 // Close stops the application
 // All components with ComponentRunnable implementation will be closed in the reversed order
 func (app *App) Close(ctx context.Context) error {
 	log.Debug("close components...")
 	app.mu.RLock()
 	defer app.mu.RUnlock()
+	app.stopStat.SpentMsPerComp = make(map[string]int64)
+	var currentComponentStopping string
 	done := make(chan struct{})
+
 	go func() {
 		select {
 		case <-done:
 			return
-		case <-time.After(time.Minute):
+		case <-time.After(StopWarningAfter):
+			statLogger(app.stopStat, log).
+				With(zap.String("in_progress", currentComponentStopping)).
+			 	Warn("components close in progress")
+		}
+	}()
+	go func() {
+		select {
+		case <-done:
+			return
+		case <-time.After(StopDeadline):
 			_, _ = os.Stderr.Write([]byte("app.Close timeout\n"))
 			_, _ = os.Stderr.Write(stackAllGoroutines())
 			panic("app.Close timeout")
@@ -224,16 +274,27 @@ func (app *App) Close(ctx context.Context) error {
 	var errs []string
 	for i := len(app.components) - 1; i >= 0; i-- {
 		if serviceClose, ok := app.components[i].(ComponentRunnable); ok {
+			start := time.Now()
+			currentComponentStopping = app.components[i].Name()
 			if e := serviceClose.Close(ctx); e != nil {
 				errs = append(errs, fmt.Sprintf("Component '%s' close error: %v", serviceClose.Name(), e))
 			}
+			spent := time.Since(start).Milliseconds()
+			app.stopStat.SpentMsTotal += spent
+			app.stopStat.SpentMsPerComp[app.components[i].Name()] = spent
 		}
 	}
 	close(done)
 	if len(errs) > 0 {
 		return errors.New(strings.Join(errs, "\n"))
 	}
-	log.Debug("all components have been closed")
+
+	l := statLogger(app.stopStat, log)
+	if app.stopStat.SpentMsTotal > StopWarningAfter.Milliseconds() {
+		l.Warn("all components have been closed")
+	}
+
+	l.Debug("all components have been closed")
 	return nil
 }
 
