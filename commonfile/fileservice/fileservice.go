@@ -22,6 +22,10 @@ const CName = "common.commonfile.fileservice"
 
 var log = logger.NewNamed(CName)
 
+const (
+	ChunkSize = 1 << 20
+)
+
 func New() FileService {
 	return &fileService{}
 }
@@ -74,7 +78,7 @@ func (fs *fileService) AddFile(ctx context.Context, r io.Reader) (ipld.Node, err
 		Maxlinks:   helpers.DefaultLinksPerBlock,
 		CidBuilder: &fs.prefix,
 	}
-	dbh, err := dbp.New(chunker.DefaultSplitter(r))
+	dbh, err := dbp.New(chunker.NewSizeSplitter(r, ChunkSize))
 	if err != nil {
 		return nil, err
 	}
