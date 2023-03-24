@@ -54,7 +54,7 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 		state = aclList.AclState()
 	)
 	// checking if the user could write
-	perm, err = state.PermissionsAtRecord(c.AclHeadId, c.Identity)
+	perm, err = state.StateAtRecord(c.AclHeadId, c.Identity)
 	if err != nil {
 		return
 	}

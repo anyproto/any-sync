@@ -25,7 +25,7 @@ func TestAclList_AclState_UserInviteAndJoin(t *testing.T) {
 	assert.Equal(t, aclrecordproto.AclUserPermissions_Admin, aclList.AclState().UserStates()[idA].Permissions)
 	assert.Equal(t, aclrecordproto.AclUserPermissions_Writer, aclList.AclState().UserStates()[idB].Permissions)
 	assert.Equal(t, aclrecordproto.AclUserPermissions_Reader, aclList.AclState().UserStates()[idC].Permissions)
-	assert.Equal(t, aclList.Head().CurrentReadKeyHash, aclList.AclState().CurrentReadKeyHash())
+	assert.Equal(t, aclList.Head().CurrentReadKeyHash, aclList.AclState().CurrentReadKeyId())
 
 	var records []*AclRecord
 	aclList.Iterate(func(record *AclRecord) (IsContinue bool) {
@@ -36,10 +36,10 @@ func TestAclList_AclState_UserInviteAndJoin(t *testing.T) {
 	// checking permissions at specific records
 	assert.Equal(t, 3, len(records))
 
-	_, err = aclList.AclState().PermissionsAtRecord(records[1].Id, idB)
+	_, err = aclList.AclState().StateAtRecord(records[1].Id, idB)
 	assert.Error(t, err, "B should have no permissions at record 1")
 
-	perm, err := aclList.AclState().PermissionsAtRecord(records[2].Id, idB)
+	perm, err := aclList.AclState().StateAtRecord(records[2].Id, idB)
 	assert.NoError(t, err, "should have no error with permissions of B in the record 2")
 	assert.Equal(t, UserPermissionPair{
 		Identity:   idB,
@@ -63,7 +63,7 @@ func TestAclList_AclState_UserJoinAndRemove(t *testing.T) {
 	// checking final state
 	assert.Equal(t, aclrecordproto.AclUserPermissions_Admin, aclList.AclState().UserStates()[idA].Permissions)
 	assert.Equal(t, aclrecordproto.AclUserPermissions_Reader, aclList.AclState().UserStates()[idC].Permissions)
-	assert.Equal(t, aclList.Head().CurrentReadKeyHash, aclList.AclState().CurrentReadKeyHash())
+	assert.Equal(t, aclList.Head().CurrentReadKeyHash, aclList.AclState().CurrentReadKeyId())
 
 	_, exists := aclList.AclState().UserStates()[idB]
 	assert.Equal(t, false, exists)
@@ -77,15 +77,15 @@ func TestAclList_AclState_UserJoinAndRemove(t *testing.T) {
 	// checking permissions at specific records
 	assert.Equal(t, 4, len(records))
 
-	assert.NotEqual(t, records[2].CurrentReadKeyHash, aclList.AclState().CurrentReadKeyHash())
+	assert.NotEqual(t, records[2].CurrentReadKeyHash, aclList.AclState().CurrentReadKeyId())
 
-	perm, err := aclList.AclState().PermissionsAtRecord(records[2].Id, idB)
+	perm, err := aclList.AclState().StateAtRecord(records[2].Id, idB)
 	assert.NoError(t, err, "should have no error with permissions of B in the record 2")
 	assert.Equal(t, UserPermissionPair{
 		Identity:   idB,
 		Permission: aclrecordproto.AclUserPermissions_Writer,
 	}, perm)
 
-	_, err = aclList.AclState().PermissionsAtRecord(records[3].Id, idB)
+	_, err = aclList.AclState().StateAtRecord(records[3].Id, idB)
 	assert.Error(t, err, "B should have no permissions at record 3, because user should be removed")
 }

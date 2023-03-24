@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/any-sync/util/crypto/cryptoproto"
+	"github.com/anytypeio/any-sync/util/strkey"
 	"github.com/gogo/protobuf/proto"
 	"io"
 	"sync"
@@ -119,6 +120,11 @@ func (k *Ed25519PrivKey) Decrypt(msg []byte) ([]byte, error) {
 	return DecryptX25519(k.privCurve, k.pubCurve, msg)
 }
 
+func (k *Ed25519PubKey) String() string {
+	res, _ := strkey.Encode(strkey.AccountAddressVersionByte, k.pubKey)
+	return res
+}
+
 // Raw public key bytes.
 func (k *Ed25519PubKey) Raw() ([]byte, error) {
 	return k.pubKey, nil
@@ -132,6 +138,11 @@ func (k *Ed25519PubKey) Encrypt(msg []byte) (data []byte, err error) {
 	})
 	data = EncryptX25519(k.pubCurve, msg)
 	return
+}
+
+// Storage returns underlying byte storage
+func (k *Ed25519PubKey) Storage() []byte {
+	return k.pubKey
 }
 
 // Equals compares two ed25519 public keys.

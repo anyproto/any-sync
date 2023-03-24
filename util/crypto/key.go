@@ -38,6 +38,10 @@ type PubKey interface {
 	Verify(data []byte, sig []byte) (bool, error)
 	// Marshall wraps key in proto encoding and marshalls it
 	Marshall() ([]byte, error)
+	// Storage returns underlying key storage
+	Storage() []byte
+	// String returns string representation
+	String() string
 }
 
 type SymKey interface {

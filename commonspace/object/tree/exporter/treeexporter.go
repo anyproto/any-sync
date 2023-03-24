@@ -68,7 +68,7 @@ func (t *treeExporter) ExportUnencrypted(tree objecttree.ReadableObjectTree) (er
 			return false
 		}
 		// that means that change is unencrypted
-		change.ReadKeyHash = 0
+		change.ReadKeyId = 0
 		change.Data = data
 		err = putStorage(change)
 		return err == nil
