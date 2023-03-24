@@ -1,18 +1,18 @@
 package encryptionkey
 
 import (
-	"github.com/anytypeio/any-sync/util/keys"
+	"github.com/anytypeio/any-sync/util/crypto"
 )
 
 type PrivKey interface {
-	keys.Key
+	crypto.Key
 
 	Decrypt([]byte) ([]byte, error)
 	GetPublic() PubKey
 }
 
 type PubKey interface {
-	keys.Key
+	crypto.Key
 
 	Encrypt(data []byte) ([]byte, error)
 }

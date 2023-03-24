@@ -7,7 +7,7 @@ import (
 	"crypto/subtle"
 	"crypto/x509"
 	"errors"
-	"github.com/anytypeio/any-sync/util/keys"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/cespare/xxhash"
 	mrand "golang.org/x/exp/rand"
 	"io"
@@ -30,7 +30,7 @@ type EncryptionRsaPubKey struct {
 	pubKey rsa.PublicKey
 }
 
-func (e *EncryptionRsaPubKey) Equals(key keys.Key) bool {
+func (e *EncryptionRsaPubKey) Equals(key crypto.Key) bool {
 	other, ok := (key).(*EncryptionRsaPubKey)
 	if !ok {
 		return keyEquals(e, key)
@@ -48,7 +48,7 @@ func (e *EncryptionRsaPubKey) Encrypt(data []byte) ([]byte, error) {
 	return rsa.EncryptOAEP(hash, rand.Reader, &e.pubKey, data, nil)
 }
 
-func (e *EncryptionRsaPrivKey) Equals(key keys.Key) bool {
+func (e *EncryptionRsaPrivKey) Equals(key crypto.Key) bool {
 	other, ok := (key).(*EncryptionRsaPrivKey)
 	if !ok {
 		return keyEquals(e, key)
@@ -127,7 +127,7 @@ func NewEncryptionRsaPubKeyFromBytes(bytes []byte) (PubKey, error) {
 	return &EncryptionRsaPubKey{pubKey: *pk}, nil
 }
 
-func keyEquals(k1, k2 keys.Key) bool {
+func keyEquals(k1, k2 crypto.Key) bool {
 	a, err := k1.Raw()
 	if err != nil {
 		return false

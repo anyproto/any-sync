@@ -4,7 +4,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/net/secureservice/handshake"
 	"github.com/anytypeio/any-sync/net/secureservice/handshake/handshakeproto"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"go.uber.org/zap"
 )
@@ -57,7 +57,7 @@ func (p *peerSignVerifier) CheckCredential(sc sec.SecureConn, cred *handshakepro
 	if err = msg.Unmarshal(cred.Payload); err != nil {
 		return nil, handshake.ErrUnexpectedPayload
 	}
-	pubKey, err := signingkey.NewSigningEd25519PubKeyFromBytes(msg.Identity)
+	pubKey, err := crypto.NewSigningEd25519PubKeyFromBytes(msg.Identity)
 	if err != nil {
 		return nil, handshake.ErrInvalidCredentials
 	}

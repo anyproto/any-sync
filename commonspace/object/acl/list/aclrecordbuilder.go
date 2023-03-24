@@ -4,8 +4,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/util/cidutil"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
-	"github.com/anytypeio/any-sync/util/keys/symmetric"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
 	"time"
 )
@@ -29,7 +28,7 @@ func newAclRecordBuilder(id string, keychain *keychain.Keychain) AclRecordBuilde
 }
 
 func (a *aclRecordBuilder) BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyBytes []byte, state *AclState) (rec *aclrecordproto.RawAclRecord, err error) {
-	acceptPrivKey, err := signingkey.NewSigningEd25519PrivKeyFromBytes(acceptPrivKeyBytes)
+	acceptPrivKey, err := crypto.NewSigningEd25519PrivKeyFromBytes(acceptPrivKeyBytes)
 	if err != nil {
 		return
 	}
@@ -37,7 +36,7 @@ func (a *aclRecordBuilder) BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyByt
 	if err != nil {
 		return
 	}
-	encSymKey, err := symmetric.FromBytes(encSymKeyBytes)
+	encSymKey, err := crypto.UnmarshallAESKey(encSymKeyBytes)
 	if err != nil {
 		return
 	}

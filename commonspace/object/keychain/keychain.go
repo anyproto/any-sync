@@ -1,6 +1,7 @@
 package keychain
 
 import (
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
 )
 
@@ -18,7 +19,7 @@ func (k *Keychain) GetOrAdd(identity string) (signingkey.PubKey, error) {
 	if key, exists := k.keys[identity]; exists {
 		return key, nil
 	}
-	res, err := signingkey.NewSigningEd25519PubKeyFromBytes([]byte(identity))
+	res, err := crypto.NewSigningEd25519PubKeyFromBytes([]byte(identity))
 	if err != nil {
 		return nil, err
 	}

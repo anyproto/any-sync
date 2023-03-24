@@ -14,7 +14,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage/mock_spacestorage"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"sync"
@@ -149,7 +149,7 @@ func TestSettingsObject_DeleteObject(t *testing.T) {
 	accountData := &accountdata.AccountData{
 		Identity: []byte("id"),
 		PeerKey:  nil,
-		SignKey:  &signingkey.Ed25519PrivateKey{},
+		SignKey:  &crypto.Ed25519PrivKey{},
 		EncKey:   nil,
 	}
 	fx.account.EXPECT().Account().Return(accountData)

@@ -3,7 +3,7 @@ package handshake
 import (
 	"context"
 	"github.com/anytypeio/any-sync/net/secureservice/handshake/handshakeproto"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	crypto2 "github.com/anytypeio/any-sync/util/crypto"
 	peer2 "github.com/anytypeio/any-sync/util/peer"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -558,12 +558,12 @@ func (t *testCredChecker) CheckCredential(sc sec.SecureConn, cred *handshakeprot
 
 func newConnPair(t require.TestingT) (sc1, sc2 *secConn) {
 	c1, c2 := net.Pipe()
-	sk1, _, err := signingkey.GenerateRandomEd25519KeyPair()
+	sk1, _, err := crypto2.GenerateRandomEd25519KeyPair()
 	require.NoError(t, err)
 	sk1b, err := sk1.Raw()
 	signKey1, err := crypto.UnmarshalEd25519PrivateKey(sk1b)
 	require.NoError(t, err)
-	sk2, _, err := signingkey.GenerateRandomEd25519KeyPair()
+	sk2, _, err := crypto2.GenerateRandomEd25519KeyPair()
 	require.NoError(t, err)
 	sk2b, err := sk2.Raw()
 	signKey2, err := crypto.UnmarshalEd25519PrivateKey(sk2b)
@@ -593,7 +593,7 @@ type secConn struct {
 
 func (s *secConn) LocalPeer() peer.ID {
 	skB, _ := s.localKey.Raw()
-	sk, _ := signingkey.NewSigningEd25519PubKeyFromBytes(skB)
+	sk, _ := crypto2.NewSigningEd25519PubKeyFromBytes(skB)
 	lp, _ := peer2.IdFromSigningPubKey(sk)
 	return lp
 }

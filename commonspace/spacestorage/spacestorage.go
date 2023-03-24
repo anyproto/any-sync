@@ -13,7 +13,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/util/cidutil"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
 	"strings"
 )
@@ -94,7 +94,7 @@ func ValidateSpaceHeader(spaceId string, header, identity []byte) (err error) {
 		err = ErrIncorrectSpaceHeader
 		return
 	}
-	key, err := signingkey.NewSigningEd25519PubKeyFromBytes(payload.Identity)
+	key, err := crypto.NewSigningEd25519PubKeyFromBytes(payload.Identity)
 	if err != nil {
 		return
 	}

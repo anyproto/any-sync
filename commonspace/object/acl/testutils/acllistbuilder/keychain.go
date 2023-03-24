@@ -2,17 +2,17 @@ package acllistbuilder
 
 import (
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/anytypeio/any-sync/util/keys"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
-	"github.com/anytypeio/any-sync/util/keys/symmetric"
 	"hash/fnv"
 	"strings"
 )
 
 type SymKey struct {
 	Hash uint64
-	Key  *symmetric.Key
+	Key  *crypto.AESKey
 }
 
 type YAMLKeychain struct {
@@ -81,12 +81,12 @@ func (k *YAMLKeychain) AddSigningKey(key *Key) {
 		err        error
 	)
 	if key.Value == "generated" {
-		newPrivKey, pubKey, err = signingkey.GenerateRandomEd25519KeyPair()
+		newPrivKey, pubKey, err = crypto.GenerateRandomEd25519KeyPair()
 		if err != nil {
 			panic(err)
 		}
 	} else {
-		newPrivKey, err = keys.DecodeKeyFromString(key.Value, signingkey.NewSigningEd25519PrivKeyFromBytes, nil)
+		newPrivKey, err = keys.DecodeKeyFromString(key.Value, crypto.NewSigningEd25519PrivKeyFromBytes, nil)
 		if err != nil {
 			panic(err)
 		}
@@ -110,11 +110,11 @@ func (k *YAMLKeychain) AddReadKey(key *Key) {
 	}
 
 	var (
-		rkey *symmetric.Key
+		rkey *crypto.AESKey
 		err  error
 	)
 	if key.Value == "generated" {
-		rkey, err = symmetric.NewRandom()
+		rkey, err = crypto.NewRandomAES()
 		if err != nil {
 			panic("should be able to generate symmetric key")
 		}
@@ -126,7 +126,7 @@ func (k *YAMLKeychain) AddReadKey(key *Key) {
 			panic("should be able to derive symmetric key")
 		}
 	} else {
-		rkey, err = symmetric.FromString(key.Value)
+		rkey, err = crypto.UnmarshallAESKeyString(key.Value)
 		if err != nil {
 			panic("should be able to parse symmetric key")
 		}

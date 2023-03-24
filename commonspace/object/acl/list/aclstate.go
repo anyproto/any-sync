@@ -9,10 +9,10 @@ import (
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/keychain"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/anytypeio/any-sync/util/keys"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
-	"github.com/anytypeio/any-sync/util/keys/symmetric"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 )
@@ -43,7 +43,7 @@ type UserPermissionPair struct {
 type AclState struct {
 	id                 string
 	currentReadKeyHash uint64
-	userReadKeys       map[uint64]*symmetric.Key
+	userReadKeys       map[uint64]*crypto.AESKey
 	userStates         map[string]*aclrecordproto.AclUserState
 	userInvites        map[string]*aclrecordproto.AclUserInvite
 	encryptionKey      encryptionkey.PrivKey
@@ -70,7 +70,7 @@ func newAclStateWithKeys(
 		identity:            string(identity),
 		signingKey:          signingKey,
 		encryptionKey:       encryptionKey,
-		userReadKeys:        make(map[uint64]*symmetric.Key),
+		userReadKeys:        make(map[uint64]*crypto.AESKey),
 		userStates:          make(map[string]*aclrecordproto.AclUserState),
 		userInvites:         make(map[string]*aclrecordproto.AclUserInvite),
 		permissionsAtRecord: make(map[string][]UserPermissionPair),
@@ -80,7 +80,7 @@ func newAclStateWithKeys(
 func newAclState(id string) *AclState {
 	return &AclState{
 		id:                  id,
-		userReadKeys:        make(map[uint64]*symmetric.Key),
+		userReadKeys:        make(map[uint64]*crypto.AESKey),
 		userStates:          make(map[string]*aclrecordproto.AclUserState),
 		userInvites:         make(map[string]*aclrecordproto.AclUserInvite),
 		permissionsAtRecord: make(map[string][]UserPermissionPair),
@@ -91,7 +91,7 @@ func (st *AclState) CurrentReadKeyHash() uint64 {
 	return st.currentReadKeyHash
 }
 
-func (st *AclState) CurrentReadKey() (*symmetric.Key, error) {
+func (st *AclState) CurrentReadKey() (*crypto.AESKey, error) {
 	key, exists := st.userReadKeys[st.currentReadKeyHash]
 	if !exists {
 		return nil, ErrNoReadKey
@@ -99,7 +99,7 @@ func (st *AclState) CurrentReadKey() (*symmetric.Key, error) {
 	return key, nil
 }
 
-func (st *AclState) UserReadKeys() map[uint64]*symmetric.Key {
+func (st *AclState) UserReadKeys() map[uint64]*crypto.AESKey {
 	return st.userReadKeys
 }
 
@@ -194,7 +194,7 @@ func (st *AclState) applyRoot(root *aclrecordproto.AclRoot) (err error) {
 }
 
 func (st *AclState) saveReadKeyFromRoot(root *aclrecordproto.AclRoot) (err error) {
-	var readKey *symmetric.Key
+	var readKey *crypto.AESKey
 	if len(root.GetDerivationScheme()) != 0 {
 		var encPrivKey []byte
 		encPrivKey, err = st.encryptionKey.Raw()
@@ -311,7 +311,7 @@ func (st *AclState) applyUserJoin(ch *aclrecordproto.AclUserJoin) error {
 
 	// validating signature
 	signature := ch.GetAcceptSignature()
-	verificationKey, err := signingkey.NewSigningEd25519PubKeyFromBytes(invite.AcceptPublicKey)
+	verificationKey, err := crypto.NewSigningEd25519PubKeyFromBytes(invite.AcceptPublicKey)
 	if err != nil {
 		return fmt.Errorf("public key verifying invite accepts is given in incorrect format: %v", err)
 	}
@@ -400,13 +400,13 @@ func (st *AclState) applyUserRemove(ch *aclrecordproto.AclUserRemove) error {
 	return nil
 }
 
-func (st *AclState) decryptReadKeyAndHash(msg []byte) (*symmetric.Key, uint64, error) {
+func (st *AclState) decryptReadKeyAndHash(msg []byte) (*crypto.AESKey, uint64, error) {
 	decrypted, err := st.encryptionKey.Decrypt(msg)
 	if err != nil {
 		return nil, 0, ErrFailedToDecrypt
 	}
 
-	key, err := symmetric.FromBytes(decrypted)
+	key, err := crypto.UnmarshallAESKey(decrypted)
 	if err != nil {
 		return nil, 0, ErrFailedToDecrypt
 	}

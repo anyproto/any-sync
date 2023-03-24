@@ -5,8 +5,8 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/util/cidutil"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
-	"github.com/anytypeio/any-sync/util/keys/symmetric"
 	"github.com/gogo/protobuf/proto"
 	"time"
 )
@@ -21,7 +21,7 @@ type BuilderContent struct {
 	Identity           []byte
 	IsSnapshot         bool
 	SigningKey         signingkey.PrivKey
-	ReadKey            *symmetric.Key
+	ReadKey            *crypto.AESKey
 	Content            []byte
 }
 
