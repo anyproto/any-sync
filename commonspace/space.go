@@ -295,7 +295,13 @@ func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCrea
 		SyncStatus:     s.syncStatus,
 		PeerGetter:     s.peerManager,
 	}
-	return synctree.PutSyncTree(ctx, payload, deps)
+	t, err = synctree.PutSyncTree(ctx, payload, deps)
+	if err != nil {
+		return
+	}
+	s.treesUsed.Add(1)
+	log.Debug("incrementing counter", zap.String("id", payload.RootRawChange.Id), zap.Int32("trees", s.treesUsed.Load()), zap.String("spaceId", s.id))
+	return
 }
 
 type BuildTreeOpts struct {
@@ -330,8 +336,8 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 	if t, err = synctree.BuildSyncTreeOrGetRemote(ctx, id, deps); err != nil {
 		return nil, err
 	}
-	log.Debug("incrementing counter", zap.String("id", id), zap.String("spaceId", s.id))
 	s.treesUsed.Add(1)
+	log.Debug("incrementing counter", zap.String("id", id), zap.Int32("trees", s.treesUsed.Load()), zap.String("spaceId", s.id))
 	return
 }
 
@@ -406,8 +412,8 @@ func (s *space) handleMessage(msg HandleMessage) {
 }
 
 func (s *space) onObjectClose(id string) {
-	log.Debug("decrementing counter", zap.String("id", id), zap.String("spaceId", s.id))
 	s.treesUsed.Add(-1)
+	log.Debug("decrementing counter", zap.String("id", id), zap.Int32("trees", s.treesUsed.Load()), zap.String("spaceId", s.id))
 	_ = s.handleQueue.CloseThread(id)
 }
 

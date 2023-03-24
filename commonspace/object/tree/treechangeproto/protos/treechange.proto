@@ -30,8 +30,8 @@ message TreeChange {
   string snapshotBaseId = 3;
   // ChangesData is an arbitrary payload to be read by the client
   bytes changesData = 4;
-  // CurrentReadKeyHash is the hash of the read key which is used to encrypt this change
-  uint64 currentReadKeyHash = 5;
+  // ReadKeyId is the id of the read key
+  string readKeyId = 5;
   // Timestamp is this change creation timestamp
   int64 timestamp = 6;
   // Identity is a public key with which the raw payload of this change is signed

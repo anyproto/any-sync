@@ -21,6 +21,7 @@ type ctxKey uint
 
 const (
 	ctxKeySpaceId ctxKey = iota
+	ctxKeyFileId
 )
 
 type BlockStore interface {
@@ -46,5 +47,14 @@ func CtxWithSpaceId(ctx context.Context, spaceId string) context.Context {
 
 func CtxGetSpaceId(ctx context.Context) (spaceId string) {
 	spaceId, _ = ctx.Value(ctxKeySpaceId).(string)
+	return
+}
+
+func CtxWithFileId(ctx context.Context, spaceId string) context.Context {
+	return context.WithValue(ctx, ctxKeyFileId, spaceId)
+}
+
+func CtxGetFileId(ctx context.Context) (spaceId string) {
+	spaceId, _ = ctx.Value(ctxKeyFileId).(string)
 	return
 }
