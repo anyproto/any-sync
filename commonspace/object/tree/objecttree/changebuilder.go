@@ -14,15 +14,15 @@ import (
 var ErrEmptyChange = errors.New("change payload should not be empty")
 
 type BuilderContent struct {
-	TreeHeadIds        []string
-	AclHeadId          string
-	SnapshotBaseId     string
-	CurrentReadKeyHash uint64
-	Identity           []byte
-	IsSnapshot         bool
-	SigningKey         signingkey.PrivKey
-	ReadKey            *crypto.AESKey
-	Content            []byte
+	TreeHeadIds    []string
+	AclHeadId      string
+	SnapshotBaseId string
+	ReadKeyId      string
+	Identity       []byte
+	IsSnapshot     bool
+	SigningKey     signingkey.PrivKey
+	ReadKey        *crypto.AESKey
+	Content        []byte
 }
 
 type InitialContent struct {
@@ -161,13 +161,13 @@ func (c *changeBuilder) BuildRoot(payload InitialContent) (ch *Change, rawIdChan
 
 func (c *changeBuilder) Build(payload BuilderContent) (ch *Change, rawIdChange *treechangeproto.RawTreeChangeWithId, err error) {
 	change := &treechangeproto.TreeChange{
-		TreeHeadIds:        payload.TreeHeadIds,
-		AclHeadId:          payload.AclHeadId,
-		SnapshotBaseId:     payload.SnapshotBaseId,
-		CurrentReadKeyHash: payload.CurrentReadKeyHash,
-		Timestamp:          time.Now().Unix(),
-		Identity:           payload.Identity,
-		IsSnapshot:         payload.IsSnapshot,
+		TreeHeadIds:    payload.TreeHeadIds,
+		AclHeadId:      payload.AclHeadId,
+		SnapshotBaseId: payload.SnapshotBaseId,
+		ReadKeyId:      payload.ReadKeyId,
+		Timestamp:      time.Now().Unix(),
+		Identity:       payload.Identity,
+		IsSnapshot:     payload.IsSnapshot,
 	}
 	if payload.ReadKey != nil {
 		var encrypted []byte
@@ -212,14 +212,14 @@ func (c *changeBuilder) Marshall(ch *Change) (raw *treechangeproto.RawTreeChange
 		return c.rootChange, nil
 	}
 	treeChange := &treechangeproto.TreeChange{
-		TreeHeadIds:        ch.PreviousIds,
-		AclHeadId:          ch.AclHeadId,
-		SnapshotBaseId:     ch.SnapshotId,
-		ChangesData:        ch.Data,
-		CurrentReadKeyHash: ch.ReadKeyHash,
-		Timestamp:          ch.Timestamp,
-		Identity:           []byte(ch.Identity),
-		IsSnapshot:         ch.IsSnapshot,
+		TreeHeadIds:    ch.PreviousIds,
+		AclHeadId:      ch.AclHeadId,
+		SnapshotBaseId: ch.SnapshotId,
+		ChangesData:    ch.Data,
+		ReadKeyId:      ch.ReadKeyId,
+		Timestamp:      ch.Timestamp,
+		Identity:       []byte(ch.Identity),
+		IsSnapshot:     ch.IsSnapshot,
 	}
 	var marshalled []byte
 	marshalled, err = treeChange.Marshal()

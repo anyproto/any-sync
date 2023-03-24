@@ -236,22 +236,22 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 	}
 
 	if content.IsEncrypted {
-		readKeyHash = state.CurrentReadKeyHash()
+		readKeyHash = state.CurrentReadKeyId()
 		readKey, err = state.CurrentReadKey()
 		if err != nil {
 			return
 		}
 	}
 	cnt = BuilderContent{
-		TreeHeadIds:        ot.tree.Heads(),
-		AclHeadId:          ot.aclList.Head().Id,
-		SnapshotBaseId:     ot.tree.RootId(),
-		CurrentReadKeyHash: readKeyHash,
-		Identity:           content.Identity,
-		IsSnapshot:         content.IsSnapshot,
-		SigningKey:         content.Key,
-		ReadKey:            readKey,
-		Content:            content.Data,
+		TreeHeadIds:    ot.tree.Heads(),
+		AclHeadId:      ot.aclList.Head().Id,
+		SnapshotBaseId: ot.tree.RootId(),
+		ReadKeyId:      readKeyHash,
+		Identity:       content.Identity,
+		IsSnapshot:     content.IsSnapshot,
+		SigningKey:     content.Key,
+		ReadKey:        readKey,
+		Content:        content.Data,
 	}
 	return
 }
@@ -488,11 +488,11 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 	}
 	decrypt := func(c *Change) (decrypted []byte, err error) {
 		// the change is not encrypted
-		if c.ReadKeyHash == 0 {
+		if c.ReadKeyId == 0 {
 			decrypted = c.Data
 			return
 		}
-		readKey, exists := ot.keys[c.ReadKeyHash]
+		readKey, exists := ot.keys[c.ReadKeyId]
 		if !exists {
 			err = list.ErrNoReadKey
 			return

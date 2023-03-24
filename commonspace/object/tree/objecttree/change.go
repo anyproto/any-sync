@@ -20,7 +20,7 @@ type Change struct {
 	SnapshotId  string
 	IsSnapshot  bool
 	Timestamp   int64
-	ReadKeyHash uint64
+	ReadKeyId   string
 	Identity    string
 	Data        []byte
 	Model       interface{}
@@ -38,7 +38,7 @@ func NewChange(id string, ch *treechangeproto.TreeChange, signature []byte) *Cha
 		PreviousIds: ch.TreeHeadIds,
 		AclHeadId:   ch.AclHeadId,
 		Timestamp:   ch.Timestamp,
-		ReadKeyHash: ch.CurrentReadKeyHash,
+		ReadKeyId:   ch.ReadKeyId,
 		Id:          id,
 		Data:        ch.ChangesData,
 		SnapshotId:  ch.SnapshotBaseId,

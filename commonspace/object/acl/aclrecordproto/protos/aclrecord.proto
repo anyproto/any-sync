@@ -27,8 +27,7 @@ message AclRoot {
     string spaceId = 2;
     bytes encryptedReadKey = 3;
     string derivationScheme = 4;
-    uint64 currentReadKeyHash = 5;
-    int64 timestamp = 6;
+    int64 timestamp = 5;
 }
 
 message AclContentValue {

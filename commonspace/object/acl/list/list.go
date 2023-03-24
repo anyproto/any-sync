@@ -9,6 +9,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anytypeio/any-sync/commonspace/object/keychain"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"sync"
 )
 
@@ -56,11 +57,11 @@ type aclList struct {
 
 func BuildAclListWithIdentity(acc *accountdata.AccountData, storage liststorage.ListStorage) (AclList, error) {
 	builder := newAclStateBuilderWithIdentity(acc)
-	return build(storage.Id(), builder, newAclRecordBuilder(storage.Id(), keychain.NewKeychain()), storage)
+	return build(storage.Id(), builder, newAclRecordBuilder(storage.Id(), crypto.NewKeyStorage()), storage)
 }
 
 func BuildAclList(storage liststorage.ListStorage) (AclList, error) {
-	return build(storage.Id(), newAclStateBuilder(), newAclRecordBuilder(storage.Id(), keychain.NewKeychain()), storage)
+	return build(storage.Id(), newAclStateBuilder(), newAclRecordBuilder(storage.Id(), crypto.NewKeyStorage()), storage)
 }
 
 func build(id string, stateBuilder *aclStateBuilder, recBuilder AclRecordBuilder, storage liststorage.ListStorage) (list AclList, err error) {
@@ -74,7 +75,7 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder AclRecordBuilder
 		return
 	}
 
-	record, err := recBuilder.ConvertFromRaw(rawRecordWithId)
+	record, err := recBuilder.FromRaw(rawRecordWithId)
 	if err != nil {
 		return
 	}
@@ -86,7 +87,7 @@ func build(id string, stateBuilder *aclStateBuilder, recBuilder AclRecordBuilder
 			return
 		}
 
-		record, err = recBuilder.ConvertFromRaw(rawRecordWithId)
+		record, err = recBuilder.FromRaw(rawRecordWithId)
 		if err != nil {
 			return
 		}
@@ -137,7 +138,7 @@ func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added
 	if _, ok := a.indexes[rawRec.Id]; ok {
 		return
 	}
-	record, err := a.recordBuilder.ConvertFromRaw(rawRec)
+	record, err := a.recordBuilder.FromRaw(rawRec)
 	if err != nil {
 		return
 	}
@@ -156,7 +157,7 @@ func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added
 }
 
 func (a *aclList) IsValidNext(rawRec *aclrecordproto.RawAclRecordWithId) (err error) {
-	_, err = a.recordBuilder.ConvertFromRaw(rawRec)
+	_, err = a.recordBuilder.FromRaw(rawRec)
 	if err != nil {
 		return
 	}
