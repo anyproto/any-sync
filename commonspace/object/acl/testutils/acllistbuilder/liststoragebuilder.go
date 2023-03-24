@@ -7,9 +7,9 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/testutils/yamltests"
 	"github.com/anytypeio/any-sync/util/cidutil"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
-	"github.com/anytypeio/any-sync/util/keys/symmetric"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"path"
@@ -249,7 +249,7 @@ func (t *AclListStorageBuilder) encryptReadKeysWithPubKey(keys []string, encKey 
 	return
 }
 
-func (t *AclListStorageBuilder) encryptReadKeysWithSymKey(keys []string, key *symmetric.Key) (enc [][]byte) {
+func (t *AclListStorageBuilder) encryptReadKeysWithSymKey(keys []string, key *crypto.AESKey) (enc [][]byte) {
 	for _, k := range keys {
 		realKey := t.keychain.GetKey(k).(*SymKey).Key.Bytes()
 		res, err := key.Encrypt(realKey)

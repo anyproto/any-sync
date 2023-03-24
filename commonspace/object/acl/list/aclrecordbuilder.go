@@ -5,7 +5,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/util/cidutil"
 	"github.com/anytypeio/any-sync/util/crypto"
-	"github.com/anytypeio/any-sync/util/keys/symmetric"
 	"github.com/gogo/protobuf/proto"
 	"time"
 )
@@ -37,7 +36,7 @@ func (a *aclRecordBuilder) BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyByt
 	if err != nil {
 		return
 	}
-	encSymKey, err := symmetric.FromBytes(encSymKeyBytes)
+	encSymKey, err := crypto.UnmarshallAESKey(encSymKeyBytes)
 	if err != nil {
 		return
 	}
