@@ -2,9 +2,10 @@ package keys
 
 import (
 	"encoding/base64"
+	"github.com/anytypeio/any-sync/util/crypto"
 )
 
-func EncodeKeyToString[T Key](key T) (str string, err error) {
+func EncodeKeyToString[T crypto.Key](key T) (str string, err error) {
 	raw, err := key.Raw()
 	if err != nil {
 		return
@@ -17,7 +18,7 @@ func EncodeBytesToString(bytes []byte) string {
 	return base64.StdEncoding.EncodeToString(bytes)
 }
 
-func DecodeKeyFromString[T Key](str string, construct func([]byte) (T, error), def T) (T, error) {
+func DecodeKeyFromString[T crypto.Key](str string, construct func([]byte) (T, error), def T) (T, error) {
 	dec, err := DecodeBytesFromString(str)
 	if err != nil {
 		return def, err

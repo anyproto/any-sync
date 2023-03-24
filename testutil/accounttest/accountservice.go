@@ -5,9 +5,9 @@ import (
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/anytypeio/any-sync/util/keys"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/any-sync/util/peer"
 )
 
@@ -25,7 +25,7 @@ func (s *AccountTestService) Init(a *app.App) (err error) {
 		return
 	}
 
-	signKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
+	signKey, _, err := crypto.GenerateRandomEd25519KeyPair()
 	if err != nil {
 		return
 	}
@@ -34,7 +34,7 @@ func (s *AccountTestService) Init(a *app.App) (err error) {
 		return
 	}
 
-	peerKey, _, err := signingkey.GenerateRandomEd25519KeyPair()
+	peerKey, _, err := crypto.GenerateRandomEd25519KeyPair()
 	if err != nil {
 		return err
 	}

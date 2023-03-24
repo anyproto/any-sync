@@ -7,11 +7,13 @@ proto:
 
 	@$(eval P_ACL_RECORDS_PATH_PB := commonspace/object/acl/aclrecordproto)
 	@$(eval P_TREE_CHANGES_PATH_PB := commonspace/object/tree/treechangeproto)
+	@$(eval P_CRYPTO_PATH_PB := util/keys/cryptoproto)
 	@$(eval P_ACL_RECORDS := M$(P_ACL_RECORDS_PATH_PB)/protos/aclrecord.proto=github.com/anytypeio/any-sync/$(P_ACL_RECORDS_PATH_PB))
 	@$(eval P_TREE_CHANGES := M$(P_TREE_CHANGES_PATH_PB)/protos/treechange.proto=github.com/anytypeio/any-sync/$(P_TREE_CHANGES_PATH_PB))
 
 	protoc --gogofaster_out=:. $(P_ACL_RECORDS_PATH_PB)/protos/*.proto
 	protoc --gogofaster_out=:. $(P_TREE_CHANGES_PATH_PB)/protos/*.proto
+	protoc --gogofaster_out=:. $(P_CRYPTO_PATH_PB)/protos/*.proto
 	$(eval PKGMAP := $$(P_TREE_CHANGES),$$(P_ACL_RECORDS))
 	protoc --gogofaster_out=$(PKGMAP):. --go-drpc_out=protolib=github.com/gogo/protobuf:. commonspace/spacesyncproto/protos/*.proto
 	protoc --gogofaster_out=$(PKGMAP):. --go-drpc_out=protolib=github.com/gogo/protobuf:. commonfile/fileproto/protos/*.proto
