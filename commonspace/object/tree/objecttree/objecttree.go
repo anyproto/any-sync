@@ -4,6 +4,7 @@ package objecttree
 import (
 	"context"
 	"errors"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"sync"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anytypeio/any-sync/util/keys/symmetric"
 	"github.com/anytypeio/any-sync/util/slice"
 )
 
@@ -99,7 +99,7 @@ type objectTree struct {
 	root    *Change
 	tree    *Tree
 
-	keys map[uint64]*symmetric.Key
+	keys map[uint64]*crypto.AESKey
 
 	// buffers
 	difSnapshotBuf  []*treechangeproto.RawTreeChangeWithId
@@ -225,7 +225,7 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 
 	var (
 		state       = ot.aclList.AclState() // special method for own keys
-		readKey     *symmetric.Key
+		readKey     *crypto.AESKey
 		readKeyHash uint64
 	)
 	canWrite := state.HasPermission(content.Identity, aclrecordproto.AclUserPermissions_Writer) ||

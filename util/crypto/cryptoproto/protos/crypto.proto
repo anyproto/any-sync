@@ -1,20 +1,14 @@
 syntax = "proto3";
-package utilcrypto;
+package crypto;
 option go_package = "util/crypto/cryptoproto";
 
 enum KeyType {
-    RSA = 0;
-    Ed25519 = 1;
-    Secp256k1 = 2;
-    ECDSA = 3;
+    Ed25519Public = 0;
+    Ed25519Private = 1;
+    AES = 2;
 }
 
-message PublicKey {
-    KeyType Type = 1;
-    bytes Data = 2;
-}
-
-message PrivateKey {
+message Key {
     KeyType Type = 1;
     bytes Data = 2;
 }

@@ -5,8 +5,8 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
-	"github.com/anytypeio/any-sync/util/keys/symmetric"
 	"math/rand"
 	"time"
 )
@@ -189,7 +189,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		aclList:         deps.aclList,
 		changeBuilder:   deps.changeBuilder,
 		rawChangeLoader: deps.rawChangeLoader,
-		keys:            make(map[uint64]*symmetric.Key),
+		keys:            make(map[uint64]*crypto.AESKey),
 		newChangesBuf:   make([]*Change, 0, 10),
 		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
 		notSeenIdxBuf:   make([]int, 0, 10),
@@ -225,7 +225,7 @@ func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht History
 		aclList:         deps.aclList,
 		changeBuilder:   deps.changeBuilder,
 		rawChangeLoader: deps.rawChangeLoader,
-		keys:            make(map[uint64]*symmetric.Key),
+		keys:            make(map[uint64]*crypto.AESKey),
 		newChangesBuf:   make([]*Change, 0, 10),
 		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
 		notSeenIdxBuf:   make([]int, 0, 10),

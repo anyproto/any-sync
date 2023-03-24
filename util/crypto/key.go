@@ -25,7 +25,7 @@ type PrivKey interface {
 	GetPublic() PubKey
 }
 
-// PubKey is the public key used to verify the signatures made by SignPrivKey
+// PubKey is the public key used to verify the signatures and decrypt messages
 type PubKey interface {
 	Key
 
@@ -33,6 +33,15 @@ type PubKey interface {
 	Encrypt(message []byte) ([]byte, error)
 	// Verify verifies the signed message and the signature
 	Verify(data []byte, sig []byte) (bool, error)
+}
+
+type SymKey interface {
+	Key
+
+	// Decrypt decrypts the message and returns the result
+	Decrypt(message []byte) ([]byte, error)
+	// Encrypt encrypts the message and returns the result
+	Encrypt(message []byte) ([]byte, error)
 }
 
 func KeyEquals(k1, k2 Key) bool {

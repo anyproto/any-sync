@@ -1,12 +1,11 @@
-package symmetric
+package crypto
 
 import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/subtle"
 	"fmt"
-	"github.com/minio/sha256-simd"
-
 	mbase "github.com/multiformats/go-multibase"
 )
 
@@ -18,83 +17,65 @@ const (
 	KeyBytes = 32
 )
 
-type Key struct {
+type AESKey struct {
 	raw []byte
 }
 
-func DeriveFromBytes(bytes []byte) (*Key, error) {
-	bArray := sha256.Sum256(bytes)
-	bSlice := bArray[:]
-	return FromBytes(bSlice)
-}
-
-func (k *Key) Equals(otherKey *Key) bool {
-	otherRaw := otherKey.raw
-	keyRaw := k.raw
-
-	if len(keyRaw) != len(otherRaw) {
+func (k *AESKey) Equals(key Key) bool {
+	aesKey, ok := key.(*AESKey)
+	if !ok {
 		return false
 	}
 
-	for i := 0; i < len(keyRaw); i++ {
-		if keyRaw[i] != otherRaw[i] {
-			return false
-		}
-	}
-	return true
+	return subtle.ConstantTimeCompare(k.raw, aesKey.raw) == 1
 }
 
-func (k *Key) Raw() ([]byte, error) {
+func (k *AESKey) Raw() ([]byte, error) {
 	return k.raw, nil
 }
 
-// NewRandom returns a random key.
-func NewRandom() (*Key, error) {
+// NewRandomAES returns a random key.
+func NewRandomAES() (*AESKey, error) {
 	raw := make([]byte, KeyBytes)
 	if _, err := rand.Read(raw); err != nil {
 		return nil, err
 	}
-	return &Key{raw: raw}, nil
+	return &AESKey{raw: raw}, nil
 }
 
-// New returns Key if err is nil and panics otherwise.
-func New() *Key {
-	k, err := NewRandom()
+// NewAES returns AESKey if err is nil and panics otherwise.
+func NewAES() *AESKey {
+	k, err := NewRandomAES()
 	if err != nil {
 		panic(err)
 	}
 	return k
 }
 
-// FromBytes returns a key by decoding bytes.
-func FromBytes(k []byte) (*Key, error) {
+// UnmarshallAESKey returns a key by decoding bytes.
+func UnmarshallAESKey(k []byte) (*AESKey, error) {
 	if len(k) != KeyBytes {
 		return nil, fmt.Errorf("invalid key")
 	}
-	return &Key{raw: k}, nil
+	return &AESKey{raw: k}, nil
 }
 
-// FromString returns a key by decoding a base32-encoded string.
-func FromString(k string) (*Key, error) {
+// UnmarshallAESKeyString returns a key by decoding a base32-encoded string.
+func UnmarshallAESKeyString(k string) (*AESKey, error) {
 	_, b, err := mbase.Decode(k)
 	if err != nil {
 		return nil, err
 	}
-	return FromBytes(b)
+	return UnmarshallAESKey(b)
 }
 
 // Bytes returns raw key bytes.
-func (k *Key) Bytes() []byte {
+func (k *AESKey) Bytes() []byte {
 	return k.raw
 }
 
-// MarshalBinary implements BinaryMarshaler.
-func (k *Key) MarshalBinary() ([]byte, error) {
-	return k.raw, nil
-}
-
 // String returns the base32-encoded string representation of raw key bytes.
-func (k *Key) String() string {
+func (k *AESKey) String() string {
 	str, err := mbase.Encode(mbase.Base32, k.raw)
 	if err != nil {
 		panic("should not error with hardcoded mbase: " + err.Error())
@@ -103,7 +84,7 @@ func (k *Key) String() string {
 }
 
 // Encrypt performs AES-256 GCM encryption on plaintext.
-func (k *Key) Encrypt(plaintext []byte) ([]byte, error) {
+func (k *AESKey) Encrypt(plaintext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(k.raw[:KeyBytes])
 	if err != nil {
 		return nil, err
@@ -122,7 +103,7 @@ func (k *Key) Encrypt(plaintext []byte) ([]byte, error) {
 }
 
 // Decrypt uses key to perform AES-256 GCM decryption on ciphertext.
-func (k *Key) Decrypt(ciphertext []byte) ([]byte, error) {
+func (k *AESKey) Decrypt(ciphertext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(k.raw[:KeyBytes])
 	if err != nil {
 		return nil, err
