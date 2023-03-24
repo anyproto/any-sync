@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/any-sync/app/logger"
 	aclrecordproto "github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/keychain"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/anytypeio/any-sync/util/keys"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
@@ -310,7 +311,7 @@ func (st *AclState) applyUserJoin(ch *aclrecordproto.AclUserJoin) error {
 
 	// validating signature
 	signature := ch.GetAcceptSignature()
-	verificationKey, err := signingkey.NewSigningEd25519PubKeyFromBytes(invite.AcceptPublicKey)
+	verificationKey, err := crypto.NewSigningEd25519PubKeyFromBytes(invite.AcceptPublicKey)
 	if err != nil {
 		return fmt.Errorf("public key verifying invite accepts is given in incorrect format: %v", err)
 	}

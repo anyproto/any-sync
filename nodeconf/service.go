@@ -4,6 +4,7 @@ import (
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/anytypeio/any-sync/util/keys"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
@@ -121,7 +122,7 @@ func nodeFromConfigNode(n NodeConfig) (*Node, error) {
 		return nil, err
 	}
 
-	sigPubKey, err := signingkey.UnmarshalEd25519PublicKey(icRaw)
+	sigPubKey, err := crypto.UnmarshalEd25519PublicKey(icRaw)
 	if err != nil {
 		return nil, err
 	}

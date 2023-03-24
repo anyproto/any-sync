@@ -1,0 +1,48 @@
+package crypto
+
+import (
+	"crypto/subtle"
+)
+
+// Key is an abstract interface for all types of keys
+type Key interface {
+	// Equals returns if the keys are equal
+	Equals(Key) bool
+
+	// Raw returns raw key
+	Raw() ([]byte, error)
+}
+
+// PrivKey is an interface for keys that should be used for signing and decryption
+type PrivKey interface {
+	Key
+
+	// Decrypt decrypts the message and returns the result
+	Decrypt(message []byte) ([]byte, error)
+	// Sign signs the raw bytes and returns the signature
+	Sign([]byte) ([]byte, error)
+	// GetPublic returns the associated public key
+	GetPublic() PubKey
+}
+
+// PubKey is the public key used to verify the signatures made by SignPrivKey
+type PubKey interface {
+	Key
+
+	// Encrypt encrypts the message and returns the result
+	Encrypt(message []byte) ([]byte, error)
+	// Verify verifies the signed message and the signature
+	Verify(data []byte, sig []byte) (bool, error)
+}
+
+func KeyEquals(k1, k2 Key) bool {
+	a, err := k1.Raw()
+	if err != nil {
+		return false
+	}
+	b, err := k2.Raw()
+	if err != nil {
+		return false
+	}
+	return subtle.ConstantTimeCompare(a, b) == 1
+}
