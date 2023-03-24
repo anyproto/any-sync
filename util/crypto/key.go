@@ -2,7 +2,10 @@ package crypto
 
 import (
 	"crypto/subtle"
+	"errors"
 )
+
+var ErrIncorrectKeyType = errors.New("incorrect key type")
 
 // Key is an abstract interface for all types of keys
 type Key interface {
@@ -33,6 +36,8 @@ type PubKey interface {
 	Encrypt(message []byte) ([]byte, error)
 	// Verify verifies the signed message and the signature
 	Verify(data []byte, sig []byte) (bool, error)
+	// Marshall wraps key in proto encoding and marshalls it
+	Marshall() ([]byte, error)
 }
 
 type SymKey interface {
