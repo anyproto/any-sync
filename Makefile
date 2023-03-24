@@ -7,7 +7,7 @@ proto:
 
 	@$(eval P_ACL_RECORDS_PATH_PB := commonspace/object/acl/aclrecordproto)
 	@$(eval P_TREE_CHANGES_PATH_PB := commonspace/object/tree/treechangeproto)
-	@$(eval P_CRYPTO_PATH_PB := util/keys/cryptoproto)
+	@$(eval P_CRYPTO_PATH_PB := util/crypto/cryptoproto)
 	@$(eval P_ACL_RECORDS := M$(P_ACL_RECORDS_PATH_PB)/protos/aclrecord.proto=github.com/anytypeio/any-sync/$(P_ACL_RECORDS_PATH_PB))
 	@$(eval P_TREE_CHANGES := M$(P_TREE_CHANGES_PATH_PB)/protos/treechange.proto=github.com/anytypeio/any-sync/$(P_TREE_CHANGES_PATH_PB))
 
