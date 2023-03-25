@@ -37,7 +37,7 @@ func defaultObjectTreeDeps(
 	rootChange *treechangeproto.RawTreeChangeWithId,
 	treeStorage treestorage.TreeStorage,
 	aclList list.AclList) objectTreeDeps {
-	changeBuilder := NewChangeBuilder(aclList.KeyStorage(), rootChange)
+	changeBuilder := NewChangeBuilder(crypto.NewKeyStorage(), rootChange)
 	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
 	return objectTreeDeps{
 		changeBuilder:   changeBuilder,
@@ -170,7 +170,7 @@ func createObjectTreeRoot(
 		Seed:          seed,
 	}
 
-	_, root, err = NewChangeBuilder(aclList.KeyStorage(), nil).BuildRoot(cnt)
+	_, root, err = NewChangeBuilder(crypto.NewKeyStorage(), nil).BuildRoot(cnt)
 	return
 }
 
