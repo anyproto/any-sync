@@ -25,12 +25,12 @@ func (n noVerifyChecker) CheckCredential(sc sec.SecureConn, cred *handshakeproto
 	return nil, nil
 }
 
-func newPeerSignVerifier(account *accountdata.AccountData) handshake.CredentialChecker {
+func newPeerSignVerifier(account *accountdata.AccountKeys) handshake.CredentialChecker {
 	return &peerSignVerifier{account: account}
 }
 
 type peerSignVerifier struct {
-	account *accountdata.AccountData
+	account *accountdata.AccountKeys
 }
 
 func (p *peerSignVerifier) MakeCredentials(sc sec.SecureConn) *handshakeproto.Credentials {

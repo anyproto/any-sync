@@ -146,7 +146,7 @@ func TestSettingsObject_DeleteObject(t *testing.T) {
 	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
 	fx.changeFactory.EXPECT().CreateObjectDeleteChange(delId, fx.doc.state, false).Return(res, nil)
 
-	accountData := &accountdata.AccountData{
+	accountData := &accountdata.AccountKeys{
 		Identity: []byte("id"),
 		PeerKey:  nil,
 		SignKey:  &crypto.Ed25519PrivKey{},

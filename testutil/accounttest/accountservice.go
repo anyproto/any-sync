@@ -13,7 +13,7 @@ import (
 
 // AccountTestService provides service for test purposes, generates new random account every Init
 type AccountTestService struct {
-	acc *accountdata.AccountData
+	acc *accountdata.AccountKeys
 }
 
 func (s *AccountTestService) Init(a *app.App) (err error) {
@@ -43,7 +43,7 @@ func (s *AccountTestService) Init(a *app.App) (err error) {
 	if err != nil {
 		return err
 	}
-	s.acc = &accountdata.AccountData{
+	s.acc = &accountdata.AccountKeys{
 		Identity: ident,
 		PeerKey:  peerKey,
 		SignKey:  signKey,
@@ -57,7 +57,7 @@ func (s *AccountTestService) Name() (name string) {
 	return accountService.CName
 }
 
-func (s *AccountTestService) Account() *accountdata.AccountData {
+func (s *AccountTestService) Account() *accountdata.AccountKeys {
 	return s.acc
 }
 

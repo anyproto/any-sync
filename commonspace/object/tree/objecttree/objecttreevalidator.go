@@ -50,7 +50,7 @@ func (v *objectTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclLis
 
 func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c *Change) (err error) {
 	var (
-		perm  list.UserPermissionPair
+		perm  list.AclUserState
 		state = aclList.AclState()
 	)
 	// checking if the user could write
@@ -59,7 +59,7 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 		return
 	}
 
-	if perm.Permission != aclrecordproto.AclUserPermissions_Writer && perm.Permission != aclrecordproto.AclUserPermissions_Admin {
+	if perm.Permissions != aclrecordproto.AclUserPermissions_Writer && perm.Permissions != aclrecordproto.AclUserPermissions_Admin {
 		err = list.ErrInsufficientPermissions
 		return
 	}

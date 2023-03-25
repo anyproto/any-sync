@@ -38,7 +38,7 @@ func TestPeerSignVerifier_CheckCredential(t *testing.T) {
 	assert.EqualError(t, err, handshake.ErrInvalidCredentials.Error())
 }
 
-func newTestAccData(t *testing.T) *accountdata.AccountData {
+func newTestAccData(t *testing.T) *accountdata.AccountKeys {
 	as := accounttest.AccountTestService{}
 	require.NoError(t, as.Init(nil))
 	return as.Account()
