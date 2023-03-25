@@ -10,7 +10,7 @@ const CName = "common.accountservice"
 
 type Service interface {
 	app.Component
-	Account() *accountdata.AccountData
+	Account() *accountdata.AccountKeys
 }
 
 type Config struct {

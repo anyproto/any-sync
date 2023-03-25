@@ -3,6 +3,7 @@ package objecttree
 import (
 	"errors"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -21,7 +22,7 @@ type Change struct {
 	IsSnapshot  bool
 	Timestamp   int64
 	ReadKeyId   string
-	Identity    string
+	Identity    crypto.PubKey
 	Data        []byte
 	Model       interface{}
 
@@ -32,7 +33,7 @@ type Change struct {
 	Signature []byte
 }
 
-func NewChange(id string, ch *treechangeproto.TreeChange, signature []byte) *Change {
+func NewChange(id string, identity crypto.PubKey, ch *treechangeproto.TreeChange, signature []byte) *Change {
 	return &Change{
 		Next:        nil,
 		PreviousIds: ch.TreeHeadIds,
@@ -43,12 +44,12 @@ func NewChange(id string, ch *treechangeproto.TreeChange, signature []byte) *Cha
 		Data:        ch.ChangesData,
 		SnapshotId:  ch.SnapshotBaseId,
 		IsSnapshot:  ch.IsSnapshot,
-		Identity:    string(ch.Identity),
+		Identity:    identity,
 		Signature:   signature,
 	}
 }
 
-func NewChangeFromRoot(id string, ch *treechangeproto.RootChange, signature []byte) *Change {
+func NewChangeFromRoot(id string, identity crypto.PubKey, ch *treechangeproto.RootChange, signature []byte) *Change {
 	changeInfo := &treechangeproto.TreeChangeInfo{
 		ChangeType:    ch.ChangeType,
 		ChangePayload: ch.ChangePayload,
@@ -60,7 +61,7 @@ func NewChangeFromRoot(id string, ch *treechangeproto.RootChange, signature []by
 		Id:         id,
 		IsSnapshot: true,
 		Timestamp:  ch.Timestamp,
-		Identity:   string(ch.Identity),
+		Identity:   identity,
 		Signature:  signature,
 		Data:       data,
 		Model:      changeInfo,

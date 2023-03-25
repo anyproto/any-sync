@@ -99,7 +99,7 @@ type objectTree struct {
 	root    *Change
 	tree    *Tree
 
-	keys map[uint64]*crypto.AESKey
+	keys map[string]crypto.SymKey
 
 	// buffers
 	difSnapshotBuf  []*treechangeproto.RawTreeChangeWithId
@@ -224,19 +224,20 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 	defer ot.aclList.RUnlock()
 
 	var (
-		state       = ot.aclList.AclState() // special method for own keys
-		readKey     *crypto.AESKey
-		readKeyHash uint64
+		state     = ot.aclList.AclState() // special method for own keys
+		readKey   crypto.SymKey
+		pubKey    = content.Key.GetPublic()
+		readKeyId string
 	)
-	canWrite := state.HasPermission(content.Identity, aclrecordproto.AclUserPermissions_Writer) ||
-		state.HasPermission(content.Identity, aclrecordproto.AclUserPermissions_Admin)
+	canWrite := state.HasPermission(pubKey, aclrecordproto.AclUserPermissions_Writer) ||
+		state.HasPermission(pubKey, aclrecordproto.AclUserPermissions_Admin)
 	if !canWrite {
 		err = list.ErrInsufficientPermissions
 		return
 	}
 
 	if content.IsEncrypted {
-		readKeyHash = state.CurrentReadKeyId()
+		readKeyId = state.CurrentReadKeyId()
 		readKey, err = state.CurrentReadKey()
 		if err != nil {
 			return
@@ -246,10 +247,9 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 		TreeHeadIds:    ot.tree.Heads(),
 		AclHeadId:      ot.aclList.Head().Id,
 		SnapshotBaseId: ot.tree.RootId(),
-		ReadKeyId:      readKeyHash,
-		Identity:       content.Identity,
+		ReadKeyId:      readKeyId,
 		IsSnapshot:     content.IsSnapshot,
-		SigningKey:     content.Key,
+		PrivKey:        content.Key,
 		ReadKey:        readKey,
 		Content:        content.Data,
 	}
@@ -488,7 +488,7 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 	}
 	decrypt := func(c *Change) (decrypted []byte, err error) {
 		// the change is not encrypted
-		if c.ReadKeyId == 0 {
+		if c.ReadKeyId == "" {
 			decrypted = c.Data
 			return
 		}

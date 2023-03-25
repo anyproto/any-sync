@@ -6,7 +6,7 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
-func NewAccountServiceWithAccount(ctrl *gomock.Controller, acc *accountdata.AccountData) *MockService {
+func NewAccountServiceWithAccount(ctrl *gomock.Controller, acc *accountdata.AccountKeys) *MockService {
 	mock := NewMockService(ctrl)
 	mock.EXPECT().Name().Return(accountservice.CName).AnyTimes()
 	mock.EXPECT().Init(gomock.Any()).AnyTimes()

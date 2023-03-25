@@ -8,7 +8,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/liststorage"
-	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/util/crypto"
 	"sync"
 )
@@ -34,6 +33,7 @@ type AclList interface {
 	Get(id string) (*AclRecord, error)
 	Iterate(iterFunc IterFunc)
 	IterateFrom(startId string, iterFunc IterFunc)
+	KeyStorage() crypto.KeyStorage
 
 	AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added bool, err error)
 
@@ -48,23 +48,25 @@ type aclList struct {
 
 	stateBuilder  *aclStateBuilder
 	recordBuilder AclRecordBuilder
+	keyStorage    crypto.KeyStorage
 	aclState      *AclState
-	keychain      *keychain.Keychain
 	storage       liststorage.ListStorage
 
 	sync.RWMutex
 }
 
-func BuildAclListWithIdentity(acc *accountdata.AccountData, storage liststorage.ListStorage) (AclList, error) {
+func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage liststorage.ListStorage) (AclList, error) {
 	builder := newAclStateBuilderWithIdentity(acc)
-	return build(storage.Id(), builder, newAclRecordBuilder(storage.Id(), crypto.NewKeyStorage()), storage)
+	keyStorage := crypto.NewKeyStorage()
+	return build(storage.Id(), keyStorage, builder, newAclRecordBuilder(storage.Id(), keyStorage), storage)
 }
 
 func BuildAclList(storage liststorage.ListStorage) (AclList, error) {
-	return build(storage.Id(), newAclStateBuilder(), newAclRecordBuilder(storage.Id(), crypto.NewKeyStorage()), storage)
+	keyStorage := crypto.NewKeyStorage()
+	return build(storage.Id(), keyStorage, newAclStateBuilder(), newAclRecordBuilder(storage.Id(), crypto.NewKeyStorage()), storage)
 }
 
-func build(id string, stateBuilder *aclStateBuilder, recBuilder AclRecordBuilder, storage liststorage.ListStorage) (list AclList, err error) {
+func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilder, recBuilder AclRecordBuilder, storage liststorage.ListStorage) (list AclList, err error) {
 	head, err := storage.Head()
 	if err != nil {
 		return
@@ -175,6 +177,10 @@ func (a *aclList) Root() *aclrecordproto.RawAclRecordWithId {
 
 func (a *aclList) AclState() *AclState {
 	return a.aclState
+}
+
+func (a *aclList) KeyStorage() crypto.KeyStorage {
+	return a.keyStorage
 }
 
 func (a *aclList) IsAfter(first string, second string) (bool, error) {

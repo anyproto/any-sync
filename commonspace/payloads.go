@@ -99,7 +99,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 	_, settingsRoot, err := builder.BuildRoot(objecttree.InitialContent{
 		AclHeadId:  rawWithId.Id,
 		Identity:   aclRoot.Identity,
-		SigningKey: payload.SigningKey,
+		PrivKey:    payload.SigningKey,
 		SpaceId:    spaceId,
 		Seed:       spaceSettingsSeed,
 		ChangeType: SpaceReserved,
@@ -201,7 +201,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 	_, settingsRoot, err := builder.BuildRoot(objecttree.InitialContent{
 		AclHeadId:  rawWithId.Id,
 		Identity:   aclRoot.Identity,
-		SigningKey: payload.SigningKey,
+		PrivKey:    payload.SigningKey,
 		SpaceId:    spaceId,
 		ChangeType: SpaceReserved,
 	})

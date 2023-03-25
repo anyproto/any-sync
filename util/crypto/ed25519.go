@@ -24,9 +24,14 @@ type Ed25519PrivKey struct {
 
 // Ed25519PubKey is an ed25519 public key.
 type Ed25519PubKey struct {
-	pubKey   ed25519.PublicKey
-	pubCurve *[32]byte
-	once     sync.Once
+	pubKey ed25519.PublicKey
+
+	pubCurve  *[32]byte
+	curveOnce sync.Once
+
+	marshallOnce sync.Once
+	marshalled   []byte
+	marshallErr  error
 }
 
 func NewEd25519PrivKey(privKey ed25519.PrivateKey) PrivKey {
@@ -132,7 +137,7 @@ func (k *Ed25519PubKey) Raw() ([]byte, error) {
 
 // Encrypt message
 func (k *Ed25519PubKey) Encrypt(msg []byte) (data []byte, err error) {
-	k.once.Do(func() {
+	k.curveOnce.Do(func() {
 		pubCurve := Ed25519PublicKeyToCurve25519(k.pubKey)
 		k.pubCurve = (*[32]byte)(pubCurve)
 	})
@@ -161,11 +166,14 @@ func (k *Ed25519PubKey) Verify(data []byte, sig []byte) (bool, error) {
 }
 
 func (k *Ed25519PubKey) Marshall() ([]byte, error) {
-	msg := &cryptoproto.Key{
-		Type: cryptoproto.KeyType_Ed25519Public,
-		Data: k.pubKey,
-	}
-	return proto.Marshal(msg)
+	k.marshallOnce.Do(func() {
+		msg := &cryptoproto.Key{
+			Type: cryptoproto.KeyType_Ed25519Public,
+			Data: k.pubKey,
+		}
+		k.marshalled, k.marshallErr = proto.Marshal(msg)
+	})
+	return k.marshalled, k.marshallErr
 }
 
 // UnmarshalEd25519PublicKey returns a public key from input bytes.
