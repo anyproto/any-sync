@@ -7,9 +7,10 @@ import (
 )
 
 func Test_EncryptDecrypt(t *testing.T) {
-	privKey, pubKey, _ := GenerateEd25519Key(rand.Reader)
+	privKey, pubKey, err := GenerateEd25519Key(rand.Reader)
+	require.NoError(t, err)
 	msg := make([]byte, 32768)
-	_, err := rand.Read(msg)
+	_, err = rand.Read(msg)
 	require.NoError(t, err)
 	enc, err := pubKey.Encrypt(msg)
 	require.NoError(t, err)
