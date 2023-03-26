@@ -51,7 +51,7 @@ func (n *Node) Capacity() float64 {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	nodesConf := a.MustComponent("config").(configGetter).GetNodes()
+	nodesConf := a.MustComponent("config").(ConfigGetter).GetNodes()
 	s.accountId = a.MustComponent(commonaccount.CName).(commonaccount.Service).Account().PeerId
 
 	fileConfig := &configuration{
