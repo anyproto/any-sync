@@ -27,7 +27,6 @@ func (c *Conn) Write(p []byte) (n int, err error) {
 			if e := c.Conn.SetWriteDeadline(time.Now().Add(c.timeout)); e != nil {
 				log.Warn("can't set write deadline", zap.String("remoteAddr", c.RemoteAddr().String()))
 			}
-
 		}
 		nn, err := c.Conn.Write(p[n:])
 		n += nn

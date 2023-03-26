@@ -14,7 +14,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage/mock_spacestorage"
-	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"sync"
@@ -146,17 +145,12 @@ func TestSettingsObject_DeleteObject(t *testing.T) {
 	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
 	fx.changeFactory.EXPECT().CreateObjectDeleteChange(delId, fx.doc.state, false).Return(res, nil)
 
-	accountData := &accountdata.AccountKeys{
-		Identity: []byte("id"),
-		PeerKey:  nil,
-		SignKey:  &crypto.Ed25519PrivKey{},
-		EncKey:   nil,
-	}
+	accountData, err := accountdata.NewRandom()
+	require.NoError(t, err)
 	fx.account.EXPECT().Account().Return(accountData)
 	fx.syncTree.EXPECT().AddContent(gomock.Any(), objecttree.SignableChangeContent{
 		Data:        res,
 		Key:         accountData.SignKey,
-		Identity:    accountData.Identity,
 		IsSnapshot:  false,
 		IsEncrypted: false,
 	}).Return(objecttree.AddResult{}, nil)
