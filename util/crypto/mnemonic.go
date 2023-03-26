@@ -22,7 +22,7 @@ func NewMnemonicGenerator() MnemonicGenerator {
 
 type Mnemonic string
 
-func (g *MnemonicGenerator) WithWordCount(wc int) (Mnemonic, error) {
+func (g MnemonicGenerator) WithWordCount(wc int) (Mnemonic, error) {
 	size := 0
 	switch wc {
 	case 12:
@@ -41,7 +41,7 @@ func (g *MnemonicGenerator) WithWordCount(wc int) (Mnemonic, error) {
 	return g.WithWordCount(size)
 }
 
-func (g *MnemonicGenerator) WithRandomEntropy(size int) (Mnemonic, error) {
+func (g MnemonicGenerator) WithRandomEntropy(size int) (Mnemonic, error) {
 	entropy, err := bip39.NewEntropy(size)
 	if err != nil {
 		return "", err
@@ -53,7 +53,7 @@ func (g *MnemonicGenerator) WithRandomEntropy(size int) (Mnemonic, error) {
 	return Mnemonic(mnemonic), nil
 }
 
-func (g *MnemonicGenerator) WithEntropy(b []byte) (Mnemonic, error) {
+func (g MnemonicGenerator) WithEntropy(b []byte) (Mnemonic, error) {
 	mnemonic, err := bip39.NewMnemonic(b)
 	if err != nil {
 		return "", err
