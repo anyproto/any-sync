@@ -18,6 +18,9 @@ service Coordinator {
 
     // SpaceStatusChange changes the status of space
     rpc SpaceStatusChange(SpaceStatusChangeRequest) returns (SpaceStatusChangeResponse);
+
+    // NetworkConfiguration retrieves the latest network configuration
+    rpc NetworkConfiguration(NetworkConfigurationRequest) returns (NetworkConfigurationResponse);
 }
 
 message SpaceSignRequest {
@@ -108,4 +111,35 @@ message SpaceStatusChangeRequest {
 // SpaceStatusChangeResponse contains changed status of space
 message SpaceStatusChangeResponse {
     SpaceStatusPayload payload = 1;
+}
+
+// NetworkConfigurationRequest contains the requested configurationId, it can be empty to request the latest version
+message NetworkConfigurationRequest {
+    string configurationId = 1;
+}
+
+// NetworkConfigurationResponse contains list of nodes
+message NetworkConfigurationResponse {
+    string configurationId = 1;
+    repeated Node nodes = 2;
+}
+
+// NodeType determines the type of API that a node supports
+enum NodeType {
+    // TreeAPI supports space/tree sync api
+    TreeAPI = 0;
+    // FileAPI support file api
+    FileAPI = 1;
+    // CoordinatorAPI supports coordinator api
+    CoordinatorAPI = 2;
+}
+
+// Node describes one node in the network
+message Node {
+    // peerId - it's a peer identifier (libp2p format string) so it's an encoded publicKey
+    string peerId = 1;
+    // list of node addresses
+    repeated string addresses = 2;
+    // list of supported APIs
+    repeated NodeType types = 3;
 }
