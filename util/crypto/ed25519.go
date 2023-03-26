@@ -132,7 +132,7 @@ func (k *Ed25519PrivKey) LibP2P() (crypto.PrivKey, error) {
 }
 
 // String returns string representation of key
-func (k *Ed25519PubKey) String() string {
+func (k *Ed25519PubKey) Account() string {
 	res, _ := strkey.Encode(strkey.AccountAddressVersionByte, k.pubKey)
 	return res
 }

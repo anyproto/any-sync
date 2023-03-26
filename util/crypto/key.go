@@ -43,8 +43,8 @@ type PubKey interface {
 	Marshall() ([]byte, error)
 	// Storage returns underlying key storage
 	Storage() []byte
-	// String returns string representation
-	String() string
+	// Account returns string representation
+	Account() string
 	// LibP2P returns libp2p model
 	LibP2P() (crypto.PubKey, error)
 }
