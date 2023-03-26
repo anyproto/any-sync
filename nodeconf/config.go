@@ -10,7 +10,7 @@ const (
 	NodeTypeCoordinator NodeType = "coordinator"
 )
 
-type configGetter interface {
+type ConfigGetter interface {
 	GetNodes() []NodeConfig
 }
 
