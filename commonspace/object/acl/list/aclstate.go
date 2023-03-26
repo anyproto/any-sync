@@ -209,7 +209,7 @@ func (st *AclState) applyChangeData(record *AclRecord) (err error) {
 		// only Admins can do non-user join changes
 		if !st.HasPermission(record.Identity, aclrecordproto.AclUserPermissions_Admin) {
 			// TODO: add string encoding
-			err = fmt.Errorf("user %s must have admin permissions", record.Identity.String())
+			err = fmt.Errorf("user %s must have admin permissions", record.Identity.Account())
 			return
 		}
 	}
