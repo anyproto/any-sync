@@ -1,9 +1,15 @@
 package crypto
 
-import "github.com/anytypeio/go-slip21"
+import (
+	"github.com/anytypeio/go-slip21"
+)
 
-const AnytypeAccountPath = "m/SLIP-0021/anytype/account"
+const (
+	AnytypeAccountPath   = "m/SLIP-0021/anytype/account"
+	AnytypeAccountPrefix = "m/44'/607'"
+)
 
+// DeriveSymmetricKey derives a symmetric key from seed and path using slip-21
 func DeriveSymmetricKey(seed []byte, path string) (SymKey, error) {
 	master, err := slip21.DeriveForPath(path, seed)
 	if err != nil {
