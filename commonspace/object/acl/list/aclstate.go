@@ -3,6 +3,7 @@ package list
 import (
 	"errors"
 	"fmt"
+	"github.com/anytypeio/any-sync/util/crypto/cryptoproto"
 
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
@@ -41,11 +42,10 @@ type AclState struct {
 	userReadKeys     map[string]crypto.SymKey
 	userStates       map[string]AclUserState
 	statesAtRecord   map[string][]AclUserState
-	//userInvites      map[string]*aclrecordproto.AclUserInvite
-	key           crypto.PrivKey
-	pubKey        crypto.PubKey
-	keyStore      crypto.KeyStorage
-	totalReadKeys int
+	key              crypto.PrivKey
+	pubKey           crypto.PubKey
+	keyStore         crypto.KeyStorage
+	totalReadKeys    int
 
 	lastRecordId string
 
@@ -62,7 +62,6 @@ func newAclStateWithKeys(
 		userReadKeys:   make(map[string]crypto.SymKey),
 		userStates:     make(map[string]AclUserState),
 		statesAtRecord: make(map[string][]AclUserState),
-		//userInvites:         make(map[string]*aclrecordproto.AclUserInvite),
 	}, nil
 }
 
@@ -72,7 +71,6 @@ func newAclState(id string) *AclState {
 		userReadKeys:   make(map[string]crypto.SymKey),
 		userStates:     make(map[string]AclUserState),
 		statesAtRecord: make(map[string][]AclUserState),
-		//userInvites:         make(map[string]*aclrecordproto.AclUserInvite),
 	}
 }
 
@@ -177,14 +175,8 @@ func (st *AclState) saveReadKeyFromRoot(record *AclRecord) (err error) {
 	if !ok {
 		return ErrIncorrectRoot
 	}
-	if len(root.GetDerivationScheme()) != 0 {
-		var keyBytes []byte
-		keyBytes, err = st.key.Raw()
-		if err != nil {
-			return
-		}
-
-		readKey, err = crypto.DeriveAccountSymmetric(keyBytes)
+	if root.DerivationParams != nil {
+		readKey, err = st.deriveKey(root.DerivationParams)
 		if err != nil {
 			return
 		}
@@ -267,113 +259,19 @@ func (st *AclState) applyUserPermissionChange(ch *aclrecordproto.AclUserPermissi
 }
 
 func (st *AclState) applyUserInvite(ch *aclrecordproto.AclUserInvite, recordId string) error {
-	//acceptPubKey, err := st.keyStore.PubKeyFromProto(ch.AcceptPublicKey)
-	//if err != nil {
-	//	return nil
-	//}
-	//st.userInvites[string(ch.AcceptPublicKey)] = ch
+	// TODO: check old code and bring it back :-)
 	return nil
 }
 
 func (st *AclState) applyUserJoin(ch *aclrecordproto.AclUserJoin, recordId string) error {
-	//invite, exists := st.userInvites[string(ch.AcceptPubKey)]
-	//if !exists {
-	//	// TODO: change key to use same encoding
-	//	return fmt.Errorf("no such invite with such public key %s", keys.EncodeBytesToString(ch.AcceptPubKey))
-	//}
-	//chIdentity := string(ch.Identity)
-	//if _, exists = st.userStates[chIdentity]; exists {
-	//	return ErrUserAlreadyExists
-	//}
-	//
-	//// validating signature
-	//signature := ch.GetAcceptSignature()
-	//verificationKey, err := crypto.UnmarshalEd25519PublicKeyProto(invite.AcceptPublicKey)
-	//if err != nil {
-	//	return fmt.Errorf("public key verifying invite accepts is given in incorrect format: %v", err)
-	//}
-	//
-	//// TODO: intuitively we need to sign not only the identity but a more complicated payload
-	//res, err := verificationKey.Verify(ch.Identity, signature)
-	//if err != nil {
-	//	return fmt.Errorf("verification returned error: %w", err)
-	//}
-	//if !res {
-	//	return ErrInvalidSignature
-	//}
-	//
-	//// if ourselves -> we need to decrypt the read keys
-	//if st.identity == chIdentity {
-	//	for _, key := range ch.EncryptedReadKeys {
-	//		key, err := st.decryptReadKey(key)
-	//		if err != nil {
-	//			return ErrFailedToDecrypt
-	//		}
-	//
-	//		st.userReadKeys[recordId] = key
-	//	}
-	//}
-	//
-	//// adding user to the list
-	//userState := &aclrecordproto.AclUserState{
-	//	Identity:    ch.Identity,
-	//	Permissions: invite.Permissions,
-	//}
-	//st.userStates[chIdentity] = userState
 	return nil
 }
 
 func (st *AclState) applyUserAdd(ch *aclrecordproto.AclUserAdd, recordId string) error {
-	//chIdentity := string(ch.Identity)
-	//if _, exists := st.userStates[chIdentity]; exists {
-	//	return ErrUserAlreadyExists
-	//}
-	//
-	//st.userStates[chIdentity] = &aclrecordproto.AclUserState{
-	//	Identity:      ch.Identity,
-	//	EncryptionKey: ch.EncryptionKey,
-	//	Permissions:   ch.Permissions,
-	//}
-	//
-	//if chIdentity == st.identity {
-	//	for _, key := range ch.EncryptedReadKeys {
-	//		key, hash, err := st.decryptReadKey(key)
-	//		if err != nil {
-	//			return ErrFailedToDecrypt
-	//		}
-	//
-	//		st.userReadKeys[hash] = key
-	//	}
-	//}
-
 	return nil
 }
 
 func (st *AclState) applyUserRemove(ch *aclrecordproto.AclUserRemove, recordId string) error {
-	//chIdentity := string(ch.Identity)
-	//if chIdentity == st.identity {
-	//	return ErrDocumentForbidden
-	//}
-	//
-	//if _, exists := st.userStates[chIdentity]; !exists {
-	//	return ErrNoSuchUser
-	//}
-	//
-	//delete(st.userStates, chIdentity)
-	//
-	//for _, replace := range ch.ReadKeyReplaces {
-	//	repIdentity := string(replace.Identity)
-	//	// if this is our identity then we have to decrypt the key
-	//	if repIdentity == st.identity {
-	//		key, hash, err := st.decryptReadKey(replace.EncryptedReadKey)
-	//		if err != nil {
-	//			return ErrFailedToDecrypt
-	//		}
-	//
-	//		st.userReadKeys[hash] = key
-	//		break
-	//	}
-	//}
 	return nil
 }
 
@@ -404,30 +302,33 @@ func (st *AclState) isUserJoin(data *aclrecordproto.AclData) bool {
 	return data.GetAclContent() != nil && data.GetAclContent()[0].GetUserJoin() != nil
 }
 
-//func (st *AclState) isUserAdd(data *aclrecordproto.AclData, identity []byte) bool {
-//	// if we have a UserAdd, then it should always be the first one applied
-//	userAdd := data.GetAclContent()[0].GetUserAdd()
-//	return data.GetAclContent() != nil && userAdd != nil && bytes.Compare(userAdd.GetIdentity(), identity) == 0
-//}
+func (st *AclState) isUserAdd(data *aclrecordproto.AclData, identity []byte) bool {
+	return false
+}
 
 func (st *AclState) UserStates() map[string]AclUserState {
 	return st.userStates
 }
 
-//func (st *AclState) Invite(acceptPubKey []byte) (invite *aclrecordproto.AclUserInvite, err error) {
-//	invite, exists := st.userInvites[string(acceptPubKey)]
-//	if !exists {
-//		err = ErrNoSuchInvite
-//		return
-//	}
-//	if len(invite.EncryptedReadKeys) != st.totalReadKeys {
-//		err = ErrOldInvite
-//	}
-//	return
-//}
+func (st *AclState) Invite(acceptPubKey []byte) (invite *aclrecordproto.AclUserInvite, err error) {
+	return
+}
 
 func (st *AclState) LastRecordId() string {
 	return st.lastRecordId
+}
+
+func (st *AclState) deriveKey(params []byte) (crypto.SymKey, error) {
+	keyDerivation := &cryptoproto.KeyDerivation{}
+	err := proto.Unmarshal(params, keyDerivation)
+	if err != nil {
+		return nil, err
+	}
+	keyBytes, err := st.key.Raw()
+	if err != nil {
+		return nil, err
+	}
+	return crypto.DeriveSymmetricKey(keyBytes, keyDerivation.DerivationPath)
 }
 
 func mapKeyFromPubKey(pubKey crypto.PubKey) string {
