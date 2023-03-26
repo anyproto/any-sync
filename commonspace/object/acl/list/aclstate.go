@@ -7,7 +7,6 @@ import (
 
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
-	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
@@ -48,8 +47,6 @@ type AclState struct {
 	totalReadKeys    int
 
 	lastRecordId string
-
-	keychain *keychain.Keychain
 }
 
 func newAclStateWithKeys(
