@@ -10,6 +10,7 @@ import (
 	"github.com/anytypeio/any-sync/util/crypto/cryptoproto"
 	"github.com/anytypeio/any-sync/util/strkey"
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	"io"
 	"sync"
 )
@@ -125,6 +126,12 @@ func (k *Ed25519PrivKey) Decrypt(msg []byte) ([]byte, error) {
 	return DecryptX25519(k.privCurve, k.pubCurve, msg)
 }
 
+// LibP2P converts the key to libp2p format
+func (k *Ed25519PrivKey) LibP2P() (crypto.PrivKey, error) {
+	return crypto.UnmarshalEd25519PrivateKey(k.privKey)
+}
+
+// String returns string representation of key
 func (k *Ed25519PubKey) String() string {
 	res, _ := strkey.Encode(strkey.AccountAddressVersionByte, k.pubKey)
 	return res
@@ -165,6 +172,7 @@ func (k *Ed25519PubKey) Verify(data []byte, sig []byte) (bool, error) {
 	return ed25519.Verify(k.pubKey, data, sig), nil
 }
 
+// Marshall marshalls the key into proto
 func (k *Ed25519PubKey) Marshall() ([]byte, error) {
 	k.marshallOnce.Do(func() {
 		msg := &cryptoproto.Key{
@@ -174,6 +182,11 @@ func (k *Ed25519PubKey) Marshall() ([]byte, error) {
 		k.marshalled, k.marshallErr = proto.Marshal(msg)
 	})
 	return k.marshalled, k.marshallErr
+}
+
+// LibP2P converts the key to libp2p format
+func (k *Ed25519PubKey) LibP2P() (crypto.PubKey, error) {
+	return crypto.UnmarshalEd25519PublicKey(k.pubKey)
 }
 
 // UnmarshalEd25519PublicKey returns a public key from input bytes.

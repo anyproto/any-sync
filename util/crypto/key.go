@@ -3,6 +3,7 @@ package crypto
 import (
 	"crypto/subtle"
 	"errors"
+	"github.com/libp2p/go-libp2p/core/crypto"
 )
 
 var ErrIncorrectKeyType = errors.New("incorrect key type")
@@ -26,6 +27,8 @@ type PrivKey interface {
 	Sign([]byte) ([]byte, error)
 	// GetPublic returns the associated public key
 	GetPublic() PubKey
+	// LibP2P returns libp2p model
+	LibP2P() (crypto.PrivKey, error)
 }
 
 // PubKey is the public key used to verify the signatures and decrypt messages
@@ -42,6 +45,8 @@ type PubKey interface {
 	Storage() []byte
 	// String returns string representation
 	String() string
+	// LibP2P returns libp2p model
+	LibP2P() (crypto.PubKey, error)
 }
 
 type SymKey interface {

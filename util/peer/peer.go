@@ -1,12 +1,12 @@
 package peer
 
 import (
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	utilcrypto "github.com/anytypeio/any-sync/util/crypto"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-func IdFromSigningPubKey(pubKey signingkey.PubKey) (peer.ID, error) {
+func IdFromSigningPubKey(pubKey utilcrypto.PubKey) (peer.ID, error) {
 	rawSigning, err := pubKey.Raw()
 	if err != nil {
 		return "", err
