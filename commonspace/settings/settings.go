@@ -5,10 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/anytypeio/any-sync/util/crypto"
 
 	"github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
@@ -207,7 +207,6 @@ func (s *settingsObject) SpaceDeleteRawChange() (raw *treechangeproto.RawTreeCha
 	return s.PrepareChange(objecttree.SignableChangeContent{
 		Data:        data,
 		Key:         accountData.SignKey,
-		Identity:    accountData.Identity,
 		IsSnapshot:  false,
 		IsEncrypted: false,
 	})
@@ -252,7 +251,6 @@ func (s *settingsObject) addContent(data []byte) (err error) {
 	_, err = s.AddContent(context.Background(), objecttree.SignableChangeContent{
 		Data:        data,
 		Key:         accountData.SignKey,
-		Identity:    accountData.Identity,
 		IsSnapshot:  false,
 		IsEncrypted: false,
 	})
@@ -264,13 +262,13 @@ func (s *settingsObject) addContent(data []byte) (err error) {
 	return
 }
 
-func VerifyDeleteChange(raw *treechangeproto.RawTreeChangeWithId, identity []byte, peerId string) (err error) {
-	changeBuilder := objecttree.NewChangeBuilder(keychain.NewKeychain(), nil)
+func VerifyDeleteChange(raw *treechangeproto.RawTreeChangeWithId, identity crypto.PubKey, peerId string) (err error) {
+	changeBuilder := objecttree.NewChangeBuilder(crypto.NewKeyStorage(), nil)
 	res, err := changeBuilder.Unmarshall(raw, true)
 	if err != nil {
 		return
 	}
-	if res.Identity != string(identity) {
+	if !res.Identity.Equals(identity) {
 		return fmt.Errorf("incorrect identity")
 	}
 	return verifyDeleteContent(res.Data, peerId)
