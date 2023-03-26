@@ -6,8 +6,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/anytypeio/any-sync/util/crypto"
-	"github.com/anytypeio/any-sync/util/keys"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
 	"github.com/anytypeio/any-sync/util/peer"
 )
 
@@ -20,16 +18,7 @@ func (s *AccountTestService) Init(a *app.App) (err error) {
 	if s.acc != nil {
 		return
 	}
-	encKey, _, err := encryptionkey.GenerateRandomRSAKeyPair(2048)
-	if err != nil {
-		return
-	}
-
 	signKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	if err != nil {
-		return
-	}
-	ident, err := signKey.GetPublic().Raw()
 	if err != nil {
 		return
 	}
@@ -44,11 +33,9 @@ func (s *AccountTestService) Init(a *app.App) (err error) {
 		return err
 	}
 	s.acc = &accountdata.AccountKeys{
-		Identity: ident,
-		PeerKey:  peerKey,
-		SignKey:  signKey,
-		EncKey:   encKey,
-		PeerId:   peerId.String(),
+		PeerKey: peerKey,
+		SignKey: signKey,
+		PeerId:  peerId.String(),
 	}
 	return nil
 }
@@ -62,14 +49,9 @@ func (s *AccountTestService) Account() *accountdata.AccountKeys {
 }
 
 func (s *AccountTestService) NodeConf(addrs []string) nodeconf.NodeConfig {
-	encEk, err := keys.EncodeKeyToString(s.acc.EncKey.GetPublic())
-	if err != nil {
-		panic(err)
-	}
 	return nodeconf.NodeConfig{
-		PeerId:        s.acc.PeerId,
-		Addresses:     addrs,
-		EncryptionKey: encEk,
-		Types:         []nodeconf.NodeType{nodeconf.NodeTypeTree},
+		PeerId:    s.acc.PeerId,
+		Addresses: addrs,
+		Types:     []nodeconf.NodeType{nodeconf.NodeTypeTree},
 	}
 }

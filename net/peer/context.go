@@ -3,6 +3,7 @@ package peer
 import (
 	"context"
 	"errors"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"storj.io/drpc/drpcctx"
 )
@@ -39,6 +40,14 @@ func CtxWithPeerId(ctx context.Context, peerId string) context.Context {
 func CtxIdentity(ctx context.Context) ([]byte, error) {
 	if identity, ok := ctx.Value(contextKeyIdentity).([]byte); ok {
 		return identity, nil
+	}
+	return nil, ErrIdentityNotFoundInContext
+}
+
+// CtxPubKey returns identity unmarshalled from proto in crypto.PubKey model
+func CtxPubKey(ctx context.Context) (crypto.PubKey, error) {
+	if identity, ok := ctx.Value(contextKeyIdentity).([]byte); ok {
+		return crypto.UnmarshalEd25519PublicKeyProto(identity)
 	}
 	return nil, ErrIdentityNotFoundInContext
 }

@@ -46,8 +46,9 @@ func TestHandshake(t *testing.T) {
 	require.NoError(t, err)
 	accId, err := peer.CtxIdentity(res.ctx)
 	require.NoError(t, err)
+	marshalledId, _ := nc.GetAccountService(1).Account().SignKey.GetPublic().Marshall()
 	assert.Equal(t, nc.GetAccountService(1).Account().PeerId, peerId)
-	assert.Equal(t, nc.GetAccountService(1).Account().Identity, accId)
+	assert.Equal(t, marshalledId, accId)
 }
 
 func newFixture(t *testing.T, nc *testnodeconf.Config, acc accountservice.Service) *fixture {

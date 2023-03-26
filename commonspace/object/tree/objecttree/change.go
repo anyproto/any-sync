@@ -19,18 +19,17 @@ type Change struct {
 	AclHeadId   string
 	Id          string
 	SnapshotId  string
-	IsSnapshot  bool
 	Timestamp   int64
 	ReadKeyId   string
 	Identity    crypto.PubKey
 	Data        []byte
 	Model       interface{}
+	Signature   []byte
 
 	// iterator helpers
 	visited          bool
 	branchesFinished bool
-
-	Signature []byte
+	IsSnapshot       bool
 }
 
 func NewChange(id string, identity crypto.PubKey, ch *treechangeproto.TreeChange, signature []byte) *Change {

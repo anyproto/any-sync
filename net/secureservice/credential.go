@@ -38,8 +38,10 @@ func (p *peerSignVerifier) MakeCredentials(sc sec.SecureConn) *handshakeproto.Cr
 	if err != nil {
 		log.Warn("can't sign identity credentials", zap.Error(err))
 	}
+	// this will actually be called only once
+	marshalled, _ := p.account.SignKey.GetPublic().Marshall()
 	msg := &handshakeproto.PayloadSignedPeerIds{
-		Identity: p.account.Identity,
+		Identity: marshalled,
 		Sign:     sign,
 	}
 	payload, _ := msg.Marshal()
@@ -57,7 +59,7 @@ func (p *peerSignVerifier) CheckCredential(sc sec.SecureConn, cred *handshakepro
 	if err = msg.Unmarshal(cred.Payload); err != nil {
 		return nil, handshake.ErrUnexpectedPayload
 	}
-	pubKey, err := crypto.NewSigningEd25519PubKeyFromBytes(msg.Identity)
+	pubKey, err := crypto.UnmarshalEd25519PublicKeyProto(msg.Identity)
 	if err != nil {
 		return nil, handshake.ErrInvalidCredentials
 	}

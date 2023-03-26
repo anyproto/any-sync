@@ -5,9 +5,6 @@ import (
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/util/crypto"
-	"github.com/anytypeio/any-sync/util/keys"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
 	"github.com/anytypeio/go-chash"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
@@ -37,10 +34,9 @@ type service struct {
 }
 
 type Node struct {
-	Addresses     []string
-	PeerId        string
-	SigningKey    signingkey.PubKey
-	EncryptionKey encryptionkey.PubKey
+	Addresses  []string
+	PeerId     string
+	SigningKey crypto.PubKey
 }
 
 func (n *Node) Id() string {
@@ -127,18 +123,9 @@ func nodeFromConfigNode(n NodeConfig) (*Node, error) {
 		return nil, err
 	}
 
-	encPubKey, err := keys.DecodeKeyFromString(
-		n.EncryptionKey,
-		encryptionkey.NewEncryptionRsaPubKeyFromBytes,
-		nil)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Node{
-		Addresses:     n.Addresses,
-		PeerId:        n.PeerId,
-		SigningKey:    sigPubKey,
-		EncryptionKey: encPubKey,
+		Addresses:  n.Addresses,
+		PeerId:     n.PeerId,
+		SigningKey: sigPubKey,
 	}, nil
 }
