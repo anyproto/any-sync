@@ -58,12 +58,12 @@ type aclList struct {
 func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage liststorage.ListStorage) (AclList, error) {
 	builder := newAclStateBuilderWithIdentity(acc)
 	keyStorage := crypto.NewKeyStorage()
-	return build(storage.Id(), keyStorage, builder, newAclRecordBuilder(storage.Id(), keyStorage), storage)
+	return build(storage.Id(), keyStorage, builder, NewAclRecordBuilder(storage.Id(), keyStorage), storage)
 }
 
 func BuildAclList(storage liststorage.ListStorage) (AclList, error) {
 	keyStorage := crypto.NewKeyStorage()
-	return build(storage.Id(), keyStorage, newAclStateBuilder(), newAclRecordBuilder(storage.Id(), crypto.NewKeyStorage()), storage)
+	return build(storage.Id(), keyStorage, newAclStateBuilder(), NewAclRecordBuilder(storage.Id(), crypto.NewKeyStorage()), storage)
 }
 
 func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilder, recBuilder AclRecordBuilder, storage liststorage.ListStorage) (list AclList, err error) {
@@ -77,7 +77,7 @@ func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilde
 		return
 	}
 
-	record, err := recBuilder.FromRaw(rawRecordWithId)
+	record, err := recBuilder.Unmarshall(rawRecordWithId)
 	if err != nil {
 		return
 	}
@@ -89,7 +89,7 @@ func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilde
 			return
 		}
 
-		record, err = recBuilder.FromRaw(rawRecordWithId)
+		record, err = recBuilder.Unmarshall(rawRecordWithId)
 		if err != nil {
 			return
 		}
@@ -140,7 +140,7 @@ func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added
 	if _, ok := a.indexes[rawRec.Id]; ok {
 		return
 	}
-	record, err := a.recordBuilder.FromRaw(rawRec)
+	record, err := a.recordBuilder.Unmarshall(rawRec)
 	if err != nil {
 		return
 	}
@@ -159,7 +159,7 @@ func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added
 }
 
 func (a *aclList) IsValidNext(rawRec *aclrecordproto.RawAclRecordWithId) (err error) {
-	_, err = a.recordBuilder.FromRaw(rawRec)
+	_, err = a.recordBuilder.Unmarshall(rawRec)
 	if err != nil {
 		return
 	}

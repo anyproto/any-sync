@@ -23,8 +23,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/nodeconf"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/anytypeio/any-sync/util/multiqueue"
 	"github.com/anytypeio/any-sync/util/slice"
 	"github.com/cheggaaa/mb/v3"
@@ -42,9 +41,7 @@ var (
 
 type SpaceCreatePayload struct {
 	// SigningKey is the signing key of the owner
-	SigningKey signingkey.PrivKey
-	// EncryptionKey is the encryption key of the owner
-	EncryptionKey encryptionkey.PrivKey
+	SigningKey crypto.PrivKey
 	// SpaceType is an arbitrary string
 	SpaceType string
 	// ReadKey is a first symmetric encryption key for a space
@@ -63,10 +60,9 @@ type HandleMessage struct {
 }
 
 type SpaceDerivePayload struct {
-	SigningKey    signingkey.PrivKey
-	EncryptionKey encryptionkey.PrivKey
-	SpaceType     string
-	SpacePayload  []byte
+	SigningKey   crypto.PrivKey
+	SpaceType    string
+	SpacePayload []byte
 }
 
 type SpaceDescription struct {

@@ -1,30 +1,24 @@
 package commonspace
 
 import (
-	aclrecordproto "github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
-	"github.com/anytypeio/any-sync/commonspace/object/keychain"
+	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/util/cidutil"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"hash/fnv"
 	"math/rand"
 	"time"
 )
 
 const (
-	SpaceReserved         = "any-sync.space"
-	SpaceDerivationScheme = "derivation.standard"
+	SpaceReserved = "any-sync.space"
 )
 
 func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
-	// unmarshalling signing and encryption keys
-	identity, err := payload.SigningKey.GetPublic().Raw()
-	if err != nil {
-		return
-	}
-	encPubKey, err := payload.EncryptionKey.GetPublic().Raw()
+	// marshalling keys
+	identity, err := payload.SigningKey.GetPublic().Marshall()
 	if err != nil {
 		return
 	}
@@ -62,43 +56,32 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 		RawHeader: marshalled,
 		Id:        spaceId,
 	}
-
-	// encrypting read key
-	hasher := fnv.New64()
-	_, err = hasher.Write(payload.ReadKey)
-	if err != nil {
-		return
-	}
-	readKeyHash := hasher.Sum64()
-	encReadKey, err := payload.EncryptionKey.GetPublic().Encrypt(payload.ReadKey)
+	readKey, err := payload.SigningKey.GetPublic().Encrypt(payload.ReadKey)
 	if err != nil {
 		return
 	}
 
-	// preparing acl
-	aclRoot := &aclrecordproto.AclRoot{
-		Identity:           identity,
-		EncryptionKey:      encPubKey,
-		SpaceId:            spaceId,
-		EncryptedReadKey:   encReadKey,
-		CurrentReadKeyHash: readKeyHash,
-		Timestamp:          time.Now().Unix(),
-	}
-	rawWithId, err := marshalAclRoot(aclRoot, payload.SigningKey)
+	// building acl root
+	keyStorage := crypto.NewKeyStorage()
+	aclBuilder := list.NewAclRecordBuilder("", keyStorage)
+	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
+		PrivKey:          payload.SigningKey,
+		SpaceId:          spaceId,
+		EncryptedReadKey: readKey,
+	})
 	if err != nil {
 		return
 	}
 
-	builder := objecttree.NewChangeBuilder(keychain.NewKeychain(), nil)
+	// building settings
+	builder := objecttree.NewChangeBuilder(keyStorage, nil)
 	spaceSettingsSeed := make([]byte, 32)
 	_, err = rand.Read(spaceSettingsSeed)
 	if err != nil {
 		return
 	}
-
 	_, settingsRoot, err := builder.BuildRoot(objecttree.InitialContent{
-		AclHeadId:  rawWithId.Id,
-		Identity:   aclRoot.Identity,
+		AclHeadId:  aclRoot.Id,
 		PrivKey:    payload.SigningKey,
 		SpaceId:    spaceId,
 		Seed:       spaceSettingsSeed,
@@ -111,7 +94,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 
 	// creating storage
 	storagePayload = spacestorage.SpaceStorageCreatePayload{
-		AclWithId:           rawWithId,
+		AclWithId:           aclRoot,
 		SpaceHeaderWithId:   rawHeaderWithId,
 		SpaceSettingsWithId: settingsRoot,
 	}
@@ -119,27 +102,19 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 }
 
 func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
-	// unmarshalling signing and encryption keys
-	identity, err := payload.SigningKey.GetPublic().Raw()
+	// marshalling keys
+	identity, err := payload.SigningKey.GetPublic().Marshall()
 	if err != nil {
 		return
 	}
-	signPrivKey, err := payload.SigningKey.Raw()
-	if err != nil {
-		return
-	}
-	encPubKey, err := payload.EncryptionKey.GetPublic().Raw()
-	if err != nil {
-		return
-	}
-	encPrivKey, err := payload.EncryptionKey.Raw()
+	pubKey, err := payload.SigningKey.GetPublic().Raw()
 	if err != nil {
 		return
 	}
 
 	// preparing replication key
 	hasher := fnv.New64()
-	_, err = hasher.Write(identity)
+	_, err = hasher.Write(pubKey)
 	if err != nil {
 		return
 	}
@@ -172,35 +147,22 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 		Id:        spaceId,
 	}
 
-	// deriving and encrypting read key
-	readKey, err := aclrecordproto.AclReadKeyDerive(signPrivKey, encPrivKey)
-	if err != nil {
-		return
-	}
-	hasher = fnv.New64()
-	_, err = hasher.Write(readKey.Bytes())
-	if err != nil {
-		return
-	}
-	readKeyHash := hasher.Sum64()
-
-	// preparing acl
-	aclRoot := &aclrecordproto.AclRoot{
-		Identity:           identity,
-		EncryptionKey:      encPubKey,
-		SpaceId:            spaceId,
-		DerivationScheme:   SpaceDerivationScheme,
-		CurrentReadKeyHash: readKeyHash,
-	}
-	rawWithId, err := marshalAclRoot(aclRoot, payload.SigningKey)
+	// building acl root
+	keyStorage := crypto.NewKeyStorage()
+	aclBuilder := list.NewAclRecordBuilder("", keyStorage)
+	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
+		PrivKey:        payload.SigningKey,
+		SpaceId:        spaceId,
+		DerivationPath: crypto.AnytypeAccountPath,
+	})
 	if err != nil {
 		return
 	}
 
-	builder := objecttree.NewChangeBuilder(keychain.NewKeychain(), nil)
+	// building settings
+	builder := objecttree.NewChangeBuilder(keyStorage, nil)
 	_, settingsRoot, err := builder.BuildRoot(objecttree.InitialContent{
-		AclHeadId:  rawWithId.Id,
-		Identity:   aclRoot.Identity,
+		AclHeadId:  aclRoot.Id,
 		PrivKey:    payload.SigningKey,
 		SpaceId:    spaceId,
 		ChangeType: SpaceReserved,
@@ -211,37 +173,9 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 
 	// creating storage
 	storagePayload = spacestorage.SpaceStorageCreatePayload{
-		AclWithId:           rawWithId,
+		AclWithId:           aclRoot,
 		SpaceHeaderWithId:   rawHeaderWithId,
 		SpaceSettingsWithId: settingsRoot,
-	}
-	return
-}
-
-func marshalAclRoot(aclRoot *aclrecordproto.AclRoot, key signingkey.PrivKey) (rawWithId *aclrecordproto.RawAclRecordWithId, err error) {
-	marshalledRoot, err := aclRoot.Marshal()
-	if err != nil {
-		return
-	}
-	signature, err := key.Sign(marshalledRoot)
-	if err != nil {
-		return
-	}
-	raw := &aclrecordproto.RawAclRecord{
-		Payload:   marshalledRoot,
-		Signature: signature,
-	}
-	marshalledRaw, err := raw.Marshal()
-	if err != nil {
-		return
-	}
-	aclHeadId, err := cidutil.NewCidFromBytes(marshalledRaw)
-	if err != nil {
-		return
-	}
-	rawWithId = &aclrecordproto.RawAclRecordWithId{
-		Payload: marshalledRaw,
-		Id:      aclHeadId,
 	}
 	return
 }
