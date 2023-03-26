@@ -14,10 +14,9 @@ type Service interface {
 }
 
 type Config struct {
-	PeerId        string `yaml:"peerId"`
-	PeerKey       string `yaml:"peerKey"`
-	SigningKey    string `yaml:"signingKey"`
-	EncryptionKey string `yaml:"encryptionKey"`
+	PeerId     string `yaml:"peerId"`
+	PeerKey    string `yaml:"peerKey"`
+	SigningKey string `yaml:"signingKey"`
 }
 
 type ConfigGetter interface {
