@@ -27,6 +27,8 @@ type PrivKey interface {
 	Sign([]byte) ([]byte, error)
 	// GetPublic returns the associated public key
 	GetPublic() PubKey
+	// Marshall wraps key in proto encoding and marshalls it
+	Marshall() ([]byte, error)
 	// LibP2P returns libp2p model
 	LibP2P() (crypto.PrivKey, error)
 }
