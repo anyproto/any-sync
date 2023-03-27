@@ -55,6 +55,18 @@ func UnmarshalEd25519PublicKeyProto(bytes []byte) (PubKey, error) {
 	return UnmarshalEd25519PublicKey(msg.Data)
 }
 
+func UnmarshalEd25519PrivateKeyProto(bytes []byte) (PrivKey, error) {
+	msg := &cryptoproto.Key{}
+	err := proto.Unmarshal(bytes, msg)
+	if err != nil {
+		return nil, err
+	}
+	if msg.Type != cryptoproto.KeyType_Ed25519Private {
+		return nil, ErrIncorrectKeyType
+	}
+	return UnmarshalEd25519PrivateKey(msg.Data)
+}
+
 func NewSigningEd25519PubKeyFromBytes(bytes []byte) (PubKey, error) {
 	return UnmarshalEd25519PublicKey(bytes)
 }
@@ -112,6 +124,15 @@ func (k *Ed25519PrivKey) GetPublic() PubKey {
 // Sign returns a signature from an input message.
 func (k *Ed25519PrivKey) Sign(msg []byte) ([]byte, error) {
 	return ed25519.Sign(k.privKey, msg), nil
+}
+
+// Marshall marshalls the key into proto
+func (k *Ed25519PrivKey) Marshall() ([]byte, error) {
+	msg := &cryptoproto.Key{
+		Type: cryptoproto.KeyType_Ed25519Public,
+		Data: k.privKey,
+	}
+	return msg.Marshal()
 }
 
 // Decrypt decrypts the message
