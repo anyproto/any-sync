@@ -129,7 +129,7 @@ func (k *Ed25519PrivKey) Sign(msg []byte) ([]byte, error) {
 // Marshall marshalls the key into proto
 func (k *Ed25519PrivKey) Marshall() ([]byte, error) {
 	msg := &cryptoproto.Key{
-		Type: cryptoproto.KeyType_Ed25519Public,
+		Type: cryptoproto.KeyType_Ed25519Private,
 		Data: k.privKey,
 	}
 	return msg.Marshal()
