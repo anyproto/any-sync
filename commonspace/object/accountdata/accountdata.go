@@ -3,7 +3,6 @@ package accountdata
 import (
 	"crypto/rand"
 	"github.com/anytypeio/any-sync/util/crypto"
-	"github.com/anytypeio/any-sync/util/peer"
 )
 
 type AccountKeys struct {
@@ -13,11 +12,10 @@ type AccountKeys struct {
 }
 
 func New(peerKey crypto.PrivKey, signKey crypto.PrivKey) *AccountKeys {
-	peerId, _ := peer.IdFromSigningPubKey(peerKey.GetPublic())
 	return &AccountKeys{
 		PeerKey: peerKey,
 		SignKey: signKey,
-		PeerId:  peerId.String(),
+		PeerId:  peerKey.GetPublic().PeerId(),
 	}
 }
 
@@ -30,13 +28,9 @@ func NewRandom() (*AccountKeys, error) {
 	if err != nil {
 		return nil, err
 	}
-	peerId, err := peer.IdFromSigningPubKey(peerKey.GetPublic())
-	if err != nil {
-		return nil, err
-	}
 	return &AccountKeys{
 		PeerKey: peerKey,
 		SignKey: signKey,
-		PeerId:  peerId.String(),
+		PeerId:  peerKey.GetPublic().PeerId(),
 	}, nil
 }

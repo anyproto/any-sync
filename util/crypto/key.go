@@ -45,8 +45,10 @@ type PubKey interface {
 	Marshall() ([]byte, error)
 	// Storage returns underlying key storage
 	Storage() []byte
-	// Account returns string representation
+	// Account returns string representation for anytype account
 	Account() string
+	// PeerId returns string representation for peer id
+	PeerId() string
 	// LibP2P returns libp2p model
 	LibP2P() (crypto.PubKey, error)
 }
