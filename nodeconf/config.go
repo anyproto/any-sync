@@ -12,6 +12,7 @@ const (
 
 type ConfigGetter interface {
 	GetNodes() []NodeConfig
+	GetNodesConfId() string
 }
 
 type NodeConfig struct {

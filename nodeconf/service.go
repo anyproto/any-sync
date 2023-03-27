@@ -7,6 +7,8 @@ import (
 	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/anytypeio/go-chash"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"go.uber.org/zap"
+	"sync"
 )
 
 const CName = "common.nodeconf"
@@ -24,13 +26,14 @@ func New() Service {
 
 type Service interface {
 	GetLast() Configuration
-	GetById(id string) Configuration
+	SetLastConfig(id string, nodes []NodeConfig) (err error)
 	app.Component
 }
 
 type service struct {
 	accountId string
 	last      Configuration
+	mu        sync.RWMutex
 }
 
 type Node struct {
@@ -48,11 +51,30 @@ func (n *Node) Capacity() float64 {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	nodesConf := a.MustComponent("config").(ConfigGetter).GetNodes()
+	nodesConf := a.MustComponent("config").(ConfigGetter)
 	s.accountId = a.MustComponent(commonaccount.CName).(commonaccount.Service).Account().PeerId
+	return s.SetLastConfig(nodesConf.GetNodesConfId(), nodesConf.GetNodes())
+}
+
+func (s *service) Name() (name string) {
+	return CName
+}
+
+func (s *service) GetLast() Configuration {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last
+}
+
+func (s *service) SetLastConfig(id string, nodesConf []NodeConfig) (err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.last != nil && s.last.Id() == id {
+		return
+	}
 
 	fileConfig := &configuration{
-		id:        "config",
+		id:        id,
 		accountId: s.accountId,
 	}
 	if fileConfig.chash, err = chash.New(chash.Config{
@@ -86,21 +108,13 @@ func (s *service) Init(a *app.App) (err error) {
 	if err = fileConfig.chash.AddMembers(members...); err != nil {
 		return
 	}
+	var beforeId = ""
+	if s.last != nil {
+		beforeId = s.last.Id()
+	}
+	log.Info("configuration changed", zap.String("before", beforeId), zap.String("after", fileConfig.Id()))
 	s.last = fileConfig
 	return
-}
-
-func (s *service) Name() (name string) {
-	return CName
-}
-
-func (s *service) GetLast() Configuration {
-	return s.last
-}
-
-func (s *service) GetById(id string) Configuration {
-	//TODO implement me
-	panic("implement me")
 }
 
 func nodeFromConfigNode(n NodeConfig) (*Node, error) {
