@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/any-sync/util/crypto/cryptoproto"
-	"github.com/anytypeio/any-sync/util/peer"
 	"github.com/anytypeio/any-sync/util/strkey"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -161,7 +160,7 @@ func (k *Ed25519PubKey) Account() string {
 
 // PeerId returns string representation of key for peer id
 func (k *Ed25519PubKey) PeerId() string {
-	peerId, _ := peer.IdFromSigningPubKey(k)
+	peerId, _ := IdFromSigningPubKey(k)
 	return peerId.String()
 }
 
