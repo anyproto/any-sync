@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/anytypeio/any-sync/net/secureservice/handshake/handshakeproto"
 	crypto2 "github.com/anytypeio/any-sync/util/crypto"
-	peer2 "github.com/anytypeio/any-sync/util/peer"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -568,9 +567,9 @@ func newConnPair(t require.TestingT) (sc1, sc2 *secConn) {
 	sk2b, err := sk2.Raw()
 	signKey2, err := crypto.UnmarshalEd25519PrivateKey(sk2b)
 	require.NoError(t, err)
-	peerId1, err := peer2.IdFromSigningPubKey(sk1.GetPublic())
+	peerId1, err := crypto2.IdFromSigningPubKey(sk1.GetPublic())
 	require.NoError(t, err)
-	peerId2, err := peer2.IdFromSigningPubKey(sk2.GetPublic())
+	peerId2, err := crypto2.IdFromSigningPubKey(sk2.GetPublic())
 	require.NoError(t, err)
 	sc1 = &secConn{
 		Conn:       c1,
@@ -594,7 +593,7 @@ type secConn struct {
 func (s *secConn) LocalPeer() peer.ID {
 	skB, _ := s.localKey.Raw()
 	sk, _ := crypto2.NewSigningEd25519PubKeyFromBytes(skB)
-	lp, _ := peer2.IdFromSigningPubKey(sk)
+	lp, _ := crypto2.IdFromSigningPubKey(sk)
 	return lp
 }
 

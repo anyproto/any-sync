@@ -6,7 +6,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/anytypeio/any-sync/util/crypto"
-	"github.com/anytypeio/any-sync/util/peer"
 )
 
 // AccountTestService provides service for test purposes, generates new random account every Init
@@ -28,7 +27,7 @@ func (s *AccountTestService) Init(a *app.App) (err error) {
 		return err
 	}
 
-	peerId, err := peer.IdFromSigningPubKey(peerKey.GetPublic())
+	peerId, err := crypto.IdFromSigningPubKey(peerKey.GetPublic())
 	if err != nil {
 		return err
 	}
