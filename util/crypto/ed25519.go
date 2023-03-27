@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/any-sync/util/crypto/cryptoproto"
+	"github.com/anytypeio/any-sync/util/peer"
 	"github.com/anytypeio/any-sync/util/strkey"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p/core/crypto"
@@ -152,10 +153,16 @@ func (k *Ed25519PrivKey) LibP2P() (crypto.PrivKey, error) {
 	return crypto.UnmarshalEd25519PrivateKey(k.privKey)
 }
 
-// String returns string representation of key
+// Account returns string representation of key in anytype account format
 func (k *Ed25519PubKey) Account() string {
 	res, _ := strkey.Encode(strkey.AccountAddressVersionByte, k.pubKey)
 	return res
+}
+
+// PeerId returns string representation of key for peer id
+func (k *Ed25519PubKey) PeerId() string {
+	peerId, _ := peer.IdFromSigningPubKey(k)
+	return peerId.String()
 }
 
 // Raw public key bytes.
