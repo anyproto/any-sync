@@ -27,6 +27,7 @@ var (
 	ErrHasInvalidChanges = errors.New("the change is invalid")
 	ErrNoCommonSnapshot  = errors.New("trees doesn't have a common snapshot")
 	ErrNoChangeInTree    = errors.New("no such change in tree")
+	ErrMissingKey        = errors.New("missing current read key")
 )
 
 type AddResultSummary int
@@ -99,7 +100,8 @@ type objectTree struct {
 	root    *Change
 	tree    *Tree
 
-	keys map[string]crypto.SymKey
+	keys           map[string]crypto.SymKey
+	currentReadKey crypto.SymKey
 
 	// buffers
 	difSnapshotBuf  []*treechangeproto.RawTreeChangeWithId
@@ -238,10 +240,11 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 
 	if content.IsEncrypted {
 		readKeyId = state.CurrentReadKeyId()
-		readKey, err = state.CurrentReadKey()
-		if err != nil {
+		if ot.currentReadKey == nil {
+			err = ErrMissingKey
 			return
 		}
+		readKey = ot.currentReadKey
 	}
 	cnt = BuilderContent{
 		TreeHeadIds:    ot.tree.Heads(),
@@ -637,21 +640,35 @@ func (ot *objectTree) validateTree(newChanges []*Change) error {
 	defer ot.aclList.RUnlock()
 	state := ot.aclList.AclState()
 
-	// just not to take lock many times, updating the key map from aclList
-	if len(ot.keys) != len(state.UserReadKeys()) {
-		for key, value := range state.UserReadKeys() {
-			treeKey, err := deriveTreeKey(value, ot.id)
-			if err != nil {
-				return err
-			}
-			ot.keys[key] = treeKey
-		}
+	err := ot.readKeysFromAclState(state)
+	if err != nil {
+		return err
 	}
 	if len(newChanges) == 0 {
 		return ot.validator.ValidateFullTree(ot.tree, ot.aclList)
 	}
 
 	return ot.validator.ValidateNewChanges(ot.tree, ot.aclList, newChanges)
+}
+
+func (ot *objectTree) readKeysFromAclState(state *list.AclState) (err error) {
+	// just not to take lock many times, updating the key map from aclList
+	if len(ot.keys) == len(state.UserReadKeys()) {
+		return nil
+	}
+	for key, value := range state.UserReadKeys() {
+		treeKey, err := deriveTreeKey(value, ot.id)
+		if err != nil {
+			return err
+		}
+		ot.keys[key] = treeKey
+	}
+	curKey, err := state.CurrentReadKey()
+	if err != nil {
+		return err
+	}
+	ot.currentReadKey, err = deriveTreeKey(curKey, ot.id)
+	return err
 }
 
 func (ot *objectTree) Debug(parser DescriptionParser) (DebugInfo, error) {
