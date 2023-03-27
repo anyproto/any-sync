@@ -6,6 +6,7 @@ import (
 
 const (
 	AnytypeAccountPath   = "m/SLIP-0021/anytype/account"
+	AnysyncTreePath      = "m/SLIP-0021/anysync/tree/%s"
 	AnytypeAccountPrefix = "m/44'/607'"
 )
 
