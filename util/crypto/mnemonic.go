@@ -38,7 +38,7 @@ func (g MnemonicGenerator) WithWordCount(wc int) (Mnemonic, error) {
 	default:
 		return "", ErrInvalidWordCount
 	}
-	return g.WithWordCount(size)
+	return g.WithRandomEntropy(size)
 }
 
 func (g MnemonicGenerator) WithRandomEntropy(size int) (Mnemonic, error) {
