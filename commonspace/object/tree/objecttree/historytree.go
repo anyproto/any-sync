@@ -45,7 +45,11 @@ func (h *historyTree) rebuildFromStorage(beforeId string, include bool) (err err
 
 	if len(ot.keys) != len(state.UserReadKeys()) {
 		for key, value := range state.UserReadKeys() {
-			ot.keys[key] = value
+			treeKey, err := deriveTreeKey(value, h.id)
+			if err != nil {
+				return err
+			}
+			ot.keys[key] = treeKey
 		}
 	}
 	return
