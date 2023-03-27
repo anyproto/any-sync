@@ -12,6 +12,15 @@ type AccountKeys struct {
 	PeerId  string
 }
 
+func New(peerKey crypto.PrivKey, signKey crypto.PrivKey) *AccountKeys {
+	peerId, _ := peer.IdFromSigningPubKey(peerKey.GetPublic())
+	return &AccountKeys{
+		PeerKey: peerKey,
+		SignKey: signKey,
+		PeerId:  peerId.String(),
+	}
+}
+
 func NewRandom() (*AccountKeys, error) {
 	peerKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
 	if err != nil {
