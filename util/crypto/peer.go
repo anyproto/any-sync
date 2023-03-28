@@ -10,11 +10,9 @@ func IdFromSigningPubKey(pubKey PubKey) (peer.ID, error) {
 	if err != nil {
 		return "", err
 	}
-
 	libp2pKey, err := crypto.UnmarshalEd25519PublicKey(rawSigning)
 	if err != nil {
 		return "", err
 	}
-
 	return peer.IDFromPublicKey(libp2pKey)
 }
