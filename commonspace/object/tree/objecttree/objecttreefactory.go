@@ -2,21 +2,18 @@ package objecttree
 
 import (
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
-	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
-	"github.com/anytypeio/any-sync/util/keys/symmetric"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"math/rand"
 	"time"
 )
 
 type ObjectTreeCreatePayload struct {
-	SignKey       signingkey.PrivKey
+	PrivKey       crypto.PrivKey
 	ChangeType    string
 	ChangePayload []byte
 	SpaceId       string
-	Identity      []byte
 	IsEncrypted   bool
 }
 
@@ -40,9 +37,7 @@ func defaultObjectTreeDeps(
 	rootChange *treechangeproto.RawTreeChangeWithId,
 	treeStorage treestorage.TreeStorage,
 	aclList list.AclList) objectTreeDeps {
-
-	keychain := keychain.NewKeychain()
-	changeBuilder := NewChangeBuilder(keychain, rootChange)
+	changeBuilder := NewChangeBuilder(crypto.NewKeyStorage(), rootChange)
 	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
 	return objectTreeDeps{
 		changeBuilder:   changeBuilder,
@@ -167,8 +162,7 @@ func createObjectTreeRoot(
 	}
 	cnt := InitialContent{
 		AclHeadId:     aclHeadId,
-		Identity:      payload.Identity,
-		SigningKey:    payload.SignKey,
+		PrivKey:       payload.PrivKey,
 		SpaceId:       payload.SpaceId,
 		ChangeType:    payload.ChangeType,
 		ChangePayload: payload.ChangePayload,
@@ -176,7 +170,7 @@ func createObjectTreeRoot(
 		Seed:          seed,
 	}
 
-	_, root, err = NewChangeBuilder(keychain.NewKeychain(), nil).BuildRoot(cnt)
+	_, root, err = NewChangeBuilder(crypto.NewKeyStorage(), nil).BuildRoot(cnt)
 	return
 }
 
@@ -189,7 +183,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		aclList:         deps.aclList,
 		changeBuilder:   deps.changeBuilder,
 		rawChangeLoader: deps.rawChangeLoader,
-		keys:            make(map[uint64]*symmetric.Key),
+		keys:            make(map[string]crypto.SymKey),
 		newChangesBuf:   make([]*Change, 0, 10),
 		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
 		notSeenIdxBuf:   make([]int, 0, 10),
@@ -225,7 +219,7 @@ func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht History
 		aclList:         deps.aclList,
 		changeBuilder:   deps.changeBuilder,
 		rawChangeLoader: deps.rawChangeLoader,
-		keys:            make(map[uint64]*symmetric.Key),
+		keys:            make(map[string]crypto.SymKey),
 		newChangesBuf:   make([]*Change, 0, 10),
 		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
 		notSeenIdxBuf:   make([]int, 0, 10),

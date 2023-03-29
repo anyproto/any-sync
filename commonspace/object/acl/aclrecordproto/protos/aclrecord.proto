@@ -18,18 +18,16 @@ message AclRecord {
     string prevId = 1;
     bytes identity = 2;
     bytes data = 3;
-    uint64 currentReadKeyHash = 4;
+    string readKeyId = 4;
     int64 timestamp = 5;
 }
 
 message AclRoot {
     bytes identity = 1;
-    bytes encryptionKey = 2;
-    string spaceId = 3;
-    bytes encryptedReadKey = 4;
-    string derivationScheme = 5;
-    uint64 currentReadKeyHash = 6;
-    int64 timestamp = 7;
+    string spaceId = 2;
+    bytes encryptedReadKey = 3;
+    bytes derivationParams = 4;
+    int64 timestamp = 5;
 }
 
 message AclContentValue {
@@ -47,37 +45,33 @@ message AclData {
 }
 
 message AclState {
-    repeated uint64 readKeyHashes = 1;
+    repeated string readKeyIds = 1;
     repeated AclUserState userStates = 2;
     map<string, AclUserInvite> invites = 3;
 }
 
 message AclUserState {
     bytes identity = 1;
-    bytes encryptionKey = 2;
-    AclUserPermissions permissions = 3;
+    AclUserPermissions permissions = 2;
 }
 
 message AclUserAdd {
     bytes identity = 1;
-    bytes encryptionKey = 2;
-    repeated bytes encryptedReadKeys = 3;
-    AclUserPermissions permissions = 4;
+    repeated bytes encryptedReadKeys = 2;
+    AclUserPermissions permissions = 3;
 }
 
 message AclUserInvite {
     bytes acceptPublicKey = 1;
-    uint64 encryptSymKeyHash = 2;
-    repeated bytes encryptedReadKeys = 3;
-    AclUserPermissions permissions = 4;
+    repeated bytes encryptedReadKeys = 2;
+    AclUserPermissions permissions = 3;
 }
 
 message AclUserJoin {
     bytes identity = 1;
-    bytes encryptionKey = 2;
-    bytes acceptSignature = 3;
-    bytes acceptPubKey = 4;
-    repeated bytes encryptedReadKeys = 5;
+    bytes acceptSignature = 2;
+    bytes acceptPubKey = 3;
+    repeated bytes encryptedReadKeys = 4;
 }
 
 message AclUserRemove {
@@ -87,8 +81,7 @@ message AclUserRemove {
 
 message AclReadKeyReplace {
     bytes identity = 1;
-    bytes encryptionKey = 2;
-    bytes encryptedReadKey = 3;
+    bytes encryptedReadKey = 2;
 }
 
 message AclUserPermissionChange {
@@ -103,7 +96,7 @@ enum AclUserPermissions {
 }
 
 message AclSyncMessage {
-    AclSyncContentValue content = 2;
+    AclSyncContentValue content = 1;
 }
 
 // AclSyncContentValue provides different types for acl sync

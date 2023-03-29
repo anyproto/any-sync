@@ -2,14 +2,29 @@ package objecttree
 
 import (
 	"context"
+	"crypto/rand"
+	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/testutils/acllistbuilder"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
+
+type mockKeyStorage struct {
+	key crypto.PubKey
+}
+
+func newKeyStorage() mockKeyStorage {
+	_, pk, _ := crypto.GenerateEd25519Key(rand.Reader)
+	return mockKeyStorage{pk}
+}
+
+func (m mockKeyStorage) PubKeyFromProto(protoBytes []byte) (crypto.PubKey, error) {
+	return m.key, nil
+}
 
 type mockChangeCreator struct{}
 
@@ -68,10 +83,9 @@ type testTreeContext struct {
 }
 
 func prepareAclList(t *testing.T) list.AclList {
-	st, err := acllistbuilder.NewListStorageWithTestName("userjoinexample.yml")
-	require.NoError(t, err, "building storage should not result in error")
-
-	aclList, err := list.BuildAclList(st)
+	randKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	aclList, err := list.NewTestDerivedAcl("spaceId", randKeys)
 	require.NoError(t, err, "building acl list should be without error")
 
 	return aclList
@@ -82,7 +96,7 @@ func prepareTreeDeps(aclList list.AclList) (*mockChangeCreator, objectTreeDeps) 
 	treeStorage := changeCreator.createNewTreeStorage("0", aclList.Head().Id)
 	root, _ := treeStorage.Root()
 	changeBuilder := &nonVerifiableChangeBuilder{
-		ChangeBuilder: NewChangeBuilder(nil, root),
+		ChangeBuilder: NewChangeBuilder(newKeyStorage(), root),
 	}
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,
@@ -100,7 +114,7 @@ func prepareTreeContext(t *testing.T, aclList list.AclList) testTreeContext {
 	treeStorage := changeCreator.createNewTreeStorage("0", aclList.Head().Id)
 	root, _ := treeStorage.Root()
 	changeBuilder := &nonVerifiableChangeBuilder{
-		ChangeBuilder: NewChangeBuilder(nil, root),
+		ChangeBuilder: NewChangeBuilder(newKeyStorage(), root),
 	}
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,

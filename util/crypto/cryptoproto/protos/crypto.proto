@@ -1,0 +1,23 @@
+syntax = "proto3";
+package crypto;
+option go_package = "util/crypto/cryptoproto";
+
+enum KeyType {
+    Ed25519Public = 0;
+    Ed25519Private = 1;
+    AES = 2;
+}
+
+enum DerivationMethod {
+    Slip21 = 0;
+}
+
+message Key {
+    KeyType Type = 1;
+    bytes Data = 2;
+}
+
+message KeyDerivation {
+    DerivationMethod method = 1;
+    string derivationPath = 2;
+}

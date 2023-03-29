@@ -17,6 +17,8 @@ import (
 func TestPeerSignVerifier_CheckCredential(t *testing.T) {
 	a1 := newTestAccData(t)
 	a2 := newTestAccData(t)
+	identity1, _ := a1.SignKey.GetPublic().Marshall()
+	identity2, _ := a2.SignKey.GetPublic().Marshall()
 
 	cc1 := newPeerSignVerifier(a1)
 	cc2 := newPeerSignVerifier(a2)
@@ -28,17 +30,17 @@ func TestPeerSignVerifier_CheckCredential(t *testing.T) {
 	cr2 := cc2.MakeCredentials(c2)
 	id1, err := cc1.CheckCredential(c1, cr2)
 	assert.NoError(t, err)
-	assert.Equal(t, a2.Identity, id1)
+	assert.Equal(t, identity2, id1)
 
 	id2, err := cc2.CheckCredential(c2, cr1)
 	assert.NoError(t, err)
-	assert.Equal(t, a1.Identity, id2)
+	assert.Equal(t, identity1, id2)
 
 	_, err = cc1.CheckCredential(c1, cr1)
 	assert.EqualError(t, err, handshake.ErrInvalidCredentials.Error())
 }
 
-func newTestAccData(t *testing.T) *accountdata.AccountData {
+func newTestAccData(t *testing.T) *accountdata.AccountKeys {
 	as := accounttest.AccountTestService{}
 	require.NoError(t, as.Init(nil))
 	return as.Account()

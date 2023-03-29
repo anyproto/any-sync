@@ -2,10 +2,10 @@ package exporter
 
 import (
 	"github.com/anytypeio/any-sync/commonspace/object/acl/liststorage"
-	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anytypeio/any-sync/util/crypto"
 )
 
 type DataConverter interface {
@@ -48,7 +48,7 @@ func (t *treeExporter) ExportUnencrypted(tree objecttree.ReadableObjectTree) (er
 	if err != nil {
 		return
 	}
-	changeBuilder := objecttree.NewChangeBuilder(keychain.NewKeychain(), tree.Header())
+	changeBuilder := objecttree.NewChangeBuilder(crypto.NewKeyStorage(), tree.Header())
 	putStorage := func(change *objecttree.Change) (err error) {
 		var raw *treechangeproto.RawTreeChangeWithId
 		raw, err = changeBuilder.Marshall(change)
@@ -68,7 +68,7 @@ func (t *treeExporter) ExportUnencrypted(tree objecttree.ReadableObjectTree) (er
 			return false
 		}
 		// that means that change is unencrypted
-		change.ReadKeyHash = 0
+		change.ReadKeyId = ""
 		change.Data = data
 		err = putStorage(change)
 		return err == nil

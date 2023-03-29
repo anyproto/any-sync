@@ -4,6 +4,7 @@ package objecttree
 import (
 	"context"
 	"errors"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"sync"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anytypeio/any-sync/util/keys/symmetric"
 	"github.com/anytypeio/any-sync/util/slice"
 )
 
@@ -27,6 +27,7 @@ var (
 	ErrHasInvalidChanges = errors.New("the change is invalid")
 	ErrNoCommonSnapshot  = errors.New("trees doesn't have a common snapshot")
 	ErrNoChangeInTree    = errors.New("no such change in tree")
+	ErrMissingKey        = errors.New("missing current read key")
 )
 
 type AddResultSummary int
@@ -99,7 +100,8 @@ type objectTree struct {
 	root    *Change
 	tree    *Tree
 
-	keys map[uint64]*symmetric.Key
+	keys           map[string]crypto.SymKey
+	currentReadKey crypto.SymKey
 
 	// buffers
 	difSnapshotBuf  []*treechangeproto.RawTreeChangeWithId
@@ -224,34 +226,35 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 	defer ot.aclList.RUnlock()
 
 	var (
-		state       = ot.aclList.AclState() // special method for own keys
-		readKey     *symmetric.Key
-		readKeyHash uint64
+		state     = ot.aclList.AclState() // special method for own keys
+		readKey   crypto.SymKey
+		pubKey    = content.Key.GetPublic()
+		readKeyId string
 	)
-	canWrite := state.HasPermission(content.Identity, aclrecordproto.AclUserPermissions_Writer) ||
-		state.HasPermission(content.Identity, aclrecordproto.AclUserPermissions_Admin)
+	canWrite := state.HasPermission(pubKey, aclrecordproto.AclUserPermissions_Writer) ||
+		state.HasPermission(pubKey, aclrecordproto.AclUserPermissions_Admin)
 	if !canWrite {
 		err = list.ErrInsufficientPermissions
 		return
 	}
 
 	if content.IsEncrypted {
-		readKeyHash = state.CurrentReadKeyHash()
-		readKey, err = state.CurrentReadKey()
-		if err != nil {
+		readKeyId = state.CurrentReadKeyId()
+		if ot.currentReadKey == nil {
+			err = ErrMissingKey
 			return
 		}
+		readKey = ot.currentReadKey
 	}
 	cnt = BuilderContent{
-		TreeHeadIds:        ot.tree.Heads(),
-		AclHeadId:          ot.aclList.Head().Id,
-		SnapshotBaseId:     ot.tree.RootId(),
-		CurrentReadKeyHash: readKeyHash,
-		Identity:           content.Identity,
-		IsSnapshot:         content.IsSnapshot,
-		SigningKey:         content.Key,
-		ReadKey:            readKey,
-		Content:            content.Data,
+		TreeHeadIds:    ot.tree.Heads(),
+		AclHeadId:      ot.aclList.Head().Id,
+		SnapshotBaseId: ot.tree.RootId(),
+		ReadKeyId:      readKeyId,
+		IsSnapshot:     content.IsSnapshot,
+		PrivKey:        content.Key,
+		ReadKey:        readKey,
+		Content:        content.Data,
 	}
 	return
 }
@@ -488,11 +491,11 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 	}
 	decrypt := func(c *Change) (decrypted []byte, err error) {
 		// the change is not encrypted
-		if c.ReadKeyHash == 0 {
+		if c.ReadKeyId == "" {
 			decrypted = c.Data
 			return
 		}
-		readKey, exists := ot.keys[c.ReadKeyHash]
+		readKey, exists := ot.keys[c.ReadKeyId]
 		if !exists {
 			err = list.ErrNoReadKey
 			return
@@ -637,17 +640,35 @@ func (ot *objectTree) validateTree(newChanges []*Change) error {
 	defer ot.aclList.RUnlock()
 	state := ot.aclList.AclState()
 
-	// just not to take lock many times, updating the key map from aclList
-	if len(ot.keys) != len(state.UserReadKeys()) {
-		for key, value := range state.UserReadKeys() {
-			ot.keys[key] = value
-		}
+	err := ot.readKeysFromAclState(state)
+	if err != nil {
+		return err
 	}
 	if len(newChanges) == 0 {
 		return ot.validator.ValidateFullTree(ot.tree, ot.aclList)
 	}
 
 	return ot.validator.ValidateNewChanges(ot.tree, ot.aclList, newChanges)
+}
+
+func (ot *objectTree) readKeysFromAclState(state *list.AclState) (err error) {
+	// just not to take lock many times, updating the key map from aclList
+	if len(ot.keys) == len(state.UserReadKeys()) {
+		return nil
+	}
+	for key, value := range state.UserReadKeys() {
+		treeKey, err := deriveTreeKey(value, ot.id)
+		if err != nil {
+			return err
+		}
+		ot.keys[key] = treeKey
+	}
+	curKey, err := state.CurrentReadKey()
+	if err != nil {
+		return err
+	}
+	ot.currentReadKey, err = deriveTreeKey(curKey, ot.id)
+	return err
 }
 
 func (ot *objectTree) Debug(parser DescriptionParser) (DebugInfo, error) {
