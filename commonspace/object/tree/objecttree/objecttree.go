@@ -57,6 +57,7 @@ type ReadableObjectTree interface {
 	ChangeInfo() *treechangeproto.TreeChangeInfo
 	Heads() []string
 	Root() *Change
+	Len() int
 
 	AclList() list.AclList
 
@@ -133,6 +134,10 @@ func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Chan
 
 func (ot *objectTree) Id() string {
 	return ot.id
+}
+
+func (ot *objectTree) Len() int {
+	return ot.tree.Len()
 }
 
 func (ot *objectTree) AclList() list.AclList {
