@@ -136,6 +136,9 @@ func TestSettingsObject_DeleteObject_NoSnapshot(t *testing.T) {
 	require.NoError(t, err)
 
 	delId := "delId"
+	doSnapshot = func(len int) bool {
+		return false
+	}
 
 	fx.syncTree.EXPECT().Id().Return("syncId")
 	fx.syncTree.EXPECT().Len().Return(10)
