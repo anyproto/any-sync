@@ -3,6 +3,7 @@ package objecttree
 import (
 	"fmt"
 	"github.com/anytypeio/any-sync/util/crypto"
+	"math/rand"
 )
 
 func commonSnapshotForTwoPaths(ourPath []string, theirPath []string) (string, error) {
@@ -39,4 +40,17 @@ func deriveTreeKey(key crypto.SymKey, cid string) (crypto.SymKey, error) {
 		return nil, err
 	}
 	return crypto.DeriveSymmetricKey(raw, fmt.Sprintf(crypto.AnysyncTreePath, cid))
+}
+
+func DoSnapshot(treeLen int) bool {
+	if treeLen <= 100 {
+		return false
+	}
+
+	var (
+		delta    = treeLen/50 + 1
+		midPoint = 1000
+		val      = rand.Intn(midPoint * 2)
+	)
+	return midPoint-delta <= val && val <= midPoint+delta
 }

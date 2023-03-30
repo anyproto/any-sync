@@ -40,6 +40,8 @@ var (
 	ErrCantDeleteSpace = errors.New("not able to delete space")
 )
 
+var doSnapshot = objecttree.DoSnapshot
+
 type BuildTreeFunc func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error)
 
 type Deps struct {
@@ -228,14 +230,13 @@ func (s *settingsObject) DeleteObject(id string) (err error) {
 		err = ErrObjDoesNotExist
 		return
 	}
-
-	// TODO: add snapshot logic
-	res, err := s.changeFactory.CreateObjectDeleteChange(id, s.state, false)
+	isSnapshot := doSnapshot(s.Len())
+	res, err := s.changeFactory.CreateObjectDeleteChange(id, s.state, isSnapshot)
 	if err != nil {
 		return
 	}
 
-	return s.addContent(res)
+	return s.addContent(res, isSnapshot)
 }
 
 func (s *settingsObject) verifyDeleteSpace(raw *treechangeproto.RawTreeChangeWithId) (err error) {
@@ -246,12 +247,12 @@ func (s *settingsObject) verifyDeleteSpace(raw *treechangeproto.RawTreeChangeWit
 	return verifyDeleteContent(data, "")
 }
 
-func (s *settingsObject) addContent(data []byte) (err error) {
+func (s *settingsObject) addContent(data []byte, isSnapshot bool) (err error) {
 	accountData := s.account.Account()
 	_, err = s.AddContent(context.Background(), objecttree.SignableChangeContent{
 		Data:        data,
 		Key:         accountData.SignKey,
-		IsSnapshot:  false,
+		IsSnapshot:  isSnapshot,
 		IsEncrypted: false,
 	})
 	if err != nil {
