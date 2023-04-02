@@ -1,14 +1,36 @@
 package accountdata
 
 import (
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	"crypto/rand"
+	"github.com/anytypeio/any-sync/util/crypto"
 )
 
-type AccountData struct { // TODO: create a convenient constructor for this
-	Identity []byte // public key
-	PeerKey  signingkey.PrivKey
-	SignKey  signingkey.PrivKey
-	EncKey   encryptionkey.PrivKey
-	PeerId   string
+type AccountKeys struct {
+	PeerKey crypto.PrivKey
+	SignKey crypto.PrivKey
+	PeerId  string
+}
+
+func New(peerKey crypto.PrivKey, signKey crypto.PrivKey) *AccountKeys {
+	return &AccountKeys{
+		PeerKey: peerKey,
+		SignKey: signKey,
+		PeerId:  peerKey.GetPublic().PeerId(),
+	}
+}
+
+func NewRandom() (*AccountKeys, error) {
+	peerKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	signKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	return &AccountKeys{
+		PeerKey: peerKey,
+		SignKey: signKey,
+		PeerId:  peerKey.GetPublic().PeerId(),
+	}, nil
 }

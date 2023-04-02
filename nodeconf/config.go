@@ -16,10 +16,9 @@ type ConfigGetter interface {
 }
 
 type NodeConfig struct {
-	PeerId        string     `yaml:"peerId"`
-	Addresses     []string   `yaml:"address"`
-	EncryptionKey string     `yaml:"encryptionPubKey,omitempty"`
-	Types         []NodeType `yaml:"types,omitempty"`
+	PeerId    string     `yaml:"peerId"`
+	Addresses []string   `yaml:"address"`
+	Types     []NodeType `yaml:"types,omitempty"`
 }
 
 func (n NodeConfig) HasType(t NodeType) bool {

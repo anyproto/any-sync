@@ -258,6 +258,20 @@ func (mr *MockObjectTreeMockRecorder) IterateRoot(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateRoot", reflect.TypeOf((*MockObjectTree)(nil).IterateRoot), arg0, arg1)
 }
 
+// Len mocks base method.
+func (m *MockObjectTree) Len() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Len")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// Len indicates an expected call of Len.
+func (mr *MockObjectTreeMockRecorder) Len() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Len", reflect.TypeOf((*MockObjectTree)(nil).Len))
+}
+
 // Lock mocks base method.
 func (m *MockObjectTree) Lock() {
 	m.ctrl.T.Helper()

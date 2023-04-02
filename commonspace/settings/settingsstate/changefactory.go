@@ -24,9 +24,10 @@ func (c *changeFactory) CreateObjectDeleteChange(id string, state *State, isSnap
 		Content: []*spacesyncproto.SpaceSettingsContent{
 			{Value: content},
 		},
-		Snapshot: nil,
 	}
-	// TODO: add snapshot logic
+	if isSnapshot {
+		change.Snapshot = c.makeSnapshot(state, id, "")
+	}
 	res, err = change.Marshal()
 	return
 }
@@ -39,9 +40,27 @@ func (c *changeFactory) CreateSpaceDeleteChange(peerId string, state *State, isS
 		Content: []*spacesyncproto.SpaceSettingsContent{
 			{Value: content},
 		},
-		Snapshot: nil,
 	}
-	// TODO: add snapshot logic
+	if isSnapshot {
+		change.Snapshot = c.makeSnapshot(state, "", peerId)
+	}
 	res, err = change.Marshal()
 	return
+}
+
+func (c *changeFactory) makeSnapshot(state *State, objectId, deleterPeer string) *spacesyncproto.SpaceSettingsSnapshot {
+	var (
+		deletedIds = state.DeletedIds
+		deleterId  = state.DeleterId
+	)
+	if objectId != "" {
+		deletedIds = append(deletedIds, objectId)
+	}
+	if deleterPeer != "" {
+		deleterId = deleterPeer
+	}
+	return &spacesyncproto.SpaceSettingsSnapshot{
+		DeletedIds:    deletedIds,
+		DeleterPeerId: deleterId,
+	}
 }
