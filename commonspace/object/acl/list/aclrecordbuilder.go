@@ -85,6 +85,10 @@ func (a *aclRecordBuilder) Unmarshall(rawIdRecord *aclrecordproto.RawAclRecordWi
 }
 
 func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *aclrecordproto.RawAclRecordWithId, err error) {
+	rawIdentity, err := content.PrivKey.GetPublic().Raw()
+	if err != nil {
+		return
+	}
 	identity, err := content.PrivKey.GetPublic().Marshall()
 	if err != nil {
 		return
@@ -93,7 +97,7 @@ func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *aclrecordproto.R
 	if err != nil {
 		return
 	}
-	identitySignature, err := content.MasterKey.Sign(identity)
+	identitySignature, err := content.MasterKey.Sign(rawIdentity)
 	if err != nil {
 		return
 	}
