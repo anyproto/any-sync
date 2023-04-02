@@ -36,10 +36,10 @@ func (m *MockService) EXPECT() *MockServiceMockRecorder {
 }
 
 // Account mocks base method.
-func (m *MockService) Account() *accountdata.AccountData {
+func (m *MockService) Account() *accountdata.AccountKeys {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Account")
-	ret0, _ := ret[0].(*accountdata.AccountData)
+	ret0, _ := ret[0].(*accountdata.AccountKeys)
 	return ret0
 }
 

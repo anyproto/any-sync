@@ -9,6 +9,7 @@ import (
 
 	aclrecordproto "github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	list "github.com/anytypeio/any-sync/commonspace/object/acl/list"
+	crypto "github.com/anytypeio/any-sync/util/crypto"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -158,6 +159,20 @@ func (m *MockAclList) IterateFrom(arg0 string, arg1 func(*list.AclRecord) bool) 
 func (mr *MockAclListMockRecorder) IterateFrom(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateFrom", reflect.TypeOf((*MockAclList)(nil).IterateFrom), arg0, arg1)
+}
+
+// KeyStorage mocks base method.
+func (m *MockAclList) KeyStorage() crypto.KeyStorage {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KeyStorage")
+	ret0, _ := ret[0].(crypto.KeyStorage)
+	return ret0
+}
+
+// KeyStorage indicates an expected call of KeyStorage.
+func (mr *MockAclListMockRecorder) KeyStorage() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeyStorage", reflect.TypeOf((*MockAclList)(nil).KeyStorage))
 }
 
 // Lock mocks base method.

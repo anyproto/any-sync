@@ -45,7 +45,7 @@ type SecureService interface {
 
 type secureService struct {
 	p2pTr    *libp2ptls.Transport
-	account  *accountdata.AccountData
+	account  *accountdata.AccountKeys
 	key      crypto.PrivKey
 	nodeconf nodeconf.Service
 

@@ -14,7 +14,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage/mock_spacestorage"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"sync"
@@ -126,7 +125,7 @@ func TestSettingsObject_Init(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestSettingsObject_DeleteObject(t *testing.T) {
+func TestSettingsObject_DeleteObject_NoSnapshot(t *testing.T) {
 	fx := newSettingsFixture(t)
 	defer fx.stop()
 
@@ -135,29 +134,70 @@ func TestSettingsObject_DeleteObject(t *testing.T) {
 
 	err := fx.doc.Init(context.Background())
 	require.NoError(t, err)
-	time.Sleep(100 * time.Millisecond)
 
 	delId := "delId"
+	doSnapshot = func(len int) bool {
+		return false
+	}
 
 	fx.syncTree.EXPECT().Id().Return("syncId")
+	fx.syncTree.EXPECT().Len().Return(10)
 	fx.delState.EXPECT().Exists(delId).Return(false)
 	fx.spaceStorage.EXPECT().TreeStorage(delId).Return(nil, nil)
 	res := []byte("settingsData")
 	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
 	fx.changeFactory.EXPECT().CreateObjectDeleteChange(delId, fx.doc.state, false).Return(res, nil)
 
-	accountData := &accountdata.AccountData{
-		Identity: []byte("id"),
-		PeerKey:  nil,
-		SignKey:  &signingkey.Ed25519PrivateKey{},
-		EncKey:   nil,
-	}
+	accountData, err := accountdata.NewRandom()
+	require.NoError(t, err)
 	fx.account.EXPECT().Account().Return(accountData)
 	fx.syncTree.EXPECT().AddContent(gomock.Any(), objecttree.SignableChangeContent{
 		Data:        res,
 		Key:         accountData.SignKey,
-		Identity:    accountData.Identity,
 		IsSnapshot:  false,
+		IsEncrypted: false,
+	}).Return(objecttree.AddResult{}, nil)
+
+	fx.stateBuilder.EXPECT().Build(fx.doc, fx.doc.state).Return(fx.doc.state, nil)
+	fx.deletionManager.EXPECT().UpdateState(gomock.Any(), fx.doc.state).Return(nil)
+	err = fx.doc.DeleteObject(delId)
+	require.NoError(t, err)
+
+	fx.syncTree.EXPECT().Close().Return(nil)
+	err = fx.doc.Close()
+	require.NoError(t, err)
+}
+
+func TestSettingsObject_DeleteObject_WithSnapshot(t *testing.T) {
+	fx := newSettingsFixture(t)
+	defer fx.stop()
+
+	fx.spaceStorage.EXPECT().SpaceSettingsId().Return(fx.docId)
+	fx.deleter.EXPECT().Delete()
+
+	err := fx.doc.Init(context.Background())
+	require.NoError(t, err)
+
+	delId := "delId"
+	doSnapshot = func(len int) bool {
+		return true
+	}
+
+	fx.syncTree.EXPECT().Id().Return("syncId")
+	fx.syncTree.EXPECT().Len().Return(10)
+	fx.delState.EXPECT().Exists(delId).Return(false)
+	fx.spaceStorage.EXPECT().TreeStorage(delId).Return(nil, nil)
+	res := []byte("settingsData")
+	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
+	fx.changeFactory.EXPECT().CreateObjectDeleteChange(delId, fx.doc.state, true).Return(res, nil)
+
+	accountData, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	fx.account.EXPECT().Account().Return(accountData)
+	fx.syncTree.EXPECT().AddContent(gomock.Any(), objecttree.SignableChangeContent{
+		Data:        res,
+		Key:         accountData.SignKey,
+		IsSnapshot:  true,
 		IsEncrypted: false,
 	}).Return(objecttree.AddResult{}, nil)
 
