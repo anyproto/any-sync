@@ -31,6 +31,10 @@ type Config struct {
 func (c *Config) Init(a *app.App) (err error) { return }
 func (c *Config) Name() string                { return "config" }
 
+func (c *Config) GetNodesConfId() string {
+	return "test"
+}
+
 func (c *Config) GetNodes() []nodeconf.NodeConfig {
 	return c.nodes
 }
