@@ -24,10 +24,11 @@ message AclRecord {
 
 message AclRoot {
     bytes identity = 1;
-    string spaceId = 2;
-    bytes encryptedReadKey = 3;
-    bytes derivationParams = 4;
+    bytes masterKey = 2;
+    string spaceId = 3;
+    bytes encryptedReadKey = 4;
     int64 timestamp = 5;
+    bytes identitySignature = 6;
 }
 
 message AclContentValue {

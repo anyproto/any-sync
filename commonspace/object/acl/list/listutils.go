@@ -10,9 +10,9 @@ import (
 func NewTestDerivedAcl(spaceId string, keys *accountdata.AccountKeys) (AclList, error) {
 	builder := NewAclRecordBuilder("", crypto.NewKeyStorage())
 	root, err := builder.BuildRoot(RootContent{
-		PrivKey:        keys.SignKey,
-		SpaceId:        spaceId,
-		DerivationPath: crypto.AnytypeAccountPath,
+		PrivKey:   keys.SignKey,
+		SpaceId:   spaceId,
+		MasterKey: keys.MasterKey,
 	})
 	if err != nil {
 		return nil, err

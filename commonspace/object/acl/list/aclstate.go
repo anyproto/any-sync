@@ -3,8 +3,6 @@ package list
 import (
 	"errors"
 	"fmt"
-	"github.com/anytypeio/any-sync/util/crypto/cryptoproto"
-
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/util/crypto"
@@ -172,8 +170,8 @@ func (st *AclState) saveReadKeyFromRoot(record *AclRecord) (err error) {
 	if !ok {
 		return ErrIncorrectRoot
 	}
-	if root.DerivationParams != nil {
-		readKey, err = st.deriveKey(root.DerivationParams)
+	if root.EncryptedReadKey == nil {
+		readKey, err = st.deriveKey()
 		if err != nil {
 			return
 		}
@@ -315,17 +313,12 @@ func (st *AclState) LastRecordId() string {
 	return st.lastRecordId
 }
 
-func (st *AclState) deriveKey(params []byte) (crypto.SymKey, error) {
-	keyDerivation := &cryptoproto.KeyDerivation{}
-	err := proto.Unmarshal(params, keyDerivation)
-	if err != nil {
-		return nil, err
-	}
+func (st *AclState) deriveKey() (crypto.SymKey, error) {
 	keyBytes, err := st.key.Raw()
 	if err != nil {
 		return nil, err
 	}
-	return crypto.DeriveSymmetricKey(keyBytes, keyDerivation.DerivationPath)
+	return crypto.DeriveSymmetricKey(keyBytes, crypto.AnysyncSpacePath)
 }
 
 func mapKeyFromPubKey(pubKey crypto.PubKey) string {
