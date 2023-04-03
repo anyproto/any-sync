@@ -14,8 +14,8 @@ var (
 
 const (
 	anytypeAccountOldPrefix = "m/44'/607'"
-	// TODO: actually approve this
-	anytypeAccountNewPrefix = "m/44'/123456'"
+	// TODO: https://github.com/satoshilabs/slips/pull/1528
+	anytypeAccountNewPrefix = "m/44'/2046'"
 )
 
 type DerivationResult struct {
