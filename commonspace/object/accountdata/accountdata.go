@@ -6,18 +6,16 @@ import (
 )
 
 type AccountKeys struct {
-	PeerKey   crypto.PrivKey
-	SignKey   crypto.PrivKey
-	MasterKey crypto.PrivKey
-	PeerId    string
+	PeerKey crypto.PrivKey
+	SignKey crypto.PrivKey
+	PeerId  string
 }
 
-func New(peerKey, signKey, masterKey crypto.PrivKey) *AccountKeys {
+func New(peerKey, signKey crypto.PrivKey) *AccountKeys {
 	return &AccountKeys{
-		PeerKey:   peerKey,
-		SignKey:   signKey,
-		MasterKey: masterKey,
-		PeerId:    peerKey.GetPublic().PeerId(),
+		PeerKey: peerKey,
+		SignKey: signKey,
+		PeerId:  peerKey.GetPublic().PeerId(),
 	}
 }
 
@@ -30,14 +28,9 @@ func NewRandom() (*AccountKeys, error) {
 	if err != nil {
 		return nil, err
 	}
-	masterKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
-	if err != nil {
-		return nil, err
-	}
 	return &AccountKeys{
-		PeerKey:   peerKey,
-		SignKey:   signKey,
-		MasterKey: masterKey,
-		PeerId:    peerKey.GetPublic().PeerId(),
+		PeerKey: peerKey,
+		SignKey: signKey,
+		PeerId:  peerKey.GetPublic().PeerId(),
 	}, nil
 }

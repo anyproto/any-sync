@@ -9,10 +9,14 @@ import (
 
 func NewTestDerivedAcl(spaceId string, keys *accountdata.AccountKeys) (AclList, error) {
 	builder := NewAclRecordBuilder("", crypto.NewKeyStorage())
+	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	if err != nil {
+		return nil, err
+	}
 	root, err := builder.BuildRoot(RootContent{
 		PrivKey:   keys.SignKey,
 		SpaceId:   spaceId,
-		MasterKey: keys.MasterKey,
+		MasterKey: masterKey,
 	})
 	if err != nil {
 		return nil, err
