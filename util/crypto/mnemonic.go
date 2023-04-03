@@ -14,7 +14,7 @@ var (
 
 const (
 	anytypeAccountOldPrefix = "m/44'/607'"
-	// TODO: https://github.com/satoshilabs/slips/pull/1528
+	// https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 	anytypeAccountNewPrefix = "m/44'/2046'"
 )
 
