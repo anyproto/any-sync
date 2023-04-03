@@ -21,8 +21,14 @@ service Coordinator {
 }
 
 message SpaceSignRequest {
+    // SpaceId is the id of the signed space
     string spaceId = 1;
+    // Header is the header of the signed space
     bytes header = 2;
+    // OldIdentity is the old identity of the space owner
+    bytes oldIdentity = 3;
+    // NewIdentitySignature is the new identity signed by the old one
+    bytes newIdentitySignature = 4;
 }
 
 enum ErrorCodes {

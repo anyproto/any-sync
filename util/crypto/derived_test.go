@@ -10,7 +10,7 @@ func TestDerivedKey(t *testing.T) {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
 	require.NoError(t, err)
-	key, err := DeriveSymmetricKey(seed, AnytypeAccountPath)
+	key, err := DeriveSymmetricKey(seed, AnysyncSpacePath)
 	require.NoError(t, err)
 	_, err = rand.Read(seed)
 	require.NoError(t, err)

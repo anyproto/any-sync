@@ -66,6 +66,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 	aclBuilder := list.NewAclRecordBuilder("", keyStorage)
 	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
 		PrivKey:          payload.SigningKey,
+		MasterKey:        payload.MasterKey,
 		SpaceId:          spaceId,
 		EncryptedReadKey: readKey,
 	})
@@ -151,9 +152,9 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 	keyStorage := crypto.NewKeyStorage()
 	aclBuilder := list.NewAclRecordBuilder("", keyStorage)
 	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
-		PrivKey:        payload.SigningKey,
-		SpaceId:        spaceId,
-		DerivationPath: crypto.AnytypeAccountPath,
+		PrivKey:   payload.SigningKey,
+		MasterKey: payload.MasterKey,
+		SpaceId:   spaceId,
 	})
 	if err != nil {
 		return
