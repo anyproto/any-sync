@@ -10,6 +10,7 @@ import (
 
 	app "github.com/anytypeio/any-sync/app"
 	treechangeproto "github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
+	coordinatorclient "github.com/anytypeio/any-sync/coordinator/coordinatorclient"
 	coordinatorproto "github.com/anytypeio/any-sync/coordinator/coordinatorproto"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -96,18 +97,18 @@ func (mr *MockCoordinatorClientMockRecorder) Name() *gomock.Call {
 }
 
 // SpaceSign mocks base method.
-func (m *MockCoordinatorClient) SpaceSign(arg0 context.Context, arg1 string, arg2 []byte) (*coordinatorproto.SpaceReceiptWithSignature, error) {
+func (m *MockCoordinatorClient) SpaceSign(arg0 context.Context, arg1 coordinatorclient.SpaceSignPayload) (*coordinatorproto.SpaceReceiptWithSignature, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpaceSign", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "SpaceSign", arg0, arg1)
 	ret0, _ := ret[0].(*coordinatorproto.SpaceReceiptWithSignature)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SpaceSign indicates an expected call of SpaceSign.
-func (mr *MockCoordinatorClientMockRecorder) SpaceSign(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) SpaceSign(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceSign", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceSign), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceSign", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceSign), arg0, arg1)
 }
 
 // StatusCheck mocks base method.
