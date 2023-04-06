@@ -107,15 +107,21 @@ message SpaceStatusChangeResponse {
     SpaceStatusPayload payload = 1;
 }
 
-// NetworkConfigurationRequest contains the requested configurationId, it can be empty to request the latest version
+// NetworkConfigurationRequest contains currenId of the client configuration, it can be empty
 message NetworkConfigurationRequest {
-    string configurationId = 1;
+    // currenId of the client configuration
+    // if the currentId is equal to the latest configuration id then the response will not contain a nodes list
+    string currentId = 1;
 }
 
 // NetworkConfigurationResponse contains list of nodes
 message NetworkConfigurationResponse {
+    // id of current configuration
     string configurationId = 1;
+    // nodes list - it will be empty if the client's currentId is equal configurationId
     repeated Node nodes = 2;
+    // unix timestamp of the creation time of configuration
+    uint64 creationTimeUnix = 3;
 }
 
 // NodeType determines the type of API that a node supports

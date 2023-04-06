@@ -4,9 +4,7 @@ import (
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/anytypeio/go-chash"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"go.uber.org/zap"
 	"sync"
 )
@@ -25,121 +23,135 @@ func New() Service {
 }
 
 type Service interface {
-	GetLast() Configuration
-	SetLastConfig(id string, nodes []NodeConfig) (err error)
+	NodeConf
 	app.Component
 }
 
 type service struct {
 	accountId string
-	last      Configuration
+	last      NodeConf
 	mu        sync.RWMutex
-}
-
-type Node struct {
-	Addresses  []string
-	PeerId     string
-	SigningKey crypto.PubKey
-}
-
-func (n *Node) Id() string {
-	return n.PeerId
-}
-
-func (n *Node) Capacity() float64 {
-	return 1
 }
 
 func (s *service) Init(a *app.App) (err error) {
 	nodesConf := a.MustComponent("config").(ConfigGetter)
 	s.accountId = a.MustComponent(commonaccount.CName).(commonaccount.Service).Account().PeerId
-	return s.SetLastConfig(nodesConf.GetNodesConfId(), nodesConf.GetNodes())
+	return s.setLastConfiguration(nodesConf.GetNodeConf())
 }
 
 func (s *service) Name() (name string) {
 	return CName
 }
 
-func (s *service) GetLast() Configuration {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.last
-}
-
-func (s *service) SetLastConfig(id string, nodesConf []NodeConfig) (err error) {
+func (s *service) setLastConfiguration(c Configuration) (err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.last != nil && s.last.Id() == id {
+	if s.last != nil && s.last.Id() == c.Id {
 		return
 	}
 
-	fileConfig := &configuration{
-		id:        id,
+	nc := &nodeConf{
+		id:        c.Id,
+		c:         c,
 		accountId: s.accountId,
 	}
-	if fileConfig.chash, err = chash.New(chash.Config{
+	if nc.chash, err = chash.New(chash.Config{
 		PartitionCount:    PartitionCount,
 		ReplicationFactor: ReplicationFactor,
 	}); err != nil {
 		return
 	}
 
-	members := make([]chash.Member, 0, len(nodesConf))
-	for _, n := range nodesConf {
+	members := make([]chash.Member, 0, len(c.Nodes))
+	for _, n := range c.Nodes {
 		if n.HasType(NodeTypeTree) {
-			var member *Node
-			member, err = nodeFromConfigNode(n)
-			if err != nil {
-				return
-			}
-			members = append(members, member)
+			members = append(members, n)
 		}
 		if n.HasType(NodeTypeConsensus) {
-			fileConfig.consensusPeers = append(fileConfig.consensusPeers, n.PeerId)
+			nc.consensusPeers = append(nc.consensusPeers, n.PeerId)
 		}
 		if n.HasType(NodeTypeFile) {
-			fileConfig.filePeers = append(fileConfig.filePeers, n.PeerId)
+			nc.filePeers = append(nc.filePeers, n.PeerId)
 		}
 		if n.HasType(NodeTypeCoordinator) {
-			fileConfig.coordinatorPeers = append(fileConfig.coordinatorPeers, n.PeerId)
+			nc.coordinatorPeers = append(nc.coordinatorPeers, n.PeerId)
 		}
-		fileConfig.allMembers = append(fileConfig.allMembers, n)
+		nc.allMembers = append(nc.allMembers, n)
 	}
-	if err = fileConfig.chash.AddMembers(members...); err != nil {
+	if err = nc.chash.AddMembers(members...); err != nil {
 		return
 	}
 	var beforeId = ""
 	if s.last != nil {
 		beforeId = s.last.Id()
 	}
-	log.Info("configuration changed", zap.String("before", beforeId), zap.String("after", fileConfig.Id()))
-	s.last = fileConfig
+	log.Info("nodeConf changed", zap.String("before", beforeId), zap.String("after", nc.Id()))
+	s.last = nc
 	return
 }
 
-func nodeFromConfigNode(n NodeConfig) (*Node, error) {
-	p, err := peer.Decode(n.PeerId)
-	if err != nil {
-		return nil, err
-	}
-	ic, err := p.ExtractPublicKey()
-	if err != nil {
-		return nil, err
-	}
+func (s *service) Id() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.Id()
+}
 
-	icRaw, err := ic.Raw()
-	if err != nil {
-		return nil, err
-	}
+func (s *service) Configuration() Configuration {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.Configuration()
+}
 
-	sigPubKey, err := crypto.UnmarshalEd25519PublicKey(icRaw)
-	if err != nil {
-		return nil, err
-	}
+func (s *service) NodeIds(spaceId string) []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.NodeIds(spaceId)
+}
 
-	return &Node{
-		Addresses:  n.Addresses,
-		PeerId:     n.PeerId,
-		SigningKey: sigPubKey,
-	}, nil
+func (s *service) IsResponsible(spaceId string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.IsResponsible(spaceId)
+}
+
+func (s *service) FilePeers() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.FilePeers()
+}
+
+func (s *service) ConsensusPeers() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.ConsensusPeers()
+}
+
+func (s *service) CoordinatorPeers() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.CoordinatorPeers()
+}
+
+func (s *service) Addresses() map[string][]string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.Addresses()
+}
+
+func (s *service) CHash() chash.CHash {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.CHash()
+}
+
+func (s *service) Partition(spaceId string) (part int) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.Partition(spaceId)
+}
+
+func (s *service) NodeTypes(nodeId string) []NodeType {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.NodeTypes(nodeId)
 }
