@@ -21,7 +21,7 @@ func TestConfiguration_NodeIds(t *testing.T) {
 		ReplicationFactor: ReplicationFactor,
 	})
 	require.NoError(t, err)
-	conf := &configuration{
+	conf := &nodeConf{
 		id:        "last",
 		accountId: "1",
 		chash:     ch,
