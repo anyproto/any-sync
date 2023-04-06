@@ -34,8 +34,8 @@ func (s syncTreeMatcher) String() string {
 	return ""
 }
 
-func syncClientFuncCreator(client SyncClient) func(spaceId string, factory RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.Configuration) SyncClient {
-	return func(spaceId string, factory RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.Configuration) SyncClient {
+func syncClientFuncCreator(client SyncClient) func(spaceId string, factory RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.NodeConf) SyncClient {
+	return func(spaceId string, factory RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.NodeConf) SyncClient {
 		return client
 	}
 }

@@ -3,7 +3,7 @@ package testnodeconf
 import (
 	"github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/nodeconf/nodeconfstore"
+	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/anytypeio/any-sync/testutil/accounttest"
 )
 
@@ -17,14 +17,14 @@ func GenNodeConfig(num int) (conf *Config) {
 		if err := ac.Init(nil); err != nil {
 			panic(err)
 		}
-		conf.nodes = append(conf.nodes, ac.NodeConf(nil))
+		conf.nodes.Nodes = append(conf.nodes.Nodes, ac.NodeConf(nil))
 		conf.configs = append(conf.configs, ac)
 	}
 	return conf
 }
 
 type Config struct {
-	nodes   []nodeconfstore.NodeConfig
+	nodes   nodeconf.Configuration
 	configs []*accounttest.AccountTestService
 }
 
@@ -35,7 +35,7 @@ func (c *Config) GetNodesConfId() string {
 	return "test"
 }
 
-func (c *Config) GetNodes() []nodeconfstore.NodeConfig {
+func (c *Config) GetNodeConf() nodeconf.Configuration {
 	return c.nodes
 }
 

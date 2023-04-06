@@ -11,7 +11,7 @@ type AccountKeys struct {
 	PeerId  string
 }
 
-func New(peerKey crypto.PrivKey, signKey crypto.PrivKey) *AccountKeys {
+func New(peerKey, signKey crypto.PrivKey) *AccountKeys {
 	return &AccountKeys{
 		PeerKey: peerKey,
 		SignKey: signKey,

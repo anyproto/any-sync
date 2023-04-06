@@ -5,9 +5,8 @@ import (
 )
 
 const (
-	AnytypeAccountPath   = "m/SLIP-0021/anytype/account"
-	AnysyncTreePath      = "m/SLIP-0021/anysync/tree/%s"
-	AnytypeAccountPrefix = "m/44'/607'"
+	AnysyncSpacePath = "m/SLIP-0021/anysync/space"
+	AnysyncTreePath  = "m/SLIP-0021/anysync/tree/%s"
 )
 
 // DeriveSymmetricKey derives a symmetric key from seed and path using slip-21

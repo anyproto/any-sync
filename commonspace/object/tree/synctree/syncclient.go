@@ -19,14 +19,14 @@ type syncClient struct {
 	objectsync.MessagePool
 	RequestFactory
 	spaceId       string
-	configuration nodeconf.Configuration
+	configuration nodeconf.NodeConf
 }
 
 func newSyncClient(
 	spaceId string,
 	pool objectsync.MessagePool,
 	factory RequestFactory,
-	configuration nodeconf.Configuration) SyncClient {
+	configuration nodeconf.NodeConf) SyncClient {
 	return &syncClient{
 		MessagePool:    pool,
 		RequestFactory: factory,

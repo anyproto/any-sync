@@ -49,7 +49,7 @@ type Deps struct {
 	Account       accountservice.Service
 	TreeGetter    treegetter.TreeGetter
 	Store         spacestorage.SpaceStorage
-	Configuration nodeconf.Configuration
+	Configuration nodeconf.NodeConf
 	DeletionState settingsstate.ObjectDeletionState
 	Provider      SpaceIdsProvider
 	OnSpaceDelete func()

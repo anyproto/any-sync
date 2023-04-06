@@ -50,6 +50,10 @@ func (tb *treeBuilder) Build(theirHeads []string, newChanges []*Change) (*Tree, 
 }
 
 func (tb *treeBuilder) build(heads []string, theirHeads []string, newChanges []*Change) (*Tree, error) {
+	defer func() {
+		tb.cache = make(map[string]*Change)
+	}()
+
 	var proposedHeads []string
 	tb.cache = make(map[string]*Change)
 

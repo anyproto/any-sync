@@ -4,14 +4,14 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/util/cidutil"
 	"github.com/anytypeio/any-sync/util/crypto"
-	"github.com/anytypeio/any-sync/util/crypto/cryptoproto"
 	"github.com/gogo/protobuf/proto"
+	"time"
 )
 
 type RootContent struct {
 	PrivKey          crypto.PrivKey
+	MasterKey        crypto.PrivKey
 	SpaceId          string
-	DerivationPath   string
 	EncryptedReadKey []byte
 }
 
@@ -85,26 +85,33 @@ func (a *aclRecordBuilder) Unmarshall(rawIdRecord *aclrecordproto.RawAclRecordWi
 }
 
 func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *aclrecordproto.RawAclRecordWithId, err error) {
+	rawIdentity, err := content.PrivKey.GetPublic().Raw()
+	if err != nil {
+		return
+	}
 	identity, err := content.PrivKey.GetPublic().Marshall()
 	if err != nil {
 		return
 	}
-	var derivationParams []byte
-	if content.DerivationPath != "" {
-		keyDerivation := &cryptoproto.KeyDerivation{
-			Method:         cryptoproto.DerivationMethod_Slip21,
-			DerivationPath: content.DerivationPath,
-		}
-		derivationParams, err = keyDerivation.Marshal()
-		if err != nil {
-			return
-		}
+	masterKey, err := content.MasterKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+	identitySignature, err := content.MasterKey.Sign(rawIdentity)
+	if err != nil {
+		return
+	}
+	var timestamp int64
+	if content.EncryptedReadKey != nil {
+		timestamp = time.Now().Unix()
 	}
 	aclRoot := &aclrecordproto.AclRoot{
-		Identity:         identity,
-		SpaceId:          content.SpaceId,
-		EncryptedReadKey: content.EncryptedReadKey,
-		DerivationParams: derivationParams,
+		Identity:          identity,
+		SpaceId:           content.SpaceId,
+		EncryptedReadKey:  content.EncryptedReadKey,
+		MasterKey:         masterKey,
+		IdentitySignature: identitySignature,
+		Timestamp:         timestamp,
 	}
 	return marshalAclRoot(aclRoot, content.PrivKey)
 }

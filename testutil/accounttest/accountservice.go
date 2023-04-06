@@ -5,7 +5,6 @@ import (
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/nodeconf"
-	"github.com/anytypeio/any-sync/nodeconf/nodeconfstore"
 	"github.com/anytypeio/any-sync/util/crypto"
 )
 
@@ -48,8 +47,8 @@ func (s *AccountTestService) Account() *accountdata.AccountKeys {
 	return s.acc
 }
 
-func (s *AccountTestService) NodeConf(addrs []string) nodeconfstore.NodeConfig {
-	return nodeconfstore.NodeConfig{
+func (s *AccountTestService) NodeConf(addrs []string) nodeconf.Node {
+	return nodeconf.Node{
 		PeerId:    s.acc.PeerId,
 		Addresses: addrs,
 		Types:     []nodeconf.NodeType{nodeconf.NodeTypeTree},

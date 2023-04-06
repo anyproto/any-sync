@@ -42,6 +42,7 @@ type Dialer interface {
 type dialer struct {
 	transport secureservice.SecureService
 	config    net2.Config
+	nodeConf  nodeconf.NodeConf
 	peerAddrs map[string][]string
 
 	mu sync.RWMutex
@@ -49,7 +50,7 @@ type dialer struct {
 
 func (d *dialer) Init(a *app.App) (err error) {
 	d.transport = a.MustComponent(secureservice.CName).(secureservice.SecureService)
-	d.peerAddrs = a.MustComponent(nodeconf.CName).(nodeconf.Service).GetLast().Addresses()
+	d.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	d.config = a.MustComponent("config").(net2.ConfigGetter).GetNet()
 	return
 }
@@ -73,6 +74,17 @@ func (d *dialer) SetPeerAddrs(peerId string, addrs []string) {
 	d.peerAddrs[peerId] = addrs
 }
 
+func (d *dialer) getPeerAddrs(peerId string) ([]string, error) {
+	if addrs, ok := d.nodeConf.PeerAddresses(peerId); ok {
+		return addrs, nil
+	}
+	addrs, ok := d.peerAddrs[peerId]
+	if !ok || len(addrs) == 0 {
+		return nil, ErrArrdsNotFound
+	}
+	return addrs, nil
+}
+
 func (d *dialer) Dial(ctx context.Context, peerId string) (p peer.Peer, err error) {
 	var ctxCancel context.CancelFunc
 	ctx, ctxCancel = context.WithTimeout(ctx, time.Second*10)
@@ -80,10 +92,11 @@ func (d *dialer) Dial(ctx context.Context, peerId string) (p peer.Peer, err erro
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
-	addrs, ok := d.peerAddrs[peerId]
-	if !ok || len(addrs) == 0 {
-		return nil, ErrArrdsNotFound
+	addrs, err := d.getPeerAddrs(peerId)
+	if err != nil {
+		return
 	}
+
 	var (
 		conn drpc.Conn
 		sc   sec.SecureConn

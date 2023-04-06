@@ -22,7 +22,7 @@ type NodeConf interface {
 	// CoordinatorPeers returns list of coordinator nodes
 	CoordinatorPeers() []string
 	// Addresses returns map[peerId][]addr with connection addresses for all known nodes
-	Addresses() map[string][]string
+	PeerAddresses(peerId string) (addrs []string, ok bool)
 	// CHash returns nodes consistent table
 	CHash() chash.CHash
 	// Partition returns partition number by spaceId
@@ -40,6 +40,7 @@ type nodeConf struct {
 	chash            chash.CHash
 	allMembers       []Node
 	c                Configuration
+	addrs            map[string][]string
 }
 
 func (c *nodeConf) Id() string {
@@ -82,12 +83,9 @@ func (c *nodeConf) CoordinatorPeers() []string {
 	return c.coordinatorPeers
 }
 
-func (c *nodeConf) Addresses() map[string][]string {
-	res := make(map[string][]string)
-	for _, m := range c.allMembers {
-		res[m.PeerId] = m.Addresses
-	}
-	return res
+func (c *nodeConf) PeerAddresses(peerId string) (addrs []string, ok bool) {
+	addrs, ok = c.addrs[peerId]
+	return
 }
 
 func (c *nodeConf) CHash() chash.CHash {

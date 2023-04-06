@@ -50,6 +50,8 @@ type SpaceCreatePayload struct {
 	ReplicationKey uint64
 	// SpacePayload is an arbitrary payload related to space type
 	SpacePayload []byte
+	// MasterKey is the master key of the owner
+	MasterKey crypto.PrivKey
 }
 
 type HandleMessage struct {
@@ -61,6 +63,7 @@ type HandleMessage struct {
 
 type SpaceDerivePayload struct {
 	SigningKey   crypto.PrivKey
+	MasterKey    crypto.PrivKey
 	SpaceType    string
 	SpacePayload []byte
 }
@@ -118,7 +121,7 @@ type space struct {
 	cache          *commonGetter
 	account        accountservice.Service
 	aclList        *syncacl.SyncAcl
-	configuration  nodeconf.Configuration
+	configuration  nodeconf.NodeConf
 	settingsObject settings.SettingsObject
 	peerManager    peermanager.PeerManager
 
