@@ -21,7 +21,7 @@ type NodeConf interface {
 	ConsensusPeers() []string
 	// CoordinatorPeers returns list of coordinator nodes
 	CoordinatorPeers() []string
-	// Addresses returns map[peerId][]addr with connection addresses for all known nodes
+	// PeerAddresses returns peer addresses by peer id
 	PeerAddresses(peerId string) (addrs []string, ok bool)
 	// CHash returns nodes consistent table
 	CHash() chash.CHash

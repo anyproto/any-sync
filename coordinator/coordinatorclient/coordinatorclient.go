@@ -23,6 +23,7 @@ type CoordinatorClient interface {
 	StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusPayload, err error)
 	SpaceSign(ctx context.Context, payload SpaceSignPayload) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error)
 	FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (limit uint64, err error)
+	NetworkConfiguration(ctx context.Context, currentId string) (*coordinatorproto.NetworkConfigurationResponse, error)
 	app.Component
 }
 
@@ -126,6 +127,21 @@ func (c *coordinatorClient) FileLimitCheck(ctx context.Context, spaceId string, 
 		return
 	}
 	return resp.Limit, nil
+}
+
+func (c *coordinatorClient) NetworkConfiguration(ctx context.Context, currentId string) (resp *coordinatorproto.NetworkConfigurationResponse, err error) {
+	cl, err := c.client(ctx)
+	if err != nil {
+		return
+	}
+	resp, err = cl.NetworkConfiguration(ctx, &coordinatorproto.NetworkConfigurationRequest{
+		CurrentId: currentId,
+	})
+	if err != nil {
+		err = rpcerr.Unwrap(err)
+		return
+	}
+	return
 }
 
 func (c *coordinatorClient) client(ctx context.Context) (coordinatorproto.DRPCCoordinatorClient, error) {
