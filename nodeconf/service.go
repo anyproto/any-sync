@@ -1,12 +1,14 @@
 package nodeconf
 
 import (
+	"context"
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/go-chash"
 	"go.uber.org/zap"
 	"sync"
+	"time"
 )
 
 const CName = "common.nodeconf"
@@ -24,23 +26,61 @@ func New() Service {
 
 type Service interface {
 	NodeConf
-	app.Component
+	app.ComponentRunnable
 }
 
 type service struct {
 	accountId string
+	config    Configuration
+	source    Source
+	store     Store
 	last      NodeConf
 	mu        sync.RWMutex
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	nodesConf := a.MustComponent("config").(ConfigGetter)
+	s.config = a.MustComponent("config").(ConfigGetter).GetNodeConf()
 	s.accountId = a.MustComponent(commonaccount.CName).(commonaccount.Service).Account().PeerId
-	return s.setLastConfiguration(nodesConf.GetNodeConf())
+	s.source = a.MustComponent(CNameSource).(Source)
+	s.store = a.MustComponent(CNameStore).(Store)
+	lastStored, err := s.store.GetLast(context.Background(), s.config.NetworkId)
+	if err == ErrConfigurationNotFound {
+		lastStored = s.config
+		err = nil
+	}
+	return s.setLastConfiguration(lastStored)
 }
 
 func (s *service) Name() (name string) {
 	return CName
+}
+
+func (s *service) Run(_ context.Context) (err error) {
+	go s.updateLoop(context.Background())
+	return
+}
+
+func (s *service) updateLoop(ctx context.Context) {
+	for _ = range time.NewTicker(time.Minute * 10).C {
+		err := s.updateConfiguration(ctx)
+		if err != nil {
+			if err == ErrConfigurationNotChanged {
+				continue
+			}
+			log.Info("can't update configuration", zap.Error(err))
+		}
+	}
+}
+
+func (s *service) updateConfiguration(ctx context.Context) (err error) {
+	last, err := s.source.GetLast(ctx, s.Configuration().Id)
+	if err != nil {
+		return
+	}
+	if err = s.store.SaveLast(ctx, last); err != nil {
+		return
+	}
+	return s.setLastConfiguration(last)
 }
 
 func (s *service) setLastConfiguration(c Configuration) (err error) {
@@ -154,4 +194,8 @@ func (s *service) NodeTypes(nodeId string) []NodeType {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.last.NodeTypes(nodeId)
+}
+
+func (s *service) Close(ctx context.Context) (err error) {
+	return
 }

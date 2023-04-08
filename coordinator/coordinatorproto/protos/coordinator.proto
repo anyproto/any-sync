@@ -124,10 +124,12 @@ message NetworkConfigurationRequest {
 message NetworkConfigurationResponse {
     // id of current configuration
     string configurationId = 1;
+    // network id
+    string networkId = 2;
     // nodes list - it will be empty if the client's currentId is equal configurationId
-    repeated Node nodes = 2;
+    repeated Node nodes = 3;
     // unix timestamp of the creation time of configuration
-    uint64 creationTimeUnix = 3;
+    uint64 creationTimeUnix = 4;
 }
 
 // NodeType determines the type of API that a node supports
