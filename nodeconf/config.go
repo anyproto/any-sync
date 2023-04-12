@@ -24,9 +24,9 @@ const (
 )
 
 type Node struct {
-	PeerId    string     `yaml:"peerId"`
-	Addresses []string   `yaml:"address"`
-	Types     []NodeType `yaml:"types,omitempty"`
+	PeerId    string     `yaml:"peerId" bson:"peerId"`
+	Addresses []string   `yaml:"addresses" bson:"addresses"`
+	Types     []NodeType `yaml:"types,omitempty" bson:"types"`
 }
 
 func (n Node) Id() string {
