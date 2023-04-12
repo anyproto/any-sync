@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	filippo.io/edwards25519 v1.0.0
-	github.com/anytypeio/go-chash v0.0.2
+	github.com/anytypeio/go-chash v0.1.0
 	github.com/anytypeio/go-slip10 v0.0.0-20200330112030-a352ca8495e4
 	github.com/anytypeio/go-slip21 v0.0.0-20200218204727-e2e51e20ab51
 	github.com/cespare/xxhash v1.1.0
@@ -15,7 +15,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/huandu/skiplist v1.2.0
 	github.com/ipfs/go-block-format v0.1.2
-	github.com/ipfs/go-blockservice v0.5.0
+	github.com/ipfs/go-blockservice v0.5.1
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-ipfs-blockstore v1.3.0
 	github.com/ipfs/go-ipfs-chunker v0.0.5
@@ -34,7 +34,7 @@ require (
 	github.com/zeebo/errs v1.3.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.8.0
-	golang.org/x/exp v0.0.0-20230206171751-46f607a40771
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	golang.org/x/net v0.9.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
 	storj.io/drpc v0.0.32
