@@ -117,7 +117,7 @@ func (s *streamPool) Send(ctx context.Context, msg drpc.Message, peerGetter Peer
 			}
 		}
 	}
-	return s.dial.Add(ctx, func() {
+	return s.dial.TryAdd(func() {
 		peers, dialErr := peerGetter(ctx)
 		if dialErr != nil {
 			log.InfoCtx(ctx, "can't get peers", zap.Error(dialErr))

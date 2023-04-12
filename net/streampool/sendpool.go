@@ -28,6 +28,10 @@ func (ss *execPool) Add(ctx context.Context, f ...func()) (err error) {
 	return ss.batch.Add(ctx, f...)
 }
 
+func (ss *execPool) TryAdd(f ...func()) (err error) {
+	return ss.batch.TryAdd(f...)
+}
+
 func (ss *execPool) sendLoop() {
 	for {
 		f, err := ss.batch.WaitOne(context.Background())
