@@ -36,8 +36,11 @@ func TestNodeConfStore_GetLast(t *testing.T) {
 			CreationTime: time.Now().Round(time.Second),
 		}
 		require.NoError(t, fx.SaveLast(ctx, c))
+
 		res, err := fx.GetLast(ctx, "456")
 		require.NoError(t, err)
+		assert.Equal(t, c.CreationTime.Unix(), res.CreationTime.Unix())
+		c.CreationTime = res.CreationTime
 		assert.Equal(t, c, res)
 	})
 }
