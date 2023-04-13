@@ -2,130 +2,62 @@ package list
 
 import (
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
-	"github.com/anytypeio/any-sync/commonspace/object/keychain"
 	"github.com/anytypeio/any-sync/util/cidutil"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
-	"github.com/anytypeio/any-sync/util/keys/symmetric"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
 	"time"
 )
 
-// remove interface
+type RootContent struct {
+	PrivKey          crypto.PrivKey
+	MasterKey        crypto.PrivKey
+	SpaceId          string
+	EncryptedReadKey []byte
+}
+
 type AclRecordBuilder interface {
-	ConvertFromRaw(rawIdRecord *aclrecordproto.RawAclRecordWithId) (rec *AclRecord, err error)
-	BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyBytes []byte, state *AclState) (rec *aclrecordproto.RawAclRecord, err error)
+	Unmarshall(rawIdRecord *aclrecordproto.RawAclRecordWithId) (rec *AclRecord, err error)
+	BuildRoot(content RootContent) (rec *aclrecordproto.RawAclRecordWithId, err error)
 }
 
 type aclRecordBuilder struct {
-	id       string
-	keychain *keychain.Keychain
+	id         string
+	keyStorage crypto.KeyStorage
 }
 
-func newAclRecordBuilder(id string, keychain *keychain.Keychain) AclRecordBuilder {
+func NewAclRecordBuilder(id string, keyStorage crypto.KeyStorage) AclRecordBuilder {
 	return &aclRecordBuilder{
-		id:       id,
-		keychain: keychain,
+		id:         id,
+		keyStorage: keyStorage,
 	}
 }
 
-func (a *aclRecordBuilder) BuildUserJoin(acceptPrivKeyBytes []byte, encSymKeyBytes []byte, state *AclState) (rec *aclrecordproto.RawAclRecord, err error) {
-	acceptPrivKey, err := signingkey.NewSigningEd25519PrivKeyFromBytes(acceptPrivKeyBytes)
-	if err != nil {
-		return
-	}
-	acceptPubKeyBytes, err := acceptPrivKey.GetPublic().Raw()
-	if err != nil {
-		return
-	}
-	encSymKey, err := symmetric.FromBytes(encSymKeyBytes)
-	if err != nil {
-		return
-	}
-
-	invite, err := state.Invite(acceptPubKeyBytes)
-	if err != nil {
-		return
-	}
-
-	encPrivKey, signPrivKey := state.UserKeys()
-	var symKeys [][]byte
-	for _, rk := range invite.EncryptedReadKeys {
-		dec, err := encSymKey.Decrypt(rk)
-		if err != nil {
-			return nil, err
-		}
-		newEnc, err := encPrivKey.GetPublic().Encrypt(dec)
-		if err != nil {
-			return nil, err
-		}
-		symKeys = append(symKeys, newEnc)
-	}
-	idSignature, err := acceptPrivKey.Sign(state.Identity())
-	if err != nil {
-		return
-	}
-	encPubKeyBytes, err := encPrivKey.GetPublic().Raw()
-	if err != nil {
-		return
-	}
-
-	userJoin := &aclrecordproto.AclUserJoin{
-		Identity:          state.Identity(),
-		EncryptionKey:     encPubKeyBytes,
-		AcceptSignature:   idSignature,
-		AcceptPubKey:      acceptPubKeyBytes,
-		EncryptedReadKeys: symKeys,
-	}
-	aclData := &aclrecordproto.AclData{AclContent: []*aclrecordproto.AclContentValue{
-		{Value: &aclrecordproto.AclContentValue_UserJoin{UserJoin: userJoin}},
-	}}
-	marshalledJoin, err := aclData.Marshal()
-	if err != nil {
-		return
-	}
-	aclRecord := &aclrecordproto.AclRecord{
-		PrevId:             state.LastRecordId(),
-		Identity:           state.Identity(),
-		Data:               marshalledJoin,
-		CurrentReadKeyHash: state.CurrentReadKeyHash(),
-		Timestamp:          time.Now().Unix(),
-	}
-	marshalledRecord, err := aclRecord.Marshal()
-	if err != nil {
-		return
-	}
-	recSignature, err := signPrivKey.Sign(marshalledRecord)
-	if err != nil {
-		return
-	}
-	rec = &aclrecordproto.RawAclRecord{
-		Payload:   marshalledRecord,
-		Signature: recSignature,
-	}
-	return
-}
-
-func (a *aclRecordBuilder) ConvertFromRaw(rawIdRecord *aclrecordproto.RawAclRecordWithId) (rec *AclRecord, err error) {
-	rawRec := &aclrecordproto.RawAclRecord{}
+func (a *aclRecordBuilder) Unmarshall(rawIdRecord *aclrecordproto.RawAclRecordWithId) (rec *AclRecord, err error) {
+	var (
+		rawRec = &aclrecordproto.RawAclRecord{}
+		pubKey crypto.PubKey
+	)
 	err = proto.Unmarshal(rawIdRecord.Payload, rawRec)
 	if err != nil {
 		return
 	}
-
 	if rawIdRecord.Id == a.id {
 		aclRoot := &aclrecordproto.AclRoot{}
 		err = proto.Unmarshal(rawRec.Payload, aclRoot)
 		if err != nil {
 			return
 		}
-
+		pubKey, err = a.keyStorage.PubKeyFromProto(aclRoot.Identity)
+		if err != nil {
+			return
+		}
 		rec = &AclRecord{
-			Id:                 rawIdRecord.Id,
-			CurrentReadKeyHash: aclRoot.CurrentReadKeyHash,
-			Timestamp:          aclRoot.Timestamp,
-			Signature:          rawRec.Signature,
-			Identity:           aclRoot.Identity,
-			Model:              aclRoot,
+			Id:        rawIdRecord.Id,
+			ReadKeyId: rawIdRecord.Id,
+			Timestamp: aclRoot.Timestamp,
+			Signature: rawRec.Signature,
+			Identity:  pubKey,
+			Model:     aclRoot,
 		}
 	} else {
 		aclRecord := &aclrecordproto.AclRecord{}
@@ -133,34 +65,63 @@ func (a *aclRecordBuilder) ConvertFromRaw(rawIdRecord *aclrecordproto.RawAclReco
 		if err != nil {
 			return
 		}
-
+		pubKey, err = a.keyStorage.PubKeyFromProto(aclRecord.Identity)
+		if err != nil {
+			return
+		}
 		rec = &AclRecord{
-			Id:                 rawIdRecord.Id,
-			PrevId:             aclRecord.PrevId,
-			CurrentReadKeyHash: aclRecord.CurrentReadKeyHash,
-			Timestamp:          aclRecord.Timestamp,
-			Data:               aclRecord.Data,
-			Signature:          rawRec.Signature,
-			Identity:           aclRecord.Identity,
+			Id:        rawIdRecord.Id,
+			PrevId:    aclRecord.PrevId,
+			ReadKeyId: aclRecord.ReadKeyId,
+			Timestamp: aclRecord.Timestamp,
+			Data:      aclRecord.Data,
+			Signature: rawRec.Signature,
+			Identity:  pubKey,
 		}
 	}
 
-	err = verifyRaw(a.keychain, rawRec, rawIdRecord, rec.Identity)
+	err = verifyRaw(pubKey, rawRec, rawIdRecord)
 	return
 }
 
-func verifyRaw(
-	keychain *keychain.Keychain,
-	rawRec *aclrecordproto.RawAclRecord,
-	recWithId *aclrecordproto.RawAclRecordWithId,
-	identity []byte) (err error) {
-	identityKey, err := keychain.GetOrAdd(string(identity))
+func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *aclrecordproto.RawAclRecordWithId, err error) {
+	rawIdentity, err := content.PrivKey.GetPublic().Raw()
 	if err != nil {
 		return
 	}
+	identity, err := content.PrivKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+	masterKey, err := content.MasterKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+	identitySignature, err := content.MasterKey.Sign(rawIdentity)
+	if err != nil {
+		return
+	}
+	var timestamp int64
+	if content.EncryptedReadKey != nil {
+		timestamp = time.Now().Unix()
+	}
+	aclRoot := &aclrecordproto.AclRoot{
+		Identity:          identity,
+		SpaceId:           content.SpaceId,
+		EncryptedReadKey:  content.EncryptedReadKey,
+		MasterKey:         masterKey,
+		IdentitySignature: identitySignature,
+		Timestamp:         timestamp,
+	}
+	return marshalAclRoot(aclRoot, content.PrivKey)
+}
 
+func verifyRaw(
+	pubKey crypto.PubKey,
+	rawRec *aclrecordproto.RawAclRecord,
+	recWithId *aclrecordproto.RawAclRecordWithId) (err error) {
 	// verifying signature
-	res, err := identityKey.Verify(rawRec.Payload, rawRec.Signature)
+	res, err := pubKey.Verify(rawRec.Payload, rawRec.Signature)
 	if err != nil {
 		return
 	}
@@ -172,6 +133,34 @@ func verifyRaw(
 	// verifying ID
 	if !cidutil.VerifyCid(recWithId.Payload, recWithId.Id) {
 		err = ErrIncorrectCID
+	}
+	return
+}
+
+func marshalAclRoot(aclRoot *aclrecordproto.AclRoot, key crypto.PrivKey) (rawWithId *aclrecordproto.RawAclRecordWithId, err error) {
+	marshalledRoot, err := aclRoot.Marshal()
+	if err != nil {
+		return
+	}
+	signature, err := key.Sign(marshalledRoot)
+	if err != nil {
+		return
+	}
+	raw := &aclrecordproto.RawAclRecord{
+		Payload:   marshalledRoot,
+		Signature: signature,
+	}
+	marshalledRaw, err := raw.Marshal()
+	if err != nil {
+		return
+	}
+	aclHeadId, err := cidutil.NewCidFromBytes(marshalledRaw)
+	if err != nil {
+		return
+	}
+	rawWithId = &aclrecordproto.RawAclRecordWithId{
+		Payload: marshalledRaw,
+		Id:      aclHeadId,
 	}
 	return
 }

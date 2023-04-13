@@ -4,7 +4,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/net/secureservice/handshake"
 	"github.com/anytypeio/any-sync/net/secureservice/handshake/handshakeproto"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"go.uber.org/zap"
 )
@@ -25,12 +25,12 @@ func (n noVerifyChecker) CheckCredential(sc sec.SecureConn, cred *handshakeproto
 	return nil, nil
 }
 
-func newPeerSignVerifier(account *accountdata.AccountData) handshake.CredentialChecker {
+func newPeerSignVerifier(account *accountdata.AccountKeys) handshake.CredentialChecker {
 	return &peerSignVerifier{account: account}
 }
 
 type peerSignVerifier struct {
-	account *accountdata.AccountData
+	account *accountdata.AccountKeys
 }
 
 func (p *peerSignVerifier) MakeCredentials(sc sec.SecureConn) *handshakeproto.Credentials {
@@ -38,8 +38,10 @@ func (p *peerSignVerifier) MakeCredentials(sc sec.SecureConn) *handshakeproto.Cr
 	if err != nil {
 		log.Warn("can't sign identity credentials", zap.Error(err))
 	}
+	// this will actually be called only once
+	marshalled, _ := p.account.SignKey.GetPublic().Marshall()
 	msg := &handshakeproto.PayloadSignedPeerIds{
-		Identity: p.account.Identity,
+		Identity: marshalled,
 		Sign:     sign,
 	}
 	payload, _ := msg.Marshal()
@@ -57,7 +59,7 @@ func (p *peerSignVerifier) CheckCredential(sc sec.SecureConn, cred *handshakepro
 	if err = msg.Unmarshal(cred.Payload); err != nil {
 		return nil, handshake.ErrUnexpectedPayload
 	}
-	pubKey, err := signingkey.NewSigningEd25519PubKeyFromBytes(msg.Identity)
+	pubKey, err := crypto.UnmarshalEd25519PublicKeyProto(msg.Identity)
 	if err != nil {
 		return nil, handshake.ErrInvalidCredentials
 	}

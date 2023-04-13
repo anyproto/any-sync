@@ -1,10 +1,25 @@
 package objecttree
 
 import (
+	"crypto/rand"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anytypeio/any-sync/util/crypto"
 )
+
+type mockKeyStorage struct {
+	key crypto.PubKey
+}
+
+func newKeyStorage() mockKeyStorage {
+	_, pk, _ := crypto.GenerateEd25519Key(rand.Reader)
+	return mockKeyStorage{pk}
+}
+
+func (m mockKeyStorage) PubKeyFromProto(protoBytes []byte) (crypto.PubKey, error) {
+	return m.key, nil
+}
 
 type MockChangeCreator struct{}
 
@@ -61,7 +76,7 @@ func (c *MockChangeCreator) CreateNewTreeStorage(treeId, aclHeadId string) trees
 func BuildTestableTree(aclList list.AclList, treeStorage treestorage.TreeStorage) (ObjectTree, error) {
 	root, _ := treeStorage.Root()
 	changeBuilder := &nonVerifiableChangeBuilder{
-		ChangeBuilder: NewChangeBuilder(nil, root),
+		ChangeBuilder: NewChangeBuilder(newKeyStorage(), root),
 	}
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,

@@ -3,8 +3,8 @@ package synctree
 import (
 	"context"
 	"fmt"
+	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/testutils/acllistbuilder"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
@@ -194,14 +194,6 @@ func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, lo
 	return newProcessSyncHandler(peerId, handler)
 }
 
-func createAclList() (list.AclList, error) {
-	st, err := acllistbuilder.NewListStorageWithTestName("userjoinexample.yml")
-	if err != nil {
-		return nil, err
-	}
-	return list.BuildAclList(st)
-}
-
 func createStorage(treeId string, aclList list.AclList) treestorage.TreeStorage {
 	changeCreator := objecttree.NewMockChangeCreator()
 	st := changeCreator.CreateNewTreeStorage(treeId, aclList.Head().Id)
@@ -269,10 +261,12 @@ func (p *processFixture) stop() {
 }
 
 func TestSimple_TwoPeers(t *testing.T) {
-	aclList, err := createAclList()
-	require.NoError(t, err)
 	treeId := "treeId"
 	spaceId := "spaceId"
+	keys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	aclList, err := list.NewTestDerivedAcl(spaceId, keys)
+	require.NoError(t, err)
 	storage := createStorage(treeId, aclList)
 	changeCreator := objecttree.NewMockChangeCreator()
 	deps := fixtureDeps{
@@ -312,10 +306,11 @@ func TestSimple_TwoPeers(t *testing.T) {
 }
 
 func TestSimple_ThreePeers(t *testing.T) {
-	aclList, err := createAclList()
-	require.NoError(t, err)
 	treeId := "treeId"
 	spaceId := "spaceId"
+	keys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	aclList, err := list.NewTestDerivedAcl(spaceId, keys)
 	storage := createStorage(treeId, aclList)
 	changeCreator := objecttree.NewMockChangeCreator()
 	deps := fixtureDeps{

@@ -2,20 +2,17 @@ package list
 
 import (
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/encryptionkey"
-	"github.com/anytypeio/any-sync/util/keys/asymmetric/signingkey"
+	"github.com/anytypeio/any-sync/util/crypto"
 )
 
 type aclStateBuilder struct {
-	signPrivKey signingkey.PrivKey
-	encPrivKey  encryptionkey.PrivKey
-	id          string
+	privKey crypto.PrivKey
+	id      string
 }
 
-func newAclStateBuilderWithIdentity(accountData *accountdata.AccountData) *aclStateBuilder {
+func newAclStateBuilderWithIdentity(keys *accountdata.AccountKeys) *aclStateBuilder {
 	return &aclStateBuilder{
-		signPrivKey: accountData.SignKey,
-		encPrivKey:  accountData.EncKey,
+		privKey: keys.SignKey,
 	}
 }
 
@@ -28,8 +25,8 @@ func (sb *aclStateBuilder) Init(id string) {
 }
 
 func (sb *aclStateBuilder) Build(records []*AclRecord) (state *AclState, err error) {
-	if sb.encPrivKey != nil && sb.signPrivKey != nil {
-		state, err = newAclStateWithKeys(sb.id, sb.signPrivKey, sb.encPrivKey)
+	if sb.privKey != nil {
+		state, err = newAclStateWithKeys(sb.id, sb.privKey)
 		if err != nil {
 			return
 		}
