@@ -25,11 +25,11 @@ type nodeConfStore struct {
 }
 
 type configGetter interface {
-	NodeConfStorePath() string
+	GetNodeConfStorePath() string
 }
 
 func (n *nodeConfStore) Init(a *app.App) (err error) {
-	n.path = a.MustComponent("config").(configGetter).NodeConfStorePath()
+	n.path = a.MustComponent("config").(configGetter).GetNodeConfStorePath()
 	return
 }
 

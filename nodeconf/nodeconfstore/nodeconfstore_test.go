@@ -73,7 +73,7 @@ type config struct {
 	path string
 }
 
-func (c config) NodeConfStorePath() string {
+func (c config) GetNodeConfStorePath() string {
 	return c.path
 }
 
