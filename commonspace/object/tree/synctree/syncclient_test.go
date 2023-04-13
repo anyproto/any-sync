@@ -29,10 +29,11 @@ type processMsg struct {
 }
 
 type msgDescription struct {
-	name  string
-	from  string
-	to    string
-	heads []string
+	name    string
+	from    string
+	to      string
+	heads   []string
+	changes []*treechangeproto.RawTreeChangeWithId
 }
 
 func (p *processMsg) description() (descr msgDescription) {
@@ -50,14 +51,17 @@ func (p *processMsg) description() (descr msgDescription) {
 		cnt := unmarshalled.GetContent().GetHeadUpdate()
 		descr.name = "HeadUpdate"
 		descr.heads = cnt.Heads
+		descr.changes = unmarshalled.GetContent().GetHeadUpdate().Changes
 	case unmarshalled.GetContent().GetFullSyncRequest() != nil:
 		cnt := unmarshalled.GetContent().GetFullSyncRequest()
 		descr.name = "FullSyncRequest"
 		descr.heads = cnt.Heads
+		descr.changes = unmarshalled.GetContent().GetFullSyncRequest().Changes
 	case unmarshalled.GetContent().GetFullSyncResponse() != nil:
 		cnt := unmarshalled.GetContent().GetFullSyncResponse()
 		descr.name = "FullSyncResponse"
 		descr.heads = cnt.Heads
+		descr.changes = unmarshalled.GetContent().GetFullSyncResponse().Changes
 	}
 	return
 }
@@ -322,7 +326,7 @@ func (p *processFixture) stop() {
 	p.wg.Wait()
 }
 
-func TestSend_EmptyClient(t *testing.T) {
+func TestSend_EmptyClientGetsFullHistory(t *testing.T) {
 	treeId := "treeId"
 	spaceId := "spaceId"
 	keys, err := accountdata.NewRandom()
@@ -345,7 +349,7 @@ func TestSend_EmptyClient(t *testing.T) {
 	fx.handlers["peer1"].sendRawChanges(context.Background(), objecttree.RawChangesPayload{
 		NewHeads: nil,
 		RawChanges: []*treechangeproto.RawTreeChangeWithId{
-			changeCreator.CreateRaw("1", aclList.Id(), treeId, false, treeId),
+			changeCreator.CreateRaw("1", aclList.Id(), treeId, true, treeId),
 		},
 	})
 	time.Sleep(100 * time.Millisecond)
@@ -357,9 +361,17 @@ func TestSend_EmptyClient(t *testing.T) {
 	require.Equal(t, firstHeads, secondHeads)
 	require.Equal(t, []string{"1"}, firstHeads)
 	logMsgs := fx.log.batcher.GetAll()
+
+	var fullResponseMsg *processMsg
 	for _, msg := range logMsgs {
-		fmt.Println(msg.description())
+		descr := msg.description()
+		if descr.name == "FullSyncResponse" {
+			fullResponseMsg = &msg
+		}
 	}
+	require.NotNil(t, fullResponseMsg)
+	// that means that we got not only the last snapshot, but also the first one
+	require.Len(t, fullResponseMsg.description().changes, 2)
 }
 
 func TestSimple_TwoPeers(t *testing.T) {

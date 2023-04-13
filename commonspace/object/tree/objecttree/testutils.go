@@ -1,10 +1,65 @@
 package objecttree
 
 import (
+	"fmt"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anytypeio/any-sync/util/crypto"
+	libcrypto "github.com/libp2p/go-libp2p/core/crypto"
 )
+
+type mockPubKey struct {
+}
+
+const mockKeyValue = "mockKey"
+
+func (m mockPubKey) Equals(key crypto.Key) bool {
+	return true
+}
+
+func (m mockPubKey) Raw() ([]byte, error) {
+	return []byte(mockKeyValue), nil
+}
+
+func (m mockPubKey) Encrypt(message []byte) ([]byte, error) {
+	return message, nil
+}
+
+func (m mockPubKey) Verify(data []byte, sig []byte) (bool, error) {
+	return true, nil
+}
+
+func (m mockPubKey) Marshall() ([]byte, error) {
+	return []byte(mockKeyValue), nil
+}
+
+func (m mockPubKey) Storage() []byte {
+	return []byte(mockKeyValue)
+}
+
+func (m mockPubKey) Account() string {
+	return mockKeyValue
+}
+
+func (m mockPubKey) PeerId() string {
+	return mockKeyValue
+}
+
+func (m mockPubKey) LibP2P() (libcrypto.PubKey, error) {
+	return nil, fmt.Errorf("can't be converted in libp2p")
+}
+
+type mockKeyStorage struct {
+}
+
+func newMockKeyStorage() mockKeyStorage {
+	return mockKeyStorage{}
+}
+
+func (m mockKeyStorage) PubKeyFromProto(protoBytes []byte) (crypto.PubKey, error) {
+	return mockPubKey{}, nil
+}
 
 type MockChangeCreator struct{}
 
@@ -61,7 +116,7 @@ func (c *MockChangeCreator) CreateNewTreeStorage(treeId, aclHeadId string) trees
 func BuildTestableTree(aclList list.AclList, treeStorage treestorage.TreeStorage) (ObjectTree, error) {
 	root, _ := treeStorage.Root()
 	changeBuilder := &nonVerifiableChangeBuilder{
-		ChangeBuilder: NewChangeBuilder(nil, root),
+		ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), root),
 	}
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,

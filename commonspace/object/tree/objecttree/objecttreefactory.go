@@ -33,7 +33,9 @@ type objectTreeDeps struct {
 	aclList         list.AclList
 }
 
-func defaultObjectTreeDeps(
+var defaultObjectTreeDeps = verifiableTreeDeps
+
+func verifiableTreeDeps(
 	rootChange *treechangeproto.RawTreeChangeWithId,
 	treeStorage treestorage.TreeStorage,
 	aclList list.AclList) objectTreeDeps {
@@ -53,7 +55,7 @@ func nonVerifiableTreeDeps(
 	rootChange *treechangeproto.RawTreeChangeWithId,
 	treeStorage treestorage.TreeStorage,
 	aclList list.AclList) objectTreeDeps {
-	changeBuilder := &nonVerifiableChangeBuilder{NewChangeBuilder(nil, rootChange)}
+	changeBuilder := &nonVerifiableChangeBuilder{NewChangeBuilder(newMockKeyStorage(), rootChange)}
 	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
 	return objectTreeDeps{
 		changeBuilder:   changeBuilder,
