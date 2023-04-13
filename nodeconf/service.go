@@ -130,7 +130,7 @@ func (s *service) setLastConfiguration(c Configuration) (err error) {
 	if s.last != nil {
 		log.Info("net configuration changed", zap.String("before", beforeId), zap.String("after", nc.Id()))
 	} else {
-		log.Info("net configuration applied", zap.String("netId", nc.Configuration().NetworkId), zap.String("after", nc.Id()))
+		log.Info("net configuration applied", zap.String("netId", nc.Configuration().NetworkId), zap.String("id", nc.Id()))
 	}
 	s.last = nc
 	return
