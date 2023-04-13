@@ -128,9 +128,9 @@ func (s *service) setLastConfiguration(c Configuration) (err error) {
 		beforeId = s.last.Id()
 	}
 	if s.last != nil {
-		log.Info("nodeConf changed", zap.String("before", beforeId), zap.String("after", nc.Id()))
+		log.Info("net configuration changed", zap.String("before", beforeId), zap.String("after", nc.Id()))
 	} else {
-		log.Info("nodeConf applied", zap.String("netId", nc.Configuration().NetworkId), zap.String("after", nc.Id()))
+		log.Info("net configuration applied", zap.String("netId", nc.Configuration().NetworkId), zap.String("after", nc.Id()))
 	}
 	s.last = nc
 	return
