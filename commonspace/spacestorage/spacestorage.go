@@ -2,7 +2,6 @@
 package spacestorage
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -73,16 +72,24 @@ func ValidateSpaceStorageCreatePayload(payload SpaceStorageCreatePayload) (err e
 	if err != nil {
 		return
 	}
-	err = validateCreateSpaceAclPayload(payload.AclWithId)
+	aclSpaceId, err := validateCreateSpaceAclPayload(payload.AclWithId)
 	if err != nil {
 		return
 	}
-	err = validateCreateSpaceSettingsPayload(payload.SpaceSettingsWithId)
+	aclHeadId, settingsSpaceId, err := validateCreateSpaceSettingsPayload(payload.SpaceSettingsWithId)
 	if err != nil {
+		return
+	}
+	if aclSpaceId != payload.SpaceHeaderWithId.Id || aclSpaceId != settingsSpaceId {
+		err = ErrIncorrectSpaceHeader
+		return
+	}
+	if aclHeadId != payload.AclWithId.Id {
+		err = ErrIncorrectSpaceHeader
 		return
 	}
 
-	return nil
+	return
 }
 
 func validateCreateSpaceHeaderPayload(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId) (err error) {
@@ -96,7 +103,6 @@ func validateCreateSpaceHeaderPayload(rawHeaderWithId *spacesyncproto.RawSpaceHe
 	if err != nil {
 		return
 	}
-
 	split := strings.Split(rawHeaderWithId.Id, ".")
 	if len(split) != 2 {
 		return ErrIncorrectSpaceHeader
@@ -106,13 +112,18 @@ func validateCreateSpaceHeaderPayload(rawHeaderWithId *spacesyncproto.RawSpaceHe
 		return
 	}
 	payloadIdentity, err := crypto.UnmarshalEd25519PublicKeyProto(header.Identity)
+	if err != nil {
+		return
+	}
 	res, err := payloadIdentity.Verify(rawSpaceHeader.SpaceHeader, rawSpaceHeader.Signature)
 	if err != nil || !res {
 		err = ErrIncorrectSpaceHeader
 		return
 	}
-
 	id, err := cidutil.NewCidFromBytes(rawSpaceHeader.SpaceHeader)
+	if err != nil {
+		return
+	}
 	requiredSpaceId := fmt.Sprintf("%s.%s", id, strconv.FormatUint(header.ReplicationKey, 36))
 	if requiredSpaceId != rawHeaderWithId.Id {
 		err = ErrIncorrectSpaceHeader
@@ -122,7 +133,7 @@ func validateCreateSpaceHeaderPayload(rawHeaderWithId *spacesyncproto.RawSpaceHe
 	return
 }
 
-func validateCreateSpaceAclPayload(rawWithId *aclrecordproto.RawAclRecordWithId) (err error) {
+func validateCreateSpaceAclPayload(rawWithId *aclrecordproto.RawAclRecordWithId) (spaceId string, err error) {
 	if !cidutil.VerifyCid(rawWithId.Payload, rawWithId.Id) {
 		err = objecttree.ErrIncorrectCid
 		return
@@ -134,24 +145,33 @@ func validateCreateSpaceAclPayload(rawWithId *aclrecordproto.RawAclRecordWithId)
 	}
 	var aclRoot aclrecordproto.AclRoot
 	err = proto.Unmarshal(rawAcl.Payload, &aclRoot)
+	if err != nil {
+		return
+	}
 	payloadIdentity, err := crypto.UnmarshalEd25519PublicKeyProto(aclRoot.Identity)
+	if err != nil {
+		return
+	}
 	res, err := payloadIdentity.Verify(rawAcl.Payload, rawAcl.Signature)
 	if err != nil || !res {
 		err = ErrIncorrectSpaceHeader
 		return
 	}
-	masterKey, err := crypto.UnmarshalEd25519PrivateKey(aclRoot.MasterKey)
-	identity, err := crypto.UnmarshalEd25519PublicKeyProto(aclRoot.Identity)
-	rawIdentity, err := identity.Raw()
-	signedIdentity, err := masterKey.Sign(rawIdentity)
-	if !bytes.Equal(signedIdentity, aclRoot.IdentitySignature) {
+	masterKey, err := crypto.UnmarshalEd25519PublicKeyProto(aclRoot.MasterKey)
+	if err != nil {
+		return
+	}
+	res, err = masterKey.Verify(aclRoot.Identity, aclRoot.IdentitySignature)
+	if err != nil || !res {
 		err = ErrIncorrectSpaceHeader
 		return
 	}
+	spaceId = aclRoot.SpaceId
+
 	return
 }
 
-func validateCreateSpaceSettingsPayload(rawWithId *treechangeproto.RawTreeChangeWithId) (err error) {
+func validateCreateSpaceSettingsPayload(rawWithId *treechangeproto.RawTreeChangeWithId) (aclHeadId string, spaceId string, err error) {
 	var raw treechangeproto.RawTreeChange
 	err = proto.Unmarshal(rawWithId.RawChange, &raw)
 	if err != nil {
@@ -159,7 +179,13 @@ func validateCreateSpaceSettingsPayload(rawWithId *treechangeproto.RawTreeChange
 	}
 	var rootChange treechangeproto.RootChange
 	err = proto.Unmarshal(raw.Payload, &rootChange)
+	if err != nil {
+		return
+	}
 	payloadIdentity, err := crypto.UnmarshalEd25519PublicKeyProto(rootChange.Identity)
+	if err != nil {
+		return
+	}
 	res, err := payloadIdentity.Verify(raw.Payload, raw.Signature)
 	if err != nil || !res {
 		err = ErrIncorrectSpaceHeader
@@ -170,6 +196,8 @@ func validateCreateSpaceSettingsPayload(rawWithId *treechangeproto.RawTreeChange
 		err = ErrIncorrectSpaceHeader
 		return
 	}
+	spaceId = rootChange.SpaceId
+	aclHeadId = rootChange.AclHeadId
 
 	return
 }

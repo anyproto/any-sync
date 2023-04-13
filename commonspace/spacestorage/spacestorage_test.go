@@ -21,40 +21,8 @@ import (
 func TestSuccessHeaderPayloadForSpaceCreate(t *testing.T) {
 	accountKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
-	identity, err := accountKeys.SignKey.GetPublic().Marshall()
+	_, rawHeaderWithId, err := rawHeaderWithId(accountKeys)
 	require.NoError(t, err)
-	spaceHeaderSeed := make([]byte, 32)
-	_, err = rand.Read(spaceHeaderSeed)
-	require.NoError(t, err)
-	spaceHeaderPayload := make([]byte, 32)
-	_, err = rand.Read(spaceHeaderPayload)
-	require.NoError(t, err)
-	replicationKey := rand2.Uint64()
-	header := &spacesyncproto.SpaceHeader{
-		Identity:           identity,
-		Timestamp:          time.Now().Unix(),
-		SpaceType:          "SpaceType",
-		ReplicationKey:     replicationKey,
-		Seed:               spaceHeaderSeed,
-		SpaceHeaderPayload: spaceHeaderPayload,
-	}
-	marhalled, err := header.Marshal()
-	require.NoError(t, err)
-	signature, err := accountKeys.SignKey.Sign(marhalled)
-	require.NoError(t, err)
-	rawHeader := &spacesyncproto.RawSpaceHeader{
-		SpaceHeader: marhalled,
-		Signature:   signature,
-	}
-	marhalledRawHeader, err := rawHeader.Marshal()
-	require.NoError(t, err)
-	id, err := cidutil.NewCidFromBytes(marhalled)
-	require.NoError(t, err)
-	spaceId := fmt.Sprintf("%s.%s", id, strconv.FormatUint(replicationKey, 36))
-	rawHeaderWithId := &spacesyncproto.RawSpaceHeaderWithId{
-		RawHeader: marhalledRawHeader,
-		Id:        spaceId,
-	}
 	err = validateCreateSpaceHeaderPayload(rawHeaderWithId)
 	require.NoError(t, err)
 }
@@ -183,46 +151,11 @@ func TestFailedHeaderPayloadForSpaceCreate_SignedWithAnotherIdentity(t *testing.
 
 func TestSuccessAclPayloadSpace(t *testing.T) {
 	accountKeys, err := accountdata.NewRandom()
+	spaceId := "AnySpaceId"
+	_, rawWithId, err := rawAclWithId(accountKeys, spaceId)
 	require.NoError(t, err)
-	identity, err := accountKeys.SignKey.GetPublic().Marshall()
-	require.NoError(t, err)
-	readKeyBytes := make([]byte, 32)
-	_, err = rand.Read(readKeyBytes)
-	require.NoError(t, err)
-	readKey, err := accountKeys.SignKey.GetPublic().Encrypt(readKeyBytes)
-	require.NoError(t, err)
-	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	rawIdentity, err := accountKeys.SignKey.GetPublic().Raw()
-	require.NoError(t, err)
-	identitySignature, err := masterKey.Sign(rawIdentity)
-	require.NoError(t, err)
-	rawMasterKey, err := masterKey.Raw()
-	require.NoError(t, err)
-	aclRoot := aclrecordproto.AclRoot{
-		Identity:          identity,
-		MasterKey:         rawMasterKey,
-		SpaceId:           "SpaceId",
-		EncryptedReadKey:  readKey,
-		Timestamp:         time.Now().Unix(),
-		IdentitySignature: identitySignature,
-	}
-	marshalled, err := aclRoot.Marshal()
-	require.NoError(t, err)
-	signature, err := accountKeys.SignKey.Sign(marshalled)
-	rawAclRecord := &aclrecordproto.RawAclRecord{
-		Payload:   marshalled,
-		Signature: signature,
-	}
-	marshalledRaw, err := rawAclRecord.Marshal()
-	require.NoError(t, err)
-	aclHeadId, err := cidutil.NewCidFromBytes(marshalledRaw)
-	require.NoError(t, err)
-	rawWithId := &aclrecordproto.RawAclRecordWithId{
-		Payload: marshalledRaw,
-		Id:      aclHeadId,
-	}
-	err = validateCreateSpaceAclPayload(rawWithId)
+	validationSpaceId, err := validateCreateSpaceAclPayload(rawWithId)
+	require.Equal(t, validationSpaceId, spaceId)
 	require.NoError(t, err)
 }
 
@@ -242,7 +175,7 @@ func TestFailAclPayloadSpace_IncorrectCid(t *testing.T) {
 	require.NoError(t, err)
 	identitySignature, err := masterKey.Sign(rawIdentity)
 	require.NoError(t, err)
-	rawMasterKey, err := masterKey.Raw()
+	rawMasterKey, err := masterKey.GetPublic().Marshall()
 	require.NoError(t, err)
 	aclRoot := aclrecordproto.AclRoot{
 		Identity:          identity,
@@ -266,7 +199,7 @@ func TestFailAclPayloadSpace_IncorrectCid(t *testing.T) {
 		Payload: marshalledRaw,
 		Id:      aclHeadId,
 	}
-	err = validateCreateSpaceAclPayload(rawWithId)
+	_, err = validateCreateSpaceAclPayload(rawWithId)
 	assert.EqualErrorf(t, err, objecttree.ErrIncorrectCid.Error(), "Error should be: %v, got: %v", objecttree.ErrIncorrectCid, err)
 }
 
@@ -286,7 +219,7 @@ func TestFailedAclPayloadSpace_IncorrectSignature(t *testing.T) {
 	require.NoError(t, err)
 	identitySignature, err := masterKey.Sign(rawIdentity)
 	require.NoError(t, err)
-	rawMasterKey, err := masterKey.Raw()
+	rawMasterKey, err := masterKey.GetPublic().Raw()
 	require.NoError(t, err)
 	aclRoot := aclrecordproto.AclRoot{
 		Identity:          identity,
@@ -310,7 +243,7 @@ func TestFailedAclPayloadSpace_IncorrectSignature(t *testing.T) {
 		Payload: marshalledRaw,
 		Id:      aclHeadId,
 	}
-	err = validateCreateSpaceAclPayload(rawWithId)
+	_, err = validateCreateSpaceAclPayload(rawWithId)
 	assert.NotNil(t, err)
 	assert.EqualErrorf(t, err, ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", ErrIncorrectSpaceHeader, err)
 }
@@ -327,7 +260,7 @@ func TestFailedAclPayloadSpace_IncorrectIdentitySignature(t *testing.T) {
 	require.NoError(t, err)
 	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
 	require.NoError(t, err)
-	rawMasterKey, err := masterKey.Raw()
+	rawMasterKey, err := masterKey.GetPublic().Marshall()
 	require.NoError(t, err)
 	aclRoot := aclrecordproto.AclRoot{
 		Identity:          identity,
@@ -352,7 +285,7 @@ func TestFailedAclPayloadSpace_IncorrectIdentitySignature(t *testing.T) {
 		Payload: marshalledRaw,
 		Id:      aclHeadId,
 	}
-	err = validateCreateSpaceAclPayload(rawWithId)
+	_, err = validateCreateSpaceAclPayload(rawWithId)
 	assert.EqualErrorf(t, err, ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", ErrIncorrectSpaceHeader, err)
 }
 
@@ -367,9 +300,10 @@ func TestSuccessSettingsPayloadSpace(t *testing.T) {
 	changePayload := make([]byte, 32)
 	_, err = rand.Read(changePayload)
 	require.NoError(t, err)
+	spaceId := "SpaceId"
 	rootChange := &treechangeproto.RootChange{
 		AclHeadId:     "AclHeadId",
-		SpaceId:       "SpaceId",
+		SpaceId:       spaceId,
 		ChangeType:    "ChangeType",
 		Timestamp:     time.Now().Unix(),
 		Seed:          spaceSettingsSeed,
@@ -391,7 +325,8 @@ func TestSuccessSettingsPayloadSpace(t *testing.T) {
 		RawChange: marshalledRawChange,
 		Id:        id,
 	}
-	err = validateCreateSpaceSettingsPayload(rawIdChange)
+	_, validationSpaceId, err := validateCreateSpaceSettingsPayload(rawIdChange)
+	require.Equal(t, validationSpaceId, spaceId)
 	require.NoError(t, err)
 }
 
@@ -428,7 +363,7 @@ func TestFailSettingsPayloadSpace_InvalidSignature(t *testing.T) {
 		RawChange: marshalledRawChange,
 		Id:        id,
 	}
-	err = validateCreateSpaceSettingsPayload(rawIdChange)
+	_, _, err = validateCreateSpaceSettingsPayload(rawIdChange)
 	assert.EqualErrorf(t, err, ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", ErrIncorrectSpaceHeader, err)
 }
 
@@ -467,6 +402,236 @@ func TestFailSettingsPayloadSpace_InvalidCid(t *testing.T) {
 		RawChange: marshalledRawChange,
 		Id:        id,
 	}
-	err = validateCreateSpaceSettingsPayload(rawIdChange)
+	_, _, err = validateCreateSpaceSettingsPayload(rawIdChange)
 	assert.EqualErrorf(t, err, ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", ErrIncorrectSpaceHeader, err)
+}
+
+func TestSuccessSameIds(t *testing.T) {
+	accountKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	spaceId, rawHeaderWithId, err := rawHeaderWithId(accountKeys)
+	require.NoError(t, err)
+	aclHeadId, rawAclWithId, err := rawAclWithId(accountKeys, spaceId)
+	require.NoError(t, err)
+	rawSettingsPayload, err := rawSettingsPayload(accountKeys, spaceId, aclHeadId)
+	spacePayload := SpaceStorageCreatePayload{
+		AclWithId:           rawAclWithId,
+		SpaceHeaderWithId:   rawHeaderWithId,
+		SpaceSettingsWithId: rawSettingsPayload,
+	}
+	err = ValidateSpaceStorageCreatePayload(spacePayload)
+	require.NoError(t, err)
+}
+
+func TestFailWithAclWrongSpaceId(t *testing.T) {
+	accountKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	spaceId, rawHeaderWithId, err := rawHeaderWithId(accountKeys)
+	require.NoError(t, err)
+	aclHeadId, rawAclWithId, err := rawAclWithId(accountKeys, "spaceId")
+	require.NoError(t, err)
+	rawSettingsPayload, err := rawSettingsPayload(accountKeys, spaceId, aclHeadId)
+	spacePayload := SpaceStorageCreatePayload{
+		AclWithId:           rawAclWithId,
+		SpaceHeaderWithId:   rawHeaderWithId,
+		SpaceSettingsWithId: rawSettingsPayload,
+	}
+	err = ValidateSpaceStorageCreatePayload(spacePayload)
+	assert.EqualErrorf(t, err, ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", ErrIncorrectSpaceHeader, err)
+}
+
+func TestFailWithSettingsWrongSpaceId(t *testing.T) {
+	accountKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	spaceId, rawHeaderWithId, err := rawHeaderWithId(accountKeys)
+	require.NoError(t, err)
+	aclHeadId, rawAclWithId, err := rawAclWithId(accountKeys, spaceId)
+	require.NoError(t, err)
+	rawSettingsPayload, err := rawSettingsPayload(accountKeys, "spaceId", aclHeadId)
+	spacePayload := SpaceStorageCreatePayload{
+		AclWithId:           rawAclWithId,
+		SpaceHeaderWithId:   rawHeaderWithId,
+		SpaceSettingsWithId: rawSettingsPayload,
+	}
+	err = ValidateSpaceStorageCreatePayload(spacePayload)
+	assert.EqualErrorf(t, err, ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", ErrIncorrectSpaceHeader, err)
+}
+
+func TestFailWithWrongAclHeadIdInSettingsPayload(t *testing.T) {
+	accountKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	spaceId, rawHeaderWithId, err := rawHeaderWithId(accountKeys)
+	require.NoError(t, err)
+	_, rawAclWithId, err := rawAclWithId(accountKeys, spaceId)
+	require.NoError(t, err)
+	rawSettingsPayload, err := rawSettingsPayload(accountKeys, spaceId, "aclHeadId")
+	spacePayload := SpaceStorageCreatePayload{
+		AclWithId:           rawAclWithId,
+		SpaceHeaderWithId:   rawHeaderWithId,
+		SpaceSettingsWithId: rawSettingsPayload,
+	}
+	err = ValidateSpaceStorageCreatePayload(spacePayload)
+	assert.EqualErrorf(t, err, ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", ErrIncorrectSpaceHeader, err)
+}
+
+func rawSettingsPayload(accountKeys *accountdata.AccountKeys, spaceId, aclHeadId string) (rawIdChange *treechangeproto.RawTreeChangeWithId, err error) {
+	identity, err := accountKeys.SignKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+	spaceSettingsSeed := make([]byte, 32)
+	_, err = rand.Read(spaceSettingsSeed)
+	if err != nil {
+		return
+	}
+	changePayload := make([]byte, 32)
+	_, err = rand.Read(changePayload)
+	if err != nil {
+		return
+	}
+	rootChange := &treechangeproto.RootChange{
+		AclHeadId:     aclHeadId,
+		SpaceId:       spaceId,
+		ChangeType:    "ChangeType",
+		Timestamp:     time.Now().Unix(),
+		Seed:          spaceSettingsSeed,
+		Identity:      identity,
+		ChangePayload: changePayload,
+	}
+	marshalledChange, err := rootChange.Marshal()
+	if err != nil {
+		return
+	}
+	signature, err := accountKeys.SignKey.Sign(marshalledChange)
+	if err != nil {
+		return
+	}
+	raw := &treechangeproto.RawTreeChange{
+		Payload:   marshalledChange,
+		Signature: signature,
+	}
+	marshalledRawChange, err := raw.Marshal()
+	id, err := cidutil.NewCidFromBytes(marshalledRawChange)
+	if err != nil {
+		return
+	}
+	rawIdChange = &treechangeproto.RawTreeChangeWithId{
+		RawChange: marshalledRawChange,
+		Id:        id,
+	}
+
+	return
+}
+
+func rawAclWithId(accountKeys *accountdata.AccountKeys, spaceId string) (aclHeadId string, rawWithId *aclrecordproto.RawAclRecordWithId, err error) {
+	readKeyBytes := make([]byte, 32)
+	_, err = rand.Read(readKeyBytes)
+	if err != nil {
+		return
+	}
+	readKey, err := accountKeys.SignKey.GetPublic().Encrypt(readKeyBytes)
+	if err != nil {
+		return
+	}
+	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	if err != nil {
+		return
+	}
+	masterPubKey := masterKey.GetPublic()
+	identity, err := accountKeys.SignKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+	identitySignature, err := masterKey.Sign(identity)
+	if err != nil {
+		return
+	}
+	rawMasterKey, err := masterPubKey.Marshall()
+	if err != nil {
+		return
+	}
+	aclRoot := aclrecordproto.AclRoot{
+		Identity:          identity,
+		MasterKey:         rawMasterKey,
+		SpaceId:           spaceId,
+		EncryptedReadKey:  readKey,
+		Timestamp:         time.Now().Unix(),
+		IdentitySignature: identitySignature,
+	}
+	marshalled, err := aclRoot.Marshal()
+	if err != nil {
+		return
+	}
+	signature, err := accountKeys.SignKey.Sign(marshalled)
+	rawAclRecord := &aclrecordproto.RawAclRecord{
+		Payload:   marshalled,
+		Signature: signature,
+	}
+	marshalledRaw, err := rawAclRecord.Marshal()
+	if err != nil {
+		return
+	}
+	aclHeadId, err = cidutil.NewCidFromBytes(marshalledRaw)
+	if err != nil {
+		return
+	}
+	rawWithId = &aclrecordproto.RawAclRecordWithId{
+		Payload: marshalledRaw,
+		Id:      aclHeadId,
+	}
+
+	return
+}
+
+func rawHeaderWithId(accountKeys *accountdata.AccountKeys) (spaceId string, rawWithId *spacesyncproto.RawSpaceHeaderWithId, err error) {
+	identity, err := accountKeys.SignKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
+	spaceHeaderSeed := make([]byte, 32)
+	_, err = rand.Read(spaceHeaderSeed)
+	if err != nil {
+		return
+	}
+	spaceHeaderPayload := make([]byte, 32)
+	_, err = rand.Read(spaceHeaderPayload)
+	if err != nil {
+		return
+	}
+	replicationKey := rand2.Uint64()
+	header := &spacesyncproto.SpaceHeader{
+		Identity:           identity,
+		Timestamp:          time.Now().Unix(),
+		SpaceType:          "SpaceType",
+		ReplicationKey:     replicationKey,
+		Seed:               spaceHeaderSeed,
+		SpaceHeaderPayload: spaceHeaderPayload,
+	}
+	marhalled, err := header.Marshal()
+	if err != nil {
+		return
+	}
+	signature, err := accountKeys.SignKey.Sign(marhalled)
+	if err != nil {
+		return
+	}
+	rawHeader := &spacesyncproto.RawSpaceHeader{
+		SpaceHeader: marhalled,
+		Signature:   signature,
+	}
+	marhalledRawHeader, err := rawHeader.Marshal()
+	if err != nil {
+		return
+	}
+	id, err := cidutil.NewCidFromBytes(marhalled)
+	if err != nil {
+		return
+	}
+	spaceId = fmt.Sprintf("%s.%s", id, strconv.FormatUint(replicationKey, 36))
+	rawWithId = &spacesyncproto.RawSpaceHeaderWithId{
+		RawHeader: marhalledRawHeader,
+		Id:        spaceId,
+	}
+
+	return
 }
