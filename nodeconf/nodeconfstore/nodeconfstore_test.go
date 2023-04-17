@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -74,7 +75,7 @@ type config struct {
 }
 
 func (c config) GetNodeConfStorePath() string {
-	return c.path
+	return filepath.Join(c.path, "nodeconf")
 }
 
 func (c config) Init(a *app.App) (err error) {
