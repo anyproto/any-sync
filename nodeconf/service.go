@@ -5,10 +5,10 @@ import (
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/util/periodicsync"
 	"github.com/anytypeio/go-chash"
 	"go.uber.org/zap"
 	"sync"
-	"time"
 )
 
 const CName = "common.nodeconf"
@@ -30,18 +30,16 @@ type Service interface {
 }
 
 type service struct {
-	accountId       string
-	config          Configuration
-	source          Source
-	store           Store
-	last            NodeConf
-	mu              sync.RWMutex
-	updateCtx       context.Context
-	updateCtxCancel context.CancelFunc
+	accountId string
+	config    Configuration
+	source    Source
+	store     Store
+	last      NodeConf
+	mu        sync.RWMutex
+	sync      periodicsync.PeriodicSync
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.updateCtx, s.updateCtxCancel = context.WithCancel(context.Background())
 	s.config = a.MustComponent("config").(ConfigGetter).GetNodeConf()
 	s.accountId = a.MustComponent(commonaccount.CName).(commonaccount.Service).Account().PeerId
 	s.source = a.MustComponent(CNameSource).(Source)
@@ -51,6 +49,15 @@ func (s *service) Init(a *app.App) (err error) {
 		lastStored = s.config
 		err = nil
 	}
+	s.sync = periodicsync.NewPeriodicSync(600, 0, func(ctx context.Context) (err error) {
+		err = s.updateConfiguration(ctx)
+		if err != nil {
+			if err == ErrConfigurationNotChanged {
+				err = nil
+			}
+		}
+		return
+	}, log)
 	return s.setLastConfiguration(lastStored)
 }
 
@@ -59,34 +66,8 @@ func (s *service) Name() (name string) {
 }
 
 func (s *service) Run(_ context.Context) (err error) {
-	go s.updateLoop(context.Background())
+	s.sync.Run()
 	return
-}
-
-func (s *service) updateLoop(ctx context.Context) {
-	ticker := time.NewTicker(time.Minute * 10)
-	defer ticker.Stop()
-
-	updateConf := func() {
-		err := s.updateConfiguration(ctx)
-		if err != nil {
-			if err == ErrConfigurationNotChanged {
-				return
-			}
-			log.Info("can't update configuration", zap.Error(err))
-		}
-	}
-
-	updateConf()
-
-	for {
-		select {
-		case <-s.updateCtx.Done():
-			return
-		case <-ticker.C:
-		}
-		updateConf()
-	}
 }
 
 func (s *service) updateConfiguration(ctx context.Context) (err error) {
@@ -218,8 +199,6 @@ func (s *service) NodeTypes(nodeId string) []NodeType {
 }
 
 func (s *service) Close(ctx context.Context) (err error) {
-	if s.updateCtxCancel != nil {
-		s.updateCtxCancel()
-	}
+	s.sync.Close()
 	return
 }
