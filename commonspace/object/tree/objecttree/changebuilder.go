@@ -84,7 +84,7 @@ func NewEmptyDataBuilder(keys crypto.KeyStorage, rootChange *treechangeproto.Raw
 		rootChange: rootChange,
 		keys:       keys,
 		newChange: func(id string, identity crypto.PubKey, ch *treechangeproto.TreeChange, signature []byte) *Change {
-			c := NewChange(id, identity, ch, signature)
+			c := NewChange(id, identity, ch, nil)
 			c.Data = nil
 			return c
 		},

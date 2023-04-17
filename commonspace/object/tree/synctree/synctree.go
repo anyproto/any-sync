@@ -54,7 +54,6 @@ type syncTree struct {
 
 var log = logger.NewNamed("common.commonspace.synctree")
 
-var buildObjectTree = objecttree.BuildObjectTree
 var createSyncClient = newSyncClient
 
 type ResponsiblePeersGetter interface {
@@ -73,6 +72,7 @@ type BuildDeps struct {
 	OnClose            func(id string)
 	SyncStatus         syncstatus.StatusUpdater
 	PeerGetter         ResponsiblePeersGetter
+	BuildObjectTree    objecttree.BuildObjectTreeFunc
 	WaitTreeRemoteSync bool
 }
 
@@ -94,7 +94,7 @@ func PutSyncTree(ctx context.Context, payload treestorage.TreeStorageCreatePaylo
 }
 
 func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t SyncTree, err error) {
-	objTree, err := buildObjectTree(deps.TreeStorage, deps.AclList)
+	objTree, err := deps.BuildObjectTree(deps.TreeStorage, deps.AclList)
 	if err != nil {
 		return
 	}

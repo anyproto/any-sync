@@ -2,7 +2,7 @@ package settings
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter/mock_treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treemanager/mock_treemanager"
 	"github.com/anytypeio/any-sync/commonspace/settings/mock_settings"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
@@ -27,15 +27,15 @@ func TestDeletionManager_UpdateState_NotResponsible(t *testing.T) {
 		deleted = true
 	}
 	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
-	treeGetter := mock_treegetter.NewMockTreeGetter(ctrl)
+	treeManager := mock_treemanager.NewMockTreeManager(ctrl)
 
 	delState.EXPECT().Add(state.DeletedIds).Return(nil)
-	treeGetter.EXPECT().DeleteSpace(ctx, spaceId).Return(nil)
+	treeManager.EXPECT().DeleteSpace(ctx, spaceId).Return(nil)
 
 	delManager := newDeletionManager(spaceId,
 		settingsId,
 		false,
-		treeGetter,
+		treeManager,
 		delState,
 		nil,
 		onDeleted)
@@ -60,17 +60,17 @@ func TestDeletionManager_UpdateState_Responsible(t *testing.T) {
 		deleted = true
 	}
 	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
-	treeGetter := mock_treegetter.NewMockTreeGetter(ctrl)
+	treeManager := mock_treemanager.NewMockTreeManager(ctrl)
 	provider := mock_settings.NewMockSpaceIdsProvider(ctrl)
 
 	delState.EXPECT().Add(state.DeletedIds).Return(nil)
-	treeGetter.EXPECT().DeleteSpace(ctx, spaceId).Return(nil)
+	treeManager.EXPECT().DeleteSpace(ctx, spaceId).Return(nil)
 	provider.EXPECT().AllIds().Return([]string{"id", "otherId", settingsId})
 	delState.EXPECT().Add([]string{"id", "otherId"}).Return(nil)
 	delManager := newDeletionManager(spaceId,
 		settingsId,
 		true,
-		treeGetter,
+		treeManager,
 		delState,
 		provider,
 		onDeleted)

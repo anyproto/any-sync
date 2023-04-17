@@ -4,20 +4,20 @@ import (
 	"context"
 	"github.com/anytypeio/any-sync/commonspace/object/syncobjectgetter"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
 	"sync/atomic"
 )
 
 type commonGetter struct {
-	treegetter.TreeGetter
+	treemanager.TreeManager
 	spaceId         string
 	reservedObjects []syncobjectgetter.SyncObject
 	spaceIsClosed   *atomic.Bool
 }
 
-func newCommonGetter(spaceId string, getter treegetter.TreeGetter, spaceIsClosed *atomic.Bool) *commonGetter {
+func newCommonGetter(spaceId string, getter treemanager.TreeManager, spaceIsClosed *atomic.Bool) *commonGetter {
 	return &commonGetter{
-		TreeGetter:    getter,
+		TreeManager:   getter,
 		spaceId:       spaceId,
 		spaceIsClosed: spaceIsClosed,
 	}
@@ -34,7 +34,7 @@ func (c *commonGetter) GetTree(ctx context.Context, spaceId, treeId string) (obj
 	if obj := c.getReservedObject(treeId); obj != nil {
 		return obj.(objecttree.ObjectTree), nil
 	}
-	return c.TreeGetter.GetTree(ctx, spaceId, treeId)
+	return c.TreeManager.GetTree(ctx, spaceId, treeId)
 }
 
 func (c *commonGetter) getReservedObject(id string) syncobjectgetter.SyncObject {
@@ -53,7 +53,7 @@ func (c *commonGetter) GetObject(ctx context.Context, objectId string) (obj sync
 	if obj := c.getReservedObject(objectId); obj != nil {
 		return obj, nil
 	}
-	t, err := c.TreeGetter.GetTree(ctx, c.spaceId, objectId)
+	t, err := c.TreeManager.GetTree(ctx, c.spaceId, objectId)
 	if err != nil {
 		return
 	}
