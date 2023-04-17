@@ -44,6 +44,7 @@ type DRPCCoordinatorClient interface {
 	FileLimitCheck(ctx context.Context, in *FileLimitCheckRequest) (*FileLimitCheckResponse, error)
 	SpaceStatusCheck(ctx context.Context, in *SpaceStatusCheckRequest) (*SpaceStatusCheckResponse, error)
 	SpaceStatusChange(ctx context.Context, in *SpaceStatusChangeRequest) (*SpaceStatusChangeResponse, error)
+	NetworkConfiguration(ctx context.Context, in *NetworkConfigurationRequest) (*NetworkConfigurationResponse, error)
 }
 
 type drpcCoordinatorClient struct {
@@ -92,11 +93,21 @@ func (c *drpcCoordinatorClient) SpaceStatusChange(ctx context.Context, in *Space
 	return out, nil
 }
 
+func (c *drpcCoordinatorClient) NetworkConfiguration(ctx context.Context, in *NetworkConfigurationRequest) (*NetworkConfigurationResponse, error) {
+	out := new(NetworkConfigurationResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/NetworkConfiguration", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCCoordinatorServer interface {
 	SpaceSign(context.Context, *SpaceSignRequest) (*SpaceSignResponse, error)
 	FileLimitCheck(context.Context, *FileLimitCheckRequest) (*FileLimitCheckResponse, error)
 	SpaceStatusCheck(context.Context, *SpaceStatusCheckRequest) (*SpaceStatusCheckResponse, error)
 	SpaceStatusChange(context.Context, *SpaceStatusChangeRequest) (*SpaceStatusChangeResponse, error)
+	NetworkConfiguration(context.Context, *NetworkConfigurationRequest) (*NetworkConfigurationResponse, error)
 }
 
 type DRPCCoordinatorUnimplementedServer struct{}
@@ -117,9 +128,13 @@ func (s *DRPCCoordinatorUnimplementedServer) SpaceStatusChange(context.Context, 
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCCoordinatorUnimplementedServer) NetworkConfiguration(context.Context, *NetworkConfigurationRequest) (*NetworkConfigurationResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCCoordinatorDescription struct{}
 
-func (DRPCCoordinatorDescription) NumMethods() int { return 4 }
+func (DRPCCoordinatorDescription) NumMethods() int { return 5 }
 
 func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -159,6 +174,15 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*SpaceStatusChangeRequest),
 					)
 			}, DRPCCoordinatorServer.SpaceStatusChange, true
+	case 4:
+		return "/coordinator.Coordinator/NetworkConfiguration", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					NetworkConfiguration(
+						ctx,
+						in1.(*NetworkConfigurationRequest),
+					)
+			}, DRPCCoordinatorServer.NetworkConfiguration, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -226,6 +250,22 @@ type drpcCoordinator_SpaceStatusChangeStream struct {
 }
 
 func (x *drpcCoordinator_SpaceStatusChangeStream) SendAndClose(m *SpaceStatusChangeResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_NetworkConfigurationStream interface {
+	drpc.Stream
+	SendAndClose(*NetworkConfigurationResponse) error
+}
+
+type drpcCoordinator_NetworkConfigurationStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_NetworkConfigurationStream) SendAndClose(m *NetworkConfigurationResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
 		return err
 	}

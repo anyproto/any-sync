@@ -47,8 +47,8 @@ func (s *AccountTestService) Account() *accountdata.AccountKeys {
 	return s.acc
 }
 
-func (s *AccountTestService) NodeConf(addrs []string) nodeconf.NodeConfig {
-	return nodeconf.NodeConfig{
+func (s *AccountTestService) NodeConf(addrs []string) nodeconf.Node {
+	return nodeconf.Node{
 		PeerId:    s.acc.PeerId,
 		Addresses: addrs,
 		Types:     []nodeconf.NodeType{nodeconf.NodeTypeTree},

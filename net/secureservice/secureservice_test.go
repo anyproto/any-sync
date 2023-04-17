@@ -6,7 +6,9 @@ import (
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/anytypeio/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anytypeio/any-sync/testutil/testnodeconf"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net"
@@ -19,7 +21,6 @@ func TestHandshake(t *testing.T) {
 	nc := testnodeconf.GenNodeConfig(2)
 	fxS := newFixture(t, nc, nc.GetAccountService(0))
 	defer fxS.Finish(t)
-
 	sc, cc := net.Pipe()
 
 	type acceptRes struct {
@@ -53,20 +54,28 @@ func TestHandshake(t *testing.T) {
 
 func newFixture(t *testing.T, nc *testnodeconf.Config, acc accountservice.Service) *fixture {
 	fx := &fixture{
+		ctrl:          gomock.NewController(t),
 		secureService: New().(*secureService),
 		acc:           acc,
 		a:             new(app.App),
 	}
-
-	fx.a.Register(fx.acc).Register(nc).Register(nodeconf.New()).Register(fx.secureService)
+	fx.mockNodeConf = mock_nodeconf.NewMockService(fx.ctrl)
+	fx.mockNodeConf.EXPECT().Init(gomock.Any())
+	fx.mockNodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
+	fx.mockNodeConf.EXPECT().Run(ctx)
+	fx.mockNodeConf.EXPECT().Close(ctx)
+	fx.mockNodeConf.EXPECT().NodeTypes(gomock.Any()).Return([]nodeconf.NodeType{nodeconf.NodeTypeTree}).AnyTimes()
+	fx.a.Register(fx.acc).Register(nc).Register(fx.mockNodeConf).Register(fx.secureService)
 	require.NoError(t, fx.a.Start(ctx))
 	return fx
 }
 
 type fixture struct {
 	*secureService
-	a   *app.App
-	acc accountservice.Service
+	a            *app.App
+	acc          accountservice.Service
+	ctrl         *gomock.Controller
+	mockNodeConf *mock_nodeconf.MockService
 }
 
 func (fx *fixture) Finish(t *testing.T) {

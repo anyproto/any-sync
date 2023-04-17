@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_nodeconf/mock_nodeconf.go github.com/anytypeio/any-sync/nodeconf Service,Configuration
+//go:generate mockgen -destination mock_nodeconf/mock_nodeconf.go github.com/anytypeio/any-sync/nodeconf Service
 package nodeconf
 
 import (
@@ -6,9 +6,11 @@ import (
 	"strings"
 )
 
-type Configuration interface {
+type NodeConf interface {
 	// Id returns current nodeconf id
 	Id() string
+	// Configuration returns configuration struct
+	Configuration() Configuration
 	// NodeIds returns list of peerId for given spaceId
 	NodeIds(spaceId string) []string
 	// IsResponsible checks if current account responsible for given spaceId
@@ -19,8 +21,8 @@ type Configuration interface {
 	ConsensusPeers() []string
 	// CoordinatorPeers returns list of coordinator nodes
 	CoordinatorPeers() []string
-	// Addresses returns map[peerId][]addr with connection addresses for all known nodes
-	Addresses() map[string][]string
+	// PeerAddresses returns peer addresses by peer id
+	PeerAddresses(peerId string) (addrs []string, ok bool)
 	// CHash returns nodes consistent table
 	CHash() chash.CHash
 	// Partition returns partition number by spaceId
@@ -29,21 +31,27 @@ type Configuration interface {
 	NodeTypes(nodeId string) []NodeType
 }
 
-type configuration struct {
+type nodeConf struct {
 	id               string
 	accountId        string
 	filePeers        []string
 	consensusPeers   []string
 	coordinatorPeers []string
 	chash            chash.CHash
-	allMembers       []NodeConfig
+	allMembers       []Node
+	c                Configuration
+	addrs            map[string][]string
 }
 
-func (c *configuration) Id() string {
+func (c *nodeConf) Id() string {
 	return c.id
 }
 
-func (c *configuration) NodeIds(spaceId string) []string {
+func (c *nodeConf) Configuration() Configuration {
+	return c.c
+}
+
+func (c *nodeConf) NodeIds(spaceId string) []string {
 	members := c.chash.GetMembers(ReplKey(spaceId))
 	res := make([]string, 0, len(members))
 	for _, m := range members {
@@ -54,7 +62,7 @@ func (c *configuration) NodeIds(spaceId string) []string {
 	return res
 }
 
-func (c *configuration) IsResponsible(spaceId string) bool {
+func (c *nodeConf) IsResponsible(spaceId string) bool {
 	for _, m := range c.chash.GetMembers(ReplKey(spaceId)) {
 		if m.Id() == c.accountId {
 			return true
@@ -63,35 +71,32 @@ func (c *configuration) IsResponsible(spaceId string) bool {
 	return false
 }
 
-func (c *configuration) FilePeers() []string {
+func (c *nodeConf) FilePeers() []string {
 	return c.filePeers
 }
 
-func (c *configuration) ConsensusPeers() []string {
+func (c *nodeConf) ConsensusPeers() []string {
 	return c.consensusPeers
 }
 
-func (c *configuration) CoordinatorPeers() []string {
+func (c *nodeConf) CoordinatorPeers() []string {
 	return c.coordinatorPeers
 }
 
-func (c *configuration) Addresses() map[string][]string {
-	res := make(map[string][]string)
-	for _, m := range c.allMembers {
-		res[m.PeerId] = m.Addresses
-	}
-	return res
+func (c *nodeConf) PeerAddresses(peerId string) (addrs []string, ok bool) {
+	addrs, ok = c.addrs[peerId]
+	return
 }
 
-func (c *configuration) CHash() chash.CHash {
+func (c *nodeConf) CHash() chash.CHash {
 	return c.chash
 }
 
-func (c *configuration) Partition(spaceId string) (part int) {
+func (c *nodeConf) Partition(spaceId string) (part int) {
 	return c.chash.GetPartition(ReplKey(spaceId))
 }
 
-func (c *configuration) NodeTypes(nodeId string) []NodeType {
+func (c *nodeConf) NodeTypes(nodeId string) []NodeType {
 	for _, m := range c.allMembers {
 		if m.PeerId == nodeId {
 			return m.Types

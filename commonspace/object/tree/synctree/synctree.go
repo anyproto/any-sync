@@ -64,7 +64,7 @@ type ResponsiblePeersGetter interface {
 type BuildDeps struct {
 	SpaceId            string
 	ObjectSync         objectsync.ObjectSync
-	Configuration      nodeconf.Configuration
+	Configuration      nodeconf.NodeConf
 	HeadNotifiable     HeadNotifiable
 	Listener           updatelistener.UpdateListener
 	AclList            list.AclList

@@ -51,13 +51,6 @@ message BlockPushRequest {
 
 message BlockPushResponse {}
 
-message BlocksDeleteRequest {
-    string spaceId = 1;
-    repeated bytes cids = 2;
-}
-
-message BlocksDeleteResponse {}
-
 
 message BlocksCheckRequest {
     string spaceId = 1;

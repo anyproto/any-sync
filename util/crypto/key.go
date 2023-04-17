@@ -47,6 +47,8 @@ type PubKey interface {
 	Storage() []byte
 	// Account returns string representation for anytype account
 	Account() string
+	// Network returns string representation for anytype network
+	Network() string
 	// PeerId returns string representation for peer id
 	PeerId() string
 	// LibP2P returns libp2p model
