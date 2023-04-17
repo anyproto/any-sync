@@ -2,7 +2,7 @@ package settings
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/util/slice"
 	"go.uber.org/zap"
@@ -20,12 +20,12 @@ func newDeletionManager(
 	spaceId string,
 	settingsId string,
 	isResponsible bool,
-	treeGetter treegetter.TreeGetter,
+	treeManager treemanager.TreeManager,
 	deletionState settingsstate.ObjectDeletionState,
 	provider SpaceIdsProvider,
 	onSpaceDelete func()) DeletionManager {
 	return &deletionManager{
-		treeGetter:    treeGetter,
+		treeManager:   treeManager,
 		isResponsible: isResponsible,
 		spaceId:       spaceId,
 		settingsId:    settingsId,
@@ -38,7 +38,7 @@ func newDeletionManager(
 type deletionManager struct {
 	deletionState settingsstate.ObjectDeletionState
 	provider      SpaceIdsProvider
-	treeGetter    treegetter.TreeGetter
+	treeManager   treemanager.TreeManager
 	spaceId       string
 	settingsId    string
 	isResponsible bool
@@ -55,7 +55,7 @@ func (d *deletionManager) UpdateState(ctx context.Context, state *settingsstate.
 		return nil
 	}
 	log.Debug("deleting space")
-	err = d.treeGetter.DeleteSpace(ctx, d.spaceId)
+	err = d.treeManager.DeleteSpace(ctx, d.spaceId)
 	if err != nil {
 		log.Debug("failed to notify on space deletion", zap.Error(err))
 	}

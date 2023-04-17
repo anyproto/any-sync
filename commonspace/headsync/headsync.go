@@ -6,7 +6,7 @@ import (
 	"github.com/anytypeio/any-sync/app/ldiff"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/credentialprovider"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
@@ -59,7 +59,7 @@ func NewHeadSync(
 	configuration nodeconf.Configuration,
 	storage spacestorage.SpaceStorage,
 	peerManager peermanager.PeerManager,
-	cache treegetter.TreeGetter,
+	cache treemanager.TreeManager,
 	syncStatus syncstatus.StatusUpdater,
 	credentialProvider credentialprovider.CredentialProvider,
 	log logger.CtxLogger) HeadSync {

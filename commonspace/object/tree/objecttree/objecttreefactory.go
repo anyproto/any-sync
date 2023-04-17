@@ -33,6 +33,8 @@ type objectTreeDeps struct {
 	aclList         list.AclList
 }
 
+type BuildObjectTreeFunc = func(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error)
+
 var defaultObjectTreeDeps = verifiableTreeDeps
 
 func verifiableTreeDeps(

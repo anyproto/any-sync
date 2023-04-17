@@ -13,7 +13,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
@@ -47,7 +47,7 @@ type BuildTreeFunc func(ctx context.Context, id string, listener updatelistener.
 type Deps struct {
 	BuildFunc     BuildTreeFunc
 	Account       accountservice.Service
-	TreeGetter    treegetter.TreeGetter
+	TreeManager   treemanager.TreeManager
 	Store         spacestorage.SpaceStorage
 	Configuration nodeconf.Configuration
 	DeletionState settingsstate.ObjectDeletionState
@@ -62,13 +62,13 @@ type Deps struct {
 
 type settingsObject struct {
 	synctree.SyncTree
-	account    accountservice.Service
-	spaceId    string
-	treeGetter treegetter.TreeGetter
-	store      spacestorage.SpaceStorage
-	builder    settingsstate.StateBuilder
-	buildFunc  BuildTreeFunc
-	loop       *deleteLoop
+	account     accountservice.Service
+	spaceId     string
+	treeManager treemanager.TreeManager
+	store       spacestorage.SpaceStorage
+	builder     settingsstate.StateBuilder
+	buildFunc   BuildTreeFunc
+	loop        *deleteLoop
 
 	state           *settingsstate.State
 	deletionState   settingsstate.ObjectDeletionState
@@ -84,7 +84,7 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 		changeFactory   settingsstate.ChangeFactory
 	)
 	if deps.del == nil {
-		deleter = newDeleter(deps.Store, deps.DeletionState, deps.TreeGetter)
+		deleter = newDeleter(deps.Store, deps.DeletionState, deps.TreeManager)
 	} else {
 		deleter = deps.del
 	}
@@ -93,7 +93,7 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 			spaceId,
 			deps.Store.SpaceSettingsId(),
 			deps.Configuration.IsResponsible(spaceId),
-			deps.TreeGetter,
+			deps.TreeManager,
 			deps.DeletionState,
 			deps.Provider,
 			deps.OnSpaceDelete)
@@ -123,7 +123,7 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 		spaceId:         spaceId,
 		account:         deps.Account,
 		deletionState:   deps.DeletionState,
-		treeGetter:      deps.TreeGetter,
+		treeManager:     deps.TreeManager,
 		store:           deps.Store,
 		buildFunc:       deps.BuildFunc,
 		builder:         builder,

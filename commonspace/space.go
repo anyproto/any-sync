@@ -118,7 +118,7 @@ type space struct {
 	headSync       headsync.HeadSync
 	syncStatus     syncstatus.StatusUpdater
 	storage        spacestorage.SpaceStorage
-	cache          *commonGetter
+	treeManager    *commonGetter
 	account        accountservice.Service
 	aclList        *syncacl.SyncAcl
 	configuration  nodeconf.Configuration
@@ -179,7 +179,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 		return
 	}
 	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.MessagePool())
-	s.cache.AddObject(s.aclList)
+	s.treeManager.AddObject(s.aclList)
 
 	deletionState := settingsstate.NewObjectDeletionState(s.storage)
 	deps := settings.Deps{
@@ -196,7 +196,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 			return
 		},
 		Account:       s.account,
-		TreeGetter:    s.cache,
+		TreeManager:   s.treeManager,
 		Store:         s.storage,
 		DeletionState: deletionState,
 		Provider:      s.headSync,
@@ -210,7 +210,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	s.cache.AddObject(s.settingsObject)
+	s.treeManager.AddObject(s.settingsObject)
 	s.syncStatus.Run()
 	s.handleQueue = multiqueue.New[HandleMessage](s.handleMessage, 100)
 	return nil
@@ -283,16 +283,17 @@ func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCrea
 		return
 	}
 	deps := synctree.BuildDeps{
-		SpaceId:        s.id,
-		ObjectSync:     s.objectSync,
-		Configuration:  s.configuration,
-		HeadNotifiable: s.headSync,
-		Listener:       listener,
-		AclList:        s.aclList,
-		SpaceStorage:   s.storage,
-		OnClose:        s.onObjectClose,
-		SyncStatus:     s.syncStatus,
-		PeerGetter:     s.peerManager,
+		SpaceId:         s.id,
+		ObjectSync:      s.objectSync,
+		Configuration:   s.configuration,
+		HeadNotifiable:  s.headSync,
+		Listener:        listener,
+		AclList:         s.aclList,
+		SpaceStorage:    s.storage,
+		OnClose:         s.onObjectClose,
+		SyncStatus:      s.syncStatus,
+		PeerGetter:      s.peerManager,
+		BuildObjectTree: s.treeManager.ObjectTreeBuilder(),
 	}
 	t, err = synctree.PutSyncTree(ctx, payload, deps)
 	if err != nil {
@@ -331,6 +332,7 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 		SyncStatus:         s.syncStatus,
 		WaitTreeRemoteSync: opts.WaitTreeRemoteSync,
 		PeerGetter:         s.peerManager,
+		BuildObjectTree:    s.treeManager.ObjectTreeBuilder(),
 	}
 	if t, err = synctree.BuildSyncTreeOrGetRemote(ctx, id, deps); err != nil {
 		return nil, err

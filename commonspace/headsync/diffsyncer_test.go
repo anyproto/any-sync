@@ -12,7 +12,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/acl/liststorage/mock_liststorage"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	mock_treestorage "github.com/anytypeio/any-sync/commonspace/object/tree/treestorage/mock_treestorage"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter/mock_treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treemanager/mock_treemanager"
 	"github.com/anytypeio/any-sync/commonspace/peermanager/mock_peermanager"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage/mock_spacestorage"
@@ -109,7 +109,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
 	peerManagerMock := mock_peermanager.NewMockPeerManager(ctrl)
-	cacheMock := mock_treegetter.NewMockTreeGetter(ctrl)
+	cacheMock := mock_treemanager.NewMockTreeManager(ctrl)
 	stMock := mock_spacestorage.NewMockSpaceStorage(ctrl)
 	clientMock := mock_spacesyncproto.NewMockDRPCSpaceSyncClient(ctrl)
 	factory := spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceSyncClient {

@@ -9,7 +9,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter/mock_treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treemanager/mock_treemanager"
 	"github.com/anytypeio/any-sync/commonspace/settings/mock_settings"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
@@ -45,7 +45,7 @@ type settingsFixture struct {
 	docId           string
 	doc             *settingsObject
 	ctrl            *gomock.Controller
-	treeGetter      *mock_treegetter.MockTreeGetter
+	treeManager     *mock_treemanager.MockTreeManager
 	spaceStorage    *mock_spacestorage.MockSpaceStorage
 	stateBuilder    *mock_settingsstate.MockStateBuilder
 	deletionManager *mock_settings.MockDeletionManager
@@ -62,7 +62,7 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 
 	ctrl := gomock.NewController(t)
 	acc := mock_accountservice.NewMockService(ctrl)
-	treeGetter := mock_treegetter.NewMockTreeGetter(ctrl)
+	treeManager := mock_treemanager.NewMockTreeManager(ctrl)
 	st := mock_spacestorage.NewMockSpaceStorage(ctrl)
 	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
 	delManager := mock_settings.NewMockDeletionManager(ctrl)
@@ -81,7 +81,7 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 	deps := Deps{
 		BuildFunc:     buildFunc,
 		Account:       acc,
-		TreeGetter:    treeGetter,
+		TreeManager:   treeManager,
 		Store:         st,
 		DeletionState: delState,
 		delManager:    delManager,
@@ -95,7 +95,7 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 		docId:           objectId,
 		doc:             doc,
 		ctrl:            ctrl,
-		treeGetter:      treeGetter,
+		treeManager:     treeManager,
 		spaceStorage:    st,
 		stateBuilder:    stateBuilder,
 		changeFactory:   changeFactory,

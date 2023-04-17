@@ -82,7 +82,6 @@ func (s *syncTreeHandler) handleHeadUpdate(
 		isEmptyUpdate = len(update.Changes) == 0
 		objTree       = s.objTree
 	)
-
 	log := log.With(
 		zap.Strings("update heads", update.Heads),
 		zap.String("treeId", objTree.Id()),

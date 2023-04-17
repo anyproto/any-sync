@@ -89,6 +89,13 @@ func (fx *syncHandlerFixture) stop() {
 func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 	ctx := context.Background()
 	log = logger.CtxLogger{Logger: zap.NewNop()}
+	fullRequest := &treechangeproto.TreeSyncMessage{
+		Content: &treechangeproto.TreeSyncContentValue{
+			Value: &treechangeproto.TreeSyncContentValue_FullSyncRequest{
+				FullSyncRequest: &treechangeproto.TreeFullSyncRequest{},
+			},
+		},
+	}
 
 	t.Run("head update non empty all heads added", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
@@ -113,7 +120,6 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 				RawChanges: []*treechangeproto.RawTreeChangeWithId{chWithId},
 			})).
 			Return(objecttree.AddResult{}, nil)
-		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2", "h1"})
 		fx.objectTreeMock.EXPECT().HasChanges(gomock.Eq([]string{"h1"})).Return(true)
 
 		err := fx.syncHandler.HandleMessage(ctx, senderId, objectMsg)
@@ -133,7 +139,6 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		}
 		treeMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
 		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
-		fullRequest := &treechangeproto.TreeSyncMessage{}
 
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2"}).AnyTimes()
@@ -188,7 +193,6 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		}
 		treeMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
 		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
-		fullRequest := &treechangeproto.TreeSyncMessage{}
 
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2"}).AnyTimes()
@@ -226,6 +230,13 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 	ctx := context.Background()
 	log = logger.CtxLogger{Logger: zap.NewNop()}
+	fullResponse := &treechangeproto.TreeSyncMessage{
+		Content: &treechangeproto.TreeSyncContentValue{
+			Value: &treechangeproto.TreeSyncContentValue_FullSyncResponse{
+				FullSyncResponse: &treechangeproto.TreeFullSyncResponse{},
+			},
+		},
+	}
 
 	t.Run("full sync request with change", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
@@ -240,7 +251,6 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 		}
 		treeMsg := treechangeproto.WrapFullRequest(fullSyncRequest, chWithId)
 		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
-		fullResponse := &treechangeproto.TreeSyncMessage{}
 
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Header().Return(nil)
@@ -274,7 +284,6 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 		}
 		treeMsg := treechangeproto.WrapFullRequest(fullSyncRequest, chWithId)
 		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
-		fullResponse := &treechangeproto.TreeSyncMessage{}
 
 		fx.objectTreeMock.EXPECT().
 			Id().AnyTimes().Return(treeId)
@@ -305,7 +314,6 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 		treeMsg := treechangeproto.WrapFullRequest(fullSyncRequest, chWithId)
 		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
 		objectMsg.RequestId = replyId
-		fullResponse := &treechangeproto.TreeSyncMessage{}
 
 		fx.objectTreeMock.EXPECT().
 			Id().AnyTimes().Return(treeId)

@@ -9,7 +9,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/headsync"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
@@ -49,7 +49,7 @@ type spaceService struct {
 	storageProvider      spacestorage.SpaceStorageProvider
 	peermanagerProvider  peermanager.PeerManagerProvider
 	credentialProvider   credentialprovider.CredentialProvider
-	treeGetter           treegetter.TreeGetter
+	treeManager          treemanager.TreeManager
 	pool                 pool.Pool
 }
 
@@ -58,7 +58,7 @@ func (s *spaceService) Init(a *app.App) (err error) {
 	s.account = a.MustComponent(accountservice.CName).(accountservice.Service)
 	s.storageProvider = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
-	s.treeGetter = a.MustComponent(treegetter.CName).(treegetter.TreeGetter)
+	s.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	s.peermanagerProvider = a.MustComponent(peermanager.CName).(peermanager.PeerManagerProvider)
 	credProvider := a.Component(credentialprovider.CName)
 	if credProvider != nil {
@@ -145,7 +145,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		return nil, err
 	}
 	spaceIsDeleted.Swap(isDeleted)
-	getter := newCommonGetter(st.Id(), s.treeGetter, spaceIsClosed)
+	getter := newCommonGetter(st.Id(), s.treeManager, spaceIsClosed)
 	syncStatus := syncstatus.NewNoOpSyncStatus()
 	// this will work only for clients, not the best solution, but...
 	if !lastConfiguration.IsResponsible(st.Id()) {
@@ -165,7 +165,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		objectSync:    objectSync,
 		headSync:      headSync,
 		syncStatus:    syncStatus,
-		cache:         getter,
+		treeManager:   getter,
 		account:       s.account,
 		configuration: lastConfiguration,
 		peerManager:   peerManager,
