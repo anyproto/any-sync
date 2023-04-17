@@ -96,6 +96,21 @@ func (mr *MockCoordinatorClientMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockCoordinatorClient)(nil).Name))
 }
 
+// NetworkConfiguration mocks base method.
+func (m *MockCoordinatorClient) NetworkConfiguration(arg0 context.Context, arg1 string) (*coordinatorproto.NetworkConfigurationResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NetworkConfiguration", arg0, arg1)
+	ret0, _ := ret[0].(*coordinatorproto.NetworkConfigurationResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NetworkConfiguration indicates an expected call of NetworkConfiguration.
+func (mr *MockCoordinatorClientMockRecorder) NetworkConfiguration(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkConfiguration", reflect.TypeOf((*MockCoordinatorClient)(nil).NetworkConfiguration), arg0, arg1)
+}
+
 // SpaceSign mocks base method.
 func (m *MockCoordinatorClient) SpaceSign(arg0 context.Context, arg1 coordinatorclient.SpaceSignPayload) (*coordinatorproto.SpaceReceiptWithSignature, error) {
 	m.ctrl.T.Helper()
