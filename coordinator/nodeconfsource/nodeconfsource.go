@@ -13,6 +13,10 @@ type NodeConfSource interface {
 	nodeconf.Source
 }
 
+func New() NodeConfSource {
+	return new(nodeConfSource)
+}
+
 type nodeConfSource struct {
 	cl coordinatorclient.CoordinatorClient
 }
