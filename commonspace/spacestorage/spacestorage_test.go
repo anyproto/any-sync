@@ -65,7 +65,7 @@ func TestFailedHeaderPayloadForSpaceCreate_InvalidFormatSpaceId(t *testing.T) {
 		Id:        spaceId,
 	}
 	err = validateCreateSpaceHeaderPayload(rawHeaderWithId)
-	assert.EqualErrorf(t, err, ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", objecttree.ErrIncorrectCid, err)
+	assert.EqualErrorf(t, err, ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", ErrIncorrectSpaceHeader, err)
 }
 
 func TestFailedHeaderPayloadForSpaceCreate_CidIsWrong(t *testing.T) {
@@ -206,8 +206,6 @@ func TestFailAclPayloadSpace_IncorrectCid(t *testing.T) {
 func TestFailedAclPayloadSpace_IncorrectSignature(t *testing.T) {
 	accountKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
-	identity, err := accountKeys.SignKey.GetPublic().Marshall()
-	require.NoError(t, err)
 	readKeyBytes := make([]byte, 32)
 	_, err = rand.Read(readKeyBytes)
 	require.NoError(t, err)
@@ -222,7 +220,7 @@ func TestFailedAclPayloadSpace_IncorrectSignature(t *testing.T) {
 	rawMasterKey, err := masterKey.GetPublic().Raw()
 	require.NoError(t, err)
 	aclRoot := aclrecordproto.AclRoot{
-		Identity:          identity,
+		Identity:          rawIdentity,
 		MasterKey:         rawMasterKey,
 		SpaceId:           "SpaceId",
 		EncryptedReadKey:  readKey,
@@ -249,38 +247,56 @@ func TestFailedAclPayloadSpace_IncorrectSignature(t *testing.T) {
 }
 
 func TestFailedAclPayloadSpace_IncorrectIdentitySignature(t *testing.T) {
+	spaceId := "AnySpaceId"
 	accountKeys, err := accountdata.NewRandom()
-	require.NoError(t, err)
-	identity, err := accountKeys.SignKey.GetPublic().Marshall()
 	require.NoError(t, err)
 	readKeyBytes := make([]byte, 32)
 	_, err = rand.Read(readKeyBytes)
-	require.NoError(t, err)
+	if err != nil {
+		return
+	}
 	readKey, err := accountKeys.SignKey.GetPublic().Encrypt(readKeyBytes)
-	require.NoError(t, err)
+	if err != nil {
+		return
+	}
 	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
-	require.NoError(t, err)
-	rawMasterKey, err := masterKey.GetPublic().Marshall()
-	require.NoError(t, err)
+	if err != nil {
+		return
+	}
+	masterPubKey := masterKey.GetPublic()
+	rawIdentity, err := accountKeys.SignKey.GetPublic().Raw()
+	if err != nil {
+		return
+	}
+	rawMasterKey, err := masterPubKey.Marshall()
+	if err != nil {
+		return
+	}
 	aclRoot := aclrecordproto.AclRoot{
-		Identity:          identity,
+		Identity:          rawIdentity,
 		MasterKey:         rawMasterKey,
-		SpaceId:           "SpaceId",
+		SpaceId:           spaceId,
 		EncryptedReadKey:  readKey,
 		Timestamp:         time.Now().Unix(),
-		IdentitySignature: identity,
+		IdentitySignature: rawIdentity,
 	}
 	marshalled, err := aclRoot.Marshal()
-	require.NoError(t, err)
+	if err != nil {
+		return
+	}
 	signature, err := accountKeys.SignKey.Sign(marshalled)
 	rawAclRecord := &aclrecordproto.RawAclRecord{
 		Payload:   marshalled,
 		Signature: signature,
 	}
 	marshalledRaw, err := rawAclRecord.Marshal()
-	require.NoError(t, err)
+	if err != nil {
+		return
+	}
 	aclHeadId, err := cidutil.NewCidFromBytes(marshalledRaw)
-	require.NoError(t, err)
+	if err != nil {
+		return
+	}
 	rawWithId := &aclrecordproto.RawAclRecordWithId{
 		Payload: marshalledRaw,
 		Id:      aclHeadId,
@@ -538,11 +554,11 @@ func rawAclWithId(accountKeys *accountdata.AccountKeys, spaceId string) (aclHead
 		return
 	}
 	masterPubKey := masterKey.GetPublic()
-	identity, err := accountKeys.SignKey.GetPublic().Marshall()
+	rawIdentity, err := accountKeys.SignKey.GetPublic().Raw()
 	if err != nil {
 		return
 	}
-	identitySignature, err := masterKey.Sign(identity)
+	identitySignature, err := masterKey.Sign(rawIdentity)
 	if err != nil {
 		return
 	}
@@ -551,7 +567,7 @@ func rawAclWithId(accountKeys *accountdata.AccountKeys, spaceId string) (aclHead
 		return
 	}
 	aclRoot := aclrecordproto.AclRoot{
-		Identity:          identity,
+		Identity:          rawIdentity,
 		MasterKey:         rawMasterKey,
 		SpaceId:           spaceId,
 		EncryptedReadKey:  readKey,
@@ -623,7 +639,7 @@ func rawHeaderWithId(accountKeys *accountdata.AccountKeys) (spaceId string, rawW
 	if err != nil {
 		return
 	}
-	id, err := cidutil.NewCidFromBytes(marhalled)
+	id, err := cidutil.NewCidFromBytes(marhalledRawHeader)
 	if err != nil {
 		return
 	}
