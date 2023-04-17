@@ -66,19 +66,26 @@ func (s *service) Run(_ context.Context) (err error) {
 func (s *service) updateLoop(ctx context.Context) {
 	ticker := time.NewTicker(time.Minute * 10)
 	defer ticker.Stop()
+
+	updateConf := func() {
+		err := s.updateConfiguration(ctx)
+		if err != nil {
+			if err == ErrConfigurationNotChanged {
+				return
+			}
+			log.Info("can't update configuration", zap.Error(err))
+		}
+	}
+
+	updateConf()
+
 	for {
 		select {
 		case <-s.updateCtx.Done():
 			return
 		case <-ticker.C:
 		}
-		err := s.updateConfiguration(ctx)
-		if err != nil {
-			if err == ErrConfigurationNotChanged {
-				continue
-			}
-			log.Info("can't update configuration", zap.Error(err))
-		}
+		updateConf()
 	}
 }
 
