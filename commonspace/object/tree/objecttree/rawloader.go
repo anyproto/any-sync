@@ -9,8 +9,9 @@ import (
 )
 
 type rawChangeLoader struct {
-	treeStorage   treestorage.TreeStorage
-	changeBuilder ChangeBuilder
+	treeStorage       treestorage.TreeStorage
+	changeBuilder     ChangeBuilder
+	alwaysFromStorage bool
 
 	// buffers
 	idStack []string
@@ -23,6 +24,12 @@ type rawCacheEntry struct {
 	position  int
 }
 
+func newStorageLoader(treeStorage treestorage.TreeStorage, changeBuilder ChangeBuilder) *rawChangeLoader {
+	loader := newRawChangeLoader(treeStorage, changeBuilder)
+	loader.alwaysFromStorage = true
+	return loader
+}
+
 func newRawChangeLoader(treeStorage treestorage.TreeStorage, changeBuilder ChangeBuilder) *rawChangeLoader {
 	return &rawChangeLoader{
 		treeStorage:   treeStorage,
@@ -30,7 +37,15 @@ func newRawChangeLoader(treeStorage treestorage.TreeStorage, changeBuilder Chang
 	}
 }
 
-func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
+func (r *rawChangeLoader) Load(commonSnapshot string, t *Tree, breakpoints []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
+	if commonSnapshot == t.root.Id && !r.alwaysFromStorage {
+		return r.loadFromTree(t, breakpoints)
+	} else {
+		return r.loadFromStorage(commonSnapshot, t.Heads(), breakpoints)
+	}
+}
+
+func (r *rawChangeLoader) loadFromTree(t *Tree, breakpoints []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
 	var stack []*Change
 	for _, h := range t.headIds {
 		stack = append(stack, t.attached[h])
@@ -98,7 +113,7 @@ func (r *rawChangeLoader) LoadFromTree(t *Tree, breakpoints []string) ([]*treech
 	return convert(results)
 }
 
-func (r *rawChangeLoader) LoadFromStorage(commonSnapshot string, heads, breakpoints []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
+func (r *rawChangeLoader) loadFromStorage(commonSnapshot string, heads, breakpoints []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
 	// resetting cache
 	r.cache = make(map[string]rawCacheEntry)
 	defer func() {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anytypeio/any-sync/util/slice"
 	"sync"
 )
 
@@ -104,4 +105,22 @@ func (t *InMemoryTreeStorage) Copy() *InMemoryTreeStorage {
 	}
 	other, _ := NewInMemoryTreeStorage(t.root, t.heads, changes)
 	return other.(*InMemoryTreeStorage)
+}
+
+func (t *InMemoryTreeStorage) Equal(other *InMemoryTreeStorage) bool {
+	if !slice.UnsortedEquals(t.heads, other.heads) {
+		return false
+	}
+	if len(t.changes) != len(other.changes) {
+		return false
+	}
+	for k, v := range t.changes {
+		if otherV, exists := other.changes[k]; exists {
+			if otherV.Id == v.Id {
+				continue
+			}
+		}
+		return false
+	}
+	return true
 }

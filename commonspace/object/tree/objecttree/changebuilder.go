@@ -52,6 +52,18 @@ func (c *nonVerifiableChangeBuilder) Marshall(ch *Change) (raw *treechangeproto.
 	return c.ChangeBuilder.Marshall(ch)
 }
 
+type emptyDataChangeBuilder struct {
+	ChangeBuilder
+}
+
+func (c *emptyDataChangeBuilder) Build(payload BuilderContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
+	panic("should not be called")
+}
+
+func (c *emptyDataChangeBuilder) Marshall(ch *Change) (raw *treechangeproto.RawTreeChangeWithId, err error) {
+	panic("should not be called")
+}
+
 type ChangeBuilder interface {
 	Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error)
 	Build(payload BuilderContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
@@ -59,13 +71,28 @@ type ChangeBuilder interface {
 	Marshall(ch *Change) (*treechangeproto.RawTreeChangeWithId, error)
 }
 
+type newChangeFunc = func(id string, identity crypto.PubKey, ch *treechangeproto.TreeChange, signature []byte) *Change
+
 type changeBuilder struct {
 	rootChange *treechangeproto.RawTreeChangeWithId
 	keys       crypto.KeyStorage
+	newChange  newChangeFunc
+}
+
+func NewEmptyDataBuilder(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
+	return &emptyDataChangeBuilder{&changeBuilder{
+		rootChange: rootChange,
+		keys:       keys,
+		newChange: func(id string, identity crypto.PubKey, ch *treechangeproto.TreeChange, signature []byte) *Change {
+			c := NewChange(id, identity, ch, signature)
+			c.Data = nil
+			return c
+		},
+	}}
 }
 
 func NewChangeBuilder(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
-	return &changeBuilder{keys: keys, rootChange: rootChange}
+	return &changeBuilder{keys: keys, rootChange: rootChange, newChange: NewChange}
 }
 
 func (c *changeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error) {
@@ -197,7 +224,7 @@ func (c *changeBuilder) Build(payload BuilderContent) (ch *Change, rawIdChange *
 	if err != nil {
 		return
 	}
-	ch = NewChange(id, payload.PrivKey.GetPublic(), change, signature)
+	ch = c.newChange(id, payload.PrivKey.GetPublic(), change, signature)
 	rawIdChange = &treechangeproto.RawTreeChangeWithId{
 		RawChange: marshalledRawChange,
 		Id:        id,
@@ -268,7 +295,7 @@ func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, 
 	if err != nil {
 		return
 	}
-	ch = NewChange(id, key, unmarshalled, raw.Signature)
+	ch = c.newChange(id, key, unmarshalled, raw.Signature)
 	return
 }
 
