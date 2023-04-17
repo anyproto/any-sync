@@ -30,6 +30,9 @@ type configGetter interface {
 
 func (n *nodeConfStore) Init(a *app.App) (err error) {
 	n.path = a.MustComponent("config").(configGetter).GetNodeConfStorePath()
+	if e := os.Mkdir(n.path, 0755); e != nil && !os.IsExist(e) {
+		return e
+	}
 	return
 }
 
