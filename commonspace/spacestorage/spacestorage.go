@@ -107,7 +107,7 @@ func validateCreateSpaceHeaderPayload(rawHeaderWithId *spacesyncproto.RawSpaceHe
 	if len(split) != 2 {
 		return ErrIncorrectSpaceHeader
 	}
-	if !cidutil.VerifyCid(rawSpaceHeader.SpaceHeader, split[0]) {
+	if !cidutil.VerifyCid(rawHeaderWithId.RawHeader, split[0]) {
 		err = objecttree.ErrIncorrectCid
 		return
 	}
@@ -120,7 +120,7 @@ func validateCreateSpaceHeaderPayload(rawHeaderWithId *spacesyncproto.RawSpaceHe
 		err = ErrIncorrectSpaceHeader
 		return
 	}
-	id, err := cidutil.NewCidFromBytes(rawSpaceHeader.SpaceHeader)
+	id, err := cidutil.NewCidFromBytes(rawHeaderWithId.RawHeader)
 	if err != nil {
 		return
 	}
@@ -148,7 +148,7 @@ func validateCreateSpaceAclPayload(rawWithId *aclrecordproto.RawAclRecordWithId)
 	if err != nil {
 		return
 	}
-	payloadIdentity, err := crypto.UnmarshalEd25519PublicKeyProto(aclRoot.Identity)
+	payloadIdentity, err := crypto.UnmarshalEd25519PublicKey(aclRoot.Identity)
 	if err != nil {
 		return
 	}
@@ -161,6 +161,7 @@ func validateCreateSpaceAclPayload(rawWithId *aclrecordproto.RawAclRecordWithId)
 	if err != nil {
 		return
 	}
+
 	res, err = masterKey.Verify(aclRoot.Identity, aclRoot.IdentitySignature)
 	if err != nil || !res {
 		err = ErrIncorrectSpaceHeader
