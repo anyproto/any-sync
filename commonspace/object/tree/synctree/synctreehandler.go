@@ -83,13 +83,19 @@ func (s *syncTreeHandler) handleHeadUpdate(
 		objTree       = s.objTree
 	)
 
-	log := log.With(zap.Strings("heads", objTree.Heads()), zap.String("treeId", objTree.Id()), zap.String("spaceId", s.spaceId))
+	log := log.With(
+		zap.Strings("update heads", update.Heads),
+		zap.String("treeId", objTree.Id()),
+		zap.String("spaceId", s.spaceId),
+		zap.Int("len(update changes)", len(update.Changes)))
 	log.DebugCtx(ctx, "received head update message")
 
 	defer func() {
 		if err != nil {
 			log.With(zap.Error(err)).Debug("head update finished with error")
 		} else if fullRequest != nil {
+			cnt := fullRequest.Content.GetFullSyncRequest()
+			log = log.With(zap.Strings("request heads", cnt.Heads), zap.Int("len(request changes)", len(cnt.Changes)))
 			log.DebugCtx(ctx, "sending full sync request")
 		} else {
 			if !isEmptyUpdate {
@@ -151,19 +157,21 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 	)
 
 	log := log.With(zap.String("senderId", senderId),
-		zap.Strings("heads", request.Heads),
+		zap.Strings("request heads", request.Heads),
 		zap.String("treeId", s.objTree.Id()),
 		zap.String("replyId", replyId),
-		zap.String("spaceId", s.spaceId))
+		zap.String("spaceId", s.spaceId),
+		zap.Int("len(request changes)", len(request.Changes)))
 	log.DebugCtx(ctx, "received full sync request message")
 
 	defer func() {
 		if err != nil {
 			log.With(zap.Error(err)).DebugCtx(ctx, "full sync request finished with error")
-
 			s.syncClient.SendWithReply(ctx, senderId, treechangeproto.WrapError(err, header), replyId)
 			return
 		} else if fullResponse != nil {
+			cnt := fullResponse.Content.GetFullSyncResponse()
+			log = log.With(zap.Strings("response heads", cnt.Heads), zap.Int("len(response changes)", len(cnt.Changes)))
 			log.DebugCtx(ctx, "full sync response sent")
 		}
 	}()
@@ -192,7 +200,11 @@ func (s *syncTreeHandler) handleFullSyncResponse(
 	var (
 		objTree = s.objTree
 	)
-	log := log.With(zap.Strings("heads", response.Heads), zap.String("treeId", s.objTree.Id()), zap.String("spaceId", s.spaceId))
+	log := log.With(
+		zap.Strings("heads", response.Heads),
+		zap.String("treeId", s.objTree.Id()),
+		zap.String("spaceId", s.spaceId),
+		zap.Int("len(changes)", len(response.Changes)))
 	log.DebugCtx(ctx, "received full sync response message")
 
 	defer func() {
