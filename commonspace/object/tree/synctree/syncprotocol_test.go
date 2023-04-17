@@ -2,7 +2,6 @@ package synctree
 
 import (
 	"context"
-	"fmt"
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
@@ -60,7 +59,24 @@ func TestEmptyClientGetsFullHistory(t *testing.T) {
 	require.Len(t, fullResponseMsg.changes, 2)
 }
 
-func TestRandomTreeMerge(t *testing.T) {
+func TestRandomMerge(t *testing.T) {
+	var (
+		rnd      = rand.New(rand.NewSource(time.Now().Unix()))
+		levels   = 20
+		perLevel = 20
+	)
+	testTreeMerge(t, levels, perLevel, func() bool {
+		return true
+	})
+	testTreeMerge(t, levels, perLevel, func() bool {
+		return false
+	})
+	testTreeMerge(t, levels, perLevel, func() bool {
+		return rnd.Intn(10) > 8
+	})
+}
+
+func testTreeMerge(t *testing.T, levels, perlevel int, isSnapshot func() bool) {
 	treeId := "treeId"
 	spaceId := "spaceId"
 	keys, err := accountdata.NewRandom()
@@ -68,17 +84,15 @@ func TestRandomTreeMerge(t *testing.T) {
 	aclList, err := list.NewTestDerivedAcl(spaceId, keys)
 	storage := createStorage(treeId, aclList)
 	changeCreator := objecttree.NewMockChangeCreator()
-	rnd := rand.New(rand.NewSource(time.Now().Unix()))
 	params := genParams{
 		prefix:     "peer1",
 		aclId:      aclList.Id(),
 		startIdx:   0,
-		levels:     10,
+		levels:     levels,
+		perLevel:   perlevel,
 		snapshotId: treeId,
 		prevHeads:  []string{treeId},
-		isSnapshot: func() bool {
-			return rnd.Intn(100) > 80
-		},
+		isSnapshot: isSnapshot,
 	}
 	initialRes := genChanges(changeCreator, params)
 	err = storage.TransactionAdd(initialRes.changes, initialRes.heads)
@@ -99,20 +113,20 @@ func TestRandomTreeMerge(t *testing.T) {
 		NewHeads:   initialRes.heads,
 		RawChanges: initialRes.changes,
 	})
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	firstHeads := fx.handlers["peer1"].tree().Heads()
 	secondHeads := fx.handlers["peer2"].tree().Heads()
 	require.True(t, slice.UnsortedEquals(firstHeads, secondHeads))
 	params = genParams{
-		prefix:     "peer1",
-		aclId:      aclList.Id(),
-		startIdx:   11,
-		levels:     10,
+		prefix:   "peer1",
+		aclId:    aclList.Id(),
+		startIdx: levels,
+		levels:   levels,
+		perLevel: perlevel,
+
 		snapshotId: initialRes.snapshotId,
 		prevHeads:  initialRes.heads,
-		isSnapshot: func() bool {
-			return rnd.Intn(100) > 80
-		},
+		isSnapshot: isSnapshot,
 	}
 	peer1Res := genChanges(changeCreator, params)
 	params.prefix = "peer2"
@@ -125,10 +139,15 @@ func TestRandomTreeMerge(t *testing.T) {
 		NewHeads:   peer2Res.heads,
 		RawChanges: peer2Res.changes,
 	})
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	fx.stop()
-	firstHeads = fx.handlers["peer1"].tree().Heads()
-	secondHeads = fx.handlers["peer2"].tree().Heads()
-	fmt.Println(firstHeads)
-	fmt.Println(secondHeads)
+	firstTree := fx.handlers["peer1"].tree()
+	secondTree := fx.handlers["peer2"].tree()
+	firstHeads = firstTree.Heads()
+	secondHeads = secondTree.Heads()
+	require.True(t, slice.UnsortedEquals(firstHeads, secondHeads))
+	require.True(t, slice.UnsortedEquals(firstHeads, append(peer1Res.heads, peer2Res.heads...)))
+	firstStorage := firstTree.Storage().(*treestorage.InMemoryTreeStorage)
+	secondStorage := secondTree.Storage().(*treestorage.InMemoryTreeStorage)
+	require.True(t, firstStorage.Equal(secondStorage))
 }

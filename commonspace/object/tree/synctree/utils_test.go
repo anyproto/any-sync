@@ -3,7 +3,6 @@ package synctree
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
@@ -275,7 +274,7 @@ func createStorage(treeId string, aclList list.AclList) treestorage.TreeStorage 
 }
 
 func createTestTree(aclList list.AclList, storage treestorage.TreeStorage) (objecttree.ObjectTree, error) {
-	return objecttree.BuildTestableTree(aclList, storage)
+	return objecttree.BuildEmptyDataTestableTree(aclList, storage)
 }
 
 type fixtureDeps struct {
@@ -345,6 +344,7 @@ type genParams struct {
 	aclId      string
 	startIdx   int
 	levels     int
+	perLevel   int
 	snapshotId string
 	prevHeads  []string
 	isSnapshot func() bool
@@ -374,7 +374,7 @@ func genChanges(creator *objecttree.MockChangeCreator, params genParams) (res ge
 			snapshotId = newId
 			continue
 		}
-		perLevel := rnd.Intn(10)
+		perLevel := rnd.Intn(params.perLevel)
 		if perLevel == 0 {
 			perLevel = 1
 		}
@@ -383,7 +383,6 @@ func genChanges(creator *objecttree.MockChangeCreator, params genParams) (res ge
 			usedIds  = map[string]struct{}{}
 		)
 		for j := 0; j < perLevel; j++ {
-			// if we didn't connect with all prev ones
 			prevConns := rnd.Intn(len(prevHeads))
 			if prevConns == 0 {
 				prevConns = 1
@@ -391,6 +390,7 @@ func genChanges(creator *objecttree.MockChangeCreator, params genParams) (res ge
 			rnd.Shuffle(len(prevHeads), func(i, j int) {
 				prevHeads[i], prevHeads[j] = prevHeads[j], prevHeads[i]
 			})
+			// if we didn't connect with all prev ones
 			if j == perLevel-1 && len(usedIds) != len(prevHeads) {
 				var unusedIds []string
 				for _, id := range prevHeads {
@@ -416,31 +416,4 @@ func genChanges(creator *objecttree.MockChangeCreator, params genParams) (res ge
 	res.heads = prevHeads
 	res.snapshotId = snapshotId
 	return
-}
-
-func TestGenChanges(t *testing.T) {
-	treeId := "treeId"
-	spaceId := "spaceId"
-	keys, err := accountdata.NewRandom()
-	require.NoError(t, err)
-	aclList, err := list.NewTestDerivedAcl(spaceId, keys)
-	storage := createStorage(treeId, aclList)
-	creator := objecttree.NewMockChangeCreator()
-	rnd := rand.New(rand.NewSource(time.Now().Unix()))
-	params := genParams{
-		prefix:     "peerId",
-		aclId:      aclList.Id(),
-		startIdx:   0,
-		levels:     10,
-		snapshotId: treeId,
-		prevHeads:  []string{treeId},
-		isSnapshot: func() bool {
-			return rnd.Intn(100) > 80
-		},
-	}
-	res := genChanges(creator, params)
-	storage.TransactionAdd(res.changes, res.heads)
-	tr, err := createTestTree(aclList, storage)
-	require.NoError(t, err)
-	fmt.Println(tr.Debug(objecttree.NoOpDescriptionParser))
 }

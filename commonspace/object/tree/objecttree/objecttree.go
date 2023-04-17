@@ -621,19 +621,7 @@ func (ot *objectTree) ChangesAfterCommonSnapshot(theirPath, theirHeads []string)
 		}
 	}
 
-	if commonSnapshot == ot.tree.RootId() {
-		return ot.getChangesFromTree(theirHeads)
-	} else {
-		return ot.getChangesFromDB(commonSnapshot, theirHeads)
-	}
-}
-
-func (ot *objectTree) getChangesFromTree(theirHeads []string) (rawChanges []*treechangeproto.RawTreeChangeWithId, err error) {
-	return ot.rawChangeLoader.LoadFromTree(ot.tree, theirHeads)
-}
-
-func (ot *objectTree) getChangesFromDB(commonSnapshot string, theirHeads []string) (rawChanges []*treechangeproto.RawTreeChangeWithId, err error) {
-	return ot.rawChangeLoader.LoadFromStorage(commonSnapshot, ot.tree.headIds, theirHeads)
+	return ot.rawChangeLoader.Load(commonSnapshot, ot.tree, theirHeads)
 }
 
 func (ot *objectTree) snapshotPathIsActual() bool {

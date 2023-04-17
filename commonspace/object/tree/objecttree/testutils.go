@@ -2,7 +2,6 @@ package objecttree
 
 import (
 	"fmt"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/util/crypto"
@@ -111,21 +110,4 @@ func (c *MockChangeCreator) CreateNewTreeStorage(treeId, aclHeadId string) trees
 	root := c.CreateRoot(treeId, aclHeadId)
 	treeStorage, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
 	return treeStorage
-}
-
-func BuildTestableTree(aclList list.AclList, treeStorage treestorage.TreeStorage) (ObjectTree, error) {
-	root, _ := treeStorage.Root()
-	changeBuilder := &nonVerifiableChangeBuilder{
-		ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), root),
-	}
-	deps := objectTreeDeps{
-		changeBuilder:   changeBuilder,
-		treeBuilder:     newTreeBuilder(treeStorage, changeBuilder),
-		treeStorage:     treeStorage,
-		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
-		validator:       &noOpTreeValidator{},
-		aclList:         aclList,
-	}
-
-	return buildObjectTree(deps)
 }
