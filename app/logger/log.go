@@ -11,11 +11,16 @@ var (
 	mu                sync.Mutex
 	logger            *zap.Logger
 	loggerConfig      zap.Config
-	namedLevels       = make(map[string]zap.AtomicLevel)
+	namedLevels       []namedLevel
 	namedGlobs        = make(map[string]glob.Glob)
 	namedLoggers      = make(map[string]CtxLogger)
 	namedSugarLoggers = make(map[string]*zap.SugaredLogger)
 )
+
+type namedLevel struct {
+	name  string
+	level zap.AtomicLevel
+}
 
 func init() {
 	loggerConfig = zap.NewDevelopmentConfig()
@@ -35,18 +40,23 @@ func SetDefault(l *zap.Logger) {
 // it also supports glob patterns for names, like "app*"
 // can be racy in case there are existing named loggers
 // so consider to call only once at the beginning
-func SetNamedLevels(l map[string]zap.AtomicLevel) {
+func SetNamedLevels(nls []NamedLevel) {
 	mu.Lock()
 	defer mu.Unlock()
-	namedLevels = l
+	namedLevels = namedLevels[:0]
 
 	var minLevel = logger.Level()
-	for k, l := range namedLevels {
-		g, err := glob.Compile(k)
-		if err == nil {
-			namedGlobs[k] = g
+	for _, nl := range nls {
+		l, err := zap.ParseAtomicLevel(nl.Level)
+		if err != nil {
+			continue
 		}
-		namedLevels[k] = l
+		namedLevels = append(namedLevels, namedLevel{name: nl.Name, level: l})
+		g, err := glob.Compile(nl.Name)
+		if err == nil {
+			namedGlobs[nl.Name] = g
+		}
+
 		if l.Level() < minLevel {
 			minLevel = l.Level()
 		}
@@ -81,23 +91,18 @@ func Default() *zap.Logger {
 	return logger
 }
 
+// getLevel returns the level for the given name
+// it return the first matching name or glob pattern whatever comes first
 func getLevel(name string) zap.AtomicLevel {
-	level, ok := namedLevels[name]
-	if !ok {
-		var found bool
-		for globName, glob := range namedGlobs {
-			if glob.Match(name) {
-				found = true
-				level, _ = namedLevels[globName]
-				// no need to check ok, because we know that globName exists
-				break
-			}
+	for _, nl := range namedLevels {
+		if nl.name == name {
+			return nl.level
 		}
-		if !found {
-			level = loggerConfig.Level
+		if g, ok := namedGlobs[nl.name]; ok && g.Match(name) {
+			return nl.level
 		}
 	}
-	return level
+	return zap.NewAtomicLevelAt(logger.Level())
 }
 
 func NewNamed(name string, fields ...zap.Field) CtxLogger {
