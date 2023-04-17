@@ -30,15 +30,18 @@ type Service interface {
 }
 
 type service struct {
-	accountId string
-	config    Configuration
-	source    Source
-	store     Store
-	last      NodeConf
-	mu        sync.RWMutex
+	accountId       string
+	config          Configuration
+	source          Source
+	store           Store
+	last            NodeConf
+	mu              sync.RWMutex
+	updateCtx       context.Context
+	updateCtxCancel context.CancelFunc
 }
 
 func (s *service) Init(a *app.App) (err error) {
+	s.updateCtx, s.updateCtxCancel = context.WithCancel(context.Background())
 	s.config = a.MustComponent("config").(ConfigGetter).GetNodeConf()
 	s.accountId = a.MustComponent(commonaccount.CName).(commonaccount.Service).Account().PeerId
 	s.source = a.MustComponent(CNameSource).(Source)
@@ -61,7 +64,14 @@ func (s *service) Run(_ context.Context) (err error) {
 }
 
 func (s *service) updateLoop(ctx context.Context) {
-	for _ = range time.NewTicker(time.Minute * 10).C {
+	ticker := time.NewTicker(time.Minute * 10)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.updateCtx.Done():
+			return
+		case <-ticker.C:
+		}
 		err := s.updateConfiguration(ctx)
 		if err != nil {
 			if err == ErrConfigurationNotChanged {
@@ -203,5 +213,8 @@ func (s *service) NodeTypes(nodeId string) []NodeType {
 }
 
 func (s *service) Close(ctx context.Context) (err error) {
+	if s.updateCtxCancel != nil {
+		s.updateCtxCancel()
+	}
 	return
 }
