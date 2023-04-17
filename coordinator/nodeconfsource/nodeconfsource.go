@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/coordinator/coordinatorclient"
+	"github.com/anytypeio/any-sync/coordinator/coordinatorproto"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"time"
 )
@@ -41,9 +42,16 @@ func (n *nodeConfSource) GetLast(ctx context.Context, currentId string) (c nodec
 	}
 	nodes := make([]nodeconf.Node, len(res.Nodes))
 	for i, node := range res.Nodes {
-		types := make([]nodeconf.NodeType, len(node.Types))
-		for j, nt := range node.Types {
-			types[j] = nodeconf.NodeType(nt)
+		types := make([]nodeconf.NodeType, 0, len(node.Types))
+		for _, nt := range node.Types {
+			switch nt {
+			case coordinatorproto.NodeType_FileAPI:
+				types = append(types, nodeconf.NodeTypeFile)
+			case coordinatorproto.NodeType_CoordinatorAPI:
+				types = append(types, nodeconf.NodeTypeCoordinator)
+			case coordinatorproto.NodeType_TreeAPI:
+				types = append(types, nodeconf.NodeTypeTree)
+			}
 		}
 		nodes[i] = nodeconf.Node{
 			PeerId:    node.PeerId,
