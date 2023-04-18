@@ -88,7 +88,6 @@ func ValidateSpaceStorageCreatePayload(payload SpaceStorageCreatePayload) (err e
 		err = ErrIncorrectSpaceHeader
 		return
 	}
-
 	return
 }
 
@@ -148,7 +147,7 @@ func validateCreateSpaceAclPayload(rawWithId *aclrecordproto.RawAclRecordWithId)
 	if err != nil {
 		return
 	}
-	payloadIdentity, err := crypto.UnmarshalEd25519PublicKey(aclRoot.Identity)
+	payloadIdentity, err := crypto.UnmarshalEd25519PublicKeyProto(aclRoot.Identity)
 	if err != nil {
 		return
 	}
@@ -161,8 +160,11 @@ func validateCreateSpaceAclPayload(rawWithId *aclrecordproto.RawAclRecordWithId)
 	if err != nil {
 		return
 	}
-
-	res, err = masterKey.Verify(aclRoot.Identity, aclRoot.IdentitySignature)
+	rawIdentity, err := payloadIdentity.Raw()
+	if err != nil {
+		return
+	}
+	res, err = masterKey.Verify(rawIdentity, aclRoot.IdentitySignature)
 	if err != nil || !res {
 		err = ErrIncorrectSpaceHeader
 		return
