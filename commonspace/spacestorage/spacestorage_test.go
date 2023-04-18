@@ -215,12 +215,13 @@ func TestFailedAclPayloadSpace_IncorrectSignature(t *testing.T) {
 	require.NoError(t, err)
 	rawIdentity, err := accountKeys.SignKey.GetPublic().Raw()
 	require.NoError(t, err)
+	identity, err := accountKeys.SignKey.GetPublic().Marshall()
 	identitySignature, err := masterKey.Sign(rawIdentity)
 	require.NoError(t, err)
 	rawMasterKey, err := masterKey.GetPublic().Raw()
 	require.NoError(t, err)
 	aclRoot := aclrecordproto.AclRoot{
-		Identity:          rawIdentity,
+		Identity:          identity,
 		MasterKey:         rawMasterKey,
 		SpaceId:           "SpaceId",
 		EncryptedReadKey:  readKey,
@@ -264,7 +265,7 @@ func TestFailedAclPayloadSpace_IncorrectIdentitySignature(t *testing.T) {
 		return
 	}
 	masterPubKey := masterKey.GetPublic()
-	rawIdentity, err := accountKeys.SignKey.GetPublic().Raw()
+	identity, err := accountKeys.SignKey.GetPublic().Marshall()
 	if err != nil {
 		return
 	}
@@ -273,12 +274,12 @@ func TestFailedAclPayloadSpace_IncorrectIdentitySignature(t *testing.T) {
 		return
 	}
 	aclRoot := aclrecordproto.AclRoot{
-		Identity:          rawIdentity,
+		Identity:          identity,
 		MasterKey:         rawMasterKey,
 		SpaceId:           spaceId,
 		EncryptedReadKey:  readKey,
 		Timestamp:         time.Now().Unix(),
-		IdentitySignature: rawIdentity,
+		IdentitySignature: identity,
 	}
 	marshalled, err := aclRoot.Marshal()
 	if err != nil {
@@ -550,6 +551,7 @@ func rawAclWithId(accountKeys *accountdata.AccountKeys, spaceId string) (aclHead
 		return
 	}
 	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	identity, err := accountKeys.SignKey.GetPublic().Marshall()
 	if err != nil {
 		return
 	}
@@ -567,7 +569,7 @@ func rawAclWithId(accountKeys *accountdata.AccountKeys, spaceId string) (aclHead
 		return
 	}
 	aclRoot := aclrecordproto.AclRoot{
-		Identity:          rawIdentity,
+		Identity:          identity,
 		MasterKey:         rawMasterKey,
 		SpaceId:           spaceId,
 		EncryptedReadKey:  readKey,
