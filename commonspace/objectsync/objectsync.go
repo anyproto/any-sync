@@ -2,6 +2,9 @@ package objectsync
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/gogo/protobuf/proto"
 	"sync/atomic"
 	"time"
 
@@ -23,7 +26,6 @@ type ObjectSync interface {
 	synchandler.SyncHandler
 	MessagePool() MessagePool
 
-	Init()
 	Close() (err error)
 }
 
@@ -31,6 +33,7 @@ type objectSync struct {
 	spaceId string
 
 	messagePool   MessagePool
+	syncClient    synctree.SyncClient
 	objectGetter  syncobjectgetter.SyncObjectGetter
 	configuration nodeconf.Configuration
 	spaceStorage  spacestorage.SpaceStorage
@@ -48,40 +51,18 @@ func NewObjectSync(
 	objectGetter syncobjectgetter.SyncObjectGetter,
 	storage spacestorage.SpaceStorage) ObjectSync {
 	syncCtx, cancel := context.WithCancel(context.Background())
-	os := newObjectSync(
-		spaceId,
-		spaceIsDeleted,
-		configuration,
-		objectGetter,
-		storage,
-		syncCtx,
-		cancel)
-	msgPool := newMessagePool(peerManager, os.handleMessage)
-	os.messagePool = msgPool
-	return os
-}
-
-func newObjectSync(
-	spaceId string,
-	spaceIsDeleted *atomic.Bool,
-	configuration nodeconf.Configuration,
-	objectGetter syncobjectgetter.SyncObjectGetter,
-	spaceStorage spacestorage.SpaceStorage,
-	syncCtx context.Context,
-	cancel context.CancelFunc,
-) *objectSync {
-	return &objectSync{
+	os := &objectSync{
 		objectGetter:   objectGetter,
-		spaceStorage:   spaceStorage,
+		spaceStorage:   storage,
 		spaceId:        spaceId,
 		syncCtx:        syncCtx,
 		cancelSync:     cancel,
 		spaceIsDeleted: spaceIsDeleted,
 		configuration:  configuration,
+		syncClient:     synctree.NewSyncClient(spaceId, peerManager, synctree.GetRequestFactory()),
 	}
-}
-
-func (s *objectSync) Init() {
+	os.messagePool = newMessagePool(peerManager, os.handleMessage)
+	return os
 }
 
 func (s *objectSync) Close() (err error) {
@@ -109,6 +90,10 @@ func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *sp
 	log.With(zap.String("objectId", msg.ObjectId), zap.String("replyId", msg.ReplyId)).DebugCtx(ctx, "handling message")
 	obj, err := s.objectGetter.GetObject(ctx, msg.ObjectId)
 	if err != nil {
+		respErr := s.sendErrorResponse(ctx, msg, senderId, err)
+		if respErr != nil {
+			log.Debug("failed to send error response", zap.Error(respErr))
+		}
 		return
 	}
 	return obj.HandleMessage(ctx, senderId, msg)
@@ -116,4 +101,14 @@ func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *sp
 
 func (s *objectSync) MessagePool() MessagePool {
 	return s.messagePool
+}
+
+func (s *objectSync) sendErrorResponse(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage, senderId string, respErr error) (err error) {
+	unmarshalled := &treechangeproto.TreeSyncMessage{}
+	err = proto.Unmarshal(msg.Payload, unmarshalled)
+	if err != nil {
+		return
+	}
+	resp := treechangeproto.WrapError(respErr, unmarshalled.RootChange)
+	return s.syncClient.SendWithReply(ctx, senderId, resp, msg.ReplyId)
 }

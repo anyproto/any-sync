@@ -244,7 +244,7 @@ func (b *broadcastTree) AddRawChanges(ctx context.Context, changes objecttree.Ra
 
 func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, log *messageLog) *processSyncHandler {
 	factory := GetRequestFactory()
-	syncClient := newSyncClient(spaceId, newProcessPeerManager(peerId, log), factory)
+	syncClient := NewSyncClient(spaceId, newProcessPeerManager(peerId, log), factory)
 	netTree := &broadcastTree{
 		ObjectTree: objTree,
 		SyncClient: syncClient,
@@ -255,7 +255,7 @@ func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, lo
 
 func createEmptySyncHandler(peerId, spaceId string, aclList list.AclList, log *messageLog) *processSyncHandler {
 	factory := GetRequestFactory()
-	syncClient := newSyncClient(spaceId, newProcessPeerManager(peerId, log), factory)
+	syncClient := NewSyncClient(spaceId, newProcessPeerManager(peerId, log), factory)
 
 	batcher := mb.New[processMsg](0)
 	return &processSyncHandler{

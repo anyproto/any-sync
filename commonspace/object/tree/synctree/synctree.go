@@ -54,7 +54,7 @@ type syncTree struct {
 
 var log = logger.NewNamed("common.commonspace.synctree")
 
-var createSyncClient = newSyncClient
+var createSyncClient = NewSyncClient
 
 type ResponsiblePeersGetter interface {
 	GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error)
