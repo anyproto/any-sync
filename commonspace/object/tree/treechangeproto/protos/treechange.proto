@@ -94,7 +94,7 @@ message TreeFullSyncResponse {
 
 // TreeErrorResponse is an error sent as a response for a full sync request
 message TreeErrorResponse {
-  string error = 1;
+  uint64 errCode = 1;
 }
 
 // TreeChangeInfo is used internally in Tree implementation for ease of marshalling

@@ -20,7 +20,7 @@ type syncClient struct {
 	spaceId string
 }
 
-func newSyncClient(
+func NewSyncClient(
 	spaceId string,
 	peerManager peermanager.PeerManager,
 	factory RequestFactory) SyncClient {
