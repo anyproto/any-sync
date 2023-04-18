@@ -124,6 +124,7 @@ type space struct {
 	configuration  nodeconf.Configuration
 	settingsObject settings.SettingsObject
 	peerManager    peermanager.PeerManager
+	treeBuilder    objecttree.BuildObjectTreeFunc
 
 	handleQueue multiqueue.MultiQueue[HandleMessage]
 
@@ -292,7 +293,7 @@ func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCrea
 		OnClose:         s.onObjectClose,
 		SyncStatus:      s.syncStatus,
 		PeerGetter:      s.peerManager,
-		BuildObjectTree: s.treeManager.ObjectTreeBuilder(),
+		BuildObjectTree: s.treeBuilder,
 	}
 	t, err = synctree.PutSyncTree(ctx, payload, deps)
 	if err != nil {
@@ -331,7 +332,7 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 		SyncStatus:         s.syncStatus,
 		WaitTreeRemoteSync: opts.WaitTreeRemoteSync,
 		PeerGetter:         s.peerManager,
-		BuildObjectTree:    s.treeManager.ObjectTreeBuilder(),
+		BuildObjectTree:    s.treeBuilder,
 	}
 	if t, err = synctree.BuildSyncTreeOrGetRemote(ctx, id, deps); err != nil {
 		return nil, err

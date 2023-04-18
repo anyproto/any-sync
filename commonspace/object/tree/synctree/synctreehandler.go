@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
@@ -15,7 +16,7 @@ import (
 
 type syncTreeHandler struct {
 	objTree     objecttree.ObjectTree
-	syncClient  SyncClient
+	syncClient  objectsync.SyncClient
 	syncStatus  syncstatus.StatusUpdater
 	handlerLock sync.Mutex
 	spaceId     string
@@ -24,7 +25,7 @@ type syncTreeHandler struct {
 
 const maxQueueSize = 5
 
-func newSyncTreeHandler(spaceId string, objTree objecttree.ObjectTree, syncClient SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
+func newSyncTreeHandler(spaceId string, objTree objecttree.ObjectTree, syncClient objectsync.SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
 	return &syncTreeHandler{
 		objTree:    objTree,
 		syncClient: syncClient,
@@ -166,7 +167,7 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 	defer func() {
 		if err != nil {
 			log.With(zap.Error(err)).DebugCtx(ctx, "full sync request finished with error")
-			s.syncClient.SendWithReply(ctx, senderId, treechangeproto.WrapError(err, header), replyId)
+			s.syncClient.SendWithReply(ctx, senderId, treechangeproto.WrapError(treechangeproto.ErrorCodes_FullSyncRequestError, header), replyId)
 			return
 		} else if fullResponse != nil {
 			cnt := fullResponse.Content.GetFullSyncResponse()

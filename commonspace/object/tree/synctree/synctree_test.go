@@ -4,11 +4,11 @@ import (
 	"context"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener/mock_updatelistener"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
+	"github.com/anytypeio/any-sync/commonspace/objectsync/mock_objectsync"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/golang/mock/gomock"
@@ -18,7 +18,7 @@ import (
 
 type syncTreeMatcher struct {
 	objTree  objecttree.ObjectTree
-	client   SyncClient
+	client   objectsync.SyncClient
 	listener updatelistener.UpdateListener
 }
 
@@ -34,8 +34,8 @@ func (s syncTreeMatcher) String() string {
 	return ""
 }
 
-func syncClientFuncCreator(client SyncClient) func(spaceId string, factory RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.Configuration) SyncClient {
-	return func(spaceId string, factory RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.Configuration) SyncClient {
+func syncClientFuncCreator(client objectsync.SyncClient) func(spaceId string, factory objectsync.RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.Configuration) objectsync.SyncClient {
+	return func(spaceId string, factory objectsync.RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.Configuration) objectsync.SyncClient {
 		return client
 	}
 }
@@ -46,7 +46,7 @@ func Test_BuildSyncTree(t *testing.T) {
 	defer ctrl.Finish()
 
 	updateListenerMock := mock_updatelistener.NewMockUpdateListener(ctrl)
-	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
+	syncClientMock := mock_objectsync.NewMockSyncClient(ctrl)
 	objTreeMock := newTestObjMock(mock_objecttree.NewMockObjectTree(ctrl))
 	tr := &syncTree{
 		ObjectTree:  objTreeMock,

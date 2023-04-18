@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_synctree/mock_synctree.go github.com/anytypeio/any-sync/commonspace/object/tree/synctree SyncTree,ReceiveQueue,HeadNotifiable
 package synctree
 
 import (
@@ -43,7 +44,7 @@ type SyncTree interface {
 type syncTree struct {
 	objecttree.ObjectTree
 	synchandler.SyncHandler
-	syncClient SyncClient
+	syncClient objectsync.SyncClient
 	syncStatus syncstatus.StatusUpdater
 	notifiable HeadNotifiable
 	listener   updatelistener.UpdateListener
@@ -54,7 +55,7 @@ type syncTree struct {
 
 var log = logger.NewNamed("common.commonspace.synctree")
 
-var createSyncClient = NewSyncClient
+var createSyncClient = objectsync.NewSyncClient
 
 type ResponsiblePeersGetter interface {
 	GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error)
@@ -101,7 +102,7 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	syncClient := createSyncClient(
 		deps.SpaceId,
 		deps.ObjectSync.MessagePool(),
-		sharedFactory)
+		objectsync.GetRequestFactory())
 	syncTree := &syncTree{
 		ObjectTree: objTree,
 		syncClient: syncClient,

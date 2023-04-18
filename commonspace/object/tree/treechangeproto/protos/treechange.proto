@@ -56,6 +56,13 @@ message RawTreeChangeWithId {
   string id = 2;
 }
 
+enum ErrorCodes {
+  Unexpected = 0;
+  GetTreeError = 1;
+  FullSyncRequestError = 2;
+  ErrorOffset = 400;
+}
+
 message TreeSyncMessage {
   TreeSyncContentValue content = 1;
   RawTreeChangeWithId rootChange = 2;

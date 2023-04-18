@@ -7,6 +7,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
@@ -84,7 +85,7 @@ type processSyncHandler struct {
 	peerId     string
 	aclList    list.AclList
 	log        *messageLog
-	syncClient SyncClient
+	syncClient objectsync.SyncClient
 }
 
 func (p *processSyncHandler) HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error) {
@@ -97,9 +98,9 @@ func (p *processSyncHandler) HandleMessage(ctx context.Context, senderId string,
 		return
 	}
 	if unmarshalled.Content.GetFullSyncResponse() == nil {
-		newTreeRequest := GetRequestFactory().CreateNewTreeRequest()
+		newTreeRequest := objectsync.GetRequestFactory().CreateNewTreeRequest()
 		var objMsg *spacesyncproto.ObjectSyncMessage
-		objMsg, err = marshallTreeMessage(newTreeRequest, request.SpaceId, request.ObjectId, "")
+		objMsg, err = objectsync.MarshallTreeMessage(newTreeRequest, request.SpaceId, request.ObjectId, "")
 		if err != nil {
 			return
 		}
@@ -124,8 +125,8 @@ func (p *processSyncHandler) HandleMessage(ctx context.Context, senderId string,
 	}
 	p.SyncHandler = newSyncTreeHandler(request.SpaceId, netTree, p.syncClient, syncstatus.NewNoOpSyncStatus())
 	var objMsg *spacesyncproto.ObjectSyncMessage
-	newTreeRequest := GetRequestFactory().CreateHeadUpdate(netTree, res.Added)
-	objMsg, err = marshallTreeMessage(newTreeRequest, request.SpaceId, request.ObjectId, "")
+	newTreeRequest := objectsync.GetRequestFactory().CreateHeadUpdate(netTree, res.Added)
+	objMsg, err = objectsync.MarshallTreeMessage(newTreeRequest, request.SpaceId, request.ObjectId, "")
 	if err != nil {
 		return
 	}
@@ -143,9 +144,9 @@ func newProcessSyncHandler(peerId string, syncHandler synchandler.SyncHandler) *
 
 func (p *processSyncHandler) manager() *processPeerManager {
 	if p.SyncHandler != nil {
-		return p.SyncHandler.(*syncTreeHandler).syncClient.(*syncClient).PeerManager.(*processPeerManager)
+		return p.SyncHandler.(*syncTreeHandler).syncClient.PeerManager().(*processPeerManager)
 	}
-	return p.syncClient.(*syncClient).PeerManager.(*processPeerManager)
+	return p.syncClient.PeerManager().(*processPeerManager)
 }
 
 func (p *processSyncHandler) tree() *broadcastTree {
@@ -229,7 +230,7 @@ func (m *processPeerManager) GetResponsiblePeers(ctx context.Context) (peers []p
 
 type broadcastTree struct {
 	objecttree.ObjectTree
-	SyncClient
+	objectsync.SyncClient
 }
 
 func (b *broadcastTree) AddRawChanges(ctx context.Context, changes objecttree.RawChangesPayload) (objecttree.AddResult, error) {
@@ -243,8 +244,8 @@ func (b *broadcastTree) AddRawChanges(ctx context.Context, changes objecttree.Ra
 }
 
 func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, log *messageLog) *processSyncHandler {
-	factory := GetRequestFactory()
-	syncClient := NewSyncClient(spaceId, newProcessPeerManager(peerId, log), factory)
+	factory := objectsync.GetRequestFactory()
+	syncClient := objectsync.NewSyncClient(spaceId, newProcessPeerManager(peerId, log), factory)
 	netTree := &broadcastTree{
 		ObjectTree: objTree,
 		SyncClient: syncClient,
@@ -254,8 +255,8 @@ func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, lo
 }
 
 func createEmptySyncHandler(peerId, spaceId string, aclList list.AclList, log *messageLog) *processSyncHandler {
-	factory := GetRequestFactory()
-	syncClient := NewSyncClient(spaceId, newProcessPeerManager(peerId, log), factory)
+	factory := objectsync.GetRequestFactory()
+	syncClient := objectsync.NewSyncClient(spaceId, newProcessPeerManager(peerId, log), factory)
 
 	batcher := mb.New[processMsg](0)
 	return &processSyncHandler{

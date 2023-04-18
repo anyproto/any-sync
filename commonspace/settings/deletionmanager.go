@@ -55,10 +55,6 @@ func (d *deletionManager) UpdateState(ctx context.Context, state *settingsstate.
 		return nil
 	}
 	log.Debug("deleting space")
-	err = d.treeManager.DeleteSpace(ctx, d.spaceId)
-	if err != nil {
-		log.Debug("failed to notify on space deletion", zap.Error(err))
-	}
 	if d.isResponsible {
 		allIds := slice.DiscardFromSlice(d.provider.AllIds(), func(id string) bool {
 			return id == d.settingsId

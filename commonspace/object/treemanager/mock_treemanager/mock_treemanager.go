@@ -9,9 +9,7 @@ import (
 	reflect "reflect"
 
 	app "github.com/anytypeio/any-sync/app"
-	list "github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	objecttree "github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
-	treestorage "github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -50,20 +48,6 @@ func (m *MockTreeManager) Close(arg0 context.Context) error {
 func (mr *MockTreeManagerMockRecorder) Close(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockTreeManager)(nil).Close), arg0)
-}
-
-// DeleteSpace mocks base method.
-func (m *MockTreeManager) DeleteSpace(arg0 context.Context, arg1 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteSpace", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteSpace indicates an expected call of DeleteSpace.
-func (mr *MockTreeManagerMockRecorder) DeleteSpace(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSpace", reflect.TypeOf((*MockTreeManager)(nil).DeleteSpace), arg0, arg1)
 }
 
 // DeleteTree mocks base method.
@@ -121,20 +105,6 @@ func (m *MockTreeManager) Name() string {
 func (mr *MockTreeManagerMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockTreeManager)(nil).Name))
-}
-
-// ObjectTreeBuilder mocks base method.
-func (m *MockTreeManager) ObjectTreeBuilder() func(treestorage.TreeStorage, list.AclList) (objecttree.ObjectTree, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ObjectTreeBuilder")
-	ret0, _ := ret[0].(func(treestorage.TreeStorage, list.AclList) (objecttree.ObjectTree, error))
-	return ret0
-}
-
-// ObjectTreeBuilder indicates an expected call of ObjectTreeBuilder.
-func (mr *MockTreeManagerMockRecorder) ObjectTreeBuilder() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObjectTreeBuilder", reflect.TypeOf((*MockTreeManager)(nil).ObjectTreeBuilder))
 }
 
 // Run mocks base method.
