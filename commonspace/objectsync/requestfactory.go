@@ -1,4 +1,4 @@
-package synctree
+package objectsync
 
 import (
 	"fmt"

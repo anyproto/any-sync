@@ -13,6 +13,4 @@ type TreeManager interface {
 	app.ComponentRunnable
 	GetTree(ctx context.Context, spaceId, treeId string) (objecttree.ObjectTree, error)
 	DeleteTree(ctx context.Context, spaceId, treeId string) error
-	DeleteSpace(ctx context.Context, spaceId string) error
-	ObjectTreeBuilder() objecttree.BuildObjectTreeFunc
 }

@@ -30,7 +30,6 @@ func TestDeletionManager_UpdateState_NotResponsible(t *testing.T) {
 	treeManager := mock_treemanager.NewMockTreeManager(ctrl)
 
 	delState.EXPECT().Add(state.DeletedIds).Return(nil)
-	treeManager.EXPECT().DeleteSpace(ctx, spaceId).Return(nil)
 
 	delManager := newDeletionManager(spaceId,
 		settingsId,
@@ -64,7 +63,6 @@ func TestDeletionManager_UpdateState_Responsible(t *testing.T) {
 	provider := mock_settings.NewMockSpaceIdsProvider(ctrl)
 
 	delState.EXPECT().Add(state.DeletedIds).Return(nil)
-	treeManager.EXPECT().DeleteSpace(ctx, spaceId).Return(nil)
 	provider.EXPECT().AllIds().Return([]string{"id", "otherId", settingsId})
 	delState.EXPECT().Add([]string{"id", "otherId"}).Return(nil)
 	delManager := newDeletionManager(spaceId,

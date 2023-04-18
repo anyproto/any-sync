@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/credentialprovider"
 	"github.com/anytypeio/any-sync/commonspace/headsync"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
@@ -152,6 +153,12 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		// TODO: move it to the client package and add possibility to inject StatusProvider from the client
 		syncStatus = syncstatus.NewSyncStatusProvider(st.Id(), syncstatus.DefaultDeps(lastConfiguration, st))
 	}
+	var builder objecttree.BuildObjectTreeFunc
+	if s.config.TreeInMemoryData {
+		builder = objecttree.BuildEmptyDataObjectTree
+	} else {
+		builder = objecttree.BuildObjectTree
+	}
 
 	peerManager, err := s.peermanagerProvider.NewPeerManager(ctx, id)
 	if err != nil {
@@ -171,6 +178,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		peerManager:   peerManager,
 		storage:       st,
 		treesUsed:     &atomic.Int32{},
+		treeBuilder:   builder,
 		isClosed:      spaceIsClosed,
 		isDeleted:     spaceIsDeleted,
 	}

@@ -1,8 +1,8 @@
+//go:generate mockgen -destination mock_objectsync/mock_objectsync.go github.com/anytypeio/any-sync/commonspace/objectsync SyncClient
 package objectsync
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/gogo/protobuf/proto"
 	"sync/atomic"
@@ -33,7 +33,7 @@ type objectSync struct {
 	spaceId string
 
 	messagePool   MessagePool
-	syncClient    synctree.SyncClient
+	syncClient    SyncClient
 	objectGetter  syncobjectgetter.SyncObjectGetter
 	configuration nodeconf.Configuration
 	spaceStorage  spacestorage.SpaceStorage
@@ -59,7 +59,7 @@ func NewObjectSync(
 		cancelSync:     cancel,
 		spaceIsDeleted: spaceIsDeleted,
 		configuration:  configuration,
-		syncClient:     synctree.NewSyncClient(spaceId, peerManager, synctree.GetRequestFactory()),
+		syncClient:     NewSyncClient(spaceId, peerManager, GetRequestFactory()),
 	}
 	os.messagePool = newMessagePool(peerManager, os.handleMessage)
 	return os
@@ -90,7 +90,7 @@ func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *sp
 	log.With(zap.String("objectId", msg.ObjectId), zap.String("replyId", msg.ReplyId)).DebugCtx(ctx, "handling message")
 	obj, err := s.objectGetter.GetObject(ctx, msg.ObjectId)
 	if err != nil {
-		respErr := s.sendErrorResponse(ctx, msg, senderId, err)
+		respErr := s.sendErrorResponse(ctx, msg, senderId)
 		if respErr != nil {
 			log.Debug("failed to send error response", zap.Error(respErr))
 		}
@@ -103,12 +103,12 @@ func (s *objectSync) MessagePool() MessagePool {
 	return s.messagePool
 }
 
-func (s *objectSync) sendErrorResponse(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage, senderId string, respErr error) (err error) {
+func (s *objectSync) sendErrorResponse(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage, senderId string) (err error) {
 	unmarshalled := &treechangeproto.TreeSyncMessage{}
 	err = proto.Unmarshal(msg.Payload, unmarshalled)
 	if err != nil {
 		return
 	}
-	resp := treechangeproto.WrapError(respErr, unmarshalled.RootChange)
+	resp := treechangeproto.WrapError(treechangeproto.ErrorCodes_GetTreeError, unmarshalled.RootChange)
 	return s.syncClient.SendWithReply(ctx, senderId, resp, msg.ReplyId)
 }

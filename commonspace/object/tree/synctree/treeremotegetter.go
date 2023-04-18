@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/rpc/rpcerr"
@@ -46,8 +47,8 @@ func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err e
 }
 
 func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (msg *treechangeproto.TreeSyncMessage, err error) {
-	newTreeRequest := GetRequestFactory().CreateNewTreeRequest()
-	objMsg, err := marshallTreeMessage(newTreeRequest, t.deps.SpaceId, t.treeId, "")
+	newTreeRequest := objectsync.GetRequestFactory().CreateNewTreeRequest()
+	objMsg, err := objectsync.MarshallTreeMessage(newTreeRequest, t.deps.SpaceId, t.treeId, "")
 	if err != nil {
 		return
 	}

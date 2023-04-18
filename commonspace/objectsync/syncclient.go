@@ -1,5 +1,4 @@
-//go:generate mockgen -destination mock_synctree/mock_synctree.go github.com/anytypeio/any-sync/commonspace/object/tree/synctree SyncClient,SyncTree,ReceiveQueue,HeadNotifiable
-package synctree
+package objectsync
 
 import (
 	"context"
@@ -12,12 +11,13 @@ type SyncClient interface {
 	RequestFactory
 	Broadcast(ctx context.Context, msg *treechangeproto.TreeSyncMessage) (err error)
 	SendWithReply(ctx context.Context, peerId string, msg *treechangeproto.TreeSyncMessage, replyId string) (err error)
+	PeerManager() peermanager.PeerManager
 }
 
 type syncClient struct {
-	peermanager.PeerManager
 	RequestFactory
-	spaceId string
+	spaceId     string
+	peerManager peermanager.PeerManager
 }
 
 func NewSyncClient(
@@ -25,29 +25,33 @@ func NewSyncClient(
 	peerManager peermanager.PeerManager,
 	factory RequestFactory) SyncClient {
 	return &syncClient{
-		PeerManager:    peerManager,
+		peerManager:    peerManager,
 		RequestFactory: factory,
 		spaceId:        spaceId,
 	}
 }
 
 func (s *syncClient) Broadcast(ctx context.Context, msg *treechangeproto.TreeSyncMessage) (err error) {
-	objMsg, err := marshallTreeMessage(msg, s.spaceId, msg.RootChange.Id, "")
+	objMsg, err := MarshallTreeMessage(msg, s.spaceId, msg.RootChange.Id, "")
 	if err != nil {
 		return
 	}
-	return s.PeerManager.Broadcast(ctx, objMsg)
+	return s.peerManager.Broadcast(ctx, objMsg)
 }
 
 func (s *syncClient) SendWithReply(ctx context.Context, peerId string, msg *treechangeproto.TreeSyncMessage, replyId string) (err error) {
-	objMsg, err := marshallTreeMessage(msg, s.spaceId, msg.RootChange.Id, replyId)
+	objMsg, err := MarshallTreeMessage(msg, s.spaceId, msg.RootChange.Id, replyId)
 	if err != nil {
 		return
 	}
-	return s.PeerManager.SendPeer(ctx, peerId, objMsg)
+	return s.peerManager.SendPeer(ctx, peerId, objMsg)
 }
 
-func marshallTreeMessage(message *treechangeproto.TreeSyncMessage, spaceId, objectId, replyId string) (objMsg *spacesyncproto.ObjectSyncMessage, err error) {
+func (s *syncClient) PeerManager() peermanager.PeerManager {
+	return s.peerManager
+}
+
+func MarshallTreeMessage(message *treechangeproto.TreeSyncMessage, spaceId, objectId, replyId string) (objMsg *spacesyncproto.ObjectSyncMessage, err error) {
 	payload, err := message.Marshal()
 	if err != nil {
 		return

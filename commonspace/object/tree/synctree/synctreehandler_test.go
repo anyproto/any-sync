@@ -3,13 +3,14 @@ package synctree
 import (
 	"context"
 	"fmt"
+	"github.com/anytypeio/any-sync/commonspace/objectsync"
+	"github.com/anytypeio/any-sync/commonspace/objectsync/mock_objectsync"
 	"sync"
 	"testing"
 
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
 	"github.com/golang/mock/gomock"
@@ -54,7 +55,7 @@ func (t *testObjTreeMock) TryRLock() bool {
 
 type syncHandlerFixture struct {
 	ctrl             *gomock.Controller
-	syncClientMock   *mock_synctree.MockSyncClient
+	syncClientMock   *mock_objectsync.MockSyncClient
 	objectTreeMock   *testObjTreeMock
 	receiveQueueMock ReceiveQueue
 
@@ -63,7 +64,7 @@ type syncHandlerFixture struct {
 
 func newSyncHandlerFixture(t *testing.T) *syncHandlerFixture {
 	ctrl := gomock.NewController(t)
-	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
+	syncClientMock := mock_objectsync.NewMockSyncClient(ctrl)
 	objectTreeMock := newTestObjMock(mock_objecttree.NewMockObjectTree(ctrl))
 	receiveQueue := newReceiveQueue(5)
 
@@ -109,7 +110,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 			SnapshotPath: []string{"h1"},
 		}
 		treeMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
-		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := objectsync.MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
 
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2"}).Times(2)
@@ -138,7 +139,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 			SnapshotPath: []string{"h1"},
 		}
 		treeMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
-		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := objectsync.MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
 
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2"}).AnyTimes()
@@ -171,7 +172,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 			SnapshotPath: []string{"h1"},
 		}
 		treeMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
-		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := objectsync.MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
 
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h1"}).AnyTimes()
@@ -192,7 +193,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 			SnapshotPath: []string{"h1"},
 		}
 		treeMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
-		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := objectsync.MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
 
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2"}).AnyTimes()
@@ -217,7 +218,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 			SnapshotPath: []string{"h1"},
 		}
 		treeMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
-		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := objectsync.MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
 
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h1"}).AnyTimes()
@@ -250,7 +251,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 			SnapshotPath: []string{"h1"},
 		}
 		treeMsg := treechangeproto.WrapFullRequest(fullSyncRequest, chWithId)
-		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := objectsync.MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
 
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().Header().Return(nil)
@@ -283,7 +284,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 			SnapshotPath: []string{"h1"},
 		}
 		treeMsg := treechangeproto.WrapFullRequest(fullSyncRequest, chWithId)
-		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := objectsync.MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
 
 		fx.objectTreeMock.EXPECT().
 			Id().AnyTimes().Return(treeId)
@@ -312,7 +313,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 			SnapshotPath: []string{"h1"},
 		}
 		treeMsg := treechangeproto.WrapFullRequest(fullSyncRequest, chWithId)
-		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := objectsync.MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
 		objectMsg.RequestId = replyId
 
 		fx.objectTreeMock.EXPECT().
@@ -339,7 +340,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 			SnapshotPath: []string{"h1"},
 		}
 		treeMsg := treechangeproto.WrapFullRequest(fullSyncRequest, chWithId)
-		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := objectsync.MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
 
 		fx.objectTreeMock.EXPECT().
 			Id().AnyTimes().Return(treeId)
@@ -380,7 +381,7 @@ func TestSyncHandler_HandleFullSyncResponse(t *testing.T) {
 			SnapshotPath: []string{"h1"},
 		}
 		treeMsg := treechangeproto.WrapFullResponse(fullSyncResponse, chWithId)
-		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, replyId)
+		objectMsg, _ := objectsync.MarshallTreeMessage(treeMsg, "spaceId", treeId, replyId)
 
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().
@@ -413,7 +414,7 @@ func TestSyncHandler_HandleFullSyncResponse(t *testing.T) {
 			SnapshotPath: []string{"h1"},
 		}
 		treeMsg := treechangeproto.WrapFullResponse(fullSyncResponse, chWithId)
-		objectMsg, _ := marshallTreeMessage(treeMsg, "spaceId", treeId, replyId)
+		objectMsg, _ := objectsync.MarshallTreeMessage(treeMsg, "spaceId", treeId, replyId)
 
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(treeId)
 		fx.objectTreeMock.EXPECT().

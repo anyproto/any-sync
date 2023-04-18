@@ -27,10 +27,10 @@ func WrapFullResponse(response *TreeFullSyncResponse, rootChange *RawTreeChangeW
 	}
 }
 
-func WrapError(err error, rootChange *RawTreeChangeWithId) *TreeSyncMessage {
+func WrapError(code ErrorCodes, rootChange *RawTreeChangeWithId) *TreeSyncMessage {
 	return &TreeSyncMessage{
 		Content: &TreeSyncContentValue{
-			Value: &TreeSyncContentValue_ErrorResponse{ErrorResponse: &TreeErrorResponse{Error: err.Error()}},
+			Value: &TreeSyncContentValue_ErrorResponse{ErrorResponse: &TreeErrorResponse{ErrCode: uint64(code)}},
 		},
 		RootChange: rootChange,
 	}
