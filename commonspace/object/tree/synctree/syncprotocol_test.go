@@ -44,7 +44,7 @@ func TestEmptyClientGetsFullHistory(t *testing.T) {
 	fx.stop()
 	firstHeads := fx.handlers["peer1"].tree().Heads()
 	secondHeads := fx.handlers["peer2"].tree().Heads()
-	require.True(t, slice.SortedEquals(firstHeads, secondHeads))
+	require.True(t, slice.UnsortedEquals(firstHeads, secondHeads))
 	require.Equal(t, []string{"1"}, firstHeads)
 	logMsgs := fx.log.batcher.GetAll()
 
@@ -94,6 +94,7 @@ func testTreeMerge(t *testing.T, levels, perlevel int, isSnapshot func() bool) {
 		prevHeads:  []string{treeId},
 		isSnapshot: isSnapshot,
 	}
+	// generating initial tree
 	initialRes := genChanges(changeCreator, params)
 	err = storage.TransactionAdd(initialRes.changes, initialRes.heads)
 	require.NoError(t, err)
@@ -128,6 +129,7 @@ func testTreeMerge(t *testing.T, levels, perlevel int, isSnapshot func() bool) {
 		prevHeads:  initialRes.heads,
 		isSnapshot: isSnapshot,
 	}
+	// generating different additions to the tree for different peers
 	peer1Res := genChanges(changeCreator, params)
 	params.prefix = "peer2"
 	peer2Res := genChanges(changeCreator, params)
