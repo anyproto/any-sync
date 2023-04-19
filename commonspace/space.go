@@ -179,7 +179,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.MessagePool())
+	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.SyncClient().MessagePool())
 	s.treeManager.AddObject(s.aclList)
 
 	deletionState := settingsstate.NewObjectDeletionState(s.storage)
@@ -284,7 +284,7 @@ func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCrea
 	}
 	deps := synctree.BuildDeps{
 		SpaceId:         s.id,
-		ObjectSync:      s.objectSync,
+		SyncClient:      s.objectSync.SyncClient(),
 		Configuration:   s.configuration,
 		HeadNotifiable:  s.headSync,
 		Listener:        listener,
@@ -322,7 +322,7 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 
 	deps := synctree.BuildDeps{
 		SpaceId:            s.id,
-		ObjectSync:         s.objectSync,
+		SyncClient:         s.objectSync.SyncClient(),
 		Configuration:      s.configuration,
 		HeadNotifiable:     s.headSync,
 		Listener:           opts.Listener,

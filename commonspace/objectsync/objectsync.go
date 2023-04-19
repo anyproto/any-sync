@@ -24,7 +24,7 @@ var log = logger.NewNamed("common.commonspace.objectsync")
 type ObjectSync interface {
 	LastUsage
 	synchandler.SyncHandler
-	MessagePool() MessagePool
+	SyncClient() SyncClient
 
 	Close() (err error)
 }
@@ -59,9 +59,9 @@ func NewObjectSync(
 		cancelSync:     cancel,
 		spaceIsDeleted: spaceIsDeleted,
 		configuration:  configuration,
-		syncClient:     NewSyncClient(spaceId, peerManager, GetRequestFactory()),
 	}
 	os.messagePool = newMessagePool(peerManager, os.handleMessage)
+	os.syncClient = NewSyncClient(spaceId, os.messagePool, GetRequestFactory())
 	return os
 }
 
@@ -79,7 +79,10 @@ func (s *objectSync) HandleMessage(ctx context.Context, senderId string, message
 }
 
 func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
-	log := log.With(zap.String("objectId", msg.ObjectId), zap.String("replyId", msg.ReplyId))
+	log := log.With(
+		zap.String("objectId", msg.ObjectId),
+		zap.String("requestId", msg.RequestId),
+		zap.String("replyId", msg.ReplyId))
 	if s.spaceIsDeleted.Load() {
 		log = log.With(zap.Bool("isDeleted", true))
 		// preventing sync with other clients if they are not just syncing the settings tree
@@ -97,11 +100,11 @@ func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *sp
 		treeMsg := &treechangeproto.TreeSyncMessage{}
 		err = proto.Unmarshal(msg.Payload, treeMsg)
 		if err != nil {
-			return s.sendError(ctx, nil, spacesyncproto.ErrUnexpected, senderId, msg.ObjectId, msg.ReplyId)
+			return s.sendError(ctx, nil, spacesyncproto.ErrUnexpected, senderId, msg.ObjectId, msg.RequestId)
 		}
 		// this means that we don't have the tree locally and therefore can't return it
 		if s.isEmptyFullSyncRequest(treeMsg) {
-			return s.sendError(ctx, nil, treechangeproto.ErrGetTree, senderId, msg.ObjectId, msg.ReplyId)
+			return s.sendError(ctx, nil, treechangeproto.ErrGetTree, senderId, msg.ObjectId, msg.RequestId)
 		}
 	}
 	obj, err := s.objectGetter.GetObject(ctx, msg.ObjectId)
@@ -112,8 +115,8 @@ func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *sp
 	return obj.HandleMessage(ctx, senderId, msg)
 }
 
-func (s *objectSync) MessagePool() MessagePool {
-	return s.messagePool
+func (s *objectSync) SyncClient() SyncClient {
+	return s.syncClient
 }
 
 func (s *objectSync) unmarshallSendError(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage, respErr error, senderId, objectId string) (err error) {
@@ -122,7 +125,7 @@ func (s *objectSync) unmarshallSendError(ctx context.Context, msg *spacesyncprot
 	if err != nil {
 		return
 	}
-	return s.sendError(ctx, unmarshalled.RootChange, respErr, senderId, objectId, msg.ReplyId)
+	return s.sendError(ctx, unmarshalled.RootChange, respErr, senderId, objectId, msg.RequestId)
 }
 
 func (s *objectSync) sendError(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, respErr error, senderId, objectId, replyId string) (err error) {
