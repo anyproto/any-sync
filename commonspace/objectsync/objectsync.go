@@ -87,12 +87,13 @@ func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *sp
 			return spacesyncproto.ErrSpaceIsDeleted
 		}
 	}
-	log.With(zap.String("objectId", msg.ObjectId), zap.String("replyId", msg.ReplyId)).DebugCtx(ctx, "handling message")
+	log.DebugCtx(ctx, "handling message")
 	obj, err := s.objectGetter.GetObject(ctx, msg.ObjectId)
 	if err != nil {
+		log.DebugCtx(ctx, "failed to get object")
 		respErr := s.sendErrorResponse(ctx, msg, senderId)
 		if respErr != nil {
-			log.Debug("failed to send error response", zap.Error(respErr))
+			log.DebugCtx(ctx, "failed to send error response", zap.Error(respErr))
 		}
 		return
 	}
