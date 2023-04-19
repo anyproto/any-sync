@@ -32,7 +32,7 @@ func TestEmptyClientGetsFullHistory(t *testing.T) {
 		},
 		emptyTrees: []string{"peer2"},
 	}
-	fx := newProcessFixture(t, spaceId, deps)
+	fx := newProtocolFixture(t, spaceId, deps)
 	fx.run(t)
 	fx.handlers["peer1"].sendRawChanges(context.Background(), objecttree.RawChangesPayload{
 		NewHeads: nil,
@@ -107,7 +107,7 @@ func testTreeMerge(t *testing.T, levels, perlevel int, isSnapshot func() bool) {
 		},
 		emptyTrees: []string{"peer2", "node1"},
 	}
-	fx := newProcessFixture(t, spaceId, deps)
+	fx := newProtocolFixture(t, spaceId, deps)
 	fx.run(t)
 	fx.handlers["peer1"].sendRawChanges(context.Background(), objecttree.RawChangesPayload{
 		NewHeads:   initialRes.heads,
