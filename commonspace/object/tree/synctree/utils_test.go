@@ -95,7 +95,7 @@ type testSyncHandler struct {
 // createSyncHandler creates a sync handler when a tree is already created
 func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, log *messageLog) *testSyncHandler {
 	factory := objectsync.GetRequestFactory()
-	syncClient := objectsync.NewSyncClient(spaceId, newTestPeerManager(peerId, log), factory)
+	syncClient := objectsync.NewSyncClient(spaceId, newTestMessagePool(peerId, log), factory)
 	netTree := &broadcastTree{
 		ObjectTree: objTree,
 		SyncClient: syncClient,
@@ -107,7 +107,7 @@ func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, lo
 // createEmptySyncHandler creates a sync handler when the tree will be provided later (this emulates the situation when we have no tree)
 func createEmptySyncHandler(peerId, spaceId string, aclList list.AclList, log *messageLog) *testSyncHandler {
 	factory := objectsync.GetRequestFactory()
-	syncClient := objectsync.NewSyncClient(spaceId, newTestPeerManager(peerId, log), factory)
+	syncClient := objectsync.NewSyncClient(spaceId, newTestMessagePool(peerId, log), factory)
 
 	batcher := mb.New[protocolMsg](0)
 	return &testSyncHandler{
@@ -173,11 +173,11 @@ func (h *testSyncHandler) HandleMessage(ctx context.Context, senderId string, re
 	return h.manager().Broadcast(context.Background(), objMsg)
 }
 
-func (h *testSyncHandler) manager() *testPeerManager {
+func (h *testSyncHandler) manager() *testMessagePool {
 	if h.SyncHandler != nil {
-		return h.SyncHandler.(*syncTreeHandler).syncClient.PeerManager().(*testPeerManager)
+		return h.SyncHandler.(*syncTreeHandler).syncClient.MessagePool().(*testMessagePool)
 	}
-	return h.syncClient.PeerManager().(*testPeerManager)
+	return h.syncClient.MessagePool().(*testMessagePool)
 }
 
 func (h *testSyncHandler) tree() *broadcastTree {
@@ -218,22 +218,22 @@ func (h *testSyncHandler) run(ctx context.Context, t *testing.T, wg *sync.WaitGr
 	}()
 }
 
-// testPeerManager captures all other handlers and sends messages to them
-type testPeerManager struct {
+// testMessagePool captures all other handlers and sends messages to them
+type testMessagePool struct {
 	peerId   string
 	handlers map[string]*testSyncHandler
 	log      *messageLog
 }
 
-func newTestPeerManager(peerId string, log *messageLog) *testPeerManager {
-	return &testPeerManager{handlers: map[string]*testSyncHandler{}, peerId: peerId, log: log}
+func newTestMessagePool(peerId string, log *messageLog) *testMessagePool {
+	return &testMessagePool{handlers: map[string]*testSyncHandler{}, peerId: peerId, log: log}
 }
 
-func (m *testPeerManager) addHandler(peerId string, handler *testSyncHandler) {
+func (m *testMessagePool) addHandler(peerId string, handler *testSyncHandler) {
 	m.handlers[peerId] = handler
 }
 
-func (m *testPeerManager) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+func (m *testMessagePool) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	pMsg := protocolMsg{
 		msg:        msg,
 		senderId:   m.peerId,
@@ -243,7 +243,7 @@ func (m *testPeerManager) SendPeer(ctx context.Context, peerId string, msg *spac
 	return m.handlers[peerId].send(context.Background(), pMsg)
 }
 
-func (m *testPeerManager) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+func (m *testMessagePool) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	for _, handler := range m.handlers {
 		pMsg := protocolMsg{
 			msg:        msg,
@@ -256,7 +256,19 @@ func (m *testPeerManager) Broadcast(ctx context.Context, msg *spacesyncproto.Obj
 	return
 }
 
-func (m *testPeerManager) GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error) {
+func (m *testMessagePool) GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error) {
+	panic("should not be called")
+}
+
+func (m *testMessagePool) LastUsage() time.Time {
+	panic("should not be called")
+}
+
+func (m *testMessagePool) HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error) {
+	panic("should not be called")
+}
+
+func (m *testMessagePool) SendSync(ctx context.Context, peerId string, message *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
 	panic("should not be called")
 }
 

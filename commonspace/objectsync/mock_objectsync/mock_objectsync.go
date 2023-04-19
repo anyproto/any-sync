@@ -10,7 +10,8 @@ import (
 
 	objecttree "github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	treechangeproto "github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
-	peermanager "github.com/anytypeio/any-sync/commonspace/peermanager"
+	objectsync "github.com/anytypeio/any-sync/commonspace/objectsync"
+	spacesyncproto "github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -109,18 +110,33 @@ func (mr *MockSyncClientMockRecorder) CreateNewTreeRequest() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNewTreeRequest", reflect.TypeOf((*MockSyncClient)(nil).CreateNewTreeRequest))
 }
 
-// PeerManager mocks base method.
-func (m *MockSyncClient) PeerManager() peermanager.PeerManager {
+// MessagePool mocks base method.
+func (m *MockSyncClient) MessagePool() objectsync.MessagePool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PeerManager")
-	ret0, _ := ret[0].(peermanager.PeerManager)
+	ret := m.ctrl.Call(m, "MessagePool")
+	ret0, _ := ret[0].(objectsync.MessagePool)
 	return ret0
 }
 
-// PeerManager indicates an expected call of PeerManager.
-func (mr *MockSyncClientMockRecorder) PeerManager() *gomock.Call {
+// MessagePool indicates an expected call of MessagePool.
+func (mr *MockSyncClientMockRecorder) MessagePool() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PeerManager", reflect.TypeOf((*MockSyncClient)(nil).PeerManager))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MessagePool", reflect.TypeOf((*MockSyncClient)(nil).MessagePool))
+}
+
+// SendSync mocks base method.
+func (m *MockSyncClient) SendSync(arg0 context.Context, arg1, arg2 string, arg3 *treechangeproto.TreeSyncMessage) (*spacesyncproto.ObjectSyncMessage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendSync", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*spacesyncproto.ObjectSyncMessage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SendSync indicates an expected call of SendSync.
+func (mr *MockSyncClientMockRecorder) SendSync(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendSync", reflect.TypeOf((*MockSyncClient)(nil).SendSync), arg0, arg1, arg2, arg3)
 }
 
 // SendWithReply mocks base method.

@@ -48,12 +48,7 @@ func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err e
 
 func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (msg *treechangeproto.TreeSyncMessage, err error) {
 	newTreeRequest := objectsync.GetRequestFactory().CreateNewTreeRequest()
-	objMsg, err := objectsync.MarshallTreeMessage(newTreeRequest, t.deps.SpaceId, t.treeId, "")
-	if err != nil {
-		return
-	}
-
-	resp, err := t.deps.ObjectSync.MessagePool().SendSync(ctx, peerId, objMsg)
+	resp, err := t.deps.SyncClient.SendSync(ctx, peerId, t.treeId, newTreeRequest)
 	if err != nil {
 		return
 	}

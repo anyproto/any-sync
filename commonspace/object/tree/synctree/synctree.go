@@ -55,15 +55,13 @@ type syncTree struct {
 
 var log = logger.NewNamed("common.commonspace.synctree")
 
-var createSyncClient = objectsync.NewSyncClient
-
 type ResponsiblePeersGetter interface {
 	GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error)
 }
 
 type BuildDeps struct {
 	SpaceId            string
-	ObjectSync         objectsync.ObjectSync
+	SyncClient         objectsync.SyncClient
 	Configuration      nodeconf.NodeConf
 	HeadNotifiable     HeadNotifiable
 	Listener           updatelistener.UpdateListener
@@ -99,10 +97,7 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	if err != nil {
 		return
 	}
-	syncClient := createSyncClient(
-		deps.SpaceId,
-		deps.ObjectSync.MessagePool(),
-		objectsync.GetRequestFactory())
+	syncClient := deps.SyncClient
 	syncTree := &syncTree{
 		ObjectTree: objTree,
 		syncClient: syncClient,
