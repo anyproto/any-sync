@@ -167,7 +167,7 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 	defer func() {
 		if err != nil {
 			log.With(zap.Error(err)).DebugCtx(ctx, "full sync request finished with error")
-			s.syncClient.SendWithReply(ctx, senderId, treechangeproto.WrapError(treechangeproto.ErrorCodes_FullSyncRequestError, header), replyId)
+			s.syncClient.SendWithReply(ctx, senderId, treechangeproto.WrapError(treechangeproto.ErrFullSync, header), replyId)
 			return
 		} else if fullResponse != nil {
 			cnt := fullResponse.Content.GetFullSyncResponse()
