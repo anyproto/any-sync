@@ -24,6 +24,10 @@ func RegisterErr(err error, code uint64) error {
 	return errWithCode
 }
 
+func Code(err error) uint64 {
+	return drpcerr.Code(err)
+}
+
 func Err(code uint64) error {
 	err, ok := errsMap[code]
 	if !ok {
