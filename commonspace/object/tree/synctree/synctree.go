@@ -243,7 +243,7 @@ func (s *syncTree) SyncWithPeer(ctx context.Context, peerId string) (err error) 
 	s.Lock()
 	defer s.Unlock()
 	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
-	return s.syncClient.SendWithReply(ctx, peerId, headUpdate, "")
+	return s.syncClient.SendWithReply(ctx, peerId, headUpdate.RootChange.Id, headUpdate, "")
 }
 
 func (s *syncTree) afterBuild() {
