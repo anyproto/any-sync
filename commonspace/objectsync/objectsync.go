@@ -84,30 +84,30 @@ func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *sp
 		log = log.With(zap.Bool("isDeleted", true))
 		// preventing sync with other clients if they are not just syncing the settings tree
 		if !slices.Contains(s.configuration.NodeIds(s.spaceId), senderId) && msg.ObjectId != s.spaceStorage.SpaceSettingsId() {
-			return s.unmarshallSendError(ctx, msg, spacesyncproto.ErrSpaceIsDeleted, senderId)
+			return s.unmarshallSendError(ctx, msg, spacesyncproto.ErrSpaceIsDeleted, senderId, msg.ObjectId)
 		}
 	}
 	log.DebugCtx(ctx, "handling message")
 	hasTree, err := s.spaceStorage.HasTree(msg.ObjectId)
 	if err != nil {
-		return s.unmarshallSendError(ctx, msg, spacesyncproto.ErrUnexpected, senderId)
+		return s.unmarshallSendError(ctx, msg, spacesyncproto.ErrUnexpected, senderId, msg.ObjectId)
 	}
 	// in this case we will try to get it from remote, unless the sender also sent us the same request :-)
 	if !hasTree {
 		treeMsg := &treechangeproto.TreeSyncMessage{}
 		err = proto.Unmarshal(msg.Payload, treeMsg)
 		if err != nil {
-			return s.sendError(ctx, nil, spacesyncproto.ErrUnexpected, senderId, msg.ReplyId)
+			return s.sendError(ctx, nil, spacesyncproto.ErrUnexpected, senderId, msg.ObjectId, msg.ReplyId)
 		}
 		// this means that we don't have the tree locally and therefore can't return it
 		if s.isEmptyFullSyncRequest(treeMsg) {
-			return s.sendError(ctx, treeMsg.RootChange, treechangeproto.ErrGetTree, senderId, msg.ReplyId)
+			return s.sendError(ctx, nil, treechangeproto.ErrGetTree, senderId, msg.ObjectId, msg.ReplyId)
 		}
 	}
 	obj, err := s.objectGetter.GetObject(ctx, msg.ObjectId)
 	if err != nil {
 		log.DebugCtx(ctx, "failed to get object")
-		return s.unmarshallSendError(ctx, msg, err, senderId)
+		return s.unmarshallSendError(ctx, msg, err, msg.ObjectId, senderId)
 	}
 	return obj.HandleMessage(ctx, senderId, msg)
 }
@@ -116,18 +116,18 @@ func (s *objectSync) MessagePool() MessagePool {
 	return s.messagePool
 }
 
-func (s *objectSync) unmarshallSendError(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage, respErr error, senderId string) (err error) {
+func (s *objectSync) unmarshallSendError(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage, respErr error, senderId, objectId string) (err error) {
 	unmarshalled := &treechangeproto.TreeSyncMessage{}
 	err = proto.Unmarshal(msg.Payload, unmarshalled)
 	if err != nil {
 		return
 	}
-	return s.sendError(ctx, unmarshalled.RootChange, respErr, senderId, msg.ReplyId)
+	return s.sendError(ctx, unmarshalled.RootChange, respErr, senderId, objectId, msg.ReplyId)
 }
 
-func (s *objectSync) sendError(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, respErr error, senderId, replyId string) (err error) {
+func (s *objectSync) sendError(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, respErr error, senderId, objectId, replyId string) (err error) {
 	resp := treechangeproto.WrapError(respErr, root)
-	return s.syncClient.SendWithReply(ctx, senderId, resp, replyId)
+	return s.syncClient.SendWithReply(ctx, senderId, objectId, resp, replyId)
 }
 
 func (s *objectSync) isEmptyFullSyncRequest(msg *treechangeproto.TreeSyncMessage) bool {

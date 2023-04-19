@@ -10,7 +10,7 @@ import (
 type SyncClient interface {
 	RequestFactory
 	Broadcast(ctx context.Context, msg *treechangeproto.TreeSyncMessage) (err error)
-	SendWithReply(ctx context.Context, peerId string, msg *treechangeproto.TreeSyncMessage, replyId string) (err error)
+	SendWithReply(ctx context.Context, peerId, objectId string, msg *treechangeproto.TreeSyncMessage, replyId string) (err error)
 	PeerManager() peermanager.PeerManager
 }
 
@@ -39,8 +39,8 @@ func (s *syncClient) Broadcast(ctx context.Context, msg *treechangeproto.TreeSyn
 	return s.peerManager.Broadcast(ctx, objMsg)
 }
 
-func (s *syncClient) SendWithReply(ctx context.Context, peerId string, msg *treechangeproto.TreeSyncMessage, replyId string) (err error) {
-	objMsg, err := MarshallTreeMessage(msg, s.spaceId, msg.RootChange.Id, replyId)
+func (s *syncClient) SendWithReply(ctx context.Context, peerId, objectId string, msg *treechangeproto.TreeSyncMessage, replyId string) (err error) {
+	objMsg, err := MarshallTreeMessage(msg, s.spaceId, objectId, replyId)
 	if err != nil {
 		return
 	}

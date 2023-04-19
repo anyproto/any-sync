@@ -154,7 +154,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		fx.syncClientMock.EXPECT().
 			CreateFullSyncRequest(gomock.Eq(fx.objectTreeMock), gomock.Eq([]string{"h1"}), gomock.Eq([]string{"h1"})).
 			Return(fullRequest, nil)
-		fx.syncClientMock.EXPECT().SendWithReply(gomock.Any(), gomock.Eq(senderId), gomock.Eq(fullRequest), gomock.Eq(""))
+		fx.syncClientMock.EXPECT().SendWithReply(gomock.Any(), gomock.Eq(senderId), gomock.Eq(treeId), gomock.Eq(fullRequest), gomock.Eq(""))
 
 		err := fx.syncHandler.HandleMessage(ctx, senderId, objectMsg)
 		require.NoError(t, err)
@@ -200,7 +200,7 @@ func TestSyncHandler_HandleHeadUpdate(t *testing.T) {
 		fx.syncClientMock.EXPECT().
 			CreateFullSyncRequest(gomock.Eq(fx.objectTreeMock), gomock.Eq([]string{"h1"}), gomock.Eq([]string{"h1"})).
 			Return(fullRequest, nil)
-		fx.syncClientMock.EXPECT().SendWithReply(gomock.Any(), gomock.Eq(senderId), gomock.Eq(fullRequest), gomock.Eq(""))
+		fx.syncClientMock.EXPECT().SendWithReply(gomock.Any(), gomock.Eq(senderId), gomock.Eq(treeId), gomock.Eq(fullRequest), gomock.Eq(""))
 
 		err := fx.syncHandler.HandleMessage(ctx, senderId, objectMsg)
 		require.NoError(t, err)
@@ -266,7 +266,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 		fx.syncClientMock.EXPECT().
 			CreateFullSyncResponse(gomock.Eq(fx.objectTreeMock), gomock.Eq([]string{"h1"}), gomock.Eq([]string{"h1"})).
 			Return(fullResponse, nil)
-		fx.syncClientMock.EXPECT().SendWithReply(gomock.Any(), gomock.Eq(senderId), gomock.Eq(fullResponse), gomock.Eq(""))
+		fx.syncClientMock.EXPECT().SendWithReply(gomock.Any(), gomock.Eq(senderId), gomock.Eq(treeId), gomock.Eq(fullResponse), gomock.Eq(""))
 
 		err := fx.syncHandler.HandleMessage(ctx, senderId, objectMsg)
 		require.NoError(t, err)
@@ -295,7 +295,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 		fx.syncClientMock.EXPECT().
 			CreateFullSyncResponse(gomock.Eq(fx.objectTreeMock), gomock.Eq([]string{"h1"}), gomock.Eq([]string{"h1"})).
 			Return(fullResponse, nil)
-		fx.syncClientMock.EXPECT().SendWithReply(gomock.Any(), gomock.Eq(senderId), gomock.Eq(fullResponse), gomock.Eq(""))
+		fx.syncClientMock.EXPECT().SendWithReply(gomock.Any(), gomock.Eq(senderId), gomock.Eq(treeId), gomock.Eq(fullResponse), gomock.Eq(""))
 
 		err := fx.syncHandler.HandleMessage(ctx, senderId, objectMsg)
 		require.NoError(t, err)
@@ -322,7 +322,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 		fx.syncClientMock.EXPECT().
 			CreateFullSyncResponse(gomock.Eq(fx.objectTreeMock), gomock.Eq([]string{"h1"}), gomock.Eq([]string{"h1"})).
 			Return(fullResponse, nil)
-		fx.syncClientMock.EXPECT().SendWithReply(gomock.Any(), gomock.Eq(senderId), gomock.Eq(fullResponse), gomock.Eq(replyId))
+		fx.syncClientMock.EXPECT().SendWithReply(gomock.Any(), gomock.Eq(senderId), gomock.Eq(treeId), gomock.Eq(fullResponse), gomock.Eq(replyId))
 
 		err := fx.syncHandler.HandleMessage(ctx, senderId, objectMsg)
 		require.NoError(t, err)
@@ -357,7 +357,7 @@ func TestSyncHandler_HandleFullSyncRequest(t *testing.T) {
 				RawChanges: []*treechangeproto.RawTreeChangeWithId{chWithId},
 			})).
 			Return(objecttree.AddResult{}, fmt.Errorf(""))
-		fx.syncClientMock.EXPECT().SendWithReply(gomock.Any(), gomock.Eq(senderId), gomock.Any(), gomock.Eq(""))
+		fx.syncClientMock.EXPECT().SendWithReply(gomock.Any(), gomock.Eq(senderId), gomock.Eq(treeId), gomock.Any(), gomock.Eq(""))
 
 		err := fx.syncHandler.HandleMessage(ctx, senderId, objectMsg)
 		require.Error(t, err)
