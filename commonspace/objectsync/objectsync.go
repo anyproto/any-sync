@@ -61,7 +61,7 @@ func NewObjectSync(
 		configuration:  configuration,
 	}
 	os.messagePool = newMessagePool(peerManager, os.handleMessage)
-	os.syncClient = NewSyncClient(spaceId, os.messagePool, GetRequestFactory())
+	os.syncClient = NewSyncClient(spaceId, os.messagePool, NewRequestFactory())
 	return os
 }
 

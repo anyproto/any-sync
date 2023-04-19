@@ -94,7 +94,7 @@ type testSyncHandler struct {
 
 // createSyncHandler creates a sync handler when a tree is already created
 func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, log *messageLog) *testSyncHandler {
-	factory := objectsync.GetRequestFactory()
+	factory := objectsync.NewRequestFactory()
 	syncClient := objectsync.NewSyncClient(spaceId, newTestMessagePool(peerId, log), factory)
 	netTree := &broadcastTree{
 		ObjectTree: objTree,
@@ -106,7 +106,7 @@ func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, lo
 
 // createEmptySyncHandler creates a sync handler when the tree will be provided later (this emulates the situation when we have no tree)
 func createEmptySyncHandler(peerId, spaceId string, aclList list.AclList, log *messageLog) *testSyncHandler {
-	factory := objectsync.GetRequestFactory()
+	factory := objectsync.NewRequestFactory()
 	syncClient := objectsync.NewSyncClient(spaceId, newTestMessagePool(peerId, log), factory)
 
 	batcher := mb.New[protocolMsg](0)
@@ -138,7 +138,7 @@ func (h *testSyncHandler) HandleMessage(ctx context.Context, senderId string, re
 		return
 	}
 	if unmarshalled.Content.GetFullSyncResponse() == nil {
-		newTreeRequest := objectsync.GetRequestFactory().CreateNewTreeRequest()
+		newTreeRequest := objectsync.NewRequestFactory().CreateNewTreeRequest()
 		var objMsg *spacesyncproto.ObjectSyncMessage
 		objMsg, err = objectsync.MarshallTreeMessage(newTreeRequest, request.SpaceId, request.ObjectId, "")
 		if err != nil {
@@ -165,7 +165,7 @@ func (h *testSyncHandler) HandleMessage(ctx context.Context, senderId string, re
 	}
 	h.SyncHandler = newSyncTreeHandler(request.SpaceId, netTree, h.syncClient, syncstatus.NewNoOpSyncStatus())
 	var objMsg *spacesyncproto.ObjectSyncMessage
-	newTreeRequest := objectsync.GetRequestFactory().CreateHeadUpdate(netTree, res.Added)
+	newTreeRequest := objectsync.NewRequestFactory().CreateHeadUpdate(netTree, res.Added)
 	objMsg, err = objectsync.MarshallTreeMessage(newTreeRequest, request.SpaceId, request.ObjectId, "")
 	if err != nil {
 		return
