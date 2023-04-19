@@ -46,7 +46,7 @@ type headSync struct {
 	diff           ldiff.Diff
 	log            logger.CtxLogger
 	syncer         DiffSyncer
-	configuration  nodeconf.Configuration
+	configuration  nodeconf.NodeConf
 	spaceIsDeleted *atomic.Bool
 
 	syncPeriod int
@@ -56,7 +56,7 @@ func NewHeadSync(
 	spaceId string,
 	spaceIsDeleted *atomic.Bool,
 	syncPeriod int,
-	configuration nodeconf.Configuration,
+	configuration nodeconf.NodeConf,
 	storage spacestorage.SpaceStorage,
 	peerManager peermanager.PeerManager,
 	cache treemanager.TreeManager,

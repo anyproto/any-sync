@@ -72,7 +72,7 @@ type treeStatus struct {
 
 type syncStatusProvider struct {
 	sync.Mutex
-	configuration  nodeconf.Configuration
+	configuration  nodeconf.NodeConf
 	periodicSync   periodicsync.PeriodicSync
 	updateReceiver UpdateReceiver
 	storage        spacestorage.SpaceStorage
@@ -92,11 +92,11 @@ type syncStatusProvider struct {
 type SyncStatusDeps struct {
 	UpdateIntervalSecs int
 	UpdateTimeout      time.Duration
-	Configuration      nodeconf.Configuration
+	Configuration      nodeconf.NodeConf
 	Storage            spacestorage.SpaceStorage
 }
 
-func DefaultDeps(configuration nodeconf.Configuration, store spacestorage.SpaceStorage) SyncStatusDeps {
+func DefaultDeps(configuration nodeconf.NodeConf, store spacestorage.SpaceStorage) SyncStatusDeps {
 	return SyncStatusDeps{
 		UpdateIntervalSecs: syncUpdateInterval,
 		UpdateTimeout:      syncTimeout,

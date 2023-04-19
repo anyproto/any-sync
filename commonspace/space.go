@@ -121,7 +121,7 @@ type space struct {
 	treeManager    *commonGetter
 	account        accountservice.Service
 	aclList        *syncacl.SyncAcl
-	configuration  nodeconf.Configuration
+	configuration  nodeconf.NodeConf
 	settingsObject settings.SettingsObject
 	peerManager    peermanager.PeerManager
 	treeBuilder    objecttree.BuildObjectTreeFunc

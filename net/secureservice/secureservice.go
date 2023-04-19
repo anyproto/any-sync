@@ -70,7 +70,7 @@ func (s *secureService) Init(a *app.App) (err error) {
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 
 	s.inboundChecker = s.noVerifyChecker
-	confTypes := s.nodeconf.GetLast().NodeTypes(account.Account().PeerId)
+	confTypes := s.nodeconf.NodeTypes(account.Account().PeerId)
 	if len(confTypes) > 0 {
 		// require identity verification if we are node
 		s.inboundChecker = s.peerSignVerifier
@@ -116,7 +116,7 @@ func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (sec.
 		return nil, HandshakeError{err: err, remoteAddr: conn.RemoteAddr().String()}
 	}
 	peerId := sc.RemotePeer().String()
-	confTypes := s.nodeconf.GetLast().NodeTypes(peerId)
+	confTypes := s.nodeconf.NodeTypes(peerId)
 	var checker handshake.CredentialChecker
 	if len(confTypes) > 0 {
 		checker = s.peerSignVerifier

@@ -1,5 +1,18 @@
 package nodeconf
 
+import (
+	"errors"
+	"time"
+)
+
+type ConfigGetter interface {
+	GetNodeConf() Configuration
+}
+
+var (
+	ErrConfigurationNotFound = errors.New("node nodeConf not found")
+)
+
 type NodeType string
 
 const (
@@ -10,21 +23,32 @@ const (
 	NodeTypeCoordinator NodeType = "coordinator"
 )
 
-type configGetter interface {
-	GetNodes() []NodeConfig
+type Node struct {
+	PeerId    string     `yaml:"peerId" bson:"peerId"`
+	Addresses []string   `yaml:"addresses" bson:"addresses"`
+	Types     []NodeType `yaml:"types,omitempty" bson:"types"`
 }
 
-type NodeConfig struct {
-	PeerId    string     `yaml:"peerId"`
-	Addresses []string   `yaml:"address"`
-	Types     []NodeType `yaml:"types,omitempty"`
+func (n Node) Id() string {
+	return n.PeerId
 }
 
-func (n NodeConfig) HasType(t NodeType) bool {
+func (n Node) Capacity() float64 {
+	return 1
+}
+
+func (n Node) HasType(t NodeType) bool {
 	for _, nt := range n.Types {
 		if nt == t {
 			return true
 		}
 	}
 	return false
+}
+
+type Configuration struct {
+	Id           string    `yaml:"id"`
+	NetworkId    string    `yaml:"networkId"`
+	Nodes        []Node    `yaml:"nodes"`
+	CreationTime time.Time `yaml:"creationTime"`
 }

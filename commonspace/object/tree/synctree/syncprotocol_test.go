@@ -64,16 +64,20 @@ func TestRandomMerge(t *testing.T) {
 		rnd      = rand.New(rand.NewSource(time.Now().Unix()))
 		levels   = 20
 		perLevel = 20
+		rounds   = 10
 	)
-	testTreeMerge(t, levels, perLevel, func() bool {
-		return true
-	})
-	testTreeMerge(t, levels, perLevel, func() bool {
-		return false
-	})
-	testTreeMerge(t, levels, perLevel, func() bool {
-		return rnd.Intn(10) > 8
-	})
+	for i := 0; i < rounds; i++ {
+		testTreeMerge(t, levels, perLevel, func() bool {
+			return true
+		})
+		testTreeMerge(t, levels, perLevel, func() bool {
+			return false
+		})
+		testTreeMerge(t, levels, perLevel, func() bool {
+			return rnd.Intn(10) > 8
+		})
+		levels += 2
+	}
 }
 
 func testTreeMerge(t *testing.T, levels, perlevel int, isSnapshot func() bool) {
@@ -113,7 +117,7 @@ func testTreeMerge(t *testing.T, levels, perlevel int, isSnapshot func() bool) {
 		NewHeads:   initialRes.heads,
 		RawChanges: initialRes.changes,
 	})
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 	firstHeads := fx.handlers["peer1"].tree().Heads()
 	secondHeads := fx.handlers["peer2"].tree().Heads()
 	require.True(t, slice.UnsortedEquals(firstHeads, secondHeads))
@@ -139,7 +143,7 @@ func testTreeMerge(t *testing.T, levels, perlevel int, isSnapshot func() bool) {
 		NewHeads:   peer2Res.heads,
 		RawChanges: peer2Res.changes,
 	})
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 	fx.stop()
 	firstTree := fx.handlers["peer1"].tree()
 	secondTree := fx.handlers["peer2"].tree()

@@ -6,6 +6,7 @@ import (
 	"github.com/anytypeio/any-sync/app/ocache"
 	"github.com/anytypeio/any-sync/net/dialer"
 	"github.com/anytypeio/any-sync/net/peer"
+	"go.uber.org/zap"
 	"math/rand"
 )
 
@@ -78,6 +79,8 @@ func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error
 	for _, peerId := range peerIds {
 		if v, err := p.cache.Get(ctx, peerId); err == nil {
 			return v.(peer.Peer), nil
+		} else {
+			log.Debug("unable to connect", zap.String("peerId", peerId), zap.Error(err))
 		}
 	}
 	return nil, ErrUnableToConnect
@@ -92,6 +95,8 @@ func (p *pool) DialOneOf(ctx context.Context, peerIds []string) (peer.Peer, erro
 	for _, peerId := range peerIds {
 		if v, err := p.dialer.Dial(ctx, peerId); err == nil {
 			return v.(peer.Peer), nil
+		} else {
+			log.Debug("unable to connect", zap.String("peerId", peerId), zap.Error(err))
 		}
 	}
 	return nil, ErrUnableToConnect

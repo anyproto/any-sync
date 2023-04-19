@@ -17,21 +17,25 @@ func GenNodeConfig(num int) (conf *Config) {
 		if err := ac.Init(nil); err != nil {
 			panic(err)
 		}
-		conf.nodes = append(conf.nodes, ac.NodeConf(nil))
+		conf.nodes.Nodes = append(conf.nodes.Nodes, ac.NodeConf(nil))
 		conf.configs = append(conf.configs, ac)
 	}
 	return conf
 }
 
 type Config struct {
-	nodes   []nodeconf.NodeConfig
+	nodes   nodeconf.Configuration
 	configs []*accounttest.AccountTestService
 }
 
 func (c *Config) Init(a *app.App) (err error) { return }
 func (c *Config) Name() string                { return "config" }
 
-func (c *Config) GetNodes() []nodeconf.NodeConfig {
+func (c *Config) GetNodesConfId() string {
+	return "test"
+}
+
+func (c *Config) GetNodeConf() nodeconf.Configuration {
 	return c.nodes
 }
 
