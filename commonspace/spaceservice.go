@@ -154,7 +154,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		syncStatus = syncstatus.NewSyncStatusProvider(st.Id(), syncstatus.DefaultDeps(lastConfiguration, st))
 	}
 	var builder objecttree.BuildObjectTreeFunc
-	if s.config.TreeInMemoryData {
+	if s.config.TreeNoInMemoryData {
 		builder = objecttree.BuildEmptyDataObjectTree
 	} else {
 		builder = objecttree.BuildObjectTree
