@@ -134,5 +134,5 @@ func (s *objectSync) sendError(ctx context.Context, root *treechangeproto.RawTre
 }
 
 func (s *objectSync) isEmptyFullSyncRequest(msg *treechangeproto.TreeSyncMessage) bool {
-	return len(msg.GetContent().GetFullSyncRequest().GetHeads()) == 0
+	return msg.GetContent().GetFullSyncRequest() != nil && len(msg.GetContent().GetFullSyncRequest().GetHeads()) == 0
 }
