@@ -154,10 +154,10 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		syncStatus = syncstatus.NewSyncStatusProvider(st.Id(), syncstatus.DefaultDeps(lastConfiguration, st))
 	}
 	var builder objecttree.BuildObjectTreeFunc
-	if s.config.TreeNoInMemoryData {
-		builder = objecttree.BuildEmptyDataObjectTree
-	} else {
+	if s.config.KeepTreeDataInMemory {
 		builder = objecttree.BuildObjectTree
+	} else {
+		builder = objecttree.BuildEmptyDataObjectTree
 	}
 
 	peerManager, err := s.peermanagerProvider.NewPeerManager(ctx, id)
