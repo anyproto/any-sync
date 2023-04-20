@@ -5,7 +5,7 @@ type ConfigGetter interface {
 }
 
 type Config struct {
-	GCTTL              int  `yaml:"gcTTL"`
-	SyncPeriod         int  `yaml:"syncPeriod"`
-	TreeNoInMemoryData bool `yaml:"treeNoInMemoryData"`
+	GCTTL                int  `yaml:"gcTTL"`
+	SyncPeriod           int  `yaml:"syncPeriod"`
+	KeepTreeDataInMemory bool `yaml:"keepTreeDataInMemory"`
 }
