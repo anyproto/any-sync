@@ -59,7 +59,7 @@ func TestEmptyClientGetsFullHistory(t *testing.T) {
 	require.Len(t, fullResponseMsg.changes, 2)
 }
 
-func TestRandomMerge(t *testing.T) {
+func TestTreeFuzzyMerge(t *testing.T) {
 	var (
 		rnd      = rand.New(rand.NewSource(time.Now().Unix()))
 		levels   = 20
