@@ -119,7 +119,7 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 		err = rpcerr.Err(errResp.ErrCode)
 		return
 	case resp.GetContent().GetFullSyncResponse() == nil:
-		err = fmt.Errorf("expected to get full sync response, but got something else")
+		err = treechangeproto.ErrUnexpected
 		return
 	default:
 		break
