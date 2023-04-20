@@ -382,7 +382,7 @@ type genResult struct {
 	snapshotId string
 }
 
-// genChanges generates several levels of tree changes where each level is connected with only previous one
+// genChanges generates several levels of tree changes where each level is connected only with previous one
 func genChanges(creator *objecttree.MockChangeCreator, params genParams) (res genResult) {
 	src := rand.NewSource(time.Now().Unix())
 	rnd := rand.New(src)
@@ -393,10 +393,18 @@ func genChanges(creator *objecttree.MockChangeCreator, params genParams) (res ge
 	prevHeads = append(prevHeads, params.prevHeads...)
 
 	for i := 0; i < params.levels; i++ {
-		if params.isSnapshot() {
-			newId := fmt.Sprintf("%s.%d.%d", params.prefix, params.startIdx+i, 0)
-			newCh := creator.CreateRaw(newId, params.aclId, snapshotId, true, prevHeads...)
+		var (
+			newHeads []string
+			usedIds  = map[string]struct{}{}
+		)
+		newChange := func(isSnapshot bool, idx int, prevIds []string) string {
+			newId := fmt.Sprintf("%s.%d.%d", params.prefix, params.startIdx+i, idx)
+			newCh := creator.CreateRaw(newId, params.aclId, snapshotId, isSnapshot, prevIds...)
 			res.changes = append(res.changes, newCh)
+			return newId
+		}
+		if params.isSnapshot() {
+			newId := newChange(true, 0, prevHeads)
 			prevHeads = []string{newId}
 			snapshotId = newId
 			continue
@@ -405,10 +413,6 @@ func genChanges(creator *objecttree.MockChangeCreator, params genParams) (res ge
 		if perLevel == 0 {
 			perLevel = 1
 		}
-		var (
-			newHeads []string
-			usedIds  = map[string]struct{}{}
-		)
 		for j := 0; j < perLevel; j++ {
 			prevConns := rnd.Intn(len(prevHeads))
 			if prevConns == 0 {
@@ -428,14 +432,12 @@ func genChanges(creator *objecttree.MockChangeCreator, params genParams) (res ge
 				prevHeads = unusedIds
 				prevConns = len(prevHeads)
 			}
-			var prevChId []string
+			var prevIds []string
 			for k := 0; k < prevConns; k++ {
-				prevChId = append(prevChId, prevHeads[k])
+				prevIds = append(prevIds, prevHeads[k])
 				usedIds[prevHeads[k]] = struct{}{}
 			}
-			newId := fmt.Sprintf("%s.%d.%d", params.prefix, params.startIdx+i, j)
-			newCh := creator.CreateRaw(newId, params.aclId, snapshotId, false, prevChId...)
-			res.changes = append(res.changes, newCh)
+			newId := newChange(false, j, prevIds)
 			newHeads = append(newHeads, newId)
 		}
 		prevHeads = newHeads
