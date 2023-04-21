@@ -541,6 +541,7 @@ func rawSettingsPayload(accountKeys *accountdata.AccountKeys, spaceId, aclHeadId
 }
 
 func rawAclWithId(accountKeys *accountdata.AccountKeys, spaceId string) (aclHeadId string, rawWithId *aclrecordproto.RawAclRecordWithId, err error) {
+	// TODO: use same storage creation methods as we use in spaces
 	readKeyBytes := make([]byte, 32)
 	_, err = rand.Read(readKeyBytes)
 	if err != nil {
@@ -602,6 +603,7 @@ func rawAclWithId(accountKeys *accountdata.AccountKeys, spaceId string) (aclHead
 }
 
 func rawHeaderWithId(accountKeys *accountdata.AccountKeys) (spaceId string, rawWithId *spacesyncproto.RawSpaceHeaderWithId, err error) {
+	// TODO: use same storage creation methods as we use in spaces
 	identity, err := accountKeys.SignKey.GetPublic().Marshall()
 	if err != nil {
 		return
