@@ -80,7 +80,7 @@ func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePaylo
 	if err != nil {
 		return
 	}
-	store, err := s.storageProvider.CreateSpaceStorage(storageCreate)
+	store, err := s.createSpaceStorage(storageCreate)
 	if err != nil {
 		if err == spacestorage.ErrSpaceStorageExists {
 			return storageCreate.SpaceHeaderWithId.Id, nil
@@ -105,7 +105,7 @@ func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePaylo
 	if err != nil {
 		return
 	}
-	store, err := s.storageProvider.CreateSpaceStorage(storageCreate)
+	store, err := s.createSpaceStorage(storageCreate)
 	if err != nil {
 		if err == spacestorage.ErrSpaceStorageExists {
 			return storageCreate.SpaceHeaderWithId.Id, nil
@@ -197,7 +197,7 @@ func (s *spaceService) addSpaceStorage(ctx context.Context, spaceDescription Spa
 			Id:        spaceDescription.SpaceSettingsId,
 		},
 	}
-	st, err = s.storageProvider.CreateSpaceStorage(payload)
+	st, err = s.createSpaceStorage(payload)
 	if err != nil {
 		err = spacesyncproto.ErrUnexpected
 		if err == spacestorage.ErrSpaceStorageExists {
@@ -229,7 +229,7 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 		return
 	}
 
-	st, err = s.storageProvider.CreateSpaceStorage(spacestorage.SpaceStorageCreatePayload{
+	st, err = s.createSpaceStorage(spacestorage.SpaceStorageCreatePayload{
 		AclWithId: &aclrecordproto.RawAclRecordWithId{
 			Payload: res.Payload.AclPayload,
 			Id:      res.Payload.AclPayloadId,
@@ -241,4 +241,12 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 		SpaceHeaderWithId: res.Payload.SpaceHeader,
 	})
 	return
+}
+
+func (s *spaceService) createSpaceStorage(payload spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {
+	err := validateSpaceStorageCreatePayload(payload)
+	if err != nil {
+		return nil, err
+	}
+	return s.storageProvider.CreateSpaceStorage(payload)
 }
