@@ -6,12 +6,12 @@ import (
 	"time"
 )
 
-type PrometheusDRPC struct {
+type prometheusDRPC struct {
 	drpc.Handler
 	SummaryVec *prometheus.SummaryVec
 }
 
-func (ph *PrometheusDRPC) HandleRPC(stream drpc.Stream, rpc string) (err error) {
+func (ph *prometheusDRPC) HandleRPC(stream drpc.Stream, rpc string) (err error) {
 	st := time.Now()
 	defer func() {
 		ph.SummaryVec.WithLabelValues(rpc).Observe(time.Since(st).Seconds())
