@@ -23,7 +23,7 @@ func TestSuccessHeaderPayloadForSpaceCreate(t *testing.T) {
 	require.NoError(t, err)
 	_, rawHeaderWithId, err := rawHeaderWithId(accountKeys)
 	require.NoError(t, err)
-	err = validateCreateSpaceHeaderPayload(rawHeaderWithId)
+	err = ValidateSpaceHeader(rawHeaderWithId, nil)
 	require.NoError(t, err)
 }
 
@@ -64,7 +64,7 @@ func TestFailedHeaderPayloadForSpaceCreate_InvalidFormatSpaceId(t *testing.T) {
 		RawHeader: marhalledRawHeader,
 		Id:        spaceId,
 	}
-	err = validateCreateSpaceHeaderPayload(rawHeaderWithId)
+	err = ValidateSpaceHeader(rawHeaderWithId, nil)
 	assert.EqualErrorf(t, err, spacestorage.ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", spacestorage.ErrIncorrectSpaceHeader, err)
 }
 
@@ -104,7 +104,7 @@ func TestFailedHeaderPayloadForSpaceCreate_CidIsWrong(t *testing.T) {
 		RawHeader: marhalledRawHeader,
 		Id:        spaceId,
 	}
-	err = validateCreateSpaceHeaderPayload(rawHeaderWithId)
+	err = ValidateSpaceHeader(rawHeaderWithId, nil)
 	assert.EqualErrorf(t, err, objecttree.ErrIncorrectCid.Error(), "Error should be: %v, got: %v", objecttree.ErrIncorrectCid, err)
 }
 
@@ -145,7 +145,7 @@ func TestFailedHeaderPayloadForSpaceCreate_SignedWithAnotherIdentity(t *testing.
 		RawHeader: marhalledRawHeader,
 		Id:        spaceId,
 	}
-	err = validateCreateSpaceHeaderPayload(rawHeaderWithId)
+	err = ValidateSpaceHeader(rawHeaderWithId, nil)
 	assert.EqualErrorf(t, err, objecttree.ErrIncorrectCid.Error(), "Error should be: %v, got: %v", objecttree.ErrIncorrectCid, err)
 }
 
@@ -637,17 +637,17 @@ func rawHeaderWithId(accountKeys *accountdata.AccountKeys) (spaceId string, rawW
 		SpaceHeader: marhalled,
 		Signature:   signature,
 	}
-	marhalledRawHeader, err := rawHeader.Marshal()
+	marshalledRawHeader, err := rawHeader.Marshal()
 	if err != nil {
 		return
 	}
-	id, err := cidutil.NewCidFromBytes(marhalledRawHeader)
+	id, err := cidutil.NewCidFromBytes(marshalledRawHeader)
 	if err != nil {
 		return
 	}
 	spaceId = fmt.Sprintf("%s.%s", id, strconv.FormatUint(replicationKey, 36))
 	rawWithId = &spacesyncproto.RawSpaceHeaderWithId{
-		RawHeader: marhalledRawHeader,
+		RawHeader: marshalledRawHeader,
 		Id:        spaceId,
 	}
 

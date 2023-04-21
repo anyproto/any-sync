@@ -1,7 +1,6 @@
 package commonspace
 
 import (
-	"fmt"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
@@ -188,7 +187,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 }
 
 func validateSpaceStorageCreatePayload(payload spacestorage.SpaceStorageCreatePayload) (err error) {
-	err = validateCreateSpaceHeaderPayload(payload.SpaceHeaderWithId)
+	err = ValidateSpaceHeader(payload.SpaceHeaderWithId, nil)
 	if err != nil {
 		return
 	}
@@ -211,7 +210,16 @@ func validateSpaceStorageCreatePayload(payload spacestorage.SpaceStorageCreatePa
 	return
 }
 
-func validateCreateSpaceHeaderPayload(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId) (err error) {
+func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, identity crypto.PubKey) (err error) {
+	sepIdx := strings.Index(rawHeaderWithId.Id, ".")
+	if sepIdx == -1 {
+		err = objecttree.ErrIncorrectCid
+		return
+	}
+	if !cidutil.VerifyCid(rawHeaderWithId.RawHeader, rawHeaderWithId.Id[:sepIdx]) {
+		err = objecttree.ErrIncorrectCid
+		return
+	}
 	var rawSpaceHeader spacesyncproto.RawSpaceHeader
 	err = proto.Unmarshal(rawHeaderWithId.RawHeader, &rawSpaceHeader)
 	if err != nil {
@@ -220,14 +228,6 @@ func validateCreateSpaceHeaderPayload(rawHeaderWithId *spacesyncproto.RawSpaceHe
 	var header spacesyncproto.SpaceHeader
 	err = proto.Unmarshal(rawSpaceHeader.SpaceHeader, &header)
 	if err != nil {
-		return
-	}
-	split := strings.Split(rawHeaderWithId.Id, ".")
-	if len(split) != 2 {
-		return spacestorage.ErrIncorrectSpaceHeader
-	}
-	if !cidutil.VerifyCid(rawHeaderWithId.RawHeader, split[0]) {
-		err = objecttree.ErrIncorrectCid
 		return
 	}
 	payloadIdentity, err := crypto.UnmarshalEd25519PublicKeyProto(header.Identity)
@@ -239,16 +239,17 @@ func validateCreateSpaceHeaderPayload(rawHeaderWithId *spacesyncproto.RawSpaceHe
 		err = spacestorage.ErrIncorrectSpaceHeader
 		return
 	}
-	id, err := cidutil.NewCidFromBytes(rawHeaderWithId.RawHeader)
-	if err != nil {
-		return
-	}
-	requiredSpaceId := fmt.Sprintf("%s.%s", id, strconv.FormatUint(header.ReplicationKey, 36))
-	if requiredSpaceId != rawHeaderWithId.Id {
+	if rawHeaderWithId.Id[sepIdx+1:] != strconv.FormatUint(header.ReplicationKey, 36) {
 		err = spacestorage.ErrIncorrectSpaceHeader
 		return
 	}
-
+	if identity == nil {
+		return
+	}
+	if !payloadIdentity.Equals(identity) {
+		err = spacestorage.ErrIncorrectSpaceHeader
+		return
+	}
 	return
 }
 
@@ -295,6 +296,10 @@ func validateCreateSpaceAclPayload(rawWithId *aclrecordproto.RawAclRecordWithId)
 }
 
 func validateCreateSpaceSettingsPayload(rawWithId *treechangeproto.RawTreeChangeWithId) (aclHeadId string, spaceId string, err error) {
+	if !cidutil.VerifyCid(rawWithId.RawChange, rawWithId.Id) {
+		err = spacestorage.ErrIncorrectSpaceHeader
+		return
+	}
 	var raw treechangeproto.RawTreeChange
 	err = proto.Unmarshal(rawWithId.RawChange, &raw)
 	if err != nil {
@@ -314,49 +319,8 @@ func validateCreateSpaceSettingsPayload(rawWithId *treechangeproto.RawTreeChange
 		err = spacestorage.ErrIncorrectSpaceHeader
 		return
 	}
-	id, err := cidutil.NewCidFromBytes(rawWithId.RawChange)
-	if id != rawWithId.Id {
-		err = spacestorage.ErrIncorrectSpaceHeader
-		return
-	}
 	spaceId = rootChange.SpaceId
 	aclHeadId = rootChange.AclHeadId
 
-	return
-}
-
-// ValidateSpaceHeader Used in coordinator
-func ValidateSpaceHeader(spaceId string, header []byte, identity crypto.PubKey) (err error) {
-	split := strings.Split(spaceId, ".")
-	if len(split) != 2 {
-		return spacestorage.ErrIncorrectSpaceHeader
-	}
-	if !cidutil.VerifyCid(header, split[0]) {
-		err = objecttree.ErrIncorrectCid
-		return
-	}
-	raw := &spacesyncproto.RawSpaceHeader{}
-	err = proto.Unmarshal(header, raw)
-	if err != nil {
-		return
-	}
-	payload := &spacesyncproto.SpaceHeader{}
-	err = proto.Unmarshal(raw.SpaceHeader, payload)
-	if err != nil {
-		return
-	}
-	payloadIdentity, err := crypto.UnmarshalEd25519PublicKeyProto(payload.Identity)
-	if err != nil {
-		return
-	}
-	if identity != nil && !payloadIdentity.Equals(identity) {
-		err = spacestorage.ErrIncorrectSpaceHeader
-		return
-	}
-	res, err := identity.Verify(raw.SpaceHeader, raw.Signature)
-	if err != nil || !res {
-		err = spacestorage.ErrIncorrectSpaceHeader
-		return
-	}
 	return
 }

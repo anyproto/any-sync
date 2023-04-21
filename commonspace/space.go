@@ -3,7 +3,6 @@ package commonspace
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/headsync"
@@ -30,6 +29,7 @@ import (
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -77,7 +77,7 @@ type SpaceDescription struct {
 }
 
 func NewSpaceId(id string, repKey uint64) string {
-	return fmt.Sprintf("%s.%s", id, strconv.FormatUint(repKey, 36))
+	return strings.Join([]string{id, strconv.FormatUint(repKey, 36)}, ".")
 }
 
 type Space interface {
