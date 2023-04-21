@@ -213,7 +213,7 @@ func validateSpaceStorageCreatePayload(payload spacestorage.SpaceStorageCreatePa
 func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, identity crypto.PubKey) (err error) {
 	sepIdx := strings.Index(rawHeaderWithId.Id, ".")
 	if sepIdx == -1 {
-		err = objecttree.ErrIncorrectCid
+		err = spacestorage.ErrIncorrectSpaceHeader
 		return
 	}
 	if !cidutil.VerifyCid(rawHeaderWithId.RawHeader, rawHeaderWithId.Id[:sepIdx]) {
