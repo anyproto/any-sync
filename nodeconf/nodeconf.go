@@ -85,6 +85,9 @@ func (c *nodeConf) CoordinatorPeers() []string {
 
 func (c *nodeConf) PeerAddresses(peerId string) (addrs []string, ok bool) {
 	addrs, ok = c.addrs[peerId]
+	if ok && len(addrs) == 0 {
+		return nil, false
+	}
 	return
 }
 
