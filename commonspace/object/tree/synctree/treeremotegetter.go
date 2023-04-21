@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/net/peer"
+	"github.com/anytypeio/any-sync/net/rpc/rpcerr"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"time"
@@ -45,13 +46,8 @@ func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err e
 }
 
 func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (msg *treechangeproto.TreeSyncMessage, err error) {
-	newTreeRequest := GetRequestFactory().CreateNewTreeRequest()
-	objMsg, err := marshallTreeMessage(newTreeRequest, t.deps.SpaceId, t.treeId, "")
-	if err != nil {
-		return
-	}
-
-	resp, err := t.deps.ObjectSync.MessagePool().SendSync(ctx, peerId, objMsg)
+	newTreeRequest := t.deps.SyncClient.CreateNewTreeRequest()
+	resp, err := t.deps.SyncClient.SendSync(ctx, peerId, t.treeId, newTreeRequest)
 	if err != nil {
 		return
 	}
@@ -117,9 +113,16 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 	if err != nil {
 		return
 	}
-	if resp.GetContent().GetFullSyncResponse() == nil {
-		err = fmt.Errorf("expected to get full sync response, but got something else")
+	switch {
+	case resp.GetContent().GetErrorResponse() != nil:
+		errResp := resp.GetContent().GetErrorResponse()
+		err = rpcerr.Err(errResp.ErrCode)
 		return
+	case resp.GetContent().GetFullSyncResponse() == nil:
+		err = treechangeproto.ErrUnexpected
+		return
+	default:
+		break
 	}
 	fullSyncResp := resp.GetContent().GetFullSyncResponse()
 
