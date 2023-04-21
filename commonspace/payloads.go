@@ -1,6 +1,7 @@
 package commonspace
 
 import (
+	"errors"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
@@ -20,6 +21,8 @@ import (
 const (
 	SpaceReserved = "any-sync.space"
 )
+
+var ErrIncorrectIdentity = errors.New("incorrect identity")
 
 func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
 	// marshalling keys
@@ -247,7 +250,7 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 		return
 	}
 	if !payloadIdentity.Equals(identity) {
-		err = spacestorage.ErrIncorrectSpaceHeader
+		err = ErrIncorrectIdentity
 		return
 	}
 	return
