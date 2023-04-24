@@ -15,6 +15,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
+	"github.com/anytypeio/any-sync/metric"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/pool"
 	"github.com/anytypeio/any-sync/net/rpc/rpcerr"
@@ -51,6 +52,7 @@ type spaceService struct {
 	credentialProvider   credentialprovider.CredentialProvider
 	treeGetter           treegetter.TreeGetter
 	pool                 pool.Pool
+	metric               metric.Metric
 }
 
 func (s *spaceService) Init(a *app.App) (err error) {
@@ -67,6 +69,7 @@ func (s *spaceService) Init(a *app.App) (err error) {
 		s.credentialProvider = credentialprovider.NewNoOp()
 	}
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
+	s.metric, _ = a.Component(metric.CName).(metric.Metric)
 	return nil
 }
 
@@ -173,6 +176,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		treesUsed:     &atomic.Int32{},
 		isClosed:      spaceIsClosed,
 		isDeleted:     spaceIsDeleted,
+		metric:        s.metric,
 	}
 	return sp, nil
 }
