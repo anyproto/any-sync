@@ -24,6 +24,7 @@ func New() Metric {
 type Metric interface {
 	Registry() *prometheus.Registry
 	WrapDRPCHandler(h drpc.Handler) drpc.Handler
+	RequestLog(ctx context.Context, fields ...zap.Field)
 	app.ComponentRunnable
 }
 

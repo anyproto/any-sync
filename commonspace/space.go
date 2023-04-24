@@ -3,6 +3,7 @@ package commonspace
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/headsync"
@@ -20,6 +21,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
+	"github.com/anytypeio/any-sync/metric"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/anytypeio/any-sync/util/crypto"
@@ -29,7 +31,6 @@ import (
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -55,10 +56,21 @@ type SpaceCreatePayload struct {
 }
 
 type HandleMessage struct {
-	Id       uint64
-	Deadline time.Time
-	SenderId string
-	Message  *spacesyncproto.ObjectSyncMessage
+	Id                uint64
+	ReceiveTime       time.Time
+	StartHandlingTime time.Time
+	Deadline          time.Time
+	SenderId          string
+	Message           *spacesyncproto.ObjectSyncMessage
+}
+
+func (m HandleMessage) LogFields(fields ...zap.Field) []zap.Field {
+	return append(fields,
+		metric.SpaceId(m.Message.SpaceId),
+		metric.ObjectId(m.Message.ObjectId),
+		metric.QueueDur(m.StartHandlingTime.Sub(m.ReceiveTime)),
+		metric.TotalDur(time.Since(m.ReceiveTime)),
+	)
 }
 
 type SpaceDerivePayload struct {
@@ -77,7 +89,7 @@ type SpaceDescription struct {
 }
 
 func NewSpaceId(id string, repKey uint64) string {
-	return strings.Join([]string{id, strconv.FormatUint(repKey, 36)}, ".")
+	return fmt.Sprintf("%s.%s", id, strconv.FormatUint(repKey, 36))
 }
 
 type Space interface {
@@ -88,6 +100,7 @@ type Space interface {
 	DebugAllHeads() []headsync.TreeHeads
 	Description() (SpaceDescription, error)
 
+	DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error)
 	BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error)
@@ -117,13 +130,13 @@ type space struct {
 	headSync       headsync.HeadSync
 	syncStatus     syncstatus.StatusUpdater
 	storage        spacestorage.SpaceStorage
-	treeManager    *commonGetter
+	cache          *commonGetter
 	account        accountservice.Service
 	aclList        *syncacl.SyncAcl
-	configuration  nodeconf.Configuration
+	configuration  nodeconf.NodeConf
 	settingsObject settings.SettingsObject
 	peerManager    peermanager.PeerManager
-	treeBuilder    objecttree.BuildObjectTreeFunc
+	metric         metric.Metric
 
 	handleQueue multiqueue.MultiQueue[HandleMessage]
 
@@ -178,8 +191,8 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.SyncClient().MessagePool())
-	s.treeManager.AddObject(s.aclList)
+	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.MessagePool())
+	s.cache.AddObject(s.aclList)
 
 	deletionState := settingsstate.NewObjectDeletionState(s.storage)
 	deps := settings.Deps{
@@ -187,8 +200,6 @@ func (s *space) Init(ctx context.Context) (err error) {
 			res, err := s.BuildTree(ctx, id, BuildTreeOpts{
 				Listener:           listener,
 				WaitTreeRemoteSync: false,
-				// space settings document should not have empty data
-				treeBuilder: objecttree.BuildObjectTree,
 			})
 			log.Debug("building settings tree", zap.String("id", id), zap.String("spaceId", s.id))
 			if err != nil {
@@ -198,7 +209,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 			return
 		},
 		Account:       s.account,
-		TreeManager:   s.treeManager,
+		TreeGetter:    s.cache,
 		Store:         s.storage,
 		DeletionState: deletionState,
 		Provider:      s.headSync,
@@ -206,12 +217,13 @@ func (s *space) Init(ctx context.Context) (err error) {
 		OnSpaceDelete: s.onSpaceDelete,
 	}
 	s.settingsObject = settings.NewSettingsObject(deps, s.id)
+	s.objectSync.Init()
 	s.headSync.Init(initialIds, deletionState)
 	err = s.settingsObject.Init(ctx)
 	if err != nil {
 		return
 	}
-	s.treeManager.AddObject(s.settingsObject)
+	s.cache.AddObject(s.settingsObject)
 	s.syncStatus.Run()
 	s.handleQueue = multiqueue.New[HandleMessage](s.handleMessage, 100)
 	return nil
@@ -243,6 +255,23 @@ func (s *space) DebugAllHeads() []headsync.TreeHeads {
 	return s.headSync.DebugAllHeads()
 }
 
+func (s *space) DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error) {
+	if s.isClosed.Load() {
+		err = ErrSpaceClosed
+		return
+	}
+	root, err := objecttree.DeriveObjectTreeRoot(payload, s.aclList)
+	if err != nil {
+		return
+	}
+	res = treestorage.TreeStorageCreatePayload{
+		RootRawChange: root,
+		Changes:       []*treechangeproto.RawTreeChangeWithId{root},
+		Heads:         []string{root.Id},
+	}
+	return
+}
+
 func (s *space) CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error) {
 	if s.isClosed.Load() {
 		err = ErrSpaceClosed
@@ -267,17 +296,16 @@ func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCrea
 		return
 	}
 	deps := synctree.BuildDeps{
-		SpaceId:         s.id,
-		SyncClient:      s.objectSync.SyncClient(),
-		Configuration:   s.configuration,
-		HeadNotifiable:  s.headSync,
-		Listener:        listener,
-		AclList:         s.aclList,
-		SpaceStorage:    s.storage,
-		OnClose:         s.onObjectClose,
-		SyncStatus:      s.syncStatus,
-		PeerGetter:      s.peerManager,
-		BuildObjectTree: s.treeBuilder,
+		SpaceId:        s.id,
+		ObjectSync:     s.objectSync,
+		Configuration:  s.configuration,
+		HeadNotifiable: s.headSync,
+		Listener:       listener,
+		AclList:        s.aclList,
+		SpaceStorage:   s.storage,
+		OnClose:        s.onObjectClose,
+		SyncStatus:     s.syncStatus,
+		PeerGetter:     s.peerManager,
 	}
 	t, err = synctree.PutSyncTree(ctx, payload, deps)
 	if err != nil {
@@ -291,7 +319,6 @@ func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCrea
 type BuildTreeOpts struct {
 	Listener           updatelistener.UpdateListener
 	WaitTreeRemoteSync bool
-	treeBuilder        objecttree.BuildObjectTreeFunc
 }
 
 type HistoryTreeOpts struct {
@@ -304,13 +331,10 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 		err = ErrSpaceClosed
 		return
 	}
-	treeBuilder := opts.treeBuilder
-	if treeBuilder == nil {
-		treeBuilder = s.treeBuilder
-	}
+
 	deps := synctree.BuildDeps{
 		SpaceId:            s.id,
-		SyncClient:         s.objectSync.SyncClient(),
+		ObjectSync:         s.objectSync,
 		Configuration:      s.configuration,
 		HeadNotifiable:     s.headSync,
 		Listener:           opts.Listener,
@@ -320,7 +344,6 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 		SyncStatus:         s.syncStatus,
 		WaitTreeRemoteSync: opts.WaitTreeRemoteSync,
 		PeerGetter:         s.peerManager,
-		BuildObjectTree:    treeBuilder,
 	}
 	if t, err = synctree.BuildSyncTreeOrGetRemote(ctx, id, deps); err != nil {
 		return nil, err
@@ -362,6 +385,7 @@ func (s *space) DeleteSpace(ctx context.Context, deleteChange *treechangeproto.R
 
 func (s *space) HandleMessage(ctx context.Context, hm HandleMessage) (err error) {
 	threadId := hm.Message.ObjectId
+	hm.ReceiveTime = time.Now()
 	if hm.Message.ReplyId != "" {
 		threadId += hm.Message.ReplyId
 		defer func() {
@@ -378,12 +402,19 @@ func (s *space) HandleMessage(ctx context.Context, hm HandleMessage) (err error)
 }
 
 func (s *space) handleMessage(msg HandleMessage) {
+	var err error
+	msg.StartHandlingTime = time.Now()
 	ctx := peer.CtxWithPeerId(context.Background(), msg.SenderId)
 	ctx = logger.CtxWithFields(ctx, zap.Uint64("msgId", msg.Id), zap.String("senderId", msg.SenderId))
+	defer func() {
+		s.metric.RequestLog(ctx, msg.LogFields(zap.Error(err))...)
+	}()
+
 	if !msg.Deadline.IsZero() {
 		now := time.Now()
 		if now.After(msg.Deadline) {
 			log.InfoCtx(ctx, "skip message: deadline exceed")
+			err = context.DeadlineExceeded
 			return
 		}
 		var cancel context.CancelFunc
@@ -391,7 +422,7 @@ func (s *space) handleMessage(msg HandleMessage) {
 		defer cancel()
 	}
 
-	if err := s.objectSync.HandleMessage(ctx, msg.SenderId, msg.Message); err != nil {
+	if err = s.objectSync.HandleMessage(ctx, msg.SenderId, msg.Message); err != nil {
 		if msg.Message.ObjectId != "" {
 			// cleanup thread on error
 			_ = s.handleQueue.CloseThread(msg.Message.ObjectId)
