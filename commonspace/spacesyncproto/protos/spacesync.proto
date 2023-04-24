@@ -9,6 +9,8 @@ enum ErrCodes {
     SpaceExists = 2;
     SpaceNotInCache = 3;
     SpaceIsDeleted = 4;
+    PeerIsNotResponsible = 5;
+    ReceiptIsInvalid = 6;
     ErrorOffset = 100;
 }
 
