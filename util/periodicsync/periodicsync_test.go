@@ -16,7 +16,7 @@ func TestPeriodicSync_Run(t *testing.T) {
 
 	l := logger.NewNamed("sync")
 
-	t.Run("diff syncer 1 time", func(t *testing.T) {
+	t.Run("loop call 1 time", func(t *testing.T) {
 		secs := 0
 		times := 0
 		diffSyncer := func(ctx context.Context) (err error) {
@@ -30,7 +30,7 @@ func TestPeriodicSync_Run(t *testing.T) {
 		require.Equal(t, 1, times)
 	})
 
-	t.Run("diff syncer 2 times", func(t *testing.T) {
+	t.Run("loop call 2 times", func(t *testing.T) {
 		secs := 1
 
 		times := 0
