@@ -3,7 +3,6 @@ package coordinatorproto
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/require"
@@ -12,7 +11,7 @@ import (
 )
 
 type fixture struct {
-	coordinatorKey  crypto.PrivKey
+	networkKey      crypto.PrivKey
 	accountKey      crypto.PubKey
 	accountIdentity []byte
 	ctx             context.Context
@@ -23,7 +22,7 @@ type fixture struct {
 }
 
 func newFixture(t *testing.T) *fixture {
-	coordinatorKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
+	networkKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
 	accountKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
@@ -33,14 +32,14 @@ func newFixture(t *testing.T) *fixture {
 		spaceId:         "spaceId",
 		peerId:          "peerId",
 		accountIdentity: accountKeyProto,
-		coordinatorKey:  coordinatorKey,
+		networkKey:      networkKey,
 		accountKey:      accountKey.GetPublic(),
 	}
 }
 
 func (fx *fixture) prepareReceipt(t *testing.T, validPeriod time.Duration) {
 	var err error
-	fx.signedReceipt, err = PrepareSpaceReceipt(fx.spaceId, fx.peerId, validPeriod, fx.accountKey, fx.coordinatorKey)
+	fx.signedReceipt, err = PrepareSpaceReceipt(fx.spaceId, fx.peerId, validPeriod, fx.accountKey, fx.networkKey)
 	require.NoError(t, err)
 	fx.originalReceipt = &SpaceReceipt{}
 	err = proto.Unmarshal(fx.signedReceipt.SpaceReceiptPayload, fx.originalReceipt)
@@ -52,7 +51,7 @@ func (fx *fixture) updateReceipt(t *testing.T, update func(t *testing.T, receipt
 	update(t, fx.originalReceipt)
 	marshalled, err := proto.Marshal(fx.originalReceipt)
 	require.NoError(t, err)
-	signature, err := fx.coordinatorKey.Sign(marshalled)
+	signature, err := fx.networkKey.Sign(marshalled)
 	require.NoError(t, err)
 	fx.signedReceipt = &SpaceReceiptWithSignature{
 		SpaceReceiptPayload: marshalled,
@@ -63,52 +62,50 @@ func (fx *fixture) updateReceipt(t *testing.T, update func(t *testing.T, receipt
 func TestReceiptValid(t *testing.T) {
 	fx := newFixture(t)
 	fx.prepareReceipt(t, time.Second)
-	err := CheckReceipt(fx.peerId, fx.spaceId, fx.accountIdentity, []string{fx.coordinatorKey.GetPublic().PeerId()}, fx.signedReceipt)
+	err := CheckReceipt(fx.peerId, fx.spaceId, fx.accountIdentity, fx.networkKey.GetPublic().Network(), fx.signedReceipt)
 	require.NoError(t, err)
 }
 
 func TestReceiptIncorrectSpaceId(t *testing.T) {
 	fx := newFixture(t)
 	fx.prepareReceipt(t, time.Second)
-	err := CheckReceipt(fx.peerId, "otherId", fx.accountIdentity, []string{fx.coordinatorKey.GetPublic().PeerId()}, fx.signedReceipt)
+	err := CheckReceipt(fx.peerId, "otherId", fx.accountIdentity, fx.networkKey.GetPublic().Network(), fx.signedReceipt)
 	require.Error(t, errReceiptSpaceIdIncorrect, err)
 }
 
 func TestReceiptIncorrectPeerId(t *testing.T) {
 	fx := newFixture(t)
 	fx.prepareReceipt(t, time.Second)
-	err := CheckReceipt("otherId", fx.spaceId, fx.accountIdentity, []string{fx.coordinatorKey.GetPublic().PeerId()}, fx.signedReceipt)
+	err := CheckReceipt("otherId", fx.spaceId, fx.accountIdentity, fx.networkKey.GetPublic().Network(), fx.signedReceipt)
 	require.Error(t, errReceiptPeerIdIncorrect, err)
 }
 
 func TestReceiptIncorrectAccountIdentity(t *testing.T) {
 	fx := newFixture(t)
 	fx.prepareReceipt(t, time.Second)
-	err := CheckReceipt(fx.peerId, fx.spaceId, []byte("some identity"), []string{fx.coordinatorKey.GetPublic().PeerId()}, fx.signedReceipt)
+	err := CheckReceipt(fx.peerId, fx.spaceId, []byte("some identity"), fx.networkKey.GetPublic().Network(), fx.signedReceipt)
 	require.Error(t, errReceiptAccountIncorrect, err)
 }
 
-func TestReceiptIncorrectCoordinatorKey(t *testing.T) {
+func TestReceiptIncorrectNetworkId(t *testing.T) {
 	fx := newFixture(t)
 	fx.prepareReceipt(t, time.Second)
 
-	t.Run("random key payload", func(t *testing.T) {
+	t.Run("random network id", func(t *testing.T) {
 		fx.updateReceipt(t, func(t *testing.T, receipt *SpaceReceipt) {
-			receipt.ControlNodeIdentity = []byte("some random stuff")
+			receipt.NetworkId = "some random network id"
 		})
-		err := CheckReceipt(fx.peerId, fx.spaceId, fx.accountIdentity, []string{fx.coordinatorKey.GetPublic().PeerId()}, fx.signedReceipt)
+		err := CheckReceipt(fx.peerId, fx.spaceId, fx.accountIdentity, fx.networkKey.GetPublic().Network(), fx.signedReceipt)
 		require.Error(t, err)
 	})
 	t.Run("random incorrect key", func(t *testing.T) {
 		fx.updateReceipt(t, func(t *testing.T, receipt *SpaceReceipt) {
 			randomKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
 			require.NoError(t, err)
-			keyBytes, err := randomKey.GetPublic().Marshall()
-			require.NoError(t, err)
-			receipt.ControlNodeIdentity = keyBytes
+			receipt.NetworkId = randomKey.GetPublic().Network()
 		})
-		err := CheckReceipt(fx.peerId, fx.spaceId, fx.accountIdentity, []string{fx.coordinatorKey.GetPublic().PeerId()}, fx.signedReceipt)
-		require.True(t, errors.Is(err, errNoSuchCoordinatorNode))
+		err := CheckReceipt(fx.peerId, fx.spaceId, fx.accountIdentity, fx.networkKey.GetPublic().Network(), fx.signedReceipt)
+		require.Error(t, errNetworkIsIncorrect, err)
 	})
 }
 
@@ -116,7 +113,7 @@ func TestReceiptIncorrectSignature(t *testing.T) {
 	fx := newFixture(t)
 	fx.prepareReceipt(t, time.Second)
 	fx.signedReceipt.Signature = []byte("random sig")
-	err := CheckReceipt(fx.peerId, fx.spaceId, fx.accountIdentity, []string{fx.coordinatorKey.GetPublic().PeerId()}, fx.signedReceipt)
+	err := CheckReceipt(fx.peerId, fx.spaceId, fx.accountIdentity, fx.networkKey.GetPublic().Network(), fx.signedReceipt)
 	require.Error(t, errReceiptSignatureIncorrect, err)
 }
 
@@ -126,6 +123,6 @@ func TestReceiptExpired(t *testing.T) {
 	fx.updateReceipt(t, func(t *testing.T, receipt *SpaceReceipt) {
 		receipt.ValidUntil = uint64(time.Now().Add(-time.Second).Unix())
 	})
-	err := CheckReceipt(fx.peerId, fx.spaceId, fx.accountIdentity, []string{fx.coordinatorKey.GetPublic().PeerId()}, fx.signedReceipt)
+	err := CheckReceipt(fx.peerId, fx.spaceId, fx.accountIdentity, fx.networkKey.GetPublic().Network(), fx.signedReceipt)
 	require.Error(t, errReceiptExpired, err)
 }

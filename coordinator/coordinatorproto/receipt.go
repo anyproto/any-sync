@@ -3,43 +3,38 @@ package coordinatorproto
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"github.com/anytypeio/any-sync/util/crypto"
+	"github.com/anytypeio/any-sync/util/strkey"
 	"github.com/gogo/protobuf/proto"
-	"golang.org/x/exp/slices"
 	"time"
 )
 
 var (
 	errReceiptSignatureIncorrect = errors.New("receipt signature is incorrect")
-	errNoSuchCoordinatorNode     = errors.New("no such coordinator node")
+	errNetworkIsIncorrect        = errors.New("network is incorrect")
 	errReceiptSpaceIdIncorrect   = errors.New("receipt space id is incorrect")
 	errReceiptPeerIdIncorrect    = errors.New("receipt peer id is incorrect")
 	errReceiptAccountIncorrect   = errors.New("receipt account is incorrect")
 	errReceiptExpired            = errors.New("receipt is expired")
 )
 
-func PrepareSpaceReceipt(spaceId, peerId string, validPeriod time.Duration, accountPubKey crypto.PubKey, nodeKey crypto.PrivKey) (signedReceipt *SpaceReceiptWithSignature, err error) {
+func PrepareSpaceReceipt(spaceId, peerId string, validPeriod time.Duration, accountPubKey crypto.PubKey, networkKey crypto.PrivKey) (signedReceipt *SpaceReceiptWithSignature, err error) {
 	marshalledAccount, err := accountPubKey.Marshall()
 	if err != nil {
 		return
 	}
-	marshalledNode, err := nodeKey.GetPublic().Marshall()
-	if err != nil {
-		return
-	}
 	receipt := &SpaceReceipt{
-		SpaceId:             spaceId,
-		PeerId:              peerId,
-		AccountIdentity:     marshalledAccount,
-		ControlNodeIdentity: marshalledNode,
-		ValidUntil:          uint64(time.Now().Add(validPeriod).Unix()),
+		SpaceId:         spaceId,
+		PeerId:          peerId,
+		AccountIdentity: marshalledAccount,
+		NetworkId:       networkKey.GetPublic().Network(),
+		ValidUntil:      uint64(time.Now().Add(validPeriod).Unix()),
 	}
 	receiptData, err := receipt.Marshal()
 	if err != nil {
 		return
 	}
-	sign, err := nodeKey.Sign(receiptData)
+	sign, err := networkKey.Sign(receiptData)
 	if err != nil {
 		return
 	}
@@ -49,7 +44,7 @@ func PrepareSpaceReceipt(spaceId, peerId string, validPeriod time.Duration, acco
 	}, nil
 }
 
-func CheckReceipt(peerId, spaceId string, accountIdentity []byte, coordinators []string, receipt *SpaceReceiptWithSignature) (err error) {
+func CheckReceipt(peerId, spaceId string, accountIdentity []byte, networkId string, receipt *SpaceReceiptWithSignature) (err error) {
 	payload := &SpaceReceipt{}
 	err = proto.Unmarshal(receipt.GetSpaceReceiptPayload(), payload)
 	if err != nil {
@@ -72,9 +67,9 @@ func CheckReceipt(peerId, spaceId string, accountIdentity []byte, coordinators [
 	if !bytes.Equal(protoRaw.Storage(), accountRaw.Storage()) {
 		return errReceiptAccountIncorrect
 	}
-	err = checkCoordinator(
-		coordinators,
-		payload.ControlNodeIdentity,
+	err = checkNetwork(
+		networkId,
+		payload.NetworkId,
 		receipt.GetSpaceReceiptPayload(),
 		receipt.GetSignature())
 	if err != nil {
@@ -86,16 +81,19 @@ func CheckReceipt(peerId, spaceId string, accountIdentity []byte, coordinators [
 	return
 }
 
-func checkCoordinator(coordinators []string, identity []byte, payload, signature []byte) (err error) {
-	coordinatorKey, err := crypto.UnmarshalEd25519PublicKeyProto(identity)
+func checkNetwork(networkId, payloadNetworkId string, payload, signature []byte) (err error) {
+	if networkId != payloadNetworkId {
+		return errNetworkIsIncorrect
+	}
+	networkIdentity, err := strkey.Decode(strkey.NetworkAddressVersionByte, networkId)
 	if err != nil {
 		return
 	}
-	receiptCoordinator := coordinatorKey.PeerId()
-	if !slices.Contains(coordinators, coordinatorKey.PeerId()) {
-		return fmt.Errorf("got coordinator %s: %w", receiptCoordinator, errNoSuchCoordinatorNode)
+	networkKey, err := crypto.UnmarshalEd25519PublicKey(networkIdentity)
+	if err != nil {
+		return
 	}
-	res, err := coordinatorKey.Verify(payload, signature)
+	res, err := networkKey.Verify(payload, signature)
 	if err != nil {
 		return
 	}
