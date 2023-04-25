@@ -60,11 +60,15 @@ func CheckReceipt(peerId, spaceId string, accountIdentity []byte, coordinators [
 	if payload.PeerId != peerId {
 		return errReceiptPeerIdIncorrect
 	}
-	protoIdentity, err := crypto.UnmarshalEd25519PublicKeyProto(payload.AccountIdentity)
+	protoRaw, err := crypto.UnmarshalEd25519PublicKeyProto(payload.AccountIdentity)
 	if err != nil {
 		return
 	}
-	if !bytes.Equal(protoIdentity.Storage(), accountIdentity) {
+	accountRaw, err := crypto.UnmarshalEd25519PublicKeyProto(accountIdentity)
+	if err != nil {
+		return
+	}
+	if !bytes.Equal(protoRaw.Storage(), accountRaw.Storage()) {
 		return errReceiptAccountIncorrect
 	}
 	err = checkCoordinator(

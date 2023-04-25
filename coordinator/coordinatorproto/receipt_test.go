@@ -24,16 +24,16 @@ type fixture struct {
 func newFixture(t *testing.T) *fixture {
 	coordinatorKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	signKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
+	accountKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	signKeyRaw, err := signKey.GetPublic().Raw()
+	accountKeyProto, err := accountKey.GetPublic().Marshall()
 	require.NoError(t, err)
 	return &fixture{
 		spaceId:         "spaceId",
 		peerId:          "peerId",
-		accountIdentity: signKeyRaw,
+		accountIdentity: accountKeyProto,
 		coordinatorKey:  coordinatorKey,
-		accountKey:      signKey.GetPublic(),
+		accountKey:      accountKey.GetPublic(),
 	}
 }
 
