@@ -15,64 +15,66 @@ type PeriodicSync interface {
 
 type SyncerFunc func(ctx context.Context) error
 
-func NewPeriodicSync(periodSeconds int, timeout time.Duration, syncer SyncerFunc, l logger.CtxLogger) PeriodicSync {
+func NewPeriodicSync(periodSeconds int, timeout time.Duration, caller SyncerFunc, l logger.CtxLogger) PeriodicSync {
+	// TODO: rename to PeriodicCall (including folders) and do PRs in all repos where we are using this
+	//  https://linear.app/anytype/issue/GO-1241/change-periodicsync-component-to-periodiccall
 	ctx, cancel := context.WithCancel(context.Background())
-	ctx = logger.CtxWithFields(ctx, zap.String("rootOp", "periodicSync"))
-	return &periodicSync{
-		syncer:        syncer,
+	ctx = logger.CtxWithFields(ctx, zap.String("rootOp", "periodicCall"))
+	return &periodicCall{
+		caller:        caller,
 		log:           l,
-		syncCtx:       ctx,
-		syncCancel:    cancel,
-		syncLoopDone:  make(chan struct{}),
+		loopCtx:       ctx,
+		loopCancel:    cancel,
+		loopDone:      make(chan struct{}),
 		periodSeconds: periodSeconds,
 		timeout:       timeout,
 	}
 }
 
-type periodicSync struct {
+type periodicCall struct {
 	log           logger.CtxLogger
-	syncer        SyncerFunc
-	syncCtx       context.Context
-	syncCancel    context.CancelFunc
-	syncLoopDone  chan struct{}
+	caller        SyncerFunc
+	loopCtx       context.Context
+	loopCancel    context.CancelFunc
+	loopDone      chan struct{}
 	periodSeconds int
 	timeout       time.Duration
 }
 
-func (p *periodicSync) Run() {
-	go p.syncLoop(p.periodSeconds)
+func (p *periodicCall) Run() {
+	go p.loop(p.periodSeconds)
 }
 
-func (p *periodicSync) syncLoop(periodSeconds int) {
+func (p *periodicCall) loop(periodSeconds int) {
 	period := time.Duration(periodSeconds) * time.Second
-	defer close(p.syncLoopDone)
-	doSync := func() {
-		ctx := p.syncCtx
+	defer close(p.loopDone)
+	doCall := func() {
+		ctx := p.loopCtx
 		if p.timeout != 0 {
 			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(p.syncCtx, p.timeout)
+			ctx, cancel = context.WithTimeout(p.loopCtx, p.timeout)
 			defer cancel()
 		}
-		if err := p.syncer(ctx); err != nil {
-			p.log.Warn("periodic sync error", zap.Error(err))
+		if err := p.caller(ctx); err != nil {
+			p.log.Warn("periodic call error", zap.Error(err))
 		}
 	}
-	doSync()
+	doCall()
 	if period > 0 {
 		ticker := time.NewTicker(period)
 		defer ticker.Stop()
 		for {
 			select {
-			case <-p.syncCtx.Done():
+			case <-p.loopCtx.Done():
 				return
 			case <-ticker.C:
-				doSync()
+				doCall()
 			}
 		}
 	}
 }
 
-func (p *periodicSync) Close() {
-	p.syncCancel()
-	<-p.syncLoopDone
+func (p *periodicCall) Close() {
+	p.loopCancel()
+	<-p.loopDone
 }

@@ -67,15 +67,15 @@ message SpaceReceiptWithSignature {
 
 // SpaceReceipt contains permission to SpacePush operation
 message SpaceReceipt {
-    // spaceId
+    // SpaceId is the identifier of space
     string spaceId = 1;
-    // peerId of receipt requester
+    // PeerId of receipt requester
     string peerId = 2;
-    // identity of space owner
+    // AccountIdentity is an identity of a space owner
     bytes accountIdentity = 3;
-    // identity of control node
-    bytes controlNodeIdentity = 4;
-    // unix-timestamp with a deadline time of receipt validity
+    // NetworkId is the id of a network where the receipt is issued
+    string networkId = 4;
+    // ValidUntil is a unix-timestamp with a deadline time of receipt validity
     uint64 validUntil = 5;
 }
 
