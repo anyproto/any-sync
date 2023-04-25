@@ -3,6 +3,7 @@ package coordinatorproto
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
 	"golang.org/x/exp/slices"
@@ -11,7 +12,7 @@ import (
 
 var (
 	errReceiptSignatureIncorrect = errors.New("receipt signature is incorrect")
-	errNoSuchCoordinatorNode     = errors.New("no such control node")
+	errNoSuchCoordinatorNode     = errors.New("no such coordinator node")
 	errReceiptSpaceIdIncorrect   = errors.New("receipt space id is incorrect")
 	errReceiptPeerIdIncorrect    = errors.New("receipt peer id is incorrect")
 	errReceiptAccountIncorrect   = errors.New("receipt account is incorrect")
@@ -90,8 +91,9 @@ func checkCoordinator(coordinators []string, identity []byte, payload, signature
 	if err != nil {
 		return
 	}
+	receiptCoordinator := coordinatorKey.PeerId()
 	if !slices.Contains(coordinators, coordinatorKey.PeerId()) {
-		return errNoSuchCoordinatorNode
+		return fmt.Errorf("got coordinator %s: %w", receiptCoordinator, errNoSuchCoordinatorNode)
 	}
 	res, err := coordinatorKey.Verify(payload, signature)
 	if err != nil {
