@@ -57,7 +57,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.sync = periodicsync.NewPeriodicSync(updatePeriodSec, 0, func(ctx context.Context) (err error) {
 		err = s.updateConfiguration(ctx)
 		if err != nil {
-			if err == ErrConfigurationNotChanged {
+			if err == ErrConfigurationNotChanged || err == ErrConfigurationNotFound {
 				err = nil
 			}
 		}
