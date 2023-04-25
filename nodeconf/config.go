@@ -9,6 +9,10 @@ type ConfigGetter interface {
 	GetNodeConf() Configuration
 }
 
+type ConfigUpdateGetter interface {
+	GetNodeConfUpdateInterval() int
+}
+
 var (
 	ErrConfigurationNotFound = errors.New("node nodeConf not found")
 )
