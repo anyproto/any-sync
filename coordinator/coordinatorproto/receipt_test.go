@@ -3,6 +3,7 @@ package coordinatorproto
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/require"
@@ -93,7 +94,7 @@ func TestReceiptIncorrectCoordinatorKey(t *testing.T) {
 
 	t.Run("random key payload", func(t *testing.T) {
 		fx.updateReceipt(t, func(t *testing.T, receipt *SpaceReceipt) {
-			receipt.AccountIdentity = []byte("some random stuff")
+			receipt.ControlNodeIdentity = []byte("some random stuff")
 		})
 		err := CheckReceipt(fx.peerId, fx.spaceId, fx.accountIdentity, []string{fx.coordinatorKey.GetPublic().PeerId()}, fx.signedReceipt)
 		require.Error(t, err)
@@ -104,10 +105,10 @@ func TestReceiptIncorrectCoordinatorKey(t *testing.T) {
 			require.NoError(t, err)
 			keyBytes, err := randomKey.GetPublic().Marshall()
 			require.NoError(t, err)
-			receipt.AccountIdentity = keyBytes
+			receipt.ControlNodeIdentity = keyBytes
 		})
 		err := CheckReceipt(fx.peerId, fx.spaceId, fx.accountIdentity, []string{fx.coordinatorKey.GetPublic().PeerId()}, fx.signedReceipt)
-		require.Error(t, errNoSuchCoordinatorNode, err)
+		require.True(t, errors.Is(err, errNoSuchCoordinatorNode))
 	})
 }
 
