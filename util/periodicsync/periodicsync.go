@@ -16,7 +16,8 @@ type PeriodicSync interface {
 type SyncerFunc func(ctx context.Context) error
 
 func NewPeriodicSync(periodSeconds int, timeout time.Duration, caller SyncerFunc, l logger.CtxLogger) PeriodicSync {
-	// TODO: rename to PeriodicCall
+	// TODO: rename to PeriodicCall (including folders) and do PRs in all repos where we are using this
+	//  https://linear.app/anytype/issue/GO-1241/change-periodicsync-component-to-periodiccall
 	ctx, cancel := context.WithCancel(context.Background())
 	ctx = logger.CtxWithFields(ctx, zap.String("rootOp", "periodicCall"))
 	return &periodicCall{
