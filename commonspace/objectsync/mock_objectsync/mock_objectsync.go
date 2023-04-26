@@ -39,11 +39,9 @@ func (m *MockSyncClient) EXPECT() *MockSyncClientMockRecorder {
 }
 
 // Broadcast mocks base method.
-func (m *MockSyncClient) Broadcast(arg0 context.Context, arg1 *treechangeproto.TreeSyncMessage) error {
+func (m *MockSyncClient) Broadcast(arg0 context.Context, arg1 *treechangeproto.TreeSyncMessage) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Broadcast", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "Broadcast", arg0, arg1)
 }
 
 // Broadcast indicates an expected call of Broadcast.
