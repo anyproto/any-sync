@@ -4,11 +4,12 @@ import (
 	"context"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"go.uber.org/zap"
 )
 
 type SyncClient interface {
 	RequestFactory
-	Broadcast(ctx context.Context, msg *treechangeproto.TreeSyncMessage) (err error)
+	Broadcast(ctx context.Context, msg *treechangeproto.TreeSyncMessage)
 	SendWithReply(ctx context.Context, peerId, objectId string, msg *treechangeproto.TreeSyncMessage, replyId string) (err error)
 	SendSync(ctx context.Context, peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error)
 	MessagePool() MessagePool
@@ -31,12 +32,15 @@ func NewSyncClient(
 	}
 }
 
-func (s *syncClient) Broadcast(ctx context.Context, msg *treechangeproto.TreeSyncMessage) (err error) {
+func (s *syncClient) Broadcast(ctx context.Context, msg *treechangeproto.TreeSyncMessage) {
 	objMsg, err := MarshallTreeMessage(msg, s.spaceId, msg.RootChange.Id, "")
 	if err != nil {
 		return
 	}
-	return s.messagePool.Broadcast(ctx, objMsg)
+	err = s.messagePool.Broadcast(ctx, objMsg)
+	if err != nil {
+		log.DebugCtx(ctx, "broadcast error", zap.Error(err))
+	}
 }
 
 func (s *syncClient) SendSync(ctx context.Context, peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {

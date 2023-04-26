@@ -116,9 +116,7 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	if isFirstBuild {
 		headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 		// send to everybody, because everybody should know that the node or client got new tree
-		if e := syncTree.syncClient.Broadcast(ctx, headUpdate); e != nil {
-			log.ErrorCtx(ctx, "broadcast error", zap.Error(e))
-		}
+		syncTree.syncClient.Broadcast(ctx, headUpdate)
 	}
 	return
 }
@@ -155,7 +153,7 @@ func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableCh
 	}
 	s.syncStatus.HeadsChange(s.Id(), res.Heads)
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
-	err = s.syncClient.Broadcast(ctx, headUpdate)
+	s.syncClient.Broadcast(ctx, headUpdate)
 	return
 }
 
@@ -182,7 +180,7 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload objecttree.
 			s.notifiable.UpdateHeads(s.Id(), res.Heads)
 		}
 		headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
-		err = s.syncClient.Broadcast(ctx, headUpdate)
+		s.syncClient.Broadcast(ctx, headUpdate)
 	}
 	return
 }
