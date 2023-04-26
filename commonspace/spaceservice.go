@@ -8,8 +8,9 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/credentialprovider"
 	"github.com/anytypeio/any-sync/commonspace/headsync"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
 	"github.com/anytypeio/any-sync/commonspace/objectsync"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
@@ -50,7 +51,7 @@ type spaceService struct {
 	storageProvider      spacestorage.SpaceStorageProvider
 	peermanagerProvider  peermanager.PeerManagerProvider
 	credentialProvider   credentialprovider.CredentialProvider
-	treeGetter           treegetter.TreeGetter
+	treeManager          treemanager.TreeManager
 	pool                 pool.Pool
 	metric               metric.Metric
 }
@@ -60,7 +61,7 @@ func (s *spaceService) Init(a *app.App) (err error) {
 	s.account = a.MustComponent(accountservice.CName).(accountservice.Service)
 	s.storageProvider = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
-	s.treeGetter = a.MustComponent(treegetter.CName).(treegetter.TreeGetter)
+	s.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	s.peermanagerProvider = a.MustComponent(peermanager.CName).(peermanager.PeerManagerProvider)
 	credProvider := a.Component(credentialprovider.CName)
 	if credProvider != nil {
@@ -82,7 +83,7 @@ func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePaylo
 	if err != nil {
 		return
 	}
-	store, err := s.storageProvider.CreateSpaceStorage(storageCreate)
+	store, err := s.createSpaceStorage(storageCreate)
 	if err != nil {
 		if err == spacestorage.ErrSpaceStorageExists {
 			return storageCreate.SpaceHeaderWithId.Id, nil
@@ -107,7 +108,7 @@ func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePaylo
 	if err != nil {
 		return
 	}
-	store, err := s.storageProvider.CreateSpaceStorage(storageCreate)
+	store, err := s.createSpaceStorage(storageCreate)
 	if err != nil {
 		if err == spacestorage.ErrSpaceStorageExists {
 			return storageCreate.SpaceHeaderWithId.Id, nil
@@ -148,12 +149,18 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		return nil, err
 	}
 	spaceIsDeleted.Swap(isDeleted)
-	getter := newCommonGetter(st.Id(), s.treeGetter, spaceIsClosed)
+	getter := newCommonGetter(st.Id(), s.treeManager, spaceIsClosed)
 	syncStatus := syncstatus.NewNoOpSyncStatus()
 	// this will work only for clients, not the best solution, but...
 	if !lastConfiguration.IsResponsible(st.Id()) {
 		// TODO: move it to the client package and add possibility to inject StatusProvider from the client
 		syncStatus = syncstatus.NewSyncStatusProvider(st.Id(), syncstatus.DefaultDeps(lastConfiguration, st))
+	}
+	var builder objecttree.BuildObjectTreeFunc
+	if s.config.KeepTreeDataInMemory {
+		builder = objecttree.BuildObjectTree
+	} else {
+		builder = objecttree.BuildEmptyDataObjectTree
 	}
 
 	peerManager, err := s.peermanagerProvider.NewPeerManager(ctx, id)
@@ -168,12 +175,13 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		objectSync:    objectSync,
 		headSync:      headSync,
 		syncStatus:    syncStatus,
-		cache:         getter,
+		treeManager:   getter,
 		account:       s.account,
 		configuration: lastConfiguration,
 		peerManager:   peerManager,
 		storage:       st,
 		treesUsed:     &atomic.Int32{},
+		treeBuilder:   builder,
 		isClosed:      spaceIsClosed,
 		isDeleted:     spaceIsDeleted,
 		metric:        s.metric,
@@ -193,7 +201,7 @@ func (s *spaceService) addSpaceStorage(ctx context.Context, spaceDescription Spa
 			Id:        spaceDescription.SpaceSettingsId,
 		},
 	}
-	st, err = s.storageProvider.CreateSpaceStorage(payload)
+	st, err = s.createSpaceStorage(payload)
 	if err != nil {
 		err = spacesyncproto.ErrUnexpected
 		if err == spacestorage.ErrSpaceStorageExists {
@@ -225,7 +233,7 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 		return
 	}
 
-	st, err = s.storageProvider.CreateSpaceStorage(spacestorage.SpaceStorageCreatePayload{
+	st, err = s.createSpaceStorage(spacestorage.SpaceStorageCreatePayload{
 		AclWithId: &aclrecordproto.RawAclRecordWithId{
 			Payload: res.Payload.AclPayload,
 			Id:      res.Payload.AclPayloadId,
@@ -237,4 +245,12 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 		SpaceHeaderWithId: res.Payload.SpaceHeader,
 	})
 	return
+}
+
+func (s *spaceService) createSpaceStorage(payload spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {
+	err := validateSpaceStorageCreatePayload(payload)
+	if err != nil {
+		return nil, err
+	}
+	return s.storageProvider.CreateSpaceStorage(payload)
 }

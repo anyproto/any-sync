@@ -49,10 +49,15 @@ func (s *service) Init(a *app.App) (err error) {
 		lastStored = s.config
 		err = nil
 	}
-	s.sync = periodicsync.NewPeriodicSync(600, 0, func(ctx context.Context) (err error) {
+	var updatePeriodSec = 600
+	if confUpd, ok := a.MustComponent("config").(ConfigUpdateGetter); ok && confUpd.GetNodeConfUpdateInterval() > 0 {
+		updatePeriodSec = confUpd.GetNodeConfUpdateInterval()
+	}
+
+	s.sync = periodicsync.NewPeriodicSync(updatePeriodSec, 0, func(ctx context.Context) (err error) {
 		err = s.updateConfiguration(ctx)
 		if err != nil {
-			if err == ErrConfigurationNotChanged {
+			if err == ErrConfigurationNotChanged || err == ErrConfigurationNotFound {
 				err = nil
 			}
 		}

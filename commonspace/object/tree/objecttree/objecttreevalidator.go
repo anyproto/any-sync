@@ -1,10 +1,12 @@
 package objecttree
 
 import (
+	"context"
 	"fmt"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anytypeio/any-sync/util/slice"
 )
 
 type ObjectTreeValidator interface {
@@ -88,11 +90,23 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 }
 
 func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList) (err error) {
-	treeStorage, err := treestorage.NewInMemoryTreeStorage(payload.RootRawChange, payload.Heads, payload.Changes)
+	treeStorage, err := treestorage.NewInMemoryTreeStorage(payload.RootRawChange, []string{payload.RootRawChange.Id}, nil)
 	if err != nil {
 		return
 	}
-
-	_, err = BuildObjectTree(treeStorage, aclList)
+	tree, err := BuildObjectTree(treeStorage, aclList)
+	if err != nil {
+		return
+	}
+	res, err := tree.AddRawChanges(context.Background(), RawChangesPayload{
+		NewHeads:   payload.Heads,
+		RawChanges: payload.Changes,
+	})
+	if err != nil {
+		return
+	}
+	if !slice.UnsortedEquals(res.Heads, payload.Heads) {
+		return ErrHasInvalidChanges
+	}
 	return
 }

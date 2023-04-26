@@ -7,7 +7,7 @@ import (
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/credentialprovider"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
 	"github.com/anytypeio/any-sync/commonspace/peermanager"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
@@ -30,7 +30,7 @@ func newDiffSyncer(
 	spaceId string,
 	diff ldiff.Diff,
 	peerManager peermanager.PeerManager,
-	cache treegetter.TreeGetter,
+	cache treemanager.TreeManager,
 	storage spacestorage.SpaceStorage,
 	clientFactory spacesyncproto.ClientFactory,
 	syncStatus syncstatus.StatusUpdater,
@@ -53,7 +53,7 @@ type diffSyncer struct {
 	spaceId            string
 	diff               ldiff.Diff
 	peerManager        peermanager.PeerManager
-	cache              treegetter.TreeGetter
+	cache              treemanager.TreeManager
 	storage            spacestorage.SpaceStorage
 	clientFactory      spacesyncproto.ClientFactory
 	log                logger.CtxLogger

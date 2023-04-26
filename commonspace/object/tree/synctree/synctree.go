@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_synctree/mock_synctree.go github.com/anytypeio/any-sync/commonspace/object/tree/synctree SyncTree,ReceiveQueue,HeadNotifiable
 package synctree
 
 import (
@@ -43,7 +44,7 @@ type SyncTree interface {
 type syncTree struct {
 	objecttree.ObjectTree
 	synchandler.SyncHandler
-	syncClient SyncClient
+	syncClient objectsync.SyncClient
 	syncStatus syncstatus.StatusUpdater
 	notifiable HeadNotifiable
 	listener   updatelistener.UpdateListener
@@ -54,16 +55,13 @@ type syncTree struct {
 
 var log = logger.NewNamed("common.commonspace.synctree")
 
-var buildObjectTree = objecttree.BuildObjectTree
-var createSyncClient = newSyncClient
-
 type ResponsiblePeersGetter interface {
 	GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error)
 }
 
 type BuildDeps struct {
 	SpaceId            string
-	ObjectSync         objectsync.ObjectSync
+	SyncClient         objectsync.SyncClient
 	Configuration      nodeconf.NodeConf
 	HeadNotifiable     HeadNotifiable
 	Listener           updatelistener.UpdateListener
@@ -73,6 +71,7 @@ type BuildDeps struct {
 	OnClose            func(id string)
 	SyncStatus         syncstatus.StatusUpdater
 	PeerGetter         ResponsiblePeersGetter
+	BuildObjectTree    objecttree.BuildObjectTreeFunc
 	WaitTreeRemoteSync bool
 }
 
@@ -94,15 +93,11 @@ func PutSyncTree(ctx context.Context, payload treestorage.TreeStorageCreatePaylo
 }
 
 func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t SyncTree, err error) {
-	objTree, err := buildObjectTree(deps.TreeStorage, deps.AclList)
+	objTree, err := deps.BuildObjectTree(deps.TreeStorage, deps.AclList)
 	if err != nil {
 		return
 	}
-	syncClient := createSyncClient(
-		deps.SpaceId,
-		deps.ObjectSync.MessagePool(),
-		sharedFactory,
-		deps.Configuration)
+	syncClient := deps.SyncClient
 	syncTree := &syncTree{
 		ObjectTree: objTree,
 		syncClient: syncClient,
@@ -243,7 +238,7 @@ func (s *syncTree) SyncWithPeer(ctx context.Context, peerId string) (err error) 
 	s.Lock()
 	defer s.Unlock()
 	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
-	return s.syncClient.SendWithReply(ctx, peerId, headUpdate, "")
+	return s.syncClient.SendWithReply(ctx, peerId, headUpdate.RootChange.Id, headUpdate, "")
 }
 
 func (s *syncTree) afterBuild() {

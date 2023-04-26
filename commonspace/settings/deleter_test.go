@@ -2,7 +2,7 @@ package settings
 
 import (
 	"fmt"
-	"github.com/anytypeio/any-sync/commonspace/object/treegetter/mock_treegetter"
+	"github.com/anytypeio/any-sync/commonspace/object/treemanager/mock_treemanager"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage/mock_spacestorage"
@@ -12,18 +12,18 @@ import (
 
 func TestDeleter_Delete(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	treeGetter := mock_treegetter.NewMockTreeGetter(ctrl)
+	treeManager := mock_treemanager.NewMockTreeManager(ctrl)
 	st := mock_spacestorage.NewMockSpaceStorage(ctrl)
 	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
 
-	deleter := newDeleter(st, delState, treeGetter)
+	deleter := newDeleter(st, delState, treeManager)
 
 	t.Run("deleter delete queued", func(t *testing.T) {
 		id := "id"
 		spaceId := "spaceId"
 		delState.EXPECT().GetQueued().Return([]string{id})
 		st.EXPECT().Id().Return(spaceId)
-		treeGetter.EXPECT().DeleteTree(gomock.Any(), spaceId, id).Return(nil)
+		treeManager.EXPECT().DeleteTree(gomock.Any(), spaceId, id).Return(nil)
 		delState.EXPECT().Delete(id).Return(nil)
 
 		deleter.Delete()
@@ -34,7 +34,7 @@ func TestDeleter_Delete(t *testing.T) {
 		spaceId := "spaceId"
 		delState.EXPECT().GetQueued().Return([]string{id})
 		st.EXPECT().Id().Return(spaceId)
-		treeGetter.EXPECT().DeleteTree(gomock.Any(), spaceId, id).Return(spacestorage.ErrTreeStorageAlreadyDeleted)
+		treeManager.EXPECT().DeleteTree(gomock.Any(), spaceId, id).Return(spacestorage.ErrTreeStorageAlreadyDeleted)
 		delState.EXPECT().Delete(id).Return(nil)
 
 		deleter.Delete()
@@ -45,7 +45,7 @@ func TestDeleter_Delete(t *testing.T) {
 		spaceId := "spaceId"
 		delState.EXPECT().GetQueued().Return([]string{id})
 		st.EXPECT().Id().Return(spaceId)
-		treeGetter.EXPECT().DeleteTree(gomock.Any(), spaceId, id).Return(fmt.Errorf("some error"))
+		treeManager.EXPECT().DeleteTree(gomock.Any(), spaceId, id).Return(fmt.Errorf("some error"))
 
 		deleter.Delete()
 	})

@@ -3,7 +3,6 @@ package commonspace
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/headsync"
@@ -31,6 +30,7 @@ import (
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -89,7 +89,7 @@ type SpaceDescription struct {
 }
 
 func NewSpaceId(id string, repKey uint64) string {
-	return fmt.Sprintf("%s.%s", id, strconv.FormatUint(repKey, 36))
+	return strings.Join([]string{id, strconv.FormatUint(repKey, 36)}, ".")
 }
 
 type Space interface {
@@ -130,12 +130,13 @@ type space struct {
 	headSync       headsync.HeadSync
 	syncStatus     syncstatus.StatusUpdater
 	storage        spacestorage.SpaceStorage
-	cache          *commonGetter
+	treeManager    *commonGetter
 	account        accountservice.Service
 	aclList        *syncacl.SyncAcl
 	configuration  nodeconf.NodeConf
 	settingsObject settings.SettingsObject
 	peerManager    peermanager.PeerManager
+	treeBuilder    objecttree.BuildObjectTreeFunc
 	metric         metric.Metric
 
 	handleQueue multiqueue.MultiQueue[HandleMessage]
@@ -191,8 +192,8 @@ func (s *space) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.MessagePool())
-	s.cache.AddObject(s.aclList)
+	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.SyncClient().MessagePool())
+	s.treeManager.AddObject(s.aclList)
 
 	deletionState := settingsstate.NewObjectDeletionState(s.storage)
 	deps := settings.Deps{
@@ -209,7 +210,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 			return
 		},
 		Account:       s.account,
-		TreeGetter:    s.cache,
+		TreeManager:   s.treeManager,
 		Store:         s.storage,
 		DeletionState: deletionState,
 		Provider:      s.headSync,
@@ -217,13 +218,12 @@ func (s *space) Init(ctx context.Context) (err error) {
 		OnSpaceDelete: s.onSpaceDelete,
 	}
 	s.settingsObject = settings.NewSettingsObject(deps, s.id)
-	s.objectSync.Init()
 	s.headSync.Init(initialIds, deletionState)
 	err = s.settingsObject.Init(ctx)
 	if err != nil {
 		return
 	}
-	s.cache.AddObject(s.settingsObject)
+	s.treeManager.AddObject(s.settingsObject)
 	s.syncStatus.Run()
 	s.handleQueue = multiqueue.New[HandleMessage](s.handleMessage, 100)
 	return nil
@@ -296,16 +296,17 @@ func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCrea
 		return
 	}
 	deps := synctree.BuildDeps{
-		SpaceId:        s.id,
-		ObjectSync:     s.objectSync,
-		Configuration:  s.configuration,
-		HeadNotifiable: s.headSync,
-		Listener:       listener,
-		AclList:        s.aclList,
-		SpaceStorage:   s.storage,
-		OnClose:        s.onObjectClose,
-		SyncStatus:     s.syncStatus,
-		PeerGetter:     s.peerManager,
+		SpaceId:         s.id,
+		SyncClient:      s.objectSync.SyncClient(),
+		Configuration:   s.configuration,
+		HeadNotifiable:  s.headSync,
+		Listener:        listener,
+		AclList:         s.aclList,
+		SpaceStorage:    s.storage,
+		OnClose:         s.onObjectClose,
+		SyncStatus:      s.syncStatus,
+		PeerGetter:      s.peerManager,
+		BuildObjectTree: s.treeBuilder,
 	}
 	t, err = synctree.PutSyncTree(ctx, payload, deps)
 	if err != nil {
@@ -334,7 +335,7 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 
 	deps := synctree.BuildDeps{
 		SpaceId:            s.id,
-		ObjectSync:         s.objectSync,
+		SyncClient:         s.objectSync.SyncClient(),
 		Configuration:      s.configuration,
 		HeadNotifiable:     s.headSync,
 		Listener:           opts.Listener,
@@ -344,6 +345,7 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 		SyncStatus:         s.syncStatus,
 		WaitTreeRemoteSync: opts.WaitTreeRemoteSync,
 		PeerGetter:         s.peerManager,
+		BuildObjectTree:    s.treeBuilder,
 	}
 	if t, err = synctree.BuildSyncTreeOrGetRemote(ctx, id, deps); err != nil {
 		return nil, err

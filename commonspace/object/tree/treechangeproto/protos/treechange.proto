@@ -56,6 +56,13 @@ message RawTreeChangeWithId {
   string id = 2;
 }
 
+enum ErrorCodes {
+  Unexpected = 0;
+  GetTreeError = 1;
+  FullSyncRequestError = 2;
+  ErrorOffset = 400;
+}
+
 message TreeSyncMessage {
   TreeSyncContentValue content = 1;
   RawTreeChangeWithId rootChange = 2;
@@ -95,6 +102,7 @@ message TreeFullSyncResponse {
 // TreeErrorResponse is an error sent as a response for a full sync request
 message TreeErrorResponse {
   string error = 1;
+  uint64 errCode = 2;
 }
 
 // TreeChangeInfo is used internally in Tree implementation for ease of marshalling

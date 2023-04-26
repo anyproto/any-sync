@@ -1,5 +1,7 @@
 package treechangeproto
 
+import "github.com/anytypeio/any-sync/net/rpc/rpcerr"
+
 func WrapHeadUpdate(update *TreeHeadUpdate, rootChange *RawTreeChangeWithId) *TreeSyncMessage {
 	return &TreeSyncMessage{
 		Content: &TreeSyncContentValue{
@@ -30,7 +32,7 @@ func WrapFullResponse(response *TreeFullSyncResponse, rootChange *RawTreeChangeW
 func WrapError(err error, rootChange *RawTreeChangeWithId) *TreeSyncMessage {
 	return &TreeSyncMessage{
 		Content: &TreeSyncContentValue{
-			Value: &TreeSyncContentValue_ErrorResponse{ErrorResponse: &TreeErrorResponse{Error: err.Error()}},
+			Value: &TreeSyncContentValue_ErrorResponse{ErrorResponse: &TreeErrorResponse{ErrCode: rpcerr.Code(err)}},
 		},
 		RootChange: rootChange,
 	}
