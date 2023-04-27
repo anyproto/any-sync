@@ -473,6 +473,11 @@ func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesA
 
 	var added []*treechangeproto.RawTreeChangeWithId
 	added, err = getAddedChanges(treeChangesAdded)
+	if !ot.treeBuilder.keepInMemoryData {
+		for _, ch := range treeChangesAdded {
+			ch.Data = nil
+		}
+	}
 	if err != nil {
 		return
 	}
