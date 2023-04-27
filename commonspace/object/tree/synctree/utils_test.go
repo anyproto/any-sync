@@ -296,7 +296,7 @@ func createStorage(treeId string, aclList list.AclList) treestorage.TreeStorage 
 }
 
 func createTestTree(aclList list.AclList, storage treestorage.TreeStorage) (objecttree.ObjectTree, error) {
-	return objecttree.BuildEmptyDataTestableTree(aclList, storage)
+	return objecttree.BuildEmptyDataTestableTree(storage, aclList)
 }
 
 type fixtureDeps struct {

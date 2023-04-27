@@ -31,6 +31,7 @@ type objectTreeDeps struct {
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
 	aclList         list.AclList
+	removeDataOnAdd bool
 }
 
 type BuildObjectTreeFunc = func(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error)
@@ -57,7 +58,7 @@ func emptyDataTreeDeps(
 	rootChange *treechangeproto.RawTreeChangeWithId,
 	treeStorage treestorage.TreeStorage,
 	aclList list.AclList) objectTreeDeps {
-	changeBuilder := NewEmptyDataBuilder(crypto.NewKeyStorage(), rootChange)
+	changeBuilder := NewChangeBuilder(crypto.NewKeyStorage(), rootChange)
 	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
 	return objectTreeDeps{
 		changeBuilder:   changeBuilder,
@@ -66,6 +67,7 @@ func emptyDataTreeDeps(
 		validator:       newTreeValidator(),
 		rawChangeLoader: newStorageLoader(treeStorage, changeBuilder),
 		aclList:         aclList,
+		removeDataOnAdd: true,
 	}
 }
 
@@ -107,7 +109,7 @@ func BuildEmptyDataObjectTree(treeStorage treestorage.TreeStorage, aclList list.
 	return buildObjectTree(deps)
 }
 
-func BuildTestableTree(aclList list.AclList, treeStorage treestorage.TreeStorage) (ObjectTree, error) {
+func BuildTestableTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
 	root, _ := treeStorage.Root()
 	changeBuilder := &nonVerifiableChangeBuilder{
 		ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), root),
@@ -124,10 +126,10 @@ func BuildTestableTree(aclList list.AclList, treeStorage treestorage.TreeStorage
 	return buildObjectTree(deps)
 }
 
-func BuildEmptyDataTestableTree(aclList list.AclList, treeStorage treestorage.TreeStorage) (ObjectTree, error) {
+func BuildEmptyDataTestableTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
 	root, _ := treeStorage.Root()
 	changeBuilder := &nonVerifiableChangeBuilder{
-		ChangeBuilder: NewEmptyDataBuilder(newMockKeyStorage(), root),
+		ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), root),
 	}
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,
@@ -136,6 +138,7 @@ func BuildEmptyDataTestableTree(aclList list.AclList, treeStorage treestorage.Tr
 		rawChangeLoader: newStorageLoader(treeStorage, changeBuilder),
 		validator:       &noOpTreeValidator{},
 		aclList:         aclList,
+		removeDataOnAdd: true,
 	}
 
 	return buildObjectTree(deps)
@@ -251,6 +254,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
 		notSeenIdxBuf:   make([]int, 0, 10),
 		newSnapshotsBuf: make([]*Change, 0, 10),
+		removeDataOnAdd: deps.removeDataOnAdd,
 	}
 
 	err := objTree.rebuildFromStorage(nil, nil)

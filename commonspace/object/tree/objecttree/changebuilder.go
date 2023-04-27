@@ -52,18 +52,6 @@ func (c *nonVerifiableChangeBuilder) Marshall(ch *Change) (raw *treechangeproto.
 	return c.ChangeBuilder.Marshall(ch)
 }
 
-type emptyDataChangeBuilder struct {
-	ChangeBuilder
-}
-
-func (c *emptyDataChangeBuilder) Build(payload BuilderContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
-	panic("should not be called")
-}
-
-func (c *emptyDataChangeBuilder) Marshall(ch *Change) (raw *treechangeproto.RawTreeChangeWithId, err error) {
-	panic("should not be called")
-}
-
 type ChangeBuilder interface {
 	Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error)
 	Build(payload BuilderContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
@@ -77,18 +65,6 @@ type changeBuilder struct {
 	rootChange *treechangeproto.RawTreeChangeWithId
 	keys       crypto.KeyStorage
 	newChange  newChangeFunc
-}
-
-func NewEmptyDataBuilder(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
-	return &emptyDataChangeBuilder{&changeBuilder{
-		rootChange: rootChange,
-		keys:       keys,
-		newChange: func(id string, identity crypto.PubKey, ch *treechangeproto.TreeChange, signature []byte) *Change {
-			c := NewChange(id, identity, ch, nil)
-			c.Data = nil
-			return c
-		},
-	}}
 }
 
 func NewChangeBuilder(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {

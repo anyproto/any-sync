@@ -85,11 +85,15 @@ func (c *MockChangeCreator) CreateRoot(id, aclId string) *treechangeproto.RawTre
 }
 
 func (c *MockChangeCreator) CreateRaw(id, aclId, snapshotId string, isSnapshot bool, prevIds ...string) *treechangeproto.RawTreeChangeWithId {
+	return c.CreateRawWithData(id, aclId, snapshotId, isSnapshot, nil, prevIds...)
+}
+
+func (c *MockChangeCreator) CreateRawWithData(id, aclId, snapshotId string, isSnapshot bool, data []byte, prevIds ...string) *treechangeproto.RawTreeChangeWithId {
 	aclChange := &treechangeproto.TreeChange{
 		TreeHeadIds:    prevIds,
 		AclHeadId:      aclId,
 		SnapshotBaseId: snapshotId,
-		ChangesData:    nil,
+		ChangesData:    data,
 		IsSnapshot:     isSnapshot,
 	}
 	res, _ := aclChange.Marshal()
