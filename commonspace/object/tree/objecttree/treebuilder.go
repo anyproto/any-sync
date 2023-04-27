@@ -21,18 +21,20 @@ type treeBuilder struct {
 	treeStorage treestorage.TreeStorage
 	builder     ChangeBuilder
 
-	cache map[string]*Change
-	tree  *Tree
+	cache            map[string]*Change
+	tree             *Tree
+	keepInMemoryData bool
 
 	// buffers
 	idStack    []string
 	loadBuffer []*Change
 }
 
-func newTreeBuilder(storage treestorage.TreeStorage, builder ChangeBuilder) *treeBuilder {
+func newTreeBuilder(keepData bool, storage treestorage.TreeStorage, builder ChangeBuilder) *treeBuilder {
 	return &treeBuilder{
-		treeStorage: storage,
-		builder:     builder,
+		treeStorage:      storage,
+		builder:          builder,
+		keepInMemoryData: keepData,
 	}
 }
 
@@ -162,6 +164,9 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 	ch, err = tb.builder.Unmarshall(change, true)
 	if err != nil {
 		return nil, err
+	}
+	if !tb.keepInMemoryData {
+		ch.Data = nil
 	}
 
 	tb.cache[id] = ch
