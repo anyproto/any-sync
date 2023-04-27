@@ -12,7 +12,7 @@ type InMemoryTreeStorage struct {
 	id      string
 	root    *treechangeproto.RawTreeChangeWithId
 	heads   []string
-	changes map[string]*treechangeproto.RawTreeChangeWithId
+	Changes map[string]*treechangeproto.RawTreeChangeWithId
 
 	sync.RWMutex
 }
@@ -22,7 +22,7 @@ func (t *InMemoryTreeStorage) TransactionAdd(changes []*treechangeproto.RawTreeC
 	defer t.RUnlock()
 
 	for _, ch := range changes {
-		t.changes[ch.Id] = ch
+		t.Changes[ch.Id] = ch
 	}
 	t.heads = append(t.heads[:0], heads...)
 	return nil
@@ -42,13 +42,13 @@ func NewInMemoryTreeStorage(
 		id:      root.Id,
 		root:    root,
 		heads:   append([]string(nil), heads...),
-		changes: allChanges,
+		Changes: allChanges,
 		RWMutex: sync.RWMutex{},
 	}, nil
 }
 
 func (t *InMemoryTreeStorage) HasChange(ctx context.Context, id string) (bool, error) {
-	_, exists := t.changes[id]
+	_, exists := t.Changes[id]
 	return exists, nil
 }
 
@@ -81,14 +81,14 @@ func (t *InMemoryTreeStorage) AddRawChange(change *treechangeproto.RawTreeChange
 	t.Lock()
 	defer t.Unlock()
 	// TODO: better to do deep copy
-	t.changes[change.Id] = change
+	t.Changes[change.Id] = change
 	return nil
 }
 
 func (t *InMemoryTreeStorage) GetRawChange(ctx context.Context, changeId string) (*treechangeproto.RawTreeChangeWithId, error) {
 	t.RLock()
 	defer t.RUnlock()
-	if res, exists := t.changes[changeId]; exists {
+	if res, exists := t.Changes[changeId]; exists {
 		return res, nil
 	}
 	return nil, fmt.Errorf("could not get change with id: %s", changeId)
@@ -100,7 +100,7 @@ func (t *InMemoryTreeStorage) Delete() error {
 
 func (t *InMemoryTreeStorage) Copy() *InMemoryTreeStorage {
 	var changes []*treechangeproto.RawTreeChangeWithId
-	for _, ch := range t.changes {
+	for _, ch := range t.Changes {
 		changes = append(changes, ch)
 	}
 	other, _ := NewInMemoryTreeStorage(t.root, t.heads, changes)
@@ -111,11 +111,11 @@ func (t *InMemoryTreeStorage) Equal(other *InMemoryTreeStorage) bool {
 	if !slice.UnsortedEquals(t.heads, other.heads) {
 		return false
 	}
-	if len(t.changes) != len(other.changes) {
+	if len(t.Changes) != len(other.Changes) {
 		return false
 	}
-	for k, v := range t.changes {
-		if otherV, exists := other.changes[k]; exists {
+	for k, v := range t.Changes {
+		if otherV, exists := other.Changes[k]; exists {
 			if otherV.Id == v.Id {
 				continue
 			}

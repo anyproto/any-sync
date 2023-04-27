@@ -8,6 +8,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/util/slice"
+	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"testing"
@@ -30,7 +31,8 @@ func TestEmptyClientGetsFullHistory(t *testing.T) {
 			"peer1": []string{"peer2"},
 			"peer2": []string{"peer1"},
 		},
-		emptyTrees: []string{"peer2"},
+		emptyTrees:  []string{"peer2"},
+		treeBuilder: objecttree.BuildTestableTree,
 	}
 	fx := newProtocolFixture(t, spaceId, deps)
 	fx.run(t)
@@ -60,6 +62,11 @@ func TestEmptyClientGetsFullHistory(t *testing.T) {
 }
 
 func TestTreeFuzzyMerge(t *testing.T) {
+	testTreeFuzzyMerge(t, true)
+	testTreeFuzzyMerge(t, false)
+}
+
+func testTreeFuzzyMerge(t *testing.T, withData bool) {
 	var (
 		rnd      = rand.New(rand.NewSource(time.Now().Unix()))
 		levels   = 20
@@ -67,20 +74,20 @@ func TestTreeFuzzyMerge(t *testing.T) {
 		rounds   = 10
 	)
 	for i := 0; i < rounds; i++ {
-		testTreeMerge(t, levels, perLevel, func() bool {
+		testTreeMerge(t, levels, perLevel, withData, func() bool {
 			return true
 		})
-		testTreeMerge(t, levels, perLevel, func() bool {
+		testTreeMerge(t, levels, perLevel, withData, func() bool {
 			return false
 		})
-		testTreeMerge(t, levels, perLevel, func() bool {
+		testTreeMerge(t, levels, perLevel, withData, func() bool {
 			return rnd.Intn(10) > 8
 		})
 		levels += 2
 	}
 }
 
-func testTreeMerge(t *testing.T, levels, perlevel int, isSnapshot func() bool) {
+func testTreeMerge(t *testing.T, levels, perLevel int, hasData bool, isSnapshot func() bool) {
 	treeId := "treeId"
 	spaceId := "spaceId"
 	keys, err := accountdata.NewRandom()
@@ -88,15 +95,20 @@ func testTreeMerge(t *testing.T, levels, perlevel int, isSnapshot func() bool) {
 	aclList, err := list.NewTestDerivedAcl(spaceId, keys)
 	storage := createStorage(treeId, aclList)
 	changeCreator := objecttree.NewMockChangeCreator()
+	builder := objecttree.BuildTestableTree
+	if hasData {
+		builder = objecttree.BuildEmptyDataTestableTree
+	}
 	params := genParams{
 		prefix:     "peer1",
 		aclId:      aclList.Id(),
 		startIdx:   0,
 		levels:     levels,
-		perLevel:   perlevel,
+		perLevel:   perLevel,
 		snapshotId: treeId,
 		prevHeads:  []string{treeId},
 		isSnapshot: isSnapshot,
+		hasData:    hasData,
 	}
 	// generating initial tree
 	initialRes := genChanges(changeCreator, params)
@@ -110,7 +122,8 @@ func testTreeMerge(t *testing.T, levels, perlevel int, isSnapshot func() bool) {
 			"peer2": []string{"node1"},
 			"node1": []string{"peer1", "peer2"},
 		},
-		emptyTrees: []string{"peer2", "node1"},
+		emptyTrees:  []string{"peer2", "node1"},
+		treeBuilder: builder,
 	}
 	fx := newProtocolFixture(t, spaceId, deps)
 	fx.run(t)
@@ -127,11 +140,12 @@ func testTreeMerge(t *testing.T, levels, perlevel int, isSnapshot func() bool) {
 		aclId:    aclList.Id(),
 		startIdx: levels,
 		levels:   levels,
-		perLevel: perlevel,
+		perLevel: perLevel,
 
 		snapshotId: initialRes.snapshotId,
 		prevHeads:  initialRes.heads,
 		isSnapshot: isSnapshot,
+		hasData:    hasData,
 	}
 	// generating different additions to the tree for different peers
 	peer1Res := genChanges(changeCreator, params)
@@ -156,4 +170,16 @@ func testTreeMerge(t *testing.T, levels, perlevel int, isSnapshot func() bool) {
 	firstStorage := firstTree.Storage().(*treestorage.InMemoryTreeStorage)
 	secondStorage := secondTree.Storage().(*treestorage.InMemoryTreeStorage)
 	require.True(t, firstStorage.Equal(secondStorage))
+	if hasData {
+		for _, ch := range secondStorage.Changes {
+			if ch.Id == treeId {
+				continue
+			}
+			unmarshallRaw := &treechangeproto.RawTreeChange{}
+			proto.Unmarshal(ch.RawChange, unmarshallRaw)
+			treeCh := &treechangeproto.TreeChange{}
+			proto.Unmarshal(unmarshallRaw.Payload, treeCh)
+			require.Equal(t, ch.Id, string(treeCh.ChangesData))
+		}
+	}
 }
