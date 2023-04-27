@@ -96,10 +96,11 @@ type objectTree struct {
 	treeBuilder     *treeBuilder
 	aclList         list.AclList
 
-	id      string
-	rawRoot *treechangeproto.RawTreeChangeWithId
-	root    *Change
-	tree    *Tree
+	removeDataOnAdd bool
+	id              string
+	rawRoot         *treechangeproto.RawTreeChangeWithId
+	root            *Change
+	tree            *Tree
 
 	keys           map[string]crypto.SymKey
 	currentReadKey crypto.SymKey
@@ -473,6 +474,11 @@ func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesA
 
 	var added []*treechangeproto.RawTreeChangeWithId
 	added, err = getAddedChanges(treeChangesAdded)
+	if ot.removeDataOnAdd {
+		for _, ch := range treeChangesAdded {
+			ch.Data = nil
+		}
+	}
 	if err != nil {
 		return
 	}
