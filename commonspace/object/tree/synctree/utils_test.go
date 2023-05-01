@@ -90,6 +90,7 @@ type testSyncHandler struct {
 	aclList    list.AclList
 	log        *messageLog
 	syncClient objectsync.SyncClient
+	builder    objecttree.BuildObjectTreeFunc
 }
 
 // createSyncHandler creates a sync handler when a tree is already created
@@ -105,7 +106,7 @@ func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, lo
 }
 
 // createEmptySyncHandler creates a sync handler when the tree will be provided later (this emulates the situation when we have no tree)
-func createEmptySyncHandler(peerId, spaceId string, aclList list.AclList, log *messageLog) *testSyncHandler {
+func createEmptySyncHandler(peerId, spaceId string, builder objecttree.BuildObjectTreeFunc, aclList list.AclList, log *messageLog) *testSyncHandler {
 	factory := objectsync.NewRequestFactory()
 	syncClient := objectsync.NewSyncClient(spaceId, newTestMessagePool(peerId, log), factory)
 
@@ -116,6 +117,7 @@ func createEmptySyncHandler(peerId, spaceId string, aclList list.AclList, log *m
 		aclList:    aclList,
 		log:        log,
 		syncClient: syncClient,
+		builder:    builder,
 	}
 }
 
@@ -148,7 +150,7 @@ func (h *testSyncHandler) HandleMessage(ctx context.Context, senderId string, re
 	}
 	fullSyncResponse := unmarshalled.Content.GetFullSyncResponse()
 	treeStorage, _ := treestorage.NewInMemoryTreeStorage(unmarshalled.RootChange, []string{unmarshalled.RootChange.Id}, nil)
-	tree, err := createTestTree(h.aclList, treeStorage)
+	tree, err := h.builder(treeStorage, h.aclList)
 	if err != nil {
 		return
 	}
@@ -296,7 +298,7 @@ func createStorage(treeId string, aclList list.AclList) treestorage.TreeStorage 
 }
 
 func createTestTree(aclList list.AclList, storage treestorage.TreeStorage) (objecttree.ObjectTree, error) {
-	return objecttree.BuildEmptyDataTestableTree(aclList, storage)
+	return objecttree.BuildEmptyDataTestableTree(storage, aclList)
 }
 
 type fixtureDeps struct {
@@ -304,6 +306,7 @@ type fixtureDeps struct {
 	initStorage   *treestorage.InMemoryTreeStorage
 	connectionMap map[string][]string
 	emptyTrees    []string
+	treeBuilder   objecttree.BuildObjectTreeFunc
 }
 
 // protocolFixture is the test environment for sync protocol tests
@@ -326,10 +329,10 @@ func newProtocolFixture(t *testing.T, spaceId string, deps fixtureDeps) *protoco
 	for peerId := range deps.connectionMap {
 		var handler *testSyncHandler
 		if slices.Contains(deps.emptyTrees, peerId) {
-			handler = createEmptySyncHandler(peerId, spaceId, deps.aclList, log)
+			handler = createEmptySyncHandler(peerId, spaceId, deps.treeBuilder, deps.aclList, log)
 		} else {
 			stCopy := deps.initStorage.Copy()
-			testTree, err := createTestTree(deps.aclList, stCopy)
+			testTree, err := deps.treeBuilder(stCopy, deps.aclList)
 			require.NoError(t, err)
 			handler = createSyncHandler(peerId, spaceId, testTree, log)
 		}
@@ -373,6 +376,7 @@ type genParams struct {
 	snapshotId string
 	prevHeads  []string
 	isSnapshot func() bool
+	hasData    bool
 }
 
 // genResult is the result of genChanges
@@ -399,7 +403,11 @@ func genChanges(creator *objecttree.MockChangeCreator, params genParams) (res ge
 		)
 		newChange := func(isSnapshot bool, idx int, prevIds []string) string {
 			newId := fmt.Sprintf("%s.%d.%d", params.prefix, params.startIdx+i, idx)
-			newCh := creator.CreateRaw(newId, params.aclId, snapshotId, isSnapshot, prevIds...)
+			var data []byte
+			if params.hasData {
+				data = []byte(newId)
+			}
+			newCh := creator.CreateRawWithData(newId, params.aclId, snapshotId, isSnapshot, data, prevIds...)
 			res.changes = append(res.changes, newCh)
 			return newId
 		}

@@ -42,7 +42,7 @@ func verifiableTreeDeps(
 	treeStorage treestorage.TreeStorage,
 	aclList list.AclList) objectTreeDeps {
 	changeBuilder := NewChangeBuilder(crypto.NewKeyStorage(), rootChange)
-	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
+	treeBuilder := newTreeBuilder(true, treeStorage, changeBuilder)
 	return objectTreeDeps{
 		changeBuilder:   changeBuilder,
 		treeBuilder:     treeBuilder,
@@ -57,8 +57,8 @@ func emptyDataTreeDeps(
 	rootChange *treechangeproto.RawTreeChangeWithId,
 	treeStorage treestorage.TreeStorage,
 	aclList list.AclList) objectTreeDeps {
-	changeBuilder := NewEmptyDataBuilder(crypto.NewKeyStorage(), rootChange)
-	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
+	changeBuilder := NewChangeBuilder(crypto.NewKeyStorage(), rootChange)
+	treeBuilder := newTreeBuilder(false, treeStorage, changeBuilder)
 	return objectTreeDeps{
 		changeBuilder:   changeBuilder,
 		treeBuilder:     treeBuilder,
@@ -74,7 +74,7 @@ func nonVerifiableTreeDeps(
 	treeStorage treestorage.TreeStorage,
 	aclList list.AclList) objectTreeDeps {
 	changeBuilder := &nonVerifiableChangeBuilder{NewChangeBuilder(newMockKeyStorage(), rootChange)}
-	treeBuilder := newTreeBuilder(treeStorage, changeBuilder)
+	treeBuilder := newTreeBuilder(true, treeStorage, changeBuilder)
 	return objectTreeDeps{
 		changeBuilder:   changeBuilder,
 		treeBuilder:     treeBuilder,
@@ -107,14 +107,14 @@ func BuildEmptyDataObjectTree(treeStorage treestorage.TreeStorage, aclList list.
 	return buildObjectTree(deps)
 }
 
-func BuildTestableTree(aclList list.AclList, treeStorage treestorage.TreeStorage) (ObjectTree, error) {
+func BuildTestableTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
 	root, _ := treeStorage.Root()
 	changeBuilder := &nonVerifiableChangeBuilder{
 		ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), root),
 	}
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,
-		treeBuilder:     newTreeBuilder(treeStorage, changeBuilder),
+		treeBuilder:     newTreeBuilder(true, treeStorage, changeBuilder),
 		treeStorage:     treeStorage,
 		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
 		validator:       &noOpTreeValidator{},
@@ -124,14 +124,14 @@ func BuildTestableTree(aclList list.AclList, treeStorage treestorage.TreeStorage
 	return buildObjectTree(deps)
 }
 
-func BuildEmptyDataTestableTree(aclList list.AclList, treeStorage treestorage.TreeStorage) (ObjectTree, error) {
+func BuildEmptyDataTestableTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
 	root, _ := treeStorage.Root()
 	changeBuilder := &nonVerifiableChangeBuilder{
-		ChangeBuilder: NewEmptyDataBuilder(newMockKeyStorage(), root),
+		ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), root),
 	}
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,
-		treeBuilder:     newTreeBuilder(treeStorage, changeBuilder),
+		treeBuilder:     newTreeBuilder(false, treeStorage, changeBuilder),
 		treeStorage:     treeStorage,
 		rawChangeLoader: newStorageLoader(treeStorage, changeBuilder),
 		validator:       &noOpTreeValidator{},
