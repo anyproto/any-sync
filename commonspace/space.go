@@ -88,7 +88,6 @@ type Space interface {
 	DebugAllHeads() []headsync.TreeHeads
 	Description() (SpaceDescription, error)
 
-	DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error)
 	BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error)
@@ -240,23 +239,6 @@ func (s *space) StoredIds() []string {
 
 func (s *space) DebugAllHeads() []headsync.TreeHeads {
 	return s.headSync.DebugAllHeads()
-}
-
-func (s *space) DeriveTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error) {
-	if s.isClosed.Load() {
-		err = ErrSpaceClosed
-		return
-	}
-	root, err := objecttree.DeriveObjectTreeRoot(payload, s.aclList)
-	if err != nil {
-		return
-	}
-	res = treestorage.TreeStorageCreatePayload{
-		RootRawChange: root,
-		Changes:       []*treechangeproto.RawTreeChangeWithId{root},
-		Heads:         []string{root.Id},
-	}
-	return
 }
 
 func (s *space) CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error) {

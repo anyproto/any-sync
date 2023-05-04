@@ -5,8 +5,6 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/util/crypto"
-	"math/rand"
-	"time"
 )
 
 type ObjectTreeCreatePayload struct {
@@ -15,6 +13,8 @@ type ObjectTreeCreatePayload struct {
 	ChangePayload []byte
 	SpaceId       string
 	IsEncrypted   bool
+	Seed          []byte
+	Timestamp     int64
 }
 
 type HistoryTreeParams struct {
@@ -83,19 +83,6 @@ func nonVerifiableTreeDeps(
 		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
 		aclList:         aclList,
 	}
-}
-
-func CreateObjectTreeRoot(payload ObjectTreeCreatePayload, aclList list.AclList) (root *treechangeproto.RawTreeChangeWithId, err error) {
-	bytes := make([]byte, 32)
-	_, err = rand.Read(bytes)
-	if err != nil {
-		return
-	}
-	return createObjectTreeRoot(payload, time.Now().Unix(), bytes, aclList)
-}
-
-func DeriveObjectTreeRoot(payload ObjectTreeCreatePayload, aclList list.AclList) (root *treechangeproto.RawTreeChangeWithId, err error) {
-	return createObjectTreeRoot(payload, 0, nil, aclList)
 }
 
 func BuildEmptyDataObjectTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
@@ -168,54 +155,7 @@ func BuildHistoryTree(params HistoryTreeParams) (HistoryTree, error) {
 	return buildHistoryTree(deps, params)
 }
 
-func CreateDerivedObjectTree(
-	payload ObjectTreeCreatePayload,
-	aclList list.AclList,
-	createStorage treestorage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
-	return createObjectTree(payload, 0, nil, aclList, createStorage)
-}
-
-func CreateObjectTree(
-	payload ObjectTreeCreatePayload,
-	aclList list.AclList,
-	createStorage treestorage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
-	bytes := make([]byte, 32)
-	_, err = rand.Read(bytes)
-	if err != nil {
-		return
-	}
-	return createObjectTree(payload, time.Now().Unix(), bytes, aclList, createStorage)
-}
-
-func createObjectTree(
-	payload ObjectTreeCreatePayload,
-	timestamp int64,
-	seed []byte,
-	aclList list.AclList,
-	createStorage treestorage.TreeStorageCreatorFunc) (objTree ObjectTree, err error) {
-	raw, err := createObjectTreeRoot(payload, timestamp, seed, aclList)
-	if err != nil {
-		return
-	}
-
-	// create storage
-	st, err := createStorage(treestorage.TreeStorageCreatePayload{
-		RootRawChange: raw,
-		Changes:       []*treechangeproto.RawTreeChangeWithId{raw},
-		Heads:         []string{raw.Id},
-	})
-	if err != nil {
-		return
-	}
-
-	return BuildObjectTree(st, aclList)
-}
-
-func createObjectTreeRoot(
-	payload ObjectTreeCreatePayload,
-	timestamp int64,
-	seed []byte,
-	aclList list.AclList) (root *treechangeproto.RawTreeChangeWithId, err error) {
+func CreateObjectTreeRoot(payload ObjectTreeCreatePayload, aclList list.AclList) (root *treechangeproto.RawTreeChangeWithId, err error) {
 	aclList.RLock()
 	aclHeadId := aclList.Head().Id
 	aclList.RUnlock()
@@ -229,8 +169,8 @@ func createObjectTreeRoot(
 		SpaceId:       payload.SpaceId,
 		ChangeType:    payload.ChangeType,
 		ChangePayload: payload.ChangePayload,
-		Timestamp:     timestamp,
-		Seed:          seed,
+		Timestamp:     payload.Timestamp,
+		Seed:          payload.Seed,
 	}
 
 	_, root, err = NewChangeBuilder(crypto.NewKeyStorage(), nil).BuildRoot(cnt)
