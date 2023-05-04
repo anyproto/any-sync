@@ -251,6 +251,10 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 		}
 		readKey = ot.currentReadKey
 	}
+	timestamp := content.Timestamp
+	if timestamp <= 0 {
+		timestamp = time.Now().Unix()
+	}
 	cnt = BuilderContent{
 		TreeHeadIds:    ot.tree.Heads(),
 		AclHeadId:      ot.aclList.Head().Id,
@@ -260,6 +264,7 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 		PrivKey:        content.Key,
 		ReadKey:        readKey,
 		Content:        content.Data,
+		Timestamp:      content.Timestamp,
 	}
 	return
 }
