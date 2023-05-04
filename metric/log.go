@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"github.com/anytypeio/any-sync/net/peer"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"time"
@@ -11,11 +12,11 @@ func Method(val string) zap.Field {
 }
 
 func QueueDur(val time.Duration) zap.Field {
-	return zap.Int64("queueMs", val.Milliseconds())
+	return zap.Float64("queueDur", val.Seconds())
 }
 
 func TotalDur(val time.Duration) zap.Field {
-	return zap.Int64("totalMs", val.Milliseconds())
+	return zap.Float64("totalDur", val.Seconds())
 }
 
 func SpaceId(val string) zap.Field {
@@ -26,14 +27,24 @@ func ObjectId(val string) zap.Field {
 	return zap.String("objectId", val)
 }
 
+func PeerId(val string) zap.Field {
+	return zap.String("peerId", val)
+}
+
 func Identity(val string) zap.Field {
 	return zap.String("identity", val)
 }
 
-func IP(val string) zap.Field {
-	return zap.String("ip", val)
+func Addr(val string) zap.Field {
+	return zap.String("addr", val)
 }
 
-func (m *metric) RequestLog(ctx context.Context, fields ...zap.Field) {
-	m.rpcLog.InfoCtx(ctx, "", fields...)
+func (m *metric) RequestLog(ctx context.Context, rpc string, fields ...zap.Field) {
+	peerId, _ := peer.CtxPeerId(ctx)
+	ak, _ := peer.CtxPubKey(ctx)
+	var acc string
+	if ak != nil {
+		acc = ak.Account()
+	}
+	m.rpcLog.Info("", append(fields, Addr(peer.CtxPeerAddr(ctx)), PeerId(peerId), Identity(acc), Method(rpc))...)
 }

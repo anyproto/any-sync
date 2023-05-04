@@ -62,6 +62,7 @@ type HandleMessage struct {
 	Deadline          time.Time
 	SenderId          string
 	Message           *spacesyncproto.ObjectSyncMessage
+	PeerCtx           context.Context
 }
 
 func (m HandleMessage) LogFields(fields ...zap.Field) []zap.Field {
@@ -407,7 +408,9 @@ func (s *space) handleMessage(msg HandleMessage) {
 	ctx := peer.CtxWithPeerId(context.Background(), msg.SenderId)
 	ctx = logger.CtxWithFields(ctx, zap.Uint64("msgId", msg.Id), zap.String("senderId", msg.SenderId))
 	defer func() {
-		s.metric.RequestLog(ctx, msg.LogFields(zap.Error(err))...)
+		s.metric.RequestLog(msg.PeerCtx, "space.streamOp", msg.LogFields(
+			zap.Error(err),
+		)...)
 	}()
 
 	if !msg.Deadline.IsZero() {
