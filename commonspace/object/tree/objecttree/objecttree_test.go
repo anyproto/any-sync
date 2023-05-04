@@ -118,7 +118,7 @@ func TestObjectTree(t *testing.T) {
 			require.Equal(t, res.Added[0].Id, oTree.Heads()[0])
 			ch, err := oTree.(*objectTree).changeBuilder.Unmarshall(res.Added[0], true)
 			require.NoError(t, err)
-			require.NotEqual(t, ch.Timestamp, 0)
+			require.NotZero(t, ch.Timestamp)
 		})
 		t.Run("timestamp is set correctly", func(t *testing.T) {
 			someTs := time.Now().Add(time.Hour).Unix()
