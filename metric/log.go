@@ -1,9 +1,9 @@
 package metric
 
 import (
+	"context"
 	"github.com/anytypeio/any-sync/net/peer"
 	"go.uber.org/zap"
-	"golang.org/x/net/context"
 	"time"
 )
 
