@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 type testTreeContext struct {
@@ -19,13 +20,13 @@ type testTreeContext struct {
 	objTree       ObjectTree
 }
 
-func prepareAclList(t *testing.T) list.AclList {
+func prepareAclList(t *testing.T) (list.AclList, *accountdata.AccountKeys) {
 	randKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
 	aclList, err := list.NewTestDerivedAcl("spaceId", randKeys)
 	require.NoError(t, err, "building acl list should be without error")
 
-	return aclList
+	return aclList, randKeys
 }
 
 func prepareHistoryTreeDeps(aclList list.AclList) (*MockChangeCreator, objectTreeDeps) {
@@ -88,7 +89,57 @@ func prepareContext(
 }
 
 func TestObjectTree(t *testing.T) {
-	aclList := prepareAclList(t)
+	aclList, keys := prepareAclList(t)
+	ctx := context.Background()
+
+	t.Run("add content", func(t *testing.T) {
+		root, err := CreateObjectTreeRoot(ObjectTreeCreatePayload{
+			PrivKey:       keys.SignKey,
+			ChangeType:    "changeType",
+			ChangePayload: nil,
+			SpaceId:       "spaceId",
+			IsEncrypted:   true,
+		}, aclList)
+		require.NoError(t, err)
+		store, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
+		oTree, err := BuildObjectTree(store, aclList)
+		require.NoError(t, err)
+
+		t.Run("0 timestamp is changed to current", func(t *testing.T) {
+			start := time.Now()
+			res, err := oTree.AddContent(ctx, SignableChangeContent{
+				Data:        []byte("some"),
+				Key:         keys.SignKey,
+				IsSnapshot:  false,
+				IsEncrypted: true,
+				Timestamp:   0,
+			})
+			end := time.Now()
+			require.NoError(t, err)
+			require.Len(t, oTree.Heads(), 1)
+			require.Equal(t, res.Added[0].Id, oTree.Heads()[0])
+			ch, err := oTree.(*objectTree).changeBuilder.Unmarshall(res.Added[0], true)
+			require.NoError(t, err)
+			require.GreaterOrEqual(t, start.Unix(), ch.Timestamp)
+			require.LessOrEqual(t, end.Unix(), ch.Timestamp)
+		})
+		t.Run("timestamp is set correctly", func(t *testing.T) {
+			someTs := time.Now().Add(time.Hour).Unix()
+			res, err := oTree.AddContent(ctx, SignableChangeContent{
+				Data:        []byte("some"),
+				Key:         keys.SignKey,
+				IsSnapshot:  false,
+				IsEncrypted: true,
+				Timestamp:   someTs,
+			})
+			require.NoError(t, err)
+			require.Len(t, oTree.Heads(), 1)
+			require.Equal(t, res.Added[0].Id, oTree.Heads()[0])
+			ch, err := oTree.(*objectTree).changeBuilder.Unmarshall(res.Added[0], true)
+			require.NoError(t, err)
+			require.Equal(t, ch.Timestamp, someTs)
+		})
+	})
 
 	t.Run("add simple", func(t *testing.T) {
 		ctx := prepareTreeContext(t, aclList)
