@@ -105,7 +105,8 @@ func TestObjectTree(t *testing.T) {
 		oTree, err := BuildObjectTree(store, aclList)
 		require.NoError(t, err)
 
-		t.Run("0 timestamp is changed", func(t *testing.T) {
+		t.Run("0 timestamp is changed to current", func(t *testing.T) {
+			start := time.Now()
 			res, err := oTree.AddContent(ctx, SignableChangeContent{
 				Data:        []byte("some"),
 				Key:         keys.SignKey,
@@ -113,12 +114,14 @@ func TestObjectTree(t *testing.T) {
 				IsEncrypted: true,
 				Timestamp:   0,
 			})
+			end := time.Now()
 			require.NoError(t, err)
 			require.Len(t, oTree.Heads(), 1)
 			require.Equal(t, res.Added[0].Id, oTree.Heads()[0])
 			ch, err := oTree.(*objectTree).changeBuilder.Unmarshall(res.Added[0], true)
 			require.NoError(t, err)
-			require.NotZero(t, ch.Timestamp)
+			require.GreaterOrEqual(t, start.Unix(), ch.Timestamp)
+			require.LessOrEqual(t, end.Unix(), ch.Timestamp)
 		})
 		t.Run("timestamp is set correctly", func(t *testing.T) {
 			someTs := time.Now().Add(time.Hour).Unix()
