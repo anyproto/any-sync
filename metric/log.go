@@ -52,6 +52,9 @@ func Size(size int) zap.Field {
 }
 
 func (m *metric) RequestLog(ctx context.Context, rpc string, fields ...zap.Field) {
+	if m == nil {
+		return
+	}
 	peerId, _ := peer.CtxPeerId(ctx)
 	ak, _ := peer.CtxPubKey(ctx)
 	var acc string
