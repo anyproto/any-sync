@@ -39,6 +39,18 @@ func Addr(val string) zap.Field {
 	return zap.String("addr", val)
 }
 
+func FileId(fileId string) zap.Field {
+	return zap.String("fileId", fileId)
+}
+
+func Cid(cid string) zap.Field {
+	return zap.String("cid", cid)
+}
+
+func Size(size int) zap.Field {
+	return zap.Int("size", size)
+}
+
 func (m *metric) RequestLog(ctx context.Context, rpc string, fields ...zap.Field) {
 	peerId, _ := peer.CtxPeerId(ctx)
 	ak, _ := peer.CtxPubKey(ctx)
