@@ -408,6 +408,9 @@ func (s *space) handleMessage(msg HandleMessage) {
 	ctx := peer.CtxWithPeerId(context.Background(), msg.SenderId)
 	ctx = logger.CtxWithFields(ctx, zap.Uint64("msgId", msg.Id), zap.String("senderId", msg.SenderId))
 	defer func() {
+		if s.metric == nil {
+			return
+		}
 		s.metric.RequestLog(msg.PeerCtx, "space.streamOp", msg.LogFields(
 			zap.Error(err),
 		)...)
