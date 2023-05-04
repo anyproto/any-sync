@@ -6,7 +6,6 @@ import (
 	"github.com/anytypeio/any-sync/util/cidutil"
 	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
-	"time"
 )
 
 var ErrEmptyChange = errors.New("change payload should not be empty")
@@ -20,6 +19,7 @@ type BuilderContent struct {
 	PrivKey        crypto.PrivKey
 	ReadKey        crypto.SymKey
 	Content        []byte
+	Timestamp      int64
 }
 
 type InitialContent struct {
@@ -166,7 +166,7 @@ func (c *changeBuilder) Build(payload BuilderContent) (ch *Change, rawIdChange *
 		AclHeadId:      payload.AclHeadId,
 		SnapshotBaseId: payload.SnapshotBaseId,
 		ReadKeyId:      payload.ReadKeyId,
-		Timestamp:      time.Now().Unix(),
+		Timestamp:      payload.Timestamp,
 		Identity:       identity,
 		IsSnapshot:     payload.IsSnapshot,
 	}
