@@ -10,6 +10,7 @@ import (
 
 type stream struct {
 	peerId   string
+	peerCtx  context.Context
 	stream   drpc.Stream
 	pool     *streamPool
 	streamId uint32
@@ -36,7 +37,7 @@ func (sr *stream) readLoop() error {
 			sr.l.Info("msg receive error", zap.Error(err))
 			return err
 		}
-		ctx := streamCtx(context.Background(), sr.streamId, sr.peerId)
+		ctx := streamCtx(sr.peerCtx, sr.streamId, sr.peerId)
 		ctx = logger.CtxWithFields(ctx, zap.String("peerId", sr.peerId))
 		if err := sr.pool.handler.HandleMessage(ctx, sr.peerId, msg); err != nil {
 			sr.l.Info("msg handle error", zap.Error(err))

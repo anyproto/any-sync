@@ -27,9 +27,9 @@ type PeerGetter func(ctx context.Context) (peers []peer.Peer, err error)
 // StreamPool keeps and read streams
 type StreamPool interface {
 	// AddStream adds new outgoing stream into the pool
-	AddStream(peerId string, stream drpc.Stream, tags ...string)
+	AddStream(stream drpc.Stream, tags ...string) (err error)
 	// ReadStream adds new incoming stream and synchronously read it
-	ReadStream(peerId string, stream drpc.Stream, tags ...string) (err error)
+	ReadStream(stream drpc.Stream, tags ...string) (err error)
 	// Send sends a message to given peers. A stream will be opened if it is not cached before. Works async.
 	Send(ctx context.Context, msg drpc.Message, target PeerGetter) (err error)
 	// SendById sends a message to given peerIds. Works only if stream exists
@@ -63,16 +63,23 @@ type openingProcess struct {
 	err error
 }
 
-func (s *streamPool) ReadStream(peerId string, drpcStream drpc.Stream, tags ...string) error {
-	st := s.addStream(peerId, drpcStream, tags...)
+func (s *streamPool) ReadStream(drpcStream drpc.Stream, tags ...string) error {
+	st, err := s.addStream(drpcStream, tags...)
+	if err != nil {
+		return err
+	}
 	return st.readLoop()
 }
 
-func (s *streamPool) AddStream(peerId string, drpcStream drpc.Stream, tags ...string) {
-	st := s.addStream(peerId, drpcStream, tags...)
+func (s *streamPool) AddStream(drpcStream drpc.Stream, tags ...string) error {
+	st, err := s.addStream(drpcStream, tags...)
+	if err != nil {
+		return err
+	}
 	go func() {
 		_ = st.readLoop()
 	}()
+	return nil
 }
 
 func (s *streamPool) Streams(tags ...string) (streams []drpc.Stream) {
@@ -86,13 +93,19 @@ func (s *streamPool) Streams(tags ...string) (streams []drpc.Stream) {
 	return
 }
 
-func (s *streamPool) addStream(peerId string, drpcStream drpc.Stream, tags ...string) *stream {
+func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream, error) {
+	ctx := drpcStream.Context()
+	peerId, err := peer.CtxPeerId(ctx)
+	if err != nil {
+		return nil, err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.lastStreamId++
 	streamId := s.lastStreamId
 	st := &stream{
 		peerId:   peerId,
+		peerCtx:  ctx,
 		stream:   drpcStream,
 		pool:     s,
 		streamId: streamId,
@@ -104,7 +117,7 @@ func (s *streamPool) addStream(peerId string, drpcStream drpc.Stream, tags ...st
 	for _, tag := range tags {
 		s.streamIdsByTag[tag] = append(s.streamIdsByTag[tag], streamId)
 	}
-	return st
+	return st, nil
 }
 
 func (s *streamPool) Send(ctx context.Context, msg drpc.Message, peerGetter PeerGetter) (err error) {
@@ -241,7 +254,10 @@ func (s *streamPool) openStream(ctx context.Context, p peer.Peer) *openingProces
 			op.err = err
 			return
 		}
-		s.AddStream(p.Id(), st, tags...)
+		if err = s.AddStream(st, tags...); err != nil {
+			op.err = nil
+			return
+		}
 	}()
 	return op
 }

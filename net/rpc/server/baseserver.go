@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/secureservice"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"github.com/zeebo/errs"
@@ -98,8 +99,11 @@ func (s *BaseDrpcServer) serveConn(conn net.Conn) {
 			l.Info("handshake error", zap.Error(err))
 			return
 		}
+		if sc, ok := conn.(sec.SecureConn); ok {
+			ctx = peer.CtxWithPeerId(ctx, sc.RemotePeer().String())
+		}
 	}
-
+	ctx = peer.CtxWithPeerAddr(ctx, conn.RemoteAddr().String())
 	l.Debug("connection opened")
 	if err := s.drpcServer.ServeOne(ctx, conn); err != nil {
 		if errs.Is(err, context.Canceled) || errs.Is(err, io.EOF) {

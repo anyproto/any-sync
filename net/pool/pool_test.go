@@ -184,6 +184,10 @@ type testPeer struct {
 	closed chan struct{}
 }
 
+func (t *testPeer) Addr() string {
+	return ""
+}
+
 func (t *testPeer) Id() string {
 	return t.id
 }
