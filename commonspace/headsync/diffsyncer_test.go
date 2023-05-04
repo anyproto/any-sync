@@ -51,6 +51,10 @@ func (p pushSpaceRequestMatcher) String() string {
 
 type mockPeer struct{}
 
+func (m mockPeer) Addr() string {
+	return ""
+}
+
 func (m mockPeer) TryClose(objectTTL time.Duration) (res bool, err error) {
 	return true, m.Close()
 }
