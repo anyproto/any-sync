@@ -103,6 +103,10 @@ type testPeer struct {
 	drpc.Conn
 }
 
+func (t testPeer) Addr() string {
+	return ""
+}
+
 func (t testPeer) TryClose(objectTTL time.Duration) (res bool, err error) {
 	return true, t.Close()
 }

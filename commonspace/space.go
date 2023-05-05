@@ -20,6 +20,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/commonspace/syncstatus"
+	"github.com/anytypeio/any-sync/metric"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/anytypeio/any-sync/util/crypto"
@@ -55,10 +56,22 @@ type SpaceCreatePayload struct {
 }
 
 type HandleMessage struct {
-	Id       uint64
-	Deadline time.Time
-	SenderId string
-	Message  *spacesyncproto.ObjectSyncMessage
+	Id                uint64
+	ReceiveTime       time.Time
+	StartHandlingTime time.Time
+	Deadline          time.Time
+	SenderId          string
+	Message           *spacesyncproto.ObjectSyncMessage
+	PeerCtx           context.Context
+}
+
+func (m HandleMessage) LogFields(fields ...zap.Field) []zap.Field {
+	return append(fields,
+		metric.SpaceId(m.Message.SpaceId),
+		metric.ObjectId(m.Message.ObjectId),
+		metric.QueueDur(m.StartHandlingTime.Sub(m.ReceiveTime)),
+		metric.TotalDur(time.Since(m.ReceiveTime)),
+	)
 }
 
 type SpaceDerivePayload struct {
@@ -124,6 +137,7 @@ type space struct {
 	settingsObject settings.SettingsObject
 	peerManager    peermanager.PeerManager
 	treeBuilder    objecttree.BuildObjectTreeFunc
+	metric         metric.Metric
 
 	handleQueue multiqueue.MultiQueue[HandleMessage]
 
@@ -362,6 +376,7 @@ func (s *space) DeleteSpace(ctx context.Context, deleteChange *treechangeproto.R
 
 func (s *space) HandleMessage(ctx context.Context, hm HandleMessage) (err error) {
 	threadId := hm.Message.ObjectId
+	hm.ReceiveTime = time.Now()
 	if hm.Message.ReplyId != "" {
 		threadId += hm.Message.ReplyId
 		defer func() {
@@ -378,12 +393,24 @@ func (s *space) HandleMessage(ctx context.Context, hm HandleMessage) (err error)
 }
 
 func (s *space) handleMessage(msg HandleMessage) {
+	var err error
+	msg.StartHandlingTime = time.Now()
 	ctx := peer.CtxWithPeerId(context.Background(), msg.SenderId)
 	ctx = logger.CtxWithFields(ctx, zap.Uint64("msgId", msg.Id), zap.String("senderId", msg.SenderId))
+	defer func() {
+		if s.metric == nil {
+			return
+		}
+		s.metric.RequestLog(msg.PeerCtx, "space.streamOp", msg.LogFields(
+			zap.Error(err),
+		)...)
+	}()
+
 	if !msg.Deadline.IsZero() {
 		now := time.Now()
 		if now.After(msg.Deadline) {
 			log.InfoCtx(ctx, "skip message: deadline exceed")
+			err = context.DeadlineExceeded
 			return
 		}
 		var cancel context.CancelFunc
@@ -391,7 +418,7 @@ func (s *space) handleMessage(msg HandleMessage) {
 		defer cancel()
 	}
 
-	if err := s.objectSync.HandleMessage(ctx, msg.SenderId, msg.Message); err != nil {
+	if err = s.objectSync.HandleMessage(ctx, msg.SenderId, msg.Message); err != nil {
 		if msg.Message.ObjectId != "" {
 			// cleanup thread on error
 			_ = s.handleQueue.CloseThread(msg.Message.ObjectId)

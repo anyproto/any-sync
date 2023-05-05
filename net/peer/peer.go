@@ -26,6 +26,7 @@ type Peer interface {
 	Id() string
 	LastUsage() time.Time
 	UpdateLastUsage()
+	Addr() string
 	TryClose(objectTTL time.Duration) (res bool, err error)
 	drpc.Conn
 }
@@ -84,6 +85,13 @@ func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
 		return false, nil
 	}
 	return true, p.Close()
+}
+
+func (p *peer) Addr() string {
+	if p.sc != nil {
+		return p.sc.RemoteAddr().String()
+	}
+	return ""
 }
 
 func (p *peer) Close() (err error) {

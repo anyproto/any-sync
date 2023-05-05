@@ -8,7 +8,6 @@ import (
 	anyNet "github.com/anytypeio/any-sync/net"
 	"github.com/anytypeio/any-sync/net/secureservice"
 	"github.com/libp2p/go-libp2p/core/sec"
-	"github.com/prometheus/client_golang/prometheus"
 	"net"
 	"storj.io/drpc"
 	"time"
@@ -46,29 +45,12 @@ func (s *drpcServer) Name() (name string) {
 }
 
 func (s *drpcServer) Run(ctx context.Context) (err error) {
-	histVec := prometheus.NewSummaryVec(prometheus.SummaryOpts{
-		Namespace: "drpc",
-		Subsystem: "server",
-		Name:      "duration_seconds",
-		Objectives: map[float64]float64{
-			0.5:  0.5,
-			0.85: 0.01,
-			0.95: 0.0005,
-			0.99: 0.0001,
-		},
-	}, []string{"rpc"})
-	if err = s.metric.Registry().Register(histVec); err != nil {
-		return
-	}
 	params := Params{
 		BufferSizeMb:  s.config.Stream.MaxMsgSizeMb,
 		TimeoutMillis: s.config.Stream.TimeoutMilliseconds,
 		ListenAddrs:   s.config.Server.ListenAddrs,
 		Wrapper: func(handler drpc.Handler) drpc.Handler {
-			return &metric.PrometheusDRPC{
-				Handler:    handler,
-				SummaryVec: histVec,
-			}
+			return s.metric.WrapDRPCHandler(handler)
 		},
 		Handshake: func(conn net.Conn) (cCtx context.Context, sc sec.SecureConn, err error) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)

@@ -21,6 +21,7 @@ var ctx = context.Background()
 func newClientStream(t *testing.T, fx *fixture, peerId string) (st testservice.DRPCTest_TestStreamClient, p peer.Peer) {
 	p, err := fx.tp.Dial(ctx, peerId)
 	require.NoError(t, err)
+	ctx = peer.CtxWithPeerId(ctx, peerId)
 	s, err := testservice.NewDRPCTestClient(p).TestStream(ctx)
 	require.NoError(t, err)
 	return s, p
@@ -33,9 +34,9 @@ func TestStreamPool_AddStream(t *testing.T) {
 		defer fx.Finish(t)
 
 		s1, _ := newClientStream(t, fx, "p1")
-		fx.AddStream("p1", s1, "space1", "common")
+		require.NoError(t, fx.AddStream(s1, "space1", "common"))
 		s2, _ := newClientStream(t, fx, "p2")
-		fx.AddStream("p2", s2, "space2", "common")
+		require.NoError(t, fx.AddStream(s2, "space2", "common"))
 
 		require.NoError(t, fx.Broadcast(ctx, &testservice.StreamMessage{ReqData: "space1"}, "space1"))
 		require.NoError(t, fx.Broadcast(ctx, &testservice.StreamMessage{ReqData: "space2"}, "space2"))
@@ -64,7 +65,7 @@ func TestStreamPool_AddStream(t *testing.T) {
 
 		s1, p1 := newClientStream(t, fx, "p1")
 		defer s1.Close()
-		fx.AddStream("p1", s1, "space1", "common")
+		require.NoError(t, fx.AddStream(s1, "space1", "common"))
 
 		require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "test"}, func(ctx context.Context) (peers []peer.Peer, err error) {
 			return []peer.Peer{p1}, nil
@@ -159,7 +160,7 @@ func TestStreamPool_SendById(t *testing.T) {
 
 	s1, _ := newClientStream(t, fx, "p1")
 	defer s1.Close()
-	fx.AddStream("p1", s1, "space1", "common")
+	require.NoError(t, fx.AddStream(s1, "space1", "common"))
 
 	require.NoError(t, fx.SendById(ctx, &testservice.StreamMessage{ReqData: "test"}, "p1"))
 	var msg *testservice.StreamMessage
@@ -177,11 +178,11 @@ func TestStreamPool_Tags(t *testing.T) {
 
 	s1, _ := newClientStream(t, fx, "p1")
 	defer s1.Close()
-	fx.AddStream("p1", s1, "t1")
+	require.NoError(t, fx.AddStream(s1, "t1"))
 
 	s2, _ := newClientStream(t, fx, "p2")
 	defer s1.Close()
-	fx.AddStream("p2", s2, "t2")
+	require.NoError(t, fx.AddStream(s2, "t2"))
 
 	err := fx.AddTagsCtx(streamCtx(ctx, 1, "p1"), "t3", "t3")
 	require.NoError(t, err)
