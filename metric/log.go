@@ -35,10 +35,6 @@ func Identity(val string) zap.Field {
 	return zap.String("identity", val)
 }
 
-func Addr(val string) zap.Field {
-	return zap.String("addr", val)
-}
-
 func FileId(fileId string) zap.Field {
 	return zap.String("fileId", fileId)
 }
