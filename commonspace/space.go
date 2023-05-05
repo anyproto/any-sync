@@ -187,7 +187,8 @@ func (s *space) Init(ctx context.Context) (err error) {
 			res, err := s.BuildTree(ctx, id, BuildTreeOpts{
 				Listener:           listener,
 				WaitTreeRemoteSync: false,
-				treeBuilder:        objecttree.BuildObjectTree,
+				// space settings document should not have empty data
+				treeBuilder: objecttree.BuildObjectTree,
 			})
 			log.Debug("building settings tree", zap.String("id", id), zap.String("spaceId", s.id))
 			if err != nil {
