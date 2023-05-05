@@ -187,6 +187,8 @@ func (s *space) Init(ctx context.Context) (err error) {
 			res, err := s.BuildTree(ctx, id, BuildTreeOpts{
 				Listener:           listener,
 				WaitTreeRemoteSync: false,
+				// space settings document should not have empty data
+				treeBuilder: objecttree.BuildObjectTree,
 			})
 			log.Debug("building settings tree", zap.String("id", id), zap.String("spaceId", s.id))
 			if err != nil {
@@ -289,6 +291,7 @@ func (s *space) PutTree(ctx context.Context, payload treestorage.TreeStorageCrea
 type BuildTreeOpts struct {
 	Listener           updatelistener.UpdateListener
 	WaitTreeRemoteSync bool
+	treeBuilder        objecttree.BuildObjectTreeFunc
 }
 
 type HistoryTreeOpts struct {
@@ -301,7 +304,10 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 		err = ErrSpaceClosed
 		return
 	}
-
+	treeBuilder := opts.treeBuilder
+	if treeBuilder == nil {
+		treeBuilder = s.treeBuilder
+	}
 	deps := synctree.BuildDeps{
 		SpaceId:            s.id,
 		SyncClient:         s.objectSync.SyncClient(),
@@ -314,7 +320,7 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 		SyncStatus:         s.syncStatus,
 		WaitTreeRemoteSync: opts.WaitTreeRemoteSync,
 		PeerGetter:         s.peerManager,
-		BuildObjectTree:    s.treeBuilder,
+		BuildObjectTree:    treeBuilder,
 	}
 	if t, err = synctree.BuildSyncTreeOrGetRemote(ctx, id, deps); err != nil {
 		return nil, err
