@@ -61,5 +61,5 @@ func (m *metric) RequestLog(ctx context.Context, rpc string, fields ...zap.Field
 	if ak != nil {
 		acc = ak.Account()
 	}
-	m.rpcLog.Info("", append(fields, Addr(peer.CtxPeerAddr(ctx)), PeerId(peerId), Identity(acc), Method(rpc))...)
+	m.rpcLog.Info("", append(fields, PeerId(peerId), Identity(acc), Method(rpc))...)
 }
