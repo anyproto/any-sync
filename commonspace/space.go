@@ -309,8 +309,9 @@ type BuildTreeOpts struct {
 }
 
 type HistoryTreeOpts struct {
-	BeforeId string
-	Include  bool
+	BeforeId      string
+	Include       bool
+	BuildFullTree bool
 }
 
 func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error) {
@@ -354,6 +355,7 @@ func (s *space) BuildHistoryTree(ctx context.Context, id string, opts HistoryTre
 		AclList:         s.aclList,
 		BeforeId:        opts.BeforeId,
 		IncludeBeforeId: opts.Include,
+		BuildFullTree:   opts.BuildFullTree,
 	}
 	params.TreeStorage, err = s.storage.TreeStorage(id)
 	if err != nil {
