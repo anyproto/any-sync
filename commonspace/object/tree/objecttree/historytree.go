@@ -14,34 +14,47 @@ type historyTree struct {
 	*objectTree
 }
 
-func (h *historyTree) rebuildFromStorage(beforeId string, include bool) (err error) {
-	ot := h.objectTree
-	ot.treeBuilder.Reset()
-	if beforeId == ot.Id() && !include {
+func (h *historyTree) rebuildFromStorage(params HistoryTreeParams) (err error) {
+	err = h.rebuild(params)
+	if err != nil {
+		return
+	}
+	h.aclList.RLock()
+	defer h.aclList.RUnlock()
+	state := h.aclList.AclState()
+
+	return h.readKeysFromAclState(state)
+}
+
+func (h *historyTree) rebuild(params HistoryTreeParams) (err error) {
+	var (
+		beforeId = params.BeforeId
+		include  = params.IncludeBeforeId
+		full     = params.BuildFullTree
+	)
+	h.treeBuilder.Reset()
+	if full {
+		h.tree, err = h.treeBuilder.BuildFull()
+		return
+	}
+	if beforeId == h.Id() && !include {
 		return ErrLoadBeforeRoot
 	}
 
 	heads := []string{beforeId}
 	if beforeId == "" {
-		heads, err = ot.treeStorage.Heads()
+		heads, err = h.treeStorage.Heads()
 		if err != nil {
 			return
 		}
 	} else if !include {
-		beforeChange, err := ot.treeBuilder.loadChange(beforeId)
+		beforeChange, err := h.treeBuilder.loadChange(beforeId)
 		if err != nil {
 			return err
 		}
 		heads = beforeChange.PreviousIds
 	}
 
-	ot.tree, err = ot.treeBuilder.build(heads, nil, nil)
-	if err != nil {
-		return
-	}
-	ot.aclList.RLock()
-	defer ot.aclList.RUnlock()
-	state := ot.aclList.AclState()
-
-	return ot.readKeysFromAclState(state)
+	h.tree, err = h.treeBuilder.build(heads, nil, nil)
+	return
 }
