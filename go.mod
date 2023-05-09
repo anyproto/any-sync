@@ -38,7 +38,7 @@ require (
 	golang.org/x/net v0.9.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
 	gopkg.in/yaml.v3 v3.0.1
-	storj.io/drpc v0.0.32
+	storj.io/drpc v0.0.33
 )
 
 require (
