@@ -51,6 +51,22 @@ func (tb *treeBuilder) Build(theirHeads []string, newChanges []*Change) (*Tree, 
 	return tb.build(heads, theirHeads, newChanges)
 }
 
+func (tb *treeBuilder) BuildFull() (*Tree, error) {
+	defer func() {
+		tb.cache = make(map[string]*Change)
+	}()
+	tb.cache = make(map[string]*Change)
+	heads, err := tb.treeStorage.Heads()
+	if err != nil {
+		return nil, err
+	}
+	err = tb.buildTree(heads, tb.treeStorage.Id())
+	if err != nil {
+		return nil, err
+	}
+	return tb.tree, nil
+}
+
 func (tb *treeBuilder) build(heads []string, theirHeads []string, newChanges []*Change) (*Tree, error) {
 	defer func() {
 		tb.cache = make(map[string]*Change)

@@ -22,6 +22,7 @@ type HistoryTreeParams struct {
 	AclList         list.AclList
 	BeforeId        string
 	IncludeBeforeId bool
+	BuildFullTree   bool
 }
 
 type objectTreeDeps struct {
@@ -230,7 +231,7 @@ func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht History
 	}
 
 	hTree := &historyTree{objectTree: objTree}
-	err = hTree.rebuildFromStorage(params.BeforeId, params.IncludeBeforeId)
+	err = hTree.rebuildFromStorage(params)
 	if err != nil {
 		return nil, err
 	}
