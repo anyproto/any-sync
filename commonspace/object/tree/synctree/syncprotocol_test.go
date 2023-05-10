@@ -112,7 +112,7 @@ func testTreeMerge(t *testing.T, levels, perLevel int, hasData bool, isSnapshot 
 	}
 	// generating initial tree
 	initialRes := genChanges(changeCreator, params)
-	err = storage.TransactionAdd(initialRes.changes, initialRes.heads)
+	err = storage.AddMany(initialRes.changes, initialRes.heads)
 	require.NoError(t, err)
 	deps := fixtureDeps{
 		aclList:     aclList,

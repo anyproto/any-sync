@@ -13,13 +13,21 @@ type InMemoryTreeStorage struct {
 	root    *treechangeproto.RawTreeChangeWithId
 	heads   []string
 	Changes map[string]*treechangeproto.RawTreeChangeWithId
+	addErr  error
 
 	sync.RWMutex
 }
 
-func (t *InMemoryTreeStorage) TransactionAdd(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error {
+func (t *InMemoryTreeStorage) SetReturnErrorOnAdd(err error) {
+	t.addErr = err
+}
+
+func (t *InMemoryTreeStorage) AddMany(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error {
 	t.RLock()
 	defer t.RUnlock()
+	if t.addErr != nil {
+		return t.addErr
+	}
 
 	for _, ch := range changes {
 		t.Changes[ch.Id] = ch

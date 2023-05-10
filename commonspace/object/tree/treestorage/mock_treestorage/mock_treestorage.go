@@ -35,6 +35,20 @@ func (m *MockTreeStorage) EXPECT() *MockTreeStorageMockRecorder {
 	return m.recorder
 }
 
+// AddMany mocks base method.
+func (m *MockTreeStorage) AddMany(arg0 []*treechangeproto.RawTreeChangeWithId, arg1 []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddMany", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddMany indicates an expected call of AddMany.
+func (mr *MockTreeStorageMockRecorder) AddMany(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddMany", reflect.TypeOf((*MockTreeStorage)(nil).AddMany), arg0, arg1)
+}
+
 // AddRawChange mocks base method.
 func (m *MockTreeStorage) AddRawChange(arg0 *treechangeproto.RawTreeChangeWithId) error {
 	m.ctrl.T.Helper()
@@ -149,18 +163,4 @@ func (m *MockTreeStorage) SetHeads(arg0 []string) error {
 func (mr *MockTreeStorageMockRecorder) SetHeads(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHeads", reflect.TypeOf((*MockTreeStorage)(nil).SetHeads), arg0)
-}
-
-// TransactionAdd mocks base method.
-func (m *MockTreeStorage) TransactionAdd(arg0 []*treechangeproto.RawTreeChangeWithId, arg1 []string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TransactionAdd", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// TransactionAdd indicates an expected call of TransactionAdd.
-func (mr *MockTreeStorageMockRecorder) TransactionAdd(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TransactionAdd", reflect.TypeOf((*MockTreeStorage)(nil).TransactionAdd), arg0, arg1)
 }
