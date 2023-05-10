@@ -116,11 +116,23 @@ type objectTree struct {
 }
 
 func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Change) (err error) {
+	oldTree := ot.tree
 	ot.treeBuilder.Reset()
-
 	ot.tree, err = ot.treeBuilder.Build(theirHeads, newChanges)
 	if err != nil {
 		return
+	}
+
+	// in case there are new heads
+	if theirHeads != nil && oldTree != nil {
+		// checking that old root is still in tree
+		rootCh, rootExists := ot.tree.attached[oldTree.RootId()]
+
+		// checking the case where theirHeads were actually below prevHeads
+		// so if we did load some extra data in the tree, let's reduce it to old root
+		if slice.UnsortedEquals(oldTree.headIds, ot.tree.headIds) && rootExists && ot.tree.RootId() != oldTree.RootId() {
+			ot.tree.makeRootAndRemove(rootCh)
+		}
 	}
 
 	// during building the tree we may have marked some changes as possible roots,
@@ -187,7 +199,7 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 		panic(err)
 	}
 
-	err = ot.treeStorage.TransactionAdd([]*treechangeproto.RawTreeChangeWithId{rawChange}, []string{objChange.Id})
+	err = ot.treeStorage.AddMany([]*treechangeproto.RawTreeChangeWithId{rawChange}, []string{objChange.Id})
 	if err != nil {
 		return
 	}
@@ -284,7 +296,11 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChang
 		addResult.Mode = Rebuild
 	}
 
-	err = ot.treeStorage.TransactionAdd(addResult.Added, addResult.Heads)
+	err = ot.treeStorage.AddMany(addResult.Added, addResult.Heads)
+	if err != nil {
+		// rolling back all changes made to inmemory state
+		ot.rebuildFromStorage(nil, nil)
+	}
 	return
 }
 
@@ -347,7 +363,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 	}
 
 	// checks if we need to go to database
-	isOldSnapshot := func(ch *Change) bool {
+	snapshotNotInTree := func(ch *Change) bool {
 		if ch.SnapshotId == ot.tree.RootId() {
 			return false
 		}
@@ -362,26 +378,12 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 
 	shouldRebuildFromStorage := false
 	// checking if we have some changes with different snapshot and then rebuilding
-	for idx, ch := range ot.newChangesBuf {
-		if isOldSnapshot(ch) {
-			var exists bool
-			// checking if it exists in the storage, if yes, then at some point it was added to the tree
-			// thus we don't need to look at this change
-			exists, err = ot.treeStorage.HasChange(ctx, ch.Id)
-			if err != nil {
-				return
-			}
-			if exists {
-				// marking as nil to delete after
-				ot.newChangesBuf[idx] = nil
-				continue
-			}
-			// we haven't seen the change, and it refers to old snapshot, so we should rebuild
+	for _, ch := range ot.newChangesBuf {
+		if snapshotNotInTree(ch) {
 			shouldRebuildFromStorage = true
+			break
 		}
 	}
-	// discarding all previously seen changes
-	ot.newChangesBuf = slice.DiscardFromSlice(ot.newChangesBuf, func(ch *Change) bool { return ch == nil })
 
 	if shouldRebuildFromStorage {
 		err = ot.rebuildFromStorage(changesPayload.NewHeads, ot.newChangesBuf)
@@ -549,22 +551,8 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 }
 
 func (ot *objectTree) HasChanges(chs ...string) bool {
-	hasChange := func(s string) bool {
-		_, attachedExists := ot.tree.attached[s]
-		if attachedExists {
-			return attachedExists
-		}
-
-		has, err := ot.treeStorage.HasChange(context.Background(), s)
-		if err != nil {
-			return false
-		}
-
-		return has
-	}
-
 	for _, ch := range chs {
-		if !hasChange(ch) {
+		if _, attachedExists := ot.tree.attached[ch]; !attachedExists {
 			return false
 		}
 	}
