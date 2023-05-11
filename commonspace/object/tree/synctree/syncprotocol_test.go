@@ -112,7 +112,7 @@ func testTreeMerge(t *testing.T, levels, perLevel int, hasData bool, isSnapshot 
 	}
 	// generating initial tree
 	initialRes := genChanges(changeCreator, params)
-	err = storage.AddMany(initialRes.changes, initialRes.heads)
+	err = storage.AddRawChangesSetHead(initialRes.changes, initialRes.heads)
 	require.NoError(t, err)
 	deps := fixtureDeps{
 		aclList:     aclList,
@@ -264,7 +264,7 @@ func testTreeStorageHasExtra(t *testing.T, levels, perLevel int, hasData bool, i
 	// adding some changes to store, but without updating heads
 	store := fx.handlers["peer1"].tree().Storage().(*treestorage.InMemoryTreeStorage)
 	oldHeads, _ := store.Heads()
-	store.AddMany(initialRes.changes, oldHeads)
+	store.AddRawChangesSetHead(initialRes.changes, oldHeads)
 
 	// sending those changes to other peer
 	fx.handlers["peer2"].sendRawChanges(context.Background(), objecttree.RawChangesPayload{
@@ -333,8 +333,8 @@ func testTreeStorageHasExtraThreeParts(t *testing.T, levels, perLevel int, hasDa
 	require.True(t, slice.UnsortedEquals(res.Heads, firstPart.heads))
 	store := fx.handlers["peer1"].tree().Storage().(*treestorage.InMemoryTreeStorage)
 	oldHeads, _ := store.Heads()
-	store.AddMany(secondPart.changes, oldHeads)
-	store.AddMany(thirdPart.changes, oldHeads)
+	store.AddRawChangesSetHead(secondPart.changes, oldHeads)
+	store.AddRawChangesSetHead(thirdPart.changes, oldHeads)
 
 	var peer2Initial []*treechangeproto.RawTreeChangeWithId
 	peer2Initial = append(peer2Initial, firstPart.changes...)

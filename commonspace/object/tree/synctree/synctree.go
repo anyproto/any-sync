@@ -76,12 +76,15 @@ type BuildDeps struct {
 }
 
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {
-	remoteGetter := treeRemoteGetter{treeId: id, deps: deps}
-	deps.TreeStorage, err = remoteGetter.getTree(ctx)
+	var (
+		remoteGetter = treeRemoteGetter{treeId: id, deps: deps}
+		isRemote     bool
+	)
+	deps.TreeStorage, isRemote, err = remoteGetter.getTree(ctx)
 	if err != nil {
 		return
 	}
-	return buildSyncTree(ctx, true, deps)
+	return buildSyncTree(ctx, isRemote, deps)
 }
 
 func PutSyncTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, deps BuildDeps) (t SyncTree, err error) {
@@ -92,7 +95,7 @@ func PutSyncTree(ctx context.Context, payload treestorage.TreeStorageCreatePaylo
 	return buildSyncTree(ctx, true, deps)
 }
 
-func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t SyncTree, err error) {
+func buildSyncTree(ctx context.Context, sendUpdate bool, deps BuildDeps) (t SyncTree, err error) {
 	objTree, err := deps.BuildObjectTree(deps.TreeStorage, deps.AclList)
 	if err != nil {
 		return
@@ -113,7 +116,7 @@ func buildSyncTree(ctx context.Context, isFirstBuild bool, deps BuildDeps) (t Sy
 	syncTree.afterBuild()
 	syncTree.Unlock()
 
-	if isFirstBuild {
+	if sendUpdate {
 		headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 		// send to everybody, because everybody should know that the node or client got new tree
 		syncTree.syncClient.Broadcast(ctx, headUpdate)
