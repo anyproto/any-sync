@@ -90,12 +90,11 @@ Loop:
 	}
 }
 
-func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.TreeStorage, err error) {
+func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.TreeStorage, isRemote bool, err error) {
 	treeStorage, err = t.deps.SpaceStorage.TreeStorage(t.treeId)
 	if err == nil {
 		return
 	}
-
 	if err != nil && err != treestorage.ErrUnknownTreeId {
 		return
 	}
@@ -109,6 +108,7 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 		return
 	}
 
+	isRemote = true
 	resp, err := t.treeRequestLoop(ctx, t.deps.WaitTreeRemoteSync)
 	if err != nil {
 		return
@@ -139,5 +139,6 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 		return
 	}
 	// now we are sure that we can save it to the storage
-	return t.deps.SpaceStorage.CreateTreeStorage(payload)
+	treeStorage, err = t.deps.SpaceStorage.CreateTreeStorage(payload)
+	return
 }

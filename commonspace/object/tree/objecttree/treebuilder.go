@@ -121,8 +121,8 @@ func (tb *treeBuilder) buildTree(heads []string, breakpoint string) (err error) 
 	if err != nil {
 		return
 	}
-	tb.tree.AddFast(ch)
 	changes := tb.dfs(heads, breakpoint)
+	tb.tree.AddFast(ch)
 	tb.tree.AddFast(changes...)
 	return
 }

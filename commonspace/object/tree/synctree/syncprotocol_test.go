@@ -112,7 +112,7 @@ func testTreeMerge(t *testing.T, levels, perLevel int, hasData bool, isSnapshot 
 	}
 	// generating initial tree
 	initialRes := genChanges(changeCreator, params)
-	err = storage.TransactionAdd(initialRes.changes, initialRes.heads)
+	err = storage.AddRawChangesSetHeads(initialRes.changes, initialRes.heads)
 	require.NoError(t, err)
 	deps := fixtureDeps{
 		aclList:     aclList,
@@ -182,4 +182,180 @@ func testTreeMerge(t *testing.T, levels, perLevel int, hasData bool, isSnapshot 
 			require.Equal(t, ch.Id, string(treeCh.ChangesData))
 		}
 	}
+}
+
+func TestTreeStorageHasExtraChanges(t *testing.T) {
+	var (
+		rnd      = rand.New(rand.NewSource(time.Now().Unix()))
+		levels   = 20
+		perLevel = 40
+	)
+
+	// simulating cases where one peer has some extra changes saved in storage
+	// and checking that this will not break the sync
+	t.Run("tree storage has extra simple", func(t *testing.T) {
+		testTreeStorageHasExtra(t, levels, perLevel, false, func() bool {
+			return false
+		})
+		testTreeStorageHasExtra(t, levels, perLevel, false, func() bool {
+			return rnd.Intn(10) > 5
+		})
+		testTreeStorageHasExtra(t, levels, perLevel, true, func() bool {
+			return false
+		})
+		testTreeStorageHasExtra(t, levels, perLevel, true, func() bool {
+			return rnd.Intn(10) > 5
+		})
+	})
+	t.Run("tree storage has extra three parts", func(t *testing.T) {
+		testTreeStorageHasExtraThreeParts(t, levels, perLevel, false, func() bool {
+			return false
+		})
+		testTreeStorageHasExtraThreeParts(t, levels, perLevel, false, func() bool {
+			return rnd.Intn(10) > 5
+		})
+		testTreeStorageHasExtraThreeParts(t, levels, perLevel, true, func() bool {
+			return false
+		})
+		testTreeStorageHasExtraThreeParts(t, levels, perLevel, true, func() bool {
+			return rnd.Intn(10) > 5
+		})
+	})
+}
+
+func testTreeStorageHasExtra(t *testing.T, levels, perLevel int, hasData bool, isSnapshot func() bool) {
+	treeId := "treeId"
+	spaceId := "spaceId"
+	keys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	aclList, err := list.NewTestDerivedAcl(spaceId, keys)
+	storage := createStorage(treeId, aclList)
+	changeCreator := objecttree.NewMockChangeCreator()
+	builder := objecttree.BuildTestableTree
+	if hasData {
+		builder = objecttree.BuildEmptyDataTestableTree
+	}
+	params := genParams{
+		prefix:     "peer1",
+		aclId:      aclList.Id(),
+		startIdx:   0,
+		levels:     levels,
+		perLevel:   perLevel,
+		snapshotId: treeId,
+		prevHeads:  []string{treeId},
+		isSnapshot: isSnapshot,
+		hasData:    hasData,
+	}
+	deps := fixtureDeps{
+		aclList:     aclList,
+		initStorage: storage.(*treestorage.InMemoryTreeStorage),
+		connectionMap: map[string][]string{
+			"peer1": []string{"peer2"},
+			"peer2": []string{"peer1"},
+		},
+		treeBuilder: builder,
+	}
+	fx := newProtocolFixture(t, spaceId, deps)
+
+	// generating initial tree
+	initialRes := genChanges(changeCreator, params)
+	fx.run(t)
+
+	// adding some changes to store, but without updating heads
+	store := fx.handlers["peer1"].tree().Storage().(*treestorage.InMemoryTreeStorage)
+	oldHeads, _ := store.Heads()
+	store.AddRawChangesSetHeads(initialRes.changes, oldHeads)
+
+	// sending those changes to other peer
+	fx.handlers["peer2"].sendRawChanges(context.Background(), objecttree.RawChangesPayload{
+		NewHeads:   initialRes.heads,
+		RawChanges: initialRes.changes,
+	})
+	time.Sleep(50 * time.Millisecond)
+
+	// here we want that the saved changes in storage should not affect the sync protocol
+	firstHeads := fx.handlers["peer1"].tree().Heads()
+	secondHeads := fx.handlers["peer2"].tree().Heads()
+	require.True(t, slice.UnsortedEquals(firstHeads, secondHeads))
+	require.True(t, slice.UnsortedEquals(initialRes.heads, firstHeads))
+}
+
+func testTreeStorageHasExtraThreeParts(t *testing.T, levels, perLevel int, hasData bool, isSnapshot func() bool) {
+	treeId := "treeId"
+	spaceId := "spaceId"
+	keys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	aclList, err := list.NewTestDerivedAcl(spaceId, keys)
+	storage := createStorage(treeId, aclList)
+	changeCreator := objecttree.NewMockChangeCreator()
+	builder := objecttree.BuildTestableTree
+	if hasData {
+		builder = objecttree.BuildEmptyDataTestableTree
+	}
+	params := genParams{
+		prefix:     "peer1",
+		aclId:      aclList.Id(),
+		startIdx:   0,
+		levels:     levels,
+		perLevel:   perLevel,
+		snapshotId: treeId,
+		prevHeads:  []string{treeId},
+		isSnapshot: isSnapshot,
+		hasData:    hasData,
+	}
+	deps := fixtureDeps{
+		aclList:     aclList,
+		initStorage: storage.(*treestorage.InMemoryTreeStorage),
+		connectionMap: map[string][]string{
+			"peer1": []string{"peer2"},
+			"peer2": []string{"peer1"},
+		},
+		treeBuilder: builder,
+	}
+	fx := newProtocolFixture(t, spaceId, deps)
+
+	// generating parts
+	firstPart := genChanges(changeCreator, params)
+	params.startIdx = levels
+	params.snapshotId = firstPart.snapshotId
+	params.prevHeads = firstPart.heads
+	secondPart := genChanges(changeCreator, params)
+	params.startIdx = levels * 2
+	params.snapshotId = secondPart.snapshotId
+	params.prevHeads = secondPart.heads
+	thirdPart := genChanges(changeCreator, params)
+
+	// adding part1 to first peer and saving part2 and part3 in its storage
+	res, _ := fx.handlers["peer1"].tree().AddRawChanges(context.Background(), objecttree.RawChangesPayload{
+		NewHeads:   firstPart.heads,
+		RawChanges: firstPart.changes,
+	})
+	require.True(t, slice.UnsortedEquals(res.Heads, firstPart.heads))
+	store := fx.handlers["peer1"].tree().Storage().(*treestorage.InMemoryTreeStorage)
+	oldHeads, _ := store.Heads()
+	store.AddRawChangesSetHeads(secondPart.changes, oldHeads)
+	store.AddRawChangesSetHeads(thirdPart.changes, oldHeads)
+
+	var peer2Initial []*treechangeproto.RawTreeChangeWithId
+	peer2Initial = append(peer2Initial, firstPart.changes...)
+	peer2Initial = append(peer2Initial, secondPart.changes...)
+
+	// adding part1 and part2 to second peer
+	res, _ = fx.handlers["peer2"].tree().AddRawChanges(context.Background(), objecttree.RawChangesPayload{
+		NewHeads:   secondPart.heads,
+		RawChanges: peer2Initial,
+	})
+	require.True(t, slice.UnsortedEquals(res.Heads, secondPart.heads))
+	fx.run(t)
+
+	// sending part3 changes to other peer
+	fx.handlers["peer2"].sendRawChanges(context.Background(), objecttree.RawChangesPayload{
+		NewHeads:   thirdPart.heads,
+		RawChanges: thirdPart.changes,
+	})
+	time.Sleep(50 * time.Millisecond)
+	firstHeads := fx.handlers["peer1"].tree().Heads()
+	secondHeads := fx.handlers["peer2"].tree().Heads()
+	require.True(t, slice.UnsortedEquals(firstHeads, secondHeads))
+	require.True(t, slice.UnsortedEquals(thirdPart.heads, firstHeads))
 }

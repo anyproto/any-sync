@@ -154,24 +154,21 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 
 func (d *diffSyncer) syncTrees(ctx context.Context, peerId string, trees []string) {
 	for _, tId := range trees {
+		log := d.log.With(zap.String("treeId", tId))
 		tree, err := d.cache.GetTree(ctx, d.spaceId, tId)
 		if err != nil {
-			d.log.InfoCtx(ctx, "can't load tree", zap.Error(err))
+			log.WarnCtx(ctx, "can't load tree", zap.Error(err))
 			continue
 		}
 		syncTree, ok := tree.(synctree.SyncTree)
 		if !ok {
-			d.log.InfoCtx(ctx, "not a sync tree", zap.String("objectId", tId))
+			log.WarnCtx(ctx, "not a sync tree")
 			continue
 		}
-		// the idea why we call it directly is that if we try to get it from cache
-		// it may be already there (i.e. loaded)
-		// and build func will not be called, thus we won't sync the tree
-		// therefore we just do it manually
 		if err = syncTree.SyncWithPeer(ctx, peerId); err != nil {
-			d.log.WarnCtx(ctx, "synctree.SyncWithPeer error", zap.Error(err), zap.String("treeId", tId))
+			log.WarnCtx(ctx, "synctree.SyncWithPeer error", zap.Error(err))
 		} else {
-			d.log.DebugCtx(ctx, "success synctree.SyncWithPeer", zap.String("treeId", tId))
+			log.DebugCtx(ctx, "success synctree.SyncWithPeer")
 		}
 	}
 }

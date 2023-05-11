@@ -2,6 +2,7 @@ package objecttree
 
 import (
 	"context"
+	"fmt"
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
@@ -64,7 +65,7 @@ func prepareContext(
 	treeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id)
 	if additionalChanges != nil {
 		payload := additionalChanges(changeCreator)
-		err := treeStorage.TransactionAdd(payload.RawChanges, payload.NewHeads)
+		err := treeStorage.AddRawChangesSetHeads(payload.RawChanges, payload.NewHeads)
 		require.NoError(t, err)
 	}
 	objTree, err := objTreeBuilder(treeStorage, aclList)
@@ -421,6 +422,99 @@ func TestObjectTree(t *testing.T) {
 		})
 	})
 
+	t.Run("rollback when add to storage returns error", func(t *testing.T) {
+		ctx := prepareTreeContext(t, aclList)
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree
+		store := ctx.treeStorage.(*treestorage.InMemoryTreeStorage)
+		addErr := fmt.Errorf("error saving")
+		store.SetReturnErrorOnAdd(addErr)
+
+		rawChanges := []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("1", aclList.Head().Id, "0", true, "0"),
+		}
+		payload := RawChangesPayload{
+			NewHeads:   []string{"1"},
+			RawChanges: rawChanges,
+		}
+		_, err := objTree.AddRawChanges(context.Background(), payload)
+		require.Error(t, err, addErr)
+		require.Equal(t, "0", objTree.Root().Id)
+	})
+
+	t.Run("their heads before common snapshot", func(t *testing.T) {
+		// checking that adding old changes did not affect the tree
+		ctx := prepareTreeContext(t, aclList)
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree
+
+		rawChanges := []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("1", aclList.Head().Id, "0", true, "0"),
+			changeCreator.CreateRaw("2", aclList.Head().Id, "1", false, "1"),
+			changeCreator.CreateRaw("3", aclList.Head().Id, "1", true, "2"),
+			changeCreator.CreateRaw("4", aclList.Head().Id, "1", false, "2"),
+			changeCreator.CreateRaw("5", aclList.Head().Id, "1", false, "1"),
+			changeCreator.CreateRaw("6", aclList.Head().Id, "1", true, "3", "4", "5"),
+		}
+		payload := RawChangesPayload{
+			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
+			RawChanges: rawChanges,
+		}
+		_, err := objTree.AddRawChanges(context.Background(), payload)
+		require.NoError(t, err, "adding changes should be without error")
+		require.Equal(t, "6", objTree.Root().Id)
+
+		rawChangesPrevious := []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("1", aclList.Head().Id, "0", true, "0"),
+		}
+		payload = RawChangesPayload{
+			NewHeads:   []string{"1"},
+			RawChanges: rawChangesPrevious,
+		}
+		_, err = objTree.AddRawChanges(context.Background(), payload)
+		require.NoError(t, err, "adding changes should be without error")
+		require.Equal(t, "6", objTree.Root().Id)
+	})
+
+	t.Run("stored changes will not break the pipeline if heads were not updated", func(t *testing.T) {
+		ctx := prepareTreeContext(t, aclList)
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree
+		store := ctx.treeStorage.(*treestorage.InMemoryTreeStorage)
+
+		rawChanges := []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("1", aclList.Head().Id, "0", true, "0"),
+		}
+		payload := RawChangesPayload{
+			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
+			RawChanges: rawChanges,
+		}
+		_, err := objTree.AddRawChanges(context.Background(), payload)
+		require.NoError(t, err, "adding changes should be without error")
+		require.Equal(t, "1", objTree.Root().Id)
+
+		// creating changes to save in the storage
+		// to imitate the condition where all changes are in the storage
+		// but the head was not updated
+		storageChanges := []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("2", aclList.Head().Id, "1", false, "1"),
+			changeCreator.CreateRaw("3", aclList.Head().Id, "1", true, "2"),
+			changeCreator.CreateRaw("4", aclList.Head().Id, "1", false, "2"),
+			changeCreator.CreateRaw("5", aclList.Head().Id, "1", false, "1"),
+			changeCreator.CreateRaw("6", aclList.Head().Id, "1", true, "3", "4", "5"),
+		}
+		store.AddRawChangesSetHeads(storageChanges, []string{"1"})
+
+		// updating with subset of those changes to see that everything will still work
+		payload = RawChangesPayload{
+			NewHeads:   []string{"6"},
+			RawChanges: storageChanges,
+		}
+		_, err = objTree.AddRawChanges(context.Background(), payload)
+		require.NoError(t, err, "adding changes should be without error")
+		require.Equal(t, "6", objTree.Root().Id)
+	})
+
 	t.Run("changes from tree after common snapshot complex", func(t *testing.T) {
 		ctx := prepareTreeContext(t, aclList)
 		changeCreator := ctx.changeCreator
@@ -654,7 +748,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("5", aclList.Head().Id, "0", false, "1"),
 			changeCreator.CreateRaw("6", aclList.Head().Id, "0", false, "3", "4", "5"),
 		}
-		deps.treeStorage.TransactionAdd(rawChanges, []string{"6"})
+		deps.treeStorage.AddRawChangesSetHeads(rawChanges, []string{"6"})
 		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
 			BeforeId:        "6",
 			IncludeBeforeId: false,
@@ -686,7 +780,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("5", aclList.Head().Id, "1", true, "3", "4"),
 			changeCreator.CreateRaw("6", aclList.Head().Id, "5", false, "5"),
 		}
-		deps.treeStorage.TransactionAdd(rawChanges, []string{"6"})
+		deps.treeStorage.AddRawChangesSetHeads(rawChanges, []string{"6"})
 		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
 			BuildFullTree: true,
 		})
@@ -716,7 +810,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("5", aclList.Head().Id, "0", false, "1"),
 			changeCreator.CreateRaw("6", aclList.Head().Id, "0", false, "3", "4", "5"),
 		}
-		deps.treeStorage.TransactionAdd(rawChanges, []string{"6"})
+		deps.treeStorage.AddRawChangesSetHeads(rawChanges, []string{"6"})
 		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
 			BeforeId:        "6",
 			IncludeBeforeId: true,
