@@ -199,7 +199,7 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 		panic(err)
 	}
 
-	err = ot.treeStorage.AddRawChangesSetHead([]*treechangeproto.RawTreeChangeWithId{rawChange}, []string{objChange.Id})
+	err = ot.treeStorage.AddRawChangesSetHeads([]*treechangeproto.RawTreeChangeWithId{rawChange}, []string{objChange.Id})
 	if err != nil {
 		return
 	}
@@ -296,7 +296,7 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChang
 		addResult.Mode = Rebuild
 	}
 
-	err = ot.treeStorage.AddRawChangesSetHead(addResult.Added, addResult.Heads)
+	err = ot.treeStorage.AddRawChangesSetHeads(addResult.Added, addResult.Heads)
 	if err != nil {
 		// rolling back all changes made to inmemory state
 		ot.rebuildFromStorage(nil, nil)

@@ -22,7 +22,7 @@ func (t *InMemoryTreeStorage) SetReturnErrorOnAdd(err error) {
 	t.addErr = err
 }
 
-func (t *InMemoryTreeStorage) AddRawChangesSetHead(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error {
+func (t *InMemoryTreeStorage) AddRawChangesSetHeads(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error {
 	t.RLock()
 	defer t.RUnlock()
 	if t.addErr != nil {
