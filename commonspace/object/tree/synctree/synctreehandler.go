@@ -93,7 +93,7 @@ func (s *syncTreeHandler) handleHeadUpdate(
 
 	defer func() {
 		if err != nil {
-			log.With(zap.Error(err)).Debug("head update finished with error")
+			log.ErrorCtx(ctx, "head update finished with error", zap.Error(err))
 		} else if fullRequest != nil {
 			cnt := fullRequest.Content.GetFullSyncRequest()
 			log = log.With(zap.Strings("request heads", cnt.Heads), zap.Int("len(request changes)", len(cnt.Changes)))
@@ -168,7 +168,7 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 
 	defer func() {
 		if err != nil {
-			log.With(zap.Error(err)).DebugCtx(ctx, "full sync request finished with error")
+			log.ErrorCtx(ctx, "full sync request finished with error", zap.Error(err))
 			s.syncClient.SendWithReply(ctx, senderId, treeId, treechangeproto.WrapError(treechangeproto.ErrFullSync, header), replyId)
 			return
 		} else if fullResponse != nil {
@@ -212,7 +212,7 @@ func (s *syncTreeHandler) handleFullSyncResponse(
 
 	defer func() {
 		if err != nil {
-			log.With(zap.Error(err)).DebugCtx(ctx, "full sync response failed")
+			log.ErrorCtx(ctx, "full sync response failed", zap.Error(err))
 		} else {
 			log.DebugCtx(ctx, "full sync response succeeded")
 		}
