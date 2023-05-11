@@ -395,6 +395,9 @@ func (s *space) HandleMessage(ctx context.Context, hm HandleMessage) (err error)
 			_ = s.handleQueue.CloseThread(threadId)
 		}()
 	}
+	if hm.PeerCtx == nil {
+		hm.PeerCtx = ctx
+	}
 	err = s.handleQueue.Add(ctx, threadId, hm)
 	if err == mb.ErrOverflowed {
 		log.InfoCtx(ctx, "queue overflowed", zap.String("spaceId", s.id), zap.String("objectId", threadId))

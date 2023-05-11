@@ -65,7 +65,7 @@ func prepareContext(
 	treeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id)
 	if additionalChanges != nil {
 		payload := additionalChanges(changeCreator)
-		err := treeStorage.AddRawChangesSetHead(payload.RawChanges, payload.NewHeads)
+		err := treeStorage.AddRawChangesSetHeads(payload.RawChanges, payload.NewHeads)
 		require.NoError(t, err)
 	}
 	objTree, err := objTreeBuilder(treeStorage, aclList)
@@ -503,7 +503,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("5", aclList.Head().Id, "1", false, "1"),
 			changeCreator.CreateRaw("6", aclList.Head().Id, "1", true, "3", "4", "5"),
 		}
-		store.AddRawChangesSetHead(storageChanges, []string{"1"})
+		store.AddRawChangesSetHeads(storageChanges, []string{"1"})
 
 		// updating with subset of those changes to see that everything will still work
 		payload = RawChangesPayload{
@@ -748,7 +748,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("5", aclList.Head().Id, "0", false, "1"),
 			changeCreator.CreateRaw("6", aclList.Head().Id, "0", false, "3", "4", "5"),
 		}
-		deps.treeStorage.AddRawChangesSetHead(rawChanges, []string{"6"})
+		deps.treeStorage.AddRawChangesSetHeads(rawChanges, []string{"6"})
 		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
 			BeforeId:        "6",
 			IncludeBeforeId: false,
@@ -780,7 +780,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("5", aclList.Head().Id, "1", true, "3", "4"),
 			changeCreator.CreateRaw("6", aclList.Head().Id, "5", false, "5"),
 		}
-		deps.treeStorage.AddRawChangesSetHead(rawChanges, []string{"6"})
+		deps.treeStorage.AddRawChangesSetHeads(rawChanges, []string{"6"})
 		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
 			BuildFullTree: true,
 		})
@@ -810,7 +810,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("5", aclList.Head().Id, "0", false, "1"),
 			changeCreator.CreateRaw("6", aclList.Head().Id, "0", false, "3", "4", "5"),
 		}
-		deps.treeStorage.AddRawChangesSetHead(rawChanges, []string{"6"})
+		deps.treeStorage.AddRawChangesSetHeads(rawChanges, []string{"6"})
 		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
 			BeforeId:        "6",
 			IncludeBeforeId: true,
