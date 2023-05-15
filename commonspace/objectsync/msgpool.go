@@ -54,7 +54,7 @@ func newMessagePool(peerManager peermanager.PeerManager, messageHandler MessageH
 func (s *messagePool) SendSync(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
 	s.updateLastUsage()
 	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(ctx, time.Second*10)
+	ctx, cancel = context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	newCounter := s.counter.Add(1)
 	msg.RequestId = genReplyKey(peerId, msg.ObjectId, newCounter)
