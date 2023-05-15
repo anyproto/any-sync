@@ -202,7 +202,6 @@ func newFixture(t *testing.T) *fixture {
 	fx.tp = rpctest.NewTestPool().WithServer(ts)
 	fx.th = &testHandler{}
 	fx.StreamPool = New().NewStreamPool(fx.th, StreamConfig{
-		SendQueueWorkers: 4,
 		SendQueueSize:    10,
 		DialQueueWorkers: 1,
 		DialQueueSize:    10,
