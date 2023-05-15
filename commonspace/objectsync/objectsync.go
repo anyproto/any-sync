@@ -109,7 +109,7 @@ func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *sp
 	}
 	obj, err := s.objectGetter.GetObject(ctx, msg.ObjectId)
 	if err != nil {
-		log.DebugCtx(ctx, "failed to get object")
+		log.WarnCtx(ctx, "failed to get object", zap.Error(err))
 		// TODO: write tests for object sync https://linear.app/anytype/issue/GO-1299/write-tests-for-commonspaceobjectsync
 		return s.unmarshallSendError(ctx, msg, err, senderId, msg.ObjectId)
 	}
