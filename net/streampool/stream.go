@@ -25,6 +25,7 @@ func (sr *stream) write(msg drpc.Message) (err error) {
 	var queueId string
 	if qId, ok := msg.(MessageQueueId); ok {
 		queueId = qId.MessageQueueId()
+		msg = qId.DrpcMessage()
 	}
 	return sr.queue.Add(sr.stream.Context(), queueId, msg)
 }

@@ -27,6 +27,7 @@ type PeerGetter func(ctx context.Context) (peers []peer.Peer, err error)
 
 type MessageQueueId interface {
 	MessageQueueId() string
+	DrpcMessage() drpc.Message
 }
 
 // StreamPool keeps and read streams
@@ -362,4 +363,22 @@ func removeStream(m map[string][]uint32, key string, streamId uint32) {
 	} else {
 		m[key] = streamIds
 	}
+}
+
+// WithQueueId wraps the message and adds queueId
+func WithQueueId(msg drpc.Message, queueId string) drpc.Message {
+	return &messageWithQueueId{queueId: queueId, Message: msg}
+}
+
+type messageWithQueueId struct {
+	drpc.Message
+	queueId string
+}
+
+func (m messageWithQueueId) MessageQueueId() string {
+	return m.queueId
+}
+
+func (m messageWithQueueId) DrpcMessage() drpc.Message {
+	return m.Message
 }
