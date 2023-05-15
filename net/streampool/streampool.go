@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/pool"
-	"github.com/cheggaaa/mb/v3"
+	"github.com/anytypeio/any-sync/util/multiqueue"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/context"
@@ -24,6 +24,10 @@ type StreamHandler interface {
 
 // PeerGetter should dial or return cached peers
 type PeerGetter func(ctx context.Context) (peers []peer.Peer, err error)
+
+type MessageQueueId interface {
+	MessageQueueId() string
+}
 
 // StreamPool keeps and read streams
 type StreamPool interface {
@@ -115,19 +119,14 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 		pool:     s,
 		streamId: streamId,
 		l:        log.With(zap.String("peerId", peerId), zap.Uint32("streamId", streamId)),
-		queue:    mb.New[drpc.Message](queueSize),
 		tags:     tags,
 	}
+	st.queue = multiqueue.New[drpc.Message](st.writeToStream, s.writeQueueSize)
 	s.streams[streamId] = st
 	s.streamIdsByPeer[peerId] = append(s.streamIdsByPeer[peerId], streamId)
 	for _, tag := range tags {
 		s.streamIdsByTag[tag] = append(s.streamIdsByTag[tag], streamId)
 	}
-	go func() {
-		if err := st.writeLoop(); err != nil {
-			st.l.Info("stream closed", zap.Error(err))
-		}
-	}()
 	return st, nil
 }
 
