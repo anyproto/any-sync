@@ -33,7 +33,7 @@ require (
 	github.com/zeebo/blake3 v0.2.3
 	github.com/zeebo/errs v1.3.0
 	go.uber.org/zap v1.24.0
-	golang.org/x/crypto v0.8.0
+	golang.org/x/crypto v0.9.0
 	golang.org/x/exp v0.0.0-20230420155640-133eef4313cb
 	golang.org/x/net v0.10.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
