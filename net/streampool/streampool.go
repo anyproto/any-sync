@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/pool"
+	"github.com/anytypeio/any-sync/util/multiqueue"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/context"
@@ -23,6 +24,11 @@ type StreamHandler interface {
 
 // PeerGetter should dial or return cached peers
 type PeerGetter func(ctx context.Context) (peers []peer.Peer, err error)
+
+type MessageQueueId interface {
+	MessageQueueId() string
+	DrpcMessage() drpc.Message
+}
 
 // StreamPool keeps and read streams
 type StreamPool interface {
@@ -52,9 +58,9 @@ type streamPool struct {
 	streamIdsByTag  map[string][]uint32
 	streams         map[uint32]*stream
 	opening         map[string]*openingProcess
-	exec            *execPool
 	dial            *execPool
 	mu              sync.Mutex
+	writeQueueSize  int
 	lastStreamId    uint32
 }
 
@@ -103,6 +109,10 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 	defer s.mu.Unlock()
 	s.lastStreamId++
 	streamId := s.lastStreamId
+	queueSize := s.writeQueueSize
+	if queueSize <= 0 {
+		queueSize = 100
+	}
 	st := &stream{
 		peerId:   peerId,
 		peerCtx:  ctx,
@@ -112,6 +122,7 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 		l:        log.With(zap.String("peerId", peerId), zap.Uint32("streamId", streamId)),
 		tags:     tags,
 	}
+	st.queue = multiqueue.New[drpc.Message](st.writeToStream, s.writeQueueSize)
 	s.streams[streamId] = st
 	s.streamIdsByPeer[peerId] = append(s.streamIdsByPeer[peerId], streamId)
 	for _, tag := range tags {
@@ -121,23 +132,16 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 }
 
 func (s *streamPool) Send(ctx context.Context, msg drpc.Message, peerGetter PeerGetter) (err error) {
-	var sendOneFunc = func(sp peer.Peer) func() {
-		return func() {
-			if e := s.sendOne(ctx, sp, msg); e != nil {
-				log.InfoCtx(ctx, "send peer error", zap.Error(e), zap.String("peerId", sp.Id()))
-			} else {
-				log.DebugCtx(ctx, "send success", zap.String("peerId", sp.Id()))
-			}
-		}
-	}
 	return s.dial.TryAdd(func() {
 		peers, dialErr := peerGetter(ctx)
 		if dialErr != nil {
 			log.InfoCtx(ctx, "can't get peers", zap.Error(dialErr))
 		}
 		for _, p := range peers {
-			if err = s.exec.Add(ctx, sendOneFunc(p)); err != nil {
-				return
+			if e := s.sendOne(ctx, p, msg); e != nil {
+				log.InfoCtx(ctx, "send peer error", zap.Error(e), zap.String("peerId", p.Id()))
+			} else {
+				log.DebugCtx(ctx, "send success", zap.String("peerId", p.Id()))
 			}
 		}
 	})
@@ -157,22 +161,14 @@ func (s *streamPool) SendById(ctx context.Context, msg drpc.Message, peerIds ...
 	}
 	s.mu.Unlock()
 
-	var sendStreamsFunc = func(streams []*stream) func() {
-		return func() {
-			for _, st := range streams {
-				if e := st.write(msg); e != nil {
-					st.l.Debug("sendById write error", zap.Error(e))
-				} else {
-					st.l.DebugCtx(ctx, "sendById success")
-					return
-				}
-			}
-		}
-	}
-
 	for _, streams := range streamsByPeer {
-		if err = s.exec.Add(ctx, sendStreamsFunc(streams)); err != nil {
-			return
+		for _, st := range streams {
+			if e := st.write(msg); e != nil {
+				st.l.Debug("sendById write error", zap.Error(e))
+			} else {
+				st.l.DebugCtx(ctx, "sendById success")
+				return
+			}
 		}
 	}
 	if len(streamsByPeer) == 0 {
@@ -271,21 +267,12 @@ func (s *streamPool) Broadcast(ctx context.Context, msg drpc.Message, tags ...st
 		}
 	}
 	s.mu.Unlock()
-	var sendStreamFunc = func(st *stream) func() {
-		return func() {
-			if e := st.write(msg); e != nil {
-				st.l.InfoCtx(ctx, "broadcast write error", zap.Error(e))
-			} else {
-				st.l.DebugCtx(ctx, "broadcast success")
-			}
-		}
-	}
+
 	for _, st := range streams {
-		if st == nil {
-			panic("nil stream")
-		}
-		if err = s.exec.Add(ctx, sendStreamFunc(st)); err != nil {
-			return err
+		if e := st.write(msg); e != nil {
+			st.l.InfoCtx(ctx, "broadcast write error", zap.Error(e))
+		} else {
+			st.l.DebugCtx(ctx, "broadcast success")
 		}
 	}
 	return
@@ -361,10 +348,7 @@ func (s *streamPool) removeStream(streamId uint32) {
 }
 
 func (s *streamPool) Close() (err error) {
-	if e := s.dial.Close(); e != nil {
-		log.Warn("dial queue close error", zap.Error(e))
-	}
-	return s.exec.Close()
+	return s.dial.Close()
 }
 
 func removeStream(m map[string][]uint32, key string, streamId uint32) {
@@ -379,4 +363,22 @@ func removeStream(m map[string][]uint32, key string, streamId uint32) {
 	} else {
 		m[key] = streamIds
 	}
+}
+
+// WithQueueId wraps the message and adds queueId
+func WithQueueId(msg drpc.Message, queueId string) drpc.Message {
+	return &messageWithQueueId{queueId: queueId, Message: msg}
+}
+
+type messageWithQueueId struct {
+	drpc.Message
+	queueId string
+}
+
+func (m messageWithQueueId) MessageQueueId() string {
+	return m.queueId
+}
+
+func (m messageWithQueueId) DrpcMessage() drpc.Message {
+	return m.Message
 }

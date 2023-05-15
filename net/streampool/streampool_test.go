@@ -39,7 +39,7 @@ func TestStreamPool_AddStream(t *testing.T) {
 		require.NoError(t, fx.AddStream(s2, "space2", "common"))
 
 		require.NoError(t, fx.Broadcast(ctx, &testservice.StreamMessage{ReqData: "space1"}, "space1"))
-		require.NoError(t, fx.Broadcast(ctx, &testservice.StreamMessage{ReqData: "space2"}, "space2"))
+		require.NoError(t, fx.Broadcast(ctx, WithQueueId(&testservice.StreamMessage{ReqData: "space2"}, "q2"), "space2"))
 		require.NoError(t, fx.Broadcast(ctx, &testservice.StreamMessage{ReqData: "common"}, "common"))
 
 		var serverResults []string
@@ -202,7 +202,6 @@ func newFixture(t *testing.T) *fixture {
 	fx.tp = rpctest.NewTestPool().WithServer(ts)
 	fx.th = &testHandler{}
 	fx.StreamPool = New().NewStreamPool(fx.th, StreamConfig{
-		SendQueueWorkers: 4,
 		SendQueueSize:    10,
 		DialQueueWorkers: 1,
 		DialQueueSize:    10,

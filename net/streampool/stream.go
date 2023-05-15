@@ -3,6 +3,7 @@ package streampool
 import (
 	"context"
 	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/util/multiqueue"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 	"sync/atomic"
@@ -16,14 +17,17 @@ type stream struct {
 	streamId uint32
 	closed   atomic.Bool
 	l        logger.CtxLogger
+	queue    multiqueue.MultiQueue[drpc.Message]
 	tags     []string
 }
 
 func (sr *stream) write(msg drpc.Message) (err error) {
-	if err = sr.stream.MsgSend(msg, EncodingProto); err != nil {
-		sr.streamClose()
+	var queueId string
+	if qId, ok := msg.(MessageQueueId); ok {
+		queueId = qId.MessageQueueId()
+		msg = qId.DrpcMessage()
 	}
-	return err
+	return sr.queue.Add(sr.stream.Context(), queueId, msg)
 }
 
 func (sr *stream) readLoop() error {
@@ -46,8 +50,18 @@ func (sr *stream) readLoop() error {
 	}
 }
 
+func (sr *stream) writeToStream(msg drpc.Message) {
+	if err := sr.stream.MsgSend(msg, EncodingProto); err != nil {
+		sr.l.Warn("msg send error", zap.Error(err))
+		sr.streamClose()
+		return
+	}
+	return
+}
+
 func (sr *stream) streamClose() {
 	if !sr.closed.Swap(true) {
+		_ = sr.queue.Close()
 		_ = sr.stream.Close()
 		sr.pool.removeStream(sr.streamId)
 	}
