@@ -103,6 +103,7 @@ func (s *messagePool) HandleMessage(ctx context.Context, senderId string, msg *s
 			return
 		}
 		log.WarnCtx(ctx, "reply id does not exist", zap.String("replyId", msg.ReplyId))
+		return
 	}
 	return s.messageHandler(ctx, senderId, msg)
 }
