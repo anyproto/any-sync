@@ -32,9 +32,11 @@ type metric struct {
 	registry *prometheus.Registry
 	rpcLog   logger.CtxLogger
 	config   Config
+	a        *app.App
 }
 
 func (m *metric) Init(a *app.App) (err error) {
+	m.a = a
 	m.registry = prometheus.NewRegistry()
 	m.config = a.MustComponent("config").(configSource).GetMetric()
 	m.rpcLog = logger.NewNamed("rpcLog")
@@ -51,6 +53,9 @@ func (m *metric) Run(ctx context.Context) (err error) {
 	}
 	if err = m.registry.Register(collectors.NewGoCollector()); err != nil {
 		return err
+	}
+	if err = m.registry.Register(newVersionsCollector(m.a)); err != nil {
+		return
 	}
 	if m.config.Addr != "" {
 		var errCh = make(chan error)

@@ -15,8 +15,8 @@ import (
 
 var (
 	// values of this vars will be defined while compilation
-	GitCommit, GitBranch, GitState, GitSummary, BuildDate string
-	name                                                  string
+	AppName, GitCommit, GitBranch, GitState, GitSummary, BuildDate string
+	name                                                           string
 )
 
 var (
@@ -64,6 +64,10 @@ type App struct {
 // Name returns app name
 func (app *App) Name() string {
 	return name
+}
+
+func (app *App) AppName() string {
+	return AppName
 }
 
 // Version return app version
@@ -257,7 +261,7 @@ func (app *App) Close(ctx context.Context) error {
 		case <-time.After(StopWarningAfter):
 			statLogger(app.stopStat, log).
 				With(zap.String("in_progress", currentComponentStopping)).
-			 	Warn("components close in progress")
+				Warn("components close in progress")
 		}
 	}()
 	go func() {
