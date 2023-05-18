@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -54,11 +55,12 @@ type ComponentStatable interface {
 // App is the central part of the application
 // It contains and manages all components
 type App struct {
-	components  []Component
-	mu          sync.RWMutex
-	startStat   Stat
-	stopStat    Stat
-	deviceState int
+	components     []Component
+	mu             sync.RWMutex
+	startStat      Stat
+	stopStat       Stat
+	deviceState    int
+	anySyncVersion string
 }
 
 // Name returns app name
@@ -314,4 +316,22 @@ func (app *App) SetDeviceState(state int) {
 			statable.StateChange(state)
 		}
 	}
+}
+
+var onceVersion sync.Once
+
+func (app *App) AnySyncVersion() string {
+	onceVersion.Do(func() {
+		fmt.Println("111")
+		info, ok := debug.ReadBuildInfo()
+		if ok {
+			for _, mod := range info.Deps {
+				if mod.Path == "github.com/anytypeio/any-sync" {
+					app.anySyncVersion = mod.Version
+					break
+				}
+			}
+		}
+	})
+	return app.anySyncVersion
 }
