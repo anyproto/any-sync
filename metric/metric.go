@@ -33,6 +33,7 @@ type metric struct {
 	rpcLog   logger.CtxLogger
 	config   Config
 	a        *app.App
+	appField zap.Field
 }
 
 func (m *metric) Init(a *app.App) (err error) {
@@ -40,6 +41,7 @@ func (m *metric) Init(a *app.App) (err error) {
 	m.registry = prometheus.NewRegistry()
 	m.config = a.MustComponent("config").(configSource).GetMetric()
 	m.rpcLog = logger.NewNamed("rpcLog")
+	m.appField = App(a.Version())
 	return nil
 }
 
