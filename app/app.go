@@ -322,7 +322,6 @@ var onceVersion sync.Once
 
 func (app *App) AnySyncVersion() string {
 	onceVersion.Do(func() {
-		fmt.Println("111")
 		info, ok := debug.ReadBuildInfo()
 		if ok {
 			for _, mod := range info.Deps {
