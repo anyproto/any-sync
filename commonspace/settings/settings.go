@@ -40,7 +40,16 @@ var (
 	ErrCantDeleteSpace = errors.New("not able to delete space")
 )
 
-var doSnapshot = objecttree.DoSnapshot
+var (
+	doSnapshot       = objecttree.DoSnapshot
+	buildHistoryTree = func(objTree objecttree.ObjectTree) (objecttree.ReadableObjectTree, error) {
+		return objecttree.BuildHistoryTree(objecttree.HistoryTreeParams{
+			TreeStorage:   objTree.Storage(),
+			AclList:       objTree.AclList(),
+			BuildFullTree: true,
+		})
+	}
+)
 
 type BuildTreeFunc func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error)
 
@@ -166,8 +175,33 @@ func (s *settingsObject) Init(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-
+	// TODO: remove this check when everybody updates
+	if err = s.checkHistoryState(ctx); err != nil {
+		return
+	}
 	s.loop.Run()
+	return
+}
+
+func (s *settingsObject) checkHistoryState(ctx context.Context) (err error) {
+	historyTree, err := buildHistoryTree(s.SyncTree)
+	if err != nil {
+		return
+	}
+	fullState, err := s.builder.Build(historyTree, nil)
+	if err != nil {
+		return
+	}
+	if len(fullState.DeletedIds) != len(s.state.DeletedIds) {
+		log.WarnCtx(ctx, "state does not have all deleted ids",
+			zap.Int("fullstate ids", len(fullState.DeletedIds)),
+			zap.Int("state ids", len(fullState.DeletedIds)))
+		s.state = fullState
+		err = s.deletionManager.UpdateState(context.Background(), s.state)
+		if err != nil {
+			return
+		}
+	}
 	return
 }
 
@@ -221,7 +255,7 @@ func (s *settingsObject) DeleteObject(id string) (err error) {
 		err = ErrDeleteSelf
 		return
 	}
-	if s.deletionState.Exists(id) {
+	if s.state.Exists(id) {
 		err = ErrAlreadyDeleted
 		return nil
 	}
@@ -249,7 +283,7 @@ func (s *settingsObject) verifyDeleteSpace(raw *treechangeproto.RawTreeChangeWit
 
 func (s *settingsObject) addContent(data []byte, isSnapshot bool) (err error) {
 	accountData := s.account.Account()
-	_, err = s.AddContent(context.Background(), objecttree.SignableChangeContent{
+	res, err := s.AddContent(context.Background(), objecttree.SignableChangeContent{
 		Data:        data,
 		Key:         accountData.SignKey,
 		IsSnapshot:  isSnapshot,
@@ -258,8 +292,11 @@ func (s *settingsObject) addContent(data []byte, isSnapshot bool) (err error) {
 	if err != nil {
 		return
 	}
-
-	s.Update(s)
+	if res.Mode == objecttree.Rebuild {
+		s.Rebuild(s)
+	} else {
+		s.Update(s)
+	}
 	return
 }
 

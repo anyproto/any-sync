@@ -47,10 +47,7 @@ type deletionManager struct {
 
 func (d *deletionManager) UpdateState(ctx context.Context, state *settingsstate.State) error {
 	log := log.With(zap.String("spaceId", d.spaceId))
-	err := d.deletionState.Add(state.DeletedIds)
-	if err != nil {
-		log.Debug("failed to add deleted ids to deletion state")
-	}
+	d.deletionState.Add(state.DeletedIds)
 	if state.DeleterId == "" {
 		return nil
 	}
@@ -59,10 +56,7 @@ func (d *deletionManager) UpdateState(ctx context.Context, state *settingsstate.
 		allIds := slice.DiscardFromSlice(d.provider.AllIds(), func(id string) bool {
 			return id == d.settingsId
 		})
-		err := d.deletionState.Add(allIds)
-		if err != nil {
-			log.Debug("failed to add all ids to deletion state")
-		}
+		d.deletionState.Add(allIds)
 	}
 	d.onSpaceDelete()
 	return nil
