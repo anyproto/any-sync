@@ -36,11 +36,9 @@ func (m *MockObjectDeletionState) EXPECT() *MockObjectDeletionStateMockRecorder 
 }
 
 // Add mocks base method.
-func (m *MockObjectDeletionState) Add(arg0 []string) error {
+func (m *MockObjectDeletionState) Add(arg0 []string) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Add", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "Add", arg0)
 }
 
 // Add indicates an expected call of Add.
@@ -145,7 +143,7 @@ func (m *MockStateBuilder) EXPECT() *MockStateBuilderMockRecorder {
 }
 
 // Build mocks base method.
-func (m *MockStateBuilder) Build(arg0 objecttree.ObjectTree, arg1 *settingsstate.State) (*settingsstate.State, error) {
+func (m *MockStateBuilder) Build(arg0 objecttree.ReadableObjectTree, arg1 *settingsstate.State) (*settingsstate.State, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Build", arg0, arg1)
 	ret0, _ := ret[0].(*settingsstate.State)

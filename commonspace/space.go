@@ -195,7 +195,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.aclList = syncacl.NewSyncAcl(aclList, s.objectSync.SyncClient().MessagePool())
 	s.treeManager.AddObject(s.aclList)
 
-	deletionState := settingsstate.NewObjectDeletionState(s.storage)
+	deletionState := settingsstate.NewObjectDeletionState(log, s.storage)
 	deps := settings.Deps{
 		BuildFunc: func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error) {
 			res, err := s.BuildTree(ctx, id, BuildTreeOpts{

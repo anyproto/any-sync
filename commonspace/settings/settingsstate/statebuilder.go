@@ -7,7 +7,7 @@ import (
 )
 
 type StateBuilder interface {
-	Build(tree objecttree.ObjectTree, state *State) (*State, error)
+	Build(tree objecttree.ReadableObjectTree, state *State) (*State, error)
 }
 
 func NewStateBuilder() StateBuilder {
@@ -17,7 +17,7 @@ func NewStateBuilder() StateBuilder {
 type stateBuilder struct {
 }
 
-func (s *stateBuilder) Build(tr objecttree.ObjectTree, oldState *State) (state *State, err error) {
+func (s *stateBuilder) Build(tr objecttree.ReadableObjectTree, oldState *State) (state *State, err error) {
 	var (
 		rootId  = tr.Root().Id
 		startId = rootId
