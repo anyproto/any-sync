@@ -19,13 +19,13 @@ const (
 )
 
 type HandshakeError struct {
-	err error
+	Err error
 	e   handshakeproto.Error
 }
 
 func (he HandshakeError) Error() string {
-	if he.err != nil {
-		return he.err.Error()
+	if he.Err != nil {
+		return he.Err.Error()
 	}
 	return he.e.String()
 }
@@ -34,7 +34,7 @@ var (
 	ErrUnexpectedPayload       = HandshakeError{e: handshakeproto.Error_UnexpectedPayload}
 	ErrDeadlineExceeded        = HandshakeError{e: handshakeproto.Error_DeadlineExceeded}
 	ErrInvalidCredentials      = HandshakeError{e: handshakeproto.Error_InvalidCredentials}
-	ErrPeerDeclinedCredentials = HandshakeError{err: errors.New("remote peer declined the credentials")}
+	ErrPeerDeclinedCredentials = HandshakeError{Err: errors.New("remote peer declined the credentials")}
 	ErrSkipVerifyNotAllowed    = HandshakeError{e: handshakeproto.Error_SkipVerifyNotAllowed}
 	ErrUnexpected              = HandshakeError{e: handshakeproto.Error_Unexpected}
 

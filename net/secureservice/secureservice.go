@@ -16,19 +16,6 @@ import (
 	"net"
 )
 
-type HandshakeError struct {
-	remoteAddr string
-	err        error
-}
-
-func (he HandshakeError) RemoteAddr() string {
-	return he.remoteAddr
-}
-
-func (he HandshakeError) Error() string {
-	return he.err.Error()
-}
-
 const CName = "common.net.secure"
 
 var log = logger.NewNamed(CName)
@@ -91,18 +78,14 @@ func (s *secureService) Name() (name string) {
 func (s *secureService) SecureInbound(ctx context.Context, conn net.Conn) (cctx context.Context, sc sec.SecureConn, err error) {
 	sc, err = s.p2pTr.SecureInbound(ctx, conn, "")
 	if err != nil {
-		return nil, nil, HandshakeError{
-			remoteAddr: conn.RemoteAddr().String(),
-			err:        err,
+		return nil, nil, handshake.HandshakeError{
+			Err: err,
 		}
 	}
 
 	identity, err := handshake.IncomingHandshake(ctx, sc, s.inboundChecker)
 	if err != nil {
-		return nil, nil, HandshakeError{
-			remoteAddr: conn.RemoteAddr().String(),
-			err:        err,
-		}
+		return nil, nil, err
 	}
 	cctx = context.Background()
 	cctx = peer.CtxWithPeerId(cctx, sc.RemotePeer().String())
@@ -113,7 +96,7 @@ func (s *secureService) SecureInbound(ctx context.Context, conn net.Conn) (cctx 
 func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (sec.SecureConn, error) {
 	sc, err := s.p2pTr.SecureOutbound(ctx, conn, "")
 	if err != nil {
-		return nil, HandshakeError{err: err, remoteAddr: conn.RemoteAddr().String()}
+		return nil, handshake.HandshakeError{Err: err}
 	}
 	peerId := sc.RemotePeer().String()
 	confTypes := s.nodeconf.GetLast().NodeTypes(peerId)
@@ -126,7 +109,7 @@ func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (sec.
 	// ignore identity for outgoing connection because we don't need it at this moment
 	_, err = handshake.OutgoingHandshake(ctx, sc, checker)
 	if err != nil {
-		return nil, HandshakeError{err: err, remoteAddr: conn.RemoteAddr().String()}
+		return nil, err
 	}
 	return sc, nil
 }
