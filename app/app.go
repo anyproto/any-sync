@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -15,8 +16,8 @@ import (
 
 var (
 	// values of this vars will be defined while compilation
-	GitCommit, GitBranch, GitState, GitSummary, BuildDate string
-	name                                                  string
+	AppName, GitCommit, GitBranch, GitState, GitSummary, BuildDate string
+	name                                                           string
 )
 
 var (
@@ -54,16 +55,21 @@ type ComponentStatable interface {
 // App is the central part of the application
 // It contains and manages all components
 type App struct {
-	components  []Component
-	mu          sync.RWMutex
-	startStat   Stat
-	stopStat    Stat
-	deviceState int
+	components     []Component
+	mu             sync.RWMutex
+	startStat      Stat
+	stopStat       Stat
+	deviceState    int
+	anySyncVersion string
 }
 
 // Name returns app name
 func (app *App) Name() string {
 	return name
+}
+
+func (app *App) AppName() string {
+	return AppName
 }
 
 // Version return app version
@@ -257,7 +263,7 @@ func (app *App) Close(ctx context.Context) error {
 		case <-time.After(StopWarningAfter):
 			statLogger(app.stopStat, log).
 				With(zap.String("in_progress", currentComponentStopping)).
-			 	Warn("components close in progress")
+				Warn("components close in progress")
 		}
 	}()
 	go func() {
@@ -310,4 +316,21 @@ func (app *App) SetDeviceState(state int) {
 			statable.StateChange(state)
 		}
 	}
+}
+
+var onceVersion sync.Once
+
+func (app *App) AnySyncVersion() string {
+	onceVersion.Do(func() {
+		info, ok := debug.ReadBuildInfo()
+		if ok {
+			for _, mod := range info.Deps {
+				if mod.Path == "github.com/anytypeio/any-sync" {
+					app.anySyncVersion = mod.Version
+					break
+				}
+			}
+		}
+	})
+	return app.anySyncVersion
 }
