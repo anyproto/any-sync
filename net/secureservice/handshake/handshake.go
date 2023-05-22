@@ -34,6 +34,8 @@ var (
 	ErrSkipVerifyNotAllowed    = handshakeError{handshakeproto.Error_SkipVerifyNotAllowed}
 	ErrUnexpected              = handshakeError{handshakeproto.Error_Unexpected}
 
+	ErrIncompatibleVersion = handshakeError{handshakeproto.Error_IncompatibleVersion}
+
 	ErrGotNotAHandshakeMessage = errors.New("go not a handshake message")
 )
 

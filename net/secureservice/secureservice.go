@@ -44,10 +44,11 @@ type SecureService interface {
 }
 
 type secureService struct {
-	p2pTr    *libp2ptls.Transport
-	account  *accountdata.AccountKeys
-	key      crypto.PrivKey
-	nodeconf nodeconf.Service
+	p2pTr        *libp2ptls.Transport
+	account      *accountdata.AccountKeys
+	key          crypto.PrivKey
+	nodeconf     nodeconf.Service
+	protoVersion uint32
 
 	noVerifyChecker  handshake.CredentialChecker
 	peerSignVerifier handshake.CredentialChecker
@@ -64,8 +65,8 @@ func (s *secureService) Init(a *app.App) (err error) {
 		return
 	}
 
-	s.noVerifyChecker = newNoVerifyChecker()
-	s.peerSignVerifier = newPeerSignVerifier(account.Account())
+	s.noVerifyChecker = newNoVerifyChecker(s.protoVersion)
+	s.peerSignVerifier = newPeerSignVerifier(s.protoVersion, account.Account())
 
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 

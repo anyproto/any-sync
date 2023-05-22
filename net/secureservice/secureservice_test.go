@@ -5,6 +5,7 @@ import (
 	"github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/net/peer"
+	"github.com/anytypeio/any-sync/net/secureservice/handshake"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/anytypeio/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anytypeio/any-sync/testutil/testnodeconf"
@@ -19,7 +20,7 @@ var ctx = context.Background()
 
 func TestHandshake(t *testing.T) {
 	nc := testnodeconf.GenNodeConfig(2)
-	fxS := newFixture(t, nc, nc.GetAccountService(0))
+	fxS := newFixture(t, nc, nc.GetAccountService(0), 0)
 	defer fxS.Finish(t)
 	sc, cc := net.Pipe()
 
@@ -35,7 +36,7 @@ func TestHandshake(t *testing.T) {
 		resCh <- ar
 	}()
 
-	fxC := newFixture(t, nc, nc.GetAccountService(1))
+	fxC := newFixture(t, nc, nc.GetAccountService(1), 0)
 	defer fxC.Finish(t)
 
 	secConn, err := fxC.SecureOutbound(ctx, cc)
@@ -52,13 +53,39 @@ func TestHandshake(t *testing.T) {
 	assert.Equal(t, marshalledId, accId)
 }
 
-func newFixture(t *testing.T, nc *testnodeconf.Config, acc accountservice.Service) *fixture {
+func TestHandshakeIncompatibleVersion(t *testing.T) {
+	nc := testnodeconf.GenNodeConfig(2)
+	fxS := newFixture(t, nc, nc.GetAccountService(0), 0)
+	defer fxS.Finish(t)
+	sc, cc := net.Pipe()
+
+	type acceptRes struct {
+		ctx  context.Context
+		conn net.Conn
+		err  error
+	}
+	resCh := make(chan acceptRes)
+	go func() {
+		var ar acceptRes
+		ar.ctx, ar.conn, ar.err = fxS.SecureInbound(ctx, sc)
+		resCh <- ar
+	}()
+	fxC := newFixture(t, nc, nc.GetAccountService(1), 1)
+	defer fxC.Finish(t)
+	_, err := fxC.SecureOutbound(ctx, cc)
+	require.EqualError(t, err, handshake.ErrIncompatibleVersion.Error())
+	res := <-resCh
+	require.EqualError(t, res.err, handshake.ErrIncompatibleVersion.Error())
+}
+
+func newFixture(t *testing.T, nc *testnodeconf.Config, acc accountservice.Service, protoVersion uint32) *fixture {
 	fx := &fixture{
 		ctrl:          gomock.NewController(t),
 		secureService: New().(*secureService),
 		acc:           acc,
 		a:             new(app.App),
 	}
+	fx.secureService.protoVersion = protoVersion
 	fx.mockNodeConf = mock_nodeconf.NewMockService(fx.ctrl)
 	fx.mockNodeConf.EXPECT().Init(gomock.Any())
 	fx.mockNodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()
