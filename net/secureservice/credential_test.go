@@ -20,8 +20,8 @@ func TestPeerSignVerifier_CheckCredential(t *testing.T) {
 	identity1, _ := a1.SignKey.GetPublic().Marshall()
 	identity2, _ := a2.SignKey.GetPublic().Marshall()
 
-	cc1 := newPeerSignVerifier(a1)
-	cc2 := newPeerSignVerifier(a2)
+	cc1 := newPeerSignVerifier(0, a1)
+	cc2 := newPeerSignVerifier(0, a2)
 
 	c1 := newTestSC(a2.PeerId)
 	c2 := newTestSC(a1.PeerId)
@@ -35,6 +35,31 @@ func TestPeerSignVerifier_CheckCredential(t *testing.T) {
 	id2, err := cc2.CheckCredential(c2, cr1)
 	assert.NoError(t, err)
 	assert.Equal(t, identity1, id2)
+
+	_, err = cc1.CheckCredential(c1, cr1)
+	assert.EqualError(t, err, handshake.ErrInvalidCredentials.Error())
+}
+
+func TestIncompatibleVersion(t *testing.T) {
+	a1 := newTestAccData(t)
+	a2 := newTestAccData(t)
+	_, _ = a1.SignKey.GetPublic().Marshall()
+	identity2, _ := a2.SignKey.GetPublic().Marshall()
+
+	cc1 := newPeerSignVerifier(0, a1)
+	cc2 := newPeerSignVerifier(1, a2)
+
+	c1 := newTestSC(a2.PeerId)
+	c2 := newTestSC(a1.PeerId)
+
+	cr1 := cc1.MakeCredentials(c1)
+	cr2 := cc2.MakeCredentials(c2)
+	id1, err := cc1.CheckCredential(c1, cr2)
+	assert.NoError(t, err)
+	assert.Equal(t, identity2, id1)
+
+	_, err = cc2.CheckCredential(c2, cr1)
+	assert.EqualError(t, err, handshake.ErrIncompatibleVersion.Error())
 
 	_, err = cc1.CheckCredential(c1, cr1)
 	assert.EqualError(t, err, handshake.ErrInvalidCredentials.Error())
