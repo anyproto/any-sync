@@ -73,9 +73,9 @@ func TestHandshakeIncompatibleVersion(t *testing.T) {
 	fxC := newFixture(t, nc, nc.GetAccountService(1), 1)
 	defer fxC.Finish(t)
 	_, err := fxC.SecureOutbound(ctx, cc)
-	require.EqualError(t, err, handshake.ErrIncompatibleVersion.Error())
+	require.Equal(t, handshake.ErrIncompatibleVersion, err)
 	res := <-resCh
-	require.EqualError(t, res.err, handshake.ErrIncompatibleVersion.Error())
+	require.Equal(t, handshake.ErrIncompatibleVersion, res.err)
 }
 
 func newFixture(t *testing.T, nc *testnodeconf.Config, acc accountservice.Service, protoVersion uint32) *fixture {

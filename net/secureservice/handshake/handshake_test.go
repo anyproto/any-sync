@@ -336,7 +336,7 @@ func TestIncomingHandshake(t *testing.T) {
 		require.Equal(t, handshakeproto.Error_IncompatibleVersion, msg.ack.Error)
 
 		res := <-handshakeResCh
-		require.EqualError(t, res.err, ErrIncompatibleVersion.Error())
+		assert.Equal(t, res.err, ErrIncompatibleVersion)
 	})
 	t.Run("write cred instead ack", func(t *testing.T) {
 		c1, c2 := newConnPair(t)
