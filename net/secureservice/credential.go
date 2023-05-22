@@ -11,14 +11,12 @@ import (
 
 func newNoVerifyChecker(protoVersion uint32) handshake.CredentialChecker {
 	return &noVerifyChecker{
-		protoVersion: protoVersion,
-		cred:         &handshakeproto.Credentials{Type: handshakeproto.CredentialsType_SkipVerify},
+		cred: &handshakeproto.Credentials{Type: handshakeproto.CredentialsType_SkipVerify, Version: protoVersion},
 	}
 }
 
 type noVerifyChecker struct {
-	protoVersion uint32
-	cred         *handshakeproto.Credentials
+	cred *handshakeproto.Credentials
 }
 
 func (n noVerifyChecker) MakeCredentials(sc sec.SecureConn) *handshakeproto.Credentials {
@@ -26,7 +24,7 @@ func (n noVerifyChecker) MakeCredentials(sc sec.SecureConn) *handshakeproto.Cred
 }
 
 func (n noVerifyChecker) CheckCredential(sc sec.SecureConn, cred *handshakeproto.Credentials) (identity []byte, err error) {
-	if cred.Version != n.protoVersion {
+	if cred.Version != n.cred.Version {
 		return nil, handshake.ErrIncompatibleVersion
 	}
 	return nil, nil
@@ -59,6 +57,7 @@ func (p *peerSignVerifier) MakeCredentials(sc sec.SecureConn) *handshakeproto.Cr
 	return &handshakeproto.Credentials{
 		Type:    handshakeproto.CredentialsType_SignedPeerIds,
 		Payload: payload,
+		Version: p.protoVersion,
 	}
 }
 

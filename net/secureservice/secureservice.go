@@ -64,7 +64,6 @@ func (s *secureService) Init(a *app.App) (err error) {
 	if s.key, err = crypto.UnmarshalEd25519PrivateKey(peerKey); err != nil {
 		return
 	}
-
 	s.noVerifyChecker = newNoVerifyChecker(s.protoVersion)
 	s.peerSignVerifier = newPeerSignVerifier(s.protoVersion, account.Account())
 
