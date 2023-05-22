@@ -11,15 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net"
-	"net/http"
-	_ "net/http/pprof"
 	"testing"
 	"time"
 )
-
-func init() {
-	go http.ListenAndServe(":6060", nil)
-}
 
 var noVerifyChecker = &testCredChecker{
 	makeCred: &handshakeproto.Credentials{Type: handshakeproto.CredentialsType_SkipVerify},
@@ -323,6 +317,26 @@ func TestIncomingHandshake(t *testing.T) {
 
 		res := <-handshakeResCh
 		require.EqualError(t, res.err, ErrInvalidCredentials.Error())
+	})
+	t.Run("invalid cred version", func(t *testing.T) {
+		c1, c2 := newConnPair(t)
+		var handshakeResCh = make(chan handshakeRes, 1)
+		go func() {
+			identity, err := IncomingHandshake(nil, c1, &testCredChecker{makeCred: noVerifyChecker.makeCred, checkErr: ErrIncompatibleVersion})
+			handshakeResCh <- handshakeRes{identity: identity, err: err}
+		}()
+		h := newHandshake()
+		h.conn = c2
+		// write credentials
+		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
+		// except ack with error
+		msg, err := h.readMsg()
+		require.NoError(t, err)
+		require.Nil(t, msg.cred)
+		require.Equal(t, handshakeproto.Error_IncompatibleVersion, msg.ack.Error)
+
+		res := <-handshakeResCh
+		assert.Equal(t, res.err, ErrIncompatibleVersion)
 	})
 	t.Run("write cred instead ack", func(t *testing.T) {
 		c1, c2 := newConnPair(t)

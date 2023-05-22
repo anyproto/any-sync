@@ -9,6 +9,7 @@ import (
 	net2 "github.com/anytypeio/any-sync/net"
 	"github.com/anytypeio/any-sync/net/peer"
 	"github.com/anytypeio/any-sync/net/secureservice"
+	"github.com/anytypeio/any-sync/net/secureservice/handshake"
 	"github.com/anytypeio/any-sync/net/timeoutconn"
 	"github.com/anytypeio/any-sync/nodeconf"
 	"github.com/libp2p/go-libp2p/core/sec"
@@ -120,6 +121,9 @@ func (d *dialer) handshake(ctx context.Context, addr, peerId string) (conn drpc.
 	timeoutConn := timeoutconn.NewConn(tcpConn, time.Millisecond*time.Duration(d.config.Stream.TimeoutMilliseconds))
 	sc, err = d.transport.SecureOutbound(ctx, timeoutConn)
 	if err != nil {
+		if he, ok := err.(handshake.HandshakeError); ok {
+			return nil, nil, he
+		}
 		return nil, nil, fmt.Errorf("tls handshaeke error: %v; since start: %v", err, time.Since(st))
 	}
 	if peerId != sc.RemotePeer().String() {

@@ -2,8 +2,8 @@ package streampool
 
 import (
 	"fmt"
+	"github.com/anytypeio/any-sync/net"
 	"github.com/anytypeio/any-sync/net/peer"
-	"github.com/anytypeio/any-sync/net/pool"
 	"github.com/anytypeio/any-sync/util/multiqueue"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -172,7 +172,7 @@ func (s *streamPool) SendById(ctx context.Context, msg drpc.Message, peerIds ...
 		}
 	}
 	if len(streamsByPeer) == 0 {
-		return pool.ErrUnableToConnect
+		return net.ErrUnableToConnect
 	}
 	return
 }

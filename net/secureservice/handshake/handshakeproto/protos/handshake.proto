@@ -36,6 +36,7 @@ Successful handshake scheme:
 message Credentials {
     CredentialsType type = 1;
     bytes payload = 2;
+    uint32 version = 3;
 }
 
 enum CredentialsType {
@@ -66,4 +67,5 @@ enum Error {
     UnexpectedPayload = 3;
     SkipVerifyNotAllowed = 4;
     DeadlineExceeded = 5;
+    IncompatibleVersion = 6;
 }
