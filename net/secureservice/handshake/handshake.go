@@ -19,22 +19,26 @@ const (
 )
 
 type HandshakeError struct {
-	e handshakeproto.Error
+	err error
+	e   handshakeproto.Error
 }
 
 func (he HandshakeError) Error() string {
+	if he.err != nil {
+		return he.err.Error()
+	}
 	return he.e.String()
 }
 
 var (
-	ErrUnexpectedPayload       = HandshakeError{handshakeproto.Error_UnexpectedPayload}
-	ErrDeadlineExceeded        = HandshakeError{handshakeproto.Error_DeadlineExceeded}
-	ErrInvalidCredentials      = HandshakeError{handshakeproto.Error_InvalidCredentials}
-	ErrPeerDeclinedCredentials = errors.New("remote peer declined the credentials")
-	ErrSkipVerifyNotAllowed    = HandshakeError{handshakeproto.Error_SkipVerifyNotAllowed}
-	ErrUnexpected              = HandshakeError{handshakeproto.Error_Unexpected}
+	ErrUnexpectedPayload       = HandshakeError{e: handshakeproto.Error_UnexpectedPayload}
+	ErrDeadlineExceeded        = HandshakeError{e: handshakeproto.Error_DeadlineExceeded}
+	ErrInvalidCredentials      = HandshakeError{e: handshakeproto.Error_InvalidCredentials}
+	ErrPeerDeclinedCredentials = HandshakeError{err: errors.New("remote peer declined the credentials")}
+	ErrSkipVerifyNotAllowed    = HandshakeError{e: handshakeproto.Error_SkipVerifyNotAllowed}
+	ErrUnexpected              = HandshakeError{e: handshakeproto.Error_Unexpected}
 
-	ErrIncompatibleVersion = HandshakeError{handshakeproto.Error_IncompatibleVersion}
+	ErrIncompatibleVersion = HandshakeError{e: handshakeproto.Error_IncompatibleVersion}
 
 	ErrGotNotAHandshakeMessage = errors.New("go not a handshake message")
 )
