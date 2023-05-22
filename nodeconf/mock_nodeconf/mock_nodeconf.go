@@ -177,6 +177,20 @@ func (mr *MockServiceMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockService)(nil).Name))
 }
 
+// NetworkCompatibilityStatus mocks base method.
+func (m *MockService) NetworkCompatibilityStatus() nodeconf.NetworkCompatibilityStatus {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NetworkCompatibilityStatus")
+	ret0, _ := ret[0].(nodeconf.NetworkCompatibilityStatus)
+	return ret0
+}
+
+// NetworkCompatibilityStatus indicates an expected call of NetworkCompatibilityStatus.
+func (mr *MockServiceMockRecorder) NetworkCompatibilityStatus() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkCompatibilityStatus", reflect.TypeOf((*MockService)(nil).NetworkCompatibilityStatus))
+}
+
 // NodeIds mocks base method.
 func (m *MockService) NodeIds(arg0 string) []string {
 	m.ctrl.T.Helper()

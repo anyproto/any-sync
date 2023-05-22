@@ -2,16 +2,13 @@ package pool
 
 import (
 	"context"
-	"errors"
 	"github.com/anytypeio/any-sync/app/ocache"
+	"github.com/anytypeio/any-sync/net"
 	"github.com/anytypeio/any-sync/net/dialer"
 	"github.com/anytypeio/any-sync/net/peer"
+	"github.com/anytypeio/any-sync/net/secureservice/handshake"
 	"go.uber.org/zap"
 	"math/rand"
-)
-
-var (
-	ErrUnableToConnect = errors.New("unable to connect")
 )
 
 // Pool creates and caches outgoing connection
@@ -76,14 +73,19 @@ func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error
 		peerIds[i], peerIds[j] = peerIds[j], peerIds[i]
 	})
 	// connecting
+	var lastErr error
 	for _, peerId := range peerIds {
 		if v, err := p.cache.Get(ctx, peerId); err == nil {
 			return v.(peer.Peer), nil
 		} else {
 			log.Debug("unable to connect", zap.String("peerId", peerId), zap.Error(err))
+			lastErr = err
 		}
 	}
-	return nil, ErrUnableToConnect
+	if _, ok := lastErr.(handshake.HandshakeError); !ok {
+		lastErr = net.ErrUnableToConnect
+	}
+	return nil, lastErr
 }
 
 func (p *pool) DialOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
@@ -92,14 +94,19 @@ func (p *pool) DialOneOf(ctx context.Context, peerIds []string) (peer.Peer, erro
 		peerIds[i], peerIds[j] = peerIds[j], peerIds[i]
 	})
 	// connecting
+	var lastErr error
 	for _, peerId := range peerIds {
 		if v, err := p.dialer.Dial(ctx, peerId); err == nil {
 			return v.(peer.Peer), nil
 		} else {
 			log.Debug("unable to connect", zap.String("peerId", peerId), zap.Error(err))
+			lastErr = err
 		}
 	}
-	return nil, ErrUnableToConnect
+	if _, ok := lastErr.(handshake.HandshakeError); !ok {
+		lastErr = net.ErrUnableToConnect
+	}
+	return nil, lastErr
 }
 
 func (p *pool) Close(ctx context.Context) (err error) {

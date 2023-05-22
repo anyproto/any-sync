@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/anytypeio/any-sync/app"
+	"github.com/anytypeio/any-sync/net"
 	"github.com/anytypeio/any-sync/net/dialer"
 	"github.com/anytypeio/any-sync/net/peer"
+	"github.com/anytypeio/any-sync/net/secureservice/handshake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"storj.io/drpc"
@@ -116,7 +118,17 @@ func TestPool_GetOneOf(t *testing.T) {
 			return nil, fmt.Errorf("persistent error")
 		}
 		p, err := fx.GetOneOf(ctx, []string{"3", "2", "1"})
-		assert.Equal(t, ErrUnableToConnect, err)
+		assert.Equal(t, net.ErrUnableToConnect, err)
+		assert.Nil(t, p)
+	})
+	t.Run("handshake error", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+			return nil, handshake.ErrIncompatibleVersion
+		}
+		p, err := fx.GetOneOf(ctx, []string{"3", "2", "1"})
+		assert.Equal(t, handshake.ErrIncompatibleVersion, err)
 		assert.Nil(t, p)
 	})
 }

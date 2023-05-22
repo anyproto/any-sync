@@ -17,7 +17,10 @@ func GenNodeConfig(num int) (conf *Config) {
 		if err := ac.Init(nil); err != nil {
 			panic(err)
 		}
-		conf.nodes.Nodes = append(conf.nodes.Nodes, ac.NodeConf(nil))
+		conf.nodes.Nodes = append(conf.nodes.Nodes, nodeconf.Node{
+			PeerId: ac.Account().PeerId,
+			Types:  []nodeconf.NodeType{nodeconf.NodeTypeTree},
+		})
 		conf.configs = append(conf.configs, ac)
 	}
 	return conf
