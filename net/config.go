@@ -1,5 +1,11 @@
 package net
 
+import "errors"
+
+var (
+	ErrUnableToConnect = errors.New("unable to connect")
+)
+
 type ConfigGetter interface {
 	GetNet() Config
 }

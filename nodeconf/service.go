@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_nodeconf/mock_nodeconf.go github.com/anytypeio/any-sync/nodeconf Service
 package nodeconf
 
 import (
@@ -5,6 +6,8 @@ import (
 	commonaccount "github.com/anytypeio/any-sync/accountservice"
 	"github.com/anytypeio/any-sync/app"
 	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anytypeio/any-sync/net"
+	"github.com/anytypeio/any-sync/net/secureservice/handshake"
 	"github.com/anytypeio/any-sync/util/periodicsync"
 	"github.com/anytypeio/go-chash"
 	"go.uber.org/zap"
@@ -20,12 +23,22 @@ const (
 
 var log = logger.NewNamed(CName)
 
+type NetworkCompatibilityStatus int
+
+const (
+	NetworkCompatibilityStatusUnknown NetworkCompatibilityStatus = iota
+	NetworkCompatibilityStatusOk
+	NetworkCompatibilityStatusError
+	NetworkCompatibilityStatusIncompatible
+)
+
 func New() Service {
 	return new(service)
 }
 
 type Service interface {
 	NodeConf
+	NetworkCompatibilityStatus() NetworkCompatibilityStatus
 	app.ComponentRunnable
 }
 
@@ -37,6 +50,8 @@ type service struct {
 	last      NodeConf
 	mu        sync.RWMutex
 	sync      periodicsync.PeriodicSync
+
+	compatibilityStatus NetworkCompatibilityStatus
 }
 
 func (s *service) Init(a *app.App) (err error) {
@@ -75,10 +90,19 @@ func (s *service) Run(_ context.Context) (err error) {
 	return
 }
 
+func (s *service) NetworkCompatibilityStatus() NetworkCompatibilityStatus {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.compatibilityStatus
+}
+
 func (s *service) updateConfiguration(ctx context.Context) (err error) {
 	last, err := s.source.GetLast(ctx, s.Configuration().Id)
 	if err != nil {
+		s.setCompatibilityStatusByErr(err)
 		return
+	} else {
+		s.setCompatibilityStatusByErr(nil)
 	}
 	if err = s.store.SaveLast(ctx, last); err != nil {
 		return
@@ -135,6 +159,21 @@ func (s *service) setLastConfiguration(c Configuration) (err error) {
 	}
 	s.last = nc
 	return
+}
+
+func (s *service) setCompatibilityStatusByErr(err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	switch err {
+	case nil:
+		s.compatibilityStatus = NetworkCompatibilityStatusOk
+	case handshake.ErrIncompatibleVersion:
+		s.compatibilityStatus = NetworkCompatibilityStatusIncompatible
+	case net.ErrUnableToConnect:
+		s.compatibilityStatus = NetworkCompatibilityStatusUnknown
+	default:
+		s.compatibilityStatus = NetworkCompatibilityStatusError
+	}
 }
 
 func (s *service) Id() string {
@@ -204,6 +243,8 @@ func (s *service) NodeTypes(nodeId string) []NodeType {
 }
 
 func (s *service) Close(ctx context.Context) (err error) {
-	s.sync.Close()
+	if s.sync != nil {
+		s.sync.Close()
+	}
 	return
 }

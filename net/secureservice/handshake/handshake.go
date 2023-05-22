@@ -18,23 +18,23 @@ const (
 	msgTypeAck  = byte(2)
 )
 
-type handshakeError struct {
+type HandshakeError struct {
 	e handshakeproto.Error
 }
 
-func (he handshakeError) Error() string {
+func (he HandshakeError) Error() string {
 	return he.e.String()
 }
 
 var (
-	ErrUnexpectedPayload       = handshakeError{handshakeproto.Error_UnexpectedPayload}
-	ErrDeadlineExceeded        = handshakeError{handshakeproto.Error_DeadlineExceeded}
-	ErrInvalidCredentials      = handshakeError{handshakeproto.Error_InvalidCredentials}
+	ErrUnexpectedPayload       = HandshakeError{handshakeproto.Error_UnexpectedPayload}
+	ErrDeadlineExceeded        = HandshakeError{handshakeproto.Error_DeadlineExceeded}
+	ErrInvalidCredentials      = HandshakeError{handshakeproto.Error_InvalidCredentials}
 	ErrPeerDeclinedCredentials = errors.New("remote peer declined the credentials")
-	ErrSkipVerifyNotAllowed    = handshakeError{handshakeproto.Error_SkipVerifyNotAllowed}
-	ErrUnexpected              = handshakeError{handshakeproto.Error_Unexpected}
+	ErrSkipVerifyNotAllowed    = HandshakeError{handshakeproto.Error_SkipVerifyNotAllowed}
+	ErrUnexpected              = HandshakeError{handshakeproto.Error_Unexpected}
 
-	ErrIncompatibleVersion = handshakeError{handshakeproto.Error_IncompatibleVersion}
+	ErrIncompatibleVersion = HandshakeError{handshakeproto.Error_IncompatibleVersion}
 
 	ErrGotNotAHandshakeMessage = errors.New("go not a handshake message")
 )
@@ -89,7 +89,7 @@ func outgoingHandshake(h *handshake, sc sec.SecureConn, cc CredentialChecker) (i
 		if msg.ack.Error == handshakeproto.Error_InvalidCredentials {
 			return nil, ErrPeerDeclinedCredentials
 		}
-		return nil, handshakeError{e: msg.ack.Error}
+		return nil, HandshakeError{e: msg.ack.Error}
 	}
 
 	if identity, err = cc.CheckCredential(sc, msg.cred); err != nil {
@@ -116,7 +116,7 @@ func outgoingHandshake(h *handshake, sc sec.SecureConn, cc CredentialChecker) (i
 		return identity, nil
 	} else {
 		_ = h.conn.Close()
-		return nil, handshakeError{e: msg.ack.Error}
+		return nil, HandshakeError{e: msg.ack.Error}
 	}
 }
 
@@ -175,7 +175,7 @@ func incomingHandshake(h *handshake, sc sec.SecureConn, cc CredentialChecker) (i
 		if msg.ack.Error == handshakeproto.Error_InvalidCredentials {
 			return nil, ErrPeerDeclinedCredentials
 		}
-		return nil, handshakeError{e: msg.ack.Error}
+		return nil, HandshakeError{e: msg.ack.Error}
 	}
 	if err = h.writeAck(handshakeproto.Error_Null); err != nil {
 		h.tryWriteErrAndClose(err)
@@ -212,7 +212,7 @@ func (h *handshake) tryWriteErrAndClose(err error) {
 		return
 	}
 	var ackErr handshakeproto.Error
-	if he, ok := err.(handshakeError); ok {
+	if he, ok := err.(HandshakeError); ok {
 		ackErr = he.e
 	} else {
 		ackErr = handshakeproto.Error_Unexpected

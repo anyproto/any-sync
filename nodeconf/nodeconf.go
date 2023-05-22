@@ -1,4 +1,3 @@
-//go:generate mockgen -destination mock_nodeconf/mock_nodeconf.go github.com/anytypeio/any-sync/nodeconf Service
 package nodeconf
 
 import (
