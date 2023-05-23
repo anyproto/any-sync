@@ -28,4 +28,3 @@ deps:
 
 test:
 	go test ./... --cover
-
