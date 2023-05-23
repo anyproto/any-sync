@@ -122,7 +122,7 @@ func (m *mockConf) NodeTypes(nodeId string) []nodeconf.NodeType {
 }
 
 //
-// Mock PeerManager implementation
+// Mock PeerManager
 //
 
 type mockPeerManager struct {
@@ -141,7 +141,7 @@ func (p *mockPeerManager) GetResponsiblePeers(ctx context.Context) (peers []peer
 }
 
 //
-// Mock PeerManagerProvider implementation
+// Mock PeerManagerProvider
 //
 
 type mockPeerManagerProvider struct {
@@ -160,7 +160,7 @@ func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId st
 }
 
 //
-// Mock Pool implementation
+// Mock Pool
 //
 
 type mockPool struct {
@@ -191,7 +191,7 @@ func (m *mockPool) DialOneOf(ctx context.Context, peerIds []string) (peer.Peer, 
 }
 
 //
-// Mock Config implementation
+// Mock Config
 //
 
 type mockConfig struct {
@@ -214,12 +214,13 @@ func (m *mockConfig) GetSpace() Config {
 }
 
 //
-// Mock TreeManager implementation
+// Mock TreeManager
 //
 
 type mockTreeManager struct {
-	space Space
-	cache ocache.OCache
+	space      Space
+	cache      ocache.OCache
+	deletedIds []string
 }
 
 func (t *mockTreeManager) Init(a *app.App) (err error) {
@@ -260,6 +261,7 @@ func (t *mockTreeManager) DeleteTree(ctx context.Context, spaceId, treeId string
 	if err != nil {
 		return
 	}
+	t.deletedIds = append(t.deletedIds, treeId)
 	_, err = t.cache.Remove(ctx, treeId)
 	return nil
 }
@@ -310,8 +312,4 @@ func newFixture(t *testing.T) *spaceFixture {
 	}
 	require.NoError(t, err)
 	return fx
-}
-
-func TestSpace(t *testing.T) {
-	_ = newFixture(t)
 }

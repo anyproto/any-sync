@@ -151,3 +151,43 @@ func (i *InMemorySpaceStorage) ReadSpaceHash() (hash string, err error) {
 func (i *InMemorySpaceStorage) Close() error {
 	return nil
 }
+
+func (i *InMemorySpaceStorage) AllTrees() map[string]treestorage.TreeStorage {
+	i.Lock()
+	defer i.Unlock()
+	cp := map[string]treestorage.TreeStorage{}
+	for id, store := range i.trees {
+		cp[id] = store
+	}
+	return cp
+}
+
+func (i *InMemorySpaceStorage) SetTrees(trees map[string]treestorage.TreeStorage) {
+	i.Lock()
+	defer i.Unlock()
+	i.trees = trees
+}
+
+func (i *InMemorySpaceStorage) CopyStorage() *InMemorySpaceStorage {
+	i.Lock()
+	defer i.Unlock()
+	copyTreeDeleted := map[string]string{}
+	for id, status := range i.treeDeleted {
+		copyTreeDeleted[id] = status
+	}
+	copyTrees := map[string]treestorage.TreeStorage{}
+	for id, store := range i.trees {
+		copyTrees[id] = store
+	}
+	return &InMemorySpaceStorage{
+		id:              i.id,
+		isDeleted:       i.isDeleted,
+		spaceSettingsId: i.spaceSettingsId,
+		treeDeleted:     copyTreeDeleted,
+		trees:           copyTrees,
+		aclStorage:      i.aclStorage,
+		spaceHeader:     i.spaceHeader,
+		spaceHash:       i.spaceHash,
+		Mutex:           sync.Mutex{},
+	}
+}
