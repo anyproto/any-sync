@@ -221,6 +221,12 @@ type mockTreeManager struct {
 	space      Space
 	cache      ocache.OCache
 	deletedIds []string
+	markedIds  []string
+}
+
+func (t *mockTreeManager) MarkTreeDeleted(ctx context.Context, spaceId, treeId string) error {
+	t.markedIds = append(t.markedIds, treeId)
+	return nil
 }
 
 func (t *mockTreeManager) Init(a *app.App) (err error) {

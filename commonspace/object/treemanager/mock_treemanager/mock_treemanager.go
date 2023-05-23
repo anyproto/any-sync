@@ -93,6 +93,20 @@ func (mr *MockTreeManagerMockRecorder) Init(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockTreeManager)(nil).Init), arg0)
 }
 
+// MarkTreeDeleted mocks base method.
+func (m *MockTreeManager) MarkTreeDeleted(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkTreeDeleted", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkTreeDeleted indicates an expected call of MarkTreeDeleted.
+func (mr *MockTreeManagerMockRecorder) MarkTreeDeleted(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkTreeDeleted", reflect.TypeOf((*MockTreeManager)(nil).MarkTreeDeleted), arg0, arg1, arg2)
+}
+
 // Name mocks base method.
 func (m *MockTreeManager) Name() string {
 	m.ctrl.T.Helper()
