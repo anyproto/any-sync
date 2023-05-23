@@ -38,7 +38,7 @@ func TestDeletionState_Add(t *testing.T) {
 		id := "newId"
 		fx.spaceStorage.EXPECT().TreeDeletedStatus(id).Return("", nil)
 		fx.spaceStorage.EXPECT().SetTreeDeletedStatus(id, spacestorage.TreeDeletedStatusQueued).Return(nil)
-		fx.delState.Add([]string{id})
+		fx.delState.Add(map[string]struct{}{id: {}})
 		require.Contains(t, fx.delState.queued, id)
 	})
 
@@ -47,7 +47,7 @@ func TestDeletionState_Add(t *testing.T) {
 		defer fx.stop()
 		id := "newId"
 		fx.spaceStorage.EXPECT().TreeDeletedStatus(id).Return(spacestorage.TreeDeletedStatusQueued, nil)
-		fx.delState.Add([]string{id})
+		fx.delState.Add(map[string]struct{}{id: {}})
 		require.Contains(t, fx.delState.queued, id)
 	})
 
@@ -56,7 +56,7 @@ func TestDeletionState_Add(t *testing.T) {
 		defer fx.stop()
 		id := "newId"
 		fx.spaceStorage.EXPECT().TreeDeletedStatus(id).Return(spacestorage.TreeDeletedStatusDeleted, nil)
-		fx.delState.Add([]string{id})
+		fx.delState.Add(map[string]struct{}{id: {}})
 		require.Contains(t, fx.delState.deleted, id)
 	})
 }
@@ -96,7 +96,7 @@ func TestDeletionState_AddObserver(t *testing.T) {
 	id := "newId"
 	fx.spaceStorage.EXPECT().TreeDeletedStatus(id).Return("", nil)
 	fx.spaceStorage.EXPECT().SetTreeDeletedStatus(id, spacestorage.TreeDeletedStatusQueued).Return(nil)
-	fx.delState.Add([]string{id})
+	fx.delState.Add(map[string]struct{}{id: {}})
 	require.Contains(t, fx.delState.queued, id)
 	require.Equal(t, []string{id}, queued)
 }

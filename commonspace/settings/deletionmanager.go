@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
-	"github.com/anytypeio/any-sync/util/slice"
 	"go.uber.org/zap"
 )
 
@@ -51,12 +50,16 @@ func (d *deletionManager) UpdateState(ctx context.Context, state *settingsstate.
 	if state.DeleterId == "" {
 		return nil
 	}
+	// we should delete space
 	log.Debug("deleting space")
 	if d.isResponsible {
-		allIds := slice.DiscardFromSlice(d.provider.AllIds(), func(id string) bool {
-			return id == d.settingsId
-		})
-		d.deletionState.Add(allIds)
+		mapIds := map[string]struct{}{}
+		for _, id := range d.provider.AllIds() {
+			if id != d.settingsId {
+				mapIds[id] = struct{}{}
+			}
+		}
+		d.deletionState.Add(mapIds)
 	}
 	d.onSpaceDelete()
 	return nil

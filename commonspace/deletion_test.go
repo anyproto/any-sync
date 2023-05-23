@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func addIncorrectSnapshot(settingsObject settings.SettingsObject, acc *accountdata.AccountKeys, partialIds []string, newId string) (err error) {
+func addIncorrectSnapshot(settingsObject settings.SettingsObject, acc *accountdata.AccountKeys, partialIds map[string]struct{}, newId string) (err error) {
 	factory := settingsstate.NewChangeFactory()
 	bytes, err := factory.CreateObjectDeleteChange(newId, &settingsstate.State{DeletedIds: partialIds}, true)
 	if err != nil {
@@ -159,8 +159,12 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 		err = spc.DeleteTree(ctx, id)
 		require.NoError(t, err)
 	}
+	mapIds := map[string]struct{}{}
+	for _, id := range ids[:partialObjs] {
+		mapIds[id] = struct{}{}
+	}
 	// adding snapshot that breaks the state
-	err = addIncorrectSnapshot(settingsObject, acc, ids[:partialObjs], ids[partialObjs])
+	err = addIncorrectSnapshot(settingsObject, acc, mapIds, ids[partialObjs])
 	require.NoError(t, err)
 	// copying the contents of the settings tree
 	treesCopy[settingsObject.Id()] = settingsObject.Storage()

@@ -19,7 +19,7 @@ func TestDeletionManager_UpdateState_NotResponsible(t *testing.T) {
 	spaceId := "spaceId"
 	settingsId := "settingsId"
 	state := &settingsstate.State{
-		DeletedIds: []string{"id"},
+		DeletedIds: map[string]struct{}{"id": {}},
 		DeleterId:  "deleterId",
 	}
 	deleted := false
@@ -51,7 +51,7 @@ func TestDeletionManager_UpdateState_Responsible(t *testing.T) {
 	spaceId := "spaceId"
 	settingsId := "settingsId"
 	state := &settingsstate.State{
-		DeletedIds: []string{"id"},
+		DeletedIds: map[string]struct{}{"id": struct{}{}},
 		DeleterId:  "deleterId",
 	}
 	deleted := false
@@ -64,7 +64,7 @@ func TestDeletionManager_UpdateState_Responsible(t *testing.T) {
 
 	delState.EXPECT().Add(state.DeletedIds)
 	provider.EXPECT().AllIds().Return([]string{"id", "otherId", settingsId})
-	delState.EXPECT().Add([]string{"id", "otherId"})
+	delState.EXPECT().Add(map[string]struct{}{"id": {}, "otherId": {}})
 	delManager := newDeletionManager(spaceId,
 		settingsId,
 		true,

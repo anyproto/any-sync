@@ -17,9 +17,9 @@ func TestStateBuilder_ProcessChange(t *testing.T) {
 	t.Run("empty model", func(t *testing.T) {
 		ch := &objecttree.Change{}
 		newSt := sb.processChange(ch, rootId, &State{
-			DeletedIds: []string{deletedId},
+			DeletedIds: map[string]struct{}{deletedId: struct{}{}},
 		})
-		require.Equal(t, []string{deletedId}, newSt.DeletedIds)
+		require.Equal(t, map[string]struct{}{deletedId: struct{}{}}, newSt.DeletedIds)
 	})
 
 	t.Run("changeId is equal to startId, LastIteratedId is equal to startId", func(t *testing.T) {
@@ -34,10 +34,10 @@ func TestStateBuilder_ProcessChange(t *testing.T) {
 		ch.Id = "startId"
 		startId := "startId"
 		newSt := sb.processChange(ch, rootId, &State{
-			DeletedIds:     []string{deletedId},
+			DeletedIds:     map[string]struct{}{deletedId: struct{}{}},
 			LastIteratedId: startId,
 		})
-		require.Equal(t, []string{deletedId}, newSt.DeletedIds)
+		require.Equal(t, map[string]struct{}{deletedId: struct{}{}}, newSt.DeletedIds)
 	})
 
 	t.Run("changeId is equal to rootId", func(t *testing.T) {
@@ -50,8 +50,8 @@ func TestStateBuilder_ProcessChange(t *testing.T) {
 			},
 		}
 		ch.Id = "rootId"
-		newSt := sb.processChange(ch, rootId, &State{})
-		require.Equal(t, []string{"id1", "id2"}, newSt.DeletedIds)
+		newSt := sb.processChange(ch, rootId, NewState())
+		require.Equal(t, map[string]struct{}{"id1": struct{}{}, "id2": struct{}{}}, newSt.DeletedIds)
 		require.Equal(t, "peerId", newSt.DeleterId)
 	})
 
@@ -66,8 +66,8 @@ func TestStateBuilder_ProcessChange(t *testing.T) {
 			},
 		}
 		ch.Id = "someId"
-		newSt := sb.processChange(ch, rootId, &State{})
-		require.Equal(t, []string{deletedId}, newSt.DeletedIds)
+		newSt := sb.processChange(ch, rootId, NewState())
+		require.Equal(t, map[string]struct{}{deletedId: struct{}{}}, newSt.DeletedIds)
 	})
 }
 

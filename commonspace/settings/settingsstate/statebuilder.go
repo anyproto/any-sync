@@ -24,7 +24,7 @@ func (s *stateBuilder) Build(tr objecttree.ReadableObjectTree, oldState *State) 
 	)
 	state = oldState
 	if state == nil {
-		state = &State{}
+		state = NewState()
 	} else if state.LastIteratedId != "" {
 		startId = state.LastIteratedId
 	}
@@ -55,11 +55,7 @@ func (s *stateBuilder) processChange(change *objecttree.Change, rootId string, s
 	deleteChange := change.Model.(*spacesyncproto.SettingsData)
 	// getting data from snapshot if we start from it
 	if change.Id == rootId {
-		state = &State{
-			DeletedIds:     deleteChange.Snapshot.DeletedIds,
-			DeleterId:      deleteChange.Snapshot.DeleterPeerId,
-			LastIteratedId: rootId,
-		}
+		state = NewStateFromSnapshot(deleteChange.Snapshot, rootId)
 		return state
 	}
 
@@ -67,7 +63,7 @@ func (s *stateBuilder) processChange(change *objecttree.Change, rootId string, s
 	for _, cnt := range deleteChange.Content {
 		switch {
 		case cnt.GetObjectDelete() != nil:
-			state.DeletedIds = append(state.DeletedIds, cnt.GetObjectDelete().GetId())
+			state.DeletedIds[cnt.GetObjectDelete().GetId()] = struct{}{}
 		case cnt.GetSpaceDelete() != nil:
 			state.DeleterId = cnt.GetSpaceDelete().GetDeleterPeerId()
 		}
