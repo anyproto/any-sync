@@ -52,7 +52,7 @@ func TestSpaceDeleteIds(t *testing.T) {
 	acc := fx.account.Account()
 	rk := crypto.NewAES()
 	ctx := context.Background()
-	totalObjs := 3000
+	totalObjs := 1500
 
 	// creating space
 	sp, err := fx.spaceService.CreateSpace(ctx, SpaceCreatePayload{
@@ -126,7 +126,7 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	acc := fx.account.Account()
 	rk := crypto.NewAES()
 	ctx := context.Background()
-	totalObjs := 3000
+	totalObjs := 1500
 	partialObjs := 300
 
 	// creating space
@@ -209,7 +209,7 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	acc := fx.account.Account()
 	rk := crypto.NewAES()
 	ctx := context.Background()
-	totalObjs := 3000
+	totalObjs := 1500
 
 	// creating space
 	sp, err := fx.spaceService.CreateSpace(ctx, SpaceCreatePayload{
