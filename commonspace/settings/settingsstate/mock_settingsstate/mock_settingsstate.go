@@ -36,7 +36,7 @@ func (m *MockObjectDeletionState) EXPECT() *MockObjectDeletionStateMockRecorder 
 }
 
 // Add mocks base method.
-func (m *MockObjectDeletionState) Add(arg0 []string) {
+func (m *MockObjectDeletionState) Add(arg0 map[string]struct{}) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Add", arg0)
 }

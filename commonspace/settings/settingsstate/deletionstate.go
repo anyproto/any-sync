@@ -12,7 +12,7 @@ type StateUpdateObserver func(ids []string)
 
 type ObjectDeletionState interface {
 	AddObserver(observer StateUpdateObserver)
-	Add(ids []string)
+	Add(ids map[string]struct{})
 	GetQueued() (ids []string)
 	Delete(id string) (err error)
 	Exists(id string) bool
@@ -43,7 +43,7 @@ func (st *objectDeletionState) AddObserver(observer StateUpdateObserver) {
 	st.stateUpdateObservers = append(st.stateUpdateObservers, observer)
 }
 
-func (st *objectDeletionState) Add(ids []string) {
+func (st *objectDeletionState) Add(ids map[string]struct{}) {
 	var added []string
 	st.Lock()
 	defer func() {
@@ -53,7 +53,7 @@ func (st *objectDeletionState) Add(ids []string) {
 		}
 	}()
 
-	for _, id := range ids {
+	for id := range ids {
 		if _, exists := st.deleted[id]; exists {
 			continue
 		}

@@ -50,7 +50,7 @@ func (c *changeFactory) CreateSpaceDeleteChange(peerId string, state *State, isS
 
 func (c *changeFactory) makeSnapshot(state *State, objectId, deleterPeer string) *spacesyncproto.SpaceSettingsSnapshot {
 	var (
-		deletedIds = state.DeletedIds
+		deletedIds = make([]string, 0, len(state.DeletedIds)+1)
 		deleterId  = state.DeleterId
 	)
 	if objectId != "" {
@@ -58,6 +58,9 @@ func (c *changeFactory) makeSnapshot(state *State, objectId, deleterPeer string)
 	}
 	if deleterPeer != "" {
 		deleterId = deleterPeer
+	}
+	for id := range state.DeletedIds {
+		deletedIds = append(deletedIds, id)
 	}
 	return &spacesyncproto.SpaceSettingsSnapshot{
 		DeletedIds:    deletedIds,
