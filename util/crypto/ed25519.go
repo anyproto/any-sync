@@ -158,6 +158,11 @@ func (k *Ed25519PubKey) Account() string {
 	return res
 }
 
+func (k *Ed25519PubKey) Network() string {
+	res, _ := strkey.Encode(strkey.NetworkAddressVersionByte, k.pubKey)
+	return res
+}
+
 // PeerId returns string representation of key for peer id
 func (k *Ed25519PubKey) PeerId() string {
 	peerId, _ := IdFromSigningPubKey(k)

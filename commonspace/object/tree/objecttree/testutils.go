@@ -41,6 +41,10 @@ func (m mockPubKey) Account() string {
 	return mockKeyValue
 }
 
+func (m mockPubKey) Network() string {
+	return mockKeyValue
+}
+
 func (m mockPubKey) PeerId() string {
 	return mockKeyValue
 }

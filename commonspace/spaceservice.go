@@ -139,7 +139,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		}
 	}
 
-	lastConfiguration := s.configurationService.GetLast()
+	lastConfiguration := s.configurationService
 	var (
 		spaceIsClosed  = &atomic.Bool{}
 		spaceIsDeleted = &atomic.Bool{}
@@ -214,7 +214,7 @@ func (s *spaceService) addSpaceStorage(ctx context.Context, spaceDescription Spa
 
 func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string) (st spacestorage.SpaceStorage, err error) {
 	var p peer.Peer
-	lastConfiguration := s.configurationService.GetLast()
+	lastConfiguration := s.configurationService
 	// we can't connect to client if it is a node
 	if lastConfiguration.IsResponsible(id) {
 		err = spacesyncproto.ErrSpaceMissing

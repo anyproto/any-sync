@@ -121,6 +121,7 @@ func (s *service) setLastConfiguration(c Configuration) (err error) {
 		id:        c.Id,
 		c:         c,
 		accountId: s.accountId,
+		addrs:     map[string][]string{},
 	}
 	if nc.chash, err = chash.New(chash.Config{
 		PartitionCount:    PartitionCount,
@@ -144,6 +145,7 @@ func (s *service) setLastConfiguration(c Configuration) (err error) {
 			nc.coordinatorPeers = append(nc.coordinatorPeers, n.PeerId)
 		}
 		nc.allMembers = append(nc.allMembers, n)
+		nc.addrs[n.PeerId] = n.Addresses
 	}
 	if err = nc.chash.AddMembers(members...); err != nil {
 		return
@@ -218,10 +220,10 @@ func (s *service) CoordinatorPeers() []string {
 	return s.last.CoordinatorPeers()
 }
 
-func (s *service) Addresses() map[string][]string {
+func (s *service) PeerAddresses(peerId string) ([]string, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.last.Addresses()
+	return s.last.PeerAddresses(peerId)
 }
 
 func (s *service) CHash() chash.CHash {

@@ -36,7 +36,7 @@ type objectSync struct {
 	messagePool   MessagePool
 	syncClient    SyncClient
 	objectGetter  syncobjectgetter.SyncObjectGetter
-	configuration nodeconf.Configuration
+	configuration nodeconf.NodeConf
 	spaceStorage  spacestorage.SpaceStorage
 
 	syncCtx        context.Context
@@ -47,7 +47,7 @@ type objectSync struct {
 func NewObjectSync(
 	spaceId string,
 	spaceIsDeleted *atomic.Bool,
-	configuration nodeconf.Configuration,
+	configuration nodeconf.NodeConf,
 	peerManager peermanager.PeerManager,
 	objectGetter syncobjectgetter.SyncObjectGetter,
 	storage spacestorage.SpaceStorage) ObjectSync {

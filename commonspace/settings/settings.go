@@ -58,7 +58,7 @@ type Deps struct {
 	Account       accountservice.Service
 	TreeManager   treemanager.TreeManager
 	Store         spacestorage.SpaceStorage
-	Configuration nodeconf.Configuration
+	Configuration nodeconf.NodeConf
 	DeletionState settingsstate.ObjectDeletionState
 	Provider      SpaceIdsProvider
 	OnSpaceDelete func()

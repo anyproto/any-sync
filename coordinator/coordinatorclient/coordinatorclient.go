@@ -145,7 +145,7 @@ func (c *coordinatorClient) NetworkConfiguration(ctx context.Context, currentId 
 }
 
 func (c *coordinatorClient) client(ctx context.Context) (coordinatorproto.DRPCCoordinatorClient, error) {
-	p, err := c.pool.GetOneOf(ctx, c.nodeConf.GetLast().CoordinatorPeers())
+	p, err := c.pool.GetOneOf(ctx, c.nodeConf.CoordinatorPeers())
 	if err != nil {
 		return nil, err
 	}
