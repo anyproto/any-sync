@@ -9,8 +9,10 @@ import (
 	"go.uber.org/zap"
 )
 
-func newNoVerifyChecker() handshake.CredentialChecker {
-	return &noVerifyChecker{cred: &handshakeproto.Credentials{Type: handshakeproto.CredentialsType_SkipVerify}}
+func newNoVerifyChecker(protoVersion uint32) handshake.CredentialChecker {
+	return &noVerifyChecker{
+		cred: &handshakeproto.Credentials{Type: handshakeproto.CredentialsType_SkipVerify, Version: protoVersion},
+	}
 }
 
 type noVerifyChecker struct {
@@ -22,15 +24,22 @@ func (n noVerifyChecker) MakeCredentials(sc sec.SecureConn) *handshakeproto.Cred
 }
 
 func (n noVerifyChecker) CheckCredential(sc sec.SecureConn, cred *handshakeproto.Credentials) (identity []byte, err error) {
+	if cred.Version != n.cred.Version {
+		return nil, handshake.ErrIncompatibleVersion
+	}
 	return nil, nil
 }
 
-func newPeerSignVerifier(account *accountdata.AccountKeys) handshake.CredentialChecker {
-	return &peerSignVerifier{account: account}
+func newPeerSignVerifier(protoVersion uint32, account *accountdata.AccountKeys) handshake.CredentialChecker {
+	return &peerSignVerifier{
+		protoVersion: protoVersion,
+		account:      account,
+	}
 }
 
 type peerSignVerifier struct {
-	account *accountdata.AccountKeys
+	protoVersion uint32
+	account      *accountdata.AccountKeys
 }
 
 func (p *peerSignVerifier) MakeCredentials(sc sec.SecureConn) *handshakeproto.Credentials {
@@ -48,10 +57,14 @@ func (p *peerSignVerifier) MakeCredentials(sc sec.SecureConn) *handshakeproto.Cr
 	return &handshakeproto.Credentials{
 		Type:    handshakeproto.CredentialsType_SignedPeerIds,
 		Payload: payload,
+		Version: p.protoVersion,
 	}
 }
 
 func (p *peerSignVerifier) CheckCredential(sc sec.SecureConn, cred *handshakeproto.Credentials) (identity []byte, err error) {
+	if cred.Version != p.protoVersion {
+		return nil, handshake.ErrIncompatibleVersion
+	}
 	if cred.Type != handshakeproto.CredentialsType_SignedPeerIds {
 		return nil, handshake.ErrSkipVerifyNotAllowed
 	}
