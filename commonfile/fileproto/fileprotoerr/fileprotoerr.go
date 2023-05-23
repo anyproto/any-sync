@@ -2,8 +2,8 @@ package fileprotoerr
 
 import (
 	"fmt"
-	"github.com/anytypeio/any-sync/commonfile/fileproto"
-	"github.com/anytypeio/any-sync/net/rpc/rpcerr"
+	"github.com/anyproto/any-sync/commonfile/fileproto"
+	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 )
 
 var (

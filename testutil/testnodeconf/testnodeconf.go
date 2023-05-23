@@ -1,10 +1,10 @@
 package testnodeconf
 
 import (
-	"github.com/anytypeio/any-sync/accountservice"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/nodeconf"
-	"github.com/anytypeio/any-sync/testutil/accounttest"
+	"github.com/anyproto/any-sync/accountservice"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/testutil/accounttest"
 )
 
 func GenNodeConfig(num int) (conf *Config) {

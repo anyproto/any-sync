@@ -3,8 +3,8 @@ package headsync
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/any-sync/app/ldiff"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/app/ldiff"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"

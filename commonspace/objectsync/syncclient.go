@@ -2,8 +2,8 @@ package objectsync
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"go.uber.org/zap"
 )
 

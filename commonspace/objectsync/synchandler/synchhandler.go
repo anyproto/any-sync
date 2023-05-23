@@ -2,7 +2,7 @@ package synchandler
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
 type SyncHandler interface {

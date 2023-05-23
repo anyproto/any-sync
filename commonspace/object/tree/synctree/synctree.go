@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_synctree/mock_synctree.go github.com/anytypeio/any-sync/commonspace/object/tree/synctree SyncTree,ReceiveQueue,HeadNotifiable
+//go:generate mockgen -destination mock_synctree/mock_synctree.go github.com/anyproto/any-sync/commonspace/object/tree/synctree SyncTree,ReceiveQueue,HeadNotifiable
 package synctree
 
 import (
@@ -6,17 +6,17 @@ import (
 	"errors"
 	"time"
 
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anytypeio/any-sync/commonspace/objectsync"
-	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
-	"github.com/anytypeio/any-sync/commonspace/spacestorage"
-	"github.com/anytypeio/any-sync/commonspace/syncstatus"
-	"github.com/anytypeio/any-sync/net/peer"
-	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/objectsync"
+	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
 )
 

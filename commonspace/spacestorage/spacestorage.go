@@ -1,15 +1,15 @@
-//go:generate mockgen -destination mock_spacestorage/mock_spacestorage.go github.com/anytypeio/any-sync/commonspace/spacestorage SpaceStorage
+//go:generate mockgen -destination mock_spacestorage/mock_spacestorage.go github.com/anyproto/any-sync/commonspace/spacestorage SpaceStorage
 package spacestorage
 
 import (
 	"context"
 	"errors"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/liststorage"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
 const CName = "common.commonspace.spacestorage"

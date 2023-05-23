@@ -2,7 +2,7 @@ package fileservice
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonfile/fileblockstore"
+	"github.com/anyproto/any-sync/commonfile/fileblockstore"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-cid"

@@ -1,10 +1,10 @@
-//go:generate mockgen -destination mock_treestorage/mock_treestorage.go github.com/anytypeio/any-sync/commonspace/object/tree/treestorage TreeStorage
+//go:generate mockgen -destination mock_treestorage/mock_treestorage.go github.com/anyproto/any-sync/commonspace/object/tree/treestorage TreeStorage
 package treestorage
 
 import (
 	"context"
 	"errors"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 )
 
 var (

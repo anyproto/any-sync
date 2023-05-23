@@ -1,6 +1,6 @@
 package treechangeproto
 
-import "github.com/anytypeio/any-sync/net/rpc/rpcerr"
+import "github.com/anyproto/any-sync/net/rpc/rpcerr"
 
 func WrapHeadUpdate(update *TreeHeadUpdate, rootChange *RawTreeChangeWithId) *TreeSyncMessage {
 	return &TreeSyncMessage{

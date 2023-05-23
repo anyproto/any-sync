@@ -2,7 +2,7 @@ package spacestorage
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app"
+	"github.com/anyproto/any-sync/app"
 	"sync"
 )
 

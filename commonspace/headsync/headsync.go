@@ -1,20 +1,20 @@
-//go:generate mockgen -destination mock_headsync/mock_headsync.go github.com/anytypeio/any-sync/commonspace/headsync DiffSyncer
+//go:generate mockgen -destination mock_headsync/mock_headsync.go github.com/anyproto/any-sync/commonspace/headsync DiffSyncer
 package headsync
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app/ldiff"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/credentialprovider"
-	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
-	"github.com/anytypeio/any-sync/commonspace/peermanager"
-	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
-	"github.com/anytypeio/any-sync/commonspace/spacestorage"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
-	"github.com/anytypeio/any-sync/commonspace/syncstatus"
-	"github.com/anytypeio/any-sync/net/peer"
-	"github.com/anytypeio/any-sync/nodeconf"
-	"github.com/anytypeio/any-sync/util/periodicsync"
+	"github.com/anyproto/any-sync/app/ldiff"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/credentialprovider"
+	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/peermanager"
+	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/util/periodicsync"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"strings"

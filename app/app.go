@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anyproto/any-sync/app/logger"
 	"go.uber.org/zap"
 	"os"
 	"runtime"
@@ -325,7 +325,7 @@ func (app *App) AnySyncVersion() string {
 		info, ok := debug.ReadBuildInfo()
 		if ok {
 			for _, mod := range info.Deps {
-				if mod.Path == "github.com/anytypeio/any-sync" {
+				if mod.Path == "github.com/anyproto/any-sync" {
 					app.anySyncVersion = mod.Version
 					break
 				}

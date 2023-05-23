@@ -3,9 +3,9 @@ package list
 import (
 	"errors"
 	"fmt"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
-	"github.com/anytypeio/any-sync/util/crypto"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 )

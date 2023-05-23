@@ -1,9 +1,9 @@
 package secureservice
 
 import (
-	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
-	"github.com/anytypeio/any-sync/net/secureservice/handshake"
-	"github.com/anytypeio/any-sync/testutil/accounttest"
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/net/secureservice/handshake"
+	"github.com/anyproto/any-sync/testutil/accounttest"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"

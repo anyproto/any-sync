@@ -2,10 +2,10 @@ package settings
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
-	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
-	"github.com/anytypeio/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"go.uber.org/zap"
 )
 

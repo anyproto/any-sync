@@ -3,7 +3,7 @@ package ocache
 import (
 	"context"
 	"errors"
-	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anyproto/any-sync/app/logger"
 	"go.uber.org/zap"
 	"sync"
 	"time"

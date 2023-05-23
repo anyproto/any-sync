@@ -1,7 +1,7 @@
 package settingsstate
 
 import (
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/slices"

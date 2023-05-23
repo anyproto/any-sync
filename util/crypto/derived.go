@@ -1,7 +1,7 @@
 package crypto
 
 import (
-	"github.com/anytypeio/go-slip21"
+	"github.com/anyproto/go-slip21"
 )
 
 const (

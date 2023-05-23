@@ -2,7 +2,7 @@ package synctree
 
 import (
 	"errors"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"sync"
 )
 

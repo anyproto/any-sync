@@ -2,8 +2,8 @@ package settings
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
-	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
+	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"go.uber.org/zap"
 )
 

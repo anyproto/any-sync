@@ -2,7 +2,7 @@ package crypto
 
 import (
 	"encoding/base64"
-	"github.com/anytypeio/any-sync/util/strkey"
+	"github.com/anyproto/any-sync/util/strkey"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 

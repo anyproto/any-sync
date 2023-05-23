@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anyproto/any-sync/app/logger"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"go.uber.org/zap"
 	"storj.io/drpc"

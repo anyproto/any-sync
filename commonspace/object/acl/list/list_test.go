@@ -2,7 +2,7 @@ package list
 
 import (
 	"fmt"
-	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/stretchr/testify/require"
 	"testing"
 )

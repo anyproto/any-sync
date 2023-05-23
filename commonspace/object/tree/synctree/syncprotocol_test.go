@@ -2,12 +2,12 @@ package synctree
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anytypeio/any-sync/util/slice"
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/util/slice"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"math/rand"

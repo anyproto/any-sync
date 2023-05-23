@@ -3,7 +3,7 @@ package crypto
 import (
 	"bytes"
 	"errors"
-	"github.com/anytypeio/go-slip10"
+	"github.com/anyproto/go-slip10"
 	"github.com/tyler-smith/go-bip39"
 )
 

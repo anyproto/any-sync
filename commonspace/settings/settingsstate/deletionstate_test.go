@@ -1,9 +1,9 @@
 package settingsstate
 
 import (
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/spacestorage"
-	"github.com/anytypeio/any-sync/commonspace/spacestorage/mock_spacestorage"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"sort"

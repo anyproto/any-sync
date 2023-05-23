@@ -1,23 +1,23 @@
-//go:generate mockgen -destination mock_settings/mock_settings.go github.com/anytypeio/any-sync/commonspace/settings DeletionManager,Deleter,SpaceIdsProvider
+//go:generate mockgen -destination mock_settings/mock_settings.go github.com/anyproto/any-sync/commonspace/settings DeletionManager,Deleter,SpaceIdsProvider
 package settings
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/anytypeio/any-sync/util/crypto"
+	"github.com/anyproto/any-sync/util/crypto"
 
-	"github.com/anytypeio/any-sync/accountservice"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
-	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
-	"github.com/anytypeio/any-sync/commonspace/spacestorage"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
-	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/accountservice"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"

@@ -1,10 +1,10 @@
 package secureservice
 
 import (
-	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
-	"github.com/anytypeio/any-sync/net/secureservice/handshake"
-	"github.com/anytypeio/any-sync/net/secureservice/handshake/handshakeproto"
-	"github.com/anytypeio/any-sync/util/crypto"
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/net/secureservice/handshake"
+	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
+	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"go.uber.org/zap"
 )

@@ -2,8 +2,8 @@ package headsync
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app/ldiff"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/app/ldiff"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
 type Client interface {

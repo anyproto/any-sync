@@ -3,9 +3,9 @@ package fileservice
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonfile/fileblockstore"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonfile/fileblockstore"
 	"github.com/ipfs/go-cid"
 	chunker "github.com/ipfs/go-ipfs-chunker"
 	ipld "github.com/ipfs/go-ipld-format"

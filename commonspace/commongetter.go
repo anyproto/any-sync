@@ -2,9 +2,9 @@ package commonspace
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/object/syncobjectgetter"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/object/syncobjectgetter"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"sync/atomic"
 )
 

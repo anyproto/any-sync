@@ -1,9 +1,9 @@
 package settingsstate
 
 import (
-	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"testing"

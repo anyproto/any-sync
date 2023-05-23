@@ -1,8 +1,8 @@
 package mock_accountservice
 
 import (
-	"github.com/anytypeio/any-sync/accountservice"
-	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/accountservice"
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/golang/mock/gomock"
 )
 

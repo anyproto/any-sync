@@ -1,9 +1,9 @@
-//go:generate mockgen -destination mock_credentialprovider/mock_credentialprovider.go github.com/anytypeio/any-sync/commonspace/credentialprovider CredentialProvider
+//go:generate mockgen -destination mock_credentialprovider/mock_credentialprovider.go github.com/anyproto/any-sync/commonspace/credentialprovider CredentialProvider
 package credentialprovider
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
 const CName = "common.commonspace.credentialprovider"

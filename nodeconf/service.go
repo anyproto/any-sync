@@ -1,15 +1,15 @@
-//go:generate mockgen -destination mock_nodeconf/mock_nodeconf.go github.com/anytypeio/any-sync/nodeconf Service
+//go:generate mockgen -destination mock_nodeconf/mock_nodeconf.go github.com/anyproto/any-sync/nodeconf Service
 package nodeconf
 
 import (
 	"context"
-	commonaccount "github.com/anytypeio/any-sync/accountservice"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/net"
-	"github.com/anytypeio/any-sync/net/secureservice/handshake"
-	"github.com/anytypeio/any-sync/util/periodicsync"
-	"github.com/anytypeio/go-chash"
+	commonaccount "github.com/anyproto/any-sync/accountservice"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/secureservice/handshake"
+	"github.com/anyproto/any-sync/util/periodicsync"
+	"github.com/anyproto/go-chash"
 	"go.uber.org/zap"
 	"sync"
 )

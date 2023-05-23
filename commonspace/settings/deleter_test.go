@@ -2,10 +2,10 @@ package settings
 
 import (
 	"fmt"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anytypeio/any-sync/commonspace/object/treemanager/mock_treemanager"
-	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
-	"github.com/anytypeio/any-sync/commonspace/spacestorage/mock_spacestorage"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
+	"github.com/anyproto/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
+	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
 	"github.com/golang/mock/gomock"
 	"testing"
 )

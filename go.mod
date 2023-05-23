@@ -1,12 +1,12 @@
-module github.com/anytypeio/any-sync
+module github.com/anyproto/any-sync
 
 go 1.19
 
 require (
 	filippo.io/edwards25519 v1.0.0
-	github.com/anytypeio/go-chash v0.1.0
-	github.com/anytypeio/go-slip10 v0.0.0-20200330112030-a352ca8495e4
-	github.com/anytypeio/go-slip21 v0.0.0-20200218204727-e2e51e20ab51
+	github.com/anyproto/go-chash v0.1.0
+	github.com/anyproto/go-slip10 v0.0.0-20200330112030-a352ca8495e4
+	github.com/anyproto/go-slip21 v0.0.0-20200218204727-e2e51e20ab51
 	github.com/cespare/xxhash v1.1.0
 	github.com/cheggaaa/mb/v3 v3.0.1
 	github.com/gobwas/glob v0.2.3

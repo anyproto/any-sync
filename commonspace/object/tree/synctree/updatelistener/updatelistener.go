@@ -1,8 +1,8 @@
-//go:generate mockgen -destination mock_updatelistener/mock_updatelistener.go github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener UpdateListener
+//go:generate mockgen -destination mock_updatelistener/mock_updatelistener.go github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener UpdateListener
 package updatelistener
 
 import (
-	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 )
 
 type UpdateListener interface {

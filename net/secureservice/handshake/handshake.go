@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"github.com/anytypeio/any-sync/net/secureservice/handshake/handshakeproto"
+	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"golang.org/x/exp/slices"
 	"io"

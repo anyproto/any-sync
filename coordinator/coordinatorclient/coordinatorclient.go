@@ -1,15 +1,15 @@
-//go:generate mockgen -destination mock_coordinatorclient/mock_coordinatorclient.go github.com/anytypeio/any-sync/coordinator/coordinatorclient CoordinatorClient
+//go:generate mockgen -destination mock_coordinatorclient/mock_coordinatorclient.go github.com/anyproto/any-sync/coordinator/coordinatorclient CoordinatorClient
 package coordinatorclient
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anytypeio/any-sync/coordinator/coordinatorproto"
-	"github.com/anytypeio/any-sync/net/pool"
-	"github.com/anytypeio/any-sync/net/rpc/rpcerr"
-	"github.com/anytypeio/any-sync/nodeconf"
-	"github.com/anytypeio/any-sync/util/crypto"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
+	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/rpc/rpcerr"
+	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 const CName = "common.coordinator.coordinatorclient"

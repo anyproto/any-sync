@@ -1,5 +1,5 @@
 .PHONY: proto test deps
-export GOPRIVATE=github.com/anytypeio
+export GOPRIVATE=github.com/anyproto
 export PATH:=deps:$(PATH)
 
 proto:
@@ -8,8 +8,8 @@ proto:
 	@$(eval P_ACL_RECORDS_PATH_PB := commonspace/object/acl/aclrecordproto)
 	@$(eval P_TREE_CHANGES_PATH_PB := commonspace/object/tree/treechangeproto)
 	@$(eval P_CRYPTO_PATH_PB := util/crypto/cryptoproto)
-	@$(eval P_ACL_RECORDS := M$(P_ACL_RECORDS_PATH_PB)/protos/aclrecord.proto=github.com/anytypeio/any-sync/$(P_ACL_RECORDS_PATH_PB))
-	@$(eval P_TREE_CHANGES := M$(P_TREE_CHANGES_PATH_PB)/protos/treechange.proto=github.com/anytypeio/any-sync/$(P_TREE_CHANGES_PATH_PB))
+	@$(eval P_ACL_RECORDS := M$(P_ACL_RECORDS_PATH_PB)/protos/aclrecord.proto=github.com/anyproto/any-sync/$(P_ACL_RECORDS_PATH_PB))
+	@$(eval P_TREE_CHANGES := M$(P_TREE_CHANGES_PATH_PB)/protos/treechange.proto=github.com/anyproto/any-sync/$(P_TREE_CHANGES_PATH_PB))
 
 	protoc --gogofaster_out=:. $(P_ACL_RECORDS_PATH_PB)/protos/*.proto
 	protoc --gogofaster_out=:. $(P_TREE_CHANGES_PATH_PB)/protos/*.proto

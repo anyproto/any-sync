@@ -1,7 +1,7 @@
 package nodeconf
 
 import (
-	"github.com/anytypeio/go-chash"
+	"github.com/anyproto/go-chash"
 	"strings"
 )
 

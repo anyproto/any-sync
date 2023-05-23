@@ -2,9 +2,9 @@ package objecttree
 
 import (
 	"errors"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anytypeio/any-sync/util/cidutil"
-	"github.com/anytypeio/any-sync/util/crypto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/util/cidutil"
+	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
 )
 

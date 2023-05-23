@@ -1,14 +1,14 @@
 package headsync
 
 import (
-	"github.com/anytypeio/any-sync/app/ldiff"
-	"github.com/anytypeio/any-sync/app/ldiff/mock_ldiff"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/headsync/mock_headsync"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage/mock_treestorage"
-	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
-	"github.com/anytypeio/any-sync/commonspace/spacestorage/mock_spacestorage"
-	"github.com/anytypeio/any-sync/util/periodicsync/mock_periodicsync"
+	"github.com/anyproto/any-sync/app/ldiff"
+	"github.com/anyproto/any-sync/app/ldiff/mock_ldiff"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/headsync/mock_headsync"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage/mock_treestorage"
+	"github.com/anyproto/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
+	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
+	"github.com/anyproto/any-sync/util/periodicsync/mock_periodicsync"
 	"github.com/golang/mock/gomock"
 	"testing"
 )

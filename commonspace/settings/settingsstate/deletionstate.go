@@ -1,9 +1,9 @@
-//go:generate mockgen -destination mock_settingsstate/mock_settingsstate.go github.com/anytypeio/any-sync/commonspace/settings/settingsstate ObjectDeletionState,StateBuilder,ChangeFactory
+//go:generate mockgen -destination mock_settingsstate/mock_settingsstate.go github.com/anyproto/any-sync/commonspace/settings/settingsstate ObjectDeletionState,StateBuilder,ChangeFactory
 package settingsstate
 
 import (
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"go.uber.org/zap"
 	"sync"
 )

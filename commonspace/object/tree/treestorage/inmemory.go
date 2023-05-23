@@ -3,8 +3,8 @@ package treestorage
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anytypeio/any-sync/util/slice"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/util/slice"
 	"sync"
 )
 

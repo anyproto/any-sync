@@ -2,7 +2,7 @@ package nodeconf
 
 import (
 	"fmt"
-	"github.com/anytypeio/go-chash"
+	"github.com/anyproto/go-chash"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"math/rand"

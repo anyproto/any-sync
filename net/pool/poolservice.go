@@ -2,11 +2,11 @@ package pool
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/app/ocache"
-	"github.com/anytypeio/any-sync/metric"
-	"github.com/anytypeio/any-sync/net/dialer"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/app/ocache"
+	"github.com/anyproto/any-sync/metric"
+	"github.com/anyproto/any-sync/net/dialer"
 	"github.com/prometheus/client_golang/prometheus"
 	"time"
 )

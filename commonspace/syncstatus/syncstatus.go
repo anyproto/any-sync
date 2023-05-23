@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anytypeio/any-sync/commonspace/spacestorage"
-	"github.com/anytypeio/any-sync/nodeconf"
-	"github.com/anytypeio/any-sync/util/periodicsync"
-	"github.com/anytypeio/any-sync/util/slice"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/util/periodicsync"
+	"github.com/anyproto/any-sync/util/slice"
 	"golang.org/x/exp/slices"
 )
 

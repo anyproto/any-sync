@@ -1,14 +1,14 @@
-//go:generate mockgen -destination mock_list/mock_list.go github.com/anytypeio/any-sync/commonspace/object/acl/list AclList
+//go:generate mockgen -destination mock_list/mock_list.go github.com/anyproto/any-sync/commonspace/object/acl/list AclList
 package list
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/aclrecordproto"
-	"github.com/anytypeio/any-sync/commonspace/object/acl/liststorage"
-	"github.com/anytypeio/any-sync/util/crypto"
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
+	"github.com/anyproto/any-sync/util/crypto"
 	"sync"
 )
 

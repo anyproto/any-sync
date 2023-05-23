@@ -2,11 +2,11 @@ package server
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/metric"
-	anyNet "github.com/anytypeio/any-sync/net"
-	"github.com/anytypeio/any-sync/net/secureservice"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/metric"
+	anyNet "github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"net"
 	"storj.io/drpc"

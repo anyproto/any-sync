@@ -1,10 +1,10 @@
 package accounttest
 
 import (
-	accountService "github.com/anytypeio/any-sync/accountservice"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
-	"github.com/anytypeio/any-sync/util/crypto"
+	accountService "github.com/anyproto/any-sync/accountservice"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 // AccountTestService provides service for test purposes, generates new random account every Init

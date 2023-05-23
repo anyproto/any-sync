@@ -2,7 +2,7 @@ package syncobjectgetter
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
+	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
 )
 
 type SyncObject interface {

@@ -2,9 +2,9 @@ package streampool
 
 import (
 	"fmt"
-	"github.com/anytypeio/any-sync/net/peer"
-	"github.com/anytypeio/any-sync/net/rpc/rpctest"
-	"github.com/anytypeio/any-sync/net/streampool/testservice"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/rpc/rpctest"
+	"github.com/anyproto/any-sync/net/streampool/testservice"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"

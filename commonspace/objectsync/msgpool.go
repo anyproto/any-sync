@@ -3,9 +3,9 @@ package objectsync
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
-	"github.com/anytypeio/any-sync/commonspace/peermanager"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
+	"github.com/anyproto/any-sync/commonspace/peermanager"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"go.uber.org/zap"
 	"strconv"
 	"strings"

@@ -1,6 +1,6 @@
 package settingsstate
 
-import "github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+import "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 
 type State struct {
 	DeletedIds     map[string]struct{}

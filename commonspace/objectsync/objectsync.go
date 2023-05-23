@@ -1,21 +1,21 @@
-//go:generate mockgen -destination mock_objectsync/mock_objectsync.go github.com/anytypeio/any-sync/commonspace/objectsync SyncClient
+//go:generate mockgen -destination mock_objectsync/mock_objectsync.go github.com/anyproto/any-sync/commonspace/objectsync SyncClient
 package objectsync
 
 import (
 	"context"
 	"fmt"
-	"github.com/anytypeio/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/gogo/protobuf/proto"
 	"sync/atomic"
 	"time"
 
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonspace/object/syncobjectgetter"
-	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
-	"github.com/anytypeio/any-sync/commonspace/peermanager"
-	"github.com/anytypeio/any-sync/commonspace/spacestorage"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
-	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/object/syncobjectgetter"
+	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
+	"github.com/anyproto/any-sync/commonspace/peermanager"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 )

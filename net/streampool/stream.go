@@ -2,8 +2,8 @@ package streampool
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/util/multiqueue"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/util/multiqueue"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 	"sync/atomic"

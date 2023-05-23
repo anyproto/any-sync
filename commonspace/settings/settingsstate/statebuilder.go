@@ -1,8 +1,8 @@
 package settingsstate
 
 import (
-	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/gogo/protobuf/proto"
 )
 

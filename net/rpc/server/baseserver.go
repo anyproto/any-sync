@@ -2,8 +2,8 @@ package server
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/net/peer"
-	"github.com/anytypeio/any-sync/net/secureservice"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"github.com/zeebo/errs"
 	"go.uber.org/zap"

@@ -2,10 +2,10 @@ package nodeconfsource
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/coordinator/coordinatorclient"
-	"github.com/anytypeio/any-sync/coordinator/coordinatorproto"
-	"github.com/anytypeio/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
+	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
+	"github.com/anyproto/any-sync/nodeconf"
 	"time"
 )
 

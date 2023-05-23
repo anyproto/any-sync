@@ -1,7 +1,7 @@
 package settingsstate
 
 import (
-	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
 type ChangeFactory interface {

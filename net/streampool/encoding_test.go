@@ -1,7 +1,7 @@
 package streampool
 
 import (
-	"github.com/anytypeio/any-sync/net/streampool/testservice"
+	"github.com/anyproto/any-sync/net/streampool/testservice"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"

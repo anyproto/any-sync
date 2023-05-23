@@ -2,11 +2,11 @@ package pool
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app/ocache"
-	"github.com/anytypeio/any-sync/net"
-	"github.com/anytypeio/any-sync/net/dialer"
-	"github.com/anytypeio/any-sync/net/peer"
-	"github.com/anytypeio/any-sync/net/secureservice/handshake"
+	"github.com/anyproto/any-sync/app/ocache"
+	"github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/dialer"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"go.uber.org/zap"
 	"math/rand"
 )

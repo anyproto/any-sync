@@ -2,8 +2,8 @@ package handshake
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/net/secureservice/handshake/handshakeproto"
-	crypto2 "github.com/anytypeio/any-sync/util/crypto"
+	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
+	crypto2 "github.com/anyproto/any-sync/util/crypto"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"

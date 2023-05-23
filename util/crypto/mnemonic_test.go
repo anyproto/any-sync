@@ -2,7 +2,7 @@ package crypto
 
 import (
 	"crypto/rand"
-	"github.com/anytypeio/go-slip10"
+	"github.com/anyproto/go-slip10"
 	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"

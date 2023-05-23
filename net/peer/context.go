@@ -3,7 +3,7 @@ package peer
 import (
 	"context"
 	"errors"
-	"github.com/anytypeio/any-sync/util/crypto"
+	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"storj.io/drpc/drpcctx"
 )

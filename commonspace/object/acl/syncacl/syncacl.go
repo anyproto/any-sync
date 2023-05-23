@@ -1,9 +1,9 @@
 package syncacl
 
 import (
-	"github.com/anytypeio/any-sync/commonspace/object/acl/list"
-	"github.com/anytypeio/any-sync/commonspace/objectsync"
-	"github.com/anytypeio/any-sync/commonspace/objectsync/synchandler"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/objectsync"
+	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
 )
 
 type SyncAcl struct {

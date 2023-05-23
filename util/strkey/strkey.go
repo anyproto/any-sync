@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/anytypeio/any-sync/util/crc16"
+	"github.com/anyproto/any-sync/util/crc16"
 
 	"github.com/mr-tron/base58/base58"
 )

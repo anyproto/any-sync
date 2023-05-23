@@ -2,8 +2,8 @@ package rpctest
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/net/rpc/server"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/net/rpc/server"
 	"net"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcconn"

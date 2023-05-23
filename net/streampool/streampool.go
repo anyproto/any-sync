@@ -2,9 +2,9 @@ package streampool
 
 import (
 	"fmt"
-	"github.com/anytypeio/any-sync/net"
-	"github.com/anytypeio/any-sync/net/peer"
-	"github.com/anytypeio/any-sync/util/multiqueue"
+	"github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/util/multiqueue"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/context"

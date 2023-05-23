@@ -10,5 +10,5 @@ updates:
     schedule:
       interval: "weekly"
     ignore:
-      - dependency-name: "github.com/anytypeio/go-chash"
+      - dependency-name: "github.com/anyproto/go-chash"
       

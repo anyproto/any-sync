@@ -1,9 +1,9 @@
 package streampool
 
 import (
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/metric"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/metric"
 )
 
 const CName = "common.net.streampool"

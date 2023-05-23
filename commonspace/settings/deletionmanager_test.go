@@ -2,10 +2,10 @@ package settings
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/commonspace/object/treemanager/mock_treemanager"
-	"github.com/anytypeio/any-sync/commonspace/settings/mock_settings"
-	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
-	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
+	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
+	"github.com/anyproto/any-sync/commonspace/settings/mock_settings"
+	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
+	"github.com/anyproto/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"testing"

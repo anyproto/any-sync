@@ -2,8 +2,8 @@ package fileblockstore
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app/logger"
-	"github.com/anytypeio/any-sync/commonfile/fileproto/fileprotoerr"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonfile/fileproto/fileprotoerr"
 	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
 )

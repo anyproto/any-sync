@@ -2,7 +2,7 @@ package objecttree
 
 import (
 	"fmt"
-	"github.com/anytypeio/any-sync/util/crypto"
+	"github.com/anyproto/any-sync/util/crypto"
 	"math/rand"
 )
 

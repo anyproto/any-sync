@@ -3,9 +3,9 @@ package rpctest
 import (
 	"context"
 	"errors"
-	"github.com/anytypeio/any-sync/app"
-	"github.com/anytypeio/any-sync/net/peer"
-	"github.com/anytypeio/any-sync/net/pool"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/pool"
 	"math/rand"
 	"storj.io/drpc"
 	"sync"

@@ -2,7 +2,7 @@ package periodicsync
 
 import (
 	"context"
-	"github.com/anytypeio/any-sync/app/logger"
+	"github.com/anyproto/any-sync/app/logger"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"testing"
