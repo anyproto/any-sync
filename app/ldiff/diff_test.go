@@ -3,9 +3,9 @@ package ldiff
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/mgo.v2/bson"
 	"math"
 	"sort"
 	"testing"
@@ -44,7 +44,7 @@ func TestDiff_Diff(t *testing.T) {
 		d2 := New(16, 16)
 		for i := 0; i < 1000; i++ {
 			id := fmt.Sprint(i)
-			head := bson.NewObjectId().Hex()
+			head := uuid.NewString()
 			d1.Set(Element{
 				Id:   id,
 				Head: head,
@@ -92,7 +92,7 @@ func TestDiff_Diff(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			d2.Set(Element{
 				Id:   fmt.Sprint(i),
-				Head: bson.NewObjectId().Hex(),
+				Head: uuid.NewString(),
 			})
 		}
 
@@ -108,7 +108,7 @@ func TestDiff_Diff(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			d2.Set(Element{
 				Id:   fmt.Sprint(i),
-				Head: bson.NewObjectId().Hex(),
+				Head: uuid.NewString(),
 			})
 		}
 		var cancel func()
@@ -123,7 +123,7 @@ func BenchmarkDiff_Ranges(b *testing.B) {
 	d := New(16, 16)
 	for i := 0; i < 10000; i++ {
 		id := fmt.Sprint(i)
-		head := bson.NewObjectId().Hex()
+		head := uuid.NewString()
 		d.Set(Element{
 			Id:   id,
 			Head: head,
