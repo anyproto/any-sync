@@ -52,3 +52,9 @@ func (i *InMemorySpaceStorageProvider) CreateSpaceStorage(payload SpaceStorageCr
 	i.storages[payload.SpaceHeaderWithId.Id] = spaceStorage
 	return spaceStorage, nil
 }
+
+func (i *InMemorySpaceStorageProvider) SetStorage(storage SpaceStorage) {
+	i.Lock()
+	defer i.Unlock()
+	i.storages[storage.Id()] = storage
+}
