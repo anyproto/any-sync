@@ -4,13 +4,14 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 	"testing"
 )
 
 func TestChangeFactory_CreateObjectDeleteChange(t *testing.T) {
 	factory := NewChangeFactory()
 	state := &State{
-		DeletedIds: []string{"1", "2"},
+		DeletedIds: map[string]struct{}{"1": {}, "2": {}},
 		DeleterId:  "del",
 	}
 	marshalled, err := factory.CreateObjectDeleteChange("3", state, false)
@@ -26,6 +27,7 @@ func TestChangeFactory_CreateObjectDeleteChange(t *testing.T) {
 	data = &spacesyncproto.SettingsData{}
 	err = proto.Unmarshal(marshalled, data)
 	require.NoError(t, err)
+	slices.Sort(data.Snapshot.DeletedIds)
 	require.Equal(t, &spacesyncproto.SpaceSettingsSnapshot{
 		DeletedIds:    []string{"1", "2", "3"},
 		DeleterPeerId: "del",
@@ -36,7 +38,7 @@ func TestChangeFactory_CreateObjectDeleteChange(t *testing.T) {
 func TestChangeFactory_CreateSpaceDeleteChange(t *testing.T) {
 	factory := NewChangeFactory()
 	state := &State{
-		DeletedIds: []string{"1", "2"},
+		DeletedIds: map[string]struct{}{"1": {}, "2": {}},
 	}
 	marshalled, err := factory.CreateSpaceDeleteChange("del", state, false)
 	require.NoError(t, err)
@@ -51,6 +53,7 @@ func TestChangeFactory_CreateSpaceDeleteChange(t *testing.T) {
 	data = &spacesyncproto.SettingsData{}
 	err = proto.Unmarshal(marshalled, data)
 	require.NoError(t, err)
+	slices.Sort(data.Snapshot.DeletedIds)
 	require.Equal(t, &spacesyncproto.SpaceSettingsSnapshot{
 		DeletedIds:    []string{"1", "2"},
 		DeleterPeerId: "del",

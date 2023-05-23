@@ -1,6 +1,7 @@
 package settingsstate
 
 import (
+	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage/mock_spacestorage"
 	"github.com/golang/mock/gomock"
@@ -18,7 +19,7 @@ type fixture struct {
 func newFixture(t *testing.T) *fixture {
 	ctrl := gomock.NewController(t)
 	spaceStorage := mock_spacestorage.NewMockSpaceStorage(ctrl)
-	delState := NewObjectDeletionState(spaceStorage).(*objectDeletionState)
+	delState := NewObjectDeletionState(logger.NewNamed("test"), spaceStorage).(*objectDeletionState)
 	return &fixture{
 		ctrl:         ctrl,
 		delState:     delState,
@@ -37,8 +38,7 @@ func TestDeletionState_Add(t *testing.T) {
 		id := "newId"
 		fx.spaceStorage.EXPECT().TreeDeletedStatus(id).Return("", nil)
 		fx.spaceStorage.EXPECT().SetTreeDeletedStatus(id, spacestorage.TreeDeletedStatusQueued).Return(nil)
-		err := fx.delState.Add([]string{id})
-		require.NoError(t, err)
+		fx.delState.Add(map[string]struct{}{id: {}})
 		require.Contains(t, fx.delState.queued, id)
 	})
 
@@ -47,8 +47,7 @@ func TestDeletionState_Add(t *testing.T) {
 		defer fx.stop()
 		id := "newId"
 		fx.spaceStorage.EXPECT().TreeDeletedStatus(id).Return(spacestorage.TreeDeletedStatusQueued, nil)
-		err := fx.delState.Add([]string{id})
-		require.NoError(t, err)
+		fx.delState.Add(map[string]struct{}{id: {}})
 		require.Contains(t, fx.delState.queued, id)
 	})
 
@@ -57,8 +56,7 @@ func TestDeletionState_Add(t *testing.T) {
 		defer fx.stop()
 		id := "newId"
 		fx.spaceStorage.EXPECT().TreeDeletedStatus(id).Return(spacestorage.TreeDeletedStatusDeleted, nil)
-		err := fx.delState.Add([]string{id})
-		require.NoError(t, err)
+		fx.delState.Add(map[string]struct{}{id: {}})
 		require.Contains(t, fx.delState.deleted, id)
 	})
 }
@@ -98,8 +96,7 @@ func TestDeletionState_AddObserver(t *testing.T) {
 	id := "newId"
 	fx.spaceStorage.EXPECT().TreeDeletedStatus(id).Return("", nil)
 	fx.spaceStorage.EXPECT().SetTreeDeletedStatus(id, spacestorage.TreeDeletedStatusQueued).Return(nil)
-	err := fx.delState.Add([]string{id})
-	require.NoError(t, err)
+	fx.delState.Add(map[string]struct{}{id: {}})
 	require.Contains(t, fx.delState.queued, id)
 	require.Equal(t, []string{id}, queued)
 }

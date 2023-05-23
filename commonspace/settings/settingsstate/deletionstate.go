@@ -2,7 +2,9 @@
 package settingsstate
 
 import (
+	"github.com/anytypeio/any-sync/app/logger"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
+	"go.uber.org/zap"
 	"sync"
 )
 
@@ -10,7 +12,7 @@ type StateUpdateObserver func(ids []string)
 
 type ObjectDeletionState interface {
 	AddObserver(observer StateUpdateObserver)
-	Add(ids []string) (err error)
+	Add(ids map[string]struct{})
 	GetQueued() (ids []string)
 	Delete(id string) (err error)
 	Exists(id string) bool
@@ -19,14 +21,16 @@ type ObjectDeletionState interface {
 
 type objectDeletionState struct {
 	sync.RWMutex
+	log                  logger.CtxLogger
 	queued               map[string]struct{}
 	deleted              map[string]struct{}
 	stateUpdateObservers []StateUpdateObserver
 	storage              spacestorage.SpaceStorage
 }
 
-func NewObjectDeletionState(storage spacestorage.SpaceStorage) ObjectDeletionState {
+func NewObjectDeletionState(log logger.CtxLogger, storage spacestorage.SpaceStorage) ObjectDeletionState {
 	return &objectDeletionState{
+		log:     log,
 		queued:  map[string]struct{}{},
 		deleted: map[string]struct{}{},
 		storage: storage,
@@ -39,19 +43,17 @@ func (st *objectDeletionState) AddObserver(observer StateUpdateObserver) {
 	st.stateUpdateObservers = append(st.stateUpdateObservers, observer)
 }
 
-func (st *objectDeletionState) Add(ids []string) (err error) {
+func (st *objectDeletionState) Add(ids map[string]struct{}) {
+	var added []string
 	st.Lock()
 	defer func() {
 		st.Unlock()
-		if err != nil {
-			return
-		}
 		for _, ob := range st.stateUpdateObservers {
-			ob(ids)
+			ob(added)
 		}
 	}()
 
-	for _, id := range ids {
+	for id := range ids {
 		if _, exists := st.deleted[id]; exists {
 			continue
 		}
@@ -60,9 +62,10 @@ func (st *objectDeletionState) Add(ids []string) (err error) {
 		}
 
 		var status string
-		status, err = st.storage.TreeDeletedStatus(id)
+		status, err := st.storage.TreeDeletedStatus(id)
 		if err != nil {
-			return
+			st.log.Warn("failed to get deleted status", zap.String("treeId", id), zap.Error(err))
+			continue
 		}
 
 		switch status {
@@ -71,14 +74,15 @@ func (st *objectDeletionState) Add(ids []string) (err error) {
 		case spacestorage.TreeDeletedStatusDeleted:
 			st.deleted[id] = struct{}{}
 		default:
-			st.queued[id] = struct{}{}
-			err = st.storage.SetTreeDeletedStatus(id, spacestorage.TreeDeletedStatusQueued)
+			err := st.storage.SetTreeDeletedStatus(id, spacestorage.TreeDeletedStatusQueued)
 			if err != nil {
-				return
+				st.log.Warn("failed to set deleted status", zap.String("treeId", id), zap.Error(err))
+				continue
 			}
+			st.queued[id] = struct{}{}
 		}
+		added = append(added, id)
 	}
-	return
 }
 
 func (st *objectDeletionState) GetQueued() (ids []string) {

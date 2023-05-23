@@ -7,7 +7,7 @@ import (
 )
 
 type StateBuilder interface {
-	Build(tree objecttree.ObjectTree, state *State) (*State, error)
+	Build(tree objecttree.ReadableObjectTree, state *State) (*State, error)
 }
 
 func NewStateBuilder() StateBuilder {
@@ -17,14 +17,14 @@ func NewStateBuilder() StateBuilder {
 type stateBuilder struct {
 }
 
-func (s *stateBuilder) Build(tr objecttree.ObjectTree, oldState *State) (state *State, err error) {
+func (s *stateBuilder) Build(tr objecttree.ReadableObjectTree, oldState *State) (state *State, err error) {
 	var (
 		rootId  = tr.Root().Id
 		startId = rootId
 	)
 	state = oldState
 	if state == nil {
-		state = &State{}
+		state = NewState()
 	} else if state.LastIteratedId != "" {
 		startId = state.LastIteratedId
 	}
@@ -55,11 +55,7 @@ func (s *stateBuilder) processChange(change *objecttree.Change, rootId string, s
 	deleteChange := change.Model.(*spacesyncproto.SettingsData)
 	// getting data from snapshot if we start from it
 	if change.Id == rootId {
-		state = &State{
-			DeletedIds:     deleteChange.Snapshot.DeletedIds,
-			DeleterId:      deleteChange.Snapshot.DeleterPeerId,
-			LastIteratedId: rootId,
-		}
+		state = NewStateFromSnapshot(deleteChange.Snapshot, rootId)
 		return state
 	}
 
@@ -67,7 +63,7 @@ func (s *stateBuilder) processChange(change *objecttree.Change, rootId string, s
 	for _, cnt := range deleteChange.Content {
 		switch {
 		case cnt.GetObjectDelete() != nil:
-			state.DeletedIds = append(state.DeletedIds, cnt.GetObjectDelete().GetId())
+			state.DeletedIds[cnt.GetObjectDelete().GetId()] = struct{}{}
 		case cnt.GetSpaceDelete() != nil:
 			state.DeleterId = cnt.GetSpaceDelete().GetDeleterPeerId()
 		}

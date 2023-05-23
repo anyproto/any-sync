@@ -19,7 +19,7 @@ func TestDeletionManager_UpdateState_NotResponsible(t *testing.T) {
 	spaceId := "spaceId"
 	settingsId := "settingsId"
 	state := &settingsstate.State{
-		DeletedIds: []string{"id"},
+		DeletedIds: map[string]struct{}{"id": {}},
 		DeleterId:  "deleterId",
 	}
 	deleted := false
@@ -29,7 +29,7 @@ func TestDeletionManager_UpdateState_NotResponsible(t *testing.T) {
 	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
 	treeManager := mock_treemanager.NewMockTreeManager(ctrl)
 
-	delState.EXPECT().Add(state.DeletedIds).Return(nil)
+	delState.EXPECT().Add(state.DeletedIds)
 
 	delManager := newDeletionManager(spaceId,
 		settingsId,
@@ -51,7 +51,7 @@ func TestDeletionManager_UpdateState_Responsible(t *testing.T) {
 	spaceId := "spaceId"
 	settingsId := "settingsId"
 	state := &settingsstate.State{
-		DeletedIds: []string{"id"},
+		DeletedIds: map[string]struct{}{"id": struct{}{}},
 		DeleterId:  "deleterId",
 	}
 	deleted := false
@@ -62,9 +62,9 @@ func TestDeletionManager_UpdateState_Responsible(t *testing.T) {
 	treeManager := mock_treemanager.NewMockTreeManager(ctrl)
 	provider := mock_settings.NewMockSpaceIdsProvider(ctrl)
 
-	delState.EXPECT().Add(state.DeletedIds).Return(nil)
+	delState.EXPECT().Add(state.DeletedIds)
 	provider.EXPECT().AllIds().Return([]string{"id", "otherId", settingsId})
-	delState.EXPECT().Add([]string{"id", "otherId"}).Return(nil)
+	delState.EXPECT().Add(map[string]struct{}{"id": {}, "otherId": {}})
 	delManager := newDeletionManager(spaceId,
 		settingsId,
 		true,

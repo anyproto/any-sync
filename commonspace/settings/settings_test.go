@@ -5,6 +5,7 @@ import (
 	"github.com/anytypeio/any-sync/accountservice/mock_accountservice"
 	"github.com/anytypeio/any-sync/commonspace/object/accountdata"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anytypeio/any-sync/commonspace/object/tree/synctree/updatelistener"
@@ -52,6 +53,7 @@ type settingsFixture struct {
 	changeFactory   *mock_settingsstate.MockChangeFactory
 	deleter         *mock_settings.MockDeleter
 	syncTree        *mock_synctree.MockSyncTree
+	historyTree     *mock_objecttree.MockObjectTree
 	delState        *mock_settingsstate.MockObjectDeletionState
 	account         *mock_accountservice.MockService
 }
@@ -69,6 +71,7 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 	stateBuilder := mock_settingsstate.NewMockStateBuilder(ctrl)
 	changeFactory := mock_settingsstate.NewMockChangeFactory(ctrl)
 	syncTree := mock_synctree.NewMockSyncTree(ctrl)
+	historyTree := mock_objecttree.NewMockObjectTree(ctrl)
 	del := mock_settings.NewMockDeleter(ctrl)
 
 	delState.EXPECT().AddObserver(gomock.Any())
@@ -77,6 +80,9 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 		require.Equal(t, objectId, id)
 		return newTestObjMock(syncTree), nil
 	})
+	buildHistoryTree = func(objTree objecttree.ObjectTree) (objecttree.ReadableObjectTree, error) {
+		return historyTree, nil
+	}
 
 	deps := Deps{
 		BuildFunc:     buildFunc,
@@ -104,45 +110,48 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 		syncTree:        syncTree,
 		account:         acc,
 		delState:        delState,
+		historyTree:     historyTree,
 	}
 }
 
-func (fx *settingsFixture) stop() {
+func (fx *settingsFixture) init(t *testing.T) {
+	fx.spaceStorage.EXPECT().SpaceSettingsId().Return(fx.docId)
+	fx.deleter.EXPECT().Delete()
+	fx.stateBuilder.EXPECT().Build(fx.historyTree, nil).Return(&settingsstate.State{}, nil)
+	fx.doc.state = &settingsstate.State{}
+
+	err := fx.doc.Init(context.Background())
+	require.NoError(t, err)
+}
+
+func (fx *settingsFixture) stop(t *testing.T) {
+	fx.syncTree.EXPECT().Close().Return(nil)
+
+	err := fx.doc.Close()
+	require.NoError(t, err)
 	fx.ctrl.Finish()
 }
 
 func TestSettingsObject_Init(t *testing.T) {
 	fx := newSettingsFixture(t)
-	defer fx.stop()
+	defer fx.stop(t)
 
-	fx.spaceStorage.EXPECT().SpaceSettingsId().Return(fx.docId)
-	fx.deleter.EXPECT().Delete()
-	fx.syncTree.EXPECT().Close().Return(nil)
-
-	err := fx.doc.Init(context.Background())
-	require.NoError(t, err)
-	err = fx.doc.Close()
-	require.NoError(t, err)
+	fx.init(t)
 }
 
 func TestSettingsObject_DeleteObject_NoSnapshot(t *testing.T) {
 	fx := newSettingsFixture(t)
-	defer fx.stop()
+	defer fx.stop(t)
 
-	fx.spaceStorage.EXPECT().SpaceSettingsId().Return(fx.docId)
-	fx.deleter.EXPECT().Delete()
-
-	err := fx.doc.Init(context.Background())
-	require.NoError(t, err)
+	fx.init(t)
 
 	delId := "delId"
-	doSnapshot = func(len int) bool {
+	DoSnapshot = func(len int) bool {
 		return false
 	}
 
 	fx.syncTree.EXPECT().Id().Return("syncId")
 	fx.syncTree.EXPECT().Len().Return(10)
-	fx.delState.EXPECT().Exists(delId).Return(false)
 	fx.spaceStorage.EXPECT().TreeStorage(delId).Return(nil, nil)
 	res := []byte("settingsData")
 	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
@@ -162,30 +171,20 @@ func TestSettingsObject_DeleteObject_NoSnapshot(t *testing.T) {
 	fx.deletionManager.EXPECT().UpdateState(gomock.Any(), fx.doc.state).Return(nil)
 	err = fx.doc.DeleteObject(delId)
 	require.NoError(t, err)
-
-	fx.syncTree.EXPECT().Close().Return(nil)
-	err = fx.doc.Close()
-	require.NoError(t, err)
 }
 
 func TestSettingsObject_DeleteObject_WithSnapshot(t *testing.T) {
 	fx := newSettingsFixture(t)
-	defer fx.stop()
+	defer fx.stop(t)
 
-	fx.spaceStorage.EXPECT().SpaceSettingsId().Return(fx.docId)
-	fx.deleter.EXPECT().Delete()
-
-	err := fx.doc.Init(context.Background())
-	require.NoError(t, err)
-
+	fx.init(t)
 	delId := "delId"
-	doSnapshot = func(len int) bool {
+	DoSnapshot = func(len int) bool {
 		return true
 	}
 
 	fx.syncTree.EXPECT().Id().Return("syncId")
 	fx.syncTree.EXPECT().Len().Return(10)
-	fx.delState.EXPECT().Exists(delId).Return(false)
 	fx.spaceStorage.EXPECT().TreeStorage(delId).Return(nil, nil)
 	res := []byte("settingsData")
 	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
@@ -199,27 +198,19 @@ func TestSettingsObject_DeleteObject_WithSnapshot(t *testing.T) {
 		Key:         accountData.SignKey,
 		IsSnapshot:  true,
 		IsEncrypted: false,
-	}).Return(objecttree.AddResult{}, nil)
+	}).Return(objecttree.AddResult{Mode: objecttree.Rebuild}, nil)
 
-	fx.stateBuilder.EXPECT().Build(fx.doc, fx.doc.state).Return(fx.doc.state, nil)
+	fx.stateBuilder.EXPECT().Build(fx.doc, nil).Return(fx.doc.state, nil)
 	fx.deletionManager.EXPECT().UpdateState(gomock.Any(), fx.doc.state).Return(nil)
 	err = fx.doc.DeleteObject(delId)
-	require.NoError(t, err)
-
-	fx.syncTree.EXPECT().Close().Return(nil)
-	err = fx.doc.Close()
 	require.NoError(t, err)
 }
 
 func TestSettingsObject_Rebuild(t *testing.T) {
 	fx := newSettingsFixture(t)
-	defer fx.stop()
+	defer fx.stop(t)
 
-	fx.spaceStorage.EXPECT().SpaceSettingsId().Return(fx.docId)
-	fx.deleter.EXPECT().Delete()
-
-	err := fx.doc.Init(context.Background())
-	require.NoError(t, err)
+	fx.init(t)
 	time.Sleep(100 * time.Millisecond)
 
 	newSt := &settingsstate.State{}
@@ -232,13 +223,9 @@ func TestSettingsObject_Rebuild(t *testing.T) {
 
 func TestSettingsObject_Update(t *testing.T) {
 	fx := newSettingsFixture(t)
-	defer fx.stop()
+	defer fx.stop(t)
 
-	fx.spaceStorage.EXPECT().SpaceSettingsId().Return(fx.docId)
-	fx.deleter.EXPECT().Delete()
-
-	err := fx.doc.Init(context.Background())
-	require.NoError(t, err)
+	fx.init(t)
 	time.Sleep(100 * time.Millisecond)
 
 	fx.doc.state = &settingsstate.State{}
@@ -250,13 +237,9 @@ func TestSettingsObject_Update(t *testing.T) {
 
 func TestSettingsObject_DeleteSpace(t *testing.T) {
 	fx := newSettingsFixture(t)
-	defer fx.stop()
+	defer fx.stop(t)
 
-	fx.spaceStorage.EXPECT().SpaceSettingsId().Return(fx.docId)
-	fx.deleter.EXPECT().Delete()
-
-	err := fx.doc.Init(context.Background())
-	require.NoError(t, err)
+	fx.init(t)
 	time.Sleep(100 * time.Millisecond)
 
 	deleterId := "delId"
@@ -275,19 +258,15 @@ func TestSettingsObject_DeleteSpace(t *testing.T) {
 		Heads: []string{rawCh.Id},
 	}, nil)
 
-	err = fx.doc.DeleteSpace(context.Background(), rawCh)
+	err := fx.doc.DeleteSpace(context.Background(), rawCh)
 	require.NoError(t, err)
 }
 
 func TestSettingsObject_DeleteSpaceIncorrectChange(t *testing.T) {
 	fx := newSettingsFixture(t)
-	defer fx.stop()
+	defer fx.stop(t)
 
-	fx.spaceStorage.EXPECT().SpaceSettingsId().Return(fx.docId)
-	fx.deleter.EXPECT().Delete()
-
-	err := fx.doc.Init(context.Background())
-	require.NoError(t, err)
+	fx.init(t)
 	time.Sleep(100 * time.Millisecond)
 
 	t.Run("incorrect change type", func(t *testing.T) {
@@ -299,7 +278,7 @@ func TestSettingsObject_DeleteSpaceIncorrectChange(t *testing.T) {
 		delChange, _ := changeFactory.CreateObjectDeleteChange("otherId", &settingsstate.State{}, false)
 
 		fx.syncTree.EXPECT().UnpackChange(rawCh).Return(delChange, nil)
-		err = fx.doc.DeleteSpace(context.Background(), rawCh)
+		err := fx.doc.DeleteSpace(context.Background(), rawCh)
 		require.NotNil(t, err)
 	})
 
@@ -312,7 +291,7 @@ func TestSettingsObject_DeleteSpaceIncorrectChange(t *testing.T) {
 		delChange, _ := changeFactory.CreateSpaceDeleteChange("", &settingsstate.State{}, false)
 
 		fx.syncTree.EXPECT().UnpackChange(rawCh).Return(delChange, nil)
-		err = fx.doc.DeleteSpace(context.Background(), rawCh)
+		err := fx.doc.DeleteSpace(context.Background(), rawCh)
 		require.NotNil(t, err)
 	})
 }
