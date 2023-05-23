@@ -146,7 +146,7 @@ func TestSettingsObject_DeleteObject_NoSnapshot(t *testing.T) {
 	fx.init(t)
 
 	delId := "delId"
-	doSnapshot = func(len int) bool {
+	DoSnapshot = func(len int) bool {
 		return false
 	}
 
@@ -179,7 +179,7 @@ func TestSettingsObject_DeleteObject_WithSnapshot(t *testing.T) {
 
 	fx.init(t)
 	delId := "delId"
-	doSnapshot = func(len int) bool {
+	DoSnapshot = func(len int) bool {
 		return true
 	}
 

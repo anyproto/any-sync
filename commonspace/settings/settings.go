@@ -41,7 +41,7 @@ var (
 )
 
 var (
-	doSnapshot       = objecttree.DoSnapshot
+	DoSnapshot       = objecttree.DoSnapshot
 	buildHistoryTree = func(objTree objecttree.ObjectTree) (objecttree.ReadableObjectTree, error) {
 		return objecttree.BuildHistoryTree(objecttree.HistoryTreeParams{
 			TreeStorage:   objTree.Storage(),
@@ -264,7 +264,7 @@ func (s *settingsObject) DeleteObject(id string) (err error) {
 		err = ErrObjDoesNotExist
 		return
 	}
-	isSnapshot := doSnapshot(s.Len())
+	isSnapshot := DoSnapshot(s.Len())
 	res, err := s.changeFactory.CreateObjectDeleteChange(id, s.state, isSnapshot)
 	if err != nil {
 		return

@@ -10,6 +10,7 @@ import (
 	"github.com/anytypeio/any-sync/commonspace/settings"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
+	"github.com/anytypeio/any-sync/commonspace/spacesyncproto"
 	"github.com/anytypeio/any-sync/util/crypto"
 	"github.com/stretchr/testify/require"
 	"math/rand"
@@ -102,6 +103,24 @@ func TestSpaceDeleteIds(t *testing.T) {
 	require.Equal(t, len(ids), len(fx.treeManager.deletedIds))
 }
 
+func createTree(t *testing.T, ctx context.Context, spc Space, acc *accountdata.AccountKeys) string {
+	bytes := make([]byte, 32)
+	rand.Read(bytes)
+	doc, err := spc.CreateTree(ctx, objecttree.ObjectTreeCreatePayload{
+		PrivKey:     acc.SignKey,
+		ChangeType:  "some",
+		SpaceId:     spc.Id(),
+		IsEncrypted: false,
+		Seed:        bytes,
+		Timestamp:   time.Now().Unix(),
+	})
+	require.NoError(t, err)
+	tr, err := spc.PutTree(ctx, doc, nil)
+	require.NoError(t, err)
+	tr.Close()
+	return tr.Id()
+}
+
 func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	fx := newFixture(t)
 	acc := fx.account.Account()
@@ -133,22 +152,8 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	settingsObject := spc.(*space).settingsObject
 	var ids []string
 	for i := 0; i < totalObjs; i++ {
-		// creating a tree
-		bytes := make([]byte, 32)
-		rand.Read(bytes)
-		doc, err := spc.CreateTree(ctx, objecttree.ObjectTreeCreatePayload{
-			PrivKey:     acc.SignKey,
-			ChangeType:  "some",
-			SpaceId:     spc.Id(),
-			IsEncrypted: false,
-			Seed:        bytes,
-			Timestamp:   time.Now().Unix(),
-		})
-		require.NoError(t, err)
-		tr, err := spc.PutTree(ctx, doc, nil)
-		require.NoError(t, err)
-		ids = append(ids, tr.Id())
-		tr.Close()
+		id := createTree(t, ctx, spc, acc)
+		ids = append(ids, id)
 	}
 	// copying storage, so we will have all the trees locally
 	inmemory := spc.Storage().(*commonStorage).SpaceStorage.(*spacestorage.InMemorySpaceStorage)
@@ -187,7 +192,16 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	time.Sleep(3 * time.Second)
 	require.Equal(t, len(ids), len(fx.treeManager.deletedIds))
 
-	// TODO: check that new snapshot will have all the changes
+	// checking that new snapshot will contain all the changes
+	settingsObject = spc.(*space).settingsObject
+	settings.DoSnapshot = func(treeLen int) bool {
+		return true
+	}
+	id := createTree(t, ctx, spc, acc)
+	err = spc.DeleteTree(ctx, id)
+	require.NoError(t, err)
+	delIds := settingsObject.Root().Model.(*spacesyncproto.SettingsData).Snapshot.DeletedIds
+	require.Equal(t, totalObjs+1, len(delIds))
 }
 
 func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
@@ -220,22 +234,8 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	settingsObject := spc.(*space).settingsObject
 	var ids []string
 	for i := 0; i < totalObjs; i++ {
-		// creating a tree
-		bytes := make([]byte, 32)
-		rand.Read(bytes)
-		doc, err := spc.CreateTree(ctx, objecttree.ObjectTreeCreatePayload{
-			PrivKey:     acc.SignKey,
-			ChangeType:  "some",
-			SpaceId:     spc.Id(),
-			IsEncrypted: false,
-			Seed:        bytes,
-			Timestamp:   time.Now().Unix(),
-		})
-		require.NoError(t, err)
-		tr, err := spc.PutTree(ctx, doc, nil)
-		require.NoError(t, err)
-		ids = append(ids, tr.Id())
-		tr.Close()
+		id := createTree(t, ctx, spc, acc)
+		ids = append(ids, id)
 	}
 	// copying storage, so we will have the same contents, except for empty trees
 	inmemory := spc.Storage().(*commonStorage).SpaceStorage.(*spacestorage.InMemorySpaceStorage)
