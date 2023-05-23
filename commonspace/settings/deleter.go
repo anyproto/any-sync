@@ -2,6 +2,7 @@ package settings
 
 import (
 	"context"
+	"github.com/anytypeio/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anytypeio/any-sync/commonspace/object/treemanager"
 	"github.com/anytypeio/any-sync/commonspace/settings/settingsstate"
 	"github.com/anytypeio/any-sync/commonspace/spacestorage"
@@ -23,17 +24,40 @@ func newDeleter(st spacestorage.SpaceStorage, state settingsstate.ObjectDeletion
 }
 
 func (d *deleter) Delete() {
-	allQueued := d.state.GetQueued()
+	var (
+		allQueued = d.state.GetQueued()
+		spaceId   = d.st.Id()
+	)
 	for _, id := range allQueued {
-		err := d.getter.DeleteTree(context.Background(), d.st.Id(), id)
-		if err != nil && err != spacestorage.ErrTreeStorageAlreadyDeleted {
-			log.With(zap.String("id", id), zap.Error(err)).Error("failed to delete object")
-			continue
+		log := log.With(zap.String("treeId", id), zap.String("spaceId", spaceId))
+		shouldDelete, err := d.tryMarkDeleted(spaceId, id)
+		if !shouldDelete {
+			if err != nil {
+				log.Error("failed to mark object as deleted", zap.Error(err))
+				continue
+			}
+		} else {
+			err = d.getter.DeleteTree(context.Background(), spaceId, id)
+			if err != nil && err != spacestorage.ErrTreeStorageAlreadyDeleted {
+				log.Error("failed to delete object", zap.Error(err))
+				continue
+			}
 		}
 		err = d.state.Delete(id)
 		if err != nil {
-			log.With(zap.String("id", id), zap.Error(err)).Error("failed to mark object as deleted")
+			log.Error("failed to mark object as deleted", zap.Error(err))
 		}
-		log.With(zap.String("id", id), zap.Error(err)).Debug("object successfully deleted")
+		log.Debug("object successfully deleted", zap.Error(err))
 	}
+}
+
+func (d *deleter) tryMarkDeleted(spaceId, treeId string) (bool, error) {
+	_, err := d.st.TreeStorage(treeId)
+	if err == nil {
+		return true, nil
+	}
+	if err != treestorage.ErrUnknownTreeId {
+		return false, err
+	}
+	return false, d.getter.MarkTreeDeleted(context.Background(), spaceId, treeId)
 }
