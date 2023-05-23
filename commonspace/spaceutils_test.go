@@ -32,6 +32,10 @@ type mockConf struct {
 	configuration nodeconf.Configuration
 }
 
+func (m *mockConf) NetworkCompatibilityStatus() nodeconf.NetworkCompatibilityStatus {
+	return nodeconf.NetworkCompatibilityStatusOk
+}
+
 func (m *mockConf) Init(a *app.App) (err error) {
 	accountKeys := a.MustComponent(accountService.CName).(accountService.Service).Account()
 	networkId := accountKeys.SignKey.GetPublic().Network()
@@ -61,10 +65,6 @@ func (m *mockConf) Run(ctx context.Context) (err error) {
 
 func (m *mockConf) Close(ctx context.Context) (err error) {
 	return nil
-}
-
-func newMockConf() *mockConf {
-	return &mockConf{}
 }
 
 func (m *mockConf) Id() string {
@@ -297,7 +297,7 @@ func newFixture(t *testing.T) *spaceFixture {
 		config:               &mockConfig{},
 		app:                  &app.App{},
 		account:              &accounttest.AccountTestService{},
-		configurationService: newMockConf(),
+		configurationService: &mockConf{},
 		storageProvider:      spacestorage.NewInMemorySpaceStorageProvider(),
 		peermanagerProvider:  &mockPeerManagerProvider{},
 		treeManager:          &mockTreeManager{},
