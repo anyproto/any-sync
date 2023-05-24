@@ -96,6 +96,7 @@ func NewSpaceId(id string, repKey uint64) string {
 type Space interface {
 	Id() string
 	Init(ctx context.Context) error
+	StartHeadSync()
 
 	StoredIds() []string
 	DebugAllHeads() []headsync.TreeHeads
@@ -229,6 +230,10 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.syncStatus.Run()
 	s.handleQueue = multiqueue.New[HandleMessage](s.handleMessage, 100)
 	return nil
+}
+
+func (s *space) StartHeadSync() {
+	s.headSync.Run()
 }
 
 func (s *space) ObjectSync() objectsync.ObjectSync {
