@@ -51,7 +51,6 @@ func TestDiffService(t *testing.T) {
 		storageMock.EXPECT().WriteSpaceHash(hash)
 		pSyncMock.EXPECT().Run()
 		service.Init([]string{initId}, delState)
-		service.Run()
 	})
 
 	t.Run("update heads", func(t *testing.T) {
@@ -65,9 +64,7 @@ func TestDiffService(t *testing.T) {
 	})
 
 	t.Run("close", func(t *testing.T) {
-		pSyncMock.EXPECT().Run()
 		pSyncMock.EXPECT().Close()
-		service.Run()
 		service.Close()
 	})
 }

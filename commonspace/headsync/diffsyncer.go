@@ -137,16 +137,19 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 
 	totalLen := len(newIds) + len(changedIds) + len(removedIds)
 	// not syncing ids which were removed through settings document
-	filteredIds := d.deletionState.FilterJoin(newIds, changedIds, removedIds)
+	missingIds := d.deletionState.Filter(newIds)
+	existingIds := append(d.deletionState.Filter(removedIds), d.deletionState.Filter(changedIds)...)
 
-	d.syncStatus.RemoveAllExcept(p.Id(), filteredIds, stateCounter)
+	d.syncStatus.RemoveAllExcept(p.Id(), existingIds, stateCounter)
 
-	d.syncTrees(ctx, p.Id(), filteredIds)
-
+	err = d.cache.SyncTrees(ctx, existingIds, missingIds)
+	if err != nil {
+		return err
+	}
 	d.log.Info("sync done:", zap.Int("newIds", len(newIds)),
 		zap.Int("changedIds", len(changedIds)),
 		zap.Int("removedIds", len(removedIds)),
-		zap.Int("already deleted ids", totalLen-len(filteredIds)),
+		zap.Int("already deleted ids", totalLen-len(existingIds)-len(missingIds)),
 		zap.String("peerId", p.Id()),
 	)
 	return

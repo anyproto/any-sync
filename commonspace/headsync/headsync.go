@@ -29,7 +29,6 @@ type TreeHeads struct {
 
 type HeadSync interface {
 	Init(objectIds []string, deletionState settingsstate.ObjectDeletionState)
-	Run()
 
 	UpdateHeads(id string, heads []string)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
@@ -49,7 +48,6 @@ type headSync struct {
 	syncer         DiffSyncer
 	configuration  nodeconf.NodeConf
 	spaceIsDeleted *atomic.Bool
-	isRunning      bool
 
 	syncPeriod int
 }
@@ -95,11 +93,7 @@ func NewHeadSync(
 func (d *headSync) Init(objectIds []string, deletionState settingsstate.ObjectDeletionState) {
 	d.fillDiff(objectIds)
 	d.syncer.Init(deletionState)
-}
-
-func (d *headSync) Run() {
 	d.periodicSync.Run()
-	d.isRunning = true
 }
 
 func (d *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
@@ -141,9 +135,7 @@ func (d *headSync) RemoveObjects(ids []string) {
 }
 
 func (d *headSync) Close() (err error) {
-	if d.isRunning {
-		d.periodicSync.Close()
-	}
+	d.periodicSync.Close()
 	return
 }
 

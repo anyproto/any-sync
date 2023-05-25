@@ -134,3 +134,17 @@ func (mr *MockTreeManagerMockRecorder) Run(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockTreeManager)(nil).Run), arg0)
 }
+
+// SyncTrees mocks base method.
+func (m *MockTreeManager) SyncTrees(arg0 context.Context, arg1, arg2 []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SyncTrees", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SyncTrees indicates an expected call of SyncTrees.
+func (mr *MockTreeManagerMockRecorder) SyncTrees(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncTrees", reflect.TypeOf((*MockTreeManager)(nil).SyncTrees), arg0, arg1, arg2)
+}

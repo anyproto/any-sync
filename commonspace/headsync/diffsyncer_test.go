@@ -135,12 +135,10 @@ func TestDiffSyncer_Sync(t *testing.T) {
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(spaceId, clientMock))).
 			Return([]string{"new"}, []string{"changed"}, nil, nil)
-		delState.EXPECT().FilterJoin(gomock.Any()).Return([]string{"new", "changed"})
-		for _, arg := range []string{"new", "changed"} {
-			cacheMock.EXPECT().
-				GetTree(gomock.Any(), spaceId, arg).
-				Return(nil, nil)
-		}
+		delState.EXPECT().Filter([]string{"new"}).Return([]string{"new"}).Times(1)
+		delState.EXPECT().Filter([]string{"changed"}).Return([]string{"changed"}).Times(1)
+		delState.EXPECT().Filter(nil).Return(nil).Times(1)
+		cacheMock.EXPECT().SyncTrees(gomock.Any(), []string{"changed"}, []string{"new"}).Return(nil)
 		require.NoError(t, diffSyncer.Sync(ctx))
 	})
 
