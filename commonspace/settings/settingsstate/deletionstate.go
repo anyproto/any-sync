@@ -16,7 +16,7 @@ type ObjectDeletionState interface {
 	GetQueued() (ids []string)
 	Delete(id string) (err error)
 	Exists(id string) bool
-	FilterJoin(ids ...[]string) (filtered []string)
+	Filter(ids []string) (filtered []string)
 }
 
 type objectDeletionState struct {
@@ -113,18 +113,13 @@ func (st *objectDeletionState) Exists(id string) bool {
 	return st.exists(id)
 }
 
-func (st *objectDeletionState) FilterJoin(ids ...[]string) (filtered []string) {
+func (st *objectDeletionState) Filter(ids []string) (filtered []string) {
 	st.RLock()
 	defer st.RUnlock()
-	filter := func(ids []string) {
-		for _, id := range ids {
-			if !st.exists(id) {
-				filtered = append(filtered, id)
-			}
+	for _, id := range ids {
+		if !st.exists(id) {
+			filtered = append(filtered, id)
 		}
-	}
-	for _, arr := range ids {
-		filter(arr)
 	}
 	return
 }

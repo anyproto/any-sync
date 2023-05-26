@@ -80,8 +80,8 @@ func TestDeletionState_FilterJoin(t *testing.T) {
 	fx.delState.queued["id1"] = struct{}{}
 	fx.delState.queued["id2"] = struct{}{}
 
-	filtered := fx.delState.FilterJoin([]string{"id1"}, []string{"id3", "id2"}, []string{"id4"})
-	require.Equal(t, []string{"id3", "id4"}, filtered)
+	filtered := fx.delState.Filter([]string{"id3", "id2"})
+	require.Equal(t, []string{"id3"}, filtered)
 }
 
 func TestDeletionState_AddObserver(t *testing.T) {

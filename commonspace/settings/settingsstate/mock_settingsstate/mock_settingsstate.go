@@ -87,22 +87,18 @@ func (mr *MockObjectDeletionStateMockRecorder) Exists(arg0 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockObjectDeletionState)(nil).Exists), arg0)
 }
 
-// FilterJoin mocks base method.
-func (m *MockObjectDeletionState) FilterJoin(arg0 ...[]string) []string {
+// Filter mocks base method.
+func (m *MockObjectDeletionState) Filter(arg0 []string) []string {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "FilterJoin", varargs...)
+	ret := m.ctrl.Call(m, "Filter", arg0)
 	ret0, _ := ret[0].([]string)
 	return ret0
 }
 
-// FilterJoin indicates an expected call of FilterJoin.
-func (mr *MockObjectDeletionStateMockRecorder) FilterJoin(arg0 ...interface{}) *gomock.Call {
+// Filter indicates an expected call of Filter.
+func (mr *MockObjectDeletionStateMockRecorder) Filter(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilterJoin", reflect.TypeOf((*MockObjectDeletionState)(nil).FilterJoin), arg0...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Filter", reflect.TypeOf((*MockObjectDeletionState)(nil).Filter), arg0)
 }
 
 // GetQueued mocks base method.

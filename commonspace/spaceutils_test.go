@@ -217,11 +217,29 @@ func (m *mockConfig) GetSpace() Config {
 // Mock TreeManager
 //
 
+type noOpSyncer struct {
+}
+
+func (n noOpSyncer) Init() {
+}
+
+func (n noOpSyncer) SyncAll(ctx context.Context, peerId string, existing, missing []string) error {
+	return nil
+}
+
+func (n noOpSyncer) Close() error {
+	return nil
+}
+
 type mockTreeManager struct {
 	space      Space
 	cache      ocache.OCache
 	deletedIds []string
 	markedIds  []string
+}
+
+func (t *mockTreeManager) NewTreeSyncer(spaceId string) treemanager.TreeSyncer {
+	return noOpSyncer{}
 }
 
 func (t *mockTreeManager) MarkTreeDeleted(ctx context.Context, spaceId, treeId string) error {

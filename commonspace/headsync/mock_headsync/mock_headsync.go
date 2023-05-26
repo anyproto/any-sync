@@ -35,6 +35,20 @@ func (m *MockDiffSyncer) EXPECT() *MockDiffSyncerMockRecorder {
 	return m.recorder
 }
 
+// Close mocks base method.
+func (m *MockDiffSyncer) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockDiffSyncerMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockDiffSyncer)(nil).Close))
+}
+
 // Init mocks base method.
 func (m *MockDiffSyncer) Init(arg0 settingsstate.ObjectDeletionState) {
 	m.ctrl.T.Helper()
