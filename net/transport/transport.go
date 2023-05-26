@@ -25,6 +25,10 @@ type MultiConn interface {
 	Open(ctx context.Context) (conn net.Conn, err error)
 	// LastUsage returns the time of the last connection activity
 	LastUsage() time.Time
+	// Addr returns remote peer address
+	Addr() string
+	// IsClosed returns true when connection is closed
+	IsClosed() bool
 	// Close closes the connection and all sub connections
 	Close() error
 }

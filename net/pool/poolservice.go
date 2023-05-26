@@ -6,7 +6,7 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/metric"
-	"github.com/anyproto/any-sync/net/dialer"
+	"github.com/anyproto/any-sync/net/peer"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"time"
@@ -27,16 +27,20 @@ type Service interface {
 	app.ComponentRunnable
 }
 
+type dialer interface {
+	Dial(ctx context.Context, peerId string) (pr peer.Peer, err error)
+}
+
 type poolService struct {
 	// default pool
 	*pool
-	dialer    dialer.Dialer
+	dialer    dialer
 	metricReg *prometheus.Registry
 }
 
 func (p *poolService) Init(a *app.App) (err error) {
-	p.dialer = a.MustComponent(dialer.CName).(dialer.Dialer)
-	p.pool = &pool{dialer: p.dialer}
+	p.dialer = a.MustComponent("net.peerservice").(dialer)
+	p.pool = &pool{}
 	if m := a.Component(metric.CName); m != nil {
 		p.metricReg = m.(metric.Metric).Registry()
 	}

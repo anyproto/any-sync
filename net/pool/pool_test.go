@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net"
-	"github.com/anyproto/any-sync/net/dialer"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"storj.io/drpc"
+	net2 "net"
 	"testing"
 	"time"
 )
@@ -158,7 +157,7 @@ type fixture struct {
 	t      *testing.T
 }
 
-var _ dialer.Dialer = (*dialerMock)(nil)
+var _ dialer = (*dialerMock)(nil)
 
 type dialerMock struct {
 	dial func(ctx context.Context, peerId string) (peer peer.Peer, err error)
@@ -181,7 +180,7 @@ func (d *dialerMock) Init(a *app.App) (err error) {
 }
 
 func (d *dialerMock) Name() (name string) {
-	return dialer.CName
+	return "net.peerservice"
 }
 
 func newTestPeer(id string) *testPeer {
@@ -194,6 +193,21 @@ func newTestPeer(id string) *testPeer {
 type testPeer struct {
 	id     string
 	closed chan struct{}
+}
+
+func (t *testPeer) Context() context.Context {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t *testPeer) Accept() (conn net2.Conn, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t *testPeer) Open(ctx context.Context) (conn net2.Conn, err error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (t *testPeer) Addr() string {
@@ -224,14 +238,11 @@ func (t *testPeer) Close() error {
 	return nil
 }
 
-func (t *testPeer) Closed() <-chan struct{} {
-	return t.closed
-}
-
-func (t *testPeer) Invoke(ctx context.Context, rpc string, enc drpc.Encoding, in, out drpc.Message) error {
-	return fmt.Errorf("call Invoke on test peer")
-}
-
-func (t *testPeer) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) (drpc.Stream, error) {
-	return nil, fmt.Errorf("call NewStream on test peer")
+func (t *testPeer) IsClosed() bool {
+	select {
+	case <-t.closed:
+		return true
+	default:
+		return false
+	}
 }

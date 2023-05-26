@@ -11,6 +11,7 @@ import (
 type yamuxConn struct {
 	ctx    context.Context
 	luConn *connutil.LastUsageConn
+	addr   string
 	*yamux.Session
 }
 
@@ -24,4 +25,8 @@ func (y *yamuxConn) LastUsage() time.Time {
 
 func (y *yamuxConn) Context() context.Context {
 	return y.ctx
+}
+
+func (y *yamuxConn) Addr() string {
+	return y.addr
 }

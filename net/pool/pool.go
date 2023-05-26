@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net"
-	"github.com/anyproto/any-sync/net/dialer"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"go.uber.org/zap"
@@ -18,13 +17,12 @@ type Pool interface {
 	// GetOneOf searches at least one existing connection in outgoing or creates a new one from a randomly selected id from given list
 	GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error)
 	// AddPeer adds incoming peer to the pool
-	AddPeer(ctx context.Context, p peer.Peer) (err error)
+	AddPeer(p peer.Peer) (err error)
 }
 
 type pool struct {
 	outgoing ocache.OCache
 	incoming ocache.OCache
-	dialer   dialer.Dialer
 }
 
 func (p *pool) Name() (name string) {
@@ -46,17 +44,11 @@ func (p *pool) get(ctx context.Context, source ocache.OCache, id string) (peer.P
 		return nil, err
 	}
 	pr := v.(peer.Peer)
-	select {
-	case <-pr.Closed():
-	default:
+	if !pr.IsClosed() {
 		return pr, nil
 	}
 	_, _ = source.Remove(ctx, id)
 	return p.Get(ctx, id)
-}
-
-func (p *pool) Dial(ctx context.Context, id string) (peer.Peer, error) {
-	return p.dialer.Dial(ctx, id)
 }
 
 func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
@@ -64,18 +56,14 @@ func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error
 	for _, peerId := range peerIds {
 		if v, err := p.incoming.Pick(ctx, peerId); err == nil {
 			pr := v.(peer.Peer)
-			select {
-			case <-pr.Closed():
-			default:
+			if !pr.IsClosed() {
 				return pr, nil
 			}
 			_, _ = p.incoming.Remove(ctx, peerId)
 		}
 		if v, err := p.outgoing.Pick(ctx, peerId); err == nil {
 			pr := v.(peer.Peer)
-			select {
-			case <-pr.Closed():
-			default:
+			if !pr.IsClosed() {
 				return pr, nil
 			}
 			_, _ = p.outgoing.Remove(ctx, peerId)
@@ -101,6 +89,6 @@ func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error
 	return nil, lastErr
 }
 
-func (p *pool) AddPeer(ctx context.Context, pr peer.Peer) (err error) {
+func (p *pool) AddPeer(pr peer.Peer) (err error) {
 	return p.incoming.Add(pr.Id(), pr)
 }

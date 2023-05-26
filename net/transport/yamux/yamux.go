@@ -100,6 +100,7 @@ func (y *yamuxTransport) Dial(ctx context.Context, addr string) (mc transport.Mu
 		ctx:     cctx,
 		luConn:  luc,
 		Session: sess,
+		addr:    addr,
 	}
 	return
 }
@@ -151,6 +152,7 @@ func (y *yamuxTransport) accept(conn net.Conn) {
 		ctx:     cctx,
 		luConn:  luc,
 		Session: sess,
+		addr:    conn.RemoteAddr().String(),
 	}
 	if err = y.accepter.Accept(mc); err != nil {
 		log.Warn("connection accept error", zap.Error(err))
