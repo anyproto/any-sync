@@ -58,7 +58,7 @@ type streamPool struct {
 	streamIdsByTag  map[string][]uint32
 	streams         map[uint32]*stream
 	opening         map[string]*openingProcess
-	dial            *execPool
+	dial            *ExecPool
 	mu              sync.Mutex
 	writeQueueSize  int
 	lastStreamId    uint32

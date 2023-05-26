@@ -6,7 +6,6 @@ import (
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
-	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
@@ -24,6 +23,7 @@ type DiffSyncer interface {
 	RemoveObjects(ids []string)
 	UpdateHeads(id string, heads []string)
 	Init(deletionState settingsstate.ObjectDeletionState)
+	Close() error
 }
 
 func newDiffSyncer(
@@ -39,7 +39,7 @@ func newDiffSyncer(
 	return &diffSyncer{
 		diff:               diff,
 		spaceId:            spaceId,
-		cache:              cache,
+		treeManager:        cache,
 		storage:            storage,
 		peerManager:        peerManager,
 		clientFactory:      clientFactory,
@@ -53,18 +53,20 @@ type diffSyncer struct {
 	spaceId            string
 	diff               ldiff.Diff
 	peerManager        peermanager.PeerManager
-	cache              treemanager.TreeManager
+	treeManager        treemanager.TreeManager
 	storage            spacestorage.SpaceStorage
 	clientFactory      spacesyncproto.ClientFactory
 	log                logger.CtxLogger
 	deletionState      settingsstate.ObjectDeletionState
 	credentialProvider credentialprovider.CredentialProvider
 	syncStatus         syncstatus.StatusUpdater
+	treeSyncer         treemanager.TreeSyncer
 }
 
 func (d *diffSyncer) Init(deletionState settingsstate.ObjectDeletionState) {
 	d.deletionState = deletionState
 	d.deletionState.AddObserver(d.RemoveObjects)
+	d.treeSyncer = d.treeManager.NewTreeSyncer(d.spaceId, d.treeManager)
 }
 
 func (d *diffSyncer) RemoveObjects(ids []string) {
@@ -124,7 +126,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	if err != nil && err != spacesyncproto.ErrSpaceMissing {
 		if err == spacesyncproto.ErrSpaceIsDeleted {
 			d.log.Debug("got space deleted while syncing")
-			d.syncTrees(ctx, p.Id(), []string{d.storage.SpaceSettingsId()})
+			d.treeSyncer.SyncAll(ctx, p.Id(), []string{d.storage.SpaceSettingsId()}, nil)
 		}
 		d.syncStatus.SetNodesOnline(p.Id(), false)
 		return fmt.Errorf("diff error: %v", err)
@@ -137,40 +139,22 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 
 	totalLen := len(newIds) + len(changedIds) + len(removedIds)
 	// not syncing ids which were removed through settings document
-	filteredIds := d.deletionState.FilterJoin(newIds, changedIds, removedIds)
+	missingIds := d.deletionState.Filter(newIds)
+	existingIds := append(d.deletionState.Filter(removedIds), d.deletionState.Filter(changedIds)...)
 
-	d.syncStatus.RemoveAllExcept(p.Id(), filteredIds, stateCounter)
+	d.syncStatus.RemoveAllExcept(p.Id(), existingIds, stateCounter)
 
-	d.syncTrees(ctx, p.Id(), filteredIds)
-
+	err = d.treeSyncer.SyncAll(ctx, p.Id(), existingIds, missingIds)
+	if err != nil {
+		return err
+	}
 	d.log.Info("sync done:", zap.Int("newIds", len(newIds)),
 		zap.Int("changedIds", len(changedIds)),
 		zap.Int("removedIds", len(removedIds)),
-		zap.Int("already deleted ids", totalLen-len(filteredIds)),
+		zap.Int("already deleted ids", totalLen-len(existingIds)-len(missingIds)),
 		zap.String("peerId", p.Id()),
 	)
 	return
-}
-
-func (d *diffSyncer) syncTrees(ctx context.Context, peerId string, trees []string) {
-	for _, tId := range trees {
-		log := d.log.With(zap.String("treeId", tId))
-		tree, err := d.cache.GetTree(ctx, d.spaceId, tId)
-		if err != nil {
-			log.WarnCtx(ctx, "can't load tree", zap.Error(err))
-			continue
-		}
-		syncTree, ok := tree.(synctree.SyncTree)
-		if !ok {
-			log.WarnCtx(ctx, "not a sync tree")
-			continue
-		}
-		if err = syncTree.SyncWithPeer(ctx, peerId); err != nil {
-			log.WarnCtx(ctx, "synctree.SyncWithPeer error", zap.Error(err))
-		} else {
-			log.DebugCtx(ctx, "success synctree.SyncWithPeer")
-		}
-	}
 }
 
 func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, peerId string, cl spacesyncproto.DRPCSpaceSyncClient) (err error) {
@@ -234,4 +218,8 @@ func (d *diffSyncer) subscribe(ctx context.Context, peerId string) (err error) {
 	return d.peerManager.SendPeer(ctx, peerId, &spacesyncproto.ObjectSyncMessage{
 		Payload: payload,
 	})
+}
+
+func (d *diffSyncer) Close() error {
+	return d.treeSyncer.Close()
 }

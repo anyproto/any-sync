@@ -6,33 +6,38 @@ import (
 	"go.uber.org/zap"
 )
 
-// newExecPool creates new execPool
+// NewExecPool creates new ExecPool
 // workers - how many processes will execute tasks
 // maxSize - limit for queue size
-func newExecPool(workers, maxSize int) *execPool {
-	ss := &execPool{
-		batch: mb.New[func()](maxSize),
-	}
-	for i := 0; i < workers; i++ {
-		go ss.sendLoop()
+func NewExecPool(workers, maxSize int) *ExecPool {
+	ss := &ExecPool{
+		workers: workers,
+		batch:   mb.New[func()](maxSize),
 	}
 	return ss
 }
 
-// execPool needed for parallel execution of the incoming send tasks
-type execPool struct {
-	batch *mb.MB[func()]
+// ExecPool needed for parallel execution of the incoming send tasks
+type ExecPool struct {
+	workers int
+	batch   *mb.MB[func()]
 }
 
-func (ss *execPool) Add(ctx context.Context, f ...func()) (err error) {
+func (ss *ExecPool) Add(ctx context.Context, f ...func()) (err error) {
 	return ss.batch.Add(ctx, f...)
 }
 
-func (ss *execPool) TryAdd(f ...func()) (err error) {
+func (ss *ExecPool) TryAdd(f ...func()) (err error) {
 	return ss.batch.TryAdd(f...)
 }
 
-func (ss *execPool) sendLoop() {
+func (ss *ExecPool) Run() {
+	for i := 0; i < ss.workers; i++ {
+		go ss.sendLoop()
+	}
+}
+
+func (ss *ExecPool) sendLoop() {
 	for {
 		f, err := ss.batch.WaitOne(context.Background())
 		if err != nil {
@@ -43,6 +48,6 @@ func (ss *execPool) sendLoop() {
 	}
 }
 
-func (ss *execPool) Close() (err error) {
+func (ss *ExecPool) Close() (err error) {
 	return ss.batch.Close()
 }
