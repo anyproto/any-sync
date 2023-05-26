@@ -7,10 +7,10 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	net2 "github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/connutil"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
-	"github.com/anyproto/any-sync/net/timeoutconn"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"go.uber.org/zap"
@@ -118,7 +118,7 @@ func (d *dialer) handshake(ctx context.Context, addr, peerId string) (conn drpc.
 		return nil, nil, fmt.Errorf("dialTimeout error: %v; since start: %v", err, time.Since(st))
 	}
 
-	timeoutConn := timeoutconn.NewConn(tcpConn, time.Millisecond*time.Duration(d.config.Stream.TimeoutMilliseconds))
+	timeoutConn := connutil.NewConn(tcpConn, time.Millisecond*time.Duration(d.config.Stream.TimeoutMilliseconds))
 	sc, err = d.transport.SecureOutbound(ctx, timeoutConn)
 	if err != nil {
 		if he, ok := err.(handshake.HandshakeError); ok {

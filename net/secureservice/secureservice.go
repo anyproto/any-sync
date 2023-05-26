@@ -25,7 +25,7 @@ func New() SecureService {
 }
 
 type SecureService interface {
-	SecureOutbound(ctx context.Context, conn net.Conn) (sec.SecureConn, error)
+	SecureOutbound(ctx context.Context, conn net.Conn) (cctx context.Context, sc sec.SecureConn, err error)
 	SecureInbound(ctx context.Context, conn net.Conn) (cctx context.Context, sc sec.SecureConn, err error)
 	app.Component
 }
@@ -93,10 +93,10 @@ func (s *secureService) SecureInbound(ctx context.Context, conn net.Conn) (cctx 
 	return
 }
 
-func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (sec.SecureConn, error) {
-	sc, err := s.p2pTr.SecureOutbound(ctx, conn, "")
+func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (cctx context.Context, sc sec.SecureConn, err error) {
+	sc, err = s.p2pTr.SecureOutbound(ctx, conn, "")
 	if err != nil {
-		return nil, handshake.HandshakeError{Err: err}
+		return nil, nil, handshake.HandshakeError{Err: err}
 	}
 	peerId := sc.RemotePeer().String()
 	confTypes := s.nodeconf.NodeTypes(peerId)
@@ -106,10 +106,12 @@ func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (sec.
 	} else {
 		checker = s.noVerifyChecker
 	}
-	// ignore identity for outgoing connection because we don't need it at this moment
-	_, err = handshake.OutgoingHandshake(ctx, sc, checker)
+	identity, err := handshake.OutgoingHandshake(ctx, sc, checker)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return sc, nil
+	cctx = context.Background()
+	cctx = peer.CtxWithPeerId(cctx, sc.RemotePeer().String())
+	cctx = peer.CtxWithIdentity(cctx, identity)
+	return cctx, sc, nil
 }
