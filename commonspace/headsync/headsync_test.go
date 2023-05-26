@@ -65,6 +65,7 @@ func TestDiffService(t *testing.T) {
 
 	t.Run("close", func(t *testing.T) {
 		pSyncMock.EXPECT().Close()
+		syncer.EXPECT().Close()
 		service.Close()
 	})
 }

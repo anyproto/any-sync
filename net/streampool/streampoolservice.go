@@ -40,7 +40,7 @@ func (s *service) NewStreamPool(h StreamHandler, conf StreamConfig) StreamPool {
 		streamIdsByTag:  map[string][]uint32{},
 		streams:         map[uint32]*stream{},
 		opening:         map[string]*openingProcess{},
-		dial:            newExecPool(conf.DialQueueWorkers, conf.DialQueueSize),
+		dial:            NewExecPool(conf.DialQueueWorkers, conf.DialQueueSize),
 	}
 	if s.metric != nil {
 		registerMetrics(s.metric.Registry(), sp, "")

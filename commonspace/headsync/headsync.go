@@ -136,7 +136,7 @@ func (d *headSync) RemoveObjects(ids []string) {
 
 func (d *headSync) Close() (err error) {
 	d.periodicSync.Close()
-	return
+	return d.syncer.Close()
 }
 
 func (d *headSync) fillDiff(objectIds []string) {

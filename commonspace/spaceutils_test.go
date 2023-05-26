@@ -224,8 +224,8 @@ type mockTreeManager struct {
 	markedIds  []string
 }
 
-func (t *mockTreeManager) SyncTrees(ctx context.Context, exiting, removed []string) error {
-	return nil
+func (t *mockTreeManager) NewTreeSyncer(spaceId string) treemanager.TreeSyncer {
+	return treemanager.NewTreeSyncer(spaceId, time.Second, 10, t, log)
 }
 
 func (t *mockTreeManager) MarkTreeDeleted(ctx context.Context, spaceId, treeId string) error {

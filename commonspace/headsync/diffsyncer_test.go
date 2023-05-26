@@ -119,6 +119,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	factory := spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceSyncClient {
 		return clientMock
 	})
+	treeSyncerMock := mock_treemanager.NewMockTreeSyncer(ctrl)
 	credentialProvider := mock_credentialprovider.NewMockCredentialProvider(ctrl)
 	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
 	spaceId := "spaceId"
@@ -126,19 +127,21 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	l := logger.NewNamed(spaceId)
 	diffSyncer := newDiffSyncer(spaceId, diffMock, peerManagerMock, cacheMock, stMock, factory, syncstatus.NewNoOpSyncStatus(), credentialProvider, l)
 	delState.EXPECT().AddObserver(gomock.Any())
+	cacheMock.EXPECT().NewTreeSyncer(spaceId).Return(treeSyncerMock)
 	diffSyncer.Init(delState)
 
 	t.Run("diff syncer sync", func(t *testing.T) {
+		mPeer := mockPeer{}
 		peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
-			Return([]peer.Peer{mockPeer{}}, nil)
+			Return([]peer.Peer{mPeer}, nil)
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(spaceId, clientMock))).
 			Return([]string{"new"}, []string{"changed"}, nil, nil)
 		delState.EXPECT().Filter([]string{"new"}).Return([]string{"new"}).Times(1)
 		delState.EXPECT().Filter([]string{"changed"}).Return([]string{"changed"}).Times(1)
 		delState.EXPECT().Filter(nil).Return(nil).Times(1)
-		cacheMock.EXPECT().SyncTrees(gomock.Any(), []string{"changed"}, []string{"new"}).Return(nil)
+		treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer.Id(), []string{"changed"}, []string{"new"}).Return(nil)
 		require.NoError(t, diffSyncer.Sync(ctx))
 	})
 
@@ -225,16 +228,15 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	})
 
 	t.Run("diff syncer sync space is deleted error", func(t *testing.T) {
+		mPeer := mockPeer{}
 		peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
-			Return([]peer.Peer{mockPeer{}}, nil)
+			Return([]peer.Peer{mPeer}, nil)
 		diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(spaceId, clientMock))).
 			Return(nil, nil, nil, spacesyncproto.ErrSpaceIsDeleted)
 		stMock.EXPECT().SpaceSettingsId().Return("settingsId")
-		cacheMock.EXPECT().
-			GetTree(gomock.Any(), spaceId, "settingsId").
-			Return(nil, nil)
+		treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer.Id(), []string{"settingsId"}, nil).Return(nil)
 
 		require.NoError(t, diffSyncer.Sync(ctx))
 	})
