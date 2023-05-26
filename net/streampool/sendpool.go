@@ -11,17 +11,16 @@ import (
 // maxSize - limit for queue size
 func NewExecPool(workers, maxSize int) *ExecPool {
 	ss := &ExecPool{
-		batch: mb.New[func()](maxSize),
-	}
-	for i := 0; i < workers; i++ {
-		go ss.sendLoop()
+		workers: workers,
+		batch:   mb.New[func()](maxSize),
 	}
 	return ss
 }
 
 // ExecPool needed for parallel execution of the incoming send tasks
 type ExecPool struct {
-	batch *mb.MB[func()]
+	workers int
+	batch   *mb.MB[func()]
 }
 
 func (ss *ExecPool) Add(ctx context.Context, f ...func()) (err error) {
@@ -30,6 +29,12 @@ func (ss *ExecPool) Add(ctx context.Context, f ...func()) (err error) {
 
 func (ss *ExecPool) TryAdd(f ...func()) (err error) {
 	return ss.batch.TryAdd(f...)
+}
+
+func (ss *ExecPool) Run() {
+	for i := 0; i < ss.workers; i++ {
+		go ss.sendLoop()
+	}
 }
 
 func (ss *ExecPool) sendLoop() {
