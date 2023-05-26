@@ -14,7 +14,7 @@ type TreeManager interface {
 	GetTree(ctx context.Context, spaceId, treeId string) (objecttree.ObjectTree, error)
 	MarkTreeDeleted(ctx context.Context, spaceId, treeId string) error
 	DeleteTree(ctx context.Context, spaceId, treeId string) error
-	NewTreeSyncer(spaceId string) TreeSyncer
+	NewTreeSyncer(spaceId string, treeManager TreeManager) TreeSyncer
 }
 
 type TreeSyncer interface {
