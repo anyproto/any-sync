@@ -238,7 +238,7 @@ type mockTreeManager struct {
 	markedIds  []string
 }
 
-func (t *mockTreeManager) NewTreeSyncer(spaceId string) treemanager.TreeSyncer {
+func (t *mockTreeManager) NewTreeSyncer(spaceId string, treeManager treemanager.TreeManager) treemanager.TreeSyncer {
 	return noOpSyncer{}
 }
 

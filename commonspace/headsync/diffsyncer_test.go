@@ -127,7 +127,7 @@ func TestDiffSyncer_Sync(t *testing.T) {
 	l := logger.NewNamed(spaceId)
 	diffSyncer := newDiffSyncer(spaceId, diffMock, peerManagerMock, cacheMock, stMock, factory, syncstatus.NewNoOpSyncStatus(), credentialProvider, l)
 	delState.EXPECT().AddObserver(gomock.Any())
-	cacheMock.EXPECT().NewTreeSyncer(spaceId).Return(treeSyncerMock)
+	cacheMock.EXPECT().NewTreeSyncer(spaceId, gomock.Any()).Return(treeSyncerMock)
 	diffSyncer.Init(delState)
 
 	t.Run("diff syncer sync", func(t *testing.T) {

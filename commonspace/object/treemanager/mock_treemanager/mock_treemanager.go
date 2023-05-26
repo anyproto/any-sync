@@ -123,17 +123,17 @@ func (mr *MockTreeManagerMockRecorder) Name() *gomock.Call {
 }
 
 // NewTreeSyncer mocks base method.
-func (m *MockTreeManager) NewTreeSyncer(arg0 string) treemanager.TreeSyncer {
+func (m *MockTreeManager) NewTreeSyncer(arg0 string, arg1 treemanager.TreeManager) treemanager.TreeSyncer {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewTreeSyncer", arg0)
+	ret := m.ctrl.Call(m, "NewTreeSyncer", arg0, arg1)
 	ret0, _ := ret[0].(treemanager.TreeSyncer)
 	return ret0
 }
 
 // NewTreeSyncer indicates an expected call of NewTreeSyncer.
-func (mr *MockTreeManagerMockRecorder) NewTreeSyncer(arg0 interface{}) *gomock.Call {
+func (mr *MockTreeManagerMockRecorder) NewTreeSyncer(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewTreeSyncer", reflect.TypeOf((*MockTreeManager)(nil).NewTreeSyncer), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewTreeSyncer", reflect.TypeOf((*MockTreeManager)(nil).NewTreeSyncer), arg0, arg1)
 }
 
 // Run mocks base method.

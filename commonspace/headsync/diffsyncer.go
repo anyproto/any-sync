@@ -66,7 +66,7 @@ type diffSyncer struct {
 func (d *diffSyncer) Init(deletionState settingsstate.ObjectDeletionState) {
 	d.deletionState = deletionState
 	d.deletionState.AddObserver(d.RemoveObjects)
-	d.treeSyncer = d.treeManager.NewTreeSyncer(d.spaceId)
+	d.treeSyncer = d.treeManager.NewTreeSyncer(d.spaceId, d.treeManager)
 }
 
 func (d *diffSyncer) RemoveObjects(ids []string) {
