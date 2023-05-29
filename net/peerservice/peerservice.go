@@ -83,7 +83,7 @@ func (p *peerService) Accept(mc transport.MultiConn) (err error) {
 	if err != nil {
 		return err
 	}
-	if err = p.pool.AddPeer(pr); err != nil {
+	if err = p.pool.AddPeer(context.Background(), pr); err != nil {
 		_ = pr.Close()
 	}
 	return

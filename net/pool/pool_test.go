@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	net2 "net"
+	"storj.io/drpc"
 	"testing"
 	"time"
 )
@@ -216,6 +217,12 @@ type testPeer struct {
 	closed chan struct{}
 }
 
+func (t *testPeer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (t *testPeer) ReleaseDrpcConn(conn drpc.Conn) {}
+
 func (t *testPeer) Context() context.Context {
 	//TODO implement me
 	panic("implement me")
@@ -238,12 +245,6 @@ func (t *testPeer) Addr() string {
 func (t *testPeer) Id() string {
 	return t.id
 }
-
-func (t *testPeer) LastUsage() time.Time {
-	return time.Now()
-}
-
-func (t *testPeer) UpdateLastUsage() {}
 
 func (t *testPeer) TryClose(objectTTL time.Duration) (res bool, err error) {
 	return true, t.Close()

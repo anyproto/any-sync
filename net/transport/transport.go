@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_transport/mock_transport.go github.com/anyproto/any-sync/net/transport Transport,MultiConn
 package transport
 
 import (
