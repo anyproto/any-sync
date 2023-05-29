@@ -337,11 +337,13 @@ func (s *space) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t
 		PeerGetter:         s.peerManager,
 		BuildObjectTree:    treeBuilder,
 	}
-	if t, err = synctree.BuildSyncTreeOrGetRemote(ctx, id, deps); err != nil {
-		return nil, err
-	}
 	s.treesUsed.Add(1)
 	log.Debug("incrementing counter", zap.String("id", id), zap.Int32("trees", s.treesUsed.Load()), zap.String("spaceId", s.id))
+	if t, err = synctree.BuildSyncTreeOrGetRemote(ctx, id, deps); err != nil {
+		s.treesUsed.Add(-1)
+		log.Debug("decrementing counter, load failed", zap.String("id", id), zap.Int32("trees", s.treesUsed.Load()), zap.String("spaceId", s.id), zap.Error(err))
+		return nil, err
+	}
 	return
 }
 
