@@ -113,7 +113,7 @@ func (d *dialer) Dial(ctx context.Context, peerId string) (p peer.Peer, err erro
 func (d *dialer) handshake(ctx context.Context, addr, peerId string) (conn drpc.Conn, sc sec.SecureConn, err error) {
 	st := time.Now()
 	// TODO: move dial timeout to config
-	tcpConn, err := net.DialTimeout("tcp", addr, time.Second*3)
+	tcpConn, err := net.DialTimeout("tcp", addr, time.Second*15)
 	if err != nil {
 		return nil, nil, fmt.Errorf("dialTimeout error: %v; since start: %v", err, time.Since(st))
 	}
