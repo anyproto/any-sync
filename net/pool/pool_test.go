@@ -132,6 +132,27 @@ func TestPool_GetOneOf(t *testing.T) {
 	})
 }
 
+func TestPool_AddPeer(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		require.NoError(t, fx.AddPeer(ctx, newTestPeer("p1")))
+	})
+	t.Run("two peers", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p1, p2 := newTestPeer("p1"), newTestPeer("p1")
+		require.NoError(t, fx.AddPeer(ctx, p1))
+		require.NoError(t, fx.AddPeer(ctx, p2))
+		select {
+		case <-p1.closed:
+		default:
+			assert.Truef(t, false, "peer not closed")
+		}
+	})
+
+}
+
 func newFixture(t *testing.T) *fixture {
 	fx := &fixture{
 		Service: New(),

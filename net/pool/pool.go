@@ -17,7 +17,7 @@ type Pool interface {
 	// GetOneOf searches at least one existing connection in outgoing or creates a new one from a randomly selected id from given list
 	GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error)
 	// AddPeer adds incoming peer to the pool
-	AddPeer(p peer.Peer) (err error)
+	AddPeer(ctx context.Context, p peer.Peer) (err error)
 }
 
 type pool struct {
@@ -89,6 +89,18 @@ func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error
 	return nil, lastErr
 }
 
-func (p *pool) AddPeer(pr peer.Peer) (err error) {
-	return p.incoming.Add(pr.Id(), pr)
+func (p *pool) AddPeer(ctx context.Context, pr peer.Peer) (err error) {
+	if err = p.incoming.Add(pr.Id(), pr); err != nil {
+		if err == ocache.ErrExists {
+			// in case when an incoming connection with a peer already exists, we close and remove an existing connection
+			if v, e := p.incoming.Pick(ctx, pr.Id()); e == nil {
+				_ = v.Close()
+				_, _ = p.incoming.Remove(ctx, pr.Id())
+				return p.incoming.Add(pr.Id(), pr)
+			}
+		} else {
+			return err
+		}
+	}
+	return
 }
