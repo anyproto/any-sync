@@ -63,14 +63,14 @@ func (p *peer) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) (dr
 }
 
 func (p *peer) Read(b []byte) (n int, err error) {
-	if n, err = p.sc.Read(b); err != nil {
+	if n, err = p.sc.Read(b); err == nil {
 		p.UpdateLastUsage()
 	}
 	return
 }
 
 func (p *peer) Write(b []byte) (n int, err error) {
-	if n, err = p.sc.Write(b); err != nil {
+	if n, err = p.sc.Write(b); err == nil {
 		p.UpdateLastUsage()
 	}
 	return
