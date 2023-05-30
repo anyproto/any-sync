@@ -23,7 +23,7 @@ require (
 	github.com/ipfs/go-ipfs-exchange-interface v0.2.1
 	github.com/ipfs/go-ipld-format v0.4.0
 	github.com/ipfs/go-merkledag v0.10.0
-	github.com/ipfs/go-unixfs v0.4.5
+	github.com/ipfs/go-unixfs v0.4.6
 	github.com/libp2p/go-libp2p v0.27.3
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multibase v0.2.0
