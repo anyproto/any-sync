@@ -5,6 +5,8 @@ option go_package = "net/secureservice/handshake/handshakeproto";
 
 /*
 
+CREDENTIALS HANDSHAKE
+
 Alice opens a new connection with Bob
 1. TLS handshake done successfully; both sides know local and remote peer identifiers.
 
@@ -68,4 +70,20 @@ enum Error {
     SkipVerifyNotAllowed = 4;
     DeadlineExceeded = 5;
     IncompatibleVersion = 6;
+    IncompatibleProto = 7;
+}
+
+
+/*
+
+PROTO HANDSHAKE
+
+ */
+
+message Proto {
+    ProtoType proto = 1;
+}
+
+enum ProtoType {
+    DRPC = 0;
 }
