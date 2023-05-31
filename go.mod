@@ -17,18 +17,18 @@ require (
 	github.com/hashicorp/yamux v0.1.1
 	github.com/huandu/skiplist v1.2.0
 	github.com/ipfs/go-block-format v0.1.2
-	github.com/ipfs/go-blockservice v0.5.1
+	github.com/ipfs/go-blockservice v0.5.2
 	github.com/ipfs/go-cid v0.4.1
-	github.com/ipfs/go-ipfs-blockstore v1.3.0
-	github.com/ipfs/go-ipfs-chunker v0.0.5
+	github.com/ipfs/go-ipfs-blockstore v1.3.1
+	github.com/ipfs/go-ipfs-chunker v0.0.6
 	github.com/ipfs/go-ipfs-exchange-interface v0.2.1
 	github.com/ipfs/go-ipld-format v0.4.0
 	github.com/ipfs/go-merkledag v0.10.0
-	github.com/ipfs/go-unixfs v0.4.5
+	github.com/ipfs/go-unixfs v0.4.6
 	github.com/libp2p/go-libp2p v0.27.3
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multibase v0.2.0
-	github.com/multiformats/go-multihash v0.2.1
+	github.com/multiformats/go-multihash v0.2.2
 	github.com/prometheus/client_golang v1.15.1
 	github.com/stretchr/testify v1.8.3
 	github.com/tyler-smith/go-bip39 v1.1.0
