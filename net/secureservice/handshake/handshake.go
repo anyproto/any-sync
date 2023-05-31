@@ -7,6 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/sec"
 	"golang.org/x/exp/slices"
 	"io"
+	"net"
 	"sync"
 )
 
@@ -73,7 +74,7 @@ func newHandshake() *handshake {
 }
 
 type handshake struct {
-	conn        sec.SecureConn
+	conn        net.Conn
 	remoteCred  *handshakeproto.Credentials
 	remoteProto *handshakeproto.Proto
 	remoteAck   *handshakeproto.Ack
