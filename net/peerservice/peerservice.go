@@ -7,6 +7,7 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/transport"
 	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -38,6 +39,7 @@ type peerService struct {
 	nodeConf  nodeconf.NodeConf
 	peerAddrs map[string][]string
 	pool      pool.Pool
+	server    server.DRPCServer
 	mu        sync.RWMutex
 }
 
@@ -45,6 +47,7 @@ func (p *peerService) Init(a *app.App) (err error) {
 	p.yamux = a.MustComponent(yamux.CName).(transport.Transport)
 	p.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	p.pool = a.MustComponent(pool.CName).(pool.Pool)
+	p.server = a.MustComponent(server.CName).(server.DRPCServer)
 	p.peerAddrs = map[string][]string{}
 	return nil
 }
@@ -75,11 +78,11 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	if err != nil {
 		return
 	}
-	return peer.NewPeer(mc)
+	return peer.NewPeer(mc, p.server)
 }
 
 func (p *peerService) Accept(mc transport.MultiConn) (err error) {
-	pr, err := peer.NewPeer(mc)
+	pr, err := peer.NewPeer(mc, p.server)
 	if err != nil {
 		return err
 	}

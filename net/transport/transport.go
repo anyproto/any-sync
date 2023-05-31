@@ -3,8 +3,13 @@ package transport
 
 import (
 	"context"
+	"errors"
 	"net"
 	"time"
+)
+
+var (
+	ErrConnClosed = errors.New("connection closed")
 )
 
 // Transport is a common interface for a network transport
