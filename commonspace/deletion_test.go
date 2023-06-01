@@ -79,7 +79,7 @@ func TestSpaceDeleteIds(t *testing.T) {
 		// creating a tree
 		bytes := make([]byte, 32)
 		rand.Read(bytes)
-		doc, err := spc.CreateTree(ctx, objecttree.ObjectTreeCreatePayload{
+		doc, err := spc.TreeBuilder().CreateTree(ctx, objecttree.ObjectTreeCreatePayload{
 			PrivKey:     acc.SignKey,
 			ChangeType:  "some",
 			SpaceId:     spc.Id(),
@@ -88,7 +88,7 @@ func TestSpaceDeleteIds(t *testing.T) {
 			Timestamp:   time.Now().Unix(),
 		})
 		require.NoError(t, err)
-		tr, err := spc.PutTree(ctx, doc, nil)
+		tr, err := spc.TreeBuilder().PutTree(ctx, doc, nil)
 		require.NoError(t, err)
 		ids = append(ids, tr.Id())
 		tr.Close()
@@ -106,7 +106,7 @@ func TestSpaceDeleteIds(t *testing.T) {
 func createTree(t *testing.T, ctx context.Context, spc Space, acc *accountdata.AccountKeys) string {
 	bytes := make([]byte, 32)
 	rand.Read(bytes)
-	doc, err := spc.CreateTree(ctx, objecttree.ObjectTreeCreatePayload{
+	doc, err := spc.TreeBuilder().CreateTree(ctx, objecttree.ObjectTreeCreatePayload{
 		PrivKey:     acc.SignKey,
 		ChangeType:  "some",
 		SpaceId:     spc.Id(),
@@ -115,7 +115,7 @@ func createTree(t *testing.T, ctx context.Context, spc Space, acc *accountdata.A
 		Timestamp:   time.Now().Unix(),
 	})
 	require.NoError(t, err)
-	tr, err := spc.PutTree(ctx, doc, nil)
+	tr, err := spc.TreeBuilder().PutTree(ctx, doc, nil)
 	require.NoError(t, err)
 	tr.Close()
 	return tr.Id()
@@ -149,7 +149,7 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	err = spc.Init(ctx)
 	require.NoError(t, err)
 
-	settingsObject := spc.(*space).settingsObject
+	settingsObject := spc.(*space).app.MustComponent(settings.CName).(settings.Settings).SettingsObject()
 	var ids []string
 	for i := 0; i < totalObjs; i++ {
 		id := createTree(t, ctx, spc, acc)
@@ -193,7 +193,7 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	require.Equal(t, len(ids), len(fx.treeManager.deletedIds))
 
 	// checking that new snapshot will contain all the changes
-	settingsObject = spc.(*space).settingsObject
+	settingsObject = spc.(*space).app.MustComponent(settings.CName).(settings.Settings).SettingsObject()
 	settings.DoSnapshot = func(treeLen int) bool {
 		return true
 	}
@@ -231,7 +231,7 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	err = spc.Init(ctx)
 	require.NoError(t, err)
 
-	settingsObject := spc.(*space).settingsObject
+	settingsObject := spc.(*space).app.MustComponent(settings.CName).(settings.Settings).SettingsObject()
 	var ids []string
 	for i := 0; i < totalObjs; i++ {
 		id := createTree(t, ctx, spc, acc)

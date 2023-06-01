@@ -81,11 +81,11 @@ func (t *treeBuilder) Init(a *app.App) (err error) {
 	t.treesUsed = state.TreesUsed
 	t.builder = state.TreeBuilderFunc
 	t.aclList = a.MustComponent(syncacl.CName).(*syncacl.SyncAcl)
-	t.spaceStorage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
+	t.spaceStorage = a.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
 	t.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	t.headsNotifiable = a.MustComponent(headsync.CName).(headsync.HeadSync)
 	t.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
-	t.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
+	t.peerManager = a.MustComponent(peermanager.ManagerName).(peermanager.PeerManager)
 	t.objectSync = a.MustComponent(objectsync.CName).(objectsync.ObjectSync)
 	t.log = log.With(zap.String("spaceId", t.spaceId))
 	return nil

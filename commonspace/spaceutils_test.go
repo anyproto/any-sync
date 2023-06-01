@@ -10,9 +10,11 @@ import (
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -129,6 +131,14 @@ func (m *mockConf) NodeTypes(nodeId string) []nodeconf.NodeType {
 type mockPeerManager struct {
 }
 
+func (p *mockPeerManager) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (p *mockPeerManager) Name() (name string) {
+	return peermanager.ManagerName
+}
+
 func (p *mockPeerManager) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	return nil
 }
@@ -153,7 +163,7 @@ func (m *mockPeerManagerProvider) Init(a *app.App) (err error) {
 }
 
 func (m *mockPeerManagerProvider) Name() (name string) {
-	return peermanager.CName
+	return peermanager.ProviderName
 }
 
 func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId string) (sm peermanager.PeerManager, err error) {
@@ -250,7 +260,7 @@ func (t *mockTreeManager) MarkTreeDeleted(ctx context.Context, spaceId, treeId s
 
 func (t *mockTreeManager) Init(a *app.App) (err error) {
 	t.cache = ocache.New(func(ctx context.Context, id string) (value ocache.Object, err error) {
-		return t.space.BuildTree(ctx, id, BuildTreeOpts{})
+		return t.space.TreeBuilder().BuildTree(ctx, id, objecttreebuilder.BuildTreeOpts{})
 	},
 		ocache.WithGCPeriod(time.Minute),
 		ocache.WithTTL(time.Duration(60)*time.Second))
@@ -325,6 +335,8 @@ func newFixture(t *testing.T) *spaceFixture {
 	}
 	fx.app.Register(fx.account).
 		Register(fx.config).
+		Register(syncstatus.NewNoOpSyncStatus()).
+		Register(credentialprovider.NewNoOp()).
 		Register(fx.configurationService).
 		Register(fx.storageProvider).
 		Register(fx.peermanagerProvider).

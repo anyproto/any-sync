@@ -2,7 +2,6 @@ package commonspace
 
 import (
 	"context"
-	"errors"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/headsync"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -19,10 +18,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-)
-
-var (
-	ErrSpaceClosed = errors.New("space is closed")
 )
 
 type SpaceCreatePayload struct {
@@ -126,7 +121,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.syncStatus = s.app.MustComponent(syncstatus.CName).(syncstatus.StatusProvider)
 	s.settings = s.app.MustComponent(settings.CName).(settings.Settings)
 	s.objectSync = s.app.MustComponent(objectsync.CName).(objectsync.ObjectSync)
-	s.storage = s.app.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
+	s.storage = s.app.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
 	return nil
 }
 

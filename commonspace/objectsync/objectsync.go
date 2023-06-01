@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/objectsync/syncclient"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/metric"
@@ -69,11 +68,14 @@ type objectSync struct {
 
 func (s *objectSync) Init(a *app.App) (err error) {
 	s.syncClient = a.MustComponent(syncclient.CName).(syncclient.SyncClient)
-	s.spaceStorage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
-	s.objectGetter = a.MustComponent(treemanager.CName).(treemanager.TreeManager).(syncobjectgetter.SyncObjectGetter)
+	s.spaceStorage = a.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
+	s.objectGetter = app.MustComponent[syncobjectgetter.SyncObjectGetter](a)
 	s.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	sharedData := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
-	s.metric = a.MustComponent(metric.CName).(metric.Metric)
+	mc := a.Component(metric.CName)
+	if mc != nil {
+		s.metric = mc.(metric.Metric)
+	}
 	s.spaceIsDeleted = sharedData.SpaceIsDeleted
 	s.spaceId = sharedData.SpaceId
 	s.handleQueue = multiqueue.New[HandleMessage](s.processHandleMessage, 100)

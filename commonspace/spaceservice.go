@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/objectmanager"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objectsync/syncclient"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
@@ -24,7 +25,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/streamsender"
-	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
@@ -69,16 +69,10 @@ type spaceService struct {
 func (s *spaceService) Init(a *app.App) (err error) {
 	s.config = a.MustComponent("config").(config.ConfigGetter).GetSpace()
 	s.account = a.MustComponent(accountservice.CName).(accountservice.Service)
-	s.storageProvider = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorageProvider)
+	s.storageProvider = a.MustComponent(spacestorage.ProviderName).(spacestorage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
-	s.peermanagerProvider = a.MustComponent(peermanager.CName).(peermanager.PeerManagerProvider)
-	credProvider := a.Component(credentialprovider.CName)
-	if credProvider != nil {
-		s.credentialProvider = credProvider.(credentialprovider.CredentialProvider)
-	} else {
-		s.credentialProvider = credentialprovider.NewNoOp()
-	}
+	s.peermanagerProvider = a.MustComponent(peermanager.ProviderName).(peermanager.PeerManagerProvider)
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
 	s.app = a
@@ -169,13 +163,6 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 	} else {
 		state.TreeBuilderFunc = objecttree.BuildEmptyDataObjectTree
 	}
-	var syncStatus syncstatus.StatusProvider
-	if !s.configurationService.IsResponsible(st.Id()) {
-		// TODO: move it to the client package and add possibility to inject StatusProvider from the client
-		syncStatus = syncstatus.NewSyncStatusProvider()
-	} else {
-		syncStatus = syncstatus.NewNoOpSyncStatus()
-	}
 	peerManager, err := s.peermanagerProvider.NewPeerManager(ctx, id)
 	if err != nil {
 		return nil, err
@@ -185,12 +172,11 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		Register(peerManager).
 		Register(newCommonStorage(st)).
 		Register(syncacl.New()).
-		Register(syncStatus).
 		Register(streamsender.New()).
 		Register(requestsender.New()).
 		Register(deletionstate.New()).
 		Register(settings.New()).
-		Register(NewObjectManager(s.treeManager)).
+		Register(objectmanager.New(s.treeManager)).
 		Register(syncclient.New()).
 		Register(objecttreebuilder.New()).
 		Register(objectsync.New()).

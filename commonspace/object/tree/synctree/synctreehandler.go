@@ -25,6 +25,7 @@ type syncTreeHandler struct {
 
 const maxQueueSize = 5
 
+// TODO: Make sync and async message handling
 func newSyncTreeHandler(spaceId string, objTree objecttree.ObjectTree, syncClient syncclient.SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
 	return &syncTreeHandler{
 		objTree:    objTree,
@@ -119,7 +120,7 @@ func (s *syncTreeHandler) handleHeadUpdate(
 			return
 		}
 
-		return s.syncClient.QueueRequest(ctx, senderId, treeId, fullRequest, replyId)
+		return s.syncClient.QueueRequest(senderId, treeId, fullRequest)
 	}
 
 	if s.alreadyHasHeads(objTree, update.Heads) {
@@ -143,7 +144,7 @@ func (s *syncTreeHandler) handleHeadUpdate(
 		return
 	}
 
-	return s.syncClient.QueueRequest(ctx, senderId, treeId, fullRequest, replyId)
+	return s.syncClient.QueueRequest(senderId, treeId, fullRequest)
 }
 
 func (s *syncTreeHandler) handleFullSyncRequest(
@@ -169,7 +170,7 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 	defer func() {
 		if err != nil {
 			log.ErrorCtx(ctx, "full sync request finished with error", zap.Error(err))
-			s.syncClient.QueueRequest(ctx, senderId, treeId, treechangeproto.WrapError(treechangeproto.ErrFullSync, header), replyId)
+			s.syncClient.QueueRequest(senderId, treeId, treechangeproto.WrapError(treechangeproto.ErrFullSync, header))
 			return
 		} else if fullResponse != nil {
 			cnt := fullResponse.Content.GetFullSyncResponse()
@@ -192,7 +193,7 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 		return
 	}
 
-	return s.syncClient.QueueRequest(ctx, senderId, treeId, fullResponse, replyId)
+	return s.syncClient.QueueRequest(senderId, treeId, fullResponse)
 }
 
 func (s *syncTreeHandler) handleFullSyncResponse(

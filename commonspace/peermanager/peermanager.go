@@ -8,7 +8,10 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 )
 
-const CName = "common.commonspace.peermanager"
+const (
+	ProviderName = "common.commonspace.peermanagerprovider"
+	ManagerName  = "common.commonspace.peermanager"
+)
 
 type PeerManager interface {
 	app.Component

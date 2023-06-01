@@ -48,14 +48,14 @@ type settings struct {
 
 func (s *settings) Init(a *app.App) (err error) {
 	s.account = a.MustComponent(accountservice.CName).(accountservice.Service)
-	s.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
+	s.treeManager = app.MustComponent[treemanager.TreeManager](a)
 	s.headsync = a.MustComponent(headsync.CName).(headsync.HeadSync)
 	s.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	s.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
 	s.treeBuilder = a.MustComponent(objecttreebuilder.CName).(objecttreebuilder.TreeBuilderComponent)
 
 	sharedState := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
-	s.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
+	s.storage = a.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
 	s.spaceIsDeleted = sharedState.SpaceIsDeleted
 
 	deps := Deps{

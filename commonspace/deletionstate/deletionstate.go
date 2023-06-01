@@ -4,7 +4,6 @@ package deletionstate
 import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"go.uber.org/zap"
 	"sync"
@@ -36,7 +35,7 @@ type objectDeletionState struct {
 }
 
 func (st *objectDeletionState) Init(a *app.App) (err error) {
-	st.storage = a.MustComponent(spacestate.CName).(*spacestate.SpaceState).SpaceStorage
+	st.storage = a.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
 	return nil
 }
 

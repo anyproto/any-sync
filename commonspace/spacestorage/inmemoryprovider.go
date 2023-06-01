@@ -22,7 +22,7 @@ func (i *InMemorySpaceStorageProvider) Init(a *app.App) (err error) {
 }
 
 func (i *InMemorySpaceStorageProvider) Name() (name string) {
-	return CName
+	return ProviderName
 }
 
 func (i *InMemorySpaceStorageProvider) WaitSpaceStorage(ctx context.Context, id string) (SpaceStorage, error) {

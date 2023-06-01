@@ -1,7 +1,8 @@
-package commonspace
+package objectmanager
 
 import (
 	"context"
+	"errors"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/syncobjectgetter"
@@ -11,6 +12,12 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"sync/atomic"
 )
+
+var (
+	ErrSpaceClosed = errors.New("space is closed")
+)
+
+const CName = "common.commonspace.objectmanager"
 
 type ObjectManager interface {
 	treemanager.TreeManager
@@ -25,7 +32,7 @@ type objectManager struct {
 	spaceIsClosed   *atomic.Bool
 }
 
-func NewObjectManager(manager treemanager.TreeManager) ObjectManager {
+func New(manager treemanager.TreeManager) ObjectManager {
 	return &objectManager{
 		TreeManager: manager,
 	}
@@ -52,6 +59,10 @@ func (o *objectManager) Close(ctx context.Context) (err error) {
 
 func (o *objectManager) AddObject(object syncobjectgetter.SyncObject) {
 	o.reservedObjects = append(o.reservedObjects, object)
+}
+
+func (o *objectManager) Name() string {
+	return CName
 }
 
 func (o *objectManager) GetTree(ctx context.Context, spaceId, treeId string) (objecttree.ObjectTree, error) {

@@ -24,7 +24,7 @@ func (s *SyncAcl) HandleMessage(ctx context.Context, senderId string, request *s
 }
 
 func (s *SyncAcl) Init(a *app.App) (err error) {
-	storage := a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
+	storage := a.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
 	aclStorage, err := storage.AclStorage()
 	if err != nil {
 		return err
