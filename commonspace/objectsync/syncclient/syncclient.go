@@ -33,7 +33,9 @@ type syncClient struct {
 }
 
 func New() SyncClient {
-	return &syncClient{}
+	return &syncClient{
+		RequestFactory: &requestFactory{},
+	}
 }
 
 func (s *syncClient) Init(a *app.App) (err error) {

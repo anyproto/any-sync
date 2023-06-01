@@ -87,6 +87,7 @@ func (t *treeBuilder) Init(a *app.App) (err error) {
 	t.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	t.peerManager = a.MustComponent(peermanager.ManagerName).(peermanager.PeerManager)
 	t.objectSync = a.MustComponent(objectsync.CName).(objectsync.ObjectSync)
+	t.syncClient = a.MustComponent(syncclient.CName).(syncclient.SyncClient)
 	t.log = log.With(zap.String("spaceId", t.spaceId))
 	return nil
 }
