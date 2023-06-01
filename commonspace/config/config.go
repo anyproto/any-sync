@@ -1,4 +1,4 @@
-package commonspace
+package config
 
 type ConfigGetter interface {
 	GetSpace() Config

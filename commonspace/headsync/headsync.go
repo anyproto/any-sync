@@ -1,14 +1,17 @@
-//go:generate mockgen -destination mock_headsync/mock_headsync.go github.com/anyproto/any-sync/commonspace/headsync DiffSyncer
 package headsync
 
 import (
 	"context"
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/app/logger"
+	config2 "github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
+	"github.com/anyproto/any-sync/commonspace/headsync"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
+	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
@@ -17,10 +20,13 @@ import (
 	"github.com/anyproto/any-sync/util/periodicsync"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
-	"strings"
 	"sync/atomic"
 	"time"
 )
+
+var log = logger.NewNamed(CName)
+
+const CName = "common.commonspace.headsync"
 
 type TreeHeads struct {
 	Id    string
@@ -28,98 +34,100 @@ type TreeHeads struct {
 }
 
 type HeadSync interface {
-	Init(objectIds []string, deletionState settingsstate.ObjectDeletionState)
-
 	UpdateHeads(id string, heads []string)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
 	RemoveObjects(ids []string)
 	AllIds() []string
 	DebugAllHeads() (res []TreeHeads)
-
-	Close() (err error)
 }
 
 type headSync struct {
 	spaceId        string
-	periodicSync   periodicsync.PeriodicSync
-	storage        spacestorage.SpaceStorage
-	diff           ldiff.Diff
-	log            logger.CtxLogger
-	syncer         DiffSyncer
-	configuration  nodeconf.NodeConf
 	spaceIsDeleted *atomic.Bool
+	syncPeriod     int
 
-	syncPeriod int
+	periodicSync       periodicsync.PeriodicSync
+	storage            spacestorage.SpaceStorage
+	diff               ldiff.Diff
+	log                logger.CtxLogger
+	syncer             headsync.DiffSyncer
+	configuration      nodeconf.NodeConf
+	peerManager        peermanager.PeerManager
+	treeManager        treemanager.TreeManager
+	credentialProvider credentialprovider.CredentialProvider
+	syncStatus         syncstatus.StatusProvider
+	deletionState      settingsstate.ObjectDeletionState
 }
 
-func NewHeadSync(
-	spaceId string,
-	spaceIsDeleted *atomic.Bool,
-	syncPeriod int,
-	configuration nodeconf.NodeConf,
-	storage spacestorage.SpaceStorage,
-	peerManager peermanager.PeerManager,
-	cache treemanager.TreeManager,
-	syncStatus syncstatus.StatusUpdater,
-	credentialProvider credentialprovider.CredentialProvider,
-	log logger.CtxLogger) HeadSync {
+func New() *headSync {
+	return &headSync{}
+}
 
-	diff := ldiff.New(16, 16)
-	l := log.With(zap.String("spaceId", spaceId))
-	factory := spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
-	syncer := newDiffSyncer(spaceId, diff, peerManager, cache, storage, factory, syncStatus, credentialProvider, l)
+func (h *headSync) Init(a *app.App) (err error) {
+	shared := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
+	cfg := a.MustComponent("cfg").(config2.ConfigGetter)
+	h.spaceId = shared.SpaceId
+	h.spaceIsDeleted = shared.SpaceIsDeleted
+	h.syncPeriod = cfg.GetSpace().SyncPeriod
+	h.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
+	h.log = log.With(zap.String("spaceId", h.spaceId))
+	h.storage = a.MustComponent("spacestorage").(spacestorage.SpaceStorage)
+	h.diff = ldiff.New(16, 16)
+	h.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
+	h.credentialProvider = a.MustComponent(credentialprovider.CName).(credentialprovider.CredentialProvider)
+	h.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusProvider)
+	h.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
+	h.deletionState = a.MustComponent("deletionstate").(settingsstate.ObjectDeletionState)
+	h.syncer = newDiffSyncer(h)
 	sync := func(ctx context.Context) (err error) {
 		// for clients cancelling the sync process
-		if spaceIsDeleted.Load() && !configuration.IsResponsible(spaceId) {
+		if h.spaceIsDeleted.Load() && !h.configuration.IsResponsible(h.spaceId) {
 			return spacesyncproto.ErrSpaceIsDeleted
 		}
-		return syncer.Sync(ctx)
+		return h.syncer.Sync(ctx)
 	}
-	periodicSync := periodicsync.NewPeriodicSync(syncPeriod, time.Minute, sync, l)
-
-	return &headSync{
-		spaceId:        spaceId,
-		storage:        storage,
-		syncer:         syncer,
-		periodicSync:   periodicSync,
-		diff:           diff,
-		log:            log,
-		syncPeriod:     syncPeriod,
-		configuration:  configuration,
-		spaceIsDeleted: spaceIsDeleted,
-	}
+	h.periodicSync = periodicsync.NewPeriodicSync(h.syncPeriod, time.Minute, sync, h.log)
+	return nil
 }
 
-func (d *headSync) Init(objectIds []string, deletionState settingsstate.ObjectDeletionState) {
-	d.fillDiff(objectIds)
-	d.syncer.Init(deletionState)
-	d.periodicSync.Run()
+func (h *headSync) Name() (name string) {
+	return CName
 }
 
-func (d *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
-	if d.spaceIsDeleted.Load() {
+func (h *headSync) Run(ctx context.Context) (err error) {
+	initialIds, err := h.storage.StoredIds()
+	if err != nil {
+		return
+	}
+	h.fillDiff(initialIds)
+	h.periodicSync.Run()
+	return
+}
+
+func (h *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
+	if h.spaceIsDeleted.Load() {
 		peerId, err := peer.CtxPeerId(ctx)
 		if err != nil {
 			return nil, err
 		}
 		// stop receiving all request for sync from clients
-		if !slices.Contains(d.configuration.NodeIds(d.spaceId), peerId) {
+		if !slices.Contains(h.configuration.NodeIds(h.spaceId), peerId) {
 			return nil, spacesyncproto.ErrSpaceIsDeleted
 		}
 	}
-	return HandleRangeRequest(ctx, d.diff, req)
+	return HandleRangeRequest(ctx, h.diff, req)
 }
 
-func (d *headSync) UpdateHeads(id string, heads []string) {
-	d.syncer.UpdateHeads(id, heads)
+func (h *headSync) UpdateHeads(id string, heads []string) {
+	h.syncer.UpdateHeads(id, heads)
 }
 
-func (d *headSync) AllIds() []string {
-	return d.diff.Ids()
+func (h *headSync) AllIds() []string {
+	return h.diff.Ids()
 }
 
-func (d *headSync) DebugAllHeads() (res []TreeHeads) {
-	els := d.diff.Elements()
+func (h *headSync) DebugAllHeads() (res []TreeHeads) {
+	els := h.diff.Elements()
 	for _, el := range els {
 		idHead := TreeHeads{
 			Id:    el.Id,
@@ -130,19 +138,19 @@ func (d *headSync) DebugAllHeads() (res []TreeHeads) {
 	return
 }
 
-func (d *headSync) RemoveObjects(ids []string) {
-	d.syncer.RemoveObjects(ids)
+func (h *headSync) RemoveObjects(ids []string) {
+	h.syncer.RemoveObjects(ids)
 }
 
-func (d *headSync) Close() (err error) {
-	d.periodicSync.Close()
-	return d.syncer.Close()
+func (h *headSync) Close(ctx context.Context) (err error) {
+	h.periodicSync.Close()
+	return h.syncer.Close()
 }
 
-func (d *headSync) fillDiff(objectIds []string) {
+func (h *headSync) fillDiff(objectIds []string) {
 	var els = make([]ldiff.Element, 0, len(objectIds))
 	for _, id := range objectIds {
-		st, err := d.storage.TreeStorage(id)
+		st, err := h.storage.TreeStorage(id)
 		if err != nil {
 			continue
 		}
@@ -155,32 +163,8 @@ func (d *headSync) fillDiff(objectIds []string) {
 			Head: concatStrings(heads),
 		})
 	}
-	d.diff.Set(els...)
-	if err := d.storage.WriteSpaceHash(d.diff.Hash()); err != nil {
-		d.log.Error("can't write space hash", zap.Error(err))
+	h.diff.Set(els...)
+	if err := h.storage.WriteSpaceHash(h.diff.Hash()); err != nil {
+		h.log.Error("can't write space hash", zap.Error(err))
 	}
-}
-
-func concatStrings(strs []string) string {
-	var (
-		b        strings.Builder
-		totalLen int
-	)
-	for _, s := range strs {
-		totalLen += len(s)
-	}
-
-	b.Grow(totalLen)
-	for _, s := range strs {
-		b.WriteString(s)
-	}
-	return b.String()
-}
-
-func splitString(str string) (res []string) {
-	const cidLen = 59
-	for i := 0; i < len(str); i += cidLen {
-		res = append(res, str[i:i+cidLen])
-	}
-	return
 }

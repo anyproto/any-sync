@@ -1,4 +1,4 @@
-package objectsync
+package syncclient
 
 import (
 	"fmt"

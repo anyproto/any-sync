@@ -26,26 +26,17 @@ type DiffSyncer interface {
 	Close() error
 }
 
-func newDiffSyncer(
-	spaceId string,
-	diff ldiff.Diff,
-	peerManager peermanager.PeerManager,
-	cache treemanager.TreeManager,
-	storage spacestorage.SpaceStorage,
-	clientFactory spacesyncproto.ClientFactory,
-	syncStatus syncstatus.StatusUpdater,
-	credentialProvider credentialprovider.CredentialProvider,
-	log logger.CtxLogger) DiffSyncer {
+func newDiffSyncer(hs *headSync) DiffSyncer {
 	return &diffSyncer{
-		diff:               diff,
-		spaceId:            spaceId,
-		treeManager:        cache,
-		storage:            storage,
-		peerManager:        peerManager,
-		clientFactory:      clientFactory,
-		credentialProvider: credentialProvider,
+		diff:               hs.diff,
+		spaceId:            hs.spaceId,
+		treeManager:        hs.treeManager,
+		storage:            hs.storage,
+		peerManager:        hs.peerManager,
+		clientFactory:      spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient),
+		credentialProvider: hs.credentialProvider,
 		log:                log,
-		syncStatus:         syncStatus,
+		syncStatus:         hs.syncStatus,
 	}
 }
 

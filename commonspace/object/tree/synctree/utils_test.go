@@ -7,7 +7,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anyproto/any-sync/commonspace/objectsync"
+	"github.com/anyproto/any-sync/commonspace/objectsync/syncclient"
 	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
@@ -89,14 +89,14 @@ type testSyncHandler struct {
 	peerId     string
 	aclList    list.AclList
 	log        *messageLog
-	syncClient objectsync.SyncClient
+	syncClient syncclient.SyncClient
 	builder    objecttree.BuildObjectTreeFunc
 }
 
 // createSyncHandler creates a sync handler when a tree is already created
 func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, log *messageLog) *testSyncHandler {
-	factory := objectsync.NewRequestFactory()
-	syncClient := objectsync.NewSyncClient(spaceId, newTestMessagePool(peerId, log), factory)
+	factory := syncclient.NewRequestFactory()
+	syncClient := syncclient.NewSyncClient(spaceId, newTestMessagePool(peerId, log), factory)
 	netTree := &broadcastTree{
 		ObjectTree: objTree,
 		SyncClient: syncClient,
@@ -107,8 +107,8 @@ func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, lo
 
 // createEmptySyncHandler creates a sync handler when the tree will be provided later (this emulates the situation when we have no tree)
 func createEmptySyncHandler(peerId, spaceId string, builder objecttree.BuildObjectTreeFunc, aclList list.AclList, log *messageLog) *testSyncHandler {
-	factory := objectsync.NewRequestFactory()
-	syncClient := objectsync.NewSyncClient(spaceId, newTestMessagePool(peerId, log), factory)
+	factory := syncclient.NewRequestFactory()
+	syncClient := syncclient.NewSyncClient(spaceId, newTestMessagePool(peerId, log), factory)
 
 	batcher := mb.New[protocolMsg](0)
 	return &testSyncHandler{
@@ -140,9 +140,9 @@ func (h *testSyncHandler) HandleMessage(ctx context.Context, senderId string, re
 		return
 	}
 	if unmarshalled.Content.GetFullSyncResponse() == nil {
-		newTreeRequest := objectsync.NewRequestFactory().CreateNewTreeRequest()
+		newTreeRequest := syncclient.NewRequestFactory().CreateNewTreeRequest()
 		var objMsg *spacesyncproto.ObjectSyncMessage
-		objMsg, err = objectsync.MarshallTreeMessage(newTreeRequest, request.SpaceId, request.ObjectId, "")
+		objMsg, err = syncclient.MarshallTreeMessage(newTreeRequest, request.SpaceId, request.ObjectId, "")
 		if err != nil {
 			return
 		}
@@ -167,8 +167,8 @@ func (h *testSyncHandler) HandleMessage(ctx context.Context, senderId string, re
 	}
 	h.SyncHandler = newSyncTreeHandler(request.SpaceId, netTree, h.syncClient, syncstatus.NewNoOpSyncStatus())
 	var objMsg *spacesyncproto.ObjectSyncMessage
-	newTreeRequest := objectsync.NewRequestFactory().CreateHeadUpdate(netTree, res.Added)
-	objMsg, err = objectsync.MarshallTreeMessage(newTreeRequest, request.SpaceId, request.ObjectId, "")
+	newTreeRequest := syncclient.NewRequestFactory().CreateHeadUpdate(netTree, res.Added)
+	objMsg, err = syncclient.MarshallTreeMessage(newTreeRequest, request.SpaceId, request.ObjectId, "")
 	if err != nil {
 		return
 	}
@@ -278,7 +278,7 @@ func (m *testMessagePool) SendSync(ctx context.Context, peerId string, message *
 // it is a simplified version of SyncTree which is easier to use in the test environment
 type broadcastTree struct {
 	objecttree.ObjectTree
-	objectsync.SyncClient
+	syncclient.SyncClient
 }
 
 func (b *broadcastTree) AddRawChanges(ctx context.Context, changes objecttree.RawChangesPayload) (objecttree.AddResult, error) {

@@ -6,6 +6,7 @@ import (
 	accountService "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ocache"
+	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
@@ -205,8 +206,8 @@ func (m *mockConfig) Name() (name string) {
 	return "config"
 }
 
-func (m *mockConfig) GetSpace() Config {
-	return Config{
+func (m *mockConfig) GetSpace() config.Config {
+	return config.Config{
 		GCTTL:                60,
 		SyncPeriod:           20,
 		KeepTreeDataInMemory: true,

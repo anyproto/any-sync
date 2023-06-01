@@ -2,9 +2,9 @@ package settings
 
 import (
 	"context"
+	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
-	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"go.uber.org/zap"
 )
@@ -15,11 +15,11 @@ type Deleter interface {
 
 type deleter struct {
 	st     spacestorage.SpaceStorage
-	state  settingsstate.ObjectDeletionState
+	state  deletionstate.ObjectDeletionState
 	getter treemanager.TreeManager
 }
 
-func newDeleter(st spacestorage.SpaceStorage, state settingsstate.ObjectDeletionState, getter treemanager.TreeManager) Deleter {
+func newDeleter(st spacestorage.SpaceStorage, state deletionstate.ObjectDeletionState, getter treemanager.TreeManager) Deleter {
 	return &deleter{st, state, getter}
 }
 

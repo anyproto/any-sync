@@ -5,6 +5,7 @@ import (
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/headsync"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
@@ -45,7 +46,7 @@ type SpaceService interface {
 }
 
 type spaceService struct {
-	config               Config
+	config               config.Config
 	account              accountservice.Service
 	configurationService nodeconf.Service
 	storageProvider      spacestorage.SpaceStorageProvider
@@ -54,10 +55,11 @@ type spaceService struct {
 	treeManager          treemanager.TreeManager
 	pool                 pool.Pool
 	metric               metric.Metric
+	app                  *app.App
 }
 
 func (s *spaceService) Init(a *app.App) (err error) {
-	s.config = a.MustComponent("config").(ConfigGetter).GetSpace()
+	s.config = a.MustComponent("config").(config.ConfigGetter).GetSpace()
 	s.account = a.MustComponent(accountservice.CName).(accountservice.Service)
 	s.storageProvider = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
@@ -149,7 +151,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		return nil, err
 	}
 	spaceIsDeleted.Swap(isDeleted)
-	getter := newCommonGetter(st.Id(), s.treeManager, spaceIsClosed)
+	getter := NewObjectManager(st.Id(), s.treeManager, spaceIsClosed)
 	syncStatus := syncstatus.NewNoOpSyncStatus()
 	// this will work only for clients, not the best solution, but...
 	if !lastConfiguration.IsResponsible(st.Id()) {

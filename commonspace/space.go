@@ -130,7 +130,7 @@ type space struct {
 	headSync       headsync.HeadSync
 	syncStatus     syncstatus.StatusUpdater
 	storage        spacestorage.SpaceStorage
-	treeManager    *commonGetter
+	treeManager    *objectManager
 	account        accountservice.Service
 	aclList        *syncacl.SyncAcl
 	configuration  nodeconf.NodeConf

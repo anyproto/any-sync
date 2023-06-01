@@ -9,6 +9,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objectsync/mock_objectsync"
+	"github.com/anyproto/any-sync/commonspace/objectsync/syncclient"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/golang/mock/gomock"
@@ -18,7 +19,7 @@ import (
 
 type syncTreeMatcher struct {
 	objTree  objecttree.ObjectTree
-	client   objectsync.SyncClient
+	client   syncclient.SyncClient
 	listener updatelistener.UpdateListener
 }
 
@@ -34,8 +35,8 @@ func (s syncTreeMatcher) String() string {
 	return ""
 }
 
-func syncClientFuncCreator(client objectsync.SyncClient) func(spaceId string, factory objectsync.RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.NodeConf) objectsync.SyncClient {
-	return func(spaceId string, factory objectsync.RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.NodeConf) objectsync.SyncClient {
+func syncClientFuncCreator(client syncclient.SyncClient) func(spaceId string, factory syncclient.RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.NodeConf) syncclient.SyncClient {
+	return func(spaceId string, factory syncclient.RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.NodeConf) syncclient.SyncClient {
 		return client
 	}
 }

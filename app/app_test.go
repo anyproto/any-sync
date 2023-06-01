@@ -34,6 +34,20 @@ func TestAppServiceRegistry(t *testing.T) {
 		names := app.ComponentNames()
 		assert.Equal(t, names, []string{"c1", "r1", "s1"})
 	})
+	t.Run("Child MustComponent", func(t *testing.T) {
+		app := app.ChildApp()
+		app.Register(newTestService(testTypeComponent, "x1", nil, nil))
+		for _, name := range []string{"c1", "r1", "s1", "x1"} {
+			assert.NotPanics(t, func() { app.MustComponent(name) }, name)
+		}
+		assert.Panics(t, func() { app.MustComponent("not-registered") })
+	})
+	t.Run("Child ComponentNames", func(t *testing.T) {
+		app := app.ChildApp()
+		app.Register(newTestService(testTypeComponent, "x1", nil, nil))
+		names := app.ComponentNames()
+		assert.Equal(t, names, []string{"x1", "c1", "r1", "s1"})
+	})
 }
 
 func TestAppStart(t *testing.T) {

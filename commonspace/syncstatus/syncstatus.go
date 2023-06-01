@@ -3,6 +3,8 @@ package syncstatus
 import (
 	"context"
 	"fmt"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"sync"
 	"time"
 
@@ -20,7 +22,9 @@ const (
 	syncTimeout        = time.Second
 )
 
-var log = logger.NewNamed("common.commonspace.syncstatus")
+var log = logger.NewNamed(CName)
+
+const CName = "common.commonspace.syncstatus"
 
 type UpdateReceiver interface {
 	UpdateTree(ctx context.Context, treeId string, status SyncStatus) (err error)
@@ -34,9 +38,6 @@ type StatusUpdater interface {
 	SetNodesOnline(senderId string, online bool)
 	StateCounter() uint64
 	RemoveAllExcept(senderId string, differentRemoteIds []string, stateCounter uint64)
-
-	Run()
-	Close() error
 }
 
 type StatusWatcher interface {
@@ -46,6 +47,7 @@ type StatusWatcher interface {
 }
 
 type StatusProvider interface {
+	app.ComponentRunnable
 	StatusUpdater
 	StatusWatcher
 }
@@ -89,33 +91,25 @@ type syncStatusProvider struct {
 	updateTimeout      time.Duration
 }
 
-type SyncStatusDeps struct {
-	UpdateIntervalSecs int
-	UpdateTimeout      time.Duration
-	Configuration      nodeconf.NodeConf
-	Storage            spacestorage.SpaceStorage
-}
-
-func DefaultDeps(configuration nodeconf.NodeConf, store spacestorage.SpaceStorage) SyncStatusDeps {
-	return SyncStatusDeps{
-		UpdateIntervalSecs: syncUpdateInterval,
-		UpdateTimeout:      syncTimeout,
-		Configuration:      configuration,
-		Storage:            store,
-	}
-}
-
-func NewSyncStatusProvider(spaceId string, deps SyncStatusDeps) StatusProvider {
+func NewSyncStatusProvider() StatusProvider {
 	return &syncStatusProvider{
-		spaceId:            spaceId,
-		treeHeads:          map[string]treeHeadsEntry{},
-		watchers:           map[string]struct{}{},
-		updateIntervalSecs: deps.UpdateIntervalSecs,
-		updateTimeout:      deps.UpdateTimeout,
-		configuration:      deps.Configuration,
-		storage:            deps.Storage,
-		stateCounter:       0,
+		treeHeads: map[string]treeHeadsEntry{},
+		watchers:  map[string]struct{}{},
 	}
+}
+
+func (s *syncStatusProvider) Init(a *app.App) (err error) {
+	sharedState := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
+	s.updateIntervalSecs = syncUpdateInterval
+	s.updateTimeout = syncTimeout
+	s.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
+	s.storage = sharedState.SpaceStorage
+	s.spaceId = sharedState.SpaceId
+	return
+}
+
+func (s *syncStatusProvider) Name() (name string) {
+	return CName
 }
 
 func (s *syncStatusProvider) SetUpdateReceiver(updater UpdateReceiver) {
@@ -125,13 +119,14 @@ func (s *syncStatusProvider) SetUpdateReceiver(updater UpdateReceiver) {
 	s.updateReceiver = updater
 }
 
-func (s *syncStatusProvider) Run() {
+func (s *syncStatusProvider) Run(ctx context.Context) error {
 	s.periodicSync = periodicsync.NewPeriodicSync(
 		s.updateIntervalSecs,
 		s.updateTimeout,
 		s.update,
 		log)
 	s.periodicSync.Run()
+	return nil
 }
 
 func (s *syncStatusProvider) HeadsChange(treeId string, heads []string) {
@@ -257,11 +252,6 @@ func (s *syncStatusProvider) Unwatch(treeId string) {
 	}
 }
 
-func (s *syncStatusProvider) Close() (err error) {
-	s.periodicSync.Close()
-	return
-}
-
 func (s *syncStatusProvider) StateCounter() uint64 {
 	s.Lock()
 	defer s.Unlock()
@@ -290,6 +280,11 @@ func (s *syncStatusProvider) RemoveAllExcept(senderId string, differentRemoteIds
 			s.treeHeads[treeId] = entry
 		}
 	}
+}
+
+func (s *syncStatusProvider) Close(ctx context.Context) error {
+	s.periodicSync.Close()
+	return nil
 }
 
 func (s *syncStatusProvider) isSenderResponsible(senderId string) bool {

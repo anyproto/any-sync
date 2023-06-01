@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/objectsync"
+	"github.com/anyproto/any-sync/commonspace/objectsync/syncclient"
 	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
@@ -16,7 +16,7 @@ import (
 
 type syncTreeHandler struct {
 	objTree     objecttree.ObjectTree
-	syncClient  objectsync.SyncClient
+	syncClient  syncclient.SyncClient
 	syncStatus  syncstatus.StatusUpdater
 	handlerLock sync.Mutex
 	spaceId     string
@@ -25,7 +25,7 @@ type syncTreeHandler struct {
 
 const maxQueueSize = 5
 
-func newSyncTreeHandler(spaceId string, objTree objecttree.ObjectTree, syncClient objectsync.SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
+func newSyncTreeHandler(spaceId string, objTree objecttree.ObjectTree, syncClient syncclient.SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
 	return &syncTreeHandler{
 		objTree:    objTree,
 		syncClient: syncClient,
@@ -119,7 +119,7 @@ func (s *syncTreeHandler) handleHeadUpdate(
 			return
 		}
 
-		return s.syncClient.SendWithReply(ctx, senderId, treeId, fullRequest, replyId)
+		return s.syncClient.QueueRequest(ctx, senderId, treeId, fullRequest, replyId)
 	}
 
 	if s.alreadyHasHeads(objTree, update.Heads) {
@@ -143,7 +143,7 @@ func (s *syncTreeHandler) handleHeadUpdate(
 		return
 	}
 
-	return s.syncClient.SendWithReply(ctx, senderId, treeId, fullRequest, replyId)
+	return s.syncClient.QueueRequest(ctx, senderId, treeId, fullRequest, replyId)
 }
 
 func (s *syncTreeHandler) handleFullSyncRequest(
@@ -169,7 +169,7 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 	defer func() {
 		if err != nil {
 			log.ErrorCtx(ctx, "full sync request finished with error", zap.Error(err))
-			s.syncClient.SendWithReply(ctx, senderId, treeId, treechangeproto.WrapError(treechangeproto.ErrFullSync, header), replyId)
+			s.syncClient.QueueRequest(ctx, senderId, treeId, treechangeproto.WrapError(treechangeproto.ErrFullSync, header), replyId)
 			return
 		} else if fullResponse != nil {
 			cnt := fullResponse.Content.GetFullSyncResponse()
@@ -192,7 +192,7 @@ func (s *syncTreeHandler) handleFullSyncRequest(
 		return
 	}
 
-	return s.syncClient.SendWithReply(ctx, senderId, treeId, fullResponse, replyId)
+	return s.syncClient.QueueRequest(ctx, senderId, treeId, fullResponse, replyId)
 }
 
 func (s *syncTreeHandler) handleFullSyncResponse(

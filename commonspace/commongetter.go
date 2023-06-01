@@ -2,32 +2,53 @@ package commonspace
 
 import (
 	"context"
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/syncobjectgetter"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"sync/atomic"
 )
 
-type commonGetter struct {
+type ObjectManager interface {
+	treemanager.TreeManager
+	AddObject(object syncobjectgetter.SyncObject)
+	GetObject(ctx context.Context, objectId string) (obj syncobjectgetter.SyncObject, err error)
+}
+
+type objectManager struct {
 	treemanager.TreeManager
 	spaceId         string
 	reservedObjects []syncobjectgetter.SyncObject
 	spaceIsClosed   *atomic.Bool
 }
 
-func newCommonGetter(spaceId string, getter treemanager.TreeManager, spaceIsClosed *atomic.Bool) *commonGetter {
-	return &commonGetter{
-		TreeManager:   getter,
-		spaceId:       spaceId,
-		spaceIsClosed: spaceIsClosed,
+func NewObjectManager(manager treemanager.TreeManager) ObjectManager {
+	return &objectManager{
+		TreeManager: manager,
 	}
 }
 
-func (c *commonGetter) AddObject(object syncobjectgetter.SyncObject) {
+func (c *objectManager) Init(a *app.App) (err error) {
+	state := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
+	c.spaceId = state.SpaceId
+	c.spaceIsClosed = state.SpaceIsClosed
+	return nil
+}
+
+func (c *objectManager) Run(ctx context.Context) (err error) {
+	return nil
+}
+
+func (c *objectManager) Close(ctx context.Context) (err error) {
+	return nil
+}
+
+func (c *objectManager) AddObject(object syncobjectgetter.SyncObject) {
 	c.reservedObjects = append(c.reservedObjects, object)
 }
 
-func (c *commonGetter) GetTree(ctx context.Context, spaceId, treeId string) (objecttree.ObjectTree, error) {
+func (c *objectManager) GetTree(ctx context.Context, spaceId, treeId string) (objecttree.ObjectTree, error) {
 	if c.spaceIsClosed.Load() {
 		return nil, ErrSpaceClosed
 	}
@@ -37,7 +58,7 @@ func (c *commonGetter) GetTree(ctx context.Context, spaceId, treeId string) (obj
 	return c.TreeManager.GetTree(ctx, spaceId, treeId)
 }
 
-func (c *commonGetter) getReservedObject(id string) syncobjectgetter.SyncObject {
+func (c *objectManager) getReservedObject(id string) syncobjectgetter.SyncObject {
 	for _, obj := range c.reservedObjects {
 		if obj != nil && obj.Id() == id {
 			return obj
@@ -46,7 +67,7 @@ func (c *commonGetter) getReservedObject(id string) syncobjectgetter.SyncObject 
 	return nil
 }
 
-func (c *commonGetter) GetObject(ctx context.Context, objectId string) (obj syncobjectgetter.SyncObject, err error) {
+func (c *objectManager) GetObject(ctx context.Context, objectId string) (obj syncobjectgetter.SyncObject, err error) {
 	if c.spaceIsClosed.Load() {
 		return nil, ErrSpaceClosed
 	}
