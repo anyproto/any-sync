@@ -6,9 +6,9 @@ import (
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
+	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
-	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
@@ -22,7 +22,7 @@ type DiffSyncer interface {
 	Sync(ctx context.Context) error
 	RemoveObjects(ids []string)
 	UpdateHeads(id string, heads []string)
-	Init(deletionState settingsstate.ObjectDeletionState)
+	Init()
 	Close() error
 }
 
@@ -37,6 +37,7 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 		credentialProvider: hs.credentialProvider,
 		log:                log,
 		syncStatus:         hs.syncStatus,
+		deletionState:      hs.deletionState,
 	}
 }
 
@@ -48,14 +49,13 @@ type diffSyncer struct {
 	storage            spacestorage.SpaceStorage
 	clientFactory      spacesyncproto.ClientFactory
 	log                logger.CtxLogger
-	deletionState      settingsstate.ObjectDeletionState
+	deletionState      deletionstate.ObjectDeletionState
 	credentialProvider credentialprovider.CredentialProvider
 	syncStatus         syncstatus.StatusUpdater
 	treeSyncer         treemanager.TreeSyncer
 }
 
-func (d *diffSyncer) Init(deletionState settingsstate.ObjectDeletionState) {
-	d.deletionState = deletionState
+func (d *diffSyncer) Init() {
 	d.deletionState.AddObserver(d.RemoveObjects)
 	d.treeSyncer = d.treeManager.NewTreeSyncer(d.spaceId, d.treeManager)
 }

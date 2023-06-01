@@ -10,11 +10,6 @@ import (
 
 const CName = "common.commonspace.shareddata"
 
-type SpaceActions interface {
-	OnObjectDelete(id string)
-	OnSpaceDelete()
-}
-
 type SpaceState struct {
 	SpaceId         string
 	SpaceIsDeleted  *atomic.Bool
@@ -23,7 +18,6 @@ type SpaceState struct {
 	AclList         list.AclList
 	SpaceStorage    spacestorage.SpaceStorage
 	TreeBuilderFunc objecttree.BuildObjectTreeFunc
-	Actions         SpaceActions
 }
 
 func (s *SpaceState) Init(a *app.App) (err error) {

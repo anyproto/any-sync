@@ -17,6 +17,10 @@ type RequestSender interface {
 	QueueRequest(peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error)
 }
 
+func New() RequestSender {
+	return &requestSender{}
+}
+
 type requestSender struct {
 }
 

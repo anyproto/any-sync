@@ -32,7 +32,7 @@ type syncClient struct {
 	streamSender  streamsender.StreamSender
 }
 
-func NewSyncClient() SyncClient {
+func New() SyncClient {
 	return &syncClient{}
 }
 

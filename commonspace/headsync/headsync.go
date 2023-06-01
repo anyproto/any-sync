@@ -7,10 +7,9 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	config2 "github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
-	"github.com/anyproto/any-sync/commonspace/headsync"
+	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
-	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -18,6 +17,7 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/periodicsync"
+	"github.com/anyproto/any-sync/util/slice"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"sync/atomic"
@@ -34,11 +34,13 @@ type TreeHeads struct {
 }
 
 type HeadSync interface {
+	app.ComponentRunnable
+	ExternalIds() []string
+	DebugAllHeads() (res []TreeHeads)
+	AllIds() []string
 	UpdateHeads(id string, heads []string)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
 	RemoveObjects(ids []string)
-	AllIds() []string
-	DebugAllHeads() (res []TreeHeads)
 }
 
 type headSync struct {
@@ -50,16 +52,16 @@ type headSync struct {
 	storage            spacestorage.SpaceStorage
 	diff               ldiff.Diff
 	log                logger.CtxLogger
-	syncer             headsync.DiffSyncer
+	syncer             DiffSyncer
 	configuration      nodeconf.NodeConf
 	peerManager        peermanager.PeerManager
 	treeManager        treemanager.TreeManager
 	credentialProvider credentialprovider.CredentialProvider
 	syncStatus         syncstatus.StatusProvider
-	deletionState      settingsstate.ObjectDeletionState
+	deletionState      deletionstate.ObjectDeletionState
 }
 
-func New() *headSync {
+func New() HeadSync {
 	return &headSync{}
 }
 
@@ -77,7 +79,7 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.credentialProvider = a.MustComponent(credentialprovider.CName).(credentialprovider.CredentialProvider)
 	h.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusProvider)
 	h.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
-	h.deletionState = a.MustComponent("deletionstate").(settingsstate.ObjectDeletionState)
+	h.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
 	h.syncer = newDiffSyncer(h)
 	sync := func(ctx context.Context) (err error) {
 		// for clients cancelling the sync process
@@ -87,6 +89,8 @@ func (h *headSync) Init(a *app.App) (err error) {
 		return h.syncer.Sync(ctx)
 	}
 	h.periodicSync = periodicsync.NewPeriodicSync(h.syncPeriod, time.Minute, sync, h.log)
+	// TODO: move to run?
+	h.syncer.Init()
 	return nil
 }
 
@@ -124,6 +128,13 @@ func (h *headSync) UpdateHeads(id string, heads []string) {
 
 func (h *headSync) AllIds() []string {
 	return h.diff.Ids()
+}
+
+func (h *headSync) ExternalIds() []string {
+	settingsId := h.storage.SpaceSettingsId()
+	return slice.DiscardFromSlice(h.AllIds(), func(id string) bool {
+		return id == settingsId
+	})
 }
 
 func (h *headSync) DebugAllHeads() (res []TreeHeads) {

@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objectsync/syncclient"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
@@ -40,12 +41,19 @@ type HistoryTreeOpts struct {
 }
 
 type TreeBuilder interface {
-	app.Component
 	BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error)
 	BuildHistoryTree(ctx context.Context, id string, opts HistoryTreeOpts) (t objecttree.HistoryTree, err error)
 	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error)
-	SetOnCloseHandler(handler func(id string))
+}
+
+type TreeBuilderComponent interface {
+	app.Component
+	TreeBuilder
+}
+
+func New() TreeBuilderComponent {
+	return &treeBuilder{}
 }
 
 type treeBuilder struct {
@@ -55,6 +63,7 @@ type treeBuilder struct {
 	peerManager     peermanager.PeerManager
 	spaceStorage    spacestorage.SpaceStorage
 	syncStatus      syncstatus.StatusUpdater
+	objectSync      objectsync.ObjectSync
 
 	log       logger.CtxLogger
 	builder   objecttree.BuildObjectTreeFunc
@@ -62,7 +71,6 @@ type treeBuilder struct {
 	aclList   list.AclList
 	treesUsed *atomic.Int32
 	isClosed  *atomic.Bool
-	onClose   func(id string)
 }
 
 func (t *treeBuilder) Init(a *app.App) (err error) {
@@ -78,17 +86,13 @@ func (t *treeBuilder) Init(a *app.App) (err error) {
 	t.spaceStorage = state.SpaceStorage
 	t.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	t.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
+	t.objectSync = a.MustComponent(objectsync.CName).(objectsync.ObjectSync)
 	t.log = log.With(zap.String("spaceId", t.spaceId))
-	t.onClose = state.Actions.OnObjectDelete
 	return nil
 }
 
 func (t *treeBuilder) Name() (name string) {
 	return CName
-}
-
-func (t *treeBuilder) SetOnCloseHandler(handler func(id string)) {
-	t.onClose = handler
 }
 
 func (t *treeBuilder) BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (ot objecttree.ObjectTree, err error) {
@@ -188,4 +192,10 @@ func (t *treeBuilder) PutTree(ctx context.Context, payload treestorage.TreeStora
 	t.treesUsed.Add(1)
 	t.log.Debug("incrementing counter", zap.String("id", payload.RootRawChange.Id), zap.Int32("trees", t.treesUsed.Load()))
 	return
+}
+
+func (t *treeBuilder) onClose(id string) {
+	t.treesUsed.Add(-1)
+	log.Debug("decrementing counter", zap.String("id", id), zap.Int32("trees", t.treesUsed.Load()), zap.String("spaceId", t.spaceId))
+	_ = t.objectSync.CloseThread(id)
 }

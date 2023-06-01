@@ -1,4 +1,4 @@
-package settingsstate
+package deletionstate
 
 import (
 	"github.com/anyproto/any-sync/app/logger"
@@ -19,7 +19,7 @@ type fixture struct {
 func newFixture(t *testing.T) *fixture {
 	ctrl := gomock.NewController(t)
 	spaceStorage := mock_spacestorage.NewMockSpaceStorage(ctrl)
-	delState := NewObjectDeletionState(logger.NewNamed("test"), spaceStorage).(*objectDeletionState)
+	delState := New(logger.NewNamed("test"), spaceStorage).(*objectDeletionState)
 	return &fixture{
 		ctrl:         ctrl,
 		delState:     delState,

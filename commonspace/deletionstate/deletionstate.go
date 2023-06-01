@@ -44,7 +44,7 @@ func (st *objectDeletionState) Name() (name string) {
 	return CName
 }
 
-func NewObjectDeletionState() ObjectDeletionState {
+func New() ObjectDeletionState {
 	return &objectDeletionState{
 		log:     log,
 		queued:  map[string]struct{}{},

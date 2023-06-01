@@ -29,6 +29,9 @@ const CName = "common.commonspace.objectsync"
 var log = logger.NewNamed(CName)
 
 type ObjectSync interface {
+	LastUsage() time.Time
+	HandleMessage(ctx context.Context, hm HandleMessage) (err error)
+	CloseThread(id string) (err error)
 	app.ComponentRunnable
 }
 
@@ -88,8 +91,13 @@ func (s *objectSync) Close(ctx context.Context) (err error) {
 	return s.handleQueue.Close()
 }
 
-func NewObjectSync() ObjectSync {
+func New() ObjectSync {
 	return &objectSync{}
+}
+
+func (s *objectSync) LastUsage() time.Time {
+	// TODO: add time
+	return time.Time{}
 }
 
 func (s *objectSync) HandleMessage(ctx context.Context, hm HandleMessage) (err error) {
@@ -168,4 +176,8 @@ func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *sp
 		return fmt.Errorf("failed to handle message: %w", err)
 	}
 	return
+}
+
+func (s *objectSync) CloseThread(id string) (err error) {
+	return s.handleQueue.CloseThread(id)
 }

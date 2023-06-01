@@ -7,15 +7,24 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
+	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/headsync"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
+	"github.com/anyproto/any-sync/commonspace/objectsync/syncclient"
+	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
+	"github.com/anyproto/any-sync/commonspace/requestsender"
+	"github.com/anyproto/any-sync/commonspace/settings"
+	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/streamsender"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
@@ -73,6 +82,7 @@ func (s *spaceService) Init(a *app.App) (err error) {
 	}
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
+	s.app = a
 	return nil
 }
 
@@ -140,8 +150,6 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 			}
 		}
 	}
-
-	lastConfiguration := s.configurationService
 	var (
 		spaceIsClosed  = &atomic.Bool{}
 		spaceIsDeleted = &atomic.Bool{}
@@ -151,42 +159,57 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		return nil, err
 	}
 	spaceIsDeleted.Swap(isDeleted)
-	getter := NewObjectManager(st.Id(), s.treeManager, spaceIsClosed)
-	syncStatus := syncstatus.NewNoOpSyncStatus()
-	// this will work only for clients, not the best solution, but...
-	if !lastConfiguration.IsResponsible(st.Id()) {
-		// TODO: move it to the client package and add possibility to inject StatusProvider from the client
-		syncStatus = syncstatus.NewSyncStatusProvider(st.Id(), syncstatus.DefaultDeps(lastConfiguration, st))
-	}
-	var builder objecttree.BuildObjectTreeFunc
-	if s.config.KeepTreeDataInMemory {
-		builder = objecttree.BuildObjectTree
-	} else {
-		builder = objecttree.BuildEmptyDataObjectTree
-	}
-
-	peerManager, err := s.peermanagerProvider.NewPeerManager(ctx, id)
+	aclStorage, err := st.AclStorage()
 	if err != nil {
 		return nil, err
 	}
+	aclList, err := list.BuildAclListWithIdentity(s.account.Account(), aclStorage)
+	if err != nil {
+		return nil, err
+	}
+	aclList = syncacl.NewSyncAcl(aclList)
+	state := &spacestate.SpaceState{
+		SpaceId:        st.Id(),
+		SpaceIsDeleted: spaceIsDeleted,
+		SpaceIsClosed:  spaceIsClosed,
+		TreesUsed:      &atomic.Int32{},
+		AclList:        aclList,
+		SpaceStorage:   st,
+	}
+	if s.config.KeepTreeDataInMemory {
+		state.TreeBuilderFunc = objecttree.BuildObjectTree
+	} else {
+		state.TreeBuilderFunc = objecttree.BuildEmptyDataObjectTree
+	}
+	var syncStatus syncstatus.StatusProvider
+	if !s.configurationService.IsResponsible(st.Id()) {
+		// TODO: move it to the client package and add possibility to inject StatusProvider from the client
+		syncStatus = syncstatus.NewSyncStatusProvider()
+	} else {
+		syncStatus = syncstatus.NewNoOpSyncStatus()
+	}
+	//lastConfiguration := s.configurationService
+	//
+	//peerManager, err := s.peermanagerProvider.NewPeerManager(ctx, id)
+	//if err != nil {
+	//	return nil, err
+	//}
+	spaceApp := s.app.ChildApp()
+	spaceApp.Register(state).
+		Register(syncStatus).
+		Register(NewObjectManager(s.treeManager)).
+		Register(streamsender.New()).
+		Register(requestsender.New()).
+		Register(deletionstate.New()).
+		Register(settings.New()).
+		Register(syncclient.New()).
+		Register(objecttreebuilder.New()).
+		Register(objectsync.New()).
+		Register(headsync.New())
 
-	headSync := headsync.NewHeadSync(id, spaceIsDeleted, s.config.SyncPeriod, lastConfiguration, st, peerManager, getter, syncStatus, s.credentialProvider, log)
-	objectSync := objectsync.NewObjectSync(id, spaceIsDeleted, lastConfiguration, peerManager, getter, st)
 	sp := &space{
-		id:            id,
-		objectSync:    objectSync,
-		headSync:      headSync,
-		syncStatus:    syncStatus,
-		treeManager:   getter,
-		account:       s.account,
-		configuration: lastConfiguration,
-		peerManager:   peerManager,
-		storage:       st,
-		treesUsed:     &atomic.Int32{},
-		treeBuilder:   builder,
-		isClosed:      spaceIsClosed,
-		isDeleted:     spaceIsDeleted,
-		metric:        s.metric,
+		state: state,
+		app:   spaceApp,
 	}
 	return sp, nil
 }

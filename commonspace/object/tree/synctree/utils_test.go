@@ -96,7 +96,7 @@ type testSyncHandler struct {
 // createSyncHandler creates a sync handler when a tree is already created
 func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, log *messageLog) *testSyncHandler {
 	factory := syncclient.NewRequestFactory()
-	syncClient := syncclient.NewSyncClient(spaceId, newTestMessagePool(peerId, log), factory)
+	syncClient := syncclient.New(spaceId, newTestMessagePool(peerId, log), factory)
 	netTree := &broadcastTree{
 		ObjectTree: objTree,
 		SyncClient: syncClient,
@@ -108,7 +108,7 @@ func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, lo
 // createEmptySyncHandler creates a sync handler when the tree will be provided later (this emulates the situation when we have no tree)
 func createEmptySyncHandler(peerId, spaceId string, builder objecttree.BuildObjectTreeFunc, aclList list.AclList, log *messageLog) *testSyncHandler {
 	factory := syncclient.NewRequestFactory()
-	syncClient := syncclient.NewSyncClient(spaceId, newTestMessagePool(peerId, log), factory)
+	syncClient := syncclient.New(spaceId, newTestMessagePool(peerId, log), factory)
 
 	batcher := mb.New[protocolMsg](0)
 	return &testSyncHandler{
