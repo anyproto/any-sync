@@ -2,21 +2,17 @@ package spacestate
 
 import (
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"sync/atomic"
 )
 
-const CName = "common.commonspace.shareddata"
+const CName = "common.commonspace.spacestate"
 
 type SpaceState struct {
 	SpaceId         string
 	SpaceIsDeleted  *atomic.Bool
 	SpaceIsClosed   *atomic.Bool
 	TreesUsed       *atomic.Int32
-	AclList         list.AclList
-	SpaceStorage    spacestorage.SpaceStorage
 	TreeBuilderFunc objecttree.BuildObjectTreeFunc
 }
 

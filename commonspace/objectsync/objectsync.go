@@ -69,6 +69,7 @@ type objectSync struct {
 
 func (s *objectSync) Init(a *app.App) (err error) {
 	s.syncClient = a.MustComponent(syncclient.CName).(syncclient.SyncClient)
+	s.spaceStorage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	s.objectGetter = a.MustComponent(treemanager.CName).(treemanager.TreeManager).(syncobjectgetter.SyncObjectGetter)
 	s.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	sharedData := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)

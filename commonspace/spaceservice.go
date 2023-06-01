@@ -10,7 +10,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/headsync"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
-	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -159,22 +158,11 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		return nil, err
 	}
 	spaceIsDeleted.Swap(isDeleted)
-	aclStorage, err := st.AclStorage()
-	if err != nil {
-		return nil, err
-	}
-	aclList, err := list.BuildAclListWithIdentity(s.account.Account(), aclStorage)
-	if err != nil {
-		return nil, err
-	}
-	aclList = syncacl.NewSyncAcl(aclList)
 	state := &spacestate.SpaceState{
 		SpaceId:        st.Id(),
 		SpaceIsDeleted: spaceIsDeleted,
 		SpaceIsClosed:  spaceIsClosed,
 		TreesUsed:      &atomic.Int32{},
-		AclList:        aclList,
-		SpaceStorage:   st,
 	}
 	if s.config.KeepTreeDataInMemory {
 		state.TreeBuilderFunc = objecttree.BuildObjectTree
@@ -188,20 +176,21 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 	} else {
 		syncStatus = syncstatus.NewNoOpSyncStatus()
 	}
-	//lastConfiguration := s.configurationService
-	//
-	//peerManager, err := s.peermanagerProvider.NewPeerManager(ctx, id)
-	//if err != nil {
-	//	return nil, err
-	//}
+	peerManager, err := s.peermanagerProvider.NewPeerManager(ctx, id)
+	if err != nil {
+		return nil, err
+	}
 	spaceApp := s.app.ChildApp()
 	spaceApp.Register(state).
+		Register(peerManager).
+		Register(newCommonStorage(st)).
+		Register(syncacl.New()).
 		Register(syncStatus).
-		Register(NewObjectManager(s.treeManager)).
 		Register(streamsender.New()).
 		Register(requestsender.New()).
 		Register(deletionstate.New()).
 		Register(settings.New()).
+		Register(NewObjectManager(s.treeManager)).
 		Register(syncclient.New()).
 		Register(objecttreebuilder.New()).
 		Register(objectsync.New()).

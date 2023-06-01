@@ -7,6 +7,7 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/headsync"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
@@ -76,14 +77,13 @@ type treeBuilder struct {
 func (t *treeBuilder) Init(a *app.App) (err error) {
 	state := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
 	t.spaceId = state.SpaceId
-	t.aclList = state.AclList
 	t.isClosed = state.SpaceIsClosed
-	t.spaceStorage = state.SpaceStorage
 	t.treesUsed = state.TreesUsed
 	t.builder = state.TreeBuilderFunc
+	t.aclList = a.MustComponent(syncacl.CName).(*syncacl.SyncAcl)
+	t.spaceStorage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	t.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	t.headsNotifiable = a.MustComponent(headsync.CName).(headsync.HeadSync)
-	t.spaceStorage = state.SpaceStorage
 	t.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	t.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	t.objectSync = a.MustComponent(objectsync.CName).(objectsync.ObjectSync)

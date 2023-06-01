@@ -89,6 +89,7 @@ type space struct {
 	objectSync  objectsync.ObjectSync
 	syncStatus  syncstatus.StatusProvider
 	settings    settings.Settings
+	storage     spacestorage.SpaceStorage
 }
 
 func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
@@ -125,11 +126,8 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.syncStatus = s.app.MustComponent(syncstatus.CName).(syncstatus.StatusProvider)
 	s.settings = s.app.MustComponent(settings.CName).(settings.Settings)
 	s.objectSync = s.app.MustComponent(objectsync.CName).(objectsync.ObjectSync)
+	s.storage = s.app.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	return nil
-}
-
-func (s *space) HeadSync() headsync.HeadSyncExternal {
-	return s.headSync
 }
 
 func (s *space) SyncStatus() syncstatus.StatusUpdater {
@@ -137,7 +135,7 @@ func (s *space) SyncStatus() syncstatus.StatusUpdater {
 }
 
 func (s *space) Storage() spacestorage.SpaceStorage {
-	return s.state.SpaceStorage
+	return s.storage
 }
 
 func (s *space) Close() error {

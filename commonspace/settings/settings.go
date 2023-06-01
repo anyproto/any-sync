@@ -25,6 +25,7 @@ type Settings interface {
 	DeleteTree(ctx context.Context, id string) (err error)
 	SpaceDeleteRawChange(ctx context.Context) (raw *treechangeproto.RawTreeChangeWithId, err error)
 	DeleteSpace(ctx context.Context, deleteChange *treechangeproto.RawTreeChangeWithId) (err error)
+	SettingsObject() SettingsObject
 	app.ComponentRunnable
 }
 
@@ -54,7 +55,7 @@ func (s *settings) Init(a *app.App) (err error) {
 	s.treeBuilder = a.MustComponent(objecttreebuilder.CName).(objecttreebuilder.TreeBuilderComponent)
 
 	sharedState := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
-	s.storage = sharedState.SpaceStorage
+	s.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	s.spaceIsDeleted = sharedState.SpaceIsDeleted
 
 	deps := Deps{
@@ -114,4 +115,8 @@ func (s *settings) onSpaceDelete() {
 		log.Warn("failed to set space deleted")
 	}
 	s.spaceIsDeleted.Swap(true)
+}
+
+func (s *settings) SettingsObject() SettingsObject {
+	return s.settingsObject
 }

@@ -27,8 +27,8 @@ const (
 	TreeDeletedStatusDeleted = "deleted"
 )
 
-// TODO: consider moving to some file with all common interfaces etc
 type SpaceStorage interface {
+	app.Component
 	Id() string
 	SetSpaceDeleted() error
 	IsSpaceDeleted() (bool, error)

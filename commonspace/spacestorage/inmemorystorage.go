@@ -1,6 +1,7 @@
 package spacestorage
 
 import (
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -19,6 +20,14 @@ type InMemorySpaceStorage struct {
 	spaceHeader     *spacesyncproto.RawSpaceHeaderWithId
 	spaceHash       string
 	sync.Mutex
+}
+
+func (i *InMemorySpaceStorage) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (i *InMemorySpaceStorage) Name() (name string) {
+	return CName
 }
 
 func NewInMemorySpaceStorage(payload SpaceStorageCreatePayload) (SpaceStorage, error) {

@@ -73,7 +73,7 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.syncPeriod = cfg.GetSpace().SyncPeriod
 	h.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	h.log = log.With(zap.String("spaceId", h.spaceId))
-	h.storage = a.MustComponent("spacestorage").(spacestorage.SpaceStorage)
+	h.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	h.diff = ldiff.New(16, 16)
 	h.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	h.credentialProvider = a.MustComponent(credentialprovider.CName).(credentialprovider.CredentialProvider)
