@@ -217,6 +217,10 @@ type testPeer struct {
 	closed chan struct{}
 }
 
+func (t *testPeer) DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error {
+	return fmt.Errorf("not implemented")
+}
+
 func (t *testPeer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	return nil, fmt.Errorf("not implemented")
 }
