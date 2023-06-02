@@ -41,6 +41,7 @@ type Peer interface {
 
 	AcquireDrpcConn(ctx context.Context) (drpc.Conn, error)
 	ReleaseDrpcConn(conn drpc.Conn)
+	DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error
 
 	IsClosed() bool
 
@@ -93,6 +94,15 @@ func (p *peer) ReleaseDrpcConn(conn drpc.Conn) {
 	}
 	p.inactive = append(p.inactive, conn)
 	return
+}
+
+func (p *peer) DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error {
+	conn, err := p.AcquireDrpcConn(ctx)
+	if err != nil {
+		return err
+	}
+	defer p.ReleaseDrpcConn(conn)
+	return do(conn)
 }
 
 func (p *peer) acceptLoop() {
