@@ -67,6 +67,7 @@ type Space interface {
 	DeleteSpace(ctx context.Context, deleteChange *treechangeproto.RawTreeChangeWithId) (err error)
 
 	HandleMessage(ctx context.Context, msg objectsync.HandleMessage) (err error)
+	HandleRequest(ctx context.Context, msg objectsync.HandleMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
 
 	TryClose(objectTTL time.Duration) (close bool, err error)
 	Close() error
@@ -101,6 +102,10 @@ func (s *space) DeleteSpace(ctx context.Context, deleteChange *treechangeproto.R
 
 func (s *space) HandleMessage(ctx context.Context, msg objectsync.HandleMessage) (err error) {
 	return s.objectSync.HandleMessage(ctx, msg)
+}
+
+func (s *space) HandleRequest(ctx context.Context, msg objectsync.HandleMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
+	return s.objectSync.HandleRequest(ctx, msg)
 }
 
 func (s *space) TreeBuilder() objecttreebuilder.TreeBuilder {
