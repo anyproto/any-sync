@@ -44,6 +44,7 @@ type DRPCSpaceSyncClient interface {
 	SpacePush(ctx context.Context, in *SpacePushRequest) (*SpacePushResponse, error)
 	SpacePull(ctx context.Context, in *SpacePullRequest) (*SpacePullResponse, error)
 	ObjectSyncStream(ctx context.Context) (DRPCSpaceSync_ObjectSyncStreamClient, error)
+	ObjectSync(ctx context.Context, in *ObjectSyncMessage) (*ObjectSyncMessage, error)
 }
 
 type drpcSpaceSyncClient struct {
@@ -118,11 +119,21 @@ func (x *drpcSpaceSync_ObjectSyncStreamClient) RecvMsg(m *ObjectSyncMessage) err
 	return x.MsgRecv(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{})
 }
 
+func (c *drpcSpaceSyncClient) ObjectSync(ctx context.Context, in *ObjectSyncMessage) (*ObjectSyncMessage, error) {
+	out := new(ObjectSyncMessage)
+	err := c.cc.Invoke(ctx, "/spacesync.SpaceSync/ObjectSync", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCSpaceSyncServer interface {
 	HeadSync(context.Context, *HeadSyncRequest) (*HeadSyncResponse, error)
 	SpacePush(context.Context, *SpacePushRequest) (*SpacePushResponse, error)
 	SpacePull(context.Context, *SpacePullRequest) (*SpacePullResponse, error)
 	ObjectSyncStream(DRPCSpaceSync_ObjectSyncStreamStream) error
+	ObjectSync(context.Context, *ObjectSyncMessage) (*ObjectSyncMessage, error)
 }
 
 type DRPCSpaceSyncUnimplementedServer struct{}
@@ -143,9 +154,13 @@ func (s *DRPCSpaceSyncUnimplementedServer) ObjectSyncStream(DRPCSpaceSync_Object
 	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCSpaceSyncUnimplementedServer) ObjectSync(context.Context, *ObjectSyncMessage) (*ObjectSyncMessage, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCSpaceSyncDescription struct{}
 
-func (DRPCSpaceSyncDescription) NumMethods() int { return 4 }
+func (DRPCSpaceSyncDescription) NumMethods() int { return 5 }
 
 func (DRPCSpaceSyncDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -184,6 +199,15 @@ func (DRPCSpaceSyncDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 						&drpcSpaceSync_ObjectSyncStreamStream{in1.(drpc.Stream)},
 					)
 			}, DRPCSpaceSyncServer.ObjectSyncStream, true
+	case 4:
+		return "/spacesync.SpaceSync/ObjectSync", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCSpaceSyncServer).
+					ObjectSync(
+						ctx,
+						in1.(*ObjectSyncMessage),
+					)
+			}, DRPCSpaceSyncServer.ObjectSync, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -265,4 +289,20 @@ func (x *drpcSpaceSync_ObjectSyncStreamStream) Recv() (*ObjectSyncMessage, error
 
 func (x *drpcSpaceSync_ObjectSyncStreamStream) RecvMsg(m *ObjectSyncMessage) error {
 	return x.MsgRecv(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{})
+}
+
+type DRPCSpaceSync_ObjectSyncStream interface {
+	drpc.Stream
+	SendAndClose(*ObjectSyncMessage) error
+}
+
+type drpcSpaceSync_ObjectSyncStream struct {
+	drpc.Stream
+}
+
+func (x *drpcSpaceSync_ObjectSyncStream) SendAndClose(m *ObjectSyncMessage) error {
+	if err := x.MsgSend(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
 }

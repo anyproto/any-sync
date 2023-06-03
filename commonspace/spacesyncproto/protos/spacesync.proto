@@ -23,6 +23,8 @@ service SpaceSync {
     rpc SpacePull(SpacePullRequest) returns (SpacePullResponse);
     // ObjectSyncStream opens object sync stream with node or client
     rpc ObjectSyncStream(stream ObjectSyncMessage) returns (stream ObjectSyncMessage);
+    // ObjectSync sends object sync message and synchronously gets response message
+    rpc ObjectSync(ObjectSyncMessage) returns (ObjectSyncMessage);
 }
 
 // HeadSyncRange presenting a request for one range
