@@ -27,7 +27,7 @@ func (i *InMemorySpaceStorage) Init(a *app.App) (err error) {
 }
 
 func (i *InMemorySpaceStorage) Name() (name string) {
-	return StorageName
+	return CName
 }
 
 func NewInMemorySpaceStorage(payload SpaceStorageCreatePayload) (SpaceStorage, error) {

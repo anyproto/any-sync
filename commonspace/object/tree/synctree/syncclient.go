@@ -1,23 +1,15 @@
-package syncclient
+package synctree
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/requestsender"
-	"github.com/anyproto/any-sync/commonspace/spacestate"
+	"github.com/anyproto/any-sync/commonspace/peermanager"
+	"github.com/anyproto/any-sync/commonspace/requestmanager"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/any-sync/commonspace/streamsender"
 	"go.uber.org/zap"
 )
 
-const CName = "common.objectsync.syncclient"
-
-var log = logger.NewNamed(CName)
-
 type SyncClient interface {
-	app.Component
 	RequestFactory
 	Broadcast(msg *treechangeproto.TreeSyncMessage)
 	SendUpdate(peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (err error)
@@ -27,35 +19,25 @@ type SyncClient interface {
 
 type syncClient struct {
 	RequestFactory
-	spaceId       string
-	requestSender requestsender.RequestSender
-	streamSender  streamsender.StreamSender
+	spaceId        string
+	requestManager requestmanager.RequestManager
+	peerManager    peermanager.PeerManager
 }
 
-func New() SyncClient {
+func NewSyncClient(spaceId string, requestManager requestmanager.RequestManager, peerManager peermanager.PeerManager) SyncClient {
 	return &syncClient{
 		RequestFactory: &requestFactory{},
+		spaceId:        spaceId,
+		requestManager: requestManager,
+		peerManager:    peerManager,
 	}
 }
-
-func (s *syncClient) Init(a *app.App) (err error) {
-	sharedState := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
-	s.spaceId = sharedState.SpaceId
-	s.requestSender = a.MustComponent(requestsender.CName).(requestsender.RequestSender)
-	s.streamSender = a.MustComponent(streamsender.CName).(streamsender.StreamSender)
-	return nil
-}
-
-func (s *syncClient) Name() (name string) {
-	return CName
-}
-
 func (s *syncClient) Broadcast(msg *treechangeproto.TreeSyncMessage) {
 	objMsg, err := MarshallTreeMessage(msg, s.spaceId, msg.RootChange.Id, "")
 	if err != nil {
 		return
 	}
-	err = s.streamSender.Broadcast(objMsg)
+	err = s.peerManager.Broadcast(context.Background(), objMsg)
 	if err != nil {
 		log.Debug("broadcast error", zap.Error(err))
 	}
@@ -66,7 +48,7 @@ func (s *syncClient) SendUpdate(peerId, objectId string, msg *treechangeproto.Tr
 	if err != nil {
 		return
 	}
-	return s.streamSender.SendPeer(peerId, objMsg)
+	return s.peerManager.SendPeer(context.Background(), peerId, objMsg)
 }
 
 func (s *syncClient) SendRequest(ctx context.Context, peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
@@ -74,7 +56,7 @@ func (s *syncClient) SendRequest(ctx context.Context, peerId, objectId string, m
 	if err != nil {
 		return
 	}
-	return s.requestSender.SendRequest(ctx, peerId, objMsg)
+	return s.requestManager.SendRequest(ctx, peerId, objMsg)
 }
 
 func (s *syncClient) QueueRequest(peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (err error) {
@@ -82,7 +64,7 @@ func (s *syncClient) QueueRequest(peerId, objectId string, msg *treechangeproto.
 	if err != nil {
 		return
 	}
-	return s.requestSender.QueueRequest(peerId, objMsg)
+	return s.requestManager.QueueRequest(peerId, objMsg)
 }
 
 func MarshallTreeMessage(message *treechangeproto.TreeSyncMessage, spaceId, objectId, replyId string) (objMsg *spacesyncproto.ObjectSyncMessage, err error) {

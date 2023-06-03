@@ -136,7 +136,7 @@ func (p *mockPeerManager) Init(a *app.App) (err error) {
 }
 
 func (p *mockPeerManager) Name() (name string) {
-	return peermanager.ManagerName
+	return peermanager.CName
 }
 
 func (p *mockPeerManager) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
@@ -163,7 +163,7 @@ func (m *mockPeerManagerProvider) Init(a *app.App) (err error) {
 }
 
 func (m *mockPeerManagerProvider) Name() (name string) {
-	return peermanager.ProviderName
+	return peermanager.CName
 }
 
 func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId string) (sm peermanager.PeerManager, err error) {

@@ -48,6 +48,11 @@ func TestAppServiceRegistry(t *testing.T) {
 		names := app.ComponentNames()
 		assert.Equal(t, names, []string{"x1", "c1", "r1", "s1"})
 	})
+	t.Run("Child override", func(t *testing.T) {
+		app := app.ChildApp()
+		app.Register(newTestService(testTypeRunnable, "s1", nil, nil))
+		_ = app.MustComponent("s1").(*testRunnable)
+	})
 }
 
 func TestAppStart(t *testing.T) {

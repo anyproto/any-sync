@@ -73,12 +73,12 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.syncPeriod = cfg.GetSpace().SyncPeriod
 	h.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	h.log = log.With(zap.String("spaceId", h.spaceId))
-	h.storage = a.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
+	h.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	h.diff = ldiff.New(16, 16)
-	h.peerManager = a.MustComponent(peermanager.ManagerName).(peermanager.PeerManager)
+	h.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	h.credentialProvider = a.MustComponent(credentialprovider.CName).(credentialprovider.CredentialProvider)
 	h.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusProvider)
-	h.treeManager = app.MustComponent[treemanager.TreeManager](a)
+	h.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	h.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
 	h.syncer = newDiffSyncer(h)
 	sync := func(ctx context.Context) (err error) {

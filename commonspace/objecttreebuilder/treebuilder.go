@@ -14,8 +14,8 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
-	"github.com/anyproto/any-sync/commonspace/objectsync/syncclient"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
+	"github.com/anyproto/any-sync/commonspace/requestmanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
@@ -58,10 +58,11 @@ func New() TreeBuilderComponent {
 }
 
 type treeBuilder struct {
-	syncClient      syncclient.SyncClient
+	syncClient      synctree.SyncClient
 	configuration   nodeconf.NodeConf
 	headsNotifiable synctree.HeadNotifiable
 	peerManager     peermanager.PeerManager
+	requestManager  requestmanager.RequestManager
 	spaceStorage    spacestorage.SpaceStorage
 	syncStatus      syncstatus.StatusUpdater
 	objectSync      objectsync.ObjectSync
@@ -81,14 +82,15 @@ func (t *treeBuilder) Init(a *app.App) (err error) {
 	t.treesUsed = state.TreesUsed
 	t.builder = state.TreeBuilderFunc
 	t.aclList = a.MustComponent(syncacl.CName).(*syncacl.SyncAcl)
-	t.spaceStorage = a.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
+	t.spaceStorage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	t.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	t.headsNotifiable = a.MustComponent(headsync.CName).(headsync.HeadSync)
 	t.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
-	t.peerManager = a.MustComponent(peermanager.ManagerName).(peermanager.PeerManager)
+	t.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
+	t.requestManager = a.MustComponent(requestmanager.CName).(requestmanager.RequestManager)
 	t.objectSync = a.MustComponent(objectsync.CName).(objectsync.ObjectSync)
-	t.syncClient = a.MustComponent(syncclient.CName).(syncclient.SyncClient)
 	t.log = log.With(zap.String("spaceId", t.spaceId))
+	t.syncClient = synctree.NewSyncClient(t.spaceId, t.requestManager, t.peerManager)
 	return nil
 }
 

@@ -19,12 +19,16 @@ type SyncAcl struct {
 	list.AclList
 }
 
+func (s *SyncAcl) HandleRequest(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (response *spacesyncproto.ObjectSyncMessage, err error) {
+	return nil, nil
+}
+
 func (s *SyncAcl) HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error) {
 	return nil
 }
 
 func (s *SyncAcl) Init(a *app.App) (err error) {
-	storage := a.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
+	storage := a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	aclStorage, err := storage.AclStorage()
 	if err != nil {
 		return err

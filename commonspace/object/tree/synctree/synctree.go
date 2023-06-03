@@ -4,7 +4,6 @@ package synctree
 import (
 	"context"
 	"errors"
-	"github.com/anyproto/any-sync/commonspace/objectsync/syncclient"
 	"time"
 
 	"github.com/anyproto/any-sync/app/logger"
@@ -44,7 +43,7 @@ type SyncTree interface {
 type syncTree struct {
 	objecttree.ObjectTree
 	synchandler.SyncHandler
-	syncClient syncclient.SyncClient
+	syncClient SyncClient
 	syncStatus syncstatus.StatusUpdater
 	notifiable HeadNotifiable
 	listener   updatelistener.UpdateListener
@@ -61,7 +60,7 @@ type ResponsiblePeersGetter interface {
 
 type BuildDeps struct {
 	SpaceId            string
-	SyncClient         syncclient.SyncClient
+	SyncClient         SyncClient
 	Configuration      nodeconf.NodeConf
 	HeadNotifiable     HeadNotifiable
 	Listener           updatelistener.UpdateListener

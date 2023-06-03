@@ -9,8 +9,7 @@ import (
 )
 
 const (
-	ProviderName = "common.commonspace.peermanagerprovider"
-	ManagerName  = "common.commonspace.peermanager"
+	CName = "common.commonspace.peermanager"
 )
 
 type PeerManager interface {

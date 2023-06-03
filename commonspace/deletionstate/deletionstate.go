@@ -35,7 +35,7 @@ type objectDeletionState struct {
 }
 
 func (st *objectDeletionState) Init(a *app.App) (err error) {
-	st.storage = a.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
+	st.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	return nil
 }
 

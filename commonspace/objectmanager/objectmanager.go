@@ -17,8 +17,6 @@ var (
 	ErrSpaceClosed = errors.New("space is closed")
 )
 
-const CName = "common.commonspace.objectmanager"
-
 type ObjectManager interface {
 	treemanager.TreeManager
 	AddObject(object syncobjectgetter.SyncObject)
@@ -62,7 +60,7 @@ func (o *objectManager) AddObject(object syncobjectgetter.SyncObject) {
 }
 
 func (o *objectManager) Name() string {
-	return CName
+	return treemanager.CName
 }
 
 func (o *objectManager) GetTree(ctx context.Context, spaceId, treeId string) (objecttree.ObjectTree, error) {

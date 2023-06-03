@@ -55,7 +55,7 @@ func (s *settings) Init(a *app.App) (err error) {
 	s.treeBuilder = a.MustComponent(objecttreebuilder.CName).(objecttreebuilder.TreeBuilderComponent)
 
 	sharedState := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
-	s.storage = a.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
+	s.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	s.spaceIsDeleted = sharedState.SpaceIsDeleted
 
 	deps := Deps{

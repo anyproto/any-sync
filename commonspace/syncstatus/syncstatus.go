@@ -104,7 +104,7 @@ func (s *syncStatusProvider) Init(a *app.App) (err error) {
 	s.updateTimeout = syncTimeout
 	s.spaceId = sharedState.SpaceId
 	s.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
-	s.storage = a.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
+	s.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	return
 }
 

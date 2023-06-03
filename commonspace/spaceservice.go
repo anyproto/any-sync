@@ -16,15 +16,13 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/objectmanager"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
-	"github.com/anyproto/any-sync/commonspace/objectsync/syncclient"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
-	"github.com/anyproto/any-sync/commonspace/requestsender"
+	"github.com/anyproto/any-sync/commonspace/requestmanager"
 	"github.com/anyproto/any-sync/commonspace/settings"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/any-sync/commonspace/streamsender"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
@@ -69,10 +67,10 @@ type spaceService struct {
 func (s *spaceService) Init(a *app.App) (err error) {
 	s.config = a.MustComponent("config").(config.ConfigGetter).GetSpace()
 	s.account = a.MustComponent(accountservice.CName).(accountservice.Service)
-	s.storageProvider = a.MustComponent(spacestorage.ProviderName).(spacestorage.SpaceStorageProvider)
+	s.storageProvider = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
-	s.peermanagerProvider = a.MustComponent(peermanager.ProviderName).(peermanager.PeerManagerProvider)
+	s.peermanagerProvider = a.MustComponent(peermanager.CName).(peermanager.PeerManagerProvider)
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
 	s.app = a
@@ -172,12 +170,10 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		Register(peerManager).
 		Register(newCommonStorage(st)).
 		Register(syncacl.New()).
-		Register(streamsender.New()).
-		Register(requestsender.New()).
+		Register(requestmanager.New()).
 		Register(deletionstate.New()).
 		Register(settings.New()).
 		Register(objectmanager.New(s.treeManager)).
-		Register(syncclient.New()).
 		Register(objecttreebuilder.New()).
 		Register(objectsync.New()).
 		Register(headsync.New())

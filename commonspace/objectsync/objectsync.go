@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace/objectsync/syncclient"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
@@ -30,6 +29,7 @@ var log = logger.NewNamed(CName)
 type ObjectSync interface {
 	LastUsage() time.Time
 	HandleMessage(ctx context.Context, hm HandleMessage) (err error)
+	HandleRequest(ctx context.Context, hm HandleMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
 	CloseThread(id string) (err error)
 	app.ComponentRunnable
 }
@@ -56,7 +56,6 @@ func (m HandleMessage) LogFields(fields ...zap.Field) []zap.Field {
 type objectSync struct {
 	spaceId string
 
-	syncClient    syncclient.SyncClient
 	objectGetter  syncobjectgetter.SyncObjectGetter
 	configuration nodeconf.NodeConf
 	spaceStorage  spacestorage.SpaceStorage
@@ -67,8 +66,7 @@ type objectSync struct {
 }
 
 func (s *objectSync) Init(a *app.App) (err error) {
-	s.syncClient = a.MustComponent(syncclient.CName).(syncclient.SyncClient)
-	s.spaceStorage = a.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
+	s.spaceStorage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	s.objectGetter = app.MustComponent[syncobjectgetter.SyncObjectGetter](a)
 	s.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	sharedData := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
@@ -101,6 +99,10 @@ func New() ObjectSync {
 func (s *objectSync) LastUsage() time.Time {
 	// TODO: add time
 	return time.Time{}
+}
+
+func (s *objectSync) HandleRequest(ctx context.Context, hm HandleMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
+	
 }
 
 func (s *objectSync) HandleMessage(ctx context.Context, hm HandleMessage) (err error) {

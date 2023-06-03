@@ -121,7 +121,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.syncStatus = s.app.MustComponent(syncstatus.CName).(syncstatus.StatusProvider)
 	s.settings = s.app.MustComponent(settings.CName).(settings.Settings)
 	s.objectSync = s.app.MustComponent(objectsync.CName).(objectsync.ObjectSync)
-	s.storage = s.app.MustComponent(spacestorage.StorageName).(spacestorage.SpaceStorage)
+	s.storage = s.app.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	return nil
 }
 

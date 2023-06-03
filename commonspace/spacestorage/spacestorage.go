@@ -12,10 +12,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
-const (
-	ProviderName = "common.commonspace.spacestorageprovider"
-	StorageName  = "common.commonspace.spacestorage"
-)
+const CName = "common.commonspace.spacestorage"
 
 var (
 	ErrSpaceStorageExists   = errors.New("space storage exists")

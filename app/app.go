@@ -125,14 +125,10 @@ func (app *App) ChildApp() *App {
 func (app *App) Register(s Component) *App {
 	app.mu.Lock()
 	defer app.mu.Unlock()
-	current := app
-	for current != nil {
-		for _, es := range current.components {
-			if s.Name() == es.Name() {
-				panic(fmt.Errorf("component '%s' already registered", s.Name()))
-			}
+	for _, es := range app.components {
+		if s.Name() == es.Name() {
+			panic(fmt.Errorf("component '%s' already registered", s.Name()))
 		}
-		current = current.parent
 	}
 	app.components = append(app.components, s)
 	return app
