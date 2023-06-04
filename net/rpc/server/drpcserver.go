@@ -6,11 +6,13 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/metric"
 	anyNet "github.com/anyproto/any-sync/net"
-	"github.com/anyproto/any-sync/net/secureservice"
-	"github.com/libp2p/go-libp2p/core/sec"
+	"go.uber.org/zap"
 	"net"
 	"storj.io/drpc"
-	"time"
+	"storj.io/drpc/drpcmanager"
+	"storj.io/drpc/drpcmux"
+	"storj.io/drpc/drpcserver"
+	"storj.io/drpc/drpcwire"
 )
 
 const CName = "common.net.drpcserver"
@@ -18,49 +20,46 @@ const CName = "common.net.drpcserver"
 var log = logger.NewNamed(CName)
 
 func New() DRPCServer {
-	return &drpcServer{BaseDrpcServer: NewBaseDrpcServer()}
+	return &drpcServer{}
 }
 
 type DRPCServer interface {
-	app.ComponentRunnable
+	ServeConn(ctx context.Context, conn net.Conn) (err error)
+	app.Component
 	drpc.Mux
 }
 
 type drpcServer struct {
-	config    anyNet.Config
-	metric    metric.Metric
-	transport secureservice.SecureService
-	*BaseDrpcServer
+	drpcServer *drpcserver.Server
+	*drpcmux.Mux
+	config anyNet.Config
+	metric metric.Metric
 }
 
-func (s *drpcServer) Init(a *app.App) (err error) {
-	s.config = a.MustComponent("config").(anyNet.ConfigGetter).GetNet()
-	s.metric = a.MustComponent(metric.CName).(metric.Metric)
-	s.transport = a.MustComponent(secureservice.CName).(secureservice.SecureService)
-	return nil
-}
+type DRPCHandlerWrapper func(handler drpc.Handler) drpc.Handler
 
 func (s *drpcServer) Name() (name string) {
 	return CName
 }
 
-func (s *drpcServer) Run(ctx context.Context) (err error) {
-	params := Params{
-		BufferSizeMb:  s.config.Stream.MaxMsgSizeMb,
-		TimeoutMillis: s.config.Stream.TimeoutMilliseconds,
-		ListenAddrs:   s.config.Server.ListenAddrs,
-		Wrapper: func(handler drpc.Handler) drpc.Handler {
-			return s.metric.WrapDRPCHandler(handler)
-		},
-		Handshake: func(conn net.Conn) (cCtx context.Context, sc sec.SecureConn, err error) {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-			defer cancel()
-			return s.transport.SecureInbound(ctx, conn)
-		},
+func (s *drpcServer) Init(a *app.App) (err error) {
+	s.config = a.MustComponent("config").(anyNet.ConfigGetter).GetNet()
+	s.metric, _ = a.Component(metric.CName).(metric.Metric)
+	s.Mux = drpcmux.New()
+
+	var handler drpc.Handler
+	handler = s
+	if s.metric != nil {
+		handler = s.metric.WrapDRPCHandler(s)
 	}
-	return s.BaseDrpcServer.Run(ctx, params)
+	s.drpcServer = drpcserver.NewWithOptions(handler, drpcserver.Options{Manager: drpcmanager.Options{
+		Reader: drpcwire.ReaderOptions{MaximumBufferSize: s.config.Stream.MaxMsgSizeMb * (1 << 20)},
+	}})
+	return
 }
 
-func (s *drpcServer) Close(ctx context.Context) (err error) {
-	return s.BaseDrpcServer.Close(ctx)
+func (s *drpcServer) ServeConn(ctx context.Context, conn net.Conn) (err error) {
+	l := log.With(zap.String("remoteAddr", conn.RemoteAddr().String())).With(zap.String("localAddr", conn.LocalAddr().String()))
+	l.Debug("drpc serve peer")
+	return s.drpcServer.ServeOne(ctx, conn)
 }

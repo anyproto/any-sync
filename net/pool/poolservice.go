@@ -6,8 +6,9 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/metric"
-	"github.com/anyproto/any-sync/net/dialer"
+	"github.com/anyproto/any-sync/net/peer"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -23,46 +24,54 @@ func New() Service {
 
 type Service interface {
 	Pool
-	NewPool(name string) Pool
 	app.ComponentRunnable
+}
+
+type dialer interface {
+	Dial(ctx context.Context, peerId string) (pr peer.Peer, err error)
 }
 
 type poolService struct {
 	// default pool
 	*pool
-	dialer    dialer.Dialer
+	dialer    dialer
 	metricReg *prometheus.Registry
 }
 
 func (p *poolService) Init(a *app.App) (err error) {
-	p.dialer = a.MustComponent(dialer.CName).(dialer.Dialer)
-	p.pool = &pool{dialer: p.dialer}
+	p.dialer = a.MustComponent("net.peerservice").(dialer)
+	p.pool = &pool{}
 	if m := a.Component(metric.CName); m != nil {
 		p.metricReg = m.(metric.Metric).Registry()
 	}
-	p.pool.cache = ocache.New(
+	p.pool.outgoing = ocache.New(
 		func(ctx context.Context, id string) (value ocache.Object, err error) {
 			return p.dialer.Dial(ctx, id)
 		},
 		ocache.WithLogger(log.Sugar()),
 		ocache.WithGCPeriod(time.Minute),
 		ocache.WithTTL(time.Minute*5),
-		ocache.WithPrometheus(p.metricReg, "netpool", "default"),
+		ocache.WithPrometheus(p.metricReg, "netpool", "outgoing"),
+	)
+	p.pool.incoming = ocache.New(
+		func(ctx context.Context, id string) (value ocache.Object, err error) {
+			return nil, ocache.ErrNotExists
+		},
+		ocache.WithLogger(log.Sugar()),
+		ocache.WithGCPeriod(time.Minute),
+		ocache.WithTTL(time.Minute*5),
+		ocache.WithPrometheus(p.metricReg, "netpool", "incoming"),
 	)
 	return nil
 }
 
-func (p *poolService) NewPool(name string) Pool {
-	return &pool{
-		dialer: p.dialer,
-		cache: ocache.New(
-			func(ctx context.Context, id string) (value ocache.Object, err error) {
-				return p.dialer.Dial(ctx, id)
-			},
-			ocache.WithLogger(log.Sugar()),
-			ocache.WithGCPeriod(time.Minute),
-			ocache.WithTTL(time.Minute*5),
-			ocache.WithPrometheus(p.metricReg, "netpool", name),
-		),
+func (p *pool) Run(ctx context.Context) (err error) {
+	return nil
+}
+
+func (p *pool) Close(ctx context.Context) (err error) {
+	if e := p.incoming.Close(); e != nil {
+		log.Warn("close incoming cache error", zap.Error(e))
 	}
+	return p.outgoing.Close()
 }

@@ -1,6 +1,6 @@
 //go:build windows
 
-package server
+package yamux
 
 import (
 	"errors"

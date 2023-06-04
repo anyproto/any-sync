@@ -1,21 +1,30 @@
 package handshake
 
 import (
-	"context"
 	"encoding/binary"
 	"errors"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/libp2p/go-libp2p/core/sec"
 	"golang.org/x/exp/slices"
 	"io"
+	"net"
 	"sync"
 )
 
 const headerSize = 5 // 1 byte for type + 4 byte for uint32 size
 
 const (
-	msgTypeCred = byte(1)
-	msgTypeAck  = byte(2)
+	msgTypeCred  = byte(1)
+	msgTypeAck   = byte(2)
+	msgTypeProto = byte(3)
+
+	sizeLimit = 200 * 1024 // 200 Kb
+)
+
+var (
+	credMsgTypes     = []byte{msgTypeCred, msgTypeAck}
+	protoMsgTypes    = []byte{msgTypeProto, msgTypeAck}
+	protoMsgTypesAck = []byte{msgTypeAck}
 )
 
 type HandshakeError struct {
@@ -38,17 +47,20 @@ var (
 	ErrSkipVerifyNotAllowed    = HandshakeError{e: handshakeproto.Error_SkipVerifyNotAllowed}
 	ErrUnexpected              = HandshakeError{e: handshakeproto.Error_Unexpected}
 
-	ErrIncompatibleVersion = HandshakeError{e: handshakeproto.Error_IncompatibleVersion}
+	ErrIncompatibleVersion     = HandshakeError{e: handshakeproto.Error_IncompatibleVersion}
+	ErrIncompatibleProto       = HandshakeError{e: handshakeproto.Error_IncompatibleProto}
+	ErrRemoteIncompatibleProto = HandshakeError{Err: errors.New("remote peer declined the proto")}
 
-	ErrGotNotAHandshakeMessage = errors.New("go not a handshake message")
+	ErrGotUnexpectedMessage = errors.New("go not a handshake message")
 )
 
 var handshakePool = &sync.Pool{New: func() any {
 	return &handshake{
-		remoteCred: &handshakeproto.Credentials{},
-		remoteAck:  &handshakeproto.Ack{},
-		localAck:   &handshakeproto.Ack{},
-		buf:        make([]byte, 0, 1024),
+		remoteCred:  &handshakeproto.Credentials{},
+		remoteAck:   &handshakeproto.Ack{},
+		localAck:    &handshakeproto.Ack{},
+		remoteProto: &handshakeproto.Proto{},
+		buf:         make([]byte, 0, 1024),
 	}
 }}
 
@@ -57,147 +69,17 @@ type CredentialChecker interface {
 	CheckCredential(sc sec.SecureConn, cred *handshakeproto.Credentials) (identity []byte, err error)
 }
 
-func OutgoingHandshake(ctx context.Context, sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	h := newHandshake()
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		identity, err = outgoingHandshake(h, sc, cc)
-	}()
-	select {
-	case <-done:
-		return
-	case <-ctx.Done():
-		_ = sc.Close()
-		return nil, ctx.Err()
-	}
-}
-
-func outgoingHandshake(h *handshake, sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
-	defer h.release()
-	h.conn = sc
-	localCred := cc.MakeCredentials(sc)
-	if err = h.writeCredentials(localCred); err != nil {
-		h.tryWriteErrAndClose(err)
-		return
-	}
-	msg, err := h.readMsg()
-	if err != nil {
-		h.tryWriteErrAndClose(err)
-		return
-	}
-	if msg.ack != nil {
-		if msg.ack.Error == handshakeproto.Error_InvalidCredentials {
-			return nil, ErrPeerDeclinedCredentials
-		}
-		return nil, HandshakeError{e: msg.ack.Error}
-	}
-
-	if identity, err = cc.CheckCredential(sc, msg.cred); err != nil {
-		h.tryWriteErrAndClose(err)
-		return
-	}
-
-	if err = h.writeAck(handshakeproto.Error_Null); err != nil {
-		h.tryWriteErrAndClose(err)
-		return nil, err
-	}
-
-	msg, err = h.readMsg()
-	if err != nil {
-		h.tryWriteErrAndClose(err)
-		return nil, err
-	}
-	if msg.ack == nil {
-		err = ErrUnexpectedPayload
-		h.tryWriteErrAndClose(err)
-		return nil, err
-	}
-	if msg.ack.Error == handshakeproto.Error_Null {
-		return identity, nil
-	} else {
-		_ = h.conn.Close()
-		return nil, HandshakeError{e: msg.ack.Error}
-	}
-}
-
-func IncomingHandshake(ctx context.Context, sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	h := newHandshake()
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		identity, err = incomingHandshake(h, sc, cc)
-	}()
-	select {
-	case <-done:
-		return
-	case <-ctx.Done():
-		_ = sc.Close()
-		return nil, ctx.Err()
-	}
-}
-
-func incomingHandshake(h *handshake, sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
-	defer h.release()
-	h.conn = sc
-
-	msg, err := h.readMsg()
-	if err != nil {
-		h.tryWriteErrAndClose(err)
-		return
-	}
-	if msg.ack != nil {
-		return nil, ErrUnexpectedPayload
-	}
-	if identity, err = cc.CheckCredential(sc, msg.cred); err != nil {
-		h.tryWriteErrAndClose(err)
-		return
-	}
-
-	if err = h.writeCredentials(cc.MakeCredentials(sc)); err != nil {
-		h.tryWriteErrAndClose(err)
-		return nil, err
-	}
-
-	msg, err = h.readMsg()
-	if err != nil {
-		h.tryWriteErrAndClose(err)
-		return nil, err
-	}
-	if msg.ack == nil {
-		err = ErrUnexpectedPayload
-		h.tryWriteErrAndClose(err)
-		return nil, err
-	}
-	if msg.ack.Error != handshakeproto.Error_Null {
-		if msg.ack.Error == handshakeproto.Error_InvalidCredentials {
-			return nil, ErrPeerDeclinedCredentials
-		}
-		return nil, HandshakeError{e: msg.ack.Error}
-	}
-	if err = h.writeAck(handshakeproto.Error_Null); err != nil {
-		h.tryWriteErrAndClose(err)
-		return nil, err
-	}
-	return
-}
-
 func newHandshake() *handshake {
 	return handshakePool.Get().(*handshake)
 }
 
 type handshake struct {
-	conn       sec.SecureConn
-	remoteCred *handshakeproto.Credentials
-	remoteAck  *handshakeproto.Ack
-	localAck   *handshakeproto.Ack
-	buf        []byte
+	conn        net.Conn
+	remoteCred  *handshakeproto.Credentials
+	remoteProto *handshakeproto.Proto
+	remoteAck   *handshakeproto.Ack
+	localAck    *handshakeproto.Ack
+	buf         []byte
 }
 
 func (h *handshake) writeCredentials(cred *handshakeproto.Credentials) (err error) {
@@ -209,8 +91,17 @@ func (h *handshake) writeCredentials(cred *handshakeproto.Credentials) (err erro
 	return h.writeData(msgTypeCred, n)
 }
 
+func (h *handshake) writeProto(proto *handshakeproto.Proto) (err error) {
+	h.buf = slices.Grow(h.buf, proto.Size()+headerSize)[:proto.Size()+headerSize]
+	n, err := proto.MarshalToSizedBuffer(h.buf[headerSize:])
+	if err != nil {
+		return err
+	}
+	return h.writeData(msgTypeProto, n)
+}
+
 func (h *handshake) tryWriteErrAndClose(err error) {
-	if err == ErrGotNotAHandshakeMessage {
+	if err == ErrUnexpectedPayload {
 		// if we got unexpected message - just close the connection
 		_ = h.conn.Close()
 		return
@@ -243,21 +134,26 @@ func (h *handshake) writeData(tp byte, size int) (err error) {
 }
 
 type message struct {
-	cred *handshakeproto.Credentials
-	ack  *handshakeproto.Ack
+	cred  *handshakeproto.Credentials
+	proto *handshakeproto.Proto
+	ack   *handshakeproto.Ack
 }
 
-func (h *handshake) readMsg() (msg message, err error) {
+func (h *handshake) readMsg(allowedTypes ...byte) (msg message, err error) {
 	h.buf = slices.Grow(h.buf, headerSize)[:headerSize]
 	if _, err = io.ReadFull(h.conn, h.buf[:headerSize]); err != nil {
 		return
 	}
 	tp := h.buf[0]
-	if tp != msgTypeCred && tp != msgTypeAck {
-		err = ErrGotNotAHandshakeMessage
+	if !slices.Contains(allowedTypes, tp) {
+		err = ErrUnexpectedPayload
 		return
 	}
 	size := binary.LittleEndian.Uint32(h.buf[1:headerSize])
+	if size > sizeLimit {
+		err = ErrGotUnexpectedMessage
+		return
+	}
 	h.buf = slices.Grow(h.buf, int(size))[:size]
 	if _, err = io.ReadFull(h.conn, h.buf[:size]); err != nil {
 		return
@@ -273,6 +169,11 @@ func (h *handshake) readMsg() (msg message, err error) {
 			return
 		}
 		msg.ack = h.remoteAck
+	case msgTypeProto:
+		if err = h.remoteProto.Unmarshal(h.buf[:size]); err != nil {
+			return
+		}
+		msg.proto = h.remoteProto
 	}
 	return
 }
@@ -284,5 +185,6 @@ func (h *handshake) release() {
 	h.remoteAck.Error = 0
 	h.remoteCred.Type = 0
 	h.remoteCred.Payload = h.remoteCred.Payload[:0]
+	h.remoteProto.Proto = 0
 	handshakePool.Put(h)
 }

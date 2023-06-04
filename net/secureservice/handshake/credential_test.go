@@ -38,15 +38,14 @@ func TestOutgoingHandshake(t *testing.T) {
 		h := newHandshake()
 		h.conn = c2
 		// receive credential message
-		msg, err := h.readMsg()
+		msg, err := h.readMsg(msgTypeCred, msgTypeAck, msgTypeProto)
 		require.NoError(t, err)
-		require.Nil(t, msg.ack)
 		_, err = noVerifyChecker.CheckCredential(c2, msg.cred)
 		require.NoError(t, err)
 		// send credential message
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
 		// receive ack
-		msg, err = h.readMsg()
+		msg, err = h.readMsg(msgTypeAck)
 		require.NoError(t, err)
 		require.Equal(t, handshakeproto.Error_Null, msg.ack.Error)
 		// send ack
@@ -76,7 +75,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		h := newHandshake()
 		h.conn = c2
 		// receive credential message
-		_, err := h.readMsg()
+		_, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		_ = c2.Close()
 		res := <-handshakeResCh
@@ -92,7 +91,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		h := newHandshake()
 		h.conn = c2
 		// receive credential message
-		_, err := h.readMsg()
+		_, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		require.NoError(t, h.writeAck(ErrInvalidCredentials.e))
 		res := <-handshakeResCh
@@ -108,10 +107,10 @@ func TestOutgoingHandshake(t *testing.T) {
 		h := newHandshake()
 		h.conn = c2
 		// receive credential message
-		_, err := h.readMsg()
+		_, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
-		msg, err := h.readMsg()
+		msg, err := h.readMsg(msgTypeAck)
 		require.NoError(t, err)
 		assert.Equal(t, ErrInvalidCredentials.e, msg.ack.Error)
 		res := <-handshakeResCh
@@ -127,7 +126,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		h := newHandshake()
 		h.conn = c2
 		// receive credential message
-		_, err := h.readMsg()
+		_, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		// write credentials and close conn
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
@@ -145,12 +144,12 @@ func TestOutgoingHandshake(t *testing.T) {
 		h := newHandshake()
 		h.conn = c2
 		// receive credential message
-		_, err := h.readMsg()
+		_, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		// write credentials
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
 		// read ack and close conn
-		_, err = h.readMsg()
+		_, err = h.readMsg(msgTypeAck)
 		require.NoError(t, err)
 		_ = c2.Close()
 		res := <-handshakeResCh
@@ -166,18 +165,17 @@ func TestOutgoingHandshake(t *testing.T) {
 		h := newHandshake()
 		h.conn = c2
 		// receive credential message
-		_, err := h.readMsg()
+		_, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		// write credentials
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
 		// read ack
-		_, err = h.readMsg()
+		_, err = h.readMsg(msgTypeAck)
 		require.NoError(t, err)
 		// write cred instead ack
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
-		msg, err := h.readMsg()
-		require.NoError(t, err)
-		assert.Equal(t, handshakeproto.Error_UnexpectedPayload, msg.ack.Error)
+		_, err = h.readMsg(msgTypeAck)
+		require.Error(t, err)
 		res := <-handshakeResCh
 		require.Error(t, res.err)
 	})
@@ -191,7 +189,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		h := newHandshake()
 		h.conn = c2
 		// receive credential message
-		msg, err := h.readMsg()
+		msg, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		require.Nil(t, msg.ack)
 		_, err = noVerifyChecker.CheckCredential(c2, msg.cred)
@@ -199,7 +197,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		// send credential message
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
 		// receive ack
-		msg, err = h.readMsg()
+		msg, err = h.readMsg(msgTypeAck)
 		require.NoError(t, err)
 		require.Equal(t, handshakeproto.Error_Null, msg.ack.Error)
 		// send ack
@@ -219,7 +217,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		h := newHandshake()
 		h.conn = c2
 		// receive credential message
-		_, err := h.readMsg()
+		_, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		ctxCancel()
 		res := <-handshakeResCh
@@ -244,14 +242,14 @@ func TestIncomingHandshake(t *testing.T) {
 		// write credentials
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
 		// wait credentials
-		msg, err := h.readMsg()
+		msg, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		require.Nil(t, msg.ack)
 		require.Equal(t, handshakeproto.CredentialsType_SkipVerify, msg.cred.Type)
 		// write ack
 		require.NoError(t, h.writeAck(handshakeproto.Error_Null))
 		// wait ack
-		msg, err = h.readMsg()
+		msg, err = h.readMsg(msgTypeAck)
 		require.NoError(t, err)
 		assert.Equal(t, handshakeproto.Error_Null, msg.ack.Error)
 		res := <-handshakeResCh
@@ -310,7 +308,7 @@ func TestIncomingHandshake(t *testing.T) {
 		// write credentials
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
 		// except ack with error
-		msg, err := h.readMsg()
+		msg, err := h.readMsg(msgTypeAck)
 		require.NoError(t, err)
 		require.Nil(t, msg.cred)
 		require.Equal(t, handshakeproto.Error_InvalidCredentials, msg.ack.Error)
@@ -330,7 +328,7 @@ func TestIncomingHandshake(t *testing.T) {
 		// write credentials
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
 		// except ack with error
-		msg, err := h.readMsg()
+		msg, err := h.readMsg(msgTypeAck)
 		require.NoError(t, err)
 		require.Nil(t, msg.cred)
 		require.Equal(t, handshakeproto.Error_IncompatibleVersion, msg.ack.Error)
@@ -350,13 +348,13 @@ func TestIncomingHandshake(t *testing.T) {
 		// write credentials
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
 		// read cred
-		_, err := h.readMsg()
+		_, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		// write cred instead ack
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
-		// expect ack with error
-		msg, err := h.readMsg()
-		require.Equal(t, handshakeproto.Error_UnexpectedPayload, msg.ack.Error)
+		// expect EOF
+		_, err = h.readMsg(msgTypeAck)
+		require.Error(t, err)
 		res := <-handshakeResCh
 		require.Error(t, res.err)
 	})
@@ -372,7 +370,7 @@ func TestIncomingHandshake(t *testing.T) {
 		// write credentials
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
 		// read cred and close conn
-		_, err := h.readMsg()
+		_, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		_ = c2.Close()
 
@@ -391,7 +389,7 @@ func TestIncomingHandshake(t *testing.T) {
 		// write credentials
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
 		// wait credentials
-		msg, err := h.readMsg()
+		msg, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		require.Nil(t, msg.ack)
 		require.Equal(t, handshakeproto.CredentialsType_SkipVerify, msg.cred.Type)
@@ -413,7 +411,7 @@ func TestIncomingHandshake(t *testing.T) {
 		// write credentials
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
 		// wait credentials
-		msg, err := h.readMsg()
+		msg, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		require.Nil(t, msg.ack)
 		require.Equal(t, handshakeproto.CredentialsType_SkipVerify, msg.cred.Type)
@@ -435,7 +433,7 @@ func TestIncomingHandshake(t *testing.T) {
 		// write credentials
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
 		// wait credentials
-		msg, err := h.readMsg()
+		msg, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		require.Nil(t, msg.ack)
 		require.Equal(t, handshakeproto.CredentialsType_SkipVerify, msg.cred.Type)
@@ -458,7 +456,7 @@ func TestIncomingHandshake(t *testing.T) {
 		// write credentials
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials(c2)))
 		// wait credentials
-		_, err := h.readMsg()
+		_, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		ctxCancel()
 		res := <-handshakeResCh
@@ -482,7 +480,7 @@ func TestNotAHandshakeMessage(t *testing.T) {
 	_, err := c2.Write([]byte("some unexpected bytes"))
 	require.Error(t, err)
 	res := <-handshakeResCh
-	assert.EqualError(t, res.err, ErrGotNotAHandshakeMessage.Error())
+	assert.Error(t, res.err)
 }
 
 func TestEndToEnd(t *testing.T) {
