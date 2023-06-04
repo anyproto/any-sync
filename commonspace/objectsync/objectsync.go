@@ -104,6 +104,8 @@ func (s *objectSync) LastUsage() time.Time {
 }
 
 func (s *objectSync) HandleRequest(ctx context.Context, hm HandleMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
+	hm.ReceiveTime = time.Now()
+	hm.StartHandlingTime = hm.ReceiveTime
 	return s.handleRequest(ctx, hm.SenderId, hm.Message)
 }
 
@@ -157,10 +159,7 @@ func (s *objectSync) processHandleMessage(msg HandleMessage) {
 }
 
 func (s *objectSync) handleRequest(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (response *spacesyncproto.ObjectSyncMessage, err error) {
-	log := log.With(
-		zap.String("objectId", msg.ObjectId),
-		zap.String("requestId", msg.RequestId),
-		zap.String("replyId", msg.ReplyId))
+	log := log.With(zap.String("objectId", msg.ObjectId))
 	if s.spaceIsDeleted.Load() {
 		log = log.With(zap.Bool("isDeleted", true))
 		// preventing sync with other clients if they are not just syncing the settings tree
@@ -180,10 +179,7 @@ func (s *objectSync) handleRequest(ctx context.Context, senderId string, msg *sp
 }
 
 func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
-	log := log.With(
-		zap.String("objectId", msg.ObjectId),
-		zap.String("requestId", msg.RequestId),
-		zap.String("replyId", msg.ReplyId))
+	log := log.With(zap.String("objectId", msg.ObjectId))
 	if s.spaceIsDeleted.Load() {
 		log = log.With(zap.Bool("isDeleted", true))
 		// preventing sync with other clients if they are not just syncing the settings tree
