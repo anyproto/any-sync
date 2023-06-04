@@ -28,6 +28,7 @@ import (
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
+	"storj.io/drpc"
 	"sync/atomic"
 )
 
@@ -222,8 +223,12 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 		return
 	}
 
-	cl := spacesyncproto.NewDRPCSpaceSyncClient(p)
-	res, err := cl.SpacePull(ctx, &spacesyncproto.SpacePullRequest{Id: id})
+	var res *spacesyncproto.SpacePullResponse
+	err = p.DoDrpc(ctx, func(conn drpc.Conn) error {
+		cl := spacesyncproto.NewDRPCSpaceSyncClient(conn)
+		res, err = cl.SpacePull(ctx, &spacesyncproto.SpacePullRequest{Id: id})
+		return err
+	})
 	if err != nil {
 		err = rpcerr.Unwrap(err)
 		return

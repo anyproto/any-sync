@@ -106,8 +106,14 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 
 func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	ctx = logger.CtxWithFields(ctx, zap.String("peerId", p.Id()))
+	conn, err := p.AcquireDrpcConn(ctx)
+	if err != nil {
+		return
+	}
+	defer p.ReleaseDrpcConn(conn)
+
 	var (
-		cl           = d.clientFactory.Client(p)
+		cl           = d.clientFactory.Client(conn)
 		rdiff        = NewRemoteDiff(d.spaceId, cl)
 		stateCounter = d.syncStatus.StateCounter()
 	)
