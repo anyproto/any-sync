@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"io"
 	"net"
+	_ "net/http/pprof"
 	"testing"
 	"time"
 )
@@ -20,6 +21,9 @@ func TestPeer_AcquireDrpcConn(t *testing.T) {
 	fx := newFixture(t, "p1")
 	defer fx.finish()
 	in, out := net.Pipe()
+	go func() {
+		handshake.IncomingProtoHandshake(ctx, out, defaultProtoChecker)
+	}()
 	defer out.Close()
 	fx.mc.EXPECT().Open(gomock.Any()).Return(in, nil)
 	dc, err := fx.AcquireDrpcConn(ctx)
@@ -76,6 +80,52 @@ func TestPeer_TryClose(t *testing.T) {
 		res, err := fx.TryClose(time.Second)
 		require.NoError(t, err)
 		assert.True(t, res)
+	})
+	t.Run("gc", func(t *testing.T) {
+		fx := newFixture(t, "p1")
+		defer fx.finish()
+		now := time.Now()
+		fx.mc.EXPECT().LastUsage().Return(now.Add(time.Millisecond * 100))
+
+		// make one inactive
+		in, out := net.Pipe()
+		go func() {
+			handshake.IncomingProtoHandshake(ctx, out, defaultProtoChecker)
+		}()
+		defer out.Close()
+		fx.mc.EXPECT().Open(gomock.Any()).Return(in, nil)
+		dc, err := fx.AcquireDrpcConn(ctx)
+		require.NoError(t, err)
+
+		// make one active but closed
+		in2, out2 := net.Pipe()
+		go func() {
+			handshake.IncomingProtoHandshake(ctx, out2, defaultProtoChecker)
+		}()
+		defer out2.Close()
+		fx.mc.EXPECT().Open(gomock.Any()).Return(in2, nil)
+		dc2, err := fx.AcquireDrpcConn(ctx)
+		require.NoError(t, err)
+		_ = dc2.Close()
+
+		// make one inactive and closed
+		in3, out3 := net.Pipe()
+		go func() {
+			handshake.IncomingProtoHandshake(ctx, out3, defaultProtoChecker)
+		}()
+		defer out3.Close()
+		fx.mc.EXPECT().Open(gomock.Any()).Return(in3, nil)
+		dc3, err := fx.AcquireDrpcConn(ctx)
+		require.NoError(t, err)
+		fx.ReleaseDrpcConn(dc3)
+		_ = dc3.Close()
+		fx.ReleaseDrpcConn(dc)
+
+		time.Sleep(time.Millisecond * 100)
+
+		res, err := fx.TryClose(time.Millisecond * 50)
+		require.NoError(t, err)
+		assert.False(t, res)
 	})
 }
 
