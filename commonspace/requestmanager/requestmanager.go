@@ -73,6 +73,7 @@ func (r *requestManager) Close(ctx context.Context) (err error) {
 }
 
 func (r *requestManager) SendRequest(ctx context.Context, peerId string, req *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
+	// TODO: limit concurrent sends?
 	return r.doRequest(ctx, peerId, req)
 }
 

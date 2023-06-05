@@ -31,7 +31,7 @@ var log = logger.NewNamed(CName)
 type ObjectSync interface {
 	LastUsage() time.Time
 	HandleMessage(ctx context.Context, hm HandleMessage) (err error)
-	HandleRequest(ctx context.Context, hm HandleMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
+	HandleRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
 	CloseThread(id string) (err error)
 	app.ComponentRunnable
 }
@@ -103,10 +103,12 @@ func (s *objectSync) LastUsage() time.Time {
 	return time.Time{}
 }
 
-func (s *objectSync) HandleRequest(ctx context.Context, hm HandleMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
-	hm.ReceiveTime = time.Now()
-	hm.StartHandlingTime = hm.ReceiveTime
-	return s.handleRequest(ctx, hm.SenderId, hm.Message)
+func (s *objectSync) HandleRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
+	peerId, err := peer.CtxPeerId(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.handleRequest(ctx, peerId, req)
 }
 
 func (s *objectSync) HandleMessage(ctx context.Context, hm HandleMessage) (err error) {
