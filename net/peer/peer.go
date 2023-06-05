@@ -38,6 +38,7 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 
 type Peer interface {
 	Id() string
+	Context() context.Context
 
 	AcquireDrpcConn(ctx context.Context) (drpc.Conn, error)
 	ReleaseDrpcConn(conn drpc.Conn)
@@ -70,19 +71,20 @@ func (p *peer) Id() string {
 
 func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	if len(p.inactive) == 0 {
-		conn, err := p.Open(ctx)
+		p.mu.Unlock()
+		dconn, err := p.openDrpcConn(ctx)
 		if err != nil {
 			return nil, err
 		}
-		dconn := drpcconn.New(conn)
+		p.mu.Lock()
 		p.inactive = append(p.inactive, dconn)
 	}
 	idx := len(p.inactive) - 1
 	res := p.inactive[idx]
 	p.inactive = p.inactive[:idx]
 	p.active[res] = struct{}{}
+	p.mu.Unlock()
 	return res, nil
 }
 
@@ -103,6 +105,18 @@ func (p *peer) DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error 
 	}
 	defer p.ReleaseDrpcConn(conn)
 	return do(conn)
+}
+
+func (p *peer) openDrpcConn(ctx context.Context) (dconn drpc.Conn, err error) {
+	conn, err := p.Open(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err = handshake.OutgoingProtoHandshake(ctx, conn, handshakeproto.ProtoType_DRPC); err != nil {
+		return nil, err
+	}
+	dconn = drpcconn.New(conn)
+	return
 }
 
 func (p *peer) acceptLoop() {

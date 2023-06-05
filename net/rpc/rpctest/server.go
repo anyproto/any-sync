@@ -5,43 +5,39 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"net"
-	"storj.io/drpc"
-	"storj.io/drpc/drpcconn"
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
 )
 
-func NewTestServer() *TesServer {
-	ts := &TesServer{
+func NewTestServer() *TestServer {
+	ts := &TestServer{
 		Mux: drpcmux.New(),
 	}
 	ts.Server = drpcserver.New(ts.Mux)
 	return ts
 }
 
-type TesServer struct {
+type TestServer struct {
 	*drpcmux.Mux
 	*drpcserver.Server
 }
 
-func (ts *TesServer) Init(a *app.App) (err error) {
+func (ts *TestServer) Init(a *app.App) (err error) {
 	return nil
 }
 
-func (ts *TesServer) Name() (name string) {
+func (ts *TestServer) Name() (name string) {
 	return server.CName
 }
 
-func (ts *TesServer) Run(ctx context.Context) (err error) {
+func (ts *TestServer) Run(ctx context.Context) (err error) {
 	return nil
 }
 
-func (ts *TesServer) Close(ctx context.Context) (err error) {
+func (ts *TestServer) Close(ctx context.Context) (err error) {
 	return nil
 }
 
-func (ts *TesServer) Dial(ctx context.Context) drpc.Conn {
-	sc, cc := net.Pipe()
-	go ts.Server.ServeOne(ctx, sc)
-	return drpcconn.New(cc)
+func (s *TestServer) ServeConn(ctx context.Context, conn net.Conn) (err error) {
+	return s.Server.ServeOne(ctx, conn)
 }
