@@ -60,6 +60,8 @@ type Space interface {
 	Id() string
 	Init(ctx context.Context) error
 
+	StoredIds() []string
+	DebugAllHeads() []headsync.TreeHeads
 	Description() (desc SpaceDescription, err error)
 
 	TreeBuilder() objecttreebuilder.TreeBuilder
@@ -113,6 +115,14 @@ func (s *space) Description() (desc SpaceDescription, err error) {
 		SpaceSettingsPayload: settingsRoot.RawChange,
 	}
 	return
+}
+
+func (s *space) StoredIds() []string {
+	return s.headSync.ExternalIds()
+}
+
+func (s *space) DebugAllHeads() []headsync.TreeHeads {
+	return s.headSync.DebugAllHeads()
 }
 
 func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
