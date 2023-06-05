@@ -5,7 +5,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 )
 
-func NewNoOpSyncStatus() StatusProvider {
+func NewNoOpSyncStatus() StatusService {
 	return &noOpSyncStatus{}
 }
 

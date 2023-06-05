@@ -90,7 +90,7 @@ type space struct {
 	treeBuilder objecttreebuilder.TreeBuilderComponent
 	headSync    headsync.HeadSync
 	objectSync  objectsync.ObjectSync
-	syncStatus  syncstatus.StatusProvider
+	syncStatus  syncstatus.StatusService
 	settings    settings.Settings
 	storage     spacestorage.SpaceStorage
 	aclList     list.AclList
@@ -164,7 +164,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	}
 	s.treeBuilder = s.app.MustComponent(objecttreebuilder.CName).(objecttreebuilder.TreeBuilderComponent)
 	s.headSync = s.app.MustComponent(headsync.CName).(headsync.HeadSync)
-	s.syncStatus = s.app.MustComponent(syncstatus.CName).(syncstatus.StatusProvider)
+	s.syncStatus = s.app.MustComponent(syncstatus.CName).(syncstatus.StatusService)
 	s.settings = s.app.MustComponent(settings.CName).(settings.Settings)
 	s.objectSync = s.app.MustComponent(objectsync.CName).(objectsync.ObjectSync)
 	s.storage = s.app.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)

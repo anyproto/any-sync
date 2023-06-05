@@ -171,6 +171,25 @@ func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId st
 }
 
 //
+// Mock StatusServiceProvider
+//
+
+type mockStatusServiceProvider struct {
+}
+
+func (m *mockStatusServiceProvider) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (m *mockStatusServiceProvider) Name() (name string) {
+	return syncstatus.CName
+}
+
+func (m *mockStatusServiceProvider) NewStatusService() syncstatus.StatusService {
+	return syncstatus.NewNoOpSyncStatus()
+}
+
+//
 // Mock Pool
 //
 
@@ -339,8 +358,8 @@ func newFixture(t *testing.T) *spaceFixture {
 	}
 	fx.app.Register(fx.account).
 		Register(fx.config).
-		Register(syncstatus.NewNoOpSyncStatus()).
 		Register(credentialprovider.NewNoOp()).
+		Register(&mockStatusServiceProvider{}).
 		Register(fx.configurationService).
 		Register(fx.storageProvider).
 		Register(fx.peermanagerProvider).

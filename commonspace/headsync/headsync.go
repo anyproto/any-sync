@@ -57,7 +57,7 @@ type headSync struct {
 	peerManager        peermanager.PeerManager
 	treeManager        treemanager.TreeManager
 	credentialProvider credentialprovider.CredentialProvider
-	syncStatus         syncstatus.StatusProvider
+	syncStatus         syncstatus.StatusService
 	deletionState      deletionstate.ObjectDeletionState
 }
 
@@ -77,7 +77,7 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.diff = ldiff.New(16, 16)
 	h.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	h.credentialProvider = a.MustComponent(credentialprovider.CName).(credentialprovider.CredentialProvider)
-	h.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusProvider)
+	h.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusService)
 	h.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	h.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
 	h.syncer = newDiffSyncer(h)
