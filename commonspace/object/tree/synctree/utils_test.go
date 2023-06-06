@@ -3,6 +3,7 @@ package synctree
 import (
 	"context"
 	"fmt"
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -81,51 +82,124 @@ func (m *messageLog) addMessage(msg protocolMsg) {
 	m.batcher.Add(context.Background(), msg)
 }
 
+type requestPeerManager struct {
+	peerId   string
+	handlers map[string]*testSyncHandler
+	log      *messageLog
+}
+
+func newRequestPeerManager(peerId string, log *messageLog) *requestPeerManager {
+	return &requestPeerManager{
+		peerId:   peerId,
+		handlers: map[string]*testSyncHandler{},
+		log:      log,
+	}
+}
+
+func (r *requestPeerManager) addHandler(peerId string, handler *testSyncHandler) {
+	r.handlers[peerId] = handler
+}
+
+func (r *requestPeerManager) Run(ctx context.Context) (err error) {
+	return nil
+}
+
+func (r *requestPeerManager) Close(ctx context.Context) (err error) {
+	return nil
+}
+
+func (r *requestPeerManager) SendRequest(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
+	panic("should not be called")
+}
+
+func (r *requestPeerManager) QueueRequest(peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	pMsg := protocolMsg{
+		msg:        msg,
+		senderId:   r.peerId,
+		receiverId: peerId,
+	}
+	r.log.addMessage(pMsg)
+	return r.handlers[peerId].send(context.Background(), pMsg)
+}
+
+func (r *requestPeerManager) Init(a *app.App) (err error) {
+	return
+}
+
+func (r *requestPeerManager) Name() (name string) {
+	return
+}
+
+func (r *requestPeerManager) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	pMsg := protocolMsg{
+		msg:        msg,
+		senderId:   r.peerId,
+		receiverId: peerId,
+	}
+	r.log.addMessage(pMsg)
+	return r.handlers[peerId].send(context.Background(), pMsg)
+}
+
+func (r *requestPeerManager) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	for _, handler := range r.handlers {
+		pMsg := protocolMsg{
+			msg:        msg,
+			senderId:   r.peerId,
+			receiverId: handler.peerId,
+		}
+		r.log.addMessage(pMsg)
+		handler.send(context.Background(), pMsg)
+	}
+	return
+}
+
+func (r *requestPeerManager) GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error) {
+	return nil, nil
+}
+
 // testSyncHandler is the wrapper around individual tree to test sync protocol
 type testSyncHandler struct {
 	synchandler.SyncHandler
-	batcher    *mb.MB[protocolMsg]
-	peerId     string
-	aclList    list.AclList
-	log        *messageLog
-	syncClient SyncClient
-	builder    objecttree.BuildObjectTreeFunc
+	batcher     *mb.MB[protocolMsg]
+	peerId      string
+	aclList     list.AclList
+	log         *messageLog
+	syncClient  SyncClient
+	builder     objecttree.BuildObjectTreeFunc
+	peerManager *requestPeerManager
 }
 
 // createSyncHandler creates a sync handler when a tree is already created
 func createSyncHandler(peerId, spaceId string, objTree objecttree.ObjectTree, log *messageLog) *testSyncHandler {
-	factory := NewRequestFactory()
-	syncClient := NewSyncClient(spaceId, newTestMessagePool(peerId, log), factory)
+	peerManager := newRequestPeerManager(peerId, log)
+	syncClient := NewSyncClient(spaceId, peerManager, peerManager)
 	netTree := &broadcastTree{
 		ObjectTree: objTree,
 		SyncClient: syncClient,
 	}
 	handler := newSyncTreeHandler(spaceId, netTree, syncClient, syncstatus.NewNoOpSyncStatus())
-	return newTestSyncHandler(peerId, handler)
+	return &testSyncHandler{
+		SyncHandler: handler,
+		batcher:     mb.New[protocolMsg](0),
+		peerId:      peerId,
+		peerManager: peerManager,
+	}
 }
 
 // createEmptySyncHandler creates a sync handler when the tree will be provided later (this emulates the situation when we have no tree)
 func createEmptySyncHandler(peerId, spaceId string, builder objecttree.BuildObjectTreeFunc, aclList list.AclList, log *messageLog) *testSyncHandler {
-	factory := NewRequestFactory()
-	syncClient := NewSyncClient(spaceId, newTestMessagePool(peerId, log), factory)
+	peerManager := newRequestPeerManager(peerId, log)
+	syncClient := NewSyncClient(spaceId, peerManager, peerManager)
 
 	batcher := mb.New[protocolMsg](0)
 	return &testSyncHandler{
-		batcher:    batcher,
-		peerId:     peerId,
-		aclList:    aclList,
-		log:        log,
-		syncClient: syncClient,
-		builder:    builder,
-	}
-}
-
-func newTestSyncHandler(peerId string, syncHandler synchandler.SyncHandler) *testSyncHandler {
-	batcher := mb.New[protocolMsg](0)
-	return &testSyncHandler{
-		SyncHandler: syncHandler,
 		batcher:     batcher,
 		peerId:      peerId,
+		aclList:     aclList,
+		log:         log,
+		syncClient:  syncClient,
+		builder:     builder,
+		peerManager: peerManager,
 	}
 }
 
@@ -140,12 +214,7 @@ func (h *testSyncHandler) HandleMessage(ctx context.Context, senderId string, re
 	}
 	if unmarshalled.Content.GetFullSyncResponse() == nil {
 		newTreeRequest := NewRequestFactory().CreateNewTreeRequest()
-		var objMsg *spacesyncproto.ObjectSyncMessage
-		objMsg, err = MarshallTreeMessage(newTreeRequest, request.SpaceId, request.ObjectId, "")
-		if err != nil {
-			return
-		}
-		return h.manager().SendPeer(context.Background(), senderId, objMsg)
+		return h.syncClient.QueueRequest(senderId, request.ObjectId, newTreeRequest)
 	}
 	fullSyncResponse := unmarshalled.Content.GetFullSyncResponse()
 	treeStorage, _ := treestorage.NewInMemoryTreeStorage(unmarshalled.RootChange, []string{unmarshalled.RootChange.Id}, nil)
@@ -165,20 +234,16 @@ func (h *testSyncHandler) HandleMessage(ctx context.Context, senderId string, re
 		return
 	}
 	h.SyncHandler = newSyncTreeHandler(request.SpaceId, netTree, h.syncClient, syncstatus.NewNoOpSyncStatus())
-	var objMsg *spacesyncproto.ObjectSyncMessage
-	newTreeRequest := NewRequestFactory().CreateHeadUpdate(netTree, res.Added)
-	objMsg, err = MarshallTreeMessage(newTreeRequest, request.SpaceId, request.ObjectId, "")
-	if err != nil {
-		return
-	}
-	return h.manager().Broadcast(context.Background(), objMsg)
+	headUpdate := NewRequestFactory().CreateHeadUpdate(netTree, res.Added)
+	h.syncClient.Broadcast(headUpdate)
+	return nil
 }
 
-func (h *testSyncHandler) manager() *testMessagePool {
+func (h *testSyncHandler) manager() *requestPeerManager {
 	if h.SyncHandler != nil {
-		return h.SyncHandler.(*syncTreeHandler).syncClient.MessagePool().(*testMessagePool)
+		return h.manager()
 	}
-	return h.syncClient.MessagePool().(*testMessagePool)
+	return h.peerManager
 }
 
 func (h *testSyncHandler) tree() *broadcastTree {
@@ -219,60 +284,6 @@ func (h *testSyncHandler) run(ctx context.Context, t *testing.T, wg *sync.WaitGr
 	}()
 }
 
-// testMessagePool captures all other handlers and sends messages to them
-type testMessagePool struct {
-	peerId   string
-	handlers map[string]*testSyncHandler
-	log      *messageLog
-}
-
-func newTestMessagePool(peerId string, log *messageLog) *testMessagePool {
-	return &testMessagePool{handlers: map[string]*testSyncHandler{}, peerId: peerId, log: log}
-}
-
-func (m *testMessagePool) addHandler(peerId string, handler *testSyncHandler) {
-	m.handlers[peerId] = handler
-}
-
-func (m *testMessagePool) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
-	pMsg := protocolMsg{
-		msg:        msg,
-		senderId:   m.peerId,
-		receiverId: peerId,
-	}
-	m.log.addMessage(pMsg)
-	return m.handlers[peerId].send(context.Background(), pMsg)
-}
-
-func (m *testMessagePool) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
-	for _, handler := range m.handlers {
-		pMsg := protocolMsg{
-			msg:        msg,
-			senderId:   m.peerId,
-			receiverId: handler.peerId,
-		}
-		m.log.addMessage(pMsg)
-		handler.send(context.Background(), pMsg)
-	}
-	return
-}
-
-func (m *testMessagePool) GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error) {
-	panic("should not be called")
-}
-
-func (m *testMessagePool) LastUsage() time.Time {
-	panic("should not be called")
-}
-
-func (m *testMessagePool) HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error) {
-	panic("should not be called")
-}
-
-func (m *testMessagePool) SendSync(ctx context.Context, peerId string, message *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
-	panic("should not be called")
-}
-
 // broadcastTree is the tree that broadcasts changes to everyone when changes are added
 // it is a simplified version of SyncTree which is easier to use in the test environment
 type broadcastTree struct {
@@ -286,7 +297,7 @@ func (b *broadcastTree) AddRawChanges(ctx context.Context, changes objecttree.Ra
 		return objecttree.AddResult{}, err
 	}
 	upd := b.SyncClient.CreateHeadUpdate(b.ObjectTree, res.Added)
-	b.SyncClient.Broadcast(ctx, upd)
+	b.SyncClient.Broadcast(upd)
 	return res, nil
 }
 

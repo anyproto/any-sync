@@ -63,19 +63,17 @@ type syncHandlerFixture struct {
 
 func newSyncHandlerFixture(t *testing.T) *syncHandlerFixture {
 	ctrl := gomock.NewController(t)
-	syncClientMock := mock_objectsync.NewMockSyncClient(ctrl)
 	objectTreeMock := newTestObjMock(mock_objecttree.NewMockObjectTree(ctrl))
 	receiveQueue := newReceiveQueue(5)
 
 	syncHandler := &syncTreeHandler{
-		objTree:    objectTreeMock,
-		syncClient: syncClientMock,
+		objTree: objectTreeMock,
+		//syncClient: syncClientMock,
 		queue:      receiveQueue,
 		syncStatus: syncstatus.NewNoOpSyncStatus(),
 	}
 	return &syncHandlerFixture{
 		ctrl:             ctrl,
-		syncClientMock:   syncClientMock,
 		objectTreeMock:   objectTreeMock,
 		receiveQueueMock: receiveQueue,
 		syncHandler:      syncHandler,

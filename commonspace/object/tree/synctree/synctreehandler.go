@@ -52,6 +52,8 @@ func (s *syncTreeHandler) HandleRequest(ctx context.Context, senderId string, re
 		return
 	}
 	s.syncStatus.HeadsReceive(senderId, request.ObjectId, treechangeproto.GetHeads(unmarshalled))
+	s.objTree.Lock()
+	defer s.objTree.Unlock()
 	treeResp, err := s.syncProtocol.FullSyncRequest(ctx, senderId, fullSyncRequest)
 	if err != nil {
 		return

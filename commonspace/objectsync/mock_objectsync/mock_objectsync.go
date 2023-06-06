@@ -10,7 +10,6 @@ import (
 
 	objecttree "github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	treechangeproto "github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	objectsync "github.com/anyproto/any-sync/commonspace/objectsync"
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -106,20 +105,6 @@ func (m *MockSyncClient) CreateNewTreeRequest() *treechangeproto.TreeSyncMessage
 func (mr *MockSyncClientMockRecorder) CreateNewTreeRequest() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNewTreeRequest", reflect.TypeOf((*MockSyncClient)(nil).CreateNewTreeRequest))
-}
-
-// MessagePool mocks base method.
-func (m *MockSyncClient) MessagePool() objectsync.MessagePool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MessagePool")
-	ret0, _ := ret[0].(objectsync.MessagePool)
-	return ret0
-}
-
-// MessagePool indicates an expected call of MessagePool.
-func (mr *MockSyncClientMockRecorder) MessagePool() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MessagePool", reflect.TypeOf((*MockSyncClient)(nil).MessagePool))
 }
 
 // SendSync mocks base method.
