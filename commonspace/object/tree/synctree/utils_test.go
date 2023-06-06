@@ -240,9 +240,6 @@ func (h *testSyncHandler) HandleMessage(ctx context.Context, senderId string, re
 }
 
 func (h *testSyncHandler) manager() *requestPeerManager {
-	if h.SyncHandler != nil {
-		return h.manager()
-	}
 	return h.peerManager
 }
 
@@ -275,10 +272,18 @@ func (h *testSyncHandler) run(ctx context.Context, t *testing.T, wg *sync.WaitGr
 				h.tree().Unlock()
 				continue
 			}
-			err = h.HandleMessage(ctx, res.senderId, res.msg)
-			if err != nil {
-				fmt.Println("error handling message", err.Error())
-				continue
+			if res.description().name == "FullSyncRequest" {
+				resp, err := h.HandleRequest(ctx, res.senderId, res.msg)
+				if err != nil {
+					fmt.Println("error handling request", err.Error())
+					continue
+				}
+				h.peerManager.SendPeer(ctx, res.senderId, resp)
+			} else {
+				err = h.HandleMessage(ctx, res.senderId, res.msg)
+				if err != nil {
+					fmt.Println("error handling message", err.Error())
+				}
 			}
 		}
 	}()
