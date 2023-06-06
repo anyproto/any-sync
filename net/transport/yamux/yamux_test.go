@@ -31,7 +31,7 @@ func TestYamuxTransport_Dial(t *testing.T) {
 	mcC, err := fxC.Dial(ctx, fxS.addr)
 	require.NoError(t, err)
 	require.Len(t, fxS.accepter.mcs, 1)
-	mcS := fxS.accepter.mcs[0]
+	mcS := <-fxS.accepter.mcs
 
 	var (
 		sData     string
@@ -83,7 +83,7 @@ func TestWriteBench(t *testing.T) {
 
 	mcC, err := fxC.Dial(ctx, fxS.addr)
 	require.NoError(t, err)
-	mcS := fxS.accepter.mcs[0]
+	mcS := <-fxS.accepter.mcs
 
 	go func() {
 		for i := 0; i < numSubConn; i++ {
@@ -139,7 +139,7 @@ func newFixture(t *testing.T) *fixture {
 		yamuxTransport: New().(*yamuxTransport),
 		ctrl:           gomock.NewController(t),
 		acc:            &accounttest.AccountTestService{},
-		accepter:       &testAccepter{},
+		accepter:       &testAccepter{mcs: make(chan transport.MultiConn, 100)},
 		a:              new(app.App),
 	}
 
@@ -179,11 +179,11 @@ func (c *testConf) GetYamux() Config {
 
 type testAccepter struct {
 	err error
-	mcs []transport.MultiConn
+	mcs chan transport.MultiConn
 }
 
 func (t *testAccepter) Accept(mc transport.MultiConn) (err error) {
-	t.mcs = append(t.mcs, mc)
+	t.mcs <- mc
 	return t.err
 }
 
