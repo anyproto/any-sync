@@ -214,14 +214,15 @@ func validateSpaceStorageCreatePayload(payload spacestorage.SpaceStorageCreatePa
 }
 
 func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, identity crypto.PubKey) (err error) {
+	if rawHeaderWithId == nil {
+		return spacestorage.ErrIncorrectSpaceHeader
+	}
 	sepIdx := strings.Index(rawHeaderWithId.Id, ".")
 	if sepIdx == -1 {
-		err = spacestorage.ErrIncorrectSpaceHeader
-		return
+		return spacestorage.ErrIncorrectSpaceHeader
 	}
 	if !cidutil.VerifyCid(rawHeaderWithId.RawHeader, rawHeaderWithId.Id[:sepIdx]) {
-		err = objecttree.ErrIncorrectCid
-		return
+		return objecttree.ErrIncorrectCid
 	}
 	var rawSpaceHeader spacesyncproto.RawSpaceHeader
 	err = proto.Unmarshal(rawHeaderWithId.RawHeader, &rawSpaceHeader)
@@ -239,19 +240,16 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 	}
 	res, err := payloadIdentity.Verify(rawSpaceHeader.SpaceHeader, rawSpaceHeader.Signature)
 	if err != nil || !res {
-		err = spacestorage.ErrIncorrectSpaceHeader
-		return
+		return spacestorage.ErrIncorrectSpaceHeader
 	}
 	if rawHeaderWithId.Id[sepIdx+1:] != strconv.FormatUint(header.ReplicationKey, 36) {
-		err = spacestorage.ErrIncorrectSpaceHeader
-		return
+		return spacestorage.ErrIncorrectSpaceHeader
 	}
 	if identity == nil {
 		return
 	}
 	if !payloadIdentity.Equals(identity) {
-		err = ErrIncorrectIdentity
-		return
+		return ErrIncorrectIdentity
 	}
 	return
 }

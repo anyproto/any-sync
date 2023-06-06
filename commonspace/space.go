@@ -169,7 +169,8 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.objectSync = s.app.MustComponent(objectsync.CName).(objectsync.ObjectSync)
 	s.storage = s.app.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	s.aclList = s.app.MustComponent(syncacl.CName).(list.AclList)
-	return nil
+	s.header, err = s.storage.SpaceHeader()
+	return
 }
 
 func (s *space) SyncStatus() syncstatus.StatusUpdater {

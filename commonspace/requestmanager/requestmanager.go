@@ -82,8 +82,9 @@ func (r *requestManager) QueueRequest(peerId string, req *spacesyncproto.ObjectS
 	defer r.Unlock()
 	pl, exists := r.pools[peerId]
 	if !exists {
-		pl := streampool.NewExecPool(r.workers, r.queueSize)
+		pl = streampool.NewExecPool(r.workers, r.queueSize)
 		r.pools[peerId] = pl
+		pl.Run()
 	}
 	// TODO: for later think when many clients are there,
 	//  we need to close pools for inactive clients

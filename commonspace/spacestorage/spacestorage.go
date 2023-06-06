@@ -28,7 +28,7 @@ const (
 )
 
 type SpaceStorage interface {
-	app.Component
+	app.ComponentRunnable
 	Id() string
 	SetSpaceDeleted() error
 	IsSpaceDeleted() (bool, error)
@@ -44,8 +44,6 @@ type SpaceStorage interface {
 	CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (treestorage.TreeStorage, error)
 	WriteSpaceHash(hash string) error
 	ReadSpaceHash() (hash string, err error)
-
-	Close() error
 }
 
 type SpaceStorageCreatePayload struct {

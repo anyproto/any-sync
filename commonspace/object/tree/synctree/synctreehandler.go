@@ -92,7 +92,7 @@ func (s *syncTreeHandler) handleMessage(ctx context.Context, senderId string) (e
 	case content.GetHeadUpdate() != nil:
 		var syncReq *treechangeproto.TreeSyncMessage
 		syncReq, err = s.syncProtocol.HeadUpdate(ctx, senderId, content.GetHeadUpdate())
-		if err != nil {
+		if err != nil || syncReq == nil {
 			return
 		}
 		return s.syncClient.QueueRequest(senderId, treeId, syncReq)
