@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
+	"github.com/anyproto/any-sync/net/connutil"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/net/transport"
@@ -25,7 +26,7 @@ type connCtrl interface {
 func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 	ctx := mc.Context()
 	pr := &peer{
-		active:    map[drpc.Conn]struct{}{},
+		active:    map[*subConn]struct{}{},
 		MultiConn: mc,
 		ctrl:      ctrl,
 	}
@@ -38,6 +39,7 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 
 type Peer interface {
 	Id() string
+	Context() context.Context
 
 	AcquireDrpcConn(ctx context.Context) (drpc.Conn, error)
 	ReleaseDrpcConn(conn drpc.Conn)
@@ -50,14 +52,19 @@ type Peer interface {
 	ocache.Object
 }
 
+type subConn struct {
+	drpc.Conn
+	*connutil.LastUsageConn
+}
+
 type peer struct {
 	id string
 
 	ctrl connCtrl
 
 	// drpc conn pool
-	inactive []drpc.Conn
-	active   map[drpc.Conn]struct{}
+	inactive []*subConn
+	active   map[*subConn]struct{}
 
 	mu sync.Mutex
 
@@ -70,29 +77,34 @@ func (p *peer) Id() string {
 
 func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	if len(p.inactive) == 0 {
-		conn, err := p.Open(ctx)
+		p.mu.Unlock()
+		dconn, err := p.openDrpcConn(ctx)
 		if err != nil {
 			return nil, err
 		}
-		dconn := drpcconn.New(conn)
+		p.mu.Lock()
 		p.inactive = append(p.inactive, dconn)
 	}
 	idx := len(p.inactive) - 1
 	res := p.inactive[idx]
 	p.inactive = p.inactive[:idx]
 	p.active[res] = struct{}{}
+	p.mu.Unlock()
 	return res, nil
 }
 
 func (p *peer) ReleaseDrpcConn(conn drpc.Conn) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if _, ok := p.active[conn]; ok {
-		delete(p.active, conn)
+	sc, ok := conn.(*subConn)
+	if !ok {
+		return
 	}
-	p.inactive = append(p.inactive, conn)
+	if _, ok = p.active[sc]; ok {
+		delete(p.active, sc)
+	}
+	p.inactive = append(p.inactive, sc)
 	return
 }
 
@@ -103,6 +115,21 @@ func (p *peer) DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error 
 	}
 	defer p.ReleaseDrpcConn(conn)
 	return do(conn)
+}
+
+func (p *peer) openDrpcConn(ctx context.Context) (dconn *subConn, err error) {
+	conn, err := p.Open(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err = handshake.OutgoingProtoHandshake(ctx, conn, handshakeproto.ProtoType_DRPC); err != nil {
+		return nil, err
+	}
+	tconn := connutil.NewLastUsageConn(conn)
+	return &subConn{
+		Conn:          drpcconn.New(tconn),
+		LastUsageConn: tconn,
+	}, nil
 }
 
 func (p *peer) acceptLoop() {
@@ -145,10 +172,47 @@ func (p *peer) serve(conn net.Conn) (err error) {
 }
 
 func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
+	p.gc(objectTTL)
 	if time.Now().Sub(p.LastUsage()) < objectTTL {
 		return false, nil
 	}
 	return true, p.Close()
+}
+
+func (p *peer) gc(ttl time.Duration) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	minLastUsage := time.Now().Add(-ttl)
+	var hasClosed bool
+	for i, in := range p.inactive {
+		select {
+		case <-in.Closed():
+			p.inactive[i] = nil
+			hasClosed = true
+		default:
+		}
+		if in.LastUsage().Before(minLastUsage) {
+			_ = in.Close()
+			p.inactive[i] = nil
+			hasClosed = true
+		}
+	}
+	if hasClosed {
+		inactive := p.inactive
+		p.inactive = p.inactive[:0]
+		for _, in := range inactive {
+			if in != nil {
+				p.inactive = append(p.inactive, in)
+			}
+		}
+	}
+	for act := range p.active {
+		select {
+		case <-act.Closed():
+			delete(p.active, act)
+		default:
+		}
+	}
 }
 
 func (p *peer) Close() (err error) {

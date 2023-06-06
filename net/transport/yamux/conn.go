@@ -9,6 +9,15 @@ import (
 	"time"
 )
 
+func NewMultiConn(cctx context.Context, luConn *connutil.LastUsageConn, addr string, sess *yamux.Session) transport.MultiConn {
+	return &yamuxConn{
+		ctx:     cctx,
+		luConn:  luConn,
+		addr:    addr,
+		Session: sess,
+	}
+}
+
 type yamuxConn struct {
 	ctx    context.Context
 	luConn *connutil.LastUsageConn
