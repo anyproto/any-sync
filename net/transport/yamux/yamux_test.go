@@ -173,7 +173,6 @@ func (c *testConf) GetYamux() Config {
 		ListenAddrs:     []string{"127.0.0.1:0"},
 		WriteTimeoutSec: 10,
 		DialTimeoutSec:  10,
-		MaxStreams:      1024,
 	}
 }
 

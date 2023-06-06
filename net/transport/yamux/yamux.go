@@ -43,9 +43,6 @@ func (y *yamuxTransport) Init(a *app.App) (err error) {
 	y.secure = a.MustComponent(secureservice.CName).(secureservice.SecureService)
 	y.conf = a.MustComponent("config").(configGetter).GetYamux()
 	y.yamuxConf = yamux.DefaultConfig()
-	if y.conf.MaxStreams > 0 {
-		y.yamuxConf.AcceptBacklog = y.conf.MaxStreams
-	}
 	y.yamuxConf.EnableKeepAlive = false
 	y.yamuxConf.StreamOpenTimeout = time.Duration(y.conf.DialTimeoutSec) * time.Second
 	y.yamuxConf.ConnectionWriteTimeout = time.Duration(y.conf.WriteTimeoutSec) * time.Second
