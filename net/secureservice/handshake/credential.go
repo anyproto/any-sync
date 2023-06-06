@@ -12,13 +12,17 @@ func OutgoingHandshake(ctx context.Context, conn io.ReadWriteCloser, peerId stri
 	}
 	h := newHandshake()
 	done := make(chan struct{})
+	var (
+		resIdentity []byte
+		resErr      error
+	)
 	go func() {
 		defer close(done)
-		identity, err = outgoingHandshake(h, conn, peerId, cc)
+		resIdentity, resErr = outgoingHandshake(h, conn, peerId, cc)
 	}()
 	select {
 	case <-done:
-		return
+		return resIdentity, resErr
 	case <-ctx.Done():
 		_ = conn.Close()
 		return nil, ctx.Err()
@@ -74,13 +78,17 @@ func IncomingHandshake(ctx context.Context, conn io.ReadWriteCloser, peerId stri
 	}
 	h := newHandshake()
 	done := make(chan struct{})
+	var (
+		resIdentity []byte
+		resError    error
+	)
 	go func() {
 		defer close(done)
-		identity, err = incomingHandshake(h, conn, peerId, cc)
+		resIdentity, resError = incomingHandshake(h, conn, peerId, cc)
 	}()
 	select {
 	case <-done:
-		return
+		return resIdentity, resError
 	case <-ctx.Done():
 		_ = conn.Close()
 		return nil, ctx.Err()
