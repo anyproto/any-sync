@@ -5,7 +5,6 @@ import (
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/util/crypto"
-	"github.com/libp2p/go-libp2p/core/sec"
 	"go.uber.org/zap"
 )
 
@@ -19,11 +18,11 @@ type noVerifyChecker struct {
 	cred *handshakeproto.Credentials
 }
 
-func (n noVerifyChecker) MakeCredentials(sc sec.SecureConn) *handshakeproto.Credentials {
+func (n noVerifyChecker) MakeCredentials(remotePeerId string) *handshakeproto.Credentials {
 	return n.cred
 }
 
-func (n noVerifyChecker) CheckCredential(sc sec.SecureConn, cred *handshakeproto.Credentials) (identity []byte, err error) {
+func (n noVerifyChecker) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (identity []byte, err error) {
 	if cred.Version != n.cred.Version {
 		return nil, handshake.ErrIncompatibleVersion
 	}
@@ -42,8 +41,8 @@ type peerSignVerifier struct {
 	account      *accountdata.AccountKeys
 }
 
-func (p *peerSignVerifier) MakeCredentials(sc sec.SecureConn) *handshakeproto.Credentials {
-	sign, err := p.account.SignKey.Sign([]byte(p.account.PeerId + sc.RemotePeer().String()))
+func (p *peerSignVerifier) MakeCredentials(remotePeerId string) *handshakeproto.Credentials {
+	sign, err := p.account.SignKey.Sign([]byte(p.account.PeerId + remotePeerId))
 	if err != nil {
 		log.Warn("can't sign identity credentials", zap.Error(err))
 	}
@@ -61,7 +60,7 @@ func (p *peerSignVerifier) MakeCredentials(sc sec.SecureConn) *handshakeproto.Cr
 	}
 }
 
-func (p *peerSignVerifier) CheckCredential(sc sec.SecureConn, cred *handshakeproto.Credentials) (identity []byte, err error) {
+func (p *peerSignVerifier) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (identity []byte, err error) {
 	if cred.Version != p.protoVersion {
 		return nil, handshake.ErrIncompatibleVersion
 	}
@@ -76,7 +75,7 @@ func (p *peerSignVerifier) CheckCredential(sc sec.SecureConn, cred *handshakepro
 	if err != nil {
 		return nil, handshake.ErrInvalidCredentials
 	}
-	ok, err := pubKey.Verify([]byte((sc.RemotePeer().String() + p.account.PeerId)), msg.Sign)
+	ok, err := pubKey.Verify([]byte((remotePeerId + p.account.PeerId)), msg.Sign)
 	if err != nil {
 		return nil, err
 	}

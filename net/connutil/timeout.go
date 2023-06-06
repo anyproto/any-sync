@@ -17,7 +17,7 @@ type TimeoutConn struct {
 	timeout time.Duration
 }
 
-func NewConn(conn net.Conn, timeout time.Duration) *TimeoutConn {
+func NewTimeout(conn net.Conn, timeout time.Duration) *TimeoutConn {
 	return &TimeoutConn{conn, timeout}
 }
 

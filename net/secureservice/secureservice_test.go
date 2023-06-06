@@ -32,18 +32,17 @@ func TestHandshake(t *testing.T) {
 	resCh := make(chan acceptRes)
 	go func() {
 		var ar acceptRes
-		ar.ctx, ar.conn, ar.err = fxS.SecureInbound(ctx, sc)
+		ar.ctx, ar.err = fxS.SecureInbound(ctx, sc)
 		resCh <- ar
 	}()
 
 	fxC := newFixture(t, nc, nc.GetAccountService(1), 0)
 	defer fxC.Finish(t)
 
-	cctx, secConn, err := fxC.SecureOutbound(ctx, cc)
+	cctx, err := fxC.SecureOutbound(ctx, cc)
 	require.NoError(t, err)
 	ctxPeerId, err := peer.CtxPeerId(cctx)
 	require.NoError(t, err)
-	assert.Equal(t, nc.GetAccountService(0).Account().PeerId, secConn.RemotePeer().String())
 	assert.Equal(t, nc.GetAccountService(0).Account().PeerId, ctxPeerId)
 	res := <-resCh
 	require.NoError(t, res.err)
@@ -70,12 +69,12 @@ func TestHandshakeIncompatibleVersion(t *testing.T) {
 	resCh := make(chan acceptRes)
 	go func() {
 		var ar acceptRes
-		ar.ctx, ar.conn, ar.err = fxS.SecureInbound(ctx, sc)
+		ar.ctx, ar.err = fxS.SecureInbound(ctx, sc)
 		resCh <- ar
 	}()
 	fxC := newFixture(t, nc, nc.GetAccountService(1), 1)
 	defer fxC.Finish(t)
-	_, _, err := fxC.SecureOutbound(ctx, cc)
+	_, err := fxC.SecureOutbound(ctx, cc)
 	require.Equal(t, handshake.ErrIncompatibleVersion, err)
 	res := <-resCh
 	require.Equal(t, handshake.ErrIncompatibleVersion, res.err)

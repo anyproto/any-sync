@@ -86,12 +86,12 @@ func (y *yamuxTransport) Dial(ctx context.Context, addr string) (mc transport.Mu
 	}
 	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
-	cctx, sc, err := y.secure.SecureOutbound(ctx, conn)
+	cctx, err := y.secure.SecureOutbound(ctx, conn)
 	if err != nil {
 		_ = conn.Close()
 		return nil, err
 	}
-	luc := connutil.NewLastUsageConn(sc)
+	luc := connutil.NewLastUsageConn(conn)
 	sess, err := yamux.Client(luc, y.yamuxConf)
 	if err != nil {
 		return
@@ -132,12 +132,12 @@ func (y *yamuxTransport) acceptLoop(ctx context.Context, list net.Listener) {
 func (y *yamuxTransport) accept(conn net.Conn) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(y.conf.DialTimeoutSec)*time.Second)
 	defer cancel()
-	cctx, sc, err := y.secure.SecureInbound(ctx, conn)
+	cctx, err := y.secure.SecureInbound(ctx, conn)
 	if err != nil {
 		log.Warn("incoming connection handshake error", zap.Error(err))
 		return
 	}
-	luc := connutil.NewLastUsageConn(sc)
+	luc := connutil.NewLastUsageConn(conn)
 	sess, err := yamux.Server(luc, y.yamuxConf)
 	if err != nil {
 		log.Warn("incoming connection yamux session error", zap.Error(err))

@@ -14,7 +14,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
+	"net"
+	"sync"
 	"testing"
+	"time"
 )
 
 var ctx = context.Background()
@@ -61,6 +64,64 @@ func TestYamuxTransport_Dial(t *testing.T) {
 	assert.NoError(t, acceptErr)
 	assert.Equal(t, data, sData)
 	assert.NoError(t, copyErr)
+}
+
+// no deadline - 69100 rps
+// common write deadline - 66700 rps
+// subconn write deadline - 67100 rps
+func TestWriteBench(t *testing.T) {
+	t.Skip()
+	var (
+		numSubConn = 10
+		numWrites  = 100000
+	)
+
+	fxS := newFixture(t)
+	defer fxS.finish(t)
+	fxC := newFixture(t)
+	defer fxC.finish(t)
+
+	mcC, err := fxC.Dial(ctx, fxS.addr)
+	require.NoError(t, err)
+	mcS := fxS.accepter.mcs[0]
+
+	go func() {
+		for i := 0; i < numSubConn; i++ {
+			conn, err := mcS.Accept()
+			require.NoError(t, err)
+			go func(sc net.Conn) {
+				var b = make([]byte, 1024)
+				for {
+					n, _ := sc.Read(b)
+					if n > 0 {
+						sc.Write(b[:n])
+					} else {
+						break
+					}
+				}
+			}(conn)
+		}
+	}()
+
+	var wg sync.WaitGroup
+	wg.Add(numSubConn)
+	st := time.Now()
+	for i := 0; i < numSubConn; i++ {
+		conn, err := mcC.Open(ctx)
+		require.NoError(t, err)
+		go func(sc net.Conn) {
+			defer sc.Close()
+			defer wg.Done()
+			for j := 0; j < numWrites; j++ {
+				var b = []byte("some data some data some data some data some data some data some data some data some data")
+				sc.Write(b)
+				sc.Read(b)
+			}
+		}(conn)
+	}
+	wg.Wait()
+	dur := time.Since(st)
+	t.Logf("%.2f req per sec", float64(numWrites*numSubConn)/dur.Seconds())
 }
 
 type fixture struct {

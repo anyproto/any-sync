@@ -4,10 +4,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
-	"github.com/libp2p/go-libp2p/core/sec"
 	"golang.org/x/exp/slices"
 	"io"
-	"net"
 	"sync"
 )
 
@@ -65,8 +63,8 @@ var handshakePool = &sync.Pool{New: func() any {
 }}
 
 type CredentialChecker interface {
-	MakeCredentials(sc sec.SecureConn) *handshakeproto.Credentials
-	CheckCredential(sc sec.SecureConn, cred *handshakeproto.Credentials) (identity []byte, err error)
+	MakeCredentials(remotePeerId string) *handshakeproto.Credentials
+	CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (identity []byte, err error)
 }
 
 func newHandshake() *handshake {
@@ -74,7 +72,7 @@ func newHandshake() *handshake {
 }
 
 type handshake struct {
-	conn        net.Conn
+	conn        io.ReadWriteCloser
 	remoteCred  *handshakeproto.Credentials
 	remoteProto *handshakeproto.Proto
 	remoteAck   *handshakeproto.Ack
