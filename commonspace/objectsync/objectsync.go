@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
@@ -69,7 +70,7 @@ type objectSync struct {
 
 func (s *objectSync) Init(a *app.App) (err error) {
 	s.spaceStorage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
-	s.objectGetter = app.MustComponent[syncobjectgetter.SyncObjectGetter](a)
+	s.objectGetter = a.MustComponent(treemanager.CName).(syncobjectgetter.SyncObjectGetter)
 	s.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	sharedData := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
 	mc := a.Component(metric.CName)
