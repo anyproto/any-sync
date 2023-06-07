@@ -73,7 +73,8 @@ func TestSpaceDeleteIds(t *testing.T) {
 	fx.treeManager.space = spc
 	err = spc.Init(ctx)
 	require.NoError(t, err)
-
+	close(fx.treeManager.waitLoad)
+	
 	var ids []string
 	for i := 0; i < totalObjs; i++ {
 		// creating a tree
@@ -147,6 +148,7 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	// adding space to tree manager
 	fx.treeManager.space = spc
 	err = spc.Init(ctx)
+	close(fx.treeManager.waitLoad)
 	require.NoError(t, err)
 
 	settingsObject := spc.(*space).app.MustComponent(settings.CName).(settings.Settings).SettingsObject()
@@ -183,10 +185,12 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	spc, err = fx.spaceService.NewSpace(ctx, sp)
 	require.NoError(t, err)
 	require.NotNil(t, spc)
+	fx.treeManager.waitLoad = make(chan struct{})
 	fx.treeManager.space = spc
 	fx.treeManager.deletedIds = nil
 	err = spc.Init(ctx)
 	require.NoError(t, err)
+	close(fx.treeManager.waitLoad)
 
 	// waiting until everything is deleted
 	time.Sleep(3 * time.Second)
@@ -230,6 +234,7 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	fx.treeManager.space = spc
 	err = spc.Init(ctx)
 	require.NoError(t, err)
+	close(fx.treeManager.waitLoad)
 
 	settingsObject := spc.(*space).app.MustComponent(settings.CName).(settings.Settings).SettingsObject()
 	var ids []string
@@ -259,10 +264,12 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, spc)
 	fx.treeManager.space = spc
+	fx.treeManager.waitLoad = make(chan struct{})
 	fx.treeManager.deletedIds = nil
 	fx.treeManager.markedIds = nil
 	err = spc.Init(ctx)
 	require.NoError(t, err)
+	close(fx.treeManager.waitLoad)
 
 	// waiting until everything is deleted
 	time.Sleep(3 * time.Second)
