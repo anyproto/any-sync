@@ -42,6 +42,12 @@ type yamuxTransport struct {
 func (y *yamuxTransport) Init(a *app.App) (err error) {
 	y.secure = a.MustComponent(secureservice.CName).(secureservice.SecureService)
 	y.conf = a.MustComponent("config").(configGetter).GetYamux()
+	if y.conf.DialTimeoutSec <= 0 {
+		y.conf.DialTimeoutSec = 10
+	}
+	if y.conf.WriteTimeoutSec <= 0 {
+		y.conf.WriteTimeoutSec = 10
+	}
 	y.yamuxConf = yamux.DefaultConfig()
 	y.yamuxConf.EnableKeepAlive = false
 	y.yamuxConf.StreamOpenTimeout = time.Duration(y.conf.DialTimeoutSec) * time.Second
