@@ -26,7 +26,10 @@ type yamuxConn struct {
 }
 
 func (y *yamuxConn) Open(ctx context.Context) (conn net.Conn, err error) {
-	return y.Session.Open()
+	if conn, err = y.Session.Open(); err != nil {
+		return
+	}
+	return
 }
 
 func (y *yamuxConn) LastUsage() time.Time {
@@ -46,6 +49,7 @@ func (y *yamuxConn) Accept() (conn net.Conn, err error) {
 		if err == yamux.ErrSessionShutdown {
 			err = transport.ErrConnClosed
 		}
+		return
 	}
 	return
 }

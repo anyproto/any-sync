@@ -3,32 +3,36 @@ package handshake
 import (
 	"context"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
-	"github.com/libp2p/go-libp2p/core/sec"
+	"io"
 )
 
-func OutgoingHandshake(ctx context.Context, sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
+func OutgoingHandshake(ctx context.Context, conn io.ReadWriteCloser, peerId string, cc CredentialChecker) (identity []byte, err error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	h := newHandshake()
 	done := make(chan struct{})
+	var (
+		resIdentity []byte
+		resErr      error
+	)
 	go func() {
 		defer close(done)
-		identity, err = outgoingHandshake(h, sc, cc)
+		resIdentity, resErr = outgoingHandshake(h, conn, peerId, cc)
 	}()
 	select {
 	case <-done:
-		return
+		return resIdentity, resErr
 	case <-ctx.Done():
-		_ = sc.Close()
+		_ = conn.Close()
 		return nil, ctx.Err()
 	}
 }
 
-func outgoingHandshake(h *handshake, sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
+func outgoingHandshake(h *handshake, conn io.ReadWriteCloser, peerId string, cc CredentialChecker) (identity []byte, err error) {
 	defer h.release()
-	h.conn = sc
-	localCred := cc.MakeCredentials(sc)
+	h.conn = conn
+	localCred := cc.MakeCredentials(peerId)
 	if err = h.writeCredentials(localCred); err != nil {
 		h.tryWriteErrAndClose(err)
 		return
@@ -45,7 +49,7 @@ func outgoingHandshake(h *handshake, sc sec.SecureConn, cc CredentialChecker) (i
 		return nil, HandshakeError{e: msg.ack.Error}
 	}
 
-	if identity, err = cc.CheckCredential(sc, msg.cred); err != nil {
+	if identity, err = cc.CheckCredential(peerId, msg.cred); err != nil {
 		h.tryWriteErrAndClose(err)
 		return
 	}
@@ -68,40 +72,44 @@ func outgoingHandshake(h *handshake, sc sec.SecureConn, cc CredentialChecker) (i
 	}
 }
 
-func IncomingHandshake(ctx context.Context, sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
+func IncomingHandshake(ctx context.Context, conn io.ReadWriteCloser, peerId string, cc CredentialChecker) (identity []byte, err error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	h := newHandshake()
 	done := make(chan struct{})
+	var (
+		resIdentity []byte
+		resError    error
+	)
 	go func() {
 		defer close(done)
-		identity, err = incomingHandshake(h, sc, cc)
+		resIdentity, resError = incomingHandshake(h, conn, peerId, cc)
 	}()
 	select {
 	case <-done:
-		return
+		return resIdentity, resError
 	case <-ctx.Done():
-		_ = sc.Close()
+		_ = conn.Close()
 		return nil, ctx.Err()
 	}
 }
 
-func incomingHandshake(h *handshake, sc sec.SecureConn, cc CredentialChecker) (identity []byte, err error) {
+func incomingHandshake(h *handshake, conn io.ReadWriteCloser, peerId string, cc CredentialChecker) (identity []byte, err error) {
 	defer h.release()
-	h.conn = sc
+	h.conn = conn
 
 	msg, err := h.readMsg(msgTypeCred)
 	if err != nil {
 		h.tryWriteErrAndClose(err)
 		return
 	}
-	if identity, err = cc.CheckCredential(sc, msg.cred); err != nil {
+	if identity, err = cc.CheckCredential(peerId, msg.cred); err != nil {
 		h.tryWriteErrAndClose(err)
 		return
 	}
 
-	if err = h.writeCredentials(cc.MakeCredentials(sc)); err != nil {
+	if err = h.writeCredentials(cc.MakeCredentials(peerId)); err != nil {
 		h.tryWriteErrAndClose(err)
 		return nil, err
 	}
