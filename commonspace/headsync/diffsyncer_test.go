@@ -1,13 +1,57 @@
 package headsync
 
 import (
+	"context"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/net/peer"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
+	"storj.io/drpc"
 	"testing"
+	"time"
 )
+
+type mockPeer struct {
+}
+
+func (m mockPeer) Id() string {
+	return "peerId"
+}
+
+func (m mockPeer) Context() context.Context {
+	return context.Background()
+}
+
+func (m mockPeer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
+	return nil, nil
+}
+
+func (m mockPeer) ReleaseDrpcConn(conn drpc.Conn) {
+	return
+}
+
+func (m mockPeer) DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error {
+	return nil
+}
+
+func (m mockPeer) IsClosed() bool {
+	return false
+}
+
+func (m mockPeer) TryClose(objectTTL time.Duration) (res bool, err error) {
+	return false, err
+}
+
+func (m mockPeer) Close() (err error) {
+	return nil
+}
 
 func (fx *headSyncFixture) initDiffSyncer(t *testing.T) {
 	fx.init(t)
-	fx.diffSyncer = newDiffSyncer(fx.headSync)
+	fx.diffSyncer = newDiffSyncer(fx.headSync).(*diffSyncer)
+	fx.diffSyncer.clientFactory = spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceSyncClient {
+		return fx.clientMock
+	})
 	fx.deletionStateMock.EXPECT().AddObserver(gomock.Any())
 	fx.treeManagerMock.EXPECT().NewTreeSyncer(fx.spaceState.SpaceId, fx.treeManagerMock).Return(fx.treeSyncerMock)
 	fx.diffSyncer.Init()
@@ -17,6 +61,22 @@ func TestDiffSyncer(t *testing.T) {
 	fx := newHeadSyncFixture(t)
 	fx.initDiffSyncer(t)
 	defer fx.stop()
+	ctx := context.Background()
+
+	t.Run("diff syncer sync", func(t *testing.T) {
+		mPeer := mockPeer{}
+		fx.peerManagerMock.EXPECT().
+			GetResponsiblePeers(gomock.Any()).
+			Return([]peer.Peer{mPeer}, nil)
+		fx.diffMock.EXPECT().
+			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock))).
+			Return([]string{"new"}, []string{"changed"}, nil, nil)
+		fx.deletionStateMock.EXPECT().Filter([]string{"new"}).Return([]string{"new"}).Times(1)
+		fx.deletionStateMock.EXPECT().Filter([]string{"changed"}).Return([]string{"changed"}).Times(1)
+		fx.deletionStateMock.EXPECT().Filter(nil).Return(nil).Times(1)
+		fx.treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer.Id(), []string{"changed"}, []string{"new"}).Return(nil)
+		require.NoError(t, fx.diffSyncer.Sync(ctx))
+	})
 }
 
 //
@@ -99,9 +159,9 @@ func TestDiffSyncer(t *testing.T) {
 //
 //func TestDiffSyncer_Sync(t *testing.T) {
 //	// setup
-//	ctx := context.Background()
-//	ctrl := gomock.NewController(t)
-//	defer ctrl.Finish()
+//	fx := newHeadSyncFixture(t)
+//	fx.initDiffSyncer(t)
+//	defer fx.stop()
 //
 //	diffMock := mock_ldiff.NewMockDiff(ctrl)
 //	peerManagerMock := mock_peermanager.NewMockPeerManager(ctrl)
@@ -136,6 +196,7 @@ func TestDiffSyncer(t *testing.T) {
 //		treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer.Id(), []string{"changed"}, []string{"new"}).Return(nil)
 //		require.NoError(t, diffSyncer.Sync(ctx))
 //	})
+//}
 //
 //	t.Run("diff syncer sync conf error", func(t *testing.T) {
 //		peerManagerMock.EXPECT().

@@ -3,6 +3,8 @@ package headsync
 import (
 	"context"
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/ldiff"
+	"github.com/anyproto/any-sync/app/ldiff/mock_ldiff"
 	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider/mock_credentialprovider"
@@ -17,6 +19,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto/mock_spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
@@ -55,8 +58,10 @@ type headSyncFixture struct {
 	deletionStateMock      *mock_deletionstate.MockObjectDeletionState
 	diffSyncerMock         *mock_headsync.MockDiffSyncer
 	treeSyncerMock         *mock_treemanager.MockTreeSyncer
+	diffMock               *mock_ldiff.MockDiff
+	clientMock             *mock_spacesyncproto.MockDRPCSpaceSyncClient
 	headSync               *headSync
-	diffSyncer             DiffSyncer
+	diffSyncer             *diffSyncer
 }
 
 func newHeadSyncFixture(t *testing.T) *headSyncFixture {
@@ -80,6 +85,8 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 	deletionStateMock.EXPECT().Name().AnyTimes().Return(deletionstate.CName)
 	diffSyncerMock := mock_headsync.NewMockDiffSyncer(ctrl)
 	treeSyncerMock := mock_treemanager.NewMockTreeSyncer(ctrl)
+	diffMock := mock_ldiff.NewMockDiff(ctrl)
+	clientMock := mock_spacesyncproto.NewMockDRPCSpaceSyncClient(ctrl)
 	hs := &headSync{}
 	a := &app.App{}
 	a.Register(spaceState).
@@ -106,6 +113,8 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 		headSync:               hs,
 		diffSyncerMock:         diffSyncerMock,
 		treeSyncerMock:         treeSyncerMock,
+		diffMock:               diffMock,
+		clientMock:             clientMock,
 	}
 }
 
@@ -116,6 +125,7 @@ func (fx *headSyncFixture) init(t *testing.T) {
 	fx.diffSyncerMock.EXPECT().Init()
 	err := fx.headSync.Init(fx.app)
 	require.NoError(t, err)
+	fx.headSync.diff = fx.diffMock
 }
 
 func (fx *headSyncFixture) stop() {
@@ -134,8 +144,13 @@ func TestHeadSync(t *testing.T) {
 		treeMock := mock_treestorage.NewMockTreeStorage(fx.ctrl)
 		fx.storageMock.EXPECT().StoredIds().Return(ids, nil)
 		fx.storageMock.EXPECT().TreeStorage(ids[0]).Return(treeMock, nil)
-		treeMock.EXPECT().Heads().Return([]string{"h1"}, nil)
-		fx.storageMock.EXPECT().WriteSpaceHash(gomock.Any()).Return(nil)
+		treeMock.EXPECT().Heads().Return([]string{"h1", "h2"}, nil)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id1",
+			Head: "h1h2",
+		})
+		fx.diffMock.EXPECT().Hash().Return("hash")
+		fx.storageMock.EXPECT().WriteSpaceHash("hash").Return(nil)
 		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
 		fx.diffSyncerMock.EXPECT().Close().Return(nil)
 		err := fx.headSync.Run(ctx)
