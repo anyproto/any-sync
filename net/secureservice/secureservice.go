@@ -21,6 +21,12 @@ const CName = "common.net.secure"
 
 var log = logger.NewNamed(CName)
 
+const (
+	// ProtoVersion 0 - first any-sync version with raw tcp connections
+	// ProtoVersion 1 - version with yamux over tcp and quic
+	ProtoVersion = 1
+)
+
 func New() SecureService {
 	return &secureService{}
 }
@@ -69,6 +75,8 @@ func (s *secureService) Init(a *app.App) (err error) {
 	if s.p2pTr, err = libp2ptls.New(libp2ptls.ID, s.key, nil); err != nil {
 		return
 	}
+
+	s.protoVersion = ProtoVersion
 
 	log.Info("secure service init", zap.String("peerId", account.Account().PeerId))
 	return nil
