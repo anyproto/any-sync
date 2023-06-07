@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_objecttreebuilder/mock_objecttreebuilder.go github.com/anyproto/any-sync/commonspace/objecttreebuilder TreeBuilder
 package objecttreebuilder
 
 import (

@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_headsync/mock_headsync.go github.com/anyproto/any-sync/commonspace/headsync DiffSyncer
 package headsync
 
 import (
@@ -65,6 +66,8 @@ func New() HeadSync {
 	return &headSync{}
 }
 
+var createDiffSyncer = newDiffSyncer
+
 func (h *headSync) Init(a *app.App) (err error) {
 	shared := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
 	cfg := a.MustComponent("config").(config2.ConfigGetter)
@@ -80,7 +83,7 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusService)
 	h.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	h.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
-	h.syncer = newDiffSyncer(h)
+	h.syncer = createDiffSyncer(h)
 	sync := func(ctx context.Context) (err error) {
 		// for clients cancelling the sync process
 		if h.spaceIsDeleted.Load() && !h.configuration.IsResponsible(h.spaceId) {
