@@ -11,12 +11,7 @@ type ConfigGetter interface {
 }
 
 type Config struct {
-	Server ServerConfig `yaml:"server"`
 	Stream StreamConfig `yaml:"stream"`
-}
-
-type ServerConfig struct {
-	ListenAddrs []string `yaml:"listenAddrs"`
 }
 
 type StreamConfig struct {
