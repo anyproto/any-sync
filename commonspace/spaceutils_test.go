@@ -270,6 +270,7 @@ type mockTreeManager struct {
 	cache      ocache.OCache
 	deletedIds []string
 	markedIds  []string
+	waitLoad   chan struct{}
 }
 
 func (t *mockTreeManager) NewTreeSyncer(spaceId string, treeManager treemanager.TreeManager) treemanager.TreeSyncer {
@@ -283,6 +284,7 @@ func (t *mockTreeManager) MarkTreeDeleted(ctx context.Context, spaceId, treeId s
 
 func (t *mockTreeManager) Init(a *app.App) (err error) {
 	t.cache = ocache.New(func(ctx context.Context, id string) (value ocache.Object, err error) {
+		<-t.waitLoad
 		return t.space.TreeBuilder().BuildTree(ctx, id, objecttreebuilder.BuildTreeOpts{})
 	},
 		ocache.WithGCPeriod(time.Minute),
@@ -352,7 +354,7 @@ func newFixture(t *testing.T) *spaceFixture {
 		configurationService: &mockConf{},
 		storageProvider:      spacestorage.NewInMemorySpaceStorageProvider(),
 		peermanagerProvider:  &mockPeerManagerProvider{},
-		treeManager:          &mockTreeManager{},
+		treeManager:          &mockTreeManager{waitLoad: make(chan struct{})},
 		pool:                 &mockPool{},
 		spaceService:         New(),
 	}

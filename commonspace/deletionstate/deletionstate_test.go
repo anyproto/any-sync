@@ -1,7 +1,6 @@
 package deletionstate
 
 import (
-	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
 	"github.com/golang/mock/gomock"
@@ -19,7 +18,8 @@ type fixture struct {
 func newFixture(t *testing.T) *fixture {
 	ctrl := gomock.NewController(t)
 	spaceStorage := mock_spacestorage.NewMockSpaceStorage(ctrl)
-	delState := New(logger.NewNamed("test"), spaceStorage).(*objectDeletionState)
+	delState := New().(*objectDeletionState)
+	delState.storage = spaceStorage
 	return &fixture{
 		ctrl:         ctrl,
 		delState:     delState,

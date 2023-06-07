@@ -38,19 +38,21 @@ type MessageHandler interface {
 
 type requestManager struct {
 	sync.Mutex
-	pools     map[string]*streampool.ExecPool
-	peerPool  pool.Pool
-	workers   int
-	queueSize int
-	handler   MessageHandler
-	ctx       context.Context
-	cancel    context.CancelFunc
+	pools         map[string]*streampool.ExecPool
+	peerPool      pool.Pool
+	workers       int
+	queueSize     int
+	handler       MessageHandler
+	ctx           context.Context
+	cancel        context.CancelFunc
+	clientFactory spacesyncproto.ClientFactory
 }
 
 func (r *requestManager) Init(a *app.App) (err error) {
 	r.ctx, r.cancel = context.WithCancel(context.Background())
 	r.handler = a.MustComponent(objectsync.CName).(MessageHandler)
 	r.peerPool = a.MustComponent(pool.CName).(pool.Pool)
+	r.clientFactory = spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
 	return
 }
 
@@ -89,18 +91,24 @@ func (r *requestManager) QueueRequest(peerId string, req *spacesyncproto.ObjectS
 	// TODO: for later think when many clients are there,
 	//  we need to close pools for inactive clients
 	return pl.TryAdd(func() {
-		ctx := r.ctx
-		resp, err := r.doRequest(ctx, peerId, req)
-		if err != nil {
-			log.Warn("failed to send request", zap.Error(err))
-			return
-		}
-		ctx = peer.CtxWithPeerId(ctx, peerId)
-		_ = r.handler.HandleMessage(ctx, objectsync.HandleMessage{
-			SenderId: peerId,
-			Message:  resp,
-			PeerCtx:  ctx,
-		})
+		doRequestAndHandle(r, peerId, req)
+	})
+}
+
+var doRequestAndHandle = (*requestManager).requestAndHandle
+
+func (r *requestManager) requestAndHandle(peerId string, req *spacesyncproto.ObjectSyncMessage) {
+	ctx := r.ctx
+	resp, err := r.doRequest(ctx, peerId, req)
+	if err != nil {
+		log.Warn("failed to send request", zap.Error(err))
+		return
+	}
+	ctx = peer.CtxWithPeerId(ctx, peerId)
+	_ = r.handler.HandleMessage(ctx, objectsync.HandleMessage{
+		SenderId: peerId,
+		Message:  resp,
+		PeerCtx:  ctx,
 	})
 }
 
@@ -110,7 +118,7 @@ func (r *requestManager) doRequest(ctx context.Context, peerId string, msg *spac
 		return
 	}
 	err = pr.DoDrpc(ctx, func(conn drpc.Conn) error {
-		cl := spacesyncproto.NewDRPCSpaceSyncClient(conn)
+		cl := r.clientFactory.Client(conn)
 		resp, err = cl.ObjectSync(ctx, msg)
 		return err
 	})

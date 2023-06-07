@@ -2,9 +2,9 @@ package settings
 
 import (
 	"fmt"
+	"github.com/anyproto/any-sync/commonspace/deletionstate/mock_deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
-	"github.com/anyproto/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
 	"github.com/golang/mock/gomock"
 	"testing"
@@ -14,7 +14,7 @@ func TestDeleter_Delete(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	treeManager := mock_treemanager.NewMockTreeManager(ctrl)
 	st := mock_spacestorage.NewMockSpaceStorage(ctrl)
-	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
+	delState := mock_deletionstate.NewMockObjectDeletionState(ctrl)
 
 	deleter := newDeleter(st, delState, treeManager)
 
