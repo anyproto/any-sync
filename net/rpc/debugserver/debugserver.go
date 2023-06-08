@@ -15,6 +15,10 @@ import (
 
 const CName = "net.rpc.debugserver"
 
+func New() DebugServer {
+	return &debugServer{}
+}
+
 type DebugServer interface {
 	app.ComponentRunnable
 	drpc.Mux
@@ -46,7 +50,10 @@ func (d *debugServer) Name() (name string) {
 }
 
 func (d *debugServer) Run(ctx context.Context) (err error) {
-	lis, err := net.Listen("tpc", d.config.ListenAddr)
+	if d.config.ListenAddr == "" {
+		return
+	}
+	lis, err := net.Listen("tcp", d.config.ListenAddr)
 	if err != nil {
 		return
 	}
