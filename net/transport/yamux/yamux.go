@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/yamux"
 	"go.uber.org/zap"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -25,6 +26,7 @@ func New() Yamux {
 // Yamux implements transport.Transport with tcp+yamux
 type Yamux interface {
 	transport.Transport
+	AddListener(lis net.Listener)
 	app.ComponentRunnable
 }
 
@@ -37,6 +39,7 @@ type yamuxTransport struct {
 	listCtx       context.Context
 	listCtxCancel context.CancelFunc
 	yamuxConf     *yamux.Config
+	mu            sync.Mutex
 }
 
 func (y *yamuxTransport) Init(a *app.App) (err error) {
@@ -63,6 +66,8 @@ func (y *yamuxTransport) Run(ctx context.Context) (err error) {
 	if y.accepter == nil {
 		return fmt.Errorf("can't run service without accepter")
 	}
+	y.mu.Lock()
+	defer y.mu.Unlock()
 	for _, listAddr := range y.conf.ListenAddrs {
 		list, err := net.Listen("tcp", listAddr)
 		if err != nil {
@@ -79,6 +84,13 @@ func (y *yamuxTransport) Run(ctx context.Context) (err error) {
 
 func (y *yamuxTransport) SetAccepter(accepter transport.Accepter) {
 	y.accepter = accepter
+}
+
+func (y *yamuxTransport) AddListener(lis net.Listener) {
+	y.mu.Lock()
+	defer y.mu.Unlock()
+	y.listeners = append(y.listeners, lis)
+	go y.acceptLoop(y.listCtx, lis)
 }
 
 func (y *yamuxTransport) Dial(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
