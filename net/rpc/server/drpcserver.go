@@ -12,6 +12,7 @@ import (
 	"storj.io/drpc/drpcmanager"
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
+	"storj.io/drpc/drpcstream"
 	"storj.io/drpc/drpcwire"
 )
 
@@ -25,6 +26,7 @@ func New() DRPCServer {
 
 type DRPCServer interface {
 	ServeConn(ctx context.Context, conn net.Conn) (err error)
+	DrpcConfig() rpc.Config
 	app.Component
 	drpc.Mux
 }
@@ -52,8 +54,10 @@ func (s *drpcServer) Init(a *app.App) (err error) {
 	if s.metric != nil {
 		handler = s.metric.WrapDRPCHandler(s)
 	}
+	bufSize := s.config.Stream.MaxMsgSizeMb * (1 << 20)
 	s.drpcServer = drpcserver.NewWithOptions(handler, drpcserver.Options{Manager: drpcmanager.Options{
-		Reader: drpcwire.ReaderOptions{MaximumBufferSize: s.config.Stream.MaxMsgSizeMb * (1 << 20)},
+		Reader: drpcwire.ReaderOptions{MaximumBufferSize: bufSize},
+		Stream: drpcstream.Options{MaximumBufferSize: bufSize},
 	}})
 	return
 }
@@ -62,4 +66,8 @@ func (s *drpcServer) ServeConn(ctx context.Context, conn net.Conn) (err error) {
 	l := log.With(zap.String("remoteAddr", conn.RemoteAddr().String())).With(zap.String("localAddr", conn.LocalAddr().String()))
 	l.Debug("drpc serve peer")
 	return s.drpcServer.ServeOne(ctx, conn)
+}
+
+func (s *drpcServer) DrpcConfig() rpc.Config {
+	return s.config
 }

@@ -2,6 +2,7 @@ package peer
 
 import (
 	"context"
+	"github.com/anyproto/any-sync/net/rpc"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/net/transport/mock_transport"
@@ -174,6 +175,10 @@ func newTesCtrl() *testCtrl {
 type testCtrl struct {
 	serveConn chan net.Conn
 	closeCh   chan struct{}
+}
+
+func (t *testCtrl) DrpcConfig() rpc.Config {
+	return rpc.Config{Stream: rpc.StreamConfig{MaxMsgSizeMb: 10}}
 }
 
 func (t *testCtrl) ServeConn(ctx context.Context, conn net.Conn) (err error) {

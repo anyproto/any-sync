@@ -6,6 +6,7 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net/connutil"
+	"github.com/anyproto/any-sync/net/rpc"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/net/transport"
@@ -14,6 +15,9 @@ import (
 	"net"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcconn"
+	"storj.io/drpc/drpcmanager"
+	"storj.io/drpc/drpcstream"
+	"storj.io/drpc/drpcwire"
 	"sync"
 	"time"
 )
@@ -22,6 +26,7 @@ var log = logger.NewNamed("common.net.peer")
 
 type connCtrl interface {
 	ServeConn(ctx context.Context, conn net.Conn) (err error)
+	DrpcConfig() rpc.Config
 }
 
 func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
@@ -127,8 +132,14 @@ func (p *peer) openDrpcConn(ctx context.Context) (dconn *subConn, err error) {
 		return nil, err
 	}
 	tconn := connutil.NewLastUsageConn(conn)
+	bufSize := p.ctrl.DrpcConfig().Stream.MaxMsgSizeMb * (1 << 20)
 	return &subConn{
-		Conn:          drpcconn.New(tconn),
+		Conn: drpcconn.NewWithOptions(conn, drpcconn.Options{
+			Manager: drpcmanager.Options{
+				Reader: drpcwire.ReaderOptions{MaximumBufferSize: bufSize},
+				Stream: drpcstream.Options{MaximumBufferSize: bufSize},
+			},
+		}),
 		LastUsageConn: tconn,
 	}, nil
 }

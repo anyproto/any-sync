@@ -3,6 +3,7 @@ package rpctest
 import (
 	"context"
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/net/rpc"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"net"
 	"storj.io/drpc/drpcmux"
@@ -40,4 +41,8 @@ func (ts *TestServer) Close(ctx context.Context) (err error) {
 
 func (s *TestServer) ServeConn(ctx context.Context, conn net.Conn) (err error) {
 	return s.Server.ServeOne(ctx, conn)
+}
+
+func (s *TestServer) DrpcConfig() rpc.Config {
+	return rpc.Config{Stream: rpc.StreamConfig{MaxMsgSizeMb: 10}}
 }
