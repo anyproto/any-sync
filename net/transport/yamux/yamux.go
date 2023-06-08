@@ -55,6 +55,7 @@ func (y *yamuxTransport) Init(a *app.App) (err error) {
 	y.yamuxConf.EnableKeepAlive = false
 	y.yamuxConf.StreamOpenTimeout = time.Duration(y.conf.DialTimeoutSec) * time.Second
 	y.yamuxConf.ConnectionWriteTimeout = time.Duration(y.conf.WriteTimeoutSec) * time.Second
+	y.listCtx, y.listCtxCancel = context.WithCancel(context.Background())
 	return
 }
 
@@ -75,7 +76,6 @@ func (y *yamuxTransport) Run(ctx context.Context) (err error) {
 		}
 		y.listeners = append(y.listeners, list)
 	}
-	y.listCtx, y.listCtxCancel = context.WithCancel(context.Background())
 	for _, list := range y.listeners {
 		go y.acceptLoop(y.listCtx, list)
 	}
