@@ -16,6 +16,7 @@ func NewTestPool() *TestPool {
 type TestPool struct {
 	peers map[string]peer.Peer
 	mu    sync.Mutex
+	ts    *TestServer
 }
 
 func (t *TestPool) Init(a *app.App) (err error) {
@@ -24,6 +25,13 @@ func (t *TestPool) Init(a *app.App) (err error) {
 
 func (t *TestPool) Name() (name string) {
 	return pool.CName
+}
+
+func (t *TestPool) WithServer(ts *TestServer) *TestPool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.ts = ts
+	return t
 }
 
 func (t *TestPool) Run(ctx context.Context) (err error) {
@@ -40,16 +48,24 @@ func (t *TestPool) Get(ctx context.Context, id string) (peer.Peer, error) {
 	if p, ok := t.peers[id]; ok {
 		return p, nil
 	}
-	return nil, net.ErrUnableToConnect
+	if t.ts == nil {
+		return nil, net.ErrUnableToConnect
+	}
+	return t.ts.Dial(id)
 }
 
 func (t *TestPool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
-	for _, id := range peerIds {
-		if p, err := t.Get(ctx, id); err == nil {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for _, peerId := range peerIds {
+		if p, ok := t.peers[peerId]; ok {
 			return p, nil
 		}
 	}
-	return nil, net.ErrUnableToConnect
+	if t.ts == nil || len(peerIds) == 0 {
+		return nil, net.ErrUnableToConnect
+	}
+	return t.ts.Dial(peerIds[0])
 }
 
 func (t *TestPool) AddPeer(ctx context.Context, p peer.Peer) (err error) {
