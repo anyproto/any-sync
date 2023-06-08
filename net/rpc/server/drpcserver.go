@@ -5,7 +5,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/metric"
-	anyNet "github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/rpc"
 	"go.uber.org/zap"
 	"net"
 	"storj.io/drpc"
@@ -32,7 +32,7 @@ type DRPCServer interface {
 type drpcServer struct {
 	drpcServer *drpcserver.Server
 	*drpcmux.Mux
-	config anyNet.Config
+	config rpc.Config
 	metric metric.Metric
 }
 
@@ -43,7 +43,7 @@ func (s *drpcServer) Name() (name string) {
 }
 
 func (s *drpcServer) Init(a *app.App) (err error) {
-	s.config = a.MustComponent("config").(anyNet.ConfigGetter).GetNet()
+	s.config = a.MustComponent("config").(rpc.ConfigGetter).GetDrpc()
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
 	s.Mux = drpcmux.New()
 
