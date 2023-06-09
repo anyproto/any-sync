@@ -57,7 +57,7 @@ func TestHandshake(t *testing.T) {
 
 func TestHandshakeIncompatibleVersion(t *testing.T) {
 	nc := testnodeconf.GenNodeConfig(2)
-	fxS := newFixture(t, nc, nc.GetAccountService(0), 0)
+	fxS := newFixture(t, nc, nc.GetAccountService(0), 1)
 	defer fxS.Finish(t)
 	sc, cc := net.Pipe()
 
@@ -72,7 +72,7 @@ func TestHandshakeIncompatibleVersion(t *testing.T) {
 		ar.ctx, ar.err = fxS.SecureInbound(ctx, sc)
 		resCh <- ar
 	}()
-	fxC := newFixture(t, nc, nc.GetAccountService(1), 1)
+	fxC := newFixture(t, nc, nc.GetAccountService(1), 2)
 	defer fxC.Finish(t)
 	_, err := fxC.SecureOutbound(ctx, cc)
 	require.Equal(t, handshake.ErrIncompatibleVersion, err)

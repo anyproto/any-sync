@@ -53,7 +53,9 @@ type secureService struct {
 }
 
 func (s *secureService) Init(a *app.App) (err error) {
-	s.protoVersion = ProtoVersion
+	if s.protoVersion == 0 {
+		s.protoVersion = ProtoVersion
+	}
 	account := a.MustComponent(commonaccount.CName).(commonaccount.Service)
 	peerKey, err := account.Account().PeerKey.Raw()
 	if err != nil {

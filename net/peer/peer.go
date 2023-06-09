@@ -222,7 +222,14 @@ func (p *peer) gc(ttl time.Duration) {
 		select {
 		case <-act.Closed():
 			delete(p.active, act)
+			continue
 		default:
+		}
+		if act.LastUsage().Before(minLastUsage) {
+			log.Warn("close active connection because no activity", zap.String("peerId", p.id), zap.String("addr", p.Addr()))
+			_ = act.Close()
+			delete(p.active, act)
+			continue
 		}
 	}
 }
