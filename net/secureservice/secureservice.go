@@ -3,6 +3,9 @@ package secureservice
 import (
 	"context"
 	"crypto/tls"
+	"io"
+	"net"
+
 	commonaccount "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -13,8 +16,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	"go.uber.org/zap"
-	"io"
-	"net"
 )
 
 const CName = "common.net.secure"
@@ -52,6 +53,7 @@ type secureService struct {
 }
 
 func (s *secureService) Init(a *app.App) (err error) {
+	s.protoVersion = ProtoVersion
 	account := a.MustComponent(commonaccount.CName).(commonaccount.Service)
 	peerKey, err := account.Account().PeerKey.Raw()
 	if err != nil {
@@ -75,8 +77,6 @@ func (s *secureService) Init(a *app.App) (err error) {
 	if s.p2pTr, err = libp2ptls.New(libp2ptls.ID, s.key, nil); err != nil {
 		return
 	}
-
-	s.protoVersion = ProtoVersion
 
 	log.Info("secure service init", zap.String("peerId", account.Account().PeerId))
 	return nil
