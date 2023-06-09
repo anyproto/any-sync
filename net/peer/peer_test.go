@@ -105,6 +105,7 @@ func TestPeer_TryClose(t *testing.T) {
 		}()
 		defer out2.Close()
 		fx.mc.EXPECT().Open(gomock.Any()).Return(in2, nil)
+		fx.mc.EXPECT().Addr().Return("")
 		dc2, err := fx.AcquireDrpcConn(ctx)
 		require.NoError(t, err)
 		_ = dc2.Close()
@@ -118,6 +119,18 @@ func TestPeer_TryClose(t *testing.T) {
 		fx.mc.EXPECT().Open(gomock.Any()).Return(in3, nil)
 		dc3, err := fx.AcquireDrpcConn(ctx)
 		require.NoError(t, err)
+
+		// make another active, should be removed by ttl
+		in4, out4 := net.Pipe()
+		go func() {
+			handshake.IncomingProtoHandshake(ctx, out4, defaultProtoChecker)
+		}()
+		defer out4.Close()
+		fx.mc.EXPECT().Open(gomock.Any()).Return(in4, nil)
+		dc4, err := fx.AcquireDrpcConn(ctx)
+		require.NoError(t, err)
+		defer dc4.Close()
+
 		fx.ReleaseDrpcConn(dc3)
 		_ = dc3.Close()
 		fx.ReleaseDrpcConn(dc)
