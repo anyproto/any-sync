@@ -1,16 +1,22 @@
-//go:generate mockgen -destination mock_settingsstate/mock_settingsstate.go github.com/anyproto/any-sync/commonspace/settings/settingsstate ObjectDeletionState,StateBuilder,ChangeFactory
-package settingsstate
+//go:generate mockgen -destination mock_deletionstate/mock_deletionstate.go github.com/anyproto/any-sync/commonspace/deletionstate ObjectDeletionState
+package deletionstate
 
 import (
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"go.uber.org/zap"
 	"sync"
 )
 
+var log = logger.NewNamed(CName)
+
+const CName = "common.commonspace.deletionstate"
+
 type StateUpdateObserver func(ids []string)
 
 type ObjectDeletionState interface {
+	app.Component
 	AddObserver(observer StateUpdateObserver)
 	Add(ids map[string]struct{})
 	GetQueued() (ids []string)
@@ -28,12 +34,20 @@ type objectDeletionState struct {
 	storage              spacestorage.SpaceStorage
 }
 
-func NewObjectDeletionState(log logger.CtxLogger, storage spacestorage.SpaceStorage) ObjectDeletionState {
+func (st *objectDeletionState) Init(a *app.App) (err error) {
+	st.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
+	return nil
+}
+
+func (st *objectDeletionState) Name() (name string) {
+	return CName
+}
+
+func New() ObjectDeletionState {
 	return &objectDeletionState{
 		log:     log,
 		queued:  map[string]struct{}{},
 		deleted: map[string]struct{}{},
-		storage: storage,
 	}
 }
 

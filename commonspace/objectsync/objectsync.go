@@ -1,18 +1,23 @@
-//go:generate mockgen -destination mock_objectsync/mock_objectsync.go github.com/anyproto/any-sync/commonspace/objectsync SyncClient
+//go:generate mockgen -destination mock_objectsync/mock_objectsync.go github.com/anyproto/any-sync/commonspace/objectsync ObjectSync
 package objectsync
 
 import (
 	"context"
 	"fmt"
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/spacestate"
+	"github.com/anyproto/any-sync/metric"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/util/multiqueue"
+	"github.com/cheggaaa/mb/v3"
 	"github.com/gogo/protobuf/proto"
 	"sync/atomic"
 	"time"
 
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/syncobjectgetter"
-	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
-	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -20,136 +25,209 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-var log = logger.NewNamed("common.commonspace.objectsync")
+const CName = "common.commonspace.objectsync"
+
+var log = logger.NewNamed(CName)
 
 type ObjectSync interface {
-	LastUsage
-	synchandler.SyncHandler
-	SyncClient() SyncClient
+	LastUsage() time.Time
+	HandleMessage(ctx context.Context, hm HandleMessage) (err error)
+	HandleRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
+	CloseThread(id string) (err error)
+	app.ComponentRunnable
+}
 
-	Close() (err error)
+type HandleMessage struct {
+	Id                uint64
+	ReceiveTime       time.Time
+	StartHandlingTime time.Time
+	Deadline          time.Time
+	SenderId          string
+	Message           *spacesyncproto.ObjectSyncMessage
+	PeerCtx           context.Context
+}
+
+func (m HandleMessage) LogFields(fields ...zap.Field) []zap.Field {
+	return append(fields,
+		metric.SpaceId(m.Message.SpaceId),
+		metric.ObjectId(m.Message.ObjectId),
+		metric.QueueDur(m.StartHandlingTime.Sub(m.ReceiveTime)),
+		metric.TotalDur(time.Since(m.ReceiveTime)),
+	)
 }
 
 type objectSync struct {
 	spaceId string
 
-	messagePool   MessagePool
-	syncClient    SyncClient
 	objectGetter  syncobjectgetter.SyncObjectGetter
 	configuration nodeconf.NodeConf
 	spaceStorage  spacestorage.SpaceStorage
+	metric        metric.Metric
 
-	syncCtx        context.Context
-	cancelSync     context.CancelFunc
 	spaceIsDeleted *atomic.Bool
+	handleQueue    multiqueue.MultiQueue[HandleMessage]
 }
 
-func NewObjectSync(
-	spaceId string,
-	spaceIsDeleted *atomic.Bool,
-	configuration nodeconf.NodeConf,
-	peerManager peermanager.PeerManager,
-	objectGetter syncobjectgetter.SyncObjectGetter,
-	storage spacestorage.SpaceStorage) ObjectSync {
-	syncCtx, cancel := context.WithCancel(context.Background())
-	os := &objectSync{
-		objectGetter:   objectGetter,
-		spaceStorage:   storage,
-		spaceId:        spaceId,
-		syncCtx:        syncCtx,
-		cancelSync:     cancel,
-		spaceIsDeleted: spaceIsDeleted,
-		configuration:  configuration,
+func (s *objectSync) Init(a *app.App) (err error) {
+	s.spaceStorage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
+	s.objectGetter = a.MustComponent(treemanager.CName).(syncobjectgetter.SyncObjectGetter)
+	s.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
+	sharedData := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
+	mc := a.Component(metric.CName)
+	if mc != nil {
+		s.metric = mc.(metric.Metric)
 	}
-	os.messagePool = newMessagePool(peerManager, os.handleMessage)
-	os.syncClient = NewSyncClient(spaceId, os.messagePool, NewRequestFactory())
-	return os
+	s.spaceIsDeleted = sharedData.SpaceIsDeleted
+	s.spaceId = sharedData.SpaceId
+	s.handleQueue = multiqueue.New[HandleMessage](s.processHandleMessage, 100)
+	return nil
 }
 
-func (s *objectSync) Close() (err error) {
-	s.cancelSync()
-	return
+func (s *objectSync) Name() (name string) {
+	return CName
+}
+
+func (s *objectSync) Run(ctx context.Context) (err error) {
+	return nil
+}
+
+func (s *objectSync) Close(ctx context.Context) (err error) {
+	return s.handleQueue.Close()
+}
+
+func New() ObjectSync {
+	return &objectSync{}
 }
 
 func (s *objectSync) LastUsage() time.Time {
-	return s.messagePool.LastUsage()
+	// TODO: add time
+	return time.Time{}
 }
 
-func (s *objectSync) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
-	return s.messagePool.HandleMessage(ctx, senderId, message)
+func (s *objectSync) HandleRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
+	peerId, err := peer.CtxPeerId(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.handleRequest(ctx, peerId, req)
 }
 
-func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
-	log := log.With(
-		zap.String("objectId", msg.ObjectId),
-		zap.String("requestId", msg.RequestId),
-		zap.String("replyId", msg.ReplyId))
+func (s *objectSync) HandleMessage(ctx context.Context, hm HandleMessage) (err error) {
+	threadId := hm.Message.ObjectId
+	hm.ReceiveTime = time.Now()
+	if hm.PeerCtx == nil {
+		hm.PeerCtx = ctx
+	}
+	err = s.handleQueue.Add(ctx, threadId, hm)
+	if err == mb.ErrOverflowed {
+		log.InfoCtx(ctx, "queue overflowed", zap.String("spaceId", s.spaceId), zap.String("objectId", threadId))
+		// skip overflowed error
+		return nil
+	}
+	return
+}
+
+func (s *objectSync) processHandleMessage(msg HandleMessage) {
+	var err error
+	msg.StartHandlingTime = time.Now()
+	ctx := peer.CtxWithPeerId(context.Background(), msg.SenderId)
+	ctx = logger.CtxWithFields(ctx, zap.Uint64("msgId", msg.Id), zap.String("senderId", msg.SenderId))
+	defer func() {
+		if s.metric == nil {
+			return
+		}
+		s.metric.RequestLog(msg.PeerCtx, "space.streamOp", msg.LogFields(
+			zap.Error(err),
+		)...)
+	}()
+
+	if !msg.Deadline.IsZero() {
+		now := time.Now()
+		if now.After(msg.Deadline) {
+			log.InfoCtx(ctx, "skip message: deadline exceed")
+			err = context.DeadlineExceeded
+			return
+		}
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(ctx, msg.Deadline)
+		defer cancel()
+	}
+	if err = s.handleMessage(ctx, msg.SenderId, msg.Message); err != nil {
+		if msg.Message.ObjectId != "" {
+			// cleanup thread on error
+			_ = s.handleQueue.CloseThread(msg.Message.ObjectId)
+		}
+		log.InfoCtx(ctx, "handleMessage error", zap.Error(err))
+	}
+}
+
+func (s *objectSync) handleRequest(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (response *spacesyncproto.ObjectSyncMessage, err error) {
+	log := log.With(zap.String("objectId", msg.ObjectId))
 	if s.spaceIsDeleted.Load() {
 		log = log.With(zap.Bool("isDeleted", true))
 		// preventing sync with other clients if they are not just syncing the settings tree
 		if !slices.Contains(s.configuration.NodeIds(s.spaceId), senderId) && msg.ObjectId != s.spaceStorage.SpaceSettingsId() {
-			s.unmarshallSendError(ctx, msg, spacesyncproto.ErrUnexpected, senderId, msg.ObjectId)
-			return fmt.Errorf("can't perform operation with object, space is deleted")
+			return nil, spacesyncproto.ErrSpaceIsDeleted
 		}
 	}
-	log.DebugCtx(ctx, "handling message")
+	err = s.checkEmptyFullSync(log, msg)
+	if err != nil {
+		return nil, err
+	}
+	obj, err := s.objectGetter.GetObject(ctx, msg.ObjectId)
+	if err != nil {
+		return nil, treechangeproto.ErrGetTree
+	}
+	return obj.HandleRequest(ctx, senderId, msg)
+}
+
+func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+	log := log.With(zap.String("objectId", msg.ObjectId))
+	if s.spaceIsDeleted.Load() {
+		log = log.With(zap.Bool("isDeleted", true))
+		// preventing sync with other clients if they are not just syncing the settings tree
+		if !slices.Contains(s.configuration.NodeIds(s.spaceId), senderId) && msg.ObjectId != s.spaceStorage.SpaceSettingsId() {
+			return spacesyncproto.ErrSpaceIsDeleted
+		}
+	}
+	err = s.checkEmptyFullSync(log, msg)
+	if err != nil {
+		return err
+	}
+	obj, err := s.objectGetter.GetObject(ctx, msg.ObjectId)
+	if err != nil {
+		return fmt.Errorf("failed to get object from cache: %w", err)
+	}
+	err = obj.HandleMessage(ctx, senderId, msg)
+	if err != nil {
+		return fmt.Errorf("failed to handle message: %w", err)
+	}
+	return
+}
+
+func (s *objectSync) CloseThread(id string) (err error) {
+	return s.handleQueue.CloseThread(id)
+}
+
+func (s *objectSync) checkEmptyFullSync(log logger.CtxLogger, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	hasTree, err := s.spaceStorage.HasTree(msg.ObjectId)
 	if err != nil {
-		s.unmarshallSendError(ctx, msg, spacesyncproto.ErrUnexpected, senderId, msg.ObjectId)
-		return fmt.Errorf("falied to execute get operation on storage has tree: %w", err)
+		log.Warn("failed to execute get operation on storage has tree", zap.Error(err))
+		return spacesyncproto.ErrUnexpected
 	}
 	// in this case we will try to get it from remote, unless the sender also sent us the same request :-)
 	if !hasTree {
 		treeMsg := &treechangeproto.TreeSyncMessage{}
 		err = proto.Unmarshal(msg.Payload, treeMsg)
 		if err != nil {
-			s.sendError(ctx, nil, spacesyncproto.ErrUnexpected, senderId, msg.ObjectId, msg.RequestId)
-			return fmt.Errorf("failed to unmarshall tree sync message: %w", err)
+			return nil
 		}
 		// this means that we don't have the tree locally and therefore can't return it
 		if s.isEmptyFullSyncRequest(treeMsg) {
-			err = treechangeproto.ErrGetTree
-			s.sendError(ctx, nil, treechangeproto.ErrGetTree, senderId, msg.ObjectId, msg.RequestId)
-			return fmt.Errorf("failed to get tree from storage on full sync: %w", err)
+			return treechangeproto.ErrGetTree
 		}
 	}
-	obj, err := s.objectGetter.GetObject(ctx, msg.ObjectId)
-	if err != nil {
-		// TODO: write tests for object sync https://linear.app/anytype/issue/GO-1299/write-tests-for-commonspaceobjectsync
-		s.unmarshallSendError(ctx, msg, spacesyncproto.ErrUnexpected, senderId, msg.ObjectId)
-		return fmt.Errorf("failed to get object from cache: %w", err)
-	}
-	// TODO: unmarshall earlier
-	err = obj.HandleMessage(ctx, senderId, msg)
-	if err != nil {
-		s.unmarshallSendError(ctx, msg, spacesyncproto.ErrUnexpected, senderId, msg.ObjectId)
-		return fmt.Errorf("failed to handle message: %w", err)
-	}
 	return
-}
-
-func (s *objectSync) SyncClient() SyncClient {
-	return s.syncClient
-}
-
-func (s *objectSync) unmarshallSendError(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage, respErr error, senderId, objectId string) {
-	unmarshalled := &treechangeproto.TreeSyncMessage{}
-	err := proto.Unmarshal(msg.Payload, unmarshalled)
-	if err != nil {
-		return
-	}
-	s.sendError(ctx, unmarshalled.RootChange, respErr, senderId, objectId, msg.RequestId)
-}
-
-func (s *objectSync) sendError(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, respErr error, senderId, objectId, replyId string) {
-	// we don't send errors if have no reply id, this can lead to bugs and also nobody needs this error
-	if replyId == "" {
-		return
-	}
-	resp := treechangeproto.WrapError(respErr, root)
-	if err := s.syncClient.SendWithReply(ctx, senderId, objectId, resp, replyId); err != nil {
-		log.InfoCtx(ctx, "failed to send error to client")
-	}
 }
 
 func (s *objectSync) isEmptyFullSyncRequest(msg *treechangeproto.TreeSyncMessage) bool {

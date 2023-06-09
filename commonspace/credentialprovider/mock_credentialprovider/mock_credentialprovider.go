@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	app "github.com/anyproto/any-sync/app"
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -48,4 +49,32 @@ func (m *MockCredentialProvider) GetCredential(arg0 context.Context, arg1 *space
 func (mr *MockCredentialProviderMockRecorder) GetCredential(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCredential", reflect.TypeOf((*MockCredentialProvider)(nil).GetCredential), arg0, arg1)
+}
+
+// Init mocks base method.
+func (m *MockCredentialProvider) Init(arg0 *app.App) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Init", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Init indicates an expected call of Init.
+func (mr *MockCredentialProviderMockRecorder) Init(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockCredentialProvider)(nil).Init), arg0)
+}
+
+// Name mocks base method.
+func (m *MockCredentialProvider) Name() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Name")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Name indicates an expected call of Name.
+func (mr *MockCredentialProviderMockRecorder) Name() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockCredentialProvider)(nil).Name))
 }

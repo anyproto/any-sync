@@ -10,7 +10,10 @@ import (
 // workers - how many processes will execute tasks
 // maxSize - limit for queue size
 func NewExecPool(workers, maxSize int) *ExecPool {
+	ctx, cancel := context.WithCancel(context.Background())
 	ss := &ExecPool{
+		ctx:     ctx,
+		cancel:  cancel,
 		workers: workers,
 		batch:   mb.New[func()](maxSize),
 	}
@@ -19,6 +22,8 @@ func NewExecPool(workers, maxSize int) *ExecPool {
 
 // ExecPool needed for parallel execution of the incoming send tasks
 type ExecPool struct {
+	ctx     context.Context
+	cancel  context.CancelFunc
 	workers int
 	batch   *mb.MB[func()]
 }
@@ -39,7 +44,7 @@ func (ss *ExecPool) Run() {
 
 func (ss *ExecPool) sendLoop() {
 	for {
-		f, err := ss.batch.WaitOne(context.Background())
+		f, err := ss.batch.WaitOne(ss.ctx)
 		if err != nil {
 			log.Debug("close send loop", zap.Error(err))
 			return
@@ -49,5 +54,6 @@ func (ss *ExecPool) sendLoop() {
 }
 
 func (ss *ExecPool) Close() (err error) {
+	ss.cancel()
 	return ss.batch.Close()
 }

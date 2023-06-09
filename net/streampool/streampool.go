@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/util/multiqueue"
+	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/context"
@@ -74,6 +74,9 @@ func (s *streamPool) ReadStream(drpcStream drpc.Stream, tags ...string) error {
 	if err != nil {
 		return err
 	}
+	go func() {
+		st.writeLoop()
+	}()
 	return st.readLoop()
 }
 
@@ -84,6 +87,9 @@ func (s *streamPool) AddStream(drpcStream drpc.Stream, tags ...string) error {
 	}
 	go func() {
 		_ = st.readLoop()
+	}()
+	go func() {
+		st.writeLoop()
 	}()
 	return nil
 }
@@ -122,7 +128,7 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 		l:        log.With(zap.String("peerId", peerId), zap.Uint32("streamId", streamId)),
 		tags:     tags,
 	}
-	st.queue = multiqueue.New[drpc.Message](st.writeToStream, s.writeQueueSize)
+	st.queue = mb.New[drpc.Message](s.writeQueueSize)
 	s.streams[streamId] = st
 	s.streamIdsByPeer[peerId] = append(s.streamIdsByPeer[peerId], streamId)
 	for _, tag := range tags {
@@ -244,6 +250,8 @@ func (s *streamPool) openStream(ctx context.Context, p peer.Peer) *openingProces
 			close(op.ch)
 			delete(s.opening, p.Id())
 		}()
+		// in case there was no peerId in context
+		ctx := peer.CtxWithPeerId(ctx, p.Id())
 		// open new stream and add to pool
 		st, tags, err := s.handler.OpenStream(ctx, p)
 		if err != nil {
@@ -363,22 +371,4 @@ func removeStream(m map[string][]uint32, key string, streamId uint32) {
 	} else {
 		m[key] = streamIds
 	}
-}
-
-// WithQueueId wraps the message and adds queueId
-func WithQueueId(msg drpc.Message, queueId string) drpc.Message {
-	return &messageWithQueueId{queueId: queueId, Message: msg}
-}
-
-type messageWithQueueId struct {
-	drpc.Message
-	queueId string
-}
-
-func (m messageWithQueueId) MessageQueueId() string {
-	return m.queueId
-}
-
-func (m messageWithQueueId) DrpcMessage() drpc.Message {
-	return m.Message
 }

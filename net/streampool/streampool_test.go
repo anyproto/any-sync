@@ -18,17 +18,25 @@ import (
 
 var ctx = context.Background()
 
+func makePeerPair(t *testing.T, fx *fixture, peerId string) (pS, pC peer.Peer) {
+	mcS, mcC := rpctest.MultiConnPair(peerId+"server", peerId)
+	pS, err := peer.NewPeer(mcS, fx.ts)
+	require.NoError(t, err)
+	pC, err = peer.NewPeer(mcC, fx.ts)
+	require.NoError(t, err)
+	return
+}
+
 func newClientStream(t *testing.T, fx *fixture, peerId string) (st testservice.DRPCTest_TestStreamClient, p peer.Peer) {
-	p, err := fx.tp.Dial(ctx, peerId)
+	_, pC := makePeerPair(t, fx, peerId)
+	drpcConn, err := pC.AcquireDrpcConn(ctx)
 	require.NoError(t, err)
-	ctx = peer.CtxWithPeerId(ctx, peerId)
-	s, err := testservice.NewDRPCTestClient(p).TestStream(ctx)
+	st, err = testservice.NewDRPCTestClient(drpcConn).TestStream(pC.Context())
 	require.NoError(t, err)
-	return s, p
+	return st, pC
 }
 
 func TestStreamPool_AddStream(t *testing.T) {
-
 	t.Run("broadcast incoming", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish(t)
@@ -39,7 +47,7 @@ func TestStreamPool_AddStream(t *testing.T) {
 		require.NoError(t, fx.AddStream(s2, "space2", "common"))
 
 		require.NoError(t, fx.Broadcast(ctx, &testservice.StreamMessage{ReqData: "space1"}, "space1"))
-		require.NoError(t, fx.Broadcast(ctx, WithQueueId(&testservice.StreamMessage{ReqData: "space2"}, "q2"), "space2"))
+		require.NoError(t, fx.Broadcast(ctx, &testservice.StreamMessage{ReqData: "space2"}, "space2"))
 		require.NoError(t, fx.Broadcast(ctx, &testservice.StreamMessage{ReqData: "common"}, "common"))
 
 		var serverResults []string
@@ -85,11 +93,10 @@ func TestStreamPool_Send(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish(t)
 
-		p, err := fx.tp.Dial(ctx, "p1")
-		require.NoError(t, err)
+		pS, _ := makePeerPair(t, fx, "p1")
 
 		require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "should open stream"}, func(ctx context.Context) (peers []peer.Peer, err error) {
-			return []peer.Peer{p}, nil
+			return []peer.Peer{pS}, nil
 		}))
 
 		var msg *testservice.StreamMessage
@@ -100,12 +107,12 @@ func TestStreamPool_Send(t *testing.T) {
 		}
 		assert.Equal(t, "should open stream", msg.ReqData)
 	})
+
 	t.Run("parallel open stream", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish(t)
 
-		p, err := fx.tp.Dial(ctx, "p1")
-		require.NoError(t, err)
+		pS, _ := makePeerPair(t, fx, "p1")
 
 		fx.th.streamOpenDelay = time.Second / 3
 
@@ -113,7 +120,7 @@ func TestStreamPool_Send(t *testing.T) {
 
 		for i := 0; i < numMsgs; i++ {
 			go require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "should open stream"}, func(ctx context.Context) (peers []peer.Peer, err error) {
-				return []peer.Peer{p}, nil
+				return []peer.Peer{pS}, nil
 			}))
 		}
 
@@ -134,9 +141,8 @@ func TestStreamPool_Send(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish(t)
 
-		p, err := fx.tp.Dial(ctx, "p1")
-		require.NoError(t, err)
-		_ = p.Close()
+		pS, _ := makePeerPair(t, fx, "p1")
+		_ = pS.Close()
 
 		fx.th.streamOpenDelay = time.Second / 3
 
@@ -147,11 +153,12 @@ func TestStreamPool_Send(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				assert.Error(t, fx.StreamPool.(*streamPool).sendOne(ctx, p, &testservice.StreamMessage{ReqData: "should open stream"}))
+				assert.Error(t, fx.StreamPool.(*streamPool).sendOne(ctx, pS, &testservice.StreamMessage{ReqData: "should open stream"}))
 			}()
 		}
 		wg.Wait()
 	})
+
 }
 
 func TestStreamPool_SendById(t *testing.T) {
@@ -196,10 +203,9 @@ func TestStreamPool_Tags(t *testing.T) {
 
 func newFixture(t *testing.T) *fixture {
 	fx := &fixture{}
-	ts := rpctest.NewTestServer()
+	fx.ts = rpctest.NewTestServer()
 	fx.tsh = &testServerHandler{receiveCh: make(chan *testservice.StreamMessage, 100)}
-	require.NoError(t, testservice.DRPCRegisterTest(ts, fx.tsh))
-	fx.tp = rpctest.NewTestPool().WithServer(ts)
+	require.NoError(t, testservice.DRPCRegisterTest(fx.ts, fx.tsh))
 	fx.th = &testHandler{}
 	fx.StreamPool = New().NewStreamPool(fx.th, StreamConfig{
 		SendQueueSize:    10,
@@ -211,14 +217,13 @@ func newFixture(t *testing.T) *fixture {
 
 type fixture struct {
 	StreamPool
-	tp  *rpctest.TestPool
 	th  *testHandler
 	tsh *testServerHandler
+	ts  *rpctest.TestServer
 }
 
 func (fx *fixture) Finish(t *testing.T) {
 	require.NoError(t, fx.Close())
-	require.NoError(t, fx.tp.Close(ctx))
 }
 
 type testHandler struct {
@@ -231,7 +236,11 @@ func (t *testHandler) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.
 	if t.streamOpenDelay > 0 {
 		time.Sleep(t.streamOpenDelay)
 	}
-	stream, err = testservice.NewDRPCTestClient(p).TestStream(ctx)
+	conn, err := p.AcquireDrpcConn(ctx)
+	if err != nil {
+		return
+	}
+	stream, err = testservice.NewDRPCTestClient(conn).TestStream(p.Context())
 	return
 }
 

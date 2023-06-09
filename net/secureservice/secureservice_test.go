@@ -32,16 +32,18 @@ func TestHandshake(t *testing.T) {
 	resCh := make(chan acceptRes)
 	go func() {
 		var ar acceptRes
-		ar.ctx, ar.conn, ar.err = fxS.SecureInbound(ctx, sc)
+		ar.ctx, ar.err = fxS.SecureInbound(ctx, sc)
 		resCh <- ar
 	}()
 
 	fxC := newFixture(t, nc, nc.GetAccountService(1), 0)
 	defer fxC.Finish(t)
 
-	secConn, err := fxC.SecureOutbound(ctx, cc)
+	cctx, err := fxC.SecureOutbound(ctx, cc)
 	require.NoError(t, err)
-	assert.Equal(t, nc.GetAccountService(0).Account().PeerId, secConn.RemotePeer().String())
+	ctxPeerId, err := peer.CtxPeerId(cctx)
+	require.NoError(t, err)
+	assert.Equal(t, nc.GetAccountService(0).Account().PeerId, ctxPeerId)
 	res := <-resCh
 	require.NoError(t, res.err)
 	peerId, err := peer.CtxPeerId(res.ctx)
@@ -67,7 +69,7 @@ func TestHandshakeIncompatibleVersion(t *testing.T) {
 	resCh := make(chan acceptRes)
 	go func() {
 		var ar acceptRes
-		ar.ctx, ar.conn, ar.err = fxS.SecureInbound(ctx, sc)
+		ar.ctx, ar.err = fxS.SecureInbound(ctx, sc)
 		resCh <- ar
 	}()
 	fxC := newFixture(t, nc, nc.GetAccountService(1), 1)

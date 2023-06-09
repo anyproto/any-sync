@@ -6,9 +6,9 @@ import (
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
+	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
-	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
@@ -22,30 +22,22 @@ type DiffSyncer interface {
 	Sync(ctx context.Context) error
 	RemoveObjects(ids []string)
 	UpdateHeads(id string, heads []string)
-	Init(deletionState settingsstate.ObjectDeletionState)
+	Init()
 	Close() error
 }
 
-func newDiffSyncer(
-	spaceId string,
-	diff ldiff.Diff,
-	peerManager peermanager.PeerManager,
-	cache treemanager.TreeManager,
-	storage spacestorage.SpaceStorage,
-	clientFactory spacesyncproto.ClientFactory,
-	syncStatus syncstatus.StatusUpdater,
-	credentialProvider credentialprovider.CredentialProvider,
-	log logger.CtxLogger) DiffSyncer {
+func newDiffSyncer(hs *headSync) DiffSyncer {
 	return &diffSyncer{
-		diff:               diff,
-		spaceId:            spaceId,
-		treeManager:        cache,
-		storage:            storage,
-		peerManager:        peerManager,
-		clientFactory:      clientFactory,
-		credentialProvider: credentialProvider,
+		diff:               hs.diff,
+		spaceId:            hs.spaceId,
+		treeManager:        hs.treeManager,
+		storage:            hs.storage,
+		peerManager:        hs.peerManager,
+		clientFactory:      spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient),
+		credentialProvider: hs.credentialProvider,
 		log:                log,
-		syncStatus:         syncStatus,
+		syncStatus:         hs.syncStatus,
+		deletionState:      hs.deletionState,
 	}
 }
 
@@ -57,14 +49,13 @@ type diffSyncer struct {
 	storage            spacestorage.SpaceStorage
 	clientFactory      spacesyncproto.ClientFactory
 	log                logger.CtxLogger
-	deletionState      settingsstate.ObjectDeletionState
+	deletionState      deletionstate.ObjectDeletionState
 	credentialProvider credentialprovider.CredentialProvider
 	syncStatus         syncstatus.StatusUpdater
 	treeSyncer         treemanager.TreeSyncer
 }
 
-func (d *diffSyncer) Init(deletionState settingsstate.ObjectDeletionState) {
-	d.deletionState = deletionState
+func (d *diffSyncer) Init() {
 	d.deletionState.AddObserver(d.RemoveObjects)
 	d.treeSyncer = d.treeManager.NewTreeSyncer(d.spaceId, d.treeManager)
 }
@@ -115,8 +106,14 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 
 func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	ctx = logger.CtxWithFields(ctx, zap.String("peerId", p.Id()))
+	conn, err := p.AcquireDrpcConn(ctx)
+	if err != nil {
+		return
+	}
+	defer p.ReleaseDrpcConn(conn)
+
 	var (
-		cl           = d.clientFactory.Client(p)
+		cl           = d.clientFactory.Client(conn)
 		rdiff        = NewRemoteDiff(d.spaceId, cl)
 		stateCounter = d.syncStatus.StateCounter()
 	)

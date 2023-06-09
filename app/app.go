@@ -55,6 +55,7 @@ type ComponentStatable interface {
 // App is the central part of the application
 // It contains and manages all components
 type App struct {
+	parent         *App
 	components     []Component
 	mu             sync.RWMutex
 	startStat      Stat
@@ -109,6 +110,16 @@ func VersionDescription() string {
 	return fmt.Sprintf("build on %s from %s at #%s(%s)", BuildDate, GitBranch, GitCommit, GitState)
 }
 
+// ChildApp creates a child container which has access to parent's components
+// It doesn't call Start on any of the parent's components
+func (app *App) ChildApp() *App {
+	return &App{
+		parent:         app,
+		deviceState:    app.deviceState,
+		anySyncVersion: app.AnySyncVersion(),
+	}
+}
+
 // Register adds service to registry
 // All components will be started in the order they were registered
 func (app *App) Register(s Component) *App {
@@ -128,10 +139,14 @@ func (app *App) Register(s Component) *App {
 func (app *App) Component(name string) Component {
 	app.mu.RLock()
 	defer app.mu.RUnlock()
-	for _, s := range app.components {
-		if s.Name() == name {
-			return s
+	current := app
+	for current != nil {
+		for _, s := range current.components {
+			if s.Name() == name {
+				return s
+			}
 		}
+		current = current.parent
 	}
 	return nil
 }
@@ -149,10 +164,14 @@ func (app *App) MustComponent(name string) Component {
 func MustComponent[i any](app *App) i {
 	app.mu.RLock()
 	defer app.mu.RUnlock()
-	for _, s := range app.components {
-		if v, ok := s.(i); ok {
-			return v
+	current := app
+	for current != nil {
+		for _, s := range current.components {
+			if v, ok := s.(i); ok {
+				return v
+			}
 		}
+		current = current.parent
 	}
 	empty := new(i)
 	panic(fmt.Errorf("component with interface %T is not found", empty))
@@ -162,9 +181,13 @@ func MustComponent[i any](app *App) i {
 func (app *App) ComponentNames() (names []string) {
 	app.mu.RLock()
 	defer app.mu.RUnlock()
-	names = make([]string, len(app.components))
-	for i, c := range app.components {
-		names[i] = c.Name()
+	names = make([]string, 0, len(app.components))
+	current := app
+	for current != nil {
+		for _, c := range current.components {
+			names = append(names, c.Name())
+		}
+		current = current.parent
 	}
 	return
 }

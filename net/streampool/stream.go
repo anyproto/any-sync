@@ -3,7 +3,7 @@ package streampool
 import (
 	"context"
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/util/multiqueue"
+	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 	"sync/atomic"
@@ -17,17 +17,12 @@ type stream struct {
 	streamId uint32
 	closed   atomic.Bool
 	l        logger.CtxLogger
-	queue    multiqueue.MultiQueue[drpc.Message]
+	queue    *mb.MB[drpc.Message]
 	tags     []string
 }
 
 func (sr *stream) write(msg drpc.Message) (err error) {
-	var queueId string
-	if qId, ok := msg.(MessageQueueId); ok {
-		queueId = qId.MessageQueueId()
-		msg = qId.DrpcMessage()
-	}
-	return sr.queue.Add(sr.stream.Context(), queueId, msg)
+	return sr.queue.Add(sr.stream.Context(), msg)
 }
 
 func (sr *stream) readLoop() error {
@@ -50,13 +45,21 @@ func (sr *stream) readLoop() error {
 	}
 }
 
-func (sr *stream) writeToStream(msg drpc.Message) {
-	if err := sr.stream.MsgSend(msg, EncodingProto); err != nil {
-		sr.l.Warn("msg send error", zap.Error(err))
-		sr.streamClose()
-		return
+func (sr *stream) writeLoop() {
+	for {
+		msg, err := sr.queue.WaitOne(sr.peerCtx)
+		if err != nil {
+			if err != mb.ErrClosed {
+				sr.streamClose()
+			}
+			return
+		}
+		if err := sr.stream.MsgSend(msg, EncodingProto); err != nil {
+			sr.l.Warn("msg send error", zap.Error(err))
+			sr.streamClose()
+			return
+		}
 	}
-	return
 }
 
 func (sr *stream) streamClose() {

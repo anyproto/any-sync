@@ -1,4 +1,4 @@
-package timeoutconn
+package connutil
 
 import (
 	"errors"
@@ -10,18 +10,18 @@ import (
 	"go.uber.org/zap"
 )
 
-var log = logger.NewNamed("common.net.timeoutconn")
+var log = logger.NewNamed("common.net.connutil")
 
-type Conn struct {
+type TimeoutConn struct {
 	net.Conn
 	timeout time.Duration
 }
 
-func NewConn(conn net.Conn, timeout time.Duration) *Conn {
-	return &Conn{conn, timeout}
+func NewTimeout(conn net.Conn, timeout time.Duration) *TimeoutConn {
+	return &TimeoutConn{conn, timeout}
 }
 
-func (c *Conn) Write(p []byte) (n int, err error) {
+func (c *TimeoutConn) Write(p []byte) (n int, err error) {
 	for {
 		if c.timeout != 0 {
 			if e := c.Conn.SetWriteDeadline(time.Now().Add(c.timeout)); e != nil {

@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	app "github.com/anyproto/any-sync/app"
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	peer "github.com/anyproto/any-sync/net/peer"
 	gomock "github.com/golang/mock/gomock"
@@ -63,6 +64,34 @@ func (m *MockPeerManager) GetResponsiblePeers(arg0 context.Context) ([]peer.Peer
 func (mr *MockPeerManagerMockRecorder) GetResponsiblePeers(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResponsiblePeers", reflect.TypeOf((*MockPeerManager)(nil).GetResponsiblePeers), arg0)
+}
+
+// Init mocks base method.
+func (m *MockPeerManager) Init(arg0 *app.App) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Init", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Init indicates an expected call of Init.
+func (mr *MockPeerManagerMockRecorder) Init(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockPeerManager)(nil).Init), arg0)
+}
+
+// Name mocks base method.
+func (m *MockPeerManager) Name() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Name")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Name indicates an expected call of Name.
+func (mr *MockPeerManagerMockRecorder) Name() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockPeerManager)(nil).Name))
 }
 
 // SendPeer mocks base method.

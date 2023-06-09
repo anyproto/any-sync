@@ -3,6 +3,8 @@ package syncstatus
 import (
 	"context"
 	"fmt"
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"sync"
 	"time"
 
@@ -20,7 +22,9 @@ const (
 	syncTimeout        = time.Second
 )
 
-var log = logger.NewNamed("common.commonspace.syncstatus")
+var log = logger.NewNamed(CName)
+
+const CName = "common.commonspace.syncstatus"
 
 type UpdateReceiver interface {
 	UpdateTree(ctx context.Context, treeId string, status SyncStatus) (err error)
@@ -34,9 +38,6 @@ type StatusUpdater interface {
 	SetNodesOnline(senderId string, online bool)
 	StateCounter() uint64
 	RemoveAllExcept(senderId string, differentRemoteIds []string, stateCounter uint64)
-
-	Run()
-	Close() error
 }
 
 type StatusWatcher interface {
@@ -45,7 +46,13 @@ type StatusWatcher interface {
 	SetUpdateReceiver(updater UpdateReceiver)
 }
 
-type StatusProvider interface {
+type StatusServiceProvider interface {
+	app.Component
+	NewStatusService() StatusService
+}
+
+type StatusService interface {
+	app.ComponentRunnable
 	StatusUpdater
 	StatusWatcher
 }
@@ -70,7 +77,7 @@ type treeStatus struct {
 	heads  []string
 }
 
-type syncStatusProvider struct {
+type syncStatusService struct {
 	sync.Mutex
 	configuration  nodeconf.NodeConf
 	periodicSync   periodicsync.PeriodicSync
@@ -89,52 +96,45 @@ type syncStatusProvider struct {
 	updateTimeout      time.Duration
 }
 
-type SyncStatusDeps struct {
-	UpdateIntervalSecs int
-	UpdateTimeout      time.Duration
-	Configuration      nodeconf.NodeConf
-	Storage            spacestorage.SpaceStorage
-}
-
-func DefaultDeps(configuration nodeconf.NodeConf, store spacestorage.SpaceStorage) SyncStatusDeps {
-	return SyncStatusDeps{
-		UpdateIntervalSecs: syncUpdateInterval,
-		UpdateTimeout:      syncTimeout,
-		Configuration:      configuration,
-		Storage:            store,
+func NewSyncStatusProvider() StatusService {
+	return &syncStatusService{
+		treeHeads: map[string]treeHeadsEntry{},
+		watchers:  map[string]struct{}{},
 	}
 }
 
-func NewSyncStatusProvider(spaceId string, deps SyncStatusDeps) StatusProvider {
-	return &syncStatusProvider{
-		spaceId:            spaceId,
-		treeHeads:          map[string]treeHeadsEntry{},
-		watchers:           map[string]struct{}{},
-		updateIntervalSecs: deps.UpdateIntervalSecs,
-		updateTimeout:      deps.UpdateTimeout,
-		configuration:      deps.Configuration,
-		storage:            deps.Storage,
-		stateCounter:       0,
-	}
+func (s *syncStatusService) Init(a *app.App) (err error) {
+	sharedState := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
+	s.updateIntervalSecs = syncUpdateInterval
+	s.updateTimeout = syncTimeout
+	s.spaceId = sharedState.SpaceId
+	s.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
+	s.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
+	return
 }
 
-func (s *syncStatusProvider) SetUpdateReceiver(updater UpdateReceiver) {
+func (s *syncStatusService) Name() (name string) {
+	return CName
+}
+
+func (s *syncStatusService) SetUpdateReceiver(updater UpdateReceiver) {
 	s.Lock()
 	defer s.Unlock()
 
 	s.updateReceiver = updater
 }
 
-func (s *syncStatusProvider) Run() {
+func (s *syncStatusService) Run(ctx context.Context) error {
 	s.periodicSync = periodicsync.NewPeriodicSync(
 		s.updateIntervalSecs,
 		s.updateTimeout,
 		s.update,
 		log)
 	s.periodicSync.Run()
+	return nil
 }
 
-func (s *syncStatusProvider) HeadsChange(treeId string, heads []string) {
+func (s *syncStatusService) HeadsChange(treeId string, heads []string) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -149,7 +149,7 @@ func (s *syncStatusProvider) HeadsChange(treeId string, heads []string) {
 	s.stateCounter++
 }
 
-func (s *syncStatusProvider) SetNodesOnline(senderId string, online bool) {
+func (s *syncStatusService) SetNodesOnline(senderId string, online bool) {
 	if !s.isSenderResponsible(senderId) {
 		return
 	}
@@ -160,7 +160,7 @@ func (s *syncStatusProvider) SetNodesOnline(senderId string, online bool) {
 	s.nodesOnline = online
 }
 
-func (s *syncStatusProvider) update(ctx context.Context) (err error) {
+func (s *syncStatusService) update(ctx context.Context) (err error) {
 	s.treeStatusBuf = s.treeStatusBuf[:0]
 
 	s.Lock()
@@ -189,7 +189,7 @@ func (s *syncStatusProvider) update(ctx context.Context) (err error) {
 	return
 }
 
-func (s *syncStatusProvider) HeadsReceive(senderId, treeId string, heads []string) {
+func (s *syncStatusService) HeadsReceive(senderId, treeId string, heads []string) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -218,7 +218,7 @@ func (s *syncStatusProvider) HeadsReceive(senderId, treeId string, heads []strin
 	s.treeHeads[treeId] = curTreeHeads
 }
 
-func (s *syncStatusProvider) Watch(treeId string) (err error) {
+func (s *syncStatusService) Watch(treeId string) (err error) {
 	s.Lock()
 	defer s.Unlock()
 	_, ok := s.treeHeads[treeId]
@@ -248,7 +248,7 @@ func (s *syncStatusProvider) Watch(treeId string) (err error) {
 	return
 }
 
-func (s *syncStatusProvider) Unwatch(treeId string) {
+func (s *syncStatusService) Unwatch(treeId string) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -257,19 +257,14 @@ func (s *syncStatusProvider) Unwatch(treeId string) {
 	}
 }
 
-func (s *syncStatusProvider) Close() (err error) {
-	s.periodicSync.Close()
-	return
-}
-
-func (s *syncStatusProvider) StateCounter() uint64 {
+func (s *syncStatusService) StateCounter() uint64 {
 	s.Lock()
 	defer s.Unlock()
 
 	return s.stateCounter
 }
 
-func (s *syncStatusProvider) RemoveAllExcept(senderId string, differentRemoteIds []string, stateCounter uint64) {
+func (s *syncStatusService) RemoveAllExcept(senderId string, differentRemoteIds []string, stateCounter uint64) {
 	// if sender is not a responsible node, then this should have no effect
 	if !s.isSenderResponsible(senderId) {
 		return
@@ -292,6 +287,11 @@ func (s *syncStatusProvider) RemoveAllExcept(senderId string, differentRemoteIds
 	}
 }
 
-func (s *syncStatusProvider) isSenderResponsible(senderId string) bool {
+func (s *syncStatusService) Close(ctx context.Context) error {
+	s.periodicSync.Close()
+	return nil
+}
+
+func (s *syncStatusService) isSenderResponsible(senderId string) bool {
 	return slices.Contains(s.configuration.NodeIds(s.spaceId), senderId)
 }

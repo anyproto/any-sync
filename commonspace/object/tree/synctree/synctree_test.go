@@ -4,11 +4,11 @@ import (
 	"context"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener/mock_updatelistener"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
-	"github.com/anyproto/any-sync/commonspace/objectsync/mock_objectsync"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/golang/mock/gomock"
@@ -18,7 +18,7 @@ import (
 
 type syncTreeMatcher struct {
 	objTree  objecttree.ObjectTree
-	client   objectsync.SyncClient
+	client   SyncClient
 	listener updatelistener.UpdateListener
 }
 
@@ -34,8 +34,8 @@ func (s syncTreeMatcher) String() string {
 	return ""
 }
 
-func syncClientFuncCreator(client objectsync.SyncClient) func(spaceId string, factory objectsync.RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.NodeConf) objectsync.SyncClient {
-	return func(spaceId string, factory objectsync.RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.NodeConf) objectsync.SyncClient {
+func syncClientFuncCreator(client SyncClient) func(spaceId string, factory RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.NodeConf) SyncClient {
+	return func(spaceId string, factory RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.NodeConf) SyncClient {
 		return client
 	}
 }
@@ -46,7 +46,7 @@ func Test_BuildSyncTree(t *testing.T) {
 	defer ctrl.Finish()
 
 	updateListenerMock := mock_updatelistener.NewMockUpdateListener(ctrl)
-	syncClientMock := mock_objectsync.NewMockSyncClient(ctrl)
+	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
 	objTreeMock := newTestObjMock(mock_objecttree.NewMockObjectTree(ctrl))
 	tr := &syncTree{
 		ObjectTree:  objTreeMock,
@@ -73,7 +73,7 @@ func Test_BuildSyncTree(t *testing.T) {
 		updateListenerMock.EXPECT().Update(tr)
 
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
-		syncClientMock.EXPECT().Broadcast(gomock.Any(), gomock.Eq(headUpdate))
+		syncClientMock.EXPECT().Broadcast(gomock.Eq(headUpdate))
 		res, err := tr.AddRawChanges(ctx, payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
@@ -95,7 +95,7 @@ func Test_BuildSyncTree(t *testing.T) {
 		updateListenerMock.EXPECT().Rebuild(tr)
 
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
-		syncClientMock.EXPECT().Broadcast(gomock.Any(), gomock.Eq(headUpdate))
+		syncClientMock.EXPECT().Broadcast(gomock.Eq(headUpdate))
 		res, err := tr.AddRawChanges(ctx, payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
@@ -133,7 +133,7 @@ func Test_BuildSyncTree(t *testing.T) {
 			Return(expectedRes, nil)
 
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
-		syncClientMock.EXPECT().Broadcast(gomock.Any(), gomock.Eq(headUpdate))
+		syncClientMock.EXPECT().Broadcast(gomock.Eq(headUpdate))
 		res, err := tr.AddContent(ctx, content)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
