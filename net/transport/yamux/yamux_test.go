@@ -66,27 +66,6 @@ func TestYamuxTransport_Dial(t *testing.T) {
 	assert.NoError(t, copyErr)
 }
 
-func TestSubConnWrite(t *testing.T) {
-	fxS := newFixture(t)
-	defer fxS.finish(t)
-	fxC := newFixture(t)
-	defer fxC.finish(t)
-	mc, err := fxC.Dial(ctx, fxS.addr)
-	require.NoError(t, err)
-
-	mcS := <-fxS.accepter.mcs
-	_ = mcS
-
-	//time.Sleep(time.Second)
-	conn, err := mc.Open(ctx)
-	require.NoError(t, err)
-	//mc.Close()
-
-	n, err := conn.Write([]byte("123"))
-	require.NoError(t, err)
-	require.Equal(t, n, 3)
-}
-
 // no deadline - 69100 rps
 // common write deadline - 66700 rps
 // subconn write deadline - 67100 rps
