@@ -95,6 +95,12 @@ func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	idx := len(p.inactive) - 1
 	res := p.inactive[idx]
 	p.inactive = p.inactive[:idx]
+	select {
+	case <-res.Closed():
+		p.mu.Unlock()
+		return p.AcquireDrpcConn(ctx)
+	default:
+	}
 	p.active[res] = struct{}{}
 	p.mu.Unlock()
 	return res, nil
