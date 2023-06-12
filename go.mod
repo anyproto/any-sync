@@ -22,7 +22,7 @@ require (
 	github.com/ipfs/go-ipfs-blockstore v1.3.1
 	github.com/ipfs/go-ipfs-chunker v0.0.6
 	github.com/ipfs/go-ipfs-exchange-interface v0.2.1
-	github.com/ipfs/go-ipld-format v0.4.0
+	github.com/ipfs/go-ipld-format v0.5.0
 	github.com/ipfs/go-merkledag v0.10.0
 	github.com/ipfs/go-unixfs v0.4.6
 	github.com/libp2p/go-libp2p v0.27.5
