@@ -29,7 +29,7 @@ func (y *yamuxConn) Open(ctx context.Context) (conn net.Conn, err error) {
 	if conn, err = y.Session.Open(); err != nil {
 		return
 	}
-	conn = connutil.NewTimeout(conn, time.Second*10)
+	//conn = connutil.NewTimeout(conn, time.Second*10)
 	return
 }
 
@@ -52,6 +52,6 @@ func (y *yamuxConn) Accept() (conn net.Conn, err error) {
 		}
 		return
 	}
-	conn = connutil.NewTimeout(conn, time.Second*10)
+	//conn = connutil.NewTimeout(conn, time.Second*10)
 	return
 }

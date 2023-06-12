@@ -21,7 +21,13 @@ func NewTimeout(conn net.Conn, timeout time.Duration) *TimeoutConn {
 	return &TimeoutConn{conn, timeout}
 }
 
-func (c *TimeoutConn) Write(p []byte) (n int, err error) {
+func (c *TimeoutConn) Write(p []byte) (n int, retErr error) {
+	log.Debug("start write", zap.Int("n", len(p)))
+	defer func() {
+		if retErr != nil {
+			log.Debug("conn write error", zap.Int("n", n), zap.Error(retErr))
+		}
+	}()
 	for {
 		if c.timeout != 0 {
 			if e := c.Conn.SetWriteDeadline(time.Now().Add(c.timeout)); e != nil {
@@ -47,6 +53,7 @@ func (c *TimeoutConn) Write(p []byte) (n int, err error) {
 			}
 			log.Debug("connection timed out", zap.String("remoteAddr", c.RemoteAddr().String()))
 		}
+		log.Debug("conn write", zap.Int("n", n))
 		return n, err
 	}
 }
