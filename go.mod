@@ -22,8 +22,8 @@ require (
 	github.com/ipfs/go-ipfs-blockstore v1.3.1
 	github.com/ipfs/go-ipfs-chunker v0.0.6
 	github.com/ipfs/go-ipfs-exchange-interface v0.2.1
-	github.com/ipfs/go-ipld-format v0.4.0
-	github.com/ipfs/go-merkledag v0.10.0
+	github.com/ipfs/go-ipld-format v0.5.0
+	github.com/ipfs/go-merkledag v0.11.0
 	github.com/ipfs/go-unixfs v0.4.6
 	github.com/libp2p/go-libp2p v0.27.5
 	github.com/mr-tron/base58 v1.2.0
@@ -66,8 +66,7 @@ require (
 	github.com/ipfs/go-ipfs-files v0.2.0 // indirect
 	github.com/ipfs/go-ipfs-posinfo v0.0.1 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
-	github.com/ipfs/go-ipld-cbor v0.0.6 // indirect
-	github.com/ipfs/go-ipld-legacy v0.1.1 // indirect
+	github.com/ipfs/go-ipld-legacy v0.2.1 // indirect
 	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
 	github.com/ipfs/go-metrics-interface v0.0.1 // indirect
@@ -100,7 +99,6 @@ require (
 	github.com/quic-go/quic-go v0.35.1 // indirect
 	github.com/quic-go/webtransport-go v0.5.3 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	github.com/whyrusleeping/cbor-gen v0.0.0-20200123233031-1cdf64d27158 // indirect
 	github.com/whyrusleeping/chunker v0.0.0-20181014151217-fe64bd25879f // indirect
 	github.com/zeebo/errs v1.3.0 // indirect
 	go.opentelemetry.io/otel v1.7.0 // indirect
@@ -110,7 +108,6 @@ require (
 	golang.org/x/sync v0.2.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/tools v0.9.3 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
 )
