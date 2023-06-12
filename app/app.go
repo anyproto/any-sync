@@ -79,10 +79,12 @@ func (app *App) Version() string {
 	return GitSummary
 }
 
+// SetVersionName sets the custom application version
 func (app *App) SetVersionName(v string) {
 	app.versionName = v
 }
 
+// VersionName returns a string with the settled app version or auto-generated version if it didn't set
 func (app *App) VersionName() string {
 	if app.versionName != "" {
 		return app.versionName
