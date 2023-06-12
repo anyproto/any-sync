@@ -61,6 +61,7 @@ type App struct {
 	startStat      Stat
 	stopStat       Stat
 	deviceState    int
+	versionName    string
 	anySyncVersion string
 }
 
@@ -76,6 +77,17 @@ func (app *App) AppName() string {
 // Version return app version
 func (app *App) Version() string {
 	return GitSummary
+}
+
+func (app *App) SetVersionName(v string) {
+	app.versionName = v
+}
+
+func (app *App) VersionName() string {
+	if app.versionName != "" {
+		return app.versionName
+	}
+	return AppName + ":" + GitSummary + "/any-sync:" + app.anySyncVersion
 }
 
 type Stat struct {
