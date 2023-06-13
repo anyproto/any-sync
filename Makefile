@@ -25,6 +25,7 @@ deps:
 	go mod download
 	go build -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
 	go build -o deps github.com/gogo/protobuf/protoc-gen-gogofaster
+	go build -o deps github.com/golang/mock/mockgen
 
 test:
 	go test ./... --cover
