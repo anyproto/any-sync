@@ -28,7 +28,7 @@ require (
 	github.com/libp2p/go-libp2p v0.27.5
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multibase v0.2.0
-	github.com/multiformats/go-multihash v0.2.2
+	github.com/multiformats/go-multihash v0.2.3
 	github.com/prometheus/client_golang v1.15.1
 	github.com/stretchr/testify v1.8.4
 	github.com/tyler-smith/go-bip39 v1.1.0
