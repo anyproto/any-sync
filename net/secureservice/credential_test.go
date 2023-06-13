@@ -15,8 +15,8 @@ func TestPeerSignVerifier_CheckCredential(t *testing.T) {
 	identity1, _ := a1.SignKey.GetPublic().Marshall()
 	identity2, _ := a2.SignKey.GetPublic().Marshall()
 
-	cc1 := newPeerSignVerifier(0, a1)
-	cc2 := newPeerSignVerifier(0, a2)
+	cc1 := newPeerSignVerifier(0, "test:v1", a1)
+	cc2 := newPeerSignVerifier(0, "test:v1", a2)
 
 	c1 := a2.PeerId
 	c2 := a1.PeerId
@@ -40,8 +40,8 @@ func TestIncompatibleVersion(t *testing.T) {
 	a2 := newTestAccData(t)
 	_, _ = a1.SignKey.GetPublic().Marshall()
 
-	cc1 := newPeerSignVerifier(0, a1)
-	cc2 := newPeerSignVerifier(1, a2)
+	cc1 := newPeerSignVerifier(0, "test:v1", a1)
+	cc2 := newPeerSignVerifier(1, "test:v1", a2)
 
 	c1 := a2.PeerId
 	c2 := a1.PeerId
