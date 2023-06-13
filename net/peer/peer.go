@@ -35,6 +35,7 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 		active:    map[*subConn]struct{}{},
 		MultiConn: mc,
 		ctrl:      ctrl,
+		created:   time.Now(),
 	}
 	if pr.id, err = CtxPeerId(ctx); err != nil {
 		return
@@ -73,6 +74,8 @@ type peer struct {
 	active   map[*subConn]struct{}
 
 	mu sync.Mutex
+
+	created time.Time
 
 	transport.MultiConn
 }
@@ -190,14 +193,14 @@ func (p *peer) serve(conn net.Conn) (err error) {
 }
 
 func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
-	p.gc(objectTTL)
-	if time.Now().Sub(p.LastUsage()) < objectTTL {
-		return false, nil
+	aliveCount := p.gc(objectTTL)
+	if aliveCount == 0 && p.created.Add(time.Minute).Before(time.Now()) {
+		return true, p.Close()
 	}
-	return true, p.Close()
+	return false, nil
 }
 
-func (p *peer) gc(ttl time.Duration) {
+func (p *peer) gc(ttl time.Duration) (aliveCount int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	minLastUsage := time.Now().Add(-ttl)
@@ -238,6 +241,7 @@ func (p *peer) gc(ttl time.Duration) {
 			continue
 		}
 	}
+	return len(p.active) + len(p.inactive)
 }
 
 func (p *peer) Close() (err error) {

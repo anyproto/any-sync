@@ -64,11 +64,9 @@ func TestPeerAccept(t *testing.T) {
 }
 
 func TestPeer_TryClose(t *testing.T) {
-	t.Run("ttl", func(t *testing.T) {
+	t.Run("not close in first minute", func(t *testing.T) {
 		fx := newFixture(t, "p1")
 		defer fx.finish()
-		lu := time.Now()
-		fx.mc.EXPECT().LastUsage().Return(lu)
 		res, err := fx.TryClose(time.Second)
 		require.NoError(t, err)
 		assert.False(t, res)
@@ -76,8 +74,7 @@ func TestPeer_TryClose(t *testing.T) {
 	t.Run("close", func(t *testing.T) {
 		fx := newFixture(t, "p1")
 		defer fx.finish()
-		lu := time.Now().Add(-time.Second * 2)
-		fx.mc.EXPECT().LastUsage().Return(lu)
+		fx.peer.created = fx.peer.created.Add(-time.Minute * 2)
 		res, err := fx.TryClose(time.Second)
 		require.NoError(t, err)
 		assert.True(t, res)
@@ -85,8 +82,7 @@ func TestPeer_TryClose(t *testing.T) {
 	t.Run("gc", func(t *testing.T) {
 		fx := newFixture(t, "p1")
 		defer fx.finish()
-		now := time.Now()
-		fx.mc.EXPECT().LastUsage().Return(now.Add(time.Millisecond * 100))
+		//now := time.Now()
 
 		// make one inactive
 		in, out := net.Pipe()
