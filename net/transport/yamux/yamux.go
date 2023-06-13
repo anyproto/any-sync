@@ -51,8 +51,16 @@ func (y *yamuxTransport) Init(a *app.App) (err error) {
 	if y.conf.WriteTimeoutSec <= 0 {
 		y.conf.WriteTimeoutSec = 10
 	}
+
 	y.yamuxConf = yamux.DefaultConfig()
-	y.yamuxConf.EnableKeepAlive = false
+	if y.conf.KeepAlivePeriodSec < 0 {
+		y.yamuxConf.EnableKeepAlive = false
+	} else {
+		y.yamuxConf.EnableKeepAlive = true
+		if y.conf.KeepAlivePeriodSec != 0 {
+			y.yamuxConf.KeepAliveInterval = time.Duration(y.conf.KeepAlivePeriodSec) * time.Second
+		}
+	}
 	y.yamuxConf.StreamOpenTimeout = time.Duration(y.conf.DialTimeoutSec) * time.Second
 	y.yamuxConf.ConnectionWriteTimeout = time.Duration(y.conf.WriteTimeoutSec) * time.Second
 	y.listCtx, y.listCtxCancel = context.WithCancel(context.Background())
@@ -106,7 +114,7 @@ func (y *yamuxTransport) Dial(ctx context.Context, addr string) (mc transport.Mu
 		_ = conn.Close()
 		return nil, err
 	}
-	luc := connutil.NewLastUsageConn(conn)
+	luc := connutil.NewLastUsageConn(connutil.NewTimeout(conn, time.Duration(y.conf.WriteTimeoutSec)*time.Second))
 	sess, err := yamux.Client(luc, y.yamuxConf)
 	if err != nil {
 		return
@@ -152,7 +160,7 @@ func (y *yamuxTransport) accept(conn net.Conn) {
 		log.Warn("incoming connection handshake error", zap.Error(err))
 		return
 	}
-	luc := connutil.NewLastUsageConn(conn)
+	luc := connutil.NewLastUsageConn(connutil.NewTimeout(conn, time.Duration(y.conf.WriteTimeoutSec)*time.Second))
 	sess, err := yamux.Server(luc, y.yamuxConf)
 	if err != nil {
 		log.Warn("incoming connection yamux session error", zap.Error(err))

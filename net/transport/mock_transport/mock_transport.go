@@ -8,7 +8,6 @@ import (
 	context "context"
 	net "net"
 	reflect "reflect"
-	time "time"
 
 	transport "github.com/anyproto/any-sync/net/transport"
 	gomock "github.com/golang/mock/gomock"
@@ -156,20 +155,6 @@ func (m *MockMultiConn) IsClosed() bool {
 func (mr *MockMultiConnMockRecorder) IsClosed() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClosed", reflect.TypeOf((*MockMultiConn)(nil).IsClosed))
-}
-
-// LastUsage mocks base method.
-func (m *MockMultiConn) LastUsage() time.Time {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LastUsage")
-	ret0, _ := ret[0].(time.Time)
-	return ret0
-}
-
-// LastUsage indicates an expected call of LastUsage.
-func (mr *MockMultiConnMockRecorder) LastUsage() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastUsage", reflect.TypeOf((*MockMultiConn)(nil).LastUsage))
 }
 
 // Open mocks base method.
