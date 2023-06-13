@@ -78,7 +78,9 @@ func (t treeRemoteGetter) treeRequestLoop(ctx context.Context, retryTimeout time
 		} else {
 			peerIdx = peerIdx % len(availablePeers)
 			msg, err = t.treeRequest(ctx, availablePeers[peerIdx])
-			if err == nil || retryTimeout == 0 {
+			// if no error or it doesn't make sense to retry
+			err = rpcerr.Unwrap(err)
+			if err == nil || err == treechangeproto.ErrGetTree || retryTimeout == 0 {
 				return msg, err
 			}
 			peerIdx++
@@ -115,18 +117,11 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 	if err != nil {
 		return
 	}
-	switch {
-	case resp.GetContent().GetErrorResponse() != nil:
-		errResp := resp.GetContent().GetErrorResponse()
-		err = rpcerr.Err(errResp.ErrCode)
-		return
-	case resp.GetContent().GetFullSyncResponse() == nil:
+	fullSyncResp := resp.GetContent().GetFullSyncResponse()
+	if fullSyncResp == nil {
 		err = treechangeproto.ErrUnexpected
 		return
-	default:
-		break
 	}
-	fullSyncResp := resp.GetContent().GetFullSyncResponse()
 
 	payload := treestorage.TreeStorageCreatePayload{
 		RootRawChange: resp.RootChange,

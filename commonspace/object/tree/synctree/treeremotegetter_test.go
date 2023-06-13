@@ -113,6 +113,18 @@ func TestTreeRemoteGetter(t *testing.T) {
 		require.Equal(t, "id", resp.RootChange.Id)
 	})
 
+	t.Run("no retry request if error get tree", func(t *testing.T) {
+		fx := newTreeRemoteGetterFixture(t)
+		defer fx.stop()
+		mockPeer := mock_peer.NewMockPeer(fx.ctrl)
+		mockPeer.EXPECT().Id().AnyTimes().Return(peerId)
+		fx.peerGetterMock.EXPECT().GetResponsiblePeers(ctx).AnyTimes().Return([]peer.Peer{mockPeer}, nil)
+		fx.syncClientMock.EXPECT().CreateNewTreeRequest().AnyTimes().Return(treeRequest)
+		fx.syncClientMock.EXPECT().SendRequest(ctx, peerId, fx.treeGetter.treeId, treeRequest).Times(1).Return(nil, treechangeproto.ErrGetTree)
+		_, err := fx.treeGetter.treeRequestLoop(ctx, retryTimeout)
+		require.Equal(t, treechangeproto.ErrGetTree, err)
+	})
+
 	t.Run("retry get peers success", func(t *testing.T) {
 		fx := newTreeRemoteGetterFixture(t)
 		defer fx.stop()
