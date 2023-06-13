@@ -3,7 +3,6 @@ package synctree
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
@@ -45,7 +44,7 @@ func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err e
 		return
 	}
 	if len(respPeers) == 0 {
-		err = fmt.Errorf("no responsible peers")
+		err = ErrNoResponsiblePeers
 		return
 	}
 	for _, p := range respPeers {
