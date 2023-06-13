@@ -75,16 +75,14 @@ func (t treeRemoteGetter) treeRequestLoop(ctx context.Context, retryTimeout time
 			if retryTimeout == 0 {
 				return nil, err
 			}
-			goto Wait
+		} else {
+			peerIdx = peerIdx % len(availablePeers)
+			msg, err = t.treeRequest(ctx, availablePeers[peerIdx])
+			if err == nil || retryTimeout == 0 {
+				return msg, err
+			}
+			peerIdx++
 		}
-
-		peerIdx = peerIdx % len(availablePeers)
-		msg, err = t.treeRequest(ctx, availablePeers[peerIdx])
-		if err == nil || retryTimeout == 0 {
-			return msg, err
-		}
-		peerIdx++
-	Wait:
 		select {
 		case <-time.After(newRequestTimeout):
 			break
