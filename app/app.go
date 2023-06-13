@@ -89,7 +89,7 @@ func (app *App) VersionName() string {
 	if app.versionName != "" {
 		return app.versionName
 	}
-	return AppName + ":" + GitSummary + "/any-sync:" + app.anySyncVersion
+	return AppName + ":" + GitSummary + "/any-sync:" + app.AnySyncVersion()
 }
 
 type Stat struct {
