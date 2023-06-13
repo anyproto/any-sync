@@ -2,6 +2,8 @@ package requestmanager
 
 import (
 	"context"
+	"sync"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
@@ -11,7 +13,6 @@ import (
 	"github.com/anyproto/any-sync/net/streampool"
 	"go.uber.org/zap"
 	"storj.io/drpc"
-	"sync"
 )
 
 const CName = "common.commonspace.requestmanager"

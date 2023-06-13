@@ -2,6 +2,8 @@ package settings
 
 import (
 	"context"
+	"sync/atomic"
+
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
@@ -16,7 +18,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
-	"sync/atomic"
 )
 
 const CName = "common.commonspace.settings"
@@ -61,8 +62,7 @@ func (s *settings) Init(a *app.App) (err error) {
 	deps := Deps{
 		BuildFunc: func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error) {
 			res, err := s.treeBuilder.BuildTree(ctx, id, objecttreebuilder.BuildTreeOpts{
-				Listener:           listener,
-				WaitTreeRemoteSync: false,
+				Listener: listener,
 				// space settings document should not have empty data
 				TreeBuilder: objecttree.BuildObjectTree,
 			})
