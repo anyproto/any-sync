@@ -51,8 +51,16 @@ func (y *yamuxTransport) Init(a *app.App) (err error) {
 	if y.conf.WriteTimeoutSec <= 0 {
 		y.conf.WriteTimeoutSec = 10
 	}
+
 	y.yamuxConf = yamux.DefaultConfig()
-	y.yamuxConf.EnableKeepAlive = false
+	if y.conf.KeepAlivePeriodSec < 0 {
+		y.yamuxConf.EnableKeepAlive = false
+	} else {
+		y.yamuxConf.EnableKeepAlive = true
+		if y.conf.KeepAlivePeriodSec != 0 {
+			y.yamuxConf.KeepAliveInterval = time.Duration(y.conf.KeepAlivePeriodSec) * time.Second
+		}
+	}
 	y.yamuxConf.StreamOpenTimeout = time.Duration(y.conf.DialTimeoutSec) * time.Second
 	y.yamuxConf.ConnectionWriteTimeout = time.Duration(y.conf.WriteTimeoutSec) * time.Second
 	y.listCtx, y.listCtxCancel = context.WithCancel(context.Background())
