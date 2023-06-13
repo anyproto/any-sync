@@ -10,6 +10,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/net/streampool"
 	"go.uber.org/zap"
 	"storj.io/drpc"
@@ -123,5 +124,6 @@ func (r *requestManager) doRequest(ctx context.Context, peerId string, msg *spac
 		resp, err = cl.ObjectSync(ctx, msg)
 		return err
 	})
+	err = rpcerr.Unwrap(err)
 	return
 }
