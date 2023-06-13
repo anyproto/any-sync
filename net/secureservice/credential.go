@@ -8,9 +8,13 @@ import (
 	"go.uber.org/zap"
 )
 
-func newNoVerifyChecker(protoVersion uint32) handshake.CredentialChecker {
+func newNoVerifyChecker(protoVersion uint32, clientVersion string) handshake.CredentialChecker {
 	return &noVerifyChecker{
-		cred: &handshakeproto.Credentials{Type: handshakeproto.CredentialsType_SkipVerify, Version: protoVersion},
+		cred: &handshakeproto.Credentials{
+			Type:          handshakeproto.CredentialsType_SkipVerify,
+			Version:       protoVersion,
+			ClientVersion: clientVersion,
+		},
 	}
 }
 
@@ -22,23 +26,29 @@ func (n noVerifyChecker) MakeCredentials(remotePeerId string) *handshakeproto.Cr
 	return n.cred
 }
 
-func (n noVerifyChecker) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (identity []byte, err error) {
+func (n noVerifyChecker) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (result handshake.Result, err error) {
 	if cred.Version != n.cred.Version {
-		return nil, handshake.ErrIncompatibleVersion
+		err = handshake.ErrIncompatibleVersion
+		return
 	}
-	return nil, nil
+	return handshake.Result{
+		ProtoVersion:  cred.Version,
+		ClientVersion: cred.ClientVersion,
+	}, nil
 }
 
-func newPeerSignVerifier(protoVersion uint32, account *accountdata.AccountKeys) handshake.CredentialChecker {
+func newPeerSignVerifier(protoVersion uint32, clientVersion string, account *accountdata.AccountKeys) handshake.CredentialChecker {
 	return &peerSignVerifier{
-		protoVersion: protoVersion,
-		account:      account,
+		protoVersion:  protoVersion,
+		clientVersion: clientVersion,
+		account:       account,
 	}
 }
 
 type peerSignVerifier struct {
-	protoVersion uint32
-	account      *accountdata.AccountKeys
+	protoVersion  uint32
+	clientVersion string
+	account       *accountdata.AccountKeys
 }
 
 func (p *peerSignVerifier) MakeCredentials(remotePeerId string) *handshakeproto.Credentials {
@@ -54,33 +64,43 @@ func (p *peerSignVerifier) MakeCredentials(remotePeerId string) *handshakeproto.
 	}
 	payload, _ := msg.Marshal()
 	return &handshakeproto.Credentials{
-		Type:    handshakeproto.CredentialsType_SignedPeerIds,
-		Payload: payload,
-		Version: p.protoVersion,
+		Type:          handshakeproto.CredentialsType_SignedPeerIds,
+		Payload:       payload,
+		Version:       p.protoVersion,
+		ClientVersion: p.clientVersion,
 	}
 }
 
-func (p *peerSignVerifier) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (identity []byte, err error) {
+func (p *peerSignVerifier) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (result handshake.Result, err error) {
 	if cred.Version != p.protoVersion {
-		return nil, handshake.ErrIncompatibleVersion
+		err = handshake.ErrIncompatibleVersion
+		return
 	}
 	if cred.Type != handshakeproto.CredentialsType_SignedPeerIds {
-		return nil, handshake.ErrSkipVerifyNotAllowed
+		err = handshake.ErrSkipVerifyNotAllowed
+		return
 	}
 	var msg = &handshakeproto.PayloadSignedPeerIds{}
 	if err = msg.Unmarshal(cred.Payload); err != nil {
-		return nil, handshake.ErrUnexpectedPayload
+		err = handshake.ErrUnexpectedPayload
+		return
 	}
 	pubKey, err := crypto.UnmarshalEd25519PublicKeyProto(msg.Identity)
 	if err != nil {
-		return nil, handshake.ErrInvalidCredentials
+		err = handshake.ErrInvalidCredentials
+		return
 	}
 	ok, err := pubKey.Verify([]byte((remotePeerId + p.account.PeerId)), msg.Sign)
 	if err != nil {
-		return nil, err
+		return
 	}
 	if !ok {
-		return nil, handshake.ErrInvalidCredentials
+		err = handshake.ErrInvalidCredentials
+		return
 	}
-	return msg.Identity, nil
+	return handshake.Result{
+		Identity:      msg.Identity,
+		ProtoVersion:  cred.Version,
+		ClientVersion: cred.ClientVersion,
+	}, nil
 }

@@ -64,7 +64,13 @@ var handshakePool = &sync.Pool{New: func() any {
 
 type CredentialChecker interface {
 	MakeCredentials(remotePeerId string) *handshakeproto.Credentials
-	CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (identity []byte, err error)
+	CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (result Result, err error)
+}
+
+type Result struct {
+	Identity      []byte
+	ProtoVersion  uint32
+	ClientVersion string
 }
 
 func newHandshake() *handshake {

@@ -6,30 +6,31 @@ import (
 	"io"
 )
 
-func OutgoingHandshake(ctx context.Context, conn io.ReadWriteCloser, peerId string, cc CredentialChecker) (identity []byte, err error) {
+func OutgoingHandshake(ctx context.Context, conn io.ReadWriteCloser, peerId string, cc CredentialChecker) (result Result, err error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	h := newHandshake()
 	done := make(chan struct{})
 	var (
-		resIdentity []byte
-		resErr      error
+		res    Result
+		resErr error
 	)
 	go func() {
 		defer close(done)
-		resIdentity, resErr = outgoingHandshake(h, conn, peerId, cc)
+		res, resErr = outgoingHandshake(h, conn, peerId, cc)
 	}()
 	select {
 	case <-done:
-		return resIdentity, resErr
+		return res, resErr
 	case <-ctx.Done():
 		_ = conn.Close()
-		return nil, ctx.Err()
+		err = ctx.Err()
+		return
 	}
 }
 
-func outgoingHandshake(h *handshake, conn io.ReadWriteCloser, peerId string, cc CredentialChecker) (identity []byte, err error) {
+func outgoingHandshake(h *handshake, conn io.ReadWriteCloser, peerId string, cc CredentialChecker) (result Result, err error) {
 	defer h.release()
 	h.conn = conn
 	localCred := cc.MakeCredentials(peerId)
@@ -44,58 +45,62 @@ func outgoingHandshake(h *handshake, conn io.ReadWriteCloser, peerId string, cc 
 	}
 	if msg.ack != nil {
 		if msg.ack.Error == handshakeproto.Error_InvalidCredentials {
-			return nil, ErrPeerDeclinedCredentials
+			err = ErrPeerDeclinedCredentials
+			return
 		}
-		return nil, HandshakeError{e: msg.ack.Error}
+		err = HandshakeError{e: msg.ack.Error}
+		return
 	}
 
-	if identity, err = cc.CheckCredential(peerId, msg.cred); err != nil {
+	if result, err = cc.CheckCredential(peerId, msg.cred); err != nil {
 		h.tryWriteErrAndClose(err)
 		return
 	}
 
 	if err = h.writeAck(handshakeproto.Error_Null); err != nil {
 		h.tryWriteErrAndClose(err)
-		return nil, err
+		return
 	}
 
 	msg, err = h.readMsg(msgTypeAck)
 	if err != nil {
 		h.tryWriteErrAndClose(err)
-		return nil, err
+		return
 	}
 	if msg.ack.Error == handshakeproto.Error_Null {
-		return identity, nil
+		return result, nil
 	} else {
 		_ = h.conn.Close()
-		return nil, HandshakeError{e: msg.ack.Error}
+		err = HandshakeError{e: msg.ack.Error}
+		return
 	}
 }
 
-func IncomingHandshake(ctx context.Context, conn io.ReadWriteCloser, peerId string, cc CredentialChecker) (identity []byte, err error) {
+func IncomingHandshake(ctx context.Context, conn io.ReadWriteCloser, peerId string, cc CredentialChecker) (result Result, err error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	h := newHandshake()
 	done := make(chan struct{})
 	var (
-		resIdentity []byte
-		resError    error
+		res      Result
+		resError error
 	)
 	go func() {
 		defer close(done)
-		resIdentity, resError = incomingHandshake(h, conn, peerId, cc)
+		res, resError = incomingHandshake(h, conn, peerId, cc)
 	}()
 	select {
 	case <-done:
-		return resIdentity, resError
+		return res, resError
 	case <-ctx.Done():
 		_ = conn.Close()
-		return nil, ctx.Err()
+		err = ctx.Err()
+		return
 	}
 }
 
-func incomingHandshake(h *handshake, conn io.ReadWriteCloser, peerId string, cc CredentialChecker) (identity []byte, err error) {
+func incomingHandshake(h *handshake, conn io.ReadWriteCloser, peerId string, cc CredentialChecker) (result Result, err error) {
 	defer h.release()
 	h.conn = conn
 
@@ -104,30 +109,32 @@ func incomingHandshake(h *handshake, conn io.ReadWriteCloser, peerId string, cc 
 		h.tryWriteErrAndClose(err)
 		return
 	}
-	if identity, err = cc.CheckCredential(peerId, msg.cred); err != nil {
+	if result, err = cc.CheckCredential(peerId, msg.cred); err != nil {
 		h.tryWriteErrAndClose(err)
 		return
 	}
 
 	if err = h.writeCredentials(cc.MakeCredentials(peerId)); err != nil {
 		h.tryWriteErrAndClose(err)
-		return nil, err
+		return
 	}
 
 	msg, err = h.readMsg(msgTypeAck)
 	if err != nil {
 		h.tryWriteErrAndClose(err)
-		return nil, err
+		return
 	}
 	if msg.ack.Error != handshakeproto.Error_Null {
 		if msg.ack.Error == handshakeproto.Error_InvalidCredentials {
-			return nil, ErrPeerDeclinedCredentials
+			err = ErrPeerDeclinedCredentials
+			return
 		}
-		return nil, HandshakeError{e: msg.ack.Error}
+		err = HandshakeError{e: msg.ack.Error}
+		return
 	}
 	if err = h.writeAck(handshakeproto.Error_Null); err != nil {
 		h.tryWriteErrAndClose(err)
-		return nil, err
+		return
 	}
 	return
 }

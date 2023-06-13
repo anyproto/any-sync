@@ -64,8 +64,8 @@ func (s *secureService) Init(a *app.App) (err error) {
 	if s.key, err = crypto.UnmarshalEd25519PrivateKey(peerKey); err != nil {
 		return
 	}
-	s.noVerifyChecker = newNoVerifyChecker(s.protoVersion)
-	s.peerSignVerifier = newPeerSignVerifier(s.protoVersion, account.Account())
+	s.noVerifyChecker = newNoVerifyChecker(s.protoVersion, a.VersionName())
+	s.peerSignVerifier = newPeerSignVerifier(s.protoVersion, a.VersionName(), account.Account())
 
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 
@@ -99,13 +99,14 @@ func (s *secureService) SecureInbound(ctx context.Context, conn net.Conn) (cctx 
 }
 
 func (s *secureService) HandshakeInbound(ctx context.Context, conn io.ReadWriteCloser, peerId string) (cctx context.Context, err error) {
-	identity, err := handshake.IncomingHandshake(ctx, conn, peerId, s.inboundChecker)
+	res, err := handshake.IncomingHandshake(ctx, conn, peerId, s.inboundChecker)
 	if err != nil {
 		return nil, err
 	}
 	cctx = context.Background()
 	cctx = peer.CtxWithPeerId(cctx, peerId)
-	cctx = peer.CtxWithIdentity(cctx, identity)
+	cctx = peer.CtxWithIdentity(cctx, res.Identity)
+	cctx = peer.CtxWithClientVersion(cctx, res.ClientVersion)
 	return
 }
 
@@ -122,13 +123,14 @@ func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (cctx
 	} else {
 		checker = s.noVerifyChecker
 	}
-	identity, err := handshake.OutgoingHandshake(ctx, sc, sc.RemotePeer().String(), checker)
+	res, err := handshake.OutgoingHandshake(ctx, sc, sc.RemotePeer().String(), checker)
 	if err != nil {
 		return nil, err
 	}
 	cctx = context.Background()
 	cctx = peer.CtxWithPeerId(cctx, sc.RemotePeer().String())
-	cctx = peer.CtxWithIdentity(cctx, identity)
+	cctx = peer.CtxWithIdentity(cctx, res.Identity)
+	cctx = peer.CtxWithClientVersion(cctx, res.ClientVersion)
 	return cctx, nil
 }
 
