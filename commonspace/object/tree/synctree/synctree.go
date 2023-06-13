@@ -71,7 +71,6 @@ type BuildDeps struct {
 	SyncStatus      syncstatus.StatusUpdater
 	PeerGetter      ResponsiblePeersGetter
 	BuildObjectTree objecttree.BuildObjectTreeFunc
-	RetryTimeout    time.Duration
 }
 
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {

@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"sync/atomic"
-	"time"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -28,9 +27,8 @@ import (
 )
 
 type BuildTreeOpts struct {
-	Listener     updatelistener.UpdateListener
-	RetryTimeout time.Duration
-	TreeBuilder  objecttree.BuildObjectTreeFunc
+	Listener    updatelistener.UpdateListener
+	TreeBuilder objecttree.BuildObjectTreeFunc
 }
 
 const CName = "common.commonspace.objecttreebuilder"
@@ -121,7 +119,6 @@ func (t *treeBuilder) BuildTree(ctx context.Context, id string, opts BuildTreeOp
 		SpaceStorage:    t.spaceStorage,
 		OnClose:         t.onClose,
 		SyncStatus:      t.syncStatus,
-		RetryTimeout:    opts.RetryTimeout,
 		PeerGetter:      t.peerManager,
 		BuildObjectTree: treeBuilder,
 	}

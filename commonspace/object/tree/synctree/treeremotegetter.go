@@ -3,22 +3,17 @@ package synctree
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 )
 
 var (
-	newRequestTimeout = 1 * time.Second
-
-	ErrRetryTimeout       = errors.New("failed to retry request")
 	ErrNoResponsiblePeers = errors.New("no responsible peers")
 )
 
@@ -65,33 +60,13 @@ func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (msg *
 	return
 }
 
-func (t treeRemoteGetter) treeRequestLoop(ctx context.Context, retryTimeout time.Duration) (msg *treechangeproto.TreeSyncMessage, err error) {
-	peerIdx := 0
-	retryCtx, cancel := context.WithTimeout(ctx, retryTimeout)
-	defer cancel()
-	for {
-		availablePeers, err := t.getPeers(ctx)
-		if err != nil {
-			if retryTimeout == 0 {
-				return nil, err
-			}
-		} else {
-			peerIdx = peerIdx % len(availablePeers)
-			msg, err = t.treeRequest(ctx, availablePeers[peerIdx])
-			// if no error or it doesn't make sense to retry
-			err = rpcerr.Unwrap(err)
-			if err == nil || err == treechangeproto.ErrGetTree || retryTimeout == 0 {
-				return msg, err
-			}
-			peerIdx++
-		}
-		select {
-		case <-time.After(newRequestTimeout):
-			break
-		case <-retryCtx.Done():
-			return nil, ErrRetryTimeout
-		}
+func (t treeRemoteGetter) treeRequestLoop(ctx context.Context) (msg *treechangeproto.TreeSyncMessage, err error) {
+	availablePeers, err := t.getPeers(ctx)
+	if err != nil {
+		return
 	}
+	// in future we will try to load from different peers
+	return t.treeRequest(ctx, availablePeers[0])
 }
 
 func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.TreeStorage, isRemote bool, err error) {
@@ -113,7 +88,7 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 	}
 
 	isRemote = true
-	resp, err := t.treeRequestLoop(ctx, t.deps.RetryTimeout)
+	resp, err := t.treeRequestLoop(ctx)
 	if err != nil {
 		return
 	}
