@@ -67,7 +67,7 @@ func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (msg *
 
 func (t treeRemoteGetter) treeRequestLoop(ctx context.Context, retryTimeout time.Duration) (msg *treechangeproto.TreeSyncMessage, err error) {
 	peerIdx := 0
-	reconnectCtx, cancel := context.WithTimeout(ctx, retryTimeout)
+	retryCtx, cancel := context.WithTimeout(ctx, retryTimeout)
 	defer cancel()
 	for {
 		availablePeers, err := t.getPeers(ctx)
@@ -86,7 +86,7 @@ func (t treeRemoteGetter) treeRequestLoop(ctx context.Context, retryTimeout time
 		select {
 		case <-time.After(newRequestTimeout):
 			break
-		case <-reconnectCtx.Done():
+		case <-retryCtx.Done():
 			return nil, ErrRetryTimeout
 		}
 	}
