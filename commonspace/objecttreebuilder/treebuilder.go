@@ -4,6 +4,9 @@ package objecttreebuilder
 import (
 	"context"
 	"errors"
+	"sync/atomic"
+	"time"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/headsync"
@@ -22,13 +25,12 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
-	"sync/atomic"
 )
 
 type BuildTreeOpts struct {
-	Listener           updatelistener.UpdateListener
-	WaitTreeRemoteSync bool
-	TreeBuilder        objecttree.BuildObjectTreeFunc
+	Listener     updatelistener.UpdateListener
+	RetryTimeout time.Duration
+	TreeBuilder  objecttree.BuildObjectTreeFunc
 }
 
 const CName = "common.commonspace.objecttreebuilder"
@@ -110,18 +112,18 @@ func (t *treeBuilder) BuildTree(ctx context.Context, id string, opts BuildTreeOp
 		treeBuilder = t.builder
 	}
 	deps := synctree.BuildDeps{
-		SpaceId:            t.spaceId,
-		SyncClient:         t.syncClient,
-		Configuration:      t.configuration,
-		HeadNotifiable:     t.headsNotifiable,
-		Listener:           opts.Listener,
-		AclList:            t.aclList,
-		SpaceStorage:       t.spaceStorage,
-		OnClose:            t.onClose,
-		SyncStatus:         t.syncStatus,
-		WaitTreeRemoteSync: opts.WaitTreeRemoteSync,
-		PeerGetter:         t.peerManager,
-		BuildObjectTree:    treeBuilder,
+		SpaceId:         t.spaceId,
+		SyncClient:      t.syncClient,
+		Configuration:   t.configuration,
+		HeadNotifiable:  t.headsNotifiable,
+		Listener:        opts.Listener,
+		AclList:         t.aclList,
+		SpaceStorage:    t.spaceStorage,
+		OnClose:         t.onClose,
+		SyncStatus:      t.syncStatus,
+		RetryTimeout:    opts.RetryTimeout,
+		PeerGetter:      t.peerManager,
+		BuildObjectTree: treeBuilder,
 	}
 	t.treesUsed.Add(1)
 	t.log.Debug("incrementing counter", zap.String("id", id), zap.Int32("trees", t.treesUsed.Load()))

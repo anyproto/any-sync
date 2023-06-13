@@ -2,7 +2,10 @@ package synctree
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
@@ -11,7 +14,13 @@ import (
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
-	"time"
+)
+
+var (
+	newRequestTimeout = 1 * time.Second
+
+	ErrRetryTimeout       = errors.New("failed to retry request")
+	ErrNoResponsiblePeers = errors.New("no responsible peers")
 )
 
 type treeRemoteGetter struct {
@@ -57,36 +66,32 @@ func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (msg *
 	return
 }
 
-func (t treeRemoteGetter) treeRequestLoop(ctx context.Context, wait bool) (msg *treechangeproto.TreeSyncMessage, err error) {
+func (t treeRemoteGetter) treeRequestLoop(ctx context.Context, retryTimeout time.Duration) (msg *treechangeproto.TreeSyncMessage, err error) {
 	peerIdx := 0
-Loop:
+	reconnectCtx, cancel := context.WithTimeout(ctx, retryTimeout)
+	defer cancel()
 	for {
-		select {
-		case <-ctx.Done():
-			return nil, fmt.Errorf("waiting for object %s interrupted, context closed", t.treeId)
-		default:
-			break
-		}
 		availablePeers, err := t.getPeers(ctx)
 		if err != nil {
-			if !wait {
+			if retryTimeout == 0 {
 				return nil, err
 			}
-			select {
-			// wait for peers to connect
-			case <-time.After(1 * time.Second):
-				continue Loop
-			case <-ctx.Done():
-				return nil, fmt.Errorf("waiting for object %s interrupted, context closed", t.treeId)
-			}
+			goto Wait
 		}
 
 		peerIdx = peerIdx % len(availablePeers)
 		msg, err = t.treeRequest(ctx, availablePeers[peerIdx])
-		if err == nil || !wait {
+		if err == nil || retryTimeout == 0 {
 			return msg, err
 		}
 		peerIdx++
+	Wait:
+		select {
+		case <-time.After(newRequestTimeout):
+			break
+		case <-reconnectCtx.Done():
+			return nil, ErrRetryTimeout
+		}
 	}
 }
 
@@ -109,7 +114,7 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 	}
 
 	isRemote = true
-	resp, err := t.treeRequestLoop(ctx, t.deps.WaitTreeRemoteSync)
+	resp, err := t.treeRequestLoop(ctx, t.deps.RetryTimeout)
 	if err != nil {
 		return
 	}

@@ -59,19 +59,19 @@ type ResponsiblePeersGetter interface {
 }
 
 type BuildDeps struct {
-	SpaceId            string
-	SyncClient         SyncClient
-	Configuration      nodeconf.NodeConf
-	HeadNotifiable     HeadNotifiable
-	Listener           updatelistener.UpdateListener
-	AclList            list.AclList
-	SpaceStorage       spacestorage.SpaceStorage
-	TreeStorage        treestorage.TreeStorage
-	OnClose            func(id string)
-	SyncStatus         syncstatus.StatusUpdater
-	PeerGetter         ResponsiblePeersGetter
-	BuildObjectTree    objecttree.BuildObjectTreeFunc
-	WaitTreeRemoteSync bool
+	SpaceId         string
+	SyncClient      SyncClient
+	Configuration   nodeconf.NodeConf
+	HeadNotifiable  HeadNotifiable
+	Listener        updatelistener.UpdateListener
+	AclList         list.AclList
+	SpaceStorage    spacestorage.SpaceStorage
+	TreeStorage     treestorage.TreeStorage
+	OnClose         func(id string)
+	SyncStatus      syncstatus.StatusUpdater
+	PeerGetter      ResponsiblePeersGetter
+	BuildObjectTree objecttree.BuildObjectTreeFunc
+	RetryTimeout    time.Duration
 }
 
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {
