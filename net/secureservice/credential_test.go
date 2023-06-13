@@ -23,13 +23,13 @@ func TestPeerSignVerifier_CheckCredential(t *testing.T) {
 
 	cr1 := cc1.MakeCredentials(c1)
 	cr2 := cc2.MakeCredentials(c2)
-	id1, err := cc1.CheckCredential(c1, cr2)
+	res, err := cc1.CheckCredential(c1, cr2)
 	assert.NoError(t, err)
-	assert.Equal(t, identity2, id1)
+	assert.Equal(t, identity2, res.Identity)
 
-	id2, err := cc2.CheckCredential(c2, cr1)
+	res2, err := cc2.CheckCredential(c2, cr1)
 	assert.NoError(t, err)
-	assert.Equal(t, identity1, id2)
+	assert.Equal(t, identity1, res2.Identity)
 
 	_, err = cc1.CheckCredential(c1, cr1)
 	assert.EqualError(t, err, handshake.ErrInvalidCredentials.Error())

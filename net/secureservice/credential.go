@@ -22,11 +22,15 @@ func (n noVerifyChecker) MakeCredentials(remotePeerId string) *handshakeproto.Cr
 	return n.cred
 }
 
-func (n noVerifyChecker) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (identity []byte, err error) {
+func (n noVerifyChecker) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (result handshake.Result, err error) {
 	if cred.Version != n.cred.Version {
-		return nil, handshake.ErrIncompatibleVersion
+		err = handshake.ErrIncompatibleVersion
+		return
 	}
-	return nil, nil
+	return handshake.Result{
+		ProtoVersion:  cred.Version,
+		ClientVersion: cred.ClientVersion,
+	}, nil
 }
 
 func newPeerSignVerifier(protoVersion uint32, account *accountdata.AccountKeys) handshake.CredentialChecker {
@@ -60,27 +64,36 @@ func (p *peerSignVerifier) MakeCredentials(remotePeerId string) *handshakeproto.
 	}
 }
 
-func (p *peerSignVerifier) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (identity []byte, err error) {
+func (p *peerSignVerifier) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (result handshake.Result, err error) {
 	if cred.Version != p.protoVersion {
-		return nil, handshake.ErrIncompatibleVersion
+		err = handshake.ErrIncompatibleVersion
+		return
 	}
 	if cred.Type != handshakeproto.CredentialsType_SignedPeerIds {
-		return nil, handshake.ErrSkipVerifyNotAllowed
+		err = handshake.ErrSkipVerifyNotAllowed
+		return
 	}
 	var msg = &handshakeproto.PayloadSignedPeerIds{}
 	if err = msg.Unmarshal(cred.Payload); err != nil {
-		return nil, handshake.ErrUnexpectedPayload
+		err = handshake.ErrUnexpectedPayload
+		return
 	}
 	pubKey, err := crypto.UnmarshalEd25519PublicKeyProto(msg.Identity)
 	if err != nil {
-		return nil, handshake.ErrInvalidCredentials
+		err = handshake.ErrInvalidCredentials
+		return
 	}
 	ok, err := pubKey.Verify([]byte((remotePeerId + p.account.PeerId)), msg.Sign)
 	if err != nil {
-		return nil, err
+		return
 	}
 	if !ok {
-		return nil, handshake.ErrInvalidCredentials
+		err = handshake.ErrInvalidCredentials
+		return
 	}
-	return msg.Identity, nil
+	return handshake.Result{
+		Identity:      msg.Identity,
+		ProtoVersion:  cred.Version,
+		ClientVersion: cred.ClientVersion,
+	}, nil
 }

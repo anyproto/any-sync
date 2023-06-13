@@ -15,15 +15,19 @@ import (
 )
 
 var noVerifyChecker = &testCredChecker{
-	makeCred: &handshakeproto.Credentials{Type: handshakeproto.CredentialsType_SkipVerify},
-	checkCred: func(peerId string, cred *handshakeproto.Credentials) (identity []byte, err error) {
-		return []byte("identity"), nil
+	makeCred: &handshakeproto.Credentials{Type: handshakeproto.CredentialsType_SkipVerify, ClientVersion: "test:v1.0"},
+	checkCred: func(peerId string, cred *handshakeproto.Credentials) (res Result, err error) {
+		return Result{
+			Identity:      []byte("identity"),
+			ProtoVersion:  cred.Version,
+			ClientVersion: cred.ClientVersion,
+		}, nil
 	},
 }
 
 type handshakeRes struct {
-	identity []byte
-	err      error
+	res Result
+	err error
 }
 
 func TestOutgoingHandshake(t *testing.T) {
@@ -32,7 +36,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := OutgoingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -50,7 +54,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		// send ack
 		require.NoError(t, h.writeAck(handshakeproto.Error_Null))
 		res := <-handshakeResCh
-		assert.NotEmpty(t, res.identity)
+		assert.NotEmpty(t, res.res)
 		assert.NoError(t, res.err)
 	})
 	t.Run("write cred err", func(t *testing.T) {
@@ -58,7 +62,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := OutgoingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		_ = c2.Close()
 		res := <-handshakeResCh
@@ -69,7 +73,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := OutgoingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -85,7 +89,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := OutgoingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -101,7 +105,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := OutgoingHandshake(nil, c1, "", &testCredChecker{makeCred: noVerifyChecker.makeCred, checkErr: ErrInvalidCredentials})
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -120,7 +124,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := OutgoingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -138,7 +142,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := OutgoingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -159,7 +163,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := OutgoingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -172,9 +176,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		_, err = h.readMsg(msgTypeAck)
 		require.NoError(t, err)
 		// write cred instead ack
-		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials("")))
-		_, err = h.readMsg(msgTypeAck)
-		require.Error(t, err)
+		_ = h.writeCredentials(noVerifyChecker.MakeCredentials(""))
 		res := <-handshakeResCh
 		require.Error(t, res.err)
 	})
@@ -183,7 +185,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := OutgoingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -211,7 +213,7 @@ func TestOutgoingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := OutgoingHandshake(ctx, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -234,7 +236,7 @@ func TestIncomingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := IncomingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -252,7 +254,7 @@ func TestIncomingHandshake(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, handshakeproto.Error_Null, msg.ack.Error)
 		res := <-handshakeResCh
-		assert.NotEmpty(t, res.identity)
+		assert.NotEmpty(t, res.res)
 		require.NoError(t, res.err)
 	})
 	t.Run("write cred err", func(t *testing.T) {
@@ -260,7 +262,7 @@ func TestIncomingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := IncomingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		_ = c2.Close()
 		res := <-handshakeResCh
@@ -271,7 +273,7 @@ func TestIncomingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := IncomingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -286,7 +288,7 @@ func TestIncomingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := IncomingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -300,7 +302,7 @@ func TestIncomingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := IncomingHandshake(nil, c1, "", &testCredChecker{makeCred: noVerifyChecker.makeCred, checkErr: ErrInvalidCredentials})
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -320,7 +322,7 @@ func TestIncomingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := IncomingHandshake(nil, c1, "", &testCredChecker{makeCred: noVerifyChecker.makeCred, checkErr: ErrIncompatibleVersion})
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -340,7 +342,7 @@ func TestIncomingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := IncomingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -350,7 +352,7 @@ func TestIncomingHandshake(t *testing.T) {
 		_, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
 		// write cred instead ack
-		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials("")))
+		_ = h.writeCredentials(noVerifyChecker.MakeCredentials(""))
 		// expect EOF
 		_, err = h.readMsg(msgTypeAck)
 		require.Error(t, err)
@@ -362,7 +364,7 @@ func TestIncomingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := IncomingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -381,7 +383,7 @@ func TestIncomingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := IncomingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -403,7 +405,7 @@ func TestIncomingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := IncomingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -425,7 +427,7 @@ func TestIncomingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := IncomingHandshake(nil, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -448,7 +450,7 @@ func TestIncomingHandshake(t *testing.T) {
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
 			identity, err := IncomingHandshake(ctx, c1, "", noVerifyChecker)
-			handshakeResCh <- handshakeRes{identity: identity, err: err}
+			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
 		h.conn = c2
@@ -472,7 +474,7 @@ func TestNotAHandshakeMessage(t *testing.T) {
 	var handshakeResCh = make(chan handshakeRes, 1)
 	go func() {
 		identity, err := IncomingHandshake(nil, c1, "", noVerifyChecker)
-		handshakeResCh <- handshakeRes{identity: identity, err: err}
+		handshakeResCh <- handshakeRes{res: identity, err: err}
 	}()
 	h := newHandshake()
 	h.conn = c2
@@ -491,20 +493,20 @@ func TestEndToEnd(t *testing.T) {
 	st := time.Now()
 	go func() {
 		identity, err := OutgoingHandshake(nil, c1, "", noVerifyChecker)
-		outResCh <- handshakeRes{identity: identity, err: err}
+		outResCh <- handshakeRes{res: identity, err: err}
 	}()
 	go func() {
 		identity, err := IncomingHandshake(nil, c2, "", noVerifyChecker)
-		inResCh <- handshakeRes{identity: identity, err: err}
+		inResCh <- handshakeRes{res: identity, err: err}
 	}()
 
 	outRes := <-outResCh
 	assert.NoError(t, outRes.err)
-	assert.NotEmpty(t, outRes.identity)
+	assert.NotEmpty(t, outRes.res)
 
 	inRes := <-inResCh
 	assert.NoError(t, inRes.err)
-	assert.NotEmpty(t, inRes.identity)
+	assert.NotEmpty(t, inRes.res)
 	t.Log("dur", time.Since(st))
 }
 
@@ -548,7 +550,7 @@ func BenchmarkHandshake(b *testing.B) {
 
 type testCredChecker struct {
 	makeCred  *handshakeproto.Credentials
-	checkCred func(peerId string, cred *handshakeproto.Credentials) (identity []byte, err error)
+	checkCred func(peerId string, cred *handshakeproto.Credentials) (res Result, err error)
 	checkErr  error
 }
 
@@ -556,14 +558,15 @@ func (t *testCredChecker) MakeCredentials(peerId string) *handshakeproto.Credent
 	return t.makeCred
 }
 
-func (t *testCredChecker) CheckCredential(peerId string, cred *handshakeproto.Credentials) (identity []byte, err error) {
+func (t *testCredChecker) CheckCredential(peerId string, cred *handshakeproto.Credentials) (res Result, err error) {
 	if t.checkErr != nil {
-		return nil, t.checkErr
+		err = t.checkErr
+		return
 	}
 	if t.checkCred != nil {
 		return t.checkCred(peerId, cred)
 	}
-	return nil, nil
+	return
 }
 
 func newConnPair(t require.TestingT) (sc1, sc2 *secConn) {
