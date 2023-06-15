@@ -3,10 +3,11 @@ package ocache
 import (
 	"context"
 	"errors"
-	"github.com/anyproto/any-sync/app/logger"
-	"go.uber.org/zap"
 	"sync"
 	"time"
+
+	"github.com/anyproto/any-sync/app/logger"
+	"go.uber.org/zap"
 )
 
 var (
@@ -157,7 +158,10 @@ func (c *oCache) Pick(ctx context.Context, id string) (value Object, err error) 
 
 func (c *oCache) load(ctx context.Context, id string, e *entry) {
 	defer close(e.load)
+	ctx, cancel := context.WithCancel(ctx)
+	e.setCancel(cancel)
 	value, err := c.loadFunc(ctx, id)
+	cancel()
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -315,6 +319,7 @@ func (c *oCache) Close() (err error) {
 	close(c.closeCh)
 	var toClose []*entry
 	for _, e := range c.data {
+		e.cancelLoad()
 		toClose = append(toClose, e)
 	}
 	c.mu.Unlock()

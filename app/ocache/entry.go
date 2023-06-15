@@ -2,9 +2,10 @@ package ocache
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 type entryState int
@@ -25,6 +26,7 @@ type entry struct {
 	value     Object
 	close     chan struct{}
 	mx        sync.Mutex
+	cancel    context.CancelFunc
 }
 
 func newEntry(id string, value Object, state entryState) *entry {
@@ -47,6 +49,20 @@ func (e *entry) isClosing() bool {
 	e.mx.Lock()
 	defer e.mx.Unlock()
 	return e.state == entryStateClosed || e.state == entryStateClosing
+}
+
+func (e *entry) setCancel(cancel context.CancelFunc) {
+	e.mx.Lock()
+	defer e.mx.Unlock()
+	e.cancel = cancel
+}
+
+func (e *entry) cancelLoad() {
+	e.mx.Lock()
+	defer e.mx.Unlock()
+	if e.cancel != nil {
+		e.cancel()
+	}
 }
 
 func (e *entry) waitLoad(ctx context.Context, id string) (value Object, err error) {
