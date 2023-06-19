@@ -23,7 +23,7 @@ type stream struct {
 }
 
 func (sr *stream) write(msg drpc.Message) (err error) {
-	return sr.queue.TryAdd(sr.stream.Context(), msg)
+	return sr.queue.TryAdd(msg)
 }
 
 func (sr *stream) readLoop() error {
