@@ -205,18 +205,27 @@ func (s *syncTree) Delete() (err error) {
 }
 
 func (s *syncTree) TryClose(objectTTL time.Duration) (bool, error) {
-	return true, s.Close()
+	if !s.TryLock() {
+		return false, nil
+	}
+	log.Debug("closing sync tree", zap.String("id", s.Id()))
+	return true, s.close()
 }
 
 func (s *syncTree) Close() (err error) {
 	log.Debug("closing sync tree", zap.String("id", s.Id()))
+	s.Lock()
+	return s.close()
+}
+
+func (s *syncTree) close() (err error) {
+	defer s.Unlock()
 	defer func() {
 		log.Debug("closed sync tree", zap.Error(err), zap.String("id", s.Id()))
 	}()
-	s.Lock()
-	defer s.Unlock()
 	if s.isClosed {
-		return ErrSyncTreeClosed
+		err = ErrSyncTreeClosed
+		return
 	}
 	s.onClose(s.Id())
 	s.isClosed = true

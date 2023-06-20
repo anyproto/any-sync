@@ -3,18 +3,21 @@ package synctree
 import (
 	"context"
 	"errors"
+	"sync"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
+	"github.com/anyproto/any-sync/util/slice"
 	"github.com/gogo/protobuf/proto"
-	"sync"
 )
 
 var (
 	ErrMessageIsRequest    = errors.New("message is request")
 	ErrMessageIsNotRequest = errors.New("message is not request")
+	ErrMoreThanOneRequest  = errors.New("more than one request for same peer")
 )
 
 type syncTreeHandler struct {
@@ -22,21 +25,23 @@ type syncTreeHandler struct {
 	syncClient   SyncClient
 	syncProtocol TreeSyncProtocol
 	syncStatus   syncstatus.StatusUpdater
-	handlerLock  sync.Mutex
 	spaceId      string
-	queue        ReceiveQueue
+
+	handlerLock     sync.Mutex
+	pendingRequests map[string]struct{}
+	heads           []string
 }
 
 const maxQueueSize = 5
 
 func newSyncTreeHandler(spaceId string, objTree objecttree.ObjectTree, syncClient SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
 	return &syncTreeHandler{
-		objTree:      objTree,
-		syncProtocol: newTreeSyncProtocol(spaceId, objTree, syncClient),
-		syncClient:   syncClient,
-		syncStatus:   syncStatus,
-		spaceId:      spaceId,
-		queue:        newReceiveQueue(maxQueueSize),
+		objTree:         objTree,
+		syncProtocol:    newTreeSyncProtocol(spaceId, objTree, syncClient),
+		syncClient:      syncClient,
+		syncStatus:      syncStatus,
+		spaceId:         spaceId,
+		pendingRequests: make(map[string]struct{}),
 	}
 }
 
@@ -48,17 +53,35 @@ func (s *syncTreeHandler) HandleRequest(ctx context.Context, senderId string, re
 	}
 	fullSyncRequest := unmarshalled.GetContent().GetFullSyncRequest()
 	if fullSyncRequest == nil {
-		err = ErrMessageIsNotRequest
-		return
+		return nil, ErrMessageIsNotRequest
 	}
-	s.syncStatus.HeadsReceive(senderId, request.ObjectId, treechangeproto.GetHeads(unmarshalled))
+	// setting pending requests
+	s.handlerLock.Lock()
+	_, exists := s.pendingRequests[senderId]
+	if exists {
+		s.handlerLock.Unlock()
+		return nil, ErrMoreThanOneRequest
+	}
+	s.pendingRequests[senderId] = struct{}{}
+	s.handlerLock.Unlock()
+
+	response, err = s.handleRequest(ctx, senderId, fullSyncRequest)
+
+	// removing pending requests
+	s.handlerLock.Lock()
+	delete(s.pendingRequests, senderId)
+	s.handlerLock.Unlock()
+	return
+}
+
+func (s *syncTreeHandler) handleRequest(ctx context.Context, senderId string, fullSyncRequest *treechangeproto.TreeFullSyncRequest) (response *spacesyncproto.ObjectSyncMessage, err error) {
 	s.objTree.Lock()
 	defer s.objTree.Unlock()
 	treeResp, err := s.syncProtocol.FullSyncRequest(ctx, senderId, fullSyncRequest)
 	if err != nil {
 		return
 	}
-	response, err = MarshallTreeMessage(treeResp, s.spaceId, request.ObjectId, "")
+	response, err = MarshallTreeMessage(treeResp, s.spaceId, s.objTree.Id(), "")
 	return
 }
 
@@ -68,28 +91,41 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 	if err != nil {
 		return
 	}
-	s.syncStatus.HeadsReceive(senderId, msg.ObjectId, treechangeproto.GetHeads(unmarshalled))
-
-	queueFull := s.queue.AddMessage(senderId, unmarshalled, msg.RequestId)
-	if queueFull {
+	heads := treechangeproto.GetHeads(unmarshalled)
+	s.syncStatus.HeadsReceive(senderId, msg.ObjectId, heads)
+	s.handlerLock.Lock()
+	// if the update has same heads then returning not to hang on a lock
+	if unmarshalled.GetContent().GetHeadUpdate() != nil && slice.UnsortedEquals(heads, s.heads) {
+		s.handlerLock.Unlock()
 		return
 	}
-
-	return s.handleMessage(ctx, senderId)
+	s.handlerLock.Unlock()
+	return s.handleMessage(ctx, unmarshalled, senderId)
 }
 
-func (s *syncTreeHandler) handleMessage(ctx context.Context, senderId string) (err error) {
+func (s *syncTreeHandler) handleMessage(ctx context.Context, msg *treechangeproto.TreeSyncMessage, senderId string) (err error) {
 	s.objTree.Lock()
 	defer s.objTree.Unlock()
-	msg, _, err := s.queue.GetMessage(senderId)
-	if err != nil {
-		return
-	}
+	var (
+		copyHeads = make([]string, 0, len(s.objTree.Heads()))
+		treeId    = s.objTree.Id()
+		content   = msg.GetContent()
+	)
 
-	defer s.queue.ClearQueue(senderId)
+	// getting old heads
+	copyHeads = append(copyHeads, s.objTree.Heads()...)
+	defer func() {
+		// checking if something changed
+		if !slice.UnsortedEquals(copyHeads, s.objTree.Heads()) {
+			s.handlerLock.Lock()
+			defer s.handlerLock.Unlock()
+			s.heads = s.heads[:0]
+			for _, h := range s.objTree.Heads() {
+				s.heads = append(s.heads, h)
+			}
+		}
+	}()
 
-	treeId := s.objTree.Id()
-	content := msg.GetContent()
 	switch {
 	case content.GetHeadUpdate() != nil:
 		var syncReq *treechangeproto.TreeSyncMessage

@@ -2,15 +2,15 @@ package synctree
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 )
 
 type testObjTreeMock struct {
@@ -52,7 +52,6 @@ type syncHandlerFixture struct {
 	ctrl             *gomock.Controller
 	syncClientMock   *mock_synctree.MockSyncClient
 	objectTreeMock   *testObjTreeMock
-	receiveQueueMock ReceiveQueue
 	syncProtocolMock *mock_synctree.MockTreeSyncProtocol
 	spaceId          string
 	senderId         string
@@ -67,20 +66,18 @@ func newSyncHandlerFixture(t *testing.T) *syncHandlerFixture {
 	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
 	syncProtocolMock := mock_synctree.NewMockTreeSyncProtocol(ctrl)
 	spaceId := "spaceId"
-	receiveQueue := newReceiveQueue(5)
 
 	syncHandler := &syncTreeHandler{
-		objTree:      objectTreeMock,
-		syncClient:   syncClientMock,
-		syncProtocol: syncProtocolMock,
-		spaceId:      spaceId,
-		queue:        receiveQueue,
-		syncStatus:   syncstatus.NewNoOpSyncStatus(),
+		objTree:         objectTreeMock,
+		syncClient:      syncClientMock,
+		syncProtocol:    syncProtocolMock,
+		spaceId:         spaceId,
+		syncStatus:      syncstatus.NewNoOpSyncStatus(),
+		pendingRequests: map[string]struct{}{},
 	}
 	return &syncHandlerFixture{
 		ctrl:             ctrl,
 		objectTreeMock:   objectTreeMock,
-		receiveQueueMock: receiveQueue,
 		syncProtocolMock: syncProtocolMock,
 		syncClientMock:   syncClientMock,
 		syncHandler:      syncHandler,
@@ -97,38 +94,68 @@ func (fx *syncHandlerFixture) stop() {
 func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("handle head update message", func(t *testing.T) {
+	t.Run("handle head update message, heads not equal, request returned", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
 		defer fx.stop()
 		treeId := "treeId"
 		chWithId := &treechangeproto.RawTreeChangeWithId{}
-		headUpdate := &treechangeproto.TreeHeadUpdate{}
+		headUpdate := &treechangeproto.TreeHeadUpdate{
+			Heads: []string{"h3"},
+		}
 		treeMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
 		objectMsg, _ := MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
 
 		syncReq := &treechangeproto.TreeSyncMessage{}
+		fx.syncHandler.heads = []string{"h2"}
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
+		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h2"})
+		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h3"})
 		fx.syncProtocolMock.EXPECT().HeadUpdate(ctx, fx.senderId, gomock.Any()).Return(syncReq, nil)
 		fx.syncClientMock.EXPECT().QueueRequest(fx.senderId, fx.treeId, syncReq).Return(nil)
 
 		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, objectMsg)
 		require.NoError(t, err)
+		require.Equal(t, []string{"h3"}, fx.syncHandler.heads)
 	})
 
-	t.Run("handle head update message, empty sync request", func(t *testing.T) {
+	t.Run("handle head update message, heads equal", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
 		defer fx.stop()
 		treeId := "treeId"
 		chWithId := &treechangeproto.RawTreeChangeWithId{}
-		headUpdate := &treechangeproto.TreeHeadUpdate{}
+		headUpdate := &treechangeproto.TreeHeadUpdate{
+			Heads: []string{"h1"},
+		}
 		treeMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
 		objectMsg, _ := MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
 
+		fx.syncHandler.heads = []string{"h1"}
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
+
+		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, objectMsg)
+		require.NoError(t, err)
+	})
+
+	t.Run("handle head update message, empty sync request returned", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		treeId := "treeId"
+		chWithId := &treechangeproto.RawTreeChangeWithId{}
+		headUpdate := &treechangeproto.TreeHeadUpdate{
+			Heads: []string{"h3"},
+		}
+		treeMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
+		objectMsg, _ := MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
+
+		fx.syncHandler.heads = []string{"h2"}
+		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
+		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h2"})
+		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h3"})
 		fx.syncProtocolMock.EXPECT().HeadUpdate(ctx, fx.senderId, gomock.Any()).Return(nil, nil)
 
 		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, objectMsg)
 		require.NoError(t, err)
+		require.Equal(t, []string{"h3"}, fx.syncHandler.heads)
 	})
 
 	t.Run("handle full sync request returns error", func(t *testing.T) {
@@ -136,11 +163,15 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 		defer fx.stop()
 		treeId := "treeId"
 		chWithId := &treechangeproto.RawTreeChangeWithId{}
-		fullRequest := &treechangeproto.TreeFullSyncRequest{}
+		fullRequest := &treechangeproto.TreeFullSyncRequest{
+			Heads: []string{"h3"},
+		}
 		treeMsg := treechangeproto.WrapFullRequest(fullRequest, chWithId)
 		objectMsg, _ := MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
 
+		fx.syncHandler.heads = []string{"h2"}
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
+		fx.objectTreeMock.EXPECT().Heads().Times(3).Return([]string{"h2"})
 
 		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, objectMsg)
 		require.Equal(t, err, ErrMessageIsRequest)
@@ -151,11 +182,16 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 		defer fx.stop()
 		treeId := "treeId"
 		chWithId := &treechangeproto.RawTreeChangeWithId{}
-		fullSyncResponse := &treechangeproto.TreeFullSyncResponse{}
+		fullSyncResponse := &treechangeproto.TreeFullSyncResponse{
+			Heads: []string{"h3"},
+		}
 		treeMsg := treechangeproto.WrapFullResponse(fullSyncResponse, chWithId)
 		objectMsg, _ := MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
 
+		fx.syncHandler.heads = []string{"h2"}
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
+		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h2"})
+		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h3"})
 		fx.syncProtocolMock.EXPECT().FullSyncResponse(ctx, fx.senderId, gomock.Any()).Return(nil)
 
 		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, objectMsg)
@@ -165,24 +201,6 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 
 func TestSyncTreeHandler_HandleRequest(t *testing.T) {
 	ctx := context.Background()
-
-	t.Run("handle request", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.stop()
-		treeId := "treeId"
-		chWithId := &treechangeproto.RawTreeChangeWithId{}
-		fullRequest := &treechangeproto.TreeFullSyncRequest{}
-		treeMsg := treechangeproto.WrapFullRequest(fullRequest, chWithId)
-		objectMsg, _ := MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
-
-		syncResp := &treechangeproto.TreeSyncMessage{}
-		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
-		fx.syncProtocolMock.EXPECT().FullSyncRequest(ctx, fx.senderId, gomock.Any()).Return(syncResp, nil)
-
-		res, err := fx.syncHandler.HandleRequest(ctx, fx.senderId, objectMsg)
-		require.NoError(t, err)
-		require.NotNil(t, res)
-	})
 
 	t.Run("handle request", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
