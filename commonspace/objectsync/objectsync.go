@@ -4,6 +4,9 @@ package objectsync
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
+	"time"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
@@ -13,8 +16,6 @@ import (
 	"github.com/anyproto/any-sync/util/multiqueue"
 	"github.com/cheggaaa/mb/v3"
 	"github.com/gogo/protobuf/proto"
-	"sync/atomic"
-	"time"
 
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/syncobjectgetter"
@@ -79,7 +80,7 @@ func (s *objectSync) Init(a *app.App) (err error) {
 	}
 	s.spaceIsDeleted = sharedData.SpaceIsDeleted
 	s.spaceId = sharedData.SpaceId
-	s.handleQueue = multiqueue.New[HandleMessage](s.processHandleMessage, 100)
+	s.handleQueue = multiqueue.New[HandleMessage](s.processHandleMessage, 30)
 	return nil
 }
 
