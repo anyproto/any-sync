@@ -262,6 +262,15 @@ func (app *App) Start(ctx context.Context) (err error) {
 	return
 }
 
+// IterateComponents iterates over all registered components. It's safe for concurrent use.
+func (app *App) IterateComponents(fn func(Component)) {
+	app.mu.RLock()
+	defer app.mu.RUnlock()
+	for _, s := range app.components {
+		fn(s)
+	}
+}
+
 func stackAllGoroutines() []byte {
 	buf := make([]byte, 1024)
 	for {
