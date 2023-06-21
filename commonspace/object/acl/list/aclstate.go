@@ -3,6 +3,7 @@ package list
 import (
 	"errors"
 	"fmt"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -23,6 +24,7 @@ var (
 	ErrOldInvite               = errors.New("invite is too old")
 	ErrInsufficientPermissions = errors.New("insufficient permissions")
 	ErrNoReadKey               = errors.New("acl state doesn't have a read key")
+	ErrNoInvite                = errors.New("can't delete invite record")
 	ErrInvalidSignature        = errors.New("signature is invalid")
 	ErrIncorrectRoot           = errors.New("incorrect root")
 	ErrIncorrectRecordSequence = errors.New("incorrect prev id of a record")
@@ -39,6 +41,7 @@ type AclState struct {
 	userReadKeys     map[string]crypto.SymKey
 	userStates       map[string]AclUserState
 	statesAtRecord   map[string][]AclUserState
+	inviteKeys       map[string]crypto.PubKey
 	key              crypto.PrivKey
 	pubKey           crypto.PubKey
 	keyStore         crypto.KeyStorage
@@ -110,17 +113,18 @@ func (st *AclState) applyRecord(record *AclRecord) (err error) {
 		err = ErrIncorrectRecordSequence
 		return
 	}
+	// if the record is root record
 	if record.Id == st.id {
 		err = st.applyRoot(record)
 		if err != nil {
 			return
 		}
 		st.statesAtRecord[record.Id] = []AclUserState{
-			{PubKey: record.Identity, Permissions: aclrecordproto.AclUserPermissions_Admin},
+			st.userStates[mapKeyFromPubKey(record.Identity)],
 		}
 		return
 	}
-
+	// if the model is not cached
 	if record.Model == nil {
 		aclData := &aclrecordproto.AclData{}
 		err = proto.Unmarshal(record.Data, aclData)
@@ -129,18 +133,16 @@ func (st *AclState) applyRecord(record *AclRecord) (err error) {
 		}
 		record.Model = aclData
 	}
-
+	// applying records contents
 	err = st.applyChangeData(record)
 	if err != nil {
 		return
 	}
-
-	// getting all states for users at record
+	// getting all states for users at record and saving them
 	var states []AclUserState
 	for _, state := range st.userStates {
 		states = append(states, state)
 	}
-
 	st.statesAtRecord[record.Id] = states
 	return
 }
@@ -156,7 +158,7 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 	// adding user to the list
 	userState := AclUserState{
 		PubKey:      record.Identity,
-		Permissions: aclrecordproto.AclUserPermissions_Admin,
+		Permissions: AclPermissions(aclrecordproto.AclUserPermissions_Admin),
 	}
 	st.currentReadKeyId = record.ReadKeyId
 	st.userStates[mapKeyFromPubKey(record.Identity)] = userState
@@ -181,54 +183,35 @@ func (st *AclState) saveReadKeyFromRoot(record *AclRecord) (err error) {
 			return
 		}
 	}
-
 	st.userReadKeys[record.Id] = readKey
 	return
 }
 
 func (st *AclState) applyChangeData(record *AclRecord) (err error) {
-	defer func() {
-		if err != nil {
-			return
-		}
-		if record.ReadKeyId != st.currentReadKeyId {
-			st.totalReadKeys++
-			st.currentReadKeyId = record.ReadKeyId
-		}
-	}()
 	model := record.Model.(*aclrecordproto.AclData)
-	if !st.isUserJoin(model) {
-		// we check signature when we add this to the List, so no need to do it here
-		if _, exists := st.userStates[mapKeyFromPubKey(record.Identity)]; !exists {
-			err = ErrNoSuchUser
-			return
-		}
-
-		// only Admins can do non-user join changes
-		if !st.HasPermission(record.Identity, aclrecordproto.AclUserPermissions_Admin) {
-			// TODO: add string encoding
-			err = fmt.Errorf("user %s must have admin permissions", record.Identity.Account())
-			return
-		}
+	if !st.isUserJoin(model) && !st.Permissions(record.Identity).CanManageAccounts() {
+		return ErrInsufficientPermissions
 	}
-
 	for _, ch := range model.GetAclContent() {
 		if err = st.applyChangeContent(ch, record.Id); err != nil {
 			log.Info("error while applying changes: %v; ignore", zap.Error(err))
 			return err
 		}
 	}
-
+	if record.ReadKeyId != st.currentReadKeyId {
+		st.totalReadKeys++
+		st.currentReadKeyId = record.ReadKeyId
+	}
 	return nil
 }
 
 func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recordId string) error {
 	switch {
-	case ch.GetUserPermissionChange() != nil:
-		return st.applyUserPermissionChange(ch.GetUserPermissionChange(), recordId)
-	case ch.GetUserAdd() != nil:
-		return st.applyUserAdd(ch.GetUserAdd(), recordId)
-	case ch.GetUserRemove() != nil:
+	case ch.GetPermissionChange() != nil:
+		return st.applyPermissionChange(ch.GetPermissionChange(), recordId)
+	case ch.GetInvite() != nil:
+		return st.applyInvite(ch.GetInvite(), recordId)
+	case ch.GetInviteRevoke() != nil:
 		return st.applyUserRemove(ch.GetUserRemove(), recordId)
 	case ch.GetUserInvite() != nil:
 		return st.applyUserInvite(ch.GetUserInvite(), recordId)
@@ -239,7 +222,7 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 	}
 }
 
-func (st *AclState) applyUserPermissionChange(ch *aclrecordproto.AclUserPermissionChange, recordId string) error {
+func (st *AclState) applyPermissionChange(ch *aclrecordproto.AclAccountPermissionChange, recordId string) error {
 	chIdentity, err := st.keyStore.PubKeyFromProto(ch.Identity)
 	if err != nil {
 		return err
@@ -248,13 +231,22 @@ func (st *AclState) applyUserPermissionChange(ch *aclrecordproto.AclUserPermissi
 	if !exists {
 		return ErrNoSuchUser
 	}
-
-	state.Permissions = ch.Permissions
+	state.Permissions = AclPermissions(ch.Permissions)
 	return nil
 }
 
-func (st *AclState) applyUserInvite(ch *aclrecordproto.AclUserInvite, recordId string) error {
-	// TODO: check old code and bring it back :-)
+func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, recordId string) error {
+	inviteKey, err := st.keyStore.PubKeyFromProto(ch.InviteKey)
+	if err != nil {
+		return err
+	}
+	st.inviteKeys[recordId] = inviteKey
+	return nil
+}
+
+func (st *AclState) applyInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, recordId string) error {
+
+	delete(st.inviteKeys, ch.InviteRecordId)
 	return nil
 }
 
@@ -283,22 +275,17 @@ func (st *AclState) decryptReadKey(msg []byte) (crypto.SymKey, error) {
 	return key, nil
 }
 
-func (st *AclState) HasPermission(identity crypto.PubKey, permission aclrecordproto.AclUserPermissions) bool {
+func (st *AclState) Permissions(identity crypto.PubKey) AclPermissions {
 	state, exists := st.userStates[mapKeyFromPubKey(identity)]
 	if !exists {
-		return false
+		return AclPermissions(aclrecordproto.AclUserPermissions_None)
 	}
-
-	return state.Permissions == permission
+	return state.Permissions
 }
 
 func (st *AclState) isUserJoin(data *aclrecordproto.AclData) bool {
 	// if we have a UserJoin, then it should always be the first one applied
 	return data.GetAclContent() != nil && data.GetAclContent()[0].GetUserJoin() != nil
-}
-
-func (st *AclState) isUserAdd(data *aclrecordproto.AclData, identity []byte) bool {
-	return false
 }
 
 func (st *AclState) UserStates() map[string]AclUserState {

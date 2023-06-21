@@ -2,6 +2,7 @@ syntax = "proto3";
 package aclrecord;
 option go_package = "commonspace/object/acl/aclrecordproto";
 
+// RawAclRecord is a proto message containing the acl payload in bytes, signature of the account who added it and signature of the acceptor
 message RawAclRecord {
     bytes payload = 1;
     bytes signature = 2;
@@ -9,19 +10,21 @@ message RawAclRecord {
     bytes acceptorSignature = 4;
 }
 
+// RawAclRecordWithId is a raw record and the id for convenience
 message RawAclRecordWithId {
     bytes payload = 1;
     string id = 2;
 }
 
+// AclRecord is a record containing the acl data
 message AclRecord {
     string prevId = 1;
     bytes identity = 2;
     bytes data = 3;
-    string readKeyId = 4;
-    int64 timestamp = 5;
+    int64 timestamp = 4;
 }
 
+// AclRoot is a root of access control list
 message AclRoot {
     bytes identity = 1;
     bytes masterKey = 2;
@@ -31,69 +34,83 @@ message AclRoot {
     bytes identitySignature = 6;
 }
 
+// AclAccountInvite contains the public invite key, the private part of which is sent to the user directly
+message AclAccountInvite {
+    bytes inviteKey = 1;
+}
+
+// AclAccountRequestJoin contains the reference to the invite record and the data of the person who wants to join, confirmed by the private invite key
+message AclAccountRequestJoin {
+    bytes inviteIdentity = 1;
+    string inviteRecordId = 2;
+    bytes inviteIdentitySignature = 3;
+}
+
+// AclAccountRequestAccept contains the reference to join record and all read keys, encrypted with the identity of the requestor
+message AclAccountRequestAccept {
+    bytes identity = 1;
+    string requestRecordId = 2;
+    bytes encryptedReadKeys = 3;
+}
+
+// AclAccountInviteRevoke revokes the invite record
+message AclAccountInviteRevoke {
+    string inviteRecordId = 1;
+}
+
+// AclReadKeys are all read keys in Acl
+message AclReadKeys {
+    repeated bytes readKey = 1;
+}
+
+// AclEncryptedReadKeys are all keys for specific identity
+message AclEncryptedReadKeys {
+    bytes identity = 1;
+    bytes encryptedReadKeys = 2;
+}
+
+// AclAccountPermissionChange changes permissions of specific account
+message AclAccountPermissionChange {
+    bytes identity = 1;
+    AclUserPermissions permissions = 2;
+}
+
+// AclReadKeyChange changes the key for a space
+message AclReadKeyChange {
+    repeated AclEncryptedReadKeys accountKeys = 1;
+}
+
+// AclAccountRemove removes an account and changes read key for space
+message AclAccountRemove {
+    bytes identity = 1;
+    repeated AclEncryptedReadKeys accountKeys = 2;
+}
+
+// AclContentValue contains possible values for Acl
 message AclContentValue {
     oneof value {
-        AclUserAdd userAdd = 1;
-        AclUserRemove userRemove = 2;
-        AclUserPermissionChange userPermissionChange = 3;
-        AclUserInvite userInvite = 4;
-        AclUserJoin userJoin = 5;
+        AclAccountInvite invite = 1;
+        AclAccountInviteRevoke inviteRevoke = 2;
+        AclAccountRequestJoin requestJoin = 3;
+        AclAccountRequestAccept requestAccept = 4;
+        AclAccountPermissionChange permissionChange = 5;
+        AclAccountRemove accountRemove = 6;
+        AclReadKeyChange readKeyChange = 7;
     }
 }
 
+// AclData contains different acl content
 message AclData {
     repeated AclContentValue aclContent = 1;
 }
 
-message AclState {
-    repeated string readKeyIds = 1;
-    repeated AclUserState userStates = 2;
-    map<string, AclUserInvite> invites = 3;
-}
-
-message AclUserState {
-    bytes identity = 1;
-    AclUserPermissions permissions = 2;
-}
-
-message AclUserAdd {
-    bytes identity = 1;
-    repeated bytes encryptedReadKeys = 2;
-    AclUserPermissions permissions = 3;
-}
-
-message AclUserInvite {
-    bytes acceptPublicKey = 1;
-    repeated bytes encryptedReadKeys = 2;
-    AclUserPermissions permissions = 3;
-}
-
-message AclUserJoin {
-    bytes identity = 1;
-    bytes acceptSignature = 2;
-    bytes acceptPubKey = 3;
-    repeated bytes encryptedReadKeys = 4;
-}
-
-message AclUserRemove {
-    bytes identity = 1;
-    repeated AclReadKeyReplace readKeyReplaces = 2;
-}
-
-message AclReadKeyReplace {
-    bytes identity = 1;
-    bytes encryptedReadKey = 2;
-}
-
-message AclUserPermissionChange {
-    bytes identity = 1;
-    AclUserPermissions permissions = 2;
-}
-
+// AclUserPermissions contains different possible user roles
 enum AclUserPermissions {
-    Admin = 0;
-    Writer = 1;
-    Reader = 2;
+    None = 0;
+    Owner = 1;
+    Admin = 2;
+    Writer = 3;
+    Reader = 4;
 }
 
 message AclSyncMessage {

@@ -18,5 +18,31 @@ type AclRecord struct {
 
 type AclUserState struct {
 	PubKey      crypto.PubKey
-	Permissions aclrecordproto.AclUserPermissions
+	Permissions AclPermissions
+}
+
+type AclPermissions aclrecordproto.AclUserPermissions
+
+func (p AclPermissions) CanWrite() bool {
+	switch aclrecordproto.AclUserPermissions(p) {
+	case aclrecordproto.AclUserPermissions_Admin:
+		return true
+	case aclrecordproto.AclUserPermissions_Writer:
+		return true
+	case aclrecordproto.AclUserPermissions_Owner:
+		return true
+	default:
+		return false
+	}
+}
+
+func (p AclPermissions) CanManageAccounts() bool {
+	switch aclrecordproto.AclUserPermissions(p) {
+	case aclrecordproto.AclUserPermissions_Admin:
+		return true
+	case aclrecordproto.AclUserPermissions_Owner:
+		return true
+	default:
+		return false
+	}
 }

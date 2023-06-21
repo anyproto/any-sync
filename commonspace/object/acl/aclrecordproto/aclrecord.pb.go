@@ -22,24 +22,31 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+// AclUserPermissions contains different possible user roles
 type AclUserPermissions int32
 
 const (
-	AclUserPermissions_Admin  AclUserPermissions = 0
-	AclUserPermissions_Writer AclUserPermissions = 1
-	AclUserPermissions_Reader AclUserPermissions = 2
+	AclUserPermissions_None   AclUserPermissions = 0
+	AclUserPermissions_Owner  AclUserPermissions = 1
+	AclUserPermissions_Admin  AclUserPermissions = 2
+	AclUserPermissions_Writer AclUserPermissions = 3
+	AclUserPermissions_Reader AclUserPermissions = 4
 )
 
 var AclUserPermissions_name = map[int32]string{
-	0: "Admin",
-	1: "Writer",
-	2: "Reader",
+	0: "None",
+	1: "Owner",
+	2: "Admin",
+	3: "Writer",
+	4: "Reader",
 }
 
 var AclUserPermissions_value = map[string]int32{
-	"Admin":  0,
-	"Writer": 1,
-	"Reader": 2,
+	"None":   0,
+	"Owner":  1,
+	"Admin":  2,
+	"Writer": 3,
+	"Reader": 4,
 }
 
 func (x AclUserPermissions) String() string {
@@ -50,6 +57,7 @@ func (AclUserPermissions) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_c8e9f754f34e929b, []int{0}
 }
 
+// RawAclRecord is a proto message containing the acl payload in bytes, signature of the account who added it and signature of the acceptor
 type RawAclRecord struct {
 	Payload           []byte `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
 	Signature         []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
@@ -118,6 +126,7 @@ func (m *RawAclRecord) GetAcceptorSignature() []byte {
 	return nil
 }
 
+// RawAclRecordWithId is a raw record and the id for convenience
 type RawAclRecordWithId struct {
 	Payload []byte `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
 	Id      string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
@@ -170,12 +179,12 @@ func (m *RawAclRecordWithId) GetId() string {
 	return ""
 }
 
+// AclRecord is a record containing the acl data
 type AclRecord struct {
 	PrevId    string `protobuf:"bytes,1,opt,name=prevId,proto3" json:"prevId,omitempty"`
 	Identity  []byte `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
 	Data      []byte `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
-	ReadKeyId string `protobuf:"bytes,4,opt,name=readKeyId,proto3" json:"readKeyId,omitempty"`
-	Timestamp int64  `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Timestamp int64  `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 }
 
 func (m *AclRecord) Reset()         { *m = AclRecord{} }
@@ -232,13 +241,6 @@ func (m *AclRecord) GetData() []byte {
 	return nil
 }
 
-func (m *AclRecord) GetReadKeyId() string {
-	if m != nil {
-		return m.ReadKeyId
-	}
-	return ""
-}
-
 func (m *AclRecord) GetTimestamp() int64 {
 	if m != nil {
 		return m.Timestamp
@@ -246,6 +248,7 @@ func (m *AclRecord) GetTimestamp() int64 {
 	return 0
 }
 
+// AclRoot is a root of access control list
 type AclRoot struct {
 	Identity          []byte `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	MasterKey         []byte `protobuf:"bytes,2,opt,name=masterKey,proto3" json:"masterKey,omitempty"`
@@ -330,14 +333,478 @@ func (m *AclRoot) GetIdentitySignature() []byte {
 	return nil
 }
 
+// AclAccountInvite contains the public invite key, the private part of which is sent to the user directly
+type AclAccountInvite struct {
+	InviteKey []byte `protobuf:"bytes,1,opt,name=inviteKey,proto3" json:"inviteKey,omitempty"`
+}
+
+func (m *AclAccountInvite) Reset()         { *m = AclAccountInvite{} }
+func (m *AclAccountInvite) String() string { return proto.CompactTextString(m) }
+func (*AclAccountInvite) ProtoMessage()    {}
+func (*AclAccountInvite) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c8e9f754f34e929b, []int{4}
+}
+func (m *AclAccountInvite) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AclAccountInvite) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AclAccountInvite.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AclAccountInvite) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AclAccountInvite.Merge(m, src)
+}
+func (m *AclAccountInvite) XXX_Size() int {
+	return m.Size()
+}
+func (m *AclAccountInvite) XXX_DiscardUnknown() {
+	xxx_messageInfo_AclAccountInvite.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AclAccountInvite proto.InternalMessageInfo
+
+func (m *AclAccountInvite) GetInviteKey() []byte {
+	if m != nil {
+		return m.InviteKey
+	}
+	return nil
+}
+
+// AclAccountRequestJoin contains the reference to the invite record and the data of the person who wants to join, confirmed by the private invite key
+type AclAccountRequestJoin struct {
+	InviteIdentity          []byte `protobuf:"bytes,1,opt,name=inviteIdentity,proto3" json:"inviteIdentity,omitempty"`
+	InviteRecordId          string `protobuf:"bytes,2,opt,name=inviteRecordId,proto3" json:"inviteRecordId,omitempty"`
+	InviteIdentitySignature []byte `protobuf:"bytes,3,opt,name=inviteIdentitySignature,proto3" json:"inviteIdentitySignature,omitempty"`
+}
+
+func (m *AclAccountRequestJoin) Reset()         { *m = AclAccountRequestJoin{} }
+func (m *AclAccountRequestJoin) String() string { return proto.CompactTextString(m) }
+func (*AclAccountRequestJoin) ProtoMessage()    {}
+func (*AclAccountRequestJoin) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c8e9f754f34e929b, []int{5}
+}
+func (m *AclAccountRequestJoin) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AclAccountRequestJoin) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AclAccountRequestJoin.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AclAccountRequestJoin) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AclAccountRequestJoin.Merge(m, src)
+}
+func (m *AclAccountRequestJoin) XXX_Size() int {
+	return m.Size()
+}
+func (m *AclAccountRequestJoin) XXX_DiscardUnknown() {
+	xxx_messageInfo_AclAccountRequestJoin.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AclAccountRequestJoin proto.InternalMessageInfo
+
+func (m *AclAccountRequestJoin) GetInviteIdentity() []byte {
+	if m != nil {
+		return m.InviteIdentity
+	}
+	return nil
+}
+
+func (m *AclAccountRequestJoin) GetInviteRecordId() string {
+	if m != nil {
+		return m.InviteRecordId
+	}
+	return ""
+}
+
+func (m *AclAccountRequestJoin) GetInviteIdentitySignature() []byte {
+	if m != nil {
+		return m.InviteIdentitySignature
+	}
+	return nil
+}
+
+// AclAccountRequestAccept contains the reference to join record and all read keys, encrypted with the identity of the requestor
+type AclAccountRequestAccept struct {
+	Identity          []byte `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	RequestRecordId   string `protobuf:"bytes,2,opt,name=requestRecordId,proto3" json:"requestRecordId,omitempty"`
+	EncryptedReadKeys []byte `protobuf:"bytes,3,opt,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
+}
+
+func (m *AclAccountRequestAccept) Reset()         { *m = AclAccountRequestAccept{} }
+func (m *AclAccountRequestAccept) String() string { return proto.CompactTextString(m) }
+func (*AclAccountRequestAccept) ProtoMessage()    {}
+func (*AclAccountRequestAccept) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c8e9f754f34e929b, []int{6}
+}
+func (m *AclAccountRequestAccept) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AclAccountRequestAccept) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AclAccountRequestAccept.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AclAccountRequestAccept) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AclAccountRequestAccept.Merge(m, src)
+}
+func (m *AclAccountRequestAccept) XXX_Size() int {
+	return m.Size()
+}
+func (m *AclAccountRequestAccept) XXX_DiscardUnknown() {
+	xxx_messageInfo_AclAccountRequestAccept.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AclAccountRequestAccept proto.InternalMessageInfo
+
+func (m *AclAccountRequestAccept) GetIdentity() []byte {
+	if m != nil {
+		return m.Identity
+	}
+	return nil
+}
+
+func (m *AclAccountRequestAccept) GetRequestRecordId() string {
+	if m != nil {
+		return m.RequestRecordId
+	}
+	return ""
+}
+
+func (m *AclAccountRequestAccept) GetEncryptedReadKeys() []byte {
+	if m != nil {
+		return m.EncryptedReadKeys
+	}
+	return nil
+}
+
+// AclAccountInviteRevoke revokes the invite record
+type AclAccountInviteRevoke struct {
+	InviteRecordId string `protobuf:"bytes,1,opt,name=inviteRecordId,proto3" json:"inviteRecordId,omitempty"`
+}
+
+func (m *AclAccountInviteRevoke) Reset()         { *m = AclAccountInviteRevoke{} }
+func (m *AclAccountInviteRevoke) String() string { return proto.CompactTextString(m) }
+func (*AclAccountInviteRevoke) ProtoMessage()    {}
+func (*AclAccountInviteRevoke) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c8e9f754f34e929b, []int{7}
+}
+func (m *AclAccountInviteRevoke) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AclAccountInviteRevoke) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AclAccountInviteRevoke.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AclAccountInviteRevoke) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AclAccountInviteRevoke.Merge(m, src)
+}
+func (m *AclAccountInviteRevoke) XXX_Size() int {
+	return m.Size()
+}
+func (m *AclAccountInviteRevoke) XXX_DiscardUnknown() {
+	xxx_messageInfo_AclAccountInviteRevoke.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AclAccountInviteRevoke proto.InternalMessageInfo
+
+func (m *AclAccountInviteRevoke) GetInviteRecordId() string {
+	if m != nil {
+		return m.InviteRecordId
+	}
+	return ""
+}
+
+// AclReadKeys are all read keys in Acl
+type AclReadKeys struct {
+	ReadKey [][]byte `protobuf:"bytes,1,rep,name=readKey,proto3" json:"readKey,omitempty"`
+}
+
+func (m *AclReadKeys) Reset()         { *m = AclReadKeys{} }
+func (m *AclReadKeys) String() string { return proto.CompactTextString(m) }
+func (*AclReadKeys) ProtoMessage()    {}
+func (*AclReadKeys) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c8e9f754f34e929b, []int{8}
+}
+func (m *AclReadKeys) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AclReadKeys) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AclReadKeys.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AclReadKeys) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AclReadKeys.Merge(m, src)
+}
+func (m *AclReadKeys) XXX_Size() int {
+	return m.Size()
+}
+func (m *AclReadKeys) XXX_DiscardUnknown() {
+	xxx_messageInfo_AclReadKeys.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AclReadKeys proto.InternalMessageInfo
+
+func (m *AclReadKeys) GetReadKey() [][]byte {
+	if m != nil {
+		return m.ReadKey
+	}
+	return nil
+}
+
+// AclEncryptedReadKeys are all keys for specific identity
+type AclEncryptedReadKeys struct {
+	Identity          []byte `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	EncryptedReadKeys []byte `protobuf:"bytes,2,opt,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
+}
+
+func (m *AclEncryptedReadKeys) Reset()         { *m = AclEncryptedReadKeys{} }
+func (m *AclEncryptedReadKeys) String() string { return proto.CompactTextString(m) }
+func (*AclEncryptedReadKeys) ProtoMessage()    {}
+func (*AclEncryptedReadKeys) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c8e9f754f34e929b, []int{9}
+}
+func (m *AclEncryptedReadKeys) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AclEncryptedReadKeys) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AclEncryptedReadKeys.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AclEncryptedReadKeys) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AclEncryptedReadKeys.Merge(m, src)
+}
+func (m *AclEncryptedReadKeys) XXX_Size() int {
+	return m.Size()
+}
+func (m *AclEncryptedReadKeys) XXX_DiscardUnknown() {
+	xxx_messageInfo_AclEncryptedReadKeys.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AclEncryptedReadKeys proto.InternalMessageInfo
+
+func (m *AclEncryptedReadKeys) GetIdentity() []byte {
+	if m != nil {
+		return m.Identity
+	}
+	return nil
+}
+
+func (m *AclEncryptedReadKeys) GetEncryptedReadKeys() []byte {
+	if m != nil {
+		return m.EncryptedReadKeys
+	}
+	return nil
+}
+
+// AclAccountPermissionChange changes permissions of specific account
+type AclAccountPermissionChange struct {
+	Identity    []byte             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Permissions AclUserPermissions `protobuf:"varint,2,opt,name=permissions,proto3,enum=aclrecord.AclUserPermissions" json:"permissions,omitempty"`
+}
+
+func (m *AclAccountPermissionChange) Reset()         { *m = AclAccountPermissionChange{} }
+func (m *AclAccountPermissionChange) String() string { return proto.CompactTextString(m) }
+func (*AclAccountPermissionChange) ProtoMessage()    {}
+func (*AclAccountPermissionChange) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c8e9f754f34e929b, []int{10}
+}
+func (m *AclAccountPermissionChange) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AclAccountPermissionChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AclAccountPermissionChange.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AclAccountPermissionChange) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AclAccountPermissionChange.Merge(m, src)
+}
+func (m *AclAccountPermissionChange) XXX_Size() int {
+	return m.Size()
+}
+func (m *AclAccountPermissionChange) XXX_DiscardUnknown() {
+	xxx_messageInfo_AclAccountPermissionChange.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AclAccountPermissionChange proto.InternalMessageInfo
+
+func (m *AclAccountPermissionChange) GetIdentity() []byte {
+	if m != nil {
+		return m.Identity
+	}
+	return nil
+}
+
+func (m *AclAccountPermissionChange) GetPermissions() AclUserPermissions {
+	if m != nil {
+		return m.Permissions
+	}
+	return AclUserPermissions_None
+}
+
+// AclReadKeyChange changes the key for a space
+type AclReadKeyChange struct {
+	AccountKeys []*AclEncryptedReadKeys `protobuf:"bytes,1,rep,name=accountKeys,proto3" json:"accountKeys,omitempty"`
+}
+
+func (m *AclReadKeyChange) Reset()         { *m = AclReadKeyChange{} }
+func (m *AclReadKeyChange) String() string { return proto.CompactTextString(m) }
+func (*AclReadKeyChange) ProtoMessage()    {}
+func (*AclReadKeyChange) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c8e9f754f34e929b, []int{11}
+}
+func (m *AclReadKeyChange) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AclReadKeyChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AclReadKeyChange.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AclReadKeyChange) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AclReadKeyChange.Merge(m, src)
+}
+func (m *AclReadKeyChange) XXX_Size() int {
+	return m.Size()
+}
+func (m *AclReadKeyChange) XXX_DiscardUnknown() {
+	xxx_messageInfo_AclReadKeyChange.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AclReadKeyChange proto.InternalMessageInfo
+
+func (m *AclReadKeyChange) GetAccountKeys() []*AclEncryptedReadKeys {
+	if m != nil {
+		return m.AccountKeys
+	}
+	return nil
+}
+
+// AclAccountRemove removes an account and changes read key for space
+type AclAccountRemove struct {
+	Identity    []byte                  `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	AccountKeys []*AclEncryptedReadKeys `protobuf:"bytes,2,rep,name=accountKeys,proto3" json:"accountKeys,omitempty"`
+}
+
+func (m *AclAccountRemove) Reset()         { *m = AclAccountRemove{} }
+func (m *AclAccountRemove) String() string { return proto.CompactTextString(m) }
+func (*AclAccountRemove) ProtoMessage()    {}
+func (*AclAccountRemove) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c8e9f754f34e929b, []int{12}
+}
+func (m *AclAccountRemove) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AclAccountRemove) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AclAccountRemove.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AclAccountRemove) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AclAccountRemove.Merge(m, src)
+}
+func (m *AclAccountRemove) XXX_Size() int {
+	return m.Size()
+}
+func (m *AclAccountRemove) XXX_DiscardUnknown() {
+	xxx_messageInfo_AclAccountRemove.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AclAccountRemove proto.InternalMessageInfo
+
+func (m *AclAccountRemove) GetIdentity() []byte {
+	if m != nil {
+		return m.Identity
+	}
+	return nil
+}
+
+func (m *AclAccountRemove) GetAccountKeys() []*AclEncryptedReadKeys {
+	if m != nil {
+		return m.AccountKeys
+	}
+	return nil
+}
+
+// AclContentValue contains possible values for Acl
 type AclContentValue struct {
 	// Types that are valid to be assigned to Value:
 	//
-	//	*AclContentValue_UserAdd
-	//	*AclContentValue_UserRemove
-	//	*AclContentValue_UserPermissionChange
-	//	*AclContentValue_UserInvite
-	//	*AclContentValue_UserJoin
+	//	*AclContentValue_Invite
+	//	*AclContentValue_InviteRevoke
+	//	*AclContentValue_RequestJoin
+	//	*AclContentValue_RequestAccept
+	//	*AclContentValue_PermissionChange
+	//	*AclContentValue_AccountRemove
+	//	*AclContentValue_ReadKeyChange
 	Value isAclContentValue_Value `protobuf_oneof:"value"`
 }
 
@@ -345,7 +812,7 @@ func (m *AclContentValue) Reset()         { *m = AclContentValue{} }
 func (m *AclContentValue) String() string { return proto.CompactTextString(m) }
 func (*AclContentValue) ProtoMessage()    {}
 func (*AclContentValue) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{4}
+	return fileDescriptor_c8e9f754f34e929b, []int{13}
 }
 func (m *AclContentValue) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -380,27 +847,35 @@ type isAclContentValue_Value interface {
 	Size() int
 }
 
-type AclContentValue_UserAdd struct {
-	UserAdd *AclUserAdd `protobuf:"bytes,1,opt,name=userAdd,proto3,oneof" json:"userAdd,omitempty"`
+type AclContentValue_Invite struct {
+	Invite *AclAccountInvite `protobuf:"bytes,1,opt,name=invite,proto3,oneof" json:"invite,omitempty"`
 }
-type AclContentValue_UserRemove struct {
-	UserRemove *AclUserRemove `protobuf:"bytes,2,opt,name=userRemove,proto3,oneof" json:"userRemove,omitempty"`
+type AclContentValue_InviteRevoke struct {
+	InviteRevoke *AclAccountInviteRevoke `protobuf:"bytes,2,opt,name=inviteRevoke,proto3,oneof" json:"inviteRevoke,omitempty"`
 }
-type AclContentValue_UserPermissionChange struct {
-	UserPermissionChange *AclUserPermissionChange `protobuf:"bytes,3,opt,name=userPermissionChange,proto3,oneof" json:"userPermissionChange,omitempty"`
+type AclContentValue_RequestJoin struct {
+	RequestJoin *AclAccountRequestJoin `protobuf:"bytes,3,opt,name=requestJoin,proto3,oneof" json:"requestJoin,omitempty"`
 }
-type AclContentValue_UserInvite struct {
-	UserInvite *AclUserInvite `protobuf:"bytes,4,opt,name=userInvite,proto3,oneof" json:"userInvite,omitempty"`
+type AclContentValue_RequestAccept struct {
+	RequestAccept *AclAccountRequestAccept `protobuf:"bytes,4,opt,name=requestAccept,proto3,oneof" json:"requestAccept,omitempty"`
 }
-type AclContentValue_UserJoin struct {
-	UserJoin *AclUserJoin `protobuf:"bytes,5,opt,name=userJoin,proto3,oneof" json:"userJoin,omitempty"`
+type AclContentValue_PermissionChange struct {
+	PermissionChange *AclAccountPermissionChange `protobuf:"bytes,5,opt,name=permissionChange,proto3,oneof" json:"permissionChange,omitempty"`
+}
+type AclContentValue_AccountRemove struct {
+	AccountRemove *AclAccountRemove `protobuf:"bytes,6,opt,name=accountRemove,proto3,oneof" json:"accountRemove,omitempty"`
+}
+type AclContentValue_ReadKeyChange struct {
+	ReadKeyChange *AclReadKeyChange `protobuf:"bytes,7,opt,name=readKeyChange,proto3,oneof" json:"readKeyChange,omitempty"`
 }
 
-func (*AclContentValue_UserAdd) isAclContentValue_Value()              {}
-func (*AclContentValue_UserRemove) isAclContentValue_Value()           {}
-func (*AclContentValue_UserPermissionChange) isAclContentValue_Value() {}
-func (*AclContentValue_UserInvite) isAclContentValue_Value()           {}
-func (*AclContentValue_UserJoin) isAclContentValue_Value()             {}
+func (*AclContentValue_Invite) isAclContentValue_Value()           {}
+func (*AclContentValue_InviteRevoke) isAclContentValue_Value()     {}
+func (*AclContentValue_RequestJoin) isAclContentValue_Value()      {}
+func (*AclContentValue_RequestAccept) isAclContentValue_Value()    {}
+func (*AclContentValue_PermissionChange) isAclContentValue_Value() {}
+func (*AclContentValue_AccountRemove) isAclContentValue_Value()    {}
+func (*AclContentValue_ReadKeyChange) isAclContentValue_Value()    {}
 
 func (m *AclContentValue) GetValue() isAclContentValue_Value {
 	if m != nil {
@@ -409,37 +884,51 @@ func (m *AclContentValue) GetValue() isAclContentValue_Value {
 	return nil
 }
 
-func (m *AclContentValue) GetUserAdd() *AclUserAdd {
-	if x, ok := m.GetValue().(*AclContentValue_UserAdd); ok {
-		return x.UserAdd
+func (m *AclContentValue) GetInvite() *AclAccountInvite {
+	if x, ok := m.GetValue().(*AclContentValue_Invite); ok {
+		return x.Invite
 	}
 	return nil
 }
 
-func (m *AclContentValue) GetUserRemove() *AclUserRemove {
-	if x, ok := m.GetValue().(*AclContentValue_UserRemove); ok {
-		return x.UserRemove
+func (m *AclContentValue) GetInviteRevoke() *AclAccountInviteRevoke {
+	if x, ok := m.GetValue().(*AclContentValue_InviteRevoke); ok {
+		return x.InviteRevoke
 	}
 	return nil
 }
 
-func (m *AclContentValue) GetUserPermissionChange() *AclUserPermissionChange {
-	if x, ok := m.GetValue().(*AclContentValue_UserPermissionChange); ok {
-		return x.UserPermissionChange
+func (m *AclContentValue) GetRequestJoin() *AclAccountRequestJoin {
+	if x, ok := m.GetValue().(*AclContentValue_RequestJoin); ok {
+		return x.RequestJoin
 	}
 	return nil
 }
 
-func (m *AclContentValue) GetUserInvite() *AclUserInvite {
-	if x, ok := m.GetValue().(*AclContentValue_UserInvite); ok {
-		return x.UserInvite
+func (m *AclContentValue) GetRequestAccept() *AclAccountRequestAccept {
+	if x, ok := m.GetValue().(*AclContentValue_RequestAccept); ok {
+		return x.RequestAccept
 	}
 	return nil
 }
 
-func (m *AclContentValue) GetUserJoin() *AclUserJoin {
-	if x, ok := m.GetValue().(*AclContentValue_UserJoin); ok {
-		return x.UserJoin
+func (m *AclContentValue) GetPermissionChange() *AclAccountPermissionChange {
+	if x, ok := m.GetValue().(*AclContentValue_PermissionChange); ok {
+		return x.PermissionChange
+	}
+	return nil
+}
+
+func (m *AclContentValue) GetAccountRemove() *AclAccountRemove {
+	if x, ok := m.GetValue().(*AclContentValue_AccountRemove); ok {
+		return x.AccountRemove
+	}
+	return nil
+}
+
+func (m *AclContentValue) GetReadKeyChange() *AclReadKeyChange {
+	if x, ok := m.GetValue().(*AclContentValue_ReadKeyChange); ok {
+		return x.ReadKeyChange
 	}
 	return nil
 }
@@ -447,14 +936,17 @@ func (m *AclContentValue) GetUserJoin() *AclUserJoin {
 // XXX_OneofWrappers is for the internal use of the proto package.
 func (*AclContentValue) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
-		(*AclContentValue_UserAdd)(nil),
-		(*AclContentValue_UserRemove)(nil),
-		(*AclContentValue_UserPermissionChange)(nil),
-		(*AclContentValue_UserInvite)(nil),
-		(*AclContentValue_UserJoin)(nil),
+		(*AclContentValue_Invite)(nil),
+		(*AclContentValue_InviteRevoke)(nil),
+		(*AclContentValue_RequestJoin)(nil),
+		(*AclContentValue_RequestAccept)(nil),
+		(*AclContentValue_PermissionChange)(nil),
+		(*AclContentValue_AccountRemove)(nil),
+		(*AclContentValue_ReadKeyChange)(nil),
 	}
 }
 
+// AclData contains different acl content
 type AclData struct {
 	AclContent []*AclContentValue `protobuf:"bytes,1,rep,name=aclContent,proto3" json:"aclContent,omitempty"`
 }
@@ -463,7 +955,7 @@ func (m *AclData) Reset()         { *m = AclData{} }
 func (m *AclData) String() string { return proto.CompactTextString(m) }
 func (*AclData) ProtoMessage()    {}
 func (*AclData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{5}
+	return fileDescriptor_c8e9f754f34e929b, []int{14}
 }
 func (m *AclData) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -499,462 +991,6 @@ func (m *AclData) GetAclContent() []*AclContentValue {
 	return nil
 }
 
-type AclState struct {
-	ReadKeyIds []string                  `protobuf:"bytes,1,rep,name=readKeyIds,proto3" json:"readKeyIds,omitempty"`
-	UserStates []*AclUserState           `protobuf:"bytes,2,rep,name=userStates,proto3" json:"userStates,omitempty"`
-	Invites    map[string]*AclUserInvite `protobuf:"bytes,3,rep,name=invites,proto3" json:"invites,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-}
-
-func (m *AclState) Reset()         { *m = AclState{} }
-func (m *AclState) String() string { return proto.CompactTextString(m) }
-func (*AclState) ProtoMessage()    {}
-func (*AclState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{6}
-}
-func (m *AclState) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *AclState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_AclState.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *AclState) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AclState.Merge(m, src)
-}
-func (m *AclState) XXX_Size() int {
-	return m.Size()
-}
-func (m *AclState) XXX_DiscardUnknown() {
-	xxx_messageInfo_AclState.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_AclState proto.InternalMessageInfo
-
-func (m *AclState) GetReadKeyIds() []string {
-	if m != nil {
-		return m.ReadKeyIds
-	}
-	return nil
-}
-
-func (m *AclState) GetUserStates() []*AclUserState {
-	if m != nil {
-		return m.UserStates
-	}
-	return nil
-}
-
-func (m *AclState) GetInvites() map[string]*AclUserInvite {
-	if m != nil {
-		return m.Invites
-	}
-	return nil
-}
-
-type AclUserState struct {
-	Identity    []byte             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	Permissions AclUserPermissions `protobuf:"varint,2,opt,name=permissions,proto3,enum=aclrecord.AclUserPermissions" json:"permissions,omitempty"`
-}
-
-func (m *AclUserState) Reset()         { *m = AclUserState{} }
-func (m *AclUserState) String() string { return proto.CompactTextString(m) }
-func (*AclUserState) ProtoMessage()    {}
-func (*AclUserState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{7}
-}
-func (m *AclUserState) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *AclUserState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_AclUserState.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *AclUserState) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AclUserState.Merge(m, src)
-}
-func (m *AclUserState) XXX_Size() int {
-	return m.Size()
-}
-func (m *AclUserState) XXX_DiscardUnknown() {
-	xxx_messageInfo_AclUserState.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_AclUserState proto.InternalMessageInfo
-
-func (m *AclUserState) GetIdentity() []byte {
-	if m != nil {
-		return m.Identity
-	}
-	return nil
-}
-
-func (m *AclUserState) GetPermissions() AclUserPermissions {
-	if m != nil {
-		return m.Permissions
-	}
-	return AclUserPermissions_Admin
-}
-
-type AclUserAdd struct {
-	Identity          []byte             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	EncryptedReadKeys [][]byte           `protobuf:"bytes,2,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
-	Permissions       AclUserPermissions `protobuf:"varint,3,opt,name=permissions,proto3,enum=aclrecord.AclUserPermissions" json:"permissions,omitempty"`
-}
-
-func (m *AclUserAdd) Reset()         { *m = AclUserAdd{} }
-func (m *AclUserAdd) String() string { return proto.CompactTextString(m) }
-func (*AclUserAdd) ProtoMessage()    {}
-func (*AclUserAdd) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{8}
-}
-func (m *AclUserAdd) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *AclUserAdd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_AclUserAdd.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *AclUserAdd) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AclUserAdd.Merge(m, src)
-}
-func (m *AclUserAdd) XXX_Size() int {
-	return m.Size()
-}
-func (m *AclUserAdd) XXX_DiscardUnknown() {
-	xxx_messageInfo_AclUserAdd.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_AclUserAdd proto.InternalMessageInfo
-
-func (m *AclUserAdd) GetIdentity() []byte {
-	if m != nil {
-		return m.Identity
-	}
-	return nil
-}
-
-func (m *AclUserAdd) GetEncryptedReadKeys() [][]byte {
-	if m != nil {
-		return m.EncryptedReadKeys
-	}
-	return nil
-}
-
-func (m *AclUserAdd) GetPermissions() AclUserPermissions {
-	if m != nil {
-		return m.Permissions
-	}
-	return AclUserPermissions_Admin
-}
-
-type AclUserInvite struct {
-	AcceptPublicKey   []byte             `protobuf:"bytes,1,opt,name=acceptPublicKey,proto3" json:"acceptPublicKey,omitempty"`
-	EncryptedReadKeys [][]byte           `protobuf:"bytes,2,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
-	Permissions       AclUserPermissions `protobuf:"varint,3,opt,name=permissions,proto3,enum=aclrecord.AclUserPermissions" json:"permissions,omitempty"`
-}
-
-func (m *AclUserInvite) Reset()         { *m = AclUserInvite{} }
-func (m *AclUserInvite) String() string { return proto.CompactTextString(m) }
-func (*AclUserInvite) ProtoMessage()    {}
-func (*AclUserInvite) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{9}
-}
-func (m *AclUserInvite) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *AclUserInvite) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_AclUserInvite.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *AclUserInvite) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AclUserInvite.Merge(m, src)
-}
-func (m *AclUserInvite) XXX_Size() int {
-	return m.Size()
-}
-func (m *AclUserInvite) XXX_DiscardUnknown() {
-	xxx_messageInfo_AclUserInvite.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_AclUserInvite proto.InternalMessageInfo
-
-func (m *AclUserInvite) GetAcceptPublicKey() []byte {
-	if m != nil {
-		return m.AcceptPublicKey
-	}
-	return nil
-}
-
-func (m *AclUserInvite) GetEncryptedReadKeys() [][]byte {
-	if m != nil {
-		return m.EncryptedReadKeys
-	}
-	return nil
-}
-
-func (m *AclUserInvite) GetPermissions() AclUserPermissions {
-	if m != nil {
-		return m.Permissions
-	}
-	return AclUserPermissions_Admin
-}
-
-type AclUserJoin struct {
-	Identity          []byte   `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	AcceptSignature   []byte   `protobuf:"bytes,2,opt,name=acceptSignature,proto3" json:"acceptSignature,omitempty"`
-	AcceptPubKey      []byte   `protobuf:"bytes,3,opt,name=acceptPubKey,proto3" json:"acceptPubKey,omitempty"`
-	EncryptedReadKeys [][]byte `protobuf:"bytes,4,rep,name=encryptedReadKeys,proto3" json:"encryptedReadKeys,omitempty"`
-}
-
-func (m *AclUserJoin) Reset()         { *m = AclUserJoin{} }
-func (m *AclUserJoin) String() string { return proto.CompactTextString(m) }
-func (*AclUserJoin) ProtoMessage()    {}
-func (*AclUserJoin) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{10}
-}
-func (m *AclUserJoin) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *AclUserJoin) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_AclUserJoin.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *AclUserJoin) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AclUserJoin.Merge(m, src)
-}
-func (m *AclUserJoin) XXX_Size() int {
-	return m.Size()
-}
-func (m *AclUserJoin) XXX_DiscardUnknown() {
-	xxx_messageInfo_AclUserJoin.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_AclUserJoin proto.InternalMessageInfo
-
-func (m *AclUserJoin) GetIdentity() []byte {
-	if m != nil {
-		return m.Identity
-	}
-	return nil
-}
-
-func (m *AclUserJoin) GetAcceptSignature() []byte {
-	if m != nil {
-		return m.AcceptSignature
-	}
-	return nil
-}
-
-func (m *AclUserJoin) GetAcceptPubKey() []byte {
-	if m != nil {
-		return m.AcceptPubKey
-	}
-	return nil
-}
-
-func (m *AclUserJoin) GetEncryptedReadKeys() [][]byte {
-	if m != nil {
-		return m.EncryptedReadKeys
-	}
-	return nil
-}
-
-type AclUserRemove struct {
-	Identity        []byte               `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	ReadKeyReplaces []*AclReadKeyReplace `protobuf:"bytes,2,rep,name=readKeyReplaces,proto3" json:"readKeyReplaces,omitempty"`
-}
-
-func (m *AclUserRemove) Reset()         { *m = AclUserRemove{} }
-func (m *AclUserRemove) String() string { return proto.CompactTextString(m) }
-func (*AclUserRemove) ProtoMessage()    {}
-func (*AclUserRemove) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{11}
-}
-func (m *AclUserRemove) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *AclUserRemove) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_AclUserRemove.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *AclUserRemove) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AclUserRemove.Merge(m, src)
-}
-func (m *AclUserRemove) XXX_Size() int {
-	return m.Size()
-}
-func (m *AclUserRemove) XXX_DiscardUnknown() {
-	xxx_messageInfo_AclUserRemove.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_AclUserRemove proto.InternalMessageInfo
-
-func (m *AclUserRemove) GetIdentity() []byte {
-	if m != nil {
-		return m.Identity
-	}
-	return nil
-}
-
-func (m *AclUserRemove) GetReadKeyReplaces() []*AclReadKeyReplace {
-	if m != nil {
-		return m.ReadKeyReplaces
-	}
-	return nil
-}
-
-type AclReadKeyReplace struct {
-	Identity         []byte `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	EncryptedReadKey []byte `protobuf:"bytes,2,opt,name=encryptedReadKey,proto3" json:"encryptedReadKey,omitempty"`
-}
-
-func (m *AclReadKeyReplace) Reset()         { *m = AclReadKeyReplace{} }
-func (m *AclReadKeyReplace) String() string { return proto.CompactTextString(m) }
-func (*AclReadKeyReplace) ProtoMessage()    {}
-func (*AclReadKeyReplace) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{12}
-}
-func (m *AclReadKeyReplace) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *AclReadKeyReplace) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_AclReadKeyReplace.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *AclReadKeyReplace) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AclReadKeyReplace.Merge(m, src)
-}
-func (m *AclReadKeyReplace) XXX_Size() int {
-	return m.Size()
-}
-func (m *AclReadKeyReplace) XXX_DiscardUnknown() {
-	xxx_messageInfo_AclReadKeyReplace.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_AclReadKeyReplace proto.InternalMessageInfo
-
-func (m *AclReadKeyReplace) GetIdentity() []byte {
-	if m != nil {
-		return m.Identity
-	}
-	return nil
-}
-
-func (m *AclReadKeyReplace) GetEncryptedReadKey() []byte {
-	if m != nil {
-		return m.EncryptedReadKey
-	}
-	return nil
-}
-
-type AclUserPermissionChange struct {
-	Identity    []byte             `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	Permissions AclUserPermissions `protobuf:"varint,2,opt,name=permissions,proto3,enum=aclrecord.AclUserPermissions" json:"permissions,omitempty"`
-}
-
-func (m *AclUserPermissionChange) Reset()         { *m = AclUserPermissionChange{} }
-func (m *AclUserPermissionChange) String() string { return proto.CompactTextString(m) }
-func (*AclUserPermissionChange) ProtoMessage()    {}
-func (*AclUserPermissionChange) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{13}
-}
-func (m *AclUserPermissionChange) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *AclUserPermissionChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_AclUserPermissionChange.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *AclUserPermissionChange) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AclUserPermissionChange.Merge(m, src)
-}
-func (m *AclUserPermissionChange) XXX_Size() int {
-	return m.Size()
-}
-func (m *AclUserPermissionChange) XXX_DiscardUnknown() {
-	xxx_messageInfo_AclUserPermissionChange.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_AclUserPermissionChange proto.InternalMessageInfo
-
-func (m *AclUserPermissionChange) GetIdentity() []byte {
-	if m != nil {
-		return m.Identity
-	}
-	return nil
-}
-
-func (m *AclUserPermissionChange) GetPermissions() AclUserPermissions {
-	if m != nil {
-		return m.Permissions
-	}
-	return AclUserPermissions_Admin
-}
-
 type AclSyncMessage struct {
 	Content *AclSyncContentValue `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
 }
@@ -963,7 +999,7 @@ func (m *AclSyncMessage) Reset()         { *m = AclSyncMessage{} }
 func (m *AclSyncMessage) String() string { return proto.CompactTextString(m) }
 func (*AclSyncMessage) ProtoMessage()    {}
 func (*AclSyncMessage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{14}
+	return fileDescriptor_c8e9f754f34e929b, []int{15}
 }
 func (m *AclSyncMessage) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1011,7 +1047,7 @@ func (m *AclSyncContentValue) Reset()         { *m = AclSyncContentValue{} }
 func (m *AclSyncContentValue) String() string { return proto.CompactTextString(m) }
 func (*AclSyncContentValue) ProtoMessage()    {}
 func (*AclSyncContentValue) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{15}
+	return fileDescriptor_c8e9f754f34e929b, []int{16}
 }
 func (m *AclSyncContentValue) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1081,7 +1117,7 @@ func (m *AclAddRecords) Reset()         { *m = AclAddRecords{} }
 func (m *AclAddRecords) String() string { return proto.CompactTextString(m) }
 func (*AclAddRecords) ProtoMessage()    {}
 func (*AclAddRecords) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c8e9f754f34e929b, []int{16}
+	return fileDescriptor_c8e9f754f34e929b, []int{17}
 }
 func (m *AclAddRecords) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1123,17 +1159,17 @@ func init() {
 	proto.RegisterType((*RawAclRecordWithId)(nil), "aclrecord.RawAclRecordWithId")
 	proto.RegisterType((*AclRecord)(nil), "aclrecord.AclRecord")
 	proto.RegisterType((*AclRoot)(nil), "aclrecord.AclRoot")
+	proto.RegisterType((*AclAccountInvite)(nil), "aclrecord.AclAccountInvite")
+	proto.RegisterType((*AclAccountRequestJoin)(nil), "aclrecord.AclAccountRequestJoin")
+	proto.RegisterType((*AclAccountRequestAccept)(nil), "aclrecord.AclAccountRequestAccept")
+	proto.RegisterType((*AclAccountInviteRevoke)(nil), "aclrecord.AclAccountInviteRevoke")
+	proto.RegisterType((*AclReadKeys)(nil), "aclrecord.AclReadKeys")
+	proto.RegisterType((*AclEncryptedReadKeys)(nil), "aclrecord.AclEncryptedReadKeys")
+	proto.RegisterType((*AclAccountPermissionChange)(nil), "aclrecord.AclAccountPermissionChange")
+	proto.RegisterType((*AclReadKeyChange)(nil), "aclrecord.AclReadKeyChange")
+	proto.RegisterType((*AclAccountRemove)(nil), "aclrecord.AclAccountRemove")
 	proto.RegisterType((*AclContentValue)(nil), "aclrecord.AclContentValue")
 	proto.RegisterType((*AclData)(nil), "aclrecord.AclData")
-	proto.RegisterType((*AclState)(nil), "aclrecord.AclState")
-	proto.RegisterMapType((map[string]*AclUserInvite)(nil), "aclrecord.AclState.InvitesEntry")
-	proto.RegisterType((*AclUserState)(nil), "aclrecord.AclUserState")
-	proto.RegisterType((*AclUserAdd)(nil), "aclrecord.AclUserAdd")
-	proto.RegisterType((*AclUserInvite)(nil), "aclrecord.AclUserInvite")
-	proto.RegisterType((*AclUserJoin)(nil), "aclrecord.AclUserJoin")
-	proto.RegisterType((*AclUserRemove)(nil), "aclrecord.AclUserRemove")
-	proto.RegisterType((*AclReadKeyReplace)(nil), "aclrecord.AclReadKeyReplace")
-	proto.RegisterType((*AclUserPermissionChange)(nil), "aclrecord.AclUserPermissionChange")
 	proto.RegisterType((*AclSyncMessage)(nil), "aclrecord.AclSyncMessage")
 	proto.RegisterType((*AclSyncContentValue)(nil), "aclrecord.AclSyncContentValue")
 	proto.RegisterType((*AclAddRecords)(nil), "aclrecord.AclAddRecords")
@@ -1144,65 +1180,64 @@ func init() {
 }
 
 var fileDescriptor_c8e9f754f34e929b = []byte{
-	// 914 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x56, 0x4f, 0x6f, 0x1b, 0x45,
-	0x14, 0xf7, 0xd8, 0x49, 0x9c, 0x7d, 0x36, 0x89, 0x33, 0x40, 0xbb, 0x8a, 0x82, 0x15, 0xad, 0x84,
-	0x14, 0x55, 0x55, 0x22, 0x0c, 0x52, 0xaa, 0x08, 0x51, 0xb9, 0xa5, 0xc8, 0x6e, 0x84, 0x54, 0x4d,
-	0x80, 0xa2, 0x72, 0x9a, 0xcc, 0x8e, 0xd2, 0xa5, 0xeb, 0xdd, 0xd5, 0xcc, 0xd8, 0xc8, 0x9f, 0x02,
-	0x6e, 0x5c, 0xb9, 0x20, 0xf1, 0x51, 0x38, 0xf6, 0x12, 0x89, 0x23, 0x4a, 0x3e, 0x03, 0x77, 0x34,
-	0x33, 0xde, 0xff, 0xce, 0x0a, 0x0e, 0x70, 0x48, 0xbc, 0xf3, 0xde, 0x6f, 0x66, 0x7e, 0xef, 0xf7,
-	0xfe, 0xec, 0xc2, 0xa7, 0x2c, 0x9e, 0xcd, 0xe2, 0x48, 0x26, 0x94, 0xf1, 0x93, 0xf8, 0xf2, 0x7b,
-	0xce, 0xd4, 0x09, 0x65, 0xa1, 0xfe, 0x13, 0x9c, 0xc5, 0xc2, 0x4f, 0x44, 0xac, 0xe2, 0x13, 0xf3,
-	0x5f, 0xe6, 0xd6, 0x63, 0x63, 0xc0, 0x4e, 0x66, 0xf0, 0x7e, 0x41, 0xd0, 0x27, 0xf4, 0x87, 0x31,
-	0x0b, 0x89, 0x31, 0x60, 0x17, 0xba, 0x09, 0x5d, 0x86, 0x31, 0xf5, 0x5d, 0x74, 0x88, 0x8e, 0xfa,
-	0x24, 0x5d, 0xe2, 0x03, 0x70, 0x64, 0x70, 0x15, 0x51, 0x35, 0x17, 0xdc, 0x6d, 0x1b, 0x5f, 0x6e,
-	0xc0, 0x0f, 0x60, 0x40, 0x19, 0xe3, 0x89, 0x8a, 0xc5, 0xd4, 0xe7, 0x91, 0x0a, 0xd4, 0xd2, 0xed,
-	0x18, 0x50, 0xcd, 0x8e, 0x1f, 0xc2, 0x5e, 0x6a, 0xbb, 0xc8, 0x4e, 0xdc, 0x30, 0xe0, 0xba, 0xc3,
-	0xfb, 0x0c, 0x70, 0x91, 0xe1, 0xcb, 0x40, 0xbd, 0x9e, 0x36, 0xf1, 0xdc, 0x81, 0x76, 0xe0, 0x1b,
-	0x82, 0x0e, 0x69, 0x07, 0xbe, 0xf7, 0x23, 0x02, 0x27, 0x8f, 0xef, 0x1e, 0x6c, 0x25, 0x82, 0x2f,
-	0xa6, 0x76, 0x9b, 0x43, 0x56, 0x2b, 0xbc, 0x0f, 0xdb, 0x41, 0xca, 0xdb, 0x06, 0x97, 0xad, 0x31,
-	0x86, 0x0d, 0x9f, 0x2a, 0xba, 0x8a, 0xc7, 0x3c, 0x6b, 0x35, 0x04, 0xa7, 0xfe, 0x39, 0x5f, 0x4e,
-	0x7d, 0xc3, 0xdd, 0x21, 0xb9, 0x41, 0x7b, 0x55, 0x30, 0xe3, 0x52, 0xd1, 0x59, 0xe2, 0x6e, 0x1e,
-	0xa2, 0xa3, 0x0e, 0xc9, 0x0d, 0xde, 0x35, 0x82, 0xae, 0x66, 0x14, 0xc7, 0xaa, 0x74, 0x2f, 0xaa,
-	0xdc, 0x7b, 0x00, 0xce, 0x8c, 0x4a, 0xc5, 0xc5, 0x39, 0x4f, 0x49, 0xe5, 0x06, 0xad, 0x80, 0xc9,
-	0xff, 0xd4, 0x37, 0xc4, 0x1c, 0x92, 0x2e, 0x75, 0x2e, 0x78, 0xc4, 0xc4, 0x32, 0x51, 0xdc, 0x27,
-	0x96, 0xd3, 0x4a, 0xde, 0x9a, 0xbd, 0x99, 0xa9, 0xce, 0x54, 0xca, 0x26, 0xcf, 0xd4, 0x96, 0xcd,
-	0x54, 0xcd, 0xe1, 0x5d, 0xb7, 0x61, 0x77, 0xcc, 0xc2, 0xa7, 0x71, 0xa4, 0x78, 0xa4, 0xbe, 0xa1,
-	0xe1, 0x9c, 0xe3, 0x8f, 0xa0, 0x3b, 0x97, 0x5c, 0x8c, 0x7d, 0x2b, 0x78, 0x6f, 0xf4, 0xfe, 0x71,
-	0x5e, 0x8e, 0x63, 0x16, 0x7e, 0x6d, 0x9d, 0x93, 0x16, 0x49, 0x71, 0xf8, 0x0c, 0x40, 0x3f, 0x12,
-	0x3e, 0x8b, 0x17, 0xb6, 0xd2, 0x7a, 0x23, 0xb7, 0xbe, 0xcb, 0xfa, 0x27, 0x2d, 0x52, 0x40, 0xe3,
-	0x6f, 0xe1, 0x3d, 0xbd, 0x7a, 0xc1, 0xc5, 0x2c, 0x90, 0x32, 0x88, 0xa3, 0xa7, 0xaf, 0x69, 0x74,
-	0xc5, 0x8d, 0x42, 0xbd, 0x91, 0x57, 0x3f, 0xa5, 0x8a, 0x9c, 0xb4, 0xc8, 0xda, 0x13, 0x52, 0x56,
-	0xd3, 0x68, 0x11, 0x28, 0x5b, 0xad, 0x6b, 0x59, 0x59, 0x7f, 0xca, 0xca, 0xae, 0xf0, 0x27, 0xb0,
-	0xad, 0x57, 0xcf, 0xe3, 0x20, 0x32, 0x1a, 0xf7, 0x46, 0xf7, 0xea, 0x3b, 0xb5, 0x77, 0xd2, 0x22,
-	0x19, 0xf2, 0x49, 0x17, 0x36, 0x17, 0x5a, 0x43, 0xef, 0x99, 0x29, 0x97, 0xcf, 0x75, 0xd9, 0x9d,
-	0x01, 0xd0, 0x4c, 0x61, 0x17, 0x1d, 0x76, 0x8e, 0x7a, 0xa3, 0xfd, 0xf2, 0x59, 0x45, 0xf9, 0x49,
-	0x01, 0xed, 0xfd, 0x85, 0x60, 0x7b, 0xcc, 0xc2, 0x0b, 0x45, 0x15, 0xc7, 0x43, 0x80, 0xac, 0x5c,
-	0xa5, 0x39, 0xc8, 0x21, 0x05, 0x0b, 0x3e, 0xb5, 0xe1, 0x1a, 0xb0, 0x74, 0xdb, 0xe6, 0xa2, 0xfb,
-	0x75, 0xd2, 0xc6, 0x4f, 0x0a, 0x50, 0x7c, 0x06, 0xdd, 0xc0, 0x44, 0x2d, 0xdd, 0x8e, 0xd9, 0x75,
-	0x58, 0xde, 0x65, 0x60, 0xc7, 0x56, 0x18, 0xf9, 0x2c, 0x52, 0x62, 0x49, 0xd2, 0x0d, 0xfb, 0x5f,
-	0x41, 0xbf, 0xe8, 0xc0, 0x03, 0xe8, 0xbc, 0xe1, 0xcb, 0x55, 0xa7, 0xea, 0x47, 0x7c, 0xbc, 0xd2,
-	0xe4, 0xee, 0xb2, 0xb0, 0x07, 0x10, 0x0b, 0x3b, 0x6b, 0x3f, 0x42, 0xde, 0x1b, 0xe8, 0x17, 0xd9,
-	0x36, 0xb6, 0xdc, 0x63, 0xe8, 0x25, 0x59, 0xe6, 0xa5, 0xb9, 0x65, 0x67, 0xf4, 0x41, 0x53, 0xd9,
-	0x48, 0x52, 0xdc, 0xe1, 0xfd, 0x8c, 0x00, 0xf2, 0xb2, 0x6e, 0xbc, 0xeb, 0x21, 0xec, 0x55, 0xdb,
-	0xd1, 0x2a, 0xdd, 0x27, 0x75, 0x47, 0x95, 0x59, 0xe7, 0x5f, 0x33, 0xfb, 0x0d, 0xc1, 0x3b, 0x25,
-	0x8d, 0xf0, 0x11, 0xec, 0xda, 0x71, 0xfb, 0x62, 0x7e, 0x19, 0x06, 0xec, 0x9c, 0xa7, 0x1c, 0xab,
-	0xe6, 0xff, 0x9b, 0xea, 0xaf, 0x08, 0x7a, 0x85, 0xae, 0x68, 0x54, 0x31, 0x0b, 0xe2, 0xa2, 0xf2,
-	0x72, 0xaa, 0x9a, 0xb1, 0x07, 0xfd, 0x2c, 0x2e, 0x1d, 0xab, 0x1d, 0xe7, 0x25, 0xdb, 0xfa, 0x40,
-	0x37, 0xee, 0x08, 0xd4, 0x93, 0x99, 0xa2, 0xab, 0xf1, 0xd3, 0x44, 0xf4, 0x0b, 0xd8, 0x5d, 0xf5,
-	0x17, 0xe1, 0x49, 0x48, 0x59, 0xd6, 0x56, 0x07, 0x65, 0x65, 0x48, 0x09, 0x44, 0xaa, 0x9b, 0xbc,
-	0xef, 0x60, 0xaf, 0x86, 0x6a, 0xbc, 0x78, 0xdd, 0xeb, 0xa0, 0xbd, 0xfe, 0x75, 0xe0, 0x2d, 0xe0,
-	0xfe, 0x1d, 0x83, 0xf1, 0xbf, 0x6d, 0x9b, 0xe7, 0xb0, 0xa3, 0x67, 0xc3, 0x32, 0x62, 0x5f, 0x72,
-	0x29, 0xe9, 0x15, 0xc7, 0x8f, 0xa0, 0xcb, 0xb2, 0x31, 0xa7, 0x7b, 0x7d, 0x58, 0x99, 0x23, 0xcb,
-	0x88, 0x95, 0x46, 0x5d, 0x0a, 0xf7, 0x5e, 0xc1, 0xbb, 0x6b, 0xfc, 0x66, 0x74, 0xfa, 0xbe, 0xfd,
-	0x0c, 0x90, 0xab, 0x33, 0x2b, 0xf3, 0x63, 0x9c, 0xf9, 0xf5, 0x00, 0xcf, 0xd1, 0xf9, 0x28, 0x9e,
-	0x98, 0x8c, 0xe7, 0x38, 0x7c, 0x0a, 0x5d, 0x91, 0x1d, 0xa9, 0xb3, 0x59, 0x8c, 0xba, 0xfe, 0xdd,
-	0x42, 0x52, 0xf4, 0x83, 0x53, 0xc0, 0x75, 0x51, 0xb0, 0x03, 0x9b, 0x63, 0x7f, 0x16, 0x44, 0x83,
-	0x16, 0x06, 0xd8, 0x7a, 0x29, 0x02, 0xc5, 0xc5, 0x00, 0xe9, 0x67, 0x9d, 0x21, 0x2e, 0x06, 0xed,
-	0x27, 0x8f, 0x7f, 0xbf, 0x19, 0xa2, 0xb7, 0x37, 0x43, 0xf4, 0xe7, 0xcd, 0x10, 0xfd, 0x74, 0x3b,
-	0x6c, 0xbd, 0xbd, 0x1d, 0xb6, 0xfe, 0xb8, 0x1d, 0xb6, 0x5e, 0x7d, 0xf8, 0x8f, 0xbe, 0x0a, 0x2f,
-	0xb7, 0xcc, 0xcf, 0xc7, 0x7f, 0x07, 0x00, 0x00, 0xff, 0xff, 0x2e, 0x3b, 0x3f, 0x0a, 0x45, 0x0a,
-	0x00, 0x00,
+	// 912 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x56, 0xdd, 0x6e, 0x1b, 0x45,
+	0x14, 0xde, 0x75, 0x1c, 0xbb, 0x3e, 0x9b, 0xa4, 0xcb, 0x00, 0xad, 0x15, 0x8a, 0x09, 0x23, 0x15,
+	0xaa, 0x0a, 0x35, 0xc8, 0x08, 0x51, 0x21, 0x44, 0xd9, 0xa6, 0x15, 0x76, 0xf8, 0xd5, 0x44, 0xa5,
+	0x52, 0xaf, 0x98, 0xce, 0x8e, 0xd2, 0x85, 0xdd, 0x9d, 0xcd, 0xec, 0xc4, 0x95, 0x9f, 0x01, 0x21,
+	0xf1, 0x08, 0xf0, 0x36, 0x5c, 0xf6, 0x06, 0x89, 0x4b, 0x94, 0xbc, 0x08, 0x9a, 0x99, 0x5d, 0xef,
+	0x9f, 0x63, 0x21, 0x2e, 0x12, 0xcf, 0x9c, 0xf9, 0xce, 0x77, 0xbe, 0xf3, 0x33, 0x63, 0xc3, 0x67,
+	0x4c, 0x24, 0x89, 0x48, 0xf3, 0x8c, 0x32, 0x7e, 0x28, 0x9e, 0xff, 0xc4, 0x99, 0x3a, 0xa4, 0x2c,
+	0xd6, 0x7f, 0x92, 0x33, 0x21, 0xc3, 0x4c, 0x0a, 0x25, 0x0e, 0xcd, 0xff, 0xbc, 0xb2, 0xde, 0x33,
+	0x06, 0x34, 0x5a, 0x19, 0xf0, 0xef, 0x2e, 0xec, 0x10, 0xfa, 0x32, 0x60, 0x31, 0x31, 0x06, 0x34,
+	0x86, 0x61, 0x46, 0x97, 0xb1, 0xa0, 0xe1, 0xd8, 0x3d, 0x70, 0xef, 0xec, 0x90, 0x72, 0x8b, 0x6e,
+	0xc1, 0x28, 0x8f, 0x4e, 0x53, 0xaa, 0xce, 0x25, 0x1f, 0xf7, 0xcc, 0x59, 0x65, 0x40, 0x77, 0xc1,
+	0xa7, 0x8c, 0xf1, 0x4c, 0x09, 0x39, 0x0f, 0x79, 0xaa, 0x22, 0xb5, 0x1c, 0x6f, 0x19, 0x50, 0xc7,
+	0x8e, 0x3e, 0x80, 0xd7, 0x4a, 0xdb, 0xc9, 0x8a, 0xb1, 0x6f, 0xc0, 0xdd, 0x03, 0xfc, 0x39, 0xa0,
+	0xba, 0xc2, 0xa7, 0x91, 0x7a, 0x31, 0xdf, 0xa4, 0x73, 0x0f, 0x7a, 0x51, 0x68, 0x04, 0x8e, 0x48,
+	0x2f, 0x0a, 0xf1, 0x19, 0x8c, 0xaa, 0xf4, 0x6e, 0xc0, 0x20, 0x93, 0x7c, 0x31, 0xb7, 0x5e, 0x23,
+	0x52, 0xec, 0xd0, 0x3e, 0x5c, 0x8b, 0x4a, 0xd9, 0x36, 0xb7, 0xd5, 0x1e, 0x21, 0xe8, 0x87, 0x54,
+	0xd1, 0x22, 0x1d, 0xb3, 0xd6, 0xc5, 0x50, 0x51, 0xc2, 0x73, 0x45, 0x93, 0xcc, 0x48, 0xdf, 0x22,
+	0x95, 0x01, 0xff, 0xe5, 0xc2, 0x50, 0xc7, 0x14, 0x42, 0x35, 0x98, 0xdd, 0x16, 0xf3, 0x2d, 0x18,
+	0x25, 0x34, 0x57, 0x5c, 0x7e, 0xc5, 0xcb, 0xb0, 0x95, 0x41, 0xa7, 0x68, 0x1a, 0x3c, 0x0f, 0x4d,
+	0xe8, 0x11, 0x29, 0xb7, 0xba, 0xd8, 0x3c, 0x65, 0x72, 0x99, 0x29, 0x1e, 0x12, 0x4e, 0x43, 0xed,
+	0x6e, 0xeb, 0xd7, 0xb1, 0x37, 0x95, 0x6e, 0xb7, 0x94, 0xea, 0x56, 0x94, 0x6a, 0xaa, 0x56, 0x0c,
+	0x6c, 0x2b, 0x3a, 0x07, 0xf8, 0x43, 0xf0, 0x03, 0x16, 0x07, 0x8c, 0x89, 0xf3, 0x54, 0xcd, 0xd3,
+	0x45, 0xa4, 0xb8, 0xe6, 0x8f, 0xcc, 0x4a, 0x8b, 0xb0, 0x09, 0x56, 0x06, 0xfc, 0x87, 0x0b, 0x6f,
+	0x56, 0x2e, 0x84, 0x9f, 0x9d, 0xf3, 0x5c, 0x1d, 0x8b, 0x28, 0x45, 0xef, 0xc1, 0x9e, 0x85, 0xcd,
+	0x9b, 0xd5, 0x69, 0x59, 0x2b, 0x9c, 0xed, 0xe0, 0xbc, 0x6c, 0x6d, 0xcb, 0x8a, 0xee, 0xc3, 0xcd,
+	0xa6, 0x67, 0x95, 0x8f, 0x6d, 0xdc, 0x55, 0xc7, 0xf8, 0x57, 0x17, 0x6e, 0x76, 0x34, 0x06, 0x66,
+	0x0e, 0x37, 0x76, 0xef, 0x0e, 0x5c, 0x97, 0x16, 0xdc, 0x92, 0xd6, 0x36, 0xeb, 0x2a, 0xb7, 0xfb,
+	0x92, 0x17, 0xaa, 0xba, 0x07, 0xf8, 0x0b, 0xb8, 0xd1, 0xae, 0x32, 0xe1, 0x0b, 0xf1, 0x33, 0x5f,
+	0x53, 0x0b, 0x77, 0x5d, 0x2d, 0xf0, 0xfb, 0xe0, 0x99, 0x91, 0xb7, 0x84, 0x7a, 0x90, 0x64, 0x31,
+	0x25, 0xee, 0xc1, 0x96, 0xbe, 0x2b, 0xc5, 0x16, 0xff, 0x08, 0x6f, 0x04, 0x2c, 0x7e, 0xdc, 0x96,
+	0xb0, 0x31, 0xed, 0xb5, 0xc9, 0xf4, 0xae, 0x4a, 0x66, 0x09, 0xfb, 0x55, 0x32, 0xdf, 0x73, 0x99,
+	0x44, 0x79, 0x1e, 0x89, 0xf4, 0xe8, 0x05, 0x4d, 0x4f, 0xf9, 0xc6, 0x38, 0x0f, 0xc0, 0xcb, 0x56,
+	0x78, 0x1b, 0x61, 0x6f, 0xfa, 0xf6, 0xbd, 0xea, 0x31, 0x0b, 0x58, 0xfc, 0x24, 0xe7, 0xb2, 0x22,
+	0xcd, 0x49, 0xdd, 0x03, 0x3f, 0x31, 0xd3, 0x5a, 0x28, 0x29, 0x02, 0x06, 0xe0, 0x51, 0xab, 0xc5,
+	0xc8, 0xd6, 0xe5, 0xf0, 0xa6, 0xef, 0x34, 0x49, 0x3b, 0xe5, 0x20, 0x75, 0x1f, 0x7c, 0x56, 0xbf,
+	0x04, 0x84, 0x27, 0x62, 0xb1, 0x39, 0x8f, 0x56, 0xc8, 0xde, 0xff, 0x08, 0xf9, 0x4b, 0x1f, 0xae,
+	0x07, 0x2c, 0x3e, 0x12, 0xa9, 0xe2, 0xa9, 0xfa, 0x81, 0xc6, 0xe7, 0x1c, 0x7d, 0x0c, 0x03, 0xdb,
+	0x75, 0x13, 0xd0, 0x9b, 0xbe, 0xd5, 0x64, 0x6c, 0x8c, 0xcf, 0xcc, 0x21, 0x05, 0x18, 0x7d, 0x09,
+	0x3b, 0x51, 0x6d, 0xa4, 0x4c, 0x59, 0xbd, 0xe9, 0xbb, 0x1b, 0x9c, 0x2d, 0x70, 0xe6, 0x90, 0x86,
+	0x23, 0x7a, 0x04, 0x9e, 0xac, 0xae, 0xb3, 0x99, 0x66, 0x6f, 0x7a, 0xb0, 0x96, 0xa7, 0x76, 0xed,
+	0x67, 0x0e, 0xa9, 0xbb, 0xa1, 0x63, 0xd8, 0x95, 0xf5, 0x0b, 0x67, 0x9e, 0x31, 0x6f, 0x8a, 0x37,
+	0xf1, 0x58, 0xe4, 0xcc, 0x21, 0x4d, 0x57, 0x74, 0x02, 0x7e, 0xd6, 0x1a, 0x30, 0xf3, 0xe0, 0x79,
+	0xd3, 0xdb, 0x6b, 0xe9, 0xda, 0xd3, 0x38, 0x73, 0x48, 0x87, 0x00, 0x1d, 0xc1, 0x2e, 0xad, 0xb7,
+	0xda, 0x3c, 0x8e, 0x57, 0x55, 0xdb, 0x42, 0xb4, 0xb2, 0x86, 0x8f, 0x26, 0x91, 0xf5, 0x31, 0x1c,
+	0x0f, 0xd7, 0x91, 0x34, 0x26, 0xd5, 0xa6, 0x57, 0x33, 0x3c, 0x1c, 0xc2, 0xf6, 0x42, 0x77, 0x1e,
+	0x3f, 0x36, 0x5f, 0x2e, 0x8f, 0xf4, 0xd7, 0xd0, 0xa7, 0x00, 0x74, 0x35, 0x17, 0xc5, 0x34, 0xef,
+	0x37, 0x59, 0xeb, 0x43, 0x43, 0x6a, 0x68, 0x7c, 0x0c, 0x7b, 0x01, 0x8b, 0x4f, 0x96, 0x29, 0xfb,
+	0x86, 0xe7, 0x39, 0x3d, 0xe5, 0xe8, 0x3e, 0x0c, 0xd9, 0x8a, 0x4a, 0x0b, 0x9c, 0x34, 0xa9, 0x34,
+	0xb6, 0x41, 0x57, 0xc2, 0xf1, 0x33, 0x78, 0x7d, 0xcd, 0xb9, 0x91, 0x17, 0x86, 0xf6, 0x59, 0xca,
+	0x0b, 0xce, 0x71, 0xab, 0x72, 0xab, 0xf3, 0x99, 0x43, 0x6a, 0xe8, 0x2a, 0xdd, 0x19, 0xec, 0x36,
+	0x70, 0xe8, 0x13, 0xfd, 0x9c, 0x95, 0x94, 0x3a, 0xe3, 0xfa, 0xa3, 0xd0, 0xfd, 0xa9, 0x40, 0x4a,
+	0xf4, 0xdd, 0xaf, 0x01, 0x75, 0xdf, 0x0c, 0x74, 0x0d, 0xfa, 0xdf, 0x8a, 0x94, 0xfb, 0x0e, 0x1a,
+	0xc1, 0xf6, 0x77, 0x2f, 0x53, 0x2e, 0x7d, 0x57, 0x2f, 0x83, 0x30, 0x89, 0x52, 0xbf, 0x87, 0x00,
+	0x06, 0x4f, 0x65, 0xa4, 0xb8, 0xf4, 0xb7, 0xf4, 0x5a, 0x77, 0x89, 0x4b, 0xbf, 0xff, 0xf0, 0xc1,
+	0x9f, 0x17, 0x13, 0xf7, 0xd5, 0xc5, 0xc4, 0xfd, 0xe7, 0x62, 0xe2, 0xfe, 0x76, 0x39, 0x71, 0x5e,
+	0x5d, 0x4e, 0x9c, 0xbf, 0x2f, 0x27, 0xce, 0xb3, 0xdb, 0xff, 0xe9, 0xd7, 0xd9, 0xf3, 0x81, 0xf9,
+	0xf8, 0xe8, 0xdf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x51, 0x62, 0x48, 0x8d, 0xcd, 0x09, 0x00, 0x00,
 }
 
 func (m *RawAclRecord) Marshal() (dAtA []byte, err error) {
@@ -1316,14 +1351,7 @@ func (m *AclRecord) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	if m.Timestamp != 0 {
 		i = encodeVarintAclrecord(dAtA, i, uint64(m.Timestamp))
 		i--
-		dAtA[i] = 0x28
-	}
-	if len(m.ReadKeyId) > 0 {
-		i -= len(m.ReadKeyId)
-		copy(dAtA[i:], m.ReadKeyId)
-		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.ReadKeyId)))
-		i--
-		dAtA[i] = 0x22
+		dAtA[i] = 0x20
 	}
 	if len(m.Data) > 0 {
 		i -= len(m.Data)
@@ -1412,6 +1440,339 @@ func (m *AclRoot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *AclAccountInvite) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AclAccountInvite) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclAccountInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.InviteKey) > 0 {
+		i -= len(m.InviteKey)
+		copy(dAtA[i:], m.InviteKey)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.InviteKey)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AclAccountRequestJoin) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AclAccountRequestJoin) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclAccountRequestJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.InviteIdentitySignature) > 0 {
+		i -= len(m.InviteIdentitySignature)
+		copy(dAtA[i:], m.InviteIdentitySignature)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.InviteIdentitySignature)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.InviteRecordId) > 0 {
+		i -= len(m.InviteRecordId)
+		copy(dAtA[i:], m.InviteRecordId)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.InviteRecordId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.InviteIdentity) > 0 {
+		i -= len(m.InviteIdentity)
+		copy(dAtA[i:], m.InviteIdentity)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.InviteIdentity)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AclAccountRequestAccept) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AclAccountRequestAccept) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclAccountRequestAccept) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.EncryptedReadKeys) > 0 {
+		i -= len(m.EncryptedReadKeys)
+		copy(dAtA[i:], m.EncryptedReadKeys)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.EncryptedReadKeys)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.RequestRecordId) > 0 {
+		i -= len(m.RequestRecordId)
+		copy(dAtA[i:], m.RequestRecordId)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.RequestRecordId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.Identity)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AclAccountInviteRevoke) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AclAccountInviteRevoke) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclAccountInviteRevoke) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.InviteRecordId) > 0 {
+		i -= len(m.InviteRecordId)
+		copy(dAtA[i:], m.InviteRecordId)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.InviteRecordId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AclReadKeys) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AclReadKeys) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclReadKeys) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.ReadKey) > 0 {
+		for iNdEx := len(m.ReadKey) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.ReadKey[iNdEx])
+			copy(dAtA[i:], m.ReadKey[iNdEx])
+			i = encodeVarintAclrecord(dAtA, i, uint64(len(m.ReadKey[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AclEncryptedReadKeys) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AclEncryptedReadKeys) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclEncryptedReadKeys) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.EncryptedReadKeys) > 0 {
+		i -= len(m.EncryptedReadKeys)
+		copy(dAtA[i:], m.EncryptedReadKeys)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.EncryptedReadKeys)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.Identity)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AclAccountPermissionChange) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AclAccountPermissionChange) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclAccountPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Permissions != 0 {
+		i = encodeVarintAclrecord(dAtA, i, uint64(m.Permissions))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.Identity)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AclReadKeyChange) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AclReadKeyChange) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclReadKeyChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.AccountKeys) > 0 {
+		for iNdEx := len(m.AccountKeys) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.AccountKeys[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintAclrecord(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AclAccountRemove) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AclAccountRemove) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclAccountRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.AccountKeys) > 0 {
+		for iNdEx := len(m.AccountKeys) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.AccountKeys[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintAclrecord(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.Identity)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *AclContentValue) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1444,16 +1805,16 @@ func (m *AclContentValue) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *AclContentValue_UserAdd) MarshalTo(dAtA []byte) (int, error) {
+func (m *AclContentValue_Invite) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *AclContentValue_UserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *AclContentValue_Invite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
-	if m.UserAdd != nil {
+	if m.Invite != nil {
 		{
-			size, err := m.UserAdd.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.Invite.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -1465,16 +1826,16 @@ func (m *AclContentValue_UserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	}
 	return len(dAtA) - i, nil
 }
-func (m *AclContentValue_UserRemove) MarshalTo(dAtA []byte) (int, error) {
+func (m *AclContentValue_InviteRevoke) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *AclContentValue_UserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *AclContentValue_InviteRevoke) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
-	if m.UserRemove != nil {
+	if m.InviteRevoke != nil {
 		{
-			size, err := m.UserRemove.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.InviteRevoke.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -1486,16 +1847,16 @@ func (m *AclContentValue_UserRemove) MarshalToSizedBuffer(dAtA []byte) (int, err
 	}
 	return len(dAtA) - i, nil
 }
-func (m *AclContentValue_UserPermissionChange) MarshalTo(dAtA []byte) (int, error) {
+func (m *AclContentValue_RequestJoin) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *AclContentValue_UserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *AclContentValue_RequestJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
-	if m.UserPermissionChange != nil {
+	if m.RequestJoin != nil {
 		{
-			size, err := m.UserPermissionChange.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.RequestJoin.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -1507,16 +1868,16 @@ func (m *AclContentValue_UserPermissionChange) MarshalToSizedBuffer(dAtA []byte)
 	}
 	return len(dAtA) - i, nil
 }
-func (m *AclContentValue_UserInvite) MarshalTo(dAtA []byte) (int, error) {
+func (m *AclContentValue_RequestAccept) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *AclContentValue_UserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *AclContentValue_RequestAccept) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
-	if m.UserInvite != nil {
+	if m.RequestAccept != nil {
 		{
-			size, err := m.UserInvite.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.RequestAccept.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -1528,16 +1889,16 @@ func (m *AclContentValue_UserInvite) MarshalToSizedBuffer(dAtA []byte) (int, err
 	}
 	return len(dAtA) - i, nil
 }
-func (m *AclContentValue_UserJoin) MarshalTo(dAtA []byte) (int, error) {
+func (m *AclContentValue_PermissionChange) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *AclContentValue_UserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *AclContentValue_PermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
-	if m.UserJoin != nil {
+	if m.PermissionChange != nil {
 		{
-			size, err := m.UserJoin.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.PermissionChange.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -1546,6 +1907,48 @@ func (m *AclContentValue_UserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error
 		}
 		i--
 		dAtA[i] = 0x2a
+	}
+	return len(dAtA) - i, nil
+}
+func (m *AclContentValue_AccountRemove) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclContentValue_AccountRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.AccountRemove != nil {
+		{
+			size, err := m.AccountRemove.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAclrecord(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x32
+	}
+	return len(dAtA) - i, nil
+}
+func (m *AclContentValue_ReadKeyChange) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AclContentValue_ReadKeyChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.ReadKeyChange != nil {
+		{
+			size, err := m.ReadKeyChange.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAclrecord(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x3a
 	}
 	return len(dAtA) - i, nil
 }
@@ -1582,370 +1985,6 @@ func (m *AclData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			i--
 			dAtA[i] = 0xa
 		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *AclState) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *AclState) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AclState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Invites) > 0 {
-		for k := range m.Invites {
-			v := m.Invites[k]
-			baseI := i
-			if v != nil {
-				{
-					size, err := v.MarshalToSizedBuffer(dAtA[:i])
-					if err != nil {
-						return 0, err
-					}
-					i -= size
-					i = encodeVarintAclrecord(dAtA, i, uint64(size))
-				}
-				i--
-				dAtA[i] = 0x12
-			}
-			i -= len(k)
-			copy(dAtA[i:], k)
-			i = encodeVarintAclrecord(dAtA, i, uint64(len(k)))
-			i--
-			dAtA[i] = 0xa
-			i = encodeVarintAclrecord(dAtA, i, uint64(baseI-i))
-			i--
-			dAtA[i] = 0x1a
-		}
-	}
-	if len(m.UserStates) > 0 {
-		for iNdEx := len(m.UserStates) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.UserStates[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintAclrecord(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x12
-		}
-	}
-	if len(m.ReadKeyIds) > 0 {
-		for iNdEx := len(m.ReadKeyIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.ReadKeyIds[iNdEx])
-			copy(dAtA[i:], m.ReadKeyIds[iNdEx])
-			i = encodeVarintAclrecord(dAtA, i, uint64(len(m.ReadKeyIds[iNdEx])))
-			i--
-			dAtA[i] = 0xa
-		}
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *AclUserState) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *AclUserState) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AclUserState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Permissions != 0 {
-		i = encodeVarintAclrecord(dAtA, i, uint64(m.Permissions))
-		i--
-		dAtA[i] = 0x10
-	}
-	if len(m.Identity) > 0 {
-		i -= len(m.Identity)
-		copy(dAtA[i:], m.Identity)
-		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.Identity)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *AclUserAdd) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *AclUserAdd) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AclUserAdd) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Permissions != 0 {
-		i = encodeVarintAclrecord(dAtA, i, uint64(m.Permissions))
-		i--
-		dAtA[i] = 0x18
-	}
-	if len(m.EncryptedReadKeys) > 0 {
-		for iNdEx := len(m.EncryptedReadKeys) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.EncryptedReadKeys[iNdEx])
-			copy(dAtA[i:], m.EncryptedReadKeys[iNdEx])
-			i = encodeVarintAclrecord(dAtA, i, uint64(len(m.EncryptedReadKeys[iNdEx])))
-			i--
-			dAtA[i] = 0x12
-		}
-	}
-	if len(m.Identity) > 0 {
-		i -= len(m.Identity)
-		copy(dAtA[i:], m.Identity)
-		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.Identity)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *AclUserInvite) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *AclUserInvite) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AclUserInvite) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Permissions != 0 {
-		i = encodeVarintAclrecord(dAtA, i, uint64(m.Permissions))
-		i--
-		dAtA[i] = 0x18
-	}
-	if len(m.EncryptedReadKeys) > 0 {
-		for iNdEx := len(m.EncryptedReadKeys) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.EncryptedReadKeys[iNdEx])
-			copy(dAtA[i:], m.EncryptedReadKeys[iNdEx])
-			i = encodeVarintAclrecord(dAtA, i, uint64(len(m.EncryptedReadKeys[iNdEx])))
-			i--
-			dAtA[i] = 0x12
-		}
-	}
-	if len(m.AcceptPublicKey) > 0 {
-		i -= len(m.AcceptPublicKey)
-		copy(dAtA[i:], m.AcceptPublicKey)
-		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.AcceptPublicKey)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *AclUserJoin) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *AclUserJoin) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AclUserJoin) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.EncryptedReadKeys) > 0 {
-		for iNdEx := len(m.EncryptedReadKeys) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.EncryptedReadKeys[iNdEx])
-			copy(dAtA[i:], m.EncryptedReadKeys[iNdEx])
-			i = encodeVarintAclrecord(dAtA, i, uint64(len(m.EncryptedReadKeys[iNdEx])))
-			i--
-			dAtA[i] = 0x22
-		}
-	}
-	if len(m.AcceptPubKey) > 0 {
-		i -= len(m.AcceptPubKey)
-		copy(dAtA[i:], m.AcceptPubKey)
-		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.AcceptPubKey)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.AcceptSignature) > 0 {
-		i -= len(m.AcceptSignature)
-		copy(dAtA[i:], m.AcceptSignature)
-		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.AcceptSignature)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Identity) > 0 {
-		i -= len(m.Identity)
-		copy(dAtA[i:], m.Identity)
-		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.Identity)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *AclUserRemove) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *AclUserRemove) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AclUserRemove) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.ReadKeyReplaces) > 0 {
-		for iNdEx := len(m.ReadKeyReplaces) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.ReadKeyReplaces[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintAclrecord(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x12
-		}
-	}
-	if len(m.Identity) > 0 {
-		i -= len(m.Identity)
-		copy(dAtA[i:], m.Identity)
-		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.Identity)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *AclReadKeyReplace) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *AclReadKeyReplace) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AclReadKeyReplace) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.EncryptedReadKey) > 0 {
-		i -= len(m.EncryptedReadKey)
-		copy(dAtA[i:], m.EncryptedReadKey)
-		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.EncryptedReadKey)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Identity) > 0 {
-		i -= len(m.Identity)
-		copy(dAtA[i:], m.Identity)
-		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.Identity)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *AclUserPermissionChange) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *AclUserPermissionChange) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AclUserPermissionChange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.Permissions != 0 {
-		i = encodeVarintAclrecord(dAtA, i, uint64(m.Permissions))
-		i--
-		dAtA[i] = 0x10
-	}
-	if len(m.Identity) > 0 {
-		i -= len(m.Identity)
-		copy(dAtA[i:], m.Identity)
-		i = encodeVarintAclrecord(dAtA, i, uint64(len(m.Identity)))
-		i--
-		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
@@ -2146,10 +2185,6 @@ func (m *AclRecord) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovAclrecord(uint64(l))
 	}
-	l = len(m.ReadKeyId)
-	if l > 0 {
-		n += 1 + l + sovAclrecord(uint64(l))
-	}
 	if m.Timestamp != 0 {
 		n += 1 + sovAclrecord(uint64(m.Timestamp))
 	}
@@ -2188,6 +2223,156 @@ func (m *AclRoot) Size() (n int) {
 	return n
 }
 
+func (m *AclAccountInvite) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.InviteKey)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	return n
+}
+
+func (m *AclAccountRequestJoin) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.InviteIdentity)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	l = len(m.InviteRecordId)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	l = len(m.InviteIdentitySignature)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	return n
+}
+
+func (m *AclAccountRequestAccept) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Identity)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	l = len(m.RequestRecordId)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	l = len(m.EncryptedReadKeys)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	return n
+}
+
+func (m *AclAccountInviteRevoke) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.InviteRecordId)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	return n
+}
+
+func (m *AclReadKeys) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.ReadKey) > 0 {
+		for _, b := range m.ReadKey {
+			l = len(b)
+			n += 1 + l + sovAclrecord(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *AclEncryptedReadKeys) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Identity)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	l = len(m.EncryptedReadKeys)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	return n
+}
+
+func (m *AclAccountPermissionChange) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Identity)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	if m.Permissions != 0 {
+		n += 1 + sovAclrecord(uint64(m.Permissions))
+	}
+	return n
+}
+
+func (m *AclReadKeyChange) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.AccountKeys) > 0 {
+		for _, e := range m.AccountKeys {
+			l = e.Size()
+			n += 1 + l + sovAclrecord(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *AclAccountRemove) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Identity)
+	if l > 0 {
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	if len(m.AccountKeys) > 0 {
+		for _, e := range m.AccountKeys {
+			l = e.Size()
+			n += 1 + l + sovAclrecord(uint64(l))
+		}
+	}
+	return n
+}
+
 func (m *AclContentValue) Size() (n int) {
 	if m == nil {
 		return 0
@@ -2200,62 +2385,86 @@ func (m *AclContentValue) Size() (n int) {
 	return n
 }
 
-func (m *AclContentValue_UserAdd) Size() (n int) {
+func (m *AclContentValue_Invite) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.UserAdd != nil {
-		l = m.UserAdd.Size()
+	if m.Invite != nil {
+		l = m.Invite.Size()
 		n += 1 + l + sovAclrecord(uint64(l))
 	}
 	return n
 }
-func (m *AclContentValue_UserRemove) Size() (n int) {
+func (m *AclContentValue_InviteRevoke) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.UserRemove != nil {
-		l = m.UserRemove.Size()
+	if m.InviteRevoke != nil {
+		l = m.InviteRevoke.Size()
 		n += 1 + l + sovAclrecord(uint64(l))
 	}
 	return n
 }
-func (m *AclContentValue_UserPermissionChange) Size() (n int) {
+func (m *AclContentValue_RequestJoin) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.UserPermissionChange != nil {
-		l = m.UserPermissionChange.Size()
+	if m.RequestJoin != nil {
+		l = m.RequestJoin.Size()
 		n += 1 + l + sovAclrecord(uint64(l))
 	}
 	return n
 }
-func (m *AclContentValue_UserInvite) Size() (n int) {
+func (m *AclContentValue_RequestAccept) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.UserInvite != nil {
-		l = m.UserInvite.Size()
+	if m.RequestAccept != nil {
+		l = m.RequestAccept.Size()
 		n += 1 + l + sovAclrecord(uint64(l))
 	}
 	return n
 }
-func (m *AclContentValue_UserJoin) Size() (n int) {
+func (m *AclContentValue_PermissionChange) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.UserJoin != nil {
-		l = m.UserJoin.Size()
+	if m.PermissionChange != nil {
+		l = m.PermissionChange.Size()
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	return n
+}
+func (m *AclContentValue_AccountRemove) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.AccountRemove != nil {
+		l = m.AccountRemove.Size()
+		n += 1 + l + sovAclrecord(uint64(l))
+	}
+	return n
+}
+func (m *AclContentValue_ReadKeyChange) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.ReadKeyChange != nil {
+		l = m.ReadKeyChange.Size()
 		n += 1 + l + sovAclrecord(uint64(l))
 	}
 	return n
@@ -2271,179 +2480,6 @@ func (m *AclData) Size() (n int) {
 			l = e.Size()
 			n += 1 + l + sovAclrecord(uint64(l))
 		}
-	}
-	return n
-}
-
-func (m *AclState) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if len(m.ReadKeyIds) > 0 {
-		for _, s := range m.ReadKeyIds {
-			l = len(s)
-			n += 1 + l + sovAclrecord(uint64(l))
-		}
-	}
-	if len(m.UserStates) > 0 {
-		for _, e := range m.UserStates {
-			l = e.Size()
-			n += 1 + l + sovAclrecord(uint64(l))
-		}
-	}
-	if len(m.Invites) > 0 {
-		for k, v := range m.Invites {
-			_ = k
-			_ = v
-			l = 0
-			if v != nil {
-				l = v.Size()
-				l += 1 + sovAclrecord(uint64(l))
-			}
-			mapEntrySize := 1 + len(k) + sovAclrecord(uint64(len(k))) + l
-			n += mapEntrySize + 1 + sovAclrecord(uint64(mapEntrySize))
-		}
-	}
-	return n
-}
-
-func (m *AclUserState) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Identity)
-	if l > 0 {
-		n += 1 + l + sovAclrecord(uint64(l))
-	}
-	if m.Permissions != 0 {
-		n += 1 + sovAclrecord(uint64(m.Permissions))
-	}
-	return n
-}
-
-func (m *AclUserAdd) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Identity)
-	if l > 0 {
-		n += 1 + l + sovAclrecord(uint64(l))
-	}
-	if len(m.EncryptedReadKeys) > 0 {
-		for _, b := range m.EncryptedReadKeys {
-			l = len(b)
-			n += 1 + l + sovAclrecord(uint64(l))
-		}
-	}
-	if m.Permissions != 0 {
-		n += 1 + sovAclrecord(uint64(m.Permissions))
-	}
-	return n
-}
-
-func (m *AclUserInvite) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.AcceptPublicKey)
-	if l > 0 {
-		n += 1 + l + sovAclrecord(uint64(l))
-	}
-	if len(m.EncryptedReadKeys) > 0 {
-		for _, b := range m.EncryptedReadKeys {
-			l = len(b)
-			n += 1 + l + sovAclrecord(uint64(l))
-		}
-	}
-	if m.Permissions != 0 {
-		n += 1 + sovAclrecord(uint64(m.Permissions))
-	}
-	return n
-}
-
-func (m *AclUserJoin) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Identity)
-	if l > 0 {
-		n += 1 + l + sovAclrecord(uint64(l))
-	}
-	l = len(m.AcceptSignature)
-	if l > 0 {
-		n += 1 + l + sovAclrecord(uint64(l))
-	}
-	l = len(m.AcceptPubKey)
-	if l > 0 {
-		n += 1 + l + sovAclrecord(uint64(l))
-	}
-	if len(m.EncryptedReadKeys) > 0 {
-		for _, b := range m.EncryptedReadKeys {
-			l = len(b)
-			n += 1 + l + sovAclrecord(uint64(l))
-		}
-	}
-	return n
-}
-
-func (m *AclUserRemove) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Identity)
-	if l > 0 {
-		n += 1 + l + sovAclrecord(uint64(l))
-	}
-	if len(m.ReadKeyReplaces) > 0 {
-		for _, e := range m.ReadKeyReplaces {
-			l = e.Size()
-			n += 1 + l + sovAclrecord(uint64(l))
-		}
-	}
-	return n
-}
-
-func (m *AclReadKeyReplace) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Identity)
-	if l > 0 {
-		n += 1 + l + sovAclrecord(uint64(l))
-	}
-	l = len(m.EncryptedReadKey)
-	if l > 0 {
-		n += 1 + l + sovAclrecord(uint64(l))
-	}
-	return n
-}
-
-func (m *AclUserPermissionChange) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Identity)
-	if l > 0 {
-		n += 1 + l + sovAclrecord(uint64(l))
-	}
-	if m.Permissions != 0 {
-		n += 1 + sovAclrecord(uint64(m.Permissions))
 	}
 	return n
 }
@@ -2938,38 +2974,6 @@ func (m *AclRecord) Unmarshal(dAtA []byte) error {
 			}
 			iNdEx = postIndex
 		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ReadKeyId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ReadKeyId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 5:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
 			}
@@ -3246,6 +3250,977 @@ func (m *AclRoot) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *AclAccountInvite) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclrecord
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AclAccountInvite: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AclAccountInvite: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InviteKey", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.InviteKey = append(m.InviteKey[:0], dAtA[iNdEx:postIndex]...)
+			if m.InviteKey == nil {
+				m.InviteKey = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclrecord(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AclAccountRequestJoin) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclrecord
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AclAccountRequestJoin: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AclAccountRequestJoin: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InviteIdentity", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.InviteIdentity = append(m.InviteIdentity[:0], dAtA[iNdEx:postIndex]...)
+			if m.InviteIdentity == nil {
+				m.InviteIdentity = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InviteRecordId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.InviteRecordId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InviteIdentitySignature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.InviteIdentitySignature = append(m.InviteIdentitySignature[:0], dAtA[iNdEx:postIndex]...)
+			if m.InviteIdentitySignature == nil {
+				m.InviteIdentitySignature = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclrecord(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AclAccountRequestAccept) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclrecord
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AclAccountRequestAccept: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AclAccountRequestAccept: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RequestRecordId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RequestRecordId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field EncryptedReadKeys", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.EncryptedReadKeys = append(m.EncryptedReadKeys[:0], dAtA[iNdEx:postIndex]...)
+			if m.EncryptedReadKeys == nil {
+				m.EncryptedReadKeys = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclrecord(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AclAccountInviteRevoke) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclrecord
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AclAccountInviteRevoke: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AclAccountInviteRevoke: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field InviteRecordId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.InviteRecordId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclrecord(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AclReadKeys) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclrecord
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AclReadKeys: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AclReadKeys: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ReadKey", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ReadKey = append(m.ReadKey, make([]byte, postIndex-iNdEx))
+			copy(m.ReadKey[len(m.ReadKey)-1], dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclrecord(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AclEncryptedReadKeys) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclrecord
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AclEncryptedReadKeys: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AclEncryptedReadKeys: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field EncryptedReadKeys", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.EncryptedReadKeys = append(m.EncryptedReadKeys[:0], dAtA[iNdEx:postIndex]...)
+			if m.EncryptedReadKeys == nil {
+				m.EncryptedReadKeys = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclrecord(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AclAccountPermissionChange) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclrecord
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AclAccountPermissionChange: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AclAccountPermissionChange: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permissions", wireType)
+			}
+			m.Permissions = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Permissions |= AclUserPermissions(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclrecord(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AclReadKeyChange) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclrecord
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AclReadKeyChange: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AclReadKeyChange: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AccountKeys", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AccountKeys = append(m.AccountKeys, &AclEncryptedReadKeys{})
+			if err := m.AccountKeys[len(m.AccountKeys)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclrecord(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AclAccountRemove) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAclrecord
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AclAccountRemove: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AclAccountRemove: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
+			if m.Identity == nil {
+				m.Identity = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AccountKeys", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AccountKeys = append(m.AccountKeys, &AclEncryptedReadKeys{})
+			if err := m.AccountKeys[len(m.AccountKeys)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAclrecord(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *AclContentValue) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -3277,7 +4252,7 @@ func (m *AclContentValue) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UserAdd", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Invite", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -3304,15 +4279,15 @@ func (m *AclContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &AclUserAdd{}
+			v := &AclAccountInvite{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &AclContentValue_UserAdd{v}
+			m.Value = &AclContentValue_Invite{v}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UserRemove", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field InviteRevoke", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -3339,15 +4314,15 @@ func (m *AclContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &AclUserRemove{}
+			v := &AclAccountInviteRevoke{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &AclContentValue_UserRemove{v}
+			m.Value = &AclContentValue_InviteRevoke{v}
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UserPermissionChange", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field RequestJoin", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -3374,15 +4349,15 @@ func (m *AclContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &AclUserPermissionChange{}
+			v := &AclAccountRequestJoin{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &AclContentValue_UserPermissionChange{v}
+			m.Value = &AclContentValue_RequestJoin{v}
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UserInvite", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field RequestAccept", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -3409,15 +4384,15 @@ func (m *AclContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &AclUserInvite{}
+			v := &AclAccountRequestAccept{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &AclContentValue_UserInvite{v}
+			m.Value = &AclContentValue_RequestAccept{v}
 			iNdEx = postIndex
 		case 5:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UserJoin", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field PermissionChange", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -3444,11 +4419,81 @@ func (m *AclContentValue) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &AclUserJoin{}
+			v := &AclAccountPermissionChange{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Value = &AclContentValue_UserJoin{v}
+			m.Value = &AclContentValue_PermissionChange{v}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AccountRemove", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &AclAccountRemove{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &AclContentValue_AccountRemove{v}
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ReadKeyChange", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAclrecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAclrecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &AclReadKeyChange{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &AclContentValue_ReadKeyChange{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -3534,1147 +4579,6 @@ func (m *AclData) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAclrecord(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *AclState) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAclrecord
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: AclState: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AclState: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ReadKeyIds", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ReadKeyIds = append(m.ReadKeyIds, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field UserStates", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.UserStates = append(m.UserStates, &AclUserState{})
-			if err := m.UserStates[len(m.UserStates)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Invites", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Invites == nil {
-				m.Invites = make(map[string]*AclUserInvite)
-			}
-			var mapkey string
-			var mapvalue *AclUserInvite
-			for iNdEx < postIndex {
-				entryPreIndex := iNdEx
-				var wire uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowAclrecord
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					wire |= uint64(b&0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				fieldNum := int32(wire >> 3)
-				if fieldNum == 1 {
-					var stringLenmapkey uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowAclrecord
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapkey |= uint64(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapkey := int(stringLenmapkey)
-					if intStringLenmapkey < 0 {
-						return ErrInvalidLengthAclrecord
-					}
-					postStringIndexmapkey := iNdEx + intStringLenmapkey
-					if postStringIndexmapkey < 0 {
-						return ErrInvalidLengthAclrecord
-					}
-					if postStringIndexmapkey > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
-					iNdEx = postStringIndexmapkey
-				} else if fieldNum == 2 {
-					var mapmsglen int
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowAclrecord
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						mapmsglen |= int(b&0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					if mapmsglen < 0 {
-						return ErrInvalidLengthAclrecord
-					}
-					postmsgIndex := iNdEx + mapmsglen
-					if postmsgIndex < 0 {
-						return ErrInvalidLengthAclrecord
-					}
-					if postmsgIndex > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapvalue = &AclUserInvite{}
-					if err := mapvalue.Unmarshal(dAtA[iNdEx:postmsgIndex]); err != nil {
-						return err
-					}
-					iNdEx = postmsgIndex
-				} else {
-					iNdEx = entryPreIndex
-					skippy, err := skipAclrecord(dAtA[iNdEx:])
-					if err != nil {
-						return err
-					}
-					if (skippy < 0) || (iNdEx+skippy) < 0 {
-						return ErrInvalidLengthAclrecord
-					}
-					if (iNdEx + skippy) > postIndex {
-						return io.ErrUnexpectedEOF
-					}
-					iNdEx += skippy
-				}
-			}
-			m.Invites[mapkey] = mapvalue
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAclrecord(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *AclUserState) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAclrecord
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: AclUserState: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AclUserState: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Permissions", wireType)
-			}
-			m.Permissions = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Permissions |= AclUserPermissions(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAclrecord(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *AclUserAdd) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAclrecord
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: AclUserAdd: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AclUserAdd: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field EncryptedReadKeys", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.EncryptedReadKeys = append(m.EncryptedReadKeys, make([]byte, postIndex-iNdEx))
-			copy(m.EncryptedReadKeys[len(m.EncryptedReadKeys)-1], dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Permissions", wireType)
-			}
-			m.Permissions = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Permissions |= AclUserPermissions(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAclrecord(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *AclUserInvite) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAclrecord
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: AclUserInvite: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AclUserInvite: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AcceptPublicKey", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.AcceptPublicKey = append(m.AcceptPublicKey[:0], dAtA[iNdEx:postIndex]...)
-			if m.AcceptPublicKey == nil {
-				m.AcceptPublicKey = []byte{}
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field EncryptedReadKeys", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.EncryptedReadKeys = append(m.EncryptedReadKeys, make([]byte, postIndex-iNdEx))
-			copy(m.EncryptedReadKeys[len(m.EncryptedReadKeys)-1], dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Permissions", wireType)
-			}
-			m.Permissions = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Permissions |= AclUserPermissions(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAclrecord(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *AclUserJoin) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAclrecord
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: AclUserJoin: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AclUserJoin: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AcceptSignature", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.AcceptSignature = append(m.AcceptSignature[:0], dAtA[iNdEx:postIndex]...)
-			if m.AcceptSignature == nil {
-				m.AcceptSignature = []byte{}
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AcceptPubKey", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.AcceptPubKey = append(m.AcceptPubKey[:0], dAtA[iNdEx:postIndex]...)
-			if m.AcceptPubKey == nil {
-				m.AcceptPubKey = []byte{}
-			}
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field EncryptedReadKeys", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.EncryptedReadKeys = append(m.EncryptedReadKeys, make([]byte, postIndex-iNdEx))
-			copy(m.EncryptedReadKeys[len(m.EncryptedReadKeys)-1], dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAclrecord(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *AclUserRemove) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAclrecord
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: AclUserRemove: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AclUserRemove: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ReadKeyReplaces", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ReadKeyReplaces = append(m.ReadKeyReplaces, &AclReadKeyReplace{})
-			if err := m.ReadKeyReplaces[len(m.ReadKeyReplaces)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAclrecord(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *AclReadKeyReplace) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAclrecord
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: AclReadKeyReplace: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AclReadKeyReplace: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field EncryptedReadKey", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.EncryptedReadKey = append(m.EncryptedReadKey[:0], dAtA[iNdEx:postIndex]...)
-			if m.EncryptedReadKey == nil {
-				m.EncryptedReadKey = []byte{}
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAclrecord(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *AclUserPermissionChange) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAclrecord
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: AclUserPermissionChange: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AclUserPermissionChange: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthAclrecord
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Identity = append(m.Identity[:0], dAtA[iNdEx:postIndex]...)
-			if m.Identity == nil {
-				m.Identity = []byte{}
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Permissions", wireType)
-			}
-			m.Permissions = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAclrecord
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Permissions |= AclUserPermissions(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAclrecord(dAtA[iNdEx:])

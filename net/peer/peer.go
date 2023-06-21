@@ -3,6 +3,11 @@ package peer
 
 import (
 	"context"
+	"io"
+	"net"
+	"sync"
+	"time"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net/connutil"
@@ -11,15 +16,11 @@ import (
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/net/transport"
 	"go.uber.org/zap"
-	"io"
-	"net"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcconn"
 	"storj.io/drpc/drpcmanager"
 	"storj.io/drpc/drpcstream"
 	"storj.io/drpc/drpcwire"
-	"sync"
-	"time"
 )
 
 var log = logger.NewNamed("common.net.peer")
@@ -200,6 +201,11 @@ func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
 	return false, nil
 }
 
+// 70 stream -> 1 subconn
+// 62 request -> 1 subconn
+// 2600 subconn (2400 non active -> 5 min)
+
+// 2 5min connect
 func (p *peer) gc(ttl time.Duration) (aliveCount int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
