@@ -55,6 +55,21 @@ func TestAppServiceRegistry(t *testing.T) {
 	})
 }
 
+func TestApp_IterateComponents(t *testing.T) {
+	app := new(App)
+
+	app.Register(newTestService(testTypeRunnable, "c1", nil, nil))
+	app.Register(newTestService(testTypeRunnable, "r1", nil, nil))
+	app.Register(newTestService(testTypeComponent, "s1", nil, nil))
+
+	var got []string
+	app.IterateComponents(func(s Component) {
+		got = append(got, s.Name())
+	})
+
+	assert.ElementsMatch(t, []string{"c1", "r1", "s1"}, got)
+}
+
 func TestAppStart(t *testing.T) {
 	t.Run("SuccessStartStop", func(t *testing.T) {
 		app := new(App)
