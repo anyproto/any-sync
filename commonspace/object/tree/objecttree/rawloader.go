@@ -2,10 +2,11 @@ package objecttree
 
 import (
 	"context"
+	"time"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/util/slice"
-	"time"
 )
 
 type rawChangeLoader struct {
@@ -22,6 +23,7 @@ type rawCacheEntry struct {
 	change    *Change
 	rawChange *treechangeproto.RawTreeChangeWithId
 	position  int
+	removed   bool
 }
 
 func newStorageLoader(treeStorage treestorage.TreeStorage, changeBuilder ChangeBuilder) *rawChangeLoader {
@@ -126,7 +128,6 @@ func (r *rawChangeLoader) loadFromStorage(commonSnapshot string, heads, breakpoi
 		if err != nil {
 			continue
 		}
-		entry.position = -1
 		r.cache[b] = entry
 		existingBreakpoints = append(existingBreakpoints, b)
 	}
@@ -135,8 +136,7 @@ func (r *rawChangeLoader) loadFromStorage(commonSnapshot string, heads, breakpoi
 	dfs := func(
 		commonSnapshot string,
 		heads []string,
-		startCounter int,
-		shouldVisit func(counter int, mapExists bool) bool,
+		shouldVisit func(entry rawCacheEntry, mapExists bool) bool,
 		visit func(entry rawCacheEntry) rawCacheEntry) bool {
 
 		// resetting stack
@@ -150,7 +150,7 @@ func (r *rawChangeLoader) loadFromStorage(commonSnapshot string, heads, breakpoi
 			r.idStack = r.idStack[:len(r.idStack)-1]
 
 			entry, exists := r.cache[id]
-			if !shouldVisit(entry.position, exists) {
+			if !shouldVisit(entry, exists) {
 				continue
 			}
 			if id == commonSnapshot {
@@ -159,7 +159,6 @@ func (r *rawChangeLoader) loadFromStorage(commonSnapshot string, heads, breakpoi
 			}
 			if !exists {
 				entry, err = r.loadEntry(id)
-				entry.position = -1
 				if err != nil {
 					continue
 				}
@@ -174,7 +173,7 @@ func (r *rawChangeLoader) loadFromStorage(commonSnapshot string, heads, breakpoi
 					break
 				}
 				prevEntry, exists := r.cache[prev]
-				if !shouldVisit(prevEntry.position, exists) {
+				if !shouldVisit(prevEntry, exists) {
 					continue
 				}
 				r.idStack = append(r.idStack, prev)
@@ -187,8 +186,8 @@ func (r *rawChangeLoader) loadFromStorage(commonSnapshot string, heads, breakpoi
 	r.idStack = append(r.idStack, heads...)
 	var buffer []*treechangeproto.RawTreeChangeWithId
 
-	rootVisited := dfs(commonSnapshot, heads, 0,
-		func(counter int, mapExists bool) bool {
+	rootVisited := dfs(commonSnapshot, heads,
+		func(_ rawCacheEntry, mapExists bool) bool {
 			return !mapExists
 		},
 		func(entry rawCacheEntry) rawCacheEntry {
@@ -213,11 +212,13 @@ func (r *rawChangeLoader) loadFromStorage(commonSnapshot string, heads, breakpoi
 	}
 
 	// marking all visited as nil
-	dfs(commonSnapshot, existingBreakpoints, len(buffer),
-		func(counter int, mapExists bool) bool {
-			return !mapExists || counter < len(buffer)
+	dfs(commonSnapshot, existingBreakpoints,
+		func(entry rawCacheEntry, mapExists bool) bool {
+			// only going through already loaded changes
+			return mapExists && !entry.removed
 		},
 		func(entry rawCacheEntry) rawCacheEntry {
+			entry.removed = true
 			if entry.position != -1 {
 				buffer[entry.position] = nil
 			}
@@ -248,6 +249,7 @@ func (r *rawChangeLoader) loadEntry(id string) (entry rawCacheEntry, err error) 
 	entry = rawCacheEntry{
 		change:    change,
 		rawChange: rawChange,
+		position:  -1,
 	}
 	return
 }
