@@ -29,7 +29,7 @@ require (
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multibase v0.2.0
 	github.com/multiformats/go-multihash v0.2.3
-	github.com/prometheus/client_golang v1.15.1
+	github.com/prometheus/client_golang v1.16.0
 	github.com/stretchr/testify v1.8.4
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/zeebo/blake3 v0.2.3
@@ -89,7 +89,7 @@ require (
 	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
-	github.com/prometheus/procfs v0.10.0 // indirect
+	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/quic-go/quic-go v0.35.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/whyrusleeping/chunker v0.0.0-20181014151217-fe64bd25879f // indirect
