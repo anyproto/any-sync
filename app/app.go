@@ -50,7 +50,7 @@ type ComponentRunnable interface {
 }
 
 type ComponentLogFieldsGetter interface {
-	// GetLogFields returns additional useful fields for logs to debug log app start time or something else in the future
+	// GetLogFields returns additional useful fields for logs to debug long app start/stop duration or something else in the future
 	// You don't need to provide the component name in the field's Key, because it will be added automatically
 	GetLogFields() []zap.Field
 }
