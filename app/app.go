@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/anyproto/any-sync/app/logger"
-	"go.uber.org/zap"
 	"os"
 	"runtime"
 	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/anyproto/any-sync/app/logger"
+	"go.uber.org/zap"
 )
 
 var (
@@ -46,6 +47,12 @@ type ComponentRunnable interface {
 	// Also will be called when service return error on Init or Run stage
 	// Non-nil error will be printed to log
 	Close(ctx context.Context) (err error)
+}
+
+type ComponentLogFieldsGetter interface {
+	// GetLogFields returns additional useful fields for logs to debug log app start time or something else in the future
+	// You don't need to provide the component name in the field's Key, because it will be added automatically
+	GetLogFields() []zap.Field
 }
 
 type ComponentStatable interface {
@@ -219,7 +226,7 @@ func (app *App) Start(ctx context.Context) (err error) {
 		case <-done:
 			return
 		case <-time.After(StartWarningAfter):
-			l := statLogger(app.stopStat, log).With(zap.String("in_progress", currentComponentStarting))
+			l := app.statLogger(app.stopStat, log).With(zap.String("in_progress", currentComponentStarting))
 			l.Warn("components start in progress")
 		}
 	}()
@@ -254,7 +261,8 @@ func (app *App) Start(ctx context.Context) (err error) {
 	}
 
 	close(done)
-	l := statLogger(app.stopStat, log)
+	l := app.statLogger(app.stopStat, log)
+
 	if app.startStat.SpentMsTotal > StartWarningAfter.Milliseconds() {
 		l.Warn("all components started")
 	}
@@ -282,13 +290,22 @@ func stackAllGoroutines() []byte {
 	}
 }
 
-func statLogger(stat Stat, ctxLogger logger.CtxLogger) logger.CtxLogger {
+func (app *App) statLogger(stat Stat, ctxLogger logger.CtxLogger) logger.CtxLogger {
 	l := ctxLogger
 	for k, v := range stat.SpentMsPerComp {
 		l = l.With(zap.Int64(k, v))
 	}
 	l = l.With(zap.Int64("total", stat.SpentMsTotal))
 
+	for _, s := range app.components {
+		// get optional log fields from components
+		if compLog, ok := s.(ComponentLogFieldsGetter); ok {
+			for _, val := range compLog.GetLogFields() {
+				val.Key = s.Name() + "_" + val.Key
+				l = l.With(val)
+			}
+		}
+	}
 	return l
 }
 
@@ -307,7 +324,7 @@ func (app *App) Close(ctx context.Context) error {
 		case <-done:
 			return
 		case <-time.After(StopWarningAfter):
-			statLogger(app.stopStat, log).
+			app.statLogger(app.stopStat, log).
 				With(zap.String("in_progress", currentComponentStopping)).
 				Warn("components close in progress")
 		}
@@ -341,7 +358,7 @@ func (app *App) Close(ctx context.Context) error {
 		return errors.New(strings.Join(errs, "\n"))
 	}
 
-	l := statLogger(app.stopStat, log)
+	l := app.statLogger(app.stopStat, log)
 	if app.stopStat.SpentMsTotal > StopWarningAfter.Milliseconds() {
 		l.Warn("all components have been closed")
 	}
