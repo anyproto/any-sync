@@ -226,7 +226,7 @@ func (app *App) Start(ctx context.Context) (err error) {
 		case <-done:
 			return
 		case <-time.After(StartWarningAfter):
-			l := app.statLogger(app.stopStat, log).With(zap.String("in_progress", currentComponentStarting))
+			l := app.statLogger(app.startStat, log).With(zap.String("in_progress", currentComponentStarting))
 			l.Warn("components start in progress")
 		}
 	}()
@@ -261,7 +261,7 @@ func (app *App) Start(ctx context.Context) (err error) {
 	}
 
 	close(done)
-	l := app.statLogger(app.stopStat, log)
+	l := app.statLogger(app.startStat, log)
 
 	if app.startStat.SpentMsTotal > StartWarningAfter.Milliseconds() {
 		l.Warn("all components started")
