@@ -6,6 +6,7 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/transport"
 	"github.com/hashicorp/yamux"
+	"io"
 	"net"
 	"time"
 )
@@ -48,7 +49,7 @@ func (y *yamuxConn) Addr() string {
 
 func (y *yamuxConn) Accept() (conn net.Conn, err error) {
 	if conn, err = y.Session.Accept(); err != nil {
-		if err == yamux.ErrSessionShutdown {
+		if err == yamux.ErrSessionShutdown || err == io.EOF {
 			err = transport.ErrConnClosed
 		}
 		return
