@@ -79,9 +79,10 @@ type peer struct {
 
 	// drpc conn pool
 	// outgoing
-	inactive       []*subConn
-	active         map[*subConn]struct{}
-	subConnRelease chan drpc.Conn
+	inactive         []*subConn
+	active           map[*subConn]struct{}
+	subConnRelease   chan drpc.Conn
+	openingWaitCount atomic.Int32
 
 	incomingCount atomic.Int32
 	acceptCtx     context.Context
@@ -103,9 +104,11 @@ func (p *peer) Id() string {
 func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	p.mu.Lock()
 	if len(p.inactive) == 0 {
-		wait := p.limiter.wait(len(p.active))
+		wait := p.limiter.wait(len(p.active) + int(p.openingWaitCount.Load()))
 		p.mu.Unlock()
 		if wait != nil {
+			p.openingWaitCount.Add(1)
+			defer p.openingWaitCount.Add(-1)
 			// throttle new connection opening
 			select {
 			case <-ctx.Done():
