@@ -30,8 +30,12 @@ func TestYamuxTransport_Dial(t *testing.T) {
 
 	mcC, err := fxC.Dial(ctx, fxS.addr)
 	require.NoError(t, err)
-	require.Len(t, fxS.accepter.mcs, 1)
-	mcS := <-fxS.accepter.mcs
+	var mcS transport.MultiConn
+	select {
+	case mcS = <-fxS.accepter.mcs:
+	case <-time.After(time.Second * 5):
+		require.True(t, false, "timeout")
+	}
 
 	var (
 		sData     string
