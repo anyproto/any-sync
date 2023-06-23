@@ -8,7 +8,6 @@ import (
 type AclRecord struct {
 	Id        string
 	PrevId    string
-	ReadKeyId string
 	Timestamp int64
 	Data      []byte
 	Identity  crypto.PubKey
@@ -22,8 +21,9 @@ type RequestRecord struct {
 }
 
 type AclUserState struct {
-	PubKey      crypto.PubKey
-	Permissions AclPermissions
+	PubKey          crypto.PubKey
+	Permissions     AclPermissions
+	RequestMetadata []byte
 }
 
 type AclPermissions aclrecordproto.AclUserPermissions

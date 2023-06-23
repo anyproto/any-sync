@@ -2,7 +2,6 @@ package list
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
@@ -15,12 +14,9 @@ var log = logger.NewNamedSugared("common.commonspace.acllist")
 
 var (
 	ErrNoSuchAccount             = errors.New("no such account")
-	ErrIncorrectInviteKey        = errors.New("incorrect invite key")
+	ErrUnexpectedContentType     = errors.New("unexpected content type")
 	ErrIncorrectIdentity         = errors.New("incorrect identity")
 	ErrFailedToDecrypt           = errors.New("failed to decrypt key")
-	ErrUserRemoved               = errors.New("user was removed from the document")
-	ErrDocumentForbidden         = errors.New("your user was forbidden access to the document")
-	ErrUserAlreadyExists         = errors.New("user already exists")
 	ErrNoSuchRecord              = errors.New("no such record")
 	ErrNoSuchRequest             = errors.New("no such request")
 	ErrNoSuchInvite              = errors.New("no such invite")
@@ -50,13 +46,14 @@ type AclState struct {
 	keyStore         crypto.KeyStorage
 	totalReadKeys    int
 
-	lastRecordId string
+	lastRecordId     string
+	contentValidator ContentValidator
 }
 
 func newAclStateWithKeys(
 	id string,
 	key crypto.PrivKey) (*AclState, error) {
-	return &AclState{
+	st := &AclState{
 		id:             id,
 		key:            key,
 		pubKey:         key.GetPublic(),
@@ -65,18 +62,30 @@ func newAclStateWithKeys(
 		statesAtRecord: make(map[string][]AclUserState),
 		inviteKeys:     make(map[string]crypto.PubKey),
 		requestRecords: make(map[string]RequestRecord),
-	}, nil
+		keyStore:       crypto.NewKeyStorage(),
+	}
+	st.contentValidator = &contentValidator{
+		keyStore: st.keyStore,
+		aclState: st,
+	}
+	return st, nil
 }
 
 func newAclState(id string) *AclState {
-	return &AclState{
+	st := &AclState{
 		id:             id,
 		userReadKeys:   make(map[string]crypto.SymKey),
 		userStates:     make(map[string]AclUserState),
 		statesAtRecord: make(map[string][]AclUserState),
 		inviteKeys:     make(map[string]crypto.PubKey),
 		requestRecords: make(map[string]RequestRecord),
+		keyStore:       crypto.NewKeyStorage(),
 	}
+	st.contentValidator = &contentValidator{
+		keyStore: st.keyStore,
+		aclState: st,
+	}
+	return st
 }
 
 func (st *AclState) CurrentReadKeyId() string {
@@ -167,7 +176,7 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 		PubKey:      record.Identity,
 		Permissions: AclPermissions(aclrecordproto.AclUserPermissions_Admin),
 	}
-	st.currentReadKeyId = record.ReadKeyId
+	st.currentReadKeyId = record.Id
 	st.userStates[mapKeyFromPubKey(record.Identity)] = userState
 	st.totalReadKeys++
 	return
@@ -196,54 +205,60 @@ func (st *AclState) saveReadKeyFromRoot(record *AclRecord) (err error) {
 
 func (st *AclState) applyChangeData(record *AclRecord) (err error) {
 	model := record.Model.(*aclrecordproto.AclData)
-	if !st.isUserJoin(model) && !st.Permissions(record.Identity).CanManageAccounts() {
-		return ErrInsufficientPermissions
-	}
 	for _, ch := range model.GetAclContent() {
-		if err = st.applyChangeContent(ch, record.Id); err != nil {
+		if err = st.applyChangeContent(ch, record.Id, record.Identity); err != nil {
 			log.Info("error while applying changes: %v; ignore", zap.Error(err))
 			return err
 		}
 	}
-	if record.ReadKeyId != st.currentReadKeyId {
-		st.totalReadKeys++
-		st.currentReadKeyId = record.ReadKeyId
-	}
 	return nil
 }
 
-func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recordId string) error {
+func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recordId string, authorIdentity crypto.PubKey) error {
 	switch {
 	case ch.GetPermissionChange() != nil:
-		return st.applyPermissionChange(ch.GetPermissionChange(), recordId)
+		return st.applyPermissionChange(ch.GetPermissionChange(), recordId, authorIdentity)
 	case ch.GetInvite() != nil:
-		return st.applyInvite(ch.GetInvite(), recordId)
+		return st.applyInvite(ch.GetInvite(), recordId, authorIdentity)
 	case ch.GetInviteRevoke() != nil:
-		return st.applyUserRemove(ch.GetUserRemove(), recordId)
-	case ch.GetUserInvite() != nil:
-		return st.applyUserInvite(ch.GetUserInvite(), recordId)
-	case ch.GetUserJoin() != nil:
-		return st.applyUserJoin(ch.GetUserJoin(), recordId)
+		return st.applyInviteRevoke(ch.GetInviteRevoke(), recordId, authorIdentity)
+	case ch.GetRequestJoin() != nil:
+		return st.applyRequestJoin(ch.GetRequestJoin(), recordId, authorIdentity)
+	case ch.GetRequestAccept() != nil:
+		return st.applyRequestAccept(ch.GetRequestAccept(), recordId, authorIdentity)
+	case ch.GetRequestDecline() != nil:
+		return st.applyRequestDecline(ch.GetRequestDecline(), recordId, authorIdentity)
+	case ch.GetAccountRemove() != nil:
+		return st.applyAccountRemove(ch.GetAccountRemove(), recordId, authorIdentity)
+	case ch.GetReadKeyChange() != nil:
+		return st.applyReadKeyChange(ch.GetReadKeyChange(), recordId, authorIdentity)
 	default:
-		return fmt.Errorf("unexpected change type: %v", ch)
+		return ErrUnexpectedContentType
 	}
 }
 
-func (st *AclState) applyPermissionChange(ch *aclrecordproto.AclAccountPermissionChange, recordId string) error {
+func (st *AclState) applyPermissionChange(ch *aclrecordproto.AclAccountPermissionChange, recordId string, authorIdentity crypto.PubKey) error {
 	chIdentity, err := st.keyStore.PubKeyFromProto(ch.Identity)
 	if err != nil {
 		return err
 	}
-	state, exists := st.userStates[mapKeyFromPubKey(chIdentity)]
-	if !exists {
-		return ErrNoSuchAccount
+	err = st.contentValidator.ValidatePermissionChange(ch, recordId, authorIdentity)
+	if err != nil {
+		return err
 	}
+	stringKey := mapKeyFromPubKey(chIdentity)
+	state, _ := st.userStates[stringKey]
 	state.Permissions = AclPermissions(ch.Permissions)
+	st.userStates[stringKey] = state
 	return nil
 }
 
-func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, recordId string) error {
+func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, recordId string, authorIdentity crypto.PubKey) error {
 	inviteKey, err := st.keyStore.PubKeyFromProto(ch.InviteKey)
+	if err != nil {
+		return err
+	}
+	err = st.contentValidator.ValidateInvite(ch, recordId, authorIdentity)
 	if err != nil {
 		return err
 	}
@@ -251,21 +266,101 @@ func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, recordId st
 	return nil
 }
 
-func (st *AclState) applyInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, recordId string) error {
-
+func (st *AclState) applyInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, recordId string, authorIdentity crypto.PubKey) error {
+	err := st.contentValidator.ValidateInviteRevoke(ch, recordId, authorIdentity)
+	if err != nil {
+		return err
+	}
 	delete(st.inviteKeys, ch.InviteRecordId)
 	return nil
 }
 
-func (st *AclState) applyUserJoin(ch *aclrecordproto.AclUserJoin, recordId string) error {
+func (st *AclState) applyRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, recordId string, authorIdentity crypto.PubKey) error {
+	err := st.contentValidator.ValidateRequestJoin(ch, recordId, authorIdentity)
+	if err != nil {
+		return err
+	}
+	st.requestRecords[recordId] = RequestRecord{
+		RequestIdentity: authorIdentity,
+		RequestMetadata: ch.Metadata,
+	}
 	return nil
 }
 
-func (st *AclState) applyUserAdd(ch *aclrecordproto.AclUserAdd, recordId string) error {
+func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, recordId string, authorIdentity crypto.PubKey) error {
+	err := st.contentValidator.ValidateRequestAccept(ch, recordId, authorIdentity)
+	if err != nil {
+		return err
+	}
+	acceptIdentity, err := st.keyStore.PubKeyFromProto(ch.Identity)
+	if err != nil {
+		return err
+	}
+	record, _ := st.requestRecords[ch.RequestRecordId]
+	st.userStates[mapKeyFromPubKey(acceptIdentity)] = AclUserState{
+		PubKey:          acceptIdentity,
+		Permissions:     AclPermissions(ch.Permissions),
+		RequestMetadata: record.RequestMetadata,
+	}
+	if !st.pubKey.Equals(acceptIdentity) {
+		return nil
+	}
+	res, err := st.key.Decrypt(ch.EncryptedReadKeys)
+	if err != nil {
+		return err
+	}
+	keys := &aclrecordproto.AclReadKeys{}
+	err = proto.Unmarshal(res, keys)
+	if err != nil {
+		return err
+	}
+	for recordId, key := range keys.ReadKeys {
+		sym, err := crypto.UnmarshallAESKey(key)
+		if err != nil {
+			return err
+		}
+		st.userReadKeys[recordId] = sym
+	}
 	return nil
 }
 
-func (st *AclState) applyUserRemove(ch *aclrecordproto.AclUserRemove, recordId string) error {
+func (st *AclState) applyRequestDecline(ch *aclrecordproto.AclAccountRequestDecline, recordId string, authorIdentity crypto.PubKey) error {
+	err := st.contentValidator.ValidateRequestDecline(ch, recordId, authorIdentity)
+	if err != nil {
+		return err
+	}
+	delete(st.requestRecords, ch.RequestRecordId)
+	return nil
+}
+
+func (st *AclState) applyAccountRemove(ch *aclrecordproto.AclAccountRemove, recordId string, authorIdentity crypto.PubKey) error {
+	err := st.contentValidator.ValidateRemove(ch, recordId, authorIdentity)
+	if err != nil {
+		return err
+	}
+	return st.updateReadKey(ch.AccountKeys, recordId)
+}
+
+func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, recordId string, authorIdentity crypto.PubKey) error {
+	err := st.contentValidator.ValidateReadKeyChange(ch, recordId, authorIdentity)
+	if err != nil {
+		return err
+	}
+	return st.updateReadKey(ch.AccountKeys, recordId)
+}
+
+func (st *AclState) updateReadKey(keys []*aclrecordproto.AclEncryptedReadKey, recordId string) error {
+	for _, accKey := range keys {
+		identity, _ := st.keyStore.PubKeyFromProto(accKey.Identity)
+		if st.pubKey.Equals(identity) {
+			res, err := st.decryptReadKey(accKey.EncryptedReadKey)
+			if err != nil {
+				return err
+			}
+			st.userReadKeys[recordId] = res
+		}
+	}
+	st.currentReadKeyId = recordId
 	return nil
 }
 
@@ -274,7 +369,6 @@ func (st *AclState) decryptReadKey(msg []byte) (crypto.SymKey, error) {
 	if err != nil {
 		return nil, ErrFailedToDecrypt
 	}
-
 	key, err := crypto.UnmarshallAESKey(decrypted)
 	if err != nil {
 		return nil, ErrFailedToDecrypt
@@ -290,17 +384,8 @@ func (st *AclState) Permissions(identity crypto.PubKey) AclPermissions {
 	return state.Permissions
 }
 
-func (st *AclState) isUserJoin(data *aclrecordproto.AclData) bool {
-	// if we have a UserJoin, then it should always be the first one applied
-	return data.GetAclContent() != nil && data.GetAclContent()[0].GetUserJoin() != nil
-}
-
 func (st *AclState) UserStates() map[string]AclUserState {
 	return st.userStates
-}
-
-func (st *AclState) Invite(acceptPubKey []byte) (invite *aclrecordproto.AclUserInvite, err error) {
-	return
 }
 
 func (st *AclState) LastRecordId() string {

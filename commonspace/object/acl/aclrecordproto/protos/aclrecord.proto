@@ -52,6 +52,7 @@ message AclAccountRequestAccept {
     bytes identity = 1;
     string requestRecordId = 2;
     bytes encryptedReadKeys = 3;
+    AclUserPermissions permissions = 4;
 }
 
 // AclAccountRequestDecline contains the reference to join record
@@ -66,13 +67,13 @@ message AclAccountInviteRevoke {
 
 // AclReadKeys are all read keys in Acl
 message AclReadKeys {
-    repeated bytes readKey = 1;
+    map<string,bytes> readKeys = 1;
 }
 
-// AclEncryptedReadKeys are all keys for specific identity
-message AclEncryptedReadKeys {
+// AclEncryptedReadKeys are new key for specific identity
+message AclEncryptedReadKey {
     bytes identity = 1;
-    bytes encryptedReadKeys = 2;
+    bytes encryptedReadKey = 2;
 }
 
 // AclAccountPermissionChange changes permissions of specific account
@@ -83,13 +84,13 @@ message AclAccountPermissionChange {
 
 // AclReadKeyChange changes the key for a space
 message AclReadKeyChange {
-    repeated AclEncryptedReadKeys accountKeys = 1;
+    repeated AclEncryptedReadKey accountKeys = 1;
 }
 
 // AclAccountRemove removes an account and changes read key for space
 message AclAccountRemove {
     bytes identity = 1;
-    repeated AclEncryptedReadKeys accountKeys = 2;
+    repeated AclEncryptedReadKey accountKeys = 2;
 }
 
 // AclContentValue contains possible values for Acl

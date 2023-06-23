@@ -1,11 +1,12 @@
 package list
 
 import (
+	"time"
+
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
-	"time"
 )
 
 type RootContent struct {
@@ -53,7 +54,6 @@ func (a *aclRecordBuilder) Unmarshall(rawIdRecord *aclrecordproto.RawAclRecordWi
 		}
 		rec = &AclRecord{
 			Id:        rawIdRecord.Id,
-			ReadKeyId: rawIdRecord.Id,
 			Timestamp: aclRoot.Timestamp,
 			Signature: rawRec.Signature,
 			Identity:  pubKey,
@@ -72,7 +72,6 @@ func (a *aclRecordBuilder) Unmarshall(rawIdRecord *aclrecordproto.RawAclRecordWi
 		rec = &AclRecord{
 			Id:        rawIdRecord.Id,
 			PrevId:    aclRecord.PrevId,
-			ReadKeyId: aclRecord.ReadKeyId,
 			Timestamp: aclRecord.Timestamp,
 			Data:      aclRecord.Data,
 			Signature: rawRec.Signature,

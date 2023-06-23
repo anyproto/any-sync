@@ -96,6 +96,9 @@ func (c *contentValidator) ValidateRequestAccept(ch *aclrecordproto.AclAccountRe
 	if !acceptIdentity.Equals(record.RequestIdentity) {
 		return ErrIncorrectIdentity
 	}
+	if ch.Permissions == aclrecordproto.AclUserPermissions_Owner {
+		return ErrInsufficientPermissions
+	}
 	return
 }
 
@@ -129,7 +132,7 @@ func (c *contentValidator) ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyCh
 	return c.validateAccountReadKeys(ch.AccountKeys)
 }
 
-func (c *contentValidator) validateAccountReadKeys(accountKeys []*aclrecordproto.AclEncryptedReadKeys) (err error) {
+func (c *contentValidator) validateAccountReadKeys(accountKeys []*aclrecordproto.AclEncryptedReadKey) (err error) {
 	if len(accountKeys) != len(c.aclState.userStates) {
 		return ErrIncorrectNumberOfAccounts
 	}
