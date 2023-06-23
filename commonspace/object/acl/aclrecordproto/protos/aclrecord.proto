@@ -44,6 +44,7 @@ message AclAccountRequestJoin {
     bytes inviteIdentity = 1;
     string inviteRecordId = 2;
     bytes inviteIdentitySignature = 3;
+    bytes metadata = 4;
 }
 
 // AclAccountRequestAccept contains the reference to join record and all read keys, encrypted with the identity of the requestor
@@ -51,6 +52,11 @@ message AclAccountRequestAccept {
     bytes identity = 1;
     string requestRecordId = 2;
     bytes encryptedReadKeys = 3;
+}
+
+// AclAccountRequestDecline contains the reference to join record
+message AclAccountRequestDecline {
+    string requestRecordId = 1;
 }
 
 // AclAccountInviteRevoke revokes the invite record
@@ -96,6 +102,7 @@ message AclContentValue {
         AclAccountPermissionChange permissionChange = 5;
         AclAccountRemove accountRemove = 6;
         AclReadKeyChange readKeyChange = 7;
+        AclAccountRequestDecline requestDecline = 8;
     }
 }
 

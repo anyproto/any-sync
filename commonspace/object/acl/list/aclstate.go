@@ -14,20 +14,22 @@ import (
 var log = logger.NewNamedSugared("common.commonspace.acllist")
 
 var (
-	ErrNoSuchUser              = errors.New("no such user")
-	ErrFailedToDecrypt         = errors.New("failed to decrypt key")
-	ErrUserRemoved             = errors.New("user was removed from the document")
-	ErrDocumentForbidden       = errors.New("your user was forbidden access to the document")
-	ErrUserAlreadyExists       = errors.New("user already exists")
-	ErrNoSuchRecord            = errors.New("no such record")
-	ErrNoSuchInvite            = errors.New("no such invite")
-	ErrOldInvite               = errors.New("invite is too old")
-	ErrInsufficientPermissions = errors.New("insufficient permissions")
-	ErrNoReadKey               = errors.New("acl state doesn't have a read key")
-	ErrNoInvite                = errors.New("can't delete invite record")
-	ErrInvalidSignature        = errors.New("signature is invalid")
-	ErrIncorrectRoot           = errors.New("incorrect root")
-	ErrIncorrectRecordSequence = errors.New("incorrect prev id of a record")
+	ErrNoSuchAccount             = errors.New("no such account")
+	ErrIncorrectInviteKey        = errors.New("incorrect invite key")
+	ErrIncorrectIdentity         = errors.New("incorrect identity")
+	ErrFailedToDecrypt           = errors.New("failed to decrypt key")
+	ErrUserRemoved               = errors.New("user was removed from the document")
+	ErrDocumentForbidden         = errors.New("your user was forbidden access to the document")
+	ErrUserAlreadyExists         = errors.New("user already exists")
+	ErrNoSuchRecord              = errors.New("no such record")
+	ErrNoSuchRequest             = errors.New("no such request")
+	ErrNoSuchInvite              = errors.New("no such invite")
+	ErrInsufficientPermissions   = errors.New("insufficient permissions")
+	ErrIncorrectNumberOfAccounts = errors.New("incorrect number of accounts")
+	ErrNoReadKey                 = errors.New("acl state doesn't have a read key")
+	ErrInvalidSignature          = errors.New("signature is invalid")
+	ErrIncorrectRoot             = errors.New("incorrect root")
+	ErrIncorrectRecordSequence   = errors.New("incorrect prev id of a record")
 )
 
 type UserPermissionPair struct {
@@ -42,6 +44,7 @@ type AclState struct {
 	userStates       map[string]AclUserState
 	statesAtRecord   map[string][]AclUserState
 	inviteKeys       map[string]crypto.PubKey
+	requestRecords   map[string]RequestRecord
 	key              crypto.PrivKey
 	pubKey           crypto.PubKey
 	keyStore         crypto.KeyStorage
@@ -60,6 +63,8 @@ func newAclStateWithKeys(
 		userReadKeys:   make(map[string]crypto.SymKey),
 		userStates:     make(map[string]AclUserState),
 		statesAtRecord: make(map[string][]AclUserState),
+		inviteKeys:     make(map[string]crypto.PubKey),
+		requestRecords: make(map[string]RequestRecord),
 	}, nil
 }
 
@@ -69,6 +74,8 @@ func newAclState(id string) *AclState {
 		userReadKeys:   make(map[string]crypto.SymKey),
 		userStates:     make(map[string]AclUserState),
 		statesAtRecord: make(map[string][]AclUserState),
+		inviteKeys:     make(map[string]crypto.PubKey),
+		requestRecords: make(map[string]RequestRecord),
 	}
 }
 
@@ -100,7 +107,7 @@ func (st *AclState) StateAtRecord(id string, pubKey crypto.PubKey) (AclUserState
 			return perm, nil
 		}
 	}
-	return AclUserState{}, ErrNoSuchUser
+	return AclUserState{}, ErrNoSuchAccount
 }
 
 func (st *AclState) applyRecord(record *AclRecord) (err error) {
@@ -229,7 +236,7 @@ func (st *AclState) applyPermissionChange(ch *aclrecordproto.AclAccountPermissio
 	}
 	state, exists := st.userStates[mapKeyFromPubKey(chIdentity)]
 	if !exists {
-		return ErrNoSuchUser
+		return ErrNoSuchAccount
 	}
 	state.Permissions = AclPermissions(ch.Permissions)
 	return nil

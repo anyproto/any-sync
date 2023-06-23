@@ -16,6 +16,11 @@ type AclRecord struct {
 	Signature []byte
 }
 
+type RequestRecord struct {
+	RequestIdentity crypto.PubKey
+	RequestMetadata []byte
+}
+
 type AclUserState struct {
 	PubKey      crypto.PubKey
 	Permissions AclPermissions
