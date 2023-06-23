@@ -20,10 +20,6 @@ type Transport interface {
 	Dial(ctx context.Context, addr string) (mc MultiConn, err error)
 }
 
-type SubConn interface {
-	net.Conn
-}
-
 // MultiConn is an object of multiplexing connection containing handshake info
 type MultiConn interface {
 	// Context returns the connection context that contains handshake details
