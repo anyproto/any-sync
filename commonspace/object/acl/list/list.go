@@ -62,12 +62,12 @@ type aclList struct {
 func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage liststorage.ListStorage) (AclList, error) {
 	builder := newAclStateBuilderWithIdentity(acc)
 	keyStorage := crypto.NewKeyStorage()
-	return build(storage.Id(), keyStorage, builder, NewAclRecordBuilder(storage.Id(), keyStorage), storage)
+	return build(storage.Id(), keyStorage, builder, NewAclRecordBuilder(storage.Id(), keyStorage, acc), storage)
 }
 
 func BuildAclList(storage liststorage.ListStorage) (AclList, error) {
 	keyStorage := crypto.NewKeyStorage()
-	return build(storage.Id(), keyStorage, newAclStateBuilder(), NewAclRecordBuilder(storage.Id(), crypto.NewKeyStorage()), storage)
+	return build(storage.Id(), keyStorage, newAclStateBuilder(), NewAclRecordBuilder(storage.Id(), crypto.NewKeyStorage(), nil), storage)
 }
 
 func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilder, recBuilder AclRecordBuilder, storage liststorage.ListStorage) (list AclList, err error) {

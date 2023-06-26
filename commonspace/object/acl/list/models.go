@@ -28,6 +28,14 @@ type AclUserState struct {
 
 type AclPermissions aclrecordproto.AclUserPermissions
 
+func (p AclPermissions) NoPermissions() bool {
+	return aclrecordproto.AclUserPermissions(p) == aclrecordproto.AclUserPermissions_None
+}
+
+func (p AclPermissions) IsOwner() bool {
+	return aclrecordproto.AclUserPermissions(p) == aclrecordproto.AclUserPermissions_Owner
+}
+
 func (p AclPermissions) CanWrite() bool {
 	switch aclrecordproto.AclUserPermissions(p) {
 	case aclrecordproto.AclUserPermissions_Admin:
