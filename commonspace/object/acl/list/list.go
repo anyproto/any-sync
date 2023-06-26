@@ -5,11 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anyproto/any-sync/util/crypto"
-	"sync"
 )
 
 type IterFunc = func(record *AclRecord) (IsContinue bool)
@@ -33,8 +34,11 @@ type AclList interface {
 	Get(id string) (*AclRecord, error)
 	Iterate(iterFunc IterFunc)
 	IterateFrom(startId string, iterFunc IterFunc)
-	KeyStorage() crypto.KeyStorage
 
+	KeyStorage() crypto.KeyStorage
+	RecordBuilder() AclRecordBuilder
+
+	ValidateRawRecord(record *aclrecordproto.RawAclRecord) (err error)
 	AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added bool, err error)
 
 	Close() (err error)
@@ -77,7 +81,7 @@ func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilde
 		return
 	}
 
-	record, err := recBuilder.Unmarshall(rawRecordWithId)
+	record, err := recBuilder.UnmarshallWithId(rawRecordWithId)
 	if err != nil {
 		return
 	}
@@ -89,7 +93,7 @@ func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilde
 			return
 		}
 
-		record, err = recBuilder.Unmarshall(rawRecordWithId)
+		record, err = recBuilder.UnmarshallWithId(rawRecordWithId)
 		if err != nil {
 			return
 		}
@@ -132,15 +136,27 @@ func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilde
 	return
 }
 
+func (a *aclList) RecordBuilder() AclRecordBuilder {
+	return a.recordBuilder
+}
+
 func (a *aclList) Records() []*AclRecord {
 	return a.records
+}
+
+func (a *aclList) ValidateRawRecord(rawRec *aclrecordproto.RawAclRecord) (err error) {
+	record, err := a.recordBuilder.Unmarshall(rawRec)
+	if err != nil {
+		return
+	}
+	return a.aclState.Validator().ValidateAclRecordContents(record)
 }
 
 func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added bool, err error) {
 	if _, ok := a.indexes[rawRec.Id]; ok {
 		return
 	}
-	record, err := a.recordBuilder.Unmarshall(rawRec)
+	record, err := a.recordBuilder.UnmarshallWithId(rawRec)
 	if err != nil {
 		return
 	}
@@ -159,7 +175,7 @@ func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added
 }
 
 func (a *aclList) IsValidNext(rawRec *aclrecordproto.RawAclRecordWithId) (err error) {
-	_, err = a.recordBuilder.Unmarshall(rawRec)
+	_, err = a.recordBuilder.UnmarshallWithId(rawRec)
 	if err != nil {
 		return
 	}

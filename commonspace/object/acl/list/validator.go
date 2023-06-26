@@ -6,14 +6,15 @@ import (
 )
 
 type ContentValidator interface {
-	ValidatePermissionChange(ch *aclrecordproto.AclAccountPermissionChange, id string, authorIdentity crypto.PubKey) (err error)
-	ValidateInvite(ch *aclrecordproto.AclAccountInvite, id string, authorIdentity crypto.PubKey) (err error)
-	ValidateInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, id string, authorIdentity crypto.PubKey) (err error)
-	ValidateRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, id string, authorIdentity crypto.PubKey) (err error)
-	ValidateRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, id string, authorIdentity crypto.PubKey) (err error)
-	ValidateRequestDecline(ch *aclrecordproto.AclAccountRequestDecline, id string, authorIdentity crypto.PubKey) (err error)
-	ValidateRemove(ch *aclrecordproto.AclAccountRemove, id string, authorIdentity crypto.PubKey) (err error)
-	ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, id string, authorIdentity crypto.PubKey) (err error)
+	ValidateAclRecordContents(ch *AclRecord) (err error)
+	ValidatePermissionChange(ch *aclrecordproto.AclAccountPermissionChange, authorIdentity crypto.PubKey) (err error)
+	ValidateInvite(ch *aclrecordproto.AclAccountInvite, authorIdentity crypto.PubKey) (err error)
+	ValidateInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, authorIdentity crypto.PubKey) (err error)
+	ValidateRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, authorIdentity crypto.PubKey) (err error)
+	ValidateRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, authorIdentity crypto.PubKey) (err error)
+	ValidateRequestDecline(ch *aclrecordproto.AclAccountRequestDecline, authorIdentity crypto.PubKey) (err error)
+	ValidateRemove(ch *aclrecordproto.AclAccountRemove, authorIdentity crypto.PubKey) (err error)
+	ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error)
 }
 
 type contentValidator struct {
@@ -21,7 +22,44 @@ type contentValidator struct {
 	aclState *AclState
 }
 
-func (c *contentValidator) ValidatePermissionChange(ch *aclrecordproto.AclAccountPermissionChange, id string, authorIdentity crypto.PubKey) (err error) {
+func (c *contentValidator) ValidateAclRecordContents(ch *AclRecord) (err error) {
+	if ch.PrevId != c.aclState.lastRecordId {
+		return ErrIncorrectRecordSequence
+	}
+	aclData := ch.Model.(*aclrecordproto.AclData)
+	for _, content := range aclData.AclContent {
+		err = c.validateAclRecordContent(content, ch.Identity)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (c *contentValidator) validateAclRecordContent(ch *aclrecordproto.AclContentValue, authorIdentity crypto.PubKey) (err error) {
+	switch {
+	case ch.GetPermissionChange() != nil:
+		return c.ValidatePermissionChange(ch.GetPermissionChange(), authorIdentity)
+	case ch.GetInvite() != nil:
+		return c.ValidateInvite(ch.GetInvite(), authorIdentity)
+	case ch.GetInviteRevoke() != nil:
+		return c.ValidateInviteRevoke(ch.GetInviteRevoke(), authorIdentity)
+	case ch.GetRequestJoin() != nil:
+		return c.ValidateRequestJoin(ch.GetRequestJoin(), authorIdentity)
+	case ch.GetRequestAccept() != nil:
+		return c.ValidateRequestAccept(ch.GetRequestAccept(), authorIdentity)
+	case ch.GetRequestDecline() != nil:
+		return c.ValidateRequestDecline(ch.GetRequestDecline(), authorIdentity)
+	case ch.GetAccountRemove() != nil:
+		return c.ValidateRemove(ch.GetAccountRemove(), authorIdentity)
+	case ch.GetReadKeyChange() != nil:
+		return c.ValidateReadKeyChange(ch.GetReadKeyChange(), authorIdentity)
+	default:
+		return ErrUnexpectedContentType
+	}
+}
+
+func (c *contentValidator) ValidatePermissionChange(ch *aclrecordproto.AclAccountPermissionChange, authorIdentity crypto.PubKey) (err error) {
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
@@ -36,7 +74,7 @@ func (c *contentValidator) ValidatePermissionChange(ch *aclrecordproto.AclAccoun
 	return
 }
 
-func (c *contentValidator) ValidateInvite(ch *aclrecordproto.AclAccountInvite, id string, authorIdentity crypto.PubKey) (err error) {
+func (c *contentValidator) ValidateInvite(ch *aclrecordproto.AclAccountInvite, authorIdentity crypto.PubKey) (err error) {
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
@@ -44,7 +82,7 @@ func (c *contentValidator) ValidateInvite(ch *aclrecordproto.AclAccountInvite, i
 	return
 }
 
-func (c *contentValidator) ValidateInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, id string, authorIdentity crypto.PubKey) (err error) {
+func (c *contentValidator) ValidateInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, authorIdentity crypto.PubKey) (err error) {
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
@@ -55,7 +93,7 @@ func (c *contentValidator) ValidateInviteRevoke(ch *aclrecordproto.AclAccountInv
 	return
 }
 
-func (c *contentValidator) ValidateRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, id string, authorIdentity crypto.PubKey) (err error) {
+func (c *contentValidator) ValidateRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, authorIdentity crypto.PubKey) (err error) {
 	inviteKey, exists := c.aclState.inviteKeys[ch.InviteRecordId]
 	if !exists {
 		return ErrNoSuchInvite
@@ -81,7 +119,7 @@ func (c *contentValidator) ValidateRequestJoin(ch *aclrecordproto.AclAccountRequ
 	return
 }
 
-func (c *contentValidator) ValidateRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, id string, authorIdentity crypto.PubKey) (err error) {
+func (c *contentValidator) ValidateRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, authorIdentity crypto.PubKey) (err error) {
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
@@ -102,7 +140,7 @@ func (c *contentValidator) ValidateRequestAccept(ch *aclrecordproto.AclAccountRe
 	return
 }
 
-func (c *contentValidator) ValidateRequestDecline(ch *aclrecordproto.AclAccountRequestDecline, id string, authorIdentity crypto.PubKey) (err error) {
+func (c *contentValidator) ValidateRequestDecline(ch *aclrecordproto.AclAccountRequestDecline, authorIdentity crypto.PubKey) (err error) {
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
@@ -113,7 +151,7 @@ func (c *contentValidator) ValidateRequestDecline(ch *aclrecordproto.AclAccountR
 	return
 }
 
-func (c *contentValidator) ValidateRemove(ch *aclrecordproto.AclAccountRemove, id string, authorIdentity crypto.PubKey) (err error) {
+func (c *contentValidator) ValidateRemove(ch *aclrecordproto.AclAccountRemove, authorIdentity crypto.PubKey) (err error) {
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
@@ -128,7 +166,7 @@ func (c *contentValidator) ValidateRemove(ch *aclrecordproto.AclAccountRemove, i
 	return c.validateAccountReadKeys(ch.AccountKeys)
 }
 
-func (c *contentValidator) ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, id string, authorIdentity crypto.PubKey) (err error) {
+func (c *contentValidator) ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error) {
 	return c.validateAccountReadKeys(ch.AccountKeys)
 }
 

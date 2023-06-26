@@ -17,7 +17,8 @@ type RootContent struct {
 }
 
 type AclRecordBuilder interface {
-	Unmarshall(rawIdRecord *aclrecordproto.RawAclRecordWithId) (rec *AclRecord, err error)
+	UnmarshallWithId(rawIdRecord *aclrecordproto.RawAclRecordWithId) (rec *AclRecord, err error)
+	Unmarshall(rawRecord *aclrecordproto.RawAclRecord) (rec *AclRecord, err error)
 	BuildRoot(content RootContent) (rec *aclrecordproto.RawAclRecordWithId, err error)
 }
 
@@ -33,7 +34,41 @@ func NewAclRecordBuilder(id string, keyStorage crypto.KeyStorage) AclRecordBuild
 	}
 }
 
-func (a *aclRecordBuilder) Unmarshall(rawIdRecord *aclrecordproto.RawAclRecordWithId) (rec *AclRecord, err error) {
+func (a *aclRecordBuilder) Unmarshall(rawRecord *aclrecordproto.RawAclRecord) (rec *AclRecord, err error) {
+	aclRecord := &aclrecordproto.AclRecord{}
+	err = proto.Unmarshal(rawRecord.Payload, aclRecord)
+	if err != nil {
+		return
+	}
+	pubKey, err := a.keyStorage.PubKeyFromProto(aclRecord.Identity)
+	if err != nil {
+		return
+	}
+	aclData := &aclrecordproto.AclData{}
+	err = proto.Unmarshal(rawRecord.Payload, aclData)
+	if err != nil {
+		return
+	}
+	rec = &AclRecord{
+		PrevId:    aclRecord.PrevId,
+		Timestamp: aclRecord.Timestamp,
+		Data:      aclRecord.Data,
+		Signature: rawRecord.Signature,
+		Identity:  pubKey,
+		Model:     aclData,
+	}
+	res, err := pubKey.Verify(rawRecord.Payload, rawRecord.Signature)
+	if err != nil {
+		return
+	}
+	if !res {
+		err = ErrInvalidSignature
+		return
+	}
+	return
+}
+
+func (a *aclRecordBuilder) UnmarshallWithId(rawIdRecord *aclrecordproto.RawAclRecordWithId) (rec *AclRecord, err error) {
 	var (
 		rawRec = &aclrecordproto.RawAclRecord{}
 		pubKey crypto.PubKey
@@ -69,6 +104,11 @@ func (a *aclRecordBuilder) Unmarshall(rawIdRecord *aclrecordproto.RawAclRecordWi
 		if err != nil {
 			return
 		}
+		aclData := &aclrecordproto.AclData{}
+		err = proto.Unmarshal(rawRec.Payload, aclData)
+		if err != nil {
+			return
+		}
 		rec = &AclRecord{
 			Id:        rawIdRecord.Id,
 			PrevId:    aclRecord.PrevId,
@@ -76,6 +116,7 @@ func (a *aclRecordBuilder) Unmarshall(rawIdRecord *aclrecordproto.RawAclRecordWi
 			Data:      aclRecord.Data,
 			Signature: rawRec.Signature,
 			Identity:  pubKey,
+			Model:     aclData,
 		}
 	}
 
