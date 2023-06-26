@@ -30,8 +30,12 @@ func TestYamuxTransport_Dial(t *testing.T) {
 
 	mcC, err := fxC.Dial(ctx, fxS.addr)
 	require.NoError(t, err)
-	require.Len(t, fxS.accepter.mcs, 1)
-	mcS := <-fxS.accepter.mcs
+	var mcS transport.MultiConn
+	select {
+	case mcS = <-fxS.accepter.mcs:
+	case <-time.After(time.Second * 5):
+		require.True(t, false, "timeout")
+	}
 
 	var (
 		sData     string
@@ -69,11 +73,11 @@ func TestYamuxTransport_Dial(t *testing.T) {
 // no deadline - 69100 rps
 // common write deadline - 66700 rps
 // subconn write deadline - 67100 rps
-func TestWriteBench(t *testing.T) {
+func TestWriteBenchReuse(t *testing.T) {
 	t.Skip()
 	var (
 		numSubConn = 10
-		numWrites  = 100000
+		numWrites  = 10000
 	)
 
 	fxS := newFixture(t)
@@ -118,6 +122,63 @@ func TestWriteBench(t *testing.T) {
 				sc.Read(b)
 			}
 		}(conn)
+	}
+	wg.Wait()
+	dur := time.Since(st)
+	t.Logf("%.2f req per sec", float64(numWrites*numSubConn)/dur.Seconds())
+}
+
+func TestWriteBenchNew(t *testing.T) {
+	t.Skip()
+	var (
+		numSubConn = 10
+		numWrites  = 10000
+	)
+
+	fxS := newFixture(t)
+	defer fxS.finish(t)
+	fxC := newFixture(t)
+	defer fxC.finish(t)
+
+	mcC, err := fxC.Dial(ctx, fxS.addr)
+	require.NoError(t, err)
+	mcS := <-fxS.accepter.mcs
+
+	go func() {
+		for i := 0; i < numSubConn; i++ {
+			require.NoError(t, err)
+			go func() {
+				var b = make([]byte, 1024)
+				for {
+					conn, _ := mcS.Accept()
+					n, _ := conn.Read(b)
+					if n > 0 {
+						conn.Write(b[:n])
+					} else {
+						_ = conn.Close()
+						break
+					}
+					conn.Close()
+				}
+			}()
+		}
+	}()
+
+	var wg sync.WaitGroup
+	wg.Add(numSubConn)
+	st := time.Now()
+	for i := 0; i < numSubConn; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < numWrites; j++ {
+				sc, err := mcC.Open(ctx)
+				require.NoError(t, err)
+				var b = []byte("some data some data some data some data some data some data some data some data some data")
+				sc.Write(b)
+				sc.Read(b)
+				sc.Close()
+			}
+		}()
 	}
 	wg.Wait()
 	dur := time.Since(st)
