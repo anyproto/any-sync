@@ -182,16 +182,21 @@ func (a *aclRecordBuilder) BuildRequestAccept(payload RequestAcceptPayload) (raw
 		err = ErrNoSuchRequest
 		return
 	}
-	readKeys := map[string][]byte{}
+	var encryptedReadKeys []*aclrecordproto.AclReadKeyWithRecord
 	for keyId, key := range a.state.userReadKeys {
 		rawKey, err := key.Raw()
 		if err != nil {
 			return nil, err
 		}
-		readKeys[keyId] = rawKey
+		enc, err := request.RequestIdentity.Encrypt(rawKey)
+		if err != nil {
+			return nil, err
+		}
+		encryptedReadKeys = append(encryptedReadKeys, &aclrecordproto.AclReadKeyWithRecord{
+			RecordId:         keyId,
+			EncryptedReadKey: enc,
+		})
 	}
-	aclKeys := &aclrecordproto.AclReadKeys{ReadKeys: readKeys}
-	marshalledKeys, err := aclKeys.Marshal()
 	if err != nil {
 		return
 	}
@@ -199,14 +204,10 @@ func (a *aclRecordBuilder) BuildRequestAccept(payload RequestAcceptPayload) (raw
 	if err != nil {
 		return
 	}
-	encKeys, err := request.RequestIdentity.Encrypt(marshalledKeys)
-	if err != nil {
-		return
-	}
 	acceptRec := &aclrecordproto.AclAccountRequestAccept{
 		Identity:          requestIdentityProto,
 		RequestRecordId:   payload.RequestRecordId,
-		EncryptedReadKeys: encKeys,
+		EncryptedReadKeys: encryptedReadKeys,
 		Permissions:       aclrecordproto.AclUserPermissions(payload.Permissions),
 	}
 	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_RequestAccept{RequestAccept: acceptRec}}

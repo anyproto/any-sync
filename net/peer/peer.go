@@ -201,11 +201,6 @@ func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
 	return false, nil
 }
 
-// 70 stream -> 1 subconn
-// 62 request -> 1 subconn
-// 2600 subconn (2400 non active -> 5 min)
-
-// 2 5min connect
 func (p *peer) gc(ttl time.Duration) (aliveCount int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()

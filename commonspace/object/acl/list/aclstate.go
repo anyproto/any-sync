@@ -312,21 +312,16 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 	if !st.pubKey.Equals(acceptIdentity) {
 		return nil
 	}
-	res, err := st.key.Decrypt(ch.EncryptedReadKeys)
-	if err != nil {
-		return err
-	}
-	keys := &aclrecordproto.AclReadKeys{}
-	err = proto.Unmarshal(res, keys)
-	if err != nil {
-		return err
-	}
-	for keyId, key := range keys.ReadKeys {
-		sym, err := crypto.UnmarshallAESKey(key)
+	for _, key := range ch.EncryptedReadKeys {
+		decrypted, err := st.key.Decrypt(key.EncryptedReadKey)
 		if err != nil {
 			return err
 		}
-		st.userReadKeys[keyId] = sym
+		sym, err := crypto.UnmarshallAESKey(decrypted)
+		if err != nil {
+			return err
+		}
+		st.userReadKeys[key.RecordId] = sym
 	}
 	return nil
 }

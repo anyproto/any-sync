@@ -51,7 +51,7 @@ message AclAccountRequestJoin {
 message AclAccountRequestAccept {
     bytes identity = 1;
     string requestRecordId = 2;
-    bytes encryptedReadKeys = 3;
+    repeated AclReadKeyWithRecord encryptedReadKeys = 3;
     AclUserPermissions permissions = 4;
 }
 
@@ -65,9 +65,10 @@ message AclAccountInviteRevoke {
     string inviteRecordId = 1;
 }
 
-// AclReadKeys are all read keys in Acl
-message AclReadKeys {
-    map<string,bytes> readKeys = 1;
+// AclReadKeys are a read key with record id
+message AclReadKeyWithRecord {
+    string recordId = 1;
+    bytes encryptedReadKey = 2;
 }
 
 // AclEncryptedReadKeys are new key for specific identity
