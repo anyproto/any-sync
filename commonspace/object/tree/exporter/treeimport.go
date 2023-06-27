@@ -15,7 +15,7 @@ type TreeImportParams struct {
 }
 
 func ImportHistoryTree(params TreeImportParams) (tree objecttree.ReadableObjectTree, err error) {
-	aclList, err := list.BuildAclList(params.ListStorage)
+	aclList, err := list.BuildAclList(params.ListStorage, list.NoOpAcceptorVerifier{})
 	if err != nil {
 		return
 	}

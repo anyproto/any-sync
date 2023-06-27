@@ -34,8 +34,8 @@ type PermissionChangePayload struct {
 }
 
 type AccountRemovePayload struct {
-	Identity crypto.PubKey
-	ReadKey  crypto.SymKey
+	Identities []crypto.PubKey
+	ReadKey    crypto.SymKey
 }
 
 type InviteResult struct {
@@ -53,6 +53,7 @@ type AclRecordBuilder interface {
 	BuildRequestJoin(payload RequestJoinPayload) (rawRecord *aclrecordproto.RawAclRecord, err error)
 	BuildRequestAccept(payload RequestAcceptPayload) (rawRecord *aclrecordproto.RawAclRecord, err error)
 	BuildRequestDecline(requestRecordId string) (rawRecord *aclrecordproto.RawAclRecord, err error)
+	BuildRequestRemove() (rawRecord *aclrecordproto.RawAclRecord, err error)
 	BuildPermissionChange(payload PermissionChangePayload) (rawRecord *aclrecordproto.RawAclRecord, err error)
 	BuildReadKeyChange(newKey crypto.SymKey) (rawRecord *aclrecordproto.RawAclRecord, err error)
 	BuildAccountRemove(payload AccountRemovePayload) (rawRecord *aclrecordproto.RawAclRecord, err error)
@@ -230,12 +231,13 @@ func (a *aclRecordBuilder) BuildRequestDecline(requestRecordId string) (rawRecor
 }
 
 func (a *aclRecordBuilder) BuildPermissionChange(payload PermissionChangePayload) (rawRecord *aclrecordproto.RawAclRecord, err error) {
-	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
+	permissions := a.state.Permissions(a.state.pubKey)
+	if !permissions.CanManageAccounts() || payload.Identity.Equals(a.state.pubKey) {
 		err = ErrInsufficientPermissions
 		return
 	}
-	if payload.Identity.Equals(a.state.pubKey) || payload.Permissions.IsOwner() {
-		err = ErrIncorrectPermissions
+	if payload.Permissions.IsOwner() {
+		err = ErrIsOwner
 		return
 	}
 	protoIdentity, err := payload.Identity.Marshall()
@@ -284,13 +286,19 @@ func (a *aclRecordBuilder) BuildReadKeyChange(newKey crypto.SymKey) (rawRecord *
 }
 
 func (a *aclRecordBuilder) BuildAccountRemove(payload AccountRemovePayload) (rawRecord *aclrecordproto.RawAclRecord, err error) {
-	permissions := a.state.Permissions(payload.Identity)
-	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() || permissions.IsOwner() {
-		err = ErrInsufficientPermissions
-		return
+	deletedMap := map[string]struct{}{}
+	for _, key := range payload.Identities {
+		permissions := a.state.Permissions(key)
+		if permissions.IsOwner() {
+			return nil, ErrInsufficientPermissions
+		}
+		if permissions.NoPermissions() {
+			return nil, ErrNoSuchAccount
+		}
+		deletedMap[mapKeyFromPubKey(key)] = struct{}{}
 	}
-	if permissions.NoPermissions() {
-		err = ErrNoSuchAccount
+	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
+		err = ErrInsufficientPermissions
 		return
 	}
 	rawKey, err := payload.ReadKey.Raw()
@@ -303,7 +311,7 @@ func (a *aclRecordBuilder) BuildAccountRemove(payload AccountRemovePayload) (raw
 	}
 	var aclReadKeys []*aclrecordproto.AclEncryptedReadKey
 	for _, st := range a.state.userStates {
-		if st.PubKey.Equals(payload.Identity) {
+		if _, exists := deletedMap[mapKeyFromPubKey(st.PubKey)]; exists {
 			continue
 		}
 		protoIdentity, err := st.PubKey.Marshall()
@@ -319,12 +327,31 @@ func (a *aclRecordBuilder) BuildAccountRemove(payload AccountRemovePayload) (raw
 			EncryptedReadKey: enc,
 		})
 	}
-	protoIdentity, err := payload.Identity.Marshall()
-	if err != nil {
+	var marshalledIdentities [][]byte
+	for _, key := range payload.Identities {
+		protoIdentity, err := key.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		marshalledIdentities = append(marshalledIdentities, protoIdentity)
+	}
+	removeRec := &aclrecordproto.AclAccountRemove{AccountKeys: aclReadKeys, Identities: marshalledIdentities}
+	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_AccountRemove{AccountRemove: removeRec}}
+	return a.buildRecord(content)
+}
+
+func (a *aclRecordBuilder) BuildRequestRemove() (rawRecord *aclrecordproto.RawAclRecord, err error) {
+	permissions := a.state.Permissions(a.state.pubKey)
+	if permissions.NoPermissions() {
+		err = ErrNoSuchAccount
 		return
 	}
-	removeRec := &aclrecordproto.AclAccountRemove{AccountKeys: aclReadKeys, Identity: protoIdentity}
-	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_AccountRemove{AccountRemove: removeRec}}
+	if permissions.IsOwner() {
+		err = ErrIsOwner
+		return
+	}
+	removeRec := &aclrecordproto.AclAccountRequestRemove{}
+	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_AccountRequestRemove{AccountRequestRemove: removeRec}}
 	return a.buildRecord(content)
 }
 

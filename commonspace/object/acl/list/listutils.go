@@ -27,5 +27,5 @@ func NewTestDerivedAcl(spaceId string, keys *accountdata.AccountKeys) (AclList, 
 	if err != nil {
 		return nil, err
 	}
-	return BuildAclListWithIdentity(keys, st)
+	return BuildAclListWithIdentity(keys, st, NoOpAcceptorVerifier{})
 }

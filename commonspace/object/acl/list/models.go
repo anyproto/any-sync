@@ -26,6 +26,13 @@ type AclUserState struct {
 	RequestMetadata []byte
 }
 
+type RequestType int
+
+const (
+	RequestTypeRemove RequestType = iota
+	RequestTypeJoin
+)
+
 type AclPermissions aclrecordproto.AclUserPermissions
 
 func (p AclPermissions) NoPermissions() bool {

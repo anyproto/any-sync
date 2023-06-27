@@ -13,7 +13,8 @@ type ContentValidator interface {
 	ValidateRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestDecline(ch *aclrecordproto.AclAccountRequestDecline, authorIdentity crypto.PubKey) (err error)
-	ValidateRemove(ch *aclrecordproto.AclAccountRemove, authorIdentity crypto.PubKey) (err error)
+	ValidateAccountRemove(ch *aclrecordproto.AclAccountRemove, authorIdentity crypto.PubKey) (err error)
+	ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error)
 	ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error)
 }
 
@@ -51,7 +52,9 @@ func (c *contentValidator) validateAclRecordContent(ch *aclrecordproto.AclConten
 	case ch.GetRequestDecline() != nil:
 		return c.ValidateRequestDecline(ch.GetRequestDecline(), authorIdentity)
 	case ch.GetAccountRemove() != nil:
-		return c.ValidateRemove(ch.GetAccountRemove(), authorIdentity)
+		return c.ValidateAccountRemove(ch.GetAccountRemove(), authorIdentity)
+	case ch.GetAccountRequestRemove() != nil:
+		return c.ValidateRequestRemove(ch.GetAccountRequestRemove(), authorIdentity)
 	case ch.GetReadKeyChange() != nil:
 		return c.ValidateReadKeyChange(ch.GetReadKeyChange(), authorIdentity)
 	default:
@@ -102,6 +105,9 @@ func (c *contentValidator) ValidateRequestJoin(ch *aclrecordproto.AclAccountRequ
 	if err != nil {
 		return
 	}
+	if _, exists := c.aclState.pendingRequests[mapKeyFromPubKey(inviteIdentity)]; exists {
+		return ErrPendingRequest
+	}
 	if !authorIdentity.Equals(inviteIdentity) {
 		return ErrIncorrectIdentity
 	}
@@ -151,19 +157,34 @@ func (c *contentValidator) ValidateRequestDecline(ch *aclrecordproto.AclAccountR
 	return
 }
 
-func (c *contentValidator) ValidateRemove(ch *aclrecordproto.AclAccountRemove, authorIdentity crypto.PubKey) (err error) {
+func (c *contentValidator) ValidateAccountRemove(ch *aclrecordproto.AclAccountRemove, authorIdentity crypto.PubKey) (err error) {
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
-	identity, err := c.keyStore.PubKeyFromProto(ch.Identity)
-	if err != nil {
-		return
-	}
-	_, exists := c.aclState.userStates[mapKeyFromPubKey(identity)]
-	if !exists {
-		return ErrNoSuchAccount
+	for _, rawIdentity := range ch.Identities {
+		identity, err := c.keyStore.PubKeyFromProto(rawIdentity)
+		if err != nil {
+			return err
+		}
+		permissions := c.aclState.Permissions(identity)
+		if permissions.NoPermissions() {
+			return ErrNoSuchAccount
+		}
+		if permissions.IsOwner() {
+			return ErrInsufficientPermissions
+		}
 	}
 	return c.validateAccountReadKeys(ch.AccountKeys)
+}
+
+func (c *contentValidator) ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error) {
+	if c.aclState.Permissions(authorIdentity).NoPermissions() {
+		return ErrInsufficientPermissions
+	}
+	if _, exists := c.aclState.pendingRequests[mapKeyFromPubKey(authorIdentity)]; exists {
+		return ErrPendingRequest
+	}
+	return
 }
 
 func (c *contentValidator) ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error) {

@@ -2,6 +2,12 @@ package commonspace
 
 import (
 	"errors"
+	"hash/fnv"
+	"math/rand"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
@@ -11,11 +17,6 @@ import (
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
-	"hash/fnv"
-	"math/rand"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -71,7 +72,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 
 	// building acl root
 	keyStorage := crypto.NewKeyStorage()
-	aclBuilder := list.NewAclRecordBuilder("", keyStorage)
+	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil)
 	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
 		PrivKey:          payload.SigningKey,
 		MasterKey:        payload.MasterKey,
@@ -158,7 +159,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 
 	// building acl root
 	keyStorage := crypto.NewKeyStorage()
-	aclBuilder := list.NewAclRecordBuilder("", keyStorage)
+	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil)
 	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
 		PrivKey:   payload.SigningKey,
 		MasterKey: payload.MasterKey,

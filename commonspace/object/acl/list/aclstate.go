@@ -14,6 +14,7 @@ var log = logger.NewNamedSugared("common.commonspace.acllist")
 
 var (
 	ErrNoSuchAccount             = errors.New("no such account")
+	ErrPendingRequest            = errors.New("already exists pending request")
 	ErrUnexpectedContentType     = errors.New("unexpected content type")
 	ErrIncorrectIdentity         = errors.New("incorrect identity")
 	ErrIncorrectInviteKey        = errors.New("incorrect invite key")
@@ -22,7 +23,7 @@ var (
 	ErrNoSuchRequest             = errors.New("no such request")
 	ErrNoSuchInvite              = errors.New("no such invite")
 	ErrInsufficientPermissions   = errors.New("insufficient permissions")
-	ErrIncorrectPermissions      = errors.New("incorrect permissions")
+	ErrIsOwner                   = errors.New("can't be made by owner")
 	ErrIncorrectNumberOfAccounts = errors.New("incorrect number of accounts")
 	ErrNoReadKey                 = errors.New("acl state doesn't have a read key")
 	ErrIncorrectReadKey          = errors.New("incorrect read key")
@@ -39,15 +40,24 @@ type UserPermissionPair struct {
 type AclState struct {
 	id               string
 	currentReadKeyId string
-	userReadKeys     map[string]crypto.SymKey
-	userStates       map[string]AclUserState
-	statesAtRecord   map[string][]AclUserState
-	inviteKeys       map[string]crypto.PubKey
-	requestRecords   map[string]RequestRecord
-	key              crypto.PrivKey
-	pubKey           crypto.PubKey
-	keyStore         crypto.KeyStorage
-	totalReadKeys    int
+	// userReadKeys is a map recordId -> read key which tells us about every read key
+	userReadKeys map[string]crypto.SymKey
+	// userStates is a map pubKey -> state which defines current user state
+	userStates map[string]AclUserState
+	// statesAtRecord is a map recordId -> state which define user state at particular record
+	//  probably this can grow rather large at some point, so we can maybe optimise later to have:
+	//  - map pubKey -> []recordIds (where recordIds is an array where such identity permissions were changed)
+	statesAtRecord map[string][]AclUserState
+	// inviteKeys is a map recordId -> invite
+	inviteKeys map[string]crypto.PubKey
+	// requestRecords is a map recordId -> RequestRecord
+	requestRecords map[string]RequestRecord
+	// pendingRequests is a map pubKey -> RequestType
+	pendingRequests map[string]RequestType
+	key             crypto.PrivKey
+	pubKey          crypto.PubKey
+	keyStore        crypto.KeyStorage
+	totalReadKeys   int
 
 	lastRecordId     string
 	contentValidator ContentValidator
@@ -57,15 +67,16 @@ func newAclStateWithKeys(
 	id string,
 	key crypto.PrivKey) (*AclState, error) {
 	st := &AclState{
-		id:             id,
-		key:            key,
-		pubKey:         key.GetPublic(),
-		userReadKeys:   make(map[string]crypto.SymKey),
-		userStates:     make(map[string]AclUserState),
-		statesAtRecord: make(map[string][]AclUserState),
-		inviteKeys:     make(map[string]crypto.PubKey),
-		requestRecords: make(map[string]RequestRecord),
-		keyStore:       crypto.NewKeyStorage(),
+		id:              id,
+		key:             key,
+		pubKey:          key.GetPublic(),
+		userReadKeys:    make(map[string]crypto.SymKey),
+		userStates:      make(map[string]AclUserState),
+		statesAtRecord:  make(map[string][]AclUserState),
+		inviteKeys:      make(map[string]crypto.PubKey),
+		requestRecords:  make(map[string]RequestRecord),
+		pendingRequests: make(map[string]RequestType),
+		keyStore:        crypto.NewKeyStorage(),
 	}
 	st.contentValidator = &contentValidator{
 		keyStore: st.keyStore,
@@ -76,13 +87,14 @@ func newAclStateWithKeys(
 
 func newAclState(id string) *AclState {
 	st := &AclState{
-		id:             id,
-		userReadKeys:   make(map[string]crypto.SymKey),
-		userStates:     make(map[string]AclUserState),
-		statesAtRecord: make(map[string][]AclUserState),
-		inviteKeys:     make(map[string]crypto.PubKey),
-		requestRecords: make(map[string]RequestRecord),
-		keyStore:       crypto.NewKeyStorage(),
+		id:              id,
+		userReadKeys:    make(map[string]crypto.SymKey),
+		userStates:      make(map[string]AclUserState),
+		statesAtRecord:  make(map[string][]AclUserState),
+		inviteKeys:      make(map[string]crypto.PubKey),
+		requestRecords:  make(map[string]RequestRecord),
+		pendingRequests: make(map[string]RequestType),
+		keyStore:        crypto.NewKeyStorage(),
 	}
 	st.contentValidator = &contentValidator{
 		keyStore: st.keyStore,
@@ -239,6 +251,8 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 		return st.applyAccountRemove(ch.GetAccountRemove(), recordId, authorIdentity)
 	case ch.GetReadKeyChange() != nil:
 		return st.applyReadKeyChange(ch.GetReadKeyChange(), recordId, authorIdentity)
+	case ch.GetAccountRequestRemove() != nil:
+		return st.applyRequestRemove(ch.GetAccountRequestRemove(), recordId, authorIdentity)
 	default:
 		return ErrUnexpectedContentType
 	}
@@ -287,6 +301,7 @@ func (st *AclState) applyRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, r
 	if err != nil {
 		return err
 	}
+	st.pendingRequests[mapKeyFromPubKey(authorIdentity)] = RequestTypeJoin
 	st.requestRecords[recordId] = RequestRecord{
 		RequestIdentity: authorIdentity,
 		RequestMetadata: ch.Metadata,
@@ -309,6 +324,7 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 		Permissions:     AclPermissions(ch.Permissions),
 		RequestMetadata: record.RequestMetadata,
 	}
+	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity))
 	if !st.pubKey.Equals(acceptIdentity) {
 		return nil
 	}
@@ -331,14 +347,33 @@ func (st *AclState) applyRequestDecline(ch *aclrecordproto.AclAccountRequestDecl
 	if err != nil {
 		return err
 	}
+	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity))
 	delete(st.requestRecords, ch.RequestRecordId)
 	return nil
 }
 
-func (st *AclState) applyAccountRemove(ch *aclrecordproto.AclAccountRemove, recordId string, authorIdentity crypto.PubKey) error {
-	err := st.contentValidator.ValidateRemove(ch, authorIdentity)
+func (st *AclState) applyRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, recordId string, authorIdentity crypto.PubKey) error {
+	err := st.contentValidator.ValidateRequestRemove(ch, authorIdentity)
 	if err != nil {
 		return err
+	}
+	st.pendingRequests[mapKeyFromPubKey(authorIdentity)] = RequestTypeRemove
+	return nil
+}
+
+func (st *AclState) applyAccountRemove(ch *aclrecordproto.AclAccountRemove, recordId string, authorIdentity crypto.PubKey) error {
+	err := st.contentValidator.ValidateAccountRemove(ch, authorIdentity)
+	if err != nil {
+		return err
+	}
+	for _, rawIdentity := range ch.Identities {
+		identity, err := st.keyStore.PubKeyFromProto(rawIdentity)
+		if err != nil {
+			return err
+		}
+		idKey := mapKeyFromPubKey(identity)
+		delete(st.userStates, idKey)
+		delete(st.pendingRequests, idKey)
 	}
 	return st.updateReadKey(ch.AccountKeys, recordId)
 }

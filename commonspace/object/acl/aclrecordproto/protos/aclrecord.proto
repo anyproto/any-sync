@@ -90,8 +90,12 @@ message AclReadKeyChange {
 
 // AclAccountRemove removes an account and changes read key for space
 message AclAccountRemove {
-    bytes identity = 1;
+    repeated bytes identities = 1;
     repeated AclEncryptedReadKey accountKeys = 2;
+}
+
+// AclAccountRequestRemove adds a request to remove an account
+message AclAccountRequestRemove {
 }
 
 // AclContentValue contains possible values for Acl
@@ -105,6 +109,7 @@ message AclContentValue {
         AclAccountRemove accountRemove = 6;
         AclReadKeyChange readKeyChange = 7;
         AclAccountRequestDecline requestDecline = 8;
+        AclAccountRequestRemove accountRequestRemove = 9;
     }
 }
 

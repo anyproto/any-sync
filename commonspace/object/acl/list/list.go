@@ -23,6 +23,17 @@ type RWLocker interface {
 	RUnlock()
 }
 
+type AcceptorVerifier interface {
+	VerifyAcceptor(rec *aclrecordproto.RawAclRecord) (err error)
+}
+
+type NoOpAcceptorVerifier struct {
+}
+
+func (n NoOpAcceptorVerifier) VerifyAcceptor(rec *aclrecordproto.RawAclRecord) (err error) {
+	return nil
+}
+
 type AclList interface {
 	RWLocker
 	Id() string
@@ -32,6 +43,7 @@ type AclList interface {
 	IsAfter(first string, second string) (bool, error)
 	Head() *AclRecord
 	Get(id string) (*AclRecord, error)
+	GetIndex(idx int) (*AclRecord, error)
 	Iterate(iterFunc IterFunc)
 	IterateFrom(startId string, iterFunc IterFunc)
 
@@ -59,18 +71,43 @@ type aclList struct {
 	sync.RWMutex
 }
 
-func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage liststorage.ListStorage) (AclList, error) {
-	builder := newAclStateBuilderWithIdentity(acc)
-	keyStorage := crypto.NewKeyStorage()
-	return build(storage.Id(), keyStorage, builder, NewAclRecordBuilder(storage.Id(), keyStorage, acc), storage)
+type internalDeps struct {
+	storage          liststorage.ListStorage
+	keyStorage       crypto.KeyStorage
+	stateBuilder     *aclStateBuilder
+	recordBuilder    AclRecordBuilder
+	acceptorVerifier AcceptorVerifier
 }
 
-func BuildAclList(storage liststorage.ListStorage) (AclList, error) {
+func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage liststorage.ListStorage, verifier AcceptorVerifier) (AclList, error) {
 	keyStorage := crypto.NewKeyStorage()
-	return build(storage.Id(), keyStorage, newAclStateBuilder(), NewAclRecordBuilder(storage.Id(), crypto.NewKeyStorage(), nil), storage)
+	deps := internalDeps{
+		storage:       storage,
+		keyStorage:    keyStorage,
+		stateBuilder:  newAclStateBuilderWithIdentity(acc),
+		recordBuilder: NewAclRecordBuilder(storage.Id(), keyStorage, acc),
+	}
+	return build(deps)
 }
 
-func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilder, recBuilder AclRecordBuilder, storage liststorage.ListStorage) (list AclList, err error) {
+func BuildAclList(storage liststorage.ListStorage, verifier AcceptorVerifier) (AclList, error) {
+	keyStorage := crypto.NewKeyStorage()
+	deps := internalDeps{
+		storage:       storage,
+		keyStorage:    keyStorage,
+		stateBuilder:  newAclStateBuilder(),
+		recordBuilder: NewAclRecordBuilder(storage.Id(), keyStorage, nil),
+	}
+	return build(deps)
+}
+
+func build(deps internalDeps) (list AclList, err error) {
+	var (
+		storage      = deps.storage
+		id           = deps.storage.Id()
+		recBuilder   = deps.recordBuilder
+		stateBuilder = deps.stateBuilder
+	)
 	head, err := storage.Head()
 	if err != nil {
 		return
@@ -215,9 +252,17 @@ func (a *aclList) Head() *AclRecord {
 func (a *aclList) Get(id string) (*AclRecord, error) {
 	recIdx, ok := a.indexes[id]
 	if !ok {
-		return nil, fmt.Errorf("no such record")
+		return nil, ErrNoSuchRecord
 	}
 	return a.records[recIdx], nil
+}
+
+func (a *aclList) GetIndex(idx int) (*AclRecord, error) {
+	// TODO: when we add snapshots we will have to monitor record num in snapshots
+	if idx < 0 || idx >= len(a.records) {
+		return nil, ErrNoSuchRecord
+	}
+	return a.records[idx], nil
 }
 
 func (a *aclList) Iterate(iterFunc IterFunc) {
