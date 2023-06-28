@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/anyproto/any-sync/app/logger"
@@ -36,8 +37,15 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 		active:    map[*subConn]struct{}{},
 		MultiConn: mc,
 		ctrl:      ctrl,
-		created:   time.Now(),
+		limiter: limiter{
+			// start throttling after 10 sub conns
+			startThreshold: 10,
+			slowDownStep:   time.Millisecond * 100,
+		},
+		subConnRelease: make(chan drpc.Conn),
+		created:        time.Now(),
 	}
+	pr.acceptCtx, pr.acceptCtxCancel = context.WithCancel(context.Background())
 	if pr.id, err = CtxPeerId(ctx); err != nil {
 		return
 	}
@@ -71,13 +79,22 @@ type peer struct {
 	ctrl connCtrl
 
 	// drpc conn pool
-	inactive []*subConn
-	active   map[*subConn]struct{}
+	// outgoing
+	inactive         []*subConn
+	active           map[*subConn]struct{}
+	subConnRelease   chan drpc.Conn
+	openingWaitCount atomic.Int32
+
+	incomingCount atomic.Int32
+	acceptCtx     context.Context
+
+	acceptCtxCancel context.CancelFunc
+
+	limiter limiter
 
 	mu sync.Mutex
 
 	created time.Time
-
 	transport.MultiConn
 }
 
@@ -88,7 +105,20 @@ func (p *peer) Id() string {
 func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	p.mu.Lock()
 	if len(p.inactive) == 0 {
+		wait := p.limiter.wait(len(p.active) + int(p.openingWaitCount.Load()))
 		p.mu.Unlock()
+		if wait != nil {
+			p.openingWaitCount.Add(1)
+			defer p.openingWaitCount.Add(-1)
+			// throttle new connection opening
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case dconn := <-p.subConnRelease:
+				return dconn, nil
+			case <-wait:
+			}
+		}
 		dconn, err := p.openDrpcConn(ctx)
 		if err != nil {
 			return nil, err
@@ -111,6 +141,21 @@ func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 }
 
 func (p *peer) ReleaseDrpcConn(conn drpc.Conn) {
+	// do nothing if it's closed connection
+	select {
+	case <-conn.Closed():
+		return
+	default:
+	}
+
+	// try to send this connection to acquire if anyone is waiting for it
+	select {
+	case p.subConnRelease <- conn:
+		return
+	default:
+	}
+
+	// return to pool
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	sc, ok := conn.(*subConn)
@@ -163,12 +208,21 @@ func (p *peer) acceptLoop() {
 		}
 	}()
 	for {
+		if wait := p.limiter.wait(int(p.incomingCount.Load())); wait != nil {
+			select {
+			case <-wait:
+			case <-p.acceptCtx.Done():
+				return
+			}
+		}
 		conn, err := p.Accept()
 		if err != nil {
 			exitErr = err
 			return
 		}
 		go func() {
+			p.incomingCount.Add(1)
+			defer p.incomingCount.Add(-1)
 			serveErr := p.serve(conn)
 			if serveErr != io.EOF && serveErr != transport.ErrConnClosed {
 				log.InfoCtx(p.Context(), "serve connection error", zap.Error(serveErr))

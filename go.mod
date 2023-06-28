@@ -25,7 +25,7 @@ require (
 	github.com/ipfs/go-ipld-format v0.5.0
 	github.com/ipfs/go-merkledag v0.11.0
 	github.com/ipfs/go-unixfs v0.4.6
-	github.com/libp2p/go-libp2p v0.28.0
+	github.com/libp2p/go-libp2p v0.28.1
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multibase v0.2.0
 	github.com/multiformats/go-multihash v0.2.3

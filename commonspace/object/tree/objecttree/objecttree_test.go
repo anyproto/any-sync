@@ -3,6 +3,9 @@ package objecttree
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -10,8 +13,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 type testTreeContext struct {
@@ -123,6 +124,7 @@ func TestObjectTree(t *testing.T) {
 			require.NoError(t, err)
 			require.GreaterOrEqual(t, start.Unix(), ch.Timestamp)
 			require.LessOrEqual(t, end.Unix(), ch.Timestamp)
+			require.Equal(t, res.Added[0].Id, oTree.(*objectTree).tree.lastIteratedHeadId)
 		})
 		t.Run("timestamp is set correctly", func(t *testing.T) {
 			someTs := time.Now().Add(time.Hour).Unix()
@@ -139,6 +141,7 @@ func TestObjectTree(t *testing.T) {
 			ch, err := oTree.(*objectTree).changeBuilder.Unmarshall(res.Added[0], true)
 			require.NoError(t, err)
 			require.Equal(t, ch.Timestamp, someTs)
+			require.Equal(t, res.Added[0].Id, oTree.(*objectTree).tree.lastIteratedHeadId)
 		})
 	})
 
