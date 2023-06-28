@@ -53,8 +53,8 @@ type AclState struct {
 	inviteKeys map[string]crypto.PubKey
 	// requestRecords is a map recordId -> RequestRecord
 	requestRecords map[string]RequestRecord
-	// pendingRequests is a map pubKey -> RequestType
-	pendingRequests map[string]RequestType
+	// pendingRequests is a map pubKey -> recordId
+	pendingRequests map[string]string
 	key             crypto.PrivKey
 	pubKey          crypto.PubKey
 	keyStore        crypto.KeyStorage
@@ -76,7 +76,7 @@ func newAclStateWithKeys(
 		statesAtRecord:  make(map[string][]AclUserState),
 		inviteKeys:      make(map[string]crypto.PubKey),
 		requestRecords:  make(map[string]RequestRecord),
-		pendingRequests: make(map[string]RequestType),
+		pendingRequests: make(map[string]string),
 		keyStore:        crypto.NewKeyStorage(),
 	}
 	st.contentValidator = &contentValidator{
@@ -94,7 +94,7 @@ func newAclState(id string) *AclState {
 		statesAtRecord:  make(map[string][]AclUserState),
 		inviteKeys:      make(map[string]crypto.PubKey),
 		requestRecords:  make(map[string]RequestRecord),
-		pendingRequests: make(map[string]RequestType),
+		pendingRequests: make(map[string]string),
 		keyStore:        crypto.NewKeyStorage(),
 	}
 	st.contentValidator = &contentValidator{
@@ -113,7 +113,7 @@ func (st *AclState) CurrentReadKeyId() string {
 }
 
 func (st *AclState) CurrentReadKey() (crypto.SymKey, error) {
-	key, exists := st.userReadKeys[st.currentReadKeyId]
+	key, exists := st.userReadKeys[st.CurrentReadKeyId()]
 	if !exists {
 		return nil, ErrNoReadKey
 	}
@@ -302,10 +302,11 @@ func (st *AclState) applyRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, r
 	if err != nil {
 		return err
 	}
-	st.pendingRequests[mapKeyFromPubKey(authorIdentity)] = RequestTypeJoin
+	st.pendingRequests[mapKeyFromPubKey(authorIdentity)] = recordId
 	st.requestRecords[recordId] = RequestRecord{
 		RequestIdentity: authorIdentity,
 		RequestMetadata: ch.Metadata,
+		Type:            RequestTypeJoin,
 	}
 	return nil
 }
@@ -358,7 +359,11 @@ func (st *AclState) applyRequestRemove(ch *aclrecordproto.AclAccountRequestRemov
 	if err != nil {
 		return err
 	}
-	st.pendingRequests[mapKeyFromPubKey(authorIdentity)] = RequestTypeRemove
+	st.requestRecords[recordId] = RequestRecord{
+		RequestIdentity: authorIdentity,
+		Type:            RequestTypeRemove,
+	}
+	st.pendingRequests[mapKeyFromPubKey(authorIdentity)] = recordId
 	return nil
 }
 
@@ -422,8 +427,24 @@ func (st *AclState) Permissions(identity crypto.PubKey) AclPermissions {
 	return state.Permissions
 }
 
-func (st *AclState) UserStates() map[string]AclUserState {
-	return st.userStates
+func (st *AclState) JoinRecords() (records []RequestRecord) {
+	for _, recId := range st.pendingRequests {
+		rec := st.requestRecords[recId]
+		if rec.Type == RequestTypeJoin {
+			records = append(records, rec)
+		}
+	}
+	return
+}
+
+func (st *AclState) RemoveRecords() (records []RequestRecord) {
+	for _, recId := range st.pendingRequests {
+		rec := st.requestRecords[recId]
+		if rec.Type == RequestTypeRemove {
+			records = append(records, rec)
+		}
+	}
+	return
 }
 
 func (st *AclState) LastRecordId() string {

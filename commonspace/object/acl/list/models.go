@@ -18,6 +18,7 @@ type AclRecord struct {
 type RequestRecord struct {
 	RequestIdentity crypto.PubKey
 	RequestMetadata []byte
+	Type            RequestType
 }
 
 type AclUserState struct {

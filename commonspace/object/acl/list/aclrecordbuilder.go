@@ -372,7 +372,7 @@ func (a *aclRecordBuilder) Unmarshall(rawRecord *aclrecordproto.RawAclRecord) (r
 		return
 	}
 	aclData := &aclrecordproto.AclData{}
-	err = proto.Unmarshal(rawRecord.Payload, aclData)
+	err = proto.Unmarshal(aclRecord.Data, aclData)
 	if err != nil {
 		return
 	}
