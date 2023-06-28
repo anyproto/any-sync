@@ -15,7 +15,10 @@ import (
 
 type IterFunc = func(record *AclRecord) (IsContinue bool)
 
-var ErrIncorrectCID = errors.New("incorrect CID")
+var (
+	ErrIncorrectCID        = errors.New("incorrect CID")
+	ErrRecordAlreadyExists = errors.New("record already exists")
+)
 
 type RWLocker interface {
 	sync.Locker
@@ -51,7 +54,7 @@ type AclList interface {
 	RecordBuilder() AclRecordBuilder
 
 	ValidateRawRecord(record *aclrecordproto.RawAclRecord) (err error)
-	AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added bool, err error)
+	AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (err error)
 
 	Close() (err error)
 }
@@ -160,6 +163,7 @@ func build(deps internalDeps) (list AclList, err error) {
 		return
 	}
 
+	recBuilder.(*aclRecordBuilder).state = state
 	list = &aclList{
 		root:          rootWithId,
 		records:       records,
@@ -189,9 +193,9 @@ func (a *aclList) ValidateRawRecord(rawRec *aclrecordproto.RawAclRecord) (err er
 	return a.aclState.Validator().ValidateAclRecordContents(record)
 }
 
-func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added bool, err error) {
+func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (err error) {
 	if _, ok := a.indexes[rawRec.Id]; ok {
-		return
+		return ErrRecordAlreadyExists
 	}
 	record, err := a.recordBuilder.UnmarshallWithId(rawRec)
 	if err != nil {
@@ -208,7 +212,7 @@ func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added
 	if err = a.storage.SetHead(rawRec.Id); err != nil {
 		return
 	}
-	return true, nil
+	return
 }
 
 func (a *aclList) IsValidNext(rawRec *aclrecordproto.RawAclRecordWithId) (err error) {

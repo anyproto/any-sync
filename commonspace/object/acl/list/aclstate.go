@@ -193,7 +193,7 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 	// adding user to the list
 	userState := AclUserState{
 		PubKey:      record.Identity,
-		Permissions: AclPermissions(aclrecordproto.AclUserPermissions_Admin),
+		Permissions: AclPermissions(aclrecordproto.AclUserPermissions_Owner),
 	}
 	st.currentReadKeyId = record.Id
 	st.userStates[mapKeyFromPubKey(record.Identity)] = userState

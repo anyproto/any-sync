@@ -29,3 +29,13 @@ func NewTestDerivedAcl(spaceId string, keys *accountdata.AccountKeys) (AclList, 
 	}
 	return BuildAclListWithIdentity(keys, st, NoOpAcceptorVerifier{})
 }
+
+func NewTestAclWithRoot(keys *accountdata.AccountKeys, root *aclrecordproto.RawAclRecordWithId) (AclList, error) {
+	st, err := liststorage.NewInMemoryAclListStorage(root.Id, []*aclrecordproto.RawAclRecordWithId{
+		root,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return BuildAclListWithIdentity(keys, st, NoOpAcceptorVerifier{})
+}

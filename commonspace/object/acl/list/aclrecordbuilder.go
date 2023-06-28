@@ -163,8 +163,12 @@ func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawReco
 	if err != nil {
 		return
 	}
+	protoIdentity, err := a.accountKeys.SignKey.GetPublic().Marshall()
+	if err != nil {
+		return
+	}
 	joinRec := &aclrecordproto.AclAccountRequestJoin{
-		InviteIdentity:          rawIdentity,
+		InviteIdentity:          protoIdentity,
 		InviteRecordId:          payload.InviteRecordId,
 		InviteIdentitySignature: signature,
 		Metadata:                payload.Metadata,
@@ -426,7 +430,7 @@ func (a *aclRecordBuilder) UnmarshallWithId(rawIdRecord *aclrecordproto.RawAclRe
 			return
 		}
 		aclData := &aclrecordproto.AclData{}
-		err = proto.Unmarshal(rawRec.Payload, aclData)
+		err = proto.Unmarshal(aclRecord.Data, aclData)
 		if err != nil {
 			return
 		}
