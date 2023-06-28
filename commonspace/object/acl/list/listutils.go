@@ -8,7 +8,7 @@ import (
 )
 
 func NewTestDerivedAcl(spaceId string, keys *accountdata.AccountKeys) (AclList, error) {
-	builder := NewAclRecordBuilder("", crypto.NewKeyStorage(), keys)
+	builder := NewAclRecordBuilder("", crypto.NewKeyStorage(), keys, NoOpAcceptorVerifier{})
 	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
 	if err != nil {
 		return nil, err

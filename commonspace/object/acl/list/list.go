@@ -85,10 +85,11 @@ type internalDeps struct {
 func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage liststorage.ListStorage, verifier AcceptorVerifier) (AclList, error) {
 	keyStorage := crypto.NewKeyStorage()
 	deps := internalDeps{
-		storage:       storage,
-		keyStorage:    keyStorage,
-		stateBuilder:  newAclStateBuilderWithIdentity(acc),
-		recordBuilder: NewAclRecordBuilder(storage.Id(), keyStorage, acc),
+		storage:          storage,
+		keyStorage:       keyStorage,
+		stateBuilder:     newAclStateBuilderWithIdentity(acc),
+		recordBuilder:    NewAclRecordBuilder(storage.Id(), keyStorage, acc, verifier),
+		acceptorVerifier: verifier,
 	}
 	return build(deps)
 }
@@ -96,10 +97,11 @@ func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage liststorage.
 func BuildAclList(storage liststorage.ListStorage, verifier AcceptorVerifier) (AclList, error) {
 	keyStorage := crypto.NewKeyStorage()
 	deps := internalDeps{
-		storage:       storage,
-		keyStorage:    keyStorage,
-		stateBuilder:  newAclStateBuilder(),
-		recordBuilder: NewAclRecordBuilder(storage.Id(), keyStorage, nil),
+		storage:          storage,
+		keyStorage:       keyStorage,
+		stateBuilder:     newAclStateBuilder(),
+		recordBuilder:    NewAclRecordBuilder(storage.Id(), keyStorage, nil, verifier),
+		acceptorVerifier: verifier,
 	}
 	return build(deps)
 }
@@ -212,15 +214,6 @@ func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (err e
 	if err = a.storage.SetHead(rawRec.Id); err != nil {
 		return
 	}
-	return
-}
-
-func (a *aclList) IsValidNext(rawRec *aclrecordproto.RawAclRecordWithId) (err error) {
-	_, err = a.recordBuilder.UnmarshallWithId(rawRec)
-	if err != nil {
-		return
-	}
-	// TODO: change state and add "check" method for records
 	return
 }
 

@@ -63,14 +63,16 @@ type aclRecordBuilder struct {
 	id          string
 	keyStorage  crypto.KeyStorage
 	accountKeys *accountdata.AccountKeys
+	verifier    AcceptorVerifier
 	state       *AclState
 }
 
-func NewAclRecordBuilder(id string, keyStorage crypto.KeyStorage, keys *accountdata.AccountKeys) AclRecordBuilder {
+func NewAclRecordBuilder(id string, keyStorage crypto.KeyStorage, keys *accountdata.AccountKeys, verifier AcceptorVerifier) AclRecordBuilder {
 	return &aclRecordBuilder{
 		id:          id,
 		keyStorage:  keyStorage,
 		accountKeys: keys,
+		verifier:    verifier,
 	}
 }
 
@@ -420,6 +422,10 @@ func (a *aclRecordBuilder) UnmarshallWithId(rawIdRecord *aclrecordproto.RawAclRe
 			Model:     aclRoot,
 		}
 	} else {
+		err = a.verifier.VerifyAcceptor(rawRec)
+		if err != nil {
+			return
+		}
 		aclRecord := &aclrecordproto.AclRecord{}
 		err = proto.Unmarshal(rawRec.Payload, aclRecord)
 		if err != nil {

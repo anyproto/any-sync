@@ -161,10 +161,14 @@ func (c *contentValidator) ValidateAccountRemove(ch *aclrecordproto.AclAccountRe
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
+	seenIdentities := map[string]struct{}{}
 	for _, rawIdentity := range ch.Identities {
 		identity, err := c.keyStore.PubKeyFromProto(rawIdentity)
 		if err != nil {
 			return err
+		}
+		if identity.Equals(authorIdentity) {
+			return ErrInsufficientPermissions
 		}
 		permissions := c.aclState.Permissions(identity)
 		if permissions.NoPermissions() {
@@ -173,8 +177,13 @@ func (c *contentValidator) ValidateAccountRemove(ch *aclrecordproto.AclAccountRe
 		if permissions.IsOwner() {
 			return ErrInsufficientPermissions
 		}
+		idKey := mapKeyFromPubKey(identity)
+		if _, exists := seenIdentities[idKey]; exists {
+			return ErrDuplicateAccounts
+		}
+		seenIdentities[mapKeyFromPubKey(identity)] = struct{}{}
 	}
-	return c.validateAccountReadKeys(ch.AccountKeys)
+	return c.validateAccountReadKeys(ch.AccountKeys, len(c.aclState.userStates)-len(ch.Identities))
 }
 
 func (c *contentValidator) ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error) {
@@ -188,11 +197,11 @@ func (c *contentValidator) ValidateRequestRemove(ch *aclrecordproto.AclAccountRe
 }
 
 func (c *contentValidator) ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error) {
-	return c.validateAccountReadKeys(ch.AccountKeys)
+	return c.validateAccountReadKeys(ch.AccountKeys, len(c.aclState.userStates))
 }
 
-func (c *contentValidator) validateAccountReadKeys(accountKeys []*aclrecordproto.AclEncryptedReadKey) (err error) {
-	if len(accountKeys) != len(c.aclState.userStates) {
+func (c *contentValidator) validateAccountReadKeys(accountKeys []*aclrecordproto.AclEncryptedReadKey, usersNum int) (err error) {
+	if len(accountKeys) != usersNum {
 		return ErrIncorrectNumberOfAccounts
 	}
 	for _, encKeys := range accountKeys {

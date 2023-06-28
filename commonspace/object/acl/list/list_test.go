@@ -7,6 +7,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/util/cidutil"
+	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,16 +53,14 @@ func newFixture(t *testing.T) *aclFixture {
 	}
 }
 
-func TestAclList_BuildRoot(t *testing.T) {
-	randomKeys, err := accountdata.NewRandom()
+func (fx *aclFixture) addRec(t *testing.T, rec *aclrecordproto.RawAclRecordWithId) {
+	err := fx.ownerAcl.AddRawRecord(rec)
 	require.NoError(t, err)
-	randomAcl, err := NewTestDerivedAcl("spaceId", randomKeys)
+	err = fx.accountAcl.AddRawRecord(rec)
 	require.NoError(t, err)
-	fmt.Println(randomAcl.Id())
 }
 
-func TestAclList_InvitePipeline(t *testing.T) {
-	fx := newFixture(t)
+func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 	var (
 		ownerAcl     = fx.ownerAcl
 		ownerState   = fx.ownerAcl.aclState
@@ -72,10 +71,7 @@ func TestAclList_InvitePipeline(t *testing.T) {
 	inv, err := ownerAcl.RecordBuilder().BuildInvite()
 	require.NoError(t, err)
 	inviteRec := wrapRecord(inv.InviteRec)
-	err = ownerAcl.AddRawRecord(inviteRec)
-	require.NoError(t, err)
-	err = accountAcl.AddRawRecord(inviteRec)
-	require.NoError(t, err)
+	fx.addRec(t, inviteRec)
 
 	// building request join
 	requestJoin, err := accountAcl.RecordBuilder().BuildRequestJoin(RequestJoinPayload{
@@ -84,22 +80,16 @@ func TestAclList_InvitePipeline(t *testing.T) {
 	})
 	require.NoError(t, err)
 	requestJoinRec := wrapRecord(requestJoin)
-	err = ownerAcl.AddRawRecord(requestJoinRec)
-	require.NoError(t, err)
-	err = accountAcl.AddRawRecord(requestJoinRec)
-	require.NoError(t, err)
+	fx.addRec(t, requestJoinRec)
 
 	// building request accept
 	requestAccept, err := ownerAcl.RecordBuilder().BuildRequestAccept(RequestAcceptPayload{
 		RequestRecordId: requestJoinRec.Id,
-		Permissions:     AclPermissions(aclrecordproto.AclUserPermissions_Writer),
+		Permissions:     perms,
 	})
 	require.NoError(t, err)
 	requestAcceptRec := wrapRecord(requestAccept)
-	err = ownerAcl.AddRawRecord(requestAcceptRec)
-	require.NoError(t, err)
-	err = accountAcl.AddRawRecord(requestAcceptRec)
-	require.NoError(t, err)
+	fx.addRec(t, requestAcceptRec)
 
 	// checking acl state
 	require.True(t, ownerState.Permissions(ownerState.pubKey).IsOwner())
@@ -108,4 +98,47 @@ func TestAclList_InvitePipeline(t *testing.T) {
 	require.Equal(t, 0, len(accountState.pendingRequests))
 	require.True(t, accountState.Permissions(ownerState.pubKey).IsOwner())
 	require.True(t, accountState.Permissions(accountState.pubKey).CanWrite())
+}
+
+func TestAclList_BuildRoot(t *testing.T) {
+	randomKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	randomAcl, err := NewTestDerivedAcl("spaceId", randomKeys)
+	require.NoError(t, err)
+	fmt.Println(randomAcl.Id())
+}
+
+func TestAclList_InvitePipeline(t *testing.T) {
+	fx := newFixture(t)
+	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
+}
+
+func TestAclList_Remove(t *testing.T) {
+	fx := newFixture(t)
+	var (
+		ownerState   = fx.ownerAcl.aclState
+		accountState = fx.accountAcl.aclState
+	)
+	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
+
+	newReadKey := crypto.NewAES()
+	remove, err := fx.ownerAcl.RecordBuilder().BuildAccountRemove(AccountRemovePayload{
+		Identities: []crypto.PubKey{fx.accountKeys.SignKey.GetPublic()},
+		ReadKey:    newReadKey,
+	})
+	require.NoError(t, err)
+	removeRec := wrapRecord(remove)
+	fx.addRec(t, removeRec)
+
+	// checking acl state
+	require.True(t, ownerState.Permissions(ownerState.pubKey).IsOwner())
+	require.True(t, ownerState.Permissions(accountState.pubKey).NoPermissions())
+	require.True(t, ownerState.userReadKeys[removeRec.Id].Equals(newReadKey))
+	require.NotNil(t, ownerState.userReadKeys[fx.ownerAcl.Id()])
+	require.Equal(t, 0, len(ownerState.pendingRequests))
+	require.Equal(t, 0, len(accountState.pendingRequests))
+	require.True(t, accountState.Permissions(ownerState.pubKey).IsOwner())
+	require.True(t, accountState.Permissions(accountState.pubKey).NoPermissions())
+	require.Nil(t, accountState.userReadKeys[removeRec.Id])
+	require.NotNil(t, accountState.userReadKeys[fx.ownerAcl.Id()])
 }

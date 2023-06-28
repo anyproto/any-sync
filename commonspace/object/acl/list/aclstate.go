@@ -25,6 +25,7 @@ var (
 	ErrInsufficientPermissions   = errors.New("insufficient permissions")
 	ErrIsOwner                   = errors.New("can't be made by owner")
 	ErrIncorrectNumberOfAccounts = errors.New("incorrect number of accounts")
+	ErrDuplicateAccounts         = errors.New("duplicate accounts")
 	ErrNoReadKey                 = errors.New("acl state doesn't have a read key")
 	ErrIncorrectReadKey          = errors.New("incorrect read key")
 	ErrInvalidSignature          = errors.New("signature is invalid")
