@@ -82,6 +82,7 @@ func (t *Tree) AddMergedHead(c *Change) error {
 		}
 	}
 	t.headIds = []string{c.Id}
+	t.lastIteratedHeadId = c.Id
 	return nil
 }
 
