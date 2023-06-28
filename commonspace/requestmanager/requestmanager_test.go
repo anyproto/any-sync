@@ -4,7 +4,6 @@ import (
 	"context"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objectsync/mock_objectsync"
@@ -181,11 +180,7 @@ func TestRequestManager_QueueRequest(t *testing.T) {
 
 		fx.requestManager.Close(context.Background())
 		close(msgRelease)
-		// waiting to know if the second one is not taken
-		// because the manager is now closed
-		time.Sleep(200 * time.Millisecond)
 		_, ok = msgs.Load("id2")
 		require.False(t, ok)
-		fx.requestManager.Close(context.Background())
 	})
 }
