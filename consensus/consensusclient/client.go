@@ -30,7 +30,7 @@ func New() Service {
 
 // Watcher watches new events by specified logId
 type Watcher interface {
-	AddConsensusRecords(recs []*consensusproto.Record)
+	AddConsensusRecords(recs []*consensusproto.RawRecordWithId)
 	AddConsensusError(err error)
 }
 
@@ -38,7 +38,7 @@ type Service interface {
 	// AddLog adds new log to consensus servers
 	AddLog(ctx context.Context, clog *consensusproto.Log) (err error)
 	// AddRecord adds new record to consensus servers
-	AddRecord(ctx context.Context, logId []byte, clog *consensusproto.Record) (err error)
+	AddRecord(ctx context.Context, logId []byte, clog *consensusproto.RawRecord) (record *consensusproto.RawRecordWithId, err error)
 	// Watch starts watching to given logId and calls watcher when any relative event received
 	Watch(logId []byte, w Watcher) (err error)
 	// UnWatch stops watching given logId and removes watcher
@@ -97,9 +97,9 @@ func (s *service) AddLog(ctx context.Context, clog *consensusproto.Log) (err err
 	})
 }
 
-func (s *service) AddRecord(ctx context.Context, logId []byte, clog *consensusproto.Record) (err error) {
-	return s.doClient(ctx, func(cl consensusproto.DRPCConsensusClient) error {
-		if _, err = cl.RecordAdd(ctx, &consensusproto.RecordAddRequest{
+func (s *service) AddRecord(ctx context.Context, logId []byte, clog *consensusproto.RawRecord) (record *consensusproto.RawRecordWithId, err error) {
+	err = s.doClient(ctx, func(cl consensusproto.DRPCConsensusClient) error {
+		if record, err = cl.RecordAdd(ctx, &consensusproto.RecordAddRequest{
 			LogId:  logId,
 			Record: clog,
 		}); err != nil {
@@ -107,6 +107,7 @@ func (s *service) AddRecord(ctx context.Context, logId []byte, clog *consensuspr
 		}
 		return nil
 	})
+	return
 }
 
 func (s *service) Watch(logId []byte, w Watcher) (err error) {

@@ -11,6 +11,7 @@ import (
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
+	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -118,7 +119,9 @@ func TestService_AddLog(t *testing.T) {
 func TestService_AddRecord(t *testing.T) {
 	fx := newFixture(t).run(t)
 	defer fx.Finish()
-	assert.NoError(t, fx.AddRecord(ctx, []byte{'1'}, &consensusproto.Record{}))
+	rec, err := fx.AddRecord(ctx, []byte{'1'}, &consensusproto.RawRecord{})
+	require.NoError(t, err)
+	assert.NotEmpty(t, rec)
 }
 
 var ctx = context.Background()
@@ -186,13 +189,15 @@ func (t *testServer) LogAdd(ctx context.Context, req *consensusproto.LogAddReque
 	return &consensusproto.Ok{}, nil
 }
 
-func (t *testServer) RecordAdd(ctx context.Context, req *consensusproto.RecordAddRequest) (*consensusproto.Ok, error) {
+func (t *testServer) RecordAdd(ctx context.Context, req *consensusproto.RecordAddRequest) (*consensusproto.RawRecordWithId, error) {
 	if t.addRecord != nil {
 		if err := t.addRecord(ctx, req); err != nil {
 			return nil, err
 		}
 	}
-	return &consensusproto.Ok{}, nil
+	data, _ := req.Record.Marshal()
+	id, _ := cidutil.NewCidFromBytes(data)
+	return &consensusproto.RawRecordWithId{Id: id, Payload: data}, nil
 }
 
 func (t *testServer) LogWatch(stream consensusproto.DRPCConsensus_LogWatchStream) error {
@@ -215,13 +220,13 @@ func (t *testServer) waitStream(test *testing.T) consensusproto.DRPCConsensus_Lo
 }
 
 type testWatcher struct {
-	recs  [][]*consensusproto.Record
+	recs  [][]*consensusproto.RawRecordWithId
 	err   error
 	ready chan struct{}
 	once  sync.Once
 }
 
-func (t *testWatcher) AddConsensusRecords(recs []*consensusproto.Record) {
+func (t *testWatcher) AddConsensusRecords(recs []*consensusproto.RawRecordWithId) {
 	t.recs = append(t.recs, recs)
 	t.once.Do(func() {
 		close(t.ready)

@@ -52,11 +52,12 @@ func (mr *MockServiceMockRecorder) AddLog(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // AddRecord mocks base method.
-func (m *MockService) AddRecord(arg0 context.Context, arg1 []byte, arg2 *consensusproto.Record) error {
+func (m *MockService) AddRecord(arg0 context.Context, arg1 []byte, arg2 *consensusproto.RawRecord) (*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddRecord", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*consensusproto.RawRecordWithId)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // AddRecord indicates an expected call of AddRecord.

@@ -14,21 +14,38 @@ enum ErrCodes {
 
 message Log {
     bytes id = 1;
-    repeated Record records = 2;
+    bytes payload = 2;
+    repeated RawRecordWithId records = 3;
 }
 
-message Record {
-    bytes id = 1;
-    bytes prevId = 2;
-    bytes payload = 3;
-    uint64 createdUnix = 4;
+// RawRecord is a proto message containing the payload in bytes, signature of the account who added it and signature of the acceptor
+message RawRecord {
+    bytes payload = 1;
+    bytes signature = 2;
+    bytes acceptorIdentity = 3;
+    bytes acceptorSignature = 4;
 }
+
+// RawRecordWithId is a raw record and the id for convenience
+message RawRecordWithId {
+    bytes payload = 1;
+    string id = 2;
+}
+
+// Record is a record containing a data
+message Record {
+    string prevId = 1;
+    bytes identity = 2;
+    bytes data = 3;
+    int64 timestamp = 4;
+}
+
 
 service Consensus {
     // AddLog adds new log to consensus
     rpc LogAdd(LogAddRequest) returns (Ok);
     // AddRecord adds new record to log
-    rpc RecordAdd(RecordAddRequest) returns (Ok);
+    rpc RecordAdd(RecordAddRequest) returns (RawRecordWithId);
     // WatchLog fetches log and subscribes for a changes
     rpc LogWatch(stream LogWatchRequest) returns (stream LogWatchEvent);
 }
@@ -41,7 +58,7 @@ message LogAddRequest {
 
 message RecordAddRequest {
     bytes logId = 1;
-    Record record = 2;
+    RawRecord record = 2;
 }
 
 message LogWatchRequest {
@@ -51,7 +68,7 @@ message LogWatchRequest {
 
 message LogWatchEvent {
     bytes logId = 1;
-    repeated Record records = 2;
+    repeated RawRecordWithId records = 2;
     Err error = 3;
 }
 

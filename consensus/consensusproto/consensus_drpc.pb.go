@@ -41,7 +41,7 @@ type DRPCConsensusClient interface {
 	DRPCConn() drpc.Conn
 
 	LogAdd(ctx context.Context, in *LogAddRequest) (*Ok, error)
-	RecordAdd(ctx context.Context, in *RecordAddRequest) (*Ok, error)
+	RecordAdd(ctx context.Context, in *RecordAddRequest) (*RawRecordWithId, error)
 	LogWatch(ctx context.Context) (DRPCConsensus_LogWatchClient, error)
 }
 
@@ -64,8 +64,8 @@ func (c *drpcConsensusClient) LogAdd(ctx context.Context, in *LogAddRequest) (*O
 	return out, nil
 }
 
-func (c *drpcConsensusClient) RecordAdd(ctx context.Context, in *RecordAddRequest) (*Ok, error) {
-	out := new(Ok)
+func (c *drpcConsensusClient) RecordAdd(ctx context.Context, in *RecordAddRequest) (*RawRecordWithId, error) {
+	out := new(RawRecordWithId)
 	err := c.cc.Invoke(ctx, "/consensusProto.Consensus/RecordAdd", drpcEncoding_File_consensus_consensusproto_protos_consensus_proto{}, in, out)
 	if err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func (x *drpcConsensus_LogWatchClient) RecvMsg(m *LogWatchEvent) error {
 
 type DRPCConsensusServer interface {
 	LogAdd(context.Context, *LogAddRequest) (*Ok, error)
-	RecordAdd(context.Context, *RecordAddRequest) (*Ok, error)
+	RecordAdd(context.Context, *RecordAddRequest) (*RawRecordWithId, error)
 	LogWatch(DRPCConsensus_LogWatchStream) error
 }
 
@@ -124,7 +124,7 @@ func (s *DRPCConsensusUnimplementedServer) LogAdd(context.Context, *LogAddReques
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCConsensusUnimplementedServer) RecordAdd(context.Context, *RecordAddRequest) (*Ok, error) {
+func (s *DRPCConsensusUnimplementedServer) RecordAdd(context.Context, *RecordAddRequest) (*RawRecordWithId, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
@@ -191,14 +191,14 @@ func (x *drpcConsensus_LogAddStream) SendAndClose(m *Ok) error {
 
 type DRPCConsensus_RecordAddStream interface {
 	drpc.Stream
-	SendAndClose(*Ok) error
+	SendAndClose(*RawRecordWithId) error
 }
 
 type drpcConsensus_RecordAddStream struct {
 	drpc.Stream
 }
 
-func (x *drpcConsensus_RecordAddStream) SendAndClose(m *Ok) error {
+func (x *drpcConsensus_RecordAddStream) SendAndClose(m *RawRecordWithId) error {
 	if err := x.MsgSend(m, drpcEncoding_File_consensus_consensusproto_protos_consensus_proto{}); err != nil {
 		return err
 	}
