@@ -2,20 +2,22 @@ package commonspace
 
 import (
 	"fmt"
+	"math/rand"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"math/rand"
-	"strconv"
-	"testing"
-	"time"
 )
 
 func TestSuccessHeaderPayloadForSpaceCreate(t *testing.T) {
@@ -188,14 +190,14 @@ func TestFailAclPayloadSpace_IncorrectCid(t *testing.T) {
 	marshalled, err := aclRoot.Marshal()
 	require.NoError(t, err)
 	signature, err := accountKeys.SignKey.Sign(marshalled)
-	rawAclRecord := &aclrecordproto.RawAclRecord{
+	rawAclRecord := &consensusproto.RawRecord{
 		Payload:   marshalled,
 		Signature: signature,
 	}
 	marshalledRaw, err := rawAclRecord.Marshal()
 	require.NoError(t, err)
 	aclHeadId := "rand"
-	rawWithId := &aclrecordproto.RawAclRecordWithId{
+	rawWithId := &consensusproto.RawRecordWithId{
 		Payload: marshalledRaw,
 		Id:      aclHeadId,
 	}
@@ -230,7 +232,7 @@ func TestFailedAclPayloadSpace_IncorrectSignature(t *testing.T) {
 	}
 	marshalled, err := aclRoot.Marshal()
 	require.NoError(t, err)
-	rawAclRecord := &aclrecordproto.RawAclRecord{
+	rawAclRecord := &consensusproto.RawRecord{
 		Payload:   marshalled,
 		Signature: marshalled,
 	}
@@ -238,7 +240,7 @@ func TestFailedAclPayloadSpace_IncorrectSignature(t *testing.T) {
 	require.NoError(t, err)
 	aclHeadId, err := cidutil.NewCidFromBytes(marshalledRaw)
 	require.NoError(t, err)
-	rawWithId := &aclrecordproto.RawAclRecordWithId{
+	rawWithId := &consensusproto.RawRecordWithId{
 		Payload: marshalledRaw,
 		Id:      aclHeadId,
 	}
@@ -286,7 +288,7 @@ func TestFailedAclPayloadSpace_IncorrectIdentitySignature(t *testing.T) {
 		return
 	}
 	signature, err := accountKeys.SignKey.Sign(marshalled)
-	rawAclRecord := &aclrecordproto.RawAclRecord{
+	rawAclRecord := &consensusproto.RawRecord{
 		Payload:   marshalled,
 		Signature: signature,
 	}
@@ -298,7 +300,7 @@ func TestFailedAclPayloadSpace_IncorrectIdentitySignature(t *testing.T) {
 	if err != nil {
 		return
 	}
-	rawWithId := &aclrecordproto.RawAclRecordWithId{
+	rawWithId := &consensusproto.RawRecordWithId{
 		Payload: marshalledRaw,
 		Id:      aclHeadId,
 	}
@@ -540,7 +542,7 @@ func rawSettingsPayload(accountKeys *accountdata.AccountKeys, spaceId, aclHeadId
 	return
 }
 
-func rawAclWithId(accountKeys *accountdata.AccountKeys, spaceId string) (aclHeadId string, rawWithId *aclrecordproto.RawAclRecordWithId, err error) {
+func rawAclWithId(accountKeys *accountdata.AccountKeys, spaceId string) (aclHeadId string, rawWithId *consensusproto.RawRecordWithId, err error) {
 	// TODO: use same storage creation methods as we use in spaces
 	readKeyBytes := make([]byte, 32)
 	_, err = rand.Read(readKeyBytes)
@@ -582,7 +584,7 @@ func rawAclWithId(accountKeys *accountdata.AccountKeys, spaceId string) (aclHead
 		return
 	}
 	signature, err := accountKeys.SignKey.Sign(marshalled)
-	rawAclRecord := &aclrecordproto.RawAclRecord{
+	rawAclRecord := &consensusproto.RawRecord{
 		Payload:   marshalled,
 		Signature: signature,
 	}
@@ -594,7 +596,7 @@ func rawAclWithId(accountKeys *accountdata.AccountKeys, spaceId string) (aclHead
 	if err != nil {
 		return
 	}
-	rawWithId = &aclrecordproto.RawAclRecordWithId{
+	rawWithId = &consensusproto.RawRecordWithId{
 		Payload: marshalledRaw,
 		Id:      aclHeadId,
 	}

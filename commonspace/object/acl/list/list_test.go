@@ -6,12 +6,13 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/stretchr/testify/require"
 )
 
-func wrapRecord(rawRec *aclrecordproto.RawAclRecord) *aclrecordproto.RawAclRecordWithId {
+func wrapRecord(rawRec *consensusproto.RawRecord) *consensusproto.RawRecordWithId {
 	payload, err := rawRec.Marshal()
 	if err != nil {
 		panic(err)
@@ -20,7 +21,7 @@ func wrapRecord(rawRec *aclrecordproto.RawAclRecord) *aclrecordproto.RawAclRecor
 	if err != nil {
 		panic(err)
 	}
-	return &aclrecordproto.RawAclRecordWithId{
+	return &consensusproto.RawRecordWithId{
 		Payload: payload,
 		Id:      id,
 	}
@@ -53,7 +54,7 @@ func newFixture(t *testing.T) *aclFixture {
 	}
 }
 
-func (fx *aclFixture) addRec(t *testing.T, rec *aclrecordproto.RawAclRecordWithId) {
+func (fx *aclFixture) addRec(t *testing.T, rec *consensusproto.RawRecordWithId) {
 	err := fx.ownerAcl.AddRawRecord(rec)
 	require.NoError(t, err)
 	err = fx.accountAcl.AddRawRecord(rec)

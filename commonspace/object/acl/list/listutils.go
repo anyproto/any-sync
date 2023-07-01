@@ -2,8 +2,8 @@ package list
 
 import (
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -21,7 +21,7 @@ func NewTestDerivedAcl(spaceId string, keys *accountdata.AccountKeys) (AclList, 
 	if err != nil {
 		return nil, err
 	}
-	st, err := liststorage.NewInMemoryAclListStorage(root.Id, []*aclrecordproto.RawAclRecordWithId{
+	st, err := liststorage.NewInMemoryAclListStorage(root.Id, []*consensusproto.RawRecordWithId{
 		root,
 	})
 	if err != nil {
@@ -30,8 +30,8 @@ func NewTestDerivedAcl(spaceId string, keys *accountdata.AccountKeys) (AclList, 
 	return BuildAclListWithIdentity(keys, st, NoOpAcceptorVerifier{})
 }
 
-func NewTestAclWithRoot(keys *accountdata.AccountKeys, root *aclrecordproto.RawAclRecordWithId) (AclList, error) {
-	st, err := liststorage.NewInMemoryAclListStorage(root.Id, []*aclrecordproto.RawAclRecordWithId{
+func NewTestAclWithRoot(keys *accountdata.AccountKeys, root *consensusproto.RawRecordWithId) (AclList, error) {
+	st, err := liststorage.NewInMemoryAclListStorage(root.Id, []*consensusproto.RawRecordWithId{
 		root,
 	})
 	if err != nil {

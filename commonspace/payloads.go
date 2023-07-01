@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
@@ -255,12 +256,12 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 	return
 }
 
-func validateCreateSpaceAclPayload(rawWithId *aclrecordproto.RawAclRecordWithId) (spaceId string, err error) {
+func validateCreateSpaceAclPayload(rawWithId *consensusproto.RawRecordWithId) (spaceId string, err error) {
 	if !cidutil.VerifyCid(rawWithId.Payload, rawWithId.Id) {
 		err = objecttree.ErrIncorrectCid
 		return
 	}
-	var rawAcl aclrecordproto.RawAclRecord
+	var rawAcl consensusproto.RawRecord
 	err = proto.Unmarshal(rawWithId.Payload, &rawAcl)
 	if err != nil {
 		return

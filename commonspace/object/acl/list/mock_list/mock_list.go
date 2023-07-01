@@ -7,8 +7,8 @@ package mock_list
 import (
 	reflect "reflect"
 
-	aclrecordproto "github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	list "github.com/anyproto/any-sync/commonspace/object/acl/list"
+	consensusproto "github.com/anyproto/any-sync/consensus/consensusproto"
 	crypto "github.com/anyproto/any-sync/util/crypto"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -51,7 +51,7 @@ func (mr *MockAclListMockRecorder) AclState() *gomock.Call {
 }
 
 // AddRawRecord mocks base method.
-func (m *MockAclList) AddRawRecord(arg0 *aclrecordproto.RawAclRecordWithId) error {
+func (m *MockAclList) AddRawRecord(arg0 *consensusproto.RawRecordWithId) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddRawRecord", arg0)
 	ret0, _ := ret[0].(error)
@@ -254,10 +254,10 @@ func (mr *MockAclListMockRecorder) Records() *gomock.Call {
 }
 
 // Root mocks base method.
-func (m *MockAclList) Root() *aclrecordproto.RawAclRecordWithId {
+func (m *MockAclList) Root() *consensusproto.RawRecordWithId {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Root")
-	ret0, _ := ret[0].(*aclrecordproto.RawAclRecordWithId)
+	ret0, _ := ret[0].(*consensusproto.RawRecordWithId)
 	return ret0
 }
 
@@ -280,7 +280,7 @@ func (mr *MockAclListMockRecorder) Unlock() *gomock.Call {
 }
 
 // ValidateRawRecord mocks base method.
-func (m *MockAclList) ValidateRawRecord(arg0 *aclrecordproto.RawAclRecord) error {
+func (m *MockAclList) ValidateRawRecord(arg0 *consensusproto.RawRecord) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ValidateRawRecord", arg0)
 	ret0, _ := ret[0].(error)

@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -27,20 +27,20 @@ type RWLocker interface {
 }
 
 type AcceptorVerifier interface {
-	VerifyAcceptor(rec *aclrecordproto.RawAclRecord) (err error)
+	VerifyAcceptor(rec *consensusproto.RawRecord) (err error)
 }
 
 type NoOpAcceptorVerifier struct {
 }
 
-func (n NoOpAcceptorVerifier) VerifyAcceptor(rec *aclrecordproto.RawAclRecord) (err error) {
+func (n NoOpAcceptorVerifier) VerifyAcceptor(rec *consensusproto.RawRecord) (err error) {
 	return nil
 }
 
 type AclList interface {
 	RWLocker
 	Id() string
-	Root() *aclrecordproto.RawAclRecordWithId
+	Root() *consensusproto.RawRecordWithId
 	Records() []*AclRecord
 	AclState() *AclState
 	IsAfter(first string, second string) (bool, error)
@@ -53,14 +53,14 @@ type AclList interface {
 	KeyStorage() crypto.KeyStorage
 	RecordBuilder() AclRecordBuilder
 
-	ValidateRawRecord(record *aclrecordproto.RawAclRecord) (err error)
-	AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (err error)
+	ValidateRawRecord(record *consensusproto.RawRecord) (err error)
+	AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error)
 
 	Close() (err error)
 }
 
 type aclList struct {
-	root    *aclrecordproto.RawAclRecordWithId
+	root    *consensusproto.RawRecordWithId
 	records []*AclRecord
 	indexes map[string]int
 	id      string
@@ -187,7 +187,7 @@ func (a *aclList) Records() []*AclRecord {
 	return a.records
 }
 
-func (a *aclList) ValidateRawRecord(rawRec *aclrecordproto.RawAclRecord) (err error) {
+func (a *aclList) ValidateRawRecord(rawRec *consensusproto.RawRecord) (err error) {
 	record, err := a.recordBuilder.Unmarshall(rawRec)
 	if err != nil {
 		return
@@ -195,7 +195,7 @@ func (a *aclList) ValidateRawRecord(rawRec *aclrecordproto.RawAclRecord) (err er
 	return a.aclState.Validator().ValidateAclRecordContents(record)
 }
 
-func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (err error) {
+func (a *aclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error) {
 	if _, ok := a.indexes[rawRec.Id]; ok {
 		return ErrRecordAlreadyExists
 	}
@@ -221,7 +221,7 @@ func (a *aclList) Id() string {
 	return a.id
 }
 
-func (a *aclList) Root() *aclrecordproto.RawAclRecordWithId {
+func (a *aclList) Root() *consensusproto.RawRecordWithId {
 	return a.root
 }
 

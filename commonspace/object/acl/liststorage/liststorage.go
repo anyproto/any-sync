@@ -4,7 +4,8 @@ package liststorage
 import (
 	"context"
 	"errors"
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
 
 var (
@@ -14,15 +15,15 @@ var (
 )
 
 type Exporter interface {
-	ListStorage(root *aclrecordproto.RawAclRecordWithId) (ListStorage, error)
+	ListStorage(root *consensusproto.RawRecordWithId) (ListStorage, error)
 }
 
 type ListStorage interface {
 	Id() string
-	Root() (*aclrecordproto.RawAclRecordWithId, error)
+	Root() (*consensusproto.RawRecordWithId, error)
 	Head() (string, error)
 	SetHead(headId string) error
 
-	GetRawRecord(ctx context.Context, id string) (*aclrecordproto.RawAclRecordWithId, error)
-	AddRawRecord(ctx context.Context, rec *aclrecordproto.RawAclRecordWithId) error
+	GetRawRecord(ctx context.Context, id string) (*consensusproto.RawRecordWithId, error)
+	AddRawRecord(ctx context.Context, rec *consensusproto.RawRecordWithId) error
 }

@@ -4,12 +4,13 @@ package spacestorage
 import (
 	"context"
 	"errors"
+
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
 
 const CName = "common.commonspace.spacestorage"
@@ -47,7 +48,7 @@ type SpaceStorage interface {
 }
 
 type SpaceStorageCreatePayload struct {
-	AclWithId           *aclrecordproto.RawAclRecordWithId
+	AclWithId           *consensusproto.RawRecordWithId
 	SpaceHeaderWithId   *spacesyncproto.RawSpaceHeaderWithId
 	SpaceSettingsWithId *treechangeproto.RawTreeChangeWithId
 }

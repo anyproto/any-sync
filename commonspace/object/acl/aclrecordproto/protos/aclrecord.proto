@@ -2,28 +2,6 @@ syntax = "proto3";
 package aclrecord;
 option go_package = "commonspace/object/acl/aclrecordproto";
 
-// RawAclRecord is a proto message containing the acl payload in bytes, signature of the account who added it and signature of the acceptor
-message RawAclRecord {
-    bytes payload = 1;
-    bytes signature = 2;
-    bytes acceptorIdentity = 3;
-    bytes acceptorSignature = 4;
-}
-
-// RawAclRecordWithId is a raw record and the id for convenience
-message RawAclRecordWithId {
-    bytes payload = 1;
-    string id = 2;
-}
-
-// AclRecord is a record containing the acl data
-message AclRecord {
-    string prevId = 1;
-    bytes identity = 2;
-    bytes data = 3;
-    int64 timestamp = 4;
-}
-
 // AclRoot is a root of access control list
 message AclRoot {
     bytes identity = 1;
@@ -125,19 +103,4 @@ enum AclUserPermissions {
     Admin = 2;
     Writer = 3;
     Reader = 4;
-}
-
-message AclSyncMessage {
-    AclSyncContentValue content = 1;
-}
-
-// AclSyncContentValue provides different types for acl sync
-message AclSyncContentValue {
-    oneof value {
-        AclAddRecords addRecords = 1;
-    }
-}
-
-message AclAddRecords {
-    repeated RawAclRecordWithId records = 1;
 }
