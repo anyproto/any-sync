@@ -595,6 +595,318 @@ func (m *Err) GetError() ErrCodes {
 	return ErrCodes_Unexpected
 }
 
+// LogSyncContentValue provides different types for log sync
+type LogSyncContentValue struct {
+	// Types that are valid to be assigned to Value:
+	//
+	//	*LogSyncContentValue_HeadUpdate
+	//	*LogSyncContentValue_FullSyncRequest
+	//	*LogSyncContentValue_FullSyncResponse
+	Value isLogSyncContentValue_Value `protobuf_oneof:"value"`
+}
+
+func (m *LogSyncContentValue) Reset()         { *m = LogSyncContentValue{} }
+func (m *LogSyncContentValue) String() string { return proto.CompactTextString(m) }
+func (*LogSyncContentValue) ProtoMessage()    {}
+func (*LogSyncContentValue) Descriptor() ([]byte, []int) {
+	return fileDescriptor_b8d7f1c16b400059, []int{10}
+}
+func (m *LogSyncContentValue) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *LogSyncContentValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_LogSyncContentValue.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *LogSyncContentValue) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LogSyncContentValue.Merge(m, src)
+}
+func (m *LogSyncContentValue) XXX_Size() int {
+	return m.Size()
+}
+func (m *LogSyncContentValue) XXX_DiscardUnknown() {
+	xxx_messageInfo_LogSyncContentValue.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_LogSyncContentValue proto.InternalMessageInfo
+
+type isLogSyncContentValue_Value interface {
+	isLogSyncContentValue_Value()
+	MarshalTo([]byte) (int, error)
+	Size() int
+}
+
+type LogSyncContentValue_HeadUpdate struct {
+	HeadUpdate *LogHeadUpdate `protobuf:"bytes,1,opt,name=headUpdate,proto3,oneof" json:"headUpdate,omitempty"`
+}
+type LogSyncContentValue_FullSyncRequest struct {
+	FullSyncRequest *LogFullSyncRequest `protobuf:"bytes,2,opt,name=fullSyncRequest,proto3,oneof" json:"fullSyncRequest,omitempty"`
+}
+type LogSyncContentValue_FullSyncResponse struct {
+	FullSyncResponse *LogFullSyncResponse `protobuf:"bytes,3,opt,name=fullSyncResponse,proto3,oneof" json:"fullSyncResponse,omitempty"`
+}
+
+func (*LogSyncContentValue_HeadUpdate) isLogSyncContentValue_Value()       {}
+func (*LogSyncContentValue_FullSyncRequest) isLogSyncContentValue_Value()  {}
+func (*LogSyncContentValue_FullSyncResponse) isLogSyncContentValue_Value() {}
+
+func (m *LogSyncContentValue) GetValue() isLogSyncContentValue_Value {
+	if m != nil {
+		return m.Value
+	}
+	return nil
+}
+
+func (m *LogSyncContentValue) GetHeadUpdate() *LogHeadUpdate {
+	if x, ok := m.GetValue().(*LogSyncContentValue_HeadUpdate); ok {
+		return x.HeadUpdate
+	}
+	return nil
+}
+
+func (m *LogSyncContentValue) GetFullSyncRequest() *LogFullSyncRequest {
+	if x, ok := m.GetValue().(*LogSyncContentValue_FullSyncRequest); ok {
+		return x.FullSyncRequest
+	}
+	return nil
+}
+
+func (m *LogSyncContentValue) GetFullSyncResponse() *LogFullSyncResponse {
+	if x, ok := m.GetValue().(*LogSyncContentValue_FullSyncResponse); ok {
+		return x.FullSyncResponse
+	}
+	return nil
+}
+
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*LogSyncContentValue) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
+		(*LogSyncContentValue_HeadUpdate)(nil),
+		(*LogSyncContentValue_FullSyncRequest)(nil),
+		(*LogSyncContentValue_FullSyncResponse)(nil),
+	}
+}
+
+// LogSyncMessage is a message sent when we are syncing logs
+type LogSyncMessage struct {
+	Id      string               `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Payload string               `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+	Content *LogSyncContentValue `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+}
+
+func (m *LogSyncMessage) Reset()         { *m = LogSyncMessage{} }
+func (m *LogSyncMessage) String() string { return proto.CompactTextString(m) }
+func (*LogSyncMessage) ProtoMessage()    {}
+func (*LogSyncMessage) Descriptor() ([]byte, []int) {
+	return fileDescriptor_b8d7f1c16b400059, []int{11}
+}
+func (m *LogSyncMessage) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *LogSyncMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_LogSyncMessage.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *LogSyncMessage) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LogSyncMessage.Merge(m, src)
+}
+func (m *LogSyncMessage) XXX_Size() int {
+	return m.Size()
+}
+func (m *LogSyncMessage) XXX_DiscardUnknown() {
+	xxx_messageInfo_LogSyncMessage.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_LogSyncMessage proto.InternalMessageInfo
+
+func (m *LogSyncMessage) GetId() string {
+	if m != nil {
+		return m.Id
+	}
+	return ""
+}
+
+func (m *LogSyncMessage) GetPayload() string {
+	if m != nil {
+		return m.Payload
+	}
+	return ""
+}
+
+func (m *LogSyncMessage) GetContent() *LogSyncContentValue {
+	if m != nil {
+		return m.Content
+	}
+	return nil
+}
+
+// LogHeadUpdate is a message sent on consensus log head update
+type LogHeadUpdate struct {
+	Head    string             `protobuf:"bytes,1,opt,name=head,proto3" json:"head,omitempty"`
+	Records []*RawRecordWithId `protobuf:"bytes,2,rep,name=records,proto3" json:"records,omitempty"`
+}
+
+func (m *LogHeadUpdate) Reset()         { *m = LogHeadUpdate{} }
+func (m *LogHeadUpdate) String() string { return proto.CompactTextString(m) }
+func (*LogHeadUpdate) ProtoMessage()    {}
+func (*LogHeadUpdate) Descriptor() ([]byte, []int) {
+	return fileDescriptor_b8d7f1c16b400059, []int{12}
+}
+func (m *LogHeadUpdate) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *LogHeadUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_LogHeadUpdate.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *LogHeadUpdate) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LogHeadUpdate.Merge(m, src)
+}
+func (m *LogHeadUpdate) XXX_Size() int {
+	return m.Size()
+}
+func (m *LogHeadUpdate) XXX_DiscardUnknown() {
+	xxx_messageInfo_LogHeadUpdate.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_LogHeadUpdate proto.InternalMessageInfo
+
+func (m *LogHeadUpdate) GetHead() string {
+	if m != nil {
+		return m.Head
+	}
+	return ""
+}
+
+func (m *LogHeadUpdate) GetRecords() []*RawRecordWithId {
+	if m != nil {
+		return m.Records
+	}
+	return nil
+}
+
+// LogFullSyncRequest is a message sent when consensus log needs full sync
+type LogFullSyncRequest struct {
+	Head string `protobuf:"bytes,1,opt,name=head,proto3" json:"head,omitempty"`
+}
+
+func (m *LogFullSyncRequest) Reset()         { *m = LogFullSyncRequest{} }
+func (m *LogFullSyncRequest) String() string { return proto.CompactTextString(m) }
+func (*LogFullSyncRequest) ProtoMessage()    {}
+func (*LogFullSyncRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_b8d7f1c16b400059, []int{13}
+}
+func (m *LogFullSyncRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *LogFullSyncRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_LogFullSyncRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *LogFullSyncRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LogFullSyncRequest.Merge(m, src)
+}
+func (m *LogFullSyncRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *LogFullSyncRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_LogFullSyncRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_LogFullSyncRequest proto.InternalMessageInfo
+
+func (m *LogFullSyncRequest) GetHead() string {
+	if m != nil {
+		return m.Head
+	}
+	return ""
+}
+
+// LogFullSyncResponse is a message sent as a response for a specific full sync
+type LogFullSyncResponse struct {
+	Head    string             `protobuf:"bytes,1,opt,name=head,proto3" json:"head,omitempty"`
+	Records []*RawRecordWithId `protobuf:"bytes,2,rep,name=records,proto3" json:"records,omitempty"`
+}
+
+func (m *LogFullSyncResponse) Reset()         { *m = LogFullSyncResponse{} }
+func (m *LogFullSyncResponse) String() string { return proto.CompactTextString(m) }
+func (*LogFullSyncResponse) ProtoMessage()    {}
+func (*LogFullSyncResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_b8d7f1c16b400059, []int{14}
+}
+func (m *LogFullSyncResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *LogFullSyncResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_LogFullSyncResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *LogFullSyncResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LogFullSyncResponse.Merge(m, src)
+}
+func (m *LogFullSyncResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *LogFullSyncResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_LogFullSyncResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_LogFullSyncResponse proto.InternalMessageInfo
+
+func (m *LogFullSyncResponse) GetHead() string {
+	if m != nil {
+		return m.Head
+	}
+	return ""
+}
+
+func (m *LogFullSyncResponse) GetRecords() []*RawRecordWithId {
+	if m != nil {
+		return m.Records
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterEnum("consensusProto.ErrCodes", ErrCodes_name, ErrCodes_value)
 	proto.RegisterType((*Log)(nil), "consensusProto.Log")
@@ -607,6 +919,11 @@ func init() {
 	proto.RegisterType((*LogWatchRequest)(nil), "consensusProto.LogWatchRequest")
 	proto.RegisterType((*LogWatchEvent)(nil), "consensusProto.LogWatchEvent")
 	proto.RegisterType((*Err)(nil), "consensusProto.Err")
+	proto.RegisterType((*LogSyncContentValue)(nil), "consensusProto.LogSyncContentValue")
+	proto.RegisterType((*LogSyncMessage)(nil), "consensusProto.LogSyncMessage")
+	proto.RegisterType((*LogHeadUpdate)(nil), "consensusProto.LogHeadUpdate")
+	proto.RegisterType((*LogFullSyncRequest)(nil), "consensusProto.LogFullSyncRequest")
+	proto.RegisterType((*LogFullSyncResponse)(nil), "consensusProto.LogFullSyncResponse")
 }
 
 func init() {
@@ -614,46 +931,56 @@ func init() {
 }
 
 var fileDescriptor_b8d7f1c16b400059 = []byte{
-	// 618 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0xcf, 0x6e, 0xd3, 0x4e,
-	0x10, 0xce, 0xda, 0x6d, 0x1a, 0x4f, 0x7e, 0x4d, 0xfd, 0x1b, 0x10, 0x32, 0x11, 0x75, 0x23, 0x4b,
-	0x48, 0xa5, 0x42, 0x29, 0x04, 0x81, 0x84, 0x7a, 0x82, 0x2a, 0x48, 0x91, 0x42, 0x8b, 0x8c, 0x50,
-	0x25, 0xb8, 0x60, 0xbc, 0x5b, 0xd7, 0x34, 0xf5, 0x86, 0xdd, 0x4d, 0xff, 0x3c, 0x03, 0x17, 0x5e,
-	0x80, 0xf7, 0xe1, 0xd8, 0x23, 0x47, 0xd4, 0x5e, 0x78, 0x00, 0x1e, 0x00, 0x79, 0x1d, 0x3b, 0x6e,
-	0x9a, 0x80, 0xb8, 0x24, 0x3b, 0xdf, 0xfc, 0xfb, 0x66, 0xe6, 0x93, 0x61, 0x33, 0xe4, 0x89, 0x64,
-	0x89, 0x1c, 0xc9, 0xc9, 0x6b, 0x28, 0xb8, 0xe2, 0x9b, 0xfa, 0xb7, 0x84, 0xb6, 0x35, 0x80, 0x8d,
-	0x02, 0x78, 0x95, 0xda, 0xde, 0x47, 0x30, 0xfb, 0x3c, 0xc2, 0x06, 0x18, 0x31, 0x75, 0x48, 0x8b,
-	0xac, 0xff, 0xe7, 0x1b, 0x31, 0x45, 0x07, 0x96, 0x86, 0xc1, 0xd9, 0x80, 0x07, 0xd4, 0x31, 0x34,
-	0x98, 0x9b, 0xf8, 0x14, 0x96, 0x04, 0x0b, 0xb9, 0xa0, 0xd2, 0x31, 0x5b, 0xe6, 0x7a, 0xbd, 0xb3,
-	0xd6, 0xbe, 0x5a, 0xb2, 0xed, 0x07, 0x27, 0xbe, 0x8e, 0xd8, 0x8b, 0xd5, 0x41, 0x8f, 0xfa, 0x79,
-	0xbc, 0xf7, 0x95, 0x80, 0x55, 0x38, 0xcb, 0x2d, 0xc8, 0xd5, 0x16, 0x77, 0xc0, 0x92, 0x71, 0x94,
-	0x04, 0x6a, 0x24, 0xd8, 0xb8, 0xfd, 0x04, 0xc0, 0x0d, 0xb0, 0x83, 0x30, 0x64, 0x43, 0xc5, 0x45,
-	0x8f, 0xb2, 0x44, 0xc5, 0xea, 0xcc, 0x31, 0x75, 0xd0, 0x35, 0x1c, 0xef, 0xc3, 0xff, 0x39, 0xf6,
-	0xba, 0xa8, 0xb8, 0xa0, 0x83, 0xaf, 0x3b, 0xbc, 0x2d, 0x58, 0x99, 0xe2, 0xfe, 0x07, 0x92, 0xd9,
-	0xc6, 0x52, 0x76, 0x56, 0xba, 0x31, 0x2f, 0x81, 0xea, 0x78, 0xb0, 0x5b, 0x50, 0x1d, 0x0a, 0x76,
-	0xdc, 0xcb, 0x52, 0x2c, 0x7f, 0x6c, 0x61, 0x13, 0x6a, 0x71, 0x4e, 0x38, 0x9b, 0xaa, 0xb0, 0x11,
-	0x61, 0x81, 0x06, 0x2a, 0x18, 0x0f, 0xa2, 0xdf, 0xe9, 0x1a, 0x54, 0x7c, 0xc4, 0xa4, 0x0a, 0x8e,
-	0x86, 0x9a, 0xb4, 0xe9, 0x4f, 0x00, 0x6f, 0x01, 0x8c, 0xdd, 0x43, 0xef, 0x09, 0x2c, 0xf7, 0x79,
-	0xf4, 0x8c, 0x52, 0x9f, 0x7d, 0x1a, 0x31, 0xa9, 0xf0, 0x2e, 0x98, 0x03, 0x1e, 0xe9, 0xce, 0xf5,
-	0xce, 0x8d, 0xe9, 0xd3, 0xf4, 0x79, 0xe4, 0xa7, 0x7e, 0xef, 0x1d, 0xd8, 0x19, 0xdb, 0x52, 0xea,
-	0x4d, 0x58, 0x1c, 0xf0, 0xa8, 0x97, 0x4f, 0x9a, 0x19, 0xf8, 0x10, 0xaa, 0xd9, 0xfd, 0x34, 0xe7,
-	0x7a, 0xe7, 0xf6, 0xdc, 0x73, 0xfb, 0xe3, 0x40, 0xef, 0x25, 0xac, 0xf4, 0x79, 0xb4, 0x17, 0xa8,
-	0xf0, 0x20, 0xaf, 0xdd, 0x84, 0xda, 0x49, 0x6a, 0xf7, 0xa8, 0x74, 0x48, 0xcb, 0x4c, 0x67, 0xcf,
-	0x6d, 0x74, 0x01, 0x46, 0x49, 0xe1, 0x35, 0xb4, 0xb7, 0x84, 0x78, 0x9f, 0x89, 0x1e, 0x52, 0xd7,
-	0xeb, 0x1e, 0xb3, 0x64, 0x1e, 0xd3, 0x92, 0x32, 0x8d, 0x7f, 0x53, 0x26, 0xde, 0x83, 0x45, 0x26,
-	0x04, 0x17, 0x7a, 0xff, 0x33, 0xf6, 0xd6, 0x15, 0xc2, 0xcf, 0x22, 0xbc, 0xc7, 0x60, 0x76, 0x85,
-	0xc0, 0x76, 0x9e, 0x91, 0x52, 0x68, 0x74, 0x9c, 0x19, 0x19, 0xdb, 0x9c, 0x32, 0x39, 0x4e, 0xdb,
-	0x78, 0x0f, 0xb5, 0x1c, 0xc2, 0x06, 0xc0, 0x9b, 0x84, 0x9d, 0x0e, 0x59, 0xa8, 0x18, 0xb5, 0x2b,
-	0xb8, 0x0c, 0x56, 0x9f, 0x47, 0xdd, 0xd3, 0x58, 0x2a, 0x69, 0x13, 0x5c, 0x81, 0x7a, 0x9f, 0x47,
-	0x3b, 0x5c, 0xbd, 0xe0, 0xa3, 0x84, 0xda, 0x06, 0x22, 0x34, 0x32, 0xda, 0xdb, 0x3c, 0xd9, 0x1f,
-	0xc4, 0xa1, 0xb2, 0x4d, 0xb4, 0xa1, 0xde, 0x4d, 0x0b, 0xef, 0xee, 0xef, 0x4b, 0xa6, 0xec, 0x5f,
-	0x66, 0xe7, 0x27, 0x01, 0x6b, 0x3b, 0x27, 0x81, 0x5b, 0x50, 0xcd, 0x84, 0x81, 0xab, 0x33, 0x44,
-	0x30, 0xb9, 0x7a, 0x13, 0xa7, 0xdd, 0xbb, 0x87, 0xb8, 0x03, 0x56, 0xa1, 0x0e, 0x6c, 0x5d, 0xdb,
-	0xe2, 0x94, 0x70, 0x9a, 0x7f, 0xdb, 0x33, 0xee, 0x40, 0x2d, 0x3f, 0x20, 0xae, 0xcd, 0xa0, 0x53,
-	0x96, 0x4a, 0x73, 0x75, 0x5e, 0x80, 0xbe, 0xfd, 0x3a, 0x79, 0x40, 0x9e, 0x77, 0xbe, 0x5d, 0xb8,
-	0xe4, 0xfc, 0xc2, 0x25, 0x3f, 0x2e, 0x5c, 0xf2, 0xe5, 0xd2, 0xad, 0x9c, 0x5f, 0xba, 0x95, 0xef,
-	0x97, 0x6e, 0xe5, 0xad, 0x33, 0xef, 0x7b, 0xf8, 0xa1, 0xaa, 0xff, 0x1e, 0xfd, 0x0e, 0x00, 0x00,
-	0xff, 0xff, 0xbc, 0x83, 0xcb, 0xc1, 0x32, 0x05, 0x00, 0x00,
+	// 782 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x55, 0xcf, 0x6e, 0xd3, 0x4c,
+	0x10, 0x8f, 0xed, 0x36, 0x89, 0x27, 0x5f, 0x13, 0x7f, 0x5b, 0x84, 0x4c, 0x44, 0xd3, 0xc8, 0x08,
+	0x29, 0x54, 0x28, 0x85, 0x20, 0x90, 0x50, 0x85, 0x10, 0x8d, 0x52, 0x25, 0x52, 0x9a, 0x82, 0xab,
+	0x52, 0x09, 0x24, 0x84, 0xf1, 0x6e, 0x5c, 0xd3, 0xd4, 0x6b, 0xec, 0x4d, 0xdb, 0x5c, 0xb9, 0x72,
+	0xe1, 0x05, 0x78, 0x1f, 0x8e, 0x3d, 0x72, 0x44, 0xed, 0x85, 0x07, 0xe0, 0x01, 0x90, 0xd7, 0x76,
+	0xe2, 0x26, 0x4e, 0x11, 0x82, 0x4b, 0xbb, 0xf3, 0xff, 0x37, 0xbf, 0x19, 0x4f, 0x60, 0xdd, 0xa4,
+	0x8e, 0x4f, 0x1c, 0x7f, 0xe8, 0x4f, 0x5e, 0xae, 0x47, 0x19, 0x5d, 0xe7, 0x7f, 0x13, 0xda, 0x3a,
+	0x57, 0xa0, 0xe2, 0x58, 0xf1, 0x3c, 0x90, 0xb5, 0xf7, 0x20, 0x75, 0xa9, 0x85, 0x8a, 0x20, 0xda,
+	0x58, 0x15, 0xaa, 0x42, 0xed, 0x3f, 0x5d, 0xb4, 0x31, 0x52, 0x21, 0xe7, 0x1a, 0xa3, 0x01, 0x35,
+	0xb0, 0x2a, 0x72, 0x65, 0x2c, 0xa2, 0xc7, 0x90, 0xf3, 0x88, 0x49, 0x3d, 0xec, 0xab, 0x52, 0x55,
+	0xaa, 0x15, 0x1a, 0xab, 0xf5, 0xcb, 0x29, 0xeb, 0xba, 0x71, 0xa2, 0x73, 0x8f, 0x7d, 0x9b, 0x1d,
+	0x74, 0xb0, 0x1e, 0xfb, 0x6b, 0x5f, 0x04, 0x90, 0xc7, 0xc6, 0x64, 0x09, 0xe1, 0x72, 0x89, 0x9b,
+	0x20, 0xfb, 0xb6, 0xe5, 0x18, 0x6c, 0xe8, 0x91, 0xa8, 0xfc, 0x44, 0x81, 0xd6, 0x40, 0x31, 0x4c,
+	0x93, 0xb8, 0x8c, 0x7a, 0x1d, 0x4c, 0x1c, 0x66, 0xb3, 0x91, 0x2a, 0x71, 0xa7, 0x19, 0x3d, 0xba,
+	0x0b, 0xff, 0xc7, 0xba, 0xdd, 0x71, 0xc6, 0x05, 0xee, 0x3c, 0x6b, 0xd0, 0x36, 0xa0, 0x34, 0x85,
+	0xfd, 0x0a, 0x90, 0x21, 0x63, 0x01, 0x3a, 0x39, 0x60, 0x4c, 0x73, 0x20, 0x1b, 0x35, 0x76, 0x1d,
+	0xb2, 0xae, 0x47, 0x8e, 0x3b, 0x61, 0x88, 0xac, 0x47, 0x12, 0x2a, 0x43, 0xde, 0x8e, 0x01, 0x87,
+	0x5d, 0x8d, 0x65, 0x84, 0x60, 0x01, 0x1b, 0xcc, 0x88, 0x1a, 0xe1, 0xef, 0x80, 0x06, 0x66, 0x1f,
+	0x11, 0x9f, 0x19, 0x47, 0x2e, 0x07, 0x2d, 0xe9, 0x13, 0x85, 0xb6, 0x00, 0xe2, 0xce, 0xa1, 0xf6,
+	0x08, 0x96, 0xba, 0xd4, 0x7a, 0x86, 0xb1, 0x4e, 0x3e, 0x0c, 0x89, 0xcf, 0xd0, 0x6d, 0x90, 0x06,
+	0xd4, 0xe2, 0x95, 0x0b, 0x8d, 0xe5, 0xe9, 0xd1, 0x74, 0xa9, 0xa5, 0x07, 0x76, 0xed, 0x35, 0x28,
+	0x21, 0xda, 0x44, 0xe8, 0x35, 0x58, 0x1c, 0x50, 0xab, 0x13, 0x77, 0x1a, 0x0a, 0xe8, 0x3e, 0x64,
+	0xc3, 0xf9, 0x71, 0xcc, 0x85, 0xc6, 0x8d, 0xb9, 0xe3, 0xd6, 0x23, 0x47, 0x6d, 0x1b, 0x4a, 0x5d,
+	0x6a, 0xed, 0x1b, 0xcc, 0x3c, 0x88, 0x73, 0x97, 0x21, 0x7f, 0x12, 0xc8, 0x1d, 0xec, 0xab, 0x42,
+	0x55, 0x0a, 0x7a, 0x8f, 0x65, 0x54, 0x01, 0x18, 0x3a, 0x63, 0xab, 0xc8, 0xad, 0x09, 0x8d, 0xf6,
+	0x49, 0xe0, 0x4d, 0xf2, 0x7c, 0xad, 0x63, 0xe2, 0xcc, 0x43, 0x9a, 0xd8, 0x4c, 0xf1, 0xcf, 0x36,
+	0x13, 0xdd, 0x81, 0x45, 0xe2, 0x79, 0xd4, 0xe3, 0xfc, 0xa7, 0xf0, 0xd6, 0xf2, 0x3c, 0x3d, 0xf4,
+	0xd0, 0x1e, 0x82, 0xd4, 0xf2, 0x3c, 0x54, 0x8f, 0x23, 0x02, 0x08, 0xc5, 0x86, 0x9a, 0x12, 0xd1,
+	0xa4, 0x98, 0xf8, 0x71, 0xd8, 0x47, 0x11, 0x96, 0xbb, 0xd4, 0xda, 0x1d, 0x39, 0x66, 0x93, 0x3a,
+	0x8c, 0x38, 0xec, 0xa5, 0x31, 0x18, 0x12, 0xf4, 0x14, 0xe0, 0x80, 0x18, 0x78, 0xcf, 0xc5, 0x06,
+	0x23, 0xd1, 0xd8, 0x56, 0x52, 0xc6, 0xd6, 0x1e, 0x3b, 0xb5, 0x33, 0x7a, 0x22, 0x04, 0xf5, 0xa0,
+	0xd4, 0x1f, 0x0e, 0x06, 0x41, 0xe2, 0x88, 0xec, 0x68, 0x50, 0x5a, 0x4a, 0x96, 0xad, 0xcb, 0x9e,
+	0xed, 0x8c, 0x3e, 0x1d, 0x8c, 0x5e, 0x80, 0x32, 0x51, 0xf9, 0x6e, 0x90, 0x22, 0x62, 0xe5, 0xd6,
+	0x95, 0x09, 0x43, 0xd7, 0x76, 0x46, 0x9f, 0x09, 0xdf, 0xcc, 0xc1, 0xe2, 0x71, 0xd0, 0xac, 0x36,
+	0x82, 0x62, 0xc4, 0xc1, 0x36, 0xf1, 0x7d, 0xc3, 0x22, 0x89, 0xbb, 0x23, 0xa7, 0xdd, 0x1d, 0x79,
+	0xf2, 0xbd, 0x3d, 0x81, 0x9c, 0x19, 0x12, 0x77, 0x05, 0x9c, 0x69, 0x7a, 0xf5, 0x38, 0x46, 0x7b,
+	0xc3, 0x77, 0x68, 0xc2, 0x62, 0xf0, 0xc5, 0x05, 0x2c, 0x46, 0xb5, 0xf9, 0xfb, 0x2f, 0x36, 0x48,
+	0xab, 0x01, 0x9a, 0xe5, 0x37, 0xad, 0x88, 0x86, 0xf9, 0x22, 0x4c, 0x13, 0xf7, 0x8f, 0xf1, 0xac,
+	0xbd, 0x85, 0x7c, 0xbc, 0x82, 0xa8, 0x08, 0xb0, 0xe7, 0x90, 0x53, 0x97, 0x98, 0x8c, 0x60, 0x25,
+	0x83, 0x96, 0x40, 0xee, 0x52, 0xab, 0x75, 0x6a, 0xfb, 0xcc, 0x57, 0x04, 0x54, 0x82, 0x42, 0x97,
+	0x5a, 0x3d, 0xca, 0xb6, 0xe8, 0xd0, 0xc1, 0x8a, 0x88, 0x10, 0x14, 0xc3, 0xa4, 0x4d, 0xea, 0xf4,
+	0x07, 0xb6, 0xc9, 0x14, 0x09, 0x29, 0x50, 0x68, 0x05, 0x8b, 0xbc, 0xd3, 0xef, 0xfb, 0x84, 0x29,
+	0x3f, 0xa5, 0xc6, 0x0f, 0x01, 0xe4, 0x66, 0x8c, 0x06, 0x6d, 0x40, 0x36, 0x3c, 0x44, 0x28, 0x6d,
+	0x7b, 0x27, 0x57, 0xa6, 0x8c, 0xa6, 0xcd, 0x3b, 0x87, 0xa8, 0x07, 0xf2, 0xf8, 0x1a, 0xa1, 0xea,
+	0x4c, 0x8f, 0x53, 0x87, 0xaa, 0xfc, 0x3b, 0x16, 0x50, 0x0f, 0xf2, 0xf1, 0xc1, 0x40, 0xab, 0x29,
+	0x70, 0x92, 0xa7, 0xa9, 0xbc, 0x32, 0xcf, 0x81, 0xdf, 0x9a, 0x9a, 0x70, 0x4f, 0xd8, 0x6c, 0x7c,
+	0x3d, 0xaf, 0x08, 0x67, 0xe7, 0x15, 0xe1, 0xfb, 0x79, 0x45, 0xf8, 0x7c, 0x51, 0xc9, 0x9c, 0x5d,
+	0x54, 0x32, 0xdf, 0x2e, 0x2a, 0x99, 0x57, 0xea, 0xbc, 0xdf, 0xdf, 0x77, 0x59, 0xfe, 0xef, 0xc1,
+	0xaf, 0x00, 0x00, 0x00, 0xff, 0xff, 0xd6, 0x8a, 0x01, 0xa8, 0xa2, 0x07, 0x00, 0x00,
 }
 
 func (m *Log) Marshal() (dAtA []byte, err error) {
@@ -1069,6 +1396,268 @@ func (m *Err) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *LogSyncContentValue) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *LogSyncContentValue) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *LogSyncContentValue) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Value != nil {
+		{
+			size := m.Value.Size()
+			i -= size
+			if _, err := m.Value.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *LogSyncContentValue_HeadUpdate) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *LogSyncContentValue_HeadUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.HeadUpdate != nil {
+		{
+			size, err := m.HeadUpdate.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintConsensus(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+func (m *LogSyncContentValue_FullSyncRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *LogSyncContentValue_FullSyncRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.FullSyncRequest != nil {
+		{
+			size, err := m.FullSyncRequest.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintConsensus(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	return len(dAtA) - i, nil
+}
+func (m *LogSyncContentValue_FullSyncResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *LogSyncContentValue_FullSyncResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.FullSyncResponse != nil {
+		{
+			size, err := m.FullSyncResponse.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintConsensus(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	return len(dAtA) - i, nil
+}
+func (m *LogSyncMessage) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *LogSyncMessage) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *LogSyncMessage) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Content != nil {
+		{
+			size, err := m.Content.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintConsensus(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.Payload) > 0 {
+		i -= len(m.Payload)
+		copy(dAtA[i:], m.Payload)
+		i = encodeVarintConsensus(dAtA, i, uint64(len(m.Payload)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Id) > 0 {
+		i -= len(m.Id)
+		copy(dAtA[i:], m.Id)
+		i = encodeVarintConsensus(dAtA, i, uint64(len(m.Id)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *LogHeadUpdate) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *LogHeadUpdate) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *LogHeadUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Records) > 0 {
+		for iNdEx := len(m.Records) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Records[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintConsensus(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Head) > 0 {
+		i -= len(m.Head)
+		copy(dAtA[i:], m.Head)
+		i = encodeVarintConsensus(dAtA, i, uint64(len(m.Head)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *LogFullSyncRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *LogFullSyncRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *LogFullSyncRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Head) > 0 {
+		i -= len(m.Head)
+		copy(dAtA[i:], m.Head)
+		i = encodeVarintConsensus(dAtA, i, uint64(len(m.Head)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *LogFullSyncResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *LogFullSyncResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *LogFullSyncResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Records) > 0 {
+		for iNdEx := len(m.Records) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Records[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintConsensus(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Head) > 0 {
+		i -= len(m.Head)
+		copy(dAtA[i:], m.Head)
+		i = encodeVarintConsensus(dAtA, i, uint64(len(m.Head)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintConsensus(dAtA []byte, offset int, v uint64) int {
 	offset -= sovConsensus(v)
 	base := offset
@@ -1260,6 +1849,126 @@ func (m *Err) Size() (n int) {
 	_ = l
 	if m.Error != 0 {
 		n += 1 + sovConsensus(uint64(m.Error))
+	}
+	return n
+}
+
+func (m *LogSyncContentValue) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Value != nil {
+		n += m.Value.Size()
+	}
+	return n
+}
+
+func (m *LogSyncContentValue_HeadUpdate) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.HeadUpdate != nil {
+		l = m.HeadUpdate.Size()
+		n += 1 + l + sovConsensus(uint64(l))
+	}
+	return n
+}
+func (m *LogSyncContentValue_FullSyncRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.FullSyncRequest != nil {
+		l = m.FullSyncRequest.Size()
+		n += 1 + l + sovConsensus(uint64(l))
+	}
+	return n
+}
+func (m *LogSyncContentValue_FullSyncResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.FullSyncResponse != nil {
+		l = m.FullSyncResponse.Size()
+		n += 1 + l + sovConsensus(uint64(l))
+	}
+	return n
+}
+func (m *LogSyncMessage) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Id)
+	if l > 0 {
+		n += 1 + l + sovConsensus(uint64(l))
+	}
+	l = len(m.Payload)
+	if l > 0 {
+		n += 1 + l + sovConsensus(uint64(l))
+	}
+	if m.Content != nil {
+		l = m.Content.Size()
+		n += 1 + l + sovConsensus(uint64(l))
+	}
+	return n
+}
+
+func (m *LogHeadUpdate) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Head)
+	if l > 0 {
+		n += 1 + l + sovConsensus(uint64(l))
+	}
+	if len(m.Records) > 0 {
+		for _, e := range m.Records {
+			l = e.Size()
+			n += 1 + l + sovConsensus(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *LogFullSyncRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Head)
+	if l > 0 {
+		n += 1 + l + sovConsensus(uint64(l))
+	}
+	return n
+}
+
+func (m *LogFullSyncResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Head)
+	if l > 0 {
+		n += 1 + l + sovConsensus(uint64(l))
+	}
+	if len(m.Records) > 0 {
+		for _, e := range m.Records {
+			l = e.Size()
+			n += 1 + l + sovConsensus(uint64(l))
+		}
 	}
 	return n
 }
@@ -2465,6 +3174,625 @@ func (m *Err) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipConsensus(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *LogSyncContentValue) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowConsensus
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: LogSyncContentValue: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: LogSyncContentValue: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HeadUpdate", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowConsensus
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &LogHeadUpdate{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &LogSyncContentValue_HeadUpdate{v}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FullSyncRequest", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowConsensus
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &LogFullSyncRequest{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &LogSyncContentValue_FullSyncRequest{v}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FullSyncResponse", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowConsensus
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &LogFullSyncResponse{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &LogSyncContentValue_FullSyncResponse{v}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipConsensus(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *LogSyncMessage) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowConsensus
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: LogSyncMessage: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: LogSyncMessage: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowConsensus
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Id = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Payload", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowConsensus
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Payload = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Content", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowConsensus
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Content == nil {
+				m.Content = &LogSyncContentValue{}
+			}
+			if err := m.Content.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipConsensus(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *LogHeadUpdate) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowConsensus
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: LogHeadUpdate: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: LogHeadUpdate: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Head", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowConsensus
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Head = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Records", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowConsensus
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Records = append(m.Records, &RawRecordWithId{})
+			if err := m.Records[len(m.Records)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipConsensus(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *LogFullSyncRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowConsensus
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: LogFullSyncRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: LogFullSyncRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Head", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowConsensus
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Head = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipConsensus(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *LogFullSyncResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowConsensus
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: LogFullSyncResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: LogFullSyncResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Head", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowConsensus
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Head = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Records", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowConsensus
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthConsensus
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Records = append(m.Records, &RawRecordWithId{})
+			if err := m.Records[len(m.Records)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipConsensus(dAtA[iNdEx:])

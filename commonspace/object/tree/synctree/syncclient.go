@@ -2,6 +2,7 @@ package synctree
 
 import (
 	"context"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/requestmanager"
@@ -32,6 +33,7 @@ func NewSyncClient(spaceId string, requestManager requestmanager.RequestManager,
 		peerManager:    peerManager,
 	}
 }
+
 func (s *syncClient) Broadcast(msg *treechangeproto.TreeSyncMessage) {
 	objMsg, err := MarshallTreeMessage(msg, s.spaceId, msg.RootChange.Id, "")
 	if err != nil {

@@ -55,6 +55,7 @@ type AclList interface {
 
 	ValidateRawRecord(record *consensusproto.RawRecord) (err error)
 	AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error)
+	AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (err error)
 
 	Close() (err error)
 }
@@ -193,6 +194,16 @@ func (a *aclList) ValidateRawRecord(rawRec *consensusproto.RawRecord) (err error
 		return
 	}
 	return a.aclState.Validator().ValidateAclRecordContents(record)
+}
+
+func (a *aclList) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (err error) {
+	for _, rec := range rawRecords {
+		err = a.AddRawRecord(rec)
+		if err != nil {
+			return
+		}
+	}
+	return
 }
 
 func (a *aclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error) {
