@@ -2,6 +2,8 @@ package commonspace
 
 import (
 	"context"
+	"sync/atomic"
+
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -9,7 +11,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/headsync"
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -24,13 +25,13 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
 	"storj.io/drpc"
-	"sync/atomic"
 )
 
 const CName = "common.commonspace"
@@ -193,7 +194,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 
 func (s *spaceService) addSpaceStorage(ctx context.Context, spaceDescription SpaceDescription) (st spacestorage.SpaceStorage, err error) {
 	payload := spacestorage.SpaceStorageCreatePayload{
-		AclWithId: &aclrecordproto.RawAclRecordWithId{
+		AclWithId: &consensusproto.RawRecordWithId{
 			Payload: spaceDescription.AclPayload,
 			Id:      spaceDescription.AclId,
 		},
@@ -240,7 +241,7 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 	}
 
 	st, err = s.createSpaceStorage(spacestorage.SpaceStorageCreatePayload{
-		AclWithId: &aclrecordproto.RawAclRecordWithId{
+		AclWithId: &consensusproto.RawRecordWithId{
 			Payload: res.Payload.AclPayload,
 			Id:      res.Payload.AclPayloadId,
 		},

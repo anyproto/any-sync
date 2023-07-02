@@ -3,7 +3,7 @@ package objecttree
 import (
 	"context"
 	"fmt"
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/util/slice"
@@ -52,20 +52,18 @@ func (v *objectTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclLis
 
 func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c *Change) (err error) {
 	var (
-		perm  list.AclUserState
-		state = aclList.AclState()
+		userState list.AclUserState
+		state     = aclList.AclState()
 	)
 	// checking if the user could write
-	perm, err = state.StateAtRecord(c.AclHeadId, c.Identity)
+	userState, err = state.StateAtRecord(c.AclHeadId, c.Identity)
 	if err != nil {
 		return
 	}
-
-	if perm.Permissions != aclrecordproto.AclUserPermissions_Writer && perm.Permissions != aclrecordproto.AclUserPermissions_Admin {
+	if !userState.Permissions.CanWrite() {
 		err = list.ErrInsufficientPermissions
 		return
 	}
-
 	if c.Id == tree.RootId() {
 		return
 	}

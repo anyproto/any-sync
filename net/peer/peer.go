@@ -3,6 +3,12 @@ package peer
 
 import (
 	"context"
+	"io"
+	"net"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net/connutil"
@@ -11,16 +17,11 @@ import (
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/net/transport"
 	"go.uber.org/zap"
-	"io"
-	"net"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcconn"
 	"storj.io/drpc/drpcmanager"
 	"storj.io/drpc/drpcstream"
 	"storj.io/drpc/drpcwire"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 var log = logger.NewNamed("common.net.peer")

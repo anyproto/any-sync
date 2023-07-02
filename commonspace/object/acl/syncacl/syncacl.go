@@ -2,6 +2,7 @@ package syncacl
 
 import (
 	"context"
+
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
@@ -34,7 +35,7 @@ func (s *SyncAcl) Init(a *app.App) (err error) {
 		return err
 	}
 	acc := a.MustComponent(accountservice.CName).(accountservice.Service)
-	s.AclList, err = list.BuildAclListWithIdentity(acc.Account(), aclStorage)
+	s.AclList, err = list.BuildAclListWithIdentity(acc.Account(), aclStorage, list.NoOpAcceptorVerifier{})
 	return err
 }
 

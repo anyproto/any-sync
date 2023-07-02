@@ -3,24 +3,26 @@ package liststorage
 import (
 	"context"
 	"fmt"
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+
+	"github.com/anyproto/any-sync/consensus/consensusproto"
+
 	"sync"
 )
 
 type inMemoryAclListStorage struct {
 	id      string
-	root    *aclrecordproto.RawAclRecordWithId
+	root    *consensusproto.RawRecordWithId
 	head    string
-	records map[string]*aclrecordproto.RawAclRecordWithId
+	records map[string]*consensusproto.RawRecordWithId
 
 	sync.RWMutex
 }
 
 func NewInMemoryAclListStorage(
 	id string,
-	records []*aclrecordproto.RawAclRecordWithId) (ListStorage, error) {
+	records []*consensusproto.RawRecordWithId) (ListStorage, error) {
 
-	allRecords := make(map[string]*aclrecordproto.RawAclRecordWithId)
+	allRecords := make(map[string]*consensusproto.RawRecordWithId)
 	for _, ch := range records {
 		allRecords[ch.Id] = ch
 	}
@@ -41,7 +43,7 @@ func (t *inMemoryAclListStorage) Id() string {
 	return t.id
 }
 
-func (t *inMemoryAclListStorage) Root() (*aclrecordproto.RawAclRecordWithId, error) {
+func (t *inMemoryAclListStorage) Root() (*consensusproto.RawRecordWithId, error) {
 	t.RLock()
 	defer t.RUnlock()
 	return t.root, nil
@@ -60,7 +62,7 @@ func (t *inMemoryAclListStorage) SetHead(head string) error {
 	return nil
 }
 
-func (t *inMemoryAclListStorage) AddRawRecord(ctx context.Context, record *aclrecordproto.RawAclRecordWithId) error {
+func (t *inMemoryAclListStorage) AddRawRecord(ctx context.Context, record *consensusproto.RawRecordWithId) error {
 	t.Lock()
 	defer t.Unlock()
 	// TODO: better to do deep copy
@@ -68,7 +70,7 @@ func (t *inMemoryAclListStorage) AddRawRecord(ctx context.Context, record *aclre
 	return nil
 }
 
-func (t *inMemoryAclListStorage) GetRawRecord(ctx context.Context, recordId string) (*aclrecordproto.RawAclRecordWithId, error) {
+func (t *inMemoryAclListStorage) GetRawRecord(ctx context.Context, recordId string) (*consensusproto.RawRecordWithId, error) {
 	t.RLock()
 	defer t.RUnlock()
 	if res, exists := t.records[recordId]; exists {

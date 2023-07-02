@@ -4,18 +4,19 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/anyproto/any-sync/app/ldiff"
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage/mock_liststorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage/mock_treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"storj.io/drpc"
-	"testing"
-	"time"
 )
 
 type pushSpaceRequestMatcher struct {
@@ -169,7 +170,7 @@ func TestDiffSyncer(t *testing.T) {
 		settingsStorage := mock_treestorage.NewMockTreeStorage(fx.ctrl)
 		settingsId := "settingsId"
 		aclRootId := "aclRootId"
-		aclRoot := &aclrecordproto.RawAclRecordWithId{
+		aclRoot := &consensusproto.RawRecordWithId{
 			Id: aclRootId,
 		}
 		settingsRoot := &treechangeproto.RawTreeChangeWithId{

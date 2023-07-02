@@ -5,16 +5,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/anyproto/any-sync/commonspace/object/accountdata"
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
-	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
-	"github.com/anyproto/any-sync/util/crypto"
 	"sync"
+
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 type IterFunc = func(record *AclRecord) (IsContinue bool)
 
-var ErrIncorrectCID = errors.New("incorrect CID")
+var (
+	ErrIncorrectCID        = errors.New("incorrect CID")
+	ErrRecordAlreadyExists = errors.New("record already exists")
+)
 
 type RWLocker interface {
 	sync.Locker
@@ -22,26 +26,41 @@ type RWLocker interface {
 	RUnlock()
 }
 
+type AcceptorVerifier interface {
+	VerifyAcceptor(rec *consensusproto.RawRecord) (err error)
+}
+
+type NoOpAcceptorVerifier struct {
+}
+
+func (n NoOpAcceptorVerifier) VerifyAcceptor(rec *consensusproto.RawRecord) (err error) {
+	return nil
+}
+
 type AclList interface {
 	RWLocker
 	Id() string
-	Root() *aclrecordproto.RawAclRecordWithId
+	Root() *consensusproto.RawRecordWithId
 	Records() []*AclRecord
 	AclState() *AclState
 	IsAfter(first string, second string) (bool, error)
 	Head() *AclRecord
 	Get(id string) (*AclRecord, error)
+	GetIndex(idx int) (*AclRecord, error)
 	Iterate(iterFunc IterFunc)
 	IterateFrom(startId string, iterFunc IterFunc)
-	KeyStorage() crypto.KeyStorage
 
-	AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added bool, err error)
+	KeyStorage() crypto.KeyStorage
+	RecordBuilder() AclRecordBuilder
+
+	ValidateRawRecord(record *consensusproto.RawRecord) (err error)
+	AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error)
 
 	Close() (err error)
 }
 
 type aclList struct {
-	root    *aclrecordproto.RawAclRecordWithId
+	root    *consensusproto.RawRecordWithId
 	records []*AclRecord
 	indexes map[string]int
 	id      string
@@ -55,18 +74,45 @@ type aclList struct {
 	sync.RWMutex
 }
 
-func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage liststorage.ListStorage) (AclList, error) {
-	builder := newAclStateBuilderWithIdentity(acc)
-	keyStorage := crypto.NewKeyStorage()
-	return build(storage.Id(), keyStorage, builder, NewAclRecordBuilder(storage.Id(), keyStorage), storage)
+type internalDeps struct {
+	storage          liststorage.ListStorage
+	keyStorage       crypto.KeyStorage
+	stateBuilder     *aclStateBuilder
+	recordBuilder    AclRecordBuilder
+	acceptorVerifier AcceptorVerifier
 }
 
-func BuildAclList(storage liststorage.ListStorage) (AclList, error) {
+func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage liststorage.ListStorage, verifier AcceptorVerifier) (AclList, error) {
 	keyStorage := crypto.NewKeyStorage()
-	return build(storage.Id(), keyStorage, newAclStateBuilder(), NewAclRecordBuilder(storage.Id(), crypto.NewKeyStorage()), storage)
+	deps := internalDeps{
+		storage:          storage,
+		keyStorage:       keyStorage,
+		stateBuilder:     newAclStateBuilderWithIdentity(acc),
+		recordBuilder:    NewAclRecordBuilder(storage.Id(), keyStorage, acc, verifier),
+		acceptorVerifier: verifier,
+	}
+	return build(deps)
 }
 
-func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilder, recBuilder AclRecordBuilder, storage liststorage.ListStorage) (list AclList, err error) {
+func BuildAclList(storage liststorage.ListStorage, verifier AcceptorVerifier) (AclList, error) {
+	keyStorage := crypto.NewKeyStorage()
+	deps := internalDeps{
+		storage:          storage,
+		keyStorage:       keyStorage,
+		stateBuilder:     newAclStateBuilder(),
+		recordBuilder:    NewAclRecordBuilder(storage.Id(), keyStorage, nil, verifier),
+		acceptorVerifier: verifier,
+	}
+	return build(deps)
+}
+
+func build(deps internalDeps) (list AclList, err error) {
+	var (
+		storage      = deps.storage
+		id           = deps.storage.Id()
+		recBuilder   = deps.recordBuilder
+		stateBuilder = deps.stateBuilder
+	)
 	head, err := storage.Head()
 	if err != nil {
 		return
@@ -77,7 +123,7 @@ func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilde
 		return
 	}
 
-	record, err := recBuilder.Unmarshall(rawRecordWithId)
+	record, err := recBuilder.UnmarshallWithId(rawRecordWithId)
 	if err != nil {
 		return
 	}
@@ -89,7 +135,7 @@ func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilde
 			return
 		}
 
-		record, err = recBuilder.Unmarshall(rawRecordWithId)
+		record, err = recBuilder.UnmarshallWithId(rawRecordWithId)
 		if err != nil {
 			return
 		}
@@ -119,6 +165,7 @@ func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilde
 		return
 	}
 
+	recBuilder.(*aclRecordBuilder).state = state
 	list = &aclList{
 		root:          rootWithId,
 		records:       records,
@@ -132,15 +179,27 @@ func build(id string, keyStorage crypto.KeyStorage, stateBuilder *aclStateBuilde
 	return
 }
 
+func (a *aclList) RecordBuilder() AclRecordBuilder {
+	return a.recordBuilder
+}
+
 func (a *aclList) Records() []*AclRecord {
 	return a.records
 }
 
-func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added bool, err error) {
-	if _, ok := a.indexes[rawRec.Id]; ok {
+func (a *aclList) ValidateRawRecord(rawRec *consensusproto.RawRecord) (err error) {
+	record, err := a.recordBuilder.Unmarshall(rawRec)
+	if err != nil {
 		return
 	}
-	record, err := a.recordBuilder.Unmarshall(rawRec)
+	return a.aclState.Validator().ValidateAclRecordContents(record)
+}
+
+func (a *aclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error) {
+	if _, ok := a.indexes[rawRec.Id]; ok {
+		return ErrRecordAlreadyExists
+	}
+	record, err := a.recordBuilder.UnmarshallWithId(rawRec)
 	if err != nil {
 		return
 	}
@@ -155,15 +214,6 @@ func (a *aclList) AddRawRecord(rawRec *aclrecordproto.RawAclRecordWithId) (added
 	if err = a.storage.SetHead(rawRec.Id); err != nil {
 		return
 	}
-	return true, nil
-}
-
-func (a *aclList) IsValidNext(rawRec *aclrecordproto.RawAclRecordWithId) (err error) {
-	_, err = a.recordBuilder.Unmarshall(rawRec)
-	if err != nil {
-		return
-	}
-	// TODO: change state and add "check" method for records
 	return
 }
 
@@ -171,7 +221,7 @@ func (a *aclList) Id() string {
 	return a.id
 }
 
-func (a *aclList) Root() *aclrecordproto.RawAclRecordWithId {
+func (a *aclList) Root() *consensusproto.RawRecordWithId {
 	return a.root
 }
 
@@ -199,9 +249,17 @@ func (a *aclList) Head() *AclRecord {
 func (a *aclList) Get(id string) (*AclRecord, error) {
 	recIdx, ok := a.indexes[id]
 	if !ok {
-		return nil, fmt.Errorf("no such record")
+		return nil, ErrNoSuchRecord
 	}
 	return a.records[recIdx], nil
+}
+
+func (a *aclList) GetIndex(idx int) (*AclRecord, error) {
+	// TODO: when we add snapshots we will have to monitor record num in snapshots
+	if idx < 0 || idx >= len(a.records) {
+		return nil, ErrNoSuchRecord
+	}
+	return a.records[idx], nil
 }
 
 func (a *aclList) Iterate(iterFunc IterFunc) {

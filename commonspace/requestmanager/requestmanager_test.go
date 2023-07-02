@@ -2,6 +2,9 @@ package requestmanager
 
 import (
 	"context"
+	"sync"
+	"testing"
+
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objectsync/mock_objectsync"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -13,9 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcconn"
-	"sync"
-	"testing"
-	"time"
 )
 
 type fixture struct {
@@ -146,6 +146,7 @@ func TestRequestManager_QueueRequest(t *testing.T) {
 		_, ok = msgs.Load("otherId1")
 		require.True(t, ok)
 		close(msgRelease)
+		fx.requestManager.Close(context.Background())
 	})
 
 	t.Run("no requests after close", func(t *testing.T) {
@@ -179,11 +180,7 @@ func TestRequestManager_QueueRequest(t *testing.T) {
 
 		fx.requestManager.Close(context.Background())
 		close(msgRelease)
-		// waiting to know if the second one is not taken
-		// because the manager is now closed
-		time.Sleep(100 * time.Millisecond)
 		_, ok = msgs.Load("id2")
 		require.False(t, ok)
-
 	})
 }
