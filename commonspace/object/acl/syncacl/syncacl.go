@@ -29,15 +29,28 @@ func New() *SyncAcl {
 	return &SyncAcl{}
 }
 
+type HeadUpdater interface {
+	UpdateHeads(id string, heads []string)
+}
+
 type SyncAcl struct {
 	list.AclList
 	syncClient  SyncClient
 	syncHandler synchandler.SyncHandler
+	headUpdater HeadUpdater
 	isClosed    bool
+}
+
+func (s *SyncAcl) Run(ctx context.Context) (err error) {
+	return
 }
 
 func (s *SyncAcl) HandleRequest(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (response *spacesyncproto.ObjectSyncMessage, err error) {
 	return s.HandleRequest(ctx, senderId, request)
+}
+
+func (s *SyncAcl) SetHeadUpdater(updater HeadUpdater) {
+	s.headUpdater = updater
 }
 
 func (s *SyncAcl) HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error) {
@@ -73,6 +86,7 @@ func (s *SyncAcl) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 		return
 	}
 	headUpdate := s.syncClient.CreateHeadUpdate(s, []*consensusproto.RawRecordWithId{rawRec})
+	s.headUpdater.UpdateHeads(s.Id(), []string{rawRec.Id})
 	s.syncClient.Broadcast(headUpdate)
 	return
 }
@@ -86,6 +100,7 @@ func (s *SyncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (e
 		return
 	}
 	headUpdate := s.syncClient.CreateHeadUpdate(s, rawRecords)
+	s.headUpdater.UpdateHeads(s.Id(), []string{rawRecords[len(rawRecords)-1].Id})
 	s.syncClient.Broadcast(headUpdate)
 	return
 }
@@ -97,7 +112,7 @@ func (s *SyncAcl) SyncWithPeer(ctx context.Context, peerId string) (err error) {
 	return s.syncClient.SendUpdate(peerId, s.Id(), headUpdate)
 }
 
-func (s *SyncAcl) Close() (err error) {
+func (s *SyncAcl) Close(ctx context.Context) (err error) {
 	s.Lock()
 	defer s.Unlock()
 	s.isClosed = true

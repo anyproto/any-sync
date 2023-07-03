@@ -57,7 +57,7 @@ type AclList interface {
 	AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error)
 	AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (err error)
 
-	Close() (err error)
+	Close(ctx context.Context) (err error)
 }
 
 type aclList struct {
@@ -293,6 +293,6 @@ func (a *aclList) IterateFrom(startId string, iterFunc IterFunc) {
 	}
 }
 
-func (a *aclList) Close() (err error) {
+func (a *aclList) Close(ctx context.Context) (err error) {
 	return nil
 }
