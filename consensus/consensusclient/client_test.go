@@ -24,13 +24,13 @@ func TestService_Watch(t *testing.T) {
 	t.Run("not found error", func(t *testing.T) {
 		fx := newFixture(t).run(t)
 		defer fx.Finish()
-		var logId = []byte{'1'}
+		var logId = "1"
 		w := &testWatcher{ready: make(chan struct{})}
 		require.NoError(t, fx.Watch(logId, w))
 		st := fx.testServer.waitStream(t)
 		req, err := st.Recv()
 		require.NoError(t, err)
-		assert.Equal(t, [][]byte{logId}, req.WatchIds)
+		assert.Equal(t, []string{logId}, req.WatchIds)
 		require.NoError(t, st.Send(&consensusproto.LogWatchEvent{
 			LogId: logId,
 			Error: &consensusproto.Err{
@@ -44,7 +44,7 @@ func TestService_Watch(t *testing.T) {
 	t.Run("watcherExists error", func(t *testing.T) {
 		fx := newFixture(t).run(t)
 		defer fx.Finish()
-		var logId = []byte{'1'}
+		var logId = "1"
 		w := &testWatcher{}
 		require.NoError(t, fx.Watch(logId, w))
 		require.Error(t, fx.Watch(logId, w))
@@ -55,20 +55,20 @@ func TestService_Watch(t *testing.T) {
 	t.Run("watch", func(t *testing.T) {
 		fx := newFixture(t).run(t)
 		defer fx.Finish()
-		var logId1 = []byte{'1'}
+		var logId1 = "1"
 		w := &testWatcher{}
 		require.NoError(t, fx.Watch(logId1, w))
 		st := fx.testServer.waitStream(t)
 		req, err := st.Recv()
 		require.NoError(t, err)
-		assert.Equal(t, [][]byte{logId1}, req.WatchIds)
+		assert.Equal(t, []string{logId1}, req.WatchIds)
 
-		var logId2 = []byte{'2'}
+		var logId2 = "2"
 		w = &testWatcher{}
 		require.NoError(t, fx.Watch(logId2, w))
 		req, err = st.Recv()
 		require.NoError(t, err)
-		assert.Equal(t, [][]byte{logId2}, req.WatchIds)
+		assert.Equal(t, []string{logId2}, req.WatchIds)
 
 		fx.testServer.releaseStream <- nil
 	})
@@ -78,14 +78,14 @@ func TestService_UnWatch(t *testing.T) {
 	t.Run("no watcher", func(t *testing.T) {
 		fx := newFixture(t).run(t)
 		defer fx.Finish()
-		require.Error(t, fx.UnWatch([]byte{'1'}))
+		require.Error(t, fx.UnWatch("1"))
 	})
 	t.Run("success", func(t *testing.T) {
 		fx := newFixture(t).run(t)
 		defer fx.Finish()
 		w := &testWatcher{}
-		require.NoError(t, fx.Watch([]byte{'1'}, w))
-		assert.NoError(t, fx.UnWatch([]byte{'1'}))
+		require.NoError(t, fx.Watch("1", w))
+		assert.NoError(t, fx.UnWatch("1"))
 	})
 }
 
@@ -119,7 +119,7 @@ func TestService_AddLog(t *testing.T) {
 func TestService_AddRecord(t *testing.T) {
 	fx := newFixture(t).run(t)
 	defer fx.Finish()
-	rec, err := fx.AddRecord(ctx, []byte{'1'}, &consensusproto.RawRecord{})
+	rec, err := fx.AddRecord(ctx, "1", &consensusproto.RawRecord{})
 	require.NoError(t, err)
 	assert.NotEmpty(t, rec)
 }
