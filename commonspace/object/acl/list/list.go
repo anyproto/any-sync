@@ -46,6 +46,8 @@ type AclList interface {
 	IsAfter(first string, second string) (bool, error)
 	HasHead(head string) bool
 	Head() *AclRecord
+
+	RecordsAfter(ctx context.Context, id string) (records []*consensusproto.RawRecordWithId, err error)
 	Get(id string) (*AclRecord, error)
 	GetIndex(idx int) (*AclRecord, error)
 	Iterate(iterFunc IterFunc)
@@ -285,6 +287,21 @@ func (a *aclList) Iterate(iterFunc IterFunc) {
 			return
 		}
 	}
+}
+
+func (a *aclList) RecordsAfter(ctx context.Context, id string) (records []*consensusproto.RawRecordWithId, err error) {
+	recIdx, ok := a.indexes[id]
+	if !ok {
+		return nil, ErrNoSuchRecord
+	}
+	for i := recIdx + 1; i < len(a.records); i++ {
+		rawRec, err := a.storage.GetRawRecord(ctx, a.records[i].Id)
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, rawRec)
+	}
+	return
 }
 
 func (a *aclList) IterateFrom(startId string, iterFunc IterFunc) {

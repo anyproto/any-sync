@@ -1,6 +1,8 @@
 package syncacl
 
 import (
+	"context"
+
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
@@ -11,20 +13,42 @@ type RequestFactory interface {
 	CreateFullSyncResponse(l list.AclList, theirHead string) (*consensusproto.LogSyncMessage, error)
 }
 
+type requestFactory struct{}
+
 func NewRequestFactory() RequestFactory {
 	return &requestFactory{}
 }
 
-type requestFactory struct{}
-
 func (r *requestFactory) CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (msg *consensusproto.LogSyncMessage) {
-	return
+	return consensusproto.WrapHeadUpdate(&consensusproto.LogHeadUpdate{
+		Head:    l.Head().Id,
+		Records: added,
+	}, l.Root())
 }
 
 func (r *requestFactory) CreateFullSyncRequest(l list.AclList, theirHead string) (req *consensusproto.LogSyncMessage, err error) {
-	return
+	if !l.HasHead(theirHead) {
+		return consensusproto.WrapFullRequest(&consensusproto.LogFullSyncRequest{
+			Head: l.Head().Id,
+		}, l.Root()), nil
+	}
+	records, err := l.RecordsAfter(context.Background(), theirHead)
+	if err != nil {
+		return
+	}
+	return consensusproto.WrapFullRequest(&consensusproto.LogFullSyncRequest{
+		Head:    l.Head().Id,
+		Records: records,
+	}, l.Root()), nil
 }
 
-func (r *requestFactory) CreateFullSyncResponse(l list.AclList, theirHead string) (*consensusproto.LogSyncMessage, error) {
-	return nil, nil
+func (r *requestFactory) CreateFullSyncResponse(l list.AclList, theirHead string) (resp *consensusproto.LogSyncMessage, err error) {
+	records, err := l.RecordsAfter(context.Background(), theirHead)
+	if err != nil {
+		return
+	}
+	return consensusproto.WrapFullResponse(&consensusproto.LogFullSyncResponse{
+		Head:    l.Head().Id,
+		Records: records,
+	}, l.Root()), nil
 }

@@ -42,6 +42,8 @@ func (s *syncAclHandler) HandleMessage(ctx context.Context, senderId string, mes
 		return
 	}
 	content := unmarshalled.GetContent()
+	head := consensusproto.GetHead(unmarshalled)
+	s.syncStatus.HeadsReceive(senderId, s.aclList.Id(), []string{head})
 	s.aclList.Lock()
 	defer s.aclList.Unlock()
 	switch {

@@ -88,7 +88,7 @@ message LogSyncContentValue {
 // LogSyncMessage is a message sent when we are syncing logs
 message LogSyncMessage {
     string id = 1;
-    string payload = 2;
+    bytes payload = 2;
     LogSyncContentValue content = 3;
 }
 

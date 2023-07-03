@@ -143,28 +143,30 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	totalLen := len(newIds) + len(changedIds) + len(removedIds)
 	// not syncing ids which were removed through settings document
 	missingIds := d.deletionState.Filter(newIds)
-	prevLen := len(changedIds)
-	changedIds = slice.DiscardFromSlice(changedIds, func(s string) bool {
+	existingIds := append(d.deletionState.Filter(removedIds), d.deletionState.Filter(changedIds)...)
+	d.syncStatus.RemoveAllExcept(p.Id(), existingIds, stateCounter)
+
+	prevExistingLen := len(existingIds)
+	existingIds = slice.DiscardFromSlice(existingIds, func(s string) bool {
 		return s == syncAclId
 	})
-	// if acl head is different
-	if len(changedIds) < prevLen {
+	// if we removed acl head from the list
+	if len(existingIds) < prevExistingLen {
 		if syncErr := d.syncAcl.SyncWithPeer(ctx, p.Id()); syncErr != nil {
 			log.Warn("failed to send acl sync message to peer", zap.String("aclId", syncAclId))
 		}
 	}
-	existingIds := append(d.deletionState.Filter(removedIds), d.deletionState.Filter(changedIds)...)
 
-	d.syncStatus.RemoveAllExcept(p.Id(), existingIds, stateCounter)
-
+	// treeSyncer should not get acl id, that's why we filter existing ids before
 	err = d.treeSyncer.SyncAll(ctx, p.Id(), existingIds, missingIds)
 	if err != nil {
 		return err
 	}
-	d.log.Info("sync done:", zap.Int("newIds", len(newIds)),
+	d.log.Info("sync done:",
+		zap.Int("newIds", len(newIds)),
 		zap.Int("changedIds", len(changedIds)),
 		zap.Int("removedIds", len(removedIds)),
-		zap.Int("already deleted ids", totalLen-len(existingIds)-len(missingIds)),
+		zap.Int("already deleted ids", totalLen-prevExistingLen-len(missingIds)),
 		zap.String("peerId", p.Id()),
 	)
 	return
