@@ -103,7 +103,7 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 			Heads: []string{"h3"},
 		}
 		treeMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
-		objectMsg, _ := MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := spacesyncproto.MarshallSyncMessage(treeMsg, "spaceId", treeId)
 
 		syncReq := &treechangeproto.TreeSyncMessage{}
 		fx.syncHandler.heads = []string{"h2"}
@@ -127,7 +127,7 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 			Heads: []string{"h1"},
 		}
 		treeMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
-		objectMsg, _ := MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := spacesyncproto.MarshallSyncMessage(treeMsg, "spaceId", treeId)
 
 		fx.syncHandler.heads = []string{"h1"}
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
@@ -145,7 +145,7 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 			Heads: []string{"h3"},
 		}
 		treeMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
-		objectMsg, _ := MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := spacesyncproto.MarshallSyncMessage(treeMsg, "spaceId", treeId)
 
 		fx.syncHandler.heads = []string{"h2"}
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
@@ -167,7 +167,7 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 			Heads: []string{"h3"},
 		}
 		treeMsg := treechangeproto.WrapFullRequest(fullRequest, chWithId)
-		objectMsg, _ := MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := spacesyncproto.MarshallSyncMessage(treeMsg, "spaceId", treeId)
 
 		fx.syncHandler.heads = []string{"h2"}
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
@@ -186,7 +186,7 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 			Heads: []string{"h3"},
 		}
 		treeMsg := treechangeproto.WrapFullResponse(fullSyncResponse, chWithId)
-		objectMsg, _ := MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := spacesyncproto.MarshallSyncMessage(treeMsg, "spaceId", treeId)
 
 		fx.syncHandler.heads = []string{"h2"}
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
@@ -209,7 +209,7 @@ func TestSyncTreeHandler_HandleRequest(t *testing.T) {
 		chWithId := &treechangeproto.RawTreeChangeWithId{}
 		fullRequest := &treechangeproto.TreeFullSyncRequest{}
 		treeMsg := treechangeproto.WrapFullRequest(fullRequest, chWithId)
-		objectMsg, _ := MarshallTreeMessage(treeMsg, "spaceId", treeId, "")
+		objectMsg, _ := spacesyncproto.MarshallSyncMessage(treeMsg, "spaceId", treeId)
 
 		syncResp := &treechangeproto.TreeSyncMessage{}
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
@@ -230,7 +230,7 @@ func TestSyncTreeHandler_HandleRequest(t *testing.T) {
 		headUpdate := &treechangeproto.TreeHeadUpdate{}
 		headUpdateMsg := treechangeproto.WrapHeadUpdate(headUpdate, chWithId)
 		for _, msg := range []*treechangeproto.TreeSyncMessage{responseMsg, headUpdateMsg} {
-			objectMsg, _ := MarshallTreeMessage(msg, "spaceId", treeId, "")
+			objectMsg, _ := spacesyncproto.MarshallSyncMessage(msg, "spaceId", treeId)
 
 			_, err := fx.syncHandler.HandleRequest(ctx, fx.senderId, objectMsg)
 			require.Equal(t, err, ErrMessageIsNotRequest)

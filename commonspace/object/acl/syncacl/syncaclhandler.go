@@ -2,11 +2,19 @@ package syncacl
 
 import (
 	"context"
+	"errors"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
+	"github.com/gogo/protobuf/proto"
+)
+
+var (
+	ErrMessageIsRequest    = errors.New("message is request")
+	ErrMessageIsNotRequest = errors.New("message is not request")
 )
 
 type syncAclHandler struct {
@@ -27,10 +35,46 @@ func newSyncAclHandler(spaceId string, aclList list.AclList, syncClient SyncClie
 	}
 }
 
-func (s *syncAclHandler) HandleMessage(ctx context.Context, senderId string, req *spacesyncproto.ObjectSyncMessage) (err error) {
+func (s *syncAclHandler) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
+	unmarshalled := &consensusproto.LogSyncMessage{}
+	err = proto.Unmarshal(message.Payload, unmarshalled)
+	if err != nil {
+		return
+	}
+	content := unmarshalled.GetContent()
+	s.aclList.Lock()
+	defer s.aclList.Unlock()
+	switch {
+	case content.GetHeadUpdate() != nil:
+		var syncReq *consensusproto.LogSyncMessage
+		syncReq, err = s.syncProtocol.HeadUpdate(ctx, senderId, content.GetHeadUpdate())
+		if err != nil || syncReq == nil {
+			return
+		}
+		return s.syncClient.QueueRequest(senderId, syncReq)
+	case content.GetFullSyncRequest() != nil:
+		return ErrMessageIsRequest
+	case content.GetFullSyncResponse() != nil:
+		return s.syncProtocol.FullSyncResponse(ctx, senderId, content.GetFullSyncResponse())
+	}
 	return
 }
 
 func (s *syncAclHandler) HandleRequest(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (response *spacesyncproto.ObjectSyncMessage, err error) {
-	return
+	unmarshalled := &consensusproto.LogSyncMessage{}
+	err = proto.Unmarshal(request.Payload, unmarshalled)
+	if err != nil {
+		return
+	}
+	fullSyncRequest := unmarshalled.GetContent().GetFullSyncRequest()
+	if fullSyncRequest == nil {
+		return nil, ErrMessageIsNotRequest
+	}
+	s.aclList.Lock()
+	defer s.aclList.Unlock()
+	aclResp, err := s.syncProtocol.FullSyncRequest(ctx, senderId, fullSyncRequest)
+	if err != nil {
+		return
+	}
+	return spacesyncproto.MarshallSyncMessage(aclResp, s.spaceId, s.aclList.Id())
 }

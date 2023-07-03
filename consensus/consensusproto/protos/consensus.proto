@@ -101,6 +101,7 @@ message LogHeadUpdate {
 // LogFullSyncRequest is a message sent when consensus log needs full sync
 message LogFullSyncRequest {
     string head = 1;
+    repeated RawRecordWithId records = 2;
 }
 
 // LogFullSyncResponse is a message sent as a response for a specific full sync

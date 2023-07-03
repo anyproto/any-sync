@@ -109,7 +109,7 @@ func (s *SyncAcl) SyncWithPeer(ctx context.Context, peerId string) (err error) {
 	s.Lock()
 	defer s.Unlock()
 	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
-	return s.syncClient.SendUpdate(peerId, s.Id(), headUpdate)
+	return s.syncClient.SendUpdate(peerId, headUpdate)
 }
 
 func (s *SyncAcl) Close(ctx context.Context) (err error) {

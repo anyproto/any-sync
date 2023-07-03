@@ -60,7 +60,7 @@ func (t *treeSyncProtocol) HeadUpdate(ctx context.Context, senderId string, upda
 	// isEmptyUpdate is sent when the tree is brought up from cache
 	if isEmptyUpdate {
 		headEquals := slice.UnsortedEquals(objTree.Heads(), update.Heads)
-		log.DebugCtx(ctx, "is empty update", zap.String("treeId", objTree.Id()), zap.Bool("headEquals", headEquals))
+		log.DebugCtx(ctx, "is empty update", zap.Bool("headEquals", headEquals))
 		if headEquals {
 			return
 		}
@@ -70,7 +70,7 @@ func (t *treeSyncProtocol) HeadUpdate(ctx context.Context, senderId string, upda
 		return
 	}
 
-	if t.alreadyHasHeads(objTree, update.Heads) {
+	if t.hasHeads(objTree, update.Heads) {
 		return
 	}
 
@@ -82,7 +82,7 @@ func (t *treeSyncProtocol) HeadUpdate(ctx context.Context, senderId string, upda
 		return
 	}
 
-	if t.alreadyHasHeads(objTree, update.Heads) {
+	if t.hasHeads(objTree, update.Heads) {
 		return
 	}
 
@@ -109,7 +109,7 @@ func (t *treeSyncProtocol) FullSyncRequest(ctx context.Context, senderId string,
 		}
 	}()
 
-	if len(request.Changes) != 0 && !t.alreadyHasHeads(objTree, request.Heads) {
+	if len(request.Changes) != 0 && !t.hasHeads(objTree, request.Heads) {
 		_, err = objTree.AddRawChanges(ctx, objecttree.RawChangesPayload{
 			NewHeads:   request.Heads,
 			RawChanges: request.Changes,
@@ -137,7 +137,7 @@ func (t *treeSyncProtocol) FullSyncResponse(ctx context.Context, senderId string
 			log.DebugCtx(ctx, "full sync response succeeded")
 		}
 	}()
-	if t.alreadyHasHeads(objTree, response.Heads) {
+	if t.hasHeads(objTree, response.Heads) {
 		return
 	}
 
@@ -148,6 +148,6 @@ func (t *treeSyncProtocol) FullSyncResponse(ctx context.Context, senderId string
 	return
 }
 
-func (t *treeSyncProtocol) alreadyHasHeads(ot objecttree.ObjectTree, heads []string) bool {
+func (t *treeSyncProtocol) hasHeads(ot objecttree.ObjectTree, heads []string) bool {
 	return slice.UnsortedEquals(ot.Heads(), heads) || ot.HasChanges(heads...)
 }

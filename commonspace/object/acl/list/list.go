@@ -44,6 +44,7 @@ type AclList interface {
 	Records() []*AclRecord
 	AclState() *AclState
 	IsAfter(first string, second string) (bool, error)
+	HasHead(head string) bool
 	Head() *AclRecord
 	Get(id string) (*AclRecord, error)
 	GetIndex(idx int) (*AclRecord, error)
@@ -199,7 +200,7 @@ func (a *aclList) ValidateRawRecord(rawRec *consensusproto.RawRecord) (err error
 func (a *aclList) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (err error) {
 	for _, rec := range rawRecords {
 		err = a.AddRawRecord(rec)
-		if err != nil {
+		if err != nil && err != ErrRecordAlreadyExists {
 			return
 		}
 	}
@@ -255,6 +256,11 @@ func (a *aclList) IsAfter(first string, second string) (bool, error) {
 
 func (a *aclList) Head() *AclRecord {
 	return a.records[len(a.records)-1]
+}
+
+func (a *aclList) HasHead(head string) bool {
+	_, exists := a.indexes[head]
+	return exists
 }
 
 func (a *aclList) Get(id string) (*AclRecord, error) {
