@@ -8,6 +8,7 @@ enum ErrCodes {
     LogExists = 1;
     LogNotFound = 2;
     RecordConflict = 3;
+    Forbidden = 4;
     ErrorOffset = 500;
 }
 
