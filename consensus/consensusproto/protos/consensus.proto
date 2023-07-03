@@ -13,7 +13,7 @@ enum ErrCodes {
 
 
 message Log {
-    bytes id = 1;
+    string id = 1;
     bytes payload = 2;
     repeated RawRecordWithId records = 3;
 }
@@ -57,17 +57,17 @@ message LogAddRequest {
 }
 
 message RecordAddRequest {
-    bytes logId = 1;
+    string logId = 1;
     RawRecord record = 2;
 }
 
 message LogWatchRequest {
-    repeated bytes watchIds = 1;
-    repeated bytes unwatchIds = 2;
+    repeated string watchIds = 1;
+    repeated string unwatchIds = 2;
 }
 
 message LogWatchEvent {
-    bytes logId = 1;
+    string logId = 1;
     repeated RawRecordWithId records = 2;
     Err error = 3;
 }
