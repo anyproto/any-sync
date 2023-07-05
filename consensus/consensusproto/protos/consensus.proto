@@ -15,7 +15,6 @@ enum ErrCodes {
 
 message Log {
     string id = 1;
-    bytes payload = 2;
     repeated RawRecordWithId records = 3;
 }
 
@@ -54,7 +53,8 @@ service Consensus {
 message Ok {}
 
 message LogAddRequest {
-    Log log = 1;
+    // first record in the log, consensus node not sign it
+    RawRecordWithId record = 1;
 }
 
 message RecordAddRequest {

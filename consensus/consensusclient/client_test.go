@@ -113,7 +113,7 @@ func TestService_Init(t *testing.T) {
 func TestService_AddLog(t *testing.T) {
 	fx := newFixture(t).run(t)
 	defer fx.Finish()
-	assert.NoError(t, fx.AddLog(ctx, &consensusproto.Log{}))
+	assert.NoError(t, fx.AddLog(ctx, &consensusproto.RawRecordWithId{}))
 }
 
 func TestService_AddRecord(t *testing.T) {
