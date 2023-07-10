@@ -9,7 +9,7 @@ import (
 
 	app "github.com/anyproto/any-sync/app"
 	deletionstate "github.com/anyproto/any-sync/commonspace/deletionstate"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockObjectDeletionState is a mock of ObjectDeletionState interface.

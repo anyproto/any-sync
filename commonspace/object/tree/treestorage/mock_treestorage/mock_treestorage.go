@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	treechangeproto "github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockTreeStorage is a mock of TreeStorage interface.

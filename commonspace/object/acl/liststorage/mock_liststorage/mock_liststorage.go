@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	aclrecordproto "github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockListStorage is a mock of ListStorage interface.

@@ -10,7 +10,7 @@ import (
 	reflect "reflect"
 
 	transport "github.com/anyproto/any-sync/net/transport"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockTransport is a mock of Transport interface.

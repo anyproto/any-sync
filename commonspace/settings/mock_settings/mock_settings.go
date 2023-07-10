@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	settingsstate "github.com/anyproto/any-sync/commonspace/settings/settingsstate"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockDeletionManager is a mock of DeletionManager interface.

@@ -11,7 +11,7 @@ import (
 	app "github.com/anyproto/any-sync/app"
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	peer "github.com/anyproto/any-sync/net/peer"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockPeerManager is a mock of PeerManager interface.

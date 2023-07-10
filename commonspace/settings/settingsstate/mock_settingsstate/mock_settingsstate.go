@@ -9,7 +9,7 @@ import (
 
 	objecttree "github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	settingsstate "github.com/anyproto/any-sync/commonspace/settings/settingsstate"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockStateBuilder is a mock of StateBuilder interface.

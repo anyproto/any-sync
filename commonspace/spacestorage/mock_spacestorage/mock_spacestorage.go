@@ -13,7 +13,7 @@ import (
 	treechangeproto "github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	treestorage "github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockSpaceStorage is a mock of SpaceStorage interface.

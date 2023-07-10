@@ -7,7 +7,7 @@ package mock_periodicsync
 import (
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockPeriodicSync is a mock of PeriodicSync interface.
