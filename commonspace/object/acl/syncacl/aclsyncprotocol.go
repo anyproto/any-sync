@@ -54,10 +54,10 @@ func (a *aclSyncProtocol) HeadUpdate(ctx context.Context, senderId string, updat
 		return
 	}
 	err = a.aclList.AddRawRecords(update.Records)
-	if err != nil && err != list.ErrIncorrectRecordSequence {
-		return
+	if err == list.ErrIncorrectRecordSequence {
+		return a.reqFactory.CreateFullSyncRequest(a.aclList, update.Head)
 	}
-	return a.reqFactory.CreateFullSyncRequest(a.aclList, update.Head)
+	return
 }
 
 func (a *aclSyncProtocol) FullSyncRequest(ctx context.Context, senderId string, request *consensusproto.LogFullSyncRequest) (response *consensusproto.LogSyncMessage, err error) {
