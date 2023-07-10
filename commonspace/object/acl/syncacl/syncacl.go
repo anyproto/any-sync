@@ -46,7 +46,7 @@ func (s *SyncAcl) Run(ctx context.Context) (err error) {
 }
 
 func (s *SyncAcl) HandleRequest(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (response *spacesyncproto.ObjectSyncMessage, err error) {
-	return s.HandleRequest(ctx, senderId, request)
+	return s.syncHandler.HandleRequest(ctx, senderId, request)
 }
 
 func (s *SyncAcl) SetHeadUpdater(updater HeadUpdater) {
@@ -54,7 +54,7 @@ func (s *SyncAcl) SetHeadUpdater(updater HeadUpdater) {
 }
 
 func (s *SyncAcl) HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error) {
-	return s.HandleMessage(ctx, senderId, request)
+	return s.syncHandler.HandleMessage(ctx, senderId, request)
 }
 
 func (s *SyncAcl) Init(a *app.App) (err error) {

@@ -59,6 +59,7 @@ func NewSpaceId(id string, repKey uint64) string {
 type Space interface {
 	Id() string
 	Init(ctx context.Context) error
+	Acl() list.AclList
 
 	StoredIds() []string
 	DebugAllHeads() []headsync.TreeHeads
@@ -151,6 +152,10 @@ func (s *space) HandleRangeRequest(ctx context.Context, req *spacesyncproto.Head
 
 func (s *space) TreeBuilder() objecttreebuilder.TreeBuilder {
 	return s.treeBuilder
+}
+
+func (s *space) Acl() list.AclList {
+	return s.aclList
 }
 
 func (s *space) Id() string {
