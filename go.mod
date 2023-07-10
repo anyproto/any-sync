@@ -37,7 +37,7 @@ require (
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.11.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
-	golang.org/x/net v0.11.0
+	golang.org/x/net v0.12.0
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.33
 )
