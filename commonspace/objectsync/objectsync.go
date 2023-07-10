@@ -149,9 +149,6 @@ func (s *objectSync) processHandleMessage(msg HandleMessage) {
 			err = context.DeadlineExceeded
 			return
 		}
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithDeadline(ctx, msg.Deadline)
-		defer cancel()
 	}
 	if err = s.handleMessage(ctx, msg.SenderId, msg.Message); err != nil {
 		if msg.Message.ObjectId != "" {

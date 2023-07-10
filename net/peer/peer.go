@@ -189,7 +189,7 @@ func (p *peer) openDrpcConn(ctx context.Context) (dconn *subConn, err error) {
 	tconn := connutil.NewLastUsageConn(conn)
 	bufSize := p.ctrl.DrpcConfig().Stream.MaxMsgSizeMb * (1 << 20)
 	return &subConn{
-		Conn: drpcconn.NewWithOptions(conn, drpcconn.Options{
+		Conn: drpcconn.NewWithOptions(tconn, drpcconn.Options{
 			Manager: drpcmanager.Options{
 				Reader: drpcwire.ReaderOptions{MaximumBufferSize: bufSize},
 				Stream: drpcstream.Options{MaximumBufferSize: bufSize},
@@ -296,7 +296,7 @@ func (p *peer) gc(ttl time.Duration) (aliveCount int) {
 			continue
 		}
 	}
-	return len(p.active) + len(p.inactive)
+	return len(p.active) + len(p.inactive) + int(p.incomingCount.Load())
 }
 
 func (p *peer) Close() (err error) {
