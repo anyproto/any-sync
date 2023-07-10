@@ -3,10 +3,11 @@ package syncstatus
 import (
 	"context"
 	"fmt"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"sync"
 	"time"
+
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/spacestate"
 
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
@@ -178,8 +179,9 @@ func (s *syncStatusService) update(ctx context.Context) (err error) {
 		}
 		s.treeStatusBuf = append(s.treeStatusBuf, treeStatus{treeId, treeHeads.syncStatus, treeHeads.heads})
 	}
+	nodesOnline := s.nodesOnline
 	s.Unlock()
-	s.updateReceiver.UpdateNodeConnection(s.nodesOnline)
+	s.updateReceiver.UpdateNodeConnection(nodesOnline)
 	for _, entry := range s.treeStatusBuf {
 		err = s.updateReceiver.UpdateTree(ctx, entry.treeId, entry.status)
 		if err != nil {

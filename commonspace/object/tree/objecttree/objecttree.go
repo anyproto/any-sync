@@ -4,11 +4,11 @@ package objecttree
 import (
 	"context"
 	"errors"
-	"github.com/anyproto/any-sync/util/crypto"
 	"sync"
 	"time"
 
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/util/crypto"
+
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
@@ -248,9 +248,7 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 		pubKey    = content.Key.GetPublic()
 		readKeyId string
 	)
-	canWrite := state.HasPermission(pubKey, aclrecordproto.AclUserPermissions_Writer) ||
-		state.HasPermission(pubKey, aclrecordproto.AclUserPermissions_Admin)
-	if !canWrite {
+	if !state.Permissions(pubKey).CanWrite() {
 		err = list.ErrInsufficientPermissions
 		return
 	}

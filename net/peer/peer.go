@@ -3,6 +3,12 @@ package peer
 
 import (
 	"context"
+	"io"
+	"net"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net/connutil"
@@ -11,16 +17,11 @@ import (
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/net/transport"
 	"go.uber.org/zap"
-	"io"
-	"net"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcconn"
 	"storj.io/drpc/drpcmanager"
 	"storj.io/drpc/drpcstream"
 	"storj.io/drpc/drpcwire"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 var log = logger.NewNamed("common.net.peer")
@@ -188,7 +189,7 @@ func (p *peer) openDrpcConn(ctx context.Context) (dconn *subConn, err error) {
 	tconn := connutil.NewLastUsageConn(conn)
 	bufSize := p.ctrl.DrpcConfig().Stream.MaxMsgSizeMb * (1 << 20)
 	return &subConn{
-		Conn: drpcconn.NewWithOptions(conn, drpcconn.Options{
+		Conn: drpcconn.NewWithOptions(tconn, drpcconn.Options{
 			Manager: drpcmanager.Options{
 				Reader: drpcwire.ReaderOptions{MaximumBufferSize: bufSize},
 				Stream: drpcstream.Options{MaximumBufferSize: bufSize},
@@ -295,7 +296,7 @@ func (p *peer) gc(ttl time.Duration) (aliveCount int) {
 			continue
 		}
 	}
-	return len(p.active) + len(p.inactive)
+	return len(p.active) + len(p.inactive) + int(p.incomingCount.Load())
 }
 
 func (p *peer) Close() (err error) {

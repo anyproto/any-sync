@@ -7,8 +7,8 @@ package mock_list
 import (
 	reflect "reflect"
 
-	aclrecordproto "github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	list "github.com/anyproto/any-sync/commonspace/object/acl/list"
+	consensusproto "github.com/anyproto/any-sync/consensus/consensusproto"
 	crypto "github.com/anyproto/any-sync/util/crypto"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -51,12 +51,11 @@ func (mr *MockAclListMockRecorder) AclState() *gomock.Call {
 }
 
 // AddRawRecord mocks base method.
-func (m *MockAclList) AddRawRecord(arg0 *aclrecordproto.RawAclRecordWithId) (bool, error) {
+func (m *MockAclList) AddRawRecord(arg0 *consensusproto.RawRecordWithId) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddRawRecord", arg0)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // AddRawRecord indicates an expected call of AddRawRecord.
@@ -92,6 +91,21 @@ func (m *MockAclList) Get(arg0 string) (*list.AclRecord, error) {
 func (mr *MockAclListMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockAclList)(nil).Get), arg0)
+}
+
+// GetIndex mocks base method.
+func (m *MockAclList) GetIndex(arg0 int) (*list.AclRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIndex", arg0)
+	ret0, _ := ret[0].(*list.AclRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetIndex indicates an expected call of GetIndex.
+func (mr *MockAclListMockRecorder) GetIndex(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIndex", reflect.TypeOf((*MockAclList)(nil).GetIndex), arg0)
 }
 
 // Head mocks base method.
@@ -211,6 +225,20 @@ func (mr *MockAclListMockRecorder) RUnlock() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RUnlock", reflect.TypeOf((*MockAclList)(nil).RUnlock))
 }
 
+// RecordBuilder mocks base method.
+func (m *MockAclList) RecordBuilder() list.AclRecordBuilder {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecordBuilder")
+	ret0, _ := ret[0].(list.AclRecordBuilder)
+	return ret0
+}
+
+// RecordBuilder indicates an expected call of RecordBuilder.
+func (mr *MockAclListMockRecorder) RecordBuilder() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordBuilder", reflect.TypeOf((*MockAclList)(nil).RecordBuilder))
+}
+
 // Records mocks base method.
 func (m *MockAclList) Records() []*list.AclRecord {
 	m.ctrl.T.Helper()
@@ -226,10 +254,10 @@ func (mr *MockAclListMockRecorder) Records() *gomock.Call {
 }
 
 // Root mocks base method.
-func (m *MockAclList) Root() *aclrecordproto.RawAclRecordWithId {
+func (m *MockAclList) Root() *consensusproto.RawRecordWithId {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Root")
-	ret0, _ := ret[0].(*aclrecordproto.RawAclRecordWithId)
+	ret0, _ := ret[0].(*consensusproto.RawRecordWithId)
 	return ret0
 }
 
@@ -249,4 +277,18 @@ func (m *MockAclList) Unlock() {
 func (mr *MockAclListMockRecorder) Unlock() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unlock", reflect.TypeOf((*MockAclList)(nil).Unlock))
+}
+
+// ValidateRawRecord mocks base method.
+func (m *MockAclList) ValidateRawRecord(arg0 *consensusproto.RawRecord) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateRawRecord", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateRawRecord indicates an expected call of ValidateRawRecord.
+func (mr *MockAclListMockRecorder) ValidateRawRecord(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRawRecord", reflect.TypeOf((*MockAclList)(nil).ValidateRawRecord), arg0)
 }
