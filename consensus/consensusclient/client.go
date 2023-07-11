@@ -212,6 +212,7 @@ func (s *service) streamReader() error {
 		if len(events) == 0 {
 			return s.stream.Err()
 		}
+		s.mu.Lock()
 		for _, e := range events {
 			if w, ok := s.watchers[e.LogId]; ok {
 				if e.Error == nil {
@@ -223,6 +224,7 @@ func (s *service) streamReader() error {
 				log.Warn("received unexpected log id", zap.String("logId", e.LogId))
 			}
 		}
+		s.mu.Unlock()
 	}
 }
 
