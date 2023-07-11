@@ -12,7 +12,6 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-graphviz v0.1.1
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/yamux v0.1.1
 	github.com/huandu/skiplist v1.2.0
@@ -34,6 +33,7 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/zeebo/blake3 v0.2.3
 	go.uber.org/atomic v1.11.0
+	go.uber.org/mock v0.2.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.10.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1

@@ -10,7 +10,7 @@ import (
 	list "github.com/anyproto/any-sync/commonspace/object/acl/list"
 	consensusproto "github.com/anyproto/any-sync/consensus/consensusproto"
 	crypto "github.com/anyproto/any-sync/util/crypto"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockAclList is a mock of AclList interface.

@@ -10,7 +10,7 @@ import (
 
 	app "github.com/anyproto/any-sync/app"
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockCredentialProvider is a mock of CredentialProvider interface.

@@ -3,8 +3,8 @@ package deletionstate
 import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	"sort"
 	"testing"
 )

@@ -12,9 +12,9 @@ import (
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
 	"github.com/anyproto/any-sync/util/cidutil"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	"sync"
 	"testing"
 	"time"
@@ -113,7 +113,7 @@ func TestService_Init(t *testing.T) {
 func TestService_AddLog(t *testing.T) {
 	fx := newFixture(t).run(t)
 	defer fx.Finish()
-	assert.NoError(t, fx.AddLog(ctx, &consensusproto.Log{}))
+	assert.NoError(t, fx.AddLog(ctx, &consensusproto.RawRecordWithId{}))
 }
 
 func TestService_AddRecord(t *testing.T) {

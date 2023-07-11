@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	objecttree "github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockUpdateListener is a mock of UpdateListener interface.

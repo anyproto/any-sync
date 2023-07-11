@@ -12,7 +12,7 @@ import (
 	app "github.com/anyproto/any-sync/app"
 	objectsync "github.com/anyproto/any-sync/commonspace/objectsync"
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockObjectSync is a mock of ObjectSync interface.

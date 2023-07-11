@@ -11,7 +11,7 @@ import (
 	app "github.com/anyproto/any-sync/app"
 	consensusclient "github.com/anyproto/any-sync/consensus/consensusclient"
 	consensusproto "github.com/anyproto/any-sync/consensus/consensusproto"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockService is a mock of Service interface.
@@ -38,7 +38,7 @@ func (m *MockService) EXPECT() *MockServiceMockRecorder {
 }
 
 // AddLog mocks base method.
-func (m *MockService) AddLog(arg0 context.Context, arg1 *consensusproto.Log) error {
+func (m *MockService) AddLog(arg0 context.Context, arg1 *consensusproto.RawRecordWithId) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddLog", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -52,7 +52,7 @@ func (mr *MockServiceMockRecorder) AddLog(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // AddRecord mocks base method.
-func (m *MockService) AddRecord(arg0 context.Context, arg1 []byte, arg2 *consensusproto.RawRecord) (*consensusproto.RawRecordWithId, error) {
+func (m *MockService) AddRecord(arg0 context.Context, arg1 string, arg2 *consensusproto.RawRecord) (*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddRecord", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*consensusproto.RawRecordWithId)
@@ -123,7 +123,7 @@ func (mr *MockServiceMockRecorder) Run(arg0 interface{}) *gomock.Call {
 }
 
 // UnWatch mocks base method.
-func (m *MockService) UnWatch(arg0 []byte) error {
+func (m *MockService) UnWatch(arg0 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UnWatch", arg0)
 	ret0, _ := ret[0].(error)
@@ -137,7 +137,7 @@ func (mr *MockServiceMockRecorder) UnWatch(arg0 interface{}) *gomock.Call {
 }
 
 // Watch mocks base method.
-func (m *MockService) Watch(arg0 []byte, arg1 consensusclient.Watcher) error {
+func (m *MockService) Watch(arg0 string, arg1 consensusclient.Watcher) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Watch", arg0, arg1)
 	ret0, _ := ret[0].(error)
