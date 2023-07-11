@@ -3,6 +3,7 @@ package syncacl
 import (
 	"context"
 	"errors"
+	"github.com/anyproto/any-sync/commonspace/object/syncobjectgetter"
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
@@ -25,15 +26,23 @@ var (
 	ErrSyncAclClosed = errors.New("sync acl is closed")
 )
 
-func New() *SyncAcl {
-	return &SyncAcl{}
+type SyncAcl interface {
+	app.ComponentRunnable
+	list.AclList
+	syncobjectgetter.SyncObject
+	SetHeadUpdater(updater HeadUpdater)
+	SyncWithPeer(ctx context.Context, peerId string) (err error)
+}
+
+func New() SyncAcl {
+	return &syncAcl{}
 }
 
 type HeadUpdater interface {
 	UpdateHeads(id string, heads []string)
 }
 
-type SyncAcl struct {
+type syncAcl struct {
 	list.AclList
 	syncClient  SyncClient
 	syncHandler synchandler.SyncHandler
@@ -41,23 +50,23 @@ type SyncAcl struct {
 	isClosed    bool
 }
 
-func (s *SyncAcl) Run(ctx context.Context) (err error) {
+func (s *syncAcl) Run(ctx context.Context) (err error) {
 	return
 }
 
-func (s *SyncAcl) HandleRequest(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (response *spacesyncproto.ObjectSyncMessage, err error) {
+func (s *syncAcl) HandleRequest(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (response *spacesyncproto.ObjectSyncMessage, err error) {
 	return s.syncHandler.HandleRequest(ctx, senderId, request)
 }
 
-func (s *SyncAcl) SetHeadUpdater(updater HeadUpdater) {
+func (s *syncAcl) SetHeadUpdater(updater HeadUpdater) {
 	s.headUpdater = updater
 }
 
-func (s *SyncAcl) HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error) {
+func (s *syncAcl) HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error) {
 	return s.syncHandler.HandleMessage(ctx, senderId, request)
 }
 
-func (s *SyncAcl) Init(a *app.App) (err error) {
+func (s *syncAcl) Init(a *app.App) (err error) {
 	storage := a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	aclStorage, err := storage.AclStorage()
 	if err != nil {
@@ -77,7 +86,7 @@ func (s *SyncAcl) Init(a *app.App) (err error) {
 	return err
 }
 
-func (s *SyncAcl) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error) {
+func (s *syncAcl) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error) {
 	if s.isClosed {
 		return ErrSyncAclClosed
 	}
@@ -91,7 +100,7 @@ func (s *SyncAcl) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 	return
 }
 
-func (s *SyncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (err error) {
+func (s *syncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (err error) {
 	if s.isClosed {
 		return ErrSyncAclClosed
 	}
@@ -105,20 +114,20 @@ func (s *SyncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (e
 	return
 }
 
-func (s *SyncAcl) SyncWithPeer(ctx context.Context, peerId string) (err error) {
+func (s *syncAcl) SyncWithPeer(ctx context.Context, peerId string) (err error) {
 	s.Lock()
 	defer s.Unlock()
 	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
 	return s.syncClient.SendUpdate(peerId, headUpdate)
 }
 
-func (s *SyncAcl) Close(ctx context.Context) (err error) {
+func (s *syncAcl) Close(ctx context.Context) (err error) {
 	s.Lock()
 	defer s.Unlock()
 	s.isClosed = true
 	return
 }
 
-func (s *SyncAcl) Name() (name string) {
+func (s *syncAcl) Name() (name string) {
 	return CName
 }

@@ -57,7 +57,7 @@ type diffSyncer struct {
 	credentialProvider credentialprovider.CredentialProvider
 	syncStatus         syncstatus.StatusUpdater
 	treeSyncer         treemanager.TreeSyncer
-	syncAcl            *syncacl.SyncAcl
+	syncAcl            syncacl.SyncAcl
 }
 
 func (d *diffSyncer) Init() {

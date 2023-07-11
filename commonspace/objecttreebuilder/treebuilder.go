@@ -82,7 +82,7 @@ func (t *treeBuilder) Init(a *app.App) (err error) {
 	t.isClosed = state.SpaceIsClosed
 	t.treesUsed = state.TreesUsed
 	t.builder = state.TreeBuilderFunc
-	t.aclList = a.MustComponent(syncacl.CName).(*syncacl.SyncAcl)
+	t.aclList = a.MustComponent(syncacl.CName).(syncacl.SyncAcl)
 	t.spaceStorage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	t.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	t.headsNotifiable = a.MustComponent(headsync.CName).(headsync.HeadSync)

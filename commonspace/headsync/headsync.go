@@ -62,7 +62,7 @@ type headSync struct {
 	credentialProvider credentialprovider.CredentialProvider
 	syncStatus         syncstatus.StatusService
 	deletionState      deletionstate.ObjectDeletionState
-	syncAcl            *syncacl.SyncAcl
+	syncAcl            syncacl.SyncAcl
 }
 
 func New() HeadSync {
@@ -74,7 +74,7 @@ var createDiffSyncer = newDiffSyncer
 func (h *headSync) Init(a *app.App) (err error) {
 	shared := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
 	cfg := a.MustComponent("config").(config2.ConfigGetter)
-	h.syncAcl = a.MustComponent(syncacl.CName).(*syncacl.SyncAcl)
+	h.syncAcl = a.MustComponent(syncacl.CName).(syncacl.SyncAcl)
 	h.spaceId = shared.SpaceId
 	h.spaceIsDeleted = shared.SpaceIsDeleted
 	h.syncPeriod = cfg.GetSpace().SyncPeriod
