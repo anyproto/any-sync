@@ -109,6 +109,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.initDiffSyncer(t)
 		defer fx.stop()
 		mPeer := mockPeer{}
+		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
 			Return([]peer.Peer{mPeer}, nil)
@@ -119,6 +120,26 @@ func TestDiffSyncer(t *testing.T) {
 		fx.deletionStateMock.EXPECT().Filter([]string{"changed"}).Return([]string{"changed"}).Times(1)
 		fx.deletionStateMock.EXPECT().Filter(nil).Return(nil).Times(1)
 		fx.treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer.Id(), []string{"changed"}, []string{"new"}).Return(nil)
+		require.NoError(t, fx.diffSyncer.Sync(ctx))
+	})
+
+	t.Run("diff syncer sync, acl changed", func(t *testing.T) {
+		fx := newHeadSyncFixture(t)
+		fx.initDiffSyncer(t)
+		defer fx.stop()
+		mPeer := mockPeer{}
+		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
+		fx.peerManagerMock.EXPECT().
+			GetResponsiblePeers(gomock.Any()).
+			Return([]peer.Peer{mPeer}, nil)
+		fx.diffMock.EXPECT().
+			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock))).
+			Return([]string{"new"}, []string{"changed"}, nil, nil)
+		fx.deletionStateMock.EXPECT().Filter([]string{"new"}).Return([]string{"new"}).Times(1)
+		fx.deletionStateMock.EXPECT().Filter([]string{"changed"}).Return([]string{"changed", "aclId"}).Times(1)
+		fx.deletionStateMock.EXPECT().Filter(nil).Return(nil).Times(1)
+		fx.treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer.Id(), []string{"changed"}, []string{"new"}).Return(nil)
+		fx.aclMock.EXPECT().SyncWithPeer(gomock.Any(), mPeer.Id()).Return(nil)
 		require.NoError(t, fx.diffSyncer.Sync(ctx))
 	})
 
@@ -139,6 +160,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.initDiffSyncer(t)
 		defer fx.stop()
 		deletedId := "id"
+		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.deletionStateMock.EXPECT().Exists(deletedId).Return(true)
 
 		// this should not result in any mock being called
@@ -152,6 +174,7 @@ func TestDiffSyncer(t *testing.T) {
 		newId := "newId"
 		newHeads := []string{"h1", "h2"}
 		hash := "hash"
+		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   newId,
 			Head: concatStrings(newHeads),
@@ -166,6 +189,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx := newHeadSyncFixture(t)
 		fx.initDiffSyncer(t)
 		defer fx.stop()
+		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		aclStorageMock := mock_liststorage.NewMockListStorage(fx.ctrl)
 		settingsStorage := mock_treestorage.NewMockTreeStorage(fx.ctrl)
 		settingsId := "settingsId"
@@ -211,6 +235,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx := newHeadSyncFixture(t)
 		fx.initDiffSyncer(t)
 		defer fx.stop()
+		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
 			Return([]peer.Peer{mockPeer{}}, nil)
@@ -226,6 +251,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.initDiffSyncer(t)
 		defer fx.stop()
 		mPeer := mockPeer{}
+		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
 			Return([]peer.Peer{mPeer}, nil)
