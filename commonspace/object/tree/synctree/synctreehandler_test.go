@@ -137,7 +137,7 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("handle head update message, empty sync request returned", func(t *testing.T) {
+	t.Run("handle head update message, no sync request returned", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
 		defer fx.stop()
 		treeId := "treeId"
