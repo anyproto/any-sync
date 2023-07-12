@@ -3,6 +3,7 @@ package syncacl
 import (
 	"context"
 	"errors"
+	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/headupdater"
 	"github.com/anyproto/any-sync/commonspace/object/syncobjectgetter"
 
 	"github.com/anyproto/any-sync/accountservice"
@@ -30,7 +31,7 @@ type SyncAcl interface {
 	app.ComponentRunnable
 	list.AclList
 	syncobjectgetter.SyncObject
-	SetHeadUpdater(updater HeadUpdater)
+	SetHeadUpdater(updater headupdater.HeadUpdater)
 	SyncWithPeer(ctx context.Context, peerId string) (err error)
 }
 
@@ -38,15 +39,11 @@ func New() SyncAcl {
 	return &syncAcl{}
 }
 
-type HeadUpdater interface {
-	UpdateHeads(id string, heads []string)
-}
-
 type syncAcl struct {
 	list.AclList
 	syncClient  SyncClient
 	syncHandler synchandler.SyncHandler
-	headUpdater HeadUpdater
+	headUpdater headupdater.HeadUpdater
 	isClosed    bool
 }
 
@@ -58,7 +55,7 @@ func (s *syncAcl) HandleRequest(ctx context.Context, senderId string, request *s
 	return s.syncHandler.HandleRequest(ctx, senderId, request)
 }
 
-func (s *syncAcl) SetHeadUpdater(updater HeadUpdater) {
+func (s *syncAcl) SetHeadUpdater(updater headupdater.HeadUpdater) {
 	s.headUpdater = updater
 }
 

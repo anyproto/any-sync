@@ -10,7 +10,7 @@ import (
 
 	app "github.com/anyproto/any-sync/app"
 	list "github.com/anyproto/any-sync/commonspace/object/acl/list"
-	syncacl "github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
+	headupdater "github.com/anyproto/any-sync/commonspace/object/acl/syncacl/headupdater"
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	consensusproto "github.com/anyproto/any-sync/consensus/consensusproto"
 	crypto "github.com/anyproto/any-sync/util/crypto"
@@ -386,7 +386,7 @@ func (mr *MockSyncAclMockRecorder) Run(arg0 interface{}) *gomock.Call {
 }
 
 // SetHeadUpdater mocks base method.
-func (m *MockSyncAcl) SetHeadUpdater(arg0 syncacl.HeadUpdater) {
+func (m *MockSyncAcl) SetHeadUpdater(arg0 headupdater.HeadUpdater) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetHeadUpdater", arg0)
 }

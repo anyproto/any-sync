@@ -76,10 +76,16 @@ func (a *aclSyncProtocol) FullSyncRequest(ctx context.Context, senderId string, 
 			log.DebugCtx(ctx, "acl full sync response sent", zap.String("response head", cnt.Head), zap.Int("len(response records)", len(cnt.Records)))
 		}
 	}()
-	if len(request.Records) > 0 && !a.aclList.HasHead(request.Head) {
-		err = a.aclList.AddRawRecords(request.Records)
-		if err != nil {
-			return
+	if !a.aclList.HasHead(request.Head) {
+		if len(request.Records) > 0 {
+			// in this case we can try to add some records
+			err = a.aclList.AddRawRecords(request.Records)
+			if err != nil {
+				return
+			}
+		} else {
+			// here it is impossible for us to do anything, we can't return records after head as defined in request, because we don't have it
+			return nil, list.ErrIncorrectRecordSequence
 		}
 	}
 	return a.reqFactory.CreateFullSyncResponse(a.aclList, request.Head)
