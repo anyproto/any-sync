@@ -81,7 +81,7 @@ func (s *syncTreeHandler) handleRequest(ctx context.Context, senderId string, fu
 	if err != nil {
 		return
 	}
-	response, err = MarshallTreeMessage(treeResp, s.spaceId, s.objTree.Id(), "")
+	response, err = spacesyncproto.MarshallSyncMessage(treeResp, s.spaceId, s.objTree.Id())
 	return
 }
 

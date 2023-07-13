@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	drpc "storj.io/drpc"
 )
 

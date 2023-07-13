@@ -3,8 +3,8 @@ package periodicsync
 import (
 	"context"
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	"testing"
 	"time"
 )

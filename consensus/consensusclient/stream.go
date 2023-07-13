@@ -23,13 +23,13 @@ type stream struct {
 	err       error
 }
 
-func (s *stream) WatchIds(logIds [][]byte) (err error) {
+func (s *stream) WatchIds(logIds []string) (err error) {
 	return s.rpcStream.Send(&consensusproto.LogWatchRequest{
 		WatchIds: logIds,
 	})
 }
 
-func (s *stream) UnwatchIds(logIds [][]byte) (err error) {
+func (s *stream) UnwatchIds(logIds []string) (err error) {
 	return s.rpcStream.Send(&consensusproto.LogWatchRequest{
 		UnwatchIds: logIds,
 	})

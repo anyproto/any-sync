@@ -11,7 +11,7 @@ import (
 	app "github.com/anyproto/any-sync/app"
 	nodeconf "github.com/anyproto/any-sync/nodeconf"
 	chash "github.com/anyproto/go-chash"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockService is a mock of Service interface.

@@ -3,10 +3,13 @@ package headsync
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
+	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -14,8 +17,8 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
+	"github.com/anyproto/any-sync/util/slice"
 	"go.uber.org/zap"
-	"time"
 )
 
 type DiffSyncer interface {
@@ -38,6 +41,7 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 		log:                log,
 		syncStatus:         hs.syncStatus,
 		deletionState:      hs.deletionState,
+		syncAcl:            hs.syncAcl,
 	}
 }
 
@@ -53,6 +57,7 @@ type diffSyncer struct {
 	credentialProvider credentialprovider.CredentialProvider
 	syncStatus         syncstatus.StatusUpdater
 	treeSyncer         treemanager.TreeSyncer
+	syncAcl            syncacl.SyncAcl
 }
 
 func (d *diffSyncer) Init() {
@@ -116,6 +121,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 		cl           = d.clientFactory.Client(conn)
 		rdiff        = NewRemoteDiff(d.spaceId, cl)
 		stateCounter = d.syncStatus.StateCounter()
+		syncAclId    = d.syncAcl.Id()
 	)
 
 	newIds, changedIds, removedIds, err := d.diff.Diff(ctx, rdiff)
@@ -138,17 +144,29 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	// not syncing ids which were removed through settings document
 	missingIds := d.deletionState.Filter(newIds)
 	existingIds := append(d.deletionState.Filter(removedIds), d.deletionState.Filter(changedIds)...)
-
 	d.syncStatus.RemoveAllExcept(p.Id(), existingIds, stateCounter)
 
+	prevExistingLen := len(existingIds)
+	existingIds = slice.DiscardFromSlice(existingIds, func(s string) bool {
+		return s == syncAclId
+	})
+	// if we removed acl head from the list
+	if len(existingIds) < prevExistingLen {
+		if syncErr := d.syncAcl.SyncWithPeer(ctx, p.Id()); syncErr != nil {
+			log.Warn("failed to send acl sync message to peer", zap.String("aclId", syncAclId))
+		}
+	}
+
+	// treeSyncer should not get acl id, that's why we filter existing ids before
 	err = d.treeSyncer.SyncAll(ctx, p.Id(), existingIds, missingIds)
 	if err != nil {
 		return err
 	}
-	d.log.Info("sync done:", zap.Int("newIds", len(newIds)),
+	d.log.Info("sync done:",
+		zap.Int("newIds", len(newIds)),
 		zap.Int("changedIds", len(changedIds)),
 		zap.Int("removedIds", len(removedIds)),
-		zap.Int("already deleted ids", totalLen-len(existingIds)-len(missingIds)),
+		zap.Int("already deleted ids", totalLen-prevExistingLen-len(missingIds)),
 		zap.String("peerId", p.Id()),
 	)
 	return

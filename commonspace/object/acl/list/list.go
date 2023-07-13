@@ -10,6 +10,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
+	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -44,7 +45,10 @@ type AclList interface {
 	Records() []*AclRecord
 	AclState() *AclState
 	IsAfter(first string, second string) (bool, error)
+	HasHead(head string) bool
 	Head() *AclRecord
+
+	RecordsAfter(ctx context.Context, id string) (records []*consensusproto.RawRecordWithId, err error)
 	Get(id string) (*AclRecord, error)
 	GetIndex(idx int) (*AclRecord, error)
 	Iterate(iterFunc IterFunc)
@@ -55,8 +59,9 @@ type AclList interface {
 
 	ValidateRawRecord(record *consensusproto.RawRecord) (err error)
 	AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error)
+	AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (err error)
 
-	Close() (err error)
+	Close(ctx context.Context) (err error)
 }
 
 type aclList struct {
@@ -195,6 +200,16 @@ func (a *aclList) ValidateRawRecord(rawRec *consensusproto.RawRecord) (err error
 	return a.aclState.Validator().ValidateAclRecordContents(record)
 }
 
+func (a *aclList) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (err error) {
+	for _, rec := range rawRecords {
+		err = a.AddRawRecord(rec)
+		if err != nil && err != ErrRecordAlreadyExists {
+			return
+		}
+	}
+	return
+}
+
 func (a *aclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error) {
 	if _, ok := a.indexes[rawRec.Id]; ok {
 		return ErrRecordAlreadyExists
@@ -246,6 +261,11 @@ func (a *aclList) Head() *AclRecord {
 	return a.records[len(a.records)-1]
 }
 
+func (a *aclList) HasHead(head string) bool {
+	_, exists := a.indexes[head]
+	return exists
+}
+
 func (a *aclList) Get(id string) (*AclRecord, error) {
 	recIdx, ok := a.indexes[id]
 	if !ok {
@@ -270,6 +290,21 @@ func (a *aclList) Iterate(iterFunc IterFunc) {
 	}
 }
 
+func (a *aclList) RecordsAfter(ctx context.Context, id string) (records []*consensusproto.RawRecordWithId, err error) {
+	recIdx, ok := a.indexes[id]
+	if !ok {
+		return nil, ErrNoSuchRecord
+	}
+	for i := recIdx + 1; i < len(a.records); i++ {
+		rawRec, err := a.storage.GetRawRecord(ctx, a.records[i].Id)
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, rawRec)
+	}
+	return
+}
+
 func (a *aclList) IterateFrom(startId string, iterFunc IterFunc) {
 	recIdx, ok := a.indexes[startId]
 	if !ok {
@@ -282,6 +317,21 @@ func (a *aclList) IterateFrom(startId string, iterFunc IterFunc) {
 	}
 }
 
-func (a *aclList) Close() (err error) {
+func (a *aclList) Close(ctx context.Context) (err error) {
 	return nil
+}
+
+func WrapAclRecord(rawRec *consensusproto.RawRecord) *consensusproto.RawRecordWithId {
+	payload, err := rawRec.Marshal()
+	if err != nil {
+		panic(err)
+	}
+	id, err := cidutil.NewCidFromBytes(payload)
+	if err != nil {
+		panic(err)
+	}
+	return &consensusproto.RawRecordWithId{
+		Payload: payload,
+		Id:      id,
+	}
 }

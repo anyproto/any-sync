@@ -7,25 +7,9 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/stretchr/testify/require"
 )
-
-func wrapRecord(rawRec *consensusproto.RawRecord) *consensusproto.RawRecordWithId {
-	payload, err := rawRec.Marshal()
-	if err != nil {
-		panic(err)
-	}
-	id, err := cidutil.NewCidFromBytes(payload)
-	if err != nil {
-		panic(err)
-	}
-	return &consensusproto.RawRecordWithId{
-		Payload: payload,
-		Id:      id,
-	}
-}
 
 type aclFixture struct {
 	ownerKeys   *accountdata.AccountKeys
@@ -71,7 +55,7 @@ func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 	// building invite
 	inv, err := ownerAcl.RecordBuilder().BuildInvite()
 	require.NoError(t, err)
-	inviteRec := wrapRecord(inv.InviteRec)
+	inviteRec := WrapAclRecord(inv.InviteRec)
 	fx.addRec(t, inviteRec)
 
 	// building request join
@@ -80,7 +64,7 @@ func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 		InviteKey:      inv.InviteKey,
 	})
 	require.NoError(t, err)
-	requestJoinRec := wrapRecord(requestJoin)
+	requestJoinRec := WrapAclRecord(requestJoin)
 	fx.addRec(t, requestJoinRec)
 
 	// building request accept
@@ -92,7 +76,7 @@ func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 	// validate
 	err = ownerAcl.ValidateRawRecord(requestAccept)
 	require.NoError(t, err)
-	requestAcceptRec := wrapRecord(requestAccept)
+	requestAcceptRec := WrapAclRecord(requestAccept)
 	fx.addRec(t, requestAcceptRec)
 
 	// checking acl state
@@ -132,13 +116,13 @@ func TestAclList_InviteRevoke(t *testing.T) {
 	// building invite
 	inv, err := fx.ownerAcl.RecordBuilder().BuildInvite()
 	require.NoError(t, err)
-	inviteRec := wrapRecord(inv.InviteRec)
+	inviteRec := WrapAclRecord(inv.InviteRec)
 	fx.addRec(t, inviteRec)
 
 	// building invite revoke
 	inviteRevoke, err := fx.ownerAcl.RecordBuilder().BuildInviteRevoke(ownerState.lastRecordId)
 	require.NoError(t, err)
-	inviteRevokeRec := wrapRecord(inviteRevoke)
+	inviteRevokeRec := WrapAclRecord(inviteRevoke)
 	fx.addRec(t, inviteRevokeRec)
 
 	// checking acl state
@@ -159,7 +143,7 @@ func TestAclList_RequestDecline(t *testing.T) {
 	// building invite
 	inv, err := ownerAcl.RecordBuilder().BuildInvite()
 	require.NoError(t, err)
-	inviteRec := wrapRecord(inv.InviteRec)
+	inviteRec := WrapAclRecord(inv.InviteRec)
 	fx.addRec(t, inviteRec)
 
 	// building request join
@@ -168,13 +152,13 @@ func TestAclList_RequestDecline(t *testing.T) {
 		InviteKey:      inv.InviteKey,
 	})
 	require.NoError(t, err)
-	requestJoinRec := wrapRecord(requestJoin)
+	requestJoinRec := WrapAclRecord(requestJoin)
 	fx.addRec(t, requestJoinRec)
 
 	// building request decline
 	requestDecline, err := ownerAcl.RecordBuilder().BuildRequestDecline(ownerState.lastRecordId)
 	require.NoError(t, err)
-	requestDeclineRec := wrapRecord(requestDecline)
+	requestDeclineRec := WrapAclRecord(requestDecline)
 	fx.addRec(t, requestDeclineRec)
 
 	// checking acl state
@@ -198,7 +182,7 @@ func TestAclList_Remove(t *testing.T) {
 		ReadKey:    newReadKey,
 	})
 	require.NoError(t, err)
-	removeRec := wrapRecord(remove)
+	removeRec := WrapAclRecord(remove)
 	fx.addRec(t, removeRec)
 
 	// checking acl state
@@ -225,7 +209,7 @@ func TestAclList_ReadKeyChange(t *testing.T) {
 	newReadKey := crypto.NewAES()
 	readKeyChange, err := fx.ownerAcl.RecordBuilder().BuildReadKeyChange(newReadKey)
 	require.NoError(t, err)
-	readKeyRec := wrapRecord(readKeyChange)
+	readKeyRec := WrapAclRecord(readKeyChange)
 	fx.addRec(t, readKeyRec)
 
 	// checking acl state
@@ -255,7 +239,7 @@ func TestAclList_PermissionChange(t *testing.T) {
 		Permissions: AclPermissions(aclrecordproto.AclUserPermissions_Writer),
 	})
 	require.NoError(t, err)
-	permissionChangeRec := wrapRecord(permissionChange)
+	permissionChangeRec := WrapAclRecord(permissionChange)
 	fx.addRec(t, permissionChangeRec)
 
 	// checking acl state
@@ -279,7 +263,7 @@ func TestAclList_RequestRemove(t *testing.T) {
 
 	removeRequest, err := fx.accountAcl.RecordBuilder().BuildRequestRemove()
 	require.NoError(t, err)
-	removeRequestRec := wrapRecord(removeRequest)
+	removeRequestRec := WrapAclRecord(removeRequest)
 	fx.addRec(t, removeRequestRec)
 
 	recs := fx.accountAcl.AclState().RemoveRecords()
@@ -292,7 +276,7 @@ func TestAclList_RequestRemove(t *testing.T) {
 		ReadKey:    newReadKey,
 	})
 	require.NoError(t, err)
-	removeRec := wrapRecord(remove)
+	removeRec := WrapAclRecord(remove)
 	fx.addRec(t, removeRec)
 
 	// checking acl state

@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	peer "github.com/anyproto/any-sync/net/peer"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockPool is a mock of Pool interface.
