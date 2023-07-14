@@ -106,10 +106,10 @@ func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	p.mu.Lock()
 	if len(p.inactive) == 0 {
 		wait := p.limiter.wait(len(p.active) + int(p.openingWaitCount.Load()))
+		p.openingWaitCount.Add(1)
+		defer p.openingWaitCount.Add(-1)
 		p.mu.Unlock()
 		if wait != nil {
-			p.openingWaitCount.Add(1)
-			defer p.openingWaitCount.Add(-1)
 			// throttle new connection opening
 			select {
 			case <-ctx.Done():
