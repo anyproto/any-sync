@@ -26,6 +26,8 @@ type DiffSyncer interface {
 	Close() error
 }
 
+const logPeriodSecs = 200
+
 func newDiffSyncer(hs *headSync) DiffSyncer {
 	return &diffSyncer{
 		diff:               hs.diff,
@@ -35,7 +37,7 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 		peerManager:        hs.peerManager,
 		clientFactory:      spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient),
 		credentialProvider: hs.credentialProvider,
-		log:                newSyncLogger(hs.log, hs.syncLogPeriod),
+		log:                newSyncLogger(hs.log, logPeriodSecs),
 		syncStatus:         hs.syncStatus,
 		deletionState:      hs.deletionState,
 	}

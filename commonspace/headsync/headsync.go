@@ -48,7 +48,6 @@ type headSync struct {
 	spaceId        string
 	spaceIsDeleted *atomic.Bool
 	syncPeriod     int
-	syncLogPeriod  int
 
 	periodicSync       periodicsync.PeriodicSync
 	storage            spacestorage.SpaceStorage
@@ -75,7 +74,6 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.spaceId = shared.SpaceId
 	h.spaceIsDeleted = shared.SpaceIsDeleted
 	h.syncPeriod = cfg.GetSpace().SyncPeriod
-	h.syncLogPeriod = cfg.GetSpace().SyncLogPeriod
 	h.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	h.log = log.With(zap.String("spaceId", h.spaceId))
 	h.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
