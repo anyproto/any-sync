@@ -45,6 +45,8 @@ type DRPCSpaceSyncClient interface {
 	SpacePull(ctx context.Context, in *SpacePullRequest) (*SpacePullResponse, error)
 	ObjectSyncStream(ctx context.Context) (DRPCSpaceSync_ObjectSyncStreamClient, error)
 	ObjectSync(ctx context.Context, in *ObjectSyncMessage) (*ObjectSyncMessage, error)
+	AclAddRecord(ctx context.Context, in *AclAddRecordRequest) (*AclAddRecordResponse, error)
+	AclGetRecords(ctx context.Context, in *AclGetRecordsRequest) (*AclGetRecordsResponse, error)
 }
 
 type drpcSpaceSyncClient struct {
@@ -132,12 +134,32 @@ func (c *drpcSpaceSyncClient) ObjectSync(ctx context.Context, in *ObjectSyncMess
 	return out, nil
 }
 
+func (c *drpcSpaceSyncClient) AclAddRecord(ctx context.Context, in *AclAddRecordRequest) (*AclAddRecordResponse, error) {
+	out := new(AclAddRecordResponse)
+	err := c.cc.Invoke(ctx, "/spacesync.SpaceSync/AclAddRecord", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcSpaceSyncClient) AclGetRecords(ctx context.Context, in *AclGetRecordsRequest) (*AclGetRecordsResponse, error) {
+	out := new(AclGetRecordsResponse)
+	err := c.cc.Invoke(ctx, "/spacesync.SpaceSync/AclGetRecords", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCSpaceSyncServer interface {
 	HeadSync(context.Context, *HeadSyncRequest) (*HeadSyncResponse, error)
 	SpacePush(context.Context, *SpacePushRequest) (*SpacePushResponse, error)
 	SpacePull(context.Context, *SpacePullRequest) (*SpacePullResponse, error)
 	ObjectSyncStream(DRPCSpaceSync_ObjectSyncStreamStream) error
 	ObjectSync(context.Context, *ObjectSyncMessage) (*ObjectSyncMessage, error)
+	AclAddRecord(context.Context, *AclAddRecordRequest) (*AclAddRecordResponse, error)
+	AclGetRecords(context.Context, *AclGetRecordsRequest) (*AclGetRecordsResponse, error)
 }
 
 type DRPCSpaceSyncUnimplementedServer struct{}
@@ -162,9 +184,17 @@ func (s *DRPCSpaceSyncUnimplementedServer) ObjectSync(context.Context, *ObjectSy
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCSpaceSyncUnimplementedServer) AclAddRecord(context.Context, *AclAddRecordRequest) (*AclAddRecordResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCSpaceSyncUnimplementedServer) AclGetRecords(context.Context, *AclGetRecordsRequest) (*AclGetRecordsResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCSpaceSyncDescription struct{}
 
-func (DRPCSpaceSyncDescription) NumMethods() int { return 5 }
+func (DRPCSpaceSyncDescription) NumMethods() int { return 7 }
 
 func (DRPCSpaceSyncDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -212,6 +242,24 @@ func (DRPCSpaceSyncDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 						in1.(*ObjectSyncMessage),
 					)
 			}, DRPCSpaceSyncServer.ObjectSync, true
+	case 5:
+		return "/spacesync.SpaceSync/AclAddRecord", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCSpaceSyncServer).
+					AclAddRecord(
+						ctx,
+						in1.(*AclAddRecordRequest),
+					)
+			}, DRPCSpaceSyncServer.AclAddRecord, true
+	case 6:
+		return "/spacesync.SpaceSync/AclGetRecords", drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCSpaceSyncServer).
+					AclGetRecords(
+						ctx,
+						in1.(*AclGetRecordsRequest),
+					)
+			}, DRPCSpaceSyncServer.AclGetRecords, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -305,6 +353,38 @@ type drpcSpaceSync_ObjectSyncStream struct {
 }
 
 func (x *drpcSpaceSync_ObjectSyncStream) SendAndClose(m *ObjectSyncMessage) error {
+	if err := x.MsgSend(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCSpaceSync_AclAddRecordStream interface {
+	drpc.Stream
+	SendAndClose(*AclAddRecordResponse) error
+}
+
+type drpcSpaceSync_AclAddRecordStream struct {
+	drpc.Stream
+}
+
+func (x *drpcSpaceSync_AclAddRecordStream) SendAndClose(m *AclAddRecordResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCSpaceSync_AclGetRecordsStream interface {
+	drpc.Stream
+	SendAndClose(*AclGetRecordsResponse) error
+}
+
+type drpcSpaceSync_AclGetRecordsStream struct {
+	drpc.Stream
+}
+
+func (x *drpcSpaceSync_AclGetRecordsStream) SendAndClose(m *AclGetRecordsResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonspace_spacesyncproto_protos_spacesync_proto{}); err != nil {
 		return err
 	}
