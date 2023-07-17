@@ -6,7 +6,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/app/logger"
-	config2 "github.com/anyproto/any-sync/commonspace/config"
+	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
@@ -48,6 +48,7 @@ type headSync struct {
 	spaceId        string
 	spaceIsDeleted *atomic.Bool
 	syncPeriod     int
+	syncLogPeriod  int
 
 	periodicSync       periodicsync.PeriodicSync
 	storage            spacestorage.SpaceStorage
@@ -70,10 +71,11 @@ var createDiffSyncer = newDiffSyncer
 
 func (h *headSync) Init(a *app.App) (err error) {
 	shared := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
-	cfg := a.MustComponent("config").(config2.ConfigGetter)
+	cfg := a.MustComponent("config").(config.ConfigGetter)
 	h.spaceId = shared.SpaceId
 	h.spaceIsDeleted = shared.SpaceIsDeleted
 	h.syncPeriod = cfg.GetSpace().SyncPeriod
+	h.syncLogPeriod = cfg.GetSpace().SyncLogPeriod
 	h.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	h.log = log.With(zap.String("spaceId", h.spaceId))
 	h.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)

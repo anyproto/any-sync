@@ -35,7 +35,7 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 		peerManager:        hs.peerManager,
 		clientFactory:      spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient),
 		credentialProvider: hs.credentialProvider,
-		log:                log,
+		log:                newSyncLogger(hs.log, hs.syncLogPeriod),
 		syncStatus:         hs.syncStatus,
 		deletionState:      hs.deletionState,
 	}
@@ -48,7 +48,7 @@ type diffSyncer struct {
 	treeManager        treemanager.TreeManager
 	storage            spacestorage.SpaceStorage
 	clientFactory      spacesyncproto.ClientFactory
-	log                logger.CtxLogger
+	log                syncLogger
 	deletionState      deletionstate.ObjectDeletionState
 	credentialProvider credentialprovider.CredentialProvider
 	syncStatus         syncstatus.StatusUpdater
@@ -100,7 +100,7 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 			d.log.ErrorCtx(ctx, "can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
 		}
 	}
-	d.log.InfoCtx(ctx, "diff done", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
+	d.log.DebugCtx(ctx, "diff done", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
 	return nil
 }
 
@@ -145,12 +145,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	if err != nil {
 		return err
 	}
-	d.log.Info("sync done:", zap.Int("newIds", len(newIds)),
-		zap.Int("changedIds", len(changedIds)),
-		zap.Int("removedIds", len(removedIds)),
-		zap.Int("already deleted ids", totalLen-len(existingIds)-len(missingIds)),
-		zap.String("peerId", p.Id()),
-	)
+	d.log.logSyncDone(p.Id(), len(newIds), len(changedIds), len(removedIds), totalLen-len(existingIds)-len(missingIds))
 	return
 }
 
