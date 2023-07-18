@@ -51,6 +51,21 @@ func (mr *MockPeerManagerMockRecorder) Broadcast(arg0, arg1 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Broadcast", reflect.TypeOf((*MockPeerManager)(nil).Broadcast), arg0, arg1)
 }
 
+// GetNodePeers mocks base method.
+func (m *MockPeerManager) GetNodePeers(arg0 context.Context) ([]peer.Peer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNodePeers", arg0)
+	ret0, _ := ret[0].([]peer.Peer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNodePeers indicates an expected call of GetNodePeers.
+func (mr *MockPeerManagerMockRecorder) GetNodePeers(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodePeers", reflect.TypeOf((*MockPeerManager)(nil).GetNodePeers), arg0)
+}
+
 // GetResponsiblePeers mocks base method.
 func (m *MockPeerManager) GetResponsiblePeers(arg0 context.Context) ([]peer.Peer, error) {
 	m.ctrl.T.Helper()
