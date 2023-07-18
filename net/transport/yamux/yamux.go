@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/yamux"
 	"go.uber.org/zap"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -25,6 +26,7 @@ func New() Yamux {
 // Yamux implements transport.Transport with tcp+yamux
 type Yamux interface {
 	transport.Transport
+	AddListener(lis net.Listener)
 	app.ComponentRunnable
 }
 
@@ -37,15 +39,31 @@ type yamuxTransport struct {
 	listCtx       context.Context
 	listCtxCancel context.CancelFunc
 	yamuxConf     *yamux.Config
+	mu            sync.Mutex
 }
 
 func (y *yamuxTransport) Init(a *app.App) (err error) {
 	y.secure = a.MustComponent(secureservice.CName).(secureservice.SecureService)
 	y.conf = a.MustComponent("config").(configGetter).GetYamux()
+	if y.conf.DialTimeoutSec <= 0 {
+		y.conf.DialTimeoutSec = 10
+	}
+	if y.conf.WriteTimeoutSec <= 0 {
+		y.conf.WriteTimeoutSec = 10
+	}
+
 	y.yamuxConf = yamux.DefaultConfig()
-	y.yamuxConf.EnableKeepAlive = false
+	if y.conf.KeepAlivePeriodSec < 0 {
+		y.yamuxConf.EnableKeepAlive = false
+	} else {
+		y.yamuxConf.EnableKeepAlive = true
+		if y.conf.KeepAlivePeriodSec != 0 {
+			y.yamuxConf.KeepAliveInterval = time.Duration(y.conf.KeepAlivePeriodSec) * time.Second
+		}
+	}
 	y.yamuxConf.StreamOpenTimeout = time.Duration(y.conf.DialTimeoutSec) * time.Second
 	y.yamuxConf.ConnectionWriteTimeout = time.Duration(y.conf.WriteTimeoutSec) * time.Second
+	y.listCtx, y.listCtxCancel = context.WithCancel(context.Background())
 	return
 }
 
@@ -57,6 +75,8 @@ func (y *yamuxTransport) Run(ctx context.Context) (err error) {
 	if y.accepter == nil {
 		return fmt.Errorf("can't run service without accepter")
 	}
+	y.mu.Lock()
+	defer y.mu.Unlock()
 	for _, listAddr := range y.conf.ListenAddrs {
 		list, err := net.Listen("tcp", listAddr)
 		if err != nil {
@@ -64,7 +84,6 @@ func (y *yamuxTransport) Run(ctx context.Context) (err error) {
 		}
 		y.listeners = append(y.listeners, list)
 	}
-	y.listCtx, y.listCtxCancel = context.WithCancel(context.Background())
 	for _, list := range y.listeners {
 		go y.acceptLoop(y.listCtx, list)
 	}
@@ -73,6 +92,13 @@ func (y *yamuxTransport) Run(ctx context.Context) (err error) {
 
 func (y *yamuxTransport) SetAccepter(accepter transport.Accepter) {
 	y.accepter = accepter
+}
+
+func (y *yamuxTransport) AddListener(lis net.Listener) {
+	y.mu.Lock()
+	defer y.mu.Unlock()
+	y.listeners = append(y.listeners, lis)
+	go y.acceptLoop(y.listCtx, lis)
 }
 
 func (y *yamuxTransport) Dial(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
@@ -88,7 +114,7 @@ func (y *yamuxTransport) Dial(ctx context.Context, addr string) (mc transport.Mu
 		_ = conn.Close()
 		return nil, err
 	}
-	luc := connutil.NewLastUsageConn(conn)
+	luc := connutil.NewLastUsageConn(connutil.NewTimeout(conn, time.Duration(y.conf.WriteTimeoutSec)*time.Second))
 	sess, err := yamux.Client(luc, y.yamuxConf)
 	if err != nil {
 		return
@@ -134,7 +160,7 @@ func (y *yamuxTransport) accept(conn net.Conn) {
 		log.Warn("incoming connection handshake error", zap.Error(err))
 		return
 	}
-	luc := connutil.NewLastUsageConn(conn)
+	luc := connutil.NewLastUsageConn(connutil.NewTimeout(conn, time.Duration(y.conf.WriteTimeoutSec)*time.Second))
 	sess, err := yamux.Server(luc, y.yamuxConf)
 	if err != nil {
 		log.Warn("incoming connection yamux session error", zap.Error(err))

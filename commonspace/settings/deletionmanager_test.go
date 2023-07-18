@@ -2,12 +2,12 @@ package settings
 
 import (
 	"context"
+	"github.com/anyproto/any-sync/commonspace/deletionstate/mock_deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
 	"github.com/anyproto/any-sync/commonspace/settings/mock_settings"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
-	"github.com/anyproto/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	"testing"
 )
 
@@ -26,7 +26,7 @@ func TestDeletionManager_UpdateState_NotResponsible(t *testing.T) {
 	onDeleted := func() {
 		deleted = true
 	}
-	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
+	delState := mock_deletionstate.NewMockObjectDeletionState(ctrl)
 	treeManager := mock_treemanager.NewMockTreeManager(ctrl)
 
 	delState.EXPECT().Add(state.DeletedIds)
@@ -58,7 +58,7 @@ func TestDeletionManager_UpdateState_Responsible(t *testing.T) {
 	onDeleted := func() {
 		deleted = true
 	}
-	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
+	delState := mock_deletionstate.NewMockObjectDeletionState(ctrl)
 	treeManager := mock_treemanager.NewMockTreeManager(ctrl)
 	provider := mock_settings.NewMockSpaceIdsProvider(ctrl)
 

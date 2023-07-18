@@ -2,26 +2,36 @@ package commonspace
 
 import (
 	"context"
+	"sync/atomic"
+
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
+	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/headsync"
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/objectmanager"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
+	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
+	"github.com/anyproto/any-sync/commonspace/requestmanager"
+	"github.com/anyproto/any-sync/commonspace/settings"
+	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
-	"sync/atomic"
+	"storj.io/drpc"
 )
 
 const CName = "common.commonspace"
@@ -45,32 +55,30 @@ type SpaceService interface {
 }
 
 type spaceService struct {
-	config               Config
-	account              accountservice.Service
-	configurationService nodeconf.Service
-	storageProvider      spacestorage.SpaceStorageProvider
-	peermanagerProvider  peermanager.PeerManagerProvider
-	credentialProvider   credentialprovider.CredentialProvider
-	treeManager          treemanager.TreeManager
-	pool                 pool.Pool
-	metric               metric.Metric
+	config                config.Config
+	account               accountservice.Service
+	configurationService  nodeconf.Service
+	storageProvider       spacestorage.SpaceStorageProvider
+	peerManagerProvider   peermanager.PeerManagerProvider
+	credentialProvider    credentialprovider.CredentialProvider
+	statusServiceProvider syncstatus.StatusServiceProvider
+	treeManager           treemanager.TreeManager
+	pool                  pool.Pool
+	metric                metric.Metric
+	app                   *app.App
 }
 
 func (s *spaceService) Init(a *app.App) (err error) {
-	s.config = a.MustComponent("config").(ConfigGetter).GetSpace()
+	s.config = a.MustComponent("config").(config.ConfigGetter).GetSpace()
 	s.account = a.MustComponent(accountservice.CName).(accountservice.Service)
 	s.storageProvider = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
-	s.peermanagerProvider = a.MustComponent(peermanager.CName).(peermanager.PeerManagerProvider)
-	credProvider := a.Component(credentialprovider.CName)
-	if credProvider != nil {
-		s.credentialProvider = credProvider.(credentialprovider.CredentialProvider)
-	} else {
-		s.credentialProvider = credentialprovider.NewNoOp()
-	}
+	s.peerManagerProvider = a.MustComponent(peermanager.CName).(peermanager.PeerManagerProvider)
+	s.statusServiceProvider = a.MustComponent(syncstatus.CName).(syncstatus.StatusServiceProvider)
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
+	s.app = a
 	return nil
 }
 
@@ -138,8 +146,6 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 			}
 		}
 	}
-
-	lastConfiguration := s.configurationService
 	var (
 		spaceIsClosed  = &atomic.Bool{}
 		spaceIsDeleted = &atomic.Bool{}
@@ -149,49 +155,46 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		return nil, err
 	}
 	spaceIsDeleted.Swap(isDeleted)
-	getter := newCommonGetter(st.Id(), s.treeManager, spaceIsClosed)
-	syncStatus := syncstatus.NewNoOpSyncStatus()
-	// this will work only for clients, not the best solution, but...
-	if !lastConfiguration.IsResponsible(st.Id()) {
-		// TODO: move it to the client package and add possibility to inject StatusProvider from the client
-		syncStatus = syncstatus.NewSyncStatusProvider(st.Id(), syncstatus.DefaultDeps(lastConfiguration, st))
+	state := &spacestate.SpaceState{
+		SpaceId:        st.Id(),
+		SpaceIsDeleted: spaceIsDeleted,
+		SpaceIsClosed:  spaceIsClosed,
+		TreesUsed:      &atomic.Int32{},
 	}
-	var builder objecttree.BuildObjectTreeFunc
 	if s.config.KeepTreeDataInMemory {
-		builder = objecttree.BuildObjectTree
+		state.TreeBuilderFunc = objecttree.BuildObjectTree
 	} else {
-		builder = objecttree.BuildEmptyDataObjectTree
+		state.TreeBuilderFunc = objecttree.BuildEmptyDataObjectTree
 	}
-
-	peerManager, err := s.peermanagerProvider.NewPeerManager(ctx, id)
+	peerManager, err := s.peerManagerProvider.NewPeerManager(ctx, id)
 	if err != nil {
 		return nil, err
 	}
+	statusService := s.statusServiceProvider.NewStatusService()
+	spaceApp := s.app.ChildApp()
+	spaceApp.Register(state).
+		Register(peerManager).
+		Register(newCommonStorage(st)).
+		Register(statusService).
+		Register(syncacl.New()).
+		Register(requestmanager.New()).
+		Register(deletionstate.New()).
+		Register(settings.New()).
+		Register(objectmanager.New(s.treeManager)).
+		Register(objecttreebuilder.New()).
+		Register(objectsync.New()).
+		Register(headsync.New())
 
-	headSync := headsync.NewHeadSync(id, spaceIsDeleted, s.config.SyncPeriod, lastConfiguration, st, peerManager, getter, syncStatus, s.credentialProvider, log)
-	objectSync := objectsync.NewObjectSync(id, spaceIsDeleted, lastConfiguration, peerManager, getter, st)
 	sp := &space{
-		id:            id,
-		objectSync:    objectSync,
-		headSync:      headSync,
-		syncStatus:    syncStatus,
-		treeManager:   getter,
-		account:       s.account,
-		configuration: lastConfiguration,
-		peerManager:   peerManager,
-		storage:       st,
-		treesUsed:     &atomic.Int32{},
-		treeBuilder:   builder,
-		isClosed:      spaceIsClosed,
-		isDeleted:     spaceIsDeleted,
-		metric:        s.metric,
+		state: state,
+		app:   spaceApp,
 	}
 	return sp, nil
 }
 
 func (s *spaceService) addSpaceStorage(ctx context.Context, spaceDescription SpaceDescription) (st spacestorage.SpaceStorage, err error) {
 	payload := spacestorage.SpaceStorageCreatePayload{
-		AclWithId: &aclrecordproto.RawAclRecordWithId{
+		AclWithId: &consensusproto.RawRecordWithId{
 			Payload: spaceDescription.AclPayload,
 			Id:      spaceDescription.AclId,
 		},
@@ -226,15 +229,19 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 		return
 	}
 
-	cl := spacesyncproto.NewDRPCSpaceSyncClient(p)
-	res, err := cl.SpacePull(ctx, &spacesyncproto.SpacePullRequest{Id: id})
+	var res *spacesyncproto.SpacePullResponse
+	err = p.DoDrpc(ctx, func(conn drpc.Conn) error {
+		cl := spacesyncproto.NewDRPCSpaceSyncClient(conn)
+		res, err = cl.SpacePull(ctx, &spacesyncproto.SpacePullRequest{Id: id})
+		return err
+	})
 	if err != nil {
 		err = rpcerr.Unwrap(err)
 		return
 	}
 
 	st, err = s.createSpaceStorage(spacestorage.SpaceStorageCreatePayload{
-		AclWithId: &aclrecordproto.RawAclRecordWithId{
+		AclWithId: &consensusproto.RawRecordWithId{
 			Payload: res.Payload.AclPayload,
 			Id:      res.Payload.AclPayloadId,
 		},

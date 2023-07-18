@@ -39,6 +39,7 @@ message Credentials {
     CredentialsType type = 1;
     bytes payload = 2;
     uint32 version = 3;
+    string clientVersion = 4;
 }
 
 enum CredentialsType {

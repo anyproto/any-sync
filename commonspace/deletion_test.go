@@ -73,13 +73,14 @@ func TestSpaceDeleteIds(t *testing.T) {
 	fx.treeManager.space = spc
 	err = spc.Init(ctx)
 	require.NoError(t, err)
-
+	close(fx.treeManager.waitLoad)
+	
 	var ids []string
 	for i := 0; i < totalObjs; i++ {
 		// creating a tree
 		bytes := make([]byte, 32)
 		rand.Read(bytes)
-		doc, err := spc.CreateTree(ctx, objecttree.ObjectTreeCreatePayload{
+		doc, err := spc.TreeBuilder().CreateTree(ctx, objecttree.ObjectTreeCreatePayload{
 			PrivKey:     acc.SignKey,
 			ChangeType:  "some",
 			SpaceId:     spc.Id(),
@@ -88,7 +89,7 @@ func TestSpaceDeleteIds(t *testing.T) {
 			Timestamp:   time.Now().Unix(),
 		})
 		require.NoError(t, err)
-		tr, err := spc.PutTree(ctx, doc, nil)
+		tr, err := spc.TreeBuilder().PutTree(ctx, doc, nil)
 		require.NoError(t, err)
 		ids = append(ids, tr.Id())
 		tr.Close()
@@ -106,7 +107,7 @@ func TestSpaceDeleteIds(t *testing.T) {
 func createTree(t *testing.T, ctx context.Context, spc Space, acc *accountdata.AccountKeys) string {
 	bytes := make([]byte, 32)
 	rand.Read(bytes)
-	doc, err := spc.CreateTree(ctx, objecttree.ObjectTreeCreatePayload{
+	doc, err := spc.TreeBuilder().CreateTree(ctx, objecttree.ObjectTreeCreatePayload{
 		PrivKey:     acc.SignKey,
 		ChangeType:  "some",
 		SpaceId:     spc.Id(),
@@ -115,7 +116,7 @@ func createTree(t *testing.T, ctx context.Context, spc Space, acc *accountdata.A
 		Timestamp:   time.Now().Unix(),
 	})
 	require.NoError(t, err)
-	tr, err := spc.PutTree(ctx, doc, nil)
+	tr, err := spc.TreeBuilder().PutTree(ctx, doc, nil)
 	require.NoError(t, err)
 	tr.Close()
 	return tr.Id()
@@ -147,9 +148,10 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	// adding space to tree manager
 	fx.treeManager.space = spc
 	err = spc.Init(ctx)
+	close(fx.treeManager.waitLoad)
 	require.NoError(t, err)
 
-	settingsObject := spc.(*space).settingsObject
+	settingsObject := spc.(*space).app.MustComponent(settings.CName).(settings.Settings).SettingsObject()
 	var ids []string
 	for i := 0; i < totalObjs; i++ {
 		id := createTree(t, ctx, spc, acc)
@@ -183,17 +185,19 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	spc, err = fx.spaceService.NewSpace(ctx, sp)
 	require.NoError(t, err)
 	require.NotNil(t, spc)
+	fx.treeManager.waitLoad = make(chan struct{})
 	fx.treeManager.space = spc
 	fx.treeManager.deletedIds = nil
 	err = spc.Init(ctx)
 	require.NoError(t, err)
+	close(fx.treeManager.waitLoad)
 
 	// waiting until everything is deleted
 	time.Sleep(3 * time.Second)
 	require.Equal(t, len(ids), len(fx.treeManager.deletedIds))
 
 	// checking that new snapshot will contain all the changes
-	settingsObject = spc.(*space).settingsObject
+	settingsObject = spc.(*space).app.MustComponent(settings.CName).(settings.Settings).SettingsObject()
 	settings.DoSnapshot = func(treeLen int) bool {
 		return true
 	}
@@ -230,8 +234,9 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	fx.treeManager.space = spc
 	err = spc.Init(ctx)
 	require.NoError(t, err)
+	close(fx.treeManager.waitLoad)
 
-	settingsObject := spc.(*space).settingsObject
+	settingsObject := spc.(*space).app.MustComponent(settings.CName).(settings.Settings).SettingsObject()
 	var ids []string
 	for i := 0; i < totalObjs; i++ {
 		id := createTree(t, ctx, spc, acc)
@@ -259,10 +264,12 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, spc)
 	fx.treeManager.space = spc
+	fx.treeManager.waitLoad = make(chan struct{})
 	fx.treeManager.deletedIds = nil
 	fx.treeManager.markedIds = nil
 	err = spc.Init(ctx)
 	require.NoError(t, err)
+	close(fx.treeManager.waitLoad)
 
 	// waiting until everything is deleted
 	time.Sleep(3 * time.Second)

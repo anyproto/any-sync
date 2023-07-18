@@ -49,6 +49,7 @@ func (p *peerService) Init(a *app.App) (err error) {
 	p.pool = a.MustComponent(pool.CName).(pool.Pool)
 	p.server = a.MustComponent(server.CName).(server.DRPCServer)
 	p.peerAddrs = map[string][]string{}
+	p.yamux.SetAccepter(p)
 	return nil
 }
 

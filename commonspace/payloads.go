@@ -2,20 +2,22 @@ package commonspace
 
 import (
 	"errors"
+	"hash/fnv"
+	"math/rand"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/gogo/protobuf/proto"
-	"hash/fnv"
-	"math/rand"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -71,7 +73,7 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 
 	// building acl root
 	keyStorage := crypto.NewKeyStorage()
-	aclBuilder := list.NewAclRecordBuilder("", keyStorage)
+	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil, list.NoOpAcceptorVerifier{})
 	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
 		PrivKey:          payload.SigningKey,
 		MasterKey:        payload.MasterKey,
@@ -158,7 +160,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 
 	// building acl root
 	keyStorage := crypto.NewKeyStorage()
-	aclBuilder := list.NewAclRecordBuilder("", keyStorage)
+	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil, list.NoOpAcceptorVerifier{})
 	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
 		PrivKey:   payload.SigningKey,
 		MasterKey: payload.MasterKey,
@@ -214,14 +216,15 @@ func validateSpaceStorageCreatePayload(payload spacestorage.SpaceStorageCreatePa
 }
 
 func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, identity crypto.PubKey) (err error) {
+	if rawHeaderWithId == nil {
+		return spacestorage.ErrIncorrectSpaceHeader
+	}
 	sepIdx := strings.Index(rawHeaderWithId.Id, ".")
 	if sepIdx == -1 {
-		err = spacestorage.ErrIncorrectSpaceHeader
-		return
+		return spacestorage.ErrIncorrectSpaceHeader
 	}
 	if !cidutil.VerifyCid(rawHeaderWithId.RawHeader, rawHeaderWithId.Id[:sepIdx]) {
-		err = objecttree.ErrIncorrectCid
-		return
+		return objecttree.ErrIncorrectCid
 	}
 	var rawSpaceHeader spacesyncproto.RawSpaceHeader
 	err = proto.Unmarshal(rawHeaderWithId.RawHeader, &rawSpaceHeader)
@@ -239,29 +242,26 @@ func ValidateSpaceHeader(rawHeaderWithId *spacesyncproto.RawSpaceHeaderWithId, i
 	}
 	res, err := payloadIdentity.Verify(rawSpaceHeader.SpaceHeader, rawSpaceHeader.Signature)
 	if err != nil || !res {
-		err = spacestorage.ErrIncorrectSpaceHeader
-		return
+		return spacestorage.ErrIncorrectSpaceHeader
 	}
 	if rawHeaderWithId.Id[sepIdx+1:] != strconv.FormatUint(header.ReplicationKey, 36) {
-		err = spacestorage.ErrIncorrectSpaceHeader
-		return
+		return spacestorage.ErrIncorrectSpaceHeader
 	}
 	if identity == nil {
 		return
 	}
 	if !payloadIdentity.Equals(identity) {
-		err = ErrIncorrectIdentity
-		return
+		return ErrIncorrectIdentity
 	}
 	return
 }
 
-func validateCreateSpaceAclPayload(rawWithId *aclrecordproto.RawAclRecordWithId) (spaceId string, err error) {
+func validateCreateSpaceAclPayload(rawWithId *consensusproto.RawRecordWithId) (spaceId string, err error) {
 	if !cidutil.VerifyCid(rawWithId.Payload, rawWithId.Id) {
 		err = objecttree.ErrIncorrectCid
 		return
 	}
-	var rawAcl aclrecordproto.RawAclRecord
+	var rawAcl consensusproto.RawRecord
 	err = proto.Unmarshal(rawWithId.Payload, &rawAcl)
 	if err != nil {
 		return

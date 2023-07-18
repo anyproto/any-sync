@@ -14,6 +14,7 @@ const (
 	contextKeyPeerId contextKey = iota
 	contextKeyIdentity
 	contextKeyPeerAddr
+	contextKeyPeerClientVersion
 )
 
 var (
@@ -48,6 +49,19 @@ func CtxPeerAddr(ctx context.Context) string {
 // CtxWithPeerAddr sets peer address to the context
 func CtxWithPeerAddr(ctx context.Context, addr string) context.Context {
 	return context.WithValue(ctx, contextKeyPeerAddr, addr)
+}
+
+// CtxPeerClientVersion returns peer client version
+func CtxPeerClientVersion(ctx context.Context) string {
+	if p, ok := ctx.Value(contextKeyPeerClientVersion).(string); ok {
+		return p
+	}
+	return ""
+}
+
+// CtxWithClientVersion sets peer clientVersion to the context
+func CtxWithClientVersion(ctx context.Context, addr string) context.Context {
+	return context.WithValue(ctx, contextKeyPeerClientVersion, addr)
 }
 
 // CtxIdentity returns identity from context

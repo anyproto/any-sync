@@ -8,8 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	settingsstate "github.com/anyproto/any-sync/commonspace/settings/settingsstate"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockDiffSyncer is a mock of DiffSyncer interface.
@@ -50,15 +49,15 @@ func (mr *MockDiffSyncerMockRecorder) Close() *gomock.Call {
 }
 
 // Init mocks base method.
-func (m *MockDiffSyncer) Init(arg0 settingsstate.ObjectDeletionState) {
+func (m *MockDiffSyncer) Init() {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Init", arg0)
+	m.ctrl.Call(m, "Init")
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockDiffSyncerMockRecorder) Init(arg0 interface{}) *gomock.Call {
+func (mr *MockDiffSyncerMockRecorder) Init() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockDiffSyncer)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockDiffSyncer)(nil).Init))
 }
 
 // RemoveObjects mocks base method.

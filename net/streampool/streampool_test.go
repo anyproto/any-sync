@@ -2,18 +2,19 @@ package streampool
 
 import (
 	"fmt"
+	"sort"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
 	"github.com/anyproto/any-sync/net/streampool/testservice"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
-	"sort"
 	"storj.io/drpc"
-	"sync"
-	"sync/atomic"
-	"testing"
-	"time"
 )
 
 var ctx = context.Background()

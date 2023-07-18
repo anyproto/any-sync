@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"net"
-	"time"
 )
 
 var (
@@ -29,8 +28,6 @@ type MultiConn interface {
 	Accept() (conn net.Conn, err error)
 	// Open opens new sub connection
 	Open(ctx context.Context) (conn net.Conn, err error)
-	// LastUsage returns the time of the last connection activity
-	LastUsage() time.Time
 	// Addr returns remote peer address
 	Addr() string
 	// IsClosed returns true when connection is closed

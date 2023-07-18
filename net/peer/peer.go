@@ -1,26 +1,34 @@
+//go:generate mockgen -destination mock_peer/mock_peer.go github.com/anyproto/any-sync/net/peer Peer
 package peer
 
 import (
 	"context"
+	"io"
+	"net"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net/connutil"
+	"github.com/anyproto/any-sync/net/rpc"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/net/transport"
 	"go.uber.org/zap"
-	"io"
-	"net"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcconn"
-	"sync"
-	"time"
+	"storj.io/drpc/drpcmanager"
+	"storj.io/drpc/drpcstream"
+	"storj.io/drpc/drpcwire"
 )
 
 var log = logger.NewNamed("common.net.peer")
 
 type connCtrl interface {
 	ServeConn(ctx context.Context, conn net.Conn) (err error)
+	DrpcConfig() rpc.Config
 }
 
 func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
@@ -29,7 +37,15 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 		active:    map[*subConn]struct{}{},
 		MultiConn: mc,
 		ctrl:      ctrl,
+		limiter: limiter{
+			// start throttling after 10 sub conns
+			startThreshold: 10,
+			slowDownStep:   time.Millisecond * 100,
+		},
+		subConnRelease: make(chan drpc.Conn),
+		created:        time.Now(),
 	}
+	pr.acceptCtx, pr.acceptCtxCancel = context.WithCancel(context.Background())
 	if pr.id, err = CtxPeerId(ctx); err != nil {
 		return
 	}
@@ -63,11 +79,22 @@ type peer struct {
 	ctrl connCtrl
 
 	// drpc conn pool
-	inactive []*subConn
-	active   map[*subConn]struct{}
+	// outgoing
+	inactive         []*subConn
+	active           map[*subConn]struct{}
+	subConnRelease   chan drpc.Conn
+	openingWaitCount atomic.Int32
+
+	incomingCount atomic.Int32
+	acceptCtx     context.Context
+
+	acceptCtxCancel context.CancelFunc
+
+	limiter limiter
 
 	mu sync.Mutex
 
+	created time.Time
 	transport.MultiConn
 }
 
@@ -78,7 +105,20 @@ func (p *peer) Id() string {
 func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	p.mu.Lock()
 	if len(p.inactive) == 0 {
+		wait := p.limiter.wait(len(p.active) + int(p.openingWaitCount.Load()))
 		p.mu.Unlock()
+		if wait != nil {
+			p.openingWaitCount.Add(1)
+			defer p.openingWaitCount.Add(-1)
+			// throttle new connection opening
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case dconn := <-p.subConnRelease:
+				return dconn, nil
+			case <-wait:
+			}
+		}
 		dconn, err := p.openDrpcConn(ctx)
 		if err != nil {
 			return nil, err
@@ -89,12 +129,33 @@ func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 	idx := len(p.inactive) - 1
 	res := p.inactive[idx]
 	p.inactive = p.inactive[:idx]
+	select {
+	case <-res.Closed():
+		p.mu.Unlock()
+		return p.AcquireDrpcConn(ctx)
+	default:
+	}
 	p.active[res] = struct{}{}
 	p.mu.Unlock()
 	return res, nil
 }
 
 func (p *peer) ReleaseDrpcConn(conn drpc.Conn) {
+	// do nothing if it's closed connection
+	select {
+	case <-conn.Closed():
+		return
+	default:
+	}
+
+	// try to send this connection to acquire if anyone is waiting for it
+	select {
+	case p.subConnRelease <- conn:
+		return
+	default:
+	}
+
+	// return to pool
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	sc, ok := conn.(*subConn)
@@ -126,8 +187,14 @@ func (p *peer) openDrpcConn(ctx context.Context) (dconn *subConn, err error) {
 		return nil, err
 	}
 	tconn := connutil.NewLastUsageConn(conn)
+	bufSize := p.ctrl.DrpcConfig().Stream.MaxMsgSizeMb * (1 << 20)
 	return &subConn{
-		Conn:          drpcconn.New(tconn),
+		Conn: drpcconn.NewWithOptions(tconn, drpcconn.Options{
+			Manager: drpcmanager.Options{
+				Reader: drpcwire.ReaderOptions{MaximumBufferSize: bufSize},
+				Stream: drpcstream.Options{MaximumBufferSize: bufSize},
+			},
+		}),
 		LastUsageConn: tconn,
 	}, nil
 }
@@ -141,12 +208,21 @@ func (p *peer) acceptLoop() {
 		}
 	}()
 	for {
+		if wait := p.limiter.wait(int(p.incomingCount.Load())); wait != nil {
+			select {
+			case <-wait:
+			case <-p.acceptCtx.Done():
+				return
+			}
+		}
 		conn, err := p.Accept()
 		if err != nil {
 			exitErr = err
 			return
 		}
 		go func() {
+			p.incomingCount.Add(1)
+			defer p.incomingCount.Add(-1)
 			serveErr := p.serve(conn)
 			if serveErr != io.EOF && serveErr != transport.ErrConnClosed {
 				log.InfoCtx(p.Context(), "serve connection error", zap.Error(serveErr))
@@ -172,14 +248,14 @@ func (p *peer) serve(conn net.Conn) (err error) {
 }
 
 func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
-	p.gc(objectTTL)
-	if time.Now().Sub(p.LastUsage()) < objectTTL {
-		return false, nil
+	aliveCount := p.gc(objectTTL)
+	if aliveCount == 0 && p.created.Add(time.Minute).Before(time.Now()) {
+		return true, p.Close()
 	}
-	return true, p.Close()
+	return false, nil
 }
 
-func (p *peer) gc(ttl time.Duration) {
+func (p *peer) gc(ttl time.Duration) (aliveCount int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	minLastUsage := time.Now().Add(-ttl)
@@ -210,9 +286,17 @@ func (p *peer) gc(ttl time.Duration) {
 		select {
 		case <-act.Closed():
 			delete(p.active, act)
+			continue
 		default:
 		}
+		if act.LastUsage().Before(minLastUsage) {
+			log.Warn("close active connection because no activity", zap.String("peerId", p.id), zap.String("addr", p.Addr()))
+			_ = act.Close()
+			delete(p.active, act)
+			continue
+		}
 	}
+	return len(p.active) + len(p.inactive) + int(p.incomingCount.Load())
 }
 
 func (p *peer) Close() (err error) {

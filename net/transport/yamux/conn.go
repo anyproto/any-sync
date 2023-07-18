@@ -3,13 +3,16 @@ package yamux
 import (
 	"context"
 	"github.com/anyproto/any-sync/net/connutil"
+	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/transport"
 	"github.com/hashicorp/yamux"
+	"io"
 	"net"
 	"time"
 )
 
 func NewMultiConn(cctx context.Context, luConn *connutil.LastUsageConn, addr string, sess *yamux.Session) transport.MultiConn {
+	cctx = peer.CtxWithPeerAddr(cctx, sess.RemoteAddr().String())
 	return &yamuxConn{
 		ctx:     cctx,
 		luConn:  luConn,
@@ -46,7 +49,7 @@ func (y *yamuxConn) Addr() string {
 
 func (y *yamuxConn) Accept() (conn net.Conn, err error) {
 	if conn, err = y.Session.Accept(); err != nil {
-		if err == yamux.ErrSessionShutdown {
+		if err == yamux.ErrSessionShutdown || err == io.EOF {
 			err = transport.ErrConnClosed
 		}
 		return

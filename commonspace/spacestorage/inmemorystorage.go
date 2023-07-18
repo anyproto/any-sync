@@ -1,11 +1,15 @@
 package spacestorage
 
 import (
-	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"context"
+
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
+
 	"sync"
 )
 
@@ -21,8 +25,24 @@ type InMemorySpaceStorage struct {
 	sync.Mutex
 }
 
+func (i *InMemorySpaceStorage) Run(ctx context.Context) (err error) {
+	return nil
+}
+
+func (i *InMemorySpaceStorage) Close(ctx context.Context) (err error) {
+	return nil
+}
+
+func (i *InMemorySpaceStorage) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (i *InMemorySpaceStorage) Name() (name string) {
+	return CName
+}
+
 func NewInMemorySpaceStorage(payload SpaceStorageCreatePayload) (SpaceStorage, error) {
-	aclStorage, err := liststorage.NewInMemoryAclListStorage(payload.AclWithId.Id, []*aclrecordproto.RawAclRecordWithId{payload.AclWithId})
+	aclStorage, err := liststorage.NewInMemoryAclListStorage(payload.AclWithId.Id, []*consensusproto.RawRecordWithId{payload.AclWithId})
 	if err != nil {
 		return nil, err
 	}
@@ -146,10 +166,6 @@ func (i *InMemorySpaceStorage) ReadSpaceHash() (hash string, err error) {
 	i.Lock()
 	defer i.Unlock()
 	return i.spaceHash, nil
-}
-
-func (i *InMemorySpaceStorage) Close() error {
-	return nil
 }
 
 func (i *InMemorySpaceStorage) AllTrees() map[string]treestorage.TreeStorage {

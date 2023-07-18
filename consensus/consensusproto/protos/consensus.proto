@@ -1,0 +1,113 @@
+syntax = "proto3";
+package consensusProto;
+
+option go_package = "consensus/consensusproto";
+
+enum ErrCodes {
+    Unexpected = 0;
+    LogExists = 1;
+    LogNotFound = 2;
+    RecordConflict = 3;
+    Forbidden = 4;
+    InvalidPayload = 5;
+    ErrorOffset = 500;
+}
+
+
+message Log {
+    string id = 1;
+    repeated RawRecordWithId records = 3;
+}
+
+// RawRecord is a proto message containing the payload in bytes, signature of the account who added it and signature of the acceptor
+message RawRecord {
+    bytes payload = 1;
+    bytes signature = 2;
+    bytes acceptorIdentity = 3;
+    bytes acceptorSignature = 4;
+}
+
+// RawRecordWithId is a raw record and the id for convenience
+message RawRecordWithId {
+    bytes payload = 1;
+    string id = 2;
+}
+
+// Record is a record containing a data
+message Record {
+    string prevId = 1;
+    bytes identity = 2;
+    bytes data = 3;
+    int64 timestamp = 4;
+}
+
+
+service Consensus {
+    // AddLog adds new log to consensus
+    rpc LogAdd(LogAddRequest) returns (Ok);
+    // AddRecord adds new record to log
+    rpc RecordAdd(RecordAddRequest) returns (RawRecordWithId);
+    // WatchLog fetches log and subscribes for a changes
+    rpc LogWatch(stream LogWatchRequest) returns (stream LogWatchEvent);
+}
+
+message Ok {}
+
+message LogAddRequest {
+    // first record in the log, consensus node not sign it
+    RawRecordWithId record = 1;
+}
+
+message RecordAddRequest {
+    string logId = 1;
+    RawRecord record = 2;
+}
+
+message LogWatchRequest {
+    repeated string watchIds = 1;
+    repeated string unwatchIds = 2;
+}
+
+message LogWatchEvent {
+    string logId = 1;
+    repeated RawRecordWithId records = 2;
+    Err error = 3;
+}
+
+message Err {
+    ErrCodes error = 1;
+}
+
+// LogSyncContentValue provides different types for log sync
+message LogSyncContentValue {
+    oneof value {
+        LogHeadUpdate headUpdate = 1;
+        LogFullSyncRequest fullSyncRequest = 2;
+        LogFullSyncResponse fullSyncResponse = 3;
+    }
+}
+
+// LogSyncMessage is a message sent when we are syncing logs
+message LogSyncMessage {
+    string id = 1;
+    bytes payload = 2;
+    LogSyncContentValue content = 3;
+}
+
+// LogHeadUpdate is a message sent on consensus log head update
+message LogHeadUpdate {
+    string head = 1;
+    repeated RawRecordWithId records = 2;
+}
+
+// LogFullSyncRequest is a message sent when consensus log needs full sync
+message LogFullSyncRequest {
+    string head = 1;
+    repeated RawRecordWithId records = 2;
+}
+
+// LogFullSyncResponse is a message sent as a response for a specific full sync
+message LogFullSyncResponse {
+    string head = 1;
+    repeated RawRecordWithId records = 2;
+}

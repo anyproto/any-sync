@@ -2,37 +2,87 @@ package synctree
 
 import (
 	"context"
+	"errors"
+	"sync"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/util/slice"
 	"github.com/gogo/protobuf/proto"
-	"go.uber.org/zap"
-	"sync"
+)
+
+var (
+	ErrMessageIsRequest    = errors.New("message is request")
+	ErrMessageIsNotRequest = errors.New("message is not request")
+	ErrMoreThanOneRequest  = errors.New("more than one request for same peer")
 )
 
 type syncTreeHandler struct {
-	objTree     objecttree.ObjectTree
-	syncClient  objectsync.SyncClient
-	syncStatus  syncstatus.StatusUpdater
-	handlerLock sync.Mutex
-	spaceId     string
-	queue       ReceiveQueue
+	objTree      objecttree.ObjectTree
+	syncClient   SyncClient
+	syncProtocol TreeSyncProtocol
+	syncStatus   syncstatus.StatusUpdater
+	spaceId      string
+
+	handlerLock     sync.Mutex
+	pendingRequests map[string]struct{}
+	heads           []string
 }
 
 const maxQueueSize = 5
 
-func newSyncTreeHandler(spaceId string, objTree objecttree.ObjectTree, syncClient objectsync.SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
+func newSyncTreeHandler(spaceId string, objTree objecttree.ObjectTree, syncClient SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
 	return &syncTreeHandler{
-		objTree:    objTree,
-		syncClient: syncClient,
-		syncStatus: syncStatus,
-		spaceId:    spaceId,
-		queue:      newReceiveQueue(maxQueueSize),
+		objTree:         objTree,
+		syncProtocol:    newTreeSyncProtocol(spaceId, objTree, syncClient),
+		syncClient:      syncClient,
+		syncStatus:      syncStatus,
+		spaceId:         spaceId,
+		pendingRequests: make(map[string]struct{}),
 	}
+}
+
+func (s *syncTreeHandler) HandleRequest(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (response *spacesyncproto.ObjectSyncMessage, err error) {
+	unmarshalled := &treechangeproto.TreeSyncMessage{}
+	err = proto.Unmarshal(request.Payload, unmarshalled)
+	if err != nil {
+		return
+	}
+	fullSyncRequest := unmarshalled.GetContent().GetFullSyncRequest()
+	if fullSyncRequest == nil {
+		return nil, ErrMessageIsNotRequest
+	}
+	// setting pending requests
+	s.handlerLock.Lock()
+	_, exists := s.pendingRequests[senderId]
+	if exists {
+		s.handlerLock.Unlock()
+		return nil, ErrMoreThanOneRequest
+	}
+	s.pendingRequests[senderId] = struct{}{}
+	s.handlerLock.Unlock()
+
+	response, err = s.handleRequest(ctx, senderId, fullSyncRequest)
+
+	// removing pending requests
+	s.handlerLock.Lock()
+	delete(s.pendingRequests, senderId)
+	s.handlerLock.Unlock()
+	return
+}
+
+func (s *syncTreeHandler) handleRequest(ctx context.Context, senderId string, fullSyncRequest *treechangeproto.TreeFullSyncRequest) (response *spacesyncproto.ObjectSyncMessage, err error) {
+	s.objTree.Lock()
+	defer s.objTree.Unlock()
+	treeResp, err := s.syncProtocol.FullSyncRequest(ctx, senderId, fullSyncRequest)
+	if err != nil {
+		return
+	}
+	response, err = spacesyncproto.MarshallSyncMessage(treeResp, s.spaceId, s.objTree.Id())
+	return
 }
 
 func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
@@ -41,194 +91,53 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 	if err != nil {
 		return
 	}
-	s.syncStatus.HeadsReceive(senderId, msg.ObjectId, treechangeproto.GetHeads(unmarshalled))
-
-	queueFull := s.queue.AddMessage(senderId, unmarshalled, msg.RequestId)
-	if queueFull {
+	heads := treechangeproto.GetHeads(unmarshalled)
+	s.syncStatus.HeadsReceive(senderId, msg.ObjectId, heads)
+	s.handlerLock.Lock()
+	// if the update has same heads then returning not to hang on a lock
+	if unmarshalled.GetContent().GetHeadUpdate() != nil && slice.UnsortedEquals(heads, s.heads) {
+		s.handlerLock.Unlock()
 		return
 	}
-
-	return s.handleMessage(ctx, senderId)
+	s.handlerLock.Unlock()
+	return s.handleMessage(ctx, unmarshalled, senderId)
 }
 
-func (s *syncTreeHandler) handleMessage(ctx context.Context, senderId string) (err error) {
+func (s *syncTreeHandler) handleMessage(ctx context.Context, msg *treechangeproto.TreeSyncMessage, senderId string) (err error) {
 	s.objTree.Lock()
 	defer s.objTree.Unlock()
-	msg, replyId, err := s.queue.GetMessage(senderId)
-	if err != nil {
-		return
-	}
-
-	defer s.queue.ClearQueue(senderId)
-
-	content := msg.GetContent()
-	switch {
-	case content.GetHeadUpdate() != nil:
-		return s.handleHeadUpdate(ctx, senderId, content.GetHeadUpdate(), replyId)
-	case content.GetFullSyncRequest() != nil:
-		return s.handleFullSyncRequest(ctx, senderId, content.GetFullSyncRequest(), replyId)
-	case content.GetFullSyncResponse() != nil:
-		return s.handleFullSyncResponse(ctx, senderId, content.GetFullSyncResponse())
-	}
-	return
-}
-
-func (s *syncTreeHandler) handleHeadUpdate(
-	ctx context.Context,
-	senderId string,
-	update *treechangeproto.TreeHeadUpdate,
-	replyId string) (err error) {
 	var (
-		fullRequest   *treechangeproto.TreeSyncMessage
-		isEmptyUpdate = len(update.Changes) == 0
-		objTree       = s.objTree
-		treeId        = objTree.Id()
+		copyHeads = make([]string, 0, len(s.objTree.Heads()))
+		treeId    = s.objTree.Id()
+		content   = msg.GetContent()
 	)
-	log := log.With(
-		zap.Strings("update heads", update.Heads),
-		zap.String("treeId", treeId),
-		zap.String("spaceId", s.spaceId),
-		zap.Int("len(update changes)", len(update.Changes)))
-	log.DebugCtx(ctx, "received head update message")
 
+	// getting old heads
+	copyHeads = append(copyHeads, s.objTree.Heads()...)
 	defer func() {
-		if err != nil {
-			log.ErrorCtx(ctx, "head update finished with error", zap.Error(err))
-		} else if fullRequest != nil {
-			cnt := fullRequest.Content.GetFullSyncRequest()
-			log = log.With(zap.Strings("request heads", cnt.Heads), zap.Int("len(request changes)", len(cnt.Changes)))
-			log.DebugCtx(ctx, "sending full sync request")
-		} else {
-			if !isEmptyUpdate {
-				log.DebugCtx(ctx, "head update finished correctly")
+		// checking if something changed
+		if !slice.UnsortedEquals(copyHeads, s.objTree.Heads()) {
+			s.handlerLock.Lock()
+			defer s.handlerLock.Unlock()
+			s.heads = s.heads[:0]
+			for _, h := range s.objTree.Heads() {
+				s.heads = append(s.heads, h)
 			}
 		}
 	}()
 
-	// isEmptyUpdate is sent when the tree is brought up from cache
-	if isEmptyUpdate {
-		headEquals := slice.UnsortedEquals(objTree.Heads(), update.Heads)
-		log.DebugCtx(ctx, "is empty update", zap.String("treeId", objTree.Id()), zap.Bool("headEquals", headEquals))
-		if headEquals {
+	switch {
+	case content.GetHeadUpdate() != nil:
+		var syncReq *treechangeproto.TreeSyncMessage
+		syncReq, err = s.syncProtocol.HeadUpdate(ctx, senderId, content.GetHeadUpdate())
+		if err != nil || syncReq == nil {
 			return
 		}
-
-		// we need to sync in any case
-		fullRequest, err = s.syncClient.CreateFullSyncRequest(objTree, update.Heads, update.SnapshotPath)
-		if err != nil {
-			return
-		}
-
-		return s.syncClient.SendWithReply(ctx, senderId, treeId, fullRequest, replyId)
+		return s.syncClient.QueueRequest(senderId, treeId, syncReq)
+	case content.GetFullSyncRequest() != nil:
+		return ErrMessageIsRequest
+	case content.GetFullSyncResponse() != nil:
+		return s.syncProtocol.FullSyncResponse(ctx, senderId, content.GetFullSyncResponse())
 	}
-
-	if s.alreadyHasHeads(objTree, update.Heads) {
-		return
-	}
-
-	_, err = objTree.AddRawChanges(ctx, objecttree.RawChangesPayload{
-		NewHeads:   update.Heads,
-		RawChanges: update.Changes,
-	})
-	if err != nil {
-		return
-	}
-
-	if s.alreadyHasHeads(objTree, update.Heads) {
-		return
-	}
-
-	fullRequest, err = s.syncClient.CreateFullSyncRequest(objTree, update.Heads, update.SnapshotPath)
-	if err != nil {
-		return
-	}
-
-	return s.syncClient.SendWithReply(ctx, senderId, treeId, fullRequest, replyId)
-}
-
-func (s *syncTreeHandler) handleFullSyncRequest(
-	ctx context.Context,
-	senderId string,
-	request *treechangeproto.TreeFullSyncRequest,
-	replyId string) (err error) {
-	var (
-		fullResponse *treechangeproto.TreeSyncMessage
-		header       = s.objTree.Header()
-		objTree      = s.objTree
-		treeId       = s.objTree.Id()
-	)
-
-	log := log.With(zap.String("senderId", senderId),
-		zap.Strings("request heads", request.Heads),
-		zap.String("treeId", treeId),
-		zap.String("replyId", replyId),
-		zap.String("spaceId", s.spaceId),
-		zap.Int("len(request changes)", len(request.Changes)))
-	log.DebugCtx(ctx, "received full sync request message")
-
-	defer func() {
-		if err != nil {
-			log.ErrorCtx(ctx, "full sync request finished with error", zap.Error(err))
-			s.syncClient.SendWithReply(ctx, senderId, treeId, treechangeproto.WrapError(treechangeproto.ErrFullSync, header), replyId)
-			return
-		} else if fullResponse != nil {
-			cnt := fullResponse.Content.GetFullSyncResponse()
-			log = log.With(zap.Strings("response heads", cnt.Heads), zap.Int("len(response changes)", len(cnt.Changes)))
-			log.DebugCtx(ctx, "full sync response sent")
-		}
-	}()
-
-	if len(request.Changes) != 0 && !s.alreadyHasHeads(objTree, request.Heads) {
-		_, err = objTree.AddRawChanges(ctx, objecttree.RawChangesPayload{
-			NewHeads:   request.Heads,
-			RawChanges: request.Changes,
-		})
-		if err != nil {
-			return
-		}
-	}
-	fullResponse, err = s.syncClient.CreateFullSyncResponse(objTree, request.Heads, request.SnapshotPath)
-	if err != nil {
-		return
-	}
-
-	return s.syncClient.SendWithReply(ctx, senderId, treeId, fullResponse, replyId)
-}
-
-func (s *syncTreeHandler) handleFullSyncResponse(
-	ctx context.Context,
-	senderId string,
-	response *treechangeproto.TreeFullSyncResponse) (err error) {
-	var (
-		objTree = s.objTree
-		treeId  = s.objTree.Id()
-	)
-	log := log.With(
-		zap.Strings("heads", response.Heads),
-		zap.String("treeId", treeId),
-		zap.String("spaceId", s.spaceId),
-		zap.Int("len(changes)", len(response.Changes)))
-	log.DebugCtx(ctx, "received full sync response message")
-
-	defer func() {
-		if err != nil {
-			log.ErrorCtx(ctx, "full sync response failed", zap.Error(err))
-		} else {
-			log.DebugCtx(ctx, "full sync response succeeded")
-		}
-	}()
-
-	if s.alreadyHasHeads(objTree, response.Heads) {
-		return
-	}
-
-	_, err = objTree.AddRawChanges(ctx, objecttree.RawChangesPayload{
-		NewHeads:   response.Heads,
-		RawChanges: response.Changes,
-	})
 	return
-}
-
-func (s *syncTreeHandler) alreadyHasHeads(t objecttree.ObjectTree, heads []string) bool {
-	return slice.UnsortedEquals(t.Heads(), heads) || t.HasChanges(heads...)
 }

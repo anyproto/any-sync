@@ -6,12 +6,15 @@ import (
 	accountService "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ocache"
+	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -128,6 +131,14 @@ func (m *mockConf) NodeTypes(nodeId string) []nodeconf.NodeType {
 type mockPeerManager struct {
 }
 
+func (p *mockPeerManager) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (p *mockPeerManager) Name() (name string) {
+	return peermanager.CName
+}
+
 func (p *mockPeerManager) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	return nil
 }
@@ -160,10 +171,33 @@ func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId st
 }
 
 //
+// Mock StatusServiceProvider
+//
+
+type mockStatusServiceProvider struct {
+}
+
+func (m *mockStatusServiceProvider) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (m *mockStatusServiceProvider) Name() (name string) {
+	return syncstatus.CName
+}
+
+func (m *mockStatusServiceProvider) NewStatusService() syncstatus.StatusService {
+	return syncstatus.NewNoOpSyncStatus()
+}
+
+//
 // Mock Pool
 //
 
 type mockPool struct {
+}
+
+func (m *mockPool) AddPeer(ctx context.Context, p peer.Peer) (err error) {
+	return nil
 }
 
 func (m *mockPool) Init(a *app.App) (err error) {
@@ -205,8 +239,8 @@ func (m *mockConfig) Name() (name string) {
 	return "config"
 }
 
-func (m *mockConfig) GetSpace() Config {
-	return Config{
+func (m *mockConfig) GetSpace() config.Config {
+	return config.Config{
 		GCTTL:                60,
 		SyncPeriod:           20,
 		KeepTreeDataInMemory: true,
@@ -236,6 +270,7 @@ type mockTreeManager struct {
 	cache      ocache.OCache
 	deletedIds []string
 	markedIds  []string
+	waitLoad   chan struct{}
 }
 
 func (t *mockTreeManager) NewTreeSyncer(spaceId string, treeManager treemanager.TreeManager) treemanager.TreeSyncer {
@@ -249,7 +284,8 @@ func (t *mockTreeManager) MarkTreeDeleted(ctx context.Context, spaceId, treeId s
 
 func (t *mockTreeManager) Init(a *app.App) (err error) {
 	t.cache = ocache.New(func(ctx context.Context, id string) (value ocache.Object, err error) {
-		return t.space.BuildTree(ctx, id, BuildTreeOpts{})
+		<-t.waitLoad
+		return t.space.TreeBuilder().BuildTree(ctx, id, objecttreebuilder.BuildTreeOpts{})
 	},
 		ocache.WithGCPeriod(time.Minute),
 		ocache.WithTTL(time.Duration(60)*time.Second))
@@ -318,12 +354,14 @@ func newFixture(t *testing.T) *spaceFixture {
 		configurationService: &mockConf{},
 		storageProvider:      spacestorage.NewInMemorySpaceStorageProvider(),
 		peermanagerProvider:  &mockPeerManagerProvider{},
-		treeManager:          &mockTreeManager{},
+		treeManager:          &mockTreeManager{waitLoad: make(chan struct{})},
 		pool:                 &mockPool{},
 		spaceService:         New(),
 	}
 	fx.app.Register(fx.account).
 		Register(fx.config).
+		Register(credentialprovider.NewNoOp()).
+		Register(&mockStatusServiceProvider{}).
 		Register(fx.configurationService).
 		Register(fx.storageProvider).
 		Register(fx.peermanagerProvider).

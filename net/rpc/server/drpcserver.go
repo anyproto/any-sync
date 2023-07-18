@@ -5,13 +5,14 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/metric"
-	anyNet "github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/rpc"
 	"go.uber.org/zap"
 	"net"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcmanager"
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
+	"storj.io/drpc/drpcstream"
 	"storj.io/drpc/drpcwire"
 )
 
@@ -25,6 +26,7 @@ func New() DRPCServer {
 
 type DRPCServer interface {
 	ServeConn(ctx context.Context, conn net.Conn) (err error)
+	DrpcConfig() rpc.Config
 	app.Component
 	drpc.Mux
 }
@@ -32,7 +34,7 @@ type DRPCServer interface {
 type drpcServer struct {
 	drpcServer *drpcserver.Server
 	*drpcmux.Mux
-	config anyNet.Config
+	config rpc.Config
 	metric metric.Metric
 }
 
@@ -43,7 +45,7 @@ func (s *drpcServer) Name() (name string) {
 }
 
 func (s *drpcServer) Init(a *app.App) (err error) {
-	s.config = a.MustComponent("config").(anyNet.ConfigGetter).GetNet()
+	s.config = a.MustComponent("config").(rpc.ConfigGetter).GetDrpc()
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
 	s.Mux = drpcmux.New()
 
@@ -52,8 +54,10 @@ func (s *drpcServer) Init(a *app.App) (err error) {
 	if s.metric != nil {
 		handler = s.metric.WrapDRPCHandler(s)
 	}
+	bufSize := s.config.Stream.MaxMsgSizeMb * (1 << 20)
 	s.drpcServer = drpcserver.NewWithOptions(handler, drpcserver.Options{Manager: drpcmanager.Options{
-		Reader: drpcwire.ReaderOptions{MaximumBufferSize: s.config.Stream.MaxMsgSizeMb * (1 << 20)},
+		Reader: drpcwire.ReaderOptions{MaximumBufferSize: bufSize},
+		Stream: drpcstream.Options{MaximumBufferSize: bufSize},
 	}})
 	return
 }
@@ -62,4 +66,8 @@ func (s *drpcServer) ServeConn(ctx context.Context, conn net.Conn) (err error) {
 	l := log.With(zap.String("remoteAddr", conn.RemoteAddr().String())).With(zap.String("localAddr", conn.LocalAddr().String()))
 	l.Debug("drpc serve peer")
 	return s.drpcServer.ServeOne(ctx, conn)
+}
+
+func (s *drpcServer) DrpcConfig() rpc.Config {
+	return s.config
 }

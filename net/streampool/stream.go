@@ -2,11 +2,12 @@ package streampool
 
 import (
 	"context"
+	"sync/atomic"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
 	"storj.io/drpc"
-	"sync/atomic"
 )
 
 type stream struct {
@@ -22,7 +23,7 @@ type stream struct {
 }
 
 func (sr *stream) write(msg drpc.Message) (err error) {
-	return sr.queue.Add(sr.stream.Context(), msg)
+	return sr.queue.TryAdd(msg)
 }
 
 func (sr *stream) readLoop() error {

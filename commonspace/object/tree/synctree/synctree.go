@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_synctree/mock_synctree.go github.com/anyproto/any-sync/commonspace/object/tree/synctree SyncTree,ReceiveQueue,HeadNotifiable
+//go:generate mockgen -destination mock_synctree/mock_synctree.go github.com/anyproto/any-sync/commonspace/object/tree/synctree SyncTree,ReceiveQueue,HeadNotifiable,SyncClient,RequestFactory,TreeSyncProtocol
 package synctree
 
 import (
@@ -11,7 +11,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
@@ -44,7 +43,7 @@ type SyncTree interface {
 type syncTree struct {
 	objecttree.ObjectTree
 	synchandler.SyncHandler
-	syncClient objectsync.SyncClient
+	syncClient SyncClient
 	syncStatus syncstatus.StatusUpdater
 	notifiable HeadNotifiable
 	listener   updatelistener.UpdateListener
@@ -60,19 +59,18 @@ type ResponsiblePeersGetter interface {
 }
 
 type BuildDeps struct {
-	SpaceId            string
-	SyncClient         objectsync.SyncClient
-	Configuration      nodeconf.NodeConf
-	HeadNotifiable     HeadNotifiable
-	Listener           updatelistener.UpdateListener
-	AclList            list.AclList
-	SpaceStorage       spacestorage.SpaceStorage
-	TreeStorage        treestorage.TreeStorage
-	OnClose            func(id string)
-	SyncStatus         syncstatus.StatusUpdater
-	PeerGetter         ResponsiblePeersGetter
-	BuildObjectTree    objecttree.BuildObjectTreeFunc
-	WaitTreeRemoteSync bool
+	SpaceId         string
+	SyncClient      SyncClient
+	Configuration   nodeconf.NodeConf
+	HeadNotifiable  HeadNotifiable
+	Listener        updatelistener.UpdateListener
+	AclList         list.AclList
+	SpaceStorage    spacestorage.SpaceStorage
+	TreeStorage     treestorage.TreeStorage
+	OnClose         func(id string)
+	SyncStatus      syncstatus.StatusUpdater
+	PeerGetter      ResponsiblePeersGetter
+	BuildObjectTree objecttree.BuildObjectTreeFunc
 }
 
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {
@@ -119,7 +117,7 @@ func buildSyncTree(ctx context.Context, sendUpdate bool, deps BuildDeps) (t Sync
 	if sendUpdate {
 		headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 		// send to everybody, because everybody should know that the node or client got new tree
-		syncTree.syncClient.Broadcast(ctx, headUpdate)
+		syncTree.syncClient.Broadcast(headUpdate)
 	}
 	return
 }
@@ -156,7 +154,7 @@ func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableCh
 	}
 	s.syncStatus.HeadsChange(s.Id(), res.Heads)
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
-	s.syncClient.Broadcast(ctx, headUpdate)
+	s.syncClient.Broadcast(headUpdate)
 	return
 }
 
@@ -183,7 +181,7 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload objecttree.
 			s.notifiable.UpdateHeads(s.Id(), res.Heads)
 		}
 		headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
-		s.syncClient.Broadcast(ctx, headUpdate)
+		s.syncClient.Broadcast(headUpdate)
 	}
 	return
 }
@@ -207,18 +205,27 @@ func (s *syncTree) Delete() (err error) {
 }
 
 func (s *syncTree) TryClose(objectTTL time.Duration) (bool, error) {
-	return true, s.Close()
+	if !s.TryLock() {
+		return false, nil
+	}
+	log.Debug("closing sync tree", zap.String("id", s.Id()))
+	return true, s.close()
 }
 
 func (s *syncTree) Close() (err error) {
 	log.Debug("closing sync tree", zap.String("id", s.Id()))
+	s.Lock()
+	return s.close()
+}
+
+func (s *syncTree) close() (err error) {
+	defer s.Unlock()
 	defer func() {
 		log.Debug("closed sync tree", zap.Error(err), zap.String("id", s.Id()))
 	}()
-	s.Lock()
-	defer s.Unlock()
 	if s.isClosed {
-		return ErrSyncTreeClosed
+		err = ErrSyncTreeClosed
+		return
 	}
 	s.onClose(s.Id())
 	s.isClosed = true
@@ -239,7 +246,7 @@ func (s *syncTree) SyncWithPeer(ctx context.Context, peerId string) (err error) 
 	s.Lock()
 	defer s.Unlock()
 	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
-	return s.syncClient.SendWithReply(ctx, peerId, headUpdate.RootChange.Id, headUpdate, "")
+	return s.syncClient.SendUpdate(peerId, headUpdate.RootChange.Id, headUpdate)
 }
 
 func (s *syncTree) afterBuild() {

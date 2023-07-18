@@ -250,6 +250,8 @@ func (s *streamPool) openStream(ctx context.Context, p peer.Peer) *openingProces
 			close(op.ch)
 			delete(s.opening, p.Id())
 		}()
+		// in case there was no peerId in context
+		ctx := peer.CtxWithPeerId(ctx, p.Id())
 		// open new stream and add to pool
 		st, tags, err := s.handler.OpenStream(ctx, p)
 		if err != nil {

@@ -2,6 +2,7 @@ package settings
 
 import (
 	"context"
+	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"go.uber.org/zap"
@@ -20,7 +21,7 @@ func newDeletionManager(
 	settingsId string,
 	isResponsible bool,
 	treeManager treemanager.TreeManager,
-	deletionState settingsstate.ObjectDeletionState,
+	deletionState deletionstate.ObjectDeletionState,
 	provider SpaceIdsProvider,
 	onSpaceDelete func()) DeletionManager {
 	return &deletionManager{
@@ -35,7 +36,7 @@ func newDeletionManager(
 }
 
 type deletionManager struct {
-	deletionState settingsstate.ObjectDeletionState
+	deletionState deletionstate.ObjectDeletionState
 	provider      SpaceIdsProvider
 	treeManager   treemanager.TreeManager
 	spaceId       string

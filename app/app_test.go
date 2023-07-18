@@ -34,6 +34,40 @@ func TestAppServiceRegistry(t *testing.T) {
 		names := app.ComponentNames()
 		assert.Equal(t, names, []string{"c1", "r1", "s1"})
 	})
+	t.Run("Child MustComponent", func(t *testing.T) {
+		app := app.ChildApp()
+		app.Register(newTestService(testTypeComponent, "x1", nil, nil))
+		for _, name := range []string{"c1", "r1", "s1", "x1"} {
+			assert.NotPanics(t, func() { app.MustComponent(name) }, name)
+		}
+		assert.Panics(t, func() { app.MustComponent("not-registered") })
+	})
+	t.Run("Child ComponentNames", func(t *testing.T) {
+		app := app.ChildApp()
+		app.Register(newTestService(testTypeComponent, "x1", nil, nil))
+		names := app.ComponentNames()
+		assert.Equal(t, names, []string{"x1", "c1", "r1", "s1"})
+	})
+	t.Run("Child override", func(t *testing.T) {
+		app := app.ChildApp()
+		app.Register(newTestService(testTypeRunnable, "s1", nil, nil))
+		_ = app.MustComponent("s1").(*testRunnable)
+	})
+}
+
+func TestApp_IterateComponents(t *testing.T) {
+	app := new(App)
+
+	app.Register(newTestService(testTypeRunnable, "c1", nil, nil))
+	app.Register(newTestService(testTypeRunnable, "r1", nil, nil))
+	app.Register(newTestService(testTypeComponent, "s1", nil, nil))
+
+	var got []string
+	app.IterateComponents(func(s Component) {
+		got = append(got, s.Name())
+	})
+
+	assert.ElementsMatch(t, []string{"c1", "r1", "s1"}, got)
 }
 
 func TestAppStart(t *testing.T) {

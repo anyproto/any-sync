@@ -2,10 +2,12 @@ package objecttree
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newChange(id string, snapshotId string, prevIds ...string) *Change {
@@ -24,6 +26,17 @@ func newSnapshot(id, snapshotId string, prevIds ...string) *Change {
 		SnapshotId:  snapshotId,
 		IsSnapshot:  true,
 	}
+}
+
+func TestTree_AddMergedHead(t *testing.T) {
+	tr := new(Tree)
+	_, _ = tr.Add(
+		newSnapshot("root", ""),
+		newChange("one", "root", "root"),
+	)
+	require.Equal(t, tr.lastIteratedHeadId, "one")
+	tr.AddMergedHead(newChange("two", "root", "one"))
+	require.Equal(t, tr.lastIteratedHeadId, "two")
 }
 
 func TestTree_Add(t *testing.T) {

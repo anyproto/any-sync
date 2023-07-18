@@ -31,6 +31,10 @@ func PeerId(val string) zap.Field {
 	return zap.String("peerId", val)
 }
 
+func PeerVersion(val string) zap.Field {
+	return zap.String("peerVersion", val)
+}
+
 func Identity(val string) zap.Field {
 	return zap.String("identity", val)
 }
@@ -61,5 +65,5 @@ func (m *metric) RequestLog(ctx context.Context, rpc string, fields ...zap.Field
 	if ak != nil {
 		acc = ak.Account()
 	}
-	m.rpcLog.Info("", append(fields, m.appField, PeerId(peerId), Identity(acc), Method(rpc))...)
+	m.rpcLog.Info("", append(fields, m.appField, PeerId(peerId), Identity(acc), Method(rpc), PeerVersion(peer.CtxPeerClientVersion(ctx)))...)
 }

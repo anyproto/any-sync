@@ -386,6 +386,25 @@ func Test_OCache_Remove(t *testing.T) {
 	})
 }
 
+func TestOCacheCancelWhenRemove(t *testing.T) {
+	c := New(func(ctx context.Context, id string) (value Object, err error) {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}, WithTTL(time.Millisecond*10))
+	stopLoad := make(chan struct{})
+	var err error
+	go func() {
+		_, err = c.Get(context.TODO(), "id")
+		stopLoad <- struct{}{}
+	}()
+	time.Sleep(time.Millisecond * 10)
+	c.Close()
+	<-stopLoad
+	require.Equal(t, context.Canceled, err)
+}
+
 func TestOCacheFuzzy(t *testing.T) {
 	t.Run("test many objects gc, get and remove simultaneously, close after", func(t *testing.T) {
 		tryCloseIds := make(map[string]bool)

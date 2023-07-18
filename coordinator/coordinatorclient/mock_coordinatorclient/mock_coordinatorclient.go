@@ -12,7 +12,7 @@ import (
 	treechangeproto "github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	coordinatorclient "github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	coordinatorproto "github.com/anyproto/any-sync/coordinator/coordinatorproto"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockCoordinatorClient is a mock of CoordinatorClient interface.

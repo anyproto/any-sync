@@ -3,6 +3,7 @@ package settings
 import (
 	"context"
 	"github.com/anyproto/any-sync/accountservice/mock_accountservice"
+	"github.com/anyproto/any-sync/commonspace/deletionstate/mock_deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
@@ -15,8 +16,8 @@ import (
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	"sync"
 	"testing"
 	"time"
@@ -54,7 +55,7 @@ type settingsFixture struct {
 	deleter         *mock_settings.MockDeleter
 	syncTree        *mock_synctree.MockSyncTree
 	historyTree     *mock_objecttree.MockObjectTree
-	delState        *mock_settingsstate.MockObjectDeletionState
+	delState        *mock_deletionstate.MockObjectDeletionState
 	account         *mock_accountservice.MockService
 }
 
@@ -66,7 +67,7 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 	acc := mock_accountservice.NewMockService(ctrl)
 	treeManager := mock_treemanager.NewMockTreeManager(ctrl)
 	st := mock_spacestorage.NewMockSpaceStorage(ctrl)
-	delState := mock_settingsstate.NewMockObjectDeletionState(ctrl)
+	delState := mock_deletionstate.NewMockObjectDeletionState(ctrl)
 	delManager := mock_settings.NewMockDeletionManager(ctrl)
 	stateBuilder := mock_settingsstate.NewMockStateBuilder(ctrl)
 	changeFactory := mock_settingsstate.NewMockChangeFactory(ctrl)

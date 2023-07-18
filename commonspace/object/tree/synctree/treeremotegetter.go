@@ -2,16 +2,19 @@ package synctree
 
 import (
 	"context"
-	"fmt"
+	"errors"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
-	"time"
+)
+
+var (
+	ErrNoResponsiblePeers = errors.New("no responsible peers")
 )
 
 type treeRemoteGetter struct {
@@ -36,7 +39,7 @@ func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err e
 		return
 	}
 	if len(respPeers) == 0 {
-		err = fmt.Errorf("no responsible peers")
+		err = ErrNoResponsiblePeers
 		return
 	}
 	for _, p := range respPeers {
@@ -47,7 +50,7 @@ func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err e
 
 func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (msg *treechangeproto.TreeSyncMessage, err error) {
 	newTreeRequest := t.deps.SyncClient.CreateNewTreeRequest()
-	resp, err := t.deps.SyncClient.SendSync(ctx, peerId, t.treeId, newTreeRequest)
+	resp, err := t.deps.SyncClient.SendRequest(ctx, peerId, t.treeId, newTreeRequest)
 	if err != nil {
 		return
 	}
@@ -57,37 +60,13 @@ func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (msg *
 	return
 }
 
-func (t treeRemoteGetter) treeRequestLoop(ctx context.Context, wait bool) (msg *treechangeproto.TreeSyncMessage, err error) {
-	peerIdx := 0
-Loop:
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, fmt.Errorf("waiting for object %s interrupted, context closed", t.treeId)
-		default:
-			break
-		}
-		availablePeers, err := t.getPeers(ctx)
-		if err != nil {
-			if !wait {
-				return nil, err
-			}
-			select {
-			// wait for peers to connect
-			case <-time.After(1 * time.Second):
-				continue Loop
-			case <-ctx.Done():
-				return nil, fmt.Errorf("waiting for object %s interrupted, context closed", t.treeId)
-			}
-		}
-
-		peerIdx = peerIdx % len(availablePeers)
-		msg, err = t.treeRequest(ctx, availablePeers[peerIdx])
-		if err == nil || !wait {
-			return msg, err
-		}
-		peerIdx++
+func (t treeRemoteGetter) treeRequestLoop(ctx context.Context) (msg *treechangeproto.TreeSyncMessage, err error) {
+	availablePeers, err := t.getPeers(ctx)
+	if err != nil {
+		return
 	}
+	// in future we will try to load from different peers
+	return t.treeRequest(ctx, availablePeers[0])
 }
 
 func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.TreeStorage, isRemote bool, err error) {
@@ -109,22 +88,15 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 	}
 
 	isRemote = true
-	resp, err := t.treeRequestLoop(ctx, t.deps.WaitTreeRemoteSync)
+	resp, err := t.treeRequestLoop(ctx)
 	if err != nil {
 		return
 	}
-	switch {
-	case resp.GetContent().GetErrorResponse() != nil:
-		errResp := resp.GetContent().GetErrorResponse()
-		err = rpcerr.Err(errResp.ErrCode)
-		return
-	case resp.GetContent().GetFullSyncResponse() == nil:
+	fullSyncResp := resp.GetContent().GetFullSyncResponse()
+	if fullSyncResp == nil {
 		err = treechangeproto.ErrUnexpected
 		return
-	default:
-		break
 	}
-	fullSyncResp := resp.GetContent().GetFullSyncResponse()
 
 	payload := treestorage.TreeStorageCreatePayload{
 		RootRawChange: resp.RootChange,

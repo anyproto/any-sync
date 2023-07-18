@@ -2,6 +2,10 @@ package synctree
 
 import (
 	"context"
+	"math/rand"
+	"testing"
+	"time"
+
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
@@ -10,9 +14,6 @@ import (
 	"github.com/anyproto/any-sync/util/slice"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/require"
-	"math/rand"
-	"testing"
-	"time"
 )
 
 func TestEmptyClientGetsFullHistory(t *testing.T) {

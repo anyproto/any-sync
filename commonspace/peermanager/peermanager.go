@@ -8,9 +8,12 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 )
 
-const CName = "common.commonspace.peermanager"
+const (
+	CName = "common.commonspace.peermanager"
+)
 
 type PeerManager interface {
+	app.Component
 	// SendPeer sends a message to a stream by peerId
 	SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error)
 	// Broadcast sends a message to all subscribed peers

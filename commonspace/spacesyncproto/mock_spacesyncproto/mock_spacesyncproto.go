@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	drpc "storj.io/drpc"
 )
 
@@ -63,6 +63,21 @@ func (m *MockDRPCSpaceSyncClient) HeadSync(arg0 context.Context, arg1 *spacesync
 func (mr *MockDRPCSpaceSyncClientMockRecorder) HeadSync(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadSync", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).HeadSync), arg0, arg1)
+}
+
+// ObjectSync mocks base method.
+func (m *MockDRPCSpaceSyncClient) ObjectSync(arg0 context.Context, arg1 *spacesyncproto.ObjectSyncMessage) (*spacesyncproto.ObjectSyncMessage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ObjectSync", arg0, arg1)
+	ret0, _ := ret[0].(*spacesyncproto.ObjectSyncMessage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ObjectSync indicates an expected call of ObjectSync.
+func (mr *MockDRPCSpaceSyncClientMockRecorder) ObjectSync(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObjectSync", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).ObjectSync), arg0, arg1)
 }
 
 // ObjectSyncStream mocks base method.

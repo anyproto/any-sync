@@ -2,15 +2,18 @@ package peer
 
 import (
 	"context"
+	"github.com/anyproto/any-sync/net/rpc"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/net/transport/mock_transport"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	"io"
 	"net"
 	_ "net/http/pprof"
+	"storj.io/drpc"
+	"storj.io/drpc/drpcconn"
 	"testing"
 	"time"
 )
@@ -18,32 +21,86 @@ import (
 var ctx = context.Background()
 
 func TestPeer_AcquireDrpcConn(t *testing.T) {
+	t.Run("generic", func(t *testing.T) {
+		fx := newFixture(t, "p1")
+		defer fx.finish()
+		in, out := net.Pipe()
+		go func() {
+			handshake.IncomingProtoHandshake(ctx, out, defaultProtoChecker)
+		}()
+		defer out.Close()
+		fx.mc.EXPECT().Open(gomock.Any()).Return(in, nil)
+		dc, err := fx.AcquireDrpcConn(ctx)
+		require.NoError(t, err)
+		assert.NotEmpty(t, dc)
+		defer dc.Close()
+
+		assert.Len(t, fx.active, 1)
+		assert.Len(t, fx.inactive, 0)
+
+		fx.ReleaseDrpcConn(dc)
+
+		assert.Len(t, fx.active, 0)
+		assert.Len(t, fx.inactive, 1)
+
+		dc, err = fx.AcquireDrpcConn(ctx)
+		require.NoError(t, err)
+		assert.NotEmpty(t, dc)
+		assert.Len(t, fx.active, 1)
+		assert.Len(t, fx.inactive, 0)
+	})
+	t.Run("closed sub conn", func(t *testing.T) {
+		fx := newFixture(t, "p1")
+		defer fx.finish()
+
+		closedIn, _ := net.Pipe()
+		dc := drpcconn.New(closedIn)
+		fx.ReleaseDrpcConn(&subConn{Conn: dc})
+		dc.Close()
+
+		in, out := net.Pipe()
+		go func() {
+			handshake.IncomingProtoHandshake(ctx, out, defaultProtoChecker)
+		}()
+		defer out.Close()
+		fx.mc.EXPECT().Open(gomock.Any()).Return(in, nil)
+		_, err := fx.AcquireDrpcConn(ctx)
+		require.NoError(t, err)
+	})
+}
+
+func TestPeer_DrpcConn_OpenThrottling(t *testing.T) {
 	fx := newFixture(t, "p1")
 	defer fx.finish()
-	in, out := net.Pipe()
+
+	acquire := func() (func(), drpc.Conn, error) {
+		in, out := net.Pipe()
+		go func() {
+			_, err := handshake.IncomingProtoHandshake(ctx, out, defaultProtoChecker)
+			require.NoError(t, err)
+		}()
+
+		fx.mc.EXPECT().Open(gomock.Any()).Return(in, nil)
+		dconn, err := fx.AcquireDrpcConn(ctx)
+		return func() { out.Close() }, dconn, err
+	}
+
+	var conCount = fx.limiter.startThreshold + 3
+	var conns []drpc.Conn
+	for i := 0; i < conCount; i++ {
+		cc, dc, err := acquire()
+		require.NoError(t, err)
+		defer cc()
+		conns = append(conns, dc)
+	}
+
 	go func() {
-		handshake.IncomingProtoHandshake(ctx, out, defaultProtoChecker)
+		time.Sleep(fx.limiter.slowDownStep)
+		fx.ReleaseDrpcConn(conns[0])
+		conns = conns[1:]
 	}()
-	defer out.Close()
-	fx.mc.EXPECT().Open(gomock.Any()).Return(in, nil)
-	dc, err := fx.AcquireDrpcConn(ctx)
+	_, err := fx.AcquireDrpcConn(ctx)
 	require.NoError(t, err)
-	assert.NotEmpty(t, dc)
-	defer dc.Close()
-
-	assert.Len(t, fx.active, 1)
-	assert.Len(t, fx.inactive, 0)
-
-	fx.ReleaseDrpcConn(dc)
-
-	assert.Len(t, fx.active, 0)
-	assert.Len(t, fx.inactive, 1)
-
-	dc, err = fx.AcquireDrpcConn(ctx)
-	require.NoError(t, err)
-	assert.NotEmpty(t, dc)
-	assert.Len(t, fx.active, 1)
-	assert.Len(t, fx.inactive, 0)
 }
 
 func TestPeerAccept(t *testing.T) {
@@ -62,12 +119,30 @@ func TestPeerAccept(t *testing.T) {
 	assert.NoError(t, <-outHandshakeCh)
 }
 
+func TestPeer_DrpcConn_AcceptThrottling(t *testing.T) {
+	fx := newFixture(t, "p1")
+	defer fx.finish()
+
+	var conCount = fx.limiter.startThreshold + 3
+	for i := 0; i < conCount; i++ {
+		in, out := net.Pipe()
+		defer out.Close()
+
+		var outHandshakeCh = make(chan error)
+		go func() {
+			outHandshakeCh <- handshake.OutgoingProtoHandshake(ctx, out, handshakeproto.ProtoType_DRPC)
+		}()
+		fx.acceptCh <- acceptedConn{conn: in}
+		cn := <-fx.testCtrl.serveConn
+		assert.Equal(t, in, cn)
+		assert.NoError(t, <-outHandshakeCh)
+	}
+}
+
 func TestPeer_TryClose(t *testing.T) {
-	t.Run("ttl", func(t *testing.T) {
+	t.Run("not close in first minute", func(t *testing.T) {
 		fx := newFixture(t, "p1")
 		defer fx.finish()
-		lu := time.Now()
-		fx.mc.EXPECT().LastUsage().Return(lu)
 		res, err := fx.TryClose(time.Second)
 		require.NoError(t, err)
 		assert.False(t, res)
@@ -75,8 +150,7 @@ func TestPeer_TryClose(t *testing.T) {
 	t.Run("close", func(t *testing.T) {
 		fx := newFixture(t, "p1")
 		defer fx.finish()
-		lu := time.Now().Add(-time.Second * 2)
-		fx.mc.EXPECT().LastUsage().Return(lu)
+		fx.peer.created = fx.peer.created.Add(-time.Minute * 2)
 		res, err := fx.TryClose(time.Second)
 		require.NoError(t, err)
 		assert.True(t, res)
@@ -84,8 +158,7 @@ func TestPeer_TryClose(t *testing.T) {
 	t.Run("gc", func(t *testing.T) {
 		fx := newFixture(t, "p1")
 		defer fx.finish()
-		now := time.Now()
-		fx.mc.EXPECT().LastUsage().Return(now.Add(time.Millisecond * 100))
+		//now := time.Now()
 
 		// make one inactive
 		in, out := net.Pipe()
@@ -104,6 +177,7 @@ func TestPeer_TryClose(t *testing.T) {
 		}()
 		defer out2.Close()
 		fx.mc.EXPECT().Open(gomock.Any()).Return(in2, nil)
+		fx.mc.EXPECT().Addr().Return("")
 		dc2, err := fx.AcquireDrpcConn(ctx)
 		require.NoError(t, err)
 		_ = dc2.Close()
@@ -117,6 +191,18 @@ func TestPeer_TryClose(t *testing.T) {
 		fx.mc.EXPECT().Open(gomock.Any()).Return(in3, nil)
 		dc3, err := fx.AcquireDrpcConn(ctx)
 		require.NoError(t, err)
+
+		// make another active, should be removed by ttl
+		in4, out4 := net.Pipe()
+		go func() {
+			handshake.IncomingProtoHandshake(ctx, out4, defaultProtoChecker)
+		}()
+		defer out4.Close()
+		fx.mc.EXPECT().Open(gomock.Any()).Return(in4, nil)
+		dc4, err := fx.AcquireDrpcConn(ctx)
+		require.NoError(t, err)
+		defer dc4.Close()
+
 		fx.ReleaseDrpcConn(dc3)
 		_ = dc3.Close()
 		fx.ReleaseDrpcConn(dc)
@@ -174,6 +260,10 @@ func newTesCtrl() *testCtrl {
 type testCtrl struct {
 	serveConn chan net.Conn
 	closeCh   chan struct{}
+}
+
+func (t *testCtrl) DrpcConfig() rpc.Config {
+	return rpc.Config{Stream: rpc.StreamConfig{MaxMsgSizeMb: 10}}
 }
 
 func (t *testCtrl) ServeConn(ctx context.Context, conn net.Conn) (err error) {
