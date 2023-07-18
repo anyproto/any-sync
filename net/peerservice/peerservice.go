@@ -68,7 +68,7 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	}
 
 	var mc transport.MultiConn
-	log.InfoCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
+	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
 	for _, addr := range addrs {
 		mc, err = p.yamux.Dial(ctx, addr)
 		if err != nil {
