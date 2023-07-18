@@ -7,6 +7,7 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/net/transport"
+	libp2crypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	"github.com/quic-go/quic-go"
@@ -60,7 +61,7 @@ func (q *quicTransport) Run(ctx context.Context) (err error) {
 	if q.accepter == nil {
 		return fmt.Errorf("can't run service without accepter")
 	}
-	tlConf, err := q.secure.ServerTlsConfig()
+	tlConf, _, err := q.secure.TlsConfig()
 	if err != nil {
 		return
 	}
@@ -79,8 +80,45 @@ func (q *quicTransport) Run(ctx context.Context) (err error) {
 }
 
 func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
-	//TODO implement me
-	panic("implement me")
+	tlsConf, keyCh, err := q.secure.TlsConfig()
+	if err != nil {
+		return nil, err
+	}
+	qConn, err := quic.DialAddr(ctx, addr, tlsConf, q.quicConf)
+	if err != nil {
+		return nil, err
+	}
+	var remotePubKey libp2crypto.PubKey
+	select {
+	case remotePubKey = <-keyCh:
+	default:
+	}
+	if remotePubKey == nil {
+		_ = qConn.CloseWithError(1, "")
+		return nil, fmt.Errorf("libp2p tls handshake bug: no key")
+	}
+
+	remotePeerId, err := peer.IDFromPublicKey(remotePubKey)
+	if err != nil {
+		_ = qConn.CloseWithError(1, "")
+		return nil, err
+	}
+
+	stream, err := qConn.OpenStreamSync(ctx)
+	if err != nil {
+		_ = qConn.CloseWithError(1, "")
+		return nil, err
+	}
+	defer func() {
+		_ = stream.Close()
+	}()
+
+	cctx, err := q.secure.HandshakeOutbound(ctx, stream, remotePeerId.String())
+	if err != nil {
+		return nil, err
+	}
+
+	return newConn(cctx, qConn), nil
 }
 
 func (q *quicTransport) acceptLoop(ctx context.Context, list *quic.Listener) {
