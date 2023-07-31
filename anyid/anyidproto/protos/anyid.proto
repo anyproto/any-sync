@@ -1,0 +1,48 @@
+syntax = "proto3";
+package anyid;
+
+option go_package = "anyid/anyidproto";
+
+service AnyId {
+  // DataPut puts client data to a repository
+  rpc DataPut(DataPutRequest) returns (Ok);
+  // DataDelete deletes client data from a repository
+  rpc DataDelete(DataDeleteRequest) returns (Ok);
+  // DataPull pulls client data from a repository
+  rpc DataPull(DataPullRequest) returns (DataPullResponse);
+}
+
+message Data {
+  string king = 1;
+  bytes data = 2;
+}
+
+message DataPutRequest {
+  // string representation of identity, must be equal handshake result
+  string identity = 1;
+  // data to save
+  Data data = 2;
+}
+
+message DataDeleteRequest {
+  // string representation of identity, must be equal handshake result
+  string identity = 1;
+  // kinds of data to delete, if empty all kinds will be deleted
+  repeated string kinds = 2;
+}
+
+message DataPullRequest {
+  // string representation of identity wanted to request
+  string identity = 1;
+  // kinds of data wanted to request
+  repeated string kinds = 2;
+}
+
+message DataPullResponse {
+  string identity = 1;
+  // a list of data with requested kinds
+  repeated Data data = 2;
+}
+
+
+message Ok {}
