@@ -1,9 +1,9 @@
 syntax = "proto3";
-package anyid;
+package identityRepo;
 
-option go_package = "anyid/anyidproto";
+option go_package = "identityrepo/identityrepoproto";
 
-service AnyId {
+service IdentityRepo {
   // DataPut puts client data to a repository
   rpc DataPut(DataPutRequest) returns (Ok);
   // DataDelete deletes client data from a repository
@@ -23,7 +23,7 @@ message DataPutRequest {
   // string representation of identity, must be equal handshake result
   string identity = 1;
   // data to save
-  Data data = 2;
+  repeated Data data = 2;
 }
 
 message DataDeleteRequest {
