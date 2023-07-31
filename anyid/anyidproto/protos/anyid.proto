@@ -13,7 +13,9 @@ service AnyId {
 }
 
 message Data {
-  string king = 1;
+  // kind is a string representing the kind of data
+  string kind = 1;
+  // data is a byte payload
   bytes data = 2;
 }
 
