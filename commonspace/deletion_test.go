@@ -51,6 +51,7 @@ func TestSpaceDeleteIds(t *testing.T) {
 	fx := newFixture(t)
 	acc := fx.account.Account()
 	rk := crypto.NewAES()
+	privKey, _, _ := crypto.GenerateRandomEd25519KeyPair()
 	ctx := context.Background()
 	totalObjs := 1500
 
@@ -58,7 +59,8 @@ func TestSpaceDeleteIds(t *testing.T) {
 	sp, err := fx.spaceService.CreateSpace(ctx, SpaceCreatePayload{
 		SigningKey:     acc.SignKey,
 		SpaceType:      "type",
-		ReadKey:        rk.Bytes(),
+		ReadKey:        rk,
+		MetadataKey:    privKey,
 		ReplicationKey: 10,
 		MasterKey:      acc.PeerKey,
 	})
@@ -74,7 +76,7 @@ func TestSpaceDeleteIds(t *testing.T) {
 	err = spc.Init(ctx)
 	require.NoError(t, err)
 	close(fx.treeManager.waitLoad)
-	
+
 	var ids []string
 	for i := 0; i < totalObjs; i++ {
 		// creating a tree
@@ -126,6 +128,7 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	fx := newFixture(t)
 	acc := fx.account.Account()
 	rk := crypto.NewAES()
+	privKey, _, _ := crypto.GenerateRandomEd25519KeyPair()
 	ctx := context.Background()
 	totalObjs := 1500
 	partialObjs := 300
@@ -134,7 +137,8 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	sp, err := fx.spaceService.CreateSpace(ctx, SpaceCreatePayload{
 		SigningKey:     acc.SignKey,
 		SpaceType:      "type",
-		ReadKey:        rk.Bytes(),
+		ReadKey:        rk,
+		MetadataKey:    privKey,
 		ReplicationKey: 10,
 		MasterKey:      acc.PeerKey,
 	})
@@ -212,6 +216,7 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	fx := newFixture(t)
 	acc := fx.account.Account()
 	rk := crypto.NewAES()
+	privKey, _, _ := crypto.GenerateRandomEd25519KeyPair()
 	ctx := context.Background()
 	totalObjs := 1500
 
@@ -219,7 +224,8 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	sp, err := fx.spaceService.CreateSpace(ctx, SpaceCreatePayload{
 		SigningKey:     acc.SignKey,
 		SpaceType:      "type",
-		ReadKey:        rk.Bytes(),
+		ReadKey:        rk,
+		MetadataKey:    privKey,
 		ReplicationKey: 10,
 		MasterKey:      acc.PeerKey,
 	})

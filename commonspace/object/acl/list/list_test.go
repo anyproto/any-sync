@@ -201,7 +201,10 @@ func TestAclList_Remove(t *testing.T) {
 	require.Equal(t, 0, len(accountState.pendingRequests))
 	require.True(t, accountState.Permissions(ownerState.pubKey).IsOwner())
 	require.True(t, accountState.Permissions(accountState.pubKey).NoPermissions())
-	require.Empty(t, accountState.keys[removeRec.Id])
+	require.NotEmpty(t, accountState.keys[removeRec.Id])
+	require.Nil(t, accountState.keys[removeRec.Id].MetadataPrivKey)
+	require.NotNil(t, accountState.keys[removeRec.Id].MetadataPubKey)
+	require.Nil(t, accountState.keys[removeRec.Id].ReadKey)
 	require.NotEmpty(t, accountState.keys[fx.ownerAcl.Id()])
 }
 
@@ -307,6 +310,8 @@ func TestAclList_RequestRemove(t *testing.T) {
 	require.Equal(t, 0, len(accountState.pendingRequests))
 	require.True(t, accountState.Permissions(ownerState.pubKey).IsOwner())
 	require.True(t, accountState.Permissions(accountState.pubKey).NoPermissions())
-	require.Empty(t, accountState.keys[removeRec.Id])
+	require.Nil(t, accountState.keys[removeRec.Id].MetadataPrivKey)
+	require.NotNil(t, accountState.keys[removeRec.Id].MetadataPubKey)
+	require.Nil(t, accountState.keys[removeRec.Id].ReadKey)
 	require.NotEmpty(t, accountState.keys[fx.ownerAcl.Id()])
 }

@@ -181,6 +181,7 @@ func build(deps internalDeps) (list AclList, err error) {
 		storage:       storage,
 		id:            id,
 	}
+	state.list = list
 	return
 }
 

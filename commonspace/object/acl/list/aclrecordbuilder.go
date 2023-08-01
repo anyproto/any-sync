@@ -271,7 +271,7 @@ func (a *aclRecordBuilder) BuildReadKeyChange(payload ReadKeyChangePayload) (raw
 		err = ErrInsufficientPermissions
 		return
 	}
-	rkChange, err := a.buildReadKeyChange(payload)
+	rkChange, err := a.buildReadKeyChange(payload, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -279,14 +279,19 @@ func (a *aclRecordBuilder) BuildReadKeyChange(payload ReadKeyChangePayload) (raw
 	return a.buildRecord(content)
 }
 
-func (a *aclRecordBuilder) buildReadKeyChange(payload ReadKeyChangePayload) (*aclrecordproto.AclReadKeyChange, error) {
+func (a *aclRecordBuilder) buildReadKeyChange(payload ReadKeyChangePayload, removedIdentities map[string]struct{}) (*aclrecordproto.AclReadKeyChange, error) {
 	// encrypting new read key with all keys of users
 	protoKey, err := payload.ReadKey.Marshall()
 	if err != nil {
 		return nil, err
 	}
 	var aclReadKeys []*aclrecordproto.AclEncryptedReadKey
-	for _, st := range a.state.accountStates {
+	for identity, st := range a.state.accountStates {
+		if removedIdentities != nil {
+			if _, exists := removedIdentities[identity]; exists {
+				continue
+			}
+		}
 		protoIdentity, err := st.PubKey.Marshall()
 		if err != nil {
 			return nil, err
@@ -359,7 +364,7 @@ func (a *aclRecordBuilder) BuildAccountRemove(payload AccountRemovePayload) (raw
 		}
 		marshalledIdentities = append(marshalledIdentities, protoIdentity)
 	}
-	rkChange, err := a.buildReadKeyChange(payload.Change)
+	rkChange, err := a.buildReadKeyChange(payload.Change, deletedMap)
 	if err != nil {
 		return nil, err
 	}
