@@ -66,19 +66,18 @@ func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 		RawHeader: marshalled,
 		Id:        spaceId,
 	}
-	readKey, err := payload.SigningKey.GetPublic().Encrypt(payload.ReadKey)
-	if err != nil {
-		return
-	}
 
 	// building acl root
 	keyStorage := crypto.NewKeyStorage()
 	aclBuilder := list.NewAclRecordBuilder("", keyStorage, nil, list.NoOpAcceptorVerifier{})
 	aclRoot, err := aclBuilder.BuildRoot(list.RootContent{
-		PrivKey:          payload.SigningKey,
-		MasterKey:        payload.MasterKey,
-		SpaceId:          spaceId,
-		EncryptedReadKey: readKey,
+		PrivKey:   payload.SigningKey,
+		MasterKey: payload.MasterKey,
+		SpaceId:   spaceId,
+		Change: list.ReadKeyChangePayload{
+			MetadataKey: payload.MetadataKey,
+			ReadKey:     payload.ReadKey,
+		},
 	})
 	if err != nil {
 		return

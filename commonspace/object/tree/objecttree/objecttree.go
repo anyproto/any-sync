@@ -642,11 +642,11 @@ func (ot *objectTree) validateTree(newChanges []*Change) error {
 
 func (ot *objectTree) readKeysFromAclState(state *list.AclState) (err error) {
 	// just not to take lock many times, updating the key map from aclList
-	if len(ot.keys) == len(state.UserReadKeys()) {
+	if len(ot.keys) == len(state.AccountKeys()) {
 		return nil
 	}
-	for key, value := range state.UserReadKeys() {
-		treeKey, err := deriveTreeKey(value, ot.id)
+	for key, value := range state.AccountKeys() {
+		treeKey, err := deriveTreeKey(value.ReadKey, ot.id)
 		if err != nil {
 			return err
 		}

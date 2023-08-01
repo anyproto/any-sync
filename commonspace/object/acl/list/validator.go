@@ -70,7 +70,7 @@ func (c *contentValidator) ValidatePermissionChange(ch *aclrecordproto.AclAccoun
 	if err != nil {
 		return err
 	}
-	_, exists := c.aclState.userStates[mapKeyFromPubKey(chIdentity)]
+	_, exists := c.aclState.accountStates[mapKeyFromPubKey(chIdentity)]
 	if !exists {
 		return ErrNoSuchAccount
 	}
@@ -183,7 +183,7 @@ func (c *contentValidator) ValidateAccountRemove(ch *aclrecordproto.AclAccountRe
 		}
 		seenIdentities[mapKeyFromPubKey(identity)] = struct{}{}
 	}
-	return c.validateAccountReadKeys(ch.AccountKeys, len(c.aclState.userStates)-len(ch.Identities))
+	return c.ValidateReadKeyChange(ch.ReadKeyChange, authorIdentity)
 }
 
 func (c *contentValidator) ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error) {
@@ -197,7 +197,14 @@ func (c *contentValidator) ValidateRequestRemove(ch *aclrecordproto.AclAccountRe
 }
 
 func (c *contentValidator) ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error) {
-	return c.validateAccountReadKeys(ch.AccountKeys, len(c.aclState.userStates))
+	_, err = c.keyStore.PubKeyFromProto(ch.MetadataPubKey)
+	if err != nil {
+		return ErrNoMetadataKey
+	}
+	if ch.EncryptedMetadataPrivKey == nil || ch.EncryptedOldReadKey == nil {
+		return ErrIncorrectReadKey
+	}
+	return c.validateAccountReadKeys(ch.AccountKeys, len(c.aclState.accountStates))
 }
 
 func (c *contentValidator) validateAccountReadKeys(accountKeys []*aclrecordproto.AclEncryptedReadKey, usersNum int) (err error) {
@@ -209,7 +216,7 @@ func (c *contentValidator) validateAccountReadKeys(accountKeys []*aclrecordproto
 		if err != nil {
 			return err
 		}
-		_, exists := c.aclState.userStates[mapKeyFromPubKey(identity)]
+		_, exists := c.aclState.accountStates[mapKeyFromPubKey(identity)]
 		if !exists {
 			return ErrNoSuchAccount
 		}

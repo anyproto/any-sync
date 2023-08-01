@@ -27,14 +27,16 @@ type SpaceCreatePayload struct {
 	SigningKey crypto.PrivKey
 	// SpaceType is an arbitrary string
 	SpaceType string
-	// ReadKey is a first symmetric encryption key for a space
-	ReadKey []byte
 	// ReplicationKey is a key which is to be used to determine the node where the space should be held
 	ReplicationKey uint64
 	// SpacePayload is an arbitrary payload related to space type
 	SpacePayload []byte
 	// MasterKey is the master key of the owner
 	MasterKey crypto.PrivKey
+	// ReadKey is the first read key of space
+	ReadKey crypto.SymKey
+	// MetadataKey is the first metadata key of space
+	MetadataKey crypto.PrivKey
 }
 
 type SpaceDerivePayload struct {

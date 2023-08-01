@@ -12,16 +12,21 @@ import (
 )
 
 type RootContent struct {
-	PrivKey          crypto.PrivKey
-	MasterKey        crypto.PrivKey
-	SpaceId          string
-	EncryptedReadKey []byte
+	PrivKey   crypto.PrivKey
+	MasterKey crypto.PrivKey
+	SpaceId   string
+	Change    ReadKeyChangePayload
 }
 
 type RequestJoinPayload struct {
 	InviteRecordId string
 	InviteKey      crypto.PrivKey
 	Metadata       []byte
+}
+
+type ReadKeyChangePayload struct {
+	MetadataKey crypto.PrivKey
+	ReadKey     crypto.SymKey
 }
 
 type RequestAcceptPayload struct {
@@ -36,7 +41,7 @@ type PermissionChangePayload struct {
 
 type AccountRemovePayload struct {
 	Identities []crypto.PubKey
-	ReadKey    crypto.SymKey
+	Change     ReadKeyChangePayload
 }
 
 type InviteResult struct {
@@ -56,7 +61,7 @@ type AclRecordBuilder interface {
 	BuildRequestDecline(requestRecordId string) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestRemove() (rawRecord *consensusproto.RawRecord, err error)
 	BuildPermissionChange(payload PermissionChangePayload) (rawRecord *consensusproto.RawRecord, err error)
-	BuildReadKeyChange(newKey crypto.SymKey) (rawRecord *consensusproto.RawRecord, err error)
+	BuildReadKeyChange(payload ReadKeyChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountRemove(payload AccountRemovePayload) (rawRecord *consensusproto.RawRecord, err error)
 }
 
@@ -158,6 +163,14 @@ func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawReco
 	if !payload.InviteKey.GetPublic().Equals(key) {
 		err = ErrIncorrectInviteKey
 	}
+	mkKey, err := a.state.CurrentMetadataKey()
+	if err != nil {
+		return nil, err
+	}
+	encMeta, err := mkKey.Encrypt(payload.Metadata)
+	if err != nil {
+		return nil, err
+	}
 	rawIdentity, err := a.accountKeys.SignKey.GetPublic().Raw()
 	if err != nil {
 		return
@@ -174,7 +187,7 @@ func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawReco
 		InviteIdentity:          protoIdentity,
 		InviteRecordId:          payload.InviteRecordId,
 		InviteIdentitySignature: signature,
-		Metadata:                payload.Metadata,
+		Metadata:                encMeta,
 	}
 	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_RequestJoin{RequestJoin: joinRec}}
 	return a.buildRecord(content)
@@ -190,33 +203,27 @@ func (a *aclRecordBuilder) BuildRequestAccept(payload RequestAcceptPayload) (raw
 		err = ErrNoSuchRequest
 		return
 	}
-	var encryptedReadKeys []*aclrecordproto.AclReadKeyWithRecord
-	for keyId, key := range a.state.userReadKeys {
-		rawKey, err := key.Raw()
-		if err != nil {
-			return nil, err
-		}
-		enc, err := request.RequestIdentity.Encrypt(rawKey)
-		if err != nil {
-			return nil, err
-		}
-		encryptedReadKeys = append(encryptedReadKeys, &aclrecordproto.AclReadKeyWithRecord{
-			RecordId:         keyId,
-			EncryptedReadKey: enc,
-		})
-	}
+	readKey, err := a.state.CurrentReadKey()
 	if err != nil {
-		return
+		return nil, ErrNoReadKey
+	}
+	protoKey, err := readKey.Marshall()
+	if err != nil {
+		return nil, err
+	}
+	enc, err := request.RequestIdentity.Encrypt(protoKey)
+	if err != nil {
+		return nil, err
 	}
 	requestIdentityProto, err := request.RequestIdentity.Marshall()
 	if err != nil {
 		return
 	}
 	acceptRec := &aclrecordproto.AclAccountRequestAccept{
-		Identity:          requestIdentityProto,
-		RequestRecordId:   payload.RequestRecordId,
-		EncryptedReadKeys: encryptedReadKeys,
-		Permissions:       aclrecordproto.AclUserPermissions(payload.Permissions),
+		Identity:         requestIdentityProto,
+		RequestRecordId:  payload.RequestRecordId,
+		EncryptedReadKey: enc,
+		Permissions:      aclrecordproto.AclUserPermissions(payload.Permissions),
 	}
 	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_RequestAccept{RequestAccept: acceptRec}}
 	return a.buildRecord(content)
@@ -259,26 +266,32 @@ func (a *aclRecordBuilder) BuildPermissionChange(payload PermissionChangePayload
 	return a.buildRecord(content)
 }
 
-func (a *aclRecordBuilder) BuildReadKeyChange(newKey crypto.SymKey) (rawRecord *consensusproto.RawRecord, err error) {
+func (a *aclRecordBuilder) BuildReadKeyChange(payload ReadKeyChangePayload) (rawRecord *consensusproto.RawRecord, err error) {
 	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
 		err = ErrInsufficientPermissions
 		return
 	}
-	rawKey, err := newKey.Raw()
+	rkChange, err := a.buildReadKeyChange(payload)
 	if err != nil {
-		return
+		return nil, err
 	}
-	if len(rawKey) != crypto.KeyBytes {
-		err = ErrIncorrectReadKey
-		return
+	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_ReadKeyChange{ReadKeyChange: rkChange}}
+	return a.buildRecord(content)
+}
+
+func (a *aclRecordBuilder) buildReadKeyChange(payload ReadKeyChangePayload) (*aclrecordproto.AclReadKeyChange, error) {
+	// encrypting new read key with all keys of users
+	protoKey, err := payload.ReadKey.Marshall()
+	if err != nil {
+		return nil, err
 	}
 	var aclReadKeys []*aclrecordproto.AclEncryptedReadKey
-	for _, st := range a.state.userStates {
+	for _, st := range a.state.accountStates {
 		protoIdentity, err := st.PubKey.Marshall()
 		if err != nil {
 			return nil, err
 		}
-		enc, err := st.PubKey.Encrypt(rawKey)
+		enc, err := st.PubKey.Encrypt(protoKey)
 		if err != nil {
 			return nil, err
 		}
@@ -287,9 +300,39 @@ func (a *aclRecordBuilder) BuildReadKeyChange(newKey crypto.SymKey) (rawRecord *
 			EncryptedReadKey: enc,
 		})
 	}
-	readRec := &aclrecordproto.AclReadKeyChange{AccountKeys: aclReadKeys}
-	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_ReadKeyChange{ReadKeyChange: readRec}}
-	return a.buildRecord(content)
+	// encrypting metadata key with new read key
+	mkPubKey, err := payload.MetadataKey.GetPublic().Marshall()
+	if err != nil {
+		return nil, err
+	}
+	mkPrivKeyProto, err := payload.MetadataKey.Marshall()
+	if err != nil {
+		return nil, err
+	}
+	encPrivKey, err := payload.ReadKey.Encrypt(mkPrivKeyProto)
+	if err != nil {
+		return nil, err
+	}
+	// encrypting current read key with new read key
+	curKey, err := a.state.CurrentReadKey()
+	if err != nil {
+		return nil, err
+	}
+	curKeyProto, err := curKey.Marshall()
+	if err != nil {
+		return nil, err
+	}
+	encOldKey, err := payload.ReadKey.Encrypt(curKeyProto)
+	if err != nil {
+		return nil, err
+	}
+	readRec := &aclrecordproto.AclReadKeyChange{
+		AccountKeys:              aclReadKeys,
+		MetadataPubKey:           mkPubKey,
+		EncryptedMetadataPrivKey: encPrivKey,
+		EncryptedOldReadKey:      encOldKey,
+	}
+	return readRec, nil
 }
 
 func (a *aclRecordBuilder) BuildAccountRemove(payload AccountRemovePayload) (rawRecord *consensusproto.RawRecord, err error) {
@@ -308,32 +351,6 @@ func (a *aclRecordBuilder) BuildAccountRemove(payload AccountRemovePayload) (raw
 		err = ErrInsufficientPermissions
 		return
 	}
-	rawKey, err := payload.ReadKey.Raw()
-	if err != nil {
-		return
-	}
-	if len(rawKey) != crypto.KeyBytes {
-		err = ErrIncorrectReadKey
-		return
-	}
-	var aclReadKeys []*aclrecordproto.AclEncryptedReadKey
-	for _, st := range a.state.userStates {
-		if _, exists := deletedMap[mapKeyFromPubKey(st.PubKey)]; exists {
-			continue
-		}
-		protoIdentity, err := st.PubKey.Marshall()
-		if err != nil {
-			return nil, err
-		}
-		enc, err := st.PubKey.Encrypt(rawKey)
-		if err != nil {
-			return nil, err
-		}
-		aclReadKeys = append(aclReadKeys, &aclrecordproto.AclEncryptedReadKey{
-			Identity:         protoIdentity,
-			EncryptedReadKey: enc,
-		})
-	}
 	var marshalledIdentities [][]byte
 	for _, key := range payload.Identities {
 		protoIdentity, err := key.Marshall()
@@ -342,7 +359,11 @@ func (a *aclRecordBuilder) BuildAccountRemove(payload AccountRemovePayload) (raw
 		}
 		marshalledIdentities = append(marshalledIdentities, protoIdentity)
 	}
-	removeRec := &aclrecordproto.AclAccountRemove{AccountKeys: aclReadKeys, Identities: marshalledIdentities}
+	rkChange, err := a.buildReadKeyChange(payload.Change)
+	if err != nil {
+		return nil, err
+	}
+	removeRec := &aclrecordproto.AclAccountRemove{ReadKeyChange: rkChange, Identities: marshalledIdentities}
 	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_AccountRemove{AccountRemove: removeRec}}
 	return a.buildRecord(content)
 }
@@ -473,17 +494,34 @@ func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *consensusproto.R
 	if err != nil {
 		return
 	}
-	var timestamp int64
-	if content.EncryptedReadKey != nil {
-		timestamp = time.Now().Unix()
-	}
 	aclRoot := &aclrecordproto.AclRoot{
 		Identity:          identity,
 		SpaceId:           content.SpaceId,
-		EncryptedReadKey:  content.EncryptedReadKey,
 		MasterKey:         masterKey,
 		IdentitySignature: identitySignature,
-		Timestamp:         timestamp,
+	}
+	if content.Change.ReadKey != nil {
+		aclRoot.Timestamp = time.Now().Unix()
+		metadataPrivProto, err := content.Change.MetadataKey.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		aclRoot.EncryptedMetadataPrivKey, err = content.Change.ReadKey.Encrypt(metadataPrivProto)
+		if err != nil {
+			return nil, err
+		}
+		aclRoot.MetadataPubKey, err = content.Change.MetadataKey.GetPublic().Marshall()
+		if err != nil {
+			return nil, err
+		}
+		rkProto, err := content.Change.ReadKey.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		aclRoot.EncryptedReadKey, err = content.PrivKey.GetPublic().Encrypt(rkProto)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return marshalAclRoot(aclRoot, content.PrivKey)
 }
