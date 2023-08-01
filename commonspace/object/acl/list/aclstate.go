@@ -507,7 +507,7 @@ func (st *AclState) unmarshallDecryptPrivKey(msg []byte, decryptor func(msg []by
 	if err != nil {
 		return nil, ErrFailedToDecrypt
 	}
-	key, err := crypto.UnmarshalEd25519PrivateKey(decrypted)
+	key, err := crypto.UnmarshalEd25519PrivateKeyProto(decrypted)
 	if err != nil {
 		return nil, ErrFailedToDecrypt
 	}
