@@ -177,11 +177,6 @@ func (st *AclState) StateAtRecord(id string, pubKey crypto.PubKey) (AclAccountSt
 }
 
 func (st *AclState) applyRecord(record *AclRecord) (err error) {
-	defer func() {
-		if err == nil {
-			st.lastRecordId = record.Id
-		}
-	}()
 	if st.lastRecordId != record.PrevId {
 		err = ErrIncorrectRecordSequence
 		return
@@ -206,6 +201,7 @@ func (st *AclState) applyRecord(record *AclRecord) (err error) {
 		states = append(states, state)
 	}
 	st.statesAtRecord[record.Id] = states
+	st.lastRecordId = record.Id
 	return
 }
 
@@ -232,6 +228,7 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 	}
 	st.readKeyChanges = []string{record.Id}
 	st.accountStates[mapKeyFromPubKey(record.Identity)] = accountState
+	st.lastRecordId = record.Id
 	return
 }
 

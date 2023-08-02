@@ -202,14 +202,14 @@ func (a *aclList) ValidateRawRecord(rawRec *consensusproto.RawRecord) (err error
 	return a.aclState.Validator().ValidateAclRecordContents(record)
 }
 
-func (a *aclList) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (err error) {
+func (a *aclList) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) error {
 	for _, rec := range rawRecords {
-		err = a.AddRawRecord(rec)
+		err := a.AddRawRecord(rec)
 		if err != nil && err != ErrRecordAlreadyExists {
-			return
+			return err
 		}
 	}
-	return
+	return nil
 }
 
 func (a *aclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error) {
