@@ -48,6 +48,9 @@ type syncAcl struct {
 }
 
 func (s *syncAcl) Run(ctx context.Context) (err error) {
+	s.Lock()
+	defer s.Unlock()
+	s.headUpdater.UpdateHeads(s.Id(), []string{s.Head().Id})
 	return
 }
 
