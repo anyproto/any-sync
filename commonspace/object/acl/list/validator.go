@@ -122,6 +122,9 @@ func (c *contentValidator) ValidateRequestJoin(ch *aclrecordproto.AclAccountRequ
 	if !ok {
 		return ErrInvalidSignature
 	}
+	if len(ch.Metadata) > MaxMetadataLen {
+		return ErrMetadataTooLarge
+	}
 	return
 }
 

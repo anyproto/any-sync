@@ -208,6 +208,21 @@ func TestAclList_Remove(t *testing.T) {
 	require.NotEmpty(t, accountState.keys[fx.ownerAcl.Id()])
 }
 
+func TestAclList_KeyChangeInvite(t *testing.T) {
+	fx := newFixture(t)
+	newReadKey := crypto.NewAES()
+	privKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+	readKeyChange, err := fx.ownerAcl.RecordBuilder().BuildReadKeyChange(ReadKeyChangePayload{
+		MetadataKey: privKey,
+		ReadKey:     newReadKey,
+	})
+	require.NoError(t, err)
+	readKeyRec := WrapAclRecord(readKeyChange)
+	fx.addRec(t, readKeyRec)
+	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
+}
+
 func TestAclList_ReadKeyChange(t *testing.T) {
 	fx := newFixture(t)
 	var (

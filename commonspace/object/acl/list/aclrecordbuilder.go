@@ -171,6 +171,9 @@ func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawReco
 	if err != nil {
 		return nil, err
 	}
+	if len(encMeta) > MaxMetadataLen {
+		return nil, ErrMetadataTooLarge
+	}
 	rawIdentity, err := a.accountKeys.SignKey.GetPublic().Raw()
 	if err != nil {
 		return

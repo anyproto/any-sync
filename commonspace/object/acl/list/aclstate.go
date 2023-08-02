@@ -31,6 +31,7 @@ var (
 	ErrInvalidSignature          = errors.New("signature is invalid")
 	ErrIncorrectRoot             = errors.New("incorrect root")
 	ErrIncorrectRecordSequence   = errors.New("incorrect prev id of a record")
+	ErrMetadataTooLarge          = errors.New("metadata size too large")
 )
 
 const MaxMetadataLen = 1024
