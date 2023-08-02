@@ -137,6 +137,10 @@ func (st *AclState) CurrentReadKeyId() string {
 	return st.readKeyChanges[len(st.readKeyChanges)-1]
 }
 
+func (st *AclState) AccountKey() crypto.PrivKey {
+	return st.key
+}
+
 func (st *AclState) CurrentReadKey() (crypto.SymKey, error) {
 	curKeys, exists := st.keys[st.CurrentReadKeyId()]
 	if !exists {
@@ -153,7 +157,7 @@ func (st *AclState) CurrentMetadataKey() (crypto.PubKey, error) {
 	return curKeys.MetadataPubKey, nil
 }
 
-func (st *AclState) AccountKeys() map[string]AclKeys {
+func (st *AclState) Keys() map[string]AclKeys {
 	return st.keys
 }
 
