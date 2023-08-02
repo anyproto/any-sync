@@ -19,6 +19,8 @@ type aclFixture struct {
 	spaceId     string
 }
 
+var mockMetadata = []byte("very important metadata")
+
 func newFixture(t *testing.T) *aclFixture {
 	ownerKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
@@ -62,6 +64,7 @@ func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 	requestJoin, err := accountAcl.RecordBuilder().BuildRequestJoin(RequestJoinPayload{
 		InviteRecordId: inviteRec.Id,
 		InviteKey:      inv.InviteKey,
+		Metadata:       mockMetadata,
 	})
 	require.NoError(t, err)
 	requestJoinRec := WrapAclRecord(requestJoin)
@@ -221,6 +224,17 @@ func TestAclList_KeyChangeInvite(t *testing.T) {
 	readKeyRec := WrapAclRecord(readKeyChange)
 	fx.addRec(t, readKeyRec)
 	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
+}
+
+func TestAclList_MetadataDecrypt(t *testing.T) {
+	fx := newFixture(t)
+	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
+	meta, err := fx.ownerAcl.AclState().GetMetadata(fx.accountKeys.SignKey.GetPublic(), true)
+	require.NoError(t, err)
+	require.Equal(t, mockMetadata, meta)
+	meta, err = fx.ownerAcl.AclState().GetMetadata(fx.accountKeys.SignKey.GetPublic(), false)
+	require.NoError(t, err)
+	require.NotEqual(t, mockMetadata, meta)
 }
 
 func TestAclList_ReadKeyChange(t *testing.T) {
