@@ -3,6 +3,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -32,6 +36,21 @@ jobs:
             ${{ runner.os }}-go-${{ matrix.go-version }}-
       # }}
 
+      - name: Setup license repository
+        uses: actions/checkout@master
+        with:
+          repository: anyproto/open
+          ref: refs/heads/main
+          path: ./open
+      - name: Check licenses
+        run: |
+          cd open
+          python3 tools/generate.py --platform golang
+          cd ..
+          sudo gem install license_finder
+          license_finder inherited_decisions add open/decisions.yml
+          license_finder --enabled-package-managers gomodules
+
       - name: deps
         run: make deps
 
@@ -55,3 +74,4 @@ jobs:
               echo "Failed"
               exit 1
           fi
+      - uses: seriousben/go-patch-cover-action@v1
