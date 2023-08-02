@@ -20,7 +20,8 @@ const CName = "net.peerservice"
 var log = logger.NewNamed(CName)
 
 var (
-	ErrAddrsNotFound = errors.New("addrs for peer not found")
+	ErrAddrsNotFound    = errors.New("addrs for peer not found")
+	ErrPeerIdMismatched = errors.New("peerId mismatched")
 )
 
 func New() PeerService {
@@ -67,7 +68,7 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	}
 
 	var mc transport.MultiConn
-	log.InfoCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
+	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
 	for _, addr := range addrs {
 		mc, err = p.yamux.Dial(ctx, addr)
 		if err != nil {
@@ -78,6 +79,13 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 	}
 	if err != nil {
 		return
+	}
+	connPeerId, err := peer.CtxPeerId(mc.Context())
+	if err != nil {
+		return nil, err
+	}
+	if connPeerId != peerId {
+		return nil, ErrPeerIdMismatched
 	}
 	return peer.NewPeer(mc, p.server)
 }
