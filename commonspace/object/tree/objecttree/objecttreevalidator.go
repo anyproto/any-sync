@@ -52,7 +52,7 @@ func (v *objectTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclLis
 
 func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c *Change) (err error) {
 	var (
-		userState list.AclUserState
+		userState list.AclAccountState
 		state     = aclList.AclState()
 	)
 	// checking if the user could write

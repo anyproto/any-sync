@@ -357,6 +357,21 @@ func (mr *MockSyncAclMockRecorder) RecordsAfter(arg0, arg1 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordsAfter", reflect.TypeOf((*MockSyncAcl)(nil).RecordsAfter), arg0, arg1)
 }
 
+// RecordsBefore mocks base method.
+func (m *MockSyncAcl) RecordsBefore(arg0 context.Context, arg1 string) ([]*consensusproto.RawRecordWithId, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecordsBefore", arg0, arg1)
+	ret0, _ := ret[0].([]*consensusproto.RawRecordWithId)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RecordsBefore indicates an expected call of RecordsBefore.
+func (mr *MockSyncAclMockRecorder) RecordsBefore(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordsBefore", reflect.TypeOf((*MockSyncAcl)(nil).RecordsBefore), arg0, arg1)
+}
+
 // Root mocks base method.
 func (m *MockSyncAcl) Root() *consensusproto.RawRecordWithId {
 	m.ctrl.T.Helper()

@@ -18,8 +18,10 @@ type PeerManager interface {
 	SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error)
 	// Broadcast sends a message to all subscribed peers
 	Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error)
-	// GetResponsiblePeers dials or gets from cache responsible peers to unary operations
+	// GetResponsiblePeers dials or gets from cache responsible peers
 	GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error)
+	// GetNodePeers dials or gets from cache node peers
+	GetNodePeers(ctx context.Context) (peers []peer.Peer, err error)
 }
 
 type PeerManagerProvider interface {
