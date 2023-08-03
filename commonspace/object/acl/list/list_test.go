@@ -31,6 +31,9 @@ func newFixture(t *testing.T) *aclFixture {
 	require.NoError(t, err)
 	accountAcl, err := NewTestAclWithRoot(accountKeys, ownerAcl.Root())
 	require.NoError(t, err)
+	require.Equal(t, ownerAcl.AclState().lastRecordId, ownerAcl.Id())
+	require.Equal(t, ownerAcl.AclState().lastRecordId, accountAcl.AclState().lastRecordId)
+	require.NotEmpty(t, ownerAcl.Id())
 	return &aclFixture{
 		ownerKeys:   ownerKeys,
 		accountKeys: accountKeys,
@@ -95,6 +98,9 @@ func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 	stateAtRec, err := ownerState.StateAtRecord(requestAcceptRec.Id, accountState.pubKey)
 	require.NoError(t, err)
 	require.True(t, stateAtRec.Permissions == perms)
+	require.Equal(t, ownerAcl.AclState().lastRecordId, requestAcceptRec.Id)
+	require.Equal(t, ownerAcl.AclState().lastRecordId, accountAcl.AclState().lastRecordId)
+	require.NotEmpty(t, requestAcceptRec.Id)
 }
 
 func TestAclList_BuildRoot(t *testing.T) {
