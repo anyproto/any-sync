@@ -17,6 +17,8 @@ message Data {
   string kind = 1;
   // data is a byte payload
   bytes data = 2;
+  // data signature
+  bytes signature = 3;
 }
 
 message DataPutRequest {
