@@ -210,11 +210,16 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 	if !ok {
 		return ErrIncorrectRoot
 	}
-	mkPubKey, err := st.keyStore.PubKeyFromProto(root.MetadataPubKey)
-	if err != nil {
-		return err
+	if root.EncryptedReadKey != nil {
+		mkPubKey, err := st.keyStore.PubKeyFromProto(root.MetadataPubKey)
+		if err != nil {
+			return err
+		}
+		st.keys[record.Id] = AclKeys{MetadataPubKey: mkPubKey}
+	} else {
+		// this should be a derived acl
+		st.keys[record.Id] = AclKeys{}
 	}
-	st.keys[record.Id] = AclKeys{MetadataPubKey: mkPubKey}
 	if st.key != nil && st.pubKey.Equals(record.Identity) {
 		err = st.saveKeysFromRoot(record.Id, root)
 		if err != nil {

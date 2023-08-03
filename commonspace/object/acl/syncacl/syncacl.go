@@ -122,6 +122,9 @@ func (s *syncAcl) SyncWithPeer(ctx context.Context, peerId string) (err error) {
 }
 
 func (s *syncAcl) Close(ctx context.Context) (err error) {
+	if s.AclList == nil {
+		return
+	}
 	s.Lock()
 	defer s.Unlock()
 	s.isClosed = true
