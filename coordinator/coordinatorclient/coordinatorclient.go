@@ -3,9 +3,11 @@ package coordinatorclient
 
 import (
 	"context"
+	"errors"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
+	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -14,6 +16,11 @@ import (
 )
 
 const CName = "common.coordinator.coordinatorclient"
+
+var (
+	ErrPubKeyMissing     = errors.New("peer pub key missing")
+	ErrNetworkMismatched = errors.New("network mismatched")
+)
 
 func New() CoordinatorClient {
 	return new(coordinatorClient)
@@ -144,6 +151,13 @@ func (c *coordinatorClient) doClient(ctx context.Context, f func(cl coordinatorp
 	p, err := c.pool.GetOneOf(ctx, c.nodeConf.CoordinatorPeers())
 	if err != nil {
 		return err
+	}
+	pubKey, err := peer.CtxPubKey(p.Context())
+	if err != nil {
+		return ErrPubKeyMissing
+	}
+	if pubKey.Network() != c.nodeConf.Configuration().NetworkId {
+		return ErrNetworkMismatched
 	}
 	return p.DoDrpc(ctx, func(conn drpc.Conn) error {
 		return f(coordinatorproto.NewDRPCCoordinatorClient(conn))
