@@ -151,6 +151,10 @@ func (p *mockPeerManager) GetResponsiblePeers(ctx context.Context) (peers []peer
 	return nil, nil
 }
 
+func (p *mockPeerManager) GetNodePeers(ctx context.Context) (peers []peer.Peer, err error) {
+	return nil, nil
+}
+
 //
 // Mock PeerManagerProvider
 //

@@ -70,7 +70,7 @@ func (c *contentValidator) ValidatePermissionChange(ch *aclrecordproto.AclAccoun
 	if err != nil {
 		return err
 	}
-	_, exists := c.aclState.userStates[mapKeyFromPubKey(chIdentity)]
+	_, exists := c.aclState.accountStates[mapKeyFromPubKey(chIdentity)]
 	if !exists {
 		return ErrNoSuchAccount
 	}
@@ -121,6 +121,9 @@ func (c *contentValidator) ValidateRequestJoin(ch *aclrecordproto.AclAccountRequ
 	}
 	if !ok {
 		return ErrInvalidSignature
+	}
+	if len(ch.Metadata) > MaxMetadataLen {
+		return ErrMetadataTooLarge
 	}
 	return
 }
@@ -183,7 +186,7 @@ func (c *contentValidator) ValidateAccountRemove(ch *aclrecordproto.AclAccountRe
 		}
 		seenIdentities[mapKeyFromPubKey(identity)] = struct{}{}
 	}
-	return c.validateAccountReadKeys(ch.AccountKeys, len(c.aclState.userStates)-len(ch.Identities))
+	return c.validateReadKeyChange(ch.ReadKeyChange, seenIdentities)
 }
 
 func (c *contentValidator) ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error) {
@@ -197,21 +200,33 @@ func (c *contentValidator) ValidateRequestRemove(ch *aclrecordproto.AclAccountRe
 }
 
 func (c *contentValidator) ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error) {
-	return c.validateAccountReadKeys(ch.AccountKeys, len(c.aclState.userStates))
+	return c.validateReadKeyChange(ch, nil)
 }
 
-func (c *contentValidator) validateAccountReadKeys(accountKeys []*aclrecordproto.AclEncryptedReadKey, usersNum int) (err error) {
-	if len(accountKeys) != usersNum {
-		return ErrIncorrectNumberOfAccounts
+func (c *contentValidator) validateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, removedUsers map[string]struct{}) (err error) {
+	_, err = c.keyStore.PubKeyFromProto(ch.MetadataPubKey)
+	if err != nil {
+		return ErrNoMetadataKey
 	}
-	for _, encKeys := range accountKeys {
+	if ch.EncryptedMetadataPrivKey == nil || ch.EncryptedOldReadKey == nil {
+		return ErrIncorrectReadKey
+	}
+	for _, encKeys := range ch.AccountKeys {
 		identity, err := c.keyStore.PubKeyFromProto(encKeys.Identity)
 		if err != nil {
 			return err
 		}
-		_, exists := c.aclState.userStates[mapKeyFromPubKey(identity)]
+		idKey := mapKeyFromPubKey(identity)
+		_, exists := c.aclState.accountStates[idKey]
 		if !exists {
 			return ErrNoSuchAccount
+		}
+		if removedUsers == nil {
+			continue
+		}
+		_, exists = removedUsers[idKey]
+		if exists {
+			return ErrIncorrectNumberOfAccounts
 		}
 	}
 	return

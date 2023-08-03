@@ -48,6 +48,9 @@ type syncAcl struct {
 }
 
 func (s *syncAcl) Run(ctx context.Context) (err error) {
+	s.Lock()
+	defer s.Unlock()
+	s.headUpdater.UpdateHeads(s.Id(), []string{s.Head().Id})
 	return
 }
 
@@ -119,6 +122,9 @@ func (s *syncAcl) SyncWithPeer(ctx context.Context, peerId string) (err error) {
 }
 
 func (s *syncAcl) Close(ctx context.Context) (err error) {
+	if s.AclList == nil {
+		return
+	}
 	s.Lock()
 	defer s.Unlock()
 	s.isClosed = true

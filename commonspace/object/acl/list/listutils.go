@@ -13,10 +13,19 @@ func NewTestDerivedAcl(spaceId string, keys *accountdata.AccountKeys) (AclList, 
 	if err != nil {
 		return nil, err
 	}
+	newReadKey := crypto.NewAES()
+	privKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	if err != nil {
+		return nil, err
+	}
 	root, err := builder.BuildRoot(RootContent{
 		PrivKey:   keys.SignKey,
 		SpaceId:   spaceId,
 		MasterKey: masterKey,
+		Change: ReadKeyChangePayload{
+			MetadataKey: privKey,
+			ReadKey:     newReadKey,
+		},
 	})
 	if err != nil {
 		return nil, err

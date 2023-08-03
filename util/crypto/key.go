@@ -62,6 +62,8 @@ type SymKey interface {
 	Decrypt(message []byte) ([]byte, error)
 	// Encrypt encrypts the message and returns the result
 	Encrypt(message []byte) ([]byte, error)
+	// Marshall wraps key in proto encoding and marshalls it
+	Marshall() ([]byte, error)
 }
 
 func KeyEquals(k1, k2 Key) bool {

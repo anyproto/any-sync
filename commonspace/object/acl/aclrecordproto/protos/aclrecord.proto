@@ -10,6 +10,8 @@ message AclRoot {
     bytes encryptedReadKey = 4;
     int64 timestamp = 5;
     bytes identitySignature = 6;
+    bytes metadataPubKey = 7;
+    bytes encryptedMetadataPrivKey = 8;
 }
 
 // AclAccountInvite contains the public invite key, the private part of which is sent to the user directly
@@ -22,6 +24,7 @@ message AclAccountRequestJoin {
     bytes inviteIdentity = 1;
     string inviteRecordId = 2;
     bytes inviteIdentitySignature = 3;
+    // Metadata is encrypted with metadata key of the space
     bytes metadata = 4;
 }
 
@@ -29,7 +32,7 @@ message AclAccountRequestJoin {
 message AclAccountRequestAccept {
     bytes identity = 1;
     string requestRecordId = 2;
-    repeated AclReadKeyWithRecord encryptedReadKeys = 3;
+    bytes encryptedReadKey = 3;
     AclUserPermissions permissions = 4;
 }
 
@@ -41,12 +44,6 @@ message AclAccountRequestDecline {
 // AclAccountInviteRevoke revokes the invite record
 message AclAccountInviteRevoke {
     string inviteRecordId = 1;
-}
-
-// AclReadKeys are a read key with record id
-message AclReadKeyWithRecord {
-    string recordId = 1;
-    bytes encryptedReadKey = 2;
 }
 
 // AclEncryptedReadKeys are new key for specific identity
@@ -64,12 +61,17 @@ message AclAccountPermissionChange {
 // AclReadKeyChange changes the key for a space
 message AclReadKeyChange {
     repeated AclEncryptedReadKey accountKeys = 1;
+    bytes metadataPubKey = 2;
+    // EncryptedMetadataPrivKey is encrypted with new read key
+    bytes encryptedMetadataPrivKey = 3;
+    // EncryptedOldReadKey is encrypted with new read key
+    bytes encryptedOldReadKey = 4;
 }
 
 // AclAccountRemove removes an account and changes read key for space
 message AclAccountRemove {
     repeated bytes identities = 1;
-    repeated AclEncryptedReadKey accountKeys = 2;
+    AclReadKeyChange readKeyChange = 2;
 }
 
 // AclAccountRequestRemove adds a request to remove an account

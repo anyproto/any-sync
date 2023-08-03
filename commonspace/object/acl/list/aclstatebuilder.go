@@ -25,15 +25,21 @@ func (sb *aclStateBuilder) Init(id string) {
 }
 
 func (sb *aclStateBuilder) Build(records []*AclRecord) (state *AclState, err error) {
+	if len(records) == 0 {
+		return nil, ErrIncorrectRecordSequence
+	}
 	if sb.privKey != nil {
-		state, err = newAclStateWithKeys(sb.id, sb.privKey)
+		state, err = newAclStateWithKeys(records[0], sb.privKey)
 		if err != nil {
 			return
 		}
 	} else {
-		state = newAclState(sb.id)
+		state, err = newAclState(records[0])
+		if err != nil {
+			return
+		}
 	}
-	for _, rec := range records {
+	for _, rec := range records[1:] {
 		err = state.applyRecord(rec)
 		if err != nil {
 			return nil, err

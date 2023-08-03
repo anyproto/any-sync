@@ -3,11 +3,11 @@ package fileservice
 import (
 	"context"
 	"github.com/anyproto/any-sync/commonfile/fileblockstore"
+	"github.com/ipfs/boxo/blockservice"
+	blockstore "github.com/ipfs/boxo/blockstore"
+	exchange "github.com/ipfs/boxo/exchange"
 	blocks "github.com/ipfs/go-block-format"
-	"github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-cid"
-	blockstore "github.com/ipfs/go-ipfs-blockstore"
-	exchange "github.com/ipfs/go-ipfs-exchange-interface"
 )
 
 func newBlockService(store fileblockstore.BlockStore) blockservice.BlockService {

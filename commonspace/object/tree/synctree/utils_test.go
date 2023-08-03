@@ -157,6 +157,10 @@ func (r *requestPeerManager) GetResponsiblePeers(ctx context.Context) (peers []p
 	return nil, nil
 }
 
+func (r *requestPeerManager) GetNodePeers(ctx context.Context) (peers []peer.Peer, err error) {
+	return nil, nil
+}
+
 // testSyncHandler is the wrapper around individual tree to test sync protocol
 type testSyncHandler struct {
 	synchandler.SyncHandler

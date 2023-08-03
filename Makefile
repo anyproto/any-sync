@@ -2,6 +2,10 @@
 export GOPRIVATE=github.com/anyproto
 export PATH:=deps:$(PATH)
 
+all:
+	@set -e;
+	@git config core.hooksPath .githooks;
+
 proto:
 	@echo 'Generating protobuf packages (Go)...'
 
