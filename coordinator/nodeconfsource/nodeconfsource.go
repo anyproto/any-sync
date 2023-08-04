@@ -51,6 +51,8 @@ func (n *nodeConfSource) GetLast(ctx context.Context, currentId string) (c nodec
 				types = append(types, nodeconf.NodeTypeCoordinator)
 			case coordinatorproto.NodeType_TreeAPI:
 				types = append(types, nodeconf.NodeTypeTree)
+			case coordinatorproto.NodeType_ConsensusAPI:
+				types = append(types, nodeconf.NodeTypeConsensus)
 			}
 		}
 		nodes[i] = nodeconf.Node{
