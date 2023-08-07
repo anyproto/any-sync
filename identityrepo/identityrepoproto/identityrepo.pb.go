@@ -85,6 +85,58 @@ func (m *Data) GetSignature() []byte {
 	return nil
 }
 
+type DataWithIdentity struct {
+	Identity string  `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Data     []*Data `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty"`
+}
+
+func (m *DataWithIdentity) Reset()         { *m = DataWithIdentity{} }
+func (m *DataWithIdentity) String() string { return proto.CompactTextString(m) }
+func (*DataWithIdentity) ProtoMessage()    {}
+func (*DataWithIdentity) Descriptor() ([]byte, []int) {
+	return fileDescriptor_fff72e8611224dab, []int{1}
+}
+func (m *DataWithIdentity) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DataWithIdentity) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DataWithIdentity.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *DataWithIdentity) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DataWithIdentity.Merge(m, src)
+}
+func (m *DataWithIdentity) XXX_Size() int {
+	return m.Size()
+}
+func (m *DataWithIdentity) XXX_DiscardUnknown() {
+	xxx_messageInfo_DataWithIdentity.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DataWithIdentity proto.InternalMessageInfo
+
+func (m *DataWithIdentity) GetIdentity() string {
+	if m != nil {
+		return m.Identity
+	}
+	return ""
+}
+
+func (m *DataWithIdentity) GetData() []*Data {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
 type DataPutRequest struct {
 	// string representation of identity, must be equal handshake result
 	Identity string `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
@@ -96,7 +148,7 @@ func (m *DataPutRequest) Reset()         { *m = DataPutRequest{} }
 func (m *DataPutRequest) String() string { return proto.CompactTextString(m) }
 func (*DataPutRequest) ProtoMessage()    {}
 func (*DataPutRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fff72e8611224dab, []int{1}
+	return fileDescriptor_fff72e8611224dab, []int{2}
 }
 func (m *DataPutRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -150,7 +202,7 @@ func (m *DataDeleteRequest) Reset()         { *m = DataDeleteRequest{} }
 func (m *DataDeleteRequest) String() string { return proto.CompactTextString(m) }
 func (*DataDeleteRequest) ProtoMessage()    {}
 func (*DataDeleteRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fff72e8611224dab, []int{2}
+	return fileDescriptor_fff72e8611224dab, []int{3}
 }
 func (m *DataDeleteRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -194,8 +246,8 @@ func (m *DataDeleteRequest) GetKinds() []string {
 }
 
 type DataPullRequest struct {
-	// string representation of identity wanted to request
-	Identity string `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	// list of identities wanted to request
+	Identities []string `protobuf:"bytes,1,rep,name=identities,proto3" json:"identities,omitempty"`
 	// kinds of data wanted to request
 	Kinds []string `protobuf:"bytes,2,rep,name=kinds,proto3" json:"kinds,omitempty"`
 }
@@ -204,7 +256,7 @@ func (m *DataPullRequest) Reset()         { *m = DataPullRequest{} }
 func (m *DataPullRequest) String() string { return proto.CompactTextString(m) }
 func (*DataPullRequest) ProtoMessage()    {}
 func (*DataPullRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fff72e8611224dab, []int{3}
+	return fileDescriptor_fff72e8611224dab, []int{4}
 }
 func (m *DataPullRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -233,11 +285,11 @@ func (m *DataPullRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_DataPullRequest proto.InternalMessageInfo
 
-func (m *DataPullRequest) GetIdentity() string {
+func (m *DataPullRequest) GetIdentities() []string {
 	if m != nil {
-		return m.Identity
+		return m.Identities
 	}
-	return ""
+	return nil
 }
 
 func (m *DataPullRequest) GetKinds() []string {
@@ -248,16 +300,14 @@ func (m *DataPullRequest) GetKinds() []string {
 }
 
 type DataPullResponse struct {
-	Identities []string `protobuf:"bytes,1,rep,name=identities,proto3" json:"identities,omitempty"`
-	// a list of data with requested kinds
-	Data []*Data `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty"`
+	Data []*DataWithIdentity `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
 }
 
 func (m *DataPullResponse) Reset()         { *m = DataPullResponse{} }
 func (m *DataPullResponse) String() string { return proto.CompactTextString(m) }
 func (*DataPullResponse) ProtoMessage()    {}
 func (*DataPullResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fff72e8611224dab, []int{4}
+	return fileDescriptor_fff72e8611224dab, []int{5}
 }
 func (m *DataPullResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -286,14 +336,7 @@ func (m *DataPullResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_DataPullResponse proto.InternalMessageInfo
 
-func (m *DataPullResponse) GetIdentities() []string {
-	if m != nil {
-		return m.Identities
-	}
-	return nil
-}
-
-func (m *DataPullResponse) GetData() []*Data {
+func (m *DataPullResponse) GetData() []*DataWithIdentity {
 	if m != nil {
 		return m.Data
 	}
@@ -307,7 +350,7 @@ func (m *Ok) Reset()         { *m = Ok{} }
 func (m *Ok) String() string { return proto.CompactTextString(m) }
 func (*Ok) ProtoMessage()    {}
 func (*Ok) Descriptor() ([]byte, []int) {
-	return fileDescriptor_fff72e8611224dab, []int{5}
+	return fileDescriptor_fff72e8611224dab, []int{6}
 }
 func (m *Ok) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -338,6 +381,7 @@ var xxx_messageInfo_Ok proto.InternalMessageInfo
 
 func init() {
 	proto.RegisterType((*Data)(nil), "identityRepo.Data")
+	proto.RegisterType((*DataWithIdentity)(nil), "identityRepo.DataWithIdentity")
 	proto.RegisterType((*DataPutRequest)(nil), "identityRepo.DataPutRequest")
 	proto.RegisterType((*DataDeleteRequest)(nil), "identityRepo.DataDeleteRequest")
 	proto.RegisterType((*DataPullRequest)(nil), "identityRepo.DataPullRequest")
@@ -350,28 +394,30 @@ func init() {
 }
 
 var fileDescriptor_fff72e8611224dab = []byte{
-	// 333 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xb2, 0xc8, 0x4c, 0x49, 0xcd,
-	0x2b, 0xc9, 0x2c, 0xa9, 0x2c, 0x4a, 0x2d, 0xc8, 0xd7, 0x47, 0xe6, 0x14, 0x14, 0xe5, 0x97, 0xe4,
-	0xeb, 0x83, 0xc9, 0x62, 0x14, 0x09, 0x3d, 0xb0, 0x98, 0x10, 0x0f, 0x4c, 0x2c, 0x28, 0xb5, 0x20,
-	0x5f, 0xc9, 0x87, 0x8b, 0xc5, 0x25, 0xb1, 0x24, 0x51, 0x48, 0x88, 0x8b, 0x25, 0x3b, 0x33, 0x2f,
-	0x45, 0x82, 0x51, 0x81, 0x51, 0x83, 0x33, 0x08, 0xcc, 0x06, 0x89, 0xa5, 0x24, 0x96, 0x24, 0x4a,
-	0x30, 0x29, 0x30, 0x6a, 0xf0, 0x04, 0x81, 0xd9, 0x42, 0x32, 0x5c, 0x9c, 0xc5, 0x99, 0xe9, 0x79,
-	0x89, 0x25, 0xa5, 0x45, 0xa9, 0x12, 0xcc, 0x60, 0x09, 0x84, 0x80, 0x52, 0x08, 0x17, 0x1f, 0xc8,
-	0xb4, 0x80, 0xd2, 0x92, 0xa0, 0xd4, 0xc2, 0xd2, 0xd4, 0xe2, 0x12, 0x21, 0x29, 0x2e, 0x0e, 0x98,
-	0x7d, 0x50, 0xb3, 0xe1, 0x7c, 0x21, 0x35, 0xb8, 0xf9, 0xcc, 0x1a, 0xdc, 0x46, 0x42, 0x7a, 0xc8,
-	0x0e, 0xd3, 0x03, 0x99, 0x03, 0xb1, 0x53, 0xc9, 0x95, 0x4b, 0x10, 0xc4, 0x73, 0x49, 0xcd, 0x49,
-	0x2d, 0x49, 0x25, 0xc6, 0x60, 0x11, 0x2e, 0x56, 0x90, 0x07, 0x8a, 0xc1, 0x26, 0x73, 0x06, 0x41,
-	0x38, 0x4a, 0xce, 0x5c, 0xfc, 0x10, 0xc7, 0xe5, 0xe4, 0x90, 0x6f, 0x48, 0x14, 0x97, 0x00, 0xc2,
-	0x90, 0xe2, 0x82, 0xfc, 0xbc, 0xe2, 0x54, 0x21, 0x39, 0x2e, 0x2e, 0xa8, 0xae, 0xcc, 0xd4, 0x62,
-	0x09, 0x46, 0xb0, 0x72, 0x24, 0x11, 0xa2, 0xfd, 0xc9, 0xc2, 0xc5, 0xe4, 0x9f, 0x6d, 0x74, 0x95,
-	0x91, 0x8b, 0xc7, 0x13, 0x49, 0x85, 0x90, 0x25, 0x17, 0x3b, 0x34, 0x50, 0x85, 0x64, 0x30, 0xf5,
-	0x22, 0xc2, 0x5a, 0x4a, 0x00, 0x55, 0xd6, 0x3f, 0x5b, 0xc8, 0x9e, 0x8b, 0x0b, 0x11, 0x72, 0x42,
-	0xf2, 0x98, 0xba, 0x51, 0xc2, 0x14, 0x8b, 0x01, 0x9e, 0x5c, 0x1c, 0x30, 0xef, 0x0a, 0xc9, 0x62,
-	0xb3, 0x1c, 0x1e, 0x96, 0x52, 0x72, 0xb8, 0xa4, 0x21, 0xa1, 0xe4, 0x64, 0x71, 0xe2, 0x91, 0x1c,
-	0xe3, 0x85, 0x47, 0x72, 0x8c, 0x0f, 0x1e, 0xc9, 0x31, 0x4e, 0x78, 0x2c, 0xc7, 0x70, 0xe1, 0xb1,
-	0x1c, 0xc3, 0x8d, 0xc7, 0x72, 0x0c, 0x51, 0x72, 0xf8, 0xd3, 0x72, 0x12, 0x1b, 0x98, 0x32, 0x06,
-	0x04, 0x00, 0x00, 0xff, 0xff, 0xa5, 0x0b, 0xc7, 0x5e, 0xf4, 0x02, 0x00, 0x00,
+	// 359 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x93, 0x4f, 0x4b, 0x02, 0x41,
+	0x18, 0xc6, 0x1d, 0xb5, 0xd2, 0x37, 0x29, 0x7b, 0xe9, 0xb0, 0x88, 0x4d, 0xb2, 0x87, 0xf0, 0xa4,
+	0x60, 0x17, 0x3b, 0x05, 0x61, 0x85, 0x10, 0x18, 0x4b, 0x14, 0x74, 0xdb, 0x70, 0xa8, 0x41, 0xd9,
+	0xdd, 0x9c, 0xf1, 0xd0, 0xb7, 0xe8, 0x63, 0x75, 0xf4, 0x12, 0x74, 0x0c, 0xfd, 0x22, 0x31, 0x7f,
+	0x56, 0x77, 0x59, 0x8d, 0x0e, 0x5d, 0x76, 0xe7, 0x7d, 0xdf, 0x99, 0xdf, 0x33, 0xcf, 0x03, 0x03,
+	0x5d, 0x3e, 0x64, 0x81, 0xe4, 0xf2, 0x6d, 0xc2, 0xa2, 0xb0, 0x9d, 0x2c, 0xa2, 0x49, 0x28, 0xc3,
+	0xb6, 0xfe, 0x8a, 0xd4, 0xa0, 0xa5, 0x7b, 0x58, 0x89, 0x7b, 0x1e, 0x8b, 0x42, 0xf7, 0x06, 0x8a,
+	0x3d, 0x5f, 0xfa, 0x88, 0x50, 0x1c, 0xf1, 0x60, 0xe8, 0x90, 0x06, 0x69, 0x96, 0x3d, 0xbd, 0x56,
+	0xbd, 0xa1, 0x2f, 0x7d, 0x27, 0xdf, 0x20, 0xcd, 0x8a, 0xa7, 0xd7, 0x58, 0x87, 0xb2, 0xe0, 0xcf,
+	0x81, 0x2f, 0xa7, 0x13, 0xe6, 0x14, 0xf4, 0x60, 0xd5, 0x70, 0xef, 0xa1, 0xaa, 0x68, 0x0f, 0x5c,
+	0xbe, 0xf4, 0xad, 0x0a, 0xd6, 0xa0, 0x14, 0x2b, 0x5a, 0xfa, 0xb2, 0xc6, 0x93, 0xa5, 0x42, 0xa1,
+	0xb9, 0xdb, 0xc1, 0x56, 0xf2, 0x6a, 0x2d, 0x45, 0x32, 0xaa, 0xee, 0x1d, 0xec, 0xa9, 0xea, 0x76,
+	0x2a, 0x3d, 0xf6, 0x3a, 0x65, 0x42, 0xfe, 0x0b, 0xf5, 0x12, 0x0e, 0x54, 0xd5, 0x63, 0x63, 0x26,
+	0xd9, 0x5f, 0xc0, 0x87, 0xb0, 0xa5, 0x82, 0x11, 0x9a, 0x5c, 0xf6, 0x4c, 0xe1, 0x5e, 0xc3, 0xbe,
+	0xb9, 0xdc, 0x78, 0x1c, 0x43, 0x28, 0x80, 0x3d, 0xc4, 0x99, 0x70, 0x88, 0xde, 0x9d, 0xe8, 0x6c,
+	0x00, 0x5d, 0x99, 0xf4, 0x0c, 0x48, 0x44, 0x61, 0x20, 0x18, 0x76, 0xac, 0x17, 0xa2, 0xbd, 0xd0,
+	0xac, 0x97, 0x64, 0xd6, 0xd6, 0x57, 0x11, 0xf2, 0x83, 0x51, 0xe7, 0x93, 0x40, 0xa5, 0x9f, 0xd8,
+	0x8d, 0x67, 0xb0, 0x63, 0x43, 0xc4, 0x7a, 0x96, 0xb3, 0xca, 0xb6, 0x56, 0x4d, 0x4f, 0x07, 0x23,
+	0x3c, 0x07, 0x58, 0x25, 0x85, 0xc7, 0xd9, 0xd3, 0xa9, 0x0c, 0xd7, 0x00, 0xfa, 0x50, 0x8a, 0xad,
+	0xe1, 0xd1, 0x3a, 0xf1, 0x65, 0x76, 0x35, 0xba, 0x69, 0x6c, 0x12, 0xb9, 0xe8, 0x7e, 0xcc, 0x29,
+	0x99, 0xcd, 0x29, 0xf9, 0x9e, 0x53, 0xf2, 0xbe, 0xa0, 0xb9, 0xd9, 0x82, 0xe6, 0xbe, 0x16, 0x34,
+	0xf7, 0x48, 0x7f, 0x7f, 0x13, 0x4f, 0xdb, 0xfa, 0x77, 0xfa, 0x13, 0x00, 0x00, 0xff, 0xff, 0x42,
+	0x4c, 0xac, 0xe7, 0x3c, 0x03, 0x00, 0x00,
 }
 
 func (m *Data) Marshal() (dAtA []byte, err error) {
@@ -412,6 +458,50 @@ func (m *Data) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.Kind)
 		copy(dAtA[i:], m.Kind)
 		i = encodeVarintIdentityrepo(dAtA, i, uint64(len(m.Kind)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *DataWithIdentity) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DataWithIdentity) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DataWithIdentity) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Data) > 0 {
+		for iNdEx := len(m.Data) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Data[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintIdentityrepo(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintIdentityrepo(dAtA, i, uint64(len(m.Identity)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -530,12 +620,14 @@ func (m *DataPullRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			dAtA[i] = 0x12
 		}
 	}
-	if len(m.Identity) > 0 {
-		i -= len(m.Identity)
-		copy(dAtA[i:], m.Identity)
-		i = encodeVarintIdentityrepo(dAtA, i, uint64(len(m.Identity)))
-		i--
-		dAtA[i] = 0xa
+	if len(m.Identities) > 0 {
+		for iNdEx := len(m.Identities) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Identities[iNdEx])
+			copy(dAtA[i:], m.Identities[iNdEx])
+			i = encodeVarintIdentityrepo(dAtA, i, uint64(len(m.Identities[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
 	}
 	return len(dAtA) - i, nil
 }
@@ -570,15 +662,6 @@ func (m *DataPullResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 				i -= size
 				i = encodeVarintIdentityrepo(dAtA, i, uint64(size))
 			}
-			i--
-			dAtA[i] = 0x12
-		}
-	}
-	if len(m.Identities) > 0 {
-		for iNdEx := len(m.Identities) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Identities[iNdEx])
-			copy(dAtA[i:], m.Identities[iNdEx])
-			i = encodeVarintIdentityrepo(dAtA, i, uint64(len(m.Identities[iNdEx])))
 			i--
 			dAtA[i] = 0xa
 		}
@@ -641,6 +724,25 @@ func (m *Data) Size() (n int) {
 	return n
 }
 
+func (m *DataWithIdentity) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Identity)
+	if l > 0 {
+		n += 1 + l + sovIdentityrepo(uint64(l))
+	}
+	if len(m.Data) > 0 {
+		for _, e := range m.Data {
+			l = e.Size()
+			n += 1 + l + sovIdentityrepo(uint64(l))
+		}
+	}
+	return n
+}
+
 func (m *DataPutRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -685,9 +787,11 @@ func (m *DataPullRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Identity)
-	if l > 0 {
-		n += 1 + l + sovIdentityrepo(uint64(l))
+	if len(m.Identities) > 0 {
+		for _, s := range m.Identities {
+			l = len(s)
+			n += 1 + l + sovIdentityrepo(uint64(l))
+		}
 	}
 	if len(m.Kinds) > 0 {
 		for _, s := range m.Kinds {
@@ -704,12 +808,6 @@ func (m *DataPullResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if len(m.Identities) > 0 {
-		for _, s := range m.Identities {
-			l = len(s)
-			n += 1 + l + sovIdentityrepo(uint64(l))
-		}
-	}
 	if len(m.Data) > 0 {
 		for _, e := range m.Data {
 			l = e.Size()
@@ -861,6 +959,122 @@ func (m *Data) Unmarshal(dAtA []byte) error {
 			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
 			if m.Signature == nil {
 				m.Signature = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipIdentityrepo(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthIdentityrepo
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DataWithIdentity) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowIdentityrepo
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DataWithIdentity: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DataWithIdentity: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowIdentityrepo
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthIdentityrepo
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthIdentityrepo
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowIdentityrepo
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthIdentityrepo
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthIdentityrepo
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Data = append(m.Data, &Data{})
+			if err := m.Data[len(m.Data)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
 			iNdEx = postIndex
 		default:
@@ -1145,7 +1359,7 @@ func (m *DataPullRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Identities", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -1173,7 +1387,7 @@ func (m *DataPullRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Identity = string(dAtA[iNdEx:postIndex])
+			m.Identities = append(m.Identities, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -1259,38 +1473,6 @@ func (m *DataPullResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Identities", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowIdentityrepo
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthIdentityrepo
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthIdentityrepo
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Identities = append(m.Identities, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
 			}
 			var msglen int
@@ -1318,7 +1500,7 @@ func (m *DataPullResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Data = append(m.Data, &Data{})
+			m.Data = append(m.Data, &DataWithIdentity{})
 			if err := m.Data[len(m.Data)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}

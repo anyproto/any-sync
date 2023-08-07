@@ -21,6 +21,11 @@ message Data {
   bytes signature = 3;
 }
 
+message DataWithIdentity {
+  string identity = 1;
+  repeated Data data = 2;
+}
+
 message DataPutRequest {
   // string representation of identity, must be equal handshake result
   string identity = 1;
@@ -36,16 +41,14 @@ message DataDeleteRequest {
 }
 
 message DataPullRequest {
-  // string representation of identity wanted to request
-  string identity = 1;
+  // list of identities wanted to request
+  repeated string identities = 1;
   // kinds of data wanted to request
   repeated string kinds = 2;
 }
 
 message DataPullResponse {
-  repeated string identities = 1;
-  // a list of data with requested kinds
-  repeated Data data = 2;
+  repeated DataWithIdentity data = 1;
 }
 
 
