@@ -43,7 +43,7 @@ message DataPullRequest {
 }
 
 message DataPullResponse {
-  string identity = 1;
+  repeated string identities = 1;
   // a list of data with requested kinds
   repeated Data data = 2;
 }
