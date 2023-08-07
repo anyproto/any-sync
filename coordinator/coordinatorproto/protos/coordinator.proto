@@ -140,6 +140,8 @@ enum NodeType {
     FileAPI = 1;
     // CoordinatorAPI supports coordinator api
     CoordinatorAPI = 2;
+    // ConsensusAPI supports consensus api
+    ConsensusAPI = 3;
 }
 
 // Node describes one node in the network
