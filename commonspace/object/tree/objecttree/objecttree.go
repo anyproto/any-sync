@@ -274,6 +274,7 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 		PrivKey:        content.Key,
 		ReadKey:        readKey,
 		Content:        content.Data,
+		DataType:       content.DataType,
 		Timestamp:      timestamp,
 	}
 	return

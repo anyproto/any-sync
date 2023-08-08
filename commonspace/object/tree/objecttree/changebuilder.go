@@ -20,6 +20,7 @@ type BuilderContent struct {
 	ReadKey        crypto.SymKey
 	Content        []byte
 	Timestamp      int64
+	DataType       string
 }
 
 type InitialContent struct {
@@ -169,6 +170,7 @@ func (c *changeBuilder) Build(payload BuilderContent) (ch *Change, rawIdChange *
 		Timestamp:      payload.Timestamp,
 		Identity:       identity,
 		IsSnapshot:     payload.IsSnapshot,
+		DataType:       payload.DataType,
 	}
 	if payload.ReadKey != nil {
 		var encrypted []byte
@@ -225,6 +227,7 @@ func (c *changeBuilder) Marshall(ch *Change) (raw *treechangeproto.RawTreeChange
 		Timestamp:      ch.Timestamp,
 		Identity:       identity,
 		IsSnapshot:     ch.IsSnapshot,
+		DataType:       ch.DataType,
 	}
 	var marshalled []byte
 	marshalled, err = treeChange.Marshal()

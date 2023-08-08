@@ -290,6 +290,9 @@ func (s *syncStatusService) RemoveAllExcept(senderId string, differentRemoteIds 
 }
 
 func (s *syncStatusService) Close(ctx context.Context) error {
+	if s.periodicSync == nil {
+		return nil
+	}
 	s.periodicSync.Close()
 	return nil
 }

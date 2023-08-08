@@ -107,7 +107,7 @@ func TestObjectTree(t *testing.T) {
 		oTree, err := BuildObjectTree(store, aclList)
 		require.NoError(t, err)
 
-		t.Run("0 timestamp is changed to current", func(t *testing.T) {
+		t.Run("0 timestamp is changed to current, data type is correct", func(t *testing.T) {
 			start := time.Now()
 			res, err := oTree.AddContent(ctx, SignableChangeContent{
 				Data:        []byte("some"),
@@ -115,6 +115,7 @@ func TestObjectTree(t *testing.T) {
 				IsSnapshot:  false,
 				IsEncrypted: true,
 				Timestamp:   0,
+				DataType:    mockDataType,
 			})
 			end := time.Now()
 			require.NoError(t, err)
@@ -125,6 +126,7 @@ func TestObjectTree(t *testing.T) {
 			require.GreaterOrEqual(t, start.Unix(), ch.Timestamp)
 			require.LessOrEqual(t, end.Unix(), ch.Timestamp)
 			require.Equal(t, res.Added[0].Id, oTree.(*objectTree).tree.lastIteratedHeadId)
+			require.Equal(t, mockDataType, ch.DataType)
 		})
 		t.Run("timestamp is set correctly", func(t *testing.T) {
 			someTs := time.Now().Add(time.Hour).Unix()
@@ -174,6 +176,9 @@ func TestObjectTree(t *testing.T) {
 		// check tree iterate
 		var iterChangesId []string
 		err = objTree.IterateRoot(nil, func(change *Change) bool {
+			if change.Id != objTree.Id() {
+				assert.Equal(t, mockDataType, change.DataType)
+			}
 			iterChangesId = append(iterChangesId, change.Id)
 			return true
 		})
@@ -574,6 +579,12 @@ func TestObjectTree(t *testing.T) {
 			for _, id := range []string{"0", "1"} {
 				_, ok := changeIds[id]
 				assert.Equal(t, false, ok)
+			}
+
+			for _, rawCh := range changes {
+				ch, err := ctx.objTree.(*objectTree).changeBuilder.Unmarshall(rawCh, false)
+				require.NoError(t, err)
+				require.Equal(t, mockDataType, ch.DataType)
 			}
 		})
 

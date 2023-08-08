@@ -25,6 +25,7 @@ type Change struct {
 	Data        []byte
 	Model       interface{}
 	Signature   []byte
+	DataType    string
 
 	// iterator helpers
 	visited          bool
@@ -45,6 +46,7 @@ func NewChange(id string, identity crypto.PubKey, ch *treechangeproto.TreeChange
 		IsSnapshot:  ch.IsSnapshot,
 		Identity:    identity,
 		Signature:   signature,
+		DataType:    ch.DataType,
 	}
 }
 
