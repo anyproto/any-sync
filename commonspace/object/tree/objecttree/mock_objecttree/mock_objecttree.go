@@ -13,7 +13,7 @@ import (
 	objecttree "github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	treechangeproto "github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	treestorage "github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockObjectTree is a mock of ObjectTree interface.

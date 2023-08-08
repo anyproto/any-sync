@@ -36,13 +36,13 @@ type Watcher interface {
 
 type Service interface {
 	// AddLog adds new log to consensus servers
-	AddLog(ctx context.Context, clog *consensusproto.Log) (err error)
+	AddLog(ctx context.Context, rec *consensusproto.RawRecordWithId) (err error)
 	// AddRecord adds new record to consensus servers
-	AddRecord(ctx context.Context, logId []byte, clog *consensusproto.RawRecord) (record *consensusproto.RawRecordWithId, err error)
+	AddRecord(ctx context.Context, logId string, rec *consensusproto.RawRecord) (record *consensusproto.RawRecordWithId, err error)
 	// Watch starts watching to given logId and calls watcher when any relative event received
-	Watch(logId []byte, w Watcher) (err error)
+	Watch(logId string, w Watcher) (err error)
 	// UnWatch stops watching given logId and removes watcher
-	UnWatch(logId []byte) (err error)
+	UnWatch(logId string) (err error)
 	app.ComponentRunnable
 }
 
@@ -86,10 +86,10 @@ func (s *service) doClient(ctx context.Context, fn func(cl consensusproto.DRPCCo
 	return fn(consensusproto.NewDRPCConsensusClient(dc))
 }
 
-func (s *service) AddLog(ctx context.Context, clog *consensusproto.Log) (err error) {
+func (s *service) AddLog(ctx context.Context, rec *consensusproto.RawRecordWithId) (err error) {
 	return s.doClient(ctx, func(cl consensusproto.DRPCConsensusClient) error {
 		if _, err = cl.LogAdd(ctx, &consensusproto.LogAddRequest{
-			Log: clog,
+			Record: rec,
 		}); err != nil {
 			return rpcerr.Unwrap(err)
 		}
@@ -97,11 +97,11 @@ func (s *service) AddLog(ctx context.Context, clog *consensusproto.Log) (err err
 	})
 }
 
-func (s *service) AddRecord(ctx context.Context, logId []byte, clog *consensusproto.RawRecord) (record *consensusproto.RawRecordWithId, err error) {
+func (s *service) AddRecord(ctx context.Context, logId string, rec *consensusproto.RawRecord) (record *consensusproto.RawRecordWithId, err error) {
 	err = s.doClient(ctx, func(cl consensusproto.DRPCConsensusClient) error {
 		if record, err = cl.RecordAdd(ctx, &consensusproto.RecordAddRequest{
 			LogId:  logId,
-			Record: clog,
+			Record: rec,
 		}); err != nil {
 			return rpcerr.Unwrap(err)
 		}
@@ -110,30 +110,30 @@ func (s *service) AddRecord(ctx context.Context, logId []byte, clog *consensuspr
 	return
 }
 
-func (s *service) Watch(logId []byte, w Watcher) (err error) {
+func (s *service) Watch(logId string, w Watcher) (err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, ok := s.watchers[string(logId)]; ok {
+	if _, ok := s.watchers[logId]; ok {
 		return ErrWatcherExists
 	}
-	s.watchers[string(logId)] = w
+	s.watchers[logId] = w
 	if s.stream != nil {
-		if wErr := s.stream.WatchIds([][]byte{logId}); wErr != nil {
+		if wErr := s.stream.WatchIds([]string{logId}); wErr != nil {
 			log.Warn("WatchIds error", zap.Error(wErr))
 		}
 	}
 	return
 }
 
-func (s *service) UnWatch(logId []byte) (err error) {
+func (s *service) UnWatch(logId string) (err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, ok := s.watchers[string(logId)]; !ok {
+	if _, ok := s.watchers[logId]; !ok {
 		return ErrWatcherNotExists
 	}
-	delete(s.watchers, string(logId))
+	delete(s.watchers, logId)
 	if s.stream != nil {
-		if wErr := s.stream.UnwatchIds([][]byte{logId}); wErr != nil {
+		if wErr := s.stream.UnwatchIds([]string{logId}); wErr != nil {
 			log.Warn("UnWatchIds error", zap.Error(wErr))
 		}
 	}
@@ -182,9 +182,9 @@ func (s *service) streamWatcher() {
 
 		// collect ids and setup stream
 		s.mu.Lock()
-		var logIds = make([][]byte, 0, len(s.watchers))
+		var logIds = make([]string, 0, len(s.watchers))
 		for id := range s.watchers {
-			logIds = append(logIds, []byte(id))
+			logIds = append(logIds, id)
 		}
 		s.stream = st
 		s.mu.Unlock()
@@ -212,17 +212,19 @@ func (s *service) streamReader() error {
 		if len(events) == 0 {
 			return s.stream.Err()
 		}
+		s.mu.Lock()
 		for _, e := range events {
-			if w, ok := s.watchers[string(e.LogId)]; ok {
+			if w, ok := s.watchers[e.LogId]; ok {
 				if e.Error == nil {
 					w.AddConsensusRecords(e.Records)
 				} else {
 					w.AddConsensusError(rpcerr.Err(uint64(e.Error.Error)))
 				}
 			} else {
-				log.Warn("received unexpected log id", zap.Binary("logId", e.LogId))
+				log.Warn("received unexpected log id", zap.String("logId", e.LogId))
 			}
 		}
+		s.mu.Unlock()
 	}
 }
 

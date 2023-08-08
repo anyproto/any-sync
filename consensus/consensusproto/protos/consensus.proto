@@ -8,13 +8,14 @@ enum ErrCodes {
     LogExists = 1;
     LogNotFound = 2;
     RecordConflict = 3;
+    Forbidden = 4;
+    InvalidPayload = 5;
     ErrorOffset = 500;
 }
 
 
 message Log {
-    bytes id = 1;
-    bytes payload = 2;
+    string id = 1;
     repeated RawRecordWithId records = 3;
 }
 
@@ -53,21 +54,22 @@ service Consensus {
 message Ok {}
 
 message LogAddRequest {
-    Log log = 1;
+    // first record in the log, consensus node not sign it
+    RawRecordWithId record = 1;
 }
 
 message RecordAddRequest {
-    bytes logId = 1;
+    string logId = 1;
     RawRecord record = 2;
 }
 
 message LogWatchRequest {
-    repeated bytes watchIds = 1;
-    repeated bytes unwatchIds = 2;
+    repeated string watchIds = 1;
+    repeated string unwatchIds = 2;
 }
 
 message LogWatchEvent {
-    bytes logId = 1;
+    string logId = 1;
     repeated RawRecordWithId records = 2;
     Err error = 3;
 }

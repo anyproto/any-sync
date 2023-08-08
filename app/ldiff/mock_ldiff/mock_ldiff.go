@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	ldiff "github.com/anyproto/any-sync/app/ldiff"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockDiff is a mock of Diff interface.

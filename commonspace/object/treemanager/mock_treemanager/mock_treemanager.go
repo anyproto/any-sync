@@ -11,7 +11,7 @@ import (
 	app "github.com/anyproto/any-sync/app"
 	objecttree "github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	treemanager "github.com/anyproto/any-sync/commonspace/object/treemanager"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockTreeManager is a mock of TreeManager interface.

@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	consensusproto "github.com/anyproto/any-sync/consensus/consensusproto"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockListStorage is a mock of ListStorage interface.

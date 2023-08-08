@@ -12,7 +12,7 @@ import (
 	updatelistener "github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
 	treestorage "github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	objecttreebuilder "github.com/anyproto/any-sync/commonspace/objecttreebuilder"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockTreeBuilder is a mock of TreeBuilder interface.
