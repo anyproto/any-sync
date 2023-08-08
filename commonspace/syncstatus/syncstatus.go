@@ -111,6 +111,11 @@ func (s *syncStatusService) Init(a *app.App) (err error) {
 	s.spaceId = sharedState.SpaceId
 	s.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	s.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
+	s.periodicSync = periodicsync.NewPeriodicSync(
+		s.updateIntervalSecs,
+		s.updateTimeout,
+		s.update,
+		log)
 	return
 }
 
@@ -126,11 +131,6 @@ func (s *syncStatusService) SetUpdateReceiver(updater UpdateReceiver) {
 }
 
 func (s *syncStatusService) Run(ctx context.Context) error {
-	s.periodicSync = periodicsync.NewPeriodicSync(
-		s.updateIntervalSecs,
-		s.updateTimeout,
-		s.update,
-		log)
 	s.periodicSync.Run()
 	return nil
 }
@@ -290,9 +290,6 @@ func (s *syncStatusService) RemoveAllExcept(senderId string, differentRemoteIds 
 }
 
 func (s *syncStatusService) Close(ctx context.Context) error {
-	if s.periodicSync == nil {
-		return nil
-	}
 	s.periodicSync.Close()
 	return nil
 }
