@@ -133,6 +133,18 @@ func (mr *MockPeerMockRecorder) ReleaseDrpcConn(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseDrpcConn", reflect.TypeOf((*MockPeer)(nil).ReleaseDrpcConn), arg0)
 }
 
+// SetTTL mocks base method.
+func (m *MockPeer) SetTTL(arg0 time.Duration) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetTTL", arg0)
+}
+
+// SetTTL indicates an expected call of SetTTL.
+func (mr *MockPeerMockRecorder) SetTTL(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTTL", reflect.TypeOf((*MockPeer)(nil).SetTTL), arg0)
+}
+
 // TryClose mocks base method.
 func (m *MockPeer) TryClose(arg0 time.Duration) (bool, error) {
 	m.ctrl.T.Helper()

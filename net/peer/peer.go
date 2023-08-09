@@ -63,6 +63,9 @@ type Peer interface {
 
 	IsClosed() bool
 
+	// SetTTL overrides the default pool ttl
+	SetTTL(ttl time.Duration)
+
 	TryClose(objectTTL time.Duration) (res bool, err error)
 
 	ocache.Object
@@ -90,10 +93,11 @@ type peer struct {
 
 	acceptCtxCancel context.CancelFunc
 
+	ttl atomic.Uint32
+
 	limiter limiter
 
-	mu sync.Mutex
-
+	mu      sync.Mutex
 	created time.Time
 	transport.MultiConn
 }
@@ -183,10 +187,10 @@ func (p *peer) openDrpcConn(ctx context.Context) (dconn *subConn, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = handshake.OutgoingProtoHandshake(ctx, conn, handshakeproto.ProtoType_DRPC); err != nil {
+	tconn := connutil.NewLastUsageConn(conn)
+	if err = handshake.OutgoingProtoHandshake(ctx, tconn, handshakeproto.ProtoType_DRPC); err != nil {
 		return nil, err
 	}
-	tconn := connutil.NewLastUsageConn(conn)
 	bufSize := p.ctrl.DrpcConfig().Stream.MaxMsgSizeMb * (1 << 20)
 	return &subConn{
 		Conn: drpcconn.NewWithOptions(tconn, drpcconn.Options{
@@ -247,7 +251,14 @@ func (p *peer) serve(conn net.Conn) (err error) {
 	return p.ctrl.ServeConn(p.Context(), conn)
 }
 
+func (p *peer) SetTTL(ttl time.Duration) {
+	p.ttl.Store(uint32(ttl.Seconds()))
+}
+
 func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
+	if ttl := p.ttl.Load(); ttl > 0 {
+		objectTTL = time.Duration(ttl) * time.Second
+	}
 	aliveCount := p.gc(objectTTL)
 	if aliveCount == 0 && p.created.Add(time.Minute).Before(time.Now()) {
 		return true, p.Close()
