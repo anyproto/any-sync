@@ -21,10 +21,11 @@ type RequestRecord struct {
 	Type            RequestType
 }
 
-type AclUserState struct {
+type AclAccountState struct {
 	PubKey          crypto.PubKey
 	Permissions     AclPermissions
 	RequestMetadata []byte
+	KeyRecordId     string
 }
 
 type RequestType int

@@ -9,7 +9,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/app/logger"
-	config2 "github.com/anyproto/any-sync/commonspace/config"
+	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
@@ -73,7 +73,7 @@ var createDiffSyncer = newDiffSyncer
 
 func (h *headSync) Init(a *app.App) (err error) {
 	shared := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
-	cfg := a.MustComponent("config").(config2.ConfigGetter)
+	cfg := a.MustComponent("config").(config.ConfigGetter)
 	h.syncAcl = a.MustComponent(syncacl.CName).(syncacl.SyncAcl)
 	h.spaceId = shared.SpaceId
 	h.spaceIsDeleted = shared.SpaceIsDeleted

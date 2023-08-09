@@ -11,6 +11,7 @@ enum ErrCodes {
     SpaceIsDeleted = 4;
     PeerIsNotResponsible = 5;
     ReceiptIsInvalid = 6;
+    InvalidPayload = 7;
     ErrorOffset = 100;
 }
 
@@ -25,6 +26,10 @@ service SpaceSync {
     rpc ObjectSyncStream(stream ObjectSyncMessage) returns (stream ObjectSyncMessage);
     // ObjectSync sends object sync message and synchronously gets response message
     rpc ObjectSync(ObjectSyncMessage) returns (ObjectSyncMessage);
+    // AclAddRecord adds a new record to acl log. Works only with any-sync-node
+    rpc AclAddRecord(AclAddRecordRequest) returns (AclAddRecordResponse);
+    // AclGetRecords gets acl records
+    rpc AclGetRecords(AclGetRecordsRequest) returns (AclGetRecordsResponse);
 }
 
 // HeadSyncRange presenting a request for one range
@@ -156,4 +161,28 @@ enum SpaceSubscriptionAction {
 message SpaceSubscription {
     repeated string spaceIds = 1;
     SpaceSubscriptionAction action = 2;
+}
+
+// AclAddRecordRequest contains marshaled consensusproto.RawRecord
+message AclAddRecordRequest {
+    string spaceId = 1;
+    bytes payload = 2;
+}
+
+// AclAddRecordResponse contains created record id and marshaled consensusproto.RawRecord
+message AclAddRecordResponse {
+    string recordId = 1;
+    bytes payload = 2;
+}
+
+// AclGetRecordsRequest can optionally contain the last known aclHeal, the server will return only new records or an empty list if there are no new records.
+// If aclHead is not provided the whole list will be returned.
+message AclGetRecordsRequest {
+    string spaceId = 1;
+    string aclHead = 2;
+}
+
+// AclGetRecordsResponse contains list of marshaled consensusproto.RawRecordWithId
+message AclGetRecordsResponse {
+    repeated bytes records = 1;
 }

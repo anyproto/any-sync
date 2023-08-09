@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+INSTALL_PYTHON=python3
+ARGS=(hook-impl --config=.pre-commit-config.yaml --hook-type=pre-push)
+# end templated
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+ARGS+=(--hook-dir "$HERE" -- "$@")
+
+if [ -x "$INSTALL_PYTHON" ]; then
+    exec "$INSTALL_PYTHON" -mpre_commit "${ARGS[@]}"
+elif command -v pre-commit > /dev/null; then
+    exec pre-commit "${ARGS[@]}"
+else
+    echo '`pre-commit` not found. Please visit https://wiki.anytype.io/doc/mandatory-git-hooks-5rQt1Qyw7k ' 1>&2
+    exit 1
+fi

@@ -9,11 +9,13 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
+	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/settings"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
+	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/util/crypto"
 	"go.uber.org/zap"
 	"strconv"
@@ -27,14 +29,16 @@ type SpaceCreatePayload struct {
 	SigningKey crypto.PrivKey
 	// SpaceType is an arbitrary string
 	SpaceType string
-	// ReadKey is a first symmetric encryption key for a space
-	ReadKey []byte
 	// ReplicationKey is a key which is to be used to determine the node where the space should be held
 	ReplicationKey uint64
 	// SpacePayload is an arbitrary payload related to space type
 	SpacePayload []byte
 	// MasterKey is the master key of the owner
 	MasterKey crypto.PrivKey
+	// ReadKey is the first read key of space
+	ReadKey crypto.SymKey
+	// MetadataKey is the first metadata key of space
+	MetadataKey crypto.PrivKey
 }
 
 type SpaceDerivePayload struct {
@@ -73,6 +77,8 @@ type Space interface {
 	SpaceDeleteRawChange(ctx context.Context) (raw *treechangeproto.RawTreeChangeWithId, err error)
 	DeleteSpace(ctx context.Context, deleteChange *treechangeproto.RawTreeChangeWithId) (err error)
 
+	GetNodePeers(ctx context.Context) (peer []peer.Peer, err error)
+
 	HandleMessage(ctx context.Context, msg objectsync.HandleMessage) (err error)
 	HandleSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
@@ -89,6 +95,7 @@ type space struct {
 	app   *app.App
 
 	treeBuilder objecttreebuilder.TreeBuilderComponent
+	peerManager peermanager.PeerManager
 	headSync    headsync.HeadSync
 	objectSync  objectsync.ObjectSync
 	syncStatus  syncstatus.StatusService
@@ -154,6 +161,10 @@ func (s *space) TreeBuilder() objecttreebuilder.TreeBuilder {
 	return s.treeBuilder
 }
 
+func (s *space) GetNodePeers(ctx context.Context) (peer []peer.Peer, err error) {
+	return s.peerManager.GetNodePeers(ctx)
+}
+
 func (s *space) Acl() list.AclList {
 	return s.aclList
 }
@@ -173,6 +184,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.settings = s.app.MustComponent(settings.CName).(settings.Settings)
 	s.objectSync = s.app.MustComponent(objectsync.CName).(objectsync.ObjectSync)
 	s.storage = s.app.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
+	s.peerManager = s.app.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	s.aclList = s.app.MustComponent(syncacl.CName).(list.AclList)
 	s.header, err = s.storage.SpaceHeader()
 	return

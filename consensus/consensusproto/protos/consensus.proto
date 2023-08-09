@@ -25,6 +25,7 @@ message RawRecord {
     bytes signature = 2;
     bytes acceptorIdentity = 3;
     bytes acceptorSignature = 4;
+    int64 acceptorTimestamp = 5;
 }
 
 // RawRecordWithId is a raw record and the id for convenience
