@@ -14,6 +14,7 @@ import (
 	"github.com/quic-go/quic-go"
 	"go.uber.org/zap"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -26,6 +27,7 @@ func New() Quic {
 }
 
 type Quic interface {
+	ListenAddrs(ctx context.Context, addrs ...string) (err error)
 	transport.Transport
 	app.ComponentRunnable
 }
@@ -38,6 +40,7 @@ type quicTransport struct {
 	listeners     []*quic.Listener
 	listCtx       context.Context
 	listCtxCancel context.CancelFunc
+	mu            sync.Mutex
 }
 
 func (q *quicTransport) Init(a *app.App) (err error) {
@@ -70,6 +73,13 @@ func (q *quicTransport) Run(ctx context.Context) (err error) {
 		return fmt.Errorf("can't run service without accepter")
 	}
 
+	q.listCtx, q.listCtxCancel = context.WithCancel(context.Background())
+	return q.ListenAddrs(ctx, q.conf.ListenAddrs...)
+}
+
+func (q *quicTransport) ListenAddrs(ctx context.Context, addrs ...string) (err error) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 	var tlsConf tls.Config
 	tlsConf.GetConfigForClient = func(_ *tls.ClientHelloInfo) (*tls.Config, error) {
 		conf, _, tlsErr := q.secure.TlsConfig()
@@ -80,15 +90,12 @@ func (q *quicTransport) Run(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	for _, listAddr := range q.conf.ListenAddrs {
+	for _, listAddr := range addrs {
 		list, err := quic.ListenAddr(listAddr, &tlsConf, q.quicConf)
 		if err != nil {
 			return err
 		}
 		q.listeners = append(q.listeners, list)
-	}
-	q.listCtx, q.listCtxCancel = context.WithCancel(context.Background())
-	for _, list := range q.listeners {
 		go q.acceptLoop(q.listCtx, list)
 	}
 	return

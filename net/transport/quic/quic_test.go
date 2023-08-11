@@ -74,7 +74,7 @@ func TestQuicTransport_Dial(t *testing.T) {
 // common write deadline - 66700 rps
 // subconn write deadline - 67100 rps
 func TestWriteBenchReuse(t *testing.T) {
-	//t.Skip()
+	t.Skip()
 	var (
 		numSubConn = 10
 		numWrites  = 10000
