@@ -2,12 +2,15 @@ package quic
 
 import (
 	"context"
+	"errors"
+	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/transport"
 	"github.com/quic-go/quic-go"
 	"net"
 )
 
 func newConn(cctx context.Context, qconn quic.Connection) transport.MultiConn {
+	cctx = peer.CtxWithPeerAddr(cctx, transport.Quic+"://"+qconn.RemoteAddr().String())
 	return &quicMultiConn{
 		cctx:       cctx,
 		Connection: qconn,
@@ -26,6 +29,11 @@ func (q *quicMultiConn) Context() context.Context {
 func (q *quicMultiConn) Accept() (conn net.Conn, err error) {
 	stream, err := q.Connection.AcceptStream(context.Background())
 	if err != nil {
+		if errors.Is(err, quic.ErrServerClosed) {
+			err = transport.ErrConnClosed
+		} else if aerr, ok := err.(*quic.ApplicationError); ok && aerr.ErrorCode == 2 {
+			err = transport.ErrConnClosed
+		}
 		return nil, err
 	}
 	return quicNetConn{
@@ -48,7 +56,7 @@ func (q *quicMultiConn) Open(ctx context.Context) (conn net.Conn, err error) {
 }
 
 func (q *quicMultiConn) Addr() string {
-	return q.RemoteAddr().String()
+	return transport.Quic + "://" + q.RemoteAddr().String()
 }
 
 func (q *quicMultiConn) IsClosed() bool {

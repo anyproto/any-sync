@@ -2,6 +2,7 @@ package quic
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -42,9 +43,16 @@ type quicTransport struct {
 func (q *quicTransport) Init(a *app.App) (err error) {
 	q.secure = a.MustComponent(secureservice.CName).(secureservice.SecureService)
 	q.conf = a.MustComponent("config").(configGetter).GetQuic()
+	if q.conf.MaxStreams <= 0 {
+		q.conf.MaxStreams = 128
+	}
+	if q.conf.KeepAlivePeriodSec <= 0 {
+		q.conf.KeepAlivePeriodSec = 25
+	}
 	q.quicConf = &quic.Config{
 		HandshakeIdleTimeout: time.Duration(q.conf.DialTimeoutSec) * time.Second,
 		MaxIncomingStreams:   q.conf.MaxStreams,
+		KeepAlivePeriod:      time.Duration(q.conf.KeepAlivePeriodSec) * time.Second,
 	}
 	return
 }
@@ -61,12 +69,19 @@ func (q *quicTransport) Run(ctx context.Context) (err error) {
 	if q.accepter == nil {
 		return fmt.Errorf("can't run service without accepter")
 	}
-	tlConf, _, err := q.secure.TlsConfig()
+
+	var tlsConf tls.Config
+	tlsConf.GetConfigForClient = func(_ *tls.ClientHelloInfo) (*tls.Config, error) {
+		conf, _, tlsErr := q.secure.TlsConfig()
+		return conf, tlsErr
+	}
+	tlsConf.NextProtos = []string{"anysync"}
+
 	if err != nil {
 		return
 	}
 	for _, listAddr := range q.conf.ListenAddrs {
-		list, err := quic.ListenAddr(listAddr, tlConf, q.quicConf)
+		list, err := quic.ListenAddr(listAddr, &tlsConf, q.quicConf)
 		if err != nil {
 			return err
 		}

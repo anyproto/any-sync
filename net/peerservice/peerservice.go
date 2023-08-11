@@ -9,9 +9,11 @@ import (
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/transport"
+	"github.com/anyproto/any-sync/net/transport/quic"
 	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
+	"strings"
 	"sync"
 )
 
@@ -31,31 +33,47 @@ func New() PeerService {
 type PeerService interface {
 	Dial(ctx context.Context, peerId string) (pr peer.Peer, err error)
 	SetPeerAddrs(peerId string, addrs []string)
+	PreferQuic(prefer bool)
 	transport.Accepter
 	app.Component
 }
 
 type peerService struct {
-	yamux     transport.Transport
-	nodeConf  nodeconf.NodeConf
-	peerAddrs map[string][]string
-	pool      pool.Pool
-	server    server.DRPCServer
-	mu        sync.RWMutex
+	yamux      transport.Transport
+	quic       transport.Transport
+	nodeConf   nodeconf.NodeConf
+	peerAddrs  map[string][]string
+	pool       pool.Pool
+	server     server.DRPCServer
+	preferQuic bool
+	mu         sync.RWMutex
 }
 
 func (p *peerService) Init(a *app.App) (err error) {
 	p.yamux = a.MustComponent(yamux.CName).(transport.Transport)
+	p.quic = a.MustComponent(quic.CName).(transport.Transport)
 	p.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	p.pool = a.MustComponent(pool.CName).(pool.Pool)
 	p.server = a.MustComponent(server.CName).(server.DRPCServer)
 	p.peerAddrs = map[string][]string{}
 	p.yamux.SetAccepter(p)
+	p.quic.SetAccepter(p)
 	return nil
 }
 
+var (
+	yamuxPreferSchemes = []string{transport.Yamux, transport.Quic}
+	quicPreferSchemes  = []string{transport.Quic, transport.Yamux}
+)
+
 func (p *peerService) Name() (name string) {
 	return CName
+}
+
+func (p *peerService) PreferQuic(prefer bool) {
+	p.mu.Lock()
+	p.preferQuic = prefer
+	p.mu.Unlock()
 }
 
 func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, err error) {
@@ -69,11 +87,29 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 
 	var mc transport.MultiConn
 	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
-	for _, addr := range addrs {
-		mc, err = p.yamux.Dial(ctx, addr)
-		if err != nil {
-			log.InfoCtx(ctx, "can't connect to host", zap.String("addr", addr), zap.Error(err))
-		} else {
+
+	var schemes = yamuxPreferSchemes
+	if p.preferQuic {
+		schemes = quicPreferSchemes
+	}
+
+	for _, sch := range schemes {
+		for _, addr := range addrs {
+			if scheme(addr) != sch {
+				continue
+			}
+			if sch == transport.Quic {
+				mc, err = p.quic.Dial(ctx, stripScheme(addr))
+			} else {
+				mc, err = p.yamux.Dial(ctx, stripScheme(addr))
+			}
+			if err != nil {
+				log.InfoCtx(ctx, "can't connect to host", zap.String("addr", addr), zap.Error(err))
+			} else {
+				break
+			}
+		}
+		if err == nil {
 			break
 		}
 	}
@@ -116,4 +152,18 @@ func (p *peerService) getPeerAddrs(peerId string) ([]string, error) {
 		return nil, ErrAddrsNotFound
 	}
 	return addrs, nil
+}
+
+func scheme(addr string) string {
+	if idx := strings.Index(addr, "://"); idx != -1 {
+		return addr[:idx]
+	}
+	return transport.Yamux
+}
+
+func stripScheme(addr string) string {
+	if idx := strings.Index(addr, "://"); idx != -1 {
+		return addr[idx+3:]
+	}
+	return addr
 }
