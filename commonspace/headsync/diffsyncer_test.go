@@ -58,6 +58,10 @@ func (p pushSpaceRequestMatcher) String() string {
 type mockPeer struct {
 }
 
+func (m mockPeer) SetTTL(ttl time.Duration) {
+	return
+}
+
 func (m mockPeer) Id() string {
 	return "peerId"
 }

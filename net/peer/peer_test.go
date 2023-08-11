@@ -155,6 +155,28 @@ func TestPeer_TryClose(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, res)
 	})
+	t.Run("custom ttl", func(t *testing.T) {
+		fx := newFixture(t, "p1")
+		defer fx.finish()
+		fx.peer.created = fx.peer.created.Add(-time.Minute * 2)
+		fx.peer.SetTTL(time.Hour)
+
+		in, out := net.Pipe()
+		hsDone := make(chan struct{})
+		go func() {
+			defer close(hsDone)
+			handshake.IncomingProtoHandshake(ctx, out, defaultProtoChecker)
+		}()
+		defer out.Close()
+		fx.mc.EXPECT().Open(gomock.Any()).Return(in, nil)
+		fx.mc.EXPECT().Addr().AnyTimes()
+		_, err := fx.AcquireDrpcConn(ctx)
+		require.NoError(t, err)
+		time.Sleep(time.Second)
+		res, err := fx.TryClose(time.Second / 2)
+		require.NoError(t, err)
+		assert.False(t, res)
+	})
 	t.Run("gc", func(t *testing.T) {
 		fx := newFixture(t, "p1")
 		defer fx.finish()
