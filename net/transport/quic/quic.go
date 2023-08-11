@@ -121,7 +121,7 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 
 	stream, err := qConn.OpenStreamSync(ctx)
 	if err != nil {
-		_ = qConn.CloseWithError(1, "")
+		_ = qConn.CloseWithError(1, err.Error())
 		return nil, err
 	}
 	defer func() {

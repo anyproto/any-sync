@@ -3,6 +3,7 @@ package peerservice
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net/peer"
@@ -93,23 +94,9 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 		schemes = quicPreferSchemes
 	}
 
+	err = ErrAddrsNotFound
 	for _, sch := range schemes {
-		for _, addr := range addrs {
-			if scheme(addr) != sch {
-				continue
-			}
-			if sch == transport.Quic {
-				mc, err = p.quic.Dial(ctx, stripScheme(addr))
-			} else {
-				mc, err = p.yamux.Dial(ctx, stripScheme(addr))
-			}
-			if err != nil {
-				log.InfoCtx(ctx, "can't connect to host", zap.String("addr", addr), zap.Error(err))
-			} else {
-				break
-			}
-		}
-		if err == nil {
+		if mc, err = p.dialScheme(ctx, sch, addrs); err == nil {
 			break
 		}
 	}
@@ -124,6 +111,31 @@ func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, er
 		return nil, ErrPeerIdMismatched
 	}
 	return peer.NewPeer(mc, p.server)
+}
+
+func (p *peerService) dialScheme(ctx context.Context, sch string, addrs []string) (mc transport.MultiConn, err error) {
+	var tr transport.Transport
+	switch sch {
+	case transport.Quic:
+		tr = p.quic
+	case transport.Yamux:
+		tr = p.yamux
+	default:
+		return nil, fmt.Errorf("unexpected transport: %v", sch)
+	}
+
+	err = ErrAddrsNotFound
+	for _, addr := range addrs {
+		if scheme(addr) != sch {
+			continue
+		}
+		if mc, err = tr.Dial(ctx, stripScheme(addr)); err == nil {
+			return
+		} else {
+			log.InfoCtx(ctx, "can't connect to host", zap.String("addr", addr), zap.Error(err))
+		}
+	}
+	return
 }
 
 func (p *peerService) Accept(mc transport.MultiConn) (err error) {
