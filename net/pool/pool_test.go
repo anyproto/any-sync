@@ -217,6 +217,10 @@ type testPeer struct {
 	closed chan struct{}
 }
 
+func (t *testPeer) SetTTL(ttl time.Duration) {
+	return
+}
+
 func (t *testPeer) DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error {
 	return fmt.Errorf("not implemented")
 }

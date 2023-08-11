@@ -145,6 +145,7 @@ func (s *service) openStream(ctx context.Context) (st *stream, err error) {
 	if err != nil {
 		return nil, err
 	}
+	pr.SetTTL(time.Hour * 24)
 	dc, err := pr.AcquireDrpcConn(ctx)
 	if err != nil {
 		return nil, err
