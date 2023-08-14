@@ -15,6 +15,7 @@ import (
 
 var (
 	ErrSpaceClosed = errors.New("space is closed")
+	ErrNotTree     = errors.New("object is not a tree")
 )
 
 type ObjectManager interface {
@@ -68,7 +69,11 @@ func (o *objectManager) GetTree(ctx context.Context, spaceId, treeId string) (ob
 		return nil, ErrSpaceClosed
 	}
 	if obj := o.getReservedObject(treeId); obj != nil {
-		return obj.(objecttree.ObjectTree), nil
+		objTree, ok := obj.(objecttree.ObjectTree)
+		if !ok {
+			return nil, ErrNotTree
+		}
+		return objTree, nil
 	}
 	return o.TreeManager.GetTree(ctx, spaceId, treeId)
 }
