@@ -20,7 +20,7 @@ var ctx = context.Background()
 
 func TestHandshake(t *testing.T) {
 	nc := testnodeconf.GenNodeConfig(2)
-	fxS := newFixture(t, nc, nc.GetAccountService(0), 0)
+	fxS := newFixture(t, nc, nc.GetAccountService(0), 1, []uint32{1})
 	defer fxS.Finish(t)
 	sc, cc := net.Pipe()
 
@@ -36,7 +36,7 @@ func TestHandshake(t *testing.T) {
 		resCh <- ar
 	}()
 
-	fxC := newFixture(t, nc, nc.GetAccountService(1), 0)
+	fxC := newFixture(t, nc, nc.GetAccountService(1), 1, []uint32{1})
 	defer fxC.Finish(t)
 
 	cctx, err := fxC.SecureOutbound(ctx, cc)
@@ -57,7 +57,7 @@ func TestHandshake(t *testing.T) {
 
 func TestHandshakeIncompatibleVersion(t *testing.T) {
 	nc := testnodeconf.GenNodeConfig(2)
-	fxS := newFixture(t, nc, nc.GetAccountService(0), 1)
+	fxS := newFixture(t, nc, nc.GetAccountService(0), 1, []uint32{0, 1})
 	defer fxS.Finish(t)
 	sc, cc := net.Pipe()
 
@@ -72,7 +72,7 @@ func TestHandshakeIncompatibleVersion(t *testing.T) {
 		ar.ctx, ar.err = fxS.SecureInbound(ctx, sc)
 		resCh <- ar
 	}()
-	fxC := newFixture(t, nc, nc.GetAccountService(1), 2)
+	fxC := newFixture(t, nc, nc.GetAccountService(1), 2, []uint32{2, 3})
 	defer fxC.Finish(t)
 	_, err := fxC.SecureOutbound(ctx, cc)
 	require.Equal(t, handshake.ErrIncompatibleVersion, err)
@@ -80,7 +80,7 @@ func TestHandshakeIncompatibleVersion(t *testing.T) {
 	require.Equal(t, handshake.ErrIncompatibleVersion, res.err)
 }
 
-func newFixture(t *testing.T, nc *testnodeconf.Config, acc accountservice.Service, protoVersion uint32) *fixture {
+func newFixture(t *testing.T, nc *testnodeconf.Config, acc accountservice.Service, protoVersion uint32, cv []uint32) *fixture {
 	fx := &fixture{
 		ctrl:          gomock.NewController(t),
 		secureService: New().(*secureService),
@@ -88,6 +88,7 @@ func newFixture(t *testing.T, nc *testnodeconf.Config, acc accountservice.Servic
 		a:             new(app.App),
 	}
 	fx.secureService.protoVersion = protoVersion
+	fx.secureService.compatibleVersions = cv
 	fx.mockNodeConf = mock_nodeconf.NewMockService(fx.ctrl)
 	fx.mockNodeConf.EXPECT().Init(gomock.Any())
 	fx.mockNodeConf.EXPECT().Name().Return(nodeconf.CName).AnyTimes()

@@ -25,7 +25,12 @@ var log = logger.NewNamed(CName)
 const (
 	// ProtoVersion 0 - first any-sync version with raw tcp connections
 	// ProtoVersion 1 - version with yamux over tcp and quic
-	ProtoVersion = 1
+	// ProtoVersion 2 - acl compatible version
+	ProtoVersion = 2
+)
+
+var (
+	compatibleVersions = []uint32{1, ProtoVersion}
 )
 
 func New() SecureService {
@@ -41,11 +46,12 @@ type SecureService interface {
 }
 
 type secureService struct {
-	p2pTr        *libp2ptls.Transport
-	account      *accountdata.AccountKeys
-	key          crypto.PrivKey
-	nodeconf     nodeconf.Service
-	protoVersion uint32
+	p2pTr              *libp2ptls.Transport
+	account            *accountdata.AccountKeys
+	key                crypto.PrivKey
+	nodeconf           nodeconf.Service
+	protoVersion       uint32
+	compatibleVersions []uint32
 
 	noVerifyChecker  handshake.CredentialChecker
 	peerSignVerifier handshake.CredentialChecker
@@ -56,6 +62,9 @@ func (s *secureService) Init(a *app.App) (err error) {
 	if s.protoVersion == 0 {
 		s.protoVersion = ProtoVersion
 	}
+	if len(s.compatibleVersions) == 0 {
+		s.compatibleVersions = compatibleVersions
+	}
 	account := a.MustComponent(commonaccount.CName).(commonaccount.Service)
 	peerKey, err := account.Account().PeerKey.Raw()
 	if err != nil {
@@ -64,8 +73,8 @@ func (s *secureService) Init(a *app.App) (err error) {
 	if s.key, err = crypto.UnmarshalEd25519PrivateKey(peerKey); err != nil {
 		return
 	}
-	s.noVerifyChecker = newNoVerifyChecker(s.protoVersion, a.VersionName())
-	s.peerSignVerifier = newPeerSignVerifier(s.protoVersion, a.VersionName(), account.Account())
+	s.noVerifyChecker = newNoVerifyChecker(s.protoVersion, s.compatibleVersions, a.VersionName())
+	s.peerSignVerifier = newPeerSignVerifier(s.protoVersion, s.compatibleVersions, a.VersionName(), account.Account())
 
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 

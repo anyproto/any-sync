@@ -6,20 +6,23 @@ import (
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/util/crypto"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 )
 
-func newNoVerifyChecker(protoVersion uint32, clientVersion string) handshake.CredentialChecker {
+func newNoVerifyChecker(protoVersion uint32, compatibleProtoVersions []uint32, clientVersion string) handshake.CredentialChecker {
 	return &noVerifyChecker{
 		cred: &handshakeproto.Credentials{
 			Type:          handshakeproto.CredentialsType_SkipVerify,
 			Version:       protoVersion,
 			ClientVersion: clientVersion,
 		},
+		compatibleVersions: compatibleProtoVersions,
 	}
 }
 
 type noVerifyChecker struct {
-	cred *handshakeproto.Credentials
+	cred               *handshakeproto.Credentials
+	compatibleVersions []uint32
 }
 
 func (n noVerifyChecker) MakeCredentials(remotePeerId string) *handshakeproto.Credentials {
@@ -27,7 +30,7 @@ func (n noVerifyChecker) MakeCredentials(remotePeerId string) *handshakeproto.Cr
 }
 
 func (n noVerifyChecker) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (result handshake.Result, err error) {
-	if cred.Version != n.cred.Version {
+	if !slices.Contains(n.compatibleVersions, cred.Version) {
 		err = handshake.ErrIncompatibleVersion
 		return
 	}
@@ -37,18 +40,20 @@ func (n noVerifyChecker) CheckCredential(remotePeerId string, cred *handshakepro
 	}, nil
 }
 
-func newPeerSignVerifier(protoVersion uint32, clientVersion string, account *accountdata.AccountKeys) handshake.CredentialChecker {
+func newPeerSignVerifier(protoVersion uint32, compatibleProtoVersions []uint32, clientVersion string, account *accountdata.AccountKeys) handshake.CredentialChecker {
 	return &peerSignVerifier{
-		protoVersion:  protoVersion,
-		clientVersion: clientVersion,
-		account:       account,
+		protoVersion:       protoVersion,
+		clientVersion:      clientVersion,
+		account:            account,
+		compatibleVersions: compatibleProtoVersions,
 	}
 }
 
 type peerSignVerifier struct {
-	protoVersion  uint32
-	clientVersion string
-	account       *accountdata.AccountKeys
+	protoVersion       uint32
+	clientVersion      string
+	account            *accountdata.AccountKeys
+	compatibleVersions []uint32
 }
 
 func (p *peerSignVerifier) MakeCredentials(remotePeerId string) *handshakeproto.Credentials {
@@ -72,7 +77,7 @@ func (p *peerSignVerifier) MakeCredentials(remotePeerId string) *handshakeproto.
 }
 
 func (p *peerSignVerifier) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (result handshake.Result, err error) {
-	if cred.Version != p.protoVersion {
+	if !slices.Contains(p.compatibleVersions, cred.Version) {
 		err = handshake.ErrIncompatibleVersion
 		return
 	}
