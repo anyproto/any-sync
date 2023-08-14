@@ -22,11 +22,11 @@ const CName = "common.net.secure"
 
 var log = logger.NewNamed(CName)
 
-const (
+var (
 	// ProtoVersion 0 - first any-sync version with raw tcp connections
 	// ProtoVersion 1 - version with yamux over tcp and quic
 	// ProtoVersion 2 - acl compatible version
-	ProtoVersion = 2
+	ProtoVersion = uint32(2)
 )
 
 var (
