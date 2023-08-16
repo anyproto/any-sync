@@ -12,7 +12,7 @@ import (
 )
 
 func NewMultiConn(cctx context.Context, luConn *connutil.LastUsageConn, addr string, sess *yamux.Session) transport.MultiConn {
-	cctx = peer.CtxWithPeerAddr(cctx, sess.RemoteAddr().String())
+	cctx = peer.CtxWithPeerAddr(cctx, transport.Yamux+"://"+sess.RemoteAddr().String())
 	return &yamuxConn{
 		ctx:     cctx,
 		luConn:  luConn,
@@ -44,7 +44,7 @@ func (y *yamuxConn) Context() context.Context {
 }
 
 func (y *yamuxConn) Addr() string {
-	return y.addr
+	return transport.Yamux + "://" + y.addr
 }
 
 func (y *yamuxConn) Accept() (conn net.Conn, err error) {

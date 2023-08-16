@@ -39,9 +39,10 @@ func New() SecureService {
 
 type SecureService interface {
 	SecureOutbound(ctx context.Context, conn net.Conn) (cctx context.Context, err error)
+	HandshakeOutbound(ctx context.Context, conn io.ReadWriteCloser, peerId string) (cctx context.Context, err error)
 	SecureInbound(ctx context.Context, conn net.Conn) (cctx context.Context, err error)
 	HandshakeInbound(ctx context.Context, conn io.ReadWriteCloser, remotePeerId string) (cctx context.Context, err error)
-	ServerTlsConfig() (*tls.Config, error)
+	TlsConfig() (*tls.Config, <-chan crypto.PubKey, error)
 	app.Component
 }
 
@@ -124,7 +125,10 @@ func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (cctx
 	if err != nil {
 		return nil, handshake.HandshakeError{Err: err}
 	}
-	peerId := sc.RemotePeer().String()
+	return s.HandshakeOutbound(ctx, sc, sc.RemotePeer().String())
+}
+
+func (s *secureService) HandshakeOutbound(ctx context.Context, conn io.ReadWriteCloser, peerId string) (cctx context.Context, err error) {
 	confTypes := s.nodeconf.NodeTypes(peerId)
 	var checker handshake.CredentialChecker
 	if len(confTypes) > 0 {
@@ -132,23 +136,23 @@ func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (cctx
 	} else {
 		checker = s.noVerifyChecker
 	}
-	res, err := handshake.OutgoingHandshake(ctx, sc, sc.RemotePeer().String(), checker)
+	res, err := handshake.OutgoingHandshake(ctx, conn, peerId, checker)
 	if err != nil {
 		return nil, err
 	}
 	cctx = context.Background()
-	cctx = peer.CtxWithPeerId(cctx, sc.RemotePeer().String())
+	cctx = peer.CtxWithPeerId(cctx, peerId)
 	cctx = peer.CtxWithIdentity(cctx, res.Identity)
 	cctx = peer.CtxWithClientVersion(cctx, res.ClientVersion)
 	return cctx, nil
 }
 
-func (s *secureService) ServerTlsConfig() (*tls.Config, error) {
+func (s *secureService) TlsConfig() (*tls.Config, <-chan crypto.PubKey, error) {
 	p2pIdn, err := libp2ptls.NewIdentity(s.key)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	conf, _ := p2pIdn.ConfigForPeer("")
+	conf, keyCh := p2pIdn.ConfigForPeer("")
 	conf.NextProtos = []string{"anysync"}
-	return conf, nil
+	return conf, keyCh, nil
 }

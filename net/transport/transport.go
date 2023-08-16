@@ -11,6 +11,11 @@ var (
 	ErrConnClosed = errors.New("connection closed")
 )
 
+const (
+	Yamux = "yamux"
+	Quic  = "quic"
+)
+
 // Transport is a common interface for a network transport
 type Transport interface {
 	// SetAccepter sets accepter that will be called for new connections
