@@ -57,22 +57,26 @@ func (t *treeExporter) ExportUnencrypted(tree objecttree.ReadableObjectTree) (er
 		}
 		return treeStorage.AddRawChange(raw)
 	}
-	err = tree.IterateRoot(t.converter.Unmarshall, func(change *objecttree.Change) bool {
-		if change.Id == tree.Id() {
+	err = tree.IterateRoot(
+		func(change *objecttree.Change, decrypted []byte) (any, error) {
+			return t.converter.Unmarshall(decrypted)
+		},
+		func(change *objecttree.Change) bool {
+			if change.Id == tree.Id() {
+				err = putStorage(change)
+				return err == nil
+			}
+			var data []byte
+			data, err = t.converter.Marshall(change.Model)
+			if err != nil {
+				return false
+			}
+			// that means that change is unencrypted
+			change.ReadKeyId = ""
+			change.Data = data
 			err = putStorage(change)
 			return err == nil
-		}
-		var data []byte
-		data, err = t.converter.Marshall(change.Model)
-		if err != nil {
-			return false
-		}
-		// that means that change is unencrypted
-		change.ReadKeyId = ""
-		change.Data = data
-		err = putStorage(change)
-		return err == nil
-	})
+		})
 	if err != nil {
 		return
 	}
