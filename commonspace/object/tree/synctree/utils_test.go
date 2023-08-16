@@ -171,6 +171,7 @@ type testSyncHandler struct {
 	syncClient  SyncClient
 	builder     objecttree.BuildObjectTreeFunc
 	peerManager *requestPeerManager
+	counter     *operationCounter
 }
 
 // createSyncHandler creates a sync handler when a tree is already created
@@ -269,22 +270,28 @@ func (h *testSyncHandler) run(ctx context.Context, t *testing.T, wg *sync.WaitGr
 				return
 			}
 			if res.userMsg != nil {
+				h.counter.Increment()
 				h.tree().Lock()
 				userRes, err := h.tree().AddRawChanges(ctx, *res.userMsg)
 				require.NoError(t, err)
 				fmt.Println("user add result", userRes.Heads)
 				h.tree().Unlock()
+				h.counter.Decrement()
 				continue
 			}
 			if res.description().name == "FullSyncRequest" {
+				h.counter.Increment()
 				resp, err := h.HandleRequest(ctx, res.senderId, res.msg)
+				h.counter.Decrement()
 				if err != nil {
 					fmt.Println("error handling request", err.Error())
 					continue
 				}
 				h.peerManager.SendPeer(ctx, res.senderId, resp)
 			} else {
+				h.counter.Increment()
 				err = h.HandleMessage(ctx, res.senderId, res.msg)
+				h.counter.Decrement()
 				if err != nil {
 					fmt.Println("error handling message", err.Error())
 				}
@@ -321,6 +328,7 @@ func createTestTree(aclList list.AclList, storage treestorage.TreeStorage) (obje
 }
 
 type fixtureDeps struct {
+	counter       *operationCounter
 	aclList       list.AclList
 	initStorage   *treestorage.InMemoryTreeStorage
 	connectionMap map[string][]string
@@ -333,6 +341,7 @@ type protocolFixture struct {
 	handlers map[string]*testSyncHandler
 	log      *messageLog
 	wg       *sync.WaitGroup
+	counter  *operationCounter
 	ctx      context.Context
 	cancel   context.CancelFunc
 }
@@ -355,6 +364,7 @@ func newProtocolFixture(t *testing.T, spaceId string, deps fixtureDeps) *protoco
 			require.NoError(t, err)
 			handler = createSyncHandler(peerId, spaceId, testTree, log)
 		}
+		handler.counter = deps.counter
 		handlers[peerId] = handler
 	}
 	for peerId, connectionMap := range deps.connectionMap {
@@ -365,6 +375,7 @@ func newProtocolFixture(t *testing.T, spaceId string, deps fixtureDeps) *protoco
 		}
 	}
 	return &protocolFixture{
+		counter:  deps.counter,
 		handlers: handlers,
 		log:      log,
 		wg:       &wg,
