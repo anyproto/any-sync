@@ -3,12 +3,16 @@ package headsync
 
 import (
 	"context"
+	"sync/atomic"
+	"time"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
+	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
@@ -21,8 +25,6 @@ import (
 	"github.com/anyproto/any-sync/util/slice"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
-	"sync/atomic"
-	"time"
 )
 
 var log = logger.NewNamed(CName)
@@ -60,6 +62,7 @@ type headSync struct {
 	credentialProvider credentialprovider.CredentialProvider
 	syncStatus         syncstatus.StatusService
 	deletionState      deletionstate.ObjectDeletionState
+	syncAcl            syncacl.SyncAcl
 }
 
 func New() HeadSync {
@@ -71,6 +74,7 @@ var createDiffSyncer = newDiffSyncer
 func (h *headSync) Init(a *app.App) (err error) {
 	shared := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
 	cfg := a.MustComponent("config").(config.ConfigGetter)
+	h.syncAcl = a.MustComponent(syncacl.CName).(syncacl.SyncAcl)
 	h.spaceId = shared.SpaceId
 	h.spaceIsDeleted = shared.SpaceIsDeleted
 	h.syncPeriod = cfg.GetSpace().SyncPeriod
@@ -92,6 +96,7 @@ func (h *headSync) Init(a *app.App) (err error) {
 		return h.syncer.Sync(ctx)
 	}
 	h.periodicSync = periodicsync.NewPeriodicSync(h.syncPeriod, time.Minute, sync, h.log)
+	h.syncAcl.SetHeadUpdater(h)
 	// TODO: move to run?
 	h.syncer.Init()
 	return nil
@@ -177,6 +182,10 @@ func (h *headSync) fillDiff(objectIds []string) {
 			Head: concatStrings(heads),
 		})
 	}
+	els = append(els, ldiff.Element{
+		Id:   h.syncAcl.Id(),
+		Head: h.syncAcl.Head().Id,
+	})
 	h.diff.Set(els...)
 	if err := h.storage.WriteSpaceHash(h.diff.Hash()); err != nil {
 		h.log.Error("can't write space hash", zap.Error(err))

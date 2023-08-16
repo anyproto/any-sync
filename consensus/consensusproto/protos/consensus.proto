@@ -25,6 +25,7 @@ message RawRecord {
     bytes signature = 2;
     bytes acceptorIdentity = 3;
     bytes acceptorSignature = 4;
+    int64 acceptorTimestamp = 5;
 }
 
 // RawRecordWithId is a raw record and the id for convenience
@@ -76,4 +77,38 @@ message LogWatchEvent {
 
 message Err {
     ErrCodes error = 1;
+}
+
+// LogSyncContentValue provides different types for log sync
+message LogSyncContentValue {
+    oneof value {
+        LogHeadUpdate headUpdate = 1;
+        LogFullSyncRequest fullSyncRequest = 2;
+        LogFullSyncResponse fullSyncResponse = 3;
+    }
+}
+
+// LogSyncMessage is a message sent when we are syncing logs
+message LogSyncMessage {
+    string id = 1;
+    bytes payload = 2;
+    LogSyncContentValue content = 3;
+}
+
+// LogHeadUpdate is a message sent on consensus log head update
+message LogHeadUpdate {
+    string head = 1;
+    repeated RawRecordWithId records = 2;
+}
+
+// LogFullSyncRequest is a message sent when consensus log needs full sync
+message LogFullSyncRequest {
+    string head = 1;
+    repeated RawRecordWithId records = 2;
+}
+
+// LogFullSyncResponse is a message sent as a response for a specific full sync
+message LogFullSyncResponse {
+    string head = 1;
+    repeated RawRecordWithId records = 2;
 }

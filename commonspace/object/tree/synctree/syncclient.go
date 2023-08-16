@@ -2,6 +2,7 @@ package synctree
 
 import (
 	"context"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/requestmanager"
@@ -32,8 +33,9 @@ func NewSyncClient(spaceId string, requestManager requestmanager.RequestManager,
 		peerManager:    peerManager,
 	}
 }
+
 func (s *syncClient) Broadcast(msg *treechangeproto.TreeSyncMessage) {
-	objMsg, err := MarshallTreeMessage(msg, s.spaceId, msg.RootChange.Id, "")
+	objMsg, err := spacesyncproto.MarshallSyncMessage(msg, s.spaceId, msg.RootChange.Id)
 	if err != nil {
 		return
 	}
@@ -44,7 +46,7 @@ func (s *syncClient) Broadcast(msg *treechangeproto.TreeSyncMessage) {
 }
 
 func (s *syncClient) SendUpdate(peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (err error) {
-	objMsg, err := MarshallTreeMessage(msg, s.spaceId, objectId, "")
+	objMsg, err := spacesyncproto.MarshallSyncMessage(msg, s.spaceId, objectId)
 	if err != nil {
 		return
 	}
@@ -52,7 +54,7 @@ func (s *syncClient) SendUpdate(peerId, objectId string, msg *treechangeproto.Tr
 }
 
 func (s *syncClient) SendRequest(ctx context.Context, peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
-	objMsg, err := MarshallTreeMessage(msg, s.spaceId, objectId, "")
+	objMsg, err := spacesyncproto.MarshallSyncMessage(msg, s.spaceId, objectId)
 	if err != nil {
 		return
 	}
@@ -60,23 +62,9 @@ func (s *syncClient) SendRequest(ctx context.Context, peerId, objectId string, m
 }
 
 func (s *syncClient) QueueRequest(peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (err error) {
-	objMsg, err := MarshallTreeMessage(msg, s.spaceId, objectId, "")
+	objMsg, err := spacesyncproto.MarshallSyncMessage(msg, s.spaceId, objectId)
 	if err != nil {
 		return
 	}
 	return s.requestManager.QueueRequest(peerId, objMsg)
-}
-
-func MarshallTreeMessage(message *treechangeproto.TreeSyncMessage, spaceId, objectId, replyId string) (objMsg *spacesyncproto.ObjectSyncMessage, err error) {
-	payload, err := message.Marshal()
-	if err != nil {
-		return
-	}
-	objMsg = &spacesyncproto.ObjectSyncMessage{
-		ReplyId:  replyId,
-		Payload:  payload,
-		ObjectId: objectId,
-		SpaceId:  spaceId,
-	}
-	return
 }

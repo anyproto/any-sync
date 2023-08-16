@@ -36,6 +36,36 @@ func (m *MockDRPCSpaceSyncClient) EXPECT() *MockDRPCSpaceSyncClientMockRecorder 
 	return m.recorder
 }
 
+// AclAddRecord mocks base method.
+func (m *MockDRPCSpaceSyncClient) AclAddRecord(arg0 context.Context, arg1 *spacesyncproto.AclAddRecordRequest) (*spacesyncproto.AclAddRecordResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AclAddRecord", arg0, arg1)
+	ret0, _ := ret[0].(*spacesyncproto.AclAddRecordResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AclAddRecord indicates an expected call of AclAddRecord.
+func (mr *MockDRPCSpaceSyncClientMockRecorder) AclAddRecord(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclAddRecord", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).AclAddRecord), arg0, arg1)
+}
+
+// AclGetRecords mocks base method.
+func (m *MockDRPCSpaceSyncClient) AclGetRecords(arg0 context.Context, arg1 *spacesyncproto.AclGetRecordsRequest) (*spacesyncproto.AclGetRecordsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AclGetRecords", arg0, arg1)
+	ret0, _ := ret[0].(*spacesyncproto.AclGetRecordsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AclGetRecords indicates an expected call of AclGetRecords.
+func (mr *MockDRPCSpaceSyncClientMockRecorder) AclGetRecords(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclGetRecords", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).AclGetRecords), arg0, arg1)
+}
+
 // DRPCConn mocks base method.
 func (m *MockDRPCSpaceSyncClient) DRPCConn() drpc.Conn {
 	m.ctrl.T.Helper()

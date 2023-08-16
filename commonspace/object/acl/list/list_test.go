@@ -7,25 +7,9 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/stretchr/testify/require"
 )
-
-func wrapRecord(rawRec *consensusproto.RawRecord) *consensusproto.RawRecordWithId {
-	payload, err := rawRec.Marshal()
-	if err != nil {
-		panic(err)
-	}
-	id, err := cidutil.NewCidFromBytes(payload)
-	if err != nil {
-		panic(err)
-	}
-	return &consensusproto.RawRecordWithId{
-		Payload: payload,
-		Id:      id,
-	}
-}
 
 type aclFixture struct {
 	ownerKeys   *accountdata.AccountKeys
@@ -34,6 +18,8 @@ type aclFixture struct {
 	accountAcl  *aclList
 	spaceId     string
 }
+
+var mockMetadata = []byte("very important metadata")
 
 func newFixture(t *testing.T) *aclFixture {
 	ownerKeys, err := accountdata.NewRandom()
@@ -45,6 +31,9 @@ func newFixture(t *testing.T) *aclFixture {
 	require.NoError(t, err)
 	accountAcl, err := NewTestAclWithRoot(accountKeys, ownerAcl.Root())
 	require.NoError(t, err)
+	require.Equal(t, ownerAcl.AclState().lastRecordId, ownerAcl.Id())
+	require.Equal(t, ownerAcl.AclState().lastRecordId, accountAcl.AclState().lastRecordId)
+	require.NotEmpty(t, ownerAcl.Id())
 	return &aclFixture{
 		ownerKeys:   ownerKeys,
 		accountKeys: accountKeys,
@@ -71,16 +60,17 @@ func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 	// building invite
 	inv, err := ownerAcl.RecordBuilder().BuildInvite()
 	require.NoError(t, err)
-	inviteRec := wrapRecord(inv.InviteRec)
+	inviteRec := WrapAclRecord(inv.InviteRec)
 	fx.addRec(t, inviteRec)
 
 	// building request join
 	requestJoin, err := accountAcl.RecordBuilder().BuildRequestJoin(RequestJoinPayload{
 		InviteRecordId: inviteRec.Id,
 		InviteKey:      inv.InviteKey,
+		Metadata:       mockMetadata,
 	})
 	require.NoError(t, err)
-	requestJoinRec := wrapRecord(requestJoin)
+	requestJoinRec := WrapAclRecord(requestJoin)
 	fx.addRec(t, requestJoinRec)
 
 	// building request accept
@@ -92,7 +82,7 @@ func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 	// validate
 	err = ownerAcl.ValidateRawRecord(requestAccept)
 	require.NoError(t, err)
-	requestAcceptRec := wrapRecord(requestAccept)
+	requestAcceptRec := WrapAclRecord(requestAccept)
 	fx.addRec(t, requestAcceptRec)
 
 	// checking acl state
@@ -108,6 +98,9 @@ func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 	stateAtRec, err := ownerState.StateAtRecord(requestAcceptRec.Id, accountState.pubKey)
 	require.NoError(t, err)
 	require.True(t, stateAtRec.Permissions == perms)
+	require.Equal(t, ownerAcl.AclState().lastRecordId, requestAcceptRec.Id)
+	require.Equal(t, ownerAcl.AclState().lastRecordId, accountAcl.AclState().lastRecordId)
+	require.NotEmpty(t, requestAcceptRec.Id)
 }
 
 func TestAclList_BuildRoot(t *testing.T) {
@@ -132,13 +125,13 @@ func TestAclList_InviteRevoke(t *testing.T) {
 	// building invite
 	inv, err := fx.ownerAcl.RecordBuilder().BuildInvite()
 	require.NoError(t, err)
-	inviteRec := wrapRecord(inv.InviteRec)
+	inviteRec := WrapAclRecord(inv.InviteRec)
 	fx.addRec(t, inviteRec)
 
 	// building invite revoke
 	inviteRevoke, err := fx.ownerAcl.RecordBuilder().BuildInviteRevoke(ownerState.lastRecordId)
 	require.NoError(t, err)
-	inviteRevokeRec := wrapRecord(inviteRevoke)
+	inviteRevokeRec := WrapAclRecord(inviteRevoke)
 	fx.addRec(t, inviteRevokeRec)
 
 	// checking acl state
@@ -159,7 +152,7 @@ func TestAclList_RequestDecline(t *testing.T) {
 	// building invite
 	inv, err := ownerAcl.RecordBuilder().BuildInvite()
 	require.NoError(t, err)
-	inviteRec := wrapRecord(inv.InviteRec)
+	inviteRec := WrapAclRecord(inv.InviteRec)
 	fx.addRec(t, inviteRec)
 
 	// building request join
@@ -168,13 +161,13 @@ func TestAclList_RequestDecline(t *testing.T) {
 		InviteKey:      inv.InviteKey,
 	})
 	require.NoError(t, err)
-	requestJoinRec := wrapRecord(requestJoin)
+	requestJoinRec := WrapAclRecord(requestJoin)
 	fx.addRec(t, requestJoinRec)
 
 	// building request decline
 	requestDecline, err := ownerAcl.RecordBuilder().BuildRequestDecline(ownerState.lastRecordId)
 	require.NoError(t, err)
-	requestDeclineRec := wrapRecord(requestDecline)
+	requestDeclineRec := WrapAclRecord(requestDecline)
 	fx.addRec(t, requestDeclineRec)
 
 	// checking acl state
@@ -193,25 +186,61 @@ func TestAclList_Remove(t *testing.T) {
 	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
 
 	newReadKey := crypto.NewAES()
+	privKey, pubKey, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
 	remove, err := fx.ownerAcl.RecordBuilder().BuildAccountRemove(AccountRemovePayload{
 		Identities: []crypto.PubKey{fx.accountKeys.SignKey.GetPublic()},
-		ReadKey:    newReadKey,
+		Change: ReadKeyChangePayload{
+			MetadataKey: privKey,
+			ReadKey:     newReadKey,
+		},
 	})
 	require.NoError(t, err)
-	removeRec := wrapRecord(remove)
+	removeRec := WrapAclRecord(remove)
 	fx.addRec(t, removeRec)
 
 	// checking acl state
 	require.True(t, ownerState.Permissions(ownerState.pubKey).IsOwner())
 	require.True(t, ownerState.Permissions(accountState.pubKey).NoPermissions())
-	require.True(t, ownerState.userReadKeys[removeRec.Id].Equals(newReadKey))
-	require.NotNil(t, ownerState.userReadKeys[fx.ownerAcl.Id()])
+	require.True(t, ownerState.keys[removeRec.Id].ReadKey.Equals(newReadKey))
+	require.True(t, ownerState.keys[removeRec.Id].MetadataPrivKey.Equals(privKey))
+	require.True(t, ownerState.keys[removeRec.Id].MetadataPubKey.Equals(pubKey))
+	require.NotEmpty(t, ownerState.keys[fx.ownerAcl.Id()])
 	require.Equal(t, 0, len(ownerState.pendingRequests))
 	require.Equal(t, 0, len(accountState.pendingRequests))
 	require.True(t, accountState.Permissions(ownerState.pubKey).IsOwner())
 	require.True(t, accountState.Permissions(accountState.pubKey).NoPermissions())
-	require.Nil(t, accountState.userReadKeys[removeRec.Id])
-	require.NotNil(t, accountState.userReadKeys[fx.ownerAcl.Id()])
+	require.NotEmpty(t, accountState.keys[removeRec.Id])
+	require.Nil(t, accountState.keys[removeRec.Id].MetadataPrivKey)
+	require.NotNil(t, accountState.keys[removeRec.Id].MetadataPubKey)
+	require.Nil(t, accountState.keys[removeRec.Id].ReadKey)
+	require.NotEmpty(t, accountState.keys[fx.ownerAcl.Id()])
+}
+
+func TestAclList_KeyChangeInvite(t *testing.T) {
+	fx := newFixture(t)
+	newReadKey := crypto.NewAES()
+	privKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+	readKeyChange, err := fx.ownerAcl.RecordBuilder().BuildReadKeyChange(ReadKeyChangePayload{
+		MetadataKey: privKey,
+		ReadKey:     newReadKey,
+	})
+	require.NoError(t, err)
+	readKeyRec := WrapAclRecord(readKeyChange)
+	fx.addRec(t, readKeyRec)
+	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
+}
+
+func TestAclList_MetadataDecrypt(t *testing.T) {
+	fx := newFixture(t)
+	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
+	meta, err := fx.ownerAcl.AclState().GetMetadata(fx.accountKeys.SignKey.GetPublic(), true)
+	require.NoError(t, err)
+	require.Equal(t, mockMetadata, meta)
+	meta, err = fx.ownerAcl.AclState().GetMetadata(fx.accountKeys.SignKey.GetPublic(), false)
+	require.NoError(t, err)
+	require.NotEqual(t, mockMetadata, meta)
 }
 
 func TestAclList_ReadKeyChange(t *testing.T) {
@@ -223,18 +252,25 @@ func TestAclList_ReadKeyChange(t *testing.T) {
 	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Admin))
 
 	newReadKey := crypto.NewAES()
-	readKeyChange, err := fx.ownerAcl.RecordBuilder().BuildReadKeyChange(newReadKey)
+	privKey, pubKey, err := crypto.GenerateRandomEd25519KeyPair()
 	require.NoError(t, err)
-	readKeyRec := wrapRecord(readKeyChange)
+	readKeyChange, err := fx.ownerAcl.RecordBuilder().BuildReadKeyChange(ReadKeyChangePayload{
+		MetadataKey: privKey,
+		ReadKey:     newReadKey,
+	})
+	require.NoError(t, err)
+	readKeyRec := WrapAclRecord(readKeyChange)
 	fx.addRec(t, readKeyRec)
 
 	// checking acl state
 	require.True(t, ownerState.Permissions(ownerState.pubKey).IsOwner())
 	require.True(t, ownerState.Permissions(accountState.pubKey).CanManageAccounts())
-	require.True(t, ownerState.userReadKeys[readKeyRec.Id].Equals(newReadKey))
-	require.True(t, accountState.userReadKeys[readKeyRec.Id].Equals(newReadKey))
-	require.NotNil(t, ownerState.userReadKeys[fx.ownerAcl.Id()])
-	require.NotNil(t, accountState.userReadKeys[fx.ownerAcl.Id()])
+	require.True(t, ownerState.keys[readKeyRec.Id].ReadKey.Equals(newReadKey))
+	require.True(t, ownerState.keys[readKeyRec.Id].MetadataPrivKey.Equals(privKey))
+	require.True(t, ownerState.keys[readKeyRec.Id].MetadataPubKey.Equals(pubKey))
+	require.True(t, accountState.keys[readKeyRec.Id].ReadKey.Equals(newReadKey))
+	require.NotEmpty(t, ownerState.keys[fx.ownerAcl.Id()])
+	require.NotEmpty(t, accountState.keys[fx.ownerAcl.Id()])
 	readKey, err := ownerState.CurrentReadKey()
 	require.NoError(t, err)
 	require.True(t, newReadKey.Equals(readKey))
@@ -255,7 +291,7 @@ func TestAclList_PermissionChange(t *testing.T) {
 		Permissions: AclPermissions(aclrecordproto.AclUserPermissions_Writer),
 	})
 	require.NoError(t, err)
-	permissionChangeRec := wrapRecord(permissionChange)
+	permissionChangeRec := WrapAclRecord(permissionChange)
 	fx.addRec(t, permissionChangeRec)
 
 	// checking acl state
@@ -263,8 +299,8 @@ func TestAclList_PermissionChange(t *testing.T) {
 	require.True(t, ownerState.Permissions(accountState.pubKey) == AclPermissions(aclrecordproto.AclUserPermissions_Writer))
 	require.True(t, accountState.Permissions(ownerState.pubKey).IsOwner())
 	require.True(t, accountState.Permissions(accountState.pubKey) == AclPermissions(aclrecordproto.AclUserPermissions_Writer))
-	require.NotNil(t, ownerState.userReadKeys[fx.ownerAcl.Id()])
-	require.NotNil(t, accountState.userReadKeys[fx.ownerAcl.Id()])
+	require.NotEmpty(t, ownerState.keys[fx.ownerAcl.Id()])
+	require.NotEmpty(t, accountState.keys[fx.ownerAcl.Id()])
 	require.Equal(t, 0, len(ownerState.pendingRequests))
 	require.Equal(t, 0, len(accountState.pendingRequests))
 }
@@ -279,7 +315,7 @@ func TestAclList_RequestRemove(t *testing.T) {
 
 	removeRequest, err := fx.accountAcl.RecordBuilder().BuildRequestRemove()
 	require.NoError(t, err)
-	removeRequestRec := wrapRecord(removeRequest)
+	removeRequestRec := WrapAclRecord(removeRequest)
 	fx.addRec(t, removeRequestRec)
 
 	recs := fx.accountAcl.AclState().RemoveRecords()
@@ -287,23 +323,30 @@ func TestAclList_RequestRemove(t *testing.T) {
 	require.True(t, accountState.pubKey.Equals(recs[0].RequestIdentity))
 
 	newReadKey := crypto.NewAES()
+	privKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
 	remove, err := fx.ownerAcl.RecordBuilder().BuildAccountRemove(AccountRemovePayload{
 		Identities: []crypto.PubKey{recs[0].RequestIdentity},
-		ReadKey:    newReadKey,
+		Change: ReadKeyChangePayload{
+			MetadataKey: privKey,
+			ReadKey:     newReadKey,
+		},
 	})
 	require.NoError(t, err)
-	removeRec := wrapRecord(remove)
+	removeRec := WrapAclRecord(remove)
 	fx.addRec(t, removeRec)
 
 	// checking acl state
 	require.True(t, ownerState.Permissions(ownerState.pubKey).IsOwner())
 	require.True(t, ownerState.Permissions(accountState.pubKey).NoPermissions())
-	require.True(t, ownerState.userReadKeys[removeRec.Id].Equals(newReadKey))
-	require.NotNil(t, ownerState.userReadKeys[fx.ownerAcl.Id()])
+	require.True(t, ownerState.keys[removeRec.Id].ReadKey.Equals(newReadKey))
+	require.NotEmpty(t, ownerState.keys[fx.ownerAcl.Id()])
 	require.Equal(t, 0, len(ownerState.pendingRequests))
 	require.Equal(t, 0, len(accountState.pendingRequests))
 	require.True(t, accountState.Permissions(ownerState.pubKey).IsOwner())
 	require.True(t, accountState.Permissions(accountState.pubKey).NoPermissions())
-	require.Nil(t, accountState.userReadKeys[removeRec.Id])
-	require.NotNil(t, accountState.userReadKeys[fx.ownerAcl.Id()])
+	require.Nil(t, accountState.keys[removeRec.Id].MetadataPrivKey)
+	require.NotNil(t, accountState.keys[removeRec.Id].MetadataPubKey)
+	require.Nil(t, accountState.keys[removeRec.Id].ReadKey)
+	require.NotEmpty(t, accountState.keys[fx.ownerAcl.Id()])
 }

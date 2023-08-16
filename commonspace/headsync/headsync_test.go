@@ -11,6 +11,9 @@ import (
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/deletionstate/mock_deletionstate"
 	"github.com/anyproto/any-sync/commonspace/headsync/mock_headsync"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
+	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/mock_syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage/mock_treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
@@ -60,6 +63,7 @@ type headSyncFixture struct {
 	treeSyncerMock         *mock_treemanager.MockTreeSyncer
 	diffMock               *mock_ldiff.MockDiff
 	clientMock             *mock_spacesyncproto.MockDRPCSpaceSyncClient
+	aclMock                *mock_syncacl.MockSyncAcl
 	headSync               *headSync
 	diffSyncer             *diffSyncer
 }
@@ -87,9 +91,13 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 	treeSyncerMock := mock_treemanager.NewMockTreeSyncer(ctrl)
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
 	clientMock := mock_spacesyncproto.NewMockDRPCSpaceSyncClient(ctrl)
+	aclMock := mock_syncacl.NewMockSyncAcl(ctrl)
+	aclMock.EXPECT().Name().AnyTimes().Return(syncacl.CName)
+	aclMock.EXPECT().SetHeadUpdater(gomock.Any()).AnyTimes()
 	hs := &headSync{}
 	a := &app.App{}
 	a.Register(spaceState).
+		Register(aclMock).
 		Register(mockConfig{}).
 		Register(configurationMock).
 		Register(storageMock).
@@ -115,6 +123,7 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 		treeSyncerMock:         treeSyncerMock,
 		diffMock:               diffMock,
 		clientMock:             clientMock,
+		aclMock:                aclMock,
 	}
 }
 
@@ -144,6 +153,8 @@ func TestHeadSync(t *testing.T) {
 		treeMock := mock_treestorage.NewMockTreeStorage(fx.ctrl)
 		fx.storageMock.EXPECT().StoredIds().Return(ids, nil)
 		fx.storageMock.EXPECT().TreeStorage(ids[0]).Return(treeMock, nil)
+		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
+		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "headId"})
 		treeMock.EXPECT().Heads().Return([]string{"h1", "h2"}, nil)
 		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   "id1",

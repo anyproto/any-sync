@@ -42,7 +42,7 @@ func (o *objectManager) Init(a *app.App) (err error) {
 	o.spaceId = state.SpaceId
 	o.spaceIsClosed = state.SpaceIsClosed
 	settingsObject := a.MustComponent(settings.CName).(settings.Settings).SettingsObject()
-	acl := a.MustComponent(syncacl.CName).(*syncacl.SyncAcl)
+	acl := a.MustComponent(syncacl.CName).(syncacl.SyncAcl)
 	o.AddObject(settingsObject)
 	o.AddObject(acl)
 	return nil

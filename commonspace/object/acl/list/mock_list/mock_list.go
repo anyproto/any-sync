@@ -5,6 +5,7 @@
 package mock_list
 
 import (
+	context "context"
 	reflect "reflect"
 
 	list "github.com/anyproto/any-sync/commonspace/object/acl/list"
@@ -64,18 +65,32 @@ func (mr *MockAclListMockRecorder) AddRawRecord(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecord", reflect.TypeOf((*MockAclList)(nil).AddRawRecord), arg0)
 }
 
-// Close mocks base method.
-func (m *MockAclList) Close() error {
+// AddRawRecords mocks base method.
+func (m *MockAclList) AddRawRecords(arg0 []*consensusproto.RawRecordWithId) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close")
+	ret := m.ctrl.Call(m, "AddRawRecords", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddRawRecords indicates an expected call of AddRawRecords.
+func (mr *MockAclListMockRecorder) AddRawRecords(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecords", reflect.TypeOf((*MockAclList)(nil).AddRawRecords), arg0)
+}
+
+// Close mocks base method.
+func (m *MockAclList) Close(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockAclListMockRecorder) Close() *gomock.Call {
+func (mr *MockAclListMockRecorder) Close(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockAclList)(nil).Close))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockAclList)(nil).Close), arg0)
 }
 
 // Get mocks base method.
@@ -106,6 +121,20 @@ func (m *MockAclList) GetIndex(arg0 int) (*list.AclRecord, error) {
 func (mr *MockAclListMockRecorder) GetIndex(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIndex", reflect.TypeOf((*MockAclList)(nil).GetIndex), arg0)
+}
+
+// HasHead mocks base method.
+func (m *MockAclList) HasHead(arg0 string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasHead", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasHead indicates an expected call of HasHead.
+func (mr *MockAclListMockRecorder) HasHead(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasHead", reflect.TypeOf((*MockAclList)(nil).HasHead), arg0)
 }
 
 // Head mocks base method.
@@ -251,6 +280,36 @@ func (m *MockAclList) Records() []*list.AclRecord {
 func (mr *MockAclListMockRecorder) Records() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Records", reflect.TypeOf((*MockAclList)(nil).Records))
+}
+
+// RecordsAfter mocks base method.
+func (m *MockAclList) RecordsAfter(arg0 context.Context, arg1 string) ([]*consensusproto.RawRecordWithId, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecordsAfter", arg0, arg1)
+	ret0, _ := ret[0].([]*consensusproto.RawRecordWithId)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RecordsAfter indicates an expected call of RecordsAfter.
+func (mr *MockAclListMockRecorder) RecordsAfter(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordsAfter", reflect.TypeOf((*MockAclList)(nil).RecordsAfter), arg0, arg1)
+}
+
+// RecordsBefore mocks base method.
+func (m *MockAclList) RecordsBefore(arg0 context.Context, arg1 string) ([]*consensusproto.RawRecordWithId, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecordsBefore", arg0, arg1)
+	ret0, _ := ret[0].([]*consensusproto.RawRecordWithId)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RecordsBefore indicates an expected call of RecordsBefore.
+func (mr *MockAclListMockRecorder) RecordsBefore(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordsBefore", reflect.TypeOf((*MockAclList)(nil).RecordsBefore), arg0, arg1)
 }
 
 // Root mocks base method.
