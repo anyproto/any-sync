@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_deletionmanager/mock_deletionmanager.go github.com/anyproto/any-sync/commonspace/deletionmanager DeletionManager,Deleter,SpaceIdsProvider
+//go:generate mockgen -destination mock_deletionmanager/mock_deletionmanager.go github.com/anyproto/any-sync/commonspace/deletionmanager DeletionManager,Deleter
 package deletionmanager
 
 import (
@@ -12,11 +12,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"go.uber.org/zap"
 )
-
-type SpaceIdsProvider interface {
-	app.Component
-	AllIds() []string
-}
 
 type DeletionManager interface {
 	app.ComponentRunnable
