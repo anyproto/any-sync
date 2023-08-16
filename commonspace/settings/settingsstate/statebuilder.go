@@ -34,7 +34,7 @@ func (s *stateBuilder) Build(tr objecttree.ReadableObjectTree, oldState *State) 
 		state.LastIteratedId = change.Id
 		return true
 	}
-	convert := func(decrypted []byte) (res any, err error) {
+	convert := func(ch *objecttree.Change, decrypted []byte) (res any, err error) {
 		deleteChange := &spacesyncproto.SettingsData{}
 		err = proto.Unmarshal(decrypted, deleteChange)
 		if err != nil {
