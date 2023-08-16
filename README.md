@@ -28,6 +28,7 @@ Plese read the [overview](https://tech.anytype.io/any-sync/overview) of protocol
 You can find the various parts of the protocol implemented in Go in the following repositories:
 - [`any-sync-node`](https://github.com/anyproto/any-sync-node) — implementation of a sync node responsible for storing spaces and objects.
 - [`any-sync-filenode`](https://github.com/anyproto/any-sync-filenode) — implementation of a file node responsible for storing files.
+- [`any-sync-consensusnode`](https://github.com/anyproto/any-sync-consensusnode) — implementation of a consensus node responsible for ACL changes monitoring and validation.
 - [`any-sync-coordinator`](https://github.com/anyproto/any-sync-coordinator) — implementation of a coordinator node responsible for network configuration management.
 
 ## Contribution
@@ -44,4 +45,4 @@ Thank you for your desire to develop Anytype together!
 ---
 Made by Any — a Swiss association 🇨🇭
 
-Licensed under [MIT License](./LICENSE).
+Licensed under [MIT License](./LICENSE.md).
