@@ -19,12 +19,12 @@ require (
 	github.com/ipfs/go-block-format v0.1.2
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-ipld-format v0.5.0
-	github.com/libp2p/go-libp2p v0.29.1
+	github.com/libp2p/go-libp2p v0.29.2
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multibase v0.2.0
 	github.com/multiformats/go-multihash v0.2.3
 	github.com/prometheus/client_golang v1.16.0
-	github.com/quic-go/quic-go v0.36.3
+	github.com/quic-go/quic-go v0.36.4
 	github.com/stretchr/testify v1.8.4
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/zeebo/blake3 v0.2.3
