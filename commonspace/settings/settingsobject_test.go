@@ -3,16 +3,14 @@ package settings
 import (
 	"context"
 	"github.com/anyproto/any-sync/accountservice/mock_accountservice"
-	"github.com/anyproto/any-sync/commonspace/deletionstate/mock_deletionstate"
+	"github.com/anyproto/any-sync/commonspace/deletionmanager/mock_deletionmanager"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
-	"github.com/anyproto/any-sync/commonspace/settings/mock_settings"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
@@ -50,12 +48,10 @@ type settingsFixture struct {
 	treeManager     *mock_treemanager.MockTreeManager
 	spaceStorage    *mock_spacestorage.MockSpaceStorage
 	stateBuilder    *mock_settingsstate.MockStateBuilder
-	deletionManager *mock_settings.MockDeletionManager
+	deletionManager *mock_deletionmanager.MockDeletionManager
 	changeFactory   *mock_settingsstate.MockChangeFactory
-	deleter         *mock_settings.MockDeleter
 	syncTree        *mock_synctree.MockSyncTree
 	historyTree     *mock_objecttree.MockObjectTree
-	delState        *mock_deletionstate.MockObjectDeletionState
 	account         *mock_accountservice.MockService
 }
 
@@ -67,15 +63,11 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 	acc := mock_accountservice.NewMockService(ctrl)
 	treeManager := mock_treemanager.NewMockTreeManager(ctrl)
 	st := mock_spacestorage.NewMockSpaceStorage(ctrl)
-	delState := mock_deletionstate.NewMockObjectDeletionState(ctrl)
-	delManager := mock_settings.NewMockDeletionManager(ctrl)
+	delManager := mock_deletionmanager.NewMockDeletionManager(ctrl)
 	stateBuilder := mock_settingsstate.NewMockStateBuilder(ctrl)
 	changeFactory := mock_settingsstate.NewMockChangeFactory(ctrl)
 	syncTree := mock_synctree.NewMockSyncTree(ctrl)
 	historyTree := mock_objecttree.NewMockObjectTree(ctrl)
-	del := mock_settings.NewMockDeleter(ctrl)
-
-	delState.EXPECT().AddObserver(gomock.Any())
 
 	buildFunc := BuildTreeFunc(func(ctx context.Context, id string, listener updatelistener.UpdateListener) (synctree.SyncTree, error) {
 		require.Equal(t, objectId, id)
@@ -90,11 +82,9 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 		Account:       acc,
 		TreeManager:   treeManager,
 		Store:         st,
-		DeletionState: delState,
-		delManager:    delManager,
+		DelManager:    delManager,
 		changeFactory: changeFactory,
 		builder:       stateBuilder,
-		del:           del,
 	}
 	doc := NewSettingsObject(deps, spaceId).(*settingsObject)
 	return &settingsFixture{
@@ -107,17 +97,14 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 		stateBuilder:    stateBuilder,
 		changeFactory:   changeFactory,
 		deletionManager: delManager,
-		deleter:         del,
 		syncTree:        syncTree,
 		account:         acc,
-		delState:        delState,
 		historyTree:     historyTree,
 	}
 }
 
 func (fx *settingsFixture) init(t *testing.T) {
 	fx.spaceStorage.EXPECT().SpaceSettingsId().Return(fx.docId)
-	fx.deleter.EXPECT().Delete()
 	fx.stateBuilder.EXPECT().Build(fx.historyTree, nil).Return(&settingsstate.State{}, nil)
 	fx.doc.state = &settingsstate.State{}
 
@@ -234,65 +221,4 @@ func TestSettingsObject_Update(t *testing.T) {
 	fx.deletionManager.EXPECT().UpdateState(gomock.Any(), fx.doc.state).Return(nil)
 
 	fx.doc.Update(fx.doc)
-}
-
-func TestSettingsObject_DeleteSpace(t *testing.T) {
-	fx := newSettingsFixture(t)
-	defer fx.stop(t)
-
-	fx.init(t)
-	time.Sleep(100 * time.Millisecond)
-
-	deleterId := "delId"
-	rawCh := &treechangeproto.RawTreeChangeWithId{
-		RawChange: []byte{1},
-		Id:        "id",
-	}
-	changeFactory := settingsstate.NewChangeFactory()
-	delChange, _ := changeFactory.CreateSpaceDeleteChange(deleterId, &settingsstate.State{}, false)
-
-	fx.syncTree.EXPECT().UnpackChange(rawCh).Return(delChange, nil)
-	fx.syncTree.EXPECT().AddRawChanges(gomock.Any(), objecttree.RawChangesPayload{
-		NewHeads:   []string{rawCh.Id},
-		RawChanges: []*treechangeproto.RawTreeChangeWithId{rawCh},
-	}).Return(objecttree.AddResult{
-		Heads: []string{rawCh.Id},
-	}, nil)
-
-	err := fx.doc.DeleteSpace(context.Background(), rawCh)
-	require.NoError(t, err)
-}
-
-func TestSettingsObject_DeleteSpaceIncorrectChange(t *testing.T) {
-	fx := newSettingsFixture(t)
-	defer fx.stop(t)
-
-	fx.init(t)
-	time.Sleep(100 * time.Millisecond)
-
-	t.Run("incorrect change type", func(t *testing.T) {
-		rawCh := &treechangeproto.RawTreeChangeWithId{
-			RawChange: []byte{1},
-			Id:        "id",
-		}
-		changeFactory := settingsstate.NewChangeFactory()
-		delChange, _ := changeFactory.CreateObjectDeleteChange("otherId", &settingsstate.State{}, false)
-
-		fx.syncTree.EXPECT().UnpackChange(rawCh).Return(delChange, nil)
-		err := fx.doc.DeleteSpace(context.Background(), rawCh)
-		require.NotNil(t, err)
-	})
-
-	t.Run("empty peer", func(t *testing.T) {
-		rawCh := &treechangeproto.RawTreeChangeWithId{
-			RawChange: []byte{1},
-			Id:        "id",
-		}
-		changeFactory := settingsstate.NewChangeFactory()
-		delChange, _ := changeFactory.CreateSpaceDeleteChange("", &settingsstate.State{}, false)
-
-		fx.syncTree.EXPECT().UnpackChange(rawCh).Return(delChange, nil)
-		err := fx.doc.DeleteSpace(context.Background(), rawCh)
-		require.NotNil(t, err)
-	})
 }

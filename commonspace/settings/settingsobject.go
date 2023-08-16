@@ -1,11 +1,10 @@
-//go:generate mockgen -destination mock_settings/mock_settings.go github.com/anyproto/any-sync/commonspace/settings DeletionManager,Deleter,SpaceIdsProvider
 package settings
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/anyproto/any-sync/commonspace/deletionstate"
+	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/util/crypto"
 
 	"github.com/anyproto/any-sync/accountservice"
@@ -21,7 +20,6 @@ import (
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 )
 
 var log = logger.NewNamed("common.commonspace.settings")
@@ -30,8 +28,6 @@ type SettingsObject interface {
 	synctree.SyncTree
 	Init(ctx context.Context) (err error)
 	DeleteObject(id string) (err error)
-	DeleteSpace(ctx context.Context, raw *treechangeproto.RawTreeChangeWithId) (err error)
-	SpaceDeleteRawChange() (raw *treechangeproto.RawTreeChangeWithId, err error)
 }
 
 var (
@@ -60,56 +56,30 @@ type Deps struct {
 	TreeManager   treemanager.TreeManager
 	Store         spacestorage.SpaceStorage
 	Configuration nodeconf.NodeConf
-	DeletionState deletionstate.ObjectDeletionState
-	Provider      SpaceIdsProvider
-	OnSpaceDelete func()
+	DelManager    deletionmanager.DeletionManager
 	// testing dependencies
 	builder       settingsstate.StateBuilder
-	del           Deleter
-	delManager    DeletionManager
 	changeFactory settingsstate.ChangeFactory
 }
 
 type settingsObject struct {
 	synctree.SyncTree
-	account     accountservice.Service
-	spaceId     string
-	treeManager treemanager.TreeManager
-	store       spacestorage.SpaceStorage
-	builder     settingsstate.StateBuilder
-	buildFunc   BuildTreeFunc
-	loop        *deleteLoop
+	account   accountservice.Service
+	spaceId   string
+	store     spacestorage.SpaceStorage
+	builder   settingsstate.StateBuilder
+	buildFunc BuildTreeFunc
 
 	state           *settingsstate.State
-	deletionState   deletionstate.ObjectDeletionState
-	deletionManager DeletionManager
+	deletionManager deletionmanager.DeletionManager
 	changeFactory   settingsstate.ChangeFactory
 }
 
 func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 	var (
-		deleter         Deleter
-		deletionManager DeletionManager
-		builder         settingsstate.StateBuilder
-		changeFactory   settingsstate.ChangeFactory
+		builder       settingsstate.StateBuilder
+		changeFactory settingsstate.ChangeFactory
 	)
-	if deps.del == nil {
-		deleter = newDeleter(deps.Store, deps.DeletionState, deps.TreeManager)
-	} else {
-		deleter = deps.del
-	}
-	if deps.delManager == nil {
-		deletionManager = newDeletionManager(
-			spaceId,
-			deps.Store.SpaceSettingsId(),
-			deps.Configuration.IsResponsible(spaceId),
-			deps.TreeManager,
-			deps.DeletionState,
-			deps.Provider,
-			deps.OnSpaceDelete)
-	} else {
-		deletionManager = deps.delManager
-	}
 	if deps.builder == nil {
 		builder = settingsstate.NewStateBuilder()
 	} else {
@@ -121,23 +91,13 @@ func NewSettingsObject(deps Deps, spaceId string) (obj SettingsObject) {
 		changeFactory = deps.changeFactory
 	}
 
-	loop := newDeleteLoop(func() {
-		deleter.Delete()
-	})
-	deps.DeletionState.AddObserver(func(ids []string) {
-		loop.notify()
-	})
-
 	s := &settingsObject{
-		loop:            loop,
 		spaceId:         spaceId,
 		account:         deps.Account,
-		deletionState:   deps.DeletionState,
-		treeManager:     deps.TreeManager,
 		store:           deps.Store,
 		buildFunc:       deps.BuildFunc,
 		builder:         builder,
-		deletionManager: deletionManager,
+		deletionManager: deps.DelManager,
 		changeFactory:   changeFactory,
 	}
 	obj = s
@@ -151,7 +111,6 @@ func (s *settingsObject) updateIds(tr objecttree.ObjectTree) {
 		log.Error("failed to build state", zap.Error(err))
 		return
 	}
-	log.Debug("updating object state", zap.String("deleted by", s.state.DeleterId))
 	if err = s.deletionManager.UpdateState(context.Background(), s.state); err != nil {
 		log.Error("failed to update state", zap.Error(err))
 	}
@@ -180,7 +139,6 @@ func (s *settingsObject) Init(ctx context.Context) (err error) {
 	if err = s.checkHistoryState(ctx); err != nil {
 		return
 	}
-	s.loop.Run()
 	return
 }
 
@@ -207,46 +165,7 @@ func (s *settingsObject) checkHistoryState(ctx context.Context) (err error) {
 }
 
 func (s *settingsObject) Close() error {
-	s.loop.Close()
 	return s.SyncTree.Close()
-}
-
-func (s *settingsObject) DeleteSpace(ctx context.Context, raw *treechangeproto.RawTreeChangeWithId) (err error) {
-	s.Lock()
-	defer s.Unlock()
-	defer func() {
-		log.Debug("finished adding delete change", zap.Error(err))
-	}()
-	err = s.verifyDeleteSpace(raw)
-	if err != nil {
-		return
-	}
-	res, err := s.AddRawChanges(ctx, objecttree.RawChangesPayload{
-		NewHeads:   []string{raw.Id},
-		RawChanges: []*treechangeproto.RawTreeChangeWithId{raw},
-	})
-	if err != nil {
-		return
-	}
-	if !slices.Contains(res.Heads, raw.Id) {
-		err = ErrCantDeleteSpace
-		return
-	}
-	return
-}
-
-func (s *settingsObject) SpaceDeleteRawChange() (raw *treechangeproto.RawTreeChangeWithId, err error) {
-	accountData := s.account.Account()
-	data, err := s.changeFactory.CreateSpaceDeleteChange(accountData.PeerId, s.state, false)
-	if err != nil {
-		return
-	}
-	return s.PrepareChange(objecttree.SignableChangeContent{
-		Data:        data,
-		Key:         accountData.SignKey,
-		IsSnapshot:  false,
-		IsEncrypted: false,
-	})
 }
 
 func (s *settingsObject) DeleteObject(id string) (err error) {

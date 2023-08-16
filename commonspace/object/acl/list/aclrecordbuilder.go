@@ -407,12 +407,13 @@ func (a *aclRecordBuilder) Unmarshall(rawRecord *consensusproto.RawRecord) (rec 
 		return
 	}
 	rec = &AclRecord{
-		PrevId:    aclRecord.PrevId,
-		Timestamp: aclRecord.Timestamp,
-		Data:      aclRecord.Data,
-		Signature: rawRecord.Signature,
-		Identity:  pubKey,
-		Model:     aclData,
+		PrevId:            aclRecord.PrevId,
+		Timestamp:         aclRecord.Timestamp,
+		AcceptorTimestamp: rawRecord.AcceptorTimestamp,
+		Data:              aclRecord.Data,
+		Signature:         rawRecord.Signature,
+		Identity:          pubKey,
+		Model:             aclData,
 	}
 	res, err := pubKey.Verify(rawRecord.Payload, rawRecord.Signature)
 	if err != nil {

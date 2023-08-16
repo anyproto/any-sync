@@ -64,8 +64,6 @@ func (s *stateBuilder) processChange(change *objecttree.Change, rootId string, s
 		switch {
 		case cnt.GetObjectDelete() != nil:
 			state.DeletedIds[cnt.GetObjectDelete().GetId()] = struct{}{}
-		case cnt.GetSpaceDelete() != nil:
-			state.DeleterId = cnt.GetSpaceDelete().GetDeleterPeerId()
 		}
 	}
 	return state

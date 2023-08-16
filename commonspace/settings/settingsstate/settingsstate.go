@@ -5,7 +5,6 @@ import "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 
 type State struct {
 	DeletedIds     map[string]struct{}
-	DeleterId      string
 	LastIteratedId string
 }
 
@@ -18,7 +17,6 @@ func NewStateFromSnapshot(snapshot *spacesyncproto.SpaceSettingsSnapshot, lastIt
 	for _, id := range snapshot.DeletedIds {
 		st.DeletedIds[id] = struct{}{}
 	}
-	st.DeleterId = snapshot.DeleterPeerId
 	st.LastIteratedId = lastIteratedId
 	return st
 }

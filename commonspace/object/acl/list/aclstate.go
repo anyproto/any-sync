@@ -264,45 +264,45 @@ func (st *AclState) saveKeysFromRoot(id string, root *aclrecordproto.AclRoot) (e
 func (st *AclState) applyChangeData(record *AclRecord) (err error) {
 	model := record.Model.(*aclrecordproto.AclData)
 	for _, ch := range model.GetAclContent() {
-		if err = st.applyChangeContent(ch, record.Id, record.Identity); err != nil {
-			log.Info("error while applying changes: %v; ignore", zap.Error(err))
+		if err = st.applyChangeContent(ch, record); err != nil {
+			log.Info("error while applying changes; ignore", zap.Error(err))
 			return err
 		}
 	}
 	return nil
 }
 
-func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recordId string, authorIdentity crypto.PubKey) error {
+func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, record *AclRecord) error {
 	switch {
 	case ch.GetPermissionChange() != nil:
-		return st.applyPermissionChange(ch.GetPermissionChange(), recordId, authorIdentity)
+		return st.applyPermissionChange(ch.GetPermissionChange(), record)
 	case ch.GetInvite() != nil:
-		return st.applyInvite(ch.GetInvite(), recordId, authorIdentity)
+		return st.applyInvite(ch.GetInvite(), record)
 	case ch.GetInviteRevoke() != nil:
-		return st.applyInviteRevoke(ch.GetInviteRevoke(), recordId, authorIdentity)
+		return st.applyInviteRevoke(ch.GetInviteRevoke(), record)
 	case ch.GetRequestJoin() != nil:
-		return st.applyRequestJoin(ch.GetRequestJoin(), recordId, authorIdentity)
+		return st.applyRequestJoin(ch.GetRequestJoin(), record)
 	case ch.GetRequestAccept() != nil:
-		return st.applyRequestAccept(ch.GetRequestAccept(), recordId, authorIdentity)
+		return st.applyRequestAccept(ch.GetRequestAccept(), record)
 	case ch.GetRequestDecline() != nil:
-		return st.applyRequestDecline(ch.GetRequestDecline(), recordId, authorIdentity)
+		return st.applyRequestDecline(ch.GetRequestDecline(), record)
 	case ch.GetAccountRemove() != nil:
-		return st.applyAccountRemove(ch.GetAccountRemove(), recordId, authorIdentity)
+		return st.applyAccountRemove(ch.GetAccountRemove(), record)
 	case ch.GetReadKeyChange() != nil:
-		return st.applyReadKeyChange(ch.GetReadKeyChange(), recordId, authorIdentity, true)
+		return st.applyReadKeyChange(ch.GetReadKeyChange(), record, true)
 	case ch.GetAccountRequestRemove() != nil:
-		return st.applyRequestRemove(ch.GetAccountRequestRemove(), recordId, authorIdentity)
+		return st.applyRequestRemove(ch.GetAccountRequestRemove(), record)
 	default:
 		return ErrUnexpectedContentType
 	}
 }
 
-func (st *AclState) applyPermissionChange(ch *aclrecordproto.AclAccountPermissionChange, recordId string, authorIdentity crypto.PubKey) error {
+func (st *AclState) applyPermissionChange(ch *aclrecordproto.AclAccountPermissionChange, record *AclRecord) error {
 	chIdentity, err := st.keyStore.PubKeyFromProto(ch.Identity)
 	if err != nil {
 		return err
 	}
-	err = st.contentValidator.ValidatePermissionChange(ch, authorIdentity)
+	err = st.contentValidator.ValidatePermissionChange(ch, record.Identity)
 	if err != nil {
 		return err
 	}
@@ -313,21 +313,21 @@ func (st *AclState) applyPermissionChange(ch *aclrecordproto.AclAccountPermissio
 	return nil
 }
 
-func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, recordId string, authorIdentity crypto.PubKey) error {
+func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, record *AclRecord) error {
 	inviteKey, err := st.keyStore.PubKeyFromProto(ch.InviteKey)
 	if err != nil {
 		return err
 	}
-	err = st.contentValidator.ValidateInvite(ch, authorIdentity)
+	err = st.contentValidator.ValidateInvite(ch, record.Identity)
 	if err != nil {
 		return err
 	}
-	st.inviteKeys[recordId] = inviteKey
+	st.inviteKeys[record.Id] = inviteKey
 	return nil
 }
 
-func (st *AclState) applyInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, recordId string, authorIdentity crypto.PubKey) error {
-	err := st.contentValidator.ValidateInviteRevoke(ch, authorIdentity)
+func (st *AclState) applyInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, record *AclRecord) error {
+	err := st.contentValidator.ValidateInviteRevoke(ch, record.Identity)
 	if err != nil {
 		return err
 	}
@@ -335,22 +335,22 @@ func (st *AclState) applyInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke,
 	return nil
 }
 
-func (st *AclState) applyRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, recordId string, authorIdentity crypto.PubKey) error {
-	err := st.contentValidator.ValidateRequestJoin(ch, authorIdentity)
+func (st *AclState) applyRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, record *AclRecord) error {
+	err := st.contentValidator.ValidateRequestJoin(ch, record.Identity)
 	if err != nil {
 		return err
 	}
-	st.pendingRequests[mapKeyFromPubKey(authorIdentity)] = recordId
-	st.requestRecords[recordId] = RequestRecord{
-		RequestIdentity: authorIdentity,
+	st.pendingRequests[mapKeyFromPubKey(record.Identity)] = record.Id
+	st.requestRecords[record.Id] = RequestRecord{
+		RequestIdentity: record.Identity,
 		RequestMetadata: ch.Metadata,
 		Type:            RequestTypeJoin,
 	}
 	return nil
 }
 
-func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, recordId string, authorIdentity crypto.PubKey) error {
-	err := st.contentValidator.ValidateRequestAccept(ch, authorIdentity)
+func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, record *AclRecord) error {
+	err := st.contentValidator.ValidateRequestAccept(ch, record.Identity)
 	if err != nil {
 		return err
 	}
@@ -358,11 +358,11 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 	if err != nil {
 		return err
 	}
-	record, _ := st.requestRecords[ch.RequestRecordId]
+	requestRecord, _ := st.requestRecords[ch.RequestRecordId]
 	st.accountStates[mapKeyFromPubKey(acceptIdentity)] = AclAccountState{
 		PubKey:          acceptIdentity,
 		Permissions:     AclPermissions(ch.Permissions),
-		RequestMetadata: record.RequestMetadata,
+		RequestMetadata: requestRecord.RequestMetadata,
 		KeyRecordId:     st.CurrentReadKeyId(),
 	}
 	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity))
@@ -421,8 +421,8 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 	return nil
 }
 
-func (st *AclState) applyRequestDecline(ch *aclrecordproto.AclAccountRequestDecline, recordId string, authorIdentity crypto.PubKey) error {
-	err := st.contentValidator.ValidateRequestDecline(ch, authorIdentity)
+func (st *AclState) applyRequestDecline(ch *aclrecordproto.AclAccountRequestDecline, record *AclRecord) error {
+	err := st.contentValidator.ValidateRequestDecline(ch, record.Identity)
 	if err != nil {
 		return err
 	}
@@ -431,21 +431,21 @@ func (st *AclState) applyRequestDecline(ch *aclrecordproto.AclAccountRequestDecl
 	return nil
 }
 
-func (st *AclState) applyRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, recordId string, authorIdentity crypto.PubKey) error {
-	err := st.contentValidator.ValidateRequestRemove(ch, authorIdentity)
+func (st *AclState) applyRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, record *AclRecord) error {
+	err := st.contentValidator.ValidateRequestRemove(ch, record.Identity)
 	if err != nil {
 		return err
 	}
-	st.requestRecords[recordId] = RequestRecord{
-		RequestIdentity: authorIdentity,
+	st.requestRecords[record.Id] = RequestRecord{
+		RequestIdentity: record.Identity,
 		Type:            RequestTypeRemove,
 	}
-	st.pendingRequests[mapKeyFromPubKey(authorIdentity)] = recordId
+	st.pendingRequests[mapKeyFromPubKey(record.Identity)] = record.Id
 	return nil
 }
 
-func (st *AclState) applyAccountRemove(ch *aclrecordproto.AclAccountRemove, recordId string, authorIdentity crypto.PubKey) error {
-	err := st.contentValidator.ValidateAccountRemove(ch, authorIdentity)
+func (st *AclState) applyAccountRemove(ch *aclrecordproto.AclAccountRemove, record *AclRecord) error {
+	err := st.contentValidator.ValidateAccountRemove(ch, record.Identity)
 	if err != nil {
 		return err
 	}
@@ -458,17 +458,17 @@ func (st *AclState) applyAccountRemove(ch *aclrecordproto.AclAccountRemove, reco
 		delete(st.accountStates, idKey)
 		delete(st.pendingRequests, idKey)
 	}
-	return st.applyReadKeyChange(ch.ReadKeyChange, recordId, authorIdentity, false)
+	return st.applyReadKeyChange(ch.ReadKeyChange, record, false)
 }
 
-func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, recordId string, authorIdentity crypto.PubKey, validate bool) error {
+func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, record *AclRecord, validate bool) error {
 	if validate {
-		err := st.contentValidator.ValidateReadKeyChange(ch, authorIdentity)
+		err := st.contentValidator.ValidateReadKeyChange(ch, record.Identity)
 		if err != nil {
 			return err
 		}
 	}
-	st.readKeyChanges = append(st.readKeyChanges, recordId)
+	st.readKeyChanges = append(st.readKeyChanges, record.Id)
 	mkPubKey, err := st.keyStore.PubKeyFromProto(ch.MetadataPubKey)
 	if err != nil {
 		return err
@@ -493,7 +493,7 @@ func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, reco
 		}
 		aclKeys.MetadataPrivKey = metadataKey
 	}
-	st.keys[recordId] = aclKeys
+	st.keys[record.Id] = aclKeys
 	return nil
 }
 

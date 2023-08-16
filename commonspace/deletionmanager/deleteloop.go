@@ -1,4 +1,4 @@
-package settings
+package deletionmanager
 
 import (
 	"context"

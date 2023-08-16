@@ -400,6 +400,18 @@ func (mr *MockSyncAclMockRecorder) Run(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockSyncAcl)(nil).Run), arg0)
 }
 
+// SetAclUpdater mocks base method.
+func (m *MockSyncAcl) SetAclUpdater(arg0 headupdater.AclUpdater) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetAclUpdater", arg0)
+}
+
+// SetAclUpdater indicates an expected call of SetAclUpdater.
+func (mr *MockSyncAclMockRecorder) SetAclUpdater(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAclUpdater", reflect.TypeOf((*MockSyncAcl)(nil).SetAclUpdater), arg0)
+}
+
 // SetHeadUpdater mocks base method.
 func (m *MockSyncAcl) SetHeadUpdater(arg0 headupdater.HeadUpdater) {
 	m.ctrl.T.Helper()
