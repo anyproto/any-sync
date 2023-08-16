@@ -26,6 +26,7 @@ func TestEmptyClientGetsFullHistory(t *testing.T) {
 	storage := createStorage(treeId, aclList)
 	changeCreator := objecttree.NewMockChangeCreator()
 	deps := fixtureDeps{
+		counter:     defaultOpCounter(),
 		aclList:     aclList,
 		initStorage: storage.(*treestorage.InMemoryTreeStorage),
 		connectionMap: map[string][]string{
@@ -43,7 +44,7 @@ func TestEmptyClientGetsFullHistory(t *testing.T) {
 			changeCreator.CreateRaw("1", aclList.Id(), treeId, true, treeId),
 		},
 	})
-	time.Sleep(100 * time.Millisecond)
+	fx.counter.WaitIdle()
 	fx.stop()
 	firstHeads := fx.handlers["peer1"].tree().Heads()
 	secondHeads := fx.handlers["peer2"].tree().Heads()
@@ -116,6 +117,7 @@ func testTreeMerge(t *testing.T, levels, perLevel int, hasData bool, isSnapshot 
 	err = storage.AddRawChangesSetHeads(initialRes.changes, initialRes.heads)
 	require.NoError(t, err)
 	deps := fixtureDeps{
+		counter:     defaultOpCounter(),
 		aclList:     aclList,
 		initStorage: storage.(*treestorage.InMemoryTreeStorage),
 		connectionMap: map[string][]string{
@@ -132,7 +134,7 @@ func testTreeMerge(t *testing.T, levels, perLevel int, hasData bool, isSnapshot 
 		NewHeads:   initialRes.heads,
 		RawChanges: initialRes.changes,
 	})
-	time.Sleep(50 * time.Millisecond)
+	fx.counter.WaitIdle()
 	firstHeads := fx.handlers["peer1"].tree().Heads()
 	secondHeads := fx.handlers["peer2"].tree().Heads()
 	require.True(t, slice.UnsortedEquals(firstHeads, secondHeads))
@@ -160,7 +162,7 @@ func testTreeMerge(t *testing.T, levels, perLevel int, hasData bool, isSnapshot 
 		NewHeads:   peer2Res.heads,
 		RawChanges: peer2Res.changes,
 	})
-	time.Sleep(50 * time.Millisecond)
+	fx.counter.WaitIdle()
 	fx.stop()
 	firstTree := fx.handlers["peer1"].tree()
 	secondTree := fx.handlers["peer2"].tree()
@@ -248,6 +250,7 @@ func testTreeStorageHasExtra(t *testing.T, levels, perLevel int, hasData bool, i
 		hasData:    hasData,
 	}
 	deps := fixtureDeps{
+		counter:     defaultOpCounter(),
 		aclList:     aclList,
 		initStorage: storage.(*treestorage.InMemoryTreeStorage),
 		connectionMap: map[string][]string{
@@ -272,7 +275,7 @@ func testTreeStorageHasExtra(t *testing.T, levels, perLevel int, hasData bool, i
 		NewHeads:   initialRes.heads,
 		RawChanges: initialRes.changes,
 	})
-	time.Sleep(50 * time.Millisecond)
+	fx.counter.WaitIdle()
 
 	// here we want that the saved changes in storage should not affect the sync protocol
 	firstHeads := fx.handlers["peer1"].tree().Heads()
@@ -305,6 +308,7 @@ func testTreeStorageHasExtraThreeParts(t *testing.T, levels, perLevel int, hasDa
 		hasData:    hasData,
 	}
 	deps := fixtureDeps{
+		counter:     defaultOpCounter(),
 		aclList:     aclList,
 		initStorage: storage.(*treestorage.InMemoryTreeStorage),
 		connectionMap: map[string][]string{
@@ -354,7 +358,7 @@ func testTreeStorageHasExtraThreeParts(t *testing.T, levels, perLevel int, hasDa
 		NewHeads:   thirdPart.heads,
 		RawChanges: thirdPart.changes,
 	})
-	time.Sleep(50 * time.Millisecond)
+	fx.counter.WaitIdle()
 	firstHeads := fx.handlers["peer1"].tree().Heads()
 	secondHeads := fx.handlers["peer2"].tree().Heads()
 	require.True(t, slice.UnsortedEquals(firstHeads, secondHeads))
