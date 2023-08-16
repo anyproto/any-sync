@@ -1,0 +1,55 @@
+syntax = "proto3";
+package identityRepo;
+
+option go_package = "identityrepo/identityrepoproto";
+
+service IdentityRepo {
+  // DataPut puts client data to a repository
+  rpc DataPut(DataPutRequest) returns (Ok);
+  // DataDelete deletes client data from a repository
+  rpc DataDelete(DataDeleteRequest) returns (Ok);
+  // DataPull pulls client data from a repository
+  rpc DataPull(DataPullRequest) returns (DataPullResponse);
+}
+
+message Data {
+  // kind is a string representing the kind of data
+  string kind = 1;
+  // data is a byte payload
+  bytes data = 2;
+  // data signature
+  bytes signature = 3;
+}
+
+message DataWithIdentity {
+  string identity = 1;
+  repeated Data data = 2;
+}
+
+message DataPutRequest {
+  // string representation of identity, must be equal handshake result
+  string identity = 1;
+  // data to save
+  repeated Data data = 2;
+}
+
+message DataDeleteRequest {
+  // string representation of identity, must be equal handshake result
+  string identity = 1;
+  // kinds of data to delete, if empty all kinds will be deleted
+  repeated string kinds = 2;
+}
+
+message DataPullRequest {
+  // list of identities wanted to request
+  repeated string identities = 1;
+  // kinds of data wanted to request
+  repeated string kinds = 2;
+}
+
+message DataPullResponse {
+  repeated DataWithIdentity data = 1;
+}
+
+
+message Ok {}
