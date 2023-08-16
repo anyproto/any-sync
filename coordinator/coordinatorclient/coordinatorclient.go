@@ -60,9 +60,10 @@ func (c *coordinatorClient) Name() (name string) {
 func (c *coordinatorClient) ChangeStatus(ctx context.Context, spaceId string, deleteRaw *treechangeproto.RawTreeChangeWithId) (status *coordinatorproto.SpaceStatusPayload, err error) {
 	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
 		resp, err := cl.SpaceStatusChange(ctx, &coordinatorproto.SpaceStatusChangeRequest{
-			SpaceId:               spaceId,
-			DeletionChangeId:      deleteRaw.GetId(),
-			DeletionChangePayload: deleteRaw.GetRawChange(),
+			SpaceId:             spaceId,
+			DeletionPayloadId:   deleteRaw.GetId(),
+			DeletionPayload:     deleteRaw.GetRawChange(),
+			DeletionPayloadType: coordinatorproto.DeletionPayloadType_Tree,
 		})
 		if err != nil {
 			return rpcerr.Unwrap(err)

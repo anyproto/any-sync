@@ -16,6 +16,9 @@ service Coordinator {
     // SpaceStatusCheck checks the status of space and tells if it is deleted or not
     rpc SpaceStatusCheck(SpaceStatusCheckRequest) returns (SpaceStatusCheckResponse);
 
+    // SpaceStatusCheckMany checks the statuses of spaces and tells if they are deleted or not
+    rpc SpaceStatusCheckMany(SpaceStatusCheckManyRequest) returns (SpaceStatusCheckManyResponse);
+
     // SpaceStatusChange changes the status of space
     rpc SpaceStatusChange(SpaceStatusChangeRequest) returns (SpaceStatusChangeResponse);
 
@@ -101,11 +104,22 @@ message SpaceStatusCheckResponse {
     SpaceStatusPayload payload = 1;
 }
 
+// SpaceStatusCheckManyRequest contains the spaceIds of requested spaces
+message SpaceStatusCheckManyRequest {
+    repeated string spaceIds = 1;
+}
+
+// SpaceStatusCheckManyResponse contains the current statuses of spaces
+message SpaceStatusCheckManyResponse {
+    repeated SpaceStatusPayload payloads = 1;
+}
+
 // SpaceStatusChangeRequest contains the deletionChange if we want to delete space, or it is empty otherwise
 message SpaceStatusChangeRequest {
     string spaceId = 1;
-    string deletionChangeId = 2;
-    bytes deletionChangePayload = 3;
+    string deletionPayloadId = 2;
+    bytes deletionPayload = 3;
+    DeletionPayloadType deletionPayloadType = 4;
 }
 
 // SpaceStatusChangeResponse contains changed status of space
@@ -142,6 +156,12 @@ enum NodeType {
     CoordinatorAPI = 2;
     // ConsensusAPI supports consensus api
     ConsensusAPI = 3;
+}
+
+// DeletionChangeType determines the type of deletion payload
+enum DeletionPayloadType {
+    Tree = 0;
+    Confirm = 1;
 }
 
 // Node describes one node in the network
