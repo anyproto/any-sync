@@ -173,3 +173,23 @@ message Node {
     // list of supported APIs
     repeated NodeType types = 3;
 }
+
+// DeletionConfirmPayloadWithSignature contains protobuf encoded deletion payload and its signature
+message DeletionConfirmPayloadWithSignature {
+    bytes deletionPayload = 1;
+    bytes signature = 2;
+}
+
+// DeletionConfirmPayload contains payload for deletion confirmation
+message DeletionConfirmPayload {
+    // SpaceId is the identifier of space
+    string spaceId = 1;
+    // PeerId of receipt requester
+    string peerId = 2;
+    // AccountIdentity is an identity of a space owner
+    bytes accountIdentity = 3;
+    // NetworkId is the id of a network where the deletion was requested
+    string networkId = 4;
+    // Timestamp is a timestamp when the deletion was requested
+    int64 timestamp = 5;
+}
