@@ -1308,7 +1308,8 @@ func (m *DeletionLogResponse) GetHasMore() bool {
 
 type DeletionLogRecord struct {
 	// Id is a record id
-	Id      string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// SpaceId is a space identifier
 	SpaceId string `protobuf:"bytes,2,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
 	// DeletionLogRecordStatus is a space status
 	Status DeletionLogRecordStatus `protobuf:"varint,3,opt,name=status,proto3,enum=coordinator.DeletionLogRecordStatus" json:"status,omitempty"`

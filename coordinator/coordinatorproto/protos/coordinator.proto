@@ -216,6 +216,7 @@ message DeletionLogResponse {
 message DeletionLogRecord {
   // Id is a record id
   string id = 1;
+  // SpaceId is a space identifier
   string spaceId = 2;
   // DeletionLogRecordStatus is a space status
   DeletionLogRecordStatus status = 3;
