@@ -14,7 +14,7 @@ type operationCounter struct {
 }
 
 func defaultOpCounter() *operationCounter {
-	return newOpCounter(50 * time.Second)
+	return newOpCounter(50 * time.Millisecond)
 }
 
 func newOpCounter(limit time.Duration) *operationCounter {
