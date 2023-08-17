@@ -35,7 +35,7 @@ func (n *noOpSyncStatus) HeadsChange(treeId string, heads []string) {
 func (n *noOpSyncStatus) HeadsReceive(senderId, treeId string, heads []string) {
 }
 
-func (n *noOpSyncStatus) SetNodesOnline(senderId string, status ConnectionStatus) {
+func (n *noOpSyncStatus) SetNodesStatus(senderId string, status ConnectionStatus) {
 }
 
 func (n *noOpSyncStatus) StateCounter() uint64 {

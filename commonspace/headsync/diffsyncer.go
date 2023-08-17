@@ -130,12 +130,12 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	err = rpcerr.Unwrap(err)
 	if err != nil && err != spacesyncproto.ErrSpaceMissing {
 		if err == spacesyncproto.ErrSpaceIsDeleted {
-			d.syncStatus.SetNodesOnline(p.Id(), syncstatus.RemovedFromNetwork)
+			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.RemovedFromNetwork)
 		}
-		d.syncStatus.SetNodesOnline(p.Id(), syncstatus.ConnectionError)
+		d.syncStatus.SetNodesStatus(p.Id(), syncstatus.ConnectionError)
 		return fmt.Errorf("diff error: %v", err)
 	}
-	d.syncStatus.SetNodesOnline(p.Id(), syncstatus.Online)
+	d.syncStatus.SetNodesStatus(p.Id(), syncstatus.Online)
 
 	if err == spacesyncproto.ErrSpaceMissing {
 		return d.sendPushSpaceRequest(ctx, p.Id(), cl)

@@ -44,7 +44,7 @@ type StatusUpdater interface {
 	HeadsChange(treeId string, heads []string)
 	HeadsReceive(senderId, treeId string, heads []string)
 
-	SetNodesOnline(senderId string, status ConnectionStatus)
+	SetNodesStatus(senderId string, status ConnectionStatus)
 	StateCounter() uint64
 	RemoveAllExcept(senderId string, differentRemoteIds []string, stateCounter uint64)
 }
@@ -158,7 +158,7 @@ func (s *syncStatusService) HeadsChange(treeId string, heads []string) {
 	s.stateCounter++
 }
 
-func (s *syncStatusService) SetNodesOnline(senderId string, status ConnectionStatus) {
+func (s *syncStatusService) SetNodesStatus(senderId string, status ConnectionStatus) {
 	if !s.isSenderResponsible(senderId) {
 		return
 	}
