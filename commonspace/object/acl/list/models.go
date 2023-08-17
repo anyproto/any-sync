@@ -6,13 +6,14 @@ import (
 )
 
 type AclRecord struct {
-	Id        string
-	PrevId    string
-	Timestamp int64
-	Data      []byte
-	Identity  crypto.PubKey
-	Model     interface{}
-	Signature []byte
+	Id                string
+	PrevId            string
+	Timestamp         int64
+	AcceptorTimestamp int64
+	Data              []byte
+	Identity          crypto.PubKey
+	Model             interface{}
+	Signature         []byte
 }
 
 type RequestRecord struct {

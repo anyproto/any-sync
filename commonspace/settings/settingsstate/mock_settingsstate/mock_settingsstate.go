@@ -87,18 +87,3 @@ func (mr *MockChangeFactoryMockRecorder) CreateObjectDeleteChange(arg0, arg1, ar
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateObjectDeleteChange", reflect.TypeOf((*MockChangeFactory)(nil).CreateObjectDeleteChange), arg0, arg1, arg2)
 }
-
-// CreateSpaceDeleteChange mocks base method.
-func (m *MockChangeFactory) CreateSpaceDeleteChange(arg0 string, arg1 *settingsstate.State, arg2 bool) ([]byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateSpaceDeleteChange", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateSpaceDeleteChange indicates an expected call of CreateSpaceDeleteChange.
-func (mr *MockChangeFactoryMockRecorder) CreateSpaceDeleteChange(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSpaceDeleteChange", reflect.TypeOf((*MockChangeFactory)(nil).CreateSpaceDeleteChange), arg0, arg1, arg2)
-}

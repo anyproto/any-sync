@@ -6,7 +6,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/headsync"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
@@ -63,7 +62,7 @@ func NewSpaceId(id string, repKey uint64) string {
 type Space interface {
 	Id() string
 	Init(ctx context.Context) error
-	Acl() list.AclList
+	Acl() syncacl.SyncAcl
 
 	StoredIds() []string
 	DebugAllHeads() []headsync.TreeHeads
@@ -74,10 +73,8 @@ type Space interface {
 	Storage() spacestorage.SpaceStorage
 
 	DeleteTree(ctx context.Context, id string) (err error)
-	SpaceDeleteRawChange(ctx context.Context) (raw *treechangeproto.RawTreeChangeWithId, err error)
-	DeleteSpace(ctx context.Context, deleteChange *treechangeproto.RawTreeChangeWithId) (err error)
-
 	GetNodePeers(ctx context.Context) (peer []peer.Peer, err error)
+	SetDeleted(isDeleted bool)
 
 	HandleMessage(ctx context.Context, msg objectsync.HandleMessage) (err error)
 	HandleSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
@@ -137,14 +134,6 @@ func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
 	return s.settings.DeleteTree(ctx, id)
 }
 
-func (s *space) SpaceDeleteRawChange(ctx context.Context) (raw *treechangeproto.RawTreeChangeWithId, err error) {
-	return s.settings.SpaceDeleteRawChange(ctx)
-}
-
-func (s *space) DeleteSpace(ctx context.Context, deleteChange *treechangeproto.RawTreeChangeWithId) (err error) {
-	return s.settings.DeleteSpace(ctx, deleteChange)
-}
-
 func (s *space) HandleMessage(ctx context.Context, msg objectsync.HandleMessage) (err error) {
 	return s.objectSync.HandleMessage(ctx, msg)
 }
@@ -165,8 +154,12 @@ func (s *space) GetNodePeers(ctx context.Context) (peer []peer.Peer, err error) 
 	return s.peerManager.GetNodePeers(ctx)
 }
 
-func (s *space) Acl() list.AclList {
-	return s.aclList
+func (s *space) SetDeleted(isDeleted bool) {
+	s.state.SpaceIsDeleted.Swap(isDeleted)
+}
+
+func (s *space) Acl() syncacl.SyncAcl {
+	return s.aclList.(syncacl.SyncAcl)
 }
 
 func (s *space) Id() string {

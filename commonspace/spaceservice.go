@@ -2,6 +2,7 @@ package commonspace
 
 import (
 	"context"
+	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"sync/atomic"
 
 	"github.com/anyproto/any-sync/accountservice"
@@ -179,6 +180,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		Register(syncacl.New()).
 		Register(requestmanager.New()).
 		Register(deletionstate.New()).
+		Register(deletionmanager.New()).
 		Register(settings.New()).
 		Register(objectmanager.New(s.treeManager)).
 		Register(objecttreebuilder.New()).

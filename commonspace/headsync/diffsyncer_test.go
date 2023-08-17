@@ -262,8 +262,6 @@ func TestDiffSyncer(t *testing.T) {
 		fx.diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock))).
 			Return(nil, nil, nil, spacesyncproto.ErrSpaceIsDeleted)
-		fx.storageMock.EXPECT().SpaceSettingsId().Return("settingsId")
-		fx.treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer.Id(), []string{"settingsId"}, nil).Return(nil)
 
 		require.NoError(t, fx.diffSyncer.Sync(ctx))
 	})

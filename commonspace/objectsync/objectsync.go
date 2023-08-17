@@ -23,7 +23,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 )
 
 const CName = "common.commonspace.objectsync"
@@ -162,11 +161,7 @@ func (s *objectSync) processHandleMessage(msg HandleMessage) {
 func (s *objectSync) handleRequest(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (response *spacesyncproto.ObjectSyncMessage, err error) {
 	log := log.With(zap.String("objectId", msg.ObjectId))
 	if s.spaceIsDeleted.Load() {
-		log = log.With(zap.Bool("isDeleted", true))
-		// preventing sync with other clients if they are not just syncing the settings tree
-		if !slices.Contains(s.configuration.NodeIds(s.spaceId), senderId) && msg.ObjectId != s.spaceStorage.SpaceSettingsId() {
-			return nil, spacesyncproto.ErrSpaceIsDeleted
-		}
+		return nil, spacesyncproto.ErrSpaceIsDeleted
 	}
 	err = s.checkEmptyFullSync(log, msg)
 	if err != nil {
@@ -182,11 +177,7 @@ func (s *objectSync) handleRequest(ctx context.Context, senderId string, msg *sp
 func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	log := log.With(zap.String("objectId", msg.ObjectId))
 	if s.spaceIsDeleted.Load() {
-		log = log.With(zap.Bool("isDeleted", true))
-		// preventing sync with other clients if they are not just syncing the settings tree
-		if !slices.Contains(s.configuration.NodeIds(s.spaceId), senderId) && msg.ObjectId != s.spaceStorage.SpaceSettingsId() {
-			return spacesyncproto.ErrSpaceIsDeleted
-		}
+		return spacesyncproto.ErrSpaceIsDeleted
 	}
 	err = s.checkEmptyFullSync(log, msg)
 	if err != nil {

@@ -19,12 +19,10 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
-	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/periodicsync"
 	"github.com/anyproto/any-sync/util/slice"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 )
 
 var log = logger.NewNamed(CName)
@@ -90,7 +88,7 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.syncer = createDiffSyncer(h)
 	sync := func(ctx context.Context) (err error) {
 		// for clients cancelling the sync process
-		if h.spaceIsDeleted.Load() && !h.configuration.IsResponsible(h.spaceId) {
+		if h.spaceIsDeleted.Load() {
 			return spacesyncproto.ErrSpaceIsDeleted
 		}
 		return h.syncer.Sync(ctx)
@@ -118,14 +116,7 @@ func (h *headSync) Run(ctx context.Context) (err error) {
 
 func (h *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
 	if h.spaceIsDeleted.Load() {
-		peerId, err := peer.CtxPeerId(ctx)
-		if err != nil {
-			return nil, err
-		}
-		// stop receiving all request for sync from clients
-		if !slices.Contains(h.configuration.NodeIds(h.spaceId), peerId) {
-			return nil, spacesyncproto.ErrSpaceIsDeleted
-		}
+		return nil, spacesyncproto.ErrSpaceIsDeleted
 	}
 	return HandleRangeRequest(ctx, h.diff, req)
 }

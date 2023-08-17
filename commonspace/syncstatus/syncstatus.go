@@ -27,16 +27,24 @@ var log = logger.NewNamed(CName)
 
 const CName = "common.commonspace.syncstatus"
 
+type ConnectionStatus int
+
+const (
+	Online ConnectionStatus = iota
+	ConnectionError
+	RemovedFromNetwork
+)
+
 type UpdateReceiver interface {
 	UpdateTree(ctx context.Context, treeId string, status SyncStatus) (err error)
-	UpdateNodeConnection(online bool)
+	UpdateNodeStatus(status ConnectionStatus)
 }
 
 type StatusUpdater interface {
 	HeadsChange(treeId string, heads []string)
 	HeadsReceive(senderId, treeId string, heads []string)
 
-	SetNodesOnline(senderId string, online bool)
+	SetNodesStatus(senderId string, status ConnectionStatus)
 	StateCounter() uint64
 	RemoveAllExcept(senderId string, differentRemoteIds []string, stateCounter uint64)
 }
@@ -89,7 +97,7 @@ type syncStatusService struct {
 	treeHeads    map[string]treeHeadsEntry
 	watchers     map[string]struct{}
 	stateCounter uint64
-	nodesOnline  bool
+	nodeStatus   ConnectionStatus
 
 	treeStatusBuf []treeStatus
 
@@ -150,7 +158,7 @@ func (s *syncStatusService) HeadsChange(treeId string, heads []string) {
 	s.stateCounter++
 }
 
-func (s *syncStatusService) SetNodesOnline(senderId string, online bool) {
+func (s *syncStatusService) SetNodesStatus(senderId string, status ConnectionStatus) {
 	if !s.isSenderResponsible(senderId) {
 		return
 	}
@@ -158,7 +166,7 @@ func (s *syncStatusService) SetNodesOnline(senderId string, online bool) {
 	s.Lock()
 	defer s.Unlock()
 
-	s.nodesOnline = online
+	s.nodeStatus = status
 }
 
 func (s *syncStatusService) update(ctx context.Context) (err error) {
@@ -179,9 +187,9 @@ func (s *syncStatusService) update(ctx context.Context) (err error) {
 		}
 		s.treeStatusBuf = append(s.treeStatusBuf, treeStatus{treeId, treeHeads.syncStatus, treeHeads.heads})
 	}
-	nodesOnline := s.nodesOnline
+	nodeStatus := s.nodeStatus
 	s.Unlock()
-	s.updateReceiver.UpdateNodeConnection(nodesOnline)
+	s.updateReceiver.UpdateNodeStatus(nodeStatus)
 	for _, entry := range s.treeStatusBuf {
 		err = s.updateReceiver.UpdateTree(ctx, entry.treeId, entry.status)
 		if err != nil {

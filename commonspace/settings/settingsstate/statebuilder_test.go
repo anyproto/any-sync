@@ -1,6 +1,8 @@
 package settingsstate
 
 import (
+	"fmt"
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -20,6 +22,26 @@ func TestStateBuilder_ProcessChange(t *testing.T) {
 			DeletedIds: map[string]struct{}{deletedId: struct{}{}},
 		})
 		require.Equal(t, map[string]struct{}{deletedId: struct{}{}}, newSt.DeletedIds)
+	})
+
+	t.Run("correct space deleted", func(t *testing.T) {
+		keys, _ := accountdata.NewRandom()
+		ch := &objecttree.Change{
+			Identity: keys.SignKey.GetPublic(),
+		}
+		ch.PreviousIds = []string{"someId"}
+		ch.Model = &spacesyncproto.SettingsData{
+			Content: []*spacesyncproto.SpaceSettingsContent{
+				{Value: &spacesyncproto.SpaceSettingsContent_SpaceDelete{
+					SpaceDelete: &spacesyncproto.SpaceDelete{DeleterPeerId: "peerId"},
+				}},
+			},
+		}
+		ch.Id = "someId"
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		newSt := sb.processChange(ch, rootId, NewState())
+		fmt.Println(newSt)
 	})
 
 	t.Run("changeId is equal to startId, LastIteratedId is equal to startId", func(t *testing.T) {
@@ -45,14 +67,12 @@ func TestStateBuilder_ProcessChange(t *testing.T) {
 		ch.PreviousIds = []string{"someId"}
 		ch.Model = &spacesyncproto.SettingsData{
 			Snapshot: &spacesyncproto.SpaceSettingsSnapshot{
-				DeletedIds:    []string{"id1", "id2"},
-				DeleterPeerId: "peerId",
+				DeletedIds: []string{"id1", "id2"},
 			},
 		}
 		ch.Id = "rootId"
 		newSt := sb.processChange(ch, rootId, NewState())
 		require.Equal(t, map[string]struct{}{"id1": struct{}{}, "id2": struct{}{}}, newSt.DeletedIds)
-		require.Equal(t, "peerId", newSt.DeleterId)
 	})
 
 	t.Run("changeId is not equal to lastIteratedId or rootId", func(t *testing.T) {

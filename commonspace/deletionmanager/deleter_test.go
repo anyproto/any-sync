@@ -1,4 +1,4 @@
-package settings
+package deletionmanager
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ func TestDeleter_Delete(t *testing.T) {
 	st := mock_spacestorage.NewMockSpaceStorage(ctrl)
 	delState := mock_deletionstate.NewMockObjectDeletionState(ctrl)
 
-	deleter := newDeleter(st, delState, treeManager)
+	deleter := newDeleter(st, delState, treeManager, log)
 
 	t.Run("deleter delete mark deleted success", func(t *testing.T) {
 		id := "id"
@@ -50,7 +50,7 @@ func TestDeleter_Delete(t *testing.T) {
 
 		deleter.Delete()
 	})
-	//treeManager.EXPECT().DeleteTree(gomock.Any(), spaceId, id).Return(spacestorage.ErrTreeStorageAlreadyDeleted)
+
 	t.Run("deleter delete success", func(t *testing.T) {
 		id := "id"
 		spaceId := "spaceId"
