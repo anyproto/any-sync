@@ -126,6 +126,63 @@ func (NodeType) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_d94f6f99586adae2, []int{2}
 }
 
+// DeletionChangeType determines the type of deletion payload
+type DeletionPayloadType int32
+
+const (
+	DeletionPayloadType_Tree    DeletionPayloadType = 0
+	DeletionPayloadType_Confirm DeletionPayloadType = 1
+)
+
+var DeletionPayloadType_name = map[int32]string{
+	0: "Tree",
+	1: "Confirm",
+}
+
+var DeletionPayloadType_value = map[string]int32{
+	"Tree":    0,
+	"Confirm": 1,
+}
+
+func (x DeletionPayloadType) String() string {
+	return proto.EnumName(DeletionPayloadType_name, int32(x))
+}
+
+func (DeletionPayloadType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{3}
+}
+
+type DeletionLogRecordStatus int32
+
+const (
+	// Ok means space should operate in a normal
+	DeletionLogRecordStatus_Ok DeletionLogRecordStatus = 0
+	// RemovePrepare means space prepared to remove, sync should be disabled
+	DeletionLogRecordStatus_RemovePrepare DeletionLogRecordStatus = 1
+	// Remove means space should be removed
+	DeletionLogRecordStatus_Remove DeletionLogRecordStatus = 2
+)
+
+var DeletionLogRecordStatus_name = map[int32]string{
+	0: "Ok",
+	1: "RemovePrepare",
+	2: "Remove",
+}
+
+var DeletionLogRecordStatus_value = map[string]int32{
+	"Ok":            0,
+	"RemovePrepare": 1,
+	"Remove":        2,
+}
+
+func (x DeletionLogRecordStatus) String() string {
+	return proto.EnumName(DeletionLogRecordStatus_name, int32(x))
+}
+
+func (DeletionLogRecordStatus) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{4}
+}
+
 type SpaceSignRequest struct {
 	// SpaceId is the id of the signed space
 	SpaceId string `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
@@ -618,18 +675,109 @@ func (m *SpaceStatusCheckResponse) GetPayload() *SpaceStatusPayload {
 	return nil
 }
 
+// SpaceStatusCheckManyRequest contains the spaceIds of requested spaces
+type SpaceStatusCheckManyRequest struct {
+	SpaceIds []string `protobuf:"bytes,1,rep,name=spaceIds,proto3" json:"spaceIds,omitempty"`
+}
+
+func (m *SpaceStatusCheckManyRequest) Reset()         { *m = SpaceStatusCheckManyRequest{} }
+func (m *SpaceStatusCheckManyRequest) String() string { return proto.CompactTextString(m) }
+func (*SpaceStatusCheckManyRequest) ProtoMessage()    {}
+func (*SpaceStatusCheckManyRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{9}
+}
+func (m *SpaceStatusCheckManyRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SpaceStatusCheckManyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SpaceStatusCheckManyRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SpaceStatusCheckManyRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SpaceStatusCheckManyRequest.Merge(m, src)
+}
+func (m *SpaceStatusCheckManyRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *SpaceStatusCheckManyRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_SpaceStatusCheckManyRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SpaceStatusCheckManyRequest proto.InternalMessageInfo
+
+func (m *SpaceStatusCheckManyRequest) GetSpaceIds() []string {
+	if m != nil {
+		return m.SpaceIds
+	}
+	return nil
+}
+
+// SpaceStatusCheckManyResponse contains the current statuses of spaces
+type SpaceStatusCheckManyResponse struct {
+	Payloads []*SpaceStatusPayload `protobuf:"bytes,1,rep,name=payloads,proto3" json:"payloads,omitempty"`
+}
+
+func (m *SpaceStatusCheckManyResponse) Reset()         { *m = SpaceStatusCheckManyResponse{} }
+func (m *SpaceStatusCheckManyResponse) String() string { return proto.CompactTextString(m) }
+func (*SpaceStatusCheckManyResponse) ProtoMessage()    {}
+func (*SpaceStatusCheckManyResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{10}
+}
+func (m *SpaceStatusCheckManyResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SpaceStatusCheckManyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SpaceStatusCheckManyResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SpaceStatusCheckManyResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SpaceStatusCheckManyResponse.Merge(m, src)
+}
+func (m *SpaceStatusCheckManyResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *SpaceStatusCheckManyResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_SpaceStatusCheckManyResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SpaceStatusCheckManyResponse proto.InternalMessageInfo
+
+func (m *SpaceStatusCheckManyResponse) GetPayloads() []*SpaceStatusPayload {
+	if m != nil {
+		return m.Payloads
+	}
+	return nil
+}
+
 // SpaceStatusChangeRequest contains the deletionChange if we want to delete space, or it is empty otherwise
 type SpaceStatusChangeRequest struct {
-	SpaceId               string `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
-	DeletionChangeId      string `protobuf:"bytes,2,opt,name=deletionChangeId,proto3" json:"deletionChangeId,omitempty"`
-	DeletionChangePayload []byte `protobuf:"bytes,3,opt,name=deletionChangePayload,proto3" json:"deletionChangePayload,omitempty"`
+	SpaceId             string              `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	DeletionPayloadId   string              `protobuf:"bytes,2,opt,name=deletionPayloadId,proto3" json:"deletionPayloadId,omitempty"`
+	DeletionPayload     []byte              `protobuf:"bytes,3,opt,name=deletionPayload,proto3" json:"deletionPayload,omitempty"`
+	DeletionPayloadType DeletionPayloadType `protobuf:"varint,4,opt,name=deletionPayloadType,proto3,enum=coordinator.DeletionPayloadType" json:"deletionPayloadType,omitempty"`
 }
 
 func (m *SpaceStatusChangeRequest) Reset()         { *m = SpaceStatusChangeRequest{} }
 func (m *SpaceStatusChangeRequest) String() string { return proto.CompactTextString(m) }
 func (*SpaceStatusChangeRequest) ProtoMessage()    {}
 func (*SpaceStatusChangeRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{9}
+	return fileDescriptor_d94f6f99586adae2, []int{11}
 }
 func (m *SpaceStatusChangeRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -665,18 +813,25 @@ func (m *SpaceStatusChangeRequest) GetSpaceId() string {
 	return ""
 }
 
-func (m *SpaceStatusChangeRequest) GetDeletionChangeId() string {
+func (m *SpaceStatusChangeRequest) GetDeletionPayloadId() string {
 	if m != nil {
-		return m.DeletionChangeId
+		return m.DeletionPayloadId
 	}
 	return ""
 }
 
-func (m *SpaceStatusChangeRequest) GetDeletionChangePayload() []byte {
+func (m *SpaceStatusChangeRequest) GetDeletionPayload() []byte {
 	if m != nil {
-		return m.DeletionChangePayload
+		return m.DeletionPayload
 	}
 	return nil
+}
+
+func (m *SpaceStatusChangeRequest) GetDeletionPayloadType() DeletionPayloadType {
+	if m != nil {
+		return m.DeletionPayloadType
+	}
+	return DeletionPayloadType_Tree
 }
 
 // SpaceStatusChangeResponse contains changed status of space
@@ -688,7 +843,7 @@ func (m *SpaceStatusChangeResponse) Reset()         { *m = SpaceStatusChangeResp
 func (m *SpaceStatusChangeResponse) String() string { return proto.CompactTextString(m) }
 func (*SpaceStatusChangeResponse) ProtoMessage()    {}
 func (*SpaceStatusChangeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{10}
+	return fileDescriptor_d94f6f99586adae2, []int{12}
 }
 func (m *SpaceStatusChangeResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -735,7 +890,7 @@ func (m *NetworkConfigurationRequest) Reset()         { *m = NetworkConfiguratio
 func (m *NetworkConfigurationRequest) String() string { return proto.CompactTextString(m) }
 func (*NetworkConfigurationRequest) ProtoMessage()    {}
 func (*NetworkConfigurationRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{11}
+	return fileDescriptor_d94f6f99586adae2, []int{13}
 }
 func (m *NetworkConfigurationRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -787,7 +942,7 @@ func (m *NetworkConfigurationResponse) Reset()         { *m = NetworkConfigurati
 func (m *NetworkConfigurationResponse) String() string { return proto.CompactTextString(m) }
 func (*NetworkConfigurationResponse) ProtoMessage()    {}
 func (*NetworkConfigurationResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{12}
+	return fileDescriptor_d94f6f99586adae2, []int{14}
 }
 func (m *NetworkConfigurationResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -858,7 +1013,7 @@ func (m *Node) Reset()         { *m = Node{} }
 func (m *Node) String() string { return proto.CompactTextString(m) }
 func (*Node) ProtoMessage()    {}
 func (*Node) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{13}
+	return fileDescriptor_d94f6f99586adae2, []int{15}
 }
 func (m *Node) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -908,10 +1063,327 @@ func (m *Node) GetTypes() []NodeType {
 	return nil
 }
 
+// DeletionConfirmPayloadWithSignature contains protobuf encoded deletion payload and its signature
+type DeletionConfirmPayloadWithSignature struct {
+	DeletionPayload []byte `protobuf:"bytes,1,opt,name=deletionPayload,proto3" json:"deletionPayload,omitempty"`
+	Signature       []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+}
+
+func (m *DeletionConfirmPayloadWithSignature) Reset()         { *m = DeletionConfirmPayloadWithSignature{} }
+func (m *DeletionConfirmPayloadWithSignature) String() string { return proto.CompactTextString(m) }
+func (*DeletionConfirmPayloadWithSignature) ProtoMessage()    {}
+func (*DeletionConfirmPayloadWithSignature) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{16}
+}
+func (m *DeletionConfirmPayloadWithSignature) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DeletionConfirmPayloadWithSignature) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DeletionConfirmPayloadWithSignature.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *DeletionConfirmPayloadWithSignature) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeletionConfirmPayloadWithSignature.Merge(m, src)
+}
+func (m *DeletionConfirmPayloadWithSignature) XXX_Size() int {
+	return m.Size()
+}
+func (m *DeletionConfirmPayloadWithSignature) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeletionConfirmPayloadWithSignature.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DeletionConfirmPayloadWithSignature proto.InternalMessageInfo
+
+func (m *DeletionConfirmPayloadWithSignature) GetDeletionPayload() []byte {
+	if m != nil {
+		return m.DeletionPayload
+	}
+	return nil
+}
+
+func (m *DeletionConfirmPayloadWithSignature) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+// DeletionConfirmPayload contains payload for deletion confirmation
+type DeletionConfirmPayload struct {
+	// SpaceId is the identifier of space
+	SpaceId string `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	// PeerId of receipt requester
+	PeerId string `protobuf:"bytes,2,opt,name=peerId,proto3" json:"peerId,omitempty"`
+	// AccountIdentity is an identity of a space owner
+	AccountIdentity []byte `protobuf:"bytes,3,opt,name=accountIdentity,proto3" json:"accountIdentity,omitempty"`
+	// NetworkId is the id of a network where the deletion was requested
+	NetworkId string `protobuf:"bytes,4,opt,name=networkId,proto3" json:"networkId,omitempty"`
+	// Timestamp is a timestamp when the deletion was requested
+	Timestamp int64 `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+}
+
+func (m *DeletionConfirmPayload) Reset()         { *m = DeletionConfirmPayload{} }
+func (m *DeletionConfirmPayload) String() string { return proto.CompactTextString(m) }
+func (*DeletionConfirmPayload) ProtoMessage()    {}
+func (*DeletionConfirmPayload) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{17}
+}
+func (m *DeletionConfirmPayload) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DeletionConfirmPayload) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DeletionConfirmPayload.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *DeletionConfirmPayload) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeletionConfirmPayload.Merge(m, src)
+}
+func (m *DeletionConfirmPayload) XXX_Size() int {
+	return m.Size()
+}
+func (m *DeletionConfirmPayload) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeletionConfirmPayload.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DeletionConfirmPayload proto.InternalMessageInfo
+
+func (m *DeletionConfirmPayload) GetSpaceId() string {
+	if m != nil {
+		return m.SpaceId
+	}
+	return ""
+}
+
+func (m *DeletionConfirmPayload) GetPeerId() string {
+	if m != nil {
+		return m.PeerId
+	}
+	return ""
+}
+
+func (m *DeletionConfirmPayload) GetAccountIdentity() []byte {
+	if m != nil {
+		return m.AccountIdentity
+	}
+	return nil
+}
+
+func (m *DeletionConfirmPayload) GetNetworkId() string {
+	if m != nil {
+		return m.NetworkId
+	}
+	return ""
+}
+
+func (m *DeletionConfirmPayload) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
+type DeletionLogRequest struct {
+	// AfterId is the last known logId to request records after this id. If it is empty will be returned a list from the beginning.
+	AfterId string `protobuf:"bytes,1,opt,name=afterId,proto3" json:"afterId,omitempty"`
+	// Limit is a desired record count in response
+	Limit uint32 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+}
+
+func (m *DeletionLogRequest) Reset()         { *m = DeletionLogRequest{} }
+func (m *DeletionLogRequest) String() string { return proto.CompactTextString(m) }
+func (*DeletionLogRequest) ProtoMessage()    {}
+func (*DeletionLogRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{18}
+}
+func (m *DeletionLogRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DeletionLogRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DeletionLogRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *DeletionLogRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeletionLogRequest.Merge(m, src)
+}
+func (m *DeletionLogRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *DeletionLogRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeletionLogRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DeletionLogRequest proto.InternalMessageInfo
+
+func (m *DeletionLogRequest) GetAfterId() string {
+	if m != nil {
+		return m.AfterId
+	}
+	return ""
+}
+
+func (m *DeletionLogRequest) GetLimit() uint32 {
+	if m != nil {
+		return m.Limit
+	}
+	return 0
+}
+
+type DeletionLogResponse struct {
+	// DeletionLogRecord list of records, if there are no new records will be empty
+	Records []*DeletionLogRecord `protobuf:"bytes,1,rep,name=records,proto3" json:"records,omitempty"`
+	// HasMore indicates if there are records left
+	HasMore bool `protobuf:"varint,2,opt,name=hasMore,proto3" json:"hasMore,omitempty"`
+}
+
+func (m *DeletionLogResponse) Reset()         { *m = DeletionLogResponse{} }
+func (m *DeletionLogResponse) String() string { return proto.CompactTextString(m) }
+func (*DeletionLogResponse) ProtoMessage()    {}
+func (*DeletionLogResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{19}
+}
+func (m *DeletionLogResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DeletionLogResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DeletionLogResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *DeletionLogResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeletionLogResponse.Merge(m, src)
+}
+func (m *DeletionLogResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *DeletionLogResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeletionLogResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DeletionLogResponse proto.InternalMessageInfo
+
+func (m *DeletionLogResponse) GetRecords() []*DeletionLogRecord {
+	if m != nil {
+		return m.Records
+	}
+	return nil
+}
+
+func (m *DeletionLogResponse) GetHasMore() bool {
+	if m != nil {
+		return m.HasMore
+	}
+	return false
+}
+
+type DeletionLogRecord struct {
+	// Id is a record id
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// SpaceId is a space identifier
+	SpaceId string `protobuf:"bytes,2,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	// DeletionLogRecordStatus is a space status
+	Status DeletionLogRecordStatus `protobuf:"varint,3,opt,name=status,proto3,enum=coordinator.DeletionLogRecordStatus" json:"status,omitempty"`
+	// Timestamp is a unixtimestamp of record creation
+	Timestamp int64 `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+}
+
+func (m *DeletionLogRecord) Reset()         { *m = DeletionLogRecord{} }
+func (m *DeletionLogRecord) String() string { return proto.CompactTextString(m) }
+func (*DeletionLogRecord) ProtoMessage()    {}
+func (*DeletionLogRecord) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{20}
+}
+func (m *DeletionLogRecord) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DeletionLogRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DeletionLogRecord.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *DeletionLogRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeletionLogRecord.Merge(m, src)
+}
+func (m *DeletionLogRecord) XXX_Size() int {
+	return m.Size()
+}
+func (m *DeletionLogRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeletionLogRecord.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DeletionLogRecord proto.InternalMessageInfo
+
+func (m *DeletionLogRecord) GetId() string {
+	if m != nil {
+		return m.Id
+	}
+	return ""
+}
+
+func (m *DeletionLogRecord) GetSpaceId() string {
+	if m != nil {
+		return m.SpaceId
+	}
+	return ""
+}
+
+func (m *DeletionLogRecord) GetStatus() DeletionLogRecordStatus {
+	if m != nil {
+		return m.Status
+	}
+	return DeletionLogRecordStatus_Ok
+}
+
+func (m *DeletionLogRecord) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 func init() {
 	proto.RegisterEnum("coordinator.ErrorCodes", ErrorCodes_name, ErrorCodes_value)
 	proto.RegisterEnum("coordinator.SpaceStatus", SpaceStatus_name, SpaceStatus_value)
 	proto.RegisterEnum("coordinator.NodeType", NodeType_name, NodeType_value)
+	proto.RegisterEnum("coordinator.DeletionPayloadType", DeletionPayloadType_name, DeletionPayloadType_value)
+	proto.RegisterEnum("coordinator.DeletionLogRecordStatus", DeletionLogRecordStatus_name, DeletionLogRecordStatus_value)
 	proto.RegisterType((*SpaceSignRequest)(nil), "coordinator.SpaceSignRequest")
 	proto.RegisterType((*SpaceStatusPayload)(nil), "coordinator.SpaceStatusPayload")
 	proto.RegisterType((*SpaceSignResponse)(nil), "coordinator.SpaceSignResponse")
@@ -921,11 +1393,18 @@ func init() {
 	proto.RegisterType((*FileLimitCheckResponse)(nil), "coordinator.FileLimitCheckResponse")
 	proto.RegisterType((*SpaceStatusCheckRequest)(nil), "coordinator.SpaceStatusCheckRequest")
 	proto.RegisterType((*SpaceStatusCheckResponse)(nil), "coordinator.SpaceStatusCheckResponse")
+	proto.RegisterType((*SpaceStatusCheckManyRequest)(nil), "coordinator.SpaceStatusCheckManyRequest")
+	proto.RegisterType((*SpaceStatusCheckManyResponse)(nil), "coordinator.SpaceStatusCheckManyResponse")
 	proto.RegisterType((*SpaceStatusChangeRequest)(nil), "coordinator.SpaceStatusChangeRequest")
 	proto.RegisterType((*SpaceStatusChangeResponse)(nil), "coordinator.SpaceStatusChangeResponse")
 	proto.RegisterType((*NetworkConfigurationRequest)(nil), "coordinator.NetworkConfigurationRequest")
 	proto.RegisterType((*NetworkConfigurationResponse)(nil), "coordinator.NetworkConfigurationResponse")
 	proto.RegisterType((*Node)(nil), "coordinator.Node")
+	proto.RegisterType((*DeletionConfirmPayloadWithSignature)(nil), "coordinator.DeletionConfirmPayloadWithSignature")
+	proto.RegisterType((*DeletionConfirmPayload)(nil), "coordinator.DeletionConfirmPayload")
+	proto.RegisterType((*DeletionLogRequest)(nil), "coordinator.DeletionLogRequest")
+	proto.RegisterType((*DeletionLogResponse)(nil), "coordinator.DeletionLogResponse")
+	proto.RegisterType((*DeletionLogRecord)(nil), "coordinator.DeletionLogRecord")
 }
 
 func init() {
@@ -933,65 +1412,82 @@ func init() {
 }
 
 var fileDescriptor_d94f6f99586adae2 = []byte{
-	// 923 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x56, 0xcf, 0x6e, 0x23, 0x45,
-	0x13, 0xf7, 0xd8, 0x4e, 0xf2, 0xb9, 0x1c, 0x79, 0x27, 0xfd, 0x25, 0x61, 0x30, 0xc6, 0x58, 0x03,
-	0x2c, 0x26, 0xa0, 0xec, 0xca, 0x0b, 0x48, 0x88, 0x0b, 0x60, 0x16, 0xc9, 0x2b, 0x14, 0xa2, 0x49,
-	0x0c, 0x02, 0x0e, 0x68, 0x76, 0xba, 0x92, 0xb4, 0xe2, 0xf4, 0x0c, 0xdd, 0x6d, 0x36, 0x39, 0x20,
-	0xf1, 0x08, 0x9c, 0x38, 0xf0, 0x04, 0x1c, 0x78, 0x03, 0x5e, 0x80, 0xe3, 0x1e, 0x39, 0xa2, 0x44,
-	0xe2, 0x39, 0x50, 0xf7, 0xcc, 0xd8, 0x3d, 0xf6, 0x38, 0x41, 0xe2, 0x62, 0xbb, 0x7e, 0xf5, 0xbf,
-	0xeb, 0xd7, 0xd5, 0x86, 0x77, 0xa3, 0x38, 0x16, 0x94, 0xf1, 0x50, 0xc5, 0xe2, 0x81, 0xf5, 0x3b,
-	0x11, 0xb1, 0x8a, 0x1f, 0x98, 0x4f, 0x69, 0xe3, 0xfb, 0x06, 0x22, 0x4d, 0x0b, 0xf2, 0x7f, 0x71,
-	0xc0, 0x3d, 0x4a, 0xc2, 0x08, 0x8f, 0xd8, 0x29, 0x0f, 0xf0, 0xbb, 0x29, 0x4a, 0x45, 0x3c, 0xd8,
-	0x90, 0x1a, 0x1b, 0x51, 0xcf, 0xe9, 0x39, 0xfd, 0x46, 0x90, 0x8b, 0x64, 0x17, 0xd6, 0xcf, 0x30,
-	0xa4, 0x28, 0xbc, 0x6a, 0xcf, 0xe9, 0x6f, 0x06, 0x99, 0x44, 0x7a, 0xd0, 0x8c, 0x27, 0x74, 0x44,
-	0x91, 0x2b, 0xa6, 0xae, 0xbc, 0x9a, 0x51, 0xda, 0x10, 0x19, 0xc0, 0x36, 0xc7, 0x67, 0xb9, 0xa8,
-	0xb3, 0x85, 0x6a, 0x2a, 0xd0, 0xab, 0x1b, 0xd3, 0x52, 0x9d, 0xaf, 0x80, 0xa4, 0xb5, 0xa9, 0x50,
-	0x4d, 0xe5, 0x61, 0x78, 0x35, 0x89, 0x43, 0x4a, 0x1e, 0xc2, 0xba, 0x34, 0x80, 0x29, 0xae, 0x35,
-	0xf0, 0xf6, 0xed, 0x1e, 0x2d, 0x87, 0x20, 0xb3, 0x23, 0x6f, 0xc3, 0x16, 0xc5, 0x09, 0x2a, 0x16,
-	0xf3, 0x63, 0x76, 0x81, 0x52, 0x85, 0x17, 0x89, 0x69, 0xa0, 0x16, 0x2c, 0x2b, 0xfc, 0x31, 0x6c,
-	0x59, 0x27, 0x22, 0x93, 0x98, 0x4b, 0x24, 0x1f, 0xc2, 0x86, 0xc0, 0x08, 0x59, 0xa2, 0x4c, 0xd6,
-	0xe6, 0xe0, 0xfe, 0x72, 0xd6, 0x20, 0x35, 0xf8, 0x92, 0xa9, 0xb3, 0x59, 0x0f, 0x41, 0xee, 0xe6,
-	0x9f, 0xc3, 0x8b, 0x2b, 0xad, 0xc8, 0x43, 0xf8, 0xbf, 0xb4, 0x94, 0x59, 0xab, 0x26, 0xd5, 0x66,
-	0x50, 0xa6, 0x22, 0x1d, 0x68, 0xc8, 0xd9, 0x21, 0xa6, 0xc3, 0x98, 0x03, 0xfe, 0xaf, 0x0e, 0x6c,
-	0xda, 0xd9, 0x6e, 0x1f, 0x69, 0x82, 0x28, 0x46, 0xd4, 0x44, 0x69, 0x04, 0x99, 0x44, 0xfa, 0x70,
-	0x2f, 0x8c, 0xa2, 0x78, 0xca, 0xd5, 0xc2, 0x58, 0x17, 0x61, 0x5d, 0x0a, 0x47, 0xf5, 0x2c, 0x16,
-	0xe7, 0x23, 0x6a, 0xe6, 0xd9, 0x08, 0xe6, 0x00, 0xe9, 0x02, 0x7c, 0x1f, 0x4e, 0x18, 0x1d, 0x73,
-	0xc5, 0x26, 0xde, 0x5a, 0xcf, 0xe9, 0xd7, 0x03, 0x0b, 0xf1, 0xbf, 0x81, 0x9d, 0x4f, 0xd9, 0x04,
-	0x3f, 0x63, 0x17, 0x4c, 0x0d, 0xcf, 0x30, 0x3a, 0xcf, 0x59, 0x58, 0x52, 0x80, 0x53, 0x5e, 0x80,
-	0xd5, 0x5c, 0xb5, 0xd0, 0x9c, 0xbf, 0x0f, 0xbb, 0x8b, 0xc1, 0xb3, 0x81, 0x6e, 0xc3, 0xda, 0x44,
-	0xa3, 0x26, 0x66, 0x3d, 0x48, 0x05, 0xff, 0x11, 0xbc, 0x60, 0x11, 0xa8, 0x50, 0xce, 0xca, 0x13,
-	0xf4, 0xc7, 0xe0, 0x2d, 0x3b, 0x65, 0x69, 0xde, 0x87, 0x8d, 0xc4, 0x1a, 0x66, 0x73, 0xf0, 0xca,
-	0x2a, 0xb6, 0x66, 0x83, 0x0d, 0x72, 0x7b, 0xff, 0x67, 0x67, 0x21, 0x6e, 0xc8, 0x4f, 0xf1, 0xee,
-	0x2b, 0xba, 0x07, 0x6e, 0xce, 0xe9, 0xd4, 0x65, 0x76, 0x2a, 0x4b, 0x38, 0x79, 0x07, 0x76, 0x8a,
-	0x58, 0x4e, 0xbc, 0x74, 0xd2, 0xe5, 0x4a, 0xff, 0x8b, 0x8c, 0xc9, 0xc5, 0xba, 0xfe, 0x7b, 0xc3,
-	0x1f, 0xc0, 0x4b, 0x07, 0x29, 0x6d, 0x86, 0x31, 0x3f, 0x61, 0xa7, 0x53, 0x11, 0xea, 0xe4, 0x79,
-	0xcb, 0x1d, 0x68, 0x44, 0x53, 0x21, 0x50, 0x0f, 0x3e, 0x6b, 0x7a, 0x0e, 0xf8, 0xbf, 0x3b, 0xd0,
-	0x29, 0xf7, 0xce, 0x0a, 0xeb, 0xc3, 0xbd, 0xc8, 0x56, 0xcc, 0x82, 0x2c, 0xc2, 0x45, 0x3e, 0x57,
-	0x17, 0xf9, 0xfc, 0x06, 0xac, 0xf1, 0x98, 0xa2, 0xf4, 0x6a, 0xbd, 0x5a, 0xbf, 0x39, 0xd8, 0x2a,
-	0xb4, 0x77, 0x10, 0x53, 0x0c, 0x52, 0xbd, 0x1e, 0x44, 0x24, 0x30, 0xcc, 0x97, 0xcb, 0x98, 0xb3,
-	0x4b, 0x73, 0x3b, 0xea, 0xc1, 0x12, 0xee, 0x33, 0xa8, 0x6b, 0x57, 0xeb, 0x32, 0x3a, 0x85, 0xcb,
-	0xd8, 0x81, 0x46, 0x48, 0xa9, 0x40, 0x29, 0x51, 0x7a, 0xd5, 0x5e, 0x4d, 0x97, 0x34, 0x03, 0xc8,
-	0x5b, 0xb0, 0xa6, 0xae, 0x92, 0xac, 0xa4, 0xd6, 0x60, 0x67, 0xa9, 0xa4, 0xe3, 0xab, 0x04, 0x83,
-	0xd4, 0x66, 0xef, 0x47, 0x07, 0xe0, 0xb1, 0x10, 0xb1, 0x18, 0x9a, 0x2a, 0x5b, 0x00, 0x63, 0x8e,
-	0x97, 0x09, 0x46, 0x0a, 0xa9, 0x5b, 0x21, 0x6e, 0xb6, 0x38, 0x3e, 0xd1, 0xa3, 0x47, 0xea, 0x3a,
-	0xc4, 0x83, 0xed, 0x39, 0xc2, 0x62, 0x7e, 0x88, 0x9c, 0x32, 0x7e, 0xea, 0x56, 0x67, 0xb6, 0x43,
-	0xdd, 0x0e, 0x52, 0xb7, 0x46, 0x08, 0xb4, 0x0c, 0x72, 0x10, 0xab, 0xc7, 0x97, 0x4c, 0x2a, 0xe9,
-	0xd6, 0x89, 0x0b, 0x4d, 0x93, 0xef, 0xf3, 0x93, 0x13, 0x89, 0xca, 0xfd, 0xad, 0xba, 0xf7, 0x03,
-	0x34, 0x2d, 0x1e, 0x90, 0xdd, 0xc2, 0x9a, 0xcf, 0x83, 0x55, 0x48, 0x17, 0xda, 0x36, 0x5d, 0xd2,
-	0xb4, 0x79, 0x15, 0xae, 0xb3, 0xa0, 0xcf, 0x15, 0x47, 0x2a, 0x14, 0xda, 0xbf, 0xba, 0x10, 0x37,
-	0x6f, 0xa8, 0xb6, 0xf7, 0x04, 0xfe, 0x97, 0x1f, 0x0a, 0x69, 0xc2, 0xc6, 0xb1, 0x40, 0xfc, 0xe8,
-	0x70, 0xe4, 0x56, 0xb4, 0xa0, 0xb7, 0x85, 0x16, 0x1c, 0xdd, 0xca, 0x70, 0x7e, 0x8c, 0x1a, 0x33,
-	0x0d, 0x0f, 0x35, 0x99, 0xb8, 0x9c, 0x4a, 0x8d, 0xd4, 0x06, 0x7f, 0xd7, 0xa0, 0x69, 0x99, 0x91,
-	0x27, 0xd0, 0x98, 0x3d, 0x1e, 0xe4, 0xe5, 0x12, 0xea, 0xcf, 0x9f, 0xd9, 0x76, 0x77, 0x95, 0x3a,
-	0x63, 0xec, 0x57, 0xd0, 0x2a, 0x2e, 0x2f, 0xe2, 0x17, 0x3c, 0x4a, 0xd7, 0x66, 0xfb, 0xd5, 0x5b,
-	0x6d, 0xb2, 0xd0, 0xdf, 0xe6, 0xaf, 0xfe, 0x7c, 0x65, 0x91, 0xd7, 0x56, 0x5d, 0xd4, 0x42, 0xf8,
-	0xd7, 0xef, 0xb0, 0xca, 0x12, 0x3c, 0xcd, 0x1f, 0x51, 0x6b, 0x47, 0x90, 0x5b, 0x7c, 0xad, 0xdd,
-	0xd6, 0xbe, 0x7f, 0x97, 0x59, 0x96, 0xe3, 0x1c, 0xb6, 0xcb, 0x6e, 0x3c, 0xe9, 0x17, 0xf9, 0xbf,
-	0x7a, 0xa5, 0xb4, 0xdf, 0xfc, 0x17, 0x96, 0x69, 0xb2, 0x8f, 0xdf, 0xfb, 0xe3, 0xba, 0xeb, 0x3c,
-	0xbf, 0xee, 0x3a, 0x7f, 0x5d, 0x77, 0x9d, 0x9f, 0x6e, 0xba, 0x95, 0xe7, 0x37, 0xdd, 0xca, 0x9f,
-	0x37, 0xdd, 0xca, 0xd7, 0x9d, 0xdb, 0xfe, 0x86, 0x3d, 0x5d, 0x37, 0x5f, 0x8f, 0xfe, 0x09, 0x00,
-	0x00, 0xff, 0xff, 0x25, 0x91, 0x6d, 0x9e, 0xad, 0x09, 0x00, 0x00,
+	// 1194 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x57, 0x4d, 0x6f, 0x1b, 0x45,
+	0x18, 0xf6, 0xf8, 0x23, 0x89, 0x5f, 0xb7, 0xee, 0x66, 0x9a, 0xa6, 0x8b, 0x6b, 0x5c, 0x6b, 0x5b,
+	0x8a, 0x31, 0x55, 0x5a, 0xb9, 0x02, 0x51, 0x95, 0x43, 0xc1, 0x2d, 0x52, 0xaa, 0x36, 0x8d, 0x36,
+	0x09, 0x08, 0x7a, 0x40, 0x5b, 0xef, 0x24, 0x59, 0xc5, 0xde, 0x5d, 0x66, 0xc7, 0x6d, 0x72, 0x40,
+	0xe2, 0x27, 0x70, 0x85, 0x3b, 0x12, 0x07, 0x0e, 0xdc, 0xf9, 0x03, 0x1c, 0x7b, 0xe4, 0x58, 0x25,
+	0x7f, 0x04, 0xcd, 0xec, 0xcc, 0xee, 0xec, 0x7a, 0xed, 0x54, 0xe2, 0xc0, 0xc5, 0xf6, 0x3c, 0xf3,
+	0x7e, 0xce, 0xfb, 0x69, 0xf8, 0x64, 0x14, 0x04, 0xd4, 0xf5, 0x7c, 0x87, 0x05, 0xf4, 0x8e, 0xf6,
+	0x3b, 0xa4, 0x01, 0x0b, 0xee, 0x88, 0xcf, 0x48, 0xc7, 0x37, 0x04, 0x84, 0x1b, 0x1a, 0x64, 0xfd,
+	0x8a, 0xc0, 0xd8, 0x09, 0x9d, 0x11, 0xd9, 0xf1, 0x0e, 0x7c, 0x9b, 0xfc, 0x30, 0x25, 0x11, 0xc3,
+	0x26, 0x2c, 0x47, 0x1c, 0xdb, 0x74, 0x4d, 0xd4, 0x45, 0xbd, 0xba, 0xad, 0x8e, 0x78, 0x1d, 0x96,
+	0x0e, 0x89, 0xe3, 0x12, 0x6a, 0x96, 0xbb, 0xa8, 0x77, 0xc1, 0x96, 0x27, 0xdc, 0x85, 0x46, 0x30,
+	0x76, 0x37, 0x5d, 0xe2, 0x33, 0x8f, 0x9d, 0x98, 0x15, 0x71, 0xa9, 0x43, 0x78, 0x00, 0x6b, 0x3e,
+	0x79, 0xad, 0x8e, 0x5c, 0x9b, 0xc3, 0xa6, 0x94, 0x98, 0x55, 0x41, 0x5a, 0x78, 0x67, 0x31, 0xc0,
+	0xb1, 0x6d, 0xcc, 0x61, 0xd3, 0x68, 0xdb, 0x39, 0x19, 0x07, 0x8e, 0x8b, 0xef, 0xc2, 0x52, 0x24,
+	0x00, 0x61, 0x5c, 0x73, 0x60, 0x6e, 0xe8, 0x3e, 0x6a, 0x0c, 0xb6, 0xa4, 0xc3, 0xb7, 0x61, 0xd5,
+	0x25, 0x63, 0xc2, 0xbc, 0xc0, 0xdf, 0xf5, 0x26, 0x24, 0x62, 0xce, 0x24, 0x14, 0x0e, 0x54, 0xec,
+	0xd9, 0x0b, 0x6b, 0x0f, 0x56, 0xb5, 0x17, 0x89, 0xc2, 0xc0, 0x8f, 0x08, 0x7e, 0x08, 0xcb, 0x94,
+	0x8c, 0x88, 0x17, 0x32, 0xa1, 0xb5, 0x31, 0xb8, 0x35, 0xab, 0xd5, 0x8e, 0x09, 0xbe, 0xf1, 0xd8,
+	0x61, 0xe2, 0x83, 0xad, 0xd8, 0xac, 0x23, 0x78, 0x6f, 0x2e, 0x15, 0xbe, 0x0b, 0x97, 0x23, 0xed,
+	0x52, 0xba, 0x2a, 0x54, 0x5d, 0xb0, 0x8b, 0xae, 0x70, 0x1b, 0xea, 0x51, 0xf2, 0x88, 0x71, 0x30,
+	0x52, 0xc0, 0xfa, 0x1d, 0xc1, 0x05, 0x5d, 0xdb, 0xe2, 0x90, 0x86, 0x84, 0xd0, 0x4d, 0x57, 0x48,
+	0xa9, 0xdb, 0xf2, 0x84, 0x7b, 0x70, 0xc9, 0x19, 0x8d, 0x82, 0xa9, 0xcf, 0x72, 0x61, 0xcd, 0xc3,
+	0xdc, 0x14, 0x9f, 0xb0, 0xd7, 0x01, 0x3d, 0xda, 0x74, 0x45, 0x3c, 0xeb, 0x76, 0x0a, 0xe0, 0x0e,
+	0xc0, 0x2b, 0x67, 0xec, 0xb9, 0x7b, 0x3e, 0xf3, 0xc6, 0x66, 0xad, 0x8b, 0x7a, 0x55, 0x5b, 0x43,
+	0xac, 0x17, 0x70, 0xe5, 0x2b, 0x6f, 0x4c, 0x9e, 0x7a, 0x13, 0x8f, 0x0d, 0x0f, 0xc9, 0xe8, 0x48,
+	0x65, 0x61, 0x81, 0x01, 0xa8, 0xd8, 0x00, 0xcd, 0xb9, 0x72, 0xc6, 0x39, 0x6b, 0x03, 0xd6, 0xf3,
+	0xc2, 0x65, 0x40, 0xd7, 0xa0, 0x36, 0xe6, 0xa8, 0x90, 0x59, 0xb5, 0xe3, 0x83, 0x75, 0x0f, 0xae,
+	0x6a, 0x09, 0x94, 0x31, 0x67, 0xee, 0x0b, 0x5a, 0x7b, 0x60, 0xce, 0x32, 0x49, 0x35, 0xf7, 0x61,
+	0x39, 0xd4, 0x82, 0xd9, 0x18, 0x5c, 0x9f, 0x97, 0xad, 0x32, 0xb0, 0xb6, 0xa2, 0xb7, 0xee, 0xc3,
+	0xb5, 0xbc, 0xd8, 0x67, 0x8e, 0x7f, 0xa2, 0xec, 0x69, 0xc1, 0x8a, 0x34, 0x80, 0x17, 0x42, 0xa5,
+	0x57, 0xb7, 0x93, 0xb3, 0xf5, 0x02, 0xda, 0xc5, 0xac, 0xd2, 0xaa, 0x07, 0xb0, 0x22, 0xb5, 0xc4,
+	0xbc, 0xef, 0x60, 0x56, 0xc2, 0x60, 0xbd, 0x45, 0x39, 0x7f, 0x1d, 0xff, 0x80, 0x9c, 0xdf, 0x3a,
+	0xb4, 0x22, 0x94, 0x32, 0x93, 0x70, 0xcd, 0x5e, 0xf0, 0xe0, 0xe7, 0x40, 0x95, 0x7d, 0x39, 0x18,
+	0xdb, 0x70, 0x39, 0x07, 0xed, 0x9e, 0x84, 0x71, 0x5f, 0x69, 0x0e, 0xba, 0x19, 0xb7, 0x1e, 0xcd,
+	0xd2, 0xd9, 0x45, 0xcc, 0xd6, 0xd7, 0xb2, 0x56, 0xb3, 0x1e, 0xfe, 0xf7, 0x90, 0x3e, 0x80, 0x6b,
+	0x5b, 0x71, 0x61, 0x0c, 0x03, 0x7f, 0xdf, 0x3b, 0x98, 0x52, 0x87, 0xab, 0x56, 0x8f, 0xd7, 0x86,
+	0xfa, 0x68, 0x4a, 0x29, 0xe1, 0xa9, 0x2d, 0x9f, 0x2f, 0x05, 0xac, 0xbf, 0x10, 0xb4, 0x8b, 0xb9,
+	0xa5, 0x61, 0x3d, 0xb8, 0x34, 0xd2, 0x2f, 0x12, 0x21, 0x79, 0x38, 0x5b, 0xb1, 0xe5, 0x7c, 0xc5,
+	0x7e, 0x08, 0x35, 0x3f, 0x70, 0x49, 0x64, 0x56, 0x44, 0x6a, 0xac, 0x66, 0xdc, 0xdb, 0x0a, 0x5c,
+	0x62, 0xc7, 0xf7, 0xb8, 0x0f, 0xc6, 0x88, 0x12, 0x47, 0xb5, 0xcf, 0x3d, 0xdf, 0x3b, 0x16, 0xef,
+	0x5e, 0xb5, 0x67, 0x70, 0xcb, 0x83, 0x2a, 0x67, 0xd5, 0xda, 0x0d, 0xca, 0xb4, 0x9b, 0x36, 0xd4,
+	0x1d, 0xd7, 0xa5, 0x24, 0x8a, 0x48, 0x64, 0x96, 0x45, 0x3e, 0xa7, 0x00, 0xfe, 0x18, 0x6a, 0xec,
+	0x24, 0x94, 0x26, 0x35, 0x07, 0x57, 0x66, 0x4c, 0x12, 0xb1, 0x8c, 0x69, 0xac, 0x09, 0xdc, 0x50,
+	0x91, 0x16, 0x0f, 0x45, 0x27, 0x32, 0x10, 0xd9, 0x9e, 0x5b, 0x90, 0x62, 0xa8, 0x38, 0xc5, 0x16,
+	0xf7, 0xda, 0x3f, 0x11, 0xac, 0x17, 0xeb, 0xfb, 0x1f, 0xbb, 0x6e, 0x1b, 0xea, 0x2c, 0x19, 0x75,
+	0x35, 0x31, 0xea, 0x52, 0xc0, 0x7a, 0x04, 0x58, 0x59, 0xfc, 0x34, 0x38, 0xd0, 0x6a, 0xd7, 0xd9,
+	0x67, 0x5a, 0x6c, 0xd4, 0x31, 0x6d, 0x96, 0xdc, 0xd8, 0x8b, 0xaa, 0x59, 0x7a, 0x70, 0x39, 0x23,
+	0x45, 0xa6, 0xe1, 0x67, 0x62, 0x54, 0x06, 0x34, 0xe9, 0x2d, 0x9d, 0xc2, 0x22, 0x14, 0x2c, 0x9c,
+	0xcc, 0x56, 0xe4, 0xdc, 0x80, 0x43, 0x27, 0x7a, 0x16, 0xc8, 0x57, 0x5e, 0xb1, 0xd5, 0xd1, 0xfa,
+	0x05, 0xc1, 0xea, 0x0c, 0x23, 0x6e, 0x42, 0xd9, 0x53, 0xb6, 0x96, 0x3d, 0x77, 0xfe, 0x1c, 0xc0,
+	0x9f, 0x27, 0x3b, 0x43, 0x45, 0xf4, 0x85, 0x9b, 0x8b, 0x4d, 0xca, 0xed, 0x0f, 0x99, 0xc7, 0xac,
+	0xe6, 0x1e, 0xb3, 0xff, 0x13, 0x02, 0x78, 0x4c, 0x69, 0x40, 0x87, 0xa2, 0x28, 0x9a, 0x00, 0x7b,
+	0x3e, 0x39, 0x0e, 0xc9, 0x88, 0x11, 0xd7, 0x28, 0x61, 0x43, 0x4e, 0x62, 0xa1, 0x84, 0xb8, 0x06,
+	0xc2, 0x26, 0xac, 0xa5, 0x08, 0x4f, 0x33, 0xe2, 0xbb, 0x9e, 0x7f, 0x60, 0x94, 0x13, 0xda, 0x21,
+	0xaf, 0x1e, 0xe2, 0x1a, 0x15, 0x8c, 0xa1, 0x29, 0x90, 0xad, 0x80, 0x3d, 0x3e, 0xf6, 0x22, 0x16,
+	0x19, 0x55, 0x6c, 0x40, 0x43, 0xe8, 0x7b, 0xbe, 0xbf, 0x1f, 0x11, 0x66, 0xfc, 0x51, 0xee, 0xff,
+	0x08, 0x0d, 0xad, 0xed, 0xe0, 0xf5, 0xcc, 0xde, 0xa4, 0x84, 0x95, 0x70, 0x07, 0x5a, 0x7a, 0x77,
+	0x8a, 0xd5, 0x2a, 0x2b, 0x0c, 0x94, 0xbb, 0x57, 0x17, 0x3b, 0xcc, 0xa1, 0x9c, 0xbf, 0x9c, 0x93,
+	0xab, 0x1c, 0xaa, 0xf4, 0x9f, 0xc0, 0x8a, 0xaa, 0x41, 0xdc, 0x80, 0xe5, 0x5d, 0x4a, 0xc8, 0x17,
+	0xdb, 0x9b, 0x46, 0x89, 0x1f, 0xf8, 0xf8, 0xe5, 0x07, 0xc4, 0x5d, 0x19, 0xa6, 0x8f, 0xce, 0x31,
+	0xe1, 0xf0, 0x90, 0x27, 0x8d, 0x1f, 0x4d, 0x23, 0x8e, 0x54, 0xfa, 0xb7, 0xd3, 0xa4, 0xd2, 0x3a,
+	0x32, 0x5e, 0x81, 0x2a, 0x17, 0x1b, 0xcb, 0x94, 0x55, 0x66, 0xa0, 0xfe, 0x43, 0xb8, 0x3a, 0x27,
+	0x78, 0x78, 0x09, 0xca, 0xcf, 0x8f, 0x8c, 0x12, 0x5e, 0x85, 0x8b, 0x36, 0x99, 0x04, 0xaf, 0xc8,
+	0x36, 0x25, 0xa1, 0x43, 0x89, 0x81, 0x30, 0xc0, 0x52, 0x0c, 0x19, 0xe5, 0xc1, 0x6f, 0x35, 0x68,
+	0x68, 0x66, 0xe1, 0x27, 0x50, 0x4f, 0xb6, 0x3f, 0xfc, 0x7e, 0x41, 0x67, 0x4f, 0xf7, 0xe4, 0x56,
+	0x67, 0xde, 0xb5, 0xac, 0x84, 0x6f, 0xa1, 0x99, 0xdd, 0x3e, 0xb0, 0x95, 0xe1, 0x28, 0xdc, 0x7b,
+	0x5a, 0x37, 0x16, 0xd2, 0x48, 0xd1, 0xdf, 0xab, 0xb5, 0x3d, 0x9d, 0xf0, 0xf8, 0xe6, 0xbc, 0x39,
+	0x94, 0x11, 0xff, 0xc1, 0x39, 0x54, 0x52, 0xc1, 0x91, 0x4c, 0xd2, 0xdc, 0x0a, 0x81, 0x7b, 0x0b,
+	0xd9, 0xb5, 0x05, 0xa5, 0xf5, 0xd1, 0x3b, 0x50, 0x4a, 0x65, 0x2f, 0xd5, 0xca, 0xad, 0xcd, 0x5b,
+	0xbc, 0xc0, 0x50, 0x6d, 0xe3, 0x68, 0xdd, 0x3a, 0x8f, 0x2c, 0x75, 0xa8, 0x68, 0x7a, 0xe6, 0x1c,
+	0x5a, 0x30, 0x9e, 0x73, 0x0e, 0x2d, 0x1c, 0xc5, 0xdb, 0xd0, 0xd0, 0xf2, 0x12, 0x5f, 0x9f, 0xdf,
+	0x6e, 0x62, 0xd1, 0xdd, 0xf9, 0x04, 0xb1, 0xc4, 0x2f, 0x3f, 0xfd, 0xfb, 0xb4, 0x83, 0xde, 0x9c,
+	0x76, 0xd0, 0xdb, 0xd3, 0x0e, 0xfa, 0xf9, 0xac, 0x53, 0x7a, 0x73, 0xd6, 0x29, 0xfd, 0x73, 0xd6,
+	0x29, 0x7d, 0xd7, 0x5e, 0xf4, 0x37, 0xf0, 0xe5, 0x92, 0xf8, 0xba, 0xf7, 0x6f, 0x00, 0x00, 0x00,
+	0xff, 0xff, 0x82, 0x8b, 0x4c, 0x0c, 0x2d, 0x0e, 0x00, 0x00,
 }
 
 func (m *SpaceSignRequest) Marshal() (dAtA []byte, err error) {
@@ -1336,6 +1832,75 @@ func (m *SpaceStatusCheckResponse) MarshalToSizedBuffer(dAtA []byte) (int, error
 	return len(dAtA) - i, nil
 }
 
+func (m *SpaceStatusCheckManyRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SpaceStatusCheckManyRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SpaceStatusCheckManyRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.SpaceIds) > 0 {
+		for iNdEx := len(m.SpaceIds) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.SpaceIds[iNdEx])
+			copy(dAtA[i:], m.SpaceIds[iNdEx])
+			i = encodeVarintCoordinator(dAtA, i, uint64(len(m.SpaceIds[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SpaceStatusCheckManyResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SpaceStatusCheckManyResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SpaceStatusCheckManyResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Payloads) > 0 {
+		for iNdEx := len(m.Payloads) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Payloads[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintCoordinator(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *SpaceStatusChangeRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1356,17 +1921,22 @@ func (m *SpaceStatusChangeRequest) MarshalToSizedBuffer(dAtA []byte) (int, error
 	_ = i
 	var l int
 	_ = l
-	if len(m.DeletionChangePayload) > 0 {
-		i -= len(m.DeletionChangePayload)
-		copy(dAtA[i:], m.DeletionChangePayload)
-		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.DeletionChangePayload)))
+	if m.DeletionPayloadType != 0 {
+		i = encodeVarintCoordinator(dAtA, i, uint64(m.DeletionPayloadType))
+		i--
+		dAtA[i] = 0x20
+	}
+	if len(m.DeletionPayload) > 0 {
+		i -= len(m.DeletionPayload)
+		copy(dAtA[i:], m.DeletionPayload)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.DeletionPayload)))
 		i--
 		dAtA[i] = 0x1a
 	}
-	if len(m.DeletionChangeId) > 0 {
-		i -= len(m.DeletionChangeId)
-		copy(dAtA[i:], m.DeletionChangeId)
-		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.DeletionChangeId)))
+	if len(m.DeletionPayloadId) > 0 {
+		i -= len(m.DeletionPayloadId)
+		copy(dAtA[i:], m.DeletionPayloadId)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.DeletionPayloadId)))
 		i--
 		dAtA[i] = 0x12
 	}
@@ -1558,6 +2128,228 @@ func (m *Node) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *DeletionConfirmPayloadWithSignature) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DeletionConfirmPayloadWithSignature) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DeletionConfirmPayloadWithSignature) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Signature) > 0 {
+		i -= len(m.Signature)
+		copy(dAtA[i:], m.Signature)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.Signature)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.DeletionPayload) > 0 {
+		i -= len(m.DeletionPayload)
+		copy(dAtA[i:], m.DeletionPayload)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.DeletionPayload)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *DeletionConfirmPayload) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DeletionConfirmPayload) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DeletionConfirmPayload) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Timestamp != 0 {
+		i = encodeVarintCoordinator(dAtA, i, uint64(m.Timestamp))
+		i--
+		dAtA[i] = 0x28
+	}
+	if len(m.NetworkId) > 0 {
+		i -= len(m.NetworkId)
+		copy(dAtA[i:], m.NetworkId)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.NetworkId)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.AccountIdentity) > 0 {
+		i -= len(m.AccountIdentity)
+		copy(dAtA[i:], m.AccountIdentity)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.AccountIdentity)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.PeerId) > 0 {
+		i -= len(m.PeerId)
+		copy(dAtA[i:], m.PeerId)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.PeerId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.SpaceId) > 0 {
+		i -= len(m.SpaceId)
+		copy(dAtA[i:], m.SpaceId)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.SpaceId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *DeletionLogRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DeletionLogRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DeletionLogRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Limit != 0 {
+		i = encodeVarintCoordinator(dAtA, i, uint64(m.Limit))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.AfterId) > 0 {
+		i -= len(m.AfterId)
+		copy(dAtA[i:], m.AfterId)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.AfterId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *DeletionLogResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DeletionLogResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DeletionLogResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.HasMore {
+		i--
+		if m.HasMore {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.Records) > 0 {
+		for iNdEx := len(m.Records) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Records[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintCoordinator(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *DeletionLogRecord) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DeletionLogRecord) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DeletionLogRecord) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Timestamp != 0 {
+		i = encodeVarintCoordinator(dAtA, i, uint64(m.Timestamp))
+		i--
+		dAtA[i] = 0x20
+	}
+	if m.Status != 0 {
+		i = encodeVarintCoordinator(dAtA, i, uint64(m.Status))
+		i--
+		dAtA[i] = 0x18
+	}
+	if len(m.SpaceId) > 0 {
+		i -= len(m.SpaceId)
+		copy(dAtA[i:], m.SpaceId)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.SpaceId)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Id) > 0 {
+		i -= len(m.Id)
+		copy(dAtA[i:], m.Id)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.Id)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintCoordinator(dAtA []byte, offset int, v uint64) int {
 	offset -= sovCoordinator(v)
 	base := offset
@@ -1722,6 +2514,36 @@ func (m *SpaceStatusCheckResponse) Size() (n int) {
 	return n
 }
 
+func (m *SpaceStatusCheckManyRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.SpaceIds) > 0 {
+		for _, s := range m.SpaceIds {
+			l = len(s)
+			n += 1 + l + sovCoordinator(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *SpaceStatusCheckManyResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Payloads) > 0 {
+		for _, e := range m.Payloads {
+			l = e.Size()
+			n += 1 + l + sovCoordinator(uint64(l))
+		}
+	}
+	return n
+}
+
 func (m *SpaceStatusChangeRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -1732,13 +2554,16 @@ func (m *SpaceStatusChangeRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovCoordinator(uint64(l))
 	}
-	l = len(m.DeletionChangeId)
+	l = len(m.DeletionPayloadId)
 	if l > 0 {
 		n += 1 + l + sovCoordinator(uint64(l))
 	}
-	l = len(m.DeletionChangePayload)
+	l = len(m.DeletionPayload)
 	if l > 0 {
 		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	if m.DeletionPayloadType != 0 {
+		n += 1 + sovCoordinator(uint64(m.DeletionPayloadType))
 	}
 	return n
 }
@@ -1817,6 +2642,108 @@ func (m *Node) Size() (n int) {
 			l += sovCoordinator(uint64(e))
 		}
 		n += 1 + sovCoordinator(uint64(l)) + l
+	}
+	return n
+}
+
+func (m *DeletionConfirmPayloadWithSignature) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.DeletionPayload)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	l = len(m.Signature)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	return n
+}
+
+func (m *DeletionConfirmPayload) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.SpaceId)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	l = len(m.PeerId)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	l = len(m.AccountIdentity)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	l = len(m.NetworkId)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	if m.Timestamp != 0 {
+		n += 1 + sovCoordinator(uint64(m.Timestamp))
+	}
+	return n
+}
+
+func (m *DeletionLogRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.AfterId)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	if m.Limit != 0 {
+		n += 1 + sovCoordinator(uint64(m.Limit))
+	}
+	return n
+}
+
+func (m *DeletionLogResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Records) > 0 {
+		for _, e := range m.Records {
+			l = e.Size()
+			n += 1 + l + sovCoordinator(uint64(l))
+		}
+	}
+	if m.HasMore {
+		n += 2
+	}
+	return n
+}
+
+func (m *DeletionLogRecord) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Id)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	l = len(m.SpaceId)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	if m.Status != 0 {
+		n += 1 + sovCoordinator(uint64(m.Status))
+	}
+	if m.Timestamp != 0 {
+		n += 1 + sovCoordinator(uint64(m.Timestamp))
 	}
 	return n
 }
@@ -2855,6 +3782,172 @@ func (m *SpaceStatusCheckResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *SpaceStatusCheckManyRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SpaceStatusCheckManyRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SpaceStatusCheckManyRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceIds", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SpaceIds = append(m.SpaceIds, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SpaceStatusCheckManyResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SpaceStatusCheckManyResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SpaceStatusCheckManyResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Payloads", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Payloads = append(m.Payloads, &SpaceStatusPayload{})
+			if err := m.Payloads[len(m.Payloads)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *SpaceStatusChangeRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -2918,7 +4011,7 @@ func (m *SpaceStatusChangeRequest) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DeletionChangeId", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field DeletionPayloadId", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -2946,11 +4039,11 @@ func (m *SpaceStatusChangeRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.DeletionChangeId = string(dAtA[iNdEx:postIndex])
+			m.DeletionPayloadId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DeletionChangePayload", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field DeletionPayload", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -2977,11 +4070,30 @@ func (m *SpaceStatusChangeRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.DeletionChangePayload = append(m.DeletionChangePayload[:0], dAtA[iNdEx:postIndex]...)
-			if m.DeletionChangePayload == nil {
-				m.DeletionChangePayload = []byte{}
+			m.DeletionPayload = append(m.DeletionPayload[:0], dAtA[iNdEx:postIndex]...)
+			if m.DeletionPayload == nil {
+				m.DeletionPayload = []byte{}
 			}
 			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DeletionPayloadType", wireType)
+			}
+			m.DeletionPayloadType = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.DeletionPayloadType |= DeletionPayloadType(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCoordinator(dAtA[iNdEx:])
@@ -3499,6 +4611,680 @@ func (m *Node) Unmarshal(dAtA []byte) error {
 				}
 			} else {
 				return fmt.Errorf("proto: wrong wireType = %d for field Types", wireType)
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DeletionConfirmPayloadWithSignature) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DeletionConfirmPayloadWithSignature: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DeletionConfirmPayloadWithSignature: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DeletionPayload", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.DeletionPayload = append(m.DeletionPayload[:0], dAtA[iNdEx:postIndex]...)
+			if m.DeletionPayload == nil {
+				m.DeletionPayload = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DeletionConfirmPayload) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DeletionConfirmPayload: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DeletionConfirmPayload: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SpaceId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PeerId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PeerId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AccountIdentity", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AccountIdentity = append(m.AccountIdentity[:0], dAtA[iNdEx:postIndex]...)
+			if m.AccountIdentity == nil {
+				m.AccountIdentity = []byte{}
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NetworkId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.NetworkId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
+			}
+			m.Timestamp = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Timestamp |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DeletionLogRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DeletionLogRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DeletionLogRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AfterId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AfterId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Limit", wireType)
+			}
+			m.Limit = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Limit |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DeletionLogResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DeletionLogResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DeletionLogResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Records", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Records = append(m.Records, &DeletionLogRecord{})
+			if err := m.Records[len(m.Records)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HasMore", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.HasMore = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DeletionLogRecord) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DeletionLogRecord: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DeletionLogRecord: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Id = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SpaceId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Status", wireType)
+			}
+			m.Status = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Status |= DeletionLogRecordStatus(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
+			}
+			m.Timestamp = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Timestamp |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
 			}
 		default:
 			iNdEx = preIndex

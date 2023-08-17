@@ -4,152 +4,232 @@ package coordinator;
 option go_package = "coordinator/coordinatorproto";
 
 service Coordinator {
-    // SpaceSign signs a space creation operation
-    rpc SpaceSign(SpaceSignRequest) returns (SpaceSignResponse);
+  // SpaceSign signs a space creation operation
+  rpc SpaceSign(SpaceSignRequest) returns (SpaceSignResponse);
 
-    // FileLimitCheck checks a limit by account and space
-    // can be used only:
-    //  - if a handshake identity matches a given identity
-    //  - if a requester contains in nodeconf list
-    rpc FileLimitCheck(FileLimitCheckRequest) returns (FileLimitCheckResponse);
+  // FileLimitCheck checks a limit by account and space
+  // can be used only:
+  //  - if a handshake identity matches a given identity
+  //  - if a requester contains in nodeconf list
+  rpc FileLimitCheck(FileLimitCheckRequest) returns (FileLimitCheckResponse);
 
-    // SpaceStatusCheck checks the status of space and tells if it is deleted or not
-    rpc SpaceStatusCheck(SpaceStatusCheckRequest) returns (SpaceStatusCheckResponse);
+  // SpaceStatusCheck checks the status of space and tells if it is deleted or not
+  rpc SpaceStatusCheck(SpaceStatusCheckRequest) returns (SpaceStatusCheckResponse);
 
-    // SpaceStatusChange changes the status of space
-    rpc SpaceStatusChange(SpaceStatusChangeRequest) returns (SpaceStatusChangeResponse);
+  // SpaceStatusCheckMany checks the statuses of spaces and tells if they are deleted or not
+  rpc SpaceStatusCheckMany(SpaceStatusCheckManyRequest) returns (SpaceStatusCheckManyResponse);
 
-    // NetworkConfiguration retrieves the latest network configuration
-    rpc NetworkConfiguration(NetworkConfigurationRequest) returns (NetworkConfigurationResponse);
+  // SpaceStatusChange changes the status of space
+  rpc SpaceStatusChange(SpaceStatusChangeRequest) returns (SpaceStatusChangeResponse);
+
+  // NetworkConfiguration retrieves the latest network configuration
+  rpc NetworkConfiguration(NetworkConfigurationRequest) returns (NetworkConfigurationResponse);
+
+  // DeletionLog gets the latest deletion log records
+  rpc DeletionLog(DeletionLogRequest) returns (DeletionLogResponse);
 }
 
 message SpaceSignRequest {
-    // SpaceId is the id of the signed space
-    string spaceId = 1;
-    // Header is the header of the signed space
-    bytes header = 2;
-    // OldIdentity is the old identity of the space owner
-    bytes oldIdentity = 3;
-    // NewIdentitySignature is the new identity signed by the old one
-    bytes newIdentitySignature = 4;
+  // SpaceId is the id of the signed space
+  string spaceId = 1;
+  // Header is the header of the signed space
+  bytes header = 2;
+  // OldIdentity is the old identity of the space owner
+  bytes oldIdentity = 3;
+  // NewIdentitySignature is the new identity signed by the old one
+  bytes newIdentitySignature = 4;
 }
 
 enum ErrorCodes {
-    Unexpected = 0;
-    SpaceDeleted = 1;
-    SpaceDeletionPending = 2;
-    SpaceCreated = 3;
-    SpaceNotExists = 4;
-    ErrorOffset = 300;
+  Unexpected = 0;
+  SpaceDeleted = 1;
+  SpaceDeletionPending = 2;
+  SpaceCreated = 3;
+  SpaceNotExists = 4;
+  ErrorOffset = 300;
 }
 
 enum SpaceStatus {
-    SpaceStatusCreated = 0;
-    SpaceStatusPendingDeletion = 1;
-    SpaceStatusDeletionStarted = 2;
-    SpaceStatusDeleted = 3;
+  SpaceStatusCreated = 0;
+  SpaceStatusPendingDeletion = 1;
+  SpaceStatusDeletionStarted = 2;
+  SpaceStatusDeleted = 3;
 }
 
 message SpaceStatusPayload {
-    SpaceStatus status = 1;
-    int64 deletionTimestamp = 2;
+  SpaceStatus status = 1;
+  int64 deletionTimestamp = 2;
 }
 
 message SpaceSignResponse {
-    SpaceReceiptWithSignature receipt = 1;
+  SpaceReceiptWithSignature receipt = 1;
 }
 
 // SpaceReceiptWithSignature contains protobuf encoded receipt and its signature
 message SpaceReceiptWithSignature {
-    bytes spaceReceiptPayload = 1;
-    bytes signature = 2;
+  bytes spaceReceiptPayload = 1;
+  bytes signature = 2;
 }
 
 // SpaceReceipt contains permission to SpacePush operation
 message SpaceReceipt {
-    // SpaceId is the identifier of space
-    string spaceId = 1;
-    // PeerId of receipt requester
-    string peerId = 2;
-    // AccountIdentity is an identity of a space owner
-    bytes accountIdentity = 3;
-    // NetworkId is the id of a network where the receipt is issued
-    string networkId = 4;
-    // ValidUntil is a unix-timestamp with a deadline time of receipt validity
-    uint64 validUntil = 5;
+  // SpaceId is the identifier of space
+  string spaceId = 1;
+  // PeerId of receipt requester
+  string peerId = 2;
+  // AccountIdentity is an identity of a space owner
+  bytes accountIdentity = 3;
+  // NetworkId is the id of a network where the receipt is issued
+  string networkId = 4;
+  // ValidUntil is a unix-timestamp with a deadline time of receipt validity
+  uint64 validUntil = 5;
 }
 
 // FileLimitCheckRequest contains an account identity and spaceId
 // control node checks that identity owns a given space
 message FileLimitCheckRequest {
-    bytes accountIdentity = 1;
-    string spaceId = 2;
+  bytes accountIdentity = 1;
+  string spaceId = 2;
 }
 
 // FileLimitCheckResponse returns a current space limit in bytes
 message FileLimitCheckResponse {
-    uint64 limit = 1;
+  uint64 limit = 1;
 }
 
 // SpaceStatusCheckRequest contains the spaceId of requested space
 message SpaceStatusCheckRequest {
-    string spaceId = 1;
+  string spaceId = 1;
 }
 
 // SpaceStatusCheckResponse contains the current status of space
 message SpaceStatusCheckResponse {
-    SpaceStatusPayload payload = 1;
+  SpaceStatusPayload payload = 1;
+}
+
+// SpaceStatusCheckManyRequest contains the spaceIds of requested spaces
+message SpaceStatusCheckManyRequest {
+  repeated string spaceIds = 1;
+}
+
+// SpaceStatusCheckManyResponse contains the current statuses of spaces
+message SpaceStatusCheckManyResponse {
+  repeated SpaceStatusPayload payloads = 1;
 }
 
 // SpaceStatusChangeRequest contains the deletionChange if we want to delete space, or it is empty otherwise
 message SpaceStatusChangeRequest {
-    string spaceId = 1;
-    string deletionChangeId = 2;
-    bytes deletionChangePayload = 3;
+  string spaceId = 1;
+  string deletionPayloadId = 2;
+  bytes deletionPayload = 3;
+  DeletionPayloadType deletionPayloadType = 4;
 }
 
 // SpaceStatusChangeResponse contains changed status of space
 message SpaceStatusChangeResponse {
-    SpaceStatusPayload payload = 1;
+  SpaceStatusPayload payload = 1;
 }
 
 // NetworkConfigurationRequest contains currenId of the client configuration, it can be empty
 message NetworkConfigurationRequest {
-    // currenId of the client configuration
-    // if the currentId is equal to the latest configuration id then the response will not contain a nodes list
-    string currentId = 1;
+  // currenId of the client configuration
+  // if the currentId is equal to the latest configuration id then the response will not contain a nodes list
+  string currentId = 1;
 }
 
 // NetworkConfigurationResponse contains list of nodes
 message NetworkConfigurationResponse {
-    // id of current configuration
-    string configurationId = 1;
-    // network id
-    string networkId = 2;
-    // nodes list - it will be empty if the client's currentId is equal configurationId
-    repeated Node nodes = 3;
-    // unix timestamp of the creation time of configuration
-    uint64 creationTimeUnix = 4;
+  // id of current configuration
+  string configurationId = 1;
+  // network id
+  string networkId = 2;
+  // nodes list - it will be empty if the client's currentId is equal configurationId
+  repeated Node nodes = 3;
+  // unix timestamp of the creation time of configuration
+  uint64 creationTimeUnix = 4;
 }
 
 // NodeType determines the type of API that a node supports
 enum NodeType {
-    // TreeAPI supports space/tree sync api
-    TreeAPI = 0;
-    // FileAPI support file api
-    FileAPI = 1;
-    // CoordinatorAPI supports coordinator api
-    CoordinatorAPI = 2;
-    // ConsensusAPI supports consensus api
-    ConsensusAPI = 3;
+  // TreeAPI supports space/tree sync api
+  TreeAPI = 0;
+  // FileAPI support file api
+  FileAPI = 1;
+  // CoordinatorAPI supports coordinator api
+  CoordinatorAPI = 2;
+  // ConsensusAPI supports consensus api
+  ConsensusAPI = 3;
+}
+
+// DeletionChangeType determines the type of deletion payload
+enum DeletionPayloadType {
+  Tree = 0;
+  Confirm = 1;
 }
 
 // Node describes one node in the network
 message Node {
-    // peerId - it's a peer identifier (libp2p format string) so it's an encoded publicKey
-    string peerId = 1;
-    // list of node addresses
-    repeated string addresses = 2;
-    // list of supported APIs
-    repeated NodeType types = 3;
+  // peerId - it's a peer identifier (libp2p format string) so it's an encoded publicKey
+  string peerId = 1;
+  // list of node addresses
+  repeated string addresses = 2;
+  // list of supported APIs
+  repeated NodeType types = 3;
 }
+
+// DeletionConfirmPayloadWithSignature contains protobuf encoded deletion payload and its signature
+message DeletionConfirmPayloadWithSignature {
+  bytes deletionPayload = 1;
+  bytes signature = 2;
+}
+
+// DeletionConfirmPayload contains payload for deletion confirmation
+message DeletionConfirmPayload {
+  // SpaceId is the identifier of space
+  string spaceId = 1;
+  // PeerId of receipt requester
+  string peerId = 2;
+  // AccountIdentity is an identity of a space owner
+  bytes accountIdentity = 3;
+  // NetworkId is the id of a network where the deletion was requested
+  string networkId = 4;
+  // Timestamp is a timestamp when the deletion was requested
+  int64 timestamp = 5;
+}
+
+
+message DeletionLogRequest {
+  // AfterId is the last known logId to request records after this id. If it is empty will be returned a list from the beginning.
+  string afterId = 1;
+  // Limit is a desired record count in response
+  uint32 limit = 2;
+}
+
+
+message DeletionLogResponse {
+  // DeletionLogRecord list of records, if there are no new records will be empty
+  repeated DeletionLogRecord records = 1;
+  // HasMore indicates if there are records left
+  bool hasMore = 2;
+}
+
+message DeletionLogRecord {
+  // Id is a record id
+  string id = 1;
+  // SpaceId is a space identifier
+  string spaceId = 2;
+  // DeletionLogRecordStatus is a space status
+  DeletionLogRecordStatus status = 3;
+  // Timestamp is a unixtimestamp of record creation
+  int64 timestamp = 4;
+}
+
+enum DeletionLogRecordStatus {
+  // Ok means space should operate in a normal
+  Ok = 0;
+  // RemovePrepare means space prepared to remove, sync should be disabled
+  RemovePrepare = 1;
+  // Remove means space should be removed
+  Remove = 2;
+}
+
