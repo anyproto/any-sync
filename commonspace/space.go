@@ -74,7 +74,7 @@ type Space interface {
 
 	DeleteTree(ctx context.Context, id string) (err error)
 	GetNodePeers(ctx context.Context) (peer []peer.Peer, err error)
-	SetDeleted()
+	SetDeleted(isDeleted bool)
 
 	HandleMessage(ctx context.Context, msg objectsync.HandleMessage) (err error)
 	HandleSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
@@ -154,8 +154,8 @@ func (s *space) GetNodePeers(ctx context.Context) (peer []peer.Peer, err error) 
 	return s.peerManager.GetNodePeers(ctx)
 }
 
-func (s *space) SetDeleted() {
-	s.state.SpaceIsDeleted.Swap(true)
+func (s *space) SetDeleted(isDeleted bool) {
+	s.state.SpaceIsDeleted.Swap(isDeleted)
 }
 
 func (s *space) Acl() syncacl.SyncAcl {
