@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 
 	app "github.com/anyproto/any-sync/app"
-	treechangeproto "github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	coordinatorclient "github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	coordinatorproto "github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	gomock "go.uber.org/mock/gomock"
@@ -39,7 +38,7 @@ func (m *MockCoordinatorClient) EXPECT() *MockCoordinatorClientMockRecorder {
 }
 
 // ChangeStatus mocks base method.
-func (m *MockCoordinatorClient) ChangeStatus(arg0 context.Context, arg1 string, arg2 *treechangeproto.RawTreeChangeWithId) (*coordinatorproto.SpaceStatusPayload, error) {
+func (m *MockCoordinatorClient) ChangeStatus(arg0 context.Context, arg1 string, arg2 *coordinatorproto.DeletionConfirmPayloadWithSignature) (*coordinatorproto.SpaceStatusPayload, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ChangeStatus", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*coordinatorproto.SpaceStatusPayload)
@@ -51,6 +50,21 @@ func (m *MockCoordinatorClient) ChangeStatus(arg0 context.Context, arg1 string, 
 func (mr *MockCoordinatorClientMockRecorder) ChangeStatus(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeStatus", reflect.TypeOf((*MockCoordinatorClient)(nil).ChangeStatus), arg0, arg1, arg2)
+}
+
+// DeletionLog mocks base method.
+func (m *MockCoordinatorClient) DeletionLog(arg0 context.Context, arg1 string, arg2 int) ([]*coordinatorproto.DeletionLogRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletionLog", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]*coordinatorproto.DeletionLogRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeletionLog indicates an expected call of DeletionLog.
+func (mr *MockCoordinatorClientMockRecorder) DeletionLog(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletionLog", reflect.TypeOf((*MockCoordinatorClient)(nil).DeletionLog), arg0, arg1, arg2)
 }
 
 // FileLimitCheck mocks base method.
@@ -139,4 +153,19 @@ func (m *MockCoordinatorClient) StatusCheck(arg0 context.Context, arg1 string) (
 func (mr *MockCoordinatorClientMockRecorder) StatusCheck(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusCheck", reflect.TypeOf((*MockCoordinatorClient)(nil).StatusCheck), arg0, arg1)
+}
+
+// StatusCheckMany mocks base method.
+func (m *MockCoordinatorClient) StatusCheckMany(arg0 context.Context, arg1 []string) ([]*coordinatorproto.SpaceStatusPayload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StatusCheckMany", arg0, arg1)
+	ret0, _ := ret[0].([]*coordinatorproto.SpaceStatusPayload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StatusCheckMany indicates an expected call of StatusCheckMany.
+func (mr *MockCoordinatorClientMockRecorder) StatusCheckMany(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusCheckMany", reflect.TypeOf((*MockCoordinatorClient)(nil).StatusCheckMany), arg0, arg1)
 }

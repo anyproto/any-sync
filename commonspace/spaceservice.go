@@ -188,8 +188,9 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		Register(headsync.New())
 
 	sp := &space{
-		state: state,
-		app:   spaceApp,
+		state:   state,
+		app:     spaceApp,
+		storage: st,
 	}
 	return sp, nil
 }
