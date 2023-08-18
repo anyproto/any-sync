@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_commonspace/mock_commonspace.go github.com/anyproto/any-sync/commonspace Space
 package commonspace
 
 import (
