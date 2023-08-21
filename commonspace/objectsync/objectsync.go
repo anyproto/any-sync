@@ -4,7 +4,6 @@ package objectsync
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
@@ -64,8 +63,7 @@ type objectSync struct {
 	spaceStorage  spacestorage.SpaceStorage
 	metric        metric.Metric
 
-	spaceIsDeleted *atomic.Bool
-	handleQueue    multiqueue.MultiQueue[HandleMessage]
+	handleQueue multiqueue.MultiQueue[HandleMessage]
 }
 
 func (s *objectSync) Init(a *app.App) (err error) {
@@ -77,7 +75,6 @@ func (s *objectSync) Init(a *app.App) (err error) {
 	if mc != nil {
 		s.metric = mc.(metric.Metric)
 	}
-	s.spaceIsDeleted = sharedData.SpaceIsDeleted
 	s.spaceId = sharedData.SpaceId
 	s.handleQueue = multiqueue.New[HandleMessage](s.processHandleMessage, 30)
 	return nil
@@ -160,9 +157,6 @@ func (s *objectSync) processHandleMessage(msg HandleMessage) {
 
 func (s *objectSync) handleRequest(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (response *spacesyncproto.ObjectSyncMessage, err error) {
 	log := log.With(zap.String("objectId", msg.ObjectId))
-	if s.spaceIsDeleted.Load() {
-		return nil, spacesyncproto.ErrSpaceIsDeleted
-	}
 	err = s.checkEmptyFullSync(log, msg)
 	if err != nil {
 		return nil, err
@@ -176,9 +170,6 @@ func (s *objectSync) handleRequest(ctx context.Context, senderId string, msg *sp
 
 func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	log := log.With(zap.String("objectId", msg.ObjectId))
-	if s.spaceIsDeleted.Load() {
-		return spacesyncproto.ErrSpaceIsDeleted
-	}
 	err = s.checkEmptyFullSync(log, msg)
 	if err != nil {
 		return err

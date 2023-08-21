@@ -148,20 +148,11 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 			}
 		}
 	}
-	var (
-		spaceIsClosed  = &atomic.Bool{}
-		spaceIsDeleted = &atomic.Bool{}
-	)
-	isDeleted, err := st.IsSpaceDeleted()
-	if err != nil {
-		return nil, err
-	}
-	spaceIsDeleted.Swap(isDeleted)
+	spaceIsClosed := &atomic.Bool{}
 	state := &spacestate.SpaceState{
-		SpaceId:        st.Id(),
-		SpaceIsDeleted: spaceIsDeleted,
-		SpaceIsClosed:  spaceIsClosed,
-		TreesUsed:      &atomic.Int32{},
+		SpaceId:       st.Id(),
+		SpaceIsClosed: spaceIsClosed,
+		TreesUsed:     &atomic.Int32{},
 	}
 	if s.config.KeepTreeDataInMemory {
 		state.TreeBuilderFunc = objecttree.BuildObjectTree
