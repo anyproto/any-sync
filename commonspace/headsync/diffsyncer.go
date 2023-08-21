@@ -163,8 +163,9 @@ func (d *diffSyncer) onDiffError(ctx context.Context, p peer.Peer, cl spacesyncp
 	if err != spacesyncproto.ErrSpaceMissing {
 		if err == spacesyncproto.ErrSpaceIsDeleted {
 			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.RemovedFromNetwork)
+		} else {
+			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.ConnectionError)
 		}
-		d.syncStatus.SetNodesStatus(p.Id(), syncstatus.ConnectionError)
 		return err
 	}
 	// in case space is missing on peer, we should send push request
@@ -172,10 +173,12 @@ func (d *diffSyncer) onDiffError(ctx context.Context, p peer.Peer, cl spacesyncp
 	if err != nil {
 		if err == coordinatorproto.ErrSpaceIsDeleted {
 			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.RemovedFromNetwork)
+		} else {
+			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.ConnectionError)
 		}
-		d.syncStatus.SetNodesStatus(p.Id(), syncstatus.ConnectionError)
 		return err
 	}
+	d.syncStatus.SetNodesStatus(p.Id(), syncstatus.Online)
 	return nil
 }
 
