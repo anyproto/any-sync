@@ -2,7 +2,6 @@ package headsync
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/anyproto/any-sync/app/ldiff"
@@ -15,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
+	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/util/slice"
@@ -128,18 +128,10 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 
 	newIds, changedIds, removedIds, err := d.diff.Diff(ctx, rdiff)
 	err = rpcerr.Unwrap(err)
-	if err != nil && err != spacesyncproto.ErrSpaceMissing {
-		if err == spacesyncproto.ErrSpaceIsDeleted {
-			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.RemovedFromNetwork)
-		}
-		d.syncStatus.SetNodesStatus(p.Id(), syncstatus.ConnectionError)
-		return fmt.Errorf("diff error: %v", err)
+	if err != nil {
+		return d.onDiffError(ctx, p, cl, err)
 	}
 	d.syncStatus.SetNodesStatus(p.Id(), syncstatus.Online)
-
-	if err == spacesyncproto.ErrSpaceMissing {
-		return d.sendPushSpaceRequest(ctx, p.Id(), cl)
-	}
 
 	totalLen := len(newIds) + len(changedIds) + len(removedIds)
 	// not syncing ids which were removed through settings document
@@ -165,6 +157,26 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	}
 	d.log.logSyncDone(p.Id(), len(newIds), len(changedIds), len(removedIds), totalLen-len(existingIds)-len(missingIds))
 	return
+}
+
+func (d *diffSyncer) onDiffError(ctx context.Context, p peer.Peer, cl spacesyncproto.DRPCSpaceSyncClient, err error) error {
+	if err != spacesyncproto.ErrSpaceMissing {
+		if err == spacesyncproto.ErrSpaceIsDeleted {
+			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.RemovedFromNetwork)
+		}
+		d.syncStatus.SetNodesStatus(p.Id(), syncstatus.ConnectionError)
+		return err
+	}
+	// in case space is missing on peer, we should send push request
+	err = d.sendPushSpaceRequest(ctx, p.Id(), cl)
+	if err != nil {
+		if err == coordinatorproto.ErrSpaceIsDeleted {
+			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.RemovedFromNetwork)
+		}
+		d.syncStatus.SetNodesStatus(p.Id(), syncstatus.ConnectionError)
+		return err
+	}
+	return nil
 }
 
 func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, peerId string, cl spacesyncproto.DRPCSpaceSyncClient) (err error) {
