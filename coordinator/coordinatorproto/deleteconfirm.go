@@ -33,31 +33,31 @@ func PrepareDeleteConfirmation(privKey crypto.PrivKey, spaceId, peerId, networkI
 	return
 }
 
-func ValidateDeleteConfirmation(pubKey crypto.PubKey, networkId string, deleteConfirm *DeletionConfirmPayloadWithSignature) (spaceId string, err error) {
+func ValidateDeleteConfirmation(pubKey crypto.PubKey, spaceId, networkId string, deleteConfirm *DeletionConfirmPayloadWithSignature) (err error) {
 	res, err := pubKey.Verify(deleteConfirm.GetDeletionPayload(), deleteConfirm.GetSignature())
 	if err != nil {
 		return
 	}
 	if !res {
-		err = errSignatureIncorrect
-		return
+		return errSignatureIncorrect
 	}
 	payload := &DeletionConfirmPayload{}
 	err = payload.Unmarshal(deleteConfirm.GetDeletionPayload())
 	if err != nil {
 		return
 	}
-	spaceId = payload.SpaceId
+	if payload.SpaceId != spaceId {
+		return errSpaceIdIncorrect
+	}
 	if payload.NetworkId != networkId {
-		err = errNetworkIsIncorrect
-		return
+		return errNetworkIsIncorrect
 	}
 	accountRaw, err := crypto.UnmarshalEd25519PublicKeyProto(payload.AccountIdentity)
 	if err != nil {
 		return
 	}
 	if !bytes.Equal(pubKey.Storage(), accountRaw.Storage()) {
-		err = errAccountIncorrect
+		return errAccountIncorrect
 	}
 	return
 }
