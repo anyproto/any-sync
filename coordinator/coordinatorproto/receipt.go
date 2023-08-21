@@ -10,12 +10,12 @@ import (
 )
 
 var (
-	errReceiptSignatureIncorrect = errors.New("receipt signature is incorrect")
-	errNetworkIsIncorrect        = errors.New("network is incorrect")
-	errReceiptSpaceIdIncorrect   = errors.New("receipt space id is incorrect")
-	errReceiptPeerIdIncorrect    = errors.New("receipt peer id is incorrect")
-	errReceiptAccountIncorrect   = errors.New("receipt account is incorrect")
-	errReceiptExpired            = errors.New("receipt is expired")
+	errSignatureIncorrect = errors.New("receipt signature is incorrect")
+	errNetworkIsIncorrect = errors.New("network is incorrect")
+	errSpaceIdIncorrect   = errors.New("receipt space id is incorrect")
+	errPeerIdIncorrect    = errors.New("receipt peer id is incorrect")
+	errAccountIncorrect   = errors.New("receipt account is incorrect")
+	errReceiptExpired     = errors.New("receipt is expired")
 )
 
 func PrepareSpaceReceipt(spaceId, peerId string, validPeriod time.Duration, accountPubKey crypto.PubKey, networkKey crypto.PrivKey) (signedReceipt *SpaceReceiptWithSignature, err error) {
@@ -51,10 +51,10 @@ func CheckReceipt(peerId, spaceId string, accountIdentity []byte, networkId stri
 		return
 	}
 	if payload.SpaceId != spaceId {
-		return errReceiptSpaceIdIncorrect
+		return errSpaceIdIncorrect
 	}
 	if payload.PeerId != peerId {
-		return errReceiptPeerIdIncorrect
+		return errPeerIdIncorrect
 	}
 	protoRaw, err := crypto.UnmarshalEd25519PublicKeyProto(payload.AccountIdentity)
 	if err != nil {
@@ -65,7 +65,7 @@ func CheckReceipt(peerId, spaceId string, accountIdentity []byte, networkId stri
 		return
 	}
 	if !bytes.Equal(protoRaw.Storage(), accountRaw.Storage()) {
-		return errReceiptAccountIncorrect
+		return errAccountIncorrect
 	}
 	err = checkNetwork(
 		networkId,
@@ -98,7 +98,7 @@ func checkNetwork(networkId, payloadNetworkId string, payload, signature []byte)
 		return
 	}
 	if !res {
-		return errReceiptSignatureIncorrect
+		return errSignatureIncorrect
 	}
 	return
 }

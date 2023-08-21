@@ -13,12 +13,14 @@ import (
 type fixture struct {
 	networkKey      crypto.PrivKey
 	accountKey      crypto.PubKey
+	accountPrivKey  crypto.PrivKey
 	accountIdentity []byte
 	ctx             context.Context
 	originalReceipt *SpaceReceipt
 	signedReceipt   *SpaceReceiptWithSignature
-	spaceId         string
-	peerId          string
+
+	spaceId string
+	peerId  string
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -34,6 +36,7 @@ func newFixture(t *testing.T) *fixture {
 		accountIdentity: accountKeyProto,
 		networkKey:      networkKey,
 		accountKey:      accountKey.GetPublic(),
+		accountPrivKey:  accountKey,
 	}
 }
 
@@ -70,21 +73,21 @@ func TestReceiptIncorrectSpaceId(t *testing.T) {
 	fx := newFixture(t)
 	fx.prepareReceipt(t, time.Second)
 	err := CheckReceipt(fx.peerId, "otherId", fx.accountIdentity, fx.networkKey.GetPublic().Network(), fx.signedReceipt)
-	require.Error(t, errReceiptSpaceIdIncorrect, err)
+	require.Error(t, errSpaceIdIncorrect, err)
 }
 
 func TestReceiptIncorrectPeerId(t *testing.T) {
 	fx := newFixture(t)
 	fx.prepareReceipt(t, time.Second)
 	err := CheckReceipt("otherId", fx.spaceId, fx.accountIdentity, fx.networkKey.GetPublic().Network(), fx.signedReceipt)
-	require.Error(t, errReceiptPeerIdIncorrect, err)
+	require.Error(t, errPeerIdIncorrect, err)
 }
 
 func TestReceiptIncorrectAccountIdentity(t *testing.T) {
 	fx := newFixture(t)
 	fx.prepareReceipt(t, time.Second)
 	err := CheckReceipt(fx.peerId, fx.spaceId, []byte("some identity"), fx.networkKey.GetPublic().Network(), fx.signedReceipt)
-	require.Error(t, errReceiptAccountIncorrect, err)
+	require.Error(t, errAccountIncorrect, err)
 }
 
 func TestReceiptIncorrectNetworkId(t *testing.T) {
@@ -114,7 +117,7 @@ func TestReceiptIncorrectSignature(t *testing.T) {
 	fx.prepareReceipt(t, time.Second)
 	fx.signedReceipt.Signature = []byte("random sig")
 	err := CheckReceipt(fx.peerId, fx.spaceId, fx.accountIdentity, fx.networkKey.GetPublic().Network(), fx.signedReceipt)
-	require.Error(t, errReceiptSignatureIncorrect, err)
+	require.Error(t, errSignatureIncorrect, err)
 }
 
 func TestReceiptExpired(t *testing.T) {
