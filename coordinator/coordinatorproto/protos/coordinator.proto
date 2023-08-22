@@ -38,6 +38,8 @@ message SpaceSignRequest {
   bytes oldIdentity = 3;
   // NewIdentitySignature is the new identity signed by the old one
   bytes newIdentitySignature = 4;
+  // ForceRequest if true, forces the creating space receipt even if the space is deleted before
+  bool forceRequest = 5;
 }
 
 enum ErrorCodes {
