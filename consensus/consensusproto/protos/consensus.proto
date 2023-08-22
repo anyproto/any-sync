@@ -44,12 +44,14 @@ message Record {
 
 
 service Consensus {
-    // AddLog adds new log to consensus
+    // LogAdd adds new log to consensus
     rpc LogAdd(LogAddRequest) returns (Ok);
-    // AddRecord adds new record to log
+    // RecordAdd adds new record to log
     rpc RecordAdd(RecordAddRequest) returns (RawRecordWithId);
-    // WatchLog fetches log and subscribes for a changes
+    // LogWatch fetches log and subscribes for a changes
     rpc LogWatch(stream LogWatchRequest) returns (stream LogWatchEvent);
+    // LogDelete deletes the log from the consensus
+    rpc LogDelete(LogDeleteRequest) returns (Ok);
 }
 
 message Ok {}
@@ -73,6 +75,10 @@ message LogWatchEvent {
     string logId = 1;
     repeated RawRecordWithId records = 2;
     Err error = 3;
+}
+
+message LogDeleteRequest {
+    string logId = 1;
 }
 
 message Err {

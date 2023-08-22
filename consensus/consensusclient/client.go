@@ -37,6 +37,8 @@ type Watcher interface {
 type Service interface {
 	// AddLog adds new log to consensus servers
 	AddLog(ctx context.Context, rec *consensusproto.RawRecordWithId) (err error)
+	// DeleteLog deletes the log from the consensus node
+	DeleteLog(ctx context.Context, logId string) (err error)
 	// AddRecord adds new record to consensus servers
 	AddRecord(ctx context.Context, logId string, rec *consensusproto.RawRecord) (record *consensusproto.RawRecordWithId, err error)
 	// Watch starts watching to given logId and calls watcher when any relative event received
@@ -90,6 +92,17 @@ func (s *service) AddLog(ctx context.Context, rec *consensusproto.RawRecordWithI
 	return s.doClient(ctx, func(cl consensusproto.DRPCConsensusClient) error {
 		if _, err = cl.LogAdd(ctx, &consensusproto.LogAddRequest{
 			Record: rec,
+		}); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+}
+
+func (s *service) DeleteLog(ctx context.Context, logId string) (err error) {
+	return s.doClient(ctx, func(cl consensusproto.DRPCConsensusClient) error {
+		if _, err = cl.LogDelete(ctx, &consensusproto.LogDeleteRequest{
+			LogId: logId,
 		}); err != nil {
 			return rpcerr.Unwrap(err)
 		}

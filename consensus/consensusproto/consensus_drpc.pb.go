@@ -43,6 +43,7 @@ type DRPCConsensusClient interface {
 	LogAdd(ctx context.Context, in *LogAddRequest) (*Ok, error)
 	RecordAdd(ctx context.Context, in *RecordAddRequest) (*RawRecordWithId, error)
 	LogWatch(ctx context.Context) (DRPCConsensus_LogWatchClient, error)
+	LogDelete(ctx context.Context, in *LogDeleteRequest) (*Ok, error)
 }
 
 type drpcConsensusClient struct {
@@ -112,10 +113,20 @@ func (x *drpcConsensus_LogWatchClient) RecvMsg(m *LogWatchEvent) error {
 	return x.MsgRecv(m, drpcEncoding_File_consensus_consensusproto_protos_consensus_proto{})
 }
 
+func (c *drpcConsensusClient) LogDelete(ctx context.Context, in *LogDeleteRequest) (*Ok, error) {
+	out := new(Ok)
+	err := c.cc.Invoke(ctx, "/consensusProto.Consensus/LogDelete", drpcEncoding_File_consensus_consensusproto_protos_consensus_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCConsensusServer interface {
 	LogAdd(context.Context, *LogAddRequest) (*Ok, error)
 	RecordAdd(context.Context, *RecordAddRequest) (*RawRecordWithId, error)
 	LogWatch(DRPCConsensus_LogWatchStream) error
+	LogDelete(context.Context, *LogDeleteRequest) (*Ok, error)
 }
 
 type DRPCConsensusUnimplementedServer struct{}
@@ -132,9 +143,13 @@ func (s *DRPCConsensusUnimplementedServer) LogWatch(DRPCConsensus_LogWatchStream
 	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCConsensusUnimplementedServer) LogDelete(context.Context, *LogDeleteRequest) (*Ok, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCConsensusDescription struct{}
 
-func (DRPCConsensusDescription) NumMethods() int { return 3 }
+func (DRPCConsensusDescription) NumMethods() int { return 4 }
 
 func (DRPCConsensusDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -164,6 +179,15 @@ func (DRPCConsensusDescription) Method(n int) (string, drpc.Encoding, drpc.Recei
 						&drpcConsensus_LogWatchStream{in1.(drpc.Stream)},
 					)
 			}, DRPCConsensusServer.LogWatch, true
+	case 3:
+		return "/consensusProto.Consensus/LogDelete", drpcEncoding_File_consensus_consensusproto_protos_consensus_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCConsensusServer).
+					LogDelete(
+						ctx,
+						in1.(*LogDeleteRequest),
+					)
+			}, DRPCConsensusServer.LogDelete, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -229,4 +253,20 @@ func (x *drpcConsensus_LogWatchStream) Recv() (*LogWatchRequest, error) {
 
 func (x *drpcConsensus_LogWatchStream) RecvMsg(m *LogWatchRequest) error {
 	return x.MsgRecv(m, drpcEncoding_File_consensus_consensusproto_protos_consensus_proto{})
+}
+
+type DRPCConsensus_LogDeleteStream interface {
+	drpc.Stream
+	SendAndClose(*Ok) error
+}
+
+type drpcConsensus_LogDeleteStream struct {
+	drpc.Stream
+}
+
+func (x *drpcConsensus_LogDeleteStream) SendAndClose(m *Ok) error {
+	if err := x.MsgSend(m, drpcEncoding_File_consensus_consensusproto_protos_consensus_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
 }

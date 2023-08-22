@@ -180,6 +180,10 @@ type testServer struct {
 	watchErrOnce  bool
 }
 
+func (t *testServer) LogDelete(ctx context.Context, req *consensusproto.LogDeleteRequest) (*consensusproto.Ok, error) {
+	return &consensusproto.Ok{}, nil
+}
+
 func (t *testServer) LogAdd(ctx context.Context, req *consensusproto.LogAddRequest) (*consensusproto.Ok, error) {
 	if t.addLog != nil {
 		if err := t.addLog(ctx, req); err != nil {
