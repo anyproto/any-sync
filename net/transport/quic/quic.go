@@ -27,7 +27,7 @@ func New() Quic {
 }
 
 type Quic interface {
-	ListenAddrs(ctx context.Context, addrs ...string) (err error)
+	ListenAddrs(ctx context.Context, addrs ...string) (listenAddrs []net.Addr, err error)
 	transport.Transport
 	app.ComponentRunnable
 }
@@ -74,10 +74,11 @@ func (q *quicTransport) Run(ctx context.Context) (err error) {
 	}
 
 	q.listCtx, q.listCtxCancel = context.WithCancel(context.Background())
-	return q.ListenAddrs(ctx, q.conf.ListenAddrs...)
+	_, err = q.ListenAddrs(ctx, q.conf.ListenAddrs...)
+	return
 }
 
-func (q *quicTransport) ListenAddrs(ctx context.Context, addrs ...string) (err error) {
+func (q *quicTransport) ListenAddrs(ctx context.Context, addrs ...string) (listenAddrs []net.Addr, err error) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	var tlsConf tls.Config
@@ -93,8 +94,9 @@ func (q *quicTransport) ListenAddrs(ctx context.Context, addrs ...string) (err e
 	for _, listAddr := range addrs {
 		list, err := quic.ListenAddr(listAddr, &tlsConf, q.quicConf)
 		if err != nil {
-			return err
+			return nil, err
 		}
+		listenAddrs = append(listenAddrs, list.Addr())
 		q.listeners = append(q.listeners, list)
 		go q.acceptLoop(q.listCtx, list)
 	}
