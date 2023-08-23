@@ -80,6 +80,20 @@ func (mr *MockServiceMockRecorder) Close(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockService)(nil).Close), arg0)
 }
 
+// DeleteLog mocks base method.
+func (m *MockService) DeleteLog(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteLog", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteLog indicates an expected call of DeleteLog.
+func (mr *MockServiceMockRecorder) DeleteLog(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteLog", reflect.TypeOf((*MockService)(nil).DeleteLog), arg0, arg1)
+}
+
 // Init mocks base method.
 func (m *MockService) Init(arg0 *app.App) error {
 	m.ctrl.T.Helper()

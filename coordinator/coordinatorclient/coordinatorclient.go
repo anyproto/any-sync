@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
@@ -27,11 +26,13 @@ func New() CoordinatorClient {
 }
 
 type CoordinatorClient interface {
-	ChangeStatus(ctx context.Context, spaceId string, deleteRaw *treechangeproto.RawTreeChangeWithId) (status *coordinatorproto.SpaceStatusPayload, err error)
+	ChangeStatus(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (status *coordinatorproto.SpaceStatusPayload, err error)
+	StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, err error)
 	StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusPayload, err error)
 	SpaceSign(ctx context.Context, payload SpaceSignPayload) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error)
 	FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (limit uint64, err error)
 	NetworkConfiguration(ctx context.Context, currentId string) (*coordinatorproto.NetworkConfigurationResponse, error)
+	DeletionLog(ctx context.Context, lastRecordId string, limit int) (records []*coordinatorproto.DeletionLogRecord, err error)
 	app.Component
 }
 
@@ -57,18 +58,50 @@ func (c *coordinatorClient) Name() (name string) {
 	return CName
 }
 
-func (c *coordinatorClient) ChangeStatus(ctx context.Context, spaceId string, deleteRaw *treechangeproto.RawTreeChangeWithId) (status *coordinatorproto.SpaceStatusPayload, err error) {
+func (c *coordinatorClient) ChangeStatus(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (status *coordinatorproto.SpaceStatusPayload, err error) {
+	confMarshalled, err := conf.Marshal()
+	if err != nil {
+		return nil, err
+	}
 	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
 		resp, err := cl.SpaceStatusChange(ctx, &coordinatorproto.SpaceStatusChangeRequest{
 			SpaceId:             spaceId,
-			DeletionPayloadId:   deleteRaw.GetId(),
-			DeletionPayload:     deleteRaw.GetRawChange(),
-			DeletionPayloadType: coordinatorproto.DeletionPayloadType_Tree,
+			DeletionPayload:     confMarshalled,
+			DeletionPayloadType: coordinatorproto.DeletionPayloadType_Confirm,
 		})
 		if err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		status = resp.Payload
+		return nil
+	})
+	return
+}
+
+func (c *coordinatorClient) DeletionLog(ctx context.Context, lastRecordId string, limit int) (records []*coordinatorproto.DeletionLogRecord, err error) {
+	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		resp, err := cl.DeletionLog(ctx, &coordinatorproto.DeletionLogRequest{
+			AfterId: lastRecordId,
+			Limit:   uint32(limit),
+		})
+		if err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		records = resp.Records
+		return nil
+	})
+	return
+}
+
+func (c *coordinatorClient) StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, err error) {
+	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		resp, err := cl.SpaceStatusCheckMany(ctx, &coordinatorproto.SpaceStatusCheckManyRequest{
+			SpaceIds: spaceIds,
+		})
+		if err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		statuses = resp.Payloads
 		return nil
 	})
 	return

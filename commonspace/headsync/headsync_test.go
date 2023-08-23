@@ -28,7 +28,6 @@ import (
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"sync/atomic"
 	"testing"
 )
 
@@ -70,8 +69,7 @@ type headSyncFixture struct {
 
 func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 	spaceState := &spacestate.SpaceState{
-		SpaceId:        "spaceId",
-		SpaceIsDeleted: &atomic.Bool{},
+		SpaceId: "spaceId",
 	}
 	ctrl := gomock.NewController(t)
 	configurationMock := mock_nodeconf.NewMockService(ctrl)

@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_commonspace/mock_commonspace.go github.com/anyproto/any-sync/commonspace Space
 package commonspace
 
 import (
@@ -147,20 +148,11 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 			}
 		}
 	}
-	var (
-		spaceIsClosed  = &atomic.Bool{}
-		spaceIsDeleted = &atomic.Bool{}
-	)
-	isDeleted, err := st.IsSpaceDeleted()
-	if err != nil {
-		return nil, err
-	}
-	spaceIsDeleted.Swap(isDeleted)
+	spaceIsClosed := &atomic.Bool{}
 	state := &spacestate.SpaceState{
-		SpaceId:        st.Id(),
-		SpaceIsDeleted: spaceIsDeleted,
-		SpaceIsClosed:  spaceIsClosed,
-		TreesUsed:      &atomic.Int32{},
+		SpaceId:       st.Id(),
+		SpaceIsClosed: spaceIsClosed,
+		TreesUsed:     &atomic.Int32{},
 	}
 	if s.config.KeepTreeDataInMemory {
 		state.TreeBuilderFunc = objecttree.BuildObjectTree
@@ -188,8 +180,9 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		Register(headsync.New())
 
 	sp := &space{
-		state: state,
-		app:   spaceApp,
+		state:   state,
+		app:     spaceApp,
+		storage: st,
 	}
 	return sp, nil
 }

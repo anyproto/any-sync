@@ -3,7 +3,6 @@ package headsync
 
 import (
 	"context"
-	"sync/atomic"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
@@ -45,9 +44,8 @@ type HeadSync interface {
 }
 
 type headSync struct {
-	spaceId        string
-	spaceIsDeleted *atomic.Bool
-	syncPeriod     int
+	spaceId    string
+	syncPeriod int
 
 	periodicSync       periodicsync.PeriodicSync
 	storage            spacestorage.SpaceStorage
@@ -74,7 +72,6 @@ func (h *headSync) Init(a *app.App) (err error) {
 	cfg := a.MustComponent("config").(config.ConfigGetter)
 	h.syncAcl = a.MustComponent(syncacl.CName).(syncacl.SyncAcl)
 	h.spaceId = shared.SpaceId
-	h.spaceIsDeleted = shared.SpaceIsDeleted
 	h.syncPeriod = cfg.GetSpace().SyncPeriod
 	h.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	h.log = log.With(zap.String("spaceId", h.spaceId))
@@ -87,10 +84,6 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
 	h.syncer = createDiffSyncer(h)
 	sync := func(ctx context.Context) (err error) {
-		// for clients cancelling the sync process
-		if h.spaceIsDeleted.Load() {
-			return spacesyncproto.ErrSpaceIsDeleted
-		}
 		return h.syncer.Sync(ctx)
 	}
 	h.periodicSync = periodicsync.NewPeriodicSync(h.syncPeriod, time.Minute, sync, h.log)
@@ -115,9 +108,6 @@ func (h *headSync) Run(ctx context.Context) (err error) {
 }
 
 func (h *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
-	if h.spaceIsDeleted.Load() {
-		return nil, spacesyncproto.ErrSpaceIsDeleted
-	}
 	return HandleRangeRequest(ctx, h.diff, req)
 }
 

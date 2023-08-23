@@ -10,7 +10,6 @@ const CName = "common.commonspace.spacestate"
 
 type SpaceState struct {
 	SpaceId         string
-	SpaceIsDeleted  *atomic.Bool
 	SpaceIsClosed   *atomic.Bool
 	TreesUsed       *atomic.Int32
 	TreeBuilderFunc objecttree.BuildObjectTreeFunc

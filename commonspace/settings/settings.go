@@ -2,11 +2,9 @@ package settings
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/commonspace/deletionmanager"
-	"sync/atomic"
-
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
@@ -30,11 +28,10 @@ func New() Settings {
 }
 
 type settings struct {
-	account        accountservice.Service
-	storage        spacestorage.SpaceStorage
-	configuration  nodeconf.NodeConf
-	treeBuilder    objecttreebuilder.TreeBuilderComponent
-	spaceIsDeleted *atomic.Bool
+	account       accountservice.Service
+	storage       spacestorage.SpaceStorage
+	configuration nodeconf.NodeConf
+	treeBuilder   objecttreebuilder.TreeBuilderComponent
 
 	settingsObject SettingsObject
 }
@@ -45,7 +42,6 @@ func (s *settings) Init(a *app.App) (err error) {
 	s.treeBuilder = a.MustComponent(objecttreebuilder.CName).(objecttreebuilder.TreeBuilderComponent)
 	sharedState := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
 	s.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
-	s.spaceIsDeleted = sharedState.SpaceIsDeleted
 
 	deps := Deps{
 		BuildFunc: func(ctx context.Context, id string, listener updatelistener.UpdateListener) (t synctree.SyncTree, err error) {
