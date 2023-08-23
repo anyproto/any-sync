@@ -45,4 +45,13 @@ func TestPeriodicSync_Run(t *testing.T) {
 		pSync.Close()
 		require.Equal(t, 2, times)
 	})
+
+	t.Run("loop close not running", func(t *testing.T) {
+		secs := 0
+		diffSyncer := func(ctx context.Context) (err error) {
+			return nil
+		}
+		pSync := NewPeriodicSync(secs, 0, diffSyncer, l)
+		pSync.Close()
+	})
 }

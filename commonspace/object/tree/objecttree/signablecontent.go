@@ -16,4 +16,6 @@ type SignableChangeContent struct {
 	IsEncrypted bool
 	// Timestamp is a timestamp of change, if it is <= 0, then we use current timestamp
 	Timestamp int64
+	// DataType contains additional info about the data in the payload
+	DataType string
 }

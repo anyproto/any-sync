@@ -208,8 +208,10 @@ func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, peerId string, cl
 		Credential: cred,
 	})
 	if err != nil {
+		d.log.WarnCtx(ctx, "space push failed", zap.Error(err))
 		return
 	}
+	d.log.InfoCtx(ctx, "space push completed successfully")
 	if e := d.subscribe(ctx, peerId); e != nil {
 		d.log.WarnCtx(ctx, "error subscribing for space", zap.Error(e))
 	}

@@ -11,7 +11,10 @@ import (
 type mockPubKey struct {
 }
 
-const mockKeyValue = "mockKey"
+const (
+	mockKeyValue = "mockKey"
+	mockDataType = "mockDataType"
+)
 
 func (m mockPubKey) Equals(key crypto.Key) bool {
 	return true
@@ -99,6 +102,7 @@ func (c *MockChangeCreator) CreateRawWithData(id, aclId, snapshotId string, isSn
 		SnapshotBaseId: snapshotId,
 		ChangesData:    data,
 		IsSnapshot:     isSnapshot,
+		DataType:       mockDataType,
 	}
 	res, _ := aclChange.Marshal()
 

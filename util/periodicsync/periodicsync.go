@@ -5,6 +5,7 @@ import (
 	"context"
 	"github.com/anyproto/any-sync/app/logger"
 	"go.uber.org/zap"
+	"sync/atomic"
 	"time"
 )
 
@@ -39,9 +40,11 @@ type periodicCall struct {
 	loopDone      chan struct{}
 	periodSeconds int
 	timeout       time.Duration
+	isRunning     atomic.Bool
 }
 
 func (p *periodicCall) Run() {
+	p.isRunning.Store(true)
 	go p.loop(p.periodSeconds)
 }
 
@@ -75,6 +78,9 @@ func (p *periodicCall) loop(periodSeconds int) {
 }
 
 func (p *periodicCall) Close() {
+	if !p.isRunning.Load() {
+		return
+	}
 	p.loopCancel()
 	<-p.loopDone
 }

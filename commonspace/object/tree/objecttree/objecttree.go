@@ -46,7 +46,7 @@ type RawChangesPayload struct {
 }
 
 type ChangeIterateFunc = func(change *Change) bool
-type ChangeConvertFunc = func(decrypted []byte) (any, error)
+type ChangeConvertFunc = func(change *Change, decrypted []byte) (any, error)
 
 type ReadableObjectTree interface {
 	RWLocker
@@ -274,6 +274,7 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 		PrivKey:        content.Key,
 		ReadKey:        readKey,
 		Content:        content.Data,
+		DataType:       content.DataType,
 		Timestamp:      timestamp,
 	}
 	return
@@ -537,7 +538,7 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 			return false
 		}
 
-		model, err = convert(decrypted)
+		model, err = convert(c, decrypted)
 		if err != nil {
 			return false
 		}

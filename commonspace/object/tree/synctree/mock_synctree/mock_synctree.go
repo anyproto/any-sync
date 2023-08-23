@@ -262,7 +262,7 @@ func (mr *MockSyncTreeMockRecorder) Id() *gomock.Call {
 }
 
 // IterateFrom mocks base method.
-func (m *MockSyncTree) IterateFrom(arg0 string, arg1 func([]byte) (interface{}, error), arg2 func(*objecttree.Change) bool) error {
+func (m *MockSyncTree) IterateFrom(arg0 string, arg1 func(*objecttree.Change, []byte) (interface{}, error), arg2 func(*objecttree.Change) bool) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IterateFrom", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -276,7 +276,7 @@ func (mr *MockSyncTreeMockRecorder) IterateFrom(arg0, arg1, arg2 interface{}) *g
 }
 
 // IterateRoot mocks base method.
-func (m *MockSyncTree) IterateRoot(arg0 func([]byte) (interface{}, error), arg1 func(*objecttree.Change) bool) error {
+func (m *MockSyncTree) IterateRoot(arg0 func(*objecttree.Change, []byte) (interface{}, error), arg1 func(*objecttree.Change) bool) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IterateRoot", arg0, arg1)
 	ret0, _ := ret[0].(error)
