@@ -202,18 +202,6 @@ func (mr *MockSpaceMockRecorder) Init(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockSpace)(nil).Init), arg0)
 }
 
-// SetDeleted mocks base method.
-func (m *MockSpace) SetDeleted(arg0 bool) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetDeleted", arg0)
-}
-
-// SetDeleted indicates an expected call of SetDeleted.
-func (mr *MockSpaceMockRecorder) SetDeleted(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDeleted", reflect.TypeOf((*MockSpace)(nil).SetDeleted), arg0)
-}
-
 // Storage mocks base method.
 func (m *MockSpace) Storage() spacestorage.SpaceStorage {
 	m.ctrl.T.Helper()
