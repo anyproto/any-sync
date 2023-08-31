@@ -37,10 +37,11 @@ type CoordinatorClient interface {
 }
 
 type SpaceSignPayload struct {
-	SpaceId     string
-	SpaceHeader []byte
-	OldAccount  crypto.PrivKey
-	Identity    crypto.PrivKey
+	SpaceId      string
+	SpaceHeader  []byte
+	OldAccount   crypto.PrivKey
+	Identity     crypto.PrivKey
+	ForceRequest bool
 }
 
 type coordinatorClient struct {
@@ -143,6 +144,7 @@ func (c *coordinatorClient) SpaceSign(ctx context.Context, payload SpaceSignPayl
 			Header:               payload.SpaceHeader,
 			OldIdentity:          oldIdentity,
 			NewIdentitySignature: newSignature,
+			ForceRequest:         payload.ForceRequest,
 		})
 		if err != nil {
 			return rpcerr.Unwrap(err)
