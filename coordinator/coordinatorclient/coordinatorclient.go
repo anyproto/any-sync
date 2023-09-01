@@ -60,16 +60,24 @@ func (c *coordinatorClient) Name() (name string) {
 }
 
 func (c *coordinatorClient) ChangeStatus(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (status *coordinatorproto.SpaceStatusPayload, err error) {
-	confMarshalled, err := conf.Marshal()
-	if err != nil {
-		return nil, err
-	}
-	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
-		resp, err := cl.SpaceStatusChange(ctx, &coordinatorproto.SpaceStatusChangeRequest{
+	var req *coordinatorproto.SpaceStatusChangeRequest
+	if conf != nil {
+		confMarshalled, err := conf.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		req = &coordinatorproto.SpaceStatusChangeRequest{
 			SpaceId:             spaceId,
 			DeletionPayload:     confMarshalled,
 			DeletionPayloadType: coordinatorproto.DeletionPayloadType_Confirm,
-		})
+		}
+	} else {
+		req = &coordinatorproto.SpaceStatusChangeRequest{
+			SpaceId: spaceId,
+		}
+	}
+	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		resp, err := cl.SpaceStatusChange(ctx, req)
 		if err != nil {
 			return rpcerr.Unwrap(err)
 		}
