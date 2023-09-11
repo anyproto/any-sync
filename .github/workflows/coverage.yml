@@ -10,32 +10,21 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version:
+          - '1.21'
     env:
       GOPRIVATE: github.com/anyproto
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
-          go-version:
-            - 1.21.0
+          go-version: '${{ matrix.go-version }}'
+          check-latest: true
 
       - name: git config
         run: git config --global url.https://${{ secrets.ANYTYPE_PAT }}@github.com/.insteadOf https://github.com/
-
-      # cache {{
-      - id: go-cache-paths
-        run: |
-          echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_OUTPUT
-          echo "GOMODCACHE=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ${{ steps.go-cache-paths.outputs.GOCACHE }}
-            ${{ steps.go-cache-paths.outputs.GOMODCACHE }}
-          key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ matrix.go-version }}-
-      # }}
 
       - name: Setup license repository
         uses: actions/checkout@master
@@ -63,7 +52,7 @@ jobs:
           TESTCOVERAGE_THRESHOLD: 0
         run: |
           go test ./... -coverprofile coverage.out -covermode count
-          
+
           generated_pattern='^\/\/ Code generated .* DO NOT EDIT\.$'
           files_list=$(grep -rl "$generated_pattern" . | grep '\.go$' | sed 's/^\.\///')
 
@@ -72,7 +61,7 @@ jobs:
             grep -v "$file" coverage.out > temp_file
             mv temp_file coverage.out
           done
-          
+
           go tool cover -func coverage.out
           echo "Quality Gate: checking test coverage is above threshold ..."
           echo "Threshold             : $TESTCOVERAGE_THRESHOLD %"
