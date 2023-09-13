@@ -94,9 +94,21 @@ message FileLimitCheckRequest {
   string spaceId = 2;
 }
 
+enum FileLimitType {
+  // SpaceLimit means that limit works only for a given spaceId
+  SpaceLimit = 0;
+  // IdentityLimit means that limit works by identity and a given spaceId can share the limit with other spaces
+  IdentityLimit = 1;
+}
+
 // FileLimitCheckResponse returns a current space limit in bytes
 message FileLimitCheckResponse {
+  // Limit in bytes
   uint64 limit = 1;
+  // Type of the limit
+  FileLimitType type = 2;
+  // SpaceIds belongs to identity, will be returned when type is identity
+  repeated string spaceIds = 3;
 }
 
 // SpaceStatusCheckRequest contains the spaceId of requested space
