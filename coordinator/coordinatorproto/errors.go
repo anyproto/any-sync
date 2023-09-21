@@ -13,4 +13,5 @@ var (
 	ErrSpaceIsDeleted       = errGroup.Register(errors.New("space is deleted"), uint64(ErrorCodes_SpaceDeleted))
 	ErrSpaceDeletionPending = errGroup.Register(errors.New("space is set out for deletion"), uint64(ErrorCodes_SpaceDeletionPending))
 	ErrSpaceNotExists       = errGroup.Register(errors.New("space not exists"), uint64(ErrorCodes_SpaceNotExists))
+	ErrSpaceLimitReached    = errGroup.Register(errors.New("space limit reached"), uint64(ErrorCodes_SpaceLimitReached))
 )

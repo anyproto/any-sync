@@ -48,6 +48,7 @@ enum ErrorCodes {
   SpaceDeletionPending = 2;
   SpaceCreated = 3;
   SpaceNotExists = 4;
+  SpaceLimitReached = 5;
   ErrorOffset = 300;
 }
 
