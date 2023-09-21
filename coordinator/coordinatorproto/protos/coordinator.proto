@@ -95,9 +95,13 @@ message FileLimitCheckRequest {
   string spaceId = 2;
 }
 
+
 // FileLimitCheckResponse returns a current space limit in bytes
 message FileLimitCheckResponse {
+  // Limit in bytes
   uint64 limit = 1;
+  // StorageKey tells a key that filenode should use to save files
+  string storageKey = 2;
 }
 
 // SpaceStatusCheckRequest contains the spaceId of requested space

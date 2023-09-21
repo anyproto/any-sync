@@ -68,10 +68,10 @@ func (mr *MockCoordinatorClientMockRecorder) DeletionLog(arg0, arg1, arg2 interf
 }
 
 // FileLimitCheck mocks base method.
-func (m *MockCoordinatorClient) FileLimitCheck(arg0 context.Context, arg1 string, arg2 []byte) (uint64, error) {
+func (m *MockCoordinatorClient) FileLimitCheck(arg0 context.Context, arg1 string, arg2 []byte) (*coordinatorproto.FileLimitCheckResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FileLimitCheck", arg0, arg1, arg2)
-	ret0, _ := ret[0].(uint64)
+	ret0, _ := ret[0].(*coordinatorproto.FileLimitCheckResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
