@@ -30,7 +30,7 @@ type CoordinatorClient interface {
 	StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, err error)
 	StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusPayload, err error)
 	SpaceSign(ctx context.Context, payload SpaceSignPayload) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error)
-	FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (limit uint64, err error)
+	FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (response *coordinatorproto.FileLimitCheckResponse, err error)
 	NetworkConfiguration(ctx context.Context, currentId string) (*coordinatorproto.NetworkConfigurationResponse, error)
 	DeletionLog(ctx context.Context, lastRecordId string, limit int) (records []*coordinatorproto.DeletionLogRecord, err error)
 	app.Component
@@ -163,16 +163,15 @@ func (c *coordinatorClient) SpaceSign(ctx context.Context, payload SpaceSignPayl
 	return
 }
 
-func (c *coordinatorClient) FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (limit uint64, err error) {
+func (c *coordinatorClient) FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (resp *coordinatorproto.FileLimitCheckResponse, err error) {
 	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
-		resp, err := cl.FileLimitCheck(ctx, &coordinatorproto.FileLimitCheckRequest{
+		resp, err = cl.FileLimitCheck(ctx, &coordinatorproto.FileLimitCheckRequest{
 			AccountIdentity: identity,
 			SpaceId:         spaceId,
 		})
 		if err != nil {
 			return rpcerr.Unwrap(err)
 		}
-		limit = resp.Limit
 		return nil
 	})
 	return
