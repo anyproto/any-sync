@@ -17,6 +17,13 @@ type ObjectTreeCreatePayload struct {
 	Timestamp     int64
 }
 
+type ObjectTreeDerivePayload struct {
+	ChangeType    string
+	ChangePayload []byte
+	SpaceId       string
+	IsEncrypted   bool
+}
+
 type HistoryTreeParams struct {
 	TreeStorage     treestorage.TreeStorage
 	AclList         list.AclList
@@ -175,6 +182,16 @@ func CreateObjectTreeRoot(payload ObjectTreeCreatePayload, aclList list.AclList)
 	}
 
 	_, root, err = NewChangeBuilder(crypto.NewKeyStorage(), nil).BuildRoot(cnt)
+	return
+}
+
+func DeriveObjectTreeRoot(payload ObjectTreeDerivePayload, aclList list.AclList) (root *treechangeproto.RawTreeChangeWithId, err error) {
+	cnt := InitialDerivedContent{
+		SpaceId:       payload.SpaceId,
+		ChangeType:    payload.ChangeType,
+		ChangePayload: payload.ChangePayload,
+	}
+	_, root, err = NewChangeBuilder(crypto.NewKeyStorage(), nil).BuildDerivedRoot(cnt)
 	return
 }
 

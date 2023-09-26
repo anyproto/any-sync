@@ -28,6 +28,7 @@ var (
 	ErrNoCommonSnapshot  = errors.New("trees doesn't have a common snapshot")
 	ErrNoChangeInTree    = errors.New("no such change in tree")
 	ErrMissingKey        = errors.New("missing current read key")
+	ErrDerived           = errors.New("expect >= 2 changes in derived tree")
 )
 
 type AddResultSummary int
@@ -58,6 +59,7 @@ type ReadableObjectTree interface {
 	Heads() []string
 	Root() *Change
 	Len() int
+	IsDerived() bool
 
 	AclList() list.AclList
 
@@ -146,6 +148,10 @@ func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Chan
 
 func (ot *objectTree) Id() string {
 	return ot.id
+}
+
+func (ot *objectTree) IsDerived() bool {
+	return ot.root.IsDerived
 }
 
 func (ot *objectTree) Len() int {

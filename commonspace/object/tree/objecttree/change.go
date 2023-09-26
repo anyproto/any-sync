@@ -26,11 +26,12 @@ type Change struct {
 	Model       interface{}
 	Signature   []byte
 	DataType    string
+	IsSnapshot  bool
+	IsDerived   bool
 
 	// iterator helpers
 	visited          bool
 	branchesFinished bool
-	IsSnapshot       bool
 }
 
 func NewChange(id string, identity crypto.PubKey, ch *treechangeproto.TreeChange, signature []byte) *Change {
@@ -50,7 +51,7 @@ func NewChange(id string, identity crypto.PubKey, ch *treechangeproto.TreeChange
 	}
 }
 
-func NewChangeFromRoot(id string, identity crypto.PubKey, ch *treechangeproto.RootChange, signature []byte) *Change {
+func NewChangeFromRoot(id string, identity crypto.PubKey, ch *treechangeproto.RootChange, signature []byte, isDerived bool) *Change {
 	changeInfo := &treechangeproto.TreeChangeInfo{
 		ChangeType:    ch.ChangeType,
 		ChangePayload: ch.ChangePayload,
@@ -66,6 +67,7 @@ func NewChangeFromRoot(id string, identity crypto.PubKey, ch *treechangeproto.Ro
 		Signature:  signature,
 		Data:       data,
 		Model:      changeInfo,
+		IsDerived:  isDerived,
 	}
 }
 

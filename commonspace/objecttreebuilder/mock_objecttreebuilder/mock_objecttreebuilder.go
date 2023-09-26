@@ -83,6 +83,21 @@ func (mr *MockTreeBuilderMockRecorder) CreateTree(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTree", reflect.TypeOf((*MockTreeBuilder)(nil).CreateTree), arg0, arg1)
 }
 
+// DeriveTree mocks base method.
+func (m *MockTreeBuilder) DeriveTree(arg0 context.Context, arg1 objecttree.ObjectTreeDerivePayload) (treestorage.TreeStorageCreatePayload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeriveTree", arg0, arg1)
+	ret0, _ := ret[0].(treestorage.TreeStorageCreatePayload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeriveTree indicates an expected call of DeriveTree.
+func (mr *MockTreeBuilderMockRecorder) DeriveTree(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeriveTree", reflect.TypeOf((*MockTreeBuilder)(nil).DeriveTree), arg0, arg1)
+}
+
 // PutTree mocks base method.
 func (m *MockTreeBuilder) PutTree(arg0 context.Context, arg1 treestorage.TreeStorageCreatePayload, arg2 updatelistener.UpdateListener) (objecttree.ObjectTree, error) {
 	m.ctrl.T.Helper()

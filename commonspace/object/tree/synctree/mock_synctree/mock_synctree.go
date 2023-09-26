@@ -261,6 +261,20 @@ func (mr *MockSyncTreeMockRecorder) Id() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Id", reflect.TypeOf((*MockSyncTree)(nil).Id))
 }
 
+// IsDerived mocks base method.
+func (m *MockSyncTree) IsDerived() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsDerived")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsDerived indicates an expected call of IsDerived.
+func (mr *MockSyncTreeMockRecorder) IsDerived() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDerived", reflect.TypeOf((*MockSyncTree)(nil).IsDerived))
+}
+
 // IterateFrom mocks base method.
 func (m *MockSyncTree) IterateFrom(arg0 string, arg1 func(*objecttree.Change, []byte) (interface{}, error), arg2 func(*objecttree.Change) bool) error {
 	m.ctrl.T.Helper()

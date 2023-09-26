@@ -3,6 +3,7 @@ package objecttree
 import (
 	"context"
 	"fmt"
+	"golang.org/x/exp/slices"
 	"testing"
 	"time"
 
@@ -33,7 +34,7 @@ func prepareAclList(t *testing.T) (list.AclList, *accountdata.AccountKeys) {
 
 func prepareHistoryTreeDeps(aclList list.AclList) (*MockChangeCreator, objectTreeDeps) {
 	changeCreator := NewMockChangeCreator()
-	treeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id)
+	treeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id, false)
 	root, _ := treeStorage.Root()
 	changeBuilder := &nonVerifiableChangeBuilder{
 		ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), root),
@@ -50,20 +51,25 @@ func prepareHistoryTreeDeps(aclList list.AclList) (*MockChangeCreator, objectTre
 }
 
 func prepareTreeContext(t *testing.T, aclList list.AclList) testTreeContext {
-	return prepareContext(t, aclList, BuildTestableTree, nil)
+	return prepareContext(t, aclList, BuildTestableTree, false, nil)
+}
+
+func prepareDerivedTreeContext(t *testing.T, aclList list.AclList) testTreeContext {
+	return prepareContext(t, aclList, BuildTestableTree, true, nil)
 }
 
 func prepareEmptyDataTreeContext(t *testing.T, aclList list.AclList, additionalChanges func(changeCreator *MockChangeCreator) RawChangesPayload) testTreeContext {
-	return prepareContext(t, aclList, BuildEmptyDataTestableTree, additionalChanges)
+	return prepareContext(t, aclList, BuildEmptyDataTestableTree, false, additionalChanges)
 }
 
 func prepareContext(
 	t *testing.T,
 	aclList list.AclList,
 	objTreeBuilder BuildObjectTreeFunc,
+	isDerived bool,
 	additionalChanges func(changeCreator *MockChangeCreator) RawChangesPayload) testTreeContext {
 	changeCreator := NewMockChangeCreator()
-	treeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id)
+	treeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id, isDerived)
 	if additionalChanges != nil {
 		payload := additionalChanges(changeCreator)
 		err := treeStorage.AddRawChangesSetHeads(payload.RawChanges, payload.NewHeads)
@@ -144,6 +150,148 @@ func TestObjectTree(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, ch.Timestamp, someTs)
 			require.Equal(t, res.Added[0].Id, oTree.(*objectTree).tree.lastIteratedHeadId)
+		})
+	})
+
+	t.Run("validate", func(t *testing.T) {
+		t.Run("non-derived only root is ok", func(t *testing.T) {
+			root, err := CreateObjectTreeRoot(ObjectTreeCreatePayload{
+				PrivKey:       keys.SignKey,
+				ChangeType:    "changeType",
+				ChangePayload: nil,
+				SpaceId:       "spaceId",
+				IsEncrypted:   true,
+			}, aclList)
+			require.NoError(t, err)
+			store, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
+			oTree, err := BuildObjectTree(store, aclList)
+			require.NoError(t, err)
+			err = ValidateRawTree(treestorage.TreeStorageCreatePayload{
+				RootRawChange: oTree.Header(),
+				Heads:         []string{root.Id},
+				Changes:       oTree.Storage().(*treestorage.InMemoryTreeStorage).AllChanges(),
+			}, aclList)
+			require.NoError(t, err)
+		})
+
+		t.Run("derived only root incorrect", func(t *testing.T) {
+			root, err := DeriveObjectTreeRoot(ObjectTreeDerivePayload{
+				ChangeType:    "changeType",
+				ChangePayload: nil,
+				SpaceId:       "spaceId",
+				IsEncrypted:   true,
+			}, aclList)
+			require.NoError(t, err)
+			store, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
+			oTree, err := BuildObjectTree(store, aclList)
+			require.NoError(t, err)
+			err = ValidateRawTree(treestorage.TreeStorageCreatePayload{
+				RootRawChange: oTree.Header(),
+				Heads:         []string{root.Id},
+				Changes:       oTree.Storage().(*treestorage.InMemoryTreeStorage).AllChanges(),
+			}, aclList)
+			require.Equal(t, ErrDerived, err)
+		})
+
+		t.Run("derived more than 1 change, not snapshot, correct", func(t *testing.T) {
+			root, err := DeriveObjectTreeRoot(ObjectTreeDerivePayload{
+				ChangeType:    "changeType",
+				ChangePayload: nil,
+				SpaceId:       "spaceId",
+				IsEncrypted:   true,
+			}, aclList)
+			require.NoError(t, err)
+			store, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
+			oTree, err := BuildObjectTree(store, aclList)
+			require.NoError(t, err)
+			_, err = oTree.AddContent(ctx, SignableChangeContent{
+				Data:        []byte("some"),
+				Key:         keys.SignKey,
+				IsSnapshot:  false,
+				IsEncrypted: true,
+				Timestamp:   time.Now().Unix(),
+				DataType:    mockDataType,
+			})
+			require.NoError(t, err)
+			allChanges := oTree.Storage().(*treestorage.InMemoryTreeStorage).AllChanges()
+			err = ValidateRawTree(treestorage.TreeStorageCreatePayload{
+				RootRawChange: oTree.Header(),
+				Heads:         []string{oTree.Heads()[0]},
+				Changes:       allChanges,
+			}, aclList)
+			require.NoError(t, err)
+			rawChs, err := oTree.ChangesAfterCommonSnapshot(nil, nil)
+			require.NoError(t, err)
+			sortFunc := func(a, b *treechangeproto.RawTreeChangeWithId) int {
+				if a.Id < b.Id {
+					return 1
+				} else {
+					return -1
+				}
+			}
+			slices.SortFunc(allChanges, sortFunc)
+			slices.SortFunc(rawChs, sortFunc)
+			require.Equal(t, allChanges, rawChs)
+		})
+
+		t.Run("derived more than 1 change, snapshot, correct", func(t *testing.T) {
+			root, err := DeriveObjectTreeRoot(ObjectTreeDerivePayload{
+				ChangeType:    "changeType",
+				ChangePayload: nil,
+				SpaceId:       "spaceId",
+				IsEncrypted:   true,
+			}, aclList)
+			require.NoError(t, err)
+			store, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
+			oTree, err := BuildObjectTree(store, aclList)
+			require.NoError(t, err)
+			_, err = oTree.AddContent(ctx, SignableChangeContent{
+				Data:        []byte("some"),
+				Key:         keys.SignKey,
+				IsSnapshot:  true,
+				IsEncrypted: true,
+				Timestamp:   time.Now().Unix(),
+				DataType:    mockDataType,
+			})
+			require.NoError(t, err)
+			allChanges := oTree.Storage().(*treestorage.InMemoryTreeStorage).AllChanges()
+			err = ValidateRawTree(treestorage.TreeStorageCreatePayload{
+				RootRawChange: oTree.Header(),
+				Heads:         []string{oTree.Heads()[0]},
+				Changes:       allChanges,
+			}, aclList)
+			require.NoError(t, err)
+			rawChs, err := oTree.ChangesAfterCommonSnapshot(nil, nil)
+			require.NoError(t, err)
+			sortFunc := func(a, b *treechangeproto.RawTreeChangeWithId) int {
+				if a.Id < b.Id {
+					return 1
+				} else {
+					return -1
+				}
+			}
+			slices.SortFunc(allChanges, sortFunc)
+			slices.SortFunc(rawChs, sortFunc)
+			require.Equal(t, allChanges, rawChs)
+		})
+
+		t.Run("validate from start, multiple snapshots, correct", func(t *testing.T) {
+			ctx := prepareTreeContext(t, aclList)
+			changeCreator := ctx.changeCreator
+
+			rawChanges := []*treechangeproto.RawTreeChangeWithId{
+				ctx.objTree.Header(),
+				changeCreator.CreateRaw("1", aclList.Head().Id, "0", false, "0"),
+				changeCreator.CreateRaw("2", aclList.Head().Id, "0", false, "1"),
+				changeCreator.CreateRaw("3", aclList.Head().Id, "0", true, "2"),
+			}
+			defaultObjectTreeDeps = nonVerifiableTreeDeps
+			err := ValidateRawTree(treestorage.TreeStorageCreatePayload{
+				RootRawChange: ctx.objTree.Header(),
+				Heads:         []string{"3"},
+				Changes:       rawChanges,
+			}, ctx.aclList)
+			require.NoError(t, err)
 		})
 	})
 
@@ -865,7 +1013,7 @@ func TestObjectTree(t *testing.T) {
 		assert.Equal(t, "0", hTree.Root().Id)
 	})
 
-	t.Run("validate correct tree", func(t *testing.T) {
+	t.Run("validate tree", func(t *testing.T) {
 		ctx := prepareTreeContext(t, aclList)
 		changeCreator := ctx.changeCreator
 

@@ -46,6 +46,7 @@ type TreeBuilder interface {
 	BuildTree(ctx context.Context, id string, opts BuildTreeOpts) (t objecttree.ObjectTree, err error)
 	BuildHistoryTree(ctx context.Context, id string, opts HistoryTreeOpts) (t objecttree.HistoryTree, err error)
 	CreateTree(ctx context.Context, payload objecttree.ObjectTreeCreatePayload) (res treestorage.TreeStorageCreatePayload, err error)
+	DeriveTree(ctx context.Context, payload objecttree.ObjectTreeDerivePayload) (res treestorage.TreeStorageCreatePayload, err error)
 	PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, listener updatelistener.UpdateListener) (t objecttree.ObjectTree, err error)
 }
 
@@ -158,6 +159,24 @@ func (t *treeBuilder) CreateTree(ctx context.Context, payload objecttree.ObjectT
 		return
 	}
 	root, err := objecttree.CreateObjectTreeRoot(payload, t.aclList)
+	if err != nil {
+		return
+	}
+
+	res = treestorage.TreeStorageCreatePayload{
+		RootRawChange: root,
+		Changes:       []*treechangeproto.RawTreeChangeWithId{root},
+		Heads:         []string{root.Id},
+	}
+	return
+}
+
+func (t *treeBuilder) DeriveTree(ctx context.Context, payload objecttree.ObjectTreeDerivePayload) (res treestorage.TreeStorageCreatePayload, err error) {
+	if t.isClosed.Load() {
+		err = ErrSpaceClosed
+		return
+	}
+	root, err := objecttree.DeriveObjectTreeRoot(payload, t.aclList)
 	if err != nil {
 		return
 	}

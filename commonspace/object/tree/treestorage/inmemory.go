@@ -85,6 +85,14 @@ func (t *InMemoryTreeStorage) SetHeads(heads []string) error {
 	return nil
 }
 
+func (t *InMemoryTreeStorage) AllChanges() []*treechangeproto.RawTreeChangeWithId {
+	var allChanges []*treechangeproto.RawTreeChangeWithId
+	for _, ch := range t.Changes {
+		allChanges = append(allChanges, ch)
+	}
+	return allChanges
+}
+
 func (t *InMemoryTreeStorage) AddRawChange(change *treechangeproto.RawTreeChangeWithId) error {
 	t.Lock()
 	defer t.Unlock()

@@ -114,7 +114,8 @@ func buildSyncTree(ctx context.Context, sendUpdate bool, deps BuildDeps) (t Sync
 	syncTree.afterBuild()
 	syncTree.Unlock()
 
-	if sendUpdate {
+	// don't send updates for empty derived trees, because they won't be accepted
+	if sendUpdate && !objecttree.IsEmptyDerivedTree(objTree) {
 		headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 		// send to everybody, because everybody should know that the node or client got new tree
 		syncTree.syncClient.Broadcast(headUpdate)

@@ -319,7 +319,7 @@ func (b *broadcastTree) AddRawChanges(ctx context.Context, changes objecttree.Ra
 
 func createStorage(treeId string, aclList list.AclList) treestorage.TreeStorage {
 	changeCreator := objecttree.NewMockChangeCreator()
-	st := changeCreator.CreateNewTreeStorage(treeId, aclList.Head().Id)
+	st := changeCreator.CreateNewTreeStorage(treeId, aclList.Head().Id, false)
 	return st
 }
 

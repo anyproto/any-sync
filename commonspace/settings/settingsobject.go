@@ -193,14 +193,6 @@ func (s *settingsObject) DeleteObject(id string) (err error) {
 	return s.addContent(res, isSnapshot)
 }
 
-func (s *settingsObject) verifyDeleteSpace(raw *treechangeproto.RawTreeChangeWithId) (err error) {
-	data, err := s.UnpackChange(raw)
-	if err != nil {
-		return
-	}
-	return verifyDeleteContent(data, "")
-}
-
 func (s *settingsObject) addContent(data []byte, isSnapshot bool) (err error) {
 	accountData := s.account.Account()
 	res, err := s.AddContent(context.Background(), objecttree.SignableChangeContent{
