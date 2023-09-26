@@ -31,10 +31,11 @@ type SettingsObject interface {
 }
 
 var (
-	ErrDeleteSelf      = errors.New("cannot delete self")
-	ErrAlreadyDeleted  = errors.New("the object is already deleted")
-	ErrObjDoesNotExist = errors.New("the object does not exist")
-	ErrCantDeleteSpace = errors.New("not able to delete space")
+	ErrDeleteSelf              = errors.New("cannot delete self")
+	ErrAlreadyDeleted          = errors.New("the object is already deleted")
+	ErrObjDoesNotExist         = errors.New("the object does not exist")
+	ErrCantDeleteDerivedObject = errors.New("can't delete derived object")
+	ErrCantDeleteSpace         = errors.New("not able to delete space")
 )
 
 var (
@@ -168,21 +169,31 @@ func (s *settingsObject) Close() error {
 	return s.SyncTree.Close()
 }
 
+var isDerivedRoot = objecttree.IsDerivedRoot
+
 func (s *settingsObject) DeleteObject(id string) (err error) {
 	s.Lock()
 	defer s.Unlock()
 	if s.Id() == id {
-		err = ErrDeleteSelf
-		return
+		return ErrDeleteSelf
 	}
 	if s.state.Exists(id) {
-		err = ErrAlreadyDeleted
-		return nil
+		return ErrAlreadyDeleted
 	}
-	_, err = s.store.TreeStorage(id)
+	st, err := s.store.TreeStorage(id)
 	if err != nil {
-		err = ErrObjDoesNotExist
-		return
+		return ErrObjDoesNotExist
+	}
+	root, err := st.Root()
+	if err != nil {
+		return ErrObjDoesNotExist
+	}
+	isDerived, err := isDerivedRoot(root)
+	if err != nil {
+		return ErrObjDoesNotExist
+	}
+	if isDerived {
+		return ErrCantDeleteDerivedObject
 	}
 	isSnapshot := DoSnapshot(s.Len())
 	res, err := s.changeFactory.CreateObjectDeleteChange(id, s.state, isSnapshot)

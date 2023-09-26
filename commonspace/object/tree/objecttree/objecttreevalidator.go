@@ -118,7 +118,3 @@ func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.
 	}
 	return
 }
-
-func IsEmptyDerivedTree(tree ObjectTree) bool {
-	return tree.IsDerived() && tree.Len() == 1 && tree.Root().Id == tree.Header().Id
-}

@@ -246,6 +246,9 @@ func (s *syncTree) checkAlive() (err error) {
 func (s *syncTree) SyncWithPeer(ctx context.Context, peerId string) (err error) {
 	s.Lock()
 	defer s.Unlock()
+	if objecttree.IsEmptyDerivedTree(s) {
+		return nil
+	}
 	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
 	return s.syncClient.SendUpdate(peerId, headUpdate.RootChange.Id, headUpdate)
 }

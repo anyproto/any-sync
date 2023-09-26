@@ -193,6 +193,19 @@ func TestObjectTree(t *testing.T) {
 			require.Equal(t, ErrDerived, err)
 		})
 
+		t.Run("derived root returns true", func(t *testing.T) {
+			root, err := DeriveObjectTreeRoot(ObjectTreeDerivePayload{
+				ChangeType:    "changeType",
+				ChangePayload: nil,
+				SpaceId:       "spaceId",
+				IsEncrypted:   true,
+			}, aclList)
+			require.NoError(t, err)
+			isDerived, err := IsDerivedRoot(root)
+			require.NoError(t, err)
+			require.True(t, isDerived)
+		})
+
 		t.Run("derived more than 1 change, not snapshot, correct", func(t *testing.T) {
 			root, err := DeriveObjectTreeRoot(ObjectTreeDerivePayload{
 				ChangeType:    "changeType",
