@@ -4,6 +4,7 @@ package commonspace
 import (
 	"context"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
+	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"sync/atomic"
 
 	"github.com/anyproto/any-sync/accountservice"
@@ -52,8 +53,12 @@ type SpaceService interface {
 	DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (string, error)
 	DeriveId(ctx context.Context, payload SpaceDerivePayload) (string, error)
 	CreateSpace(ctx context.Context, payload SpaceCreatePayload) (string, error)
-	NewSpace(ctx context.Context, id string) (sp Space, err error)
+	NewSpace(ctx context.Context, id string, deps Deps) (sp Space, err error)
 	app.Component
+}
+
+type Deps struct {
+	TreeSyncer treesyncer.TreeSyncer
 }
 
 type spaceService struct {
@@ -129,7 +134,7 @@ func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePaylo
 	return store.Id(), nil
 }
 
-func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
+func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Space, error) {
 	st, err := s.storageProvider.WaitSpaceStorage(ctx, id)
 	if err != nil {
 		if err != spacestorage.ErrSpaceStorageMissing {
@@ -175,6 +180,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string) (Space, error) {
 		Register(deletionmanager.New()).
 		Register(settings.New()).
 		Register(objectmanager.New(s.treeManager)).
+		Register(deps.TreeSyncer).
 		Register(objecttreebuilder.New()).
 		Register(objectsync.New()).
 		Register(headsync.New())

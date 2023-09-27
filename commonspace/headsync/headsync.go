@@ -3,6 +3,7 @@ package headsync
 
 import (
 	"context"
+	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"time"
 
 	"github.com/anyproto/any-sync/app"
@@ -12,7 +13,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
-	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -54,7 +54,7 @@ type headSync struct {
 	syncer             DiffSyncer
 	configuration      nodeconf.NodeConf
 	peerManager        peermanager.PeerManager
-	treeManager        treemanager.TreeManager
+	treeSyncer         treesyncer.TreeSyncer
 	credentialProvider credentialprovider.CredentialProvider
 	syncStatus         syncstatus.StatusService
 	deletionState      deletionstate.ObjectDeletionState
@@ -80,7 +80,7 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	h.credentialProvider = a.MustComponent(credentialprovider.CName).(credentialprovider.CredentialProvider)
 	h.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusService)
-	h.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
+	h.treeSyncer = a.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	h.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
 	h.syncer = createDiffSyncer(h)
 	sync := func(ctx context.Context) (err error) {
@@ -144,7 +144,7 @@ func (h *headSync) RemoveObjects(ids []string) {
 
 func (h *headSync) Close(ctx context.Context) (err error) {
 	h.periodicSync.Close()
-	return h.syncer.Close()
+	return
 }
 
 func (h *headSync) fillDiff(objectIds []string) {

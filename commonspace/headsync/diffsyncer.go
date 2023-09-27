@@ -2,6 +2,7 @@ package headsync
 
 import (
 	"context"
+	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"time"
 
 	"github.com/anyproto/any-sync/app/ldiff"
@@ -26,7 +27,6 @@ type DiffSyncer interface {
 	RemoveObjects(ids []string)
 	UpdateHeads(id string, heads []string)
 	Init()
-	Close() error
 }
 
 const logPeriodSecs = 200
@@ -35,7 +35,6 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 	return &diffSyncer{
 		diff:               hs.diff,
 		spaceId:            hs.spaceId,
-		treeManager:        hs.treeManager,
 		storage:            hs.storage,
 		peerManager:        hs.peerManager,
 		clientFactory:      spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient),
@@ -44,6 +43,7 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 		syncStatus:         hs.syncStatus,
 		deletionState:      hs.deletionState,
 		syncAcl:            hs.syncAcl,
+		treeSyncer:         hs.treeSyncer,
 	}
 }
 
@@ -52,19 +52,18 @@ type diffSyncer struct {
 	diff               ldiff.Diff
 	peerManager        peermanager.PeerManager
 	treeManager        treemanager.TreeManager
+	treeSyncer         treesyncer.TreeSyncer
 	storage            spacestorage.SpaceStorage
 	clientFactory      spacesyncproto.ClientFactory
 	log                syncLogger
 	deletionState      deletionstate.ObjectDeletionState
 	credentialProvider credentialprovider.CredentialProvider
 	syncStatus         syncstatus.StatusUpdater
-	treeSyncer         treemanager.TreeSyncer
 	syncAcl            syncacl.SyncAcl
 }
 
 func (d *diffSyncer) Init() {
 	d.deletionState.AddObserver(d.RemoveObjects)
-	d.treeSyncer = d.treeManager.NewTreeSyncer(d.spaceId, d.treeManager)
 }
 
 func (d *diffSyncer) RemoveObjects(ids []string) {
@@ -245,8 +244,4 @@ func (d *diffSyncer) subscribe(ctx context.Context, peerId string) (err error) {
 	return d.peerManager.SendPeer(ctx, peerId, &spacesyncproto.ObjectSyncMessage{
 		Payload: payload,
 	})
-}
-
-func (d *diffSyncer) Close() error {
-	return d.treeSyncer.Close()
 }

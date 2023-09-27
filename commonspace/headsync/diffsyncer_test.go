@@ -101,7 +101,6 @@ func (fx *headSyncFixture) initDiffSyncer(t *testing.T) {
 		return fx.clientMock
 	})
 	fx.deletionStateMock.EXPECT().AddObserver(gomock.Any())
-	fx.treeManagerMock.EXPECT().NewTreeSyncer(fx.spaceState.SpaceId, fx.treeManagerMock).Return(fx.treeSyncerMock)
 	fx.diffSyncer.Init()
 }
 

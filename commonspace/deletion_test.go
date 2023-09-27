@@ -68,7 +68,7 @@ func TestSpaceDeleteIds(t *testing.T) {
 	require.NotNil(t, sp)
 
 	// initializing space
-	spc, err := fx.spaceService.NewSpace(ctx, sp)
+	spc, err := fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}})
 	require.NoError(t, err)
 	require.NotNil(t, spc)
 	// adding space to tree manager
@@ -146,7 +146,7 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	require.NotNil(t, sp)
 
 	// initializing space
-	spc, err := fx.spaceService.NewSpace(ctx, sp)
+	spc, err := fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}})
 	require.NoError(t, err)
 	require.NotNil(t, spc)
 	// adding space to tree manager
@@ -186,7 +186,7 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	// now we replace the storage, so the trees are back, but the settings object says that they are deleted
 	fx.storageProvider.(*spacestorage.InMemorySpaceStorageProvider).SetStorage(storageCopy)
 
-	spc, err = fx.spaceService.NewSpace(ctx, sp)
+	spc, err = fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}})
 	require.NoError(t, err)
 	require.NotNil(t, spc)
 	fx.treeManager.waitLoad = make(chan struct{})
@@ -233,7 +233,7 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	require.NotNil(t, sp)
 
 	// initializing space
-	spc, err := fx.spaceService.NewSpace(ctx, sp)
+	spc, err := fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}})
 	require.NoError(t, err)
 	require.NotNil(t, spc)
 	// adding space to tree manager
@@ -266,7 +266,7 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	// now we replace the storage, so the trees are back, but the settings object says that they are deleted
 	fx.storageProvider.(*spacestorage.InMemorySpaceStorageProvider).SetStorage(storageCopy)
 
-	spc, err = fx.spaceService.NewSpace(ctx, sp)
+	spc, err = fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}})
 	require.NoError(t, err)
 	require.NotNil(t, spc)
 	fx.treeManager.space = spc

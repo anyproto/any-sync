@@ -10,6 +10,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -269,16 +270,38 @@ func (n noOpSyncer) Close() error {
 	return nil
 }
 
+type mockTreeSyncer struct {
+}
+
+func (m mockTreeSyncer) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (m mockTreeSyncer) Name() (name string) {
+	return treesyncer.CName
+}
+
+func (m mockTreeSyncer) Run(ctx context.Context) (err error) {
+	return nil
+}
+
+func (m mockTreeSyncer) Close(ctx context.Context) (err error) {
+	return nil
+}
+
+func (m mockTreeSyncer) StartSync() {
+}
+
+func (m mockTreeSyncer) SyncAll(ctx context.Context, peerId string, existing, missing []string) error {
+	return nil
+}
+
 type mockTreeManager struct {
 	space      Space
 	cache      ocache.OCache
 	deletedIds []string
 	markedIds  []string
 	waitLoad   chan struct{}
-}
-
-func (t *mockTreeManager) NewTreeSyncer(spaceId string, treeManager treemanager.TreeManager) treemanager.TreeSyncer {
-	return noOpSyncer{}
 }
 
 func (t *mockTreeManager) MarkTreeDeleted(ctx context.Context, spaceId, treeId string) error {
