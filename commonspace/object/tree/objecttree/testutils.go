@@ -91,6 +91,24 @@ func (c *MockChangeCreator) CreateRoot(id, aclId string) *treechangeproto.RawTre
 	}
 }
 
+func (c *MockChangeCreator) CreateDerivedRoot(id string, isDerived bool) *treechangeproto.RawTreeChangeWithId {
+	aclChange := &treechangeproto.RootChange{
+		IsDerived: isDerived,
+	}
+	res, _ := aclChange.Marshal()
+
+	raw := &treechangeproto.RawTreeChange{
+		Payload:   res,
+		Signature: nil,
+	}
+	rawMarshalled, _ := raw.Marshal()
+
+	return &treechangeproto.RawTreeChangeWithId{
+		RawChange: rawMarshalled,
+		Id:        id,
+	}
+}
+
 func (c *MockChangeCreator) CreateRaw(id, aclId, snapshotId string, isSnapshot bool, prevIds ...string) *treechangeproto.RawTreeChangeWithId {
 	return c.CreateRawWithData(id, aclId, snapshotId, isSnapshot, nil, prevIds...)
 }
@@ -118,7 +136,7 @@ func (c *MockChangeCreator) CreateRawWithData(id, aclId, snapshotId string, isSn
 	}
 }
 
-func (c *MockChangeCreator) CreateNewTreeStorage(treeId, aclHeadId string) treestorage.TreeStorage {
+func (c *MockChangeCreator) CreateNewTreeStorage(treeId, aclHeadId string, isDerived bool) treestorage.TreeStorage {
 	root := c.CreateRoot(treeId, aclHeadId)
 	treeStorage, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
 	return treeStorage

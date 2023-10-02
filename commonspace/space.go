@@ -6,6 +6,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/headsync"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
+	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
@@ -69,6 +70,7 @@ type Space interface {
 	Description() (desc SpaceDescription, err error)
 
 	TreeBuilder() objecttreebuilder.TreeBuilder
+	TreeSyncer() treesyncer.TreeSyncer
 	SyncStatus() syncstatus.StatusUpdater
 	Storage() spacestorage.SpaceStorage
 
@@ -91,6 +93,7 @@ type space struct {
 	app   *app.App
 
 	treeBuilder objecttreebuilder.TreeBuilderComponent
+	treeSyncer  treesyncer.TreeSyncer
 	peerManager peermanager.PeerManager
 	headSync    headsync.HeadSync
 	objectSync  objectsync.ObjectSync
@@ -149,6 +152,10 @@ func (s *space) TreeBuilder() objecttreebuilder.TreeBuilder {
 	return s.treeBuilder
 }
 
+func (s *space) TreeSyncer() treesyncer.TreeSyncer {
+	return s.treeSyncer
+}
+
 func (s *space) GetNodePeers(ctx context.Context) (peer []peer.Peer, err error) {
 	return s.peerManager.GetNodePeers(ctx)
 }
@@ -174,6 +181,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.storage = s.app.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	s.peerManager = s.app.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	s.aclList = s.app.MustComponent(syncacl.CName).(list.AclList)
+	s.treeSyncer = s.app.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	s.header, err = s.storage.SpaceHeader()
 	return
 }

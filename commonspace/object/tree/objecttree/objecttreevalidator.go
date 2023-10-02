@@ -55,6 +55,9 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 		userState list.AclAccountState
 		state     = aclList.AclState()
 	)
+	if c.IsDerived {
+		return nil
+	}
 	// checking if the user could write
 	userState, err = state.StateAtRecord(c.AclHeadId, c.Identity)
 	if err != nil {
@@ -72,6 +75,9 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 	for _, id := range c.PreviousIds {
 		prevChange := tree.attached[id]
 		if prevChange.AclHeadId == c.AclHeadId {
+			continue
+		}
+		if prevChange.IsDerived {
 			continue
 		}
 		var after bool
@@ -105,6 +111,10 @@ func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.
 	}
 	if !slice.UnsortedEquals(res.Heads, payload.Heads) {
 		return ErrHasInvalidChanges
+	}
+	// if tree has only one change we still should check if the snapshot id is same as root
+	if IsEmptyDerivedTree(tree) {
+		return ErrDerived
 	}
 	return
 }

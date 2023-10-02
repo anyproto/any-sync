@@ -33,30 +33,25 @@ type InitialContent struct {
 	Timestamp     int64
 }
 
-type nonVerifiableChangeBuilder struct {
-	ChangeBuilder
+type InitialDerivedContent struct {
+	SpaceId       string
+	ChangeType    string
+	ChangePayload []byte
 }
 
-func (c *nonVerifiableChangeBuilder) BuildRoot(payload InitialContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
-	return c.ChangeBuilder.BuildRoot(payload)
+type nonVerifiableChangeBuilder struct {
+	ChangeBuilder
 }
 
 func (c *nonVerifiableChangeBuilder) Unmarshall(rawChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error) {
 	return c.ChangeBuilder.Unmarshall(rawChange, false)
 }
 
-func (c *nonVerifiableChangeBuilder) Build(payload BuilderContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error) {
-	return c.ChangeBuilder.Build(payload)
-}
-
-func (c *nonVerifiableChangeBuilder) Marshall(ch *Change) (raw *treechangeproto.RawTreeChangeWithId, err error) {
-	return c.ChangeBuilder.Marshall(ch)
-}
-
 type ChangeBuilder interface {
 	Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error)
 	Build(payload BuilderContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
 	BuildRoot(payload InitialContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
+	BuildDerivedRoot(payload InitialDerivedContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
 	Marshall(ch *Change) (*treechangeproto.RawTreeChangeWithId, error)
 }
 
@@ -96,7 +91,7 @@ func (c *changeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWit
 		return
 	}
 
-	if verify {
+	if verify && !ch.IsDerived {
 		// verifying signature
 		var res bool
 		res, err = ch.Identity.Verify(raw.Payload, raw.Signature)
@@ -109,10 +104,6 @@ func (c *changeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWit
 		}
 	}
 	return
-}
-
-func (c *changeBuilder) SetRootRawChange(rawIdChange *treechangeproto.RawTreeChangeWithId) {
-	c.rootChange = rawIdChange
 }
 
 func (c *changeBuilder) BuildRoot(payload InitialContent) (ch *Change, rawIdChange *treechangeproto.RawTreeChangeWithId, err error) {
@@ -149,7 +140,37 @@ func (c *changeBuilder) BuildRoot(payload InitialContent) (ch *Change, rawIdChan
 	if err != nil {
 		return
 	}
-	ch = NewChangeFromRoot(id, payload.PrivKey.GetPublic(), change, signature)
+	ch = NewChangeFromRoot(id, payload.PrivKey.GetPublic(), change, signature, false)
+	rawIdChange = &treechangeproto.RawTreeChangeWithId{
+		RawChange: marshalledRawChange,
+		Id:        id,
+	}
+	return
+}
+
+func (c *changeBuilder) BuildDerivedRoot(payload InitialDerivedContent) (ch *Change, rawIdChange *treechangeproto.RawTreeChangeWithId, err error) {
+	change := &treechangeproto.RootChange{
+		ChangeType:    payload.ChangeType,
+		ChangePayload: payload.ChangePayload,
+		SpaceId:       payload.SpaceId,
+		IsDerived:     true,
+	}
+	marshalledChange, err := proto.Marshal(change)
+	if err != nil {
+		return
+	}
+	raw := &treechangeproto.RawTreeChange{
+		Payload: marshalledChange,
+	}
+	marshalledRawChange, err := proto.Marshal(raw)
+	if err != nil {
+		return
+	}
+	id, err := cidutil.NewCidFromBytes(marshalledRawChange)
+	if err != nil {
+		return
+	}
+	ch = NewChangeFromRoot(id, nil, change, nil, true)
 	rawIdChange = &treechangeproto.RawTreeChangeWithId{
 		RawChange: marshalledRawChange,
 		Id:        id,
@@ -258,11 +279,15 @@ func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, 
 		if err != nil {
 			return
 		}
-		key, err = c.keys.PubKeyFromProto(unmarshalled.Identity)
-		if err != nil {
-			return
+		// key will be empty for derived roots
+		var key crypto.PubKey
+		if !unmarshalled.IsDerived {
+			key, err = c.keys.PubKeyFromProto(unmarshalled.Identity)
+			if err != nil {
+				return
+			}
 		}
-		ch = NewChangeFromRoot(id, key, unmarshalled, raw.Signature)
+		ch = NewChangeFromRoot(id, key, unmarshalled, raw.Signature, unmarshalled.IsDerived)
 		return
 	}
 	unmarshalled := &treechangeproto.TreeChange{}

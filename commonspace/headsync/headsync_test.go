@@ -17,6 +17,8 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage/mock_treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
+	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
+	"github.com/anyproto/any-sync/commonspace/object/treesyncer/mock_treesyncer"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/peermanager/mock_peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
@@ -59,7 +61,7 @@ type headSyncFixture struct {
 	treeManagerMock        *mock_treemanager.MockTreeManager
 	deletionStateMock      *mock_deletionstate.MockObjectDeletionState
 	diffSyncerMock         *mock_headsync.MockDiffSyncer
-	treeSyncerMock         *mock_treemanager.MockTreeSyncer
+	treeSyncerMock         *mock_treesyncer.MockTreeSyncer
 	diffMock               *mock_ldiff.MockDiff
 	clientMock             *mock_spacesyncproto.MockDRPCSpaceSyncClient
 	aclMock                *mock_syncacl.MockSyncAcl
@@ -86,7 +88,8 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 	deletionStateMock := mock_deletionstate.NewMockObjectDeletionState(ctrl)
 	deletionStateMock.EXPECT().Name().AnyTimes().Return(deletionstate.CName)
 	diffSyncerMock := mock_headsync.NewMockDiffSyncer(ctrl)
-	treeSyncerMock := mock_treemanager.NewMockTreeSyncer(ctrl)
+	treeSyncerMock := mock_treesyncer.NewMockTreeSyncer(ctrl)
+	treeSyncerMock.EXPECT().Name().AnyTimes().Return(treesyncer.CName)
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
 	clientMock := mock_spacesyncproto.NewMockDRPCSpaceSyncClient(ctrl)
 	aclMock := mock_syncacl.NewMockSyncAcl(ctrl)
@@ -103,6 +106,7 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 		Register(credentialProviderMock).
 		Register(syncStatus).
 		Register(treeManagerMock).
+		Register(treeSyncerMock).
 		Register(deletionStateMock).
 		Register(hs)
 	return &headSyncFixture{
@@ -161,7 +165,6 @@ func TestHeadSync(t *testing.T) {
 		fx.diffMock.EXPECT().Hash().Return("hash")
 		fx.storageMock.EXPECT().WriteSpaceHash("hash").Return(nil)
 		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
-		fx.diffSyncerMock.EXPECT().Close().Return(nil)
 		err := fx.headSync.Run(ctx)
 		require.NoError(t, err)
 		err = fx.headSync.Close(ctx)
