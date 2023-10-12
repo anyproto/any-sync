@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/crypto"
-	"github.com/stretchr/testify/require"
 )
 
 type aclFixture struct {
@@ -34,6 +35,9 @@ func newFixture(t *testing.T) *aclFixture {
 	require.Equal(t, ownerAcl.AclState().lastRecordId, ownerAcl.Id())
 	require.Equal(t, ownerAcl.AclState().lastRecordId, accountAcl.AclState().lastRecordId)
 	require.NotEmpty(t, ownerAcl.Id())
+	meta, err := ownerAcl.AclState().GetMetadata(ownerKeys.SignKey.GetPublic(), true)
+	require.NoError(t, err)
+	require.Equal(t, []byte("metadata"), meta)
 	return &aclFixture{
 		ownerKeys:   ownerKeys,
 		accountKeys: accountKeys,

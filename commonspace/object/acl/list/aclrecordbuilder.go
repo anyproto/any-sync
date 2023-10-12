@@ -3,12 +3,13 @@ package list
 import (
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
-	"github.com/gogo/protobuf/proto"
 )
 
 type RootContent struct {
@@ -16,6 +17,7 @@ type RootContent struct {
 	MasterKey crypto.PrivKey
 	SpaceId   string
 	Change    ReadKeyChangePayload
+	Metadata  []byte
 }
 
 type RequestJoinPayload struct {
@@ -531,6 +533,11 @@ func (a *aclRecordBuilder) BuildRoot(content RootContent) (rec *consensusproto.R
 		if err != nil {
 			return nil, err
 		}
+		enc, err := content.Change.MetadataKey.GetPublic().Encrypt(content.Metadata)
+		if err != nil {
+			return nil, err
+		}
+		aclRoot.EncryptedOwnerMetadata = enc
 	}
 	return marshalAclRoot(aclRoot, content.PrivKey)
 }

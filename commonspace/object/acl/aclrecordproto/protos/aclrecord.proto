@@ -12,6 +12,7 @@ message AclRoot {
     bytes identitySignature = 6;
     bytes metadataPubKey = 7;
     bytes encryptedMetadataPrivKey = 8;
+    bytes encryptedOwnerMetadata = 9;
 }
 
 // AclAccountInvite contains the public invite key, the private part of which is sent to the user directly

@@ -2,6 +2,13 @@ package commonspace
 
 import (
 	"context"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/headsync"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
@@ -17,11 +24,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/util/crypto"
-	"go.uber.org/zap"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 type SpaceCreatePayload struct {
@@ -39,6 +41,8 @@ type SpaceCreatePayload struct {
 	ReadKey crypto.SymKey
 	// MetadataKey is the first metadata key of space
 	MetadataKey crypto.PrivKey
+	// Metadata is the metadata of the owner
+	Metadata []byte
 }
 
 type SpaceDerivePayload struct {

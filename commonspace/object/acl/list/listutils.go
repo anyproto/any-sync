@@ -26,6 +26,7 @@ func NewTestDerivedAcl(spaceId string, keys *accountdata.AccountKeys) (AclList, 
 			MetadataKey: privKey,
 			ReadKey:     newReadKey,
 		},
+		Metadata: []byte("metadata"),
 	})
 	if err != nil {
 		return nil, err
