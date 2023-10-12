@@ -2,11 +2,13 @@ package list
 
 import (
 	"errors"
+
+	"github.com/gogo/protobuf/proto"
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/util/crypto"
-	"github.com/gogo/protobuf/proto"
-	"go.uber.org/zap"
 )
 
 var log = logger.NewNamedSugared("common.commonspace.acllist")
@@ -228,8 +230,10 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 	}
 	// adding an account to the list
 	accountState := AclAccountState{
-		PubKey:      record.Identity,
-		Permissions: AclPermissions(aclrecordproto.AclUserPermissions_Owner),
+		PubKey:          record.Identity,
+		Permissions:     AclPermissions(aclrecordproto.AclUserPermissions_Owner),
+		KeyRecordId:     record.Id,
+		RequestMetadata: root.EncryptedOwnerMetadata,
 	}
 	st.readKeyChanges = []string{record.Id}
 	st.accountStates[mapKeyFromPubKey(record.Identity)] = accountState
