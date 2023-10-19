@@ -27,6 +27,12 @@ service Coordinator {
 
   // DeletionLog gets the latest deletion log records
   rpc DeletionLog(DeletionLogRequest) returns (DeletionLogResponse);
+
+  // AccountDelete deletes an account
+  rpc AccountDelete(AccountDeleteRequest) returns (AccountDeleteResponse);
+
+  // AccountRevertDeletion reverts an account deletion
+  rpc AccountRevertDeletion(AccountRevertDeletionRequest) returns (AccountRevertDeletionResponse);
 }
 
 message SpaceSignRequest {
@@ -95,7 +101,6 @@ message FileLimitCheckRequest {
   string spaceId = 2;
 }
 
-
 // FileLimitCheckResponse returns a current space limit in bytes
 message FileLimitCheckResponse {
   // Limit in bytes
@@ -130,6 +135,7 @@ message SpaceStatusChangeRequest {
   string deletionPayloadId = 2;
   bytes deletionPayload = 3;
   DeletionPayloadType deletionPayloadType = 4;
+  int64 deletionDuration = 5;
 }
 
 // SpaceStatusChangeResponse contains changed status of space
@@ -204,7 +210,6 @@ message DeletionConfirmPayload {
   int64 timestamp = 5;
 }
 
-
 message DeletionLogRequest {
   // AfterId is the last known logId to request records after this id. If it is empty will be returned a list from the beginning.
   string afterId = 1;
@@ -240,3 +245,33 @@ enum DeletionLogRecordStatus {
   Remove = 2;
 }
 
+// AccountDeleteRequest contains payload for account deletion
+message AccountDeleteRequest {
+  string deletionPayloadId = 1;
+  bytes deletionPayload = 2;
+}
+
+// AccountDeletionConfirmPayload contains payload for deletion confirmation
+message AccountDeletionConfirmPayload {
+  // PeerId of receipt requester
+  string peerId = 1;
+  // AccountIdentity is an identity of a space owner
+  bytes accountIdentity = 2;
+  // NetworkId is the id of a network where the deletion was requested
+  string networkId = 3;
+  // Timestamp is a timestamp when the deletion was requested
+  int64 timestamp = 4;
+}
+
+// AccountDeleteResponse contains timestamp when the account is finally deleted
+message AccountDeleteResponse {
+  int64 deletionTimestamp = 1;
+}
+
+// AccountRevertDeletionRequest is a request to revert an account deletion
+message AccountRevertDeletionRequest {
+}
+
+// AccountRevertDeletionResponse is an empty response confirming that the deletion is reverted
+message AccountRevertDeletionResponse {
+}
