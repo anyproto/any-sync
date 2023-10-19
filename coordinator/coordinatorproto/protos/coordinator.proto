@@ -253,6 +253,7 @@ message SpaceDeleteRequest {
   string spaceId = 1;
   string deletionPayloadId = 2;
   bytes deletionPayload = 3;
+  int64 deletionDuration = 4;
 }
 
 // SpaceDeleteResponse contains timestamp when the space is finally deleted
