@@ -19,7 +19,7 @@ service Coordinator {
   // SpaceStatusCheckMany checks the statuses of spaces and tells if they are deleted or not
   rpc SpaceStatusCheckMany(SpaceStatusCheckManyRequest) returns (SpaceStatusCheckManyResponse);
 
-  // SpaceStatusChange changes the status of space
+  // SpaceStatusChange changes the status of space - Deprecated
   rpc SpaceStatusChange(SpaceStatusChangeRequest) returns (SpaceStatusChangeResponse);
 
   // NetworkConfiguration retrieves the latest network configuration
@@ -27,6 +27,9 @@ service Coordinator {
 
   // DeletionLog gets the latest deletion log records
   rpc DeletionLog(DeletionLogRequest) returns (DeletionLogResponse);
+
+  // SpaceDelete deletes a space
+  rpc SpaceDelete(SpaceDeleteRequest) returns (SpaceDeleteResponse);
 
   // AccountDelete deletes an account
   rpc AccountDelete(AccountDeleteRequest) returns (AccountDeleteResponse);
@@ -135,7 +138,6 @@ message SpaceStatusChangeRequest {
   string deletionPayloadId = 2;
   bytes deletionPayload = 3;
   DeletionPayloadType deletionPayloadType = 4;
-  int64 deletionDuration = 5;
 }
 
 // SpaceStatusChangeResponse contains changed status of space
@@ -244,6 +246,18 @@ enum DeletionLogRecordStatus {
   RemovePrepare = 1;
   // Remove means space should be removed
   Remove = 2;
+}
+
+// SpaceDeleteRequest contains the deletion confirmation for the space to be deleted
+message SpaceDeleteRequest {
+  string spaceId = 1;
+  string deletionPayloadId = 2;
+  bytes deletionPayload = 3;
+}
+
+// SpaceDeleteResponse contains timestamp when the space is finally deleted
+message SpaceDeleteResponse {
+  int64 toBeDeletedTimestamp = 1;
 }
 
 // AccountDeleteRequest contains payload for account deletion
