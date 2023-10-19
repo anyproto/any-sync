@@ -281,7 +281,7 @@ message AccountDeletionConfirmPayload {
 
 // AccountDeleteResponse contains timestamp when the account is finally deleted
 message AccountDeleteResponse {
-  int64 deletionTimestamp = 1;
+  int64 toBeDeletedTimestamp = 1;
 }
 
 // AccountRevertDeletionRequest is a request to revert an account deletion
