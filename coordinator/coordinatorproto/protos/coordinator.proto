@@ -178,6 +178,7 @@ enum NodeType {
 enum DeletionPayloadType {
   Tree = 0;
   Confirm = 1;
+  Account = 2;
 }
 
 // Node describes one node in the network
