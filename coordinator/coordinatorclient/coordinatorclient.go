@@ -30,7 +30,7 @@ func New() CoordinatorClient {
 
 type CoordinatorClient interface {
 	SpaceDelete(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (err error)
-	AccountDelete(ctx context.Context, conf *coordinatorproto.AccountDeletionConfirmPayload) (timestamp int64, err error)
+	AccountDelete(ctx context.Context, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (timestamp int64, err error)
 	AccountRevertDeletion(ctx context.Context) (err error)
 	StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, err error)
 	StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusPayload, err error)
@@ -87,7 +87,7 @@ func (c *coordinatorClient) SpaceDelete(ctx context.Context, spaceId string, con
 	})
 }
 
-func (c *coordinatorClient) AccountDelete(ctx context.Context, conf *coordinatorproto.AccountDeletionConfirmPayload) (timestamp int64, err error) {
+func (c *coordinatorClient) AccountDelete(ctx context.Context, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (timestamp int64, err error) {
 	confMarshalled, err := conf.Marshal()
 	if err != nil {
 		return
