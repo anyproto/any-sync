@@ -19,7 +19,7 @@ service Coordinator {
   // SpaceStatusCheckMany checks the statuses of spaces and tells if they are deleted or not
   rpc SpaceStatusCheckMany(SpaceStatusCheckManyRequest) returns (SpaceStatusCheckManyResponse);
 
-  // SpaceStatusChange changes the status of space
+  // SpaceStatusChange changes the status of space - Deprecated
   rpc SpaceStatusChange(SpaceStatusChangeRequest) returns (SpaceStatusChangeResponse);
 
   // NetworkConfiguration retrieves the latest network configuration
@@ -27,6 +27,15 @@ service Coordinator {
 
   // DeletionLog gets the latest deletion log records
   rpc DeletionLog(DeletionLogRequest) returns (DeletionLogResponse);
+
+  // SpaceDelete deletes a space
+  rpc SpaceDelete(SpaceDeleteRequest) returns (SpaceDeleteResponse);
+
+  // AccountDelete deletes an account
+  rpc AccountDelete(AccountDeleteRequest) returns (AccountDeleteResponse);
+
+  // AccountRevertDeletion reverts an account deletion
+  rpc AccountRevertDeletion(AccountRevertDeletionRequest) returns (AccountRevertDeletionResponse);
 }
 
 message SpaceSignRequest {
@@ -49,6 +58,7 @@ enum ErrorCodes {
   SpaceCreated = 3;
   SpaceNotExists = 4;
   SpaceLimitReached = 5;
+  AccountDeleted = 6;
   ErrorOffset = 300;
 }
 
@@ -94,7 +104,6 @@ message FileLimitCheckRequest {
   bytes accountIdentity = 1;
   string spaceId = 2;
 }
-
 
 // FileLimitCheckResponse returns a current space limit in bytes
 message FileLimitCheckResponse {
@@ -172,6 +181,7 @@ enum NodeType {
 enum DeletionPayloadType {
   Tree = 0;
   Confirm = 1;
+  Account = 2;
 }
 
 // Node describes one node in the network
@@ -203,7 +213,6 @@ message DeletionConfirmPayload {
   // Timestamp is a timestamp when the deletion was requested
   int64 timestamp = 5;
 }
-
 
 message DeletionLogRequest {
   // AfterId is the last known logId to request records after this id. If it is empty will be returned a list from the beginning.
@@ -240,3 +249,46 @@ enum DeletionLogRecordStatus {
   Remove = 2;
 }
 
+// SpaceDeleteRequest contains the deletion confirmation for the space to be deleted
+message SpaceDeleteRequest {
+  string spaceId = 1;
+  string deletionPayloadId = 2;
+  bytes deletionPayload = 3;
+  int64 deletionDuration = 4;
+}
+
+// SpaceDeleteResponse contains timestamp when the space is finally deleted
+message SpaceDeleteResponse {
+  int64 toBeDeletedTimestamp = 1;
+}
+
+// AccountDeleteRequest contains payload for account deletion
+message AccountDeleteRequest {
+  string deletionPayloadId = 1;
+  bytes deletionPayload = 2;
+}
+
+// AccountDeletionConfirmPayload contains payload for deletion confirmation
+message AccountDeletionConfirmPayload {
+  // PeerId of receipt requester
+  string peerId = 1;
+  // AccountIdentity is an identity of a space owner
+  bytes accountIdentity = 2;
+  // NetworkId is the id of a network where the deletion was requested
+  string networkId = 3;
+  // Timestamp is a timestamp when the deletion was requested
+  int64 timestamp = 4;
+}
+
+// AccountDeleteResponse contains timestamp when the account is finally deleted
+message AccountDeleteResponse {
+  int64 toBeDeletedTimestamp = 1;
+}
+
+// AccountRevertDeletionRequest is a request to revert an account deletion
+message AccountRevertDeletionRequest {
+}
+
+// AccountRevertDeletionResponse is an empty response confirming that the deletion is reverted
+message AccountRevertDeletionResponse {
+}

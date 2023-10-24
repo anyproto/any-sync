@@ -4,14 +4,17 @@ package coordinatorclient
 import (
 	"context"
 	"errors"
+
+	"storj.io/drpc"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
-	"storj.io/drpc"
 )
 
 const CName = "common.coordinator.coordinatorclient"
@@ -26,7 +29,9 @@ func New() CoordinatorClient {
 }
 
 type CoordinatorClient interface {
-	ChangeStatus(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (status *coordinatorproto.SpaceStatusPayload, err error)
+	SpaceDelete(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (err error)
+	AccountDelete(ctx context.Context, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (timestamp int64, err error)
+	AccountRevertDeletion(ctx context.Context) (err error)
 	StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, err error)
 	StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusPayload, err error)
 	SpaceSign(ctx context.Context, payload SpaceSignPayload) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error)
@@ -59,32 +64,62 @@ func (c *coordinatorClient) Name() (name string) {
 	return CName
 }
 
-func (c *coordinatorClient) ChangeStatus(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (status *coordinatorproto.SpaceStatusPayload, err error) {
-	var req *coordinatorproto.SpaceStatusChangeRequest
-	if conf != nil {
-		confMarshalled, err := conf.Marshal()
-		if err != nil {
-			return nil, err
-		}
-		req = &coordinatorproto.SpaceStatusChangeRequest{
-			SpaceId:             spaceId,
-			DeletionPayload:     confMarshalled,
-			DeletionPayloadType: coordinatorproto.DeletionPayloadType_Confirm,
-		}
-	} else {
-		req = &coordinatorproto.SpaceStatusChangeRequest{
-			SpaceId: spaceId,
-		}
+func (c *coordinatorClient) SpaceDelete(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (err error) {
+	confMarshalled, err := conf.Marshal()
+	if err != nil {
+		return err
 	}
-	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
-		resp, err := cl.SpaceStatusChange(ctx, req)
+	id, err := cidutil.NewCidFromBytes(confMarshalled)
+	if err != nil {
+		return err
+	}
+	req := &coordinatorproto.SpaceDeleteRequest{
+		SpaceId:           spaceId,
+		DeletionPayload:   confMarshalled,
+		DeletionPayloadId: id,
+	}
+	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		_, err := cl.SpaceDelete(ctx, req)
 		if err != nil {
 			return rpcerr.Unwrap(err)
 		}
-		status = resp.Payload
+		return nil
+	})
+}
+
+func (c *coordinatorClient) AccountDelete(ctx context.Context, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (timestamp int64, err error) {
+	confMarshalled, err := conf.Marshal()
+	if err != nil {
+		return
+	}
+	id, err := cidutil.NewCidFromBytes(confMarshalled)
+	if err != nil {
+		return
+	}
+	req := &coordinatorproto.AccountDeleteRequest{
+		DeletionPayload:   confMarshalled,
+		DeletionPayloadId: id,
+	}
+	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		resp, err := cl.AccountDelete(ctx, req)
+		if err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		timestamp = resp.ToBeDeletedTimestamp
 		return nil
 	})
 	return
+}
+
+func (c *coordinatorClient) AccountRevertDeletion(ctx context.Context) (err error) {
+	req := &coordinatorproto.AccountRevertDeletionRequest{}
+	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		_, err := cl.AccountRevertDeletion(ctx, req)
+		if err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
 }
 
 func (c *coordinatorClient) DeletionLog(ctx context.Context, lastRecordId string, limit int) (records []*coordinatorproto.DeletionLogRecord, err error) {

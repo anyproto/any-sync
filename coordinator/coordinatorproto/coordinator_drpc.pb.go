@@ -47,6 +47,9 @@ type DRPCCoordinatorClient interface {
 	SpaceStatusChange(ctx context.Context, in *SpaceStatusChangeRequest) (*SpaceStatusChangeResponse, error)
 	NetworkConfiguration(ctx context.Context, in *NetworkConfigurationRequest) (*NetworkConfigurationResponse, error)
 	DeletionLog(ctx context.Context, in *DeletionLogRequest) (*DeletionLogResponse, error)
+	SpaceDelete(ctx context.Context, in *SpaceDeleteRequest) (*SpaceDeleteResponse, error)
+	AccountDelete(ctx context.Context, in *AccountDeleteRequest) (*AccountDeleteResponse, error)
+	AccountRevertDeletion(ctx context.Context, in *AccountRevertDeletionRequest) (*AccountRevertDeletionResponse, error)
 }
 
 type drpcCoordinatorClient struct {
@@ -122,6 +125,33 @@ func (c *drpcCoordinatorClient) DeletionLog(ctx context.Context, in *DeletionLog
 	return out, nil
 }
 
+func (c *drpcCoordinatorClient) SpaceDelete(ctx context.Context, in *SpaceDeleteRequest) (*SpaceDeleteResponse, error) {
+	out := new(SpaceDeleteResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/SpaceDelete", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcCoordinatorClient) AccountDelete(ctx context.Context, in *AccountDeleteRequest) (*AccountDeleteResponse, error) {
+	out := new(AccountDeleteResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/AccountDelete", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcCoordinatorClient) AccountRevertDeletion(ctx context.Context, in *AccountRevertDeletionRequest) (*AccountRevertDeletionResponse, error) {
+	out := new(AccountRevertDeletionResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/AccountRevertDeletion", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCCoordinatorServer interface {
 	SpaceSign(context.Context, *SpaceSignRequest) (*SpaceSignResponse, error)
 	FileLimitCheck(context.Context, *FileLimitCheckRequest) (*FileLimitCheckResponse, error)
@@ -130,6 +160,9 @@ type DRPCCoordinatorServer interface {
 	SpaceStatusChange(context.Context, *SpaceStatusChangeRequest) (*SpaceStatusChangeResponse, error)
 	NetworkConfiguration(context.Context, *NetworkConfigurationRequest) (*NetworkConfigurationResponse, error)
 	DeletionLog(context.Context, *DeletionLogRequest) (*DeletionLogResponse, error)
+	SpaceDelete(context.Context, *SpaceDeleteRequest) (*SpaceDeleteResponse, error)
+	AccountDelete(context.Context, *AccountDeleteRequest) (*AccountDeleteResponse, error)
+	AccountRevertDeletion(context.Context, *AccountRevertDeletionRequest) (*AccountRevertDeletionResponse, error)
 }
 
 type DRPCCoordinatorUnimplementedServer struct{}
@@ -162,9 +195,21 @@ func (s *DRPCCoordinatorUnimplementedServer) DeletionLog(context.Context, *Delet
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCCoordinatorUnimplementedServer) SpaceDelete(context.Context, *SpaceDeleteRequest) (*SpaceDeleteResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCCoordinatorUnimplementedServer) AccountDelete(context.Context, *AccountDeleteRequest) (*AccountDeleteResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCCoordinatorUnimplementedServer) AccountRevertDeletion(context.Context, *AccountRevertDeletionRequest) (*AccountRevertDeletionResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCCoordinatorDescription struct{}
 
-func (DRPCCoordinatorDescription) NumMethods() int { return 7 }
+func (DRPCCoordinatorDescription) NumMethods() int { return 10 }
 
 func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -231,6 +276,33 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*DeletionLogRequest),
 					)
 			}, DRPCCoordinatorServer.DeletionLog, true
+	case 7:
+		return "/coordinator.Coordinator/SpaceDelete", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					SpaceDelete(
+						ctx,
+						in1.(*SpaceDeleteRequest),
+					)
+			}, DRPCCoordinatorServer.SpaceDelete, true
+	case 8:
+		return "/coordinator.Coordinator/AccountDelete", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					AccountDelete(
+						ctx,
+						in1.(*AccountDeleteRequest),
+					)
+			}, DRPCCoordinatorServer.AccountDelete, true
+	case 9:
+		return "/coordinator.Coordinator/AccountRevertDeletion", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					AccountRevertDeletion(
+						ctx,
+						in1.(*AccountRevertDeletionRequest),
+					)
+			}, DRPCCoordinatorServer.AccountRevertDeletion, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -346,6 +418,54 @@ type drpcCoordinator_DeletionLogStream struct {
 }
 
 func (x *drpcCoordinator_DeletionLogStream) SendAndClose(m *DeletionLogResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_SpaceDeleteStream interface {
+	drpc.Stream
+	SendAndClose(*SpaceDeleteResponse) error
+}
+
+type drpcCoordinator_SpaceDeleteStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_SpaceDeleteStream) SendAndClose(m *SpaceDeleteResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_AccountDeleteStream interface {
+	drpc.Stream
+	SendAndClose(*AccountDeleteResponse) error
+}
+
+type drpcCoordinator_AccountDeleteStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_AccountDeleteStream) SendAndClose(m *AccountDeleteResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_AccountRevertDeletionStream interface {
+	drpc.Stream
+	SendAndClose(*AccountRevertDeletionResponse) error
+}
+
+type drpcCoordinator_AccountRevertDeletionStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_AccountRevertDeletionStream) SendAndClose(m *AccountRevertDeletionResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
 		return err
 	}
