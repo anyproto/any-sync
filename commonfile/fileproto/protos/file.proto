@@ -121,7 +121,7 @@ message SpaceInfoResponse {
     uint64 totalUsageBytes = 2;
     uint64 cidsCount = 3;
     uint64 filesCount = 4;
-    uint32 spaceUsageBytes = 5;
+    uint64 spaceUsageBytes = 5;
     string spaceId = 6;
 }
 
