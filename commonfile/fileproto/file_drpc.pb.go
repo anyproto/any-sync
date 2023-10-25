@@ -48,6 +48,7 @@ type DRPCFileClient interface {
 	FilesInfo(ctx context.Context, in *FilesInfoRequest) (*FilesInfoResponse, error)
 	Check(ctx context.Context, in *CheckRequest) (*CheckResponse, error)
 	SpaceInfo(ctx context.Context, in *SpaceInfoRequest) (*SpaceInfoResponse, error)
+	AccountInfo(ctx context.Context, in *AccountInfoRequest) (*AccountInfoResponse, error)
 }
 
 type drpcFileClient struct {
@@ -132,6 +133,15 @@ func (c *drpcFileClient) SpaceInfo(ctx context.Context, in *SpaceInfoRequest) (*
 	return out, nil
 }
 
+func (c *drpcFileClient) AccountInfo(ctx context.Context, in *AccountInfoRequest) (*AccountInfoResponse, error) {
+	out := new(AccountInfoResponse)
+	err := c.cc.Invoke(ctx, "/filesync.File/AccountInfo", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCFileServer interface {
 	BlockGet(context.Context, *BlockGetRequest) (*BlockGetResponse, error)
 	BlockPush(context.Context, *BlockPushRequest) (*BlockPushResponse, error)
@@ -141,6 +151,7 @@ type DRPCFileServer interface {
 	FilesInfo(context.Context, *FilesInfoRequest) (*FilesInfoResponse, error)
 	Check(context.Context, *CheckRequest) (*CheckResponse, error)
 	SpaceInfo(context.Context, *SpaceInfoRequest) (*SpaceInfoResponse, error)
+	AccountInfo(context.Context, *AccountInfoRequest) (*AccountInfoResponse, error)
 }
 
 type DRPCFileUnimplementedServer struct{}
@@ -177,9 +188,13 @@ func (s *DRPCFileUnimplementedServer) SpaceInfo(context.Context, *SpaceInfoReque
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCFileUnimplementedServer) AccountInfo(context.Context, *AccountInfoRequest) (*AccountInfoResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCFileDescription struct{}
 
-func (DRPCFileDescription) NumMethods() int { return 8 }
+func (DRPCFileDescription) NumMethods() int { return 9 }
 
 func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -255,6 +270,15 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*SpaceInfoRequest),
 					)
 			}, DRPCFileServer.SpaceInfo, true
+	case 8:
+		return "/filesync.File/AccountInfo", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCFileServer).
+					AccountInfo(
+						ctx,
+						in1.(*AccountInfoRequest),
+					)
+			}, DRPCFileServer.AccountInfo, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -386,6 +410,22 @@ type drpcFile_SpaceInfoStream struct {
 }
 
 func (x *drpcFile_SpaceInfoStream) SendAndClose(m *SpaceInfoResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCFile_AccountInfoStream interface {
+	drpc.Stream
+	SendAndClose(*AccountInfoResponse) error
+}
+
+type drpcFile_AccountInfoStream struct {
+	drpc.Stream
+}
+
+func (x *drpcFile_AccountInfoStream) SendAndClose(m *AccountInfoResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
 		return err
 	}
