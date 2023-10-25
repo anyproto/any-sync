@@ -41,19 +41,33 @@ func (m *MockCoordinatorClient) EXPECT() *MockCoordinatorClientMockRecorder {
 	return m.recorder
 }
 
-// ChangeStatus mocks base method.
-func (m *MockCoordinatorClient) ChangeStatus(arg0 context.Context, arg1 string, arg2 *coordinatorproto.DeletionConfirmPayloadWithSignature) (*coordinatorproto.SpaceStatusPayload, error) {
+// AccountDelete mocks base method.
+func (m *MockCoordinatorClient) AccountDelete(arg0 context.Context, arg1 *coordinatorproto.DeletionConfirmPayloadWithSignature) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChangeStatus", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*coordinatorproto.SpaceStatusPayload)
+	ret := m.ctrl.Call(m, "AccountDelete", arg0, arg1)
+	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ChangeStatus indicates an expected call of ChangeStatus.
-func (mr *MockCoordinatorClientMockRecorder) ChangeStatus(arg0, arg1, arg2 any) *gomock.Call {
+// AccountDelete indicates an expected call of AccountDelete.
+func (mr *MockCoordinatorClientMockRecorder) AccountDelete(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeStatus", reflect.TypeOf((*MockCoordinatorClient)(nil).ChangeStatus), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountDelete", reflect.TypeOf((*MockCoordinatorClient)(nil).AccountDelete), arg0, arg1)
+}
+
+// AccountRevertDeletion mocks base method.
+func (m *MockCoordinatorClient) AccountRevertDeletion(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AccountRevertDeletion", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AccountRevertDeletion indicates an expected call of AccountRevertDeletion.
+func (mr *MockCoordinatorClientMockRecorder) AccountRevertDeletion(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountRevertDeletion", reflect.TypeOf((*MockCoordinatorClient)(nil).AccountRevertDeletion), arg0)
 }
 
 // DeletionLog mocks base method.
@@ -127,6 +141,20 @@ func (m *MockCoordinatorClient) NetworkConfiguration(arg0 context.Context, arg1 
 func (mr *MockCoordinatorClientMockRecorder) NetworkConfiguration(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkConfiguration", reflect.TypeOf((*MockCoordinatorClient)(nil).NetworkConfiguration), arg0, arg1)
+}
+
+// SpaceDelete mocks base method.
+func (m *MockCoordinatorClient) SpaceDelete(arg0 context.Context, arg1 string, arg2 *coordinatorproto.DeletionConfirmPayloadWithSignature) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SpaceDelete", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SpaceDelete indicates an expected call of SpaceDelete.
+func (mr *MockCoordinatorClientMockRecorder) SpaceDelete(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceDelete", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceDelete), arg0, arg1, arg2)
 }
 
 // SpaceSign mocks base method.
