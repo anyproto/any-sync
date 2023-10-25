@@ -30,6 +30,8 @@ service File {
     rpc Check(CheckRequest) returns (CheckResponse);
     // SpaceInfo returns usage, limit, etc about space
     rpc SpaceInfo(SpaceInfoRequest) returns (SpaceInfoResponse);
+    // AccountInfo returns usage, limit, etc by all spaces
+    rpc AccountInfo(AccountInfoRequest) returns (AccountInfoResponse);
 }
 
 message BlockGetRequest {
@@ -116,8 +118,19 @@ message SpaceInfoRequest {
 
 message SpaceInfoResponse {
     uint64 limitBytes = 1;
-    uint64 usageBytes = 2;
+    uint64 totalUsageBytes = 2;
     uint64 cidsCount = 3;
     uint64 filesCount = 4;
+    uint32 spaceUsageBytes = 5;
+    string spaceId = 6;
 }
 
+message AccountInfoRequest {
+}
+
+message AccountInfoResponse {
+    uint64 limitBytes = 1;
+    uint64 totalUsageBytes = 2;
+    uint64 totalCidsCount = 3;
+    repeated SpaceInfoResponse spaces = 4;
+}
