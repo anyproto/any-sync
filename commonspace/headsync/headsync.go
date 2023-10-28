@@ -3,8 +3,9 @@ package headsync
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ldiff"
@@ -13,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
+	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -21,7 +23,6 @@ import (
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/periodicsync"
 	"github.com/anyproto/any-sync/util/slice"
-	"go.uber.org/zap"
 )
 
 var log = logger.NewNamed(CName)
@@ -121,8 +122,9 @@ func (h *headSync) AllIds() []string {
 
 func (h *headSync) ExternalIds() []string {
 	settingsId := h.storage.SpaceSettingsId()
+	aclId := h.syncAcl.Id()
 	return slice.DiscardFromSlice(h.AllIds(), func(id string) bool {
-		return id == settingsId
+		return id == settingsId || id == aclId
 	})
 }
 
