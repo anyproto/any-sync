@@ -181,6 +181,20 @@ func (mr *MockServiceMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockService)(nil).Name))
 }
 
+// NamingNodePeers mocks base method.
+func (m *MockService) NamingNodePeers() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NamingNodePeers")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// NamingNodePeers indicates an expected call of NamingNodePeers.
+func (mr *MockServiceMockRecorder) NamingNodePeers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NamingNodePeers", reflect.TypeOf((*MockService)(nil).NamingNodePeers))
+}
+
 // NetworkCompatibilityStatus mocks base method.
 func (m *MockService) NetworkCompatibilityStatus() nodeconf.NetworkCompatibilityStatus {
 	m.ctrl.T.Helper()
@@ -235,6 +249,20 @@ func (m *MockService) Partition(arg0 string) int {
 func (mr *MockServiceMockRecorder) Partition(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Partition", reflect.TypeOf((*MockService)(nil).Partition), arg0)
+}
+
+// PaymentProcessingNodePeers mocks base method.
+func (m *MockService) PaymentProcessingNodePeers() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PaymentProcessingNodePeers")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// PaymentProcessingNodePeers indicates an expected call of PaymentProcessingNodePeers.
+func (mr *MockServiceMockRecorder) PaymentProcessingNodePeers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PaymentProcessingNodePeers", reflect.TypeOf((*MockService)(nil).PaymentProcessingNodePeers))
 }
 
 // PeerAddresses mocks base method.

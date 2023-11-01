@@ -3,6 +3,9 @@ package commonspace
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	accountService "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ocache"
@@ -22,8 +25,6 @@ import (
 	"github.com/anyproto/any-sync/testutil/accounttest"
 	"github.com/anyproto/go-chash"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 //
@@ -100,6 +101,14 @@ func (m *mockConf) ConsensusPeers() []string {
 }
 
 func (m *mockConf) CoordinatorPeers() []string {
+	return nil
+}
+
+func (m *mockConf) NamingNodePeers() []string {
+	return nil
+}
+
+func (m *mockConf) PaymentProcessingNodePeers() []string {
 	return nil
 }
 

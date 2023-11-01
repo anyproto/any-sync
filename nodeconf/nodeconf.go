@@ -1,8 +1,9 @@
 package nodeconf
 
 import (
-	"github.com/anyproto/go-chash"
 	"strings"
+
+	"github.com/anyproto/go-chash"
 )
 
 type NodeConf interface {
@@ -20,6 +21,11 @@ type NodeConf interface {
 	ConsensusPeers() []string
 	// CoordinatorPeers returns list of coordinator nodes
 	CoordinatorPeers() []string
+	// Please see any-ns-node repo for details
+	// Usually one network has only 1 naming node, but we support array of NNs
+	NamingNodePeers() []string
+	// Please see any-pp-node repo for details
+	PaymentProcessingNodePeers() []string
 	// PeerAddresses returns peer addresses by peer id
 	PeerAddresses(peerId string) (addrs []string, ok bool)
 	// CHash returns nodes consistent table
@@ -31,15 +37,17 @@ type NodeConf interface {
 }
 
 type nodeConf struct {
-	id               string
-	accountId        string
-	filePeers        []string
-	consensusPeers   []string
-	coordinatorPeers []string
-	chash            chash.CHash
-	allMembers       []Node
-	c                Configuration
-	addrs            map[string][]string
+	id                         string
+	accountId                  string
+	filePeers                  []string
+	consensusPeers             []string
+	coordinatorPeers           []string
+	namingNodePeers            []string
+	paymentProcessingNodePeers []string
+	chash                      chash.CHash
+	allMembers                 []Node
+	c                          Configuration
+	addrs                      map[string][]string
 }
 
 func (c *nodeConf) Id() string {
@@ -82,6 +90,14 @@ func (c *nodeConf) CoordinatorPeers() []string {
 	return c.coordinatorPeers
 }
 
+func (c *nodeConf) NamingNodePeers() []string {
+	return c.namingNodePeers
+}
+
+func (c *nodeConf) PaymentProcessingNodePeers() []string {
+	return c.paymentProcessingNodePeers
+}
+
 func (c *nodeConf) PeerAddresses(peerId string) (addrs []string, ok bool) {
 	addrs, ok = c.addrs[peerId]
 	if ok && len(addrs) == 0 {
@@ -112,4 +128,49 @@ func ReplKey(spaceId string) (replKey string) {
 		return spaceId[i+1:]
 	}
 	return spaceId
+}
+
+func ConfigurationToNodeConf(c Configuration) (nc *nodeConf, err error) {
+	nc = &nodeConf{
+		id: c.Id,
+		c:  c,
+
+		// WARN: do not forget to set it later, Configuration does not feature it
+		//accountId: s.accountId,
+
+		addrs: map[string][]string{},
+	}
+	if nc.chash, err = chash.New(chash.Config{
+		PartitionCount:    PartitionCount,
+		ReplicationFactor: ReplicationFactor,
+	}); err != nil {
+		return
+	}
+
+	members := make([]chash.Member, 0, len(c.Nodes))
+	for _, n := range c.Nodes {
+		if n.HasType(NodeTypeTree) {
+			members = append(members, n)
+		}
+		if n.HasType(NodeTypeConsensus) {
+			nc.consensusPeers = append(nc.consensusPeers, n.PeerId)
+		}
+		if n.HasType(NodeTypeFile) {
+			nc.filePeers = append(nc.filePeers, n.PeerId)
+		}
+		if n.HasType(NodeTypeCoordinator) {
+			nc.coordinatorPeers = append(nc.coordinatorPeers, n.PeerId)
+		}
+		if n.HasType(NodeTypeNamingNode) {
+			nc.namingNodePeers = append(nc.namingNodePeers, n.PeerId)
+		}
+		if n.HasType(NodeTypePaymentProcessingNode) {
+			nc.paymentProcessingNodePeers = append(nc.paymentProcessingNodePeers, n.PeerId)
+		}
+
+		nc.allMembers = append(nc.allMembers, n)
+		nc.addrs[n.PeerId] = n.Addresses
+	}
+	err = nc.chash.AddMembers(members...)
+	return
 }

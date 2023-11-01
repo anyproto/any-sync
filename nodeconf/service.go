@@ -3,6 +3,8 @@ package nodeconf
 
 import (
 	"context"
+	"sync"
+
 	commonaccount "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -11,7 +13,6 @@ import (
 	"github.com/anyproto/any-sync/util/periodicsync"
 	"github.com/anyproto/go-chash"
 	"go.uber.org/zap"
-	"sync"
 )
 
 const CName = "common.nodeconf"
@@ -117,39 +118,12 @@ func (s *service) setLastConfiguration(c Configuration) (err error) {
 		return
 	}
 
-	nc := &nodeConf{
-		id:        c.Id,
-		c:         c,
-		accountId: s.accountId,
-		addrs:     map[string][]string{},
-	}
-	if nc.chash, err = chash.New(chash.Config{
-		PartitionCount:    PartitionCount,
-		ReplicationFactor: ReplicationFactor,
-	}); err != nil {
+	nc, err := ConfigurationToNodeConf(c)
+	if err != nil {
 		return
 	}
+	nc.accountId = s.accountId
 
-	members := make([]chash.Member, 0, len(c.Nodes))
-	for _, n := range c.Nodes {
-		if n.HasType(NodeTypeTree) {
-			members = append(members, n)
-		}
-		if n.HasType(NodeTypeConsensus) {
-			nc.consensusPeers = append(nc.consensusPeers, n.PeerId)
-		}
-		if n.HasType(NodeTypeFile) {
-			nc.filePeers = append(nc.filePeers, n.PeerId)
-		}
-		if n.HasType(NodeTypeCoordinator) {
-			nc.coordinatorPeers = append(nc.coordinatorPeers, n.PeerId)
-		}
-		nc.allMembers = append(nc.allMembers, n)
-		nc.addrs[n.PeerId] = n.Addresses
-	}
-	if err = nc.chash.AddMembers(members...); err != nil {
-		return
-	}
 	var beforeId = ""
 	if s.last != nil {
 		beforeId = s.last.Id()
@@ -218,6 +192,18 @@ func (s *service) CoordinatorPeers() []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.last.CoordinatorPeers()
+}
+
+func (s *service) NamingNodePeers() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.NamingNodePeers()
+}
+
+func (s *service) PaymentProcessingNodePeers() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.last.PaymentProcessingNodePeers()
 }
 
 func (s *service) PeerAddresses(peerId string) ([]string, bool) {
