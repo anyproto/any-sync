@@ -238,6 +238,8 @@ message DeletionLogRecord {
   DeletionLogRecordStatus status = 3;
   // Timestamp is a unixtimestamp of record creation
   int64 timestamp = 4;
+  // FileGroup is a key of group for file nodes
+  string fileGroup = 5;
 }
 
 enum DeletionLogRecordStatus {
