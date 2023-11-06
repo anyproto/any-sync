@@ -1351,6 +1351,8 @@ type DeletionLogRecord struct {
 	Status DeletionLogRecordStatus `protobuf:"varint,3,opt,name=status,proto3,enum=coordinator.DeletionLogRecordStatus" json:"status,omitempty"`
 	// Timestamp is a unixtimestamp of record creation
 	Timestamp int64 `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// FileGroup is a key of group for file nodes
+	FileGroup string `protobuf:"bytes,5,opt,name=fileGroup,proto3" json:"fileGroup,omitempty"`
 }
 
 func (m *DeletionLogRecord) Reset()         { *m = DeletionLogRecord{} }
@@ -1412,6 +1414,13 @@ func (m *DeletionLogRecord) GetTimestamp() int64 {
 		return m.Timestamp
 	}
 	return 0
+}
+
+func (m *DeletionLogRecord) GetFileGroup() string {
+	if m != nil {
+		return m.FileGroup
+	}
+	return ""
 }
 
 // SpaceDeleteRequest contains the deletion confirmation for the space to be deleted
@@ -2758,6 +2767,13 @@ func (m *DeletionLogRecord) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.FileGroup) > 0 {
+		i -= len(m.FileGroup)
+		copy(dAtA[i:], m.FileGroup)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.FileGroup)))
+		i--
+		dAtA[i] = 0x2a
+	}
 	if m.Timestamp != 0 {
 		i = encodeVarintCoordinator(dAtA, i, uint64(m.Timestamp))
 		i--
@@ -3423,6 +3439,10 @@ func (m *DeletionLogRecord) Size() (n int) {
 	}
 	if m.Timestamp != 0 {
 		n += 1 + sovCoordinator(uint64(m.Timestamp))
+	}
+	l = len(m.FileGroup)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
 	}
 	return n
 }
@@ -6124,6 +6144,38 @@ func (m *DeletionLogRecord) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FileGroup", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.FileGroup = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCoordinator(dAtA[iNdEx:])
