@@ -2,11 +2,12 @@ package nodeconfsource
 
 import (
 	"context"
+	"time"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/nodeconf"
-	"time"
 )
 
 type NodeConfSource interface {
@@ -53,6 +54,10 @@ func (n *nodeConfSource) GetLast(ctx context.Context, currentId string) (c nodec
 				types = append(types, nodeconf.NodeTypeTree)
 			case coordinatorproto.NodeType_ConsensusAPI:
 				types = append(types, nodeconf.NodeTypeConsensus)
+			case coordinatorproto.NodeType_NamingNodeAPI:
+				types = append(types, nodeconf.NodeTypeNamingNode)
+			case coordinatorproto.NodeType_PaymentProcessingAPI:
+				types = append(types, nodeconf.NodeTypePaymentProcessingNode)
 			}
 		}
 		nodes[i] = nodeconf.Node{

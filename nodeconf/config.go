@@ -24,7 +24,9 @@ const (
 	NodeTypeConsensus NodeType = "consensus"
 	NodeTypeFile      NodeType = "file"
 
-	NodeTypeCoordinator NodeType = "coordinator"
+	NodeTypeCoordinator           NodeType = "coordinator"
+	NodeTypeNamingNode            NodeType = "namingNode"
+	NodeTypePaymentProcessingNode NodeType = "paymentProcessingNode"
 )
 
 type Node struct {

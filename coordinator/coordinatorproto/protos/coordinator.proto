@@ -175,6 +175,12 @@ enum NodeType {
   CoordinatorAPI = 2;
   // ConsensusAPI supports consensus api
   ConsensusAPI = 3;
+  // NamingNodeAPI supports naming node api
+  // (see any-ns-node repository)
+  NamingNodeAPI = 4;
+  // PaymentProcessingAPI supports payment processing api
+  // (see any-pp-node repository)
+  PaymentProcessingAPI = 5;
 }
 
 // DeletionChangeType determines the type of deletion payload
