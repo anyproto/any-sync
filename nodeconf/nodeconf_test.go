@@ -150,13 +150,13 @@ creationTime: 2023-07-21T11:51:12.970882+01:00
 
 	log.Info("conf", zap.Any("conf", conf))
 
-	nodeConf, err := ConfigurationToNodeConf(conf)
+	nodeConf, err := сonfigurationToNodeConf(conf)
 	require.NoError(t, err)
 
 	assert.Equal(t, "64ba63209976be4a733bbb91", nodeConf.Id())
 	assert.Equal(t, "N4Gvo3v5wL31RrYgX3PrhAGMYvdWe5rAgtVB8cZySYWrkhb6", nodeConf.c.NetworkId)
 
-	// should not be set by ConfigurationToNodeConf
+	// should not be set by сonfigurationToNodeConf
 	assert.Equal(t, "", nodeConf.accountId)
 	assert.Equal(t, []string{"12D3KooYYYEXV3KjBxEU5EnsPfneLx84vMWAtTBQBeyooN82KSuS"}, nodeConf.FilePeers())
 	assert.Equal(t, []string{"consensus1", "consensus2"}, nodeConf.ConsensusPeers())

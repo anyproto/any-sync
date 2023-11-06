@@ -118,7 +118,7 @@ func (s *service) setLastConfiguration(c Configuration) (err error) {
 		return
 	}
 
-	nc, err := ConfigurationToNodeConf(c)
+	nc, err := сonfigurationToNodeConf(c)
 	if err != nil {
 		return
 	}

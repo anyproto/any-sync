@@ -130,7 +130,7 @@ func ReplKey(spaceId string) (replKey string) {
 	return spaceId
 }
 
-func ConfigurationToNodeConf(c Configuration) (nc *nodeConf, err error) {
+func сonfigurationToNodeConf(c Configuration) (nc *nodeConf, err error) {
 	nc = &nodeConf{
 		id: c.Id,
 		c:  c,
