@@ -15,7 +15,7 @@ require (
 	github.com/google/uuid v1.4.0
 	github.com/hashicorp/yamux v0.1.1
 	github.com/huandu/skiplist v1.2.0
-	github.com/ipfs/boxo v0.15.0
+	github.com/ipfs/boxo v0.13.1
 	github.com/ipfs/go-block-format v0.2.0
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-ipld-format v0.6.0
