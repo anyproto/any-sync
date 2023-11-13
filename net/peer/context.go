@@ -3,9 +3,11 @@ package peer
 import (
 	"context"
 	"errors"
-	"github.com/anyproto/any-sync/util/crypto"
+
 	"github.com/libp2p/go-libp2p/core/sec"
 	"storj.io/drpc/drpcctx"
+
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 type contextKey uint
@@ -21,6 +23,8 @@ var (
 	ErrPeerIdNotFoundInContext   = errors.New("peer id not found in context")
 	ErrIdentityNotFoundInContext = errors.New("identity not found in context")
 )
+
+const CtxResponsiblePeers = "*"
 
 // CtxPeerId first tries to get peer id under our own key, but if it is not found tries to get through DRPC key
 func CtxPeerId(ctx context.Context) (string, error) {

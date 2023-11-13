@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/peermanager/mock_peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/peer/mock_peer"
-	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 )
 
 type treeRemoteGetterFixture struct {
@@ -59,15 +60,17 @@ func TestTreeRemoteGetter(t *testing.T) {
 		Payload: marshalled,
 	}
 
-	t.Run("request works", func(t *testing.T) {
+	t.Run("responsible peers", func(t *testing.T) {
 		fx := newTreeRemoteGetterFixture(t)
 		defer fx.stop()
 		mockPeer := mock_peer.NewMockPeer(fx.ctrl)
+
+		tCtx := peer.CtxWithPeerId(ctx, "*")
 		mockPeer.EXPECT().Id().AnyTimes().Return(peerId)
-		fx.peerGetterMock.EXPECT().GetResponsiblePeers(ctx).Return([]peer.Peer{mockPeer}, nil)
+		fx.peerGetterMock.EXPECT().GetResponsiblePeers(tCtx).Return([]peer.Peer{mockPeer}, nil)
 		fx.syncClientMock.EXPECT().CreateNewTreeRequest().Return(treeRequest)
-		fx.syncClientMock.EXPECT().SendRequest(ctx, peerId, fx.treeGetter.treeId, treeRequest).Return(objectResponse, nil)
-		resp, err := fx.treeGetter.treeRequestLoop(ctx)
+		fx.syncClientMock.EXPECT().SendRequest(tCtx, peerId, fx.treeGetter.treeId, treeRequest).Return(objectResponse, nil)
+		resp, err := fx.treeGetter.treeRequestLoop(tCtx)
 		require.NoError(t, err)
 		require.Equal(t, "id", resp.RootChange.Id)
 	})
@@ -75,13 +78,13 @@ func TestTreeRemoteGetter(t *testing.T) {
 	t.Run("request fails", func(t *testing.T) {
 		fx := newTreeRemoteGetterFixture(t)
 		defer fx.stop()
+		tCtx := peer.CtxWithPeerId(ctx, peerId)
 		treeRequest := &treechangeproto.TreeSyncMessage{}
 		mockPeer := mock_peer.NewMockPeer(fx.ctrl)
 		mockPeer.EXPECT().Id().AnyTimes().Return(peerId)
-		fx.peerGetterMock.EXPECT().GetResponsiblePeers(ctx).Return([]peer.Peer{mockPeer}, nil)
 		fx.syncClientMock.EXPECT().CreateNewTreeRequest().Return(treeRequest)
-		fx.syncClientMock.EXPECT().SendRequest(ctx, peerId, fx.treeGetter.treeId, treeRequest).AnyTimes().Return(nil, fmt.Errorf("some"))
-		_, err := fx.treeGetter.treeRequestLoop(ctx)
+		fx.syncClientMock.EXPECT().SendRequest(tCtx, peerId, fx.treeGetter.treeId, treeRequest).AnyTimes().Return(nil, fmt.Errorf("some"))
+		_, err := fx.treeGetter.treeRequestLoop(tCtx)
 		require.Error(t, err)
 	})
 }
