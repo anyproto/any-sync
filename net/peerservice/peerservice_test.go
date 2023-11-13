@@ -3,6 +3,12 @@ package peerservice
 import (
 	"context"
 	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
@@ -12,10 +18,6 @@ import (
 	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
-	"testing"
 )
 
 var ctx = context.Background()
@@ -110,6 +112,22 @@ func TestPeerService_Dial(t *testing.T) {
 		p, err := fx.Dial(ctx, peerId)
 		require.NoError(t, err)
 		assert.NotNil(t, p)
+	})
+	t.Run("ignore", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		fx.PreferQuic(false)
+		var peerId = "p1"
+
+		fx.nodeConf.EXPECT().PeerAddresses(peerId).Return([]string{"127.0.0.1:1111"}, true).AnyTimes()
+
+		fx.yamux.MockTransport.EXPECT().Dial(ctx, "127.0.0.1:1111").Return(nil, fmt.Errorf("error"))
+
+		_, err := fx.Dial(ctx, peerId)
+		require.Error(t, err)
+
+		_, err = fx.Dial(ctx, peerId)
+		require.EqualError(t, err, ErrAddrsNotFound.Error())
 	})
 }
 
