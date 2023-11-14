@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 
+	"github.com/gogo/protobuf/proto"
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/gogo/protobuf/proto"
-	"go.uber.org/zap"
 )
 
 var (
@@ -22,18 +23,17 @@ type treeRemoteGetter struct {
 	treeId string
 }
 
-func newRemoteGetter(treeId string, deps BuildDeps) treeRemoteGetter {
-	return treeRemoteGetter{treeId: treeId, deps: deps}
-}
-
 func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err error) {
 	peerId, err := peer.CtxPeerId(ctx)
-	if err == nil {
+	if err != nil {
+		return nil, err
+	}
+	if peerId != peer.CtxResponsiblePeers {
 		peerIds = []string{peerId}
 		return
 	}
-	err = nil
-	log.WarnCtx(ctx, "peer not found in context, use responsible")
+
+	log.InfoCtx(ctx, "use responsible peers")
 	respPeers, err := t.deps.PeerGetter.GetResponsiblePeers(ctx)
 	if err != nil {
 		return

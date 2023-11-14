@@ -8,7 +8,7 @@ require (
 	github.com/anyproto/go-slip10 v1.0.0
 	github.com/anyproto/go-slip21 v1.0.0
 	github.com/cespare/xxhash v1.1.0
-	github.com/cheggaaa/mb/v3 v3.0.1
+	github.com/cheggaaa/mb/v3 v3.0.2
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-graphviz v0.1.1
 	github.com/gogo/protobuf v1.3.2

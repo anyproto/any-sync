@@ -230,13 +230,13 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 		return
 	}
 
-	sm, err := s.peerManagerProvider.NewPeerManager(ctx, id)
+	pm, err := s.peerManagerProvider.NewPeerManager(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	var peers []peer.Peer
 	for {
-		peers, err = sm.GetResponsiblePeers(ctx)
+		peers, err = pm.GetResponsiblePeers(ctx)
 		if err != nil && !errors.Is(err, net.ErrUnableToConnect) {
 			return nil, err
 		}
