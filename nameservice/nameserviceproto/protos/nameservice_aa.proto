@@ -1,0 +1,158 @@
+syntax = "proto3";
+option go_package = "nameservice/nameserviceproto";
+
+message UserAccount {
+  // An Ethereum address that owns that account
+  string ownerEthAddress = 1;
+
+  // This smart contract really controls all names
+  // you can ask .owner() method to get 'ownerEthAddress'
+  string ownerSmartContracWalletAddress = 2;
+
+  // The ownerSmartContracWalletAddress field is calculated automatically
+  // from ownerEthAddress even if SCW is not deployed yet
+  // SCW is deployed automatically after first operation
+  bool ownerSmartContracWalletDeployed = 3;
+
+  // Number of names that the user can buy. We will mint him tokens that he can use to buy names
+  // (one token per name)
+  uint64 namesCountLeft = 4;
+
+  // Number of gas operations: update name, add new data, etc
+  uint64 operationsCountLeft = 5;
+}
+
+message AdminFundUserAccountRequest {
+  // An Ethereum address that owns that name
+  string ownerEthAddress = 1;
+
+  // Number of names that user can buy. We will mint him tokens that he can use to buy names
+  // (one token per name)
+  uint64 namesCount = 2;
+}
+
+message AdminFundUserAccountRequestSigned {
+  // AdminFundUserAccountRequest struct
+  bytes payload = 1;
+
+  // payload signed by Admin of this service 
+  bytes signature = 2; 
+}
+
+message AdminFundGasOperationsRequest {
+  // An Ethereum address that owns that name
+  string ownerEthAddress = 1;
+
+  string ownerAnyID = 2;
+
+  // Number of gas operations: update name, add new data, etc
+  uint64 operationsCount = 3;
+}
+
+message AdminFundGasOperationsRequestSigned {
+  // AdminFundGasOperationsRequest struct
+  bytes payload = 1;
+
+  // payload signed by Admin of this service
+  bytes signature = 2; 
+}
+
+// no signature required here
+message GetUserAccountRequest {
+  // An Ethereum address that owns that account
+  string ownerEthAddress = 1;
+}
+
+message GetDataNameRegisterResponse {
+  bytes data = 1;
+
+  bytes context = 2;
+}
+
+message CreateUserOperationRequest { 
+  bytes data = 1;
+
+  // "data" signed with Ethereum private key
+  bytes signedData = 2;
+
+  bytes context = 3;
+
+  string ownerEthAddress = 4;
+
+  string ownerAnyID = 5;
+}
+
+message CreateUserOperationRequestSigned {
+  // CreateUserOperationRequest struct
+  bytes payload = 1;
+
+  // payload signed with Anytype identity
+  bytes signature = 2;
+}
+
+message NameRegisterRequest {
+  string fullName = 1;
+
+  // A content hash attached to this name
+  string ownerAnyAddress = 2;
+  
+  // An Ethereum address that owns that name
+  string ownerEthAddress = 3;
+
+  // A SpaceID attached to this name
+  string spaceId = 4;
+}
+
+message GetOperationStatusRequest {
+  string operationId = 1;
+}
+
+enum OperationState {
+  Unknown = 0;
+  
+  Pending = 1;
+  PendingOrNotFound = 2;
+  Completed = 3;
+  Error = 4;
+}
+
+message OperationResponse {
+  string operationId = 1;
+
+  OperationState operationState = 2;
+}
+
+service AnynsAccountAbstraction {
+// COMMON METHODS:
+  rpc GetOperation(GetOperationStatusRequest) returns (OperationResponse) {}
+
+// ADMIN METHODS:
+  // Will send "access tokens" to the user's account (to his SmartContractWallet).
+  // User will be able to use these "access tokens" to register his name later directly.
+  // 
+  // Blocking, will send TX to EVM chain
+  // If finished without error -> please use GetUserAccount to get updated info
+  rpc AdminFundUserAccount(AdminFundUserAccountRequestSigned) returns (OperationResponse) {}
+  
+  // Each operation is a single blockchain TX like "name update".
+  // User will be able to send operations without having any gas in his wallet later
+  rpc AdminFundGasOperations(AdminFundGasOperationsRequestSigned) returns (OperationResponse) {}
+
+// USER METHODS:
+  // Use it to:
+  // 1 - get your SmartContractWallet address
+  // 2 - get how many operations you still have
+  rpc GetUserAccount(GetUserAccountRequest) returns (UserAccount) {}
+
+  // Example usage:
+  // 1. get data + context
+  // 2. sign it with your Ethereum private key
+  // 3. send it using CreateUserOperation
+  // 4. check operation status using GetOperation
+  rpc GetDataNameRegister(NameRegisterRequest) returns (GetDataNameRegisterResponse) {}
+  
+  // TODO
+  //rpc GetDataNameUpdate(NameUpdateRequest) returns (GetDataNameRegisterResponse) {}
+
+  rpc CreateUserOperation(CreateUserOperationRequestSigned) returns (OperationResponse) {}
+}

@@ -1,0 +1,46 @@
+syntax = "proto3";
+option go_package = "nameservice/nameserviceproto";
+
+//import "google/protobuf/timestamp.proto";
+
+message NameAvailableRequest {
+  // Name including .any suffix
+  string fullName = 1;
+}
+
+message NameByAddressRequest {
+  // An Ethereum address that owns that name
+  string ownerEthAddress = 1;
+}
+
+message NameAvailableResponse {
+  bool available = 1;
+  
+  // An Ethereum address that owns that name
+  // This field is non-empty only if name is "already registered"
+  string ownerEthAddress = 2;
+
+  // A content hash attached to this name
+  // This field is non-empty only if name is "already registered"
+  string ownerAnyAddress = 3;
+
+  // A SpaceID attached to this name
+  // This field is non-empty only if name is "already registered"
+  string spaceId = 4;
+
+  // doestn't work with marashalling/unmarshalling
+  //google.protobuf.Timestamp nameExpires = 5 [(gogoproto.stdtime) = true];
+  int64 nameExpires = 5;
+}
+
+message NameByAddressResponse {
+  bool found = 1;
+
+  string name = 2;
+}
+
+service Anyns {
+  // Check if name is free or get the attached information if not
+  rpc IsNameAvailable(NameAvailableRequest) returns (NameAvailableResponse) {}
+  rpc GetNameByAddress(NameByAddressRequest) returns (NameByAddressResponse) {}
+}
