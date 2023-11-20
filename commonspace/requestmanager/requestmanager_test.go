@@ -5,6 +5,11 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+	"storj.io/drpc"
+	"storj.io/drpc/drpcconn"
+
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objectsync/mock_objectsync"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -12,10 +17,6 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/peer/mock_peer"
 	"github.com/anyproto/any-sync/net/pool/mock_pool"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
-	"storj.io/drpc"
-	"storj.io/drpc/drpcconn"
 )
 
 type fixture struct {
@@ -58,7 +59,7 @@ func TestRequestManager_SyncRequest(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.stop()
 
-		peerId := "peerId"
+		peerId := "PeerId"
 		peerMock := mock_peer.NewMockPeer(fx.ctrl)
 		conn := &drpcconn.Conn{}
 		msg := &spacesyncproto.ObjectSyncMessage{}
@@ -78,7 +79,7 @@ func TestRequestManager_SyncRequest(t *testing.T) {
 		defer fx.stop()
 		ctx = fx.requestManager.ctx
 
-		peerId := "peerId"
+		peerId := "PeerId"
 		peerMock := mock_peer.NewMockPeer(fx.ctrl)
 		conn := &drpcconn.Conn{}
 		msg := &spacesyncproto.ObjectSyncMessage{}
@@ -119,7 +120,7 @@ func TestRequestManager_QueueRequest(t *testing.T) {
 		otherMsg1 := &spacesyncproto.ObjectSyncMessage{ObjectId: "otherId1"}
 
 		// sending requests to first peer
-		peerId := "peerId"
+		peerId := "PeerId"
 		err := fx.requestManager.QueueRequest(peerId, msg1)
 		require.NoError(t, err)
 		err = fx.requestManager.QueueRequest(peerId, msg2)
@@ -165,7 +166,7 @@ func TestRequestManager_QueueRequest(t *testing.T) {
 		msg2 := &spacesyncproto.ObjectSyncMessage{ObjectId: "id2"}
 
 		// sending requests to first peer
-		peerId := "peerId"
+		peerId := "PeerId"
 		err := fx.requestManager.QueueRequest(peerId, msg1)
 		require.NoError(t, err)
 		err = fx.requestManager.QueueRequest(peerId, msg2)

@@ -4,16 +4,19 @@ import (
 	"context"
 	"sync"
 
+	"go.uber.org/zap"
+	"storj.io/drpc"
+
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
+	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/net/streampool"
-	"go.uber.org/zap"
-	"storj.io/drpc"
 )
 
 const CName = "common.commonspace.requestmanager"
@@ -48,10 +51,29 @@ type requestManager struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
 	clientFactory spacesyncproto.ClientFactory
+	statService   debugstat.StatService
+	reqStat       *requestStat
+	spaceId       string
+}
+
+func (r *requestManager) ProvideStat() any {
+	return r.reqStat.QueueStat()
+}
+
+func (r *requestManager) StatId() string {
+	return r.spaceId
+}
+
+func (r *requestManager) StatType() string {
+	return CName
 }
 
 func (r *requestManager) Init(a *app.App) (err error) {
 	r.ctx, r.cancel = context.WithCancel(context.Background())
+	spaceState := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
+	r.statService = a.MustComponent(debugstat.CName).(debugstat.StatService)
+	r.reqStat = newRequestStat()
+	r.spaceId = spaceState.SpaceId
 	r.handler = a.MustComponent(objectsync.CName).(MessageHandler)
 	r.peerPool = a.MustComponent(pool.CName).(pool.Pool)
 	r.clientFactory = spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
@@ -63,6 +85,7 @@ func (r *requestManager) Name() (name string) {
 }
 
 func (r *requestManager) Run(ctx context.Context) (err error) {
+	r.statService.AddProvider(r)
 	return nil
 }
 
@@ -70,6 +93,7 @@ func (r *requestManager) Close(ctx context.Context) (err error) {
 	r.Lock()
 	defer r.Unlock()
 	r.cancel()
+	r.statService.RemoveProvider(r)
 	for _, p := range r.pools {
 		_ = p.Close()
 	}
@@ -78,6 +102,11 @@ func (r *requestManager) Close(ctx context.Context) (err error) {
 
 func (r *requestManager) SendRequest(ctx context.Context, peerId string, req *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
 	// TODO: limit concurrent sends?
+	size := r.reqStat.CalcSize(req)
+	r.reqStat.AddSyncRequest(peerId, size)
+	defer func() {
+		r.reqStat.RemoveSyncRequest(peerId, size)
+	}()
 	return r.doRequest(ctx, peerId, req)
 }
 
@@ -90,10 +119,13 @@ func (r *requestManager) QueueRequest(peerId string, req *spacesyncproto.ObjectS
 		r.pools[peerId] = pl
 		pl.Run()
 	}
+	size := r.reqStat.CalcSize(req)
+	r.reqStat.AddQueueRequest(peerId, size)
 	// TODO: for later think when many clients are there,
 	//  we need to close pools for inactive clients
 	return pl.TryAdd(func() {
 		doRequestAndHandle(r, peerId, req)
+		r.reqStat.RemoveQueueRequest(peerId, size)
 	})
 }
 
