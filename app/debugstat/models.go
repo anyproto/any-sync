@@ -1,15 +1,15 @@
 package debugstat
 
-type statValue struct {
+type StatValue struct {
 	Key   string `json:"key"`
 	Value any    `json:"value"`
 }
 
-type statType struct {
+type StatType struct {
 	Type   string      `json:"type"`
-	Values []statValue `json:"values"`
+	Values []StatValue `json:"values"`
 }
 
-type statSummary struct {
-	Stats []statType `json:"stat_types"`
+type StatSummary struct {
+	Stats []StatType `json:"stat_types"`
 }
