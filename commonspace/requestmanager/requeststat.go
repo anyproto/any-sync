@@ -25,12 +25,12 @@ func newRequestStat(spaceId string) *requestStat {
 type spaceQueueStat struct {
 	SpaceId   string     `json:"space_id"`
 	TotalSize int64      `json:"total_size"`
-	PeerStats []peerStat `json:"peer_stats"`
+	PeerStats []peerStat `json:"peer_stats,omitempty"`
 }
 
 type summaryStat struct {
 	TotalSize  int64            `json:"total_size"`
-	QueueStats []spaceQueueStat `json:"sorted_stats"`
+	QueueStats []spaceQueueStat `json:"sorted_stats,omitempty"`
 }
 
 type peerStat struct {

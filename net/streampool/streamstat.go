@@ -8,7 +8,7 @@ type SizeableMessage interface {
 
 type streamPoolStat struct {
 	TotalSize int64        `json:"total_size"`
-	Streams   []streamStat `json:"streams"`
+	Streams   []streamStat `json:"streams,omitempty"`
 }
 
 type streamStat struct {
