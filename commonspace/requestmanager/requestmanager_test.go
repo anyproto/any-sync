@@ -5,6 +5,12 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+	"storj.io/drpc"
+	"storj.io/drpc/drpcconn"
+
+	"github.com/anyproto/any-sync/app/debugstat/mock_debugstat"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objectsync/mock_objectsync"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -12,10 +18,6 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/peer/mock_peer"
 	"github.com/anyproto/any-sync/net/pool/mock_pool"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
-	"storj.io/drpc"
-	"storj.io/drpc/drpcconn"
 )
 
 type fixture struct {
@@ -23,6 +25,7 @@ type fixture struct {
 	messageHandlerMock *mock_objectsync.MockObjectSync
 	peerPoolMock       *mock_pool.MockPool
 	clientMock         *mock_spacesyncproto.MockDRPCSpaceSyncClient
+	statMock           *mock_debugstat.MockStatService
 	ctrl               *gomock.Controller
 }
 
@@ -32,17 +35,21 @@ func newFixture(t *testing.T) *fixture {
 	peerPoolMock := mock_pool.NewMockPool(ctrl)
 	messageHandlerMock := mock_objectsync.NewMockObjectSync(ctrl)
 	clientMock := mock_spacesyncproto.NewMockDRPCSpaceSyncClient(ctrl)
+	statMock := mock_debugstat.NewMockStatService(ctrl)
 	manager.peerPool = peerPoolMock
 	manager.handler = messageHandlerMock
 	manager.clientFactory = spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceSyncClient {
 		return clientMock
 	})
+	manager.statService = statMock
+	manager.reqStat = newRequestStat("spaceId")
 	manager.ctx, manager.cancel = context.WithCancel(context.Background())
 	return &fixture{
 		requestManager:     manager,
 		messageHandlerMock: messageHandlerMock,
 		peerPoolMock:       peerPoolMock,
 		clientMock:         clientMock,
+		statMock:           statMock,
 		ctrl:               ctrl,
 	}
 }
@@ -58,7 +65,7 @@ func TestRequestManager_SyncRequest(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.stop()
 
-		peerId := "peerId"
+		peerId := "PeerId"
 		peerMock := mock_peer.NewMockPeer(fx.ctrl)
 		conn := &drpcconn.Conn{}
 		msg := &spacesyncproto.ObjectSyncMessage{}
@@ -78,7 +85,7 @@ func TestRequestManager_SyncRequest(t *testing.T) {
 		defer fx.stop()
 		ctx = fx.requestManager.ctx
 
-		peerId := "peerId"
+		peerId := "PeerId"
 		peerMock := mock_peer.NewMockPeer(fx.ctrl)
 		conn := &drpcconn.Conn{}
 		msg := &spacesyncproto.ObjectSyncMessage{}
@@ -119,7 +126,7 @@ func TestRequestManager_QueueRequest(t *testing.T) {
 		otherMsg1 := &spacesyncproto.ObjectSyncMessage{ObjectId: "otherId1"}
 
 		// sending requests to first peer
-		peerId := "peerId"
+		peerId := "PeerId"
 		err := fx.requestManager.QueueRequest(peerId, msg1)
 		require.NoError(t, err)
 		err = fx.requestManager.QueueRequest(peerId, msg2)
@@ -146,6 +153,7 @@ func TestRequestManager_QueueRequest(t *testing.T) {
 		_, ok = msgs.Load("otherId1")
 		require.True(t, ok)
 		close(msgRelease)
+		fx.statMock.EXPECT().RemoveProvider(gomock.Any())
 		fx.requestManager.Close(context.Background())
 	})
 
@@ -165,7 +173,7 @@ func TestRequestManager_QueueRequest(t *testing.T) {
 		msg2 := &spacesyncproto.ObjectSyncMessage{ObjectId: "id2"}
 
 		// sending requests to first peer
-		peerId := "peerId"
+		peerId := "PeerId"
 		err := fx.requestManager.QueueRequest(peerId, msg1)
 		require.NoError(t, err)
 		err = fx.requestManager.QueueRequest(peerId, msg2)
@@ -178,6 +186,7 @@ func TestRequestManager_QueueRequest(t *testing.T) {
 		_, ok = msgs.Load("id2")
 		require.False(t, ok)
 
+		fx.statMock.EXPECT().RemoveProvider(gomock.Any())
 		fx.requestManager.Close(context.Background())
 		close(msgRelease)
 		_, ok = msgs.Load("id2")

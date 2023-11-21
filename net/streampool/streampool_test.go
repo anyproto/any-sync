@@ -8,13 +8,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/rpc/rpctest"
-	"github.com/anyproto/any-sync/net/streampool/testservice"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 	"storj.io/drpc"
+
+	"github.com/anyproto/any-sync/app/debugstat"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/rpc/rpctest"
+	"github.com/anyproto/any-sync/net/streampool/testservice"
 )
 
 var ctx = context.Background()
@@ -208,7 +210,9 @@ func newFixture(t *testing.T) *fixture {
 	fx.tsh = &testServerHandler{receiveCh: make(chan *testservice.StreamMessage, 100)}
 	require.NoError(t, testservice.DRPCRegisterTest(fx.ts, fx.tsh))
 	fx.th = &testHandler{}
-	fx.StreamPool = New().NewStreamPool(fx.th, StreamConfig{
+	s := New()
+	s.(*service).debugStat = debugstat.NewNoOp()
+	fx.StreamPool = s.NewStreamPool(fx.th, StreamConfig{
 		SendQueueSize:    10,
 		DialQueueWorkers: 1,
 		DialQueueSize:    10,

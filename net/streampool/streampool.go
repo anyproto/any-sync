@@ -2,14 +2,17 @@ package streampool
 
 import (
 	"fmt"
-	"github.com/anyproto/any-sync/net"
-	"github.com/anyproto/any-sync/net/peer"
+	"sync"
+
 	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/context"
 	"storj.io/drpc"
-	"sync"
+
+	"github.com/anyproto/any-sync/app/debugstat"
+	"github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/peer"
 )
 
 // StreamHandler handles incoming messages from streams
@@ -54,6 +57,7 @@ type StreamPool interface {
 
 type streamPool struct {
 	handler         StreamHandler
+	statService     debugstat.StatService
 	streamIdsByPeer map[string][]uint32
 	streamIdsByTag  map[string][]uint32
 	streams         map[uint32]*stream
@@ -62,6 +66,38 @@ type streamPool struct {
 	mu              sync.Mutex
 	writeQueueSize  int
 	lastStreamId    uint32
+}
+
+func (s *streamPool) ProvideStat() any {
+	s.mu.Lock()
+	var totalSize int64
+	var stats []streamStat
+	for _, st := range s.streams {
+		stats = append(stats, st.stats)
+		totalSize += st.stats.TotalSize
+	}
+	s.mu.Unlock()
+	slices.SortFunc(stats, func(first streamStat, second streamStat) int {
+		if first.TotalSize > second.TotalSize {
+			return -1
+		} else if first.TotalSize == second.TotalSize {
+			return 0
+		} else {
+			return 1
+		}
+	})
+	return streamPoolStat{
+		TotalSize: totalSize,
+		Streams:   stats,
+	}
+}
+
+func (s *streamPool) StatId() string {
+	return CName
+}
+
+func (s *streamPool) StatType() string {
+	return CName
 }
 
 type openingProcess struct {
@@ -127,6 +163,7 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 		streamId: streamId,
 		l:        log.With(zap.String("peerId", peerId), zap.Uint32("streamId", streamId)),
 		tags:     tags,
+		stats:    newStreamStat(peerId),
 	}
 	st.queue = mb.New[drpc.Message](s.writeQueueSize)
 	s.streams[streamId] = st
@@ -356,6 +393,7 @@ func (s *streamPool) removeStream(streamId uint32) {
 }
 
 func (s *streamPool) Close() (err error) {
+	s.statService.RemoveProvider(s)
 	return s.dial.Close()
 }
 

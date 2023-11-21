@@ -2,6 +2,7 @@ package streampool
 
 import (
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/metric"
 )
@@ -29,7 +30,8 @@ type Service interface {
 }
 
 type service struct {
-	metric metric.Metric
+	metric    metric.Metric
+	debugStat debugstat.StatService
 }
 
 func (s *service) NewStreamPool(h StreamHandler, conf StreamConfig) StreamPool {
@@ -42,7 +44,9 @@ func (s *service) NewStreamPool(h StreamHandler, conf StreamConfig) StreamPool {
 		streams:         map[uint32]*stream{},
 		opening:         map[string]*openingProcess{},
 		dial:            pl,
+		statService:     s.debugStat,
 	}
+	sp.statService.AddProvider(sp)
 	pl.Run()
 	if s.metric != nil {
 		registerMetrics(s.metric.Registry(), sp, "")
@@ -52,6 +56,10 @@ func (s *service) NewStreamPool(h StreamHandler, conf StreamConfig) StreamPool {
 
 func (s *service) Init(a *app.App) (err error) {
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
+	s.debugStat, _ = a.Component(debugstat.CName).(debugstat.StatService)
+	if s.debugStat == nil {
+		s.debugStat = debugstat.NewNoOp()
+	}
 	return nil
 }
 
