@@ -29,8 +29,8 @@ type spaceQueueStat struct {
 }
 
 type SummaryStat struct {
-	QueueStats []spaceQueueStat `json:"sorted_stats"`
 	TotalSize  int              `json:"total_size"`
+	QueueStats []spaceQueueStat `json:"sorted_stats"`
 }
 
 type peerStat struct {
@@ -91,7 +91,19 @@ func (r *requestStat) QueueStat() spaceQueueStat {
 		stat.PeerId = peerId
 		peerStats = append(peerStats, stat)
 	}
+	slices.SortFunc(peerStats, func(first, second peerStat) int {
+		firstTotalSize := first.QueueSize + first.SyncSize
+		secondTotalSize := second.QueueSize + second.SyncSize
+		if firstTotalSize > secondTotalSize {
+			return 1
+		} else if firstTotalSize == secondTotalSize {
+			return 0
+		} else {
+			return -1
+		}
+	})
 	return spaceQueueStat{
+		SpaceId:   r.spaceId,
 		TotalSize: totalSize,
 		PeerStats: peerStats,
 	}
