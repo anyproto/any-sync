@@ -10,6 +10,7 @@ import (
 	"storj.io/drpc"
 	"storj.io/drpc/drpcconn"
 
+	"github.com/anyproto/any-sync/app/debugstat/mock_debugstat"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objectsync/mock_objectsync"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -24,6 +25,7 @@ type fixture struct {
 	messageHandlerMock *mock_objectsync.MockObjectSync
 	peerPoolMock       *mock_pool.MockPool
 	clientMock         *mock_spacesyncproto.MockDRPCSpaceSyncClient
+	statMock           *mock_debugstat.MockStatService
 	ctrl               *gomock.Controller
 }
 
@@ -33,17 +35,21 @@ func newFixture(t *testing.T) *fixture {
 	peerPoolMock := mock_pool.NewMockPool(ctrl)
 	messageHandlerMock := mock_objectsync.NewMockObjectSync(ctrl)
 	clientMock := mock_spacesyncproto.NewMockDRPCSpaceSyncClient(ctrl)
+	statMock := mock_debugstat.NewMockStatService(ctrl)
 	manager.peerPool = peerPoolMock
 	manager.handler = messageHandlerMock
 	manager.clientFactory = spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceSyncClient {
 		return clientMock
 	})
+	manager.statService = statMock
+	manager.reqStat = newRequestStat("spaceId")
 	manager.ctx, manager.cancel = context.WithCancel(context.Background())
 	return &fixture{
 		requestManager:     manager,
 		messageHandlerMock: messageHandlerMock,
 		peerPoolMock:       peerPoolMock,
 		clientMock:         clientMock,
+		statMock:           statMock,
 		ctrl:               ctrl,
 	}
 }
@@ -147,6 +153,7 @@ func TestRequestManager_QueueRequest(t *testing.T) {
 		_, ok = msgs.Load("otherId1")
 		require.True(t, ok)
 		close(msgRelease)
+		fx.statMock.EXPECT().RemoveProvider(gomock.Any())
 		fx.requestManager.Close(context.Background())
 	})
 
@@ -179,6 +186,7 @@ func TestRequestManager_QueueRequest(t *testing.T) {
 		_, ok = msgs.Load("id2")
 		require.False(t, ok)
 
+		fx.statMock.EXPECT().RemoveProvider(gomock.Any())
 		fx.requestManager.Close(context.Background())
 		close(msgRelease)
 		_, ok = msgs.Load("id2")

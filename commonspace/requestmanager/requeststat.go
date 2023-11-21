@@ -3,23 +3,34 @@ package requestmanager
 import (
 	"sync"
 
+	"golang.org/x/exp/slices"
+
+	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
 type requestStat struct {
 	sync.Mutex
 	peerStats map[string]peerStat
+	spaceId   string
 }
 
-func newRequestStat() *requestStat {
+func newRequestStat(spaceId string) *requestStat {
 	return &requestStat{
 		peerStats: make(map[string]peerStat),
+		spaceId:   spaceId,
 	}
 }
 
 type spaceQueueStat struct {
+	SpaceId   string     `json:"space_id"`
 	TotalSize int        `json:"total_size"`
 	PeerStats []peerStat `json:"peer_stats"`
+}
+
+type SummaryStat struct {
+	QueueStats []spaceQueueStat `json:"sorted_stats"`
+	TotalSize  int              `json:"total_size"`
 }
 
 type peerStat struct {
@@ -83,5 +94,31 @@ func (r *requestStat) QueueStat() spaceQueueStat {
 	return spaceQueueStat{
 		TotalSize: totalSize,
 		PeerStats: peerStats,
+	}
+}
+
+func (r *requestStat) Aggregate(values []debugstat.StatValue) SummaryStat {
+	var totalSize int
+	var stats []spaceQueueStat
+	for _, v := range values {
+		stat, ok := v.Value.(spaceQueueStat)
+		if !ok {
+			continue
+		}
+		totalSize += stat.TotalSize
+		stats = append(stats, stat)
+	}
+	slices.SortFunc(stats, func(first, second spaceQueueStat) int {
+		if first.TotalSize > second.TotalSize {
+			return 1
+		} else if first.TotalSize == second.TotalSize {
+			return 0
+		} else {
+			return -1
+		}
+	})
+	return SummaryStat{
+		TotalSize:  totalSize,
+		QueueStats: stats,
 	}
 }

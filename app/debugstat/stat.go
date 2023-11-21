@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_debugstat/mock_debugstat.go github.com/anyproto/any-sync/app/debugstat StatService
 package debugstat
 
 import (
@@ -16,6 +17,10 @@ type StatProvider interface {
 	ProvideStat() any
 	StatId() string
 	StatType() string
+}
+
+type AggregatableStatProvider interface {
+	AggregateStat(stats []StatValue) any
 }
 
 type StatService interface {
@@ -68,8 +73,7 @@ func (s *statService) GetStat() (st StatSummary) {
 
 	for tp, provs := range allProviders {
 		stType := StatType{
-			Type:   tp,
-			Values: nil,
+			Type: tp,
 		}
 		for _, prov := range provs {
 			stat := prov.ProvideStat()
@@ -77,6 +81,12 @@ func (s *statService) GetStat() (st StatSummary) {
 				Key:   prov.StatId(),
 				Value: stat,
 			})
+		}
+		if len(provs) > 0 {
+			if aggregate, ok := provs[0].(AggregatableStatProvider); ok {
+				stType.Aggregate = aggregate.AggregateStat(stType.Values)
+				stType.Values = nil
+			}
 		}
 		st.Stats = append(st.Stats, stType)
 	}

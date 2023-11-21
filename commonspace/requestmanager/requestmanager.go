@@ -56,6 +56,10 @@ type requestManager struct {
 	spaceId       string
 }
 
+func (r *requestManager) AggregateStat(stats []debugstat.StatValue) any {
+	return r.reqStat.Aggregate(stats)
+}
+
 func (r *requestManager) ProvideStat() any {
 	return r.reqStat.QueueStat()
 }
@@ -72,7 +76,7 @@ func (r *requestManager) Init(a *app.App) (err error) {
 	r.ctx, r.cancel = context.WithCancel(context.Background())
 	spaceState := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
 	r.statService = a.MustComponent(debugstat.CName).(debugstat.StatService)
-	r.reqStat = newRequestStat()
+	r.reqStat = newRequestStat(spaceState.SpaceId)
 	r.spaceId = spaceState.SpaceId
 	r.handler = a.MustComponent(objectsync.CName).(MessageHandler)
 	r.peerPool = a.MustComponent(pool.CName).(pool.Pool)
