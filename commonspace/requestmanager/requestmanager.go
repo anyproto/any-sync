@@ -75,7 +75,10 @@ func (r *requestManager) StatType() string {
 func (r *requestManager) Init(a *app.App) (err error) {
 	r.ctx, r.cancel = context.WithCancel(context.Background())
 	spaceState := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
-	r.statService = a.MustComponent(debugstat.CName).(debugstat.StatService)
+	r.statService, _ = a.Component(debugstat.CName).(debugstat.StatService)
+	if r.statService == nil {
+		r.statService = debugstat.NewNoOp()
+	}
 	r.reqStat = newRequestStat(spaceState.SpaceId)
 	r.spaceId = spaceState.SpaceId
 	r.handler = a.MustComponent(objectsync.CName).(MessageHandler)
@@ -106,10 +109,9 @@ func (r *requestManager) Close(ctx context.Context) (err error) {
 
 func (r *requestManager) SendRequest(ctx context.Context, peerId string, req *spacesyncproto.ObjectSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
 	// TODO: limit concurrent sends?
-	size := r.reqStat.CalcSize(req)
-	r.reqStat.AddSyncRequest(peerId, size)
+	r.reqStat.AddSyncRequest(peerId, req)
 	defer func() {
-		r.reqStat.RemoveSyncRequest(peerId, size)
+		r.reqStat.RemoveSyncRequest(peerId, req)
 	}()
 	return r.doRequest(ctx, peerId, req)
 }
@@ -123,13 +125,12 @@ func (r *requestManager) QueueRequest(peerId string, req *spacesyncproto.ObjectS
 		r.pools[peerId] = pl
 		pl.Run()
 	}
-	size := r.reqStat.CalcSize(req)
-	r.reqStat.AddQueueRequest(peerId, size)
+	r.reqStat.AddQueueRequest(peerId, req)
 	// TODO: for later think when many clients are there,
 	//  we need to close pools for inactive clients
 	return pl.TryAdd(func() {
 		doRequestAndHandle(r, peerId, req)
-		r.reqStat.RemoveQueueRequest(peerId, size)
+		r.reqStat.RemoveQueueRequest(peerId, req)
 	})
 }
 

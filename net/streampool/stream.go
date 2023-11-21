@@ -4,10 +4,11 @@ import (
 	"context"
 	"sync/atomic"
 
-	"github.com/anyproto/any-sync/app/logger"
 	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
 	"storj.io/drpc"
+
+	"github.com/anyproto/any-sync/app/logger"
 )
 
 type stream struct {
@@ -19,11 +20,17 @@ type stream struct {
 	closed   atomic.Bool
 	l        logger.CtxLogger
 	queue    *mb.MB[drpc.Message]
+	stats    streamStat
 	tags     []string
 }
 
 func (sr *stream) write(msg drpc.Message) (err error) {
-	return sr.queue.TryAdd(msg)
+	sr.stats.AddMessage(msg)
+	err = sr.queue.TryAdd(msg)
+	if err != nil {
+		sr.stats.RemoveMessage(msg)
+	}
+	return err
 }
 
 func (sr *stream) readLoop() error {
@@ -58,8 +65,8 @@ func (sr *stream) writeLoop() {
 		if err := sr.stream.MsgSend(msg, EncodingProto); err != nil {
 			sr.l.Warn("msg send error", zap.Error(err))
 			sr.streamClose()
-			return
 		}
+		sr.stats.RemoveMessage(msg)
 	}
 }
 

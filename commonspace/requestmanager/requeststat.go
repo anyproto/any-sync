@@ -24,67 +24,63 @@ func newRequestStat(spaceId string) *requestStat {
 
 type spaceQueueStat struct {
 	SpaceId   string     `json:"space_id"`
-	TotalSize int        `json:"total_size"`
+	TotalSize int64      `json:"total_size"`
 	PeerStats []peerStat `json:"peer_stats"`
 }
 
-type SummaryStat struct {
-	TotalSize  int              `json:"total_size"`
+type summaryStat struct {
+	TotalSize  int64            `json:"total_size"`
 	QueueStats []spaceQueueStat `json:"sorted_stats"`
 }
 
 type peerStat struct {
 	QueueCount int    `json:"queue_count"`
-	QueueSize  int    `json:"queue_size"`
-	SyncSize   int    `json:"sync_size"`
 	SyncCount  int    `json:"sync_count"`
+	QueueSize  int64  `json:"queue_size"`
+	SyncSize   int64  `json:"sync_size"`
 	PeerId     string `json:"peer_id"`
 }
 
-func (r *requestStat) AddQueueRequest(peerId string, size int) {
+func (r *requestStat) AddQueueRequest(peerId string, req *spacesyncproto.ObjectSyncMessage) {
 	r.Lock()
 	defer r.Unlock()
 	stat := r.peerStats[peerId]
 	stat.QueueCount++
-	stat.QueueSize += size
+	stat.QueueSize += int64(req.Size())
 	r.peerStats[peerId] = stat
 }
 
-func (r *requestStat) AddSyncRequest(peerId string, size int) {
+func (r *requestStat) AddSyncRequest(peerId string, req *spacesyncproto.ObjectSyncMessage) {
 	r.Lock()
 	defer r.Unlock()
 	stat := r.peerStats[peerId]
 	stat.SyncCount++
-	stat.SyncSize += size
+	stat.SyncSize += int64(req.Size())
 	r.peerStats[peerId] = stat
 }
 
-func (r *requestStat) RemoveSyncRequest(peerId string, size int) {
+func (r *requestStat) RemoveSyncRequest(peerId string, req *spacesyncproto.ObjectSyncMessage) {
 	r.Lock()
 	defer r.Unlock()
 	stat := r.peerStats[peerId]
 	stat.SyncCount--
-	stat.SyncSize -= size
+	stat.SyncSize -= int64(req.Size())
 	r.peerStats[peerId] = stat
 }
 
-func (r *requestStat) RemoveQueueRequest(peerId string, size int) {
+func (r *requestStat) RemoveQueueRequest(peerId string, req *spacesyncproto.ObjectSyncMessage) {
 	r.Lock()
 	defer r.Unlock()
 	stat := r.peerStats[peerId]
 	stat.QueueCount--
-	stat.QueueSize -= size
+	stat.QueueSize -= int64(req.Size())
 	r.peerStats[peerId] = stat
-}
-
-func (r *requestStat) CalcSize(msg *spacesyncproto.ObjectSyncMessage) int {
-	return len(msg.Payload)
 }
 
 func (r *requestStat) QueueStat() spaceQueueStat {
 	r.Lock()
 	defer r.Unlock()
-	var totalSize int
+	var totalSize int64
 	var peerStats []peerStat
 	for peerId, stat := range r.peerStats {
 		totalSize += stat.QueueSize
@@ -109,8 +105,8 @@ func (r *requestStat) QueueStat() spaceQueueStat {
 	}
 }
 
-func (r *requestStat) Aggregate(values []debugstat.StatValue) SummaryStat {
-	var totalSize int
+func (r *requestStat) Aggregate(values []debugstat.StatValue) summaryStat {
+	var totalSize int64
 	var stats []spaceQueueStat
 	for _, v := range values {
 		stat, ok := v.Value.(spaceQueueStat)
@@ -129,7 +125,7 @@ func (r *requestStat) Aggregate(values []debugstat.StatValue) SummaryStat {
 			return 1
 		}
 	})
-	return SummaryStat{
+	return summaryStat{
 		TotalSize:  totalSize,
 		QueueStats: stats,
 	}
