@@ -95,11 +95,11 @@ func (r *requestStat) QueueStat() spaceQueueStat {
 		firstTotalSize := first.QueueSize + first.SyncSize
 		secondTotalSize := second.QueueSize + second.SyncSize
 		if firstTotalSize > secondTotalSize {
-			return 1
+			return -1
 		} else if firstTotalSize == secondTotalSize {
 			return 0
 		} else {
-			return -1
+			return 1
 		}
 	})
 	return spaceQueueStat{
@@ -122,11 +122,11 @@ func (r *requestStat) Aggregate(values []debugstat.StatValue) SummaryStat {
 	}
 	slices.SortFunc(stats, func(first, second spaceQueueStat) int {
 		if first.TotalSize > second.TotalSize {
-			return 1
+			return -1
 		} else if first.TotalSize == second.TotalSize {
 			return 0
 		} else {
-			return -1
+			return 1
 		}
 	})
 	return SummaryStat{
