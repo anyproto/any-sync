@@ -65,6 +65,7 @@ func (sr *stream) writeLoop() {
 		if err := sr.stream.MsgSend(msg, EncodingProto); err != nil {
 			sr.l.Warn("msg send error", zap.Error(err))
 			sr.streamClose()
+			return
 		}
 		sr.stats.RemoveMessage(msg)
 	}
