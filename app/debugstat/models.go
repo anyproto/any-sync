@@ -8,9 +8,9 @@ type StatValue struct {
 type StatType struct {
 	Type      string      `json:"type"`
 	Values    []StatValue `json:"values,omitempty"`
-	Aggregate any         `json:"aggregate"`
+	Aggregate any         `json:"aggregate,omitempty"`
 }
 
 type StatSummary struct {
-	Stats []StatType `json:"stat_types"`
+	Stats []StatType `json:"stat_types,omitempty"`
 }
