@@ -76,8 +76,8 @@ func (s *streamPool) ProvideStat() any {
 		cp := st.stats
 		cp.TotalSize = cp.totalSize.Load()
 		cp.MsgCount = int(cp.msgCount.Load())
+		totalSize += cp.TotalSize
 		stats = append(stats, cp)
-		totalSize += st.stats.TotalSize
 	}
 	s.mu.Unlock()
 	slices.SortFunc(stats, func(first streamStat, second streamStat) int {
