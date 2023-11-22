@@ -73,7 +73,10 @@ func (s *streamPool) ProvideStat() any {
 	var totalSize int64
 	var stats []streamStat
 	for _, st := range s.streams {
-		stats = append(stats, st.stats)
+		cp := st.stats
+		cp.TotalSize = cp.totalSize.Load()
+		cp.MsgCount = int(cp.msgCount.Load())
+		stats = append(stats, cp)
 		totalSize += st.stats.TotalSize
 	}
 	s.mu.Unlock()
