@@ -1,11 +1,16 @@
 package crypto
 
 import (
+	"crypto/ecdsa"
 	"crypto/rand"
-	"github.com/anyproto/go-slip10"
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
+
+	"github.com/anyproto/go-slip10"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMnemonic(t *testing.T) {
@@ -40,4 +45,43 @@ func TestMnemonic(t *testing.T) {
 	oldAccountRes, err := phrase.deriveForPath(true, 0, anytypeAccountOldPrefix)
 	require.NoError(t, err)
 	require.True(t, res.OldAccountKey.Equals(oldAccountRes.MasterKey))
+
+	// testing Ethereum derivation:
+	var phrase2 Mnemonic = "tag volcano eight thank tide danger coast health above argue embrace heavy"
+	res, err = phrase2.DeriveKeys(0)
+	require.NoError(t, err)
+
+	// get address by public key
+	publicKey := res.EthereumIdentity.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	require.Equal(t, true, ok)
+	ethAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+
+	require.Equal(t, common.HexToAddress("0xC49926C4124cEe1cbA0Ea94Ea31a6c12318df947"), ethAddress)
+}
+
+func TestMnemonic_ethereumKeyFromMnemonic(t *testing.T) {
+	var badPphrase Mnemonic = "tag volcano"
+	_, _, err := badPphrase.ethereumKeyFromMnemonic(0, defaultEthereumDerivation)
+	require.Error(t, err)
+
+	// good
+	var phrase Mnemonic = "tag volcano eight thank tide danger coast health above argue embrace heavy"
+
+	addr, pk, err := phrase.ethereumKeyFromMnemonic(0, defaultEthereumDerivation)
+	require.NoError(t, err)
+	require.Equal(t, common.HexToAddress("0xC49926C4124cEe1cbA0Ea94Ea31a6c12318df947"), addr)
+
+	// what wallet.PrivateKeyHex(account) does
+	bytes := crypto.FromECDSA(pk)
+	pkStr := hexutil.Encode(bytes)[2:]
+	require.Equal(t, "63e21d10fd50155dbba0e7d3f7431a400b84b4c2ac1ee38872f82448fe3ecfb9", pkStr)
+
+	addr, pk, err = phrase.ethereumKeyFromMnemonic(1, defaultEthereumDerivation)
+	require.NoError(t, err)
+	require.Equal(t, common.HexToAddress("0x8230645aC28A4EdD1b0B53E7Cd8019744E9dD559"), addr)
+
+	bytes = crypto.FromECDSA(pk)
+	pkStr = hexutil.Encode(bytes)[2:]
+	require.Equal(t, "b31048b0aa87649bdb9016c0ee28c788ddfc45e52cd71cc0da08c47cb4390ae7", pkStr)
 }
