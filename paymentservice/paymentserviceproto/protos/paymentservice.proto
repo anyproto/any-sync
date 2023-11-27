@@ -1,0 +1,107 @@
+syntax = "proto3";
+option go_package = "paymentservice/paymentserviceproto";
+
+// TODO: no marshalling avail :-(
+//import "google/protobuf/timestamp.proto";
+
+enum SubscriptionTier {
+  Tier_Unknown = 0;
+
+  Tier_Friend = 1;
+  Tier_Supporter1Year = 2;
+  Tier_Patron1Year = 3;
+}
+
+enum SubscriptionStatus {
+  Status_Unknown = 0;
+  Status_Pending = 1;
+  Status_Active = 2;
+  Status_Expired = 3;
+  Status_Canceled = 4;
+}
+
+enum PaymentMethod {
+  Method_Card = 0;
+  Method_Crypto = 1;
+  Method_ApplePay = 2;
+  Method_GooglePay = 3;
+}
+
+// 1
+message GetSubscriptionRequest {
+  // in the following format: "12D3KooWA8EXV3KjBxEU5EnsPfneLx84vMWAtTBQBeyooN82KSuS"
+  string ownerAnyID = 1;
+}
+
+message GetSubscriptionRequestSigned {
+  // GetSubscriptionRequest
+  bytes payload = 1;
+
+  // this is payload signed with payload.ownerAnyID
+  bytes signature = 2;
+}
+
+message GetSubscriptionResponse {
+  SubscriptionTier tier = 1;
+  SubscriptionStatus status = 2;
+
+  //TODO: use google.protobuf.Timestamp and marshall it
+  uint64 dateStarted = 3;
+  uint64 dateEnds = 4;
+  bool isAutoRenew = 5;
+
+  // if client has "downgraded" - he is still able to use the service until the end of the period
+  // (dateEnds) but then he will be on nextTier until nextTierEnds
+  //
+  // if Tier0_Unknown -> then no next tier
+  SubscriptionTier nextTier = 6;
+  uint64 nextTierEnds = 7;
+
+  PaymentMethod paymentMethod = 8;
+}
+
+// 2 
+message BuySubscriptionRequest {
+  // in the following format: "12D3KooWA8EXV3KjBxEU5EnsPfneLx84vMWAtTBQBeyooN82KSuS"
+  string ownerAnyID = 1;
+
+  // this is the owner's ETH main EOA (External Owned Account) address
+  //  not AccountAbstraction's SCW (Smart Contract Wallet) address! 
+  // 
+  // in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
+  // this is required to reserve a name for the owner
+  string ownerEthAddress = 2;
+
+  SubscriptionTier requestedTier = 3;
+
+  PaymentMethod paymentMethod = 4;
+}
+
+message BuySubscriptionRequestSigned {
+  // BuySubscriptionRequest
+  bytes payload = 1;
+
+  // this is payload signed with payload.ownerAnyID
+  bytes signature = 2;
+}
+
+message BuySubscriptionResponse {
+  // will feature current billing ID
+  // stripe.com/?client_reference_id=1234
+  string paymentUrl = 1;
+}
+
+service AnyPaymentProcessing {
+  rpc GetSubscriptionStatus(GetSubscriptionRequestSigned) returns (GetSubscriptionResponse) {}
+
+  // Will save a new BillingID to DB, and return a payment link
+  // You can:
+  // a) buy a subscription
+  // b) TODO: upgrade your tier
+  // c) TODO: renew subscription
+  //
+  // WARNING: 
+  // 1 - User can not ask for a payment link on behalf of another user (a signature is required)
+  // 2 - Admin can do that on behalf of a user
+  rpc BuySubscription(BuySubscriptionRequestSigned) returns (BuySubscriptionResponse) {}
+}
