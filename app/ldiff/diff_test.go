@@ -3,12 +3,13 @@ package ldiff
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"math"
 	"sort"
 	"testing"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDiff_fillRange(t *testing.T) {
@@ -23,17 +24,10 @@ func TestDiff_fillRange(t *testing.T) {
 	t.Log(d.sl.Len())
 
 	t.Run("elements", func(t *testing.T) {
-		r := Range{From: 0, To: math.MaxUint64, Limit: 10}
+		r := Range{From: 0, To: math.MaxUint64}
 		res := d.getRange(r)
 		assert.NotNil(t, res.Hash)
-		assert.Len(t, res.Elements, 10)
-	})
-	t.Run("hash", func(t *testing.T) {
-		r := Range{From: 0, To: math.MaxUint64, Limit: 9}
-		res := d.getRange(r)
-		t.Log(len(res.Elements))
-		assert.NotNil(t, res.Hash)
-		assert.Nil(t, res.Elements)
+		assert.Equal(t, res.Count, 10)
 	})
 }
 
@@ -76,6 +70,73 @@ func TestDiff_Diff(t *testing.T) {
 		assert.Len(t, newIds, 1)
 		assert.Len(t, changedIds, 1)
 		assert.Len(t, removedIds, 1)
+	})
+	t.Run("complex", func(t *testing.T) {
+		d1 := New(16, 128)
+		d2 := New(16, 128)
+		length := 10000
+		for i := 0; i < length; i++ {
+			id := fmt.Sprint(i)
+			head := uuid.NewString()
+			d1.Set(Element{
+				Id:   id,
+				Head: head,
+			})
+		}
+
+		newIds, changedIds, removedIds, err := d1.Diff(ctx, d2)
+		require.NoError(t, err)
+		assert.Len(t, newIds, 0)
+		assert.Len(t, changedIds, 0)
+		assert.Len(t, removedIds, length)
+
+		for i := 0; i < length; i++ {
+			id := fmt.Sprint(i)
+			head := uuid.NewString()
+			d2.Set(Element{
+				Id:   id,
+				Head: head,
+			})
+		}
+
+		newIds, changedIds, removedIds, err = d1.Diff(ctx, d2)
+		require.NoError(t, err)
+		assert.Len(t, newIds, 0)
+		assert.Len(t, changedIds, length)
+		assert.Len(t, removedIds, 0)
+
+		for i := 0; i < length; i++ {
+			id := fmt.Sprint(i)
+			head := uuid.NewString()
+			d2.Set(Element{
+				Id:   id,
+				Head: head,
+			})
+		}
+
+		res, err := d1.Ranges(
+			context.Background(),
+			[]Range{{From: 0, To: math.MaxUint64, Elements: true}},
+			nil)
+		require.NoError(t, err)
+		require.Len(t, res, 1)
+		for i, el := range res[0].Elements {
+			if i < length/2 {
+				continue
+			}
+			id := el.Id
+			head := el.Head
+			d2.Set(Element{
+				Id:   id,
+				Head: head,
+			})
+		}
+
+		newIds, changedIds, removedIds, err = d1.Diff(ctx, d2)
+		require.NoError(t, err)
+		assert.Len(t, newIds, 0)
+		assert.Len(t, changedIds, length/2)
+		assert.Len(t, removedIds, 0)
 	})
 	t.Run("empty", func(t *testing.T) {
 		d1 := New(16, 16)
@@ -133,7 +194,7 @@ func BenchmarkDiff_Ranges(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	var resBuf []RangeResult
-	var ranges = []Range{{From: 0, To: math.MaxUint64, Limit: 10}}
+	var ranges = []Range{{From: 0, To: math.MaxUint64}}
 	for i := 0; i < b.N; i++ {
 		d.Ranges(ctx, ranges, resBuf)
 		resBuf = resBuf[:0]
@@ -196,4 +257,70 @@ func TestDiff_Elements(t *testing.T) {
 		return gotEls[i].Id < gotEls[j].Id
 	})
 	assert.Equal(t, els, gotEls)
+}
+
+func TestRangesAddRemove(t *testing.T) {
+	length := 10000
+	divideFactor := 4
+	compareThreshold := 4
+	addTwice := func() string {
+		d := New(divideFactor, compareThreshold)
+		var els []Element
+		for i := 0; i < length; i++ {
+			if i < length/20 {
+				continue
+			}
+			els = append(els, Element{
+				Id:   fmt.Sprint(i),
+				Head: fmt.Sprint("h", i),
+			})
+		}
+		d.Set(els...)
+		els = els[:0]
+		for i := 0; i < length/20; i++ {
+			els = append(els, Element{
+				Id:   fmt.Sprint(i),
+				Head: fmt.Sprint("h", i),
+			})
+		}
+		d.Set(els...)
+		return d.Hash()
+	}
+	addOnce := func() string {
+		d := New(divideFactor, compareThreshold)
+		var els []Element
+		for i := 0; i < length; i++ {
+			els = append(els, Element{
+				Id:   fmt.Sprint(i),
+				Head: fmt.Sprint("h", i),
+			})
+		}
+		d.Set(els...)
+		return d.Hash()
+	}
+	addRemove := func() string {
+		d := New(divideFactor, compareThreshold)
+		var els []Element
+		for i := 0; i < length; i++ {
+			els = append(els, Element{
+				Id:   fmt.Sprint(i),
+				Head: fmt.Sprint("h", i),
+			})
+		}
+		d.Set(els...)
+		for i := 0; i < length/20; i++ {
+			err := d.RemoveId(fmt.Sprint(i))
+			require.NoError(t, err)
+		}
+		els = els[:0]
+		for i := 0; i < length/20; i++ {
+			els = append(els, Element{
+				Id:   fmt.Sprint(i),
+				Head: fmt.Sprint("h", i),
+			})
+		}
+		d.Set(els...)
+		return d.Hash()
+	}
+	require.Equal(t, addTwice(), addOnce(), addRemove())
 }
