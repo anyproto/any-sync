@@ -21,19 +21,17 @@ type AnyPpClientService interface {
 	GetSubscriptionStatus(ctx context.Context, in *pp.GetSubscriptionRequestSigned) (out *pp.GetSubscriptionResponse, err error)
 	BuySubscription(ctx context.Context, in *pp.BuySubscriptionRequestSigned) (out *pp.BuySubscriptionResponse, err error)
 
-	app.ComponentRunnable
+	app.Component
 }
 
 type service struct {
 	pool     pool.Pool
 	nodeconf nodeconf.Service
-	close    chan struct{}
 }
 
 func (s *service) Init(a *app.App) (err error) {
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
-	s.close = make(chan struct{})
 	return nil
 }
 
@@ -43,19 +41,6 @@ func (s *service) Name() (name string) {
 
 func New() AnyPpClientService {
 	return new(service)
-}
-
-func (s *service) Run(_ context.Context) error {
-	return nil
-}
-
-func (s *service) Close(_ context.Context) error {
-	select {
-	case <-s.close:
-	default:
-		close(s.close)
-	}
-	return nil
 }
 
 func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProcessingClient) error) error {

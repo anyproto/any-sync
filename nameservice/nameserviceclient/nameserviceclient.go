@@ -26,7 +26,7 @@ type AnyNsClientServiceBase interface {
 	// reverse resolve
 	GetNameByAddress(ctx context.Context, in *nsp.NameByAddressRequest) (out *nsp.NameByAddressResponse, err error)
 
-	app.ComponentRunnable
+	app.Component
 }
 
 type AnyNsClientService interface {
@@ -43,13 +43,11 @@ type AnyNsClientService interface {
 type service struct {
 	pool     pool.Pool
 	nodeconf nodeconf.Service
-	close    chan struct{}
 }
 
 func (s *service) Init(a *app.App) (err error) {
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
-	s.close = make(chan struct{})
 	return nil
 }
 
@@ -59,19 +57,6 @@ func (s *service) Name() (name string) {
 
 func New() AnyNsClientService {
 	return new(service)
-}
-
-func (s *service) Run(_ context.Context) error {
-	return nil
-}
-
-func (s *service) Close(_ context.Context) error {
-	select {
-	case <-s.close:
-	default:
-		close(s.close)
-	}
-	return nil
 }
 
 func (s *service) doClient(ctx context.Context, fn func(cl nsp.DRPCAnynsClient) error) error {
