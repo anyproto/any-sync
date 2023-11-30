@@ -80,6 +80,10 @@ message CreateUserOperationRequest {
   string ownerEthAddress = 4;
 
   string ownerAnyID = 5;
+
+  // all operations currently are towards single name, please specify it
+  // we can use it for caching, etc purps.
+  string fullName = 6;
 }
 
 message CreateUserOperationRequestSigned {
