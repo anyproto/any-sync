@@ -44,7 +44,9 @@ type SpaceStorage interface {
 	HasTree(id string) (bool, error)
 	CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (treestorage.TreeStorage, error)
 	WriteSpaceHash(hash string) error
+	WriteOldSpaceHash(hash string) error
 	ReadSpaceHash() (hash string, err error)
+	ReadOldSpaceHash() (hash string, err error)
 }
 
 type SpaceStorageCreatePayload struct {

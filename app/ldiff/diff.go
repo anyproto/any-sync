@@ -1,7 +1,7 @@
 // Package ldiff provides a container of elements with fixed id and changeable content.
 // Diff can calculate the difference with another diff container (you can make it remote) with minimum hops and traffic.
 //
-//go:generate mockgen -destination mock_ldiff/mock_ldiff.go github.com/anyproto/any-sync/app/ldiff Diff,Remote
+//go:generate mockgen -destination mock_ldiff/mock_ldiff.go github.com/anyproto/any-sync/app/ldiff Diff,Remote,DiffContainer
 package ldiff
 
 import (
@@ -15,9 +15,11 @@ import (
 	"github.com/cespare/xxhash"
 	"github.com/huandu/skiplist"
 	"github.com/zeebo/blake3"
+
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
-// New creates new Diff container
+// New creates precalculated Diff container
 //
 // divideFactor - means how many hashes you want to ask for once
 //
@@ -32,6 +34,10 @@ import (
 //
 // Less threshold and divideFactor - less traffic but more requests
 func New(divideFactor, compareThreshold int) Diff {
+	return newDiff(divideFactor, compareThreshold)
+}
+
+func newDiff(divideFactor, compareThreshold int) *diff {
 	if divideFactor < 2 {
 		divideFactor = 2
 	}
@@ -67,6 +73,7 @@ type Element struct {
 type Range struct {
 	From, To uint64
 	Elements bool
+	Limit    int
 }
 
 // RangeResult response for Range
@@ -100,6 +107,8 @@ type Diff interface {
 	Hash() string
 	// Len returns count of elements in the diff
 	Len() int
+	// DiffType returns type of diff
+	DiffType() spacesyncproto.DiffType
 }
 
 // Remote interface for using in the Diff
@@ -227,9 +236,10 @@ func (d *diff) RemoveId(id string) error {
 
 func (d *diff) getRange(r Range) (rr RangeResult) {
 	rng := d.ranges.getRange(r.From, r.To)
-	rr.Count = rng.elements
+	// if we have the division for this range
 	if rng != nil {
 		rr.Hash = rng.hash
+		rr.Count = rng.elements
 		if !r.Elements && rng.isDivided {
 			return
 		}
@@ -242,6 +252,7 @@ func (d *diff) getRange(r Range) (rr RangeResult) {
 		el = el.Next()
 		rr.Elements = append(rr.Elements, elem)
 	}
+	rr.Count = len(rr.Elements)
 	return
 }
 
@@ -265,6 +276,10 @@ type diffCtx struct {
 }
 
 var errMismatched = errors.New("query and results mismatched")
+
+func (d *diff) DiffType() spacesyncproto.DiffType {
+	return spacesyncproto.DiffType_Precalculated
+}
 
 // Diff makes diff with remote container
 func (d *diff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error) {

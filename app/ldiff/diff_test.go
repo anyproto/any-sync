@@ -150,18 +150,40 @@ func TestDiff_Diff(t *testing.T) {
 	t.Run("one empty", func(t *testing.T) {
 		d1 := New(4, 4)
 		d2 := New(4, 4)
-		for i := 0; i < 10; i++ {
+		length := 10000
+		for i := 0; i < length; i++ {
 			d2.Set(Element{
 				Id:   fmt.Sprint(i),
 				Head: uuid.NewString(),
 			})
 		}
-
 		newIds, changedIds, removedIds, err := d1.Diff(ctx, d2)
 		require.NoError(t, err)
-		assert.Len(t, newIds, 10)
+		assert.Len(t, newIds, length)
 		assert.Len(t, changedIds, 0)
 		assert.Len(t, removedIds, 0)
+	})
+	t.Run("not intersecting", func(t *testing.T) {
+		d1 := New(16, 16)
+		d2 := New(16, 16)
+		length := 10000
+		for i := 0; i < length; i++ {
+			d1.Set(Element{
+				Id:   fmt.Sprint(i),
+				Head: uuid.NewString(),
+			})
+		}
+		for i := length; i < length*2; i++ {
+			d2.Set(Element{
+				Id:   fmt.Sprint(i),
+				Head: uuid.NewString(),
+			})
+		}
+		newIds, changedIds, removedIds, err := d1.Diff(ctx, d2)
+		require.NoError(t, err)
+		assert.Len(t, newIds, length)
+		assert.Len(t, changedIds, 0)
+		assert.Len(t, removedIds, length)
 	})
 	t.Run("context cancel", func(t *testing.T) {
 		d1 := New(4, 4)
