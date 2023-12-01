@@ -30,12 +30,14 @@ func (d *diffContainer) PrecalculatedDiff() Diff {
 func (d *diffContainer) Set(elements ...Element) {
 	d.initial.mu.Lock()
 	defer d.initial.mu.Unlock()
+	defer d.initial.markHashDirty()
 	d.precalculated.Set(elements...)
 }
 
 func (d *diffContainer) RemoveId(id string) error {
 	d.initial.mu.Lock()
 	defer d.initial.mu.Unlock()
+	defer d.initial.markHashDirty()
 	return d.precalculated.RemoveId(id)
 }
 

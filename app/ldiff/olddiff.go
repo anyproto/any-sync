@@ -251,6 +251,10 @@ func (d *olddiff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, remo
 	return dctx.newIds, dctx.changedIds, dctx.removedIds, nil
 }
 
+func (d *olddiff) markHashDirty() {
+	d.hashIsDirty.Store(true)
+}
+
 func (d *olddiff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResult) {
 	// both hash equals - do nothing
 	if bytes.Equal(myRes.Hash, otherRes.Hash) {
