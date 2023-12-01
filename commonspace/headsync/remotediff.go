@@ -50,9 +50,9 @@ func (r *remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffCont
 			return false, err
 		}
 		if len(resp.Results) != 0 && bytes.Equal(hashB, resp.Results[0].Hash) {
-			return true, nil
+			return false, nil
 		}
-		return false, nil
+		return true, nil
 	}
 	r.diffType = resp.DiffType
 	switch resp.DiffType {
