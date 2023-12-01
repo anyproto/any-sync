@@ -216,6 +216,8 @@ func (h *hashRanges) calcElementsHash(from, to uint64) (hash []byte, els int) {
 		hasher.WriteString(elem.Head)
 		els++
 	}
-	hash = hasher.Sum(nil)
+	if els != 0 {
+		hash = hasher.Sum(nil)
+	}
 	return
 }
