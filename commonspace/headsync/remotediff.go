@@ -20,19 +20,20 @@ type RemoteDiff interface {
 }
 
 func NewRemoteDiff(spaceId string, client Client) RemoteDiff {
-	return remote{
+	return &remote{
 		spaceId: spaceId,
 		client:  client,
 	}
 }
 
 type remote struct {
-	spaceId string
-	client  Client
+	spaceId  string
+	client   Client
+	diffType spacesyncproto.DiffType
 }
 
 // DiffTypeCheck checks which type of diff should we use
-func (r remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffContainer) (needsSync bool, diff ldiff.Diff, err error) {
+func (r *remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffContainer) (needsSync bool, diff ldiff.Diff, err error) {
 	req := &spacesyncproto.HeadSyncRequest{
 		SpaceId:  r.spaceId,
 		DiffType: spacesyncproto.DiffType_Precalculated,
@@ -53,6 +54,7 @@ func (r remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffConta
 		}
 		return false, nil
 	}
+	r.diffType = resp.DiffType
 	switch resp.DiffType {
 	case spacesyncproto.DiffType_Precalculated:
 		diff = diffContainer.PrecalculatedDiff()
@@ -64,7 +66,7 @@ func (r remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffConta
 	return
 }
 
-func (r remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error) {
+func (r *remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error) {
 	results = resBuf[:0]
 	pbRanges := make([]*spacesyncproto.HeadSyncRange, 0, len(ranges))
 	for _, rg := range ranges {
@@ -74,8 +76,9 @@ func (r remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff
 		})
 	}
 	req := &spacesyncproto.HeadSyncRequest{
-		SpaceId: r.spaceId,
-		Ranges:  pbRanges,
+		SpaceId:  r.spaceId,
+		Ranges:   pbRanges,
+		DiffType: r.diffType,
 	}
 	resp, err := r.client.HeadSync(ctx, req)
 	if err != nil {
