@@ -346,3 +346,81 @@ func TestRangesAddRemove(t *testing.T) {
 	}
 	require.Equal(t, addTwice(), addOnce(), addRemove())
 }
+
+func printBestParams() {
+	numTests := 10
+	length := 100000
+	calcParams := func(divideFactor, compareThreshold, length int) (total, maxLevel, avgLevel, zeroEls int) {
+		d := New(divideFactor, compareThreshold)
+		var els []Element
+		for i := 0; i < length; i++ {
+			els = append(els, Element{
+				Id:   uuid.NewString(),
+				Head: uuid.NewString(),
+			})
+		}
+		d.Set(els...)
+		df := d.(*diff)
+		for _, rng := range df.ranges.ranges {
+			if rng.elements == 0 {
+				zeroEls++
+			}
+			if rng.level > maxLevel {
+				maxLevel = rng.level
+			}
+			avgLevel += rng.level
+		}
+		total = len(df.ranges.ranges)
+		avgLevel = avgLevel / total
+		return
+	}
+	type result struct {
+		divFactor, compThreshold, numRanges, maxLevel, avgLevel, zeroEls int
+	}
+	sf := func(i, j result) int {
+		if i.numRanges < j.numRanges {
+			return -1
+		} else if i.numRanges == j.numRanges {
+			return 0
+		} else {
+			return 1
+		}
+	}
+	var results []result
+	for divFactor := 0; divFactor < 6; divFactor++ {
+		df := 1 << divFactor
+		for compThreshold := 0; compThreshold < 10; compThreshold++ {
+			ct := 1 << compThreshold
+			fmt.Println("starting, df:", df, "ct:", ct)
+			var rngs []result
+			for i := 0; i < numTests; i++ {
+				total, maxLevel, avgLevel, zeroEls := calcParams(df, ct, length)
+				rngs = append(rngs, result{
+					divFactor:     df,
+					compThreshold: ct,
+					numRanges:     total,
+					maxLevel:      maxLevel,
+					avgLevel:      avgLevel,
+					zeroEls:       zeroEls,
+				})
+			}
+			slices.SortFunc(rngs, sf)
+			ranges := rngs[len(rngs)/2]
+			results = append(results, ranges)
+		}
+	}
+	slices.SortFunc(results, sf)
+	fmt.Println(results)
+	// 100000 - [{16 512 273 2 1 0} {4 512 341 4 3 0} {2 512 511 8 7 0} {1 512 511 8 7 0}
+	// {8 256 585 3 2 0} {8 512 585 3 2 0} {1 256 1023 9 8 0} {2 256 1023 9 8 0}
+	// {32 256 1057 2 1 0} {32 512 1057 2 1 0} {32 128 1089 3 1 0} {4 256 1365 5 4 0}
+	// {4 128 1369 6 4 0} {2 128 2049 11 9 0} {1 128 2049 11 9 0} {1 64 4157 12 10 0}
+	// {2 64 4159 12 10 0} {16 128 4369 3 2 0} {16 64 4369 3 2 0} {16 256 4369 3 2 0}
+	// {8 64 4681 4 3 0} {8 128 4681 4 3 0} {4 64 5461 6 5 0} {4 32 6389 7 5 0}
+	// {8 32 6505 5 4 17} {16 32 8033 4 3 374} {2 32 8619 13 11 0} {1 32 8621 13 11 0}
+	// {2 16 17837 15 12 0} {1 16 17847 15 12 0} {4 16 21081 8 6 22} {32 64 33825 3 2 1578}
+	// {32 32 33825 3 2 1559} {32 16 33825 3 2 1518} {8 16 35881 5 4 1313} {16 16 66737 4 3 13022}]
+	// 1000000 - [{8 256 11753 5 4 0}]
+	// 1000000 - [{16 128 69905 4 3 0}]
+	// 1000000 - [{32 256 33825 3 2 0}]
+}
