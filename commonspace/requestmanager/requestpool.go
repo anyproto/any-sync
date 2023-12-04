@@ -66,12 +66,11 @@ func (rp *RequestPool) sendLoop() {
 			return
 		}
 		rp.mx.Lock()
-		if f, ok := rp.entries[id]; ok {
-			delete(rp.entries, id)
-			rp.mx.Unlock()
+		f := rp.entries[id]
+		delete(rp.entries, id)
+		rp.mx.Unlock()
+		if f != nil {
 			f()
-		} else {
-			rp.mx.Unlock()
 		}
 	}
 }
