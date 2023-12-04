@@ -2,8 +2,11 @@ package headsync
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"time"
+
+	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
+
+	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/app/logger"
@@ -19,7 +22,6 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/util/slice"
-	"go.uber.org/zap"
 )
 
 type DiffSyncer interface {
@@ -33,7 +35,7 @@ const logPeriodSecs = 200
 
 func newDiffSyncer(hs *headSync) DiffSyncer {
 	return &diffSyncer{
-		diff:               hs.diff,
+		diffContainer:      hs.diffContainer,
 		spaceId:            hs.spaceId,
 		storage:            hs.storage,
 		peerManager:        hs.peerManager,
@@ -49,7 +51,7 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 
 type diffSyncer struct {
 	spaceId            string
-	diff               ldiff.Diff
+	diffContainer      ldiff.DiffContainer
 	peerManager        peermanager.PeerManager
 	treeManager        treemanager.TreeManager
 	treeSyncer         treesyncer.TreeSyncer
@@ -68,9 +70,9 @@ func (d *diffSyncer) Init() {
 
 func (d *diffSyncer) RemoveObjects(ids []string) {
 	for _, id := range ids {
-		_ = d.diff.RemoveId(id)
+		_ = d.diffContainer.RemoveId(id)
 	}
-	if err := d.storage.WriteSpaceHash(d.diff.Hash()); err != nil {
+	if err := d.storage.WriteSpaceHash(d.diffContainer.PrecalculatedDiff().Hash()); err != nil {
 		d.log.Error("can't write space hash", zap.Error(err))
 	}
 }
@@ -79,11 +81,11 @@ func (d *diffSyncer) UpdateHeads(id string, heads []string) {
 	if d.deletionState.Exists(id) {
 		return
 	}
-	d.diff.Set(ldiff.Element{
+	d.diffContainer.Set(ldiff.Element{
 		Id:   id,
 		Head: concatStrings(heads),
 	})
-	if err := d.storage.WriteSpaceHash(d.diff.Hash()); err != nil {
+	if err := d.storage.WriteSpaceHash(d.diffContainer.PrecalculatedDiff().Hash()); err != nil {
 		d.log.Error("can't write space hash", zap.Error(err))
 	}
 }
@@ -119,16 +121,25 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	defer p.ReleaseDrpcConn(conn)
 
 	var (
-		cl           = d.clientFactory.Client(conn)
-		rdiff        = NewRemoteDiff(d.spaceId, cl)
-		stateCounter = d.syncStatus.StateCounter()
-		syncAclId    = d.syncAcl.Id()
+		cl                             = d.clientFactory.Client(conn)
+		rdiff                          = NewRemoteDiff(d.spaceId, cl)
+		stateCounter                   = d.syncStatus.StateCounter()
+		syncAclId                      = d.syncAcl.Id()
+		newIds, changedIds, removedIds []string
 	)
-
-	newIds, changedIds, removedIds, err := d.diff.Diff(ctx, rdiff)
+	// getting correct diff and checking if we need to continue sync
+	// we do this through diffContainer for the sake of testing
+	needsSync, diff, err := d.diffContainer.DiffTypeCheck(ctx, rdiff)
 	err = rpcerr.Unwrap(err)
 	if err != nil {
 		return d.onDiffError(ctx, p, cl, err)
+	}
+	if needsSync {
+		newIds, changedIds, removedIds, err = diff.Diff(ctx, rdiff)
+		err = rpcerr.Unwrap(err)
+		if err != nil {
+			return d.onDiffError(ctx, p, cl, err)
+		}
 	}
 	d.syncStatus.SetNodesStatus(p.Id(), syncstatus.Online)
 
