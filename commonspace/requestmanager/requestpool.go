@@ -8,12 +8,12 @@ import (
 	"go.uber.org/zap"
 )
 
-// NewRequestPool creates new RequestPool
+// тewRequestPool creates new requestPool
 // workers - how many processes will execute tasks
 // maxSize - limit for queue size
-func NewRequestPool(workers, maxSize int) *RequestPool {
+func тewRequestPool(workers, maxSize int) *requestPool {
 	ctx, cancel := context.WithCancel(context.Background())
-	ss := &RequestPool{
+	ss := &requestPool{
 		ctx:     ctx,
 		cancel:  cancel,
 		workers: workers,
@@ -23,8 +23,8 @@ func NewRequestPool(workers, maxSize int) *RequestPool {
 	return ss
 }
 
-// RequestPool needed for parallel execution of the incoming send tasks
-type RequestPool struct {
+// requestPool needed for parallel execution of the incoming send tasks
+type requestPool struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
 	workers int
@@ -34,7 +34,7 @@ type RequestPool struct {
 	mx      sync.Mutex
 }
 
-func (rp *RequestPool) TryAdd(id string, f func()) (err error) {
+func (rp *requestPool) TryAdd(id string, f func()) (err error) {
 	rp.mx.Lock()
 	if _, ok := rp.entries[id]; ok {
 		rp.entries[id] = f
@@ -52,13 +52,13 @@ func (rp *RequestPool) TryAdd(id string, f func()) (err error) {
 	return
 }
 
-func (rp *RequestPool) Run() {
+func (rp *requestPool) Run() {
 	for i := 0; i < rp.workers; i++ {
 		go rp.sendLoop()
 	}
 }
 
-func (rp *RequestPool) sendLoop() {
+func (rp *requestPool) sendLoop() {
 	for {
 		id, err := rp.batch.WaitOne(rp.ctx)
 		if err != nil {
@@ -75,7 +75,7 @@ func (rp *RequestPool) sendLoop() {
 	}
 }
 
-func (rp *RequestPool) Close() (err error) {
+func (rp *requestPool) Close() (err error) {
 	rp.cancel()
 	return rp.batch.Close()
 }

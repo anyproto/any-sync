@@ -16,7 +16,7 @@ func TestRequestPool_Add(t *testing.T) {
 		setBlock := func() {
 			<-ch
 		}
-		rp := NewRequestPool(2, 2)
+		rp := тewRequestPool(2, 2)
 		err := rp.TryAdd("1", setBlock)
 		require.NoError(t, err)
 		err = rp.TryAdd("2", setBlock)
@@ -46,7 +46,7 @@ func TestRequestPool_Add(t *testing.T) {
 		firstVal := atomic.Int32{}
 		secondVal := atomic.Int32{}
 		thirdVal := atomic.Int32{}
-		rp := NewRequestPool(2, 2)
+		rp := тewRequestPool(2, 2)
 		err := rp.TryAdd("1", func() {
 			firstVal.Store(1)
 		})

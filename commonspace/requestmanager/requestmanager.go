@@ -32,7 +32,7 @@ func New() RequestManager {
 	return &requestManager{
 		workers:   10,
 		queueSize: 300,
-		pools:     map[string]*RequestPool{},
+		pools:     map[string]*requestPool{},
 	}
 }
 
@@ -42,7 +42,7 @@ type MessageHandler interface {
 
 type requestManager struct {
 	sync.Mutex
-	pools         map[string]*RequestPool
+	pools         map[string]*requestPool
 	peerPool      pool.Pool
 	workers       int
 	queueSize     int
@@ -120,7 +120,7 @@ func (r *requestManager) QueueRequest(peerId string, req *spacesyncproto.ObjectS
 	defer r.Unlock()
 	pl, exists := r.pools[peerId]
 	if !exists {
-		pl = NewRequestPool(r.workers, r.queueSize)
+		pl = тewRequestPool(r.workers, r.queueSize)
 		r.pools[peerId] = pl
 		pl.Run()
 	}
