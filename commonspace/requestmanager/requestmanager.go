@@ -120,7 +120,7 @@ func (r *requestManager) QueueRequest(peerId string, req *spacesyncproto.ObjectS
 	defer r.Unlock()
 	pl, exists := r.pools[peerId]
 	if !exists {
-		pl = тewRequestPool(r.workers, r.queueSize)
+		pl = newRequestPool(r.workers, r.queueSize)
 		r.pools[peerId] = pl
 		pl.Run()
 	}

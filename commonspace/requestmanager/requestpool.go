@@ -8,10 +8,10 @@ import (
 	"go.uber.org/zap"
 )
 
-// тewRequestPool creates new requestPool
+// newRequestPool creates new requestPool
 // workers - how many processes will execute tasks
 // maxSize - limit for queue size
-func тewRequestPool(workers, maxSize int) *requestPool {
+func newRequestPool(workers, maxSize int) *requestPool {
 	ctx, cancel := context.WithCancel(context.Background())
 	ss := &requestPool{
 		ctx:     ctx,
