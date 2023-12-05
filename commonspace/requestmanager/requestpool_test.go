@@ -70,6 +70,11 @@ func TestRequestPool_Add(t *testing.T) {
 		}, onRemove)
 		require.Error(t, err)
 		require.Empty(t, rp.entries["3"])
+		rp.Run()
+		time.Sleep(100 * time.Millisecond)
+		rp.Close()
 		require.Equal(t, int32(3), removed.Load())
+		require.Equal(t, int32(1), firstVal.Load())
+		require.Equal(t, int32(2), secondVal.Load())
 	})
 }
