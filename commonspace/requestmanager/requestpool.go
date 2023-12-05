@@ -8,6 +8,11 @@ import (
 	"go.uber.org/zap"
 )
 
+type entry struct {
+	call     func()
+	onRemove func()
+}
+
 // newRequestPool creates new requestPool
 // workers - how many processes will execute tasks
 // maxSize - limit for queue size
@@ -18,7 +23,7 @@ func newRequestPool(workers, maxSize int) *requestPool {
 		cancel:  cancel,
 		workers: workers,
 		batch:   mb.New[string](maxSize),
-		entries: map[string]func(){},
+		entries: map[string]entry{},
 	}
 	return ss
 }
@@ -29,25 +34,36 @@ type requestPool struct {
 	cancel  context.CancelFunc
 	workers int
 
-	entries map[string]func()
+	entries map[string]entry
 	batch   *mb.MB[string]
 	mx      sync.Mutex
 }
 
-func (rp *requestPool) TryAdd(id string, f func()) (err error) {
+func (rp *requestPool) TryAdd(id string, call, remove func()) (err error) {
 	rp.mx.Lock()
-	if _, ok := rp.entries[id]; ok {
-		rp.entries[id] = f
+	if prevEntry, ok := rp.entries[id]; ok {
+		rp.entries[id] = entry{
+			call:     call,
+			onRemove: remove,
+		}
 		rp.mx.Unlock()
+		prevEntry.onRemove()
 		return
 	}
-	rp.entries[id] = f
+	rp.entries[id] = entry{
+		call:     call,
+		onRemove: remove,
+	}
 	rp.mx.Unlock()
 	err = rp.batch.TryAdd(id)
 	if err != nil {
 		rp.mx.Lock()
+		curEntry := rp.entries[id]
 		delete(rp.entries, id)
 		rp.mx.Unlock()
+		if curEntry.onRemove != nil {
+			curEntry.onRemove()
+		}
 	}
 	return
 }
@@ -66,11 +82,12 @@ func (rp *requestPool) sendLoop() {
 			return
 		}
 		rp.mx.Lock()
-		f := rp.entries[id]
+		curEntry := rp.entries[id]
 		delete(rp.entries, id)
 		rp.mx.Unlock()
-		if f != nil {
-			f()
+		if curEntry.call != nil {
+			curEntry.call()
+			curEntry.onRemove()
 		}
 	}
 }
