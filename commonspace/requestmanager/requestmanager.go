@@ -16,7 +16,6 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
-	"github.com/anyproto/any-sync/net/streampool"
 )
 
 const CName = "common.commonspace.requestmanager"
@@ -33,7 +32,7 @@ func New() RequestManager {
 	return &requestManager{
 		workers:   10,
 		queueSize: 300,
-		pools:     map[string]*streampool.ExecPool{},
+		pools:     map[string]*requestPool{},
 	}
 }
 
@@ -43,7 +42,7 @@ type MessageHandler interface {
 
 type requestManager struct {
 	sync.Mutex
-	pools         map[string]*streampool.ExecPool
+	pools         map[string]*requestPool
 	peerPool      pool.Pool
 	workers       int
 	queueSize     int
@@ -121,14 +120,14 @@ func (r *requestManager) QueueRequest(peerId string, req *spacesyncproto.ObjectS
 	defer r.Unlock()
 	pl, exists := r.pools[peerId]
 	if !exists {
-		pl = streampool.NewExecPool(r.workers, r.queueSize)
+		pl = newRequestPool(r.workers, r.queueSize)
 		r.pools[peerId] = pl
 		pl.Run()
 	}
 	r.reqStat.AddQueueRequest(peerId, req)
 	// TODO: for later think when many clients are there,
 	//  we need to close pools for inactive clients
-	return pl.TryAdd(func() {
+	return pl.TryAdd(req.ObjectId, func() {
 		doRequestAndHandle(r, peerId, req)
 		r.reqStat.RemoveQueueRequest(peerId, req)
 	})
