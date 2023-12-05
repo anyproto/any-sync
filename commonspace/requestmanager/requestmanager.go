@@ -127,10 +127,15 @@ func (r *requestManager) QueueRequest(peerId string, req *spacesyncproto.ObjectS
 	r.reqStat.AddQueueRequest(peerId, req)
 	// TODO: for later think when many clients are there,
 	//  we need to close pools for inactive clients
-	return pl.TryAdd(req.ObjectId, func() {
-		doRequestAndHandle(r, peerId, req)
-		r.reqStat.RemoveQueueRequest(peerId, req)
-	})
+	return pl.TryAdd(
+		req.ObjectId,
+		func() {
+			doRequestAndHandle(r, peerId, req)
+		},
+		func() {
+			r.reqStat.RemoveQueueRequest(peerId, req)
+		},
+	)
 }
 
 var doRequestAndHandle = (*requestManager).requestAndHandle
