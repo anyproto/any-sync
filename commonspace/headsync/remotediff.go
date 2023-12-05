@@ -74,6 +74,7 @@ func (r *remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldif
 			From:     rg.From,
 			To:       rg.To,
 			Elements: rg.Elements,
+			Limit:    uint32(rg.Limit),
 		})
 	}
 	req := &spacesyncproto.HeadSyncRequest{

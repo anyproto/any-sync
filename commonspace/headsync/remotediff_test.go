@@ -13,32 +13,37 @@ import (
 )
 
 func TestRemote(t *testing.T) {
-	ldLocal := ldiff.New(32, 256)
-	ldRemote := ldiff.New(32, 256)
-	var (
-		localEls  []ldiff.Element
-		remoteEls []ldiff.Element
-	)
+	contLocal := ldiff.NewDiffContainer(32, 256)
+	contRemote := ldiff.NewDiffContainer(32, 256)
 
-	for i := 0; i < 100000; i++ {
-		el := ldiff.Element{
-			Id:   fmt.Sprint(i),
-			Head: fmt.Sprint(i),
+	test := func(t *testing.T, ldLocal, ldRemote ldiff.Diff) {
+		var (
+			localEls  []ldiff.Element
+			remoteEls []ldiff.Element
+		)
+
+		for i := 0; i < 100000; i++ {
+			el := ldiff.Element{
+				Id:   fmt.Sprint(i),
+				Head: fmt.Sprint(i),
+			}
+			remoteEls = append(remoteEls, el)
+			if i%100 == 0 {
+				localEls = append(localEls, el)
+			}
 		}
-		remoteEls = append(remoteEls, el)
-		if i%100 == 0 {
-			localEls = append(localEls, el)
-		}
+		ldLocal.Set(localEls...)
+		ldRemote.Set(remoteEls...)
+
+		rd := NewRemoteDiff("1", &mockClient{l: ldRemote})
+		newIds, changedIds, removedIds, err := ldLocal.Diff(context.Background(), rd)
+		require.NoError(t, err)
+		assert.Len(t, newIds, 99000)
+		assert.Len(t, changedIds, 0)
+		assert.Len(t, removedIds, 0)
 	}
-	ldLocal.Set(localEls...)
-	ldRemote.Set(remoteEls...)
-
-	rd := NewRemoteDiff("1", &mockClient{l: ldRemote})
-	newIds, changedIds, removedIds, err := ldLocal.Diff(context.Background(), rd)
-	require.NoError(t, err)
-	assert.Len(t, newIds, 99000)
-	assert.Len(t, changedIds, 0)
-	assert.Len(t, removedIds, 0)
+	test(t, contLocal.PrecalculatedDiff(), contRemote.PrecalculatedDiff())
+	test(t, contLocal.InitialDiff(), contRemote.InitialDiff())
 }
 
 type mockClient struct {
