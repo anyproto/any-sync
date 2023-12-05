@@ -71,8 +71,10 @@ func (r *remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldif
 	pbRanges := make([]*spacesyncproto.HeadSyncRange, 0, len(ranges))
 	for _, rg := range ranges {
 		pbRanges = append(pbRanges, &spacesyncproto.HeadSyncRange{
-			From: rg.From,
-			To:   rg.To,
+			From:     rg.From,
+			To:       rg.To,
+			Elements: rg.Elements,
+			Limit:    uint32(rg.Limit),
 		})
 	}
 	req := &spacesyncproto.HeadSyncRequest{
