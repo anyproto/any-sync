@@ -21,11 +21,10 @@ var (
 
 const (
 	anytypeAccountOldPrefix = "m/44'/607'"
+
 	// https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 	anytypeAccountNewPrefix = "m/44'/2046'"
-)
 
-const (
 	// https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki
 	// standard Ethereum path (MetaMask, MyEtherWallet, etc) is
 	// "m/44'/60'/0'/0/0" for first account
