@@ -3,12 +3,13 @@ module github.com/anyproto/any-sync
 go 1.19
 
 require (
-	filippo.io/edwards25519 v1.0.0
+	filippo.io/edwards25519 v1.1.0
 	github.com/anyproto/go-chash v0.1.0
 	github.com/anyproto/go-slip10 v1.0.0
 	github.com/anyproto/go-slip21 v1.0.0
 	github.com/cespare/xxhash v1.1.0
 	github.com/cheggaaa/mb/v3 v3.0.2
+	github.com/ethereum/go-ethereum v1.10.4
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-graphviz v0.1.1
 	github.com/gogo/protobuf v1.3.2
@@ -49,7 +50,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
-	github.com/ethereum/go-ethereum v1.10.4 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
