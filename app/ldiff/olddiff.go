@@ -21,10 +21,10 @@ type olddiff struct {
 	compareThreshold int
 	hashIsDirty      atomic.Bool
 	hash             []byte
-	mu               sync.RWMutex
+	mu               *sync.RWMutex
 }
 
-func newOldDiff(divideFactor, compareThreshold int, sl *skiplist.SkipList) *olddiff {
+func newOldDiff(divideFactor, compareThreshold int, sl *skiplist.SkipList, mu *sync.RWMutex) *olddiff {
 	if divideFactor < 2 {
 		divideFactor = 2
 	}
@@ -35,6 +35,7 @@ func newOldDiff(divideFactor, compareThreshold int, sl *skiplist.SkipList) *oldd
 		divideFactor:     divideFactor,
 		compareThreshold: compareThreshold,
 		sl:               sl,
+		mu:               mu,
 	}
 	return d
 }

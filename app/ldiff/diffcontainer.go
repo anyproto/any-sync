@@ -28,15 +28,11 @@ func (d *diffContainer) PrecalculatedDiff() Diff {
 }
 
 func (d *diffContainer) Set(elements ...Element) {
-	d.initial.mu.Lock()
-	defer d.initial.mu.Unlock()
 	defer d.initial.markHashDirty()
 	d.precalculated.Set(elements...)
 }
 
 func (d *diffContainer) RemoveId(id string) error {
-	d.initial.mu.Lock()
-	defer d.initial.mu.Unlock()
 	defer d.initial.markHashDirty()
 	return d.precalculated.RemoveId(id)
 }
@@ -48,7 +44,7 @@ func (d *diffContainer) DiffTypeCheck(ctx context.Context, typeChecker RemoteTyp
 func NewDiffContainer(divideFactor, compareThreshold int) DiffContainer {
 	newDiff := newDiff(divideFactor, compareThreshold)
 	// this was for old diffs
-	oldDiff := newOldDiff(16, 16, newDiff.sl)
+	oldDiff := newOldDiff(16, 16, newDiff.sl, &newDiff.mu)
 	return &diffContainer{
 		initial:       oldDiff,
 		precalculated: newDiff,
