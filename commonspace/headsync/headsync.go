@@ -50,7 +50,7 @@ type headSync struct {
 
 	periodicSync       periodicsync.PeriodicSync
 	storage            spacestorage.SpaceStorage
-	diff               ldiff.Diff
+	diffContainer      ldiff.DiffContainer
 	log                logger.CtxLogger
 	syncer             DiffSyncer
 	configuration      nodeconf.NodeConf
@@ -77,7 +77,7 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	h.log = log.With(zap.String("spaceId", h.spaceId))
 	h.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
-	h.diff = ldiff.New(16, 16)
+	h.diffContainer = ldiff.NewDiffContainer(32, 256)
 	h.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	h.credentialProvider = a.MustComponent(credentialprovider.CName).(credentialprovider.CredentialProvider)
 	h.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusService)
@@ -109,7 +109,11 @@ func (h *headSync) Run(ctx context.Context) (err error) {
 }
 
 func (h *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
-	return HandleRangeRequest(ctx, h.diff, req)
+	if req.DiffType == spacesyncproto.DiffType_Precalculated {
+		return HandleRangeRequest(ctx, h.diffContainer.PrecalculatedDiff(), req)
+	} else {
+		return HandleRangeRequest(ctx, h.diffContainer.InitialDiff(), req)
+	}
 }
 
 func (h *headSync) UpdateHeads(id string, heads []string) {
@@ -117,7 +121,7 @@ func (h *headSync) UpdateHeads(id string, heads []string) {
 }
 
 func (h *headSync) AllIds() []string {
-	return h.diff.Ids()
+	return h.diffContainer.PrecalculatedDiff().Ids()
 }
 
 func (h *headSync) ExternalIds() []string {
@@ -129,7 +133,7 @@ func (h *headSync) ExternalIds() []string {
 }
 
 func (h *headSync) DebugAllHeads() (res []TreeHeads) {
-	els := h.diff.Elements()
+	els := h.diffContainer.PrecalculatedDiff().Elements()
 	for _, el := range els {
 		idHead := TreeHeads{
 			Id:    el.Id,
@@ -145,6 +149,7 @@ func (h *headSync) RemoveObjects(ids []string) {
 }
 
 func (h *headSync) Close(ctx context.Context) (err error) {
+	h.storage.WriteOldSpaceHash(h.diffContainer.InitialDiff().Hash())
 	h.periodicSync.Close()
 	return
 }
@@ -169,8 +174,11 @@ func (h *headSync) fillDiff(objectIds []string) {
 		Id:   h.syncAcl.Id(),
 		Head: h.syncAcl.Head().Id,
 	})
-	h.diff.Set(els...)
-	if err := h.storage.WriteSpaceHash(h.diff.Hash()); err != nil {
+	h.diffContainer.Set(els...)
+	if err := h.storage.WriteSpaceHash(h.diffContainer.PrecalculatedDiff().Hash()); err != nil {
 		h.log.Error("can't write space hash", zap.Error(err))
+	}
+	if err := h.storage.WriteOldSpaceHash(h.diffContainer.InitialDiff().Hash()); err != nil {
+		h.log.Error("can't write old space hash", zap.Error(err))
 	}
 }

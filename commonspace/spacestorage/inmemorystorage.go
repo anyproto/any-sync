@@ -2,6 +2,7 @@ package spacestorage
 
 import (
 	"context"
+	"sync"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
@@ -9,8 +10,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-
-	"sync"
 )
 
 type InMemorySpaceStorage struct {
@@ -22,6 +21,7 @@ type InMemorySpaceStorage struct {
 	aclStorage      liststorage.ListStorage
 	spaceHeader     *spacesyncproto.RawSpaceHeaderWithId
 	spaceHash       string
+	oldSpaceHash    string
 	sync.Mutex
 }
 
@@ -162,10 +162,23 @@ func (i *InMemorySpaceStorage) WriteSpaceHash(hash string) error {
 	return nil
 }
 
+func (i *InMemorySpaceStorage) WriteOldSpaceHash(hash string) error {
+	i.Lock()
+	defer i.Unlock()
+	i.oldSpaceHash = hash
+	return nil
+}
+
 func (i *InMemorySpaceStorage) ReadSpaceHash() (hash string, err error) {
 	i.Lock()
 	defer i.Unlock()
 	return i.spaceHash, nil
+}
+
+func (i *InMemorySpaceStorage) ReadOldSpaceHash() (hash string, err error) {
+	i.Lock()
+	defer i.Unlock()
+	return i.oldSpaceHash, nil
 }
 
 func (i *InMemorySpaceStorage) AllTrees() map[string]treestorage.TreeStorage {

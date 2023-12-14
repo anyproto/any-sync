@@ -37,6 +37,7 @@ message HeadSyncRange {
     uint64 from = 1;
     uint64 to = 2;
     uint32 limit = 3;
+    bool elements = 4;
 }
 
 // HeadSyncResult presenting a response for one range
@@ -56,11 +57,13 @@ message HeadSyncResultElement {
 message HeadSyncRequest {
     string spaceId = 1;
     repeated HeadSyncRange ranges = 2;
+    DiffType diffType = 3;
 }
 
 // HeadSyncResponse is a response for HeadSync
 message HeadSyncResponse {
     repeated HeadSyncResult results = 1;
+    DiffType diffType = 2;
 }
 
 // ObjectSyncMessage is a message sent on object sync
@@ -185,4 +188,10 @@ message AclGetRecordsRequest {
 // AclGetRecordsResponse contains list of marshaled consensusproto.RawRecordWithId
 message AclGetRecordsResponse {
     repeated bytes records = 1;
+}
+
+// DiffType is a type of diff
+enum DiffType {
+    Initial = 0;
+    Precalculated = 1;
 }
