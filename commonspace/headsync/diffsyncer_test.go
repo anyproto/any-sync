@@ -59,6 +59,10 @@ func (p pushSpaceRequestMatcher) String() string {
 type mockPeer struct {
 }
 
+func (m mockPeer) CloseChan() <-chan struct{} {
+	return nil
+}
+
 func (m mockPeer) SetTTL(ttl time.Duration) {
 	return
 }

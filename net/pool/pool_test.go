@@ -4,16 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	net2 "net"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"storj.io/drpc"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	net2 "net"
-	"storj.io/drpc"
-	"testing"
-	"time"
 )
 
 var ctx = context.Background()
@@ -275,4 +277,8 @@ func (t *testPeer) IsClosed() bool {
 	default:
 		return false
 	}
+}
+
+func (t *testPeer) CloseChan() <-chan struct{} {
+	return t.closed
 }
