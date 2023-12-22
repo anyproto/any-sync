@@ -9,6 +9,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.uber.org/zap"
+	"storj.io/drpc"
+	"storj.io/drpc/drpcconn"
+	"storj.io/drpc/drpcmanager"
+	"storj.io/drpc/drpcstream"
+	"storj.io/drpc/drpcwire"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net/connutil"
@@ -16,12 +23,6 @@ import (
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/net/transport"
-	"go.uber.org/zap"
-	"storj.io/drpc"
-	"storj.io/drpc/drpcconn"
-	"storj.io/drpc/drpcmanager"
-	"storj.io/drpc/drpcstream"
-	"storj.io/drpc/drpcwire"
 )
 
 var log = logger.NewNamed("common.net.peer")
@@ -62,6 +63,7 @@ type Peer interface {
 	DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error
 
 	IsClosed() bool
+	CloseChan() <-chan struct{}
 
 	// SetTTL overrides the default pool ttl
 	SetTTL(ttl time.Duration)
