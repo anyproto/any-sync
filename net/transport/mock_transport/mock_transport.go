@@ -133,6 +133,20 @@ func (mr *MockMultiConnMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockMultiConn)(nil).Close))
 }
 
+// CloseChan mocks base method.
+func (m *MockMultiConn) CloseChan() <-chan struct{} {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CloseChan")
+	ret0, _ := ret[0].(<-chan struct{})
+	return ret0
+}
+
+// CloseChan indicates an expected call of CloseChan.
+func (mr *MockMultiConnMockRecorder) CloseChan() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseChan", reflect.TypeOf((*MockMultiConn)(nil).CloseChan))
+}
+
 // Context mocks base method.
 func (m *MockMultiConn) Context() context.Context {
 	m.ctrl.T.Helper()

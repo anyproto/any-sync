@@ -4,12 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-	"sync"
-	"time"
-
-	"go.uber.org/zap"
-
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net/peer"
@@ -19,6 +13,9 @@ import (
 	"github.com/anyproto/any-sync/net/transport/quic"
 	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
+	"go.uber.org/zap"
+	"strings"
+	"sync"
 )
 
 const CName = "net.peerservice"
@@ -43,16 +40,14 @@ type PeerService interface {
 }
 
 type peerService struct {
-	yamux         transport.Transport
-	quic          transport.Transport
-	nodeConf      nodeconf.NodeConf
-	peerAddrs     map[string][]string
-	ignoreAddrs   *sync.Map
-	ignoreTimeout time.Duration
-	pool          pool.Pool
-	server        server.DRPCServer
-	preferQuic    bool
-	mu            sync.RWMutex
+	yamux      transport.Transport
+	quic       transport.Transport
+	nodeConf   nodeconf.NodeConf
+	peerAddrs  map[string][]string
+	pool       pool.Pool
+	server     server.DRPCServer
+	preferQuic bool
+	mu         sync.RWMutex
 }
 
 func (p *peerService) Init(a *app.App) (err error) {
@@ -62,8 +57,6 @@ func (p *peerService) Init(a *app.App) (err error) {
 	p.pool = a.MustComponent(pool.CName).(pool.Pool)
 	p.server = a.MustComponent(server.CName).(server.DRPCServer)
 	p.peerAddrs = map[string][]string{}
-	p.ignoreAddrs = &sync.Map{}
-	p.ignoreTimeout = time.Minute * 3
 	p.yamux.SetAccepter(p)
 	p.quic.SetAccepter(p)
 	return nil
@@ -86,20 +79,20 @@ func (p *peerService) PreferQuic(prefer bool) {
 
 func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, err error) {
 	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	addrs, err := p.getPeerAddrs(peerId)
+	if err != nil {
+		return
+	}
+
+	var mc transport.MultiConn
+	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
+
 	var schemes = yamuxPreferSchemes
 	if p.preferQuic {
 		schemes = quicPreferSchemes
 	}
-
-	addrs, err := p.getPeerAddrs(peerId)
-	if err != nil {
-		p.mu.RUnlock()
-		return
-	}
-	p.mu.RUnlock()
-
-	var mc transport.MultiConn
-	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
 
 	err = ErrAddrsNotFound
 	for _, sch := range schemes {
@@ -132,20 +125,14 @@ func (p *peerService) dialScheme(ctx context.Context, sch string, addrs []string
 	}
 
 	err = ErrAddrsNotFound
-	now := time.Now()
 	for _, addr := range addrs {
 		if scheme(addr) != sch {
 			continue
 		}
-		if tm, ok := p.ignoreAddrs.Load(addr); ok && tm.(time.Time).After(now) {
-			continue
-		}
 		if mc, err = tr.Dial(ctx, stripScheme(addr)); err == nil {
-			p.ignoreAddrs.Delete(addr)
 			return
 		} else {
 			log.InfoCtx(ctx, "can't connect to host", zap.String("addr", addr), zap.Error(err))
-			p.ignoreAddrs.Store(addr, time.Now().Add(p.ignoreTimeout))
 		}
 	}
 	return

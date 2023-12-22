@@ -3,10 +3,12 @@ package quic
 import (
 	"context"
 	"errors"
+	"net"
+
+	"github.com/quic-go/quic-go"
+
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/transport"
-	"github.com/quic-go/quic-go"
-	"net"
 )
 
 func newConn(cctx context.Context, qconn quic.Connection) transport.MultiConn {
@@ -61,11 +63,15 @@ func (q *quicMultiConn) Addr() string {
 
 func (q *quicMultiConn) IsClosed() bool {
 	select {
-	case <-q.Connection.Context().Done():
+	case <-q.CloseChan():
 		return true
 	default:
 		return false
 	}
+}
+
+func (q *quicMultiConn) CloseChan() <-chan struct{} {
+	return q.Connection.Context().Done()
 }
 
 func (q *quicMultiConn) Close() error {

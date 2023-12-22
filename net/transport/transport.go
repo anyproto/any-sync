@@ -37,6 +37,8 @@ type MultiConn interface {
 	Addr() string
 	// IsClosed returns true when connection is closed
 	IsClosed() bool
+	// CloseChan returns a channel that will be closed with connection
+	CloseChan() <-chan struct{}
 	// Close closes the connection and all sub connections
 	Close() error
 }
