@@ -69,6 +69,20 @@ func (mr *MockPeerMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockPeer)(nil).Close))
 }
 
+// CloseChan mocks base method.
+func (m *MockPeer) CloseChan() <-chan struct{} {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CloseChan")
+	ret0, _ := ret[0].(<-chan struct{})
+	return ret0
+}
+
+// CloseChan indicates an expected call of CloseChan.
+func (mr *MockPeerMockRecorder) CloseChan() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseChan", reflect.TypeOf((*MockPeer)(nil).CloseChan))
+}
+
 // Context mocks base method.
 func (m *MockPeer) Context() context.Context {
 	m.ctrl.T.Helper()
