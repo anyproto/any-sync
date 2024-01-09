@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -42,12 +41,11 @@ type aclWaiter struct {
 	spaceId    string
 	prevHeadId string
 
-	onFinish func()
-	once     sync.Once
-	mx       sync.Mutex
+	onFinish func() error
+	finished bool
 }
 
-func New(spaceId string, onFinish func()) AclWaiter {
+func New(spaceId string, onFinish func() error) AclWaiter {
 	return &aclWaiter{
 		spaceId:  spaceId,
 		onFinish: onFinish,
@@ -66,9 +64,7 @@ func (a *aclWaiter) Name() (name string) {
 }
 
 func (a *aclWaiter) loop(ctx context.Context) error {
-	a.mx.Lock()
 	if a.acl == nil {
-		a.mx.Unlock()
 		res, err := a.client.AclGetRecords(ctx, "")
 		if err != nil {
 			return err
@@ -84,12 +80,10 @@ func (a *aclWaiter) loop(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		a.mx.Lock()
 		a.acl = acl
 		a.prevHeadId = acl.Head().Id
 	} else {
 		prevId := a.prevHeadId
-		a.mx.Unlock()
 		res, err := a.client.AclGetRecords(ctx, prevId)
 		if err != nil {
 			return err
@@ -97,22 +91,24 @@ func (a *aclWaiter) loop(ctx context.Context) error {
 		if len(res) == 0 {
 			return nil
 		}
-		a.mx.Lock()
 		for _, rec := range res {
 			err := a.acl.AddRawRecord(rec)
 			if err != nil && !errors.Is(err, list.ErrRecordAlreadyExists) {
-				a.mx.Unlock()
 				return err
 			}
 		}
 	}
 	// if the user was added
 	if !a.acl.AclState().Permissions(a.keys.SignKey.GetPublic()).NoPermissions() {
-		a.mx.Unlock()
-		a.once.Do(a.onFinish)
-		return nil
+		if !a.finished {
+			err := a.onFinish()
+			if err == nil {
+				a.finished = true
+			} else {
+				return err
+			}
+		}
 	}
-	a.mx.Unlock()
 	return nil
 }
 
