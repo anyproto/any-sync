@@ -69,9 +69,8 @@ func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 
 	// building request join
 	requestJoin, err := accountAcl.RecordBuilder().BuildRequestJoin(RequestJoinPayload{
-		InviteRecordId: inviteRec.Id,
-		InviteKey:      inv.InviteKey,
-		Metadata:       mockMetadata,
+		InviteKey: inv.InviteKey,
+		Metadata:  mockMetadata,
 	})
 	require.NoError(t, err)
 	requestJoinRec := WrapAclRecord(requestJoin)
@@ -160,8 +159,7 @@ func TestAclList_RequestDecline(t *testing.T) {
 
 	// building request join
 	requestJoin, err := accountAcl.RecordBuilder().BuildRequestJoin(RequestJoinPayload{
-		InviteRecordId: inviteRec.Id,
-		InviteKey:      inv.InviteKey,
+		InviteKey: inv.InviteKey,
 	})
 	require.NoError(t, err)
 	requestJoinRec := WrapAclRecord(requestJoin)

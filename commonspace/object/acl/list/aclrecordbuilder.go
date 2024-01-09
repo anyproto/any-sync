@@ -21,9 +21,8 @@ type RootContent struct {
 }
 
 type RequestJoinPayload struct {
-	InviteRecordId string
-	InviteKey      crypto.PrivKey
-	Metadata       []byte
+	InviteKey crypto.PrivKey
+	Metadata  []byte
 }
 
 type ReadKeyChangePayload struct {
@@ -157,7 +156,13 @@ func (a *aclRecordBuilder) BuildInviteRevoke(inviteRecordId string) (rawRecord *
 }
 
 func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawRecord *consensusproto.RawRecord, err error) {
-	key, exists := a.state.inviteKeys[payload.InviteRecordId]
+	var inviteId string
+	for id, key := range a.state.inviteKeys {
+		if key.Equals(payload.InviteKey.GetPublic()) {
+			inviteId = id
+		}
+	}
+	key, exists := a.state.inviteKeys[inviteId]
 	if !exists {
 		err = ErrNoSuchInvite
 		return
@@ -190,7 +195,7 @@ func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawReco
 	}
 	joinRec := &aclrecordproto.AclAccountRequestJoin{
 		InviteIdentity:          protoIdentity,
-		InviteRecordId:          payload.InviteRecordId,
+		InviteRecordId:          inviteId,
 		InviteIdentitySignature: signature,
 		Metadata:                encMeta,
 	}
