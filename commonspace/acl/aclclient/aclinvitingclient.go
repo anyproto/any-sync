@@ -89,7 +89,8 @@ func (c *aclInvitingClient) RequestJoin(ctx context.Context, spaceId string, pay
 	pubIdentity := payload.InviteKey.GetPublic()
 	for _, rec := range acl.AclState().JoinRecords() {
 		if rec.RequestIdentity.Equals(pubIdentity) {
-			return fmt.Errorf("request already sent")
+			// that means that we already requested to join
+			return nil
 		}
 	}
 	rec, err := acl.RecordBuilder().BuildRequestJoin(payload)
