@@ -17,18 +17,17 @@ const CName = "common.acl.aclclient"
 
 type AclInvitingClient interface {
 	app.Component
-	AclGetRecords(ctx context.Context, aclHead string) ([]*consensusproto.RawRecordWithId, error)
-	RequestJoin(ctx context.Context, acl list.AclList, payload list.RequestJoinPayload) error
+	AclGetRecords(ctx context.Context, spaceId, aclHead string) ([]*consensusproto.RawRecordWithId, error)
+	RequestJoin(ctx context.Context, spaceId string, acl list.AclList, payload list.RequestJoinPayload) error
 }
 
 type aclInvitingClient struct {
 	nodeConf nodeconf.Service
 	pool     pool.Pool
-	spaceId  string
 }
 
-func NewAclInvitingClient(spaceId string) AclInvitingClient {
-	return &aclInvitingClient{spaceId: spaceId}
+func NewAclInvitingClient() AclInvitingClient {
+	return &aclInvitingClient{}
 }
 
 func (c *aclInvitingClient) Name() (name string) {
@@ -41,7 +40,7 @@ func (c *aclInvitingClient) Init(a *app.App) (err error) {
 	return nil
 }
 
-func (c *aclInvitingClient) AclGetRecords(ctx context.Context, aclHead string) (recs []*consensusproto.RawRecordWithId, err error) {
+func (c *aclInvitingClient) AclGetRecords(ctx context.Context, spaceId, aclHead string) (recs []*consensusproto.RawRecordWithId, err error) {
 	var res *spacesyncproto.AclGetRecordsResponse
 	err = c.doClient(ctx, aclHead, func(cl spacesyncproto.DRPCSpaceSyncClient) error {
 		var err error
@@ -65,7 +64,7 @@ func (c *aclInvitingClient) AclGetRecords(ctx context.Context, aclHead string) (
 	return
 }
 
-func (c *aclInvitingClient) RequestJoin(ctx context.Context, acl list.AclList, payload list.RequestJoinPayload) (err error) {
+func (c *aclInvitingClient) RequestJoin(ctx context.Context, spaceId string, acl list.AclList, payload list.RequestJoinPayload) (err error) {
 	acl.RLock()
 	res, err := acl.RecordBuilder().BuildRequestJoin(payload)
 	if err != nil {

@@ -65,7 +65,7 @@ func (a *aclWaiter) Name() (name string) {
 
 func (a *aclWaiter) loop(ctx context.Context) error {
 	if a.acl == nil {
-		res, err := a.client.AclGetRecords(ctx, "")
+		res, err := a.client.AclGetRecords(ctx, a.spaceId, "")
 		if err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ func (a *aclWaiter) loop(ctx context.Context) error {
 		a.prevHeadId = acl.Head().Id
 	} else {
 		prevId := a.prevHeadId
-		res, err := a.client.AclGetRecords(ctx, prevId)
+		res, err := a.client.AclGetRecords(ctx, a.spaceId, prevId)
 		if err != nil {
 			return err
 		}
