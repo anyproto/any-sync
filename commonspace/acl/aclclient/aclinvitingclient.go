@@ -45,7 +45,7 @@ func (c *aclInvitingClient) AclGetRecords(ctx context.Context, spaceId, aclHead 
 	err = c.doClient(ctx, aclHead, func(cl spacesyncproto.DRPCSpaceSyncClient) error {
 		var err error
 		res, err = cl.AclGetRecords(ctx, &spacesyncproto.AclGetRecordsRequest{
-			SpaceId: c.spaceId,
+			SpaceId: spaceId,
 			AclHead: aclHead,
 		})
 		return err
@@ -78,7 +78,7 @@ func (c *aclInvitingClient) RequestJoin(ctx context.Context, spaceId string, acl
 	}
 	return c.doClient(ctx, acl.Id(), func(cl spacesyncproto.DRPCSpaceSyncClient) error {
 		_, err = cl.AclAddRecord(ctx, &spacesyncproto.AclAddRecordRequest{
-			SpaceId: c.spaceId,
+			SpaceId: spaceId,
 			Payload: data,
 		})
 		return err
