@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_coordinatorclient/mock_coordinatorclient.go github.com/anyproto/any-sync/coordinator/coordinatorclient CoordinatorClient
 //
+
 // Package mock_coordinatorclient is a generated GoMock package.
 package mock_coordinatorclient
 
@@ -15,6 +16,7 @@ import (
 	app "github.com/anyproto/any-sync/app"
 	coordinatorclient "github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	coordinatorproto "github.com/anyproto/any-sync/coordinator/coordinatorproto"
+	identityrepoproto "github.com/anyproto/any-sync/identityrepo/identityrepoproto"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -98,6 +100,35 @@ func (m *MockCoordinatorClient) FileLimitCheck(arg0 context.Context, arg1 string
 func (mr *MockCoordinatorClientMockRecorder) FileLimitCheck(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileLimitCheck", reflect.TypeOf((*MockCoordinatorClient)(nil).FileLimitCheck), arg0, arg1, arg2)
+}
+
+// IdentityRepoGet mocks base method.
+func (m *MockCoordinatorClient) IdentityRepoGet(arg0 context.Context, arg1, arg2 []string) ([]*identityrepoproto.DataWithIdentity, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IdentityRepoGet", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]*identityrepoproto.DataWithIdentity)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IdentityRepoGet indicates an expected call of IdentityRepoGet.
+func (mr *MockCoordinatorClientMockRecorder) IdentityRepoGet(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IdentityRepoGet", reflect.TypeOf((*MockCoordinatorClient)(nil).IdentityRepoGet), arg0, arg1, arg2)
+}
+
+// IdentityRepoPut mocks base method.
+func (m *MockCoordinatorClient) IdentityRepoPut(arg0 context.Context, arg1 string, arg2 []*identityrepoproto.Data) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IdentityRepoPut", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// IdentityRepoPut indicates an expected call of IdentityRepoPut.
+func (mr *MockCoordinatorClientMockRecorder) IdentityRepoPut(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IdentityRepoPut", reflect.TypeOf((*MockCoordinatorClient)(nil).IdentityRepoPut), arg0, arg1, arg2)
 }
 
 // Init mocks base method.
