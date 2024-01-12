@@ -401,6 +401,7 @@ func (st *AclState) applyRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, r
 	st.requestRecords[record.Id] = RequestRecord{
 		RequestIdentity: record.Identity,
 		RequestMetadata: ch.Metadata,
+		KeyRecordId:     st.CurrentReadKeyId(),
 		Type:            RequestTypeJoin,
 	}
 	return nil
@@ -420,7 +421,7 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 		PubKey:          acceptIdentity,
 		Permissions:     AclPermissions(ch.Permissions),
 		RequestMetadata: requestRecord.RequestMetadata,
-		KeyRecordId:     st.CurrentReadKeyId(),
+		KeyRecordId:     requestRecord.KeyRecordId,
 	}
 	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity))
 	if !st.pubKey.Equals(acceptIdentity) {
@@ -601,10 +602,21 @@ func (st *AclState) Permissions(identity crypto.PubKey) AclPermissions {
 	return state.Permissions
 }
 
-func (st *AclState) JoinRecords() (records []RequestRecord) {
+func (st *AclState) JoinRecords(decrypt bool) (records []RequestRecord, err error) {
 	for _, recId := range st.pendingRequests {
 		rec := st.requestRecords[recId]
 		if rec.Type == RequestTypeJoin {
+			if decrypt {
+				aclKeys := st.keys[rec.KeyRecordId]
+				if aclKeys.MetadataPrivKey == nil {
+					return nil, ErrFailedToDecrypt
+				}
+				res, err := aclKeys.MetadataPrivKey.Decrypt(rec.RequestMetadata)
+				if err != nil {
+					return nil, err
+				}
+				rec.RequestMetadata = res
+			}
 			records = append(records, rec)
 		}
 	}

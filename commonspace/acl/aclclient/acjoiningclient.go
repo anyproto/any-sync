@@ -19,34 +19,34 @@ import (
 
 const CName = "common.acl.aclclient"
 
-type AclInvitingClient interface {
+type AclJoiningClient interface {
 	app.Component
 	AclGetRecords(ctx context.Context, spaceId, aclHead string) ([]*consensusproto.RawRecordWithId, error)
 	RequestJoin(ctx context.Context, spaceId string, payload list.RequestJoinPayload) error
 }
 
-type aclInvitingClient struct {
+type aclJoiningClient struct {
 	nodeConf nodeconf.Service
 	pool     pool.Pool
 	keys     *accountdata.AccountKeys
 }
 
-func NewAclInvitingClient() AclInvitingClient {
-	return &aclInvitingClient{}
+func NewAclJoiningClient() AclJoiningClient {
+	return &aclJoiningClient{}
 }
 
-func (c *aclInvitingClient) Name() (name string) {
+func (c *aclJoiningClient) Name() (name string) {
 	return CName
 }
 
-func (c *aclInvitingClient) Init(a *app.App) (err error) {
+func (c *aclJoiningClient) Init(a *app.App) (err error) {
 	c.pool = a.MustComponent(pool.CName).(pool.Pool)
 	c.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	c.keys = a.MustComponent(accountservice.CName).(accountservice.Service).Account()
 	return nil
 }
 
-func (c *aclInvitingClient) AclGetRecords(ctx context.Context, spaceId, aclHead string) (recs []*consensusproto.RawRecordWithId, err error) {
+func (c *aclJoiningClient) AclGetRecords(ctx context.Context, spaceId, aclHead string) (recs []*consensusproto.RawRecordWithId, err error) {
 	var res *spacesyncproto.AclGetRecordsResponse
 	err = c.doClient(ctx, aclHead, func(cl spacesyncproto.DRPCSpaceSyncClient) error {
 		var err error
@@ -70,7 +70,7 @@ func (c *aclInvitingClient) AclGetRecords(ctx context.Context, spaceId, aclHead 
 	return
 }
 
-func (c *aclInvitingClient) RequestJoin(ctx context.Context, spaceId string, payload list.RequestJoinPayload) (err error) {
+func (c *aclJoiningClient) RequestJoin(ctx context.Context, spaceId string, payload list.RequestJoinPayload) (err error) {
 	res, err := c.AclGetRecords(ctx, spaceId, "")
 	if err != nil {
 		return err
@@ -87,7 +87,11 @@ func (c *aclInvitingClient) RequestJoin(ctx context.Context, spaceId string, pay
 		return err
 	}
 	pubIdentity := payload.InviteKey.GetPublic()
-	for _, rec := range acl.AclState().JoinRecords() {
+	joinRecs, err := acl.AclState().JoinRecords(false)
+	if err != nil {
+		return err
+	}
+	for _, rec := range joinRecs {
 		if rec.RequestIdentity.Equals(pubIdentity) {
 			// that means that we already requested to join
 			return nil
@@ -110,7 +114,7 @@ func (c *aclInvitingClient) RequestJoin(ctx context.Context, spaceId string, pay
 	})
 }
 
-func (c *aclInvitingClient) doClient(ctx context.Context, spaceId string, f func(cl spacesyncproto.DRPCSpaceSyncClient) error) error {
+func (c *aclJoiningClient) doClient(ctx context.Context, spaceId string, f func(cl spacesyncproto.DRPCSpaceSyncClient) error) error {
 	p, err := c.pool.GetOneOf(ctx, c.nodeConf.NodeIds(spaceId))
 	if err != nil {
 		return err

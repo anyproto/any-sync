@@ -32,7 +32,7 @@ type AclWaiter interface {
 }
 
 type aclWaiter struct {
-	client aclclient.AclInvitingClient
+	client aclclient.AclJoiningClient
 	keys   *accountdata.AccountKeys
 
 	periodicCall periodicsync.PeriodicSync
@@ -53,7 +53,7 @@ func New(spaceId string, onFinish func() error) AclWaiter {
 }
 
 func (a *aclWaiter) Init(app *app.App) (err error) {
-	a.client = app.MustComponent(aclclient.CName).(aclclient.AclInvitingClient)
+	a.client = app.MustComponent(aclclient.CName).(aclclient.AclJoiningClient)
 	a.keys = app.MustComponent(accountservice.CName).(accountservice.Service).Account()
 	a.periodicCall = periodicsync.NewPeriodicSync(checkIntervalSecs, timeout, a.loop, log.With(zap.String("spaceId", a.spaceId)))
 	return nil
