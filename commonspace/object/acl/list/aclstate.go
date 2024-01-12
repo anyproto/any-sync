@@ -178,6 +178,59 @@ func (st *AclState) StateAtRecord(id string, pubKey crypto.PubKey) (AclAccountSt
 	return AclAccountState{}, ErrNoSuchAccount
 }
 
+func (st *AclState) CurrentStates() []AclAccountState {
+	var res []AclAccountState
+	for _, state := range st.accountStates {
+		res = append(res, state)
+	}
+	return res
+}
+
+type AclAccountDiff struct {
+	Added   []AclAccountState
+	Removed []AclAccountState
+	Changed []AclAccountState
+}
+
+func (st *AclState) ChangedStates(first, last string) (diff AclAccountDiff, err error) {
+	firstStates, ok := st.statesAtRecord[first]
+	if !ok {
+		log.Errorf("missing record at id %s", first)
+		return
+	}
+	lastStates, ok := st.statesAtRecord[last]
+	if !ok {
+		log.Errorf("missing record at id %s", last)
+		return
+	}
+	findFunc := func(states []AclAccountState, state AclAccountState) int {
+		for idx, st := range states {
+			if st.PubKey.Equals(state.PubKey) {
+				return idx
+			}
+		}
+		return -1
+	}
+	for _, state := range lastStates {
+		idx := findFunc(firstStates, state)
+		if idx == -1 {
+			diff.Added = append(diff.Added, state)
+			continue
+		}
+		if state.Permissions != firstStates[idx].Permissions {
+			diff.Changed = append(diff.Changed, state)
+		}
+	}
+	for _, state := range firstStates {
+		idx := findFunc(lastStates, state)
+		if idx == -1 {
+			diff.Removed = append(diff.Removed, state)
+		}
+	}
+
+	return diff, nil
+}
+
 func (st *AclState) applyRecord(record *AclRecord) (err error) {
 	if st.lastRecordId != record.PrevId {
 		err = ErrIncorrectRecordSequence
