@@ -20,6 +20,7 @@ type RequestRecord struct {
 	RequestIdentity crypto.PubKey
 	RequestMetadata []byte
 	KeyRecordId     string
+	RecordId        string
 	Type            RequestType
 }
 

@@ -402,6 +402,7 @@ func (st *AclState) applyRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, r
 		RequestIdentity: record.Identity,
 		RequestMetadata: ch.Metadata,
 		KeyRecordId:     st.CurrentReadKeyId(),
+		RecordId:        record.Id,
 		Type:            RequestTypeJoin,
 	}
 	return nil
@@ -497,6 +498,7 @@ func (st *AclState) applyRequestRemove(ch *aclrecordproto.AclAccountRequestRemov
 	st.requestRecords[record.Id] = RequestRecord{
 		RequestIdentity: record.Identity,
 		Type:            RequestTypeRemove,
+		RecordId:        record.Id,
 	}
 	st.pendingRequests[mapKeyFromPubKey(record.Identity)] = record.Id
 	return nil
