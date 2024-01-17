@@ -293,9 +293,15 @@ func (a *aclList) Iterate(iterFunc IterFunc) {
 }
 
 func (a *aclList) RecordsAfter(ctx context.Context, id string) (records []*consensusproto.RawRecordWithId, err error) {
-	recIdx, ok := a.indexes[id]
-	if !ok {
-		return nil, ErrNoSuchRecord
+	var recIdx int
+	if id == "" {
+		recIdx = -1
+	} else {
+		var ok bool
+		recIdx, ok = a.indexes[id]
+		if !ok {
+			return nil, ErrNoSuchRecord
+		}
 	}
 	for i := recIdx + 1; i < len(a.records); i++ {
 		rawRec, err := a.storage.GetRawRecord(ctx, a.records[i].Id)
