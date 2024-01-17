@@ -158,30 +158,28 @@ func build(deps internalDeps) (list AclList, err error) {
 	if len(records)%2 != 0 {
 		indexes[records[len(records)/2].Id] = len(records) / 2
 	}
-
-	stateBuilder.Init(id)
-	state, err := stateBuilder.Build(records)
-	if err != nil {
-		return
-	}
-
 	// TODO: check if this is correct (raw model instead of unmarshalled)
 	rootWithId, err := storage.Root()
 	if err != nil {
 		return
 	}
 
-	recBuilder.(*aclRecordBuilder).state = state
 	list = &aclList{
 		root:          rootWithId,
 		records:       records,
 		indexes:       indexes,
 		stateBuilder:  stateBuilder,
 		recordBuilder: recBuilder,
-		aclState:      state,
 		storage:       storage,
 		id:            id,
 	}
+	stateBuilder.Init(id)
+	state, err := stateBuilder.Build(records, list)
+	if err != nil {
+		return
+	}
+	list.(*aclList).aclState = state
+	recBuilder.(*aclRecordBuilder).state = state
 	state.list = list
 	return
 }

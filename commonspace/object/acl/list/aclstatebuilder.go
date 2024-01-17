@@ -24,7 +24,7 @@ func (sb *aclStateBuilder) Init(id string) {
 	sb.id = id
 }
 
-func (sb *aclStateBuilder) Build(records []*AclRecord) (state *AclState, err error) {
+func (sb *aclStateBuilder) Build(records []*AclRecord, list AclList) (state *AclState, err error) {
 	if len(records) == 0 {
 		return nil, ErrIncorrectRecordSequence
 	}
@@ -39,6 +39,7 @@ func (sb *aclStateBuilder) Build(records []*AclRecord) (state *AclState, err err
 			return
 		}
 	}
+	state.list = list
 	for _, rec := range records[1:] {
 		err = state.applyRecord(rec)
 		if err != nil {
