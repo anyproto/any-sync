@@ -26,7 +26,7 @@ require (
 	github.com/multiformats/go-multibase v0.2.0
 	github.com/multiformats/go-multihash v0.2.3
 	github.com/prometheus/client_golang v1.17.0
-	github.com/quic-go/quic-go v0.40.0
+	github.com/quic-go/quic-go v0.41.0
 	github.com/stretchr/testify v1.8.4
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/zeebo/blake3 v0.2.3
@@ -87,7 +87,6 @@ require (
 	github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.11.1 // indirect
-	github.com/quic-go/qtls-go1-20 v0.4.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/whyrusleeping/chunker v0.0.0-20181014151217-fe64bd25879f // indirect
 	github.com/zeebo/errs v1.3.0 // indirect
