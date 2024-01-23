@@ -5,6 +5,17 @@ import (
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
+type AclStatus int
+
+const (
+	StatusNone AclStatus = iota
+	StatusJoining
+	StatusActive
+	StatusRemoved
+	StatusDeclined
+	StatusRemoving
+)
+
 type AclRecord struct {
 	Id                string
 	PrevId            string
@@ -31,6 +42,20 @@ type AclAccountState struct {
 	KeyRecordId     string
 }
 
+type PermissionChange struct {
+	RecordId   string
+	Permission AclPermissions
+}
+
+type AccountState struct {
+	PubKey            crypto.PubKey
+	Permissions       AclPermissions
+	Status            AclStatus
+	RequestMetadata   []byte
+	KeyRecordId       string
+	PermissionChanges []PermissionChange
+}
+
 type RequestType int
 
 const (
@@ -39,6 +64,14 @@ const (
 )
 
 type AclPermissions aclrecordproto.AclUserPermissions
+
+const (
+	AclPermissionsNone   = AclPermissions(aclrecordproto.AclUserPermissions_None)
+	AclPermissionsReader = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
+	AclPermissionsWriter = AclPermissions(aclrecordproto.AclUserPermissions_Writer)
+	AclPermissionsAdmin  = AclPermissions(aclrecordproto.AclUserPermissions_Admin)
+	AclPermissionsOwner  = AclPermissions(aclrecordproto.AclUserPermissions_Owner)
+)
 
 func (p AclPermissions) NoPermissions() bool {
 	return aclrecordproto.AclUserPermissions(p) == aclrecordproto.AclUserPermissions_None

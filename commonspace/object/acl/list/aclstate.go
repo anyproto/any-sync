@@ -55,11 +55,7 @@ type AclState struct {
 	// keys represent current keys of the acl
 	keys map[string]AclKeys
 	// accountStates is a map pubKey -> state which defines current account state
-	accountStates map[string]AclAccountState
-	// statesAtRecord is a map recordId -> state which define account state at particular record
-	//  probably this can grow rather large at some point, so we can maybe optimise later to have:
-	//  - map pubKey -> []recordIds (where recordIds is an array where such identity permissions were changed)
-	statesAtRecord map[string][]AclAccountState
+	accountStates map[string]AccountState
 	// inviteKeys is a map recordId -> invite
 	inviteKeys map[string]crypto.PubKey
 	// requestRecords is a map recordId -> RequestRecord
@@ -74,7 +70,7 @@ type AclState struct {
 
 	lastRecordId     string
 	contentValidator ContentValidator
-	list             AclList
+	list             *aclList
 }
 
 func newAclStateWithKeys(
@@ -85,8 +81,7 @@ func newAclStateWithKeys(
 		key:             key,
 		pubKey:          key.GetPublic(),
 		keys:            make(map[string]AclKeys),
-		accountStates:   make(map[string]AclAccountState),
-		statesAtRecord:  make(map[string][]AclAccountState),
+		accountStates:   make(map[string]AccountState),
 		inviteKeys:      make(map[string]crypto.PubKey),
 		requestRecords:  make(map[string]RequestRecord),
 		pendingRequests: make(map[string]string),
@@ -99,9 +94,6 @@ func newAclStateWithKeys(
 	err = st.applyRoot(rootRecord)
 	if err != nil {
 		return
-	}
-	st.statesAtRecord[rootRecord.Id] = []AclAccountState{
-		st.accountStates[mapKeyFromPubKey(rootRecord.Identity)],
 	}
 	return st, nil
 }
@@ -110,8 +102,7 @@ func newAclState(rootRecord *AclRecord) (st *AclState, err error) {
 	st = &AclState{
 		id:              rootRecord.Id,
 		keys:            make(map[string]AclKeys),
-		accountStates:   make(map[string]AclAccountState),
-		statesAtRecord:  make(map[string][]AclAccountState),
+		accountStates:   make(map[string]AccountState),
 		inviteKeys:      make(map[string]crypto.PubKey),
 		requestRecords:  make(map[string]RequestRecord),
 		pendingRequests: make(map[string]string),
@@ -124,9 +115,6 @@ func newAclState(rootRecord *AclRecord) (st *AclState, err error) {
 	err = st.applyRoot(rootRecord)
 	if err != nil {
 		return
-	}
-	st.statesAtRecord[rootRecord.Id] = []AclAccountState{
-		st.accountStates[mapKeyFromPubKey(rootRecord.Identity)],
 	}
 	return st, nil
 }
@@ -163,72 +151,21 @@ func (st *AclState) Keys() map[string]AclKeys {
 	return st.keys
 }
 
-func (st *AclState) StateAtRecord(id string, pubKey crypto.PubKey) (AclAccountState, error) {
-	accountState, ok := st.statesAtRecord[id]
+func (st *AclState) PermissionsAtRecord(id string, pubKey crypto.PubKey) (AclPermissions, error) {
+	accountState, ok := st.accountStates[mapKeyFromPubKey(pubKey)]
 	if !ok {
-		log.Errorf("missing record at id %s", id)
-		return AclAccountState{}, ErrNoSuchRecord
+		return AclPermissionsNone, ErrNoSuchAccount
 	}
-
-	for _, perm := range accountState {
-		if perm.PubKey.Equals(pubKey) {
-			return perm, nil
-		}
-	}
-	return AclAccountState{}, ErrNoSuchAccount
+	perms := closestPermissions(accountState, id, st.list.isAfterNoCheck)
+	return perms, nil
 }
 
-func (st *AclState) CurrentStates() []AclAccountState {
-	var res []AclAccountState
+func (st *AclState) CurrentStates() []AccountState {
+	var res []AccountState
 	for _, state := range st.accountStates {
 		res = append(res, state)
 	}
 	return res
-}
-
-type AclAccountDiff struct {
-	Added   []AclAccountState
-	Removed []AclAccountState
-	Changed []AclAccountState
-}
-
-func (st *AclState) ChangedStates(first, last string) (diff AclAccountDiff, err error) {
-	firstStates, ok := st.statesAtRecord[first]
-	if !ok {
-		log.Errorf("missing record at id %s", first)
-		return
-	}
-	lastStates, ok := st.statesAtRecord[last]
-	if !ok {
-		log.Errorf("missing record at id %s", last)
-		return
-	}
-	findFunc := func(states []AclAccountState, state AclAccountState) int {
-		for idx, st := range states {
-			if st.PubKey.Equals(state.PubKey) {
-				return idx
-			}
-		}
-		return -1
-	}
-	for _, state := range lastStates {
-		idx := findFunc(firstStates, state)
-		if idx == -1 {
-			diff.Added = append(diff.Added, state)
-			continue
-		}
-		if state.Permissions != firstStates[idx].Permissions {
-			diff.Changed = append(diff.Changed, state)
-		}
-	}
-	for _, state := range firstStates {
-		idx := findFunc(lastStates, state)
-		if idx == -1 {
-			diff.Removed = append(diff.Removed, state)
-		}
-	}
-
-	return diff, nil
 }
 
 func (st *AclState) applyRecord(record *AclRecord) (err error) {
@@ -251,11 +188,10 @@ func (st *AclState) applyRecord(record *AclRecord) (err error) {
 		return
 	}
 	// getting all states for users at record and saving them
-	var states []AclAccountState
+	var states []AccountState
 	for _, state := range st.accountStates {
 		states = append(states, state)
 	}
-	st.statesAtRecord[record.Id] = states
 	st.lastRecordId = record.Id
 	return
 }
@@ -282,11 +218,18 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 		}
 	}
 	// adding an account to the list
-	accountState := AclAccountState{
+	accountState := AccountState{
 		PubKey:          record.Identity,
 		Permissions:     AclPermissions(aclrecordproto.AclUserPermissions_Owner),
 		KeyRecordId:     record.Id,
 		RequestMetadata: root.EncryptedOwnerMetadata,
+		Status:          StatusActive,
+		PermissionChanges: []PermissionChange{
+			{
+				RecordId:   record.Id,
+				Permission: AclPermissionsOwner,
+			},
+		},
 	}
 	st.readKeyChanges = []string{record.Id}
 	st.accountStates[mapKeyFromPubKey(record.Identity)] = accountState
@@ -350,7 +293,8 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 	case ch.GetAccountRequestRemove() != nil:
 		return st.applyRequestRemove(ch.GetAccountRequestRemove(), record)
 	default:
-		return ErrUnexpectedContentType
+		log.Errorf("got unexpected content type: %s", record.Id)
+		return nil
 	}
 }
 
@@ -366,6 +310,10 @@ func (st *AclState) applyPermissionChange(ch *aclrecordproto.AclAccountPermissio
 	stringKey := mapKeyFromPubKey(chIdentity)
 	state, _ := st.accountStates[stringKey]
 	state.Permissions = AclPermissions(ch.Permissions)
+	state.PermissionChanges = append(state.PermissionChanges, PermissionChange{
+		RecordId:   record.Id,
+		Permission: state.Permissions,
+	})
 	st.accountStates[stringKey] = state
 	return nil
 }
@@ -405,6 +353,13 @@ func (st *AclState) applyRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, r
 		RecordId:        record.Id,
 		Type:            RequestTypeJoin,
 	}
+	st.accountStates[mapKeyFromPubKey(record.Identity)] = AccountState{
+		PubKey:          record.Identity,
+		Permissions:     AclPermissionsNone,
+		Status:          StatusJoining,
+		RequestMetadata: ch.Metadata,
+		KeyRecordId:     st.CurrentReadKeyId(),
+	}
 	return nil
 }
 
@@ -418,11 +373,18 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 		return err
 	}
 	requestRecord, _ := st.requestRecords[ch.RequestRecordId]
-	st.accountStates[mapKeyFromPubKey(acceptIdentity)] = AclAccountState{
+	st.accountStates[mapKeyFromPubKey(acceptIdentity)] = AccountState{
 		PubKey:          acceptIdentity,
 		Permissions:     AclPermissions(ch.Permissions),
 		RequestMetadata: requestRecord.RequestMetadata,
 		KeyRecordId:     requestRecord.KeyRecordId,
+		Status:          StatusActive,
+		PermissionChanges: []PermissionChange{
+			{
+				Permission: AclPermissions(ch.Permissions),
+				RecordId:   record.Id,
+			},
+		},
 	}
 	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity))
 	if !st.pubKey.Equals(acceptIdentity) {
@@ -485,6 +447,13 @@ func (st *AclState) applyRequestDecline(ch *aclrecordproto.AclAccountRequestDecl
 	if err != nil {
 		return err
 	}
+	pk := mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity)
+	accSt, exists := st.accountStates[pk]
+	if !exists {
+		return ErrNoSuchAccount
+	}
+	accSt.Status = StatusDeclined
+	st.accountStates[pk] = accSt
 	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity))
 	delete(st.requestRecords, ch.RequestRecordId)
 	return nil
@@ -501,6 +470,13 @@ func (st *AclState) applyRequestRemove(ch *aclrecordproto.AclAccountRequestRemov
 		RecordId:        record.Id,
 	}
 	st.pendingRequests[mapKeyFromPubKey(record.Identity)] = record.Id
+	pk := mapKeyFromPubKey(record.Identity)
+	accSt, exists := st.accountStates[pk]
+	if !exists {
+		return ErrNoSuchAccount
+	}
+	accSt.Status = StatusRemoving
+	st.accountStates[pk] = accSt
 	return nil
 }
 
@@ -515,7 +491,13 @@ func (st *AclState) applyAccountRemove(ch *aclrecordproto.AclAccountRemove, reco
 			return err
 		}
 		idKey := mapKeyFromPubKey(identity)
-		delete(st.accountStates, idKey)
+		accSt, exists := st.accountStates[idKey]
+		if !exists {
+			return ErrNoSuchAccount
+		}
+		accSt.Status = StatusRemoved
+		accSt.Permissions = AclPermissionsNone
+		st.accountStates[idKey] = accSt
 		delete(st.pendingRequests, idKey)
 	}
 	return st.applyReadKeyChange(ch.ReadKeyChange, record, false)
@@ -649,4 +631,31 @@ func (st *AclState) deriveKey() (crypto.SymKey, error) {
 
 func mapKeyFromPubKey(pubKey crypto.PubKey) string {
 	return string(pubKey.Storage())
+}
+
+func closestPermissions(accountState AccountState, recordId string, isAfter func(first, second string) bool) AclPermissions {
+	if len(accountState.PermissionChanges) == 0 {
+		return AclPermissionsNone
+	}
+	permChanges := accountState.PermissionChanges
+	var (
+		i     int
+		after bool
+	)
+	for i = len(permChanges) - 1; i >= 0; i-- {
+		if recordId == permChanges[i].RecordId {
+			return permChanges[i].Permission
+		}
+		after = isAfter(recordId, permChanges[i].RecordId)
+		if !after {
+			break
+		}
+	}
+	if after {
+		return permChanges[0].Permission
+	}
+	if i == len(permChanges)-1 {
+		return AclPermissionsNone
+	}
+	return permChanges[i+1].Permission
 }

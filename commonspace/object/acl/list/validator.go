@@ -153,8 +153,8 @@ func (c *contentValidator) ValidateRequestDecline(ch *aclrecordproto.AclAccountR
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
-	_, exists := c.aclState.requestRecords[ch.RequestRecordId]
-	if !exists {
+	rec, exists := c.aclState.requestRecords[ch.RequestRecordId]
+	if !exists || rec.Type != RequestTypeJoin {
 		return ErrNoSuchRequest
 	}
 	return

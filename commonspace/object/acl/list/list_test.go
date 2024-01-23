@@ -95,11 +95,12 @@ func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 		require.Equal(t, 0, len(acl.AclState().pendingRequests))
 	}
 
-	_, err = ownerState.StateAtRecord(requestJoinRec.Id, accountState.pubKey)
-	require.Equal(t, ErrNoSuchAccount, err)
-	stateAtRec, err := ownerState.StateAtRecord(requestAcceptRec.Id, accountState.pubKey)
+	permsAtJoinRec, err := ownerState.PermissionsAtRecord(requestJoinRec.Id, accountState.pubKey)
 	require.NoError(t, err)
-	require.True(t, stateAtRec.Permissions == perms)
+	require.Equal(t, AclPermissionsNone, permsAtJoinRec)
+	permsAtRec, err := ownerState.PermissionsAtRecord(requestAcceptRec.Id, accountState.pubKey)
+	require.NoError(t, err)
+	require.True(t, permsAtRec == perms)
 	require.Equal(t, ownerAcl.AclState().lastRecordId, requestAcceptRec.Id)
 	require.Equal(t, ownerAcl.AclState().lastRecordId, accountAcl.AclState().lastRecordId)
 	require.NotEmpty(t, requestAcceptRec.Id)
@@ -216,6 +217,14 @@ func TestAclList_Remove(t *testing.T) {
 	require.NotNil(t, accountState.keys[removeRec.Id].MetadataPubKey)
 	require.Nil(t, accountState.keys[removeRec.Id].ReadKey)
 	require.NotEmpty(t, accountState.keys[fx.ownerAcl.Id()])
+}
+
+func TestAclList_FixAcceptPanic(t *testing.T) {
+	fx := newFixture(t)
+	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
+
+	_, err := BuildAclListWithIdentity(fx.accountKeys, fx.ownerAcl.storage, NoOpAcceptorVerifier{})
+	require.NoError(t, err)
 }
 
 func TestAclList_KeyChangeInvite(t *testing.T) {

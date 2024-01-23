@@ -52,18 +52,18 @@ func (v *objectTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclLis
 
 func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c *Change) (err error) {
 	var (
-		userState list.AclAccountState
-		state     = aclList.AclState()
+		perms list.AclPermissions
+		state = aclList.AclState()
 	)
 	if c.IsDerived {
 		return nil
 	}
 	// checking if the user could write
-	userState, err = state.StateAtRecord(c.AclHeadId, c.Identity)
+	perms, err = state.PermissionsAtRecord(c.AclHeadId, c.Identity)
 	if err != nil {
 		return
 	}
-	if !userState.Permissions.CanWrite() {
+	if !perms.CanWrite() {
 		err = list.ErrInsufficientPermissions
 		return
 	}

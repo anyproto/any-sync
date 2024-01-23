@@ -174,13 +174,13 @@ func build(deps internalDeps) (list AclList, err error) {
 		id:            id,
 	}
 	stateBuilder.Init(id)
-	state, err := stateBuilder.Build(records, list)
+	state, err := stateBuilder.Build(records, list.(*aclList))
 	if err != nil {
 		return
 	}
 	list.(*aclList).aclState = state
 	recBuilder.(*aclRecordBuilder).state = state
-	state.list = list
+	state.list = list.(*aclList)
 	return
 }
 
@@ -255,6 +255,10 @@ func (a *aclList) IsAfter(first string, second string) (bool, error) {
 		return false, fmt.Errorf("not all entries are there: first (%t), second (%t)", okFirst, okSecond)
 	}
 	return firstRec >= secondRec, nil
+}
+
+func (a *aclList) isAfterNoCheck(first, second string) bool {
+	return a.indexes[first] >= a.indexes[second]
 }
 
 func (a *aclList) Head() *AclRecord {
