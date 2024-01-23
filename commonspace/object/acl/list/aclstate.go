@@ -50,8 +50,7 @@ type AclKeys struct {
 }
 
 type AclState struct {
-	id               string
-	currentReadKeyId string
+	id string
 	// keys represent current keys of the acl
 	keys map[string]AclKeys
 	// accountStates is a map pubKey -> state which defines current account state
@@ -292,6 +291,10 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 		return st.applyReadKeyChange(ch.GetReadKeyChange(), record, true)
 	case ch.GetAccountRequestRemove() != nil:
 		return st.applyRequestRemove(ch.GetAccountRequestRemove(), record)
+	case ch.GetAccountsAdd() != nil:
+		return st.applyAccountsAdd(ch.GetAccountsAdd(), record)
+	case ch.GetPermissionChanges() != nil:
+		return st.applyPermissionChanges(ch.GetPermissionChanges(), record)
 	default:
 		log.Errorf("got unexpected content type: %s", record.Id)
 		return nil
@@ -605,6 +608,15 @@ func (st *AclState) unmarshallDecryptPrivKey(msg []byte, decryptor func(msg []by
 	return key, nil
 }
 
+func (st *AclState) GetInviteIdByPrivKey(inviteKey crypto.PrivKey) (recId string, err error) {
+	for id, inv := range st.inviteKeys {
+		if inv.Equals(inviteKey.GetPublic()) {
+			return id, nil
+		}
+	}
+	return "", ErrNoSuchRecord
+}
+
 func (st *AclState) GetMetadata(identity crypto.PubKey, decrypt bool) (res []byte, err error) {
 	state, exists := st.accountStates[mapKeyFromPubKey(identity)]
 	if !exists {
@@ -647,6 +659,27 @@ func (st *AclState) JoinRecords(decrypt bool) (records []RequestRecord, err erro
 		}
 	}
 	return
+}
+
+func (st *AclState) JoinRecord(identity crypto.PubKey, decrypt bool) (RequestRecord, error) {
+	for _, recId := range st.pendingRequests {
+		rec := st.requestRecords[recId]
+		if rec.Type == RequestTypeJoin && rec.RequestIdentity.Equals(identity) {
+			if decrypt {
+				aclKeys := st.keys[rec.KeyRecordId]
+				if aclKeys.MetadataPrivKey == nil {
+					return RequestRecord{}, ErrFailedToDecrypt
+				}
+				res, err := aclKeys.MetadataPrivKey.Decrypt(rec.RequestMetadata)
+				if err != nil {
+					return RequestRecord{}, err
+				}
+				rec.RequestMetadata = res
+			}
+			return rec, nil
+		}
+	}
+	return RequestRecord{}, ErrNoSuchRecord
 }
 
 func (st *AclState) RemoveRecords() (records []RequestRecord) {

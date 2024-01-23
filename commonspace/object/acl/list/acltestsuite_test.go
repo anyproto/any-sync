@@ -132,7 +132,6 @@ func (a *aclExecutor) execute(cmd string) error {
 	}
 	switch command {
 	case "join":
-		a.expectedAccounts[account].status = StatusJoining
 		invite := a.invites[args[0]]
 		requestJoin, err := acl.RecordBuilder().BuildRequestJoin(RequestJoinPayload{
 			InviteKey: invite,
@@ -145,6 +144,7 @@ func (a *aclExecutor) execute(cmd string) error {
 		if err != nil {
 			return err
 		}
+		a.expectedAccounts[account].status = StatusJoining
 	case "invite":
 		res, err := acl.RecordBuilder().BuildInvite()
 		if err != nil {
@@ -188,17 +188,26 @@ func (a *aclExecutor) execute(cmd string) error {
 		}
 		a.expectedAccounts[argParts[0]].status = StatusActive
 		a.expectedAccounts[argParts[0]].perms = perms
-	case "change":
-		argParts := strings.Split(args[0], ",")
-		if len(argParts) != 2 {
-			return errIncorrectParts
+	case "changes":
+		var payloads []PermissionChangePayload
+		var funcs []func()
+		for _, arg := range args {
+			argParts := strings.Split(arg, ",")
+			if len(argParts) != 2 {
+				return errIncorrectParts
+			}
+			changed := a.actualAccounts[argParts[0]].keys.SignKey.GetPublic()
+			perms := getPerm(argParts[1])
+			payloads = append(payloads, PermissionChangePayload{
+				Identity:    changed,
+				Permissions: perms,
+			})
+			funcs = append(funcs, func() {
+				a.expectedAccounts[argParts[0]].perms = perms
+			})
 		}
-		changed := a.actualAccounts[argParts[0]].keys.SignKey.GetPublic()
-		perms := getPerm(argParts[1])
-		res, err := acl.RecordBuilder().BuildPermissionChange(PermissionChangePayload{
-			Identity:    changed,
-			Permissions: perms,
-		})
+		permissionChanges := PermissionChangesPayload{Changes: payloads}
+		res, err := acl.RecordBuilder().BuildPermissionChanges(permissionChanges)
 		if err != nil {
 			return err
 		}
@@ -206,7 +215,50 @@ func (a *aclExecutor) execute(cmd string) error {
 		if err != nil {
 			return err
 		}
-		a.expectedAccounts[argParts[0]].perms = perms
+		for _, f := range funcs {
+			f()
+		}
+	case "add":
+		var payloads []AccountAdd
+		for _, arg := range args {
+			argParts := strings.Split(arg, ",")
+			if len(argParts) != 3 {
+				return errIncorrectParts
+			}
+			keys, err := accountdata.NewRandom()
+			if err != nil {
+				return err
+			}
+			ownerAcl := a.actualAccounts[a.owner].acl.(*aclList)
+			accountAcl, err := BuildAclListWithIdentity(keys, ownerAcl.storage, NoOpAcceptorVerifier{})
+			if err != nil {
+				return err
+			}
+			state := &testAclState{
+				keys: keys,
+				acl:  accountAcl,
+			}
+			account = argParts[0]
+			a.actualAccounts[account] = state
+			a.expectedAccounts[account] = &accountExpectedState{
+				perms:    getPerm(argParts[1]),
+				status:   StatusActive,
+				metadata: []byte(argParts[2]),
+			}
+			payloads = append(payloads, AccountAdd{
+				Identity:    keys.SignKey.GetPublic(),
+				Permissions: getPerm(argParts[1]),
+				Metadata:    []byte(argParts[2]),
+			})
+		}
+		res, err := acl.RecordBuilder().BuildAccountsAdd(AccountsAddPayload{Additions: payloads})
+		if err != nil {
+			return err
+		}
+		err = addRec(WrapAclRecord(res))
+		if err != nil {
+			return err
+		}
 	case "remove":
 		identities := strings.Split(args[0], ",")
 		var pubKeys []crypto.PubKey
@@ -237,6 +289,36 @@ func (a *aclExecutor) execute(cmd string) error {
 			a.expectedAccounts[id].status = StatusRemoved
 			a.expectedAccounts[id].perms = AclPermissionsNone
 		}
+	case "decline":
+		id := args[0]
+		pk := a.actualAccounts[id].keys.SignKey.GetPublic()
+		rec, err := acl.AclState().JoinRecord(pk, false)
+		if err != nil {
+			return err
+		}
+		res, err := acl.RecordBuilder().BuildRequestDecline(rec.RecordId)
+		if err != nil {
+			return err
+		}
+		err = addRec(WrapAclRecord(res))
+		if err != nil {
+			return err
+		}
+		a.expectedAccounts[id].status = StatusDeclined
+	case "revoke":
+		invite := a.invites[args[0]]
+		invId, err := acl.AclState().GetInviteIdByPrivKey(invite)
+		if err != nil {
+			return err
+		}
+		requestJoin, err := acl.RecordBuilder().BuildInviteRevoke(invId)
+		if err != nil {
+			return err
+		}
+		err = addRec(WrapAclRecord(requestJoin))
+		if err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("unexpected")
 	}
@@ -253,6 +335,12 @@ func (a *aclExecutor) verify(t *testing.T) {
 			state := act.acl.AclState()
 			require.Equal(t, exp.status, state.accountStates[mapKeyFromPubKey(key)].Status)
 			require.Equal(t, exp.perms, state.accountStates[mapKeyFromPubKey(key)].Permissions)
+			if a.expectedAccounts[actId].status != StatusActive {
+				metadata, err := act.acl.AclState().GetMetadata(key, false)
+				require.NoError(t, err)
+				require.NotNil(t, metadata)
+				continue
+			}
 			metadata, err := act.acl.AclState().GetMetadata(key, true)
 			require.NoError(t, err)
 			require.Equal(t, exp.metadata, metadata)
@@ -262,18 +350,43 @@ func (a *aclExecutor) verify(t *testing.T) {
 
 func TestAclExecutor(t *testing.T) {
 	a := newAclExecutor("spaceId")
-	cmds := []string{
-		"a.init:a",
-		"a.invite:invId",
-		"b.join:invId",
-		"a.approve:b,rw",
-		"c.join:invId",
-		"a.approve:c,r",
-		"a.remove:c",
+	type cmdErr struct {
+		cmd string
+		err error
+	}
+	cmds := []cmdErr{
+		{"a.init:a", nil},
+		// creating an invite
+		{"a.invite:invId", nil},
+		// now b can join
+		{"b.join:invId", nil},
+		// a approves b, it can write now
+		{"a.approve:b,rw", nil},
+		// c joins with the same invite
+		{"c.join:invId", nil},
+		// a approves c
+		{"a.approve:c,r", nil},
+		// a removes c
+		{"a.remove:c", nil},
+		// e also joins as an admin
+		{"e.join:invId", nil},
+		{"a.approve:e,adm", nil},
+		// now e can remove other users
+		{"e.remove:b", nil},
+		{"e.revoke:invId", nil},
+		{"z.join:invId", ErrNoSuchInvite},
+		// e can't revoke the same id
+		{"e.revoke:invId", ErrNoSuchRecord},
+		// e can't remove a, because a is the owner
+		{"e.remove:a", ErrInsufficientPermissions},
+		// e can add new users
+		{"e.add:x,r,m1;y,adm,m2", nil},
+		// now y can also change permission as an admin
+		{"y.changes:x,rw", nil},
 	}
 	for _, cmd := range cmds {
-		err := a.execute(cmd)
-		require.NoError(t, err)
+		err := a.execute(cmd.cmd)
+		require.Equal(t, cmd.err, err)
 	}
 	a.verify(t)
 }
