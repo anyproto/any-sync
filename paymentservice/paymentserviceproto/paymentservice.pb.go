@@ -25,24 +25,24 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 type SubscriptionTier int32
 
 const (
-	SubscriptionTier_Tier_Unknown        SubscriptionTier = 0
-	SubscriptionTier_Tier_Friend         SubscriptionTier = 1
-	SubscriptionTier_Tier_Supporter1Year SubscriptionTier = 2
-	SubscriptionTier_Tier_Patron1Year    SubscriptionTier = 3
+	SubscriptionTier_TierUnknown        SubscriptionTier = 0
+	SubscriptionTier_TierFriend         SubscriptionTier = 1
+	SubscriptionTier_TierSupporter1Year SubscriptionTier = 2
+	SubscriptionTier_TierPatron1Year    SubscriptionTier = 3
 )
 
 var SubscriptionTier_name = map[int32]string{
-	0: "Tier_Unknown",
-	1: "Tier_Friend",
-	2: "Tier_Supporter1Year",
-	3: "Tier_Patron1Year",
+	0: "TierUnknown",
+	1: "TierFriend",
+	2: "TierSupporter1Year",
+	3: "TierPatron1Year",
 }
 
 var SubscriptionTier_value = map[string]int32{
-	"Tier_Unknown":        0,
-	"Tier_Friend":         1,
-	"Tier_Supporter1Year": 2,
-	"Tier_Patron1Year":    3,
+	"TierUnknown":        0,
+	"TierFriend":         1,
+	"TierSupporter1Year": 2,
+	"TierPatron1Year":    3,
 }
 
 func (x SubscriptionTier) String() string {
@@ -56,27 +56,24 @@ func (SubscriptionTier) EnumDescriptor() ([]byte, []int) {
 type SubscriptionStatus int32
 
 const (
-	SubscriptionStatus_Status_Unknown  SubscriptionStatus = 0
-	SubscriptionStatus_Status_Pending  SubscriptionStatus = 1
-	SubscriptionStatus_Status_Active   SubscriptionStatus = 2
-	SubscriptionStatus_Status_Expired  SubscriptionStatus = 3
-	SubscriptionStatus_Status_Canceled SubscriptionStatus = 4
+	SubscriptionStatus_StatusUnknown SubscriptionStatus = 0
+	// payment is still pending
+	// this will be the status until the payment is confirmed or N is elapsed and no payment is received
+	// in the last case the subscription will switch to Status_Unknown or Status_Active
+	SubscriptionStatus_StatusPending SubscriptionStatus = 1
+	SubscriptionStatus_StatusActive  SubscriptionStatus = 2
 )
 
 var SubscriptionStatus_name = map[int32]string{
-	0: "Status_Unknown",
-	1: "Status_Pending",
-	2: "Status_Active",
-	3: "Status_Expired",
-	4: "Status_Canceled",
+	0: "StatusUnknown",
+	1: "StatusPending",
+	2: "StatusActive",
 }
 
 var SubscriptionStatus_value = map[string]int32{
-	"Status_Unknown":  0,
-	"Status_Pending":  1,
-	"Status_Active":   2,
-	"Status_Expired":  3,
-	"Status_Canceled": 4,
+	"StatusUnknown": 0,
+	"StatusPending": 1,
+	"StatusActive":  2,
 }
 
 func (x SubscriptionStatus) String() string {
@@ -90,24 +87,24 @@ func (SubscriptionStatus) EnumDescriptor() ([]byte, []int) {
 type PaymentMethod int32
 
 const (
-	PaymentMethod_Method_Card      PaymentMethod = 0
-	PaymentMethod_Method_Crypto    PaymentMethod = 1
-	PaymentMethod_Method_ApplePay  PaymentMethod = 2
-	PaymentMethod_Method_GooglePay PaymentMethod = 3
+	PaymentMethod_MethodCard      PaymentMethod = 0
+	PaymentMethod_MethodCrypto    PaymentMethod = 1
+	PaymentMethod_MethodApplePay  PaymentMethod = 2
+	PaymentMethod_MethodGooglePay PaymentMethod = 3
 )
 
 var PaymentMethod_name = map[int32]string{
-	0: "Method_Card",
-	1: "Method_Crypto",
-	2: "Method_ApplePay",
-	3: "Method_GooglePay",
+	0: "MethodCard",
+	1: "MethodCrypto",
+	2: "MethodApplePay",
+	3: "MethodGooglePay",
 }
 
 var PaymentMethod_value = map[string]int32{
-	"Method_Card":      0,
-	"Method_Crypto":    1,
-	"Method_ApplePay":  2,
-	"Method_GooglePay": 3,
+	"MethodCard":      0,
+	"MethodCrypto":    1,
+	"MethodApplePay":  2,
+	"MethodGooglePay": 3,
 }
 
 func (x PaymentMethod) String() string {
@@ -232,6 +229,9 @@ type GetSubscriptionResponse struct {
 	NextTier      SubscriptionTier `protobuf:"varint,6,opt,name=nextTier,proto3,enum=SubscriptionTier" json:"nextTier,omitempty"`
 	NextTierEnds  uint64           `protobuf:"varint,7,opt,name=nextTierEnds,proto3" json:"nextTierEnds,omitempty"`
 	PaymentMethod PaymentMethod    `protobuf:"varint,8,opt,name=paymentMethod,proto3,enum=PaymentMethod" json:"paymentMethod,omitempty"`
+	// if name was requested - it will be here
+	// seeBuySubscriptionRequest.requestedAnyName field
+	RequestedAnyName string `protobuf:"bytes,9,opt,name=requestedAnyName,proto3" json:"requestedAnyName,omitempty"`
 }
 
 func (m *GetSubscriptionResponse) Reset()         { *m = GetSubscriptionResponse{} }
@@ -271,14 +271,14 @@ func (m *GetSubscriptionResponse) GetTier() SubscriptionTier {
 	if m != nil {
 		return m.Tier
 	}
-	return SubscriptionTier_Tier_Unknown
+	return SubscriptionTier_TierUnknown
 }
 
 func (m *GetSubscriptionResponse) GetStatus() SubscriptionStatus {
 	if m != nil {
 		return m.Status
 	}
-	return SubscriptionStatus_Status_Unknown
+	return SubscriptionStatus_StatusUnknown
 }
 
 func (m *GetSubscriptionResponse) GetDateStarted() uint64 {
@@ -306,7 +306,7 @@ func (m *GetSubscriptionResponse) GetNextTier() SubscriptionTier {
 	if m != nil {
 		return m.NextTier
 	}
-	return SubscriptionTier_Tier_Unknown
+	return SubscriptionTier_TierUnknown
 }
 
 func (m *GetSubscriptionResponse) GetNextTierEnds() uint64 {
@@ -320,22 +320,31 @@ func (m *GetSubscriptionResponse) GetPaymentMethod() PaymentMethod {
 	if m != nil {
 		return m.PaymentMethod
 	}
-	return PaymentMethod_Method_Card
+	return PaymentMethod_MethodCard
+}
+
+func (m *GetSubscriptionResponse) GetRequestedAnyName() string {
+	if m != nil {
+		return m.RequestedAnyName
+	}
+	return ""
 }
 
 // 2
 type BuySubscriptionRequest struct {
 	// in the following format: "12D3KooWA8EXV3KjBxEU5EnsPfneLx84vMWAtTBQBeyooN82KSuS"
-	OwnerAnyID string `protobuf:"bytes,1,opt,name=ownerAnyID,proto3" json:"ownerAnyID,omitempty"`
-	// this is the owner's ETH main EOA (External Owned Account) address
-	//
-	//	not AccountAbstraction's SCW (Smart Contract Wallet) address!
-	//
+	OwnerAnyId string `protobuf:"bytes,1,opt,name=ownerAnyId,proto3" json:"ownerAnyId,omitempty"`
+	// this is the owner's ETH main EOA (Externally Owned Account) address
+	// not AccountAbstraction's SCW (Smart Contract Wallet) address!
+	// this is required to reserve a name for the owner (later that is done by user)
 	// in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
-	// this is required to reserve a name for the owner
 	OwnerEthAddress string           `protobuf:"bytes,2,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
 	RequestedTier   SubscriptionTier `protobuf:"varint,3,opt,name=requestedTier,proto3,enum=SubscriptionTier" json:"requestedTier,omitempty"`
 	PaymentMethod   PaymentMethod    `protobuf:"varint,4,opt,name=paymentMethod,proto3,enum=PaymentMethod" json:"paymentMethod,omitempty"`
+	// this is just to store the requested name in the DB
+	// and then you will be able to retrieve it via GetSubscriptionRequest
+	// PP won't register the name in NS!
+	RequestedAnyName string `protobuf:"bytes,5,opt,name=requestedAnyName,proto3" json:"requestedAnyName,omitempty"`
 }
 
 func (m *BuySubscriptionRequest) Reset()         { *m = BuySubscriptionRequest{} }
@@ -371,9 +380,9 @@ func (m *BuySubscriptionRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_BuySubscriptionRequest proto.InternalMessageInfo
 
-func (m *BuySubscriptionRequest) GetOwnerAnyID() string {
+func (m *BuySubscriptionRequest) GetOwnerAnyId() string {
 	if m != nil {
-		return m.OwnerAnyID
+		return m.OwnerAnyId
 	}
 	return ""
 }
@@ -389,14 +398,21 @@ func (m *BuySubscriptionRequest) GetRequestedTier() SubscriptionTier {
 	if m != nil {
 		return m.RequestedTier
 	}
-	return SubscriptionTier_Tier_Unknown
+	return SubscriptionTier_TierUnknown
 }
 
 func (m *BuySubscriptionRequest) GetPaymentMethod() PaymentMethod {
 	if m != nil {
 		return m.PaymentMethod
 	}
-	return PaymentMethod_Method_Card
+	return PaymentMethod_MethodCard
+}
+
+func (m *BuySubscriptionRequest) GetRequestedAnyName() string {
+	if m != nil {
+		return m.RequestedAnyName
+	}
+	return ""
 }
 
 type BuySubscriptionRequestSigned struct {
@@ -499,6 +515,151 @@ func (m *BuySubscriptionResponse) GetPaymentUrl() string {
 	return ""
 }
 
+type GetSubscriptionPortalLinkRequest struct {
+	// in the following format: "12D3KooWA8EXV3KjBxEU5EnsPfneLx84vMWAtTBQBeyooN82KSuS"
+	OwnerAnyId string `protobuf:"bytes,1,opt,name=ownerAnyId,proto3" json:"ownerAnyId,omitempty"`
+}
+
+func (m *GetSubscriptionPortalLinkRequest) Reset()         { *m = GetSubscriptionPortalLinkRequest{} }
+func (m *GetSubscriptionPortalLinkRequest) String() string { return proto.CompactTextString(m) }
+func (*GetSubscriptionPortalLinkRequest) ProtoMessage()    {}
+func (*GetSubscriptionPortalLinkRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{6}
+}
+func (m *GetSubscriptionPortalLinkRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetSubscriptionPortalLinkRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetSubscriptionPortalLinkRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GetSubscriptionPortalLinkRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetSubscriptionPortalLinkRequest.Merge(m, src)
+}
+func (m *GetSubscriptionPortalLinkRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetSubscriptionPortalLinkRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetSubscriptionPortalLinkRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetSubscriptionPortalLinkRequest proto.InternalMessageInfo
+
+func (m *GetSubscriptionPortalLinkRequest) GetOwnerAnyId() string {
+	if m != nil {
+		return m.OwnerAnyId
+	}
+	return ""
+}
+
+type GetSubscriptionPortalLinkRequestSigned struct {
+	// GetSubscriptionPortalLinkRequest
+	Payload []byte `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
+	// this is payload signed with payload.ownerAnyID
+	Signature []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+}
+
+func (m *GetSubscriptionPortalLinkRequestSigned) Reset() {
+	*m = GetSubscriptionPortalLinkRequestSigned{}
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) String() string { return proto.CompactTextString(m) }
+func (*GetSubscriptionPortalLinkRequestSigned) ProtoMessage()    {}
+func (*GetSubscriptionPortalLinkRequestSigned) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{7}
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetSubscriptionPortalLinkRequestSigned.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetSubscriptionPortalLinkRequestSigned.Merge(m, src)
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetSubscriptionPortalLinkRequestSigned.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetSubscriptionPortalLinkRequestSigned proto.InternalMessageInfo
+
+func (m *GetSubscriptionPortalLinkRequestSigned) GetPayload() []byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
+func (m *GetSubscriptionPortalLinkRequestSigned) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+type GetSubscriptionPortalLinkResponse struct {
+	PortalUrl string `protobuf:"bytes,1,opt,name=portalUrl,proto3" json:"portalUrl,omitempty"`
+}
+
+func (m *GetSubscriptionPortalLinkResponse) Reset()         { *m = GetSubscriptionPortalLinkResponse{} }
+func (m *GetSubscriptionPortalLinkResponse) String() string { return proto.CompactTextString(m) }
+func (*GetSubscriptionPortalLinkResponse) ProtoMessage()    {}
+func (*GetSubscriptionPortalLinkResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{8}
+}
+func (m *GetSubscriptionPortalLinkResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetSubscriptionPortalLinkResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetSubscriptionPortalLinkResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GetSubscriptionPortalLinkResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetSubscriptionPortalLinkResponse.Merge(m, src)
+}
+func (m *GetSubscriptionPortalLinkResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetSubscriptionPortalLinkResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetSubscriptionPortalLinkResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetSubscriptionPortalLinkResponse proto.InternalMessageInfo
+
+func (m *GetSubscriptionPortalLinkResponse) GetPortalUrl() string {
+	if m != nil {
+		return m.PortalUrl
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterEnum("SubscriptionTier", SubscriptionTier_name, SubscriptionTier_value)
 	proto.RegisterEnum("SubscriptionStatus", SubscriptionStatus_name, SubscriptionStatus_value)
@@ -509,6 +670,9 @@ func init() {
 	proto.RegisterType((*BuySubscriptionRequest)(nil), "BuySubscriptionRequest")
 	proto.RegisterType((*BuySubscriptionRequestSigned)(nil), "BuySubscriptionRequestSigned")
 	proto.RegisterType((*BuySubscriptionResponse)(nil), "BuySubscriptionResponse")
+	proto.RegisterType((*GetSubscriptionPortalLinkRequest)(nil), "GetSubscriptionPortalLinkRequest")
+	proto.RegisterType((*GetSubscriptionPortalLinkRequestSigned)(nil), "GetSubscriptionPortalLinkRequestSigned")
+	proto.RegisterType((*GetSubscriptionPortalLinkResponse)(nil), "GetSubscriptionPortalLinkResponse")
 }
 
 func init() {
@@ -516,48 +680,52 @@ func init() {
 }
 
 var fileDescriptor_4feb29dcc5ba50f6 = []byte{
-	// 647 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x94, 0x51, 0x4b, 0x1b, 0x4b,
-	0x14, 0xc7, 0x77, 0x93, 0x5c, 0x8d, 0x47, 0x93, 0xac, 0xa3, 0x57, 0x17, 0xd1, 0x25, 0x2c, 0x5c,
-	0x08, 0x5e, 0xee, 0xca, 0xb5, 0x85, 0xb6, 0x50, 0x0a, 0xd1, 0x5a, 0x29, 0xb4, 0x10, 0x36, 0x55,
-	0x68, 0x1f, 0x2a, 0x6b, 0xe6, 0x10, 0x97, 0xa6, 0x33, 0xdb, 0x99, 0x59, 0x75, 0xbf, 0x45, 0x3f,
-	0x4e, 0x3f, 0x42, 0x1f, 0xed, 0x4b, 0xe9, 0x63, 0xd1, 0x2f, 0x52, 0x76, 0x76, 0xa3, 0x9b, 0xc4,
-	0xd8, 0xd2, 0xbe, 0xec, 0xce, 0xf9, 0x9d, 0x33, 0xff, 0x99, 0xff, 0xcc, 0x61, 0xe0, 0x49, 0x14,
-	0x24, 0xef, 0x91, 0x29, 0x89, 0xe2, 0x34, 0xec, 0xe1, 0xd6, 0x68, 0x18, 0x09, 0xae, 0xf8, 0x96,
-	0xfe, 0xca, 0xb1, 0x94, 0xa7, 0xa9, 0xfb, 0x10, 0x56, 0xf6, 0x51, 0x75, 0xe3, 0x63, 0xd9, 0x13,
-	0x61, 0xa4, 0x42, 0xce, 0x7c, 0xfc, 0x10, 0xa3, 0x54, 0xc4, 0x01, 0xe0, 0x67, 0x0c, 0x45, 0x9b,
-	0x25, 0xcf, 0x9f, 0xda, 0x66, 0xd3, 0x6c, 0xcd, 0xf9, 0x05, 0xe2, 0x1e, 0xc2, 0xfa, 0xed, 0x33,
-	0xbb, 0x61, 0x9f, 0x21, 0x25, 0x36, 0xcc, 0x46, 0x41, 0x32, 0xe0, 0x01, 0xd5, 0x93, 0x17, 0xfc,
-	0x61, 0x48, 0xd6, 0x61, 0x4e, 0x86, 0x7d, 0x16, 0xa8, 0x58, 0xa0, 0x5d, 0xd2, 0xb9, 0x1b, 0xe0,
-	0x7e, 0x2d, 0xc1, 0xea, 0x84, 0xb0, 0x8c, 0x38, 0x93, 0x48, 0xfe, 0x81, 0x8a, 0x0a, 0x51, 0x68,
-	0xc1, 0xfa, 0xf6, 0xa2, 0x57, 0x2c, 0x7a, 0x15, 0xa2, 0xf0, 0x75, 0x9a, 0xfc, 0x0b, 0x33, 0x52,
-	0x05, 0x2a, 0x96, 0x5a, 0xbd, 0xbe, 0xbd, 0x34, 0x52, 0xd8, 0xd5, 0x29, 0x3f, 0x2f, 0x21, 0x4d,
-	0x98, 0xa7, 0x81, 0xc2, 0xae, 0x0a, 0x84, 0x42, 0x6a, 0x97, 0x9b, 0x66, 0xab, 0xe2, 0x17, 0x11,
-	0x59, 0x83, 0x6a, 0x1a, 0xee, 0x31, 0x2a, 0xed, 0x8a, 0x4e, 0x5f, 0xc7, 0xe9, 0xec, 0x50, 0xb6,
-	0x63, 0xc5, 0x7d, 0x64, 0x78, 0x66, 0xff, 0xd5, 0x34, 0x5b, 0x55, 0xbf, 0x88, 0xc8, 0x7f, 0x50,
-	0x65, 0x78, 0xae, 0xd2, 0xed, 0xd9, 0x33, 0xd3, 0xf6, 0x7d, 0x5d, 0x42, 0x5c, 0x58, 0x18, 0x8e,
-	0xf5, 0x82, 0xb3, 0x7a, 0xc1, 0x11, 0x46, 0xee, 0x43, 0x2d, 0xbf, 0xcc, 0x97, 0xa8, 0x4e, 0x38,
-	0xb5, 0xab, 0x5a, 0xb7, 0xee, 0x75, 0x8a, 0xd4, 0x1f, 0x2d, 0x72, 0xbf, 0x98, 0xb0, 0xb2, 0x13,
-	0x27, 0xbf, 0x71, 0xd7, 0xa4, 0x05, 0x0d, 0x1d, 0xed, 0xa9, 0x93, 0x36, 0xa5, 0x02, 0x65, 0x76,
-	0xb2, 0x73, 0xfe, 0x38, 0x26, 0x0f, 0xa0, 0x26, 0x32, 0x51, 0xa4, 0xda, 0x72, 0x79, 0x9a, 0xe5,
-	0xd1, 0xba, 0x49, 0x4f, 0x95, 0x5f, 0xf1, 0x74, 0x08, 0xeb, 0xb7, 0x5b, 0xfa, 0xc3, 0x26, 0x7c,
-	0x04, 0xab, 0x13, 0xba, 0x79, 0x0f, 0x3a, 0x00, 0xf9, 0x1e, 0x0e, 0xc4, 0x60, 0x78, 0x56, 0x37,
-	0x64, 0x93, 0x82, 0x35, 0xee, 0x95, 0x58, 0xb0, 0x90, 0xfe, 0x8f, 0x0e, 0xd8, 0x3b, 0xc6, 0xcf,
-	0x98, 0x65, 0x90, 0x06, 0xcc, 0x6b, 0xf2, 0x4c, 0x84, 0xc8, 0xa8, 0x65, 0x92, 0x55, 0x58, 0xd2,
-	0xa0, 0x1b, 0x47, 0x11, 0x17, 0x0a, 0xc5, 0xff, 0xaf, 0x31, 0x10, 0x56, 0x89, 0x2c, 0x83, 0xa5,
-	0x13, 0x9d, 0x40, 0x09, 0xce, 0x32, 0x5a, 0xde, 0x3c, 0x07, 0x32, 0xd9, 0xd3, 0x84, 0x40, 0x3d,
-	0x1b, 0x15, 0x56, 0xba, 0x61, 0x1d, 0x64, 0x34, 0x64, 0x7d, 0xcb, 0x24, 0x8b, 0x50, 0xcb, 0x59,
-	0xbb, 0xa7, 0xc2, 0x53, 0xb4, 0x4a, 0x85, 0xb2, 0xbd, 0xf3, 0x28, 0x14, 0x48, 0xad, 0x32, 0x59,
-	0x82, 0x46, 0xce, 0x76, 0x03, 0xd6, 0xc3, 0x01, 0x52, 0xab, 0xb2, 0xf9, 0x16, 0x6a, 0x23, 0x57,
-	0x92, 0x5a, 0xc9, 0x46, 0x47, 0xbb, 0x81, 0xa0, 0x96, 0x91, 0xaa, 0x0f, 0x81, 0x48, 0x22, 0xc5,
-	0x2d, 0x33, 0x55, 0xca, 0x51, 0x3b, 0x8a, 0x06, 0xd8, 0x09, 0x92, 0xcc, 0x59, 0x0e, 0xf7, 0x39,
-	0xef, 0x67, 0xb4, 0xbc, 0xfd, 0xc9, 0x84, 0xe5, 0x36, 0x4b, 0xf2, 0x35, 0x3a, 0x82, 0xf7, 0x50,
-	0xca, 0x90, 0xf5, 0x89, 0x0f, 0x7f, 0x8f, 0xbd, 0x0b, 0xb9, 0xeb, 0x0d, 0xef, 0xae, 0x87, 0x68,
-	0xcd, 0xf6, 0xa6, 0x3c, 0x27, 0xae, 0x41, 0x5e, 0x40, 0x63, 0xec, 0x9e, 0xc9, 0x86, 0x77, 0x57,
-	0x47, 0xad, 0xd9, 0xde, 0x94, 0xc6, 0x70, 0x8d, 0x9d, 0xc7, 0x9f, 0x2f, 0x1d, 0xf3, 0xe2, 0xd2,
-	0x31, 0xbf, 0x5f, 0x3a, 0xe6, 0xc7, 0x2b, 0xc7, 0xb8, 0xb8, 0x72, 0x8c, 0x6f, 0x57, 0x8e, 0xf1,
-	0xc6, 0xfd, 0xf9, 0x33, 0x7d, 0x3c, 0xa3, 0x7f, 0xf7, 0x7e, 0x04, 0x00, 0x00, 0xff, 0xff, 0xda,
-	0x2c, 0x8d, 0x51, 0xd3, 0x05, 0x00, 0x00,
+	// 707 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x95, 0x5f, 0x4f, 0xd3, 0x5e,
+	0x18, 0xc7, 0xdb, 0x6d, 0xc0, 0xf6, 0xc0, 0xb6, 0x72, 0xf8, 0xfd, 0xa0, 0x2e, 0xa3, 0x99, 0x4d,
+	0xd4, 0x65, 0xc6, 0x12, 0xd1, 0x44, 0x4d, 0x8c, 0x49, 0x51, 0x24, 0x26, 0x68, 0x96, 0x4e, 0x48,
+	0xe4, 0x8a, 0xb2, 0x9e, 0x8c, 0xca, 0x38, 0xa7, 0x9e, 0x73, 0x0a, 0xf6, 0xd6, 0x57, 0xe0, 0x8b,
+	0xf0, 0xc5, 0x78, 0xc9, 0xa5, 0x97, 0x06, 0x5e, 0x87, 0x89, 0xe9, 0x69, 0xd9, 0x5f, 0xc6, 0x88,
+	0xdc, 0xac, 0x7d, 0x3e, 0xe7, 0x39, 0xcf, 0x9f, 0xf3, 0x7c, 0x7b, 0x06, 0xaf, 0x02, 0x37, 0x3a,
+	0xc6, 0x44, 0x70, 0xcc, 0x4e, 0xfc, 0x36, 0x5e, 0x1b, 0x36, 0x03, 0x46, 0x05, 0x5d, 0x93, 0xbf,
+	0x7c, 0x64, 0xc9, 0x92, 0xd4, 0x7c, 0x0e, 0xcb, 0x5b, 0x58, 0xb4, 0xc2, 0x03, 0xde, 0x66, 0x7e,
+	0x20, 0x7c, 0x4a, 0x1c, 0xfc, 0x25, 0xc4, 0x5c, 0x20, 0x03, 0x80, 0x9e, 0x12, 0xcc, 0x6c, 0x12,
+	0xbd, 0x7b, 0xa3, 0xab, 0x35, 0xb5, 0x5e, 0x70, 0x06, 0x88, 0xb9, 0x0b, 0xd5, 0xab, 0x77, 0xb6,
+	0xfc, 0x0e, 0xc1, 0x1e, 0xd2, 0x61, 0x2e, 0x70, 0xa3, 0x2e, 0x75, 0x3d, 0xb9, 0x79, 0xc1, 0xb9,
+	0x34, 0x51, 0x15, 0x0a, 0xdc, 0xef, 0x10, 0x57, 0x84, 0x0c, 0xeb, 0x19, 0xb9, 0xd6, 0x07, 0xe6,
+	0xb7, 0x2c, 0xac, 0x8c, 0x05, 0xe6, 0x01, 0x25, 0x1c, 0xa3, 0x7b, 0x90, 0x13, 0x3e, 0x66, 0x32,
+	0x60, 0x69, 0x7d, 0xd1, 0x1a, 0x74, 0xfa, 0xe8, 0x63, 0xe6, 0xc8, 0x65, 0xf4, 0x10, 0x66, 0xb9,
+	0x70, 0x45, 0xc8, 0x65, 0xf4, 0xd2, 0xfa, 0xd2, 0x90, 0x63, 0x4b, 0x2e, 0x39, 0xa9, 0x0b, 0xaa,
+	0xc1, 0xbc, 0xe7, 0x0a, 0xdc, 0x12, 0x2e, 0x13, 0xd8, 0xd3, 0xb3, 0x35, 0xb5, 0x9e, 0x73, 0x06,
+	0x11, 0xaa, 0x40, 0x3e, 0x36, 0x37, 0x89, 0xc7, 0xf5, 0x9c, 0x5c, 0xee, 0xd9, 0xf1, 0x6e, 0x9f,
+	0xdb, 0xa1, 0xa0, 0x0e, 0x26, 0xf8, 0x54, 0x9f, 0xa9, 0xa9, 0xf5, 0xbc, 0x33, 0x88, 0xd0, 0x23,
+	0xc8, 0x13, 0xfc, 0x55, 0xc4, 0xe5, 0xe9, 0xb3, 0x93, 0xea, 0xee, 0xb9, 0x20, 0x13, 0x16, 0x2e,
+	0xdf, 0x65, 0xc2, 0x39, 0x99, 0x70, 0x88, 0xa1, 0xa7, 0x50, 0x4c, 0x87, 0xf9, 0x1e, 0x8b, 0x43,
+	0xea, 0xe9, 0x79, 0x19, 0xb7, 0x64, 0x35, 0x07, 0xa9, 0x33, 0xec, 0x84, 0x1a, 0xa0, 0xb1, 0x64,
+	0x42, 0xd8, 0xb3, 0x49, 0xf4, 0xc1, 0x3d, 0xc6, 0x7a, 0x41, 0x8e, 0x75, 0x8c, 0x9b, 0x7f, 0x54,
+	0x58, 0xde, 0x08, 0xa3, 0x69, 0xba, 0xf0, 0xc6, 0x74, 0xe1, 0xa1, 0x3a, 0x94, 0xa5, 0xb5, 0x29,
+	0x0e, 0x6d, 0xcf, 0x63, 0x98, 0x27, 0x53, 0x28, 0x38, 0xa3, 0x18, 0x3d, 0x83, 0x62, 0x2f, 0xb1,
+	0x3c, 0x9e, 0xec, 0xa4, 0xe3, 0x19, 0xf6, 0x1b, 0xef, 0x3f, 0xf7, 0xaf, 0xfd, 0xcf, 0x4c, 0xe8,
+	0x7f, 0x17, 0xaa, 0x57, 0xb7, 0x7f, 0x4b, 0x71, 0xbf, 0x80, 0x95, 0xb1, 0xb8, 0xa9, 0xb6, 0x0d,
+	0x80, 0xb4, 0xde, 0x1d, 0xd6, 0xbd, 0x3c, 0xd7, 0x3e, 0x31, 0x37, 0xa0, 0x36, 0xf2, 0x59, 0x34,
+	0x29, 0x13, 0x6e, 0x77, 0xdb, 0x27, 0x47, 0x37, 0x9c, 0x8d, 0xb9, 0x0f, 0xf7, 0xa7, 0xc5, 0xb8,
+	0x65, 0x83, 0x36, 0xdc, 0xbd, 0x26, 0x43, 0xda, 0x6a, 0x15, 0x0a, 0x81, 0xa4, 0xfd, 0x4e, 0xfb,
+	0xa0, 0xb1, 0x0f, 0xda, 0xa8, 0x00, 0x50, 0x19, 0xe6, 0xe3, 0xe7, 0x0e, 0x39, 0x22, 0xf4, 0x94,
+	0x68, 0x0a, 0x2a, 0x01, 0xc4, 0xe0, 0x2d, 0xf3, 0x31, 0xf1, 0x34, 0x15, 0x2d, 0x03, 0x8a, 0xed,
+	0x56, 0x18, 0xc4, 0x81, 0x30, 0x7b, 0xfc, 0x09, 0xbb, 0x4c, 0xcb, 0xa0, 0x25, 0x28, 0xc7, 0xbc,
+	0xe9, 0x0a, 0x46, 0x49, 0x02, 0xb3, 0x8d, 0x6d, 0x40, 0xe3, 0x17, 0x02, 0x5a, 0x84, 0x62, 0xf2,
+	0xd6, 0xcf, 0xd2, 0x43, 0x4d, 0x4c, 0x3c, 0x9f, 0x74, 0x34, 0x15, 0x69, 0xb0, 0x90, 0x20, 0xbb,
+	0x2d, 0xfc, 0x13, 0xac, 0x65, 0x1a, 0x7b, 0x50, 0x1c, 0xd2, 0x5d, 0x5c, 0x5b, 0xf2, 0xf6, 0xda,
+	0x65, 0x9e, 0xa6, 0xc4, 0x5b, 0x52, 0x9b, 0x45, 0x81, 0xa0, 0x9a, 0x8a, 0x10, 0x94, 0x12, 0x62,
+	0x07, 0x41, 0x17, 0x37, 0xdd, 0x28, 0xa9, 0x34, 0x61, 0x5b, 0x94, 0x76, 0x12, 0x98, 0x5d, 0xff,
+	0x91, 0x81, 0xff, 0x6c, 0x12, 0xa5, 0xf1, 0x9b, 0x8c, 0xb6, 0x31, 0xe7, 0x3e, 0xe9, 0x20, 0x07,
+	0xfe, 0x1f, 0x39, 0xe7, 0xb4, 0x8b, 0x55, 0xeb, 0xba, 0x5b, 0xb9, 0xa2, 0x5b, 0x13, 0xee, 0x56,
+	0x53, 0x41, 0xdb, 0x50, 0x1e, 0x11, 0x27, 0x5a, 0xb5, 0xae, 0xfb, 0x0c, 0x2a, 0xba, 0x35, 0x41,
+	0xcd, 0xa6, 0x82, 0x3e, 0xc3, 0x9d, 0x89, 0x4a, 0x40, 0x0f, 0xac, 0x9b, 0xe9, 0xb0, 0x62, 0x5a,
+	0x53, 0xe5, 0x64, 0x2a, 0x1b, 0x2f, 0x7f, 0x9e, 0x1b, 0xea, 0xd9, 0xb9, 0xa1, 0xfe, 0x3e, 0x37,
+	0xd4, 0xef, 0x17, 0x86, 0x72, 0x76, 0x61, 0x28, 0xbf, 0x2e, 0x0c, 0x65, 0xcf, 0x9c, 0xfe, 0xff,
+	0x78, 0x30, 0x2b, 0x1f, 0x4f, 0xfe, 0x06, 0x00, 0x00, 0xff, 0xff, 0x5d, 0xde, 0x71, 0x1b, 0x4c,
+	0x07, 0x00, 0x00,
 }
 
 func (m *GetSubscriptionRequest) Marshal() (dAtA []byte, err error) {
@@ -647,6 +815,13 @@ func (m *GetSubscriptionResponse) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
+	if len(m.RequestedAnyName) > 0 {
+		i -= len(m.RequestedAnyName)
+		copy(dAtA[i:], m.RequestedAnyName)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.RequestedAnyName)))
+		i--
+		dAtA[i] = 0x4a
+	}
 	if m.PaymentMethod != 0 {
 		i = encodeVarintPaymentservice(dAtA, i, uint64(m.PaymentMethod))
 		i--
@@ -715,6 +890,13 @@ func (m *BuySubscriptionRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 	_ = i
 	var l int
 	_ = l
+	if len(m.RequestedAnyName) > 0 {
+		i -= len(m.RequestedAnyName)
+		copy(dAtA[i:], m.RequestedAnyName)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.RequestedAnyName)))
+		i--
+		dAtA[i] = 0x2a
+	}
 	if m.PaymentMethod != 0 {
 		i = encodeVarintPaymentservice(dAtA, i, uint64(m.PaymentMethod))
 		i--
@@ -732,10 +914,10 @@ func (m *BuySubscriptionRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.OwnerAnyID) > 0 {
-		i -= len(m.OwnerAnyID)
-		copy(dAtA[i:], m.OwnerAnyID)
-		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.OwnerAnyID)))
+	if len(m.OwnerAnyId) > 0 {
+		i -= len(m.OwnerAnyId)
+		copy(dAtA[i:], m.OwnerAnyId)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.OwnerAnyId)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -803,6 +985,103 @@ func (m *BuySubscriptionResponse) MarshalToSizedBuffer(dAtA []byte) (int, error)
 		i -= len(m.PaymentUrl)
 		copy(dAtA[i:], m.PaymentUrl)
 		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.PaymentUrl)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *GetSubscriptionPortalLinkRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetSubscriptionPortalLinkRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GetSubscriptionPortalLinkRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.OwnerAnyId) > 0 {
+		i -= len(m.OwnerAnyId)
+		copy(dAtA[i:], m.OwnerAnyId)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.OwnerAnyId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *GetSubscriptionPortalLinkRequestSigned) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetSubscriptionPortalLinkRequestSigned) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GetSubscriptionPortalLinkRequestSigned) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Signature) > 0 {
+		i -= len(m.Signature)
+		copy(dAtA[i:], m.Signature)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Signature)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Payload) > 0 {
+		i -= len(m.Payload)
+		copy(dAtA[i:], m.Payload)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Payload)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *GetSubscriptionPortalLinkResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetSubscriptionPortalLinkResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GetSubscriptionPortalLinkResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.PortalUrl) > 0 {
+		i -= len(m.PortalUrl)
+		copy(dAtA[i:], m.PortalUrl)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.PortalUrl)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -880,6 +1159,10 @@ func (m *GetSubscriptionResponse) Size() (n int) {
 	if m.PaymentMethod != 0 {
 		n += 1 + sovPaymentservice(uint64(m.PaymentMethod))
 	}
+	l = len(m.RequestedAnyName)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
 	return n
 }
 
@@ -889,7 +1172,7 @@ func (m *BuySubscriptionRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.OwnerAnyID)
+	l = len(m.OwnerAnyId)
 	if l > 0 {
 		n += 1 + l + sovPaymentservice(uint64(l))
 	}
@@ -902,6 +1185,10 @@ func (m *BuySubscriptionRequest) Size() (n int) {
 	}
 	if m.PaymentMethod != 0 {
 		n += 1 + sovPaymentservice(uint64(m.PaymentMethod))
+	}
+	l = len(m.RequestedAnyName)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
 	}
 	return n
 }
@@ -930,6 +1217,49 @@ func (m *BuySubscriptionResponse) Size() (n int) {
 	var l int
 	_ = l
 	l = len(m.PaymentUrl)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *GetSubscriptionPortalLinkRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.OwnerAnyId)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *GetSubscriptionPortalLinkRequestSigned) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Payload)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.Signature)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *GetSubscriptionPortalLinkResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.PortalUrl)
 	if l > 0 {
 		n += 1 + l + sovPaymentservice(uint64(l))
 	}
@@ -1324,6 +1654,38 @@ func (m *GetSubscriptionResponse) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RequestedAnyName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RequestedAnyName = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPaymentservice(dAtA[iNdEx:])
@@ -1376,7 +1738,7 @@ func (m *BuySubscriptionRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field OwnerAnyID", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerAnyId", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -1404,7 +1766,7 @@ func (m *BuySubscriptionRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.OwnerAnyID = string(dAtA[iNdEx:postIndex])
+			m.OwnerAnyId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -1476,6 +1838,38 @@ func (m *BuySubscriptionRequest) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RequestedAnyName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RequestedAnyName = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPaymentservice(dAtA[iNdEx:])
@@ -1675,6 +2069,288 @@ func (m *BuySubscriptionResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.PaymentUrl = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GetSubscriptionPortalLinkRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetSubscriptionPortalLinkRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetSubscriptionPortalLinkRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerAnyId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OwnerAnyId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetSubscriptionPortalLinkRequestSigned: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetSubscriptionPortalLinkRequestSigned: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Payload", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Payload = append(m.Payload[:0], dAtA[iNdEx:postIndex]...)
+			if m.Payload == nil {
+				m.Payload = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GetSubscriptionPortalLinkResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetSubscriptionPortalLinkResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetSubscriptionPortalLinkResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PortalUrl", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PortalUrl = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

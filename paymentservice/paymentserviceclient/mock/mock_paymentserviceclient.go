@@ -55,20 +55,6 @@ func (mr *MockAnyPpClientServiceMockRecorder) BuySubscription(ctx, in any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuySubscription", reflect.TypeOf((*MockAnyPpClientService)(nil).BuySubscription), ctx, in)
 }
 
-// Close mocks base method.
-func (m *MockAnyPpClientService) Close(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Close indicates an expected call of Close.
-func (mr *MockAnyPpClientServiceMockRecorder) Close(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockAnyPpClientService)(nil).Close), ctx)
-}
-
 // GetSubscriptionStatus mocks base method.
 func (m *MockAnyPpClientService) GetSubscriptionStatus(ctx context.Context, in *paymentserviceproto.GetSubscriptionRequestSigned) (*paymentserviceproto.GetSubscriptionResponse, error) {
 	m.ctrl.T.Helper()
@@ -110,18 +96,4 @@ func (m *MockAnyPpClientService) Name() string {
 func (mr *MockAnyPpClientServiceMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockAnyPpClientService)(nil).Name))
-}
-
-// Run mocks base method.
-func (m *MockAnyPpClientService) Run(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Run indicates an expected call of Run.
-func (mr *MockAnyPpClientServiceMockRecorder) Run(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockAnyPpClientService)(nil).Run), ctx)
 }

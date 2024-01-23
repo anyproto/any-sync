@@ -42,6 +42,7 @@ type DRPCAnyPaymentProcessingClient interface {
 
 	GetSubscriptionStatus(ctx context.Context, in *GetSubscriptionRequestSigned) (*GetSubscriptionResponse, error)
 	BuySubscription(ctx context.Context, in *BuySubscriptionRequestSigned) (*BuySubscriptionResponse, error)
+	GetSubscriptionPortalLink(ctx context.Context, in *GetSubscriptionPortalLinkRequestSigned) (*GetSubscriptionPortalLinkResponse, error)
 }
 
 type drpcAnyPaymentProcessingClient struct {
@@ -72,9 +73,19 @@ func (c *drpcAnyPaymentProcessingClient) BuySubscription(ctx context.Context, in
 	return out, nil
 }
 
+func (c *drpcAnyPaymentProcessingClient) GetSubscriptionPortalLink(ctx context.Context, in *GetSubscriptionPortalLinkRequestSigned) (*GetSubscriptionPortalLinkResponse, error) {
+	out := new(GetSubscriptionPortalLinkResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing/GetSubscriptionPortalLink", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCAnyPaymentProcessingServer interface {
 	GetSubscriptionStatus(context.Context, *GetSubscriptionRequestSigned) (*GetSubscriptionResponse, error)
 	BuySubscription(context.Context, *BuySubscriptionRequestSigned) (*BuySubscriptionResponse, error)
+	GetSubscriptionPortalLink(context.Context, *GetSubscriptionPortalLinkRequestSigned) (*GetSubscriptionPortalLinkResponse, error)
 }
 
 type DRPCAnyPaymentProcessingUnimplementedServer struct{}
@@ -87,9 +98,13 @@ func (s *DRPCAnyPaymentProcessingUnimplementedServer) BuySubscription(context.Co
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCAnyPaymentProcessingUnimplementedServer) GetSubscriptionPortalLink(context.Context, *GetSubscriptionPortalLinkRequestSigned) (*GetSubscriptionPortalLinkResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCAnyPaymentProcessingDescription struct{}
 
-func (DRPCAnyPaymentProcessingDescription) NumMethods() int { return 2 }
+func (DRPCAnyPaymentProcessingDescription) NumMethods() int { return 3 }
 
 func (DRPCAnyPaymentProcessingDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -111,6 +126,15 @@ func (DRPCAnyPaymentProcessingDescription) Method(n int) (string, drpc.Encoding,
 						in1.(*BuySubscriptionRequestSigned),
 					)
 			}, DRPCAnyPaymentProcessingServer.BuySubscription, true
+	case 2:
+		return "/AnyPaymentProcessing/GetSubscriptionPortalLink", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessingServer).
+					GetSubscriptionPortalLink(
+						ctx,
+						in1.(*GetSubscriptionPortalLinkRequestSigned),
+					)
+			}, DRPCAnyPaymentProcessingServer.GetSubscriptionPortalLink, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -146,6 +170,22 @@ type drpcAnyPaymentProcessing_BuySubscriptionStream struct {
 }
 
 func (x *drpcAnyPaymentProcessing_BuySubscriptionStream) SendAndClose(m *BuySubscriptionResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing_GetSubscriptionPortalLinkStream interface {
+	drpc.Stream
+	SendAndClose(*GetSubscriptionPortalLinkResponse) error
+}
+
+type drpcAnyPaymentProcessing_GetSubscriptionPortalLinkStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing_GetSubscriptionPortalLinkStream) SendAndClose(m *GetSubscriptionPortalLinkResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
 		return err
 	}

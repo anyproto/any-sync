@@ -9,28 +9,33 @@ message NameAvailableRequest {
 }
 
 message NameByAddressRequest {
-  // An Ethereum address that owns that name
-  string ownerEthAddress = 1;
+  // EOA -> SCW -> name
+  // A SCW Ethereum address that owns that name 
+  string ownerScwEthAddress = 1;
 }
 
 message NameAvailableResponse {
   bool available = 1;
   
-  // An Ethereum address that owns that name
+  // EOA -> SCW -> name
   // This field is non-empty only if name is "already registered"
-  string ownerEthAddress = 2;
+  string ownerScwEthAddress = 2;
+  
+  // This field is non-empty only if name is "already registered"
+  // TODO: 
+  string ownerEthAddress = 3;
 
   // A content hash attached to this name
   // This field is non-empty only if name is "already registered"
-  string ownerAnyAddress = 3;
+  string ownerAnyAddress = 4;
 
   // A SpaceID attached to this name
   // This field is non-empty only if name is "already registered"
-  string spaceId = 4;
+  string spaceId = 5;
 
-  // doestn't work with marashalling/unmarshalling
+  // doesn't work with marashalling/unmarshalling
   //google.protobuf.Timestamp nameExpires = 5 [(gogoproto.stdtime) = true];
-  int64 nameExpires = 5;
+  int64 nameExpires = 6;
 }
 
 message NameByAddressResponse {
@@ -40,7 +45,9 @@ message NameByAddressResponse {
 }
 
 service Anyns {
-  // Check if name is free or get the attached information if not
+  // Lookup: name -> address
   rpc IsNameAvailable(NameAvailableRequest) returns (NameAvailableResponse) {}
+
+  // Reverse lookup: address -> name
   rpc GetNameByAddress(NameByAddressRequest) returns (NameByAddressResponse) {}
 }
