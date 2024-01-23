@@ -40,6 +40,20 @@ type PermissionChangePayload struct {
 	Permissions AclPermissions
 }
 
+type PermissionChangesPayload struct {
+	Changes []PermissionChangePayload
+}
+
+type AccountsAddPayload struct {
+	Additions []AccountAdd
+}
+
+type AccountAdd struct {
+	Identity    crypto.PubKey
+	Permissions AclPermissions
+	Metadata    []byte
+}
+
 type AccountRemovePayload struct {
 	Identities []crypto.PubKey
 	Change     ReadKeyChangePayload
@@ -62,8 +76,10 @@ type AclRecordBuilder interface {
 	BuildRequestDecline(requestRecordId string) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestRemove() (rawRecord *consensusproto.RawRecord, err error)
 	BuildPermissionChange(payload PermissionChangePayload) (rawRecord *consensusproto.RawRecord, err error)
+	BuildPermissionChanges(payload PermissionChangesPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildReadKeyChange(payload ReadKeyChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountRemove(payload AccountRemovePayload) (rawRecord *consensusproto.RawRecord, err error)
+	BuildAccountsAdd(payload AccountsAddPayload) (rawRecord *consensusproto.RawRecord, err error)
 }
 
 type aclRecordBuilder struct {
@@ -114,6 +130,85 @@ func (a *aclRecordBuilder) buildRecord(aclContent *aclrecordproto.AclContentValu
 		Signature: signature,
 	}
 	return
+}
+
+func (a *aclRecordBuilder) BuildPermissionChanges(payload PermissionChangesPayload) (rawRecord *consensusproto.RawRecord, err error) {
+	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
+		err = ErrInsufficientPermissions
+		return
+	}
+	var changes []*aclrecordproto.AclAccountPermissionChange
+	for _, perm := range payload.Changes {
+		if perm.Identity.Equals(a.state.pubKey) {
+			err = ErrInsufficientPermissions
+			return
+		}
+		if perm.Permissions.IsOwner() {
+			err = ErrIsOwner
+			return
+		}
+		protoIdentity, err := perm.Identity.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, &aclrecordproto.AclAccountPermissionChange{
+			Identity:    protoIdentity,
+			Permissions: aclrecordproto.AclUserPermissions(perm.Permissions),
+		})
+	}
+	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_PermissionChanges{
+		&aclrecordproto.AclAccountPermissionChanges{changes},
+	}}
+	return a.buildRecord(content)
+}
+
+func (a *aclRecordBuilder) BuildAccountsAdd(payload AccountsAddPayload) (rawRecord *consensusproto.RawRecord, err error) {
+	var accs []*aclrecordproto.AclAccountAdd
+	for _, acc := range payload.Additions {
+		if !a.state.Permissions(acc.Identity).NoPermissions() {
+			return nil, ErrDuplicateAccounts
+		}
+		if acc.Permissions.IsOwner() {
+			return nil, ErrIsOwner
+		}
+		mkKey, err := a.state.CurrentMetadataKey()
+		if err != nil {
+			return nil, err
+		}
+		encMeta, err := mkKey.Encrypt(acc.Metadata)
+		if err != nil {
+			return nil, err
+		}
+		if len(encMeta) > MaxMetadataLen {
+			return nil, ErrMetadataTooLarge
+		}
+		readKey, err := a.state.CurrentReadKey()
+		if err != nil {
+			return nil, ErrNoReadKey
+		}
+		protoKey, err := readKey.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		enc, err := acc.Identity.Encrypt(protoKey)
+		if err != nil {
+			return nil, err
+		}
+		protoIdentity, err := acc.Identity.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		accs = append(accs, &aclrecordproto.AclAccountAdd{
+			Identity:         protoIdentity,
+			Permissions:      aclrecordproto.AclUserPermissions(acc.Permissions),
+			Metadata:         encMeta,
+			EncryptedReadKey: enc,
+		})
+	}
+	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_AccountsAdd{
+		&aclrecordproto.AclAccountsAdd{accs},
+	}}
+	return a.buildRecord(content)
 }
 
 func (a *aclRecordBuilder) BuildInvite() (res InviteResult, err error) {

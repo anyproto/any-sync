@@ -298,6 +298,16 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 	}
 }
 
+func (st *AclState) applyPermissionChanges(ch *aclrecordproto.AclAccountPermissionChanges, record *AclRecord) (err error) {
+	for _, ch := range ch.Changes {
+		err := st.applyPermissionChange(ch, record)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (st *AclState) applyPermissionChange(ch *aclrecordproto.AclAccountPermissionChange, record *AclRecord) error {
 	chIdentity, err := st.keyStore.PubKeyFromProto(ch.Identity)
 	if err != nil {
@@ -363,6 +373,34 @@ func (st *AclState) applyRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, r
 	return nil
 }
 
+func (st *AclState) applyAccountsAdd(ch *aclrecordproto.AclAccountsAdd, record *AclRecord) error {
+	err := st.contentValidator.ValidateAccountsAdd(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	for _, acc := range ch.Additions {
+		identity, err := st.keyStore.PubKeyFromProto(acc.Identity)
+		if err != nil {
+			return err
+		}
+		st.accountStates[mapKeyFromPubKey(identity)] = AccountState{
+			PubKey:          identity,
+			Permissions:     AclPermissions(acc.Permissions),
+			Status:          StatusActive,
+			RequestMetadata: acc.Metadata,
+			KeyRecordId:     st.CurrentReadKeyId(),
+		}
+		if !st.pubKey.Equals(identity) {
+			continue
+		}
+		err = st.unpackAllKeys(acc.EncryptedReadKey)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, record *AclRecord) error {
 	err := st.contentValidator.ValidateRequestAccept(ch, record.Identity)
 	if err != nil {
@@ -390,7 +428,11 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 	if !st.pubKey.Equals(acceptIdentity) {
 		return nil
 	}
-	iterReadKey, err := st.unmarshallDecryptReadKey(ch.EncryptedReadKey, st.key.Decrypt)
+	return st.unpackAllKeys(ch.EncryptedReadKey)
+}
+
+func (st *AclState) unpackAllKeys(rk []byte) error {
+	iterReadKey, err := st.unmarshallDecryptReadKey(rk, st.key.Decrypt)
 	if err != nil {
 		return err
 	}

@@ -53,6 +53,24 @@ message AclEncryptedReadKey {
     bytes encryptedReadKey = 2;
 }
 
+// AclAccountPermissionChanges contains permission changes for certain identities
+message AclAccountPermissionChanges {
+    repeated AclAccountPermissionChange changes = 1;
+}
+
+// AclAccountsAdd contains new accounts to be added
+message AclAccountsAdd {
+    repeated AclAccountAdd additions = 1;
+}
+
+// AclAccountAdd contains new account to be added
+message AclAccountAdd {
+    bytes identity = 1;
+    AclUserPermissions permissions = 2;
+    bytes metadata = 3;
+    bytes encryptedReadKey = 4;
+}
+
 // AclAccountPermissionChange changes permissions of specific account
 message AclAccountPermissionChange {
     bytes identity = 1;
@@ -86,11 +104,14 @@ message AclContentValue {
         AclAccountInviteRevoke inviteRevoke = 2;
         AclAccountRequestJoin requestJoin = 3;
         AclAccountRequestAccept requestAccept = 4;
+        // AclAccountPermissionChange deprecated
         AclAccountPermissionChange permissionChange = 5;
         AclAccountRemove accountRemove = 6;
         AclReadKeyChange readKeyChange = 7;
         AclAccountRequestDecline requestDecline = 8;
         AclAccountRequestRemove accountRequestRemove = 9;
+        AclAccountPermissionChanges permissionChanges = 10;
+        AclAccountsAdd accountsAdd = 11;
     }
 }
 
