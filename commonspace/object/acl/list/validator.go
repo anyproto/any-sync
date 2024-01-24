@@ -8,6 +8,8 @@ import (
 type ContentValidator interface {
 	ValidateAclRecordContents(ch *AclRecord) (err error)
 	ValidatePermissionChange(ch *aclrecordproto.AclAccountPermissionChange, authorIdentity crypto.PubKey) (err error)
+	ValidatePermissionChanges(ch *aclrecordproto.AclAccountPermissionChanges, authorIdentity crypto.PubKey) (err error)
+	ValidateAccountsAdd(ch *aclrecordproto.AclAccountsAdd, authorIdentity crypto.PubKey) (err error)
 	ValidateInvite(ch *aclrecordproto.AclAccountInvite, authorIdentity crypto.PubKey) (err error)
 	ValidateInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, authorIdentity crypto.PubKey) (err error)
@@ -21,6 +23,39 @@ type ContentValidator interface {
 type contentValidator struct {
 	keyStore crypto.KeyStorage
 	aclState *AclState
+}
+
+func (c *contentValidator) ValidatePermissionChanges(ch *aclrecordproto.AclAccountPermissionChanges, authorIdentity crypto.PubKey) (err error) {
+	for _, ch := range ch.Changes {
+		err := c.ValidatePermissionChange(ch, authorIdentity)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *contentValidator) ValidateAccountsAdd(ch *aclrecordproto.AclAccountsAdd, authorIdentity crypto.PubKey) (err error) {
+	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
+		return ErrInsufficientPermissions
+	}
+	for _, ch := range ch.Additions {
+		identity, err := c.keyStore.PubKeyFromProto(ch.Identity)
+		if err != nil {
+			return err
+		}
+		if !c.aclState.Permissions(identity).NoPermissions() {
+			return ErrDuplicateAccounts
+		}
+		perm := AclPermissions(ch.Permissions)
+		if perm.IsOwner() {
+			return ErrIsOwner
+		}
+		if perm.NoPermissions() {
+			return ErrInsufficientPermissions
+		}
+	}
+	return nil
 }
 
 func (c *contentValidator) ValidateAclRecordContents(ch *AclRecord) (err error) {
@@ -57,6 +92,10 @@ func (c *contentValidator) validateAclRecordContent(ch *aclrecordproto.AclConten
 		return c.ValidateRequestRemove(ch.GetAccountRequestRemove(), authorIdentity)
 	case ch.GetReadKeyChange() != nil:
 		return c.ValidateReadKeyChange(ch.GetReadKeyChange(), authorIdentity)
+	case ch.GetPermissionChanges() != nil:
+		return c.ValidatePermissionChanges(ch.GetPermissionChanges(), authorIdentity)
+	case ch.GetAccountsAdd() != nil:
+		return c.ValidateAccountsAdd(ch.GetAccountsAdd(), authorIdentity)
 	default:
 		return ErrUnexpectedContentType
 	}
@@ -153,8 +192,8 @@ func (c *contentValidator) ValidateRequestDecline(ch *aclrecordproto.AclAccountR
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
-	_, exists := c.aclState.requestRecords[ch.RequestRecordId]
-	if !exists {
+	rec, exists := c.aclState.requestRecords[ch.RequestRecordId]
+	if !exists || rec.Type != RequestTypeJoin {
 		return ErrNoSuchRequest
 	}
 	return

@@ -8,6 +8,10 @@ import (
 )
 
 func NewTestDerivedAcl(spaceId string, keys *accountdata.AccountKeys) (AclList, error) {
+	return NewTestDerivedAclMetadata(spaceId, keys, []byte("metadata"))
+}
+
+func NewTestDerivedAclMetadata(spaceId string, keys *accountdata.AccountKeys, metadata []byte) (AclList, error) {
 	builder := NewAclRecordBuilder("", crypto.NewKeyStorage(), keys, NoOpAcceptorVerifier{})
 	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
 	if err != nil {
@@ -26,7 +30,7 @@ func NewTestDerivedAcl(spaceId string, keys *accountdata.AccountKeys) (AclList, 
 			MetadataKey: privKey,
 			ReadKey:     newReadKey,
 		},
-		Metadata: []byte("metadata"),
+		Metadata: metadata,
 	})
 	if err != nil {
 		return nil, err

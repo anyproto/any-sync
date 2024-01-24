@@ -178,7 +178,7 @@ message AclAddRecordResponse {
     bytes payload = 2;
 }
 
-// AclGetRecordsRequest can optionally contain the last known aclHeal, the server will return only new records or an empty list if there are no new records.
+// AclGetRecordsRequest can optionally contain the last known aclHead, the server will return only new records or an empty list if there are no new records.
 // If aclHead is not provided the whole list will be returned.
 message AclGetRecordsRequest {
     string spaceId = 1;

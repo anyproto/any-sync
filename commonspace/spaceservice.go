@@ -9,6 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/net"
@@ -190,6 +191,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 		Register(deps.TreeSyncer).
 		Register(objecttreebuilder.New()).
 		Register(objectsync.New()).
+		Register(aclclient.NewAclSpaceClient()).
 		Register(headsync.New())
 
 	sp := &space{

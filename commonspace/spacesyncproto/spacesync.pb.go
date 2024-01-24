@@ -1383,7 +1383,7 @@ func (m *AclAddRecordResponse) GetPayload() []byte {
 	return nil
 }
 
-// AclGetRecordsRequest can optionally contain the last known aclHeal, the server will return only new records or an empty list if there are no new records.
+// AclGetRecordsRequest can optionally contain the last known aclHead, the server will return only new records or an empty list if there are no new records.
 // If aclHead is not provided the whole list will be returned.
 type AclGetRecordsRequest struct {
 	SpaceId string `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`

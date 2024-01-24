@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/headsync"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
@@ -75,6 +76,7 @@ type Space interface {
 
 	TreeBuilder() objecttreebuilder.TreeBuilder
 	TreeSyncer() treesyncer.TreeSyncer
+	AclClient() aclclient.AclSpaceClient
 	SyncStatus() syncstatus.StatusUpdater
 	Storage() spacestorage.SpaceStorage
 
@@ -104,6 +106,7 @@ type space struct {
 	syncStatus  syncstatus.StatusService
 	settings    settings.Settings
 	storage     spacestorage.SpaceStorage
+	aclClient   aclclient.AclSpaceClient
 	aclList     list.AclList
 }
 
@@ -160,6 +163,10 @@ func (s *space) TreeSyncer() treesyncer.TreeSyncer {
 	return s.treeSyncer
 }
 
+func (s *space) AclClient() aclclient.AclSpaceClient {
+	return s.aclClient
+}
+
 func (s *space) GetNodePeers(ctx context.Context) (peer []peer.Peer, err error) {
 	return s.peerManager.GetNodePeers(ctx)
 }
@@ -186,6 +193,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.peerManager = s.app.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	s.aclList = s.app.MustComponent(syncacl.CName).(list.AclList)
 	s.treeSyncer = s.app.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
+	s.aclClient = s.app.MustComponent(aclclient.CName).(aclclient.AclSpaceClient)
 	s.header, err = s.storage.SpaceHeader()
 	return
 }

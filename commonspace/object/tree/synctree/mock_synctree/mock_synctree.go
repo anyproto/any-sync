@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_synctree/mock_synctree.go github.com/anyproto/any-sync/commonspace/object/tree/synctree SyncTree,ReceiveQueue,HeadNotifiable,SyncClient,RequestFactory,TreeSyncProtocol
 //
+
 // Package mock_synctree is a generated GoMock package.
 package mock_synctree
 
