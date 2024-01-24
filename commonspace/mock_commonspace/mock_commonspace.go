@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_commonspace/mock_commonspace.go github.com/anyproto/any-sync/commonspace Space
 //
+
 // Package mock_commonspace is a generated GoMock package.
 package mock_commonspace
 
@@ -14,6 +15,7 @@ import (
 	time "time"
 
 	commonspace "github.com/anyproto/any-sync/commonspace"
+	aclclient "github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	headsync "github.com/anyproto/any-sync/commonspace/headsync"
 	syncacl "github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	treesyncer "github.com/anyproto/any-sync/commonspace/object/treesyncer"
@@ -61,6 +63,20 @@ func (m *MockSpace) Acl() syncacl.SyncAcl {
 func (mr *MockSpaceMockRecorder) Acl() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Acl", reflect.TypeOf((*MockSpace)(nil).Acl))
+}
+
+// AclClient mocks base method.
+func (m *MockSpace) AclClient() aclclient.AclSpaceClient {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AclClient")
+	ret0, _ := ret[0].(aclclient.AclSpaceClient)
+	return ret0
+}
+
+// AclClient indicates an expected call of AclClient.
+func (mr *MockSpaceMockRecorder) AclClient() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclClient", reflect.TypeOf((*MockSpace)(nil).AclClient))
 }
 
 // Close mocks base method.
