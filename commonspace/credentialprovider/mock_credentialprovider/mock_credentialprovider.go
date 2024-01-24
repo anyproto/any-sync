@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_credentialprovider/mock_credentialprovider.go github.com/anyproto/any-sync/commonspace/credentialprovider CredentialProvider
 //
+
 // Package mock_credentialprovider is a generated GoMock package.
 package mock_credentialprovider
 
