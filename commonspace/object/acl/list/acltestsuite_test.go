@@ -23,22 +23,26 @@ type accountExpectedState struct {
 	perms    AclPermissions
 	status   AclStatus
 	metadata []byte
+	pseudoId string
+	recCmd   string
 }
 
 type aclExecutor struct {
-	owner            string
-	spaceId          string
-	invites          map[string]crypto.PrivKey
-	actualAccounts   map[string]*testAclState
-	expectedAccounts map[string]*accountExpectedState
+	owner               string
+	spaceId             string
+	invites             map[string]crypto.PrivKey
+	actualAccounts      map[string]*testAclState
+	expectedAccounts    map[string]*accountExpectedState
+	expectedPermissions map[string][]accountExpectedState
 }
 
 func newAclExecutor(spaceId string) *aclExecutor {
 	return &aclExecutor{
-		spaceId:          spaceId,
-		invites:          map[string]crypto.PrivKey{},
-		actualAccounts:   make(map[string]*testAclState),
-		expectedAccounts: make(map[string]*accountExpectedState),
+		spaceId:             spaceId,
+		invites:             map[string]crypto.PrivKey{},
+		actualAccounts:      make(map[string]*testAclState),
+		expectedAccounts:    make(map[string]*accountExpectedState),
+		expectedPermissions: make(map[string][]accountExpectedState),
 	}
 }
 
@@ -46,7 +50,7 @@ var (
 	errIncorrectParts = errors.New("incorrect parts")
 )
 
-func (a *aclExecutor) execute(cmd string) error {
+func (a *aclExecutor) execute(cmd string) (err error) {
 	parts := strings.Split(cmd, ":")
 	if len(parts) != 2 {
 		return errIncorrectParts
@@ -61,7 +65,9 @@ func (a *aclExecutor) execute(cmd string) error {
 	if len(args) == 0 {
 		return errIncorrectParts
 	}
+	var isNewAccount bool
 	if _, exists := a.actualAccounts[account]; !exists {
+		isNewAccount = true
 		keys, err := accountdata.NewRandom()
 		if err != nil {
 			return err
@@ -80,6 +86,7 @@ func (a *aclExecutor) execute(cmd string) error {
 				perms:    AclPermissions(aclrecordproto.AclUserPermissions_Owner),
 				status:   StatusActive,
 				metadata: []byte(account),
+				pseudoId: account,
 			}
 			a.owner = account
 			return nil
@@ -96,6 +103,7 @@ func (a *aclExecutor) execute(cmd string) error {
 			a.actualAccounts[account] = state
 			a.expectedAccounts[account] = &accountExpectedState{
 				metadata: []byte(account),
+				pseudoId: account,
 			}
 		}
 	} else if a.expectedAccounts[account].status == StatusRemoved {
@@ -106,9 +114,30 @@ func (a *aclExecutor) execute(cmd string) error {
 			return err
 		}
 		a.actualAccounts[account].acl = accountAcl
-		return nil
 	}
 	acl := a.actualAccounts[account].acl
+	var afterAll []func()
+	defer func() {
+		if err != nil {
+			if !isNewAccount {
+				return
+			}
+			delete(a.expectedAccounts, account)
+			delete(a.actualAccounts, account)
+		} else {
+			for _, f := range afterAll {
+				f()
+			}
+			head := acl.Head().Id
+			var states []accountExpectedState
+			for _, state := range a.expectedAccounts {
+				cp := *state
+				cp.recCmd = cmd
+				states = append(states, cp)
+			}
+			a.expectedPermissions[head] = states
+		}
+	}()
 	addRec := func(rec *consensusproto.RawRecordWithId) error {
 		for _, acc := range a.actualAccounts {
 			err := acc.acl.AddRawRecord(rec)
@@ -190,7 +219,6 @@ func (a *aclExecutor) execute(cmd string) error {
 		a.expectedAccounts[argParts[0]].perms = perms
 	case "changes":
 		var payloads []PermissionChangePayload
-		var funcs []func()
 		for _, arg := range args {
 			argParts := strings.Split(arg, ",")
 			if len(argParts) != 2 {
@@ -202,7 +230,7 @@ func (a *aclExecutor) execute(cmd string) error {
 				Identity:    changed,
 				Permissions: perms,
 			})
-			funcs = append(funcs, func() {
+			afterAll = append(afterAll, func() {
 				a.expectedAccounts[argParts[0]].perms = perms
 			})
 		}
@@ -214,9 +242,6 @@ func (a *aclExecutor) execute(cmd string) error {
 		err = addRec(WrapAclRecord(res))
 		if err != nil {
 			return err
-		}
-		for _, f := range funcs {
-			f()
 		}
 	case "add":
 		var payloads []AccountAdd
@@ -244,6 +269,7 @@ func (a *aclExecutor) execute(cmd string) error {
 				perms:    getPerm(argParts[1]),
 				status:   StatusActive,
 				metadata: []byte(argParts[2]),
+				pseudoId: account,
 			}
 			payloads = append(payloads, AccountAdd{
 				Identity:    keys.SignKey.GetPublic(),
@@ -251,6 +277,16 @@ func (a *aclExecutor) execute(cmd string) error {
 				Metadata:    []byte(argParts[2]),
 			})
 		}
+		defer func() {
+			if err != nil {
+				for _, arg := range args {
+					argParts := strings.Split(arg, ",")
+					account := argParts[0]
+					delete(a.expectedAccounts, account)
+					delete(a.actualAccounts, account)
+				}
+			}
+		}()
 		res, err := acl.RecordBuilder().BuildAccountsAdd(AccountsAddPayload{Additions: payloads})
 		if err != nil {
 			return err
@@ -346,6 +382,19 @@ func (a *aclExecutor) verify(t *testing.T) {
 			require.Equal(t, exp.metadata, metadata)
 		}
 	}
+	for aclRecId, perms := range a.expectedPermissions {
+		for _, perm := range perms {
+			for actId, acc := range a.actualAccounts {
+				if a.expectedAccounts[actId].status == StatusRemoved {
+					continue
+				}
+				identity := a.actualAccounts[perm.pseudoId].keys.SignKey.GetPublic()
+				actualPerms, err := acc.acl.AclState().PermissionsAtRecord(aclRecId, identity)
+				require.NoError(t, err, perm.recCmd)
+				require.Equal(t, perm.perms, actualPerms, fmt.Sprintf("%s, %s, %s", perm.recCmd, perm.pseudoId, actId))
+			}
+		}
+	}
 }
 
 func TestAclExecutor(t *testing.T) {
@@ -361,7 +410,7 @@ func TestAclExecutor(t *testing.T) {
 		// now b can join
 		{"b.join:invId", nil},
 		// a approves b, it can write now
-		{"a.approve:b,rw", nil},
+		{"a.approve:b,r", nil},
 		// c joins with the same invite
 		{"c.join:invId", nil},
 		// a approves c
@@ -383,10 +432,16 @@ func TestAclExecutor(t *testing.T) {
 		{"e.add:x,r,m1;y,adm,m2", nil},
 		// now y can also change permission as an admin
 		{"y.changes:x,rw", nil},
+		// e can generate another invite
+		{"e.invite:inv1Id", nil},
+		// b tries to join again
+		{"b.join:inv1Id", nil},
+		// e approves b
+		{"e.approve:b,rw", nil},
 	}
 	for _, cmd := range cmds {
 		err := a.execute(cmd.cmd)
-		require.Equal(t, cmd.err, err)
+		require.Equal(t, cmd.err, err, cmd)
 	}
 	a.verify(t)
 }

@@ -366,12 +366,25 @@ func (st *AclState) applyRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, r
 		RecordId:        record.Id,
 		Type:            RequestTypeJoin,
 	}
-	st.accountStates[mapKeyFromPubKey(record.Identity)] = AccountState{
-		PubKey:          record.Identity,
-		Permissions:     AclPermissionsNone,
-		Status:          StatusJoining,
-		RequestMetadata: ch.Metadata,
-		KeyRecordId:     st.CurrentReadKeyId(),
+	pKeyString := mapKeyFromPubKey(record.Identity)
+	state, exists := st.accountStates[pKeyString]
+	if !exists {
+		st.accountStates[mapKeyFromPubKey(record.Identity)] = AccountState{
+			PubKey:          record.Identity,
+			Permissions:     AclPermissionsNone,
+			Status:          StatusJoining,
+			RequestMetadata: ch.Metadata,
+			KeyRecordId:     st.CurrentReadKeyId(),
+		}
+	} else {
+		st.accountStates[mapKeyFromPubKey(record.Identity)] = AccountState{
+			PubKey:            record.Identity,
+			Permissions:       AclPermissionsNone,
+			Status:            StatusJoining,
+			RequestMetadata:   ch.Metadata,
+			KeyRecordId:       st.CurrentReadKeyId(),
+			PermissionChanges: state.PermissionChanges,
+		}
 	}
 	return nil
 }
@@ -392,6 +405,12 @@ func (st *AclState) applyAccountsAdd(ch *aclrecordproto.AclAccountsAdd, record *
 			Status:          StatusActive,
 			RequestMetadata: acc.Metadata,
 			KeyRecordId:     st.CurrentReadKeyId(),
+			PermissionChanges: []PermissionChange{
+				{
+					Permission: AclPermissions(acc.Permissions),
+					RecordId:   record.Id,
+				},
+			},
 		}
 		if !st.pubKey.Equals(identity) {
 			continue
@@ -414,18 +433,34 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 		return err
 	}
 	requestRecord, _ := st.requestRecords[ch.RequestRecordId]
-	st.accountStates[mapKeyFromPubKey(acceptIdentity)] = AccountState{
-		PubKey:          acceptIdentity,
-		Permissions:     AclPermissions(ch.Permissions),
-		RequestMetadata: requestRecord.RequestMetadata,
-		KeyRecordId:     requestRecord.KeyRecordId,
-		Status:          StatusActive,
-		PermissionChanges: []PermissionChange{
-			{
+	pKeyString := mapKeyFromPubKey(acceptIdentity)
+	state, exists := st.accountStates[pKeyString]
+	if !exists {
+		st.accountStates[pKeyString] = AccountState{
+			PubKey:          acceptIdentity,
+			Permissions:     AclPermissions(ch.Permissions),
+			RequestMetadata: requestRecord.RequestMetadata,
+			KeyRecordId:     requestRecord.KeyRecordId,
+			Status:          StatusActive,
+			PermissionChanges: []PermissionChange{
+				{
+					Permission: AclPermissions(ch.Permissions),
+					RecordId:   record.Id,
+				},
+			},
+		}
+	} else {
+		st.accountStates[pKeyString] = AccountState{
+			PubKey:          acceptIdentity,
+			Permissions:     AclPermissions(ch.Permissions),
+			RequestMetadata: requestRecord.RequestMetadata,
+			KeyRecordId:     requestRecord.KeyRecordId,
+			Status:          StatusActive,
+			PermissionChanges: append(state.PermissionChanges, PermissionChange{
 				Permission: AclPermissions(ch.Permissions),
 				RecordId:   record.Id,
-			},
-		},
+			}),
+		}
 	}
 	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity))
 	if !st.pubKey.Equals(acceptIdentity) {
@@ -542,6 +577,10 @@ func (st *AclState) applyAccountRemove(ch *aclrecordproto.AclAccountRemove, reco
 		}
 		accSt.Status = StatusRemoved
 		accSt.Permissions = AclPermissionsNone
+		accSt.PermissionChanges = append(accSt.PermissionChanges, PermissionChange{
+			RecordId:   record.Id,
+			Permission: AclPermissionsNone,
+		})
 		st.accountStates[idKey] = accSt
 		delete(st.pendingRequests, idKey)
 	}
@@ -713,24 +752,10 @@ func closestPermissions(accountState AccountState, recordId string, isAfter func
 		return AclPermissionsNone
 	}
 	permChanges := accountState.PermissionChanges
-	var (
-		i     int
-		after bool
-	)
-	for i = len(permChanges) - 1; i >= 0; i-- {
-		if recordId == permChanges[i].RecordId {
+	for i := len(permChanges) - 1; i >= 0; i-- {
+		if isAfter(recordId, permChanges[i].RecordId) {
 			return permChanges[i].Permission
 		}
-		after = isAfter(recordId, permChanges[i].RecordId)
-		if !after {
-			break
-		}
 	}
-	if after {
-		return permChanges[0].Permission
-	}
-	if i == len(permChanges)-1 {
-		return AclPermissionsNone
-	}
-	return permChanges[i+1].Permission
+	return AclPermissionsNone
 }

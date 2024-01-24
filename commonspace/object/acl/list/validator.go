@@ -47,8 +47,12 @@ func (c *contentValidator) ValidateAccountsAdd(ch *aclrecordproto.AclAccountsAdd
 		if !c.aclState.Permissions(identity).NoPermissions() {
 			return ErrDuplicateAccounts
 		}
-		if AclPermissions(ch.Permissions).IsOwner() {
+		perm := AclPermissions(ch.Permissions)
+		if perm.IsOwner() {
 			return ErrIsOwner
+		}
+		if perm.NoPermissions() {
+			return ErrInsufficientPermissions
 		}
 	}
 	return nil
