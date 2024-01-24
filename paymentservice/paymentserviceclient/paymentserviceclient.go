@@ -20,6 +20,7 @@ const CName = "any-pp.drpcclient"
 type AnyPpClientService interface {
 	GetSubscriptionStatus(ctx context.Context, in *pp.GetSubscriptionRequestSigned) (out *pp.GetSubscriptionResponse, err error)
 	BuySubscription(ctx context.Context, in *pp.BuySubscriptionRequestSigned) (out *pp.BuySubscriptionResponse, err error)
+	GetSubscriptionPortalLink(ctx context.Context, in *pp.GetSubscriptionPortalLinkRequestSigned) (out *pp.GetSubscriptionPortalLinkResponse, err error)
 
 	app.Component
 }
@@ -74,6 +75,16 @@ func (s *service) GetSubscriptionStatus(ctx context.Context, in *pp.GetSubscript
 func (s *service) BuySubscription(ctx context.Context, in *pp.BuySubscriptionRequestSigned) (out *pp.BuySubscriptionResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
 		if out, err = cl.BuySubscription(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) GetSubscriptionPortalLink(ctx context.Context, in *pp.GetSubscriptionPortalLinkRequestSigned) (out *pp.GetSubscriptionPortalLinkResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
+		if out, err = cl.GetSubscriptionPortalLink(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil

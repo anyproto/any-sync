@@ -22,7 +22,6 @@ message NameAvailableResponse {
   string ownerScwEthAddress = 2;
   
   // This field is non-empty only if name is "already registered"
-  // TODO: 
   string ownerEthAddress = 3;
 
   // A content hash attached to this name

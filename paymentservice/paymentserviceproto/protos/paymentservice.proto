@@ -7,9 +7,17 @@ option go_package = "paymentservice/paymentserviceproto";
 enum SubscriptionTier {
   TierUnknown = 0;
 
+  // "free" tier
   TierFriend = 1;
-  TierSupporter1Year = 2;
-  TierPatron1Year = 3;
+
+  // these can be used just for testing in debug mode
+  // it will still create an active subscription, but with NO features
+  TierSupporter1WeekTEST = 2;
+  TierPatron1WeekTEST = 3;
+
+  // these are the real tiers:
+  TierSupporter1Year = 4;
+  TierPatron1Year = 5;
 }
 
 enum SubscriptionStatus {
@@ -129,15 +137,14 @@ service AnyPaymentProcessing {
   // You can:
   // a) buy a subscription
   // b) TODO: upgrade your tier
-  // c) TODO: renew subscription
   // 
   // you can call BuySubscription multiple times even if current payment is not processed yet 
   // (to get new payment link)
   rpc BuySubscription(BuySubscriptionRequestSigned) returns (BuySubscriptionResponse) {}
 
   // Will generate a link to the portal where user can:
-  // a) change his billing details
+  // a) change her billing details
   // b) see payment info, invoices, etc
-  // c) cancel the subscription
+  // c) cancel/renew the subscription
   rpc GetSubscriptionPortalLink(GetSubscriptionPortalLinkRequestSigned) returns (GetSubscriptionPortalLinkResponse) {}
 }

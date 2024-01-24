@@ -119,7 +119,6 @@ type NameAvailableResponse struct {
 	// This field is non-empty only if name is "already registered"
 	OwnerScwEthAddress string `protobuf:"bytes,2,opt,name=ownerScwEthAddress,proto3" json:"ownerScwEthAddress,omitempty"`
 	// This field is non-empty only if name is "already registered"
-	// TODO:
 	OwnerEthAddress string `protobuf:"bytes,3,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
 	// A content hash attached to this name
 	// This field is non-empty only if name is "already registered"

@@ -98,6 +98,26 @@ message NameRegisterRequest {
   string fullName = 1;
 
   // A content hash attached to this name
+  // This should not be empty!
+  string ownerAnyAddress = 2;
+  
+  // An Ethereum address that owns that name
+  string ownerEthAddress = 3;
+
+  // Example:
+  // 1 - register alice.any -> ANYID123123
+  // 2 - register xxxx.any -> ANYID123123
+  // reverse resolve ANYID123123 will return xxxx.any 
+  //
+  // TODO: currently by default "true"
+  // bool updateReverseResolver = 4;
+}
+
+message NameRegisterForSpaceRequest {
+  string fullName = 1;
+
+  // A content hash attached to this name
+  // This should not be empty!
   string ownerAnyAddress = 2;
   
   // An Ethereum address that owns that name
@@ -153,7 +173,12 @@ service AnynsAccountAbstraction {
   // 2. sign it with your Ethereum private key
   // 3. send it using CreateUserOperation
   // 4. check operation status using GetOperation
+  //
+  // Register new name for my Any identity
   rpc GetDataNameRegister(NameRegisterRequest) returns (GetDataNameRegisterResponse) {}
+
+  // Register new name and attach Space ID to it
+  rpc GetDataNameRegisterForSpace(NameRegisterForSpaceRequest) returns (GetDataNameRegisterResponse) {}
   
   // TODO
   //rpc GetDataNameUpdate(NameUpdateRequest) returns (GetDataNameRegisterResponse) {}
