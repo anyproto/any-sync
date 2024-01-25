@@ -174,6 +174,7 @@ func (h *headSync) fillDiff(objectIds []string) {
 		Id:   h.syncAcl.Id(),
 		Head: h.syncAcl.Head().Id,
 	})
+	log.Debug("setting acl", zap.String("aclId", h.syncAcl.Id()), zap.String("headId", h.syncAcl.Head().Id))
 	h.diffContainer.Set(els...)
 	if err := h.storage.WriteSpaceHash(h.diffContainer.PrecalculatedDiff().Hash()); err != nil {
 		h.log.Error("can't write space hash", zap.Error(err))
