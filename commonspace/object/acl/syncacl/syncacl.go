@@ -3,6 +3,9 @@ package syncacl
 import (
 	"context"
 	"errors"
+
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/headupdater"
 	"github.com/anyproto/any-sync/commonspace/object/syncobjectgetter"
 
@@ -119,6 +122,7 @@ func (s *syncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (e
 	if err != nil {
 		return
 	}
+	log.Debug("records updated, final state", zap.String("head", s.AclList.Head().Id), zap.Int("len(total)", len(s.AclList.Records())))
 	headUpdate := s.syncClient.CreateHeadUpdate(s, rawRecords)
 	s.headUpdater.UpdateHeads(s.Id(), []string{rawRecords[len(rawRecords)-1].Id})
 	s.syncClient.Broadcast(headUpdate)
