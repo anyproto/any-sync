@@ -264,7 +264,7 @@ func (st *AclState) applyChangeData(record *AclRecord) (err error) {
 	model := record.Model.(*aclrecordproto.AclData)
 	for _, ch := range model.GetAclContent() {
 		if err = st.applyChangeContent(ch, record); err != nil {
-			log.Info("error while applying changes; ignore", zap.Error(err))
+			log.Info("error while applying changes", zap.Error(err))
 			return err
 		}
 	}

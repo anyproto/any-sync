@@ -140,6 +140,9 @@ func (c *contentValidator) ValidateRequestJoin(ch *aclrecordproto.AclAccountRequ
 	if !exists {
 		return ErrNoSuchInvite
 	}
+	if !c.aclState.Permissions(authorIdentity).NoPermissions() {
+		return ErrInsufficientPermissions
+	}
 	inviteIdentity, err := c.keyStore.PubKeyFromProto(ch.InviteIdentity)
 	if err != nil {
 		return

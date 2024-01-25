@@ -407,6 +407,8 @@ func TestAclExecutor(t *testing.T) {
 		{"a.init:a", nil},
 		// creating an invite
 		{"a.invite:invId", nil},
+		// cannot self join
+		{"a.join:invId", ErrInsufficientPermissions},
 		// now b can join
 		{"b.join:invId", nil},
 		// a approves b, it can write now

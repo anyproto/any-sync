@@ -264,6 +264,11 @@ func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawReco
 	}
 	if !payload.InviteKey.GetPublic().Equals(key) {
 		err = ErrIncorrectInviteKey
+		return
+	}
+	if !a.state.Permissions(a.accountKeys.SignKey.GetPublic()).NoPermissions() {
+		err = ErrInsufficientPermissions
+		return
 	}
 	mkKey, err := a.state.CurrentMetadataKey()
 	if err != nil {
