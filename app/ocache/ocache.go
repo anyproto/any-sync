@@ -6,8 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anyproto/any-sync/app/logger"
 	"go.uber.org/zap"
+
+	"github.com/anyproto/any-sync/app/logger"
 )
 
 var (
@@ -137,10 +138,11 @@ Load:
 	if reload {
 		goto Load
 	}
-	if load {
-		go c.load(ctx, id, e)
-	}
 	c.metricsGet(!load)
+	if load {
+		c.load(ctx, id, e)
+		return e.value, e.loadErr
+	}
 	return e.waitLoad(ctx, id)
 }
 
