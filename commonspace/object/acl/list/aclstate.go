@@ -285,7 +285,7 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 		return st.applyRequestAccept(ch.GetRequestAccept(), record)
 	case ch.GetRequestDecline() != nil:
 		return st.applyRequestDecline(ch.GetRequestDecline(), record)
-	case ch.GetRequestDecline() != nil:
+	case ch.GetRequestCancel() != nil:
 		return st.applyRequestCancel(ch.GetRequestCancel(), record)
 	case ch.GetAccountRemove() != nil:
 		return st.applyAccountRemove(ch.GetAccountRemove(), record)

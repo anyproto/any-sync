@@ -471,6 +471,24 @@ func TestAclExecutor(t *testing.T) {
 		{"b.join:inv1Id", nil},
 		// e approves b
 		{"e.approve:b,rw", nil},
+		{"g.join:inv1Id", nil},
+		{"g.cancel:g", nil},
+		// e cannot approve cancelled request
+		{"e.approve:g,rw", fmt.Errorf("no join records for approve")},
+		{"g.join:inv1Id", nil},
+		{"e.decline:g", nil},
+		// g cannot cancel declined request
+		{"g.cancel:g", ErrNoSuchRecord},
+		{"g.join:inv1Id", nil},
+		{"e.approve:g,r", nil},
+		// g can request remove
+		{"g.request_remove:g", nil},
+		// g can cancel request to remove
+		{"g.cancel:g", nil},
+		{"g.request_remove:g", nil},
+		{"a.remove:g", nil},
+		// g cannot cancel not existing request to remove
+		{"g.cancel:g", ErrNoSuchRecord},
 	}
 	for _, cmd := range cmds {
 		err := a.execute(cmd.cmd)
