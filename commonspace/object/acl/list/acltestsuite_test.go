@@ -325,6 +325,17 @@ func (a *aclExecutor) execute(cmd string) (err error) {
 			a.expectedAccounts[id].status = StatusRemoved
 			a.expectedAccounts[id].perms = AclPermissionsNone
 		}
+	case "request_remove":
+		id := args[0]
+		res, err := acl.RecordBuilder().BuildRequestRemove()
+		if err != nil {
+			return err
+		}
+		err = addRec(WrapAclRecord(res))
+		if err != nil {
+			return err
+		}
+		a.expectedAccounts[id].status = StatusRemoving
 	case "decline":
 		id := args[0]
 		pk := a.actualAccounts[id].keys.SignKey.GetPublic()
@@ -341,6 +352,26 @@ func (a *aclExecutor) execute(cmd string) (err error) {
 			return err
 		}
 		a.expectedAccounts[id].status = StatusDeclined
+	case "cancel":
+		id := args[0]
+		pk := a.actualAccounts[id].keys.SignKey.GetPublic()
+		rec, err := acl.AclState().Record(pk)
+		if err != nil {
+			return err
+		}
+		res, err := acl.RecordBuilder().BuildRequestCancel(rec.RecordId)
+		if err != nil {
+			return err
+		}
+		err = addRec(WrapAclRecord(res))
+		if err != nil {
+			return err
+		}
+		if rec.Type == RequestTypeJoin {
+			a.expectedAccounts[id].status = StatusCanceled
+		} else {
+			a.expectedAccounts[id].status = StatusActive
+		}
 	case "revoke":
 		invite := a.invites[args[0]]
 		invId, err := acl.AclState().GetInviteIdByPrivKey(invite)

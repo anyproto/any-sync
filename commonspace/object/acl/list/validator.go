@@ -15,6 +15,7 @@ type ContentValidator interface {
 	ValidateRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestDecline(ch *aclrecordproto.AclAccountRequestDecline, authorIdentity crypto.PubKey) (err error)
+	ValidateRequestCancel(ch *aclrecordproto.AclAccountRequestCancel, authorIdentity crypto.PubKey) (err error)
 	ValidateAccountRemove(ch *aclrecordproto.AclAccountRemove, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error)
 	ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error)
@@ -198,6 +199,17 @@ func (c *contentValidator) ValidateRequestDecline(ch *aclrecordproto.AclAccountR
 	rec, exists := c.aclState.requestRecords[ch.RequestRecordId]
 	if !exists || rec.Type != RequestTypeJoin {
 		return ErrNoSuchRequest
+	}
+	return
+}
+
+func (c *contentValidator) ValidateRequestCancel(ch *aclrecordproto.AclAccountRequestCancel, authorIdentity crypto.PubKey) (err error) {
+	rec, exists := c.aclState.requestRecords[ch.RecordId]
+	if !exists {
+		return ErrNoSuchRequest
+	}
+	if !rec.RequestIdentity.Equals(authorIdentity) {
+		return ErrInsufficientPermissions
 	}
 	return
 }
