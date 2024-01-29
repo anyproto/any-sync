@@ -34,6 +34,10 @@ type AclSpaceClient interface {
 	AddRecord(ctx context.Context, consRec *consensusproto.RawRecord) error
 	RemoveAccounts(ctx context.Context, payload list.AccountRemovePayload) error
 	AcceptRequest(ctx context.Context, payload list.RequestAcceptPayload) error
+	DeclineRequest(ctx context.Context, identity crypto.PubKey) (err error)
+	ChangePermissions(ctx context.Context, permChange list.PermissionChangesPayload) (err error)
+	RequestSelfRemove(ctx context.Context) (err error)
+	AddAccounts(ctx context.Context, add list.AccountsAddPayload) (err error)
 }
 
 func NewAclSpaceClient() AclSpaceClient {
@@ -59,9 +63,62 @@ func (c *aclSpaceClient) Name() (name string) {
 	return CName
 }
 
+func (c *aclSpaceClient) RequestSelfRemove(ctx context.Context) (err error) {
+	c.acl.Lock()
+	res, err := c.acl.RecordBuilder().BuildRequestRemove()
+	if err != nil {
+		c.acl.Unlock()
+		return
+	}
+	c.acl.Unlock()
+	_, err = c.sendRecordAndUpdate(ctx, c.spaceId, res)
+	return err
+}
+
+func (c *aclSpaceClient) ChangePermissions(ctx context.Context, permChange list.PermissionChangesPayload) (err error) {
+	c.acl.Lock()
+	res, err := c.acl.RecordBuilder().BuildPermissionChanges(permChange)
+	if err != nil {
+		c.acl.Unlock()
+		return
+	}
+	c.acl.Unlock()
+	_, err = c.sendRecordAndUpdate(ctx, c.spaceId, res)
+	return err
+}
+
+func (c *aclSpaceClient) AddAccounts(ctx context.Context, add list.AccountsAddPayload) (err error) {
+	c.acl.Lock()
+	res, err := c.acl.RecordBuilder().BuildAccountsAdd(add)
+	if err != nil {
+		c.acl.Unlock()
+		return
+	}
+	c.acl.Unlock()
+	_, err = c.sendRecordAndUpdate(ctx, c.spaceId, res)
+	return err
+}
+
 func (c *aclSpaceClient) RemoveAccounts(ctx context.Context, payload list.AccountRemovePayload) (err error) {
 	c.acl.Lock()
 	res, err := c.acl.RecordBuilder().BuildAccountRemove(payload)
+	if err != nil {
+		c.acl.Unlock()
+		return
+	}
+	c.acl.Unlock()
+	_, err = c.sendRecordAndUpdate(ctx, c.spaceId, res)
+	return err
+}
+
+func (c *aclSpaceClient) DeclineRequest(ctx context.Context, identity crypto.PubKey) (err error) {
+	c.acl.Lock()
+	pendingReq, err := c.acl.AclState().JoinRecord(identity, false)
+	if err != nil {
+		c.acl.Unlock()
+		return
+	}
+	res, err := c.acl.RecordBuilder().BuildRequestDecline(pendingReq.RecordId)
 	if err != nil {
 		c.acl.Unlock()
 		return
