@@ -3,17 +3,19 @@ package objecttree
 import (
 	"context"
 	"fmt"
-	"golang.org/x/exp/slices"
 	"testing"
 	"time"
+
+	"golang.org/x/exp/slices"
+
+	"github.com/gogo/protobuf/proto"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type testTreeContext struct {
@@ -99,6 +101,63 @@ func prepareContext(
 func TestObjectTree(t *testing.T) {
 	aclList, keys := prepareAclList(t)
 	ctx := context.Background()
+
+	t.Run("validate no read key", func(t *testing.T) {
+		exec := list.NewAclExecutor("spaceId")
+		type cmdErr struct {
+			cmd string
+			err error
+		}
+		cmds := []cmdErr{
+			{"a.init:a", nil},
+			{"a.invite:invId", nil},
+			{"b.join:invId", nil},
+			{"a.approve:b,r", nil},
+		}
+		for _, cmd := range cmds {
+			err := exec.Execute(cmd.cmd)
+			require.Equal(t, cmd.err, err, cmd)
+		}
+		aAccount := exec.ActualAccounts()["a"]
+		bAccount := exec.ActualAccounts()["b"]
+		root, err := CreateObjectTreeRoot(ObjectTreeCreatePayload{
+			PrivKey:       aAccount.Keys.SignKey,
+			ChangeType:    "changeType",
+			ChangePayload: nil,
+			SpaceId:       "spaceId",
+			IsEncrypted:   true,
+		}, aAccount.Acl)
+		require.NoError(t, err)
+		aStore, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
+		aTree, err := BuildKeyVerifiableObjectTree(aStore, aAccount.Acl)
+		require.NoError(t, err)
+		_, err = aTree.AddContent(ctx, SignableChangeContent{
+			Data:        []byte("some"),
+			Key:         aAccount.Keys.SignKey,
+			IsSnapshot:  false,
+			IsEncrypted: true,
+			DataType:    mockDataType,
+		})
+		require.NoError(t, err)
+		bStore := aTree.Storage().(*treestorage.InMemoryTreeStorage).Copy()
+		bTree, err := BuildKeyVerifiableObjectTree(bStore, bAccount.Acl)
+		require.NoError(t, err)
+		err = exec.Execute("a.remove:b")
+		require.NoError(t, err)
+		res, err := aTree.AddContent(ctx, SignableChangeContent{
+			Data:        []byte("some"),
+			Key:         aAccount.Keys.SignKey,
+			IsSnapshot:  false,
+			IsEncrypted: true,
+			DataType:    mockDataType,
+		})
+		require.NoError(t, err)
+		res, err = bTree.AddRawChanges(ctx, RawChangesPayload{
+			NewHeads:   aTree.Heads(),
+			RawChanges: res.Added,
+		})
+		require.Equal(t, ErrHasInvalidChanges, err)
+	})
 
 	t.Run("add content", func(t *testing.T) {
 		root, err := CreateObjectTreeRoot(ObjectTreeCreatePayload{

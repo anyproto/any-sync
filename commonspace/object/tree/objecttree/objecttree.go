@@ -316,14 +316,17 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 	ot.difSnapshotBuf = ot.difSnapshotBuf[:0]
 	ot.newSnapshotsBuf = ot.newSnapshotsBuf[:0]
 
-	headsCopy := func() []string {
+	headsCopy := func(heads []string) []string {
 		newHeads := make([]string, 0, len(ot.tree.Heads()))
-		newHeads = append(newHeads, ot.tree.Heads()...)
+		newHeads = append(newHeads, heads...)
 		return newHeads
 	}
 
-	// this will be returned to client, so we shouldn't use buffer here
-	prevHeadsCopy := headsCopy()
+	var (
+		// this will be returned to client, so we shouldn't use buffer here
+		prevHeadsCopy  = headsCopy(ot.tree.Heads())
+		lastIteratedId = ot.tree.lastIteratedHeadId
+	)
 
 	// filtering changes, verifying and unmarshalling them
 	for idx, ch := range changesPayload.RawChanges {
@@ -365,6 +368,8 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 				delete(ot.tree.attached, ch.Id)
 			}
 		}
+		ot.tree.headIds = headsCopy(prevHeadsCopy)
+		ot.tree.lastIteratedHeadId = lastIteratedId
 	}
 
 	// checks if we need to go to database
@@ -657,6 +662,9 @@ func (ot *objectTree) readKeysFromAclState(state *list.AclState) (err error) {
 		return nil
 	}
 	for key, value := range state.Keys() {
+		if value.ReadKey == nil {
+			return list.ErrNoReadKey
+		}
 		treeKey, err := deriveTreeKey(value.ReadKey, ot.id)
 		if err != nil {
 			return err

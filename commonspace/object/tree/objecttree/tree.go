@@ -19,7 +19,6 @@ type Tree struct {
 	root               *Change
 	headIds            []string
 	lastIteratedHeadId string
-	metaHeadIds        []string
 	attached           map[string]*Change
 	unAttached         map[string]*Change
 	// missed id -> list of dependency ids
