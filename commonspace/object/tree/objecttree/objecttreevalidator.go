@@ -26,10 +26,14 @@ func (n *noOpTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclList,
 	return nil
 }
 
-type objectTreeValidator struct{}
+type objectTreeValidator struct {
+	validateKeys bool
+}
 
-func newTreeValidator() ObjectTreeValidator {
-	return &objectTreeValidator{}
+func newTreeValidator(validateKeys bool) ObjectTreeValidator {
+	return &objectTreeValidator{
+		validateKeys: validateKeys,
+	}
 }
 
 func (v *objectTreeValidator) ValidateFullTree(tree *Tree, aclList list.AclList) (err error) {
@@ -69,6 +73,12 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 	}
 	if c.Id == tree.RootId() {
 		return
+	}
+	if v.validateKeys {
+		keys, exists := state.Keys()[c.ReadKeyId]
+		if !exists || keys.ReadKey == nil {
+			return list.ErrNoReadKey
+		}
 	}
 
 	// checking if the change refers to later acl heads than its previous ids

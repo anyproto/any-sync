@@ -55,7 +55,7 @@ func verifiableTreeDeps(
 		changeBuilder:   changeBuilder,
 		treeBuilder:     treeBuilder,
 		treeStorage:     treeStorage,
-		validator:       newTreeValidator(),
+		validator:       newTreeValidator(false),
 		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
 		aclList:         aclList,
 	}
@@ -71,7 +71,7 @@ func emptyDataTreeDeps(
 		changeBuilder:   changeBuilder,
 		treeBuilder:     treeBuilder,
 		treeStorage:     treeStorage,
-		validator:       newTreeValidator(),
+		validator:       newTreeValidator(false),
 		rawChangeLoader: newStorageLoader(treeStorage, changeBuilder),
 		aclList:         aclList,
 	}
@@ -133,6 +133,16 @@ func BuildEmptyDataTestableTree(treeStorage treestorage.TreeStorage, aclList lis
 		aclList:         aclList,
 	}
 
+	return buildObjectTree(deps)
+}
+
+func BuildKeyVerifiableObjectTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
+	rootChange, err := treeStorage.Root()
+	if err != nil {
+		return nil, err
+	}
+	deps := defaultObjectTreeDeps(rootChange, treeStorage, aclList)
+	deps.validator = newTreeValidator(true)
 	return buildObjectTree(deps)
 }
 
