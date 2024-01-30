@@ -152,11 +152,13 @@ func TestObjectTree(t *testing.T) {
 			DataType:    mockDataType,
 		})
 		require.NoError(t, err)
+		oldHeads := bTree.Heads()
 		res, err = bTree.AddRawChanges(ctx, RawChangesPayload{
 			NewHeads:   aTree.Heads(),
 			RawChanges: res.Added,
 		})
 		require.Equal(t, ErrHasInvalidChanges, err)
+		require.Equal(t, oldHeads, bTree.Heads())
 	})
 
 	t.Run("add content", func(t *testing.T) {
