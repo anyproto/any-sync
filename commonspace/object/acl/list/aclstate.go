@@ -118,6 +118,10 @@ func newAclState(rootRecord *AclRecord) (st *AclState, err error) {
 	return st, nil
 }
 
+func (st *AclState) Identity() crypto.PubKey {
+	return st.pubKey
+}
+
 func (st *AclState) Validator() ContentValidator {
 	return st.contentValidator
 }

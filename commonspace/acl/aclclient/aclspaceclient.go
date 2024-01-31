@@ -35,7 +35,7 @@ type AclSpaceClient interface {
 	RemoveAccounts(ctx context.Context, payload list.AccountRemovePayload) error
 	AcceptRequest(ctx context.Context, payload list.RequestAcceptPayload) error
 	DeclineRequest(ctx context.Context, identity crypto.PubKey) (err error)
-	CancelRequest(ctx context.Context, identity crypto.PubKey) (err error)
+	CancelRequest(ctx context.Context) (err error)
 	ChangePermissions(ctx context.Context, permChange list.PermissionChangesPayload) (err error)
 	RequestSelfRemove(ctx context.Context) (err error)
 	RevokeInvite(ctx context.Context, inviteRecordId string) (err error)
@@ -142,9 +142,9 @@ func (c *aclSpaceClient) DeclineRequest(ctx context.Context, identity crypto.Pub
 	return err
 }
 
-func (c *aclSpaceClient) CancelRequest(ctx context.Context, identity crypto.PubKey) (err error) {
+func (c *aclSpaceClient) CancelRequest(ctx context.Context) (err error) {
 	c.acl.Lock()
-	pendingReq, err := c.acl.AclState().Record(identity)
+	pendingReq, err := c.acl.AclState().Record(c.acl.AclState().Identity())
 	if err != nil {
 		c.acl.Unlock()
 		return
