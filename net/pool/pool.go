@@ -3,12 +3,14 @@ package pool
 
 import (
 	"context"
+	"math/rand"
+
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
-	"go.uber.org/zap"
-	"math/rand"
 )
 
 // Pool creates and caches outgoing connection
@@ -71,12 +73,17 @@ func (p *pool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error
 		}
 	}
 	// shuffle ids for better consistency
-	rand.Shuffle(len(peerIds), func(i, j int) {
-		peerIds[i], peerIds[j] = peerIds[j], peerIds[i]
+	indexes := make([]int, len(peerIds))
+	for i := range indexes {
+		indexes[i] = i
+	}
+	rand.Shuffle(len(indexes), func(i, j int) {
+		indexes[i], indexes[j] = indexes[j], indexes[i]
 	})
 	// connecting
 	var lastErr error
-	for _, peerId := range peerIds {
+	for _, idx := range indexes {
+		peerId := peerIds[idx]
 		if v, err := p.Get(ctx, peerId); err == nil {
 			return v, nil
 		} else {
