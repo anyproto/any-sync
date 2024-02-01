@@ -103,12 +103,12 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 	return
 }
 
-func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList) (err error) {
+func ValidateRawTreeBuildFunc(payload treestorage.TreeStorageCreatePayload, buildFunc BuildObjectTreeFunc, aclList list.AclList) (err error) {
 	treeStorage, err := treestorage.NewInMemoryTreeStorage(payload.RootRawChange, []string{payload.RootRawChange.Id}, nil)
 	if err != nil {
 		return
 	}
-	tree, err := BuildObjectTree(treeStorage, aclList)
+	tree, err := buildFunc(treeStorage, aclList)
 	if err != nil {
 		return
 	}
@@ -127,4 +127,8 @@ func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.
 		return ErrDerived
 	}
 	return
+}
+
+func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList) (err error) {
+	return ValidateRawTreeBuildFunc(payload, BuildObjectTree, aclList)
 }
