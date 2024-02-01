@@ -102,7 +102,7 @@ func TestObjectTree(t *testing.T) {
 	aclList, keys := prepareAclList(t)
 	ctx := context.Background()
 
-	t.Run("validate no read key", func(t *testing.T) {
+	t.Run("user delete logic: validation, key change, decryption", func(t *testing.T) {
 		exec := list.NewAclExecutor("spaceId")
 		type cmdErr struct {
 			cmd string
@@ -168,6 +168,12 @@ func TestObjectTree(t *testing.T) {
 			Heads:         heads,
 		}, BuildKeyVerifiableObjectTree, bAccount.Acl)
 		require.Equal(t, ErrHasInvalidChanges, err)
+		err = aTree.IterateRoot(func(change *Change, decrypted []byte) (any, error) {
+			return nil, nil
+		}, func(change *Change) bool {
+			return true
+		})
+		require.NoError(t, err)
 	})
 
 	t.Run("add content", func(t *testing.T) {
