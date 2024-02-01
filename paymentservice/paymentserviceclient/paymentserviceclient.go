@@ -2,8 +2,10 @@ package paymentserviceclient
 
 import (
 	"context"
+	"errors"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -12,6 +14,8 @@ import (
 )
 
 const CName = "any-pp.drpcclient"
+
+var log = logger.NewNamed(CName)
 
 /*
  * This client component can be used to access the Any Payment Processing node
@@ -45,6 +49,12 @@ func New() AnyPpClientService {
 }
 
 func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProcessingClient) error) error {
+	if len(s.nodeconf.PaymentProcessingNodePeers()) == 0 {
+		log.Error("no payment processing peers configured")
+
+		return errors.New("no paymentProcessingNode peers configured")
+	}
+
 	// it will try to connect to the Payment Node
 	// please use "paymentProcessingNode" type of node in the config (in the network.nodes array)
 	peer, err := s.pool.Get(ctx, s.nodeconf.PaymentProcessingNodePeers()[0])

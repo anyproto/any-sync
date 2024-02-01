@@ -2,6 +2,7 @@ package nameserviceclient
 
 import (
 	"context"
+	"errors"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -60,6 +61,11 @@ func New() AnyNsClientService {
 }
 
 func (s *service) doClient(ctx context.Context, fn func(cl nsp.DRPCAnynsClient) error) error {
+	if len(s.nodeconf.NamingNodePeers()) == 0 {
+		log.Error("no namingNode peers configured")
+		return errors.New("no namingNode peers configured")
+	}
+
 	// it will try to connect to the Naming Node
 	// please enable "namingNode" type of node in the config (in the network.nodes array)
 	peer, err := s.pool.Get(ctx, s.nodeconf.NamingNodePeers()[0])
