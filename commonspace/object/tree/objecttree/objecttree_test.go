@@ -159,6 +159,15 @@ func TestObjectTree(t *testing.T) {
 		})
 		require.Equal(t, ErrHasInvalidChanges, err)
 		require.Equal(t, oldHeads, bTree.Heads())
+		bStore = aTree.Storage().(*treestorage.InMemoryTreeStorage).Copy()
+		root, _ = bStore.Root()
+		heads, _ := bStore.Heads()
+		err = ValidateRawTreeBuildFunc(treestorage.TreeStorageCreatePayload{
+			RootRawChange: root,
+			Changes:       bStore.AllChanges(),
+			Heads:         heads,
+		}, BuildKeyVerifiableObjectTree, bAccount.Acl)
+		require.Equal(t, ErrHasInvalidChanges, err)
 	})
 
 	t.Run("add content", func(t *testing.T) {
