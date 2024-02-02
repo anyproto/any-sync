@@ -40,7 +40,8 @@ enum PaymentMethod {
 
 // 1
 message GetSubscriptionRequest {
-  // in the following format: "12D3KooWA8EXV3KjBxEU5EnsPfneLx84vMWAtTBQBeyooN82KSuS"
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
   string ownerAnyID = 1;
 }
 
@@ -77,10 +78,11 @@ message GetSubscriptionResponse {
 
 // 2 
 message BuySubscriptionRequest {
-  // in the following format: "12D3KooWA8EXV3KjBxEU5EnsPfneLx84vMWAtTBQBeyooN82KSuS"
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
   string ownerAnyId = 1;
 
-  // this is the owner's ETH main EOA (Externally Owned Account) address
+  // this is the owner's main EOA (Externally Owned Account) address
   // not AccountAbstraction's SCW (Smart Contract Wallet) address! 
   // this is required to reserve a name for the owner (later that is done by user)
   // in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
@@ -111,7 +113,8 @@ message BuySubscriptionResponse {
 }
 
 message GetSubscriptionPortalLinkRequest {
-  // in the following format: "12D3KooWA8EXV3KjBxEU5EnsPfneLx84vMWAtTBQBeyooN82KSuS"
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
   string ownerAnyId = 1;
 }
 
@@ -133,13 +136,10 @@ message GetSubscriptionPortalLinkResponse {
 service AnyPaymentProcessing {
   rpc GetSubscriptionStatus(GetSubscriptionRequestSigned) returns (GetSubscriptionResponse) {}
 
-  // Will save a new BillingID to DB, and return a payment link
-  // You can:
-  // a) buy a subscription
-  // b) TODO: upgrade your tier
-  // 
-  // you can call BuySubscription multiple times even if current payment is not processed yet 
-  // (to get new payment link)
+  // Will save a new BillingID to DB, and return a payment link.
+  // You can call BuySubscription multiple times even if current payment is not processed yet 
+  // (to get new payment link).
+  // If user has already an active subscription, then this will return an error.
   rpc BuySubscription(BuySubscriptionRequestSigned) returns (BuySubscriptionResponse) {}
 
   // Will generate a link to the portal where user can:

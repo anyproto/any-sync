@@ -79,6 +79,8 @@ message CreateUserOperationRequest {
 
   string ownerEthAddress = 4;
 
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
   string ownerAnyID = 5;
 
   // all operations currently are towards single name, please specify it
@@ -99,6 +101,8 @@ message NameRegisterRequest {
 
   // A content hash attached to this name
   // This should not be empty!
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
   string ownerAnyAddress = 2;
   
   // An Ethereum address that owns that name
@@ -118,6 +122,8 @@ message NameRegisterForSpaceRequest {
 
   // A content hash attached to this name
   // This should not be empty!
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
   string ownerAnyAddress = 2;
   
   // An Ethereum address that owns that name

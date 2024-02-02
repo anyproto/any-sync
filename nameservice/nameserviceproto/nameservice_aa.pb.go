@@ -470,7 +470,9 @@ type CreateUserOperationRequest struct {
 	SignedData      []byte `protobuf:"bytes,2,opt,name=signedData,proto3" json:"signedData,omitempty"`
 	Context         []byte `protobuf:"bytes,3,opt,name=context,proto3" json:"context,omitempty"`
 	OwnerEthAddress string `protobuf:"bytes,4,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
-	OwnerAnyID      string `protobuf:"bytes,5,opt,name=ownerAnyID,proto3" json:"ownerAnyID,omitempty"`
+	// in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+	// you can get it with Account().SignKey.GetPublic().Account()
+	OwnerAnyID string `protobuf:"bytes,5,opt,name=ownerAnyID,proto3" json:"ownerAnyID,omitempty"`
 	// all operations currently are towards single name, please specify it
 	// we can use it for caching, etc purps.
 	FullName string `protobuf:"bytes,6,opt,name=fullName,proto3" json:"fullName,omitempty"`
@@ -609,6 +611,8 @@ type NameRegisterRequest struct {
 	FullName string `protobuf:"bytes,1,opt,name=fullName,proto3" json:"fullName,omitempty"`
 	// A content hash attached to this name
 	// This should not be empty!
+	// in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+	// you can get it with Account().SignKey.GetPublic().Account()
 	OwnerAnyAddress string `protobuf:"bytes,2,opt,name=ownerAnyAddress,proto3" json:"ownerAnyAddress,omitempty"`
 	// An Ethereum address that owns that name
 	OwnerEthAddress string `protobuf:"bytes,3,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
@@ -672,6 +676,8 @@ type NameRegisterForSpaceRequest struct {
 	FullName string `protobuf:"bytes,1,opt,name=fullName,proto3" json:"fullName,omitempty"`
 	// A content hash attached to this name
 	// This should not be empty!
+	// in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+	// you can get it with Account().SignKey.GetPublic().Account()
 	OwnerAnyAddress string `protobuf:"bytes,2,opt,name=ownerAnyAddress,proto3" json:"ownerAnyAddress,omitempty"`
 	// An Ethereum address that owns that name
 	OwnerEthAddress string `protobuf:"bytes,3,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`

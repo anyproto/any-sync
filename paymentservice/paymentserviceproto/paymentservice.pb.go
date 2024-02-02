@@ -127,7 +127,8 @@ func (PaymentMethod) EnumDescriptor() ([]byte, []int) {
 
 // 1
 type GetSubscriptionRequest struct {
-	// in the following format: "12D3KooWA8EXV3KjBxEU5EnsPfneLx84vMWAtTBQBeyooN82KSuS"
+	// in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+	// you can get it with Account().SignKey.GetPublic().Account()
 	OwnerAnyID string `protobuf:"bytes,1,opt,name=ownerAnyID,proto3" json:"ownerAnyID,omitempty"`
 }
 
@@ -342,9 +343,10 @@ func (m *GetSubscriptionResponse) GetRequestedAnyName() string {
 
 // 2
 type BuySubscriptionRequest struct {
-	// in the following format: "12D3KooWA8EXV3KjBxEU5EnsPfneLx84vMWAtTBQBeyooN82KSuS"
+	// in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+	// you can get it with Account().SignKey.GetPublic().Account()
 	OwnerAnyId string `protobuf:"bytes,1,opt,name=ownerAnyId,proto3" json:"ownerAnyId,omitempty"`
-	// this is the owner's ETH main EOA (Externally Owned Account) address
+	// this is the owner's main EOA (Externally Owned Account) address
 	// not AccountAbstraction's SCW (Smart Contract Wallet) address!
 	// this is required to reserve a name for the owner (later that is done by user)
 	// in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
@@ -526,7 +528,8 @@ func (m *BuySubscriptionResponse) GetPaymentUrl() string {
 }
 
 type GetSubscriptionPortalLinkRequest struct {
-	// in the following format: "12D3KooWA8EXV3KjBxEU5EnsPfneLx84vMWAtTBQBeyooN82KSuS"
+	// in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+	// you can get it with Account().SignKey.GetPublic().Account()
 	OwnerAnyId string `protobuf:"bytes,1,opt,name=ownerAnyId,proto3" json:"ownerAnyId,omitempty"`
 }
 
