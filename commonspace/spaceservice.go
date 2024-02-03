@@ -8,26 +8,22 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-
-	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
-	"github.com/anyproto/any-sync/commonspace/deletionmanager"
-	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
-	"github.com/anyproto/any-sync/net"
-	"github.com/anyproto/any-sync/net/peer"
-
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
+	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/headsync"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/objectmanager"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
@@ -40,6 +36,8 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
+	"github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -66,12 +64,12 @@ type SpaceService interface {
 }
 
 type Deps struct {
-	TreeSyncer treesyncer.TreeSyncer
+	TreeSyncer     treesyncer.TreeSyncer
+	AccountService accountservice.Service
 }
 
 type spaceService struct {
 	config                config.Config
-	account               accountservice.Service
 	configurationService  nodeconf.Service
 	storageProvider       spacestorage.SpaceStorageProvider
 	peerManagerProvider   peermanager.PeerManagerProvider
@@ -85,7 +83,6 @@ type spaceService struct {
 
 func (s *spaceService) Init(a *app.App) (err error) {
 	s.config = a.MustComponent("config").(config.ConfigGetter).GetSpace()
-	s.account = a.MustComponent(accountservice.CName).(accountservice.Service)
 	s.storageProvider = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorageProvider)
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
@@ -178,6 +175,9 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 	}
 	statusService := s.statusServiceProvider.NewStatusService()
 	spaceApp := s.app.ChildApp()
+	if deps.AccountService != nil {
+		spaceApp.Register(deps.AccountService)
+	}
 	spaceApp.Register(state).
 		Register(peerManager).
 		Register(newCommonStorage(st)).
