@@ -122,6 +122,10 @@ func (st *AclState) Identity() crypto.PubKey {
 	return st.pubKey
 }
 
+func (st *AclState) Key() crypto.PrivKey {
+	return st.key
+}
+
 func (st *AclState) Validator() ContentValidator {
 	return st.contentValidator
 }
