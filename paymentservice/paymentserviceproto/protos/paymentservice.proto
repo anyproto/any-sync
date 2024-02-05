@@ -8,16 +8,16 @@ enum SubscriptionTier {
   TierUnknown = 0;
 
   // "free" tier
-  TierFriend = 1;
+  TierExplorer = 1;
 
   // these can be used just for testing in debug mode
   // it will still create an active subscription, but with NO features
-  TierSupporter1WeekTEST = 2;
-  TierPatron1WeekTEST = 3;
+  TierBuilder1WeekTEST = 2;
+  TierCoCreator1WeekTEST = 3;
 
   // these are the real tiers:
-  TierSupporter1Year = 4;
-  TierPatron1Year = 5;
+  TierBuilder1Year = 4;
+  TierCoCreator1Year = 5;
 }
 
 enum SubscriptionStatus {
