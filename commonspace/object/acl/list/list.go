@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"sync"
 
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
@@ -207,6 +209,7 @@ func (a *aclList) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) er
 			return err
 		}
 	}
+	log.Debug("inner records updated, final state", zap.String("head", a.Head().Id), zap.Int("len(total)", len(a.Records())))
 	return nil
 }
 
