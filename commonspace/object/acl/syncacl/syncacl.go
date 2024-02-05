@@ -119,6 +119,7 @@ func (s *syncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (e
 		return ErrSyncAclClosed
 	}
 	prevHead := s.AclList.Head().Id
+	log.Debug("received updates", zap.String("aclId", s.AclList.Id()), zap.String("prevHead", prevHead), zap.String("lastHead", rawRecords[len(rawRecords)-1].Id))
 	err = s.AclList.AddRawRecords(rawRecords)
 	if err != nil || s.AclList.Head().Id == prevHead {
 		return
