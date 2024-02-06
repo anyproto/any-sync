@@ -106,7 +106,7 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 
 	// basically building tree with in-memory storage and validating that it was without errors
 	log.With(zap.String("id", t.treeId)).DebugCtx(ctx, "validating tree")
-	err = objecttree.ValidateRawTree(payload, t.deps.AclList)
+	err = objecttree.ValidateRawTreeBuildFunc(payload, t.deps.BuildObjectTree, t.deps.AclList)
 	if err != nil {
 		return
 	}

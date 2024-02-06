@@ -74,6 +74,7 @@ type AclRecordBuilder interface {
 	BuildRequestJoin(payload RequestJoinPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestAccept(payload RequestAcceptPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestDecline(requestRecordId string) (rawRecord *consensusproto.RawRecord, err error)
+	BuildRequestCancel(requestRecordId string) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestRemove() (rawRecord *consensusproto.RawRecord, err error)
 	BuildPermissionChange(payload PermissionChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildPermissionChanges(payload PermissionChangesPayload) (rawRecord *consensusproto.RawRecord, err error)
@@ -264,6 +265,11 @@ func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawReco
 	}
 	if !payload.InviteKey.GetPublic().Equals(key) {
 		err = ErrIncorrectInviteKey
+		return
+	}
+	if !a.state.Permissions(a.accountKeys.SignKey.GetPublic()).NoPermissions() {
+		err = ErrInsufficientPermissions
+		return
 	}
 	mkKey, err := a.state.CurrentMetadataKey()
 	if err != nil {
@@ -339,13 +345,28 @@ func (a *aclRecordBuilder) BuildRequestDecline(requestRecordId string) (rawRecor
 		err = ErrInsufficientPermissions
 		return
 	}
-	_, exists := a.state.requestRecords[requestRecordId]
-	if !exists {
+	rec, exists := a.state.requestRecords[requestRecordId]
+	if !exists || rec.Type != RequestTypeJoin {
 		err = ErrNoSuchRequest
 		return
 	}
 	declineRec := &aclrecordproto.AclAccountRequestDecline{RequestRecordId: requestRecordId}
 	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_RequestDecline{RequestDecline: declineRec}}
+	return a.buildRecord(content)
+}
+
+func (a *aclRecordBuilder) BuildRequestCancel(requestRecordId string) (rawRecord *consensusproto.RawRecord, err error) {
+	rec, exists := a.state.requestRecords[requestRecordId]
+	if !exists {
+		err = ErrNoSuchRequest
+		return
+	}
+	if !rec.RequestIdentity.Equals(a.state.pubKey) {
+		err = ErrInsufficientPermissions
+		return
+	}
+	cancelRec := &aclrecordproto.AclAccountRequestCancel{RecordId: requestRecordId}
+	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_RequestCancel{RequestCancel: cancelRec}}
 	return a.buildRecord(content)
 }
 

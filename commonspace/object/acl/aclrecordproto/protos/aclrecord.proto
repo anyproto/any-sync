@@ -71,6 +71,11 @@ message AclAccountAdd {
     bytes encryptedReadKey = 4;
 }
 
+// AclRequestCancel contains reference to the request that is canceled by the account
+message AclAccountRequestCancel {
+    string recordId = 1;
+}
+
 // AclAccountPermissionChange changes permissions of specific account
 message AclAccountPermissionChange {
     bytes identity = 1;
@@ -112,6 +117,7 @@ message AclContentValue {
         AclAccountRequestRemove accountRequestRemove = 9;
         AclAccountPermissionChanges permissionChanges = 10;
         AclAccountsAdd accountsAdd = 11;
+        AclAccountRequestCancel requestCancel = 12;
     }
 }
 

@@ -236,6 +236,17 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 	if err != nil {
 		return nil, err
 	}
+	peerApp := s.app.ChildApp().Register(pm)
+	err = peerApp.Start(ctx)
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := peerApp.Close(ctx)
+		if err != nil {
+			log.Warn("failed to close peer manager")
+		}
+	}()
 	var peers []peer.Peer
 	for {
 		peers, err = pm.GetResponsiblePeers(ctx)

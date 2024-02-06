@@ -2,14 +2,16 @@ package syncacl
 
 import (
 	"context"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list/mock_list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/mock_syncacl"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
-	"testing"
 )
 
 type aclSyncProtocolFixture struct {
@@ -64,6 +66,7 @@ func TestHeadUpdate(t *testing.T) {
 			Records: []*consensusproto.RawRecordWithId{chWithId},
 		}
 		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
+		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{})
 		fx.aclMock.EXPECT().HasHead("h1").Return(false)
 		fx.aclMock.EXPECT().AddRawRecords(headUpdate.Records).Return(nil)
 		req, err := fx.syncProtocol.HeadUpdate(ctx, fx.senderId, headUpdate)
@@ -79,6 +82,7 @@ func TestHeadUpdate(t *testing.T) {
 			Records: []*consensusproto.RawRecordWithId{chWithId},
 		}
 		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
+		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{})
 		fx.aclMock.EXPECT().HasHead("h1").Return(false)
 		fx.aclMock.EXPECT().AddRawRecords(headUpdate.Records).Return(list.ErrIncorrectRecordSequence)
 		fx.reqFactory.EXPECT().CreateFullSyncRequest(fx.aclMock, headUpdate.Head).Return(fullRequest, nil)
@@ -95,6 +99,7 @@ func TestHeadUpdate(t *testing.T) {
 			Records: []*consensusproto.RawRecordWithId{chWithId},
 		}
 		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
+		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{})
 		fx.aclMock.EXPECT().HasHead("h1").Return(true)
 		req, err := fx.syncProtocol.HeadUpdate(ctx, fx.senderId, headUpdate)
 		require.Nil(t, req)
@@ -107,7 +112,7 @@ func TestHeadUpdate(t *testing.T) {
 			Head: "h1",
 		}
 		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
-		fx.aclMock.EXPECT().Head().Return(&list.AclRecord{Id: "h1"})
+		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "h1"})
 		req, err := fx.syncProtocol.HeadUpdate(ctx, fx.senderId, headUpdate)
 		require.Nil(t, req)
 		require.NoError(t, err)
@@ -119,7 +124,7 @@ func TestHeadUpdate(t *testing.T) {
 			Head: "h1",
 		}
 		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
-		fx.aclMock.EXPECT().Head().Return(&list.AclRecord{Id: "h2"})
+		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "h2"})
 		fx.reqFactory.EXPECT().CreateFullSyncRequest(fx.aclMock, headUpdate.Head).Return(fullRequest, nil)
 		req, err := fx.syncProtocol.HeadUpdate(ctx, fx.senderId, headUpdate)
 		require.Equal(t, fullRequest, req)

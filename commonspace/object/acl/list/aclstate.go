@@ -118,6 +118,10 @@ func newAclState(rootRecord *AclRecord) (st *AclState, err error) {
 	return st, nil
 }
 
+func (st *AclState) Identity() crypto.PubKey {
+	return st.pubKey
+}
+
 func (st *AclState) Validator() ContentValidator {
 	return st.contentValidator
 }
@@ -165,6 +169,14 @@ func (st *AclState) CurrentStates() []AccountState {
 		res = append(res, state)
 	}
 	return res
+}
+
+func (st *AclState) Invites() []crypto.PubKey {
+	var invites []crypto.PubKey
+	for _, inv := range st.inviteKeys {
+		invites = append(invites, inv)
+	}
+	return invites
 }
 
 func (st *AclState) applyRecord(record *AclRecord) (err error) {
@@ -264,7 +276,7 @@ func (st *AclState) applyChangeData(record *AclRecord) (err error) {
 	model := record.Model.(*aclrecordproto.AclData)
 	for _, ch := range model.GetAclContent() {
 		if err = st.applyChangeContent(ch, record); err != nil {
-			log.Info("error while applying changes; ignore", zap.Error(err))
+			log.Info("error while applying changes", zap.Error(err))
 			return err
 		}
 	}
@@ -285,6 +297,8 @@ func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, recor
 		return st.applyRequestAccept(ch.GetRequestAccept(), record)
 	case ch.GetRequestDecline() != nil:
 		return st.applyRequestDecline(ch.GetRequestDecline(), record)
+	case ch.GetRequestCancel() != nil:
+		return st.applyRequestCancel(ch.GetRequestCancel(), record)
 	case ch.GetAccountRemove() != nil:
 		return st.applyAccountRemove(ch.GetAccountRemove(), record)
 	case ch.GetReadKeyChange() != nil:
@@ -463,6 +477,7 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 		}
 	}
 	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RequestRecordId].RequestIdentity))
+	delete(st.requestRecords, ch.RequestRecordId)
 	if !st.pubKey.Equals(acceptIdentity) {
 		return nil
 	}
@@ -539,6 +554,28 @@ func (st *AclState) applyRequestDecline(ch *aclrecordproto.AclAccountRequestDecl
 	return nil
 }
 
+func (st *AclState) applyRequestCancel(ch *aclrecordproto.AclAccountRequestCancel, record *AclRecord) error {
+	err := st.contentValidator.ValidateRequestCancel(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	pk := mapKeyFromPubKey(st.requestRecords[ch.RecordId].RequestIdentity)
+	accSt, exists := st.accountStates[pk]
+	if !exists {
+		return ErrNoSuchAccount
+	}
+	rec := st.requestRecords[ch.RecordId]
+	if rec.Type == RequestTypeJoin {
+		accSt.Status = StatusCanceled
+	} else {
+		accSt.Status = StatusActive
+	}
+	st.accountStates[pk] = accSt
+	delete(st.pendingRequests, mapKeyFromPubKey(st.requestRecords[ch.RecordId].RequestIdentity))
+	delete(st.requestRecords, ch.RecordId)
+	return nil
+}
+
 func (st *AclState) applyRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, record *AclRecord) error {
 	err := st.contentValidator.ValidateRequestRemove(ch, record.Identity)
 	if err != nil {
@@ -582,7 +619,11 @@ func (st *AclState) applyAccountRemove(ch *aclrecordproto.AclAccountRemove, reco
 			Permission: AclPermissionsNone,
 		})
 		st.accountStates[idKey] = accSt
-		delete(st.pendingRequests, idKey)
+		recId, exists := st.pendingRequests[idKey]
+		if exists {
+			delete(st.pendingRequests, idKey)
+			delete(st.requestRecords, recId)
+		}
 	}
 	return st.applyReadKeyChange(ch.ReadKeyChange, record, false)
 }
@@ -700,25 +741,32 @@ func (st *AclState) JoinRecords(decrypt bool) (records []RequestRecord, err erro
 	return
 }
 
-func (st *AclState) JoinRecord(identity crypto.PubKey, decrypt bool) (RequestRecord, error) {
-	for _, recId := range st.pendingRequests {
-		rec := st.requestRecords[recId]
-		if rec.Type == RequestTypeJoin && rec.RequestIdentity.Equals(identity) {
-			if decrypt {
-				aclKeys := st.keys[rec.KeyRecordId]
-				if aclKeys.MetadataPrivKey == nil {
-					return RequestRecord{}, ErrFailedToDecrypt
-				}
-				res, err := aclKeys.MetadataPrivKey.Decrypt(rec.RequestMetadata)
-				if err != nil {
-					return RequestRecord{}, err
-				}
-				rec.RequestMetadata = res
-			}
-			return rec, nil
-		}
+func (st *AclState) Record(identity crypto.PubKey) (RequestRecord, error) {
+	recId, exists := st.pendingRequests[mapKeyFromPubKey(identity)]
+	if !exists {
+		return RequestRecord{}, ErrNoSuchRecord
 	}
-	return RequestRecord{}, ErrNoSuchRecord
+	return st.requestRecords[recId], nil
+}
+
+func (st *AclState) JoinRecord(identity crypto.PubKey, decrypt bool) (RequestRecord, error) {
+	recId, exists := st.pendingRequests[mapKeyFromPubKey(identity)]
+	if !exists {
+		return RequestRecord{}, ErrNoSuchRecord
+	}
+	rec := st.requestRecords[recId]
+	if decrypt {
+		aclKeys := st.keys[rec.KeyRecordId]
+		if aclKeys.MetadataPrivKey == nil {
+			return RequestRecord{}, ErrFailedToDecrypt
+		}
+		res, err := aclKeys.MetadataPrivKey.Decrypt(rec.RequestMetadata)
+		if err != nil {
+			return RequestRecord{}, err
+		}
+		rec.RequestMetadata = res
+	}
+	return rec, nil
 }
 
 func (st *AclState) RemoveRecords() (records []RequestRecord) {

@@ -260,6 +260,10 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 	}
 
 	if content.IsEncrypted {
+		err = ot.readKeysFromAclState(state)
+		if err != nil {
+			return
+		}
 		readKeyId = state.CurrentReadKeyId()
 		if ot.currentReadKey == nil {
 			err = ErrMissingKey

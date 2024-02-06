@@ -86,13 +86,12 @@ func (c *aclJoiningClient) RequestJoin(ctx context.Context, spaceId string, payl
 	if err != nil {
 		return err
 	}
-	pubIdentity := payload.InviteKey.GetPublic()
 	joinRecs, err := acl.AclState().JoinRecords(false)
 	if err != nil {
 		return err
 	}
 	for _, rec := range joinRecs {
-		if rec.RequestIdentity.Equals(pubIdentity) {
+		if rec.RequestIdentity.Equals(c.keys.SignKey.GetPublic()) {
 			// that means that we already requested to join
 			return nil
 		}
