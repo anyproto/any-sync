@@ -101,6 +101,7 @@ func (s *syncAcl) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 	if s.isClosed {
 		return ErrSyncAclClosed
 	}
+	log.Debug("received update", zap.String("aclId", s.AclList.Id()), zap.String("prevHead", s.AclList.Head().Id), zap.String("newHead", rawRec.Id))
 	err = s.AclList.AddRawRecord(rawRec)
 	if err != nil {
 		return
@@ -119,12 +120,13 @@ func (s *syncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (e
 		return ErrSyncAclClosed
 	}
 	prevHead := s.AclList.Head().Id
-	log.Debug("received updates", zap.String("aclId", s.AclList.Id()), zap.String("prevHead", prevHead), zap.String("lastHead", rawRecords[len(rawRecords)-1].Id))
+	log := log.With(zap.String("aclId", s.AclList.Id()), zap.String("prevHead", prevHead))
+	log.Debug("received updates", zap.String("newHead", rawRecords[len(rawRecords)-1].Id))
 	err = s.AclList.AddRawRecords(rawRecords)
 	if err != nil || s.AclList.Head().Id == prevHead {
 		return
 	}
-	log.Debug("records updated, final state", zap.String("head", s.AclList.Head().Id), zap.Int("len(total)", len(s.AclList.Records())))
+	log.Debug("records updated", zap.String("head", s.AclList.Head().Id), zap.Int("len(total)", len(s.AclList.Records())))
 	headUpdate := s.syncClient.CreateHeadUpdate(s, rawRecords)
 	s.headUpdater.UpdateHeads(s.Id(), []string{rawRecords[len(rawRecords)-1].Id})
 	s.syncClient.Broadcast(headUpdate)
