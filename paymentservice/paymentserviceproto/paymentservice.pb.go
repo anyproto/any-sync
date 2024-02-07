@@ -243,8 +243,7 @@ type GetSubscriptionResponse struct {
 	// if name was requested - it will be here
 	// seeBuySubscriptionRequest.requestedAnyName field
 	RequestedAnyName string `protobuf:"bytes,9,opt,name=requestedAnyName,proto3" json:"requestedAnyName,omitempty"`
-	// if user verified her email OR provided it while buying a subscription
-	// it will be here
+	// if user verified her email OR provided it while buying a subscription, it will be here
 	UserEmail string `protobuf:"bytes,10,opt,name=userEmail,proto3" json:"userEmail,omitempty"`
 }
 
