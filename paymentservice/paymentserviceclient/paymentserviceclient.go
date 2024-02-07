@@ -25,6 +25,8 @@ type AnyPpClientService interface {
 	GetSubscriptionStatus(ctx context.Context, in *pp.GetSubscriptionRequestSigned) (out *pp.GetSubscriptionResponse, err error)
 	BuySubscription(ctx context.Context, in *pp.BuySubscriptionRequestSigned) (out *pp.BuySubscriptionResponse, err error)
 	GetSubscriptionPortalLink(ctx context.Context, in *pp.GetSubscriptionPortalLinkRequestSigned) (out *pp.GetSubscriptionPortalLinkResponse, err error)
+	GetVerificationEmail(ctx context.Context, in *pp.GetVerificationEmailRequestSigned) (out *pp.GetVerificationEmailResponse, err error)
+	VerifyEmail(ctx context.Context, in *pp.VerifyEmailRequestSigned) (out *pp.VerifyEmailResponse, err error)
 
 	app.Component
 }
@@ -95,6 +97,26 @@ func (s *service) BuySubscription(ctx context.Context, in *pp.BuySubscriptionReq
 func (s *service) GetSubscriptionPortalLink(ctx context.Context, in *pp.GetSubscriptionPortalLinkRequestSigned) (out *pp.GetSubscriptionPortalLinkResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
 		if out, err = cl.GetSubscriptionPortalLink(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) GetVerificationEmail(ctx context.Context, in *pp.GetVerificationEmailRequestSigned) (out *pp.GetVerificationEmailResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
+		if out, err = cl.GetVerificationEmail(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) VerifyEmail(ctx context.Context, in *pp.VerifyEmailRequestSigned) (out *pp.VerifyEmailResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
+		if out, err = cl.VerifyEmail(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil

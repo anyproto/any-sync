@@ -85,6 +85,21 @@ func (mr *MockAnyPpClientServiceMockRecorder) GetSubscriptionStatus(ctx, in any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubscriptionStatus", reflect.TypeOf((*MockAnyPpClientService)(nil).GetSubscriptionStatus), ctx, in)
 }
 
+// GetVerificationEmail mocks base method.
+func (m *MockAnyPpClientService) GetVerificationEmail(ctx context.Context, in *paymentserviceproto.GetVerificationEmailRequestSigned) (*paymentserviceproto.GetVerificationEmailResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVerificationEmail", ctx, in)
+	ret0, _ := ret[0].(*paymentserviceproto.GetVerificationEmailResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetVerificationEmail indicates an expected call of GetVerificationEmail.
+func (mr *MockAnyPpClientServiceMockRecorder) GetVerificationEmail(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVerificationEmail", reflect.TypeOf((*MockAnyPpClientService)(nil).GetVerificationEmail), ctx, in)
+}
+
 // Init mocks base method.
 func (m *MockAnyPpClientService) Init(a *app.App) error {
 	m.ctrl.T.Helper()
@@ -111,4 +126,19 @@ func (m *MockAnyPpClientService) Name() string {
 func (mr *MockAnyPpClientServiceMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockAnyPpClientService)(nil).Name))
+}
+
+// VerifyEmail mocks base method.
+func (m *MockAnyPpClientService) VerifyEmail(ctx context.Context, in *paymentserviceproto.VerifyEmailRequestSigned) (*paymentserviceproto.VerifyEmailResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyEmail", ctx, in)
+	ret0, _ := ret[0].(*paymentserviceproto.VerifyEmailResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// VerifyEmail indicates an expected call of VerifyEmail.
+func (mr *MockAnyPpClientServiceMockRecorder) VerifyEmail(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyEmail", reflect.TypeOf((*MockAnyPpClientService)(nil).VerifyEmail), ctx, in)
 }

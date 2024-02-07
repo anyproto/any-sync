@@ -74,6 +74,10 @@ message GetSubscriptionResponse {
   // if name was requested - it will be here
   // seeBuySubscriptionRequest.requestedAnyName field
   string requestedAnyName = 9;
+
+  // if user verified her email OR provided it while buying a subscription
+  // it will be here
+  string userEmail = 10;
 }
 
 // 2 
@@ -130,21 +134,77 @@ message GetSubscriptionPortalLinkResponse {
   string portalUrl = 1;
 }
 
+message GetVerificationEmailRequest {
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
+  string ownerAnyId = 1;
+
+  string email = 2;
+
+  bool subscribeToNewsletter = 3;
+}
+
+message GetVerificationEmailResponse {
+  
+}
+
+message GetVerificationEmailRequestSigned {
+  // GetVerificationEmailRequest
+  bytes payload = 1;
+
+  // this is payload signed with payload.ownerAnyID
+  bytes signature = 2;
+}
+
+message VerifyEmailRequest {
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
+  string ownerAnyId = 1;
+
+  // this is the owner's main EOA (Externally Owned Account) address
+  // not AccountAbstraction's SCW (Smart Contract Wallet) address! 
+  // this is required to reserve a name for the owner (later that is done by user)
+  // in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
+  string ownerEthAddress = 2;
+  
+  string code = 3;
+}
+
+message VerifyEmailResponse {
+  bool success = 1;
+}
+
+message VerifyEmailRequestSigned {
+  // VerifyEmailRequest
+  bytes payload = 1;
+
+  // this is payload signed with payload.ownerAnyID
+  bytes signature = 2;
+}
+
 // NOTICE:
 // 1 - User can not ask for a payment/other links on behalf of another user (a signature is required)
 // 2 - Admin can do that on behalf of any user
 service AnyPaymentProcessing {
   rpc GetSubscriptionStatus(GetSubscriptionRequestSigned) returns (GetSubscriptionResponse) {}
 
-  // Will save a new BillingID to DB, and return a payment link.
+  // Save a new BillingID to DB, and return a payment link.
   // You can call BuySubscription multiple times even if current payment is not processed yet 
   // (to get new payment link).
   // If user has already an active subscription, then this will return an error.
   rpc BuySubscription(BuySubscriptionRequestSigned) returns (BuySubscriptionResponse) {}
 
-  // Will generate a link to the portal where user can:
+  // Generate a link to the portal where user can:
   // a) change her billing details
   // b) see payment info, invoices, etc
   // c) cancel/renew the subscription
   rpc GetSubscriptionPortalLink(GetSubscriptionPortalLinkRequestSigned) returns (GetSubscriptionPortalLinkResponse) {}
+
+  // Verify user's email: 1st step - get a verification link to the email
+  // Will fail if already verified, i.e. you can not change your email
+  rpc GetVerificationEmail(GetVerificationEmailRequestSigned) returns (GetVerificationEmailResponse) {}
+  
+  // Enter the code from the email
+  // Will fail if: link was not requested, link is expired, if email is already verified
+  rpc VerifyEmail(VerifyEmailRequestSigned) returns (VerifyEmailResponse) {}
 }
