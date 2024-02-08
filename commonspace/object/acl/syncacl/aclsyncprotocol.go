@@ -4,10 +4,11 @@ package syncacl
 import (
 	"context"
 
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"go.uber.org/zap"
 )
 
 type AclSyncProtocol interface {
@@ -28,6 +29,7 @@ func (a *aclSyncProtocol) HeadUpdate(ctx context.Context, senderId string, updat
 	log := a.log.With(
 		zap.String("senderId", senderId),
 		zap.String("update head", update.Head),
+		zap.String("current head", a.aclList.Head().Id),
 		zap.Int("len(update records)", len(update.Records)))
 	log.DebugCtx(ctx, "received acl head update message")
 
