@@ -27,8 +27,10 @@ service SpaceSync {
     // ObjectSync sends object sync message and synchronously gets response message
     rpc ObjectSync(ObjectSyncMessage) returns (ObjectSyncMessage);
     // AclAddRecord adds a new record to acl log. Works only with any-sync-node
+    // deprecated: use coordinator api
     rpc AclAddRecord(AclAddRecordRequest) returns (AclAddRecordResponse);
     // AclGetRecords gets acl records
+    // deprecated: use coordinator api
     rpc AclGetRecords(AclGetRecordsRequest) returns (AclGetRecordsResponse);
 }
 
