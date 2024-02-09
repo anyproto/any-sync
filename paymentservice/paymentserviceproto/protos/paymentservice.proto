@@ -77,6 +77,8 @@ message GetSubscriptionResponse {
 
   // if user verified her email OR provided it while buying a subscription, it will be here
   string userEmail = 10;
+
+  bool subscribeToNewsletter = 11;
 }
 
 // 2 
