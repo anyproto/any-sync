@@ -57,8 +57,9 @@ service Consensus {
 message Ok {}
 
 message LogAddRequest {
+    string logId = 1;
     // first record in the log, consensus node not sign it
-    RawRecordWithId record = 1;
+    RawRecordWithId record = 2;
 }
 
 message RecordAddRequest {
