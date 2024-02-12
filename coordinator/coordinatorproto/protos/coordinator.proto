@@ -72,6 +72,7 @@ enum SpaceStatus {
   SpaceStatusPendingDeletion = 1;
   SpaceStatusDeletionStarted = 2;
   SpaceStatusDeleted = 3;
+  SpaceStatusNotExists = 4;
 }
 
 message SpaceStatusPayload {
