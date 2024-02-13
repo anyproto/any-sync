@@ -126,6 +126,9 @@ func TestOCache_Get(t *testing.T) {
 	t.Run("context cancel", func(t *testing.T) {
 		c := New(func(ctx context.Context, id string) (value Object, err error) {
 			time.Sleep(time.Second / 3)
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
 			return &testObject{
 				name: "id",
 			}, nil

@@ -158,31 +158,29 @@ func build(deps internalDeps) (list AclList, err error) {
 	if len(records)%2 != 0 {
 		indexes[records[len(records)/2].Id] = len(records) / 2
 	}
-
-	stateBuilder.Init(id)
-	state, err := stateBuilder.Build(records)
-	if err != nil {
-		return
-	}
-
 	// TODO: check if this is correct (raw model instead of unmarshalled)
 	rootWithId, err := storage.Root()
 	if err != nil {
 		return
 	}
 
-	recBuilder.(*aclRecordBuilder).state = state
 	list = &aclList{
 		root:          rootWithId,
 		records:       records,
 		indexes:       indexes,
 		stateBuilder:  stateBuilder,
 		recordBuilder: recBuilder,
-		aclState:      state,
 		storage:       storage,
 		id:            id,
 	}
-	state.list = list
+	stateBuilder.Init(id)
+	state, err := stateBuilder.Build(records, list.(*aclList))
+	if err != nil {
+		return
+	}
+	list.(*aclList).aclState = state
+	recBuilder.(*aclRecordBuilder).state = state
+	state.list = list.(*aclList)
 	return
 }
 
@@ -259,6 +257,10 @@ func (a *aclList) IsAfter(first string, second string) (bool, error) {
 	return firstRec >= secondRec, nil
 }
 
+func (a *aclList) isAfterNoCheck(first, second string) bool {
+	return a.indexes[first] >= a.indexes[second]
+}
+
 func (a *aclList) Head() *AclRecord {
 	return a.records[len(a.records)-1]
 }
@@ -293,9 +295,15 @@ func (a *aclList) Iterate(iterFunc IterFunc) {
 }
 
 func (a *aclList) RecordsAfter(ctx context.Context, id string) (records []*consensusproto.RawRecordWithId, err error) {
-	recIdx, ok := a.indexes[id]
-	if !ok {
-		return nil, ErrNoSuchRecord
+	var recIdx int
+	if id == "" {
+		recIdx = -1
+	} else {
+		var ok bool
+		recIdx, ok = a.indexes[id]
+		if !ok {
+			return nil, ErrNoSuchRecord
+		}
 	}
 	for i := recIdx + 1; i < len(a.records); i++ {
 		rawRec, err := a.storage.GetRawRecord(ctx, a.records[i].Id)

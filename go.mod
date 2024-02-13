@@ -11,9 +11,9 @@ require (
 	github.com/cheggaaa/mb/v3 v3.0.2
 	github.com/ethereum/go-ethereum v1.10.4
 	github.com/gobwas/glob v0.2.3
-	github.com/goccy/go-graphviz v0.1.1
+	github.com/goccy/go-graphviz v0.1.2
 	github.com/gogo/protobuf v1.3.2
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.5.0
 	github.com/hashicorp/yamux v0.1.1
 	github.com/huandu/skiplist v1.2.0
 	github.com/ipfs/boxo v0.13.1
@@ -94,7 +94,7 @@ require (
 	go.opentelemetry.io/otel v1.14.0 // indirect
 	go.opentelemetry.io/otel/trace v1.14.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/image v0.6.0 // indirect
+	golang.org/x/image v0.14.0 // indirect
 	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/sync v0.4.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect

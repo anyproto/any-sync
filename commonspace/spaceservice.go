@@ -9,6 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/net"
@@ -190,6 +191,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 		Register(deps.TreeSyncer).
 		Register(objecttreebuilder.New()).
 		Register(objectsync.New()).
+		Register(aclclient.NewAclSpaceClient()).
 		Register(headsync.New())
 
 	sp := &space{
@@ -234,6 +236,17 @@ func (s *spaceService) getSpaceStorageFromRemote(ctx context.Context, id string)
 	if err != nil {
 		return nil, err
 	}
+	peerApp := s.app.ChildApp().Register(pm)
+	err = peerApp.Start(ctx)
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := peerApp.Close(ctx)
+		if err != nil {
+			log.Warn("failed to close peer manager")
+		}
+	}()
 	var peers []peer.Peer
 	for {
 		peers, err = pm.GetResponsiblePeers(ctx)

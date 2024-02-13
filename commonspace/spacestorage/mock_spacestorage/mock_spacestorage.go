@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_spacestorage/mock_spacestorage.go github.com/anyproto/any-sync/commonspace/spacestorage SpaceStorage
 //
+
 // Package mock_spacestorage is a generated GoMock package.
 package mock_spacestorage
 

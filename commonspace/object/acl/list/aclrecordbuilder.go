@@ -21,9 +21,8 @@ type RootContent struct {
 }
 
 type RequestJoinPayload struct {
-	InviteRecordId string
-	InviteKey      crypto.PrivKey
-	Metadata       []byte
+	InviteKey crypto.PrivKey
+	Metadata  []byte
 }
 
 type ReadKeyChangePayload struct {
@@ -39,6 +38,20 @@ type RequestAcceptPayload struct {
 type PermissionChangePayload struct {
 	Identity    crypto.PubKey
 	Permissions AclPermissions
+}
+
+type PermissionChangesPayload struct {
+	Changes []PermissionChangePayload
+}
+
+type AccountsAddPayload struct {
+	Additions []AccountAdd
+}
+
+type AccountAdd struct {
+	Identity    crypto.PubKey
+	Permissions AclPermissions
+	Metadata    []byte
 }
 
 type AccountRemovePayload struct {
@@ -61,10 +74,13 @@ type AclRecordBuilder interface {
 	BuildRequestJoin(payload RequestJoinPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestAccept(payload RequestAcceptPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestDecline(requestRecordId string) (rawRecord *consensusproto.RawRecord, err error)
+	BuildRequestCancel(requestRecordId string) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestRemove() (rawRecord *consensusproto.RawRecord, err error)
 	BuildPermissionChange(payload PermissionChangePayload) (rawRecord *consensusproto.RawRecord, err error)
+	BuildPermissionChanges(payload PermissionChangesPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildReadKeyChange(payload ReadKeyChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildAccountRemove(payload AccountRemovePayload) (rawRecord *consensusproto.RawRecord, err error)
+	BuildAccountsAdd(payload AccountsAddPayload) (rawRecord *consensusproto.RawRecord, err error)
 }
 
 type aclRecordBuilder struct {
@@ -117,6 +133,85 @@ func (a *aclRecordBuilder) buildRecord(aclContent *aclrecordproto.AclContentValu
 	return
 }
 
+func (a *aclRecordBuilder) BuildPermissionChanges(payload PermissionChangesPayload) (rawRecord *consensusproto.RawRecord, err error) {
+	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
+		err = ErrInsufficientPermissions
+		return
+	}
+	var changes []*aclrecordproto.AclAccountPermissionChange
+	for _, perm := range payload.Changes {
+		if perm.Identity.Equals(a.state.pubKey) {
+			err = ErrInsufficientPermissions
+			return
+		}
+		if perm.Permissions.IsOwner() {
+			err = ErrIsOwner
+			return
+		}
+		protoIdentity, err := perm.Identity.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, &aclrecordproto.AclAccountPermissionChange{
+			Identity:    protoIdentity,
+			Permissions: aclrecordproto.AclUserPermissions(perm.Permissions),
+		})
+	}
+	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_PermissionChanges{
+		&aclrecordproto.AclAccountPermissionChanges{changes},
+	}}
+	return a.buildRecord(content)
+}
+
+func (a *aclRecordBuilder) BuildAccountsAdd(payload AccountsAddPayload) (rawRecord *consensusproto.RawRecord, err error) {
+	var accs []*aclrecordproto.AclAccountAdd
+	for _, acc := range payload.Additions {
+		if !a.state.Permissions(acc.Identity).NoPermissions() {
+			return nil, ErrDuplicateAccounts
+		}
+		if acc.Permissions.IsOwner() {
+			return nil, ErrIsOwner
+		}
+		mkKey, err := a.state.CurrentMetadataKey()
+		if err != nil {
+			return nil, err
+		}
+		encMeta, err := mkKey.Encrypt(acc.Metadata)
+		if err != nil {
+			return nil, err
+		}
+		if len(encMeta) > MaxMetadataLen {
+			return nil, ErrMetadataTooLarge
+		}
+		readKey, err := a.state.CurrentReadKey()
+		if err != nil {
+			return nil, ErrNoReadKey
+		}
+		protoKey, err := readKey.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		enc, err := acc.Identity.Encrypt(protoKey)
+		if err != nil {
+			return nil, err
+		}
+		protoIdentity, err := acc.Identity.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		accs = append(accs, &aclrecordproto.AclAccountAdd{
+			Identity:         protoIdentity,
+			Permissions:      aclrecordproto.AclUserPermissions(acc.Permissions),
+			Metadata:         encMeta,
+			EncryptedReadKey: enc,
+		})
+	}
+	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_AccountsAdd{
+		&aclrecordproto.AclAccountsAdd{accs},
+	}}
+	return a.buildRecord(content)
+}
+
 func (a *aclRecordBuilder) BuildInvite() (res InviteResult, err error) {
 	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
 		err = ErrInsufficientPermissions
@@ -157,13 +252,24 @@ func (a *aclRecordBuilder) BuildInviteRevoke(inviteRecordId string) (rawRecord *
 }
 
 func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawRecord *consensusproto.RawRecord, err error) {
-	key, exists := a.state.inviteKeys[payload.InviteRecordId]
+	var inviteId string
+	for id, key := range a.state.inviteKeys {
+		if key.Equals(payload.InviteKey.GetPublic()) {
+			inviteId = id
+		}
+	}
+	key, exists := a.state.inviteKeys[inviteId]
 	if !exists {
 		err = ErrNoSuchInvite
 		return
 	}
 	if !payload.InviteKey.GetPublic().Equals(key) {
 		err = ErrIncorrectInviteKey
+		return
+	}
+	if !a.state.Permissions(a.accountKeys.SignKey.GetPublic()).NoPermissions() {
+		err = ErrInsufficientPermissions
+		return
 	}
 	mkKey, err := a.state.CurrentMetadataKey()
 	if err != nil {
@@ -190,7 +296,7 @@ func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawReco
 	}
 	joinRec := &aclrecordproto.AclAccountRequestJoin{
 		InviteIdentity:          protoIdentity,
-		InviteRecordId:          payload.InviteRecordId,
+		InviteRecordId:          inviteId,
 		InviteIdentitySignature: signature,
 		Metadata:                encMeta,
 	}
@@ -239,13 +345,28 @@ func (a *aclRecordBuilder) BuildRequestDecline(requestRecordId string) (rawRecor
 		err = ErrInsufficientPermissions
 		return
 	}
-	_, exists := a.state.requestRecords[requestRecordId]
-	if !exists {
+	rec, exists := a.state.requestRecords[requestRecordId]
+	if !exists || rec.Type != RequestTypeJoin {
 		err = ErrNoSuchRequest
 		return
 	}
 	declineRec := &aclrecordproto.AclAccountRequestDecline{RequestRecordId: requestRecordId}
 	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_RequestDecline{RequestDecline: declineRec}}
+	return a.buildRecord(content)
+}
+
+func (a *aclRecordBuilder) BuildRequestCancel(requestRecordId string) (rawRecord *consensusproto.RawRecord, err error) {
+	rec, exists := a.state.requestRecords[requestRecordId]
+	if !exists {
+		err = ErrNoSuchRequest
+		return
+	}
+	if !rec.RequestIdentity.Equals(a.state.pubKey) {
+		err = ErrInsufficientPermissions
+		return
+	}
+	cancelRec := &aclrecordproto.AclAccountRequestCancel{RecordId: requestRecordId}
+	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_RequestCancel{RequestCancel: cancelRec}}
 	return a.buildRecord(content)
 }
 

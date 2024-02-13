@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_deletionstate/mock_deletionstate.go github.com/anyproto/any-sync/commonspace/deletionstate ObjectDeletionState
 //
+
 // Package mock_deletionstate is a generated GoMock package.
 package mock_deletionstate
 

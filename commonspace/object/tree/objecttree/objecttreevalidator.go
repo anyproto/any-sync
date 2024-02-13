@@ -26,10 +26,14 @@ func (n *noOpTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclList,
 	return nil
 }
 
-type objectTreeValidator struct{}
+type objectTreeValidator struct {
+	validateKeys bool
+}
 
-func newTreeValidator() ObjectTreeValidator {
-	return &objectTreeValidator{}
+func newTreeValidator(validateKeys bool) ObjectTreeValidator {
+	return &objectTreeValidator{
+		validateKeys: validateKeys,
+	}
 }
 
 func (v *objectTreeValidator) ValidateFullTree(tree *Tree, aclList list.AclList) (err error) {
@@ -52,23 +56,29 @@ func (v *objectTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclLis
 
 func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c *Change) (err error) {
 	var (
-		userState list.AclAccountState
-		state     = aclList.AclState()
+		perms list.AclPermissions
+		state = aclList.AclState()
 	)
 	if c.IsDerived {
 		return nil
 	}
 	// checking if the user could write
-	userState, err = state.StateAtRecord(c.AclHeadId, c.Identity)
+	perms, err = state.PermissionsAtRecord(c.AclHeadId, c.Identity)
 	if err != nil {
 		return
 	}
-	if !userState.Permissions.CanWrite() {
+	if !perms.CanWrite() {
 		err = list.ErrInsufficientPermissions
 		return
 	}
 	if c.Id == tree.RootId() {
 		return
+	}
+	if v.validateKeys {
+		keys, exists := state.Keys()[c.ReadKeyId]
+		if !exists || keys.ReadKey == nil {
+			return list.ErrNoReadKey
+		}
 	}
 
 	// checking if the change refers to later acl heads than its previous ids
@@ -93,12 +103,12 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 	return
 }
 
-func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList) (err error) {
+func ValidateRawTreeBuildFunc(payload treestorage.TreeStorageCreatePayload, buildFunc BuildObjectTreeFunc, aclList list.AclList) (err error) {
 	treeStorage, err := treestorage.NewInMemoryTreeStorage(payload.RootRawChange, []string{payload.RootRawChange.Id}, nil)
 	if err != nil {
 		return
 	}
-	tree, err := BuildObjectTree(treeStorage, aclList)
+	tree, err := buildFunc(treeStorage, aclList)
 	if err != nil {
 		return
 	}
@@ -117,4 +127,8 @@ func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.
 		return ErrDerived
 	}
 	return
+}
+
+func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList) (err error) {
+	return ValidateRawTreeBuildFunc(payload, BuildObjectTree, aclList)
 }
