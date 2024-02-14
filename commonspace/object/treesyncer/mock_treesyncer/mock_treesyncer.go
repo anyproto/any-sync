@@ -121,6 +121,18 @@ func (mr *MockTreeSyncerMockRecorder) StartSync() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSync", reflect.TypeOf((*MockTreeSyncer)(nil).StartSync))
 }
 
+// StopSync mocks base method.
+func (m *MockTreeSyncer) StopSync() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "StopSync")
+}
+
+// StopSync indicates an expected call of StopSync.
+func (mr *MockTreeSyncerMockRecorder) StopSync() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopSync", reflect.TypeOf((*MockTreeSyncer)(nil).StopSync))
+}
+
 // SyncAll mocks base method.
 func (m *MockTreeSyncer) SyncAll(arg0 context.Context, arg1 string, arg2, arg3 []string) error {
 	m.ctrl.T.Helper()
