@@ -676,8 +676,11 @@ func (ot *objectTree) readKeysFromAclState(state *list.AclState) (err error) {
 		return nil
 	}
 	for key, value := range state.Keys() {
+		if _, exists := ot.keys[key]; exists {
+			continue
+		}
 		if value.ReadKey == nil {
-			return list.ErrNoReadKey
+			continue
 		}
 		treeKey, err := deriveTreeKey(value.ReadKey, ot.id)
 		if err != nil {
@@ -688,6 +691,9 @@ func (ot *objectTree) readKeysFromAclState(state *list.AclState) (err error) {
 	curKey, err := state.CurrentReadKey()
 	if err != nil {
 		return err
+	}
+	if curKey == nil {
+		return nil
 	}
 	ot.currentReadKey, err = deriveTreeKey(curKey, ot.id)
 	return err
