@@ -171,6 +171,19 @@ func (st *AclState) CurrentStates() []AccountState {
 	return res
 }
 
+func (st *AclState) HadReadPermissions(identity crypto.PubKey) (had bool) {
+	state, exists := st.accountStates[mapKeyFromPubKey(identity)]
+	if !exists {
+		return false
+	}
+	for _, perm := range state.PermissionChanges {
+		if !perm.Permission.NoPermissions() {
+			return true
+		}
+	}
+	return false
+}
+
 func (st *AclState) Invites() []crypto.PubKey {
 	var invites []crypto.PubKey
 	for _, inv := range st.inviteKeys {

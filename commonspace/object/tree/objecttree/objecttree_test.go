@@ -162,7 +162,7 @@ func TestObjectTree(t *testing.T) {
 		bStore = aTree.Storage().(*treestorage.InMemoryTreeStorage).Copy()
 		root, _ = bStore.Root()
 		heads, _ := bStore.Heads()
-		err = ValidateRawTreeBuildFunc(treestorage.TreeStorageCreatePayload{
+		_, err = ValidateRawTreeBuildFunc(treestorage.TreeStorageCreatePayload{
 			RootRawChange: root,
 			Changes:       bStore.AllChanges(),
 			Heads:         heads,

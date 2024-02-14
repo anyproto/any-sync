@@ -366,6 +366,16 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 		return
 	}
 
+	var (
+		filteredHeads = false
+		headsToUse    = changesPayload.NewHeads
+	)
+	// if our validator provides filtering mechanism then we use it
+	filteredHeads, ot.newChangesBuf, ot.newSnapshotsBuf, ot.notSeenIdxBuf = ot.validator.FilterChanges(ot.aclList, changesPayload.NewHeads, ot.newChangesBuf, ot.newSnapshotsBuf, ot.notSeenIdxBuf)
+	if filteredHeads {
+		// if we filtered some of the heads, then we don't know which heads to use
+		headsToUse = []string{}
+	}
 	rollback := func(changes []*Change) {
 		for _, ch := range changes {
 			if _, exists := ot.tree.attached[ch.Id]; exists {
@@ -400,7 +410,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 	}
 
 	if shouldRebuildFromStorage {
-		err = ot.rebuildFromStorage(changesPayload.NewHeads, ot.newChangesBuf)
+		err = ot.rebuildFromStorage(headsToUse, ot.newChangesBuf)
 		if err != nil {
 			// rebuilding without new changes
 			ot.rebuildFromStorage(nil, nil)
