@@ -185,6 +185,9 @@ func ValidateFilterReadKeyRawTreeBuildFunc(payload treestorage.TreeStorageCreate
 	if err != nil {
 		return
 	}
+	if IsEmptyTree(tree) {
+		return payload, ErrNoChangeInTree
+	}
 	return treestorage.TreeStorageCreatePayload{
 		RootRawChange: payload.RootRawChange,
 		Heads:         res.Heads,

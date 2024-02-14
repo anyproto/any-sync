@@ -12,5 +12,6 @@ const CName = "common.object.treesyncer"
 type TreeSyncer interface {
 	app.ComponentRunnable
 	StartSync()
+	ShouldSync(peerId string) bool
 	SyncAll(ctx context.Context, peerId string, existing, missing []string) error
 }
