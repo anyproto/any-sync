@@ -672,7 +672,7 @@ func (ot *objectTree) readKeysFromAclState(state *list.AclState) (err error) {
 		return nil
 	}
 	// if we can't read the keys anyway
-	if state.AccountKey() == nil || state.Permissions(state.AccountKey().GetPublic()).NoPermissions() {
+	if state.AccountKey() == nil || !state.HadReadPermissions(state.AccountKey().GetPublic()) {
 		return nil
 	}
 	for key, value := range state.Keys() {
