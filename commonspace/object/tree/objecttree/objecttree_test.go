@@ -702,7 +702,7 @@ func TestObjectTree(t *testing.T) {
 			ctx.changeCreator.CreateRawWithData("8", aclList.Head().Id, "6", false, []byte("8"), "6"),
 		}
 		_, err := ctx.objTree.AddRawChanges(context.Background(), RawChangesPayload{
-			NewHeads:   []string{"6"},
+			NewHeads:   []string{"7", "8"},
 			RawChanges: rawChanges,
 		})
 		require.NoError(t, err)

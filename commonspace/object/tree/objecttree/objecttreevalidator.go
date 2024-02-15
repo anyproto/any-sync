@@ -35,21 +35,18 @@ func (n *noOpTreeValidator) FilterChanges(aclList list.AclList, heads []string, 
 	if n.filterFunc == nil {
 		return false, changes, snapshots, indexes
 	}
-	var existingHeadsCount int
 	for idx, c := range changes {
 		// only taking changes which we can read
 		if n.filterFunc(c) {
-			if slice.FindPos(heads, c.Id) != -1 {
-				existingHeadsCount++
-			}
 			newIndexes = append(newIndexes, indexes[idx])
 			filtered = append(filtered, c)
 			if c.IsSnapshot {
 				filteredSnapshots = append(filteredSnapshots, c)
 			}
+		} else {
+			filteredHeads = true
 		}
 	}
-	filteredHeads = existingHeadsCount != len(heads)
 	return
 }
 
@@ -90,21 +87,20 @@ func (v *objectTreeValidator) FilterChanges(aclList list.AclList, heads []string
 	aclList.RLock()
 	defer aclList.RUnlock()
 	state := aclList.AclState()
-	var existingHeadsCount int
 	for idx, c := range changes {
 		// only taking changes which we can read
 		if keys, exists := state.Keys()[c.ReadKeyId]; exists && keys.ReadKey != nil {
-			if slice.FindPos(heads, c.Id) != -1 {
-				existingHeadsCount++
-			}
 			newIndexes = append(newIndexes, indexes[idx])
 			filtered = append(filtered, c)
 			if c.IsSnapshot {
 				filteredSnapshots = append(filteredSnapshots, c)
 			}
+		} else {
+			// if we filtered at least one change this can be the change between heads and other changes
+			// thus we cannot use heads
+			filteredHeads = true
 		}
 	}
-	filteredHeads = existingHeadsCount != len(heads)
 	return
 }
 
