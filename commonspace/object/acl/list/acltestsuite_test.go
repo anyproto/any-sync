@@ -101,6 +101,7 @@ func TestAclExecutor(t *testing.T) {
 		// g can cancel request to remove
 		{"g.cancel:g", nil},
 		{"g.request_remove:g", nil},
+		{"g.request_remove:g", ErrPendingRequest},
 		{"a.remove:g", nil},
 		// g cannot cancel not existing request to remove
 		{"g.cancel:g", ErrNoSuchRecord},
