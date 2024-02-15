@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/anyproto/go-chash"
+	"github.com/stretchr/testify/require"
+
 	accountService "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ocache"
@@ -23,8 +26,6 @@ import (
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
-	"github.com/anyproto/go-chash"
-	"github.com/stretchr/testify/require"
 )
 
 //
@@ -282,6 +283,10 @@ func (n noOpSyncer) Close() error {
 type mockTreeSyncer struct {
 }
 
+func (m mockTreeSyncer) ShouldSync(peerId string) bool {
+	return false
+}
+
 func (m mockTreeSyncer) Init(a *app.App) (err error) {
 	return nil
 }
@@ -299,6 +304,9 @@ func (m mockTreeSyncer) Close(ctx context.Context) (err error) {
 }
 
 func (m mockTreeSyncer) StartSync() {
+}
+
+func (m mockTreeSyncer) StopSync() {
 }
 
 func (m mockTreeSyncer) SyncAll(ctx context.Context, peerId string, existing, missing []string) error {

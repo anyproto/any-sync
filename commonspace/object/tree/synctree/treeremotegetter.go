@@ -104,13 +104,17 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 		Heads:         fullSyncResp.Heads,
 	}
 
+	validatorFunc := t.deps.ValidateObjectTree
+	if validatorFunc == nil {
+		validatorFunc = objecttree.ValidateRawTreeBuildFunc
+	}
 	// basically building tree with in-memory storage and validating that it was without errors
 	log.With(zap.String("id", t.treeId)).DebugCtx(ctx, "validating tree")
-	err = objecttree.ValidateRawTreeBuildFunc(payload, t.deps.BuildObjectTree, t.deps.AclList)
+	newPayload, err := validatorFunc(payload, t.deps.BuildObjectTree, t.deps.AclList)
 	if err != nil {
 		return
 	}
 	// now we are sure that we can save it to the storage
-	treeStorage, err = t.deps.SpaceStorage.CreateTreeStorage(payload)
+	treeStorage, err = t.deps.SpaceStorage.CreateTreeStorage(newPayload)
 	return
 }
