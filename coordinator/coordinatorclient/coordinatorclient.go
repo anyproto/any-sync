@@ -8,6 +8,7 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/identityrepo/identityrepoproto"
 	"github.com/anyproto/any-sync/net/peer"
@@ -42,6 +43,10 @@ type CoordinatorClient interface {
 
 	IdentityRepoPut(ctx context.Context, identity string, data []*identityrepoproto.Data) (err error)
 	IdentityRepoGet(ctx context.Context, identities []string, kinds []string) (res []*identityrepoproto.DataWithIdentity, err error)
+
+	AclAddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (res *consensusproto.RawRecordWithId, err error)
+	AclGetRecords(ctx context.Context, spaceId, aclHead string) (res []*consensusproto.RawRecordWithId, err error)
+
 	app.Component
 }
 
@@ -253,6 +258,49 @@ func (c *coordinatorClient) IdentityRepoGet(ctx context.Context, identities, kin
 			return rpcerr.Unwrap(err)
 		}
 		res = resp.GetData()
+		return nil
+	})
+	return
+}
+
+func (c *coordinatorClient) AclAddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (res *consensusproto.RawRecordWithId, err error) {
+	recordData, err := rec.Marshal()
+	if err != nil {
+		return
+	}
+	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		resp, err := cl.AclAddRecord(ctx, &coordinatorproto.AclAddRecordRequest{
+			SpaceId: spaceId,
+			Payload: recordData,
+		})
+		if err != nil {
+			return err
+		}
+		res = &consensusproto.RawRecordWithId{
+			Payload: resp.Payload,
+			Id:      resp.RecordId,
+		}
+		return nil
+	})
+	return
+}
+
+func (c *coordinatorClient) AclGetRecords(ctx context.Context, spaceId, aclHead string) (res []*consensusproto.RawRecordWithId, err error) {
+	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		resp, err := cl.AclGetRecords(ctx, &coordinatorproto.AclGetRecordsRequest{
+			SpaceId: spaceId,
+			AclHead: aclHead,
+		})
+		if err != nil {
+			return err
+		}
+		res = make([]*consensusproto.RawRecordWithId, len(resp.Records))
+		for i, rec := range resp.Records {
+			res[i] = &consensusproto.RawRecordWithId{}
+			if err = res[i].Unmarshal(rec); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 	return
