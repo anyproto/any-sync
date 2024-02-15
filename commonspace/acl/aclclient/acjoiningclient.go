@@ -23,6 +23,7 @@ type AclJoiningClient interface {
 	app.Component
 	AclGetRecords(ctx context.Context, spaceId, aclHead string) ([]*consensusproto.RawRecordWithId, error)
 	RequestJoin(ctx context.Context, spaceId string, payload list.RequestJoinPayload) error
+	SendRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (res *spacesyncproto.AclAddRecordResponse, err error)
 }
 
 type aclJoiningClient struct {
@@ -111,6 +112,24 @@ func (c *aclJoiningClient) RequestJoin(ctx context.Context, spaceId string, payl
 		})
 		return err
 	})
+}
+
+func (c *aclJoiningClient) SendRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (res *spacesyncproto.AclAddRecordResponse, err error) {
+	marshalled, err := rec.Marshal()
+	if err != nil {
+		return
+	}
+	err = c.doClient(ctx, spaceId, func(cl spacesyncproto.DRPCSpaceSyncClient) error {
+		res, err = cl.AclAddRecord(ctx, &spacesyncproto.AclAddRecordRequest{
+			SpaceId: spaceId,
+			Payload: marshalled,
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return
 }
 
 func (c *aclJoiningClient) doClient(ctx context.Context, spaceId string, f func(cl spacesyncproto.DRPCSpaceSyncClient) error) error {

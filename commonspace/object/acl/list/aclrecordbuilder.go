@@ -1,6 +1,7 @@
 package list
 
 import (
+	"errors"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -508,6 +509,10 @@ func (a *aclRecordBuilder) BuildRequestRemove() (rawRecord *consensusproto.RawRe
 	if permissions.IsOwner() {
 		err = ErrIsOwner
 		return
+	}
+	_, err = a.state.Record(a.state.pubKey)
+	if !errors.Is(err, ErrNoSuchRecord) {
+		return nil, ErrPendingRequest
 	}
 	removeRec := &aclrecordproto.AclAccountRequestRemove{}
 	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_AccountRequestRemove{AccountRequestRemove: removeRec}}

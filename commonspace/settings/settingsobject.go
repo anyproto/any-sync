@@ -4,8 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/util/crypto"
+
+	"github.com/gogo/protobuf/proto"
+	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app/logger"
@@ -18,8 +22,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/nodeconf"
-	"github.com/gogo/protobuf/proto"
-	"go.uber.org/zap"
 )
 
 var log = logger.NewNamed("common.commonspace.settings")
@@ -166,7 +168,10 @@ func (s *settingsObject) checkHistoryState(ctx context.Context) (err error) {
 }
 
 func (s *settingsObject) Close() error {
-	return s.SyncTree.Close()
+	if s.SyncTree != nil {
+		return s.SyncTree.Close()
+	}
+	return nil
 }
 
 var isDerivedRoot = objecttree.IsDerivedRoot

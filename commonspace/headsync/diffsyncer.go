@@ -113,6 +113,9 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 }
 
 func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
+	if !d.treeSyncer.ShouldSync(p.Id()) {
+		return
+	}
 	ctx = logger.CtxWithFields(ctx, zap.String("peerId", p.Id()))
 	conn, err := p.AcquireDrpcConn(ctx)
 	if err != nil {

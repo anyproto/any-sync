@@ -75,9 +75,15 @@ enum SpaceStatus {
   SpaceStatusNotExists = 4;
 }
 
+enum SpacePermissions {
+  SpacePermissionsUnknown = 0;
+  SpacePermissionsOwner = 1;
+}
+
 message SpaceStatusPayload {
   SpaceStatus status = 1;
   int64 deletionTimestamp = 2;
+  SpacePermissions permissions = 3;
 }
 
 message SpaceSignResponse {

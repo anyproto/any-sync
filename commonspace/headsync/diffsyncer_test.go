@@ -119,6 +119,7 @@ func TestDiffSyncer(t *testing.T) {
 		mPeer := mockPeer{}
 		remDiff := NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock)
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
+		fx.treeSyncerMock.EXPECT().ShouldSync(gomock.Any()).Return(true)
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
 			Return([]peer.Peer{mPeer}, nil)
@@ -140,6 +141,7 @@ func TestDiffSyncer(t *testing.T) {
 		defer fx.stop()
 		mPeer := mockPeer{}
 		remDiff := NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock)
+		fx.treeSyncerMock.EXPECT().ShouldSync(gomock.Any()).Return(true)
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
@@ -205,6 +207,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.initDiffSyncer(t)
 		defer fx.stop()
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
+		fx.treeSyncerMock.EXPECT().ShouldSync(gomock.Any()).Return(true)
 		aclStorageMock := mock_liststorage.NewMockListStorage(fx.ctrl)
 		settingsStorage := mock_treestorage.NewMockTreeStorage(fx.ctrl)
 		settingsId := "settingsId"
@@ -255,6 +258,7 @@ func TestDiffSyncer(t *testing.T) {
 		defer fx.stop()
 		remDiff := NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock)
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
+		fx.treeSyncerMock.EXPECT().ShouldSync(gomock.Any()).Return(true)
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
 			Return([]peer.Peer{mockPeer{}}, nil)
@@ -273,6 +277,7 @@ func TestDiffSyncer(t *testing.T) {
 		defer fx.stop()
 		mPeer := mockPeer{}
 		remDiff := NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock)
+		fx.treeSyncerMock.EXPECT().ShouldSync(gomock.Any()).Return(true)
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).

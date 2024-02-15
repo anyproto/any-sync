@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_treesyncer/mock_treesyncer.go github.com/anyproto/any-sync/commonspace/object/treesyncer TreeSyncer
 //
-
 // Package mock_treesyncer is a generated GoMock package.
 package mock_treesyncer
 
@@ -96,6 +95,20 @@ func (mr *MockTreeSyncerMockRecorder) Run(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockTreeSyncer)(nil).Run), arg0)
 }
 
+// ShouldSync mocks base method.
+func (m *MockTreeSyncer) ShouldSync(arg0 string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ShouldSync", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// ShouldSync indicates an expected call of ShouldSync.
+func (mr *MockTreeSyncerMockRecorder) ShouldSync(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldSync", reflect.TypeOf((*MockTreeSyncer)(nil).ShouldSync), arg0)
+}
+
 // StartSync mocks base method.
 func (m *MockTreeSyncer) StartSync() {
 	m.ctrl.T.Helper()
@@ -106,6 +119,18 @@ func (m *MockTreeSyncer) StartSync() {
 func (mr *MockTreeSyncerMockRecorder) StartSync() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSync", reflect.TypeOf((*MockTreeSyncer)(nil).StartSync))
+}
+
+// StopSync mocks base method.
+func (m *MockTreeSyncer) StopSync() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "StopSync")
+}
+
+// StopSync indicates an expected call of StopSync.
+func (mr *MockTreeSyncerMockRecorder) StopSync() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopSync", reflect.TypeOf((*MockTreeSyncer)(nil).StopSync))
 }
 
 // SyncAll mocks base method.
