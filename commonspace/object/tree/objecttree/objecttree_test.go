@@ -148,7 +148,7 @@ func TestObjectTree(t *testing.T) {
 		}, aAccount.Acl)
 		require.NoError(t, err)
 		aStore, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
-		aTree, err := BuildKeyVerifiableObjectTree(aStore, aAccount.Acl)
+		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
 		_, err = aTree.AddContent(ctx, SignableChangeContent{
 			Data:        []byte("some"),
@@ -159,7 +159,7 @@ func TestObjectTree(t *testing.T) {
 		})
 		require.NoError(t, err)
 		bStore := aTree.Storage().(*treestorage.InMemoryTreeStorage).Copy()
-		bTree, err := BuildKeyVerifiableObjectTree(bStore, bAccount.Acl)
+		bTree, err := BuildKeyFilterableObjectTree(bStore, bAccount.Acl)
 		require.NoError(t, err)
 		err = exec.Execute("a.remove:b")
 		require.NoError(t, err)
@@ -176,17 +176,17 @@ func TestObjectTree(t *testing.T) {
 			NewHeads:   aTree.Heads(),
 			RawChanges: res.Added,
 		})
-		require.Equal(t, ErrHasInvalidChanges, err)
 		require.Equal(t, oldHeads, bTree.Heads())
 		bStore = aTree.Storage().(*treestorage.InMemoryTreeStorage).Copy()
 		root, _ = bStore.Root()
 		heads, _ := bStore.Heads()
-		_, err = ValidateRawTreeBuildFunc(treestorage.TreeStorageCreatePayload{
+		filteredPayload, err := ValidateFilterRawTree(treestorage.TreeStorageCreatePayload{
 			RootRawChange: root,
 			Changes:       bStore.AllChanges(),
 			Heads:         heads,
-		}, BuildKeyVerifiableObjectTree, bAccount.Acl)
-		require.Equal(t, ErrHasInvalidChanges, err)
+		}, bAccount.Acl)
+		require.NoError(t, err)
+		require.Equal(t, 2, len(filteredPayload.Changes))
 		err = aTree.IterateRoot(func(change *Change, decrypted []byte) (any, error) {
 			return nil, nil
 		}, func(change *Change) bool {

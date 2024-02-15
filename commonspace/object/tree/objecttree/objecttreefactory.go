@@ -136,16 +136,6 @@ func BuildEmptyDataTestableTree(treeStorage treestorage.TreeStorage, aclList lis
 	return buildObjectTree(deps)
 }
 
-func BuildKeyVerifiableObjectTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
-	rootChange, err := treeStorage.Root()
-	if err != nil {
-		return nil, err
-	}
-	deps := defaultObjectTreeDeps(rootChange, treeStorage, aclList)
-	deps.validator = newTreeValidator(true, false)
-	return buildObjectTree(deps)
-}
-
 func BuildKeyFilterableObjectTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
 	rootChange, err := treeStorage.Root()
 	if err != nil {

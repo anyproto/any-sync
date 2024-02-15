@@ -93,7 +93,7 @@ func (v *objectTreeValidator) FilterChanges(aclList list.AclList, heads []string
 	var existingHeadsCount int
 	for idx, c := range changes {
 		// only taking changes which we can read
-		if _, exists := state.Keys()[c.ReadKeyId]; exists {
+		if keys, exists := state.Keys()[c.ReadKeyId]; exists && keys.ReadKey != nil {
 			if slice.FindPos(heads, c.Id) != -1 {
 				existingHeadsCount++
 			}
@@ -183,7 +183,7 @@ func ValidateRawTreeBuildFunc(payload treestorage.TreeStorageCreatePayload, buil
 	return payload, nil
 }
 
-func ValidateFilterReadKeyRawTreeBuildFunc(payload treestorage.TreeStorageCreatePayload, buildFunc BuildObjectTreeFunc, aclList list.AclList) (retPayload treestorage.TreeStorageCreatePayload, err error) {
+func ValidateFilterRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList) (retPayload treestorage.TreeStorageCreatePayload, err error) {
 	aclList.RLock()
 	if !aclList.AclState().HadReadPermissions(aclList.AclState().Identity()) {
 		aclList.RUnlock()
