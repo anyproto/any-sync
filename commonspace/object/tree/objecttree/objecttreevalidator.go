@@ -19,7 +19,9 @@ type ObjectTreeValidator interface {
 	FilterChanges(aclList list.AclList, heads []string, changes []*Change, snapshots []*Change, indexes []int) (filteredHeads bool, filtered, filteredSnapshots []*Change, newIndexes []int)
 }
 
-type noOpTreeValidator struct{}
+type noOpTreeValidator struct {
+	filterFunc func(ch *Change) bool
+}
 
 func (n *noOpTreeValidator) ValidateFullTree(tree *Tree, aclList list.AclList) error {
 	return nil
@@ -30,7 +32,25 @@ func (n *noOpTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclList,
 }
 
 func (n *noOpTreeValidator) FilterChanges(aclList list.AclList, heads []string, changes []*Change, snapshots []*Change, indexes []int) (filteredHeads bool, filtered, filteredSnapshots []*Change, newIndexes []int) {
-	return false, changes, snapshots, indexes
+	if n.filterFunc == nil {
+		return false, changes, snapshots, indexes
+	}
+	var existingHeadsCount int
+	for idx, c := range changes {
+		// only taking changes which we can read
+		if n.filterFunc(c) {
+			if slice.FindPos(heads, c.Id) != -1 {
+				existingHeadsCount++
+			}
+			newIndexes = append(newIndexes, indexes[idx])
+			filtered = append(filtered, c)
+			if c.IsSnapshot {
+				filteredSnapshots = append(filteredSnapshots, c)
+			}
+		}
+	}
+	filteredHeads = existingHeadsCount != len(heads)
+	return
 }
 
 type objectTreeValidator struct {
