@@ -3,6 +3,14 @@ package consensusclient
 import (
 	"context"
 	"fmt"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto/consensuserr"
@@ -12,12 +20,6 @@ import (
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
 	"github.com/anyproto/any-sync/util/cidutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
-	"sync"
-	"testing"
-	"time"
 )
 
 func TestService_Watch(t *testing.T) {
@@ -113,7 +115,7 @@ func TestService_Init(t *testing.T) {
 func TestService_AddLog(t *testing.T) {
 	fx := newFixture(t).run(t)
 	defer fx.Finish()
-	assert.NoError(t, fx.AddLog(ctx, &consensusproto.RawRecordWithId{}))
+	assert.NoError(t, fx.AddLog(ctx, "1", &consensusproto.RawRecordWithId{}))
 }
 
 func TestService_AddRecord(t *testing.T) {

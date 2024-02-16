@@ -4,15 +4,17 @@ package consensusclient
 import (
 	"context"
 	"errors"
+	"sync"
+	"time"
+
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
-	"go.uber.org/zap"
-	"sync"
-	"time"
 )
 
 const CName = "consensus.consensusclient"
@@ -36,7 +38,7 @@ type Watcher interface {
 
 type Service interface {
 	// AddLog adds new log to consensus servers
-	AddLog(ctx context.Context, rec *consensusproto.RawRecordWithId) (err error)
+	AddLog(ctx context.Context, logId string, rec *consensusproto.RawRecordWithId) (err error)
 	// DeleteLog deletes the log from the consensus node
 	DeleteLog(ctx context.Context, logId string) (err error)
 	// AddRecord adds new record to consensus servers
@@ -88,9 +90,10 @@ func (s *service) doClient(ctx context.Context, fn func(cl consensusproto.DRPCCo
 	return fn(consensusproto.NewDRPCConsensusClient(dc))
 }
 
-func (s *service) AddLog(ctx context.Context, rec *consensusproto.RawRecordWithId) (err error) {
+func (s *service) AddLog(ctx context.Context, logId string, rec *consensusproto.RawRecordWithId) (err error) {
 	return s.doClient(ctx, func(cl consensusproto.DRPCConsensusClient) error {
 		if _, err = cl.LogAdd(ctx, &consensusproto.LogAddRequest{
+			LogId:  logId,
 			Record: rec,
 		}); err != nil {
 			return rpcerr.Unwrap(err)
