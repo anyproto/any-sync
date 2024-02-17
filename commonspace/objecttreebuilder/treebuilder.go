@@ -42,6 +42,7 @@ type HistoryTreeOpts struct {
 	BeforeId      string
 	Include       bool
 	BuildFullTree bool
+	HeadIds       []string
 }
 
 type TreeBuilder interface {
@@ -148,6 +149,7 @@ func (t *treeBuilder) BuildHistoryTree(ctx context.Context, id string, opts Hist
 		BeforeId:        opts.BeforeId,
 		IncludeBeforeId: opts.Include,
 		BuildFullTree:   opts.BuildFullTree,
+		HeadIds:         opts.HeadIds,
 	}
 	params.TreeStorage, err = t.spaceStorage.TreeStorage(id)
 	if err != nil {
