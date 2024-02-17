@@ -29,6 +29,7 @@ type HistoryTreeParams struct {
 	AclList         list.AclList
 	BeforeId        string
 	IncludeBeforeId bool
+	HeadIds         []string
 	BuildFullTree   bool
 }
 

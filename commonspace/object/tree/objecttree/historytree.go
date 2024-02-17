@@ -41,6 +41,10 @@ func (h *historyTree) rebuild(params HistoryTreeParams) (err error) {
 		return ErrLoadBeforeRoot
 	}
 
+	if params.HeadIds != nil {
+		h.tree, err = h.treeBuilder.build(params.HeadIds, nil, nil)
+		return
+	}
 	heads := []string{beforeId}
 	if beforeId == "" {
 		heads, err = h.treeStorage.Heads()
