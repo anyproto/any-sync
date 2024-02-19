@@ -4,16 +4,12 @@ import (
 	"context"
 	"errors"
 
-	"storj.io/drpc"
-
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/anyproto/any-sync/net/pool"
-	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -47,15 +43,13 @@ func NewAclSpaceClient() AclSpaceClient {
 }
 
 type aclSpaceClient struct {
-	nodeConf nodeconf.Service
-	pool     pool.Pool
-	acl      list.AclList
-	spaceId  string
+	coordinatorClient coordinatorclient.CoordinatorClient
+	acl               list.AclList
+	spaceId           string
 }
 
 func (c *aclSpaceClient) Init(a *app.App) (err error) {
-	c.pool = a.MustComponent(pool.CName).(pool.Pool)
-	c.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
+	c.coordinatorClient = a.MustComponent(coordinatorclient.CName).(coordinatorclient.CoordinatorClient)
 	c.acl = a.MustComponent(syncacl.CName).(list.AclList)
 	c.spaceId = a.MustComponent(spacestate.CName).(*spacestate.SpaceState).SpaceId
 	return nil
@@ -73,8 +67,7 @@ func (c *aclSpaceClient) RevokeInvite(ctx context.Context, inviteRecordId string
 		return
 	}
 	c.acl.Unlock()
-	_, err = c.sendRecordAndUpdate(ctx, c.spaceId, res)
-	return err
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
 }
 
 func (c *aclSpaceClient) RequestSelfRemove(ctx context.Context) (err error) {
@@ -85,8 +78,7 @@ func (c *aclSpaceClient) RequestSelfRemove(ctx context.Context) (err error) {
 		return
 	}
 	c.acl.Unlock()
-	_, err = c.sendRecordAndUpdate(ctx, c.spaceId, res)
-	return err
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
 }
 
 func (c *aclSpaceClient) ChangePermissions(ctx context.Context, permChange list.PermissionChangesPayload) (err error) {
@@ -97,8 +89,7 @@ func (c *aclSpaceClient) ChangePermissions(ctx context.Context, permChange list.
 		return
 	}
 	c.acl.Unlock()
-	_, err = c.sendRecordAndUpdate(ctx, c.spaceId, res)
-	return err
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
 }
 
 func (c *aclSpaceClient) AddAccounts(ctx context.Context, add list.AccountsAddPayload) (err error) {
@@ -109,8 +100,7 @@ func (c *aclSpaceClient) AddAccounts(ctx context.Context, add list.AccountsAddPa
 		return
 	}
 	c.acl.Unlock()
-	_, err = c.sendRecordAndUpdate(ctx, c.spaceId, res)
-	return err
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
 }
 
 func (c *aclSpaceClient) RemoveAccounts(ctx context.Context, payload list.AccountRemovePayload) (err error) {
@@ -121,8 +111,7 @@ func (c *aclSpaceClient) RemoveAccounts(ctx context.Context, payload list.Accoun
 		return
 	}
 	c.acl.Unlock()
-	_, err = c.sendRecordAndUpdate(ctx, c.spaceId, res)
-	return err
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
 }
 
 func (c *aclSpaceClient) DeclineRequest(ctx context.Context, identity crypto.PubKey) (err error) {
@@ -138,8 +127,7 @@ func (c *aclSpaceClient) DeclineRequest(ctx context.Context, identity crypto.Pub
 		return
 	}
 	c.acl.Unlock()
-	_, err = c.sendRecordAndUpdate(ctx, c.spaceId, res)
-	return err
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
 }
 
 func (c *aclSpaceClient) CancelRequest(ctx context.Context) (err error) {
@@ -155,8 +143,7 @@ func (c *aclSpaceClient) CancelRequest(ctx context.Context) (err error) {
 		return
 	}
 	c.acl.Unlock()
-	_, err = c.sendRecordAndUpdate(ctx, c.spaceId, res)
-	return err
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
 }
 
 func (c *aclSpaceClient) AcceptRequest(ctx context.Context, payload list.RequestAcceptPayload) (err error) {
@@ -167,8 +154,7 @@ func (c *aclSpaceClient) AcceptRequest(ctx context.Context, payload list.Request
 		return
 	}
 	c.acl.Unlock()
-	_, err = c.sendRecordAndUpdate(ctx, c.spaceId, res)
-	return err
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
 }
 
 func (c *aclSpaceClient) GenerateInvite() (resp list.InviteResult, err error) {
@@ -178,46 +164,20 @@ func (c *aclSpaceClient) GenerateInvite() (resp list.InviteResult, err error) {
 }
 
 func (c *aclSpaceClient) AddRecord(ctx context.Context, consRec *consensusproto.RawRecord) (err error) {
-	_, err = c.sendRecordAndUpdate(ctx, c.spaceId, consRec)
-	return
+	return c.sendRecordAndUpdate(ctx, c.spaceId, consRec)
 }
 
-func (c *aclSpaceClient) sendRecordAndUpdate(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (res *spacesyncproto.AclAddRecordResponse, err error) {
-	marshalled, err := rec.Marshal()
+func (c *aclSpaceClient) sendRecordAndUpdate(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (err error) {
+	res, err := c.coordinatorClient.AclAddRecord(ctx, spaceId, rec)
 	if err != nil {
 		return
-	}
-	err = c.doClient(ctx, spaceId, func(cl spacesyncproto.DRPCSpaceSyncClient) error {
-		res, err = cl.AclAddRecord(ctx, &spacesyncproto.AclAddRecordRequest{
-			SpaceId: spaceId,
-			Payload: marshalled,
-		})
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return
+
 	}
 	c.acl.Lock()
 	defer c.acl.Unlock()
-	err = c.acl.AddRawRecord(&consensusproto.RawRecordWithId{
-		Payload: res.Payload,
-		Id:      res.RecordId,
-	})
+	err = c.acl.AddRawRecord(res)
 	if errors.Is(err, list.ErrRecordAlreadyExists) {
 		err = nil
 	}
 	return
-}
-
-func (c *aclSpaceClient) doClient(ctx context.Context, spaceId string, f func(cl spacesyncproto.DRPCSpaceSyncClient) error) error {
-	p, err := c.pool.GetOneOf(ctx, c.nodeConf.NodeIds(spaceId))
-	if err != nil {
-		return err
-	}
-	return p.DoDrpc(ctx, func(conn drpc.Conn) error {
-		return f(spacesyncproto.NewDRPCSpaceSyncClient(conn))
-	})
 }
