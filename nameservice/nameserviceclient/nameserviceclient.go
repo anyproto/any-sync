@@ -35,6 +35,8 @@ type AnyNsClientService interface {
 	GetUserAccount(ctx context.Context, in *nsp.GetUserAccountRequest) (out *nsp.UserAccount, err error)
 	AdminFundUserAccount(ctx context.Context, in *nsp.AdminFundUserAccountRequestSigned) (out *nsp.OperationResponse, err error)
 
+	AdminRegisterName(ctx context.Context, in *nsp.NameRegisterRequestSigned) (out *nsp.OperationResponse, err error)
+
 	GetOperation(ctx context.Context, in *nsp.GetOperationStatusRequest) (out *nsp.OperationResponse, err error)
 	CreateOperation(ctx context.Context, in *nsp.CreateUserOperationRequestSigned) (out *nsp.OperationResponse, err error)
 
@@ -137,6 +139,16 @@ func (s *service) GetUserAccount(ctx context.Context, in *nsp.GetUserAccountRequ
 func (s *service) AdminFundUserAccount(ctx context.Context, in *nsp.AdminFundUserAccountRequestSigned) (out *nsp.OperationResponse, err error) {
 	err = s.doClientAA(ctx, func(cl nsp.DRPCAnynsAccountAbstractionClient) error {
 		if out, err = cl.AdminFundUserAccount(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) AdminRegisterName(ctx context.Context, in *nsp.NameRegisterRequestSigned) (out *nsp.OperationResponse, err error) {
+	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
+		if out, err = cl.AdminNameRegisterSigned(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil

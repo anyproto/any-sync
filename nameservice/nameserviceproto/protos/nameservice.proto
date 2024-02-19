@@ -2,6 +2,7 @@ syntax = "proto3";
 option go_package = "nameservice/nameserviceproto";
 
 //import "google/protobuf/timestamp.proto";
+import "nameservice/nameserviceproto/protos/nameservice_aa.proto";
 
 message NameAvailableRequest {
   // Name including .any suffix
@@ -49,4 +50,8 @@ service Anyns {
 
   // Reverse lookup: address -> name
   rpc GetNameByAddress(NameByAddressRequest) returns (NameByAddressResponse) {}
+
+  // Register new name for the user (on behalf of the user)
+  // Anytype CAN only register names for users, but can not transfer or update them!
+  rpc AdminNameRegisterSigned(NameRegisterRequestSigned) returns (OperationResponse) {}
 }

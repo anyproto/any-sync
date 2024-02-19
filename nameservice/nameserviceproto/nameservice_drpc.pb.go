@@ -42,6 +42,7 @@ type DRPCAnynsClient interface {
 
 	IsNameAvailable(ctx context.Context, in *NameAvailableRequest) (*NameAvailableResponse, error)
 	GetNameByAddress(ctx context.Context, in *NameByAddressRequest) (*NameByAddressResponse, error)
+	AdminNameRegisterSigned(ctx context.Context, in *NameRegisterRequestSigned) (*OperationResponse, error)
 }
 
 type drpcAnynsClient struct {
@@ -72,9 +73,19 @@ func (c *drpcAnynsClient) GetNameByAddress(ctx context.Context, in *NameByAddres
 	return out, nil
 }
 
+func (c *drpcAnynsClient) AdminNameRegisterSigned(ctx context.Context, in *NameRegisterRequestSigned) (*OperationResponse, error) {
+	out := new(OperationResponse)
+	err := c.cc.Invoke(ctx, "/Anyns/AdminNameRegisterSigned", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCAnynsServer interface {
 	IsNameAvailable(context.Context, *NameAvailableRequest) (*NameAvailableResponse, error)
 	GetNameByAddress(context.Context, *NameByAddressRequest) (*NameByAddressResponse, error)
+	AdminNameRegisterSigned(context.Context, *NameRegisterRequestSigned) (*OperationResponse, error)
 }
 
 type DRPCAnynsUnimplementedServer struct{}
@@ -87,9 +98,13 @@ func (s *DRPCAnynsUnimplementedServer) GetNameByAddress(context.Context, *NameBy
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCAnynsUnimplementedServer) AdminNameRegisterSigned(context.Context, *NameRegisterRequestSigned) (*OperationResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCAnynsDescription struct{}
 
-func (DRPCAnynsDescription) NumMethods() int { return 2 }
+func (DRPCAnynsDescription) NumMethods() int { return 3 }
 
 func (DRPCAnynsDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -111,6 +126,15 @@ func (DRPCAnynsDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver,
 						in1.(*NameByAddressRequest),
 					)
 			}, DRPCAnynsServer.GetNameByAddress, true
+	case 2:
+		return "/Anyns/AdminNameRegisterSigned", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnynsServer).
+					AdminNameRegisterSigned(
+						ctx,
+						in1.(*NameRegisterRequestSigned),
+					)
+			}, DRPCAnynsServer.AdminNameRegisterSigned, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -146,6 +170,22 @@ type drpcAnyns_GetNameByAddressStream struct {
 }
 
 func (x *drpcAnyns_GetNameByAddressStream) SendAndClose(m *NameByAddressResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyns_AdminNameRegisterSignedStream interface {
+	drpc.Stream
+	SendAndClose(*OperationResponse) error
+}
+
+type drpcAnyns_AdminNameRegisterSignedStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyns_AdminNameRegisterSignedStream) SendAndClose(m *OperationResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}); err != nil {
 		return err
 	}

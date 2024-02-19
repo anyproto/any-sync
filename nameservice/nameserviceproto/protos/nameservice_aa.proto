@@ -117,6 +117,14 @@ message NameRegisterRequest {
   // bool updateReverseResolver = 4;
 }
 
+message NameRegisterRequestSigned {
+  // NameRegisterRequest struct
+  bytes payload = 1;
+
+  // payload signed by payload.ownerEthAddress 
+  bytes signature = 2; 
+}
+
 message NameRegisterForSpaceRequest {
   string fullName = 1;
 
