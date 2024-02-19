@@ -22,6 +22,10 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
+	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
+	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
+	"github.com/anyproto/any-sync/identityrepo/identityrepoproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -370,6 +374,69 @@ func (t *mockTreeManager) DeleteTree(ctx context.Context, spaceId, treeId string
 	return nil
 }
 
+type mockCoordinatorClient struct {
+}
+
+func (m mockCoordinatorClient) SpaceDelete(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (err error) {
+	return
+}
+
+func (m mockCoordinatorClient) AccountDelete(ctx context.Context, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (timestamp int64, err error) {
+	return
+}
+
+func (m mockCoordinatorClient) AccountRevertDeletion(ctx context.Context) (err error) {
+	return
+}
+
+func (m mockCoordinatorClient) StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, err error) {
+	return
+}
+
+func (m mockCoordinatorClient) StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusPayload, err error) {
+	return
+}
+
+func (m mockCoordinatorClient) SpaceSign(ctx context.Context, payload coordinatorclient.SpaceSignPayload) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error) {
+	return
+}
+
+func (m mockCoordinatorClient) FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (response *coordinatorproto.FileLimitCheckResponse, err error) {
+	return
+}
+
+func (m mockCoordinatorClient) NetworkConfiguration(ctx context.Context, currentId string) (*coordinatorproto.NetworkConfigurationResponse, error) {
+	return nil, nil
+}
+
+func (m mockCoordinatorClient) DeletionLog(ctx context.Context, lastRecordId string, limit int) (records []*coordinatorproto.DeletionLogRecord, err error) {
+	return
+}
+
+func (m mockCoordinatorClient) IdentityRepoPut(ctx context.Context, identity string, data []*identityrepoproto.Data) (err error) {
+	return
+}
+
+func (m mockCoordinatorClient) IdentityRepoGet(ctx context.Context, identities []string, kinds []string) (res []*identityrepoproto.DataWithIdentity, err error) {
+	return
+}
+
+func (m mockCoordinatorClient) AclAddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (res *consensusproto.RawRecordWithId, err error) {
+	return
+}
+
+func (m mockCoordinatorClient) AclGetRecords(ctx context.Context, spaceId, aclHead string) (res []*consensusproto.RawRecordWithId, err error) {
+	return
+}
+
+func (m mockCoordinatorClient) Init(a *app.App) (err error) {
+	return
+}
+
+func (m mockCoordinatorClient) Name() (name string) {
+	return coordinatorclient.CName
+}
+
 //
 // Space fixture
 //
@@ -406,6 +473,7 @@ func newFixture(t *testing.T) *spaceFixture {
 		Register(fx.config).
 		Register(credentialprovider.NewNoOp()).
 		Register(&mockStatusServiceProvider{}).
+		Register(mockCoordinatorClient{}).
 		Register(fx.configurationService).
 		Register(fx.storageProvider).
 		Register(fx.peermanagerProvider).
