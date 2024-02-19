@@ -171,7 +171,6 @@ func (c *aclSpaceClient) sendRecordAndUpdate(ctx context.Context, spaceId string
 	res, err := c.coordinatorClient.AclAddRecord(ctx, spaceId, rec)
 	if err != nil {
 		return
-
 	}
 	c.acl.Lock()
 	defer c.acl.Unlock()
