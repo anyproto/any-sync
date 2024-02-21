@@ -108,6 +108,10 @@ message NameRegisterRequest {
   // An Ethereum address that owns that name
   string ownerEthAddress = 3;
 
+  // if false -> name ownership will belong to ownerEthAddress
+  // if true -> name ownership will belong to SCW of ownerEthAddress (AccountAbstraction)
+  bool registerToSmartContractWallet = 4;
+
   // Example:
   // 1 - register alice.any -> ANYID123123
   // 2 - register xxxx.any -> ANYID123123
