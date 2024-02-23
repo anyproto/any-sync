@@ -36,6 +36,11 @@ service Coordinator {
 
   // AccountRevertDeletion reverts an account deletion
   rpc AccountRevertDeletion(AccountRevertDeletionRequest) returns (AccountRevertDeletionResponse);
+
+  // AclAddRecord adds a new record to acl log. Works only with any-sync-node
+  rpc AclAddRecord(AclAddRecordRequest) returns (AclAddRecordResponse);
+  // AclGetRecords gets acl records
+  rpc AclGetRecords(AclGetRecordsRequest) returns (AclGetRecordsResponse);
 }
 
 message SpaceSignRequest {
@@ -70,9 +75,15 @@ enum SpaceStatus {
   SpaceStatusNotExists = 4;
 }
 
+enum SpacePermissions {
+  SpacePermissionsUnknown = 0;
+  SpacePermissionsOwner = 1;
+}
+
 message SpaceStatusPayload {
   SpaceStatus status = 1;
   int64 deletionTimestamp = 2;
+  SpacePermissions permissions = 3;
 }
 
 message SpaceSignResponse {
@@ -300,4 +311,28 @@ message AccountRevertDeletionRequest {
 
 // AccountRevertDeletionResponse is an empty response confirming that the deletion is reverted
 message AccountRevertDeletionResponse {
+}
+
+// AclAddRecordRequest contains marshaled consensusproto.RawRecord
+message AclAddRecordRequest {
+  string spaceId = 1;
+  bytes payload = 2;
+}
+
+// AclAddRecordResponse contains created record id and marshaled consensusproto.RawRecord
+message AclAddRecordResponse {
+  string recordId = 1;
+  bytes payload = 2;
+}
+
+// AclGetRecordsRequest can optionally contain the last known aclHead, the server will return only new records or an empty list if there are no new records.
+// If aclHead is not provided the whole list will be returned.
+message AclGetRecordsRequest {
+  string spaceId = 1;
+  string aclHead = 2;
+}
+
+// AclGetRecordsResponse contains list of marshaled consensusproto.RawRecordWithId
+message AclGetRecordsResponse {
+  repeated bytes records = 1;
 }

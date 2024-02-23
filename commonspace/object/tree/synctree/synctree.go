@@ -6,6 +6,8 @@ import (
 	"errors"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
@@ -16,7 +18,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/nodeconf"
-	"go.uber.org/zap"
 )
 
 var (
@@ -59,18 +60,19 @@ type ResponsiblePeersGetter interface {
 }
 
 type BuildDeps struct {
-	SpaceId         string
-	SyncClient      SyncClient
-	Configuration   nodeconf.NodeConf
-	HeadNotifiable  HeadNotifiable
-	Listener        updatelistener.UpdateListener
-	AclList         list.AclList
-	SpaceStorage    spacestorage.SpaceStorage
-	TreeStorage     treestorage.TreeStorage
-	OnClose         func(id string)
-	SyncStatus      syncstatus.StatusUpdater
-	PeerGetter      ResponsiblePeersGetter
-	BuildObjectTree objecttree.BuildObjectTreeFunc
+	SpaceId            string
+	SyncClient         SyncClient
+	Configuration      nodeconf.NodeConf
+	HeadNotifiable     HeadNotifiable
+	Listener           updatelistener.UpdateListener
+	AclList            list.AclList
+	SpaceStorage       spacestorage.SpaceStorage
+	TreeStorage        treestorage.TreeStorage
+	OnClose            func(id string)
+	SyncStatus         syncstatus.StatusUpdater
+	PeerGetter         ResponsiblePeersGetter
+	BuildObjectTree    objecttree.BuildObjectTreeFunc
+	ValidateObjectTree objecttree.ValidatorFunc
 }
 
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {

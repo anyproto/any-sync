@@ -6,6 +6,10 @@ import (
 	"io"
 	"net"
 
+	"github.com/libp2p/go-libp2p/core/crypto"
+	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
+	"go.uber.org/zap"
+
 	commonaccount "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -13,9 +17,6 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/nodeconf"
-	"github.com/libp2p/go-libp2p/core/crypto"
-	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
-	"go.uber.org/zap"
 )
 
 const CName = "common.net.secure"
@@ -26,11 +27,12 @@ var (
 	// ProtoVersion 0 - first any-sync version with raw tcp connections
 	// ProtoVersion 1 - version with yamux over tcp and quic
 	// ProtoVersion 2 - acl compatible version
+	// ProtoVersion 3 - acl with breaking changes / multiplayer
 	ProtoVersion = uint32(2)
 )
 
 var (
-	compatibleVersions = []uint32{1, ProtoVersion}
+	compatibleVersions = []uint32{ProtoVersion, 3}
 )
 
 func New() SecureService {

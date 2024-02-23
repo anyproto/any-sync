@@ -247,6 +247,9 @@ func (c *contentValidator) ValidateRequestRemove(ch *aclrecordproto.AclAccountRe
 	if c.aclState.Permissions(authorIdentity).NoPermissions() {
 		return ErrInsufficientPermissions
 	}
+	if c.aclState.Permissions(authorIdentity).IsOwner() {
+		return ErrIsOwner
+	}
 	if _, exists := c.aclState.pendingRequests[mapKeyFromPubKey(authorIdentity)]; exists {
 		return ErrPendingRequest
 	}
