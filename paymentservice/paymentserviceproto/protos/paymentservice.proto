@@ -71,8 +71,6 @@ message GetSubscriptionResponse {
 
   PaymentMethod paymentMethod = 8;
 
-  // if name was requested - it will be here
-  // seeBuySubscriptionRequest.requestedAnyName field
   string requestedAnyName = 9;
 
   // if user verified her email OR provided it while buying a subscription, it will be here
@@ -97,9 +95,8 @@ message BuySubscriptionRequest {
 
   PaymentMethod paymentMethod = 4;
 
-  // this is just to store the requested name in the DB
-  // and then you will be able to retrieve it via GetSubscriptionRequest
-  // PP won't register the name in NS!
+  // if empty - then no name requested
+  // if non-empty - PP node will register that name on behalf of the user
   string requestedAnyName = 5;
 }
 
