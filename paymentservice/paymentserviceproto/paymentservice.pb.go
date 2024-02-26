@@ -237,12 +237,10 @@ type GetSubscriptionResponse struct {
 	// (dateEnds) but then he will be on nextTier until nextTierEnds
 	//
 	// if Tier0_Unknown -> then no next tier
-	NextTier      SubscriptionTier `protobuf:"varint,6,opt,name=nextTier,proto3,enum=SubscriptionTier" json:"nextTier,omitempty"`
-	NextTierEnds  uint64           `protobuf:"varint,7,opt,name=nextTierEnds,proto3" json:"nextTierEnds,omitempty"`
-	PaymentMethod PaymentMethod    `protobuf:"varint,8,opt,name=paymentMethod,proto3,enum=PaymentMethod" json:"paymentMethod,omitempty"`
-	// if name was requested - it will be here
-	// seeBuySubscriptionRequest.requestedAnyName field
-	RequestedAnyName string `protobuf:"bytes,9,opt,name=requestedAnyName,proto3" json:"requestedAnyName,omitempty"`
+	NextTier         SubscriptionTier `protobuf:"varint,6,opt,name=nextTier,proto3,enum=SubscriptionTier" json:"nextTier,omitempty"`
+	NextTierEnds     uint64           `protobuf:"varint,7,opt,name=nextTierEnds,proto3" json:"nextTierEnds,omitempty"`
+	PaymentMethod    PaymentMethod    `protobuf:"varint,8,opt,name=paymentMethod,proto3,enum=PaymentMethod" json:"paymentMethod,omitempty"`
+	RequestedAnyName string           `protobuf:"bytes,9,opt,name=requestedAnyName,proto3" json:"requestedAnyName,omitempty"`
 	// if user verified her email OR provided it while buying a subscription, it will be here
 	UserEmail             string `protobuf:"bytes,10,opt,name=userEmail,proto3" json:"userEmail,omitempty"`
 	SubscribeToNewsletter bool   `protobuf:"varint,11,opt,name=subscribeToNewsletter,proto3" json:"subscribeToNewsletter,omitempty"`
@@ -370,9 +368,8 @@ type BuySubscriptionRequest struct {
 	OwnerEthAddress string           `protobuf:"bytes,2,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
 	RequestedTier   SubscriptionTier `protobuf:"varint,3,opt,name=requestedTier,proto3,enum=SubscriptionTier" json:"requestedTier,omitempty"`
 	PaymentMethod   PaymentMethod    `protobuf:"varint,4,opt,name=paymentMethod,proto3,enum=PaymentMethod" json:"paymentMethod,omitempty"`
-	// this is just to store the requested name in the DB
-	// and then you will be able to retrieve it via GetSubscriptionRequest
-	// PP won't register the name in NS!
+	// if empty - then no name requested
+	// if non-empty - PP node will register that name on behalf of the user
 	RequestedAnyName string `protobuf:"bytes,5,opt,name=requestedAnyName,proto3" json:"requestedAnyName,omitempty"`
 }
 

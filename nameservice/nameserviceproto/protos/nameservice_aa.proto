@@ -112,6 +112,9 @@ message NameRegisterRequest {
   // if true -> name ownership will belong to SCW of ownerEthAddress (AccountAbstraction)
   bool registerToSmartContractWallet = 4;
 
+  // How many months to register the name for
+  uint32 registerPeriodMonths = 5;
+
   // Example:
   // 1 - register alice.any -> ANYID123123
   // 2 - register xxxx.any -> ANYID123123
@@ -143,6 +146,9 @@ message NameRegisterForSpaceRequest {
 
   // A SpaceID attached to this name
   string spaceId = 4;
+
+  // How many months to register the name for
+  uint32 registerPeriodMonths = 5;
 }
 
 message GetOperationStatusRequest {
