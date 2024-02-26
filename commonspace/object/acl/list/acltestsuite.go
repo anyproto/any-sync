@@ -165,6 +165,34 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 			afterAll = append(afterAll, func() {
 				a.expectedAccounts[id].status = StatusDeclined
 			})
+		case "approve":
+			recs, err := acl.AclState().JoinRecords(false)
+			if err != nil {
+				return nil, err
+			}
+			argParts := strings.Split(commandArgs[0], ",")
+			if len(argParts) != 2 {
+				return nil, errIncorrectParts
+			}
+			approved := a.actualAccounts[argParts[0]].Keys.SignKey.GetPublic()
+			var recId string
+			for _, rec := range recs {
+				if rec.RequestIdentity.Equals(approved) {
+					recId = rec.RecordId
+				}
+			}
+			if recId == "" {
+				return nil, fmt.Errorf("no join records for approve")
+			}
+			perms := getPerm(argParts[1])
+			afterAll = append(afterAll, func() {
+				a.expectedAccounts[argParts[0]].status = StatusActive
+				a.expectedAccounts[argParts[0]].perms = perms
+			})
+			batchPayload.Approvals = append(batchPayload.Approvals, RequestAcceptPayload{
+				RequestRecordId: recId,
+				Permissions:     perms,
+			})
 		}
 	}
 
