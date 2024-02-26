@@ -50,61 +50,61 @@ func TestAclExecutor(t *testing.T) {
 		err error
 	}
 	cmds := []cmdErr{
-		{"a.init:a", nil},
+		{"a.init::a", nil},
 		// creating an invite
-		{"a.invite:invId", nil},
+		{"a.invite::invId", nil},
 		// cannot self join
-		{"a.join:invId", ErrInsufficientPermissions},
+		{"a.join::invId", ErrInsufficientPermissions},
 		// now b can join
-		{"b.join:invId", nil},
+		{"b.join::invId", nil},
 		// a approves b, it can write now
-		{"a.approve:b,r", nil},
+		{"a.approve::b,r", nil},
 		// c joins with the same invite
-		{"c.join:invId", nil},
+		{"c.join::invId", nil},
 		// a approves c
-		{"a.approve:c,r", nil},
+		{"a.approve::c,r", nil},
 		// a removes c
-		{"a.remove:c", nil},
+		{"a.remove::c", nil},
 		// e also joins as an admin
-		{"e.join:invId", nil},
-		{"a.approve:e,adm", nil},
+		{"e.join::invId", nil},
+		{"a.approve::e,adm", nil},
 		// now e can remove other users
-		{"e.remove:b", nil},
-		{"e.revoke:invId", nil},
-		{"z.join:invId", ErrNoSuchInvite},
+		{"e.remove::b", nil},
+		{"e.revoke::invId", nil},
+		{"z.join::invId", ErrNoSuchInvite},
 		// e can't revoke the same id
-		{"e.revoke:invId", ErrNoSuchRecord},
+		{"e.revoke::invId", ErrNoSuchRecord},
 		// e can't remove a, because a is the owner
-		{"e.remove:a", ErrInsufficientPermissions},
+		{"e.remove::a", ErrInsufficientPermissions},
 		// e can add new users
-		{"e.add:x,r,m1;y,adm,m2", nil},
+		{"e.add::x,r,m1;y,adm,m2", nil},
 		// now y can also change permission as an admin
-		{"y.changes:x,rw", nil},
+		{"y.changes::x,rw", nil},
 		// e can generate another invite
-		{"e.invite:inv1Id", nil},
+		{"e.invite::inv1Id", nil},
 		// b tries to join again
-		{"b.join:inv1Id", nil},
+		{"b.join::inv1Id", nil},
 		// e approves b
-		{"e.approve:b,rw", nil},
-		{"g.join:inv1Id", nil},
-		{"g.cancel:g", nil},
+		{"e.approve::b,rw", nil},
+		{"g.join::inv1Id", nil},
+		{"g.cancel::g", nil},
 		// e cannot approve cancelled request
-		{"e.approve:g,rw", fmt.Errorf("no join records for approve")},
-		{"g.join:inv1Id", nil},
-		{"e.decline:g", nil},
+		{"e.approve::g,rw", fmt.Errorf("no join records for approve")},
+		{"g.join::inv1Id", nil},
+		{"e.decline::g", nil},
 		// g cannot cancel declined request
-		{"g.cancel:g", ErrNoSuchRecord},
-		{"g.join:inv1Id", nil},
-		{"e.approve:g,r", nil},
+		{"g.cancel::g", ErrNoSuchRecord},
+		{"g.join::inv1Id", nil},
+		{"e.approve::g,r", nil},
 		// g can request remove
-		{"g.request_remove:g", nil},
+		{"g.request_remove::g", nil},
 		// g can cancel request to remove
-		{"g.cancel:g", nil},
-		{"g.request_remove:g", nil},
-		{"g.request_remove:g", ErrPendingRequest},
-		{"a.remove:g", nil},
+		{"g.cancel::g", nil},
+		{"g.request_remove::g", nil},
+		{"g.request_remove::g", ErrPendingRequest},
+		{"a.remove::g", nil},
 		// g cannot cancel not existing request to remove
-		{"g.cancel:g", ErrNoSuchRecord},
+		{"g.cancel::g", ErrNoSuchRecord},
 	}
 	for _, cmd := range cmds {
 		err := a.Execute(cmd.cmd)

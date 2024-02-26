@@ -47,8 +47,127 @@ var (
 	errIncorrectParts = errors.New("incorrect parts")
 )
 
+func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm func(perm string) AclPermissions, addRec func(rec *consensusproto.RawRecordWithId) error) (afterAll []func(), err error) {
+	// remove:a,b,c;add:d,rw,m1|e,r,m2;changes:f,rw|g,r;revoke:inv1id;decline:g,h;
+	batchPayload := BatchRequestPayload{}
+	for _, arg := range args {
+		parts := strings.Split(arg, ":")
+		if len(parts) != 2 {
+			return nil, errIncorrectParts
+		}
+		command := parts[0]
+		commandArgs := strings.Split(parts[1], "|")
+		switch command {
+		case "add":
+			var payloads []AccountAdd
+			for _, arg := range commandArgs {
+				argParts := strings.Split(arg, ",")
+				if len(argParts) != 3 {
+					return nil, errIncorrectParts
+				}
+				keys, err := accountdata.NewRandom()
+				if err != nil {
+					return nil, err
+				}
+				ownerAcl := a.actualAccounts[a.owner].Acl.(*aclList)
+				accountAcl, err := BuildAclListWithIdentity(keys, ownerAcl.storage, NoOpAcceptorVerifier{})
+				if err != nil {
+					return nil, err
+				}
+				state := &TestAclState{
+					Keys: keys,
+					Acl:  accountAcl,
+				}
+				account := argParts[0]
+				a.actualAccounts[account] = state
+				a.expectedAccounts[account] = &accountExpectedState{
+					perms:    getPerm(argParts[1]),
+					status:   StatusActive,
+					metadata: []byte(argParts[2]),
+					pseudoId: account,
+				}
+				payloads = append(payloads, AccountAdd{
+					Identity:    keys.SignKey.GetPublic(),
+					Permissions: getPerm(argParts[1]),
+					Metadata:    []byte(argParts[2]),
+				})
+			}
+			defer func() {
+				if err != nil {
+					for _, arg := range args {
+						argParts := strings.Split(arg, ",")
+						account := argParts[0]
+						delete(a.expectedAccounts, account)
+						delete(a.actualAccounts, account)
+					}
+				}
+			}()
+			batchPayload.Additions = payloads
+		case "remove":
+			identities := strings.Split(commandArgs[0], ",")
+			var pubKeys []crypto.PubKey
+			for _, id := range identities {
+				pk := a.actualAccounts[id].Keys.SignKey.GetPublic()
+				pubKeys = append(pubKeys, pk)
+			}
+			priv, _, err := crypto.GenerateRandomEd25519KeyPair()
+			if err != nil {
+				return nil, err
+			}
+			sym := crypto.NewAES()
+			payload := AccountRemovePayload{
+				Identities: pubKeys,
+				Change: ReadKeyChangePayload{
+					MetadataKey: priv,
+					ReadKey:     sym,
+				},
+			}
+			batchPayload.Removals = payload
+		case "changes":
+			var payloads []PermissionChangePayload
+			for _, arg := range commandArgs {
+				argParts := strings.Split(arg, ",")
+				if len(argParts) != 2 {
+					return nil, errIncorrectParts
+				}
+				changed := a.actualAccounts[argParts[0]].Keys.SignKey.GetPublic()
+				perms := getPerm(argParts[1])
+				payloads = append(payloads, PermissionChangePayload{
+					Identity:    changed,
+					Permissions: perms,
+				})
+				afterAll = append(afterAll, func() {
+					a.expectedAccounts[argParts[0]].perms = perms
+				})
+			}
+			batchPayload.Changes = payloads
+		case "revoke":
+			invite := a.invites[commandArgs[0]]
+			invId, err := acl.AclState().GetInviteIdByPrivKey(invite)
+			if err != nil {
+				return nil, err
+			}
+			batchPayload.InviteRevokes = append(batchPayload.InviteRevokes, invId)
+		case "decline":
+			id := commandArgs[0]
+			pk := a.actualAccounts[id].Keys.SignKey.GetPublic()
+			rec, err := acl.AclState().JoinRecord(pk, false)
+			if err != nil {
+				return nil, err
+			}
+			batchPayload.Declines = append(batchPayload.Declines, rec.RecordId)
+		}
+	}
+
+	res, err := acl.RecordBuilder().BuildBatchRequest(batchPayload)
+	if err != nil {
+		return nil, err
+	}
+	return afterAll, addRec(WrapAclRecord(res))
+}
+
 func (a *AclTestExecutor) Execute(cmd string) (err error) {
-	parts := strings.Split(cmd, ":")
+	parts := strings.Split(cmd, "::")
 	if len(parts) != 2 {
 		return errIncorrectParts
 	}
@@ -178,6 +297,11 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		}
 		a.invites[args[0]] = res.InviteKey
 		err = addRec(WrapAclRecord(res.InviteRec))
+		if err != nil {
+			return err
+		}
+	case "batch":
+		afterAll, err = a.buildBatchRequest(args, acl, getPerm, addRec)
 		if err != nil {
 			return err
 		}

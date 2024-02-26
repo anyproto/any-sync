@@ -128,10 +128,10 @@ func TestObjectTree(t *testing.T) {
 			err error
 		}
 		cmds := []cmdErr{
-			{"a.init:a", nil},
-			{"a.invite:invId", nil},
-			{"b.join:invId", nil},
-			{"a.approve:b,r", nil},
+			{"a.init::a", nil},
+			{"a.invite::invId", nil},
+			{"b.join::invId", nil},
+			{"a.approve::b,r", nil},
 		}
 		for _, cmd := range cmds {
 			err := exec.Execute(cmd.cmd)
@@ -161,7 +161,7 @@ func TestObjectTree(t *testing.T) {
 		bStore := aTree.Storage().(*treestorage.InMemoryTreeStorage).Copy()
 		bTree, err := BuildKeyFilterableObjectTree(bStore, bAccount.Acl)
 		require.NoError(t, err)
-		err = exec.Execute("a.remove:b")
+		err = exec.Execute("a.remove::b")
 		require.NoError(t, err)
 		res, err := aTree.AddContent(ctx, SignableChangeContent{
 			Data:        []byte("some"),
