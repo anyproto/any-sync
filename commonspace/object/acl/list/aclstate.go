@@ -192,6 +192,14 @@ func (st *AclState) Invites() []crypto.PubKey {
 	return invites
 }
 
+func (st *AclState) InviteIds() []string {
+	var invites []string
+	for invId := range st.inviteKeys {
+		invites = append(invites, invId)
+	}
+	return invites
+}
+
 func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
 	if st.lastRecordId != record.PrevId {
 		err = ErrIncorrectRecordSequence
