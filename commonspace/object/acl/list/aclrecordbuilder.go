@@ -113,13 +113,6 @@ func NewAclRecordBuilder(id string, keyStorage crypto.KeyStorage, keys *accountd
 
 func (a *aclRecordBuilder) BuildBatchRequest(payload BatchRequestPayload) (rawRec *consensusproto.RawRecord, err error) {
 	var aclContent []*aclrecordproto.AclContentValue
-	if len(payload.Removals.Identities) > 0 {
-		content, err := a.buildAccountRemove(payload.Removals)
-		if err != nil {
-			return nil, err
-		}
-		aclContent = append(aclContent, content)
-	}
 	if len(payload.Additions) > 0 {
 		content, err := a.buildAccountsAdd(AccountsAddPayload{Additions: payload.Additions})
 		if err != nil {
@@ -150,6 +143,13 @@ func (a *aclRecordBuilder) BuildBatchRequest(payload BatchRequestPayload) (rawRe
 	}
 	for _, id := range payload.InviteRevokes {
 		content, err := a.buildInviteRevoke(id)
+		if err != nil {
+			return nil, err
+		}
+		aclContent = append(aclContent, content)
+	}
+	if len(payload.Removals.Identities) > 0 {
+		content, err := a.buildAccountRemove(payload.Removals)
 		if err != nil {
 			return nil, err
 		}

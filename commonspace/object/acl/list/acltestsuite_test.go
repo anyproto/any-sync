@@ -105,6 +105,7 @@ func TestAclExecutor(t *testing.T) {
 		{"a.remove::g", nil},
 		// g cannot cancel not existing request to remove
 		{"g.cancel::g", ErrNoSuchRecord},
+		{"a.batch::remove:e,y;add:z,rw,mz|u,r,mu;revoke:inv1Id", nil},
 	}
 	for _, cmd := range cmds {
 		err := a.Execute(cmd.cmd)

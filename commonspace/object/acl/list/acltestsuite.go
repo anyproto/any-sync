@@ -123,6 +123,12 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 				},
 			}
 			batchPayload.Removals = payload
+			afterAll = append(afterAll, func() {
+				for _, id := range identities {
+					a.expectedAccounts[id].status = StatusRemoved
+					a.expectedAccounts[id].perms = AclPermissionsNone
+				}
+			})
 		case "changes":
 			var payloads []PermissionChangePayload
 			for _, arg := range commandArgs {
@@ -156,6 +162,9 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 				return nil, err
 			}
 			batchPayload.Declines = append(batchPayload.Declines, rec.RecordId)
+			afterAll = append(afterAll, func() {
+				a.expectedAccounts[id].status = StatusDeclined
+			})
 		}
 	}
 
