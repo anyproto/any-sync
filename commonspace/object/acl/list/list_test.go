@@ -87,7 +87,7 @@ func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 	})
 	require.NoError(t, err)
 	// validate
-	err = ownerAcl.ValidateRawRecord(requestAccept)
+	err = ownerAcl.ValidateRawRecord(requestAccept, nil)
 	require.NoError(t, err)
 	requestAcceptRec := WrapAclRecord(requestAccept)
 	fx.addRec(t, requestAcceptRec)

@@ -58,7 +58,7 @@ type AclList interface {
 	KeyStorage() crypto.KeyStorage
 	RecordBuilder() AclRecordBuilder
 
-	ValidateRawRecord(record *consensusproto.RawRecord) (err error)
+	ValidateRawRecord(rawRec *consensusproto.RawRecord, afterValid func(state *AclState) error) (err error)
 	AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err error)
 	AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (err error)
 
@@ -192,12 +192,17 @@ func (a *aclList) Records() []*AclRecord {
 	return a.records
 }
 
-func (a *aclList) ValidateRawRecord(rawRec *consensusproto.RawRecord) (err error) {
+func (a *aclList) ValidateRawRecord(rawRec *consensusproto.RawRecord, afterValid func(state *AclState) error) (err error) {
 	record, err := a.recordBuilder.Unmarshall(rawRec)
 	if err != nil {
 		return
 	}
-	return a.aclState.Copy().ApplyRecord(record)
+	stateCopy := a.aclState.Copy()
+	err = stateCopy.ApplyRecord(record)
+	if err != nil || afterValid == nil {
+		return
+	}
+	return afterValid(stateCopy)
 }
 
 func (a *aclList) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) error {
