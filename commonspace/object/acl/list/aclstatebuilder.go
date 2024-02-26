@@ -41,7 +41,7 @@ func (sb *aclStateBuilder) Build(records []*AclRecord, list *aclList) (state *Ac
 	}
 	state.list = list
 	for _, rec := range records[1:] {
-		err = state.applyRecord(rec)
+		err = state.ApplyRecord(rec)
 		if err != nil {
 			return nil, err
 		}
@@ -52,7 +52,7 @@ func (sb *aclStateBuilder) Build(records []*AclRecord, list *aclList) (state *Ac
 
 func (sb *aclStateBuilder) Append(state *AclState, records []*AclRecord) (err error) {
 	for _, rec := range records {
-		err = state.applyRecord(rec)
+		err = state.ApplyRecord(rec)
 		if err != nil {
 			return
 		}

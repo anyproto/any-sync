@@ -197,7 +197,7 @@ func (a *aclList) ValidateRawRecord(rawRec *consensusproto.RawRecord) (err error
 	if err != nil {
 		return
 	}
-	return a.aclState.Validator().ValidateAclRecordContents(record)
+	return a.aclState.Copy().ApplyRecord(record)
 }
 
 func (a *aclList) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) error {
@@ -218,9 +218,11 @@ func (a *aclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 	if err != nil {
 		return
 	}
-	if err = a.aclState.applyRecord(record); err != nil {
+	copyState := a.aclState.Copy()
+	if err = copyState.ApplyRecord(record); err != nil {
 		return
 	}
+	a.setState(copyState)
 	a.records = append(a.records, record)
 	a.indexes[record.Id] = len(a.records) - 1
 	if err = a.storage.AddRawRecord(context.Background(), rawRec); err != nil {
@@ -230,6 +232,11 @@ func (a *aclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 		return
 	}
 	return
+}
+
+func (a *aclList) setState(state *AclState) {
+	a.aclState = state
+	a.recordBuilder.(*aclRecordBuilder).state = state
 }
 
 func (a *aclList) Id() string {
