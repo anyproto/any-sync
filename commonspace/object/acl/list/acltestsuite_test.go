@@ -111,6 +111,13 @@ func TestAclExecutor(t *testing.T) {
 		{"a.batch::remove:e,y;add:z,rw,mz|u,r,mu;revoke:inv1Id;approve:l,r;approve:p,adm;decline:s", nil},
 		{"p.remove::l", nil},
 		{"s.join::inv1Id", ErrNoSuchInvite},
+		{"p.invite::i1", nil},
+		{"p.invite::i2", nil},
+		{"r.join::i1", nil},
+		{"q.join::i2", nil},
+		{"p.batch::revoke:i1;revoke:i2", nil},
+		{"f.join::i1", ErrNoSuchInvite},
+		{"f.join::i2", ErrNoSuchInvite},
 	}
 	for _, cmd := range cmds {
 		err := a.Execute(cmd.cmd)
