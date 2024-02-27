@@ -26,6 +26,13 @@ type contentValidator struct {
 	aclState *AclState
 }
 
+func newContentValidator(keyStore crypto.KeyStorage, aclState *AclState) ContentValidator {
+	return &contentValidator{
+		keyStore: keyStore,
+		aclState: aclState,
+	}
+}
+
 func (c *contentValidator) ValidatePermissionChanges(ch *aclrecordproto.AclAccountPermissionChanges, authorIdentity crypto.PubKey) (err error) {
 	for _, ch := range ch.Changes {
 		err := c.ValidatePermissionChange(ch, authorIdentity)
