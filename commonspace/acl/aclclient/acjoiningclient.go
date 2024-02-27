@@ -19,6 +19,7 @@ type AclJoiningClient interface {
 	app.Component
 	AclGetRecords(ctx context.Context, spaceId, aclHead string) ([]*consensusproto.RawRecordWithId, error)
 	RequestJoin(ctx context.Context, spaceId string, payload list.RequestJoinPayload) error
+	CancelRemoveSelfRequest(ctx context.Context, spaceId string) (err error)
 }
 
 type aclJoiningClient struct {
@@ -75,5 +76,39 @@ func (c *aclJoiningClient) RequestJoin(ctx context.Context, spaceId string, payl
 		return
 	}
 	_, err = c.coordinatorClient.AclAddRecord(ctx, spaceId, rec)
+	return
+}
+
+func (c *aclJoiningClient) CancelRemoveSelfRequest(ctx context.Context, spaceId string) (err error) {
+	res, err := c.AclGetRecords(ctx, spaceId, "")
+	if err != nil {
+		return err
+	}
+	if len(res) == 0 {
+		return fmt.Errorf("acl not found")
+	}
+	storage, err := liststorage.NewInMemoryAclListStorage(res[0].Id, res)
+	if err != nil {
+		return err
+	}
+	acl, err := list.BuildAclListWithIdentity(c.keys, storage, list.NoOpAcceptorVerifier{})
+	if err != nil {
+		return err
+	}
+	pendingReq, err := acl.AclState().Record(acl.AclState().Identity())
+	if err != nil {
+		if !acl.AclState().Permissions(acl.AclState().Identity()).NoPermissions() {
+			return nil
+		}
+		return err
+	}
+	if pendingReq.Type != list.RequestTypeRemove {
+		return list.ErrInsufficientPermissions
+	}
+	newRec, err := acl.RecordBuilder().BuildRequestCancel(pendingReq.RecordId)
+	if err != nil {
+		return
+	}
+	_, err = c.coordinatorClient.AclAddRecord(ctx, spaceId, newRec)
 	return
 }
