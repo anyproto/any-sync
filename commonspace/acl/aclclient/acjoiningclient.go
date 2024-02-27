@@ -19,7 +19,7 @@ type AclJoiningClient interface {
 	app.Component
 	AclGetRecords(ctx context.Context, spaceId, aclHead string) ([]*consensusproto.RawRecordWithId, error)
 	RequestJoin(ctx context.Context, spaceId string, payload list.RequestJoinPayload) error
-	CancelRemoveSelfRequest(ctx context.Context, spaceId string) (err error)
+	CancelRemoveSelf(ctx context.Context, spaceId string) (err error)
 }
 
 type aclJoiningClient struct {
@@ -79,7 +79,7 @@ func (c *aclJoiningClient) RequestJoin(ctx context.Context, spaceId string, payl
 	return
 }
 
-func (c *aclJoiningClient) CancelRemoveSelfRequest(ctx context.Context, spaceId string) (err error) {
+func (c *aclJoiningClient) CancelRemoveSelf(ctx context.Context, spaceId string) (err error) {
 	res, err := c.AclGetRecords(ctx, spaceId, "")
 	if err != nil {
 		return err
