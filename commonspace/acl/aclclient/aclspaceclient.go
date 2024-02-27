@@ -36,6 +36,7 @@ type AclSpaceClient interface {
 	ChangePermissions(ctx context.Context, permChange list.PermissionChangesPayload) (err error)
 	RequestSelfRemove(ctx context.Context) (err error)
 	RevokeInvite(ctx context.Context, inviteRecordId string) (err error)
+	RevokeAllInvites(ctx context.Context) (err error)
 	AddAccounts(ctx context.Context, add list.AccountsAddPayload) (err error)
 }
 
@@ -107,6 +108,20 @@ func (c *aclSpaceClient) AddAccounts(ctx context.Context, add list.AccountsAddPa
 func (c *aclSpaceClient) RemoveAccounts(ctx context.Context, payload list.AccountRemovePayload) (err error) {
 	c.acl.Lock()
 	res, err := c.acl.RecordBuilder().BuildAccountRemove(payload)
+	if err != nil {
+		c.acl.Unlock()
+		return
+	}
+	c.acl.Unlock()
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
+}
+
+func (c *aclSpaceClient) RevokeAllInvites(ctx context.Context) (err error) {
+	c.acl.Lock()
+	payload := list.BatchRequestPayload{
+		InviteRevokes: c.acl.AclState().InviteIds(),
+	}
+	res, err := c.acl.RecordBuilder().BuildBatchRequest(payload)
 	if err != nil {
 		c.acl.Unlock()
 		return
