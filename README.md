@@ -1,22 +1,31 @@
 # Any-Sync
-Any-Sync is an open-source protocol designed to create high-performance, local-first, peer-to-peer, end-to-end encrypted applications that facilitate seamless collaboration among multiple users and devices. 
+Any-Sync is an open-source protocol that enables local first communication and collaboration based on CRDTs. There are two important differentiators of Any-Sync:
+- It is designed around creators’ controlled keys
+- It is focused on bringing high-performance communication and collaboration at scale
 
-By utilizing this protocol, users can rest assured that they retain complete control over their data and digital experience. They are empowered to freely transition between various service providers, or even opt to self-host the applications.
+Any-Sync fulfills the seven ideals of [local first software](https://www.inkandswitch.com/local-first/):
+- **No spinners**: your work at your fingertips. Any-Sync keeps the primary copy of each space on the local device. Data synchronization with other devices happens quietly in the background - allowing you to operate with your data at your fingertips.
+- **Your work is not trapped on one device.** Users can easily work on different devices. Each device keeps data in local storage, synchronization between devices happens in the background using CRDTs to resolve conflicts.
+- **The network is optional.** Everything works offline. Data synchronization need not necessarily go via the Internet: Any-Sync allows users to sync data via local WiFi networks. Still, there is a role for the network - it works as additional backup, helps with peer discovery and especially solves the closed-laptop problem (you made changes on laptop, when your phone was offline, the changes can either sync when both devices are online or via backup node).
+- **Seamless collaboration with your colleagues.** Achieving this goal is one of the biggest challenges in realizing local-first software, that’s why Any-Sync is built with CRDTs. So each device resolves conflicts independently.
+- **The Long Now.** Because you have a local-first application, you can use it on your computer even if the software author disappears. This is also strengthened by open data standards and open code.
+- **Security and privacy by default.** Any-Sync uses end-to-end encryption so that backup nodes store encrypted data that they cannot read. Conflict resolution happens on-device. The keys are controlled by users.
+- **You retain ultimate ownership and control.** In the local first ideals this meant that you have local data, so you have ultimate ownership and control. To realize the idea of ultimate ownership we added creator controlled keys to Anytype. 
 
-This ensures utmost flexibility and autonomy for users in managing their personal information and digital interactions.
+Additional two ideals that Any-Sync adds:
+- **Creators’ controlled keys.** Creators control encryption keys; there is no central registry of users (we don’t even ask your email). We added an option to self-host your backup to support full autonomy of users from the network. 
+- **Open Source.** Any-Sync protocol is open source, so all claims about how it works are independently verifiable.
+
+We have released Anytype - the interface that is built on Any-Sync protocol. Users of Anytype can create spaces - graph-based databases with modular UI. Each space has unique access rights. Today, Anytype's beta is in single-player mode. Multiplayer mode, which will support local-first collaboration between multiple users, will be launched in the first half of 2024.
 
 ## Introduction
-Most existing information management tools are implemented on centralized client-server architecture or designed for an offline-first single-user usage. Either way there are trade-offs for users: they can face restricted freedoms and privacy violations or compromise on the functionality of tools to avoid this.
-
-We believe this goes against fundamental digital freedoms and that a new generation of software is needed that will respect these freedoms, while providing best in-class user experience. 
-
-Our goal with `any-sync` is to develop a protocol that will enable the deployment of this software. 
+We designed Any-Sync out of a strong conviction that the Internet today is akin to a nervous system of humanity - today it is cloud based, so all the neurons can communicate only via servers that are controlled by different elites. We envision a “no-one in between” local first alternative would be a much better foundation for communication on the internet. For this we’ve built Any-Sync to support fast and scalable synchronization of discussions, communities and apps.
 
 Features: 
 - Conflict-free data replication across multiple devices and agents
 - Built-in end-to-end encryption
 - Cryptographically verifiable history of changes
-- Adoption to frequent operations (high performance) 
+- Adoption to frequent operations (high performance)
 - Reliable and scalable infrastructure
 - Simultaneous support of p2p and remote communication
 
