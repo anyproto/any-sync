@@ -39,16 +39,19 @@ type aclWaiter struct {
 
 	acl        list.AclList
 	spaceId    string
+	aclHeadId  string
 	prevHeadId string
 
 	onFinish func(acl list.AclList) error
+	onReject func(acl list.AclList) error
 	finished bool
 }
 
-func New(spaceId string, onFinish func(acl list.AclList) error) AclWaiter {
+func New(spaceId string, aclHeadId string, onFinish, onReject func(acl list.AclList) error) AclWaiter {
 	return &aclWaiter{
-		spaceId:  spaceId,
-		onFinish: onFinish,
+		spaceId:   spaceId,
+		aclHeadId: aclHeadId,
+		onFinish:  onFinish,
 	}
 }
 
@@ -64,6 +67,9 @@ func (a *aclWaiter) Name() (name string) {
 }
 
 func (a *aclWaiter) loop(ctx context.Context) error {
+	if a.finished {
+		return nil
+	}
 	if a.acl == nil {
 		res, err := a.client.AclGetRecords(ctx, a.spaceId, "")
 		if err != nil {
@@ -100,8 +106,21 @@ func (a *aclWaiter) loop(ctx context.Context) error {
 	}
 	// if the user was added
 	if !a.acl.AclState().Permissions(a.keys.SignKey.GetPublic()).NoPermissions() {
-		if !a.finished {
-			err := a.onFinish(a.acl)
+		err := a.onFinish(a.acl)
+		if err == nil {
+			a.finished = true
+			return nil
+		} else {
+			return err
+		}
+	}
+	// check the join record, if it exists
+	_, err := a.acl.AclState().JoinRecord(a.acl.AclState().Identity(), false)
+	if err != nil {
+		_, err = a.acl.Get(a.aclHeadId)
+		// that means the request was declined
+		if err == nil {
+			err := a.onReject(a.acl)
 			if err == nil {
 				a.finished = true
 			} else {
