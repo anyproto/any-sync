@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusclient"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 const CName = "coordinator.acl"
@@ -47,7 +48,7 @@ func (as *aclService) Init(a *app.App) (err error) {
 	as.cache = ocache.New(as.loadObject,
 		ocache.WithTTL(5*time.Minute),
 		ocache.WithLogger(log.Sugar()),
-		ocache.WithPrometheus(metricReg, "coordinator", "acl"),
+		ocache.WithPrometheus(metricReg, "acl", ""),
 	)
 	return
 }
@@ -93,6 +94,16 @@ func (as *aclService) RecordsAfter(ctx context.Context, spaceId, aclHead string)
 	acl.RLock()
 	defer acl.RUnlock()
 	return acl.RecordsAfter(ctx, aclHead)
+}
+
+func (as *aclService) Permissions(ctx context.Context, identity crypto.PubKey, spaceId string) (res list.AclPermissions, err error) {
+	acl, err := as.get(ctx, spaceId)
+	if err != nil {
+		return
+	}
+	acl.RLock()
+	defer acl.RUnlock()
+	return acl.AclState().Permissions(identity), nil
 }
 
 func (as *aclService) Run(ctx context.Context) (err error) {
