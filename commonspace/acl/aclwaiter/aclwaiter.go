@@ -41,11 +41,11 @@ type aclWaiter struct {
 	spaceId    string
 	prevHeadId string
 
-	onFinish func() error
+	onFinish func(acl list.AclList) error
 	finished bool
 }
 
-func New(spaceId string, onFinish func() error) AclWaiter {
+func New(spaceId string, onFinish func(acl list.AclList) error) AclWaiter {
 	return &aclWaiter{
 		spaceId:  spaceId,
 		onFinish: onFinish,
@@ -101,7 +101,7 @@ func (a *aclWaiter) loop(ctx context.Context) error {
 	// if the user was added
 	if !a.acl.AclState().Permissions(a.keys.SignKey.GetPublic()).NoPermissions() {
 		if !a.finished {
-			err := a.onFinish()
+			err := a.onFinish(a.acl)
 			if err == nil {
 				a.finished = true
 			} else {
