@@ -1,12 +1,11 @@
 syntax = "proto3";
 option go_package = "paymentservice/paymentserviceproto";
 
-// TODO: no marshalling avail :-(
-//import "google/protobuf/timestamp.proto";
-
+// TODO:
+// later we will have an interface to enumerate all available tiers
+// it's a bad idea to list them here, because interface will be changed often
 enum SubscriptionTier {
   TierUnknown = 0;
-
   // "free" tier
   TierExplorer = 1;
 
@@ -18,16 +17,17 @@ enum SubscriptionTier {
   // these are the real tiers:
   TierBuilder1Year = 4;
   TierCoCreator1Year = 5;
+
+  TierBuilderPlus = 6;
+  TierAnytypeTeam = 7;
 }
 
 enum SubscriptionStatus {
   StatusUnknown = 0;
-  
   // payment is still pending
   // this will be the status until the payment is confirmed or N is elapsed and no payment is received
   // in the last case the subscription will switch to Status_Unknown or Status_Active
   StatusPending = 1;
-  
   StatusActive = 2;  
 }
 
@@ -36,9 +36,10 @@ enum PaymentMethod {
   MethodCrypto = 1;
   MethodApplePay = 2;
   MethodGooglePay = 3;
+  MethodAppleInapp = 4;
+  MethodGoogleInapp = 5;
 }
 
-// 1
 message GetSubscriptionRequest {
   // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
   // you can get it with Account().SignKey.GetPublic().Account()
@@ -48,7 +49,6 @@ message GetSubscriptionRequest {
 message GetSubscriptionRequestSigned {
   // GetSubscriptionRequest
   bytes payload = 1;
-
   // this is payload signed with payload.ownerAnyID
   bytes signature = 2;
 }
@@ -56,45 +56,27 @@ message GetSubscriptionRequestSigned {
 message GetSubscriptionResponse {
   SubscriptionTier tier = 1;
   SubscriptionStatus status = 2;
-
-  //TODO: use google.protobuf.Timestamp and marshall it
   uint64 dateStarted = 3;
   uint64 dateEnds = 4;
   bool isAutoRenew = 5;
-
-  // if client has "downgraded" - he is still able to use the service until the end of the period
-  // (dateEnds) but then he will be on nextTier until nextTierEnds
-  //
-  // if Tier0_Unknown -> then no next tier
-  SubscriptionTier nextTier = 6;
-  uint64 nextTierEnds = 7;
-
-  PaymentMethod paymentMethod = 8;
-
-  string requestedAnyName = 9;
-
+  PaymentMethod paymentMethod = 6;
+  string requestedAnyName = 7;
   // if user verified her email OR provided it while buying a subscription, it will be here
-  string userEmail = 10;
-
-  bool subscribeToNewsletter = 11;
+  string userEmail = 8;
+  bool subscribeToNewsletter = 9;
 }
 
-// 2 
 message BuySubscriptionRequest {
   // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
   // you can get it with Account().SignKey.GetPublic().Account()
   string ownerAnyId = 1;
-
   // this is the owner's main EOA (Externally Owned Account) address
   // not AccountAbstraction's SCW (Smart Contract Wallet) address! 
   // this is required to reserve a name for the owner (later that is done by user)
   // in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
   string ownerEthAddress = 2;
-
   SubscriptionTier requestedTier = 3;
-
   PaymentMethod paymentMethod = 4;
-
   // if empty - then no name requested
   // if non-empty - PP node will register that name on behalf of the user
   string requestedAnyName = 5;
@@ -103,7 +85,6 @@ message BuySubscriptionRequest {
 message BuySubscriptionRequestSigned {
   // BuySubscriptionRequest
   bytes payload = 1;
-
   // this is payload signed with payload.ownerAnyID
   bytes signature = 2;
 }
@@ -123,7 +104,6 @@ message GetSubscriptionPortalLinkRequest {
 message GetSubscriptionPortalLinkRequestSigned {
   // GetSubscriptionPortalLinkRequest
   bytes payload = 1;
-
   // this is payload signed with payload.ownerAnyID
   bytes signature = 2;
 }
@@ -136,9 +116,7 @@ message GetVerificationEmailRequest {
   // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
   // you can get it with Account().SignKey.GetPublic().Account()
   string ownerAnyId = 1;
-
   string email = 2;
-
   bool subscribeToNewsletter = 3;
 }
 
@@ -149,7 +127,6 @@ message GetVerificationEmailResponse {
 message GetVerificationEmailRequestSigned {
   // GetVerificationEmailRequest
   bytes payload = 1;
-
   // this is payload signed with payload.ownerAnyID
   bytes signature = 2;
 }
@@ -158,13 +135,12 @@ message VerifyEmailRequest {
   // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
   // you can get it with Account().SignKey.GetPublic().Account()
   string ownerAnyId = 1;
-
   // this is the owner's main EOA (Externally Owned Account) address
   // not AccountAbstraction's SCW (Smart Contract Wallet) address! 
   // this is required to reserve a name for the owner (later that is done by user)
   // in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
   string ownerEthAddress = 2;
-  
+  // code received in the email
   string code = 3;
 }
 
@@ -175,7 +151,6 @@ message VerifyEmailResponse {
 message VerifyEmailRequestSigned {
   // VerifyEmailRequest
   bytes payload = 1;
-
   // this is payload signed with payload.ownerAnyID
   bytes signature = 2;
 }
