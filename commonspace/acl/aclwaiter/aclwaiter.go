@@ -52,6 +52,7 @@ func New(spaceId string, aclHeadId string, onFinish, onReject func(acl list.AclL
 		spaceId:   spaceId,
 		aclHeadId: aclHeadId,
 		onFinish:  onFinish,
+		onReject:  onReject,
 	}
 }
 
