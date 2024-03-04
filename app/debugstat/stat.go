@@ -42,13 +42,17 @@ type statService struct {
 func (s *statService) AddProvider(provider StatProvider) {
 	s.Lock()
 	defer s.Unlock()
-	s.providers[provider.StatId()] = provider
+	s.providers[s.provId(provider)] = provider
+}
+
+func (s *statService) provId(provider StatProvider) string {
+	return provider.StatType() + "-" + provider.StatId()
 }
 
 func (s *statService) RemoveProvider(provider StatProvider) {
 	s.Lock()
 	defer s.Unlock()
-	delete(s.providers, provider.StatId())
+	delete(s.providers, s.provId(provider))
 }
 
 func (s *statService) Init(a *app.App) (err error) {
