@@ -18,7 +18,8 @@ const CName = "common.acl.aclclient"
 type AclJoiningClient interface {
 	app.Component
 	AclGetRecords(ctx context.Context, spaceId, aclHead string) ([]*consensusproto.RawRecordWithId, error)
-	RequestJoin(ctx context.Context, spaceId string, payload list.RequestJoinPayload) error
+	RequestJoin(ctx context.Context, spaceId string, payload list.RequestJoinPayload) (aclHeadId string, err error)
+	CancelJoin(ctx context.Context, spaceId string) (err error)
 	CancelRemoveSelf(ctx context.Context, spaceId string) (err error)
 }
 
@@ -45,55 +46,70 @@ func (c *aclJoiningClient) AclGetRecords(ctx context.Context, spaceId, aclHead s
 	return c.coordinatorClient.AclGetRecords(ctx, spaceId, aclHead)
 }
 
-func (c *aclJoiningClient) RequestJoin(ctx context.Context, spaceId string, payload list.RequestJoinPayload) (err error) {
+func (c *aclJoiningClient) getAcl(ctx context.Context, spaceId string) (l list.AclList, err error) {
 	res, err := c.AclGetRecords(ctx, spaceId, "")
 	if err != nil {
-		return err
+		return
 	}
 	if len(res) == 0 {
-		return fmt.Errorf("acl not found")
+		err = fmt.Errorf("acl not found")
+		return
 	}
 	storage, err := liststorage.NewInMemoryAclListStorage(res[0].Id, res)
 	if err != nil {
-		return err
+		return
 	}
-	acl, err := list.BuildAclListWithIdentity(c.keys, storage, list.NoOpAcceptorVerifier{})
+	return list.BuildAclListWithIdentity(c.keys, storage, list.NoOpAcceptorVerifier{})
+}
+
+func (c *aclJoiningClient) CancelJoin(ctx context.Context, spaceId string) (err error) {
+	acl, err := c.getAcl(ctx, spaceId)
 	if err != nil {
-		return err
+		return
+	}
+	pendingReq, err := acl.AclState().JoinRecord(acl.AclState().Identity(), false)
+	if err != nil {
+		return
+	}
+	res, err := acl.RecordBuilder().BuildRequestCancel(pendingReq.RecordId)
+	if err != nil {
+		return
+	}
+	_, err = c.coordinatorClient.AclAddRecord(ctx, spaceId, res)
+	return
+}
+
+func (c *aclJoiningClient) RequestJoin(ctx context.Context, spaceId string, payload list.RequestJoinPayload) (aclHeadId string, err error) {
+	acl, err := c.getAcl(ctx, spaceId)
+	if err != nil {
+		return
 	}
 	joinRecs, err := acl.AclState().JoinRecords(false)
 	if err != nil {
-		return err
+		return
 	}
 	for _, rec := range joinRecs {
 		if rec.RequestIdentity.Equals(c.keys.SignKey.GetPublic()) {
 			// that means that we already requested to join
-			return nil
+			return
 		}
 	}
 	rec, err := acl.RecordBuilder().BuildRequestJoin(payload)
 	if err != nil {
 		return
 	}
-	_, err = c.coordinatorClient.AclAddRecord(ctx, spaceId, rec)
+	recWithId, err := c.coordinatorClient.AclAddRecord(ctx, spaceId, rec)
+	if err != nil {
+		return
+	}
+	aclHeadId = recWithId.Id
 	return
 }
 
 func (c *aclJoiningClient) CancelRemoveSelf(ctx context.Context, spaceId string) (err error) {
-	res, err := c.AclGetRecords(ctx, spaceId, "")
+	acl, err := c.getAcl(ctx, spaceId)
 	if err != nil {
-		return err
-	}
-	if len(res) == 0 {
-		return fmt.Errorf("acl not found")
-	}
-	storage, err := liststorage.NewInMemoryAclListStorage(res[0].Id, res)
-	if err != nil {
-		return err
-	}
-	acl, err := list.BuildAclListWithIdentity(c.keys, storage, list.NoOpAcceptorVerifier{})
-	if err != nil {
-		return err
+		return
 	}
 	pendingReq, err := acl.AclState().Record(acl.AclState().Identity())
 	if err != nil {
