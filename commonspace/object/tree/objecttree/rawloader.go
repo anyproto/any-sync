@@ -24,6 +24,8 @@ type rawCacheEntry struct {
 	rawChange *treechangeproto.RawTreeChangeWithId
 	position  int
 	removed   bool
+	nextSet   bool
+	size      int
 }
 
 func newStorageLoader(treeStorage treestorage.TreeStorage, changeBuilder ChangeBuilder) *rawChangeLoader {
@@ -250,6 +252,7 @@ func (r *rawChangeLoader) loadEntry(id string) (entry rawCacheEntry, err error) 
 		change:    change,
 		rawChange: rawChange,
 		position:  -1,
+		size:      len(rawChange.RawChange),
 	}
 	return
 }
