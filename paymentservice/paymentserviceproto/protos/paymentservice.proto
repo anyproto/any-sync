@@ -31,8 +31,8 @@ enum SubscriptionStatus {
   StatusActive = 2;
   // when buying from other side - some data is missing in the Subscription
   // we need to provide additional data after the payment
-  // please call BuySubscription to fill-in needed fields
-  StatusPendingRequiresInput = 3;
+  // please call FinalizeSubscription to fill-in needed fields
+  StatusPendingRequiresFinalization = 3;
 }
 
 enum PaymentMethod {
@@ -99,6 +99,30 @@ message BuySubscriptionResponse {
   // will feature current billing ID
   // stripe.com/?client_reference_id=1234
   string paymentUrl = 1;
+}
+
+message FinalizeSubscriptionRequest {
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
+  string ownerAnyId = 1;
+  // this is the owner's main EOA (Externally Owned Account) address
+  // not AccountAbstraction's SCW (Smart Contract Wallet) address! 
+  // this is required to reserve a name for the owner (later that is done by user)
+  // in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
+  string ownerEthAddress = 2;
+  // if empty - then no name requested
+  string requestedAnyName = 3;
+}
+
+message FinalizeSubscriptionResponse {
+  
+}
+
+message FinalizeSubscriptionRequestSigned {
+  // VerifyEmailRequest
+  bytes payload = 1;
+  // this is payload signed with payload.ownerAnyID
+  bytes signature = 2;
 }
 
 message GetSubscriptionPortalLinkRequest {
@@ -172,6 +196,9 @@ service AnyPaymentProcessing {
   // (to get new payment link).
   // If user has already an active subscription, then this will return an error.
   rpc BuySubscription(BuySubscriptionRequestSigned) returns (BuySubscriptionResponse) {}
+
+  // If your subscription is in StatusPendingRequiresFinalization, then you need to call this method
+  rpc FinalizeSubscription(FinalizeSubscriptionRequestSigned) returns (FinalizeSubscriptionResponse) {}
 
   // Generate a link to the portal where user can:
   // a) change her billing details
