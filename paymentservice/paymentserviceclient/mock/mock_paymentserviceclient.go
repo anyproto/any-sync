@@ -55,6 +55,21 @@ func (mr *MockAnyPpClientServiceMockRecorder) BuySubscription(ctx, in any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuySubscription", reflect.TypeOf((*MockAnyPpClientService)(nil).BuySubscription), ctx, in)
 }
 
+// FinalizeSubscription mocks base method.
+func (m *MockAnyPpClientService) FinalizeSubscription(ctx context.Context, in *paymentserviceproto.FinalizeSubscriptionRequestSigned) (*paymentserviceproto.FinalizeSubscriptionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FinalizeSubscription", ctx, in)
+	ret0, _ := ret[0].(*paymentserviceproto.FinalizeSubscriptionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FinalizeSubscription indicates an expected call of FinalizeSubscription.
+func (mr *MockAnyPpClientServiceMockRecorder) FinalizeSubscription(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeSubscription", reflect.TypeOf((*MockAnyPpClientService)(nil).FinalizeSubscription), ctx, in)
+}
+
 // GetSubscriptionPortalLink mocks base method.
 func (m *MockAnyPpClientService) GetSubscriptionPortalLink(ctx context.Context, in *paymentserviceproto.GetSubscriptionPortalLinkRequestSigned) (*paymentserviceproto.GetSubscriptionPortalLinkResponse, error) {
 	m.ctrl.T.Helper()
