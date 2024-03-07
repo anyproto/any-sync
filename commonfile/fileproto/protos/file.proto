@@ -139,7 +139,8 @@ message AccountInfoResponse {
 
 
 message AccountLimitSetRequest {
-    uint64 limit = 1;
+    string identity = 1;
+    uint64 limit = 2;
 }
 
 message SpaceLimitSetRequest {

@@ -14,6 +14,6 @@ var (
 	ErrForbidden          = errGroup.Register(fmt.Errorf("forbidden"), uint64(fileproto.ErrCodes_Forbidden))
 	ErrSpaceLimitExceeded = errGroup.Register(fmt.Errorf("space limit exceeded"), uint64(fileproto.ErrCodes_LimitExceeded))
 	ErrQuerySizeExceeded  = errGroup.Register(fmt.Errorf("query size exceeded"), uint64(fileproto.ErrCodes_QuerySizeExceeded))
-	ErrNotEnoughSpace     = errGroup.Register(fmt.Errorf("query size exceeded"), uint64(fileproto.ErrCodes_NotEnoughSpace))
+	ErrNotEnoughSpace     = errGroup.Register(fmt.Errorf("not enough space"), uint64(fileproto.ErrCodes_NotEnoughSpace))
 	ErrWrongHash          = errGroup.Register(fmt.Errorf("wrong block hash"), uint64(fileproto.ErrCodes_WrongHash))
 )
