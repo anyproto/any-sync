@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_list/mock_list.go github.com/anyproto/any-sync/commonspace/object/acl/list AclList
 //
-
 // Package mock_list is a generated GoMock package.
 package mock_list
 
@@ -344,15 +343,15 @@ func (mr *MockAclListMockRecorder) Unlock() *gomock.Call {
 }
 
 // ValidateRawRecord mocks base method.
-func (m *MockAclList) ValidateRawRecord(arg0 *consensusproto.RawRecord) error {
+func (m *MockAclList) ValidateRawRecord(arg0 *consensusproto.RawRecord, arg1 func(*list.AclState) error) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateRawRecord", arg0)
+	ret := m.ctrl.Call(m, "ValidateRawRecord", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ValidateRawRecord indicates an expected call of ValidateRawRecord.
-func (mr *MockAclListMockRecorder) ValidateRawRecord(arg0 any) *gomock.Call {
+func (mr *MockAclListMockRecorder) ValidateRawRecord(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRawRecord", reflect.TypeOf((*MockAclList)(nil).ValidateRawRecord), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRawRecord", reflect.TypeOf((*MockAclList)(nil).ValidateRawRecord), arg0, arg1)
 }

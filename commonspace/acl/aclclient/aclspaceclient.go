@@ -27,6 +27,7 @@ type InviteSaveFunc func()
 type AclSpaceClient interface {
 	app.Component
 	GenerateInvite() (list.InviteResult, error)
+	StopSharing(ctx context.Context, readKeyChange list.ReadKeyChangePayload) (err error)
 	AddRecord(ctx context.Context, consRec *consensusproto.RawRecord) error
 	RemoveAccounts(ctx context.Context, payload list.AccountRemovePayload) error
 	AcceptRequest(ctx context.Context, payload list.RequestAcceptPayload) error
@@ -35,6 +36,7 @@ type AclSpaceClient interface {
 	ChangePermissions(ctx context.Context, permChange list.PermissionChangesPayload) (err error)
 	RequestSelfRemove(ctx context.Context) (err error)
 	RevokeInvite(ctx context.Context, inviteRecordId string) (err error)
+	RevokeAllInvites(ctx context.Context) (err error)
 	AddAccounts(ctx context.Context, add list.AccountsAddPayload) (err error)
 }
 
@@ -106,6 +108,53 @@ func (c *aclSpaceClient) AddAccounts(ctx context.Context, add list.AccountsAddPa
 func (c *aclSpaceClient) RemoveAccounts(ctx context.Context, payload list.AccountRemovePayload) (err error) {
 	c.acl.Lock()
 	res, err := c.acl.RecordBuilder().BuildAccountRemove(payload)
+	if err != nil {
+		c.acl.Unlock()
+		return
+	}
+	c.acl.Unlock()
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
+}
+
+func (c *aclSpaceClient) RevokeAllInvites(ctx context.Context) (err error) {
+	c.acl.Lock()
+	payload := list.BatchRequestPayload{
+		InviteRevokes: c.acl.AclState().InviteIds(),
+	}
+	res, err := c.acl.RecordBuilder().BuildBatchRequest(payload)
+	if err != nil {
+		c.acl.Unlock()
+		return
+	}
+	c.acl.Unlock()
+	return c.sendRecordAndUpdate(ctx, c.spaceId, res)
+}
+
+func (c *aclSpaceClient) StopSharing(ctx context.Context, readKeyChange list.ReadKeyChangePayload) (err error) {
+	c.acl.Lock()
+	var (
+		identities []crypto.PubKey
+		recIds     []string
+	)
+	for _, state := range c.acl.AclState().CurrentAccounts() {
+		if state.Permissions.NoPermissions() || state.Permissions.IsOwner() {
+			continue
+		}
+		identities = append(identities, state.PubKey)
+	}
+	recs, _ := c.acl.AclState().JoinRecords(false)
+	for _, rec := range recs {
+		recIds = append(recIds, rec.RecordId)
+	}
+	payload := list.BatchRequestPayload{
+		Removals: list.AccountRemovePayload{
+			Identities: identities,
+			Change:     readKeyChange,
+		},
+		Declines:      recIds,
+		InviteRevokes: c.acl.AclState().InviteIds(),
+	}
+	res, err := c.acl.RecordBuilder().BuildBatchRequest(payload)
 	if err != nil {
 		c.acl.Unlock()
 		return

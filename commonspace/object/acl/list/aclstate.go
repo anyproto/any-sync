@@ -192,7 +192,15 @@ func (st *AclState) Invites() []crypto.PubKey {
 	return invites
 }
 
-func (st *AclState) applyRecord(record *AclRecord) (err error) {
+func (st *AclState) InviteIds() []string {
+	var invites []string
+	for invId := range st.inviteKeys {
+		invites = append(invites, invId)
+	}
+	return invites
+}
+
+func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
 	if st.lastRecordId != record.PrevId {
 		err = ErrIncorrectRecordSequence
 		return
@@ -294,6 +302,44 @@ func (st *AclState) applyChangeData(record *AclRecord) (err error) {
 		}
 	}
 	return nil
+}
+
+func (st *AclState) Copy() *AclState {
+	newSt := &AclState{
+		id:              st.id,
+		key:             st.key,
+		pubKey:          st.key.GetPublic(),
+		keys:            make(map[string]AclKeys),
+		accountStates:   make(map[string]AccountState),
+		inviteKeys:      make(map[string]crypto.PubKey),
+		requestRecords:  make(map[string]RequestRecord),
+		pendingRequests: make(map[string]string),
+		keyStore:        st.keyStore,
+	}
+	for k, v := range st.keys {
+		newSt.keys[k] = v
+	}
+	for k, v := range st.accountStates {
+		var permChanges []PermissionChange
+		permChanges = append(permChanges, v.PermissionChanges...)
+		accState := v
+		accState.PermissionChanges = permChanges
+		newSt.accountStates[k] = accState
+	}
+	for k, v := range st.inviteKeys {
+		newSt.inviteKeys[k] = v
+	}
+	for k, v := range st.requestRecords {
+		newSt.requestRecords[k] = v
+	}
+	for k, v := range st.pendingRequests {
+		newSt.pendingRequests[k] = v
+	}
+	newSt.readKeyChanges = append(newSt.readKeyChanges, st.readKeyChanges...)
+	newSt.list = st.list
+	newSt.lastRecordId = st.lastRecordId
+	newSt.contentValidator = newContentValidator(newSt.keyStore, newSt)
+	return newSt
 }
 
 func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, record *AclRecord) error {
@@ -522,16 +568,18 @@ func (st *AclState) unpackAllKeys(rk []byte) error {
 			break
 		}
 		model := rec.Model.(*aclrecordproto.AclData)
-		if len(model.GetAclContent()) != 1 {
-			return ErrIncorrectReadKey
-		}
-		ch := model.GetAclContent()[0]
+		content := model.GetAclContent()
 		var readKeyChange *aclrecordproto.AclReadKeyChange
-		switch {
-		case ch.GetReadKeyChange() != nil:
-			readKeyChange = ch.GetReadKeyChange()
-		case ch.GetAccountRemove() != nil:
-			readKeyChange = ch.GetAccountRemove().GetReadKeyChange()
+		for _, ch := range content {
+			switch {
+			case ch.GetReadKeyChange() != nil:
+				readKeyChange = ch.GetReadKeyChange()
+			case ch.GetAccountRemove() != nil:
+				readKeyChange = ch.GetAccountRemove().GetReadKeyChange()
+			}
+		}
+		if readKeyChange == nil {
+			return ErrIncorrectReadKey
 		}
 		oldReadKey, err := st.unmarshallDecryptReadKey(readKeyChange.EncryptedOldReadKey, iterReadKey.Decrypt)
 		if err != nil {

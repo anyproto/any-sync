@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_syncacl/mock_syncacl.go github.com/anyproto/any-sync/commonspace/object/acl/syncacl SyncAcl,SyncClient,RequestFactory,AclSyncProtocol
 //
-
 // Package mock_syncacl is a generated GoMock package.
 package mock_syncacl
 
@@ -456,17 +455,17 @@ func (mr *MockSyncAclMockRecorder) Unlock() *gomock.Call {
 }
 
 // ValidateRawRecord mocks base method.
-func (m *MockSyncAcl) ValidateRawRecord(arg0 *consensusproto.RawRecord) error {
+func (m *MockSyncAcl) ValidateRawRecord(arg0 *consensusproto.RawRecord, arg1 func(*list.AclState) error) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateRawRecord", arg0)
+	ret := m.ctrl.Call(m, "ValidateRawRecord", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ValidateRawRecord indicates an expected call of ValidateRawRecord.
-func (mr *MockSyncAclMockRecorder) ValidateRawRecord(arg0 any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) ValidateRawRecord(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRawRecord", reflect.TypeOf((*MockSyncAcl)(nil).ValidateRawRecord), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRawRecord", reflect.TypeOf((*MockSyncAcl)(nil).ValidateRawRecord), arg0, arg1)
 }
 
 // MockSyncClient is a mock of SyncClient interface.
