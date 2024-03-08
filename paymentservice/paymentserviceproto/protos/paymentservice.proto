@@ -1,6 +1,8 @@
 syntax = "proto3";
 option go_package = "paymentservice/paymentserviceproto";
 
+import "paymentservice/paymentserviceproto/protos/paymentservice_tiers.proto";
+
 // TODO:
 // later we will have an interface to enumerate all available tiers
 // it's a bad idea to list them here, because interface will be changed often
@@ -213,4 +215,11 @@ service AnyPaymentProcessing {
   // Enter the code from the email
   // Will fail if: link was not requested, link is expired, if email is already verified
   rpc VerifyEmail(VerifyEmailRequestSigned) returns (VerifyEmailResponse) {}
+
+  // Returns all available application tiers, including inactive
+  // 1 - this list does not depend on the current platform (iOS, Android, Desktop)
+  // 2 - this list can be different for different users, based on their account ID
+  // 3 - user can not buy stripe
+  // 4 - some tiers are custom ()
+  rpc GetAllTiers(GetTiersRequestSigned) returns (GetTiersResponse) {}
 }

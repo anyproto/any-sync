@@ -70,6 +70,21 @@ func (mr *MockAnyPpClientServiceMockRecorder) FinalizeSubscription(ctx, in any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeSubscription", reflect.TypeOf((*MockAnyPpClientService)(nil).FinalizeSubscription), ctx, in)
 }
 
+// GetAllTiers mocks base method.
+func (m *MockAnyPpClientService) GetAllTiers(ctx context.Context, in *paymentserviceproto.GetTiersRequestSigned) (*paymentserviceproto.GetTiersResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllTiers", ctx, in)
+	ret0, _ := ret[0].(*paymentserviceproto.GetTiersResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllTiers indicates an expected call of GetAllTiers.
+func (mr *MockAnyPpClientServiceMockRecorder) GetAllTiers(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllTiers", reflect.TypeOf((*MockAnyPpClientService)(nil).GetAllTiers), ctx, in)
+}
+
 // GetSubscriptionPortalLink mocks base method.
 func (m *MockAnyPpClientService) GetSubscriptionPortalLink(ctx context.Context, in *paymentserviceproto.GetSubscriptionPortalLinkRequestSigned) (*paymentserviceproto.GetSubscriptionPortalLinkResponse, error) {
 	m.ctrl.T.Helper()

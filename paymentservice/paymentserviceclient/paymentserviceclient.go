@@ -28,6 +28,7 @@ type AnyPpClientService interface {
 	GetVerificationEmail(ctx context.Context, in *pp.GetVerificationEmailRequestSigned) (out *pp.GetVerificationEmailResponse, err error)
 	VerifyEmail(ctx context.Context, in *pp.VerifyEmailRequestSigned) (out *pp.VerifyEmailResponse, err error)
 	FinalizeSubscription(ctx context.Context, in *pp.FinalizeSubscriptionRequestSigned) (out *pp.FinalizeSubscriptionResponse, err error)
+	GetAllTiers(ctx context.Context, in *pp.GetTiersRequestSigned) (out *pp.GetTiersResponse, err error)
 
 	app.Component
 }
@@ -128,6 +129,16 @@ func (s *service) VerifyEmail(ctx context.Context, in *pp.VerifyEmailRequestSign
 func (s *service) FinalizeSubscription(ctx context.Context, in *pp.FinalizeSubscriptionRequestSigned) (out *pp.FinalizeSubscriptionResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
 		if out, err = cl.FinalizeSubscription(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) GetAllTiers(ctx context.Context, in *pp.GetTiersRequestSigned) (out *pp.GetTiersResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
+		if out, err = cl.GetAllTiers(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil
