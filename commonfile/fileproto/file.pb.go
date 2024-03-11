@@ -1006,11 +1006,13 @@ func (m *AccountInfoRequest) XXX_DiscardUnknown() {
 var xxx_messageInfo_AccountInfoRequest proto.InternalMessageInfo
 
 type AccountInfoResponse struct {
-	LimitBytes        uint64               `protobuf:"varint,1,opt,name=limitBytes,proto3" json:"limitBytes,omitempty"`
-	TotalUsageBytes   uint64               `protobuf:"varint,2,opt,name=totalUsageBytes,proto3" json:"totalUsageBytes,omitempty"`
-	TotalCidsCount    uint64               `protobuf:"varint,3,opt,name=totalCidsCount,proto3" json:"totalCidsCount,omitempty"`
-	Spaces            []*SpaceInfoResponse `protobuf:"bytes,4,rep,name=spaces,proto3" json:"spaces,omitempty"`
-	AccountLimitBytes uint64               `protobuf:"varint,5,opt,name=accountLimitBytes,proto3" json:"accountLimitBytes,omitempty"`
+	// the shared limit excluding isolated spaces
+	LimitBytes      uint64               `protobuf:"varint,1,opt,name=limitBytes,proto3" json:"limitBytes,omitempty"`
+	TotalUsageBytes uint64               `protobuf:"varint,2,opt,name=totalUsageBytes,proto3" json:"totalUsageBytes,omitempty"`
+	TotalCidsCount  uint64               `protobuf:"varint,3,opt,name=totalCidsCount,proto3" json:"totalCidsCount,omitempty"`
+	Spaces          []*SpaceInfoResponse `protobuf:"bytes,4,rep,name=spaces,proto3" json:"spaces,omitempty"`
+	// the total limit including isolated spaces
+	AccountLimitBytes uint64 `protobuf:"varint,5,opt,name=accountLimitBytes,proto3" json:"accountLimitBytes,omitempty"`
 }
 
 func (m *AccountInfoResponse) Reset()         { *m = AccountInfoResponse{} }

@@ -131,10 +131,12 @@ message AccountInfoRequest {
 }
 
 message AccountInfoResponse {
+    // the shared limit excluding isolated spaces
     uint64 limitBytes = 1;
     uint64 totalUsageBytes = 2;
     uint64 totalCidsCount = 3;
     repeated SpaceInfoResponse spaces = 4;
+    // the total limit including isolated spaces
     uint64 accountLimitBytes = 5;
 }
 
