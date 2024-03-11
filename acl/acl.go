@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_acl/mock_acl.go github.com/anyproto/any-sync/acl AclService
 package acl
 
 import (
@@ -21,13 +22,15 @@ const CName = "coordinator.acl"
 
 var log = logger.NewNamed(CName)
 
-func New() Acl {
+func New() AclService {
 	return &aclService{}
 }
 
-type Acl interface {
+type AclService interface {
 	AddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (result *consensusproto.RawRecordWithId, err error)
 	RecordsAfter(ctx context.Context, spaceId, aclHead string) (result []*consensusproto.RawRecordWithId, err error)
+	Permissions(ctx context.Context, identity crypto.PubKey, spaceId string) (res list.AclPermissions, err error)
+	OwnerPubKey(ctx context.Context, spaceId string) (ownerIdentity crypto.PubKey, err error)
 	app.ComponentRunnable
 }
 
@@ -94,6 +97,16 @@ func (as *aclService) RecordsAfter(ctx context.Context, spaceId, aclHead string)
 	acl.RLock()
 	defer acl.RUnlock()
 	return acl.RecordsAfter(ctx, aclHead)
+}
+
+func (as *aclService) OwnerPubKey(ctx context.Context, spaceId string) (ownerIdentity crypto.PubKey, err error) {
+	acl, err := as.get(ctx, spaceId)
+	if err != nil {
+		return
+	}
+	acl.RLock()
+	defer acl.RUnlock()
+	return acl.AclState().OwnerPubKey()
 }
 
 func (as *aclService) Permissions(ctx context.Context, identity crypto.PubKey, spaceId string) (res list.AclPermissions, err error) {
