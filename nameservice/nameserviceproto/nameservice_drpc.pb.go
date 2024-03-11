@@ -42,6 +42,7 @@ type DRPCAnynsClient interface {
 
 	IsNameAvailable(ctx context.Context, in *NameAvailableRequest) (*NameAvailableResponse, error)
 	GetNameByAddress(ctx context.Context, in *NameByAddressRequest) (*NameByAddressResponse, error)
+	GetNameByAnyId(ctx context.Context, in *NameByAnyIdRequest) (*NameByAddressResponse, error)
 	AdminNameRegisterSigned(ctx context.Context, in *NameRegisterRequestSigned) (*OperationResponse, error)
 }
 
@@ -73,6 +74,15 @@ func (c *drpcAnynsClient) GetNameByAddress(ctx context.Context, in *NameByAddres
 	return out, nil
 }
 
+func (c *drpcAnynsClient) GetNameByAnyId(ctx context.Context, in *NameByAnyIdRequest) (*NameByAddressResponse, error) {
+	out := new(NameByAddressResponse)
+	err := c.cc.Invoke(ctx, "/Anyns/GetNameByAnyId", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *drpcAnynsClient) AdminNameRegisterSigned(ctx context.Context, in *NameRegisterRequestSigned) (*OperationResponse, error) {
 	out := new(OperationResponse)
 	err := c.cc.Invoke(ctx, "/Anyns/AdminNameRegisterSigned", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}, in, out)
@@ -85,6 +95,7 @@ func (c *drpcAnynsClient) AdminNameRegisterSigned(ctx context.Context, in *NameR
 type DRPCAnynsServer interface {
 	IsNameAvailable(context.Context, *NameAvailableRequest) (*NameAvailableResponse, error)
 	GetNameByAddress(context.Context, *NameByAddressRequest) (*NameByAddressResponse, error)
+	GetNameByAnyId(context.Context, *NameByAnyIdRequest) (*NameByAddressResponse, error)
 	AdminNameRegisterSigned(context.Context, *NameRegisterRequestSigned) (*OperationResponse, error)
 }
 
@@ -98,13 +109,17 @@ func (s *DRPCAnynsUnimplementedServer) GetNameByAddress(context.Context, *NameBy
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCAnynsUnimplementedServer) GetNameByAnyId(context.Context, *NameByAnyIdRequest) (*NameByAddressResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 func (s *DRPCAnynsUnimplementedServer) AdminNameRegisterSigned(context.Context, *NameRegisterRequestSigned) (*OperationResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
 type DRPCAnynsDescription struct{}
 
-func (DRPCAnynsDescription) NumMethods() int { return 3 }
+func (DRPCAnynsDescription) NumMethods() int { return 4 }
 
 func (DRPCAnynsDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -127,6 +142,15 @@ func (DRPCAnynsDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver,
 					)
 			}, DRPCAnynsServer.GetNameByAddress, true
 	case 2:
+		return "/Anyns/GetNameByAnyId", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnynsServer).
+					GetNameByAnyId(
+						ctx,
+						in1.(*NameByAnyIdRequest),
+					)
+			}, DRPCAnynsServer.GetNameByAnyId, true
+	case 3:
 		return "/Anyns/AdminNameRegisterSigned", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCAnynsServer).
@@ -170,6 +194,22 @@ type drpcAnyns_GetNameByAddressStream struct {
 }
 
 func (x *drpcAnyns_GetNameByAddressStream) SendAndClose(m *NameByAddressResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyns_GetNameByAnyIdStream interface {
+	drpc.Stream
+	SendAndClose(*NameByAddressResponse) error
+}
+
+type drpcAnyns_GetNameByAnyIdStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyns_GetNameByAnyIdStream) SendAndClose(m *NameByAddressResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}); err != nil {
 		return err
 	}

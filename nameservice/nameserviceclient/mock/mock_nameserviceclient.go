@@ -55,6 +55,21 @@ func (mr *MockAnyNsClientServiceBaseMockRecorder) GetNameByAddress(ctx, in any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNameByAddress", reflect.TypeOf((*MockAnyNsClientServiceBase)(nil).GetNameByAddress), ctx, in)
 }
 
+// GetNameByAnyId mocks base method.
+func (m *MockAnyNsClientServiceBase) GetNameByAnyId(ctx context.Context, in *nameserviceproto.NameByAnyIdRequest) (*nameserviceproto.NameByAddressResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNameByAnyId", ctx, in)
+	ret0, _ := ret[0].(*nameserviceproto.NameByAddressResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNameByAnyId indicates an expected call of GetNameByAnyId.
+func (mr *MockAnyNsClientServiceBaseMockRecorder) GetNameByAnyId(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNameByAnyId", reflect.TypeOf((*MockAnyNsClientServiceBase)(nil).GetNameByAnyId), ctx, in)
+}
+
 // Init mocks base method.
 func (m *MockAnyNsClientServiceBase) Init(a *app.App) error {
 	m.ctrl.T.Helper()
@@ -179,6 +194,21 @@ func (m *MockAnyNsClientService) GetNameByAddress(ctx context.Context, in *names
 func (mr *MockAnyNsClientServiceMockRecorder) GetNameByAddress(ctx, in any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNameByAddress", reflect.TypeOf((*MockAnyNsClientService)(nil).GetNameByAddress), ctx, in)
+}
+
+// GetNameByAnyId mocks base method.
+func (m *MockAnyNsClientService) GetNameByAnyId(ctx context.Context, in *nameserviceproto.NameByAnyIdRequest) (*nameserviceproto.NameByAddressResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNameByAnyId", ctx, in)
+	ret0, _ := ret[0].(*nameserviceproto.NameByAddressResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNameByAnyId indicates an expected call of GetNameByAnyId.
+func (mr *MockAnyNsClientServiceMockRecorder) GetNameByAnyId(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNameByAnyId", reflect.TypeOf((*MockAnyNsClientService)(nil).GetNameByAnyId), ctx, in)
 }
 
 // GetOperation mocks base method.

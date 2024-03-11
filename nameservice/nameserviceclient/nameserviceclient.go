@@ -26,6 +26,7 @@ type AnyNsClientServiceBase interface {
 	IsNameAvailable(ctx context.Context, in *nsp.NameAvailableRequest) (out *nsp.NameAvailableResponse, err error)
 	// reverse resolve
 	GetNameByAddress(ctx context.Context, in *nsp.NameByAddressRequest) (out *nsp.NameByAddressResponse, err error)
+	GetNameByAnyId(ctx context.Context, in *nsp.NameByAnyIdRequest) (out *nsp.NameByAddressResponse, err error)
 
 	app.Component
 }
@@ -118,6 +119,16 @@ func (s *service) IsNameAvailable(ctx context.Context, in *nsp.NameAvailableRequ
 func (s *service) GetNameByAddress(ctx context.Context, in *nsp.NameByAddressRequest) (out *nsp.NameByAddressResponse, err error) {
 	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
 		if out, err = cl.GetNameByAddress(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) GetNameByAnyId(ctx context.Context, in *nsp.NameByAnyIdRequest) (out *nsp.NameByAddressResponse, err error) {
+	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
+		if out, err = cl.GetNameByAnyId(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil
