@@ -135,6 +135,7 @@ message AccountInfoResponse {
     uint64 totalUsageBytes = 2;
     uint64 totalCidsCount = 3;
     repeated SpaceInfoResponse spaces = 4;
+    uint64 accountLimitBytes = 5;
 }
 
 
