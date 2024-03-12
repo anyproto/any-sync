@@ -374,7 +374,13 @@ func (t *mockTreeManager) DeleteTree(ctx context.Context, spaceId, treeId string
 	return nil
 }
 
+var _ coordinatorclient.CoordinatorClient = (*mockCoordinatorClient)(nil)
+
 type mockCoordinatorClient struct {
+}
+
+func (m mockCoordinatorClient) AccountLimitsSet(ctx context.Context, req *coordinatorproto.AccountLimitsSetRequest) error {
+	return nil
 }
 
 func (m mockCoordinatorClient) SpaceDelete(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (err error) {
@@ -398,10 +404,6 @@ func (m mockCoordinatorClient) StatusCheck(ctx context.Context, spaceId string) 
 }
 
 func (m mockCoordinatorClient) SpaceSign(ctx context.Context, payload coordinatorclient.SpaceSignPayload) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error) {
-	return
-}
-
-func (m mockCoordinatorClient) FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (response *coordinatorproto.FileLimitCheckResponse, err error) {
 	return
 }
 
