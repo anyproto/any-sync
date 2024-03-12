@@ -52,6 +52,7 @@ type DRPCCoordinatorClient interface {
 	AccountRevertDeletion(ctx context.Context, in *AccountRevertDeletionRequest) (*AccountRevertDeletionResponse, error)
 	AclAddRecord(ctx context.Context, in *AclAddRecordRequest) (*AclAddRecordResponse, error)
 	AclGetRecords(ctx context.Context, in *AclGetRecordsRequest) (*AclGetRecordsResponse, error)
+	AccountLimitsSet(ctx context.Context, in *AccountLimitsSetRequest) (*AccountLimitsSetResponse, error)
 }
 
 type drpcCoordinatorClient struct {
@@ -172,6 +173,15 @@ func (c *drpcCoordinatorClient) AclGetRecords(ctx context.Context, in *AclGetRec
 	return out, nil
 }
 
+func (c *drpcCoordinatorClient) AccountLimitsSet(ctx context.Context, in *AccountLimitsSetRequest) (*AccountLimitsSetResponse, error) {
+	out := new(AccountLimitsSetResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/AccountLimitsSet", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCCoordinatorServer interface {
 	SpaceSign(context.Context, *SpaceSignRequest) (*SpaceSignResponse, error)
 	FileLimitCheck(context.Context, *FileLimitCheckRequest) (*FileLimitCheckResponse, error)
@@ -185,6 +195,7 @@ type DRPCCoordinatorServer interface {
 	AccountRevertDeletion(context.Context, *AccountRevertDeletionRequest) (*AccountRevertDeletionResponse, error)
 	AclAddRecord(context.Context, *AclAddRecordRequest) (*AclAddRecordResponse, error)
 	AclGetRecords(context.Context, *AclGetRecordsRequest) (*AclGetRecordsResponse, error)
+	AccountLimitsSet(context.Context, *AccountLimitsSetRequest) (*AccountLimitsSetResponse, error)
 }
 
 type DRPCCoordinatorUnimplementedServer struct{}
@@ -237,9 +248,13 @@ func (s *DRPCCoordinatorUnimplementedServer) AclGetRecords(context.Context, *Acl
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCCoordinatorUnimplementedServer) AccountLimitsSet(context.Context, *AccountLimitsSetRequest) (*AccountLimitsSetResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCCoordinatorDescription struct{}
 
-func (DRPCCoordinatorDescription) NumMethods() int { return 12 }
+func (DRPCCoordinatorDescription) NumMethods() int { return 13 }
 
 func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -351,6 +366,15 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*AclGetRecordsRequest),
 					)
 			}, DRPCCoordinatorServer.AclGetRecords, true
+	case 12:
+		return "/coordinator.Coordinator/AccountLimitsSet", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					AccountLimitsSet(
+						ctx,
+						in1.(*AccountLimitsSetRequest),
+					)
+			}, DRPCCoordinatorServer.AccountLimitsSet, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -546,6 +570,22 @@ type drpcCoordinator_AclGetRecordsStream struct {
 }
 
 func (x *drpcCoordinator_AclGetRecordsStream) SendAndClose(m *AclGetRecordsResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_AccountLimitsSetStream interface {
+	drpc.Stream
+	SendAndClose(*AccountLimitsSetResponse) error
+}
+
+type drpcCoordinator_AccountLimitsSetStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_AccountLimitsSetStream) SendAndClose(m *AccountLimitsSetResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
 		return err
 	}
