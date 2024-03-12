@@ -59,6 +59,20 @@ func (mr *MockCoordinatorClientMockRecorder) AccountDelete(arg0, arg1 any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountDelete", reflect.TypeOf((*MockCoordinatorClient)(nil).AccountDelete), arg0, arg1)
 }
 
+// AccountLimitsSet mocks base method.
+func (m *MockCoordinatorClient) AccountLimitsSet(arg0 context.Context, arg1 *coordinatorproto.AccountLimitsSetRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AccountLimitsSet", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AccountLimitsSet indicates an expected call of AccountLimitsSet.
+func (mr *MockCoordinatorClientMockRecorder) AccountLimitsSet(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountLimitsSet", reflect.TypeOf((*MockCoordinatorClient)(nil).AccountLimitsSet), arg0, arg1)
+}
+
 // AccountRevertDeletion mocks base method.
 func (m *MockCoordinatorClient) AccountRevertDeletion(arg0 context.Context) error {
 	m.ctrl.T.Helper()
@@ -116,21 +130,6 @@ func (m *MockCoordinatorClient) DeletionLog(arg0 context.Context, arg1 string, a
 func (mr *MockCoordinatorClientMockRecorder) DeletionLog(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletionLog", reflect.TypeOf((*MockCoordinatorClient)(nil).DeletionLog), arg0, arg1, arg2)
-}
-
-// FileLimitCheck mocks base method.
-func (m *MockCoordinatorClient) FileLimitCheck(arg0 context.Context, arg1 string, arg2 []byte) (*coordinatorproto.FileLimitCheckResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FileLimitCheck", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*coordinatorproto.FileLimitCheckResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// FileLimitCheck indicates an expected call of FileLimitCheck.
-func (mr *MockCoordinatorClientMockRecorder) FileLimitCheck(arg0, arg1, arg2 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileLimitCheck", reflect.TypeOf((*MockCoordinatorClient)(nil).FileLimitCheck), arg0, arg1, arg2)
 }
 
 // IdentityRepoGet mocks base method.
