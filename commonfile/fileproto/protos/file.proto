@@ -109,7 +109,9 @@ message FileInfo {
     uint32 cidsCount = 3;
 }
 
-message FilesGetRequest {}
+message FilesGetRequest {
+    string spaceId = 1;
+}
 
 message FilesGetResponse {
     string fileId = 1;
