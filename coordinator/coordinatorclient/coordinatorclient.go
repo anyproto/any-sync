@@ -37,7 +37,6 @@ type CoordinatorClient interface {
 	StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, err error)
 	StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusPayload, err error)
 	SpaceSign(ctx context.Context, payload SpaceSignPayload) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error)
-	FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (response *coordinatorproto.FileLimitCheckResponse, err error)
 	NetworkConfiguration(ctx context.Context, currentId string) (*coordinatorproto.NetworkConfigurationResponse, error)
 	DeletionLog(ctx context.Context, lastRecordId string, limit int) (records []*coordinatorproto.DeletionLogRecord, err error)
 
@@ -46,6 +45,8 @@ type CoordinatorClient interface {
 
 	AclAddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (res *consensusproto.RawRecordWithId, err error)
 	AclGetRecords(ctx context.Context, spaceId, aclHead string) (res []*consensusproto.RawRecordWithId, err error)
+
+	AccountLimitsSet(ctx context.Context, req *coordinatorproto.AccountLimitsSetRequest) error
 
 	app.Component
 }
@@ -207,20 +208,6 @@ func (c *coordinatorClient) SpaceSign(ctx context.Context, payload SpaceSignPayl
 	return
 }
 
-func (c *coordinatorClient) FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (resp *coordinatorproto.FileLimitCheckResponse, err error) {
-	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
-		resp, err = cl.FileLimitCheck(ctx, &coordinatorproto.FileLimitCheckRequest{
-			AccountIdentity: identity,
-			SpaceId:         spaceId,
-		})
-		if err != nil {
-			return rpcerr.Unwrap(err)
-		}
-		return nil
-	})
-	return
-}
-
 func (c *coordinatorClient) NetworkConfiguration(ctx context.Context, currentId string) (resp *coordinatorproto.NetworkConfigurationResponse, err error) {
 	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
 		resp, err = cl.NetworkConfiguration(ctx, &coordinatorproto.NetworkConfigurationRequest{
@@ -304,6 +291,13 @@ func (c *coordinatorClient) AclGetRecords(ctx context.Context, spaceId, aclHead 
 		return nil
 	})
 	return
+}
+
+func (c *coordinatorClient) AccountLimitsSet(ctx context.Context, req *coordinatorproto.AccountLimitsSetRequest) error {
+	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		_, err := cl.AccountLimitsSet(ctx, req)
+		return err
+	})
 }
 
 func (c *coordinatorClient) doClient(ctx context.Context, f func(cl coordinatorproto.DRPCCoordinatorClient) error) error {

@@ -41,7 +41,6 @@ type DRPCCoordinatorClient interface {
 	DRPCConn() drpc.Conn
 
 	SpaceSign(ctx context.Context, in *SpaceSignRequest) (*SpaceSignResponse, error)
-	FileLimitCheck(ctx context.Context, in *FileLimitCheckRequest) (*FileLimitCheckResponse, error)
 	SpaceStatusCheck(ctx context.Context, in *SpaceStatusCheckRequest) (*SpaceStatusCheckResponse, error)
 	SpaceStatusCheckMany(ctx context.Context, in *SpaceStatusCheckManyRequest) (*SpaceStatusCheckManyResponse, error)
 	SpaceStatusChange(ctx context.Context, in *SpaceStatusChangeRequest) (*SpaceStatusChangeResponse, error)
@@ -68,15 +67,6 @@ func (c *drpcCoordinatorClient) DRPCConn() drpc.Conn { return c.cc }
 func (c *drpcCoordinatorClient) SpaceSign(ctx context.Context, in *SpaceSignRequest) (*SpaceSignResponse, error) {
 	out := new(SpaceSignResponse)
 	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/SpaceSign", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *drpcCoordinatorClient) FileLimitCheck(ctx context.Context, in *FileLimitCheckRequest) (*FileLimitCheckResponse, error) {
-	out := new(FileLimitCheckResponse)
-	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/FileLimitCheck", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +174,6 @@ func (c *drpcCoordinatorClient) AccountLimitsSet(ctx context.Context, in *Accoun
 
 type DRPCCoordinatorServer interface {
 	SpaceSign(context.Context, *SpaceSignRequest) (*SpaceSignResponse, error)
-	FileLimitCheck(context.Context, *FileLimitCheckRequest) (*FileLimitCheckResponse, error)
 	SpaceStatusCheck(context.Context, *SpaceStatusCheckRequest) (*SpaceStatusCheckResponse, error)
 	SpaceStatusCheckMany(context.Context, *SpaceStatusCheckManyRequest) (*SpaceStatusCheckManyResponse, error)
 	SpaceStatusChange(context.Context, *SpaceStatusChangeRequest) (*SpaceStatusChangeResponse, error)
@@ -201,10 +190,6 @@ type DRPCCoordinatorServer interface {
 type DRPCCoordinatorUnimplementedServer struct{}
 
 func (s *DRPCCoordinatorUnimplementedServer) SpaceSign(context.Context, *SpaceSignRequest) (*SpaceSignResponse, error) {
-	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
-}
-
-func (s *DRPCCoordinatorUnimplementedServer) FileLimitCheck(context.Context, *FileLimitCheckRequest) (*FileLimitCheckResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
@@ -254,7 +239,7 @@ func (s *DRPCCoordinatorUnimplementedServer) AccountLimitsSet(context.Context, *
 
 type DRPCCoordinatorDescription struct{}
 
-func (DRPCCoordinatorDescription) NumMethods() int { return 13 }
+func (DRPCCoordinatorDescription) NumMethods() int { return 12 }
 
 func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -268,15 +253,6 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 					)
 			}, DRPCCoordinatorServer.SpaceSign, true
 	case 1:
-		return "/coordinator.Coordinator/FileLimitCheck", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
-			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
-				return srv.(DRPCCoordinatorServer).
-					FileLimitCheck(
-						ctx,
-						in1.(*FileLimitCheckRequest),
-					)
-			}, DRPCCoordinatorServer.FileLimitCheck, true
-	case 2:
 		return "/coordinator.Coordinator/SpaceStatusCheck", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCCoordinatorServer).
@@ -285,7 +261,7 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*SpaceStatusCheckRequest),
 					)
 			}, DRPCCoordinatorServer.SpaceStatusCheck, true
-	case 3:
+	case 2:
 		return "/coordinator.Coordinator/SpaceStatusCheckMany", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCCoordinatorServer).
@@ -294,7 +270,7 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*SpaceStatusCheckManyRequest),
 					)
 			}, DRPCCoordinatorServer.SpaceStatusCheckMany, true
-	case 4:
+	case 3:
 		return "/coordinator.Coordinator/SpaceStatusChange", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCCoordinatorServer).
@@ -303,7 +279,7 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*SpaceStatusChangeRequest),
 					)
 			}, DRPCCoordinatorServer.SpaceStatusChange, true
-	case 5:
+	case 4:
 		return "/coordinator.Coordinator/NetworkConfiguration", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCCoordinatorServer).
@@ -312,7 +288,7 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*NetworkConfigurationRequest),
 					)
 			}, DRPCCoordinatorServer.NetworkConfiguration, true
-	case 6:
+	case 5:
 		return "/coordinator.Coordinator/DeletionLog", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCCoordinatorServer).
@@ -321,7 +297,7 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*DeletionLogRequest),
 					)
 			}, DRPCCoordinatorServer.DeletionLog, true
-	case 7:
+	case 6:
 		return "/coordinator.Coordinator/SpaceDelete", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCCoordinatorServer).
@@ -330,7 +306,7 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*SpaceDeleteRequest),
 					)
 			}, DRPCCoordinatorServer.SpaceDelete, true
-	case 8:
+	case 7:
 		return "/coordinator.Coordinator/AccountDelete", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCCoordinatorServer).
@@ -339,7 +315,7 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*AccountDeleteRequest),
 					)
 			}, DRPCCoordinatorServer.AccountDelete, true
-	case 9:
+	case 8:
 		return "/coordinator.Coordinator/AccountRevertDeletion", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCCoordinatorServer).
@@ -348,7 +324,7 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*AccountRevertDeletionRequest),
 					)
 			}, DRPCCoordinatorServer.AccountRevertDeletion, true
-	case 10:
+	case 9:
 		return "/coordinator.Coordinator/AclAddRecord", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCCoordinatorServer).
@@ -357,7 +333,7 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*AclAddRecordRequest),
 					)
 			}, DRPCCoordinatorServer.AclAddRecord, true
-	case 11:
+	case 10:
 		return "/coordinator.Coordinator/AclGetRecords", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCCoordinatorServer).
@@ -366,7 +342,7 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*AclGetRecordsRequest),
 					)
 			}, DRPCCoordinatorServer.AclGetRecords, true
-	case 12:
+	case 11:
 		return "/coordinator.Coordinator/AccountLimitsSet", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCCoordinatorServer).
@@ -394,22 +370,6 @@ type drpcCoordinator_SpaceSignStream struct {
 }
 
 func (x *drpcCoordinator_SpaceSignStream) SendAndClose(m *SpaceSignResponse) error {
-	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
-		return err
-	}
-	return x.CloseSend()
-}
-
-type DRPCCoordinator_FileLimitCheckStream interface {
-	drpc.Stream
-	SendAndClose(*FileLimitCheckResponse) error
-}
-
-type drpcCoordinator_FileLimitCheckStream struct {
-	drpc.Stream
-}
-
-func (x *drpcCoordinator_FileLimitCheckStream) SendAndClose(m *FileLimitCheckResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
 		return err
 	}
