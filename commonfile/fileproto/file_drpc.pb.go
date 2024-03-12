@@ -46,6 +46,7 @@ type DRPCFileClient interface {
 	BlocksBind(ctx context.Context, in *BlocksBindRequest) (*Ok, error)
 	FilesDelete(ctx context.Context, in *FilesDeleteRequest) (*FilesDeleteResponse, error)
 	FilesInfo(ctx context.Context, in *FilesInfoRequest) (*FilesInfoResponse, error)
+	FilesGet(ctx context.Context, in *FilesGetRequest) (DRPCFile_FilesGetClient, error)
 	Check(ctx context.Context, in *CheckRequest) (*CheckResponse, error)
 	SpaceInfo(ctx context.Context, in *SpaceInfoRequest) (*SpaceInfoResponse, error)
 	AccountInfo(ctx context.Context, in *AccountInfoRequest) (*AccountInfoResponse, error)
@@ -117,6 +118,46 @@ func (c *drpcFileClient) FilesInfo(ctx context.Context, in *FilesInfoRequest) (*
 	return out, nil
 }
 
+func (c *drpcFileClient) FilesGet(ctx context.Context, in *FilesGetRequest) (DRPCFile_FilesGetClient, error) {
+	stream, err := c.cc.NewStream(ctx, "/filesync.File/FilesGet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{})
+	if err != nil {
+		return nil, err
+	}
+	x := &drpcFile_FilesGetClient{stream}
+	if err := x.MsgSend(in, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
+		return nil, err
+	}
+	if err := x.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type DRPCFile_FilesGetClient interface {
+	drpc.Stream
+	Recv() (*FilesGetResponse, error)
+}
+
+type drpcFile_FilesGetClient struct {
+	drpc.Stream
+}
+
+func (x *drpcFile_FilesGetClient) GetStream() drpc.Stream {
+	return x.Stream
+}
+
+func (x *drpcFile_FilesGetClient) Recv() (*FilesGetResponse, error) {
+	m := new(FilesGetResponse)
+	if err := x.MsgRecv(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{}); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (x *drpcFile_FilesGetClient) RecvMsg(m *FilesGetResponse) error {
+	return x.MsgRecv(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{})
+}
+
 func (c *drpcFileClient) Check(ctx context.Context, in *CheckRequest) (*CheckResponse, error) {
 	out := new(CheckResponse)
 	err := c.cc.Invoke(ctx, "/filesync.File/Check", drpcEncoding_File_commonfile_fileproto_protos_file_proto{}, in, out)
@@ -169,6 +210,7 @@ type DRPCFileServer interface {
 	BlocksBind(context.Context, *BlocksBindRequest) (*Ok, error)
 	FilesDelete(context.Context, *FilesDeleteRequest) (*FilesDeleteResponse, error)
 	FilesInfo(context.Context, *FilesInfoRequest) (*FilesInfoResponse, error)
+	FilesGet(*FilesGetRequest, DRPCFile_FilesGetStream) error
 	Check(context.Context, *CheckRequest) (*CheckResponse, error)
 	SpaceInfo(context.Context, *SpaceInfoRequest) (*SpaceInfoResponse, error)
 	AccountInfo(context.Context, *AccountInfoRequest) (*AccountInfoResponse, error)
@@ -202,6 +244,10 @@ func (s *DRPCFileUnimplementedServer) FilesInfo(context.Context, *FilesInfoReque
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCFileUnimplementedServer) FilesGet(*FilesGetRequest, DRPCFile_FilesGetStream) error {
+	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 func (s *DRPCFileUnimplementedServer) Check(context.Context, *CheckRequest) (*CheckResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
@@ -224,7 +270,7 @@ func (s *DRPCFileUnimplementedServer) SpaceLimitSet(context.Context, *SpaceLimit
 
 type DRPCFileDescription struct{}
 
-func (DRPCFileDescription) NumMethods() int { return 11 }
+func (DRPCFileDescription) NumMethods() int { return 12 }
 
 func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -283,6 +329,15 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 					)
 			}, DRPCFileServer.FilesInfo, true
 	case 6:
+		return "/filesync.File/FilesGet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return nil, srv.(DRPCFileServer).
+					FilesGet(
+						in1.(*FilesGetRequest),
+						&drpcFile_FilesGetStream{in2.(drpc.Stream)},
+					)
+			}, DRPCFileServer.FilesGet, true
+	case 7:
 		return "/filesync.File/Check", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -291,7 +346,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*CheckRequest),
 					)
 			}, DRPCFileServer.Check, true
-	case 7:
+	case 8:
 		return "/filesync.File/SpaceInfo", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -300,7 +355,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*SpaceInfoRequest),
 					)
 			}, DRPCFileServer.SpaceInfo, true
-	case 8:
+	case 9:
 		return "/filesync.File/AccountInfo", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -309,7 +364,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*AccountInfoRequest),
 					)
 			}, DRPCFileServer.AccountInfo, true
-	case 9:
+	case 10:
 		return "/filesync.File/AccountLimitSet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -318,7 +373,7 @@ func (DRPCFileDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, 
 						in1.(*AccountLimitSetRequest),
 					)
 			}, DRPCFileServer.AccountLimitSet, true
-	case 10:
+	case 11:
 		return "/filesync.File/SpaceLimitSet", drpcEncoding_File_commonfile_fileproto_protos_file_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCFileServer).
@@ -430,6 +485,19 @@ func (x *drpcFile_FilesInfoStream) SendAndClose(m *FilesInfoResponse) error {
 		return err
 	}
 	return x.CloseSend()
+}
+
+type DRPCFile_FilesGetStream interface {
+	drpc.Stream
+	Send(*FilesGetResponse) error
+}
+
+type drpcFile_FilesGetStream struct {
+	drpc.Stream
+}
+
+func (x *drpcFile_FilesGetStream) Send(m *FilesGetResponse) error {
+	return x.MsgSend(m, drpcEncoding_File_commonfile_fileproto_protos_file_proto{})
 }
 
 type DRPCFile_CheckStream interface {

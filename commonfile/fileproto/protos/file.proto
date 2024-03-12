@@ -27,6 +27,8 @@ service File {
     rpc FilesDelete(FilesDeleteRequest) returns (FilesDeleteResponse);
     // FilesInfo return info by given files id
     rpc FilesInfo(FilesInfoRequest) returns (FilesInfoResponse);
+    // FilesGet returns a stream that streams all file ids in the space
+    rpc FilesGet(FilesGetRequest) returns (stream FilesGetResponse);
     // Check checks the connection and credentials
     rpc Check(CheckRequest) returns (CheckResponse);
     // SpaceInfo returns usage, limit, etc about space
@@ -106,6 +108,13 @@ message FileInfo {
     uint64 usageBytes = 2;
     uint32 cidsCount = 3;
 }
+
+message FilesGetRequest {}
+
+message FilesGetResponse {
+    string fileId = 1;
+}
+
 
 message CheckRequest {}
 
