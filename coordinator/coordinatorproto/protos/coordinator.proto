@@ -41,6 +41,8 @@ service Coordinator {
   rpc AclAddRecord(AclAddRecordRequest) returns (AclAddRecordResponse);
   // AclGetRecords gets acl records
   rpc AclGetRecords(AclGetRecordsRequest) returns (AclGetRecordsResponse);
+
+  rpc AccountLimitsSet(AccountLimitsSetRequest) returns (AccountLimitsSetResponse);
 }
 
 message SpaceSignRequest {
@@ -336,3 +338,14 @@ message AclGetRecordsRequest {
 message AclGetRecordsResponse {
   repeated bytes records = 1;
 }
+
+message AccountLimitsSetRequest {
+  string identity = 1;
+  string reason = 2;
+  uint64 fileStorageLimitBytes = 3;
+  uint32 spaceMembersRead = 4;
+  uint32 spaceMembersWrite = 5;
+}
+
+
+message AccountLimitsSetResponse {}
