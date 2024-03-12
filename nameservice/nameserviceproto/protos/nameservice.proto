@@ -9,14 +9,29 @@ message NameAvailableRequest {
   string fullName = 1;
 }
 
+message BatchNameAvailableRequest {
+  // Names including .any suffix
+  repeated string fullNames = 1;
+}
+
 message NameByAddressRequest {
   // EOA -> SCW -> name
   // A SCW Ethereum address that owns that name 
   string ownerScwEthAddress = 1;
 }
 
+message BatchNameByAddressRequest {
+  // EOA -> SCW -> name
+  // A SCW Ethereum address that owns that name 
+  repeated string ownerScwEthAddresses = 1;
+}
+
 message NameByAnyIdRequest {
   string anyAddress = 1;
+}
+
+message BatchNameByAnyIdRequest {
+  repeated string anyAddresses = 1;
 }
 
 message NameAvailableResponse {
@@ -42,21 +57,32 @@ message NameAvailableResponse {
   int64 nameExpires = 6;
 }
 
+message BatchNameAvailableResponse {
+  repeated NameAvailableResponse results = 1;
+}
+
 message NameByAddressResponse {
   bool found = 1;
 
   string name = 2;
 }
 
+message BatchNameByAddressResponse {
+  repeated NameByAddressResponse results = 1;
+}
+
 service Anyns {
   // Lookup: name -> address
   rpc IsNameAvailable(NameAvailableRequest) returns (NameAvailableResponse) {}
+  rpc BatchIsNameAvailable(BatchNameAvailableRequest) returns (BatchNameAvailableResponse) {}
 
   // Reverse lookup: address -> name
   rpc GetNameByAddress(NameByAddressRequest) returns (NameByAddressResponse) {}
+  rpc BatchGetNameByAddress(BatchNameByAddressRequest) returns (BatchNameByAddressResponse) {}
 
   // Reverse lookup: ANY ID -> name
   rpc GetNameByAnyId(NameByAnyIdRequest) returns (NameByAddressResponse) {}
+  rpc BatchGetNameByAnyId(BatchNameByAnyIdRequest) returns (BatchNameByAddressResponse) {}
 
   // Register new name for the user (on behalf of the user)
   // Anytype CAN only register names for users, but can not transfer or update them!

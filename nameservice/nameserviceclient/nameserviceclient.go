@@ -28,6 +28,11 @@ type AnyNsClientServiceBase interface {
 	GetNameByAddress(ctx context.Context, in *nsp.NameByAddressRequest) (out *nsp.NameByAddressResponse, err error)
 	GetNameByAnyId(ctx context.Context, in *nsp.NameByAnyIdRequest) (out *nsp.NameByAddressResponse, err error)
 
+	BatchIsNameAvailable(ctx context.Context, in *nsp.BatchNameAvailableRequest) (out *nsp.BatchNameAvailableResponse, err error)
+	// reverse resolve
+	BatchGetNameByAddress(ctx context.Context, in *nsp.BatchNameByAddressRequest) (out *nsp.BatchNameByAddressResponse, err error)
+	BatchGetNameByAnyId(ctx context.Context, in *nsp.BatchNameByAnyIdRequest) (out *nsp.BatchNameByAddressResponse, err error)
+
 	app.Component
 }
 
@@ -129,6 +134,37 @@ func (s *service) GetNameByAddress(ctx context.Context, in *nsp.NameByAddressReq
 func (s *service) GetNameByAnyId(ctx context.Context, in *nsp.NameByAnyIdRequest) (out *nsp.NameByAddressResponse, err error) {
 	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
 		if out, err = cl.GetNameByAnyId(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) BatchIsNameAvailable(ctx context.Context, in *nsp.BatchNameAvailableRequest) (out *nsp.BatchNameAvailableResponse, err error) {
+	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
+		if out, err = cl.BatchIsNameAvailable(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+// reverse resolve
+func (s *service) BatchGetNameByAddress(ctx context.Context, in *nsp.BatchNameByAddressRequest) (out *nsp.BatchNameByAddressResponse, err error) {
+	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
+		if out, err = cl.BatchGetNameByAddress(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) BatchGetNameByAnyId(ctx context.Context, in *nsp.BatchNameByAnyIdRequest) (out *nsp.BatchNameByAddressResponse, err error) {
+	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
+		if out, err = cl.BatchGetNameByAnyId(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil

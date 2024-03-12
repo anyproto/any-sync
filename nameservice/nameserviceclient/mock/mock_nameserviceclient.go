@@ -40,6 +40,51 @@ func (m *MockAnyNsClientServiceBase) EXPECT() *MockAnyNsClientServiceBaseMockRec
 	return m.recorder
 }
 
+// BatchGetNameByAddress mocks base method.
+func (m *MockAnyNsClientServiceBase) BatchGetNameByAddress(ctx context.Context, in *nameserviceproto.BatchNameByAddressRequest) (*nameserviceproto.BatchNameByAddressResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetNameByAddress", ctx, in)
+	ret0, _ := ret[0].(*nameserviceproto.BatchNameByAddressResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchGetNameByAddress indicates an expected call of BatchGetNameByAddress.
+func (mr *MockAnyNsClientServiceBaseMockRecorder) BatchGetNameByAddress(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetNameByAddress", reflect.TypeOf((*MockAnyNsClientServiceBase)(nil).BatchGetNameByAddress), ctx, in)
+}
+
+// BatchGetNameByAnyId mocks base method.
+func (m *MockAnyNsClientServiceBase) BatchGetNameByAnyId(ctx context.Context, in *nameserviceproto.BatchNameByAnyIdRequest) (*nameserviceproto.BatchNameByAddressResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetNameByAnyId", ctx, in)
+	ret0, _ := ret[0].(*nameserviceproto.BatchNameByAddressResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchGetNameByAnyId indicates an expected call of BatchGetNameByAnyId.
+func (mr *MockAnyNsClientServiceBaseMockRecorder) BatchGetNameByAnyId(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetNameByAnyId", reflect.TypeOf((*MockAnyNsClientServiceBase)(nil).BatchGetNameByAnyId), ctx, in)
+}
+
+// BatchIsNameAvailable mocks base method.
+func (m *MockAnyNsClientServiceBase) BatchIsNameAvailable(ctx context.Context, in *nameserviceproto.BatchNameAvailableRequest) (*nameserviceproto.BatchNameAvailableResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchIsNameAvailable", ctx, in)
+	ret0, _ := ret[0].(*nameserviceproto.BatchNameAvailableResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchIsNameAvailable indicates an expected call of BatchIsNameAvailable.
+func (mr *MockAnyNsClientServiceBaseMockRecorder) BatchIsNameAvailable(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchIsNameAvailable", reflect.TypeOf((*MockAnyNsClientServiceBase)(nil).BatchIsNameAvailable), ctx, in)
+}
+
 // GetNameByAddress mocks base method.
 func (m *MockAnyNsClientServiceBase) GetNameByAddress(ctx context.Context, in *nameserviceproto.NameByAddressRequest) (*nameserviceproto.NameByAddressResponse, error) {
 	m.ctrl.T.Helper()
@@ -164,6 +209,51 @@ func (m *MockAnyNsClientService) AdminRegisterName(ctx context.Context, in *name
 func (mr *MockAnyNsClientServiceMockRecorder) AdminRegisterName(ctx, in any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdminRegisterName", reflect.TypeOf((*MockAnyNsClientService)(nil).AdminRegisterName), ctx, in)
+}
+
+// BatchGetNameByAddress mocks base method.
+func (m *MockAnyNsClientService) BatchGetNameByAddress(ctx context.Context, in *nameserviceproto.BatchNameByAddressRequest) (*nameserviceproto.BatchNameByAddressResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetNameByAddress", ctx, in)
+	ret0, _ := ret[0].(*nameserviceproto.BatchNameByAddressResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchGetNameByAddress indicates an expected call of BatchGetNameByAddress.
+func (mr *MockAnyNsClientServiceMockRecorder) BatchGetNameByAddress(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetNameByAddress", reflect.TypeOf((*MockAnyNsClientService)(nil).BatchGetNameByAddress), ctx, in)
+}
+
+// BatchGetNameByAnyId mocks base method.
+func (m *MockAnyNsClientService) BatchGetNameByAnyId(ctx context.Context, in *nameserviceproto.BatchNameByAnyIdRequest) (*nameserviceproto.BatchNameByAddressResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetNameByAnyId", ctx, in)
+	ret0, _ := ret[0].(*nameserviceproto.BatchNameByAddressResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchGetNameByAnyId indicates an expected call of BatchGetNameByAnyId.
+func (mr *MockAnyNsClientServiceMockRecorder) BatchGetNameByAnyId(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetNameByAnyId", reflect.TypeOf((*MockAnyNsClientService)(nil).BatchGetNameByAnyId), ctx, in)
+}
+
+// BatchIsNameAvailable mocks base method.
+func (m *MockAnyNsClientService) BatchIsNameAvailable(ctx context.Context, in *nameserviceproto.BatchNameAvailableRequest) (*nameserviceproto.BatchNameAvailableResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchIsNameAvailable", ctx, in)
+	ret0, _ := ret[0].(*nameserviceproto.BatchNameAvailableResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchIsNameAvailable indicates an expected call of BatchIsNameAvailable.
+func (mr *MockAnyNsClientServiceMockRecorder) BatchIsNameAvailable(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchIsNameAvailable", reflect.TypeOf((*MockAnyNsClientService)(nil).BatchIsNameAvailable), ctx, in)
 }
 
 // CreateOperation mocks base method.
