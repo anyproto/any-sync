@@ -7,9 +7,10 @@ enum ErrCodes {
     Unexpected = 0;
     CIDNotFound = 1;
     Forbidden = 2;
-    SpaceLimitExceeded = 3;
+    LimitExceeded = 3;
     QuerySizeExceeded = 4;
     WrongHash = 5;
+    NotEnoughSpace = 6;
     ErrorOffset = 200;
 }
 
@@ -17,22 +18,30 @@ service File {
     // BlockGet gets one block from a server
     rpc BlockGet(BlockGetRequest) returns (BlockGetResponse);
     // BlockPush pushes one block to a server
-    rpc BlockPush(BlockPushRequest) returns (BlockPushResponse);
+    rpc BlockPush(BlockPushRequest) returns (Ok);
     // BlocksCheck checks is CIDs exists
     rpc BlocksCheck(BlocksCheckRequest) returns (BlocksCheckResponse);
     // BlocksBind binds CIDs to space
-    rpc BlocksBind(BlocksBindRequest) returns (BlocksBindResponse);
+    rpc BlocksBind(BlocksBindRequest) returns (Ok);
     // FilesDelete deletes files by id
     rpc FilesDelete(FilesDeleteRequest) returns (FilesDeleteResponse);
     // FilesInfo return info by given files id
     rpc FilesInfo(FilesInfoRequest) returns (FilesInfoResponse);
+    // FilesGet returns a stream that streams all file ids in the space
+    rpc FilesGet(FilesGetRequest) returns (stream FilesGetResponse);
     // Check checks the connection and credentials
     rpc Check(CheckRequest) returns (CheckResponse);
     // SpaceInfo returns usage, limit, etc about space
     rpc SpaceInfo(SpaceInfoRequest) returns (SpaceInfoResponse);
     // AccountInfo returns usage, limit, etc by all spaces
     rpc AccountInfo(AccountInfoRequest) returns (AccountInfoResponse);
+    // AccountLimitSet sets the account file storage limit (available only for nodeconf members)
+    rpc AccountLimitSet(AccountLimitSetRequest) returns (Ok);
+    // SpaceLimitSet sets the space limit. Limit 0 means space will use account limits.
+    rpc SpaceLimitSet(SpaceLimitSetRequest) returns (Ok);
 }
+
+message Ok {}
 
 message BlockGetRequest {
     string spaceId = 1;
@@ -50,9 +59,6 @@ message BlockPushRequest {
     bytes cid = 3;
     bytes data = 4;
 }
-
-message BlockPushResponse {}
-
 
 message BlocksCheckRequest {
     string spaceId = 1;
@@ -80,8 +86,6 @@ message BlocksBindRequest {
     repeated bytes cids = 3;
 }
 
-message BlocksBindResponse {}
-
 
 message FilesDeleteRequest {
     string spaceId = 1;
@@ -104,6 +108,15 @@ message FileInfo {
     uint64 usageBytes = 2;
     uint32 cidsCount = 3;
 }
+
+message FilesGetRequest {
+    string spaceId = 1;
+}
+
+message FilesGetResponse {
+    string fileId = 1;
+}
+
 
 message CheckRequest {}
 
@@ -129,8 +142,22 @@ message AccountInfoRequest {
 }
 
 message AccountInfoResponse {
+    // the shared limit excluding isolated spaces
     uint64 limitBytes = 1;
     uint64 totalUsageBytes = 2;
     uint64 totalCidsCount = 3;
     repeated SpaceInfoResponse spaces = 4;
+    // the total limit including isolated spaces
+    uint64 accountLimitBytes = 5;
+}
+
+
+message AccountLimitSetRequest {
+    string identity = 1;
+    uint64 limit = 2;
+}
+
+message SpaceLimitSetRequest {
+    string spaceId = 1;
+    uint64 limit = 2;
 }
