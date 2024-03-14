@@ -46,6 +46,7 @@ message Ok {}
 message BlockGetRequest {
     string spaceId = 1;
     bytes cid = 2;
+    bool wait = 3;
 }
 
 message BlockGetResponse {
