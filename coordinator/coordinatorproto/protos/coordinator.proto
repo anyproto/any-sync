@@ -60,6 +60,7 @@ enum ErrorCodes {
   SpaceNotExists = 4;
   SpaceLimitReached = 5;
   AccountDeleted = 6;
+  Forbidden = 7;
   ErrorOffset = 300;
 }
 
