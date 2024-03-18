@@ -48,7 +48,10 @@ func TestAclService_AddRecord(t *testing.T) {
 		fx.consCl.EXPECT().AddRecord(ctx, spaceId, inv.InviteRec).Return(expRes, nil)
 		fx.consCl.EXPECT().UnWatch(spaceId)
 
-		res, err := fx.AddRecord(ctx, spaceId, inv.InviteRec)
+		res, err := fx.AddRecord(ctx, spaceId, inv.InviteRec, Limits{
+			ReadMembers:  10,
+			WriteMembers: 10,
+		})
 		assert.Equal(t, expRes, res)
 		assert.NoError(t, err)
 
@@ -71,11 +74,16 @@ func TestAclService_AddRecord(t *testing.T) {
 		})
 		fx.consCl.EXPECT().UnWatch(spaceId)
 
-		res, err := fx.AddRecord(ctx, spaceId, inv.InviteRec)
+		res, err := fx.AddRecord(ctx, spaceId, inv.InviteRec, Limits{
+			ReadMembers:  10,
+			WriteMembers: 10,
+		})
 		assert.Nil(t, res)
 		assert.EqualError(t, err, testErr.Error())
 	})
-
+	t.Run("limit exceed", func(t *testing.T) {
+		// TODO:
+	})
 }
 
 func TestAclService_RecordsAfter(t *testing.T) {
