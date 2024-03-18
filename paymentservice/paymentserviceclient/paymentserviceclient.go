@@ -61,8 +61,7 @@ func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProc
 
 	// it will try to connect to the Payment Node
 	// please use "paymentProcessingNode" type of node in the config (in the network.nodes array)
-	peer, err := s.pool.Get(ctx, s.nodeconf.PaymentProcessingNodePeers()[0])
-
+	peer, err := s.pool.GetOneOf(ctx, s.nodeconf.PaymentProcessingNodePeers())
 	if err != nil {
 		return err
 	}
