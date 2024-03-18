@@ -16,4 +16,5 @@ var (
 	ErrSpaceNotExists       = errGroup.Register(errors.New("space not exists"), uint64(ErrorCodes_SpaceNotExists))
 	ErrSpaceLimitReached    = errGroup.Register(errors.New("space limit reached"), uint64(ErrorCodes_SpaceLimitReached))
 	ErrAccountIsDeleted     = errGroup.Register(errors.New("account is deleted"), uint64(ErrorCodes_AccountDeleted))
+	ErrForbidden            = errGroup.Register(errors.New("forbidden"), uint64(ErrorCodes_Forbidden))
 )

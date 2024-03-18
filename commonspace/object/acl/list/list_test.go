@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
@@ -394,4 +395,11 @@ func TestAclList_RequestRemove(t *testing.T) {
 	require.NotNil(t, accountState().keys[removeRec.Id].MetadataPubKey)
 	require.Nil(t, accountState().keys[removeRec.Id].ReadKey)
 	require.NotEmpty(t, accountState().keys[fx.ownerAcl.Id()])
+}
+
+func TestAclState_OwnerPubKey(t *testing.T) {
+	fx := newFixture(t)
+	pubKey, err := fx.ownerAcl.AclState().OwnerPubKey()
+	require.NoError(t, err)
+	assert.Equal(t, fx.ownerKeys.SignKey.GetPublic().Account(), pubKey.Account())
 }
