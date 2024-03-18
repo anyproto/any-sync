@@ -82,7 +82,13 @@ func TestAclService_AddRecord(t *testing.T) {
 		assert.EqualError(t, err, testErr.Error())
 	})
 	t.Run("limit exceed", func(t *testing.T) {
-		// TODO:
+		fx := newFixture(t)
+		defer fx.finish(t)
+		_, err := fx.AddRecord(ctx, spaceId, inv.InviteRec, Limits{
+			ReadMembers:  1,
+			WriteMembers: 1,
+		})
+		assert.ErrorIs(t, err, ErrLimitExceed)
 	})
 }
 
@@ -136,7 +142,7 @@ func TestAclService(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, res.IsOwner())
 	})
-	t.Run("ownerPUbKey", func(t *testing.T) {
+	t.Run("ownerPubKey", func(t *testing.T) {
 		res, err := fx.OwnerPubKey(ctx, spaceId)
 		require.NoError(t, err)
 		assert.Equal(t, ownerKeys.SignKey.GetPublic().Account(), res.Account())

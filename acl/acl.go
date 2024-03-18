@@ -83,12 +83,17 @@ func (as *aclService) get(ctx context.Context, spaceId string) (list.AclList, er
 }
 
 func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord, limits Limits) (result *consensusproto.RawRecordWithId, err error) {
+	if limits.ReadMembers <= 1 && limits.WriteMembers <= 1 {
+		return nil, ErrLimitExceed
+	}
+
 	acl, err := as.get(ctx, spaceId)
 	if err != nil {
 		return nil, err
 	}
 	acl.RLock()
 	defer acl.RUnlock()
+
 	err = acl.ValidateRawRecord(rec, func(state *list.AclState) error {
 		var readers, writers int
 		for _, acc := range state.CurrentAccounts() {
