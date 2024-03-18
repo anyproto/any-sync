@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_acl/mock_acl.go github.com/anyproto/any-sync/acl AclService
 //
-
 // Package mock_acl is a generated GoMock package.
 package mock_acl
 
@@ -13,6 +12,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	acl "github.com/anyproto/any-sync/acl"
 	app "github.com/anyproto/any-sync/app"
 	list "github.com/anyproto/any-sync/commonspace/object/acl/list"
 	consensusproto "github.com/anyproto/any-sync/consensus/consensusproto"
@@ -44,18 +44,18 @@ func (m *MockAclService) EXPECT() *MockAclServiceMockRecorder {
 }
 
 // AddRecord mocks base method.
-func (m *MockAclService) AddRecord(arg0 context.Context, arg1 string, arg2 *consensusproto.RawRecord) (*consensusproto.RawRecordWithId, error) {
+func (m *MockAclService) AddRecord(arg0 context.Context, arg1 string, arg2 *consensusproto.RawRecord, arg3 acl.Limits) (*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRecord", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "AddRecord", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*consensusproto.RawRecordWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddRecord indicates an expected call of AddRecord.
-func (mr *MockAclServiceMockRecorder) AddRecord(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockAclServiceMockRecorder) AddRecord(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRecord", reflect.TypeOf((*MockAclService)(nil).AddRecord), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRecord", reflect.TypeOf((*MockAclService)(nil).AddRecord), arg0, arg1, arg2, arg3)
 }
 
 // Close mocks base method.
