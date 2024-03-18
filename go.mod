@@ -37,7 +37,7 @@ require (
 	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3
 	golang.org/x/net v0.22.0
 	gopkg.in/yaml.v3 v3.0.1
-	storj.io/drpc v0.0.33
+	storj.io/drpc v0.0.34
 )
 
 require (
