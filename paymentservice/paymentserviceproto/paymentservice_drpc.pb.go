@@ -42,6 +42,11 @@ type DRPCAnyPaymentProcessingClient interface {
 
 	GetSubscriptionStatus(ctx context.Context, in *GetSubscriptionRequestSigned) (*GetSubscriptionResponse, error)
 	BuySubscription(ctx context.Context, in *BuySubscriptionRequestSigned) (*BuySubscriptionResponse, error)
+	FinalizeSubscription(ctx context.Context, in *FinalizeSubscriptionRequestSigned) (*FinalizeSubscriptionResponse, error)
+	GetSubscriptionPortalLink(ctx context.Context, in *GetSubscriptionPortalLinkRequestSigned) (*GetSubscriptionPortalLinkResponse, error)
+	GetVerificationEmail(ctx context.Context, in *GetVerificationEmailRequestSigned) (*GetVerificationEmailResponse, error)
+	VerifyEmail(ctx context.Context, in *VerifyEmailRequestSigned) (*VerifyEmailResponse, error)
+	GetAllTiers(ctx context.Context, in *GetTiersRequestSigned) (*GetTiersResponse, error)
 }
 
 type drpcAnyPaymentProcessingClient struct {
@@ -72,9 +77,59 @@ func (c *drpcAnyPaymentProcessingClient) BuySubscription(ctx context.Context, in
 	return out, nil
 }
 
+func (c *drpcAnyPaymentProcessingClient) FinalizeSubscription(ctx context.Context, in *FinalizeSubscriptionRequestSigned) (*FinalizeSubscriptionResponse, error) {
+	out := new(FinalizeSubscriptionResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing/FinalizeSubscription", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcAnyPaymentProcessingClient) GetSubscriptionPortalLink(ctx context.Context, in *GetSubscriptionPortalLinkRequestSigned) (*GetSubscriptionPortalLinkResponse, error) {
+	out := new(GetSubscriptionPortalLinkResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing/GetSubscriptionPortalLink", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcAnyPaymentProcessingClient) GetVerificationEmail(ctx context.Context, in *GetVerificationEmailRequestSigned) (*GetVerificationEmailResponse, error) {
+	out := new(GetVerificationEmailResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing/GetVerificationEmail", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcAnyPaymentProcessingClient) VerifyEmail(ctx context.Context, in *VerifyEmailRequestSigned) (*VerifyEmailResponse, error) {
+	out := new(VerifyEmailResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing/VerifyEmail", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcAnyPaymentProcessingClient) GetAllTiers(ctx context.Context, in *GetTiersRequestSigned) (*GetTiersResponse, error) {
+	out := new(GetTiersResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing/GetAllTiers", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCAnyPaymentProcessingServer interface {
 	GetSubscriptionStatus(context.Context, *GetSubscriptionRequestSigned) (*GetSubscriptionResponse, error)
 	BuySubscription(context.Context, *BuySubscriptionRequestSigned) (*BuySubscriptionResponse, error)
+	FinalizeSubscription(context.Context, *FinalizeSubscriptionRequestSigned) (*FinalizeSubscriptionResponse, error)
+	GetSubscriptionPortalLink(context.Context, *GetSubscriptionPortalLinkRequestSigned) (*GetSubscriptionPortalLinkResponse, error)
+	GetVerificationEmail(context.Context, *GetVerificationEmailRequestSigned) (*GetVerificationEmailResponse, error)
+	VerifyEmail(context.Context, *VerifyEmailRequestSigned) (*VerifyEmailResponse, error)
+	GetAllTiers(context.Context, *GetTiersRequestSigned) (*GetTiersResponse, error)
 }
 
 type DRPCAnyPaymentProcessingUnimplementedServer struct{}
@@ -87,9 +142,29 @@ func (s *DRPCAnyPaymentProcessingUnimplementedServer) BuySubscription(context.Co
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCAnyPaymentProcessingUnimplementedServer) FinalizeSubscription(context.Context, *FinalizeSubscriptionRequestSigned) (*FinalizeSubscriptionResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCAnyPaymentProcessingUnimplementedServer) GetSubscriptionPortalLink(context.Context, *GetSubscriptionPortalLinkRequestSigned) (*GetSubscriptionPortalLinkResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCAnyPaymentProcessingUnimplementedServer) GetVerificationEmail(context.Context, *GetVerificationEmailRequestSigned) (*GetVerificationEmailResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCAnyPaymentProcessingUnimplementedServer) VerifyEmail(context.Context, *VerifyEmailRequestSigned) (*VerifyEmailResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCAnyPaymentProcessingUnimplementedServer) GetAllTiers(context.Context, *GetTiersRequestSigned) (*GetTiersResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCAnyPaymentProcessingDescription struct{}
 
-func (DRPCAnyPaymentProcessingDescription) NumMethods() int { return 2 }
+func (DRPCAnyPaymentProcessingDescription) NumMethods() int { return 7 }
 
 func (DRPCAnyPaymentProcessingDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -111,6 +186,51 @@ func (DRPCAnyPaymentProcessingDescription) Method(n int) (string, drpc.Encoding,
 						in1.(*BuySubscriptionRequestSigned),
 					)
 			}, DRPCAnyPaymentProcessingServer.BuySubscription, true
+	case 2:
+		return "/AnyPaymentProcessing/FinalizeSubscription", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessingServer).
+					FinalizeSubscription(
+						ctx,
+						in1.(*FinalizeSubscriptionRequestSigned),
+					)
+			}, DRPCAnyPaymentProcessingServer.FinalizeSubscription, true
+	case 3:
+		return "/AnyPaymentProcessing/GetSubscriptionPortalLink", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessingServer).
+					GetSubscriptionPortalLink(
+						ctx,
+						in1.(*GetSubscriptionPortalLinkRequestSigned),
+					)
+			}, DRPCAnyPaymentProcessingServer.GetSubscriptionPortalLink, true
+	case 4:
+		return "/AnyPaymentProcessing/GetVerificationEmail", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessingServer).
+					GetVerificationEmail(
+						ctx,
+						in1.(*GetVerificationEmailRequestSigned),
+					)
+			}, DRPCAnyPaymentProcessingServer.GetVerificationEmail, true
+	case 5:
+		return "/AnyPaymentProcessing/VerifyEmail", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessingServer).
+					VerifyEmail(
+						ctx,
+						in1.(*VerifyEmailRequestSigned),
+					)
+			}, DRPCAnyPaymentProcessingServer.VerifyEmail, true
+	case 6:
+		return "/AnyPaymentProcessing/GetAllTiers", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessingServer).
+					GetAllTiers(
+						ctx,
+						in1.(*GetTiersRequestSigned),
+					)
+			}, DRPCAnyPaymentProcessingServer.GetAllTiers, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -146,6 +266,86 @@ type drpcAnyPaymentProcessing_BuySubscriptionStream struct {
 }
 
 func (x *drpcAnyPaymentProcessing_BuySubscriptionStream) SendAndClose(m *BuySubscriptionResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing_FinalizeSubscriptionStream interface {
+	drpc.Stream
+	SendAndClose(*FinalizeSubscriptionResponse) error
+}
+
+type drpcAnyPaymentProcessing_FinalizeSubscriptionStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing_FinalizeSubscriptionStream) SendAndClose(m *FinalizeSubscriptionResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing_GetSubscriptionPortalLinkStream interface {
+	drpc.Stream
+	SendAndClose(*GetSubscriptionPortalLinkResponse) error
+}
+
+type drpcAnyPaymentProcessing_GetSubscriptionPortalLinkStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing_GetSubscriptionPortalLinkStream) SendAndClose(m *GetSubscriptionPortalLinkResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing_GetVerificationEmailStream interface {
+	drpc.Stream
+	SendAndClose(*GetVerificationEmailResponse) error
+}
+
+type drpcAnyPaymentProcessing_GetVerificationEmailStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing_GetVerificationEmailStream) SendAndClose(m *GetVerificationEmailResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing_VerifyEmailStream interface {
+	drpc.Stream
+	SendAndClose(*VerifyEmailResponse) error
+}
+
+type drpcAnyPaymentProcessing_VerifyEmailStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing_VerifyEmailStream) SendAndClose(m *VerifyEmailResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing_GetAllTiersStream interface {
+	drpc.Stream
+	SendAndClose(*GetTiersResponse) error
+}
+
+type drpcAnyPaymentProcessing_GetAllTiersStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing_GetAllTiersStream) SendAndClose(m *GetTiersResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
 		return err
 	}

@@ -2,6 +2,7 @@ package nameserviceclient
 
 import (
 	"context"
+	"errors"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -25,6 +26,12 @@ type AnyNsClientServiceBase interface {
 	IsNameAvailable(ctx context.Context, in *nsp.NameAvailableRequest) (out *nsp.NameAvailableResponse, err error)
 	// reverse resolve
 	GetNameByAddress(ctx context.Context, in *nsp.NameByAddressRequest) (out *nsp.NameByAddressResponse, err error)
+	GetNameByAnyId(ctx context.Context, in *nsp.NameByAnyIdRequest) (out *nsp.NameByAddressResponse, err error)
+
+	BatchIsNameAvailable(ctx context.Context, in *nsp.BatchNameAvailableRequest) (out *nsp.BatchNameAvailableResponse, err error)
+	// reverse resolve
+	BatchGetNameByAddress(ctx context.Context, in *nsp.BatchNameByAddressRequest) (out *nsp.BatchNameByAddressResponse, err error)
+	BatchGetNameByAnyId(ctx context.Context, in *nsp.BatchNameByAnyIdRequest) (out *nsp.BatchNameByAddressResponse, err error)
 
 	app.Component
 }
@@ -33,6 +40,8 @@ type AnyNsClientService interface {
 	// AccountAbstractions methods:
 	GetUserAccount(ctx context.Context, in *nsp.GetUserAccountRequest) (out *nsp.UserAccount, err error)
 	AdminFundUserAccount(ctx context.Context, in *nsp.AdminFundUserAccountRequestSigned) (out *nsp.OperationResponse, err error)
+
+	AdminRegisterName(ctx context.Context, in *nsp.NameRegisterRequestSigned) (out *nsp.OperationResponse, err error)
 
 	GetOperation(ctx context.Context, in *nsp.GetOperationStatusRequest) (out *nsp.OperationResponse, err error)
 	CreateOperation(ctx context.Context, in *nsp.CreateUserOperationRequestSigned) (out *nsp.OperationResponse, err error)
@@ -60,9 +69,14 @@ func New() AnyNsClientService {
 }
 
 func (s *service) doClient(ctx context.Context, fn func(cl nsp.DRPCAnynsClient) error) error {
+	if len(s.nodeconf.NamingNodePeers()) == 0 {
+		log.Error("no namingNode peers configured")
+		return errors.New("no namingNode peers configured")
+	}
+
 	// it will try to connect to the Naming Node
 	// please enable "namingNode" type of node in the config (in the network.nodes array)
-	peer, err := s.pool.Get(ctx, s.nodeconf.NamingNodePeers()[0])
+	peer, err := s.pool.GetOneOf(ctx, s.nodeconf.NamingNodePeers())
 	log.Info("trying to connect to namingNode peer: ", zap.Any("peer", peer))
 
 	if err != nil {
@@ -117,6 +131,47 @@ func (s *service) GetNameByAddress(ctx context.Context, in *nsp.NameByAddressReq
 	return
 }
 
+func (s *service) GetNameByAnyId(ctx context.Context, in *nsp.NameByAnyIdRequest) (out *nsp.NameByAddressResponse, err error) {
+	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
+		if out, err = cl.GetNameByAnyId(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) BatchIsNameAvailable(ctx context.Context, in *nsp.BatchNameAvailableRequest) (out *nsp.BatchNameAvailableResponse, err error) {
+	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
+		if out, err = cl.BatchIsNameAvailable(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+// reverse resolve
+func (s *service) BatchGetNameByAddress(ctx context.Context, in *nsp.BatchNameByAddressRequest) (out *nsp.BatchNameByAddressResponse, err error) {
+	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
+		if out, err = cl.BatchGetNameByAddress(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) BatchGetNameByAnyId(ctx context.Context, in *nsp.BatchNameByAnyIdRequest) (out *nsp.BatchNameByAddressResponse, err error) {
+	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
+		if out, err = cl.BatchGetNameByAnyId(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
 // AA
 func (s *service) GetUserAccount(ctx context.Context, in *nsp.GetUserAccountRequest) (out *nsp.UserAccount, err error) {
 	err = s.doClientAA(ctx, func(cl nsp.DRPCAnynsAccountAbstractionClient) error {
@@ -131,6 +186,16 @@ func (s *service) GetUserAccount(ctx context.Context, in *nsp.GetUserAccountRequ
 func (s *service) AdminFundUserAccount(ctx context.Context, in *nsp.AdminFundUserAccountRequestSigned) (out *nsp.OperationResponse, err error) {
 	err = s.doClientAA(ctx, func(cl nsp.DRPCAnynsAccountAbstractionClient) error {
 		if out, err = cl.AdminFundUserAccount(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) AdminRegisterName(ctx context.Context, in *nsp.NameRegisterRequestSigned) (out *nsp.OperationResponse, err error) {
+	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
+		if out, err = cl.AdminNameRegisterSigned(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil
