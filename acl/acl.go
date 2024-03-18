@@ -3,6 +3,7 @@ package acl
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -22,12 +23,19 @@ const CName = "coordinator.acl"
 
 var log = logger.NewNamed(CName)
 
+var ErrLimitExceed = errors.New("limit exceed")
+
+type Limits struct {
+	ReadMembers  uint32
+	WriteMembers uint32
+}
+
 func New() AclService {
 	return &aclService{}
 }
 
 type AclService interface {
-	AddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (result *consensusproto.RawRecordWithId, err error)
+	AddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord, limits Limits) (result *consensusproto.RawRecordWithId, err error)
 	RecordsAfter(ctx context.Context, spaceId, aclHead string) (result []*consensusproto.RawRecordWithId, err error)
 	Permissions(ctx context.Context, identity crypto.PubKey, spaceId string) (res list.AclPermissions, err error)
 	OwnerPubKey(ctx context.Context, spaceId string) (ownerIdentity crypto.PubKey, err error)
@@ -74,14 +82,34 @@ func (as *aclService) get(ctx context.Context, spaceId string) (list.AclList, er
 	return aObj.AclList, nil
 }
 
-func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (result *consensusproto.RawRecordWithId, err error) {
+func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord, limits Limits) (result *consensusproto.RawRecordWithId, err error) {
+	if limits.ReadMembers <= 1 && limits.WriteMembers <= 1 {
+		return nil, ErrLimitExceed
+	}
+
 	acl, err := as.get(ctx, spaceId)
 	if err != nil {
 		return nil, err
 	}
 	acl.RLock()
 	defer acl.RUnlock()
-	err = acl.ValidateRawRecord(rec, nil)
+
+	err = acl.ValidateRawRecord(rec, func(state *list.AclState) error {
+		var readers, writers int
+		for _, acc := range state.CurrentAccounts() {
+			readers++
+			if acc.Permissions.CanWrite() {
+				writers++
+			}
+			if uint32(readers) > limits.ReadMembers {
+				return ErrLimitExceed
+			}
+			if uint32(writers) > limits.WriteMembers {
+				return ErrLimitExceed
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		return
 	}

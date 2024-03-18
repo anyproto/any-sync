@@ -48,7 +48,10 @@ func TestAclService_AddRecord(t *testing.T) {
 		fx.consCl.EXPECT().AddRecord(ctx, spaceId, inv.InviteRec).Return(expRes, nil)
 		fx.consCl.EXPECT().UnWatch(spaceId)
 
-		res, err := fx.AddRecord(ctx, spaceId, inv.InviteRec)
+		res, err := fx.AddRecord(ctx, spaceId, inv.InviteRec, Limits{
+			ReadMembers:  10,
+			WriteMembers: 10,
+		})
 		assert.Equal(t, expRes, res)
 		assert.NoError(t, err)
 
@@ -71,11 +74,22 @@ func TestAclService_AddRecord(t *testing.T) {
 		})
 		fx.consCl.EXPECT().UnWatch(spaceId)
 
-		res, err := fx.AddRecord(ctx, spaceId, inv.InviteRec)
+		res, err := fx.AddRecord(ctx, spaceId, inv.InviteRec, Limits{
+			ReadMembers:  10,
+			WriteMembers: 10,
+		})
 		assert.Nil(t, res)
 		assert.EqualError(t, err, testErr.Error())
 	})
-
+	t.Run("limit exceed", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		_, err := fx.AddRecord(ctx, spaceId, inv.InviteRec, Limits{
+			ReadMembers:  1,
+			WriteMembers: 1,
+		})
+		assert.ErrorIs(t, err, ErrLimitExceed)
+	})
 }
 
 func TestAclService_RecordsAfter(t *testing.T) {
@@ -128,7 +142,7 @@ func TestAclService(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, res.IsOwner())
 	})
-	t.Run("ownerPUbKey", func(t *testing.T) {
+	t.Run("ownerPubKey", func(t *testing.T) {
 		res, err := fx.OwnerPubKey(ctx, spaceId)
 		require.NoError(t, err)
 		assert.Equal(t, ownerKeys.SignKey.GetPublic().Account(), res.Account())

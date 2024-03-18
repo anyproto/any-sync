@@ -60,6 +60,7 @@ enum ErrorCodes {
   SpaceNotExists = 4;
   SpaceLimitReached = 5;
   AccountDeleted = 6;
+  Forbidden = 7;
   ErrorOffset = 300;
 }
 
@@ -76,10 +77,16 @@ enum SpacePermissions {
   SpacePermissionsOwner = 1;
 }
 
+message SpaceLimits {
+  uint32 readMembers = 1;
+  uint32 writeMembers = 2;
+}
+
 message SpaceStatusPayload {
   SpaceStatus status = 1;
   int64 deletionTimestamp = 2;
   SpacePermissions permissions = 3;
+  SpaceLimits limits = 4;
 }
 
 message SpaceSignResponse {
