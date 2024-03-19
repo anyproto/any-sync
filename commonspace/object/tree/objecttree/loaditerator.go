@@ -8,50 +8,67 @@ import (
 )
 
 type LoadIterator interface {
-	NextBatch(maxSize int) (batch []*treechangeproto.RawTreeChangeWithId, heads []string, err error)
+	NextBatch(maxSize int) (batch IteratorBatch, err error)
+}
+
+type IteratorBatch struct {
+	Batch        []*treechangeproto.RawTreeChangeWithId
+	Heads        []string
+	SnapshotPath []string
+	Root         *treechangeproto.RawTreeChangeWithId
 }
 
 type loadIterator struct {
-	loader     *rawChangeLoader
-	cache      map[string]rawCacheEntry
-	idStack    []string
-	heads      []string
-	lastHeads  []string
-	root       *Change
-	lastChange *Change
-	iter       *iterator
+	loader       *rawChangeLoader
+	cache        map[string]rawCacheEntry
+	idStack      []string
+	heads        []string
+	lastHeads    []string
+	snapshotPath []string
+	root         *Change
+	lastChange   *Change
+	iter         *iterator
+	isExhausted  bool
 }
 
-func newLoadIterator(loader *rawChangeLoader) *loadIterator {
+func newLoadIterator(loader *rawChangeLoader, snapshotPath []string) *loadIterator {
 	return &loadIterator{
-		loader: loader,
-		cache:  make(map[string]rawCacheEntry),
+		loader:       loader,
+		cache:        make(map[string]rawCacheEntry),
+		snapshotPath: snapshotPath,
 	}
 }
 
-func (l *loadIterator) NextBatch(maxSize int) (batch []*treechangeproto.RawTreeChangeWithId, heads []string, err error) {
+func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 	l.iter = newIterator()
 	defer freeIterator(l.iter)
 	curSize := 0
-	heads = l.lastHeads
-	l.iter.iterateSkip(l.root, l.lastChange, func(c *Change) (isContinue bool) {
+	batch.Root = l.loader.Root()
+	batch.Heads = l.lastHeads
+	batch.SnapshotPath = l.snapshotPath
+	if l.isExhausted {
+		return
+	}
+	l.isExhausted = true
+	l.iter.iterateSkip(l.root, l.lastChange, true, func(c *Change) (isContinue bool) {
+		l.lastChange = c
 		rawEntry := l.cache[c.Id]
 		if rawEntry.removed {
 			return true
 		}
 		if curSize+rawEntry.size > maxSize {
-			l.lastChange = c
+			l.isExhausted = false
 			return false
 		}
 		curSize += rawEntry.size
-		batch = append(batch, rawEntry.rawChange)
-		heads = slice.DiscardFromSlice(heads, func(s string) bool {
+		batch.Batch = append(batch.Batch, rawEntry.rawChange)
+		batch.Heads = slice.DiscardFromSlice(batch.Heads, func(s string) bool {
 			return slices.Contains(c.PreviousIds, s)
 		})
-		heads = append(heads, c.Id)
+		batch.Heads = append(batch.Heads, c.Id)
 		return true
 	})
-	l.lastHeads = heads
+	l.lastHeads = batch.Heads
 	return
 }
 

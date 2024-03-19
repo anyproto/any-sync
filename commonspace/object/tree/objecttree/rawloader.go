@@ -256,3 +256,8 @@ func (r *rawChangeLoader) loadEntry(id string) (entry rawCacheEntry, err error) 
 	}
 	return
 }
+
+func (r *rawChangeLoader) Root() *treechangeproto.RawTreeChangeWithId {
+	root, _ := r.treeStorage.Root()
+	return root
+}

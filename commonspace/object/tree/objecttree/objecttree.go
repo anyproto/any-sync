@@ -77,7 +77,7 @@ type ObjectTree interface {
 	SnapshotPath() []string
 	ChangesAfterCommonSnapshot(snapshotPath, heads []string) ([]*treechangeproto.RawTreeChangeWithId, error)
 	ChangesAfterCommonSnapshotLoader(snapshotPath, heads []string) (LoadIterator, error)
-	
+
 	Storage() treestorage.TreeStorage
 
 	AddContent(ctx context.Context, content SignableChangeContent) (AddResult, error)
@@ -664,7 +664,7 @@ func (ot *objectTree) ChangesAfterCommonSnapshotLoader(theirPath, theirHeads []s
 		}
 	}
 
-	iter := newLoadIterator(ot.rawChangeLoader)
+	iter := newLoadIterator(ot.rawChangeLoader, ourPath)
 	err = iter.load(commonSnapshot, ot.tree.headIds, theirHeads)
 	if err != nil {
 		return nil, err

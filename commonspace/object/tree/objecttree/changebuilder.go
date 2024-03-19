@@ -2,10 +2,12 @@ package objecttree
 
 import (
 	"errors"
+
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
-	"github.com/gogo/protobuf/proto"
 )
 
 var ErrEmptyChange = errors.New("change payload should not be empty")
@@ -60,6 +62,7 @@ type newChangeFunc = func(id string, identity crypto.PubKey, ch *treechangeproto
 type changeBuilder struct {
 	rootChange *treechangeproto.RawTreeChangeWithId
 	keys       crypto.KeyStorage
+	rawTreeCh  *treechangeproto.RawTreeChange
 	newChange  newChangeFunc
 }
 
@@ -81,7 +84,9 @@ func (c *changeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWit
 		}
 	}
 
-	raw := &treechangeproto.RawTreeChange{} // TODO: sync pool
+	c.rawTreeCh.Signature = c.rawTreeCh.Signature[:0]
+	c.rawTreeCh.Payload = c.rawTreeCh.Payload[:0]
+	raw := c.rawTreeCh
 	err = proto.Unmarshal(rawIdChange.GetRawChange(), raw)
 	if err != nil {
 		return

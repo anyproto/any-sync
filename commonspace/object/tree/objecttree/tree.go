@@ -402,18 +402,6 @@ func (t *Tree) iterate(start *Change, f func(c *Change) (isContinue bool)) {
 	it.iterate(start, f)
 }
 
-func (t *Tree) iterateSkip(start *Change, skipBefore *Change, f func(c *Change) (isContinue bool)) {
-	it := newIterator()
-	defer freeIterator(it)
-	it.iterateSkip(start, skipBefore, f)
-}
-
-func (t *Tree) IterateSkip(startId string, skipBeforeId string, f func(c *Change) (isContinue bool)) {
-	it := newIterator()
-	defer freeIterator(it)
-	it.iterateSkip(t.attached[startId], t.attached[skipBeforeId], f)
-}
-
 func (t *Tree) Iterate(startId string, f func(c *Change) (isContinue bool)) {
 	t.iterate(t.attached[startId], f)
 }
