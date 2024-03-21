@@ -97,6 +97,9 @@ func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consen
 	err = acl.ValidateRawRecord(rec, func(state *list.AclState) error {
 		var readers, writers int
 		for _, acc := range state.CurrentAccounts() {
+			if acc.Permissions.NoPermissions() {
+				continue
+			}
 			readers++
 			if acc.Permissions.CanWrite() {
 				writers++
