@@ -302,6 +302,28 @@ func (c *coordinatorClient) AccountLimitsSet(ctx context.Context, req *coordinat
 	})
 }
 
+func (c *coordinatorClient) SpaceMakeShareable(ctx context.Context, spaceId string) (err error) {
+	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		if _, err := cl.SpaceMakeShareable(ctx, &coordinatorproto.SpaceMakeShareableRequest{
+			SpaceId: spaceId,
+		}); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+}
+
+func (c *coordinatorClient) SpaceMakeUnshareable(ctx context.Context, spaceId string) (err error) {
+	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		if _, err := cl.SpaceMakeUnshareable(ctx, &coordinatorproto.SpaceMakeUnshareableRequest{
+			SpaceId: spaceId,
+		}); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+}
+
 func (c *coordinatorClient) doClient(ctx context.Context, f func(cl coordinatorproto.DRPCCoordinatorClient) error) error {
 	p, err := c.getPeer(ctx)
 	if err != nil {
