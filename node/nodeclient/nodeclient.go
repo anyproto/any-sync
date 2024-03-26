@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_nodeclient/mock_nodeclient.go github.com/anyproto/any-sync/node/nodeclient NodeClient
 package nodeclient
 
 import (
