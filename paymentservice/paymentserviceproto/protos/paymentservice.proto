@@ -187,11 +187,36 @@ message VerifyEmailRequestSigned {
   bytes signature = 2;
 }
 
+message IsNameValidRequest {
+  int32 requestedTier = 1;
+  string requestedAnyName = 2;
+}
+
+message IsNameValidResponse {
+  Code code = 1;
+  string description = 2;
+
+  enum Code {
+      Valid = 0;
+      NoDotAny = 1;
+      TooShort = 2;
+      TooLong = 3;
+      HasInvalidChars = 4;
+      TierFeatureNoName = 5;
+      // if everything is fine - "name is already taken" check should be done in the NS
+      // see IsNameAvailable()
+  }
+}
+
 // NOTICE:
 // 1 - User can not ask for a payment/other links on behalf of another user (a signature is required)
 // 2 - Admin can do that on behalf of any user
 service AnyPaymentProcessing {
   rpc GetSubscriptionStatus(GetSubscriptionRequestSigned) returns (GetSubscriptionResponse) {}
+
+  // Check if the requested name is valid for the requested tier
+  // before requesting a payment link and paying 
+  rpc IsNameValid(IsNameValidRequest) returns (IsNameValidResponse) {}
 
   // Save a new BillingID to DB, and return a payment link.
   // You can call BuySubscription multiple times even if current payment is not processed yet 

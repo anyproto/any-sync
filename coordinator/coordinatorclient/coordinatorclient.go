@@ -261,7 +261,7 @@ func (c *coordinatorClient) AclAddRecord(ctx context.Context, spaceId string, re
 			Payload: recordData,
 		})
 		if err != nil {
-			return err
+			return rpcerr.Unwrap(err)
 		}
 		res = &consensusproto.RawRecordWithId{
 			Payload: resp.Payload,
@@ -279,7 +279,7 @@ func (c *coordinatorClient) AclGetRecords(ctx context.Context, spaceId, aclHead 
 			AclHead: aclHead,
 		})
 		if err != nil {
-			return err
+			return rpcerr.Unwrap(err)
 		}
 		res = make([]*consensusproto.RawRecordWithId, len(resp.Records))
 		for i, rec := range resp.Records {
@@ -295,8 +295,10 @@ func (c *coordinatorClient) AclGetRecords(ctx context.Context, spaceId, aclHead 
 
 func (c *coordinatorClient) AccountLimitsSet(ctx context.Context, req *coordinatorproto.AccountLimitsSetRequest) error {
 	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
-		_, err := cl.AccountLimitsSet(ctx, req)
-		return err
+		if _, err := cl.AccountLimitsSet(ctx, req); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
 	})
 }
 

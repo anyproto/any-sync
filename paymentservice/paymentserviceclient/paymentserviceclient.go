@@ -23,6 +23,7 @@ var log = logger.NewNamed(CName)
  */
 type AnyPpClientService interface {
 	GetSubscriptionStatus(ctx context.Context, in *pp.GetSubscriptionRequestSigned) (out *pp.GetSubscriptionResponse, err error)
+	IsNameValid(ctx context.Context, in *pp.IsNameValidRequest) (out *pp.IsNameValidResponse, err error)
 	BuySubscription(ctx context.Context, in *pp.BuySubscriptionRequestSigned) (out *pp.BuySubscriptionResponse, err error)
 	GetSubscriptionPortalLink(ctx context.Context, in *pp.GetSubscriptionPortalLinkRequestSigned) (out *pp.GetSubscriptionPortalLinkResponse, err error)
 	GetVerificationEmail(ctx context.Context, in *pp.GetVerificationEmailRequestSigned) (out *pp.GetVerificationEmailResponse, err error)
@@ -138,6 +139,16 @@ func (s *service) FinalizeSubscription(ctx context.Context, in *pp.FinalizeSubsc
 func (s *service) GetAllTiers(ctx context.Context, in *pp.GetTiersRequestSigned) (out *pp.GetTiersResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
 		if out, err = cl.GetAllTiers(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) IsNameValid(ctx context.Context, in *pp.IsNameValidRequest) (out *pp.IsNameValidResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
+		if out, err = cl.IsNameValid(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil
