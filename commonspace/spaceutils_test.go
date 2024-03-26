@@ -379,6 +379,14 @@ var _ coordinatorclient.CoordinatorClient = (*mockCoordinatorClient)(nil)
 type mockCoordinatorClient struct {
 }
 
+func (m mockCoordinatorClient) SpaceMakeShareable(ctx context.Context, spaceId string) (err error) {
+	return nil
+}
+
+func (m mockCoordinatorClient) SpaceMakeUnshareable(ctx context.Context, spaceId string) (err error) {
+	return nil
+}
+
 func (m mockCoordinatorClient) AccountLimitsSet(ctx context.Context, req *coordinatorproto.AccountLimitsSetRequest) error {
 	return nil
 }
