@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_aclclient/mock_aclclient.go github.com/anyproto/any-sync/commonspace/acl/aclclient AclJoiningClient,AclSpaceClient
 package aclclient
 
 import (
