@@ -15,6 +15,10 @@ import (
 
 const CName = "common.node.nodeclient"
 
+func New() NodeClient {
+	return &nodeClient{}
+}
+
 type NodeClient interface {
 	app.Component
 	AclGetRecords(ctx context.Context, spaceId, aclHead string) (recs []*consensusproto.RawRecordWithId, err error)
@@ -37,7 +41,7 @@ func (c *nodeClient) Name() (name string) {
 }
 
 func (c *nodeClient) AclGetRecords(ctx context.Context, spaceId, aclHead string) (recs []*consensusproto.RawRecordWithId, err error) {
-	err = c.doClient(ctx, spaceId, func(cl spacesyncproto.DRPCSpaceSyncClient) error {
+	err = clientDo(c, ctx, spaceId, func(cl spacesyncproto.DRPCSpaceSyncClient) error {
 		resp, err := cl.AclGetRecords(ctx, &spacesyncproto.AclGetRecordsRequest{
 			SpaceId: spaceId,
 			AclHead: aclHead,
@@ -62,7 +66,7 @@ func (c *nodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *cons
 	if err != nil {
 		return
 	}
-	err = c.doClient(ctx, spaceId, func(cl spacesyncproto.DRPCSpaceSyncClient) error {
+	err = clientDo(c, ctx, spaceId, func(cl spacesyncproto.DRPCSpaceSyncClient) error {
 		res, err := cl.AclAddRecord(ctx, &spacesyncproto.AclAddRecordRequest{
 			SpaceId: spaceId,
 			Payload: data,
@@ -78,6 +82,8 @@ func (c *nodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *cons
 	})
 	return
 }
+
+var clientDo = (*nodeClient).doClient
 
 func (c *nodeClient) doClient(ctx context.Context, spaceId string, f func(cl spacesyncproto.DRPCSpaceSyncClient) error) error {
 	p, err := c.pool.GetOneOf(ctx, c.nodeConf.NodeIds(spaceId))
