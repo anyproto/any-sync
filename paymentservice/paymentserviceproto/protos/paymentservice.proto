@@ -208,6 +208,32 @@ message IsNameValidResponse {
   }
 }
 
+enum ErrorCodes {
+  Unexpected = 0;
+
+  EthAddressEmpty = 1;
+  InvalidSignature = 2;
+  TierWrong = 3;
+  TierNotFound = 4;
+  TierInactive = 5;
+  PaymentMethodWrong = 6;
+  BadAnyName = 7;
+  Unknown = 8;
+
+  SubsAlreadyActive = 9;
+  SubsNotFound = 10;
+  SubsWrongState = 11;
+
+  EmailWrongFormat = 12;
+  EmailAlreadyVerified = 13;
+  EmailAlreadySent = 14;
+  EmailFailedToSend = 15;
+  EmailExpired = 16;
+  EmailWrongCode = 17;
+
+  ErrorOffset = 600;
+}
+
 // NOTICE:
 // 1 - User can not ask for a payment/other links on behalf of another user (a signature is required)
 // 2 - Admin can do that on behalf of any user
