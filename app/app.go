@@ -4,14 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/anyproto/any-sync/app/logger"
-	"go.uber.org/zap"
 	"os"
 	"runtime"
 	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
+
+	"github.com/anyproto/any-sync/app/logger"
 )
 
 var (
@@ -227,7 +229,7 @@ func (app *App) Start(ctx context.Context) (err error) {
 		for i := idx; i >= 0; i-- {
 			if serviceClose, ok := app.components[i].(ComponentRunnable); ok {
 				if e := serviceClose.Close(ctx); e != nil {
-					log.Info("close error", zap.String("component", serviceClose.Name()), zap.Error(e))
+					log.Error("close error", zap.String("component", serviceClose.Name()), zap.Error(e))
 				}
 			}
 		}
@@ -235,6 +237,7 @@ func (app *App) Start(ctx context.Context) (err error) {
 
 	for i, s := range app.components {
 		if err = s.Init(app); err != nil {
+			log.Error("can't init service", zap.String("service", s.Name()), zap.Error(err))
 			closeServices(i)
 			return fmt.Errorf("can't init service '%s': %w", s.Name(), err)
 		}
@@ -244,6 +247,7 @@ func (app *App) Start(ctx context.Context) (err error) {
 		if serviceRun, ok := s.(ComponentRunnable); ok {
 			start := time.Now()
 			if err = serviceRun.Run(ctx); err != nil {
+				log.Error("can't run service", zap.String("service", serviceRun.Name()), zap.Error(err))
 				closeServices(i)
 				return fmt.Errorf("can't run service '%s': %w", serviceRun.Name(), err)
 			}
