@@ -87,19 +87,24 @@ func TestLimiter_Synchronous(t *testing.T) {
 	// now we should be able to call again, because we cleared the map
 	err = wrapped.HandleRPC(firstStream, "rpc")
 	require.NoError(t, err)
-	// but limit of 1 sec is not enough
+	// but limit of 1 sec is not enough to clean the map
 	time.Sleep(1 * time.Millisecond)
 	err = wrapped.HandleRPC(firstStream, "rpc")
 	require.Equal(t, ErrLimitExceeded, err)
 }
 
-func TestLimiter_Concurrent(t *testing.T) {
+func TestLimiter_Concurrent_NoBursts(t *testing.T) {
 	lim := New().(*limiter)
 	handler := &mockHandler{}
-	tps := 10
+	var (
+		targetRps = 10
+		// peerRps should be greater than targetRps
+		peerRps  = 100
+		reqDelay = time.Duration(1000/peerRps) * time.Millisecond
+	)
 	lim.cfg = Config{
 		DefaultTokens: Tokens{
-			TokensPerSecond: tps,
+			TokensPerSecond: targetRps,
 			MaxTokens:       1,
 		},
 	}
@@ -109,15 +114,15 @@ func TestLimiter_Concurrent(t *testing.T) {
 	waitFirst := make(chan struct{})
 	waitSecond := make(chan struct{})
 	go func() {
-		for i := 0; i < 100; i++ {
-			time.Sleep(10 * time.Millisecond)
+		for i := 0; i < peerRps; i++ {
+			time.Sleep(reqDelay)
 			_ = wrapped.HandleRPC(firstStream, "rpc")
 		}
 		close(waitFirst)
 	}()
 	go func() {
-		for i := 0; i < 100; i++ {
-			time.Sleep(10 * time.Millisecond)
+		for i := 0; i < peerRps; i++ {
+			time.Sleep(reqDelay)
 			_ = wrapped.HandleRPC(secondStream, "rpc")
 		}
 		close(waitSecond)
@@ -125,6 +130,51 @@ func TestLimiter_Concurrent(t *testing.T) {
 	<-waitFirst
 	<-waitSecond
 	// 2 for number of peers and 2 for error margin (delays etc)
-	maxCalls := 2 * 2 * tps
+	maxCalls := 2 * 2 * targetRps
 	require.Greater(t, maxCalls, int(handler.calls.Load()))
+}
+
+func TestLimiter_Concurrent_Bursts(t *testing.T) {
+	lim := New().(*limiter)
+	handler := &mockHandler{}
+	var (
+		targetRps = 10
+		// bursts are not affected by rps limit
+		burst = 10
+		// peerRps should be greater than targetRps + burst
+		peerRps  = 100
+		reqDelay = time.Duration(1000/peerRps) * time.Millisecond
+	)
+	lim.cfg = Config{
+		DefaultTokens: Tokens{
+			TokensPerSecond: targetRps,
+			MaxTokens:       burst,
+		},
+	}
+	wrapped := lim.WrapDRPCHandler(handler)
+	firstStream := mockStream{ctx: peer.CtxWithPeerId(ctx, "peer1")}
+	secondStream := mockStream{ctx: peer.CtxWithPeerId(ctx, "peer2")}
+	waitFirst := make(chan struct{})
+	waitSecond := make(chan struct{})
+	go func() {
+		for i := 0; i < peerRps; i++ {
+			time.Sleep(reqDelay)
+			_ = wrapped.HandleRPC(firstStream, "rpc")
+		}
+		close(waitFirst)
+	}()
+	go func() {
+		for i := 0; i < peerRps; i++ {
+			time.Sleep(reqDelay)
+			_ = wrapped.HandleRPC(secondStream, "rpc")
+		}
+		close(waitSecond)
+	}()
+	<-waitFirst
+	<-waitSecond
+	// 2 for number of peers and 2 for error margin (delays etc)
+	maxCalls := 2 * 2 * (targetRps + burst)
+	minCalls := 2 * (targetRps + burst)
+	require.Greater(t, maxCalls, int(handler.calls.Load()))
+	require.LessOrEqual(t, minCalls, int(handler.calls.Load()))
 }
