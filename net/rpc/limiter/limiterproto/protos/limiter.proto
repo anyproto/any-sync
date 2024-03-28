@@ -4,5 +4,5 @@ option go_package = "net/rpc/limiter/limiterproto";
 
 enum ErrCodes {
     RateLimitExceeded = 0;
-    ErrorOffset = 600;
+    ErrorOffset = 700;
 }
