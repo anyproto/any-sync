@@ -60,8 +60,8 @@ message GetSubscriptionRequestSigned {
 }
 
 message GetSubscriptionResponse {
-  // was SubscriptionTier before, changed to int32 to allow us to use dynamic tiers
-  int32 tier = 1;
+  // was SubscriptionTier before, changed to uint32 to allow us to use dynamic tiers
+  uint32 tier = 1;
   SubscriptionStatus status = 2;
   uint64 dateStarted = 3;
   uint64 dateEnds = 4;
@@ -82,8 +82,8 @@ message BuySubscriptionRequest {
   // this is required to reserve a name for the owner (later that is done by user)
   // in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
   string ownerEthAddress = 2;
-  // was SubscriptionTier before, changed to int32 to allow us to use dynamic tiers
-  int32 requestedTier = 3;
+  // was SubscriptionTier before, changed to uint32 to allow us to use dynamic tiers
+  uint32 requestedTier = 3;
   PaymentMethod paymentMethod = 4;
   // if empty - then no name requested
   // if non-empty - PP node will register that name on behalf of the user
@@ -188,7 +188,7 @@ message VerifyEmailRequestSigned {
 }
 
 message IsNameValidRequest {
-  int32 requestedTier = 1;
+  uint32 requestedTier = 1;
   string requestedAnyName = 2;
 }
 
@@ -206,6 +206,32 @@ message IsNameValidResponse {
       // if everything is fine - "name is already taken" check should be done in the NS
       // see IsNameAvailable()
   }
+}
+
+enum ErrorCodes {
+  Unexpected = 0;
+
+  EthAddressEmpty = 1;
+  InvalidSignature = 2;
+  TierWrong = 3;
+  TierNotFound = 4;
+  TierInactive = 5;
+  PaymentMethodWrong = 6;
+  BadAnyName = 7;
+  Unknown = 8;
+
+  SubsAlreadyActive = 9;
+  SubsNotFound = 10;
+  SubsWrongState = 11;
+
+  EmailWrongFormat = 12;
+  EmailAlreadyVerified = 13;
+  EmailAlreadySent = 14;
+  EmailFailedToSend = 15;
+  EmailExpired = 16;
+  EmailWrongCode = 17;
+
+  ErrorOffset = 600;
 }
 
 // NOTICE:
