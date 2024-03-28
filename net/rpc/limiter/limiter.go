@@ -2,7 +2,6 @@ package limiter
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"sync"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/rpc/limiter/limiterproto"
 	"github.com/anyproto/any-sync/util/periodicsync"
 )
 
@@ -22,11 +22,7 @@ const (
 	checkTimeout      = 2 * time.Second
 )
 
-var (
-	log = logger.NewNamed(CName)
-
-	ErrLimitExceeded = errors.New("rate limit exceeded")
-)
+var log = logger.NewNamed(CName)
 
 const CName = "common.rpc.limiter"
 
@@ -104,7 +100,7 @@ func (h *limiter) HandleRPC(stream drpc.Stream, rpc string) (err error) {
 	}
 	lim := h.getPeerLimiter(peerId, rpc)
 	if !lim.Allow() {
-		return ErrLimitExceeded
+		return limiterproto.ErrLimitExceeded
 	}
 	return h.Handler.HandleRPC(stream, rpc)
 }

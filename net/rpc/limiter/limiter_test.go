@@ -10,6 +10,7 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/rpc/limiter/limiterproto"
 )
 
 var ctx = context.Background()
@@ -71,7 +72,7 @@ func TestLimiter_Synchronous(t *testing.T) {
 	err := wrapped.HandleRPC(firstStream, "rpc")
 	require.NoError(t, err)
 	err = wrapped.HandleRPC(firstStream, "rpc")
-	require.Equal(t, ErrLimitExceeded, err)
+	require.Equal(t, limiterproto.ErrLimitExceeded, err)
 	// second stream should not affect the first one
 	secondStream := mockStream{ctx: peer.CtxWithPeerId(ctx, "peer2")}
 	err = wrapped.HandleRPC(secondStream, "rpc")
@@ -90,7 +91,7 @@ func TestLimiter_Synchronous(t *testing.T) {
 	// but limit of 1 sec is not enough to clean the map
 	time.Sleep(1 * time.Millisecond)
 	err = wrapped.HandleRPC(firstStream, "rpc")
-	require.Equal(t, ErrLimitExceeded, err)
+	require.Equal(t, limiterproto.ErrLimitExceeded, err)
 }
 
 func TestLimiter_Concurrent_NoBursts(t *testing.T) {
