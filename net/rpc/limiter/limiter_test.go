@@ -96,9 +96,10 @@ func TestLimiter_Synchronous(t *testing.T) {
 func TestLimiter_Concurrent(t *testing.T) {
 	lim := New().(*limiter)
 	handler := &mockHandler{}
+	tps := 10
 	lim.cfg = Config{
 		DefaultTokens: Tokens{
-			TokensPerSecond: 10,
+			TokensPerSecond: tps,
 			MaxTokens:       1,
 		},
 	}
@@ -123,5 +124,7 @@ func TestLimiter_Concurrent(t *testing.T) {
 	}()
 	<-waitFirst
 	<-waitSecond
-	require.Greater(t, 50, int(handler.calls.Load()))
+	// 2 for number of peers and 2 for error margin (delays etc)
+	maxCalls := 2 * 2 * tps
+	require.Greater(t, maxCalls, int(handler.calls.Load()))
 }
