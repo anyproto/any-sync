@@ -2,12 +2,15 @@ package server
 
 import (
 	"context"
+	"net"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/rpc"
+	"github.com/anyproto/any-sync/net/rpc/limiter"
+
 	"go.uber.org/zap"
-	"net"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcmanager"
 	"storj.io/drpc/drpcmux"
@@ -34,8 +37,9 @@ type DRPCServer interface {
 type drpcServer struct {
 	drpcServer *drpcserver.Server
 	*drpcmux.Mux
-	config rpc.Config
-	metric metric.Metric
+	config  rpc.Config
+	metric  metric.Metric
+	limiter limiter.RpcLimiter
 }
 
 type DRPCHandlerWrapper func(handler drpc.Handler) drpc.Handler
@@ -47,12 +51,16 @@ func (s *drpcServer) Name() (name string) {
 func (s *drpcServer) Init(a *app.App) (err error) {
 	s.config = a.MustComponent("config").(rpc.ConfigGetter).GetDrpc()
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
+	s.limiter, _ = a.Component(limiter.CName).(limiter.RpcLimiter)
 	s.Mux = drpcmux.New()
 
 	var handler drpc.Handler
 	handler = s
 	if s.metric != nil {
 		handler = s.metric.WrapDRPCHandler(s)
+	}
+	if s.limiter != nil {
+		handler = s.limiter.WrapDRPCHandler(handler)
 	}
 	bufSize := s.config.Stream.MaxMsgSizeMb * (1 << 20)
 	s.drpcServer = drpcserver.NewWithOptions(handler, drpcserver.Options{Manager: drpcmanager.Options{
