@@ -57,7 +57,7 @@ func (s *drpcServer) Init(a *app.App) (err error) {
 	var handler drpc.Handler
 	handler = s
 	if s.metric != nil {
-		handler = s.metric.WrapDRPCHandler(s)
+		handler = s.metric.WrapDRPCHandler(handler)
 	}
 	if s.limiter != nil {
 		handler = s.limiter.WrapDRPCHandler(handler)
