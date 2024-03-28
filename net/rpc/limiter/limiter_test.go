@@ -47,7 +47,7 @@ func (m *mockHandler) HandleRPC(stream drpc.Stream, rpc string) (err error) {
 	return nil
 }
 
-func TestLimiter_Single(t *testing.T) {
+func TestLimiter_Synchronous(t *testing.T) {
 	lim := New().(*limiter)
 	handler := &mockHandler{}
 	lim.cfg = Config{
@@ -91,4 +91,37 @@ func TestLimiter_Single(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 	err = wrapped.HandleRPC(firstStream, "rpc")
 	require.Equal(t, ErrLimitExceeded, err)
+}
+
+func TestLimiter_Concurrent(t *testing.T) {
+	lim := New().(*limiter)
+	handler := &mockHandler{}
+	lim.cfg = Config{
+		DefaultTokens: Tokens{
+			TokensPerSecond: 10,
+			MaxTokens:       1,
+		},
+	}
+	wrapped := lim.WrapDRPCHandler(handler)
+	firstStream := mockStream{ctx: peer.CtxWithPeerId(ctx, "peer1")}
+	secondStream := mockStream{ctx: peer.CtxWithPeerId(ctx, "peer2")}
+	waitFirst := make(chan struct{})
+	waitSecond := make(chan struct{})
+	go func() {
+		for i := 0; i < 100; i++ {
+			time.Sleep(10 * time.Millisecond)
+			_ = wrapped.HandleRPC(firstStream, "rpc")
+		}
+		close(waitFirst)
+	}()
+	go func() {
+		for i := 0; i < 100; i++ {
+			time.Sleep(10 * time.Millisecond)
+			_ = wrapped.HandleRPC(secondStream, "rpc")
+		}
+		close(waitSecond)
+	}()
+	<-waitFirst
+	<-waitSecond
+	require.Greater(t, 50, int(handler.calls.Load()))
 }
