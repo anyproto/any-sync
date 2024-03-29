@@ -101,6 +101,8 @@ message BuySubscriptionResponse {
   // will feature current billing ID
   // stripe.com/?client_reference_id=1234
   string paymentUrl = 1;
+  // billingID is passed via mobile client to payment platform
+  string billingID = 2;
 }
 
 message FinalizeSubscriptionRequest {
