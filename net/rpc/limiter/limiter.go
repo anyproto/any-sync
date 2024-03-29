@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_limiter/mock_limiter.go github.com/anyproto/any-sync/net/rpc/limiter RpcLimiter
 package limiter
 
 import (
