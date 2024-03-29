@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/atomic"
 	"golang.org/x/time/rate"
 	"storj.io/drpc"
 
@@ -34,7 +33,7 @@ type RpcLimiter interface {
 
 func New() RpcLimiter {
 	return &limiter{
-		limiters:          make(map[string]peerLimiter),
+		limiters:          make(map[string]*peerLimiter),
 		peerCheckInterval: peerCheckInterval,
 		checkTimeout:      checkTimeout,
 	}
@@ -42,12 +41,12 @@ func New() RpcLimiter {
 
 type peerLimiter struct {
 	*rate.Limiter
-	lastUsage *atomic.Time
+	lastUsage time.Time
 }
 
 type limiter struct {
 	drpc.Handler
-	limiters          map[string]peerLimiter
+	limiters          map[string]*peerLimiter
 	periodicLoop      periodicsync.PeriodicSync
 	peerCheckInterval time.Duration
 	checkTimeout      time.Duration
@@ -79,7 +78,7 @@ func (h *limiter) peerLoop(ctx context.Context) error {
 	h.mx.Lock()
 	defer h.mx.Unlock()
 	for rpcPeer, lim := range h.limiters {
-		if time.Since(lim.lastUsage.Load()) > h.peerCheckInterval {
+		if time.Since(lim.lastUsage) > h.peerCheckInterval {
 			delete(h.limiters, rpcPeer)
 		}
 	}
@@ -112,20 +111,19 @@ func (h *limiter) getLimits(rpc string) Tokens {
 	return h.cfg.DefaultTokens
 }
 
-func (h *limiter) getPeerLimiter(peerId string, rpc string) peerLimiter {
+func (h *limiter) getPeerLimiter(peerId string, rpc string) *peerLimiter {
 	// rpc looks like this /anyNodeSync.NodeSync/PartitionSync
+	rpcPeer := strings.Join([]string{peerId, rpc}, "-")
 	h.mx.Lock()
 	defer h.mx.Unlock()
-	rpcPeer := strings.Join([]string{peerId, rpc}, "-")
 	lim, ok := h.limiters[rpcPeer]
 	if !ok {
 		limits := h.getLimits(rpc)
-		lim = peerLimiter{
+		lim = &peerLimiter{
 			Limiter: rate.NewLimiter(rate.Limit(limits.TokensPerSecond), limits.MaxTokens),
 		}
-		lim.lastUsage = &atomic.Time{}
 		h.limiters[rpcPeer] = lim
 	}
-	lim.lastUsage.Store(time.Now())
+	lim.lastUsage = time.Now()
 	return lim
 }
