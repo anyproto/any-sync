@@ -20,7 +20,8 @@ message GetTiersRequest {
   // you can get it with Account().SignKey.GetPublic().Account()
   string ownerAnyId = 1;
 
-  string locale = 2;
+  // "en", "de", "sv", etc
+  string language = 2;
 }
 
 message GetTiersRequestSigned {
