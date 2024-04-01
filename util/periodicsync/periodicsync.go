@@ -3,10 +3,12 @@ package periodicsync
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/app/logger"
-	"go.uber.org/zap"
 	"sync/atomic"
 	"time"
+
+	"go.uber.org/zap"
+
+	"github.com/anyproto/any-sync/app/logger"
 )
 
 type PeriodicSync interface {
@@ -17,39 +19,40 @@ type PeriodicSync interface {
 type SyncerFunc func(ctx context.Context) error
 
 func NewPeriodicSync(periodSeconds int, timeout time.Duration, caller SyncerFunc, l logger.CtxLogger) PeriodicSync {
-	// TODO: rename to PeriodicCall (including folders) and do PRs in all repos where we are using this
-	//  https://linear.app/anytype/issue/GO-1241/change-periodicsync-component-to-periodiccall
+	return NewPeriodicSyncDuration(time.Duration(periodSeconds)*time.Second, timeout, caller, l)
+}
+
+func NewPeriodicSyncDuration(periodicLoopInterval, timeout time.Duration, caller SyncerFunc, l logger.CtxLogger) PeriodicSync {
 	ctx, cancel := context.WithCancel(context.Background())
 	ctx = logger.CtxWithFields(ctx, zap.String("rootOp", "periodicCall"))
 	return &periodicCall{
-		caller:        caller,
-		log:           l,
-		loopCtx:       ctx,
-		loopCancel:    cancel,
-		loopDone:      make(chan struct{}),
-		periodSeconds: periodSeconds,
-		timeout:       timeout,
+		caller:     caller,
+		log:        l,
+		loopCtx:    ctx,
+		loopCancel: cancel,
+		loopDone:   make(chan struct{}),
+		period:     periodicLoopInterval,
+		timeout:    timeout,
 	}
 }
 
 type periodicCall struct {
-	log           logger.CtxLogger
-	caller        SyncerFunc
-	loopCtx       context.Context
-	loopCancel    context.CancelFunc
-	loopDone      chan struct{}
-	periodSeconds int
-	timeout       time.Duration
-	isRunning     atomic.Bool
+	log        logger.CtxLogger
+	caller     SyncerFunc
+	loopCtx    context.Context
+	loopCancel context.CancelFunc
+	loopDone   chan struct{}
+	period     time.Duration
+	timeout    time.Duration
+	isRunning  atomic.Bool
 }
 
 func (p *periodicCall) Run() {
 	p.isRunning.Store(true)
-	go p.loop(p.periodSeconds)
+	go p.loop(p.period)
 }
 
-func (p *periodicCall) loop(periodSeconds int) {
-	period := time.Duration(periodSeconds) * time.Second
+func (p *periodicCall) loop(period time.Duration) {
 	defer close(p.loopDone)
 	doCall := func() {
 		ctx := p.loopCtx
