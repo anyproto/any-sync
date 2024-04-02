@@ -68,6 +68,7 @@ enum ErrorCodes {
   AccountDeleted = 6;
   Forbidden = 7;
   AclHeadIsMissing = 8;
+  AclNonEmpty = 9;
   ErrorOffset = 300;
 }
 
