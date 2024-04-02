@@ -43,7 +43,7 @@ func Unwrap(e error) error {
 	}
 	err, ok := errsMap[code]
 	if !ok {
-		return drpcerr.WithCode(fmt.Errorf("unexpected error: %v; code: %d", e, code), code)
+		return drpcerr.WithCode(fmt.Errorf("unexpected error: %w; code: %d", e, code), code)
 	}
 	return err
 }
