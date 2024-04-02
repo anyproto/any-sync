@@ -131,6 +131,20 @@ func (mr *MockAclServiceMockRecorder) Permissions(arg0, arg1, arg2 any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Permissions", reflect.TypeOf((*MockAclService)(nil).Permissions), arg0, arg1, arg2)
 }
 
+// ReadState mocks base method.
+func (m *MockAclService) ReadState(arg0 context.Context, arg1 string, arg2 func(*list.AclState) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadState", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReadState indicates an expected call of ReadState.
+func (mr *MockAclServiceMockRecorder) ReadState(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadState", reflect.TypeOf((*MockAclService)(nil).ReadState), arg0, arg1, arg2)
+}
+
 // RecordsAfter mocks base method.
 func (m *MockAclService) RecordsAfter(arg0 context.Context, arg1, arg2 string) ([]*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()

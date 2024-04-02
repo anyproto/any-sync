@@ -149,6 +149,32 @@ func TestAclService(t *testing.T) {
 	})
 }
 
+func TestAclService_ReadState(t *testing.T) {
+	ownerKeys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	spaceId := "spaceId"
+	ownerAcl, err := list.NewTestDerivedAcl(spaceId, ownerKeys)
+	require.NoError(t, err)
+
+	fx := newFixture(t)
+	defer fx.finish(t)
+
+	fx.consCl.EXPECT().Watch(spaceId, gomock.Any()).DoAndReturn(func(spaceId string, w consensusclient.Watcher) error {
+		go func() {
+			w.AddConsensusRecords([]*consensusproto.RawRecordWithId{
+				ownerAcl.Root(),
+			})
+		}()
+		return nil
+	})
+	fx.consCl.EXPECT().UnWatch(spaceId)
+
+	require.NoError(t, fx.ReadState(ctx, spaceId, func(s *list.AclState) error {
+		assert.NotNil(t, s)
+		return nil
+	}))
+}
+
 func newFixture(t *testing.T) *fixture {
 	ctrl := gomock.NewController(t)
 	fx := &fixture{
