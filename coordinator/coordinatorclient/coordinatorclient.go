@@ -37,8 +37,8 @@ type CoordinatorClient interface {
 	StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, err error)
 	StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusPayload, err error)
 	SpaceSign(ctx context.Context, payload SpaceSignPayload) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error)
-	SpaceMakeShareable(ctx context.Context, spaceId, aclHead string) (err error)
-	SpaceMakeUnshareable(ctx context.Context, spaceId string) (err error)
+	SpaceMakeShareable(ctx context.Context, spaceId string) (err error)
+	SpaceMakeUnshareable(ctx context.Context, spaceId, aclId string) (err error)
 	NetworkConfiguration(ctx context.Context, currentId string) (*coordinatorproto.NetworkConfigurationResponse, error)
 	DeletionLog(ctx context.Context, lastRecordId string, limit int) (records []*coordinatorproto.DeletionLogRecord, err error)
 
@@ -304,11 +304,10 @@ func (c *coordinatorClient) AccountLimitsSet(ctx context.Context, req *coordinat
 	})
 }
 
-func (c *coordinatorClient) SpaceMakeShareable(ctx context.Context, spaceId, aclHead string) (err error) {
+func (c *coordinatorClient) SpaceMakeShareable(ctx context.Context, spaceId string) (err error) {
 	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
 		if _, err := cl.SpaceMakeShareable(ctx, &coordinatorproto.SpaceMakeShareableRequest{
 			SpaceId: spaceId,
-			AclHead: aclHead,
 		}); err != nil {
 			return rpcerr.Unwrap(err)
 		}
@@ -316,10 +315,11 @@ func (c *coordinatorClient) SpaceMakeShareable(ctx context.Context, spaceId, acl
 	})
 }
 
-func (c *coordinatorClient) SpaceMakeUnshareable(ctx context.Context, spaceId string) (err error) {
+func (c *coordinatorClient) SpaceMakeUnshareable(ctx context.Context, spaceId, aclHead string) (err error) {
 	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
 		if _, err := cl.SpaceMakeUnshareable(ctx, &coordinatorproto.SpaceMakeUnshareableRequest{
 			SpaceId: spaceId,
+			AclHead: aclHead,
 		}); err != nil {
 			return rpcerr.Unwrap(err)
 		}

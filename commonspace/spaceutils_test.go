@@ -383,7 +383,7 @@ func (m mockCoordinatorClient) SpaceMakeShareable(ctx context.Context, spaceId s
 	return nil
 }
 
-func (m mockCoordinatorClient) SpaceMakeUnshareable(ctx context.Context, spaceId string) (err error) {
+func (m mockCoordinatorClient) SpaceMakeUnshareable(ctx context.Context, spaceId, aclId string) (err error) {
 	return nil
 }
 

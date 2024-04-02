@@ -156,13 +156,13 @@ message SpaceStatusChangeResponse {
 
 message SpaceMakeShareableRequest {
     string spaceId = 1;
-    string aclHead = 2;
 }
 
 message SpaceMakeShareableResponse {}
 
 message SpaceMakeUnshareableRequest {
   string spaceId = 1;
+  string aclHead = 2;
 }
 
 message SpaceMakeUnshareableResponse {}
