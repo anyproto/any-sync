@@ -67,6 +67,7 @@ enum ErrorCodes {
   SpaceLimitReached = 5;
   AccountDeleted = 6;
   Forbidden = 7;
+  AclHeadIsMissing = 8;
   ErrorOffset = 300;
 }
 
@@ -155,6 +156,7 @@ message SpaceStatusChangeResponse {
 
 message SpaceMakeShareableRequest {
     string spaceId = 1;
+    string aclHead = 2;
 }
 
 message SpaceMakeShareableResponse {}
