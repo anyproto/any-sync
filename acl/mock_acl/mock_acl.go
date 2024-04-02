@@ -73,6 +73,21 @@ func (mr *MockAclServiceMockRecorder) Close(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockAclService)(nil).Close), arg0)
 }
 
+// HasRecord mocks base method.
+func (m *MockAclService) HasRecord(arg0 context.Context, arg1, arg2 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasRecord", arg0, arg1, arg2)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HasRecord indicates an expected call of HasRecord.
+func (mr *MockAclServiceMockRecorder) HasRecord(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasRecord", reflect.TypeOf((*MockAclService)(nil).HasRecord), arg0, arg1, arg2)
+}
+
 // Init mocks base method.
 func (m *MockAclService) Init(arg0 *app.App) error {
 	m.ctrl.T.Helper()
