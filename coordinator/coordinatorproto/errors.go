@@ -17,4 +17,5 @@ var (
 	ErrSpaceLimitReached    = errGroup.Register(errors.New("space limit reached"), uint64(ErrorCodes_SpaceLimitReached))
 	ErrAccountIsDeleted     = errGroup.Register(errors.New("account is deleted"), uint64(ErrorCodes_AccountDeleted))
 	ErrForbidden            = errGroup.Register(errors.New("forbidden"), uint64(ErrorCodes_Forbidden))
+	ErrAclHeadIsMissing     = errGroup.Register(errors.New("acl head is missing"), uint64(ErrorCodes_AclHeadIsMissing))
 )
