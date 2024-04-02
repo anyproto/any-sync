@@ -11,7 +11,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
+	"github.com/anyproto/any-sync/node/nodeclient"
 )
 
 const CName = "common.acl.aclclient"
@@ -25,8 +25,8 @@ type AclJoiningClient interface {
 }
 
 type aclJoiningClient struct {
-	coordinatorClient coordinatorclient.CoordinatorClient
-	keys              *accountdata.AccountKeys
+	nodeClient nodeclient.NodeClient
+	keys       *accountdata.AccountKeys
 }
 
 func NewAclJoiningClient() AclJoiningClient {
@@ -38,13 +38,13 @@ func (c *aclJoiningClient) Name() (name string) {
 }
 
 func (c *aclJoiningClient) Init(a *app.App) (err error) {
-	c.coordinatorClient = a.MustComponent(coordinatorclient.CName).(coordinatorclient.CoordinatorClient)
+	c.nodeClient = a.MustComponent(nodeclient.CName).(nodeclient.NodeClient)
 	c.keys = a.MustComponent(accountservice.CName).(accountservice.Service).Account()
 	return nil
 }
 
 func (c *aclJoiningClient) AclGetRecords(ctx context.Context, spaceId, aclHead string) (recs []*consensusproto.RawRecordWithId, err error) {
-	return c.coordinatorClient.AclGetRecords(ctx, spaceId, aclHead)
+	return c.nodeClient.AclGetRecords(ctx, spaceId, aclHead)
 }
 
 func (c *aclJoiningClient) getAcl(ctx context.Context, spaceId string) (l list.AclList, err error) {
@@ -76,7 +76,7 @@ func (c *aclJoiningClient) CancelJoin(ctx context.Context, spaceId string) (err 
 	if err != nil {
 		return
 	}
-	_, err = c.coordinatorClient.AclAddRecord(ctx, spaceId, res)
+	_, err = c.nodeClient.AclAddRecord(ctx, spaceId, res)
 	return
 }
 
@@ -99,7 +99,7 @@ func (c *aclJoiningClient) RequestJoin(ctx context.Context, spaceId string, payl
 	if err != nil {
 		return
 	}
-	recWithId, err := c.coordinatorClient.AclAddRecord(ctx, spaceId, rec)
+	recWithId, err := c.nodeClient.AclAddRecord(ctx, spaceId, rec)
 	if err != nil {
 		return
 	}
@@ -126,6 +126,6 @@ func (c *aclJoiningClient) CancelRemoveSelf(ctx context.Context, spaceId string)
 	if err != nil {
 		return
 	}
-	_, err = c.coordinatorClient.AclAddRecord(ctx, spaceId, newRec)
+	_, err = c.nodeClient.AclAddRecord(ctx, spaceId, newRec)
 	return
 }

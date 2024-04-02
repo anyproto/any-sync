@@ -12,14 +12,7 @@ enum PeriodType {
 }
 
 message Feature {
-  // "invites"
-  // "GBs"
-  // "spaces"
-  // ...
-  string valueStr = 1;
-  
-  // each uint is a value of the feature
-  uint32 valueUint = 2;
+  string description = 1;
 }
 
 message GetTiersRequest {
@@ -28,9 +21,6 @@ message GetTiersRequest {
   string ownerAnyId = 1;
 
   string locale = 2;
-
-  // see PaymentMethod enum
-  uint32 paymentMethod = 3;
 }
 
 message GetTiersRequestSigned {
@@ -68,9 +58,9 @@ message TierData {
   // somename.any - len of 8
   uint32 anyNameMinLength = 11;
   // each tier has a set of features
-  // each feature has a unique key: "storage", "invites", etc
-  // not using enum here to provide dynamic feature list
-  map<string, Feature> features = 12;
+  repeated Feature features = 12;
+  // green, blue, red, purple or custom color in string format #ff00ff
+  string colorStr = 13;
 }
 
 message GetTiersResponse {

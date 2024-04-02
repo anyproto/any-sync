@@ -9,7 +9,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
+	"github.com/anyproto/any-sync/node/nodeclient"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -45,13 +45,13 @@ func NewAclSpaceClient() AclSpaceClient {
 }
 
 type aclSpaceClient struct {
-	coordinatorClient coordinatorclient.CoordinatorClient
-	acl               list.AclList
-	spaceId           string
+	nodeClient nodeclient.NodeClient
+	acl        list.AclList
+	spaceId    string
 }
 
 func (c *aclSpaceClient) Init(a *app.App) (err error) {
-	c.coordinatorClient = a.MustComponent(coordinatorclient.CName).(coordinatorclient.CoordinatorClient)
+	c.nodeClient = a.MustComponent(nodeclient.CName).(nodeclient.NodeClient)
 	c.acl = a.MustComponent(syncacl.CName).(list.AclList)
 	c.spaceId = a.MustComponent(spacestate.CName).(*spacestate.SpaceState).SpaceId
 	return nil
@@ -217,7 +217,7 @@ func (c *aclSpaceClient) AddRecord(ctx context.Context, consRec *consensusproto.
 }
 
 func (c *aclSpaceClient) sendRecordAndUpdate(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (err error) {
-	res, err := c.coordinatorClient.AclAddRecord(ctx, spaceId, rec)
+	res, err := c.nodeClient.AclAddRecord(ctx, spaceId, rec)
 	if err != nil {
 		return
 	}

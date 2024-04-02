@@ -28,6 +28,7 @@ import (
 	"github.com/anyproto/any-sync/identityrepo/identityrepoproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/node/nodeclient"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
 )
@@ -447,6 +448,27 @@ func (m mockCoordinatorClient) Name() (name string) {
 	return coordinatorclient.CName
 }
 
+var _ nodeclient.NodeClient = (*mockNodeClient)(nil)
+
+type mockNodeClient struct {
+}
+
+func (m mockNodeClient) Init(a *app.App) (err error) {
+	return
+}
+
+func (m mockNodeClient) Name() (name string) {
+	return nodeclient.CName
+}
+
+func (m mockNodeClient) AclGetRecords(ctx context.Context, spaceId, aclHead string) (recs []*consensusproto.RawRecordWithId, err error) {
+	return
+}
+
+func (m mockNodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (recWithId *consensusproto.RawRecordWithId, err error) {
+	return
+}
+
 //
 // Space fixture
 //
@@ -484,6 +506,7 @@ func newFixture(t *testing.T) *spaceFixture {
 		Register(credentialprovider.NewNoOp()).
 		Register(&mockStatusServiceProvider{}).
 		Register(mockCoordinatorClient{}).
+		Register(mockNodeClient{}).
 		Register(fx.configurationService).
 		Register(fx.storageProvider).
 		Register(fx.peermanagerProvider).

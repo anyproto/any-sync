@@ -275,7 +275,6 @@ func (c *oCache) GC() {
 	var toClose []*entry
 	for _, e := range c.data {
 		if e.isActive() && e.lastUsage.Before(deadline) {
-			e.close = make(chan struct{})
 			toClose = append(toClose, e)
 		}
 	}
