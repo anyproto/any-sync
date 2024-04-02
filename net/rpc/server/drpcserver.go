@@ -56,11 +56,11 @@ func (s *drpcServer) Init(a *app.App) (err error) {
 
 	var handler drpc.Handler
 	handler = s
-	if s.metric != nil {
-		handler = s.metric.WrapDRPCHandler(handler)
-	}
 	if s.limiter != nil {
 		handler = s.limiter.WrapDRPCHandler(handler)
+	}
+	if s.metric != nil {
+		handler = s.metric.WrapDRPCHandler(handler)
 	}
 	bufSize := s.config.Stream.MaxMsgSizeMb * (1 << 20)
 	s.drpcServer = drpcserver.NewWithOptions(handler, drpcserver.Options{Manager: drpcmanager.Options{
