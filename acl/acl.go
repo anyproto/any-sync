@@ -94,6 +94,13 @@ func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consen
 	acl.RLock()
 	defer acl.RUnlock()
 
+	var beforeReaders int
+	for _, acc := range acl.AclState().CurrentAccounts() {
+		if !acc.Permissions.NoPermissions() {
+			beforeReaders++
+		}
+	}
+
 	err = acl.ValidateRawRecord(rec, func(state *list.AclState) error {
 		var readers, writers int
 		for _, acc := range state.CurrentAccounts() {
@@ -104,6 +111,8 @@ func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consen
 			if acc.Permissions.CanWrite() {
 				writers++
 			}
+		}
+		if readers >= beforeReaders {
 			if uint32(readers) > limits.ReadMembers {
 				return ErrLimitExceed
 			}
