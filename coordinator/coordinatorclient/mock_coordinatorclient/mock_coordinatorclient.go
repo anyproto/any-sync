@@ -218,6 +218,34 @@ func (mr *MockCoordinatorClientMockRecorder) SpaceDelete(arg0, arg1, arg2 any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceDelete", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceDelete), arg0, arg1, arg2)
 }
 
+// SpaceMakeShareable mocks base method.
+func (m *MockCoordinatorClient) SpaceMakeShareable(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SpaceMakeShareable", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SpaceMakeShareable indicates an expected call of SpaceMakeShareable.
+func (mr *MockCoordinatorClientMockRecorder) SpaceMakeShareable(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceMakeShareable", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceMakeShareable), arg0, arg1)
+}
+
+// SpaceMakeUnshareable mocks base method.
+func (m *MockCoordinatorClient) SpaceMakeUnshareable(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SpaceMakeUnshareable", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SpaceMakeUnshareable indicates an expected call of SpaceMakeUnshareable.
+func (mr *MockCoordinatorClientMockRecorder) SpaceMakeUnshareable(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceMakeUnshareable", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceMakeUnshareable), arg0, arg1, arg2)
+}
+
 // SpaceSign mocks base method.
 func (m *MockCoordinatorClient) SpaceSign(arg0 context.Context, arg1 coordinatorclient.SpaceSignPayload) (*coordinatorproto.SpaceReceiptWithSignature, error) {
 	m.ctrl.T.Helper()

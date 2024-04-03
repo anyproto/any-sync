@@ -39,6 +39,8 @@ type AclService interface {
 	RecordsAfter(ctx context.Context, spaceId, aclHead string) (result []*consensusproto.RawRecordWithId, err error)
 	Permissions(ctx context.Context, identity crypto.PubKey, spaceId string) (res list.AclPermissions, err error)
 	OwnerPubKey(ctx context.Context, spaceId string) (ownerIdentity crypto.PubKey, err error)
+	ReadState(ctx context.Context, spaceId string, f func(s *list.AclState) error) (err error)
+	HasRecord(ctx context.Context, spaceId, recordId string) (has bool, err error)
 	app.ComponentRunnable
 }
 
@@ -94,6 +96,13 @@ func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consen
 	acl.RLock()
 	defer acl.RUnlock()
 
+	var beforeReaders int
+	for _, acc := range acl.AclState().CurrentAccounts() {
+		if !acc.Permissions.NoPermissions() {
+			beforeReaders++
+		}
+	}
+
 	err = acl.ValidateRawRecord(rec, func(state *list.AclState) error {
 		var readers, writers int
 		for _, acc := range state.CurrentAccounts() {
@@ -104,6 +113,8 @@ func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consen
 			if acc.Permissions.CanWrite() {
 				writers++
 			}
+		}
+		if readers >= beforeReaders {
 			if uint32(readers) > limits.ReadMembers {
 				return ErrLimitExceed
 			}
@@ -148,6 +159,33 @@ func (as *aclService) Permissions(ctx context.Context, identity crypto.PubKey, s
 	acl.RLock()
 	defer acl.RUnlock()
 	return acl.AclState().Permissions(identity), nil
+}
+
+func (as *aclService) ReadState(ctx context.Context, spaceId string, f func(s *list.AclState) error) (err error) {
+	acl, err := as.get(ctx, spaceId)
+	if err != nil {
+		return
+	}
+	acl.RLock()
+	defer acl.RUnlock()
+	return f(acl.AclState())
+}
+
+func (as *aclService) HasRecord(ctx context.Context, spaceId, recordId string) (has bool, err error) {
+	acl, err := as.get(ctx, spaceId)
+	if err != nil {
+		return
+	}
+	acl.RLock()
+	defer acl.RUnlock()
+	acl.Iterate(func(record *list.AclRecord) (isContinue bool) {
+		if record.Id == recordId {
+			has = true
+			return false
+		}
+		return true
+	})
+	return
 }
 
 func (as *aclService) Run(ctx context.Context) (err error) {
