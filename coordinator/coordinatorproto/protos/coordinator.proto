@@ -69,6 +69,7 @@ enum ErrorCodes {
   Forbidden = 7;
   AclHeadIsMissing = 8;
   AclNonEmpty = 9;
+  SpaceNotShareable = 10;
   ErrorOffset = 300;
 }
 

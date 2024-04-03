@@ -19,4 +19,5 @@ var (
 	ErrForbidden            = errGroup.Register(errors.New("forbidden"), uint64(ErrorCodes_Forbidden))
 	ErrAclHeadIsMissing     = errGroup.Register(errors.New("acl head is missing"), uint64(ErrorCodes_AclHeadIsMissing))
 	ErrAclNonEmpty          = errGroup.Register(errors.New("acl is not empty"), uint64(ErrorCodes_AclNonEmpty))
+	ErrSpaceNotShareable    = errGroup.Register(errors.New("space not shareable"), uint64(ErrorCodes_SpaceNotShareable))
 )
