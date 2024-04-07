@@ -132,6 +132,10 @@ func (c *aclSpaceClient) RevokeAllInvites(ctx context.Context) (err error) {
 
 func (c *aclSpaceClient) StopSharing(ctx context.Context, readKeyChange list.ReadKeyChangePayload) (err error) {
 	c.acl.Lock()
+	if c.acl.AclState().IsEmpty() {
+		c.acl.Unlock()
+		return
+	}
 	var (
 		identities []crypto.PubKey
 		recIds     []string
