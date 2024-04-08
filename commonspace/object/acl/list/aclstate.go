@@ -229,6 +229,16 @@ func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
 	return
 }
 
+func (st *AclState) IsEmpty() bool {
+	users := 0
+	for _, acc := range st.CurrentAccounts() {
+		if !acc.Permissions.NoPermissions() {
+			users++
+		}
+	}
+	return users == 1 && len(st.Invites()) == 0 && len(st.pendingRequests) == 0
+}
+
 func (st *AclState) applyRoot(record *AclRecord) (err error) {
 	root, ok := record.Model.(*aclrecordproto.AclRoot)
 	if !ok {
