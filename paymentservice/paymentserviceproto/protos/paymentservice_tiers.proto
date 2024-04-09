@@ -61,6 +61,18 @@ message TierData {
   repeated Feature features = 12;
   // green, blue, red, purple or custom color in string format #ff00ff
   string colorStr = 13;
+
+  // Stripe platform-specific data:
+  string stripeProductId = 14;
+  string stripeManageUrl = 15;
+
+  // iOS platform-specific data:
+  string iosProductId = 16;
+  string iosManageUrl = 17;
+
+  // Android platform-specific data:
+  string androidProductId = 18;
+  string androidManageUrl = 19;
 }
 
 message GetTiersResponse {
