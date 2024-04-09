@@ -44,6 +44,7 @@ enum PaymentMethod {
   MethodGooglePay = 3;
   MethodAppleInapp = 4;
   MethodGoogleInapp = 5;
+  MethodNone = 6;
 }
 
 message GetSubscriptionRequest {
