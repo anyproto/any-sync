@@ -34,7 +34,7 @@ type CoordinatorClient interface {
 	SpaceDelete(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (err error)
 	AccountDelete(ctx context.Context, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (timestamp int64, err error)
 	AccountRevertDeletion(ctx context.Context) (err error)
-	StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, err error)
+	StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, limits *coordinatorproto.AccountLimits, err error)
 	StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusPayload, err error)
 	SpaceSign(ctx context.Context, payload SpaceSignPayload) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error)
 	SpaceMakeShareable(ctx context.Context, spaceId string) (err error)
@@ -149,7 +149,11 @@ func (c *coordinatorClient) DeletionLog(ctx context.Context, lastRecordId string
 	return
 }
 
-func (c *coordinatorClient) StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, err error) {
+func (c *coordinatorClient) StatusCheckMany(ctx context.Context, spaceIds []string) (
+	statuses []*coordinatorproto.SpaceStatusPayload,
+	limits *coordinatorproto.AccountLimits,
+	err error,
+) {
 	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
 		resp, err := cl.SpaceStatusCheckMany(ctx, &coordinatorproto.SpaceStatusCheckManyRequest{
 			SpaceIds: spaceIds,
@@ -158,6 +162,7 @@ func (c *coordinatorClient) StatusCheckMany(ctx context.Context, spaceIds []stri
 			return rpcerr.Unwrap(err)
 		}
 		statuses = resp.Payloads
+		limits = resp.AccountLimits
 		return nil
 	})
 	return

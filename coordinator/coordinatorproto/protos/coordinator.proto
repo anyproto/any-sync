@@ -141,7 +141,14 @@ message SpaceStatusCheckManyRequest {
 // SpaceStatusCheckManyResponse contains the current statuses of spaces
 message SpaceStatusCheckManyResponse {
   repeated SpaceStatusPayload payloads = 1;
+  AccountLimits accountLimits = 2;
 }
+
+// AccountLimits describes account level limit
+message AccountLimits {
+  uint32 sharedSpacesLimit = 1;
+}
+
 
 // SpaceStatusChangeRequest contains the deletionChange if we want to delete space, or it is empty otherwise
 message SpaceStatusChangeRequest {
