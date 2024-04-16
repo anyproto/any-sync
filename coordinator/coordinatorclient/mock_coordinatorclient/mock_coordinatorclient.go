@@ -277,12 +277,13 @@ func (mr *MockCoordinatorClientMockRecorder) StatusCheck(arg0, arg1 any) *gomock
 }
 
 // StatusCheckMany mocks base method.
-func (m *MockCoordinatorClient) StatusCheckMany(arg0 context.Context, arg1 []string) ([]*coordinatorproto.SpaceStatusPayload, error) {
+func (m *MockCoordinatorClient) StatusCheckMany(arg0 context.Context, arg1 []string) ([]*coordinatorproto.SpaceStatusPayload, *coordinatorproto.AccountLimits, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StatusCheckMany", arg0, arg1)
 	ret0, _ := ret[0].([]*coordinatorproto.SpaceStatusPayload)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(*coordinatorproto.AccountLimits)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // StatusCheckMany indicates an expected call of StatusCheckMany.
