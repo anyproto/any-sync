@@ -404,7 +404,7 @@ func (m mockCoordinatorClient) AccountRevertDeletion(ctx context.Context) (err e
 	return
 }
 
-func (m mockCoordinatorClient) StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, err error) {
+func (m mockCoordinatorClient) StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, limit *coordinatorproto.AccountLimits, err error) {
 	return
 }
 
