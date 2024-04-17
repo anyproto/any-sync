@@ -9,7 +9,7 @@ import (
 )
 
 type DataConverter interface {
-	Unmarshall(decrypted []byte) (any, error)
+	Unmarshall(dataType string, decrypted []byte) (any, error)
 	Marshall(model any) ([]byte, error)
 }
 
@@ -59,7 +59,7 @@ func (t *treeExporter) ExportUnencrypted(tree objecttree.ReadableObjectTree) (er
 	}
 	err = tree.IterateRoot(
 		func(change *objecttree.Change, decrypted []byte) (any, error) {
-			return t.converter.Unmarshall(decrypted)
+			return t.converter.Unmarshall(change.DataType, decrypted)
 		},
 		func(change *objecttree.Change) bool {
 			if change.Id == tree.Id() {
