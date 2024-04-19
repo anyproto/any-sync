@@ -48,6 +48,7 @@ type DRPCAnyPaymentProcessingClient interface {
 	GetVerificationEmail(ctx context.Context, in *GetVerificationEmailRequestSigned) (*GetVerificationEmailResponse, error)
 	VerifyEmail(ctx context.Context, in *VerifyEmailRequestSigned) (*VerifyEmailResponse, error)
 	GetAllTiers(ctx context.Context, in *GetTiersRequestSigned) (*GetTiersResponse, error)
+	VerifyAppStoreReceipt(ctx context.Context, in *VerifyAppStoreReceiptRequestSigned) (*VerifyAppStoreReceiptRequestResponse, error)
 }
 
 type drpcAnyPaymentProcessingClient struct {
@@ -132,6 +133,15 @@ func (c *drpcAnyPaymentProcessingClient) GetAllTiers(ctx context.Context, in *Ge
 	return out, nil
 }
 
+func (c *drpcAnyPaymentProcessingClient) VerifyAppStoreReceipt(ctx context.Context, in *VerifyAppStoreReceiptRequestSigned) (*VerifyAppStoreReceiptRequestResponse, error) {
+	out := new(VerifyAppStoreReceiptRequestResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing/VerifyAppStoreReceipt", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCAnyPaymentProcessingServer interface {
 	GetSubscriptionStatus(context.Context, *GetSubscriptionRequestSigned) (*GetSubscriptionResponse, error)
 	IsNameValid(context.Context, *IsNameValidRequest) (*IsNameValidResponse, error)
@@ -141,6 +151,7 @@ type DRPCAnyPaymentProcessingServer interface {
 	GetVerificationEmail(context.Context, *GetVerificationEmailRequestSigned) (*GetVerificationEmailResponse, error)
 	VerifyEmail(context.Context, *VerifyEmailRequestSigned) (*VerifyEmailResponse, error)
 	GetAllTiers(context.Context, *GetTiersRequestSigned) (*GetTiersResponse, error)
+	VerifyAppStoreReceipt(context.Context, *VerifyAppStoreReceiptRequestSigned) (*VerifyAppStoreReceiptRequestResponse, error)
 }
 
 type DRPCAnyPaymentProcessingUnimplementedServer struct{}
@@ -177,9 +188,13 @@ func (s *DRPCAnyPaymentProcessingUnimplementedServer) GetAllTiers(context.Contex
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCAnyPaymentProcessingUnimplementedServer) VerifyAppStoreReceipt(context.Context, *VerifyAppStoreReceiptRequestSigned) (*VerifyAppStoreReceiptRequestResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCAnyPaymentProcessingDescription struct{}
 
-func (DRPCAnyPaymentProcessingDescription) NumMethods() int { return 8 }
+func (DRPCAnyPaymentProcessingDescription) NumMethods() int { return 9 }
 
 func (DRPCAnyPaymentProcessingDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -255,6 +270,15 @@ func (DRPCAnyPaymentProcessingDescription) Method(n int) (string, drpc.Encoding,
 						in1.(*GetTiersRequestSigned),
 					)
 			}, DRPCAnyPaymentProcessingServer.GetAllTiers, true
+	case 8:
+		return "/AnyPaymentProcessing/VerifyAppStoreReceipt", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessingServer).
+					VerifyAppStoreReceipt(
+						ctx,
+						in1.(*VerifyAppStoreReceiptRequestSigned),
+					)
+			}, DRPCAnyPaymentProcessingServer.VerifyAppStoreReceipt, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -386,6 +410,22 @@ type drpcAnyPaymentProcessing_GetAllTiersStream struct {
 }
 
 func (x *drpcAnyPaymentProcessing_GetAllTiersStream) SendAndClose(m *GetTiersResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing_VerifyAppStoreReceiptStream interface {
+	drpc.Stream
+	SendAndClose(*VerifyAppStoreReceiptRequestResponse) error
+}
+
+type drpcAnyPaymentProcessing_VerifyAppStoreReceiptStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing_VerifyAppStoreReceiptStream) SendAndClose(m *VerifyAppStoreReceiptRequestResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
 		return err
 	}

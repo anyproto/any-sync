@@ -211,6 +211,35 @@ message IsNameValidResponse {
   }
 }
 
+message VerifyAppStoreReceiptRequest {
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
+  string ownerAnyId = 1;
+  // this is the owner's main EOA (Externally Owned Account) address
+  // not AccountAbstraction's SCW (Smart Contract Wallet) address!
+  // this is required to reserve a name for the owner (later that is done by user)
+  // in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
+  string ownerEthAddress = 2;
+  // was SubscriptionTier before, changed to uint32 to allow us to use dynamic tiers
+  uint32 requestedTier = 3;
+  // receipt is a JWT-encoded information about subscription purchase
+  string receipt = 4;
+  // if empty - then no name requested
+  // if non-empty - PP node will register that name on behalf of the user
+  string requestedAnyName = 5;
+}
+
+message VerifyAppStoreReceiptRequestSigned {
+  // VerifyAppStoreReceiptRequest
+  bytes payload = 1;
+  // this is payload signed with payload.ownerAnyID
+  bytes signature = 2;
+}
+
+message VerifyAppStoreReceiptRequestResponse {
+
+}
+
 enum ErrorCodes {
   Unexpected = 0;
 
@@ -276,4 +305,8 @@ service AnyPaymentProcessing {
   // 3 - user can not buy stripe
   // 4 - some tiers are custom ()
   rpc GetAllTiers(GetTiersRequestSigned) returns (GetTiersResponse) {}
+
+  // Verify purchase in case subscription was bought via AppStore
+  // Incoming receipt contains all information to register purchase on Payment Node
+  rpc VerifyAppStoreReceipt(VerifyAppStoreReceiptRequestSigned) returns (VerifyAppStoreReceiptRequestResponse) {}
 }
