@@ -55,9 +55,6 @@ message NameAvailableResponse {
   // doesn't work with marashalling/unmarshalling
   //google.protobuf.Timestamp nameExpires = 5 [(gogoproto.stdtime) = true];
   int64 nameExpires = 6;
-
-  // some names are blacklisted until further notice
-  bool inBlacklist = 7;
 }
 
 message BatchNameAvailableResponse {

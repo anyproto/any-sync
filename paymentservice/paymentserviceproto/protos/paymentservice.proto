@@ -206,7 +206,7 @@ message IsNameValidResponse {
       TooLong = 3;
       HasInvalidChars = 4;
       TierFeatureNoName = 5;
-      InBlacklist = 6;
+      CanNotReserve = 6;
       // if everything is fine - "name is already taken" check should be done in the NS
       // see IsNameAvailable()
   }
