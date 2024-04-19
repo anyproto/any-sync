@@ -213,21 +213,10 @@ message IsNameValidResponse {
 }
 
 message VerifyAppStoreReceiptRequest {
-  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
-  // you can get it with Account().SignKey.GetPublic().Account()
-  string ownerAnyId = 1;
-  // this is the owner's main EOA (Externally Owned Account) address
-  // not AccountAbstraction's SCW (Smart Contract Wallet) address!
-  // this is required to reserve a name for the owner (later that is done by user)
-  // in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
-  string ownerEthAddress = 2;
-  // was SubscriptionTier before, changed to uint32 to allow us to use dynamic tiers
-  uint32 requestedTier = 3;
+  // billingID is used to identify purchase request registered on payment node
+  string billingID = 1;
   // receipt is a JWT-encoded information about subscription purchase
-  string receipt = 4;
-  // if empty - then no name requested
-  // if non-empty - PP node will register that name on behalf of the user
-  string requestedAnyName = 5;
+  string receipt = 2;
 }
 
 message VerifyAppStoreReceiptRequestSigned {
