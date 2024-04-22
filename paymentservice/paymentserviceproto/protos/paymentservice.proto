@@ -229,7 +229,7 @@ message VerifyAppStoreReceiptRequestSigned {
   bytes signature = 2;
 }
 
-message VerifyAppStoreReceiptRequestResponse {
+message VerifyAppStoreReceiptResponse {
 
 }
 
@@ -301,5 +301,5 @@ service AnyPaymentProcessing {
 
   // Verify purchase in case subscription was bought via AppStore
   // Incoming receipt contains all information to register purchase on Payment Node
-  rpc VerifyAppStoreReceipt(VerifyAppStoreReceiptRequestSigned) returns (VerifyAppStoreReceiptRequestResponse) {}
+  rpc VerifyAppStoreReceipt(VerifyAppStoreReceiptRequestSigned) returns (VerifyAppStoreReceiptResponse) {}
 }
