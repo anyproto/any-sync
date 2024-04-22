@@ -32,7 +32,7 @@ var (
 )
 
 var (
-	compatibleVersions = []uint32{ProtoVersion}
+	compatibleVersions = []uint32{2, ProtoVersion}
 )
 
 func New() SecureService {
