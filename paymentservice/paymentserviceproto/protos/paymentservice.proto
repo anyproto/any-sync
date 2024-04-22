@@ -213,10 +213,13 @@ message IsNameValidResponse {
 }
 
 message VerifyAppStoreReceiptRequest {
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
+  string ownerAnyId = 1;
   // billingID is used to identify purchase request registered on payment node
-  string billingID = 1;
+  string billingID = 2;
   // receipt is a JWT-encoded information about subscription purchase
-  string receipt = 2;
+  string receipt = 3;
 }
 
 message VerifyAppStoreReceiptRequestSigned {
