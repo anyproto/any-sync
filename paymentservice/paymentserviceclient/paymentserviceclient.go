@@ -30,7 +30,7 @@ type AnyPpClientService interface {
 	VerifyEmail(ctx context.Context, in *pp.VerifyEmailRequestSigned) (out *pp.VerifyEmailResponse, err error)
 	FinalizeSubscription(ctx context.Context, in *pp.FinalizeSubscriptionRequestSigned) (out *pp.FinalizeSubscriptionResponse, err error)
 	GetAllTiers(ctx context.Context, in *pp.GetTiersRequestSigned) (out *pp.GetTiersResponse, err error)
-	VerifyAppStoreReceipt(ctx context.Context, in *pp.VerifyAppStoreReceiptRequestSigned) (out *pp.VerifyAppStoreReceiptRequestResponse, err error)
+	VerifyAppStoreReceipt(ctx context.Context, in *pp.VerifyAppStoreReceiptRequestSigned) (out *pp.VerifyAppStoreReceiptResponse, err error)
 
 	app.Component
 }
@@ -157,7 +157,7 @@ func (s *service) IsNameValid(ctx context.Context, in *pp.IsNameValidRequest) (o
 	return
 }
 
-func (s *service) VerifyAppStoreReceipt(ctx context.Context, in *pp.VerifyAppStoreReceiptRequestSigned) (out *pp.VerifyAppStoreReceiptRequestResponse, err error) {
+func (s *service) VerifyAppStoreReceipt(ctx context.Context, in *pp.VerifyAppStoreReceiptRequestSigned) (out *pp.VerifyAppStoreReceiptResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
 		if out, err = cl.VerifyAppStoreReceipt(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)

@@ -175,10 +175,10 @@ func (mr *MockAnyPpClientServiceMockRecorder) Name() *gomock.Call {
 }
 
 // VerifyAppStoreReceipt mocks base method.
-func (m *MockAnyPpClientService) VerifyAppStoreReceipt(ctx context.Context, in *paymentserviceproto.VerifyAppStoreReceiptRequestSigned) (*paymentserviceproto.VerifyAppStoreReceiptRequestResponse, error) {
+func (m *MockAnyPpClientService) VerifyAppStoreReceipt(ctx context.Context, in *paymentserviceproto.VerifyAppStoreReceiptRequestSigned) (*paymentserviceproto.VerifyAppStoreReceiptResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VerifyAppStoreReceipt", ctx, in)
-	ret0, _ := ret[0].(*paymentserviceproto.VerifyAppStoreReceiptRequestResponse)
+	ret0, _ := ret[0].(*paymentserviceproto.VerifyAppStoreReceiptResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
