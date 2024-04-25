@@ -244,6 +244,9 @@ var defaultProtoChecker = handshake.ProtoChecker{
 }
 
 func (p *peer) serve(conn net.Conn) (err error) {
+	defer func() {
+		_ = conn.Close()
+	}()
 	hsCtx, cancel := context.WithTimeout(p.Context(), time.Second*20)
 	if _, err = handshake.IncomingProtoHandshake(hsCtx, conn, defaultProtoChecker); err != nil {
 		cancel()
