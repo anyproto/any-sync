@@ -4,18 +4,20 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/net/secureservice"
-	"github.com/anyproto/any-sync/net/transport"
+	"net"
+	"sync"
+	"time"
+
 	libp2crypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 	"github.com/quic-go/quic-go"
 	"go.uber.org/zap"
-	"net"
-	"sync"
-	"time"
+
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/net/secureservice"
+	"github.com/anyproto/any-sync/net/transport"
 )
 
 const CName = "net.transport.quic"
@@ -139,6 +141,9 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 
 	cctx, err := q.secure.HandshakeOutbound(ctx, stream, remotePeerId.String())
 	if err != nil {
+		defer func() {
+			_ = qConn.CloseWithError(3, "outbound handshake failed")
+		}()
 		return nil, err
 	}
 
@@ -189,6 +194,9 @@ func (q *quicTransport) accept(conn quic.Connection) (err error) {
 	}()
 	cctx, err := q.secure.HandshakeInbound(ctx, stream, remotePeerId.String())
 	if err != nil {
+		defer func() {
+			_ = conn.CloseWithError(3, "inbound handshake failed")
+		}()
 		return
 	}
 	mc := newConn(cctx, conn)
