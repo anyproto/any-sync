@@ -96,10 +96,13 @@ func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consen
 	acl.RLock()
 	defer acl.RUnlock()
 
-	var beforeReaders int
+	var beforeReaders, beforeWriters int
 	for _, acc := range acl.AclState().CurrentAccounts() {
 		if !acc.Permissions.NoPermissions() {
 			beforeReaders++
+		}
+		if acc.Permissions.CanWrite() {
+			beforeWriters++
 		}
 	}
 
@@ -114,13 +117,11 @@ func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consen
 				writers++
 			}
 		}
-		if readers >= beforeReaders {
-			if readers > beforeReaders && uint32(readers) > limits.ReadMembers {
-				return ErrLimitExceed
-			}
-			if uint32(writers) > limits.WriteMembers {
-				return ErrLimitExceed
-			}
+		if readers > beforeReaders && uint32(readers) > limits.ReadMembers {
+			return ErrLimitExceed
+		}
+		if writers > beforeWriters && uint32(writers) > limits.WriteMembers {
+			return ErrLimitExceed
 		}
 		return nil
 	})
