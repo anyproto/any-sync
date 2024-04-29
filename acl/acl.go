@@ -115,7 +115,7 @@ func (as *aclService) AddRecord(ctx context.Context, spaceId string, rec *consen
 			}
 		}
 		if readers >= beforeReaders {
-			if uint32(readers) > limits.ReadMembers {
+			if readers > beforeReaders && uint32(readers) > limits.ReadMembers {
 				return ErrLimitExceed
 			}
 			if uint32(writers) > limits.WriteMembers {
