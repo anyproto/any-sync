@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cheggaaa/mb/v3"
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
@@ -13,15 +16,14 @@ import (
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/util/multiqueue"
-	"github.com/cheggaaa/mb/v3"
-	"github.com/gogo/protobuf/proto"
+
+	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/syncobjectgetter"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/nodeconf"
-	"go.uber.org/zap"
 )
 
 const CName = "common.commonspace.objectsync"
@@ -170,6 +172,12 @@ func (s *objectSync) handleRequest(ctx context.Context, senderId string, msg *sp
 
 func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	log := log.With(zap.String("objectId", msg.ObjectId))
+	defer func() {
+		if p := recover(); p != nil {
+			log.Warn("object sync: panic recovered", zap.Any("panic", p))
+			err = fmt.Errorf("panic recovered: %v", p)
+		}
+	}()
 	err = s.checkEmptyFullSync(log, msg)
 	if err != nil {
 		return err
