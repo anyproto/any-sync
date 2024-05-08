@@ -2,6 +2,7 @@ package headsync
 
 import (
 	"context"
+	mock_syncstatus "github.com/anyproto/any-sync/commonspace/syncstatus/mock_spacesyncstatus"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -70,6 +71,7 @@ type headSyncFixture struct {
 	aclMock                *mock_syncacl.MockSyncAcl
 	headSync               *headSync
 	diffSyncer             *diffSyncer
+	spaceSync              *mock_syncstatus.MockSpaceSyncStatusUpdater
 }
 
 func newHeadSyncFixture(t *testing.T) *headSyncFixture {
@@ -99,6 +101,9 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 	aclMock := mock_syncacl.NewMockSyncAcl(ctrl)
 	aclMock.EXPECT().Name().AnyTimes().Return(syncacl.CName)
 	aclMock.EXPECT().SetHeadUpdater(gomock.Any()).AnyTimes()
+	spaceSync := mock_syncstatus.NewMockSpaceSyncStatusUpdater(ctrl)
+	spaceSync.EXPECT().Name().AnyTimes().Return(syncstatus.SpaceSyncStatusService)
+
 	hs := &headSync{}
 	a := &app.App{}
 	a.Register(spaceState).
@@ -112,7 +117,8 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 		Register(treeManagerMock).
 		Register(treeSyncerMock).
 		Register(deletionStateMock).
-		Register(hs)
+		Register(hs).
+		Register(spaceSync)
 	return &headSyncFixture{
 		spaceState:             spaceState,
 		ctrl:                   ctrl,
@@ -131,6 +137,7 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 		diffMock:               diffMock,
 		clientMock:             clientMock,
 		aclMock:                aclMock,
+		spaceSync:              spaceSync,
 	}
 }
 

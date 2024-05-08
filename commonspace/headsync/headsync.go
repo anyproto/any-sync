@@ -60,6 +60,7 @@ type headSync struct {
 	syncStatus         syncstatus.StatusService
 	deletionState      deletionstate.ObjectDeletionState
 	syncAcl            syncacl.SyncAcl
+	spaceSync          syncstatus.SpaceSyncStatusUpdater
 }
 
 func New() HeadSync {
@@ -83,6 +84,7 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusService)
 	h.treeSyncer = a.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	h.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
+	h.spaceSync = a.MustComponent(syncstatus.SpaceSyncStatusService).(syncstatus.SpaceSyncStatusUpdater)
 	h.syncer = createDiffSyncer(h)
 	sync := func(ctx context.Context) (err error) {
 		return h.syncer.Sync(ctx)

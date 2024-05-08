@@ -2,6 +2,7 @@ package headsync
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
@@ -46,6 +47,7 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 		deletionState:      hs.deletionState,
 		syncAcl:            hs.syncAcl,
 		treeSyncer:         hs.treeSyncer,
+		spaceSync:          hs.spaceSync,
 	}
 }
 
@@ -62,6 +64,7 @@ type diffSyncer struct {
 	credentialProvider credentialprovider.CredentialProvider
 	syncStatus         syncstatus.StatusUpdater
 	syncAcl            syncacl.SyncAcl
+	spaceSync          syncstatus.SpaceSyncStatusUpdater
 }
 
 func (d *diffSyncer) Init() {
@@ -103,16 +106,46 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 		peerIds = append(peerIds, p.Id())
 	}
 	d.log.DebugCtx(ctx, "start diffsync", zap.Strings("peerIds", peerIds))
+	nodePeers := d.peerManager.GetNodeResponsiblePeers()
+	var numberOfFailedNodePeers, numberOfOfflineNodePeers int
 	for _, p := range peers {
-		if err = d.syncWithPeer(peer.CtxWithPeerId(ctx, p.Id()), p); err != nil {
+		nodePeer := slices.Contains(nodePeers, p.Id())
+		if err = d.syncWithPeer(peer.CtxWithPeerId(ctx, p.Id()), p, nodePeer); err != nil {
 			d.log.ErrorCtx(ctx, "can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
+			numberOfOfflineNodePeers, numberOfFailedNodePeers = d.sendEventForNodePeer(nodePeer, numberOfOfflineNodePeers, numberOfFailedNodePeers)
+		} else if nodePeer {
+			d.spaceSync.SendUpdate(syncstatus.MakeSyncStatus(d.spaceId, syncstatus.Synced, 0, syncstatus.Null, syncstatus.Objects))
 		}
 	}
+	d.sendResultSpaceSyncStatusEvent(numberOfFailedNodePeers, numberOfOfflineNodePeers, len(nodePeers))
 	d.log.DebugCtx(ctx, "diff done", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
 	return nil
 }
 
-func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
+func (d *diffSyncer) sendEventForNodePeer(nodePeer bool, numberOfOfflineNodePeers int, numberOfFailedNodePeers int) (int, int) {
+	if nodePeer && d.syncStatus.GetNodeStatus() != syncstatus.Online {
+		d.spaceSync.SendUpdate(syncstatus.MakeSyncStatus(d.spaceId, syncstatus.Offline, 0, syncstatus.Null, syncstatus.Objects))
+		numberOfOfflineNodePeers++
+		return numberOfOfflineNodePeers, numberOfFailedNodePeers
+	}
+	if nodePeer {
+		numberOfFailedNodePeers++
+		d.spaceSync.SendUpdate(syncstatus.MakeSyncStatus(d.spaceId, syncstatus.Error, 0, syncstatus.NetworkError, syncstatus.Objects))
+	}
+	return numberOfOfflineNodePeers, numberOfFailedNodePeers
+}
+
+func (d *diffSyncer) sendResultSpaceSyncStatusEvent(numberOfFailedNodePeers, numberOfOfflineNodePeers, nodePeersNumber int) {
+	if nodePeersNumber <= 1 || numberOfOfflineNodePeers == nodePeersNumber || numberOfFailedNodePeers == nodePeersNumber { // means that we've already sent events for 1 peer node and don't need to evaluate result sync status again
+		return
+	}
+	if numberOfFailedNodePeers != 0 || numberOfOfflineNodePeers != 0 {
+		d.spaceSync.SendUpdate(syncstatus.MakeSyncStatus(d.spaceId, syncstatus.Error, 0, syncstatus.NetworkError, syncstatus.Objects))
+		return
+	}
+}
+
+func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer, nodePeer bool) (err error) {
 	if !d.treeSyncer.ShouldSync(p.Id()) {
 		return
 	}
@@ -156,6 +189,11 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	existingIds = slice.DiscardFromSlice(existingIds, func(s string) bool {
 		return s == syncAclId
 	})
+
+	if (len(existingIds) != 0 || len(missingIds) != 0) && nodePeer {
+		d.spaceSync.SendUpdate(syncstatus.MakeSyncStatus(d.spaceId, syncstatus.Syncing, len(existingIds)+len(missingIds), syncstatus.Null, syncstatus.Objects))
+	}
+
 	// if we removed acl head from the list
 	if len(existingIds) < prevExistingLen {
 		if syncErr := d.syncAcl.SyncWithPeer(ctx, p.Id()); syncErr != nil {

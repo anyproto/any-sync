@@ -9,7 +9,9 @@ func NewNoOpSyncStatus() StatusService {
 	return &noOpSyncStatus{}
 }
 
-type noOpSyncStatus struct{}
+type noOpSyncStatus struct {
+	nodeStatus ConnectionStatus
+}
 
 func (n *noOpSyncStatus) Init(a *app.App) (err error) {
 	return nil
@@ -36,6 +38,7 @@ func (n *noOpSyncStatus) HeadsReceive(senderId, treeId string, heads []string) {
 }
 
 func (n *noOpSyncStatus) SetNodesStatus(senderId string, status ConnectionStatus) {
+	n.nodeStatus = status
 }
 
 func (n *noOpSyncStatus) StateCounter() uint64 {
@@ -51,4 +54,8 @@ func (n *noOpSyncStatus) Run(ctx context.Context) error {
 
 func (n *noOpSyncStatus) Close(ctx context.Context) error {
 	return nil
+}
+
+func (n *noOpSyncStatus) GetNodeStatus() ConnectionStatus {
+	return n.nodeStatus
 }

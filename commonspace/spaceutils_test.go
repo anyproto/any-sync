@@ -3,6 +3,8 @@ package commonspace
 import (
 	"context"
 	"fmt"
+	mock_syncstatus "github.com/anyproto/any-sync/commonspace/syncstatus/mock_spacesyncstatus"
+	"go.uber.org/mock/gomock"
 	"testing"
 	"time"
 
@@ -169,6 +171,10 @@ func (p *mockPeerManager) GetResponsiblePeers(ctx context.Context) (peers []peer
 
 func (p *mockPeerManager) GetNodePeers(ctx context.Context) (peers []peer.Peer, err error) {
 	return nil, nil
+}
+
+func (p *mockPeerManager) GetNodeResponsiblePeers() (peers []string) {
+	return nil
 }
 
 //
@@ -501,6 +507,11 @@ func newFixture(t *testing.T) *spaceFixture {
 		pool:                 &mockPool{},
 		spaceService:         New(),
 	}
+	syncStatusUpdater := mock_syncstatus.NewMockSpaceSyncStatusUpdater(gomock.NewController(t))
+	syncStatusUpdater.EXPECT().Name().Return(syncstatus.SpaceSyncStatusService).AnyTimes()
+	syncStatusUpdater.EXPECT().Init(fx.app).Return(nil).AnyTimes()
+	syncStatusUpdater.EXPECT().Run(ctx).Return(nil).AnyTimes()
+
 	fx.app.Register(fx.account).
 		Register(fx.config).
 		Register(credentialprovider.NewNoOp()).
@@ -512,7 +523,8 @@ func newFixture(t *testing.T) *spaceFixture {
 		Register(fx.peermanagerProvider).
 		Register(fx.treeManager).
 		Register(fx.pool).
-		Register(fx.spaceService)
+		Register(fx.spaceService).
+		Register(syncStatusUpdater)
 	err := fx.app.Start(ctx)
 	if err != nil {
 		fx.cancelFunc()

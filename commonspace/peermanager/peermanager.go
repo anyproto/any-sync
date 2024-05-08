@@ -22,6 +22,8 @@ type PeerManager interface {
 	GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error)
 	// GetNodePeers dials or gets from cache node peers
 	GetNodePeers(ctx context.Context) (peers []peer.Peer, err error)
+	// GetNodeResponsiblePeers get responsible node peers from cache
+	GetNodeResponsiblePeers() (peers []string)
 }
 
 type PeerManagerProvider interface {

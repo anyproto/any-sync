@@ -41,6 +41,7 @@ type UpdateReceiver interface {
 }
 
 type StatusUpdater interface {
+	NodeStatusProvider
 	HeadsChange(treeId string, heads []string)
 	HeadsReceive(senderId, treeId string, heads []string)
 
@@ -53,6 +54,10 @@ type StatusWatcher interface {
 	Watch(treeId string) (err error)
 	Unwatch(treeId string)
 	SetUpdateReceiver(updater UpdateReceiver)
+}
+
+type NodeStatusProvider interface {
+	GetNodeStatus() ConnectionStatus
 }
 
 type StatusServiceProvider interface {
@@ -304,4 +309,8 @@ func (s *syncStatusService) Close(ctx context.Context) error {
 
 func (s *syncStatusService) isSenderResponsible(senderId string) bool {
 	return slices.Contains(s.configuration.NodeIds(s.spaceId), senderId)
+}
+
+func (s *syncStatusService) GetNodeStatus() ConnectionStatus {
+	return s.nodeStatus
 }

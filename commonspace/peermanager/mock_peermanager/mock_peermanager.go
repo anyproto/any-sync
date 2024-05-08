@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_peermanager/mock_peermanager.go github.com/anyproto/any-sync/commonspace/peermanager PeerManager
 //
-
 // Package mock_peermanager is a generated GoMock package.
 package mock_peermanager
 
@@ -69,6 +68,20 @@ func (m *MockPeerManager) GetNodePeers(arg0 context.Context) ([]peer.Peer, error
 func (mr *MockPeerManagerMockRecorder) GetNodePeers(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodePeers", reflect.TypeOf((*MockPeerManager)(nil).GetNodePeers), arg0)
+}
+
+// GetNodeResponsiblePeers mocks base method.
+func (m *MockPeerManager) GetNodeResponsiblePeers() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNodeResponsiblePeers")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// GetNodeResponsiblePeers indicates an expected call of GetNodeResponsiblePeers.
+func (mr *MockPeerManagerMockRecorder) GetNodeResponsiblePeers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodeResponsiblePeers", reflect.TypeOf((*MockPeerManager)(nil).GetNodeResponsiblePeers))
 }
 
 // GetResponsiblePeers mocks base method.
