@@ -107,41 +107,26 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 	}
 	d.log.DebugCtx(ctx, "start diffsync", zap.Strings("peerIds", peerIds))
 	nodePeers := d.peerManager.GetNodeResponsiblePeers()
-	var numberOfFailedNodePeers, numberOfOfflineNodePeers int
 	for _, p := range peers {
 		nodePeer := slices.Contains(nodePeers, p.Id())
 		if err = d.syncWithPeer(peer.CtxWithPeerId(ctx, p.Id()), p, nodePeer); err != nil {
 			d.log.ErrorCtx(ctx, "can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
-			numberOfOfflineNodePeers, numberOfFailedNodePeers = d.sendEventForNodePeer(nodePeer, numberOfOfflineNodePeers, numberOfFailedNodePeers)
+			d.sendEventForNodePeer(nodePeer)
 		} else if nodePeer {
 			d.spaceSync.SendUpdate(syncstatus.MakeSyncStatus(d.spaceId, syncstatus.Synced, 0, syncstatus.Null, syncstatus.Objects))
 		}
 	}
-	d.sendResultSpaceSyncStatusEvent(numberOfFailedNodePeers, numberOfOfflineNodePeers, len(nodePeers))
 	d.log.DebugCtx(ctx, "diff done", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
 	return nil
 }
 
-func (d *diffSyncer) sendEventForNodePeer(nodePeer bool, numberOfOfflineNodePeers int, numberOfFailedNodePeers int) (int, int) {
+func (d *diffSyncer) sendEventForNodePeer(nodePeer bool) {
 	if nodePeer && d.syncStatus.GetNodeStatus() != syncstatus.Online {
 		d.spaceSync.SendUpdate(syncstatus.MakeSyncStatus(d.spaceId, syncstatus.Offline, 0, syncstatus.Null, syncstatus.Objects))
-		numberOfOfflineNodePeers++
-		return numberOfOfflineNodePeers, numberOfFailedNodePeers
+		return
 	}
 	if nodePeer {
-		numberOfFailedNodePeers++
 		d.spaceSync.SendUpdate(syncstatus.MakeSyncStatus(d.spaceId, syncstatus.Error, 0, syncstatus.NetworkError, syncstatus.Objects))
-	}
-	return numberOfOfflineNodePeers, numberOfFailedNodePeers
-}
-
-func (d *diffSyncer) sendResultSpaceSyncStatusEvent(numberOfFailedNodePeers, numberOfOfflineNodePeers, nodePeersNumber int) {
-	if nodePeersNumber <= 1 || numberOfOfflineNodePeers == nodePeersNumber || numberOfFailedNodePeers == nodePeersNumber { // means that we've already sent events for 1 peer node and don't need to evaluate result sync status again
-		return
-	}
-	if numberOfFailedNodePeers != 0 || numberOfOfflineNodePeers != 0 {
-		d.spaceSync.SendUpdate(syncstatus.MakeSyncStatus(d.spaceId, syncstatus.Error, 0, syncstatus.NetworkError, syncstatus.Objects))
-		return
 	}
 }
 
