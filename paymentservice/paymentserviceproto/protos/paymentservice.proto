@@ -256,6 +256,8 @@ enum ErrorCodes {
   EmailExpired = 16;
   EmailWrongCode = 17;
 
+  InvalidReceipt = 18;
+
   ErrorOffset = 600;
 }
 
