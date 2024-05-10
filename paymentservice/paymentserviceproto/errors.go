@@ -26,4 +26,5 @@ var (
 	ErrEmailFailedToSend    = errGroup.Register(errors.New("failed to send email"), uint64(ErrorCodes_EmailFailedToSend))
 	ErrEmailExpired         = errGroup.Register(errors.New("email verification request expired. try getting new code"), uint64(ErrorCodes_EmailExpired))
 	ErrEmailWrongCode       = errGroup.Register(errors.New("wrong verification code"), uint64(ErrorCodes_EmailWrongCode))
+	ErrInvalidReceipt       = errGroup.Register(errors.New("invalid AppStore receipt"), uint64(ErrorCodes_InvalidReceipt))
 )
