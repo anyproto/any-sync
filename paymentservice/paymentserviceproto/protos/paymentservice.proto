@@ -89,6 +89,8 @@ message BuySubscriptionRequest {
   // if empty - then no name requested
   // if non-empty - PP node will register that name on behalf of the user
   string requestedAnyName = 5;
+  // for some payment methods we need to know the user's email
+  string userEmail = 6;
 }
 
 message BuySubscriptionRequestSigned {
