@@ -29,6 +29,7 @@ var (
 	ErrNoChangeInTree    = errors.New("no such change in tree")
 	ErrMissingKey        = errors.New("missing current read key")
 	ErrDerived           = errors.New("expect >= 2 changes in derived tree")
+	ErrDeleted           = errors.New("object tree is deleted")
 )
 
 type AddResultSummary int
@@ -105,6 +106,7 @@ type objectTree struct {
 
 	keys           map[string]crypto.SymKey
 	currentReadKey crypto.SymKey
+	isDeleted      bool
 
 	// buffers
 	difSnapshotBuf  []*treechangeproto.RawTreeChangeWithId
@@ -179,6 +181,9 @@ func (ot *objectTree) Storage() treestorage.TreeStorage {
 }
 
 func (ot *objectTree) GetChange(id string) (*Change, error) {
+	if ot.isDeleted {
+		return nil, ErrDeleted
+	}
 	if ch, ok := ot.tree.attached[id]; ok {
 		return ch, nil
 	}
@@ -186,6 +191,10 @@ func (ot *objectTree) GetChange(id string) (*Change, error) {
 }
 
 func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeContent) (res AddResult, err error) {
+	if ot.isDeleted {
+		err = ErrDeleted
+		return
+	}
 	payload, err := ot.prepareBuilderContent(content)
 	if err != nil {
 		return
@@ -227,6 +236,10 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 }
 
 func (ot *objectTree) UnpackChange(raw *treechangeproto.RawTreeChangeWithId) (data []byte, err error) {
+	if ot.isDeleted {
+		err = ErrDeleted
+		return
+	}
 	unmarshalled, err := ot.changeBuilder.Unmarshall(raw, true)
 	if err != nil {
 		return
@@ -236,6 +249,10 @@ func (ot *objectTree) UnpackChange(raw *treechangeproto.RawTreeChangeWithId) (da
 }
 
 func (ot *objectTree) PrepareChange(content SignableChangeContent) (res *treechangeproto.RawTreeChangeWithId, err error) {
+	if ot.isDeleted {
+		err = ErrDeleted
+		return
+	}
 	payload, err := ot.prepareBuilderContent(content)
 	if err != nil {
 		return
@@ -291,6 +308,10 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 }
 
 func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChangesPayload) (addResult AddResult, err error) {
+	if ot.isDeleted {
+		err = ErrDeleted
+		return
+	}
 	lastHeadId := ot.tree.lastIteratedHeadId
 	addResult, err = ot.addRawChanges(ctx, changesPayload)
 	if err != nil {
@@ -526,6 +547,10 @@ func (ot *objectTree) IterateRoot(convert ChangeConvertFunc, iterate ChangeItera
 }
 
 func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) (err error) {
+	if ot.isDeleted {
+		err = ErrDeleted
+		return
+	}
 	if convert == nil {
 		ot.tree.Iterate(id, iterate)
 		return
@@ -575,12 +600,14 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 }
 
 func (ot *objectTree) HasChanges(chs ...string) bool {
+	if ot.isDeleted {
+		return false
+	}
 	for _, ch := range chs {
 		if _, attachedExists := ot.tree.attached[ch]; !attachedExists {
 			return false
 		}
 	}
-
 	return true
 }
 
@@ -601,10 +628,17 @@ func (ot *objectTree) Close() error {
 }
 
 func (ot *objectTree) Delete() error {
+	if ot.isDeleted {
+		return nil
+	}
+	ot.isDeleted = true
 	return ot.treeStorage.Delete()
 }
 
 func (ot *objectTree) SnapshotPath() []string {
+	if ot.isDeleted {
+		return nil
+	}
 	// TODO: Add error as return parameter
 	if ot.snapshotPathIsActual() {
 		return ot.snapshotPath
@@ -627,6 +661,9 @@ func (ot *objectTree) SnapshotPath() []string {
 }
 
 func (ot *objectTree) ChangesAfterCommonSnapshot(theirPath, theirHeads []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
+	if ot.isDeleted {
+		return nil, ErrDeleted
+	}
 	var (
 		needFullDocument = len(theirPath) == 0
 		ourPath          = ot.SnapshotPath()
