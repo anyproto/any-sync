@@ -24,6 +24,8 @@ type PeerManager interface {
 	GetNodePeers(ctx context.Context) (peers []peer.Peer, err error)
 	// GetNodeResponsiblePeers get responsible node peers from cache
 	GetNodeResponsiblePeers() (peers []string)
+	// IsPeerOffline check if peer node has offline status
+	IsPeerOffline(senderId string) bool
 }
 
 type PeerManagerProvider interface {

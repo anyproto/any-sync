@@ -3,8 +3,6 @@ package commonspace
 import (
 	"context"
 	"fmt"
-	mock_syncstatus "github.com/anyproto/any-sync/commonspace/syncstatus/mock_spacesyncstatus"
-	"go.uber.org/mock/gomock"
 	"testing"
 	"time"
 
@@ -23,7 +21,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
@@ -149,6 +146,10 @@ func (m *mockConf) NodeTypes(nodeId string) []nodeconf.NodeType {
 type mockPeerManager struct {
 }
 
+func (p *mockPeerManager) IsPeerOffline(senderId string) bool {
+	return false
+}
+
 func (p *mockPeerManager) Init(a *app.App) (err error) {
 	return nil
 }
@@ -194,25 +195,6 @@ func (m *mockPeerManagerProvider) Name() (name string) {
 
 func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId string) (sm peermanager.PeerManager, err error) {
 	return &mockPeerManager{}, nil
-}
-
-//
-// Mock StatusServiceProvider
-//
-
-type mockStatusServiceProvider struct {
-}
-
-func (m *mockStatusServiceProvider) Init(a *app.App) (err error) {
-	return nil
-}
-
-func (m *mockStatusServiceProvider) Name() (name string) {
-	return syncstatus.CName
-}
-
-func (m *mockStatusServiceProvider) NewStatusService() syncstatus.StatusService {
-	return syncstatus.NewNoOpSyncStatus()
 }
 
 //
@@ -507,15 +489,9 @@ func newFixture(t *testing.T) *spaceFixture {
 		pool:                 &mockPool{},
 		spaceService:         New(),
 	}
-	syncStatusUpdater := mock_syncstatus.NewMockSpaceSyncStatusUpdater(gomock.NewController(t))
-	syncStatusUpdater.EXPECT().Name().Return(syncstatus.SpaceSyncStatusService).AnyTimes()
-	syncStatusUpdater.EXPECT().Init(fx.app).Return(nil).AnyTimes()
-	syncStatusUpdater.EXPECT().Run(ctx).Return(nil).AnyTimes()
-
 	fx.app.Register(fx.account).
 		Register(fx.config).
 		Register(credentialprovider.NewNoOp()).
-		Register(&mockStatusServiceProvider{}).
 		Register(mockCoordinatorClient{}).
 		Register(mockNodeClient{}).
 		Register(fx.configurationService).
@@ -523,8 +499,7 @@ func newFixture(t *testing.T) *spaceFixture {
 		Register(fx.peermanagerProvider).
 		Register(fx.treeManager).
 		Register(fx.pool).
-		Register(fx.spaceService).
-		Register(syncStatusUpdater)
+		Register(fx.spaceService)
 	err := fx.app.Start(ctx)
 	if err != nil {
 		fx.cancelFunc()

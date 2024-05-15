@@ -103,7 +103,7 @@ type space struct {
 	peerManager peermanager.PeerManager
 	headSync    headsync.HeadSync
 	objectSync  objectsync.ObjectSync
-	syncStatus  syncstatus.StatusService
+	syncStatus  syncstatus.StatusUpdater
 	settings    settings.Settings
 	storage     spacestorage.SpaceStorage
 	aclClient   aclclient.AclSpaceClient
@@ -186,7 +186,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	}
 	s.treeBuilder = s.app.MustComponent(objecttreebuilder.CName).(objecttreebuilder.TreeBuilderComponent)
 	s.headSync = s.app.MustComponent(headsync.CName).(headsync.HeadSync)
-	s.syncStatus = s.app.MustComponent(syncstatus.CName).(syncstatus.StatusService)
+	s.syncStatus = s.app.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	s.settings = s.app.MustComponent(settings.CName).(settings.Settings)
 	s.objectSync = s.app.MustComponent(objectsync.CName).(objectsync.ObjectSync)
 	s.storage = s.app.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)

@@ -113,6 +113,20 @@ func (mr *MockPeerManagerMockRecorder) Init(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockPeerManager)(nil).Init), arg0)
 }
 
+// IsPeerOffline mocks base method.
+func (m *MockPeerManager) IsPeerOffline(arg0 string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsPeerOffline", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsPeerOffline indicates an expected call of IsPeerOffline.
+func (mr *MockPeerManagerMockRecorder) IsPeerOffline(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPeerOffline", reflect.TypeOf((*MockPeerManager)(nil).IsPeerOffline), arg0)
+}
+
 // Name mocks base method.
 func (m *MockPeerManager) Name() string {
 	m.ctrl.T.Helper()

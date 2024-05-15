@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"testing"
 	"time"
 
@@ -133,10 +132,6 @@ func TestDiffSyncer(t *testing.T) {
 		fx.deletionStateMock.EXPECT().Filter([]string{"changed"}).Return([]string{"changed"}).Times(1)
 		fx.deletionStateMock.EXPECT().Filter(nil).Return(nil).Times(1)
 		fx.treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer.Id(), []string{"changed"}, []string{"new"}).Return(nil)
-		fx.peerManagerMock.EXPECT().GetNodeResponsiblePeers().Return([]string{mPeer.Id()})
-		fx.spaceSync.EXPECT().SendUpdate(syncstatus.MakeSyncStatus(fx.spaceState.SpaceId, syncstatus.Syncing, 2, syncstatus.Null, syncstatus.Objects))
-		fx.spaceSync.EXPECT().SendUpdate(syncstatus.MakeSyncStatus(fx.spaceState.SpaceId, syncstatus.Synced, 0, syncstatus.Null, syncstatus.Objects))
-
 		require.NoError(t, fx.diffSyncer.Sync(ctx))
 	})
 
@@ -161,8 +156,6 @@ func TestDiffSyncer(t *testing.T) {
 		fx.deletionStateMock.EXPECT().Filter(nil).Return(nil).Times(1)
 		fx.treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer.Id(), []string{"changed"}, []string{"new"}).Return(nil)
 		fx.aclMock.EXPECT().SyncWithPeer(gomock.Any(), mPeer.Id()).Return(nil)
-		fx.peerManagerMock.EXPECT().GetNodeResponsiblePeers().Return(nil)
-
 		require.NoError(t, fx.diffSyncer.Sync(ctx))
 	})
 
@@ -256,8 +249,6 @@ func TestDiffSyncer(t *testing.T) {
 			Return(nil, nil)
 
 		fx.peerManagerMock.EXPECT().SendPeer(gomock.Any(), "peerId", gomock.Any())
-		fx.peerManagerMock.EXPECT().GetNodeResponsiblePeers().Return([]string{"peerId"})
-		fx.spaceSync.EXPECT().SendUpdate(syncstatus.MakeSyncStatus(fx.spaceState.SpaceId, syncstatus.Synced, 0, syncstatus.Null, syncstatus.Objects))
 
 		require.NoError(t, fx.diffSyncer.Sync(ctx))
 	})
@@ -278,9 +269,6 @@ func TestDiffSyncer(t *testing.T) {
 			Diff(gomock.Any(), gomock.Eq(remDiff)).
 			Return(nil, nil, nil, spacesyncproto.ErrUnexpected)
 
-		fx.peerManagerMock.EXPECT().GetNodeResponsiblePeers().Return([]string{"peerId"})
-		fx.spaceSync.EXPECT().SendUpdate(syncstatus.MakeSyncStatus(fx.spaceState.SpaceId, syncstatus.Offline, 0, syncstatus.Null, syncstatus.Objects))
-
 		require.NoError(t, fx.diffSyncer.Sync(ctx))
 	})
 
@@ -300,8 +288,6 @@ func TestDiffSyncer(t *testing.T) {
 		fx.diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remDiff)).
 			Return(nil, nil, nil, spacesyncproto.ErrSpaceIsDeleted)
-		fx.peerManagerMock.EXPECT().GetNodeResponsiblePeers().Return([]string{mPeer.Id()})
-		fx.spaceSync.EXPECT().SendUpdate(syncstatus.MakeSyncStatus(fx.spaceState.SpaceId, syncstatus.Offline, 0, syncstatus.Null, syncstatus.Objects))
 
 		require.NoError(t, fx.diffSyncer.Sync(ctx))
 	})

@@ -2,7 +2,6 @@ package headsync
 
 import (
 	"context"
-	mock_syncstatus "github.com/anyproto/any-sync/commonspace/syncstatus/mock_spacesyncstatus"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -31,7 +30,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto/mock_spacesyncproto"
-	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 )
@@ -60,7 +58,6 @@ type headSyncFixture struct {
 	storageMock            *mock_spacestorage.MockSpaceStorage
 	peerManagerMock        *mock_peermanager.MockPeerManager
 	credentialProviderMock *mock_credentialprovider.MockCredentialProvider
-	syncStatus             syncstatus.StatusService
 	treeManagerMock        *mock_treemanager.MockTreeManager
 	deletionStateMock      *mock_deletionstate.MockObjectDeletionState
 	diffSyncerMock         *mock_headsync.MockDiffSyncer
@@ -71,7 +68,6 @@ type headSyncFixture struct {
 	aclMock                *mock_syncacl.MockSyncAcl
 	headSync               *headSync
 	diffSyncer             *diffSyncer
-	spaceSync              *mock_syncstatus.MockSpaceSyncStatusUpdater
 }
 
 func newHeadSyncFixture(t *testing.T) *headSyncFixture {
@@ -87,7 +83,6 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 	peerManagerMock.EXPECT().Name().AnyTimes().Return(peermanager.CName)
 	credentialProviderMock := mock_credentialprovider.NewMockCredentialProvider(ctrl)
 	credentialProviderMock.EXPECT().Name().AnyTimes().Return(credentialprovider.CName)
-	syncStatus := syncstatus.NewNoOpSyncStatus()
 	treeManagerMock := mock_treemanager.NewMockTreeManager(ctrl)
 	treeManagerMock.EXPECT().Name().AnyTimes().Return(treemanager.CName)
 	deletionStateMock := mock_deletionstate.NewMockObjectDeletionState(ctrl)
@@ -101,8 +96,6 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 	aclMock := mock_syncacl.NewMockSyncAcl(ctrl)
 	aclMock.EXPECT().Name().AnyTimes().Return(syncacl.CName)
 	aclMock.EXPECT().SetHeadUpdater(gomock.Any()).AnyTimes()
-	spaceSync := mock_syncstatus.NewMockSpaceSyncStatusUpdater(ctrl)
-	spaceSync.EXPECT().Name().AnyTimes().Return(syncstatus.SpaceSyncStatusService)
 
 	hs := &headSync{}
 	a := &app.App{}
@@ -113,12 +106,10 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 		Register(storageMock).
 		Register(peerManagerMock).
 		Register(credentialProviderMock).
-		Register(syncStatus).
 		Register(treeManagerMock).
 		Register(treeSyncerMock).
 		Register(deletionStateMock).
-		Register(hs).
-		Register(spaceSync)
+		Register(hs)
 	return &headSyncFixture{
 		spaceState:             spaceState,
 		ctrl:                   ctrl,
@@ -127,7 +118,6 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 		storageMock:            storageMock,
 		peerManagerMock:        peerManagerMock,
 		credentialProviderMock: credentialProviderMock,
-		syncStatus:             syncStatus,
 		treeManagerMock:        treeManagerMock,
 		deletionStateMock:      deletionStateMock,
 		headSync:               hs,
@@ -137,7 +127,6 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 		diffMock:               diffMock,
 		clientMock:             clientMock,
 		aclMock:                aclMock,
-		spaceSync:              spaceSync,
 	}
 }
 

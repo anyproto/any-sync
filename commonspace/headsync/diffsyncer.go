@@ -2,7 +2,6 @@ package headsync
 
 import (
 	"context"
-	"slices"
 	"time"
 
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
@@ -18,8 +17,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/any-sync/commonspace/syncstatus"
-	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/util/slice"
@@ -43,11 +40,9 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 		clientFactory:      spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient),
 		credentialProvider: hs.credentialProvider,
 		log:                newSyncLogger(hs.log, logPeriodSecs),
-		syncStatus:         hs.syncStatus,
 		deletionState:      hs.deletionState,
 		syncAcl:            hs.syncAcl,
 		treeSyncer:         hs.treeSyncer,
-		spaceSync:          hs.spaceSync,
 	}
 }
 
@@ -62,9 +57,7 @@ type diffSyncer struct {
 	log                syncLogger
 	deletionState      deletionstate.ObjectDeletionState
 	credentialProvider credentialprovider.CredentialProvider
-	syncStatus         syncstatus.StatusUpdater
 	syncAcl            syncacl.SyncAcl
-	spaceSync          syncstatus.SpaceSyncStatusUpdater
 }
 
 func (d *diffSyncer) Init() {
@@ -106,31 +99,16 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 		peerIds = append(peerIds, p.Id())
 	}
 	d.log.DebugCtx(ctx, "start diffsync", zap.Strings("peerIds", peerIds))
-	nodePeers := d.peerManager.GetNodeResponsiblePeers()
 	for _, p := range peers {
-		nodePeer := slices.Contains(nodePeers, p.Id())
-		if err = d.syncWithPeer(peer.CtxWithPeerId(ctx, p.Id()), p, nodePeer); err != nil {
+		if err = d.syncWithPeer(peer.CtxWithPeerId(ctx, p.Id()), p); err != nil {
 			d.log.ErrorCtx(ctx, "can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
-			d.sendEventForNodePeer(nodePeer)
-		} else if nodePeer {
-			d.spaceSync.SendUpdate(syncstatus.MakeSyncStatus(d.spaceId, syncstatus.Synced, 0, syncstatus.Null, syncstatus.Objects))
 		}
 	}
 	d.log.DebugCtx(ctx, "diff done", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
 	return nil
 }
 
-func (d *diffSyncer) sendEventForNodePeer(nodePeer bool) {
-	if nodePeer && d.syncStatus.GetNodeStatus() != syncstatus.Online {
-		d.spaceSync.SendUpdate(syncstatus.MakeSyncStatus(d.spaceId, syncstatus.Offline, 0, syncstatus.Null, syncstatus.Objects))
-		return
-	}
-	if nodePeer {
-		d.spaceSync.SendUpdate(syncstatus.MakeSyncStatus(d.spaceId, syncstatus.Error, 0, syncstatus.NetworkError, syncstatus.Objects))
-	}
-}
-
-func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer, nodePeer bool) (err error) {
+func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	if !d.treeSyncer.ShouldSync(p.Id()) {
 		return
 	}
@@ -144,7 +122,6 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer, nodePeer boo
 	var (
 		cl                             = d.clientFactory.Client(conn)
 		rdiff                          = NewRemoteDiff(d.spaceId, cl)
-		stateCounter                   = d.syncStatus.StateCounter()
 		syncAclId                      = d.syncAcl.Id()
 		newIds, changedIds, removedIds []string
 	)
@@ -162,22 +139,16 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer, nodePeer boo
 			return d.onDiffError(ctx, p, cl, err)
 		}
 	}
-	d.syncStatus.SetNodesStatus(p.Id(), syncstatus.Online)
 
 	totalLen := len(newIds) + len(changedIds) + len(removedIds)
 	// not syncing ids which were removed through settings document
 	missingIds := d.deletionState.Filter(newIds)
 	existingIds := append(d.deletionState.Filter(removedIds), d.deletionState.Filter(changedIds)...)
-	d.syncStatus.RemoveAllExcept(p.Id(), existingIds, stateCounter)
 
 	prevExistingLen := len(existingIds)
 	existingIds = slice.DiscardFromSlice(existingIds, func(s string) bool {
 		return s == syncAclId
 	})
-
-	if (len(existingIds) != 0 || len(missingIds) != 0) && nodePeer {
-		d.spaceSync.SendUpdate(syncstatus.MakeSyncStatus(d.spaceId, syncstatus.Syncing, len(existingIds)+len(missingIds), syncstatus.Null, syncstatus.Objects))
-	}
 
 	// if we removed acl head from the list
 	if len(existingIds) < prevExistingLen {
@@ -197,24 +168,13 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer, nodePeer boo
 
 func (d *diffSyncer) onDiffError(ctx context.Context, p peer.Peer, cl spacesyncproto.DRPCSpaceSyncClient, err error) error {
 	if err != spacesyncproto.ErrSpaceMissing {
-		if err == spacesyncproto.ErrSpaceIsDeleted {
-			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.RemovedFromNetwork)
-		} else {
-			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.ConnectionError)
-		}
 		return err
 	}
 	// in case space is missing on peer, we should send push request
 	err = d.sendPushSpaceRequest(ctx, p.Id(), cl)
 	if err != nil {
-		if err == coordinatorproto.ErrSpaceIsDeleted {
-			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.RemovedFromNetwork)
-		} else {
-			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.ConnectionError)
-		}
 		return err
 	}
-	d.syncStatus.SetNodesStatus(p.Id(), syncstatus.Online)
 	return nil
 }
 

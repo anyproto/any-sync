@@ -91,7 +91,7 @@ func (s *syncAcl) Init(a *app.App) (err error) {
 	spaceId := storage.Id()
 	requestManager := a.MustComponent(requestmanager.CName).(requestmanager.RequestManager)
 	peerManager := a.MustComponent(peermanager.CName).(peermanager.PeerManager)
-	syncStatus := a.MustComponent(syncstatus.CName).(syncstatus.StatusService)
+	syncStatus := a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	s.syncClient = NewSyncClient(spaceId, requestManager, peerManager)
 	s.syncHandler = newSyncAclHandler(storage.Id(), s, s.syncClient, syncStatus)
 	return err
