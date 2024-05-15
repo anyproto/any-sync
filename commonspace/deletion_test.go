@@ -3,6 +3,12 @@ package commonspace
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -13,10 +19,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/util/crypto"
-	"github.com/stretchr/testify/require"
-	"math/rand"
-	"testing"
-	"time"
 )
 
 func addIncorrectSnapshot(settingsObject settings.SettingsObject, acc *accountdata.AccountKeys, partialIds map[string]struct{}, newId string) (err error) {

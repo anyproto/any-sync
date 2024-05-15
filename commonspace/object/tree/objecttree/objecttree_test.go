@@ -121,6 +121,51 @@ func TestObjectTree(t *testing.T) {
 	aclList, keys := prepareAclList(t)
 	ctx := context.Background()
 
+	t.Run("delete object tree", func(t *testing.T) {
+		exec := list.NewAclExecutor("spaceId")
+		type cmdErr struct {
+			cmd string
+			err error
+		}
+		cmds := []cmdErr{
+			{"a.init::a", nil},
+		}
+		for _, cmd := range cmds {
+			err := exec.Execute(cmd.cmd)
+			require.Equal(t, cmd.err, err, cmd)
+		}
+		aAccount := exec.ActualAccounts()["a"]
+		root, err := CreateObjectTreeRoot(ObjectTreeCreatePayload{
+			PrivKey:       aAccount.Keys.SignKey,
+			ChangeType:    "changeType",
+			ChangePayload: nil,
+			SpaceId:       "spaceId",
+			IsEncrypted:   true,
+		}, aAccount.Acl)
+		require.NoError(t, err)
+		aStore, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
+		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
+		require.NoError(t, err)
+		err = aTree.Delete()
+		require.NoError(t, err)
+		_, err = aTree.ChangesAfterCommonSnapshot(nil, nil)
+		require.Equal(t, ErrDeleted, err)
+		err = aTree.IterateFrom("", nil, func(change *Change) bool {
+			return true
+		})
+		require.Equal(t, ErrDeleted, err)
+		_, err = aTree.AddContent(ctx, SignableChangeContent{})
+		require.Equal(t, ErrDeleted, err)
+		_, err = aTree.AddRawChanges(ctx, RawChangesPayload{})
+		require.Equal(t, ErrDeleted, err)
+		_, err = aTree.PrepareChange(SignableChangeContent{})
+		require.Equal(t, ErrDeleted, err)
+		_, err = aTree.UnpackChange(nil)
+		require.Equal(t, ErrDeleted, err)
+		_, err = aTree.GetChange("")
+		require.Equal(t, ErrDeleted, err)
+	})
+
 	t.Run("user delete logic: validation, key change, decryption", func(t *testing.T) {
 		exec := list.NewAclExecutor("spaceId")
 		type cmdErr struct {
