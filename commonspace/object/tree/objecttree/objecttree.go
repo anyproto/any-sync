@@ -4,14 +4,16 @@ package objecttree
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/anyproto/any-sync/util/crypto"
+	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/slice"
 )
 
@@ -124,6 +126,7 @@ func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Chan
 	ot.treeBuilder.Reset()
 	ot.tree, err = ot.treeBuilder.Build(theirHeads, newChanges)
 	if err != nil {
+		ot.tree = oldTree
 		return
 	}
 
@@ -429,20 +432,27 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 			break
 		}
 	}
-
+	log := log.With(zap.String("treeId", ot.id))
 	if shouldRebuildFromStorage {
 		err = ot.rebuildFromStorage(headsToUse, ot.newChangesBuf)
 		if err != nil {
+			log.Error("failed to rebuild with new heads", zap.Strings("headsToUse", headsToUse), zap.Error(err))
 			// rebuilding without new changes
-			ot.rebuildFromStorage(nil, nil)
+			rebuildErr := ot.rebuildFromStorage(nil, nil)
+			if rebuildErr != nil {
+				log.Error("failed to rebuild from storage", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
+			}
 			return
 		}
 		addResult, err = ot.createAddResult(prevHeadsCopy, Rebuild, nil, changesPayload.RawChanges)
 		if err != nil {
+			log.Error("failed to create add result", zap.Strings("headsToUse", headsToUse), zap.Error(err))
 			// that means that some unattached changes were somehow corrupted in memory
 			// this shouldn't happen but if that happens, then rebuilding from storage
-			ot.rebuildFromStorage(nil, nil)
-			return
+			rebuildErr := ot.rebuildFromStorage(nil, nil)
+			if rebuildErr != nil {
+				log.Error("failed to rebuild after add result", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
+			}
 		}
 		return
 	}
@@ -463,7 +473,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 		err = ot.validateTree(treeChangesAdded)
 		if err != nil {
 			rollback(treeChangesAdded)
-			err = ErrHasInvalidChanges
+			err = fmt.Errorf("%w: %w", ErrHasInvalidChanges, err)
 			return
 		}
 		addResult, err = ot.createAddResult(prevHeadsCopy, mode, treeChangesAdded, changesPayload.RawChanges)
