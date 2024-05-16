@@ -432,24 +432,26 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 			break
 		}
 	}
-
+	log := log.With(zap.String("treeId", ot.id))
 	if shouldRebuildFromStorage {
 		err = ot.rebuildFromStorage(headsToUse, ot.newChangesBuf)
 		if err != nil {
+			log.Error("failed to rebuild with new heads", zap.Strings("headsToUse", headsToUse), zap.Error(err))
 			// rebuilding without new changes
 			rebuildErr := ot.rebuildFromStorage(nil, nil)
 			if rebuildErr != nil {
-				log.Error("failed to rebuild", zap.String("treeId", ot.id), zap.Strings("heads", ot.Heads()), zap.Error(err))
+				log.Error("failed to rebuild from storage", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
 			}
 			return
 		}
 		addResult, err = ot.createAddResult(prevHeadsCopy, Rebuild, nil, changesPayload.RawChanges)
 		if err != nil {
+			log.Error("failed to create add result", zap.Strings("headsToUse", headsToUse), zap.Error(err))
 			// that means that some unattached changes were somehow corrupted in memory
 			// this shouldn't happen but if that happens, then rebuilding from storage
 			rebuildErr := ot.rebuildFromStorage(nil, nil)
 			if rebuildErr != nil {
-				log.Error("failed to rebuild after add result", zap.String("treeId", ot.id), zap.Strings("heads", ot.Heads()), zap.Error(err))
+				log.Error("failed to rebuild after add result", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
 			}
 		}
 		return
