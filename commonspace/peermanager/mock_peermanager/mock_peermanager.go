@@ -70,20 +70,6 @@ func (mr *MockPeerManagerMockRecorder) GetNodePeers(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodePeers", reflect.TypeOf((*MockPeerManager)(nil).GetNodePeers), arg0)
 }
 
-// GetNodeResponsiblePeers mocks base method.
-func (m *MockPeerManager) GetNodeResponsiblePeers() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNodeResponsiblePeers")
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// GetNodeResponsiblePeers indicates an expected call of GetNodeResponsiblePeers.
-func (mr *MockPeerManagerMockRecorder) GetNodeResponsiblePeers() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodeResponsiblePeers", reflect.TypeOf((*MockPeerManager)(nil).GetNodeResponsiblePeers))
-}
-
 // GetResponsiblePeers mocks base method.
 func (m *MockPeerManager) GetResponsiblePeers(arg0 context.Context) ([]peer.Peer, error) {
 	m.ctrl.T.Helper()

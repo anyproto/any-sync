@@ -4,7 +4,6 @@ package commonspace
 import (
 	"context"
 	"errors"
-	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"sync/atomic"
 	"time"
 
@@ -38,6 +37,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/pool"
