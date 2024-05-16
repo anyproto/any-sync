@@ -2,6 +2,7 @@ package objecttree
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -1228,6 +1229,6 @@ func TestObjectTree(t *testing.T) {
 			Heads:         []string{"3"},
 			Changes:       rawChanges,
 		}, ctx.aclList)
-		require.Equal(t, ErrHasInvalidChanges, err)
+		require.True(t, errors.Is(err, ErrHasInvalidChanges))
 	})
 }

@@ -170,7 +170,7 @@ func ValidateRawTreeBuildFunc(payload treestorage.TreeStorageCreatePayload, buil
 		return
 	}
 	if !slice.UnsortedEquals(res.Heads, payload.Heads) {
-		return payload, ErrHasInvalidChanges
+		return payload, fmt.Errorf("heads mismatch: %v != %v, %w", res.Heads, payload.Heads, ErrHasInvalidChanges)
 	}
 	// if tree has only one change we still should check if the snapshot id is same as root
 	if IsEmptyDerivedTree(tree) {

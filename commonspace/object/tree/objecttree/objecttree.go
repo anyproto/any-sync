@@ -4,14 +4,16 @@ package objecttree
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/anyproto/any-sync/util/crypto"
+	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/slice"
 )
 
@@ -124,6 +126,7 @@ func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Chan
 	ot.treeBuilder.Reset()
 	ot.tree, err = ot.treeBuilder.Build(theirHeads, newChanges)
 	if err != nil {
+		ot.tree = oldTree
 		return
 	}
 
@@ -434,15 +437,20 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 		err = ot.rebuildFromStorage(headsToUse, ot.newChangesBuf)
 		if err != nil {
 			// rebuilding without new changes
-			ot.rebuildFromStorage(nil, nil)
+			rebuildErr := ot.rebuildFromStorage(nil, nil)
+			if rebuildErr != nil {
+				log.Error("failed to rebuild", zap.String("treeId", ot.id), zap.Strings("heads", ot.Heads()), zap.Error(err))
+			}
 			return
 		}
 		addResult, err = ot.createAddResult(prevHeadsCopy, Rebuild, nil, changesPayload.RawChanges)
 		if err != nil {
 			// that means that some unattached changes were somehow corrupted in memory
 			// this shouldn't happen but if that happens, then rebuilding from storage
-			ot.rebuildFromStorage(nil, nil)
-			return
+			rebuildErr := ot.rebuildFromStorage(nil, nil)
+			if rebuildErr != nil {
+				log.Error("failed to rebuild after add result", zap.String("treeId", ot.id), zap.Strings("heads", ot.Heads()), zap.Error(err))
+			}
 		}
 		return
 	}
@@ -463,7 +471,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 		err = ot.validateTree(treeChangesAdded)
 		if err != nil {
 			rollback(treeChangesAdded)
-			err = ErrHasInvalidChanges
+			err = fmt.Errorf("%w: %w", ErrHasInvalidChanges, err)
 			return
 		}
 		addResult, err = ot.createAddResult(prevHeadsCopy, mode, treeChangesAdded, changesPayload.RawChanges)
