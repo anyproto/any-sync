@@ -3,9 +3,10 @@ package treestorage
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/util/slice"
-	"sync"
 )
 
 type InMemoryTreeStorage struct {
@@ -111,6 +112,9 @@ func (t *InMemoryTreeStorage) GetRawChange(ctx context.Context, changeId string)
 }
 
 func (t *InMemoryTreeStorage) Delete() error {
+	t.root = nil
+	t.Changes = nil
+	t.heads = nil
 	return nil
 }
 
