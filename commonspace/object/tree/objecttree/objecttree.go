@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/anyproto/any-sync/util/debug"
+
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
@@ -17,14 +19,6 @@ import (
 	"github.com/anyproto/any-sync/util/slice"
 )
 
-type RWLocker interface {
-	sync.Locker
-	RLock()
-	RUnlock()
-	TryRLock() bool
-	TryLock() bool
-}
-
 var (
 	ErrHasInvalidChanges = errors.New("the change is invalid")
 	ErrNoCommonSnapshot  = errors.New("trees doesn't have a common snapshot")
@@ -32,6 +26,7 @@ var (
 	ErrMissingKey        = errors.New("missing current read key")
 	ErrDerived           = errors.New("expect >= 2 changes in derived tree")
 	ErrDeleted           = errors.New("object tree is deleted")
+	ErrNoAclHead         = errors.New("no acl head")
 )
 
 type AddResultSummary int
@@ -53,7 +48,7 @@ type ChangeIterateFunc = func(change *Change) bool
 type ChangeConvertFunc = func(change *Change, decrypted []byte) (any, error)
 
 type ReadableObjectTree interface {
-	RWLocker
+	sync.Locker
 
 	Id() string
 	Header() *treechangeproto.RawTreeChangeWithId
@@ -118,7 +113,7 @@ type objectTree struct {
 
 	snapshotPath []string
 
-	sync.RWMutex
+	sync.Mutex
 }
 
 func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Change) (err error) {
@@ -193,11 +188,20 @@ func (ot *objectTree) GetChange(id string) (*Change, error) {
 	return nil, ErrNoChangeInTree
 }
 
+func (ot *objectTree) logUseWhenUnlocked() {
+	// this is needed to check when we use the tree not under the lock
+	if ot.TryLock() {
+		log.With(zap.String("treeId", ot.id), zap.String("stack", debug.StackCompact(true))).Error("use tree when unlocked")
+		ot.Unlock()
+	}
+}
+
 func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeContent) (res AddResult, err error) {
 	if ot.isDeleted {
 		err = ErrDeleted
 		return
 	}
+	ot.logUseWhenUnlocked()
 	payload, err := ot.prepareBuilderContent(content)
 	if err != nil {
 		return
@@ -315,6 +319,7 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChang
 		err = ErrDeleted
 		return
 	}
+	ot.logUseWhenUnlocked()
 	lastHeadId := ot.tree.lastIteratedHeadId
 	addResult, err = ot.addRawChanges(ctx, changesPayload)
 	if err != nil {
@@ -395,7 +400,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 		headsToUse    = changesPayload.NewHeads
 	)
 	// if our validator provides filtering mechanism then we use it
-	filteredHeads, ot.newChangesBuf, ot.newSnapshotsBuf, ot.notSeenIdxBuf = ot.validator.FilterChanges(ot.aclList, changesPayload.NewHeads, ot.newChangesBuf, ot.newSnapshotsBuf, ot.notSeenIdxBuf)
+	filteredHeads, ot.newChangesBuf, ot.newSnapshotsBuf, ot.notSeenIdxBuf = ot.validator.FilterChanges(ot.aclList, ot.newChangesBuf, ot.newSnapshotsBuf, ot.notSeenIdxBuf)
 	if filteredHeads {
 		// if we filtered some of the heads, then we don't know which heads to use
 		headsToUse = []string{}
