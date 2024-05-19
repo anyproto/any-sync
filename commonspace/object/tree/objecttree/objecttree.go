@@ -47,8 +47,13 @@ type RawChangesPayload struct {
 type ChangeIterateFunc = func(change *Change) bool
 type ChangeConvertFunc = func(change *Change, decrypted []byte) (any, error)
 
-type ReadableObjectTree interface {
+type TryLocker interface {
 	sync.Locker
+	TryLock() bool
+}
+
+type ReadableObjectTree interface {
+	TryLocker
 
 	Id() string
 	Header() *treechangeproto.RawTreeChangeWithId
