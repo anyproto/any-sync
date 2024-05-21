@@ -496,7 +496,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 			rollback(treeChangesAdded)
 			rebuildErr := ot.rebuildFromStorage(nil, nil)
 			if rebuildErr != nil {
-				log.Error("failed to rebuild after add result", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
+				log.Error("failed to rebuild after add result (add to tree)", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
 			}
 			return
 		}
