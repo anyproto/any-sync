@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_peermanager/mock_peermanager.go github.com/anyproto/any-sync/commonspace/peermanager PeerManager
 //
+
 // Package mock_peermanager is a generated GoMock package.
 package mock_peermanager
 
@@ -97,20 +98,6 @@ func (m *MockPeerManager) Init(arg0 *app.App) error {
 func (mr *MockPeerManagerMockRecorder) Init(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockPeerManager)(nil).Init), arg0)
-}
-
-// IsPeerOffline mocks base method.
-func (m *MockPeerManager) IsPeerOffline(arg0 string) bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsPeerOffline", arg0)
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// IsPeerOffline indicates an expected call of IsPeerOffline.
-func (mr *MockPeerManagerMockRecorder) IsPeerOffline(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPeerOffline", reflect.TypeOf((*MockPeerManager)(nil).IsPeerOffline), arg0)
 }
 
 // Name mocks base method.
