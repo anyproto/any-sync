@@ -169,6 +169,8 @@ func ValidateRawTreeBuildFunc(payload treestorage.TreeStorageCreatePayload, buil
 	if err != nil {
 		return
 	}
+	tree.Lock()
+	defer tree.Unlock()
 	res, err := tree.AddRawChanges(context.Background(), RawChangesPayload{
 		NewHeads:   payload.Heads,
 		RawChanges: payload.Changes,
@@ -201,6 +203,8 @@ func ValidateFilterRawTree(payload treestorage.TreeStorageCreatePayload, aclList
 	if err != nil {
 		return
 	}
+	tree.Lock()
+	defer tree.Unlock()
 	res, err := tree.AddRawChanges(context.Background(), RawChangesPayload{
 		NewHeads:   payload.Heads,
 		RawChanges: payload.Changes,
