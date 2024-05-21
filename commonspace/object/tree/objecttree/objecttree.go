@@ -342,7 +342,10 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChang
 	err = ot.treeStorage.AddRawChangesSetHeads(addResult.Added, addResult.Heads)
 	if err != nil {
 		// rolling back all changes made to inmemory state
-		ot.rebuildFromStorage(nil, nil)
+		rebuildErr := ot.rebuildFromStorage(nil, nil)
+		if rebuildErr != nil {
+			log.Error("failed to rebuild after adding to storage", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
+		}
 	}
 	return
 }
@@ -490,7 +493,11 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 		if err != nil {
 			// that means that some unattached changes were somehow corrupted in memory
 			// this shouldn't happen but if that happens, then rebuilding from storage
-			ot.rebuildFromStorage(nil, nil)
+			rollback(treeChangesAdded)
+			rebuildErr := ot.rebuildFromStorage(nil, nil)
+			if rebuildErr != nil {
+				log.Error("failed to rebuild after add result", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
+			}
 			return
 		}
 		return
