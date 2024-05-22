@@ -161,14 +161,6 @@ func (r *requestPeerManager) GetNodePeers(ctx context.Context) (peers []peer.Pee
 	return nil, nil
 }
 
-func (r *requestPeerManager) GetNodeResponsiblePeers() (peers []string) {
-	return
-}
-
-func (r *requestPeerManager) IsPeerOffline(senderId string) bool {
-	return false
-}
-
 // testSyncHandler is the wrapper around individual tree to test sync protocol
 type testSyncHandler struct {
 	synchandler.SyncHandler

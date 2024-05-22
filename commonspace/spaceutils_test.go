@@ -174,10 +174,6 @@ func (p *mockPeerManager) GetNodePeers(ctx context.Context) (peers []peer.Peer, 
 	return nil, nil
 }
 
-func (p *mockPeerManager) GetNodeResponsiblePeers() (peers []string) {
-	return nil
-}
-
 //
 // Mock PeerManagerProvider
 //
