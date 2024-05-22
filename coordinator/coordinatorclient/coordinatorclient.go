@@ -11,8 +11,8 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/identityrepo/identityrepoproto"
+	"github.com/anyproto/any-sync/net/netmodule"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/cidutil"
@@ -62,12 +62,12 @@ type SpaceSignPayload struct {
 }
 
 type coordinatorClient struct {
-	pool     pool.Pool
-	nodeConf nodeconf.Service
+	netModule netmodule.NetModule
+	nodeConf  nodeconf.Service
 }
 
 func (c *coordinatorClient) Init(a *app.App) (err error) {
-	c.pool = a.MustComponent(pool.CName).(pool.Service)
+	c.netModule = a.MustComponent(netmodule.CName).(netmodule.NetModule)
 	c.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	return
 }
@@ -353,7 +353,7 @@ func (c *coordinatorClient) doIdentityRepoClient(ctx context.Context, f func(cl 
 }
 
 func (c *coordinatorClient) getPeer(ctx context.Context) (peer.Peer, error) {
-	p, err := c.pool.GetOneOf(ctx, c.nodeConf.CoordinatorPeers())
+	p, err := c.netModule.GetOneOf(ctx, c.nodeConf.CoordinatorPeers())
 	if err != nil {
 		return nil, err
 	}

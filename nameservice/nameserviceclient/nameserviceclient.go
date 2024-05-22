@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/netmodule"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
-	"go.uber.org/zap"
 
 	nsp "github.com/anyproto/any-sync/nameservice/nameserviceproto"
 )
@@ -50,12 +51,12 @@ type AnyNsClientService interface {
 }
 
 type service struct {
-	pool     pool.Pool
-	nodeconf nodeconf.Service
+	netModule netmodule.NetModule
+	nodeconf  nodeconf.Service
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.pool = a.MustComponent(pool.CName).(pool.Pool)
+	s.netModule = a.MustComponent(netmodule.CName).(netmodule.NetModule)
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	return nil
 }
@@ -76,7 +77,7 @@ func (s *service) doClient(ctx context.Context, fn func(cl nsp.DRPCAnynsClient) 
 
 	// it will try to connect to the Naming Node
 	// please enable "namingNode" type of node in the config (in the network.nodes array)
-	peer, err := s.pool.GetOneOf(ctx, s.nodeconf.NamingNodePeers())
+	peer, err := s.netModule.GetOneOf(ctx, s.nodeconf.NamingNodePeers())
 	log.Info("trying to connect to namingNode peer: ", zap.Any("peer", peer))
 
 	if err != nil {
@@ -95,7 +96,7 @@ func (s *service) doClient(ctx context.Context, fn func(cl nsp.DRPCAnynsClient) 
 func (s *service) doClientAA(ctx context.Context, fn func(cl nsp.DRPCAnynsAccountAbstractionClient) error) error {
 	// it will try to connect to the Naming Node
 	// please enable "namingNode" type of node in the config (in the network.nodes array)
-	peer, err := s.pool.Get(ctx, s.nodeconf.NamingNodePeers()[0])
+	peer, err := s.netModule.Get(ctx, s.nodeconf.NamingNodePeers()[0])
 	log.Info("trying to connect to namingNode peer: ", zap.Any("peer", peer))
 
 	if err != nil {

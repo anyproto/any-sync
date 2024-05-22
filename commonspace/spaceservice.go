@@ -13,6 +13,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/netmodule"
 	"github.com/anyproto/any-sync/net/peer"
 
 	"storj.io/drpc"
@@ -40,7 +41,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
-	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
 )
@@ -78,7 +78,7 @@ type spaceService struct {
 	credentialProvider    credentialprovider.CredentialProvider
 	statusServiceProvider syncstatus.StatusServiceProvider
 	treeManager           treemanager.TreeManager
-	pool                  pool.Pool
+	netModule             netmodule.NetModule
 	metric                metric.Metric
 	app                   *app.App
 }
@@ -91,7 +91,7 @@ func (s *spaceService) Init(a *app.App) (err error) {
 	s.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	s.peerManagerProvider = a.MustComponent(peermanager.CName).(peermanager.PeerManagerProvider)
 	s.statusServiceProvider = a.MustComponent(syncstatus.CName).(syncstatus.StatusServiceProvider)
-	s.pool = a.MustComponent(pool.CName).(pool.Pool)
+	s.netModule = a.MustComponent(netmodule.CName).(netmodule.NetModule)
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
 	s.app = a
 	return nil

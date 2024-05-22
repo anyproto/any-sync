@@ -9,7 +9,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/netmodule"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
 )
@@ -27,12 +27,12 @@ type NodeClient interface {
 }
 
 type nodeClient struct {
-	pool     pool.Service
-	nodeConf nodeconf.Service
+	netModule netmodule.NetModule
+	nodeConf  nodeconf.Service
 }
 
 func (c *nodeClient) Init(a *app.App) (err error) {
-	c.pool = a.MustComponent(pool.CName).(pool.Service)
+	c.netModule = a.MustComponent(netmodule.CName).(netmodule.NetModule)
 	c.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	return
 }
@@ -87,7 +87,7 @@ func (c *nodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *cons
 var clientDo = (*nodeClient).doClient
 
 func (c *nodeClient) doClient(ctx context.Context, spaceId string, f func(cl spacesyncproto.DRPCSpaceSyncClient) error) error {
-	p, err := c.pool.GetOneOf(ctx, c.nodeConf.NodeIds(spaceId))
+	p, err := c.netModule.GetOneOf(ctx, c.nodeConf.NodeIds(spaceId))
 	if err != nil {
 		return err
 	}
