@@ -27,6 +27,6 @@ var (
 	ErrEmailExpired              = errGroup.Register(errors.New("email verification request expired. try getting new code"), uint64(ErrorCodes_EmailExpired))
 	ErrEmailWrongCode            = errGroup.Register(errors.New("wrong verification code"), uint64(ErrorCodes_EmailWrongCode))
 	ErrAppleInvalidReceipt       = errGroup.Register(errors.New("invalid AppStore receipt"), uint64(ErrorCodes_AppleInvalidReceipt))
-	ErrApplePurchaseRegistration = errGroup.Register(errors.New("invalid AppStore receipt"), uint64(ErrorCodes_ApplePurchaseRegistration))
-	ErrAppleSubscriptionRenew    = errGroup.Register(errors.New("invalid AppStore receipt"), uint64(ErrorCodes_AppleSubscriptionRenew))
+	ErrApplePurchaseRegistration = errGroup.Register(errors.New("error on purchase registration"), uint64(ErrorCodes_ApplePurchaseRegistration))
+	ErrAppleSubscriptionRenew    = errGroup.Register(errors.New("error on subscription renew"), uint64(ErrorCodes_AppleSubscriptionRenew))
 )
