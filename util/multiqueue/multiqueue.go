@@ -3,8 +3,9 @@ package multiqueue
 import (
 	"context"
 	"errors"
-	"github.com/cheggaaa/mb/v3"
 	"sync"
+
+	"github.com/cheggaaa/mb/v3"
 )
 
 var (
@@ -25,6 +26,7 @@ type HandleFunc[T any] func(msg T)
 type MultiQueue[T any] interface {
 	Add(ctx context.Context, threadId string, msg T) (err error)
 	CloseThread(threadId string) (err error)
+	ThreadIds() []string
 	Close() (err error)
 }
 
@@ -34,6 +36,16 @@ type multiQueue[T any] struct {
 	threads      map[string]*mb.MB[T]
 	mu           sync.Mutex
 	closed       bool
+}
+
+func (m *multiQueue[T]) ThreadIds() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	ids := make([]string, 0, len(m.threads))
+	for id := range m.threads {
+		ids = append(ids, id)
+	}
+	return ids
 }
 
 func (m *multiQueue[T]) Add(ctx context.Context, threadId string, msg T) (err error) {

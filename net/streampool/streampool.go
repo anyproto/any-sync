@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/context"
@@ -13,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/util/multiqueue"
 )
 
 // StreamHandler handles incoming messages from streams
@@ -23,6 +23,8 @@ type StreamHandler interface {
 	HandleMessage(ctx context.Context, peerId string, msg drpc.Message) (err error)
 	// NewReadMessage creates new empty message for unmarshalling into it
 	NewReadMessage() drpc.Message
+	// GetQueueProvider returns queue provider for outgoing messages
+	GetQueueProvider() multiqueue.QueueProvider[drpc.Message]
 }
 
 // PeerGetter should dial or return cached peers
@@ -154,10 +156,6 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 	defer s.mu.Unlock()
 	s.lastStreamId++
 	streamId := s.lastStreamId
-	queueSize := s.writeQueueSize
-	if queueSize <= 0 {
-		queueSize = 100
-	}
 	st := &stream{
 		peerId:   peerId,
 		peerCtx:  ctx,
@@ -168,7 +166,7 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 		tags:     tags,
 		stats:    newStreamStat(peerId),
 	}
-	st.queue = mb.New[drpc.Message](s.writeQueueSize)
+	st.queue = s.handler.GetQueueProvider().GetQueue(peerId)
 	s.streams[streamId] = st
 	s.streamIdsByPeer[peerId] = append(s.streamIdsByPeer[peerId], streamId)
 	for _, tag := range tags {

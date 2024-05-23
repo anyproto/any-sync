@@ -9,6 +9,7 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/util/multiqueue"
 )
 
 type stream struct {
@@ -19,7 +20,7 @@ type stream struct {
 	streamId uint32
 	closed   atomic.Bool
 	l        logger.CtxLogger
-	queue    *mb.MB[drpc.Message]
+	queue    *multiqueue.Queue[drpc.Message]
 	stats    streamStat
 	tags     []string
 }
