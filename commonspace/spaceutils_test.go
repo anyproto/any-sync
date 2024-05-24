@@ -3,6 +3,7 @@ package commonspace
 import (
 	"context"
 	"fmt"
+	"github.com/anyproto/any-sync/commonspace/peerstatus"
 	"testing"
 	"time"
 
@@ -452,6 +453,29 @@ func (m mockNodeClient) AclGetRecords(ctx context.Context, spaceId, aclHead stri
 func (m mockNodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (recWithId *consensusproto.RawRecordWithId, err error) {
 	return
 }
+
+type mockPeerStatus struct {
+}
+
+func (m mockPeerStatus) Init(a *app.App) (err error) {
+	return
+}
+
+func (m mockPeerStatus) Name() (name string) {
+	return
+}
+
+func (m mockPeerStatus) Run(ctx context.Context) (err error) {
+	return
+}
+
+func (m mockPeerStatus) Close(ctx context.Context) (err error) {
+	return
+}
+
+func (m mockPeerStatus) SendPeerUpdate() {}
+
+func (m mockPeerStatus) SendNewStatus(status peerstatus.Status) {}
 
 //
 // Space fixture
