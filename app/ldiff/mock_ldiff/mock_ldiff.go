@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_ldiff/mock_ldiff.go github.com/anyproto/any-sync/app/ldiff Diff,Remote,DiffContainer
 //
-
 // Package mock_ldiff is a generated GoMock package.
 package mock_ldiff
 

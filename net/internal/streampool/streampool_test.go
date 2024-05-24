@@ -15,9 +15,9 @@ import (
 
 	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/net/internal/peer"
-	"github.com/anyproto/any-sync/net/internal/rpc/rpctest"
 	"github.com/anyproto/any-sync/net/internal/streampool/testservice"
 	peer2 "github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/rpc/rpctest"
 	streampool2 "github.com/anyproto/any-sync/net/streampool"
 )
 
@@ -32,7 +32,7 @@ func makePeerPair(t *testing.T, fx *fixture, peerId string) (pS, pC peer2.Peer) 
 	return
 }
 
-func newClientStream(t *testing.T, fx *fixture, peerId string) (st testservice.DRPCTest_TestStreamClient, p peer.Peer) {
+func newClientStream(t *testing.T, fx *fixture, peerId string) (st testservice.DRPCTest_TestStreamClient, p peer2.Peer) {
 	_, pC := makePeerPair(t, fx, peerId)
 	drpcConn, err := pC.AcquireDrpcConn(ctx)
 	require.NoError(t, err)
@@ -80,8 +80,8 @@ func TestStreamPool_AddStream(t *testing.T) {
 		defer s1.Close()
 		require.NoError(t, fx.AddStream(s1, "space1", "common"))
 
-		require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "test"}, func(ctx context.Context) (peers []peer.Peer, err error) {
-			return []peer.Peer{p1}, nil
+		require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "test"}, func(ctx context.Context) (peers []peer2.Peer, err error) {
+			return []peer2.Peer{p1}, nil
 		}))
 		var msg *testservice.StreamMessage
 		select {
@@ -100,8 +100,8 @@ func TestStreamPool_Send(t *testing.T) {
 
 		pS, _ := makePeerPair(t, fx, "p1")
 
-		require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "should open stream"}, func(ctx context.Context) (peers []peer.Peer, err error) {
-			return []peer.Peer{pS}, nil
+		require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "should open stream"}, func(ctx context.Context) (peers []peer2.Peer, err error) {
+			return []peer2.Peer{pS}, nil
 		}))
 
 		var msg *testservice.StreamMessage
@@ -124,8 +124,8 @@ func TestStreamPool_Send(t *testing.T) {
 		var numMsgs = 5
 
 		for i := 0; i < numMsgs; i++ {
-			go require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "should open stream"}, func(ctx context.Context) (peers []peer.Peer, err error) {
-				return []peer.Peer{pS}, nil
+			go require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "should open stream"}, func(ctx context.Context) (peers []peer2.Peer, err error) {
+				return []peer2.Peer{pS}, nil
 			}))
 		}
 
@@ -223,7 +223,7 @@ func newFixture(t *testing.T) *fixture {
 }
 
 type fixture struct {
-	StreamPool
+	streampool2.StreamPool
 	th  *testHandler
 	tsh *testServerHandler
 	ts  *rpctest.TestServer
@@ -239,7 +239,7 @@ type testHandler struct {
 	mu               sync.Mutex
 }
 
-func (t *testHandler) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error) {
+func (t *testHandler) OpenStream(ctx context.Context, p peer2.Peer) (stream drpc.Stream, tags []string, err error) {
 	if t.streamOpenDelay > 0 {
 		time.Sleep(t.streamOpenDelay)
 	}

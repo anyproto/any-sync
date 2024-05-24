@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_liststorage/mock_liststorage.go github.com/anyproto/any-sync/commonspace/object/acl/liststorage ListStorage
 //
-
 // Package mock_liststorage is a generated GoMock package.
 package mock_liststorage
 

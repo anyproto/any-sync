@@ -1,12 +1,14 @@
 package secureservice
 
 import (
-	"github.com/anyproto/any-sync/commonspace/object/accountdata"
-	"github.com/anyproto/any-sync/net/internal/secureservice/handshake"
-	"github.com/anyproto/any-sync/testutil/accounttest"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
+
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	handshake2 "github.com/anyproto/any-sync/net/secureservice/handshake"
+	"github.com/anyproto/any-sync/testutil/accounttest"
 )
 
 func TestPeerSignVerifier_CheckCredential(t *testing.T) {
@@ -32,7 +34,7 @@ func TestPeerSignVerifier_CheckCredential(t *testing.T) {
 	assert.Equal(t, identity1, res2.Identity)
 
 	_, err = cc1.CheckCredential(c1, cr1)
-	assert.EqualError(t, err, handshake.ErrInvalidCredentials.Error())
+	assert.EqualError(t, err, handshake2.ErrInvalidCredentials.Error())
 }
 
 func TestIncompatibleVersion(t *testing.T) {
@@ -49,13 +51,13 @@ func TestIncompatibleVersion(t *testing.T) {
 	cr1 := cc1.MakeCredentials(c1)
 	cr2 := cc2.MakeCredentials(c2)
 	_, err := cc1.CheckCredential(c1, cr2)
-	assert.EqualError(t, err, handshake.ErrIncompatibleVersion.Error())
+	assert.EqualError(t, err, handshake2.ErrIncompatibleVersion.Error())
 
 	_, err = cc2.CheckCredential(c2, cr1)
-	assert.EqualError(t, err, handshake.ErrIncompatibleVersion.Error())
+	assert.EqualError(t, err, handshake2.ErrIncompatibleVersion.Error())
 
 	_, err = cc1.CheckCredential(c1, cr1)
-	assert.EqualError(t, err, handshake.ErrInvalidCredentials.Error())
+	assert.EqualError(t, err, handshake2.ErrInvalidCredentials.Error())
 }
 
 func newTestAccData(t *testing.T) *accountdata.AccountKeys {

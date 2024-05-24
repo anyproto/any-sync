@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_objecttreebuilder/mock_objecttreebuilder.go github.com/anyproto/any-sync/commonspace/objecttreebuilder TreeBuilder
 //
-
 // Package mock_objecttreebuilder is a generated GoMock package.
 package mock_objecttreebuilder
 

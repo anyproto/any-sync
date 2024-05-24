@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_syncacl/mock_syncacl.go github.com/anyproto/any-sync/commonspace/object/acl/syncacl SyncAcl,SyncClient,RequestFactory,AclSyncProtocol
 //
-
 // Package mock_syncacl is a generated GoMock package.
 package mock_syncacl
 

@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_treestorage/mock_treestorage.go github.com/anyproto/any-sync/commonspace/object/tree/treestorage TreeStorage
 //
-
 // Package mock_treestorage is a generated GoMock package.
 package mock_treestorage
 

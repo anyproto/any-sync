@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_spacesyncproto/mock_spacesyncproto.go github.com/anyproto/any-sync/commonspace/spacesyncproto DRPCSpaceSyncClient
 //
-
 // Package mock_spacesyncproto is a generated GoMock package.
 package mock_spacesyncproto
 

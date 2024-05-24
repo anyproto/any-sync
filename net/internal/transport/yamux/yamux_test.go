@@ -3,21 +3,24 @@ package yamux
 import (
 	"bytes"
 	"context"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/net/internal/secureservice"
-	"github.com/anyproto/any-sync/net/internal/transport"
-	"github.com/anyproto/any-sync/nodeconf"
-	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
-	"github.com/anyproto/any-sync/testutil/accounttest"
-	"github.com/anyproto/any-sync/testutil/testnodeconf"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 	"io"
 	"net"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/net/internal/secureservice"
+	"github.com/anyproto/any-sync/net/internal/transport"
+	yamux2 "github.com/anyproto/any-sync/net/transport/yamux"
+	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
+	"github.com/anyproto/any-sync/testutil/accounttest"
+	"github.com/anyproto/any-sync/testutil/testnodeconf"
 )
 
 var ctx = context.Background()
@@ -229,8 +232,8 @@ type testConf struct {
 	*testnodeconf.Config
 }
 
-func (c *testConf) GetYamux() Config {
-	return Config{
+func (c *testConf) GetYamux() yamux2.Config {
+	return yamux2.Config{
 		ListenAddrs:     []string{"127.0.0.1:0"},
 		WriteTimeoutSec: 10,
 		DialTimeoutSec:  10,

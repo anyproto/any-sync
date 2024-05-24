@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_treemanager/mock_treemanager.go github.com/anyproto/any-sync/commonspace/object/treemanager TreeManager
 //
-
 // Package mock_treemanager is a generated GoMock package.
 package mock_treemanager
 

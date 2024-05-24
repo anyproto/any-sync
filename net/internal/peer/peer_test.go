@@ -2,20 +2,23 @@ package peer
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/net/internal/rpc"
-	"github.com/anyproto/any-sync/net/internal/secureservice/handshake"
-	"github.com/anyproto/any-sync/net/internal/secureservice/handshake/handshakeproto"
-	"github.com/anyproto/any-sync/net/internal/transport/mock_transport"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 	"io"
 	"net"
 	_ "net/http/pprof"
-	"storj.io/drpc"
-	"storj.io/drpc/drpcconn"
 	"testing"
 	"time"
+
+	"github.com/anyproto/any-sync/net/internal/secureservice/handshake"
+	"github.com/anyproto/any-sync/net/internal/secureservice/handshake/handshakeproto"
+	"github.com/anyproto/any-sync/net/internal/transport/mock_transport"
+	peer2 "github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/rpc"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+	"storj.io/drpc"
+	"storj.io/drpc/drpcconn"
 )
 
 var ctx = context.Background()
@@ -249,7 +252,7 @@ func newFixture(t *testing.T, peerId string) *fixture {
 		testCtrl: newTesCtrl(),
 	}
 	fx.mc = mock_transport.NewMockMultiConn(fx.ctrl)
-	ctx := CtxWithPeerId(context.Background(), peerId)
+	ctx := peer2.CtxWithPeerId(context.Background(), peerId)
 	fx.mc.EXPECT().Context().Return(ctx).AnyTimes()
 	fx.mc.EXPECT().Accept().DoAndReturn(func() (net.Conn, error) {
 		ac := <-fx.acceptCh

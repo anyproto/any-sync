@@ -3,19 +3,21 @@ package peerservice
 import (
 	"context"
 	"fmt"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/net/internal/peer"
-	"github.com/anyproto/any-sync/net/internal/pool"
-	"github.com/anyproto/any-sync/net/internal/rpc/rpctest"
-	"github.com/anyproto/any-sync/net/internal/transport/mock_transport"
-	"github.com/anyproto/any-sync/net/internal/transport/quic"
-	"github.com/anyproto/any-sync/net/internal/transport/yamux"
-	"github.com/anyproto/any-sync/nodeconf"
-	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"testing"
+
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/net/internal/pool"
+	"github.com/anyproto/any-sync/net/internal/transport/mock_transport"
+	"github.com/anyproto/any-sync/net/internal/transport/quic"
+	"github.com/anyproto/any-sync/net/internal/transport/yamux"
+	peer2 "github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/rpc/rpctest"
+	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
 )
 
 var ctx = context.Background()
@@ -157,7 +159,7 @@ func newFixture(t *testing.T) *fixture {
 
 func (fx *fixture) mockMC(peerId string) *mock_transport.MockMultiConn {
 	mc := mock_transport.NewMockMultiConn(fx.ctrl)
-	cctx := peer.CtxWithPeerId(ctx, peerId)
+	cctx := peer2.CtxWithPeerId(ctx, peerId)
 	mc.EXPECT().Context().Return(cctx).AnyTimes()
 	mc.EXPECT().Accept().Return(nil, fmt.Errorf("test")).AnyTimes()
 	mc.EXPECT().Close().AnyTimes()

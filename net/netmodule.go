@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_net/mock_net.go github.com/anyproto/any-sync/net Service
 package net
 
 import (

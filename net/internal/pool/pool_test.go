@@ -13,8 +13,9 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/net/internal/peer"
-	"github.com/anyproto/any-sync/net/internal/secureservice/handshake"
+	"github.com/anyproto/any-sync/net/neterr"
+	peer2 "github.com/anyproto/any-sync/net/peer"
+	handshake2 "github.com/anyproto/any-sync/net/secureservice/handshake"
 )
 
 var ctx = context.Background()
@@ -24,7 +25,7 @@ func TestPool_Get(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
 		var expErr = errors.New("dial error")
-		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer2.Peer, err error) {
 			return nil, expErr
 		}
 		p, err := fx.Get(ctx, "1")
@@ -34,7 +35,7 @@ func TestPool_Get(t *testing.T) {
 	t.Run("dial and cached", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
-		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer2.Peer, err error) {
 			return newTestPeer("1"), nil
 		}
 		p, err := fx.Get(ctx, "1")
@@ -49,7 +50,7 @@ func TestPool_Get(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
 		tp := newTestPeer("1")
-		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer2.Peer, err error) {
 			return tp, nil
 		}
 		p, err := fx.Get(ctx, "1")
@@ -57,7 +58,7 @@ func TestPool_Get(t *testing.T) {
 		assert.NotNil(t, p)
 		p.Close()
 		tp2 := newTestPeer("1")
-		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer2.Peer, err error) {
 			return tp2, nil
 		}
 		p, err = fx.Get(ctx, "1")
@@ -68,7 +69,7 @@ func TestPool_Get(t *testing.T) {
 
 func TestPool_GetOneOf(t *testing.T) {
 	addToCache := func(t *testing.T, fx *fixture, tp *testPeer) {
-		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer2.Peer, err error) {
 			return tp, nil
 		}
 		gp, err := fx.Get(ctx, tp.Id())
@@ -101,7 +102,7 @@ func TestPool_GetOneOf(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
 		var called bool
-		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer2.Peer, err error) {
 			if called {
 				return nil, fmt.Errorf("not expected call")
 			}
@@ -115,7 +116,7 @@ func TestPool_GetOneOf(t *testing.T) {
 	t.Run("unable to connect", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
-		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer2.Peer, err error) {
 			return nil, fmt.Errorf("persistent error")
 		}
 		p, err := fx.GetOneOf(ctx, []string{"3", "2", "1"})
@@ -125,11 +126,11 @@ func TestPool_GetOneOf(t *testing.T) {
 	t.Run("handshake error", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
-		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
-			return nil, handshake.ErrIncompatibleVersion
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer2.Peer, err error) {
+			return nil, handshake2.ErrIncompatibleVersion
 		}
 		p, err := fx.GetOneOf(ctx, []string{"3", "2", "1"})
-		assert.Equal(t, handshake.ErrIncompatibleVersion, err)
+		assert.Equal(t, handshake2.ErrIncompatibleVersion, err)
 		assert.Nil(t, p)
 	})
 }
@@ -183,10 +184,10 @@ type fixture struct {
 var _ dialer = (*dialerMock)(nil)
 
 type dialerMock struct {
-	dial func(ctx context.Context, peerId string) (peer peer.Peer, err error)
+	dial func(ctx context.Context, peerId string) (peer peer2.Peer, err error)
 }
 
-func (d *dialerMock) Dial(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+func (d *dialerMock) Dial(ctx context.Context, peerId string) (peer peer2.Peer, err error) {
 	return d.dial(ctx, peerId)
 }
 

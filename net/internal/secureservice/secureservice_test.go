@@ -2,18 +2,20 @@ package secureservice
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/accountservice"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/net/internal/peer"
-	"github.com/anyproto/any-sync/net/internal/secureservice/handshake"
-	"github.com/anyproto/any-sync/nodeconf"
-	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
-	"github.com/anyproto/any-sync/testutil/testnodeconf"
+	"net"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"net"
-	"testing"
+
+	"github.com/anyproto/any-sync/accountservice"
+	"github.com/anyproto/any-sync/app"
+	peer2 "github.com/anyproto/any-sync/net/peer"
+	handshake2 "github.com/anyproto/any-sync/net/secureservice/handshake"
+	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
+	"github.com/anyproto/any-sync/testutil/testnodeconf"
 )
 
 var ctx = context.Background()
@@ -41,14 +43,14 @@ func TestHandshake(t *testing.T) {
 
 	cctx, err := fxC.SecureOutbound(ctx, cc)
 	require.NoError(t, err)
-	ctxPeerId, err := peer.CtxPeerId(cctx)
+	ctxPeerId, err := peer2.CtxPeerId(cctx)
 	require.NoError(t, err)
 	assert.Equal(t, nc.GetAccountService(0).Account().PeerId, ctxPeerId)
 	res := <-resCh
 	require.NoError(t, res.err)
-	peerId, err := peer.CtxPeerId(res.ctx)
+	peerId, err := peer2.CtxPeerId(res.ctx)
 	require.NoError(t, err)
-	accId, err := peer.CtxIdentity(res.ctx)
+	accId, err := peer2.CtxIdentity(res.ctx)
 	require.NoError(t, err)
 	marshalledId, _ := nc.GetAccountService(1).Account().SignKey.GetPublic().Marshall()
 	assert.Equal(t, nc.GetAccountService(1).Account().PeerId, peerId)
@@ -75,9 +77,9 @@ func TestHandshakeIncompatibleVersion(t *testing.T) {
 	fxC := newFixture(t, nc, nc.GetAccountService(1), 2, []uint32{2, 3})
 	defer fxC.Finish(t)
 	_, err := fxC.SecureOutbound(ctx, cc)
-	require.Equal(t, handshake.ErrIncompatibleVersion, err)
+	require.Equal(t, handshake2.ErrIncompatibleVersion, err)
 	res := <-resCh
-	require.Equal(t, handshake.ErrIncompatibleVersion, res.err)
+	require.Equal(t, handshake2.ErrIncompatibleVersion, res.err)
 }
 
 func newFixture(t *testing.T, nc *testnodeconf.Config, acc accountservice.Service, protoVersion uint32, cv []uint32) *fixture {

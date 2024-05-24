@@ -2,22 +2,25 @@ package handshake
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/net/internal/secureservice/handshake/handshakeproto"
-	crypto2 "github.com/anyproto/any-sync/util/crypto"
+	"net"
+	"testing"
+	"time"
+
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"net"
-	"testing"
-	"time"
+
+	"github.com/anyproto/any-sync/net/internal/secureservice/handshake/handshakeproto"
+	handshake2 "github.com/anyproto/any-sync/net/secureservice/handshake"
+	crypto2 "github.com/anyproto/any-sync/util/crypto"
 )
 
 var noVerifyChecker = &testCredChecker{
 	makeCred: &handshakeproto.Credentials{Type: handshakeproto.CredentialsType_SkipVerify, ClientVersion: "test:v1.0"},
-	checkCred: func(peerId string, cred *handshakeproto.Credentials) (res Result, err error) {
-		return Result{
+	checkCred: func(peerId string, cred *handshakeproto.Credentials) (res handshake2.Result, err error) {
+		return handshake2.Result{
 			Identity:      []byte("identity"),
 			ProtoVersion:  cred.Version,
 			ClientVersion: cred.ClientVersion,
@@ -26,7 +29,7 @@ var noVerifyChecker = &testCredChecker{
 }
 
 type handshakeRes struct {
-	res Result
+	res handshake2.Result
 	err error
 }
 
@@ -96,15 +99,15 @@ func TestOutgoingHandshake(t *testing.T) {
 		// receive credential message
 		_, err := h.readMsg(msgTypeCred)
 		require.NoError(t, err)
-		require.NoError(t, h.writeAck(ErrInvalidCredentials.e))
+		require.NoError(t, h.writeAck(handshake2.ErrInvalidCredentials.E))
 		res := <-handshakeResCh
-		require.EqualError(t, res.err, ErrPeerDeclinedCredentials.Error())
+		require.EqualError(t, res.err, handshake2.ErrPeerDeclinedCredentials.Error())
 	})
 	t.Run("cred err", func(t *testing.T) {
 		c1, c2 := newConnPair(t)
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
-			identity, err := OutgoingHandshake(nil, c1, "", &testCredChecker{makeCred: noVerifyChecker.makeCred, checkErr: ErrInvalidCredentials})
+			identity, err := OutgoingHandshake(nil, c1, "", &testCredChecker{makeCred: noVerifyChecker.makeCred, checkErr: handshake2.ErrInvalidCredentials})
 			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
@@ -115,9 +118,9 @@ func TestOutgoingHandshake(t *testing.T) {
 		require.NoError(t, h.writeCredentials(noVerifyChecker.MakeCredentials("")))
 		msg, err := h.readMsg(msgTypeAck)
 		require.NoError(t, err)
-		assert.Equal(t, ErrInvalidCredentials.e, msg.ack.Error)
+		assert.Equal(t, handshake2.ErrInvalidCredentials.E, msg.ack.Error)
 		res := <-handshakeResCh
-		require.EqualError(t, res.err, ErrInvalidCredentials.Error())
+		require.EqualError(t, res.err, handshake2.ErrInvalidCredentials.Error())
 	})
 	t.Run("write ack err", func(t *testing.T) {
 		c1, c2 := newConnPair(t)
@@ -301,7 +304,7 @@ func TestIncomingHandshake(t *testing.T) {
 		c1, c2 := newConnPair(t)
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
-			identity, err := IncomingHandshake(nil, c1, "", &testCredChecker{makeCred: noVerifyChecker.makeCred, checkErr: ErrInvalidCredentials})
+			identity, err := IncomingHandshake(nil, c1, "", &testCredChecker{makeCred: noVerifyChecker.makeCred, checkErr: handshake2.ErrInvalidCredentials})
 			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
@@ -315,13 +318,13 @@ func TestIncomingHandshake(t *testing.T) {
 		require.Equal(t, handshakeproto.Error_InvalidCredentials, msg.ack.Error)
 
 		res := <-handshakeResCh
-		require.EqualError(t, res.err, ErrInvalidCredentials.Error())
+		require.EqualError(t, res.err, handshake2.ErrInvalidCredentials.Error())
 	})
 	t.Run("invalid cred version", func(t *testing.T) {
 		c1, c2 := newConnPair(t)
 		var handshakeResCh = make(chan handshakeRes, 1)
 		go func() {
-			identity, err := IncomingHandshake(nil, c1, "", &testCredChecker{makeCred: noVerifyChecker.makeCred, checkErr: ErrIncompatibleVersion})
+			identity, err := IncomingHandshake(nil, c1, "", &testCredChecker{makeCred: noVerifyChecker.makeCred, checkErr: handshake2.ErrIncompatibleVersion})
 			handshakeResCh <- handshakeRes{res: identity, err: err}
 		}()
 		h := newHandshake()
@@ -335,7 +338,7 @@ func TestIncomingHandshake(t *testing.T) {
 		require.Equal(t, handshakeproto.Error_IncompatibleVersion, msg.ack.Error)
 
 		res := <-handshakeResCh
-		assert.Equal(t, res.err, ErrIncompatibleVersion)
+		assert.Equal(t, res.err, handshake2.ErrIncompatibleVersion)
 	})
 	t.Run("write cred instead ack", func(t *testing.T) {
 		c1, c2 := newConnPair(t)
@@ -398,7 +401,7 @@ func TestIncomingHandshake(t *testing.T) {
 		require.NoError(t, h.writeAck(handshakeproto.Error_InvalidCredentials))
 
 		res := <-handshakeResCh
-		assert.EqualError(t, res.err, ErrPeerDeclinedCredentials.Error())
+		assert.EqualError(t, res.err, handshake2.ErrPeerDeclinedCredentials.Error())
 	})
 	t.Run("write ack with err", func(t *testing.T) {
 		c1, c2 := newConnPair(t)
@@ -420,7 +423,7 @@ func TestIncomingHandshake(t *testing.T) {
 		require.NoError(t, h.writeAck(handshakeproto.Error_Unexpected))
 
 		res := <-handshakeResCh
-		assert.EqualError(t, res.err, ErrUnexpected.Error())
+		assert.EqualError(t, res.err, handshake2.ErrUnexpected.Error())
 	})
 	t.Run("final ack error", func(t *testing.T) {
 		c1, c2 := newConnPair(t)
@@ -550,7 +553,7 @@ func BenchmarkHandshake(b *testing.B) {
 
 type testCredChecker struct {
 	makeCred  *handshakeproto.Credentials
-	checkCred func(peerId string, cred *handshakeproto.Credentials) (res Result, err error)
+	checkCred func(peerId string, cred *handshakeproto.Credentials) (res handshake2.Result, err error)
 	checkErr  error
 }
 
@@ -558,7 +561,7 @@ func (t *testCredChecker) MakeCredentials(peerId string) *handshakeproto.Credent
 	return t.makeCred
 }
 
-func (t *testCredChecker) CheckCredential(peerId string, cred *handshakeproto.Credentials) (res Result, err error) {
+func (t *testCredChecker) CheckCredential(peerId string, cred *handshakeproto.Credentials) (res handshake2.Result, err error) {
 	if t.checkErr != nil {
 		err = t.checkErr
 		return

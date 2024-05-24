@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"storj.io/drpc"
 
-	"github.com/anyproto/any-sync/net/internal/peer"
 	"github.com/anyproto/any-sync/net/internal/rpc/limiter/limiterproto"
+	peer2 "github.com/anyproto/any-sync/net/peer"
 )
 
 var ctx = context.Background()
@@ -67,14 +67,14 @@ func TestLimiter_Synchronous(t *testing.T) {
 	wrapped := lim.WrapDRPCHandler(handler)
 	// rpc call allows only one token max, so it should let only first call
 	// for second one we should wait 100 ms
-	firstStream := mockStream{ctx: peer.CtxWithPeerId(ctx, "peer1")}
+	firstStream := mockStream{ctx: peer2.CtxWithPeerId(ctx, "peer1")}
 	// check that we are using specific timeout
 	err := wrapped.HandleRPC(firstStream, "rpc")
 	require.NoError(t, err)
 	err = wrapped.HandleRPC(firstStream, "rpc")
 	require.Equal(t, limiterproto.ErrLimitExceeded, err)
 	// second stream should not affect the first one
-	secondStream := mockStream{ctx: peer.CtxWithPeerId(ctx, "peer2")}
+	secondStream := mockStream{ctx: peer2.CtxWithPeerId(ctx, "peer2")}
 	err = wrapped.HandleRPC(secondStream, "rpc")
 	require.NoError(t, err)
 	// after 100 ms new token has been generated
@@ -110,8 +110,8 @@ func TestLimiter_Concurrent_NoBursts(t *testing.T) {
 		},
 	}
 	wrapped := lim.WrapDRPCHandler(handler)
-	firstStream := mockStream{ctx: peer.CtxWithPeerId(ctx, "peer1")}
-	secondStream := mockStream{ctx: peer.CtxWithPeerId(ctx, "peer2")}
+	firstStream := mockStream{ctx: peer2.CtxWithPeerId(ctx, "peer1")}
+	secondStream := mockStream{ctx: peer2.CtxWithPeerId(ctx, "peer2")}
 	waitFirst := make(chan struct{})
 	waitSecond := make(chan struct{})
 	go func() {
@@ -153,8 +153,8 @@ func TestLimiter_Concurrent_Bursts(t *testing.T) {
 		},
 	}
 	wrapped := lim.WrapDRPCHandler(handler)
-	firstStream := mockStream{ctx: peer.CtxWithPeerId(ctx, "peer1")}
-	secondStream := mockStream{ctx: peer.CtxWithPeerId(ctx, "peer2")}
+	firstStream := mockStream{ctx: peer2.CtxWithPeerId(ctx, "peer1")}
+	secondStream := mockStream{ctx: peer2.CtxWithPeerId(ctx, "peer2")}
 	waitFirst := make(chan struct{})
 	waitSecond := make(chan struct{})
 	go func() {

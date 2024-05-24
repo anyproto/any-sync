@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_objectsync/mock_objectsync.go github.com/anyproto/any-sync/commonspace/objectsync ObjectSync
 //
-
 // Package mock_objectsync is a generated GoMock package.
 package mock_objectsync
 

@@ -1,11 +1,14 @@
 package handshake
 
 import (
-	"github.com/anyproto/any-sync/net/internal/secureservice/handshake/handshakeproto"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/anyproto/any-sync/net/internal/secureservice/handshake/handshakeproto"
+	handshake2 "github.com/anyproto/any-sync/net/secureservice/handshake"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type protoRes struct {
@@ -52,7 +55,7 @@ func TestIncomingProtoHandshake(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, handshakeproto.Error_IncompatibleProto, msg.ack.Error)
 		res := <-protoResCh
-		require.Error(t, res.err, ErrIncompatibleProto.Error())
+		require.Error(t, res.err, handshake2.ErrIncompatibleProto.Error())
 	})
 }
 
@@ -91,7 +94,7 @@ func TestOutgoingProtoHandshake(t *testing.T) {
 		require.NoError(t, h.writeAck(handshakeproto.Error_IncompatibleProto))
 
 		res := <-protoResCh
-		assert.EqualError(t, res.err, ErrRemoteIncompatibleProto.Error())
+		assert.EqualError(t, res.err, handshake2.ErrRemoteIncompatibleProto.Error())
 	})
 }
 

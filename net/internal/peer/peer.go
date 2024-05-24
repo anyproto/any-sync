@@ -1,4 +1,3 @@
-//go:generate mockgen -destination mock_peer/mock_peer.go github.com/anyproto/any-sync/net/internal/peer Peer
 package peer
 
 import (

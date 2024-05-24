@@ -10,20 +10,21 @@ import (
 	"storj.io/drpc"
 	"storj.io/drpc/drpcconn"
 
+	"github.com/anyproto/any-sync/net/mock_net"
+	"github.com/anyproto/any-sync/net/peer/mock_peer"
+
 	"github.com/anyproto/any-sync/app/debugstat/mock_debugstat"
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objectsync/mock_objectsync"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto/mock_spacesyncproto"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/peer/mock_peer"
-	"github.com/anyproto/any-sync/net/pool/mock_pool"
 )
 
 type fixture struct {
 	requestManager     *requestManager
 	messageHandlerMock *mock_objectsync.MockObjectSync
-	peerPoolMock       *mock_pool.MockPool
+	netMock            *mock_net.MockService
 	clientMock         *mock_spacesyncproto.MockDRPCSpaceSyncClient
 	statMock           *mock_debugstat.MockStatService
 	ctrl               *gomock.Controller
@@ -32,11 +33,11 @@ type fixture struct {
 func newFixture(t *testing.T) *fixture {
 	ctrl := gomock.NewController(t)
 	manager := New().(*requestManager)
-	peerPoolMock := mock_pool.NewMockPool(ctrl)
+	netMockService := mock_net.NewMockService(ctrl)
 	messageHandlerMock := mock_objectsync.NewMockObjectSync(ctrl)
 	clientMock := mock_spacesyncproto.NewMockDRPCSpaceSyncClient(ctrl)
 	statMock := mock_debugstat.NewMockStatService(ctrl)
-	manager.netService = peerPoolMock
+	manager.netService = netMockService
 	manager.handler = messageHandlerMock
 	manager.clientFactory = spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceSyncClient {
 		return clientMock
@@ -47,7 +48,7 @@ func newFixture(t *testing.T) *fixture {
 	return &fixture{
 		requestManager:     manager,
 		messageHandlerMock: messageHandlerMock,
-		peerPoolMock:       peerPoolMock,
+		netMock:            netMockService,
 		clientMock:         clientMock,
 		statMock:           statMock,
 		ctrl:               ctrl,
@@ -70,7 +71,7 @@ func TestRequestManager_SyncRequest(t *testing.T) {
 		conn := &drpcconn.Conn{}
 		msg := &spacesyncproto.ObjectSyncMessage{}
 		resp := &spacesyncproto.ObjectSyncMessage{}
-		fx.peerPoolMock.EXPECT().Get(ctx, peerId).Return(peerMock, nil)
+		fx.netMock.EXPECT().Get(ctx, peerId).Return(peerMock, nil)
 		fx.clientMock.EXPECT().ObjectSync(ctx, msg).Return(resp, nil)
 		peerMock.EXPECT().DoDrpc(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, drpcHandler func(conn drpc.Conn) error) {
 			drpcHandler(conn)
@@ -90,7 +91,7 @@ func TestRequestManager_SyncRequest(t *testing.T) {
 		conn := &drpcconn.Conn{}
 		msg := &spacesyncproto.ObjectSyncMessage{}
 		resp := &spacesyncproto.ObjectSyncMessage{}
-		fx.peerPoolMock.EXPECT().Get(ctx, peerId).Return(peerMock, nil)
+		fx.netMock.EXPECT().Get(ctx, peerId).Return(peerMock, nil)
 		fx.clientMock.EXPECT().ObjectSync(ctx, msg).Return(resp, nil)
 		peerMock.EXPECT().DoDrpc(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, drpcHandler func(conn drpc.Conn) error) {
 			drpcHandler(conn)

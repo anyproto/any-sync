@@ -14,7 +14,6 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto/consensuserr"
-	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
@@ -102,11 +101,11 @@ func TestService_Init(t *testing.T) {
 	})
 	t.Run("reconnect on start", func(t *testing.T) {
 		fx := newFixture(t)
-		fx.a.MustComponent(pool.CName).(*rpctest.TestPool).WithServer(nil)
+		fx.a.MustComponent("common.net.pool").(*rpctest.TestPool).WithServer(nil)
 		fx.run(t)
 		defer fx.Finish()
 		time.Sleep(time.Millisecond * 50)
-		fx.a.MustComponent(pool.CName).(*rpctest.TestPool).WithServer(fx.drpcTS)
+		fx.a.MustComponent("common.net.pool").(*rpctest.TestPool).WithServer(fx.drpcTS)
 		fx.testServer.waitStream(t)
 		fx.testServer.releaseStream <- nil
 	})
