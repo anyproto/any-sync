@@ -6,11 +6,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/anyproto/any-sync/util/go-ethereum/accounts"
 	"github.com/anyproto/go-slip10"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/tyler-smith/go-bip39"
+
+	"github.com/anyproto/any-sync/util/ethereum/accounts"
 )
 
 var (
@@ -185,36 +186,6 @@ func derivePrivateKey(masterKey *hdkeychain.ExtendedKey, path accounts.Derivatio
 
 	return privateKeyECDSA, nil
 }
-
-/*
-// this function was using go-ethereum codebase which is huge
-// we got rid of it
-//
-func (m Mnemonic) ethereumKeyFromMnemonic(index uint32, path string) (pk *ecdsa.PrivateKey, err error) {
-	wallet, err := hdwallet.NewFromMnemonic(string(m))
-	if err != nil {
-		return nil, err
-	}
-
-	// m/44'/60'/0'/0/0 for first account
-	// m/44'/60'/0'/0/1 for second account, etc
-	fullPath := fmt.Sprintf("%s/%d", path, index)
-
-	p := hdwallet.MustParseDerivationPath(fullPath)
-	account, err := wallet.Derive(p, false)
-	if err != nil {
-		return nil, err
-	}
-
-	//addr = account.Address
-
-	pk, err = wallet.PrivateKey(account)
-	if err != nil {
-		return nil, err
-	}
-
-	return pk, nil
-}*/
 
 func (m Mnemonic) ethereumKeyFromMnemonic(index uint32, path string) (pk *ecdsa.PrivateKey, err error) {
 	seed, err := m.Seed()

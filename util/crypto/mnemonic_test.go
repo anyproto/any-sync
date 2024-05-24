@@ -52,33 +52,4 @@ func TestMnemonic(t *testing.T) {
 	publicKey := res.EthereumIdentity.Public()
 	_, ok := publicKey.(*ecdsa.PublicKey)
 	require.Equal(t, true, ok)
-	//ethAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	//require.Equal(t, common.HexToAddress("0xC49926C4124cEe1cbA0Ea94Ea31a6c12318df947"), ethAddress)
 }
-
-/*
-// this test was using go-ethereum codebase which is huge
-// we got rid of it
-func TestMnemonic_ethereumKeyFromMnemonic(t *testing.T) {
-	var badPphrase Mnemonic = "tag volcano"
-	_, err := badPphrase.ethereumKeyFromMnemonic(0, defaultEthereumDerivation)
-	require.Error(t, err)
-
-	// good
-	var phrase Mnemonic = "tag volcano eight thank tide danger coast health above argue embrace heavy"
-
-	pk, err := phrase.ethereumKeyFromMnemonic(0, defaultEthereumDerivation)
-	require.NoError(t, err)
-
-	// what wallet.PrivateKeyHex(account) does
-	bytes := crypto.FromECDSA(pk)
-	pkStr := hexutil.Encode(bytes)[2:]
-	require.Equal(t, "63e21d10fd50155dbba0e7d3f7431a400b84b4c2ac1ee38872f82448fe3ecfb9", pkStr)
-
-	pk, err = phrase.ethereumKeyFromMnemonic(1, defaultEthereumDerivation)
-	require.NoError(t, err)
-
-	bytes = crypto.FromECDSA(pk)
-	pkStr = hexutil.Encode(bytes)[2:]
-	require.Equal(t, "b31048b0aa87649bdb9016c0ee28c788ddfc45e52cd71cc0da08c47cb4390ae7", pkStr)
-}*/
