@@ -9,7 +9,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/anyproto/any-sync/net/netmodule"
+	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
 )
@@ -27,12 +27,12 @@ type NodeClient interface {
 }
 
 type nodeClient struct {
-	netModule netmodule.NetModule
+	netModule net.Service
 	nodeConf  nodeconf.Service
 }
 
 func (c *nodeClient) Init(a *app.App) (err error) {
-	c.netModule = a.MustComponent(netmodule.CName).(netmodule.NetModule)
+	c.netModule = a.MustComponent(net.CName).(net.Service)
 	c.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	return
 }

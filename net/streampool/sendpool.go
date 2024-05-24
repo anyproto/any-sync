@@ -2,9 +2,14 @@ package streampool
 
 import (
 	"context"
+
 	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
+
+	"github.com/anyproto/any-sync/app/logger"
 )
+
+var log = logger.NewNamed("common.net.streampool")
 
 // NewExecPool creates new ExecPool
 // workers - how many processes will execute tasks
@@ -15,7 +20,7 @@ func NewExecPool(workers, maxSize int) *ExecPool {
 		ctx:     ctx,
 		cancel:  cancel,
 		workers: workers,
-		batch:   mb.New[func()](maxSize),
+		Batch:   mb.New[func()](maxSize),
 	}
 	return ss
 }
@@ -25,15 +30,15 @@ type ExecPool struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
 	workers int
-	batch   *mb.MB[func()]
+	Batch   *mb.MB[func()] //should be private
 }
 
 func (ss *ExecPool) Add(ctx context.Context, f ...func()) (err error) {
-	return ss.batch.Add(ctx, f...)
+	return ss.Batch.Add(ctx, f...)
 }
 
 func (ss *ExecPool) TryAdd(f ...func()) (err error) {
-	return ss.batch.TryAdd(f...)
+	return ss.Batch.TryAdd(f...)
 }
 
 func (ss *ExecPool) Run() {
@@ -44,7 +49,7 @@ func (ss *ExecPool) Run() {
 
 func (ss *ExecPool) sendLoop() {
 	for {
-		f, err := ss.batch.WaitOne(ss.ctx)
+		f, err := ss.Batch.WaitOne(ss.ctx)
 		if err != nil {
 			log.Debug("close send loop", zap.Error(err))
 			return
@@ -55,5 +60,5 @@ func (ss *ExecPool) sendLoop() {
 
 func (ss *ExecPool) Close() (err error) {
 	ss.cancel()
-	return ss.batch.Close()
+	return ss.Batch.Close()
 }

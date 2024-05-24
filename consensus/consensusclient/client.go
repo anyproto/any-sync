@@ -12,7 +12,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/anyproto/any-sync/net/netmodule"
+	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
 )
@@ -51,8 +51,8 @@ type Service interface {
 }
 
 type service struct {
-	netModule netmodule.NetModule
-	nodeconf  nodeconf.Service
+	netService net.Service
+	nodeconf   nodeconf.Service
 
 	watchers map[string]Watcher
 	stream   *stream
@@ -61,7 +61,7 @@ type service struct {
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.netModule = a.MustComponent(netmodule.CName).(netmodule.NetModule)
+	s.netService = a.MustComponent(net.CName).(net.Service)
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.watchers = make(map[string]Watcher)
 	s.close = make(chan struct{})
@@ -78,7 +78,7 @@ func (s *service) Run(_ context.Context) error {
 }
 
 func (s *service) doClient(ctx context.Context, fn func(cl consensusproto.DRPCConsensusClient) error) error {
-	peer, err := s.netModule.GetOneOf(ctx, s.nodeconf.ConsensusPeers())
+	peer, err := s.netService.GetOneOf(ctx, s.nodeconf.ConsensusPeers())
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (s *service) UnWatch(logId string) (err error) {
 }
 
 func (s *service) openStream(ctx context.Context) (st *stream, err error) {
-	pr, err := s.netModule.GetOneOf(ctx, s.nodeconf.ConsensusPeers())
+	pr, err := s.netService.GetOneOf(ctx, s.nodeconf.ConsensusPeers())
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/net/netmodule"
+	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
 
@@ -36,12 +36,12 @@ type AnyPpClientService interface {
 }
 
 type service struct {
-	netModule netmodule.NetModule
-	nodeconf  nodeconf.Service
+	net      net.Service
+	nodeconf nodeconf.Service
 }
 
 func (s *service) Init(a *app.App) (err error) {
-	s.netModule = a.MustComponent(netmodule.CName).(netmodule.NetModule)
+	s.net = a.MustComponent(net.CName).(net.Service)
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	return nil
 }
@@ -63,7 +63,7 @@ func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProc
 
 	// it will try to connect to the Payment Node
 	// please use "paymentProcessingNode" type of node in the config (in the network.nodes array)
-	peer, err := s.netModule.GetOneOf(ctx, s.nodeconf.PaymentProcessingNodePeers())
+	peer, err := s.net.GetOneOf(ctx, s.nodeconf.PaymentProcessingNodePeers())
 	if err != nil {
 		return err
 	}

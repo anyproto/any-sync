@@ -13,7 +13,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/any-sync/net/netmodule"
+	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 )
@@ -43,7 +43,7 @@ type MessageHandler interface {
 type requestManager struct {
 	sync.Mutex
 	pools         map[string]*requestPool
-	netModule     netmodule.NetModule
+	netService    net.Service
 	workers       int
 	queueSize     int
 	handler       MessageHandler
@@ -81,7 +81,7 @@ func (r *requestManager) Init(a *app.App) (err error) {
 	r.reqStat = newRequestStat(spaceState.SpaceId)
 	r.spaceId = spaceState.SpaceId
 	r.handler = a.MustComponent(objectsync.CName).(MessageHandler)
-	r.netModule = a.MustComponent(netmodule.CName).(netmodule.NetModule)
+	r.netService = a.MustComponent(net.CName).(net.Service)
 	r.clientFactory = spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
 	return
 }
@@ -156,7 +156,7 @@ func (r *requestManager) requestAndHandle(peerId string, req *spacesyncproto.Obj
 }
 
 func (r *requestManager) doRequest(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
-	pr, err := r.netModule.Get(ctx, peerId)
+	pr, err := r.netService.Get(ctx, peerId)
 	if err != nil {
 		return
 	}

@@ -36,7 +36,7 @@ func newFixture(t *testing.T) *fixture {
 	messageHandlerMock := mock_objectsync.NewMockObjectSync(ctrl)
 	clientMock := mock_spacesyncproto.NewMockDRPCSpaceSyncClient(ctrl)
 	statMock := mock_debugstat.NewMockStatService(ctrl)
-	manager.netModule = peerPoolMock
+	manager.netService = peerPoolMock
 	manager.handler = messageHandlerMock
 	manager.clientFactory = spacesyncproto.ClientFactoryFunc(func(cc drpc.Conn) spacesyncproto.DRPCSpaceSyncClient {
 		return clientMock

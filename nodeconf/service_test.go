@@ -3,15 +3,16 @@ package nodeconf
 import (
 	"context"
 	"errors"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/net"
-	"github.com/anyproto/any-sync/net/secureservice/handshake"
-	"github.com/anyproto/any-sync/testutil/accounttest"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/net/secureservice/handshake"
+	"github.com/anyproto/any-sync/testutil/accounttest"
 )
 
 var ctx = context.Background()
@@ -21,7 +22,7 @@ func TestService_NetworkCompatibilityStatus(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.finish(t)
 		fx.testSource.call = func() (c Configuration, e error) {
-			e = net.ErrUnableToConnect
+			e = neterr.ErrUnableToConnect
 			return
 		}
 		fx.run(t)

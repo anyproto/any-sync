@@ -5,14 +5,15 @@ import (
 	"context"
 	"sync"
 
+	"github.com/anyproto/go-chash"
+	"go.uber.org/zap"
+
 	commonaccount "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/net"
+	"github.com/anyproto/any-sync/net/neterr"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/util/periodicsync"
-	"github.com/anyproto/go-chash"
-	"go.uber.org/zap"
 )
 
 const CName = "common.nodeconf"
@@ -145,7 +146,7 @@ func (s *service) setCompatibilityStatusByErr(err error) {
 		s.compatibilityStatus = NetworkCompatibilityStatusOk
 	case handshake.ErrIncompatibleVersion:
 		s.compatibilityStatus = NetworkCompatibilityStatusIncompatible
-	case net.ErrUnableToConnect:
+	case neterr.ErrUnableToConnect:
 		s.compatibilityStatus = NetworkCompatibilityStatusUnknown
 	default:
 		s.compatibilityStatus = NetworkCompatibilityStatusError
