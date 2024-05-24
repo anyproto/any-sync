@@ -37,8 +37,7 @@ func New() PeerService {
 
 type PeerService interface {
 	Dial(ctx context.Context, peerId string) (pr peer2.Peer, err error)
-	SetPeerAddrs(peerId string, addrs []string)
-	PreferQuic(prefer bool)
+	peer2.PeerService
 	transport.Accepter
 	app.Component
 }

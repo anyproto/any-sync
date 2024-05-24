@@ -12,6 +12,8 @@ import (
 	"github.com/anyproto/any-sync/net/internal/streampool"
 	"github.com/anyproto/any-sync/net/internal/transport/quic"
 	"github.com/anyproto/any-sync/net/peer"
+	peer2 "github.com/anyproto/any-sync/net/peer"
+	pool2 "github.com/anyproto/any-sync/net/pool"
 	streampool2 "github.com/anyproto/any-sync/net/streampool"
 )
 
@@ -20,17 +22,15 @@ const CName = "any-sync.net.module"
 var log = logger.NewNamed(CName)
 
 type Service interface {
-	app.AppModule
 	GetDrpcServer() server.DRPCServer
 	NewStreamPool(handler streampool.StreamHandler, config streampool2.StreamConfig) streampool2.StreamPool
-	PreferQuic(prefer bool)
-	SetPeerAddrs(peerId string, addrs []string)
-	Get(ctx context.Context, id string) (peer.Peer, error)
-	GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error)
 	ListenAddrs(ctx context.Context, addrs ...string) (listenAddrs []net.Addr, err error)
+	peer2.PeerService
+	pool2.Pool
+	app.AppModule
 }
 
-type netModule struct {
+type netService struct {
 	peerService       peerservice.PeerService
 	poolService       pool.Service
 	streamPoolService streampool.Service
@@ -38,50 +38,50 @@ type netModule struct {
 	quic              quic.Quic
 }
 
-func (nm *netModule) Inject(a *app.App) {
-	nm.poolService = a.MustComponent(pool.CName).(pool.Service)
-	nm.peerService = a.MustComponent(peerservice.CName).(peerservice.PeerService)
-	nm.streamPoolService = a.MustComponent(streampool.CName).(streampool.Service)
-	nm.drpcServer = a.MustComponent(server.CName).(server.DRPCServer)
-	nm.quic = a.MustComponent(quic.CName).(quic.Quic)
+func (ns *netService) Inject(a *app.App) {
+	ns.poolService = a.MustComponent(pool.CName).(pool.Service)
+	ns.peerService = a.MustComponent(peerservice.CName).(peerservice.PeerService)
+	ns.streamPoolService = a.MustComponent(streampool.CName).(streampool.Service)
+	ns.drpcServer = a.MustComponent(server.CName).(server.DRPCServer)
+	ns.quic = a.MustComponent(quic.CName).(quic.Quic)
 }
 
-func (nm *netModule) PreferQuic(prefer bool) {
-	nm.peerService.PreferQuic(prefer)
+func (ns *netService) PreferQuic(prefer bool) {
+	ns.peerService.PreferQuic(prefer)
 }
 
-func (nm *netModule) SetPeerAddrs(peerId string, addrs []string) {
-	nm.peerService.SetPeerAddrs(peerId, addrs)
+func (ns *netService) SetPeerAddrs(peerId string, addrs []string) {
+	ns.peerService.SetPeerAddrs(peerId, addrs)
 }
 
-func (nm *netModule) Get(ctx context.Context, id string) (peer.Peer, error) {
-	return nm.poolService.Get(ctx, id)
+func (ns *netService) Get(ctx context.Context, id string) (peer.Peer, error) {
+	return ns.poolService.Get(ctx, id)
 }
 
-func (nm *netModule) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
-	return nm.poolService.GetOneOf(ctx, peerIds)
+func (ns *netService) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
+	return ns.poolService.GetOneOf(ctx, peerIds)
 }
 
-func (nm *netModule) ListenAddrs(ctx context.Context, addrs ...string) (listenAddrs []net.Addr, err error) {
-	return nm.quic.ListenAddrs(ctx, addrs...)
+func (ns *netService) ListenAddrs(ctx context.Context, addrs ...string) (listenAddrs []net.Addr, err error) {
+	return ns.quic.ListenAddrs(ctx, addrs...)
 }
 
-func (nm *netModule) NewStreamPool(handler streampool.StreamHandler, config streampool2.StreamConfig) streampool2.StreamPool {
-	return nm.streamPoolService.NewStreamPool(handler, config)
+func (ns *netService) NewStreamPool(handler streampool.StreamHandler, config streampool2.StreamConfig) streampool2.StreamPool {
+	return ns.streamPoolService.NewStreamPool(handler, config)
 }
 
 func New() Service {
-	return new(netModule)
+	return new(netService)
 }
 
-func (nm *netModule) GetDrpcServer() server.DRPCServer {
-	return nm.drpcServer
+func (ns *netService) GetDrpcServer() server.DRPCServer {
+	return ns.drpcServer
 }
 
-func (nm *netModule) Init(a *app.App) (err error) {
+func (ns *netService) Init(a *app.App) (err error) {
 	return nil
 }
 
-func (nm *netModule) Name() (name string) {
+func (ns *netService) Name() (name string) {
 	return CName
 }

@@ -10,15 +10,13 @@ import (
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net/neterr"
 	"github.com/anyproto/any-sync/net/peer"
+	pool2 "github.com/anyproto/any-sync/net/pool"
 	handshake2 "github.com/anyproto/any-sync/net/secureservice/handshake"
 )
 
 // Pool creates and caches outgoing connection
 type Pool interface {
-	// Get lookups to peer in existing connections or creates and outgoing new one
-	Get(ctx context.Context, id string) (peer.Peer, error)
-	// GetOneOf searches at least one existing connection in outgoing or creates a new one from a randomly selected id from given list
-	GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error)
+	pool2.Pool
 	// AddPeer adds incoming peer to the pool
 	AddPeer(ctx context.Context, p peer.Peer) (err error)
 }
