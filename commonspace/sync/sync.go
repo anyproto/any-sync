@@ -22,28 +22,25 @@ type SyncService interface {
 type MergeFilterFunc func(ctx context.Context, msg drpc.Message, q *mb.MB[drpc.Message]) error
 
 type syncService struct {
-	// sendQueue is a multiqueue: peerId -> queue
-	// this queue exists for sending head updates
 	sendQueueProvider multiqueue.QueueProvider[drpc.Message]
-	// receiveQueue is a multiqueue: objectId -> queue
-	// this queue exists for receiving head updates
-	receiveQueue multiqueue.MultiQueue[drpc.Message]
-	// manager is a Request manager which works with both incoming and outgoing requests
-	manager RequestManager
-	// handler checks if head update is relevant and then queues Request intent if necessary
-	handler HeadUpdateHandler
-	// sender sends head updates to peers
-	sender      HeadUpdateSender
-	mergeFilter MergeFilterFunc
-	ctx         context.Context
-	cancel      context.CancelFunc
+	receiveQueue      multiqueue.MultiQueue[drpc.Message]
+	manager           RequestManager
+	handler           HeadUpdateHandler
+	sender            HeadUpdateSender
+	mergeFilter       MergeFilterFunc
+	ctx               context.Context
+	cancel            context.CancelFunc
 }
 
-func NewSyncService() SyncService {
+func NewSyncService(deps SyncDeps) SyncService {
 	s := &syncService{}
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	s.sendQueueProvider = multiqueue.NewQueueProvider[drpc.Message](100, s.handleOutgoingMessage)
 	s.receiveQueue = multiqueue.New[drpc.Message](s.handleIncomingMessage, 100)
+	s.sender = deps.HeadUpdateSender
+	s.handler = deps.HeadUpdateHandler
+	s.mergeFilter = deps.MergeFilter
+	s.manager = NewRequestManager(deps)
 	return s
 }
 

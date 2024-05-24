@@ -1,9 +1,7 @@
 package sync
 
 import (
-	"context"
 	"strings"
-	"sync"
 
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
@@ -53,11 +51,15 @@ type requestManager struct {
 	requestHandler  RequestHandler
 	responseHandler ResponseHandler
 	requestSender   RequestSender
-	currentRequests map[string]struct{}
-	mx              sync.Mutex
-	ctx             context.Context
-	cancel          context.CancelFunc
-	wait            chan struct{}
+}
+
+func NewRequestManager(deps SyncDeps) RequestManager {
+	return &requestManager{
+		requestPool:     NewRequestPool(),
+		requestHandler:  deps.RequestHandler,
+		responseHandler: deps.ResponseHandler,
+		requestSender:   deps.RequestSender,
+	}
 }
 
 func (r *requestManager) QueueRequest(rq Request) error {
