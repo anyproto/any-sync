@@ -48,12 +48,6 @@ func NewSyncService() SyncService {
 }
 
 func (s *syncService) handleOutgoingMessage(id string, msg drpc.Message, q *mb.MB[drpc.Message]) error {
-	//headUpdate := msg.(*HeadUpdate)
-	//cp := headUpdate.ShallowCopy()
-	//cp.SetPeerId(id)
-	//// TODO: add some merging/filtering logic if needed
-	//// for example we can filter empty messages for the same peer
-	//// or we can merge the messages together
 	return s.mergeFilter(s.ctx, msg, q)
 }
 
@@ -65,7 +59,7 @@ func (s *syncService) handleIncomingMessage(msg drpc.Message) {
 	if req == nil {
 		return
 	}
-	err = s.manager.QueueRequest("", "", req)
+	err = s.manager.QueueRequest(req)
 	if err != nil {
 		log.Error("failed to queue request", zap.Error(err))
 	}
@@ -76,7 +70,11 @@ func (s *syncService) GetQueueProvider() multiqueue.QueueProvider[drpc.Message] 
 }
 
 func (s *syncService) HandleMessage(ctx context.Context, peerId string, msg drpc.Message) error {
-	return s.receiveQueue.Add(ctx, peerId, msg.(*HeadUpdate))
+	return s.receiveQueue.Add(ctx, peerId, msg)
+}
+
+func (s *syncService) HandleStreamRequest(ctx context.Context, req Request, stream drpc.Stream) error {
+	return s.manager.HandleStreamRequest(req, stream)
 }
 
 func (s *syncService) NewReadMessage() drpc.Message {
