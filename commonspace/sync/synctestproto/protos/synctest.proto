@@ -1,0 +1,18 @@
+syntax = "proto3";
+package synctest;
+option go_package = "commonspace/sync/synctestproto";
+
+message CounterIncrease {
+    int32 value = 1;
+    string objectId = 2;
+}
+
+message CounterRequest {
+    repeated int32 existingValues = 1;
+    string objectId = 2;
+}
+
+service CounterSync {
+    rpc CounterStreamRequest(CounterRequest) returns (stream CounterIncrease);
+    rpc CounterStream(CounterRequest) returns (stream CounterIncrease);
+}
