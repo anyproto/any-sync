@@ -3,7 +3,6 @@ package commonspace
 import (
 	"context"
 	"fmt"
-	"github.com/anyproto/any-sync/commonspace/peerstatus"
 	"testing"
 	"time"
 
@@ -227,6 +226,10 @@ func (m *mockPool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, e
 
 func (m *mockPool) DialOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
 	return nil, fmt.Errorf("can't dial peer")
+}
+
+func (m *mockPool) Pick(ctx context.Context, id string) (peer.Peer, error) {
+	return nil, fmt.Errorf("no such peer")
 }
 
 //
@@ -473,9 +476,9 @@ func (m mockPeerStatus) Close(ctx context.Context) (err error) {
 	return
 }
 
-func (m mockPeerStatus) SendPeerUpdate() {}
+func (m mockPeerStatus) CheckPeerStatus() {}
 
-func (m mockPeerStatus) SendNewStatus(status peerstatus.Status) {}
+func (m mockPeerStatus) SendNotPossibleStatus() {}
 
 //
 // Space fixture
