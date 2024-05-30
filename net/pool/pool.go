@@ -133,5 +133,5 @@ func (p *pool) pick(ctx context.Context, source ocache.OCache, id string) (peer.
 	if !pr.IsClosed() {
 		return pr, nil
 	}
-	return nil, fmt.Errorf("failed to pick connection with peer: peer not founc")
+	return nil, fmt.Errorf("failed to pick connection with peer: peer not found")
 }

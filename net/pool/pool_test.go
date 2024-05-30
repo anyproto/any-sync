@@ -153,7 +153,40 @@ func TestPool_AddPeer(t *testing.T) {
 			assert.Truef(t, false, "peer not closed")
 		}
 	})
+}
 
+func TestPool_Pick(t *testing.T) {
+	t.Run("not exist", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+
+		p, err := fx.Pick(ctx, "1")
+		assert.Nil(t, p)
+		assert.NotNil(t, err)
+	})
+	t.Run("success", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p1 := newTestPeer("p1")
+		require.NoError(t, fx.AddPeer(ctx, p1))
+
+		p, err := fx.Pick(ctx, "p1")
+
+		assert.NotNil(t, p)
+		assert.Equal(t, p1, p)
+		assert.Nil(t, err)
+	})
+	t.Run("peer is closed", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.Finish()
+		p1 := newTestPeer("p1")
+		require.NoError(t, fx.AddPeer(ctx, p1))
+		require.NoError(t, p1.Close())
+		p, err := fx.Pick(ctx, "p1")
+
+		assert.Nil(t, p)
+		assert.NotNil(t, err)
+	})
 }
 
 func newFixture(t *testing.T) *fixture {

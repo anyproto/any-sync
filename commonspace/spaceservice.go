@@ -32,7 +32,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
-	"github.com/anyproto/any-sync/commonspace/peerstatus"
 	"github.com/anyproto/any-sync/commonspace/requestmanager"
 	"github.com/anyproto/any-sync/commonspace/settings"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
@@ -69,7 +68,6 @@ type SpaceService interface {
 type Deps struct {
 	TreeSyncer treesyncer.TreeSyncer
 	SyncStatus syncstatus.StatusUpdater
-	PeerStatus peerstatus.StatusUpdateSender
 }
 
 type spaceService struct {
@@ -179,7 +177,6 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 	}
 	spaceApp := s.app.ChildApp()
 	spaceApp.Register(state).
-		Register(deps.PeerStatus).
 		Register(deps.SyncStatus).
 		Register(peerManager).
 		Register(newCommonStorage(st)).
