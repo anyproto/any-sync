@@ -146,10 +146,6 @@ func (m *mockConf) NodeTypes(nodeId string) []nodeconf.NodeType {
 type mockPeerManager struct {
 }
 
-func (p *mockPeerManager) IsPeerOffline(senderId string) bool {
-	return false
-}
-
 func (p *mockPeerManager) Init(a *app.App) (err error) {
 	return nil
 }
@@ -456,29 +452,6 @@ func (m mockNodeClient) AclGetRecords(ctx context.Context, spaceId, aclHead stri
 func (m mockNodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (recWithId *consensusproto.RawRecordWithId, err error) {
 	return
 }
-
-type mockPeerStatus struct {
-}
-
-func (m mockPeerStatus) Init(a *app.App) (err error) {
-	return
-}
-
-func (m mockPeerStatus) Name() (name string) {
-	return
-}
-
-func (m mockPeerStatus) Run(ctx context.Context) (err error) {
-	return
-}
-
-func (m mockPeerStatus) Close(ctx context.Context) (err error) {
-	return
-}
-
-func (m mockPeerStatus) CheckPeerStatus() {}
-
-func (m mockPeerStatus) SendNotPossibleStatus() {}
 
 //
 // Space fixture
