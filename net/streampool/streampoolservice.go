@@ -25,7 +25,7 @@ type StreamConfig struct {
 }
 
 type Service interface {
-	NewStreamPool(h StreamHandler, conf StreamConfig) StreamPool
+	NewStreamPool(h StreamOpener, conf StreamConfig) StreamPool
 	app.Component
 }
 
@@ -34,10 +34,10 @@ type service struct {
 	debugStat debugstat.StatService
 }
 
-func (s *service) NewStreamPool(h StreamHandler, conf StreamConfig) StreamPool {
+func (s *service) NewStreamPool(h StreamOpener, conf StreamConfig) StreamPool {
 	pl := NewExecPool(conf.DialQueueWorkers, conf.DialQueueSize)
 	sp := &streamPool{
-		handler:         h,
+		streamOpener:    h,
 		writeQueueSize:  conf.SendQueueSize,
 		streamIdsByPeer: map[string][]uint32{},
 		streamIdsByTag:  map[string][]uint32{},

@@ -11,6 +11,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/sync/synctest"
 	"github.com/anyproto/any-sync/commonspace/sync/synctestproto"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
+	"github.com/anyproto/any-sync/net/streampool"
 )
 
 var ctx = context.Background()
@@ -25,6 +26,7 @@ func TestNewSyncService(t *testing.T) {
 		Register(rpctest.NewTestServer()).
 		Register(synctest.NewRpcServer()).
 		Register(synctest.NewPeerProvider("first"))
+	//Register(synctest.NewCounterStreamOpener())
 	secondApp.Register(connProvider).
 		Register(rpctest.NewTestServer()).
 		Register(synctest.NewRpcServer()).
@@ -48,4 +50,29 @@ func TestNewSyncService(t *testing.T) {
 		return nil
 	})
 	require.NoError(t, err)
+}
+
+type counterFixture struct {
+	a *app.App
+}
+
+type counterFixtureParams struct {
+	connProvider *synctest.ConnProvider
+	start        int32
+	delta        int32
+}
+
+func newFixture(t *testing.T, peerId string, params counterFixtureParams) *counterFixture {
+	a := &app.App{}
+	a.Register(params.connProvider).
+		Register(rpctest.NewTestServer()).
+		Register(synctest.NewCounterStreamOpener()).
+		Register(synctest.NewPeerProvider(peerId)).
+		Register(synctest.NewCounter(params.start, params.delta)).
+		Register(streampool.NewStreamPool()).
+		Register(synctest.NewCounterSyncDepsFactory()).
+		Register(NewSyncService()).
+		//Register().
+		Register(synctest.NewRpcServer())
+	return nil
 }

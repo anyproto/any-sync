@@ -7,7 +7,9 @@ import (
 	"go.uber.org/zap"
 	"storj.io/drpc"
 
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/util/multiqueue"
 )
 
@@ -16,32 +18,43 @@ const CName = "common.commonspace.sync"
 var log = logger.NewNamed("sync")
 
 type SyncService interface {
-	GetQueueProvider() multiqueue.QueueProvider[drpc.Message]
+	app.Component
+	GetQueue(peerId string) *multiqueue.Queue[drpc.Message]
+	HandleMessage(ctx context.Context, peerId string, msg drpc.Message) error
+	HandleStreamRequest(ctx context.Context, req syncdeps.Request, stream drpc.Stream) error
+	QueueRequest(ctx context.Context, rq syncdeps.Request) error
 }
-
-type MergeFilterFunc func(ctx context.Context, msg drpc.Message, q *mb.MB[drpc.Message]) error
 
 type syncService struct {
 	sendQueueProvider multiqueue.QueueProvider[drpc.Message]
 	receiveQueue      multiqueue.MultiQueue[drpc.Message]
 	manager           RequestManager
-	handler           HeadUpdateHandler
-	sender            HeadUpdateSender
-	mergeFilter       MergeFilterFunc
+	handler           syncdeps.HeadUpdateHandler
+	mergeFilter       syncdeps.MergeFilterFunc
+	newMessage        func() drpc.Message
 	ctx               context.Context
 	cancel            context.CancelFunc
 }
 
-func NewSyncService(deps SyncDeps) SyncService {
-	s := &syncService{}
-	s.ctx, s.cancel = context.WithCancel(context.Background())
+func (s *syncService) Init(a *app.App) (err error) {
+	factory := a.MustComponent(syncdeps.CName).(syncdeps.SyncDepsFactory)
 	s.sendQueueProvider = multiqueue.NewQueueProvider[drpc.Message](100, s.handleOutgoingMessage)
 	s.receiveQueue = multiqueue.New[drpc.Message](s.handleIncomingMessage, 100)
-	s.sender = deps.HeadUpdateSender
+	deps := factory.SyncDeps()
 	s.handler = deps.HeadUpdateHandler
 	s.mergeFilter = deps.MergeFilter
+	s.newMessage = deps.ReadMessageConstructor
 	s.manager = NewRequestManager(deps)
-	return s
+	s.ctx, s.cancel = context.WithCancel(context.Background())
+	return nil
+}
+
+func (s *syncService) Name() (name string) {
+	return CName
+}
+
+func NewSyncService() SyncService {
+	return &syncService{}
 }
 
 func (s *syncService) handleOutgoingMessage(id string, msg drpc.Message, q *mb.MB[drpc.Message]) error {
@@ -62,18 +75,23 @@ func (s *syncService) handleIncomingMessage(msg drpc.Message) {
 	}
 }
 
-func (s *syncService) GetQueueProvider() multiqueue.QueueProvider[drpc.Message] {
-	return s.sendQueueProvider
+func (s *syncService) GetQueue(peerId string) *multiqueue.Queue[drpc.Message] {
+	queue := s.sendQueueProvider.GetQueue(peerId)
+	return queue
+}
+
+func (s *syncService) NewReadMessage() drpc.Message {
+	return s.newMessage()
 }
 
 func (s *syncService) HandleMessage(ctx context.Context, peerId string, msg drpc.Message) error {
 	return s.receiveQueue.Add(ctx, peerId, msg)
 }
 
-func (s *syncService) HandleStreamRequest(ctx context.Context, req Request, stream drpc.Stream) error {
-	return s.manager.HandleStreamRequest(req, stream)
+func (s *syncService) QueueRequest(ctx context.Context, rq syncdeps.Request) error {
+	return s.manager.QueueRequest(rq)
 }
 
-func (s *syncService) NewReadMessage() drpc.Message {
-	return &HeadUpdate{}
+func (s *syncService) HandleStreamRequest(ctx context.Context, req syncdeps.Request, stream drpc.Stream) error {
+	return s.manager.HandleStreamRequest(ctx, req, stream)
 }

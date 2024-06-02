@@ -10,6 +10,10 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
+type BroadcastOptions struct {
+	EmptyPeers []string
+}
+
 type HeadUpdate struct {
 	peerId       string
 	objectId     string

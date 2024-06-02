@@ -14,5 +14,5 @@ message CounterRequest {
 
 service CounterSync {
     rpc CounterStreamRequest(CounterRequest) returns (stream CounterIncrease);
-    rpc CounterStream(CounterRequest) returns (stream CounterIncrease);
+    rpc CounterStream(stream CounterIncrease) returns (stream CounterIncrease);
 }

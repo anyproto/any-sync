@@ -1,34 +1,20 @@
 package sync
 
 import (
+	"context"
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 
+	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/net/streampool"
 )
 
-type Request interface {
-	PeerId() string
-	ObjectId() string
-}
-
-type Response interface {
-	// heads   []string
-	// changes []*treechangeproto.RawTreeChangeWithId
-	// root    *treechangeproto.RawTreeChangeWithId
-}
-
 type RequestManager interface {
-	QueueRequest(rq Request) error
-	HandleStreamRequest(rq Request, stream drpc.Stream) error
-}
-
-type RequestHandler interface {
-	HandleRequest(rq Request) (Request, error)
-	HandleStreamRequest(rq Request, send func(resp proto.Message) error) (Request, error)
+	QueueRequest(rq syncdeps.Request) error
+	HandleStreamRequest(ctx context.Context, rq syncdeps.Request, stream drpc.Stream) error
 }
 
 type StreamResponse struct {
@@ -36,24 +22,14 @@ type StreamResponse struct {
 	Connection drpc.Conn
 }
 
-type RequestSender interface {
-	SendRequest(rq Request) (resp Response, err error)
-	SendStreamRequest(rq Request, receive func(stream drpc.Stream) error) (err error)
-}
-
-type ResponseHandler interface {
-	NewResponse() Response
-	HandleResponse(peerId, objectId string, resp Response) error
-}
-
 type requestManager struct {
 	requestPool     RequestPool
-	requestHandler  RequestHandler
-	responseHandler ResponseHandler
-	requestSender   RequestSender
+	requestHandler  syncdeps.RequestHandler
+	responseHandler syncdeps.ResponseHandler
+	requestSender   syncdeps.RequestSender
 }
 
-func NewRequestManager(deps SyncDeps) RequestManager {
+func NewRequestManager(deps syncdeps.SyncDeps) RequestManager {
 	return &requestManager{
 		requestPool:     NewRequestPool(),
 		requestHandler:  deps.RequestHandler,
@@ -62,16 +38,16 @@ func NewRequestManager(deps SyncDeps) RequestManager {
 	}
 }
 
-func (r *requestManager) QueueRequest(rq Request) error {
-	return r.requestPool.QueueRequestAction(rq.PeerId(), rq.ObjectId(), func() {
-		err := r.requestSender.SendStreamRequest(rq, func(stream drpc.Stream) error {
+func (r *requestManager) QueueRequest(rq syncdeps.Request) error {
+	return r.requestPool.QueueRequestAction(rq.PeerId(), rq.ObjectId(), func(ctx context.Context) {
+		err := r.requestSender.SendStreamRequest(ctx, rq, func(stream drpc.Stream) error {
 			for {
 				resp := r.responseHandler.NewResponse()
 				err := stream.MsgRecv(resp, streampool.EncodingProto)
 				if err != nil {
 					return err
 				}
-				err = r.responseHandler.HandleResponse(rq.PeerId(), rq.ObjectId(), resp)
+				err = r.responseHandler.HandleResponse(ctx, rq.PeerId(), rq.ObjectId(), resp)
 				if err != nil {
 					return err
 				}
@@ -83,12 +59,12 @@ func (r *requestManager) QueueRequest(rq Request) error {
 	})
 }
 
-func (r *requestManager) HandleStreamRequest(rq Request, stream drpc.Stream) error {
+func (r *requestManager) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, stream drpc.Stream) error {
 	if !r.requestPool.TryTake(rq.PeerId(), rq.ObjectId()) {
 		return nil
 	}
 	defer r.requestPool.Release(rq.PeerId(), rq.ObjectId())
-	newRq, err := r.requestHandler.HandleStreamRequest(rq, func(resp proto.Message) error {
+	newRq, err := r.requestHandler.HandleStreamRequest(ctx, rq, func(resp proto.Message) error {
 		return stream.MsgSend(resp, streampool.EncodingProto)
 	})
 	if err != nil {

@@ -41,7 +41,7 @@ type DRPCCounterSyncClient interface {
 	DRPCConn() drpc.Conn
 
 	CounterStreamRequest(ctx context.Context, in *CounterRequest) (DRPCCounterSync_CounterStreamRequestClient, error)
-	CounterStream(ctx context.Context, in *CounterRequest) (DRPCCounterSync_CounterStreamClient, error)
+	CounterStream(ctx context.Context) (DRPCCounterSync_CounterStreamClient, error)
 }
 
 type drpcCounterSyncClient struct {
@@ -94,23 +94,18 @@ func (x *drpcCounterSync_CounterStreamRequestClient) RecvMsg(m *CounterIncrease)
 	return x.MsgRecv(m, drpcEncoding_File_commonspace_sync_synctestproto_protos_synctest_proto{})
 }
 
-func (c *drpcCounterSyncClient) CounterStream(ctx context.Context, in *CounterRequest) (DRPCCounterSync_CounterStreamClient, error) {
+func (c *drpcCounterSyncClient) CounterStream(ctx context.Context) (DRPCCounterSync_CounterStreamClient, error) {
 	stream, err := c.cc.NewStream(ctx, "/synctest.CounterSync/CounterStream", drpcEncoding_File_commonspace_sync_synctestproto_protos_synctest_proto{})
 	if err != nil {
 		return nil, err
 	}
 	x := &drpcCounterSync_CounterStreamClient{stream}
-	if err := x.MsgSend(in, drpcEncoding_File_commonspace_sync_synctestproto_protos_synctest_proto{}); err != nil {
-		return nil, err
-	}
-	if err := x.CloseSend(); err != nil {
-		return nil, err
-	}
 	return x, nil
 }
 
 type DRPCCounterSync_CounterStreamClient interface {
 	drpc.Stream
+	Send(*CounterIncrease) error
 	Recv() (*CounterIncrease, error)
 }
 
@@ -120,6 +115,10 @@ type drpcCounterSync_CounterStreamClient struct {
 
 func (x *drpcCounterSync_CounterStreamClient) GetStream() drpc.Stream {
 	return x.Stream
+}
+
+func (x *drpcCounterSync_CounterStreamClient) Send(m *CounterIncrease) error {
+	return x.MsgSend(m, drpcEncoding_File_commonspace_sync_synctestproto_protos_synctest_proto{})
 }
 
 func (x *drpcCounterSync_CounterStreamClient) Recv() (*CounterIncrease, error) {
@@ -136,7 +135,7 @@ func (x *drpcCounterSync_CounterStreamClient) RecvMsg(m *CounterIncrease) error 
 
 type DRPCCounterSyncServer interface {
 	CounterStreamRequest(*CounterRequest, DRPCCounterSync_CounterStreamRequestStream) error
-	CounterStream(*CounterRequest, DRPCCounterSync_CounterStreamStream) error
+	CounterStream(DRPCCounterSync_CounterStreamStream) error
 }
 
 type DRPCCounterSyncUnimplementedServer struct{}
@@ -145,7 +144,7 @@ func (s *DRPCCounterSyncUnimplementedServer) CounterStreamRequest(*CounterReques
 	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCCounterSyncUnimplementedServer) CounterStream(*CounterRequest, DRPCCounterSync_CounterStreamStream) error {
+func (s *DRPCCounterSyncUnimplementedServer) CounterStream(DRPCCounterSync_CounterStreamStream) error {
 	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
@@ -169,8 +168,7 @@ func (DRPCCounterSyncDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return nil, srv.(DRPCCounterSyncServer).
 					CounterStream(
-						in1.(*CounterRequest),
-						&drpcCounterSync_CounterStreamStream{in2.(drpc.Stream)},
+						&drpcCounterSync_CounterStreamStream{in1.(drpc.Stream)},
 					)
 			}, DRPCCounterSyncServer.CounterStream, true
 	default:
@@ -198,6 +196,7 @@ func (x *drpcCounterSync_CounterStreamRequestStream) Send(m *CounterIncrease) er
 type DRPCCounterSync_CounterStreamStream interface {
 	drpc.Stream
 	Send(*CounterIncrease) error
+	Recv() (*CounterIncrease, error)
 }
 
 type drpcCounterSync_CounterStreamStream struct {
@@ -206,4 +205,16 @@ type drpcCounterSync_CounterStreamStream struct {
 
 func (x *drpcCounterSync_CounterStreamStream) Send(m *CounterIncrease) error {
 	return x.MsgSend(m, drpcEncoding_File_commonspace_sync_synctestproto_protos_synctest_proto{})
+}
+
+func (x *drpcCounterSync_CounterStreamStream) Recv() (*CounterIncrease, error) {
+	m := new(CounterIncrease)
+	if err := x.MsgRecv(m, drpcEncoding_File_commonspace_sync_synctestproto_protos_synctest_proto{}); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (x *drpcCounterSync_CounterStreamStream) RecvMsg(m *CounterIncrease) error {
+	return x.MsgRecv(m, drpcEncoding_File_commonspace_sync_synctestproto_protos_synctest_proto{})
 }

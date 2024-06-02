@@ -1,26 +1,32 @@
 package sync
 
 import (
+	"context"
 	"sync"
 )
 
 type RequestPool interface {
 	TryTake(peerId, objectId string) bool
 	Release(peerId, objectId string)
-	QueueRequestAction(peerId, objectId string, action func()) (err error)
+	QueueRequestAction(peerId, objectId string, action func(ctx context.Context)) (err error)
 }
 
 type requestPool struct {
 	mu       sync.Mutex
 	taken    map[string]struct{}
 	pools    map[string]*tryAddQueue
+	ctx      context.Context
+	cancel   context.CancelFunc
 	isClosed bool
 }
 
 func NewRequestPool() RequestPool {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &requestPool{
-		taken: make(map[string]struct{}),
-		pools: make(map[string]*tryAddQueue),
+		ctx:    ctx,
+		cancel: cancel,
+		taken:  make(map[string]struct{}),
+		pools:  make(map[string]*tryAddQueue),
 	}
 }
 
@@ -47,7 +53,7 @@ func (rp *requestPool) Release(peerId, objectId string) {
 	delete(rp.taken, id)
 }
 
-func (rp *requestPool) QueueRequestAction(peerId, objectId string, action func()) (err error) {
+func (rp *requestPool) QueueRequestAction(peerId, objectId string, action func(ctx context.Context)) (err error) {
 	rp.mu.Lock()
 	if rp.isClosed {
 		rp.mu.Unlock()
@@ -70,7 +76,7 @@ func (rp *requestPool) QueueRequestAction(peerId, objectId string, action func()
 			pool.TryAdd(objectId, wrappedAction, func() {})
 			return
 		}
-		action()
+		action(rp.ctx)
 		rp.Release(peerId, objectId)
 	}
 	pool.Replace(objectId, wrappedAction, func() {})

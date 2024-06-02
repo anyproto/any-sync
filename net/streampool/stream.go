@@ -40,14 +40,14 @@ func (sr *stream) readLoop() error {
 	}()
 	sr.l.Debug("stream read started")
 	for {
-		msg := sr.pool.handler.NewReadMessage()
+		msg := sr.pool.syncDelegate.NewReadMessage()
 		if err := sr.stream.MsgRecv(msg, EncodingProto); err != nil {
 			sr.l.Info("msg receive error", zap.Error(err))
 			return err
 		}
 		ctx := streamCtx(sr.peerCtx, sr.streamId, sr.peerId)
 		ctx = logger.CtxWithFields(ctx, zap.String("peerId", sr.peerId))
-		if err := sr.pool.handler.HandleMessage(ctx, sr.peerId, msg); err != nil {
+		if err := sr.pool.syncDelegate.HandleMessage(ctx, sr.peerId, msg); err != nil {
 			sr.l.Info("msg handle error", zap.Error(err))
 			return err
 		}

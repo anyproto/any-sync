@@ -9,22 +9,46 @@ import (
 	"golang.org/x/net/context"
 	"storj.io/drpc"
 
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/util/multiqueue"
 )
 
-// StreamHandler handles incoming messages from streams
-type StreamHandler interface {
-	// OpenStream opens stream with given peer
-	OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error)
+type configGetter interface {
+	GetConfig() StreamConfig
+}
+
+type StreamSyncDelegate interface {
+	app.Component
 	// HandleMessage handles incoming message
 	HandleMessage(ctx context.Context, peerId string, msg drpc.Message) (err error)
 	// NewReadMessage creates new empty message for unmarshalling into it
 	NewReadMessage() drpc.Message
-	// GetQueueProvider returns queue provider for outgoing messages
-	GetQueueProvider() multiqueue.QueueProvider[drpc.Message]
+	// GetQueue returns queue for outgoing messages
+	GetQueue(peerId string) *multiqueue.Queue[drpc.Message]
+}
+
+const (
+	StreamOpenerCName       = "common.commonspace.streampool"
+	streamSyncDelegateCName = "common.commonspace.sync"
+)
+
+func NewStreamPool() StreamPool {
+	return &streamPool{
+		streamIdsByPeer: map[string][]uint32{},
+		streamIdsByTag:  map[string][]uint32{},
+		streams:         map[uint32]*stream{},
+		opening:         map[string]*openingProcess{},
+	}
+}
+
+// StreamOpener handles incoming messages from streams
+type StreamOpener interface {
+	app.Component
+	// OpenStream opens stream with given peer
+	OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error)
 }
 
 // PeerGetter should dial or return cached peers
@@ -37,37 +61,52 @@ type MessageQueueId interface {
 
 // StreamPool keeps and read streams
 type StreamPool interface {
+	app.ComponentRunnable
 	// AddStream adds new outgoing stream into the pool
 	AddStream(stream drpc.Stream, tags ...string) (err error)
 	// ReadStream adds new incoming stream and synchronously read it
 	ReadStream(stream drpc.Stream, tags ...string) (err error)
 	// Send sends a message to given peers. A stream will be opened if it is not cached before. Works async.
 	Send(ctx context.Context, msg drpc.Message, target PeerGetter) (err error)
-	// SendById sends a message to given peerIds. Works only if stream exists
-	SendById(ctx context.Context, msg drpc.Message, peerIds ...string) (err error)
 	// Broadcast sends a message to all peers with given tags. Works async.
 	Broadcast(ctx context.Context, msg drpc.Message, tags ...string) (err error)
-	// AddTagsCtx adds tags to stream, stream will be extracted from ctx
-	AddTagsCtx(ctx context.Context, tags ...string) error
-	// RemoveTagsCtx removes tags from stream, stream will be extracted from ctx
-	RemoveTagsCtx(ctx context.Context, tags ...string) error
-	// Streams gets all streams for specific tags
-	Streams(tags ...string) (streams []drpc.Stream)
-	// Close closes all streams
-	Close() error
 }
 
 type streamPool struct {
-	handler         StreamHandler
+	streamOpener    StreamOpener
+	syncDelegate    StreamSyncDelegate
 	statService     debugstat.StatService
 	streamIdsByPeer map[string][]uint32
 	streamIdsByTag  map[string][]uint32
 	streams         map[uint32]*stream
 	opening         map[string]*openingProcess
+	streamConfig    StreamConfig
 	dial            *ExecPool
 	mu              sync.Mutex
 	writeQueueSize  int
 	lastStreamId    uint32
+}
+
+func (s *streamPool) Init(a *app.App) (err error) {
+	s.streamOpener = a.MustComponent(StreamOpenerCName).(StreamOpener)
+	s.syncDelegate = a.MustComponent(streamSyncDelegateCName).(StreamSyncDelegate)
+	comp, ok := a.Component(debugstat.CName).(debugstat.StatService)
+	if !ok {
+		comp = debugstat.NewNoOp()
+	}
+	s.statService = comp
+	s.streamConfig = a.MustComponent("config").(configGetter).GetConfig()
+	s.statService.AddProvider(s)
+	return nil
+}
+
+func (s *streamPool) Name() (name string) {
+	return CName
+}
+
+func (s *streamPool) Run(ctx context.Context) (err error) {
+	s.dial = NewExecPool(s.streamConfig.DialQueueWorkers, s.streamConfig.DialQueueSize)
+	return nil
 }
 
 func (s *streamPool) ProvideStat() any {
@@ -166,7 +205,7 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 		tags:     tags,
 		stats:    newStreamStat(peerId),
 	}
-	st.queue = s.handler.GetQueueProvider().GetQueue(peerId)
+	st.queue = s.syncDelegate.GetQueue(peerId)
 	s.streams[streamId] = st
 	s.streamIdsByPeer[peerId] = append(s.streamIdsByPeer[peerId], streamId)
 	for _, tag := range tags {
@@ -291,7 +330,7 @@ func (s *streamPool) openStream(ctx context.Context, p peer.Peer) *openingProces
 		// in case there was no peerId in context
 		ctx := peer.CtxWithPeerId(ctx, p.Id())
 		// open new stream and add to pool
-		st, tags, err := s.handler.OpenStream(ctx, p)
+		st, tags, err := s.streamOpener.OpenStream(ctx, p)
 		if err != nil {
 			op.err = err
 			return
@@ -393,7 +432,7 @@ func (s *streamPool) removeStream(streamId uint32) {
 	st.l.Debug("stream removed", zap.Strings("tags", st.tags))
 }
 
-func (s *streamPool) Close() (err error) {
+func (s *streamPool) Close(ctx context.Context) (err error) {
 	s.statService.RemoveProvider(s)
 	return s.dial.Close()
 }

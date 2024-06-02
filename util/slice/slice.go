@@ -136,3 +136,25 @@ func DiscardFromSlice[T any](elements []T, isDiscarded func(T) bool) []T {
 	elements = elements[:finishedIdx]
 	return elements
 }
+
+func CompareMaps[T comparable](map1, map2 map[T]struct{}) (both, first, second []T) {
+	both = []T{}
+	first = []T{}
+	second = []T{}
+
+	for key := range map1 {
+		if _, found := map2[key]; found {
+			both = append(both, key)
+		} else {
+			first = append(first, key)
+		}
+	}
+
+	for key := range map2 {
+		if _, found := map1[key]; !found {
+			second = append(second, key)
+		}
+	}
+
+	return both, first, second
+}
