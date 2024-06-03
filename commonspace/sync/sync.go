@@ -27,7 +27,7 @@ type SyncService interface {
 
 type syncService struct {
 	sendQueueProvider multiqueue.QueueProvider[drpc.Message]
-	receiveQueue      multiqueue.MultiQueue[drpc.Message]
+	receiveQueue      multiqueue.MultiQueue[msgCtx]
 	manager           RequestManager
 	handler           syncdeps.HeadUpdateHandler
 	mergeFilter       syncdeps.MergeFilterFunc
@@ -36,10 +36,15 @@ type syncService struct {
 	cancel            context.CancelFunc
 }
 
+type msgCtx struct {
+	ctx context.Context
+	drpc.Message
+}
+
 func (s *syncService) Init(a *app.App) (err error) {
 	factory := a.MustComponent(syncdeps.CName).(syncdeps.SyncDepsFactory)
 	s.sendQueueProvider = multiqueue.NewQueueProvider[drpc.Message](100, s.handleOutgoingMessage)
-	s.receiveQueue = multiqueue.New[drpc.Message](s.handleIncomingMessage, 100)
+	s.receiveQueue = multiqueue.New[msgCtx](s.handleIncomingMessage, 100)
 	deps := factory.SyncDeps()
 	s.handler = deps.HeadUpdateHandler
 	s.mergeFilter = deps.MergeFilter
@@ -61,8 +66,8 @@ func (s *syncService) handleOutgoingMessage(id string, msg drpc.Message, q *mb.M
 	return s.mergeFilter(s.ctx, msg, q)
 }
 
-func (s *syncService) handleIncomingMessage(msg drpc.Message) {
-	req, err := s.handler.HandleHeadUpdate(s.ctx, msg)
+func (s *syncService) handleIncomingMessage(msg msgCtx) {
+	req, err := s.handler.HandleHeadUpdate(msg.ctx, msg.Message)
 	if err != nil {
 		log.Error("failed to handle head update", zap.Error(err))
 	}
@@ -85,7 +90,10 @@ func (s *syncService) NewReadMessage() drpc.Message {
 }
 
 func (s *syncService) HandleMessage(ctx context.Context, peerId string, msg drpc.Message) error {
-	return s.receiveQueue.Add(ctx, peerId, msg)
+	return s.receiveQueue.Add(ctx, peerId, msgCtx{
+		ctx:     ctx,
+		Message: msg,
+	})
 }
 
 func (s *syncService) QueueRequest(ctx context.Context, rq syncdeps.Request) error {

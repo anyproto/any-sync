@@ -1,6 +1,7 @@
 package synctest
 
 import (
+	"fmt"
 	"sync"
 
 	"golang.org/x/exp/slices"
@@ -13,12 +14,14 @@ const CounterName = "counter"
 
 type Counter struct {
 	sync.Mutex
-	counters    map[int32]struct{}
-	next, delta int32
-	maxVal      int32
+	counters     map[int32]struct{}
+	peerProvider *PeerProvider
+	next, delta  int32
+	maxVal       int32
 }
 
 func (c *Counter) Init(a *app.App) (err error) {
+	c.peerProvider = a.MustComponent(PeerName).(*PeerProvider)
 	return nil
 }
 
@@ -45,6 +48,8 @@ func (c *Counter) CheckComplete() bool {
 }
 
 func (c *Counter) Add(val int32) {
+	fmt.Println("adding", val, "peerId", c.peerProvider.myPeer)
+	fmt.Println("dumping peerId", c.peerProvider.myPeer, "dump", c.Dump())
 	c.Lock()
 	defer c.Unlock()
 	if val > c.maxVal {
@@ -70,7 +75,7 @@ func (c *Counter) DiffCurrentNew(vals []int32) (toSend, toAsk []int32) {
 	for _, val := range vals {
 		m[val] = struct{}{}
 	}
-	_, toSend, toAsk = slice.CompareMaps(m, c.counters)
+	_, toSend, toAsk = slice.CompareMaps(c.counters, m)
 	return
 }
 
@@ -80,6 +85,7 @@ func (c *Counter) KnownCounters() (ret []int32) {
 	for val := range c.counters {
 		ret = append(ret, val)
 	}
+	slices.Sort(ret)
 	return
 }
 

@@ -2,7 +2,6 @@ package synctest
 
 import (
 	"context"
-	"fmt"
 	"math/rand/v2"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/commonspace/sync/synctestproto"
+	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/util/periodicsync"
 )
@@ -19,17 +19,25 @@ var log = logger.NewNamed(syncdeps.CName)
 const CounterGeneratorName = "countergenerator"
 
 type CounterGenerator struct {
-	counter    *Counter
-	streamPool streampool.StreamPool
-	loop       periodicsync.PeriodicSync
-	ownId      string
+	counter      *Counter
+	streamPool   streampool.StreamPool
+	connProvider *ConnProvider
+	peerProvider *PeerProvider
+	loop         periodicsync.PeriodicSync
+	ownId        string
+}
+
+func NewCounterGenerator() *CounterGenerator {
+	return &CounterGenerator{}
 }
 
 func (c *CounterGenerator) Init(a *app.App) (err error) {
 	c.counter = a.MustComponent(CounterName).(*Counter)
-	c.ownId = a.MustComponent(PeerName).(*PeerProvider).myPeer
+	c.connProvider = a.MustComponent(ConnName).(*ConnProvider)
+	c.peerProvider = a.MustComponent(PeerName).(*PeerProvider)
+	c.ownId = c.peerProvider.myPeer
 	c.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
-	c.loop = periodicsync.NewPeriodicSyncDuration(time.Millisecond*100, time.Millisecond*100, c.update, log)
+	c.loop = periodicsync.NewPeriodicSyncDuration(time.Millisecond*100, 0, c.update, log)
 	return
 }
 
@@ -41,11 +49,25 @@ func (c *CounterGenerator) update(ctx context.Context) error {
 	res := c.counter.Generate()
 	randChoice := rand.Int()%2 == 0
 	if randChoice {
-		fmt.Println("Broadcast", res, "by", c.ownId)
-		return c.streamPool.Broadcast(ctx, &synctestproto.CounterIncrease{
+		err := c.streamPool.Send(ctx, &synctestproto.CounterIncrease{
 			Value:    res,
 			ObjectId: "counter",
+		}, func(ctx context.Context) (peers []peer.Peer, err error) {
+			for _, peerId := range c.connProvider.GetPeerIds() {
+				if peerId == c.ownId {
+					continue
+				}
+				pr, err := c.peerProvider.GetPeer(peerId)
+				if err != nil {
+					return nil, err
+				}
+				peers = append(peers, pr)
+			}
+			return
 		})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

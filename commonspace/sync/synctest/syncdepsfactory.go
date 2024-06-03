@@ -20,17 +20,18 @@ func NewCounterSyncDepsFactory() syncdeps.SyncDepsFactory {
 
 func (c *CounterSyncDepsFactory) Init(a *app.App) (err error) {
 	counter := a.MustComponent(CounterName).(*Counter)
+	peerProvider := a.MustComponent(PeerName).(*PeerProvider)
 	requestHandler := &CounterRequestHandler{counter: counter}
 	requestSender := &CounterRequestSender{peerProvider: a.MustComponent(PeerName).(*PeerProvider)}
 	responseHandler := &CounterResponseHandler{counter: counter}
-	updateHandler := &CounterUpdateHandler{counter: counter}
+	updateHandler := &CounterUpdateHandler{counter: counter, peerProvider: peerProvider}
 	c.syncDeps = syncdeps.SyncDeps{
 		HeadUpdateHandler: updateHandler,
 		ResponseHandler:   responseHandler,
 		RequestHandler:    requestHandler,
 		RequestSender:     requestSender,
 		MergeFilter: func(ctx context.Context, msg drpc.Message, q *mb.MB[drpc.Message]) error {
-			return nil
+			return q.TryAdd(msg)
 		},
 		ReadMessageConstructor: func() drpc.Message {
 			return &CounterUpdate{}

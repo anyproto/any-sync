@@ -6,7 +6,7 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/sync/synctestproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/streampool"
 )
@@ -31,7 +31,7 @@ func (c *CounterStreamOpener) OpenStream(ctx context.Context, p peer.Peer) (stre
 	if err != nil {
 		return
 	}
-	objectStream, err := spacesyncproto.NewDRPCSpaceSyncClient(conn).ObjectSyncStream(ctx)
+	objectStream, err := synctestproto.NewDRPCCounterSyncClient(conn).CounterStream(ctx)
 	if err != nil {
 		return
 	}

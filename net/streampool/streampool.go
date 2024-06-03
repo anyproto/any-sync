@@ -106,6 +106,7 @@ func (s *streamPool) Name() (name string) {
 
 func (s *streamPool) Run(ctx context.Context) (err error) {
 	s.dial = NewExecPool(s.streamConfig.DialQueueWorkers, s.streamConfig.DialQueueSize)
+	s.dial.Run()
 	return nil
 }
 

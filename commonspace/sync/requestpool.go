@@ -80,7 +80,6 @@ func (rp *requestPool) QueueRequestAction(peerId, objectId string, action func(c
 		rp.Release(peerId, objectId)
 	}
 	pool.Replace(objectId, wrappedAction, func() {})
-	rp.mu.Unlock()
 	return nil
 }
 

@@ -10,11 +10,12 @@ import (
 )
 
 type CounterUpdateHandler struct {
-	counter *Counter
+	counter      *Counter
+	peerProvider *PeerProvider
 }
 
 func (c *CounterUpdateHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (syncdeps.Request, error) {
-	update := headUpdate.(CounterUpdate)
+	update := headUpdate.(*CounterUpdate)
 	c.counter.Add(update.counter)
 	if c.counter.CheckComplete() {
 		return nil, nil
