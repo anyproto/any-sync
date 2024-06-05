@@ -16,7 +16,7 @@ Additional two ideals that Any-Sync adds:
 - **Creators’ controlled keys.** Creators control encryption keys; there is no central registry of users (we don’t even ask your email). We added an option to self-host your backup to support full autonomy of users from the network. 
 - **Open Source.** Any-Sync protocol is open source, so all claims about how it works are independently verifiable.
 
-We have released Anytype - the interface that is built on Any-Sync protocol. Users of Anytype can create spaces - graph-based databases with modular UI. Each space has unique access rights. Today, Anytype's beta is in single-player mode. Multiplayer mode, which will support local-first collaboration between multiple users, will be launched in the first half of 2024.
+We have released Anytype - the interface that is built on Any-Sync protocol. Users of Anytype can create spaces - graph-based databases with modular UI. Each space has unique access rights. 
 
 ## Introduction
 We designed Any-Sync out of a strong conviction that the Internet today is akin to a nervous system of humanity - today it is cloud based, so all the neurons can communicate only via servers that are controlled by different elites. We envision a “no-one in between” local first alternative would be a much better foundation for communication on the internet. For this we’ve built Any-Sync to support fast and scalable synchronization of discussions, communities and apps.
