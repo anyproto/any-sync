@@ -33,7 +33,6 @@ func NewCounterGenerator() *CounterGenerator {
 
 func (c *CounterGenerator) Init(a *app.App) (err error) {
 	c.counter = a.MustComponent(CounterName).(*Counter)
-	c.connProvider = a.MustComponent(ConnName).(*ConnProvider)
 	c.peerProvider = a.MustComponent(PeerName).(*PeerProvider)
 	c.ownId = c.peerProvider.myPeer
 	c.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
@@ -53,7 +52,7 @@ func (c *CounterGenerator) update(ctx context.Context) error {
 			Value:    res,
 			ObjectId: "counter",
 		}, func(ctx context.Context) (peers []peer.Peer, err error) {
-			for _, peerId := range c.connProvider.GetPeerIds() {
+			for _, peerId := range c.peerProvider.GetPeerIds() {
 				if peerId == c.ownId {
 					continue
 				}

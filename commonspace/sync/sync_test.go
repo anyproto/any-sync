@@ -16,10 +16,11 @@ import (
 var ctx = context.Background()
 
 func TestNewSyncService(t *testing.T) {
-	connProvider := synctest.NewConnProvider([]string{"first", "second"})
+	peerPool := synctest.NewPeerGlobalPool([]string{"first", "second"})
+	peerPool.MakePeers()
 	var (
-		firstApp  = newFixture(t, "first", counterFixtureParams{connProvider: connProvider, start: 0, delta: 2})
-		secondApp = newFixture(t, "second", counterFixtureParams{connProvider: connProvider, start: 1, delta: 2})
+		firstApp  = newFixture(t, "first", counterFixtureParams{peerPool: peerPool, start: 0, delta: 2})
+		secondApp = newFixture(t, "second", counterFixtureParams{peerPool: peerPool, start: 1, delta: 2})
 	)
 	require.NoError(t, firstApp.a.Start(ctx))
 	require.NoError(t, secondApp.a.Start(ctx))
@@ -33,14 +34,14 @@ type counterFixture struct {
 }
 
 type counterFixtureParams struct {
-	connProvider *synctest.ConnProvider
-	start        int32
-	delta        int32
+	peerPool *synctest.PeerGlobalPool
+	start    int32
+	delta    int32
 }
 
 func newFixture(t *testing.T, peerId string, params counterFixtureParams) *counterFixture {
 	a := &app.App{}
-	a.Register(params.connProvider).
+	a.Register(params.peerPool).
 		Register(synctest.NewConfig()).
 		Register(rpctest.NewTestServer()).
 		Register(synctest.NewCounterStreamOpener()).

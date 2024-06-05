@@ -1,29 +1,37 @@
 package synctest
 
 import (
+	"context"
 	"sync"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
 	"github.com/anyproto/any-sync/net/rpc/server"
-	"github.com/anyproto/any-sync/net/transport"
 )
 
 const PeerName = "peerprovider"
 
 type PeerProvider struct {
 	sync.Mutex
-	myPeer       string
-	peers        map[string]peer.Peer
-	connProvider *ConnProvider
-	server       *rpctest.TestServer
+	myPeer string
+	peers  map[string]peer.Peer
+	pool   *PeerGlobalPool
+	server *rpctest.TestServer
+}
+
+func (c *PeerProvider) Run(ctx context.Context) (err error) {
+	c.pool.AddCtrl(c.myPeer, c.server)
+	return nil
+}
+
+func (c *PeerProvider) Close(ctx context.Context) (err error) {
+	return nil
 }
 
 func (c *PeerProvider) Init(a *app.App) (err error) {
-	c.connProvider = a.MustComponent(ConnName).(*ConnProvider)
+	c.pool = a.MustComponent(PeerGlobalName).(*PeerGlobalPool)
 	c.server = a.MustComponent(server.CName).(*rpctest.TestServer)
-	c.connProvider.Observe(c, c.myPeer)
 	return
 }
 
@@ -31,11 +39,8 @@ func (c *PeerProvider) Name() (name string) {
 	return PeerName
 }
 
-func (c *PeerProvider) StartPeer(peerId string, conn transport.MultiConn) (err error) {
-	c.Lock()
-	defer c.Unlock()
-	c.peers[peerId], err = peer.NewPeer(conn, c.server)
-	return err
+func (c *PeerProvider) GetPeerIds() (peerIds []string) {
+	return c.pool.GetPeerIds()
 }
 
 func (c *PeerProvider) GetPeer(peerId string) (pr peer.Peer, err error) {
@@ -44,8 +49,7 @@ func (c *PeerProvider) GetPeer(peerId string) (pr peer.Peer, err error) {
 	if pr, ok := c.peers[peerId]; ok {
 		return pr, nil
 	}
-	conn := c.connProvider.GetConn(c.myPeer, peerId)
-	c.peers[peerId], err = peer.NewPeer(conn, c.server)
+	c.peers[peerId], err = c.pool.GetPeer(mapId(c.myPeer, peerId))
 	if err != nil {
 		return nil, err
 	}
