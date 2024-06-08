@@ -24,18 +24,14 @@ type StreamResponse struct {
 }
 
 type requestManager struct {
-	requestPool     RequestPool
-	requestHandler  syncdeps.RequestHandler
-	responseHandler syncdeps.ResponseHandler
-	requestSender   syncdeps.RequestSender
+	requestPool RequestPool
+	handler     syncdeps.SyncHandler
 }
 
-func NewRequestManager(deps syncdeps.SyncDeps) RequestManager {
+func NewRequestManager(handler syncdeps.SyncHandler) RequestManager {
 	return &requestManager{
-		requestPool:     NewRequestPool(),
-		requestHandler:  deps.RequestHandler,
-		responseHandler: deps.ResponseHandler,
-		requestSender:   deps.RequestSender,
+		requestPool: NewRequestPool(),
+		handler:     handler,
 	}
 }
 
@@ -43,9 +39,9 @@ func (r *requestManager) QueueRequest(rq syncdeps.Request) error {
 	return r.requestPool.QueueRequestAction(rq.PeerId(), rq.ObjectId(), func(ctx context.Context) {
 		fmt.Println("starting stream request", rq.PeerId(), rq.ObjectId())
 		defer fmt.Println("ending stream request", rq.PeerId(), rq.ObjectId())
-		err := r.requestSender.SendStreamRequest(ctx, rq, func(stream drpc.Stream) error {
+		err := r.handler.SendStreamRequest(ctx, rq, func(stream drpc.Stream) error {
 			for {
-				resp := r.responseHandler.NewResponse()
+				resp := r.handler.NewResponse()
 				fmt.Println("receiving message", rq.PeerId(), rq.ObjectId())
 				err := stream.MsgRecv(resp, streampool.EncodingProto)
 				fmt.Println("received message", rq.PeerId(), rq.ObjectId(), err)
@@ -53,7 +49,7 @@ func (r *requestManager) QueueRequest(rq syncdeps.Request) error {
 					return err
 				}
 				fmt.Println("handling response", rq.PeerId(), rq.ObjectId())
-				err = r.responseHandler.HandleResponse(ctx, rq.PeerId(), rq.ObjectId(), resp)
+				err = r.handler.HandleResponse(ctx, rq.PeerId(), rq.ObjectId(), resp)
 				fmt.Println("handled response", rq.PeerId(), rq.ObjectId(), err)
 				if err != nil {
 					return err
@@ -72,7 +68,7 @@ func (r *requestManager) HandleStreamRequest(ctx context.Context, rq syncdeps.Re
 	}
 	fmt.Println("handling stream request", rq.PeerId(), rq.ObjectId())
 	defer r.requestPool.Release(rq.PeerId(), rq.ObjectId())
-	newRq, err := r.requestHandler.HandleStreamRequest(ctx, rq, func(resp proto.Message) error {
+	newRq, err := r.handler.HandleStreamRequest(ctx, rq, func(resp proto.Message) error {
 		fmt.Println("sending response", rq.PeerId(), rq.ObjectId())
 		return stream.MsgSend(resp, streampool.EncodingProto)
 	})

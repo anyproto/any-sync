@@ -29,9 +29,7 @@ type syncService struct {
 	sendQueueProvider multiqueue.QueueProvider[drpc.Message]
 	receiveQueue      multiqueue.MultiQueue[msgCtx]
 	manager           RequestManager
-	handler           syncdeps.HeadUpdateHandler
-	mergeFilter       syncdeps.MergeFilterFunc
-	newMessage        func() drpc.Message
+	handler           syncdeps.SyncHandler
 	ctx               context.Context
 	cancel            context.CancelFunc
 }
@@ -42,14 +40,10 @@ type msgCtx struct {
 }
 
 func (s *syncService) Init(a *app.App) (err error) {
-	factory := a.MustComponent(syncdeps.CName).(syncdeps.SyncDepsFactory)
+	s.handler = a.MustComponent(syncdeps.CName).(syncdeps.SyncHandler)
 	s.sendQueueProvider = multiqueue.NewQueueProvider[drpc.Message](100, s.handleOutgoingMessage)
 	s.receiveQueue = multiqueue.New[msgCtx](s.handleIncomingMessage, 100)
-	deps := factory.SyncDeps()
-	s.handler = deps.HeadUpdateHandler
-	s.mergeFilter = deps.MergeFilter
-	s.newMessage = deps.ReadMessageConstructor
-	s.manager = NewRequestManager(deps)
+	s.manager = NewRequestManager(s.handler)
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	return nil
 }
@@ -63,7 +57,7 @@ func NewSyncService() SyncService {
 }
 
 func (s *syncService) handleOutgoingMessage(id string, msg drpc.Message, q *mb.MB[drpc.Message]) error {
-	return s.mergeFilter(s.ctx, msg, q)
+	return s.handler.TryAddMessage(s.ctx, msg, q)
 }
 
 func (s *syncService) handleIncomingMessage(msg msgCtx) {
@@ -86,7 +80,7 @@ func (s *syncService) GetQueue(peerId string) *multiqueue.Queue[drpc.Message] {
 }
 
 func (s *syncService) NewReadMessage() drpc.Message {
-	return s.newMessage()
+	return s.handler.NewMessage()
 }
 
 func (s *syncService) HandleMessage(ctx context.Context, peerId string, msg drpc.Message) error {

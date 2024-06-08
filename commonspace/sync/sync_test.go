@@ -48,7 +48,7 @@ func newFixture(t *testing.T, peerId string, params counterFixtureParams) *count
 		Register(synctest.NewPeerProvider(peerId)).
 		Register(synctest.NewCounter(params.start, params.delta)).
 		Register(streampool.NewStreamPool()).
-		Register(synctest.NewCounterSyncDepsFactory()).
+		Register(synctest.NewCounterSyncHandler()).
 		Register(NewSyncService()).
 		Register(synctest.NewCounterGenerator()).
 		Register(synctest.NewRpcServer())
