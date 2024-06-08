@@ -20,6 +20,8 @@ var log = logger.NewNamed("sync")
 type SyncService interface {
 	app.Component
 	GetQueue(peerId string) *multiqueue.Queue[drpc.Message]
+	//SendMessage(ctx context.Context, peerId string, msg drpc.Message) error
+	//BroadcastMessage(ctx context.Context, msg drpc.Message) error
 	HandleMessage(ctx context.Context, peerId string, msg drpc.Message) error
 	HandleStreamRequest(ctx context.Context, req syncdeps.Request, stream drpc.Stream) error
 	QueueRequest(ctx context.Context, rq syncdeps.Request) error

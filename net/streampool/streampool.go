@@ -11,6 +11,7 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/debugstat"
+	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/util/multiqueue"
@@ -75,6 +76,7 @@ type StreamPool interface {
 type streamPool struct {
 	streamOpener    StreamOpener
 	syncDelegate    StreamSyncDelegate
+	metric          metric.Metric
 	statService     debugstat.StatService
 	streamIdsByPeer map[string][]uint32
 	streamIdsByTag  map[string][]uint32
@@ -90,6 +92,7 @@ type streamPool struct {
 func (s *streamPool) Init(a *app.App) (err error) {
 	s.streamOpener = a.MustComponent(StreamOpenerCName).(StreamOpener)
 	s.syncDelegate = a.MustComponent(streamSyncDelegateCName).(StreamSyncDelegate)
+	s.metric, _ = a.Component(metric.CName).(metric.Metric)
 	comp, ok := a.Component(debugstat.CName).(debugstat.StatService)
 	if !ok {
 		comp = debugstat.NewNoOp()

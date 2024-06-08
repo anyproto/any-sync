@@ -12,21 +12,21 @@ type RequestPool interface {
 }
 
 type requestPool struct {
-	mu       sync.Mutex
-	taken    map[string]struct{}
-	pools    map[string]*tryAddQueue
-	ctx      context.Context
-	cancel   context.CancelFunc
-	isClosed bool
+	mu        sync.Mutex
+	peerGuard *guard
+	pools     map[string]*tryAddQueue
+	ctx       context.Context
+	cancel    context.CancelFunc
+	isClosed  bool
 }
 
 func NewRequestPool() RequestPool {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &requestPool{
-		ctx:    ctx,
-		cancel: cancel,
-		taken:  make(map[string]struct{}),
-		pools:  make(map[string]*tryAddQueue),
+		ctx:       ctx,
+		cancel:    cancel,
+		pools:     make(map[string]*tryAddQueue),
+		peerGuard: newGuard(),
 	}
 }
 
@@ -37,20 +37,11 @@ func (rp *requestPool) TryTake(peerId, objectId string) bool {
 		return false
 	}
 
-	id := fullId(peerId, objectId)
-	if _, exists := rp.taken[id]; exists {
-		return false
-	}
-	rp.taken[id] = struct{}{}
-	return true
+	return rp.peerGuard.TryTake(fullId(peerId, objectId))
 }
 
 func (rp *requestPool) Release(peerId, objectId string) {
-	rp.mu.Lock()
-	defer rp.mu.Unlock()
-
-	id := fullId(peerId, objectId)
-	delete(rp.taken, id)
+	rp.peerGuard.Release(fullId(peerId, objectId))
 }
 
 func (rp *requestPool) QueueRequestAction(peerId, objectId string, action func(ctx context.Context)) (err error) {
