@@ -16,14 +16,16 @@ import (
 var ctx = context.Background()
 
 func TestNewSyncService(t *testing.T) {
-	peerPool := synctest.NewPeerGlobalPool([]string{"first", "second"})
+	peerPool := synctest.NewPeerGlobalPool([]string{"first", "second", "third"})
 	peerPool.MakePeers()
 	var (
-		firstApp  = newFixture(t, "first", counterFixtureParams{peerPool: peerPool, start: 0, delta: 2})
-		secondApp = newFixture(t, "second", counterFixtureParams{peerPool: peerPool, start: 1, delta: 2})
+		firstApp  = newFixture(t, "first", counterFixtureParams{peerPool: peerPool, start: 0, delta: 3})
+		secondApp = newFixture(t, "second", counterFixtureParams{peerPool: peerPool, start: 1, delta: 3})
+		thirdApp  = newFixture(t, "third", counterFixtureParams{peerPool: peerPool, start: 2, delta: 3})
 	)
 	require.NoError(t, firstApp.a.Start(ctx))
 	require.NoError(t, secondApp.a.Start(ctx))
+	require.NoError(t, thirdApp.a.Start(ctx))
 	time.Sleep(100 * time.Second)
 	firstApp.a.Close(context.Background())
 	secondApp.a.Close(context.Background())
