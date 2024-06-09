@@ -2,6 +2,8 @@ package synctest
 
 import (
 	"context"
+	"errors"
+	"io"
 
 	"storj.io/drpc"
 
@@ -25,6 +27,10 @@ func (c *CounterRequestSender) SendStreamRequest(ctx context.Context, rq syncdep
 		if err != nil {
 			return err
 		}
-		return receive(stream)
+		err = receive(stream)
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		return err
 	})
 }

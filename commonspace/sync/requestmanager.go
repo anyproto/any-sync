@@ -14,7 +14,12 @@ import (
 
 type RequestManager interface {
 	QueueRequest(rq syncdeps.Request) error
+	SendRequest(ctx context.Context, rq syncdeps.Request, collector ResponseCollector) error
 	HandleStreamRequest(ctx context.Context, rq syncdeps.Request, stream drpc.Stream) error
+}
+
+type ResponseCollector interface {
+	CollectResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error
 }
 
 type StreamResponse struct {
@@ -34,6 +39,22 @@ func NewRequestManager(handler syncdeps.SyncHandler) RequestManager {
 		handler:       handler,
 		incomingGuard: newGuard(),
 	}
+}
+
+func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, collector ResponseCollector) error {
+	return r.handler.SendStreamRequest(ctx, rq, func(stream drpc.Stream) error {
+		for {
+			resp := r.handler.NewResponse()
+			err := stream.MsgRecv(resp, streampool.EncodingProto)
+			if err != nil {
+				return err
+			}
+			err = collector.CollectResponse(ctx, rq.PeerId(), rq.ObjectId(), resp)
+			if err != nil {
+				return err
+			}
+		}
+	})
 }
 
 func (r *requestManager) QueueRequest(rq syncdeps.Request) error {

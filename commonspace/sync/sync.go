@@ -23,6 +23,7 @@ type SyncService interface {
 	app.Component
 	BroadcastMessage(ctx context.Context, msg drpc.Message) error
 	HandleStreamRequest(ctx context.Context, req syncdeps.Request, stream drpc.Stream) error
+	SendRequest(ctx context.Context, rq syncdeps.Request, collector ResponseCollector) error
 	QueueRequest(ctx context.Context, rq syncdeps.Request) error
 }
 
@@ -102,6 +103,10 @@ func (s *syncService) HandleMessage(ctx context.Context, peerId string, msg drpc
 
 func (s *syncService) QueueRequest(ctx context.Context, rq syncdeps.Request) error {
 	return s.manager.QueueRequest(rq)
+}
+
+func (s *syncService) SendRequest(ctx context.Context, rq syncdeps.Request, collector ResponseCollector) error {
+	return s.manager.SendRequest(ctx, rq, collector)
 }
 
 func (s *syncService) HandleStreamRequest(ctx context.Context, req syncdeps.Request, stream drpc.Stream) error {
