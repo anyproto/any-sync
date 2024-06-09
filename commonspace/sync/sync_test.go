@@ -29,6 +29,7 @@ func TestNewSyncService(t *testing.T) {
 	time.Sleep(100 * time.Second)
 	firstApp.a.Close(context.Background())
 	secondApp.a.Close(context.Background())
+	thirdApp.a.Close(context.Background())
 }
 
 type counterFixture struct {
@@ -48,6 +49,7 @@ func newFixture(t *testing.T, peerId string, params counterFixtureParams) *count
 		Register(rpctest.NewTestServer()).
 		Register(synctest.NewCounterStreamOpener()).
 		Register(synctest.NewPeerProvider(peerId)).
+		Register(synctest.NewCounterPeerManager()).
 		Register(synctest.NewCounter(params.start, params.delta)).
 		Register(streampool.NewStreamPool()).
 		Register(synctest.NewCounterSyncHandler()).

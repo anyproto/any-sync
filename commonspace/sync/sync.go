@@ -9,7 +9,9 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
+	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/util/multiqueue"
 )
 
@@ -19,10 +21,7 @@ var log = logger.NewNamed("sync")
 
 type SyncService interface {
 	app.Component
-	GetQueue(peerId string) *multiqueue.Queue[drpc.Message]
-	//SendMessage(ctx context.Context, peerId string, msg drpc.Message) error
-	//BroadcastMessage(ctx context.Context, msg drpc.Message) error
-	HandleMessage(ctx context.Context, peerId string, msg drpc.Message) error
+	BroadcastMessage(ctx context.Context, msg drpc.Message) error
 	HandleStreamRequest(ctx context.Context, req syncdeps.Request, stream drpc.Stream) error
 	QueueRequest(ctx context.Context, rq syncdeps.Request) error
 }
@@ -31,6 +30,8 @@ type syncService struct {
 	sendQueueProvider multiqueue.QueueProvider[drpc.Message]
 	receiveQueue      multiqueue.MultiQueue[msgCtx]
 	manager           RequestManager
+	streamPool        streampool.StreamPool
+	peerManager       peermanager.PeerManager
 	handler           syncdeps.SyncHandler
 	ctx               context.Context
 	cancel            context.CancelFunc
@@ -41,10 +42,17 @@ type msgCtx struct {
 	drpc.Message
 }
 
+func NewSyncService() SyncService {
+	return &syncService{}
+}
+
 func (s *syncService) Init(a *app.App) (err error) {
 	s.handler = a.MustComponent(syncdeps.CName).(syncdeps.SyncHandler)
 	s.sendQueueProvider = multiqueue.NewQueueProvider[drpc.Message](100, s.handleOutgoingMessage)
 	s.receiveQueue = multiqueue.New[msgCtx](s.handleIncomingMessage, 100)
+	s.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
+	s.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
+	s.streamPool.SetSyncDelegate(s)
 	s.manager = NewRequestManager(s.handler)
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	return nil
@@ -54,8 +62,8 @@ func (s *syncService) Name() (name string) {
 	return CName
 }
 
-func NewSyncService() SyncService {
-	return &syncService{}
+func (s *syncService) BroadcastMessage(ctx context.Context, msg drpc.Message) error {
+	return s.peerManager.BroadcastMessage(ctx, msg, s.streamPool)
 }
 
 func (s *syncService) handleOutgoingMessage(id string, msg drpc.Message, q *mb.MB[drpc.Message]) error {

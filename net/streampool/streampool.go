@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/streampool/streamopener"
 	"github.com/anyproto/any-sync/util/multiqueue"
 )
 
@@ -22,7 +23,6 @@ type configGetter interface {
 }
 
 type StreamSyncDelegate interface {
-	app.Component
 	// HandleMessage handles incoming message
 	HandleMessage(ctx context.Context, peerId string, msg drpc.Message) (err error)
 	// NewReadMessage creates new empty message for unmarshalling into it
@@ -31,11 +31,6 @@ type StreamSyncDelegate interface {
 	GetQueue(peerId string) *multiqueue.Queue[drpc.Message]
 }
 
-const (
-	StreamOpenerCName       = "common.commonspace.streampool"
-	streamSyncDelegateCName = "common.commonspace.sync"
-)
-
 func NewStreamPool() StreamPool {
 	return &streamPool{
 		streamIdsByPeer: map[string][]uint32{},
@@ -43,13 +38,6 @@ func NewStreamPool() StreamPool {
 		streams:         map[uint32]*stream{},
 		opening:         map[string]*openingProcess{},
 	}
-}
-
-// StreamOpener handles incoming messages from streams
-type StreamOpener interface {
-	app.Component
-	// OpenStream opens stream with given peer
-	OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error)
 }
 
 // PeerGetter should dial or return cached peers
@@ -71,10 +59,12 @@ type StreamPool interface {
 	Send(ctx context.Context, msg drpc.Message, target PeerGetter) (err error)
 	// Broadcast sends a message to all peers with given tags. Works async.
 	Broadcast(ctx context.Context, msg drpc.Message, tags ...string) (err error)
+	// SetSyncDelegate registers sync delegate for handling incoming messages
+	SetSyncDelegate(syncDelegate StreamSyncDelegate)
 }
 
 type streamPool struct {
-	streamOpener    StreamOpener
+	streamOpener    streamopener.StreamOpener
 	syncDelegate    StreamSyncDelegate
 	metric          metric.Metric
 	statService     debugstat.StatService
@@ -90,8 +80,7 @@ type streamPool struct {
 }
 
 func (s *streamPool) Init(a *app.App) (err error) {
-	s.streamOpener = a.MustComponent(StreamOpenerCName).(StreamOpener)
-	s.syncDelegate = a.MustComponent(streamSyncDelegateCName).(StreamSyncDelegate)
+	s.streamOpener = a.MustComponent(streamopener.CName).(streamopener.StreamOpener)
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
 	comp, ok := a.Component(debugstat.CName).(debugstat.StatService)
 	if !ok {
@@ -111,6 +100,10 @@ func (s *streamPool) Run(ctx context.Context) (err error) {
 	s.dial = NewExecPool(s.streamConfig.DialQueueWorkers, s.streamConfig.DialQueueSize)
 	s.dial.Run()
 	return nil
+}
+
+func (s *streamPool) SetSyncDelegate(syncDelegate StreamSyncDelegate) {
+	s.syncDelegate = syncDelegate
 }
 
 func (s *streamPool) ProvideStat() any {

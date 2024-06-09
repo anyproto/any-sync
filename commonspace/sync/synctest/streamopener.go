@@ -8,10 +8,10 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/sync/synctestproto"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/streampool"
+	"github.com/anyproto/any-sync/net/streampool/streamopener"
 )
 
-func NewCounterStreamOpener() streampool.StreamOpener {
+func NewCounterStreamOpener() streamopener.StreamOpener {
 	return &CounterStreamOpener{}
 }
 
@@ -23,7 +23,7 @@ func (c *CounterStreamOpener) Init(a *app.App) (err error) {
 }
 
 func (c *CounterStreamOpener) Name() (name string) {
-	return streampool.StreamOpenerCName
+	return streamopener.CName
 }
 
 func (c *CounterStreamOpener) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error) {
