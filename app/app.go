@@ -38,6 +38,12 @@ type Component interface {
 	Name() (name string)
 }
 
+type ComponentReloadable interface {
+	ComponentRunnable
+	// Reload will execute the logic after reloading or for new session
+	Reload(ctx context.Context) (err error)
+}
+
 // ComponentRunnable is an interface for realizing ability to start background processes or deep configure service
 type ComponentRunnable interface {
 	Component
@@ -264,6 +270,19 @@ func (app *App) Start(ctx context.Context) (err error) {
 	}
 	l.Debug("all components started")
 	return
+}
+
+// Reload check if component implement ComponentReload interface and run Reload for this component
+func (app *App) Reload(ctx context.Context) (err error) {
+	for _, component := range app.components {
+		if serviceReload, ok := component.(ComponentReloadable); ok {
+			err := serviceReload.Reload(ctx)
+			if err != nil {
+				return fmt.Errorf("can't reload service '%s': %w", component.Name(), err)
+			}
+		}
+	}
+	return nil
 }
 
 // IterateComponents iterates over all registered components. It's safe for concurrent use.
