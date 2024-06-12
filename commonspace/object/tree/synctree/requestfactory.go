@@ -47,5 +47,5 @@ func (r *requestFactory) CreateFullSyncRequest(peerId string, t objecttree.Objec
 }
 
 func (r *requestFactory) CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (ResponseProducer, error) {
-	return NewResponseProducer(r.spaceId, t, theirHeads, theirSnapshotPath)
+	return newResponseProducer(r.spaceId, t, theirHeads, theirSnapshotPath)
 }

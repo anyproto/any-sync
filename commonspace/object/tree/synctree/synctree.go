@@ -13,8 +13,8 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -35,15 +35,16 @@ type ListenerSetter interface {
 
 type SyncTree interface {
 	objecttree.ObjectTree
-	synchandler.SyncHandler
+	syncdeps.ObjectSyncHandler
+	AddRawChangesFromPeer(ctx context.Context, peerId string, changesPayload objecttree.RawChangesPayload) (res objecttree.AddResult, err error)
 	ListenerSetter
 	SyncWithPeer(ctx context.Context, peerId string) (err error)
 }
 
 // SyncTree sends head updates to sync service and also sends new changes to update listener
 type syncTree struct {
+	syncdeps.ObjectSyncHandler
 	objecttree.ObjectTree
-	synchandler.SyncHandler
 	syncClient SyncClient
 	syncStatus syncstatus.StatusUpdater
 	notifiable HeadNotifiable
@@ -109,8 +110,8 @@ func buildSyncTree(ctx context.Context, sendUpdate bool, deps BuildDeps) (t Sync
 		listener:   deps.Listener,
 		syncStatus: deps.SyncStatus,
 	}
-	syncHandler := newSyncTreeHandler(deps.SpaceId, syncTree, syncClient, deps.SyncStatus)
-	syncTree.SyncHandler = syncHandler
+	syncHandler := NewSyncHandler(syncTree, syncClient, deps.SpaceId)
+	syncTree.ObjectSyncHandler = syncHandler
 	t = syncTree
 	syncTree.Lock()
 	syncTree.afterBuild()

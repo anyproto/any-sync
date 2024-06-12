@@ -12,7 +12,7 @@ type responseProducer struct {
 	objectId string
 }
 
-func NewResponseProducer(spaceId string, tree objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (ResponseProducer, error) {
+func newResponseProducer(spaceId string, tree objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (ResponseProducer, error) {
 	res, err := tree.ChangesAfterCommonSnapshotLoader(theirSnapshotPath, theirHeads)
 	if err != nil {
 		return nil, err

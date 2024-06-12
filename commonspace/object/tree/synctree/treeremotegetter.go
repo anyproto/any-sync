@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/net/peer"
@@ -48,19 +46,16 @@ func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err e
 	return
 }
 
-func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (msg *treechangeproto.TreeSyncMessage, err error) {
-	newTreeRequest := t.deps.SyncClient.CreateNewTreeRequest()
-	resp, err := t.deps.SyncClient.SendRequest(ctx, peerId, t.treeId, newTreeRequest)
+func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (collector *responseCollector, err error) {
+	collector = newResponseCollector()
+	err = t.deps.SyncClient.SendNewTreeRequest(ctx, peerId, t.treeId, collector)
 	if err != nil {
-		return
+		return nil, err
 	}
-
-	msg = &treechangeproto.TreeSyncMessage{}
-	err = proto.Unmarshal(resp.Payload, msg)
-	return
+	return collector, nil
 }
 
-func (t treeRemoteGetter) treeRequestLoop(ctx context.Context) (msg *treechangeproto.TreeSyncMessage, err error) {
+func (t treeRemoteGetter) treeRequestLoop(ctx context.Context) (collector *responseCollector, err error) {
 	availablePeers, err := t.getPeers(ctx)
 	if err != nil {
 		return
@@ -71,10 +66,7 @@ func (t treeRemoteGetter) treeRequestLoop(ctx context.Context) (msg *treechangep
 
 func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.TreeStorage, isRemote bool, err error) {
 	treeStorage, err = t.deps.SpaceStorage.TreeStorage(t.treeId)
-	if err == nil {
-		return
-	}
-	if err != nil && err != treestorage.ErrUnknownTreeId {
+	if err == nil || !errors.Is(err, treestorage.ErrUnknownTreeId) {
 		return
 	}
 
@@ -88,20 +80,15 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 	}
 
 	isRemote = true
-	resp, err := t.treeRequestLoop(ctx)
+	collector, err := t.treeRequestLoop(ctx)
 	if err != nil {
-		return
-	}
-	fullSyncResp := resp.GetContent().GetFullSyncResponse()
-	if fullSyncResp == nil {
-		err = treechangeproto.ErrUnexpected
 		return
 	}
 
 	payload := treestorage.TreeStorageCreatePayload{
-		RootRawChange: resp.RootChange,
-		Changes:       fullSyncResp.Changes,
-		Heads:         fullSyncResp.Heads,
+		RootRawChange: collector.root,
+		Changes:       collector.changes,
+		Heads:         collector.heads,
 	}
 
 	validatorFunc := t.deps.ValidateObjectTree
