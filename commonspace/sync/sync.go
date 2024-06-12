@@ -68,7 +68,7 @@ func (s *syncService) BroadcastMessage(ctx context.Context, msg drpc.Message) er
 }
 
 func (s *syncService) handleOutgoingMessage(id string, msg drpc.Message, q *mb.MB[drpc.Message]) error {
-	return s.handler.TryAddMessage(s.ctx, msg, q)
+	return s.handler.TryAddMessage(s.ctx, id, msg, q)
 }
 
 func (s *syncService) handleIncomingMessage(msg msgCtx) {
@@ -95,6 +95,7 @@ func (s *syncService) NewReadMessage() drpc.Message {
 }
 
 func (s *syncService) HandleMessage(ctx context.Context, peerId string, msg drpc.Message) error {
+	// TODO: make this queue per object and add closing of the individual queues
 	return s.receiveQueue.Add(ctx, peerId, msgCtx{
 		ctx:     ctx,
 		Message: msg,

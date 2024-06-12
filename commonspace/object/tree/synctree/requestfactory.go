@@ -1,72 +1,51 @@
 package synctree
 
 import (
-	"fmt"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/util/slice"
 )
 
+const batchSize = 1024 * 1024 * 10
+
 type RequestFactory interface {
-	CreateHeadUpdate(t objecttree.ObjectTree, added []*treechangeproto.RawTreeChangeWithId) (msg *treechangeproto.TreeSyncMessage)
-	CreateNewTreeRequest() (msg *treechangeproto.TreeSyncMessage)
-	CreateFullSyncRequest(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (req *treechangeproto.TreeSyncMessage, err error)
-	CreateFullSyncResponse(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (*treechangeproto.TreeSyncMessage, error)
+	CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate HeadUpdate)
+	CreateNewTreeRequest(peerId, objectId string) Request
+	CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) Request
+	CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (ResponseProducer, error)
 }
 
-func NewRequestFactory() RequestFactory {
-	return &requestFactory{}
+func NewRequestFactory(spaceId string) RequestFactory {
+	return &requestFactory{spaceId}
 }
 
-type requestFactory struct{}
-
-func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, added []*treechangeproto.RawTreeChangeWithId) (msg *treechangeproto.TreeSyncMessage) {
-	return treechangeproto.WrapHeadUpdate(&treechangeproto.TreeHeadUpdate{
-		Heads:        t.Heads(),
-		Changes:      added,
-		SnapshotPath: t.SnapshotPath(),
-	}, t.Header())
+type requestFactory struct {
+	spaceId string
 }
 
-func (r *requestFactory) CreateNewTreeRequest() (msg *treechangeproto.TreeSyncMessage) {
-	return treechangeproto.WrapFullRequest(&treechangeproto.TreeFullSyncRequest{}, nil)
+func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate HeadUpdate) {
+	broadcastOpts := BroadcastOptions{}
+	if ignoredPeer != "" {
+		broadcastOpts.EmptyPeers = []string{ignoredPeer}
+	}
+	return HeadUpdate{
+		objectId:     t.Id(),
+		spaceId:      r.spaceId,
+		heads:        t.Heads(),
+		changes:      added,
+		snapshotPath: t.SnapshotPath(),
+		root:         t.Header(),
+		opts:         broadcastOpts,
+	}
 }
 
-func (r *requestFactory) CreateFullSyncRequest(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (msg *treechangeproto.TreeSyncMessage, err error) {
-	req := &treechangeproto.TreeFullSyncRequest{}
-	if t == nil {
-		return nil, fmt.Errorf("tree should not be empty")
-	}
-
-	req.Heads = t.Heads()
-	req.SnapshotPath = t.SnapshotPath()
-
-	var changesAfterSnapshot []*treechangeproto.RawTreeChangeWithId
-	changesAfterSnapshot, err = t.ChangesAfterCommonSnapshot(theirSnapshotPath, theirHeads)
-	if err != nil {
-		return
-	}
-
-	req.Changes = changesAfterSnapshot
-	msg = treechangeproto.WrapFullRequest(req, t.Header())
-	return
+func (r *requestFactory) CreateNewTreeRequest(peerId, objectId string) Request {
+	return NewRequest(peerId, r.spaceId, objectId, nil, nil, nil)
 }
 
-func (r *requestFactory) CreateFullSyncResponse(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (msg *treechangeproto.TreeSyncMessage, err error) {
-	resp := &treechangeproto.TreeFullSyncResponse{
-		Heads:        t.Heads(),
-		SnapshotPath: t.SnapshotPath(),
-	}
-	if slice.UnsortedEquals(theirHeads, t.Heads()) {
-		msg = treechangeproto.WrapFullResponse(resp, t.Header())
-		return
-	}
+func (r *requestFactory) CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) Request {
+	return NewRequest(peerId, r.spaceId, t.Id(), t.Heads(), t.SnapshotPath(), t.Header())
+}
 
-	ourChanges, err := t.ChangesAfterCommonSnapshot(theirSnapshotPath, theirHeads)
-	if err != nil {
-		return
-	}
-	resp.Changes = ourChanges
-	msg = treechangeproto.WrapFullResponse(resp, t.Header())
-	return
+func (r *requestFactory) CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (ResponseProducer, error) {
+	return NewResponseProducer(r.spaceId, t, theirHeads, theirSnapshotPath)
 }

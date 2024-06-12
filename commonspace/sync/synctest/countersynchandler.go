@@ -26,7 +26,7 @@ func (c *CounterSyncHandler) HandleHeadUpdate(ctx context.Context, headUpdate dr
 	return c.updateHandler.HandleHeadUpdate(ctx, headUpdate)
 }
 
-func (c *CounterSyncHandler) TryAddMessage(ctx context.Context, msg drpc.Message, q *mb.MB[drpc.Message]) error {
+func (c *CounterSyncHandler) TryAddMessage(ctx context.Context, id string, msg drpc.Message, q *mb.MB[drpc.Message]) error {
 	return q.TryAdd(msg)
 }
 

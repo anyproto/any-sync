@@ -3,11 +3,12 @@ package synctree
 import (
 	"context"
 
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/requestmanager"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"go.uber.org/zap"
 )
 
 type SyncClient interface {
@@ -20,9 +21,7 @@ type SyncClient interface {
 
 type syncClient struct {
 	RequestFactory
-	spaceId        string
-	requestManager requestmanager.RequestManager
-	peerManager    peermanager.PeerManager
+	spaceId string
 }
 
 func NewSyncClient(spaceId string, requestManager requestmanager.RequestManager, peerManager peermanager.PeerManager) SyncClient {

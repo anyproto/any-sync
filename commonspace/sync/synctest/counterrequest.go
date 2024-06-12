@@ -11,8 +11,8 @@ type CounterRequest struct {
 	*synctestproto.CounterRequest
 }
 
-func (c CounterRequest) Proto() proto.Message {
-	return c.CounterRequest
+func (c CounterRequest) Proto() (proto.Message, error) {
+	return c.CounterRequest, nil
 }
 
 func NewCounterRequest(peerId, objectId string, counters []int32) CounterRequest {

@@ -23,7 +23,11 @@ func (c *CounterRequestSender) SendStreamRequest(ctx context.Context, rq syncdep
 	}
 	return pr.DoDrpc(ctx, func(conn drpc.Conn) error {
 		cl := synctestproto.NewDRPCCounterSyncClient(conn)
-		stream, err := cl.CounterStreamRequest(ctx, rq.Proto().(*synctestproto.CounterRequest))
+		req, err := rq.Proto()
+		if err != nil {
+			return err
+		}
+		stream, err := cl.CounterStreamRequest(ctx, req.(*synctestproto.CounterRequest))
 		if err != nil {
 			return err
 		}
