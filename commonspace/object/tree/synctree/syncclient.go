@@ -3,67 +3,41 @@ package synctree
 import (
 	"context"
 
-	"go.uber.org/zap"
-
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/peermanager"
-	"github.com/anyproto/any-sync/commonspace/requestmanager"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/sync"
 )
 
 type SyncClient interface {
 	RequestFactory
-	Broadcast(msg *treechangeproto.TreeSyncMessage)
-	SendUpdate(peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (err error)
-	QueueRequest(peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (err error)
-	SendRequest(ctx context.Context, peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error)
+	Broadcast(ctx context.Context, headUpdate HeadUpdate) error
+	SendNewTreeRequest(ctx context.Context, peerId, objectId string, collector *responseCollector) (err error)
+	QueueRequest(ctx context.Context, peerId string, tree objecttree.ObjectTree) (err error)
 }
 
 type syncClient struct {
 	RequestFactory
-	spaceId string
+	syncService sync.SyncService
+	spaceId     string
 }
 
-func NewSyncClient(spaceId string, requestManager requestmanager.RequestManager, peerManager peermanager.PeerManager) SyncClient {
+func NewSyncClient(spaceId string, syncService sync.SyncService) SyncClient {
 	return &syncClient{
 		RequestFactory: &requestFactory{},
 		spaceId:        spaceId,
-		requestManager: requestManager,
-		peerManager:    peerManager,
+		syncService:    syncService,
 	}
 }
 
-func (s *syncClient) Broadcast(msg *treechangeproto.TreeSyncMessage) {
-	objMsg, err := spacesyncproto.MarshallSyncMessage(msg, s.spaceId, msg.RootChange.Id)
-	if err != nil {
-		return
-	}
-	err = s.peerManager.Broadcast(context.Background(), objMsg)
-	if err != nil {
-		log.Debug("broadcast error", zap.Error(err))
-	}
+func (s *syncClient) Broadcast(ctx context.Context, headUpdate HeadUpdate) error {
+	return s.syncService.BroadcastMessage(ctx, headUpdate)
 }
 
-func (s *syncClient) SendUpdate(peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (err error) {
-	objMsg, err := spacesyncproto.MarshallSyncMessage(msg, s.spaceId, objectId)
-	if err != nil {
-		return
-	}
-	return s.peerManager.SendPeer(context.Background(), peerId, objMsg)
+func (s *syncClient) SendNewTreeRequest(ctx context.Context, peerId, objectId string, collector *responseCollector) (err error) {
+	req := s.CreateNewTreeRequest(peerId, objectId)
+	return s.syncService.SendRequest(ctx, req, collector)
 }
 
-func (s *syncClient) SendRequest(ctx context.Context, peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (reply *spacesyncproto.ObjectSyncMessage, err error) {
-	objMsg, err := spacesyncproto.MarshallSyncMessage(msg, s.spaceId, objectId)
-	if err != nil {
-		return
-	}
-	return s.requestManager.SendRequest(ctx, peerId, objMsg)
-}
-
-func (s *syncClient) QueueRequest(peerId, objectId string, msg *treechangeproto.TreeSyncMessage) (err error) {
-	objMsg, err := spacesyncproto.MarshallSyncMessage(msg, s.spaceId, objectId)
-	if err != nil {
-		return
-	}
-	return s.requestManager.QueueRequest(peerId, objMsg)
+func (s *syncClient) QueueRequest(ctx context.Context, peerId string, tree objecttree.ObjectTree) (err error) {
+	req := s.CreateFullSyncRequest(peerId, tree)
+	return s.syncService.QueueRequest(ctx, req)
 }

@@ -118,9 +118,12 @@ func buildSyncTree(ctx context.Context, sendUpdate bool, deps BuildDeps) (t Sync
 
 	// don't send updates for empty derived trees, because they won't be accepted
 	if sendUpdate && !objecttree.IsEmptyDerivedTree(objTree) {
-		headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
+		headUpdate := syncTree.syncClient.CreateHeadUpdate(objTree, "", nil)
 		// send to everybody, because everybody should know that the node or client got new tree
-		syncTree.syncClient.Broadcast(headUpdate)
+		broadcastErr := syncTree.syncClient.Broadcast(ctx, headUpdate)
+		if broadcastErr != nil {
+			log.Warn("failed to broadcast head update", zap.Error(broadcastErr))
+		}
 	}
 	return
 }
@@ -156,8 +159,26 @@ func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableCh
 		s.notifiable.UpdateHeads(s.Id(), res.Heads)
 	}
 	s.syncStatus.HeadsChange(s.Id(), res.Heads)
-	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
-	s.syncClient.Broadcast(headUpdate)
+	headUpdate := s.syncClient.CreateHeadUpdate(s, "", res.Added)
+	broadcastErr := s.syncClient.Broadcast(ctx, headUpdate)
+	if broadcastErr != nil {
+		log.Warn("failed to broadcast head update", zap.Error(broadcastErr))
+	}
+	return
+}
+
+func (s *syncTree) AddRawChangesFromPeer(ctx context.Context, peerId string, changesPayload objecttree.RawChangesPayload) (res objecttree.AddResult, err error) {
+	res, err = s.AddRawChanges(ctx, changesPayload)
+	if err != nil {
+		return
+	}
+	if res.Mode != objecttree.Nothing {
+		headUpdate := s.syncClient.CreateHeadUpdate(s, peerId, res.Added)
+		broadcastErr := s.syncClient.Broadcast(ctx, headUpdate)
+		if broadcastErr != nil {
+			log.Warn("failed to broadcast head update", zap.Error(broadcastErr))
+		}
+	}
 	return
 }
 
@@ -183,8 +204,7 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload objecttree.
 		if s.notifiable != nil {
 			s.notifiable.UpdateHeads(s.Id(), res.Heads)
 		}
-		headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
-		s.syncClient.Broadcast(headUpdate)
+		// broadcast will happen on upper level, so we know which peer sent the changes
 	}
 	return
 }
@@ -251,8 +271,7 @@ func (s *syncTree) SyncWithPeer(ctx context.Context, peerId string) (err error) 
 	if objecttree.IsEmptyDerivedTree(s) {
 		return nil
 	}
-	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
-	return s.syncClient.SendUpdate(peerId, headUpdate.RootChange.Id, headUpdate)
+	return s.syncClient.QueueRequest(ctx, peerId, s)
 }
 
 func (s *syncTree) afterBuild() {
