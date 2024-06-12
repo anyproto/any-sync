@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_peer/mock_peer.go github.com/anyproto/any-sync/net/peer Peer
 //
-
 // Package mock_peer is a generated GoMock package.
 package mock_peer
 

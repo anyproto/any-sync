@@ -27,7 +27,6 @@ import (
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/identityrepo/identityrepoproto"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/node/nodeclient"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
@@ -225,7 +224,7 @@ func (m *mockPool) Init(a *app.App) (err error) {
 }
 
 func (m *mockPool) Name() (name string) {
-	return pool.CName
+	return "common.net.pool"
 }
 
 func (m *mockPool) Get(ctx context.Context, id string) (peer.Peer, error) {

@@ -2,11 +2,14 @@ package rpctest
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/rpc"
-	"github.com/anyproto/any-sync/net/rpc/server"
 	"net"
+
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/net/internal/peer"
+	"github.com/anyproto/any-sync/net/internal/rpc/server"
+	peer2 "github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/rpc"
+
 	"storj.io/drpc/drpcmux"
 	"storj.io/drpc/drpcserver"
 )
@@ -59,7 +62,7 @@ func (s *TestServer) DrpcConfig() rpc.Config {
 	return rpc.Config{Stream: rpc.StreamConfig{MaxMsgSizeMb: 10}}
 }
 
-func (s *TestServer) Dial(peerId string) (clientPeer peer.Peer, err error) {
+func (s *TestServer) Dial(peerId string) (clientPeer peer2.Peer, err error) {
 	mcS, mcC := MultiConnPair(peerId+"server", peerId)
 	// NewPeer runs the accept loop
 	_, err = peer.NewPeer(mcS, s)

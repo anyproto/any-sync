@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_peermanager/mock_peermanager.go github.com/anyproto/any-sync/commonspace/peermanager PeerManager
 //
-
 // Package mock_peermanager is a generated GoMock package.
 package mock_peermanager
 

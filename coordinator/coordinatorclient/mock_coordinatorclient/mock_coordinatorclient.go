@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_coordinatorclient/mock_coordinatorclient.go github.com/anyproto/any-sync/coordinator/coordinatorclient CoordinatorClient
 //
-
 // Package mock_coordinatorclient is a generated GoMock package.
 package mock_coordinatorclient
 

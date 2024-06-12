@@ -2,9 +2,11 @@ package metric
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/net/peer"
-	"go.uber.org/zap"
 	"time"
+
+	"go.uber.org/zap"
+
+	"github.com/anyproto/any-sync/net/peer"
 )
 
 func Method(val string) zap.Field {

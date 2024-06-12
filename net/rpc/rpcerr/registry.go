@@ -3,6 +3,7 @@ package rpcerr
 import (
 	"errors"
 	"fmt"
+
 	"storj.io/drpc/drpcerr"
 )
 

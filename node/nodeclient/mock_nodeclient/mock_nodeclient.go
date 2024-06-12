@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_nodeclient/mock_nodeclient.go github.com/anyproto/any-sync/node/nodeclient NodeClient
 //
-
 // Package mock_nodeclient is a generated GoMock package.
 package mock_nodeclient
 

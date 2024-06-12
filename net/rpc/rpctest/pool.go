@@ -2,11 +2,12 @@ package rpctest
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/net"
-	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/pool"
 	"sync"
+
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/net/internal/pool"
+	"github.com/anyproto/any-sync/net/neterr"
+	"github.com/anyproto/any-sync/net/peer"
 )
 
 func NewTestPool() *TestPool {
@@ -49,7 +50,7 @@ func (t *TestPool) Get(ctx context.Context, id string) (peer.Peer, error) {
 		return p, nil
 	}
 	if t.ts == nil {
-		return nil, net.ErrUnableToConnect
+		return nil, neterr.ErrUnableToConnect
 	}
 	return t.ts.Dial(id)
 }
@@ -63,7 +64,7 @@ func (t *TestPool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, e
 		}
 	}
 	if t.ts == nil || len(peerIds) == 0 {
-		return nil, net.ErrUnableToConnect
+		return nil, neterr.ErrUnableToConnect
 	}
 	return t.ts.Dial(peerIds[0])
 }

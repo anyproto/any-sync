@@ -1,9 +1,5 @@
 package quic
 
-type configGetter interface {
-	GetQuic() Config
-}
-
 type Config struct {
 	ListenAddrs        []string `yaml:"listenAddrs"`
 	WriteTimeoutSec    int      `yaml:"writeTimeoutSec"`

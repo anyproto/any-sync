@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_deletionmanager/mock_deletionmanager.go github.com/anyproto/any-sync/commonspace/deletionmanager DeletionManager,Deleter
 //
-
 // Package mock_deletionmanager is a generated GoMock package.
 package mock_deletionmanager
 
