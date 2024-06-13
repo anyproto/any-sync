@@ -115,6 +115,10 @@ func (s *syncHandler) HandleResponse(ctx context.Context, peerId, objectId strin
 	return err
 }
 
+func (s *syncHandler) ResponseCollector() syncdeps.ResponseCollector {
+	return newResponseCollector(s)
+}
+
 func (s *syncHandler) hasHeads(ot objecttree.ObjectTree, heads []string) bool {
 	return slice.UnsortedEquals(ot.Heads(), heads) || ot.HasChanges(heads...)
 }

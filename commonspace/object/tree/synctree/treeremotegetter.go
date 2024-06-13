@@ -46,16 +46,17 @@ func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err e
 	return
 }
 
-func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (collector *responseCollector, err error) {
-	collector = newResponseCollector()
-	err = t.deps.SyncClient.SendNewTreeRequest(ctx, peerId, t.treeId, collector)
+func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (collector *fullResponseCollector, err error) {
+	collector = newFullResponseCollector()
+	req := t.deps.SyncClient.CreateNewTreeRequest(peerId, t.treeId)
+	err = t.deps.SyncClient.SendTreeRequest(ctx, req, collector)
 	if err != nil {
 		return nil, err
 	}
 	return collector, nil
 }
 
-func (t treeRemoteGetter) treeRequestLoop(ctx context.Context) (collector *responseCollector, err error) {
+func (t treeRemoteGetter) treeRequestLoop(ctx context.Context) (collector *fullResponseCollector, err error) {
 	availablePeers, err := t.getPeers(ctx)
 	if err != nil {
 		return

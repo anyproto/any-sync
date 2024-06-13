@@ -5,12 +5,13 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/sync"
+	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 )
 
 type SyncClient interface {
 	RequestFactory
 	Broadcast(ctx context.Context, headUpdate HeadUpdate) error
-	SendNewTreeRequest(ctx context.Context, peerId, objectId string, collector *responseCollector) (err error)
+	SendTreeRequest(ctx context.Context, req syncdeps.Request, collector syncdeps.ResponseCollector) (err error)
 	QueueRequest(ctx context.Context, peerId string, tree objecttree.ObjectTree) (err error)
 }
 
@@ -32,8 +33,7 @@ func (s *syncClient) Broadcast(ctx context.Context, headUpdate HeadUpdate) error
 	return s.syncService.BroadcastMessage(ctx, headUpdate)
 }
 
-func (s *syncClient) SendNewTreeRequest(ctx context.Context, peerId, objectId string, collector *responseCollector) (err error) {
-	req := s.CreateNewTreeRequest(peerId, objectId)
+func (s *syncClient) SendTreeRequest(ctx context.Context, req syncdeps.Request, collector syncdeps.ResponseCollector) (err error) {
 	return s.syncService.SendRequest(ctx, req, collector)
 }
 

@@ -24,6 +24,7 @@ type ObjectSyncHandler interface {
 	HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (Request, error)
 	HandleStreamRequest(ctx context.Context, rq Request, send func(resp proto.Message) error) (Request, error)
 	HandleResponse(ctx context.Context, peerId, objectId string, resp Response) error
+	ResponseCollector() ResponseCollector
 }
 
 type SyncHandler interface {

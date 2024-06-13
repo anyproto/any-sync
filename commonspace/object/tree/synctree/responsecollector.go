@@ -10,17 +10,17 @@ import (
 
 var ErrUnexpectedResponseType = errors.New("unexpected response type")
 
-type responseCollector struct {
+type fullResponseCollector struct {
 	heads   []string
 	root    *treechangeproto.RawTreeChangeWithId
 	changes []*treechangeproto.RawTreeChangeWithId
 }
 
-func newResponseCollector() *responseCollector {
-	return &responseCollector{}
+func newFullResponseCollector() *fullResponseCollector {
+	return &fullResponseCollector{}
 }
 
-func (r *responseCollector) CollectResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
+func (r *fullResponseCollector) CollectResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
 	treeResp, ok := resp.(Response)
 	if !ok {
 		return ErrUnexpectedResponseType
@@ -29,4 +29,16 @@ func (r *responseCollector) CollectResponse(ctx context.Context, peerId, objectI
 	r.root = treeResp.root
 	r.changes = append(r.changes, treeResp.changes...)
 	return nil
+}
+
+type responseCollector struct {
+	handler syncdeps.ObjectSyncHandler
+}
+
+func newResponseCollector(handler syncdeps.ObjectSyncHandler) *responseCollector {
+	return &responseCollector{handler: handler}
+}
+
+func (r *responseCollector) CollectResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
+	return r.handler.HandleResponse(ctx, peerId, objectId, resp)
 }
