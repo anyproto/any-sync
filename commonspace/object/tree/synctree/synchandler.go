@@ -8,6 +8,8 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/util/slice"
@@ -33,7 +35,7 @@ func NewSyncHandler(tree SyncTree, syncClient SyncClient, spaceId string) syncde
 }
 
 func (s *syncHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (req syncdeps.Request, err error) {
-	update, ok := headUpdate.(HeadUpdate)
+	update, ok := headUpdate.(*objectsync.HeadUpdate)
 	if !ok {
 		return nil, ErrUnexpectedResponseType
 	}
@@ -41,23 +43,32 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Mess
 	if err != nil {
 		return nil, err
 	}
+	treeSyncMsg := &treechangeproto.TreeSyncMessage{}
+	err = proto.Unmarshal(update.Bytes, treeSyncMsg)
+	if err != nil {
+		return nil, err
+	}
+	if treeSyncMsg.GetContent().GetHeadUpdate() == nil {
+		return nil, ErrUnexpectedMessageType
+	}
+	contentUpdate := treeSyncMsg.GetContent().GetHeadUpdate()
 	s.tree.Lock()
 	defer s.tree.Unlock()
-	if len(update.changes) == 0 {
-		if s.hasHeads(s.tree, update.heads) {
+	if len(contentUpdate.Changes) == 0 {
+		if s.hasHeads(s.tree, contentUpdate.Heads) {
 			return nil, nil
 		}
 		return s.syncClient.CreateFullSyncRequest(peerId, s.tree), nil
 	}
 	rawChangesPayload := objecttree.RawChangesPayload{
-		NewHeads:   update.heads,
-		RawChanges: update.changes,
+		NewHeads:   contentUpdate.Heads,
+		RawChanges: contentUpdate.Changes,
 	}
 	res, err := s.tree.AddRawChangesFromPeer(ctx, peerId, rawChangesPayload)
 	if err != nil {
 		return nil, err
 	}
-	if !slice.UnsortedEquals(res.Heads, update.heads) {
+	if !slice.UnsortedEquals(res.Heads, contentUpdate.Heads) {
 		return s.syncClient.CreateFullSyncRequest(peerId, s.tree), nil
 	}
 	return nil, nil

@@ -25,7 +25,7 @@ type ObjectMeta struct {
 type HeadUpdate struct {
 	Meta   ObjectMeta
 	Bytes  []byte
-	update InnerHeadUpdate
+	Update InnerHeadUpdate
 }
 
 func (h *HeadUpdate) SetPeerId(peerId string) {
@@ -47,8 +47,8 @@ func (h *HeadUpdate) SetProtoMessage(message proto.Message) error {
 }
 
 func (h *HeadUpdate) ProtoMessage() (proto.Message, error) {
-	if h.update != nil {
-		payload, err := h.update.Marshall(h.Meta)
+	if h.Update != nil {
+		payload, err := h.Update.Marshall(h.Meta)
 		if err != nil {
 			return nil, err
 		}

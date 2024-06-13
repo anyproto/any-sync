@@ -3,12 +3,13 @@ package synctree
 import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
 )
 
 const batchSize = 1024 * 1024 * 10
 
 type RequestFactory interface {
-	CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate HeadUpdate)
+	CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectsync.HeadUpdate)
 	CreateNewTreeRequest(peerId, objectId string) Request
 	CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) Request
 	CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (ResponseProducer, error)
@@ -22,19 +23,23 @@ type requestFactory struct {
 	spaceId string
 }
 
-func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate HeadUpdate) {
+func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectsync.HeadUpdate) {
 	broadcastOpts := BroadcastOptions{}
 	if ignoredPeer != "" {
 		broadcastOpts.EmptyPeers = []string{ignoredPeer}
 	}
-	return HeadUpdate{
-		objectId:     t.Id(),
-		spaceId:      r.spaceId,
-		heads:        t.Heads(),
-		changes:      added,
-		snapshotPath: t.SnapshotPath(),
-		root:         t.Header(),
-		opts:         broadcastOpts,
+	return &objectsync.HeadUpdate{
+		Meta: objectsync.ObjectMeta{
+			ObjectId: t.Id(),
+			SpaceId:  r.spaceId,
+		},
+		Update: InnerHeadUpdate{
+			opts:         broadcastOpts,
+			heads:        t.Heads(),
+			changes:      added,
+			snapshotPath: t.SnapshotPath(),
+			root:         t.Header(),
+		},
 	}
 }
 
