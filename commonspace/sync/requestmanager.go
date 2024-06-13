@@ -40,7 +40,7 @@ func NewRequestManager(handler syncdeps.SyncHandler) RequestManager {
 func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, collector syncdeps.ResponseCollector) error {
 	return r.handler.SendStreamRequest(ctx, rq, func(stream drpc.Stream) error {
 		for {
-			resp := r.handler.NewResponse()
+			resp := collector.NewResponse()
 			err := stream.MsgRecv(resp, streampool.EncodingProto)
 			if err != nil {
 				return err

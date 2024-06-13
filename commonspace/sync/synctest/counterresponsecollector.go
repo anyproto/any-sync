@@ -20,3 +20,7 @@ func (c *CounterResponseCollector) CollectResponse(ctx context.Context, peerId, 
 	c.counter.Add(counterResp.Value)
 	return nil
 }
+
+func (c *CounterResponseCollector) NewResponse() syncdeps.Response {
+	return &synctestproto.CounterIncrease{}
+}

@@ -31,6 +31,10 @@ func (r *fullResponseCollector) CollectResponse(ctx context.Context, peerId, obj
 	return nil
 }
 
+func (r *fullResponseCollector) NewResponse() syncdeps.Response {
+	return Response{}
+}
+
 type responseCollector struct {
 	handler syncdeps.ObjectSyncHandler
 }
@@ -41,4 +45,8 @@ func newResponseCollector(handler syncdeps.ObjectSyncHandler) *responseCollector
 
 func (r *responseCollector) CollectResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
 	return r.handler.HandleResponse(ctx, peerId, objectId, resp)
+}
+
+func (r *responseCollector) NewResponse() syncdeps.Response {
+	return Response{}
 }

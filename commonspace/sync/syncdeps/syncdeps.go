@@ -13,6 +13,7 @@ import (
 const CName = "common.sync.syncdeps"
 
 type ResponseCollector interface {
+	NewResponse() Response
 	CollectResponse(ctx context.Context, peerId, objectId string, resp Response) error
 }
 
@@ -34,6 +35,5 @@ type SyncHandler interface {
 	ApplyRequest(ctx context.Context, rq Request, requestSender RequestSender) error
 	TryAddMessage(ctx context.Context, peerId string, msg drpc.Message, q *mb.MB[drpc.Message]) error
 	SendStreamRequest(ctx context.Context, rq Request, receive func(stream drpc.Stream) error) (err error)
-	NewResponse() Response
 	NewMessage() drpc.Message
 }

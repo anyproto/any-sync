@@ -9,7 +9,6 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
-	"github.com/anyproto/any-sync/commonspace/sync/synctestproto"
 )
 
 type CounterSyncHandler struct {
@@ -42,10 +41,6 @@ func (c *CounterSyncHandler) HandleStreamRequest(ctx context.Context, rq syncdep
 
 func (c *CounterSyncHandler) SendStreamRequest(ctx context.Context, rq syncdeps.Request, receive func(stream drpc.Stream) error) (err error) {
 	return c.requestSender.SendStreamRequest(ctx, rq, receive)
-}
-
-func (c *CounterSyncHandler) NewResponse() syncdeps.Response {
-	return &synctestproto.CounterIncrease{}
 }
 
 func (c *CounterSyncHandler) Init(a *app.App) (err error) {
