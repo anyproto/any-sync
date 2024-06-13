@@ -14,12 +14,8 @@ import (
 
 type RequestManager interface {
 	QueueRequest(rq syncdeps.Request) error
-	SendRequest(ctx context.Context, rq syncdeps.Request, collector ResponseCollector) error
+	SendRequest(ctx context.Context, rq syncdeps.Request, collector syncdeps.ResponseCollector) error
 	HandleStreamRequest(ctx context.Context, rq syncdeps.Request, stream drpc.Stream) error
-}
-
-type ResponseCollector interface {
-	CollectResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error
 }
 
 type StreamResponse struct {
@@ -41,7 +37,7 @@ func NewRequestManager(handler syncdeps.SyncHandler) RequestManager {
 	}
 }
 
-func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, collector ResponseCollector) error {
+func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, collector syncdeps.ResponseCollector) error {
 	return r.handler.SendStreamRequest(ctx, rq, func(stream drpc.Stream) error {
 		for {
 			resp := r.handler.NewResponse()
@@ -59,21 +55,9 @@ func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, c
 
 func (r *requestManager) QueueRequest(rq syncdeps.Request) error {
 	return r.requestPool.QueueRequestAction(rq.PeerId(), rq.ObjectId(), func(ctx context.Context) {
-		err := r.handler.SendStreamRequest(ctx, rq, func(stream drpc.Stream) error {
-			for {
-				resp := r.handler.NewResponse()
-				err := stream.MsgRecv(resp, streampool.EncodingProto)
-				if err != nil {
-					return err
-				}
-				err = r.handler.HandleResponse(ctx, rq.PeerId(), rq.ObjectId(), resp)
-				if err != nil {
-					return err
-				}
-			}
-		})
+		err := r.handler.ApplyRequest(ctx, rq, r)
 		if err != nil {
-			log.Warn("failed to receive request", zap.Error(err))
+			log.Error("failed to apply request", zap.Error(err))
 		}
 	})
 }

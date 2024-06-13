@@ -9,13 +9,19 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
+	"github.com/anyproto/any-sync/commonspace/sync/synctestproto"
 )
 
 type CounterSyncHandler struct {
-	requestHandler  *CounterRequestHandler
-	requestSender   *CounterRequestSender
-	responseHandler *CounterResponseHandler
-	updateHandler   *CounterUpdateHandler
+	counter        *Counter
+	requestHandler *CounterRequestHandler
+	requestSender  *CounterRequestSender
+	updateHandler  *CounterUpdateHandler
+}
+
+func (c *CounterSyncHandler) ApplyRequest(ctx context.Context, rq syncdeps.Request, requestSender syncdeps.RequestSender) error {
+	collector := NewCounterResponseCollector(c.counter)
+	return requestSender.SendRequest(ctx, rq, collector)
 }
 
 func NewCounterSyncHandler() syncdeps.SyncHandler {
@@ -38,21 +44,16 @@ func (c *CounterSyncHandler) SendStreamRequest(ctx context.Context, rq syncdeps.
 	return c.requestSender.SendStreamRequest(ctx, rq, receive)
 }
 
-func (c *CounterSyncHandler) HandleResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
-	return c.responseHandler.HandleResponse(ctx, peerId, objectId, resp)
-}
-
 func (c *CounterSyncHandler) NewResponse() syncdeps.Response {
-	return c.responseHandler.NewResponse()
+	return &synctestproto.CounterIncrease{}
 }
 
 func (c *CounterSyncHandler) Init(a *app.App) (err error) {
-	counter := a.MustComponent(CounterName).(*Counter)
 	peerProvider := a.MustComponent(PeerName).(*PeerProvider)
-	c.requestHandler = &CounterRequestHandler{counter: counter}
+	c.counter = a.MustComponent(CounterName).(*Counter)
+	c.requestHandler = &CounterRequestHandler{counter: c.counter}
 	c.requestSender = &CounterRequestSender{peerProvider: a.MustComponent(PeerName).(*PeerProvider)}
-	c.responseHandler = &CounterResponseHandler{counter: counter}
-	c.updateHandler = &CounterUpdateHandler{counter: counter, peerProvider: peerProvider}
+	c.updateHandler = &CounterUpdateHandler{counter: c.counter, peerProvider: peerProvider}
 	return nil
 }
 

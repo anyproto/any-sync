@@ -12,6 +12,14 @@ import (
 
 const CName = "common.sync.syncdeps"
 
+type ResponseCollector interface {
+	CollectResponse(ctx context.Context, peerId, objectId string, resp Response) error
+}
+
+type RequestSender interface {
+	SendRequest(ctx context.Context, rq Request, collector ResponseCollector) error
+}
+
 type ObjectSyncHandler interface {
 	HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (Request, error)
 	HandleStreamRequest(ctx context.Context, rq Request, send func(resp proto.Message) error) (Request, error)
@@ -20,7 +28,9 @@ type ObjectSyncHandler interface {
 
 type SyncHandler interface {
 	app.Component
-	ObjectSyncHandler
+	HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (Request, error)
+	HandleStreamRequest(ctx context.Context, rq Request, sendResponse func(resp proto.Message) error) (Request, error)
+	ApplyRequest(ctx context.Context, rq Request, requestSender RequestSender) error
 	TryAddMessage(ctx context.Context, peerId string, msg drpc.Message, q *mb.MB[drpc.Message]) error
 	SendStreamRequest(ctx context.Context, rq Request, receive func(stream drpc.Stream) error) (err error)
 	NewResponse() Response
