@@ -2,21 +2,35 @@ package objectsync
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/cheggaaa/mb/v3"
 	"github.com/gogo/protobuf/proto"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/pool"
 )
 
 const CName = "common.sync.objectsync"
 
+var ErrUnexpectedHeadUpdateType = errors.New("unexpected head update type")
+
 type objectSync struct {
 	spaceId string
+	pool    pool.Service
 	manager treemanager.TreeManager
+}
+
+type peerIdSettable interface {
+	SetPeerId(peerId string)
 }
 
 func (o *objectSync) Init(a *app.App) (err error) {
@@ -29,36 +43,80 @@ func (o *objectSync) Name() (name string) {
 }
 
 func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (syncdeps.Request, error) {
-	//TODO implement me
-	panic("implement me")
+	update, ok := headUpdate.(*HeadUpdate)
+	if !ok {
+		return nil, ErrUnexpectedHeadUpdateType
+	}
+	obj, err := o.manager.GetTree(context.Background(), update.Meta.SpaceId, update.Meta.ObjectId)
+	if err != nil {
+		return synctree.NewRequest(update.Meta.PeerId, update.Meta.SpaceId, update.Meta.ObjectId, nil, nil, nil), nil
+	}
+	objHandler, ok := obj.(syncdeps.ObjectSyncHandler)
+	if !ok {
+		return nil, fmt.Errorf("object %s does not support sync", obj.Id())
+	}
+	return objHandler.HandleHeadUpdate(ctx, update)
 }
 
 func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, sendResponse func(resp proto.Message) error) (syncdeps.Request, error) {
-	//TODO implement me
-	panic("implement me")
+	obj, err := o.manager.GetTree(context.Background(), o.spaceId, rq.ObjectId())
+	if err != nil {
+		return nil, treechangeproto.ErrGetTree
+	}
+	objHandler, ok := obj.(syncdeps.ObjectSyncHandler)
+	if !ok {
+		return nil, fmt.Errorf("object %s does not support sync", obj.Id())
+	}
+	return objHandler.HandleStreamRequest(ctx, rq, sendResponse)
 }
 
 func (o *objectSync) ApplyRequest(ctx context.Context, rq syncdeps.Request, requestSender syncdeps.RequestSender) error {
-	//TODO implement me
-	panic("implement me")
+	ctx = peer.CtxWithPeerId(ctx, rq.PeerId())
+	obj, err := o.manager.GetTree(context.Background(), o.spaceId, rq.ObjectId())
+	// if tree exists locally
+	if err == nil {
+		objHandler, ok := obj.(syncdeps.ObjectSyncHandler)
+		if !ok {
+			return fmt.Errorf("object %s does not support sync", obj.Id())
+		}
+		collector := objHandler.ResponseCollector()
+		return requestSender.SendRequest(ctx, rq, collector)
+	}
+	_, err = o.manager.GetTree(ctx, o.spaceId, rq.ObjectId())
+	return err
 }
 
 func (o *objectSync) TryAddMessage(ctx context.Context, peerId string, msg drpc.Message, q *mb.MB[drpc.Message]) error {
-	//TODO implement me
-	panic("implement me")
+	settable, ok := msg.(peerIdSettable)
+	if ok {
+		settable.SetPeerId(peerId)
+	}
+	return q.TryAdd(msg)
 }
 
 func (o *objectSync) SendStreamRequest(ctx context.Context, rq syncdeps.Request, receive func(stream drpc.Stream) error) (err error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (o *objectSync) NewResponse() syncdeps.Response {
-	//TODO implement me
-	panic("implement me")
+	pr, err := o.pool.GetOneOf(ctx, []string{rq.PeerId()})
+	if err != nil {
+		return err
+	}
+	return pr.DoDrpc(ctx, func(conn drpc.Conn) error {
+		cl := spacesyncproto.NewDRPCSpaceSyncClient(conn)
+		res, err := rq.Proto()
+		if err != nil {
+			return err
+		}
+		msg, ok := res.(*spacesyncproto.ObjectSyncMessage)
+		if !ok {
+			return fmt.Errorf("unexpected message type %T", res)
+		}
+		stream, err := cl.ObjectSyncRequestStream(ctx, msg)
+		if err != nil {
+			return err
+		}
+		return receive(stream)
+	})
 }
 
 func (o *objectSync) NewMessage() drpc.Message {
-	//TODO implement me
-	panic("implement me")
+	return &HeadUpdate{}
 }

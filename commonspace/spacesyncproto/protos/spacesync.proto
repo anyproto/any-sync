@@ -26,6 +26,8 @@ service SpaceSync {
     rpc ObjectSyncStream(stream ObjectSyncMessage) returns (stream ObjectSyncMessage);
     // ObjectSync sends object sync message and synchronously gets response message
     rpc ObjectSync(ObjectSyncMessage) returns (ObjectSyncMessage);
+    // ObjectSyncRequestStream opens sends a request and gets streamed response
+    rpc ObjectSyncRequestStream(ObjectSyncMessage) returns (stream ObjectSyncMessage);
     // AclAddRecord adds a new record to acl log. Works only with any-sync-node
     // deprecated: use coordinator api
     rpc AclAddRecord(AclAddRecordRequest) returns (AclAddRecordResponse);
