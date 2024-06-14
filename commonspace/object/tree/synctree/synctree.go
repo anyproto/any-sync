@@ -272,7 +272,8 @@ func (s *syncTree) SyncWithPeer(ctx context.Context, peerId string) (err error) 
 	if objecttree.IsEmptyDerivedTree(s) {
 		return nil
 	}
-	return s.syncClient.QueueRequest(ctx, peerId, s)
+	req := s.syncClient.CreateFullSyncRequest(peerId, s)
+	return s.syncClient.QueueRequest(ctx, req)
 }
 
 func (s *syncTree) afterBuild() {

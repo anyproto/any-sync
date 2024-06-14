@@ -4,51 +4,52 @@ import (
 	"context"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
 
 type RequestFactory interface {
-	CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (msg *consensusproto.LogSyncMessage)
-	CreateFullSyncRequest(l list.AclList, theirHead string) (req *consensusproto.LogSyncMessage, err error)
-	CreateFullSyncResponse(l list.AclList, theirHead string) (*consensusproto.LogSyncMessage, error)
+	CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (headUpdate *objectsync.HeadUpdate)
+	CreateFullSyncRequest(peerId string, l list.AclList) *Request
+	CreateFullSyncResponse(l list.AclList, theirHead string) (resp *Response, err error)
 }
 
-type requestFactory struct{}
-
-func NewRequestFactory() RequestFactory {
-	return &requestFactory{}
+type requestFactory struct {
+	spaceId string
 }
 
-func (r *requestFactory) CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (msg *consensusproto.LogSyncMessage) {
-	return consensusproto.WrapHeadUpdate(&consensusproto.LogHeadUpdate{
-		Head:    l.Head().Id,
-		Records: added,
-	}, l.Root())
+func NewRequestFactory(spaceId string) RequestFactory {
+	return &requestFactory{spaceId: spaceId}
 }
 
-func (r *requestFactory) CreateFullSyncRequest(l list.AclList, theirHead string) (req *consensusproto.LogSyncMessage, err error) {
-	if !l.HasHead(theirHead) {
-		return consensusproto.WrapFullRequest(&consensusproto.LogFullSyncRequest{
-			Head: l.Head().Id,
-		}, l.Root()), nil
+func (r *requestFactory) CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (headUpdate *objectsync.HeadUpdate) {
+	return &objectsync.HeadUpdate{
+		Meta: objectsync.ObjectMeta{
+			ObjectId: l.Id(),
+			SpaceId:  r.spaceId,
+		},
+		Update: InnerHeadUpdate{
+			head:    l.Head().Id,
+			records: added,
+			root:    l.Root(),
+		},
 	}
+}
+
+func (r *requestFactory) CreateFullSyncRequest(peerId string, l list.AclList) *Request {
+	return NewRequest(peerId, l.Id(), r.spaceId, l.Head().Id, l.Root())
+}
+
+func (r *requestFactory) CreateFullSyncResponse(l list.AclList, theirHead string) (resp *Response, err error) {
 	records, err := l.RecordsAfter(context.Background(), theirHead)
 	if err != nil {
 		return
 	}
-	return consensusproto.WrapFullRequest(&consensusproto.LogFullSyncRequest{
-		Head:    l.Head().Id,
-		Records: records,
-	}, l.Root()), nil
-}
-
-func (r *requestFactory) CreateFullSyncResponse(l list.AclList, theirHead string) (resp *consensusproto.LogSyncMessage, err error) {
-	records, err := l.RecordsAfter(context.Background(), theirHead)
-	if err != nil {
-		return
-	}
-	return consensusproto.WrapFullResponse(&consensusproto.LogFullSyncResponse{
-		Head:    l.Head().Id,
-		Records: records,
-	}, l.Root()), nil
+	return &Response{
+		spaceId:  r.spaceId,
+		objectId: l.Id(),
+		head:     l.Head().Id,
+		records:  records,
+		root:     l.Root(),
+	}, nil
 }

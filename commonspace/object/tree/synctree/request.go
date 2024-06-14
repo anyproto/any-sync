@@ -16,8 +16,8 @@ type Request struct {
 	root         *treechangeproto.RawTreeChangeWithId
 }
 
-func NewRequest(peerId, spaceId, objectId string, heads []string, snapshotPath []string, root *treechangeproto.RawTreeChangeWithId) Request {
-	return Request{
+func NewRequest(peerId, spaceId, objectId string, heads []string, snapshotPath []string, root *treechangeproto.RawTreeChangeWithId) *Request {
+	return &Request{
 		peerId:       peerId,
 		spaceId:      spaceId,
 		objectId:     objectId,
@@ -27,15 +27,15 @@ func NewRequest(peerId, spaceId, objectId string, heads []string, snapshotPath [
 	}
 }
 
-func (r Request) PeerId() string {
+func (r *Request) PeerId() string {
 	return r.peerId
 }
 
-func (r Request) ObjectId() string {
+func (r *Request) ObjectId() string {
 	return r.root.Id
 }
 
-func (r Request) Proto() (proto.Message, error) {
+func (r *Request) Proto() (proto.Message, error) {
 	msg := &treechangeproto.TreeFullSyncRequest{
 		Heads:        r.heads,
 		SnapshotPath: r.snapshotPath,

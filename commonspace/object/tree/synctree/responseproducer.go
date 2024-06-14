@@ -3,7 +3,7 @@ package synctree
 import "github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 
 type ResponseProducer interface {
-	NewResponse(batchSize int) (Response, error)
+	NewResponse(batchSize int) (*Response, error)
 }
 
 type responseProducer struct {
@@ -24,12 +24,12 @@ func newResponseProducer(spaceId string, tree objecttree.ObjectTree, theirHeads,
 	}, nil
 }
 
-func (r *responseProducer) NewResponse(batchSize int) (Response, error) {
+func (r *responseProducer) NewResponse(batchSize int) (*Response, error) {
 	res, err := r.iterator.NextBatch(batchSize)
 	if err != nil {
-		return Response{}, err
+		return &Response{}, err
 	}
-	return Response{
+	return &Response{
 		heads:        res.Heads,
 		snapshotPath: res.SnapshotPath,
 		changes:      res.Batch,

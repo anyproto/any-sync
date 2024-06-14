@@ -4,12 +4,20 @@ import (
 	"context"
 	"errors"
 
-	"github.com/anyproto/any-sync/commonspace/object/acl/list"
-	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/any-sync/commonspace/syncstatus"
-	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/gogo/protobuf/proto"
+	"storj.io/drpc"
+
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
+	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
+	"github.com/anyproto/any-sync/net/peer"
+)
+
+var (
+	ErrUnexpectedMessageType  = errors.New("unexpected message type")
+	ErrUnexpectedResponseType = errors.New("unexpected response type")
+	ErrUnexpectedRequestType  = errors.New("unexpected request type")
 )
 
 var (
@@ -18,65 +26,85 @@ var (
 )
 
 type syncAclHandler struct {
-	aclList      list.AclList
-	syncClient   SyncClient
-	syncProtocol AclSyncProtocol
-	syncStatus   syncstatus.StatusUpdater
-	spaceId      string
+	aclList    list.AclList
+	syncClient SyncClient
+	spaceId    string
 }
 
-func newSyncAclHandler(spaceId string, aclList list.AclList, syncClient SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
+func newSyncAclHandler(spaceId string, aclList list.AclList, syncClient SyncClient) syncdeps.ObjectSyncHandler {
 	return &syncAclHandler{
-		aclList:      aclList,
-		syncClient:   syncClient,
-		syncProtocol: newAclSyncProtocol(spaceId, aclList, syncClient),
-		syncStatus:   syncStatus,
-		spaceId:      spaceId,
+		spaceId:    spaceId,
+		aclList:    aclList,
+		syncClient: syncClient,
 	}
 }
 
-func (s *syncAclHandler) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
-	unmarshalled := &consensusproto.LogSyncMessage{}
-	err = proto.Unmarshal(message.Payload, unmarshalled)
-	if err != nil {
-		return
+func (s *syncAclHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (syncdeps.Request, error) {
+	update, ok := headUpdate.(*objectsync.HeadUpdate)
+	if !ok {
+		return nil, ErrUnexpectedResponseType
 	}
-	content := unmarshalled.GetContent()
-	head := consensusproto.GetHead(unmarshalled)
-	s.syncStatus.HeadsReceive(senderId, s.aclList.Id(), []string{head})
+	peerId, err := peer.CtxPeerId(ctx)
+	if err != nil {
+		return nil, err
+	}
+	objMsg := &consensusproto.LogSyncMessage{}
+	err = proto.Unmarshal(update.Bytes, objMsg)
+	if err != nil {
+		return nil, err
+	}
+	if objMsg.GetContent().GetHeadUpdate() == nil {
+		return nil, ErrUnexpectedMessageType
+	}
+	contentUpdate := objMsg.GetContent().GetHeadUpdate()
 	s.aclList.Lock()
 	defer s.aclList.Unlock()
-	switch {
-	case content.GetHeadUpdate() != nil:
-		var syncReq *consensusproto.LogSyncMessage
-		syncReq, err = s.syncProtocol.HeadUpdate(ctx, senderId, content.GetHeadUpdate())
-		if err != nil || syncReq == nil {
-			return
+	if len(contentUpdate.Records) == 0 {
+		if s.aclList.HasHead(contentUpdate.Head) {
+			return nil, nil
 		}
-		return s.syncClient.QueueRequest(senderId, syncReq)
-	case content.GetFullSyncRequest() != nil:
-		return ErrMessageIsRequest
-	case content.GetFullSyncResponse() != nil:
-		return s.syncProtocol.FullSyncResponse(ctx, senderId, content.GetFullSyncResponse())
+		return s.syncClient.CreateFullSyncRequest(peerId, s.aclList), nil
 	}
-	return
+	err = s.aclList.AddRawRecords(contentUpdate.Records)
+	if !errors.Is(err, list.ErrIncorrectRecordSequence) {
+		return nil, err
+	}
+	return s.syncClient.CreateFullSyncRequest(peerId, s.aclList), nil
 }
 
-func (s *syncAclHandler) HandleRequest(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (response *spacesyncproto.ObjectSyncMessage, err error) {
-	unmarshalled := &consensusproto.LogSyncMessage{}
-	err = proto.Unmarshal(request.Payload, unmarshalled)
-	if err != nil {
-		return
+func (s *syncAclHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, send func(resp proto.Message) error) (syncdeps.Request, error) {
+	req, ok := rq.(*Request)
+	if !ok {
+		return nil, ErrUnexpectedRequestType
 	}
-	fullSyncRequest := unmarshalled.GetContent().GetFullSyncRequest()
-	if fullSyncRequest == nil {
-		return nil, ErrMessageIsNotRequest
+	s.aclList.Lock()
+	if !s.aclList.HasHead(req.head) {
+		s.aclList.Unlock()
+		return s.syncClient.CreateFullSyncRequest(req.peerId, s.aclList), nil
+	}
+	resp, err := s.syncClient.CreateFullSyncResponse(s.aclList, req.head)
+	if err != nil {
+		s.aclList.Unlock()
+		return nil, err
+	}
+	s.aclList.Unlock()
+	protoMsg, err := resp.ProtoMessage()
+	if err != nil {
+		return nil, err
+	}
+	return nil, send(protoMsg)
+}
+
+func (s *syncAclHandler) HandleResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
+	response, ok := resp.(*Response)
+	if !ok {
+		return ErrUnexpectedResponseType
 	}
 	s.aclList.Lock()
 	defer s.aclList.Unlock()
-	aclResp, err := s.syncProtocol.FullSyncRequest(ctx, senderId, fullSyncRequest)
-	if err != nil {
-		return
-	}
-	return spacesyncproto.MarshallSyncMessage(aclResp, s.spaceId, s.aclList.Id())
+	return s.aclList.AddRawRecords(response.records)
+}
+
+func (s *syncAclHandler) ResponseCollector() syncdeps.ResponseCollector {
+	return newResponseCollector(s)
 }

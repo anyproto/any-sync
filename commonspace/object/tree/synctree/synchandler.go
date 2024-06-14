@@ -16,8 +16,9 @@ import (
 )
 
 var (
-	ErrUnexpectedMessageType = errors.New("unexpected response type")
-	ErrUnexpectedRequestType = errors.New("unexpected request type")
+	ErrUnexpectedMessageType  = errors.New("unexpected message type")
+	ErrUnexpectedRequestType  = errors.New("unexpected request type")
+	ErrUnexpectedResponseType = errors.New("unexpected response type")
 )
 
 type syncHandler struct {
@@ -75,9 +76,9 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Mess
 }
 
 func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, send func(resp proto.Message) error) (syncdeps.Request, error) {
-	req, ok := rq.(Request)
+	req, ok := rq.(*Request)
 	if !ok {
-		return nil, ErrUnexpectedResponseType
+		return nil, ErrUnexpectedRequestType
 	}
 	s.tree.Lock()
 	curHeads := s.tree.Heads()
@@ -112,7 +113,7 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 }
 
 func (s *syncHandler) HandleResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
-	response, ok := resp.(Response)
+	response, ok := resp.(*Response)
 	if !ok {
 		return ErrUnexpectedResponseType
 	}

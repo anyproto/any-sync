@@ -14,6 +14,7 @@ type BroadcastOptions struct {
 
 type InnerHeadUpdate interface {
 	Marshall(data ObjectMeta) ([]byte, error)
+	Heads() []string
 }
 
 type ObjectMeta struct {

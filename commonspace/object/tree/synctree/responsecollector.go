@@ -2,13 +2,10 @@ package synctree
 
 import (
 	"context"
-	"errors"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 )
-
-var ErrUnexpectedResponseType = errors.New("unexpected response type")
 
 type fullResponseCollector struct {
 	heads   []string
@@ -21,7 +18,7 @@ func newFullResponseCollector() *fullResponseCollector {
 }
 
 func (r *fullResponseCollector) CollectResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
-	treeResp, ok := resp.(Response)
+	treeResp, ok := resp.(*Response)
 	if !ok {
 		return ErrUnexpectedResponseType
 	}
@@ -32,7 +29,7 @@ func (r *fullResponseCollector) CollectResponse(ctx context.Context, peerId, obj
 }
 
 func (r *fullResponseCollector) NewResponse() syncdeps.Response {
-	return Response{}
+	return &Response{}
 }
 
 type responseCollector struct {
@@ -48,5 +45,5 @@ func (r *responseCollector) CollectResponse(ctx context.Context, peerId, objectI
 }
 
 func (r *responseCollector) NewResponse() syncdeps.Response {
-	return Response{}
+	return &Response{}
 }

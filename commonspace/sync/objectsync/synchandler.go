@@ -55,6 +55,7 @@ func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Messa
 	if !ok {
 		return nil, fmt.Errorf("object %s does not support sync", obj.Id())
 	}
+	// TODO: add heads receive check somewhere (on object level?)
 	return objHandler.HandleHeadUpdate(ctx, update)
 }
 

@@ -3,7 +3,6 @@ package synctree
 import (
 	"context"
 
-	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/sync"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
@@ -13,7 +12,7 @@ type SyncClient interface {
 	RequestFactory
 	Broadcast(ctx context.Context, headUpdate *objectsync.HeadUpdate) error
 	SendTreeRequest(ctx context.Context, req syncdeps.Request, collector syncdeps.ResponseCollector) (err error)
-	QueueRequest(ctx context.Context, peerId string, tree objecttree.ObjectTree) (err error)
+	QueueRequest(ctx context.Context, req syncdeps.Request) (err error)
 }
 
 type syncClient struct {
@@ -38,7 +37,6 @@ func (s *syncClient) SendTreeRequest(ctx context.Context, req syncdeps.Request, 
 	return s.syncService.SendRequest(ctx, req, collector)
 }
 
-func (s *syncClient) QueueRequest(ctx context.Context, peerId string, tree objecttree.ObjectTree) (err error) {
-	req := s.CreateFullSyncRequest(peerId, tree)
+func (s *syncClient) QueueRequest(ctx context.Context, req syncdeps.Request) (err error) {
 	return s.syncService.QueueRequest(ctx, req)
 }

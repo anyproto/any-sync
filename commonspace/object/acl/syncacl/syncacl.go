@@ -7,18 +7,15 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/headupdater"
-	"github.com/anyproto/any-sync/commonspace/object/syncobjectgetter"
+	"github.com/anyproto/any-sync/commonspace/sync"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
+	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
-	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
-	"github.com/anyproto/any-sync/commonspace/peermanager"
-	"github.com/anyproto/any-sync/commonspace/requestmanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
 
@@ -33,7 +30,6 @@ var (
 type SyncAcl interface {
 	app.ComponentRunnable
 	list.AclList
-	syncobjectgetter.SyncObject
 	SetHeadUpdater(updater headupdater.HeadUpdater)
 	SyncWithPeer(ctx context.Context, peerId string) (err error)
 	SetAclUpdater(updater headupdater.AclUpdater)
@@ -45,8 +41,8 @@ func New() SyncAcl {
 
 type syncAcl struct {
 	list.AclList
+	syncdeps.ObjectSyncHandler
 	syncClient  SyncClient
-	syncHandler synchandler.SyncHandler
 	headUpdater headupdater.HeadUpdater
 	isClosed    bool
 	aclUpdater  headupdater.AclUpdater
@@ -65,16 +61,8 @@ func (s *syncAcl) Run(ctx context.Context) (err error) {
 	return
 }
 
-func (s *syncAcl) HandleRequest(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (response *spacesyncproto.ObjectSyncMessage, err error) {
-	return s.syncHandler.HandleRequest(ctx, senderId, request)
-}
-
 func (s *syncAcl) SetHeadUpdater(updater headupdater.HeadUpdater) {
 	s.headUpdater = updater
-}
-
-func (s *syncAcl) HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error) {
-	return s.syncHandler.HandleMessage(ctx, senderId, request)
 }
 
 func (s *syncAcl) Init(a *app.App) (err error) {
@@ -89,11 +77,9 @@ func (s *syncAcl) Init(a *app.App) (err error) {
 		return
 	}
 	spaceId := storage.Id()
-	requestManager := a.MustComponent(requestmanager.CName).(requestmanager.RequestManager)
-	peerManager := a.MustComponent(peermanager.CName).(peermanager.PeerManager)
-	syncStatus := a.MustComponent(syncstatus.CName).(syncstatus.StatusService)
-	s.syncClient = NewSyncClient(spaceId, requestManager, peerManager)
-	s.syncHandler = newSyncAclHandler(storage.Id(), s, s.syncClient, syncStatus)
+	syncService := a.MustComponent(sync.CName).(sync.SyncService)
+	s.syncClient = NewSyncClient(spaceId, syncService)
+	s.ObjectSyncHandler = newSyncAclHandler(storage.Id(), s, s.syncClient)
 	return err
 }
 
@@ -107,12 +93,19 @@ func (s *syncAcl) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 		return
 	}
 	headUpdate := s.syncClient.CreateHeadUpdate(s, []*consensusproto.RawRecordWithId{rawRec})
+	s.broadcast(headUpdate)
 	s.headUpdater.UpdateHeads(s.Id(), []string{rawRec.Id})
-	s.syncClient.Broadcast(headUpdate)
 	if s.aclUpdater != nil {
 		s.aclUpdater.UpdateAcl(s)
 	}
 	return
+}
+
+func (s *syncAcl) broadcast(headUpdate *objectsync.HeadUpdate) {
+	err := s.syncClient.Broadcast(context.Background(), headUpdate)
+	if err != nil {
+		log.Error("broadcast acl message error", zap.Error(err))
+	}
 }
 
 func (s *syncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (err error) {
@@ -129,7 +122,7 @@ func (s *syncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (e
 	log.Debug("records updated", zap.String("head", s.AclList.Head().Id), zap.Int("len(total)", len(s.AclList.Records())))
 	headUpdate := s.syncClient.CreateHeadUpdate(s, rawRecords)
 	s.headUpdater.UpdateHeads(s.Id(), []string{rawRecords[len(rawRecords)-1].Id})
-	s.syncClient.Broadcast(headUpdate)
+	s.broadcast(headUpdate)
 	if s.aclUpdater != nil {
 		s.aclUpdater.UpdateAcl(s)
 	}
@@ -139,8 +132,8 @@ func (s *syncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (e
 func (s *syncAcl) SyncWithPeer(ctx context.Context, peerId string) (err error) {
 	s.Lock()
 	defer s.Unlock()
-	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
-	return s.syncClient.SendUpdate(peerId, headUpdate)
+	req := s.syncClient.CreateFullSyncRequest(peerId, s)
+	return s.syncClient.QueueRequest(ctx, req)
 }
 
 func (s *syncAcl) Close(ctx context.Context) (err error) {

@@ -31,3 +31,7 @@ func (h InnerHeadUpdate) Marshall(data objectsync.ObjectMeta) ([]byte, error) {
 type BroadcastOptions struct {
 	EmptyPeers []string
 }
+
+func (h InnerHeadUpdate) Heads() []string {
+	return h.heads
+}
