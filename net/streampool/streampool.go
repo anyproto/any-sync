@@ -19,7 +19,7 @@ import (
 )
 
 type configGetter interface {
-	GetConfig() StreamConfig
+	GetStreamConfig() StreamConfig
 }
 
 type StreamSyncDelegate interface {
@@ -87,7 +87,7 @@ func (s *streamPool) Init(a *app.App) (err error) {
 		comp = debugstat.NewNoOp()
 	}
 	s.statService = comp
-	s.streamConfig = a.MustComponent("config").(configGetter).GetConfig()
+	s.streamConfig = a.MustComponent("config").(configGetter).GetStreamConfig()
 	s.statService.AddProvider(s)
 	return nil
 }

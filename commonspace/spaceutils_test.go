@@ -3,17 +3,21 @@ package commonspace
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/anyproto/go-chash"
 	"github.com/stretchr/testify/require"
+	"storj.io/drpc"
 
 	accountService "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
+	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
@@ -21,6 +25,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/sync/synctest"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
@@ -28,8 +33,12 @@ import (
 	"github.com/anyproto/any-sync/identityrepo/identityrepoproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/rpc/rpctest"
+	"github.com/anyproto/any-sync/net/streampool"
+	"github.com/anyproto/any-sync/net/streampool/streamopener"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 //
@@ -186,7 +195,7 @@ func (m *mockPeerManagerProvider) Name() (name string) {
 }
 
 func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId string) (sm peermanager.PeerManager, err error) {
-	return &mockPeerManager{}, nil
+	return synctest.NewCounterPeerManager(), nil
 }
 
 //
@@ -266,6 +275,14 @@ func (m *mockConfig) GetSpace() config.Config {
 	}
 }
 
+func (m *mockConfig) GetStreamConfig() streampool.StreamConfig {
+	return streampool.StreamConfig{
+		SendQueueSize:    100,
+		DialQueueWorkers: 100,
+		DialQueueSize:    100,
+	}
+}
+
 //
 // Mock TreeManager
 //
@@ -319,20 +336,26 @@ func (m mockTreeSyncer) SyncAll(ctx context.Context, peerId string, existing, mi
 
 type mockTreeManager struct {
 	space      Space
+	mx         sync.Mutex
 	cache      ocache.OCache
 	deletedIds []string
 	markedIds  []string
+	wait       bool
 	waitLoad   chan struct{}
 }
 
 func (t *mockTreeManager) MarkTreeDeleted(ctx context.Context, spaceId, treeId string) error {
+	t.mx.Lock()
+	defer t.mx.Unlock()
 	t.markedIds = append(t.markedIds, treeId)
 	return nil
 }
 
 func (t *mockTreeManager) Init(a *app.App) (err error) {
 	t.cache = ocache.New(func(ctx context.Context, id string) (value ocache.Object, err error) {
-		<-t.waitLoad
+		if t.wait {
+			<-t.waitLoad
+		}
 		return t.space.TreeBuilder().BuildTree(ctx, id, objecttreebuilder.BuildTreeOpts{})
 	},
 		ocache.WithGCPeriod(time.Minute),
@@ -438,6 +461,51 @@ func (m mockCoordinatorClient) Name() (name string) {
 }
 
 //
+// Stream opener
+//
+
+func newStreamOpener(spaceId string) streamopener.StreamOpener {
+	return &streamOpener{spaceId: spaceId}
+}
+
+type streamOpener struct {
+	spaceId string
+}
+
+func (c *streamOpener) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (c *streamOpener) Name() (name string) {
+	return streamopener.CName
+}
+
+func (c *streamOpener) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error) {
+	conn, err := p.AcquireDrpcConn(ctx)
+	if err != nil {
+		return
+	}
+	objectStream, err := spacesyncproto.NewDRPCSpaceSyncClient(conn).ObjectSyncStream(ctx)
+	if err != nil {
+		return
+	}
+	var msg = &spacesyncproto.SpaceSubscription{
+		SpaceIds: []string{c.spaceId},
+		Action:   spacesyncproto.SpaceSubscriptionAction_Subscribe,
+	}
+	payload, err := msg.Marshal()
+	if err != nil {
+		return
+	}
+	if err = objectStream.Send(&spacesyncproto.ObjectSyncMessage{
+		Payload: payload,
+	}); err != nil {
+		return
+	}
+	return objectStream, nil, nil
+}
+
+//
 // Space fixture
 //
 
@@ -447,7 +515,8 @@ type spaceFixture struct {
 	account              accountService.Service
 	configurationService nodeconf.Service
 	storageProvider      spacestorage.SpaceStorageProvider
-	peermanagerProvider  peermanager.PeerManagerProvider
+	peerManagerProvider  peermanager.PeerManagerProvider
+	streamOpener         streamopener.StreamOpener
 	credentialProvider   credentialprovider.CredentialProvider
 	treeManager          *mockTreeManager
 	pool                 *mockPool
@@ -464,7 +533,7 @@ func newFixture(t *testing.T) *spaceFixture {
 		account:              &accounttest.AccountTestService{},
 		configurationService: &mockConf{},
 		storageProvider:      spacestorage.NewInMemorySpaceStorageProvider(),
-		peermanagerProvider:  &mockPeerManagerProvider{},
+		peerManagerProvider:  &mockPeerManagerProvider{},
 		treeManager:          &mockTreeManager{waitLoad: make(chan struct{})},
 		pool:                 &mockPool{},
 		spaceService:         New(),
@@ -476,9 +545,8 @@ func newFixture(t *testing.T) *spaceFixture {
 		Register(mockCoordinatorClient{}).
 		Register(fx.configurationService).
 		Register(fx.storageProvider).
-		Register(fx.peermanagerProvider).
+		Register(fx.peerManagerProvider).
 		Register(fx.treeManager).
-		Register(fx.pool).
 		Register(fx.spaceService)
 	err := fx.app.Start(ctx)
 	if err != nil {
@@ -486,4 +554,110 @@ func newFixture(t *testing.T) *spaceFixture {
 	}
 	require.NoError(t, err)
 	return fx
+}
+
+func newFixtureWithData(t *testing.T, spaceId string, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spacestorage.InMemorySpaceStorageProvider) *spaceFixture {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	fx := &spaceFixture{
+		cancelFunc:           cancel,
+		config:               &mockConfig{},
+		app:                  &app.App{},
+		account:              accounttest.NewWithAcc(keys),
+		configurationService: &mockConf{},
+		storageProvider:      provider,
+		streamOpener:         newStreamOpener(spaceId),
+		peerManagerProvider:  &mockPeerManagerProvider{},
+		treeManager:          &mockTreeManager{waitLoad: make(chan struct{})},
+		pool:                 &mockPool{},
+		spaceService:         New(),
+	}
+	fx.app.Register(fx.account).
+		Register(fx.config).
+		Register(peerPool).
+		Register(rpctest.NewTestServer()).
+		Register(synctest.NewPeerProvider(keys.PeerId)).
+		Register(credentialprovider.NewNoOp()).
+		Register(&mockStatusServiceProvider{}).
+		Register(mockCoordinatorClient{}).
+		Register(fx.configurationService).
+		Register(fx.storageProvider).
+		Register(fx.peerManagerProvider).
+		Register(fx.treeManager).
+		Register(fx.spaceService)
+	err := fx.app.Start(ctx)
+	if err != nil {
+		fx.cancelFunc()
+	}
+	require.NoError(t, err)
+	return fx
+}
+
+type multiPeerFixture struct {
+	peerFixtures []*spaceFixture
+}
+
+func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
+	keys, err := accountdata.NewRandom()
+	require.NoError(t, err)
+	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+	metaKey, _, err := crypto.GenerateRandomEd25519KeyPair()
+	require.NoError(t, err)
+	readKey := crypto.NewAES()
+	meta := []byte("account")
+	payload := SpaceCreatePayload{
+		SigningKey:     keys.SignKey,
+		SpaceType:      "space",
+		ReplicationKey: 10,
+		SpacePayload:   nil,
+		MasterKey:      masterKey,
+		ReadKey:        readKey,
+		MetadataKey:    metaKey,
+		Metadata:       meta,
+	}
+	createSpace, err := storagePayloadForSpaceCreate(payload)
+	require.NoError(t, err)
+	executor := list.NewExternalKeysAclExecutor(createSpace.SpaceHeaderWithId.Id, keys, meta, createSpace.AclWithId)
+	cmds := []string{
+		"0.init::0",
+		"0.invite::invId",
+	}
+	for i := 1; i < peerNum; i++ {
+		cmds = append(cmds, fmt.Sprintf("%d.join::invId", i))
+		cmds = append(cmds, fmt.Sprintf("0.approve::%d,rw", i))
+	}
+	for _, cmd := range cmds {
+		err := executor.Execute(cmd)
+		require.NoError(t, err, cmd)
+	}
+	var (
+		allKeys    []*accountdata.AccountKeys
+		allRecords []*consensusproto.RawRecordWithId
+		providers  []*spacestorage.InMemorySpaceStorageProvider
+		peerIds    []string
+	)
+	allRecords, err = executor.ActualAccounts()["0"].Acl.RecordsAfter(context.Background(), "")
+	require.NoError(t, err)
+	for i := 0; i < peerNum; i++ {
+		allKeys = append(allKeys, executor.ActualAccounts()[fmt.Sprint(i)].Keys)
+		peerIds = append(peerIds, executor.ActualAccounts()[fmt.Sprint(i)].Keys.PeerId)
+		provider := spacestorage.NewInMemorySpaceStorageProvider().(*spacestorage.InMemorySpaceStorageProvider)
+		providers = append(providers, provider)
+		spaceStore, err := provider.CreateSpaceStorage(createSpace)
+		require.NoError(t, err)
+		for _, rec := range allRecords {
+			listStorage, err := spaceStore.AclStorage()
+			require.NoError(t, err)
+			err = listStorage.AddRawRecord(context.Background(), rec)
+			require.NoError(t, err)
+		}
+	}
+	peerPool := synctest.NewPeerGlobalPool(peerIds)
+	peerPool.MakePeers()
+	var peerFixtures []*spaceFixture
+	for i := 0; i < peerNum; i++ {
+		fx := newFixtureWithData(t, createSpace.SpaceHeaderWithId.Id, allKeys[i], peerPool, providers[i])
+		peerFixtures = append(peerFixtures, fx)
+	}
+	return &multiPeerFixture{peerFixtures: peerFixtures}
 }

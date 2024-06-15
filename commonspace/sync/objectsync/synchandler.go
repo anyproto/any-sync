@@ -33,6 +33,10 @@ type peerIdSettable interface {
 	SetPeerId(peerId string)
 }
 
+func New() syncdeps.SyncHandler {
+	return &objectSync{}
+}
+
 func (o *objectSync) Init(a *app.App) (err error) {
 	o.manager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	return

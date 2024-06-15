@@ -3,10 +3,9 @@ package liststorage
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-
-	"sync"
 )
 
 type inMemoryAclListStorage struct {
@@ -65,7 +64,7 @@ func (t *inMemoryAclListStorage) SetHead(head string) error {
 func (t *inMemoryAclListStorage) AddRawRecord(ctx context.Context, record *consensusproto.RawRecordWithId) error {
 	t.Lock()
 	defer t.Unlock()
-	// TODO: better to do deep copy
+
 	t.records[record.Id] = record
 	return nil
 }

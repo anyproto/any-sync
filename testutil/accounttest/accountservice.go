@@ -12,6 +12,10 @@ type AccountTestService struct {
 	acc *accountdata.AccountKeys
 }
 
+func NewWithAcc(acc *accountdata.AccountKeys) *AccountTestService {
+	return &AccountTestService{acc: acc}
+}
+
 func (s *AccountTestService) Init(a *app.App) (err error) {
 	if s.acc != nil {
 		return

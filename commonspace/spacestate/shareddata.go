@@ -1,9 +1,10 @@
 package spacestate
 
 import (
+	"sync/atomic"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
-	"sync/atomic"
 )
 
 const CName = "common.commonspace.spacestate"

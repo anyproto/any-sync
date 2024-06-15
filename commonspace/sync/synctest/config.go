@@ -20,7 +20,7 @@ func (c *Config) Name() (name string) {
 	return "config"
 }
 
-func (c *Config) GetConfig() streampool.StreamConfig {
+func (c *Config) GetStreamConfig() streampool.StreamConfig {
 	return streampool.StreamConfig{
 		SendQueueSize:    100,
 		DialQueueWorkers: 100,

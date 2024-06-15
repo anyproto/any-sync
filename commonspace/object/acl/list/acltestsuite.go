@@ -27,6 +27,9 @@ type accountExpectedState struct {
 type AclTestExecutor struct {
 	owner               string
 	spaceId             string
+	ownerKeys           *accountdata.AccountKeys
+	ownerMeta           []byte
+	root                *consensusproto.RawRecordWithId
 	invites             map[string]crypto.PrivKey
 	actualAccounts      map[string]*TestAclState
 	expectedAccounts    map[string]*accountExpectedState
@@ -36,6 +39,19 @@ type AclTestExecutor struct {
 func NewAclExecutor(spaceId string) *AclTestExecutor {
 	return &AclTestExecutor{
 		spaceId:             spaceId,
+		invites:             map[string]crypto.PrivKey{},
+		actualAccounts:      make(map[string]*TestAclState),
+		expectedAccounts:    make(map[string]*accountExpectedState),
+		expectedPermissions: make(map[string][]accountExpectedState),
+	}
+}
+
+func NewExternalKeysAclExecutor(spaceId string, keys *accountdata.AccountKeys, ownerMeta []byte, root *consensusproto.RawRecordWithId) *AclTestExecutor {
+	return &AclTestExecutor{
+		spaceId:             spaceId,
+		ownerKeys:           keys,
+		root:                root,
+		ownerMeta:           ownerMeta,
 		invites:             map[string]crypto.PrivKey{},
 		actualAccounts:      make(map[string]*TestAclState),
 		expectedAccounts:    make(map[string]*accountExpectedState),
@@ -226,9 +242,20 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			return err
 		}
 		if len(a.expectedAccounts) == 0 {
-			acl, err := NewTestDerivedAclMetadata(a.spaceId, keys, []byte(account))
-			if err != nil {
-				return err
+			meta := []byte(account)
+			var acl AclList
+			if a.ownerKeys == nil {
+				acl, err = NewTestDerivedAclMetadata(a.spaceId, keys, meta)
+				if err != nil {
+					return err
+				}
+			} else {
+				keys = a.ownerKeys
+				meta = a.ownerMeta
+				acl, err = NewTestAclWithRoot(keys, a.root)
+				if err != nil {
+					return err
+				}
 			}
 			state := &TestAclState{
 				Keys: keys,
@@ -238,7 +265,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			a.expectedAccounts[account] = &accountExpectedState{
 				perms:    AclPermissions(aclrecordproto.AclUserPermissions_Owner),
 				status:   StatusActive,
-				metadata: []byte(account),
+				metadata: meta,
 				pseudoId: account,
 			}
 			a.owner = account

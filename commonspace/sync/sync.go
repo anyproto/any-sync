@@ -20,12 +20,15 @@ const CName = "common.commonspace.sync"
 
 var log = logger.NewNamed("sync")
 
+var ErrUnexpectedMessage = errors.New("unexpected message")
+
 type SyncService interface {
 	app.Component
 	BroadcastMessage(ctx context.Context, msg drpc.Message) error
 	HandleStreamRequest(ctx context.Context, req syncdeps.Request, stream drpc.Stream) error
 	SendRequest(ctx context.Context, rq syncdeps.Request, collector syncdeps.ResponseCollector) error
 	QueueRequest(ctx context.Context, rq syncdeps.Request) error
+	CloseReceiveQueue(id string) error
 }
 
 type syncService struct {
@@ -116,13 +119,17 @@ func (s *syncService) NewReadMessage() drpc.Message {
 }
 
 func (s *syncService) HandleMessage(ctx context.Context, peerId string, msg drpc.Message) error {
-	// TODO: make this queue per object and add closing of the individual queues
-	err := s.receiveQueue.Add(ctx, peerId, msgCtx{
+	idMsg, ok := msg.(syncdeps.Message)
+	if !ok {
+		return ErrUnexpectedMessage
+	}
+	objectId := idMsg.ObjectId()
+	err := s.receiveQueue.Add(ctx, objectId, msgCtx{
 		ctx:     ctx,
 		Message: msg,
 	})
 	if errors.Is(err, mb.ErrOverflowed) {
-		log.Info("queue overflowed", zap.String("peerId", peerId))
+		log.Info("queue overflowed", zap.String("objectId", objectId))
 		return nil
 	}
 	return err
@@ -138,4 +145,8 @@ func (s *syncService) SendRequest(ctx context.Context, rq syncdeps.Request, coll
 
 func (s *syncService) HandleStreamRequest(ctx context.Context, req syncdeps.Request, stream drpc.Stream) error {
 	return s.manager.HandleStreamRequest(ctx, req, stream)
+}
+
+func (s *syncService) CloseReceiveQueue(id string) error {
+	return s.receiveQueue.CloseThread(id)
 }

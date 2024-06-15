@@ -13,9 +13,11 @@ import (
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/sync"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/streampool"
+	"github.com/anyproto/any-sync/net/streampool/streamopener"
 
 	"storj.io/drpc"
 
@@ -40,7 +42,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
-	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
 )
@@ -66,7 +67,8 @@ type SpaceService interface {
 }
 
 type Deps struct {
-	TreeSyncer treesyncer.TreeSyncer
+	TreeSyncer   treesyncer.TreeSyncer
+	StreamOpener streamopener.StreamOpener
 }
 
 type spaceService struct {
@@ -78,7 +80,6 @@ type spaceService struct {
 	credentialProvider    credentialprovider.CredentialProvider
 	statusServiceProvider syncstatus.StatusServiceProvider
 	treeManager           treemanager.TreeManager
-	pool                  pool.Pool
 	metric                metric.Metric
 	app                   *app.App
 }
@@ -91,7 +92,6 @@ func (s *spaceService) Init(a *app.App) (err error) {
 	s.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	s.peerManagerProvider = a.MustComponent(peermanager.CName).(peermanager.PeerManagerProvider)
 	s.statusServiceProvider = a.MustComponent(syncstatus.CName).(syncstatus.StatusServiceProvider)
-	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
 	s.app = a
 	return nil
@@ -180,8 +180,11 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 	spaceApp := s.app.ChildApp()
 	spaceApp.Register(state).
 		Register(peerManager).
+		Register(deps.StreamOpener).
 		Register(streampool.NewStreamPool()).
 		Register(newCommonStorage(st)).
+		Register(objectsync.New()).
+		Register(sync.NewSyncService()).
 		Register(statusService).
 		Register(syncacl.New()).
 		Register(deletionstate.New()).
@@ -190,7 +193,6 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 		Register(objectmanager.New(s.treeManager)).
 		Register(deps.TreeSyncer).
 		Register(objecttreebuilder.New()).
-		Register(sync.NewSyncService()).
 		Register(aclclient.NewAclSpaceClient()).
 		Register(headsync.New())
 
