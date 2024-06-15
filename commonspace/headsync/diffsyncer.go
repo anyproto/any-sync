@@ -240,22 +240,5 @@ func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, peerId string, cl
 		return
 	}
 	d.log.InfoCtx(ctx, "space push completed successfully")
-	if e := d.subscribe(ctx, peerId); e != nil {
-		d.log.WarnCtx(ctx, "error subscribing for space", zap.Error(e))
-	}
 	return
-}
-
-func (d *diffSyncer) subscribe(ctx context.Context, peerId string) (err error) {
-	var msg = &spacesyncproto.SpaceSubscription{
-		SpaceIds: []string{d.spaceId},
-		Action:   spacesyncproto.SpaceSubscriptionAction_Subscribe,
-	}
-	payload, err := msg.Marshal()
-	if err != nil {
-		return
-	}
-	return d.peerManager.SendPeer(ctx, peerId, &spacesyncproto.ObjectSyncMessage{
-		Payload: payload,
-	})
 }

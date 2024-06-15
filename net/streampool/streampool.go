@@ -203,6 +203,9 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 		stats:    newStreamStat(peerId),
 	}
 	st.queue = s.syncDelegate.GetQueue(peerId)
+	if st.queue == nil {
+		return nil, fmt.Errorf("no queue for peer %s", peerId)
+	}
 	s.streams[streamId] = st
 	s.streamIdsByPeer[peerId] = append(s.streamIdsByPeer[peerId], streamId)
 	for _, tag := range tags {

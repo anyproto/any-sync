@@ -10,8 +10,8 @@ const batchSize = 1024 * 1024 * 10
 
 type RequestFactory interface {
 	CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectsync.HeadUpdate)
-	CreateNewTreeRequest(peerId, objectId string) *Request
-	CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *Request
+	CreateNewTreeRequest(peerId, objectId string) *objectsync.Request
+	CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectsync.Request
 	CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (ResponseProducer, error)
 }
 
@@ -43,11 +43,11 @@ func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer s
 	}
 }
 
-func (r *requestFactory) CreateNewTreeRequest(peerId, objectId string) *Request {
+func (r *requestFactory) CreateNewTreeRequest(peerId, objectId string) *objectsync.Request {
 	return NewRequest(peerId, r.spaceId, objectId, nil, nil, nil)
 }
 
-func (r *requestFactory) CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *Request {
+func (r *requestFactory) CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectsync.Request {
 	return NewRequest(peerId, r.spaceId, t.Id(), t.Heads(), t.SnapshotPath(), t.Header())
 }
 

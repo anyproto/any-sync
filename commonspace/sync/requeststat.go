@@ -1,4 +1,4 @@
-package requestmanager
+package sync
 
 import (
 	"sync"

@@ -13,7 +13,6 @@ const CName = "common.object.treemanager"
 type TreeManager interface {
 	app.ComponentRunnable
 	GetTree(ctx context.Context, spaceId, treeId string) (objecttree.ObjectTree, error)
-	PickTree(ctx context.Context, spaceId, treeId string) (objecttree.ObjectTree, error)
 	MarkTreeDeleted(ctx context.Context, spaceId, treeId string) error
 	DeleteTree(ctx context.Context, spaceId, treeId string) error
 }

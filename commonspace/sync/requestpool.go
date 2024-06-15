@@ -9,6 +9,7 @@ type RequestPool interface {
 	TryTake(peerId, objectId string) bool
 	Release(peerId, objectId string)
 	QueueRequestAction(peerId, objectId string, action func(ctx context.Context)) (err error)
+	Close()
 }
 
 type requestPool struct {

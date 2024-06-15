@@ -10,7 +10,7 @@ import (
 
 type RequestFactory interface {
 	CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (headUpdate *objectsync.HeadUpdate)
-	CreateFullSyncRequest(peerId string, l list.AclList) *Request
+	CreateFullSyncRequest(peerId string, l list.AclList) *objectsync.Request
 	CreateFullSyncResponse(l list.AclList, theirHead string) (resp *Response, err error)
 }
 
@@ -36,7 +36,7 @@ func (r *requestFactory) CreateHeadUpdate(l list.AclList, added []*consensusprot
 	}
 }
 
-func (r *requestFactory) CreateFullSyncRequest(peerId string, l list.AclList) *Request {
+func (r *requestFactory) CreateFullSyncRequest(peerId string, l list.AclList) *objectsync.Request {
 	return NewRequest(peerId, l.Id(), r.spaceId, l.Head().Id, l.Root())
 }
 

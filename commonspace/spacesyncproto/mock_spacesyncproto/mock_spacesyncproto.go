@@ -115,6 +115,21 @@ func (mr *MockDRPCSpaceSyncClientMockRecorder) ObjectSync(arg0, arg1 any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObjectSync", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).ObjectSync), arg0, arg1)
 }
 
+// ObjectSyncRequestStream mocks base method.
+func (m *MockDRPCSpaceSyncClient) ObjectSyncRequestStream(arg0 context.Context, arg1 *spacesyncproto.ObjectSyncMessage) (spacesyncproto.DRPCSpaceSync_ObjectSyncRequestStreamClient, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ObjectSyncRequestStream", arg0, arg1)
+	ret0, _ := ret[0].(spacesyncproto.DRPCSpaceSync_ObjectSyncRequestStreamClient)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ObjectSyncRequestStream indicates an expected call of ObjectSyncRequestStream.
+func (mr *MockDRPCSpaceSyncClientMockRecorder) ObjectSyncRequestStream(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObjectSyncRequestStream", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).ObjectSyncRequestStream), arg0, arg1)
+}
+
 // ObjectSyncStream mocks base method.
 func (m *MockDRPCSpaceSyncClient) ObjectSyncStream(arg0 context.Context) (spacesyncproto.DRPCSpaceSync_ObjectSyncStreamClient, error) {
 	m.ctrl.T.Helper()

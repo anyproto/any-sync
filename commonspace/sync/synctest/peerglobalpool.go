@@ -64,8 +64,8 @@ func (p *PeerGlobalPool) MakePeers() {
 	}
 }
 
-func (c *PeerGlobalPool) GetPeerIds() (peerIds []string) {
-	return c.peerIds
+func (p *PeerGlobalPool) GetPeerIds() (peerIds []string) {
+	return p.peerIds
 }
 
 func (p *PeerGlobalPool) AddCtrl(peerId string, addCtrl connCtrl) {

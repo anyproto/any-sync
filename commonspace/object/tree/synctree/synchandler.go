@@ -76,13 +76,22 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Mess
 }
 
 func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, send func(resp proto.Message) error) (syncdeps.Request, error) {
-	req, ok := rq.(*Request)
+	req, ok := rq.(*objectsync.Request)
 	if !ok {
+		return nil, ErrUnexpectedRequestType
+	}
+	treeSyncMsg := &treechangeproto.TreeSyncMessage{}
+	err := proto.Unmarshal(req.Bytes, treeSyncMsg)
+	if err != nil {
+		return nil, err
+	}
+	request := treeSyncMsg.GetContent().GetFullSyncRequest()
+	if request == nil {
 		return nil, ErrUnexpectedRequestType
 	}
 	s.tree.Lock()
 	curHeads := s.tree.Heads()
-	producer, err := newResponseProducer(s.spaceId, s.tree, req.heads, req.snapshotPath)
+	producer, err := newResponseProducer(s.spaceId, s.tree, request.Heads, request.SnapshotPath)
 	if err != nil {
 		s.tree.Unlock()
 		return nil, err
@@ -106,7 +115,7 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		}
 		s.tree.Lock()
 	}
-	if !slice.UnsortedEquals(curHeads, req.heads) {
+	if !slice.UnsortedEquals(curHeads, request.Heads) {
 		return s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree), nil
 	}
 	return nil, nil

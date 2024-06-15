@@ -12,8 +12,10 @@ import (
 	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
+	"github.com/anyproto/any-sync/commonspace/sync"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/streampool"
 
 	"storj.io/drpc"
 
@@ -29,10 +31,8 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/objectmanager"
-	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
-	"github.com/anyproto/any-sync/commonspace/requestmanager"
 	"github.com/anyproto/any-sync/commonspace/settings"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -180,17 +180,17 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 	spaceApp := s.app.ChildApp()
 	spaceApp.Register(state).
 		Register(peerManager).
+		Register(streampool.NewStreamPool()).
 		Register(newCommonStorage(st)).
 		Register(statusService).
 		Register(syncacl.New()).
-		Register(requestmanager.New()).
 		Register(deletionstate.New()).
 		Register(deletionmanager.New()).
 		Register(settings.New()).
 		Register(objectmanager.New(s.treeManager)).
 		Register(deps.TreeSyncer).
 		Register(objecttreebuilder.New()).
-		Register(objectsync.New()).
+		Register(sync.NewSyncService()).
 		Register(aclclient.NewAclSpaceClient()).
 		Register(headsync.New())
 

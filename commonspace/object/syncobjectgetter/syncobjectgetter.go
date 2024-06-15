@@ -2,12 +2,13 @@ package syncobjectgetter
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
+
+	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 )
 
 type SyncObject interface {
 	Id() string
-	synchandler.SyncHandler
+	syncdeps.ObjectSyncHandler
 }
 
 type SyncObjectGetter interface {

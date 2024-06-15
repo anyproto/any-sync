@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 
 	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
@@ -47,6 +48,10 @@ func NewSyncService() SyncService {
 	return &syncService{}
 }
 
+func (s *syncService) Name() (name string) {
+	return CName
+}
+
 func (s *syncService) Init(a *app.App) (err error) {
 	s.handler = a.MustComponent(syncdeps.CName).(syncdeps.SyncHandler)
 	s.sendQueueProvider = multiqueue.NewQueueProvider[drpc.Message](100, s.handleOutgoingMessage)
@@ -59,8 +64,18 @@ func (s *syncService) Init(a *app.App) (err error) {
 	return nil
 }
 
-func (s *syncService) Name() (name string) {
-	return CName
+func (s *syncService) Run(ctx context.Context) (err error) {
+	return nil
+}
+
+func (s *syncService) Close(ctx context.Context) (err error) {
+	receiveErr := s.receiveQueue.Close()
+	providerErr := s.sendQueueProvider.Close()
+	if receiveErr != nil || providerErr != nil {
+		err = errors.Join(receiveErr, providerErr)
+	}
+	s.manager.Close()
+	return
 }
 
 func (s *syncService) BroadcastMessage(ctx context.Context, msg drpc.Message) error {
@@ -83,6 +98,12 @@ func (s *syncService) handleIncomingMessage(msg msgCtx) {
 	if err != nil {
 		log.Error("failed to queue request", zap.Error(err))
 	}
+	//msg.StartHandlingTime = time.Now()
+	//ctx := peer.CtxWithPeerId(context.Background(), msg.SenderId)
+	//ctx = logger.CtxWithFields(ctx, zap.Uint64("msgId", msg.Id), zap.String("senderId", msg.SenderId))
+	//s.metric.RequestLog(msg.PeerCtx, "space.streamOp", msg.LogFields(
+	//	zap.Error(err),
+	//)...)
 }
 
 func (s *syncService) GetQueue(peerId string) *multiqueue.Queue[drpc.Message] {
@@ -96,10 +117,15 @@ func (s *syncService) NewReadMessage() drpc.Message {
 
 func (s *syncService) HandleMessage(ctx context.Context, peerId string, msg drpc.Message) error {
 	// TODO: make this queue per object and add closing of the individual queues
-	return s.receiveQueue.Add(ctx, peerId, msgCtx{
+	err := s.receiveQueue.Add(ctx, peerId, msgCtx{
 		ctx:     ctx,
 		Message: msg,
 	})
+	if errors.Is(err, mb.ErrOverflowed) {
+		log.Info("queue overflowed", zap.String("peerId", peerId))
+		return nil
+	}
+	return err
 }
 
 func (s *syncService) QueueRequest(ctx context.Context, rq syncdeps.Request) error {

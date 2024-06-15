@@ -73,16 +73,25 @@ func (s *syncAclHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.M
 }
 
 func (s *syncAclHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, send func(resp proto.Message) error) (syncdeps.Request, error) {
-	req, ok := rq.(*Request)
+	req, ok := rq.(*objectsync.Request)
 	if !ok {
 		return nil, ErrUnexpectedRequestType
 	}
-	s.aclList.Lock()
-	if !s.aclList.HasHead(req.head) {
-		s.aclList.Unlock()
-		return s.syncClient.CreateFullSyncRequest(req.peerId, s.aclList), nil
+	syncMsg := &consensusproto.LogSyncMessage{}
+	err := proto.Unmarshal(req.Bytes, syncMsg)
+	if err != nil {
+		return nil, err
 	}
-	resp, err := s.syncClient.CreateFullSyncResponse(s.aclList, req.head)
+	request := syncMsg.GetContent().GetFullSyncRequest()
+	if request == nil {
+		return nil, ErrUnexpectedRequestType
+	}
+	s.aclList.Lock()
+	if !s.aclList.HasHead(request.Head) {
+		s.aclList.Unlock()
+		return s.syncClient.CreateFullSyncRequest(req.PeerId(), s.aclList), nil
+	}
+	resp, err := s.syncClient.CreateFullSyncResponse(s.aclList, request.Head)
 	if err != nil {
 		s.aclList.Unlock()
 		return nil, err

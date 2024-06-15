@@ -16,6 +16,7 @@ type RequestManager interface {
 	QueueRequest(rq syncdeps.Request) error
 	SendRequest(ctx context.Context, rq syncdeps.Request, collector syncdeps.ResponseCollector) error
 	HandleStreamRequest(ctx context.Context, rq syncdeps.Request, stream drpc.Stream) error
+	Close()
 }
 
 type StreamResponse struct {
@@ -77,6 +78,10 @@ func (r *requestManager) HandleStreamRequest(ctx context.Context, rq syncdeps.Re
 		return r.QueueRequest(newRq)
 	}
 	return nil
+}
+
+func (r *requestManager) Close() {
+	r.requestPool.Close()
 }
 
 func fullId(peerId, objectId string) string {

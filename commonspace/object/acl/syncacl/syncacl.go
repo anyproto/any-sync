@@ -30,6 +30,7 @@ var (
 type SyncAcl interface {
 	app.ComponentRunnable
 	list.AclList
+	syncdeps.ObjectSyncHandler
 	SetHeadUpdater(updater headupdater.HeadUpdater)
 	SyncWithPeer(ctx context.Context, peerId string) (err error)
 	SetAclUpdater(updater headupdater.AclUpdater)
