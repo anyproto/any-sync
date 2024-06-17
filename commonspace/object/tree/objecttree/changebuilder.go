@@ -67,7 +67,7 @@ type changeBuilder struct {
 }
 
 func NewChangeBuilder(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
-	return &changeBuilder{keys: keys, rootChange: rootChange, newChange: NewChange}
+	return &changeBuilder{keys: keys, rootChange: rootChange, newChange: NewChange, rawTreeCh: &treechangeproto.RawTreeChange{}}
 }
 
 func (c *changeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error) {

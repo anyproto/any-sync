@@ -130,6 +130,10 @@ func (r *RpcServer) getSpace(ctx context.Context, spaceId string) (sp Space, err
 		if err != nil {
 			return nil, err
 		}
+		err = sp.Init(ctx)
+		if err != nil {
+			return nil, err
+		}
 		r.spaces[spaceId] = sp
 	}
 	return sp, nil
@@ -251,13 +255,13 @@ func (s *spaceProcess) update(ctx context.Context) error {
 	var tr objecttree.ObjectTree
 	newDoc := rand.Int()%10 == 0
 	snapshot := rand.Int()%10 == 0
-	if newDoc {
+	allTrees := sp.StoredIds()
+	if newDoc || len(allTrees) == 0 {
 		tr, err = s.manager.CreateTree(ctx, s.spaceId)
 		if err != nil {
 			return err
 		}
 	} else {
-		allTrees := sp.StoredIds()
 		rnd := rand.Int() % len(allTrees)
 		tr, err = s.manager.GetTree(ctx, s.spaceId, allTrees[rnd])
 		if err != nil {

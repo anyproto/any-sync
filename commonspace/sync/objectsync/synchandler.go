@@ -20,8 +20,6 @@ import (
 	"github.com/anyproto/any-sync/net/pool"
 )
 
-const CName = "common.sync.objectsync"
-
 var ErrUnexpectedHeadUpdateType = errors.New("unexpected head update type")
 
 type objectSync struct {
@@ -44,7 +42,7 @@ func (o *objectSync) Init(a *app.App) (err error) {
 }
 
 func (o *objectSync) Name() (name string) {
-	return CName
+	return syncdeps.CName
 }
 
 func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (syncdeps.Request, error) {
