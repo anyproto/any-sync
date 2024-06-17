@@ -4,13 +4,13 @@ import (
 	"context"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
-	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
 
 type RequestFactory interface {
-	CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (headUpdate *objectsync.HeadUpdate)
-	CreateFullSyncRequest(peerId string, l list.AclList) *objectsync.Request
+	CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (headUpdate *objectmessages.HeadUpdate)
+	CreateFullSyncRequest(peerId string, l list.AclList) *objectmessages.Request
 	CreateFullSyncResponse(l list.AclList, theirHead string) (resp *Response, err error)
 }
 
@@ -22,9 +22,9 @@ func NewRequestFactory(spaceId string) RequestFactory {
 	return &requestFactory{spaceId: spaceId}
 }
 
-func (r *requestFactory) CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (headUpdate *objectsync.HeadUpdate) {
-	return &objectsync.HeadUpdate{
-		Meta: objectsync.ObjectMeta{
+func (r *requestFactory) CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (headUpdate *objectmessages.HeadUpdate) {
+	return &objectmessages.HeadUpdate{
+		Meta: objectmessages.ObjectMeta{
 			ObjectId: l.Id(),
 			SpaceId:  r.spaceId,
 		},
@@ -36,7 +36,7 @@ func (r *requestFactory) CreateHeadUpdate(l list.AclList, added []*consensusprot
 	}
 }
 
-func (r *requestFactory) CreateFullSyncRequest(peerId string, l list.AclList) *objectsync.Request {
+func (r *requestFactory) CreateFullSyncRequest(peerId string, l list.AclList) *objectmessages.Request {
 	return NewRequest(peerId, l.Id(), r.spaceId, l.Head().Id, l.Root())
 }
 

@@ -1,7 +1,7 @@
 package syncacl
 
 import (
-	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
 
@@ -11,7 +11,7 @@ type InnerHeadUpdate struct {
 	root    *consensusproto.RawRecordWithId
 }
 
-func (h InnerHeadUpdate) Marshall(data objectsync.ObjectMeta) ([]byte, error) {
+func (h InnerHeadUpdate) Marshall(data objectmessages.ObjectMeta) ([]byte, error) {
 	treeMsg := consensusproto.WrapHeadUpdate(&consensusproto.LogHeadUpdate{
 		Head:    h.head,
 		Records: h.records,

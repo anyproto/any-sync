@@ -1,4 +1,4 @@
-package objectsync
+package objectmessages
 
 import (
 	"github.com/gogo/protobuf/proto"

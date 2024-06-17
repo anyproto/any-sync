@@ -23,7 +23,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	syncservice "github.com/anyproto/any-sync/commonspace/sync"
-	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -149,7 +149,7 @@ func (s *space) HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto
 	if err != nil {
 		return
 	}
-	objSyncReq := objectsync.NewByteRequest(peerId, req.SpaceId, req.ObjectId, req.Payload)
+	objSyncReq := objectmessages.NewByteRequest(peerId, req.SpaceId, req.ObjectId, req.Payload)
 	return s.syncService.HandleStreamRequest(ctx, objSyncReq, stream)
 }
 

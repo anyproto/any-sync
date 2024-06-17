@@ -8,7 +8,7 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
-	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/net/peer"
@@ -40,7 +40,7 @@ func newSyncAclHandler(spaceId string, aclList list.AclList, syncClient SyncClie
 }
 
 func (s *syncAclHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (syncdeps.Request, error) {
-	update, ok := headUpdate.(*objectsync.HeadUpdate)
+	update, ok := headUpdate.(*objectmessages.HeadUpdate)
 	if !ok {
 		return nil, ErrUnexpectedResponseType
 	}
@@ -73,7 +73,7 @@ func (s *syncAclHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.M
 }
 
 func (s *syncAclHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, send func(resp proto.Message) error) (syncdeps.Request, error) {
-	req, ok := rq.(*objectsync.Request)
+	req, ok := rq.(*objectmessages.Request)
 	if !ok {
 		return nil, ErrUnexpectedRequestType
 	}

@@ -9,7 +9,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/util/slice"
@@ -36,7 +36,7 @@ func NewSyncHandler(tree SyncTree, syncClient SyncClient, spaceId string) syncde
 }
 
 func (s *syncHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (req syncdeps.Request, err error) {
-	update, ok := headUpdate.(*objectsync.HeadUpdate)
+	update, ok := headUpdate.(*objectmessages.HeadUpdate)
 	if !ok {
 		return nil, ErrUnexpectedResponseType
 	}
@@ -76,7 +76,7 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Mess
 }
 
 func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, send func(resp proto.Message) error) (syncdeps.Request, error) {
-	req, ok := rq.(*objectsync.Request)
+	req, ok := rq.(*objectmessages.Request)
 	if !ok {
 		return nil, ErrUnexpectedRequestType
 	}

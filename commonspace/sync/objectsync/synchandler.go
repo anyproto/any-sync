@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
@@ -47,7 +48,7 @@ func (o *objectSync) Name() (name string) {
 }
 
 func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (syncdeps.Request, error) {
-	update, ok := headUpdate.(*HeadUpdate)
+	update, ok := headUpdate.(*objectmessages.HeadUpdate)
 	if !ok {
 		return nil, ErrUnexpectedHeadUpdateType
 	}
@@ -123,5 +124,5 @@ func (o *objectSync) SendStreamRequest(ctx context.Context, rq syncdeps.Request,
 }
 
 func (o *objectSync) NewMessage() drpc.Message {
-	return &HeadUpdate{}
+	return &objectmessages.HeadUpdate{}
 }

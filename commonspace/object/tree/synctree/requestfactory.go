@@ -3,15 +3,15 @@ package synctree
 import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 )
 
 const batchSize = 1024 * 1024 * 10
 
 type RequestFactory interface {
-	CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectsync.HeadUpdate)
-	CreateNewTreeRequest(peerId, objectId string) *objectsync.Request
-	CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectsync.Request
+	CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectmessages.HeadUpdate)
+	CreateNewTreeRequest(peerId, objectId string) *objectmessages.Request
+	CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectmessages.Request
 	CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (ResponseProducer, error)
 }
 
@@ -23,13 +23,13 @@ type requestFactory struct {
 	spaceId string
 }
 
-func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectsync.HeadUpdate) {
+func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectmessages.HeadUpdate) {
 	broadcastOpts := BroadcastOptions{}
 	if ignoredPeer != "" {
 		broadcastOpts.EmptyPeers = []string{ignoredPeer}
 	}
-	return &objectsync.HeadUpdate{
-		Meta: objectsync.ObjectMeta{
+	return &objectmessages.HeadUpdate{
+		Meta: objectmessages.ObjectMeta{
 			ObjectId: t.Id(),
 			SpaceId:  r.spaceId,
 		},
@@ -43,11 +43,11 @@ func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer s
 	}
 }
 
-func (r *requestFactory) CreateNewTreeRequest(peerId, objectId string) *objectsync.Request {
+func (r *requestFactory) CreateNewTreeRequest(peerId, objectId string) *objectmessages.Request {
 	return NewRequest(peerId, r.spaceId, objectId, nil, nil, nil)
 }
 
-func (r *requestFactory) CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectsync.Request {
+func (r *requestFactory) CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectmessages.Request {
 	return NewRequest(peerId, r.spaceId, t.Id(), t.Heads(), t.SnapshotPath(), t.Header())
 }
 

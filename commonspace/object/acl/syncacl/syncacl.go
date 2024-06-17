@@ -8,7 +8,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/headupdater"
 	"github.com/anyproto/any-sync/commonspace/sync"
-	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 
 	"github.com/anyproto/any-sync/accountservice"
@@ -102,7 +102,7 @@ func (s *syncAcl) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 	return
 }
 
-func (s *syncAcl) broadcast(headUpdate *objectsync.HeadUpdate) {
+func (s *syncAcl) broadcast(headUpdate *objectmessages.HeadUpdate) {
 	err := s.syncClient.Broadcast(context.Background(), headUpdate)
 	if err != nil {
 		log.Error("broadcast acl message error", zap.Error(err))
