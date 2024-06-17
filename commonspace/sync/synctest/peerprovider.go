@@ -10,7 +10,7 @@ import (
 	"github.com/anyproto/any-sync/net/rpc/server"
 )
 
-const PeerName = "peerprovider"
+const PeerName = "net.peerservice"
 
 type PeerProvider struct {
 	sync.Mutex
@@ -41,6 +41,10 @@ func (c *PeerProvider) Name() (name string) {
 
 func (c *PeerProvider) GetPeerIds() (peerIds []string) {
 	return c.pool.GetPeerIds()
+}
+
+func (c *PeerProvider) Dial(ctx context.Context, peerId string) (pr peer.Peer, err error) {
+	return c.GetPeer(peerId)
 }
 
 func (c *PeerProvider) GetPeer(peerId string) (pr peer.Peer, err error) {

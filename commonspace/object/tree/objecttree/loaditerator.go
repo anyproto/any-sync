@@ -185,8 +185,8 @@ func (l *loadIterator) load(commonSnapshot string, heads, breakpoints []string) 
 	if err != nil {
 		return
 	}
+	l.root = loadedCs.change
 	l.lastHeads = []string{l.root.Id}
 	l.lastChange = loadedCs.change
-	l.root = loadedCs.change
 	return nil
 }

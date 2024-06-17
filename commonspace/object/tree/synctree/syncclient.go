@@ -23,7 +23,7 @@ type syncClient struct {
 
 func NewSyncClient(spaceId string, syncService sync.SyncService) SyncClient {
 	return &syncClient{
-		RequestFactory: &requestFactory{},
+		RequestFactory: NewRequestFactory(spaceId),
 		spaceId:        spaceId,
 		syncService:    syncService,
 	}

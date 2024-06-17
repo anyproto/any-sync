@@ -560,6 +560,7 @@ func (c *streamOpener) OpenStream(ctx context.Context, p peer.Peer) (stream drpc
 	}
 	if err = objectStream.Send(&spacesyncproto.ObjectSyncMessage{
 		Payload: payload,
+		SpaceId: c.spaceId,
 	}); err != nil {
 		return
 	}
@@ -639,6 +640,7 @@ func newFixtureWithData(t *testing.T, spaceId string, keys *accountdata.AccountK
 		Register(peerPool).
 		Register(rpctest.NewTestServer()).
 		Register(synctest.NewPeerProvider(keys.PeerId)).
+		Register(pool.New()).
 		Register(credentialprovider.NewNoOp()).
 		Register(&mockStatusServiceProvider{}).
 		Register(mockCoordinatorClient{}).
@@ -735,5 +737,6 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 
 func Test(t *testing.T) {
 	mpFixture := newMultiPeerFixture(t, 3)
+	time.Sleep(100 * time.Second)
 	mpFixture.Close()
 }

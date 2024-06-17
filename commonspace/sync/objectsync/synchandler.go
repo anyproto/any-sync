@@ -38,6 +38,7 @@ func New() syncdeps.SyncHandler {
 
 func (o *objectSync) Init(a *app.App) (err error) {
 	o.manager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
+	o.pool = a.MustComponent(pool.CName).(pool.Service)
 	return
 }
 
@@ -50,9 +51,13 @@ func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Messa
 	if !ok {
 		return nil, ErrUnexpectedHeadUpdateType
 	}
+	peerId, err := peer.CtxPeerId(ctx)
+	if err != nil {
+		return nil, err
+	}
 	obj, err := o.manager.GetTree(context.Background(), update.Meta.SpaceId, update.Meta.ObjectId)
 	if err != nil {
-		return synctree.NewRequest(update.Meta.PeerId, update.Meta.SpaceId, update.Meta.ObjectId, nil, nil, nil), nil
+		return synctree.NewRequest(peerId, update.Meta.SpaceId, update.Meta.ObjectId, nil, nil, nil), nil
 	}
 	objHandler, ok := obj.(syncdeps.ObjectSyncHandler)
 	if !ok {
