@@ -2,11 +2,13 @@ package rpctest
 
 import (
 	"context"
+	"fmt"
+	"sync"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
-	"sync"
 )
 
 func NewTestPool() *TestPool {
@@ -73,4 +75,16 @@ func (t *TestPool) AddPeer(ctx context.Context, p peer.Peer) (err error) {
 	defer t.mu.Unlock()
 	t.peers[p.Id()] = p
 	return nil
+}
+
+func (t *TestPool) Pick(ctx context.Context, id string) (peer.Peer, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if p, ok := t.peers[id]; ok {
+		return p, nil
+	}
+	if t.ts == nil {
+		return nil, net.ErrUnableToConnect
+	}
+	return nil, fmt.Errorf("not found")
 }

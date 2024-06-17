@@ -67,20 +67,20 @@ type SpaceService interface {
 
 type Deps struct {
 	TreeSyncer treesyncer.TreeSyncer
+	SyncStatus syncstatus.StatusUpdater
 }
 
 type spaceService struct {
-	config                config.Config
-	account               accountservice.Service
-	configurationService  nodeconf.Service
-	storageProvider       spacestorage.SpaceStorageProvider
-	peerManagerProvider   peermanager.PeerManagerProvider
-	credentialProvider    credentialprovider.CredentialProvider
-	statusServiceProvider syncstatus.StatusServiceProvider
-	treeManager           treemanager.TreeManager
-	pool                  pool.Pool
-	metric                metric.Metric
-	app                   *app.App
+	config               config.Config
+	account              accountservice.Service
+	configurationService nodeconf.Service
+	storageProvider      spacestorage.SpaceStorageProvider
+	peerManagerProvider  peermanager.PeerManagerProvider
+	credentialProvider   credentialprovider.CredentialProvider
+	treeManager          treemanager.TreeManager
+	pool                 pool.Pool
+	metric               metric.Metric
+	app                  *app.App
 }
 
 func (s *spaceService) Init(a *app.App) (err error) {
@@ -90,7 +90,6 @@ func (s *spaceService) Init(a *app.App) (err error) {
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	s.peerManagerProvider = a.MustComponent(peermanager.CName).(peermanager.PeerManagerProvider)
-	s.statusServiceProvider = a.MustComponent(syncstatus.CName).(syncstatus.StatusServiceProvider)
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
 	s.app = a
@@ -176,12 +175,11 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 	if err != nil {
 		return nil, err
 	}
-	statusService := s.statusServiceProvider.NewStatusService()
 	spaceApp := s.app.ChildApp()
 	spaceApp.Register(state).
+		Register(deps.SyncStatus).
 		Register(peerManager).
 		Register(newCommonStorage(st)).
-		Register(statusService).
 		Register(syncacl.New()).
 		Register(requestmanager.New()).
 		Register(deletionstate.New()).

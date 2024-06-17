@@ -17,8 +17,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/any-sync/commonspace/syncstatus"
-	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/util/slice"
@@ -42,7 +40,6 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 		clientFactory:      spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient),
 		credentialProvider: hs.credentialProvider,
 		log:                newSyncLogger(hs.log, logPeriodSecs),
-		syncStatus:         hs.syncStatus,
 		deletionState:      hs.deletionState,
 		syncAcl:            hs.syncAcl,
 		treeSyncer:         hs.treeSyncer,
@@ -60,7 +57,6 @@ type diffSyncer struct {
 	log                syncLogger
 	deletionState      deletionstate.ObjectDeletionState
 	credentialProvider credentialprovider.CredentialProvider
-	syncStatus         syncstatus.StatusUpdater
 	syncAcl            syncacl.SyncAcl
 }
 
@@ -126,7 +122,6 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	var (
 		cl                             = d.clientFactory.Client(conn)
 		rdiff                          = NewRemoteDiff(d.spaceId, cl)
-		stateCounter                   = d.syncStatus.StateCounter()
 		syncAclId                      = d.syncAcl.Id()
 		newIds, changedIds, removedIds []string
 	)
@@ -144,18 +139,17 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 			return d.onDiffError(ctx, p, cl, err)
 		}
 	}
-	d.syncStatus.SetNodesStatus(p.Id(), syncstatus.Online)
 
 	totalLen := len(newIds) + len(changedIds) + len(removedIds)
 	// not syncing ids which were removed through settings document
 	missingIds := d.deletionState.Filter(newIds)
 	existingIds := append(d.deletionState.Filter(removedIds), d.deletionState.Filter(changedIds)...)
-	d.syncStatus.RemoveAllExcept(p.Id(), existingIds, stateCounter)
 
 	prevExistingLen := len(existingIds)
 	existingIds = slice.DiscardFromSlice(existingIds, func(s string) bool {
 		return s == syncAclId
 	})
+
 	// if we removed acl head from the list
 	if len(existingIds) < prevExistingLen {
 		if syncErr := d.syncAcl.SyncWithPeer(ctx, p.Id()); syncErr != nil {
@@ -174,24 +168,13 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 
 func (d *diffSyncer) onDiffError(ctx context.Context, p peer.Peer, cl spacesyncproto.DRPCSpaceSyncClient, err error) error {
 	if err != spacesyncproto.ErrSpaceMissing {
-		if err == spacesyncproto.ErrSpaceIsDeleted {
-			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.RemovedFromNetwork)
-		} else {
-			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.ConnectionError)
-		}
 		return err
 	}
 	// in case space is missing on peer, we should send push request
 	err = d.sendPushSpaceRequest(ctx, p.Id(), cl)
 	if err != nil {
-		if err == coordinatorproto.ErrSpaceIsDeleted {
-			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.RemovedFromNetwork)
-		} else {
-			d.syncStatus.SetNodesStatus(p.Id(), syncstatus.ConnectionError)
-		}
 		return err
 	}
-	d.syncStatus.SetNodesStatus(p.Id(), syncstatus.Online)
 	return nil
 }
 
