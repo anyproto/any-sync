@@ -26,6 +26,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -86,6 +87,7 @@ type Space interface {
 	GetNodePeers(ctx context.Context) (peer []peer.Peer, err error)
 
 	HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage, stream drpc.Stream) (err error)
+	HandleStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
 
 	TryClose(objectTTL time.Duration) (close bool, err error)
@@ -104,6 +106,7 @@ type space struct {
 	peerManager peermanager.PeerManager
 	headSync    headsync.HeadSync
 	syncService syncservice.SyncService
+	streamPool  streampool.StreamPool
 	syncStatus  syncstatus.StatusService
 	settings    settings.Settings
 	storage     spacestorage.SpaceStorage
@@ -142,6 +145,10 @@ func (s *space) DebugAllHeads() []headsync.TreeHeads {
 
 func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
 	return s.settings.DeleteTree(ctx, id)
+}
+
+func (s *space) HandleStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error {
+	return s.streamPool.ReadStream(stream)
 }
 
 func (s *space) HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage, stream drpc.Stream) (err error) {
@@ -194,6 +201,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.storage = s.app.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	s.peerManager = s.app.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	s.aclList = s.app.MustComponent(syncacl.CName).(list.AclList)
+	s.streamPool = s.app.MustComponent(streampool.CName).(streampool.StreamPool)
 	s.treeSyncer = s.app.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	s.aclClient = s.app.MustComponent(aclclient.CName).(aclclient.AclSpaceClient)
 	s.header, err = s.storage.SpaceHeader()
