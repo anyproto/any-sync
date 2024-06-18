@@ -2,6 +2,7 @@ package objecttree
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 )
@@ -212,6 +214,51 @@ func TestObjectTree(t *testing.T) {
 	aclList, keys := prepareAclList(t)
 	ctx := context.Background()
 
+	t.Run("delete object tree", func(t *testing.T) {
+		exec := list.NewAclExecutor("spaceId")
+		type cmdErr struct {
+			cmd string
+			err error
+		}
+		cmds := []cmdErr{
+			{"a.init::a", nil},
+		}
+		for _, cmd := range cmds {
+			err := exec.Execute(cmd.cmd)
+			require.Equal(t, cmd.err, err, cmd)
+		}
+		aAccount := exec.ActualAccounts()["a"]
+		root, err := CreateObjectTreeRoot(ObjectTreeCreatePayload{
+			PrivKey:       aAccount.Keys.SignKey,
+			ChangeType:    "changeType",
+			ChangePayload: nil,
+			SpaceId:       "spaceId",
+			IsEncrypted:   true,
+		}, aAccount.Acl)
+		require.NoError(t, err)
+		aStore, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
+		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
+		require.NoError(t, err)
+		err = aTree.Delete()
+		require.NoError(t, err)
+		_, err = aTree.ChangesAfterCommonSnapshot(nil, nil)
+		require.Equal(t, ErrDeleted, err)
+		err = aTree.IterateFrom("", nil, func(change *Change) bool {
+			return true
+		})
+		require.Equal(t, ErrDeleted, err)
+		_, err = aTree.AddContent(ctx, SignableChangeContent{})
+		require.Equal(t, ErrDeleted, err)
+		_, err = aTree.AddRawChanges(ctx, RawChangesPayload{})
+		require.Equal(t, ErrDeleted, err)
+		_, err = aTree.PrepareChange(SignableChangeContent{})
+		require.Equal(t, ErrDeleted, err)
+		_, err = aTree.UnpackChange(nil)
+		require.Equal(t, ErrDeleted, err)
+		_, err = aTree.GetChange("")
+		require.Equal(t, ErrDeleted, err)
+	})
+
 	t.Run("user delete logic: validation, key change, decryption", func(t *testing.T) {
 		exec := list.NewAclExecutor("spaceId")
 		type cmdErr struct {
@@ -284,6 +331,84 @@ func TestObjectTree(t *testing.T) {
 			return true
 		})
 		require.NoError(t, err)
+	})
+
+	t.Run("filter changes when no aclHeadId", func(t *testing.T) {
+		exec := list.NewAclExecutor("spaceId")
+		type cmdErr struct {
+			cmd string
+			err error
+		}
+		cmds := []cmdErr{
+			{"a.init::a", nil},
+			{"a.invite::invId", nil},
+			{"b.join::invId", nil},
+			{"a.approve::b,r", nil},
+		}
+		for _, cmd := range cmds {
+			err := exec.Execute(cmd.cmd)
+			require.Equal(t, cmd.err, err, cmd)
+		}
+		aAccount := exec.ActualAccounts()["a"]
+		bAccount := exec.ActualAccounts()["b"]
+		root, err := CreateObjectTreeRoot(ObjectTreeCreatePayload{
+			PrivKey:       aAccount.Keys.SignKey,
+			ChangeType:    "changeType",
+			ChangePayload: nil,
+			SpaceId:       "spaceId",
+			IsEncrypted:   true,
+		}, aAccount.Acl)
+		require.NoError(t, err)
+		aStore, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
+		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
+		require.NoError(t, err)
+		_, err = aTree.AddContent(ctx, SignableChangeContent{
+			Data:        []byte("some"),
+			Key:         aAccount.Keys.SignKey,
+			IsSnapshot:  false,
+			IsEncrypted: true,
+			DataType:    mockDataType,
+		})
+		require.NoError(t, err)
+		bStore := aTree.Storage().(*treestorage.InMemoryTreeStorage).Copy()
+		// copying old version of storage
+		prevAclRecs, err := bAccount.Acl.RecordsAfter(ctx, "")
+		require.NoError(t, err)
+		storage, err := liststorage.NewInMemoryAclListStorage(prevAclRecs[0].Id, prevAclRecs)
+		require.NoError(t, err)
+		acl, err := list.BuildAclListWithIdentity(bAccount.Keys, storage, list.NoOpAcceptorVerifier{})
+		require.NoError(t, err)
+		// creating tree with old storage which doesn't have a new invite record
+		bTree, err := BuildKeyFilterableObjectTree(bStore, acl)
+		require.NoError(t, err)
+		err = exec.Execute("a.invite::inv1Id")
+		require.NoError(t, err)
+		res, err := aTree.AddContent(ctx, SignableChangeContent{
+			Data:        []byte("some"),
+			Key:         aAccount.Keys.SignKey,
+			IsSnapshot:  false,
+			IsEncrypted: true,
+			DataType:    mockDataType,
+		})
+		unexpectedId := res.Added[0].Id
+		require.NoError(t, err)
+		var collectedChanges []*Change
+		err = aTree.IterateRoot(func(change *Change, decrypted []byte) (any, error) {
+			return nil, nil
+		}, func(change *Change) bool {
+			collectedChanges = append(collectedChanges, change)
+			return true
+		})
+		require.NoError(t, err)
+		bObjTree := bTree.(*objectTree)
+		// this is just a random slice, so the func works
+		indexes := []int{1, 2, 3, 4, 5}
+		// checking that we filter the changes
+		filtered, filteredChanges, _, _ := bObjTree.validator.FilterChanges(bObjTree.aclList, collectedChanges, nil, indexes)
+		require.True(t, filtered)
+		for _, ch := range filteredChanges {
+			require.NotEqual(t, unexpectedId, ch.Id)
+		}
 	})
 
 	t.Run("add content", func(t *testing.T) {
@@ -1274,7 +1399,7 @@ func TestObjectTree(t *testing.T) {
 			Heads:         []string{"3"},
 			Changes:       rawChanges,
 		}, ctx.aclList)
-		require.Equal(t, ErrHasInvalidChanges, err)
+		require.True(t, errors.Is(err, ErrHasInvalidChanges))
 	})
 
 	t.Run("gen changes test load iterator simple", func(t *testing.T) {

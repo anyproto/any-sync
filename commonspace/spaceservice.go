@@ -114,7 +114,7 @@ func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePaylo
 		return
 	}
 
-	return store.Id(), nil
+	return store.Id(), store.Close(ctx)
 }
 
 func (s *spaceService) DeriveId(ctx context.Context, payload SpaceDerivePayload) (id string, err error) {
@@ -139,7 +139,7 @@ func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePaylo
 		return
 	}
 
-	return store.Id(), nil
+	return store.Id(), store.Close(ctx)
 }
 
 func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Space, error) {

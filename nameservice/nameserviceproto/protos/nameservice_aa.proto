@@ -79,6 +79,8 @@ message CreateUserOperationRequest {
 
   string ownerEthAddress = 4;
 
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
   string ownerAnyID = 5;
 
   // all operations currently are towards single name, please specify it
@@ -98,6 +100,45 @@ message NameRegisterRequest {
   string fullName = 1;
 
   // A content hash attached to this name
+  // This should not be empty!
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
+  string ownerAnyAddress = 2;
+  
+  // An Ethereum address that owns that name
+  string ownerEthAddress = 3;
+
+  // if false -> name ownership will belong to ownerEthAddress
+  // if true -> name ownership will belong to SCW of ownerEthAddress (AccountAbstraction)
+  bool registerToSmartContractWallet = 4;
+
+  // How many months to register the name for
+  uint32 registerPeriodMonths = 5;
+
+  // Example:
+  // 1 - register alice.any -> ANYID123123
+  // 2 - register xxxx.any -> ANYID123123
+  // reverse resolve ANYID123123 will return xxxx.any 
+  //
+  // TODO: currently by default "true"
+  // bool updateReverseResolver = 4;
+}
+
+message NameRegisterRequestSigned {
+  // NameRegisterRequest struct
+  bytes payload = 1;
+
+  // payload signed by payload.ownerEthAddress 
+  bytes signature = 2; 
+}
+
+message NameRegisterForSpaceRequest {
+  string fullName = 1;
+
+  // A content hash attached to this name
+  // This should not be empty!
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
   string ownerAnyAddress = 2;
   
   // An Ethereum address that owns that name
@@ -105,6 +146,9 @@ message NameRegisterRequest {
 
   // A SpaceID attached to this name
   string spaceId = 4;
+
+  // How many months to register the name for
+  uint32 registerPeriodMonths = 5;
 }
 
 message GetOperationStatusRequest {
@@ -153,7 +197,12 @@ service AnynsAccountAbstraction {
   // 2. sign it with your Ethereum private key
   // 3. send it using CreateUserOperation
   // 4. check operation status using GetOperation
+  //
+  // Register new name for my Any identity
   rpc GetDataNameRegister(NameRegisterRequest) returns (GetDataNameRegisterResponse) {}
+
+  // Register new name and attach Space ID to it
+  rpc GetDataNameRegisterForSpace(NameRegisterForSpaceRequest) returns (GetDataNameRegisterResponse) {}
   
   // TODO
   //rpc GetDataNameUpdate(NameUpdateRequest) returns (GetDataNameRegisterResponse) {}

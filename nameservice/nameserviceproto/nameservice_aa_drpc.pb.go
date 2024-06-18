@@ -45,6 +45,7 @@ type DRPCAnynsAccountAbstractionClient interface {
 	AdminFundGasOperations(ctx context.Context, in *AdminFundGasOperationsRequestSigned) (*OperationResponse, error)
 	GetUserAccount(ctx context.Context, in *GetUserAccountRequest) (*UserAccount, error)
 	GetDataNameRegister(ctx context.Context, in *NameRegisterRequest) (*GetDataNameRegisterResponse, error)
+	GetDataNameRegisterForSpace(ctx context.Context, in *NameRegisterForSpaceRequest) (*GetDataNameRegisterResponse, error)
 	CreateUserOperation(ctx context.Context, in *CreateUserOperationRequestSigned) (*OperationResponse, error)
 }
 
@@ -103,6 +104,15 @@ func (c *drpcAnynsAccountAbstractionClient) GetDataNameRegister(ctx context.Cont
 	return out, nil
 }
 
+func (c *drpcAnynsAccountAbstractionClient) GetDataNameRegisterForSpace(ctx context.Context, in *NameRegisterForSpaceRequest) (*GetDataNameRegisterResponse, error) {
+	out := new(GetDataNameRegisterResponse)
+	err := c.cc.Invoke(ctx, "/AnynsAccountAbstraction/GetDataNameRegisterForSpace", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_aa_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *drpcAnynsAccountAbstractionClient) CreateUserOperation(ctx context.Context, in *CreateUserOperationRequestSigned) (*OperationResponse, error) {
 	out := new(OperationResponse)
 	err := c.cc.Invoke(ctx, "/AnynsAccountAbstraction/CreateUserOperation", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_aa_proto{}, in, out)
@@ -118,6 +128,7 @@ type DRPCAnynsAccountAbstractionServer interface {
 	AdminFundGasOperations(context.Context, *AdminFundGasOperationsRequestSigned) (*OperationResponse, error)
 	GetUserAccount(context.Context, *GetUserAccountRequest) (*UserAccount, error)
 	GetDataNameRegister(context.Context, *NameRegisterRequest) (*GetDataNameRegisterResponse, error)
+	GetDataNameRegisterForSpace(context.Context, *NameRegisterForSpaceRequest) (*GetDataNameRegisterResponse, error)
 	CreateUserOperation(context.Context, *CreateUserOperationRequestSigned) (*OperationResponse, error)
 }
 
@@ -143,13 +154,17 @@ func (s *DRPCAnynsAccountAbstractionUnimplementedServer) GetDataNameRegister(con
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCAnynsAccountAbstractionUnimplementedServer) GetDataNameRegisterForSpace(context.Context, *NameRegisterForSpaceRequest) (*GetDataNameRegisterResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 func (s *DRPCAnynsAccountAbstractionUnimplementedServer) CreateUserOperation(context.Context, *CreateUserOperationRequestSigned) (*OperationResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
 type DRPCAnynsAccountAbstractionDescription struct{}
 
-func (DRPCAnynsAccountAbstractionDescription) NumMethods() int { return 6 }
+func (DRPCAnynsAccountAbstractionDescription) NumMethods() int { return 7 }
 
 func (DRPCAnynsAccountAbstractionDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -199,6 +214,15 @@ func (DRPCAnynsAccountAbstractionDescription) Method(n int) (string, drpc.Encodi
 					)
 			}, DRPCAnynsAccountAbstractionServer.GetDataNameRegister, true
 	case 5:
+		return "/AnynsAccountAbstraction/GetDataNameRegisterForSpace", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_aa_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnynsAccountAbstractionServer).
+					GetDataNameRegisterForSpace(
+						ctx,
+						in1.(*NameRegisterForSpaceRequest),
+					)
+			}, DRPCAnynsAccountAbstractionServer.GetDataNameRegisterForSpace, true
+	case 6:
 		return "/AnynsAccountAbstraction/CreateUserOperation", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_aa_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCAnynsAccountAbstractionServer).
@@ -290,6 +314,22 @@ type drpcAnynsAccountAbstraction_GetDataNameRegisterStream struct {
 }
 
 func (x *drpcAnynsAccountAbstraction_GetDataNameRegisterStream) SendAndClose(m *GetDataNameRegisterResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_aa_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnynsAccountAbstraction_GetDataNameRegisterForSpaceStream interface {
+	drpc.Stream
+	SendAndClose(*GetDataNameRegisterResponse) error
+}
+
+type drpcAnynsAccountAbstraction_GetDataNameRegisterForSpaceStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnynsAccountAbstraction_GetDataNameRegisterForSpaceStream) SendAndClose(m *GetDataNameRegisterResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_aa_proto{}); err != nil {
 		return err
 	}

@@ -333,30 +333,6 @@ func (mr *MockObjectTreeMockRecorder) PrepareChange(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareChange", reflect.TypeOf((*MockObjectTree)(nil).PrepareChange), arg0)
 }
 
-// RLock mocks base method.
-func (m *MockObjectTree) RLock() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RLock")
-}
-
-// RLock indicates an expected call of RLock.
-func (mr *MockObjectTreeMockRecorder) RLock() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RLock", reflect.TypeOf((*MockObjectTree)(nil).RLock))
-}
-
-// RUnlock mocks base method.
-func (m *MockObjectTree) RUnlock() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RUnlock")
-}
-
-// RUnlock indicates an expected call of RUnlock.
-func (mr *MockObjectTreeMockRecorder) RUnlock() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RUnlock", reflect.TypeOf((*MockObjectTree)(nil).RUnlock))
-}
-
 // Root mocks base method.
 func (m *MockObjectTree) Root() *objecttree.Change {
 	m.ctrl.T.Helper()
@@ -426,20 +402,6 @@ func (m *MockObjectTree) TryLock() bool {
 func (mr *MockObjectTreeMockRecorder) TryLock() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryLock", reflect.TypeOf((*MockObjectTree)(nil).TryLock))
-}
-
-// TryRLock mocks base method.
-func (m *MockObjectTree) TryRLock() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TryRLock")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// TryRLock indicates an expected call of TryRLock.
-func (mr *MockObjectTreeMockRecorder) TryRLock() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryRLock", reflect.TypeOf((*MockObjectTree)(nil).TryRLock))
 }
 
 // Unlock mocks base method.

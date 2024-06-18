@@ -22,27 +22,46 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
+// TODO:
+// later we will have an interface to enumerate all available tiers
+// it's a bad idea to list them here, because interface will be changed often
 type SubscriptionTier int32
 
 const (
-	SubscriptionTier_Tier_Unknown        SubscriptionTier = 0
-	SubscriptionTier_Tier_Friend         SubscriptionTier = 1
-	SubscriptionTier_Tier_Supporter1Year SubscriptionTier = 2
-	SubscriptionTier_Tier_Patron1Year    SubscriptionTier = 3
+	SubscriptionTier_TierUnknown SubscriptionTier = 0
+	// "free" tier
+	SubscriptionTier_TierExplorer SubscriptionTier = 1
+	// these can be used just for testing in debug mode
+	// it will still create an active subscription, but with NO features
+	SubscriptionTier_TierBuilder1WeekTEST   SubscriptionTier = 2
+	SubscriptionTier_TierCoCreator1WeekTEST SubscriptionTier = 3
+	// these are the real tiers:
+	SubscriptionTier_TierBuilder1Year   SubscriptionTier = 4
+	SubscriptionTier_TierCoCreator1Year SubscriptionTier = 5
+	SubscriptionTier_TierBuilderPlus    SubscriptionTier = 6
+	SubscriptionTier_TierAnytypeTeam    SubscriptionTier = 7
 )
 
 var SubscriptionTier_name = map[int32]string{
-	0: "Tier_Unknown",
-	1: "Tier_Friend",
-	2: "Tier_Supporter1Year",
-	3: "Tier_Patron1Year",
+	0: "TierUnknown",
+	1: "TierExplorer",
+	2: "TierBuilder1WeekTEST",
+	3: "TierCoCreator1WeekTEST",
+	4: "TierBuilder1Year",
+	5: "TierCoCreator1Year",
+	6: "TierBuilderPlus",
+	7: "TierAnytypeTeam",
 }
 
 var SubscriptionTier_value = map[string]int32{
-	"Tier_Unknown":        0,
-	"Tier_Friend":         1,
-	"Tier_Supporter1Year": 2,
-	"Tier_Patron1Year":    3,
+	"TierUnknown":            0,
+	"TierExplorer":           1,
+	"TierBuilder1WeekTEST":   2,
+	"TierCoCreator1WeekTEST": 3,
+	"TierBuilder1Year":       4,
+	"TierCoCreator1Year":     5,
+	"TierBuilderPlus":        6,
+	"TierAnytypeTeam":        7,
 }
 
 func (x SubscriptionTier) String() string {
@@ -56,27 +75,30 @@ func (SubscriptionTier) EnumDescriptor() ([]byte, []int) {
 type SubscriptionStatus int32
 
 const (
-	SubscriptionStatus_Status_Unknown  SubscriptionStatus = 0
-	SubscriptionStatus_Status_Pending  SubscriptionStatus = 1
-	SubscriptionStatus_Status_Active   SubscriptionStatus = 2
-	SubscriptionStatus_Status_Expired  SubscriptionStatus = 3
-	SubscriptionStatus_Status_Canceled SubscriptionStatus = 4
+	SubscriptionStatus_StatusUnknown SubscriptionStatus = 0
+	// payment is still pending
+	// this will be the status until the payment is confirmed or N is elapsed and no payment is received
+	// in the last case the subscription will switch to Status_Unknown or Status_Active
+	SubscriptionStatus_StatusPending SubscriptionStatus = 1
+	SubscriptionStatus_StatusActive  SubscriptionStatus = 2
+	// when buying from other side - some data is missing in the Subscription
+	// we need to provide additional data after the payment
+	// please call FinalizeSubscription to fill-in needed fields
+	SubscriptionStatus_StatusPendingRequiresFinalization SubscriptionStatus = 3
 )
 
 var SubscriptionStatus_name = map[int32]string{
-	0: "Status_Unknown",
-	1: "Status_Pending",
-	2: "Status_Active",
-	3: "Status_Expired",
-	4: "Status_Canceled",
+	0: "StatusUnknown",
+	1: "StatusPending",
+	2: "StatusActive",
+	3: "StatusPendingRequiresFinalization",
 }
 
 var SubscriptionStatus_value = map[string]int32{
-	"Status_Unknown":  0,
-	"Status_Pending":  1,
-	"Status_Active":   2,
-	"Status_Expired":  3,
-	"Status_Canceled": 4,
+	"StatusUnknown":                     0,
+	"StatusPending":                     1,
+	"StatusActive":                      2,
+	"StatusPendingRequiresFinalization": 3,
 }
 
 func (x SubscriptionStatus) String() string {
@@ -90,24 +112,33 @@ func (SubscriptionStatus) EnumDescriptor() ([]byte, []int) {
 type PaymentMethod int32
 
 const (
-	PaymentMethod_Method_Card      PaymentMethod = 0
-	PaymentMethod_Method_Crypto    PaymentMethod = 1
-	PaymentMethod_Method_ApplePay  PaymentMethod = 2
-	PaymentMethod_Method_GooglePay PaymentMethod = 3
+	PaymentMethod_MethodCard        PaymentMethod = 0
+	PaymentMethod_MethodCrypto      PaymentMethod = 1
+	PaymentMethod_MethodApplePay    PaymentMethod = 2
+	PaymentMethod_MethodGooglePay   PaymentMethod = 3
+	PaymentMethod_MethodAppleInapp  PaymentMethod = 4
+	PaymentMethod_MethodGoogleInapp PaymentMethod = 5
+	PaymentMethod_MethodNone        PaymentMethod = 6
 )
 
 var PaymentMethod_name = map[int32]string{
-	0: "Method_Card",
-	1: "Method_Crypto",
-	2: "Method_ApplePay",
-	3: "Method_GooglePay",
+	0: "MethodCard",
+	1: "MethodCrypto",
+	2: "MethodApplePay",
+	3: "MethodGooglePay",
+	4: "MethodAppleInapp",
+	5: "MethodGoogleInapp",
+	6: "MethodNone",
 }
 
 var PaymentMethod_value = map[string]int32{
-	"Method_Card":      0,
-	"Method_Crypto":    1,
-	"Method_ApplePay":  2,
-	"Method_GooglePay": 3,
+	"MethodCard":        0,
+	"MethodCrypto":      1,
+	"MethodApplePay":    2,
+	"MethodGooglePay":   3,
+	"MethodAppleInapp":  4,
+	"MethodGoogleInapp": 5,
+	"MethodNone":        6,
 }
 
 func (x PaymentMethod) String() string {
@@ -118,9 +149,134 @@ func (PaymentMethod) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_4feb29dcc5ba50f6, []int{2}
 }
 
-// 1
+type ErrorCodes int32
+
+const (
+	ErrorCodes_Unexpected                ErrorCodes = 0
+	ErrorCodes_EthAddressEmpty           ErrorCodes = 1
+	ErrorCodes_InvalidSignature          ErrorCodes = 2
+	ErrorCodes_TierWrong                 ErrorCodes = 3
+	ErrorCodes_TierNotFound              ErrorCodes = 4
+	ErrorCodes_TierInactive              ErrorCodes = 5
+	ErrorCodes_PaymentMethodWrong        ErrorCodes = 6
+	ErrorCodes_BadAnyName                ErrorCodes = 7
+	ErrorCodes_Unknown                   ErrorCodes = 8
+	ErrorCodes_SubsAlreadyActive         ErrorCodes = 9
+	ErrorCodes_SubsNotFound              ErrorCodes = 10
+	ErrorCodes_SubsWrongState            ErrorCodes = 11
+	ErrorCodes_EmailWrongFormat          ErrorCodes = 12
+	ErrorCodes_EmailAlreadyVerified      ErrorCodes = 13
+	ErrorCodes_EmailAlreadySent          ErrorCodes = 14
+	ErrorCodes_EmailFailedToSend         ErrorCodes = 15
+	ErrorCodes_EmailExpired              ErrorCodes = 16
+	ErrorCodes_EmailWrongCode            ErrorCodes = 17
+	ErrorCodes_AppleInvalidReceipt       ErrorCodes = 18
+	ErrorCodes_ApplePurchaseRegistration ErrorCodes = 19
+	ErrorCodes_AppleSubscriptionRenew    ErrorCodes = 20
+	ErrorCodes_ErrorOffset               ErrorCodes = 600
+)
+
+var ErrorCodes_name = map[int32]string{
+	0:   "Unexpected",
+	1:   "EthAddressEmpty",
+	2:   "InvalidSignature",
+	3:   "TierWrong",
+	4:   "TierNotFound",
+	5:   "TierInactive",
+	6:   "PaymentMethodWrong",
+	7:   "BadAnyName",
+	8:   "Unknown",
+	9:   "SubsAlreadyActive",
+	10:  "SubsNotFound",
+	11:  "SubsWrongState",
+	12:  "EmailWrongFormat",
+	13:  "EmailAlreadyVerified",
+	14:  "EmailAlreadySent",
+	15:  "EmailFailedToSend",
+	16:  "EmailExpired",
+	17:  "EmailWrongCode",
+	18:  "AppleInvalidReceipt",
+	19:  "ApplePurchaseRegistration",
+	20:  "AppleSubscriptionRenew",
+	600: "ErrorOffset",
+}
+
+var ErrorCodes_value = map[string]int32{
+	"Unexpected":                0,
+	"EthAddressEmpty":           1,
+	"InvalidSignature":          2,
+	"TierWrong":                 3,
+	"TierNotFound":              4,
+	"TierInactive":              5,
+	"PaymentMethodWrong":        6,
+	"BadAnyName":                7,
+	"Unknown":                   8,
+	"SubsAlreadyActive":         9,
+	"SubsNotFound":              10,
+	"SubsWrongState":            11,
+	"EmailWrongFormat":          12,
+	"EmailAlreadyVerified":      13,
+	"EmailAlreadySent":          14,
+	"EmailFailedToSend":         15,
+	"EmailExpired":              16,
+	"EmailWrongCode":            17,
+	"AppleInvalidReceipt":       18,
+	"ApplePurchaseRegistration": 19,
+	"AppleSubscriptionRenew":    20,
+	"ErrorOffset":               600,
+}
+
+func (x ErrorCodes) String() string {
+	return proto.EnumName(ErrorCodes_name, int32(x))
+}
+
+func (ErrorCodes) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{3}
+}
+
+type IsNameValidResponse_Code int32
+
+const (
+	IsNameValidResponse_Valid             IsNameValidResponse_Code = 0
+	IsNameValidResponse_NoDotAny          IsNameValidResponse_Code = 1
+	IsNameValidResponse_TooShort          IsNameValidResponse_Code = 2
+	IsNameValidResponse_TooLong           IsNameValidResponse_Code = 3
+	IsNameValidResponse_HasInvalidChars   IsNameValidResponse_Code = 4
+	IsNameValidResponse_TierFeatureNoName IsNameValidResponse_Code = 5
+	IsNameValidResponse_CanNotReserve     IsNameValidResponse_Code = 6
+)
+
+var IsNameValidResponse_Code_name = map[int32]string{
+	0: "Valid",
+	1: "NoDotAny",
+	2: "TooShort",
+	3: "TooLong",
+	4: "HasInvalidChars",
+	5: "TierFeatureNoName",
+	6: "CanNotReserve",
+}
+
+var IsNameValidResponse_Code_value = map[string]int32{
+	"Valid":             0,
+	"NoDotAny":          1,
+	"TooShort":          2,
+	"TooLong":           3,
+	"HasInvalidChars":   4,
+	"TierFeatureNoName": 5,
+	"CanNotReserve":     6,
+}
+
+func (x IsNameValidResponse_Code) String() string {
+	return proto.EnumName(IsNameValidResponse_Code_name, int32(x))
+}
+
+func (IsNameValidResponse_Code) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{19, 0}
+}
+
 type GetSubscriptionRequest struct {
-	// in the following format: "12D3KooWA8EXV3KjBxEU5EnsPfneLx84vMWAtTBQBeyooN82KSuS"
+	// in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+	// you can get it with Account().SignKey.GetPublic().Account()
 	OwnerAnyID string `protobuf:"bytes,1,opt,name=ownerAnyID,proto3" json:"ownerAnyID,omitempty"`
 }
 
@@ -219,19 +375,17 @@ func (m *GetSubscriptionRequestSigned) GetSignature() []byte {
 }
 
 type GetSubscriptionResponse struct {
-	Tier   SubscriptionTier   `protobuf:"varint,1,opt,name=tier,proto3,enum=SubscriptionTier" json:"tier,omitempty"`
-	Status SubscriptionStatus `protobuf:"varint,2,opt,name=status,proto3,enum=SubscriptionStatus" json:"status,omitempty"`
-	// TODO: use google.protobuf.Timestamp and marshall it
-	DateStarted uint64 `protobuf:"varint,3,opt,name=dateStarted,proto3" json:"dateStarted,omitempty"`
-	DateEnds    uint64 `protobuf:"varint,4,opt,name=dateEnds,proto3" json:"dateEnds,omitempty"`
-	IsAutoRenew bool   `protobuf:"varint,5,opt,name=isAutoRenew,proto3" json:"isAutoRenew,omitempty"`
-	// if client has "downgraded" - he is still able to use the service until the end of the period
-	// (dateEnds) but then he will be on nextTier until nextTierEnds
-	//
-	// if Tier0_Unknown -> then no next tier
-	NextTier      SubscriptionTier `protobuf:"varint,6,opt,name=nextTier,proto3,enum=SubscriptionTier" json:"nextTier,omitempty"`
-	NextTierEnds  uint64           `protobuf:"varint,7,opt,name=nextTierEnds,proto3" json:"nextTierEnds,omitempty"`
-	PaymentMethod PaymentMethod    `protobuf:"varint,8,opt,name=paymentMethod,proto3,enum=PaymentMethod" json:"paymentMethod,omitempty"`
+	// was SubscriptionTier before, changed to uint32 to allow us to use dynamic tiers
+	Tier             uint32             `protobuf:"varint,1,opt,name=tier,proto3" json:"tier,omitempty"`
+	Status           SubscriptionStatus `protobuf:"varint,2,opt,name=status,proto3,enum=SubscriptionStatus" json:"status,omitempty"`
+	DateStarted      uint64             `protobuf:"varint,3,opt,name=dateStarted,proto3" json:"dateStarted,omitempty"`
+	DateEnds         uint64             `protobuf:"varint,4,opt,name=dateEnds,proto3" json:"dateEnds,omitempty"`
+	IsAutoRenew      bool               `protobuf:"varint,5,opt,name=isAutoRenew,proto3" json:"isAutoRenew,omitempty"`
+	PaymentMethod    PaymentMethod      `protobuf:"varint,6,opt,name=paymentMethod,proto3,enum=PaymentMethod" json:"paymentMethod,omitempty"`
+	RequestedAnyName string             `protobuf:"bytes,7,opt,name=requestedAnyName,proto3" json:"requestedAnyName,omitempty"`
+	// if user verified her email OR provided it while buying a subscription, it will be here
+	UserEmail             string `protobuf:"bytes,8,opt,name=userEmail,proto3" json:"userEmail,omitempty"`
+	SubscribeToNewsletter bool   `protobuf:"varint,9,opt,name=subscribeToNewsletter,proto3" json:"subscribeToNewsletter,omitempty"`
 }
 
 func (m *GetSubscriptionResponse) Reset()         { *m = GetSubscriptionResponse{} }
@@ -267,18 +421,18 @@ func (m *GetSubscriptionResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GetSubscriptionResponse proto.InternalMessageInfo
 
-func (m *GetSubscriptionResponse) GetTier() SubscriptionTier {
+func (m *GetSubscriptionResponse) GetTier() uint32 {
 	if m != nil {
 		return m.Tier
 	}
-	return SubscriptionTier_Tier_Unknown
+	return 0
 }
 
 func (m *GetSubscriptionResponse) GetStatus() SubscriptionStatus {
 	if m != nil {
 		return m.Status
 	}
-	return SubscriptionStatus_Status_Unknown
+	return SubscriptionStatus_StatusUnknown
 }
 
 func (m *GetSubscriptionResponse) GetDateStarted() uint64 {
@@ -302,40 +456,51 @@ func (m *GetSubscriptionResponse) GetIsAutoRenew() bool {
 	return false
 }
 
-func (m *GetSubscriptionResponse) GetNextTier() SubscriptionTier {
-	if m != nil {
-		return m.NextTier
-	}
-	return SubscriptionTier_Tier_Unknown
-}
-
-func (m *GetSubscriptionResponse) GetNextTierEnds() uint64 {
-	if m != nil {
-		return m.NextTierEnds
-	}
-	return 0
-}
-
 func (m *GetSubscriptionResponse) GetPaymentMethod() PaymentMethod {
 	if m != nil {
 		return m.PaymentMethod
 	}
-	return PaymentMethod_Method_Card
+	return PaymentMethod_MethodCard
 }
 
-// 2
+func (m *GetSubscriptionResponse) GetRequestedAnyName() string {
+	if m != nil {
+		return m.RequestedAnyName
+	}
+	return ""
+}
+
+func (m *GetSubscriptionResponse) GetUserEmail() string {
+	if m != nil {
+		return m.UserEmail
+	}
+	return ""
+}
+
+func (m *GetSubscriptionResponse) GetSubscribeToNewsletter() bool {
+	if m != nil {
+		return m.SubscribeToNewsletter
+	}
+	return false
+}
+
 type BuySubscriptionRequest struct {
-	// in the following format: "12D3KooWA8EXV3KjBxEU5EnsPfneLx84vMWAtTBQBeyooN82KSuS"
-	OwnerAnyID string `protobuf:"bytes,1,opt,name=ownerAnyID,proto3" json:"ownerAnyID,omitempty"`
-	// this is the owner's ETH main EOA (External Owned Account) address
-	//
-	//	not AccountAbstraction's SCW (Smart Contract Wallet) address!
-	//
+	// in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+	// you can get it with Account().SignKey.GetPublic().Account()
+	OwnerAnyId string `protobuf:"bytes,1,opt,name=ownerAnyId,proto3" json:"ownerAnyId,omitempty"`
+	// this is the owner's main EOA (Externally Owned Account) address
+	// not AccountAbstraction's SCW (Smart Contract Wallet) address!
+	// this is required to reserve a name for the owner (later that is done by user)
 	// in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
-	// this is required to reserve a name for the owner
-	OwnerEthAddress string           `protobuf:"bytes,2,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
-	RequestedTier   SubscriptionTier `protobuf:"varint,3,opt,name=requestedTier,proto3,enum=SubscriptionTier" json:"requestedTier,omitempty"`
-	PaymentMethod   PaymentMethod    `protobuf:"varint,4,opt,name=paymentMethod,proto3,enum=PaymentMethod" json:"paymentMethod,omitempty"`
+	OwnerEthAddress string `protobuf:"bytes,2,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
+	// was SubscriptionTier before, changed to uint32 to allow us to use dynamic tiers
+	RequestedTier uint32        `protobuf:"varint,3,opt,name=requestedTier,proto3" json:"requestedTier,omitempty"`
+	PaymentMethod PaymentMethod `protobuf:"varint,4,opt,name=paymentMethod,proto3,enum=PaymentMethod" json:"paymentMethod,omitempty"`
+	// if empty - then no name requested
+	// if non-empty - PP node will register that name on behalf of the user
+	RequestedAnyName string `protobuf:"bytes,5,opt,name=requestedAnyName,proto3" json:"requestedAnyName,omitempty"`
+	// for some payment methods we need to know the user's email
+	UserEmail string `protobuf:"bytes,6,opt,name=userEmail,proto3" json:"userEmail,omitempty"`
 }
 
 func (m *BuySubscriptionRequest) Reset()         { *m = BuySubscriptionRequest{} }
@@ -371,9 +536,9 @@ func (m *BuySubscriptionRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_BuySubscriptionRequest proto.InternalMessageInfo
 
-func (m *BuySubscriptionRequest) GetOwnerAnyID() string {
+func (m *BuySubscriptionRequest) GetOwnerAnyId() string {
 	if m != nil {
-		return m.OwnerAnyID
+		return m.OwnerAnyId
 	}
 	return ""
 }
@@ -385,18 +550,32 @@ func (m *BuySubscriptionRequest) GetOwnerEthAddress() string {
 	return ""
 }
 
-func (m *BuySubscriptionRequest) GetRequestedTier() SubscriptionTier {
+func (m *BuySubscriptionRequest) GetRequestedTier() uint32 {
 	if m != nil {
 		return m.RequestedTier
 	}
-	return SubscriptionTier_Tier_Unknown
+	return 0
 }
 
 func (m *BuySubscriptionRequest) GetPaymentMethod() PaymentMethod {
 	if m != nil {
 		return m.PaymentMethod
 	}
-	return PaymentMethod_Method_Card
+	return PaymentMethod_MethodCard
+}
+
+func (m *BuySubscriptionRequest) GetRequestedAnyName() string {
+	if m != nil {
+		return m.RequestedAnyName
+	}
+	return ""
+}
+
+func (m *BuySubscriptionRequest) GetUserEmail() string {
+	if m != nil {
+		return m.UserEmail
+	}
+	return ""
 }
 
 type BuySubscriptionRequestSigned struct {
@@ -457,6 +636,8 @@ type BuySubscriptionResponse struct {
 	// will feature current billing ID
 	// stripe.com/?client_reference_id=1234
 	PaymentUrl string `protobuf:"bytes,1,opt,name=paymentUrl,proto3" json:"paymentUrl,omitempty"`
+	// billingID is passed via mobile client to payment platform
+	BillingID string `protobuf:"bytes,2,opt,name=billingID,proto3" json:"billingID,omitempty"`
 }
 
 func (m *BuySubscriptionResponse) Reset()         { *m = BuySubscriptionResponse{} }
@@ -499,16 +680,911 @@ func (m *BuySubscriptionResponse) GetPaymentUrl() string {
 	return ""
 }
 
+func (m *BuySubscriptionResponse) GetBillingID() string {
+	if m != nil {
+		return m.BillingID
+	}
+	return ""
+}
+
+type FinalizeSubscriptionRequest struct {
+	// in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+	// you can get it with Account().SignKey.GetPublic().Account()
+	OwnerAnyId string `protobuf:"bytes,1,opt,name=ownerAnyId,proto3" json:"ownerAnyId,omitempty"`
+	// this is the owner's main EOA (Externally Owned Account) address
+	// not AccountAbstraction's SCW (Smart Contract Wallet) address!
+	// this is required to reserve a name for the owner (later that is done by user)
+	// in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
+	OwnerEthAddress string `protobuf:"bytes,2,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
+	// if empty - then no name requested
+	RequestedAnyName string `protobuf:"bytes,3,opt,name=requestedAnyName,proto3" json:"requestedAnyName,omitempty"`
+}
+
+func (m *FinalizeSubscriptionRequest) Reset()         { *m = FinalizeSubscriptionRequest{} }
+func (m *FinalizeSubscriptionRequest) String() string { return proto.CompactTextString(m) }
+func (*FinalizeSubscriptionRequest) ProtoMessage()    {}
+func (*FinalizeSubscriptionRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{6}
+}
+func (m *FinalizeSubscriptionRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *FinalizeSubscriptionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_FinalizeSubscriptionRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *FinalizeSubscriptionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FinalizeSubscriptionRequest.Merge(m, src)
+}
+func (m *FinalizeSubscriptionRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *FinalizeSubscriptionRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_FinalizeSubscriptionRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_FinalizeSubscriptionRequest proto.InternalMessageInfo
+
+func (m *FinalizeSubscriptionRequest) GetOwnerAnyId() string {
+	if m != nil {
+		return m.OwnerAnyId
+	}
+	return ""
+}
+
+func (m *FinalizeSubscriptionRequest) GetOwnerEthAddress() string {
+	if m != nil {
+		return m.OwnerEthAddress
+	}
+	return ""
+}
+
+func (m *FinalizeSubscriptionRequest) GetRequestedAnyName() string {
+	if m != nil {
+		return m.RequestedAnyName
+	}
+	return ""
+}
+
+type FinalizeSubscriptionResponse struct {
+}
+
+func (m *FinalizeSubscriptionResponse) Reset()         { *m = FinalizeSubscriptionResponse{} }
+func (m *FinalizeSubscriptionResponse) String() string { return proto.CompactTextString(m) }
+func (*FinalizeSubscriptionResponse) ProtoMessage()    {}
+func (*FinalizeSubscriptionResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{7}
+}
+func (m *FinalizeSubscriptionResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *FinalizeSubscriptionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_FinalizeSubscriptionResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *FinalizeSubscriptionResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FinalizeSubscriptionResponse.Merge(m, src)
+}
+func (m *FinalizeSubscriptionResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *FinalizeSubscriptionResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_FinalizeSubscriptionResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_FinalizeSubscriptionResponse proto.InternalMessageInfo
+
+type FinalizeSubscriptionRequestSigned struct {
+	// VerifyEmailRequest
+	Payload []byte `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
+	// this is payload signed with payload.ownerAnyID
+	Signature []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+}
+
+func (m *FinalizeSubscriptionRequestSigned) Reset()         { *m = FinalizeSubscriptionRequestSigned{} }
+func (m *FinalizeSubscriptionRequestSigned) String() string { return proto.CompactTextString(m) }
+func (*FinalizeSubscriptionRequestSigned) ProtoMessage()    {}
+func (*FinalizeSubscriptionRequestSigned) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{8}
+}
+func (m *FinalizeSubscriptionRequestSigned) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *FinalizeSubscriptionRequestSigned) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_FinalizeSubscriptionRequestSigned.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *FinalizeSubscriptionRequestSigned) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FinalizeSubscriptionRequestSigned.Merge(m, src)
+}
+func (m *FinalizeSubscriptionRequestSigned) XXX_Size() int {
+	return m.Size()
+}
+func (m *FinalizeSubscriptionRequestSigned) XXX_DiscardUnknown() {
+	xxx_messageInfo_FinalizeSubscriptionRequestSigned.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_FinalizeSubscriptionRequestSigned proto.InternalMessageInfo
+
+func (m *FinalizeSubscriptionRequestSigned) GetPayload() []byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
+func (m *FinalizeSubscriptionRequestSigned) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+type GetSubscriptionPortalLinkRequest struct {
+	// in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+	// you can get it with Account().SignKey.GetPublic().Account()
+	OwnerAnyId string `protobuf:"bytes,1,opt,name=ownerAnyId,proto3" json:"ownerAnyId,omitempty"`
+}
+
+func (m *GetSubscriptionPortalLinkRequest) Reset()         { *m = GetSubscriptionPortalLinkRequest{} }
+func (m *GetSubscriptionPortalLinkRequest) String() string { return proto.CompactTextString(m) }
+func (*GetSubscriptionPortalLinkRequest) ProtoMessage()    {}
+func (*GetSubscriptionPortalLinkRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{9}
+}
+func (m *GetSubscriptionPortalLinkRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetSubscriptionPortalLinkRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetSubscriptionPortalLinkRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GetSubscriptionPortalLinkRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetSubscriptionPortalLinkRequest.Merge(m, src)
+}
+func (m *GetSubscriptionPortalLinkRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetSubscriptionPortalLinkRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetSubscriptionPortalLinkRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetSubscriptionPortalLinkRequest proto.InternalMessageInfo
+
+func (m *GetSubscriptionPortalLinkRequest) GetOwnerAnyId() string {
+	if m != nil {
+		return m.OwnerAnyId
+	}
+	return ""
+}
+
+type GetSubscriptionPortalLinkRequestSigned struct {
+	// GetSubscriptionPortalLinkRequest
+	Payload []byte `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
+	// this is payload signed with payload.ownerAnyID
+	Signature []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+}
+
+func (m *GetSubscriptionPortalLinkRequestSigned) Reset() {
+	*m = GetSubscriptionPortalLinkRequestSigned{}
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) String() string { return proto.CompactTextString(m) }
+func (*GetSubscriptionPortalLinkRequestSigned) ProtoMessage()    {}
+func (*GetSubscriptionPortalLinkRequestSigned) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{10}
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetSubscriptionPortalLinkRequestSigned.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetSubscriptionPortalLinkRequestSigned.Merge(m, src)
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetSubscriptionPortalLinkRequestSigned.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetSubscriptionPortalLinkRequestSigned proto.InternalMessageInfo
+
+func (m *GetSubscriptionPortalLinkRequestSigned) GetPayload() []byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
+func (m *GetSubscriptionPortalLinkRequestSigned) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+type GetSubscriptionPortalLinkResponse struct {
+	PortalUrl string `protobuf:"bytes,1,opt,name=portalUrl,proto3" json:"portalUrl,omitempty"`
+}
+
+func (m *GetSubscriptionPortalLinkResponse) Reset()         { *m = GetSubscriptionPortalLinkResponse{} }
+func (m *GetSubscriptionPortalLinkResponse) String() string { return proto.CompactTextString(m) }
+func (*GetSubscriptionPortalLinkResponse) ProtoMessage()    {}
+func (*GetSubscriptionPortalLinkResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{11}
+}
+func (m *GetSubscriptionPortalLinkResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetSubscriptionPortalLinkResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetSubscriptionPortalLinkResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GetSubscriptionPortalLinkResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetSubscriptionPortalLinkResponse.Merge(m, src)
+}
+func (m *GetSubscriptionPortalLinkResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetSubscriptionPortalLinkResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetSubscriptionPortalLinkResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetSubscriptionPortalLinkResponse proto.InternalMessageInfo
+
+func (m *GetSubscriptionPortalLinkResponse) GetPortalUrl() string {
+	if m != nil {
+		return m.PortalUrl
+	}
+	return ""
+}
+
+type GetVerificationEmailRequest struct {
+	// in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+	// you can get it with Account().SignKey.GetPublic().Account()
+	OwnerAnyId            string `protobuf:"bytes,1,opt,name=ownerAnyId,proto3" json:"ownerAnyId,omitempty"`
+	Email                 string `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	SubscribeToNewsletter bool   `protobuf:"varint,3,opt,name=subscribeToNewsletter,proto3" json:"subscribeToNewsletter,omitempty"`
+}
+
+func (m *GetVerificationEmailRequest) Reset()         { *m = GetVerificationEmailRequest{} }
+func (m *GetVerificationEmailRequest) String() string { return proto.CompactTextString(m) }
+func (*GetVerificationEmailRequest) ProtoMessage()    {}
+func (*GetVerificationEmailRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{12}
+}
+func (m *GetVerificationEmailRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetVerificationEmailRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetVerificationEmailRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GetVerificationEmailRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetVerificationEmailRequest.Merge(m, src)
+}
+func (m *GetVerificationEmailRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetVerificationEmailRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetVerificationEmailRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetVerificationEmailRequest proto.InternalMessageInfo
+
+func (m *GetVerificationEmailRequest) GetOwnerAnyId() string {
+	if m != nil {
+		return m.OwnerAnyId
+	}
+	return ""
+}
+
+func (m *GetVerificationEmailRequest) GetEmail() string {
+	if m != nil {
+		return m.Email
+	}
+	return ""
+}
+
+func (m *GetVerificationEmailRequest) GetSubscribeToNewsletter() bool {
+	if m != nil {
+		return m.SubscribeToNewsletter
+	}
+	return false
+}
+
+type GetVerificationEmailResponse struct {
+}
+
+func (m *GetVerificationEmailResponse) Reset()         { *m = GetVerificationEmailResponse{} }
+func (m *GetVerificationEmailResponse) String() string { return proto.CompactTextString(m) }
+func (*GetVerificationEmailResponse) ProtoMessage()    {}
+func (*GetVerificationEmailResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{13}
+}
+func (m *GetVerificationEmailResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetVerificationEmailResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetVerificationEmailResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GetVerificationEmailResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetVerificationEmailResponse.Merge(m, src)
+}
+func (m *GetVerificationEmailResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetVerificationEmailResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetVerificationEmailResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetVerificationEmailResponse proto.InternalMessageInfo
+
+type GetVerificationEmailRequestSigned struct {
+	// GetVerificationEmailRequest
+	Payload []byte `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
+	// this is payload signed with payload.ownerAnyID
+	Signature []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+}
+
+func (m *GetVerificationEmailRequestSigned) Reset()         { *m = GetVerificationEmailRequestSigned{} }
+func (m *GetVerificationEmailRequestSigned) String() string { return proto.CompactTextString(m) }
+func (*GetVerificationEmailRequestSigned) ProtoMessage()    {}
+func (*GetVerificationEmailRequestSigned) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{14}
+}
+func (m *GetVerificationEmailRequestSigned) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetVerificationEmailRequestSigned) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetVerificationEmailRequestSigned.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GetVerificationEmailRequestSigned) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetVerificationEmailRequestSigned.Merge(m, src)
+}
+func (m *GetVerificationEmailRequestSigned) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetVerificationEmailRequestSigned) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetVerificationEmailRequestSigned.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetVerificationEmailRequestSigned proto.InternalMessageInfo
+
+func (m *GetVerificationEmailRequestSigned) GetPayload() []byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
+func (m *GetVerificationEmailRequestSigned) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+type VerifyEmailRequest struct {
+	// in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+	// you can get it with Account().SignKey.GetPublic().Account()
+	OwnerAnyId string `protobuf:"bytes,1,opt,name=ownerAnyId,proto3" json:"ownerAnyId,omitempty"`
+	// this is the owner's main EOA (Externally Owned Account) address
+	// not AccountAbstraction's SCW (Smart Contract Wallet) address!
+	// this is required to reserve a name for the owner (later that is done by user)
+	// in the following format: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d"
+	OwnerEthAddress string `protobuf:"bytes,2,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
+	// code received in the email
+	Code string `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
+}
+
+func (m *VerifyEmailRequest) Reset()         { *m = VerifyEmailRequest{} }
+func (m *VerifyEmailRequest) String() string { return proto.CompactTextString(m) }
+func (*VerifyEmailRequest) ProtoMessage()    {}
+func (*VerifyEmailRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{15}
+}
+func (m *VerifyEmailRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *VerifyEmailRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_VerifyEmailRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *VerifyEmailRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_VerifyEmailRequest.Merge(m, src)
+}
+func (m *VerifyEmailRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *VerifyEmailRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_VerifyEmailRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_VerifyEmailRequest proto.InternalMessageInfo
+
+func (m *VerifyEmailRequest) GetOwnerAnyId() string {
+	if m != nil {
+		return m.OwnerAnyId
+	}
+	return ""
+}
+
+func (m *VerifyEmailRequest) GetOwnerEthAddress() string {
+	if m != nil {
+		return m.OwnerEthAddress
+	}
+	return ""
+}
+
+func (m *VerifyEmailRequest) GetCode() string {
+	if m != nil {
+		return m.Code
+	}
+	return ""
+}
+
+type VerifyEmailResponse struct {
+	Success bool `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+}
+
+func (m *VerifyEmailResponse) Reset()         { *m = VerifyEmailResponse{} }
+func (m *VerifyEmailResponse) String() string { return proto.CompactTextString(m) }
+func (*VerifyEmailResponse) ProtoMessage()    {}
+func (*VerifyEmailResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{16}
+}
+func (m *VerifyEmailResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *VerifyEmailResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_VerifyEmailResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *VerifyEmailResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_VerifyEmailResponse.Merge(m, src)
+}
+func (m *VerifyEmailResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *VerifyEmailResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_VerifyEmailResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_VerifyEmailResponse proto.InternalMessageInfo
+
+func (m *VerifyEmailResponse) GetSuccess() bool {
+	if m != nil {
+		return m.Success
+	}
+	return false
+}
+
+type VerifyEmailRequestSigned struct {
+	// VerifyEmailRequest
+	Payload []byte `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
+	// this is payload signed with payload.ownerAnyID
+	Signature []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+}
+
+func (m *VerifyEmailRequestSigned) Reset()         { *m = VerifyEmailRequestSigned{} }
+func (m *VerifyEmailRequestSigned) String() string { return proto.CompactTextString(m) }
+func (*VerifyEmailRequestSigned) ProtoMessage()    {}
+func (*VerifyEmailRequestSigned) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{17}
+}
+func (m *VerifyEmailRequestSigned) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *VerifyEmailRequestSigned) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_VerifyEmailRequestSigned.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *VerifyEmailRequestSigned) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_VerifyEmailRequestSigned.Merge(m, src)
+}
+func (m *VerifyEmailRequestSigned) XXX_Size() int {
+	return m.Size()
+}
+func (m *VerifyEmailRequestSigned) XXX_DiscardUnknown() {
+	xxx_messageInfo_VerifyEmailRequestSigned.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_VerifyEmailRequestSigned proto.InternalMessageInfo
+
+func (m *VerifyEmailRequestSigned) GetPayload() []byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
+func (m *VerifyEmailRequestSigned) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+type IsNameValidRequest struct {
+	RequestedTier    uint32 `protobuf:"varint,1,opt,name=requestedTier,proto3" json:"requestedTier,omitempty"`
+	RequestedAnyName string `protobuf:"bytes,2,opt,name=requestedAnyName,proto3" json:"requestedAnyName,omitempty"`
+}
+
+func (m *IsNameValidRequest) Reset()         { *m = IsNameValidRequest{} }
+func (m *IsNameValidRequest) String() string { return proto.CompactTextString(m) }
+func (*IsNameValidRequest) ProtoMessage()    {}
+func (*IsNameValidRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{18}
+}
+func (m *IsNameValidRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *IsNameValidRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_IsNameValidRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *IsNameValidRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_IsNameValidRequest.Merge(m, src)
+}
+func (m *IsNameValidRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *IsNameValidRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_IsNameValidRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_IsNameValidRequest proto.InternalMessageInfo
+
+func (m *IsNameValidRequest) GetRequestedTier() uint32 {
+	if m != nil {
+		return m.RequestedTier
+	}
+	return 0
+}
+
+func (m *IsNameValidRequest) GetRequestedAnyName() string {
+	if m != nil {
+		return m.RequestedAnyName
+	}
+	return ""
+}
+
+type IsNameValidResponse struct {
+	Code        IsNameValidResponse_Code `protobuf:"varint,1,opt,name=code,proto3,enum=IsNameValidResponse_Code" json:"code,omitempty"`
+	Description string                   `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+}
+
+func (m *IsNameValidResponse) Reset()         { *m = IsNameValidResponse{} }
+func (m *IsNameValidResponse) String() string { return proto.CompactTextString(m) }
+func (*IsNameValidResponse) ProtoMessage()    {}
+func (*IsNameValidResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{19}
+}
+func (m *IsNameValidResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *IsNameValidResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_IsNameValidResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *IsNameValidResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_IsNameValidResponse.Merge(m, src)
+}
+func (m *IsNameValidResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *IsNameValidResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_IsNameValidResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_IsNameValidResponse proto.InternalMessageInfo
+
+func (m *IsNameValidResponse) GetCode() IsNameValidResponse_Code {
+	if m != nil {
+		return m.Code
+	}
+	return IsNameValidResponse_Valid
+}
+
+func (m *IsNameValidResponse) GetDescription() string {
+	if m != nil {
+		return m.Description
+	}
+	return ""
+}
+
+type VerifyAppStoreReceiptRequest struct {
+	// in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+	// you can get it with Account().SignKey.GetPublic().Account()
+	OwnerAnyId string `protobuf:"bytes,1,opt,name=ownerAnyId,proto3" json:"ownerAnyId,omitempty"`
+	// receipt is a JWT-encoded information about subscription purchase
+	Receipt string `protobuf:"bytes,2,opt,name=receipt,proto3" json:"receipt,omitempty"`
+}
+
+func (m *VerifyAppStoreReceiptRequest) Reset()         { *m = VerifyAppStoreReceiptRequest{} }
+func (m *VerifyAppStoreReceiptRequest) String() string { return proto.CompactTextString(m) }
+func (*VerifyAppStoreReceiptRequest) ProtoMessage()    {}
+func (*VerifyAppStoreReceiptRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{20}
+}
+func (m *VerifyAppStoreReceiptRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *VerifyAppStoreReceiptRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_VerifyAppStoreReceiptRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *VerifyAppStoreReceiptRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_VerifyAppStoreReceiptRequest.Merge(m, src)
+}
+func (m *VerifyAppStoreReceiptRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *VerifyAppStoreReceiptRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_VerifyAppStoreReceiptRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_VerifyAppStoreReceiptRequest proto.InternalMessageInfo
+
+func (m *VerifyAppStoreReceiptRequest) GetOwnerAnyId() string {
+	if m != nil {
+		return m.OwnerAnyId
+	}
+	return ""
+}
+
+func (m *VerifyAppStoreReceiptRequest) GetReceipt() string {
+	if m != nil {
+		return m.Receipt
+	}
+	return ""
+}
+
+type VerifyAppStoreReceiptRequestSigned struct {
+	// VerifyAppStoreReceiptRequest
+	Payload []byte `protobuf:"bytes,1,opt,name=payload,proto3" json:"payload,omitempty"`
+	// this is payload signed with payload.ownerAnyID
+	Signature []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+}
+
+func (m *VerifyAppStoreReceiptRequestSigned) Reset()         { *m = VerifyAppStoreReceiptRequestSigned{} }
+func (m *VerifyAppStoreReceiptRequestSigned) String() string { return proto.CompactTextString(m) }
+func (*VerifyAppStoreReceiptRequestSigned) ProtoMessage()    {}
+func (*VerifyAppStoreReceiptRequestSigned) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{21}
+}
+func (m *VerifyAppStoreReceiptRequestSigned) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *VerifyAppStoreReceiptRequestSigned) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_VerifyAppStoreReceiptRequestSigned.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *VerifyAppStoreReceiptRequestSigned) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_VerifyAppStoreReceiptRequestSigned.Merge(m, src)
+}
+func (m *VerifyAppStoreReceiptRequestSigned) XXX_Size() int {
+	return m.Size()
+}
+func (m *VerifyAppStoreReceiptRequestSigned) XXX_DiscardUnknown() {
+	xxx_messageInfo_VerifyAppStoreReceiptRequestSigned.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_VerifyAppStoreReceiptRequestSigned proto.InternalMessageInfo
+
+func (m *VerifyAppStoreReceiptRequestSigned) GetPayload() []byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
+func (m *VerifyAppStoreReceiptRequestSigned) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
+type VerifyAppStoreReceiptResponse struct {
+}
+
+func (m *VerifyAppStoreReceiptResponse) Reset()         { *m = VerifyAppStoreReceiptResponse{} }
+func (m *VerifyAppStoreReceiptResponse) String() string { return proto.CompactTextString(m) }
+func (*VerifyAppStoreReceiptResponse) ProtoMessage()    {}
+func (*VerifyAppStoreReceiptResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_4feb29dcc5ba50f6, []int{22}
+}
+func (m *VerifyAppStoreReceiptResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *VerifyAppStoreReceiptResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_VerifyAppStoreReceiptResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *VerifyAppStoreReceiptResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_VerifyAppStoreReceiptResponse.Merge(m, src)
+}
+func (m *VerifyAppStoreReceiptResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *VerifyAppStoreReceiptResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_VerifyAppStoreReceiptResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_VerifyAppStoreReceiptResponse proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterEnum("SubscriptionTier", SubscriptionTier_name, SubscriptionTier_value)
 	proto.RegisterEnum("SubscriptionStatus", SubscriptionStatus_name, SubscriptionStatus_value)
 	proto.RegisterEnum("PaymentMethod", PaymentMethod_name, PaymentMethod_value)
+	proto.RegisterEnum("ErrorCodes", ErrorCodes_name, ErrorCodes_value)
+	proto.RegisterEnum("IsNameValidResponse_Code", IsNameValidResponse_Code_name, IsNameValidResponse_Code_value)
 	proto.RegisterType((*GetSubscriptionRequest)(nil), "GetSubscriptionRequest")
 	proto.RegisterType((*GetSubscriptionRequestSigned)(nil), "GetSubscriptionRequestSigned")
 	proto.RegisterType((*GetSubscriptionResponse)(nil), "GetSubscriptionResponse")
 	proto.RegisterType((*BuySubscriptionRequest)(nil), "BuySubscriptionRequest")
 	proto.RegisterType((*BuySubscriptionRequestSigned)(nil), "BuySubscriptionRequestSigned")
 	proto.RegisterType((*BuySubscriptionResponse)(nil), "BuySubscriptionResponse")
+	proto.RegisterType((*FinalizeSubscriptionRequest)(nil), "FinalizeSubscriptionRequest")
+	proto.RegisterType((*FinalizeSubscriptionResponse)(nil), "FinalizeSubscriptionResponse")
+	proto.RegisterType((*FinalizeSubscriptionRequestSigned)(nil), "FinalizeSubscriptionRequestSigned")
+	proto.RegisterType((*GetSubscriptionPortalLinkRequest)(nil), "GetSubscriptionPortalLinkRequest")
+	proto.RegisterType((*GetSubscriptionPortalLinkRequestSigned)(nil), "GetSubscriptionPortalLinkRequestSigned")
+	proto.RegisterType((*GetSubscriptionPortalLinkResponse)(nil), "GetSubscriptionPortalLinkResponse")
+	proto.RegisterType((*GetVerificationEmailRequest)(nil), "GetVerificationEmailRequest")
+	proto.RegisterType((*GetVerificationEmailResponse)(nil), "GetVerificationEmailResponse")
+	proto.RegisterType((*GetVerificationEmailRequestSigned)(nil), "GetVerificationEmailRequestSigned")
+	proto.RegisterType((*VerifyEmailRequest)(nil), "VerifyEmailRequest")
+	proto.RegisterType((*VerifyEmailResponse)(nil), "VerifyEmailResponse")
+	proto.RegisterType((*VerifyEmailRequestSigned)(nil), "VerifyEmailRequestSigned")
+	proto.RegisterType((*IsNameValidRequest)(nil), "IsNameValidRequest")
+	proto.RegisterType((*IsNameValidResponse)(nil), "IsNameValidResponse")
+	proto.RegisterType((*VerifyAppStoreReceiptRequest)(nil), "VerifyAppStoreReceiptRequest")
+	proto.RegisterType((*VerifyAppStoreReceiptRequestSigned)(nil), "VerifyAppStoreReceiptRequestSigned")
+	proto.RegisterType((*VerifyAppStoreReceiptResponse)(nil), "VerifyAppStoreReceiptResponse")
 }
 
 func init() {
@@ -516,48 +1592,101 @@ func init() {
 }
 
 var fileDescriptor_4feb29dcc5ba50f6 = []byte{
-	// 647 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x94, 0x51, 0x4b, 0x1b, 0x4b,
-	0x14, 0xc7, 0x77, 0x93, 0x5c, 0x8d, 0x47, 0x93, 0xac, 0xa3, 0x57, 0x17, 0xd1, 0x25, 0x2c, 0x5c,
-	0x08, 0x5e, 0xee, 0xca, 0xb5, 0x85, 0xb6, 0x50, 0x0a, 0xd1, 0x5a, 0x29, 0xb4, 0x10, 0x36, 0x55,
-	0x68, 0x1f, 0x2a, 0x6b, 0xe6, 0x10, 0x97, 0xa6, 0x33, 0xdb, 0x99, 0x59, 0x75, 0xbf, 0x45, 0x3f,
-	0x4e, 0x3f, 0x42, 0x1f, 0xed, 0x4b, 0xe9, 0x63, 0xd1, 0x2f, 0x52, 0x76, 0x76, 0xa3, 0x9b, 0xc4,
-	0xd8, 0xd2, 0xbe, 0xec, 0xce, 0xf9, 0x9d, 0x33, 0xff, 0x99, 0xff, 0xcc, 0x61, 0xe0, 0x49, 0x14,
-	0x24, 0xef, 0x91, 0x29, 0x89, 0xe2, 0x34, 0xec, 0xe1, 0xd6, 0x68, 0x18, 0x09, 0xae, 0xf8, 0x96,
-	0xfe, 0xca, 0xb1, 0x94, 0xa7, 0xa9, 0xfb, 0x10, 0x56, 0xf6, 0x51, 0x75, 0xe3, 0x63, 0xd9, 0x13,
-	0x61, 0xa4, 0x42, 0xce, 0x7c, 0xfc, 0x10, 0xa3, 0x54, 0xc4, 0x01, 0xe0, 0x67, 0x0c, 0x45, 0x9b,
-	0x25, 0xcf, 0x9f, 0xda, 0x66, 0xd3, 0x6c, 0xcd, 0xf9, 0x05, 0xe2, 0x1e, 0xc2, 0xfa, 0xed, 0x33,
-	0xbb, 0x61, 0x9f, 0x21, 0x25, 0x36, 0xcc, 0x46, 0x41, 0x32, 0xe0, 0x01, 0xd5, 0x93, 0x17, 0xfc,
-	0x61, 0x48, 0xd6, 0x61, 0x4e, 0x86, 0x7d, 0x16, 0xa8, 0x58, 0xa0, 0x5d, 0xd2, 0xb9, 0x1b, 0xe0,
-	0x7e, 0x2d, 0xc1, 0xea, 0x84, 0xb0, 0x8c, 0x38, 0x93, 0x48, 0xfe, 0x81, 0x8a, 0x0a, 0x51, 0x68,
-	0xc1, 0xfa, 0xf6, 0xa2, 0x57, 0x2c, 0x7a, 0x15, 0xa2, 0xf0, 0x75, 0x9a, 0xfc, 0x0b, 0x33, 0x52,
-	0x05, 0x2a, 0x96, 0x5a, 0xbd, 0xbe, 0xbd, 0x34, 0x52, 0xd8, 0xd5, 0x29, 0x3f, 0x2f, 0x21, 0x4d,
-	0x98, 0xa7, 0x81, 0xc2, 0xae, 0x0a, 0x84, 0x42, 0x6a, 0x97, 0x9b, 0x66, 0xab, 0xe2, 0x17, 0x11,
-	0x59, 0x83, 0x6a, 0x1a, 0xee, 0x31, 0x2a, 0xed, 0x8a, 0x4e, 0x5f, 0xc7, 0xe9, 0xec, 0x50, 0xb6,
-	0x63, 0xc5, 0x7d, 0x64, 0x78, 0x66, 0xff, 0xd5, 0x34, 0x5b, 0x55, 0xbf, 0x88, 0xc8, 0x7f, 0x50,
-	0x65, 0x78, 0xae, 0xd2, 0xed, 0xd9, 0x33, 0xd3, 0xf6, 0x7d, 0x5d, 0x42, 0x5c, 0x58, 0x18, 0x8e,
-	0xf5, 0x82, 0xb3, 0x7a, 0xc1, 0x11, 0x46, 0xee, 0x43, 0x2d, 0xbf, 0xcc, 0x97, 0xa8, 0x4e, 0x38,
-	0xb5, 0xab, 0x5a, 0xb7, 0xee, 0x75, 0x8a, 0xd4, 0x1f, 0x2d, 0x72, 0xbf, 0x98, 0xb0, 0xb2, 0x13,
-	0x27, 0xbf, 0x71, 0xd7, 0xa4, 0x05, 0x0d, 0x1d, 0xed, 0xa9, 0x93, 0x36, 0xa5, 0x02, 0x65, 0x76,
-	0xb2, 0x73, 0xfe, 0x38, 0x26, 0x0f, 0xa0, 0x26, 0x32, 0x51, 0xa4, 0xda, 0x72, 0x79, 0x9a, 0xe5,
-	0xd1, 0xba, 0x49, 0x4f, 0x95, 0x5f, 0xf1, 0x74, 0x08, 0xeb, 0xb7, 0x5b, 0xfa, 0xc3, 0x26, 0x7c,
-	0x04, 0xab, 0x13, 0xba, 0x79, 0x0f, 0x3a, 0x00, 0xf9, 0x1e, 0x0e, 0xc4, 0x60, 0x78, 0x56, 0x37,
-	0x64, 0x93, 0x82, 0x35, 0xee, 0x95, 0x58, 0xb0, 0x90, 0xfe, 0x8f, 0x0e, 0xd8, 0x3b, 0xc6, 0xcf,
-	0x98, 0x65, 0x90, 0x06, 0xcc, 0x6b, 0xf2, 0x4c, 0x84, 0xc8, 0xa8, 0x65, 0x92, 0x55, 0x58, 0xd2,
-	0xa0, 0x1b, 0x47, 0x11, 0x17, 0x0a, 0xc5, 0xff, 0xaf, 0x31, 0x10, 0x56, 0x89, 0x2c, 0x83, 0xa5,
-	0x13, 0x9d, 0x40, 0x09, 0xce, 0x32, 0x5a, 0xde, 0x3c, 0x07, 0x32, 0xd9, 0xd3, 0x84, 0x40, 0x3d,
-	0x1b, 0x15, 0x56, 0xba, 0x61, 0x1d, 0x64, 0x34, 0x64, 0x7d, 0xcb, 0x24, 0x8b, 0x50, 0xcb, 0x59,
-	0xbb, 0xa7, 0xc2, 0x53, 0xb4, 0x4a, 0x85, 0xb2, 0xbd, 0xf3, 0x28, 0x14, 0x48, 0xad, 0x32, 0x59,
-	0x82, 0x46, 0xce, 0x76, 0x03, 0xd6, 0xc3, 0x01, 0x52, 0xab, 0xb2, 0xf9, 0x16, 0x6a, 0x23, 0x57,
-	0x92, 0x5a, 0xc9, 0x46, 0x47, 0xbb, 0x81, 0xa0, 0x96, 0x91, 0xaa, 0x0f, 0x81, 0x48, 0x22, 0xc5,
-	0x2d, 0x33, 0x55, 0xca, 0x51, 0x3b, 0x8a, 0x06, 0xd8, 0x09, 0x92, 0xcc, 0x59, 0x0e, 0xf7, 0x39,
-	0xef, 0x67, 0xb4, 0xbc, 0xfd, 0xc9, 0x84, 0xe5, 0x36, 0x4b, 0xf2, 0x35, 0x3a, 0x82, 0xf7, 0x50,
-	0xca, 0x90, 0xf5, 0x89, 0x0f, 0x7f, 0x8f, 0xbd, 0x0b, 0xb9, 0xeb, 0x0d, 0xef, 0xae, 0x87, 0x68,
-	0xcd, 0xf6, 0xa6, 0x3c, 0x27, 0xae, 0x41, 0x5e, 0x40, 0x63, 0xec, 0x9e, 0xc9, 0x86, 0x77, 0x57,
-	0x47, 0xad, 0xd9, 0xde, 0x94, 0xc6, 0x70, 0x8d, 0x9d, 0xc7, 0x9f, 0x2f, 0x1d, 0xf3, 0xe2, 0xd2,
-	0x31, 0xbf, 0x5f, 0x3a, 0xe6, 0xc7, 0x2b, 0xc7, 0xb8, 0xb8, 0x72, 0x8c, 0x6f, 0x57, 0x8e, 0xf1,
-	0xc6, 0xfd, 0xf9, 0x33, 0x7d, 0x3c, 0xa3, 0x7f, 0xf7, 0x7e, 0x04, 0x00, 0x00, 0xff, 0xff, 0xda,
-	0x2c, 0x8d, 0x51, 0xd3, 0x05, 0x00, 0x00,
+	// 1495 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x58, 0x4b, 0x6f, 0x1b, 0x47,
+	0x12, 0xe6, 0xf0, 0x25, 0xb1, 0xf4, 0x6a, 0x35, 0x29, 0x79, 0x44, 0x4b, 0x5c, 0x79, 0xf6, 0x25,
+	0x68, 0xb1, 0x63, 0xac, 0xd7, 0x87, 0xc5, 0x62, 0xb1, 0x08, 0x25, 0x51, 0x8a, 0x00, 0x47, 0x11,
+	0x48, 0xda, 0x4e, 0xe2, 0x20, 0xc9, 0x88, 0x53, 0xa2, 0x26, 0x1e, 0x75, 0x4f, 0x7a, 0x9a, 0x92,
+	0x99, 0x5f, 0x90, 0xdc, 0x02, 0xe4, 0x90, 0x1f, 0x94, 0x4b, 0x8e, 0xbe, 0x04, 0xf0, 0x31, 0xb1,
+	0xff, 0x40, 0x8e, 0x39, 0x06, 0xdd, 0x33, 0x14, 0x87, 0xe2, 0x88, 0x52, 0x2c, 0xe4, 0x62, 0x4d,
+	0x7f, 0xdd, 0x55, 0x5d, 0xf5, 0xd5, 0xa3, 0x8b, 0x86, 0xff, 0x07, 0x4e, 0xff, 0x14, 0x99, 0x0c,
+	0x51, 0x9c, 0x79, 0x1d, 0xbc, 0x3f, 0xba, 0x0c, 0x04, 0x97, 0xfc, 0xbe, 0xfe, 0x37, 0xbc, 0xb4,
+	0x65, 0x6b, 0xb4, 0xba, 0xf3, 0xb6, 0xf2, 0x9f, 0x4a, 0x0f, 0x45, 0x18, 0x69, 0xb1, 0xfe, 0x03,
+	0xcb, 0x7b, 0x28, 0x5b, 0xbd, 0xa3, 0xb0, 0x23, 0xbc, 0x40, 0x7a, 0x9c, 0x35, 0xf1, 0x8b, 0x1e,
+	0x86, 0x92, 0xd6, 0x00, 0xf8, 0x39, 0x43, 0x51, 0x67, 0xfd, 0xfd, 0x1d, 0xd3, 0x58, 0x37, 0x36,
+	0x4a, 0xcd, 0x04, 0x62, 0x3d, 0x81, 0xd5, 0x74, 0xc9, 0x96, 0xd7, 0x65, 0xe8, 0x52, 0x13, 0xa6,
+	0x02, 0xa7, 0xef, 0x73, 0xc7, 0xd5, 0xc2, 0xb3, 0xcd, 0xc1, 0x92, 0xae, 0x42, 0x29, 0xf4, 0xba,
+	0xcc, 0x91, 0x3d, 0x81, 0x66, 0x56, 0xef, 0x0d, 0x01, 0xeb, 0x97, 0x2c, 0xdc, 0x19, 0x53, 0x1c,
+	0x06, 0x9c, 0x85, 0x48, 0x29, 0xe4, 0x95, 0xf1, 0x5a, 0xe1, 0x5c, 0x53, 0x7f, 0xd3, 0x7f, 0x40,
+	0x31, 0x94, 0x8e, 0xec, 0x85, 0x5a, 0xd5, 0xfc, 0x83, 0xb2, 0x9d, 0x14, 0x6d, 0xe9, 0xad, 0x66,
+	0x7c, 0x84, 0xae, 0xc3, 0x8c, 0xeb, 0x48, 0x6c, 0x49, 0x47, 0x48, 0x74, 0xcd, 0xdc, 0xba, 0xb1,
+	0x91, 0x6f, 0x26, 0x21, 0x5a, 0x85, 0x69, 0xb5, 0x6c, 0x30, 0x37, 0x34, 0xf3, 0x7a, 0xfb, 0x62,
+	0xad, 0xa4, 0xbd, 0xb0, 0xde, 0x93, 0xbc, 0x89, 0x0c, 0xcf, 0xcd, 0xc2, 0xba, 0xb1, 0x31, 0xdd,
+	0x4c, 0x42, 0xf4, 0x21, 0xcc, 0xc5, 0x64, 0xbf, 0x87, 0xf2, 0x84, 0xbb, 0x66, 0x51, 0xdb, 0x34,
+	0x6f, 0x1f, 0x26, 0xd1, 0xe6, 0xe8, 0x21, 0xba, 0x09, 0x44, 0x44, 0xdc, 0xa1, 0x5b, 0x67, 0xfd,
+	0x03, 0xe7, 0x14, 0xcd, 0x29, 0x4d, 0xf8, 0x18, 0xae, 0xc8, 0xeb, 0x85, 0x28, 0x1a, 0xa7, 0x8e,
+	0xe7, 0x9b, 0xd3, 0xfa, 0xd0, 0x10, 0xa0, 0x0f, 0x61, 0x29, 0x8c, 0xbc, 0x3f, 0xc2, 0x36, 0x3f,
+	0xc0, 0xf3, 0xd0, 0x47, 0x29, 0x51, 0x98, 0x25, 0x6d, 0x6b, 0xfa, 0xa6, 0xf5, 0x55, 0x16, 0x96,
+	0xb7, 0x7a, 0xfd, 0xeb, 0xb2, 0xc0, 0x1d, 0xcb, 0x02, 0x97, 0x6e, 0xc0, 0x82, 0x5e, 0x35, 0xe4,
+	0x49, 0xdd, 0x75, 0x05, 0x86, 0x51, 0x18, 0x4a, 0xcd, 0xcb, 0x30, 0xfd, 0x0b, 0xcc, 0x5d, 0x38,
+	0xd3, 0x56, 0x41, 0xcc, 0xe9, 0x20, 0x8e, 0x82, 0xe3, 0x04, 0xe6, 0xdf, 0x96, 0xc0, 0xc2, 0x4d,
+	0x08, 0x2c, 0x5e, 0x22, 0x50, 0x65, 0x75, 0x3a, 0x13, 0xb7, 0xcc, 0xea, 0xa7, 0x70, 0x67, 0x4c,
+	0x6f, 0x9c, 0xd4, 0x35, 0x80, 0xd8, 0x9b, 0xc7, 0xc2, 0x1f, 0x50, 0x3c, 0x44, 0x94, 0xe2, 0x23,
+	0xcf, 0xf7, 0x3d, 0xd6, 0xdd, 0xdf, 0x89, 0xc9, 0x1d, 0x02, 0xd6, 0xb7, 0x06, 0xdc, 0xdd, 0xf5,
+	0x98, 0xe3, 0x7b, 0x5f, 0xe2, 0x1f, 0x1b, 0xc0, 0x34, 0x92, 0x73, 0xe9, 0x24, 0x5b, 0x35, 0x58,
+	0x4d, 0x37, 0x2a, 0xf2, 0xd9, 0x7a, 0x06, 0xf7, 0x26, 0x18, 0x7d, 0x4b, 0xae, 0xb7, 0x60, 0xfd,
+	0x52, 0x03, 0x39, 0xe4, 0x42, 0x3a, 0xfe, 0x23, 0x8f, 0x3d, 0xbf, 0x21, 0x2d, 0xd6, 0x67, 0xf0,
+	0xb7, 0xeb, 0x74, 0xdc, 0xd2, 0xca, 0x3a, 0xdc, 0x9b, 0x70, 0x43, 0x9c, 0x1b, 0xab, 0x50, 0x0a,
+	0x34, 0x3a, 0x4c, 0x8d, 0x21, 0x60, 0x7d, 0x6d, 0xc0, 0xdd, 0x3d, 0x94, 0x4f, 0x50, 0x78, 0xc7,
+	0x5e, 0xc7, 0x51, 0x3a, 0x74, 0x16, 0xdf, 0x34, 0xf6, 0x15, 0x28, 0xa0, 0x2e, 0x83, 0x28, 0xe2,
+	0xd1, 0xe2, 0xea, 0x1e, 0x92, 0x9b, 0xd4, 0x43, 0x6a, 0xfa, 0x39, 0x48, 0x31, 0x65, 0x18, 0xf1,
+	0x09, 0xa6, 0xde, 0x92, 0x4b, 0x01, 0x54, 0x6b, 0xee, 0xff, 0x2e, 0xf7, 0x6f, 0x9e, 0xfa, 0x14,
+	0xf2, 0x1d, 0xee, 0x0e, 0xd2, 0x5d, 0x7f, 0x5b, 0xf7, 0xa1, 0x3c, 0x72, 0x67, 0x1c, 0x31, 0x13,
+	0xa6, 0xc2, 0x5e, 0xa7, 0xa3, 0x94, 0x19, 0x9a, 0xaf, 0xc1, 0xd2, 0x6a, 0x82, 0x39, 0x6e, 0xe4,
+	0x2d, 0x1d, 0x3f, 0x06, 0xba, 0x1f, 0xaa, 0x8a, 0x7b, 0xe2, 0xf8, 0x9e, 0x3b, 0x70, 0x7c, 0xac,
+	0xd5, 0x1a, 0x69, 0xad, 0x36, 0xad, 0x9e, 0xb3, 0x57, 0xd4, 0xf3, 0xcf, 0x06, 0x94, 0x47, 0x2e,
+	0x8a, 0xbd, 0xfd, 0x67, 0x4c, 0x8c, 0xa1, 0xbb, 0xf4, 0x8a, 0x9d, 0x72, 0xc6, 0xde, 0xe6, 0x2e,
+	0x46, 0x9c, 0xe9, 0xe7, 0x17, 0x2f, 0xf2, 0x3d, 0xbe, 0x2d, 0x09, 0x59, 0x7d, 0xc8, 0xab, 0xf3,
+	0xb4, 0x04, 0x05, 0xad, 0x85, 0x64, 0xe8, 0x2c, 0x4c, 0x1f, 0xf0, 0x1d, 0x2e, 0xeb, 0xac, 0x4f,
+	0x0c, 0xb5, 0x6a, 0x73, 0xde, 0x3a, 0xe1, 0x42, 0x92, 0x2c, 0x9d, 0x81, 0xa9, 0x36, 0xe7, 0x8f,
+	0x38, 0xeb, 0x92, 0x1c, 0x2d, 0xc3, 0xc2, 0xbb, 0x4e, 0xb8, 0xcf, 0xce, 0x94, 0xe0, 0xf6, 0x89,
+	0x23, 0x42, 0x92, 0xa7, 0x4b, 0xb0, 0xa8, 0xbc, 0xdd, 0x45, 0x4d, 0xd8, 0x01, 0x57, 0xf6, 0x91,
+	0x02, 0x5d, 0x84, 0xb9, 0x6d, 0x87, 0x1d, 0x70, 0xd9, 0x44, 0x35, 0x16, 0x21, 0x29, 0x5a, 0x1f,
+	0xc0, 0x6a, 0x14, 0x9f, 0x7a, 0x10, 0xb4, 0x24, 0x17, 0xd8, 0xc4, 0x0e, 0x7a, 0x81, 0xbc, 0x69,
+	0x3a, 0x99, 0x30, 0x25, 0x22, 0x89, 0xd8, 0xb1, 0xc1, 0xd2, 0xfa, 0x18, 0xac, 0x49, 0x9a, 0x6f,
+	0x99, 0x03, 0x7f, 0x82, 0xb5, 0x2b, 0xb4, 0x47, 0x01, 0xd8, 0xfc, 0xde, 0x00, 0x92, 0xec, 0x33,
+	0x3a, 0xfa, 0x0b, 0x30, 0xa3, 0xfe, 0x3e, 0x66, 0xcf, 0x19, 0x3f, 0x67, 0x24, 0x43, 0x09, 0xcc,
+	0x2a, 0xa0, 0xf1, 0x22, 0xf0, 0xb9, 0x40, 0x41, 0x0c, 0x6a, 0x42, 0x45, 0x21, 0x5b, 0x3d, 0xcf,
+	0x77, 0x51, 0xfc, 0xeb, 0x29, 0xe2, 0xf3, 0x76, 0xa3, 0xd5, 0x26, 0x59, 0x5a, 0x85, 0x65, 0xb5,
+	0xb3, 0xcd, 0xb7, 0x05, 0x3a, 0x92, 0x27, 0xf6, 0x72, 0xb4, 0x02, 0x24, 0x29, 0xf5, 0x21, 0x3a,
+	0x82, 0xe4, 0xe9, 0x32, 0xd0, 0x51, 0x09, 0x8d, 0x17, 0x54, 0xcc, 0x12, 0xa7, 0x0f, 0xfd, 0x5e,
+	0x48, 0x8a, 0x03, 0xb0, 0xce, 0xfa, 0xb2, 0x1f, 0x60, 0x1b, 0x9d, 0x53, 0x32, 0xb5, 0x19, 0x02,
+	0x1d, 0x1f, 0xec, 0x54, 0x1c, 0xa3, 0xaf, 0xa1, 0x23, 0x17, 0xd0, 0x21, 0x32, 0xd7, 0x63, 0x5d,
+	0x62, 0x28, 0xdf, 0x22, 0xa8, 0xde, 0x91, 0xde, 0x19, 0x92, 0x2c, 0xfd, 0x2b, 0xdc, 0x1b, 0x39,
+	0xa4, 0x42, 0xe1, 0x09, 0x0c, 0xe3, 0x57, 0x49, 0x37, 0x28, 0x92, 0xdb, 0xfc, 0xce, 0x80, 0xb9,
+	0x91, 0xc9, 0x83, 0xce, 0x03, 0x44, 0x5f, 0xdb, 0x8e, 0x70, 0x23, 0xda, 0xe2, 0xb5, 0xe8, 0x07,
+	0x92, 0x13, 0x83, 0x52, 0x98, 0x8f, 0x90, 0x7a, 0x10, 0xf8, 0x78, 0xe8, 0xf4, 0x49, 0x56, 0x79,
+	0x14, 0x61, 0x7b, 0x9c, 0x77, 0x23, 0x50, 0x33, 0x95, 0x38, 0xb8, 0xcf, 0x9c, 0x20, 0x88, 0x12,
+	0x36, 0x79, 0x34, 0x82, 0x0b, 0xc3, 0x7b, 0x0f, 0x38, 0x43, 0x52, 0xdc, 0xfc, 0x31, 0x07, 0xd0,
+	0x10, 0x82, 0x0b, 0x55, 0x2e, 0xa1, 0xda, 0x7e, 0xcc, 0xf0, 0x45, 0x80, 0x1d, 0x89, 0xca, 0xac,
+	0x32, 0x2c, 0x0c, 0xfb, 0x57, 0xe3, 0x34, 0x90, 0xaa, 0x76, 0x2a, 0x40, 0xe2, 0xea, 0x68, 0x0d,
+	0xb2, 0x87, 0x64, 0xe9, 0x1c, 0x94, 0x14, 0xdb, 0x4f, 0x45, 0x54, 0x45, 0x71, 0x1e, 0x1c, 0x70,
+	0xb9, 0xcb, 0x7b, 0xcc, 0x25, 0xf9, 0x01, 0xb2, 0xcf, 0x9c, 0x88, 0xbd, 0x82, 0x8a, 0xe6, 0x08,
+	0x2b, 0x91, 0x6c, 0x51, 0x59, 0xb1, 0xe5, 0x0c, 0x9a, 0x06, 0x99, 0x52, 0xe5, 0x39, 0x88, 0xcb,
+	0xb4, 0x72, 0x4c, 0x05, 0xb0, 0xee, 0x0b, 0x74, 0xdc, 0x7e, 0x1c, 0x89, 0x92, 0x8e, 0x4d, 0xef,
+	0x28, 0xbc, 0xb8, 0x0f, 0x14, 0x81, 0x0a, 0xd1, 0x4a, 0x55, 0x90, 0x90, 0xcc, 0x28, 0xd3, 0x75,
+	0xdb, 0xd4, 0xe0, 0x2e, 0x17, 0xa7, 0x8e, 0x24, 0xb3, 0x2a, 0x43, 0x35, 0x1a, 0xeb, 0x8c, 0x5e,
+	0x17, 0x74, 0xc9, 0xdc, 0xc5, 0xf9, 0x78, 0xa7, 0x85, 0x4c, 0x92, 0x79, 0x65, 0x82, 0x46, 0x77,
+	0x1d, 0xcf, 0x47, 0xb7, 0xcd, 0x5b, 0xc8, 0x5c, 0xb2, 0xa0, 0x4c, 0xd0, 0x70, 0xe3, 0x45, 0xe0,
+	0x09, 0x74, 0x09, 0x51, 0x26, 0x0c, 0xaf, 0x53, 0x0c, 0x93, 0x45, 0x7a, 0x07, 0xca, 0x71, 0xa0,
+	0xce, 0xa2, 0xfe, 0xa6, 0xab, 0x8c, 0x50, 0xba, 0x06, 0x2b, 0x51, 0xa8, 0x7b, 0xa2, 0x73, 0xe2,
+	0x84, 0xd8, 0xc4, 0xae, 0x17, 0x4a, 0x11, 0xe5, 0x50, 0x59, 0x15, 0x8b, 0xde, 0x1e, 0x1d, 0x74,
+	0x18, 0x9e, 0x93, 0x0a, 0x25, 0x30, 0xa3, 0x83, 0xf8, 0xfe, 0xf1, 0x71, 0x88, 0x92, 0xbc, 0xca,
+	0x3f, 0xf8, 0xb5, 0x00, 0x95, 0x3a, 0xeb, 0xc7, 0xf4, 0x1e, 0x0a, 0xae, 0xde, 0x0e, 0x8f, 0x75,
+	0x69, 0x13, 0x96, 0x2e, 0xcd, 0x0b, 0x71, 0x09, 0xac, 0xd9, 0x93, 0x7e, 0x87, 0x55, 0x4d, 0xfb,
+	0x8a, 0x5f, 0x53, 0x56, 0x86, 0xfe, 0x17, 0x66, 0x12, 0x1d, 0x9b, 0x96, 0xed, 0xf1, 0xc7, 0xa4,
+	0x5a, 0x49, 0x6b, 0xea, 0x56, 0x86, 0x3e, 0x82, 0x85, 0x4b, 0x13, 0x2d, 0x5d, 0xb3, 0x27, 0xcd,
+	0xce, 0x55, 0xd3, 0xbe, 0x62, 0x04, 0xb6, 0x32, 0xf4, 0x19, 0x54, 0xd2, 0x06, 0x42, 0x6a, 0xd9,
+	0xd7, 0xce, 0x89, 0xd5, 0x35, 0x7b, 0xe2, 0xac, 0x99, 0xa1, 0x9f, 0xc3, 0xca, 0x95, 0xa3, 0x16,
+	0xfd, 0xbb, 0x7d, 0xb3, 0x41, 0xaf, 0x6a, 0xd9, 0xd7, 0xce, 0x6b, 0x91, 0x23, 0x69, 0x73, 0x0e,
+	0xd5, 0xd2, 0x93, 0xc7, 0x9f, 0xea, 0x9a, 0x3d, 0x71, 0x84, 0xca, 0xd0, 0x77, 0x60, 0x26, 0x31,
+	0x42, 0xd0, 0x15, 0xfb, 0xaa, 0x81, 0xa2, 0x5a, 0xb1, 0x53, 0x86, 0x93, 0x28, 0xe2, 0x7b, 0x28,
+	0xeb, 0xbe, 0xaf, 0x2a, 0x3a, 0xa4, 0xcb, 0xea, 0x46, 0xfd, 0x39, 0x2a, 0xbe, 0x98, 0xc0, 0x2f,
+	0x64, 0x3f, 0x81, 0xa5, 0xd4, 0x87, 0x86, 0xfe, 0xd9, 0xbe, 0xfe, 0x79, 0xab, 0xd6, 0xec, 0x89,
+	0xaf, 0x94, 0x95, 0xd9, 0xfa, 0xdf, 0x0f, 0xaf, 0x6b, 0xc6, 0xcb, 0xd7, 0x35, 0xe3, 0xa7, 0xd7,
+	0x35, 0xe3, 0x9b, 0x37, 0xb5, 0xcc, 0xcb, 0x37, 0xb5, 0xcc, 0xab, 0x37, 0xb5, 0xcc, 0x47, 0xd6,
+	0xf5, 0xff, 0xd7, 0x71, 0x54, 0xd4, 0x7f, 0xfe, 0xfd, 0x5b, 0x00, 0x00, 0x00, 0xff, 0xff, 0xf3,
+	0xa2, 0x9f, 0x51, 0x58, 0x11, 0x00, 0x00,
 }
 
 func (m *GetSubscriptionRequest) Marshal() (dAtA []byte, err error) {
@@ -647,18 +1776,32 @@ func (m *GetSubscriptionResponse) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
+	if m.SubscribeToNewsletter {
+		i--
+		if m.SubscribeToNewsletter {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x48
+	}
+	if len(m.UserEmail) > 0 {
+		i -= len(m.UserEmail)
+		copy(dAtA[i:], m.UserEmail)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.UserEmail)))
+		i--
+		dAtA[i] = 0x42
+	}
+	if len(m.RequestedAnyName) > 0 {
+		i -= len(m.RequestedAnyName)
+		copy(dAtA[i:], m.RequestedAnyName)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.RequestedAnyName)))
+		i--
+		dAtA[i] = 0x3a
+	}
 	if m.PaymentMethod != 0 {
 		i = encodeVarintPaymentservice(dAtA, i, uint64(m.PaymentMethod))
-		i--
-		dAtA[i] = 0x40
-	}
-	if m.NextTierEnds != 0 {
-		i = encodeVarintPaymentservice(dAtA, i, uint64(m.NextTierEnds))
-		i--
-		dAtA[i] = 0x38
-	}
-	if m.NextTier != 0 {
-		i = encodeVarintPaymentservice(dAtA, i, uint64(m.NextTier))
 		i--
 		dAtA[i] = 0x30
 	}
@@ -715,6 +1858,20 @@ func (m *BuySubscriptionRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 	_ = i
 	var l int
 	_ = l
+	if len(m.UserEmail) > 0 {
+		i -= len(m.UserEmail)
+		copy(dAtA[i:], m.UserEmail)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.UserEmail)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.RequestedAnyName) > 0 {
+		i -= len(m.RequestedAnyName)
+		copy(dAtA[i:], m.RequestedAnyName)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.RequestedAnyName)))
+		i--
+		dAtA[i] = 0x2a
+	}
 	if m.PaymentMethod != 0 {
 		i = encodeVarintPaymentservice(dAtA, i, uint64(m.PaymentMethod))
 		i--
@@ -732,10 +1889,10 @@ func (m *BuySubscriptionRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.OwnerAnyID) > 0 {
-		i -= len(m.OwnerAnyID)
-		copy(dAtA[i:], m.OwnerAnyID)
-		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.OwnerAnyID)))
+	if len(m.OwnerAnyId) > 0 {
+		i -= len(m.OwnerAnyId)
+		copy(dAtA[i:], m.OwnerAnyId)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.OwnerAnyId)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -799,6 +1956,13 @@ func (m *BuySubscriptionResponse) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
+	if len(m.BillingID) > 0 {
+		i -= len(m.BillingID)
+		copy(dAtA[i:], m.BillingID)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.BillingID)))
+		i--
+		dAtA[i] = 0x12
+	}
 	if len(m.PaymentUrl) > 0 {
 		i -= len(m.PaymentUrl)
 		copy(dAtA[i:], m.PaymentUrl)
@@ -806,6 +1970,595 @@ func (m *BuySubscriptionResponse) MarshalToSizedBuffer(dAtA []byte) (int, error)
 		i--
 		dAtA[i] = 0xa
 	}
+	return len(dAtA) - i, nil
+}
+
+func (m *FinalizeSubscriptionRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *FinalizeSubscriptionRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *FinalizeSubscriptionRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.RequestedAnyName) > 0 {
+		i -= len(m.RequestedAnyName)
+		copy(dAtA[i:], m.RequestedAnyName)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.RequestedAnyName)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.OwnerEthAddress) > 0 {
+		i -= len(m.OwnerEthAddress)
+		copy(dAtA[i:], m.OwnerEthAddress)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.OwnerEthAddress)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.OwnerAnyId) > 0 {
+		i -= len(m.OwnerAnyId)
+		copy(dAtA[i:], m.OwnerAnyId)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.OwnerAnyId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *FinalizeSubscriptionResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *FinalizeSubscriptionResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *FinalizeSubscriptionResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *FinalizeSubscriptionRequestSigned) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *FinalizeSubscriptionRequestSigned) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *FinalizeSubscriptionRequestSigned) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Signature) > 0 {
+		i -= len(m.Signature)
+		copy(dAtA[i:], m.Signature)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Signature)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Payload) > 0 {
+		i -= len(m.Payload)
+		copy(dAtA[i:], m.Payload)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Payload)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *GetSubscriptionPortalLinkRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetSubscriptionPortalLinkRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GetSubscriptionPortalLinkRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.OwnerAnyId) > 0 {
+		i -= len(m.OwnerAnyId)
+		copy(dAtA[i:], m.OwnerAnyId)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.OwnerAnyId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *GetSubscriptionPortalLinkRequestSigned) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetSubscriptionPortalLinkRequestSigned) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GetSubscriptionPortalLinkRequestSigned) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Signature) > 0 {
+		i -= len(m.Signature)
+		copy(dAtA[i:], m.Signature)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Signature)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Payload) > 0 {
+		i -= len(m.Payload)
+		copy(dAtA[i:], m.Payload)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Payload)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *GetSubscriptionPortalLinkResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetSubscriptionPortalLinkResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GetSubscriptionPortalLinkResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.PortalUrl) > 0 {
+		i -= len(m.PortalUrl)
+		copy(dAtA[i:], m.PortalUrl)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.PortalUrl)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *GetVerificationEmailRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetVerificationEmailRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GetVerificationEmailRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.SubscribeToNewsletter {
+		i--
+		if m.SubscribeToNewsletter {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x18
+	}
+	if len(m.Email) > 0 {
+		i -= len(m.Email)
+		copy(dAtA[i:], m.Email)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Email)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.OwnerAnyId) > 0 {
+		i -= len(m.OwnerAnyId)
+		copy(dAtA[i:], m.OwnerAnyId)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.OwnerAnyId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *GetVerificationEmailResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetVerificationEmailResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GetVerificationEmailResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *GetVerificationEmailRequestSigned) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetVerificationEmailRequestSigned) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GetVerificationEmailRequestSigned) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Signature) > 0 {
+		i -= len(m.Signature)
+		copy(dAtA[i:], m.Signature)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Signature)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Payload) > 0 {
+		i -= len(m.Payload)
+		copy(dAtA[i:], m.Payload)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Payload)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *VerifyEmailRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VerifyEmailRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VerifyEmailRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Code) > 0 {
+		i -= len(m.Code)
+		copy(dAtA[i:], m.Code)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Code)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.OwnerEthAddress) > 0 {
+		i -= len(m.OwnerEthAddress)
+		copy(dAtA[i:], m.OwnerEthAddress)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.OwnerEthAddress)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.OwnerAnyId) > 0 {
+		i -= len(m.OwnerAnyId)
+		copy(dAtA[i:], m.OwnerAnyId)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.OwnerAnyId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *VerifyEmailResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VerifyEmailResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VerifyEmailResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.Success {
+		i--
+		if m.Success {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *VerifyEmailRequestSigned) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VerifyEmailRequestSigned) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VerifyEmailRequestSigned) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Signature) > 0 {
+		i -= len(m.Signature)
+		copy(dAtA[i:], m.Signature)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Signature)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Payload) > 0 {
+		i -= len(m.Payload)
+		copy(dAtA[i:], m.Payload)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Payload)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *IsNameValidRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *IsNameValidRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *IsNameValidRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.RequestedAnyName) > 0 {
+		i -= len(m.RequestedAnyName)
+		copy(dAtA[i:], m.RequestedAnyName)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.RequestedAnyName)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.RequestedTier != 0 {
+		i = encodeVarintPaymentservice(dAtA, i, uint64(m.RequestedTier))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *IsNameValidResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *IsNameValidResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *IsNameValidResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Description) > 0 {
+		i -= len(m.Description)
+		copy(dAtA[i:], m.Description)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Description)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Code != 0 {
+		i = encodeVarintPaymentservice(dAtA, i, uint64(m.Code))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *VerifyAppStoreReceiptRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VerifyAppStoreReceiptRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VerifyAppStoreReceiptRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Receipt) > 0 {
+		i -= len(m.Receipt)
+		copy(dAtA[i:], m.Receipt)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Receipt)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.OwnerAnyId) > 0 {
+		i -= len(m.OwnerAnyId)
+		copy(dAtA[i:], m.OwnerAnyId)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.OwnerAnyId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *VerifyAppStoreReceiptRequestSigned) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VerifyAppStoreReceiptRequestSigned) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VerifyAppStoreReceiptRequestSigned) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Signature) > 0 {
+		i -= len(m.Signature)
+		copy(dAtA[i:], m.Signature)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Signature)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Payload) > 0 {
+		i -= len(m.Payload)
+		copy(dAtA[i:], m.Payload)
+		i = encodeVarintPaymentservice(dAtA, i, uint64(len(m.Payload)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *VerifyAppStoreReceiptResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VerifyAppStoreReceiptResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VerifyAppStoreReceiptResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
 	return len(dAtA) - i, nil
 }
 
@@ -871,14 +2624,19 @@ func (m *GetSubscriptionResponse) Size() (n int) {
 	if m.IsAutoRenew {
 		n += 2
 	}
-	if m.NextTier != 0 {
-		n += 1 + sovPaymentservice(uint64(m.NextTier))
-	}
-	if m.NextTierEnds != 0 {
-		n += 1 + sovPaymentservice(uint64(m.NextTierEnds))
-	}
 	if m.PaymentMethod != 0 {
 		n += 1 + sovPaymentservice(uint64(m.PaymentMethod))
+	}
+	l = len(m.RequestedAnyName)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.UserEmail)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	if m.SubscribeToNewsletter {
+		n += 2
 	}
 	return n
 }
@@ -889,7 +2647,7 @@ func (m *BuySubscriptionRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.OwnerAnyID)
+	l = len(m.OwnerAnyId)
 	if l > 0 {
 		n += 1 + l + sovPaymentservice(uint64(l))
 	}
@@ -902,6 +2660,14 @@ func (m *BuySubscriptionRequest) Size() (n int) {
 	}
 	if m.PaymentMethod != 0 {
 		n += 1 + sovPaymentservice(uint64(m.PaymentMethod))
+	}
+	l = len(m.RequestedAnyName)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.UserEmail)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
 	}
 	return n
 }
@@ -933,6 +2699,271 @@ func (m *BuySubscriptionResponse) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovPaymentservice(uint64(l))
 	}
+	l = len(m.BillingID)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *FinalizeSubscriptionRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.OwnerAnyId)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.OwnerEthAddress)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.RequestedAnyName)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *FinalizeSubscriptionResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *FinalizeSubscriptionRequestSigned) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Payload)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.Signature)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *GetSubscriptionPortalLinkRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.OwnerAnyId)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *GetSubscriptionPortalLinkRequestSigned) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Payload)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.Signature)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *GetSubscriptionPortalLinkResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.PortalUrl)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *GetVerificationEmailRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.OwnerAnyId)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.Email)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	if m.SubscribeToNewsletter {
+		n += 2
+	}
+	return n
+}
+
+func (m *GetVerificationEmailResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *GetVerificationEmailRequestSigned) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Payload)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.Signature)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *VerifyEmailRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.OwnerAnyId)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.OwnerEthAddress)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.Code)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *VerifyEmailResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Success {
+		n += 2
+	}
+	return n
+}
+
+func (m *VerifyEmailRequestSigned) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Payload)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.Signature)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *IsNameValidRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.RequestedTier != 0 {
+		n += 1 + sovPaymentservice(uint64(m.RequestedTier))
+	}
+	l = len(m.RequestedAnyName)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *IsNameValidResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Code != 0 {
+		n += 1 + sovPaymentservice(uint64(m.Code))
+	}
+	l = len(m.Description)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *VerifyAppStoreReceiptRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.OwnerAnyId)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.Receipt)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *VerifyAppStoreReceiptRequestSigned) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Payload)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	l = len(m.Signature)
+	if l > 0 {
+		n += 1 + l + sovPaymentservice(uint64(l))
+	}
+	return n
+}
+
+func (m *VerifyAppStoreReceiptResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
 	return n
 }
 
@@ -1185,7 +3216,7 @@ func (m *GetSubscriptionResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Tier |= SubscriptionTier(b&0x7F) << shift
+				m.Tier |= uint32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1269,44 +3300,6 @@ func (m *GetSubscriptionResponse) Unmarshal(dAtA []byte) error {
 			m.IsAutoRenew = bool(v != 0)
 		case 6:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field NextTier", wireType)
-			}
-			m.NextTier = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPaymentservice
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.NextTier |= SubscriptionTier(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 7:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field NextTierEnds", wireType)
-			}
-			m.NextTierEnds = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPaymentservice
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.NextTierEnds |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 8:
-			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PaymentMethod", wireType)
 			}
 			m.PaymentMethod = 0
@@ -1324,6 +3317,90 @@ func (m *GetSubscriptionResponse) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RequestedAnyName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RequestedAnyName = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UserEmail", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.UserEmail = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 9:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SubscribeToNewsletter", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.SubscribeToNewsletter = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPaymentservice(dAtA[iNdEx:])
@@ -1376,7 +3453,7 @@ func (m *BuySubscriptionRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field OwnerAnyID", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerAnyId", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -1404,7 +3481,7 @@ func (m *BuySubscriptionRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.OwnerAnyID = string(dAtA[iNdEx:postIndex])
+			m.OwnerAnyId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -1452,7 +3529,7 @@ func (m *BuySubscriptionRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.RequestedTier |= SubscriptionTier(b&0x7F) << shift
+				m.RequestedTier |= uint32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1476,6 +3553,70 @@ func (m *BuySubscriptionRequest) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RequestedAnyName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RequestedAnyName = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UserEmail", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.UserEmail = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPaymentservice(dAtA[iNdEx:])
@@ -1676,6 +3817,1754 @@ func (m *BuySubscriptionResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.PaymentUrl = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BillingID", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.BillingID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *FinalizeSubscriptionRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: FinalizeSubscriptionRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: FinalizeSubscriptionRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerAnyId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OwnerAnyId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerEthAddress", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OwnerEthAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RequestedAnyName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RequestedAnyName = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *FinalizeSubscriptionResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: FinalizeSubscriptionResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: FinalizeSubscriptionResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *FinalizeSubscriptionRequestSigned) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: FinalizeSubscriptionRequestSigned: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: FinalizeSubscriptionRequestSigned: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Payload", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Payload = append(m.Payload[:0], dAtA[iNdEx:postIndex]...)
+			if m.Payload == nil {
+				m.Payload = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GetSubscriptionPortalLinkRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetSubscriptionPortalLinkRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetSubscriptionPortalLinkRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerAnyId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OwnerAnyId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetSubscriptionPortalLinkRequestSigned: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetSubscriptionPortalLinkRequestSigned: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Payload", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Payload = append(m.Payload[:0], dAtA[iNdEx:postIndex]...)
+			if m.Payload == nil {
+				m.Payload = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GetSubscriptionPortalLinkResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetSubscriptionPortalLinkResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetSubscriptionPortalLinkResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PortalUrl", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PortalUrl = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GetVerificationEmailRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetVerificationEmailRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetVerificationEmailRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerAnyId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OwnerAnyId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Email", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Email = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SubscribeToNewsletter", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.SubscribeToNewsletter = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GetVerificationEmailResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetVerificationEmailResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetVerificationEmailResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GetVerificationEmailRequestSigned) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetVerificationEmailRequestSigned: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetVerificationEmailRequestSigned: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Payload", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Payload = append(m.Payload[:0], dAtA[iNdEx:postIndex]...)
+			if m.Payload == nil {
+				m.Payload = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *VerifyEmailRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VerifyEmailRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VerifyEmailRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerAnyId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OwnerAnyId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerEthAddress", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OwnerEthAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Code = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *VerifyEmailResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VerifyEmailResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VerifyEmailResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Success", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Success = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *VerifyEmailRequestSigned) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VerifyEmailRequestSigned: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VerifyEmailRequestSigned: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Payload", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Payload = append(m.Payload[:0], dAtA[iNdEx:postIndex]...)
+			if m.Payload == nil {
+				m.Payload = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *IsNameValidRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: IsNameValidRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: IsNameValidRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RequestedTier", wireType)
+			}
+			m.RequestedTier = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.RequestedTier |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RequestedAnyName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RequestedAnyName = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *IsNameValidResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: IsNameValidResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: IsNameValidResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
+			}
+			m.Code = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Code |= IsNameValidResponse_Code(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Description", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Description = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *VerifyAppStoreReceiptRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VerifyAppStoreReceiptRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VerifyAppStoreReceiptRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerAnyId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OwnerAnyId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Receipt", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Receipt = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *VerifyAppStoreReceiptRequestSigned) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VerifyAppStoreReceiptRequestSigned: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VerifyAppStoreReceiptRequestSigned: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Payload", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Payload = append(m.Payload[:0], dAtA[iNdEx:postIndex]...)
+			if m.Payload == nil {
+				m.Payload = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPaymentservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPaymentservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthPaymentservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *VerifyAppStoreReceiptResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPaymentservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VerifyAppStoreReceiptResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VerifyAppStoreReceiptResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPaymentservice(dAtA[iNdEx:])

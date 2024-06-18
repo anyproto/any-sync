@@ -28,11 +28,11 @@ var (
 	// ProtoVersion 1 - version with yamux over tcp and quic
 	// ProtoVersion 2 - acl compatible version
 	// ProtoVersion 3 - acl with breaking changes / multiplayer
-	ProtoVersion = uint32(2)
+	ProtoVersion = uint32(3)
 )
 
 var (
-	compatibleVersions = []uint32{ProtoVersion, 3}
+	compatibleVersions = []uint32{2, ProtoVersion}
 )
 
 func New() SecureService {

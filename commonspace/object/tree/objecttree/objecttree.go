@@ -4,24 +4,20 @@ package objecttree
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/anyproto/any-sync/util/crypto"
+	"github.com/anyproto/any-sync/util/debug"
+
+	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/slice"
 )
-
-type RWLocker interface {
-	sync.Locker
-	RLock()
-	RUnlock()
-	TryRLock() bool
-	TryLock() bool
-}
 
 var (
 	ErrHasInvalidChanges = errors.New("the change is invalid")
@@ -29,6 +25,8 @@ var (
 	ErrNoChangeInTree    = errors.New("no such change in tree")
 	ErrMissingKey        = errors.New("missing current read key")
 	ErrDerived           = errors.New("expect >= 2 changes in derived tree")
+	ErrDeleted           = errors.New("object tree is deleted")
+	ErrNoAclHead         = errors.New("no acl head")
 )
 
 type AddResultSummary int
@@ -49,8 +47,13 @@ type RawChangesPayload struct {
 type ChangeIterateFunc = func(change *Change) bool
 type ChangeConvertFunc = func(change *Change, decrypted []byte) (any, error)
 
+type TryLocker interface {
+	sync.Locker
+	TryLock() bool
+}
+
 type ReadableObjectTree interface {
-	RWLocker
+	TryLocker
 
 	Id() string
 	Header() *treechangeproto.RawTreeChangeWithId
@@ -106,6 +109,7 @@ type objectTree struct {
 
 	keys           map[string]crypto.SymKey
 	currentReadKey crypto.SymKey
+	isDeleted      bool
 
 	// buffers
 	difSnapshotBuf  []*treechangeproto.RawTreeChangeWithId
@@ -115,7 +119,7 @@ type objectTree struct {
 
 	snapshotPath []string
 
-	sync.RWMutex
+	sync.Mutex
 }
 
 func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Change) (err error) {
@@ -123,6 +127,7 @@ func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Chan
 	ot.treeBuilder.Reset()
 	ot.tree, err = ot.treeBuilder.Build(theirHeads, newChanges)
 	if err != nil {
+		ot.tree = oldTree
 		return
 	}
 
@@ -180,13 +185,29 @@ func (ot *objectTree) Storage() treestorage.TreeStorage {
 }
 
 func (ot *objectTree) GetChange(id string) (*Change, error) {
+	if ot.isDeleted {
+		return nil, ErrDeleted
+	}
 	if ch, ok := ot.tree.attached[id]; ok {
 		return ch, nil
 	}
 	return nil, ErrNoChangeInTree
 }
 
+func (ot *objectTree) logUseWhenUnlocked() {
+	// this is needed to check when we use the tree not under the lock
+	if ot.TryLock() {
+		log.With(zap.String("treeId", ot.id), zap.String("stack", debug.StackCompact(true))).Error("use tree when unlocked")
+		ot.Unlock()
+	}
+}
+
 func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeContent) (res AddResult, err error) {
+	if ot.isDeleted {
+		err = ErrDeleted
+		return
+	}
+	ot.logUseWhenUnlocked()
 	payload, err := ot.prepareBuilderContent(content)
 	if err != nil {
 		return
@@ -228,6 +249,10 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 }
 
 func (ot *objectTree) UnpackChange(raw *treechangeproto.RawTreeChangeWithId) (data []byte, err error) {
+	if ot.isDeleted {
+		err = ErrDeleted
+		return
+	}
 	unmarshalled, err := ot.changeBuilder.Unmarshall(raw, true)
 	if err != nil {
 		return
@@ -237,6 +262,10 @@ func (ot *objectTree) UnpackChange(raw *treechangeproto.RawTreeChangeWithId) (da
 }
 
 func (ot *objectTree) PrepareChange(content SignableChangeContent) (res *treechangeproto.RawTreeChangeWithId, err error) {
+	if ot.isDeleted {
+		err = ErrDeleted
+		return
+	}
 	payload, err := ot.prepareBuilderContent(content)
 	if err != nil {
 		return
@@ -292,6 +321,11 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 }
 
 func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChangesPayload) (addResult AddResult, err error) {
+	if ot.isDeleted {
+		err = ErrDeleted
+		return
+	}
+	ot.logUseWhenUnlocked()
 	lastHeadId := ot.tree.lastIteratedHeadId
 	addResult, err = ot.addRawChanges(ctx, changesPayload)
 	if err != nil {
@@ -309,7 +343,10 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChang
 	err = ot.treeStorage.AddRawChangesSetHeads(addResult.Added, addResult.Heads)
 	if err != nil {
 		// rolling back all changes made to inmemory state
-		ot.rebuildFromStorage(nil, nil)
+		rebuildErr := ot.rebuildFromStorage(nil, nil)
+		if rebuildErr != nil {
+			log.Error("failed to rebuild after adding to storage", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
+		}
 	}
 	return
 }
@@ -372,7 +409,7 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 		headsToUse    = changesPayload.NewHeads
 	)
 	// if our validator provides filtering mechanism then we use it
-	filteredHeads, ot.newChangesBuf, ot.newSnapshotsBuf, ot.notSeenIdxBuf = ot.validator.FilterChanges(ot.aclList, changesPayload.NewHeads, ot.newChangesBuf, ot.newSnapshotsBuf, ot.notSeenIdxBuf)
+	filteredHeads, ot.newChangesBuf, ot.newSnapshotsBuf, ot.notSeenIdxBuf = ot.validator.FilterChanges(ot.aclList, ot.newChangesBuf, ot.newSnapshotsBuf, ot.notSeenIdxBuf)
 	if filteredHeads {
 		// if we filtered some of the heads, then we don't know which heads to use
 		headsToUse = []string{}
@@ -409,20 +446,27 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 			break
 		}
 	}
-
+	log := log.With(zap.String("treeId", ot.id))
 	if shouldRebuildFromStorage {
 		err = ot.rebuildFromStorage(headsToUse, ot.newChangesBuf)
 		if err != nil {
+			log.Error("failed to rebuild with new heads", zap.Strings("headsToUse", headsToUse), zap.Error(err))
 			// rebuilding without new changes
-			ot.rebuildFromStorage(nil, nil)
+			rebuildErr := ot.rebuildFromStorage(nil, nil)
+			if rebuildErr != nil {
+				log.Error("failed to rebuild from storage", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
+			}
 			return
 		}
 		addResult, err = ot.createAddResult(prevHeadsCopy, Rebuild, nil, changesPayload.RawChanges)
 		if err != nil {
+			log.Error("failed to create add result", zap.Strings("headsToUse", headsToUse), zap.Error(err))
 			// that means that some unattached changes were somehow corrupted in memory
 			// this shouldn't happen but if that happens, then rebuilding from storage
-			ot.rebuildFromStorage(nil, nil)
-			return
+			rebuildErr := ot.rebuildFromStorage(nil, nil)
+			if rebuildErr != nil {
+				log.Error("failed to rebuild after add result", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
+			}
 		}
 		return
 	}
@@ -443,14 +487,18 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 		err = ot.validateTree(treeChangesAdded)
 		if err != nil {
 			rollback(treeChangesAdded)
-			err = ErrHasInvalidChanges
+			err = fmt.Errorf("%w: %w", ErrHasInvalidChanges, err)
 			return
 		}
 		addResult, err = ot.createAddResult(prevHeadsCopy, mode, treeChangesAdded, changesPayload.RawChanges)
 		if err != nil {
 			// that means that some unattached changes were somehow corrupted in memory
 			// this shouldn't happen but if that happens, then rebuilding from storage
-			ot.rebuildFromStorage(nil, nil)
+			rollback(treeChangesAdded)
+			rebuildErr := ot.rebuildFromStorage(nil, nil)
+			if rebuildErr != nil {
+				log.Error("failed to rebuild after add result (add to tree)", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
+			}
 			return
 		}
 		return
@@ -527,6 +575,10 @@ func (ot *objectTree) IterateRoot(convert ChangeConvertFunc, iterate ChangeItera
 }
 
 func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate ChangeIterateFunc) (err error) {
+	if ot.isDeleted {
+		err = ErrDeleted
+		return
+	}
 	if convert == nil {
 		ot.tree.Iterate(id, iterate)
 		return
@@ -576,12 +628,14 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 }
 
 func (ot *objectTree) HasChanges(chs ...string) bool {
+	if ot.isDeleted {
+		return false
+	}
 	for _, ch := range chs {
 		if _, attachedExists := ot.tree.attached[ch]; !attachedExists {
 			return false
 		}
 	}
-
 	return true
 }
 
@@ -602,10 +656,17 @@ func (ot *objectTree) Close() error {
 }
 
 func (ot *objectTree) Delete() error {
+	if ot.isDeleted {
+		return nil
+	}
+	ot.isDeleted = true
 	return ot.treeStorage.Delete()
 }
 
 func (ot *objectTree) SnapshotPath() []string {
+	if ot.isDeleted {
+		return nil
+	}
 	// TODO: Add error as return parameter
 	if ot.snapshotPathIsActual() {
 		return ot.snapshotPath
@@ -628,6 +689,9 @@ func (ot *objectTree) SnapshotPath() []string {
 }
 
 func (ot *objectTree) ChangesAfterCommonSnapshot(theirPath, theirHeads []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
+	if ot.isDeleted {
+		return nil, ErrDeleted
+	}
 	var (
 		needFullDocument = len(theirPath) == 0
 		ourPath          = ot.SnapshotPath()

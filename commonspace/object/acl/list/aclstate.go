@@ -34,6 +34,7 @@ var (
 	ErrIncorrectRoot             = errors.New("incorrect root")
 	ErrIncorrectRecordSequence   = errors.New("incorrect prev id of a record")
 	ErrMetadataTooLarge          = errors.New("metadata size too large")
+	ErrOwnerNotFound             = errors.New("owner not found")
 )
 
 const MaxMetadataLen = 1024
@@ -226,6 +227,16 @@ func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
 	}
 	st.lastRecordId = record.Id
 	return
+}
+
+func (st *AclState) IsEmpty() bool {
+	users := 0
+	for _, acc := range st.CurrentAccounts() {
+		if !acc.Permissions.NoPermissions() {
+			users++
+		}
+	}
+	return users == 1 && len(st.Invites()) == 0 && len(st.pendingRequests) == 0
 }
 
 func (st *AclState) applyRoot(record *AclRecord) (err error) {
@@ -842,6 +853,15 @@ func (st *AclState) RemoveRecords() (records []RequestRecord) {
 
 func (st *AclState) LastRecordId() string {
 	return st.lastRecordId
+}
+
+func (st *AclState) OwnerPubKey() (ownerIdentity crypto.PubKey, err error) {
+	for _, aState := range st.accountStates {
+		if aState.Permissions.IsOwner() {
+			return aState.PubKey, nil
+		}
+	}
+	return nil, ErrOwnerNotFound
 }
 
 func (st *AclState) deriveKey() (crypto.SymKey, error) {

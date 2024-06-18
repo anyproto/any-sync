@@ -3,75 +3,13 @@ on:
     branches:
       - main
 
+name: coverage
+
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version:
-          - '1.21'
-    env:
-      GOPRIVATE: github.com/anyproto
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
-        with:
-          go-version: '${{ matrix.go-version }}'
-          check-latest: true
-
-      - name: git config
-        run: git config --global url.https://${{ secrets.ANYTYPE_PAT }}@github.com/.insteadOf https://github.com/
-
-      - name: Setup license repository
-        uses: actions/checkout@master
-        with:
-          repository: anyproto/open
-          ref: refs/heads/main
-          path: ./open
-      - name: Check licenses
-        run: |
-          cd open
-          python3 tools/generate.py --platform golang
-          cd ..
-          sudo gem install license_finder
-          license_finder inherited_decisions add open/decisions.yml
-          license_finder --enabled-package-managers gomodules
-
-      - name: deps
-        run: make deps
-
-      - name: unit tests
-        run: make test
-
-      - name: Quality Gate - Test coverage shall be above threshold
-        env:
-          TESTCOVERAGE_THRESHOLD: 0
-        run: |
-          go test ./... -coverprofile coverage.out -covermode count
-
-          generated_pattern='^\/\/ Code generated .* DO NOT EDIT\.$'
-          files_list=$(grep -rl "$generated_pattern" . | grep '\.go$' | sed 's/^\.\///')
-
-          for file in $files_list; do
-            echo "Removing $file from coverage report"
-            grep -v "$file" coverage.out > temp_file
-            mv temp_file coverage.out
-          done
-
-          go tool cover -func coverage.out
-          echo "Quality Gate: checking test coverage is above threshold ..."
-          echo "Threshold             : $TESTCOVERAGE_THRESHOLD %"
-          totalCoverage=`go tool cover -func=coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+'`
-          echo "Current test coverage : $totalCoverage %"
-          if (( $(echo "$totalCoverage $TESTCOVERAGE_THRESHOLD" | awk '{print ($1 > $2)}') )); then
-              echo "OK"
-          else
-              echo "Current test coverage is below threshold. Please add more unit tests or adjust threshold to a lower value."
-              echo "Failed"
-              exit 1
-          fi
-      - uses: seriousben/go-patch-cover-action@v1
+  release-reusable:
+    uses: anyproto/any-sync-node/.github/workflows/coverage-reusable.yml@main
+    secrets: inherit # pass all secrets

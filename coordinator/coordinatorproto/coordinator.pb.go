@@ -32,6 +32,10 @@ const (
 	ErrorCodes_SpaceNotExists       ErrorCodes = 4
 	ErrorCodes_SpaceLimitReached    ErrorCodes = 5
 	ErrorCodes_AccountDeleted       ErrorCodes = 6
+	ErrorCodes_Forbidden            ErrorCodes = 7
+	ErrorCodes_AclHeadIsMissing     ErrorCodes = 8
+	ErrorCodes_AclNonEmpty          ErrorCodes = 9
+	ErrorCodes_SpaceNotShareable    ErrorCodes = 10
 	ErrorCodes_ErrorOffset          ErrorCodes = 300
 )
 
@@ -43,6 +47,10 @@ var ErrorCodes_name = map[int32]string{
 	4:   "SpaceNotExists",
 	5:   "SpaceLimitReached",
 	6:   "AccountDeleted",
+	7:   "Forbidden",
+	8:   "AclHeadIsMissing",
+	9:   "AclNonEmpty",
+	10:  "SpaceNotShareable",
 	300: "ErrorOffset",
 }
 
@@ -54,6 +62,10 @@ var ErrorCodes_value = map[string]int32{
 	"SpaceNotExists":       4,
 	"SpaceLimitReached":    5,
 	"AccountDeleted":       6,
+	"Forbidden":            7,
+	"AclHeadIsMissing":     8,
+	"AclNonEmpty":          9,
+	"SpaceNotShareable":    10,
 	"ErrorOffset":          300,
 }
 
@@ -311,17 +323,71 @@ func (m *SpaceSignRequest) GetForceRequest() bool {
 	return false
 }
 
+type SpaceLimits struct {
+	ReadMembers  uint32 `protobuf:"varint,1,opt,name=readMembers,proto3" json:"readMembers,omitempty"`
+	WriteMembers uint32 `protobuf:"varint,2,opt,name=writeMembers,proto3" json:"writeMembers,omitempty"`
+}
+
+func (m *SpaceLimits) Reset()         { *m = SpaceLimits{} }
+func (m *SpaceLimits) String() string { return proto.CompactTextString(m) }
+func (*SpaceLimits) ProtoMessage()    {}
+func (*SpaceLimits) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{1}
+}
+func (m *SpaceLimits) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SpaceLimits) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SpaceLimits.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SpaceLimits) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SpaceLimits.Merge(m, src)
+}
+func (m *SpaceLimits) XXX_Size() int {
+	return m.Size()
+}
+func (m *SpaceLimits) XXX_DiscardUnknown() {
+	xxx_messageInfo_SpaceLimits.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SpaceLimits proto.InternalMessageInfo
+
+func (m *SpaceLimits) GetReadMembers() uint32 {
+	if m != nil {
+		return m.ReadMembers
+	}
+	return 0
+}
+
+func (m *SpaceLimits) GetWriteMembers() uint32 {
+	if m != nil {
+		return m.WriteMembers
+	}
+	return 0
+}
+
 type SpaceStatusPayload struct {
 	Status            SpaceStatus      `protobuf:"varint,1,opt,name=status,proto3,enum=coordinator.SpaceStatus" json:"status,omitempty"`
 	DeletionTimestamp int64            `protobuf:"varint,2,opt,name=deletionTimestamp,proto3" json:"deletionTimestamp,omitempty"`
 	Permissions       SpacePermissions `protobuf:"varint,3,opt,name=permissions,proto3,enum=coordinator.SpacePermissions" json:"permissions,omitempty"`
+	Limits            *SpaceLimits     `protobuf:"bytes,4,opt,name=limits,proto3" json:"limits,omitempty"`
+	IsShared          bool             `protobuf:"varint,5,opt,name=isShared,proto3" json:"isShared,omitempty"`
 }
 
 func (m *SpaceStatusPayload) Reset()         { *m = SpaceStatusPayload{} }
 func (m *SpaceStatusPayload) String() string { return proto.CompactTextString(m) }
 func (*SpaceStatusPayload) ProtoMessage()    {}
 func (*SpaceStatusPayload) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{1}
+	return fileDescriptor_d94f6f99586adae2, []int{2}
 }
 func (m *SpaceStatusPayload) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -371,6 +437,20 @@ func (m *SpaceStatusPayload) GetPermissions() SpacePermissions {
 	return SpacePermissions_SpacePermissionsUnknown
 }
 
+func (m *SpaceStatusPayload) GetLimits() *SpaceLimits {
+	if m != nil {
+		return m.Limits
+	}
+	return nil
+}
+
+func (m *SpaceStatusPayload) GetIsShared() bool {
+	if m != nil {
+		return m.IsShared
+	}
+	return false
+}
+
 type SpaceSignResponse struct {
 	Receipt *SpaceReceiptWithSignature `protobuf:"bytes,1,opt,name=receipt,proto3" json:"receipt,omitempty"`
 }
@@ -379,7 +459,7 @@ func (m *SpaceSignResponse) Reset()         { *m = SpaceSignResponse{} }
 func (m *SpaceSignResponse) String() string { return proto.CompactTextString(m) }
 func (*SpaceSignResponse) ProtoMessage()    {}
 func (*SpaceSignResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{2}
+	return fileDescriptor_d94f6f99586adae2, []int{3}
 }
 func (m *SpaceSignResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -425,7 +505,7 @@ func (m *SpaceReceiptWithSignature) Reset()         { *m = SpaceReceiptWithSigna
 func (m *SpaceReceiptWithSignature) String() string { return proto.CompactTextString(m) }
 func (*SpaceReceiptWithSignature) ProtoMessage()    {}
 func (*SpaceReceiptWithSignature) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{3}
+	return fileDescriptor_d94f6f99586adae2, []int{4}
 }
 func (m *SpaceReceiptWithSignature) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -486,7 +566,7 @@ func (m *SpaceReceipt) Reset()         { *m = SpaceReceipt{} }
 func (m *SpaceReceipt) String() string { return proto.CompactTextString(m) }
 func (*SpaceReceipt) ProtoMessage()    {}
 func (*SpaceReceipt) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{4}
+	return fileDescriptor_d94f6f99586adae2, []int{5}
 }
 func (m *SpaceReceipt) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -550,115 +630,6 @@ func (m *SpaceReceipt) GetValidUntil() uint64 {
 	return 0
 }
 
-// FileLimitCheckRequest contains an account identity and spaceId
-// control node checks that identity owns a given space
-type FileLimitCheckRequest struct {
-	AccountIdentity []byte `protobuf:"bytes,1,opt,name=accountIdentity,proto3" json:"accountIdentity,omitempty"`
-	SpaceId         string `protobuf:"bytes,2,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
-}
-
-func (m *FileLimitCheckRequest) Reset()         { *m = FileLimitCheckRequest{} }
-func (m *FileLimitCheckRequest) String() string { return proto.CompactTextString(m) }
-func (*FileLimitCheckRequest) ProtoMessage()    {}
-func (*FileLimitCheckRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{5}
-}
-func (m *FileLimitCheckRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *FileLimitCheckRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_FileLimitCheckRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *FileLimitCheckRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_FileLimitCheckRequest.Merge(m, src)
-}
-func (m *FileLimitCheckRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *FileLimitCheckRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_FileLimitCheckRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_FileLimitCheckRequest proto.InternalMessageInfo
-
-func (m *FileLimitCheckRequest) GetAccountIdentity() []byte {
-	if m != nil {
-		return m.AccountIdentity
-	}
-	return nil
-}
-
-func (m *FileLimitCheckRequest) GetSpaceId() string {
-	if m != nil {
-		return m.SpaceId
-	}
-	return ""
-}
-
-// FileLimitCheckResponse returns a current space limit in bytes
-type FileLimitCheckResponse struct {
-	// Limit in bytes
-	Limit uint64 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
-	// StorageKey tells a key that filenode should use to save files
-	StorageKey string `protobuf:"bytes,2,opt,name=storageKey,proto3" json:"storageKey,omitempty"`
-}
-
-func (m *FileLimitCheckResponse) Reset()         { *m = FileLimitCheckResponse{} }
-func (m *FileLimitCheckResponse) String() string { return proto.CompactTextString(m) }
-func (*FileLimitCheckResponse) ProtoMessage()    {}
-func (*FileLimitCheckResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{6}
-}
-func (m *FileLimitCheckResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *FileLimitCheckResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_FileLimitCheckResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *FileLimitCheckResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_FileLimitCheckResponse.Merge(m, src)
-}
-func (m *FileLimitCheckResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *FileLimitCheckResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_FileLimitCheckResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_FileLimitCheckResponse proto.InternalMessageInfo
-
-func (m *FileLimitCheckResponse) GetLimit() uint64 {
-	if m != nil {
-		return m.Limit
-	}
-	return 0
-}
-
-func (m *FileLimitCheckResponse) GetStorageKey() string {
-	if m != nil {
-		return m.StorageKey
-	}
-	return ""
-}
-
 // SpaceStatusCheckRequest contains the spaceId of requested space
 type SpaceStatusCheckRequest struct {
 	SpaceId string `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
@@ -668,7 +639,7 @@ func (m *SpaceStatusCheckRequest) Reset()         { *m = SpaceStatusCheckRequest
 func (m *SpaceStatusCheckRequest) String() string { return proto.CompactTextString(m) }
 func (*SpaceStatusCheckRequest) ProtoMessage()    {}
 func (*SpaceStatusCheckRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{7}
+	return fileDescriptor_d94f6f99586adae2, []int{6}
 }
 func (m *SpaceStatusCheckRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -713,7 +684,7 @@ func (m *SpaceStatusCheckResponse) Reset()         { *m = SpaceStatusCheckRespon
 func (m *SpaceStatusCheckResponse) String() string { return proto.CompactTextString(m) }
 func (*SpaceStatusCheckResponse) ProtoMessage()    {}
 func (*SpaceStatusCheckResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{8}
+	return fileDescriptor_d94f6f99586adae2, []int{7}
 }
 func (m *SpaceStatusCheckResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -758,7 +729,7 @@ func (m *SpaceStatusCheckManyRequest) Reset()         { *m = SpaceStatusCheckMan
 func (m *SpaceStatusCheckManyRequest) String() string { return proto.CompactTextString(m) }
 func (*SpaceStatusCheckManyRequest) ProtoMessage()    {}
 func (*SpaceStatusCheckManyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{9}
+	return fileDescriptor_d94f6f99586adae2, []int{8}
 }
 func (m *SpaceStatusCheckManyRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -796,14 +767,15 @@ func (m *SpaceStatusCheckManyRequest) GetSpaceIds() []string {
 
 // SpaceStatusCheckManyResponse contains the current statuses of spaces
 type SpaceStatusCheckManyResponse struct {
-	Payloads []*SpaceStatusPayload `protobuf:"bytes,1,rep,name=payloads,proto3" json:"payloads,omitempty"`
+	Payloads      []*SpaceStatusPayload `protobuf:"bytes,1,rep,name=payloads,proto3" json:"payloads,omitempty"`
+	AccountLimits *AccountLimits        `protobuf:"bytes,2,opt,name=accountLimits,proto3" json:"accountLimits,omitempty"`
 }
 
 func (m *SpaceStatusCheckManyResponse) Reset()         { *m = SpaceStatusCheckManyResponse{} }
 func (m *SpaceStatusCheckManyResponse) String() string { return proto.CompactTextString(m) }
 func (*SpaceStatusCheckManyResponse) ProtoMessage()    {}
 func (*SpaceStatusCheckManyResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{10}
+	return fileDescriptor_d94f6f99586adae2, []int{9}
 }
 func (m *SpaceStatusCheckManyResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -837,6 +809,58 @@ func (m *SpaceStatusCheckManyResponse) GetPayloads() []*SpaceStatusPayload {
 		return m.Payloads
 	}
 	return nil
+}
+
+func (m *SpaceStatusCheckManyResponse) GetAccountLimits() *AccountLimits {
+	if m != nil {
+		return m.AccountLimits
+	}
+	return nil
+}
+
+// AccountLimits describes account level limit
+type AccountLimits struct {
+	SharedSpacesLimit uint32 `protobuf:"varint,1,opt,name=sharedSpacesLimit,proto3" json:"sharedSpacesLimit,omitempty"`
+}
+
+func (m *AccountLimits) Reset()         { *m = AccountLimits{} }
+func (m *AccountLimits) String() string { return proto.CompactTextString(m) }
+func (*AccountLimits) ProtoMessage()    {}
+func (*AccountLimits) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{10}
+}
+func (m *AccountLimits) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AccountLimits) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AccountLimits.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AccountLimits) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AccountLimits.Merge(m, src)
+}
+func (m *AccountLimits) XXX_Size() int {
+	return m.Size()
+}
+func (m *AccountLimits) XXX_DiscardUnknown() {
+	xxx_messageInfo_AccountLimits.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AccountLimits proto.InternalMessageInfo
+
+func (m *AccountLimits) GetSharedSpacesLimit() uint32 {
+	if m != nil {
+		return m.SharedSpacesLimit
+	}
+	return 0
 }
 
 // SpaceStatusChangeRequest contains the deletionChange if we want to delete space, or it is empty otherwise
@@ -953,6 +977,174 @@ func (m *SpaceStatusChangeResponse) GetPayload() *SpaceStatusPayload {
 	return nil
 }
 
+type SpaceMakeShareableRequest struct {
+	SpaceId string `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+}
+
+func (m *SpaceMakeShareableRequest) Reset()         { *m = SpaceMakeShareableRequest{} }
+func (m *SpaceMakeShareableRequest) String() string { return proto.CompactTextString(m) }
+func (*SpaceMakeShareableRequest) ProtoMessage()    {}
+func (*SpaceMakeShareableRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{13}
+}
+func (m *SpaceMakeShareableRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SpaceMakeShareableRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SpaceMakeShareableRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SpaceMakeShareableRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SpaceMakeShareableRequest.Merge(m, src)
+}
+func (m *SpaceMakeShareableRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *SpaceMakeShareableRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_SpaceMakeShareableRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SpaceMakeShareableRequest proto.InternalMessageInfo
+
+func (m *SpaceMakeShareableRequest) GetSpaceId() string {
+	if m != nil {
+		return m.SpaceId
+	}
+	return ""
+}
+
+type SpaceMakeShareableResponse struct {
+}
+
+func (m *SpaceMakeShareableResponse) Reset()         { *m = SpaceMakeShareableResponse{} }
+func (m *SpaceMakeShareableResponse) String() string { return proto.CompactTextString(m) }
+func (*SpaceMakeShareableResponse) ProtoMessage()    {}
+func (*SpaceMakeShareableResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{14}
+}
+func (m *SpaceMakeShareableResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SpaceMakeShareableResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SpaceMakeShareableResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SpaceMakeShareableResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SpaceMakeShareableResponse.Merge(m, src)
+}
+func (m *SpaceMakeShareableResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *SpaceMakeShareableResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_SpaceMakeShareableResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SpaceMakeShareableResponse proto.InternalMessageInfo
+
+type SpaceMakeUnshareableRequest struct {
+	SpaceId string `protobuf:"bytes,1,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	AclHead string `protobuf:"bytes,2,opt,name=aclHead,proto3" json:"aclHead,omitempty"`
+}
+
+func (m *SpaceMakeUnshareableRequest) Reset()         { *m = SpaceMakeUnshareableRequest{} }
+func (m *SpaceMakeUnshareableRequest) String() string { return proto.CompactTextString(m) }
+func (*SpaceMakeUnshareableRequest) ProtoMessage()    {}
+func (*SpaceMakeUnshareableRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{15}
+}
+func (m *SpaceMakeUnshareableRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SpaceMakeUnshareableRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SpaceMakeUnshareableRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SpaceMakeUnshareableRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SpaceMakeUnshareableRequest.Merge(m, src)
+}
+func (m *SpaceMakeUnshareableRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *SpaceMakeUnshareableRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_SpaceMakeUnshareableRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SpaceMakeUnshareableRequest proto.InternalMessageInfo
+
+func (m *SpaceMakeUnshareableRequest) GetSpaceId() string {
+	if m != nil {
+		return m.SpaceId
+	}
+	return ""
+}
+
+func (m *SpaceMakeUnshareableRequest) GetAclHead() string {
+	if m != nil {
+		return m.AclHead
+	}
+	return ""
+}
+
+type SpaceMakeUnshareableResponse struct {
+}
+
+func (m *SpaceMakeUnshareableResponse) Reset()         { *m = SpaceMakeUnshareableResponse{} }
+func (m *SpaceMakeUnshareableResponse) String() string { return proto.CompactTextString(m) }
+func (*SpaceMakeUnshareableResponse) ProtoMessage()    {}
+func (*SpaceMakeUnshareableResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{16}
+}
+func (m *SpaceMakeUnshareableResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SpaceMakeUnshareableResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SpaceMakeUnshareableResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SpaceMakeUnshareableResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SpaceMakeUnshareableResponse.Merge(m, src)
+}
+func (m *SpaceMakeUnshareableResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *SpaceMakeUnshareableResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_SpaceMakeUnshareableResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SpaceMakeUnshareableResponse proto.InternalMessageInfo
+
 // NetworkConfigurationRequest contains currenId of the client configuration, it can be empty
 type NetworkConfigurationRequest struct {
 	// currenId of the client configuration
@@ -964,7 +1156,7 @@ func (m *NetworkConfigurationRequest) Reset()         { *m = NetworkConfiguratio
 func (m *NetworkConfigurationRequest) String() string { return proto.CompactTextString(m) }
 func (*NetworkConfigurationRequest) ProtoMessage()    {}
 func (*NetworkConfigurationRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{13}
+	return fileDescriptor_d94f6f99586adae2, []int{17}
 }
 func (m *NetworkConfigurationRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1016,7 +1208,7 @@ func (m *NetworkConfigurationResponse) Reset()         { *m = NetworkConfigurati
 func (m *NetworkConfigurationResponse) String() string { return proto.CompactTextString(m) }
 func (*NetworkConfigurationResponse) ProtoMessage()    {}
 func (*NetworkConfigurationResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{14}
+	return fileDescriptor_d94f6f99586adae2, []int{18}
 }
 func (m *NetworkConfigurationResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1087,7 +1279,7 @@ func (m *Node) Reset()         { *m = Node{} }
 func (m *Node) String() string { return proto.CompactTextString(m) }
 func (*Node) ProtoMessage()    {}
 func (*Node) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{15}
+	return fileDescriptor_d94f6f99586adae2, []int{19}
 }
 func (m *Node) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1147,7 +1339,7 @@ func (m *DeletionConfirmPayloadWithSignature) Reset()         { *m = DeletionCon
 func (m *DeletionConfirmPayloadWithSignature) String() string { return proto.CompactTextString(m) }
 func (*DeletionConfirmPayloadWithSignature) ProtoMessage()    {}
 func (*DeletionConfirmPayloadWithSignature) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{16}
+	return fileDescriptor_d94f6f99586adae2, []int{20}
 }
 func (m *DeletionConfirmPayloadWithSignature) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1208,7 +1400,7 @@ func (m *DeletionConfirmPayload) Reset()         { *m = DeletionConfirmPayload{}
 func (m *DeletionConfirmPayload) String() string { return proto.CompactTextString(m) }
 func (*DeletionConfirmPayload) ProtoMessage()    {}
 func (*DeletionConfirmPayload) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{17}
+	return fileDescriptor_d94f6f99586adae2, []int{21}
 }
 func (m *DeletionConfirmPayload) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1283,7 +1475,7 @@ func (m *DeletionLogRequest) Reset()         { *m = DeletionLogRequest{} }
 func (m *DeletionLogRequest) String() string { return proto.CompactTextString(m) }
 func (*DeletionLogRequest) ProtoMessage()    {}
 func (*DeletionLogRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{18}
+	return fileDescriptor_d94f6f99586adae2, []int{22}
 }
 func (m *DeletionLogRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1337,7 +1529,7 @@ func (m *DeletionLogResponse) Reset()         { *m = DeletionLogResponse{} }
 func (m *DeletionLogResponse) String() string { return proto.CompactTextString(m) }
 func (*DeletionLogResponse) ProtoMessage()    {}
 func (*DeletionLogResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{19}
+	return fileDescriptor_d94f6f99586adae2, []int{23}
 }
 func (m *DeletionLogResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1397,7 +1589,7 @@ func (m *DeletionLogRecord) Reset()         { *m = DeletionLogRecord{} }
 func (m *DeletionLogRecord) String() string { return proto.CompactTextString(m) }
 func (*DeletionLogRecord) ProtoMessage()    {}
 func (*DeletionLogRecord) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{20}
+	return fileDescriptor_d94f6f99586adae2, []int{24}
 }
 func (m *DeletionLogRecord) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1473,7 +1665,7 @@ func (m *SpaceDeleteRequest) Reset()         { *m = SpaceDeleteRequest{} }
 func (m *SpaceDeleteRequest) String() string { return proto.CompactTextString(m) }
 func (*SpaceDeleteRequest) ProtoMessage()    {}
 func (*SpaceDeleteRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{21}
+	return fileDescriptor_d94f6f99586adae2, []int{25}
 }
 func (m *SpaceDeleteRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1539,7 +1731,7 @@ func (m *SpaceDeleteResponse) Reset()         { *m = SpaceDeleteResponse{} }
 func (m *SpaceDeleteResponse) String() string { return proto.CompactTextString(m) }
 func (*SpaceDeleteResponse) ProtoMessage()    {}
 func (*SpaceDeleteResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{22}
+	return fileDescriptor_d94f6f99586adae2, []int{26}
 }
 func (m *SpaceDeleteResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1585,7 +1777,7 @@ func (m *AccountDeleteRequest) Reset()         { *m = AccountDeleteRequest{} }
 func (m *AccountDeleteRequest) String() string { return proto.CompactTextString(m) }
 func (*AccountDeleteRequest) ProtoMessage()    {}
 func (*AccountDeleteRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{23}
+	return fileDescriptor_d94f6f99586adae2, []int{27}
 }
 func (m *AccountDeleteRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1644,7 +1836,7 @@ func (m *AccountDeletionConfirmPayload) Reset()         { *m = AccountDeletionCo
 func (m *AccountDeletionConfirmPayload) String() string { return proto.CompactTextString(m) }
 func (*AccountDeletionConfirmPayload) ProtoMessage()    {}
 func (*AccountDeletionConfirmPayload) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{24}
+	return fileDescriptor_d94f6f99586adae2, []int{28}
 }
 func (m *AccountDeletionConfirmPayload) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1710,7 +1902,7 @@ func (m *AccountDeleteResponse) Reset()         { *m = AccountDeleteResponse{} }
 func (m *AccountDeleteResponse) String() string { return proto.CompactTextString(m) }
 func (*AccountDeleteResponse) ProtoMessage()    {}
 func (*AccountDeleteResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{25}
+	return fileDescriptor_d94f6f99586adae2, []int{29}
 }
 func (m *AccountDeleteResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1754,7 +1946,7 @@ func (m *AccountRevertDeletionRequest) Reset()         { *m = AccountRevertDelet
 func (m *AccountRevertDeletionRequest) String() string { return proto.CompactTextString(m) }
 func (*AccountRevertDeletionRequest) ProtoMessage()    {}
 func (*AccountRevertDeletionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{26}
+	return fileDescriptor_d94f6f99586adae2, []int{30}
 }
 func (m *AccountRevertDeletionRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1791,7 +1983,7 @@ func (m *AccountRevertDeletionResponse) Reset()         { *m = AccountRevertDele
 func (m *AccountRevertDeletionResponse) String() string { return proto.CompactTextString(m) }
 func (*AccountRevertDeletionResponse) ProtoMessage()    {}
 func (*AccountRevertDeletionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{27}
+	return fileDescriptor_d94f6f99586adae2, []int{31}
 }
 func (m *AccountRevertDeletionResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1830,7 +2022,7 @@ func (m *AclAddRecordRequest) Reset()         { *m = AclAddRecordRequest{} }
 func (m *AclAddRecordRequest) String() string { return proto.CompactTextString(m) }
 func (*AclAddRecordRequest) ProtoMessage()    {}
 func (*AclAddRecordRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{28}
+	return fileDescriptor_d94f6f99586adae2, []int{32}
 }
 func (m *AclAddRecordRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1883,7 +2075,7 @@ func (m *AclAddRecordResponse) Reset()         { *m = AclAddRecordResponse{} }
 func (m *AclAddRecordResponse) String() string { return proto.CompactTextString(m) }
 func (*AclAddRecordResponse) ProtoMessage()    {}
 func (*AclAddRecordResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{29}
+	return fileDescriptor_d94f6f99586adae2, []int{33}
 }
 func (m *AclAddRecordResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1937,7 +2129,7 @@ func (m *AclGetRecordsRequest) Reset()         { *m = AclGetRecordsRequest{} }
 func (m *AclGetRecordsRequest) String() string { return proto.CompactTextString(m) }
 func (*AclGetRecordsRequest) ProtoMessage()    {}
 func (*AclGetRecordsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{30}
+	return fileDescriptor_d94f6f99586adae2, []int{34}
 }
 func (m *AclGetRecordsRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1989,7 +2181,7 @@ func (m *AclGetRecordsResponse) Reset()         { *m = AclGetRecordsResponse{} }
 func (m *AclGetRecordsResponse) String() string { return proto.CompactTextString(m) }
 func (*AclGetRecordsResponse) ProtoMessage()    {}
 func (*AclGetRecordsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_d94f6f99586adae2, []int{31}
+	return fileDescriptor_d94f6f99586adae2, []int{35}
 }
 func (m *AclGetRecordsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2025,6 +2217,126 @@ func (m *AclGetRecordsResponse) GetRecords() [][]byte {
 	return nil
 }
 
+type AccountLimitsSetRequest struct {
+	Identity              string `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Reason                string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	FileStorageLimitBytes uint64 `protobuf:"varint,3,opt,name=fileStorageLimitBytes,proto3" json:"fileStorageLimitBytes,omitempty"`
+	SpaceMembersRead      uint32 `protobuf:"varint,4,opt,name=spaceMembersRead,proto3" json:"spaceMembersRead,omitempty"`
+	SpaceMembersWrite     uint32 `protobuf:"varint,5,opt,name=spaceMembersWrite,proto3" json:"spaceMembersWrite,omitempty"`
+	SharedSpacesLimit     uint32 `protobuf:"varint,6,opt,name=sharedSpacesLimit,proto3" json:"sharedSpacesLimit,omitempty"`
+}
+
+func (m *AccountLimitsSetRequest) Reset()         { *m = AccountLimitsSetRequest{} }
+func (m *AccountLimitsSetRequest) String() string { return proto.CompactTextString(m) }
+func (*AccountLimitsSetRequest) ProtoMessage()    {}
+func (*AccountLimitsSetRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{36}
+}
+func (m *AccountLimitsSetRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AccountLimitsSetRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AccountLimitsSetRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AccountLimitsSetRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AccountLimitsSetRequest.Merge(m, src)
+}
+func (m *AccountLimitsSetRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *AccountLimitsSetRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_AccountLimitsSetRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AccountLimitsSetRequest proto.InternalMessageInfo
+
+func (m *AccountLimitsSetRequest) GetIdentity() string {
+	if m != nil {
+		return m.Identity
+	}
+	return ""
+}
+
+func (m *AccountLimitsSetRequest) GetReason() string {
+	if m != nil {
+		return m.Reason
+	}
+	return ""
+}
+
+func (m *AccountLimitsSetRequest) GetFileStorageLimitBytes() uint64 {
+	if m != nil {
+		return m.FileStorageLimitBytes
+	}
+	return 0
+}
+
+func (m *AccountLimitsSetRequest) GetSpaceMembersRead() uint32 {
+	if m != nil {
+		return m.SpaceMembersRead
+	}
+	return 0
+}
+
+func (m *AccountLimitsSetRequest) GetSpaceMembersWrite() uint32 {
+	if m != nil {
+		return m.SpaceMembersWrite
+	}
+	return 0
+}
+
+func (m *AccountLimitsSetRequest) GetSharedSpacesLimit() uint32 {
+	if m != nil {
+		return m.SharedSpacesLimit
+	}
+	return 0
+}
+
+type AccountLimitsSetResponse struct {
+}
+
+func (m *AccountLimitsSetResponse) Reset()         { *m = AccountLimitsSetResponse{} }
+func (m *AccountLimitsSetResponse) String() string { return proto.CompactTextString(m) }
+func (*AccountLimitsSetResponse) ProtoMessage()    {}
+func (*AccountLimitsSetResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_d94f6f99586adae2, []int{37}
+}
+func (m *AccountLimitsSetResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AccountLimitsSetResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AccountLimitsSetResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AccountLimitsSetResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AccountLimitsSetResponse.Merge(m, src)
+}
+func (m *AccountLimitsSetResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *AccountLimitsSetResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_AccountLimitsSetResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AccountLimitsSetResponse proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterEnum("coordinator.ErrorCodes", ErrorCodes_name, ErrorCodes_value)
 	proto.RegisterEnum("coordinator.SpaceStatus", SpaceStatus_name, SpaceStatus_value)
@@ -2033,18 +2345,22 @@ func init() {
 	proto.RegisterEnum("coordinator.DeletionPayloadType", DeletionPayloadType_name, DeletionPayloadType_value)
 	proto.RegisterEnum("coordinator.DeletionLogRecordStatus", DeletionLogRecordStatus_name, DeletionLogRecordStatus_value)
 	proto.RegisterType((*SpaceSignRequest)(nil), "coordinator.SpaceSignRequest")
+	proto.RegisterType((*SpaceLimits)(nil), "coordinator.SpaceLimits")
 	proto.RegisterType((*SpaceStatusPayload)(nil), "coordinator.SpaceStatusPayload")
 	proto.RegisterType((*SpaceSignResponse)(nil), "coordinator.SpaceSignResponse")
 	proto.RegisterType((*SpaceReceiptWithSignature)(nil), "coordinator.SpaceReceiptWithSignature")
 	proto.RegisterType((*SpaceReceipt)(nil), "coordinator.SpaceReceipt")
-	proto.RegisterType((*FileLimitCheckRequest)(nil), "coordinator.FileLimitCheckRequest")
-	proto.RegisterType((*FileLimitCheckResponse)(nil), "coordinator.FileLimitCheckResponse")
 	proto.RegisterType((*SpaceStatusCheckRequest)(nil), "coordinator.SpaceStatusCheckRequest")
 	proto.RegisterType((*SpaceStatusCheckResponse)(nil), "coordinator.SpaceStatusCheckResponse")
 	proto.RegisterType((*SpaceStatusCheckManyRequest)(nil), "coordinator.SpaceStatusCheckManyRequest")
 	proto.RegisterType((*SpaceStatusCheckManyResponse)(nil), "coordinator.SpaceStatusCheckManyResponse")
+	proto.RegisterType((*AccountLimits)(nil), "coordinator.AccountLimits")
 	proto.RegisterType((*SpaceStatusChangeRequest)(nil), "coordinator.SpaceStatusChangeRequest")
 	proto.RegisterType((*SpaceStatusChangeResponse)(nil), "coordinator.SpaceStatusChangeResponse")
+	proto.RegisterType((*SpaceMakeShareableRequest)(nil), "coordinator.SpaceMakeShareableRequest")
+	proto.RegisterType((*SpaceMakeShareableResponse)(nil), "coordinator.SpaceMakeShareableResponse")
+	proto.RegisterType((*SpaceMakeUnshareableRequest)(nil), "coordinator.SpaceMakeUnshareableRequest")
+	proto.RegisterType((*SpaceMakeUnshareableResponse)(nil), "coordinator.SpaceMakeUnshareableResponse")
 	proto.RegisterType((*NetworkConfigurationRequest)(nil), "coordinator.NetworkConfigurationRequest")
 	proto.RegisterType((*NetworkConfigurationResponse)(nil), "coordinator.NetworkConfigurationResponse")
 	proto.RegisterType((*Node)(nil), "coordinator.Node")
@@ -2064,6 +2380,8 @@ func init() {
 	proto.RegisterType((*AclAddRecordResponse)(nil), "coordinator.AclAddRecordResponse")
 	proto.RegisterType((*AclGetRecordsRequest)(nil), "coordinator.AclGetRecordsRequest")
 	proto.RegisterType((*AclGetRecordsResponse)(nil), "coordinator.AclGetRecordsResponse")
+	proto.RegisterType((*AccountLimitsSetRequest)(nil), "coordinator.AccountLimitsSetRequest")
+	proto.RegisterType((*AccountLimitsSetResponse)(nil), "coordinator.AccountLimitsSetResponse")
 }
 
 func init() {
@@ -2071,109 +2389,126 @@ func init() {
 }
 
 var fileDescriptor_d94f6f99586adae2 = []byte{
-	// 1626 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x58, 0xcf, 0x6f, 0x13, 0xc7,
-	0x17, 0xf7, 0x6e, 0x9c, 0xc4, 0x7e, 0x0e, 0x66, 0x33, 0xf9, 0x81, 0x31, 0xc6, 0x84, 0x85, 0x2f,
-	0xdf, 0xe0, 0xef, 0x57, 0x40, 0x8d, 0x5a, 0x15, 0x51, 0xa9, 0x84, 0x40, 0x69, 0xf8, 0x11, 0xa2,
-	0x0d, 0xa1, 0x6a, 0x39, 0x54, 0xcb, 0xee, 0xc4, 0x59, 0xc5, 0x9e, 0x75, 0x67, 0xc7, 0x84, 0xfc,
-	0x17, 0xbd, 0xf5, 0xd4, 0x7b, 0xa5, 0xf6, 0x50, 0x55, 0xaa, 0x7a, 0xa8, 0xd4, 0x73, 0x8f, 0x1c,
-	0x7b, 0x44, 0x70, 0xed, 0x1f, 0x51, 0xcd, 0xec, 0xec, 0xee, 0xec, 0x0f, 0x3b, 0xa9, 0x38, 0x70,
-	0x49, 0x3c, 0x9f, 0x79, 0xef, 0xcd, 0xfb, 0x35, 0xef, 0xcd, 0x5b, 0xf8, 0xd0, 0xf1, 0x7d, 0xea,
-	0x7a, 0xc4, 0x66, 0x3e, 0xbd, 0xaa, 0xfc, 0x1e, 0x52, 0x9f, 0xf9, 0x57, 0xc5, 0xdf, 0x40, 0xc5,
-	0xaf, 0x08, 0x08, 0xd5, 0x14, 0xc8, 0xfc, 0x43, 0x03, 0x63, 0x7b, 0x68, 0x3b, 0x78, 0xdb, 0xeb,
-	0x11, 0x0b, 0x7f, 0x33, 0xc2, 0x01, 0x43, 0x0d, 0x98, 0x0d, 0x38, 0xb6, 0xe1, 0x36, 0xb4, 0x15,
-	0x6d, 0xb5, 0x6a, 0x45, 0x4b, 0xb4, 0x0c, 0x33, 0x7b, 0xd8, 0x76, 0x31, 0x6d, 0xe8, 0x2b, 0xda,
-	0xea, 0x9c, 0x25, 0x57, 0x68, 0x05, 0x6a, 0x7e, 0xdf, 0xdd, 0x70, 0x31, 0x61, 0x1e, 0x3b, 0x6c,
-	0x4c, 0x89, 0x4d, 0x15, 0x42, 0x5d, 0x58, 0x24, 0xf8, 0x20, 0x5a, 0xf2, 0xd3, 0x6c, 0x36, 0xa2,
-	0xb8, 0x51, 0x16, 0xa4, 0x85, 0x7b, 0xc8, 0x84, 0xb9, 0x5d, 0x9f, 0x3a, 0x58, 0xea, 0xd5, 0x98,
-	0x5e, 0xd1, 0x56, 0x2b, 0x56, 0x0a, 0x33, 0x7f, 0xd5, 0x00, 0x85, 0x06, 0x30, 0x9b, 0x8d, 0x82,
-	0x2d, 0xfb, 0xb0, 0xef, 0xdb, 0x2e, 0xba, 0x06, 0x33, 0x81, 0x00, 0x84, 0x05, 0xf5, 0x6e, 0xe3,
-	0x8a, 0xea, 0x08, 0x85, 0xc1, 0x92, 0x74, 0xe8, 0xff, 0x30, 0xef, 0xe2, 0x3e, 0x66, 0x9e, 0x4f,
-	0x9e, 0x78, 0x03, 0x1c, 0x30, 0x7b, 0x30, 0x14, 0x56, 0x4e, 0x59, 0xf9, 0x0d, 0xf4, 0x29, 0xd4,
-	0x86, 0x98, 0x0e, 0xbc, 0x20, 0xf0, 0x7c, 0x12, 0x08, 0x83, 0xeb, 0xdd, 0xb3, 0xf9, 0x43, 0xb6,
-	0x12, 0x22, 0x4b, 0xe5, 0x30, 0x77, 0x60, 0x5e, 0xf1, 0x7b, 0x30, 0xf4, 0x49, 0x80, 0xd1, 0x2d,
-	0x98, 0xa5, 0xd8, 0xc1, 0xde, 0x90, 0x09, 0xb5, 0x6b, 0xdd, 0x4b, 0x79, 0x89, 0x56, 0x48, 0xf0,
-	0x85, 0xc7, 0xf6, 0x62, 0x4f, 0x59, 0x11, 0x9b, 0xb9, 0x0f, 0xa7, 0xc7, 0x52, 0xa1, 0x6b, 0xb0,
-	0x10, 0x28, 0x9b, 0xd2, 0x57, 0xe2, 0xa8, 0x39, 0xab, 0x68, 0x0b, 0xb5, 0xa0, 0x1a, 0xc4, 0xa1,
-	0x0a, 0x43, 0x9e, 0x00, 0xe6, 0x0f, 0x1a, 0xcc, 0xa9, 0xa7, 0x4d, 0x4e, 0x9c, 0x21, 0xc6, 0x74,
-	0xc3, 0x15, 0x52, 0xaa, 0x96, 0x5c, 0xa1, 0x55, 0x38, 0x69, 0x3b, 0x8e, 0x3f, 0x22, 0x2c, 0x93,
-	0x3c, 0x59, 0x98, 0xab, 0x42, 0x30, 0x3b, 0xf0, 0xe9, 0xfe, 0x86, 0x2b, 0xb2, 0xa6, 0x6a, 0x25,
-	0x00, 0x6a, 0x03, 0xbc, 0xb0, 0xfb, 0x9e, 0xbb, 0x43, 0x98, 0xd7, 0x17, 0x89, 0x52, 0xb6, 0x14,
-	0xc4, 0x7c, 0x06, 0x4b, 0x9f, 0x79, 0x7d, 0xfc, 0xd0, 0x1b, 0x78, 0x6c, 0x7d, 0x0f, 0x3b, 0xfb,
-	0x51, 0xae, 0x17, 0x28, 0xa0, 0x15, 0x2b, 0xa0, 0x18, 0xa7, 0xa7, 0x8c, 0x33, 0x37, 0x61, 0x39,
-	0x2b, 0x5c, 0x06, 0x74, 0x11, 0xa6, 0xfb, 0x1c, 0x15, 0x32, 0xcb, 0x56, 0xb8, 0xe0, 0xca, 0x06,
-	0xcc, 0xa7, 0x76, 0x0f, 0x3f, 0xc0, 0x87, 0x52, 0x98, 0x82, 0x98, 0xd7, 0xe1, 0x94, 0x92, 0xa1,
-	0x29, 0x75, 0xc7, 0x7a, 0xd8, 0xdc, 0x81, 0x46, 0x9e, 0x49, 0xaa, 0x71, 0x03, 0x66, 0x87, 0x4a,
-	0xb0, 0x6b, 0xdd, 0x73, 0xe3, 0xae, 0x83, 0x0c, 0xbc, 0x15, 0xd1, 0x9b, 0x37, 0xe0, 0x4c, 0x56,
-	0xec, 0x23, 0x9b, 0x1c, 0x46, 0xfa, 0x34, 0xa1, 0x22, 0x15, 0xe0, 0x37, 0x6d, 0x6a, 0xb5, 0x6a,
-	0xc5, 0x6b, 0xf3, 0x19, 0xb4, 0x8a, 0x59, 0xa5, 0x56, 0x37, 0xa1, 0x22, 0x4f, 0x09, 0x79, 0x8f,
-	0xa1, 0x56, 0xcc, 0x60, 0xbe, 0xd6, 0x32, 0xf6, 0xda, 0xa4, 0x87, 0x8f, 0x2e, 0x60, 0xca, 0x2d,
-	0x97, 0x32, 0xe3, 0x70, 0xe6, 0x37, 0x78, 0x72, 0x64, 0xc0, 0x28, 0x3b, 0x33, 0x30, 0xb2, 0x60,
-	0x21, 0x03, 0x3d, 0x39, 0x1c, 0x86, 0xd5, 0xad, 0xde, 0x5d, 0x49, 0x99, 0x75, 0x27, 0x4f, 0x67,
-	0x15, 0x31, 0x9b, 0x4f, 0xe5, 0x5d, 0x4e, 0x5b, 0xf8, 0xee, 0x21, 0xbd, 0x09, 0x67, 0x36, 0xc3,
-	0x8b, 0xb3, 0xee, 0x93, 0x5d, 0xaf, 0x37, 0xa2, 0x36, 0x3f, 0x3a, 0x72, 0x5e, 0x0b, 0xaa, 0xce,
-	0x88, 0x52, 0xcc, 0x53, 0x5f, 0xba, 0x2f, 0x01, 0xcc, 0xdf, 0x35, 0x68, 0x15, 0x73, 0x4b, 0xc5,
-	0x56, 0xe1, 0xa4, 0xa3, 0x6e, 0xc4, 0x42, 0xb2, 0x70, 0xfa, 0x46, 0xeb, 0xd9, 0x1b, 0xfd, 0x5f,
-	0x98, 0x26, 0xbe, 0x8b, 0x79, 0x6d, 0xe5, 0xa9, 0x31, 0x9f, 0x32, 0x6f, 0xd3, 0x77, 0xb1, 0x15,
-	0xee, 0xa3, 0x0e, 0x18, 0x0e, 0xc5, 0x76, 0x54, 0x9f, 0x77, 0x88, 0xf7, 0x52, 0xf8, 0xbd, 0x6c,
-	0xe5, 0x70, 0xd3, 0x83, 0x32, 0x67, 0x55, 0xca, 0x91, 0x96, 0x2a, 0x47, 0x2d, 0xa8, 0xda, 0xae,
-	0x4b, 0x71, 0x10, 0xe0, 0xa0, 0xa1, 0x8b, 0x7c, 0x4e, 0x00, 0xf4, 0x3f, 0x98, 0x66, 0x87, 0x43,
-	0xa9, 0x52, 0xbd, 0xbb, 0x94, 0x53, 0x49, 0xc4, 0x32, 0xa4, 0x31, 0x07, 0x70, 0x21, 0x8a, 0xb4,
-	0x70, 0x14, 0x1d, 0xc8, 0x40, 0xa4, 0x6b, 0x72, 0x41, 0x8a, 0x69, 0xc5, 0x29, 0x36, 0xb9, 0x16,
-	0xff, 0xac, 0xc1, 0x72, 0xf1, 0x79, 0xef, 0xb1, 0x2a, 0xb7, 0xa0, 0xca, 0xe2, 0x5e, 0x3a, 0x2d,
-	0x7a, 0x69, 0x02, 0x98, 0x77, 0x00, 0x45, 0x1a, 0x3f, 0xf4, 0x7b, 0xca, 0xdd, 0xb5, 0x77, 0x99,
-	0x12, 0x9b, 0x68, 0x99, 0x14, 0x53, 0xae, 0xec, 0x09, 0x59, 0x4c, 0x4d, 0x0f, 0x16, 0x52, 0x52,
-	0x64, 0x1a, 0x7e, 0x2c, 0x5a, 0xa9, 0x4f, 0xe3, 0xda, 0xd2, 0x2e, 0xbc, 0x84, 0x82, 0x85, 0x93,
-	0x59, 0x11, 0x39, 0x57, 0x60, 0xcf, 0x0e, 0x1e, 0xf9, 0xd2, 0xcb, 0x15, 0x2b, 0x5a, 0x9a, 0xbf,
-	0x69, 0x30, 0x9f, 0x63, 0x44, 0x75, 0xd0, 0xbd, 0x48, 0x57, 0xdd, 0x73, 0xc7, 0xf7, 0x09, 0xf4,
-	0x49, 0xfc, 0x28, 0x09, 0xdf, 0x0b, 0x17, 0x27, 0xab, 0x94, 0x79, 0xa0, 0xa4, 0x9c, 0x59, 0xce,
-	0x38, 0x93, 0xef, 0xee, 0x7a, 0x7d, 0x7c, 0x8f, 0xfa, 0xa3, 0xd0, 0xd5, 0x55, 0x2b, 0x01, 0xcc,
-	0x5f, 0xa2, 0x57, 0x92, 0x38, 0xe4, 0x3d, 0xd6, 0xc9, 0x0e, 0x18, 0x11, 0x74, 0x47, 0x56, 0x02,
-	0x69, 0x4b, 0x0e, 0x37, 0x37, 0x60, 0x21, 0xa5, 0xb3, 0x8c, 0x6c, 0x17, 0x16, 0x99, 0x7f, 0x5b,
-	0xa2, 0x6e, 0xf2, 0x56, 0xd3, 0x84, 0x98, 0xc2, 0x3d, 0x93, 0xc0, 0xe2, 0x5a, 0x98, 0xb9, 0x69,
-	0x07, 0x14, 0x9a, 0xa9, 0xfd, 0x0b, 0x33, 0xf5, 0x42, 0x33, 0xcd, 0xef, 0x35, 0x38, 0xab, 0x1e,
-	0x98, 0xbf, 0x94, 0xe3, 0x2a, 0x50, 0xc1, 0xd5, 0xd3, 0x8f, 0x71, 0xf5, 0xa6, 0x26, 0x5e, 0xbd,
-	0x6c, 0xb6, 0x98, 0x0f, 0x60, 0x29, 0xe3, 0x8f, 0x77, 0x70, 0x6e, 0x1b, 0x5a, 0x52, 0x98, 0x85,
-	0x5f, 0x60, 0x1a, 0x5b, 0x1c, 0x3d, 0xd1, 0xcf, 0xc5, 0xbe, 0xc8, 0xee, 0x87, 0x87, 0xf2, 0x40,
-	0xaf, 0x39, 0xfd, 0x35, 0xd7, 0x95, 0x57, 0xf1, 0xc8, 0xec, 0x6c, 0x24, 0xcd, 0x2f, 0x74, 0x4e,
-	0xdc, 0xdb, 0x1e, 0xf2, 0x40, 0xab, 0xa2, 0xa4, 0x5d, 0x4d, 0xa8, 0x84, 0xf7, 0x3b, 0x16, 0x16,
-	0xaf, 0x27, 0x48, 0xbb, 0x2f, 0xa4, 0xdd, 0xc3, 0x2c, 0x94, 0x16, 0x1c, 0x4b, 0x33, 0xdb, 0xe9,
-	0x7f, 0x8e, 0xed, 0xf8, 0xf2, 0xcb, 0xa5, 0xf9, 0x01, 0x77, 0x79, 0x4a, 0x96, 0x54, 0xad, 0x91,
-	0xae, 0x54, 0x73, 0x71, 0x25, 0xea, 0xfc, 0xa8, 0x01, 0xdc, 0xa5, 0xd4, 0xa7, 0xeb, 0xa2, 0xd1,
-	0xd5, 0x01, 0x76, 0x08, 0x7e, 0x39, 0xc4, 0x0e, 0xc3, 0xae, 0x51, 0x42, 0x86, 0x7c, 0x7d, 0xcb,
-	0x80, 0x18, 0x1a, 0x6a, 0xc0, 0x62, 0x82, 0xf0, 0x74, 0xc4, 0xc4, 0xf5, 0x48, 0xcf, 0xd0, 0x63,
-	0xda, 0x75, 0xde, 0x11, 0xb1, 0x6b, 0x4c, 0x21, 0x04, 0x75, 0x81, 0x6c, 0xfa, 0xec, 0xee, 0x4b,
-	0x2f, 0x60, 0x81, 0x51, 0x46, 0x4b, 0x72, 0x28, 0x11, 0x2f, 0x59, 0x0b, 0xdb, 0xce, 0x1e, 0x76,
-	0x8d, 0x69, 0x4e, 0x9a, 0xca, 0x16, 0xd7, 0x98, 0x41, 0x06, 0xd4, 0x84, 0x6a, 0x8f, 0x77, 0x77,
-	0x03, 0xcc, 0x8c, 0x9f, 0xf4, 0xce, 0x77, 0x1a, 0xd4, 0x94, 0x67, 0x07, 0x5a, 0x4e, 0x0d, 0x66,
-	0xd1, 0xc1, 0x25, 0xd4, 0x86, 0xa6, 0xfa, 0x3a, 0x09, 0x55, 0x8c, 0x34, 0x36, 0xb4, 0xcc, 0x7e,
-	0xb4, 0xb1, 0xcd, 0x6c, 0xca, 0xf9, 0xf5, 0x8c, 0xdc, 0x48, 0xa3, 0xa9, 0xd8, 0xf8, 0x10, 0x57,
-	0xcc, 0xea, 0xdc, 0x97, 0x33, 0xae, 0x32, 0x8c, 0xa1, 0x33, 0xf2, 0x8d, 0xad, 0x60, 0x3b, 0x64,
-	0x9f, 0xf8, 0x07, 0xc4, 0x28, 0xa1, 0xd3, 0xb0, 0x94, 0xdd, 0x7c, 0x7c, 0x40, 0x30, 0x35, 0xb4,
-	0xce, 0x01, 0x54, 0xa2, 0x4e, 0x8f, 0x6a, 0x30, 0xfb, 0x84, 0x62, 0xbc, 0xb6, 0xb5, 0x61, 0x94,
-	0xf8, 0x82, 0x0f, 0x01, 0x7c, 0xa1, 0x71, 0x8f, 0xad, 0x27, 0xa5, 0x9d, 0x63, 0x22, 0x04, 0xeb,
-	0x3c, 0xe0, 0x24, 0x18, 0x05, 0x1c, 0x99, 0x42, 0xf3, 0x70, 0x62, 0xd3, 0x1e, 0x78, 0xa4, 0xc7,
-	0x25, 0x72, 0xa8, 0xcc, 0x8d, 0xd8, 0xb2, 0x0f, 0x07, 0x98, 0xb0, 0x2d, 0xea, 0x3b, 0x38, 0x08,
-	0x3c, 0xd2, 0xe3, 0x3b, 0xd3, 0x9d, 0x1b, 0x49, 0x9f, 0x53, 0x1e, 0x89, 0xa8, 0x02, 0x65, 0xae,
-	0x43, 0xa8, 0x80, 0xac, 0x31, 0x86, 0xc6, 0x17, 0x32, 0x64, 0x86, 0xde, 0xb9, 0x05, 0xa7, 0xc6,
-	0x34, 0x17, 0x34, 0x03, 0xfa, 0xe3, 0x7d, 0xa3, 0xc4, 0x55, 0xb1, 0xf0, 0xc0, 0x7f, 0x81, 0xb7,
-	0x28, 0x1e, 0xda, 0x14, 0x1b, 0x1a, 0x02, 0x98, 0x09, 0x21, 0x43, 0xef, 0xfe, 0x5d, 0x81, 0x9a,
-	0x62, 0x10, 0xba, 0x0f, 0xd5, 0x78, 0x7a, 0x45, 0x05, 0x63, 0xaf, 0xf2, 0x35, 0xa1, 0xd9, 0x1e,
-	0xb7, 0x2d, 0xf3, 0xff, 0x4b, 0xa8, 0xa7, 0xa7, 0x27, 0x64, 0xa6, 0x38, 0x0a, 0xe7, 0xb6, 0xe6,
-	0x85, 0x89, 0x34, 0x52, 0xf4, 0xd7, 0xd1, 0xc7, 0x8d, 0x64, 0x02, 0x41, 0x17, 0xc7, 0xbd, 0x93,
-	0x53, 0xe2, 0xff, 0x73, 0x04, 0x95, 0x3c, 0x60, 0x3f, 0x95, 0x73, 0xf1, 0x88, 0x83, 0x56, 0x27,
-	0xb2, 0x2b, 0x03, 0x54, 0xf3, 0xf2, 0x31, 0x28, 0xe5, 0x61, 0xcf, 0xa3, 0x4f, 0x06, 0xca, 0x3c,
-	0x80, 0x26, 0x28, 0xaa, 0x4c, 0x44, 0xcd, 0x4b, 0x47, 0x91, 0x25, 0x06, 0x15, 0xbd, 0xee, 0x33,
-	0x06, 0x4d, 0x18, 0x1f, 0x32, 0x06, 0x4d, 0x1c, 0x15, 0xb6, 0xa0, 0xa6, 0xe4, 0x25, 0x3a, 0x37,
-	0xfe, 0x39, 0x14, 0x8a, 0x5e, 0x19, 0x4f, 0x90, 0x48, 0x54, 0x4a, 0x22, 0x2a, 0x98, 0x89, 0x52,
-	0xfd, 0x3f, 0x23, 0xb1, 0xe8, 0xb5, 0xf1, 0x14, 0x4e, 0xa4, 0x6a, 0x1f, 0x3a, 0x9f, 0x62, 0x29,
-	0x7a, 0x55, 0x34, 0xcd, 0x49, 0x24, 0x52, 0x2e, 0x89, 0x3b, 0x70, 0xba, 0x29, 0xa2, 0xcb, 0x45,
-	0xcc, 0x85, 0x8d, 0xb5, 0xd9, 0x39, 0x0e, 0xa9, 0x3c, 0x6f, 0x1b, 0xe6, 0xd4, 0xc6, 0x88, 0x56,
-	0x32, 0xbc, 0xb9, 0xf6, 0xdb, 0x3c, 0x3f, 0x81, 0x42, 0x75, 0x8e, 0xd2, 0xd3, 0x72, 0xce, 0xc9,
-	0xf7, 0xce, 0x9c, 0x73, 0x0a, 0x5a, 0xe2, 0xed, 0x8f, 0xfe, 0x7c, 0xd3, 0xd6, 0x5e, 0xbd, 0x69,
-	0x6b, 0xaf, 0xdf, 0xb4, 0xb5, 0x6f, 0xdf, 0xb6, 0x4b, 0xaf, 0xde, 0xb6, 0x4b, 0x7f, 0xbd, 0x6d,
-	0x97, 0xbe, 0x6a, 0x4d, 0xfa, 0xe6, 0xf9, 0x7c, 0x46, 0xfc, 0xbb, 0xfe, 0x4f, 0x00, 0x00, 0x00,
-	0xff, 0xff, 0x83, 0x2d, 0x56, 0x38, 0x1a, 0x15, 0x00, 0x00,
+	// 1896 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x59, 0xcd, 0x73, 0x13, 0xc9,
+	0x15, 0xd7, 0x8c, 0x65, 0x5b, 0x7a, 0xb2, 0xcd, 0xb8, 0x6d, 0x83, 0x10, 0x42, 0x98, 0x09, 0x01,
+	0xa3, 0xa4, 0x80, 0x88, 0x90, 0x0a, 0x45, 0x52, 0xc1, 0x98, 0x8f, 0x88, 0x60, 0xe3, 0x8c, 0x30,
+	0x54, 0xe5, 0x42, 0x8d, 0x67, 0xda, 0xf2, 0x94, 0xa5, 0x1e, 0xa5, 0xa7, 0x85, 0xd1, 0x39, 0xc7,
+	0x5c, 0x72, 0xcb, 0x69, 0xef, 0x7b, 0xd8, 0xc3, 0xd6, 0x5e, 0xf6, 0xb0, 0x55, 0x7b, 0xdc, 0xda,
+	0x23, 0xc7, 0x3d, 0x52, 0xf0, 0x4f, 0xec, 0x71, 0xab, 0x7b, 0x7a, 0x46, 0x3d, 0x1f, 0x92, 0xbd,
+	0xc5, 0x81, 0x8b, 0xed, 0x7e, 0xef, 0xf5, 0x7b, 0xaf, 0x7f, 0xfd, 0xde, 0xeb, 0xf7, 0xc6, 0x70,
+	0xc7, 0xf1, 0x7d, 0xea, 0x7a, 0xc4, 0x66, 0x3e, 0xbd, 0xa9, 0xfc, 0x3d, 0xa0, 0x3e, 0xf3, 0x6f,
+	0x8a, 0x9f, 0x81, 0x4a, 0xbf, 0x21, 0x48, 0xa8, 0xa2, 0x90, 0xcc, 0xef, 0x35, 0x30, 0x3a, 0x03,
+	0xdb, 0xc1, 0x1d, 0xaf, 0x4b, 0x2c, 0xfc, 0xef, 0x21, 0x0e, 0x18, 0xaa, 0xc2, 0x7c, 0xc0, 0x69,
+	0x6d, 0xb7, 0xaa, 0xad, 0x6b, 0x1b, 0x65, 0x2b, 0x5a, 0xa2, 0xb3, 0x30, 0x77, 0x88, 0x6d, 0x17,
+	0xd3, 0xaa, 0xbe, 0xae, 0x6d, 0x2c, 0x58, 0x72, 0x85, 0xd6, 0xa1, 0xe2, 0xf7, 0xdc, 0xb6, 0x8b,
+	0x09, 0xf3, 0xd8, 0xa8, 0x3a, 0x23, 0x98, 0x2a, 0x09, 0xb5, 0x60, 0x95, 0xe0, 0xe3, 0x68, 0xc9,
+	0xad, 0xd9, 0x6c, 0x48, 0x71, 0xb5, 0x28, 0x44, 0x73, 0x79, 0xc8, 0x84, 0x85, 0x03, 0x9f, 0x3a,
+	0x58, 0xfa, 0x55, 0x9d, 0x5d, 0xd7, 0x36, 0x4a, 0x56, 0x82, 0x66, 0x76, 0xa0, 0x22, 0xfc, 0x7f,
+	0xe6, 0xf5, 0x3d, 0x16, 0x70, 0x47, 0x28, 0xb6, 0xdd, 0x6d, 0xdc, 0xdf, 0xc7, 0x34, 0x10, 0xee,
+	0x2f, 0x5a, 0x2a, 0x89, 0x2b, 0x3d, 0xa6, 0x1e, 0xc3, 0x91, 0x88, 0x2e, 0x44, 0x12, 0x34, 0xf3,
+	0x3f, 0x3a, 0xa0, 0x10, 0x15, 0x66, 0xb3, 0x61, 0xb0, 0x6b, 0x8f, 0x7a, 0xbe, 0xed, 0xa2, 0x5b,
+	0x30, 0x17, 0x08, 0x82, 0xd0, 0xbb, 0xd4, 0xaa, 0xde, 0x50, 0xd1, 0x55, 0x36, 0x58, 0x52, 0x0e,
+	0xfd, 0x1e, 0x96, 0x5d, 0xdc, 0xc3, 0xcc, 0xf3, 0xc9, 0x0b, 0xaf, 0x8f, 0x03, 0x66, 0xf7, 0x07,
+	0xc2, 0xe2, 0x8c, 0x95, 0x65, 0xa0, 0xbf, 0x41, 0x65, 0x80, 0x69, 0xdf, 0x0b, 0x02, 0xcf, 0x27,
+	0x81, 0x40, 0x71, 0xa9, 0x75, 0x31, 0x6b, 0x64, 0x77, 0x2c, 0x64, 0xa9, 0x3b, 0xb8, 0x83, 0x3d,
+	0x81, 0x83, 0x80, 0xb5, 0x92, 0xe7, 0x60, 0x88, 0x93, 0x25, 0xe5, 0x50, 0x0d, 0x4a, 0x5e, 0xd0,
+	0x39, 0xb4, 0x29, 0x76, 0x25, 0xbc, 0xf1, 0xda, 0xdc, 0x83, 0x65, 0x25, 0x34, 0x82, 0x81, 0x4f,
+	0x02, 0x8c, 0xee, 0xc3, 0x3c, 0xc5, 0x0e, 0xf6, 0x06, 0x4c, 0x80, 0x50, 0x69, 0x5d, 0xcd, 0xda,
+	0xb0, 0x42, 0x81, 0x57, 0x1e, 0x3b, 0x8c, 0x2f, 0xd3, 0x8a, 0xb6, 0x99, 0x47, 0x70, 0x7e, 0xa2,
+	0x14, 0xba, 0x05, 0x2b, 0x81, 0xc2, 0x94, 0xc8, 0x0b, 0x53, 0x0b, 0x56, 0x1e, 0x0b, 0xd5, 0xa1,
+	0x1c, 0xc4, 0xd1, 0x14, 0x46, 0xe5, 0x98, 0x60, 0x7e, 0xa9, 0xc1, 0x82, 0x6a, 0x6d, 0x7a, 0x6c,
+	0x0f, 0x30, 0xa6, 0x6d, 0x57, 0x68, 0x29, 0x5b, 0x72, 0x85, 0x36, 0xe0, 0x8c, 0xed, 0x38, 0xfe,
+	0x90, 0xb0, 0x54, 0x7c, 0xa7, 0xc9, 0xdc, 0x15, 0x82, 0xd9, 0xb1, 0x4f, 0x8f, 0xda, 0xae, 0xb8,
+	0x81, 0xb2, 0x35, 0x26, 0xa0, 0x06, 0xc0, 0x1b, 0xbb, 0xe7, 0xb9, 0x7b, 0x84, 0x79, 0x3d, 0x01,
+	0x76, 0xd1, 0x52, 0x28, 0xe6, 0x6d, 0x38, 0xa7, 0x84, 0xd0, 0xd6, 0x21, 0x76, 0x8e, 0x4e, 0x4c,
+	0x48, 0x73, 0x0f, 0xaa, 0xd9, 0x4d, 0xf2, 0xaa, 0xee, 0xc2, 0xfc, 0x40, 0xc1, 0xaf, 0xd2, 0xba,
+	0x34, 0x29, 0x5e, 0x25, 0x96, 0x56, 0x24, 0x6f, 0xde, 0x85, 0x0b, 0x69, 0xb5, 0xdb, 0x36, 0x19,
+	0x45, 0xfe, 0xd4, 0xa0, 0x24, 0x1d, 0xe0, 0xa9, 0x30, 0xb3, 0x51, 0xb6, 0xe2, 0xb5, 0xf9, 0x85,
+	0x06, 0xf5, 0xfc, 0xbd, 0xd2, 0xad, 0x7b, 0x50, 0x92, 0x66, 0xc2, 0xcd, 0xa7, 0xf0, 0x2b, 0xde,
+	0x80, 0xee, 0xc3, 0xa2, 0x44, 0x3d, 0x0c, 0x64, 0x71, 0x57, 0x95, 0x56, 0x2d, 0xa1, 0x61, 0x53,
+	0x95, 0xb0, 0x92, 0x1b, 0xcc, 0xbf, 0xc2, 0x62, 0x82, 0xcf, 0x73, 0x34, 0x10, 0x01, 0x2f, 0x0c,
+	0x07, 0x82, 0x2a, 0x0b, 0x47, 0x96, 0x61, 0xbe, 0xd7, 0x52, 0x88, 0xdb, 0xa4, 0x8b, 0x4f, 0x2e,
+	0x9c, 0x4a, 0x21, 0x90, 0x87, 0x8a, 0xe3, 0x2c, 0xcb, 0xe0, 0x21, 0x97, 0x22, 0x46, 0x21, 0x97,
+	0x22, 0x23, 0x0b, 0x56, 0x52, 0xa4, 0x17, 0xa3, 0x41, 0x58, 0x55, 0x97, 0x5a, 0xeb, 0x09, 0x54,
+	0x1e, 0x66, 0xe5, 0xac, 0xbc, 0xcd, 0xe6, 0x4b, 0x99, 0xa0, 0xc9, 0x13, 0x7e, 0x7a, 0x50, 0xdd,
+	0x91, 0x7a, 0xb7, 0xed, 0x23, 0x2c, 0x4a, 0x8c, 0xbd, 0xdf, 0x3b, 0x19, 0x3a, 0xb3, 0x0e, 0xb5,
+	0xbc, 0x6d, 0xa1, 0x3f, 0xe6, 0x3f, 0x65, 0xa4, 0x72, 0xee, 0x1e, 0x09, 0x4e, 0xad, 0x96, 0x73,
+	0x6c, 0xa7, 0xf7, 0x77, 0x6c, 0x47, 0xf7, 0x10, 0x2d, 0xcd, 0x86, 0x0c, 0xe0, 0x8c, 0x4a, 0x69,
+	0xf2, 0x1e, 0x5c, 0xd8, 0x09, 0xb3, 0x7a, 0xcb, 0x27, 0x07, 0x5e, 0x77, 0x48, 0x6d, 0x0e, 0x61,
+	0x64, 0xb2, 0x0e, 0x65, 0x67, 0x48, 0x29, 0xe6, 0x85, 0x41, 0x1a, 0x1d, 0x13, 0xcc, 0xef, 0x34,
+	0xa8, 0xe7, 0xef, 0x96, 0x00, 0x6f, 0xc0, 0x19, 0x47, 0x65, 0xc4, 0x4a, 0xd2, 0xe4, 0x64, 0xb9,
+	0xd1, 0xd3, 0xe5, 0xe6, 0x1a, 0xcc, 0x12, 0xdf, 0xc5, 0xfc, 0x19, 0xe1, 0x39, 0xb6, 0x9c, 0xb8,
+	0xa6, 0x1d, 0xdf, 0xc5, 0x56, 0xc8, 0x47, 0x4d, 0x30, 0x1c, 0x8a, 0xed, 0xe8, 0x29, 0xda, 0x23,
+	0xde, 0x5b, 0x11, 0x3f, 0x45, 0x2b, 0x43, 0x37, 0x3d, 0x28, 0xf2, 0xad, 0x4a, 0xad, 0xd4, 0x12,
+	0xb5, 0xb2, 0x0e, 0x65, 0xdb, 0x75, 0x29, 0x0e, 0x02, 0xcc, 0x53, 0x93, 0x57, 0x86, 0x31, 0x01,
+	0xfd, 0x0e, 0x66, 0xd9, 0x68, 0x20, 0x5d, 0x5a, 0x6a, 0xad, 0x65, 0x5c, 0x12, 0x31, 0x19, 0xca,
+	0x98, 0x7d, 0xf8, 0x4d, 0x14, 0xb1, 0x02, 0x28, 0xda, 0x97, 0x01, 0x95, 0x7c, 0x30, 0x72, 0x52,
+	0x45, 0xcb, 0x4f, 0x95, 0xe9, 0x0f, 0xc5, 0xd7, 0x1a, 0x9c, 0xcd, 0xb7, 0xf7, 0x19, 0x9f, 0x8c,
+	0x3a, 0x94, 0x59, 0xdc, 0x36, 0xcc, 0x8a, 0xb6, 0x61, 0x4c, 0x30, 0x1f, 0x02, 0x8a, 0x3c, 0x7e,
+	0xe6, 0x77, 0x95, 0x88, 0xb7, 0x0f, 0x98, 0x72, 0x37, 0xd1, 0x12, 0xad, 0xc2, 0xac, 0x78, 0xf5,
+	0x65, 0xcb, 0x13, 0x2e, 0x4c, 0x0f, 0x56, 0x12, 0x5a, 0x64, 0x18, 0xfe, 0x59, 0xbc, 0xf3, 0x3e,
+	0x8d, 0x8b, 0x74, 0x23, 0xb7, 0x98, 0x88, 0x2d, 0x5c, 0xcc, 0x8a, 0xc4, 0xb9, 0x03, 0x87, 0x76,
+	0xb0, 0xed, 0x4b, 0x94, 0x4b, 0x56, 0xb4, 0x34, 0xbf, 0xd5, 0x60, 0x39, 0xb3, 0x11, 0x2d, 0x81,
+	0xee, 0x45, 0xbe, 0xea, 0x5e, 0x02, 0x6e, 0x3d, 0x09, 0xf7, 0x5f, 0xe2, 0xfe, 0x2b, 0x6c, 0x8d,
+	0xae, 0x4c, 0x77, 0x29, 0xd5, 0x8b, 0x25, 0xc0, 0x2c, 0xa6, 0xc0, 0xe4, 0xdc, 0x03, 0xaf, 0x87,
+	0x9f, 0x50, 0x7f, 0x18, 0x42, 0x5d, 0xb6, 0xc6, 0x04, 0xf3, 0x1b, 0x4d, 0x36, 0x84, 0xc2, 0xc8,
+	0x67, 0xac, 0xf7, 0x4d, 0x30, 0x22, 0xd2, 0x43, 0x59, 0x09, 0xe4, 0x59, 0x32, 0x74, 0xb3, 0x0d,
+	0x2b, 0x09, 0x9f, 0xe5, 0xcd, 0xb6, 0x60, 0x95, 0xf9, 0x0f, 0x24, 0xd5, 0x1d, 0xb7, 0xa5, 0x9a,
+	0x50, 0x93, 0xcb, 0x33, 0x09, 0xac, 0xca, 0x47, 0x33, 0x09, 0x40, 0xee, 0x31, 0xb5, 0x5f, 0x71,
+	0x4c, 0x3d, 0xf7, 0x98, 0xbc, 0x89, 0xb8, 0xa8, 0x1a, 0xcc, 0x26, 0xe5, 0xa4, 0x0a, 0x94, 0x93,
+	0x7a, 0xfa, 0x29, 0x52, 0x6f, 0x66, 0x6a, 0xea, 0xa5, 0xa3, 0xc5, 0xfc, 0x07, 0xac, 0xa5, 0xf0,
+	0xf8, 0x04, 0x70, 0x1b, 0x50, 0x97, 0xca, 0x2c, 0xfc, 0x06, 0xd3, 0xf8, 0xc4, 0xd1, 0x88, 0x73,
+	0x29, 0xc6, 0x22, 0xcd, 0x97, 0x0f, 0x52, 0x1b, 0x56, 0x36, 0x9d, 0xde, 0xa6, 0xeb, 0xca, 0x54,
+	0x3c, 0xcd, 0xdb, 0x37, 0x48, 0x5c, 0x40, 0xfc, 0x46, 0x3f, 0xe3, 0x17, 0xad, 0xaa, 0x92, 0xe7,
+	0xaa, 0x41, 0x29, 0xcc, 0xef, 0x58, 0x59, 0xbc, 0x9e, 0xa2, 0xed, 0xa9, 0xd0, 0xf6, 0x04, 0xb3,
+	0x50, 0x5b, 0xf0, 0x29, 0xaf, 0xf2, 0x1f, 0x38, 0xe4, 0x09, 0x5d, 0xd2, 0xb5, 0x6a, 0xb2, 0x52,
+	0x2d, 0xc4, 0x95, 0xc8, 0xfc, 0xaf, 0x0e, 0xe7, 0x12, 0xbd, 0x5e, 0x87, 0xef, 0x8e, 0x5b, 0x58,
+	0x2f, 0x0a, 0x10, 0x79, 0xa0, 0x68, 0xcd, 0x63, 0x8b, 0x62, 0x3b, 0xf0, 0x49, 0x54, 0xd6, 0xc3,
+	0x15, 0xfa, 0x23, 0xac, 0xf1, 0x92, 0xd0, 0x61, 0x3e, 0xb5, 0xbb, 0xe1, 0x24, 0xf5, 0x60, 0xc4,
+	0x70, 0x58, 0x8e, 0x8a, 0x56, 0x3e, 0x93, 0xa7, 0xac, 0x38, 0x9d, 0x1c, 0x2e, 0x2d, 0x7e, 0xb6,
+	0xa2, 0xa8, 0xc0, 0x19, 0xba, 0xe8, 0x45, 0x15, 0xda, 0x2b, 0x3e, 0x94, 0x8a, 0x6a, 0xc4, 0x7b,
+	0xd1, 0x34, 0x23, 0xbf, 0x73, 0x9d, 0x9b, 0xd4, 0xb9, 0xd6, 0xa0, 0x9a, 0x05, 0x23, 0xc4, 0xb0,
+	0xf9, 0xb3, 0x06, 0xf0, 0x88, 0x52, 0x9f, 0x6e, 0x89, 0x96, 0x60, 0x09, 0x60, 0x8f, 0xe0, 0xb7,
+	0x03, 0xec, 0x30, 0xec, 0x1a, 0x05, 0x64, 0xc8, 0x21, 0x4a, 0x86, 0xae, 0xa1, 0xa1, 0x2a, 0xac,
+	0x8e, 0x29, 0x3c, 0x71, 0x31, 0x71, 0x3d, 0xd2, 0x35, 0xf4, 0x58, 0x76, 0x8b, 0xf7, 0x0e, 0xd8,
+	0x35, 0x66, 0x10, 0x82, 0x25, 0x41, 0xd9, 0xf1, 0xd9, 0xa3, 0xb7, 0x5e, 0xc0, 0x02, 0xa3, 0x88,
+	0xd6, 0xe4, 0x6c, 0x29, 0x5c, 0xb1, 0xb0, 0xed, 0x1c, 0x62, 0xd7, 0x98, 0xe5, 0xa2, 0x89, 0xbc,
+	0x72, 0x8d, 0x39, 0xb4, 0x08, 0xe5, 0xc7, 0x3e, 0xdd, 0xf7, 0x5c, 0x17, 0x13, 0x63, 0x1e, 0xad,
+	0x82, 0xb1, 0x19, 0x86, 0x44, 0x3b, 0xd8, 0xe6, 0x83, 0x2f, 0xe9, 0x1a, 0x25, 0x74, 0x06, 0x2a,
+	0x9b, 0x4e, 0x6f, 0xc7, 0x27, 0x8f, 0xfa, 0x03, 0x36, 0x32, 0xca, 0xb1, 0x81, 0x1d, 0x9f, 0xc5,
+	0x4d, 0xa3, 0x01, 0xc8, 0x80, 0x8a, 0x38, 0xe7, 0xf3, 0x83, 0x83, 0x00, 0x33, 0xe3, 0x2b, 0xbd,
+	0xf9, 0x7f, 0x4d, 0x7e, 0x41, 0x08, 0x9f, 0x0b, 0x74, 0x36, 0x31, 0xfa, 0x47, 0xa7, 0x28, 0xa0,
+	0x86, 0x6c, 0x43, 0x65, 0x73, 0x1b, 0x9e, 0x37, 0x3a, 0xbe, 0xa1, 0xa5, 0xf8, 0x11, 0xa3, 0xc3,
+	0x6c, 0xca, 0xf7, 0xeb, 0x29, 0xbd, 0xd1, 0xf1, 0x66, 0x62, 0x24, 0x43, 0xba, 0x82, 0x51, 0xf3,
+	0xa9, 0xfc, 0x34, 0xa3, 0x8c, 0xfb, 0xe8, 0x82, 0x1c, 0x12, 0x15, 0xda, 0x1e, 0x39, 0x22, 0xfe,
+	0x31, 0x31, 0x0a, 0xe8, 0x3c, 0xac, 0xa5, 0x99, 0xcf, 0x8f, 0x09, 0xa6, 0x86, 0xd6, 0x3c, 0x86,
+	0x52, 0xd4, 0x60, 0xa1, 0x0a, 0xcc, 0xbf, 0xa0, 0x18, 0x6f, 0xee, 0xb6, 0x8d, 0x02, 0x5f, 0x3c,
+	0xf6, 0x7a, 0x62, 0xa1, 0x71, 0xf8, 0xb7, 0xc6, 0x2f, 0x2a, 0xa7, 0x89, 0xfb, 0xdc, 0xe2, 0x31,
+	0x42, 0x82, 0x61, 0xc0, 0x29, 0x33, 0x68, 0x19, 0x16, 0x77, 0xec, 0xbe, 0x47, 0xba, 0x5c, 0x23,
+	0x27, 0x15, 0xf9, 0x21, 0x76, 0xed, 0x51, 0x1f, 0x13, 0xb6, 0x4b, 0x7d, 0x07, 0x8b, 0x5b, 0xe1,
+	0x9c, 0xd9, 0xe6, 0xdd, 0x71, 0x7b, 0xa1, 0xcc, 0x18, 0xa8, 0x04, 0x45, 0xee, 0x43, 0xe8, 0x80,
+	0x2c, 0xed, 0x86, 0xc6, 0x17, 0xf2, 0xfe, 0x0d, 0xbd, 0x79, 0x1f, 0xce, 0x4d, 0x78, 0xd3, 0xd1,
+	0x1c, 0xe8, 0xcf, 0x8f, 0x8c, 0x02, 0x77, 0xc5, 0xc2, 0x7d, 0xff, 0x0d, 0xde, 0xa5, 0x78, 0x60,
+	0x53, 0x6c, 0x68, 0x08, 0x60, 0x2e, 0x24, 0x19, 0x7a, 0xeb, 0x07, 0x80, 0x8a, 0x72, 0x20, 0xf4,
+	0x14, 0xca, 0xf1, 0x17, 0x0d, 0x94, 0xf3, 0x61, 0x45, 0xf9, 0x08, 0x56, 0x6b, 0x4c, 0x62, 0xcb,
+	0xb2, 0xf3, 0x3a, 0xfa, 0x70, 0x36, 0x1e, 0x73, 0xd1, 0x95, 0x49, 0xb3, 0x90, 0x3a, 0xcd, 0xd7,
+	0x7e, 0x7b, 0x82, 0x94, 0x34, 0x70, 0x94, 0x08, 0x8c, 0x78, 0x8e, 0x46, 0x1b, 0x53, 0xb7, 0x2b,
+	0x63, 0x7a, 0xed, 0xfa, 0x29, 0x24, 0xa5, 0xb1, 0xfd, 0xe8, 0x5b, 0x8f, 0x32, 0xf3, 0xa1, 0x29,
+	0x8e, 0x2a, 0x53, 0x6f, 0xed, 0xea, 0x49, 0x62, 0xd2, 0x06, 0x96, 0x19, 0x90, 0x18, 0xe4, 0x50,
+	0xce, 0xee, 0xbc, 0x01, 0xb1, 0x76, 0xed, 0x44, 0xb9, 0x14, 0x6e, 0xa9, 0xf1, 0x2d, 0x0f, 0xb7,
+	0xfc, 0xa1, 0x31, 0x0f, 0xb7, 0x09, 0xb3, 0x20, 0x37, 0x96, 0x37, 0xcd, 0xa5, 0x8c, 0x4d, 0x19,
+	0x17, 0x53, 0xc6, 0xa6, 0x8e, 0x86, 0xbb, 0x50, 0x51, 0x12, 0x02, 0x5d, 0x9a, 0xdc, 0xfe, 0x86,
+	0xaa, 0xd7, 0x27, 0x0b, 0x8c, 0x35, 0x2a, 0x85, 0x1d, 0xe5, 0xcc, 0xf2, 0x89, 0x7e, 0x2f, 0xa5,
+	0x31, 0xaf, 0xbb, 0x7c, 0x19, 0x7f, 0x5e, 0x91, 0x3a, 0x2f, 0xe7, 0x7d, 0x9a, 0x49, 0x6a, 0x35,
+	0xa7, 0x89, 0x48, 0xbd, 0x24, 0xee, 0xb8, 0x92, 0x4d, 0x10, 0xba, 0x9e, 0xb7, 0x39, 0xb7, 0x91,
+	0xaa, 0x35, 0x4f, 0x23, 0x2a, 0xed, 0x75, 0x60, 0x41, 0x6d, 0x84, 0xd0, 0x7a, 0x6a, 0x6f, 0xa6,
+	0xdd, 0xaa, 0x5d, 0x9e, 0x22, 0xa1, 0x82, 0xa3, 0xf4, 0x30, 0x19, 0x70, 0xb2, 0xbd, 0x52, 0x06,
+	0x9c, 0xbc, 0x16, 0xe8, 0x35, 0x7f, 0x13, 0x93, 0x4f, 0x7b, 0xaa, 0x16, 0x4d, 0x68, 0x83, 0x52,
+	0xb5, 0x68, 0x52, 0x7f, 0xf0, 0xe0, 0x4f, 0x3f, 0x7e, 0x68, 0x68, 0xef, 0x3e, 0x34, 0xb4, 0xf7,
+	0x1f, 0x1a, 0xda, 0xff, 0x3e, 0x36, 0x0a, 0xef, 0x3e, 0x36, 0x0a, 0x3f, 0x7d, 0x6c, 0x14, 0xfe,
+	0x55, 0x9f, 0xf6, 0x4f, 0x88, 0xfd, 0x39, 0xf1, 0xeb, 0xf6, 0x2f, 0x01, 0x00, 0x00, 0xff, 0xff,
+	0x44, 0xc8, 0x68, 0xc2, 0xab, 0x18, 0x00, 0x00,
 }
 
 func (m *SpaceSignRequest) Marshal() (dAtA []byte, err error) {
@@ -2237,6 +2572,39 @@ func (m *SpaceSignRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *SpaceLimits) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SpaceLimits) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SpaceLimits) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.WriteMembers != 0 {
+		i = encodeVarintCoordinator(dAtA, i, uint64(m.WriteMembers))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.ReadMembers != 0 {
+		i = encodeVarintCoordinator(dAtA, i, uint64(m.ReadMembers))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *SpaceStatusPayload) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -2257,6 +2625,28 @@ func (m *SpaceStatusPayload) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.IsShared {
+		i--
+		if m.IsShared {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x28
+	}
+	if m.Limits != nil {
+		{
+			size, err := m.Limits.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintCoordinator(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
 	if m.Permissions != 0 {
 		i = encodeVarintCoordinator(dAtA, i, uint64(m.Permissions))
 		i--
@@ -2403,78 +2793,6 @@ func (m *SpaceReceipt) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *FileLimitCheckRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *FileLimitCheckRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *FileLimitCheckRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.SpaceId) > 0 {
-		i -= len(m.SpaceId)
-		copy(dAtA[i:], m.SpaceId)
-		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.SpaceId)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.AccountIdentity) > 0 {
-		i -= len(m.AccountIdentity)
-		copy(dAtA[i:], m.AccountIdentity)
-		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.AccountIdentity)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *FileLimitCheckResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *FileLimitCheckResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *FileLimitCheckResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.StorageKey) > 0 {
-		i -= len(m.StorageKey)
-		copy(dAtA[i:], m.StorageKey)
-		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.StorageKey)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if m.Limit != 0 {
-		i = encodeVarintCoordinator(dAtA, i, uint64(m.Limit))
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
 func (m *SpaceStatusCheckRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -2592,6 +2910,18 @@ func (m *SpaceStatusCheckManyResponse) MarshalToSizedBuffer(dAtA []byte) (int, e
 	_ = i
 	var l int
 	_ = l
+	if m.AccountLimits != nil {
+		{
+			size, err := m.AccountLimits.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintCoordinator(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
 	if len(m.Payloads) > 0 {
 		for iNdEx := len(m.Payloads) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -2605,6 +2935,34 @@ func (m *SpaceStatusCheckManyResponse) MarshalToSizedBuffer(dAtA []byte) (int, e
 			i--
 			dAtA[i] = 0xa
 		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AccountLimits) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AccountLimits) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AccountLimits) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.SharedSpacesLimit != 0 {
+		i = encodeVarintCoordinator(dAtA, i, uint64(m.SharedSpacesLimit))
+		i--
+		dAtA[i] = 0x8
 	}
 	return len(dAtA) - i, nil
 }
@@ -2690,6 +3048,119 @@ func (m *SpaceStatusChangeResponse) MarshalToSizedBuffer(dAtA []byte) (int, erro
 		i--
 		dAtA[i] = 0xa
 	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SpaceMakeShareableRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SpaceMakeShareableRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SpaceMakeShareableRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.SpaceId) > 0 {
+		i -= len(m.SpaceId)
+		copy(dAtA[i:], m.SpaceId)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.SpaceId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SpaceMakeShareableResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SpaceMakeShareableResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SpaceMakeShareableResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
+func (m *SpaceMakeUnshareableRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SpaceMakeUnshareableRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SpaceMakeUnshareableRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.AclHead) > 0 {
+		i -= len(m.AclHead)
+		copy(dAtA[i:], m.AclHead)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.AclHead)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.SpaceId) > 0 {
+		i -= len(m.SpaceId)
+		copy(dAtA[i:], m.SpaceId)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.SpaceId)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SpaceMakeUnshareableResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SpaceMakeUnshareableResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SpaceMakeUnshareableResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
 	return len(dAtA) - i, nil
 }
 
@@ -2800,20 +3271,20 @@ func (m *Node) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	var l int
 	_ = l
 	if len(m.Types) > 0 {
-		dAtA5 := make([]byte, len(m.Types)*10)
-		var j4 int
+		dAtA7 := make([]byte, len(m.Types)*10)
+		var j6 int
 		for _, num := range m.Types {
 			for num >= 1<<7 {
-				dAtA5[j4] = uint8(uint64(num)&0x7f | 0x80)
+				dAtA7[j6] = uint8(uint64(num)&0x7f | 0x80)
 				num >>= 7
-				j4++
+				j6++
 			}
-			dAtA5[j4] = uint8(num)
-			j4++
+			dAtA7[j6] = uint8(num)
+			j6++
 		}
-		i -= j4
-		copy(dAtA[i:], dAtA5[:j4])
-		i = encodeVarintCoordinator(dAtA, i, uint64(j4))
+		i -= j6
+		copy(dAtA[i:], dAtA7[:j6])
+		i = encodeVarintCoordinator(dAtA, i, uint64(j6))
 		i--
 		dAtA[i] = 0x1a
 	}
@@ -3445,6 +3916,86 @@ func (m *AclGetRecordsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *AccountLimitsSetRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AccountLimitsSetRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AccountLimitsSetRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.SharedSpacesLimit != 0 {
+		i = encodeVarintCoordinator(dAtA, i, uint64(m.SharedSpacesLimit))
+		i--
+		dAtA[i] = 0x30
+	}
+	if m.SpaceMembersWrite != 0 {
+		i = encodeVarintCoordinator(dAtA, i, uint64(m.SpaceMembersWrite))
+		i--
+		dAtA[i] = 0x28
+	}
+	if m.SpaceMembersRead != 0 {
+		i = encodeVarintCoordinator(dAtA, i, uint64(m.SpaceMembersRead))
+		i--
+		dAtA[i] = 0x20
+	}
+	if m.FileStorageLimitBytes != 0 {
+		i = encodeVarintCoordinator(dAtA, i, uint64(m.FileStorageLimitBytes))
+		i--
+		dAtA[i] = 0x18
+	}
+	if len(m.Reason) > 0 {
+		i -= len(m.Reason)
+		copy(dAtA[i:], m.Reason)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.Reason)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Identity) > 0 {
+		i -= len(m.Identity)
+		copy(dAtA[i:], m.Identity)
+		i = encodeVarintCoordinator(dAtA, i, uint64(len(m.Identity)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AccountLimitsSetResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AccountLimitsSetResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AccountLimitsSetResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintCoordinator(dAtA []byte, offset int, v uint64) int {
 	offset -= sovCoordinator(v)
 	base := offset
@@ -3484,6 +4035,21 @@ func (m *SpaceSignRequest) Size() (n int) {
 	return n
 }
 
+func (m *SpaceLimits) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.ReadMembers != 0 {
+		n += 1 + sovCoordinator(uint64(m.ReadMembers))
+	}
+	if m.WriteMembers != 0 {
+		n += 1 + sovCoordinator(uint64(m.WriteMembers))
+	}
+	return n
+}
+
 func (m *SpaceStatusPayload) Size() (n int) {
 	if m == nil {
 		return 0
@@ -3498,6 +4064,13 @@ func (m *SpaceStatusPayload) Size() (n int) {
 	}
 	if m.Permissions != 0 {
 		n += 1 + sovCoordinator(uint64(m.Permissions))
+	}
+	if m.Limits != nil {
+		l = m.Limits.Size()
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	if m.IsShared {
+		n += 2
 	}
 	return n
 }
@@ -3560,39 +4133,6 @@ func (m *SpaceReceipt) Size() (n int) {
 	return n
 }
 
-func (m *FileLimitCheckRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.AccountIdentity)
-	if l > 0 {
-		n += 1 + l + sovCoordinator(uint64(l))
-	}
-	l = len(m.SpaceId)
-	if l > 0 {
-		n += 1 + l + sovCoordinator(uint64(l))
-	}
-	return n
-}
-
-func (m *FileLimitCheckResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Limit != 0 {
-		n += 1 + sovCoordinator(uint64(m.Limit))
-	}
-	l = len(m.StorageKey)
-	if l > 0 {
-		n += 1 + l + sovCoordinator(uint64(l))
-	}
-	return n
-}
-
 func (m *SpaceStatusCheckRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -3646,6 +4186,22 @@ func (m *SpaceStatusCheckManyResponse) Size() (n int) {
 			n += 1 + l + sovCoordinator(uint64(l))
 		}
 	}
+	if m.AccountLimits != nil {
+		l = m.AccountLimits.Size()
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	return n
+}
+
+func (m *AccountLimits) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.SharedSpacesLimit != 0 {
+		n += 1 + sovCoordinator(uint64(m.SharedSpacesLimit))
+	}
 	return n
 }
 
@@ -3683,6 +4239,54 @@ func (m *SpaceStatusChangeResponse) Size() (n int) {
 		l = m.Payload.Size()
 		n += 1 + l + sovCoordinator(uint64(l))
 	}
+	return n
+}
+
+func (m *SpaceMakeShareableRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.SpaceId)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	return n
+}
+
+func (m *SpaceMakeShareableResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *SpaceMakeUnshareableRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.SpaceId)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	l = len(m.AclHead)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	return n
+}
+
+func (m *SpaceMakeUnshareableResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
 	return n
 }
 
@@ -4030,6 +4634,44 @@ func (m *AclGetRecordsResponse) Size() (n int) {
 	return n
 }
 
+func (m *AccountLimitsSetRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Identity)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	l = len(m.Reason)
+	if l > 0 {
+		n += 1 + l + sovCoordinator(uint64(l))
+	}
+	if m.FileStorageLimitBytes != 0 {
+		n += 1 + sovCoordinator(uint64(m.FileStorageLimitBytes))
+	}
+	if m.SpaceMembersRead != 0 {
+		n += 1 + sovCoordinator(uint64(m.SpaceMembersRead))
+	}
+	if m.SpaceMembersWrite != 0 {
+		n += 1 + sovCoordinator(uint64(m.SpaceMembersWrite))
+	}
+	if m.SharedSpacesLimit != 0 {
+		n += 1 + sovCoordinator(uint64(m.SharedSpacesLimit))
+	}
+	return n
+}
+
+func (m *AccountLimitsSetResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
 func sovCoordinator(x uint64) (n int) {
 	return (math_bits.Len64(x|1) + 6) / 7
 }
@@ -4240,6 +4882,94 @@ func (m *SpaceSignRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *SpaceLimits) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SpaceLimits: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SpaceLimits: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ReadMembers", wireType)
+			}
+			m.ReadMembers = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ReadMembers |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field WriteMembers", wireType)
+			}
+			m.WriteMembers = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.WriteMembers |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *SpaceStatusPayload) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -4326,6 +5056,62 @@ func (m *SpaceStatusPayload) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Limits", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Limits == nil {
+				m.Limits = &SpaceLimits{}
+			}
+			if err := m.Limits.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsShared", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsShared = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCoordinator(dAtA[iNdEx:])
@@ -4750,223 +5536,6 @@ func (m *SpaceReceipt) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *FileLimitCheckRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowCoordinator
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: FileLimitCheckRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: FileLimitCheckRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AccountIdentity", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCoordinator
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthCoordinator
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthCoordinator
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.AccountIdentity = append(m.AccountIdentity[:0], dAtA[iNdEx:postIndex]...)
-			if m.AccountIdentity == nil {
-				m.AccountIdentity = []byte{}
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SpaceId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCoordinator
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthCoordinator
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthCoordinator
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.SpaceId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipCoordinator(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthCoordinator
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *FileLimitCheckResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowCoordinator
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: FileLimitCheckResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: FileLimitCheckResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Limit", wireType)
-			}
-			m.Limit = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCoordinator
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Limit |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field StorageKey", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCoordinator
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthCoordinator
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthCoordinator
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.StorageKey = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipCoordinator(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthCoordinator
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
 func (m *SpaceStatusCheckRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -5280,6 +5849,111 @@ func (m *SpaceStatusCheckManyResponse) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AccountLimits", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.AccountLimits == nil {
+				m.AccountLimits = &AccountLimits{}
+			}
+			if err := m.AccountLimits.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AccountLimits) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AccountLimits: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AccountLimits: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SharedSpacesLimit", wireType)
+			}
+			m.SharedSpacesLimit = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.SharedSpacesLimit |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCoordinator(dAtA[iNdEx:])
@@ -5533,6 +6207,302 @@ func (m *SpaceStatusChangeResponse) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SpaceMakeShareableRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SpaceMakeShareableRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SpaceMakeShareableRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SpaceId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SpaceMakeShareableResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SpaceMakeShareableResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SpaceMakeShareableResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SpaceMakeUnshareableRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SpaceMakeUnshareableRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SpaceMakeUnshareableRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SpaceId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AclHead", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AclHead = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SpaceMakeUnshareableResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SpaceMakeUnshareableResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SpaceMakeUnshareableResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCoordinator(dAtA[iNdEx:])
@@ -7787,6 +8757,246 @@ func (m *AclGetRecordsResponse) Unmarshal(dAtA []byte) error {
 			m.Records = append(m.Records, make([]byte, postIndex-iNdEx))
 			copy(m.Records[len(m.Records)-1], dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AccountLimitsSetRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AccountLimitsSetRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AccountLimitsSetRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Identity", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Identity = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Reason", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Reason = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FileStorageLimitBytes", wireType)
+			}
+			m.FileStorageLimitBytes = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.FileStorageLimitBytes |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceMembersRead", wireType)
+			}
+			m.SpaceMembersRead = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.SpaceMembersRead |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SpaceMembersWrite", wireType)
+			}
+			m.SpaceMembersWrite = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.SpaceMembersWrite |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SharedSpacesLimit", wireType)
+			}
+			m.SharedSpacesLimit = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCoordinator
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.SharedSpacesLimit |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCoordinator(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthCoordinator
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AccountLimitsSetResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCoordinator
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AccountLimitsSetResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AccountLimitsSetResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCoordinator(dAtA[iNdEx:])

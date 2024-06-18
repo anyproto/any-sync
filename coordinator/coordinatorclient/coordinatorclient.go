@@ -34,10 +34,11 @@ type CoordinatorClient interface {
 	SpaceDelete(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (err error)
 	AccountDelete(ctx context.Context, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (timestamp int64, err error)
 	AccountRevertDeletion(ctx context.Context) (err error)
-	StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, err error)
+	StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, limits *coordinatorproto.AccountLimits, err error)
 	StatusCheck(ctx context.Context, spaceId string) (status *coordinatorproto.SpaceStatusPayload, err error)
 	SpaceSign(ctx context.Context, payload SpaceSignPayload) (receipt *coordinatorproto.SpaceReceiptWithSignature, err error)
-	FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (response *coordinatorproto.FileLimitCheckResponse, err error)
+	SpaceMakeShareable(ctx context.Context, spaceId string) (err error)
+	SpaceMakeUnshareable(ctx context.Context, spaceId, aclId string) (err error)
 	NetworkConfiguration(ctx context.Context, currentId string) (*coordinatorproto.NetworkConfigurationResponse, error)
 	DeletionLog(ctx context.Context, lastRecordId string, limit int) (records []*coordinatorproto.DeletionLogRecord, err error)
 
@@ -46,6 +47,8 @@ type CoordinatorClient interface {
 
 	AclAddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (res *consensusproto.RawRecordWithId, err error)
 	AclGetRecords(ctx context.Context, spaceId, aclHead string) (res []*consensusproto.RawRecordWithId, err error)
+
+	AccountLimitsSet(ctx context.Context, req *coordinatorproto.AccountLimitsSetRequest) error
 
 	app.Component
 }
@@ -146,7 +149,11 @@ func (c *coordinatorClient) DeletionLog(ctx context.Context, lastRecordId string
 	return
 }
 
-func (c *coordinatorClient) StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, err error) {
+func (c *coordinatorClient) StatusCheckMany(ctx context.Context, spaceIds []string) (
+	statuses []*coordinatorproto.SpaceStatusPayload,
+	limits *coordinatorproto.AccountLimits,
+	err error,
+) {
 	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
 		resp, err := cl.SpaceStatusCheckMany(ctx, &coordinatorproto.SpaceStatusCheckManyRequest{
 			SpaceIds: spaceIds,
@@ -155,6 +162,7 @@ func (c *coordinatorClient) StatusCheckMany(ctx context.Context, spaceIds []stri
 			return rpcerr.Unwrap(err)
 		}
 		statuses = resp.Payloads
+		limits = resp.AccountLimits
 		return nil
 	})
 	return
@@ -202,20 +210,6 @@ func (c *coordinatorClient) SpaceSign(ctx context.Context, payload SpaceSignPayl
 			return rpcerr.Unwrap(err)
 		}
 		receipt = resp.Receipt
-		return nil
-	})
-	return
-}
-
-func (c *coordinatorClient) FileLimitCheck(ctx context.Context, spaceId string, identity []byte) (resp *coordinatorproto.FileLimitCheckResponse, err error) {
-	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
-		resp, err = cl.FileLimitCheck(ctx, &coordinatorproto.FileLimitCheckRequest{
-			AccountIdentity: identity,
-			SpaceId:         spaceId,
-		})
-		if err != nil {
-			return rpcerr.Unwrap(err)
-		}
 		return nil
 	})
 	return
@@ -274,7 +268,7 @@ func (c *coordinatorClient) AclAddRecord(ctx context.Context, spaceId string, re
 			Payload: recordData,
 		})
 		if err != nil {
-			return err
+			return rpcerr.Unwrap(err)
 		}
 		res = &consensusproto.RawRecordWithId{
 			Payload: resp.Payload,
@@ -292,7 +286,7 @@ func (c *coordinatorClient) AclGetRecords(ctx context.Context, spaceId, aclHead 
 			AclHead: aclHead,
 		})
 		if err != nil {
-			return err
+			return rpcerr.Unwrap(err)
 		}
 		res = make([]*consensusproto.RawRecordWithId, len(resp.Records))
 		for i, rec := range resp.Records {
@@ -304,6 +298,38 @@ func (c *coordinatorClient) AclGetRecords(ctx context.Context, spaceId, aclHead 
 		return nil
 	})
 	return
+}
+
+func (c *coordinatorClient) AccountLimitsSet(ctx context.Context, req *coordinatorproto.AccountLimitsSetRequest) error {
+	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		if _, err := cl.AccountLimitsSet(ctx, req); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+}
+
+func (c *coordinatorClient) SpaceMakeShareable(ctx context.Context, spaceId string) (err error) {
+	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		if _, err := cl.SpaceMakeShareable(ctx, &coordinatorproto.SpaceMakeShareableRequest{
+			SpaceId: spaceId,
+		}); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+}
+
+func (c *coordinatorClient) SpaceMakeUnshareable(ctx context.Context, spaceId, aclHead string) (err error) {
+	return c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		if _, err := cl.SpaceMakeUnshareable(ctx, &coordinatorproto.SpaceMakeUnshareableRequest{
+			SpaceId: spaceId,
+			AclHead: aclHead,
+		}); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
 }
 
 func (c *coordinatorClient) doClient(ctx context.Context, f func(cl coordinatorproto.DRPCCoordinatorClient) error) error {

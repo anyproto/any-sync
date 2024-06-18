@@ -41,7 +41,12 @@ type DRPCAnynsClient interface {
 	DRPCConn() drpc.Conn
 
 	IsNameAvailable(ctx context.Context, in *NameAvailableRequest) (*NameAvailableResponse, error)
+	BatchIsNameAvailable(ctx context.Context, in *BatchNameAvailableRequest) (*BatchNameAvailableResponse, error)
 	GetNameByAddress(ctx context.Context, in *NameByAddressRequest) (*NameByAddressResponse, error)
+	BatchGetNameByAddress(ctx context.Context, in *BatchNameByAddressRequest) (*BatchNameByAddressResponse, error)
+	GetNameByAnyId(ctx context.Context, in *NameByAnyIdRequest) (*NameByAddressResponse, error)
+	BatchGetNameByAnyId(ctx context.Context, in *BatchNameByAnyIdRequest) (*BatchNameByAddressResponse, error)
+	AdminNameRegisterSigned(ctx context.Context, in *NameRegisterRequestSigned) (*OperationResponse, error)
 }
 
 type drpcAnynsClient struct {
@@ -63,6 +68,15 @@ func (c *drpcAnynsClient) IsNameAvailable(ctx context.Context, in *NameAvailable
 	return out, nil
 }
 
+func (c *drpcAnynsClient) BatchIsNameAvailable(ctx context.Context, in *BatchNameAvailableRequest) (*BatchNameAvailableResponse, error) {
+	out := new(BatchNameAvailableResponse)
+	err := c.cc.Invoke(ctx, "/Anyns/BatchIsNameAvailable", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *drpcAnynsClient) GetNameByAddress(ctx context.Context, in *NameByAddressRequest) (*NameByAddressResponse, error) {
 	out := new(NameByAddressResponse)
 	err := c.cc.Invoke(ctx, "/Anyns/GetNameByAddress", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}, in, out)
@@ -72,9 +86,50 @@ func (c *drpcAnynsClient) GetNameByAddress(ctx context.Context, in *NameByAddres
 	return out, nil
 }
 
+func (c *drpcAnynsClient) BatchGetNameByAddress(ctx context.Context, in *BatchNameByAddressRequest) (*BatchNameByAddressResponse, error) {
+	out := new(BatchNameByAddressResponse)
+	err := c.cc.Invoke(ctx, "/Anyns/BatchGetNameByAddress", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcAnynsClient) GetNameByAnyId(ctx context.Context, in *NameByAnyIdRequest) (*NameByAddressResponse, error) {
+	out := new(NameByAddressResponse)
+	err := c.cc.Invoke(ctx, "/Anyns/GetNameByAnyId", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcAnynsClient) BatchGetNameByAnyId(ctx context.Context, in *BatchNameByAnyIdRequest) (*BatchNameByAddressResponse, error) {
+	out := new(BatchNameByAddressResponse)
+	err := c.cc.Invoke(ctx, "/Anyns/BatchGetNameByAnyId", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcAnynsClient) AdminNameRegisterSigned(ctx context.Context, in *NameRegisterRequestSigned) (*OperationResponse, error) {
+	out := new(OperationResponse)
+	err := c.cc.Invoke(ctx, "/Anyns/AdminNameRegisterSigned", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCAnynsServer interface {
 	IsNameAvailable(context.Context, *NameAvailableRequest) (*NameAvailableResponse, error)
+	BatchIsNameAvailable(context.Context, *BatchNameAvailableRequest) (*BatchNameAvailableResponse, error)
 	GetNameByAddress(context.Context, *NameByAddressRequest) (*NameByAddressResponse, error)
+	BatchGetNameByAddress(context.Context, *BatchNameByAddressRequest) (*BatchNameByAddressResponse, error)
+	GetNameByAnyId(context.Context, *NameByAnyIdRequest) (*NameByAddressResponse, error)
+	BatchGetNameByAnyId(context.Context, *BatchNameByAnyIdRequest) (*BatchNameByAddressResponse, error)
+	AdminNameRegisterSigned(context.Context, *NameRegisterRequestSigned) (*OperationResponse, error)
 }
 
 type DRPCAnynsUnimplementedServer struct{}
@@ -83,13 +138,33 @@ func (s *DRPCAnynsUnimplementedServer) IsNameAvailable(context.Context, *NameAva
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCAnynsUnimplementedServer) BatchIsNameAvailable(context.Context, *BatchNameAvailableRequest) (*BatchNameAvailableResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 func (s *DRPCAnynsUnimplementedServer) GetNameByAddress(context.Context, *NameByAddressRequest) (*NameByAddressResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCAnynsUnimplementedServer) BatchGetNameByAddress(context.Context, *BatchNameByAddressRequest) (*BatchNameByAddressResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCAnynsUnimplementedServer) GetNameByAnyId(context.Context, *NameByAnyIdRequest) (*NameByAddressResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCAnynsUnimplementedServer) BatchGetNameByAnyId(context.Context, *BatchNameByAnyIdRequest) (*BatchNameByAddressResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCAnynsUnimplementedServer) AdminNameRegisterSigned(context.Context, *NameRegisterRequestSigned) (*OperationResponse, error) {
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
 type DRPCAnynsDescription struct{}
 
-func (DRPCAnynsDescription) NumMethods() int { return 2 }
+func (DRPCAnynsDescription) NumMethods() int { return 7 }
 
 func (DRPCAnynsDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -103,6 +178,15 @@ func (DRPCAnynsDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver,
 					)
 			}, DRPCAnynsServer.IsNameAvailable, true
 	case 1:
+		return "/Anyns/BatchIsNameAvailable", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnynsServer).
+					BatchIsNameAvailable(
+						ctx,
+						in1.(*BatchNameAvailableRequest),
+					)
+			}, DRPCAnynsServer.BatchIsNameAvailable, true
+	case 2:
 		return "/Anyns/GetNameByAddress", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCAnynsServer).
@@ -111,6 +195,42 @@ func (DRPCAnynsDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver,
 						in1.(*NameByAddressRequest),
 					)
 			}, DRPCAnynsServer.GetNameByAddress, true
+	case 3:
+		return "/Anyns/BatchGetNameByAddress", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnynsServer).
+					BatchGetNameByAddress(
+						ctx,
+						in1.(*BatchNameByAddressRequest),
+					)
+			}, DRPCAnynsServer.BatchGetNameByAddress, true
+	case 4:
+		return "/Anyns/GetNameByAnyId", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnynsServer).
+					GetNameByAnyId(
+						ctx,
+						in1.(*NameByAnyIdRequest),
+					)
+			}, DRPCAnynsServer.GetNameByAnyId, true
+	case 5:
+		return "/Anyns/BatchGetNameByAnyId", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnynsServer).
+					BatchGetNameByAnyId(
+						ctx,
+						in1.(*BatchNameByAnyIdRequest),
+					)
+			}, DRPCAnynsServer.BatchGetNameByAnyId, true
+	case 6:
+		return "/Anyns/AdminNameRegisterSigned", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnynsServer).
+					AdminNameRegisterSigned(
+						ctx,
+						in1.(*NameRegisterRequestSigned),
+					)
+			}, DRPCAnynsServer.AdminNameRegisterSigned, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -136,6 +256,22 @@ func (x *drpcAnyns_IsNameAvailableStream) SendAndClose(m *NameAvailableResponse)
 	return x.CloseSend()
 }
 
+type DRPCAnyns_BatchIsNameAvailableStream interface {
+	drpc.Stream
+	SendAndClose(*BatchNameAvailableResponse) error
+}
+
+type drpcAnyns_BatchIsNameAvailableStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyns_BatchIsNameAvailableStream) SendAndClose(m *BatchNameAvailableResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
 type DRPCAnyns_GetNameByAddressStream interface {
 	drpc.Stream
 	SendAndClose(*NameByAddressResponse) error
@@ -146,6 +282,70 @@ type drpcAnyns_GetNameByAddressStream struct {
 }
 
 func (x *drpcAnyns_GetNameByAddressStream) SendAndClose(m *NameByAddressResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyns_BatchGetNameByAddressStream interface {
+	drpc.Stream
+	SendAndClose(*BatchNameByAddressResponse) error
+}
+
+type drpcAnyns_BatchGetNameByAddressStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyns_BatchGetNameByAddressStream) SendAndClose(m *BatchNameByAddressResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyns_GetNameByAnyIdStream interface {
+	drpc.Stream
+	SendAndClose(*NameByAddressResponse) error
+}
+
+type drpcAnyns_GetNameByAnyIdStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyns_GetNameByAnyIdStream) SendAndClose(m *NameByAddressResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyns_BatchGetNameByAnyIdStream interface {
+	drpc.Stream
+	SendAndClose(*BatchNameByAddressResponse) error
+}
+
+type drpcAnyns_BatchGetNameByAnyIdStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyns_BatchGetNameByAnyIdStream) SendAndClose(m *BatchNameByAddressResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyns_AdminNameRegisterSignedStream interface {
+	drpc.Stream
+	SendAndClose(*OperationResponse) error
+}
+
+type drpcAnyns_AdminNameRegisterSignedStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyns_AdminNameRegisterSignedStream) SendAndClose(m *OperationResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}); err != nil {
 		return err
 	}

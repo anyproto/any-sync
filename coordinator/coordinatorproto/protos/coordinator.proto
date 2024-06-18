@@ -7,12 +7,6 @@ service Coordinator {
   // SpaceSign signs a space creation operation
   rpc SpaceSign(SpaceSignRequest) returns (SpaceSignResponse);
 
-  // FileLimitCheck checks a limit by account and space
-  // can be used only:
-  //  - if a handshake identity matches a given identity
-  //  - if a requester contains in nodeconf list
-  rpc FileLimitCheck(FileLimitCheckRequest) returns (FileLimitCheckResponse);
-
   // SpaceStatusCheck checks the status of space and tells if it is deleted or not
   rpc SpaceStatusCheck(SpaceStatusCheckRequest) returns (SpaceStatusCheckResponse);
 
@@ -21,6 +15,12 @@ service Coordinator {
 
   // SpaceStatusChange changes the status of space - Deprecated
   rpc SpaceStatusChange(SpaceStatusChangeRequest) returns (SpaceStatusChangeResponse);
+
+  // SpaceMakeShareable makes space shareable
+  rpc SpaceMakeShareable(SpaceMakeShareableRequest) returns (SpaceMakeShareableResponse);
+
+  // SpaceMakeUnshareable marks space unshareable
+  rpc SpaceMakeUnshareable(SpaceMakeUnshareableRequest) returns (SpaceMakeUnshareableResponse);
 
   // NetworkConfiguration retrieves the latest network configuration
   rpc NetworkConfiguration(NetworkConfigurationRequest) returns (NetworkConfigurationResponse);
@@ -41,6 +41,8 @@ service Coordinator {
   rpc AclAddRecord(AclAddRecordRequest) returns (AclAddRecordResponse);
   // AclGetRecords gets acl records
   rpc AclGetRecords(AclGetRecordsRequest) returns (AclGetRecordsResponse);
+  // AccountLimitsSet sets limits to the account. Can be used only by a network config member
+  rpc AccountLimitsSet(AccountLimitsSetRequest) returns (AccountLimitsSetResponse);
 }
 
 message SpaceSignRequest {
@@ -64,6 +66,10 @@ enum ErrorCodes {
   SpaceNotExists = 4;
   SpaceLimitReached = 5;
   AccountDeleted = 6;
+  Forbidden = 7;
+  AclHeadIsMissing = 8;
+  AclNonEmpty = 9;
+  SpaceNotShareable = 10;
   ErrorOffset = 300;
 }
 
@@ -80,10 +86,17 @@ enum SpacePermissions {
   SpacePermissionsOwner = 1;
 }
 
+message SpaceLimits {
+  uint32 readMembers = 1;
+  uint32 writeMembers = 2;
+}
+
 message SpaceStatusPayload {
   SpaceStatus status = 1;
   int64 deletionTimestamp = 2;
   SpacePermissions permissions = 3;
+  SpaceLimits limits = 4;
+  bool isShared = 5;
 }
 
 message SpaceSignResponse {
@@ -110,21 +123,6 @@ message SpaceReceipt {
   uint64 validUntil = 5;
 }
 
-// FileLimitCheckRequest contains an account identity and spaceId
-// control node checks that identity owns a given space
-message FileLimitCheckRequest {
-  bytes accountIdentity = 1;
-  string spaceId = 2;
-}
-
-// FileLimitCheckResponse returns a current space limit in bytes
-message FileLimitCheckResponse {
-  // Limit in bytes
-  uint64 limit = 1;
-  // StorageKey tells a key that filenode should use to save files
-  string storageKey = 2;
-}
-
 // SpaceStatusCheckRequest contains the spaceId of requested space
 message SpaceStatusCheckRequest {
   string spaceId = 1;
@@ -143,7 +141,14 @@ message SpaceStatusCheckManyRequest {
 // SpaceStatusCheckManyResponse contains the current statuses of spaces
 message SpaceStatusCheckManyResponse {
   repeated SpaceStatusPayload payloads = 1;
+  AccountLimits accountLimits = 2;
 }
+
+// AccountLimits describes account level limit
+message AccountLimits {
+  uint32 sharedSpacesLimit = 1;
+}
+
 
 // SpaceStatusChangeRequest contains the deletionChange if we want to delete space, or it is empty otherwise
 message SpaceStatusChangeRequest {
@@ -157,6 +162,19 @@ message SpaceStatusChangeRequest {
 message SpaceStatusChangeResponse {
   SpaceStatusPayload payload = 1;
 }
+
+message SpaceMakeShareableRequest {
+    string spaceId = 1;
+}
+
+message SpaceMakeShareableResponse {}
+
+message SpaceMakeUnshareableRequest {
+  string spaceId = 1;
+  string aclHead = 2;
+}
+
+message SpaceMakeUnshareableResponse {}
 
 // NetworkConfigurationRequest contains currenId of the client configuration, it can be empty
 message NetworkConfigurationRequest {
@@ -336,3 +354,15 @@ message AclGetRecordsRequest {
 message AclGetRecordsResponse {
   repeated bytes records = 1;
 }
+
+message AccountLimitsSetRequest {
+  string identity = 1;
+  string reason = 2;
+  uint64 fileStorageLimitBytes = 3;
+  uint32 spaceMembersRead = 4;
+  uint32 spaceMembersWrite = 5;
+  uint32 sharedSpacesLimit = 6;
+}
+
+
+message AccountLimitsSetResponse {}

@@ -2,16 +2,48 @@ package crypto
 
 import (
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
+	"encoding/hex"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/anyproto/go-slip10"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
 )
+
+func Keccak256(data []byte) []byte {
+	hash := sha3.NewLegacyKeccak256()
+	hash.Write(data)
+	return hash.Sum(nil)
+}
+
+func PublicKeyToAddress(pub *ecdsa.PublicKey) string {
+	// Serialize the public key to a byte slice
+	pubBytes := elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+
+	// Compute the Keccak256 hash of the public key (excluding the first byte)
+	hash := Keccak256(pubBytes[1:])
+
+	// Take the last 20 bytes of the hash as the address
+	address := hash[12:]
+
+	return fmt.Sprintf("0x%x", address)
+}
+
+func PrivateKeyToBytes(priv *ecdsa.PrivateKey) []byte {
+	return priv.D.Bytes()
+}
+
+// Encode encodes b as a hex string with 0x prefix.
+func Encode(b []byte) string {
+	enc := make([]byte, len(b)*2+2)
+	copy(enc, "0x")
+	hex.Encode(enc[2:], b)
+	return string(enc)
+}
 
 func TestMnemonic(t *testing.T) {
 	phrase, err := NewMnemonicGenerator().WithWordCount(12)
@@ -55,33 +87,53 @@ func TestMnemonic(t *testing.T) {
 	publicKey := res.EthereumIdentity.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	require.Equal(t, true, ok)
-	ethAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
 
-	require.Equal(t, common.HexToAddress("0xC49926C4124cEe1cbA0Ea94Ea31a6c12318df947"), ethAddress)
+	// convert publicKeyECDSA to address
+	ethAddress := PublicKeyToAddress(publicKeyECDSA)
+	shouldBe := strings.ToLower("0xC49926C4124cEe1cbA0Ea94Ea31a6c12318df947")
+	require.Equal(t, shouldBe, ethAddress)
 }
 
 func TestMnemonic_ethereumKeyFromMnemonic(t *testing.T) {
 	var badPphrase Mnemonic = "tag volcano"
-	_, _, err := badPphrase.ethereumKeyFromMnemonic(0, defaultEthereumDerivation)
+	_, err := badPphrase.ethereumKeyFromMnemonic(0, defaultEthereumDerivation)
 	require.Error(t, err)
 
 	// good
 	var phrase Mnemonic = "tag volcano eight thank tide danger coast health above argue embrace heavy"
 
-	addr, pk, err := phrase.ethereumKeyFromMnemonic(0, defaultEthereumDerivation)
+	pk, err := phrase.ethereumKeyFromMnemonic(0, defaultEthereumDerivation)
 	require.NoError(t, err)
-	require.Equal(t, common.HexToAddress("0xC49926C4124cEe1cbA0Ea94Ea31a6c12318df947"), addr)
+
+	// check address
+	publicKey := pk.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	require.Equal(t, true, ok)
+
+	// convert publicKeyECDSA to address
+	ethAddress := PublicKeyToAddress(publicKeyECDSA)
+	shouldBe := strings.ToLower("0xC49926C4124cEe1cbA0Ea94Ea31a6c12318df947")
+	require.Equal(t, shouldBe, ethAddress)
 
 	// what wallet.PrivateKeyHex(account) does
-	bytes := crypto.FromECDSA(pk)
-	pkStr := hexutil.Encode(bytes)[2:]
+	bytes := PrivateKeyToBytes(pk)
+	pkStr := Encode(bytes)[2:]
 	require.Equal(t, "63e21d10fd50155dbba0e7d3f7431a400b84b4c2ac1ee38872f82448fe3ecfb9", pkStr)
 
-	addr, pk, err = phrase.ethereumKeyFromMnemonic(1, defaultEthereumDerivation)
+	pk, err = phrase.ethereumKeyFromMnemonic(1, defaultEthereumDerivation)
 	require.NoError(t, err)
-	require.Equal(t, common.HexToAddress("0x8230645aC28A4EdD1b0B53E7Cd8019744E9dD559"), addr)
 
-	bytes = crypto.FromECDSA(pk)
-	pkStr = hexutil.Encode(bytes)[2:]
+	// check address
+	publicKey = pk.Public()
+	publicKeyECDSA, ok = publicKey.(*ecdsa.PublicKey)
+	require.Equal(t, true, ok)
+
+	// convert publicKeyECDSA to address
+	ethAddress = PublicKeyToAddress(publicKeyECDSA)
+	shouldBe = strings.ToLower("0x8230645aC28A4EdD1b0B53E7Cd8019744E9dD559")
+	require.Equal(t, shouldBe, ethAddress)
+
+	bytes = PrivateKeyToBytes(pk)
+	pkStr = Encode(bytes)[2:]
 	require.Equal(t, "b31048b0aa87649bdb9016c0ee28c788ddfc45e52cd71cc0da08c47cb4390ae7", pkStr)
 }

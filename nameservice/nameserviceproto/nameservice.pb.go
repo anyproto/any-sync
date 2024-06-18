@@ -67,16 +67,62 @@ func (m *NameAvailableRequest) GetFullName() string {
 	return ""
 }
 
+type BatchNameAvailableRequest struct {
+	// Names including .any suffix
+	FullNames []string `protobuf:"bytes,1,rep,name=fullNames,proto3" json:"fullNames,omitempty"`
+}
+
+func (m *BatchNameAvailableRequest) Reset()         { *m = BatchNameAvailableRequest{} }
+func (m *BatchNameAvailableRequest) String() string { return proto.CompactTextString(m) }
+func (*BatchNameAvailableRequest) ProtoMessage()    {}
+func (*BatchNameAvailableRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_06bca2ea4304f305, []int{1}
+}
+func (m *BatchNameAvailableRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *BatchNameAvailableRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_BatchNameAvailableRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *BatchNameAvailableRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BatchNameAvailableRequest.Merge(m, src)
+}
+func (m *BatchNameAvailableRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *BatchNameAvailableRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_BatchNameAvailableRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BatchNameAvailableRequest proto.InternalMessageInfo
+
+func (m *BatchNameAvailableRequest) GetFullNames() []string {
+	if m != nil {
+		return m.FullNames
+	}
+	return nil
+}
+
 type NameByAddressRequest struct {
-	// An Ethereum address that owns that name
-	OwnerEthAddress string `protobuf:"bytes,1,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
+	// EOA -> SCW -> name
+	// A SCW Ethereum address that owns that name
+	OwnerScwEthAddress string `protobuf:"bytes,1,opt,name=ownerScwEthAddress,proto3" json:"ownerScwEthAddress,omitempty"`
 }
 
 func (m *NameByAddressRequest) Reset()         { *m = NameByAddressRequest{} }
 func (m *NameByAddressRequest) String() string { return proto.CompactTextString(m) }
 func (*NameByAddressRequest) ProtoMessage()    {}
 func (*NameByAddressRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_06bca2ea4304f305, []int{1}
+	return fileDescriptor_06bca2ea4304f305, []int{2}
 }
 func (m *NameByAddressRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -105,34 +151,170 @@ func (m *NameByAddressRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_NameByAddressRequest proto.InternalMessageInfo
 
-func (m *NameByAddressRequest) GetOwnerEthAddress() string {
+func (m *NameByAddressRequest) GetOwnerScwEthAddress() string {
 	if m != nil {
-		return m.OwnerEthAddress
+		return m.OwnerScwEthAddress
 	}
 	return ""
 }
 
+type BatchNameByAddressRequest struct {
+	// EOA -> SCW -> name
+	// A SCW Ethereum address that owns that name
+	OwnerScwEthAddresses []string `protobuf:"bytes,1,rep,name=ownerScwEthAddresses,proto3" json:"ownerScwEthAddresses,omitempty"`
+}
+
+func (m *BatchNameByAddressRequest) Reset()         { *m = BatchNameByAddressRequest{} }
+func (m *BatchNameByAddressRequest) String() string { return proto.CompactTextString(m) }
+func (*BatchNameByAddressRequest) ProtoMessage()    {}
+func (*BatchNameByAddressRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_06bca2ea4304f305, []int{3}
+}
+func (m *BatchNameByAddressRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *BatchNameByAddressRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_BatchNameByAddressRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *BatchNameByAddressRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BatchNameByAddressRequest.Merge(m, src)
+}
+func (m *BatchNameByAddressRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *BatchNameByAddressRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_BatchNameByAddressRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BatchNameByAddressRequest proto.InternalMessageInfo
+
+func (m *BatchNameByAddressRequest) GetOwnerScwEthAddresses() []string {
+	if m != nil {
+		return m.OwnerScwEthAddresses
+	}
+	return nil
+}
+
+type NameByAnyIdRequest struct {
+	AnyAddress string `protobuf:"bytes,1,opt,name=anyAddress,proto3" json:"anyAddress,omitempty"`
+}
+
+func (m *NameByAnyIdRequest) Reset()         { *m = NameByAnyIdRequest{} }
+func (m *NameByAnyIdRequest) String() string { return proto.CompactTextString(m) }
+func (*NameByAnyIdRequest) ProtoMessage()    {}
+func (*NameByAnyIdRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_06bca2ea4304f305, []int{4}
+}
+func (m *NameByAnyIdRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *NameByAnyIdRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_NameByAnyIdRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *NameByAnyIdRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NameByAnyIdRequest.Merge(m, src)
+}
+func (m *NameByAnyIdRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *NameByAnyIdRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_NameByAnyIdRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NameByAnyIdRequest proto.InternalMessageInfo
+
+func (m *NameByAnyIdRequest) GetAnyAddress() string {
+	if m != nil {
+		return m.AnyAddress
+	}
+	return ""
+}
+
+type BatchNameByAnyIdRequest struct {
+	AnyAddresses []string `protobuf:"bytes,1,rep,name=anyAddresses,proto3" json:"anyAddresses,omitempty"`
+}
+
+func (m *BatchNameByAnyIdRequest) Reset()         { *m = BatchNameByAnyIdRequest{} }
+func (m *BatchNameByAnyIdRequest) String() string { return proto.CompactTextString(m) }
+func (*BatchNameByAnyIdRequest) ProtoMessage()    {}
+func (*BatchNameByAnyIdRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_06bca2ea4304f305, []int{5}
+}
+func (m *BatchNameByAnyIdRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *BatchNameByAnyIdRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_BatchNameByAnyIdRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *BatchNameByAnyIdRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BatchNameByAnyIdRequest.Merge(m, src)
+}
+func (m *BatchNameByAnyIdRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *BatchNameByAnyIdRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_BatchNameByAnyIdRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BatchNameByAnyIdRequest proto.InternalMessageInfo
+
+func (m *BatchNameByAnyIdRequest) GetAnyAddresses() []string {
+	if m != nil {
+		return m.AnyAddresses
+	}
+	return nil
+}
+
 type NameAvailableResponse struct {
 	Available bool `protobuf:"varint,1,opt,name=available,proto3" json:"available,omitempty"`
-	// An Ethereum address that owns that name
+	// EOA -> SCW -> name
 	// This field is non-empty only if name is "already registered"
-	OwnerEthAddress string `protobuf:"bytes,2,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
+	OwnerScwEthAddress string `protobuf:"bytes,2,opt,name=ownerScwEthAddress,proto3" json:"ownerScwEthAddress,omitempty"`
+	// This field is non-empty only if name is "already registered"
+	OwnerEthAddress string `protobuf:"bytes,3,opt,name=ownerEthAddress,proto3" json:"ownerEthAddress,omitempty"`
 	// A content hash attached to this name
 	// This field is non-empty only if name is "already registered"
-	OwnerAnyAddress string `protobuf:"bytes,3,opt,name=ownerAnyAddress,proto3" json:"ownerAnyAddress,omitempty"`
+	OwnerAnyAddress string `protobuf:"bytes,4,opt,name=ownerAnyAddress,proto3" json:"ownerAnyAddress,omitempty"`
 	// A SpaceID attached to this name
 	// This field is non-empty only if name is "already registered"
-	SpaceId string `protobuf:"bytes,4,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
-	// doestn't work with marashalling/unmarshalling
-	// google.protobuf.Timestamp nameExpires = 5 [(gogoproto.stdtime) = true];
-	NameExpires int64 `protobuf:"varint,5,opt,name=nameExpires,proto3" json:"nameExpires,omitempty"`
+	SpaceId string `protobuf:"bytes,5,opt,name=spaceId,proto3" json:"spaceId,omitempty"`
+	// doesn't work with marashalling/unmarshalling
+	//google.protobuf.Timestamp nameExpires = 5 [(gogoproto.stdtime) = true];
+	NameExpires int64 `protobuf:"varint,6,opt,name=nameExpires,proto3" json:"nameExpires,omitempty"`
 }
 
 func (m *NameAvailableResponse) Reset()         { *m = NameAvailableResponse{} }
 func (m *NameAvailableResponse) String() string { return proto.CompactTextString(m) }
 func (*NameAvailableResponse) ProtoMessage()    {}
 func (*NameAvailableResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_06bca2ea4304f305, []int{2}
+	return fileDescriptor_06bca2ea4304f305, []int{6}
 }
 func (m *NameAvailableResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -168,6 +350,13 @@ func (m *NameAvailableResponse) GetAvailable() bool {
 	return false
 }
 
+func (m *NameAvailableResponse) GetOwnerScwEthAddress() string {
+	if m != nil {
+		return m.OwnerScwEthAddress
+	}
+	return ""
+}
+
 func (m *NameAvailableResponse) GetOwnerEthAddress() string {
 	if m != nil {
 		return m.OwnerEthAddress
@@ -196,6 +385,50 @@ func (m *NameAvailableResponse) GetNameExpires() int64 {
 	return 0
 }
 
+type BatchNameAvailableResponse struct {
+	Results []*NameAvailableResponse `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
+}
+
+func (m *BatchNameAvailableResponse) Reset()         { *m = BatchNameAvailableResponse{} }
+func (m *BatchNameAvailableResponse) String() string { return proto.CompactTextString(m) }
+func (*BatchNameAvailableResponse) ProtoMessage()    {}
+func (*BatchNameAvailableResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_06bca2ea4304f305, []int{7}
+}
+func (m *BatchNameAvailableResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *BatchNameAvailableResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_BatchNameAvailableResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *BatchNameAvailableResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BatchNameAvailableResponse.Merge(m, src)
+}
+func (m *BatchNameAvailableResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *BatchNameAvailableResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_BatchNameAvailableResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BatchNameAvailableResponse proto.InternalMessageInfo
+
+func (m *BatchNameAvailableResponse) GetResults() []*NameAvailableResponse {
+	if m != nil {
+		return m.Results
+	}
+	return nil
+}
+
 type NameByAddressResponse struct {
 	Found bool   `protobuf:"varint,1,opt,name=found,proto3" json:"found,omitempty"`
 	Name  string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
@@ -205,7 +438,7 @@ func (m *NameByAddressResponse) Reset()         { *m = NameByAddressResponse{} }
 func (m *NameByAddressResponse) String() string { return proto.CompactTextString(m) }
 func (*NameByAddressResponse) ProtoMessage()    {}
 func (*NameByAddressResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_06bca2ea4304f305, []int{3}
+	return fileDescriptor_06bca2ea4304f305, []int{8}
 }
 func (m *NameByAddressResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -248,11 +481,61 @@ func (m *NameByAddressResponse) GetName() string {
 	return ""
 }
 
+type BatchNameByAddressResponse struct {
+	Results []*NameByAddressResponse `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
+}
+
+func (m *BatchNameByAddressResponse) Reset()         { *m = BatchNameByAddressResponse{} }
+func (m *BatchNameByAddressResponse) String() string { return proto.CompactTextString(m) }
+func (*BatchNameByAddressResponse) ProtoMessage()    {}
+func (*BatchNameByAddressResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_06bca2ea4304f305, []int{9}
+}
+func (m *BatchNameByAddressResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *BatchNameByAddressResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_BatchNameByAddressResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *BatchNameByAddressResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BatchNameByAddressResponse.Merge(m, src)
+}
+func (m *BatchNameByAddressResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *BatchNameByAddressResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_BatchNameByAddressResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BatchNameByAddressResponse proto.InternalMessageInfo
+
+func (m *BatchNameByAddressResponse) GetResults() []*NameByAddressResponse {
+	if m != nil {
+		return m.Results
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*NameAvailableRequest)(nil), "NameAvailableRequest")
+	proto.RegisterType((*BatchNameAvailableRequest)(nil), "BatchNameAvailableRequest")
 	proto.RegisterType((*NameByAddressRequest)(nil), "NameByAddressRequest")
+	proto.RegisterType((*BatchNameByAddressRequest)(nil), "BatchNameByAddressRequest")
+	proto.RegisterType((*NameByAnyIdRequest)(nil), "NameByAnyIdRequest")
+	proto.RegisterType((*BatchNameByAnyIdRequest)(nil), "BatchNameByAnyIdRequest")
 	proto.RegisterType((*NameAvailableResponse)(nil), "NameAvailableResponse")
+	proto.RegisterType((*BatchNameAvailableResponse)(nil), "BatchNameAvailableResponse")
 	proto.RegisterType((*NameByAddressResponse)(nil), "NameByAddressResponse")
+	proto.RegisterType((*BatchNameByAddressResponse)(nil), "BatchNameByAddressResponse")
 }
 
 func init() {
@@ -260,28 +543,43 @@ func init() {
 }
 
 var fileDescriptor_06bca2ea4304f305 = []byte{
-	// 330 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x52, 0x31, 0x6f, 0xf2, 0x30,
-	0x10, 0x8d, 0x3f, 0xe0, 0x2b, 0x5c, 0x07, 0x2a, 0x0b, 0xaa, 0x08, 0x21, 0x0b, 0x79, 0x62, 0x02,
-	0x89, 0xaa, 0x9d, 0x1b, 0x2a, 0x54, 0xb1, 0x74, 0xc8, 0xd8, 0xcd, 0x90, 0x43, 0x45, 0x0a, 0x4e,
-	0x1a, 0x07, 0x5a, 0xfe, 0x05, 0x7f, 0xaa, 0x52, 0x47, 0xc6, 0x8e, 0x15, 0xfc, 0x91, 0x0a, 0xc7,
-	0x81, 0x90, 0x46, 0x5d, 0x12, 0xdf, 0xf3, 0xbd, 0xbb, 0x77, 0xef, 0x0c, 0xb7, 0x52, 0x2c, 0x50,
-	0x61, 0xb4, 0x9a, 0x4f, 0xb1, 0x9f, 0x39, 0x87, 0x51, 0x10, 0x07, 0x7d, 0xfd, 0x55, 0x59, 0xbc,
-	0xa7, 0x21, 0x3e, 0x80, 0xc6, 0x93, 0x58, 0xa0, 0xb3, 0x12, 0x73, 0x5f, 0x4c, 0x7c, 0x74, 0xf1,
-	0x75, 0x89, 0x2a, 0xa6, 0x2d, 0xa8, 0xce, 0x96, 0xbe, 0x7f, 0xb8, 0xb3, 0x49, 0x87, 0x74, 0x6b,
-	0xee, 0x31, 0xe6, 0xf7, 0x09, 0x67, 0xb8, 0x76, 0x3c, 0x2f, 0x42, 0xa5, 0x52, 0x4e, 0x17, 0xea,
-	0xc1, 0x9b, 0xc4, 0x68, 0x14, 0xbf, 0x98, 0x1b, 0x43, 0xcd, 0xc3, 0xfc, 0x83, 0x40, 0x33, 0xd7,
-	0x56, 0x85, 0x81, 0x54, 0x48, 0xdb, 0x50, 0x13, 0x29, 0xa8, 0xd9, 0x55, 0xf7, 0x04, 0x14, 0x75,
-	0xf8, 0x57, 0xd8, 0xe1, 0x98, 0xe9, 0xc8, 0x54, 0xa5, 0x5d, 0xca, 0x64, 0x9e, 0x60, 0x6a, 0xc3,
-	0x85, 0x0a, 0xc5, 0x14, 0xc7, 0x9e, 0x5d, 0xd6, 0x19, 0x69, 0x48, 0x3b, 0x70, 0x79, 0x30, 0x6c,
-	0xf4, 0x1e, 0xce, 0x23, 0x54, 0x76, 0xa5, 0x43, 0xba, 0x25, 0x37, 0x0b, 0x71, 0x27, 0x19, 0x23,
-	0xe3, 0x84, 0x19, 0xa3, 0x01, 0x95, 0x59, 0xb0, 0x94, 0x9e, 0x19, 0x21, 0x09, 0x28, 0x85, 0xf2,
-	0x81, 0x6d, 0x34, 0xeb, 0xf3, 0x60, 0x43, 0xa0, 0xe2, 0xc8, 0xb5, 0x54, 0x74, 0x08, 0xf5, 0xb1,
-	0x3a, 0x73, 0x85, 0x36, 0x7b, 0x45, 0xcb, 0x69, 0x5d, 0xf7, 0x0a, 0xcd, 0xe3, 0x16, 0x7d, 0x80,
-	0xab, 0x47, 0x8c, 0xcf, 0x34, 0x99, 0x22, 0xf9, 0x6d, 0x99, 0x22, 0xbf, 0xa4, 0x73, 0x6b, 0x78,
-	0xf7, 0xb9, 0x63, 0x64, 0xbb, 0x63, 0xe4, 0x7b, 0xc7, 0xc8, 0x66, 0xcf, 0xac, 0xed, 0x9e, 0x59,
-	0x5f, 0x7b, 0x66, 0x3d, 0xb7, 0xff, 0x7a, 0x64, 0x93, 0xff, 0xfa, 0x77, 0xf3, 0x13, 0x00, 0x00,
-	0xff, 0xff, 0xe0, 0x5b, 0xc6, 0xb3, 0x8b, 0x02, 0x00, 0x00,
+	// 562 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0x4d, 0x6f, 0xd3, 0x40,
+	0x10, 0xb5, 0x49, 0xd2, 0x36, 0x53, 0x44, 0xd1, 0x36, 0xa1, 0xc6, 0xad, 0xac, 0x68, 0x4f, 0x39,
+	0x6d, 0x51, 0xf8, 0x10, 0x1c, 0x10, 0x72, 0x50, 0x41, 0x11, 0x52, 0x2a, 0xdc, 0x1b, 0x17, 0xb4,
+	0x8d, 0xb7, 0xad, 0xa5, 0x64, 0x1d, 0xbc, 0x4e, 0x4b, 0xfe, 0x05, 0x17, 0xfe, 0x13, 0xc7, 0x1e,
+	0x39, 0xa2, 0xe4, 0x37, 0x70, 0x47, 0x5e, 0xdb, 0xf1, 0xfa, 0xab, 0xa8, 0x97, 0xd6, 0xfb, 0xe6,
+	0xcd, 0xdb, 0x37, 0x4f, 0x3b, 0x81, 0x97, 0x9c, 0xce, 0x98, 0x60, 0xc1, 0xb5, 0x37, 0x61, 0xc7,
+	0xca, 0xf7, 0x3c, 0xf0, 0x43, 0xff, 0x58, 0xfe, 0x15, 0x2a, 0x4e, 0x24, 0x64, 0xbe, 0xbe, 0x67,
+	0xdb, 0x57, 0x4a, 0xe3, 0x4e, 0x3c, 0x80, 0xce, 0x98, 0xce, 0x98, 0x7d, 0x4d, 0xbd, 0x29, 0x3d,
+	0x9f, 0x32, 0x87, 0x7d, 0x5b, 0x30, 0x11, 0x22, 0x13, 0x76, 0x2e, 0x16, 0xd3, 0x69, 0x54, 0x33,
+	0xf4, 0x9e, 0xde, 0x6f, 0x3b, 0x9b, 0x33, 0x7e, 0x03, 0x4f, 0x87, 0x34, 0x9c, 0x5c, 0x55, 0x36,
+	0x1e, 0x41, 0x3b, 0x25, 0x0a, 0x43, 0xef, 0x35, 0xfa, 0x6d, 0x27, 0x03, 0xf0, 0x87, 0xf8, 0xba,
+	0xe1, 0xd2, 0x76, 0xdd, 0x80, 0x09, 0x91, 0x76, 0x11, 0x40, 0xfe, 0x0d, 0x67, 0xc1, 0xd9, 0xe4,
+	0xe6, 0x24, 0xbc, 0x4a, 0x8a, 0xc9, 0xc5, 0x15, 0x15, 0x7c, 0xaa, 0x58, 0x28, 0x89, 0x0d, 0xa0,
+	0x53, 0x6e, 0xd9, 0xb8, 0xa9, 0xac, 0xe1, 0x17, 0x80, 0x12, 0x2d, 0xbe, 0x1c, 0xb9, 0xa9, 0x92,
+	0x05, 0x40, 0xf9, 0x32, 0x6f, 0x47, 0x41, 0xf0, 0x5b, 0x38, 0x50, 0x6d, 0xa8, 0xad, 0x18, 0x1e,
+	0x66, 0xc4, 0xcd, 0xe5, 0x39, 0x0c, 0xff, 0xd5, 0xa1, 0x5b, 0x08, 0x51, 0xcc, 0x7d, 0x2e, 0x58,
+	0x94, 0x22, 0x4d, 0x41, 0x79, 0xef, 0x8e, 0x93, 0x01, 0x35, 0x69, 0x3d, 0xa8, 0x4b, 0x0b, 0xf5,
+	0x61, 0x4f, 0xa2, 0x0a, 0xb9, 0x21, 0xc9, 0x45, 0x78, 0xc3, 0xb4, 0xb3, 0xa9, 0x9b, 0x0a, 0x33,
+	0x83, 0x91, 0x01, 0xdb, 0x62, 0x4e, 0x27, 0x6c, 0xe4, 0x1a, 0x2d, 0xc9, 0x48, 0x8f, 0xa8, 0x07,
+	0xbb, 0xd1, 0x53, 0x3b, 0xf9, 0x3e, 0xf7, 0x02, 0x26, 0x8c, 0xad, 0x9e, 0xde, 0x6f, 0x38, 0x2a,
+	0x84, 0xc7, 0x60, 0x56, 0x3d, 0xa0, 0x64, 0xf6, 0x67, 0xb0, 0x1d, 0x30, 0xb1, 0x98, 0x86, 0x71,
+	0x68, 0xbb, 0x83, 0x27, 0xa4, 0x92, 0xe8, 0xa4, 0x34, 0x6c, 0xc7, 0x31, 0x2a, 0x0f, 0x21, 0x91,
+	0xea, 0x40, 0xeb, 0xc2, 0x5f, 0x70, 0x37, 0x89, 0x30, 0x3e, 0x20, 0x04, 0xcd, 0xc8, 0x4d, 0x12,
+	0x98, 0xfc, 0xce, 0x59, 0x2a, 0xeb, 0xd4, 0x58, 0x2a, 0x11, 0x37, 0x96, 0x06, 0x3f, 0x9b, 0xd0,
+	0xb2, 0xf9, 0x92, 0x0b, 0x34, 0x84, 0xbd, 0x91, 0xc8, 0x0d, 0x80, 0xba, 0xa4, 0x6a, 0x75, 0xcc,
+	0x9a, 0x39, 0xb1, 0x86, 0x3e, 0x43, 0x47, 0xba, 0x2b, 0x0a, 0x99, 0xa4, 0x76, 0x11, 0xcd, 0x43,
+	0x52, 0x9f, 0x31, 0xd6, 0xd0, 0x7b, 0x78, 0xfc, 0x91, 0x85, 0xb9, 0x29, 0x12, 0x5f, 0xc5, 0x7d,
+	0x32, 0x6b, 0x86, 0xc5, 0x1a, 0x72, 0xa0, 0x2b, 0x2f, 0x29, 0x29, 0x29, 0xc6, 0x4a, 0x72, 0x87,
+	0xa4, 0x3e, 0x69, 0xac, 0xa1, 0x77, 0xf0, 0x28, 0x93, 0x8b, 0x36, 0x0a, 0xed, 0x93, 0xf2, 0x7e,
+	0xdd, 0x61, 0x6a, 0x0c, 0xfb, 0x05, 0x53, 0x52, 0xc5, 0x20, 0x35, 0xab, 0xfa, 0x3f, 0x43, 0x9f,
+	0xe0, 0xc0, 0x76, 0x67, 0x1e, 0x8f, 0xea, 0x0e, 0xbb, 0xf4, 0x44, 0xc8, 0x82, 0x33, 0xef, 0x92,
+	0x33, 0x17, 0x99, 0x44, 0x05, 0x13, 0xbd, 0xb8, 0x66, 0x22, 0x72, 0x3a, 0x67, 0x01, 0x0d, 0x3d,
+	0x9f, 0x67, 0x62, 0xc3, 0x57, 0xbf, 0x56, 0x96, 0x7e, 0xbb, 0xb2, 0xf4, 0x3f, 0x2b, 0x4b, 0xff,
+	0xb1, 0xb6, 0xb4, 0xdb, 0xb5, 0xa5, 0xfd, 0x5e, 0x5b, 0xda, 0x97, 0xa3, 0xbb, 0x7e, 0xc3, 0xcf,
+	0xb7, 0xe4, 0xbf, 0xe7, 0xff, 0x02, 0x00, 0x00, 0xff, 0xff, 0xc3, 0x04, 0xfe, 0x4d, 0x21, 0x06,
+	0x00, 0x00,
 }
 
 func (m *NameAvailableRequest) Marshal() (dAtA []byte, err error) {
@@ -314,6 +612,38 @@ func (m *NameAvailableRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *BatchNameAvailableRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *BatchNameAvailableRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BatchNameAvailableRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.FullNames) > 0 {
+		for iNdEx := len(m.FullNames) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.FullNames[iNdEx])
+			copy(dAtA[i:], m.FullNames[iNdEx])
+			i = encodeVarintNameservice(dAtA, i, uint64(len(m.FullNames[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *NameByAddressRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -334,12 +664,106 @@ func (m *NameByAddressRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.OwnerEthAddress) > 0 {
-		i -= len(m.OwnerEthAddress)
-		copy(dAtA[i:], m.OwnerEthAddress)
-		i = encodeVarintNameservice(dAtA, i, uint64(len(m.OwnerEthAddress)))
+	if len(m.OwnerScwEthAddress) > 0 {
+		i -= len(m.OwnerScwEthAddress)
+		copy(dAtA[i:], m.OwnerScwEthAddress)
+		i = encodeVarintNameservice(dAtA, i, uint64(len(m.OwnerScwEthAddress)))
 		i--
 		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *BatchNameByAddressRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *BatchNameByAddressRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BatchNameByAddressRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.OwnerScwEthAddresses) > 0 {
+		for iNdEx := len(m.OwnerScwEthAddresses) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.OwnerScwEthAddresses[iNdEx])
+			copy(dAtA[i:], m.OwnerScwEthAddresses[iNdEx])
+			i = encodeVarintNameservice(dAtA, i, uint64(len(m.OwnerScwEthAddresses[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *NameByAnyIdRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *NameByAnyIdRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *NameByAnyIdRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.AnyAddress) > 0 {
+		i -= len(m.AnyAddress)
+		copy(dAtA[i:], m.AnyAddress)
+		i = encodeVarintNameservice(dAtA, i, uint64(len(m.AnyAddress)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *BatchNameByAnyIdRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *BatchNameByAnyIdRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BatchNameByAnyIdRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.AnyAddresses) > 0 {
+		for iNdEx := len(m.AnyAddresses) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.AnyAddresses[iNdEx])
+			copy(dAtA[i:], m.AnyAddresses[iNdEx])
+			i = encodeVarintNameservice(dAtA, i, uint64(len(m.AnyAddresses[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
 	}
 	return len(dAtA) - i, nil
 }
@@ -367,26 +791,33 @@ func (m *NameAvailableResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	if m.NameExpires != 0 {
 		i = encodeVarintNameservice(dAtA, i, uint64(m.NameExpires))
 		i--
-		dAtA[i] = 0x28
+		dAtA[i] = 0x30
 	}
 	if len(m.SpaceId) > 0 {
 		i -= len(m.SpaceId)
 		copy(dAtA[i:], m.SpaceId)
 		i = encodeVarintNameservice(dAtA, i, uint64(len(m.SpaceId)))
 		i--
-		dAtA[i] = 0x22
+		dAtA[i] = 0x2a
 	}
 	if len(m.OwnerAnyAddress) > 0 {
 		i -= len(m.OwnerAnyAddress)
 		copy(dAtA[i:], m.OwnerAnyAddress)
 		i = encodeVarintNameservice(dAtA, i, uint64(len(m.OwnerAnyAddress)))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
 	}
 	if len(m.OwnerEthAddress) > 0 {
 		i -= len(m.OwnerEthAddress)
 		copy(dAtA[i:], m.OwnerEthAddress)
 		i = encodeVarintNameservice(dAtA, i, uint64(len(m.OwnerEthAddress)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.OwnerScwEthAddress) > 0 {
+		i -= len(m.OwnerScwEthAddress)
+		copy(dAtA[i:], m.OwnerScwEthAddress)
+		i = encodeVarintNameservice(dAtA, i, uint64(len(m.OwnerScwEthAddress)))
 		i--
 		dAtA[i] = 0x12
 	}
@@ -399,6 +830,43 @@ func (m *NameAvailableResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		}
 		i--
 		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *BatchNameAvailableResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *BatchNameAvailableResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BatchNameAvailableResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Results) > 0 {
+		for iNdEx := len(m.Results) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Results[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintNameservice(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
 	}
 	return len(dAtA) - i, nil
 }
@@ -443,6 +911,43 @@ func (m *NameByAddressResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *BatchNameByAddressResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *BatchNameByAddressResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BatchNameByAddressResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Results) > 0 {
+		for iNdEx := len(m.Results) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Results[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintNameservice(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintNameservice(dAtA []byte, offset int, v uint64) int {
 	offset -= sovNameservice(v)
 	base := offset
@@ -467,15 +972,73 @@ func (m *NameAvailableRequest) Size() (n int) {
 	return n
 }
 
+func (m *BatchNameAvailableRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.FullNames) > 0 {
+		for _, s := range m.FullNames {
+			l = len(s)
+			n += 1 + l + sovNameservice(uint64(l))
+		}
+	}
+	return n
+}
+
 func (m *NameByAddressRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.OwnerEthAddress)
+	l = len(m.OwnerScwEthAddress)
 	if l > 0 {
 		n += 1 + l + sovNameservice(uint64(l))
+	}
+	return n
+}
+
+func (m *BatchNameByAddressRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.OwnerScwEthAddresses) > 0 {
+		for _, s := range m.OwnerScwEthAddresses {
+			l = len(s)
+			n += 1 + l + sovNameservice(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *NameByAnyIdRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.AnyAddress)
+	if l > 0 {
+		n += 1 + l + sovNameservice(uint64(l))
+	}
+	return n
+}
+
+func (m *BatchNameByAnyIdRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.AnyAddresses) > 0 {
+		for _, s := range m.AnyAddresses {
+			l = len(s)
+			n += 1 + l + sovNameservice(uint64(l))
+		}
 	}
 	return n
 }
@@ -488,6 +1051,10 @@ func (m *NameAvailableResponse) Size() (n int) {
 	_ = l
 	if m.Available {
 		n += 2
+	}
+	l = len(m.OwnerScwEthAddress)
+	if l > 0 {
+		n += 1 + l + sovNameservice(uint64(l))
 	}
 	l = len(m.OwnerEthAddress)
 	if l > 0 {
@@ -507,6 +1074,21 @@ func (m *NameAvailableResponse) Size() (n int) {
 	return n
 }
 
+func (m *BatchNameAvailableResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Results) > 0 {
+		for _, e := range m.Results {
+			l = e.Size()
+			n += 1 + l + sovNameservice(uint64(l))
+		}
+	}
+	return n
+}
+
 func (m *NameByAddressResponse) Size() (n int) {
 	if m == nil {
 		return 0
@@ -519,6 +1101,21 @@ func (m *NameByAddressResponse) Size() (n int) {
 	l = len(m.Name)
 	if l > 0 {
 		n += 1 + l + sovNameservice(uint64(l))
+	}
+	return n
+}
+
+func (m *BatchNameByAddressResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Results) > 0 {
+		for _, e := range m.Results {
+			l = e.Size()
+			n += 1 + l + sovNameservice(uint64(l))
+		}
 	}
 	return n
 }
@@ -611,6 +1208,88 @@ func (m *NameAvailableRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *BatchNameAvailableRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowNameservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: BatchNameAvailableRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: BatchNameAvailableRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FullNames", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNameservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.FullNames = append(m.FullNames, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipNameservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *NameByAddressRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -642,7 +1321,7 @@ func (m *NameByAddressRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field OwnerEthAddress", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerScwEthAddress", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -670,7 +1349,253 @@ func (m *NameByAddressRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.OwnerEthAddress = string(dAtA[iNdEx:postIndex])
+			m.OwnerScwEthAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipNameservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *BatchNameByAddressRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowNameservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: BatchNameByAddressRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: BatchNameByAddressRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerScwEthAddresses", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNameservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OwnerScwEthAddresses = append(m.OwnerScwEthAddresses, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipNameservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *NameByAnyIdRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowNameservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: NameByAnyIdRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: NameByAnyIdRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AnyAddress", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNameservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AnyAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipNameservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *BatchNameByAnyIdRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowNameservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: BatchNameByAnyIdRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: BatchNameByAnyIdRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AnyAddresses", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNameservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AnyAddresses = append(m.AnyAddresses, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -744,6 +1669,38 @@ func (m *NameAvailableResponse) Unmarshal(dAtA []byte) error {
 			m.Available = bool(v != 0)
 		case 2:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field OwnerScwEthAddress", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNameservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.OwnerScwEthAddress = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field OwnerEthAddress", wireType)
 			}
 			var stringLen uint64
@@ -774,7 +1731,7 @@ func (m *NameAvailableResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.OwnerEthAddress = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 3:
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field OwnerAnyAddress", wireType)
 			}
@@ -806,7 +1763,7 @@ func (m *NameAvailableResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.OwnerAnyAddress = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 4:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field SpaceId", wireType)
 			}
@@ -838,7 +1795,7 @@ func (m *NameAvailableResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.SpaceId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 5:
+		case 6:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field NameExpires", wireType)
 			}
@@ -857,6 +1814,90 @@ func (m *NameAvailableResponse) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipNameservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *BatchNameAvailableResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowNameservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: BatchNameAvailableResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: BatchNameAvailableResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Results", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNameservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Results = append(m.Results, &NameAvailableResponse{})
+			if err := m.Results[len(m.Results)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipNameservice(dAtA[iNdEx:])
@@ -958,6 +1999,90 @@ func (m *NameByAddressResponse) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Name = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipNameservice(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *BatchNameByAddressResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowNameservice
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: BatchNameByAddressResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: BatchNameByAddressResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Results", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNameservice
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthNameservice
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Results = append(m.Results, &NameByAddressResponse{})
+			if err := m.Results[len(m.Results)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

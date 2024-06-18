@@ -9,8 +9,8 @@ import (
 )
 
 type DataConverter interface {
-	Unmarshall(decrypted []byte) (any, error)
-	Marshall(model any) ([]byte, error)
+	Unmarshall(dataType string, decrypted []byte) (any, error)
+	Marshall(model any) (data []byte, dataType string, err error)
 }
 
 type TreeExporterParams struct {
@@ -59,21 +59,25 @@ func (t *treeExporter) ExportUnencrypted(tree objecttree.ReadableObjectTree) (er
 	}
 	err = tree.IterateRoot(
 		func(change *objecttree.Change, decrypted []byte) (any, error) {
-			return t.converter.Unmarshall(decrypted)
+			return t.converter.Unmarshall(change.DataType, decrypted)
 		},
 		func(change *objecttree.Change) bool {
 			if change.Id == tree.Id() {
 				err = putStorage(change)
 				return err == nil
 			}
-			var data []byte
-			data, err = t.converter.Marshall(change.Model)
+			var (
+				data     []byte
+				dataType string
+			)
+			data, dataType, err = t.converter.Marshall(change.Model)
 			if err != nil {
 				return false
 			}
 			// that means that change is unencrypted
 			change.ReadKeyId = ""
 			change.Data = data
+			change.DataType = dataType
 			err = putStorage(change)
 			return err == nil
 		})

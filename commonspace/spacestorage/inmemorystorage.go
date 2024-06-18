@@ -186,7 +186,7 @@ func (i *InMemorySpaceStorage) AllTrees() map[string]treestorage.TreeStorage {
 	defer i.Unlock()
 	cp := map[string]treestorage.TreeStorage{}
 	for id, store := range i.trees {
-		cp[id] = store
+		cp[id] = store.(*treestorage.InMemoryTreeStorage).Copy()
 	}
 	return cp
 }
