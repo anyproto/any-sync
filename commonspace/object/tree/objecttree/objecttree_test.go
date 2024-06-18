@@ -1299,13 +1299,126 @@ func TestObjectTree(t *testing.T) {
 			RawChanges: result.changes,
 		})
 		require.NoError(t, err)
-		iter, err := objTree.ChangesAfterCommonSnapshotLoader([]string{objTree.Root().Id}, []string{objTree.Root().Id})
+		iter, err := objTree.ChangesAfterCommonSnapshotLoader([]string{objTree.Id()}, []string{objTree.Id()})
 		require.NoError(t, err)
 		otherTreeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id, false)
 		otherTree, err := BuildTestableTree(otherTreeStorage, aclList)
 		require.NoError(t, err)
 		for {
 			batch, err := iter.NextBatch(300)
+			require.NoError(t, err)
+			if len(batch.Batch) == 0 {
+				break
+			}
+			res, err := otherTree.AddRawChanges(context.Background(), RawChangesPayload{
+				NewHeads:   batch.Heads,
+				RawChanges: batch.Batch,
+			})
+			require.NoError(t, err)
+			require.Equal(t, len(batch.Batch), len(res.Added))
+		}
+		require.Equal(t, objTree.Heads(), otherTree.Heads())
+	})
+
+	t.Run("gen changes test load iterator snapshots", func(t *testing.T) {
+		ctx := prepareTreeContext(t, aclList)
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree
+		snapshotCounter := 0
+		result := genChanges(changeCreator, genParams{
+			prefix:     "id",
+			aclId:      aclList.Id(),
+			startIdx:   0,
+			levels:     100,
+			perLevel:   10,
+			snapshotId: objTree.Root().Id,
+			prevHeads:  []string{objTree.Root().Id},
+			isSnapshot: func() bool {
+				snapshotCounter++
+				return snapshotCounter%10 == 0
+			},
+			hasData: false,
+		})
+		_, err := objTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   result.heads,
+			RawChanges: result.changes,
+		})
+		require.NoError(t, err)
+		iter, err := objTree.ChangesAfterCommonSnapshotLoader([]string{objTree.Id()}, []string{objTree.Id()})
+		require.NoError(t, err)
+		otherTreeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id, false)
+		otherTree, err := BuildTestableTree(otherTreeStorage, aclList)
+		require.NoError(t, err)
+		for {
+			batch, err := iter.NextBatch(300)
+			require.NoError(t, err)
+			if len(batch.Batch) == 0 {
+				break
+			}
+			res, err := otherTree.AddRawChanges(context.Background(), RawChangesPayload{
+				NewHeads:   batch.Heads,
+				RawChanges: batch.Batch,
+			})
+			require.NoError(t, err)
+			require.Equal(t, len(batch.Batch), len(res.Added))
+		}
+		require.Equal(t, objTree.Heads(), otherTree.Heads())
+	})
+
+	t.Run("gen changes test load iterator non empty other tree", func(t *testing.T) {
+		ctx := prepareTreeContext(t, aclList)
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree
+		snapshotCounter := 0
+		result := genChanges(changeCreator, genParams{
+			prefix:     "id",
+			aclId:      aclList.Id(),
+			startIdx:   0,
+			levels:     93,
+			perLevel:   10,
+			snapshotId: objTree.Root().Id,
+			prevHeads:  []string{objTree.Root().Id},
+			isSnapshot: func() bool {
+				snapshotCounter++
+				return snapshotCounter%50 == 0
+			},
+			hasData: false,
+		})
+		otherTreeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id, false)
+		otherTree, err := BuildTestableTree(otherTreeStorage, aclList)
+		_, err = objTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   result.heads,
+			RawChanges: result.changes,
+		})
+		require.NoError(t, err)
+		_, err = otherTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   result.heads,
+			RawChanges: result.changes,
+		})
+		require.NoError(t, err)
+		result = genChanges(changeCreator, genParams{
+			prefix:     "id",
+			aclId:      aclList.Id(),
+			startIdx:   93,
+			levels:     29,
+			perLevel:   10,
+			snapshotId: objTree.Root().Id,
+			prevHeads:  objTree.Heads(),
+			isSnapshot: func() bool {
+				snapshotCounter++
+				return snapshotCounter%50 == 0
+			},
+			hasData: false,
+		})
+		_, err = objTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   result.heads,
+			RawChanges: result.changes,
+		})
+		require.NoError(t, err)
+		iter, err := objTree.ChangesAfterCommonSnapshotLoader(otherTree.SnapshotPath(), otherTree.Heads())
+		require.NoError(t, err)
+		for {
+			batch, err := iter.NextBatch(400)
 			require.NoError(t, err)
 			if len(batch.Batch) == 0 {
 				break
