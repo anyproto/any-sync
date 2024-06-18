@@ -2,6 +2,8 @@ package sync
 
 import (
 	"context"
+	"errors"
+	"io"
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
@@ -44,6 +46,9 @@ func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, c
 			resp := collector.NewResponse()
 			err := stream.MsgRecv(resp, streampool.EncodingProto)
 			if err != nil {
+				if errors.Is(err, io.EOF) {
+					return nil
+				}
 				return err
 			}
 			err = collector.CollectResponse(ctx, rq.PeerId(), rq.ObjectId(), resp)
