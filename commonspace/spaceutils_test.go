@@ -272,7 +272,7 @@ func (m *mockConfig) Name() (name string) {
 func (m *mockConfig) GetSpace() config.Config {
 	return config.Config{
 		GCTTL:                60,
-		SyncPeriod:           20,
+		SyncPeriod:           5,
 		KeepTreeDataInMemory: true,
 	}
 }
@@ -584,6 +584,7 @@ type spaceFixture struct {
 	treeManager          *mockTreeManager
 	pool                 *mockPool
 	spaceService         SpaceService
+	process              *spaceProcess
 	cancelFunc           context.CancelFunc
 }
 
@@ -634,6 +635,7 @@ func newFixtureWithData(t *testing.T, spaceId string, keys *accountdata.AccountK
 		treeManager:          newMockTreeManager(spaceId),
 		pool:                 &mockPool{},
 		spaceService:         New(),
+		process:              newSpaceProcess(spaceId),
 	}
 	fx.app.Register(fx.account).
 		Register(fx.config).
@@ -650,7 +652,7 @@ func newFixtureWithData(t *testing.T, spaceId string, keys *accountdata.AccountK
 		Register(fx.treeManager).
 		Register(fx.spaceService).
 		Register(NewRpcServer()).
-		Register(newSpaceProcess(spaceId))
+		Register(fx.process)
 	err := fx.app.Start(ctx)
 	if err != nil {
 		fx.cancelFunc()
@@ -737,8 +739,24 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 	return &multiPeerFixture{peerFixtures: peerFixtures}
 }
 
-func Test(t *testing.T) {
+func Test_Sync(t *testing.T) {
 	mpFixture := newMultiPeerFixture(t, 3)
-	time.Sleep(100 * time.Second)
+	time.Sleep(5 * time.Second)
+	for _, fx := range mpFixture.peerFixtures {
+		err := fx.process.Close(context.Background())
+		require.NoError(t, err)
+	}
+	time.Sleep(5 * time.Second)
+	var hashes []string
+	for _, fx := range mpFixture.peerFixtures {
+		sp, err := fx.app.MustComponent(RpcName).(*RpcServer).GetSpace(context.Background(), fx.process.spaceId)
+		require.NoError(t, err)
+		spaceHash, err := sp.Storage().ReadSpaceHash()
+		require.NoError(t, err)
+		hashes = append(hashes, spaceHash)
+	}
+	for i := 1; i < len(hashes); i++ {
+		require.Equal(t, hashes[0], hashes[i])
+	}
 	mpFixture.Close()
 }

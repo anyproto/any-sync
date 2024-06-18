@@ -229,7 +229,7 @@ func (s *spaceProcess) Init(a *app.App) (err error) {
 	s.manager = a.MustComponent(treemanager.CName).(*mockTreeManager)
 	s.spaceServer = a.MustComponent(RpcName).(*RpcServer)
 	s.accountService = a.MustComponent(accountservice.CName).(accountservice.Service)
-	s.periodicCall = periodicsync.NewPeriodicSyncDuration(5*time.Second, 0, s.update, log)
+	s.periodicCall = periodicsync.NewPeriodicSyncDuration(50*time.Millisecond, 0, s.update, log)
 	return
 }
 
@@ -253,7 +253,7 @@ func (s *spaceProcess) update(ctx context.Context) error {
 		return err
 	}
 	var tr objecttree.ObjectTree
-	newDoc := rand.Int()%10 == 0
+	newDoc := rand.Int()%20 == 0
 	snapshot := rand.Int()%10 == 0
 	allTrees := sp.StoredIds()
 	if newDoc || len(allTrees) == 0 {
