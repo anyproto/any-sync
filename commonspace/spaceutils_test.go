@@ -38,6 +38,7 @@ import (
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/net/streampool/streamopener"
+	"github.com/anyproto/any-sync/node/nodeclient"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -148,6 +149,27 @@ func (m *mockConf) NodeTypes(nodeId string) []nodeconf.NodeType {
 		return m.configuration.Nodes[0].Types
 	}
 	return nil
+}
+
+var _ nodeclient.NodeClient = (*mockNodeClient)(nil)
+
+type mockNodeClient struct {
+}
+
+func (m mockNodeClient) Init(a *app.App) (err error) {
+	return
+}
+
+func (m mockNodeClient) Name() (name string) {
+	return nodeclient.CName
+}
+
+func (m mockNodeClient) AclGetRecords(ctx context.Context, spaceId, aclHead string) (recs []*consensusproto.RawRecordWithId, err error) {
+	return
+}
+
+func (m mockNodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (recWithId *consensusproto.RawRecordWithId, err error) {
+	return
 }
 
 //
@@ -615,6 +637,7 @@ func newFixture(t *testing.T) *spaceFixture {
 		Register(credentialprovider.NewNoOp()).
 		Register(&mockStatusServiceProvider{}).
 		Register(mockCoordinatorClient{}).
+		Register(mockNodeClient{}).
 		Register(fx.configurationService).
 		Register(fx.storageProvider).
 		Register(fx.peerManagerProvider).
@@ -654,6 +677,7 @@ func newFixtureWithData(t *testing.T, spaceId string, keys *accountdata.AccountK
 		Register(credentialprovider.NewNoOp()).
 		Register(&mockStatusServiceProvider{}).
 		Register(mockCoordinatorClient{}).
+		Register(mockNodeClient{}).
 		Register(fx.configurationService).
 		Register(fx.storageProvider).
 		Register(fx.peerManagerProvider).
