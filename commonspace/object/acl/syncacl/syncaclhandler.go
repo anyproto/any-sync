@@ -18,6 +18,7 @@ var (
 	ErrUnexpectedMessageType  = errors.New("unexpected message type")
 	ErrUnexpectedResponseType = errors.New("unexpected response type")
 	ErrUnexpectedRequestType  = errors.New("unexpected request type")
+	ErrUnknownHead            = errors.New("unknown head")
 )
 
 var (
@@ -89,7 +90,7 @@ func (s *syncAclHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Re
 	s.aclList.Lock()
 	if !s.aclList.HasHead(request.Head) {
 		s.aclList.Unlock()
-		return s.syncClient.CreateFullSyncRequest(req.PeerId(), s.aclList), nil
+		return s.syncClient.CreateFullSyncRequest(req.PeerId(), s.aclList), ErrUnknownHead
 	}
 	resp, err := s.syncClient.CreateFullSyncResponse(s.aclList, request.Head)
 	if err != nil {
@@ -108,6 +109,9 @@ func (s *syncAclHandler) HandleResponse(ctx context.Context, peerId, objectId st
 	response, ok := resp.(*Response)
 	if !ok {
 		return ErrUnexpectedResponseType
+	}
+	if len(response.records) == 0 {
+		return nil
 	}
 	s.aclList.Lock()
 	defer s.aclList.Unlock()

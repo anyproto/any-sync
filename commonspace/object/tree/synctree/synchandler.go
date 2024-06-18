@@ -96,6 +96,15 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		s.tree.Unlock()
 		return nil, err
 	}
+	if slice.UnsortedEquals(curHeads, request.Heads) {
+		resp := producer.EmptyResponse()
+		s.tree.Unlock()
+		protoResp, err := resp.ProtoMessage()
+		if err != nil {
+			return nil, err
+		}
+		return nil, send(protoResp)
+	}
 	for {
 		batch, err := producer.NewResponse(batchSize)
 		s.tree.Unlock()
@@ -114,6 +123,7 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 			return nil, err
 		}
 		s.tree.Lock()
+		curHeads = s.tree.Heads()
 	}
 	if !slice.UnsortedEquals(curHeads, request.Heads) {
 		return s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree), nil
@@ -125,6 +135,9 @@ func (s *syncHandler) HandleResponse(ctx context.Context, peerId, objectId strin
 	response, ok := resp.(*Response)
 	if !ok {
 		return ErrUnexpectedResponseType
+	}
+	if len(response.changes) == 0 {
+		return nil
 	}
 	s.tree.Lock()
 	defer s.tree.Unlock()

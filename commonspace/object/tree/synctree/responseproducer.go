@@ -1,13 +1,17 @@
 package synctree
 
-import "github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+import (
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+)
 
 type ResponseProducer interface {
 	NewResponse(batchSize int) (*Response, error)
+	EmptyResponse() *Response
 }
 
 type responseProducer struct {
 	iterator objecttree.LoadIterator
+	tree     objecttree.ObjectTree
 	spaceId  string
 	objectId string
 }
@@ -19,6 +23,7 @@ func newResponseProducer(spaceId string, tree objecttree.ObjectTree, theirHeads,
 	}
 	return &responseProducer{
 		iterator: res,
+		tree:     tree,
 		spaceId:  spaceId,
 		objectId: tree.Id(),
 	}, nil
@@ -37,4 +42,14 @@ func (r *responseProducer) NewResponse(batchSize int) (*Response, error) {
 		spaceId:      r.spaceId,
 		objectId:     r.objectId,
 	}, nil
+}
+
+func (r *responseProducer) EmptyResponse() *Response {
+	return &Response{
+		heads:        r.tree.Heads(),
+		spaceId:      r.spaceId,
+		objectId:     r.objectId,
+		root:         r.tree.Header(),
+		snapshotPath: r.tree.SnapshotPath(),
+	}
 }

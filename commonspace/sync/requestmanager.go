@@ -42,11 +42,12 @@ func NewRequestManager(handler syncdeps.SyncHandler) RequestManager {
 
 func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, collector syncdeps.ResponseCollector) error {
 	return r.handler.SendStreamRequest(ctx, rq, func(stream drpc.Stream) error {
+		calledOnce := false
 		for {
 			resp := collector.NewResponse()
 			err := stream.MsgRecv(resp, streampool.EncodingProto)
 			if err != nil {
-				if errors.Is(err, io.EOF) {
+				if errors.Is(err, io.EOF) && calledOnce {
 					return nil
 				}
 				return err
@@ -55,6 +56,7 @@ func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, c
 			if err != nil {
 				return err
 			}
+			calledOnce = true
 		}
 	})
 }
