@@ -718,12 +718,14 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 		providers = append(providers, provider)
 		spaceStore, err := provider.CreateSpaceStorage(createSpace)
 		require.NoError(t, err)
+		listStorage, err := spaceStore.AclStorage()
+		require.NoError(t, err)
 		for _, rec := range allRecords {
-			listStorage, err := spaceStore.AclStorage()
-			require.NoError(t, err)
 			err = listStorage.AddRawRecord(context.Background(), rec)
 			require.NoError(t, err)
 		}
+		err = listStorage.SetHead(allRecords[len(allRecords)-1].Id)
+		require.NoError(t, err)
 	}
 	peerPool := synctest.NewPeerGlobalPool(peerIds)
 	peerPool.MakePeers()
