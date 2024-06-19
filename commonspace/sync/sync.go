@@ -114,6 +114,10 @@ func (s *syncService) GetQueue(peerId string) *multiqueue.Queue[drpc.Message] {
 	return queue
 }
 
+func (s *syncService) RemoveQueue(peerId string) error {
+	return s.sendQueueProvider.RemoveQueue(peerId)
+}
+
 func (s *syncService) NewReadMessage() drpc.Message {
 	return s.handler.NewMessage()
 }

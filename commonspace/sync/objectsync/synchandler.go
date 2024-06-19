@@ -74,7 +74,7 @@ func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Messa
 func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, sendResponse func(resp proto.Message) error) (syncdeps.Request, error) {
 	obj, err := o.manager.GetTree(context.Background(), o.spaceId, rq.ObjectId())
 	if err != nil {
-		return nil, treechangeproto.ErrGetTree
+		return synctree.NewRequest(rq.PeerId(), o.spaceId, rq.ObjectId(), nil, nil, nil), treechangeproto.ErrGetTree
 	}
 	objHandler, ok := obj.(syncdeps.ObjectSyncHandler)
 	if !ok {

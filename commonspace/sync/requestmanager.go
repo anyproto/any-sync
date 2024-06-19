@@ -78,11 +78,15 @@ func (r *requestManager) HandleStreamRequest(ctx context.Context, rq syncdeps.Re
 	newRq, err := r.handler.HandleStreamRequest(ctx, rq, func(resp proto.Message) error {
 		return stream.MsgSend(resp, streampool.EncodingProto)
 	})
+	// here is a little bit non-standard decision, because we can return error but still can queue the request
+	if newRq != nil {
+		rqErr := r.QueueRequest(newRq)
+		if rqErr != nil {
+			log.Debug("failed to queue request", zap.Error(err))
+		}
+	}
 	if err != nil {
 		return err
-	}
-	if newRq != nil {
-		return r.QueueRequest(newRq)
 	}
 	return nil
 }

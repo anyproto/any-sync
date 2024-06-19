@@ -13,16 +13,17 @@ import (
 )
 
 type stream struct {
-	peerId   string
-	peerCtx  context.Context
-	stream   drpc.Stream
-	pool     *streamPool
-	streamId uint32
-	closed   atomic.Bool
-	l        logger.CtxLogger
-	queue    *multiqueue.Queue[drpc.Message]
-	stats    streamStat
-	tags     []string
+	peerId       string
+	peerCtx      context.Context
+	stream       drpc.Stream
+	pool         *streamPool
+	streamId     uint32
+	closed       atomic.Bool
+	l            logger.CtxLogger
+	queue        *multiqueue.Queue[drpc.Message]
+	stats        streamStat
+	syncDelegate StreamSyncDelegate
+	tags         []string
 }
 
 func (sr *stream) write(msg drpc.Message) (err error) {
@@ -74,7 +75,7 @@ func (sr *stream) writeLoop() {
 
 func (sr *stream) streamClose() {
 	if !sr.closed.Swap(true) {
-		_ = sr.queue.Close()
+		_ = sr.syncDelegate.RemoveQueue(sr.peerId)
 		_ = sr.stream.Close()
 		sr.pool.removeStream(sr.streamId)
 	}

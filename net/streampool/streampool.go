@@ -29,6 +29,8 @@ type StreamSyncDelegate interface {
 	NewReadMessage() drpc.Message
 	// GetQueue returns queue for outgoing messages
 	GetQueue(peerId string) *multiqueue.Queue[drpc.Message]
+	// RemoveQueue removes queue for outgoing messages
+	RemoveQueue(peerId string) error
 }
 
 func NewStreamPool() StreamPool {
@@ -193,14 +195,15 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 	s.lastStreamId++
 	streamId := s.lastStreamId
 	st := &stream{
-		peerId:   peerId,
-		peerCtx:  ctx,
-		stream:   drpcStream,
-		pool:     s,
-		streamId: streamId,
-		l:        log.With(zap.String("peerId", peerId), zap.Uint32("streamId", streamId)),
-		tags:     tags,
-		stats:    newStreamStat(peerId),
+		peerId:       peerId,
+		peerCtx:      ctx,
+		stream:       drpcStream,
+		pool:         s,
+		streamId:     streamId,
+		l:            log.With(zap.String("peerId", peerId), zap.Uint32("streamId", streamId)),
+		tags:         tags,
+		syncDelegate: s.syncDelegate,
+		stats:        newStreamStat(peerId),
 	}
 	st.queue = s.syncDelegate.GetQueue(peerId)
 	if st.queue == nil {
@@ -422,7 +425,6 @@ func (s *streamPool) removeStream(streamId uint32) {
 	if st == nil {
 		log.Fatal("removeStream: stream does not exist", zap.Uint32("streamId", streamId))
 	}
-
 	removeStream(s.streamIdsByPeer, st.peerId, streamId)
 	for _, tag := range st.tags {
 		removeStream(s.streamIdsByTag, tag, streamId)
