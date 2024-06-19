@@ -13,6 +13,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
@@ -42,6 +43,7 @@ func (o *objectSync) Init(a *app.App) (err error) {
 	o.manager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	o.pool = a.MustComponent(pool.CName).(pool.Service)
 	o.status = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
+	o.spaceId = a.MustComponent(spacestate.CName).(*spacestate.SpaceState).SpaceId
 	return
 }
 
