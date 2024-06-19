@@ -89,6 +89,7 @@ func (t *treeBuilder) Init(a *app.App) (err error) {
 	t.headsNotifiable = a.MustComponent(headsync.CName).(headsync.HeadSync)
 	t.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	t.syncService = a.MustComponent(sync.CName).(sync.SyncService)
+	t.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	t.log = log.With(zap.String("spaceId", t.spaceId))
 	t.syncClient = synctree.NewSyncClient(t.spaceId, t.syncService)
 	return nil
