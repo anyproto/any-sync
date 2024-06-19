@@ -23,7 +23,6 @@ type stream struct {
 	queue        *multiqueue.Queue[drpc.Message]
 	stats        streamStat
 	syncDelegate StreamSyncDelegate
-	tags         []string
 }
 
 func (sr *stream) write(msg drpc.Message) (err error) {

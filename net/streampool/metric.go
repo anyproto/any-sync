@@ -17,16 +17,6 @@ func registerMetrics(ref *prometheus.Registry, sp *streamPool, name string) {
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Namespace: name,
 			Subsystem: "streampool",
-			Name:      "tag_count",
-			Help:      "count of active tags",
-		}, func() float64 {
-			sp.mu.Lock()
-			defer sp.mu.Unlock()
-			return float64(len(sp.streamIdsByTag))
-		}),
-		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
-			Namespace: name,
-			Subsystem: "streampool",
 			Name:      "dial_queue",
 			Help:      "dial queue size",
 		}, func() float64 {
