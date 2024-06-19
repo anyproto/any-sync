@@ -16,6 +16,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 )
@@ -26,6 +27,7 @@ type objectSync struct {
 	spaceId string
 	pool    pool.Service
 	manager treemanager.TreeManager
+	status  syncstatus.StatusUpdater
 }
 
 type peerIdSettable interface {
@@ -39,6 +41,7 @@ func New() syncdeps.SyncHandler {
 func (o *objectSync) Init(a *app.App) (err error) {
 	o.manager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	o.pool = a.MustComponent(pool.CName).(pool.Service)
+	o.status = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	return
 }
 
@@ -63,8 +66,7 @@ func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Messa
 	if !ok {
 		return nil, fmt.Errorf("object %s does not support sync", obj.Id())
 	}
-	// TODO: add heads receive check somewhere (on object level?)
-	return objHandler.HandleHeadUpdate(ctx, update)
+	return objHandler.HandleHeadUpdate(ctx, o.status, update)
 }
 
 func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, sendResponse func(resp proto.Message) error) (syncdeps.Request, error) {

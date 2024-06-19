@@ -3,6 +3,7 @@ package pool
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 
 	"go.uber.org/zap"
@@ -21,6 +22,8 @@ type Pool interface {
 	GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error)
 	// AddPeer adds incoming peer to the pool
 	AddPeer(ctx context.Context, p peer.Peer) (err error)
+	// Pick check if connection with peer exist without dial
+	Pick(ctx context.Context, id string) (pr peer.Peer, err error)
 }
 
 type pool struct {
@@ -111,4 +114,24 @@ func (p *pool) AddPeer(ctx context.Context, pr peer.Peer) (err error) {
 		}
 	}
 	return
+}
+
+func (p *pool) Pick(ctx context.Context, id string) (pr peer.Peer, err error) {
+	// check if connection with peer exist without dial
+	if pr, err = p.pick(ctx, p.incoming, id); err != nil {
+		return p.pick(ctx, p.outgoing, id)
+	}
+	return
+}
+
+func (p *pool) pick(ctx context.Context, source ocache.OCache, id string) (peer.Peer, error) {
+	v, err := source.Pick(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	pr := v.(peer.Peer)
+	if !pr.IsClosed() {
+		return pr, nil
+	}
+	return nil, fmt.Errorf("failed to pick connection with peer: peer not found")
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
 	"github.com/anyproto/any-sync/net/rpc/server"
 	"github.com/anyproto/any-sync/net/streampool"
@@ -126,6 +127,7 @@ func (r *RpcServer) getSpace(ctx context.Context, spaceId string) (sp Space, err
 		sp, err = r.spaceService.NewSpace(ctx, spaceId, Deps{
 			TreeSyncer:   NewTreeSyncer(spaceId),
 			StreamOpener: newStreamOpener(spaceId),
+			SyncStatus:   syncstatus.NewNoOpSyncStatus(),
 		})
 		if err != nil {
 			return nil, err

@@ -8,6 +8,7 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
 )
 
 const CName = "common.sync.syncdeps"
@@ -22,7 +23,7 @@ type RequestSender interface {
 }
 
 type ObjectSyncHandler interface {
-	HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (Request, error)
+	HandleHeadUpdate(ctx context.Context, statusUpdater syncstatus.StatusUpdater, headUpdate drpc.Message) (Request, error)
 	HandleStreamRequest(ctx context.Context, rq Request, send func(resp proto.Message) error) (Request, error)
 	HandleResponse(ctx context.Context, peerId, objectId string, resp Response) error
 	ResponseCollector() ResponseCollector

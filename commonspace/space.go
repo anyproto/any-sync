@@ -107,7 +107,7 @@ type space struct {
 	headSync    headsync.HeadSync
 	syncService syncservice.SyncService
 	streamPool  streampool.StreamPool
-	syncStatus  syncstatus.StatusService
+	syncStatus  syncstatus.StatusUpdater
 	settings    settings.Settings
 	storage     spacestorage.SpaceStorage
 	aclClient   aclclient.AclSpaceClient
@@ -195,7 +195,7 @@ func (s *space) Init(ctx context.Context) (err error) {
 	}
 	s.treeBuilder = s.app.MustComponent(objecttreebuilder.CName).(objecttreebuilder.TreeBuilderComponent)
 	s.headSync = s.app.MustComponent(headsync.CName).(headsync.HeadSync)
-	s.syncStatus = s.app.MustComponent(syncstatus.CName).(syncstatus.StatusService)
+	s.syncStatus = s.app.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	s.settings = s.app.MustComponent(settings.CName).(settings.Settings)
 	s.syncService = s.app.MustComponent(syncservice.CName).(syncservice.SyncService)
 	s.storage = s.app.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)

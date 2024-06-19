@@ -28,7 +28,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/synctest"
-	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/coordinator/coordinatorclient"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
@@ -223,25 +222,6 @@ func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId st
 }
 
 //
-// Mock StatusServiceProvider
-//
-
-type mockStatusServiceProvider struct {
-}
-
-func (m *mockStatusServiceProvider) Init(a *app.App) (err error) {
-	return nil
-}
-
-func (m *mockStatusServiceProvider) Name() (name string) {
-	return syncstatus.CName
-}
-
-func (m *mockStatusServiceProvider) NewStatusService() syncstatus.StatusService {
-	return syncstatus.NewNoOpSyncStatus()
-}
-
-//
 // Mock Pool
 //
 
@@ -274,6 +254,10 @@ func (m *mockPool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, e
 
 func (m *mockPool) DialOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
 	return nil, fmt.Errorf("can't dial peer")
+}
+
+func (m *mockPool) Pick(ctx context.Context, id string) (peer.Peer, error) {
+	return nil, fmt.Errorf("no such peer")
 }
 
 //
@@ -635,7 +619,6 @@ func newFixture(t *testing.T) *spaceFixture {
 	fx.app.Register(fx.account).
 		Register(fx.config).
 		Register(credentialprovider.NewNoOp()).
-		Register(&mockStatusServiceProvider{}).
 		Register(mockCoordinatorClient{}).
 		Register(mockNodeClient{}).
 		Register(fx.configurationService).
@@ -675,7 +658,6 @@ func newFixtureWithData(t *testing.T, spaceId string, keys *accountdata.AccountK
 		Register(synctest.NewPeerProvider(keys.PeerId)).
 		Register(pool.New()).
 		Register(credentialprovider.NewNoOp()).
-		Register(&mockStatusServiceProvider{}).
 		Register(mockCoordinatorClient{}).
 		Register(mockNodeClient{}).
 		Register(fx.configurationService).

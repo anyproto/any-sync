@@ -10,6 +10,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/net/peer"
 )
@@ -40,7 +41,7 @@ func newSyncAclHandler(spaceId string, aclList list.AclList, syncClient SyncClie
 	}
 }
 
-func (s *syncAclHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (syncdeps.Request, error) {
+func (s *syncAclHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncstatus.StatusUpdater, headUpdate drpc.Message) (syncdeps.Request, error) {
 	update, ok := headUpdate.(*objectmessages.HeadUpdate)
 	if !ok {
 		return nil, ErrUnexpectedResponseType
@@ -58,6 +59,7 @@ func (s *syncAclHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.M
 		return nil, ErrUnexpectedMessageType
 	}
 	contentUpdate := objMsg.GetContent().GetHeadUpdate()
+	statusUpdater.HeadsReceive(peerId, update.ObjectId(), []string{contentUpdate.Head})
 	s.aclList.Lock()
 	defer s.aclList.Unlock()
 	if len(contentUpdate.Records) == 0 {

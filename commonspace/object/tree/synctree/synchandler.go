@@ -11,6 +11,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/util/slice"
 )
@@ -35,7 +36,7 @@ func NewSyncHandler(tree SyncTree, syncClient SyncClient, spaceId string) syncde
 	}
 }
 
-func (s *syncHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (req syncdeps.Request, err error) {
+func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncstatus.StatusUpdater, headUpdate drpc.Message) (req syncdeps.Request, err error) {
 	update, ok := headUpdate.(*objectmessages.HeadUpdate)
 	if !ok {
 		return nil, ErrUnexpectedResponseType
@@ -53,6 +54,7 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Mess
 		return nil, ErrUnexpectedMessageType
 	}
 	contentUpdate := treeSyncMsg.GetContent().GetHeadUpdate()
+	statusUpdater.HeadsReceive(peerId, update.ObjectId(), contentUpdate.Heads)
 	s.tree.Lock()
 	defer s.tree.Unlock()
 	if len(contentUpdate.Changes) == 0 {

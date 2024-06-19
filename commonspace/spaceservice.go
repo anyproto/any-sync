@@ -16,6 +16,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/net/streampool/streamopener"
 
@@ -67,21 +68,22 @@ type SpaceService interface {
 }
 
 type Deps struct {
+	SyncStatus   syncstatus.StatusUpdater
 	TreeSyncer   treesyncer.TreeSyncer
 	StreamOpener streamopener.StreamOpener
 }
 
 type spaceService struct {
-	config                config.Config
-	account               accountservice.Service
-	configurationService  nodeconf.Service
-	storageProvider       spacestorage.SpaceStorageProvider
-	peerManagerProvider   peermanager.PeerManagerProvider
-	credentialProvider    credentialprovider.CredentialProvider
-	statusServiceProvider syncstatus.StatusServiceProvider
-	treeManager           treemanager.TreeManager
-	metric                metric.Metric
-	app                   *app.App
+	config               config.Config
+	account              accountservice.Service
+	configurationService nodeconf.Service
+	storageProvider      spacestorage.SpaceStorageProvider
+	peerManagerProvider  peermanager.PeerManagerProvider
+	credentialProvider   credentialprovider.CredentialProvider
+	treeManager          treemanager.TreeManager
+	metric               metric.Metric
+	app                  *app.App
+	pool                 pool.Pool
 }
 
 func (s *spaceService) Init(a *app.App) (err error) {
@@ -91,7 +93,7 @@ func (s *spaceService) Init(a *app.App) (err error) {
 	s.configurationService = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.treeManager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	s.peerManagerProvider = a.MustComponent(peermanager.CName).(peermanager.PeerManagerProvider)
-	s.statusServiceProvider = a.MustComponent(syncstatus.CName).(syncstatus.StatusServiceProvider)
+	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
 	s.app = a
 	return nil
@@ -176,16 +178,15 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 	if err != nil {
 		return nil, err
 	}
-	statusService := s.statusServiceProvider.NewStatusService()
 	spaceApp := s.app.ChildApp()
 	spaceApp.Register(state).
+		Register(deps.SyncStatus).
 		Register(peerManager).
 		Register(deps.StreamOpener).
 		Register(streampool.NewStreamPool()).
 		Register(newCommonStorage(st)).
 		Register(objectsync.New()).
 		Register(sync.NewSyncService()).
-		Register(statusService).
 		Register(syncacl.New()).
 		Register(deletionstate.New()).
 		Register(deletionmanager.New()).
@@ -195,7 +196,6 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 		Register(objecttreebuilder.New()).
 		Register(aclclient.NewAclSpaceClient()).
 		Register(headsync.New())
-
 	sp := &space{
 		state:   state,
 		app:     spaceApp,

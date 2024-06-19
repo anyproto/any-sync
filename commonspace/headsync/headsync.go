@@ -19,7 +19,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/periodicsync"
 	"github.com/anyproto/any-sync/util/slice"
@@ -57,7 +56,6 @@ type headSync struct {
 	peerManager        peermanager.PeerManager
 	treeSyncer         treesyncer.TreeSyncer
 	credentialProvider credentialprovider.CredentialProvider
-	syncStatus         syncstatus.StatusService
 	deletionState      deletionstate.ObjectDeletionState
 	syncAcl            syncacl.SyncAcl
 }
@@ -80,7 +78,6 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.diffContainer = ldiff.NewDiffContainer(32, 256)
 	h.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	h.credentialProvider = a.MustComponent(credentialprovider.CName).(credentialprovider.CredentialProvider)
-	h.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusService)
 	h.treeSyncer = a.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	h.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
 	h.syncer = createDiffSyncer(h)
