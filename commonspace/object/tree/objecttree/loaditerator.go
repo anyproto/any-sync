@@ -56,7 +56,7 @@ func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 		if rawEntry.removed {
 			return true
 		}
-		if curSize+rawEntry.size > maxSize {
+		if curSize+rawEntry.size > maxSize && len(batch.Batch) != 0 {
 			l.isExhausted = false
 			return false
 		}
