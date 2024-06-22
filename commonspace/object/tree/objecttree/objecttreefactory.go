@@ -39,7 +39,7 @@ type objectTreeDeps struct {
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
 	aclList         list.AclList
-	flusher         flusher
+	flusher         Flusher
 }
 
 type BuildObjectTreeFunc = func(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error)

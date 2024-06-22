@@ -742,7 +742,7 @@ func TestObjectTree(t *testing.T) {
 		})
 		require.NoError(t, err, "iterate should be without error")
 		assert.Equal(t, []string{"0", "1", "2", "3", "4"}, iterChangesId)
-		// before flush
+		// before Flush
 		assert.Equal(t, "0", objTree.Root().Id)
 
 		// check storage
@@ -761,7 +761,7 @@ func TestObjectTree(t *testing.T) {
 		err = objTree.Flush()
 		require.NoError(t, err)
 
-		// after flush
+		// after Flush
 		assert.Equal(t, "3", objTree.Root().Id)
 		for _, ch := range rawChanges {
 			treeCh, err := objTree.GetChange(ch.Id)
