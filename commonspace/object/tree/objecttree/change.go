@@ -2,9 +2,11 @@ package objecttree
 
 import (
 	"errors"
+
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/util/crypto"
-	"github.com/gogo/protobuf/proto"
 )
 
 var (
@@ -28,6 +30,7 @@ type Change struct {
 	DataType    string
 	IsSnapshot  bool
 	IsDerived   bool
+	IsNew       bool
 
 	// iterator helpers
 	visited          bool

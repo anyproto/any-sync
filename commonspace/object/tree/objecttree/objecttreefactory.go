@@ -39,6 +39,7 @@ type objectTreeDeps struct {
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
 	aclList         list.AclList
+	flusher         flusher
 }
 
 type BuildObjectTreeFunc = func(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error)
@@ -58,6 +59,7 @@ func verifiableTreeDeps(
 		validator:       newTreeValidator(false, false),
 		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
 		aclList:         aclList,
+		flusher:         &defaultFlusher{},
 	}
 }
 
@@ -74,6 +76,7 @@ func emptyDataTreeDeps(
 		validator:       newTreeValidator(false, false),
 		rawChangeLoader: newStorageLoader(treeStorage, changeBuilder),
 		aclList:         aclList,
+		flusher:         &defaultFlusher{},
 	}
 }
 
@@ -90,6 +93,7 @@ func nonVerifiableTreeDeps(
 		validator:       &noOpTreeValidator{},
 		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
 		aclList:         aclList,
+		flusher:         &defaultFlusher{},
 	}
 }
 
@@ -114,6 +118,7 @@ func BuildTestableTree(treeStorage treestorage.TreeStorage, aclList list.AclList
 		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
 		validator:       &noOpTreeValidator{},
 		aclList:         aclList,
+		flusher:         &defaultFlusher{},
 	}
 
 	return buildObjectTree(deps)
@@ -131,6 +136,7 @@ func BuildEmptyDataTestableTree(treeStorage treestorage.TreeStorage, aclList lis
 		rawChangeLoader: newStorageLoader(treeStorage, changeBuilder),
 		validator:       &noOpTreeValidator{},
 		aclList:         aclList,
+		flusher:         &defaultFlusher{},
 	}
 
 	return buildObjectTree(deps)
@@ -219,6 +225,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
 		notSeenIdxBuf:   make([]int, 0, 10),
 		newSnapshotsBuf: make([]*Change, 0, 10),
+		flusher:         deps.flusher,
 	}
 
 	err := objTree.rebuildFromStorage(nil, nil)
@@ -255,6 +262,7 @@ func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht History
 		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
 		notSeenIdxBuf:   make([]int, 0, 10),
 		newSnapshotsBuf: make([]*Change, 0, 10),
+		flusher:         deps.flusher,
 	}
 
 	hTree := &historyTree{objectTree: objTree}
