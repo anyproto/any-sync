@@ -160,6 +160,20 @@ func (mr *MockObjectTreeMockRecorder) Delete() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockObjectTree)(nil).Delete))
 }
 
+// Flush mocks base method.
+func (m *MockObjectTree) Flush() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Flush")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Flush indicates an expected call of Flush.
+func (mr *MockObjectTreeMockRecorder) Flush() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flush", reflect.TypeOf((*MockObjectTree)(nil).Flush))
+}
+
 // GetChange mocks base method.
 func (m *MockObjectTree) GetChange(arg0 string) (*objecttree.Change, error) {
 	m.ctrl.T.Helper()
@@ -330,6 +344,18 @@ func (m *MockObjectTree) Root() *objecttree.Change {
 func (mr *MockObjectTreeMockRecorder) Root() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Root", reflect.TypeOf((*MockObjectTree)(nil).Root))
+}
+
+// SetFlusher mocks base method.
+func (m *MockObjectTree) SetFlusher(arg0 objecttree.Flusher) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetFlusher", arg0)
+}
+
+// SetFlusher indicates an expected call of SetFlusher.
+func (mr *MockObjectTreeMockRecorder) SetFlusher(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFlusher", reflect.TypeOf((*MockObjectTree)(nil).SetFlusher), arg0)
 }
 
 // SnapshotPath mocks base method.
