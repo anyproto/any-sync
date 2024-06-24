@@ -18,6 +18,16 @@ type Response struct {
 	root         *treechangeproto.RawTreeChangeWithId
 }
 
+func (r *Response) MsgSize() uint64 {
+	size := uint64(len(r.spaceId)+len(r.objectId)) * 59
+	size += uint64(len(r.snapshotPath)) * 59
+	for _, change := range r.changes {
+		size += uint64(len(change.Id))
+		size += uint64(len(change.RawChange))
+	}
+	return size + uint64(len(r.heads))*59
+}
+
 func (r *Response) ProtoMessage() (proto.Message, error) {
 	resp := &treechangeproto.TreeFullSyncResponse{
 		Heads:        r.heads,

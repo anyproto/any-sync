@@ -11,6 +11,14 @@ type CounterRequest struct {
 	*synctestproto.CounterRequest
 }
 
+func (c CounterRequest) MsgSize() uint64 {
+	if c.CounterRequest != nil {
+		return uint64(proto.Size(c.CounterRequest))
+	} else {
+		return 0
+	}
+}
+
 func (c CounterRequest) Proto() (proto.Message, error) {
 	return c.CounterRequest, nil
 }

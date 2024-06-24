@@ -5,24 +5,28 @@ import (
 	"sync"
 )
 
-type QueueProvider[T any] interface {
+type QueueProvider[T Sizeable] interface {
 	GetQueue(id string) *Queue[T]
 	RemoveQueue(id string) error
 	Close() error
 }
 
-type queueProvider[T any] struct {
+type queueProvider[T Sizeable] struct {
 	queues  map[string]*Queue[T]
 	mx      sync.Mutex
 	closed  bool
 	size    int
+	msgType int
 	handler QueueHandler[T]
+	updater sizeUpdater
 }
 
-func NewQueueProvider[T any](size int, handler QueueHandler[T]) QueueProvider[T] {
+func NewQueueProvider[T Sizeable](size, msgType int, updater sizeUpdater, handler QueueHandler[T]) QueueProvider[T] {
 	return &queueProvider[T]{
 		queues:  make(map[string]*Queue[T]),
+		updater: updater,
 		size:    size,
+		msgType: msgType,
 		handler: handler,
 	}
 }
@@ -35,7 +39,7 @@ func (p *queueProvider[T]) GetQueue(id string) *Queue[T] {
 	}
 	q, ok := p.queues[id]
 	if !ok {
-		q = NewQueue(id, p.size, p.handler)
+		q = NewQueue(id, p.size, p.msgType, p.updater, p.handler)
 		p.queues[id] = q
 	}
 	return q

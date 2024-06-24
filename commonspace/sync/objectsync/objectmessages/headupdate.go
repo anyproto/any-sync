@@ -15,6 +15,7 @@ type BroadcastOptions struct {
 type InnerHeadUpdate interface {
 	Marshall(data ObjectMeta) ([]byte, error)
 	Heads() []string
+	MsgSize() uint64
 }
 
 type ObjectMeta struct {
@@ -27,6 +28,16 @@ type HeadUpdate struct {
 	Meta   ObjectMeta
 	Bytes  []byte
 	Update InnerHeadUpdate
+}
+
+func (h *HeadUpdate) MsgSize() uint64 {
+	var byteSize uint64
+	if h.Update != nil {
+		byteSize += h.Update.MsgSize()
+	} else {
+		byteSize += uint64(len(h.Bytes))
+	}
+	return byteSize + uint64(len(h.Meta.PeerId)) + uint64(len(h.Meta.ObjectId)) + uint64(len(h.Meta.SpaceId))
 }
 
 func (h *HeadUpdate) SetPeerId(peerId string) {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
+	"github.com/anyproto/any-sync/util/multiqueue"
 )
 
 type CounterSyncHandler struct {
@@ -31,11 +32,11 @@ func (c *CounterSyncHandler) HandleHeadUpdate(ctx context.Context, headUpdate dr
 	return c.updateHandler.HandleHeadUpdate(ctx, headUpdate)
 }
 
-func (c *CounterSyncHandler) TryAddMessage(ctx context.Context, id string, msg drpc.Message, q *mb.MB[drpc.Message]) error {
+func (c *CounterSyncHandler) TryAddMessage(ctx context.Context, id string, msg multiqueue.Sizeable, q *mb.MB[multiqueue.Sizeable]) error {
 	return q.TryAdd(msg)
 }
 
-func (c *CounterSyncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, send func(resp proto.Message) error) (syncdeps.Request, error) {
+func (c *CounterSyncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, send func(resp proto.Message) error) (syncdeps.Request, error) {
 	return c.requestHandler.HandleStreamRequest(ctx, rq, send)
 }
 

@@ -10,6 +10,13 @@ type InnerRequest struct {
 	root *consensusproto.RawRecordWithId
 }
 
+func (r *InnerRequest) MsgSize() uint64 {
+	size := uint64(len(r.head))
+	size += uint64(len(r.root.Id))
+	size += uint64(len(r.root.Payload))
+	return size
+}
+
 func NewRequest(peerId, objectId, spaceId, head string, root *consensusproto.RawRecordWithId) *objectmessages.Request {
 	return objectmessages.NewRequest(peerId, spaceId, objectId, &InnerRequest{
 		head: head,

@@ -32,19 +32,24 @@ type SyncService interface {
 }
 
 type syncService struct {
-	sendQueueProvider multiqueue.QueueProvider[drpc.Message]
+	sendQueueProvider multiqueue.QueueProvider[multiqueue.Sizeable]
 	receiveQueue      multiqueue.MultiQueue[msgCtx]
 	manager           RequestManager
 	streamPool        streampool.StreamPool
 	peerManager       peermanager.PeerManager
 	handler           syncdeps.SyncHandler
+	metric            syncdeps.QueueSizeUpdater
 	ctx               context.Context
 	cancel            context.CancelFunc
 }
 
 type msgCtx struct {
 	ctx context.Context
-	drpc.Message
+	multiqueue.Sizeable
+}
+
+func (m msgCtx) MsgSize() uint64 {
+	return m.Sizeable.MsgSize()
 }
 
 func NewSyncService() SyncService {
@@ -56,13 +61,14 @@ func (s *syncService) Name() (name string) {
 }
 
 func (s *syncService) Init(a *app.App) (err error) {
+	s.metric = &mockMetric{}
 	s.handler = a.MustComponent(syncdeps.CName).(syncdeps.SyncHandler)
-	s.sendQueueProvider = multiqueue.NewQueueProvider[drpc.Message](100, s.handleOutgoingMessage)
-	s.receiveQueue = multiqueue.New[msgCtx](s.handleIncomingMessage, 100)
+	s.sendQueueProvider = multiqueue.NewQueueProvider[multiqueue.Sizeable](100, syncdeps.MsgTypeOutgoing, s.metric, s.handleOutgoingMessage)
+	s.receiveQueue = multiqueue.New[msgCtx](s.handleIncomingMessage, s.metric, syncdeps.MsgTypeIncoming, 100)
 	s.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	s.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
 	s.streamPool.SetSyncDelegate(s)
-	s.manager = NewRequestManager(s.handler)
+	s.manager = NewRequestManager(s.handler, s.metric)
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	return nil
 }
@@ -85,12 +91,12 @@ func (s *syncService) BroadcastMessage(ctx context.Context, msg drpc.Message) er
 	return s.peerManager.BroadcastMessage(ctx, msg, s.streamPool)
 }
 
-func (s *syncService) handleOutgoingMessage(id string, msg drpc.Message, q *mb.MB[drpc.Message]) error {
+func (s *syncService) handleOutgoingMessage(id string, msg multiqueue.Sizeable, q *mb.MB[multiqueue.Sizeable]) error {
 	return s.handler.TryAddMessage(s.ctx, id, msg, q)
 }
 
 func (s *syncService) handleIncomingMessage(msg msgCtx) {
-	req, err := s.handler.HandleHeadUpdate(msg.ctx, msg.Message)
+	req, err := s.handler.HandleHeadUpdate(msg.ctx, msg.Sizeable)
 	if err != nil {
 		log.Error("failed to handle head update", zap.Error(err))
 	}
@@ -109,7 +115,7 @@ func (s *syncService) handleIncomingMessage(msg msgCtx) {
 	//)...)
 }
 
-func (s *syncService) GetQueue(peerId string) *multiqueue.Queue[drpc.Message] {
+func (s *syncService) GetQueue(peerId string) *multiqueue.Queue[multiqueue.Sizeable] {
 	queue := s.sendQueueProvider.GetQueue(peerId)
 	return queue
 }
@@ -129,8 +135,8 @@ func (s *syncService) HandleMessage(ctx context.Context, peerId string, msg drpc
 	}
 	objectId := idMsg.ObjectId()
 	err := s.receiveQueue.Add(ctx, objectId, msgCtx{
-		ctx:     ctx,
-		Message: msg,
+		ctx:      ctx,
+		Sizeable: idMsg,
 	})
 	if errors.Is(err, mb.ErrOverflowed) {
 		log.Info("queue overflowed", zap.String("objectId", objectId))

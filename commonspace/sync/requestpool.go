@@ -8,7 +8,7 @@ import (
 type RequestPool interface {
 	TryTake(peerId, objectId string) bool
 	Release(peerId, objectId string)
-	QueueRequestAction(peerId, objectId string, action func(ctx context.Context)) (err error)
+	QueueRequestAction(peerId, objectId string, action func(ctx context.Context), remove func()) (err error)
 	Close()
 }
 
@@ -45,7 +45,7 @@ func (rp *requestPool) Release(peerId, objectId string) {
 	rp.peerGuard.Release(fullId(peerId, objectId))
 }
 
-func (rp *requestPool) QueueRequestAction(peerId, objectId string, action func(ctx context.Context)) (err error) {
+func (rp *requestPool) QueueRequestAction(peerId, objectId string, action func(ctx context.Context), remove func()) (err error) {
 	rp.mu.Lock()
 	if rp.isClosed {
 		rp.mu.Unlock()
@@ -65,13 +65,12 @@ func (rp *requestPool) QueueRequestAction(peerId, objectId string, action func(c
 	var wrappedAction func()
 	wrappedAction = func() {
 		if !rp.TryTake(peerId, objectId) {
-			pool.TryAdd(objectId, wrappedAction, func() {})
 			return
 		}
 		action(rp.ctx)
 		rp.Release(peerId, objectId)
 	}
-	pool.Replace(objectId, wrappedAction, func() {})
+	pool.Replace(objectId, wrappedAction, remove)
 	return nil
 }
 

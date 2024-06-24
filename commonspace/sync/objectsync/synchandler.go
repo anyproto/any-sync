@@ -20,6 +20,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/util/multiqueue"
 )
 
 var ErrUnexpectedHeadUpdateType = errors.New("unexpected head update type")
@@ -71,7 +72,7 @@ func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Messa
 	return objHandler.HandleHeadUpdate(ctx, o.status, update)
 }
 
-func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, sendResponse func(resp proto.Message) error) (syncdeps.Request, error) {
+func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, sendResponse func(resp proto.Message) error) (syncdeps.Request, error) {
 	obj, err := o.manager.GetTree(context.Background(), o.spaceId, rq.ObjectId())
 	if err != nil {
 		return synctree.NewRequest(rq.PeerId(), o.spaceId, rq.ObjectId(), nil, nil, nil), treechangeproto.ErrGetTree
@@ -80,7 +81,7 @@ func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Reques
 	if !ok {
 		return nil, fmt.Errorf("object %s does not support sync", obj.Id())
 	}
-	return objHandler.HandleStreamRequest(ctx, rq, sendResponse)
+	return objHandler.HandleStreamRequest(ctx, rq, updater, sendResponse)
 }
 
 func (o *objectSync) ApplyRequest(ctx context.Context, rq syncdeps.Request, requestSender syncdeps.RequestSender) error {
@@ -99,7 +100,7 @@ func (o *objectSync) ApplyRequest(ctx context.Context, rq syncdeps.Request, requ
 	return err
 }
 
-func (o *objectSync) TryAddMessage(ctx context.Context, peerId string, msg drpc.Message, q *mb.MB[drpc.Message]) error {
+func (o *objectSync) TryAddMessage(ctx context.Context, peerId string, msg multiqueue.Sizeable, q *mb.MB[multiqueue.Sizeable]) error {
 	settable, ok := msg.(peerIdSettable)
 	if ok {
 		settable.SetPeerId(peerId)

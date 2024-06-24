@@ -8,6 +8,7 @@ import (
 
 type InnerRequest interface {
 	Marshall() ([]byte, error)
+	MsgSize() uint64
 }
 
 type Request struct {
@@ -16,6 +17,16 @@ type Request struct {
 	objectId string
 	Inner    InnerRequest
 	Bytes    []byte
+}
+
+func (r *Request) MsgSize() uint64 {
+	var byteSize uint64
+	if r.Inner != nil {
+		byteSize += r.Inner.MsgSize()
+	} else {
+		byteSize += uint64(len(r.Bytes))
+	}
+	return byteSize + uint64(len(r.peerId)) + uint64(len(r.objectId)) + uint64(len(r.spaceId))
 }
 
 func NewByteRequest(peerId, spaceId, objectId string, message []byte) *Request {

@@ -272,8 +272,10 @@ func (s *spaceProcess) update(ctx context.Context) error {
 	}
 	tr.Lock()
 	defer tr.Unlock()
+	bytes := make([]byte, 1024)
+	_, _ = rand.Read(bytes)
 	_, err = tr.AddContent(ctx, objecttree.SignableChangeContent{
-		Data:        nil,
+		Data:        bytes,
 		Key:         s.accountService.Account().SignKey,
 		IsSnapshot:  snapshot,
 		IsEncrypted: true,

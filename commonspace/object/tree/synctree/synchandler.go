@@ -77,7 +77,7 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 	return nil, nil
 }
 
-func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, send func(resp proto.Message) error) (syncdeps.Request, error) {
+func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, send func(resp proto.Message) error) (syncdeps.Request, error) {
 	req, ok := rq.(*objectmessages.Request)
 	if !ok {
 		return nil, ErrUnexpectedRequestType
@@ -116,11 +116,15 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		if len(batch.changes) == 0 {
 			break
 		}
+		size := batch.MsgSize()
+		updater.UpdateQueueSize(size, syncdeps.MsgTypeSentResponse, true)
 		protoBatch, err := batch.ProtoMessage()
 		if err != nil {
+			updater.UpdateQueueSize(size, syncdeps.MsgTypeSentResponse, false)
 			return nil, err
 		}
 		err = send(protoBatch)
+		updater.UpdateQueueSize(size, syncdeps.MsgTypeSentResponse, false)
 		if err != nil {
 			return nil, err
 		}

@@ -17,6 +17,15 @@ type Response struct {
 	root     *consensusproto.RawRecordWithId
 }
 
+func (r *Response) MsgSize() uint64 {
+	size := uint64(len(r.head))
+	for _, record := range r.records {
+		size += uint64(len(record.Id))
+		size += uint64(len(record.Payload))
+	}
+	return size + uint64(len(r.spaceId)) + uint64(len(r.objectId))
+}
+
 func (r *Response) ProtoMessage() (proto.Message, error) {
 	resp := &consensusproto.LogFullSyncResponse{
 		Head:    r.head,

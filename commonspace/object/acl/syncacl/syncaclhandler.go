@@ -75,7 +75,7 @@ func (s *syncAclHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syn
 	return s.syncClient.CreateFullSyncRequest(peerId, s.aclList), nil
 }
 
-func (s *syncAclHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, send func(resp proto.Message) error) (syncdeps.Request, error) {
+func (s *syncAclHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, send func(resp proto.Message) error) (syncdeps.Request, error) {
 	req, ok := rq.(*objectmessages.Request)
 	if !ok {
 		return nil, ErrUnexpectedRequestType
@@ -100,6 +100,9 @@ func (s *syncAclHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Re
 		return nil, err
 	}
 	s.aclList.Unlock()
+	size := resp.MsgSize()
+	updater.UpdateQueueSize(size, syncdeps.MsgTypeSentResponse, true)
+	defer updater.UpdateQueueSize(size, syncdeps.MsgTypeSentResponse, false)
 	protoMsg, err := resp.ProtoMessage()
 	if err != nil {
 		return nil, err

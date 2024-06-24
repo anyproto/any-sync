@@ -30,13 +30,15 @@ type requestManager struct {
 	requestPool   RequestPool
 	incomingGuard *guard
 	handler       syncdeps.SyncHandler
+	metric        syncdeps.QueueSizeUpdater
 }
 
-func NewRequestManager(handler syncdeps.SyncHandler) RequestManager {
+func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUpdater) RequestManager {
 	return &requestManager{
 		requestPool:   NewRequestPool(),
 		handler:       handler,
 		incomingGuard: newGuard(),
+		metric:        metric,
 	}
 }
 
@@ -52,7 +54,10 @@ func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, c
 				}
 				return err
 			}
+			size := resp.MsgSize()
+			r.metric.UpdateQueueSize(size, syncdeps.MsgTypeReceivedResponse, true)
 			err = collector.CollectResponse(ctx, rq.PeerId(), rq.ObjectId(), resp)
+			r.metric.UpdateQueueSize(size, syncdeps.MsgTypeReceivedResponse, false)
 			if err != nil {
 				return err
 			}
@@ -62,20 +67,27 @@ func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, c
 }
 
 func (r *requestManager) QueueRequest(rq syncdeps.Request) error {
+	size := rq.MsgSize()
+	r.metric.UpdateQueueSize(size, syncdeps.MsgTypeOutgoingRequest, true)
 	return r.requestPool.QueueRequestAction(rq.PeerId(), rq.ObjectId(), func(ctx context.Context) {
 		err := r.handler.ApplyRequest(ctx, rq, r)
 		if err != nil {
 			log.Error("failed to apply request", zap.Error(err))
 		}
+	}, func() {
+		r.metric.UpdateQueueSize(size, syncdeps.MsgTypeOutgoingRequest, false)
 	})
 }
 
 func (r *requestManager) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, stream drpc.Stream) error {
+	size := rq.MsgSize()
+	r.metric.UpdateQueueSize(size, syncdeps.MsgTypeIncomingRequest, true)
+	defer r.metric.UpdateQueueSize(size, syncdeps.MsgTypeIncomingRequest, false)
 	if !r.incomingGuard.TryTake(fullId(rq.PeerId(), rq.ObjectId())) {
 		return nil
 	}
 	defer r.incomingGuard.Release(fullId(rq.PeerId(), rq.ObjectId()))
-	newRq, err := r.handler.HandleStreamRequest(ctx, rq, func(resp proto.Message) error {
+	newRq, err := r.handler.HandleStreamRequest(ctx, rq, r.metric, func(resp proto.Message) error {
 		return stream.MsgSend(resp, streampool.EncodingProto)
 	})
 	// here is a little bit non-standard decision, because we can return error but still can queue the request

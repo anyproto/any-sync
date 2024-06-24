@@ -20,14 +20,14 @@ type stream struct {
 	streamId     uint32
 	closed       atomic.Bool
 	l            logger.CtxLogger
-	queue        *multiqueue.Queue[drpc.Message]
+	queue        *multiqueue.Queue[multiqueue.Sizeable]
 	stats        streamStat
 	syncDelegate StreamSyncDelegate
 }
 
 func (sr *stream) write(msg drpc.Message) (err error) {
 	sr.stats.AddMessage(msg)
-	err = sr.queue.TryAdd(msg)
+	err = sr.queue.TryAdd(msg.(multiqueue.Sizeable))
 	if err != nil {
 		sr.stats.RemoveMessage(msg)
 	}

@@ -22,13 +22,17 @@ type configGetter interface {
 	GetStreamConfig() StreamConfig
 }
 
+type sizeable interface {
+	MsgSize() uint64
+}
+
 type StreamSyncDelegate interface {
 	// HandleMessage handles incoming message
 	HandleMessage(ctx context.Context, peerId string, msg drpc.Message) (err error)
 	// NewReadMessage creates new empty message for unmarshalling into it
 	NewReadMessage() drpc.Message
 	// GetQueue returns queue for outgoing messages
-	GetQueue(peerId string) *multiqueue.Queue[drpc.Message]
+	GetQueue(peerId string) *multiqueue.Queue[multiqueue.Sizeable]
 	// RemoveQueue removes queue for outgoing messages
 	RemoveQueue(peerId string) error
 }

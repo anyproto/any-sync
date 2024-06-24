@@ -15,6 +15,16 @@ type InnerHeadUpdate struct {
 	root         *treechangeproto.RawTreeChangeWithId
 }
 
+func (h InnerHeadUpdate) MsgSize() uint64 {
+	size := uint64(len(h.heads))
+	size += uint64(len(h.snapshotPath))
+	for _, change := range h.changes {
+		size += uint64(len(change.Id))
+		size += uint64(len(change.RawChange))
+	}
+	return size
+}
+
 func (h InnerHeadUpdate) Marshall(data objectmessages.ObjectMeta) ([]byte, error) {
 	changes := h.changes
 	if slices.Contains(h.opts.EmptyPeers, data.PeerId) {
