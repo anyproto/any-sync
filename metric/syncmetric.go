@@ -70,96 +70,96 @@ func (m *metric) registerSyncMetrics() error {
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Namespace: "sync",
 			Subsystem: "space",
-			Name:      "incomingMsgSize",
-			Help:      "cache size",
+			Name:      "incoming_msg_size",
+			Help:      "Size of incoming messages",
 		}, func() float64 {
 			return float64(m.getLastCached().IncomingMsgSize)
 		}),
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Namespace: "sync",
 			Subsystem: "space",
-			Name:      "outgoingMsgSize",
-			Help:      "cache size",
+			Name:      "outgoing_msg_size",
+			Help:      "Size of outgoing messages",
 		}, func() float64 {
 			return float64(m.getLastCached().OutgoingMsgSize)
 		}),
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Namespace: "sync",
 			Subsystem: "space",
-			Name:      "outgoingReqSize",
-			Help:      "cache size",
+			Name:      "outgoing_req_size",
+			Help:      "Size of outgoing requests",
 		}, func() float64 {
 			return float64(m.getLastCached().OutgoingReqSize)
 		}),
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Namespace: "sync",
 			Subsystem: "space",
-			Name:      "incomingReqSize",
-			Help:      "cache size",
+			Name:      "incoming_req_size",
+			Help:      "Size of incoming requests",
 		}, func() float64 {
 			return float64(m.getLastCached().IncomingReqSize)
 		}),
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Namespace: "sync",
 			Subsystem: "space",
-			Name:      "receivedRespSize",
-			Help:      "cache size",
+			Name:      "received_resp_size",
+			Help:      "Size of received responses",
 		}, func() float64 {
 			return float64(m.getLastCached().ReceivedRespSize)
 		}),
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Namespace: "sync",
 			Subsystem: "space",
-			Name:      "sentRespSize",
-			Help:      "cache size",
+			Name:      "sent_resp_size",
+			Help:      "Size of sent responses",
 		}, func() float64 {
 			return float64(m.getLastCached().SentRespSize)
 		}),
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Namespace: "sync",
 			Subsystem: "space",
-			Name:      "incomingMsgCount",
-			Help:      "cache size",
+			Name:      "incoming_msg_count",
+			Help:      "Count of incoming messages",
 		}, func() float64 {
 			return float64(m.getLastCached().IncomingMsgCount)
 		}),
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Namespace: "sync",
 			Subsystem: "space",
-			Name:      "outgoingMsgCount",
-			Help:      "cache size",
+			Name:      "outgoing_msg_count",
+			Help:      "Count of outgoing messages",
 		}, func() float64 {
 			return float64(m.getLastCached().OutgoingMsgCount)
 		}),
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Namespace: "sync",
 			Subsystem: "space",
-			Name:      "outgoingReqCount",
-			Help:      "cache size",
+			Name:      "outgoing_req_count",
+			Help:      "Count of outgoing requests",
 		}, func() float64 {
 			return float64(m.getLastCached().OutgoingReqCount)
 		}),
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Namespace: "sync",
 			Subsystem: "space",
-			Name:      "incomingReqCount",
-			Help:      "cache size",
+			Name:      "incoming_req_count",
+			Help:      "Count of incoming requests",
 		}, func() float64 {
 			return float64(m.getLastCached().IncomingReqCount)
 		}),
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Namespace: "sync",
 			Subsystem: "space",
-			Name:      "receivedRespCount",
-			Help:      "cache size",
+			Name:      "received_resp_count",
+			Help:      "Count of received responses",
 		}, func() float64 {
 			return float64(m.getLastCached().ReceivedRespCount)
 		}),
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Namespace: "sync",
 			Subsystem: "space",
-			Name:      "sentRespCount",
-			Help:      "cache size",
+			Name:      "sent_resp_count",
+			Help:      "Count of sent responses",
 		}, func() float64 {
 			return float64(m.getLastCached().SentRespCount)
 		}),
