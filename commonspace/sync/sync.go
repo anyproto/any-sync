@@ -11,7 +11,9 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
+	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
+	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/util/multiqueue"
 )
@@ -38,7 +40,9 @@ type syncService struct {
 	streamPool        streampool.StreamPool
 	peerManager       peermanager.PeerManager
 	handler           syncdeps.SyncHandler
-	metric            syncdeps.QueueSizeUpdater
+	spaceId           string
+	metric            *syncMetric
+	commonMetric      metric.Metric
 	ctx               context.Context
 	cancel            context.CancelFunc
 }
@@ -61,12 +65,14 @@ func (s *syncService) Name() (name string) {
 }
 
 func (s *syncService) Init(a *app.App) (err error) {
-	s.metric = &mockMetric{}
+	s.metric = &syncMetric{}
+	s.spaceId = a.MustComponent(spacestate.CName).(*spacestate.SpaceState).SpaceId
 	s.handler = a.MustComponent(syncdeps.CName).(syncdeps.SyncHandler)
 	s.sendQueueProvider = multiqueue.NewQueueProvider[multiqueue.Sizeable](100, syncdeps.MsgTypeOutgoing, s.metric, s.handleOutgoingMessage)
 	s.receiveQueue = multiqueue.New[msgCtx](s.handleIncomingMessage, s.metric, syncdeps.MsgTypeIncoming, 100)
 	s.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	s.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
+	s.commonMetric, _ = a.Component(metric.CName).(metric.Metric)
 	s.streamPool.SetSyncDelegate(s)
 	s.manager = NewRequestManager(s.handler, s.metric)
 	s.ctx, s.cancel = context.WithCancel(context.Background())
@@ -74,6 +80,9 @@ func (s *syncService) Init(a *app.App) (err error) {
 }
 
 func (s *syncService) Run(ctx context.Context) (err error) {
+	if s.commonMetric != nil {
+		s.commonMetric.RegisterSyncMetric(s.spaceId, s.metric)
+	}
 	return nil
 }
 
@@ -82,6 +91,9 @@ func (s *syncService) Close(ctx context.Context) (err error) {
 	providerErr := s.sendQueueProvider.Close()
 	if receiveErr != nil || providerErr != nil {
 		err = errors.Join(receiveErr, providerErr)
+	}
+	if s.commonMetric != nil {
+		s.commonMetric.UnregisterSyncMetric(s.spaceId, s.metric)
 	}
 	s.manager.Close()
 	return
