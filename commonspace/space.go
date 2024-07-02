@@ -26,6 +26,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -86,6 +87,7 @@ type Space interface {
 	DeleteTree(ctx context.Context, id string) (err error)
 	GetNodePeers(ctx context.Context) (peer []peer.Peer, err error)
 
+	HandleDeprecatedObjectSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
 	HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage, stream drpc.Stream) (err error)
 	HandleStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
@@ -148,6 +150,13 @@ func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
 }
 
 func (s *space) HandleStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error {
+	protoVersion, err := peer.CtxProtoVersion(stream.Context())
+	if err != nil {
+		return err
+	}
+	if protoVersion < secureservice.ProtoVersion {
+		return spacesyncproto.ErrUnexpected
+	}
 	return s.streamPool.ReadStream(stream)
 }
 
@@ -158,6 +167,10 @@ func (s *space) HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto
 	}
 	objSyncReq := objectmessages.NewByteRequest(peerId, req.SpaceId, req.ObjectId, req.Payload)
 	return s.syncService.HandleStreamRequest(ctx, objSyncReq, stream)
+}
+
+func (s *space) HandleDeprecatedObjectSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
+	return s.syncService.HandleDeprecatedObjectSync(ctx, req)
 }
 
 func (s *space) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {

@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -82,6 +83,54 @@ func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Reques
 		return nil, fmt.Errorf("object %s does not support sync", obj.Id())
 	}
 	return objHandler.HandleStreamRequest(ctx, rq, updater, sendResponse)
+}
+
+func (o *objectSync) HandleDeprecatedObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
+	obj, err := o.manager.GetTree(context.Background(), o.spaceId, req.ObjectId)
+	if err != nil {
+		unmarshalled := &treechangeproto.TreeSyncMessage{}
+		err = proto.Unmarshal(req.Payload, unmarshalled)
+		if err != nil {
+			return nil, err
+		}
+		cnt := unmarshalled.GetContent().GetFullSyncRequest()
+		// we also don't have the tree, so we can't handle this request
+		if unmarshalled.RootChange == nil || cnt == nil {
+			return nil, treechangeproto.ErrGetTree
+		}
+		// we don't have the tree, so we return empty response, so next time we will get the tree
+		if cnt.Changes == nil {
+			return &spacesyncproto.ObjectSyncMessage{
+				SpaceId:  req.SpaceId,
+				ObjectId: req.ObjectId,
+			}, nil
+		}
+		// we don't have the tree, but this must be a request with full data
+		payload := treestorage.TreeStorageCreatePayload{
+			RootRawChange: unmarshalled.RootChange,
+			Changes:       cnt.Changes,
+			Heads:         cnt.Heads,
+		}
+		err := o.manager.ValidateAndPutTree(ctx, o.spaceId, payload)
+		if err != nil {
+			return nil, err
+		}
+		cnt.Changes = nil
+		marshalled, err := proto.Marshal(unmarshalled)
+		if err != nil {
+			return nil, err
+		}
+		return &spacesyncproto.ObjectSyncMessage{
+			SpaceId:  req.SpaceId,
+			ObjectId: req.ObjectId,
+			Payload:  marshalled,
+		}, nil
+	}
+	objHandler, ok := obj.(syncdeps.ObjectSyncHandler)
+	if !ok {
+		return nil, fmt.Errorf("object %s does not support sync", obj.Id())
+	}
+	return objHandler.HandleDeprecatedRequest(ctx, req)
 }
 
 func (o *objectSync) ApplyRequest(ctx context.Context, rq syncdeps.Request, requestSender syncdeps.RequestSender) error {

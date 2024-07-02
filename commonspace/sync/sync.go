@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/streampool"
@@ -27,6 +28,7 @@ var ErrUnexpectedMessage = errors.New("unexpected message")
 type SyncService interface {
 	app.Component
 	BroadcastMessage(ctx context.Context, msg drpc.Message) error
+	HandleDeprecatedObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
 	HandleStreamRequest(ctx context.Context, req syncdeps.Request, stream drpc.Stream) error
 	SendRequest(ctx context.Context, rq syncdeps.Request, collector syncdeps.ResponseCollector) error
 	QueueRequest(ctx context.Context, rq syncdeps.Request) error
@@ -155,6 +157,10 @@ func (s *syncService) HandleMessage(ctx context.Context, peerId string, msg drpc
 		return nil
 	}
 	return err
+}
+
+func (s *syncService) HandleDeprecatedObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
+	return s.manager.HandleDeprecatedObjectSync(ctx, req)
 }
 
 func (s *syncService) QueueRequest(ctx context.Context, rq syncdeps.Request) error {
