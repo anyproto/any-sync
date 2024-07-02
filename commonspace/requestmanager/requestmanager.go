@@ -13,7 +13,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 )
@@ -112,7 +111,11 @@ func (r *requestManager) SendRequest(ctx context.Context, peerId string, req *sp
 	defer func() {
 		r.reqStat.RemoveSyncRequest(peerId, req)
 	}()
-	return r.doRequest(ctx, peerId, req)
+	res, err := r.doRequest(ctx, peerId, req)
+	if err != nil {
+		return nil, err
+	}
+	return res.resp, err
 }
 
 func (r *requestManager) QueueRequest(peerId string, req *spacesyncproto.ObjectSyncMessage) (err error) {
@@ -142,27 +145,36 @@ var doRequestAndHandle = (*requestManager).requestAndHandle
 
 func (r *requestManager) requestAndHandle(peerId string, req *spacesyncproto.ObjectSyncMessage) {
 	ctx := r.ctx
-	resp, err := r.doRequest(ctx, peerId, req)
+	res, err := r.doRequest(ctx, peerId, req)
 	if err != nil {
 		log.Warn("failed to send request", zap.Error(err))
 		return
 	}
-	ctx = peer.CtxWithPeerId(ctx, peerId)
 	_ = r.handler.HandleMessage(ctx, objectsync.HandleMessage{
 		SenderId: peerId,
-		Message:  resp,
-		PeerCtx:  ctx,
+		Message:  res.resp,
+		PeerCtx:  res.peerCtx,
 	})
 }
 
-func (r *requestManager) doRequest(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
+type result struct {
+	peerCtx context.Context
+	resp    *spacesyncproto.ObjectSyncMessage
+}
+
+func (r *requestManager) doRequest(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (res result, err error) {
 	pr, err := r.peerPool.Get(ctx, peerId)
 	if err != nil {
 		return
 	}
+	res.peerCtx = pr.Context()
 	err = pr.DoDrpc(ctx, func(conn drpc.Conn) error {
 		cl := r.clientFactory.Client(conn)
-		resp, err = cl.ObjectSync(ctx, msg)
+		resp, err := cl.ObjectSync(ctx, msg)
+		if err != nil {
+			return err
+		}
+		res.resp = resp
 		return err
 	})
 	err = rpcerr.Unwrap(err)

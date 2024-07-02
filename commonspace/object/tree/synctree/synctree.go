@@ -17,6 +17,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/nodeconf"
 )
 
@@ -37,7 +38,7 @@ type SyncTree interface {
 	objecttree.ObjectTree
 	synchandler.SyncHandler
 	ListenerSetter
-	SyncWithPeer(ctx context.Context, peerId string) (err error)
+	SyncWithPeer(ctx context.Context, p peer.Peer) (err error)
 }
 
 // SyncTree sends head updates to sync service and also sends new changes to update listener
@@ -245,14 +246,18 @@ func (s *syncTree) checkAlive() (err error) {
 	return
 }
 
-func (s *syncTree) SyncWithPeer(ctx context.Context, peerId string) (err error) {
+func (s *syncTree) SyncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	s.Lock()
 	defer s.Unlock()
-	if objecttree.IsEmptyDerivedTree(s) {
-		return nil
+	protoVersion, err := peer.CtxProtoVersion(ctx)
+	// this works with old protocol
+	if err != nil || protoVersion <= secureservice.ProtoVersion {
+		headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
+		return s.syncClient.SendUpdate(p.Id(), headUpdate.RootChange.Id, headUpdate)
 	}
-	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
-	return s.syncClient.SendUpdate(peerId, headUpdate.RootChange.Id, headUpdate)
+	// for new protocol sending empty request
+	request := s.syncClient.CreateEmptyFullSyncRequest(s)
+	return s.syncClient.QueueRequest(p.Id(), s.Id(), request)
 }
 
 func (s *syncTree) afterBuild() {

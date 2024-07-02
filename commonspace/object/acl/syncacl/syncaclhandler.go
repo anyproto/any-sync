@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/gogo/protobuf/proto"
 )
 
 var (
@@ -35,7 +36,7 @@ func newSyncAclHandler(spaceId string, aclList list.AclList, syncClient SyncClie
 	}
 }
 
-func (s *syncAclHandler) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
+func (s *syncAclHandler) HandleMessage(ctx context.Context, senderId string, protoVersion uint32, message *spacesyncproto.ObjectSyncMessage) (err error) {
 	unmarshalled := &consensusproto.LogSyncMessage{}
 	err = proto.Unmarshal(message.Payload, unmarshalled)
 	if err != nil {

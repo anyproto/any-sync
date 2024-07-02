@@ -8,6 +8,8 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/headupdater"
 	"github.com/anyproto/any-sync/commonspace/object/syncobjectgetter"
+	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/secureservice"
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
@@ -35,7 +37,7 @@ type SyncAcl interface {
 	list.AclList
 	syncobjectgetter.SyncObject
 	SetHeadUpdater(updater headupdater.HeadUpdater)
-	SyncWithPeer(ctx context.Context, peerId string) (err error)
+	SyncWithPeer(ctx context.Context, p peer.Peer) (err error)
 	SetAclUpdater(updater headupdater.AclUpdater)
 }
 
@@ -73,8 +75,8 @@ func (s *syncAcl) SetHeadUpdater(updater headupdater.HeadUpdater) {
 	s.headUpdater = updater
 }
 
-func (s *syncAcl) HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error) {
-	return s.syncHandler.HandleMessage(ctx, senderId, request)
+func (s *syncAcl) HandleMessage(ctx context.Context, senderId string, protoVersion uint32, request *spacesyncproto.ObjectSyncMessage) (err error) {
+	return s.syncHandler.HandleMessage(ctx, senderId, protoVersion, request)
 }
 
 func (s *syncAcl) Init(a *app.App) (err error) {
@@ -136,11 +138,18 @@ func (s *syncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (e
 	return
 }
 
-func (s *syncAcl) SyncWithPeer(ctx context.Context, peerId string) (err error) {
+func (s *syncAcl) SyncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	s.Lock()
 	defer s.Unlock()
-	headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
-	return s.syncClient.SendUpdate(peerId, headUpdate)
+	protoVersion, err := peer.CtxProtoVersion(ctx)
+	// this works with old protocol
+	if err != nil || protoVersion <= secureservice.ProtoVersion {
+		headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
+		return s.syncClient.SendUpdate(p.Id(), headUpdate)
+	}
+	// for new protocol sending empty request
+	request := s.syncClient.CreateEmptyFullSyncRequest(s)
+	return s.syncClient.QueueRequest(p.Id(), request)
 }
 
 func (s *syncAcl) Close(ctx context.Context) (err error) {
