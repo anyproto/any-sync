@@ -28,11 +28,13 @@ var (
 	// ProtoVersion 1 - version with yamux over tcp and quic
 	// ProtoVersion 2 - acl compatible version
 	// ProtoVersion 3 - acl with breaking changes / multiplayer
-	ProtoVersion = uint32(3)
+	// ProtoVersion 4 - new sync compatible version
+	NewSyncCompatibleVersion = uint32(4)
+	ProtoVersion             = uint32(5)
 )
 
 var (
-	compatibleVersions = []uint32{2, ProtoVersion}
+	compatibleVersions = []uint32{NewSyncCompatibleVersion, ProtoVersion}
 )
 
 func New() SecureService {
@@ -119,6 +121,7 @@ func (s *secureService) HandshakeInbound(ctx context.Context, conn io.ReadWriteC
 	cctx = peer.CtxWithPeerId(cctx, peerId)
 	cctx = peer.CtxWithIdentity(cctx, res.Identity)
 	cctx = peer.CtxWithClientVersion(cctx, res.ClientVersion)
+	cctx = peer.CtxWithProtoVersion(cctx, res.ProtoVersion)
 	return
 }
 
@@ -146,6 +149,7 @@ func (s *secureService) HandshakeOutbound(ctx context.Context, conn io.ReadWrite
 	cctx = peer.CtxWithPeerId(cctx, peerId)
 	cctx = peer.CtxWithIdentity(cctx, res.Identity)
 	cctx = peer.CtxWithClientVersion(cctx, res.ClientVersion)
+	cctx = peer.CtxWithProtoVersion(cctx, res.ProtoVersion)
 	return cctx, nil
 }
 
