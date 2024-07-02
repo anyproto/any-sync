@@ -179,6 +179,7 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload objecttree.
 			s.listener.Rebuild(s)
 		}
 	}
+	s.flush()
 	if res.Mode != objecttree.Nothing {
 		if s.notifiable != nil {
 			s.notifiable.UpdateHeads(s.Id(), res.Heads)
@@ -258,8 +259,16 @@ func (s *syncTree) SyncWithPeer(ctx context.Context, peerId string) (err error) 
 func (s *syncTree) afterBuild() {
 	if s.listener != nil {
 		s.listener.Rebuild(s)
+		s.flush()
 	}
 	if s.notifiable != nil {
 		s.notifiable.UpdateHeads(s.Id(), s.Heads())
+	}
+}
+
+func (s *syncTree) flush() {
+	err := s.Flush()
+	if err != nil {
+		log.Warn("flush error", zap.Error(err))
 	}
 }

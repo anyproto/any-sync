@@ -90,6 +90,8 @@ type ObjectTree interface {
 
 	Delete() error
 	Close() error
+	SetFlusher(flusher Flusher)
+	Flush() error
 	TryClose(objectTTL time.Duration) (bool, error)
 }
 
@@ -100,6 +102,7 @@ type objectTree struct {
 	rawChangeLoader *rawChangeLoader
 	treeBuilder     *treeBuilder
 	aclList         list.AclList
+	flusher         Flusher
 
 	id      string
 	rawRoot *treechangeproto.RawTreeChangeWithId
@@ -169,6 +172,10 @@ func (ot *objectTree) AclList() list.AclList {
 
 func (ot *objectTree) Header() *treechangeproto.RawTreeChangeWithId {
 	return ot.rawRoot
+}
+
+func (ot *objectTree) SetFlusher(flusher Flusher) {
+	ot.flusher = flusher
 }
 
 func (ot *objectTree) UnmarshalledHeader() *Change {
@@ -332,7 +339,10 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChang
 	}
 
 	// reducing tree if we have new roots
-	ot.tree.reduceTree()
+	err = ot.flusher.FlushAfterBuild(ot)
+	if err != nil {
+		return
+	}
 
 	// that means that we removed the ids while reducing
 	if _, exists := ot.tree.attached[lastHeadId]; !exists {
@@ -504,6 +514,13 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 	}
 }
 
+func (ot *objectTree) Flush() error {
+	if ot.isDeleted {
+		return ErrDeleted
+	}
+	return ot.flusher.Flush(ot)
+}
+
 func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesAdded []*Change, rawChanges []*treechangeproto.RawTreeChangeWithId) (addResult AddResult, err error) {
 	headsCopy := func() []string {
 		newHeads := make([]string, 0, len(ot.tree.Heads()))
@@ -521,6 +538,8 @@ func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesA
 		for _, idx := range ot.notSeenIdxBuf {
 			rawChange := rawChanges[idx]
 			if ch, exists := ot.tree.attached[rawChange.Id]; exists {
+				// this marks the change as new if needed
+				ot.flusher.MarkNewChange(ch)
 				if len(toConvert) != 0 {
 					alreadyConverted[ch] = struct{}{}
 				}
@@ -539,6 +558,8 @@ func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesA
 		for _, ch := range toConvert {
 			// if we got some changes that we need to convert to raw
 			if _, exists := alreadyConverted[ch]; !exists {
+				// this marks the change as new if needed
+				ot.flusher.MarkNewChange(ch)
 				var raw *treechangeproto.RawTreeChangeWithId
 				raw, err = ot.changeBuilder.Marshall(ch)
 				if err != nil {

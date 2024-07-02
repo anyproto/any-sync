@@ -2,6 +2,11 @@ package synctree
 
 import (
 	"context"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
@@ -11,9 +16,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/nodeconf"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
-	"testing"
 )
 
 type syncTreeMatcher struct {
@@ -74,6 +76,7 @@ func Test_BuildSyncTree(t *testing.T) {
 
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
 		syncClientMock.EXPECT().Broadcast(gomock.Eq(headUpdate))
+		objTreeMock.EXPECT().Flush()
 		res, err := tr.AddRawChanges(ctx, payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
@@ -96,6 +99,7 @@ func Test_BuildSyncTree(t *testing.T) {
 
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
 		syncClientMock.EXPECT().Broadcast(gomock.Eq(headUpdate))
+		objTreeMock.EXPECT().Flush()
 		res, err := tr.AddRawChanges(ctx, payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
