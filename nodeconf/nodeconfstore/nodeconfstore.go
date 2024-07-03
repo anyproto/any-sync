@@ -61,5 +61,5 @@ func (n *nodeConfStore) SaveLast(ctx context.Context, c nodeconf.Configuration) 
 	if err != nil {
 		return
 	}
-	return os.WriteFile(path, data, 0755)
+	return os.WriteFile(path, data, 0644)
 }
