@@ -27,7 +27,7 @@ func NewRequestPool() RequestPool {
 		ctx:       ctx,
 		cancel:    cancel,
 		pools:     make(map[string]*tryAddQueue),
-		peerGuard: newGuard(),
+		peerGuard: newGuard(0),
 	}
 }
 
@@ -57,7 +57,7 @@ func (rp *requestPool) QueueRequestAction(peerId, objectId string, action func(c
 	)
 	pool, exists = rp.pools[peerId]
 	if !exists {
-		pool = newTryAddQueue(100, 100)
+		pool = newTryAddQueue(10, 100)
 		rp.pools[peerId] = pool
 		pool.Run()
 	}

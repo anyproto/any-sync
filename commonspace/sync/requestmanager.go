@@ -40,7 +40,7 @@ func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUp
 	return &requestManager{
 		requestPool:   NewRequestPool(),
 		handler:       handler,
-		incomingGuard: newGuard(),
+		incomingGuard: newGuard(1000),
 		metric:        metric,
 	}
 }
