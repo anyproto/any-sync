@@ -356,6 +356,11 @@ type mockTreeManager struct {
 	waitLoad    chan struct{}
 }
 
+func (t *mockTreeManager) ValidateAndPutTree(ctx context.Context, spaceId string, payload treestorage.TreeStorageCreatePayload) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func newMockTreeManager(spaceId string) *mockTreeManager {
 	return &mockTreeManager{
 		spaceId:    spaceId,

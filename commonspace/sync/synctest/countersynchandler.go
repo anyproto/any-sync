@@ -8,6 +8,7 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/util/multiqueue"
 )
@@ -17,6 +18,11 @@ type CounterSyncHandler struct {
 	requestHandler *CounterRequestHandler
 	requestSender  *CounterRequestSender
 	updateHandler  *CounterUpdateHandler
+}
+
+func (c *CounterSyncHandler) HandleDeprecatedObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (c *CounterSyncHandler) ApplyRequest(ctx context.Context, rq syncdeps.Request, requestSender syncdeps.RequestSender) error {

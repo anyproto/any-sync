@@ -5,9 +5,11 @@ import (
 	"errors"
 
 	"github.com/gogo/protobuf/proto"
+	"go.uber.org/zap"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
@@ -73,6 +75,54 @@ func (s *syncAclHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syn
 		return nil, err
 	}
 	return s.syncClient.CreateFullSyncRequest(peerId, s.aclList), nil
+}
+
+func (s *syncAclHandler) HandleDeprecatedRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
+	syncMsg := &consensusproto.LogSyncMessage{}
+	err = proto.Unmarshal(req.Payload, syncMsg)
+	if err != nil {
+		return nil, err
+	}
+	request := syncMsg.GetContent().GetFullSyncRequest()
+	if request == nil {
+		return nil, ErrUnexpectedRequestType
+	}
+	s.aclList.Lock()
+	root := s.aclList.Root()
+	head := s.aclList.Head().Id
+	prepareResponse := func(records []*consensusproto.RawRecordWithId) (*spacesyncproto.ObjectSyncMessage, error) {
+		logResp := consensusproto.WrapFullResponse(&consensusproto.LogFullSyncResponse{
+			Head:    head,
+			Records: records,
+		}, root)
+		marshalled, err := proto.Marshal(logResp)
+		if err != nil {
+			return nil, err
+		}
+		return &spacesyncproto.ObjectSyncMessage{
+			Payload:  marshalled,
+			ObjectId: req.ObjectId,
+			SpaceId:  s.spaceId,
+		}, nil
+	}
+	if !s.aclList.HasHead(request.Head) {
+		if request.Records != nil {
+			err = s.aclList.AddRawRecords(request.Records)
+			if err != nil {
+				log.Warn("failed to add records", zap.Error(err))
+			}
+		}
+		s.aclList.Unlock()
+		return prepareResponse(nil)
+	}
+	recs, err := s.aclList.RecordsAfter(ctx, request.Head)
+	if err != nil {
+		s.aclList.Unlock()
+		return nil, err
+	}
+	head = s.aclList.Head().Id
+	s.aclList.Unlock()
+	return prepareResponse(recs)
 }
 
 func (s *syncAclHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, send func(resp proto.Message) error) (syncdeps.Request, error) {
