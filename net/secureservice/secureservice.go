@@ -29,8 +29,8 @@ var (
 	// ProtoVersion 2 - acl compatible version
 	// ProtoVersion 3 - acl with breaking changes / multiplayer
 	// ProtoVersion 4 - new sync compatible version
-	NewSyncCompatibleVersion = uint32(4)
-	ProtoVersion             = uint32(5)
+	NewSyncCompatibleVersion = uint32(2)
+	ProtoVersion             = uint32(3)
 )
 
 var (
