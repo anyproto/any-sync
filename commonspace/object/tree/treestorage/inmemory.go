@@ -19,6 +19,10 @@ type InMemoryTreeStorage struct {
 	sync.RWMutex
 }
 
+func (t *InMemoryTreeStorage) GetAppendRawChange(ctx context.Context, buf []byte, id string) (*treechangeproto.RawTreeChangeWithId, error) {
+	return t.GetRawChange(ctx, id)
+}
+
 func (t *InMemoryTreeStorage) SetReturnErrorOnAdd(err error) {
 	t.addErr = err
 }

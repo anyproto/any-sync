@@ -152,9 +152,9 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		s.tree.Unlock()
 		return nil, err
 	}
+	s.tree.Unlock()
 	if slice.UnsortedEquals(curHeads, request.Heads) {
 		resp := producer.EmptyResponse()
-		s.tree.Unlock()
 		protoResp, err := resp.ProtoMessage()
 		if err != nil {
 			return nil, err
@@ -163,7 +163,6 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 	}
 	for {
 		batch, err := producer.NewResponse(batchSize)
-		s.tree.Unlock()
 		if err != nil {
 			return nil, err
 		}
@@ -182,7 +181,6 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		if err != nil {
 			return nil, err
 		}
-		s.tree.Lock()
 		curHeads = s.tree.Heads()
 	}
 	if !slice.UnsortedEquals(curHeads, request.Heads) {

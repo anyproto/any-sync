@@ -13,6 +13,7 @@ type rawChangeLoader struct {
 	treeStorage       treestorage.TreeStorage
 	changeBuilder     ChangeBuilder
 	alwaysFromStorage bool
+	buf               []byte
 
 	// buffers
 	idStack []string
@@ -253,6 +254,35 @@ func (r *rawChangeLoader) loadEntry(id string) (entry rawCacheEntry, err error) 
 		rawChange: rawChange,
 		position:  -1,
 		size:      len(rawChange.RawChange),
+	}
+	return
+}
+
+func (r *rawChangeLoader) loadRaw(id string) (ch *treechangeproto.RawTreeChangeWithId, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	return r.treeStorage.GetRawChange(ctx, id)
+}
+
+func (r *rawChangeLoader) loadAppendEntry(id string) (entry rawCacheEntry, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	rawChange, err := r.treeStorage.GetAppendRawChange(ctx, r.buf[:0], id)
+	if err != nil {
+		return
+	}
+	size := len(rawChange.RawChange)
+
+	change, err := r.changeBuilder.Unmarshall(rawChange, false)
+	if err != nil {
+		return
+	}
+	entry = rawCacheEntry{
+		change:   change,
+		position: -1,
+		size:     size,
 	}
 	return
 }

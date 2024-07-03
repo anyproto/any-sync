@@ -61,7 +61,13 @@ func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 			return false
 		}
 		curSize += rawEntry.size
-		batch.Batch = append(batch.Batch, rawEntry.rawChange)
+
+		var rawCh *treechangeproto.RawTreeChangeWithId
+		rawCh, err = l.loader.loadRaw(c.Id)
+		if err != nil {
+			return false
+		}
+		batch.Batch = append(batch.Batch, rawCh)
 		batch.Heads = slice.DiscardFromSlice(batch.Heads, func(s string) bool {
 			return slices.Contains(c.PreviousIds, s)
 		})
@@ -75,13 +81,13 @@ func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 func (l *loadIterator) load(commonSnapshot string, heads, breakpoints []string) (err error) {
 	existingBreakpoints := make([]string, 0, len(breakpoints))
 	for _, b := range breakpoints {
-		_, err := l.loader.loadEntry(b)
+		_, err := l.loader.loadAppendEntry(b)
 		if err != nil {
 			continue
 		}
 		existingBreakpoints = append(existingBreakpoints, b)
 	}
-	loadedCs, err := l.loader.loadEntry(commonSnapshot)
+	loadedCs, err := l.loader.loadAppendEntry(commonSnapshot)
 	if err != nil {
 		return err
 	}
@@ -107,7 +113,7 @@ func (l *loadIterator) load(commonSnapshot string, heads, breakpoints []string) 
 				continue
 			}
 			if !exists {
-				entry, err = l.loader.loadEntry(id)
+				entry, err = l.loader.loadAppendEntry(id)
 				if err != nil {
 					return
 				}

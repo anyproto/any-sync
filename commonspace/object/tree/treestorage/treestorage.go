@@ -4,6 +4,7 @@ package treestorage
 import (
 	"context"
 	"errors"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 )
 
@@ -34,6 +35,7 @@ type TreeStorage interface {
 	AddRawChangesSetHeads(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error
 
 	GetRawChange(ctx context.Context, id string) (*treechangeproto.RawTreeChangeWithId, error)
+	GetAppendRawChange(ctx context.Context, buf []byte, id string) (*treechangeproto.RawTreeChangeWithId, error)
 	HasChange(ctx context.Context, id string) (bool, error)
 	Delete() error
 }
