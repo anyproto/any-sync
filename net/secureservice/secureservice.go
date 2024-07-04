@@ -34,7 +34,7 @@ var (
 )
 
 var (
-	compatibleVersions = []uint32{NewSyncCompatibleVersion, ProtoVersion}
+	compatibleVersions = []uint32{2, ProtoVersion}
 )
 
 func New() SecureService {
