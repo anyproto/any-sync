@@ -32,6 +32,7 @@ type StreamResponse struct {
 type requestManager struct {
 	requestPool   RequestPool
 	incomingGuard *guard
+	limit         *Limit
 	handler       syncdeps.SyncHandler
 	metric        syncdeps.QueueSizeUpdater
 }
@@ -39,8 +40,9 @@ type requestManager struct {
 func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUpdater) RequestManager {
 	return &requestManager{
 		requestPool:   NewRequestPool(),
+		limit:         NewLimit(10),
 		handler:       handler,
-		incomingGuard: newGuard(1000),
+		incomingGuard: newGuard(0),
 		metric:        metric,
 	}
 }
@@ -96,12 +98,14 @@ func (r *requestManager) HandleDeprecatedObjectSync(ctx context.Context, req *sp
 
 func (r *requestManager) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, stream drpc.Stream) error {
 	size := rq.MsgSize()
-	r.metric.UpdateQueueSize(size, syncdeps.MsgTypeIncomingRequest, true)
-	defer r.metric.UpdateQueueSize(size, syncdeps.MsgTypeIncomingRequest, false)
 	if !r.incomingGuard.TryTake(fullId(rq.PeerId(), rq.ObjectId())) {
 		return nil
 	}
 	defer r.incomingGuard.Release(fullId(rq.PeerId(), rq.ObjectId()))
+	r.metric.UpdateQueueSize(size, syncdeps.MsgTypeIncomingRequest, true)
+	defer r.metric.UpdateQueueSize(size, syncdeps.MsgTypeIncomingRequest, false)
+	r.limit.Take(rq.PeerId())
+	defer r.limit.Release(rq.PeerId())
 	newRq, err := r.handler.HandleStreamRequest(ctx, rq, r.metric, func(resp proto.Message) error {
 		return stream.MsgSend(resp, streampool.EncodingProto)
 	})
