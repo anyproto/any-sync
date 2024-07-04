@@ -102,10 +102,12 @@ func (r *requestManager) HandleStreamRequest(ctx context.Context, rq syncdeps.Re
 		return nil
 	}
 	defer r.incomingGuard.Release(fullId(rq.PeerId(), rq.ObjectId()))
+	if !r.limit.Take(rq.PeerId()) {
+		return nil
+	}
+	defer r.limit.Release(rq.PeerId())
 	r.metric.UpdateQueueSize(size, syncdeps.MsgTypeIncomingRequest, true)
 	defer r.metric.UpdateQueueSize(size, syncdeps.MsgTypeIncomingRequest, false)
-	r.limit.Take(rq.PeerId())
-	defer r.limit.Release(rq.PeerId())
 	newRq, err := r.handler.HandleStreamRequest(ctx, rq, r.metric, func(resp proto.Message) error {
 		return stream.MsgSend(resp, streampool.EncodingProto)
 	})
