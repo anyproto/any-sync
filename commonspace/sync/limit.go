@@ -32,6 +32,6 @@ func (l *Limit) Release(id string) {
 	defer l.cond.L.Unlock()
 	if l.tokens[id] > 0 {
 		l.tokens[id]--
-		l.cond.Broadcast()
+		l.cond.Signal()
 	}
 }
