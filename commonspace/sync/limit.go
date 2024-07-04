@@ -8,7 +8,6 @@ type Limit struct {
 	max    int
 	tokens map[string]int
 	cond   *sync.Cond
-	mutex  sync.Mutex
 }
 
 func NewLimit(max int) *Limit {
@@ -20,22 +19,19 @@ func NewLimit(max int) *Limit {
 }
 
 func (l *Limit) Take(id string) {
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
-
+	l.cond.L.Lock()
+	defer l.cond.L.Unlock()
 	for l.tokens[id] >= l.max {
 		l.cond.Wait()
 	}
-
 	l.tokens[id]++
 }
 
 func (l *Limit) Release(id string) {
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
-
+	l.cond.L.Lock()
+	defer l.cond.L.Unlock()
 	if l.tokens[id] > 0 {
 		l.tokens[id]--
-		l.cond.Signal()
+		l.cond.Broadcast()
 	}
 }
