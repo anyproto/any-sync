@@ -199,7 +199,9 @@ func (c *oCache) remove(ctx context.Context, e *entry) (ok bool, err error) {
 	_, curState := e.setClosing(true)
 	if curState == entryStateClosing {
 		ok = true
-		err = e.value.Close()
+		if e.value != nil {
+			err = e.value.Close()
+		}
 		c.mu.Lock()
 		e.setClosed()
 		delete(c.data, e.id)
