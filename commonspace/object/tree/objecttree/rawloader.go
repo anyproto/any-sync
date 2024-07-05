@@ -276,7 +276,7 @@ func (r *rawChangeLoader) loadAppendEntry(id string) (entry rawCacheEntry, err e
 	size := len(rawChange.RawChange)
 	r.buf = rawChange.RawChange
 
-	change, err := r.changeBuilder.Unmarshall(rawChange, false)
+	change, err := r.changeBuilder.UnmarshallReduced(rawChange)
 	if err != nil {
 		return
 	}

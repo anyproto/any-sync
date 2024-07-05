@@ -51,6 +51,7 @@ func (c *nonVerifiableChangeBuilder) Unmarshall(rawChange *treechangeproto.RawTr
 
 type ChangeBuilder interface {
 	Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error)
+	UnmarshallReduced(rawIdChange *treechangeproto.RawTreeChangeWithId) (ch *Change, err error)
 	Build(payload BuilderContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
 	BuildRoot(payload InitialContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
 	BuildDerivedRoot(payload InitialDerivedContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
@@ -107,6 +108,26 @@ func (c *changeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWit
 			err = ErrIncorrectSignature
 			return
 		}
+	}
+	return
+}
+
+func (c *changeBuilder) UnmarshallReduced(rawIdChange *treechangeproto.RawTreeChangeWithId) (ch *Change, err error) {
+	if rawIdChange.GetRawChange() == nil {
+		err = ErrEmptyChange
+		return
+	}
+
+	c.rawTreeCh.Signature = c.rawTreeCh.Signature[:0]
+	c.rawTreeCh.Payload = c.rawTreeCh.Payload[:0]
+	raw := c.rawTreeCh
+	err = proto.Unmarshal(rawIdChange.GetRawChange(), raw)
+	if err != nil {
+		return
+	}
+	ch, err = c.unmarshallReducedRawChange(raw, rawIdChange.Id)
+	if err != nil {
+		return
 	}
 	return
 }
@@ -305,6 +326,36 @@ func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, 
 		return
 	}
 	ch = c.newChange(id, key, unmarshalled, raw.Signature)
+	return
+}
+
+func (c *changeBuilder) unmarshallReducedRawChange(raw *treechangeproto.RawTreeChange, id string) (ch *Change, err error) {
+	if c.isRoot(id) {
+		unmarshalled := &treechangeproto.RootChange{}
+		err = proto.Unmarshal(raw.Payload, unmarshalled)
+		if err != nil {
+			return
+		}
+		// key will be empty for derived roots
+		var key crypto.PubKey
+		if !unmarshalled.IsDerived {
+			key, err = c.keys.PubKeyFromProto(unmarshalled.Identity)
+			if err != nil {
+				return
+			}
+		}
+		ch = NewChangeFromRoot(id, key, unmarshalled, raw.Signature, unmarshalled.IsDerived)
+		return
+	}
+	unmarshalled := &treechangeproto.ReducedTreeChange{}
+	err = proto.Unmarshal(raw.Payload, unmarshalled)
+	if err != nil {
+		return
+	}
+	ch = &Change{
+		Id:          id,
+		PreviousIds: unmarshalled.TreeHeadIds,
+	}
 	return
 }
 
