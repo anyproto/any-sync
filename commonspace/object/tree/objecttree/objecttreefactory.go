@@ -65,7 +65,7 @@ func emptyDataTreeDeps(
 	rootChange *treechangeproto.RawTreeChangeWithId,
 	treeStorage treestorage.TreeStorage,
 	aclList list.AclList) objectTreeDeps {
-	changeBuilder := NewChangeBuilder(crypto.NewKeyStorage(), rootChange)
+	changeBuilder := NewEmptyDataChangeBuilder(crypto.NewKeyStorage(), rootChange)
 	treeBuilder := newTreeBuilder(false, treeStorage, changeBuilder)
 	return objectTreeDeps{
 		changeBuilder:   changeBuilder,
@@ -122,7 +122,7 @@ func BuildTestableTree(treeStorage treestorage.TreeStorage, aclList list.AclList
 func BuildEmptyDataTestableTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
 	root, _ := treeStorage.Root()
 	changeBuilder := &nonVerifiableChangeBuilder{
-		ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), root),
+		ChangeBuilder: NewEmptyDataChangeBuilder(newMockKeyStorage(), root),
 	}
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,

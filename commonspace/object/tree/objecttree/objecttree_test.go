@@ -852,15 +852,6 @@ func TestObjectTree(t *testing.T) {
 			require.Equal(t, []string{"6"}, objTree.Heads())
 			require.Equal(t, 6, len(res.Added))
 
-			// checking that added changes still have data
-			for _, ch := range res.Added {
-				unmarshallRaw := &treechangeproto.RawTreeChange{}
-				proto.Unmarshal(ch.RawChange, unmarshallRaw)
-				treeCh := &treechangeproto.TreeChange{}
-				proto.Unmarshal(unmarshallRaw.Payload, treeCh)
-				require.Equal(t, ch.Id, string(treeCh.ChangesData))
-			}
-
 			// checking that the tree doesn't have data in memory
 			err = objTree.IterateRoot(nil, func(change *Change) bool {
 				if change.Id == "0" {

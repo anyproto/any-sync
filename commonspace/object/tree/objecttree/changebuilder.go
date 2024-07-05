@@ -58,17 +58,19 @@ type ChangeBuilder interface {
 	Marshall(ch *Change) (*treechangeproto.RawTreeChangeWithId, error)
 }
 
-type newChangeFunc = func(id string, identity crypto.PubKey, ch *treechangeproto.TreeChange, signature []byte) *Change
-
 type changeBuilder struct {
 	rootChange *treechangeproto.RawTreeChangeWithId
 	keys       crypto.KeyStorage
 	rawTreeCh  *treechangeproto.RawTreeChange
-	newChange  newChangeFunc
+	hasData    bool
 }
 
 func NewChangeBuilder(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
-	return &changeBuilder{keys: keys, rootChange: rootChange, newChange: NewChange, rawTreeCh: &treechangeproto.RawTreeChange{}}
+	return &changeBuilder{keys: keys, rootChange: rootChange, hasData: true, rawTreeCh: &treechangeproto.RawTreeChange{}}
+}
+
+func NewEmptyDataChangeBuilder(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
+	return &changeBuilder{keys: keys, rootChange: rootChange, hasData: false, rawTreeCh: &treechangeproto.RawTreeChange{}}
 }
 
 func (c *changeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error) {
@@ -249,7 +251,19 @@ func (c *changeBuilder) Build(payload BuilderContent) (ch *Change, rawIdChange *
 	if err != nil {
 		return
 	}
-	ch = c.newChange(id, payload.PrivKey.GetPublic(), change, signature)
+	ch = &Change{
+		PreviousIds: change.TreeHeadIds,
+		AclHeadId:   change.AclHeadId,
+		Id:          id,
+		SnapshotId:  change.SnapshotBaseId,
+		Timestamp:   change.Timestamp,
+		ReadKeyId:   change.ReadKeyId,
+		Identity:    payload.PrivKey.GetPublic(),
+		Signature:   signature,
+		Data:        change.ChangesData,
+		DataType:    change.DataType,
+		IsSnapshot:  change.IsSnapshot,
+	}
 	rawIdChange = &treechangeproto.RawTreeChangeWithId{
 		RawChange: marshalledRawChange,
 		Id:        id,
@@ -316,16 +330,52 @@ func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, 
 		ch = NewChangeFromRoot(id, key, unmarshalled, raw.Signature, unmarshalled.IsDerived)
 		return
 	}
-	unmarshalled := &treechangeproto.TreeChange{}
-	err = proto.Unmarshal(raw.Payload, unmarshalled)
-	if err != nil {
-		return
+	if !c.hasData {
+		change := &treechangeproto.NoDataTreeChange{}
+		err = proto.Unmarshal(raw.Payload, change)
+		if err != nil {
+			return
+		}
+		key, err = c.keys.PubKeyFromProto(change.Identity)
+		if err != nil {
+			return
+		}
+		ch = &Change{
+			PreviousIds: change.TreeHeadIds,
+			AclHeadId:   change.AclHeadId,
+			Id:          id,
+			SnapshotId:  change.SnapshotBaseId,
+			Timestamp:   change.Timestamp,
+			ReadKeyId:   change.ReadKeyId,
+			Identity:    key,
+			Signature:   raw.Signature,
+			DataType:    change.DataType,
+			IsSnapshot:  change.IsSnapshot,
+		}
+	} else {
+		change := &treechangeproto.TreeChange{}
+		err = proto.Unmarshal(raw.Payload, change)
+		if err != nil {
+			return
+		}
+		key, err = c.keys.PubKeyFromProto(change.Identity)
+		if err != nil {
+			return
+		}
+		ch = &Change{
+			PreviousIds: change.TreeHeadIds,
+			AclHeadId:   change.AclHeadId,
+			Id:          id,
+			SnapshotId:  change.SnapshotBaseId,
+			Timestamp:   change.Timestamp,
+			ReadKeyId:   change.ReadKeyId,
+			Data:        change.ChangesData,
+			Identity:    key,
+			Signature:   raw.Signature,
+			DataType:    change.DataType,
+			IsSnapshot:  change.IsSnapshot,
+		}
 	}
-	key, err = c.keys.PubKeyFromProto(unmarshalled.Identity)
-	if err != nil {
-		return
-	}
-	ch = c.newChange(id, key, unmarshalled, raw.Signature)
 	return
 }
 
