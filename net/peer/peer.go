@@ -265,6 +265,7 @@ func (p *peer) TryClose(objectTTL time.Duration) (res bool, err error) {
 		objectTTL = time.Duration(ttl) * time.Second
 	}
 	aliveCount := p.gc(objectTTL)
+	log.Debug("peer gc", zap.String("peerId", p.id), zap.Int("aliveCount", aliveCount))
 	if aliveCount == 0 && p.created.Add(time.Minute).Before(time.Now()) {
 		return true, p.Close()
 	}

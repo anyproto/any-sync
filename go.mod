@@ -101,4 +101,4 @@ require (
 	lukechampine.com/blake3 v1.2.1 // indirect
 )
 
-replace github.com/gogo/protobuf => github.com/anyproto/protobuf v1.3.3-0.20240715193215-a93dfa8960ec
+replace github.com/gogo/protobuf => github.com/anyproto/protobuf v1.3.3-0.20240715205950-2af411f17dfa

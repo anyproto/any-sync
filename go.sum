@@ -12,8 +12,8 @@ github.com/anyproto/go-slip10 v1.0.0 h1:uAEtSuudR3jJBOfkOXf3bErxVoxbuKwdoJN55M1i
 github.com/anyproto/go-slip10 v1.0.0/go.mod h1:BCmIlM1KB8wX6K4/8pOvxPl9oVKfEvZ5vsmO5rkK6vg=
 github.com/anyproto/go-slip21 v1.0.0 h1:CI7lUqTIwmPOEGVAj4jyNLoICvueh++0U2HoAi3m2ZY=
 github.com/anyproto/go-slip21 v1.0.0/go.mod h1:gbIJt7HAdr5DuT4f2pFTKCBSUWYsm/fysHBNqgsuxT0=
-github.com/anyproto/protobuf v1.3.3-0.20240715193215-a93dfa8960ec h1:rgT7SEusQCNhehj4r9De3fx6rIpNsXDpH4J4OFbReWQ=
-github.com/anyproto/protobuf v1.3.3-0.20240715193215-a93dfa8960ec/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69NZV8Q=
+github.com/anyproto/protobuf v1.3.3-0.20240715205950-2af411f17dfa h1:uQImj4hK8HwkOcxhy/88/+jQpH0n2jX2Iryz6vomhM0=
+github.com/anyproto/protobuf v1.3.3-0.20240715205950-2af411f17dfa/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69NZV8Q=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/benbjohnson/clock v1.3.5 h1:VvXlSJBzZpA/zum6Sj74hxwYI2DIxRWuNIoXAzHZz5o=
 github.com/benbjohnson/clock v1.3.5/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=

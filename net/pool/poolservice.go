@@ -2,14 +2,16 @@ package pool
 
 import (
 	"context"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
-	"time"
 )
 
 const (
@@ -49,8 +51,8 @@ func (p *poolService) Init(a *app.App) (err error) {
 			return p.dialer.Dial(ctx, id)
 		},
 		ocache.WithLogger(log.Sugar()),
-		ocache.WithGCPeriod(time.Minute/2),
-		ocache.WithTTL(time.Minute),
+		ocache.WithGCPeriod(time.Second*5),
+		ocache.WithTTL(time.Second*10),
 		ocache.WithPrometheus(p.metricReg, "netpool", "outgoing"),
 	)
 	p.pool.incoming = ocache.New(
@@ -58,8 +60,8 @@ func (p *poolService) Init(a *app.App) (err error) {
 			return nil, ocache.ErrNotExists
 		},
 		ocache.WithLogger(log.Sugar()),
-		ocache.WithGCPeriod(time.Minute/2),
-		ocache.WithTTL(time.Minute),
+		ocache.WithGCPeriod(time.Second*5),
+		ocache.WithTTL(time.Second*10),
 		ocache.WithPrometheus(p.metricReg, "netpool", "incoming"),
 	)
 	return nil
