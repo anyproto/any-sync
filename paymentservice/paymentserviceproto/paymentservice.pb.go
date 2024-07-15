@@ -301,6 +301,14 @@ func (m *GetSubscriptionRequest) XXX_Marshal(b []byte, deterministic bool) ([]by
 		return b[:n], nil
 	}
 }
+func (m *GetSubscriptionRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *GetSubscriptionRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetSubscriptionRequest.Merge(m, src)
 }
@@ -347,6 +355,14 @@ func (m *GetSubscriptionRequestSigned) XXX_Marshal(b []byte, deterministic bool)
 		}
 		return b[:n], nil
 	}
+}
+func (m *GetSubscriptionRequestSigned) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *GetSubscriptionRequestSigned) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetSubscriptionRequestSigned.Merge(m, src)
@@ -408,6 +424,14 @@ func (m *GetSubscriptionResponse) XXX_Marshal(b []byte, deterministic bool) ([]b
 		}
 		return b[:n], nil
 	}
+}
+func (m *GetSubscriptionResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *GetSubscriptionResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetSubscriptionResponse.Merge(m, src)
@@ -524,6 +548,14 @@ func (m *BuySubscriptionRequest) XXX_Marshal(b []byte, deterministic bool) ([]by
 		return b[:n], nil
 	}
 }
+func (m *BuySubscriptionRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *BuySubscriptionRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BuySubscriptionRequest.Merge(m, src)
 }
@@ -606,6 +638,14 @@ func (m *BuySubscriptionRequestSigned) XXX_Marshal(b []byte, deterministic bool)
 		return b[:n], nil
 	}
 }
+func (m *BuySubscriptionRequestSigned) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *BuySubscriptionRequestSigned) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BuySubscriptionRequestSigned.Merge(m, src)
 }
@@ -660,6 +700,14 @@ func (m *BuySubscriptionResponse) XXX_Marshal(b []byte, deterministic bool) ([]b
 		}
 		return b[:n], nil
 	}
+}
+func (m *BuySubscriptionResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *BuySubscriptionResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BuySubscriptionResponse.Merge(m, src)
@@ -721,6 +769,14 @@ func (m *FinalizeSubscriptionRequest) XXX_Marshal(b []byte, deterministic bool) 
 		return b[:n], nil
 	}
 }
+func (m *FinalizeSubscriptionRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *FinalizeSubscriptionRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_FinalizeSubscriptionRequest.Merge(m, src)
 }
@@ -778,6 +834,14 @@ func (m *FinalizeSubscriptionResponse) XXX_Marshal(b []byte, deterministic bool)
 		return b[:n], nil
 	}
 }
+func (m *FinalizeSubscriptionResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *FinalizeSubscriptionResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_FinalizeSubscriptionResponse.Merge(m, src)
 }
@@ -817,6 +881,14 @@ func (m *FinalizeSubscriptionRequestSigned) XXX_Marshal(b []byte, deterministic 
 		}
 		return b[:n], nil
 	}
+}
+func (m *FinalizeSubscriptionRequestSigned) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *FinalizeSubscriptionRequestSigned) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_FinalizeSubscriptionRequestSigned.Merge(m, src)
@@ -871,6 +943,14 @@ func (m *GetSubscriptionPortalLinkRequest) XXX_Marshal(b []byte, deterministic b
 		return b[:n], nil
 	}
 }
+func (m *GetSubscriptionPortalLinkRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *GetSubscriptionPortalLinkRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetSubscriptionPortalLinkRequest.Merge(m, src)
 }
@@ -919,6 +999,14 @@ func (m *GetSubscriptionPortalLinkRequestSigned) XXX_Marshal(b []byte, determini
 		}
 		return b[:n], nil
 	}
+}
+func (m *GetSubscriptionPortalLinkRequestSigned) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *GetSubscriptionPortalLinkRequestSigned) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetSubscriptionPortalLinkRequestSigned.Merge(m, src)
@@ -971,6 +1059,14 @@ func (m *GetSubscriptionPortalLinkResponse) XXX_Marshal(b []byte, deterministic 
 		return b[:n], nil
 	}
 }
+func (m *GetSubscriptionPortalLinkResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *GetSubscriptionPortalLinkResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetSubscriptionPortalLinkResponse.Merge(m, src)
 }
@@ -1018,6 +1114,14 @@ func (m *GetVerificationEmailRequest) XXX_Marshal(b []byte, deterministic bool) 
 		}
 		return b[:n], nil
 	}
+}
+func (m *GetVerificationEmailRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *GetVerificationEmailRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetVerificationEmailRequest.Merge(m, src)
@@ -1076,6 +1180,14 @@ func (m *GetVerificationEmailResponse) XXX_Marshal(b []byte, deterministic bool)
 		return b[:n], nil
 	}
 }
+func (m *GetVerificationEmailResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *GetVerificationEmailResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetVerificationEmailResponse.Merge(m, src)
 }
@@ -1115,6 +1227,14 @@ func (m *GetVerificationEmailRequestSigned) XXX_Marshal(b []byte, deterministic 
 		}
 		return b[:n], nil
 	}
+}
+func (m *GetVerificationEmailRequestSigned) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *GetVerificationEmailRequestSigned) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetVerificationEmailRequestSigned.Merge(m, src)
@@ -1176,6 +1296,14 @@ func (m *VerifyEmailRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return b[:n], nil
 	}
 }
+func (m *VerifyEmailRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *VerifyEmailRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_VerifyEmailRequest.Merge(m, src)
 }
@@ -1234,6 +1362,14 @@ func (m *VerifyEmailResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return b[:n], nil
 	}
 }
+func (m *VerifyEmailResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *VerifyEmailResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_VerifyEmailResponse.Merge(m, src)
 }
@@ -1280,6 +1416,14 @@ func (m *VerifyEmailRequestSigned) XXX_Marshal(b []byte, deterministic bool) ([]
 		}
 		return b[:n], nil
 	}
+}
+func (m *VerifyEmailRequestSigned) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *VerifyEmailRequestSigned) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_VerifyEmailRequestSigned.Merge(m, src)
@@ -1333,6 +1477,14 @@ func (m *IsNameValidRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return b[:n], nil
 	}
 }
+func (m *IsNameValidRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *IsNameValidRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_IsNameValidRequest.Merge(m, src)
 }
@@ -1384,6 +1536,14 @@ func (m *IsNameValidResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		}
 		return b[:n], nil
 	}
+}
+func (m *IsNameValidResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *IsNameValidResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_IsNameValidResponse.Merge(m, src)
@@ -1440,6 +1600,14 @@ func (m *VerifyAppStoreReceiptRequest) XXX_Marshal(b []byte, deterministic bool)
 		return b[:n], nil
 	}
 }
+func (m *VerifyAppStoreReceiptRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *VerifyAppStoreReceiptRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_VerifyAppStoreReceiptRequest.Merge(m, src)
 }
@@ -1494,6 +1662,14 @@ func (m *VerifyAppStoreReceiptRequestSigned) XXX_Marshal(b []byte, deterministic
 		return b[:n], nil
 	}
 }
+func (m *VerifyAppStoreReceiptRequestSigned) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *VerifyAppStoreReceiptRequestSigned) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_VerifyAppStoreReceiptRequestSigned.Merge(m, src)
 }
@@ -1543,6 +1719,14 @@ func (m *VerifyAppStoreReceiptResponse) XXX_Marshal(b []byte, deterministic bool
 		}
 		return b[:n], nil
 	}
+}
+func (m *VerifyAppStoreReceiptResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *VerifyAppStoreReceiptResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_VerifyAppStoreReceiptResponse.Merge(m, src)

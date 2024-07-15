@@ -48,6 +48,14 @@ func (m *CounterIncrease) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
+func (m *CounterIncrease) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *CounterIncrease) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_CounterIncrease.Merge(m, src)
 }
@@ -99,6 +107,14 @@ func (m *CounterRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		}
 		return b[:n], nil
 	}
+}
+func (m *CounterRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *CounterRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_CounterRequest.Merge(m, src)

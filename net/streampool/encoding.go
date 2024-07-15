@@ -42,6 +42,21 @@ func (p protoEncoding) Marshal(msg drpc.Message) (res []byte, err error) {
 	return proto.Marshal(pmsg)
 }
 
+func (p protoEncoding) MarshalAppend(buf []byte, msg drpc.Message) (res []byte, err error) {
+	pmsg, ok := msg.(proto.Message)
+	if !ok {
+		if pmg, ok := msg.(ProtoMessageGettable); ok {
+			pmsg, err = pmg.ProtoMessage()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, errNotAProtoMsg
+		}
+	}
+	return proto.MarshalAppend(buf, pmsg)
+}
+
 func (p protoEncoding) Unmarshal(buf []byte, msg drpc.Message) (err error) {
 	var pms ProtoMessageSettable
 	pmsg, ok := msg.(proto.Message)

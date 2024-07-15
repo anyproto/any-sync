@@ -94,6 +94,14 @@ func (m *RootChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
+func (m *RootChange) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *RootChange) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_RootChange.Merge(m, src)
 }
@@ -204,6 +212,14 @@ func (m *TreeChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		}
 		return b[:n], nil
 	}
+}
+func (m *TreeChange) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *TreeChange) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TreeChange.Merge(m, src)
@@ -321,6 +337,14 @@ func (m *NoDataTreeChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
+func (m *NoDataTreeChange) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *NoDataTreeChange) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_NoDataTreeChange.Merge(m, src)
 }
@@ -415,6 +439,14 @@ func (m *ReducedTreeChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
+func (m *ReducedTreeChange) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *ReducedTreeChange) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_ReducedTreeChange.Merge(m, src)
 }
@@ -462,6 +494,14 @@ func (m *RawTreeChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		}
 		return b[:n], nil
 	}
+}
+func (m *RawTreeChange) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *RawTreeChange) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_RawTreeChange.Merge(m, src)
@@ -518,6 +558,14 @@ func (m *RawTreeChangeWithId) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return b[:n], nil
 	}
 }
+func (m *RawTreeChangeWithId) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *RawTreeChangeWithId) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_RawTreeChangeWithId.Merge(m, src)
 }
@@ -570,6 +618,14 @@ func (m *TreeSyncMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
+func (m *TreeSyncMessage) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *TreeSyncMessage) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TreeSyncMessage.Merge(m, src)
 }
@@ -604,7 +660,7 @@ type TreeSyncContentValue struct {
 	//	*TreeSyncContentValue_FullSyncRequest
 	//	*TreeSyncContentValue_FullSyncResponse
 	//	*TreeSyncContentValue_ErrorResponse
-	Value isTreeSyncContentValue_Value `protobuf_oneof:"value"`
+	Value isTreeSyncContentValueValue `protobuf_oneof:"value"`
 }
 
 func (m *TreeSyncContentValue) Reset()         { *m = TreeSyncContentValue{} }
@@ -628,6 +684,14 @@ func (m *TreeSyncContentValue) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
+func (m *TreeSyncContentValue) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *TreeSyncContentValue) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TreeSyncContentValue.Merge(m, src)
 }
@@ -640,8 +704,8 @@ func (m *TreeSyncContentValue) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_TreeSyncContentValue proto.InternalMessageInfo
 
-type isTreeSyncContentValue_Value interface {
-	isTreeSyncContentValue_Value()
+type isTreeSyncContentValueValue interface {
+	isTreeSyncContentValueValue()
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
@@ -659,12 +723,12 @@ type TreeSyncContentValue_ErrorResponse struct {
 	ErrorResponse *TreeErrorResponse `protobuf:"bytes,4,opt,name=errorResponse,proto3,oneof" json:"errorResponse,omitempty"`
 }
 
-func (*TreeSyncContentValue_HeadUpdate) isTreeSyncContentValue_Value()       {}
-func (*TreeSyncContentValue_FullSyncRequest) isTreeSyncContentValue_Value()  {}
-func (*TreeSyncContentValue_FullSyncResponse) isTreeSyncContentValue_Value() {}
-func (*TreeSyncContentValue_ErrorResponse) isTreeSyncContentValue_Value()    {}
+func (*TreeSyncContentValue_HeadUpdate) isTreeSyncContentValueValue()       {}
+func (*TreeSyncContentValue_FullSyncRequest) isTreeSyncContentValueValue()  {}
+func (*TreeSyncContentValue_FullSyncResponse) isTreeSyncContentValueValue() {}
+func (*TreeSyncContentValue_ErrorResponse) isTreeSyncContentValueValue()    {}
 
-func (m *TreeSyncContentValue) GetValue() isTreeSyncContentValue_Value {
+func (m *TreeSyncContentValue) GetValue() isTreeSyncContentValueValue {
 	if m != nil {
 		return m.Value
 	}
@@ -737,6 +801,14 @@ func (m *TreeHeadUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return b[:n], nil
 	}
 }
+func (m *TreeHeadUpdate) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *TreeHeadUpdate) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TreeHeadUpdate.Merge(m, src)
 }
@@ -797,6 +869,14 @@ func (m *TreeFullSyncRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		}
 		return b[:n], nil
 	}
+}
+func (m *TreeFullSyncRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *TreeFullSyncRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TreeFullSyncRequest.Merge(m, src)
@@ -859,6 +939,14 @@ func (m *TreeFullSyncResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
+func (m *TreeFullSyncResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *TreeFullSyncResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TreeFullSyncResponse.Merge(m, src)
 }
@@ -919,6 +1007,14 @@ func (m *TreeErrorResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
+func (m *TreeErrorResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *TreeErrorResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TreeErrorResponse.Merge(m, src)
 }
@@ -971,6 +1067,14 @@ func (m *TreeChangeInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		}
 		return b[:n], nil
 	}
+}
+func (m *TreeChangeInfo) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *TreeChangeInfo) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TreeChangeInfo.Merge(m, src)

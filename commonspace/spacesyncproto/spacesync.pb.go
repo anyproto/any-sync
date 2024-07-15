@@ -149,6 +149,14 @@ func (m *HeadSyncRange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return b[:n], nil
 	}
 }
+func (m *HeadSyncRange) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *HeadSyncRange) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_HeadSyncRange.Merge(m, src)
 }
@@ -217,6 +225,14 @@ func (m *HeadSyncResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return b[:n], nil
 	}
 }
+func (m *HeadSyncResult) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *HeadSyncResult) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_HeadSyncResult.Merge(m, src)
 }
@@ -277,6 +293,14 @@ func (m *HeadSyncResultElement) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		return b[:n], nil
 	}
 }
+func (m *HeadSyncResultElement) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *HeadSyncResultElement) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_HeadSyncResultElement.Merge(m, src)
 }
@@ -330,6 +354,14 @@ func (m *HeadSyncRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		}
 		return b[:n], nil
 	}
+}
+func (m *HeadSyncRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *HeadSyncRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_HeadSyncRequest.Merge(m, src)
@@ -391,6 +423,14 @@ func (m *HeadSyncResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
+func (m *HeadSyncResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *HeadSyncResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_HeadSyncResponse.Merge(m, src)
 }
@@ -446,6 +486,14 @@ func (m *ObjectSyncMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		}
 		return b[:n], nil
 	}
+}
+func (m *ObjectSyncMessage) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *ObjectSyncMessage) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_ObjectSyncMessage.Merge(m, src)
@@ -521,6 +569,14 @@ func (m *SpacePushRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
+func (m *SpacePushRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *SpacePushRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SpacePushRequest.Merge(m, src)
 }
@@ -572,6 +628,14 @@ func (m *SpacePushResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
+func (m *SpacePushResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *SpacePushResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SpacePushResponse.Merge(m, src)
 }
@@ -609,6 +673,14 @@ func (m *SpacePullRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		}
 		return b[:n], nil
 	}
+}
+func (m *SpacePullRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *SpacePullRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SpacePullRequest.Merge(m, src)
@@ -654,6 +726,14 @@ func (m *SpacePullResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		}
 		return b[:n], nil
 	}
+}
+func (m *SpacePullResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *SpacePullResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SpacePullResponse.Merge(m, src)
@@ -703,6 +783,14 @@ func (m *SpacePayload) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		}
 		return b[:n], nil
 	}
+}
+func (m *SpacePayload) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *SpacePayload) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SpacePayload.Merge(m, src)
@@ -781,6 +869,14 @@ func (m *SpaceHeader) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		}
 		return b[:n], nil
 	}
+}
+func (m *SpaceHeader) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *SpaceHeader) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SpaceHeader.Merge(m, src)
@@ -863,6 +959,14 @@ func (m *RawSpaceHeader) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return b[:n], nil
 	}
 }
+func (m *RawSpaceHeader) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *RawSpaceHeader) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_RawSpaceHeader.Merge(m, src)
 }
@@ -916,6 +1020,14 @@ func (m *RawSpaceHeaderWithId) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
+func (m *RawSpaceHeaderWithId) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *RawSpaceHeaderWithId) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_RawSpaceHeaderWithId.Merge(m, src)
 }
@@ -948,7 +1060,7 @@ type SpaceSettingsContent struct {
 	//
 	//	*SpaceSettingsContent_ObjectDelete
 	//	*SpaceSettingsContent_SpaceDelete
-	Value isSpaceSettingsContent_Value `protobuf_oneof:"value"`
+	Value isSpaceSettingsContentValue `protobuf_oneof:"value"`
 }
 
 func (m *SpaceSettingsContent) Reset()         { *m = SpaceSettingsContent{} }
@@ -972,6 +1084,14 @@ func (m *SpaceSettingsContent) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
+func (m *SpaceSettingsContent) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *SpaceSettingsContent) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SpaceSettingsContent.Merge(m, src)
 }
@@ -984,8 +1104,8 @@ func (m *SpaceSettingsContent) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_SpaceSettingsContent proto.InternalMessageInfo
 
-type isSpaceSettingsContent_Value interface {
-	isSpaceSettingsContent_Value()
+type isSpaceSettingsContentValue interface {
+	isSpaceSettingsContentValue()
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
@@ -997,10 +1117,10 @@ type SpaceSettingsContent_SpaceDelete struct {
 	SpaceDelete *SpaceDelete `protobuf:"bytes,2,opt,name=spaceDelete,proto3,oneof" json:"spaceDelete,omitempty"`
 }
 
-func (*SpaceSettingsContent_ObjectDelete) isSpaceSettingsContent_Value() {}
-func (*SpaceSettingsContent_SpaceDelete) isSpaceSettingsContent_Value()  {}
+func (*SpaceSettingsContent_ObjectDelete) isSpaceSettingsContentValue() {}
+func (*SpaceSettingsContent_SpaceDelete) isSpaceSettingsContentValue()  {}
 
-func (m *SpaceSettingsContent) GetValue() isSpaceSettingsContent_Value {
+func (m *SpaceSettingsContent) GetValue() isSpaceSettingsContentValue {
 	if m != nil {
 		return m.Value
 	}
@@ -1055,6 +1175,14 @@ func (m *ObjectDelete) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return b[:n], nil
 	}
 }
+func (m *ObjectDelete) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *ObjectDelete) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_ObjectDelete.Merge(m, src)
 }
@@ -1099,6 +1227,14 @@ func (m *SpaceDelete) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		}
 		return b[:n], nil
 	}
+}
+func (m *SpaceDelete) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *SpaceDelete) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SpaceDelete.Merge(m, src)
@@ -1145,6 +1281,14 @@ func (m *SpaceSettingsSnapshot) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		}
 		return b[:n], nil
 	}
+}
+func (m *SpaceSettingsSnapshot) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *SpaceSettingsSnapshot) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SpaceSettingsSnapshot.Merge(m, src)
@@ -1199,6 +1343,14 @@ func (m *SettingsData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return b[:n], nil
 	}
 }
+func (m *SettingsData) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *SettingsData) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SettingsData.Merge(m, src)
 }
@@ -1250,6 +1402,14 @@ func (m *SpaceSubscription) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		}
 		return b[:n], nil
 	}
+}
+func (m *SpaceSubscription) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *SpaceSubscription) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SpaceSubscription.Merge(m, src)
@@ -1304,6 +1464,14 @@ func (m *AclAddRecordRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return b[:n], nil
 	}
 }
+func (m *AclAddRecordRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AclAddRecordRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAddRecordRequest.Merge(m, src)
 }
@@ -1356,6 +1524,14 @@ func (m *AclAddRecordResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		}
 		return b[:n], nil
 	}
+}
+func (m *AclAddRecordResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *AclAddRecordResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAddRecordResponse.Merge(m, src)
@@ -1411,6 +1587,14 @@ func (m *AclGetRecordsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
+func (m *AclGetRecordsRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AclGetRecordsRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclGetRecordsRequest.Merge(m, src)
 }
@@ -1462,6 +1646,14 @@ func (m *AclGetRecordsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		}
 		return b[:n], nil
 	}
+}
+func (m *AclGetRecordsResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *AclGetRecordsResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclGetRecordsResponse.Merge(m, src)

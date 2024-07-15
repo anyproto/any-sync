@@ -76,6 +76,14 @@ func (m *Key) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
+func (m *Key) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *Key) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Key.Merge(m, src)
 }

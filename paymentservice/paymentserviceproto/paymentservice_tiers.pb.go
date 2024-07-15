@@ -84,6 +84,14 @@ func (m *Feature) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
+func (m *Feature) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *Feature) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Feature.Merge(m, src)
 }
@@ -130,6 +138,14 @@ func (m *GetTiersRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		}
 		return b[:n], nil
 	}
+}
+func (m *GetTiersRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *GetTiersRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetTiersRequest.Merge(m, src)
@@ -184,6 +200,14 @@ func (m *GetTiersRequestSigned) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		}
 		return b[:n], nil
 	}
+}
+func (m *GetTiersRequestSigned) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *GetTiersRequestSigned) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetTiersRequestSigned.Merge(m, src)
@@ -273,6 +297,14 @@ func (m *TierData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		}
 		return b[:n], nil
 	}
+}
+func (m *TierData) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *TierData) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TierData.Merge(m, src)
@@ -444,6 +476,14 @@ func (m *GetTiersResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		}
 		return b[:n], nil
 	}
+}
+func (m *GetTiersResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *GetTiersResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetTiersResponse.Merge(m, src)
