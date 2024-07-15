@@ -51,8 +51,8 @@ func (p *poolService) Init(a *app.App) (err error) {
 			return p.dialer.Dial(ctx, id)
 		},
 		ocache.WithLogger(log.Sugar()),
-		ocache.WithGCPeriod(time.Second*5),
-		ocache.WithTTL(time.Second*10),
+		ocache.WithGCPeriod(time.Minute/2),
+		ocache.WithTTL(time.Minute),
 		ocache.WithPrometheus(p.metricReg, "netpool", "outgoing"),
 	)
 	p.pool.incoming = ocache.New(
@@ -60,8 +60,8 @@ func (p *poolService) Init(a *app.App) (err error) {
 			return nil, ocache.ErrNotExists
 		},
 		ocache.WithLogger(log.Sugar()),
-		ocache.WithGCPeriod(time.Second*5),
-		ocache.WithTTL(time.Second*10),
+		ocache.WithGCPeriod(time.Minute/2),
+		ocache.WithTTL(time.Minute),
 		ocache.WithPrometheus(p.metricReg, "netpool", "incoming"),
 	)
 	return nil
