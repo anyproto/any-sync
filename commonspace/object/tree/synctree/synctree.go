@@ -18,6 +18,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/util/slice"
 )
 
 var (
@@ -33,8 +34,13 @@ type ListenerSetter interface {
 	SetListener(listener updatelistener.UpdateListener)
 }
 
-type SyncTree interface {
+type peerSendableObjectTree interface {
 	objecttree.ObjectTree
+	AddRawChangesFromPeer(ctx context.Context, peerId string, changesPayload objecttree.RawChangesPayload) (res objecttree.AddResult, err error)
+}
+
+type SyncTree interface {
+	peerSendableObjectTree
 	synchandler.SyncHandler
 	ListenerSetter
 	SyncWithPeer(ctx context.Context, peerId string) (err error)
@@ -158,6 +164,19 @@ func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableCh
 	s.syncStatus.HeadsChange(s.Id(), res.Heads)
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
 	s.syncClient.Broadcast(headUpdate)
+	return
+}
+
+func (s *syncTree) AddRawChangesFromPeer(ctx context.Context, peerId string, changesPayload objecttree.RawChangesPayload) (res objecttree.AddResult, err error) {
+	prevHeads := s.Heads()
+	res, err = s.AddRawChanges(ctx, changesPayload)
+	if err != nil {
+		return
+	}
+	curHeads := s.Heads()
+	if !slice.UnsortedEquals(prevHeads, curHeads) {
+		s.syncStatus.HeadsApply(peerId, s.Id(), curHeads)
+	}
 	return
 }
 

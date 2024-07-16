@@ -11,4 +11,5 @@ type StatusUpdater interface {
 
 	HeadsChange(treeId string, heads []string)
 	HeadsReceive(senderId, treeId string, heads []string)
+	HeadsApply(senderId, treeId string, heads []string)
 }
