@@ -4,6 +4,7 @@ package synctree
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
 	"go.uber.org/zap"
@@ -174,8 +175,15 @@ func (s *syncTree) AddRawChangesFromPeer(ctx context.Context, peerId string, cha
 		return
 	}
 	curHeads := s.Heads()
+	allAdded := true
+	for _, head := range changesPayload.NewHeads {
+		if !slices.Contains(curHeads, head) {
+			allAdded = false
+			break
+		}
+	}
 	if !slice.UnsortedEquals(prevHeads, curHeads) {
-		s.syncStatus.HeadsApply(peerId, s.Id(), curHeads)
+		s.syncStatus.HeadsApply(peerId, s.Id(), curHeads, allAdded)
 	}
 	return
 }
