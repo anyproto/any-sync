@@ -168,7 +168,19 @@ func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableCh
 	return
 }
 
+func (s *syncTree) hasHeads(ot objecttree.ObjectTree, heads []string) bool {
+	return slice.UnsortedEquals(ot.Heads(), heads) || ot.HasChanges(heads...)
+}
+
 func (s *syncTree) AddRawChangesFromPeer(ctx context.Context, peerId string, changesPayload objecttree.RawChangesPayload) (res objecttree.AddResult, err error) {
+	if s.hasHeads(s, changesPayload.NewHeads) {
+		s.syncStatus.HeadsApply(peerId, s.Id(), s.Heads(), true)
+		return objecttree.AddResult{
+			OldHeads: changesPayload.NewHeads,
+			Heads:    changesPayload.NewHeads,
+			Mode:     objecttree.Nothing,
+		}, nil
+	}
 	prevHeads := s.Heads()
 	res, err = s.AddRawChanges(ctx, changesPayload)
 	if err != nil {

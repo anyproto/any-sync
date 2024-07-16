@@ -71,6 +71,7 @@ func Test_BuildSyncTree(t *testing.T) {
 			Mode:  objecttree.Append,
 		}
 		objTreeMock.EXPECT().Heads().AnyTimes().Return([]string{"headId"})
+		objTreeMock.EXPECT().HasChanges(gomock.Any()).AnyTimes().Return(false)
 		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(payload)).
 			Return(expectedRes, nil)
 		updateListenerMock.EXPECT().Update(tr)

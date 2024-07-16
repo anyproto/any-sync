@@ -71,10 +71,6 @@ func (t *treeSyncProtocol) HeadUpdate(ctx context.Context, senderId string, upda
 		return
 	}
 
-	if t.hasHeads(objTree, update.Heads) {
-		return
-	}
-
 	_, err = objTree.AddRawChangesFromPeer(ctx, senderId, objecttree.RawChangesPayload{
 		NewHeads:   update.Heads,
 		RawChanges: update.Changes,
@@ -110,7 +106,7 @@ func (t *treeSyncProtocol) FullSyncRequest(ctx context.Context, senderId string,
 		}
 	}()
 
-	if len(request.Changes) != 0 && !t.hasHeads(objTree, request.Heads) {
+	if len(request.Changes) != 0 {
 		_, err = objTree.AddRawChangesFromPeer(ctx, senderId, objecttree.RawChangesPayload{
 			NewHeads:   request.Heads,
 			RawChanges: request.Changes,
@@ -138,9 +134,6 @@ func (t *treeSyncProtocol) FullSyncResponse(ctx context.Context, senderId string
 			log.DebugCtx(ctx, "full sync response succeeded")
 		}
 	}()
-	if t.hasHeads(objTree, response.Heads) {
-		return
-	}
 
 	_, err = objTree.AddRawChangesFromPeer(ctx, senderId, objecttree.RawChangesPayload{
 		NewHeads:   response.Heads,
