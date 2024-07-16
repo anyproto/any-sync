@@ -515,44 +515,18 @@ func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesA
 	// returns changes that we added to the tree as attached this round
 	// they can include not only the changes that were added now,
 	// but also the changes that were previously in the tree
-	getAddedChanges := func(toConvert []*Change) (added []*treechangeproto.RawTreeChangeWithId, err error) {
-		alreadyConverted := make(map[*Change]struct{})
-
-		// first we see if we have already unmarshalled those changes
+	getAddedChanges := func() (added []*treechangeproto.RawTreeChangeWithId, err error) {
 		for _, idx := range ot.notSeenIdxBuf {
 			rawChange := rawChanges[idx]
-			if ch, exists := ot.tree.attached[rawChange.Id]; exists {
-				if len(toConvert) != 0 {
-					alreadyConverted[ch] = struct{}{}
-				}
+			if _, exists := ot.tree.attached[rawChange.Id]; exists {
 				added = append(added, rawChange)
-			}
-		}
-		// this will happen in case we called rebuild from storage
-		// or if all the changes that we added were contained in current add request
-		// (this what would happen in most cases)
-		if len(toConvert) == 0 || len(added) == len(toConvert) {
-			return
-		}
-
-		// but in some cases it may happen that the changes that were added this round
-		// were contained in unattached from previous requests
-		for _, ch := range toConvert {
-			// if we got some changes that we need to convert to raw
-			if _, exists := alreadyConverted[ch]; !exists {
-				var raw *treechangeproto.RawTreeChangeWithId
-				raw, err = ot.changeBuilder.Marshall(ch)
-				if err != nil {
-					return
-				}
-				added = append(added, raw)
 			}
 		}
 		return
 	}
 
 	var added []*treechangeproto.RawTreeChangeWithId
-	added, err = getAddedChanges(treeChangesAdded)
+	added, err = getAddedChanges()
 	if !ot.treeBuilder.keepInMemoryData {
 		for _, ch := range treeChangesAdded {
 			ch.Data = nil

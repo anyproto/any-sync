@@ -46,6 +46,7 @@ func (t *Tree) Root() *Change {
 }
 
 func (t *Tree) AddFast(changes ...*Change) []*Change {
+	defer t.clearUnattached()
 	t.addedBuf = t.addedBuf[:0]
 	for _, c := range changes {
 		// ignore existing
@@ -85,7 +86,12 @@ func (t *Tree) AddMergedHead(c *Change) error {
 	return nil
 }
 
+func (t *Tree) clearUnattached() {
+	t.unAttached = make(map[string]*Change)
+}
+
 func (t *Tree) Add(changes ...*Change) (mode Mode, added []*Change) {
+	defer t.clearUnattached()
 	t.addedBuf = t.addedBuf[:0]
 	var (
 		// this is previous head id which should have been iterated last
