@@ -57,8 +57,7 @@ func New() AnyPpClientService {
 func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProcessingClient) error) error {
 	if len(s.nodeconf.PaymentProcessingNodePeers()) == 0 {
 		log.Error("no payment processing peers configured")
-
-		return errors.New("no paymentProcessingNode peers configured")
+		return errors.New("no paymentProcessingNode peers configured. Node config ID: " + s.nodeconf.Id())
 	}
 
 	// it will try to connect to the Payment Node
