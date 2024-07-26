@@ -2,6 +2,7 @@ package syncstatus
 
 import (
 	"context"
+
 	"github.com/anyproto/any-sync/app"
 )
 
@@ -20,6 +21,12 @@ func (n *noOpSyncStatus) Name() (name string) {
 }
 
 func (n *noOpSyncStatus) HeadsChange(treeId string, heads []string) {
+}
+
+func (n *noOpSyncStatus) ObjectReceive(senderId, treeId string, heads []string) {
+}
+
+func (n *noOpSyncStatus) HeadsApply(senderId, treeId string, heads []string, allAdded bool) {
 }
 
 func (n *noOpSyncStatus) HeadsReceive(senderId, treeId string, heads []string) {

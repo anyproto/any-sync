@@ -4,6 +4,7 @@ package synctree
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
 	"go.uber.org/zap"
@@ -18,6 +19,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/util/slice"
 )
 
 var (
@@ -33,8 +35,13 @@ type ListenerSetter interface {
 	SetListener(listener updatelistener.UpdateListener)
 }
 
-type SyncTree interface {
+type peerSendableObjectTree interface {
 	objecttree.ObjectTree
+	AddRawChangesFromPeer(ctx context.Context, peerId string, changesPayload objecttree.RawChangesPayload) (res objecttree.AddResult, err error)
+}
+
+type SyncTree interface {
+	peerSendableObjectTree
 	synchandler.SyncHandler
 	ListenerSetter
 	SyncWithPeer(ctx context.Context, peerId string) (err error)
@@ -78,13 +85,13 @@ type BuildDeps struct {
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {
 	var (
 		remoteGetter = treeRemoteGetter{treeId: id, deps: deps}
-		isRemote     bool
+		peerId       string
 	)
-	deps.TreeStorage, isRemote, err = remoteGetter.getTree(ctx)
+	deps.TreeStorage, peerId, err = remoteGetter.getTree(ctx)
 	if err != nil {
 		return
 	}
-	return buildSyncTree(ctx, isRemote, deps)
+	return buildSyncTree(ctx, peerId, deps)
 }
 
 func PutSyncTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, deps BuildDeps) (t SyncTree, err error) {
@@ -92,10 +99,10 @@ func PutSyncTree(ctx context.Context, payload treestorage.TreeStorageCreatePaylo
 	if err != nil {
 		return
 	}
-	return buildSyncTree(ctx, true, deps)
+	return buildSyncTree(ctx, "", deps)
 }
 
-func buildSyncTree(ctx context.Context, sendUpdate bool, deps BuildDeps) (t SyncTree, err error) {
+func buildSyncTree(ctx context.Context, peerId string, deps BuildDeps) (t SyncTree, err error) {
 	objTree, err := deps.BuildObjectTree(deps.TreeStorage, deps.AclList)
 	if err != nil {
 		return
@@ -117,10 +124,11 @@ func buildSyncTree(ctx context.Context, sendUpdate bool, deps BuildDeps) (t Sync
 	syncTree.Unlock()
 
 	// don't send updates for empty derived trees, because they won't be accepted
-	if sendUpdate && !objecttree.IsEmptyDerivedTree(objTree) {
+	if peerId != "" && !objecttree.IsEmptyDerivedTree(objTree) {
 		headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 		// send to everybody, because everybody should know that the node or client got new tree
 		syncTree.syncClient.Broadcast(headUpdate)
+		deps.SyncStatus.ObjectReceive(peerId, syncTree.Id(), syncTree.Heads())
 	}
 	return
 }
@@ -158,6 +166,38 @@ func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableCh
 	s.syncStatus.HeadsChange(s.Id(), res.Heads)
 	headUpdate := s.syncClient.CreateHeadUpdate(s, res.Added)
 	s.syncClient.Broadcast(headUpdate)
+	return
+}
+
+func (s *syncTree) hasHeads(ot objecttree.ObjectTree, heads []string) bool {
+	return slice.UnsortedEquals(ot.Heads(), heads) || ot.HasChanges(heads...)
+}
+
+func (s *syncTree) AddRawChangesFromPeer(ctx context.Context, peerId string, changesPayload objecttree.RawChangesPayload) (res objecttree.AddResult, err error) {
+	if s.hasHeads(s, changesPayload.NewHeads) {
+		s.syncStatus.HeadsApply(peerId, s.Id(), s.Heads(), true)
+		return objecttree.AddResult{
+			OldHeads: changesPayload.NewHeads,
+			Heads:    changesPayload.NewHeads,
+			Mode:     objecttree.Nothing,
+		}, nil
+	}
+	prevHeads := s.Heads()
+	res, err = s.AddRawChanges(ctx, changesPayload)
+	if err != nil {
+		return
+	}
+	curHeads := s.Heads()
+	allAdded := true
+	for _, head := range changesPayload.NewHeads {
+		if !slices.Contains(curHeads, head) {
+			allAdded = false
+			break
+		}
+	}
+	if !slice.UnsortedEquals(prevHeads, curHeads) {
+		s.syncStatus.HeadsApply(peerId, s.Id(), curHeads, allAdded)
+	}
 	return
 }
 

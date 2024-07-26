@@ -3,14 +3,16 @@ package synctree
 import (
 	"context"
 	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
-	"testing"
 )
 
 type treeSyncProtocolFixture struct {
@@ -69,8 +71,7 @@ func TestTreeSyncProtocol_HeadUpdate(t *testing.T) {
 			SnapshotPath: []string{"h1"},
 		}
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
-		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2"}).Times(2)
-		fx.objectTreeMock.EXPECT().HasChanges(gomock.Eq([]string{"h1"})).Return(false)
+		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2"}).AnyTimes()
 		fx.objectTreeMock.EXPECT().
 			AddRawChanges(gomock.Any(), gomock.Eq(objecttree.RawChangesPayload{
 				NewHeads:   []string{"h1"},
@@ -96,6 +97,12 @@ func TestTreeSyncProtocol_HeadUpdate(t *testing.T) {
 
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h1"}).AnyTimes()
+		fx.objectTreeMock.EXPECT().
+			AddRawChanges(gomock.Any(), gomock.Eq(objecttree.RawChangesPayload{
+				NewHeads:   []string{"h1"},
+				RawChanges: []*treechangeproto.RawTreeChangeWithId{chWithId},
+			})).
+			Return(objecttree.AddResult{}, nil)
 
 		res, err := fx.syncProtocol.HeadUpdate(ctx, fx.senderId, headUpdate)
 		require.NoError(t, err)
@@ -161,7 +168,7 @@ func TestTreeSyncProtocol_FullSyncRequest(t *testing.T) {
 		}
 
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2"}).AnyTimes()
-		fx.objectTreeMock.EXPECT().HasChanges(gomock.Eq([]string{"h1"})).Return(false)
+		fx.objectTreeMock.EXPECT().HasChanges(gomock.Eq([]string{"h1"})).AnyTimes().Return(false)
 		fx.objectTreeMock.EXPECT().
 			AddRawChanges(gomock.Any(), gomock.Eq(objecttree.RawChangesPayload{
 				NewHeads:   []string{"h1"},
@@ -190,6 +197,12 @@ func TestTreeSyncProtocol_FullSyncRequest(t *testing.T) {
 		fx.objectTreeMock.EXPECT().
 			Heads().
 			Return([]string{"h1"}).AnyTimes()
+		fx.objectTreeMock.EXPECT().
+			AddRawChanges(gomock.Any(), gomock.Eq(objecttree.RawChangesPayload{
+				NewHeads:   []string{"h1"},
+				RawChanges: []*treechangeproto.RawTreeChangeWithId{chWithId},
+			})).
+			Return(objecttree.AddResult{}, nil)
 		fx.reqFactory.EXPECT().
 			CreateFullSyncResponse(gomock.Eq(fx.objectTreeMock), gomock.Eq([]string{"h1"}), gomock.Eq([]string{"h1"})).
 			Return(fullResponse, nil)
@@ -228,7 +241,6 @@ func TestTreeSyncProtocol_FullSyncRequest(t *testing.T) {
 		}
 
 		fx.objectTreeMock.EXPECT().Heads().Return([]string{"h2"}).AnyTimes()
-		fx.objectTreeMock.EXPECT().HasChanges(gomock.Eq([]string{"h1"})).Return(false)
 		fx.objectTreeMock.EXPECT().
 			AddRawChanges(gomock.Any(), gomock.Eq(objecttree.RawChangesPayload{
 				NewHeads:   []string{"h1"},
@@ -259,9 +271,6 @@ func TestTreeSyncProtocol_FullSyncResponse(t *testing.T) {
 			Heads().
 			Return([]string{"h2"}).AnyTimes()
 		fx.objectTreeMock.EXPECT().
-			HasChanges(gomock.Eq([]string{"h1"})).
-			Return(false)
-		fx.objectTreeMock.EXPECT().
 			AddRawChanges(gomock.Any(), gomock.Eq(objecttree.RawChangesPayload{
 				NewHeads:   []string{"h1"},
 				RawChanges: []*treechangeproto.RawTreeChangeWithId{chWithId},
@@ -286,6 +295,12 @@ func TestTreeSyncProtocol_FullSyncResponse(t *testing.T) {
 		fx.objectTreeMock.EXPECT().
 			Heads().
 			Return([]string{"h1"}).AnyTimes()
+		fx.objectTreeMock.EXPECT().
+			AddRawChanges(gomock.Any(), gomock.Eq(objecttree.RawChangesPayload{
+				NewHeads:   []string{"h1"},
+				RawChanges: []*treechangeproto.RawTreeChangeWithId{chWithId},
+			})).
+			Return(objecttree.AddResult{}, nil)
 
 		err := fx.syncProtocol.FullSyncResponse(ctx, fx.senderId, fullSyncResponse)
 		require.NoError(t, err)
