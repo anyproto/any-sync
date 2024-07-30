@@ -36,7 +36,7 @@ type syncTreeHandler struct {
 
 const maxQueueSize = 5
 
-func newSyncTreeHandler(spaceId string, objTree objecttree.ObjectTree, syncClient SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
+func newSyncTreeHandler(spaceId string, objTree peerSendableObjectTree, syncClient SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
 	return &syncTreeHandler{
 		objTree:         objTree,
 		syncProtocol:    newTreeSyncProtocol(spaceId, objTree, syncClient),

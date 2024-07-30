@@ -71,7 +71,7 @@ func New() AnyNsClientService {
 func (s *service) doClient(ctx context.Context, fn func(cl nsp.DRPCAnynsClient) error) error {
 	if len(s.nodeconf.NamingNodePeers()) == 0 {
 		log.Error("no namingNode peers configured")
-		return errors.New("no namingNode peers configured")
+		return errors.New("no namingNode peers configured. Node config ID: " + s.nodeconf.Id())
 	}
 
 	// it will try to connect to the Naming Node
