@@ -26,6 +26,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -149,13 +150,14 @@ func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
 }
 
 func (s *space) HandleStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error {
-	//protoVersion, err := peer.CtxProtoVersion(stream.Context())
-	//if err != nil {
-	//	return err
-	//}
-	//if protoVersion < secureservice.ProtoVersion {
-	//	return spacesyncproto.ErrUnexpected
-	//}
+	protoVersion, err := peer.CtxProtoVersion(stream.Context())
+	if err != nil {
+		return err
+	}
+	if protoVersion < secureservice.ProtoVersion {
+		log.Warn("protoVersion < secureservice.ProtoVersion", zap.Int("protoVersion", int(protoVersion)), zap.Int("secureservice.ProtoVersion", int(secureservice.ProtoVersion)))
+		return spacesyncproto.ErrUnexpected
+	}
 	return s.streamPool.ReadStream(stream)
 }
 
