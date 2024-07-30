@@ -115,8 +115,12 @@ func (o *objectSync) HandleDeprecatedObjectSync(ctx context.Context, req *spaces
 		if err != nil {
 			return nil, err
 		}
-		cnt.Changes = nil
-		marshalled, err := proto.Marshal(unmarshalled)
+		resp := &treechangeproto.TreeFullSyncResponse{
+			Heads:        cnt.Heads,
+			SnapshotPath: cnt.SnapshotPath,
+		}
+		syncMsg := treechangeproto.WrapFullResponse(resp, unmarshalled.RootChange)
+		marshalled, err := proto.Marshal(syncMsg)
 		if err != nil {
 			return nil, err
 		}
