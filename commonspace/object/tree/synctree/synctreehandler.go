@@ -155,6 +155,14 @@ func (s *syncTreeHandler) handleMessage(ctx context.Context, msg *treechangeprot
 			return err
 		}
 		return s.syncClient.QueueRequest(senderId, treeId, req)
+	default:
+		if protoVersion <= secureservice.ProtoVersion {
+			return nil
+		}
+		req, err := s.syncClient.CreateFullSyncRequest(s.objTree, nil, nil)
+		if err != nil {
+			return err
+		}
+		return s.syncClient.QueueRequest(senderId, treeId, req)
 	}
-	return
 }
