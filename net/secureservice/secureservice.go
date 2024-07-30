@@ -29,12 +29,12 @@ var (
 	// ProtoVersion 2 - acl compatible version
 	// ProtoVersion 3 - acl with breaking changes / multiplayer
 	AclCompatibleVersion = uint32(2)
-	ProtoVersion         = uint32(3)
-	NewSyncProtoVersion  = uint32(4)
+	AclVersion           = uint32(3)
+	ProtoVersion         = uint32(4)
 )
 
 var (
-	compatibleVersions = []uint32{AclCompatibleVersion, ProtoVersion, NewSyncProtoVersion}
+	compatibleVersions = []uint32{AclCompatibleVersion, AclVersion, ProtoVersion}
 )
 
 func New() SecureService {
