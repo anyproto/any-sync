@@ -4,6 +4,9 @@ import (
 	"hash/fnv"
 	"math/rand"
 	"sort"
+
+	"golang.org/x/exp/constraints"
+	"golang.org/x/exp/slices"
 )
 
 func DifferenceRemovedAdded(a, b []string) (removed []string, added []string) {
@@ -117,6 +120,27 @@ func UnsortedEquals(s1, s2 []string) bool {
 	sort.Strings(s2Sorted)
 
 	return SortedEquals(s1Sorted, s2Sorted)
+}
+
+func ContainsSorted[T constraints.Ordered](first []T, second []T) bool {
+	if len(first) < len(second) {
+		return false
+	}
+	slices.Sort(first)
+	slices.Sort(second)
+	i := 0
+	j := 0
+	for i < len(first) && j < len(second) {
+		if first[i] == second[j] {
+			i++
+			j++
+		} else if first[i] < second[j] {
+			i++
+		} else {
+			j++
+		}
+	}
+	return j == len(second)
 }
 
 func DiscardFromSlice[T any](elements []T, isDiscarded func(T) bool) []T {

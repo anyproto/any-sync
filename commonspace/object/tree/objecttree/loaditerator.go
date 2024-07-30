@@ -54,6 +54,10 @@ func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 		l.lastChange = c
 		rawEntry := l.cache[c.Id]
 		if rawEntry.removed {
+			batch.Heads = slice.DiscardFromSlice(batch.Heads, func(s string) bool {
+				return slices.Contains(c.PreviousIds, s)
+			})
+			batch.Heads = append(batch.Heads, c.Id)
 			return true
 		}
 		if curSize+rawEntry.size > maxSize && len(batch.Batch) != 0 {

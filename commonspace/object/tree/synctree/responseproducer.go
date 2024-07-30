@@ -45,8 +45,10 @@ func (r *responseProducer) NewResponse(batchSize int) (*Response, error) {
 }
 
 func (r *responseProducer) EmptyResponse() *Response {
+	headsCopy := make([]string, len(r.tree.Heads()))
+	copy(headsCopy, r.tree.Heads())
 	return &Response{
-		heads:        r.tree.Heads(),
+		heads:        headsCopy,
 		spaceId:      r.spaceId,
 		objectId:     r.objectId,
 		root:         r.tree.Header(),

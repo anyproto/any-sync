@@ -99,11 +99,11 @@ func (r *requestManager) HandleDeprecatedObjectSync(ctx context.Context, req *sp
 func (r *requestManager) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, stream drpc.Stream) error {
 	size := rq.MsgSize()
 	if !r.incomingGuard.TryTake(fullId(rq.PeerId(), rq.ObjectId())) {
-		return nil
+		return spacesyncproto.ErrDuplicateRequest
 	}
 	defer r.incomingGuard.Release(fullId(rq.PeerId(), rq.ObjectId()))
 	if !r.limit.Take(rq.PeerId()) {
-		return nil
+		return spacesyncproto.ErrTooManyRequestsFromPeer
 	}
 	defer r.limit.Release(rq.PeerId())
 	r.metric.UpdateQueueSize(size, syncdeps.MsgTypeIncomingRequest, true)

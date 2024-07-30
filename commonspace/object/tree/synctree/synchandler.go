@@ -154,7 +154,7 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		return nil, err
 	}
 	var returnReq *objectmessages.Request
-	if slice.UnsortedEquals(curHeads, request.Heads) {
+	if slice.UnsortedEquals(curHeads, request.Heads) || slice.ContainsSorted(request.Heads, curHeads) {
 		resp := producer.EmptyResponse()
 		s.tree.Unlock()
 		protoResp, err := resp.ProtoMessage()

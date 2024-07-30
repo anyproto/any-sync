@@ -12,6 +12,8 @@ enum ErrCodes {
     PeerIsNotResponsible = 5;
     ReceiptIsInvalid = 6;
     InvalidPayload = 7;
+    DuplicateRequest = 8;
+    TooManyRequestsFromPeer = 9;
     ErrorOffset = 100;
 }
 

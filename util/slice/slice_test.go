@@ -103,3 +103,34 @@ func TestCompareMaps(t *testing.T) {
 		})
 	}
 }
+
+func TestContainsSorted(t *testing.T) {
+	tests := []struct {
+		name     string
+		first    []int
+		second   []int
+		expected bool
+	}{
+		{"both empty", []int{}, []int{}, true},
+		{"first empty", []int{}, []int{1}, false},
+		{"second empty", []int{1, 2, 3}, []int{}, true},
+		{"both non-empty and first contains second", []int{1, 2, 3, 4, 5}, []int{2, 3, 4}, true},
+		{"both non-empty and first does not contain second", []int{1, 2, 3, 4, 5}, []int{3, 4, 6}, false},
+		{"both non-empty and first shorter than second", []int{1, 2, 3}, []int{1, 2, 3, 4}, false},
+		{"both non-empty and first equals second", []int{1, 2, 3}, []int{1, 2, 3}, true},
+		{"both non-empty and first contains second at the beginning", []int{1, 2, 3, 4, 5}, []int{1, 2, 3}, true},
+		{"both non-empty and first contains second at the end", []int{1, 2, 3, 4, 5}, []int{3, 4, 5}, true},
+		{"non-consecutive elements", []int{1, 3, 5, 7, 9}, []int{3, 7}, true},
+		{"unsorted first contains sorted second", []int{5, 1, 3, 2, 4}, []int{2, 3, 4}, true},
+		{"unsorted first does not contain sorted second", []int{5, 1, 3, 2, 4}, []int{3, 4, 6}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ContainsSorted(tt.first, tt.second)
+			if result != tt.expected {
+				t.Errorf("ContainsSorted(%v, %v) = %v; want %v", tt.first, tt.second, result, tt.expected)
+			}
+		})
+	}
+}
