@@ -113,6 +113,7 @@ func TestContainsSorted(t *testing.T) {
 	}{
 		{"both empty", []int{}, []int{}, true},
 		{"first empty", []int{}, []int{1}, false},
+		{"equal length but different", []int{2}, []int{1}, false},
 		{"second empty", []int{1, 2, 3}, []int{}, true},
 		{"both non-empty and first contains second", []int{1, 2, 3, 4, 5}, []int{2, 3, 4}, true},
 		{"both non-empty and first does not contain second", []int{1, 2, 3, 4, 5}, []int{3, 4, 6}, false},

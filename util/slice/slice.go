@@ -140,7 +140,7 @@ func ContainsSorted[T constraints.Ordered](first []T, second []T) bool {
 			j++
 		}
 	}
-	return j == len(second)
+	return i >= j && j == len(second)
 }
 
 func DiscardFromSlice[T any](elements []T, isDiscarded func(T) bool) []T {
