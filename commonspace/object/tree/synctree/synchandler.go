@@ -153,15 +153,18 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		s.tree.Unlock()
 		return nil, err
 	}
-	var returnReq *objectmessages.Request
+	var returnReq syncdeps.Request
 	if slice.UnsortedEquals(curHeads, request.Heads) || slice.ContainsSorted(request.Heads, curHeads) {
+		if len(curHeads) != len(request.Heads) {
+			returnReq = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
+		}
 		resp := producer.EmptyResponse()
 		s.tree.Unlock()
 		protoResp, err := resp.ProtoMessage()
 		if err != nil {
 			return nil, err
 		}
-		return nil, send(protoResp)
+		return returnReq, send(protoResp)
 	} else {
 		returnReq = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
 		s.tree.Unlock()

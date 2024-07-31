@@ -20,8 +20,10 @@ func (r *InnerRequest) MsgSize() uint64 {
 }
 
 func NewRequest(peerId, spaceId, objectId string, heads []string, snapshotPath []string, root *treechangeproto.RawTreeChangeWithId) *objectmessages.Request {
+	copyHeads := make([]string, len(heads))
+	copy(copyHeads, heads)
 	return objectmessages.NewRequest(peerId, spaceId, objectId, &InnerRequest{
-		heads:        heads,
+		heads:        copyHeads,
 		snapshotPath: snapshotPath,
 		root:         root,
 	})
