@@ -27,6 +27,9 @@ func (r *Response) MsgSize() uint64 {
 }
 
 func (r *Response) ProtoMessage() (proto.Message, error) {
+	if r.objectId == "" {
+		return &spacesyncproto.ObjectSyncMessage{}, nil
+	}
 	resp := &consensusproto.LogFullSyncResponse{
 		Head:    r.head,
 		Records: r.records,

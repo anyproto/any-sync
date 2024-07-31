@@ -29,6 +29,9 @@ func (r *Response) MsgSize() uint64 {
 }
 
 func (r *Response) ProtoMessage() (proto.Message, error) {
+	if r.objectId == "" {
+		return &spacesyncproto.ObjectSyncMessage{}, nil
+	}
 	resp := &treechangeproto.TreeFullSyncResponse{
 		Heads:        r.heads,
 		SnapshotPath: r.snapshotPath,
