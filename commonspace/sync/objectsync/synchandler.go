@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
+	"github.com/anyproto/any-sync/commonspace/objectmanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
@@ -29,7 +30,7 @@ var ErrUnexpectedHeadUpdateType = errors.New("unexpected head update type")
 type objectSync struct {
 	spaceId string
 	pool    pool.Service
-	manager treemanager.TreeManager
+	manager objectmanager.ObjectManager
 	status  syncstatus.StatusUpdater
 }
 
@@ -42,7 +43,7 @@ func New() syncdeps.SyncHandler {
 }
 
 func (o *objectSync) Init(a *app.App) (err error) {
-	o.manager = a.MustComponent(treemanager.CName).(treemanager.TreeManager)
+	o.manager = a.MustComponent(treemanager.CName).(objectmanager.ObjectManager)
 	o.pool = a.MustComponent(pool.CName).(pool.Service)
 	o.status = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	o.spaceId = a.MustComponent(spacestate.CName).(*spacestate.SpaceState).SpaceId
@@ -62,7 +63,7 @@ func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Messa
 	if err != nil {
 		return nil, err
 	}
-	obj, err := o.manager.GetTree(context.Background(), update.Meta.SpaceId, update.Meta.ObjectId)
+	obj, err := o.manager.GetObject(context.Background(), update.Meta.ObjectId)
 	if err != nil {
 		return synctree.NewRequest(peerId, update.Meta.SpaceId, update.Meta.ObjectId, nil, nil, nil), nil
 	}
@@ -74,7 +75,7 @@ func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Messa
 }
 
 func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, sendResponse func(resp proto.Message) error) (syncdeps.Request, error) {
-	obj, err := o.manager.GetTree(context.Background(), o.spaceId, rq.ObjectId())
+	obj, err := o.manager.GetObject(context.Background(), rq.ObjectId())
 	if err != nil {
 		return synctree.NewRequest(rq.PeerId(), o.spaceId, rq.ObjectId(), nil, nil, nil), treechangeproto.ErrGetTree
 	}
@@ -86,7 +87,7 @@ func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Reques
 }
 
 func (o *objectSync) HandleDeprecatedObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
-	obj, err := o.manager.GetTree(context.Background(), o.spaceId, req.ObjectId)
+	obj, err := o.manager.GetObject(context.Background(), req.ObjectId)
 	if err != nil {
 		unmarshalled := &treechangeproto.TreeSyncMessage{}
 		err = proto.Unmarshal(req.Payload, unmarshalled)
