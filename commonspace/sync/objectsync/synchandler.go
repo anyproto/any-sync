@@ -140,8 +140,8 @@ func (o *objectSync) HandleDeprecatedObjectSync(ctx context.Context, req *spaces
 
 func (o *objectSync) ApplyRequest(ctx context.Context, rq syncdeps.Request, requestSender syncdeps.RequestSender) error {
 	ctx = peer.CtxWithPeerId(ctx, rq.PeerId())
-	obj, err := o.manager.GetTree(context.Background(), o.spaceId, rq.ObjectId())
-	// if tree exists locally
+	obj, err := o.manager.GetObject(context.Background(), rq.ObjectId())
+	// if tree or acl exists locally
 	if err == nil {
 		objHandler, ok := obj.(syncdeps.ObjectSyncHandler)
 		if !ok {
@@ -150,7 +150,7 @@ func (o *objectSync) ApplyRequest(ctx context.Context, rq syncdeps.Request, requ
 		collector := objHandler.ResponseCollector()
 		return requestSender.SendRequest(ctx, rq, collector)
 	}
-	_, err = o.manager.GetTree(ctx, o.spaceId, rq.ObjectId())
+	_, err = o.manager.GetObject(ctx, rq.ObjectId())
 	return err
 }
 
