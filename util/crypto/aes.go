@@ -7,7 +7,7 @@ import (
 	"crypto/subtle"
 	"fmt"
 	"github.com/anyproto/any-sync/util/crypto/cryptoproto"
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	mbase "github.com/multiformats/go-multibase"
 )
 

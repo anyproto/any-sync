@@ -3,7 +3,7 @@ package syncacl
 import (
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"

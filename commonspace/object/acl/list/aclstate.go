@@ -3,7 +3,7 @@ package list
 import (
 	"errors"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app/logger"

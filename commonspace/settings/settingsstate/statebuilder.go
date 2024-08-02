@@ -3,7 +3,7 @@ package settingsstate
 import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 )
 
 type StateBuilder interface {

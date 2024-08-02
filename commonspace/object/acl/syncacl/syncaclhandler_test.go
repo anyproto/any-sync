@@ -8,7 +8,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"sync"

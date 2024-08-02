@@ -3,7 +3,7 @@ package synctest
 import (
 	"context"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"golang.org/x/exp/slices"
 
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"

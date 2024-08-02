@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"github.com/anyproto/any-sync/util/crypto"
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"

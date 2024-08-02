@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/cheggaaa/mb/v3"
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"

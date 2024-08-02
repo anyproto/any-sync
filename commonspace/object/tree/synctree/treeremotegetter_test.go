@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 

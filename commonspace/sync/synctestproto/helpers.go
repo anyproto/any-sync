@@ -1,6 +1,6 @@
 package synctestproto
 
-import "github.com/gogo/protobuf/proto"
+import "github.com/anyproto/protobuf/proto"
 
 func (c *CounterIncrease) MsgSize() uint64 {
 	if c != nil {

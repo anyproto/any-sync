@@ -2,7 +2,7 @@
 package spacesyncproto
 
 import (
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"storj.io/drpc"
 )
 

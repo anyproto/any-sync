@@ -3,7 +3,7 @@ package objecttree
 import (
 	"errors"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/util/cidutil"

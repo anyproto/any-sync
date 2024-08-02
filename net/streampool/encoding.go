@@ -3,7 +3,7 @@ package streampool
 import (
 	"errors"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"storj.io/drpc"
 )
 

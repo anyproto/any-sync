@@ -1,7 +1,7 @@
 package synctest
 
 import (
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 
 	"github.com/anyproto/any-sync/commonspace/sync/synctestproto"
 )

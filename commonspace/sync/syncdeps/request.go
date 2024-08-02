@@ -1,6 +1,6 @@
 package syncdeps
 
-import "github.com/gogo/protobuf/proto"
+import "github.com/anyproto/protobuf/proto"
 
 type Request interface {
 	PeerId() string

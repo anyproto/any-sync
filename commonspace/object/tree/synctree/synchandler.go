@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 

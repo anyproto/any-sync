@@ -7,13 +7,13 @@ require (
 	github.com/anyproto/go-chash v0.1.0
 	github.com/anyproto/go-slip10 v1.0.0
 	github.com/anyproto/go-slip21 v1.0.0
+	github.com/anyproto/protobuf v1.3.3-0.20240801222536-5596d71a739e
 	github.com/btcsuite/btcd v0.22.1
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
 	github.com/cespare/xxhash v1.1.0
 	github.com/cheggaaa/mb/v3 v3.0.2
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-graphviz v0.1.2
-	github.com/gogo/protobuf v1.3.2
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/yamux v0.1.1
 	github.com/huandu/skiplist v1.2.0
@@ -54,6 +54,7 @@ require (
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/pprof v0.0.0-20240402174815-29b9bb013b0f // indirect
@@ -100,5 +101,3 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
 )
-
-replace github.com/gogo/protobuf => github.com/anyproto/protobuf v1.3.3-0.20240715205950-2af411f17dfa

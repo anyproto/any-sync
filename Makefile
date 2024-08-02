@@ -6,7 +6,9 @@ all:
 	@set -e;
 	@git config core.hooksPath .githooks;
 
-proto:
+proto: proto-execute replace-strings
+
+proto-execute:
 	@echo 'Generating protobuf packages (Go)...'
 
 	@$(eval P_ACL_RECORDS_PATH_PB := commonspace/object/acl/aclrecordproto)
@@ -34,8 +36,11 @@ proto:
 deps:
 	go mod download
 	go build -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
-	go build -o deps github.com/gogo/protobuf/protoc-gen-gogofaster
+	go build -o deps github.com/anyproto/protobuf/protoc-gen-gogofaster
 
 test:
 	go test ./... --cover
 
+replace-strings:
+	@echo "Replacing 'github.com/gogo/protobuf' with 'github.com/anyproto/protobuf' in all files recursively..."
+	LC_CTYPE=C LANG=C find . -type f -name "*.go" | xargs sed -i '' "s|github.com/gogo/protobuf|github.com/anyproto/protobuf|g"

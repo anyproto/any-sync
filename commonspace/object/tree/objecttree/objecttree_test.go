@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/exp/slices"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 

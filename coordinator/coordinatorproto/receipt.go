@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/strkey"
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"time"
 )
 
