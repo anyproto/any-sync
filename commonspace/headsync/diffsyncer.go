@@ -100,7 +100,7 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 	}
 	d.log.DebugCtx(ctx, "start diffsync", zap.Strings("peerIds", peerIds))
 	for _, p := range peers {
-		if err = d.syncWithPeer(p.Context(), p); err != nil {
+		if err = d.syncWithPeer(peer.CtxWithPeerAddr(ctx, p.Id()), p); err != nil {
 			d.log.ErrorCtx(ctx, "can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
 		}
 	}

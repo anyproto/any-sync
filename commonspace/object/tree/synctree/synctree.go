@@ -289,7 +289,7 @@ func (s *syncTree) checkAlive() (err error) {
 func (s *syncTree) SyncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	s.Lock()
 	defer s.Unlock()
-	protoVersion, err := peer.CtxProtoVersion(ctx)
+	protoVersion, err := peer.CtxProtoVersion(p.Context())
 	// this works with old protocol
 	if err != nil || protoVersion <= secureservice.ProtoVersion {
 		headUpdate := s.syncClient.CreateHeadUpdate(s, nil)
