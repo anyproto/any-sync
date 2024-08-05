@@ -28,6 +28,7 @@ func (r *requestFactory) CreateHeadUpdate(l list.AclList, added []*consensusprot
 }
 
 func (r *requestFactory) CreateEmptyFullSyncRequest(l list.AclList) (req *consensusproto.LogSyncMessage) {
+	// this is only sent to newer versions of the protocol
 	return consensusproto.WrapFullRequest(&consensusproto.LogFullSyncRequest{
 		Head: l.Head().Id,
 	}, l.Root())
