@@ -143,11 +143,8 @@ func (s *syncTreeHandler) handleMessage(ctx context.Context, msg *treechangeprot
 		if err != nil {
 			return err
 		}
-		if protoVersion <= secureservice.ProtoVersion {
-			return nil
-		}
 		cnt := content.GetFullSyncResponse()
-		if slice.UnsortedEquals(cnt.Heads, s.objTree.Heads()) {
+		if protoVersion <= secureservice.ProtoVersion || slice.UnsortedEquals(cnt.Heads, s.objTree.Heads()) {
 			return nil
 		}
 		req, err := s.syncClient.CreateFullSyncRequest(s.objTree, cnt.Heads, cnt.SnapshotPath)

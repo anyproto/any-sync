@@ -10,11 +10,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list/mock_list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/mock_syncacl"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
+	"github.com/anyproto/any-sync/net/secureservice"
 )
 
 type testAclMock struct {
@@ -180,6 +182,43 @@ func TestSyncAclHandler_HandleMessage(t *testing.T) {
 		fx.syncProtocolMock.EXPECT().FullSyncResponse(ctx, fx.senderId, gomock.Any()).Return(nil)
 
 		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, 0, objectMsg)
+		require.NoError(t, err)
+	})
+	t.Run("handle full sync response, new protocol, not equal heads", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		chWithId := &consensusproto.RawRecordWithId{}
+		fullResponse := &consensusproto.LogFullSyncResponse{
+			Head:    "h1",
+			Records: []*consensusproto.RawRecordWithId{chWithId},
+		}
+		logMessage := consensusproto.WrapFullResponse(fullResponse, chWithId)
+		objectMsg, _ := spacesyncproto.MarshallSyncMessage(logMessage, fx.spaceId, fx.aclId)
+
+		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
+		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "h2"})
+		fx.syncProtocolMock.EXPECT().FullSyncResponse(ctx, fx.senderId, gomock.Any()).Return(nil)
+		req := &consensusproto.LogSyncMessage{}
+		fx.syncClientMock.EXPECT().CreateFullSyncRequest(fx.aclMock, "h1").Return(req, nil)
+		fx.syncClientMock.EXPECT().QueueRequest(fx.senderId, req).Return(nil)
+		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, secureservice.NewSyncProtoVersion, objectMsg)
+		require.NoError(t, err)
+	})
+	t.Run("handle full sync response, new protocol, equal heads", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		chWithId := &consensusproto.RawRecordWithId{}
+		fullResponse := &consensusproto.LogFullSyncResponse{
+			Head:    "h1",
+			Records: []*consensusproto.RawRecordWithId{chWithId},
+		}
+		logMessage := consensusproto.WrapFullResponse(fullResponse, chWithId)
+		objectMsg, _ := spacesyncproto.MarshallSyncMessage(logMessage, fx.spaceId, fx.aclId)
+
+		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
+		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "h1"})
+		fx.syncProtocolMock.EXPECT().FullSyncResponse(ctx, fx.senderId, gomock.Any()).Return(nil)
+		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, secureservice.NewSyncProtoVersion, objectMsg)
 		require.NoError(t, err)
 	})
 }
