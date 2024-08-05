@@ -289,6 +289,9 @@ func (s *syncTree) checkAlive() (err error) {
 func (s *syncTree) SyncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	s.Lock()
 	defer s.Unlock()
+	if objecttree.IsEmptyDerivedTree(s.ObjectTree) {
+		return
+	}
 	protoVersion, err := peer.CtxProtoVersion(p.Context())
 	// this works with old protocol
 	if err != nil || protoVersion <= secureservice.ProtoVersion {
