@@ -212,7 +212,7 @@ func createEmptySyncHandler(peerId, spaceId string, builder objecttree.BuildObje
 
 func (h *testSyncHandler) HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error) {
 	if h.SyncHandler != nil {
-		return h.SyncHandler.HandleMessage(ctx, senderId, request)
+		return h.SyncHandler.HandleMessage(ctx, senderId, 0, request)
 	}
 	unmarshalled := &treechangeproto.TreeSyncMessage{}
 	err = proto.Unmarshal(request.Payload, unmarshalled)

@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/any-sync/net/secureservice"
 )
 
 var (
@@ -35,7 +37,7 @@ func newSyncAclHandler(spaceId string, aclList list.AclList, syncClient SyncClie
 	}
 }
 
-func (s *syncAclHandler) HandleMessage(ctx context.Context, senderId string, message *spacesyncproto.ObjectSyncMessage) (err error) {
+func (s *syncAclHandler) HandleMessage(ctx context.Context, senderId string, protoVersion uint32, message *spacesyncproto.ObjectSyncMessage) (err error) {
 	unmarshalled := &consensusproto.LogSyncMessage{}
 	err = proto.Unmarshal(message.Payload, unmarshalled)
 	if err != nil {
@@ -57,7 +59,18 @@ func (s *syncAclHandler) HandleMessage(ctx context.Context, senderId string, mes
 	case content.GetFullSyncRequest() != nil:
 		return ErrMessageIsRequest
 	case content.GetFullSyncResponse() != nil:
-		return s.syncProtocol.FullSyncResponse(ctx, senderId, content.GetFullSyncResponse())
+		err := s.syncProtocol.FullSyncResponse(ctx, senderId, content.GetFullSyncResponse())
+		if err != nil {
+			return err
+		}
+		if protoVersion <= secureservice.ProtoVersion || s.aclList.Head().Id == head {
+			return nil
+		}
+		req, err := s.syncClient.CreateFullSyncRequest(s.aclList, head)
+		if err != nil {
+			return err
+		}
+		return s.syncClient.QueueRequest(senderId, req)
 	}
 	return
 }
