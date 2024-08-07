@@ -166,7 +166,9 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		}
 		return returnReq, send(protoResp)
 	} else {
-		returnReq = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
+		if len(request.Heads) != 0 {
+			returnReq = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
+		}
 		s.tree.Unlock()
 	}
 	for {
