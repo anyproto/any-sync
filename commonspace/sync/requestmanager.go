@@ -40,7 +40,7 @@ type requestManager struct {
 func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUpdater) RequestManager {
 	return &requestManager{
 		requestPool:   NewRequestPool(),
-		limit:         NewLimit(10),
+		limit:         NewLimit([]int{20, 15, 10, 5}, []int{200, 400, 600}),
 		handler:       handler,
 		incomingGuard: newGuard(0),
 		metric:        metric,

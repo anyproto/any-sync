@@ -1,47 +1,41 @@
 package sync
 
 import (
-	"sync"
+	"fmt"
 	"testing"
-	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestLimit(t *testing.T) {
-	l := NewLimit(3)
-	ids := []string{"id1", "id2", "id3"}
-
-	var wg sync.WaitGroup
-	wg.Add(len(ids) * 5)
-
-	// Function to simulate taking and releasing tokens
-	testFunc := func(i int, id string) {
-		defer wg.Done()
-
-		start := time.Now()
-		l.Take(id)
-		taken := time.Since(start)
-
-		// Ensure no more than the limit of tokens are taken simultaneously
-		if taken > time.Second {
-			t.Errorf("Goroutine %d for %s waited too long to take a token", i, id)
+	for _, tc := range []struct {
+		peerStep []int
+	}{
+		{
+			peerStep: []int{5, 4, 3, 2, 1},
+		},
+	} {
+		totalStep := make([]int, len(tc.peerStep)-1)
+		totalStep[0] = tc.peerStep[0]
+		for i := 1; i < len(tc.peerStep)-2; i++ {
+			totalStep[i] = totalStep[i-1] + tc.peerStep[i] + 1
 		}
-
-		time.Sleep(500 * time.Millisecond)
-		l.Release(id)
-	}
-
-	for i := 0; i < 5; i++ {
-		for _, id := range ids {
-			go testFunc(i, id)
+		totalStep[len(totalStep)-1] = totalStep[len(totalStep)-2] + tc.peerStep[len(tc.peerStep)-1]
+		l := NewLimit(tc.peerStep, totalStep)
+		for j := 0; j < len(tc.peerStep); j++ {
+			for i := 0; i < tc.peerStep[j]; i++ {
+				require.True(t, l.Take(fmt.Sprint(j)))
+			}
+			require.False(t, l.Take(fmt.Sprint(j)))
 		}
-	}
-
-	wg.Wait()
-
-	// Ensure all tokens are released
-	for _, id := range ids {
-		if l.tokens[id] != 0 {
-			t.Errorf("Tokens for %s should be 0, got %d", id, l.tokens[id])
+		require.Equal(t, len(tc.peerStep)-1, l.counter)
+		require.Equal(t, totalStep[len(totalStep)-1], l.total)
+		for j := 0; j < len(tc.peerStep); j++ {
+			for i := 0; i < tc.peerStep[j]; i++ {
+				l.Release(fmt.Sprint(j))
+			}
 		}
+		require.Equal(t, 0, l.counter)
+		require.Equal(t, 0, l.total)
 	}
 }
