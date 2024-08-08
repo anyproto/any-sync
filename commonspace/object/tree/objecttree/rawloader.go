@@ -265,11 +265,15 @@ func (r *rawChangeLoader) loadRaw(id string) (ch *treechangeproto.RawTreeChangeW
 	return r.treeStorage.GetRawChange(ctx, id)
 }
 
-func (r *rawChangeLoader) loadAppendEntry(id string) (entry rawCacheEntry, err error) {
+func (r *rawChangeLoader) loadAppendRaw(id string) (ch *treechangeproto.RawTreeChangeWithId, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
-	rawChange, err := r.treeStorage.GetAppendRawChange(ctx, r.buf[:0], id)
+	return r.treeStorage.GetAppendRawChange(ctx, r.buf[:0], id)
+}
+
+func (r *rawChangeLoader) loadAppendEntry(id string) (entry rawCacheEntry, err error) {
+	rawChange, err := r.loadAppendRaw(id)
 	if err != nil {
 		return
 	}

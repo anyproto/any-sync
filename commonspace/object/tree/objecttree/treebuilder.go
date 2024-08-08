@@ -1,10 +1,8 @@
 package objecttree
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -21,6 +19,7 @@ var (
 type treeBuilder struct {
 	treeStorage treestorage.TreeStorage
 	builder     ChangeBuilder
+	loader      *rawChangeLoader
 
 	cache            map[string]*Change
 	tree             *Tree
@@ -31,10 +30,11 @@ type treeBuilder struct {
 	loadBuffer []*Change
 }
 
-func newTreeBuilder(keepData bool, storage treestorage.TreeStorage, builder ChangeBuilder) *treeBuilder {
+func newTreeBuilder(keepData bool, storage treestorage.TreeStorage, builder ChangeBuilder, loader *rawChangeLoader) *treeBuilder {
 	return &treeBuilder{
 		treeStorage:      storage,
 		builder:          builder,
+		loader:           loader,
 		keepInMemoryData: keepData,
 	}
 }
@@ -170,10 +170,7 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 		return ch, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer cancel()
-
-	change, err := tb.treeStorage.GetRawChange(ctx, id)
+	change, err := tb.loader.loadAppendRaw(id)
 	if err != nil {
 		return nil, err
 	}
