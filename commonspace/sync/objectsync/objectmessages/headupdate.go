@@ -2,11 +2,32 @@ package objectmessages
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/anyproto/protobuf/proto"
 
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
+
+var messagePool = &sync.Pool{
+	New: func() interface{} {
+		return &spacesyncproto.ObjectSyncMessage{}
+	},
+}
+
+func newMessage() *spacesyncproto.ObjectSyncMessage {
+	return messagePool.Get().(*spacesyncproto.ObjectSyncMessage)
+}
+
+func FreeHeadUpdate(update *HeadUpdate) {
+	if update.msg == nil {
+		return
+	}
+	objMsg := update.msg
+	update.Bytes = nil
+	update.msg = nil
+	messagePool.Put(objMsg)
+}
 
 type BroadcastOptions struct {
 	EmptyPeers []string
@@ -28,6 +49,7 @@ type HeadUpdate struct {
 	Meta   ObjectMeta
 	Bytes  []byte
 	Update InnerHeadUpdate
+	msg    *spacesyncproto.ObjectSyncMessage
 }
 
 func (h *HeadUpdate) MsgSize() uint64 {
@@ -52,6 +74,7 @@ func (h *HeadUpdate) SetProtoMessage(message proto.Message) error {
 	if msg, ok = message.(*spacesyncproto.ObjectSyncMessage); !ok {
 		return fmt.Errorf("unexpected message type: %T", message)
 	}
+	h.msg = msg
 	h.Bytes = msg.GetPayload()
 	h.Meta.SpaceId = msg.SpaceId
 	h.Meta.ObjectId = msg.ObjectId
@@ -70,7 +93,7 @@ func (h *HeadUpdate) ProtoMessage() (proto.Message, error) {
 			ObjectId: h.Meta.ObjectId,
 		}, nil
 	}
-	return &spacesyncproto.ObjectSyncMessage{}, nil
+	return newMessage(), nil
 }
 
 func (h *HeadUpdate) PeerId() string {

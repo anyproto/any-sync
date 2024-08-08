@@ -52,6 +52,7 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 	if err != nil {
 		return nil, err
 	}
+	objectmessages.FreeHeadUpdate(update)
 	if treeSyncMsg.GetContent().GetHeadUpdate() == nil {
 		return nil, ErrUnexpectedMessageType
 	}

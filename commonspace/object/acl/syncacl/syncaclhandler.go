@@ -57,6 +57,7 @@ func (s *syncAclHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syn
 	if err != nil {
 		return nil, err
 	}
+	objectmessages.FreeHeadUpdate(update)
 	if objMsg.GetContent().GetHeadUpdate() == nil {
 		return nil, ErrUnexpectedMessageType
 	}
