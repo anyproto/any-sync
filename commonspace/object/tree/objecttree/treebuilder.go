@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/util/slice"
-	"go.uber.org/zap"
 )
 
 var (
@@ -181,6 +182,7 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 	if err != nil {
 		return nil, err
 	}
+	// TODO: see if we can delete this
 	if !tb.keepInMemoryData {
 		ch.Data = nil
 	}

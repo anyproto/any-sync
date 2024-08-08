@@ -1,21 +1,25 @@
 package sync
 
 import (
+	"fmt"
 	"sync"
 
 	"golang.org/x/exp/slices"
 )
 
 type Limit struct {
-	peerStep  []int
-	totalStep []int
-	counter   int
-	total     int
-	tokens    map[string]int
-	mx        sync.Mutex
+	peerStep      []int
+	totalStep     []int
+	excludeIds    []string
+	excludedLimit int
+	excludedTotal int
+	counter       int
+	total         int
+	tokens        map[string]int
+	mx            sync.Mutex
 }
 
-func NewLimit(peerStep, totalStep []int) *Limit {
+func NewLimit(peerStep, totalStep []int, excludeIds []string, excludedLimit int) *Limit {
 	if len(peerStep) == 0 || len(totalStep) == 0 || len(peerStep) != len(totalStep)+1 {
 		panic("incorrect limit configuration")
 	}
@@ -34,15 +38,25 @@ func NewLimit(peerStep, totalStep []int) *Limit {
 	// totalStep = [3, 6], where everything more than 6 in total will get 1 token for each id
 	totalStep = append(totalStep, totalStep[len(totalStep)-1])
 	return &Limit{
-		peerStep:  peerStep,
-		totalStep: totalStep,
-		tokens:    make(map[string]int),
+		excludeIds:    excludeIds,
+		excludedLimit: excludedLimit,
+		peerStep:      peerStep,
+		totalStep:     totalStep,
+		tokens:        make(map[string]int),
 	}
 }
 
 func (l *Limit) Take(id string) bool {
 	l.mx.Lock()
 	defer l.mx.Unlock()
+	if l.isExcluded(id) {
+		if l.tokens[id] >= l.excludedLimit {
+			return false
+		}
+		l.tokens[id]++
+		l.excludedTotal++
+		return true
+	}
 	if l.tokens[id] >= l.peerStep[l.counter] {
 		return false
 	}
@@ -62,6 +76,10 @@ func (l *Limit) Release(id string) {
 	} else {
 		return
 	}
+	if l.isExcluded(id) {
+		l.excludedTotal--
+		return
+	}
 	l.total--
 	if l.total < l.totalStep[l.counter] {
 		if l.counter == len(l.totalStep)-1 {
@@ -71,4 +89,22 @@ func (l *Limit) Release(id string) {
 			l.counter--
 		}
 	}
+}
+
+func (l *Limit) isExcluded(id string) bool {
+	for _, excludeId := range l.excludeIds {
+		if id == excludeId {
+			return true
+		}
+	}
+	return false
+}
+
+func (l *Limit) Stats(id string) string {
+	l.mx.Lock()
+	defer l.mx.Unlock()
+	if l.isExcluded(id) {
+		return fmt.Sprintf("excluded peer: %d/%d, total: %d/%d/%d", l.tokens[id], l.excludedLimit, l.excludedTotal, l.total, l.totalStep[l.counter])
+	}
+	return fmt.Sprintf("peer: %d/%d, total: %d/%d/%d", l.tokens[id], l.peerStep[l.counter], l.excludedTotal, l.total, l.totalStep[l.counter])
 }

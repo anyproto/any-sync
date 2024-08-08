@@ -16,6 +16,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/streampool"
+	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/multiqueue"
 )
 
@@ -41,6 +42,7 @@ type syncService struct {
 	manager           RequestManager
 	streamPool        streampool.StreamPool
 	peerManager       peermanager.PeerManager
+	nodeConf          nodeconf.NodeConf
 	handler           syncdeps.SyncHandler
 	spaceId           string
 	metric            *syncMetric
@@ -75,8 +77,13 @@ func (s *syncService) Init(a *app.App) (err error) {
 	s.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	s.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
 	s.commonMetric, _ = a.Component(metric.CName).(metric.Metric)
+	s.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
+	var nodeIds []string
+	for _, node := range s.nodeConf.Configuration().Nodes {
+		nodeIds = append(nodeIds, node.PeerId)
+	}
 	s.streamPool.SetSyncDelegate(s)
-	s.manager = NewRequestManager(s.handler, s.metric)
+	s.manager = NewRequestManager(s.handler, s.metric, nodeIds)
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	return nil
 }

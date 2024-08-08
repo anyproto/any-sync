@@ -37,10 +37,10 @@ type requestManager struct {
 	metric        syncdeps.QueueSizeUpdater
 }
 
-func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUpdater) RequestManager {
+func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUpdater, responsibleNodeIds []string) RequestManager {
 	return &requestManager{
 		requestPool:   NewRequestPool(),
-		limit:         NewLimit([]int{20, 15, 10, 5}, []int{200, 400, 600}),
+		limit:         NewLimit([]int{15, 10, 5}, []int{200, 400}, responsibleNodeIds, 20),
 		handler:       handler,
 		incomingGuard: newGuard(0),
 		metric:        metric,
@@ -77,7 +77,7 @@ func (r *requestManager) QueueRequest(rq syncdeps.Request) error {
 	return r.requestPool.QueueRequestAction(rq.PeerId(), rq.ObjectId(), func(ctx context.Context) {
 		err := r.handler.ApplyRequest(ctx, rq, r)
 		if err != nil {
-			log.Error("failed to apply request", zap.Error(err))
+			log.Error("failed to apply request", zap.Error(err), zap.String("limit stats", r.limit.Stats(rq.PeerId())))
 		}
 	}, func() {
 		r.metric.UpdateQueueSize(size, syncdeps.MsgTypeOutgoingRequest, false)

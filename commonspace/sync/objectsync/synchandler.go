@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/cheggaaa/mb/v3"
 	"github.com/anyproto/protobuf/proto"
+	"github.com/cheggaaa/mb/v3"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
@@ -26,6 +27,8 @@ import (
 )
 
 var ErrUnexpectedHeadUpdateType = errors.New("unexpected head update type")
+
+var log = logger.NewNamed(syncdeps.CName)
 
 type objectSync struct {
 	spaceId string
