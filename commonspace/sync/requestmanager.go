@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
@@ -39,7 +40,7 @@ type requestManager struct {
 
 func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUpdater, responsibleNodeIds []string) RequestManager {
 	return &requestManager{
-		requestPool:   NewRequestPool(),
+		requestPool:   NewRequestPool(time.Second*30, time.Minute),
 		limit:         NewLimit([]int{15, 10, 5}, []int{200, 400}, responsibleNodeIds, 20),
 		handler:       handler,
 		incomingGuard: newGuard(0),

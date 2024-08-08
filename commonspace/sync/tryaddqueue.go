@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
@@ -28,13 +29,14 @@ func newTryAddQueue(workers, maxSize int) *tryAddQueue {
 }
 
 type tryAddQueue struct {
-	ctx     context.Context
-	cancel  context.CancelFunc
-	workers int
-	cnt     atomic.Uint64
-	entries map[string]entry
-	batch   *mb.MB[string]
-	mx      sync.Mutex
+	ctx        context.Context
+	cancel     context.CancelFunc
+	workers    int
+	cnt        atomic.Uint64
+	lastServed time.Time
+	entries    map[string]entry
+	batch      *mb.MB[string]
+	mx         sync.Mutex
 }
 
 func (rp *tryAddQueue) Replace(id string, call, remove func()) {
@@ -120,6 +122,7 @@ func (rp *tryAddQueue) sendLoop() {
 			return
 		}
 		rp.mx.Lock()
+		rp.lastServed = time.Now()
 		curEntry := rp.entries[id]
 		delete(rp.entries, id)
 		rp.mx.Unlock()
@@ -130,6 +133,12 @@ func (rp *tryAddQueue) sendLoop() {
 			}
 		}
 	}
+}
+
+func (rp *tryAddQueue) ShouldClose(curTime time.Time, timeout time.Duration) bool {
+	rp.mx.Lock()
+	defer rp.mx.Unlock()
+	return curTime.Sub(rp.lastServed) > timeout && rp.batch.Len() == 0
 }
 
 func (rp *tryAddQueue) Close() (err error) {
