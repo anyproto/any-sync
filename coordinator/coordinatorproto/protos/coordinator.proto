@@ -43,6 +43,8 @@ service Coordinator {
   rpc AclGetRecords(AclGetRecordsRequest) returns (AclGetRecordsResponse);
   // AccountLimitsSet sets limits to the account. Can be used only by a network config member
   rpc AccountLimitsSet(AccountLimitsSetRequest) returns (AccountLimitsSetResponse);
+  // EventLog gets the latest event log records
+  rpc AclEventLog(AclEventLogRequest) returns (AclEventLogResponse);
 }
 
 message SpaceSignRequest {
@@ -364,5 +366,39 @@ message AccountLimitsSetRequest {
   uint32 sharedSpacesLimit = 6;
 }
 
-
 message AccountLimitsSetResponse {}
+
+message AclEventLogRequest {
+  string accountIdentity = 1;
+  // AfterId is the last known logId to request records after this id. If it is empty will be returned a list from the beginning.
+  string afterId = 2;
+  // Limit is a desired record count in response
+  uint32 limit = 3;
+}
+
+message AclEventLogResponse {
+  // AclEventLogRecord list of records, if there are no new records will be empty
+  repeated AclEventLogRecord records = 1;
+  // HasMore indicates if there are records left
+  bool hasMore = 2;
+}
+
+enum AclEventLogRecordType {
+  RecordTypeSpaceReceipt = 0;
+  RecordTypeSpaceShared = 1;
+  RecordTypeSpaceUnshared = 2;
+  RecordTypeSpaceAclAddRecord = 3;
+}
+
+message AclEventLogRecord {
+  // Id is a record id
+  string id = 1;
+  // SpaceId is a space identifier
+  string spaceId = 2;
+  // Timestamp is a unixtimestamp of record creation
+  int64 timestamp = 3;
+  // Type of current event
+  AclEventLogRecordType type = 4;
+  // only for "RecordTypeSpaceAclAddRecord" type of records
+  string aclChangeId = 5;
+}
