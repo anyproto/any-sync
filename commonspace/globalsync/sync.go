@@ -41,6 +41,7 @@ func (g *globalSync) Init(a *app.App) (err error) {
 }
 
 func (g *globalSync) Run(ctx context.Context) (err error) {
+	g.rp.Run()
 	return
 }
 

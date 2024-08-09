@@ -126,7 +126,6 @@ func (r *requestManager) HandleStreamRequest(ctx context.Context, rq syncdeps.Re
 }
 
 func (r *requestManager) Close() {
-	r.requestPool.Close()
 }
 
 func fullId(peerId, objectId string) string {

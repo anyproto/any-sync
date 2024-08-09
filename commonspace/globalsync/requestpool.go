@@ -13,6 +13,7 @@ import (
 type RequestPool interface {
 	TryTake(peerId, objectId string) bool
 	Release(peerId, objectId string)
+	Run()
 	QueueRequestAction(peerId, objectId string, action func(ctx context.Context), remove func()) (err error)
 	Close()
 }
