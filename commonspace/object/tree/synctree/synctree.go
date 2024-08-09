@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -145,10 +146,14 @@ func (s *syncTree) IterateRoot(convert objecttree.ChangeConvertFunc, iterate obj
 }
 
 func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableChangeContent) (res objecttree.AddResult, err error) {
+	return s.AddContentWithValidator(ctx, content, nil)
+}
+
+func (s *syncTree) AddContentWithValidator(ctx context.Context, content objecttree.SignableChangeContent, validate func(change *treechangeproto.RawTreeChangeWithId) error) (res objecttree.AddResult, err error) {
 	if err = s.checkAlive(); err != nil {
 		return
 	}
-	res, err = s.ObjectTree.AddContent(ctx, content)
+	res, err = s.ObjectTree.AddContentWithValidator(ctx, content, validate)
 	if err != nil {
 		return
 	}

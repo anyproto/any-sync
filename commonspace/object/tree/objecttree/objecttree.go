@@ -83,6 +83,7 @@ type ObjectTree interface {
 	Storage() treestorage.TreeStorage
 
 	AddContent(ctx context.Context, content SignableChangeContent) (AddResult, error)
+	AddContentWithValidator(ctx context.Context, content SignableChangeContent, validate func(change *treechangeproto.RawTreeChangeWithId) error) (AddResult, error)
 	AddRawChanges(ctx context.Context, changes RawChangesPayload) (AddResult, error)
 
 	UnpackChange(raw *treechangeproto.RawTreeChangeWithId) (data []byte, err error)
@@ -209,6 +210,10 @@ func (ot *objectTree) logUseWhenUnlocked() {
 }
 
 func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeContent) (res AddResult, err error) {
+	return ot.AddContentWithValidator(ctx, content, nil)
+}
+
+func (ot *objectTree) AddContentWithValidator(ctx context.Context, content SignableChangeContent, validator func(change *treechangeproto.RawTreeChangeWithId) error) (res AddResult, err error) {
 	if ot.isDeleted {
 		err = ErrDeleted
 		return
@@ -228,6 +233,14 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 		// clearing tree, because we already saved everything in the last snapshot
 		ot.tree = &Tree{}
 	}
+
+	if validator != nil {
+		err = validator(rawChange)
+		if err != nil {
+			return
+		}
+	}
+
 	err = ot.tree.AddMergedHead(objChange)
 	if err != nil {
 		panic(err)
