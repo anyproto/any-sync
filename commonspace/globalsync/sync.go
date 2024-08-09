@@ -36,7 +36,7 @@ func (g *globalSync) Init(a *app.App) (err error) {
 	for _, node := range g.nodeConf.Configuration().Nodes {
 		nodeIds = append(nodeIds, node.PeerId)
 	}
-	g.limit = NewLimit([]int{15, 10, 5}, []int{200, 400}, nodeIds, 40)
+	g.limit = NewLimit([]int{20, 15, 10, 5}, []int{200, 400, 800}, nodeIds, 100)
 	return
 }
 
