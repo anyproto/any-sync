@@ -10,6 +10,7 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/globalsync"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -77,13 +78,9 @@ func (s *syncService) Init(a *app.App) (err error) {
 	s.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	s.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
 	s.commonMetric, _ = a.Component(metric.CName).(metric.Metric)
-	s.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
-	var nodeIds []string
-	for _, node := range s.nodeConf.Configuration().Nodes {
-		nodeIds = append(nodeIds, node.PeerId)
-	}
+	globalSync := a.MustComponent(globalsync.CName).(globalsync.GlobalSync)
 	s.streamPool.SetSyncDelegate(s)
-	s.manager = NewRequestManager(s.handler, s.metric, nodeIds)
+	s.manager = NewRequestManager(s.handler, s.metric, globalSync.RequestPool(s.spaceId), globalSync.Limit(s.spaceId))
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	return nil
 }

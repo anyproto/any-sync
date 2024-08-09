@@ -17,6 +17,7 @@ import (
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
+	"github.com/anyproto/any-sync/commonspace/globalsync"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
@@ -657,6 +658,7 @@ func newFixtureWithData(t *testing.T, spaceId string, keys *accountdata.AccountK
 		process:              newSpaceProcess(spaceId),
 	}
 	fx.app.Register(fx.account).
+		Register(globalsync.New()).
 		Register(fx.config).
 		Register(peerPool).
 		Register(rpctest.NewTestServer()).

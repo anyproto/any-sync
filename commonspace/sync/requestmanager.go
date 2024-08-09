@@ -5,12 +5,12 @@ import (
 	"errors"
 	"io"
 	"strings"
-	"time"
 
 	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 
+	"github.com/anyproto/any-sync/commonspace/globalsync"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/net/peer"
@@ -31,19 +31,19 @@ type StreamResponse struct {
 }
 
 type requestManager struct {
-	requestPool   RequestPool
-	incomingGuard *guard
-	limit         *Limit
+	requestPool   globalsync.RequestPool
+	incomingGuard *globalsync.Guard
+	limit         *globalsync.Limit
 	handler       syncdeps.SyncHandler
 	metric        syncdeps.QueueSizeUpdater
 }
 
-func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUpdater, responsibleNodeIds []string) RequestManager {
+func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUpdater, requestPool globalsync.RequestPool, limit *globalsync.Limit) RequestManager {
 	return &requestManager{
-		requestPool:   NewRequestPool(time.Second*30, time.Minute),
-		limit:         NewLimit([]int{15, 10, 5}, []int{200, 400}, responsibleNodeIds, 20),
+		requestPool:   requestPool,
+		limit:         limit,
 		handler:       handler,
-		incomingGuard: newGuard(0),
+		incomingGuard: globalsync.NewGuard(0),
 		metric:        metric,
 	}
 }
