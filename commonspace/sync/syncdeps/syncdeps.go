@@ -3,14 +3,12 @@ package syncdeps
 import (
 	"context"
 
-	"github.com/cheggaaa/mb/v3"
 	"github.com/anyproto/protobuf/proto"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
-	"github.com/anyproto/any-sync/util/multiqueue"
 )
 
 const CName = "common.sync.syncdeps"
@@ -42,7 +40,5 @@ type SyncHandler interface {
 	HandleStreamRequest(ctx context.Context, rq Request, updater QueueSizeUpdater, sendResponse func(resp proto.Message) error) (Request, error)
 	HandleDeprecatedObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
 	ApplyRequest(ctx context.Context, rq Request, requestSender RequestSender) error
-	TryAddMessage(ctx context.Context, peerId string, msg multiqueue.Sizeable, q *mb.MB[multiqueue.Sizeable]) error
 	SendStreamRequest(ctx context.Context, rq Request, receive func(stream drpc.Stream) error) (err error)
-	NewMessage() drpc.Message
 }

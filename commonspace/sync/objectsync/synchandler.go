@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/anyproto/protobuf/proto"
-	"github.com/cheggaaa/mb/v3"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
@@ -23,7 +22,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
-	"github.com/anyproto/any-sync/util/multiqueue"
+	"github.com/anyproto/any-sync/net/secureservice"
 )
 
 var ErrUnexpectedHeadUpdateType = errors.New("unexpected head update type")
@@ -35,10 +34,6 @@ type objectSync struct {
 	pool    pool.Service
 	manager objectmanager.ObjectManager
 	status  syncstatus.StatusUpdater
-}
-
-type peerIdSettable interface {
-	SetPeerId(peerId string)
 }
 
 func New() syncdeps.SyncHandler {
@@ -66,15 +61,27 @@ func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Messa
 	if err != nil {
 		return nil, err
 	}
+	protoVersion, err := peer.CtxProtoVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	isNewProto := protoVersion >= secureservice.ProtoVersion
 	obj, err := o.manager.GetObject(context.Background(), update.Meta.ObjectId)
 	if err != nil {
-		return synctree.NewRequest(peerId, update.Meta.SpaceId, update.Meta.ObjectId, nil, nil, nil), nil
+		if isNewProto {
+			return synctree.NewRequest(peerId, update.Meta.SpaceId, update.Meta.ObjectId, nil, nil, nil), nil
+		}
+		return nil, err
 	}
 	objHandler, ok := obj.(syncdeps.ObjectSyncHandler)
 	if !ok {
 		return nil, fmt.Errorf("object %s does not support sync", obj.Id())
 	}
-	return objHandler.HandleHeadUpdate(ctx, o.status, update)
+	req, err := objHandler.HandleHeadUpdate(ctx, o.status, update)
+	if isNewProto {
+		return req, err
+	}
+	return nil, err
 }
 
 func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, sendResponse func(resp proto.Message) error) (syncdeps.Request, error) {
@@ -168,14 +175,6 @@ func (o *objectSync) ApplyRequest(ctx context.Context, rq syncdeps.Request, requ
 	}
 	_, err = o.manager.GetObject(ctx, rq.ObjectId())
 	return err
-}
-
-func (o *objectSync) TryAddMessage(ctx context.Context, peerId string, msg multiqueue.Sizeable, q *mb.MB[multiqueue.Sizeable]) error {
-	settable, ok := msg.(peerIdSettable)
-	if ok {
-		settable.SetPeerId(peerId)
-	}
-	return q.TryAdd(msg)
 }
 
 func (o *objectSync) SendStreamRequest(ctx context.Context, rq syncdeps.Request, receive func(stream drpc.Stream) error) (err error) {

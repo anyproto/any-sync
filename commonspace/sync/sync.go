@@ -32,24 +32,24 @@ type SyncService interface {
 	BroadcastMessage(ctx context.Context, msg drpc.Message) error
 	HandleDeprecatedObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
 	HandleStreamRequest(ctx context.Context, req syncdeps.Request, stream drpc.Stream) error
+	HandleMessage(ctx context.Context, msg drpc.Message) error
 	SendRequest(ctx context.Context, rq syncdeps.Request, collector syncdeps.ResponseCollector) error
 	QueueRequest(ctx context.Context, rq syncdeps.Request) error
 	CloseReceiveQueue(id string) error
 }
 
 type syncService struct {
-	sendQueueProvider multiqueue.QueueProvider[multiqueue.Sizeable]
-	receiveQueue      multiqueue.MultiQueue[msgCtx]
-	manager           RequestManager
-	streamPool        streampool.StreamPool
-	peerManager       peermanager.PeerManager
-	nodeConf          nodeconf.NodeConf
-	handler           syncdeps.SyncHandler
-	spaceId           string
-	metric            *syncMetric
-	commonMetric      metric.Metric
-	ctx               context.Context
-	cancel            context.CancelFunc
+	receiveQueue multiqueue.MultiQueue[msgCtx]
+	manager      RequestManager
+	streamPool   streampool.StreamPool
+	peerManager  peermanager.PeerManager
+	nodeConf     nodeconf.NodeConf
+	handler      syncdeps.SyncHandler
+	spaceId      string
+	metric       *syncMetric
+	commonMetric metric.Metric
+	ctx          context.Context
+	cancel       context.CancelFunc
 }
 
 type msgCtx struct {
@@ -73,13 +73,11 @@ func (s *syncService) Init(a *app.App) (err error) {
 	s.metric = &syncMetric{}
 	s.spaceId = a.MustComponent(spacestate.CName).(*spacestate.SpaceState).SpaceId
 	s.handler = a.MustComponent(syncdeps.CName).(syncdeps.SyncHandler)
-	s.sendQueueProvider = multiqueue.NewQueueProvider[multiqueue.Sizeable](100, syncdeps.MsgTypeOutgoing, s.metric, s.handleOutgoingMessage)
 	s.receiveQueue = multiqueue.New[msgCtx](s.handleIncomingMessage, s.metric, syncdeps.MsgTypeIncoming, 100)
 	s.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	s.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
 	s.commonMetric, _ = a.Component(metric.CName).(metric.Metric)
 	globalSync := a.MustComponent(globalsync.CName).(globalsync.GlobalSync)
-	s.streamPool.SetSyncDelegate(s)
 	s.manager = NewRequestManager(s.handler, s.metric, globalSync.RequestPool(s.spaceId), globalSync.Limit(s.spaceId))
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	return nil
@@ -93,11 +91,7 @@ func (s *syncService) Run(ctx context.Context) (err error) {
 }
 
 func (s *syncService) Close(ctx context.Context) (err error) {
-	receiveErr := s.receiveQueue.Close()
-	providerErr := s.sendQueueProvider.Close()
-	if receiveErr != nil || providerErr != nil {
-		err = errors.Join(receiveErr, providerErr)
-	}
+	err = s.receiveQueue.Close()
 	if s.commonMetric != nil {
 		s.commonMetric.UnregisterSyncMetric(s.spaceId, s.metric)
 	}
@@ -106,11 +100,7 @@ func (s *syncService) Close(ctx context.Context) (err error) {
 }
 
 func (s *syncService) BroadcastMessage(ctx context.Context, msg drpc.Message) error {
-	return s.peerManager.BroadcastMessage(ctx, msg, s.streamPool)
-}
-
-func (s *syncService) handleOutgoingMessage(id string, msg multiqueue.Sizeable, q *mb.MB[multiqueue.Sizeable]) error {
-	return s.handler.TryAddMessage(s.ctx, id, msg, q)
+	return s.peerManager.BroadcastMessage(ctx, msg)
 }
 
 func (s *syncService) handleIncomingMessage(msg msgCtx) {
@@ -133,20 +123,7 @@ func (s *syncService) handleIncomingMessage(msg msgCtx) {
 	//)...)
 }
 
-func (s *syncService) GetQueue(peerId string) *multiqueue.Queue[multiqueue.Sizeable] {
-	queue := s.sendQueueProvider.GetQueue(peerId)
-	return queue
-}
-
-func (s *syncService) RemoveQueue(peerId string) error {
-	return s.sendQueueProvider.RemoveQueue(peerId)
-}
-
-func (s *syncService) NewReadMessage() drpc.Message {
-	return s.handler.NewMessage()
-}
-
-func (s *syncService) HandleMessage(ctx context.Context, peerId string, msg drpc.Message) error {
+func (s *syncService) HandleMessage(ctx context.Context, msg drpc.Message) error {
 	idMsg, ok := msg.(syncdeps.Message)
 	if !ok {
 		return ErrUnexpectedMessage

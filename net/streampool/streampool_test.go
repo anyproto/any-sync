@@ -164,6 +164,24 @@ func TestStreamPool_Send(t *testing.T) {
 
 }
 
+func TestStreamPool_SendById(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.Finish(t)
+
+	s1, _ := newClientStream(t, fx, "p1")
+	defer s1.Close()
+	require.NoError(t, fx.AddStream(s1, "space1", "common"))
+
+	require.NoError(t, fx.SendById(ctx, &testservice.StreamMessage{ReqData: "test"}, "p1"))
+	var msg *testservice.StreamMessage
+	select {
+	case msg = <-fx.tsh.receiveCh:
+	case <-time.After(time.Second):
+		require.NoError(t, fmt.Errorf("timeout"))
+	}
+	assert.Equal(t, "test", msg.ReqData)
+}
+
 func TestStreamPool_Tags(t *testing.T) {
 	fx := newFixture(t)
 	defer fx.Finish(t)

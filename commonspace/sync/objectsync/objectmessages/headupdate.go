@@ -15,7 +15,7 @@ var messagePool = &sync.Pool{
 	},
 }
 
-func newMessage() *spacesyncproto.ObjectSyncMessage {
+func NewMessage() *spacesyncproto.ObjectSyncMessage {
 	return messagePool.Get().(*spacesyncproto.ObjectSyncMessage)
 }
 
@@ -93,7 +93,11 @@ func (h *HeadUpdate) ProtoMessage() (proto.Message, error) {
 			ObjectId: h.Meta.ObjectId,
 		}, nil
 	}
-	return newMessage(), nil
+	return NewMessage(), nil
+}
+
+func (h *HeadUpdate) SpaceId() string {
+	return h.Meta.SpaceId
 }
 
 func (h *HeadUpdate) PeerId() string {

@@ -9,6 +9,8 @@ import (
 
 	"go.uber.org/zap"
 
+	"storj.io/drpc"
+
 	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
@@ -17,10 +19,6 @@ import (
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
-	"github.com/anyproto/any-sync/net/streampool"
-	"github.com/anyproto/any-sync/net/streampool/streamopener"
-
-	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
@@ -68,9 +66,8 @@ type SpaceService interface {
 }
 
 type Deps struct {
-	SyncStatus   syncstatus.StatusUpdater
-	TreeSyncer   treesyncer.TreeSyncer
-	StreamOpener streamopener.StreamOpener
+	SyncStatus syncstatus.StatusUpdater
+	TreeSyncer treesyncer.TreeSyncer
 }
 
 type spaceService struct {
@@ -182,8 +179,6 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 	spaceApp.Register(state).
 		Register(deps.SyncStatus).
 		Register(peerManager).
-		Register(deps.StreamOpener).
-		Register(streampool.NewStreamPool()).
 		Register(newCommonStorage(st)).
 		Register(objectsync.New()).
 		Register(sync.NewSyncService()).

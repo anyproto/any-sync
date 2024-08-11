@@ -9,25 +9,32 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/util/multiqueue"
 )
 
 type stream struct {
-	peerId       string
-	peerCtx      context.Context
-	stream       drpc.Stream
-	pool         *streamPool
-	streamId     uint32
-	closed       atomic.Bool
-	l            logger.CtxLogger
-	queue        *multiqueue.Queue[multiqueue.Sizeable]
-	stats        streamStat
-	syncDelegate StreamSyncDelegate
+	peerId   string
+	peerCtx  context.Context
+	stream   drpc.Stream
+	pool     *streamPool
+	streamId uint32
+	closed   atomic.Bool
+	l        logger.CtxLogger
+	queue    *mb.MB[drpc.Message]
+	stats    streamStat
+	tags     []string
+}
+
+type peerSettable interface {
+	SetPeerId(peerId string)
 }
 
 func (sr *stream) write(msg drpc.Message) (err error) {
 	sr.stats.AddMessage(msg)
-	err = sr.queue.TryAdd(msg.(multiqueue.Sizeable))
+	settable, ok := msg.(peerSettable)
+	if ok {
+		settable.SetPeerId(sr.peerId)
+	}
+	err = sr.queue.TryAdd(msg)
 	if err != nil {
 		sr.stats.RemoveMessage(msg)
 	}
@@ -40,14 +47,18 @@ func (sr *stream) readLoop() error {
 	}()
 	sr.l.Debug("stream read started")
 	for {
-		msg := sr.pool.syncDelegate.NewReadMessage()
+		msg := sr.pool.handler.NewReadMessage()
 		if err := sr.stream.MsgRecv(msg, EncodingProto); err != nil {
 			sr.l.Info("msg receive error", zap.Error(err))
 			return err
 		}
+		settable, ok := msg.(peerSettable)
+		if ok {
+			settable.SetPeerId(sr.peerId)
+		}
 		ctx := streamCtx(sr.peerCtx, sr.streamId, sr.peerId)
 		ctx = logger.CtxWithFields(ctx, zap.String("peerId", sr.peerId))
-		if err := sr.pool.syncDelegate.HandleMessage(ctx, sr.peerId, msg); err != nil {
+		if err := sr.pool.handler.HandleMessage(ctx, sr.peerId, msg); err != nil {
 			sr.l.Info("msg handle error", zap.Error(err))
 			return err
 		}
@@ -74,7 +85,7 @@ func (sr *stream) writeLoop() {
 
 func (sr *stream) streamClose() {
 	if !sr.closed.Swap(true) {
-		_ = sr.syncDelegate.RemoveQueue(sr.peerId)
+		_ = sr.queue.Close()
 		_ = sr.stream.Close()
 		sr.pool.removeStream(sr.streamId)
 	}

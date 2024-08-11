@@ -8,7 +8,6 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/streampool"
 )
 
 const (
@@ -22,7 +21,9 @@ type PeerManager interface {
 	// GetNodePeers dials or gets from cache node peers
 	GetNodePeers(ctx context.Context) (peers []peer.Peer, err error)
 	// BroadcastMessage sends message to all peers
-	BroadcastMessage(ctx context.Context, msg drpc.Message, streamPool streampool.StreamPool) error
+	BroadcastMessage(ctx context.Context, msg drpc.Message) error
+	// SendMessage sends message to peer
+	SendMessage(ctx context.Context, peerId string, msg drpc.Message) error
 }
 
 type PeerManagerProvider interface {

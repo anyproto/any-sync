@@ -26,7 +26,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -89,8 +88,8 @@ type Space interface {
 
 	HandleDeprecatedObjectSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
 	HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage, stream drpc.Stream) (err error)
-	HandleStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
+	HandleMessage(ctx context.Context, msg *objectmessages.HeadUpdate) (err error)
 
 	TryClose(objectTTL time.Duration) (close bool, err error)
 	Close() error
@@ -149,16 +148,8 @@ func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
 	return s.settings.DeleteTree(ctx, id)
 }
 
-func (s *space) HandleStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error {
-	protoVersion, err := peer.CtxProtoVersion(stream.Context())
-	if err != nil {
-		return err
-	}
-	if protoVersion < secureservice.ProtoVersion {
-		log.Warn("protoVersion < secureservice.ProtoVersion", zap.Int("protoVersion", int(protoVersion)), zap.Int("secureservice.ProtoVersion", int(secureservice.ProtoVersion)))
-		return spacesyncproto.ErrUnexpected
-	}
-	return s.streamPool.ReadStream(stream)
+func (s *space) HandleMessage(peerCtx context.Context, msg *objectmessages.HeadUpdate) (err error) {
+	return s.syncService.HandleMessage(peerCtx, msg)
 }
 
 func (s *space) HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage, stream drpc.Stream) (err error) {

@@ -52,9 +52,6 @@ func (m *syncMetric) UpdateQueueSize(size uint64, msgType int, add bool) {
 	case syncdeps.MsgTypeIncoming:
 		atSize = &m.incomingMsgSize
 		atCount = &m.incomingMsgCount
-	case syncdeps.MsgTypeOutgoing:
-		atSize = &m.outgoingMsgSize
-		atCount = &m.outgoingMsgCount
 	case syncdeps.MsgTypeIncomingRequest:
 		atSize = &m.incomingReqSize
 		atCount = &m.incomingReqCount

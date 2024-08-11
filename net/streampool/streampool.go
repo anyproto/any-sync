@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/context"
@@ -11,38 +12,29 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/debugstat"
+	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/streampool/streamopener"
-	"github.com/anyproto/any-sync/util/multiqueue"
+	"github.com/anyproto/any-sync/net/secureservice"
+	"github.com/anyproto/any-sync/net/streampool/streamhandler"
 )
+
+const CName = "common.net.streampool"
+
+var log = logger.NewNamed(CName)
+
+func New() StreamPool {
+	return &streamPool{
+		streamIdsByPeer: make(map[string][]uint32),
+		streamIdsByTag:  make(map[string][]uint32),
+		streams:         make(map[uint32]*stream),
+		opening:         make(map[string]*openingProcess),
+	}
+}
 
 type configGetter interface {
 	GetStreamConfig() StreamConfig
-}
-
-type sizeable interface {
-	MsgSize() uint64
-}
-
-type StreamSyncDelegate interface {
-	// HandleMessage handles incoming message
-	HandleMessage(ctx context.Context, peerId string, msg drpc.Message) (err error)
-	// NewReadMessage creates new empty message for unmarshalling into it
-	NewReadMessage() drpc.Message
-	// GetQueue returns queue for outgoing messages
-	GetQueue(peerId string) *multiqueue.Queue[multiqueue.Sizeable]
-	// RemoveQueue removes queue for outgoing messages
-	RemoveQueue(peerId string) error
-}
-
-func NewStreamPool() StreamPool {
-	return &streamPool{
-		streamIdsByPeer: map[string][]uint32{},
-		streams:         map[uint32]*stream{},
-		opening:         map[string]*openingProcess{},
-	}
 }
 
 // PeerGetter should dial or return cached peers
@@ -57,23 +49,29 @@ type MessageQueueId interface {
 type StreamPool interface {
 	app.ComponentRunnable
 	// AddStream adds new outgoing stream into the pool
-	AddStream(stream drpc.Stream) (err error)
+	AddStream(stream drpc.Stream, tags ...string) (err error)
 	// ReadStream adds new incoming stream and synchronously read it
-	ReadStream(stream drpc.Stream) (err error)
+	ReadStream(stream drpc.Stream, tags ...string) (err error)
 	// Send sends a message to given peers. A stream will be opened if it is not cached before. Works async.
 	Send(ctx context.Context, msg drpc.Message, target PeerGetter) (err error)
+	// SendById sends a message to given peerIds. Works only if stream exists
+	SendById(ctx context.Context, msg drpc.Message, peerIds ...string) (err error)
 	// Broadcast sends a message to all peers with given tags. Works async.
 	Broadcast(ctx context.Context, msg drpc.Message, tags ...string) (err error)
-	// SetSyncDelegate registers sync delegate for handling incoming messages
-	SetSyncDelegate(syncDelegate StreamSyncDelegate)
+	// AddTagsCtx adds tags to stream, stream will be extracted from ctx
+	AddTagsCtx(ctx context.Context, tags ...string) error
+	// RemoveTagsCtx removes tags from stream, stream will be extracted from ctx
+	RemoveTagsCtx(ctx context.Context, tags ...string) error
+	// Streams gets all streams for specific tags
+	Streams(tags ...string) (streams []drpc.Stream)
 }
 
 type streamPool struct {
-	streamOpener    streamopener.StreamOpener
-	syncDelegate    StreamSyncDelegate
 	metric          metric.Metric
+	handler         streamhandler.StreamHandler
 	statService     debugstat.StatService
 	streamIdsByPeer map[string][]uint32
+	streamIdsByTag  map[string][]uint32
 	streams         map[uint32]*stream
 	opening         map[string]*openingProcess
 	streamConfig    StreamConfig
@@ -84,8 +82,8 @@ type streamPool struct {
 }
 
 func (s *streamPool) Init(a *app.App) (err error) {
-	s.streamOpener = a.MustComponent(streamopener.CName).(streamopener.StreamOpener)
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
+	s.handler = a.MustComponent(streamhandler.CName).(streamhandler.StreamHandler)
 	comp, ok := a.Component(debugstat.CName).(debugstat.StatService)
 	if !ok {
 		comp = debugstat.NewNoOp()
@@ -93,6 +91,9 @@ func (s *streamPool) Init(a *app.App) (err error) {
 	s.statService = comp
 	s.streamConfig = a.MustComponent("config").(configGetter).GetStreamConfig()
 	s.statService.AddProvider(s)
+	if s.metric != nil {
+		registerMetrics(s.metric.Registry(), s, "")
+	}
 	return nil
 }
 
@@ -104,10 +105,6 @@ func (s *streamPool) Run(ctx context.Context) (err error) {
 	s.dial = NewExecPool(s.streamConfig.DialQueueWorkers, s.streamConfig.DialQueueSize)
 	s.dial.Run()
 	return nil
-}
-
-func (s *streamPool) SetSyncDelegate(syncDelegate StreamSyncDelegate) {
-	s.syncDelegate = syncDelegate
 }
 
 func (s *streamPool) ProvideStat() any {
@@ -150,8 +147,8 @@ type openingProcess struct {
 	err error
 }
 
-func (s *streamPool) ReadStream(drpcStream drpc.Stream) error {
-	st, err := s.addStream(drpcStream)
+func (s *streamPool) ReadStream(drpcStream drpc.Stream, tags ...string) error {
+	st, err := s.addStream(drpcStream, tags...)
 	if err != nil {
 		return err
 	}
@@ -161,8 +158,8 @@ func (s *streamPool) ReadStream(drpcStream drpc.Stream) error {
 	return st.readLoop()
 }
 
-func (s *streamPool) AddStream(drpcStream drpc.Stream) error {
-	st, err := s.addStream(drpcStream)
+func (s *streamPool) AddStream(drpcStream drpc.Stream, tags ...string) error {
+	st, err := s.addStream(drpcStream, tags...)
 	if err != nil {
 		return err
 	}
@@ -175,7 +172,18 @@ func (s *streamPool) AddStream(drpcStream drpc.Stream) error {
 	return nil
 }
 
-func (s *streamPool) addStream(drpcStream drpc.Stream) (*stream, error) {
+func (s *streamPool) Streams(tags ...string) (streams []drpc.Stream) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, tag := range tags {
+		for _, id := range s.streamIdsByTag[tag] {
+			streams = append(streams, s.streams[id].stream)
+		}
+	}
+	return
+}
+
+func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream, error) {
 	ctx := drpcStream.Context()
 	peerId, err := peer.CtxPeerId(ctx)
 	if err != nil {
@@ -185,22 +193,26 @@ func (s *streamPool) addStream(drpcStream drpc.Stream) (*stream, error) {
 	defer s.mu.Unlock()
 	s.lastStreamId++
 	streamId := s.lastStreamId
+	queueSize := s.writeQueueSize
+	if queueSize <= 0 {
+		queueSize = 100
+	}
 	st := &stream{
-		peerId:       peerId,
-		peerCtx:      ctx,
-		stream:       drpcStream,
-		pool:         s,
-		streamId:     streamId,
-		l:            log.With(zap.String("peerId", peerId), zap.Uint32("streamId", streamId)),
-		syncDelegate: s.syncDelegate,
-		stats:        newStreamStat(peerId),
+		peerId:   peerId,
+		peerCtx:  ctx,
+		stream:   drpcStream,
+		pool:     s,
+		streamId: streamId,
+		l:        log.With(zap.String("peerId", peerId), zap.Uint32("streamId", streamId)),
+		tags:     tags,
+		stats:    newStreamStat(peerId),
 	}
-	st.queue = s.syncDelegate.GetQueue(peerId)
-	if st.queue == nil {
-		return nil, fmt.Errorf("no queue for peer %s", peerId)
-	}
+	st.queue = mb.New[drpc.Message](s.writeQueueSize)
 	s.streams[streamId] = st
 	s.streamIdsByPeer[peerId] = append(s.streamIdsByPeer[peerId], streamId)
+	for _, tag := range tags {
+		s.streamIdsByTag[tag] = append(s.streamIdsByTag[tag], streamId)
+	}
 	return st, nil
 }
 
@@ -319,13 +331,18 @@ func (s *streamPool) openStream(ctx context.Context, p peer.Peer) *openingProces
 		}()
 		// in case there was no peerId in context
 		ctx := peer.CtxWithPeerId(ctx, p.Id())
+		peerProto, err := peer.CtxProtoVersion(p.Context())
+		if err != nil {
+			peerProto = secureservice.ProtoVersion
+		}
+		ctx = peer.CtxWithProtoVersion(ctx, peerProto)
 		// open new stream and add to pool
-		st, _, err := s.streamOpener.OpenStream(ctx, p)
+		st, tags, err := s.handler.OpenStream(ctx, p)
 		if err != nil {
 			op.err = err
 			return
 		}
-		if err = s.AddStream(st); err != nil {
+		if err = s.AddStream(st, tags...); err != nil {
 			op.err = nil
 			return
 		}
@@ -336,9 +353,9 @@ func (s *streamPool) openStream(ctx context.Context, p peer.Peer) *openingProces
 func (s *streamPool) Broadcast(ctx context.Context, msg drpc.Message, tags ...string) (err error) {
 	s.mu.Lock()
 	var streams []*stream
-	for _, peerStreams := range s.streamIdsByPeer {
-		if len(peerStreams) > 0 {
-			streams = append(streams, s.streams[peerStreams[0]])
+	for _, tag := range tags {
+		for _, streamId := range s.streamIdsByTag[tag] {
+			streams = append(streams, s.streams[streamId])
 		}
 	}
 	s.mu.Unlock()
@@ -353,6 +370,58 @@ func (s *streamPool) Broadcast(ctx context.Context, msg drpc.Message, tags ...st
 	return
 }
 
+func (s *streamPool) AddTagsCtx(ctx context.Context, tags ...string) error {
+	streamId, ok := ctx.Value(streamCtxKeyStreamId).(uint32)
+	if !ok {
+		return fmt.Errorf("context without streamId")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	st, ok := s.streams[streamId]
+	if !ok {
+		return fmt.Errorf("stream not found")
+	}
+	var newTags = make([]string, 0, len(tags))
+	for _, newTag := range tags {
+		if !slices.Contains(st.tags, newTag) {
+			st.tags = append(st.tags, newTag)
+			newTags = append(newTags, newTag)
+		}
+	}
+	for _, newTag := range newTags {
+		s.streamIdsByTag[newTag] = append(s.streamIdsByTag[newTag], streamId)
+	}
+	return nil
+}
+
+func (s *streamPool) RemoveTagsCtx(ctx context.Context, tags ...string) error {
+	streamId, ok := ctx.Value(streamCtxKeyStreamId).(uint32)
+	if !ok {
+		return fmt.Errorf("context without streamId")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	st, ok := s.streams[streamId]
+	if !ok {
+		return fmt.Errorf("stream not found")
+	}
+
+	var filtered = st.tags[:0]
+	var toRemove = make([]string, 0, len(tags))
+	for _, t := range st.tags {
+		if slices.Contains(tags, t) {
+			toRemove = append(toRemove, t)
+		} else {
+			filtered = append(filtered, t)
+		}
+	}
+	st.tags = filtered
+	for _, t := range toRemove {
+		removeStream(s.streamIdsByTag, t, streamId)
+	}
+	return nil
+}
+
 func (s *streamPool) removeStream(streamId uint32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -360,9 +429,14 @@ func (s *streamPool) removeStream(streamId uint32) {
 	if st == nil {
 		log.Fatal("removeStream: stream does not exist", zap.Uint32("streamId", streamId))
 	}
+
 	removeStream(s.streamIdsByPeer, st.peerId, streamId)
+	for _, tag := range st.tags {
+		removeStream(s.streamIdsByTag, tag, streamId)
+	}
+
 	delete(s.streams, streamId)
-	st.l.Debug("stream removed", zap.String("peerId", st.peerId))
+	st.l.Debug("stream removed", zap.Strings("tags", st.tags))
 }
 
 func (s *streamPool) Close(ctx context.Context) (err error) {

@@ -98,6 +98,7 @@ const RpcName = "rpcserver"
 type RpcServer struct {
 	spaceService SpaceService
 	spaces       map[string]Space
+	streamPool   streampool.StreamPool
 	sync.Mutex
 }
 
@@ -125,9 +126,8 @@ func (r *RpcServer) getSpace(ctx context.Context, spaceId string) (sp Space, err
 	sp, ok := r.spaces[spaceId]
 	if !ok {
 		sp, err = r.spaceService.NewSpace(ctx, spaceId, Deps{
-			TreeSyncer:   NewTreeSyncer(spaceId),
-			StreamOpener: newStreamOpener(spaceId),
-			SyncStatus:   syncstatus.NewNoOpSyncStatus(),
+			TreeSyncer: NewTreeSyncer(spaceId),
+			SyncStatus: syncstatus.NewNoOpSyncStatus(),
 		})
 		if err != nil {
 			return nil, err
@@ -165,15 +165,7 @@ func (r *RpcServer) SpacePull(ctx context.Context, request *spacesyncproto.Space
 }
 
 func (r *RpcServer) ObjectSyncStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error {
-	msg := &spacesyncproto.ObjectSyncMessage{}
-	if err := stream.MsgRecv(msg, streampool.EncodingProto); err != nil {
-		return err
-	}
-	sp, err := r.getSpace(stream.Context(), msg.SpaceId)
-	if err != nil {
-		return err
-	}
-	return sp.HandleStream(&failingStream{stream, false})
+	return r.streamPool.ReadStream(&failingStream{stream, false})
 }
 
 func (r *RpcServer) ObjectSync(ctx context.Context, message *spacesyncproto.ObjectSyncMessage) (*spacesyncproto.ObjectSyncMessage, error) {
@@ -202,6 +194,7 @@ func (r *RpcServer) AclGetRecords(ctx context.Context, request *spacesyncproto.A
 func (r *RpcServer) Init(a *app.App) (err error) {
 	serv := a.MustComponent(server.CName).(*rpctest.TestServer)
 	r.spaceService = a.MustComponent(CName).(SpaceService)
+	r.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
 	return spacesyncproto.DRPCRegisterSpaceSync(serv, r)
 }
 
