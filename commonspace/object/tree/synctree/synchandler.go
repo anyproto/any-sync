@@ -62,8 +62,10 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 	defer s.tree.Unlock()
 	if len(contentUpdate.Changes) == 0 {
 		if s.hasHeads(s.tree, contentUpdate.Heads) {
+			statusUpdater.HeadsApply(peerId, update.ObjectId(), contentUpdate.Heads, true)
 			return nil, nil
 		}
+		statusUpdater.HeadsApply(peerId, update.ObjectId(), contentUpdate.Heads, false)
 		return s.syncClient.CreateFullSyncRequest(peerId, s.tree), nil
 	}
 	rawChangesPayload := objecttree.RawChangesPayload{
