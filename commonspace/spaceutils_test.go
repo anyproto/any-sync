@@ -341,7 +341,7 @@ func (m mockTreeSyncer) StartSync() {
 func (m mockTreeSyncer) StopSync() {
 }
 
-func (m mockTreeSyncer) SyncAll(ctx context.Context, peerId string, existing, missing []string) error {
+func (m mockTreeSyncer) SyncAll(ctx context.Context, p peer.Peer, existing, missing []string) error {
 	return nil
 }
 

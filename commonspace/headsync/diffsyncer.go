@@ -100,7 +100,7 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 	}
 	d.log.DebugCtx(ctx, "start diffsync", zap.Strings("peerIds", peerIds))
 	for _, p := range peers {
-		if err = d.syncWithPeer(p.Context(), p); err != nil {
+		if err = d.syncWithPeer(peer.CtxWithPeerAddr(ctx, p.Id()), p); err != nil {
 			d.log.ErrorCtx(ctx, "can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
 		}
 	}
@@ -152,13 +152,13 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 
 	// if we removed acl head from the list
 	if len(existingIds) < prevExistingLen {
-		if syncErr := d.syncAcl.SyncWithPeer(ctx, p.Id()); syncErr != nil {
+		if syncErr := d.syncAcl.SyncWithPeer(ctx, p); syncErr != nil {
 			log.Warn("failed to send acl sync message to peer", zap.String("aclId", syncAclId))
 		}
 	}
 
 	// treeSyncer should not get acl id, that's why we filter existing ids before
-	err = d.treeSyncer.SyncAll(ctx, p.Id(), existingIds, missingIds)
+	err = d.treeSyncer.SyncAll(ctx, p, existingIds, missingIds)
 	if err != nil {
 		return err
 	}

@@ -3,6 +3,10 @@ package yamux
 import (
 	"context"
 	"fmt"
+	"net"
+	"sync"
+	"time"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net/connutil"
@@ -10,9 +14,6 @@ import (
 	"github.com/anyproto/any-sync/net/transport"
 	"github.com/hashicorp/yamux"
 	"go.uber.org/zap"
-	"net"
-	"sync"
-	"time"
 )
 
 const CName = "net.transport.yamux"
@@ -157,18 +158,18 @@ func (y *yamuxTransport) accept(conn net.Conn) {
 	defer cancel()
 	cctx, err := y.secure.SecureInbound(ctx, conn)
 	if err != nil {
-		log.Warn("incoming connection handshake error", zap.Error(err))
+		log.Info("incoming connection handshake error", zap.Error(err), zap.String("remoteAddr", conn.RemoteAddr().String()))
 		return
 	}
 	luc := connutil.NewLastUsageConn(connutil.NewTimeout(conn, time.Duration(y.conf.WriteTimeoutSec)*time.Second))
 	sess, err := yamux.Server(luc, y.yamuxConf)
 	if err != nil {
-		log.Warn("incoming connection yamux session error", zap.Error(err))
+		log.Info("incoming connection yamux session error", zap.Error(err), zap.String("remoteAddr", conn.RemoteAddr().String()))
 		return
 	}
 	mc := NewMultiConn(cctx, luc, conn.RemoteAddr().String(), sess)
 	if err = y.accepter.Accept(mc); err != nil {
-		log.Warn("connection accept error", zap.Error(err))
+		log.Info("connection accept error", zap.Error(err), zap.String("remoteAddr", conn.RemoteAddr().String()))
 	}
 }
 

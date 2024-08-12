@@ -10,6 +10,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/sync"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
+	"github.com/anyproto/any-sync/net/peer"
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
@@ -32,7 +33,7 @@ type SyncAcl interface {
 	list.AclList
 	syncdeps.ObjectSyncHandler
 	SetHeadUpdater(updater headupdater.HeadUpdater)
-	SyncWithPeer(ctx context.Context, peerId string) (err error)
+	SyncWithPeer(ctx context.Context, p peer.Peer) (err error)
 	SetAclUpdater(updater headupdater.AclUpdater)
 }
 
@@ -130,10 +131,10 @@ func (s *syncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (e
 	return
 }
 
-func (s *syncAcl) SyncWithPeer(ctx context.Context, peerId string) (err error) {
+func (s *syncAcl) SyncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	s.Lock()
 	defer s.Unlock()
-	req := s.syncClient.CreateFullSyncRequest(peerId, s)
+	req := s.syncClient.CreateFullSyncRequest(p.Id(), s)
 	return s.syncClient.QueueRequest(ctx, req)
 }
 

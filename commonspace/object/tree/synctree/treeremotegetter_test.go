@@ -70,7 +70,7 @@ func TestTreeRemoteGetter(t *testing.T) {
 		fx.peerGetterMock.EXPECT().GetResponsiblePeers(tCtx).Return([]peer.Peer{mockPeer}, nil)
 		fx.syncClientMock.EXPECT().CreateNewTreeRequest().Return(treeRequest)
 		fx.syncClientMock.EXPECT().SendRequest(tCtx, peerId, fx.treeGetter.treeId, treeRequest).Return(objectResponse, nil)
-		resp, err := fx.treeGetter.treeRequestLoop(tCtx)
+		resp, _, err := fx.treeGetter.treeRequestLoop(tCtx)
 		require.NoError(t, err)
 		require.Equal(t, "id", resp.RootChange.Id)
 	})
@@ -84,7 +84,7 @@ func TestTreeRemoteGetter(t *testing.T) {
 		mockPeer.EXPECT().Id().AnyTimes().Return(peerId)
 		fx.syncClientMock.EXPECT().CreateNewTreeRequest().Return(treeRequest)
 		fx.syncClientMock.EXPECT().SendRequest(tCtx, peerId, fx.treeGetter.treeId, treeRequest).AnyTimes().Return(nil, fmt.Errorf("some"))
-		_, err := fx.treeGetter.treeRequestLoop(tCtx)
+		_, _, err := fx.treeGetter.treeRequestLoop(tCtx)
 		require.Error(t, err)
 	})
 }

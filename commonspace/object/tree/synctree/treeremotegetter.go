@@ -56,16 +56,18 @@ func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (colle
 	return collector, nil
 }
 
-func (t treeRemoteGetter) treeRequestLoop(ctx context.Context) (collector *fullResponseCollector, err error) {
+func (t treeRemoteGetter) treeRequestLoop(ctx context.Context) (collector *fullResponseCollector, peerId string, err error) {
 	availablePeers, err := t.getPeers(ctx)
 	if err != nil {
 		return
 	}
+	peerId = availablePeers[0]
 	// in future we will try to load from different peers
-	return t.treeRequest(ctx, availablePeers[0])
+	collector, err = t.treeRequest(ctx, peerId)
+	return collector, peerId, err
 }
 
-func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.TreeStorage, isRemote bool, err error) {
+func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.TreeStorage, peerId string, err error) {
 	treeStorage, err = t.deps.SpaceStorage.TreeStorage(t.treeId)
 	if err == nil || !errors.Is(err, treestorage.ErrUnknownTreeId) {
 		return
@@ -80,8 +82,7 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 		return
 	}
 
-	isRemote = true
-	collector, err := t.treeRequestLoop(ctx)
+	collector, peerId, err := t.treeRequestLoop(ctx)
 	if err != nil {
 		return
 	}
