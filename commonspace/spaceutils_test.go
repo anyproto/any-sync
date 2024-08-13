@@ -424,6 +424,10 @@ func (m mockCoordinatorClient) AclGetRecords(ctx context.Context, spaceId, aclHe
 	return
 }
 
+func (m mockCoordinatorClient) AclEventLog(ctx context.Context, accountId, lastRecordId string, limit int) (records []*coordinatorproto.AclEventLogRecord, err error) {
+	return
+}
+
 func (m mockCoordinatorClient) Init(a *app.App) (err error) {
 	return
 }
