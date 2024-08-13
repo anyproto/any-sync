@@ -43,6 +43,7 @@ service Coordinator {
   rpc AclGetRecords(AclGetRecordsRequest) returns (AclGetRecordsResponse);
   // AccountLimitsSet sets limits to the account. Can be used only by a network config member
   rpc AccountLimitsSet(AccountLimitsSetRequest) returns (AccountLimitsSetResponse);
+  
   // EventLog gets the latest event log records
   rpc AclEventLog(AclEventLogRequest) returns (AclEventLogResponse);
 }
