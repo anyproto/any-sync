@@ -199,7 +199,3 @@ func (o *objectSync) SendStreamRequest(ctx context.Context, rq syncdeps.Request,
 		return receive(stream)
 	})
 }
-
-func (o *objectSync) NewMessage() drpc.Message {
-	return &objectmessages.HeadUpdate{}
-}
