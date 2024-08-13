@@ -43,7 +43,6 @@ type MultiQueue[T Sizeable] interface {
 type multiQueue[T Sizeable] struct {
 	handler      HandleFunc[T]
 	updater      sizeUpdater
-	totalMsgSize uint64
 	queueMaxSize int
 	msgType      int
 	threads      map[string]*mb.MB[T]
@@ -99,15 +98,7 @@ func (m *multiQueue[T]) threadLoop(q *mb.MB[T]) {
 }
 
 func (m *multiQueue[T]) updateSize(msg T, add bool) {
-	m.mu.Lock()
-	size := msg.MsgSize()
-	if add {
-		m.totalMsgSize += msg.MsgSize()
-	} else {
-		m.totalMsgSize -= msg.MsgSize()
-	}
-	m.mu.Unlock()
-	m.updater.UpdateQueueSize(size, m.msgType, add)
+	m.updater.UpdateQueueSize(msg.MsgSize(), m.msgType, add)
 }
 
 func (m *multiQueue[T]) CloseThread(threadId string) (err error) {

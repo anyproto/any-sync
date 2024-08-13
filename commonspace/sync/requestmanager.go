@@ -43,7 +43,7 @@ func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUp
 		requestPool:   requestPool,
 		limit:         limit,
 		handler:       handler,
-		incomingGuard: globalsync.NewGuard(0),
+		incomingGuard: globalsync.NewGuard(),
 		metric:        metric,
 	}
 }

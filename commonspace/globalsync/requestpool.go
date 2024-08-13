@@ -38,7 +38,7 @@ func NewRequestPool(closePeriod, gcPeriod time.Duration) RequestPool {
 		closePeriod: closePeriod,
 		gcPeriod:    gcPeriod,
 		pools:       make(map[string]*tryAddQueue),
-		peerGuard:   NewGuard(0),
+		peerGuard:   NewGuard(),
 	}
 }
 
