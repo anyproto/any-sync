@@ -1,4 +1,4 @@
-package globalsync
+package syncqueues
 
 import "sync"
 

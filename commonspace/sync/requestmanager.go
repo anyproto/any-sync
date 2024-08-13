@@ -10,11 +10,11 @@ import (
 	"go.uber.org/zap"
 	"storj.io/drpc"
 
-	"github.com/anyproto/any-sync/commonspace/globalsync"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/streampool"
+	syncqueues2 "github.com/anyproto/any-sync/util/syncqueues"
 )
 
 type RequestManager interface {
@@ -31,19 +31,19 @@ type StreamResponse struct {
 }
 
 type requestManager struct {
-	requestPool   globalsync.RequestPool
-	incomingGuard *globalsync.Guard
-	limit         *globalsync.Limit
+	requestPool   syncqueues2.RequestPool
+	incomingGuard *syncqueues2.Guard
+	limit         *syncqueues2.Limit
 	handler       syncdeps.SyncHandler
 	metric        syncdeps.QueueSizeUpdater
 }
 
-func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUpdater, requestPool globalsync.RequestPool, limit *globalsync.Limit) RequestManager {
+func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUpdater, requestPool syncqueues2.RequestPool, limit *syncqueues2.Limit) RequestManager {
 	return &requestManager{
 		requestPool:   requestPool,
 		limit:         limit,
 		handler:       handler,
-		incomingGuard: globalsync.NewGuard(),
+		incomingGuard: syncqueues2.NewGuard(),
 		metric:        metric,
 	}
 }

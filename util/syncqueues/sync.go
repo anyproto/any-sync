@@ -1,4 +1,4 @@
-package globalsync
+package syncqueues
 
 import (
 	"context"
@@ -9,27 +9,27 @@ import (
 	"github.com/anyproto/any-sync/nodeconf"
 )
 
-const CName = "common.commonspace.globalsync"
+const CName = "common.util.syncqueues"
 
 var log = logger.NewNamed(CName)
 
-type GlobalSync interface {
+type SyncQueues interface {
 	app.ComponentRunnable
 	RequestPool(spaceId string) RequestPool
 	Limit(spaceId string) *Limit
 }
 
-func New() GlobalSync {
-	return &globalSync{}
+func New() SyncQueues {
+	return &syncQueues{}
 }
 
-type globalSync struct {
+type syncQueues struct {
 	limit    *Limit
 	rp       RequestPool
 	nodeConf nodeconf.Service
 }
 
-func (g *globalSync) Init(a *app.App) (err error) {
+func (g *syncQueues) Init(a *app.App) (err error) {
 	g.rp = NewRequestPool(time.Second*30, time.Minute)
 	g.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	var nodeIds []string
@@ -40,24 +40,24 @@ func (g *globalSync) Init(a *app.App) (err error) {
 	return
 }
 
-func (g *globalSync) Run(ctx context.Context) (err error) {
+func (g *syncQueues) Run(ctx context.Context) (err error) {
 	g.rp.Run()
 	return
 }
 
-func (g *globalSync) Close(ctx context.Context) (err error) {
+func (g *syncQueues) Close(ctx context.Context) (err error) {
 	g.rp.Close()
 	return
 }
 
-func (g *globalSync) RequestPool(spaceId string) RequestPool {
+func (g *syncQueues) RequestPool(spaceId string) RequestPool {
 	return g.rp
 }
 
-func (g *globalSync) Limit(spaceId string) *Limit {
+func (g *syncQueues) Limit(spaceId string) *Limit {
 	return g.limit
 }
 
-func (g *globalSync) Name() string {
+func (g *syncQueues) Name() string {
 	return CName
 }

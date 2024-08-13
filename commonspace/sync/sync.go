@@ -10,7 +10,6 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/commonspace/globalsync"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -19,6 +18,7 @@ import (
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/multiqueue"
+	"github.com/anyproto/any-sync/util/syncqueues"
 )
 
 const CName = "common.commonspace.sync"
@@ -77,8 +77,8 @@ func (s *syncService) Init(a *app.App) (err error) {
 	s.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	s.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
 	s.commonMetric, _ = a.Component(metric.CName).(metric.Metric)
-	globalSync := a.MustComponent(globalsync.CName).(globalsync.GlobalSync)
-	s.manager = NewRequestManager(s.handler, s.metric, globalSync.RequestPool(s.spaceId), globalSync.Limit(s.spaceId))
+	syncQueues := a.MustComponent(syncqueues.CName).(syncqueues.SyncQueues)
+	s.manager = NewRequestManager(s.handler, s.metric, syncQueues.RequestPool(s.spaceId), syncQueues.Limit(s.spaceId))
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	return nil
 }
