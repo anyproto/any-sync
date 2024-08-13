@@ -73,6 +73,21 @@ func (mr *MockObjectTreeMockRecorder) AddContent(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContent", reflect.TypeOf((*MockObjectTree)(nil).AddContent), arg0, arg1)
 }
 
+// AddContentWithValidator mocks base method.
+func (m *MockObjectTree) AddContentWithValidator(arg0 context.Context, arg1 objecttree.SignableChangeContent, arg2 func(*treechangeproto.RawTreeChangeWithId) error) (objecttree.AddResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddContentWithValidator", arg0, arg1, arg2)
+	ret0, _ := ret[0].(objecttree.AddResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddContentWithValidator indicates an expected call of AddContentWithValidator.
+func (mr *MockObjectTreeMockRecorder) AddContentWithValidator(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContentWithValidator", reflect.TypeOf((*MockObjectTree)(nil).AddContentWithValidator), arg0, arg1, arg2)
+}
+
 // AddRawChanges mocks base method.
 func (m *MockObjectTree) AddRawChanges(arg0 context.Context, arg1 objecttree.RawChangesPayload) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
