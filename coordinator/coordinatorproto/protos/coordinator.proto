@@ -400,4 +400,6 @@ message AclEventLogRecord {
   int64 timestamp = 3;
   // Type of current event
   AclEventLogRecordType type = 4;
+  // only for RecordTypeSpaceAclAddRecord
+  string aclChangeId = 5; 
 }
