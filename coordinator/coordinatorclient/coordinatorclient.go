@@ -50,6 +50,8 @@ type CoordinatorClient interface {
 
 	AccountLimitsSet(ctx context.Context, req *coordinatorproto.AccountLimitsSetRequest) error
 
+	AclEventLog(ctx context.Context, accountId, lastRecordId string, limit int) (records []*coordinatorproto.AclEventLogRecord, err error)
+
 	app.Component
 }
 
@@ -330,6 +332,22 @@ func (c *coordinatorClient) SpaceMakeUnshareable(ctx context.Context, spaceId, a
 		}
 		return nil
 	})
+}
+
+func (c *coordinatorClient) AclEventLog(ctx context.Context, accountId, lastRecordId string, limit int) (records []*coordinatorproto.AclEventLogRecord, err error) {
+	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
+		resp, err := cl.AclEventLog(ctx, &coordinatorproto.AclEventLogRequest{
+			AccountIdentity: accountId,
+			AfterId:         lastRecordId,
+			Limit:           uint32(limit),
+		})
+		if err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		records = resp.Records
+		return nil
+	})
+	return
 }
 
 func (c *coordinatorClient) doClient(ctx context.Context, f func(cl coordinatorproto.DRPCCoordinatorClient) error) error {

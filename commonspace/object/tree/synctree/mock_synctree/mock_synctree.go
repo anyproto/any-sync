@@ -20,6 +20,7 @@ import (
 	treechangeproto "github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	treestorage "github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	peer "github.com/anyproto/any-sync/net/peer"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -193,17 +194,17 @@ func (mr *MockSyncTreeMockRecorder) GetChange(arg0 any) *gomock.Call {
 }
 
 // HandleMessage mocks base method.
-func (m *MockSyncTree) HandleMessage(arg0 context.Context, arg1 string, arg2 *spacesyncproto.ObjectSyncMessage) error {
+func (m *MockSyncTree) HandleMessage(arg0 context.Context, arg1 string, arg2 uint32, arg3 *spacesyncproto.ObjectSyncMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleMessage", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "HandleMessage", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // HandleMessage indicates an expected call of HandleMessage.
-func (mr *MockSyncTreeMockRecorder) HandleMessage(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) HandleMessage(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleMessage", reflect.TypeOf((*MockSyncTree)(nil).HandleMessage), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleMessage", reflect.TypeOf((*MockSyncTree)(nil).HandleMessage), arg0, arg1, arg2, arg3)
 }
 
 // HandleRequest mocks base method.
@@ -419,7 +420,7 @@ func (mr *MockSyncTreeMockRecorder) Storage() *gomock.Call {
 }
 
 // SyncWithPeer mocks base method.
-func (m *MockSyncTree) SyncWithPeer(arg0 context.Context, arg1 string) error {
+func (m *MockSyncTree) SyncWithPeer(arg0 context.Context, arg1 peer.Peer) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SyncWithPeer", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -637,6 +638,20 @@ func (mr *MockSyncClientMockRecorder) Broadcast(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Broadcast", reflect.TypeOf((*MockSyncClient)(nil).Broadcast), arg0)
 }
 
+// CreateEmptyFullSyncRequest mocks base method.
+func (m *MockSyncClient) CreateEmptyFullSyncRequest(arg0 objecttree.ObjectTree) *treechangeproto.TreeSyncMessage {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateEmptyFullSyncRequest", arg0)
+	ret0, _ := ret[0].(*treechangeproto.TreeSyncMessage)
+	return ret0
+}
+
+// CreateEmptyFullSyncRequest indicates an expected call of CreateEmptyFullSyncRequest.
+func (mr *MockSyncClientMockRecorder) CreateEmptyFullSyncRequest(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEmptyFullSyncRequest", reflect.TypeOf((*MockSyncClient)(nil).CreateEmptyFullSyncRequest), arg0)
+}
+
 // CreateFullSyncRequest mocks base method.
 func (m *MockSyncClient) CreateFullSyncRequest(arg0 objecttree.ObjectTree, arg1, arg2 []string) (*treechangeproto.TreeSyncMessage, error) {
 	m.ctrl.T.Helper()
@@ -759,6 +774,20 @@ func NewMockRequestFactory(ctrl *gomock.Controller) *MockRequestFactory {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockRequestFactory) EXPECT() *MockRequestFactoryMockRecorder {
 	return m.recorder
+}
+
+// CreateEmptyFullSyncRequest mocks base method.
+func (m *MockRequestFactory) CreateEmptyFullSyncRequest(arg0 objecttree.ObjectTree) *treechangeproto.TreeSyncMessage {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateEmptyFullSyncRequest", arg0)
+	ret0, _ := ret[0].(*treechangeproto.TreeSyncMessage)
+	return ret0
+}
+
+// CreateEmptyFullSyncRequest indicates an expected call of CreateEmptyFullSyncRequest.
+func (mr *MockRequestFactoryMockRecorder) CreateEmptyFullSyncRequest(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEmptyFullSyncRequest", reflect.TypeOf((*MockRequestFactory)(nil).CreateEmptyFullSyncRequest), arg0)
 }
 
 // CreateFullSyncRequest mocks base method.
