@@ -84,7 +84,7 @@ func (rp *replaceableQueue) callLoop() {
 	for {
 		id, err := rp.batch.WaitOne(rp.ctx)
 		if err != nil {
-			log.Debug("close send loop", zap.Error(err))
+			log.Debug("close call loop", zap.Error(err))
 			return
 		}
 		rp.mx.Lock()
