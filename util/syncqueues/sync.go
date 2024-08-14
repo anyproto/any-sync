@@ -18,7 +18,7 @@ var log = logger.NewNamed(CName)
 
 type SyncQueues interface {
 	app.ComponentRunnable
-	RequestPool(spaceId string) RequestPool
+	ActionPool(spaceId string) ActionPool
 	Limit(spaceId string) *Limit
 }
 
@@ -28,7 +28,7 @@ func New() SyncQueues {
 
 type syncQueues struct {
 	limit          *Limit
-	rp             RequestPool
+	pool           ActionPool
 	nodeConf       nodeconf.Service
 	accountService accountService.Service
 }
@@ -47,12 +47,12 @@ func (g *syncQueues) Init(a *app.App) (err error) {
 			iAmResponsible = true
 		}
 	}
-	g.rp = NewRequestPool(time.Second*30, time.Minute, func(peerId string) *tryAddQueue {
+	g.pool = NewActionPool(time.Second*30, time.Minute, func(peerId string) *replaceableQueue {
 		// increase limits between responsible nodes
 		if slices.Contains(nodeIds, peerId) && iAmResponsible {
-			return newTryAddQueue(30, 400)
+			return newReplaceableQueue(30, 400)
 		} else {
-			return newTryAddQueue(10, 100)
+			return newReplaceableQueue(10, 100)
 		}
 	})
 	g.limit = NewLimit([]int{20, 15, 10, 5}, []int{200, 400, 800}, nodeIds, 100)
@@ -60,17 +60,17 @@ func (g *syncQueues) Init(a *app.App) (err error) {
 }
 
 func (g *syncQueues) Run(ctx context.Context) (err error) {
-	g.rp.Run()
+	g.pool.Run()
 	return
 }
 
 func (g *syncQueues) Close(ctx context.Context) (err error) {
-	g.rp.Close()
+	g.pool.Close()
 	return
 }
 
-func (g *syncQueues) RequestPool(spaceId string) RequestPool {
-	return g.rp
+func (g *syncQueues) ActionPool(spaceId string) ActionPool {
+	return g.pool
 }
 
 func (g *syncQueues) Limit(spaceId string) *Limit {

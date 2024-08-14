@@ -31,14 +31,14 @@ type StreamResponse struct {
 }
 
 type requestManager struct {
-	requestPool   syncqueues.RequestPool
+	requestPool   syncqueues.ActionPool
 	incomingGuard *syncqueues.Guard
 	limit         *syncqueues.Limit
 	handler       syncdeps.SyncHandler
 	metric        syncdeps.QueueSizeUpdater
 }
 
-func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUpdater, requestPool syncqueues.RequestPool, limit *syncqueues.Limit) RequestManager {
+func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUpdater, requestPool syncqueues.ActionPool, limit *syncqueues.Limit) RequestManager {
 	return &requestManager{
 		requestPool:   requestPool,
 		limit:         limit,
@@ -75,7 +75,7 @@ func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, c
 func (r *requestManager) QueueRequest(rq syncdeps.Request) error {
 	size := rq.MsgSize()
 	r.metric.UpdateQueueSize(size, syncdeps.MsgTypeOutgoingRequest, true)
-	return r.requestPool.QueueRequestAction(rq.PeerId(), rq.ObjectId(), func(ctx context.Context) {
+	r.requestPool.Add(rq.PeerId(), rq.ObjectId(), func(ctx context.Context) {
 		err := r.handler.ApplyRequest(ctx, rq, r)
 		if err != nil {
 			log.Error("failed to apply request", zap.Error(err), zap.String("limit stats", r.limit.Stats(rq.PeerId())))
@@ -83,6 +83,7 @@ func (r *requestManager) QueueRequest(rq syncdeps.Request) error {
 	}, func() {
 		r.metric.UpdateQueueSize(size, syncdeps.MsgTypeOutgoingRequest, false)
 	})
+	return nil
 }
 
 func (r *requestManager) HandleDeprecatedObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {

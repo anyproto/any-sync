@@ -10,41 +10,39 @@ import (
 	"github.com/anyproto/any-sync/util/periodicsync"
 )
 
-type RequestPool interface {
-	TryTake(peerId, objectId string) bool
-	Release(peerId, objectId string)
+type ActionPool interface {
 	Run()
-	QueueRequestAction(peerId, objectId string, action func(ctx context.Context), remove func()) (err error)
+	Add(peerId, objectId string, action func(ctx context.Context), remove func())
 	Close()
 }
 
-type requestPool struct {
+type actionPool struct {
 	mu           sync.Mutex
 	peerGuard    *Guard
-	pools        map[string]*tryAddQueue
+	queues       map[string]*replaceableQueue
 	periodicLoop periodicsync.PeriodicSync
 	closePeriod  time.Duration
 	gcPeriod     time.Duration
 	ctx          context.Context
 	cancel       context.CancelFunc
-	openFunc     func(peerId string) *tryAddQueue
+	openFunc     func(peerId string) *replaceableQueue
 	isClosed     bool
 }
 
-func NewRequestPool(closePeriod, gcPeriod time.Duration, openFunc func(peerId string) *tryAddQueue) RequestPool {
+func NewActionPool(closePeriod, gcPeriod time.Duration, openFunc func(peerId string) *replaceableQueue) ActionPool {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &requestPool{
+	return &actionPool{
 		ctx:         ctx,
 		cancel:      cancel,
 		closePeriod: closePeriod,
 		gcPeriod:    gcPeriod,
 		openFunc:    openFunc,
-		pools:       make(map[string]*tryAddQueue),
+		queues:      make(map[string]*replaceableQueue),
 		peerGuard:   NewGuard(),
 	}
 }
 
-func (rp *requestPool) TryTake(peerId, objectId string) bool {
+func (rp *actionPool) tryTake(peerId, objectId string) bool {
 	rp.mu.Lock()
 	defer rp.mu.Unlock()
 	if rp.isClosed {
@@ -54,68 +52,68 @@ func (rp *requestPool) TryTake(peerId, objectId string) bool {
 	return rp.peerGuard.TryTake(fullId(peerId, objectId))
 }
 
-func (rp *requestPool) Release(peerId, objectId string) {
+func (rp *actionPool) release(peerId, objectId string) {
 	rp.peerGuard.Release(fullId(peerId, objectId))
 }
 
-func (rp *requestPool) Run() {
+func (rp *actionPool) Run() {
 	rp.periodicLoop = periodicsync.NewPeriodicSyncDuration(rp.gcPeriod, time.Minute, rp.gc, log)
 	rp.periodicLoop.Run()
 }
 
-func (rp *requestPool) gc(ctx context.Context) error {
+func (rp *actionPool) gc(ctx context.Context) error {
 	rp.mu.Lock()
-	var poolsToClose []*tryAddQueue
+	var queuesToClose []*replaceableQueue
 	tm := time.Now()
-	for id, pool := range rp.pools {
-		if pool.ShouldClose(tm, rp.closePeriod) {
-			delete(rp.pools, id)
-			log.Debug("closing pool", zap.String("peerId", id))
-			poolsToClose = append(poolsToClose, pool)
+	for id, queue := range rp.queues {
+		if queue.ShouldClose(tm, rp.closePeriod) {
+			delete(rp.queues, id)
+			log.Debug("closing queue", zap.String("peerId", id))
+			queuesToClose = append(queuesToClose, queue)
 		}
 	}
 	rp.mu.Unlock()
-	for _, pool := range poolsToClose {
-		_ = pool.Close()
+	for _, queue := range queuesToClose {
+		_ = queue.Close()
 	}
 	return nil
 }
 
-func (rp *requestPool) QueueRequestAction(peerId, objectId string, action func(ctx context.Context), remove func()) (err error) {
+func (rp *actionPool) Add(peerId, objectId string, action func(ctx context.Context), remove func()) {
 	rp.mu.Lock()
 	if rp.isClosed {
 		rp.mu.Unlock()
-		return nil
+		return
 	}
 	var (
-		pool   *tryAddQueue
+		queue  *replaceableQueue
 		exists bool
 	)
-	pool, exists = rp.pools[peerId]
+	queue, exists = rp.queues[peerId]
 	if !exists {
-		pool = rp.openFunc(peerId)
-		rp.pools[peerId] = pool
-		pool.Run()
+		queue = rp.openFunc(peerId)
+		rp.queues[peerId] = queue
+		queue.Run()
 	}
 	rp.mu.Unlock()
 	var wrappedAction func()
 	wrappedAction = func() {
-		if !rp.TryTake(peerId, objectId) {
+		// this prevents cases when two simultaneous requests are sent at the same time
+		if !rp.tryTake(peerId, objectId) {
 			return
 		}
 		action(rp.ctx)
-		rp.Release(peerId, objectId)
+		rp.release(peerId, objectId)
 	}
-	pool.Replace(objectId, wrappedAction, remove)
-	return nil
+	queue.Replace(objectId, wrappedAction, remove)
 }
 
-func (rp *requestPool) Close() {
+func (rp *actionPool) Close() {
 	rp.periodicLoop.Close()
 	rp.mu.Lock()
 	defer rp.mu.Unlock()
 	rp.isClosed = true
-	for _, pool := range rp.pools {
-		_ = pool.Close()
+	for _, queue := range rp.queues {
+		_ = queue.Close()
 	}
 }

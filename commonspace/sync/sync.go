@@ -78,7 +78,7 @@ func (s *syncService) Init(a *app.App) (err error) {
 	s.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
 	s.commonMetric, _ = a.Component(metric.CName).(metric.Metric)
 	syncQueues := a.MustComponent(syncqueues.CName).(syncqueues.SyncQueues)
-	s.manager = NewRequestManager(s.handler, s.metric, syncQueues.RequestPool(s.spaceId), syncQueues.Limit(s.spaceId))
+	s.manager = NewRequestManager(s.handler, s.metric, syncQueues.ActionPool(s.spaceId), syncQueues.Limit(s.spaceId))
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	return nil
 }
