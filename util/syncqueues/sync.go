@@ -4,6 +4,9 @@ import (
 	"context"
 	"time"
 
+	"golang.org/x/exp/slices"
+
+	accountService "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -24,18 +27,34 @@ func New() SyncQueues {
 }
 
 type syncQueues struct {
-	limit    *Limit
-	rp       RequestPool
-	nodeConf nodeconf.Service
+	limit          *Limit
+	rp             RequestPool
+	nodeConf       nodeconf.Service
+	accountService accountService.Service
 }
 
 func (g *syncQueues) Init(a *app.App) (err error) {
-	g.rp = NewRequestPool(time.Second*30, time.Minute)
 	g.nodeConf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
-	var nodeIds []string
+	g.accountService = a.MustComponent(accountService.CName).(accountService.Service)
+	var (
+		nodeIds        []string
+		iAmResponsible bool
+		myId           = g.accountService.Account().PeerId
+	)
 	for _, node := range g.nodeConf.Configuration().Nodes {
 		nodeIds = append(nodeIds, node.PeerId)
+		if node.PeerId == myId {
+			iAmResponsible = true
+		}
 	}
+	g.rp = NewRequestPool(time.Second*30, time.Minute, func(peerId string) *tryAddQueue {
+		// increase limits between responsible nodes
+		if slices.Contains(nodeIds, peerId) && iAmResponsible {
+			return newTryAddQueue(30, 400)
+		} else {
+			return newTryAddQueue(10, 100)
+		}
+	})
 	g.limit = NewLimit([]int{20, 15, 10, 5}, []int{200, 400, 800}, nodeIds, 100)
 	return
 }

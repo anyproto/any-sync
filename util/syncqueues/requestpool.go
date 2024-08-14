@@ -27,16 +27,18 @@ type requestPool struct {
 	gcPeriod     time.Duration
 	ctx          context.Context
 	cancel       context.CancelFunc
+	openFunc     func(peerId string) *tryAddQueue
 	isClosed     bool
 }
 
-func NewRequestPool(closePeriod, gcPeriod time.Duration) RequestPool {
+func NewRequestPool(closePeriod, gcPeriod time.Duration, openFunc func(peerId string) *tryAddQueue) RequestPool {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &requestPool{
 		ctx:         ctx,
 		cancel:      cancel,
 		closePeriod: closePeriod,
 		gcPeriod:    gcPeriod,
+		openFunc:    openFunc,
 		pools:       make(map[string]*tryAddQueue),
 		peerGuard:   NewGuard(),
 	}
@@ -91,7 +93,7 @@ func (rp *requestPool) QueueRequestAction(peerId, objectId string, action func(c
 	)
 	pool, exists = rp.pools[peerId]
 	if !exists {
-		pool = newTryAddQueue(10, 100)
+		pool = rp.openFunc(peerId)
 		rp.pools[peerId] = pool
 		pool.Run()
 	}
