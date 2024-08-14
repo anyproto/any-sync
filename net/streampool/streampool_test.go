@@ -13,9 +13,11 @@ import (
 	"golang.org/x/net/context"
 	"storj.io/drpc"
 
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
+	"github.com/anyproto/any-sync/net/streampool/streamhandler"
 	"github.com/anyproto/any-sync/net/streampool/testservice"
 )
 
@@ -210,13 +212,16 @@ func newFixture(t *testing.T) *fixture {
 	fx.tsh = &testServerHandler{receiveCh: make(chan *testservice.StreamMessage, 100)}
 	require.NoError(t, testservice.DRPCRegisterTest(fx.ts, fx.tsh))
 	fx.th = &testHandler{}
-	s := New()
-	s.(*service).debugStat = debugstat.NewNoOp()
-	fx.StreamPool = s.NewStreamPool(fx.th, StreamConfig{
+	s := New().(*streamPool)
+	s.handler = fx.th
+	s.statService = debugstat.NewNoOp()
+	s.streamConfig = StreamConfig{
 		SendQueueSize:    10,
 		DialQueueWorkers: 1,
 		DialQueueSize:    10,
-	})
+	}
+	fx.StreamPool = s
+	require.NoError(t, fx.StreamPool.Run(context.Background()))
 	return fx
 }
 
@@ -228,13 +233,21 @@ type fixture struct {
 }
 
 func (fx *fixture) Finish(t *testing.T) {
-	require.NoError(t, fx.Close())
+	require.NoError(t, fx.Close(context.Background()))
 }
 
 type testHandler struct {
 	streamOpenDelay  time.Duration
 	incomingMessages []drpc.Message
 	mu               sync.Mutex
+}
+
+func (t *testHandler) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (t *testHandler) Name() (name string) {
+	return streamhandler.CName
 }
 
 func (t *testHandler) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error) {

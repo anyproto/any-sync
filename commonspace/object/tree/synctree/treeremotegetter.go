@@ -72,6 +72,7 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 	if err == nil || !errors.Is(err, treestorage.ErrUnknownTreeId) {
 		return
 	}
+	storageErr := err
 
 	status, err := t.deps.SpaceStorage.TreeDeletedStatus(t.treeId)
 	if err != nil {
@@ -84,6 +85,9 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 
 	collector, peerId, err := t.treeRequestLoop(ctx)
 	if err != nil {
+		if errors.Is(err, peer.ErrPeerIdNotFoundInContext) {
+			err = storageErr
+		}
 		return
 	}
 
