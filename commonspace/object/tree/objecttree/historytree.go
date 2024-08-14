@@ -27,34 +27,25 @@ func (h *historyTree) rebuildFromStorage(params HistoryTreeParams) (err error) {
 }
 
 func (h *historyTree) rebuild(params HistoryTreeParams) (err error) {
-	var (
-		beforeId = params.BeforeId
-		include  = params.IncludeBeforeId
-		full     = params.BuildFullTree
-	)
 	h.treeBuilder.Reset()
-	if full {
+	if len(params.Heads) == 0 {
 		h.tree, err = h.treeBuilder.BuildFull()
 		return
 	}
-	if beforeId == h.Id() && !include {
-		return ErrLoadBeforeRoot
-	}
 
-	heads := []string{beforeId}
-	if beforeId == "" {
-		heads, err = h.treeStorage.Heads()
+	if len(params.Heads) == 1 && params.Heads[0] == "" {
+		params.Heads, err = h.treeStorage.Heads()
 		if err != nil {
 			return
 		}
-	} else if !include {
-		beforeChange, err := h.treeBuilder.loadChange(beforeId)
+	}
+	if !params.IncludeBeforeId && len(params.Heads) == 1 {
+		beforeChange, err := h.treeBuilder.loadChange(params.Heads[0])
 		if err != nil {
 			return err
 		}
-		heads = beforeChange.PreviousIds
+		params.Heads = beforeChange.PreviousIds
 	}
-
-	h.tree, err = h.treeBuilder.build(heads, nil, nil)
+	h.tree, err = h.treeBuilder.build(params.Heads, nil, nil)
 	return
 }

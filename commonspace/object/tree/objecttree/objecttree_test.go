@@ -1174,7 +1174,7 @@ func TestObjectTree(t *testing.T) {
 		}
 		deps.treeStorage.AddRawChangesSetHeads(rawChanges, []string{"6"})
 		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
-			BeforeId:        "6",
+			Heads:           []string{"6"},
 			IncludeBeforeId: false,
 		})
 		require.NoError(t, err)
@@ -1205,9 +1205,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("6", aclList.Head().Id, "5", false, "5"),
 		}
 		deps.treeStorage.AddRawChangesSetHeads(rawChanges, []string{"6"})
-		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
-			BuildFullTree: true,
-		})
+		hTree, err := buildHistoryTree(deps, HistoryTreeParams{})
 		require.NoError(t, err)
 		// check tree heads
 		assert.Equal(t, []string{"6"}, hTree.Heads())
@@ -1236,8 +1234,7 @@ func TestObjectTree(t *testing.T) {
 		}
 		deps.treeStorage.AddRawChangesSetHeads(rawChanges, []string{"6"})
 		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
-			BeforeId:        "6",
-			IncludeBeforeId: true,
+			Heads: []string{"6"}, IncludeBeforeId: true,
 		})
 		require.NoError(t, err)
 		// check tree heads
@@ -1257,7 +1254,7 @@ func TestObjectTree(t *testing.T) {
 	t.Run("test history tree root", func(t *testing.T) {
 		_, deps := prepareHistoryTreeDeps(aclList)
 		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
-			BeforeId:        "0",
+			Heads:           []string{"0"},
 			IncludeBeforeId: true,
 		})
 		require.NoError(t, err)
