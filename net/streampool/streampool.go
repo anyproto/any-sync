@@ -49,9 +49,9 @@ type MessageQueueId interface {
 type StreamPool interface {
 	app.ComponentRunnable
 	// AddStream adds new outgoing stream into the pool
-	AddStream(stream drpc.Stream, tags ...string) (err error)
+	AddStream(stream drpc.Stream, queueSize int, tags ...string) (err error)
 	// ReadStream adds new incoming stream and synchronously read it
-	ReadStream(stream drpc.Stream, tags ...string) (err error)
+	ReadStream(stream drpc.Stream, queueSize int, tags ...string) (err error)
 	// Send sends a message to given peers. A stream will be opened if it is not cached before. Works async.
 	Send(ctx context.Context, msg drpc.Message, target PeerGetter) (err error)
 	// SendById sends a message to given peerIds. Works only if stream exists
@@ -147,8 +147,8 @@ type openingProcess struct {
 	err error
 }
 
-func (s *streamPool) ReadStream(drpcStream drpc.Stream, tags ...string) error {
-	st, err := s.addStream(drpcStream, tags...)
+func (s *streamPool) ReadStream(drpcStream drpc.Stream, queueSize int, tags ...string) error {
+	st, err := s.addStream(drpcStream, queueSize, tags...)
 	if err != nil {
 		return err
 	}
@@ -158,8 +158,8 @@ func (s *streamPool) ReadStream(drpcStream drpc.Stream, tags ...string) error {
 	return st.readLoop()
 }
 
-func (s *streamPool) AddStream(drpcStream drpc.Stream, tags ...string) error {
-	st, err := s.addStream(drpcStream, tags...)
+func (s *streamPool) AddStream(drpcStream drpc.Stream, queueSize int, tags ...string) error {
+	st, err := s.addStream(drpcStream, queueSize, tags...)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func (s *streamPool) Streams(tags ...string) (streams []drpc.Stream) {
 	return
 }
 
-func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream, error) {
+func (s *streamPool) addStream(drpcStream drpc.Stream, queueSize int, tags ...string) (*stream, error) {
 	ctx := drpcStream.Context()
 	peerId, err := peer.CtxPeerId(ctx)
 	if err != nil {
@@ -193,7 +193,6 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 	defer s.mu.Unlock()
 	s.lastStreamId++
 	streamId := s.lastStreamId
-	queueSize := s.writeQueueSize
 	if queueSize <= 0 {
 		queueSize = 100
 	}
@@ -207,7 +206,7 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 		tags:     tags,
 		stats:    newStreamStat(peerId),
 	}
-	st.queue = mb.New[drpc.Message](s.writeQueueSize)
+	st.queue = mb.New[drpc.Message](queueSize)
 	s.streams[streamId] = st
 	s.streamIdsByPeer[peerId] = append(s.streamIdsByPeer[peerId], streamId)
 	for _, tag := range tags {
@@ -337,12 +336,12 @@ func (s *streamPool) openStream(ctx context.Context, p peer.Peer) *openingProces
 		}
 		ctx = peer.CtxWithProtoVersion(ctx, peerProto)
 		// open new stream and add to pool
-		st, tags, err := s.handler.OpenStream(ctx, p)
+		st, tags, queueSize, err := s.handler.OpenStream(ctx, p)
 		if err != nil {
 			op.err = err
 			return
 		}
-		if err = s.AddStream(st, tags...); err != nil {
+		if err = s.AddStream(st, queueSize, tags...); err != nil {
 			op.err = nil
 			return
 		}

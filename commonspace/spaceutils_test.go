@@ -596,7 +596,7 @@ func (s *streamOpener) Name() (name string) {
 	return streamhandler.CName
 }
 
-func (s *streamOpener) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error) {
+func (s *streamOpener) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, queueSize int, err error) {
 	conn, err := p.AcquireDrpcConn(ctx)
 	if err != nil {
 		return
@@ -618,7 +618,8 @@ func (s *streamOpener) OpenStream(ctx context.Context, p peer.Peer) (stream drpc
 	}); err != nil {
 		return
 	}
-	return &failingStream{objectStream, false}, nil, nil
+	queueSize = 100
+	return &failingStream{objectStream, false}, nil, queueSize, nil
 }
 
 //

@@ -166,7 +166,7 @@ func (r *RpcServer) SpacePull(ctx context.Context, request *spacesyncproto.Space
 }
 
 func (r *RpcServer) ObjectSyncStream(stream spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error {
-	return r.streamPool.ReadStream(&failingStream{stream, false})
+	return r.streamPool.ReadStream(&failingStream{stream, false}, 100)
 }
 
 func (r *RpcServer) ObjectSync(ctx context.Context, message *spacesyncproto.ObjectSyncMessage) (*spacesyncproto.ObjectSyncMessage, error) {

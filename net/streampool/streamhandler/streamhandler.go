@@ -15,7 +15,7 @@ const CName = "common.streampool.streamhandler"
 type StreamHandler interface {
 	app.Component
 	// OpenStream opens stream with given peer
-	OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error)
+	OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, queueSize int, err error)
 	// HandleMessage handles incoming message
 	HandleMessage(ctx context.Context, peerId string, msg drpc.Message) (err error)
 	// NewReadMessage creates new empty message for unmarshalling into it
