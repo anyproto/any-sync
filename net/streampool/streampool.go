@@ -81,6 +81,16 @@ type streamPool struct {
 	lastStreamId    uint32
 }
 
+func (s *streamPool) OutgoingMsg() (count uint32, size uint64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, st := range s.streams {
+		count += uint32(st.stats.msgCount.Load())
+		size += uint64(st.stats.totalSize.Load())
+	}
+	return
+}
+
 func (s *streamPool) Init(a *app.App) (err error) {
 	s.metric, _ = a.Component(metric.CName).(metric.Metric)
 	s.handler = a.MustComponent(streamhandler.CName).(streamhandler.StreamHandler)
@@ -92,6 +102,7 @@ func (s *streamPool) Init(a *app.App) (err error) {
 	s.streamConfig = a.MustComponent("config").(configGetter).GetStreamConfig()
 	s.statService.AddProvider(s)
 	if s.metric != nil {
+		s.metric.RegisterStreamPoolSyncMetric(s)
 		registerMetrics(s.metric.Registry(), s, "")
 	}
 	return nil
@@ -440,6 +451,7 @@ func (s *streamPool) removeStream(streamId uint32) {
 
 func (s *streamPool) Close(ctx context.Context) (err error) {
 	s.statService.RemoveProvider(s)
+	s.metric.UnregisterStreamPoolSyncMetric()
 	return s.dial.Close()
 }
 

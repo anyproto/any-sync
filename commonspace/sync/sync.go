@@ -93,7 +93,7 @@ func (s *syncService) Run(ctx context.Context) (err error) {
 func (s *syncService) Close(ctx context.Context) (err error) {
 	err = s.receiveQueue.Close()
 	if s.commonMetric != nil {
-		s.commonMetric.UnregisterSyncMetric(s.spaceId, s.metric)
+		s.commonMetric.UnregisterSyncMetric(s.spaceId)
 	}
 	s.manager.Close()
 	return

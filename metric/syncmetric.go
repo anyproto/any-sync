@@ -10,6 +10,10 @@ type SyncMetric interface {
 	SyncMetricState() SyncMetricState
 }
 
+type StreamPoolMetric interface {
+	OutgoingMsg() (count uint32, size uint64)
+}
+
 type SyncMetricState struct {
 	IncomingMsgCount  uint32
 	IncomingMsgSize   uint64
@@ -28,13 +32,11 @@ type SyncMetricState struct {
 
 func (st *SyncMetricState) Append(other SyncMetricState) {
 	st.IncomingMsgSize += other.IncomingMsgSize
-	st.OutgoingMsgSize += other.OutgoingMsgSize
 	st.IncomingReqSize += other.IncomingReqSize
 	st.OutgoingReqSize += other.OutgoingReqSize
 	st.ReceivedRespSize += other.ReceivedRespSize
 	st.SentRespSize += other.SentRespSize
 	st.IncomingMsgCount += other.IncomingMsgCount
-	st.OutgoingMsgCount += other.OutgoingMsgCount
 	st.IncomingReqCount += other.IncomingReqCount
 	st.OutgoingReqCount += other.OutgoingReqCount
 	st.ReceivedRespCount += other.ReceivedRespCount
@@ -57,6 +59,9 @@ func (m *metric) getLastCached() SyncMetricState {
 	lastCached = SyncMetricState{}
 	for _, mtr := range allMetrics {
 		lastCached.Append(mtr.SyncMetricState())
+	}
+	if m.streamPoolMetric != nil {
+		lastCached.OutgoingMsgCount, lastCached.OutgoingMsgSize = m.streamPoolMetric.OutgoingMsg()
 	}
 	m.mx.Lock()
 	defer m.mx.Unlock()

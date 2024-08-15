@@ -31,7 +31,9 @@ type Metric interface {
 	WrapDRPCHandler(h drpc.Handler) drpc.Handler
 	RequestLog(ctx context.Context, rpc string, fields ...zap.Field)
 	RegisterSyncMetric(spaceId string, syncMetric SyncMetric)
-	UnregisterSyncMetric(spaceId string, syncMetric SyncMetric)
+	UnregisterSyncMetric(spaceId string)
+	RegisterStreamPoolSyncMetric(mtr StreamPoolMetric)
+	UnregisterStreamPoolSyncMetric()
 	app.ComponentRunnable
 }
 
@@ -43,9 +45,22 @@ type metric struct {
 	appField          zap.Field
 	mx                sync.Mutex
 	syncMetrics       map[string]SyncMetric
+	streamPoolMetric  StreamPoolMetric
 	lastCachedState   SyncMetricState
 	lastCachedDate    time.Time
 	lastCachedTimeout time.Duration
+}
+
+func (m *metric) RegisterStreamPoolSyncMetric(mtr StreamPoolMetric) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	m.streamPoolMetric = mtr
+}
+
+func (m *metric) UnregisterStreamPoolSyncMetric() {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	m.streamPoolMetric = nil
 }
 
 func (m *metric) RegisterSyncMetric(spaceId string, syncMetric SyncMetric) {
@@ -54,7 +69,7 @@ func (m *metric) RegisterSyncMetric(spaceId string, syncMetric SyncMetric) {
 	m.syncMetrics[spaceId] = syncMetric
 }
 
-func (m *metric) UnregisterSyncMetric(spaceId string, syncMetric SyncMetric) {
+func (m *metric) UnregisterSyncMetric(spaceId string) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 	delete(m.syncMetrics, spaceId)

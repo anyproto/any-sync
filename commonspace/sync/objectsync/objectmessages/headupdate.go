@@ -62,6 +62,10 @@ func (h *HeadUpdate) MsgSize() uint64 {
 	return byteSize + uint64(len(h.Meta.PeerId)) + uint64(len(h.Meta.ObjectId)) + uint64(len(h.Meta.SpaceId))
 }
 
+func (h *HeadUpdate) Size() int {
+	return int(h.MsgSize())
+}
+
 func (h *HeadUpdate) SetPeerId(peerId string) {
 	h.Meta.PeerId = peerId
 }
