@@ -71,11 +71,12 @@ func (m *multiQueue[T]) Add(ctx context.Context, threadId string, msg T) (err er
 		q = m.startThread(threadId)
 	}
 	m.mu.Unlock()
+	m.updateSize(msg, true)
 	err = q.TryAdd(msg)
 	if err != nil {
+		m.updateSize(msg, false)
 		return
 	}
-	m.updateSize(msg, true)
 	return
 }
 

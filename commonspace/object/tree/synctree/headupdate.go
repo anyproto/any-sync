@@ -15,9 +15,13 @@ type InnerHeadUpdate struct {
 	root         *treechangeproto.RawTreeChangeWithId
 }
 
-func (h InnerHeadUpdate) MsgSize() uint64 {
-	size := uint64(len(h.heads))
-	size += uint64(len(h.snapshotPath))
+func (h InnerHeadUpdate) MsgSize() (size uint64) {
+	for _, head := range h.heads {
+		size += uint64(len(head))
+	}
+	for _, snapshotId := range h.snapshotPath {
+		size += uint64(len(snapshotId))
+	}
 	for _, change := range h.changes {
 		size += uint64(len(change.Id))
 		size += uint64(len(change.RawChange))

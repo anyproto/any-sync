@@ -73,8 +73,15 @@ func (m *syncMetric) UpdateQueueSize(size uint64, msgType int, add bool) {
 		atCount.Add(1)
 		m.totalSize.Add(intSize)
 	} else {
-		atSize.Add(-intSize)
-		atCount.Add(-1)
-		m.totalSize.Add(-intSize)
+		curCount := atCount.Load()
+		curSize := atSize.Load()
+		if curCount != 0 {
+			atCount.Add(-1)
+		}
+		// TODO: fix the root cause :-)
+		if curSize > intSize {
+			atSize.Add(-intSize)
+			m.totalSize.Add(-intSize)
+		}
 	}
 }
