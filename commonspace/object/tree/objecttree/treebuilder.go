@@ -82,8 +82,11 @@ func (tb *treeBuilder) build(heads []string, theirHeads []string, newChanges []*
 	//  but then we have to be sure that invariant stays true
 	oldBreakpoint, err := tb.findBreakpoint(heads, true)
 	if err != nil {
-		// this should never error out, because otherwise we have broken data
-		return nil, fmt.Errorf("findBreakpoint error: %v", err)
+		log.Error("findBreakpoint error", zap.Error(err), zap.String("treeId", tb.treeStorage.Id()))
+		heads, oldBreakpoint, err = tb.restoreTree()
+		if err != nil {
+			return nil, fmt.Errorf("restoreTree error: %v", err)
+		}
 	}
 
 	if len(theirHeads) > 0 {
@@ -186,6 +189,38 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 
 	tb.cache[id] = ch
 	return ch, nil
+}
+
+func (tb *treeBuilder) restoreTree() (newHeads []string, breakpoint string, err error) {
+	allIds, err := tb.treeStorage.GetAllChangeIds()
+	if err != nil {
+		return
+	}
+	rootCh, err := tb.loadChange(tb.treeStorage.Id())
+	if err != nil {
+		return
+	}
+	tr := &Tree{}
+	tr.AddFast(rootCh)
+	var changes []*Change
+	for _, id := range allIds {
+		if id == tb.treeStorage.Id() {
+			continue
+		}
+		ch, e := tb.loadChange(id)
+		if e != nil {
+			continue
+		}
+		changes = append(changes, ch)
+	}
+	tr.AddFast(changes...)
+	breakpoint, err = tb.findBreakpoint(tr.headIds, false)
+	if err != nil {
+		return
+	}
+	newHeads = tr.headIds
+	err = tb.treeStorage.SetHeads(newHeads)
+	return
 }
 
 func (tb *treeBuilder) findBreakpoint(heads []string, noError bool) (breakpoint string, err error) {

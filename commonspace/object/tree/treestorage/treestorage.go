@@ -33,6 +33,7 @@ type TreeStorage interface {
 	SetHeads(heads []string) error
 	AddRawChange(change *treechangeproto.RawTreeChangeWithId) error
 	AddRawChangesSetHeads(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error
+	GetAllChangeIds() ([]string, error)
 
 	GetRawChange(ctx context.Context, id string) (*treechangeproto.RawTreeChangeWithId, error)
 	GetAppendRawChange(ctx context.Context, buf []byte, id string) (*treechangeproto.RawTreeChangeWithId, error)
