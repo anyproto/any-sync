@@ -144,6 +144,12 @@ func (t *InMemoryTreeStorage) Copy() *InMemoryTreeStorage {
 	return other.(*InMemoryTreeStorage)
 }
 
+func (t *InMemoryTreeStorage) Remove(id string) {
+	t.Lock()
+	defer t.Unlock()
+	delete(t.Changes, id)
+}
+
 func (t *InMemoryTreeStorage) Equal(other *InMemoryTreeStorage) bool {
 	t.Lock()
 	defer t.Unlock()

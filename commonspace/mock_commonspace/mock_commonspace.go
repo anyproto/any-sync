@@ -22,6 +22,7 @@ import (
 	objecttreebuilder "github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	spacestorage "github.com/anyproto/any-sync/commonspace/spacestorage"
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	objectmessages "github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	syncstatus "github.com/anyproto/any-sync/commonspace/syncstatus"
 	peer "github.com/anyproto/any-sync/net/peer"
 	gomock "go.uber.org/mock/gomock"
@@ -151,6 +152,35 @@ func (mr *MockSpaceMockRecorder) GetNodePeers(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodePeers", reflect.TypeOf((*MockSpace)(nil).GetNodePeers), arg0)
 }
 
+// HandleDeprecatedObjectSyncRequest mocks base method.
+func (m *MockSpace) HandleDeprecatedObjectSyncRequest(arg0 context.Context, arg1 *spacesyncproto.ObjectSyncMessage) (*spacesyncproto.ObjectSyncMessage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HandleDeprecatedObjectSyncRequest", arg0, arg1)
+	ret0, _ := ret[0].(*spacesyncproto.ObjectSyncMessage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HandleDeprecatedObjectSyncRequest indicates an expected call of HandleDeprecatedObjectSyncRequest.
+func (mr *MockSpaceMockRecorder) HandleDeprecatedObjectSyncRequest(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleDeprecatedObjectSyncRequest", reflect.TypeOf((*MockSpace)(nil).HandleDeprecatedObjectSyncRequest), arg0, arg1)
+}
+
+// HandleMessage mocks base method.
+func (m *MockSpace) HandleMessage(arg0 context.Context, arg1 *objectmessages.HeadUpdate) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HandleMessage", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// HandleMessage indicates an expected call of HandleMessage.
+func (mr *MockSpaceMockRecorder) HandleMessage(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleMessage", reflect.TypeOf((*MockSpace)(nil).HandleMessage), arg0, arg1)
+}
+
 // HandleRangeRequest mocks base method.
 func (m *MockSpace) HandleRangeRequest(arg0 context.Context, arg1 *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
 	m.ctrl.T.Helper()
@@ -164,20 +194,6 @@ func (m *MockSpace) HandleRangeRequest(arg0 context.Context, arg1 *spacesyncprot
 func (mr *MockSpaceMockRecorder) HandleRangeRequest(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleRangeRequest", reflect.TypeOf((*MockSpace)(nil).HandleRangeRequest), arg0, arg1)
-}
-
-// HandleStream mocks base method.
-func (m *MockSpace) HandleStream(arg0 spacesyncproto.DRPCSpaceSync_ObjectSyncStreamStream) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleStream", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// HandleStream indicates an expected call of HandleStream.
-func (mr *MockSpaceMockRecorder) HandleStream(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStream", reflect.TypeOf((*MockSpace)(nil).HandleStream), arg0)
 }
 
 // HandleStreamSyncRequest mocks base method.

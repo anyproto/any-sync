@@ -15,7 +15,6 @@ import (
 
 	app "github.com/anyproto/any-sync/app"
 	peer "github.com/anyproto/any-sync/net/peer"
-	streampool "github.com/anyproto/any-sync/net/streampool"
 	gomock "go.uber.org/mock/gomock"
 	drpc "storj.io/drpc"
 )
@@ -44,17 +43,17 @@ func (m *MockPeerManager) EXPECT() *MockPeerManagerMockRecorder {
 }
 
 // BroadcastMessage mocks base method.
-func (m *MockPeerManager) BroadcastMessage(arg0 context.Context, arg1 drpc.Message, arg2 streampool.StreamPool) error {
+func (m *MockPeerManager) BroadcastMessage(arg0 context.Context, arg1 drpc.Message) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BroadcastMessage", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "BroadcastMessage", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // BroadcastMessage indicates an expected call of BroadcastMessage.
-func (mr *MockPeerManagerMockRecorder) BroadcastMessage(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPeerManagerMockRecorder) BroadcastMessage(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BroadcastMessage", reflect.TypeOf((*MockPeerManager)(nil).BroadcastMessage), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BroadcastMessage", reflect.TypeOf((*MockPeerManager)(nil).BroadcastMessage), arg0, arg1)
 }
 
 // GetNodePeers mocks base method.
@@ -113,4 +112,18 @@ func (m *MockPeerManager) Name() string {
 func (mr *MockPeerManagerMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockPeerManager)(nil).Name))
+}
+
+// SendMessage mocks base method.
+func (m *MockPeerManager) SendMessage(arg0 context.Context, arg1 string, arg2 drpc.Message) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendMessage", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendMessage indicates an expected call of SendMessage.
+func (mr *MockPeerManagerMockRecorder) SendMessage(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMessage", reflect.TypeOf((*MockPeerManager)(nil).SendMessage), arg0, arg1, arg2)
 }

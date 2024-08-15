@@ -881,6 +881,37 @@ func TestObjectTree(t *testing.T) {
 		require.Equal(t, []string{"0", "1", "2", "3", "4"}, ids)
 	})
 
+	t.Run("test tree restore", func(t *testing.T) {
+		ctx := prepareTreeContext(t, aclList)
+		rawChanges := []*treechangeproto.RawTreeChangeWithId{
+			ctx.changeCreator.CreateRawWithData("1", aclList.Head().Id, "0", false, []byte("1"), "0"),
+			ctx.changeCreator.CreateRawWithData("2", aclList.Head().Id, "0", false, []byte("2"), "1"),
+			ctx.changeCreator.CreateRawWithData("3", aclList.Head().Id, "0", false, []byte("3"), "2"),
+			ctx.changeCreator.CreateRawWithData("4", aclList.Head().Id, "0", false, []byte("4"), "2"),
+			ctx.changeCreator.CreateRawWithData("5", aclList.Head().Id, "0", false, []byte("5"), "1"),
+			ctx.changeCreator.CreateRawWithData("6", aclList.Head().Id, "0", true, []byte("6"), "3", "4", "5"),
+			ctx.changeCreator.CreateRawWithData("7", aclList.Head().Id, "6", false, []byte("7"), "6"),
+			ctx.changeCreator.CreateRawWithData("8", aclList.Head().Id, "6", false, []byte("8"), "6"),
+		}
+		_, err := ctx.objTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   []string{"7", "8"},
+			RawChanges: rawChanges,
+		})
+		require.NoError(t, err)
+		st := ctx.treeStorage.(*treestorage.InMemoryTreeStorage)
+		st.Remove("6")
+		newCh := ctx.changeCreator.CreateRawWithData("9", aclList.Head().Id, "0", false, []byte("9"), "3", "4", "5")
+		_, err = ctx.objTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   []string{"9"},
+			RawChanges: []*treechangeproto.RawTreeChangeWithId{newCh},
+		})
+		require.NoError(t, err)
+		require.Equal(t, []string{"9"}, ctx.objTree.Heads())
+		heads, err := ctx.objTree.Storage().Heads()
+		require.NoError(t, err)
+		require.Equal(t, []string{"9"}, heads)
+	})
+
 	t.Run("rollback when add to storage returns error", func(t *testing.T) {
 		ctx := prepareTreeContext(t, aclList)
 		changeCreator := ctx.changeCreator
