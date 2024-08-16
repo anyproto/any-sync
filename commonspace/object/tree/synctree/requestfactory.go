@@ -9,7 +9,7 @@ import (
 const batchSize = 1024 * 1024
 
 type RequestFactory interface {
-	CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectmessages.HeadUpdate)
+	CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectmessages.HeadUpdate, err error)
 	CreateNewTreeRequest(peerId, objectId string) *objectmessages.Request
 	CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectmessages.Request
 	CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (ResponseProducer, error)
@@ -23,17 +23,17 @@ type requestFactory struct {
 	spaceId string
 }
 
-func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectmessages.HeadUpdate) {
+func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectmessages.HeadUpdate, err error) {
 	broadcastOpts := BroadcastOptions{}
 	if ignoredPeer != "" {
 		broadcastOpts.EmptyPeers = []string{ignoredPeer}
 	}
-	return &objectmessages.HeadUpdate{
+	headUpdate = &objectmessages.HeadUpdate{
 		Meta: objectmessages.ObjectMeta{
 			ObjectId: t.Id(),
 			SpaceId:  r.spaceId,
 		},
-		Update: InnerHeadUpdate{
+		Update: &InnerHeadUpdate{
 			opts:         broadcastOpts,
 			heads:        t.Heads(),
 			changes:      added,
@@ -41,6 +41,8 @@ func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer s
 			root:         t.Header(),
 		},
 	}
+	err = headUpdate.Update.Prepare()
+	return
 }
 
 func (r *requestFactory) CreateNewTreeRequest(peerId, objectId string) *objectmessages.Request {

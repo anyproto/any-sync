@@ -24,16 +24,18 @@ type stream struct {
 	tags     []string
 }
 
-type peerSettable interface {
+type peerMessage interface {
 	SetPeerId(peerId string)
+	Copy() drpc.Message
 }
 
 func (sr *stream) write(msg drpc.Message) (err error) {
-	sr.stats.AddMessage(msg)
-	settable, ok := msg.(peerSettable)
-	if ok {
-		settable.SetPeerId(sr.peerId)
+	if peerMsg, ok := msg.(peerMessage); ok {
+		cp := peerMsg.Copy().(peerMessage)
+		cp.SetPeerId(sr.peerId)
+		msg = cp
 	}
+	sr.stats.AddMessage(msg)
 	err = sr.queue.TryAdd(msg)
 	if err != nil {
 		sr.stats.RemoveMessage(msg)
@@ -51,10 +53,6 @@ func (sr *stream) readLoop() error {
 		if err := sr.stream.MsgRecv(msg, EncodingProto); err != nil {
 			sr.l.Info("msg receive error", zap.Error(err))
 			return err
-		}
-		settable, ok := msg.(peerSettable)
-		if ok {
-			settable.SetPeerId(sr.peerId)
 		}
 		ctx := streamCtx(sr.peerCtx, sr.streamId, sr.peerId)
 		ctx = logger.CtxWithFields(ctx, zap.String("peerId", sr.peerId))

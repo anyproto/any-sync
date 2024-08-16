@@ -6,12 +6,16 @@ import (
 )
 
 type InnerHeadUpdate struct {
-	head    string
-	records []*consensusproto.RawRecordWithId
-	root    *consensusproto.RawRecordWithId
+	head     string
+	records  []*consensusproto.RawRecordWithId
+	root     *consensusproto.RawRecordWithId
+	prepared []byte
 }
 
-func (h InnerHeadUpdate) MsgSize() uint64 {
+func (h *InnerHeadUpdate) MsgSize() uint64 {
+	if h.prepared != nil {
+		return uint64(len(h.prepared))
+	}
 	size := uint64(len(h.head))
 	for _, record := range h.records {
 		size += uint64(len(record.Id))
@@ -20,14 +24,31 @@ func (h InnerHeadUpdate) MsgSize() uint64 {
 	return size + uint64(len(h.head)) + uint64(len(h.root.Id)) + uint64(len(h.root.Payload))
 }
 
-func (h InnerHeadUpdate) Marshall(data objectmessages.ObjectMeta) ([]byte, error) {
-	treeMsg := consensusproto.WrapHeadUpdate(&consensusproto.LogHeadUpdate{
+func (h *InnerHeadUpdate) Prepare() error {
+	logMsg := consensusproto.WrapHeadUpdate(&consensusproto.LogHeadUpdate{
 		Head:    h.head,
 		Records: h.records,
 	}, h.root)
-	return treeMsg.Marshal()
+	bytes, err := logMsg.Marshal()
+	if err != nil {
+		return err
+	}
+	h.records = nil
+	h.prepared = bytes
+	return nil
 }
 
-func (h InnerHeadUpdate) Heads() []string {
+func (h *InnerHeadUpdate) Marshall(data objectmessages.ObjectMeta) ([]byte, error) {
+	if h.prepared != nil {
+		return h.prepared, nil
+	}
+	logMsg := consensusproto.WrapHeadUpdate(&consensusproto.LogHeadUpdate{
+		Head:    h.head,
+		Records: h.records,
+	}, h.root)
+	return logMsg.Marshal()
+}
+
+func (h *InnerHeadUpdate) Heads() []string {
 	return []string{h.head}
 }

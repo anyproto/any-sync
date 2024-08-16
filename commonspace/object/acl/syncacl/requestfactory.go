@@ -9,7 +9,7 @@ import (
 )
 
 type RequestFactory interface {
-	CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (headUpdate *objectmessages.HeadUpdate)
+	CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (headUpdate *objectmessages.HeadUpdate, err error)
 	CreateFullSyncRequest(peerId string, l list.AclList) *objectmessages.Request
 	CreateFullSyncResponse(l list.AclList, theirHead string) (resp *Response, err error)
 }
@@ -22,18 +22,20 @@ func NewRequestFactory(spaceId string) RequestFactory {
 	return &requestFactory{spaceId: spaceId}
 }
 
-func (r *requestFactory) CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (headUpdate *objectmessages.HeadUpdate) {
-	return &objectmessages.HeadUpdate{
+func (r *requestFactory) CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (headUpdate *objectmessages.HeadUpdate, err error) {
+	headUpdate = &objectmessages.HeadUpdate{
 		Meta: objectmessages.ObjectMeta{
 			ObjectId: l.Id(),
 			SpaceId:  r.spaceId,
 		},
-		Update: InnerHeadUpdate{
+		Update: &InnerHeadUpdate{
 			head:    l.Head().Id,
 			records: added,
 			root:    l.Root(),
 		},
 	}
+	err = headUpdate.Update.Prepare()
+	return
 }
 
 func (r *requestFactory) CreateFullSyncRequest(peerId string, l list.AclList) *objectmessages.Request {

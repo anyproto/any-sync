@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/anyproto/protobuf/proto"
+	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
@@ -35,6 +36,7 @@ type BroadcastOptions struct {
 
 type InnerHeadUpdate interface {
 	Marshall(data ObjectMeta) ([]byte, error)
+	Prepare() error
 	Heads() []string
 	MsgSize() uint64
 }
@@ -110,4 +112,13 @@ func (h *HeadUpdate) PeerId() string {
 
 func (h *HeadUpdate) ObjectId() string {
 	return h.Meta.ObjectId
+}
+
+func (h *HeadUpdate) Copy() drpc.Message {
+	return &HeadUpdate{
+		Meta:   h.Meta,
+		Bytes:  h.Bytes,
+		Update: h.Update,
+		msg:    h.msg,
+	}
 }

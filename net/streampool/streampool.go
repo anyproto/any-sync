@@ -369,7 +369,6 @@ func (s *streamPool) Broadcast(ctx context.Context, msg drpc.Message, tags ...st
 		}
 	}
 	s.mu.Unlock()
-
 	for _, st := range streams {
 		if e := st.write(msg); e != nil {
 			st.l.InfoCtx(ctx, "broadcast write error", zap.Error(e))
@@ -451,7 +450,9 @@ func (s *streamPool) removeStream(streamId uint32) {
 
 func (s *streamPool) Close(ctx context.Context) (err error) {
 	s.statService.RemoveProvider(s)
-	s.metric.UnregisterStreamPoolSyncMetric()
+	if s.metric != nil {
+		s.metric.UnregisterStreamPoolSyncMetric()
+	}
 	return s.dial.Close()
 }
 

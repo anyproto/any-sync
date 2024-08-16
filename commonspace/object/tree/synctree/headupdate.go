@@ -8,28 +8,51 @@ import (
 )
 
 type InnerHeadUpdate struct {
-	opts         BroadcastOptions
-	heads        []string
-	changes      []*treechangeproto.RawTreeChangeWithId
-	snapshotPath []string
-	root         *treechangeproto.RawTreeChangeWithId
+	opts          BroadcastOptions
+	heads         []string
+	changes       []*treechangeproto.RawTreeChangeWithId
+	snapshotPath  []string
+	root          *treechangeproto.RawTreeChangeWithId
+	prepared      []byte
+	emptyPrepared []byte
 }
 
-func (h InnerHeadUpdate) MsgSize() (size uint64) {
-	for _, head := range h.heads {
-		size += uint64(len(head))
-	}
-	for _, snapshotId := range h.snapshotPath {
-		size += uint64(len(snapshotId))
-	}
-	for _, change := range h.changes {
-		size += uint64(len(change.Id))
-		size += uint64(len(change.RawChange))
-	}
-	return size
+func (h *InnerHeadUpdate) MsgSize() (size uint64) {
+	return uint64(len(h.prepared))
 }
 
-func (h InnerHeadUpdate) Marshall(data objectmessages.ObjectMeta) ([]byte, error) {
+func (h *InnerHeadUpdate) Prepare() error {
+	treeMsg := treechangeproto.WrapHeadUpdate(&treechangeproto.TreeHeadUpdate{
+		Heads:        h.heads,
+		SnapshotPath: h.snapshotPath,
+		Changes:      h.changes,
+	}, h.root)
+	bytes, err := treeMsg.Marshal()
+	if err != nil {
+		return err
+	}
+	h.prepared = bytes
+	emptyTreeMsg := treechangeproto.WrapHeadUpdate(&treechangeproto.TreeHeadUpdate{
+		Heads:        h.heads,
+		SnapshotPath: h.snapshotPath,
+	}, h.root)
+	bytes, err = emptyTreeMsg.Marshal()
+	if err != nil {
+		return err
+	}
+	h.changes = nil
+	h.emptyPrepared = bytes
+	return nil
+}
+
+func (h *InnerHeadUpdate) Marshall(data objectmessages.ObjectMeta) ([]byte, error) {
+	if h.prepared != nil {
+		if slices.Contains(h.opts.EmptyPeers, data.PeerId) {
+			return h.emptyPrepared, nil
+		} else {
+			return h.prepared, nil
+		}
+	}
 	changes := h.changes
 	if slices.Contains(h.opts.EmptyPeers, data.PeerId) {
 		changes = nil
@@ -46,6 +69,6 @@ type BroadcastOptions struct {
 	EmptyPeers []string
 }
 
-func (h InnerHeadUpdate) Heads() []string {
+func (h *InnerHeadUpdate) Heads() []string {
 	return h.heads
 }

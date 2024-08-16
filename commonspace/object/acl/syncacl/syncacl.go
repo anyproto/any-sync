@@ -94,7 +94,10 @@ func (s *syncAcl) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 	if err != nil {
 		return
 	}
-	headUpdate := s.syncClient.CreateHeadUpdate(s, []*consensusproto.RawRecordWithId{rawRec})
+	headUpdate, err := s.syncClient.CreateHeadUpdate(s, []*consensusproto.RawRecordWithId{rawRec})
+	if err != nil {
+		return
+	}
 	s.broadcast(headUpdate)
 	s.headUpdater.UpdateHeads(s.Id(), []string{rawRec.Id})
 	if s.aclUpdater != nil {
@@ -122,7 +125,10 @@ func (s *syncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (e
 		return
 	}
 	log.Debug("records updated", zap.String("head", s.AclList.Head().Id), zap.Int("len(total)", len(s.AclList.Records())))
-	headUpdate := s.syncClient.CreateHeadUpdate(s, rawRecords)
+	headUpdate, err := s.syncClient.CreateHeadUpdate(s, rawRecords)
+	if err != nil {
+		return
+	}
 	s.headUpdater.UpdateHeads(s.Id(), []string{rawRecords[len(rawRecords)-1].Id})
 	s.broadcast(headUpdate)
 	if s.aclUpdater != nil {
