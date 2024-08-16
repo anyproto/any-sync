@@ -6,7 +6,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 )
 
-const batchSize = 1024 * 1024 * 10
+const batchSize = 1024 * 1024
 
 type RequestFactory interface {
 	CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectmessages.HeadUpdate)

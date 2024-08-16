@@ -60,7 +60,7 @@ func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 			batch.Heads = append(batch.Heads, c.Id)
 			return true
 		}
-		if curSize+rawEntry.size > maxSize && len(batch.Batch) != 0 {
+		if curSize+rawEntry.size >= maxSize && len(batch.Batch) != 0 {
 			l.isExhausted = false
 			return false
 		}

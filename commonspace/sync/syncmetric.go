@@ -4,6 +4,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/metric"
 )
@@ -82,6 +84,8 @@ func (m *syncMetric) UpdateQueueSize(size uint64, msgType int, add bool) {
 		if curSize > intSize {
 			atSize.Add(-intSize)
 			m.totalSize.Add(-intSize)
+		} else {
+			log.Error("syncMetric.UpdateQueueSize: totalSize is less than message size", zap.Int64("size", intSize), zap.Int64("totalSize", curSize))
 		}
 	}
 }
