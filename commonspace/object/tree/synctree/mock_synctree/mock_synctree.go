@@ -655,11 +655,12 @@ func (mr *MockSyncClientMockRecorder) CreateFullSyncRequest(arg0, arg1 any) *gom
 }
 
 // CreateHeadUpdate mocks base method.
-func (m *MockSyncClient) CreateHeadUpdate(arg0 objecttree.ObjectTree, arg1 string, arg2 []*treechangeproto.RawTreeChangeWithId) *objectmessages.HeadUpdate {
+func (m *MockSyncClient) CreateHeadUpdate(arg0 objecttree.ObjectTree, arg1 string, arg2 []*treechangeproto.RawTreeChangeWithId) (*objectmessages.HeadUpdate, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateHeadUpdate", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*objectmessages.HeadUpdate)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CreateHeadUpdate indicates an expected call of CreateHeadUpdate.
@@ -763,11 +764,12 @@ func (mr *MockRequestFactoryMockRecorder) CreateFullSyncRequest(arg0, arg1 any) 
 }
 
 // CreateHeadUpdate mocks base method.
-func (m *MockRequestFactory) CreateHeadUpdate(arg0 objecttree.ObjectTree, arg1 string, arg2 []*treechangeproto.RawTreeChangeWithId) *objectmessages.HeadUpdate {
+func (m *MockRequestFactory) CreateHeadUpdate(arg0 objecttree.ObjectTree, arg1 string, arg2 []*treechangeproto.RawTreeChangeWithId) (*objectmessages.HeadUpdate, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateHeadUpdate", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*objectmessages.HeadUpdate)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CreateHeadUpdate indicates an expected call of CreateHeadUpdate.
