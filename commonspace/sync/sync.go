@@ -15,7 +15,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/metric"
-	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/multiqueue"
 	"github.com/anyproto/any-sync/util/syncqueues"
@@ -41,7 +40,6 @@ type SyncService interface {
 type syncService struct {
 	receiveQueue multiqueue.MultiQueue[msgCtx]
 	manager      RequestManager
-	streamPool   streampool.StreamPool
 	peerManager  peermanager.PeerManager
 	nodeConf     nodeconf.NodeConf
 	handler      syncdeps.SyncHandler
@@ -75,7 +73,6 @@ func (s *syncService) Init(a *app.App) (err error) {
 	s.handler = a.MustComponent(syncdeps.CName).(syncdeps.SyncHandler)
 	s.receiveQueue = multiqueue.New[msgCtx](s.handleIncomingMessage, s.metric, syncdeps.MsgTypeIncoming, 100)
 	s.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
-	s.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
 	s.commonMetric, _ = a.Component(metric.CName).(metric.Metric)
 	syncQueues := a.MustComponent(syncqueues.CName).(syncqueues.SyncQueues)
 	s.manager = NewRequestManager(s.handler, s.metric, syncQueues.ActionPool(s.spaceId), syncQueues.Limit(s.spaceId))
@@ -113,14 +110,8 @@ func (s *syncService) handleIncomingMessage(msg msgCtx) {
 	}
 	err = s.manager.QueueRequest(req)
 	if err != nil {
-		log.Error("failed to queue request", zap.Error(err))
+		log.Error("failed to queue testRequest", zap.Error(err))
 	}
-	//msg.StartHandlingTime = time.Now()
-	//ctx := peer.CtxWithPeerId(context.Background(), msg.SenderId)
-	//ctx = logger.CtxWithFields(ctx, zap.Uint64("msgId", msg.Id), zap.String("senderId", msg.SenderId))
-	//s.metric.RequestLog(msg.PeerCtx, "space.streamOp", msg.LogFields(
-	//	zap.Error(err),
-	//)...)
 }
 
 func (s *syncService) HandleMessage(ctx context.Context, msg drpc.Message) error {
