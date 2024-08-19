@@ -99,7 +99,7 @@ func PutSyncTree(ctx context.Context, payload treestorage.TreeStorageCreatePaylo
 	if err != nil {
 		return
 	}
-	return buildSyncTree(ctx, "", deps)
+	return buildSyncTree(ctx, peer.CtxResponsiblePeers, deps)
 }
 
 func buildSyncTree(ctx context.Context, peerId string, deps BuildDeps) (t SyncTree, err error) {
@@ -128,12 +128,15 @@ func buildSyncTree(ctx context.Context, peerId string, deps BuildDeps) (t SyncTr
 		if err != nil {
 			return nil, err
 		}
+		log.Debug("broadcast after build", zap.String("treeId", objTree.Id()), zap.Strings("heads", objTree.Heads()))
 		// send to everybody, because everybody should know that the node or client got new tree
 		broadcastErr := syncTree.syncClient.Broadcast(ctx, headUpdate)
 		if broadcastErr != nil {
 			log.Warn("failed to broadcast head update", zap.Error(broadcastErr))
 		}
-		deps.SyncStatus.ObjectReceive(peerId, syncTree.Id(), syncTree.Heads())
+		if peerId != peer.CtxResponsiblePeers {
+			deps.SyncStatus.ObjectReceive(peerId, syncTree.Id(), syncTree.Heads())
+		}
 	}
 	return
 }
@@ -183,6 +186,7 @@ func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableCh
 func (s *syncTree) AddRawChangesFromPeer(ctx context.Context, peerId string, changesPayload objecttree.RawChangesPayload) (res objecttree.AddResult, err error) {
 	if s.hasHeads(s, changesPayload.NewHeads) {
 		s.syncStatus.HeadsApply(peerId, s.Id(), s.Heads(), true)
+		log.Debug("heads already applied", zap.String("treeId", s.Id()), zap.Strings("heads", changesPayload.NewHeads))
 		return objecttree.AddResult{
 			OldHeads: changesPayload.NewHeads,
 			Heads:    changesPayload.NewHeads,
