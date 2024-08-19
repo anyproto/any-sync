@@ -49,6 +49,7 @@ func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUp
 }
 
 func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, collector syncdeps.ResponseCollector) error {
+	log.Debug("send request", zap.String("peerId", rq.PeerId()), zap.String("objectId", rq.ObjectId()))
 	return r.handler.SendStreamRequest(ctx, rq, func(stream drpc.Stream) error {
 		calledOnce := false
 		for {
@@ -78,7 +79,7 @@ func (r *requestManager) QueueRequest(rq syncdeps.Request) error {
 	r.requestPool.Add(rq.PeerId(), rq.ObjectId(), func(ctx context.Context) {
 		err := r.handler.ApplyRequest(ctx, rq, r)
 		if err != nil {
-			log.Error("failed to apply request", zap.Error(err), zap.String("limit stats", r.limit.Stats(rq.PeerId())))
+			log.Error("failed to apply request", zap.Error(err), zap.String("peerId", rq.PeerId()), zap.String("objectId", rq.ObjectId()))
 		}
 	}, func() {
 		r.metric.UpdateQueueSize(size, syncdeps.MsgTypeOutgoingRequest, false)

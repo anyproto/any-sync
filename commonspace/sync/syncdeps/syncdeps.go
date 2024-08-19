@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_syncdeps/mock_syncdeps.go github.com/anyproto/any-sync/commonspace/sync/syncdeps ObjectSyncHandler
+//go:generate mockgen -destination mock_syncdeps/mock_syncdeps.go github.com/anyproto/any-sync/commonspace/sync/syncdeps ObjectSyncHandler,RequestSender,ResponseCollector
 package syncdeps
 
 import (

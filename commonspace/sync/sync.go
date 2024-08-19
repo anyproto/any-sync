@@ -108,9 +108,10 @@ func (s *syncService) handleIncomingMessage(msg msgCtx) {
 	if req == nil {
 		return
 	}
+	log.Debug("queue request", zap.String("objectId", req.ObjectId()), zap.String("spaceId", s.spaceId))
 	err = s.manager.QueueRequest(req)
 	if err != nil {
-		log.Error("failed to queue testRequest", zap.Error(err))
+		log.Error("failed to queue request", zap.Error(err))
 	}
 }
 
