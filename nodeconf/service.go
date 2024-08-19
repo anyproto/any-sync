@@ -5,14 +5,15 @@ import (
 	"context"
 	"sync"
 
+	"github.com/anyproto/go-chash"
+	"go.uber.org/zap"
+
 	commonaccount "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/util/periodicsync"
-	"github.com/anyproto/go-chash"
-	"go.uber.org/zap"
 )
 
 const CName = "common.nodeconf"
