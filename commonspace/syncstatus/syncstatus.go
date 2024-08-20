@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_syncstatus/mock_syncstatus.go github.com/anyproto/any-sync/commonspace/syncstatus StatusUpdater
 package syncstatus
 
 import (

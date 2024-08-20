@@ -14,13 +14,9 @@ import (
 	reflect "reflect"
 	time "time"
 
-	proto "github.com/anyproto/protobuf/proto"
-	gomock "go.uber.org/mock/gomock"
-	drpc "storj.io/drpc"
-
 	list "github.com/anyproto/any-sync/commonspace/object/acl/list"
 	objecttree "github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
-	synctree "github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
+	response "github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
 	updatelistener "github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
 	treechangeproto "github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	treestorage "github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
@@ -29,6 +25,9 @@ import (
 	syncdeps "github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	syncstatus "github.com/anyproto/any-sync/commonspace/syncstatus"
 	peer "github.com/anyproto/any-sync/net/peer"
+	proto "github.com/anyproto/protobuf/proto"
+	gomock "go.uber.org/mock/gomock"
+	drpc "storj.io/drpc"
 )
 
 // MockSyncTree is a mock of SyncTree interface.
@@ -685,10 +684,10 @@ func (mr *MockSyncClientMockRecorder) CreateNewTreeRequest(arg0, arg1 any) *gomo
 }
 
 // CreateResponseProducer mocks base method.
-func (m *MockSyncClient) CreateResponseProducer(arg0 objecttree.ObjectTree, arg1, arg2 []string) (synctree.ResponseProducer, error) {
+func (m *MockSyncClient) CreateResponseProducer(arg0 objecttree.ObjectTree, arg1, arg2 []string) (response.ResponseProducer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateResponseProducer", arg0, arg1, arg2)
-	ret0, _ := ret[0].(synctree.ResponseProducer)
+	ret0, _ := ret[0].(response.ResponseProducer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -794,10 +793,10 @@ func (mr *MockRequestFactoryMockRecorder) CreateNewTreeRequest(arg0, arg1 any) *
 }
 
 // CreateResponseProducer mocks base method.
-func (m *MockRequestFactory) CreateResponseProducer(arg0 objecttree.ObjectTree, arg1, arg2 []string) (synctree.ResponseProducer, error) {
+func (m *MockRequestFactory) CreateResponseProducer(arg0 objecttree.ObjectTree, arg1, arg2 []string) (response.ResponseProducer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateResponseProducer", arg0, arg1, arg2)
-	ret0, _ := ret[0].(synctree.ResponseProducer)
+	ret0, _ := ret[0].(response.ResponseProducer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

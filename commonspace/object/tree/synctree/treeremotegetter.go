@@ -16,6 +16,10 @@ var (
 	ErrNoResponsiblePeers = errors.New("no responsible peers")
 )
 
+type treeGetter interface {
+	getTree(ctx context.Context) (treeStorage treestorage.TreeStorage, peerId string, err error)
+}
+
 type treeRemoteGetter struct {
 	deps   BuildDeps
 	treeId string

@@ -82,9 +82,13 @@ type BuildDeps struct {
 	ValidateObjectTree objecttree.ValidatorFunc
 }
 
+var newTreeGetter = func(deps BuildDeps, treeId string) treeGetter {
+	return treeRemoteGetter{deps: deps, treeId: treeId}
+}
+
 func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t SyncTree, err error) {
 	var (
-		remoteGetter = treeRemoteGetter{treeId: id, deps: deps}
+		remoteGetter = newTreeGetter(deps, id)
 		peerId       string
 	)
 	deps.TreeStorage, peerId, err = remoteGetter.getTree(ctx)
@@ -195,18 +199,16 @@ func (s *syncTree) AddRawChangesFromPeer(ctx context.Context, peerId string, cha
 	}
 	prevHeads := s.Heads()
 	res, err = s.AddRawChanges(ctx, changesPayload)
-	if err != nil {
+	if err != nil || res.Mode == objecttree.Nothing {
 		return
 	}
-	if res.Mode != objecttree.Nothing {
-		headUpdate, err := s.syncClient.CreateHeadUpdate(s, peerId, res.Added)
-		if err != nil {
-			return res, err
-		}
-		broadcastErr := s.syncClient.Broadcast(ctx, headUpdate)
-		if broadcastErr != nil {
-			log.Warn("failed to broadcast head update", zap.Error(broadcastErr))
-		}
+	headUpdate, err := s.syncClient.CreateHeadUpdate(s, peerId, res.Added)
+	if err != nil {
+		return res, err
+	}
+	broadcastErr := s.syncClient.Broadcast(ctx, headUpdate)
+	if broadcastErr != nil {
+		log.Warn("failed to broadcast head update", zap.Error(broadcastErr))
 	}
 	curHeads := s.Heads()
 	allAdded := true
