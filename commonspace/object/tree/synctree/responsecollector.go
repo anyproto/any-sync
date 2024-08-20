@@ -3,6 +3,7 @@ package synctree
 import (
 	"context"
 
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 )
@@ -18,18 +19,18 @@ func newFullResponseCollector() *fullResponseCollector {
 }
 
 func (r *fullResponseCollector) CollectResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
-	treeResp, ok := resp.(*Response)
+	treeResp, ok := resp.(*response.Response)
 	if !ok {
 		return ErrUnexpectedResponseType
 	}
-	r.heads = treeResp.heads
-	r.root = treeResp.root
-	r.changes = append(r.changes, treeResp.changes...)
+	r.heads = treeResp.Heads
+	r.root = treeResp.Root
+	r.changes = append(r.changes, treeResp.Changes...)
 	return nil
 }
 
 func (r *fullResponseCollector) NewResponse() syncdeps.Response {
-	return &Response{}
+	return &response.Response{}
 }
 
 type responseCollector struct {
@@ -45,5 +46,5 @@ func (r *responseCollector) CollectResponse(ctx context.Context, peerId, objectI
 }
 
 func (r *responseCollector) NewResponse() syncdeps.Response {
-	return &Response{}
+	return &response.Response{}
 }

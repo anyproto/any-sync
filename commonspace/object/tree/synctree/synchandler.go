@@ -9,6 +9,7 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	response "github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
@@ -151,7 +152,7 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 	s.tree.Lock()
 	curHeads := s.tree.Heads()
 	log.Debug("got stream request", zap.String("objectId", req.ObjectId()), zap.String("peerId", rq.PeerId()), zap.Int("len", s.tree.Len()))
-	producer, err := newResponseProducer(s.spaceId, s.tree, request.Heads, request.SnapshotPath)
+	producer, err := response.NewResponseProducer(s.spaceId, s.tree, request.Heads, request.SnapshotPath)
 	if err != nil {
 		s.tree.Unlock()
 		return nil, err
@@ -179,7 +180,7 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		if err != nil {
 			return nil, err
 		}
-		if len(batch.changes) == 0 {
+		if len(batch.Changes) == 0 {
 			break
 		}
 		size := batch.MsgSize()
@@ -199,18 +200,18 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 }
 
 func (s *syncHandler) HandleResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
-	response, ok := resp.(*Response)
+	rsp, ok := resp.(*response.Response)
 	if !ok {
 		return ErrUnexpectedResponseType
 	}
-	if len(response.changes) == 0 {
+	if len(rsp.Changes) == 0 {
 		return nil
 	}
 	s.tree.Lock()
 	defer s.tree.Unlock()
 	rawChangesPayload := objecttree.RawChangesPayload{
-		NewHeads:   response.heads,
-		RawChanges: response.changes,
+		NewHeads:   rsp.Heads,
+		RawChanges: rsp.Changes,
 	}
 	_, err := s.tree.AddRawChangesFromPeer(ctx, peerId, rawChangesPayload)
 	return err

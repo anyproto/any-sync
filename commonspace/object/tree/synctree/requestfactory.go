@@ -2,6 +2,7 @@ package synctree
 
 import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 )
@@ -12,7 +13,7 @@ type RequestFactory interface {
 	CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectmessages.HeadUpdate, err error)
 	CreateNewTreeRequest(peerId, objectId string) *objectmessages.Request
 	CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectmessages.Request
-	CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (ResponseProducer, error)
+	CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (response.ResponseProducer, error)
 }
 
 func NewRequestFactory(spaceId string) RequestFactory {
@@ -53,6 +54,6 @@ func (r *requestFactory) CreateFullSyncRequest(peerId string, t objecttree.Objec
 	return NewRequest(peerId, r.spaceId, t.Id(), t.Heads(), t.SnapshotPath(), t.Header())
 }
 
-func (r *requestFactory) CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (ResponseProducer, error) {
-	return newResponseProducer(r.spaceId, t, theirHeads, theirSnapshotPath)
+func (r *requestFactory) CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (response.ResponseProducer, error) {
+	return response.NewResponseProducer(r.spaceId, t, theirHeads, theirSnapshotPath)
 }

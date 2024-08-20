@@ -1,4 +1,4 @@
-package synctree
+package response
 
 import (
 	"fmt"
@@ -10,35 +10,35 @@ import (
 )
 
 type Response struct {
-	spaceId      string
-	objectId     string
-	heads        []string
-	snapshotPath []string
-	changes      []*treechangeproto.RawTreeChangeWithId
-	root         *treechangeproto.RawTreeChangeWithId
+	SpaceId      string
+	ObjectId     string
+	Heads        []string
+	SnapshotPath []string
+	Changes      []*treechangeproto.RawTreeChangeWithId
+	Root         *treechangeproto.RawTreeChangeWithId
 }
 
 func (r *Response) MsgSize() uint64 {
-	size := uint64(len(r.spaceId)+len(r.objectId)) * 59
-	size += uint64(len(r.snapshotPath)) * 59
-	for _, change := range r.changes {
+	size := uint64(len(r.SpaceId)+len(r.ObjectId)) * 59
+	size += uint64(len(r.SnapshotPath)) * 59
+	for _, change := range r.Changes {
 		size += uint64(len(change.Id))
 		size += uint64(len(change.RawChange))
 	}
-	return size + uint64(len(r.heads))*59
+	return size + uint64(len(r.Heads))*59
 }
 
 func (r *Response) ProtoMessage() (proto.Message, error) {
-	if r.objectId == "" {
+	if r.ObjectId == "" {
 		return &spacesyncproto.ObjectSyncMessage{}, nil
 	}
 	resp := &treechangeproto.TreeFullSyncResponse{
-		Heads:        r.heads,
-		SnapshotPath: r.snapshotPath,
-		Changes:      r.changes,
+		Heads:        r.Heads,
+		SnapshotPath: r.SnapshotPath,
+		Changes:      r.Changes,
 	}
-	wrapped := treechangeproto.WrapFullResponse(resp, r.root)
-	return spacesyncproto.MarshallSyncMessage(wrapped, r.spaceId, r.objectId)
+	wrapped := treechangeproto.WrapFullResponse(resp, r.Root)
+	return spacesyncproto.MarshallSyncMessage(wrapped, r.SpaceId, r.ObjectId)
 }
 
 func (r *Response) SetProtoMessage(message proto.Message) error {
@@ -54,15 +54,15 @@ func (r *Response) SetProtoMessage(message proto.Message) error {
 	if err != nil {
 		return err
 	}
-	r.root = treeMsg.RootChange
+	r.Root = treeMsg.RootChange
 	headMsg := treeMsg.GetContent().GetFullSyncResponse()
 	if headMsg == nil {
 		return fmt.Errorf("unexpected message type: %T", treeMsg.GetContent())
 	}
-	r.heads = headMsg.Heads
-	r.changes = headMsg.Changes
-	r.snapshotPath = headMsg.SnapshotPath
-	r.spaceId = msg.SpaceId
-	r.objectId = msg.ObjectId
+	r.Heads = headMsg.Heads
+	r.Changes = headMsg.Changes
+	r.SnapshotPath = headMsg.SnapshotPath
+	r.SpaceId = msg.SpaceId
+	r.ObjectId = msg.ObjectId
 	return nil
 }

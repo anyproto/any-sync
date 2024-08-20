@@ -1,4 +1,4 @@
-package synctree
+package response
 
 import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
@@ -16,7 +16,7 @@ type responseProducer struct {
 	objectId string
 }
 
-func newResponseProducer(spaceId string, tree objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (ResponseProducer, error) {
+func NewResponseProducer(spaceId string, tree objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (ResponseProducer, error) {
 	res, err := tree.ChangesAfterCommonSnapshotLoader(theirSnapshotPath, theirHeads)
 	if err != nil {
 		return nil, err
@@ -35,12 +35,12 @@ func (r *responseProducer) NewResponse(batchSize int) (*Response, error) {
 		return &Response{}, err
 	}
 	return &Response{
-		heads:        res.Heads,
-		snapshotPath: res.SnapshotPath,
-		changes:      res.Batch,
-		root:         res.Root,
-		spaceId:      r.spaceId,
-		objectId:     r.objectId,
+		Heads:        res.Heads,
+		SnapshotPath: res.SnapshotPath,
+		Changes:      res.Batch,
+		Root:         res.Root,
+		SpaceId:      r.spaceId,
+		ObjectId:     r.objectId,
 	}, nil
 }
 
@@ -48,10 +48,10 @@ func (r *responseProducer) EmptyResponse() *Response {
 	headsCopy := make([]string, len(r.tree.Heads()))
 	copy(headsCopy, r.tree.Heads())
 	return &Response{
-		heads:        headsCopy,
-		spaceId:      r.spaceId,
-		objectId:     r.objectId,
-		root:         r.tree.Header(),
-		snapshotPath: r.tree.SnapshotPath(),
+		Heads:        headsCopy,
+		SpaceId:      r.spaceId,
+		ObjectId:     r.objectId,
+		Root:         r.tree.Header(),
+		SnapshotPath: r.tree.SnapshotPath(),
 	}
 }

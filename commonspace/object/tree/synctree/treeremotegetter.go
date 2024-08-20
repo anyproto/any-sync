@@ -21,6 +21,8 @@ type treeRemoteGetter struct {
 	treeId string
 }
 
+var createCollector = newFullResponseCollector
+
 func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err error) {
 	peerId, err := peer.CtxPeerId(ctx)
 	if err != nil {
@@ -47,7 +49,7 @@ func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err e
 }
 
 func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (collector *fullResponseCollector, err error) {
-	collector = newFullResponseCollector()
+	collector = createCollector()
 	req := t.deps.SyncClient.CreateNewTreeRequest(peerId, t.treeId)
 	err = t.deps.SyncClient.SendTreeRequest(ctx, req, collector)
 	if err != nil {

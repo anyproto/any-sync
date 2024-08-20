@@ -13,8 +13,8 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener/mock_updatelistener"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
-	"github.com/anyproto/any-sync/nodeconf"
 )
 
 type syncTreeMatcher struct {
@@ -31,14 +31,22 @@ func (s syncTreeMatcher) Matches(x interface{}) bool {
 	return s.objTree == t.ObjectTree && t.syncClient == s.client && t.listener == s.listener
 }
 
-func (s syncTreeMatcher) String() string {
-	return ""
+type testObjMock struct {
+	*mock_objecttree.MockObjectTree
 }
 
-func syncClientFuncCreator(client SyncClient) func(spaceId string, factory RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.NodeConf) SyncClient {
-	return func(spaceId string, factory RequestFactory, objectSync objectsync.ObjectSync, configuration nodeconf.NodeConf) SyncClient {
-		return client
-	}
+func newTestObjMock(obj *mock_objecttree.MockObjectTree) *testObjMock {
+	return &testObjMock{MockObjectTree: obj}
+}
+
+func (t *testObjMock) Lock() {
+}
+
+func (t *testObjMock) Unlock() {
+}
+
+func (s syncTreeMatcher) String() string {
+	return ""
 }
 
 func Test_BuildSyncTree(t *testing.T) {
@@ -50,15 +58,14 @@ func Test_BuildSyncTree(t *testing.T) {
 	syncClientMock := mock_synctree.NewMockSyncClient(ctrl)
 	objTreeMock := newTestObjMock(mock_objecttree.NewMockObjectTree(ctrl))
 	tr := &syncTree{
-		ObjectTree:  objTreeMock,
-		SyncHandler: nil,
-		syncClient:  syncClientMock,
-		listener:    updateListenerMock,
-		isClosed:    false,
-		syncStatus:  syncstatus.NewNoOpSyncStatus(),
+		ObjectTree: objTreeMock,
+		syncClient: syncClientMock,
+		listener:   updateListenerMock,
+		isClosed:   false,
+		syncStatus: syncstatus.NewNoOpSyncStatus(),
 	}
 
-	headUpdate := &treechangeproto.TreeSyncMessage{}
+	headUpdate := &objectmessages.HeadUpdate{}
 	t.Run("AddRawChangesFromPeer update", func(t *testing.T) {
 		changes := []*treechangeproto.RawTreeChangeWithId{{Id: "some"}}
 		payload := objecttree.RawChangesPayload{
@@ -75,8 +82,8 @@ func Test_BuildSyncTree(t *testing.T) {
 			Return(expectedRes, nil)
 		updateListenerMock.EXPECT().Update(tr)
 
-		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
-		syncClientMock.EXPECT().Broadcast(gomock.Eq(headUpdate))
+		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), "peerId", gomock.Eq(changes)).Return(headUpdate)
+		syncClientMock.EXPECT().Broadcast(gomock.Any(), gomock.Eq(headUpdate))
 		res, err := tr.AddRawChangesFromPeer(ctx, "peerId", payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
@@ -98,8 +105,8 @@ func Test_BuildSyncTree(t *testing.T) {
 			Return(expectedRes, nil)
 		updateListenerMock.EXPECT().Rebuild(tr)
 
-		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
-		syncClientMock.EXPECT().Broadcast(gomock.Eq(headUpdate))
+		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), "peerId", gomock.Eq(changes)).Return(headUpdate)
+		syncClientMock.EXPECT().Broadcast(gomock.Any(), gomock.Eq(headUpdate))
 		res, err := tr.AddRawChangesFromPeer(ctx, "peerId", payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
@@ -137,8 +144,8 @@ func Test_BuildSyncTree(t *testing.T) {
 		objTreeMock.EXPECT().AddContent(gomock.Any(), gomock.Eq(content)).
 			Return(expectedRes, nil)
 
-		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
-		syncClientMock.EXPECT().Broadcast(gomock.Eq(headUpdate))
+		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), "", gomock.Eq(changes)).Return(headUpdate)
+		syncClientMock.EXPECT().Broadcast(gomock.Any(), gomock.Eq(headUpdate))
 		res, err := tr.AddContent(ctx, content)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
