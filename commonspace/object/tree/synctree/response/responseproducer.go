@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_response/mock_response.go github.com/anyproto/any-sync/commonspace/object/tree/synctree/response ResponseProducer
 package response
 
 import (

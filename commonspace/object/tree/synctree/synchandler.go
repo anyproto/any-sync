@@ -31,6 +31,8 @@ type syncHandler struct {
 	spaceId    string
 }
 
+var createResponseProducer = response.NewResponseProducer
+
 func NewSyncHandler(tree SyncTree, syncClient SyncClient, spaceId string) syncdeps.ObjectSyncHandler {
 	return &syncHandler{
 		tree:       tree,
