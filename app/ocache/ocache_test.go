@@ -140,24 +140,15 @@ func TestOCache_Get(t *testing.T) {
 		assert.Equal(t, context.Canceled, err)
 		assert.NoError(t, c.Close())
 	})
-	t.Run("parallel load and remove", func(t *testing.T) {
-		var waitCh = make(chan struct{})
+	t.Run("value is nil", func(t *testing.T) {
 		c := New(func(ctx context.Context, id string) (value Object, err error) {
 			return nil, nil
 		})
 
-		id := "id"
-		go func() {
-			val, err := c.Get(context.TODO(), id)
-			close(waitCh)
-			require.NoError(t, err)
-			assert.Nil(t, val)
-		}()
-
-		<-waitCh
-		ok, err := c.Remove(context.TODO(), id)
-		require.NoError(t, err)
-		assert.True(t, ok)
+		value, err := c.Get(ctx, "id")
+		assert.NotNil(t, err)
+		assert.Nil(t, value)
+		assert.NoError(t, c.Close())
 	})
 }
 
