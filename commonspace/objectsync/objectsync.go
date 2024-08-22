@@ -15,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/util/multiqueue"
 
 	"go.uber.org/zap"
@@ -128,6 +129,10 @@ func (s *objectSync) HandleMessage(ctx context.Context, hm HandleMessage) (err e
 
 func (s *objectSync) processHandleMessage(msg HandleMessage) {
 	var err error
+	peerProtoVersion, err := peer.CtxProtoVersion(msg.PeerCtx)
+	if err != nil {
+		peerProtoVersion = secureservice.ProtoVersion
+	}
 	msg.StartHandlingTime = time.Now()
 	ctx := peer.CtxWithPeerId(context.Background(), msg.SenderId)
 	ctx = logger.CtxWithFields(ctx, zap.Uint64("msgId", msg.Id), zap.String("senderId", msg.SenderId))
@@ -148,7 +153,7 @@ func (s *objectSync) processHandleMessage(msg HandleMessage) {
 			return
 		}
 	}
-	if err = s.handleMessage(ctx, msg.SenderId, msg.Message); err != nil {
+	if err = s.handleMessage(ctx, msg.SenderId, peerProtoVersion, msg.Message); err != nil {
 		if msg.Message.ObjectId != "" {
 			// cleanup thread on error
 			_ = s.handleQueue.CloseThread(msg.Message.ObjectId)
@@ -170,7 +175,7 @@ func (s *objectSync) handleRequest(ctx context.Context, senderId string, msg *sp
 	return obj.HandleRequest(ctx, senderId, msg)
 }
 
-func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+func (s *objectSync) handleMessage(ctx context.Context, senderId string, protoVersion uint32, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	log := log.With(zap.String("objectId", msg.ObjectId))
 	defer func() {
 		if p := recover(); p != nil {
@@ -186,7 +191,7 @@ func (s *objectSync) handleMessage(ctx context.Context, senderId string, msg *sp
 	if err != nil {
 		return fmt.Errorf("failed to get object from cache: %w", err)
 	}
-	err = obj.HandleMessage(ctx, senderId, msg)
+	err = obj.HandleMessage(ctx, senderId, protoVersion, msg)
 	if err != nil {
 		return fmt.Errorf("failed to handle message: %w", err)
 	}

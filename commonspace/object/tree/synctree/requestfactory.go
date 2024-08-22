@@ -2,6 +2,7 @@ package synctree
 
 import (
 	"fmt"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/util/slice"
@@ -10,6 +11,7 @@ import (
 type RequestFactory interface {
 	CreateHeadUpdate(t objecttree.ObjectTree, added []*treechangeproto.RawTreeChangeWithId) (msg *treechangeproto.TreeSyncMessage)
 	CreateNewTreeRequest() (msg *treechangeproto.TreeSyncMessage)
+	CreateEmptyFullSyncRequest(t objecttree.ObjectTree) (req *treechangeproto.TreeSyncMessage)
 	CreateFullSyncRequest(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (req *treechangeproto.TreeSyncMessage, err error)
 	CreateFullSyncResponse(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (*treechangeproto.TreeSyncMessage, error)
 }
@@ -30,6 +32,13 @@ func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, added []*tree
 
 func (r *requestFactory) CreateNewTreeRequest() (msg *treechangeproto.TreeSyncMessage) {
 	return treechangeproto.WrapFullRequest(&treechangeproto.TreeFullSyncRequest{}, nil)
+}
+
+func (r *requestFactory) CreateEmptyFullSyncRequest(t objecttree.ObjectTree) (msg *treechangeproto.TreeSyncMessage) {
+	return treechangeproto.WrapFullRequest(&treechangeproto.TreeFullSyncRequest{
+		Heads:        t.Heads(),
+		SnapshotPath: t.SnapshotPath(),
+	}, t.Header())
 }
 
 func (r *requestFactory) CreateFullSyncRequest(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (msg *treechangeproto.TreeSyncMessage, err error) {

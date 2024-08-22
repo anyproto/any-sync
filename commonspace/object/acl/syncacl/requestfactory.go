@@ -9,6 +9,7 @@ import (
 
 type RequestFactory interface {
 	CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (msg *consensusproto.LogSyncMessage)
+	CreateEmptyFullSyncRequest(l list.AclList) (req *consensusproto.LogSyncMessage)
 	CreateFullSyncRequest(l list.AclList, theirHead string) (req *consensusproto.LogSyncMessage, err error)
 	CreateFullSyncResponse(l list.AclList, theirHead string) (*consensusproto.LogSyncMessage, error)
 }
@@ -23,6 +24,13 @@ func (r *requestFactory) CreateHeadUpdate(l list.AclList, added []*consensusprot
 	return consensusproto.WrapHeadUpdate(&consensusproto.LogHeadUpdate{
 		Head:    l.Head().Id,
 		Records: added,
+	}, l.Root())
+}
+
+func (r *requestFactory) CreateEmptyFullSyncRequest(l list.AclList) (req *consensusproto.LogSyncMessage) {
+	// this is only sent to newer versions of the protocol
+	return consensusproto.WrapFullRequest(&consensusproto.LogFullSyncRequest{
+		Head: l.Head().Id,
 	}, l.Root())
 }
 

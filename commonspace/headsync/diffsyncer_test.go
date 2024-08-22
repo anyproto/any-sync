@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -18,6 +17,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/rpc/rpctest"
 )
 
 type pushSpaceRequestMatcher struct {
@@ -56,49 +56,6 @@ func (p pushSpaceRequestMatcher) String() string {
 	return ""
 }
 
-type mockPeer struct {
-}
-
-func (m mockPeer) CloseChan() <-chan struct{} {
-	return nil
-}
-
-func (m mockPeer) SetTTL(ttl time.Duration) {
-	return
-}
-
-func (m mockPeer) Id() string {
-	return "peerId"
-}
-
-func (m mockPeer) Context() context.Context {
-	return context.Background()
-}
-
-func (m mockPeer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
-	return nil, nil
-}
-
-func (m mockPeer) ReleaseDrpcConn(conn drpc.Conn) {
-	return
-}
-
-func (m mockPeer) DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error {
-	return nil
-}
-
-func (m mockPeer) IsClosed() bool {
-	return false
-}
-
-func (m mockPeer) TryClose(objectTTL time.Duration) (res bool, err error) {
-	return false, err
-}
-
-func (m mockPeer) Close() (err error) {
-	return nil
-}
-
 func (fx *headSyncFixture) initDiffSyncer(t *testing.T) {
 	fx.init(t)
 	fx.diffSyncer = newDiffSyncer(fx.headSync).(*diffSyncer)
@@ -116,7 +73,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx := newHeadSyncFixture(t)
 		fx.initDiffSyncer(t)
 		defer fx.stop()
-		mPeer := mockPeer{}
+		mPeer := rpctest.MockPeer{}
 		remDiff := NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock)
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.treeSyncerMock.EXPECT().ShouldSync(gomock.Any()).Return(true)
@@ -131,7 +88,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.deletionStateMock.EXPECT().Filter([]string{"new"}).Return([]string{"new"}).Times(1)
 		fx.deletionStateMock.EXPECT().Filter([]string{"changed"}).Return([]string{"changed"}).Times(1)
 		fx.deletionStateMock.EXPECT().Filter(nil).Return(nil).Times(1)
-		fx.treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer.Id(), []string{"changed"}, []string{"new"}).Return(nil)
+		fx.treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer, []string{"changed"}, []string{"new"}).Return(nil)
 		require.NoError(t, fx.diffSyncer.Sync(ctx))
 	})
 
@@ -139,7 +96,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx := newHeadSyncFixture(t)
 		fx.initDiffSyncer(t)
 		defer fx.stop()
-		mPeer := mockPeer{}
+		mPeer := rpctest.MockPeer{}
 		remDiff := NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock)
 		fx.treeSyncerMock.EXPECT().ShouldSync(gomock.Any()).Return(true)
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
@@ -154,8 +111,8 @@ func TestDiffSyncer(t *testing.T) {
 		fx.deletionStateMock.EXPECT().Filter([]string{"new"}).Return([]string{"new"}).Times(1)
 		fx.deletionStateMock.EXPECT().Filter([]string{"changed"}).Return([]string{"changed", "aclId"}).Times(1)
 		fx.deletionStateMock.EXPECT().Filter(nil).Return(nil).Times(1)
-		fx.treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer.Id(), []string{"changed"}, []string{"new"}).Return(nil)
-		fx.aclMock.EXPECT().SyncWithPeer(gomock.Any(), mPeer.Id()).Return(nil)
+		fx.treeSyncerMock.EXPECT().SyncAll(gomock.Any(), mPeer, []string{"changed"}, []string{"new"}).Return(nil)
+		fx.aclMock.EXPECT().SyncWithPeer(gomock.Any(), mPeer).Return(nil)
 		require.NoError(t, fx.diffSyncer.Sync(ctx))
 	})
 
@@ -225,7 +182,7 @@ func TestDiffSyncer(t *testing.T) {
 
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
-			Return([]peer.Peer{mockPeer{}}, nil)
+			Return([]peer.Peer{rpctest.MockPeer{}}, nil)
 		fx.diffContainerMock.EXPECT().
 			DiffTypeCheck(gomock.Any(), gomock.Eq(remDiff)).Return(true, fx.diffMock, nil)
 		fx.diffMock.EXPECT().
@@ -261,7 +218,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.treeSyncerMock.EXPECT().ShouldSync(gomock.Any()).Return(true)
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
-			Return([]peer.Peer{mockPeer{}}, nil)
+			Return([]peer.Peer{rpctest.MockPeer{}}, nil)
 		fx.diffContainerMock.EXPECT().
 			DiffTypeCheck(gomock.Any(), gomock.Eq(remDiff)).Return(true, fx.diffMock, nil)
 		fx.diffMock.EXPECT().
@@ -275,7 +232,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx := newHeadSyncFixture(t)
 		fx.initDiffSyncer(t)
 		defer fx.stop()
-		mPeer := mockPeer{}
+		mPeer := rpctest.MockPeer{}
 		remDiff := NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock)
 		fx.treeSyncerMock.EXPECT().ShouldSync(gomock.Any()).Return(true)
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
