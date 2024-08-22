@@ -4,7 +4,6 @@ package nodeconf
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 
 	commonaccount "github.com/anyproto/any-sync/accountservice"
@@ -107,8 +106,9 @@ func (s *service) NetworkCompatibilityStatus() NetworkCompatibilityStatus {
 }
 
 func (s *service) updateConfiguration(ctx context.Context) (err error) {
-	last, err := s.fetchLastConfiguration(ctx)
-	if err != nil {
+	last, err := s.source.GetLast(ctx, s.Configuration().Id)
+	if err != nil && !errors.Is(err, ErrConfigurationNotChanged) {
+		s.setCompatibilityStatusByErr(err)
 		return err
 	}
 
@@ -123,36 +123,26 @@ func (s *service) updateConfiguration(ctx context.Context) (err error) {
 	return nil
 }
 
-func (s *service) fetchLastConfiguration(ctx context.Context) (Configuration, error) {
-	last, err := s.source.GetLast(ctx, s.Configuration().Id)
-	if err != nil && !errors.Is(err, ErrConfigurationNotChanged) {
-		s.setCompatibilityStatusByErr(err)
-	}
-	return last, err
-}
-
 func (s *service) updateCompatibilityStatus(ctx context.Context, err error) error {
 	needsUpdate, checkErr := s.networkProtoVersionChecker.IsNetworkNeedsUpdate(ctx)
 	if checkErr != nil {
-		return fmt.Errorf("network protocol version check failed: %w", checkErr)
+		return checkErr
 	}
-
 	if needsUpdate {
 		s.setCompatibilityStatus(NetworkCompatibilityStatusNeedsUpdate)
-		return nil
+	} else {
+		s.setCompatibilityStatusByErr(err)
 	}
-
-	s.setCompatibilityStatusByErr(err)
-	return nil
+	return err
 }
 
 func (s *service) saveAndSetLastConfiguration(ctx context.Context, last Configuration) error {
 	if err := s.store.SaveLast(ctx, last); err != nil {
-		return fmt.Errorf("failed to save last configuration: %w", err)
+		return err
 	}
 
 	if err := s.setLastConfiguration(last); err != nil {
-		return fmt.Errorf("failed to set last configuration: %w", err)
+		return err
 	}
 
 	return nil
