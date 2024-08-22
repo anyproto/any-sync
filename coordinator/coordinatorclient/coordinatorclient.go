@@ -4,7 +4,6 @@ package coordinatorclient
 import (
 	"context"
 	"errors"
-	"github.com/anyproto/any-sync/net/secureservice"
 
 	"storj.io/drpc"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
+	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
