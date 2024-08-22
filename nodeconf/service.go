@@ -3,6 +3,8 @@ package nodeconf
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 
 	commonaccount "github.com/anyproto/any-sync/accountservice"
@@ -44,6 +46,10 @@ type Service interface {
 	app.ComponentRunnable
 }
 
+type NetworkProtoVersionChecker interface {
+	IsNetworkNeedsUpdate(ctx context.Context) (bool, error)
+}
+
 type service struct {
 	accountId string
 	config    Configuration
@@ -53,7 +59,8 @@ type service struct {
 	mu        sync.RWMutex
 	sync      periodicsync.PeriodicSync
 
-	compatibilityStatus NetworkCompatibilityStatus
+	compatibilityStatus        NetworkCompatibilityStatus
+	networkProtoVersionChecker NetworkProtoVersionChecker
 }
 
 func (s *service) Init(a *app.App) (err error) {
@@ -80,6 +87,7 @@ func (s *service) Init(a *app.App) (err error) {
 		}
 		return
 	}, log)
+	s.networkProtoVersionChecker = app.MustComponent[NetworkProtoVersionChecker](a)
 	return s.setLastConfiguration(lastStored)
 }
 
@@ -99,17 +107,78 @@ func (s *service) NetworkCompatibilityStatus() NetworkCompatibilityStatus {
 }
 
 func (s *service) updateConfiguration(ctx context.Context) (err error) {
-	last, err := s.source.GetLast(ctx, s.Configuration().Id)
+	last, err := s.fetchLastConfiguration(ctx)
 	if err != nil {
+		return err
+	}
+
+	if err = s.updateCompatibilityStatus(ctx, err); err != nil {
+		return err
+	}
+
+	if err = s.saveAndSetLastConfiguration(ctx, last); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *service) fetchLastConfiguration(ctx context.Context) (Configuration, error) {
+	last, err := s.source.GetLast(ctx, s.Configuration().Id)
+	if err != nil && !errors.Is(err, ErrConfigurationNotChanged) {
 		s.setCompatibilityStatusByErr(err)
-		return
-	} else {
-		s.setCompatibilityStatusByErr(nil)
 	}
-	if err = s.store.SaveLast(ctx, last); err != nil {
-		return
+	return last, err
+}
+
+func (s *service) updateCompatibilityStatus(ctx context.Context, err error) error {
+	needsUpdate, checkErr := s.networkProtoVersionChecker.IsNetworkNeedsUpdate(ctx)
+	if checkErr != nil {
+		return fmt.Errorf("network protocol version check failed: %w", checkErr)
 	}
-	return s.setLastConfiguration(last)
+
+	if needsUpdate {
+		s.setCompatibilityStatus(NetworkCompatibilityStatusNeedsUpdate)
+		return nil
+	}
+
+	s.setCompatibilityStatusByErr(err)
+	return nil
+}
+
+func (s *service) saveAndSetLastConfiguration(ctx context.Context, last Configuration) error {
+	if err := s.store.SaveLast(ctx, last); err != nil {
+		return fmt.Errorf("failed to save last configuration: %w", err)
+	}
+
+	if err := s.setLastConfiguration(last); err != nil {
+		return fmt.Errorf("failed to set last configuration: %w", err)
+	}
+
+	return nil
+}
+
+func (s *service) setCompatibilityStatus(status NetworkCompatibilityStatus) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.compatibilityStatus = status
+}
+
+func (s *service) setCompatibilityStatusByErr(err error) {
+	var status NetworkCompatibilityStatus
+
+	switch err {
+	case nil:
+		status = NetworkCompatibilityStatusOk
+	case handshake.ErrIncompatibleVersion:
+		status = NetworkCompatibilityStatusIncompatible
+	case net.ErrUnableToConnect:
+		status = NetworkCompatibilityStatusUnknown
+	default:
+		status = NetworkCompatibilityStatusError
+	}
+
+	s.setCompatibilityStatus(status)
 }
 
 func (s *service) setLastConfiguration(c Configuration) (err error) {
@@ -136,23 +205,6 @@ func (s *service) setLastConfiguration(c Configuration) (err error) {
 	}
 	s.last = nc
 	return
-}
-
-func (s *service) setCompatibilityStatusByErr(err error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	switch err {
-	case nil:
-		s.compatibilityStatus = NetworkCompatibilityStatusOk
-	case handshake.ErrIncompatibleVersion:
-		s.compatibilityStatus = NetworkCompatibilityStatusIncompatible
-	case net.ErrUnableToConnect:
-		s.compatibilityStatus = NetworkCompatibilityStatusUnknown
-	case ErrNetworkNeedsUpdate:
-		s.compatibilityStatus = NetworkCompatibilityStatusNeedsUpdate
-	default:
-		s.compatibilityStatus = NetworkCompatibilityStatusError
-	}
 }
 
 func (s *service) Id() string {

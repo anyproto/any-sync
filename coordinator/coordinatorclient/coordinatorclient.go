@@ -361,7 +361,7 @@ func (c *coordinatorClient) IsNetworkNeedsUpdate(ctx context.Context) (bool, err
 	if err != nil {
 		return false, err
 	}
-	return version != secureservice.ProtoVersion, nil
+	return secureservice.ProtoVersion < version, nil
 }
 
 func (c *coordinatorClient) doClient(ctx context.Context, f func(cl coordinatorproto.DRPCCoordinatorClient) error) error {
