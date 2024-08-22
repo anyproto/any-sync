@@ -31,6 +31,7 @@ const (
 	NetworkCompatibilityStatusOk
 	NetworkCompatibilityStatusError
 	NetworkCompatibilityStatusIncompatible
+	NetworkCompatibilityStatusNeedsUpdate
 )
 
 func New() Service {
@@ -147,6 +148,8 @@ func (s *service) setCompatibilityStatusByErr(err error) {
 		s.compatibilityStatus = NetworkCompatibilityStatusIncompatible
 	case net.ErrUnableToConnect:
 		s.compatibilityStatus = NetworkCompatibilityStatusUnknown
+	case ErrNetworkNeedsUpdate:
+		s.compatibilityStatus = NetworkCompatibilityStatusNeedsUpdate
 	default:
 		s.compatibilityStatus = NetworkCompatibilityStatusError
 	}

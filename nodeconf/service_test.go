@@ -54,6 +54,17 @@ func TestService_NetworkCompatibilityStatus(t *testing.T) {
 		time.Sleep(time.Millisecond * 10)
 		assert.Equal(t, NetworkCompatibilityStatusOk, fx.NetworkCompatibilityStatus())
 	})
+	t.Run("needs update", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish(t)
+		fx.testSource.call = func() (c Configuration, e error) {
+			e = ErrNetworkNeedsUpdate
+			return
+		}
+		fx.run(t)
+		time.Sleep(time.Millisecond * 10)
+		assert.Equal(t, NetworkCompatibilityStatusNeedsUpdate, fx.NetworkCompatibilityStatus())
+	})
 }
 
 func newFixture(t *testing.T) *fixture {

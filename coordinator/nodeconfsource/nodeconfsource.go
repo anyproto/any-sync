@@ -66,10 +66,18 @@ func (n *nodeConfSource) GetLast(ctx context.Context, currentId string) (c nodec
 			Types:     types,
 		}
 	}
+
+	needsUpdate, err := n.cl.IsNetworkNeedsUpdate(ctx)
+	if err != nil {
+		return
+	}
+	if needsUpdate {
+		err = nodeconf.ErrNetworkNeedsUpdate
+	}
 	return nodeconf.Configuration{
 		Id:           res.ConfigurationId,
 		NetworkId:    res.NetworkId,
 		Nodes:        nodes,
 		CreationTime: time.Unix(int64(res.CreationTimeUnix), 0),
-	}, nil
+	}, err
 }
