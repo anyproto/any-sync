@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_coordinatorclient/mock_coordinatorclient.go github.com/anyproto/any-sync/coordinator/coordinatorclient CoordinatorClient
 //
-
 // Package mock_coordinatorclient is a generated GoMock package.
 package mock_coordinatorclient
 
@@ -188,6 +187,21 @@ func (m *MockCoordinatorClient) Init(arg0 *app.App) error {
 func (mr *MockCoordinatorClientMockRecorder) Init(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockCoordinatorClient)(nil).Init), arg0)
+}
+
+// IsNetworkNeedsUpdate mocks base method.
+func (m *MockCoordinatorClient) IsNetworkNeedsUpdate(arg0 context.Context) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsNetworkNeedsUpdate", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsNetworkNeedsUpdate indicates an expected call of IsNetworkNeedsUpdate.
+func (mr *MockCoordinatorClientMockRecorder) IsNetworkNeedsUpdate(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNetworkNeedsUpdate", reflect.TypeOf((*MockCoordinatorClient)(nil).IsNetworkNeedsUpdate), arg0)
 }
 
 // Name mocks base method.
