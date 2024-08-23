@@ -18,14 +18,16 @@ type Response struct {
 	Root         *treechangeproto.RawTreeChangeWithId
 }
 
+const cidLen = 59
+
 func (r *Response) MsgSize() uint64 {
-	size := uint64(len(r.SpaceId)+len(r.ObjectId)) * 59
-	size += uint64(len(r.SnapshotPath)) * 59
+	size := uint64(len(r.SpaceId) + len(r.ObjectId))
+	size += uint64(len(r.SnapshotPath)) * cidLen
 	for _, change := range r.Changes {
 		size += uint64(len(change.Id))
 		size += uint64(len(change.RawChange))
 	}
-	return size + uint64(len(r.Heads))*59
+	return size + uint64(len(r.Heads))*cidLen
 }
 
 func (r *Response) ProtoMessage() (proto.Message, error) {

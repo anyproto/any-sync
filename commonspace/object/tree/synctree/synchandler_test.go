@@ -3,18 +3,27 @@ package synctree
 import (
 	"testing"
 
+	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/response/mock_response"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus/mock_syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 )
 
-func TestSyncHandler_Sync(t *testing.T) {
+type testUpdater struct {
+}
+
+func (t testUpdater) UpdateQueueSize(size uint64, msgType int, add bool) {
+}
+
+func TestSyncHandler_HeadUpdate(t *testing.T) {
 	t.Run("head update ok", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
 		defer fx.finish()
@@ -165,6 +174,54 @@ func TestSyncHandler_Sync(t *testing.T) {
 		req, err := fx.syncHandler.HandleHeadUpdate(ctx, fx.syncStatus, headUpdate)
 		require.NoError(t, err)
 		require.Equal(t, returnReq, req)
+	})
+}
+
+func TestSyncHandler_HandleStreamRequest(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.finish()
+		heads := []string{"peerHead"}
+		fullRequest := &treechangeproto.TreeFullSyncRequest{
+			Heads:        heads,
+			SnapshotPath: []string{"root"},
+		}
+		rawCh := &treechangeproto.RawTreeChangeWithId{
+			RawChange: []byte("abcd"),
+			Id:        "chId",
+		}
+		wrapped := treechangeproto.WrapFullRequest(fullRequest, nil)
+		marshaled, err := wrapped.Marshal()
+		require.NoError(t, err)
+		request := objectmessages.NewByteRequest("peerId", "spaceId", "objectId", marshaled)
+		producer := mock_response.NewMockResponseProducer(fx.ctrl)
+		createResponseProducer = func(spaceId string, tree objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (response.ResponseProducer, error) {
+			return producer, nil
+		}
+		returnReq := &objectmessages.Request{
+			Bytes: []byte("abcde"),
+		}
+		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq)
+		fx.tree.EXPECT().Heads().Return([]string{"curHead"})
+		resp := &response.Response{
+			Heads:    heads,
+			ObjectId: "objectId",
+			Changes: []*treechangeproto.RawTreeChangeWithId{
+				rawCh,
+			},
+		}
+		producer.EXPECT().NewResponse(gomock.Any()).Times(2).Return(resp, nil)
+		producer.EXPECT().NewResponse(gomock.Any()).Return(&response.Response{}, nil)
+		ctx = peer.CtxWithPeerId(ctx, "peerId")
+		callCount := 0
+		req, err := fx.syncHandler.HandleStreamRequest(ctx, request, testUpdater{}, func(resp proto.Message) error {
+			require.NotNil(t, resp)
+			callCount++
+			return nil
+		})
+		require.NoError(t, err)
+		require.Equal(t, returnReq, req)
+		require.Equal(t, 2, callCount)
 	})
 }
 

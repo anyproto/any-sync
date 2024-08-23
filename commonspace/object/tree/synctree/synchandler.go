@@ -153,8 +153,8 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 	}
 	s.tree.Lock()
 	curHeads := s.tree.Heads()
-	log.Debug("got stream request", zap.String("objectId", req.ObjectId()), zap.String("peerId", rq.PeerId()), zap.Int("len", s.tree.Len()))
-	producer, err := response.NewResponseProducer(s.spaceId, s.tree, request.Heads, request.SnapshotPath)
+	log.Debug("got stream request", zap.String("objectId", req.ObjectId()), zap.String("peerId", rq.PeerId()))
+	producer, err := createResponseProducer(s.spaceId, s.tree, request.Heads, request.SnapshotPath)
 	if err != nil {
 		s.tree.Unlock()
 		return nil, err
