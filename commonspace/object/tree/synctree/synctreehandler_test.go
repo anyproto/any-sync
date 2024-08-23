@@ -118,7 +118,7 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
 		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h2"})
 		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h3"})
-		fx.syncProtocolMock.EXPECT().HeadUpdate(ctx, fx.senderId, gomock.Any()).Return(syncReq, nil)
+		fx.syncProtocolMock.EXPECT().HeadUpdate(ctx, fx.senderId, uint32(0), gomock.Any()).Return(syncReq, nil)
 		fx.syncClientMock.EXPECT().QueueRequest(fx.senderId, fx.treeId, syncReq).Return(nil)
 
 		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, 0, objectMsg)
@@ -159,7 +159,7 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
 		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h2"})
 		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h3"})
-		fx.syncProtocolMock.EXPECT().HeadUpdate(ctx, fx.senderId, gomock.Any()).Return(nil, nil)
+		fx.syncProtocolMock.EXPECT().HeadUpdate(ctx, fx.senderId, uint32(0), gomock.Any()).Return(nil, nil)
 
 		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, 0, objectMsg)
 		require.NoError(t, err)

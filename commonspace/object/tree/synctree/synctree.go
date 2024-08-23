@@ -100,7 +100,7 @@ func PutSyncTree(ctx context.Context, payload treestorage.TreeStorageCreatePaylo
 	if err != nil {
 		return
 	}
-	return buildSyncTree(ctx, "", deps)
+	return buildSyncTree(ctx, peer.CtxResponsiblePeers, deps)
 }
 
 func buildSyncTree(ctx context.Context, peerId string, deps BuildDeps) (t SyncTree, err error) {
@@ -129,7 +129,9 @@ func buildSyncTree(ctx context.Context, peerId string, deps BuildDeps) (t SyncTr
 		headUpdate := syncTree.syncClient.CreateHeadUpdate(t, nil)
 		// send to everybody, because everybody should know that the node or client got new tree
 		syncTree.syncClient.Broadcast(headUpdate)
-		deps.SyncStatus.ObjectReceive(peerId, syncTree.Id(), syncTree.Heads())
+		if peerId != peer.CtxResponsiblePeers {
+			deps.SyncStatus.ObjectReceive(peerId, syncTree.Id(), syncTree.Heads())
+		}
 	}
 	return
 }
