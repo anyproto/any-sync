@@ -674,7 +674,7 @@ func newFixture(t *testing.T) *spaceFixture {
 	return fx
 }
 
-func newMultipeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spacestorage.InMemorySpaceStorageProvider) *spaceFixture {
+func newPeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spacestorage.InMemorySpaceStorageProvider) *spaceFixture {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	fx := &spaceFixture{
 		ctx:                  ctx,
@@ -790,7 +790,7 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 	peerPool.MakePeers()
 	var peerFixtures []*spaceFixture
 	for i := 0; i < peerNum; i++ {
-		fx := newMultipeerFixture(t, createSpace.SpaceHeaderWithId.Id, allKeys[i], peerPool, providers[i])
+		fx := newPeerFixture(t, createSpace.SpaceHeaderWithId.Id, allKeys[i], peerPool, providers[i])
 		peerFixtures = append(peerFixtures, fx)
 	}
 	return &multiPeerFixture{peerFixtures: peerFixtures}
