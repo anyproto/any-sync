@@ -3,6 +3,9 @@ package deletionmanager
 
 import (
 	"context"
+
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
@@ -10,7 +13,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
-	"go.uber.org/zap"
 )
 
 type DeletionManager interface {

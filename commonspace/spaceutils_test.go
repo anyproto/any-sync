@@ -46,10 +46,6 @@ import (
 	"github.com/anyproto/any-sync/util/syncqueues"
 )
 
-//
-// Mock NodeConf implementation
-//
-
 type mockConf struct {
 	id            string
 	networkId     string
@@ -174,11 +170,15 @@ func (m mockNodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *c
 	return
 }
 
-//
-// Mock PeerManager
-//
-
 type mockPeerManager struct {
+}
+
+func (p *mockPeerManager) BroadcastMessage(ctx context.Context, msg drpc.Message) error {
+	return nil
+}
+
+func (p *mockPeerManager) SendMessage(ctx context.Context, peerId string, msg drpc.Message) error {
+	return nil
 }
 
 func (p *mockPeerManager) Init(a *app.App) (err error) {
@@ -189,14 +189,6 @@ func (p *mockPeerManager) Name() (name string) {
 	return peermanager.CName
 }
 
-func (p *mockPeerManager) SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
-	return nil
-}
-
-func (p *mockPeerManager) Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error) {
-	return nil
-}
-
 func (p *mockPeerManager) GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error) {
 	return nil, nil
 }
@@ -205,9 +197,20 @@ func (p *mockPeerManager) GetNodePeers(ctx context.Context) (peers []peer.Peer, 
 	return nil, nil
 }
 
-//
-// Mock PeerManagerProvider
-//
+type testPeerManagerProvider struct {
+}
+
+func (m *testPeerManagerProvider) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (m *testPeerManagerProvider) Name() (name string) {
+	return peermanager.CName
+}
+
+func (m *testPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId string) (sm peermanager.PeerManager, err error) {
+	return synctest.NewTestPeerManager(), nil
+}
 
 type mockPeerManagerProvider struct {
 }
@@ -221,14 +224,18 @@ func (m *mockPeerManagerProvider) Name() (name string) {
 }
 
 func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId string) (sm peermanager.PeerManager, err error) {
-	return synctest.NewTestPeerManager(), nil
+	return &mockPeerManager{}, nil
 }
 
-//
-// Mock Pool
-//
-
 type mockPool struct {
+}
+
+func (m *mockPool) Run(ctx context.Context) (err error) {
+	return nil
+}
+
+func (m *mockPool) Close(ctx context.Context) (err error) {
+	return nil
 }
 
 func (m *mockPool) AddPeer(ctx context.Context, p peer.Peer) (err error) {
@@ -263,10 +270,6 @@ func (m *mockPool) Pick(ctx context.Context, id string) (peer.Peer, error) {
 	return nil, fmt.Errorf("no such peer")
 }
 
-//
-// Mock Config
-//
-
 type mockConfig struct {
 }
 
@@ -293,10 +296,6 @@ func (m *mockConfig) GetStreamConfig() streampool.StreamConfig {
 		DialQueueSize:    100,
 	}
 }
-
-//
-// Mock TreeManager
-//
 
 type noOpSyncer struct {
 }
@@ -345,7 +344,7 @@ func (m mockTreeSyncer) SyncAll(ctx context.Context, p peer.Peer, existing, miss
 	return nil
 }
 
-type mockTreeManager struct {
+type testTreeManager struct {
 	mx          sync.Mutex
 	space       Space
 	spaceId     string
@@ -359,40 +358,40 @@ type mockTreeManager struct {
 	waitLoad    chan struct{}
 }
 
-func (t *mockTreeManager) ValidateAndPutTree(ctx context.Context, spaceId string, payload treestorage.TreeStorageCreatePayload) error {
-	//TODO implement me
-	panic("implement me")
+func (t *testTreeManager) ValidateAndPutTree(ctx context.Context, spaceId string, payload treestorage.TreeStorageCreatePayload) error {
+	return nil
 }
 
-func newMockTreeManager(spaceId string) *mockTreeManager {
-	return &mockTreeManager{
+func newMockTreeManager(spaceId string) *testTreeManager {
+	return &testTreeManager{
 		spaceId:    spaceId,
+		waitLoad:   make(chan struct{}),
 		treesToPut: make(map[string]treestorage.TreeStorageCreatePayload),
 	}
 }
 
-func (t *mockTreeManager) MarkTreeDeleted(ctx context.Context, spaceId, treeId string) error {
+func (t *testTreeManager) MarkTreeDeleted(ctx context.Context, spaceId, treeId string) error {
 	t.mx.Lock()
 	defer t.mx.Unlock()
 	t.markedIds = append(t.markedIds, treeId)
 	return nil
 }
 
-func (t *mockTreeManager) getSpace(ctx context.Context) (Space, error) {
+func (t *testTreeManager) getSpace(ctx context.Context) (Space, error) {
 	if t.space != nil {
 		return t.space, nil
 	}
 	return t.spaceGetter.GetSpace(ctx, t.spaceId)
 }
 
-func (t *mockTreeManager) Init(a *app.App) (err error) {
+func (t *testTreeManager) Init(a *app.App) (err error) {
 	t.cache = ocache.New(func(ctx context.Context, id string) (value ocache.Object, err error) {
-		if t.wait {
-			<-t.waitLoad
-		}
 		sp, err := t.getSpace(ctx)
 		if err != nil {
 			return nil, err
+		}
+		if t.wait {
+			<-t.waitLoad
 		}
 		t.mx.Lock()
 		if tr, ok := t.treesToPut[id]; ok {
@@ -410,19 +409,19 @@ func (t *mockTreeManager) Init(a *app.App) (err error) {
 	return nil
 }
 
-func (t *mockTreeManager) Name() (name string) {
+func (t *testTreeManager) Name() (name string) {
 	return treemanager.CName
 }
 
-func (t *mockTreeManager) Run(ctx context.Context) (err error) {
+func (t *testTreeManager) Run(ctx context.Context) (err error) {
 	return nil
 }
 
-func (t *mockTreeManager) Close(ctx context.Context) (err error) {
+func (t *testTreeManager) Close(ctx context.Context) (err error) {
 	return t.cache.Close()
 }
 
-func (t *mockTreeManager) GetTree(ctx context.Context, spaceId, treeId string) (objecttree.ObjectTree, error) {
+func (t *testTreeManager) GetTree(ctx context.Context, spaceId, treeId string) (objecttree.ObjectTree, error) {
 	val, err := t.cache.Get(ctx, treeId)
 	if err != nil {
 		return nil, err
@@ -430,7 +429,7 @@ func (t *mockTreeManager) GetTree(ctx context.Context, spaceId, treeId string) (
 	return val.(objecttree.ObjectTree), nil
 }
 
-func (t *mockTreeManager) CreateTree(ctx context.Context, spaceId string) (objecttree.ObjectTree, error) {
+func (t *testTreeManager) CreateTree(ctx context.Context, spaceId string) (objecttree.ObjectTree, error) {
 	sp, err := t.getSpace(ctx)
 	if err != nil {
 		return nil, err
@@ -451,14 +450,14 @@ func (t *mockTreeManager) CreateTree(ctx context.Context, spaceId string) (objec
 	return t.PutTree(ctx, createPayload)
 }
 
-func (t *mockTreeManager) PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.ObjectTree, error) {
+func (t *testTreeManager) PutTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.ObjectTree, error) {
 	t.mx.Lock()
 	t.treesToPut[payload.RootRawChange.Id] = payload
 	t.mx.Unlock()
 	return t.GetTree(ctx, t.spaceId, payload.RootRawChange.Id)
 }
 
-func (t *mockTreeManager) DeleteTree(ctx context.Context, spaceId, treeId string) (err error) {
+func (t *testTreeManager) DeleteTree(ctx context.Context, spaceId, treeId string) (err error) {
 	tr, err := t.GetTree(ctx, spaceId, treeId)
 	if err != nil {
 		return
@@ -543,10 +542,6 @@ func (m mockCoordinatorClient) Name() (name string) {
 	return coordinatorclient.CName
 }
 
-//
-// Stream opener
-//
-
 func newStreamOpener(spaceId string) streamhandler.StreamHandler {
 	return &streamOpener{spaceId: spaceId}
 }
@@ -622,10 +617,6 @@ func (s *streamOpener) OpenStream(ctx context.Context, p peer.Peer) (stream drpc
 	return &failingStream{objectStream, false}, nil, queueSize, nil
 }
 
-//
-// Space fixture
-//
-
 type spaceFixture struct {
 	ctx                  context.Context
 	app                  *app.App
@@ -636,7 +627,7 @@ type spaceFixture struct {
 	peerManagerProvider  peermanager.PeerManagerProvider
 	streamOpener         streamhandler.StreamHandler
 	credentialProvider   credentialprovider.CredentialProvider
-	treeManager          *mockTreeManager
+	treeManager          *testTreeManager
 	pool                 *mockPool
 	spaceService         SpaceService
 	process              *spaceProcess
@@ -646,27 +637,35 @@ type spaceFixture struct {
 func newFixture(t *testing.T) *spaceFixture {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	fx := &spaceFixture{
+		ctx:                  ctx,
 		cancelFunc:           cancel,
-		config:               &mockConfig{},
 		app:                  &app.App{},
+		config:               &mockConfig{},
 		account:              &accounttest.AccountTestService{},
 		configurationService: &mockConf{},
+		streamOpener:         newStreamOpener("spaceId"),
+		peerManagerProvider:  &testPeerManagerProvider{},
 		storageProvider:      spacestorage.NewInMemorySpaceStorageProvider(),
-		peerManagerProvider:  &mockPeerManagerProvider{},
-		treeManager:          &mockTreeManager{waitLoad: make(chan struct{})},
+		treeManager:          newMockTreeManager("spaceId"),
 		pool:                 &mockPool{},
 		spaceService:         New(),
 	}
 	fx.app.Register(fx.account).
+		Register(syncqueues.New()).
 		Register(fx.config).
+		Register(rpctest.NewTestServer()).
+		Register(&mockPool{}).
+		Register(fx.storageProvider).
 		Register(credentialprovider.NewNoOp()).
+		Register(streampool.New()).
+		Register(fx.streamOpener).
 		Register(mockCoordinatorClient{}).
 		Register(mockNodeClient{}).
+		Register(&mockPeerManagerProvider{}).
 		Register(fx.configurationService).
-		Register(fx.storageProvider).
-		Register(fx.peerManagerProvider).
 		Register(fx.treeManager).
-		Register(fx.spaceService)
+		Register(fx.spaceService).
+		Register(NewRpcServer())
 	err := fx.app.Start(ctx)
 	if err != nil {
 		fx.cancelFunc()
@@ -675,7 +674,7 @@ func newFixture(t *testing.T) *spaceFixture {
 	return fx
 }
 
-func newFixtureWithData(t *testing.T, spaceId string, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spacestorage.InMemorySpaceStorageProvider) *spaceFixture {
+func newMultipeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spacestorage.InMemorySpaceStorageProvider) *spaceFixture {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	fx := &spaceFixture{
 		ctx:                  ctx,
@@ -686,7 +685,7 @@ func newFixtureWithData(t *testing.T, spaceId string, keys *accountdata.AccountK
 		configurationService: &mockConf{},
 		storageProvider:      provider,
 		streamOpener:         newStreamOpener(spaceId),
-		peerManagerProvider:  &mockPeerManagerProvider{},
+		peerManagerProvider:  &testPeerManagerProvider{},
 		treeManager:          newMockTreeManager(spaceId),
 		pool:                 &mockPool{},
 		spaceService:         New(),
@@ -791,7 +790,7 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 	peerPool.MakePeers()
 	var peerFixtures []*spaceFixture
 	for i := 0; i < peerNum; i++ {
-		fx := newFixtureWithData(t, createSpace.SpaceHeaderWithId.Id, allKeys[i], peerPool, providers[i])
+		fx := newMultipeerFixture(t, createSpace.SpaceHeaderWithId.Id, allKeys[i], peerPool, providers[i])
 		peerFixtures = append(peerFixtures, fx)
 	}
 	return &multiPeerFixture{peerFixtures: peerFixtures}

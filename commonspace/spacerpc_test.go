@@ -23,10 +23,6 @@ import (
 	"github.com/anyproto/any-sync/util/periodicsync"
 )
 
-//
-// TreeSyncer
-//
-
 func NewTreeSyncer(spaceId string) treesyncer.TreeSyncer {
 	return &treeSyncer{spaceId: spaceId}
 }
@@ -64,8 +60,6 @@ func (t *treeSyncer) ShouldSync(peerId string) bool {
 }
 
 func (t *treeSyncer) SyncAll(ctx context.Context, p peer.Peer, existing, missing []string) (err error) {
-	// TODO: copied from any-sync's previous version, should change later if needed to use queues
-	//  problem here is that all sync process is basically synchronous and has *same timeout
 	syncTrees := func(ids []string) {
 		for _, id := range ids {
 			log := log.With(zap.String("treeId", id))
@@ -89,10 +83,6 @@ func (t *treeSyncer) SyncAll(ctx context.Context, p peer.Peer, existing, missing
 	syncTrees(existing)
 	return
 }
-
-//
-// RpcServer
-//
 
 const RpcName = "rpcserver"
 
@@ -205,15 +195,11 @@ func (r *RpcServer) Name() (name string) {
 
 const SpaceProcessName = "spaceprocess"
 
-//
-// SpaceProcess
-//
-
 type spaceProcess struct {
 	spaceId        string
 	spaceServer    *RpcServer
 	accountService accountservice.Service
-	manager        *mockTreeManager
+	manager        *testTreeManager
 	periodicCall   periodicsync.PeriodicSync
 }
 
@@ -222,7 +208,7 @@ func newSpaceProcess(spaceId string) *spaceProcess {
 }
 
 func (s *spaceProcess) Init(a *app.App) (err error) {
-	s.manager = a.MustComponent(treemanager.CName).(*mockTreeManager)
+	s.manager = a.MustComponent(treemanager.CName).(*testTreeManager)
 	s.spaceServer = a.MustComponent(RpcName).(*RpcServer)
 	s.accountService = a.MustComponent(accountservice.CName).(accountservice.Service)
 	s.periodicCall = periodicsync.NewPeriodicSyncDuration(50*time.Millisecond, 0, s.update, log)
