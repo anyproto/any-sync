@@ -168,7 +168,7 @@ func (c *oCache) load(ctx context.Context, id string, e *entry) {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if value == nil {
+	if value == nil && err == nil {
 		err = fmt.Errorf("loaded value is nil, id: %s", id)
 	}
 	if err != nil {
