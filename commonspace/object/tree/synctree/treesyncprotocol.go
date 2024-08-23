@@ -8,11 +8,13 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
+	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/util/slice"
 )
 
 type TreeSyncProtocol interface {
-	HeadUpdate(ctx context.Context, senderId string, update *treechangeproto.TreeHeadUpdate) (request *treechangeproto.TreeSyncMessage, err error)
+	HeadUpdate(ctx context.Context, senderId string, protoVersion uint32, update *treechangeproto.TreeHeadUpdate) (request *treechangeproto.TreeSyncMessage, err error)
 	FullSyncRequest(ctx context.Context, senderId string, request *treechangeproto.TreeFullSyncRequest) (response *treechangeproto.TreeSyncMessage, err error)
 	FullSyncResponse(ctx context.Context, senderId string, response *treechangeproto.TreeFullSyncResponse) (err error)
 }
@@ -21,19 +23,21 @@ type treeSyncProtocol struct {
 	log        logger.CtxLogger
 	spaceId    string
 	objTree    peerSendableObjectTree
+	syncStatus syncstatus.StatusUpdater
 	reqFactory RequestFactory
 }
 
-func newTreeSyncProtocol(spaceId string, objTree peerSendableObjectTree, reqFactory RequestFactory) *treeSyncProtocol {
+func newTreeSyncProtocol(spaceId string, objTree peerSendableObjectTree, reqFactory RequestFactory, syncStatus syncstatus.StatusUpdater) *treeSyncProtocol {
 	return &treeSyncProtocol{
 		log:        log.With(zap.String("spaceId", spaceId), zap.String("treeId", objTree.Id())),
 		spaceId:    spaceId,
 		objTree:    objTree,
+		syncStatus: syncStatus,
 		reqFactory: reqFactory,
 	}
 }
 
-func (t *treeSyncProtocol) HeadUpdate(ctx context.Context, senderId string, update *treechangeproto.TreeHeadUpdate) (fullRequest *treechangeproto.TreeSyncMessage, err error) {
+func (t *treeSyncProtocol) HeadUpdate(ctx context.Context, senderId string, protoVersion uint32, update *treechangeproto.TreeHeadUpdate) (fullRequest *treechangeproto.TreeSyncMessage, err error) {
 	var (
 		isEmptyUpdate = len(update.Changes) == 0
 		objTree       = t.objTree
@@ -63,6 +67,9 @@ func (t *treeSyncProtocol) HeadUpdate(ctx context.Context, senderId string, upda
 		headEquals := slice.UnsortedEquals(objTree.Heads(), update.Heads)
 		log.DebugCtx(ctx, "is empty update", zap.Bool("headEquals", headEquals))
 		if headEquals {
+			if protoVersion > secureservice.ProtoVersion {
+				t.syncStatus.HeadsApply(senderId, objTree.Id(), update.Heads, true)
+			}
 			return
 		}
 

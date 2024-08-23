@@ -39,7 +39,7 @@ const maxQueueSize = 5
 func newSyncTreeHandler(spaceId string, objTree peerSendableObjectTree, syncClient SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
 	return &syncTreeHandler{
 		objTree:         objTree,
-		syncProtocol:    newTreeSyncProtocol(spaceId, objTree, syncClient),
+		syncProtocol:    newTreeSyncProtocol(spaceId, objTree, syncClient, syncStatus),
 		syncClient:      syncClient,
 		syncStatus:      syncStatus,
 		spaceId:         spaceId,
@@ -131,7 +131,7 @@ func (s *syncTreeHandler) handleMessage(ctx context.Context, msg *treechangeprot
 	switch {
 	case content.GetHeadUpdate() != nil:
 		var syncReq *treechangeproto.TreeSyncMessage
-		syncReq, err = s.syncProtocol.HeadUpdate(ctx, senderId, content.GetHeadUpdate())
+		syncReq, err = s.syncProtocol.HeadUpdate(ctx, senderId, protoVersion, content.GetHeadUpdate())
 		if err != nil || syncReq == nil {
 			return
 		}

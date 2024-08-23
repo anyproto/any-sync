@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
+	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -40,6 +41,7 @@ type CoordinatorClient interface {
 	SpaceMakeShareable(ctx context.Context, spaceId string) (err error)
 	SpaceMakeUnshareable(ctx context.Context, spaceId, aclId string) (err error)
 	NetworkConfiguration(ctx context.Context, currentId string) (*coordinatorproto.NetworkConfigurationResponse, error)
+	IsNetworkNeedsUpdate(ctx context.Context) (bool, error)
 	DeletionLog(ctx context.Context, lastRecordId string, limit int) (records []*coordinatorproto.DeletionLogRecord, err error)
 
 	IdentityRepoPut(ctx context.Context, identity string, data []*identityrepoproto.Data) (err error)
@@ -348,6 +350,18 @@ func (c *coordinatorClient) AclEventLog(ctx context.Context, accountId, lastReco
 		return nil
 	})
 	return
+}
+
+func (c *coordinatorClient) IsNetworkNeedsUpdate(ctx context.Context) (bool, error) {
+	p, err := c.getPeer(ctx)
+	if err != nil {
+		return false, err
+	}
+	version, err := peer.CtxProtoVersion(p.Context())
+	if err != nil {
+		return false, err
+	}
+	return secureservice.ProtoVersion < version, nil
 }
 
 func (c *coordinatorClient) doClient(ctx context.Context, f func(cl coordinatorproto.DRPCCoordinatorClient) error) error {

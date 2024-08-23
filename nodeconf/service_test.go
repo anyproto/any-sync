@@ -54,26 +54,44 @@ func TestService_NetworkCompatibilityStatus(t *testing.T) {
 		time.Sleep(time.Millisecond * 10)
 		assert.Equal(t, NetworkCompatibilityStatusOk, fx.NetworkCompatibilityStatus())
 	})
+	t.Run("needs update", func(t *testing.T) {
+		fx := newFixture(t)
+		fx.testCoordinator.needsUpdate = true
+		defer fx.finish(t)
+		fx.run(t)
+		time.Sleep(time.Millisecond * 10)
+		assert.Equal(t, NetworkCompatibilityStatusNeedsUpdate, fx.NetworkCompatibilityStatus())
+	})
+	t.Run("network not changed update", func(t *testing.T) {
+		fx := newFixture(t)
+		fx.testSource.err = ErrConfigurationNotChanged
+		defer fx.finish(t)
+		fx.run(t)
+		time.Sleep(time.Millisecond * 10)
+		assert.Equal(t, NetworkCompatibilityStatusOk, fx.NetworkCompatibilityStatus())
+	})
 }
 
 func newFixture(t *testing.T) *fixture {
 	fx := &fixture{
-		Service:    New(),
-		a:          new(app.App),
-		testStore:  &testStore{},
-		testSource: &testSource{},
-		testConf:   newTestConf(),
+		Service:         New(),
+		testCoordinator: &testCoordinator{},
+		a:               new(app.App),
+		testStore:       &testStore{},
+		testSource:      &testSource{},
+		testConf:        newTestConf(),
 	}
-	fx.a.Register(fx.testConf).Register(&accounttest.AccountTestService{}).Register(fx.Service).Register(fx.testSource).Register(fx.testStore)
+	fx.a.Register(fx.testConf).Register(&accounttest.AccountTestService{}).Register(fx.Service).Register(fx.testSource).Register(fx.testStore).Register(fx.testCoordinator)
 	return fx
 }
 
 type fixture struct {
 	Service
-	a          *app.App
-	testStore  *testStore
-	testSource *testSource
-	testConf   *testConf
+	a               *app.App
+	testStore       *testStore
+	testSource      *testSource
+	testConf        *testConf
+	testCoordinator *testCoordinator
 }
 
 func (fx *fixture) run(t *testing.T) {
@@ -83,6 +101,17 @@ func (fx *fixture) run(t *testing.T) {
 func (fx *fixture) finish(t *testing.T) {
 	require.NoError(t, fx.a.Close(ctx))
 }
+
+type testCoordinator struct {
+	needsUpdate bool
+}
+
+func (t *testCoordinator) IsNetworkNeedsUpdate(ctx context.Context) (bool, error) {
+	return t.needsUpdate, nil
+}
+
+func (t *testCoordinator) Init(a *app.App) error { return nil }
+func (t *testCoordinator) Name() string          { return "testCoordinator" }
 
 type testSource struct {
 	conf Configuration
