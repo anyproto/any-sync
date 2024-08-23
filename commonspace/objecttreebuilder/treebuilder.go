@@ -38,9 +38,8 @@ var log = logger.NewNamed(CName)
 var ErrSpaceClosed = errors.New("space is closed")
 
 type HistoryTreeOpts struct {
-	BeforeId      string
-	Include       bool
-	BuildFullTree bool
+	Heads   []string
+	Include bool
 }
 
 type TreeBuilder interface {
@@ -142,9 +141,8 @@ func (t *treeBuilder) BuildHistoryTree(ctx context.Context, id string, opts Hist
 
 	params := objecttree.HistoryTreeParams{
 		AclList:         t.aclList,
-		BeforeId:        opts.BeforeId,
+		Heads:           opts.Heads,
 		IncludeBeforeId: opts.Include,
-		BuildFullTree:   opts.BuildFullTree,
 	}
 	params.TreeStorage, err = t.spaceStorage.TreeStorage(id)
 	if err != nil {

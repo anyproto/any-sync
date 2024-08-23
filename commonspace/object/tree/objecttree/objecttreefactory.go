@@ -27,9 +27,8 @@ type ObjectTreeDerivePayload struct {
 type HistoryTreeParams struct {
 	TreeStorage     treestorage.TreeStorage
 	AclList         list.AclList
-	BeforeId        string
+	Heads           []string
 	IncludeBeforeId bool
-	BuildFullTree   bool
 }
 
 type objectTreeDeps struct {

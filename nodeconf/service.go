@@ -3,6 +3,7 @@ package nodeconf
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/anyproto/go-chash"
@@ -32,6 +33,7 @@ const (
 	NetworkCompatibilityStatusOk
 	NetworkCompatibilityStatusError
 	NetworkCompatibilityStatusIncompatible
+	NetworkCompatibilityStatusNeedsUpdate
 )
 
 func New() Service {
@@ -44,6 +46,10 @@ type Service interface {
 	app.ComponentRunnable
 }
 
+type NetworkProtoVersionChecker interface {
+	IsNetworkNeedsUpdate(ctx context.Context) (bool, error)
+}
+
 type service struct {
 	accountId string
 	config    Configuration
@@ -53,7 +59,8 @@ type service struct {
 	mu        sync.RWMutex
 	sync      periodicsync.PeriodicSync
 
-	compatibilityStatus NetworkCompatibilityStatus
+	compatibilityStatus        NetworkCompatibilityStatus
+	networkProtoVersionChecker NetworkProtoVersionChecker
 }
 
 func (s *service) Init(a *app.App) (err error) {
@@ -80,6 +87,7 @@ func (s *service) Init(a *app.App) (err error) {
 		}
 		return
 	}, log)
+	s.networkProtoVersionChecker = app.MustComponent[NetworkProtoVersionChecker](a)
 	return s.setLastConfiguration(lastStored)
 }
 
@@ -100,16 +108,68 @@ func (s *service) NetworkCompatibilityStatus() NetworkCompatibilityStatus {
 
 func (s *service) updateConfiguration(ctx context.Context) (err error) {
 	last, err := s.source.GetLast(ctx, s.Configuration().Id)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrConfigurationNotChanged) {
 		s.setCompatibilityStatusByErr(err)
-		return
+		return err
+	}
+
+	if err = s.updateCompatibilityStatus(ctx); err != nil {
+		return err
+	}
+
+	if err = s.saveAndSetLastConfiguration(ctx, last); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *service) updateCompatibilityStatus(ctx context.Context) error {
+	needsUpdate, checkErr := s.networkProtoVersionChecker.IsNetworkNeedsUpdate(ctx)
+	if checkErr != nil {
+		return checkErr
+	}
+	if needsUpdate {
+		s.setCompatibilityStatus(NetworkCompatibilityStatusNeedsUpdate)
 	} else {
-		s.setCompatibilityStatusByErr(nil)
+		s.setCompatibilityStatus(NetworkCompatibilityStatusOk)
 	}
-	if err = s.store.SaveLast(ctx, last); err != nil {
-		return
+	return nil
+}
+
+func (s *service) saveAndSetLastConfiguration(ctx context.Context, last Configuration) error {
+	if err := s.store.SaveLast(ctx, last); err != nil {
+		return err
 	}
-	return s.setLastConfiguration(last)
+
+	if err := s.setLastConfiguration(last); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *service) setCompatibilityStatus(status NetworkCompatibilityStatus) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.compatibilityStatus = status
+}
+
+func (s *service) setCompatibilityStatusByErr(err error) {
+	var status NetworkCompatibilityStatus
+
+	switch err {
+	case nil:
+		status = NetworkCompatibilityStatusOk
+	case handshake.ErrIncompatibleVersion:
+		status = NetworkCompatibilityStatusIncompatible
+	case net.ErrUnableToConnect:
+		status = NetworkCompatibilityStatusUnknown
+	default:
+		status = NetworkCompatibilityStatusError
+	}
+
+	s.setCompatibilityStatus(status)
 }
 
 func (s *service) setLastConfiguration(c Configuration) (err error) {
@@ -136,21 +196,6 @@ func (s *service) setLastConfiguration(c Configuration) (err error) {
 	}
 	s.last = nc
 	return
-}
-
-func (s *service) setCompatibilityStatusByErr(err error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	switch err {
-	case nil:
-		s.compatibilityStatus = NetworkCompatibilityStatusOk
-	case handshake.ErrIncompatibleVersion:
-		s.compatibilityStatus = NetworkCompatibilityStatusIncompatible
-	case net.ErrUnableToConnect:
-		s.compatibilityStatus = NetworkCompatibilityStatusUnknown
-	default:
-		s.compatibilityStatus = NetworkCompatibilityStatusError
-	}
 }
 
 func (s *service) Id() string {
