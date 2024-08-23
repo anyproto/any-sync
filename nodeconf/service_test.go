@@ -68,7 +68,7 @@ func TestService_NetworkCompatibilityStatus(t *testing.T) {
 		defer fx.finish(t)
 		fx.run(t)
 		time.Sleep(time.Millisecond * 10)
-		assert.Equal(t, NetworkCompatibilityStatusError, fx.NetworkCompatibilityStatus())
+		assert.Equal(t, NetworkCompatibilityStatusOk, fx.NetworkCompatibilityStatus())
 	})
 }
 

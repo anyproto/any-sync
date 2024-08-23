@@ -112,7 +112,7 @@ func (s *service) updateConfiguration(ctx context.Context) (err error) {
 		return err
 	}
 
-	if err = s.updateCompatibilityStatus(ctx, err); err != nil {
+	if err = s.updateCompatibilityStatus(ctx); err != nil {
 		return err
 	}
 
@@ -123,7 +123,7 @@ func (s *service) updateConfiguration(ctx context.Context) (err error) {
 	return nil
 }
 
-func (s *service) updateCompatibilityStatus(ctx context.Context, err error) error {
+func (s *service) updateCompatibilityStatus(ctx context.Context) error {
 	needsUpdate, checkErr := s.networkProtoVersionChecker.IsNetworkNeedsUpdate(ctx)
 	if checkErr != nil {
 		return checkErr
@@ -131,9 +131,9 @@ func (s *service) updateCompatibilityStatus(ctx context.Context, err error) erro
 	if needsUpdate {
 		s.setCompatibilityStatus(NetworkCompatibilityStatusNeedsUpdate)
 	} else {
-		s.setCompatibilityStatusByErr(err)
+		s.setCompatibilityStatus(NetworkCompatibilityStatusOk)
 	}
-	return err
+	return nil
 }
 
 func (s *service) saveAndSetLastConfiguration(ctx context.Context, last Configuration) error {
