@@ -21,6 +21,17 @@ type connCtrl interface {
 
 type connCtrlWrapper struct {
 	connCtrl
+	setChan chan struct{}
+}
+
+func (c *connCtrlWrapper) ServeConn(ctx context.Context, conn net.Conn) (err error) {
+	<-c.setChan
+	return c.connCtrl.ServeConn(ctx, conn)
+}
+
+func (c *connCtrlWrapper) DrpcConfig() rpc.Config {
+	<-c.setChan
+	return c.connCtrl.DrpcConfig()
 }
 
 type PeerGlobalPool struct {
@@ -57,7 +68,9 @@ func (p *PeerGlobalPool) MakePeers() {
 				continue
 			}
 			id := mapId(first, second)
-			p.ctrls[id] = &connCtrlWrapper{}
+			p.ctrls[id] = &connCtrlWrapper{
+				setChan: make(chan struct{}),
+			}
 			conn := p.connProvider.GetConn(first, second)
 			p.peers[id], _ = peer.NewPeer(conn, p.ctrls[id])
 		}
@@ -75,6 +88,7 @@ func (p *PeerGlobalPool) AddCtrl(peerId string, addCtrl connCtrl) {
 		splitId := strings.Split(id, "-")
 		if splitId[0] == peerId {
 			ctrl.connCtrl = addCtrl
+			close(ctrl.setChan)
 		}
 	}
 }
