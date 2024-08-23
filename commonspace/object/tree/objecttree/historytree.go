@@ -27,34 +27,46 @@ func (h *historyTree) rebuildFromStorage(params HistoryTreeParams) (err error) {
 }
 
 func (h *historyTree) rebuild(params HistoryTreeParams) (err error) {
-	var (
-		beforeId = params.BeforeId
-		include  = params.IncludeBeforeId
-		full     = params.BuildFullTree
-	)
 	h.treeBuilder.Reset()
-	if full {
+
+	if len(params.Heads) == 0 {
 		h.tree, err = h.treeBuilder.BuildFull()
-		return
-	}
-	if beforeId == h.Id() && !include {
-		return ErrLoadBeforeRoot
+		return err
 	}
 
-	heads := []string{beforeId}
-	if beforeId == "" {
-		heads, err = h.treeStorage.Heads()
-		if err != nil {
-			return
-		}
-	} else if !include {
-		beforeChange, err := h.treeBuilder.loadChange(beforeId)
-		if err != nil {
-			return err
-		}
-		heads = beforeChange.PreviousIds
+	if len(params.Heads) == 1 {
+		return h.rebuildWithSingleHead(params.IncludeBeforeId, params.Heads[0])
 	}
 
+	h.tree, err = h.treeBuilder.build(params.Heads, nil, nil)
+	return err
+}
+
+func (h *historyTree) rebuildWithSingleHead(includeBeforeId bool, head string) (err error) {
+	if head == "" {
+		return h.rebuildWithEmptyHead()
+	}
+	if !includeBeforeId {
+		return h.rebuildWithPreviousHead(head)
+	}
+	h.tree, err = h.treeBuilder.build([]string{head}, nil, nil)
+	return err
+}
+
+func (h *historyTree) rebuildWithEmptyHead() (err error) {
+	heads, err := h.treeStorage.Heads()
+	if err != nil {
+		return err
+	}
 	h.tree, err = h.treeBuilder.build(heads, nil, nil)
-	return
+	return err
+}
+
+func (h *historyTree) rebuildWithPreviousHead(head string) (err error) {
+	change, err := h.treeBuilder.loadChange(head)
+	if err != nil {
+		return err
+	}
+	h.tree, err = h.treeBuilder.build(change.PreviousIds, nil, nil)
+	return err
 }
