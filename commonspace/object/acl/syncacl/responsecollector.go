@@ -3,6 +3,7 @@ package syncacl
 import (
 	"context"
 
+	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/response"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 )
 
@@ -11,7 +12,7 @@ type responseCollector struct {
 }
 
 func (r *responseCollector) NewResponse() syncdeps.Response {
-	return &Response{}
+	return &response.Response{}
 }
 
 func newResponseCollector(handler syncdeps.ObjectSyncHandler) *responseCollector {

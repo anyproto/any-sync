@@ -1,4 +1,4 @@
-package syncacl
+package response
 
 import (
 	"fmt"
@@ -10,32 +10,32 @@ import (
 )
 
 type Response struct {
-	spaceId  string
-	objectId string
-	head     string
-	records  []*consensusproto.RawRecordWithId
-	root     *consensusproto.RawRecordWithId
+	SpaceId  string
+	ObjectId string
+	Head     string
+	Records  []*consensusproto.RawRecordWithId
+	Root     *consensusproto.RawRecordWithId
 }
 
 func (r *Response) MsgSize() uint64 {
-	size := uint64(len(r.head))
-	for _, record := range r.records {
+	size := uint64(len(r.Head))
+	for _, record := range r.Records {
 		size += uint64(len(record.Id))
 		size += uint64(len(record.Payload))
 	}
-	return size + uint64(len(r.spaceId)) + uint64(len(r.objectId))
+	return size + uint64(len(r.SpaceId)) + uint64(len(r.ObjectId))
 }
 
 func (r *Response) ProtoMessage() (proto.Message, error) {
-	if r.objectId == "" {
+	if r.ObjectId == "" {
 		return &spacesyncproto.ObjectSyncMessage{}, nil
 	}
 	resp := &consensusproto.LogFullSyncResponse{
-		Head:    r.head,
-		Records: r.records,
+		Head:    r.Head,
+		Records: r.Records,
 	}
-	wrapped := consensusproto.WrapFullResponse(resp, r.root)
-	return spacesyncproto.MarshallSyncMessage(wrapped, r.spaceId, r.objectId)
+	wrapped := consensusproto.WrapFullResponse(resp, r.Root)
+	return spacesyncproto.MarshallSyncMessage(wrapped, r.SpaceId, r.ObjectId)
 }
 
 func (r *Response) SetProtoMessage(message proto.Message) error {
@@ -51,7 +51,7 @@ func (r *Response) SetProtoMessage(message proto.Message) error {
 	if err != nil {
 		return err
 	}
-	r.root = &consensusproto.RawRecordWithId{
+	r.Root = &consensusproto.RawRecordWithId{
 		Payload: logMsg.Payload,
 		Id:      logMsg.Id,
 	}
@@ -59,9 +59,9 @@ func (r *Response) SetProtoMessage(message proto.Message) error {
 	if respMsg == nil {
 		return fmt.Errorf("unexpected message type: %T", logMsg.GetContent())
 	}
-	r.head = respMsg.Head
-	r.records = respMsg.Records
-	r.spaceId = msg.SpaceId
-	r.objectId = msg.ObjectId
+	r.Head = respMsg.Head
+	r.Records = respMsg.Records
+	r.SpaceId = msg.SpaceId
+	r.ObjectId = msg.ObjectId
 	return nil
 }

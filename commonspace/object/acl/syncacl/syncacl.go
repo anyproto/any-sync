@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_syncacl/mock_syncacl.go github.com/anyproto/any-sync/commonspace/object/acl/syncacl SyncClient
 package syncacl
 
 import (

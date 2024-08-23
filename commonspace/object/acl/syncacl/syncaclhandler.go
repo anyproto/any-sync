@@ -9,6 +9,7 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	response2 "github.com/anyproto/any-sync/commonspace/object/acl/syncacl/response"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
@@ -22,11 +23,6 @@ var (
 	ErrUnexpectedResponseType = errors.New("unexpected response type")
 	ErrUnexpectedRequestType  = errors.New("unexpected request type")
 	ErrUnknownHead            = errors.New("unknown head")
-)
-
-var (
-	ErrMessageIsRequest    = errors.New("message is request")
-	ErrMessageIsNotRequest = errors.New("message is not request")
 )
 
 type syncAclHandler struct {
@@ -162,16 +158,16 @@ func (s *syncAclHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Re
 }
 
 func (s *syncAclHandler) HandleResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
-	response, ok := resp.(*Response)
+	response, ok := resp.(*response2.Response)
 	if !ok {
 		return ErrUnexpectedResponseType
 	}
-	if len(response.records) == 0 {
+	if len(response.Records) == 0 {
 		return nil
 	}
 	s.aclList.Lock()
 	defer s.aclList.Unlock()
-	return s.aclList.AddRawRecords(response.records)
+	return s.aclList.AddRawRecords(response.Records)
 }
 
 func (s *syncAclHandler) ResponseCollector() syncdeps.ResponseCollector {

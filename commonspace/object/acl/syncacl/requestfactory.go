@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/response"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
@@ -11,7 +12,7 @@ import (
 type RequestFactory interface {
 	CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (headUpdate *objectmessages.HeadUpdate, err error)
 	CreateFullSyncRequest(peerId string, l list.AclList) *objectmessages.Request
-	CreateFullSyncResponse(l list.AclList, theirHead string) (resp *Response, err error)
+	CreateFullSyncResponse(l list.AclList, theirHead string) (resp *response.Response, err error)
 }
 
 type requestFactory struct {
@@ -42,16 +43,16 @@ func (r *requestFactory) CreateFullSyncRequest(peerId string, l list.AclList) *o
 	return NewRequest(peerId, l.Id(), r.spaceId, l.Head().Id, l.Root())
 }
 
-func (r *requestFactory) CreateFullSyncResponse(l list.AclList, theirHead string) (resp *Response, err error) {
+func (r *requestFactory) CreateFullSyncResponse(l list.AclList, theirHead string) (resp *response.Response, err error) {
 	records, err := l.RecordsAfter(context.Background(), theirHead)
 	if err != nil {
 		return
 	}
-	return &Response{
-		spaceId:  r.spaceId,
-		objectId: l.Id(),
-		head:     l.Head().Id,
-		records:  records,
-		root:     l.Root(),
+	return &response.Response{
+		SpaceId:  r.spaceId,
+		ObjectId: l.Id(),
+		Head:     l.Head().Id,
+		Records:  records,
+		Root:     l.Root(),
 	}, nil
 }
