@@ -24,7 +24,7 @@ func (t testUpdater) UpdateQueueSize(size uint64, msgType int, add bool) {
 }
 
 func TestSyncHandler_HeadUpdate(t *testing.T) {
-	t.Run("head update ok", func(t *testing.T) {
+	t.Run("head update ok, everything added, we don't send request", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
 		defer fx.finish()
 		rawCh := &treechangeproto.RawTreeChangeWithId{
@@ -64,7 +64,7 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Nil(t, req)
 	})
-	t.Run("head update different heads after add", func(t *testing.T) {
+	t.Run("head update different heads after add, we send request", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
 		defer fx.finish()
 		rawCh := &treechangeproto.RawTreeChangeWithId{
@@ -108,7 +108,7 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, returnReq, req)
 	})
-	t.Run("head update no changes, same heads", func(t *testing.T) {
+	t.Run("head update no changes, same heads, we don't send request", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
 		defer fx.finish()
 		rawCh := &treechangeproto.RawTreeChangeWithId{
@@ -139,7 +139,7 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Nil(t, req)
 	})
-	t.Run("head update no changes, different heads", func(t *testing.T) {
+	t.Run("head update no changes, different heads, we send request", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
 		defer fx.finish()
 		rawCh := &treechangeproto.RawTreeChangeWithId{
@@ -178,7 +178,7 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 }
 
 func TestSyncHandler_HandleStreamRequest(t *testing.T) {
-	t.Run("ok", func(t *testing.T) {
+	t.Run("heads are different, we send request", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
 		defer fx.finish()
 		heads := []string{"peerHead"}
@@ -222,6 +222,138 @@ func TestSyncHandler_HandleStreamRequest(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, returnReq, req)
 		require.Equal(t, 2, callCount)
+	})
+	t.Run("request has no heads = peer doesn't have tree, we don't send request", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.finish()
+		heads := []string{"peerHead"}
+		fullRequest := &treechangeproto.TreeFullSyncRequest{}
+		rawCh := &treechangeproto.RawTreeChangeWithId{
+			RawChange: []byte("abcd"),
+			Id:        "chId",
+		}
+		wrapped := treechangeproto.WrapFullRequest(fullRequest, nil)
+		marshaled, err := wrapped.Marshal()
+		require.NoError(t, err)
+		request := objectmessages.NewByteRequest("peerId", "spaceId", "objectId", marshaled)
+		producer := mock_response.NewMockResponseProducer(fx.ctrl)
+		createResponseProducer = func(spaceId string, tree objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (response.ResponseProducer, error) {
+			return producer, nil
+		}
+		fx.tree.EXPECT().Heads().Return([]string{"curHead"})
+		resp := &response.Response{
+			Heads:    heads,
+			ObjectId: "objectId",
+			Changes: []*treechangeproto.RawTreeChangeWithId{
+				rawCh,
+			},
+		}
+		producer.EXPECT().NewResponse(gomock.Any()).Times(2).Return(resp, nil)
+		producer.EXPECT().NewResponse(gomock.Any()).Return(&response.Response{}, nil)
+		ctx = peer.CtxWithPeerId(ctx, "peerId")
+		callCount := 0
+		req, err := fx.syncHandler.HandleStreamRequest(ctx, request, testUpdater{}, func(resp proto.Message) error {
+			require.NotNil(t, resp)
+			callCount++
+			return nil
+		})
+		require.NoError(t, err)
+		require.Nil(t, req)
+		require.Equal(t, 2, callCount)
+	})
+	t.Run("they have our heads and more, we send request", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.finish()
+		heads := []string{"peerHead", "curHead"}
+		fullRequest := &treechangeproto.TreeFullSyncRequest{
+			Heads: heads,
+		}
+		wrapped := treechangeproto.WrapFullRequest(fullRequest, nil)
+		marshaled, err := wrapped.Marshal()
+		require.NoError(t, err)
+		request := objectmessages.NewByteRequest("peerId", "spaceId", "objectId", marshaled)
+		producer := mock_response.NewMockResponseProducer(fx.ctrl)
+		createResponseProducer = func(spaceId string, tree objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (response.ResponseProducer, error) {
+			return producer, nil
+		}
+		fx.tree.EXPECT().Heads().Return([]string{"curHead"})
+		resp := &response.Response{
+			Heads: heads,
+		}
+		returnReq := &objectmessages.Request{
+			Bytes: []byte("abcde"),
+		}
+		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq)
+		producer.EXPECT().EmptyResponse().Return(resp)
+		ctx = peer.CtxWithPeerId(ctx, "peerId")
+		callCount := 0
+		req, err := fx.syncHandler.HandleStreamRequest(ctx, request, testUpdater{}, func(resp proto.Message) error {
+			require.NotNil(t, resp)
+			callCount++
+			return nil
+		})
+		require.NoError(t, err)
+		require.Equal(t, returnReq, req)
+		require.Equal(t, 1, callCount)
+	})
+	t.Run("we have exactly same heads, we don't send request", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.finish()
+		heads := []string{"peerHead", "curHead"}
+		fullRequest := &treechangeproto.TreeFullSyncRequest{
+			Heads: heads,
+		}
+		wrapped := treechangeproto.WrapFullRequest(fullRequest, nil)
+		marshaled, err := wrapped.Marshal()
+		require.NoError(t, err)
+		request := objectmessages.NewByteRequest("peerId", "spaceId", "objectId", marshaled)
+		producer := mock_response.NewMockResponseProducer(fx.ctrl)
+		createResponseProducer = func(spaceId string, tree objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (response.ResponseProducer, error) {
+			return producer, nil
+		}
+		fx.tree.EXPECT().Heads().Return([]string{"curHead"})
+		resp := &response.Response{
+			Heads: heads,
+		}
+		returnReq := &objectmessages.Request{
+			Bytes: []byte("abcde"),
+		}
+		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq)
+		producer.EXPECT().EmptyResponse().Return(resp)
+		ctx = peer.CtxWithPeerId(ctx, "peerId")
+		callCount := 0
+		req, err := fx.syncHandler.HandleStreamRequest(ctx, request, testUpdater{}, func(resp proto.Message) error {
+			require.NotNil(t, resp)
+			callCount++
+			return nil
+		})
+		require.NoError(t, err)
+		require.Equal(t, returnReq, req)
+		require.Equal(t, 1, callCount)
+	})
+}
+
+func TestSyncHandler_HandleResponse(t *testing.T) {
+	t.Run("handle response with changes", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.finish()
+		rawCh := &treechangeproto.RawTreeChangeWithId{
+			RawChange: []byte("abcd"),
+			Id:        "chId",
+		}
+		resp := &response.Response{
+			Heads: []string{"abcd"},
+			Changes: []*treechangeproto.RawTreeChangeWithId{
+				rawCh,
+			},
+		}
+		payload := objecttree.RawChangesPayload{
+			NewHeads:   resp.Heads,
+			RawChanges: resp.Changes,
+		}
+		fx.tree.EXPECT().AddRawChangesFromPeer(ctx, "peerId", payload).Return(objecttree.AddResult{}, nil)
+		err := fx.syncHandler.HandleResponse(ctx, "peerId", "objectId", resp)
+		require.NoError(t, err)
 	})
 }
 
