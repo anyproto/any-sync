@@ -9,7 +9,7 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
-	response2 "github.com/anyproto/any-sync/commonspace/object/acl/syncacl/response"
+	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/response"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
@@ -158,7 +158,7 @@ func (s *syncAclHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Re
 }
 
 func (s *syncAclHandler) HandleResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
-	response, ok := resp.(*response2.Response)
+	response, ok := resp.(*response.Response)
 	if !ok {
 		return ErrUnexpectedResponseType
 	}
