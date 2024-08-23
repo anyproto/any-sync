@@ -38,7 +38,7 @@ func (s syncGetter) Id() string {
 }
 
 func TestObjectSync_HandleHeadUpdate(t *testing.T) {
-	t.Run("handle head update new proto ok", func(t *testing.T) {
+	t.Run("handle head update new proto, return request", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.close(t)
 		update := &objectmessages.HeadUpdate{
@@ -60,7 +60,7 @@ func TestObjectSync_HandleHeadUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, req, r)
 	})
-	t.Run("handle head update old proto ok", func(t *testing.T) {
+	t.Run("handle head update old proto, return nothing", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.close(t)
 		update := &objectmessages.HeadUpdate{
@@ -82,7 +82,7 @@ func TestObjectSync_HandleHeadUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Nil(t, r)
 	})
-	t.Run("handle head update object missing", func(t *testing.T) {
+	t.Run("handle head update object missing, return request", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.close(t)
 		update := &objectmessages.HeadUpdate{
@@ -103,7 +103,7 @@ func TestObjectSync_HandleHeadUpdate(t *testing.T) {
 }
 
 func TestObjectSync_DeprecatedObjectSync(t *testing.T) {
-	t.Run("handle deprecated sync empty message returned", func(t *testing.T) {
+	t.Run("handle deprecated sync, object missing, empty response returned", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.close(t)
 		fullSyncReq := &treechangeproto.TreeFullSyncRequest{}
@@ -129,7 +129,7 @@ func TestObjectSync_DeprecatedObjectSync(t *testing.T) {
 		}
 		require.Equal(t, retMsg, r)
 	})
-	t.Run("handle deprecated sync put tree", func(t *testing.T) {
+	t.Run("handle deprecated sync, object missing, put tree, return response", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.close(t)
 		rootCh := &treechangeproto.RawTreeChangeWithId{
@@ -175,7 +175,7 @@ func TestObjectSync_DeprecatedObjectSync(t *testing.T) {
 		}
 		require.Equal(t, retMsg, r)
 	})
-	t.Run("handle deprecated sync ok", func(t *testing.T) {
+	t.Run("handle deprecated sync, object exists, return response", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.close(t)
 		fullSyncReq := &treechangeproto.TreeFullSyncRequest{}
@@ -202,7 +202,7 @@ func TestObjectSync_DeprecatedObjectSync(t *testing.T) {
 }
 
 func TestObjectSync_HandleStreamRequest(t *testing.T) {
-	t.Run("handle stream request object not found", func(t *testing.T) {
+	t.Run("handle stream request, object not found, return error", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.close(t)
 		fullSyncReq := &treechangeproto.TreeFullSyncRequest{
@@ -224,7 +224,7 @@ func TestObjectSync_HandleStreamRequest(t *testing.T) {
 		require.Equal(t, treechangeproto.ErrGetTree, err)
 		require.Equal(t, expectedReq, r)
 	})
-	t.Run("handle stream request object not found", func(t *testing.T) {
+	t.Run("handle stream request, object found, handle on object level, return no request", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.close(t)
 		fullSyncReq := &treechangeproto.TreeFullSyncRequest{
@@ -250,7 +250,7 @@ func TestObjectSync_HandleStreamRequest(t *testing.T) {
 }
 
 func TestObjectSync_ApplyRequest(t *testing.T) {
-	t.Run("apply request nil manager error", func(t *testing.T) {
+	t.Run("apply request, no error", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.close(t)
 		requestSender := mock_syncdeps.NewMockRequestSender(fx.ctrl)
@@ -265,7 +265,7 @@ func TestObjectSync_ApplyRequest(t *testing.T) {
 		err := fx.objectSync.ApplyRequest(ctx, rq, requestSender)
 		require.NoError(t, err)
 	})
-	t.Run("apply request manager error", func(t *testing.T) {
+	t.Run("apply request, manager error", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.close(t)
 		requestSender := mock_syncdeps.NewMockRequestSender(fx.ctrl)
