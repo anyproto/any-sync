@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/net/peer"
 )
 
 const CName = "common.object.treesyncer"
@@ -14,5 +15,5 @@ type TreeSyncer interface {
 	StartSync()
 	StopSync()
 	ShouldSync(peerId string) bool
-	SyncAll(ctx context.Context, peerId string, existing, missing []string) error
+	SyncAll(ctx context.Context, p peer.Peer, existing, missing []string) error
 }

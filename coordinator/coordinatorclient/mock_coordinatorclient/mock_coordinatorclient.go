@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_coordinatorclient/mock_coordinatorclient.go github.com/anyproto/any-sync/coordinator/coordinatorclient CoordinatorClient
 //
-
 // Package mock_coordinatorclient is a generated GoMock package.
 package mock_coordinatorclient
 
@@ -102,6 +101,21 @@ func (mr *MockCoordinatorClientMockRecorder) AclAddRecord(arg0, arg1, arg2 any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclAddRecord", reflect.TypeOf((*MockCoordinatorClient)(nil).AclAddRecord), arg0, arg1, arg2)
 }
 
+// AclEventLog mocks base method.
+func (m *MockCoordinatorClient) AclEventLog(arg0 context.Context, arg1, arg2 string, arg3 int) ([]*coordinatorproto.AclEventLogRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AclEventLog", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].([]*coordinatorproto.AclEventLogRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AclEventLog indicates an expected call of AclEventLog.
+func (mr *MockCoordinatorClientMockRecorder) AclEventLog(arg0, arg1, arg2, arg3 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclEventLog", reflect.TypeOf((*MockCoordinatorClient)(nil).AclEventLog), arg0, arg1, arg2, arg3)
+}
+
 // AclGetRecords mocks base method.
 func (m *MockCoordinatorClient) AclGetRecords(arg0 context.Context, arg1, arg2 string) ([]*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
@@ -173,6 +187,21 @@ func (m *MockCoordinatorClient) Init(arg0 *app.App) error {
 func (mr *MockCoordinatorClientMockRecorder) Init(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockCoordinatorClient)(nil).Init), arg0)
+}
+
+// IsNetworkNeedsUpdate mocks base method.
+func (m *MockCoordinatorClient) IsNetworkNeedsUpdate(arg0 context.Context) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsNetworkNeedsUpdate", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsNetworkNeedsUpdate indicates an expected call of IsNetworkNeedsUpdate.
+func (mr *MockCoordinatorClientMockRecorder) IsNetworkNeedsUpdate(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNetworkNeedsUpdate", reflect.TypeOf((*MockCoordinatorClient)(nil).IsNetworkNeedsUpdate), arg0)
 }
 
 // Name mocks base method.

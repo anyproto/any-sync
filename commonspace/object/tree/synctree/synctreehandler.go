@@ -5,13 +5,15 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/objectsync/synchandler"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
+	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/util/slice"
-	"github.com/gogo/protobuf/proto"
 )
 
 var (
@@ -34,10 +36,10 @@ type syncTreeHandler struct {
 
 const maxQueueSize = 5
 
-func newSyncTreeHandler(spaceId string, objTree objecttree.ObjectTree, syncClient SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
+func newSyncTreeHandler(spaceId string, objTree peerSendableObjectTree, syncClient SyncClient, syncStatus syncstatus.StatusUpdater) synchandler.SyncHandler {
 	return &syncTreeHandler{
 		objTree:         objTree,
-		syncProtocol:    newTreeSyncProtocol(spaceId, objTree, syncClient),
+		syncProtocol:    newTreeSyncProtocol(spaceId, objTree, syncClient, syncStatus),
 		syncClient:      syncClient,
 		syncStatus:      syncStatus,
 		spaceId:         spaceId,
@@ -85,7 +87,7 @@ func (s *syncTreeHandler) handleRequest(ctx context.Context, senderId string, fu
 	return
 }
 
-func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, msg *spacesyncproto.ObjectSyncMessage) (err error) {
+func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, protoVersion uint32, msg *spacesyncproto.ObjectSyncMessage) (err error) {
 	unmarshalled := &treechangeproto.TreeSyncMessage{}
 	err = proto.Unmarshal(msg.Payload, unmarshalled)
 	if err != nil {
@@ -100,10 +102,10 @@ func (s *syncTreeHandler) HandleMessage(ctx context.Context, senderId string, ms
 		return
 	}
 	s.handlerLock.Unlock()
-	return s.handleMessage(ctx, unmarshalled, senderId)
+	return s.handleMessage(ctx, unmarshalled, protoVersion, senderId)
 }
 
-func (s *syncTreeHandler) handleMessage(ctx context.Context, msg *treechangeproto.TreeSyncMessage, senderId string) (err error) {
+func (s *syncTreeHandler) handleMessage(ctx context.Context, msg *treechangeproto.TreeSyncMessage, protoVersion uint32, senderId string) (err error) {
 	s.objTree.Lock()
 	defer s.objTree.Unlock()
 	var (
@@ -129,7 +131,7 @@ func (s *syncTreeHandler) handleMessage(ctx context.Context, msg *treechangeprot
 	switch {
 	case content.GetHeadUpdate() != nil:
 		var syncReq *treechangeproto.TreeSyncMessage
-		syncReq, err = s.syncProtocol.HeadUpdate(ctx, senderId, content.GetHeadUpdate())
+		syncReq, err = s.syncProtocol.HeadUpdate(ctx, senderId, protoVersion, content.GetHeadUpdate())
 		if err != nil || syncReq == nil {
 			return
 		}
@@ -137,7 +139,27 @@ func (s *syncTreeHandler) handleMessage(ctx context.Context, msg *treechangeprot
 	case content.GetFullSyncRequest() != nil:
 		return ErrMessageIsRequest
 	case content.GetFullSyncResponse() != nil:
-		return s.syncProtocol.FullSyncResponse(ctx, senderId, content.GetFullSyncResponse())
+		err := s.syncProtocol.FullSyncResponse(ctx, senderId, content.GetFullSyncResponse())
+		if err != nil {
+			return err
+		}
+		cnt := content.GetFullSyncResponse()
+		if protoVersion <= secureservice.ProtoVersion || slice.UnsortedEquals(cnt.Heads, s.objTree.Heads()) {
+			return nil
+		}
+		req, err := s.syncClient.CreateFullSyncRequest(s.objTree, cnt.Heads, cnt.SnapshotPath)
+		if err != nil {
+			return err
+		}
+		return s.syncClient.QueueRequest(senderId, treeId, req)
+	default:
+		if protoVersion <= secureservice.ProtoVersion {
+			return nil
+		}
+		req, err := s.syncClient.CreateFullSyncRequest(s.objTree, nil, nil)
+		if err != nil {
+			return err
+		}
+		return s.syncClient.QueueRequest(senderId, treeId, req)
 	}
-	return
 }

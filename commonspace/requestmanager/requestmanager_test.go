@@ -66,12 +66,14 @@ func TestRequestManager_SyncRequest(t *testing.T) {
 		defer fx.stop()
 
 		peerId := "PeerId"
+		peerCtx := peer.CtxWithPeerId(ctx, peerId)
 		peerMock := mock_peer.NewMockPeer(fx.ctrl)
 		conn := &drpcconn.Conn{}
 		msg := &spacesyncproto.ObjectSyncMessage{}
 		resp := &spacesyncproto.ObjectSyncMessage{}
 		fx.peerPoolMock.EXPECT().Get(ctx, peerId).Return(peerMock, nil)
 		fx.clientMock.EXPECT().ObjectSync(ctx, msg).Return(resp, nil)
+		peerMock.EXPECT().Context().Return(peerCtx).AnyTimes()
 		peerMock.EXPECT().DoDrpc(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, drpcHandler func(conn drpc.Conn) error) {
 			drpcHandler(conn)
 		}).Return(nil)
@@ -86,12 +88,14 @@ func TestRequestManager_SyncRequest(t *testing.T) {
 		ctx = fx.requestManager.ctx
 
 		peerId := "PeerId"
+		peerCtx := peer.CtxWithPeerId(ctx, peerId)
 		peerMock := mock_peer.NewMockPeer(fx.ctrl)
 		conn := &drpcconn.Conn{}
 		msg := &spacesyncproto.ObjectSyncMessage{}
 		resp := &spacesyncproto.ObjectSyncMessage{}
 		fx.peerPoolMock.EXPECT().Get(ctx, peerId).Return(peerMock, nil)
 		fx.clientMock.EXPECT().ObjectSync(ctx, msg).Return(resp, nil)
+		peerMock.EXPECT().Context().Return(peerCtx).AnyTimes()
 		peerMock.EXPECT().DoDrpc(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, drpcHandler func(conn drpc.Conn) error) {
 			drpcHandler(conn)
 		}).Return(nil)

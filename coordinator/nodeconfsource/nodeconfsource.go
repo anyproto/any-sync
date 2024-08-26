@@ -66,6 +66,7 @@ func (n *nodeConfSource) GetLast(ctx context.Context, currentId string) (c nodec
 			Types:     types,
 		}
 	}
+
 	return nodeconf.Configuration{
 		Id:           res.ConfigurationId,
 		NetworkId:    res.NetworkId,

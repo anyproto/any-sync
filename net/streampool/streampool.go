@@ -13,6 +13,7 @@ import (
 	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/secureservice"
 )
 
 // StreamHandler handles incoming messages from streams
@@ -293,6 +294,11 @@ func (s *streamPool) openStream(ctx context.Context, p peer.Peer) *openingProces
 		// in case there was no peerId in context
 		ctx := peer.CtxWithPeerId(ctx, p.Id())
 		// open new stream and add to pool
+		peerProto, err := peer.CtxProtoVersion(p.Context())
+		if err != nil {
+			peerProto = secureservice.ProtoVersion
+		}
+		ctx = peer.CtxWithProtoVersion(ctx, peerProto)
 		st, tags, err := s.handler.OpenStream(ctx, p)
 		if err != nil {
 			op.err = err

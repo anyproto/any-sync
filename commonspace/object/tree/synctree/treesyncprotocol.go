@@ -3,15 +3,18 @@ package synctree
 import (
 	"context"
 
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/syncstatus"
+	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/util/slice"
-	"go.uber.org/zap"
 )
 
 type TreeSyncProtocol interface {
-	HeadUpdate(ctx context.Context, senderId string, update *treechangeproto.TreeHeadUpdate) (request *treechangeproto.TreeSyncMessage, err error)
+	HeadUpdate(ctx context.Context, senderId string, protoVersion uint32, update *treechangeproto.TreeHeadUpdate) (request *treechangeproto.TreeSyncMessage, err error)
 	FullSyncRequest(ctx context.Context, senderId string, request *treechangeproto.TreeFullSyncRequest) (response *treechangeproto.TreeSyncMessage, err error)
 	FullSyncResponse(ctx context.Context, senderId string, response *treechangeproto.TreeFullSyncResponse) (err error)
 }
@@ -19,20 +22,22 @@ type TreeSyncProtocol interface {
 type treeSyncProtocol struct {
 	log        logger.CtxLogger
 	spaceId    string
-	objTree    objecttree.ObjectTree
+	objTree    peerSendableObjectTree
+	syncStatus syncstatus.StatusUpdater
 	reqFactory RequestFactory
 }
 
-func newTreeSyncProtocol(spaceId string, objTree objecttree.ObjectTree, reqFactory RequestFactory) *treeSyncProtocol {
+func newTreeSyncProtocol(spaceId string, objTree peerSendableObjectTree, reqFactory RequestFactory, syncStatus syncstatus.StatusUpdater) *treeSyncProtocol {
 	return &treeSyncProtocol{
 		log:        log.With(zap.String("spaceId", spaceId), zap.String("treeId", objTree.Id())),
 		spaceId:    spaceId,
 		objTree:    objTree,
+		syncStatus: syncStatus,
 		reqFactory: reqFactory,
 	}
 }
 
-func (t *treeSyncProtocol) HeadUpdate(ctx context.Context, senderId string, update *treechangeproto.TreeHeadUpdate) (fullRequest *treechangeproto.TreeSyncMessage, err error) {
+func (t *treeSyncProtocol) HeadUpdate(ctx context.Context, senderId string, protoVersion uint32, update *treechangeproto.TreeHeadUpdate) (fullRequest *treechangeproto.TreeSyncMessage, err error) {
 	var (
 		isEmptyUpdate = len(update.Changes) == 0
 		objTree       = t.objTree
@@ -62,6 +67,9 @@ func (t *treeSyncProtocol) HeadUpdate(ctx context.Context, senderId string, upda
 		headEquals := slice.UnsortedEquals(objTree.Heads(), update.Heads)
 		log.DebugCtx(ctx, "is empty update", zap.Bool("headEquals", headEquals))
 		if headEquals {
+			if protoVersion > secureservice.ProtoVersion {
+				t.syncStatus.HeadsApply(senderId, objTree.Id(), update.Heads, true)
+			}
 			return
 		}
 
@@ -70,11 +78,7 @@ func (t *treeSyncProtocol) HeadUpdate(ctx context.Context, senderId string, upda
 		return
 	}
 
-	if t.hasHeads(objTree, update.Heads) {
-		return
-	}
-
-	_, err = objTree.AddRawChanges(ctx, objecttree.RawChangesPayload{
+	_, err = objTree.AddRawChangesFromPeer(ctx, senderId, objecttree.RawChangesPayload{
 		NewHeads:   update.Heads,
 		RawChanges: update.Changes,
 	})
@@ -109,8 +113,8 @@ func (t *treeSyncProtocol) FullSyncRequest(ctx context.Context, senderId string,
 		}
 	}()
 
-	if len(request.Changes) != 0 && !t.hasHeads(objTree, request.Heads) {
-		_, err = objTree.AddRawChanges(ctx, objecttree.RawChangesPayload{
+	if len(request.Changes) != 0 {
+		_, err = objTree.AddRawChangesFromPeer(ctx, senderId, objecttree.RawChangesPayload{
 			NewHeads:   request.Heads,
 			RawChanges: request.Changes,
 		})
@@ -137,11 +141,8 @@ func (t *treeSyncProtocol) FullSyncResponse(ctx context.Context, senderId string
 			log.DebugCtx(ctx, "full sync response succeeded")
 		}
 	}()
-	if t.hasHeads(objTree, response.Heads) {
-		return
-	}
 
-	_, err = objTree.AddRawChanges(ctx, objecttree.RawChangesPayload{
+	_, err = objTree.AddRawChangesFromPeer(ctx, senderId, objecttree.RawChangesPayload{
 		NewHeads:   response.Heads,
 		RawChanges: response.Changes,
 	})

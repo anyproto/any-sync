@@ -5,18 +5,25 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
+	"github.com/anyproto/any-sync/net/secureservice"
 )
 
 type testObjTreeMock struct {
 	*mock_objecttree.MockObjectTree
 	m sync.RWMutex
+}
+
+func (t *testObjTreeMock) AddRawChangesFromPeer(ctx context.Context, peerId string, changesPayload objecttree.RawChangesPayload) (res objecttree.AddResult, err error) {
+	return t.MockObjectTree.AddRawChanges(ctx, changesPayload)
 }
 
 func newTestObjMock(mockTree *mock_objecttree.MockObjectTree) *testObjTreeMock {
@@ -111,10 +118,10 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
 		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h2"})
 		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h3"})
-		fx.syncProtocolMock.EXPECT().HeadUpdate(ctx, fx.senderId, gomock.Any()).Return(syncReq, nil)
+		fx.syncProtocolMock.EXPECT().HeadUpdate(ctx, fx.senderId, uint32(0), gomock.Any()).Return(syncReq, nil)
 		fx.syncClientMock.EXPECT().QueueRequest(fx.senderId, fx.treeId, syncReq).Return(nil)
 
-		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, objectMsg)
+		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, 0, objectMsg)
 		require.NoError(t, err)
 		require.Equal(t, []string{"h3"}, fx.syncHandler.heads)
 	})
@@ -133,7 +140,7 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 		fx.syncHandler.heads = []string{"h1"}
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
 
-		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, objectMsg)
+		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, 0, objectMsg)
 		require.NoError(t, err)
 	})
 
@@ -152,9 +159,9 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
 		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h2"})
 		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h3"})
-		fx.syncProtocolMock.EXPECT().HeadUpdate(ctx, fx.senderId, gomock.Any()).Return(nil, nil)
+		fx.syncProtocolMock.EXPECT().HeadUpdate(ctx, fx.senderId, uint32(0), gomock.Any()).Return(nil, nil)
 
-		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, objectMsg)
+		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, 0, objectMsg)
 		require.NoError(t, err)
 		require.Equal(t, []string{"h3"}, fx.syncHandler.heads)
 	})
@@ -174,7 +181,7 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
 		fx.objectTreeMock.EXPECT().Heads().Times(3).Return([]string{"h2"})
 
-		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, objectMsg)
+		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, 0, objectMsg)
 		require.Equal(t, err, ErrMessageIsRequest)
 	})
 
@@ -195,7 +202,66 @@ func TestSyncTreeHandler_HandleMessage(t *testing.T) {
 		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h3"})
 		fx.syncProtocolMock.EXPECT().FullSyncResponse(ctx, fx.senderId, gomock.Any()).Return(nil)
 
-		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, objectMsg)
+		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, 0, objectMsg)
+		require.NoError(t, err)
+	})
+
+	t.Run("handle full sync response new protocol heads not equal", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		treeId := "treeId"
+		chWithId := &treechangeproto.RawTreeChangeWithId{}
+		fullSyncResponse := &treechangeproto.TreeFullSyncResponse{
+			Heads:        []string{"h3"},
+			SnapshotPath: []string{"h3"},
+		}
+		treeMsg := treechangeproto.WrapFullResponse(fullSyncResponse, chWithId)
+		objectMsg, _ := spacesyncproto.MarshallSyncMessage(treeMsg, "spaceId", treeId)
+
+		fx.syncHandler.heads = []string{"h2"}
+		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
+		fx.objectTreeMock.EXPECT().Heads().AnyTimes().Return([]string{"h2"})
+		fx.syncProtocolMock.EXPECT().FullSyncResponse(ctx, fx.senderId, gomock.Any()).Return(nil)
+		req := &treechangeproto.TreeSyncMessage{}
+		fx.syncClientMock.EXPECT().CreateFullSyncRequest(fx.objectTreeMock, fullSyncResponse.Heads, fullSyncResponse.SnapshotPath).Return(req, nil)
+		fx.syncClientMock.EXPECT().QueueRequest(fx.senderId, fx.treeId, req).Return(nil)
+		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, secureservice.NewSyncProtoVersion, objectMsg)
+		require.NoError(t, err)
+	})
+
+	t.Run("handle full sync response new protocol heads equal", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		treeId := "treeId"
+		chWithId := &treechangeproto.RawTreeChangeWithId{}
+		fullSyncResponse := &treechangeproto.TreeFullSyncResponse{
+			Heads:        []string{"h3"},
+			SnapshotPath: []string{"h3"},
+		}
+		treeMsg := treechangeproto.WrapFullResponse(fullSyncResponse, chWithId)
+		objectMsg, _ := spacesyncproto.MarshallSyncMessage(treeMsg, "spaceId", treeId)
+
+		fx.syncHandler.heads = []string{"h2"}
+		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
+		fx.objectTreeMock.EXPECT().Heads().Times(2).Return([]string{"h2"})
+		fx.objectTreeMock.EXPECT().Heads().Times(3).Return([]string{"h3"})
+		fx.syncProtocolMock.EXPECT().FullSyncResponse(ctx, fx.senderId, gomock.Any()).Return(nil)
+		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, secureservice.NewSyncProtoVersion, objectMsg)
+		require.NoError(t, err)
+	})
+
+	t.Run("handle full sync response new protocol empty message", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		treeId := "treeId"
+		objectMsg := &spacesyncproto.ObjectSyncMessage{ObjectId: treeId}
+		fx.syncHandler.heads = []string{"h2"}
+		fx.objectTreeMock.EXPECT().Id().AnyTimes().Return(fx.treeId)
+		fx.objectTreeMock.EXPECT().Heads().AnyTimes().Return([]string{"h2"})
+		req := &treechangeproto.TreeSyncMessage{}
+		fx.syncClientMock.EXPECT().CreateFullSyncRequest(fx.objectTreeMock, nil, nil).Return(req, nil)
+		fx.syncClientMock.EXPECT().QueueRequest(fx.senderId, fx.treeId, req).Return(nil)
+		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, secureservice.NewSyncProtoVersion, objectMsg)
 		require.NoError(t, err)
 	})
 }

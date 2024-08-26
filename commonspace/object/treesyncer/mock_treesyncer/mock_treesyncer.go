@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	app "github.com/anyproto/any-sync/app"
+	peer "github.com/anyproto/any-sync/net/peer"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -135,7 +136,7 @@ func (mr *MockTreeSyncerMockRecorder) StopSync() *gomock.Call {
 }
 
 // SyncAll mocks base method.
-func (m *MockTreeSyncer) SyncAll(arg0 context.Context, arg1 string, arg2, arg3 []string) error {
+func (m *MockTreeSyncer) SyncAll(arg0 context.Context, arg1 peer.Peer, arg2, arg3 []string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SyncAll", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)

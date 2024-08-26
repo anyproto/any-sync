@@ -60,7 +60,7 @@ func Test_BuildSyncTree(t *testing.T) {
 	}
 
 	headUpdate := &treechangeproto.TreeSyncMessage{}
-	t.Run("AddRawChanges update", func(t *testing.T) {
+	t.Run("AddRawChangesFromPeer update", func(t *testing.T) {
 		changes := []*treechangeproto.RawTreeChangeWithId{{Id: "some"}}
 		payload := objecttree.RawChangesPayload{
 			NewHeads:   nil,
@@ -70,6 +70,8 @@ func Test_BuildSyncTree(t *testing.T) {
 			Added: changes,
 			Mode:  objecttree.Append,
 		}
+		objTreeMock.EXPECT().Heads().AnyTimes().Return([]string{"headId"})
+		objTreeMock.EXPECT().HasChanges(gomock.Any()).AnyTimes().Return(false)
 		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(payload)).
 			Return(expectedRes, nil)
 		updateListenerMock.EXPECT().Update(tr)
@@ -77,12 +79,12 @@ func Test_BuildSyncTree(t *testing.T) {
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
 		syncClientMock.EXPECT().Broadcast(gomock.Eq(headUpdate))
 		objTreeMock.EXPECT().Flush()
-		res, err := tr.AddRawChanges(ctx, payload)
+		res, err := tr.AddRawChangesFromPeer(ctx, "peerId", payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
 	})
 
-	t.Run("AddRawChanges rebuild", func(t *testing.T) {
+	t.Run("AddRawChangesFromPeer rebuild", func(t *testing.T) {
 		changes := []*treechangeproto.RawTreeChangeWithId{{Id: "some"}}
 		payload := objecttree.RawChangesPayload{
 			NewHeads:   nil,
@@ -93,6 +95,7 @@ func Test_BuildSyncTree(t *testing.T) {
 			Added: changes,
 			Mode:  objecttree.Rebuild,
 		}
+		objTreeMock.EXPECT().Heads().AnyTimes().Return([]string{"headId"})
 		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(payload)).
 			Return(expectedRes, nil)
 		updateListenerMock.EXPECT().Rebuild(tr)
@@ -100,12 +103,12 @@ func Test_BuildSyncTree(t *testing.T) {
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), gomock.Eq(changes)).Return(headUpdate)
 		syncClientMock.EXPECT().Broadcast(gomock.Eq(headUpdate))
 		objTreeMock.EXPECT().Flush()
-		res, err := tr.AddRawChanges(ctx, payload)
+		res, err := tr.AddRawChangesFromPeer(ctx, "peerId", payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
 	})
 
-	t.Run("AddRawChanges nothing", func(t *testing.T) {
+	t.Run("AddRawChangesFromPeer nothing", func(t *testing.T) {
 		changes := []*treechangeproto.RawTreeChangeWithId{{Id: "some"}}
 		payload := objecttree.RawChangesPayload{
 			NewHeads:   nil,
@@ -115,10 +118,11 @@ func Test_BuildSyncTree(t *testing.T) {
 			Added: changes,
 			Mode:  objecttree.Nothing,
 		}
+		objTreeMock.EXPECT().Heads().AnyTimes().Return([]string{"headId"})
 		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(payload)).
 			Return(expectedRes, nil)
 
-		res, err := tr.AddRawChanges(ctx, payload)
+		res, err := tr.AddRawChangesFromPeer(ctx, "peerId", payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
 	})

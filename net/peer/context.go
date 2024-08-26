@@ -17,11 +17,13 @@ const (
 	contextKeyIdentity
 	contextKeyPeerAddr
 	contextKeyPeerClientVersion
+	contextKeyPeerProtoVersion
 )
 
 var (
-	ErrPeerIdNotFoundInContext   = errors.New("peer id not found in context")
-	ErrIdentityNotFoundInContext = errors.New("identity not found in context")
+	ErrPeerIdNotFoundInContext       = errors.New("peer id not found in context")
+	ErrProtoVersionNotFoundInContext = errors.New("proto version not found in context")
+	ErrIdentityNotFoundInContext     = errors.New("identity not found in context")
 )
 
 const CtxResponsiblePeers = "*"
@@ -40,6 +42,19 @@ func CtxPeerId(ctx context.Context) (string, error) {
 // CtxWithPeerId sets peer id in the context
 func CtxWithPeerId(ctx context.Context, peerId string) context.Context {
 	return context.WithValue(ctx, contextKeyPeerId, peerId)
+}
+
+// CtxWithProtoVersion sets peer protocol version
+func CtxWithProtoVersion(ctx context.Context, version uint32) context.Context {
+	return context.WithValue(ctx, contextKeyPeerProtoVersion, version)
+}
+
+// CtxProtoVersion returns peer protocol version
+func CtxProtoVersion(ctx context.Context) (uint32, error) {
+	if protoVersion, ok := ctx.Value(contextKeyPeerProtoVersion).(uint32); ok {
+		return protoVersion, nil
+	}
+	return 0, ErrProtoVersionNotFoundInContext
 }
 
 // CtxPeerAddr returns peer address

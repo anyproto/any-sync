@@ -3,6 +3,16 @@ package synctree
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/cheggaaa/mb/v3"
+	"github.com/gogo/protobuf/proto"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
@@ -12,14 +22,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/cheggaaa/mb/v3"
-	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/slices"
-	"math/rand"
-	"sync"
-	"testing"
-	"time"
 )
 
 // protocolMsg is a message used in sync protocol tests
@@ -210,7 +212,7 @@ func createEmptySyncHandler(peerId, spaceId string, builder objecttree.BuildObje
 
 func (h *testSyncHandler) HandleMessage(ctx context.Context, senderId string, request *spacesyncproto.ObjectSyncMessage) (err error) {
 	if h.SyncHandler != nil {
-		return h.SyncHandler.HandleMessage(ctx, senderId, request)
+		return h.SyncHandler.HandleMessage(ctx, senderId, 0, request)
 	}
 	unmarshalled := &treechangeproto.TreeSyncMessage{}
 	err = proto.Unmarshal(request.Payload, unmarshalled)
@@ -308,6 +310,16 @@ type broadcastTree struct {
 }
 
 func (b *broadcastTree) AddRawChanges(ctx context.Context, changes objecttree.RawChangesPayload) (objecttree.AddResult, error) {
+	res, err := b.ObjectTree.AddRawChanges(ctx, changes)
+	if err != nil {
+		return objecttree.AddResult{}, err
+	}
+	upd := b.SyncClient.CreateHeadUpdate(b.ObjectTree, res.Added)
+	b.SyncClient.Broadcast(upd)
+	return res, nil
+}
+
+func (b *broadcastTree) AddRawChangesFromPeer(ctx context.Context, peerId string, changes objecttree.RawChangesPayload) (objecttree.AddResult, error) {
 	res, err := b.ObjectTree.AddRawChanges(ctx, changes)
 	if err != nil {
 		return objecttree.AddResult{}, err

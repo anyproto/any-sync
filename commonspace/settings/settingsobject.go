@@ -44,9 +44,8 @@ var (
 	DoSnapshot       = objecttree.DoSnapshot
 	buildHistoryTree = func(objTree objecttree.ObjectTree) (objecttree.ReadableObjectTree, error) {
 		return objecttree.BuildHistoryTree(objecttree.HistoryTreeParams{
-			TreeStorage:   objTree.Storage(),
-			AclList:       objTree.AclList(),
-			BuildFullTree: true,
+			TreeStorage: objTree.Storage(),
+			AclList:     objTree.AclList(),
 		})
 	}
 )
