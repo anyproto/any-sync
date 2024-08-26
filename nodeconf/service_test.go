@@ -3,15 +3,17 @@ package nodeconf
 import (
 	"context"
 	"errors"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/testutil/accounttest"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"sync"
-	"testing"
-	"time"
 )
 
 var ctx = context.Background()
@@ -69,6 +71,19 @@ func TestService_NetworkCompatibilityStatus(t *testing.T) {
 		fx.run(t)
 		time.Sleep(time.Millisecond * 10)
 		assert.Equal(t, NetworkCompatibilityStatusOk, fx.NetworkCompatibilityStatus())
+	})
+}
+
+func TestService_NetworkGetLast(t *testing.T) {
+	t.Run("same configuration error does not cause empty one to be set", func(t *testing.T) {
+		fx := newFixture(t)
+		fx.testSource.call = func() (Configuration, error) {
+			return Configuration{}, ErrConfigurationNotChanged
+		}
+		defer fx.finish(t)
+		fx.run(t)
+		time.Sleep(time.Millisecond * 10)
+		assert.NotEmpty(t, fx.Configuration().Id)
 	})
 }
 

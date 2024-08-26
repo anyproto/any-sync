@@ -29,7 +29,7 @@ require (
 	github.com/quic-go/quic-go v0.46.0
 	github.com/stretchr/testify v1.9.0
 	github.com/tyler-smith/go-bip39 v1.1.0
-	github.com/zeebo/blake3 v0.2.3
+	github.com/zeebo/blake3 v0.2.4
 	go.uber.org/atomic v1.11.0
 	go.uber.org/mock v0.4.0
 	go.uber.org/zap v1.27.0

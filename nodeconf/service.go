@@ -6,14 +6,15 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/anyproto/go-chash"
+	"go.uber.org/zap"
+
 	commonaccount "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/util/periodicsync"
-	"github.com/anyproto/go-chash"
-	"go.uber.org/zap"
 )
 
 const CName = "common.nodeconf"
@@ -107,7 +108,11 @@ func (s *service) NetworkCompatibilityStatus() NetworkCompatibilityStatus {
 
 func (s *service) updateConfiguration(ctx context.Context) (err error) {
 	last, err := s.source.GetLast(ctx, s.Configuration().Id)
-	if err != nil && !errors.Is(err, ErrConfigurationNotChanged) {
+	if err != nil {
+		if errors.Is(err, ErrConfigurationNotChanged) {
+			err = s.updateCompatibilityStatus(ctx)
+			return err
+		}
 		s.setCompatibilityStatusByErr(err)
 		return err
 	}
