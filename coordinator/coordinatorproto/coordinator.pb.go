@@ -2701,6 +2701,14 @@ func (m *AclEventLogRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return b[:n], nil
 	}
 }
+func (m *AclEventLogRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AclEventLogRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclEventLogRequest.Merge(m, src)
 }
@@ -2762,6 +2770,14 @@ func (m *AclEventLogResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return b[:n], nil
 	}
 }
+func (m *AclEventLogResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AclEventLogResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclEventLogResponse.Merge(m, src)
 }
@@ -2821,6 +2837,14 @@ func (m *AclEventLogRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		}
 		return b[:n], nil
 	}
+}
+func (m *AclEventLogRecord) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *AclEventLogRecord) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclEventLogRecord.Merge(m, src)

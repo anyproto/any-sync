@@ -6,7 +6,7 @@ all:
 	@set -e;
 	@git config core.hooksPath .githooks;
 
-proto: proto-execute replace-strings
+proto: proto-execute replace-gogo-strings
 
 proto-execute:
 	@echo 'Generating protobuf packages (Go)...'
@@ -40,6 +40,6 @@ deps:
 test:
 	go test ./... --cover
 
-replace-strings:
+replace-gogo-strings:
 	@echo "Replacing 'github.com/gogo/protobuf' with 'github.com/anyproto/protobuf' in all files recursively..."
 	LC_CTYPE=C LANG=C find . -type f -name "*.go" | xargs sed -i '' "s|github.com/gogo/protobuf|github.com/anyproto/protobuf|g"
