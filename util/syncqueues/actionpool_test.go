@@ -112,12 +112,16 @@ func TestRequestPool(t *testing.T) {
 		// we expect try add to fail and call remove action
 		wait := make(chan struct{})
 		wg := &sync.WaitGroup{}
-		wg.Add(1)
+		wg.Add(2)
 		rp.Add("peerId", "objectId", func(ctx context.Context) {
 			<-wait
 		}, func() {})
+		time.Sleep(100 * time.Millisecond)
 		rp.Add("peerId", "objectId1", func(ctx context.Context) {
-			require.Fail(t, "should not be called")
+			wg.Done()
+		}, func() {
+		})
+		rp.Add("peerId", "objectId2", func(ctx context.Context) {
 		}, func() {
 			wg.Done()
 		})
