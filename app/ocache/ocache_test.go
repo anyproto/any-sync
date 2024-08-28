@@ -140,6 +140,16 @@ func TestOCache_Get(t *testing.T) {
 		assert.Equal(t, context.Canceled, err)
 		assert.NoError(t, c.Close())
 	})
+	t.Run("value is nil", func(t *testing.T) {
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			return nil, nil
+		})
+
+		value, err := c.Get(ctx, "id")
+		assert.NotNil(t, err)
+		assert.Nil(t, value)
+		assert.NoError(t, c.Close())
+	})
 }
 
 func TestOCache_GC(t *testing.T) {

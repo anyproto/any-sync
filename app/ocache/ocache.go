@@ -3,6 +3,7 @@ package ocache
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -167,6 +168,9 @@ func (c *oCache) load(ctx context.Context, id string, e *entry) {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if value == nil && err == nil {
+		err = fmt.Errorf("loaded value is nil, id: %s", id)
+	}
 	if err != nil {
 		e.loadErr = err
 		delete(c.data, id)
