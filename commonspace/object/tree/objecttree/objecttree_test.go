@@ -1423,6 +1423,49 @@ func TestObjectTree(t *testing.T) {
 		require.Equal(t, objTree.Heads(), otherTree.Heads())
 	})
 
+	t.Run("gen changes test load iterator each change exceed max size", func(t *testing.T) {
+		ctx := prepareTreeContext(t, aclList)
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree
+		result := genChanges(changeCreator, genParams{
+			prefix:     "id",
+			aclId:      aclList.Id(),
+			startIdx:   0,
+			levels:     100,
+			perLevel:   10,
+			snapshotId: objTree.Root().Id,
+			prevHeads:  []string{objTree.Root().Id},
+			isSnapshot: func() bool {
+				return false
+			},
+			hasData: false,
+		})
+		_, err := objTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   result.heads,
+			RawChanges: result.changes,
+		})
+		require.NoError(t, err)
+		iter, err := objTree.ChangesAfterCommonSnapshotLoader([]string{objTree.Id()}, []string{objTree.Id()})
+		require.NoError(t, err)
+		otherTreeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id, false)
+		otherTree, err := BuildTestableTree(otherTreeStorage, aclList)
+		require.NoError(t, err)
+		for {
+			batch, err := iter.NextBatch(1)
+			require.NoError(t, err)
+			if len(batch.Batch) == 0 {
+				break
+			}
+			res, err := otherTree.AddRawChanges(context.Background(), RawChangesPayload{
+				NewHeads:   batch.Heads,
+				RawChanges: batch.Batch,
+			})
+			require.NoError(t, err)
+			require.Equal(t, len(batch.Batch), len(res.Added))
+		}
+		require.Equal(t, objTree.Heads(), otherTree.Heads())
+	})
+
 	t.Run("gen changes test load iterator snapshots", func(t *testing.T) {
 		ctx := prepareTreeContext(t, aclList)
 		changeCreator := ctx.changeCreator
