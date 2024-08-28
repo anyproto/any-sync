@@ -16,7 +16,21 @@ type InMemoryTreeStorage struct {
 	Changes map[string]*treechangeproto.RawTreeChangeWithId
 	addErr  error
 
-	sync.RWMutex
+	sync.Mutex
+}
+
+func (t *InMemoryTreeStorage) GetAllChangeIds() (chs []string, err error) {
+	t.Lock()
+	defer t.Unlock()
+	chs = make([]string, 0, len(t.Changes))
+	for id := range t.Changes {
+		chs = append(chs, id)
+	}
+	return
+}
+
+func (t *InMemoryTreeStorage) GetAppendRawChange(ctx context.Context, buf []byte, id string) (*treechangeproto.RawTreeChangeWithId, error) {
+	return t.GetRawChange(ctx, id)
 }
 
 func (t *InMemoryTreeStorage) SetReturnErrorOnAdd(err error) {
@@ -24,8 +38,8 @@ func (t *InMemoryTreeStorage) SetReturnErrorOnAdd(err error) {
 }
 
 func (t *InMemoryTreeStorage) AddRawChangesSetHeads(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error {
-	t.RLock()
-	defer t.RUnlock()
+	t.Lock()
+	defer t.Unlock()
 	if t.addErr != nil {
 		return t.addErr
 	}
@@ -52,7 +66,6 @@ func NewInMemoryTreeStorage(
 		root:    root,
 		heads:   append([]string(nil), heads...),
 		Changes: allChanges,
-		RWMutex: sync.RWMutex{},
 	}, nil
 }
 
@@ -62,20 +75,20 @@ func (t *InMemoryTreeStorage) HasChange(ctx context.Context, id string) (bool, e
 }
 
 func (t *InMemoryTreeStorage) Id() string {
-	t.RLock()
-	defer t.RUnlock()
+	t.Lock()
+	defer t.Unlock()
 	return t.id
 }
 
 func (t *InMemoryTreeStorage) Root() (*treechangeproto.RawTreeChangeWithId, error) {
-	t.RLock()
-	defer t.RUnlock()
+	t.Lock()
+	defer t.Unlock()
 	return t.root, nil
 }
 
 func (t *InMemoryTreeStorage) Heads() ([]string, error) {
-	t.RLock()
-	defer t.RUnlock()
+	t.Lock()
+	defer t.Unlock()
 	return t.heads, nil
 }
 
@@ -103,8 +116,8 @@ func (t *InMemoryTreeStorage) AddRawChange(change *treechangeproto.RawTreeChange
 }
 
 func (t *InMemoryTreeStorage) GetRawChange(ctx context.Context, changeId string) (*treechangeproto.RawTreeChangeWithId, error) {
-	t.RLock()
-	defer t.RUnlock()
+	t.Lock()
+	defer t.Unlock()
 	if res, exists := t.Changes[changeId]; exists {
 		return res, nil
 	}
@@ -112,6 +125,8 @@ func (t *InMemoryTreeStorage) GetRawChange(ctx context.Context, changeId string)
 }
 
 func (t *InMemoryTreeStorage) Delete() error {
+	t.Lock()
+	defer t.Unlock()
 	t.root = nil
 	t.Changes = nil
 	t.heads = nil
@@ -119,6 +134,8 @@ func (t *InMemoryTreeStorage) Delete() error {
 }
 
 func (t *InMemoryTreeStorage) Copy() *InMemoryTreeStorage {
+	t.Lock()
+	defer t.Unlock()
 	var changes []*treechangeproto.RawTreeChangeWithId
 	for _, ch := range t.Changes {
 		changes = append(changes, ch)
@@ -127,7 +144,15 @@ func (t *InMemoryTreeStorage) Copy() *InMemoryTreeStorage {
 	return other.(*InMemoryTreeStorage)
 }
 
+func (t *InMemoryTreeStorage) Remove(id string) {
+	t.Lock()
+	defer t.Unlock()
+	delete(t.Changes, id)
+}
+
 func (t *InMemoryTreeStorage) Equal(other *InMemoryTreeStorage) bool {
+	t.Lock()
+	defer t.Unlock()
 	if !slice.UnsortedEquals(t.heads, other.heads) {
 		return false
 	}

@@ -2,15 +2,18 @@ package metric
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/app/logger"
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
-	"net/http"
 	"storj.io/drpc"
-	"time"
+
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
 )
 
 const CName = "common.metric"
@@ -18,26 +21,63 @@ const CName = "common.metric"
 var log = logger.NewNamed(CName)
 
 func New() Metric {
-	return new(metric)
+	return &metric{
+		lastCachedTimeout: time.Second * 10,
+	}
 }
 
 type Metric interface {
 	Registry() *prometheus.Registry
 	WrapDRPCHandler(h drpc.Handler) drpc.Handler
 	RequestLog(ctx context.Context, rpc string, fields ...zap.Field)
+	RegisterSyncMetric(spaceId string, syncMetric SyncMetric)
+	UnregisterSyncMetric(spaceId string)
+	RegisterStreamPoolSyncMetric(mtr StreamPoolMetric)
+	UnregisterStreamPoolSyncMetric()
 	app.ComponentRunnable
 }
 
 type metric struct {
-	registry *prometheus.Registry
-	rpcLog   logger.CtxLogger
-	config   Config
-	a        *app.App
-	appField zap.Field
+	registry          *prometheus.Registry
+	rpcLog            logger.CtxLogger
+	config            Config
+	a                 *app.App
+	appField          zap.Field
+	mx                sync.Mutex
+	syncMetrics       map[string]SyncMetric
+	streamPoolMetric  StreamPoolMetric
+	lastCachedState   SyncMetricState
+	lastCachedDate    time.Time
+	lastCachedTimeout time.Duration
+}
+
+func (m *metric) RegisterStreamPoolSyncMetric(mtr StreamPoolMetric) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	m.streamPoolMetric = mtr
+}
+
+func (m *metric) UnregisterStreamPoolSyncMetric() {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	m.streamPoolMetric = nil
+}
+
+func (m *metric) RegisterSyncMetric(spaceId string, syncMetric SyncMetric) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	m.syncMetrics[spaceId] = syncMetric
+}
+
+func (m *metric) UnregisterSyncMetric(spaceId string) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	delete(m.syncMetrics, spaceId)
 }
 
 func (m *metric) Init(a *app.App) (err error) {
 	m.a = a
+	m.syncMetrics = make(map[string]SyncMetric)
 	m.registry = prometheus.NewRegistry()
 	m.config = a.MustComponent("config").(configSource).GetMetric()
 	m.rpcLog = logger.NewNamed("rpcLog")
@@ -57,6 +97,9 @@ func (m *metric) Run(ctx context.Context) (err error) {
 		return err
 	}
 	if err = m.registry.Register(newVersionsCollector(m.a)); err != nil {
+		return
+	}
+	if err = m.registerSyncMetrics(); err != nil {
 		return
 	}
 	if m.config.Addr != "" {

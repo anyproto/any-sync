@@ -18,11 +18,10 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
-	"github.com/anyproto/any-sync/commonspace/requestmanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
+	"github.com/anyproto/any-sync/commonspace/sync"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/nodeconf"
 )
@@ -65,10 +64,9 @@ type treeBuilder struct {
 	configuration   nodeconf.NodeConf
 	headsNotifiable synctree.HeadNotifiable
 	peerManager     peermanager.PeerManager
-	requestManager  requestmanager.RequestManager
 	spaceStorage    spacestorage.SpaceStorage
 	syncStatus      syncstatus.StatusUpdater
-	objectSync      objectsync.ObjectSync
+	syncService     sync.SyncService
 
 	log       logger.CtxLogger
 	builder   objecttree.BuildObjectTreeFunc
@@ -89,11 +87,10 @@ func (t *treeBuilder) Init(a *app.App) (err error) {
 	t.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	t.headsNotifiable = a.MustComponent(headsync.CName).(headsync.HeadSync)
 	t.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
+	t.syncService = a.MustComponent(sync.CName).(sync.SyncService)
 	t.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
-	t.requestManager = a.MustComponent(requestmanager.CName).(requestmanager.RequestManager)
-	t.objectSync = a.MustComponent(objectsync.CName).(objectsync.ObjectSync)
 	t.log = log.With(zap.String("spaceId", t.spaceId))
-	t.syncClient = synctree.NewSyncClient(t.spaceId, t.requestManager, t.peerManager)
+	t.syncClient = synctree.NewSyncClient(t.spaceId, t.syncService)
 	return nil
 }
 
@@ -220,5 +217,5 @@ func (t *treeBuilder) PutTree(ctx context.Context, payload treestorage.TreeStora
 func (t *treeBuilder) onClose(id string) {
 	t.treesUsed.Add(-1)
 	log.Debug("decrementing counter", zap.String("id", id), zap.Int32("trees", t.treesUsed.Load()), zap.String("spaceId", t.spaceId))
-	_ = t.objectSync.CloseThread(id)
+	_ = t.syncService.CloseReceiveQueue(id)
 }

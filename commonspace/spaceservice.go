@@ -9,13 +9,16 @@ import (
 
 	"go.uber.org/zap"
 
+	"storj.io/drpc"
+
 	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
+	"github.com/anyproto/any-sync/commonspace/sync"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
-
-	"storj.io/drpc"
+	"github.com/anyproto/any-sync/net/pool"
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
@@ -29,10 +32,8 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/objectmanager"
-	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
-	"github.com/anyproto/any-sync/commonspace/requestmanager"
 	"github.com/anyproto/any-sync/commonspace/settings"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -40,7 +41,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/metric"
-	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
 )
@@ -66,8 +66,8 @@ type SpaceService interface {
 }
 
 type Deps struct {
-	TreeSyncer treesyncer.TreeSyncer
 	SyncStatus syncstatus.StatusUpdater
+	TreeSyncer treesyncer.TreeSyncer
 }
 
 type spaceService struct {
@@ -78,9 +78,9 @@ type spaceService struct {
 	peerManagerProvider  peermanager.PeerManagerProvider
 	credentialProvider   credentialprovider.CredentialProvider
 	treeManager          treemanager.TreeManager
-	pool                 pool.Pool
 	metric               metric.Metric
 	app                  *app.App
+	pool                 pool.Pool
 }
 
 func (s *spaceService) Init(a *app.App) (err error) {
@@ -180,18 +180,17 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 		Register(deps.SyncStatus).
 		Register(peerManager).
 		Register(newCommonStorage(st)).
+		Register(objectsync.New()).
+		Register(sync.NewSyncService()).
 		Register(syncacl.New()).
-		Register(requestmanager.New()).
 		Register(deletionstate.New()).
 		Register(deletionmanager.New()).
 		Register(settings.New()).
 		Register(objectmanager.New(s.treeManager)).
 		Register(deps.TreeSyncer).
 		Register(objecttreebuilder.New()).
-		Register(objectsync.New()).
 		Register(aclclient.NewAclSpaceClient()).
 		Register(headsync.New())
-
 	sp := &space{
 		state:   state,
 		app:     spaceApp,

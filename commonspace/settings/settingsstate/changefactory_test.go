@@ -2,7 +2,7 @@ package settingsstate
 
 import (
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/slices"
 	"testing"

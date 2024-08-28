@@ -1,8 +1,11 @@
+//go:generate mockgen -destination mock_objectmanager/mock_objectmanager.go github.com/anyproto/any-sync/commonspace/objectmanager ObjectManager
 package objectmanager
 
 import (
 	"context"
 	"errors"
+	"sync/atomic"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/syncobjectgetter"
@@ -10,7 +13,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/settings"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
-	"sync/atomic"
 )
 
 var (

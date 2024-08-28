@@ -5,7 +5,7 @@ package nameserviceproto
 
 import (
 	fmt "fmt"
-	proto "github.com/gogo/protobuf/proto"
+	proto "github.com/anyproto/protobuf/proto"
 	io "io"
 	math "math"
 	math_bits "math/bits"
@@ -47,6 +47,14 @@ func (m *NameAvailableRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		}
 		return b[:n], nil
 	}
+}
+func (m *NameAvailableRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *NameAvailableRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_NameAvailableRequest.Merge(m, src)
@@ -92,6 +100,14 @@ func (m *BatchNameAvailableRequest) XXX_Marshal(b []byte, deterministic bool) ([
 		}
 		return b[:n], nil
 	}
+}
+func (m *BatchNameAvailableRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *BatchNameAvailableRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BatchNameAvailableRequest.Merge(m, src)
@@ -139,6 +155,14 @@ func (m *NameByAddressRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
+func (m *NameByAddressRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *NameByAddressRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_NameByAddressRequest.Merge(m, src)
 }
@@ -185,6 +209,14 @@ func (m *BatchNameByAddressRequest) XXX_Marshal(b []byte, deterministic bool) ([
 		return b[:n], nil
 	}
 }
+func (m *BatchNameByAddressRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *BatchNameByAddressRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BatchNameByAddressRequest.Merge(m, src)
 }
@@ -229,6 +261,14 @@ func (m *NameByAnyIdRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return b[:n], nil
 	}
 }
+func (m *NameByAnyIdRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *NameByAnyIdRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_NameByAnyIdRequest.Merge(m, src)
 }
@@ -272,6 +312,14 @@ func (m *BatchNameByAnyIdRequest) XXX_Marshal(b []byte, deterministic bool) ([]b
 		}
 		return b[:n], nil
 	}
+}
+func (m *BatchNameByAnyIdRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *BatchNameByAnyIdRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BatchNameByAnyIdRequest.Merge(m, src)
@@ -330,6 +378,14 @@ func (m *NameAvailableResponse) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		}
 		return b[:n], nil
 	}
+}
+func (m *NameAvailableResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *NameAvailableResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_NameAvailableResponse.Merge(m, src)
@@ -410,6 +466,14 @@ func (m *BatchNameAvailableResponse) XXX_Marshal(b []byte, deterministic bool) (
 		return b[:n], nil
 	}
 }
+func (m *BatchNameAvailableResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *BatchNameAvailableResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BatchNameAvailableResponse.Merge(m, src)
 }
@@ -454,6 +518,14 @@ func (m *NameByAddressResponse) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		}
 		return b[:n], nil
 	}
+}
+func (m *NameByAddressResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *NameByAddressResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_NameByAddressResponse.Merge(m, src)
@@ -505,6 +577,14 @@ func (m *BatchNameByAddressResponse) XXX_Marshal(b []byte, deterministic bool) (
 		}
 		return b[:n], nil
 	}
+}
+func (m *BatchNameByAddressResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *BatchNameByAddressResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BatchNameByAddressResponse.Merge(m, src)

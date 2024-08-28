@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/anyproto/any-sync/util/crypto/cryptoproto"
 	"github.com/anyproto/any-sync/util/strkey"
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"io"
 	"sync"

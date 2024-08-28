@@ -5,7 +5,7 @@ package consensusproto
 
 import (
 	fmt "fmt"
-	proto "github.com/gogo/protobuf/proto"
+	proto "github.com/anyproto/protobuf/proto"
 	io "io"
 	math "math"
 	math_bits "math/bits"
@@ -88,6 +88,14 @@ func (m *Log) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
+func (m *Log) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *Log) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Log.Merge(m, src)
 }
@@ -143,6 +151,14 @@ func (m *RawRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		}
 		return b[:n], nil
 	}
+}
+func (m *RawRecord) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *RawRecord) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_RawRecord.Merge(m, src)
@@ -218,6 +234,14 @@ func (m *RawRecordWithId) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
+func (m *RawRecordWithId) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *RawRecordWithId) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_RawRecordWithId.Merge(m, src)
 }
@@ -272,6 +296,14 @@ func (m *Record) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		}
 		return b[:n], nil
 	}
+}
+func (m *Record) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *Record) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Record.Merge(m, src)
@@ -337,6 +369,14 @@ func (m *Ok) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
+func (m *Ok) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *Ok) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Ok.Merge(m, src)
 }
@@ -375,6 +415,14 @@ func (m *LogAddRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		}
 		return b[:n], nil
 	}
+}
+func (m *LogAddRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *LogAddRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_LogAddRequest.Merge(m, src)
@@ -428,6 +476,14 @@ func (m *RecordAddRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
+func (m *RecordAddRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *RecordAddRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_RecordAddRequest.Merge(m, src)
 }
@@ -479,6 +535,14 @@ func (m *LogWatchRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		}
 		return b[:n], nil
 	}
+}
+func (m *LogWatchRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *LogWatchRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_LogWatchRequest.Merge(m, src)
@@ -532,6 +596,14 @@ func (m *LogWatchEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		}
 		return b[:n], nil
 	}
+}
+func (m *LogWatchEvent) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *LogWatchEvent) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_LogWatchEvent.Merge(m, src)
@@ -591,6 +663,14 @@ func (m *LogDeleteRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
+func (m *LogDeleteRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *LogDeleteRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_LogDeleteRequest.Merge(m, src)
 }
@@ -635,6 +715,14 @@ func (m *Err) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
+func (m *Err) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *Err) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Err.Merge(m, src)
 }
@@ -661,7 +749,7 @@ type LogSyncContentValue struct {
 	//	*LogSyncContentValue_HeadUpdate
 	//	*LogSyncContentValue_FullSyncRequest
 	//	*LogSyncContentValue_FullSyncResponse
-	Value isLogSyncContentValue_Value `protobuf_oneof:"value"`
+	Value isLogSyncContentValueValue `protobuf_oneof:"value"`
 }
 
 func (m *LogSyncContentValue) Reset()         { *m = LogSyncContentValue{} }
@@ -685,6 +773,14 @@ func (m *LogSyncContentValue) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return b[:n], nil
 	}
 }
+func (m *LogSyncContentValue) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *LogSyncContentValue) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_LogSyncContentValue.Merge(m, src)
 }
@@ -697,8 +793,8 @@ func (m *LogSyncContentValue) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_LogSyncContentValue proto.InternalMessageInfo
 
-type isLogSyncContentValue_Value interface {
-	isLogSyncContentValue_Value()
+type isLogSyncContentValueValue interface {
+	isLogSyncContentValueValue()
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
@@ -713,11 +809,11 @@ type LogSyncContentValue_FullSyncResponse struct {
 	FullSyncResponse *LogFullSyncResponse `protobuf:"bytes,3,opt,name=fullSyncResponse,proto3,oneof" json:"fullSyncResponse,omitempty"`
 }
 
-func (*LogSyncContentValue_HeadUpdate) isLogSyncContentValue_Value()       {}
-func (*LogSyncContentValue_FullSyncRequest) isLogSyncContentValue_Value()  {}
-func (*LogSyncContentValue_FullSyncResponse) isLogSyncContentValue_Value() {}
+func (*LogSyncContentValue_HeadUpdate) isLogSyncContentValueValue()       {}
+func (*LogSyncContentValue_FullSyncRequest) isLogSyncContentValueValue()  {}
+func (*LogSyncContentValue_FullSyncResponse) isLogSyncContentValueValue() {}
 
-func (m *LogSyncContentValue) GetValue() isLogSyncContentValue_Value {
+func (m *LogSyncContentValue) GetValue() isLogSyncContentValueValue {
 	if m != nil {
 		return m.Value
 	}
@@ -782,6 +878,14 @@ func (m *LogSyncMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return b[:n], nil
 	}
 }
+func (m *LogSyncMessage) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *LogSyncMessage) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_LogSyncMessage.Merge(m, src)
 }
@@ -842,6 +946,14 @@ func (m *LogHeadUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return b[:n], nil
 	}
 }
+func (m *LogHeadUpdate) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *LogHeadUpdate) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_LogHeadUpdate.Merge(m, src)
 }
@@ -895,6 +1007,14 @@ func (m *LogFullSyncRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return b[:n], nil
 	}
 }
+func (m *LogFullSyncRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *LogFullSyncRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_LogFullSyncRequest.Merge(m, src)
 }
@@ -947,6 +1067,14 @@ func (m *LogFullSyncResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		}
 		return b[:n], nil
 	}
+}
+func (m *LogFullSyncResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *LogFullSyncResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_LogFullSyncResponse.Merge(m, src)

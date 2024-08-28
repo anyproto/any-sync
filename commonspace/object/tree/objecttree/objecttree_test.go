@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
 	"golang.org/x/exp/slices"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -19,6 +20,96 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 )
+
+// genParams is the parameters for genChanges
+type genParams struct {
+	// prefix is the prefix which is added to change id
+	prefix     string
+	aclId      string
+	startIdx   int
+	levels     int
+	perLevel   int
+	snapshotId string
+	prevHeads  []string
+	isSnapshot func() bool
+	hasData    bool
+}
+
+// genResult is the result of genChanges
+type genResult struct {
+	changes    []*treechangeproto.RawTreeChangeWithId
+	heads      []string
+	snapshotId string
+}
+
+// genChanges generates several levels of tree changes where each level is connected only with previous one
+func genChanges(creator *MockChangeCreator, params genParams) (res genResult) {
+	src := rand.NewSource(time.Now().Unix())
+	rnd := rand.New(src)
+	var (
+		prevHeads  []string
+		snapshotId = params.snapshotId
+	)
+	prevHeads = append(prevHeads, params.prevHeads...)
+
+	for i := 0; i < params.levels; i++ {
+		var (
+			newHeads []string
+			usedIds  = map[string]struct{}{}
+		)
+		newChange := func(isSnapshot bool, idx int, prevIds []string) string {
+			newId := fmt.Sprintf("%s.%d.%d", params.prefix, params.startIdx+i, idx)
+			var data []byte
+			if params.hasData {
+				data = []byte(newId)
+			}
+			newCh := creator.CreateRawWithData(newId, params.aclId, snapshotId, isSnapshot, data, prevIds...)
+			res.changes = append(res.changes, newCh)
+			return newId
+		}
+		if params.isSnapshot() {
+			newId := newChange(true, 0, prevHeads)
+			prevHeads = []string{newId}
+			snapshotId = newId
+			continue
+		}
+		perLevel := rnd.Intn(params.perLevel)
+		if perLevel == 0 {
+			perLevel = 1
+		}
+		for j := 0; j < perLevel; j++ {
+			prevConns := rnd.Intn(len(prevHeads))
+			if prevConns == 0 {
+				prevConns = 1
+			}
+			rnd.Shuffle(len(prevHeads), func(i, j int) {
+				prevHeads[i], prevHeads[j] = prevHeads[j], prevHeads[i]
+			})
+			// if we didn't connect with all prev ones
+			if j == perLevel-1 && len(usedIds) != len(prevHeads) {
+				var unusedIds []string
+				for _, id := range prevHeads {
+					if _, exists := usedIds[id]; !exists {
+						unusedIds = append(unusedIds, id)
+					}
+				}
+				prevHeads = unusedIds
+				prevConns = len(prevHeads)
+			}
+			var prevIds []string
+			for k := 0; k < prevConns; k++ {
+				prevIds = append(prevIds, prevHeads[k])
+				usedIds[prevHeads[k]] = struct{}{}
+			}
+			newId := newChange(false, j, prevIds)
+			newHeads = append(newHeads, newId)
+		}
+		prevHeads = newHeads
+	}
+	res.heads = prevHeads
+	res.snapshotId = snapshotId
+	return
+}
 
 type testTreeContext struct {
 	aclList       list.AclList
@@ -33,11 +124,12 @@ func genBuildFilterableTestableTree(filterFunc func(ch *Change) bool) func(treeS
 		changeBuilder := &nonVerifiableChangeBuilder{
 			ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), root),
 		}
+		loader := newRawChangeLoader(treeStorage, changeBuilder)
 		deps := objectTreeDeps{
 			changeBuilder:   changeBuilder,
-			treeBuilder:     newTreeBuilder(true, treeStorage, changeBuilder),
+			treeBuilder:     newTreeBuilder(true, treeStorage, changeBuilder, loader),
 			treeStorage:     treeStorage,
-			rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
+			rawChangeLoader: loader,
 			validator:       &noOpTreeValidator{filterFunc: filterFunc},
 			aclList:         aclList,
 		}
@@ -62,11 +154,12 @@ func prepareHistoryTreeDeps(aclList list.AclList) (*MockChangeCreator, objectTre
 	changeBuilder := &nonVerifiableChangeBuilder{
 		ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), root),
 	}
+	loader := newRawChangeLoader(treeStorage, changeBuilder)
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,
-		treeBuilder:     newTreeBuilder(true, treeStorage, changeBuilder),
+		treeBuilder:     newTreeBuilder(true, treeStorage, changeBuilder, loader),
 		treeStorage:     treeStorage,
-		rawChangeLoader: newRawChangeLoader(treeStorage, changeBuilder),
+		rawChangeLoader: loader,
 		validator:       &noOpTreeValidator{},
 		aclList:         aclList,
 	}
@@ -728,58 +821,6 @@ func TestObjectTree(t *testing.T) {
 	})
 
 	t.Run("test empty data tree", func(t *testing.T) {
-		t.Run("empty tree add", func(t *testing.T) {
-			ctx := prepareEmptyDataTreeContext(t, aclList, nil)
-			changeCreator := ctx.changeCreator
-			objTree := ctx.objTree
-
-			rawChangesFirst := []*treechangeproto.RawTreeChangeWithId{
-				changeCreator.CreateRawWithData("1", aclList.Head().Id, "0", false, []byte("1"), "0"),
-				changeCreator.CreateRawWithData("2", aclList.Head().Id, "0", false, []byte("2"), "1"),
-				changeCreator.CreateRawWithData("3", aclList.Head().Id, "0", false, []byte("3"), "2"),
-			}
-			rawChangesSecond := []*treechangeproto.RawTreeChangeWithId{
-				changeCreator.CreateRawWithData("4", aclList.Head().Id, "0", false, []byte("4"), "2"),
-				changeCreator.CreateRawWithData("5", aclList.Head().Id, "0", false, []byte("5"), "1"),
-				changeCreator.CreateRawWithData("6", aclList.Head().Id, "0", false, []byte("6"), "3", "4", "5"),
-			}
-
-			// making them to be saved in unattached
-			_, err := objTree.AddRawChanges(context.Background(), RawChangesPayload{
-				NewHeads:   []string{"6"},
-				RawChanges: rawChangesSecond,
-			})
-			require.NoError(t, err, "adding changes should be without error")
-			// attaching them
-			res, err := objTree.AddRawChanges(context.Background(), RawChangesPayload{
-				NewHeads:   []string{"3"},
-				RawChanges: rawChangesFirst,
-			})
-
-			require.NoError(t, err, "adding changes should be without error")
-			require.Equal(t, "0", objTree.Root().Id)
-			require.Equal(t, []string{"6"}, objTree.Heads())
-			require.Equal(t, 6, len(res.Added))
-
-			// checking that added changes still have data
-			for _, ch := range res.Added {
-				unmarshallRaw := &treechangeproto.RawTreeChange{}
-				proto.Unmarshal(ch.RawChange, unmarshallRaw)
-				treeCh := &treechangeproto.TreeChange{}
-				proto.Unmarshal(unmarshallRaw.Payload, treeCh)
-				require.Equal(t, ch.Id, string(treeCh.ChangesData))
-			}
-
-			// checking that the tree doesn't have data in memory
-			err = objTree.IterateRoot(nil, func(change *Change) bool {
-				if change.Id == "0" {
-					return true
-				}
-				require.Nil(t, change.Data)
-				return true
-			})
-		})
-
 		t.Run("empty tree load", func(t *testing.T) {
 			ctx := prepareEmptyDataTreeContext(t, aclList, func(changeCreator *MockChangeCreator) RawChangesPayload {
 				rawChanges := []*treechangeproto.RawTreeChangeWithId{
@@ -838,6 +879,37 @@ func TestObjectTree(t *testing.T) {
 		})
 		slices.Sort(ids)
 		require.Equal(t, []string{"0", "1", "2", "3", "4"}, ids)
+	})
+
+	t.Run("test tree restore", func(t *testing.T) {
+		ctx := prepareTreeContext(t, aclList)
+		rawChanges := []*treechangeproto.RawTreeChangeWithId{
+			ctx.changeCreator.CreateRawWithData("1", aclList.Head().Id, "0", false, []byte("1"), "0"),
+			ctx.changeCreator.CreateRawWithData("2", aclList.Head().Id, "0", false, []byte("2"), "1"),
+			ctx.changeCreator.CreateRawWithData("3", aclList.Head().Id, "0", false, []byte("3"), "2"),
+			ctx.changeCreator.CreateRawWithData("4", aclList.Head().Id, "0", false, []byte("4"), "2"),
+			ctx.changeCreator.CreateRawWithData("5", aclList.Head().Id, "0", false, []byte("5"), "1"),
+			ctx.changeCreator.CreateRawWithData("6", aclList.Head().Id, "0", true, []byte("6"), "3", "4", "5"),
+			ctx.changeCreator.CreateRawWithData("7", aclList.Head().Id, "6", false, []byte("7"), "6"),
+			ctx.changeCreator.CreateRawWithData("8", aclList.Head().Id, "6", false, []byte("8"), "6"),
+		}
+		_, err := ctx.objTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   []string{"7", "8"},
+			RawChanges: rawChanges,
+		})
+		require.NoError(t, err)
+		st := ctx.treeStorage.(*treestorage.InMemoryTreeStorage)
+		st.Remove("6")
+		newCh := ctx.changeCreator.CreateRawWithData("9", aclList.Head().Id, "0", false, []byte("9"), "3", "4", "5")
+		_, err = ctx.objTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   []string{"9"},
+			RawChanges: []*treechangeproto.RawTreeChangeWithId{newCh},
+		})
+		require.NoError(t, err)
+		require.Equal(t, []string{"9"}, ctx.objTree.Heads())
+		heads, err := ctx.objTree.Storage().Heads()
+		require.NoError(t, err)
+		require.Equal(t, []string{"9"}, heads)
 	})
 
 	t.Run("rollback when add to storage returns error", func(t *testing.T) {
@@ -1306,5 +1378,204 @@ func TestObjectTree(t *testing.T) {
 			Changes:       rawChanges,
 		}, ctx.aclList)
 		require.True(t, errors.Is(err, ErrHasInvalidChanges))
+	})
+
+	t.Run("gen changes test load iterator simple", func(t *testing.T) {
+		ctx := prepareTreeContext(t, aclList)
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree
+		result := genChanges(changeCreator, genParams{
+			prefix:     "id",
+			aclId:      aclList.Id(),
+			startIdx:   0,
+			levels:     100,
+			perLevel:   10,
+			snapshotId: objTree.Root().Id,
+			prevHeads:  []string{objTree.Root().Id},
+			isSnapshot: func() bool {
+				return false
+			},
+			hasData: false,
+		})
+		_, err := objTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   result.heads,
+			RawChanges: result.changes,
+		})
+		require.NoError(t, err)
+		iter, err := objTree.ChangesAfterCommonSnapshotLoader([]string{objTree.Id()}, []string{objTree.Id()})
+		require.NoError(t, err)
+		otherTreeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id, false)
+		otherTree, err := BuildTestableTree(otherTreeStorage, aclList)
+		require.NoError(t, err)
+		for {
+			batch, err := iter.NextBatch(300)
+			require.NoError(t, err)
+			if len(batch.Batch) == 0 {
+				break
+			}
+			res, err := otherTree.AddRawChanges(context.Background(), RawChangesPayload{
+				NewHeads:   batch.Heads,
+				RawChanges: batch.Batch,
+			})
+			require.NoError(t, err)
+			require.Equal(t, len(batch.Batch), len(res.Added))
+		}
+		require.Equal(t, objTree.Heads(), otherTree.Heads())
+	})
+
+	t.Run("gen changes test load iterator each change exceed max size", func(t *testing.T) {
+		ctx := prepareTreeContext(t, aclList)
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree
+		result := genChanges(changeCreator, genParams{
+			prefix:     "id",
+			aclId:      aclList.Id(),
+			startIdx:   0,
+			levels:     100,
+			perLevel:   10,
+			snapshotId: objTree.Root().Id,
+			prevHeads:  []string{objTree.Root().Id},
+			isSnapshot: func() bool {
+				return false
+			},
+			hasData: false,
+		})
+		_, err := objTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   result.heads,
+			RawChanges: result.changes,
+		})
+		require.NoError(t, err)
+		iter, err := objTree.ChangesAfterCommonSnapshotLoader([]string{objTree.Id()}, []string{objTree.Id()})
+		require.NoError(t, err)
+		otherTreeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id, false)
+		otherTree, err := BuildTestableTree(otherTreeStorage, aclList)
+		require.NoError(t, err)
+		for {
+			batch, err := iter.NextBatch(1)
+			require.NoError(t, err)
+			if len(batch.Batch) == 0 {
+				break
+			}
+			res, err := otherTree.AddRawChanges(context.Background(), RawChangesPayload{
+				NewHeads:   batch.Heads,
+				RawChanges: batch.Batch,
+			})
+			require.NoError(t, err)
+			require.Equal(t, len(batch.Batch), len(res.Added))
+		}
+		require.Equal(t, objTree.Heads(), otherTree.Heads())
+	})
+
+	t.Run("gen changes test load iterator snapshots", func(t *testing.T) {
+		ctx := prepareTreeContext(t, aclList)
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree
+		snapshotCounter := 0
+		result := genChanges(changeCreator, genParams{
+			prefix:     "id",
+			aclId:      aclList.Id(),
+			startIdx:   0,
+			levels:     100,
+			perLevel:   10,
+			snapshotId: objTree.Root().Id,
+			prevHeads:  []string{objTree.Root().Id},
+			isSnapshot: func() bool {
+				snapshotCounter++
+				return snapshotCounter%10 == 0
+			},
+			hasData: false,
+		})
+		_, err := objTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   result.heads,
+			RawChanges: result.changes,
+		})
+		require.NoError(t, err)
+		iter, err := objTree.ChangesAfterCommonSnapshotLoader([]string{objTree.Id()}, []string{objTree.Id()})
+		require.NoError(t, err)
+		otherTreeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id, false)
+		otherTree, err := BuildTestableTree(otherTreeStorage, aclList)
+		require.NoError(t, err)
+		for {
+			batch, err := iter.NextBatch(300)
+			require.NoError(t, err)
+			if len(batch.Batch) == 0 {
+				break
+			}
+			res, err := otherTree.AddRawChanges(context.Background(), RawChangesPayload{
+				NewHeads:   batch.Heads,
+				RawChanges: batch.Batch,
+			})
+			require.NoError(t, err)
+			require.Equal(t, len(batch.Batch), len(res.Added))
+		}
+		require.Equal(t, objTree.Heads(), otherTree.Heads())
+	})
+
+	t.Run("gen changes test load iterator non empty other tree", func(t *testing.T) {
+		ctx := prepareTreeContext(t, aclList)
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree
+		snapshotCounter := 0
+		result := genChanges(changeCreator, genParams{
+			prefix:     "id",
+			aclId:      aclList.Id(),
+			startIdx:   0,
+			levels:     93,
+			perLevel:   10,
+			snapshotId: objTree.Root().Id,
+			prevHeads:  []string{objTree.Root().Id},
+			isSnapshot: func() bool {
+				snapshotCounter++
+				return snapshotCounter%50 == 0
+			},
+			hasData: false,
+		})
+		otherTreeStorage := changeCreator.CreateNewTreeStorage("0", aclList.Head().Id, false)
+		otherTree, err := BuildTestableTree(otherTreeStorage, aclList)
+		_, err = objTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   result.heads,
+			RawChanges: result.changes,
+		})
+		require.NoError(t, err)
+		_, err = otherTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   result.heads,
+			RawChanges: result.changes,
+		})
+		require.NoError(t, err)
+		result = genChanges(changeCreator, genParams{
+			prefix:     "id",
+			aclId:      aclList.Id(),
+			startIdx:   93,
+			levels:     29,
+			perLevel:   10,
+			snapshotId: objTree.Root().Id,
+			prevHeads:  objTree.Heads(),
+			isSnapshot: func() bool {
+				snapshotCounter++
+				return snapshotCounter%50 == 0
+			},
+			hasData: false,
+		})
+		_, err = objTree.AddRawChanges(context.Background(), RawChangesPayload{
+			NewHeads:   result.heads,
+			RawChanges: result.changes,
+		})
+		require.NoError(t, err)
+		iter, err := objTree.ChangesAfterCommonSnapshotLoader(otherTree.SnapshotPath(), otherTree.Heads())
+		require.NoError(t, err)
+		for {
+			batch, err := iter.NextBatch(400)
+			require.NoError(t, err)
+			if len(batch.Batch) == 0 {
+				break
+			}
+			res, err := otherTree.AddRawChanges(context.Background(), RawChangesPayload{
+				NewHeads:   batch.Heads,
+				RawChanges: batch.Batch,
+			})
+			require.NoError(t, err)
+			require.Equal(t, len(batch.Batch), len(res.Added))
+		}
+		require.Equal(t, objTree.Heads(), otherTree.Heads())
 	})
 }

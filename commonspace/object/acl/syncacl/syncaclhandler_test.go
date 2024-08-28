@@ -1,23 +1,272 @@
 package syncacl
 
 import (
-	"context"
-	"fmt"
 	"sync"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list/mock_list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/mock_syncacl"
+	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/response"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/any-sync/commonspace/syncstatus"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
+	"github.com/anyproto/any-sync/commonspace/syncstatus/mock_syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/anyproto/any-sync/net/secureservice"
+	"github.com/anyproto/any-sync/net/peer"
 )
+
+type testQueueUpdater struct {
+}
+
+func (t testQueueUpdater) UpdateQueueSize(size uint64, msgType int, add bool) {
+}
+
+func TestSyncAclHandler_HandleHeadUpdate(t *testing.T) {
+	ctx = peer.CtxWithPeerId(ctx, "peerId")
+	t.Run("handle head update, can't add records, request returned", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		chWithId := &consensusproto.RawRecordWithId{}
+		headUpdate := &consensusproto.LogHeadUpdate{
+			Head:    "h1",
+			Records: []*consensusproto.RawRecordWithId{chWithId},
+		}
+		logMessage := consensusproto.WrapHeadUpdate(headUpdate, chWithId)
+		marshaled, err := logMessage.Marshal()
+		require.NoError(t, err)
+		objectHeadUpdate := &objectmessages.HeadUpdate{
+			Bytes: marshaled,
+			Meta: objectmessages.ObjectMeta{
+				PeerId:   "peerId",
+				ObjectId: "objectId",
+				SpaceId:  "spaceId",
+			},
+		}
+		retReq := &objectmessages.Request{
+			Bytes: []byte("bytes"),
+		}
+		fx.statusUpdater.EXPECT().HeadsReceive("peerId", "objectId", []string{"h1"})
+		fx.aclMock.EXPECT().AddRawRecords([]*consensusproto.RawRecordWithId{chWithId}).Return(list.ErrIncorrectRecordSequence)
+		fx.syncClientMock.EXPECT().CreateFullSyncRequest("peerId", fx.aclMock).Return(retReq)
+		req, err := fx.syncHandler.HandleHeadUpdate(ctx, fx.statusUpdater, objectHeadUpdate)
+		require.NoError(t, err)
+		require.Equal(t, retReq, req)
+	})
+	t.Run("handle head update, records added, no request returned", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		chWithId := &consensusproto.RawRecordWithId{}
+		headUpdate := &consensusproto.LogHeadUpdate{
+			Head:    "h1",
+			Records: []*consensusproto.RawRecordWithId{chWithId},
+		}
+		logMessage := consensusproto.WrapHeadUpdate(headUpdate, chWithId)
+		marshaled, err := logMessage.Marshal()
+		require.NoError(t, err)
+		objectHeadUpdate := &objectmessages.HeadUpdate{
+			Bytes: marshaled,
+			Meta: objectmessages.ObjectMeta{
+				PeerId:   "peerId",
+				ObjectId: "objectId",
+				SpaceId:  "spaceId",
+			},
+		}
+		fx.statusUpdater.EXPECT().HeadsReceive("peerId", "objectId", []string{"h1"})
+		fx.aclMock.EXPECT().AddRawRecords([]*consensusproto.RawRecordWithId{chWithId}).Return(nil)
+		req, err := fx.syncHandler.HandleHeadUpdate(ctx, fx.statusUpdater, objectHeadUpdate)
+		require.NoError(t, err)
+		require.Nil(t, req)
+	})
+	t.Run("handle head update, no records, request returned", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		chWithId := &consensusproto.RawRecordWithId{}
+		headUpdate := &consensusproto.LogHeadUpdate{
+			Head: "h1",
+		}
+		logMessage := consensusproto.WrapHeadUpdate(headUpdate, chWithId)
+		marshaled, err := logMessage.Marshal()
+		require.NoError(t, err)
+		objectHeadUpdate := &objectmessages.HeadUpdate{
+			Bytes: marshaled,
+			Meta: objectmessages.ObjectMeta{
+				PeerId:   "peerId",
+				ObjectId: "objectId",
+				SpaceId:  "spaceId",
+			},
+		}
+		retReq := &objectmessages.Request{
+			Bytes: []byte("bytes"),
+		}
+		fx.statusUpdater.EXPECT().HeadsReceive("peerId", "objectId", []string{"h1"})
+		fx.aclMock.EXPECT().HasHead("h1").Return(false)
+		fx.syncClientMock.EXPECT().CreateFullSyncRequest("peerId", fx.aclMock).Return(retReq)
+		req, err := fx.syncHandler.HandleHeadUpdate(ctx, fx.statusUpdater, objectHeadUpdate)
+		require.NoError(t, err)
+		require.Equal(t, retReq, req)
+	})
+	t.Run("handle head update, no records, same heads", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		chWithId := &consensusproto.RawRecordWithId{}
+		headUpdate := &consensusproto.LogHeadUpdate{
+			Head: "h1",
+		}
+		logMessage := consensusproto.WrapHeadUpdate(headUpdate, chWithId)
+		marshaled, err := logMessage.Marshal()
+		require.NoError(t, err)
+		objectHeadUpdate := &objectmessages.HeadUpdate{
+			Bytes: marshaled,
+			Meta: objectmessages.ObjectMeta{
+				PeerId:   "peerId",
+				ObjectId: "objectId",
+				SpaceId:  "spaceId",
+			},
+		}
+		fx.statusUpdater.EXPECT().HeadsReceive("peerId", "objectId", []string{"h1"})
+		fx.aclMock.EXPECT().HasHead("h1").Return(true)
+		req, err := fx.syncHandler.HandleHeadUpdate(ctx, fx.statusUpdater, objectHeadUpdate)
+		require.NoError(t, err)
+		require.Nil(t, req)
+	})
+}
+
+func TestSyncAclHandler_HandleStreamRequest(t *testing.T) {
+	t.Run("handle full sync request, no head exists, return request", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		chWithId := &consensusproto.RawRecordWithId{}
+		fullRequest := &consensusproto.LogFullSyncRequest{
+			Head:    "h1",
+			Records: []*consensusproto.RawRecordWithId{chWithId},
+		}
+		logMessage := consensusproto.WrapFullRequest(fullRequest, chWithId)
+		marshaled, err := logMessage.Marshal()
+		require.NoError(t, err)
+		returnReq := &objectmessages.Request{Bytes: []byte("bytes")}
+		request := objectmessages.NewByteRequest("peerId", "spaceId", "objectId", marshaled)
+		fx.aclMock.EXPECT().HasHead("h1").Return(false)
+		fx.syncClientMock.EXPECT().CreateFullSyncRequest("peerId", fx.aclMock).Return(returnReq)
+		req, err := fx.syncHandler.HandleStreamRequest(ctx, request, testQueueUpdater{}, func(resp proto.Message) error {
+			return nil
+		})
+		require.Equal(t, ErrUnknownHead, err)
+		require.Equal(t, returnReq, req)
+	})
+	t.Run("handle full sync request, head exists, return response", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		chWithId := &consensusproto.RawRecordWithId{}
+		fullRequest := &consensusproto.LogFullSyncRequest{
+			Head:    "h1",
+			Records: []*consensusproto.RawRecordWithId{chWithId},
+		}
+		logMessage := consensusproto.WrapFullRequest(fullRequest, chWithId)
+		marshaled, err := logMessage.Marshal()
+		require.NoError(t, err)
+		returnResp := &response.Response{Head: "h2"}
+		request := objectmessages.NewByteRequest("peerId", "spaceId", "objectId", marshaled)
+		fx.aclMock.EXPECT().HasHead("h1").Return(true)
+		fx.syncClientMock.EXPECT().CreateFullSyncResponse(fx.aclMock, "h1").Return(returnResp, nil)
+		sendCalled := false
+		req, err := fx.syncHandler.HandleStreamRequest(ctx, request, testQueueUpdater{}, func(resp proto.Message) error {
+			require.NotNil(t, resp)
+			sendCalled = true
+			return nil
+		})
+		require.NoError(t, err)
+		require.Nil(t, req)
+		require.True(t, sendCalled)
+	})
+}
+
+func TestSyncAclHandler_HandleDeprecatedRequest(t *testing.T) {
+	t.Run("handle deprecated request, records, return empty response", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		chWithId := &consensusproto.RawRecordWithId{}
+		fullRequest := &consensusproto.LogFullSyncRequest{
+			Head:    "h1",
+			Records: []*consensusproto.RawRecordWithId{chWithId},
+		}
+		logMessage := consensusproto.WrapFullRequest(fullRequest, chWithId)
+		objectMsg, err := spacesyncproto.MarshallSyncMessage(logMessage, "spaceId", "objectId")
+		require.NoError(t, err)
+		fx.aclMock.EXPECT().Root().Return(chWithId)
+		fx.aclMock.EXPECT().Head().Return(&list.AclRecord{Id: "h2"})
+		fx.aclMock.EXPECT().HasHead("h1").Return(false)
+		fx.aclMock.EXPECT().AddRawRecords([]*consensusproto.RawRecordWithId{chWithId}).Return(nil)
+		resp, err := fx.syncHandler.HandleDeprecatedRequest(ctx, objectMsg)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Equal(t, "spaceId", resp.SpaceId)
+		require.Equal(t, "objectId", resp.ObjectId)
+	})
+	t.Run("handle deprecated request, no records, return empty response", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		chWithId := &consensusproto.RawRecordWithId{}
+		fullRequest := &consensusproto.LogFullSyncRequest{
+			Head: "h1",
+		}
+		logMessage := consensusproto.WrapFullRequest(fullRequest, chWithId)
+		objectMsg, err := spacesyncproto.MarshallSyncMessage(logMessage, "spaceId", "objectId")
+		require.NoError(t, err)
+		fx.aclMock.EXPECT().Root().Return(chWithId)
+		fx.aclMock.EXPECT().Head().Return(&list.AclRecord{Id: "h2"})
+		fx.aclMock.EXPECT().HasHead("h1").Return(false)
+		resp, err := fx.syncHandler.HandleDeprecatedRequest(ctx, objectMsg)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Equal(t, "spaceId", resp.SpaceId)
+		require.Equal(t, "objectId", resp.ObjectId)
+	})
+	t.Run("handle deprecated request, has head, return records after", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		chWithId := &consensusproto.RawRecordWithId{}
+		fullRequest := &consensusproto.LogFullSyncRequest{
+			Head: "h1",
+		}
+		logMessage := consensusproto.WrapFullRequest(fullRequest, chWithId)
+		objectMsg, err := spacesyncproto.MarshallSyncMessage(logMessage, "spaceId", "objectId")
+		require.NoError(t, err)
+		fx.aclMock.EXPECT().Root().Return(chWithId)
+		fx.aclMock.EXPECT().Head().Times(2).Return(&list.AclRecord{Id: "h2"})
+		fx.aclMock.EXPECT().HasHead("h1").Return(true)
+		fx.aclMock.EXPECT().RecordsAfter(ctx, "h1").Return([]*consensusproto.RawRecordWithId{chWithId}, nil)
+		resp, err := fx.syncHandler.HandleDeprecatedRequest(ctx, objectMsg)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Equal(t, "spaceId", resp.SpaceId)
+		require.Equal(t, "objectId", resp.ObjectId)
+	})
+}
+
+func TestSyncAclHandler_HandleResponse(t *testing.T) {
+	t.Run("handle response, no changes, return nil", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		resp := &response.Response{}
+		err := fx.syncHandler.HandleResponse(ctx, "peerId", "objectId", resp)
+		require.NoError(t, err)
+	})
+	t.Run("handle response, changes, add records", func(t *testing.T) {
+		fx := newSyncHandlerFixture(t)
+		defer fx.stop()
+		chWithId := &consensusproto.RawRecordWithId{}
+		resp := &response.Response{
+			Records: []*consensusproto.RawRecordWithId{chWithId},
+		}
+		fx.aclMock.EXPECT().AddRawRecords([]*consensusproto.RawRecordWithId{chWithId}).Return(nil)
+		err := fx.syncHandler.HandleResponse(ctx, "peerId", "objectId", resp)
+		require.NoError(t, err)
+	})
+}
 
 type testAclMock struct {
 	*mock_list.MockAclList
@@ -55,13 +304,10 @@ func (t *testAclMock) TryRLock() bool {
 }
 
 type syncHandlerFixture struct {
-	ctrl             *gomock.Controller
-	syncClientMock   *mock_syncacl.MockSyncClient
-	aclMock          *testAclMock
-	syncProtocolMock *mock_syncacl.MockAclSyncProtocol
-	spaceId          string
-	senderId         string
-	aclId            string
+	ctrl           *gomock.Controller
+	syncClientMock *mock_syncacl.MockSyncClient
+	statusUpdater  *mock_syncstatus.MockStatusUpdater
+	aclMock        *testAclMock
 
 	syncHandler *syncAclHandler
 }
@@ -70,205 +316,22 @@ func newSyncHandlerFixture(t *testing.T) *syncHandlerFixture {
 	ctrl := gomock.NewController(t)
 	aclMock := newTestAclMock(mock_list.NewMockAclList(ctrl))
 	syncClientMock := mock_syncacl.NewMockSyncClient(ctrl)
-	syncProtocolMock := mock_syncacl.NewMockAclSyncProtocol(ctrl)
-	spaceId := "spaceId"
+	statusUpdater := mock_syncstatus.NewMockStatusUpdater(ctrl)
 
 	syncHandler := &syncAclHandler{
-		aclList:      aclMock,
-		syncClient:   syncClientMock,
-		syncProtocol: syncProtocolMock,
-		syncStatus:   syncstatus.NewNoOpSyncStatus(),
-		spaceId:      spaceId,
+		aclList:    aclMock,
+		syncClient: syncClientMock,
+		spaceId:    "spaceId",
 	}
 	return &syncHandlerFixture{
-		ctrl:             ctrl,
-		syncClientMock:   syncClientMock,
-		aclMock:          aclMock,
-		syncProtocolMock: syncProtocolMock,
-		spaceId:          spaceId,
-		senderId:         "senderId",
-		aclId:            "aclId",
-		syncHandler:      syncHandler,
+		ctrl:           ctrl,
+		syncClientMock: syncClientMock,
+		aclMock:        aclMock,
+		statusUpdater:  statusUpdater,
+		syncHandler:    syncHandler,
 	}
 }
 
 func (fx *syncHandlerFixture) stop() {
 	fx.ctrl.Finish()
-}
-
-func TestSyncAclHandler_HandleMessage(t *testing.T) {
-	ctx := context.Background()
-	t.Run("handle head update, request returned", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.stop()
-		chWithId := &consensusproto.RawRecordWithId{}
-		headUpdate := &consensusproto.LogHeadUpdate{
-			Head:    "h1",
-			Records: []*consensusproto.RawRecordWithId{chWithId},
-		}
-		logMessage := consensusproto.WrapHeadUpdate(headUpdate, chWithId)
-		objectMsg, _ := spacesyncproto.MarshallSyncMessage(logMessage, fx.spaceId, fx.aclId)
-
-		syncReq := &consensusproto.LogSyncMessage{}
-		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
-		fx.syncProtocolMock.EXPECT().HeadUpdate(ctx, fx.senderId, gomock.Any()).Return(syncReq, nil)
-		fx.syncClientMock.EXPECT().QueueRequest(fx.senderId, syncReq).Return(nil)
-
-		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, 0, objectMsg)
-		require.NoError(t, err)
-	})
-	t.Run("handle head update, no request", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.stop()
-		chWithId := &consensusproto.RawRecordWithId{}
-		headUpdate := &consensusproto.LogHeadUpdate{
-			Head:    "h1",
-			Records: []*consensusproto.RawRecordWithId{chWithId},
-		}
-		logMessage := consensusproto.WrapHeadUpdate(headUpdate, chWithId)
-		objectMsg, _ := spacesyncproto.MarshallSyncMessage(logMessage, fx.spaceId, fx.aclId)
-
-		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
-		fx.syncProtocolMock.EXPECT().HeadUpdate(ctx, fx.senderId, gomock.Any()).Return(nil, nil)
-
-		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, 0, objectMsg)
-		require.NoError(t, err)
-	})
-	t.Run("handle head update, returned error", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.stop()
-		chWithId := &consensusproto.RawRecordWithId{}
-		headUpdate := &consensusproto.LogHeadUpdate{
-			Head:    "h1",
-			Records: []*consensusproto.RawRecordWithId{chWithId},
-		}
-		logMessage := consensusproto.WrapHeadUpdate(headUpdate, chWithId)
-		objectMsg, _ := spacesyncproto.MarshallSyncMessage(logMessage, fx.spaceId, fx.aclId)
-
-		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
-		expectedErr := fmt.Errorf("some error")
-		fx.syncProtocolMock.EXPECT().HeadUpdate(ctx, fx.senderId, gomock.Any()).Return(nil, expectedErr)
-
-		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, 0, objectMsg)
-		require.Error(t, expectedErr, err)
-	})
-	t.Run("handle full sync request is forbidden", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.stop()
-		chWithId := &consensusproto.RawRecordWithId{}
-		fullRequest := &consensusproto.LogFullSyncRequest{
-			Head:    "h1",
-			Records: []*consensusproto.RawRecordWithId{chWithId},
-		}
-		logMessage := consensusproto.WrapFullRequest(fullRequest, chWithId)
-		objectMsg, _ := spacesyncproto.MarshallSyncMessage(logMessage, fx.spaceId, fx.aclId)
-
-		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
-		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, 0, objectMsg)
-		require.Error(t, ErrMessageIsRequest, err)
-	})
-	t.Run("handle full sync response, no error", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.stop()
-		chWithId := &consensusproto.RawRecordWithId{}
-		fullResponse := &consensusproto.LogFullSyncResponse{
-			Head:    "h1",
-			Records: []*consensusproto.RawRecordWithId{chWithId},
-		}
-		logMessage := consensusproto.WrapFullResponse(fullResponse, chWithId)
-		objectMsg, _ := spacesyncproto.MarshallSyncMessage(logMessage, fx.spaceId, fx.aclId)
-
-		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
-		fx.syncProtocolMock.EXPECT().FullSyncResponse(ctx, fx.senderId, gomock.Any()).Return(nil)
-
-		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, 0, objectMsg)
-		require.NoError(t, err)
-	})
-	t.Run("handle full sync response, new protocol, not equal heads", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.stop()
-		chWithId := &consensusproto.RawRecordWithId{}
-		fullResponse := &consensusproto.LogFullSyncResponse{
-			Head:    "h1",
-			Records: []*consensusproto.RawRecordWithId{chWithId},
-		}
-		logMessage := consensusproto.WrapFullResponse(fullResponse, chWithId)
-		objectMsg, _ := spacesyncproto.MarshallSyncMessage(logMessage, fx.spaceId, fx.aclId)
-
-		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
-		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "h2"})
-		fx.syncProtocolMock.EXPECT().FullSyncResponse(ctx, fx.senderId, gomock.Any()).Return(nil)
-		req := &consensusproto.LogSyncMessage{}
-		fx.syncClientMock.EXPECT().CreateFullSyncRequest(fx.aclMock, "h1").Return(req, nil)
-		fx.syncClientMock.EXPECT().QueueRequest(fx.senderId, req).Return(nil)
-		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, secureservice.NewSyncProtoVersion, objectMsg)
-		require.NoError(t, err)
-	})
-	t.Run("handle full sync response, new protocol, equal heads", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.stop()
-		chWithId := &consensusproto.RawRecordWithId{}
-		fullResponse := &consensusproto.LogFullSyncResponse{
-			Head:    "h1",
-			Records: []*consensusproto.RawRecordWithId{chWithId},
-		}
-		logMessage := consensusproto.WrapFullResponse(fullResponse, chWithId)
-		objectMsg, _ := spacesyncproto.MarshallSyncMessage(logMessage, fx.spaceId, fx.aclId)
-
-		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
-		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "h1"})
-		fx.syncProtocolMock.EXPECT().FullSyncResponse(ctx, fx.senderId, gomock.Any()).Return(nil)
-		err := fx.syncHandler.HandleMessage(ctx, fx.senderId, secureservice.NewSyncProtoVersion, objectMsg)
-		require.NoError(t, err)
-	})
-}
-
-func TestSyncAclHandler_HandleRequest(t *testing.T) {
-	ctx := context.Background()
-	t.Run("handle full sync request, no error", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.stop()
-		chWithId := &consensusproto.RawRecordWithId{}
-		fullRequest := &consensusproto.LogFullSyncRequest{
-			Head:    "h1",
-			Records: []*consensusproto.RawRecordWithId{chWithId},
-		}
-		logMessage := consensusproto.WrapFullRequest(fullRequest, chWithId)
-		objectMsg, _ := spacesyncproto.MarshallSyncMessage(logMessage, fx.spaceId, fx.aclId)
-		fullResp := &consensusproto.LogSyncMessage{
-			Content: &consensusproto.LogSyncContentValue{
-				Value: &consensusproto.LogSyncContentValue_FullSyncResponse{
-					FullSyncResponse: &consensusproto.LogFullSyncResponse{
-						Head: "returnedHead",
-					},
-				},
-			},
-		}
-
-		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
-		fx.syncProtocolMock.EXPECT().FullSyncRequest(ctx, fx.senderId, gomock.Any()).Return(fullResp, nil)
-		res, err := fx.syncHandler.HandleRequest(ctx, fx.senderId, objectMsg)
-		require.NoError(t, err)
-		unmarshalled := &consensusproto.LogSyncMessage{}
-		err = proto.Unmarshal(res.Payload, unmarshalled)
-		if err != nil {
-			return
-		}
-		require.Equal(t, "returnedHead", consensusproto.GetHead(unmarshalled))
-	})
-	t.Run("handle other message returns error", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.stop()
-		chWithId := &consensusproto.RawRecordWithId{}
-		headUpdate := &consensusproto.LogHeadUpdate{
-			Head:    "h1",
-			Records: []*consensusproto.RawRecordWithId{chWithId},
-		}
-		logMessage := consensusproto.WrapHeadUpdate(headUpdate, chWithId)
-		objectMsg, _ := spacesyncproto.MarshallSyncMessage(logMessage, fx.spaceId, fx.aclId)
-
-		fx.aclMock.EXPECT().Id().AnyTimes().Return(fx.aclId)
-		_, err := fx.syncHandler.HandleRequest(ctx, fx.senderId, objectMsg)
-		require.Error(t, ErrMessageIsNotRequest, err)
-	})
 }

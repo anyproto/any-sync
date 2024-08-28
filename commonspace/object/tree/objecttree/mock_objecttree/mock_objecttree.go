@@ -117,6 +117,21 @@ func (mr *MockObjectTreeMockRecorder) ChangesAfterCommonSnapshot(arg0, arg1 any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangesAfterCommonSnapshot", reflect.TypeOf((*MockObjectTree)(nil).ChangesAfterCommonSnapshot), arg0, arg1)
 }
 
+// ChangesAfterCommonSnapshotLoader mocks base method.
+func (m *MockObjectTree) ChangesAfterCommonSnapshotLoader(arg0, arg1 []string) (objecttree.LoadIterator, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangesAfterCommonSnapshotLoader", arg0, arg1)
+	ret0, _ := ret[0].(objecttree.LoadIterator)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ChangesAfterCommonSnapshotLoader indicates an expected call of ChangesAfterCommonSnapshotLoader.
+func (mr *MockObjectTreeMockRecorder) ChangesAfterCommonSnapshotLoader(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangesAfterCommonSnapshotLoader", reflect.TypeOf((*MockObjectTree)(nil).ChangesAfterCommonSnapshotLoader), arg0, arg1)
+}
+
 // Close mocks base method.
 func (m *MockObjectTree) Close() error {
 	m.ctrl.T.Helper()

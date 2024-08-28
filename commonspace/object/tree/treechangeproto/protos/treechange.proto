@@ -44,6 +44,31 @@ message TreeChange {
     string dataType = 9;
 }
 
+// TreeChange is a change of a tree
+message NoDataTreeChange {
+    // TreeHeadIds are previous ids for this TreeChange
+    repeated string treeHeadIds = 1;
+    // AclHeadId is a cid of latest acl record at the time of this change
+    string aclHeadId = 2;
+    // SnapshotBaseId is a snapshot (root) of the tree where this change is added
+    string snapshotBaseId = 3;
+    // ReadKeyId is the id of the read key
+    string readKeyId = 5;
+    // Timestamp is this change creation timestamp
+    int64 timestamp = 6;
+    // Identity is a public key with which the raw payload of this change is signed
+    bytes identity = 7;
+    // IsSnapshot indicates whether this change contains a snapshot of state
+    bool isSnapshot = 8;
+    // DataType indicates some special parameters of data for the client
+    string dataType = 9;
+}
+
+message ReducedTreeChange {
+    // TreeHeadIds are previous ids for this TreeChange
+    repeated string treeHeadIds = 1;
+}
+
 // RawTreeChange is a marshalled TreeChange (or RootChange) payload and a signature of this payload
 message RawTreeChange {
     // Payload is a byte payload containing TreeChange

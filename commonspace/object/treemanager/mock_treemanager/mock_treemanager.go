@@ -15,6 +15,7 @@ import (
 
 	app "github.com/anyproto/any-sync/app"
 	objecttree "github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	treestorage "github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -138,4 +139,18 @@ func (m *MockTreeManager) Run(arg0 context.Context) error {
 func (mr *MockTreeManagerMockRecorder) Run(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockTreeManager)(nil).Run), arg0)
+}
+
+// ValidateAndPutTree mocks base method.
+func (m *MockTreeManager) ValidateAndPutTree(arg0 context.Context, arg1 string, arg2 treestorage.TreeStorageCreatePayload) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateAndPutTree", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateAndPutTree indicates an expected call of ValidateAndPutTree.
+func (mr *MockTreeManagerMockRecorder) ValidateAndPutTree(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateAndPutTree", reflect.TypeOf((*MockTreeManager)(nil).ValidateAndPutTree), arg0, arg1, arg2)
 }

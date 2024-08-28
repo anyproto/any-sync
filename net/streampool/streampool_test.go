@@ -13,9 +13,11 @@ import (
 	"golang.org/x/net/context"
 	"storj.io/drpc"
 
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
+	"github.com/anyproto/any-sync/net/streampool/streamhandler"
 	"github.com/anyproto/any-sync/net/streampool/testservice"
 )
 
@@ -45,9 +47,9 @@ func TestStreamPool_AddStream(t *testing.T) {
 		defer fx.Finish(t)
 
 		s1, _ := newClientStream(t, fx, "p1")
-		require.NoError(t, fx.AddStream(s1, "space1", "common"))
+		require.NoError(t, fx.AddStream(s1, 100, "space1", "common"))
 		s2, _ := newClientStream(t, fx, "p2")
-		require.NoError(t, fx.AddStream(s2, "space2", "common"))
+		require.NoError(t, fx.AddStream(s2, 100, "space2", "common"))
 
 		require.NoError(t, fx.Broadcast(ctx, &testservice.StreamMessage{ReqData: "space1"}, "space1"))
 		require.NoError(t, fx.Broadcast(ctx, &testservice.StreamMessage{ReqData: "space2"}, "space2"))
@@ -76,7 +78,7 @@ func TestStreamPool_AddStream(t *testing.T) {
 
 		s1, p1 := newClientStream(t, fx, "p1")
 		defer s1.Close()
-		require.NoError(t, fx.AddStream(s1, "space1", "common"))
+		require.NoError(t, fx.AddStream(s1, 100, "space1", "common"))
 
 		require.NoError(t, fx.Send(ctx, &testservice.StreamMessage{ReqData: "test"}, func(ctx context.Context) (peers []peer.Peer, err error) {
 			return []peer.Peer{p1}, nil
@@ -170,7 +172,7 @@ func TestStreamPool_SendById(t *testing.T) {
 
 	s1, _ := newClientStream(t, fx, "p1")
 	defer s1.Close()
-	require.NoError(t, fx.AddStream(s1, "space1", "common"))
+	require.NoError(t, fx.AddStream(s1, 100, "space1", "common"))
 
 	require.NoError(t, fx.SendById(ctx, &testservice.StreamMessage{ReqData: "test"}, "p1"))
 	var msg *testservice.StreamMessage
@@ -188,11 +190,11 @@ func TestStreamPool_Tags(t *testing.T) {
 
 	s1, _ := newClientStream(t, fx, "p1")
 	defer s1.Close()
-	require.NoError(t, fx.AddStream(s1, "t1"))
+	require.NoError(t, fx.AddStream(s1, 100, "t1"))
 
 	s2, _ := newClientStream(t, fx, "p2")
 	defer s1.Close()
-	require.NoError(t, fx.AddStream(s2, "t2"))
+	require.NoError(t, fx.AddStream(s2, 100, "t2"))
 
 	err := fx.AddTagsCtx(streamCtx(ctx, 1, "p1"), "t3", "t3")
 	require.NoError(t, err)
@@ -210,13 +212,16 @@ func newFixture(t *testing.T) *fixture {
 	fx.tsh = &testServerHandler{receiveCh: make(chan *testservice.StreamMessage, 100)}
 	require.NoError(t, testservice.DRPCRegisterTest(fx.ts, fx.tsh))
 	fx.th = &testHandler{}
-	s := New()
-	s.(*service).debugStat = debugstat.NewNoOp()
-	fx.StreamPool = s.NewStreamPool(fx.th, StreamConfig{
+	s := New().(*streamPool)
+	s.handler = fx.th
+	s.statService = debugstat.NewNoOp()
+	s.streamConfig = StreamConfig{
 		SendQueueSize:    10,
 		DialQueueWorkers: 1,
 		DialQueueSize:    10,
-	})
+	}
+	fx.StreamPool = s
+	require.NoError(t, fx.StreamPool.Run(context.Background()))
 	return fx
 }
 
@@ -228,7 +233,7 @@ type fixture struct {
 }
 
 func (fx *fixture) Finish(t *testing.T) {
-	require.NoError(t, fx.Close())
+	require.NoError(t, fx.Close(context.Background()))
 }
 
 type testHandler struct {
@@ -237,7 +242,15 @@ type testHandler struct {
 	mu               sync.Mutex
 }
 
-func (t *testHandler) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error) {
+func (t *testHandler) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (t *testHandler) Name() (name string) {
+	return streamhandler.CName
+}
+
+func (t *testHandler) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, queueSize int, err error) {
 	if t.streamOpenDelay > 0 {
 		time.Sleep(t.streamOpenDelay)
 	}
@@ -245,6 +258,7 @@ func (t *testHandler) OpenStream(ctx context.Context, p peer.Peer) (stream drpc.
 	if err != nil {
 		return
 	}
+	queueSize = 100
 	stream, err = testservice.NewDRPCTestClient(conn).TestStream(p.Context())
 	return
 }

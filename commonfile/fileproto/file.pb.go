@@ -5,7 +5,7 @@ package fileproto
 
 import (
 	fmt "fmt"
-	proto "github.com/gogo/protobuf/proto"
+	proto "github.com/anyproto/protobuf/proto"
 	io "io"
 	math "math"
 	math_bits "math/bits"
@@ -117,6 +117,14 @@ func (m *Ok) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
+func (m *Ok) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *Ok) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Ok.Merge(m, src)
 }
@@ -155,6 +163,14 @@ func (m *BlockGetRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		}
 		return b[:n], nil
 	}
+}
+func (m *BlockGetRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *BlockGetRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BlockGetRequest.Merge(m, src)
@@ -215,6 +231,14 @@ func (m *BlockGetResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
+func (m *BlockGetResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *BlockGetResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BlockGetResponse.Merge(m, src)
 }
@@ -268,6 +292,14 @@ func (m *BlockPushRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		}
 		return b[:n], nil
 	}
+}
+func (m *BlockPushRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *BlockPushRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BlockPushRequest.Merge(m, src)
@@ -335,6 +367,14 @@ func (m *BlocksCheckRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return b[:n], nil
 	}
 }
+func (m *BlocksCheckRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *BlocksCheckRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BlocksCheckRequest.Merge(m, src)
 }
@@ -386,6 +426,14 @@ func (m *BlocksCheckResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return b[:n], nil
 	}
 }
+func (m *BlocksCheckResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *BlocksCheckResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BlocksCheckResponse.Merge(m, src)
 }
@@ -430,6 +478,14 @@ func (m *BlockAvailability) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		}
 		return b[:n], nil
 	}
+}
+func (m *BlockAvailability) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *BlockAvailability) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BlockAvailability.Merge(m, src)
@@ -483,6 +539,14 @@ func (m *BlocksBindRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		}
 		return b[:n], nil
 	}
+}
+func (m *BlocksBindRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *BlocksBindRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BlocksBindRequest.Merge(m, src)
@@ -543,6 +607,14 @@ func (m *FilesDeleteRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return b[:n], nil
 	}
 }
+func (m *FilesDeleteRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *FilesDeleteRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_FilesDeleteRequest.Merge(m, src)
 }
@@ -593,6 +665,14 @@ func (m *FilesDeleteResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return b[:n], nil
 	}
 }
+func (m *FilesDeleteResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *FilesDeleteResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_FilesDeleteResponse.Merge(m, src)
 }
@@ -630,6 +710,14 @@ func (m *FilesInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		}
 		return b[:n], nil
 	}
+}
+func (m *FilesInfoRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *FilesInfoRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_FilesInfoRequest.Merge(m, src)
@@ -682,6 +770,14 @@ func (m *FilesInfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
+func (m *FilesInfoResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *FilesInfoResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_FilesInfoResponse.Merge(m, src)
 }
@@ -727,6 +823,14 @@ func (m *FileInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		}
 		return b[:n], nil
 	}
+}
+func (m *FileInfo) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *FileInfo) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_FileInfo.Merge(m, src)
@@ -786,6 +890,14 @@ func (m *FilesGetRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
+func (m *FilesGetRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *FilesGetRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_FilesGetRequest.Merge(m, src)
 }
@@ -830,6 +942,14 @@ func (m *FilesGetResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
+func (m *FilesGetResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *FilesGetResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_FilesGetResponse.Merge(m, src)
 }
@@ -873,6 +993,14 @@ func (m *CheckRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return b[:n], nil
 	}
 }
+func (m *CheckRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *CheckRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_CheckRequest.Merge(m, src)
 }
@@ -910,6 +1038,14 @@ func (m *CheckResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		}
 		return b[:n], nil
 	}
+}
+func (m *CheckResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *CheckResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_CheckResponse.Merge(m, src)
@@ -962,6 +1098,14 @@ func (m *SpaceInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
+func (m *SpaceInfoRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *SpaceInfoRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SpaceInfoRequest.Merge(m, src)
 }
@@ -1010,6 +1154,14 @@ func (m *SpaceInfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		}
 		return b[:n], nil
 	}
+}
+func (m *SpaceInfoResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *SpaceInfoResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SpaceInfoResponse.Merge(m, src)
@@ -1089,6 +1241,14 @@ func (m *AccountInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return b[:n], nil
 	}
 }
+func (m *AccountInfoRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AccountInfoRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AccountInfoRequest.Merge(m, src)
 }
@@ -1131,6 +1291,14 @@ func (m *AccountInfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		}
 		return b[:n], nil
 	}
+}
+func (m *AccountInfoResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *AccountInfoResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AccountInfoResponse.Merge(m, src)
@@ -1205,6 +1373,14 @@ func (m *AccountLimitSetRequest) XXX_Marshal(b []byte, deterministic bool) ([]by
 		return b[:n], nil
 	}
 }
+func (m *AccountLimitSetRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AccountLimitSetRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AccountLimitSetRequest.Merge(m, src)
 }
@@ -1256,6 +1432,14 @@ func (m *SpaceLimitSetRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		}
 		return b[:n], nil
 	}
+}
+func (m *SpaceLimitSetRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *SpaceLimitSetRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SpaceLimitSetRequest.Merge(m, src)

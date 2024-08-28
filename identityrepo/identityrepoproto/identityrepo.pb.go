@@ -5,7 +5,7 @@ package identityrepoproto
 
 import (
 	fmt "fmt"
-	proto "github.com/gogo/protobuf/proto"
+	proto "github.com/anyproto/protobuf/proto"
 	io "io"
 	math "math"
 	math_bits "math/bits"
@@ -51,6 +51,14 @@ func (m *Data) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		}
 		return b[:n], nil
 	}
+}
+func (m *Data) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *Data) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Data.Merge(m, src)
@@ -111,6 +119,14 @@ func (m *DataWithIdentity) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
+func (m *DataWithIdentity) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *DataWithIdentity) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_DataWithIdentity.Merge(m, src)
 }
@@ -164,6 +180,14 @@ func (m *DataPutRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		}
 		return b[:n], nil
 	}
+}
+func (m *DataPutRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *DataPutRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_DataPutRequest.Merge(m, src)
@@ -219,6 +243,14 @@ func (m *DataDeleteRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
+func (m *DataDeleteRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *DataDeleteRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_DataDeleteRequest.Merge(m, src)
 }
@@ -273,6 +305,14 @@ func (m *DataPullRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
+func (m *DataPullRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *DataPullRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_DataPullRequest.Merge(m, src)
 }
@@ -324,6 +364,14 @@ func (m *DataPullResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
+func (m *DataPullResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *DataPullResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_DataPullResponse.Merge(m, src)
 }
@@ -366,6 +414,14 @@ func (m *Ok) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		}
 		return b[:n], nil
 	}
+}
+func (m *Ok) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *Ok) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Ok.Merge(m, src)

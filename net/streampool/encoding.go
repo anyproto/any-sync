@@ -2,7 +2,8 @@ package streampool
 
 import (
 	"errors"
-	"github.com/gogo/protobuf/proto"
+
+	"github.com/anyproto/protobuf/proto"
 	"storj.io/drpc"
 )
 
@@ -15,20 +16,66 @@ var (
 	errNotAProtoMsg = errors.New("encoding: not a proto message")
 )
 
+type ProtoMessageGettable interface {
+	ProtoMessage() (proto.Message, error)
+}
+
+type ProtoMessageSettable interface {
+	ProtoMessageGettable
+	SetProtoMessage(proto.Message) error
+}
+
 type protoEncoding struct{}
 
-func (p protoEncoding) Marshal(msg drpc.Message) ([]byte, error) {
+func (p protoEncoding) Marshal(msg drpc.Message) (res []byte, err error) {
 	pmsg, ok := msg.(proto.Message)
 	if !ok {
-		return nil, errNotAProtoMsg
+		if pmg, ok := msg.(ProtoMessageGettable); ok {
+			pmsg, err = pmg.ProtoMessage()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, errNotAProtoMsg
+		}
 	}
 	return proto.Marshal(pmsg)
 }
 
-func (p protoEncoding) Unmarshal(buf []byte, msg drpc.Message) error {
+func (p protoEncoding) MarshalAppend(buf []byte, msg drpc.Message) (res []byte, err error) {
 	pmsg, ok := msg.(proto.Message)
 	if !ok {
-		return errNotAProtoMsg
+		if pmg, ok := msg.(ProtoMessageGettable); ok {
+			pmsg, err = pmg.ProtoMessage()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, errNotAProtoMsg
+		}
 	}
-	return proto.Unmarshal(buf, pmsg)
+	return proto.MarshalAppend(buf, pmsg)
+}
+
+func (p protoEncoding) Unmarshal(buf []byte, msg drpc.Message) (err error) {
+	var pms ProtoMessageSettable
+	pmsg, ok := msg.(proto.Message)
+	if !ok {
+		if pms, ok = msg.(ProtoMessageSettable); ok {
+			pmsg, err = pms.ProtoMessage()
+			if err != nil {
+				return err
+			}
+		} else {
+			return errNotAProtoMsg
+		}
+	}
+	err = proto.Unmarshal(buf, pmsg)
+	if err != nil {
+		return err
+	}
+	if pms != nil {
+		err = pms.SetProtoMessage(pmsg)
+	}
+	return
 }

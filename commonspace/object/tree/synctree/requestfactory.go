@@ -1,81 +1,59 @@
 package synctree
 
 import (
-	"fmt"
-
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/util/slice"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 )
 
+const batchSize = 1024 * 1024
+
 type RequestFactory interface {
-	CreateHeadUpdate(t objecttree.ObjectTree, added []*treechangeproto.RawTreeChangeWithId) (msg *treechangeproto.TreeSyncMessage)
-	CreateNewTreeRequest() (msg *treechangeproto.TreeSyncMessage)
-	CreateEmptyFullSyncRequest(t objecttree.ObjectTree) (req *treechangeproto.TreeSyncMessage)
-	CreateFullSyncRequest(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (req *treechangeproto.TreeSyncMessage, err error)
-	CreateFullSyncResponse(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (*treechangeproto.TreeSyncMessage, error)
+	CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectmessages.HeadUpdate, err error)
+	CreateNewTreeRequest(peerId, objectId string) *objectmessages.Request
+	CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectmessages.Request
+	CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (response.ResponseProducer, error)
 }
 
-func NewRequestFactory() RequestFactory {
-	return &requestFactory{}
+func NewRequestFactory(spaceId string) RequestFactory {
+	return &requestFactory{spaceId}
 }
 
-type requestFactory struct{}
-
-func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, added []*treechangeproto.RawTreeChangeWithId) (msg *treechangeproto.TreeSyncMessage) {
-	return treechangeproto.WrapHeadUpdate(&treechangeproto.TreeHeadUpdate{
-		Heads:        t.Heads(),
-		Changes:      added,
-		SnapshotPath: t.SnapshotPath(),
-	}, t.Header())
+type requestFactory struct {
+	spaceId string
 }
 
-func (r *requestFactory) CreateNewTreeRequest() (msg *treechangeproto.TreeSyncMessage) {
-	return treechangeproto.WrapFullRequest(&treechangeproto.TreeFullSyncRequest{}, nil)
-}
-
-func (r *requestFactory) CreateEmptyFullSyncRequest(t objecttree.ObjectTree) (msg *treechangeproto.TreeSyncMessage) {
-	return treechangeproto.WrapFullRequest(&treechangeproto.TreeFullSyncRequest{
-		Heads:        t.Heads(),
-		SnapshotPath: t.SnapshotPath(),
-	}, t.Header())
-}
-
-func (r *requestFactory) CreateFullSyncRequest(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (msg *treechangeproto.TreeSyncMessage, err error) {
-	req := &treechangeproto.TreeFullSyncRequest{}
-	if t == nil {
-		return nil, fmt.Errorf("tree should not be empty")
+func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectmessages.HeadUpdate, err error) {
+	broadcastOpts := BroadcastOptions{}
+	if ignoredPeer != "" {
+		broadcastOpts.EmptyPeers = []string{ignoredPeer}
 	}
-
-	req.Heads = t.Heads()
-	req.SnapshotPath = t.SnapshotPath()
-
-	var changesAfterSnapshot []*treechangeproto.RawTreeChangeWithId
-	changesAfterSnapshot, err = t.ChangesAfterCommonSnapshot(theirSnapshotPath, theirHeads)
-	if err != nil {
-		return
+	headUpdate = &objectmessages.HeadUpdate{
+		Meta: objectmessages.ObjectMeta{
+			ObjectId: t.Id(),
+			SpaceId:  r.spaceId,
+		},
+		Update: &InnerHeadUpdate{
+			opts:         broadcastOpts,
+			heads:        t.Heads(),
+			changes:      added,
+			snapshotPath: t.SnapshotPath(),
+			root:         t.Header(),
+		},
 	}
-
-	req.Changes = changesAfterSnapshot
-	msg = treechangeproto.WrapFullRequest(req, t.Header())
+	err = headUpdate.Update.Prepare()
 	return
 }
 
-func (r *requestFactory) CreateFullSyncResponse(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (msg *treechangeproto.TreeSyncMessage, err error) {
-	resp := &treechangeproto.TreeFullSyncResponse{
-		Heads:        t.Heads(),
-		SnapshotPath: t.SnapshotPath(),
-	}
-	if slice.UnsortedEquals(theirHeads, t.Heads()) {
-		msg = treechangeproto.WrapFullResponse(resp, t.Header())
-		return
-	}
+func (r *requestFactory) CreateNewTreeRequest(peerId, objectId string) *objectmessages.Request {
+	return NewRequest(peerId, r.spaceId, objectId, nil, nil, nil)
+}
 
-	ourChanges, err := t.ChangesAfterCommonSnapshot(theirSnapshotPath, theirHeads)
-	if err != nil {
-		return
-	}
-	resp.Changes = ourChanges
-	msg = treechangeproto.WrapFullResponse(resp, t.Header())
-	return
+func (r *requestFactory) CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectmessages.Request {
+	return NewRequest(peerId, r.spaceId, t.Id(), t.Heads(), t.SnapshotPath(), t.Header())
+}
+
+func (r *requestFactory) CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (response.ResponseProducer, error) {
+	return response.NewResponseProducer(r.spaceId, t, theirHeads, theirSnapshotPath)
 }

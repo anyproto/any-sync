@@ -24,7 +24,17 @@ type stream struct {
 	tags     []string
 }
 
+type peerMessage interface {
+	SetPeerId(peerId string)
+	Copy() drpc.Message
+}
+
 func (sr *stream) write(msg drpc.Message) (err error) {
+	if peerMsg, ok := msg.(peerMessage); ok {
+		cp := peerMsg.Copy().(peerMessage)
+		cp.SetPeerId(sr.peerId)
+		msg = cp
+	}
 	sr.stats.AddMessage(msg)
 	err = sr.queue.TryAdd(msg)
 	if err != nil {

@@ -238,7 +238,7 @@ func (d *diffSyncer) subscribe(ctx context.Context, peerId string) (err error) {
 	if err != nil {
 		return
 	}
-	return d.peerManager.SendPeer(ctx, peerId, &spacesyncproto.ObjectSyncMessage{
+	return d.peerManager.SendMessage(ctx, peerId, &spacesyncproto.ObjectSyncMessage{
 		Payload: payload,
 	})
 }

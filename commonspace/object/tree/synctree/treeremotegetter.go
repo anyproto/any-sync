@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/net/peer"
@@ -18,10 +16,16 @@ var (
 	ErrNoResponsiblePeers = errors.New("no responsible peers")
 )
 
+type treeGetter interface {
+	getTree(ctx context.Context) (treeStorage treestorage.TreeStorage, peerId string, err error)
+}
+
 type treeRemoteGetter struct {
 	deps   BuildDeps
 	treeId string
 }
+
+var createCollector = newFullResponseCollector
 
 func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err error) {
 	peerId, err := peer.CtxPeerId(ctx)
@@ -48,39 +52,33 @@ func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err e
 	return
 }
 
-func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (msg *treechangeproto.TreeSyncMessage, err error) {
-	newTreeRequest := t.deps.SyncClient.CreateNewTreeRequest()
-	resp, err := t.deps.SyncClient.SendRequest(ctx, peerId, t.treeId, newTreeRequest)
+func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (collector *fullResponseCollector, err error) {
+	collector = createCollector()
+	req := t.deps.SyncClient.CreateNewTreeRequest(peerId, t.treeId)
+	err = t.deps.SyncClient.SendTreeRequest(ctx, req, collector)
 	if err != nil {
-		return
+		return nil, err
 	}
-
-	msg = &treechangeproto.TreeSyncMessage{}
-	err = proto.Unmarshal(resp.Payload, msg)
-	return
+	return collector, nil
 }
 
-func (t treeRemoteGetter) treeRequestLoop(ctx context.Context) (msg *treechangeproto.TreeSyncMessage, peerId string, err error) {
+func (t treeRemoteGetter) treeRequestLoop(ctx context.Context) (collector *fullResponseCollector, peerId string, err error) {
 	availablePeers, err := t.getPeers(ctx)
 	if err != nil {
 		return
 	}
+	peerId = availablePeers[0]
 	// in future we will try to load from different peers
-	res, err := t.treeRequest(ctx, availablePeers[0])
-	if err != nil {
-		return
-	}
-	return res, availablePeers[0], nil
+	collector, err = t.treeRequest(ctx, peerId)
+	return collector, peerId, err
 }
 
 func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.TreeStorage, peerId string, err error) {
 	treeStorage, err = t.deps.SpaceStorage.TreeStorage(t.treeId)
-	if err == nil {
+	if err == nil || !errors.Is(err, treestorage.ErrUnknownTreeId) {
 		return
 	}
-	if err != nil && err != treestorage.ErrUnknownTreeId {
-		return
-	}
+	storageErr := err
 
 	status, err := t.deps.SpaceStorage.TreeDeletedStatus(t.treeId)
 	if err != nil {
@@ -91,20 +89,18 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 		return
 	}
 
-	resp, peerId, err := t.treeRequestLoop(ctx)
+	collector, peerId, err := t.treeRequestLoop(ctx)
 	if err != nil {
-		return
-	}
-	fullSyncResp := resp.GetContent().GetFullSyncResponse()
-	if fullSyncResp == nil {
-		err = treechangeproto.ErrUnexpected
+		if errors.Is(err, peer.ErrPeerIdNotFoundInContext) {
+			err = storageErr
+		}
 		return
 	}
 
 	payload := treestorage.TreeStorageCreatePayload{
-		RootRawChange: resp.RootChange,
-		Changes:       fullSyncResp.Changes,
-		Heads:         fullSyncResp.Heads,
+		RootRawChange: collector.root,
+		Changes:       collector.changes,
+		Heads:         collector.heads,
 	}
 
 	validatorFunc := t.deps.ValidateObjectTree

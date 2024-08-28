@@ -82,6 +82,36 @@ func (mr *MockTreeStorageMockRecorder) Delete() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockTreeStorage)(nil).Delete))
 }
 
+// GetAllChangeIds mocks base method.
+func (m *MockTreeStorage) GetAllChangeIds() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllChangeIds")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllChangeIds indicates an expected call of GetAllChangeIds.
+func (mr *MockTreeStorageMockRecorder) GetAllChangeIds() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllChangeIds", reflect.TypeOf((*MockTreeStorage)(nil).GetAllChangeIds))
+}
+
+// GetAppendRawChange mocks base method.
+func (m *MockTreeStorage) GetAppendRawChange(arg0 context.Context, arg1 []byte, arg2 string) (*treechangeproto.RawTreeChangeWithId, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAppendRawChange", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*treechangeproto.RawTreeChangeWithId)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAppendRawChange indicates an expected call of GetAppendRawChange.
+func (mr *MockTreeStorageMockRecorder) GetAppendRawChange(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAppendRawChange", reflect.TypeOf((*MockTreeStorage)(nil).GetAppendRawChange), arg0, arg1, arg2)
+}
+
 // GetRawChange mocks base method.
 func (m *MockTreeStorage) GetRawChange(arg0 context.Context, arg1 string) (*treechangeproto.RawTreeChangeWithId, error) {
 	m.ctrl.T.Helper()

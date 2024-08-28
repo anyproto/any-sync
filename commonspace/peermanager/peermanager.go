@@ -3,8 +3,10 @@ package peermanager
 
 import (
 	"context"
+
+	"storj.io/drpc"
+
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/net/peer"
 )
 
@@ -14,14 +16,14 @@ const (
 
 type PeerManager interface {
 	app.Component
-	// SendPeer sends a message to a stream by peerId
-	SendPeer(ctx context.Context, peerId string, msg *spacesyncproto.ObjectSyncMessage) (err error)
-	// Broadcast sends a message to all subscribed peers
-	Broadcast(ctx context.Context, msg *spacesyncproto.ObjectSyncMessage) (err error)
 	// GetResponsiblePeers dials or gets from cache responsible peers
 	GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error)
 	// GetNodePeers dials or gets from cache node peers
 	GetNodePeers(ctx context.Context) (peers []peer.Peer, err error)
+	// BroadcastMessage sends message to all peers
+	BroadcastMessage(ctx context.Context, msg drpc.Message) error
+	// SendMessage sends message to peer
+	SendMessage(ctx context.Context, peerId string, msg drpc.Message) error
 }
 
 type PeerManagerProvider interface {

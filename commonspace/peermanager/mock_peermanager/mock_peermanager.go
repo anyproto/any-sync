@@ -14,9 +14,9 @@ import (
 	reflect "reflect"
 
 	app "github.com/anyproto/any-sync/app"
-	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	peer "github.com/anyproto/any-sync/net/peer"
 	gomock "go.uber.org/mock/gomock"
+	drpc "storj.io/drpc"
 )
 
 // MockPeerManager is a mock of PeerManager interface.
@@ -42,18 +42,18 @@ func (m *MockPeerManager) EXPECT() *MockPeerManagerMockRecorder {
 	return m.recorder
 }
 
-// Broadcast mocks base method.
-func (m *MockPeerManager) Broadcast(arg0 context.Context, arg1 *spacesyncproto.ObjectSyncMessage) error {
+// BroadcastMessage mocks base method.
+func (m *MockPeerManager) BroadcastMessage(arg0 context.Context, arg1 drpc.Message) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Broadcast", arg0, arg1)
+	ret := m.ctrl.Call(m, "BroadcastMessage", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Broadcast indicates an expected call of Broadcast.
-func (mr *MockPeerManagerMockRecorder) Broadcast(arg0, arg1 any) *gomock.Call {
+// BroadcastMessage indicates an expected call of BroadcastMessage.
+func (mr *MockPeerManagerMockRecorder) BroadcastMessage(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Broadcast", reflect.TypeOf((*MockPeerManager)(nil).Broadcast), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BroadcastMessage", reflect.TypeOf((*MockPeerManager)(nil).BroadcastMessage), arg0, arg1)
 }
 
 // GetNodePeers mocks base method.
@@ -114,16 +114,16 @@ func (mr *MockPeerManagerMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockPeerManager)(nil).Name))
 }
 
-// SendPeer mocks base method.
-func (m *MockPeerManager) SendPeer(arg0 context.Context, arg1 string, arg2 *spacesyncproto.ObjectSyncMessage) error {
+// SendMessage mocks base method.
+func (m *MockPeerManager) SendMessage(arg0 context.Context, arg1 string, arg2 drpc.Message) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SendPeer", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "SendMessage", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// SendPeer indicates an expected call of SendPeer.
-func (mr *MockPeerManagerMockRecorder) SendPeer(arg0, arg1, arg2 any) *gomock.Call {
+// SendMessage indicates an expected call of SendMessage.
+func (mr *MockPeerManagerMockRecorder) SendMessage(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendPeer", reflect.TypeOf((*MockPeerManager)(nil).SendPeer), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMessage", reflect.TypeOf((*MockPeerManager)(nil).SendMessage), arg0, arg1, arg2)
 }

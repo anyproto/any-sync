@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
@@ -15,15 +16,17 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
-	"github.com/anyproto/any-sync/commonspace/objectsync"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/settings"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	syncservice "github.com/anyproto/any-sync/commonspace/sync"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
+	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -83,9 +86,10 @@ type Space interface {
 	DeleteTree(ctx context.Context, id string) (err error)
 	GetNodePeers(ctx context.Context) (peer []peer.Peer, err error)
 
-	HandleMessage(ctx context.Context, msg objectsync.HandleMessage) (err error)
-	HandleSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
+	HandleDeprecatedObjectSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
+	HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage, stream drpc.Stream) (err error)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
+	HandleMessage(ctx context.Context, msg *objectmessages.HeadUpdate) (err error)
 
 	TryClose(objectTTL time.Duration) (close bool, err error)
 	Close() error
@@ -102,7 +106,8 @@ type space struct {
 	treeSyncer  treesyncer.TreeSyncer
 	peerManager peermanager.PeerManager
 	headSync    headsync.HeadSync
-	objectSync  objectsync.ObjectSync
+	syncService syncservice.SyncService
+	streamPool  streampool.StreamPool
 	syncStatus  syncstatus.StatusUpdater
 	settings    settings.Settings
 	storage     spacestorage.SpaceStorage
@@ -143,12 +148,21 @@ func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
 	return s.settings.DeleteTree(ctx, id)
 }
 
-func (s *space) HandleMessage(ctx context.Context, msg objectsync.HandleMessage) (err error) {
-	return s.objectSync.HandleMessage(ctx, msg)
+func (s *space) HandleMessage(peerCtx context.Context, msg *objectmessages.HeadUpdate) (err error) {
+	return s.syncService.HandleMessage(peerCtx, msg)
 }
 
-func (s *space) HandleSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
-	return s.objectSync.HandleRequest(ctx, req)
+func (s *space) HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage, stream drpc.Stream) (err error) {
+	peerId, err := peer.CtxPeerId(ctx)
+	if err != nil {
+		return
+	}
+	objSyncReq := objectmessages.NewByteRequest(peerId, req.SpaceId, req.ObjectId, req.Payload)
+	return s.syncService.HandleStreamRequest(ctx, objSyncReq, stream)
+}
+
+func (s *space) HandleDeprecatedObjectSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
+	return s.syncService.HandleDeprecatedObjectSync(ctx, req)
 }
 
 func (s *space) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
@@ -188,10 +202,11 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.headSync = s.app.MustComponent(headsync.CName).(headsync.HeadSync)
 	s.syncStatus = s.app.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	s.settings = s.app.MustComponent(settings.CName).(settings.Settings)
-	s.objectSync = s.app.MustComponent(objectsync.CName).(objectsync.ObjectSync)
+	s.syncService = s.app.MustComponent(syncservice.CName).(syncservice.SyncService)
 	s.storage = s.app.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	s.peerManager = s.app.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	s.aclList = s.app.MustComponent(syncacl.CName).(list.AclList)
+	s.streamPool = s.app.MustComponent(streampool.CName).(streampool.StreamPool)
 	s.treeSyncer = s.app.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	s.aclClient = s.app.MustComponent(aclclient.CName).(aclclient.AclSpaceClient)
 	s.header, err = s.storage.SpaceHeader()
@@ -220,9 +235,6 @@ func (s *space) Close() error {
 }
 
 func (s *space) TryClose(objectTTL time.Duration) (close bool, err error) {
-	if time.Now().Sub(s.objectSync.LastUsage()) < objectTTL {
-		return false, nil
-	}
 	locked := s.state.TreesUsed.Load() > 1
 	log.With(zap.Int32("trees used", s.state.TreesUsed.Load()), zap.Bool("locked", locked), zap.String("spaceId", s.state.SpaceId)).Debug("space lock status check")
 	if locked {

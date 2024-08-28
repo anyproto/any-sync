@@ -1,15 +1,14 @@
 package objecttree
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/util/slice"
-	"go.uber.org/zap"
 )
 
 var (
@@ -20,6 +19,7 @@ var (
 type treeBuilder struct {
 	treeStorage treestorage.TreeStorage
 	builder     ChangeBuilder
+	loader      *rawChangeLoader
 
 	cache            map[string]*Change
 	tree             *Tree
@@ -30,10 +30,11 @@ type treeBuilder struct {
 	loadBuffer []*Change
 }
 
-func newTreeBuilder(keepData bool, storage treestorage.TreeStorage, builder ChangeBuilder) *treeBuilder {
+func newTreeBuilder(keepData bool, storage treestorage.TreeStorage, builder ChangeBuilder, loader *rawChangeLoader) *treeBuilder {
 	return &treeBuilder{
 		treeStorage:      storage,
 		builder:          builder,
+		loader:           loader,
 		keepInMemoryData: keepData,
 	}
 }
@@ -81,8 +82,11 @@ func (tb *treeBuilder) build(heads []string, theirHeads []string, newChanges []*
 	//  but then we have to be sure that invariant stays true
 	oldBreakpoint, err := tb.findBreakpoint(heads, true)
 	if err != nil {
-		// this should never error out, because otherwise we have broken data
-		return nil, fmt.Errorf("findBreakpoint error: %v", err)
+		log.Error("findBreakpoint error", zap.Error(err), zap.String("treeId", tb.treeStorage.Id()))
+		heads, oldBreakpoint, err = tb.restoreTree()
+		if err != nil {
+			return nil, fmt.Errorf("restoreTree error: %v", err)
+		}
 	}
 
 	if len(theirHeads) > 0 {
@@ -169,10 +173,7 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 		return ch, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer cancel()
-
-	change, err := tb.treeStorage.GetRawChange(ctx, id)
+	change, err := tb.loader.loadAppendRaw(id)
 	if err != nil {
 		return nil, err
 	}
@@ -181,12 +182,45 @@ func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
 	if err != nil {
 		return nil, err
 	}
+	// TODO: see if we can delete this
 	if !tb.keepInMemoryData {
 		ch.Data = nil
 	}
 
 	tb.cache[id] = ch
 	return ch, nil
+}
+
+func (tb *treeBuilder) restoreTree() (newHeads []string, breakpoint string, err error) {
+	allIds, err := tb.treeStorage.GetAllChangeIds()
+	if err != nil {
+		return
+	}
+	rootCh, err := tb.loadChange(tb.treeStorage.Id())
+	if err != nil {
+		return
+	}
+	tr := &Tree{}
+	tr.AddFast(rootCh)
+	var changes []*Change
+	for _, id := range allIds {
+		if id == tb.treeStorage.Id() {
+			continue
+		}
+		ch, e := tb.loadChange(id)
+		if e != nil {
+			continue
+		}
+		changes = append(changes, ch)
+	}
+	tr.AddFast(changes...)
+	breakpoint, err = tb.findBreakpoint(tr.headIds, false)
+	if err != nil {
+		return
+	}
+	newHeads = tr.headIds
+	err = tb.treeStorage.SetHeads(newHeads)
+	return
 }
 
 func (tb *treeBuilder) findBreakpoint(heads []string, noError bool) (breakpoint string, err error) {

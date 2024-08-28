@@ -195,6 +195,7 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	fx.treeManager.waitLoad = make(chan struct{})
 	fx.treeManager.space = spc
 	fx.treeManager.deletedIds = nil
+	fx.treeManager.wait = true
 	err = spc.Init(ctx)
 	require.NoError(t, err)
 	close(fx.treeManager.waitLoad)

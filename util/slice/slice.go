@@ -4,6 +4,9 @@ import (
 	"hash/fnv"
 	"math/rand"
 	"sort"
+
+	"golang.org/x/exp/constraints"
+	"golang.org/x/exp/slices"
 )
 
 func DifferenceRemovedAdded(a, b []string) (removed []string, added []string) {
@@ -119,6 +122,27 @@ func UnsortedEquals(s1, s2 []string) bool {
 	return SortedEquals(s1Sorted, s2Sorted)
 }
 
+func ContainsSorted[T constraints.Ordered](first []T, second []T) bool {
+	if len(first) < len(second) {
+		return false
+	}
+	slices.Sort(first)
+	slices.Sort(second)
+	i := 0
+	j := 0
+	for i < len(first) && j < len(second) {
+		if first[i] == second[j] {
+			i++
+			j++
+		} else if first[i] < second[j] {
+			i++
+		} else {
+			j++
+		}
+	}
+	return i >= j && j == len(second)
+}
+
 func DiscardFromSlice[T any](elements []T, isDiscarded func(T) bool) []T {
 	var (
 		finishedIdx = 0
@@ -135,4 +159,26 @@ func DiscardFromSlice[T any](elements []T, isDiscarded func(T) bool) []T {
 	}
 	elements = elements[:finishedIdx]
 	return elements
+}
+
+func CompareMaps[T comparable](map1, map2 map[T]struct{}) (both, first, second []T) {
+	both = []T{}
+	first = []T{}
+	second = []T{}
+
+	for key := range map1 {
+		if _, found := map2[key]; found {
+			both = append(both, key)
+		} else {
+			first = append(first, key)
+		}
+	}
+
+	for key := range map2 {
+		if _, found := map1[key]; !found {
+			second = append(second, key)
+		}
+	}
+
+	return both, first, second
 }

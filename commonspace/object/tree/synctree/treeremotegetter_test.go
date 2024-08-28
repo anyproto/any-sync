@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/peermanager/mock_peermanager"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/peer/mock_peer"
 )
@@ -51,39 +49,57 @@ func (fx *treeRemoteGetterFixture) stop() {
 func TestTreeRemoteGetter(t *testing.T) {
 	ctx := context.Background()
 	peerId := "peerId"
-	treeRequest := &treechangeproto.TreeSyncMessage{}
-	treeResponse := &treechangeproto.TreeSyncMessage{
-		RootChange: &treechangeproto.RawTreeChangeWithId{Id: "id"},
-	}
-	marshalled, _ := proto.Marshal(treeResponse)
-	objectResponse := &spacesyncproto.ObjectSyncMessage{
-		Payload: marshalled,
-	}
+	treeRequest := &objectmessages.Request{}
 
 	t.Run("responsible peers", func(t *testing.T) {
 		fx := newTreeRemoteGetterFixture(t)
 		defer fx.stop()
 		mockPeer := mock_peer.NewMockPeer(fx.ctrl)
-
+		coll := newFullResponseCollector()
+		createCollector = func() *fullResponseCollector {
+			return coll
+		}
 		tCtx := peer.CtxWithPeerId(ctx, "*")
 		mockPeer.EXPECT().Id().AnyTimes().Return(peerId)
 		fx.peerGetterMock.EXPECT().GetResponsiblePeers(tCtx).Return([]peer.Peer{mockPeer}, nil)
-		fx.syncClientMock.EXPECT().CreateNewTreeRequest().Return(treeRequest)
-		fx.syncClientMock.EXPECT().SendRequest(tCtx, peerId, fx.treeGetter.treeId, treeRequest).Return(objectResponse, nil)
-		resp, _, err := fx.treeGetter.treeRequestLoop(tCtx)
+		fx.syncClientMock.EXPECT().CreateNewTreeRequest("peerId", "treeId").Return(treeRequest)
+		fx.syncClientMock.EXPECT().SendTreeRequest(tCtx, treeRequest, coll).Return(nil)
+		retColl, pId, err := fx.treeGetter.treeRequestLoop(tCtx)
 		require.NoError(t, err)
-		require.Equal(t, "id", resp.RootChange.Id)
+		require.Equal(t, "peerId", pId)
+		require.Equal(t, coll, retColl)
 	})
 
 	t.Run("request fails", func(t *testing.T) {
 		fx := newTreeRemoteGetterFixture(t)
 		defer fx.stop()
-		tCtx := peer.CtxWithPeerId(ctx, peerId)
-		treeRequest := &treechangeproto.TreeSyncMessage{}
 		mockPeer := mock_peer.NewMockPeer(fx.ctrl)
+		coll := newFullResponseCollector()
+		createCollector = func() *fullResponseCollector {
+			return coll
+		}
+		tCtx := peer.CtxWithPeerId(ctx, "*")
 		mockPeer.EXPECT().Id().AnyTimes().Return(peerId)
-		fx.syncClientMock.EXPECT().CreateNewTreeRequest().Return(treeRequest)
-		fx.syncClientMock.EXPECT().SendRequest(tCtx, peerId, fx.treeGetter.treeId, treeRequest).AnyTimes().Return(nil, fmt.Errorf("some"))
+		fx.peerGetterMock.EXPECT().GetResponsiblePeers(tCtx).Return([]peer.Peer{mockPeer}, nil)
+		fx.syncClientMock.EXPECT().CreateNewTreeRequest("peerId", "treeId").Return(treeRequest)
+		fx.syncClientMock.EXPECT().SendTreeRequest(tCtx, treeRequest, coll).Return(fmt.Errorf("error"))
+		_, _, err := fx.treeGetter.treeRequestLoop(tCtx)
+		require.Error(t, err)
+	})
+
+	t.Run("no responsible peers", func(t *testing.T) {
+		fx := newTreeRemoteGetterFixture(t)
+		defer fx.stop()
+		mockPeer := mock_peer.NewMockPeer(fx.ctrl)
+		coll := newFullResponseCollector()
+		createCollector = func() *fullResponseCollector {
+			return coll
+		}
+		tCtx := peer.CtxWithPeerId(ctx, "*")
+		mockPeer.EXPECT().Id().AnyTimes().Return(peerId)
+		fx.peerGetterMock.EXPECT().GetResponsiblePeers(tCtx).Return([]peer.Peer{mockPeer}, nil)
+		fx.syncClientMock.EXPECT().CreateNewTreeRequest("peerId", "treeId").Return(treeRequest)
+		fx.syncClientMock.EXPECT().SendTreeRequest(tCtx, treeRequest, coll).Return(fmt.Errorf("error"))
 		_, _, err := fx.treeGetter.treeRequestLoop(tCtx)
 		require.Error(t, err)
 	})

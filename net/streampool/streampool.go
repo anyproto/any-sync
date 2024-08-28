@@ -10,20 +10,31 @@ import (
 	"golang.org/x/net/context"
 	"storj.io/drpc"
 
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/debugstat"
+	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/secureservice"
+	"github.com/anyproto/any-sync/net/streampool/streamhandler"
 )
 
-// StreamHandler handles incoming messages from streams
-type StreamHandler interface {
-	// OpenStream opens stream with given peer
-	OpenStream(ctx context.Context, p peer.Peer) (stream drpc.Stream, tags []string, err error)
-	// HandleMessage handles incoming message
-	HandleMessage(ctx context.Context, peerId string, msg drpc.Message) (err error)
-	// NewReadMessage creates new empty message for unmarshalling into it
-	NewReadMessage() drpc.Message
+const CName = "common.net.streampool"
+
+var log = logger.NewNamed(CName)
+
+func New() StreamPool {
+	return &streamPool{
+		streamIdsByPeer: make(map[string][]uint32),
+		streamIdsByTag:  make(map[string][]uint32),
+		streams:         make(map[uint32]*stream),
+		opening:         make(map[string]*openingProcess),
+	}
+}
+
+type configGetter interface {
+	GetStreamConfig() StreamConfig
 }
 
 // PeerGetter should dial or return cached peers
@@ -36,10 +47,11 @@ type MessageQueueId interface {
 
 // StreamPool keeps and read streams
 type StreamPool interface {
+	app.ComponentRunnable
 	// AddStream adds new outgoing stream into the pool
-	AddStream(stream drpc.Stream, tags ...string) (err error)
+	AddStream(stream drpc.Stream, queueSize int, tags ...string) (err error)
 	// ReadStream adds new incoming stream and synchronously read it
-	ReadStream(stream drpc.Stream, tags ...string) (err error)
+	ReadStream(stream drpc.Stream, queueSize int, tags ...string) (err error)
 	// Send sends a message to given peers. A stream will be opened if it is not cached before. Works async.
 	Send(ctx context.Context, msg drpc.Message, target PeerGetter) (err error)
 	// SendById sends a message to given peerIds. Works only if stream exists
@@ -52,21 +64,58 @@ type StreamPool interface {
 	RemoveTagsCtx(ctx context.Context, tags ...string) error
 	// Streams gets all streams for specific tags
 	Streams(tags ...string) (streams []drpc.Stream)
-	// Close closes all streams
-	Close() error
 }
 
 type streamPool struct {
-	handler         StreamHandler
+	metric          metric.Metric
+	handler         streamhandler.StreamHandler
 	statService     debugstat.StatService
 	streamIdsByPeer map[string][]uint32
 	streamIdsByTag  map[string][]uint32
 	streams         map[uint32]*stream
 	opening         map[string]*openingProcess
+	streamConfig    StreamConfig
 	dial            *ExecPool
 	mu              sync.Mutex
 	writeQueueSize  int
 	lastStreamId    uint32
+}
+
+func (s *streamPool) OutgoingMsg() (count uint32, size uint64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, st := range s.streams {
+		count += uint32(st.stats.msgCount.Load())
+		size += uint64(st.stats.totalSize.Load())
+	}
+	return
+}
+
+func (s *streamPool) Init(a *app.App) (err error) {
+	s.metric, _ = a.Component(metric.CName).(metric.Metric)
+	s.handler = a.MustComponent(streamhandler.CName).(streamhandler.StreamHandler)
+	comp, ok := a.Component(debugstat.CName).(debugstat.StatService)
+	if !ok {
+		comp = debugstat.NewNoOp()
+	}
+	s.statService = comp
+	s.streamConfig = a.MustComponent("config").(configGetter).GetStreamConfig()
+	s.statService.AddProvider(s)
+	if s.metric != nil {
+		s.metric.RegisterStreamPoolSyncMetric(s)
+		registerMetrics(s.metric.Registry(), s, "")
+	}
+	return nil
+}
+
+func (s *streamPool) Name() (name string) {
+	return CName
+}
+
+func (s *streamPool) Run(ctx context.Context) (err error) {
+	s.dial = NewExecPool(s.streamConfig.DialQueueWorkers, s.streamConfig.DialQueueSize)
+	s.dial.Run()
+	return nil
 }
 
 func (s *streamPool) ProvideStat() any {
@@ -109,8 +158,8 @@ type openingProcess struct {
 	err error
 }
 
-func (s *streamPool) ReadStream(drpcStream drpc.Stream, tags ...string) error {
-	st, err := s.addStream(drpcStream, tags...)
+func (s *streamPool) ReadStream(drpcStream drpc.Stream, queueSize int, tags ...string) error {
+	st, err := s.addStream(drpcStream, queueSize, tags...)
 	if err != nil {
 		return err
 	}
@@ -120,8 +169,8 @@ func (s *streamPool) ReadStream(drpcStream drpc.Stream, tags ...string) error {
 	return st.readLoop()
 }
 
-func (s *streamPool) AddStream(drpcStream drpc.Stream, tags ...string) error {
-	st, err := s.addStream(drpcStream, tags...)
+func (s *streamPool) AddStream(drpcStream drpc.Stream, queueSize int, tags ...string) error {
+	st, err := s.addStream(drpcStream, queueSize, tags...)
 	if err != nil {
 		return err
 	}
@@ -145,7 +194,7 @@ func (s *streamPool) Streams(tags ...string) (streams []drpc.Stream) {
 	return
 }
 
-func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream, error) {
+func (s *streamPool) addStream(drpcStream drpc.Stream, queueSize int, tags ...string) (*stream, error) {
 	ctx := drpcStream.Context()
 	peerId, err := peer.CtxPeerId(ctx)
 	if err != nil {
@@ -155,7 +204,6 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 	defer s.mu.Unlock()
 	s.lastStreamId++
 	streamId := s.lastStreamId
-	queueSize := s.writeQueueSize
 	if queueSize <= 0 {
 		queueSize = 100
 	}
@@ -169,7 +217,7 @@ func (s *streamPool) addStream(drpcStream drpc.Stream, tags ...string) (*stream,
 		tags:     tags,
 		stats:    newStreamStat(peerId),
 	}
-	st.queue = mb.New[drpc.Message](s.writeQueueSize)
+	st.queue = mb.New[drpc.Message](queueSize)
 	s.streams[streamId] = st
 	s.streamIdsByPeer[peerId] = append(s.streamIdsByPeer[peerId], streamId)
 	for _, tag := range tags {
@@ -293,18 +341,18 @@ func (s *streamPool) openStream(ctx context.Context, p peer.Peer) *openingProces
 		}()
 		// in case there was no peerId in context
 		ctx := peer.CtxWithPeerId(ctx, p.Id())
-		// open new stream and add to pool
 		peerProto, err := peer.CtxProtoVersion(p.Context())
 		if err != nil {
 			peerProto = secureservice.ProtoVersion
 		}
 		ctx = peer.CtxWithProtoVersion(ctx, peerProto)
-		st, tags, err := s.handler.OpenStream(ctx, p)
+		// open new stream and add to pool
+		st, tags, queueSize, err := s.handler.OpenStream(ctx, p)
 		if err != nil {
 			op.err = err
 			return
 		}
-		if err = s.AddStream(st, tags...); err != nil {
+		if err = s.AddStream(st, queueSize, tags...); err != nil {
 			op.err = nil
 			return
 		}
@@ -321,7 +369,6 @@ func (s *streamPool) Broadcast(ctx context.Context, msg drpc.Message, tags ...st
 		}
 	}
 	s.mu.Unlock()
-
 	for _, st := range streams {
 		if e := st.write(msg); e != nil {
 			st.l.InfoCtx(ctx, "broadcast write error", zap.Error(e))
@@ -401,8 +448,11 @@ func (s *streamPool) removeStream(streamId uint32) {
 	st.l.Debug("stream removed", zap.Strings("tags", st.tags))
 }
 
-func (s *streamPool) Close() (err error) {
+func (s *streamPool) Close(ctx context.Context) (err error) {
 	s.statService.RemoveProvider(s)
+	if s.metric != nil {
+		s.metric.UnregisterStreamPoolSyncMetric()
+	}
 	return s.dial.Close()
 }
 

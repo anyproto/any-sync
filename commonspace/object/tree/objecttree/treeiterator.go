@@ -27,13 +27,18 @@ type iterator struct {
 	f      func(c *Change) bool
 }
 
-func (i *iterator) iterateSkip(start *Change, skipBefore *Change, f func(c *Change) (isContinue bool)) {
+func (i *iterator) iterateSkip(start *Change, skipBefore *Change, include bool, f func(c *Change) (isContinue bool)) {
 	skipping := true
 	i.iterate(start, func(c *Change) (isContinue bool) {
-		if skipping && c != skipBefore {
+		if skipping {
+			if c == skipBefore {
+				skipping = false
+				if include {
+					return f(c)
+				}
+			}
 			return true
 		}
-		skipping = false
 		return f(c)
 	})
 }

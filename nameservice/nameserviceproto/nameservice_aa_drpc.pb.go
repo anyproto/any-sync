@@ -8,8 +8,8 @@ import (
 	bytes "bytes"
 	context "context"
 	errors "errors"
-	jsonpb "github.com/gogo/protobuf/jsonpb"
-	proto "github.com/gogo/protobuf/proto"
+	jsonpb "github.com/anyproto/protobuf/jsonpb"
+	proto "github.com/anyproto/protobuf/proto"
 	drpc "storj.io/drpc"
 	drpcerr "storj.io/drpc/drpcerr"
 )

@@ -2,10 +2,12 @@ package objecttree
 
 import (
 	"errors"
+
+	"github.com/anyproto/protobuf/proto"
+
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
-	"github.com/gogo/protobuf/proto"
 )
 
 var ErrEmptyChange = errors.New("change payload should not be empty")
@@ -49,22 +51,26 @@ func (c *nonVerifiableChangeBuilder) Unmarshall(rawChange *treechangeproto.RawTr
 
 type ChangeBuilder interface {
 	Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error)
+	UnmarshallReduced(rawIdChange *treechangeproto.RawTreeChangeWithId) (ch *Change, err error)
 	Build(payload BuilderContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
 	BuildRoot(payload InitialContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
 	BuildDerivedRoot(payload InitialDerivedContent) (ch *Change, raw *treechangeproto.RawTreeChangeWithId, err error)
 	Marshall(ch *Change) (*treechangeproto.RawTreeChangeWithId, error)
 }
 
-type newChangeFunc = func(id string, identity crypto.PubKey, ch *treechangeproto.TreeChange, signature []byte) *Change
-
 type changeBuilder struct {
 	rootChange *treechangeproto.RawTreeChangeWithId
 	keys       crypto.KeyStorage
-	newChange  newChangeFunc
+	rawTreeCh  *treechangeproto.RawTreeChange
+	hasData    bool
 }
 
 func NewChangeBuilder(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
-	return &changeBuilder{keys: keys, rootChange: rootChange, newChange: NewChange}
+	return &changeBuilder{keys: keys, rootChange: rootChange, hasData: true, rawTreeCh: &treechangeproto.RawTreeChange{}}
+}
+
+func NewEmptyDataChangeBuilder(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
+	return &changeBuilder{keys: keys, rootChange: rootChange, hasData: false, rawTreeCh: &treechangeproto.RawTreeChange{}}
 }
 
 func (c *changeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWithId, verify bool) (ch *Change, err error) {
@@ -81,7 +87,9 @@ func (c *changeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWit
 		}
 	}
 
-	raw := &treechangeproto.RawTreeChange{} // TODO: sync pool
+	c.rawTreeCh.Signature = c.rawTreeCh.Signature[:0]
+	c.rawTreeCh.Payload = c.rawTreeCh.Payload[:0]
+	raw := c.rawTreeCh
 	err = proto.Unmarshal(rawIdChange.GetRawChange(), raw)
 	if err != nil {
 		return
@@ -102,6 +110,26 @@ func (c *changeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWit
 			err = ErrIncorrectSignature
 			return
 		}
+	}
+	return
+}
+
+func (c *changeBuilder) UnmarshallReduced(rawIdChange *treechangeproto.RawTreeChangeWithId) (ch *Change, err error) {
+	if rawIdChange.GetRawChange() == nil {
+		err = ErrEmptyChange
+		return
+	}
+
+	c.rawTreeCh.Signature = c.rawTreeCh.Signature[:0]
+	c.rawTreeCh.Payload = c.rawTreeCh.Payload[:0]
+	raw := c.rawTreeCh
+	err = proto.Unmarshal(rawIdChange.GetRawChange(), raw)
+	if err != nil {
+		return
+	}
+	ch, err = c.unmarshallReducedRawChange(raw, rawIdChange.Id)
+	if err != nil {
+		return
 	}
 	return
 }
@@ -223,7 +251,19 @@ func (c *changeBuilder) Build(payload BuilderContent) (ch *Change, rawIdChange *
 	if err != nil {
 		return
 	}
-	ch = c.newChange(id, payload.PrivKey.GetPublic(), change, signature)
+	ch = &Change{
+		PreviousIds: change.TreeHeadIds,
+		AclHeadId:   change.AclHeadId,
+		Id:          id,
+		SnapshotId:  change.SnapshotBaseId,
+		Timestamp:   change.Timestamp,
+		ReadKeyId:   change.ReadKeyId,
+		Identity:    payload.PrivKey.GetPublic(),
+		Signature:   signature,
+		Data:        change.ChangesData,
+		DataType:    change.DataType,
+		IsSnapshot:  change.IsSnapshot,
+	}
 	rawIdChange = &treechangeproto.RawTreeChangeWithId{
 		RawChange: marshalledRawChange,
 		Id:        id,
@@ -290,16 +330,82 @@ func (c *changeBuilder) unmarshallRawChange(raw *treechangeproto.RawTreeChange, 
 		ch = NewChangeFromRoot(id, key, unmarshalled, raw.Signature, unmarshalled.IsDerived)
 		return
 	}
-	unmarshalled := &treechangeproto.TreeChange{}
+	if !c.hasData {
+		change := &treechangeproto.NoDataTreeChange{}
+		err = proto.Unmarshal(raw.Payload, change)
+		if err != nil {
+			return
+		}
+		key, err = c.keys.PubKeyFromProto(change.Identity)
+		if err != nil {
+			return
+		}
+		ch = &Change{
+			PreviousIds: change.TreeHeadIds,
+			AclHeadId:   change.AclHeadId,
+			Id:          id,
+			SnapshotId:  change.SnapshotBaseId,
+			Timestamp:   change.Timestamp,
+			ReadKeyId:   change.ReadKeyId,
+			Identity:    key,
+			Signature:   raw.Signature,
+			DataType:    change.DataType,
+			IsSnapshot:  change.IsSnapshot,
+		}
+	} else {
+		change := &treechangeproto.TreeChange{}
+		err = proto.Unmarshal(raw.Payload, change)
+		if err != nil {
+			return
+		}
+		key, err = c.keys.PubKeyFromProto(change.Identity)
+		if err != nil {
+			return
+		}
+		ch = &Change{
+			PreviousIds: change.TreeHeadIds,
+			AclHeadId:   change.AclHeadId,
+			Id:          id,
+			SnapshotId:  change.SnapshotBaseId,
+			Timestamp:   change.Timestamp,
+			ReadKeyId:   change.ReadKeyId,
+			Data:        change.ChangesData,
+			Identity:    key,
+			Signature:   raw.Signature,
+			DataType:    change.DataType,
+			IsSnapshot:  change.IsSnapshot,
+		}
+	}
+	return
+}
+
+func (c *changeBuilder) unmarshallReducedRawChange(raw *treechangeproto.RawTreeChange, id string) (ch *Change, err error) {
+	if c.isRoot(id) {
+		unmarshalled := &treechangeproto.RootChange{}
+		err = proto.Unmarshal(raw.Payload, unmarshalled)
+		if err != nil {
+			return
+		}
+		// key will be empty for derived roots
+		var key crypto.PubKey
+		if !unmarshalled.IsDerived {
+			key, err = c.keys.PubKeyFromProto(unmarshalled.Identity)
+			if err != nil {
+				return
+			}
+		}
+		ch = NewChangeFromRoot(id, key, unmarshalled, raw.Signature, unmarshalled.IsDerived)
+		return
+	}
+	unmarshalled := &treechangeproto.ReducedTreeChange{}
 	err = proto.Unmarshal(raw.Payload, unmarshalled)
 	if err != nil {
 		return
 	}
-	key, err = c.keys.PubKeyFromProto(unmarshalled.Identity)
-	if err != nil {
-		return
+	ch = &Change{
+		Id:          id,
+		PreviousIds: unmarshalled.TreeHeadIds,
 	}
-	ch = c.newChange(id, key, unmarshalled, raw.Signature)
 	return
 }
 

@@ -5,7 +5,7 @@ package aclrecordproto
 
 import (
 	fmt "fmt"
-	proto "github.com/gogo/protobuf/proto"
+	proto "github.com/anyproto/protobuf/proto"
 	io "io"
 	math "math"
 	math_bits "math/bits"
@@ -90,6 +90,14 @@ func (m *AclRoot) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		}
 		return b[:n], nil
 	}
+}
+func (m *AclRoot) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *AclRoot) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclRoot.Merge(m, src)
@@ -192,6 +200,14 @@ func (m *AclAccountInvite) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
+func (m *AclAccountInvite) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AclAccountInvite) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAccountInvite.Merge(m, src)
 }
@@ -240,6 +256,14 @@ func (m *AclAccountRequestJoin) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		}
 		return b[:n], nil
 	}
+}
+func (m *AclAccountRequestJoin) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *AclAccountRequestJoin) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAccountRequestJoin.Merge(m, src)
@@ -310,6 +334,14 @@ func (m *AclAccountRequestAccept) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return b[:n], nil
 	}
 }
+func (m *AclAccountRequestAccept) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AclAccountRequestAccept) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAccountRequestAccept.Merge(m, src)
 }
@@ -376,6 +408,14 @@ func (m *AclAccountRequestDecline) XXX_Marshal(b []byte, deterministic bool) ([]
 		return b[:n], nil
 	}
 }
+func (m *AclAccountRequestDecline) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AclAccountRequestDecline) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAccountRequestDecline.Merge(m, src)
 }
@@ -420,6 +460,14 @@ func (m *AclAccountInviteRevoke) XXX_Marshal(b []byte, deterministic bool) ([]by
 		}
 		return b[:n], nil
 	}
+}
+func (m *AclAccountInviteRevoke) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *AclAccountInviteRevoke) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAccountInviteRevoke.Merge(m, src)
@@ -466,6 +514,14 @@ func (m *AclEncryptedReadKey) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		}
 		return b[:n], nil
 	}
+}
+func (m *AclEncryptedReadKey) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *AclEncryptedReadKey) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclEncryptedReadKey.Merge(m, src)
@@ -519,6 +575,14 @@ func (m *AclAccountPermissionChanges) XXX_Marshal(b []byte, deterministic bool) 
 		return b[:n], nil
 	}
 }
+func (m *AclAccountPermissionChanges) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AclAccountPermissionChanges) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAccountPermissionChanges.Merge(m, src)
 }
@@ -563,6 +627,14 @@ func (m *AclAccountsAdd) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		}
 		return b[:n], nil
 	}
+}
+func (m *AclAccountsAdd) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *AclAccountsAdd) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAccountsAdd.Merge(m, src)
@@ -611,6 +683,14 @@ func (m *AclAccountAdd) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		}
 		return b[:n], nil
 	}
+}
+func (m *AclAccountAdd) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *AclAccountAdd) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAccountAdd.Merge(m, src)
@@ -678,6 +758,14 @@ func (m *AclAccountRequestCancel) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return b[:n], nil
 	}
 }
+func (m *AclAccountRequestCancel) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AclAccountRequestCancel) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAccountRequestCancel.Merge(m, src)
 }
@@ -723,6 +811,14 @@ func (m *AclAccountPermissionChange) XXX_Marshal(b []byte, deterministic bool) (
 		}
 		return b[:n], nil
 	}
+}
+func (m *AclAccountPermissionChange) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *AclAccountPermissionChange) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAccountPermissionChange.Merge(m, src)
@@ -780,6 +876,14 @@ func (m *AclReadKeyChange) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		}
 		return b[:n], nil
 	}
+}
+func (m *AclReadKeyChange) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *AclReadKeyChange) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclReadKeyChange.Merge(m, src)
@@ -848,6 +952,14 @@ func (m *AclAccountRemove) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
+func (m *AclAccountRemove) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AclAccountRemove) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAccountRemove.Merge(m, src)
 }
@@ -899,6 +1011,14 @@ func (m *AclAccountRequestRemove) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return b[:n], nil
 	}
 }
+func (m *AclAccountRequestRemove) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AclAccountRequestRemove) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclAccountRequestRemove.Merge(m, src)
 }
@@ -927,7 +1047,7 @@ type AclContentValue struct {
 	//	*AclContentValue_PermissionChanges
 	//	*AclContentValue_AccountsAdd
 	//	*AclContentValue_RequestCancel
-	Value isAclContentValue_Value `protobuf_oneof:"value"`
+	Value isAclContentValueValue `protobuf_oneof:"value"`
 }
 
 func (m *AclContentValue) Reset()         { *m = AclContentValue{} }
@@ -951,6 +1071,14 @@ func (m *AclContentValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
+func (m *AclContentValue) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *AclContentValue) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclContentValue.Merge(m, src)
 }
@@ -963,8 +1091,8 @@ func (m *AclContentValue) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AclContentValue proto.InternalMessageInfo
 
-type isAclContentValue_Value interface {
-	isAclContentValue_Value()
+type isAclContentValueValue interface {
+	isAclContentValueValue()
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
@@ -1006,20 +1134,20 @@ type AclContentValue_RequestCancel struct {
 	RequestCancel *AclAccountRequestCancel `protobuf:"bytes,12,opt,name=requestCancel,proto3,oneof" json:"requestCancel,omitempty"`
 }
 
-func (*AclContentValue_Invite) isAclContentValue_Value()               {}
-func (*AclContentValue_InviteRevoke) isAclContentValue_Value()         {}
-func (*AclContentValue_RequestJoin) isAclContentValue_Value()          {}
-func (*AclContentValue_RequestAccept) isAclContentValue_Value()        {}
-func (*AclContentValue_PermissionChange) isAclContentValue_Value()     {}
-func (*AclContentValue_AccountRemove) isAclContentValue_Value()        {}
-func (*AclContentValue_ReadKeyChange) isAclContentValue_Value()        {}
-func (*AclContentValue_RequestDecline) isAclContentValue_Value()       {}
-func (*AclContentValue_AccountRequestRemove) isAclContentValue_Value() {}
-func (*AclContentValue_PermissionChanges) isAclContentValue_Value()    {}
-func (*AclContentValue_AccountsAdd) isAclContentValue_Value()          {}
-func (*AclContentValue_RequestCancel) isAclContentValue_Value()        {}
+func (*AclContentValue_Invite) isAclContentValueValue()               {}
+func (*AclContentValue_InviteRevoke) isAclContentValueValue()         {}
+func (*AclContentValue_RequestJoin) isAclContentValueValue()          {}
+func (*AclContentValue_RequestAccept) isAclContentValueValue()        {}
+func (*AclContentValue_PermissionChange) isAclContentValueValue()     {}
+func (*AclContentValue_AccountRemove) isAclContentValueValue()        {}
+func (*AclContentValue_ReadKeyChange) isAclContentValueValue()        {}
+func (*AclContentValue_RequestDecline) isAclContentValueValue()       {}
+func (*AclContentValue_AccountRequestRemove) isAclContentValueValue() {}
+func (*AclContentValue_PermissionChanges) isAclContentValueValue()    {}
+func (*AclContentValue_AccountsAdd) isAclContentValueValue()          {}
+func (*AclContentValue_RequestCancel) isAclContentValueValue()        {}
 
-func (m *AclContentValue) GetValue() isAclContentValue_Value {
+func (m *AclContentValue) GetValue() isAclContentValueValue {
 	if m != nil {
 		return m.Value
 	}
@@ -1153,6 +1281,14 @@ func (m *AclData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		}
 		return b[:n], nil
 	}
+}
+func (m *AclData) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *AclData) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AclData.Merge(m, src)
