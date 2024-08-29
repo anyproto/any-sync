@@ -47,6 +47,7 @@ type DRPCAnynsClient interface {
 	GetNameByAnyId(ctx context.Context, in *NameByAnyIdRequest) (*NameByAddressResponse, error)
 	BatchGetNameByAnyId(ctx context.Context, in *BatchNameByAnyIdRequest) (*BatchNameByAddressResponse, error)
 	AdminNameRegisterSigned(ctx context.Context, in *NameRegisterRequestSigned) (*OperationResponse, error)
+	AdminNameRenewSigned(ctx context.Context, in *NameRenewRequestSigned) (*OperationResponse, error)
 }
 
 type drpcAnynsClient struct {
@@ -122,6 +123,15 @@ func (c *drpcAnynsClient) AdminNameRegisterSigned(ctx context.Context, in *NameR
 	return out, nil
 }
 
+func (c *drpcAnynsClient) AdminNameRenewSigned(ctx context.Context, in *NameRenewRequestSigned) (*OperationResponse, error) {
+	out := new(OperationResponse)
+	err := c.cc.Invoke(ctx, "/Anyns/AdminNameRenewSigned", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCAnynsServer interface {
 	IsNameAvailable(context.Context, *NameAvailableRequest) (*NameAvailableResponse, error)
 	BatchIsNameAvailable(context.Context, *BatchNameAvailableRequest) (*BatchNameAvailableResponse, error)
@@ -130,6 +140,7 @@ type DRPCAnynsServer interface {
 	GetNameByAnyId(context.Context, *NameByAnyIdRequest) (*NameByAddressResponse, error)
 	BatchGetNameByAnyId(context.Context, *BatchNameByAnyIdRequest) (*BatchNameByAddressResponse, error)
 	AdminNameRegisterSigned(context.Context, *NameRegisterRequestSigned) (*OperationResponse, error)
+	AdminNameRenewSigned(context.Context, *NameRenewRequestSigned) (*OperationResponse, error)
 }
 
 type DRPCAnynsUnimplementedServer struct{}
@@ -162,9 +173,13 @@ func (s *DRPCAnynsUnimplementedServer) AdminNameRegisterSigned(context.Context, 
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCAnynsUnimplementedServer) AdminNameRenewSigned(context.Context, *NameRenewRequestSigned) (*OperationResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCAnynsDescription struct{}
 
-func (DRPCAnynsDescription) NumMethods() int { return 7 }
+func (DRPCAnynsDescription) NumMethods() int { return 8 }
 
 func (DRPCAnynsDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -231,6 +246,15 @@ func (DRPCAnynsDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver,
 						in1.(*NameRegisterRequestSigned),
 					)
 			}, DRPCAnynsServer.AdminNameRegisterSigned, true
+	case 7:
+		return "/Anyns/AdminNameRenewSigned", drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnynsServer).
+					AdminNameRenewSigned(
+						ctx,
+						in1.(*NameRenewRequestSigned),
+					)
+			}, DRPCAnynsServer.AdminNameRenewSigned, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -346,6 +370,22 @@ type drpcAnyns_AdminNameRegisterSignedStream struct {
 }
 
 func (x *drpcAnyns_AdminNameRegisterSignedStream) SendAndClose(m *OperationResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyns_AdminNameRenewSignedStream interface {
+	drpc.Stream
+	SendAndClose(*OperationResponse) error
+}
+
+type drpcAnyns_AdminNameRenewSignedStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyns_AdminNameRenewSignedStream) SendAndClose(m *OperationResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_nameservice_nameserviceproto_protos_nameservice_proto{}); err != nil {
 		return err
 	}
