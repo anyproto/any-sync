@@ -38,6 +38,7 @@ type objectTreeDeps struct {
 	validator       ObjectTreeValidator
 	rawChangeLoader *rawChangeLoader
 	aclList         list.AclList
+	flusher         Flusher
 }
 
 type BuildObjectTreeFunc = func(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error)
@@ -58,6 +59,7 @@ func verifiableTreeDeps(
 		validator:       newTreeValidator(false, false),
 		rawChangeLoader: rawLoader,
 		aclList:         aclList,
+		flusher:         &defaultFlusher{},
 	}
 }
 
@@ -75,6 +77,7 @@ func emptyDataTreeDeps(
 		validator:       newTreeValidator(false, false),
 		rawChangeLoader: loader,
 		aclList:         aclList,
+		flusher:         &defaultFlusher{},
 	}
 }
 
@@ -92,6 +95,7 @@ func nonVerifiableTreeDeps(
 		validator:       &noOpTreeValidator{},
 		rawChangeLoader: loader,
 		aclList:         aclList,
+		flusher:         &defaultFlusher{},
 	}
 }
 
@@ -117,6 +121,7 @@ func BuildTestableTree(treeStorage treestorage.TreeStorage, aclList list.AclList
 		rawChangeLoader: loader,
 		validator:       &noOpTreeValidator{},
 		aclList:         aclList,
+		flusher:         &defaultFlusher{},
 	}
 
 	return buildObjectTree(deps)
@@ -135,6 +140,7 @@ func BuildEmptyDataTestableTree(treeStorage treestorage.TreeStorage, aclList lis
 		rawChangeLoader: loader,
 		validator:       &noOpTreeValidator{},
 		aclList:         aclList,
+		flusher:         &defaultFlusher{},
 	}
 
 	return buildObjectTree(deps)
@@ -223,6 +229,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
 		notSeenIdxBuf:   make([]int, 0, 10),
 		newSnapshotsBuf: make([]*Change, 0, 10),
+		flusher:         deps.flusher,
 	}
 
 	err := objTree.rebuildFromStorage(nil, nil)
@@ -259,6 +266,7 @@ func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht History
 		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
 		notSeenIdxBuf:   make([]int, 0, 10),
 		newSnapshotsBuf: make([]*Change, 0, 10),
+		flusher:         deps.flusher,
 	}
 
 	hTree := &historyTree{objectTree: objTree}
