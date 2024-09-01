@@ -40,9 +40,11 @@ func (m *MockUpdateListener) EXPECT() *MockUpdateListenerMockRecorder {
 }
 
 // Rebuild mocks base method.
-func (m *MockUpdateListener) Rebuild(arg0 objecttree.ObjectTree) {
+func (m *MockUpdateListener) Rebuild(arg0 objecttree.ObjectTree) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Rebuild", arg0)
+	ret := m.ctrl.Call(m, "Rebuild", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Rebuild indicates an expected call of Rebuild.
@@ -52,9 +54,11 @@ func (mr *MockUpdateListenerMockRecorder) Rebuild(arg0 any) *gomock.Call {
 }
 
 // Update mocks base method.
-func (m *MockUpdateListener) Update(arg0 objecttree.ObjectTree) {
+func (m *MockUpdateListener) Update(arg0 objecttree.ObjectTree) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Update", arg0)
+	ret := m.ctrl.Call(m, "Update", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Update indicates an expected call of Update.

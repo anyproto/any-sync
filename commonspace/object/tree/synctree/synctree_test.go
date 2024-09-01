@@ -204,10 +204,16 @@ func Test_SyncTree(t *testing.T) {
 		objTreeMock.EXPECT().Heads().Return([]string{"headId"}).Times(2)
 		objTreeMock.EXPECT().Heads().Return([]string{"headId1"}).Times(1)
 		objTreeMock.EXPECT().HasChanges(gomock.Any()).AnyTimes().Return(false)
-		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(payload)).
-			Return(expectedRes, nil)
+		objTreeMock.EXPECT().AddRawChangesWithUpdater(gomock.Any(), gomock.Eq(payload), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, changes objecttree.RawChangesPayload, updater objecttree.Updater) (addResult objecttree.AddResult, err error) {
+				err = updater(objTreeMock, objecttree.Append)
+				if err != nil {
+					return objecttree.AddResult{}, err
+				}
+				return expectedRes, nil
+			})
 		notifiableMock.EXPECT().UpdateHeads("id", []string{"headId1"})
-		updateListenerMock.EXPECT().Update(tr)
+		updateListenerMock.EXPECT().Update(tr).Return(nil)
 
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), "peerId", gomock.Eq(changes)).Return(headUpdate, nil)
 		syncClientMock.EXPECT().Broadcast(gomock.Any(), gomock.Eq(headUpdate))
@@ -231,10 +237,16 @@ func Test_SyncTree(t *testing.T) {
 		objTreeMock.EXPECT().Heads().Return([]string{"headId"}).Times(2)
 		objTreeMock.EXPECT().Heads().Return([]string{"headId1"}).Times(1)
 		objTreeMock.EXPECT().HasChanges(gomock.Any()).AnyTimes().Return(false)
-		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(payload)).
-			Return(expectedRes, nil)
+		objTreeMock.EXPECT().AddRawChangesWithUpdater(gomock.Any(), gomock.Eq(payload), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, changes objecttree.RawChangesPayload, updater objecttree.Updater) (addResult objecttree.AddResult, err error) {
+				err = updater(objTreeMock, objecttree.Rebuild)
+				if err != nil {
+					return objecttree.AddResult{}, err
+				}
+				return expectedRes, nil
+			})
 		notifiableMock.EXPECT().UpdateHeads("id", []string{"headId1"})
-		updateListenerMock.EXPECT().Rebuild(tr)
+		updateListenerMock.EXPECT().Rebuild(tr).Return(nil)
 
 		syncClientMock.EXPECT().CreateHeadUpdate(gomock.Eq(tr), "peerId", gomock.Eq(changes)).Return(headUpdate, nil)
 		syncClientMock.EXPECT().Broadcast(gomock.Any(), gomock.Eq(headUpdate))
@@ -275,8 +287,14 @@ func Test_SyncTree(t *testing.T) {
 		}
 		objTreeMock.EXPECT().Heads().Return([]string{"headId"}).AnyTimes()
 		objTreeMock.EXPECT().HasChanges(gomock.Any()).AnyTimes().Return(false)
-		objTreeMock.EXPECT().AddRawChanges(gomock.Any(), gomock.Eq(payload)).
-			Return(expectedRes, nil)
+		objTreeMock.EXPECT().AddRawChangesWithUpdater(gomock.Any(), gomock.Eq(payload), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, changes objecttree.RawChangesPayload, updater objecttree.Updater) (addResult objecttree.AddResult, err error) {
+				err = updater(objTreeMock, objecttree.Nothing)
+				if err != nil {
+					return objecttree.AddResult{}, err
+				}
+				return expectedRes, nil
+			})
 		res, err := tr.AddRawChangesFromPeer(ctx, "peerId", payload)
 		require.NoError(t, err)
 		require.Equal(t, expectedRes, res)
@@ -293,7 +311,7 @@ func Test_SyncTree(t *testing.T) {
 			Added: changes,
 		}
 		objTreeMock.EXPECT().Id().Return("id").AnyTimes()
-		objTreeMock.EXPECT().AddContent(gomock.Any(), gomock.Eq(content)).
+		objTreeMock.EXPECT().AddContentWithValidator(gomock.Any(), gomock.Eq(content), gomock.Any()).
 			Return(expectedRes, nil)
 		syncStatusMock.EXPECT().HeadsChange("id", []string{"headId"})
 		notifiableMock.EXPECT().UpdateHeads("id", []string{"headId"})

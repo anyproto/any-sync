@@ -427,6 +427,21 @@ func TestObjectTree(t *testing.T) {
 		oTree, err := BuildObjectTree(store, aclList)
 		require.NoError(t, err)
 
+		t.Run("add content validate failed", func(t *testing.T) {
+			_, err := oTree.AddContentWithValidator(ctx, SignableChangeContent{
+				Data:        []byte("some"),
+				Key:         keys.SignKey,
+				IsSnapshot:  false,
+				IsEncrypted: true,
+				Timestamp:   0,
+				DataType:    mockDataType,
+			}, func(change *treechangeproto.RawTreeChangeWithId) error {
+				return errors.New("validation failed")
+			})
+			require.Error(t, err)
+			require.Len(t, oTree.Heads(), 1)
+			require.Equal(t, root.Id, oTree.Root().Id)
+		})
 		t.Run("0 timestamp is changed to current, data type is correct", func(t *testing.T) {
 			start := time.Now()
 			res, err := oTree.AddContent(ctx, SignableChangeContent{
@@ -815,7 +830,24 @@ func TestObjectTree(t *testing.T) {
 			RawChanges: rawChanges,
 		}
 
-		res, err := objTree.AddRawChanges(context.Background(), payload)
+		res, err := objTree.AddRawChangesWithUpdater(context.Background(), payload, func(tree ObjectTree, md Mode) error {
+			// check tree iterate
+			var iterChangesId []string
+			err := objTree.IterateRoot(nil, func(change *Change) bool {
+				iterChangesId = append(iterChangesId, change.Id)
+				return true
+			})
+			require.NoError(t, err, "iterate should be without error")
+			assert.Equal(t, []string{"0", "1", "2", "3", "4"}, iterChangesId)
+			assert.Equal(t, "0", objTree.Root().Id)
+
+			for _, ch := range rawChanges {
+				treeCh, err := objTree.GetChange(ch.Id)
+				require.NoError(t, err)
+				require.True(t, treeCh.IsNew)
+			}
+			return nil
+		})
 		require.NoError(t, err, "adding changes should be without error")
 
 		// check result
@@ -827,36 +859,16 @@ func TestObjectTree(t *testing.T) {
 		// check tree heads
 		assert.Equal(t, []string{"4"}, objTree.Heads())
 
-		// check tree iterate
-		var iterChangesId []string
-		err = objTree.IterateRoot(nil, func(change *Change) bool {
-			iterChangesId = append(iterChangesId, change.Id)
-			return true
-		})
-		require.NoError(t, err, "iterate should be without error")
-		assert.Equal(t, []string{"0", "1", "2", "3", "4"}, iterChangesId)
-		// before Flush
-		assert.Equal(t, "0", objTree.Root().Id)
-
 		// check storage
 		heads, _ := treeStorage.Heads()
 		assert.Equal(t, []string{"4"}, heads)
 
-		for _, ch := range rawChanges {
-			treeCh, err := objTree.GetChange(ch.Id)
-			require.NoError(t, err)
-			require.True(t, treeCh.IsNew)
-			raw, err := treeStorage.GetRawChange(context.Background(), ch.Id)
-			assert.NoError(t, err, "storage should have all the changes")
-			assert.Equal(t, ch, raw, "the changes in the storage should be the same")
-		}
-
-		err = objTree.Flush()
-		require.NoError(t, err)
-
 		// after Flush
 		assert.Equal(t, "3", objTree.Root().Id)
 		for _, ch := range rawChanges {
+			raw, err := treeStorage.GetRawChange(context.Background(), ch.Id)
+			assert.NoError(t, err, "storage should have all the changes")
+			assert.Equal(t, ch, raw, "the changes in the storage should be the same")
 			treeCh, err := objTree.GetChange(ch.Id)
 			if ch.Id == "3" || ch.Id == "4" {
 				require.NoError(t, err)

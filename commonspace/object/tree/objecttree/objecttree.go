@@ -29,6 +29,8 @@ var (
 	ErrNoAclHead         = errors.New("no acl head")
 )
 
+type Updater func(tree ObjectTree, md Mode) error
+
 type AddResultSummary int
 
 type AddResult struct {
@@ -86,6 +88,7 @@ type ObjectTree interface {
 	AddContent(ctx context.Context, content SignableChangeContent) (AddResult, error)
 	AddContentWithValidator(ctx context.Context, content SignableChangeContent, validate func(change *treechangeproto.RawTreeChangeWithId) error) (AddResult, error)
 	AddRawChanges(ctx context.Context, changes RawChangesPayload) (AddResult, error)
+	AddRawChangesWithUpdater(ctx context.Context, changes RawChangesPayload, updater Updater) (AddResult, error)
 
 	UnpackChange(raw *treechangeproto.RawTreeChangeWithId) (data []byte, err error)
 	PrepareChange(content SignableChangeContent) (res *treechangeproto.RawTreeChangeWithId, err error)
@@ -93,7 +96,6 @@ type ObjectTree interface {
 	Delete() error
 	Close() error
 	SetFlusher(flusher Flusher)
-	Flush() error
 	TryClose(objectTTL time.Duration) (bool, error)
 }
 
@@ -340,14 +342,14 @@ func (ot *objectTree) prepareBuilderContent(content SignableChangeContent) (cnt 
 	return
 }
 
-func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChangesPayload) (addResult AddResult, err error) {
+func (ot *objectTree) AddRawChangesWithUpdater(ctx context.Context, changes RawChangesPayload, updater Updater) (addResult AddResult, err error) {
 	if ot.isDeleted {
 		err = ErrDeleted
 		return
 	}
 	ot.logUseWhenUnlocked()
 	lastHeadId := ot.tree.lastIteratedHeadId
-	addResult, err = ot.addRawChanges(ctx, changesPayload)
+	addResult, err = ot.addChangesToTree(ctx, changes)
 	if err != nil {
 		return
 	}
@@ -363,18 +365,35 @@ func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChang
 		addResult.Mode = Rebuild
 	}
 
-	err = ot.treeStorage.AddRawChangesSetHeads(addResult.Added, addResult.Heads)
-	if err != nil {
-		// rolling back all changes made to inmemory state
+	rollback := func() {
 		rebuildErr := ot.rebuildFromStorage(nil, nil)
 		if rebuildErr != nil {
 			log.Error("failed to rebuild after adding to storage", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
 		}
 	}
+
+	if updater != nil {
+		err = updater(ot, addResult.Mode)
+		if err != nil {
+			rollback()
+			return
+		}
+	}
+
+	err = ot.treeStorage.AddRawChangesSetHeads(addResult.Added, addResult.Heads)
+	if err != nil {
+		rollback()
+		return
+	}
+	ot.flusher.Flush(ot)
 	return
 }
 
-func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChangesPayload) (addResult AddResult, err error) {
+func (ot *objectTree) AddRawChanges(ctx context.Context, changesPayload RawChangesPayload) (addResult AddResult, err error) {
+	return ot.AddRawChangesWithUpdater(ctx, changesPayload, nil)
+}
+
+func (ot *objectTree) addChangesToTree(ctx context.Context, changesPayload RawChangesPayload) (addResult AddResult, err error) {
 	// resetting buffers
 	ot.newChangesBuf = ot.newChangesBuf[:0]
 	ot.notSeenIdxBuf = ot.notSeenIdxBuf[:0]
@@ -526,13 +545,6 @@ func (ot *objectTree) addRawChanges(ctx context.Context, changesPayload RawChang
 		}
 		return
 	}
-}
-
-func (ot *objectTree) Flush() error {
-	if ot.isDeleted {
-		return ErrDeleted
-	}
-	return ot.flusher.Flush(ot)
 }
 
 func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesAdded []*Change, rawChanges []*treechangeproto.RawTreeChangeWithId) (addResult AddResult, err error) {

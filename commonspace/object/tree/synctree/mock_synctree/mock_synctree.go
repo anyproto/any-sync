@@ -127,6 +127,21 @@ func (mr *MockSyncTreeMockRecorder) AddRawChangesFromPeer(arg0, arg1, arg2 any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChangesFromPeer", reflect.TypeOf((*MockSyncTree)(nil).AddRawChangesFromPeer), arg0, arg1, arg2)
 }
 
+// AddRawChangesWithUpdater mocks base method.
+func (m *MockSyncTree) AddRawChangesWithUpdater(arg0 context.Context, arg1 objecttree.RawChangesPayload, arg2 objecttree.Updater) (objecttree.AddResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddRawChangesWithUpdater", arg0, arg1, arg2)
+	ret0, _ := ret[0].(objecttree.AddResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddRawChangesWithUpdater indicates an expected call of AddRawChangesWithUpdater.
+func (mr *MockSyncTreeMockRecorder) AddRawChangesWithUpdater(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChangesWithUpdater", reflect.TypeOf((*MockSyncTree)(nil).AddRawChangesWithUpdater), arg0, arg1, arg2)
+}
+
 // ChangeInfo mocks base method.
 func (m *MockSyncTree) ChangeInfo() *treechangeproto.TreeChangeInfo {
 	m.ctrl.T.Helper()

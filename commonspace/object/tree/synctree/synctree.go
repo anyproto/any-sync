@@ -238,21 +238,23 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload objecttree.
 	if err = s.checkAlive(); err != nil {
 		return
 	}
-	res, err = s.ObjectTree.AddRawChanges(ctx, changesPayload)
+	res, err = s.ObjectTree.AddRawChangesWithUpdater(ctx, changesPayload, func(tree objecttree.ObjectTree, md objecttree.Mode) error {
+		if s.listener != nil {
+			switch md {
+			case objecttree.Nothing:
+				return nil
+			case objecttree.Append:
+				return s.listener.Update(s)
+			case objecttree.Rebuild:
+				return s.listener.Rebuild(s)
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		return
 	}
-	if s.listener != nil {
-		switch res.Mode {
-		case objecttree.Nothing:
-			return
-		case objecttree.Append:
-			s.listener.Update(s)
-		case objecttree.Rebuild:
-			s.listener.Rebuild(s)
-		}
-	}
-	s.flush()
+
 	if res.Mode != objecttree.Nothing {
 		if s.notifiable != nil {
 			s.notifiable.UpdateHeads(s.Id(), res.Heads)
@@ -338,16 +340,8 @@ func (s *syncTree) SyncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 func (s *syncTree) afterBuild() {
 	if s.listener != nil {
 		s.listener.Rebuild(s)
-		s.flush()
 	}
 	if s.notifiable != nil {
 		s.notifiable.UpdateHeads(s.Id(), s.Heads())
-	}
-}
-
-func (s *syncTree) flush() {
-	err := s.Flush()
-	if err != nil {
-		log.Warn("flush error", zap.Error(err))
 	}
 }
