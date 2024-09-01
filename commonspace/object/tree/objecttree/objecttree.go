@@ -29,7 +29,10 @@ var (
 	ErrNoAclHead         = errors.New("no acl head")
 )
 
-type Updater func(tree ObjectTree, md Mode) error
+type (
+	Updater         = func(tree ObjectTree, md Mode) error
+	ChangeValidator = func(change *treechangeproto.RawTreeChangeWithId) error
+)
 
 type AddResultSummary int
 
@@ -86,7 +89,7 @@ type ObjectTree interface {
 	Storage() treestorage.TreeStorage
 
 	AddContent(ctx context.Context, content SignableChangeContent) (AddResult, error)
-	AddContentWithValidator(ctx context.Context, content SignableChangeContent, validate func(change *treechangeproto.RawTreeChangeWithId) error) (AddResult, error)
+	AddContentWithValidator(ctx context.Context, content SignableChangeContent, validate ChangeValidator) (AddResult, error)
 	AddRawChanges(ctx context.Context, changes RawChangesPayload) (AddResult, error)
 	AddRawChangesWithUpdater(ctx context.Context, changes RawChangesPayload, updater Updater) (AddResult, error)
 
