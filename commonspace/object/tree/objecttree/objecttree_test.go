@@ -879,6 +879,43 @@ func TestObjectTree(t *testing.T) {
 		}
 	})
 
+	t.Run("update failed, nothing saved", func(t *testing.T) {
+		ctx := prepareTreeContext(t, aclList)
+		treeStorage := ctx.treeStorage
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree.(*objectTree)
+		objTree.flusher = &newChangeFlusher{}
+
+		rawChanges := []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("1", aclList.Head().Id, "0", false, "0"),
+			changeCreator.CreateRaw("2", aclList.Head().Id, "0", false, "1"),
+			changeCreator.CreateRaw("3", aclList.Head().Id, "0", true, "2"),
+			changeCreator.CreateRaw("4", aclList.Head().Id, "3", false, "3"),
+		}
+		payload := RawChangesPayload{
+			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
+			RawChanges: rawChanges,
+		}
+
+		_, err := objTree.AddRawChangesWithUpdater(context.Background(), payload, func(tree ObjectTree, md Mode) error {
+			return fmt.Errorf("some error")
+		})
+		require.Equal(t, fmt.Errorf("some error"), err)
+
+		// check tree heads
+		require.Equal(t, []string{"0"}, objTree.Heads())
+
+		// check storage
+		heads, _ := treeStorage.Heads()
+		require.Equal(t, []string{"0"}, heads)
+
+		require.Equal(t, "0", objTree.Root().Id)
+		for _, ch := range rawChanges {
+			_, err := treeStorage.GetRawChange(context.Background(), ch.Id)
+			require.Error(t, err)
+		}
+	})
+
 	t.Run("snapshot path", func(t *testing.T) {
 		ctx := prepareTreeContext(t, aclList)
 		changeCreator := ctx.changeCreator
