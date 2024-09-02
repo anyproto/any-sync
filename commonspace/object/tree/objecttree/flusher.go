@@ -42,6 +42,7 @@ func (n *newChangeFlusher) Flush(t *objectTree) error {
 	for _, ch := range n.newChanges {
 		ch.IsNew = false
 	}
+	n.newChanges = n.newChanges[:0]
 	t.tree.reduceTree()
 	return nil
 }
