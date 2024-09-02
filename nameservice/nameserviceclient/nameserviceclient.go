@@ -42,6 +42,7 @@ type AnyNsClientService interface {
 	AdminFundUserAccount(ctx context.Context, in *nsp.AdminFundUserAccountRequestSigned) (out *nsp.OperationResponse, err error)
 
 	AdminRegisterName(ctx context.Context, in *nsp.NameRegisterRequestSigned) (out *nsp.OperationResponse, err error)
+	AdminRenewName(ctx context.Context, in *nsp.NameRenewRequestSigned) (out *nsp.OperationResponse, err error)
 
 	GetOperation(ctx context.Context, in *nsp.GetOperationStatusRequest) (out *nsp.OperationResponse, err error)
 	CreateOperation(ctx context.Context, in *nsp.CreateUserOperationRequestSigned) (out *nsp.OperationResponse, err error)
@@ -198,6 +199,16 @@ func (s *service) AdminFundUserAccount(ctx context.Context, in *nsp.AdminFundUse
 func (s *service) AdminRegisterName(ctx context.Context, in *nsp.NameRegisterRequestSigned) (out *nsp.OperationResponse, err error) {
 	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
 		if out, err = cl.AdminNameRegisterSigned(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) AdminRenewName(ctx context.Context, in *nsp.NameRenewRequestSigned) (out *nsp.OperationResponse, err error) {
+	err = s.doClient(ctx, func(cl nsp.DRPCAnynsClient) error {
+		if out, err = cl.AdminNameRenewSigned(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil

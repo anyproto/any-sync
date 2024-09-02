@@ -132,6 +132,34 @@ message NameRegisterRequestSigned {
   bytes signature = 2; 
 }
 
+message NameRenewRequest {
+  string fullName = 1;
+
+  // A content hash attached to this name
+  // This should not be empty!
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
+  string ownerAnyAddress = 2;
+
+  // An Ethereum address that owns that name
+  string ownerEthAddress = 3;
+
+  // if false -> name ownership will belong to ownerEthAddress
+  // if true -> name ownership will belong to SCW of ownerEthAddress (AccountAbstraction)
+  bool renewToSmartContractWallet = 4;
+
+  // How many months to register the name for
+  uint32 renewPeriodMonths = 5;
+}
+
+message NameRenewRequestSigned {
+  // NameRenewRequest struct
+  bytes payload = 1;
+
+  // payload signed by payload.ownerEthAddress 
+  bytes signature = 2;
+}
+
 message NameRegisterForSpaceRequest {
   string fullName = 1;
 

@@ -5,6 +5,7 @@
 //
 //	mockgen -source nameservice/nameserviceclient/nameserviceclient.go
 //
+
 // Package mock_nameserviceclient is a generated GoMock package.
 package mock_nameserviceclient
 
@@ -209,6 +210,21 @@ func (m *MockAnyNsClientService) AdminRegisterName(ctx context.Context, in *name
 func (mr *MockAnyNsClientServiceMockRecorder) AdminRegisterName(ctx, in any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdminRegisterName", reflect.TypeOf((*MockAnyNsClientService)(nil).AdminRegisterName), ctx, in)
+}
+
+// AdminRenewName mocks base method.
+func (m *MockAnyNsClientService) AdminRenewName(ctx context.Context, in *nameserviceproto.NameRenewRequestSigned) (*nameserviceproto.OperationResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AdminRenewName", ctx, in)
+	ret0, _ := ret[0].(*nameserviceproto.OperationResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AdminRenewName indicates an expected call of AdminRenewName.
+func (mr *MockAnyNsClientServiceMockRecorder) AdminRenewName(ctx, in any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdminRenewName", reflect.TypeOf((*MockAnyNsClientService)(nil).AdminRenewName), ctx, in)
 }
 
 // BatchGetNameByAddress mocks base method.

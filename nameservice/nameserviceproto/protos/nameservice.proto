@@ -85,6 +85,7 @@ service Anyns {
   rpc BatchGetNameByAnyId(BatchNameByAnyIdRequest) returns (BatchNameByAddressResponse) {}
 
   // Register new name for the user (on behalf of the user)
-  // Anytype CAN only register names for users, but can not transfer or update them!
+  // Anytype CAN only register names for users, but can not transfer!
   rpc AdminNameRegisterSigned(NameRegisterRequestSigned) returns (OperationResponse) {}
+  rpc AdminNameRenewSigned(NameRenewRequestSigned) returns (OperationResponse) {}
 }
