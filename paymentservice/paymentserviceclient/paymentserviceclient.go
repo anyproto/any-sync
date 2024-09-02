@@ -9,6 +9,7 @@ import (
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/nodeconf"
+	"go.uber.org/zap"
 
 	pp "github.com/anyproto/any-sync/paymentservice/paymentserviceproto"
 )
@@ -64,11 +65,15 @@ func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProc
 	// please use "paymentProcessingNode" type of node in the config (in the network.nodes array)
 	peer, err := s.pool.GetOneOf(ctx, s.nodeconf.PaymentProcessingNodePeers())
 	if err != nil {
+		log.Error("failed to get a paymentnode peer. maybe you're on a custom network", zap.Error(err))
 		return err
 	}
 
+	log.Debug("trying to connect to paymentProcessingNode peer: ", zap.Any("peer", peer))
+
 	dc, err := peer.AcquireDrpcConn(ctx)
 	if err != nil {
+		log.Error("failed to acquire a DRPC connection to paymentnode", zap.Error(err))
 		return err
 	}
 	defer peer.ReleaseDrpcConn(dc)

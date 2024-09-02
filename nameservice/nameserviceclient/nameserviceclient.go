@@ -77,14 +77,16 @@ func (s *service) doClient(ctx context.Context, fn func(cl nsp.DRPCAnynsClient) 
 	// it will try to connect to the Naming Node
 	// please enable "namingNode" type of node in the config (in the network.nodes array)
 	peer, err := s.pool.GetOneOf(ctx, s.nodeconf.NamingNodePeers())
-	log.Info("trying to connect to namingNode peer: ", zap.Any("peer", peer))
-
 	if err != nil {
+		log.Error("failed to get a namingnode peer. maybe you're on a custom network", zap.Error(err))
 		return err
 	}
 
+	log.Debug("trying to connect to namingNode peer: ", zap.Any("peer", peer))
+
 	dc, err := peer.AcquireDrpcConn(ctx)
 	if err != nil {
+		log.Error("failed to acquire a DRPC connection to namingnode", zap.Error(err))
 		return err
 	}
 	defer peer.ReleaseDrpcConn(dc)
