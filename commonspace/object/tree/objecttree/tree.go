@@ -408,8 +408,14 @@ func (t *Tree) iterate(start *Change, f func(c *Change) (isContinue bool)) {
 	it.iterate(start, f)
 }
 
-func (t *Tree) Iterate(startId string, f func(c *Change) (isContinue bool)) {
-	t.iterate(t.attached[startId], f)
+func (t *Tree) iterateSkip(start *Change, f func(c *Change) (isContinue bool)) {
+	it := newIterator()
+	defer freeIterator(it)
+	it.iterateSkip(t.root, start, true, f)
+}
+
+func (t *Tree) IterateSkip(startId string, f func(c *Change) (isContinue bool)) {
+	t.iterateSkip(t.attached[startId], f)
 }
 
 func (t *Tree) IterateBranching(startId string, f func(c *Change, branchLevel int) (isContinue bool)) {
@@ -464,7 +470,7 @@ func (t *Tree) HeadsChanges() []*Change {
 
 func (t *Tree) String() string {
 	var buf = bytes.NewBuffer(nil)
-	t.Iterate(t.RootId(), func(c *Change) (isContinue bool) {
+	t.IterateSkip(t.RootId(), func(c *Change) (isContinue bool) {
 		buf.WriteString(c.Id)
 		if len(c.Next) > 1 {
 			buf.WriteString("-<")

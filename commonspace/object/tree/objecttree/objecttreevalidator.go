@@ -63,7 +63,7 @@ func newTreeValidator(validateKeys bool, filterChanges bool) ObjectTreeValidator
 }
 
 func (v *objectTreeValidator) ValidateFullTree(tree *Tree, aclList list.AclList) (err error) {
-	tree.Iterate(tree.RootId(), func(c *Change) (isContinue bool) {
+	tree.IterateSkip(tree.RootId(), func(c *Change) (isContinue bool) {
 		err = v.validateChange(tree, aclList, c)
 		return err == nil
 	})

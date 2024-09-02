@@ -600,7 +600,7 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 		return
 	}
 	if convert == nil {
-		ot.tree.Iterate(id, iterate)
+		ot.tree.IterateSkip(id, iterate)
 		return
 	}
 	decrypt := func(c *Change) (decrypted []byte, err error) {
@@ -619,7 +619,7 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 		return
 	}
 
-	ot.tree.Iterate(id, func(c *Change) (isContinue bool) {
+	ot.tree.IterateSkip(id, func(c *Change) (isContinue bool) {
 		var model any
 		// if already saved as a model
 		if c.Model != nil {
