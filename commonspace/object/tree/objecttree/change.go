@@ -30,6 +30,7 @@ type Change struct {
 	DataType    string
 	IsSnapshot  bool
 	IsDerived   bool
+	IsNew       bool
 
 	// iterator helpers
 	visited          bool

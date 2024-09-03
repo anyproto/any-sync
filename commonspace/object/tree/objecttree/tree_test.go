@@ -193,7 +193,7 @@ func TestTree_CheckRootReduce(t *testing.T) {
 			tr.reduceTree()
 			assert.Equal(t, "10", tr.RootId())
 			var res []string
-			tr.Iterate(tr.RootId(), func(c *Change) (isContinue bool) {
+			tr.IterateSkip(tr.RootId(), func(c *Change) (isContinue bool) {
 				res = append(res, c.Id)
 				return true
 			})
@@ -228,7 +228,7 @@ func TestTree_CheckRootReduce(t *testing.T) {
 			tr.reduceTree()
 			assert.Equal(t, "10", tr.RootId())
 			var res []string
-			tr.Iterate(tr.RootId(), func(c *Change) (isContinue bool) {
+			tr.IterateSkip(tr.RootId(), func(c *Change) (isContinue bool) {
 				res = append(res, c.Id)
 				return true
 			})
@@ -279,16 +279,39 @@ func TestTree_Iterate(t *testing.T) {
 			newChange("last", "0", "10"),
 		)
 		var res []string
-		tr.Iterate("0", func(c *Change) (isContinue bool) {
+		tr.IterateSkip("0", func(c *Change) (isContinue bool) {
 			res = append(res, c.Id)
 			return true
 		})
 		res = res[:0]
-		tr.Iterate("0", func(c *Change) (isContinue bool) {
+		tr.IterateSkip("0", func(c *Change) (isContinue bool) {
 			res = append(res, c.Id)
 			return true
 		})
 		assert.Equal(t, []string{"0", "1", "1.1", "1.2", "1.4", "1.3", "1.3.1", "1.2+3", "1.2+3.1", "10", "last"}, res)
+	})
+	t.Run("complex tree with diverging branches", func(t *testing.T) {
+		tr := new(Tree)
+		tr.Add(
+			newSnapshot("0", ""),
+			newChange("1", "0", "0"),
+			newChange("2", "0", "0"),
+			newChange("2.1", "0", "2"),
+			newChange("2.2", "0", "2"),
+			newChange("2.4", "0", "2.2"),
+			newChange("2.3", "0", "2"),
+			newChange("2.3.1", "0", "2.3"),
+			newChange("2.2+3", "0", "2.4", "2.3.1"),
+			newChange("2.2+3.1", "0", "2.2+3"),
+			newChange("10", "0", "2.2+3.1", "2.1"),
+			newChange("last", "0", "10"),
+		)
+		var res []string
+		tr.IterateSkip("1", func(c *Change) (isContinue bool) {
+			res = append(res, c.Id)
+			return true
+		})
+		assert.Equal(t, []string{"1", "2", "2.1", "2.2", "2.4", "2.3", "2.3.1", "2.2+3", "2.2+3.1", "10", "last"}, res)
 	})
 }
 
@@ -336,7 +359,7 @@ func BenchmarkTree_IterateLinear(b *testing.B) {
 	}
 	b.Run("add linear", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			tr.Iterate("0", func(c *Change) (isContinue bool) {
+			tr.IterateSkip("0", func(c *Change) (isContinue bool) {
 				return true
 			})
 		}

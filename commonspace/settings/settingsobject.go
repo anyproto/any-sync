@@ -119,15 +119,17 @@ func (s *settingsObject) updateIds(tr objecttree.ObjectTree) {
 }
 
 // Update is called as part of UpdateListener interface
-func (s *settingsObject) Update(tr objecttree.ObjectTree) {
+func (s *settingsObject) Update(tr objecttree.ObjectTree) error {
 	s.updateIds(tr)
+	return nil
 }
 
 // Rebuild is called as part of UpdateListener interface (including when the object is built for the first time, e.g. on Init call)
-func (s *settingsObject) Rebuild(tr objecttree.ObjectTree) {
+func (s *settingsObject) Rebuild(tr objecttree.ObjectTree) error {
 	// at initial build "s" may not contain the object tree, so it is safer to provide it from the function parameter
 	s.state = nil
 	s.updateIds(tr)
+	return nil
 }
 
 func (s *settingsObject) Init(ctx context.Context) (err error) {

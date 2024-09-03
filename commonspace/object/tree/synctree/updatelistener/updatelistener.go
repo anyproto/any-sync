@@ -6,6 +6,6 @@ import (
 )
 
 type UpdateListener interface {
-	Update(tree objecttree.ObjectTree)
-	Rebuild(tree objecttree.ObjectTree)
+	Update(tree objecttree.ObjectTree) error
+	Rebuild(tree objecttree.ObjectTree) error
 }

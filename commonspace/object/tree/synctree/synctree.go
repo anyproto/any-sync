@@ -13,6 +13,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
@@ -166,10 +167,14 @@ func (s *syncTree) IterateRoot(convert objecttree.ChangeConvertFunc, iterate obj
 }
 
 func (s *syncTree) AddContent(ctx context.Context, content objecttree.SignableChangeContent) (res objecttree.AddResult, err error) {
+	return s.AddContentWithValidator(ctx, content, nil)
+}
+
+func (s *syncTree) AddContentWithValidator(ctx context.Context, content objecttree.SignableChangeContent, validate func(change *treechangeproto.RawTreeChangeWithId) error) (res objecttree.AddResult, err error) {
 	if err = s.checkAlive(); err != nil {
 		return
 	}
-	res, err = s.ObjectTree.AddContent(ctx, content)
+	res, err = s.ObjectTree.AddContentWithValidator(ctx, content, validate)
 	if err != nil {
 		return
 	}
@@ -233,20 +238,23 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload objecttree.
 	if err = s.checkAlive(); err != nil {
 		return
 	}
-	res, err = s.ObjectTree.AddRawChanges(ctx, changesPayload)
+	res, err = s.ObjectTree.AddRawChangesWithUpdater(ctx, changesPayload, func(tree objecttree.ObjectTree, md objecttree.Mode) error {
+		if s.listener != nil {
+			switch md {
+			case objecttree.Nothing:
+				return nil
+			case objecttree.Append:
+				return s.listener.Update(s)
+			case objecttree.Rebuild:
+				return s.listener.Rebuild(s)
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		return
 	}
-	if s.listener != nil {
-		switch res.Mode {
-		case objecttree.Nothing:
-			return
-		case objecttree.Append:
-			s.listener.Update(s)
-		case objecttree.Rebuild:
-			s.listener.Rebuild(s)
-		}
-	}
+
 	if res.Mode != objecttree.Nothing {
 		if s.notifiable != nil {
 			s.notifiable.UpdateHeads(s.Id(), res.Heads)

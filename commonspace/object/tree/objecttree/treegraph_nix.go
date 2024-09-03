@@ -21,7 +21,7 @@ import (
 func (t *Tree) Graph(parser DescriptionParser) (data string, err error) {
 	var order = make(map[string]string)
 	var seq = 0
-	t.Iterate(t.RootId(), func(c *Change) (isContinue bool) {
+	t.IterateSkip(t.RootId(), func(c *Change) (isContinue bool) {
 		v := order[c.Id]
 		if v == "" {
 			order[c.Id] = fmt.Sprint(seq)
