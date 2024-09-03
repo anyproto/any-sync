@@ -1773,6 +1773,14 @@ func (m *GetRefCodeMyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return b[:n], nil
 	}
 }
+func (m *GetRefCodeMyRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *GetRefCodeMyRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetRefCodeMyRequest.Merge(m, src)
 }
@@ -1819,6 +1827,14 @@ func (m *GetRefCodeMyRequestSigned) XXX_Marshal(b []byte, deterministic bool) ([
 		}
 		return b[:n], nil
 	}
+}
+func (m *GetRefCodeMyRequestSigned) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *GetRefCodeMyRequestSigned) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetRefCodeMyRequestSigned.Merge(m, src)
@@ -1872,6 +1888,14 @@ func (m *GetRefCodeMyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		}
 		return b[:n], nil
 	}
+}
+func (m *GetRefCodeMyResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *GetRefCodeMyResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetRefCodeMyResponse.Merge(m, src)
@@ -1927,6 +1951,14 @@ func (m *SetRefCodeOfMyInviterRequest) XXX_Marshal(b []byte, deterministic bool)
 		return b[:n], nil
 	}
 }
+func (m *SetRefCodeOfMyInviterRequest) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *SetRefCodeOfMyInviterRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SetRefCodeOfMyInviterRequest.Merge(m, src)
 }
@@ -1981,6 +2013,14 @@ func (m *SetRefCodeOfMyInviterRequestSigned) XXX_Marshal(b []byte, deterministic
 		return b[:n], nil
 	}
 }
+func (m *SetRefCodeOfMyInviterRequestSigned) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 func (m *SetRefCodeOfMyInviterRequestSigned) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SetRefCodeOfMyInviterRequestSigned.Merge(m, src)
 }
@@ -2030,6 +2070,14 @@ func (m *SetRefCodeOfMyInviterResponse) XXX_Marshal(b []byte, deterministic bool
 		}
 		return b[:n], nil
 	}
+}
+func (m *SetRefCodeOfMyInviterResponse) XXX_MarshalAppend(b []byte, newLen int) ([]byte, error) {
+	b = b[:newLen]
+	_, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 func (m *SetRefCodeOfMyInviterResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SetRefCodeOfMyInviterResponse.Merge(m, src)
