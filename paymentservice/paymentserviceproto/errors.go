@@ -29,4 +29,6 @@ var (
 	ErrAppleInvalidReceipt       = errGroup.Register(errors.New("invalid AppStore receipt"), uint64(ErrorCodes_AppleInvalidReceipt))
 	ErrApplePurchaseRegistration = errGroup.Register(errors.New("error on purchase registration"), uint64(ErrorCodes_ApplePurchaseRegistration))
 	ErrAppleSubscriptionRenew    = errGroup.Register(errors.New("error on subscription renew"), uint64(ErrorCodes_AppleSubscriptionRenew))
+	ErrRefCodeAlreadySet         = errGroup.Register(errors.New("ref code was already set by you"), uint64(ErrorCodes_RefCodeAlreadySet))
+	ErrRefCodeInvalid            = errGroup.Register(errors.New("ref code is invalid"), uint64(ErrorCodes_RefCodeInvalid))
 )

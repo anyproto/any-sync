@@ -49,6 +49,8 @@ type DRPCAnyPaymentProcessingClient interface {
 	VerifyEmail(ctx context.Context, in *VerifyEmailRequestSigned) (*VerifyEmailResponse, error)
 	GetAllTiers(ctx context.Context, in *GetTiersRequestSigned) (*GetTiersResponse, error)
 	VerifyAppStoreReceipt(ctx context.Context, in *VerifyAppStoreReceiptRequestSigned) (*VerifyAppStoreReceiptResponse, error)
+	GetRefCodeMy(ctx context.Context, in *GetRefCodeMyRequestSigned) (*GetRefCodeMyResponse, error)
+	SetRefCodeOfMyInviter(ctx context.Context, in *SetRefCodeOfMyInviterRequestSigned) (*SetRefCodeOfMyInviterResponse, error)
 }
 
 type drpcAnyPaymentProcessingClient struct {
@@ -142,6 +144,24 @@ func (c *drpcAnyPaymentProcessingClient) VerifyAppStoreReceipt(ctx context.Conte
 	return out, nil
 }
 
+func (c *drpcAnyPaymentProcessingClient) GetRefCodeMy(ctx context.Context, in *GetRefCodeMyRequestSigned) (*GetRefCodeMyResponse, error) {
+	out := new(GetRefCodeMyResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing/GetRefCodeMy", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *drpcAnyPaymentProcessingClient) SetRefCodeOfMyInviter(ctx context.Context, in *SetRefCodeOfMyInviterRequestSigned) (*SetRefCodeOfMyInviterResponse, error) {
+	out := new(SetRefCodeOfMyInviterResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing/SetRefCodeOfMyInviter", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCAnyPaymentProcessingServer interface {
 	GetSubscriptionStatus(context.Context, *GetSubscriptionRequestSigned) (*GetSubscriptionResponse, error)
 	IsNameValid(context.Context, *IsNameValidRequest) (*IsNameValidResponse, error)
@@ -152,6 +172,8 @@ type DRPCAnyPaymentProcessingServer interface {
 	VerifyEmail(context.Context, *VerifyEmailRequestSigned) (*VerifyEmailResponse, error)
 	GetAllTiers(context.Context, *GetTiersRequestSigned) (*GetTiersResponse, error)
 	VerifyAppStoreReceipt(context.Context, *VerifyAppStoreReceiptRequestSigned) (*VerifyAppStoreReceiptResponse, error)
+	GetRefCodeMy(context.Context, *GetRefCodeMyRequestSigned) (*GetRefCodeMyResponse, error)
+	SetRefCodeOfMyInviter(context.Context, *SetRefCodeOfMyInviterRequestSigned) (*SetRefCodeOfMyInviterResponse, error)
 }
 
 type DRPCAnyPaymentProcessingUnimplementedServer struct{}
@@ -192,9 +214,17 @@ func (s *DRPCAnyPaymentProcessingUnimplementedServer) VerifyAppStoreReceipt(cont
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCAnyPaymentProcessingUnimplementedServer) GetRefCodeMy(context.Context, *GetRefCodeMyRequestSigned) (*GetRefCodeMyResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
+func (s *DRPCAnyPaymentProcessingUnimplementedServer) SetRefCodeOfMyInviter(context.Context, *SetRefCodeOfMyInviterRequestSigned) (*SetRefCodeOfMyInviterResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCAnyPaymentProcessingDescription struct{}
 
-func (DRPCAnyPaymentProcessingDescription) NumMethods() int { return 9 }
+func (DRPCAnyPaymentProcessingDescription) NumMethods() int { return 11 }
 
 func (DRPCAnyPaymentProcessingDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -279,6 +309,24 @@ func (DRPCAnyPaymentProcessingDescription) Method(n int) (string, drpc.Encoding,
 						in1.(*VerifyAppStoreReceiptRequestSigned),
 					)
 			}, DRPCAnyPaymentProcessingServer.VerifyAppStoreReceipt, true
+	case 9:
+		return "/AnyPaymentProcessing/GetRefCodeMy", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessingServer).
+					GetRefCodeMy(
+						ctx,
+						in1.(*GetRefCodeMyRequestSigned),
+					)
+			}, DRPCAnyPaymentProcessingServer.GetRefCodeMy, true
+	case 10:
+		return "/AnyPaymentProcessing/SetRefCodeOfMyInviter", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessingServer).
+					SetRefCodeOfMyInviter(
+						ctx,
+						in1.(*SetRefCodeOfMyInviterRequestSigned),
+					)
+			}, DRPCAnyPaymentProcessingServer.SetRefCodeOfMyInviter, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -426,6 +474,38 @@ type drpcAnyPaymentProcessing_VerifyAppStoreReceiptStream struct {
 }
 
 func (x *drpcAnyPaymentProcessing_VerifyAppStoreReceiptStream) SendAndClose(m *VerifyAppStoreReceiptResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing_GetRefCodeMyStream interface {
+	drpc.Stream
+	SendAndClose(*GetRefCodeMyResponse) error
+}
+
+type drpcAnyPaymentProcessing_GetRefCodeMyStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing_GetRefCodeMyStream) SendAndClose(m *GetRefCodeMyResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing_SetRefCodeOfMyInviterStream interface {
+	drpc.Stream
+	SendAndClose(*SetRefCodeOfMyInviterResponse) error
+}
+
+type drpcAnyPaymentProcessing_SetRefCodeOfMyInviterStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing_SetRefCodeOfMyInviterStream) SendAndClose(m *SetRefCodeOfMyInviterResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice_proto{}); err != nil {
 		return err
 	}
