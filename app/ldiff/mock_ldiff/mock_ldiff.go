@@ -265,20 +265,6 @@ func (mr *MockDiffContainerMockRecorder) DiffTypeCheck(arg0, arg1 any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiffTypeCheck", reflect.TypeOf((*MockDiffContainer)(nil).DiffTypeCheck), arg0, arg1)
 }
 
-// InitialDiff mocks base method.
-func (m *MockDiffContainer) InitialDiff() ldiff.Diff {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InitialDiff")
-	ret0, _ := ret[0].(ldiff.Diff)
-	return ret0
-}
-
-// InitialDiff indicates an expected call of InitialDiff.
-func (mr *MockDiffContainerMockRecorder) InitialDiff() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitialDiff", reflect.TypeOf((*MockDiffContainer)(nil).InitialDiff))
-}
-
 // PrecalculatedDiff mocks base method.
 func (m *MockDiffContainer) PrecalculatedDiff() ldiff.Diff {
 	m.ctrl.T.Helper()

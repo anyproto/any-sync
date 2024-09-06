@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 	"math"
 
 	"github.com/anyproto/any-sync/app/ldiff"
@@ -60,8 +61,8 @@ func (r *remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffCont
 		diff = diffContainer.PrecalculatedDiff()
 		needsSync, err = checkHash(diff)
 	case spacesyncproto.DiffType_Initial:
-		diff = diffContainer.InitialDiff()
-		needsSync, err = checkHash(diff)
+		err = fmt.Errorf("Unexpected DiffType: %s", req.DiffType.String())
+		return
 	}
 	return
 }

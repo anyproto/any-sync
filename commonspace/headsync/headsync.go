@@ -3,6 +3,7 @@ package headsync
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.uber.org/zap"
@@ -109,7 +110,8 @@ func (h *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.H
 	if req.DiffType == spacesyncproto.DiffType_Precalculated {
 		return HandleRangeRequest(ctx, h.diffContainer.PrecalculatedDiff(), req)
 	} else {
-		return HandleRangeRequest(ctx, h.diffContainer.InitialDiff(), req)
+		err = fmt.Errorf("Unexpected DiffType: %s", req.DiffType.String())
+		return
 	}
 }
 
@@ -146,7 +148,9 @@ func (h *headSync) RemoveObjects(ids []string) {
 }
 
 func (h *headSync) Close(ctx context.Context) (err error) {
-	h.storage.WriteOldSpaceHash(h.diffContainer.InitialDiff().Hash())
+	// tolya:
+	// only initial diff is used here: should we remove WriteOldSpaceHash?
+	// h.storage.WriteOldSpaceHash(h.diffContainer.InitialDiff().Hash())
 	h.periodicSync.Close()
 	return
 }
@@ -175,8 +179,5 @@ func (h *headSync) fillDiff(objectIds []string) {
 	h.diffContainer.Set(els...)
 	if err := h.storage.WriteSpaceHash(h.diffContainer.PrecalculatedDiff().Hash()); err != nil {
 		h.log.Error("can't write space hash", zap.Error(err))
-	}
-	if err := h.storage.WriteOldSpaceHash(h.diffContainer.InitialDiff().Hash()); err != nil {
-		h.log.Error("can't write old space hash", zap.Error(err))
 	}
 }

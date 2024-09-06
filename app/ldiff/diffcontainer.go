@@ -8,19 +8,13 @@ type RemoteTypeChecker interface {
 
 type DiffContainer interface {
 	DiffTypeCheck(ctx context.Context, typeChecker RemoteTypeChecker) (needsSync bool, diff Diff, err error)
-	InitialDiff() Diff
 	PrecalculatedDiff() Diff
 	Set(elements ...Element)
 	RemoveId(id string) error
 }
 
 type diffContainer struct {
-	initial       *olddiff
 	precalculated *diff
-}
-
-func (d *diffContainer) InitialDiff() Diff {
-	return d.initial
 }
 
 func (d *diffContainer) PrecalculatedDiff() Diff {
@@ -28,12 +22,10 @@ func (d *diffContainer) PrecalculatedDiff() Diff {
 }
 
 func (d *diffContainer) Set(elements ...Element) {
-	defer d.initial.markHashDirty()
 	d.precalculated.Set(elements...)
 }
 
 func (d *diffContainer) RemoveId(id string) error {
-	defer d.initial.markHashDirty()
 	return d.precalculated.RemoveId(id)
 }
 
@@ -43,10 +35,7 @@ func (d *diffContainer) DiffTypeCheck(ctx context.Context, typeChecker RemoteTyp
 
 func NewDiffContainer(divideFactor, compareThreshold int) DiffContainer {
 	newDiff := newDiff(divideFactor, compareThreshold)
-	// this was for old diffs
-	oldDiff := newOldDiff(16, 16, newDiff.sl, &newDiff.mu)
 	return &diffContainer{
-		initial:       oldDiff,
 		precalculated: newDiff,
 	}
 }
