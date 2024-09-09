@@ -137,7 +137,7 @@ func (fx *headSyncFixture) init(t *testing.T) {
 	fx.diffSyncerMock.EXPECT().Init()
 	err := fx.headSync.Init(fx.app)
 	require.NoError(t, err)
-	fx.headSync.diffContainer = fx.diffContainerMock
+
 }
 
 func (fx *headSyncFixture) stop() {

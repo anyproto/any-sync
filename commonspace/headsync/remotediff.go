@@ -68,6 +68,7 @@ func (r *remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldif
 	return
 }
 
+// Passes lock by value: contains sync.RWMutex
 func HandleRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
 	ranges := make([]ldiff.Range, 0, len(req.Ranges))
 	// basically we gather data applicable for both diffs

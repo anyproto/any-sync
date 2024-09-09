@@ -14,7 +14,7 @@ import (
 )
 
 func TestDiff_fillRange(t *testing.T) {
-	d := New(4, 4).(*diff)
+	d := New(4, 4)
 	for i := 0; i < 10; i++ {
 		el := Element{
 			Id:   fmt.Sprint(i),
@@ -361,8 +361,7 @@ func printBestParams() {
 			})
 		}
 		d.Set(els...)
-		df := d.(*diff)
-		for _, rng := range df.ranges.ranges {
+		for _, rng := range d.ranges.ranges {
 			if rng.elements == 0 {
 				zeroEls++
 			}
@@ -371,7 +370,7 @@ func printBestParams() {
 			}
 			avgLevel += rng.level
 		}
-		total = len(df.ranges.ranges)
+		total = len(d.ranges.ranges)
 		avgLevel = avgLevel / total
 		return
 	}
