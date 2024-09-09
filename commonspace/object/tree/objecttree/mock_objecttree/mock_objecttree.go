@@ -104,7 +104,7 @@ func (mr *MockObjectTreeMockRecorder) AddRawChanges(arg0, arg1 any) *gomock.Call
 }
 
 // AddRawChangesWithUpdater mocks base method.
-func (m *MockObjectTree) AddRawChangesWithUpdater(arg0 context.Context, arg1 objecttree.RawChangesPayload, arg2 objecttree.Updater) (objecttree.AddResult, error) {
+func (m *MockObjectTree) AddRawChangesWithUpdater(arg0 context.Context, arg1 objecttree.RawChangesPayload, arg2 func(objecttree.ObjectTree, objecttree.Mode) error) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddRawChangesWithUpdater", arg0, arg1, arg2)
 	ret0, _ := ret[0].(objecttree.AddResult)
@@ -203,20 +203,6 @@ func (m *MockObjectTree) Delete() error {
 func (mr *MockObjectTreeMockRecorder) Delete() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockObjectTree)(nil).Delete))
-}
-
-// Flush mocks base method.
-func (m *MockObjectTree) Flush() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Flush")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Flush indicates an expected call of Flush.
-func (mr *MockObjectTreeMockRecorder) Flush() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flush", reflect.TypeOf((*MockObjectTree)(nil).Flush))
 }
 
 // GetChange mocks base method.

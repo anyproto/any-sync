@@ -143,11 +143,10 @@ func TestDiffSyncer(t *testing.T) {
 		newHeads := []string{"h1", "h2"}
 		hash := "hash"
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
-		fx.diffContainerMock.EXPECT().Set(ldiff.Element{
+		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   newId,
 			Head: concatStrings(newHeads),
 		})
-		fx.diffContainerMock.EXPECT().PrecalculatedDiff().Return(fx.diffMock)
 		fx.diffMock.EXPECT().Hash().Return(hash)
 		fx.deletionStateMock.EXPECT().Exists(newId).Return(false)
 		fx.storageMock.EXPECT().WriteSpaceHash(hash)
