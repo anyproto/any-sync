@@ -249,22 +249,6 @@ func (m *MockDiffContainer) EXPECT() *MockDiffContainerMockRecorder {
 	return m.recorder
 }
 
-// DiffTypeCheck mocks base method.
-func (m *MockDiffContainer) DiffTypeCheck(arg0 context.Context, arg1 ldiff.RemoteTypeChecker) (bool, ldiff.Diff, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DiffTypeCheck", arg0, arg1)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(ldiff.Diff)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// DiffTypeCheck indicates an expected call of DiffTypeCheck.
-func (mr *MockDiffContainerMockRecorder) DiffTypeCheck(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiffTypeCheck", reflect.TypeOf((*MockDiffContainer)(nil).DiffTypeCheck), arg0, arg1)
-}
-
 // PrecalculatedDiff mocks base method.
 func (m *MockDiffContainer) PrecalculatedDiff() ldiff.Diff {
 	m.ctrl.T.Helper()

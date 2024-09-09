@@ -1,11 +1,7 @@
 package headsync
 
 import (
-	"bytes"
 	"context"
-	"encoding/hex"
-	"fmt"
-	"math"
 
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -16,7 +12,6 @@ type Client interface {
 }
 
 type RemoteDiff interface {
-	ldiff.RemoteTypeChecker
 	ldiff.Remote
 }
 
@@ -31,40 +26,6 @@ type remote struct {
 	spaceId  string
 	client   Client
 	diffType spacesyncproto.DiffType
-}
-
-// DiffTypeCheck checks which type of diff should we use
-func (r *remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffContainer) (needsSync bool, diff ldiff.Diff, err error) {
-	req := &spacesyncproto.HeadSyncRequest{
-		SpaceId:  r.spaceId,
-		DiffType: spacesyncproto.DiffType_Precalculated,
-		Ranges:   []*spacesyncproto.HeadSyncRange{{From: 0, To: math.MaxUint64}},
-	}
-	resp, err := r.client.HeadSync(ctx, req)
-	if err != nil {
-		return
-	}
-	needsSync = true
-	checkHash := func(diff ldiff.Diff) (bool, error) {
-		hashB, err := hex.DecodeString(diff.Hash())
-		if err != nil {
-			return false, err
-		}
-		if len(resp.Results) != 0 && bytes.Equal(hashB, resp.Results[0].Hash) {
-			return false, nil
-		}
-		return true, nil
-	}
-	r.diffType = resp.DiffType
-	switch resp.DiffType {
-	case spacesyncproto.DiffType_Precalculated:
-		diff = diffContainer.PrecalculatedDiff()
-		needsSync, err = checkHash(diff)
-	case spacesyncproto.DiffType_Initial:
-		err = fmt.Errorf("Unexpected DiffType: %s", req.DiffType.String())
-		return
-	}
-	return
 }
 
 func (r *remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error) {
@@ -143,6 +104,8 @@ func HandleRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesyncproto.H
 			Count:    uint32(rangeRes.Count),
 		})
 	}
-	resp.DiffType = d.DiffType()
+
+	// resp.DiffType = d.DiffType()
+
 	return
 }

@@ -18,7 +18,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/util/slice"
 )
 
@@ -33,7 +32,7 @@ const logPeriodSecs = 200
 
 func newDiffSyncer(hs *headSync) DiffSyncer {
 	return &diffSyncer{
-		diffContainer:      hs.diffContainer,
+		diff:      hs.diff,
 		spaceId:            hs.spaceId,
 		storage:            hs.storage,
 		peerManager:        hs.peerManager,
@@ -48,7 +47,7 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 
 type diffSyncer struct {
 	spaceId            string
-	diffContainer      ldiff.DiffContainer
+	diff      ldiff.Diff
 	peerManager        peermanager.PeerManager
 	treeManager        treemanager.TreeManager
 	treeSyncer         treesyncer.TreeSyncer
@@ -66,9 +65,9 @@ func (d *diffSyncer) Init() {
 
 func (d *diffSyncer) RemoveObjects(ids []string) {
 	for _, id := range ids {
-		_ = d.diffContainer.RemoveId(id)
+		_ = d.diff.RemoveId(id)
 	}
-	if err := d.storage.WriteSpaceHash(d.diffContainer.PrecalculatedDiff().Hash()); err != nil {
+	if err := d.storage.WriteSpaceHash(d.diff.Hash()); err != nil {
 		d.log.Error("can't write space hash", zap.Error(err))
 	}
 }
@@ -77,11 +76,11 @@ func (d *diffSyncer) UpdateHeads(id string, heads []string) {
 	if d.deletionState.Exists(id) {
 		return
 	}
-	d.diffContainer.Set(ldiff.Element{
+	d.diff.Set(ldiff.Element{
 		Id:   id,
 		Head: concatStrings(heads),
 	})
-	if err := d.storage.WriteSpaceHash(d.diffContainer.PrecalculatedDiff().Hash()); err != nil {
+	if err := d.storage.WriteSpaceHash(d.diff.Hash()); err != nil {
 		d.log.Error("can't write space hash", zap.Error(err))
 	}
 }
@@ -120,25 +119,9 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	defer p.ReleaseDrpcConn(conn)
 
 	var (
-		cl                             = d.clientFactory.Client(conn)
-		rdiff                          = NewRemoteDiff(d.spaceId, cl)
 		syncAclId                      = d.syncAcl.Id()
 		newIds, changedIds, removedIds []string
 	)
-	// getting correct diff and checking if we need to continue sync
-	// we do this through diffContainer for the sake of testing
-	needsSync, diff, err := d.diffContainer.DiffTypeCheck(ctx, rdiff)
-	err = rpcerr.Unwrap(err)
-	if err != nil {
-		return d.onDiffError(ctx, p, cl, err)
-	}
-	if needsSync {
-		newIds, changedIds, removedIds, err = diff.Diff(ctx, rdiff)
-		err = rpcerr.Unwrap(err)
-		if err != nil {
-			return d.onDiffError(ctx, p, cl, err)
-		}
-	}
 
 	totalLen := len(newIds) + len(changedIds) + len(removedIds)
 	// not syncing ids which were removed through settings document
