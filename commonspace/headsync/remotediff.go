@@ -105,8 +105,5 @@ func HandleRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesyncproto.H
 			Count:    uint32(rangeRes.Count),
 		})
 	}
-
-	// resp.DiffType = d.DiffType()
-
 	return
 }

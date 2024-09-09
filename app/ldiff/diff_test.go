@@ -14,7 +14,7 @@ import (
 )
 
 func TestDiff_fillRange(t *testing.T) {
-	d := New(4, 4)
+	d := New(4, 4).(*diff)
 	for i := 0; i < 10; i++ {
 		el := Element{
 			Id:   fmt.Sprint(i),
@@ -352,7 +352,7 @@ func printBestParams() {
 	numTests := 10
 	length := 100000
 	calcParams := func(divideFactor, compareThreshold, length int) (total, maxLevel, avgLevel, zeroEls int) {
-		d := New(divideFactor, compareThreshold)
+		d := New(divideFactor, compareThreshold).(*diff)
 		var els []Element
 		for i := 0; i < length; i++ {
 			els = append(els, Element{

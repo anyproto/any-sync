@@ -42,7 +42,7 @@ func TestRemote(t *testing.T) {
 		assert.Len(t, changedIds, 0)
 		assert.Len(t, removedIds, 0)
 	}
-	test(t, *contLocal, *contRemote)
+	test(t, contLocal, contRemote)
 }
 
 type mockClient struct {

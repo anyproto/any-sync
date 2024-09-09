@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
+	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 
 	"go.uber.org/zap"
 
@@ -32,7 +33,7 @@ const logPeriodSecs = 200
 
 func newDiffSyncer(hs *headSync) DiffSyncer {
 	return &diffSyncer{
-		diff:      hs.diff,
+		diff:               hs.diff,
 		spaceId:            hs.spaceId,
 		storage:            hs.storage,
 		peerManager:        hs.peerManager,
@@ -47,7 +48,7 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 
 type diffSyncer struct {
 	spaceId            string
-	diff      ldiff.Diff
+	diff               ldiff.Diff
 	peerManager        peermanager.PeerManager
 	treeManager        treemanager.TreeManager
 	treeSyncer         treesyncer.TreeSyncer
@@ -119,10 +120,17 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	defer p.ReleaseDrpcConn(conn)
 
 	var (
+		cl                             = d.clientFactory.Client(conn)
+		rdiff                          = NewRemoteDiff(d.spaceId, cl)
 		syncAclId                      = d.syncAcl.Id()
 		newIds, changedIds, removedIds []string
 	)
 
+	newIds, changedIds, removedIds, err = d.diff.Diff(ctx, rdiff)
+	err = rpcerr.Unwrap(err)
+	if err != nil {
+		return d.onDiffError(ctx, p, cl, err)
+	}
 	totalLen := len(newIds) + len(changedIds) + len(removedIds)
 	// not syncing ids which were removed through settings document
 	missingIds := d.deletionState.Filter(newIds)

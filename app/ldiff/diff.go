@@ -17,6 +17,27 @@ import (
 	"github.com/zeebo/blake3"
 )
 
+// Diff contains elements and can compare it with Remote diff
+type Diff interface {
+	Remote
+	// Set adds or update elements in container
+	Set(elements ...Element)
+	// RemoveId removes element by id
+	RemoveId(id string) error
+	// Diff makes diff with remote container
+	Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error)
+	// Elements retrieves all elements in the Diff
+	Elements() []Element
+	// Element returns an element by id
+	Element(id string) (Element, error)
+	// Ids retrieves ids of all elements in the Diff
+	Ids() []string
+	// Hash returns hash of all elements in the diff
+	Hash() string
+	// Len returns count of elements in the diff
+	Len() int
+}
+
 // New creates precalculated Diff container
 //
 // divideFactor - means how many hashes you want to ask for once
@@ -31,18 +52,18 @@ import (
 //	normal value between 8 and 64
 //
 // Less threshold and divideFactor - less traffic but more requests
-func New(divideFactor, compareThreshold int) *Diff {
+func New(divideFactor, compareThreshold int) Diff {
 	return NewDiff(divideFactor, compareThreshold)
 }
 
-func NewDiff(divideFactor, compareThreshold int) *Diff {
+func NewDiff(divideFactor, compareThreshold int) Diff {
 	if divideFactor < 2 {
 		divideFactor = 2
 	}
 	if compareThreshold < 1 {
 		compareThreshold = 1
 	}
-	d := &Diff{
+	d := &diff{
 		divideFactor:     divideFactor,
 		compareThreshold: compareThreshold,
 	}
@@ -93,7 +114,7 @@ type Remote interface {
 }
 
 // Diff contains elements and can compare it with Remote diff
-type Diff struct {
+type diff struct {
 	sl               *skiplist.SkipList
 	divideFactor     int
 	compareThreshold int
@@ -102,7 +123,7 @@ type Diff struct {
 }
 
 // Compare implements skiplist interface
-func (d *Diff) Compare(lhs, rhs interface{}) int {
+func (d *diff) Compare(lhs, rhs interface{}) int {
 	lhe := lhs.(*element)
 	rhe := rhs.(*element)
 	if lhe.Id == rhe.Id {
@@ -121,12 +142,12 @@ func (d *Diff) Compare(lhs, rhs interface{}) int {
 }
 
 // CalcScore implements skiplist interface
-func (d *Diff) CalcScore(key interface{}) float64 {
+func (d *diff) CalcScore(key interface{}) float64 {
 	return 0
 }
 
 // Set adds or update element in container
-func (d *Diff) Set(elements ...Element) {
+func (d *diff) Set(elements ...Element) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	for _, e := range elements {
@@ -139,7 +160,7 @@ func (d *Diff) Set(elements ...Element) {
 	d.ranges.recalculateHashes()
 }
 
-func (d *Diff) Ids() (ids []string) {
+func (d *diff) Ids() (ids []string) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -154,13 +175,13 @@ func (d *Diff) Ids() (ids []string) {
 	return
 }
 
-func (d *Diff) Len() int {
+func (d *diff) Len() int {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	return d.sl.Len()
 }
 
-func (d *Diff) Elements() (elements []Element) {
+func (d *diff) Elements() (elements []Element) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -175,7 +196,7 @@ func (d *Diff) Elements() (elements []Element) {
 	return
 }
 
-func (d *Diff) Element(id string) (Element, error) {
+func (d *diff) Element(id string) (Element, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	el := d.sl.Get(&element{Element: Element{Id: id}, hash: xxhash.Sum64([]byte(id))})
@@ -188,14 +209,14 @@ func (d *Diff) Element(id string) (Element, error) {
 	return Element{}, ErrElementNotFound
 }
 
-func (d *Diff) Hash() string {
+func (d *diff) Hash() string {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	return hex.EncodeToString(d.ranges.hash())
 }
 
 // RemoveId removes element by id
-func (d *Diff) RemoveId(id string) error {
+func (d *diff) RemoveId(id string) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	hash := xxhash.Sum64([]byte(id))
@@ -210,7 +231,7 @@ func (d *Diff) RemoveId(id string) error {
 	return nil
 }
 
-func (d *Diff) getRange(r Range) (rr RangeResult) {
+func (d *diff) getRange(r Range) (rr RangeResult) {
 	rng := d.ranges.getRange(r.From, r.To)
 	// if we have the division for this range
 	if rng != nil {
@@ -233,7 +254,7 @@ func (d *Diff) getRange(r Range) (rr RangeResult) {
 }
 
 // Ranges calculates given ranges and return results
-func (d *Diff) Ranges(ctx context.Context, ranges []Range, resBuf []RangeResult) (results []RangeResult, err error) {
+func (d *diff) Ranges(ctx context.Context, ranges []Range, resBuf []RangeResult) (results []RangeResult, err error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -254,7 +275,7 @@ type diffCtx struct {
 var errMismatched = errors.New("query and results mismatched")
 
 // Diff makes diff with remote container
-func (d *Diff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error) {
+func (d *diff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error) {
 	dctx := &diffCtx{}
 	dctx.toSend = append(dctx.toSend, Range{
 		From: 0,
@@ -286,7 +307,7 @@ func (d *Diff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, removed
 	return dctx.newIds, dctx.changedIds, dctx.removedIds, nil
 }
 
-func (d *Diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResult) {
+func (d *diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResult) {
 	// both hash equals - do nothing
 	if bytes.Equal(myRes.Hash, otherRes.Hash) {
 		return
@@ -315,7 +336,7 @@ func (d *Diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResul
 	return
 }
 
-func (d *Diff) compareElements(dctx *diffCtx, my, other []Element) {
+func (d *diff) compareElements(dctx *diffCtx, my, other []Element) {
 	find := func(list []Element, targetEl Element) (has, eq bool) {
 		for _, el := range list {
 			if el.Id == targetEl.Id {

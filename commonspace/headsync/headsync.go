@@ -44,7 +44,6 @@ type HeadSync interface {
 	RemoveObjects(ids []string)
 }
 
-
 type headSync struct {
 	spaceId    string
 	syncPeriod int
@@ -77,7 +76,7 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
 	h.log = log.With(zap.String("spaceId", h.spaceId))
 	h.storage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
-	h.diff = *ldiff.NewDiff(32, 256)
+	h.diff = ldiff.NewDiff(32, 256)
 	h.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
 	h.credentialProvider = a.MustComponent(credentialprovider.CName).(credentialprovider.CredentialProvider)
 	h.treeSyncer = a.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
@@ -149,9 +148,6 @@ func (h *headSync) RemoveObjects(ids []string) {
 }
 
 func (h *headSync) Close(ctx context.Context) (err error) {
-	// tolya:
-	// only initial diff is used here: should we remove WriteOldSpaceHash?
-	// h.storage.WriteOldSpaceHash(h.diffContainer.InitialDiff().Hash())
 	h.periodicSync.Close()
 	return
 }
