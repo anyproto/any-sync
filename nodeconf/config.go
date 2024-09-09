@@ -2,7 +2,6 @@ package nodeconf
 
 import (
 	"errors"
-	"time"
 )
 
 type ConfigGetter interface {
@@ -13,9 +12,7 @@ type ConfigUpdateGetter interface {
 	GetNodeConfUpdateInterval() int
 }
 
-var (
-	ErrConfigurationNotFound = errors.New("node nodeConf not found")
-)
+var ErrConfigurationNotFound = errors.New("node nodeConf not found")
 
 type NodeType string
 
@@ -53,8 +50,7 @@ func (n Node) HasType(t NodeType) bool {
 }
 
 type Configuration struct {
-	Id           string    `yaml:"id"`
-	NetworkId    string    `yaml:"networkId"`
-	Nodes        []Node    `yaml:"nodes"`
-	CreationTime time.Time `yaml:"creationTime"`
+	Id        string `yaml:"id"`
+	NetworkId string `yaml:"networkId"`
+	Nodes     []Node `yaml:"nodes"`
 }

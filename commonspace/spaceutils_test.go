@@ -67,10 +67,9 @@ func (m *mockConf) Init(a *app.App) (err error) {
 	m.id = networkId
 	m.networkId = networkId
 	m.configuration = nodeconf.Configuration{
-		Id:           networkId,
-		NetworkId:    networkId,
-		Nodes:        []nodeconf.Node{node},
-		CreationTime: time.Now(),
+		Id:        networkId,
+		NetworkId: networkId,
+		Nodes:     []nodeconf.Node{node},
 	}
 	return nil
 }
@@ -151,8 +150,7 @@ func (m *mockConf) NodeTypes(nodeId string) []nodeconf.NodeType {
 
 var _ nodeclient.NodeClient = (*mockNodeClient)(nil)
 
-type mockNodeClient struct {
-}
+type mockNodeClient struct{}
 
 func (m mockNodeClient) Init(a *app.App) (err error) {
 	return
@@ -170,8 +168,7 @@ func (m mockNodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *c
 	return
 }
 
-type mockPeerManager struct {
-}
+type mockPeerManager struct{}
 
 func (p *mockPeerManager) BroadcastMessage(ctx context.Context, msg drpc.Message) error {
 	return nil
@@ -197,8 +194,7 @@ func (p *mockPeerManager) GetNodePeers(ctx context.Context) (peers []peer.Peer, 
 	return nil, nil
 }
 
-type testPeerManagerProvider struct {
-}
+type testPeerManagerProvider struct{}
 
 func (m *testPeerManagerProvider) Init(a *app.App) (err error) {
 	return nil
@@ -212,8 +208,7 @@ func (m *testPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId st
 	return synctest.NewTestPeerManager(), nil
 }
 
-type mockPeerManagerProvider struct {
-}
+type mockPeerManagerProvider struct{}
 
 func (m *mockPeerManagerProvider) Init(a *app.App) (err error) {
 	return nil
@@ -227,8 +222,7 @@ func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId st
 	return &mockPeerManager{}, nil
 }
 
-type mockPool struct {
-}
+type mockPool struct{}
 
 func (m *mockPool) Run(ctx context.Context) (err error) {
 	return nil
@@ -270,8 +264,7 @@ func (m *mockPool) Pick(ctx context.Context, id string) (peer.Peer, error) {
 	return nil, fmt.Errorf("no such peer")
 }
 
-type mockConfig struct {
-}
+type mockConfig struct{}
 
 func (m *mockConfig) Init(a *app.App) (err error) {
 	return nil
@@ -297,8 +290,7 @@ func (m *mockConfig) GetStreamConfig() streampool.StreamConfig {
 	}
 }
 
-type noOpSyncer struct {
-}
+type noOpSyncer struct{}
 
 func (n noOpSyncer) Init() {
 }
@@ -311,8 +303,7 @@ func (n noOpSyncer) Close() error {
 	return nil
 }
 
-type mockTreeSyncer struct {
-}
+type mockTreeSyncer struct{}
 
 func (m mockTreeSyncer) ShouldSync(peerId string) bool {
 	return false
@@ -471,8 +462,7 @@ func (t *testTreeManager) DeleteTree(ctx context.Context, spaceId, treeId string
 	return nil
 }
 
-type mockCoordinatorClient struct {
-}
+type mockCoordinatorClient struct{}
 
 func (m mockCoordinatorClient) StatusCheckMany(ctx context.Context, spaceIds []string) (statuses []*coordinatorproto.SpaceStatusPayload, limits *coordinatorproto.AccountLimits, err error) {
 	return
@@ -559,7 +549,7 @@ func (s *streamOpener) HandleMessage(peerCtx context.Context, peerId string, msg
 		return
 	}
 	if syncMsg.SpaceId() == "" {
-		var msg = &spacesyncproto.SpaceSubscription{}
+		msg := &spacesyncproto.SpaceSubscription{}
 		if err = msg.Unmarshal(syncMsg.Bytes); err != nil {
 			return
 		}
@@ -600,7 +590,7 @@ func (s *streamOpener) OpenStream(ctx context.Context, p peer.Peer) (stream drpc
 	if err != nil {
 		return
 	}
-	var msg = &spacesyncproto.SpaceSubscription{
+	msg := &spacesyncproto.SpaceSubscription{
 		SpaceIds: []string{s.spaceId},
 		Action:   spacesyncproto.SpaceSubscriptionAction_Subscribe,
 	}

@@ -213,7 +213,6 @@ func newTestConf() *testConf {
 					Types:     []NodeType{NodeTypeFile},
 				},
 			},
-			CreationTime: time.Now(),
 		},
 	}
 }

@@ -2,14 +2,14 @@ package nodeconfstore
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"testing"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"os"
-	"path/filepath"
-	"testing"
-	"time"
 )
 
 var ctx = context.Background()
@@ -34,14 +34,11 @@ func TestNodeConfStore_GetLast(t *testing.T) {
 					Types:     []nodeconf.NodeType{nodeconf.NodeTypeTree, nodeconf.NodeTypeCoordinator},
 				},
 			},
-			CreationTime: time.Now().Round(time.Second),
 		}
 		require.NoError(t, fx.SaveLast(ctx, c))
 
 		res, err := fx.GetLast(ctx, "456")
 		require.NoError(t, err)
-		assert.Equal(t, c.CreationTime.Unix(), res.CreationTime.Unix())
-		c.CreationTime = res.CreationTime
 		assert.Equal(t, c, res)
 	})
 }
