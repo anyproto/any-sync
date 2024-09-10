@@ -13,8 +13,8 @@ import (
 )
 
 func TestRemote(t *testing.T) {
-	contLocal := ldiff.NewDiff(32, 256)
-	contRemote := ldiff.NewDiff(32, 256)
+	contLocal := ldiff.New(32, 256)
+	contRemote := ldiff.New(32, 256)
 
 	test := func(t *testing.T, ldLocal, ldRemote ldiff.Diff) {
 		var (

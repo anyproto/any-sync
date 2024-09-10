@@ -53,10 +53,10 @@ type Diff interface {
 //
 // Less threshold and divideFactor - less traffic but more requests
 func New(divideFactor, compareThreshold int) Diff {
-	return NewDiff(divideFactor, compareThreshold)
+	return newDiff(divideFactor, compareThreshold)
 }
 
-func NewDiff(divideFactor, compareThreshold int) Diff {
+func newDiff(divideFactor, compareThreshold int) Diff {
 	if divideFactor < 2 {
 		divideFactor = 2
 	}
