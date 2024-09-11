@@ -3,7 +3,6 @@ package headsync
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"go.uber.org/zap"
@@ -107,12 +106,7 @@ func (h *headSync) Run(ctx context.Context) (err error) {
 }
 
 func (h *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
-	if req.DiffType == spacesyncproto.DiffType_Precalculated {
-		return HandleRangeRequest(ctx, h.diff, req)
-	} else {
-		err = fmt.Errorf("Unexpected DiffType: %s", req.DiffType.String())
-		return
-	}
+	return HandleRangeRequest(ctx, h.diff, req)
 }
 
 func (h *headSync) UpdateHeads(id string, heads []string) {
