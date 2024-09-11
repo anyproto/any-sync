@@ -162,23 +162,10 @@ func (i *InMemorySpaceStorage) WriteSpaceHash(hash string) error {
 	return nil
 }
 
-func (i *InMemorySpaceStorage) WriteOldSpaceHash(hash string) error {
-	i.Lock()
-	defer i.Unlock()
-	i.oldSpaceHash = hash
-	return nil
-}
-
 func (i *InMemorySpaceStorage) ReadSpaceHash() (hash string, err error) {
 	i.Lock()
 	defer i.Unlock()
 	return i.spaceHash, nil
-}
-
-func (i *InMemorySpaceStorage) ReadOldSpaceHash() (hash string, err error) {
-	i.Lock()
-	defer i.Unlock()
-	return i.oldSpaceHash, nil
 }
 
 func (i *InMemorySpaceStorage) AllTrees() map[string]treestorage.TreeStorage {
