@@ -13,8 +13,8 @@ import (
 )
 
 func TestRemote(t *testing.T) {
-	contLocal := ldiff.NewDiffContainer(32, 256)
-	contRemote := ldiff.NewDiffContainer(32, 256)
+	contLocal := ldiff.New(32, 256)
+	contRemote := ldiff.New(32, 256)
 
 	test := func(t *testing.T, ldLocal, ldRemote ldiff.Diff) {
 		var (
@@ -42,8 +42,7 @@ func TestRemote(t *testing.T) {
 		assert.Len(t, changedIds, 0)
 		assert.Len(t, removedIds, 0)
 	}
-	test(t, contLocal.PrecalculatedDiff(), contRemote.PrecalculatedDiff())
-	test(t, contLocal.InitialDiff(), contRemote.InitialDiff())
+	test(t, contLocal, contRemote)
 }
 
 type mockClient struct {

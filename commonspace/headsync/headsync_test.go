@@ -62,7 +62,6 @@ type headSyncFixture struct {
 	deletionStateMock      *mock_deletionstate.MockObjectDeletionState
 	diffSyncerMock         *mock_headsync.MockDiffSyncer
 	treeSyncerMock         *mock_treesyncer.MockTreeSyncer
-	diffContainerMock      *mock_ldiff.MockDiffContainer
 	diffMock               *mock_ldiff.MockDiff
 	clientMock             *mock_spacesyncproto.MockDRPCSpaceSyncClient
 	aclMock                *mock_syncacl.MockSyncAcl
@@ -90,7 +89,6 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 	diffSyncerMock := mock_headsync.NewMockDiffSyncer(ctrl)
 	treeSyncerMock := mock_treesyncer.NewMockTreeSyncer(ctrl)
 	treeSyncerMock.EXPECT().Name().AnyTimes().Return(treesyncer.CName)
-	diffContainerMock := mock_ldiff.NewMockDiffContainer(ctrl)
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
 	clientMock := mock_spacesyncproto.NewMockDRPCSpaceSyncClient(ctrl)
 	aclMock := mock_syncacl.NewMockSyncAcl(ctrl)
@@ -123,7 +121,6 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 		headSync:               hs,
 		diffSyncerMock:         diffSyncerMock,
 		treeSyncerMock:         treeSyncerMock,
-		diffContainerMock:      diffContainerMock,
 		diffMock:               diffMock,
 		clientMock:             clientMock,
 		aclMock:                aclMock,
@@ -137,7 +134,7 @@ func (fx *headSyncFixture) init(t *testing.T) {
 	fx.diffSyncerMock.EXPECT().Init()
 	err := fx.headSync.Init(fx.app)
 	require.NoError(t, err)
-	fx.headSync.diffContainer = fx.diffContainerMock
+	fx.headSync.diff = fx.diffMock
 }
 
 func (fx *headSyncFixture) stop() {
@@ -159,22 +156,15 @@ func TestHeadSync(t *testing.T) {
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "headId"})
 		treeMock.EXPECT().Heads().Return([]string{"h1", "h2"}, nil)
-		fx.diffContainerMock.EXPECT().Set(ldiff.Element{
+		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   "id1",
 			Head: "h1h2",
 		})
-		fx.diffContainerMock.EXPECT().PrecalculatedDiff().Return(fx.diffMock)
 		fx.diffMock.EXPECT().Hash().Return("hash")
 		fx.storageMock.EXPECT().WriteSpaceHash("hash").Return(nil)
-		fx.diffContainerMock.EXPECT().InitialDiff().Return(fx.diffMock)
-		fx.diffMock.EXPECT().Hash().Return("hash")
-		fx.storageMock.EXPECT().WriteOldSpaceHash("hash").Return(nil)
 		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
 		err := fx.headSync.Run(ctx)
 		require.NoError(t, err)
-		fx.diffContainerMock.EXPECT().InitialDiff().Return(fx.diffMock)
-		fx.diffMock.EXPECT().Hash().Return("hash")
-		fx.storageMock.EXPECT().WriteOldSpaceHash("hash").Return(nil)
 		err = fx.headSync.Close(ctx)
 		require.NoError(t, err)
 	})

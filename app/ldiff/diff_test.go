@@ -352,7 +352,7 @@ func printBestParams() {
 	numTests := 10
 	length := 100000
 	calcParams := func(divideFactor, compareThreshold, length int) (total, maxLevel, avgLevel, zeroEls int) {
-		d := New(divideFactor, compareThreshold)
+		d := New(divideFactor, compareThreshold).(*diff)
 		var els []Element
 		for i := 0; i < length; i++ {
 			els = append(els, Element{
@@ -361,8 +361,7 @@ func printBestParams() {
 			})
 		}
 		d.Set(els...)
-		df := d.(*diff)
-		for _, rng := range df.ranges.ranges {
+		for _, rng := range d.ranges.ranges {
 			if rng.elements == 0 {
 				zeroEls++
 			}
@@ -371,7 +370,7 @@ func printBestParams() {
 			}
 			avgLevel += rng.level
 		}
-		total = len(df.ranges.ranges)
+		total = len(d.ranges.ranges)
 		avgLevel = avgLevel / total
 		return
 	}

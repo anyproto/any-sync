@@ -1,7 +1,7 @@
 // Package ldiff provides a container of elements with fixed id and changeable content.
 // Diff can calculate the difference with another diff container (you can make it remote) with minimum hops and traffic.
 //
-//go:generate mockgen -destination mock_ldiff/mock_ldiff.go github.com/anyproto/any-sync/app/ldiff Diff,Remote,DiffContainer
+//go:generate mockgen -destination mock_ldiff/mock_ldiff.go github.com/anyproto/any-sync/app/ldiff Diff,Remote
 package ldiff
 
 import (
@@ -15,9 +15,28 @@ import (
 	"github.com/cespare/xxhash"
 	"github.com/huandu/skiplist"
 	"github.com/zeebo/blake3"
-
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
+
+// Diff contains elements and can compare it with Remote diff
+type Diff interface {
+	Remote
+	// Set adds or update elements in container
+	Set(elements ...Element)
+	// RemoveId removes element by id
+	RemoveId(id string) error
+	// Diff makes diff with remote container
+	Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error)
+	// Elements retrieves all elements in the Diff
+	Elements() []Element
+	// Element returns an element by id
+	Element(id string) (Element, error)
+	// Ids retrieves ids of all elements in the Diff
+	Ids() []string
+	// Hash returns hash of all elements in the diff
+	Hash() string
+	// Len returns count of elements in the diff
+	Len() int
+}
 
 // New creates precalculated Diff container
 //
@@ -37,7 +56,7 @@ func New(divideFactor, compareThreshold int) Diff {
 	return newDiff(divideFactor, compareThreshold)
 }
 
-func newDiff(divideFactor, compareThreshold int) *diff {
+func newDiff(divideFactor, compareThreshold int) Diff {
 	if divideFactor < 2 {
 		divideFactor = 2
 	}
@@ -88,35 +107,13 @@ type element struct {
 	hash uint64
 }
 
-// Diff contains elements and can compare it with Remote diff
-type Diff interface {
-	Remote
-	// Set adds or update elements in container
-	Set(elements ...Element)
-	// RemoveId removes element by id
-	RemoveId(id string) error
-	// Diff makes diff with remote container
-	Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error)
-	// Elements retrieves all elements in the Diff
-	Elements() []Element
-	// Element returns an element by id
-	Element(id string) (Element, error)
-	// Ids retrieves ids of all elements in the Diff
-	Ids() []string
-	// Hash returns hash of all elements in the diff
-	Hash() string
-	// Len returns count of elements in the diff
-	Len() int
-	// DiffType returns type of diff
-	DiffType() spacesyncproto.DiffType
-}
-
 // Remote interface for using in the Diff
 type Remote interface {
 	// Ranges calculates given ranges and return results
 	Ranges(ctx context.Context, ranges []Range, resBuf []RangeResult) (results []RangeResult, err error)
 }
 
+// Diff contains elements and can compare it with Remote diff
 type diff struct {
 	sl               *skiplist.SkipList
 	divideFactor     int
@@ -276,10 +273,6 @@ type diffCtx struct {
 }
 
 var errMismatched = errors.New("query and results mismatched")
-
-func (d *diff) DiffType() spacesyncproto.DiffType {
-	return spacesyncproto.DiffType_Precalculated
-}
 
 // Diff makes diff with remote container
 func (d *diff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error) {

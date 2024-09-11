@@ -160,21 +160,6 @@ func (mr *MockSpaceStorageMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockSpaceStorage)(nil).Name))
 }
 
-// ReadOldSpaceHash mocks base method.
-func (m *MockSpaceStorage) ReadOldSpaceHash() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadOldSpaceHash")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadOldSpaceHash indicates an expected call of ReadOldSpaceHash.
-func (mr *MockSpaceStorageMockRecorder) ReadOldSpaceHash() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadOldSpaceHash", reflect.TypeOf((*MockSpaceStorage)(nil).ReadOldSpaceHash))
-}
-
 // ReadSpaceHash mocks base method.
 func (m *MockSpaceStorage) ReadSpaceHash() (string, error) {
 	m.ctrl.T.Helper()
@@ -319,20 +304,6 @@ func (m *MockSpaceStorage) TreeStorage(arg0 string) (treestorage.TreeStorage, er
 func (mr *MockSpaceStorageMockRecorder) TreeStorage(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TreeStorage", reflect.TypeOf((*MockSpaceStorage)(nil).TreeStorage), arg0)
-}
-
-// WriteOldSpaceHash mocks base method.
-func (m *MockSpaceStorage) WriteOldSpaceHash(arg0 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteOldSpaceHash", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// WriteOldSpaceHash indicates an expected call of WriteOldSpaceHash.
-func (mr *MockSpaceStorageMockRecorder) WriteOldSpaceHash(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteOldSpaceHash", reflect.TypeOf((*MockSpaceStorage)(nil).WriteOldSpaceHash), arg0)
 }
 
 // WriteSpaceHash mocks base method.
