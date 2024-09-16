@@ -68,7 +68,7 @@ func mergedTreeNodes(configNodes []Node, lastStoredNodes []Node) (mergedAddrs []
 	mustRewriteNods := false
 
 	for _, node := range lastStoredNodes {
-		if node.HasType(NodeTypeTree) {
+		if node.HasType(NodeTypeCoordinator) {
 			for _, addr := range node.Addresses {
 				treeNodes[addr] = 1
 			}
@@ -76,7 +76,7 @@ func mergedTreeNodes(configNodes []Node, lastStoredNodes []Node) (mergedAddrs []
 	}
 
 	for _, node := range configNodes {
-		if node.HasType(NodeTypeTree) {
+		if node.HasType(NodeTypeCoordinator) {
 			for _, addr := range node.Addresses {
 				if _, found := treeNodes[addr]; !found {
 					mustRewriteNods = true
@@ -108,6 +108,16 @@ func (s *service) Init(a *app.App) (err error) {
 		lastStored = s.config
 		err = nil
 	}
+
+	if mergedAddrs := mergedTreeNodes(s.config.Nodes, lastStored.Nodes); mergedAddrs != nil {
+		for _, node := range lastStored.Nodes {
+			if node.HasType(NodeTypeCoordinator) {
+				node.Addresses = mergedAddrs
+				break // can we break here? node structure in yaml allows to have multiple sections with the same nodeType
+			}
+		}
+	}
+
 	var updatePeriodSec = 600
 	if confUpd, ok := a.MustComponent("config").(ConfigUpdateGetter); ok && confUpd.GetNodeConfUpdateInterval() > 0 {
 		updatePeriodSec = confUpd.GetNodeConfUpdateInterval()
