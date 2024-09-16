@@ -63,6 +63,41 @@ type service struct {
 	networkProtoVersionChecker NetworkProtoVersionChecker
 }
 
+func mergedTreeNodes(configNodes []Node, lastStoredNodes []Node) (mergedAddrs []string) {
+	treeNodes := make(map[string]int)
+	mustRewriteNods := false
+
+	for _, node := range lastStoredNodes {
+		if node.HasType(NodeTypeTree) {
+			for _, addr := range node.Addresses {
+				treeNodes[addr] = 1
+			}
+		}
+	}
+
+	for _, node := range configNodes {
+		if node.HasType(NodeTypeTree) {
+			for _, addr := range node.Addresses {
+				if _, found := treeNodes[addr]; !found {
+					mustRewriteNods = true
+				}
+				treeNodes[addr] += 1
+			}
+		}
+	}
+
+	if mustRewriteNods {
+		mergedAddrs = make([]string, 0)
+		for addr, _ := range treeNodes {
+			mergedAddrs = append(mergedAddrs, addr)
+		}
+
+		return
+	}
+
+	return nil
+
+}
 func (s *service) Init(a *app.App) (err error) {
 	s.config = a.MustComponent("config").(ConfigGetter).GetNodeConf()
 	s.accountId = a.MustComponent(commonaccount.CName).(commonaccount.Service).Account().PeerId
