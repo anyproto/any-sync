@@ -217,3 +217,79 @@ func newTestConf() *testConf {
 		},
 	}
 }
+
+func TestService_mergeCoordinatorAddrs(t *testing.T) {
+	confApp := Configuration{
+		Id:        "test",
+		NetworkId: "testNetwork",
+		Nodes: []Node{
+			{
+				PeerId:    "12D3KooWKLCajM89S8unbt3tgGbRLgmiWnFZT3adn9A5pQciBSLa",
+				Addresses: []string{"127.0.0.1:4830", "192.168.1.1:8833"},
+				Types:     []NodeType{NodeTypeCoordinator},
+			},
+			{
+				PeerId:    "12D3KooWKnXTtbveMDUFfeSqR5dt9a4JW66tZQXG7C7PdDh3vqGu",
+				Addresses: []string{"127.0.0.1:4730"},
+				Types:     []NodeType{NodeTypeTree},
+			},
+			{
+				PeerId:    "12D3KooWKgVN2kW8xw5Uvm2sLUnkeUNQYAvcWvF58maTzev7FjPi",
+				Addresses: []string{"127.0.0.1:4731"},
+				Types:     []NodeType{NodeTypeTree},
+			},
+			{
+				PeerId:    "12D3KooWCUPYuMnQhu9yREJgQyjcz8zWY83rZGmDLwb9YR6QkbZX",
+				Addresses: []string{"127.0.0.1:4732"},
+				Types:     []NodeType{NodeTypeTree},
+			},
+			{
+				PeerId:    "12D3KooWQxiZ5a7vcy4DTJa8Gy1eVUmwb5ojN4SrJC9Rjxzigw6C",
+				Addresses: []string{"127.0.0.1:4733"},
+				Types:     []NodeType{NodeTypeFile},
+			},
+		},
+		CreationTime: time.Now(),
+	}
+
+	confStored := Configuration{
+		Id:        "test",
+		NetworkId: "testNetwork",
+		Nodes: []Node{
+			{
+				PeerId:    "12D3KooWKLCajM89S8unbt3tgGbRLgmiWnFZT3adn9A5pQciBSLa",
+				Addresses: []string{"127.0.0.1:4830"},
+				Types:     []NodeType{NodeTypeCoordinator},
+			},
+			{
+				PeerId:    "12D3KooWKnXTtbveMDUFfeSqR5dt9a4JW66tZQXG7C7PdDh3vqGu",
+				Addresses: []string{"127.0.0.1:4730"},
+				Types:     []NodeType{NodeTypeTree},
+			},
+			{
+				PeerId:    "12D3KooWKgVN2kW8xw5Uvm2sLUnkeUNQYAvcWvF58maTzev7FjPi",
+				Addresses: []string{"127.0.0.1:4731"},
+				Types:     []NodeType{NodeTypeTree},
+			},
+			{
+				PeerId:    "12D3KooWCUPYuMnQhu9yREJgQyjcz8zWY83rZGmDLwb9YR6QkbZX",
+				Addresses: []string{"127.0.0.1:4732"},
+				Types:     []NodeType{NodeTypeTree},
+			},
+			{
+				PeerId:    "12D3KooWQxiZ5a7vcy4DTJa8Gy1eVUmwb5ojN4SrJC9Rjxzigw6C",
+				Addresses: []string{"127.0.0.1:4733"},
+				Types:     []NodeType{NodeTypeFile},
+			},
+		},
+		CreationTime: time.Now(),
+	}
+
+	t.Run("coorditor nodes are merged", func(t *testing.T) {
+		mergeCoordinatorAddrs(confApp, confStored)
+		assert.Equal(t, 2, len(confStored.Nodes[0].Addresses))
+		assert.Equal(t, "127.0.0.1:4830", confStored.Nodes[0].Addresses[0])
+		assert.Equal(t, "192.168.1.1:8833", confStored.Nodes[0].Addresses[1])
+	})
+
+}

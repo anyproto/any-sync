@@ -9,6 +9,7 @@ import (
 	"github.com/anyproto/go-chash"
 	"go.uber.org/zap"
 
+	"fmt"
 	commonaccount "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -63,41 +64,59 @@ type service struct {
 	networkProtoVersionChecker NetworkProtoVersionChecker
 }
 
-func mergedTreeNodes(configNodes []Node, lastStoredNodes []Node) (mergedAddrs []string) {
-	treeNodes := make(map[string]int)
-	mustRewriteNods := false
+// Merges nodes in app config coordinator nodes with nodes from file (lastStored).
+// This is important to avoid the situation when locally stored configuration
+// has obsolete coordinator nodes so client can't fetch up-to-date connection info
+// (i.e. treeNodes)
+func mergeCoordinatorAddrs(appConfig Configuration, lastStored Configuration) (mustRewriteLocalConfig bool) {
+	mustRewriteLocalConfig = false
 
-	for _, node := range lastStoredNodes {
+	appNodesByPeer := make(map[string]*Node)
+	for i, node := range appConfig.Nodes {
 		if node.HasType(NodeTypeCoordinator) {
-			for _, addr := range node.Addresses {
-				treeNodes[addr] = 1
-			}
+			appNodesByPeer[node.PeerId] = &appConfig.Nodes[i]
 		}
 	}
 
-	for _, node := range configNodes {
+	storedNodesByPeer := make(map[string]*Node)
+	for i, node := range lastStored.Nodes {
 		if node.HasType(NodeTypeCoordinator) {
-			for _, addr := range node.Addresses {
-				if _, found := treeNodes[addr]; !found {
-					mustRewriteNods = true
+			storedNodesByPeer[node.PeerId] = &lastStored.Nodes[i]
+		}
+	}
+	for appPeerId, appNode := range appNodesByPeer {
+		if storedNode, found := storedNodesByPeer[appPeerId]; found {
+			// merge addresses: add missing from app config to stored
+			storedAddrs := make(map[string]bool)
+			for _, addr := range storedNode.Addresses {
+				storedAddrs[addr] = true
+			}
+
+			for _, appAddr := range appNode.Addresses {
+				// assumming appNode.Addresses has no duplicates
+				if _, found := storedAddrs[appAddr]; !found {
+
+					mustRewriteLocalConfig = true
+					storedNode.Addresses = append(storedNode.Addresses, appAddr)
+					fmt.Printf("%#v\n", storedNode)
 				}
-				treeNodes[addr] += 1
 			}
+
+		} else {
+			// append a whole node to stored config
+			mustRewriteLocalConfig = true
+			newNode := Node{}
+			newNode.Addresses = make([]string, len(appNode.Addresses))
+			copy(newNode.Addresses, appNode.Addresses)
+			lastStored.Nodes = append(lastStored.Nodes, newNode)
 		}
 	}
+	fmt.Printf("%#v\n", lastStored.Nodes[0])
 
-	if mustRewriteNods {
-		mergedAddrs = make([]string, 0)
-		for addr, _ := range treeNodes {
-			mergedAddrs = append(mergedAddrs, addr)
-		}
-
-		return
-	}
-
-	return nil
+	return
 
 }
+
 func (s *service) Init(a *app.App) (err error) {
 	s.config = a.MustComponent("config").(ConfigGetter).GetNodeConf()
 	s.accountId = a.MustComponent(commonaccount.CName).(commonaccount.Service).Account().PeerId
@@ -109,14 +128,7 @@ func (s *service) Init(a *app.App) (err error) {
 		err = nil
 	}
 
-	if mergedAddrs := mergedTreeNodes(s.config.Nodes, lastStored.Nodes); mergedAddrs != nil {
-		for _, node := range lastStored.Nodes {
-			if node.HasType(NodeTypeCoordinator) {
-				node.Addresses = mergedAddrs
-				break // can we break here? node structure in yaml allows to have multiple sections with the same nodeType
-			}
-		}
-	}
+	mergeCoordinatorAddrs(s.config, lastStored)
 
 	var updatePeriodSec = 600
 	if confUpd, ok := a.MustComponent("config").(ConfigUpdateGetter); ok && confUpd.GetNodeConfUpdateInterval() > 0 {
