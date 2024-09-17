@@ -9,7 +9,6 @@ import (
 	"github.com/anyproto/go-chash"
 	"go.uber.org/zap"
 
-	"fmt"
 	commonaccount "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -68,7 +67,7 @@ type service struct {
 // This is important to avoid the situation when locally stored configuration
 // has obsolete coordinator nodes so client can't fetch up-to-date connection info
 // (i.e. treeNodes)
-func mergeCoordinatorAddrs(appConfig Configuration, lastStored Configuration) (mustRewriteLocalConfig bool) {
+func mergeCoordinatorAddrs(appConfig *Configuration, lastStored *Configuration) (mustRewriteLocalConfig bool) {
 	mustRewriteLocalConfig = false
 
 	appNodesByPeer := make(map[string]*Node)
@@ -128,7 +127,7 @@ func (s *service) Init(a *app.App) (err error) {
 		err = nil
 	}
 
-	mergeCoordinatorAddrs(s.config, lastStored)
+	mergeCoordinatorAddrs(&s.config, &lastStored)
 
 	var updatePeriodSec = 600
 	if confUpd, ok := a.MustComponent("config").(ConfigUpdateGetter); ok && confUpd.GetNodeConfUpdateInterval() > 0 {
