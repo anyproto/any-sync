@@ -99,7 +99,7 @@ func mergeCoordinatorAddrs(appConfig *Configuration, lastStored *Configuration) 
 				}
 			}
 		} else {
-			// append a whole node to stored config
+			// append a whole node to the stored config
 			mustRewriteLocalConfig = true
 			lastStored.Nodes = append(lastStored.Nodes, *appNode)
 		}
@@ -118,9 +118,17 @@ func (s *service) Init(a *app.App) (err error) {
 	if err == ErrConfigurationNotFound {
 		lastStored = s.config
 		err = nil
+	} else {
+		// merge coordinator nodes from app config to lasStored to have up-to-date coordinator
+		mustRewriteLocalConfig := mergeCoordinatorAddrs(&s.config, &lastStored)
+		if mustRewriteLocalConfig {
+			// saving last configuration if changed, which also triggers Configuration.Id change
+			err = s.saveAndSetLastConfiguration(context.Background(), lastStored)
+			if err != nil {
+				return
+			}
+		}
 	}
-
-	mergeCoordinatorAddrs(&s.config, &lastStored)
 
 	var updatePeriodSec = 600
 	if confUpd, ok := a.MustComponent("config").(ConfigUpdateGetter); ok && confUpd.GetNodeConfUpdateInterval() > 0 {
