@@ -94,26 +94,14 @@ func mergeCoordinatorAddrs(appConfig *Configuration, lastStored *Configuration) 
 			for _, appAddr := range appNode.Addresses {
 				// assumming appNode.Addresses has no duplicates
 				if _, found := storedAddrs[appAddr]; !found {
-
 					mustRewriteLocalConfig = true
 					storedNode.Addresses = append(storedNode.Addresses, appAddr)
 				}
 			}
-
 		} else {
 			// append a whole node to stored config
 			mustRewriteLocalConfig = true
-			newNode := Node{
-				PeerId: appNode.PeerId,
-			}
-			newNode.Addresses = make([]string, len(appNode.Addresses))
-			copy(newNode.Addresses, appNode.Addresses)
-
-			newNode.Types = make([]NodeType, len(appNode.Types))
-			copy(newNode.Types, appNode.Types)
-
-			lastStored.Nodes = append(lastStored.Nodes, newNode)
-
+			lastStored.Nodes = append(lastStored.Nodes, *appNode)
 		}
 	}
 
