@@ -288,9 +288,4 @@ func TestService_mergeCoordinatorAddrs(t *testing.T) {
 		assert.Equal(t, "127.0.0.1:4830", confStored.Nodes[0].Addresses[0])
 		assert.Equal(t, "192.168.1.1:8833", confStored.Nodes[0].Addresses[1])
 	})
-
-	// (integration) old config yml and bad coordinator node;
-	// (unit) other config nodes are not affected;
-	// [x] (unit) peer id which doesn't exist is added;
-
 }
