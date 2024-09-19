@@ -217,3 +217,75 @@ func newTestConf() *testConf {
 		},
 	}
 }
+
+func TestService_mergeCoordinatorAddrs(t *testing.T) {
+
+	t.Run("coorditor nodes with different peerID added", func(t *testing.T) {
+		confApp := Configuration{
+			Id:        "test",
+			NetworkId: "testNetwork",
+			Nodes: []Node{
+				{
+					PeerId:    "12D3KooWKgVN2kW8xw5Uvm2sLUnkeUNQYAvcWvF58maTzev7FjPi",
+					Addresses: []string{"127.0.0.1:3030", "192.168.1.1:8833"},
+					Types:     []NodeType{NodeTypeCoordinator},
+				},
+			},
+			CreationTime: time.Now(),
+		}
+
+		confStored := Configuration{
+			Id:        "test",
+			NetworkId: "testNetwork",
+			Nodes: []Node{
+				{
+					PeerId:    "12D3KooWKLCajM89S8unbt3tgGbRLgmiWnFZT3adn9A5pQciBSLa",
+					Addresses: []string{"127.0.0.1:4830"},
+					Types:     []NodeType{NodeTypeCoordinator},
+				},
+			},
+			CreationTime: time.Now(),
+		}
+
+		mergeCoordinatorAddrs(&confApp, &confStored)
+
+		assert.Equal(t, 2, len(confStored.Nodes))
+		assert.Equal(t, "127.0.0.1:3030", confStored.Nodes[1].Addresses[0])
+		assert.Equal(t, "192.168.1.1:8833", confStored.Nodes[1].Addresses[1])
+		assert.Equal(t, "12D3KooWKgVN2kW8xw5Uvm2sLUnkeUNQYAvcWvF58maTzev7FjPi", confStored.Nodes[1].PeerId)
+	})
+
+	t.Run("coorditor nodes with the same peerID have Addresses merged", func(t *testing.T) {
+		confApp := Configuration{
+			Id:        "test",
+			NetworkId: "testNetwork",
+			Nodes: []Node{
+				{
+					PeerId:    "12D3KooWKLCajM89S8unbt3tgGbRLgmiWnFZT3adn9A5pQciBSLa",
+					Addresses: []string{"127.0.0.1:4830", "192.168.1.1:8833"},
+					Types:     []NodeType{NodeTypeCoordinator},
+				},
+			},
+			CreationTime: time.Now(),
+		}
+
+		confStored := Configuration{
+			Id:        "test",
+			NetworkId: "testNetwork",
+			Nodes: []Node{
+				{
+					PeerId:    "12D3KooWKLCajM89S8unbt3tgGbRLgmiWnFZT3adn9A5pQciBSLa",
+					Addresses: []string{"127.0.0.1:4830"},
+					Types:     []NodeType{NodeTypeCoordinator},
+				},
+			},
+			CreationTime: time.Now(),
+		}
+
+		mergeCoordinatorAddrs(&confApp, &confStored)
+
+		assert.Equal(t, 2, len(confStored.Nodes[0].Addresses))
+		assert.Equal(t, "127.0.0.1:4830", confStored.Nodes[0].Addresses[0])
+		assert.Equal(t, "192.168.1.1:8833", confStored.Nodes[0].Addresses[1])
+	})
+}

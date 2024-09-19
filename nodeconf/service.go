@@ -63,6 +63,52 @@ type service struct {
 	networkProtoVersionChecker NetworkProtoVersionChecker
 }
 
+// Merges nodes in app config coordinator nodes with nodes from file (lastStored).
+// This is important to avoid the situation when locally stored configuration
+// has obsolete coordinator nodes so client can't fetch up-to-date connection info
+// (i.e. treeNodes)
+func mergeCoordinatorAddrs(appConfig *Configuration, lastStored *Configuration) (mustRewriteLocalConfig bool) {
+	mustRewriteLocalConfig = false
+
+	appNodesByPeer := make(map[string]*Node)
+	for i, node := range appConfig.Nodes {
+		if node.HasType(NodeTypeCoordinator) {
+			appNodesByPeer[node.PeerId] = &appConfig.Nodes[i]
+		}
+	}
+
+	storedNodesByPeer := make(map[string]*Node)
+	for i, node := range lastStored.Nodes {
+		if node.HasType(NodeTypeCoordinator) {
+			storedNodesByPeer[node.PeerId] = &lastStored.Nodes[i]
+		}
+	}
+	for appPeerId, appNode := range appNodesByPeer {
+		if storedNode, found := storedNodesByPeer[appPeerId]; found {
+			// merge addresses: add missing from app config to stored
+			storedAddrs := make(map[string]bool)
+			for _, addr := range storedNode.Addresses {
+				storedAddrs[addr] = true
+			}
+
+			for _, appAddr := range appNode.Addresses {
+				// assumming appNode.Addresses has no duplicates
+				if _, found := storedAddrs[appAddr]; !found {
+					mustRewriteLocalConfig = true
+					storedNode.Addresses = append(storedNode.Addresses, appAddr)
+				}
+			}
+		} else {
+			// append a whole node to the stored config
+			mustRewriteLocalConfig = true
+			lastStored.Nodes = append(lastStored.Nodes, *appNode)
+		}
+	}
+
+	return
+
+}
+
 func (s *service) Init(a *app.App) (err error) {
 	s.config = a.MustComponent("config").(ConfigGetter).GetNodeConf()
 	s.accountId = a.MustComponent(commonaccount.CName).(commonaccount.Service).Account().PeerId
@@ -72,7 +118,19 @@ func (s *service) Init(a *app.App) (err error) {
 	if err == ErrConfigurationNotFound {
 		lastStored = s.config
 		err = nil
+	} else {
+		// merge coordinator nodes from app config to lasStored to have up-to-date coordinator
+		mustRewriteLocalConfig := mergeCoordinatorAddrs(&s.config, &lastStored)
+		if mustRewriteLocalConfig {
+			// saving last configuration if changed
+			lastStored.Id = "-1" // forces configuration to be re-pulled from consensus node
+			err = s.saveAndSetLastConfiguration(context.Background(), lastStored)
+			if err != nil {
+				return
+			}
+		}
 	}
+
 	var updatePeriodSec = 600
 	if confUpd, ok := a.MustComponent("config").(ConfigUpdateGetter); ok && confUpd.GetNodeConfUpdateInterval() > 0 {
 		updatePeriodSec = confUpd.GetNodeConfUpdateInterval()
