@@ -122,7 +122,8 @@ func (s *service) Init(a *app.App) (err error) {
 		// merge coordinator nodes from app config to lasStored to have up-to-date coordinator
 		mustRewriteLocalConfig := mergeCoordinatorAddrs(&s.config, &lastStored)
 		if mustRewriteLocalConfig {
-			// saving last configuration if changed, which also triggers Configuration.Id change
+			// saving last configuration if changed
+			lastStored.Id = "-1" // forces configuration to be re-pulled from consensus node
 			err = s.saveAndSetLastConfiguration(context.Background(), lastStored)
 			if err != nil {
 				return
