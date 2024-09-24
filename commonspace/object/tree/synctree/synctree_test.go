@@ -15,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener/mock_updatelistener"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus/mock_syncstatus"
@@ -147,7 +148,7 @@ func Test_BuildSyncTree(t *testing.T) {
 }
 
 func Test_PutSyncTree(t *testing.T) {
-	t.Run("put sync tree", func(t *testing.T) {
+	t.Run("put sync tree ok", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.finish()
 		fx.spaceStorage.EXPECT().CreateTreeStorage(gomock.Any()).Return(nil, nil)
@@ -161,9 +162,26 @@ func Test_PutSyncTree(t *testing.T) {
 		}
 		fx.syncClient.EXPECT().CreateHeadUpdate(gomock.Any(), "", nil).Return(headUpdate, nil)
 		fx.syncClient.EXPECT().Broadcast(gomock.Any(), headUpdate)
-		res, err := PutSyncTree(ctx, treestorage.TreeStorageCreatePayload{}, fx.deps)
+		fx.spaceStorage.EXPECT().TreeDeletedStatus("rootId").Return("", nil)
+		res, err := PutSyncTree(ctx, treestorage.TreeStorageCreatePayload{
+			RootRawChange: &treechangeproto.RawTreeChangeWithId{
+				Id: "rootId",
+			},
+		}, fx.deps)
 		require.NoError(t, err)
 		require.NotNil(t, res)
+	})
+	t.Run("put sync tree already deleted", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish()
+		fx.spaceStorage.EXPECT().TreeDeletedStatus("rootId").Return("deleted", nil)
+		res, err := PutSyncTree(ctx, treestorage.TreeStorageCreatePayload{
+			RootRawChange: &treechangeproto.RawTreeChangeWithId{
+				Id: "rootId",
+			},
+		}, fx.deps)
+		require.Equal(t, spacestorage.ErrTreeStorageAlreadyDeleted, err)
+		require.Nil(t, res)
 	})
 }
 
