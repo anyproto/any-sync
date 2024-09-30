@@ -165,7 +165,7 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 		ids = append(ids, id)
 	}
 	// copying storage, so we will have all the trees locally
-	inmemory := spc.Storage().(*commonStorage).SpaceStorage.(*spacestorage.InMemorySpaceStorage)
+	inmemory := spc.Storage().(*spacestorage.InMemorySpaceStorage)
 	storageCopy := inmemory.CopyStorage()
 	treesCopy := inmemory.AllTrees()
 
@@ -253,7 +253,7 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 		ids = append(ids, id)
 	}
 	// copying storage, so we will have the same contents, except for empty trees
-	inmemory := spc.Storage().(*commonStorage).SpaceStorage.(*spacestorage.InMemorySpaceStorage)
+	inmemory := spc.Storage().(*spacestorage.InMemorySpaceStorage)
 	storageCopy := inmemory.CopyStorage()
 
 	// deleting trees, this will prepare the document to have all the deletion changes

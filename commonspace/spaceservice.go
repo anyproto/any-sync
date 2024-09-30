@@ -179,7 +179,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 	spaceApp.Register(state).
 		Register(deps.SyncStatus).
 		Register(peerManager).
-		Register(newCommonStorage(st)).
+		Register(st).
 		Register(objectsync.New()).
 		Register(sync.NewSyncService()).
 		Register(syncacl.New()).

@@ -8,7 +8,6 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/net/peer"
 )
 
@@ -78,21 +77,15 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 	if err == nil || !errors.Is(err, treestorage.ErrUnknownTreeId) {
 		return
 	}
-	storageErr := err
-
-	status, err := t.deps.SpaceStorage.TreeDeletedStatus(t.treeId)
+	err = checkTreeDeleted(t.treeId, t.deps.SpaceStorage)
 	if err != nil {
-		return
-	}
-	if status != "" {
-		err = spacestorage.ErrTreeStorageAlreadyDeleted
 		return
 	}
 
 	collector, peerId, err := t.treeRequestLoop(ctx)
 	if err != nil {
 		if errors.Is(err, peer.ErrPeerIdNotFoundInContext) {
-			err = storageErr
+			err = treestorage.ErrUnknownTreeId
 		}
 		return
 	}

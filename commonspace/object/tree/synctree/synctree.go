@@ -101,6 +101,10 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 }
 
 func PutSyncTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, deps BuildDeps) (t SyncTree, err error) {
+	err = checkTreeDeleted(payload.RootRawChange.Id, deps.SpaceStorage)
+	if err != nil {
+		return
+	}
 	deps.TreeStorage, err = deps.SpaceStorage.CreateTreeStorage(payload)
 	if err != nil {
 		return
@@ -344,4 +348,15 @@ func (s *syncTree) afterBuild() {
 	if s.notifiable != nil {
 		s.notifiable.UpdateHeads(s.Id(), s.Heads())
 	}
+}
+
+func checkTreeDeleted(treeId string, spaceStorage spacestorage.SpaceStorage) error {
+	status, err := spaceStorage.TreeDeletedStatus(treeId)
+	if err != nil {
+		return err
+	}
+	if status != "" {
+		return spacestorage.ErrTreeStorageAlreadyDeleted
+	}
+	return nil
 }
