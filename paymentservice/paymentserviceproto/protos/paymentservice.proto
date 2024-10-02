@@ -233,6 +233,45 @@ message VerifyAppStoreReceiptResponse {
 
 }
 
+message GetRefCodeMyRequest {
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
+  string ownerAnyId = 1;
+}
+
+message GetRefCodeMyRequestSigned {
+  // GetRefCodeMyRequest
+  bytes payload = 1;
+  // this is payload signed with payload.ownerAnyID
+  bytes signature = 2;
+}
+
+message GetRefCodeMyResponse {
+  string refCode = 1;
+
+  // includes refCode
+  string refLink = 2;
+}
+
+message SetRefCodeOfMyInviterRequest {
+  // in the following format: "A5k2d9sFZw84yisTxRnz2bPRd1YPfVfhxqymZ6yESprFTG65"
+  // you can get it with Account().SignKey.GetPublic().Account()
+  string ownerAnyId = 1;
+
+  string refCode = 2;
+}
+
+message SetRefCodeOfMyInviterRequestSigned {
+    // SetRefCodeOfMyInviterRequest
+    bytes payload = 1;
+    // this is payload signed with payload.ownerAnyID
+    bytes signature = 2;
+}
+
+message SetRefCodeOfMyInviterResponse {
+
+}
+
 enum ErrorCodes {
   Unexpected = 0;
 
@@ -259,6 +298,9 @@ enum ErrorCodes {
   AppleInvalidReceipt = 18;
   ApplePurchaseRegistration = 19;
   AppleSubscriptionRenew = 20;
+
+  RefCodeAlreadySet = 21;
+  RefCodeInvalid = 22;
 
   ErrorOffset = 600;
 }
@@ -306,4 +348,11 @@ service AnyPaymentProcessing {
   // Verify purchase in case subscription was bought via AppStore
   // Incoming receipt contains all information to register purchase on Payment Node
   rpc VerifyAppStoreReceipt(VerifyAppStoreReceiptRequestSigned) returns (VerifyAppStoreReceiptResponse) {}
+
+  // To send someone your ref.code
+  rpc GetRefCodeMy(GetRefCodeMyRequestSigned) returns (GetRefCodeMyResponse) {}
+
+  // If someone invited you -> then you will need to set the ref code of inviter
+  // Can be done only once and can not be changed
+  rpc SetRefCodeOfMyInviter(SetRefCodeOfMyInviterRequestSigned) returns (SetRefCodeOfMyInviterResponse) {}
 }

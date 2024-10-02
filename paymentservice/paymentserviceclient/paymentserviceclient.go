@@ -32,6 +32,8 @@ type AnyPpClientService interface {
 	FinalizeSubscription(ctx context.Context, in *pp.FinalizeSubscriptionRequestSigned) (out *pp.FinalizeSubscriptionResponse, err error)
 	GetAllTiers(ctx context.Context, in *pp.GetTiersRequestSigned) (out *pp.GetTiersResponse, err error)
 	VerifyAppStoreReceipt(ctx context.Context, in *pp.VerifyAppStoreReceiptRequestSigned) (out *pp.VerifyAppStoreReceiptResponse, err error)
+	GetRefCodeMy(ctx context.Context, in *pp.GetRefCodeMyRequestSigned) (out *pp.GetRefCodeMyResponse, err error)
+	SetRefCodeOfMyInviter(ctx context.Context, in *pp.SetRefCodeOfMyInviterRequestSigned) (out *pp.SetRefCodeOfMyInviterResponse, err error)
 
 	app.Component
 }
@@ -164,6 +166,26 @@ func (s *service) IsNameValid(ctx context.Context, in *pp.IsNameValidRequest) (o
 func (s *service) VerifyAppStoreReceipt(ctx context.Context, in *pp.VerifyAppStoreReceiptRequestSigned) (out *pp.VerifyAppStoreReceiptResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
 		if out, err = cl.VerifyAppStoreReceipt(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) GetRefCodeMy(ctx context.Context, in *pp.GetRefCodeMyRequestSigned) (out *pp.GetRefCodeMyResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
+		if out, err = cl.GetRefCodeMy(ctx, in); err != nil {
+			return rpcerr.Unwrap(err)
+		}
+		return nil
+	})
+	return
+}
+
+func (s *service) SetRefCodeOfMyInviter(ctx context.Context, in *pp.SetRefCodeOfMyInviterRequestSigned) (out *pp.SetRefCodeOfMyInviterResponse, err error) {
+	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessingClient) error {
+		if out, err = cl.SetRefCodeOfMyInviter(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil
