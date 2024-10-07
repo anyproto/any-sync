@@ -155,6 +155,9 @@ message GetVerificationEmailRequest {
   string ownerAnyId = 1;
   string email = 2;
   bool subscribeToNewsletter = 3;
+  bool insiderTipsAndTutorials = 4;
+  // if we are coming from the onboarding screen
+  bool isOnboardingList = 5;
 }
 
 message GetVerificationEmailResponse {
