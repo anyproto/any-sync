@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/metric"
@@ -64,6 +65,12 @@ func (p *poolService) Init(a *app.App) (err error) {
 		ocache.WithTTL(time.Minute),
 		ocache.WithPrometheus(p.metricReg, "netpool", "incoming"),
 	)
+	comp, ok := a.Component(debugstat.CName).(debugstat.StatService)
+	if !ok {
+		comp = debugstat.NewNoOp()
+	}
+	p.pool.statService = comp
+	p.pool.AddStatProvider()
 	return nil
 }
 
@@ -72,6 +79,7 @@ func (p *pool) Run(ctx context.Context) (err error) {
 }
 
 func (p *pool) Close(ctx context.Context) (err error) {
+	p.statService.RemoveProvider(p)
 	if e := p.incoming.Close(); e != nil {
 		log.Warn("close incoming cache error", zap.Error(e))
 	}
