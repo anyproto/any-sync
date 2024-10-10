@@ -55,9 +55,10 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 }
 
 type Stat struct {
-	PeerId         string     `json:"peerId"`
-	SubConnections []*subConn `json:"subConnections"`
-	Created        time.Time  `json:"created"`
+	PeerId         string    `json:"peerId"`
+	SubConnections int       `json:"subConnections"`
+	Created        time.Time `json:"created"`
+	Version        uint32    `json:"version"`
 }
 
 type StatProvider interface {
@@ -332,13 +333,11 @@ func (p *peer) Close() (err error) {
 }
 
 func (p *peer) ProvideStat() *Stat {
-	connections := make([]*subConn, 0, len(p.active))
-	for c := range p.active {
-		connections = append(connections, c)
-	}
+	protoVersion, _ := CtxProtoVersion(p.Context())
 	return &Stat{
 		PeerId:         p.id,
-		SubConnections: connections,
+		SubConnections: len(p.subConnRelease),
 		Created:        p.created,
+		Version:        protoVersion,
 	}
 }
