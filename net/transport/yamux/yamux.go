@@ -104,7 +104,8 @@ func (y *yamuxTransport) AddListener(lis net.Listener) {
 
 func (y *yamuxTransport) Dial(ctx context.Context, addr string) (mc transport.MultiConn, err error) {
 	dialTimeout := time.Duration(y.conf.DialTimeoutSec) * time.Second
-	conn, err := net.DialTimeout("tcp", addr, dialTimeout)
+	dialer := &net.Dialer{Timeout: dialTimeout}
+	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, err
 	}
