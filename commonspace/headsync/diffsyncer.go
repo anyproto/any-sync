@@ -2,7 +2,10 @@ package headsync
 
 import (
 	"context"
+	"errors"
 	"time"
+
+	"github.com/quic-go/quic-go"
 
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
@@ -101,7 +104,9 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 	d.log.DebugCtx(ctx, "start diffsync", zap.Strings("peerIds", peerIds))
 	for _, p := range peers {
 		if err = d.syncWithPeer(peer.CtxWithPeerAddr(ctx, p.Id()), p); err != nil {
-			d.log.ErrorCtx(ctx, "can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
+			if !errors.Is(err, &quic.IdleTimeoutError{}) && !errors.Is(err, context.DeadlineExceeded) {
+				d.log.ErrorCtx(ctx, "can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
+			}
 		}
 	}
 	d.log.DebugCtx(ctx, "diff done", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
