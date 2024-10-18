@@ -79,7 +79,7 @@ func (r *requestManager) QueueRequest(rq syncdeps.Request) error {
 	r.requestPool.Add(rq.PeerId(), rq.ObjectId(), func(ctx context.Context) {
 		err := r.handler.ApplyRequest(ctx, rq, r)
 		if err != nil {
-			log.Error("failed to apply request", zap.Error(err), zap.String("peerId", rq.PeerId()), zap.String("objectId", rq.ObjectId()))
+			log.Debug("failed to apply request", zap.Error(err), zap.String("peerId", rq.PeerId()), zap.String("objectId", rq.ObjectId()))
 		}
 	}, func() {
 		r.metric.UpdateQueueSize(size, syncdeps.MsgTypeOutgoingRequest, false)

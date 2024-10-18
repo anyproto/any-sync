@@ -23,6 +23,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 	"github.com/anyproto/any-sync/net/secureservice"
 )
 
@@ -187,7 +188,7 @@ func (o *objectSync) SendStreamRequest(ctx context.Context, rq syncdeps.Request,
 	if err != nil {
 		return err
 	}
-	return pr.DoDrpc(ctx, func(conn drpc.Conn) error {
+	err = pr.DoDrpc(ctx, func(conn drpc.Conn) error {
 		cl := spacesyncproto.NewDRPCSpaceSyncClient(conn)
 		res, err := rq.Proto()
 		if err != nil {
@@ -203,4 +204,9 @@ func (o *objectSync) SendStreamRequest(ctx context.Context, rq syncdeps.Request,
 		}
 		return receive(stream)
 	})
+	if err != nil {
+		err = rpcerr.Unwrap(err)
+		return
+	}
+	return
 }
