@@ -8,6 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net"
 	"github.com/anyproto/any-sync/net/peer"
@@ -26,9 +27,14 @@ type Pool interface {
 	Pick(ctx context.Context, id string) (pr peer.Peer, err error)
 }
 
+type poolStats struct {
+	PeerStats []*peer.Stat `json:"peerStats"`
+}
+
 type pool struct {
-	outgoing ocache.OCache
-	incoming ocache.OCache
+	outgoing    ocache.OCache
+	incoming    ocache.OCache
+	statService debugstat.StatService
 }
 
 func (p *pool) Name() (name string) {
@@ -134,4 +140,33 @@ func (p *pool) pick(ctx context.Context, source ocache.OCache, id string) (peer.
 		return pr, nil
 	}
 	return nil, fmt.Errorf("failed to pick connection with peer: peer not found")
+}
+
+func (p *pool) AddStatProvider() {
+	p.statService.AddProvider(p)
+}
+
+func (p *pool) ProvideStat() any {
+	peerStats := make([]*peer.Stat, 0)
+	p.outgoing.ForEach(func(v ocache.Object) (isContinue bool) {
+		if p, ok := v.(peer.StatProvider); ok {
+			peerStats = append(peerStats, p.ProvideStat())
+		}
+		return true
+	})
+	p.incoming.ForEach(func(v ocache.Object) (isContinue bool) {
+		if p, ok := v.(peer.StatProvider); ok {
+			peerStats = append(peerStats, p.ProvideStat())
+		}
+		return true
+	})
+	return &poolStats{PeerStats: peerStats}
+}
+
+func (p *pool) StatId() string {
+	return CName
+}
+
+func (p *pool) StatType() string {
+	return CName
 }
