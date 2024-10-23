@@ -10,6 +10,7 @@ package objecttree
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -31,7 +32,11 @@ func (t *Tree) Graph(parser DescriptionParser) (data string, err error) {
 		seq++
 		return true
 	})
-	g := graphviz.New()
+	ctx := context.Background()
+	g, err := graphviz.New(ctx)
+	if err != nil {
+		return
+	}
 	defer g.Close()
 	graph, err := g.Graph()
 	if err != nil {
@@ -42,7 +47,7 @@ func (t *Tree) Graph(parser DescriptionParser) (data string, err error) {
 	}()
 	var nodes = make(map[string]*cgraph.Node)
 	var addChange = func(c *Change) error {
-		n, e := graph.CreateNode(c.Id)
+		n, e := graph.CreateNodeByName(c.Id)
 		if e != nil {
 			return e
 		}
@@ -81,7 +86,7 @@ func (t *Tree) Graph(parser DescriptionParser) (data string, err error) {
 		if n, ok := nodes[id]; ok {
 			return n, nil
 		}
-		n, err := graph.CreateNode(fmt.Sprintf("%s: not in Tree", id))
+		n, err := graph.CreateNodeByName(fmt.Sprintf("%s: not in Tree", id))
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +103,7 @@ func (t *Tree) Graph(parser DescriptionParser) (data string, err error) {
 			if e != nil {
 				return e
 			}
-			_, e = graph.CreateEdge("", self, prev)
+			_, e = graph.CreateEdgeByName("", self, prev)
 			if e != nil {
 				return e
 			}
@@ -116,7 +121,7 @@ func (t *Tree) Graph(parser DescriptionParser) (data string, err error) {
 		}
 	}
 	var buf bytes.Buffer
-	if err = g.Render(graph, "dot", &buf); err != nil {
+	if err = g.Render(ctx, graph, "dot", &buf); err != nil {
 		return
 	}
 	return buf.String(), nil

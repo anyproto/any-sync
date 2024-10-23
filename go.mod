@@ -1,7 +1,6 @@
 module github.com/anyproto/any-sync
 
-go 1.22
-toolchain go1.22.5
+go 1.22.0
 
 require (
 	filippo.io/edwards25519 v1.1.0
