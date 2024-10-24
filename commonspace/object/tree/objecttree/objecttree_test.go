@@ -246,6 +246,8 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		_, err = aTree.ChangesAfterCommonSnapshot(nil, nil)
 		require.Equal(t, ErrDeleted, err)
+		_, err = aTree.ChangesAfterCommonSnapshotLoader(nil, nil)
+		require.Equal(t, ErrDeleted, err)
 		err = aTree.IterateFrom("", nil, func(change *Change) bool {
 			return true
 		})
