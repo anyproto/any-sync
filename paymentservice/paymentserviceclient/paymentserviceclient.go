@@ -1,3 +1,4 @@
+//go:generate mockgen -destination=mock/mock_paymentserviceclient.go -package=mock_paymentserviceclient github.com/anyproto/any-sync/paymentservice/paymentserviceclient AnyPpClientService
 package paymentserviceclient
 
 import (

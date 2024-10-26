@@ -42,7 +42,7 @@ deps:
 	go build -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
 	go build -o deps github.com/anyproto/protobuf/protoc-gen-gogofaster
 
-test: mocks
+test:
 	go test ./... --cover
 
 replace-gogo-strings:
