@@ -1,4 +1,4 @@
-.PHONY: proto test deps
+.PHONY: proto test deps mocks
 export GOPRIVATE=github.com/anyproto
 export PATH:=deps:$(PATH)
 
@@ -32,12 +32,17 @@ proto-execute:
 	protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. nameservice/nameserviceproto/protos/*.proto
 	protoc --gogofaster_out=:. --go-drpc_out=protolib=github.com/gogo/protobuf:. paymentservice/paymentserviceproto/protos/*.proto
 
+mocks:
+	echo 'Generating mocks...'
+	go build -o deps go.uber.org/mock/mockgen
+	PATH=$(CURDIR)/deps:$(PATH) go generate ./...
+
 deps:
 	go mod download
 	go build -o deps storj.io/drpc/cmd/protoc-gen-go-drpc
 	go build -o deps github.com/anyproto/protobuf/protoc-gen-gogofaster
 
-test:
+test: mocks
 	go test ./... --cover
 
 replace-gogo-strings:
