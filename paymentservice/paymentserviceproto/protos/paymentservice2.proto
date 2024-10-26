@@ -1,0 +1,195 @@
+syntax = "proto3";
+option go_package = "paymentservice/paymentserviceproto";
+
+message Membership2 {
+  enum PeriodType {
+    PeriodTypeUnknown = 0;
+    PeriodTypeUnlimited = 1;
+    PeriodTypeDays = 2;
+    PeriodTypeWeeks = 3;
+    PeriodTypeMonths = 4;
+    PeriodTypeYears = 5;
+  }
+
+  enum PaymentMethod {
+    MethodNone = 0;
+    MethodStripe = 1;
+    MethodCrypto = 2;
+    MethodInappApple = 3;
+    MethodInappGoogle = 4;
+  }
+
+  message Amount {
+    string currency = 1;
+    // $0.01 = 1
+    // $1.00 = 100
+    uint32 amountCents = 2;
+  }
+
+  message Product {
+    // this is a unique Payment Node ID of the tier
+    // adding 2 same products to a cart means we will have 2 items with same ID
+    uint32 id = 1;
+    bool isActive = 2;
+    // is it a product that should be attached to a space
+    bool isAttachToSpace = 3;
+    // the price of a Package may not be equal to the sum of all underlying products
+    bool isPackage = 4;
+    // localized
+    string name = 5;
+    string description = 6;
+    bool isTest = 7;
+    PeriodType periodType = 8;
+    // i.e. "5 days" or "3 years"
+    uint32 periodValue = 9;
+  }
+
+  message PurchaseInfo {
+    uint64 dateStarted = 1;
+    uint64 dateEnds = 2;
+    bool isAutoRenew = 3;
+    PaymentMethod paymentMethod = 4;
+  }
+
+  message ProductStatus {
+    enum Status {
+      StatusUnknown = 0;
+      StatusPending = 1;
+      StatusActive = 2;
+      StatusPendingRequiresFinalization = 3;
+    }
+    Status status = 1;
+
+    string spaceAttachedTo = 2;
+    bool isNeedsAttachmentToSpace = 3;
+  }
+
+  message PurchasedProduct {
+    Product product = 1;
+    PurchaseInfo purchaseInfo = 2;
+    ProductStatus productStatus = 3;
+  }
+
+  message CartProduct {
+    Product product = 1;
+    // if "isAttachedToSpace" was true for that product
+    string spaceID = 2;
+    // some additional context (extra)
+    string context = 3;
+  }
+
+  message StoreProduct {
+    Product product = 1;
+    Amount price = 2;
+  }
+
+  message Invoice {
+    enum Status {
+      Unpaid = 0;
+      Paid = 1;
+    }
+    
+    string id = 1;
+    uint64 date = 2;
+    Amount total = 3;
+    Status status = 4;
+  }
+
+  message Cart {
+    // 1. if you add Nx the same product - it will be Nx in the 'products' array, i.e:
+    // each product instance has a unique index
+    // each product instance can have a different "context" attached (like spaceId)
+    // 2. each product may be already attached to a space + have a context
+    // (that what makes CartProduct different from Product)
+    repeated CartProduct products = 1;
+    // total amount of the cart (including discounts, etc)
+    Amount total = 2;
+  }
+
+  message GetStatusRequest {
+
+  }
+
+  message GetStatusResponse {
+    repeated Membership2.PurchasedProduct products = 1;
+    Membership2.Invoice nextInvoice = 2;
+  }
+
+  // Some products require extra allocation step
+  message ProductAllocateToSpaceRequest {
+    string spaceId = 1;
+    string productId = 2;
+    // some additional data
+    string context = 3;
+  }
+
+  message ProductAllocateToSpaceResponse {
+    
+  }
+
+  message StoreProductsEnumerateRequest {
+    
+  }
+
+  message StoreProductsEnumerateResponse {
+    repeated Membership2.StoreProduct products = 1;
+  }
+
+  message StoreCartGetRequest {
+
+  }
+
+  message StoreCartGetResponse {
+    Membership2.Cart cart = 1;
+  }
+
+  message StoreCartProductAddRequest {
+    string productId = 1;
+    // if "isAttachedToSpace" was true for that product
+    string spaceID = 2;
+    // some additional context (extra) 
+    string context = 3;
+  }
+
+  message StoreCartProductAddResponse {
+    Membership2.Cart cart = 1;
+  }
+
+  message StoreCartProductRemoveRequest {
+    // each product instance has a unique index
+    // each product instance can have a different "context" attached (like spaceId)
+    string index = 1;
+  }
+
+  message StoreCartProductRemoveResponse {
+    Membership2.Cart cart = 1;
+  }
+
+  message StoreCartPromocodeApplyRequest {
+    string promocode = 1;
+  }
+
+  message StoreCartPromocodeApplyResponse {
+    Membership2.Cart cart = 1;
+  }
+
+  message StoreCartCheckoutGenerateRequest {
+
+  }
+
+  message StoreCartCheckoutGenerateResponse {
+    string paymentUrl = 1;
+  }
+}
+
+service AnyPaymentProcessing2 {
+  rpc StoreProductsEnumerate (Membership2.StoreProductsEnumerateRequest) returns (Membership2.StoreProductsEnumerateResponse);
+  rpc StoreCartGet (Membership2.StoreCartGetRequest) returns (Membership2.StoreCartGetResponse);
+  rpc StoreCartProductAdd (Membership2.StoreCartProductAddRequest) returns (Membership2.StoreCartProductAddResponse);
+  rpc StoreCartProductRemove (Membership2.StoreCartProductRemoveRequest) returns (Membership2.StoreCartProductRemoveResponse);
+  rpc StoreCartPromocodeApply (Membership2.StoreCartPromocodeApplyRequest) returns (Membership2.StoreCartPromocodeApplyResponse);
+  rpc StoreCartCheckoutGenerate (Membership2.StoreCartCheckoutGenerateRequest) returns (Membership2.StoreCartCheckoutGenerateResponse);
+
+  rpc GetStatus (Membership2.GetStatusRequest) returns (Membership2.GetStatusResponse);
+  rpc ProductAllocateToSpace (Membership2.ProductAllocateToSpaceRequest) returns (Membership2.ProductAllocateToSpaceResponse);
+}
