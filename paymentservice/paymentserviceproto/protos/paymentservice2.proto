@@ -27,9 +27,9 @@ message Membership2 {
   }
 
   message Product {
-    // this is a unique Payment Node ID of the tier
+    // this is a unique Payment Node ID
     // adding 2 same products to a cart means we will have 2 items with same ID
-    uint32 id = 1;
+    string id = 1;
     bool isActive = 2;
     // is it a product that should be attached to a space
     bool isAttachToSpace = 3;
