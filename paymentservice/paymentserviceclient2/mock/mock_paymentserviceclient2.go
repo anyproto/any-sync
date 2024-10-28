@@ -99,6 +99,21 @@ func (mr *MockAnyPpClientService2MockRecorder) ProductAllocateToSpace(arg0, arg1
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProductAllocateToSpace", reflect.TypeOf((*MockAnyPpClientService2)(nil).ProductAllocateToSpace), arg0, arg1)
 }
 
+// ProductsEnumerate mocks base method.
+func (m *MockAnyPpClientService2) ProductsEnumerate(arg0 context.Context, arg1 *paymentserviceproto.Membership2_StoreProductsEnumerateRequest) (*paymentserviceproto.Membership2_StoreProductsEnumerateResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProductsEnumerate", arg0, arg1)
+	ret0, _ := ret[0].(*paymentserviceproto.Membership2_StoreProductsEnumerateResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ProductsEnumerate indicates an expected call of ProductsEnumerate.
+func (mr *MockAnyPpClientService2MockRecorder) ProductsEnumerate(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProductsEnumerate", reflect.TypeOf((*MockAnyPpClientService2)(nil).ProductsEnumerate), arg0, arg1)
+}
+
 // StoreCartCheckoutGenerate mocks base method.
 func (m *MockAnyPpClientService2) StoreCartCheckoutGenerate(arg0 context.Context, arg1 *paymentserviceproto.Membership2_StoreCartCheckoutGenerateRequest) (*paymentserviceproto.Membership2_StoreCartCheckoutGenerateResponse, error) {
 	m.ctrl.T.Helper()
@@ -115,10 +130,10 @@ func (mr *MockAnyPpClientService2MockRecorder) StoreCartCheckoutGenerate(arg0, a
 }
 
 // StoreCartGet mocks base method.
-func (m *MockAnyPpClientService2) StoreCartGet(arg0 context.Context, arg1 *paymentserviceproto.Membership2_StoreCartGetRequest) (*paymentserviceproto.Membership2_StoreCartGetResponse, error) {
+func (m *MockAnyPpClientService2) StoreCartGet(arg0 context.Context, arg1 *paymentserviceproto.Membership2_StoreCartGetRequest) (*paymentserviceproto.Membership2_StoreCartResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StoreCartGet", arg0, arg1)
-	ret0, _ := ret[0].(*paymentserviceproto.Membership2_StoreCartGetResponse)
+	ret0, _ := ret[0].(*paymentserviceproto.Membership2_StoreCartResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -130,10 +145,10 @@ func (mr *MockAnyPpClientService2MockRecorder) StoreCartGet(arg0, arg1 any) *gom
 }
 
 // StoreCartProductAdd mocks base method.
-func (m *MockAnyPpClientService2) StoreCartProductAdd(arg0 context.Context, arg1 *paymentserviceproto.Membership2_StoreCartProductAddRequest) (*paymentserviceproto.Membership2_StoreCartProductAddResponse, error) {
+func (m *MockAnyPpClientService2) StoreCartProductAdd(arg0 context.Context, arg1 *paymentserviceproto.Membership2_StoreCartProductAddRequest) (*paymentserviceproto.Membership2_StoreCartResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StoreCartProductAdd", arg0, arg1)
-	ret0, _ := ret[0].(*paymentserviceproto.Membership2_StoreCartProductAddResponse)
+	ret0, _ := ret[0].(*paymentserviceproto.Membership2_StoreCartResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -145,10 +160,10 @@ func (mr *MockAnyPpClientService2MockRecorder) StoreCartProductAdd(arg0, arg1 an
 }
 
 // StoreCartProductRemove mocks base method.
-func (m *MockAnyPpClientService2) StoreCartProductRemove(arg0 context.Context, arg1 *paymentserviceproto.Membership2_StoreCartProductRemoveRequest) (*paymentserviceproto.Membership2_StoreCartProductRemoveResponse, error) {
+func (m *MockAnyPpClientService2) StoreCartProductRemove(arg0 context.Context, arg1 *paymentserviceproto.Membership2_StoreCartProductRemoveRequest) (*paymentserviceproto.Membership2_StoreCartResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StoreCartProductRemove", arg0, arg1)
-	ret0, _ := ret[0].(*paymentserviceproto.Membership2_StoreCartProductRemoveResponse)
+	ret0, _ := ret[0].(*paymentserviceproto.Membership2_StoreCartResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -160,10 +175,10 @@ func (mr *MockAnyPpClientService2MockRecorder) StoreCartProductRemove(arg0, arg1
 }
 
 // StoreCartPromocodeApply mocks base method.
-func (m *MockAnyPpClientService2) StoreCartPromocodeApply(arg0 context.Context, arg1 *paymentserviceproto.Membership2_StoreCartPromocodeApplyRequest) (*paymentserviceproto.Membership2_StoreCartPromocodeApplyResponse, error) {
+func (m *MockAnyPpClientService2) StoreCartPromocodeApply(arg0 context.Context, arg1 *paymentserviceproto.Membership2_StoreCartPromocodeApplyRequest) (*paymentserviceproto.Membership2_StoreCartResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StoreCartPromocodeApply", arg0, arg1)
-	ret0, _ := ret[0].(*paymentserviceproto.Membership2_StoreCartPromocodeApplyResponse)
+	ret0, _ := ret[0].(*paymentserviceproto.Membership2_StoreCartResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -172,19 +187,4 @@ func (m *MockAnyPpClientService2) StoreCartPromocodeApply(arg0 context.Context, 
 func (mr *MockAnyPpClientService2MockRecorder) StoreCartPromocodeApply(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreCartPromocodeApply", reflect.TypeOf((*MockAnyPpClientService2)(nil).StoreCartPromocodeApply), arg0, arg1)
-}
-
-// StoreProductsEnumerate mocks base method.
-func (m *MockAnyPpClientService2) StoreProductsEnumerate(arg0 context.Context, arg1 *paymentserviceproto.Membership2_StoreProductsEnumerateRequest) (*paymentserviceproto.Membership2_StoreProductsEnumerateResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StoreProductsEnumerate", arg0, arg1)
-	ret0, _ := ret[0].(*paymentserviceproto.Membership2_StoreProductsEnumerateResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// StoreProductsEnumerate indicates an expected call of StoreProductsEnumerate.
-func (mr *MockAnyPpClientService2MockRecorder) StoreProductsEnumerate(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreProductsEnumerate", reflect.TypeOf((*MockAnyPpClientService2)(nil).StoreProductsEnumerate), arg0, arg1)
 }

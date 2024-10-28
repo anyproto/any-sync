@@ -139,10 +139,6 @@ message Membership2 {
 
   }
 
-  message StoreCartGetResponse {
-    Membership2.Cart cart = 1;
-  }
-
   message StoreCartProductAddRequest {
     string productId = 1;
     // if "isAttachedToSpace" was true for that product
@@ -151,7 +147,7 @@ message Membership2 {
     string context = 3;
   }
 
-  message StoreCartProductAddResponse {
+  message StoreCartResponse {
     Membership2.Cart cart = 1;
   }
 
@@ -161,16 +157,8 @@ message Membership2 {
     string index = 1;
   }
 
-  message StoreCartProductRemoveResponse {
-    Membership2.Cart cart = 1;
-  }
-
   message StoreCartPromocodeApplyRequest {
     string promocode = 1;
-  }
-
-  message StoreCartPromocodeApplyResponse {
-    Membership2.Cart cart = 1;
   }
 
   message StoreCartCheckoutGenerateRequest {
@@ -183,13 +171,13 @@ message Membership2 {
 }
 
 service AnyPaymentProcessing2 {
-  rpc StoreProductsEnumerate (Membership2.StoreProductsEnumerateRequest) returns (Membership2.StoreProductsEnumerateResponse);
-  rpc StoreCartGet (Membership2.StoreCartGetRequest) returns (Membership2.StoreCartGetResponse);
-  rpc StoreCartProductAdd (Membership2.StoreCartProductAddRequest) returns (Membership2.StoreCartProductAddResponse);
-  rpc StoreCartProductRemove (Membership2.StoreCartProductRemoveRequest) returns (Membership2.StoreCartProductRemoveResponse);
-  rpc StoreCartPromocodeApply (Membership2.StoreCartPromocodeApplyRequest) returns (Membership2.StoreCartPromocodeApplyResponse);
+  rpc StoreCartGet (Membership2.StoreCartGetRequest) returns (Membership2.StoreCartResponse);
+  rpc StoreCartProductAdd (Membership2.StoreCartProductAddRequest) returns (Membership2.StoreCartResponse);
+  rpc StoreCartProductRemove (Membership2.StoreCartProductRemoveRequest) returns (Membership2.StoreCartResponse);
+  rpc StoreCartPromocodeApply (Membership2.StoreCartPromocodeApplyRequest) returns (Membership2.StoreCartResponse);
   rpc StoreCartCheckoutGenerate (Membership2.StoreCartCheckoutGenerateRequest) returns (Membership2.StoreCartCheckoutGenerateResponse);
 
   rpc GetStatus (Membership2.GetStatusRequest) returns (Membership2.GetStatusResponse);
+  rpc ProductsEnumerate (Membership2.StoreProductsEnumerateRequest) returns (Membership2.StoreProductsEnumerateResponse);
   rpc ProductAllocateToSpace (Membership2.ProductAllocateToSpaceRequest) returns (Membership2.ProductAllocateToSpaceResponse);
 }
