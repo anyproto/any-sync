@@ -154,7 +154,7 @@ message Membership2 {
   message StoreCartProductRemoveRequest {
     // each product instance has a unique index
     // each product instance can have a different "context" attached (like spaceId)
-    string index = 1;
+    uint32 index = 1;
   }
 
   message StoreCartPromocodeApplyRequest {
