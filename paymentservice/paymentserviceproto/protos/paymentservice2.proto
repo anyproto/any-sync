@@ -38,10 +38,9 @@ message Membership2 {
     // localized
     string name = 5;
     string description = 6;
-    bool isTest = 7;
-    PeriodType periodType = 8;
+    PeriodType periodType = 7;
     // i.e. "5 days" or "3 years"
-    uint32 periodValue = 9;
+    uint32 periodValue = 8;
   }
 
   message PurchaseInfo {
@@ -62,6 +61,7 @@ message Membership2 {
 
     string spaceAttachedTo = 2;
     bool isNeedsAttachmentToSpace = 3;
+    bool isRenewalEnabled = 4;
   }
 
   message PurchasedProduct {
@@ -168,6 +168,16 @@ message Membership2 {
   message StoreCartCheckoutGenerateResponse {
     string paymentUrl = 1;
   }
+
+  message ProductSetSettingsRequest {
+    // index in all products list
+    uint32 productIndex = 1;
+    bool isRenewalEnabled = 2;
+  }
+
+  message ProductSetSettingsResponse {
+    
+  }
 }
 
 service AnyPaymentProcessing2 {
@@ -180,4 +190,5 @@ service AnyPaymentProcessing2 {
   rpc GetStatus (Membership2.GetStatusRequest) returns (Membership2.GetStatusResponse);
   rpc ProductsEnumerate (Membership2.StoreProductsEnumerateRequest) returns (Membership2.StoreProductsEnumerateResponse);
   rpc ProductAllocateToSpace (Membership2.ProductAllocateToSpaceRequest) returns (Membership2.ProductAllocateToSpaceResponse);
+  rpc ProductSetSettings (Membership2.ProductSetSettingsRequest) returns (Membership2.ProductSetSettingsResponse);
 }

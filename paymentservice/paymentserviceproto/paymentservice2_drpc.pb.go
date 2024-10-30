@@ -48,6 +48,7 @@ type DRPCAnyPaymentProcessing2Client interface {
 	GetStatus(ctx context.Context, in *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error)
 	ProductsEnumerate(ctx context.Context, in *Membership2_StoreProductsEnumerateRequest) (*Membership2_StoreProductsEnumerateResponse, error)
 	ProductAllocateToSpace(ctx context.Context, in *Membership2_ProductAllocateToSpaceRequest) (*Membership2_ProductAllocateToSpaceResponse, error)
+	ProductSetSettings(ctx context.Context, in *Membership2_ProductSetSettingsRequest) (*Membership2_ProductSetSettingsResponse, error)
 }
 
 type drpcAnyPaymentProcessing2Client struct {
@@ -132,6 +133,15 @@ func (c *drpcAnyPaymentProcessing2Client) ProductAllocateToSpace(ctx context.Con
 	return out, nil
 }
 
+func (c *drpcAnyPaymentProcessing2Client) ProductSetSettings(ctx context.Context, in *Membership2_ProductSetSettingsRequest) (*Membership2_ProductSetSettingsResponse, error) {
+	out := new(Membership2_ProductSetSettingsResponse)
+	err := c.cc.Invoke(ctx, "/AnyPaymentProcessing2/ProductSetSettings", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCAnyPaymentProcessing2Server interface {
 	StoreCartGet(context.Context, *Membership2_StoreCartGetRequest) (*Membership2_StoreCartResponse, error)
 	StoreCartProductAdd(context.Context, *Membership2_StoreCartProductAddRequest) (*Membership2_StoreCartResponse, error)
@@ -141,6 +151,7 @@ type DRPCAnyPaymentProcessing2Server interface {
 	GetStatus(context.Context, *Membership2_GetStatusRequest) (*Membership2_GetStatusResponse, error)
 	ProductsEnumerate(context.Context, *Membership2_StoreProductsEnumerateRequest) (*Membership2_StoreProductsEnumerateResponse, error)
 	ProductAllocateToSpace(context.Context, *Membership2_ProductAllocateToSpaceRequest) (*Membership2_ProductAllocateToSpaceResponse, error)
+	ProductSetSettings(context.Context, *Membership2_ProductSetSettingsRequest) (*Membership2_ProductSetSettingsResponse, error)
 }
 
 type DRPCAnyPaymentProcessing2UnimplementedServer struct{}
@@ -177,9 +188,13 @@ func (s *DRPCAnyPaymentProcessing2UnimplementedServer) ProductAllocateToSpace(co
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCAnyPaymentProcessing2UnimplementedServer) ProductSetSettings(context.Context, *Membership2_ProductSetSettingsRequest) (*Membership2_ProductSetSettingsResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCAnyPaymentProcessing2Description struct{}
 
-func (DRPCAnyPaymentProcessing2Description) NumMethods() int { return 8 }
+func (DRPCAnyPaymentProcessing2Description) NumMethods() int { return 9 }
 
 func (DRPCAnyPaymentProcessing2Description) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -255,6 +270,15 @@ func (DRPCAnyPaymentProcessing2Description) Method(n int) (string, drpc.Encoding
 						in1.(*Membership2_ProductAllocateToSpaceRequest),
 					)
 			}, DRPCAnyPaymentProcessing2Server.ProductAllocateToSpace, true
+	case 8:
+		return "/AnyPaymentProcessing2/ProductSetSettings", drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCAnyPaymentProcessing2Server).
+					ProductSetSettings(
+						ctx,
+						in1.(*Membership2_ProductSetSettingsRequest),
+					)
+			}, DRPCAnyPaymentProcessing2Server.ProductSetSettings, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -386,6 +410,22 @@ type drpcAnyPaymentProcessing2_ProductAllocateToSpaceStream struct {
 }
 
 func (x *drpcAnyPaymentProcessing2_ProductAllocateToSpaceStream) SendAndClose(m *Membership2_ProductAllocateToSpaceResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCAnyPaymentProcessing2_ProductSetSettingsStream interface {
+	drpc.Stream
+	SendAndClose(*Membership2_ProductSetSettingsResponse) error
+}
+
+type drpcAnyPaymentProcessing2_ProductSetSettingsStream struct {
+	drpc.Stream
+}
+
+func (x *drpcAnyPaymentProcessing2_ProductSetSettingsStream) SendAndClose(m *Membership2_ProductSetSettingsResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_paymentservice_paymentserviceproto_protos_paymentservice2_proto{}); err != nil {
 		return err
 	}
