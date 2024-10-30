@@ -30,17 +30,16 @@ message Membership2 {
     // this is a unique Payment Node ID
     // adding 2 same products to a cart means we will have 2 items with same ID
     string id = 1;
-    bool isActive = 2;
     // is it a product that should be attached to a space
-    bool isAttachToSpace = 3;
+    bool isAttachToSpace = 2;
     // the price of a Package may not be equal to the sum of all underlying products
-    bool isPackage = 4;
+    bool isPackage = 3;
     // localized
-    string name = 5;
-    string description = 6;
-    PeriodType periodType = 7;
+    string name = 4;
+    string description = 5;
+    PeriodType periodType = 6;
     // i.e. "5 days" or "3 years"
-    uint32 periodValue = 8;
+    uint32 periodValue = 7;
   }
 
   message PurchaseInfo {
