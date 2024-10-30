@@ -142,10 +142,6 @@ func (p *pool) pick(ctx context.Context, source ocache.OCache, id string) (peer.
 	return nil, fmt.Errorf("failed to pick connection with peer: peer not found")
 }
 
-func (p *pool) AddStatProvider() {
-	p.statService.AddProvider(p)
-}
-
 func (p *pool) ProvideStat() any {
 	peerStats := make([]*peer.Stat, 0)
 	p.outgoing.ForEach(func(v ocache.Object) (isContinue bool) {

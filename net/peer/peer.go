@@ -334,9 +334,12 @@ func (p *peer) Close() (err error) {
 
 func (p *peer) ProvideStat() *Stat {
 	protoVersion, _ := CtxProtoVersion(p.Context())
+	p.mu.Lock()
+	subConnectionsCount := len(p.active)
+	p.mu.Unlock()
 	return &Stat{
 		PeerId:         p.id,
-		SubConnections: len(p.subConnRelease),
+		SubConnections: subConnectionsCount,
 		Created:        p.created,
 		Version:        protoVersion,
 	}

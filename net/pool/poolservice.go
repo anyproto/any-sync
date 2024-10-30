@@ -69,8 +69,8 @@ func (p *poolService) Init(a *app.App) (err error) {
 	if !ok {
 		comp = debugstat.NewNoOp()
 	}
-	p.pool.statService = comp
-	p.pool.AddStatProvider()
+	p.statService = comp
+	p.statService.AddProvider(p)
 	return nil
 }
 
