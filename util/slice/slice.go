@@ -122,25 +122,27 @@ func UnsortedEquals(s1, s2 []string) bool {
 	return SortedEquals(s1Sorted, s2Sorted)
 }
 
-func ContainsSorted[T constraints.Ordered](first []T, second []T) bool {
-	if len(first) < len(second) {
+func ContainsSorted[T constraints.Ordered](seq []T, subseq []T) bool {
+	if len(seq) < len(subseq) {
 		return false
 	}
-	slices.Sort(first)
-	slices.Sort(second)
+	slices.Sort(seq)
+	slices.Sort(subseq)
 	i := 0
 	j := 0
-	for i < len(first) && j < len(second) {
-		if first[i] == second[j] {
+	for i < len(seq) && j < len(subseq) {
+		if seq[i] == subseq[j] {
 			i++
 			j++
-		} else if first[i] < second[j] {
+		} else if seq[i] < subseq[j] {
 			i++
 		} else {
-			j++
+			// in this case we didn't find match for subseq[j] in seq
+			return false
 		}
 	}
-	return i >= j && j == len(second)
+	// if we reached the end of subseq, then all elements were found
+	return j == len(subseq)
 }
 
 func DiscardFromSlice[T any](elements []T, isDiscarded func(T) bool) []T {
