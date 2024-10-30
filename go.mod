@@ -13,7 +13,7 @@ require (
 	github.com/cespare/xxhash v1.1.0
 	github.com/cheggaaa/mb/v3 v3.0.2
 	github.com/gobwas/glob v0.2.3
-	github.com/goccy/go-graphviz v0.2.3
+	github.com/goccy/go-graphviz v0.2.9
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/yamux v0.1.1
 	github.com/huandu/skiplist v1.2.1
