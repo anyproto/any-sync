@@ -124,6 +124,7 @@ func TestContainsSorted(t *testing.T) {
 		{"non-consecutive elements", []int{1, 3, 5, 7, 9}, []int{3, 7}, true},
 		{"unsorted first contains sorted second", []int{5, 1, 3, 2, 4}, []int{2, 3, 4}, true},
 		{"unsorted first does not contain sorted second", []int{5, 1, 3, 2, 4}, []int{3, 4, 6}, false},
+		{"test previous bug", []int{1, 3}, []int{2}, false},
 	}
 
 	for _, tt := range tests {

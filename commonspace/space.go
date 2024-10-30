@@ -102,17 +102,18 @@ type space struct {
 	state *spacestate.SpaceState
 	app   *app.App
 
-	treeBuilder objecttreebuilder.TreeBuilderComponent
-	treeSyncer  treesyncer.TreeSyncer
-	peerManager peermanager.PeerManager
-	headSync    headsync.HeadSync
-	syncService syncservice.SyncService
-	streamPool  streampool.StreamPool
-	syncStatus  syncstatus.StatusUpdater
-	settings    settings.Settings
-	storage     spacestorage.SpaceStorage
-	aclClient   aclclient.AclSpaceClient
-	aclList     list.AclList
+	treeBuilder  objecttreebuilder.TreeBuilderComponent
+	treeSyncer   treesyncer.TreeSyncer
+	peerManager  peermanager.PeerManager
+	headSync     headsync.HeadSync
+	syncService  syncservice.SyncService
+	streamPool   streampool.StreamPool
+	syncStatus   syncstatus.StatusUpdater
+	settings     settings.Settings
+	storage      spacestorage.SpaceStorage
+	aclClient    aclclient.AclSpaceClient
+	aclList      list.AclList
+	creationTime time.Time
 }
 
 func (s *space) Description() (desc SpaceDescription, err error) {
@@ -194,6 +195,7 @@ func (s *space) Id() string {
 }
 
 func (s *space) Init(ctx context.Context) (err error) {
+	s.creationTime = time.Now()
 	err = s.app.Start(ctx)
 	if err != nil {
 		return
@@ -236,7 +238,8 @@ func (s *space) Close() error {
 
 func (s *space) TryClose(objectTTL time.Duration) (close bool, err error) {
 	locked := s.state.TreesUsed.Load() > 1
-	log.With(zap.Int32("trees used", s.state.TreesUsed.Load()), zap.Bool("locked", locked), zap.String("spaceId", s.state.SpaceId)).Debug("space lock status check")
+	inCacheSecs := int(time.Now().Sub(s.creationTime).Seconds())
+	log.With(zap.Int32("trees used", s.state.TreesUsed.Load()), zap.Bool("locked", locked), zap.String("spaceId", s.state.SpaceId), zap.Int("in cache secs", inCacheSecs)).Debug("space lock status check")
 	if locked {
 		return false, nil
 	}

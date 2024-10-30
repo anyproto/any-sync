@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"sync"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/net/peer"
@@ -14,8 +17,6 @@ import (
 	"github.com/anyproto/any-sync/net/transport/yamux"
 	"github.com/anyproto/any-sync/nodeconf"
 	"go.uber.org/zap"
-	"strings"
-	"sync"
 )
 
 const CName = "net.peerservice"
@@ -78,21 +79,20 @@ func (p *peerService) PreferQuic(prefer bool) {
 }
 
 func (p *peerService) Dial(ctx context.Context, peerId string) (pr peer.Peer, err error) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-
-	addrs, err := p.getPeerAddrs(peerId)
-	if err != nil {
-		return
-	}
-
-	var mc transport.MultiConn
-	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
-
 	var schemes = yamuxPreferSchemes
+	p.mu.RLock()
 	if p.preferQuic {
 		schemes = quicPreferSchemes
 	}
+	addrs, err := p.getPeerAddrs(peerId)
+	if err != nil {
+		p.mu.RUnlock()
+		return
+	}
+	p.mu.RUnlock()
+
+	var mc transport.MultiConn
+	log.DebugCtx(ctx, "dial", zap.String("peerId", peerId), zap.Strings("addrs", addrs))
 
 	err = ErrAddrsNotFound
 	for _, sch := range schemes {
