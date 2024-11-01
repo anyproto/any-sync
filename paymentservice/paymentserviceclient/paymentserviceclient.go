@@ -55,17 +55,30 @@ func New() AnyPpClientService {
 	return new(service)
 }
 
+/*
+ * Case 1: Custom network, no paymentProcessingNode peers ->
+ *  This should not be called in custom networks! Please see what client of this service is doing.
+ *  Otherwise will return: { "no payment processing peers configured. Maybe you're on a custom network" }
+ *
+ * Case 2: Anytype network, no paymentProcessingNode peers in config ->
+ *  !!! This is a big issue, probably because of problems with nodeconf. Should be logged!
+ *
+ * Case 3: Anytype network, paymentProcessingNode peers in config, no connectivity ->
+ *  This can happen due to network connectivity issues and it is OK.
+ *  Will return:
+ *  { "failed to get a paymentnode peer. maybe you're on a custom network","error":"unable to connect” }
+ */
 func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProcessingClient) error) error {
 	if len(s.nodeconf.PaymentProcessingNodePeers()) == 0 {
-		log.Error("no payment processing peers configured")
-		return errors.New("no paymentProcessingNode peers configured. Node config ID: " + s.nodeconf.Id())
+		log.Error("no payment processing peers configured. Maybe you're on a custom network. Node config ID: " + s.nodeconf.Id())
+		return errors.New("no paymentProcessingNode peers configured. Maybe you're on a custom network. Node config ID: " + s.nodeconf.Id())
 	}
 
 	// it will try to connect to the Payment Node
 	// please use "paymentProcessingNode" type of node in the config (in the network.nodes array)
 	peer, err := s.pool.GetOneOf(ctx, s.nodeconf.PaymentProcessingNodePeers())
 	if err != nil {
-		log.Error("failed to get a paymentnode peer. maybe you're on a custom network", zap.Error(err))
+		log.Error("failed to get a paymentnode peer", zap.Error(err))
 		return err
 	}
 
