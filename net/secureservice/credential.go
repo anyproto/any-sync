@@ -1,12 +1,15 @@
 package secureservice
 
 import (
+	"strings"
+
+	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
+
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/util/crypto"
-	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 )
 
 func newNoVerifyChecker(protoVersion uint32, compatibleProtoVersions []uint32, clientVersion string) handshake.CredentialChecker {
@@ -31,6 +34,11 @@ func (n noVerifyChecker) MakeCredentials(remotePeerId string) *handshakeproto.Cr
 
 func (n noVerifyChecker) CheckCredential(remotePeerId string, cred *handshakeproto.Credentials) (result handshake.Result, err error) {
 	if !slices.Contains(n.compatibleVersions, cred.Version) {
+		err = handshake.ErrIncompatibleVersion
+		return
+	}
+	// Hotfix for a bad version
+	if strings.Contains(cred.ClientVersion, "middle:v0.36.6") {
 		err = handshake.ErrIncompatibleVersion
 		return
 	}
@@ -101,6 +109,11 @@ func (p *peerSignVerifier) CheckCredential(remotePeerId string, cred *handshakep
 	}
 	if !ok {
 		err = handshake.ErrInvalidCredentials
+		return
+	}
+	// Hotfix for a bad version
+	if strings.Contains(cred.ClientVersion, "middle:v0.36.6") {
+		err = handshake.ErrIncompatibleVersion
 		return
 	}
 	return handshake.Result{
