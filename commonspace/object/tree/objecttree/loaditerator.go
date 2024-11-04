@@ -57,7 +57,9 @@ func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 			batch.Heads = slice.DiscardFromSlice(batch.Heads, func(s string) bool {
 				return slices.Contains(c.PreviousIds, s)
 			})
-			batch.Heads = append(batch.Heads, c.Id)
+			if !slices.Contains(batch.Heads, c.Id) {
+				batch.Heads = append(batch.Heads, c.Id)
+			}
 			return true
 		}
 		if curSize+rawEntry.size >= maxSize && len(batch.Batch) != 0 {
@@ -75,7 +77,9 @@ func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 		batch.Heads = slice.DiscardFromSlice(batch.Heads, func(s string) bool {
 			return slices.Contains(c.PreviousIds, s)
 		})
-		batch.Heads = append(batch.Heads, c.Id)
+		if !slices.Contains(batch.Heads, c.Id) {
+			batch.Heads = append(batch.Heads, c.Id)
+		}
 		return true
 	})
 	l.lastHeads = batch.Heads

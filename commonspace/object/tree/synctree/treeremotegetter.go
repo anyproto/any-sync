@@ -4,9 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"go.uber.org/zap"
-
-	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/net/peer"
 )
@@ -52,7 +49,7 @@ func (t treeRemoteGetter) getPeers(ctx context.Context) (peerIds []string, err e
 }
 
 func (t treeRemoteGetter) treeRequest(ctx context.Context, peerId string) (collector *fullResponseCollector, err error) {
-	collector = createCollector()
+	collector = createCollector(t.deps)
 	req := t.deps.SyncClient.CreateNewTreeRequest(peerId, t.treeId)
 	err = t.deps.SyncClient.SendTreeRequest(ctx, req, collector)
 	if err != nil {
@@ -90,23 +87,5 @@ func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.
 		return
 	}
 
-	payload := treestorage.TreeStorageCreatePayload{
-		RootRawChange: collector.root,
-		Changes:       collector.changes,
-		Heads:         collector.heads,
-	}
-
-	validatorFunc := t.deps.ValidateObjectTree
-	if validatorFunc == nil {
-		validatorFunc = objecttree.ValidateRawTreeBuildFunc
-	}
-	// basically building tree with in-memory storage and validating that it was without errors
-	log.With(zap.String("id", t.treeId)).DebugCtx(ctx, "validating tree")
-	newPayload, err := validatorFunc(payload, t.deps.BuildObjectTree, t.deps.AclList)
-	if err != nil {
-		return
-	}
-	// now we are sure that we can save it to the storage
-	treeStorage, err = t.deps.SpaceStorage.CreateTreeStorage(newPayload)
-	return
+	return collector.objectTree.Storage(), peerId, nil
 }
