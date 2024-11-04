@@ -51,6 +51,7 @@ func (r *fullResponseCollector) CollectResponse(ctx context.Context, peerId, obj
 		if err != nil {
 			return err
 		}
+		r.objectTree.SetEmptyData(true)
 		return nil
 	}
 	_, err := r.objectTree.AddRawChanges(ctx, objecttree.RawChangesPayload{
