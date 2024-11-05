@@ -37,21 +37,13 @@ func (r *fullResponseCollector) CollectResponse(ctx context.Context, peerId, obj
 		}
 		validator := r.deps.ValidateObjectTree
 		if validator == nil {
-			validator = objecttree.ValidateRawTreeBuildFunc
+			validator = objecttree.ValidateRawTreeDefault
 		}
-		payload, err := validator(createPayload, r.deps.BuildObjectTree, r.deps.AclList)
+		objTree, err := validator(createPayload, r.deps.SpaceStorage, r.deps.AclList)
 		if err != nil {
 			return err
 		}
-		storage, err := r.deps.SpaceStorage.CreateTreeStorage(payload)
-		if err != nil {
-			return err
-		}
-		r.objectTree, err = r.deps.BuildObjectTree(storage, r.deps.AclList)
-		if err != nil {
-			return err
-		}
-		r.objectTree.SetEmptyData(true)
+		r.objectTree = objTree
 		return nil
 	}
 	_, err := r.objectTree.AddRawChanges(ctx, objecttree.RawChangesPayload{
