@@ -18,6 +18,7 @@ var (
 type Change struct {
 	Next        []*Change
 	PreviousIds []string
+	Previous    []*Change
 	AclHeadId   string
 	Id          string
 	SnapshotId  string

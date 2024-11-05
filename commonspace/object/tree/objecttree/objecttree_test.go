@@ -323,13 +323,13 @@ func TestObjectTree(t *testing.T) {
 		bStore = aTree.Storage().(*treestorage.InMemoryTreeStorage).Copy()
 		root, _ = bStore.Root()
 		heads, _ := bStore.Heads()
-		filteredPayload, err := ValidateFilterRawTree(treestorage.TreeStorageCreatePayload{
+		newTree, err := ValidateFilterRawTree(treestorage.TreeStorageCreatePayload{
 			RootRawChange: root,
 			Changes:       bStore.AllChanges(),
 			Heads:         heads,
-		}, bAccount.Acl)
+		}, InMemoryStorageCreator{}, bAccount.Acl)
 		require.NoError(t, err)
-		require.Equal(t, 2, len(filteredPayload.Changes))
+		require.Equal(t, 2, len(newTree.Storage().(*treestorage.InMemoryTreeStorage).AllChanges()))
 		err = aTree.IterateRoot(func(change *Change, decrypted []byte) (any, error) {
 			return nil, nil
 		}, func(change *Change) bool {
@@ -497,6 +497,7 @@ func TestObjectTree(t *testing.T) {
 			store, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
 			oTree, err := BuildObjectTree(store, aclList)
 			require.NoError(t, err)
+			emptyDataTreeDeps = nonVerifiableTreeDeps
 			err = ValidateRawTree(treestorage.TreeStorageCreatePayload{
 				RootRawChange: oTree.Header(),
 				Heads:         []string{root.Id},
@@ -516,6 +517,7 @@ func TestObjectTree(t *testing.T) {
 			store, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
 			oTree, err := BuildObjectTree(store, aclList)
 			require.NoError(t, err)
+			emptyDataTreeDeps = nonVerifiableTreeDeps
 			err = ValidateRawTree(treestorage.TreeStorageCreatePayload{
 				RootRawChange: oTree.Header(),
 				Heads:         []string{root.Id},
@@ -558,6 +560,7 @@ func TestObjectTree(t *testing.T) {
 			})
 			require.NoError(t, err)
 			allChanges := oTree.Storage().(*treestorage.InMemoryTreeStorage).AllChanges()
+			emptyDataTreeDeps = nonVerifiableTreeDeps
 			err = ValidateRawTree(treestorage.TreeStorageCreatePayload{
 				RootRawChange: oTree.Header(),
 				Heads:         []string{oTree.Heads()[0]},
@@ -587,6 +590,7 @@ func TestObjectTree(t *testing.T) {
 			}, aclList)
 			require.NoError(t, err)
 			store, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
+			emptyDataTreeDeps = nonVerifiableTreeDeps
 			oTree, err := BuildObjectTree(store, aclList)
 			require.NoError(t, err)
 			_, err = oTree.AddContent(ctx, SignableChangeContent{
@@ -629,7 +633,7 @@ func TestObjectTree(t *testing.T) {
 				changeCreator.CreateRaw("2", aclList.Head().Id, "0", false, "1"),
 				changeCreator.CreateRaw("3", aclList.Head().Id, "0", true, "2"),
 			}
-			defaultObjectTreeDeps = nonVerifiableTreeDeps
+			emptyDataTreeDeps = nonVerifiableTreeDeps
 			err := ValidateRawTree(treestorage.TreeStorageCreatePayload{
 				RootRawChange: ctx.objTree.Header(),
 				Heads:         []string{"3"},
@@ -1476,7 +1480,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("2", aclList.Head().Id, "0", false, "1"),
 			changeCreator.CreateRaw("3", aclList.Head().Id, "0", true, "2"),
 		}
-		defaultObjectTreeDeps = nonVerifiableTreeDeps
+		emptyDataTreeDeps = nonVerifiableTreeDeps
 		err := ValidateRawTree(treestorage.TreeStorageCreatePayload{
 			RootRawChange: ctx.objTree.Header(),
 			Heads:         []string{"3"},
@@ -1493,7 +1497,7 @@ func TestObjectTree(t *testing.T) {
 			ctx.objTree.Header(),
 			changeCreator.CreateRaw("3", aclList.Head().Id, "0", true, "2"),
 		}
-		defaultObjectTreeDeps = nonVerifiableTreeDeps
+		emptyDataTreeDeps = nonVerifiableTreeDeps
 		err := ValidateRawTree(treestorage.TreeStorageCreatePayload{
 			RootRawChange: ctx.objTree.Header(),
 			Heads:         []string{"3"},
