@@ -103,6 +103,11 @@ message Membership2 {
     repeated CartProduct products = 1;
     // total amount of the cart (including discounts, etc)
     Amount total = 2;
+
+    // in case you are paying in the middle of the period (for existing customers)
+    // the next invoice amount will also be generated
+    Amount totalNextInvoice = 3;
+    uint64 nextInvoiceDate = 4;
   }
 
   message GetStatusRequest {
@@ -160,11 +165,16 @@ message Membership2 {
     string promocode = 1;
   }
 
-  message StoreCartCheckoutGenerateRequest {
+  message StoreCartCheckoutRequest {
 
   }
 
-  message StoreCartCheckoutGenerateResponse {
+  message StoreCartCheckoutResponse {
+    // for new customers - will contain a payment URL
+    // (new Stripe session)
+    //
+    // if this is empty - then this is existing customer
+    // and we are trying to process the payment
     string paymentUrl = 1;
   }
 
@@ -184,7 +194,7 @@ service AnyPaymentProcessing2 {
   rpc StoreCartProductAdd (Membership2.StoreCartProductAddRequest) returns (Membership2.StoreCartResponse);
   rpc StoreCartProductRemove (Membership2.StoreCartProductRemoveRequest) returns (Membership2.StoreCartResponse);
   rpc StoreCartPromocodeApply (Membership2.StoreCartPromocodeApplyRequest) returns (Membership2.StoreCartResponse);
-  rpc StoreCartCheckoutGenerate (Membership2.StoreCartCheckoutGenerateRequest) returns (Membership2.StoreCartCheckoutGenerateResponse);
+  rpc StoreCartCheckout(Membership2.StoreCartCheckoutRequest) returns (Membership2.StoreCartCheckoutResponse);
 
   rpc GetStatus (Membership2.GetStatusRequest) returns (Membership2.GetStatusResponse);
   rpc ProductsEnumerate (Membership2.StoreProductsEnumerateRequest) returns (Membership2.StoreProductsEnumerateResponse);
