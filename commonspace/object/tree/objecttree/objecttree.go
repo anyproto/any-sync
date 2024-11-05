@@ -98,7 +98,6 @@ type ObjectTree interface {
 
 	Delete() error
 	Close() error
-	SetEmptyData(emptyData bool)
 	SetFlusher(flusher Flusher)
 	TryClose(objectTTL time.Duration) (bool, error)
 }
@@ -160,10 +159,6 @@ func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Chan
 	// it is a good question whether we need to validate everything
 	// because maybe we can trust the stuff that is already in the storage
 	return ot.validateTree(nil)
-}
-
-func (ot *objectTree) SetEmptyData(emptyData bool) {
-	ot.changeBuilder.(*changeBuilder).hasData = !emptyData
 }
 
 func (ot *objectTree) Id() string {

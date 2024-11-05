@@ -74,7 +74,6 @@ func (t *Tree) reduceTree() (res bool) {
 		minRoot  *Change
 		minTotal = math.MaxInt
 	)
-
 	for _, r := range t.possibleRoots {
 		// if this is snapshot and next is also snapshot, then we don't need to take this one into account
 		if len(r.Next) == 1 && r.Next[0].IsSnapshot {
@@ -88,6 +87,7 @@ func (t *Tree) reduceTree() (res bool) {
 		}
 		return false
 	})
+	// TODO: this can be further optimized by iterating the tree and checking the roots from top to bottom
 
 	// checking if we can reduce tree to other root
 	for _, root := range t.possibleRoots {
