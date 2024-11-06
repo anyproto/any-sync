@@ -46,6 +46,8 @@ func (r *fullResponseCollector) CollectResponse(ctx context.Context, peerId, obj
 		r.objectTree = objTree
 		return nil
 	}
+	r.objectTree.Lock()
+	defer r.objectTree.Unlock()
 	_, err := r.objectTree.AddRawChanges(ctx, objecttree.RawChangesPayload{
 		NewHeads:   treeResp.Heads,
 		RawChanges: treeResp.Changes,
