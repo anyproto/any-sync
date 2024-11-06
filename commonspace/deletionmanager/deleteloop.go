@@ -11,11 +11,11 @@ type deleteLoop struct {
 	deleteCtx    context.Context
 	deleteCancel context.CancelFunc
 	deleteChan   chan struct{}
-	deleteFunc   func()
+	deleteFunc   func(ctx context.Context)
 	loopDone     chan struct{}
 }
 
-func newDeleteLoop(deleteFunc func()) *deleteLoop {
+func newDeleteLoop(deleteFunc func(ctx context.Context)) *deleteLoop {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &deleteLoop{
 		deleteCtx:    ctx,
@@ -32,7 +32,7 @@ func (dl *deleteLoop) Run() {
 
 func (dl *deleteLoop) loop() {
 	defer close(dl.loopDone)
-	dl.deleteFunc()
+	dl.deleteFunc(dl.deleteCtx)
 	ticker := time.NewTicker(deleteLoopInterval)
 	defer ticker.Stop()
 	for {
@@ -40,10 +40,10 @@ func (dl *deleteLoop) loop() {
 		case <-dl.deleteCtx.Done():
 			return
 		case <-dl.deleteChan:
-			dl.deleteFunc()
+			dl.deleteFunc(dl.deleteCtx)
 			ticker.Reset(deleteLoopInterval)
 		case <-ticker.C:
-			dl.deleteFunc()
+			dl.deleteFunc(dl.deleteCtx)
 		}
 	}
 }
