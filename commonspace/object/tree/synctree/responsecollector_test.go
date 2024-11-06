@@ -60,6 +60,8 @@ func TestFullResponseCollector_CollectResponse(t *testing.T) {
 		}
 		coll := newFullResponseCollector(BuildDeps{})
 		coll.objectTree = objTree
+		objTree.EXPECT().Lock()
+		objTree.EXPECT().Unlock()
 		objTree.EXPECT().AddRawChanges(nil, objecttree.RawChangesPayload{
 			NewHeads:   testPayload.Heads,
 			RawChanges: testPayload.Changes,
