@@ -31,13 +31,20 @@ type ObjectTreeValidator interface {
 
 type noOpTreeValidator struct {
 	filterFunc func(ch *Change) bool
+	fail       bool
 }
 
 func (n *noOpTreeValidator) ValidateFullTree(tree *Tree, aclList list.AclList) error {
+	if n.fail {
+		return fmt.Errorf("failed")
+	}
 	return nil
 }
 
 func (n *noOpTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclList, newChanges []*Change) error {
+	if n.fail {
+		return fmt.Errorf("failed")
+	}
 	return nil
 }
 

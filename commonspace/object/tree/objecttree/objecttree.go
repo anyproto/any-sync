@@ -460,10 +460,23 @@ func (ot *objectTree) addChangesToTree(ctx context.Context, changesPayload RawCh
 		headsToUse = []string{}
 	}
 	rollback := func(changes []*Change) {
+		var visited []*Change
 		for _, ch := range changes {
-			if _, exists := ot.tree.attached[ch.Id]; exists {
+			if ex, exists := ot.tree.attached[ch.Id]; exists {
+				ex.visited = true
+				visited = append(visited, ex)
 				delete(ot.tree.attached, ch.Id)
 			}
+		}
+		for _, ch := range ot.tree.attached {
+			// deleting all visited changes from next
+			ch.Next = slice.DiscardFromSlice(ch.Next, func(change *Change) bool {
+				return change.visited
+			})
+		}
+		// doing this just in case
+		for _, ch := range visited {
+			ch.visited = false
 		}
 		ot.tree.headIds = headsCopy(prevHeadsCopy)
 		ot.tree.lastIteratedHeadId = lastIteratedId
