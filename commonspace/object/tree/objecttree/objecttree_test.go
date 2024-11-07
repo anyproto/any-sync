@@ -818,6 +818,29 @@ func TestObjectTree(t *testing.T) {
 		}
 	})
 
+	t.Run("add with rollback", func(t *testing.T) {
+		ctx := prepareTreeContext(t, aclList)
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree
+
+		rawChanges := []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("1", aclList.Head().Id, "0", false, "0"),
+			changeCreator.CreateRaw("2", aclList.Head().Id, "0", false, "1"),
+			changeCreator.CreateRaw("3", aclList.Head().Id, "0", false, "2"),
+			changeCreator.CreateRaw("4", aclList.Head().Id, "0", false, "3"),
+		}
+		payload := RawChangesPayload{
+			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
+			RawChanges: rawChanges,
+		}
+		tr := objTree.(*objectTree)
+		tr.validator.(*noOpTreeValidator).fail = true
+		_, err := objTree.AddRawChanges(context.Background(), payload)
+		require.Error(t, err)
+		require.Len(t, tr.tree.attached, 1)
+		require.Empty(t, tr.tree.attached["0"].Next)
+	})
+
 	t.Run("add new snapshot simple with newChangeFlusher", func(t *testing.T) {
 		ctx := prepareTreeContext(t, aclList)
 		treeStorage := ctx.treeStorage
