@@ -2,16 +2,18 @@ package deletionmanager
 
 import (
 	"context"
+
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
-	"go.uber.org/zap"
 )
 
 type Deleter interface {
-	Delete()
+	Delete(ctx context.Context)
 }
 
 type deleter struct {
@@ -25,7 +27,7 @@ func newDeleter(st spacestorage.SpaceStorage, state deletionstate.ObjectDeletion
 	return &deleter{st, state, getter, log}
 }
 
-func (d *deleter) Delete() {
+func (d *deleter) Delete(ctx context.Context) {
 	var (
 		allQueued = d.state.GetQueued()
 		spaceId   = d.st.Id()
@@ -39,7 +41,7 @@ func (d *deleter) Delete() {
 				continue
 			}
 		} else {
-			err = d.getter.DeleteTree(context.Background(), spaceId, id)
+			err = d.getter.DeleteTree(ctx, spaceId, id)
 			if err != nil && err != spacestorage.ErrTreeStorageAlreadyDeleted {
 				log.Error("failed to delete object", zap.Error(err))
 				continue

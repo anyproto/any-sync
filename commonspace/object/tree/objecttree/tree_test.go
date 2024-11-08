@@ -200,6 +200,31 @@ func TestTree_CheckRootReduce(t *testing.T) {
 			assert.Equal(t, []string{"10", "last"}, res)
 		})
 	})
+	t.Run("snapshots in line", func(t *testing.T) {
+		tr := new(Tree)
+		tr.Add(
+			newSnapshot("0", ""),
+			newSnapshot("0.1", "0", "0"),
+			newSnapshot("0.2", "0", "0"),
+			newSnapshot("1", "0", "0.1", "0.2"),
+			newSnapshot("2", "1", "1"),
+			newSnapshot("3", "2", "2"),
+		)
+		t.Run("check root", func(t *testing.T) {
+			total := tr.checkRoot(tr.attached["3"])
+			assert.Equal(t, 0, total)
+		})
+		t.Run("reduce", func(t *testing.T) {
+			tr.reduceTree()
+			assert.Equal(t, "3", tr.RootId())
+			var res []string
+			tr.IterateSkip(tr.RootId(), func(c *Change) (isContinue bool) {
+				res = append(res, c.Id)
+				return true
+			})
+			assert.Equal(t, []string{"3"}, res)
+		})
+	})
 	t.Run("check root many", func(t *testing.T) {
 		tr := new(Tree)
 		tr.Add(

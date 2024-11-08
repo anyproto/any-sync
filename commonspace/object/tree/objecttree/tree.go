@@ -266,6 +266,7 @@ func (t *Tree) attach(c *Change, newEl bool) {
 	for _, id := range c.PreviousIds {
 		// prev id must already be attached if we attach this id, so we don't need to check if it exists
 		prev := t.attached[id]
+		c.Previous = append(c.Previous, prev)
 		// appending c to next changes of all previous changes
 		if len(prev.Next) == 0 || prev.Next[len(prev.Next)-1].Id <= c.Id {
 			prev.Next = append(prev.Next, c)
@@ -341,10 +342,8 @@ func (t *Tree) dfsPrev(stack []*Change, breakpoints []string, visit func(ch *Cha
 		ch.visited = true
 		t.visitedBuf = append(t.visitedBuf, ch)
 
-		for _, prevId := range ch.PreviousIds {
-			prevCh, exists := t.attached[prevId]
-			// here the only time it wouldn't exist if we are at the tree root
-			if exists && !prevCh.visited {
+		for _, prevCh := range ch.Previous {
+			if !prevCh.visited {
 				stack = append(stack, prevCh)
 			}
 		}
