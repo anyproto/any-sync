@@ -36,7 +36,7 @@ func TestPool_Get(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
 		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
-			return newTestPeer("1", time.Now(), 0, 0), nil
+			return newTestPeer("1"), nil
 		}
 		p, err := fx.Get(ctx, "1")
 		assert.NoError(t, err)
@@ -49,7 +49,7 @@ func TestPool_Get(t *testing.T) {
 	t.Run("retry for closed", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
-		tp := newTestPeer("1", time.Now(), 0, 0)
+		tp := newTestPeer("1")
 		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
 			return tp, nil
 		}
@@ -57,7 +57,7 @@ func TestPool_Get(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, p)
 		p.Close()
-		tp2 := newTestPeer("1", time.Now(), 0, 0)
+		tp2 := newTestPeer("1")
 		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
 			return tp2, nil
 		}
@@ -80,7 +80,7 @@ func TestPool_GetOneOf(t *testing.T) {
 	t.Run("from cache", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
-		tp1 := newTestPeer("1", time.Now(), 0, 0)
+		tp1 := newTestPeer("1")
 		addToCache(t, fx, tp1)
 		p, err := fx.GetOneOf(ctx, []string{"3", "2", "1"})
 		require.NoError(t, err)
@@ -89,10 +89,10 @@ func TestPool_GetOneOf(t *testing.T) {
 	t.Run("from cache - skip closed", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
-		tp2 := newTestPeer("2", time.Now(), 0, 0)
+		tp2 := newTestPeer("2")
 		addToCache(t, fx, tp2)
 		tp2.Close()
-		tp1 := newTestPeer("1", time.Now(), 0, 0)
+		tp1 := newTestPeer("1")
 		addToCache(t, fx, tp1)
 		p, err := fx.GetOneOf(ctx, []string{"3", "2", "1"})
 		require.NoError(t, err)
@@ -107,7 +107,7 @@ func TestPool_GetOneOf(t *testing.T) {
 				return nil, fmt.Errorf("not expected call")
 			}
 			called = true
-			return newTestPeer(peerId, time.Now(), 0, 0), nil
+			return newTestPeer(peerId), nil
 		}
 		p, err := fx.GetOneOf(ctx, []string{"3", "2", "1"})
 		require.NoError(t, err)
@@ -139,12 +139,12 @@ func TestPool_AddPeer(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
-		require.NoError(t, fx.AddPeer(ctx, newTestPeer("p1", time.Now(), 0, 0)))
+		require.NoError(t, fx.AddPeer(ctx, newTestPeer("p1")))
 	})
 	t.Run("two peers", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
-		p1, p2 := newTestPeer("p1", time.Now(), 0, 0), newTestPeer("p1", time.Now(), 0, 0)
+		p1, p2 := newTestPeer("p1"), newTestPeer("p1")
 		require.NoError(t, fx.AddPeer(ctx, p1))
 		require.NoError(t, fx.AddPeer(ctx, p2))
 		select {
@@ -167,7 +167,7 @@ func TestPool_Pick(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
-		p1 := newTestPeer("p1", time.Now(), 0, 0)
+		p1 := newTestPeer("p1")
 		require.NoError(t, fx.AddPeer(ctx, p1))
 
 		p, err := fx.Pick(ctx, "p1")
@@ -179,7 +179,7 @@ func TestPool_Pick(t *testing.T) {
 	t.Run("peer is closed", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
-		p1 := newTestPeer("p1", time.Now(), 0, 0)
+		p1 := newTestPeer("p1")
 		require.NoError(t, fx.AddPeer(ctx, p1))
 		require.NoError(t, p1.Close())
 		p, err := fx.Pick(ctx, "p1")
@@ -195,7 +195,7 @@ func TestProvideStat_NoPeers(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.Finish()
 		created := time.Now()
-		p1 := newTestPeer("p1", created, 1, 1)
+		p1 := newTestPeerWithParams("p1", created, 1, 1)
 		require.NoError(t, fx.AddPeer(ctx, p1))
 
 		statProvider, ok := fx.Service.(*poolService)
@@ -221,11 +221,11 @@ func TestProvideStat_NoPeers(t *testing.T) {
 		defer fx.Finish()
 		created := time.Now()
 		created1 := time.Now()
-		p1 := newTestPeer("p1", created, 2, 2)
+		p1 := newTestPeerWithParams("p1", created, 2, 2)
 		require.NoError(t, fx.AddPeer(ctx, p1))
 
 		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
-			return newTestPeer(peerId, created1, 0, 0), nil
+			return newTestPeerWithParams(peerId, created1, 0, 0), nil
 		}
 
 		peerId := "p2"
@@ -264,7 +264,7 @@ func TestProvideStat_NoPeers(t *testing.T) {
 		version := uint32(2)
 
 		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
-			return newTestPeer(peerId, created, subConn, version), nil
+			return newTestPeerWithParams(peerId, created, subConn, version), nil
 		}
 
 		_, err := fx.Get(ctx, peerId)
@@ -357,7 +357,14 @@ func (d *dialerMock) Name() (name string) {
 	return "net.peerservice"
 }
 
-func newTestPeer(id string, created time.Time, subConnections int, version uint32) *testPeer {
+func newTestPeer(id string) *testPeer {
+	return &testPeer{
+		id:     id,
+		closed: make(chan struct{}),
+	}
+}
+
+func newTestPeerWithParams(id string, created time.Time, subConnections int, version uint32) *testPeer {
 	return &testPeer{
 		id:             id,
 		closed:         make(chan struct{}),
