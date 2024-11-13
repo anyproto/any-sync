@@ -15,7 +15,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-graphviz v0.2.9
 	github.com/google/uuid v1.6.0
-	github.com/hashicorp/yamux v0.1.1
+	github.com/hashicorp/yamux v0.1.2
 	github.com/huandu/skiplist v1.2.1
 	github.com/ipfs/boxo v0.24.3
 	github.com/ipfs/go-block-format v0.2.0
