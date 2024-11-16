@@ -8,6 +8,7 @@ require (
 	github.com/anyproto/go-slip10 v1.0.0
 	github.com/anyproto/go-slip21 v1.0.0
 	github.com/anyproto/protobuf v1.3.3-0.20240814124528-72b8c7e0e0f5
+	github.com/anyproto/lexid v0.0.2
 	github.com/btcsuite/btcd v0.22.1
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
 	github.com/cespare/xxhash v1.1.0

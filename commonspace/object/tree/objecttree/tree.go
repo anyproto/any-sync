@@ -1,10 +1,11 @@
 package objecttree
 
 import (
-	"bytes"
-	"crypto/md5"
 	"fmt"
 	"sort"
+
+	"github.com/anyproto/lexid"
+	"go.uber.org/zap"
 )
 
 type Mode int
@@ -14,6 +15,8 @@ const (
 	Rebuild
 	Nothing
 )
+
+var lexId = lexid.Must(lexid.CharsAllNoEscape, 4, 100)
 
 type Tree struct {
 	root               *Change
@@ -249,6 +252,14 @@ func (t *Tree) canAttach(c *Change) (attach bool) {
 			break
 		}
 	}
+	if attach {
+		// we should also have snapshot of attached change inside tree
+		_, ok := t.attached[c.SnapshotId]
+		if !ok {
+			log.Error("snapshot not found in tree", zap.String("id", c.Id), zap.String("snapshot", c.SnapshotId))
+			attach = false
+		}
+	}
 	return
 }
 
@@ -260,6 +271,7 @@ func (t *Tree) attach(c *Change, newEl bool) {
 	}
 	if c.IsSnapshot {
 		t.possibleRoots = append(t.possibleRoots, c)
+		c.SnapshotCounter = t.attached[c.SnapshotId].SnapshotCounter + 1
 	}
 
 	// add next to all prev changes
@@ -387,8 +399,33 @@ func (t *Tree) dfsNext(stack []*Change, visit func(ch *Change) (isContinue bool)
 }
 
 func (t *Tree) updateHeads() {
-	var newHeadIds []string
-	t.iterate(t.root, func(c *Change) (isContinue bool) {
+	var (
+		newHeadIds []string
+		maxId      = t.attached[t.lastIteratedHeadId].OrderId
+	)
+	it := newIterator()
+	defer freeIterator(it)
+	buf := it.makeIterBuffer(t.root)
+	// root change should always have order id
+	lastSeenOrderId := ""
+	for idx := len(buf) - 1; idx >= 0; idx-- {
+		c := buf[idx]
+		if c.OrderId == "" {
+			c.lastSeenOrderId = lastSeenOrderId
+		} else {
+			lastSeenOrderId = c.OrderId
+		}
+		if len(c.Next) == 0 {
+			newHeadIds = append(newHeadIds, c.Id)
+		}
+	}
+	for idx := len(buf) - 1; idx >= 0; idx-- {
+
+	}
+	it.iterate(t.root, func(c *Change) (isContinue bool) {
+		if c.OrderId == "" {
+
+		}
 		if len(c.Next) == 0 {
 			newHeadIds = append(newHeadIds, c.Id)
 		}
@@ -401,23 +438,31 @@ func (t *Tree) updateHeads() {
 	sort.Strings(t.headIds)
 }
 
-func (t *Tree) iterate(start *Change, f func(c *Change) (isContinue bool)) {
-	it := newIterator()
-	defer freeIterator(it)
-	it.iterate(start, f)
+func (t *Tree) iterate(start *Change,
+	f
+func (c *Change)(isContinue bool)) {
+it := newIterator()
+defer freeIterator(it)
+it.iterate(start, f)
 }
 
-func (t *Tree) iterateSkip(start *Change, f func(c *Change) (isContinue bool)) {
-	it := newIterator()
-	defer freeIterator(it)
-	it.iterateSkip(t.root, start, true, f)
+func (t *Tree) iterateSkip(start *Change,
+	f
+func (c *Change)(isContinue bool)) {
+it := newIterator()
+defer freeIterator(it)
+it.iterateSkip(t.root, start, true, f)
 }
 
-func (t *Tree) IterateSkip(startId string, f func(c *Change) (isContinue bool)) {
-	t.iterateSkip(t.attached[startId], f)
+func (t *Tree) IterateSkip(startId
+string, f
+func (c *Change)(isContinue bool)) {
+t.iterateSkip(t.attached[startId], f)
 }
 
-func (t *Tree) IterateBranching(startId string, f func(c *Change, branchLevel int) (isContinue bool)) {
+func (t *Tree) IterateBranching(startId
+string, f
+func (c *Change, branchLevel int) (isContinue bool)) {
 	// branchLevel indicates the number of parallel branches
 	var bc int
 	t.iterate(t.attached[startId], func(c *Change) (isContinue bool) {
@@ -432,31 +477,35 @@ func (t *Tree) IterateBranching(startId string, f func(c *Change, branchLevel in
 	})
 }
 
-func (t *Tree) Hash() string {
-	h := md5.New()
-	n := 0
-	t.iterate(t.root, func(c *Change) (isContinue bool) {
-		n++
-		fmt.Fprintf(h, "-%s", c.Id)
-		return true
-	})
-	return fmt.Sprintf("%d-%x", n, h.Sum(nil))
+func (t *Tree) Hash()
+string{
+h, := md5.New()
+n := 0
+t.iterate(t.root, func (c *Change) (isContinue bool){
+n++
+fmt.Fprintf(h, "-%s", c.Id)
+return true
+})
+return fmt.Sprintf("%d-%x", n, h.Sum(nil))
 }
 
-func (t *Tree) GetDuplicateEvents() int {
-	return t.duplicateEvents
+func (t *Tree) GetDuplicateEvents()
+int{
+return t.duplicateEvents
 }
 
 func (t *Tree) ResetDuplicateEvents() {
 	t.duplicateEvents = 0
 }
 
-func (t *Tree) Len() int {
-	return len(t.attached)
+func (t *Tree) Len()
+int{
+return len(t.attached)
 }
 
-func (t *Tree) Heads() []string {
-	return t.headIds
+func (t *Tree) Heads()[]
+string{
+return t.headIds
 }
 
 func (t *Tree) HeadsChanges() []*Change {
@@ -467,22 +516,24 @@ func (t *Tree) HeadsChanges() []*Change {
 	return heads
 }
 
-func (t *Tree) String() string {
-	var buf = bytes.NewBuffer(nil)
-	t.IterateSkip(t.RootId(), func(c *Change) (isContinue bool) {
-		buf.WriteString(c.Id)
-		if len(c.Next) > 1 {
-			buf.WriteString("-<")
-		} else if len(c.Next) > 0 {
-			buf.WriteString("->")
-		} else {
-			buf.WriteString("-|")
-		}
-		return true
-	})
-	return buf.String()
+func (t *Tree) String()
+string{
+var buf = bytes.NewBuffer(nil)
+t.IterateSkip(t.RootId(), func (c *Change) (isContinue bool){
+buf.WriteString(c.Id)
+if len(c.Next) > 1{
+buf.WriteString("-<")
+} else if len(c.Next) > 0{
+buf.WriteString("->")
+} else{
+buf.WriteString("-|")
+}
+return true
+})
+return buf.String()
 }
 
-func (t *Tree) Get(id string) *Change {
-	return t.attached[id]
+func (t *Tree) Get(id
+string) *Change{
+return t.attached[id]
 }

@@ -16,26 +16,29 @@ var (
 
 // Change is an abstract type for all types of changes
 type Change struct {
-	Next        []*Change
-	PreviousIds []string
-	Previous    []*Change
-	AclHeadId   string
-	Id          string
-	SnapshotId  string
-	Timestamp   int64
-	ReadKeyId   string
-	Identity    crypto.PubKey
-	Data        []byte
-	Model       interface{}
-	Signature   []byte
-	DataType    string
-	IsSnapshot  bool
-	IsDerived   bool
-	IsNew       bool
+	Next            []*Change
+	PreviousIds     []string
+	Previous        []*Change
+	AclHeadId       string
+	Id              string
+	SnapshotId      string
+	Timestamp       int64
+	ReadKeyId       string
+	Identity        crypto.PubKey
+	Data            []byte
+	Model           interface{}
+	Signature       []byte
+	DataType        string
+	IsSnapshot      bool
+	IsDerived       bool
+	IsNew           bool
+	OrderId         string
+	SnapshotCounter int
 
 	// iterator helpers
 	visited          bool
 	branchesFinished bool
+	lastSeenOrderId  string
 }
 
 func NewChangeFromRoot(id string, identity crypto.PubKey, ch *treechangeproto.RootChange, signature []byte, isDerived bool) *Change {
