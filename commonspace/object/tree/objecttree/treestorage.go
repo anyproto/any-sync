@@ -18,8 +18,9 @@ type Storage interface {
 	Id() string
 	Root() (*StorageChange, error)
 	Heads() ([]string, error)
-	HasChange(ctx context.Context, id string) (bool, error)
-	GetOne(ctx context.Context, id string) (StorageChange, error)
+	CommonSnapshot() (string, error)
+	Has(ctx context.Context, id string) (bool, error)
+	Get(ctx context.Context, id string) (StorageChange, error)
 	GetAfterOrder(ctx context.Context, orderId string, iter StorageIterator) error
 	AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error
 	Delete() error

@@ -45,8 +45,9 @@ type AddResult struct {
 }
 
 type RawChangesPayload struct {
-	NewHeads   []string
-	RawChanges []*treechangeproto.RawTreeChangeWithId
+	NewHeads     []string
+	RawChanges   []*treechangeproto.RawTreeChangeWithId
+	SnapshotPath []string
 }
 
 type ChangeIterateFunc = func(change *Change) bool
@@ -131,9 +132,8 @@ type objectTree struct {
 	sync.Mutex
 }
 
-func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Change) (err error) {
+func (ot *objectTree) rebuildFromStorage(theirHeads, theirSnapshotPath []string, newChanges []*Change) (err error) {
 	oldTree := ot.tree
-	ot.treeBuilder.Reset()
 	ot.tree, err = ot.treeBuilder.Build(theirHeads, newChanges)
 	if err != nil {
 		ot.tree = oldTree
@@ -483,23 +483,33 @@ func (ot *objectTree) addChangesToTree(ctx context.Context, changesPayload RawCh
 	}
 
 	// checks if we need to go to database
-	snapshotNotInTree := func(ch *Change) bool {
+	snapshotNotInTree := func(ch *Change) (bool, error) {
 		if ch.SnapshotId == ot.tree.RootId() {
-			return false
+			return false, nil
+		}
+		if oldSn, ok := ot.tree.attached[ch.SnapshotId]; ok {
+			if !oldSn.IsSnapshot {
+				return false, ErrHasInvalidChanges
+			}
 		}
 		for _, sn := range ot.newSnapshotsBuf {
 			// if change refers to newly received snapshot
 			if ch.SnapshotId == sn.Id {
-				return false
+				return false, nil
 			}
 		}
-		return true
+		return true, nil
 	}
 
 	shouldRebuildFromStorage := false
 	// checking if we have some changes with different snapshot and then rebuilding
 	for _, ch := range ot.newChangesBuf {
-		if snapshotNotInTree(ch) {
+		var notInTree bool
+		notInTree, err = snapshotNotInTree(ch)
+		if err != nil {
+			return
+		}
+		if notInTree {
 			shouldRebuildFromStorage = true
 			break
 		}
@@ -655,6 +665,8 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 		}
 
 		c.Model = model
+		// delete data because it just wastes memory
+		c.Data = nil
 		return iterate(c)
 	})
 	return

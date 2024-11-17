@@ -83,7 +83,7 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	} else {
 		snapshot = tb.treeStorage.Id()
 	}
-	snapshotCh, err := tb.storage.GetOne(tb.ctx, snapshot)
+	snapshotCh, err := tb.storage.Get(tb.ctx, snapshot)
 	if err != nil {
 		return nil, err
 	}
@@ -149,9 +149,10 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 		current       []StorageChange
 		lowestCounter = intsets.MaxInt
 	)
+	// TODO: we should actually check for all changes if they have valid snapshots
 	// getting actual snapshots
 	for _, id := range snapshots {
-		ch, err := tb.storage.GetOne(tb.ctx, id)
+		ch, err := tb.storage.Get(tb.ctx, id)
 		if err != nil {
 			log.Error("failed to get snapshot", zap.String("id", id), zap.Error(err))
 			continue
@@ -164,7 +165,7 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 	// equalizing counters for each snapshot branch
 	for i, ch := range current {
 		for ch.SnapshotCounter > lowestCounter {
-			ch, err = tb.storage.GetOne(tb.ctx, ch.SnapshotId)
+			ch, err = tb.storage.Get(tb.ctx, ch.SnapshotId)
 			if err != nil {
 				return "", err
 			}
@@ -196,7 +197,7 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 		}
 		// go down one counter
 		for i, ch := range current {
-			ch, err = tb.storage.GetOne(tb.ctx, ch.SnapshotId)
+			ch, err = tb.storage.Get(tb.ctx, ch.SnapshotId)
 			if err != nil {
 				return "", err
 			}

@@ -1,9 +1,8 @@
 package objecttree
 
 import (
-	"math"
-
-	"github.com/anyproto/any-sync/util/slice"
+	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 )
 
 // clearPossibleRoots force removes any snapshots which can further be deemed as roots
@@ -70,41 +69,59 @@ func (t *Tree) reduceTree() (res bool) {
 	if len(t.possibleRoots) == 0 {
 		return
 	}
-	var (
-		minRoot  *Change
-		minTotal = math.MaxInt
-	)
-	for _, r := range t.possibleRoots {
-		// if this is snapshot and next is also snapshot, then we don't need to take this one into account
-		if len(r.Next) == 1 && r.Next[0].IsSnapshot {
-			r.visited = true
-		}
-	}
-	t.possibleRoots = slice.DiscardFromSlice(t.possibleRoots, func(change *Change) bool {
-		if change.visited {
-			change.visited = false
-			return true
-		}
+	cur, ok := t.attached[t.attached[t.headIds[0]].SnapshotId]
+	if !ok {
+		log.Error("snapshot not found in tree", zap.String("snapshotId", t.attached[t.headIds[0]].SnapshotId))
 		return false
-	})
-	// TODO: this can be further optimized by iterating the tree and checking the roots from top to bottom
-
-	// checking if we can reduce tree to other root
-	for _, root := range t.possibleRoots {
-		totalChanges := t.checkRoot(root)
-		// we prefer new root with min amount of total changes
-		if totalChanges != -1 && totalChanges < minTotal {
-			minRoot = root
-			minTotal = totalChanges
+	}
+	if len(t.headIds) == 1 {
+		t.clearPossibleRoots()
+		t.makeRootAndRemove(cur)
+		return true
+	}
+	// gathering snapshots from first head to root
+	var path []*Change
+	for cur.Id != t.root.Id {
+		path = append(path, cur)
+		cur, ok = t.attached[cur.SnapshotId]
+		if !ok {
+			log.Error("snapshot not found in tree", zap.String("snapshotId", cur.SnapshotId))
+			return false
+		}
+		cur.visited = true
+	}
+	path = append(path, t.root)
+	t.root.visited = true
+	// checking where paths from other heads intersect path
+	maxIdx := 0
+	for i := 1; i < len(t.headIds); i++ {
+		cur, ok := t.attached[t.attached[t.headIds[i]].SnapshotId]
+		if !ok {
+			log.Error("snapshot not found in tree", zap.String("snapshotId", t.attached[t.headIds[i]].SnapshotId))
+			return false
+		}
+		for cur.Id != t.root.Id {
+			if cur.visited {
+				// TODO: we may use counters here but it is not necessary
+				idx := slices.IndexFunc(path, func(c *Change) bool {
+					return c.Id == cur.Id
+				})
+				if idx > maxIdx {
+					maxIdx = idx
+				}
+				break
+			}
+			cur, ok = t.attached[cur.SnapshotId]
+			if !ok {
+				log.Error("snapshot not found in tree", zap.String("snapshotId", cur.SnapshotId))
+				return false
+			}
 		}
 	}
-
-	t.clearPossibleRoots()
-	if minRoot == nil {
-		return
+	for _, c := range path {
+		c.visited = false
 	}
-
-	t.makeRootAndRemove(minRoot)
-	res = true
-	return
+	t.clearPossibleRoots()
+	t.makeRootAndRemove(path[maxIdx])
+	return true
 }

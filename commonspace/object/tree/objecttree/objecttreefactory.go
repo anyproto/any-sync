@@ -244,7 +244,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		flusher:         deps.flusher,
 	}
 
-	err := objTree.rebuildFromStorage(nil, nil)
+	err := objTree.rebuildFromStorage(nil, nil, nil)
 	if err != nil {
 		return nil, err
 	}
