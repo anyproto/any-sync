@@ -86,6 +86,8 @@ func (t *Tree) AddMergedHead(c *Change) error {
 			return fmt.Errorf("this is not a new head")
 		}
 	}
+	last := t.attached[t.lastIteratedHeadId]
+	c.OrderId = lexId.Next(last.OrderId)
 	t.headIds = []string{c.Id}
 	t.lastIteratedHeadId = c.Id
 	return nil
