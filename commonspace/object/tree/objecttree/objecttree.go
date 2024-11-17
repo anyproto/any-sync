@@ -135,7 +135,15 @@ type objectTree struct {
 
 func (ot *objectTree) rebuildFromStorage(theirHeads, theirSnapshotPath []string, newChanges []*Change) (err error) {
 	oldTree := ot.tree
-	ot.tree, err = ot.treeBuilder.Build(theirHeads, newChanges)
+	ourPath := ot.SnapshotPath()
+	ot.tree, err = ot.treeBuilder.Build(treeBuilderOpts{
+		full:              false,
+		theirHeads:        theirHeads,
+		ourHeads:          ot.tree.Heads(),
+		ourSnapshotPath:   ourPath,
+		theirSnapshotPath: theirSnapshotPath,
+		newChanges:        newChanges,
+	})
 	if err != nil {
 		ot.tree = oldTree
 		return
@@ -236,7 +244,12 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 	oldHeads = append(oldHeads, ot.tree.Heads()...)
 
 	objChange, rawChange, err := ot.changeBuilder.Build(payload)
+	if err != nil {
+		return
+	}
+	objChange.OrderId = lexId.Next(ot.tree.attached[ot.tree.lastIteratedHeadId].OrderId)
 	if content.IsSnapshot {
+		objChange.SnapshotCounter = ot.tree.root.SnapshotCounter + 1
 		// clearing tree, because we already saved everything in the last snapshot
 		ot.tree = &Tree{}
 	}
@@ -252,8 +265,16 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 	if err != nil {
 		panic(err)
 	}
-
-	err = ot.treeStorage.AddRawChangesSetHeads([]*treechangeproto.RawTreeChangeWithId{rawChange}, []string{objChange.Id})
+	storageChange := StorageChange{
+		RawChange:       rawChange.RawChange,
+		PrevIds:         objChange.PreviousIds,
+		Id:              objChange.Id,
+		SnapshotCounter: objChange.SnapshotCounter,
+		SnapshotId:      objChange.SnapshotId,
+		OrderId:         objChange.OrderId,
+		ChangeSize:      len(rawChange.RawChange),
+	}
+	err = ot.storage.AddAll(ctx, []StorageChange{storageChange}, ot.Heads(), ot.tree.root.Id)
 	if err != nil {
 		return
 	}
@@ -266,7 +287,7 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 	res = AddResult{
 		OldHeads: oldHeads,
 		Heads:    []string{objChange.Id},
-		Added:    []*treechangeproto.RawTreeChangeWithId{rawChange},
+		Added:    []StorageChange{storageChange},
 		Mode:     mode,
 	}
 	log.With("treeId", ot.id).With("head", objChange.Id).
@@ -370,7 +391,7 @@ func (ot *objectTree) AddRawChangesWithUpdater(ctx context.Context, changes RawC
 	}
 
 	rollback := func() {
-		rebuildErr := ot.rebuildFromStorage(nil, nil)
+		rebuildErr := ot.rebuildFromStorage(nil, nil, nil)
 		if rebuildErr != nil {
 			log.Error("failed to rebuild after adding to storage", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
 		}
@@ -384,7 +405,7 @@ func (ot *objectTree) AddRawChangesWithUpdater(ctx context.Context, changes RawC
 		}
 	}
 
-	err = ot.treeStorage.AddRawChangesSetHeads(addResult.Added, addResult.Heads)
+	err = ot.storage.AddAll(ctx, addResult.Added, addResult.Heads, ot.tree.RootId())
 	if err != nil {
 		rollback()
 		return

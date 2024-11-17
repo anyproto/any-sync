@@ -86,8 +86,6 @@ func (t *Tree) AddMergedHead(c *Change) error {
 			return fmt.Errorf("this is not a new head")
 		}
 	}
-	last := t.attached[t.lastIteratedHeadId]
-	c.OrderId = lexId.Next(last.OrderId)
 	t.headIds = []string{c.Id}
 	t.lastIteratedHeadId = c.Id
 	return nil
@@ -273,7 +271,7 @@ func (t *Tree) attach(c *Change, newEl bool) {
 	if !newEl {
 		delete(t.unAttached, c.Id)
 	}
-	if c.IsSnapshot {
+	if c.IsSnapshot && c.SnapshotCounter == 0 {
 		t.possibleRoots = append(t.possibleRoots, c)
 		c.SnapshotCounter = t.attached[c.SnapshotId].SnapshotCounter + 1
 	}
