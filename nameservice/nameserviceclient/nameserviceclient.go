@@ -1,3 +1,4 @@
+//go:generate mockgen -destination=mock/mock_nameserviceclient.go -package=mock_nameserviceclient github.com/anyproto/any-sync/nameservice/nameserviceclient AnyNsClientService
 package nameserviceclient
 
 import (
