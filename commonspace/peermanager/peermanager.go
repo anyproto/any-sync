@@ -24,6 +24,8 @@ type PeerManager interface {
 	BroadcastMessage(ctx context.Context, msg drpc.Message) error
 	// SendMessage sends message to peer
 	SendMessage(ctx context.Context, peerId string, msg drpc.Message) error
+	// KeepAlive sends keepAlive messages to needed peers
+	KeepAlive(ctx context.Context)
 }
 
 type PeerManagerProvider interface {

@@ -101,6 +101,18 @@ func (mr *MockPeerManagerMockRecorder) Init(a any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockPeerManager)(nil).Init), a)
 }
 
+// KeepAlive mocks base method.
+func (m *MockPeerManager) KeepAlive(ctx context.Context) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "KeepAlive", ctx)
+}
+
+// KeepAlive indicates an expected call of KeepAlive.
+func (mr *MockPeerManagerMockRecorder) KeepAlive(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeepAlive", reflect.TypeOf((*MockPeerManager)(nil).KeepAlive), ctx)
+}
+
 // Name mocks base method.
 func (m *MockPeerManager) Name() string {
 	m.ctrl.T.Helper()

@@ -137,13 +137,13 @@ func (m *MockDeleter) EXPECT() *MockDeleterMockRecorder {
 }
 
 // Delete mocks base method.
-func (m *MockDeleter) Delete(arg0 context.Context) {
+func (m *MockDeleter) Delete(ctx context.Context) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Delete", arg0)
+	m.ctrl.Call(m, "Delete", ctx)
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockDeleterMockRecorder) Delete(arg0 any) *gomock.Call {
+func (mr *MockDeleterMockRecorder) Delete(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDeleter)(nil).Delete), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDeleter)(nil).Delete), ctx)
 }
