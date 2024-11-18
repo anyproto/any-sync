@@ -8,6 +8,7 @@ import (
 
 	"github.com/anyproto/lexid"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 )
 
 type Mode int
@@ -224,45 +225,52 @@ func (t *Tree) add(c *Change) (attached bool) {
 		sort.Strings(c.PreviousIds)
 	}
 	// attaching only if all prev ids are attached
-	attached = true
-	for _, pid := range c.PreviousIds {
-		if _, ok := t.attached[pid]; ok {
-			continue
-		}
-		attached = false
-		// updating wait list for either unseen or unAttached changes
-		wl := t.waitList[pid]
-		wl = append(wl, c.Id)
-		t.waitList[pid] = wl
-	}
-	if attached {
+	attach, remove := t.canAttachOrRemove(c, true)
+	if attach {
 		t.attach(c, true)
-	} else {
+	} else if !remove {
 		t.unAttached[c.Id] = c
 	}
 	return
 }
 
-func (t *Tree) canAttach(c *Change) (attach bool) {
+func (t *Tree) canAttachOrRemove(c *Change, addToWait bool) (attach, remove bool) {
 	if c == nil {
-		return false
+		return false, false
 	}
 	attach = true
-	for _, id := range c.PreviousIds {
-		if _, exists := t.attached[id]; !exists {
-			attach = false
-			break
+	prevSnapshots := make([]string, 0, len(c.PreviousIds))
+	for _, pid := range c.PreviousIds {
+		if prev, ok := t.attached[pid]; ok {
+			if prev.IsSnapshot && len(c.PreviousIds) == 1 {
+				prevSnapshots = append(prevSnapshots, prev.Id)
+			} else {
+				prevSnapshots = append(prevSnapshots, prev.SnapshotId)
+			}
+			continue
+		}
+		attach = false
+		if addToWait {
+			// updating wait list for either unseen or unAttached changes
+			wl := t.waitList[pid]
+			wl = append(wl, c.Id)
+			t.waitList[pid] = wl
 		}
 	}
-	if attach {
-		// we should also have snapshot of attached change inside tree
-		_, ok := t.attached[c.SnapshotId]
-		if !ok {
-			log.Error("snapshot not found in tree", zap.String("id", c.Id), zap.String("snapshot", c.SnapshotId))
-			attach = false
-		}
+	if !attach {
+		return
 	}
-	return
+	// we should also have snapshot of attached change inside tree
+	sn, ok := t.attached[c.SnapshotId]
+	if !ok {
+		log.Error("snapshot not found in tree", zap.String("id", c.Id), zap.String("snapshot", c.SnapshotId))
+		return false, true
+	}
+	if !slices.Contains(prevSnapshots, sn.SnapshotId) {
+		log.Error("change has different snapshot than its prev ids", zap.String("id", c.Id), zap.String("snapshot", c.SnapshotId))
+		return false, true
+	}
+	return true, false
 }
 
 func (t *Tree) attach(c *Change, newEl bool) {
@@ -271,7 +279,7 @@ func (t *Tree) attach(c *Change, newEl bool) {
 	if !newEl {
 		delete(t.unAttached, c.Id)
 	}
-	if c.IsSnapshot && c.SnapshotCounter == 0 {
+	if c.SnapshotCounter == 0 {
 		t.possibleRoots = append(t.possibleRoots, c)
 		c.SnapshotCounter = t.attached[c.SnapshotId].SnapshotCounter + 1
 	}
@@ -305,8 +313,11 @@ func (t *Tree) attach(c *Change, newEl bool) {
 			// next can only be in unAttached, because if next is attached then previous (we) are attached
 			// which is obviously not true, because we are attaching previous only now
 			next := t.unAttached[wid]
-			if t.canAttach(next) {
+			attach, remove := t.canAttachOrRemove(next, false)
+			if attach {
 				t.attach(next, false)
+			} else if remove {
+				delete(t.unAttached, next.Id)
 			}
 			// if we can't attach next that means that some other change will trigger attachment later,
 			// so we don't care about those changes

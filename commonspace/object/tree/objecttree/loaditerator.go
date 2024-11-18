@@ -1,6 +1,9 @@
 package objecttree
 
 import (
+	"context"
+	"fmt"
+
 	"golang.org/x/exp/slices"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -19,12 +22,15 @@ type IteratorBatch struct {
 }
 
 type loadIterator struct {
+	storage      Storage
+	builder      ChangeBuilder
 	loader       *rawChangeLoader
 	cache        map[string]rawCacheEntry
 	idStack      []string
 	heads        []string
 	lastHeads    []string
 	snapshotPath []string
+	orderId      string
 	root         *Change
 	lastChange   *Change
 	iter         *iterator
@@ -40,22 +46,24 @@ func newLoadIterator(loader *rawChangeLoader, snapshotPath []string) *loadIterat
 }
 
 func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
-	l.iter = newIterator()
-	defer freeIterator(l.iter)
-	curSize := 0
 	batch.Root = l.loader.Root()
 	batch.Heads = l.lastHeads
 	batch.SnapshotPath = l.snapshotPath
+	var curSize int
 	if l.isExhausted {
 		return
 	}
 	l.isExhausted = true
-	l.iter.iterateSkip(l.root, l.lastChange, true, func(c *Change) (isContinue bool) {
-		l.lastChange = c
-		rawEntry := l.cache[c.Id]
+	err = l.storage.GetAfterOrder(context.Background(), l.orderId, func(ctx context.Context, c StorageChange) (shouldContinue bool) {
+		l.orderId = c.OrderId
+		rawEntry, ok := l.cache[c.Id]
+		// if there are no such entry in cache continue
+		if !ok {
+			return true
+		}
 		if rawEntry.removed {
 			batch.Heads = slice.DiscardFromSlice(batch.Heads, func(s string) bool {
-				return slices.Contains(c.PreviousIds, s)
+				return slices.Contains(c.PrevIds, s)
 			})
 			if !slices.Contains(batch.Heads, c.Id) {
 				batch.Heads = append(batch.Heads, c.Id)
@@ -68,38 +76,57 @@ func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 		}
 		curSize += rawEntry.size
 
-		var rawCh *treechangeproto.RawTreeChangeWithId
-		rawCh, err = l.loader.loadRaw(c.Id)
-		if err != nil {
-			return false
-		}
-		batch.Batch = append(batch.Batch, rawCh)
+		batch.Batch = append(batch.Batch, &treechangeproto.RawTreeChangeWithId{
+			RawChange: c.RawChange,
+			Id:        c.Id,
+		})
 		batch.Heads = slice.DiscardFromSlice(batch.Heads, func(s string) bool {
-			return slices.Contains(c.PreviousIds, s)
+			return slices.Contains(c.PrevIds, s)
 		})
 		if !slices.Contains(batch.Heads, c.Id) {
 			batch.Heads = append(batch.Heads, c.Id)
 		}
 		return true
 	})
+	if err != nil {
+		return
+	}
 	l.lastHeads = batch.Heads
 	return
 }
 
 func (l *loadIterator) load(commonSnapshot string, heads, breakpoints []string) (err error) {
+	ctx := context.Background()
+	cs, err := l.storage.Get(ctx, commonSnapshot)
+	if err != nil {
+		return
+	}
+	rawCh := &treechangeproto.RawTreeChangeWithId{}
+	err = l.storage.GetAfterOrder(ctx, cs.OrderId, func(ctx context.Context, change StorageChange) (shouldContinue bool) {
+		rawCh.Id = change.Id
+		rawCh.RawChange = change.RawChange
+		var ch *Change
+		ch, err = l.builder.UnmarshallReduced(rawCh)
+		if err != nil {
+			return false
+		}
+		l.cache[change.Id] = rawCacheEntry{
+			change: ch,
+			size:   len(change.RawChange),
+		}
+		return true
+	})
+	if err != nil {
+		return
+	}
 	existingBreakpoints := make([]string, 0, len(breakpoints))
 	for _, b := range breakpoints {
-		_, err := l.loader.loadAppendEntry(b)
-		if err != nil {
+		_, ok := l.cache[b]
+		if !ok {
 			continue
 		}
 		existingBreakpoints = append(existingBreakpoints, b)
 	}
-	loadedCs, err := l.loader.loadAppendEntry(commonSnapshot)
-	if err != nil {
-		return err
-	}
-	l.cache[commonSnapshot] = loadedCs
 	l.heads = heads
 
 	dfs := func(
@@ -121,12 +148,9 @@ func (l *loadIterator) load(commonSnapshot string, heads, breakpoints []string) 
 				continue
 			}
 			if !exists {
-				entry, err = l.loader.loadAppendEntry(id)
-				if err != nil {
-					return
-				}
+				// this should not happen
+				return fmt.Errorf("entry %s not found in cache", id)
 			}
-			// setting the counter when we visit
 			entry = visit(entry)
 			l.cache[id] = entry
 
@@ -141,19 +165,6 @@ func (l *loadIterator) load(commonSnapshot string, heads, breakpoints []string) 
 		return nil
 	}
 
-	l.idStack = append(l.idStack, heads...)
-	// load everything
-	err = dfs(commonSnapshot, heads,
-		func(_ rawCacheEntry, mapExists bool) bool {
-			return !mapExists
-		},
-		func(entry rawCacheEntry) rawCacheEntry {
-			entry.position = 0
-			return entry
-		})
-	if err != nil {
-		return
-	}
 	// marking some changes as removed, not to send to anybody
 	err = dfs(commonSnapshot, existingBreakpoints,
 		func(entry rawCacheEntry, mapExists bool) bool {
@@ -167,40 +178,9 @@ func (l *loadIterator) load(commonSnapshot string, heads, breakpoints []string) 
 	if err != nil {
 		return
 	}
-	// setting next for all changes in batch
-	err = dfs(commonSnapshot, heads,
-		func(entry rawCacheEntry, mapExists bool) bool {
-			return mapExists && !entry.nextSet
-		},
-		func(entry rawCacheEntry) rawCacheEntry {
-			for _, id := range entry.change.PreviousIds {
-				prevEntry, exists := l.cache[id]
-				if !exists {
-					continue
-				}
-				prev := prevEntry.change
-				if len(prev.Next) == 0 || prev.Next[len(prev.Next)-1].Id <= entry.change.Id {
-					prev.Next = append(prev.Next, entry.change)
-				} else {
-					insertIdx := 0
-					for idx, el := range prev.Next {
-						if el.Id >= entry.change.Id {
-							insertIdx = idx
-							break
-						}
-					}
-					prev.Next = append(prev.Next[:insertIdx+1], prev.Next[insertIdx:]...)
-					prev.Next[insertIdx] = entry.change
-				}
-			}
-			entry.nextSet = true
-			return entry
-		})
-	if err != nil {
-		return
-	}
-	l.root = loadedCs.change
+	l.root = l.cache[commonSnapshot].change
+	l.orderId = l.root.OrderId
 	l.lastHeads = []string{l.root.Id}
-	l.lastChange = loadedCs.change
+	l.lastChange = l.root
 	return nil
 }

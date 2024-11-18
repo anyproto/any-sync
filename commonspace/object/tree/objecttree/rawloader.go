@@ -21,12 +21,10 @@ type rawChangeLoader struct {
 }
 
 type rawCacheEntry struct {
-	change    *Change
-	rawChange *treechangeproto.RawTreeChangeWithId
-	position  int
-	removed   bool
-	nextSet   bool
-	size      int
+	change  *Change
+	removed bool
+	nextSet bool
+	size    int
 }
 
 func newStorageLoader(treeStorage treestorage.TreeStorage, changeBuilder ChangeBuilder) *rawChangeLoader {

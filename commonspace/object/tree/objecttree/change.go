@@ -16,16 +16,17 @@ var (
 
 // Change is an abstract type for all types of changes
 type Change struct {
-	Next            []*Change
-	PreviousIds     []string
-	Previous        []*Change
-	AclHeadId       string
-	Id              string
-	SnapshotId      string
-	Timestamp       int64
-	ReadKeyId       string
-	Identity        crypto.PubKey
-	Data            []byte
+	Next        []*Change
+	PreviousIds []string
+	Previous    []*Change
+	AclHeadId   string
+	Id          string
+	SnapshotId  string
+	Timestamp   int64
+	ReadKeyId   string
+	Identity    crypto.PubKey
+	Data        []byte
+	// TODO: add call one time comment
 	Model           interface{}
 	Signature       []byte
 	DataType        string

@@ -84,7 +84,6 @@ type ObjectTree interface {
 	ReadableObjectTree
 
 	SnapshotPath() []string
-	ChangesAfterCommonSnapshot(snapshotPath, heads []string) ([]*treechangeproto.RawTreeChangeWithId, error)
 	ChangesAfterCommonSnapshotLoader(snapshotPath, heads []string) (LoadIterator, error)
 
 	Storage() treestorage.TreeStorage
@@ -756,29 +755,6 @@ func (ot *objectTree) SnapshotPath() []string {
 	ot.snapshotPath = path
 
 	return path
-}
-
-func (ot *objectTree) ChangesAfterCommonSnapshot(theirPath, theirHeads []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
-	if ot.isDeleted {
-		return nil, ErrDeleted
-	}
-	var (
-		needFullDocument = len(theirPath) == 0
-		ourPath          = ot.SnapshotPath()
-		// by default returning everything we have from start
-		commonSnapshot = ourPath[len(ourPath)-1]
-		err            error
-	)
-
-	// if this is non-empty request
-	if !needFullDocument {
-		commonSnapshot, err = commonSnapshotForTwoPaths(ourPath, theirPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return ot.rawChangeLoader.Load(commonSnapshot, ot.tree, theirHeads)
 }
 
 func (ot *objectTree) ChangesAfterCommonSnapshotLoader(theirPath, theirHeads []string) (LoadIterator, error) {
