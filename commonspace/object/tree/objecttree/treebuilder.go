@@ -64,15 +64,23 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	var snapshot string
 	if !opts.full {
 		if len(opts.theirSnapshotPath) == 0 {
-			our := opts.ourSnapshotPath[len(opts.ourSnapshotPath)-1]
-			lowest := tb.lowestSnapshots(cache, opts.theirHeads, our)
-			if len(lowest) != 1 {
-				snapshot, err = tb.commonSnapshot(lowest)
+			if len(opts.ourSnapshotPath) == 0 {
+				common, err := tb.storage.CommonSnapshot()
 				if err != nil {
 					return nil, err
 				}
+				snapshot = common
 			} else {
-				snapshot = lowest[0]
+				our := opts.ourSnapshotPath[len(opts.ourSnapshotPath)-1]
+				lowest := tb.lowestSnapshots(cache, opts.theirHeads, our)
+				if len(lowest) != 1 {
+					snapshot, err = tb.commonSnapshot(lowest)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					snapshot = lowest[0]
+				}
 			}
 		} else {
 			snapshot, err = commonSnapshotForTwoPaths(opts.ourSnapshotPath, opts.theirSnapshotPath)
@@ -81,7 +89,7 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 			}
 		}
 	} else {
-		snapshot = tb.treeStorage.Id()
+		snapshot = tb.storage.Id()
 	}
 	snapshotCh, err := tb.storage.Get(tb.ctx, snapshot)
 	if err != nil {
@@ -89,13 +97,15 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	}
 	rawChange := &treechangeproto.RawTreeChangeWithId{}
 	var changes []*Change
-	err = tb.storage.GetAfterOrder(tb.ctx, snapshotCh.OrderId, func(ctx context.Context, change StorageChange) (shouldContinue bool) {
-		rawChange.Id = change.Id
-		rawChange.RawChange = change.RawChange
+	err = tb.storage.GetAfterOrder(tb.ctx, snapshotCh.OrderId, func(ctx context.Context, storageChange StorageChange) (shouldContinue bool) {
+		rawChange.Id = storageChange.Id
+		rawChange.RawChange = storageChange.RawChange
 		ch, err := tb.builder.Unmarshall(rawChange, false)
 		if err != nil {
 			return false
 		}
+		ch.OrderId = storageChange.OrderId
+		ch.SnapshotCounter = storageChange.SnapshotCounter
 		changes = append(changes, ch)
 		return true
 	})
@@ -103,7 +113,6 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 		return nil, err
 	}
 	tr = &Tree{}
-	// TODO: enrich data with order ids
 	changes = append(changes, opts.newChanges...)
 	tr.AddFast(changes...)
 	return tr, nil

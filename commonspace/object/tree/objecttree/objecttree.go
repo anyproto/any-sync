@@ -133,8 +133,13 @@ type objectTree struct {
 }
 
 func (ot *objectTree) rebuildFromStorage(theirHeads, theirSnapshotPath []string, newChanges []*Change) (err error) {
-	oldTree := ot.tree
-	ourPath := ot.SnapshotPath()
+	var (
+		ourPath []string
+		oldTree = ot.tree
+	)
+	if ot.tree != nil {
+		ourPath = ot.SnapshotPath()
+	}
 	ot.tree, err = ot.treeBuilder.Build(treeBuilderOpts{
 		full:              false,
 		theirHeads:        theirHeads,
@@ -777,7 +782,7 @@ func (ot *objectTree) ChangesAfterCommonSnapshotLoader(theirPath, theirHeads []s
 		}
 	}
 
-	iter := newLoadIterator(ot.rawChangeLoader, ourPath)
+	iter := newLoadIterator(ot.rawRoot, ourPath, ot.storage, ot.changeBuilder)
 	err = iter.load(commonSnapshot, ot.tree.headIds, theirHeads)
 	if err != nil {
 		return nil, err

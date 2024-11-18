@@ -10,6 +10,13 @@ import (
 	"github.com/anyproto/any-sync/util/slice"
 )
 
+type rawCacheEntry struct {
+	change  *Change
+	removed bool
+	nextSet bool
+	size    int
+}
+
 type LoadIterator interface {
 	NextBatch(maxSize int) (batch IteratorBatch, err error)
 }
@@ -24,30 +31,28 @@ type IteratorBatch struct {
 type loadIterator struct {
 	storage      Storage
 	builder      ChangeBuilder
-	loader       *rawChangeLoader
 	cache        map[string]rawCacheEntry
 	idStack      []string
 	heads        []string
 	lastHeads    []string
 	snapshotPath []string
 	orderId      string
-	root         *Change
-	lastChange   *Change
-	iter         *iterator
+	root         *treechangeproto.RawTreeChangeWithId
 	isExhausted  bool
 }
 
-func newLoadIterator(loader *rawChangeLoader, snapshotPath []string) *loadIterator {
+func newLoadIterator(root *treechangeproto.RawTreeChangeWithId, snapshotPath []string, storage Storage, builder ChangeBuilder) *loadIterator {
 	return &loadIterator{
-		loader:       loader,
+		storage:      storage,
+		builder:      builder,
 		cache:        make(map[string]rawCacheEntry),
 		snapshotPath: snapshotPath,
+		root:         root,
 	}
 }
 
 func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
-	batch.Root = l.loader.Root()
-	batch.Heads = l.lastHeads
+	batch.Root = l.root
 	batch.SnapshotPath = l.snapshotPath
 	var curSize int
 	if l.isExhausted {
@@ -178,9 +183,7 @@ func (l *loadIterator) load(commonSnapshot string, heads, breakpoints []string) 
 	if err != nil {
 		return
 	}
-	l.root = l.cache[commonSnapshot].change
-	l.orderId = l.root.OrderId
-	l.lastHeads = []string{l.root.Id}
-	l.lastChange = l.root
+	l.orderId = cs.OrderId
+	l.lastHeads = []string{cs.Id}
 	return nil
 }

@@ -50,16 +50,14 @@ func verifiableTreeDeps(
 	treeStorage treestorage.TreeStorage,
 	aclList list.AclList) objectTreeDeps {
 	changeBuilder := NewChangeBuilder(crypto.NewKeyStorage(), rootChange)
-	rawLoader := newRawChangeLoader(treeStorage, changeBuilder)
 	treeBuilder := newTreeBuilder(true, treeStorage, changeBuilder, rawLoader)
 	return objectTreeDeps{
-		changeBuilder:   changeBuilder,
-		treeBuilder:     treeBuilder,
-		treeStorage:     treeStorage,
-		validator:       newTreeValidator(false, false),
-		rawChangeLoader: rawLoader,
-		aclList:         aclList,
-		flusher:         &defaultFlusher{},
+		changeBuilder: changeBuilder,
+		treeBuilder:   treeBuilder,
+		treeStorage:   treeStorage,
+		validator:     newTreeValidator(false, false),
+		aclList:       aclList,
+		flusher:       &defaultFlusher{},
 	}
 }
 
@@ -70,16 +68,14 @@ func verifiableEmptyDataTreeDeps(
 	treeStorage treestorage.TreeStorage,
 	aclList list.AclList) objectTreeDeps {
 	changeBuilder := NewEmptyDataChangeBuilder(crypto.NewKeyStorage(), rootChange)
-	loader := newStorageLoader(treeStorage, changeBuilder)
 	treeBuilder := newTreeBuilder(false, treeStorage, changeBuilder, loader)
 	return objectTreeDeps{
-		changeBuilder:   changeBuilder,
-		treeBuilder:     treeBuilder,
-		treeStorage:     treeStorage,
-		validator:       newTreeValidator(false, false),
-		rawChangeLoader: loader,
-		aclList:         aclList,
-		flusher:         &defaultFlusher{},
+		changeBuilder: changeBuilder,
+		treeBuilder:   treeBuilder,
+		treeStorage:   treeStorage,
+		validator:     newTreeValidator(false, false),
+		aclList:       aclList,
+		flusher:       &defaultFlusher{},
 	}
 }
 
@@ -88,16 +84,14 @@ func nonVerifiableTreeDeps(
 	treeStorage treestorage.TreeStorage,
 	aclList list.AclList) objectTreeDeps {
 	changeBuilder := &nonVerifiableChangeBuilder{NewChangeBuilder(newMockKeyStorage(), rootChange)}
-	loader := newRawChangeLoader(treeStorage, changeBuilder)
 	treeBuilder := newTreeBuilder(true, treeStorage, changeBuilder, loader)
 	return objectTreeDeps{
-		changeBuilder:   changeBuilder,
-		treeBuilder:     treeBuilder,
-		treeStorage:     treeStorage,
-		validator:       &noOpTreeValidator{},
-		rawChangeLoader: loader,
-		aclList:         aclList,
-		flusher:         &defaultFlusher{},
+		changeBuilder: changeBuilder,
+		treeBuilder:   treeBuilder,
+		treeStorage:   treeStorage,
+		validator:     &noOpTreeValidator{},
+		aclList:       aclList,
+		flusher:       &defaultFlusher{},
 	}
 }
 
@@ -115,15 +109,13 @@ func BuildTestableTree(treeStorage treestorage.TreeStorage, aclList list.AclList
 	changeBuilder := &nonVerifiableChangeBuilder{
 		ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), root),
 	}
-	loader := newRawChangeLoader(treeStorage, changeBuilder)
 	deps := objectTreeDeps{
-		changeBuilder:   changeBuilder,
-		treeBuilder:     newTreeBuilder(true, treeStorage, changeBuilder, loader),
-		treeStorage:     treeStorage,
-		rawChangeLoader: loader,
-		validator:       &noOpTreeValidator{},
-		aclList:         aclList,
-		flusher:         &defaultFlusher{},
+		changeBuilder: changeBuilder,
+		treeBuilder:   newTreeBuilder(true, treeStorage, changeBuilder, loader),
+		treeStorage:   treeStorage,
+		validator:     &noOpTreeValidator{},
+		aclList:       aclList,
+		flusher:       &defaultFlusher{},
 	}
 
 	return buildObjectTree(deps)
@@ -134,15 +126,13 @@ func BuildEmptyDataTestableTree(treeStorage treestorage.TreeStorage, aclList lis
 	changeBuilder := &nonVerifiableChangeBuilder{
 		ChangeBuilder: NewEmptyDataChangeBuilder(newMockKeyStorage(), root),
 	}
-	loader := newStorageLoader(treeStorage, changeBuilder)
 	deps := objectTreeDeps{
-		changeBuilder:   changeBuilder,
-		treeBuilder:     newTreeBuilder(false, treeStorage, changeBuilder, loader),
-		treeStorage:     treeStorage,
-		rawChangeLoader: loader,
-		validator:       &noOpTreeValidator{},
-		aclList:         aclList,
-		flusher:         &defaultFlusher{},
+		changeBuilder: changeBuilder,
+		treeBuilder:   newTreeBuilder(false, treeStorage, changeBuilder, loader),
+		treeStorage:   treeStorage,
+		validator:     &noOpTreeValidator{},
+		aclList:       aclList,
+		flusher:       &defaultFlusher{},
 	}
 
 	return buildObjectTree(deps)
