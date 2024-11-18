@@ -54,6 +54,18 @@ func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 	return pr, nil
 }
 
+type Stat struct {
+	PeerId         string    `json:"peerId"`
+	SubConnections int       `json:"subConnections"`
+	Created        time.Time `json:"created"`
+	Version        uint32    `json:"version"`
+	AliveTimeSecs  float64   `json:"aliveTimeSecs"`
+}
+
+type StatProvider interface {
+	ProvideStat() *Stat
+}
+
 type Peer interface {
 	Id() string
 	Context() context.Context
@@ -319,4 +331,18 @@ func (p *peer) gc(ttl time.Duration) (aliveCount int) {
 func (p *peer) Close() (err error) {
 	log.Debug("peer close", zap.String("peerId", p.id))
 	return p.MultiConn.Close()
+}
+
+func (p *peer) ProvideStat() *Stat {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	protoVersion, _ := CtxProtoVersion(p.Context())
+	subConnectionsCount := len(p.active)
+	return &Stat{
+		PeerId:         p.id,
+		SubConnections: subConnectionsCount,
+		Created:        p.created,
+		Version:        protoVersion,
+		AliveTimeSecs:  time.Now().Sub(p.created).Seconds(),
+	}
 }
