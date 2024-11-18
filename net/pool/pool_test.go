@@ -189,7 +189,7 @@ func TestPool_Pick(t *testing.T) {
 	})
 }
 
-func TestProvideStat_NoPeers(t *testing.T) {
+func TestProvideStat(t *testing.T) {
 	t.Run("only incoming peers", func(t *testing.T) {
 		// given
 		fx := newFixture(t)
@@ -214,6 +214,7 @@ func TestProvideStat_NoPeers(t *testing.T) {
 		assert.Equal(t, p1.created, poolStat.PeerStats[0].Created)
 		assert.Equal(t, p1.subConnections, poolStat.PeerStats[0].SubConnections)
 		assert.Equal(t, p1.version, poolStat.PeerStats[0].Version)
+		assert.NotEmpty(t, poolStat.PeerStats[0].AliveTimeSecs)
 	})
 	t.Run("outgoing and incoming peers", func(t *testing.T) {
 		// given
@@ -248,11 +249,13 @@ func TestProvideStat_NoPeers(t *testing.T) {
 		assert.Equal(t, created1, poolStat.PeerStats[0].Created)
 		assert.Equal(t, 0, poolStat.PeerStats[0].SubConnections)
 		assert.Equal(t, uint32(0), poolStat.PeerStats[0].Version)
+		assert.NotEmpty(t, poolStat.PeerStats[0].AliveTimeSecs)
 
 		assert.Equal(t, p1.id, poolStat.PeerStats[1].PeerId)
 		assert.Equal(t, p1.created, poolStat.PeerStats[1].Created)
 		assert.Equal(t, p1.subConnections, poolStat.PeerStats[1].SubConnections)
 		assert.Equal(t, p1.version, poolStat.PeerStats[1].Version)
+		assert.NotEmpty(t, poolStat.PeerStats[1].AliveTimeSecs)
 	})
 	t.Run("only outcoming peers", func(t *testing.T) {
 		// given
@@ -286,6 +289,7 @@ func TestProvideStat_NoPeers(t *testing.T) {
 		assert.Equal(t, created, poolStat.PeerStats[0].Created)
 		assert.Equal(t, subConn, poolStat.PeerStats[0].SubConnections)
 		assert.Equal(t, version, poolStat.PeerStats[0].Version)
+		assert.NotEmpty(t, version, poolStat.PeerStats[0].AliveTimeSecs)
 	})
 	t.Run("no peers", func(t *testing.T) {
 		// given
@@ -388,6 +392,7 @@ func (t *testPeer) ProvideStat() *peer.Stat {
 		Created:        t.created,
 		SubConnections: t.subConnections,
 		Version:        t.version,
+		AliveTimeSecs:  time.Now().Sub(t.created).Seconds(),
 	}
 }
 

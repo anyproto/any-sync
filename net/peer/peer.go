@@ -59,6 +59,7 @@ type Stat struct {
 	SubConnections int       `json:"subConnections"`
 	Created        time.Time `json:"created"`
 	Version        uint32    `json:"version"`
+	AliveTimeSecs  float64   `json:"aliveTimeSecs"`
 }
 
 type StatProvider interface {
@@ -342,5 +343,6 @@ func (p *peer) ProvideStat() *Stat {
 		SubConnections: subConnectionsCount,
 		Created:        p.created,
 		Version:        protoVersion,
+		AliveTimeSecs:  time.Now().Sub(p.created).Seconds(),
 	}
 }
