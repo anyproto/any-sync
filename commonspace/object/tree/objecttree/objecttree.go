@@ -103,14 +103,13 @@ type ObjectTree interface {
 }
 
 type objectTree struct {
-	treeStorage     treestorage.TreeStorage
-	storage         Storage
-	changeBuilder   ChangeBuilder
-	validator       ObjectTreeValidator
-	rawChangeLoader *rawChangeLoader
-	treeBuilder     *treeBuilder
-	aclList         list.AclList
-	flusher         Flusher
+	treeStorage   treestorage.TreeStorage
+	storage       Storage
+	changeBuilder ChangeBuilder
+	validator     ObjectTreeValidator
+	treeBuilder   *treeBuilder
+	aclList       list.AclList
+	flusher       Flusher
 
 	id      string
 	rawRoot *treechangeproto.RawTreeChangeWithId

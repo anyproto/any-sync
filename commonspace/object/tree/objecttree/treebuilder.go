@@ -10,7 +10,6 @@ import (
 
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 )
 
 var (
@@ -19,11 +18,9 @@ var (
 )
 
 type treeBuilder struct {
-	treeStorage treestorage.TreeStorage
-	builder     ChangeBuilder
-	loader      *rawChangeLoader
-	storage     Storage
-	ctx         context.Context
+	builder ChangeBuilder
+	storage Storage
+	ctx     context.Context
 
 	// buffers
 	idStack    []string
@@ -39,11 +36,10 @@ type treeBuilderOpts struct {
 	newChanges        []*Change
 }
 
-func newTreeBuilder(keepData bool, storage treestorage.TreeStorage, builder ChangeBuilder, loader *rawChangeLoader) *treeBuilder {
+func newTreeBuilder(storage Storage, builder ChangeBuilder) *treeBuilder {
 	return &treeBuilder{
-		treeStorage: storage,
-		builder:     builder,
-		loader:      loader,
+		storage: storage,
+		builder: builder,
 	}
 }
 
