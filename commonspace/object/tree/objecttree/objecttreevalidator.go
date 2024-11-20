@@ -10,13 +10,13 @@ import (
 )
 
 type TreeStorageCreator interface {
-	CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (treestorage.TreeStorage, error)
+	CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (Storage, error)
 }
 
 type InMemoryStorageCreator struct{}
 
-func (i InMemoryStorageCreator) CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (treestorage.TreeStorage, error) {
-	return treestorage.NewInMemoryTreeStorage(payload.RootRawChange, payload.Heads, payload.Changes)
+func (i InMemoryStorageCreator) CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (Storage, error) {
+	return nil, nil
 }
 
 type ValidatorFunc func(payload treestorage.TreeStorageCreatePayload, storageCreator TreeStorageCreator, aclList list.AclList) (ret ObjectTree, err error)

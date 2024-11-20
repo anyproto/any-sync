@@ -128,7 +128,7 @@ func genBuildFilterableTestableTree(filterFunc func(ch *Change) bool) func(treeS
 		deps := objectTreeDeps{
 			changeBuilder:   changeBuilder,
 			treeBuilder:     newTreeBuilder(true, treeStorage, changeBuilder, loader),
-			treeStorage:     treeStorage,
+			storage:         treeStorage,
 			rawChangeLoader: loader,
 			validator:       &noOpTreeValidator{filterFunc: filterFunc},
 			aclList:         aclList,
@@ -159,7 +159,7 @@ func prepareHistoryTreeDeps(aclList list.AclList) (*MockChangeCreator, objectTre
 	deps := objectTreeDeps{
 		changeBuilder:   changeBuilder,
 		treeBuilder:     newTreeBuilder(true, treeStorage, changeBuilder, loader),
-		treeStorage:     treeStorage,
+		storage:         treeStorage,
 		rawChangeLoader: loader,
 		validator:       &noOpTreeValidator{},
 		aclList:         aclList,
@@ -1393,7 +1393,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("5", aclList.Head().Id, "0", false, "1"),
 			changeCreator.CreateRaw("6", aclList.Head().Id, "0", false, "3", "4", "5"),
 		}
-		deps.treeStorage.AddRawChangesSetHeads(rawChanges, []string{"6"})
+		deps.storage.AddRawChangesSetHeads(rawChanges, []string{"6"})
 		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
 			Heads:           []string{"6"},
 			IncludeBeforeId: false,
@@ -1425,7 +1425,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("5", aclList.Head().Id, "1", true, "3", "4"),
 			changeCreator.CreateRaw("6", aclList.Head().Id, "5", false, "5"),
 		}
-		deps.treeStorage.AddRawChangesSetHeads(rawChanges, []string{"6"})
+		deps.storage.AddRawChangesSetHeads(rawChanges, []string{"6"})
 		hTree, err := buildHistoryTree(deps, HistoryTreeParams{})
 		require.NoError(t, err)
 		// check tree heads
@@ -1453,7 +1453,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("5", aclList.Head().Id, "0", false, "1"),
 			changeCreator.CreateRaw("6", aclList.Head().Id, "0", false, "3", "4", "5"),
 		}
-		deps.treeStorage.AddRawChangesSetHeads(rawChanges, []string{"6"})
+		deps.storage.AddRawChangesSetHeads(rawChanges, []string{"6"})
 		hTree, err := buildHistoryTree(deps, HistoryTreeParams{
 			Heads: []string{"6"}, IncludeBeforeId: true,
 		})
