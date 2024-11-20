@@ -25,20 +25,19 @@ type ObjectTreeDerivePayload struct {
 }
 
 type HistoryTreeParams struct {
-	TreeStorage     treestorage.TreeStorage
+	Storage         Storage
 	AclList         list.AclList
 	Heads           []string
 	IncludeBeforeId bool
 }
 
 type objectTreeDeps struct {
-	changeBuilder   ChangeBuilder
-	treeBuilder     *treeBuilder
-	treeStorage     treestorage.TreeStorage
-	validator       ObjectTreeValidator
-	rawChangeLoader *rawChangeLoader
-	aclList         list.AclList
-	flusher         Flusher
+	changeBuilder ChangeBuilder
+	treeBuilder   *treeBuilder
+	treeStorage   treestorage.TreeStorage
+	validator     ObjectTreeValidator
+	aclList       list.AclList
+	flusher       Flusher
 }
 
 type BuildObjectTreeFunc = func(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error)

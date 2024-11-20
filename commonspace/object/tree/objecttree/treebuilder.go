@@ -10,6 +10,7 @@ import (
 
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/util/slice"
 )
 
 var (
@@ -29,6 +30,7 @@ type treeBuilder struct {
 
 type treeBuilderOpts struct {
 	full              bool
+	useHeadsSnapshot  bool
 	theirHeads        []string
 	ourHeads          []string
 	ourSnapshotPath   []string
@@ -58,7 +60,20 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 		cache[ch.Id] = ch
 	}
 	var snapshot string
-	if !opts.full {
+	if opts.useHeadsSnapshot {
+		lowest, err := tb.lowestSnapshots(nil, opts.ourHeads, "")
+		if err != nil {
+			return nil, err
+		}
+		if len(lowest) != 1 {
+			snapshot, err = tb.commonSnapshot(lowest)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			snapshot = lowest[0]
+		}
+	} else if !opts.full {
 		if len(opts.theirSnapshotPath) == 0 {
 			if len(opts.ourSnapshotPath) == 0 {
 				common, err := tb.storage.CommonSnapshot()
@@ -68,7 +83,10 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 				snapshot = common
 			} else {
 				our := opts.ourSnapshotPath[len(opts.ourSnapshotPath)-1]
-				lowest := tb.lowestSnapshots(cache, opts.theirHeads, our)
+				lowest, err := tb.lowestSnapshots(cache, opts.theirHeads, our)
+				if err != nil {
+					return nil, err
+				}
 				if len(lowest) != 1 {
 					snapshot, err = tb.commonSnapshot(lowest)
 					if err != nil {
@@ -114,15 +132,27 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	return tr, nil
 }
 
-func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string, ourSnapshot string) (snapshots []string) {
+func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string, ourSnapshot string) (snapshots []string, err error) {
 	var next, current []string
-	for _, ch := range heads {
-		head, ok := cache[ch]
-		if !ok {
-			continue
+	if cache != nil {
+		for _, ch := range heads {
+			head, ok := cache[ch]
+			if !ok {
+				continue
+			}
+			next = append(next, head.SnapshotId)
 		}
-		next = append(next, head.SnapshotId)
+	} else {
+		for _, head := range heads {
+			ch, err := tb.storage.Get(tb.ctx, head)
+			if err != nil {
+				return nil, err
+			}
+			next = append(next, ch.SnapshotId)
+		}
 	}
+	slices.Sort(next)
+	next = slice.DiscardDuplicatesSorted(next)
 	current = make([]string, 0, len(next))
 	for len(next) > 0 {
 		current = current[:0]
@@ -137,16 +167,12 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 			}
 		}
 	}
-	snapshots = append(snapshots, ourSnapshot)
-	slices.Sort(snapshots)
-	cnt := 0
-	for i := 0; i < len(snapshots)-1; i++ {
-		if snapshots[i] != snapshots[i+1] {
-			cnt++
-			snapshots[cnt] = snapshots[i+1]
-		}
+	if ourSnapshot != "" {
+		snapshots = append(snapshots, ourSnapshot)
 	}
-	return snapshots[:cnt+1]
+	slices.Sort(snapshots)
+	snapshots = slice.DiscardDuplicatesSorted(snapshots)
+	return snapshots, nil
 }
 
 func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err error) {
@@ -189,13 +215,9 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 			return 0
 		})
 		// removing same snapshots
-		cnt := 0
-		for i := 0; i < len(current)-1; i++ {
-			if current[i].Id != current[i+1].Id {
-				cnt++
-				current[cnt] = current[i+1]
-			}
-		}
+		current = slice.DiscardDuplicatesSortedFunc(current, func(a, b StorageChange) bool {
+			return a.SnapshotId == b.SnapshotId
+		})
 		// if there is only one snapshot left - return it
 		if len(current) == 1 {
 			return current[0].Id, nil
