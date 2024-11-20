@@ -76,7 +76,7 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	} else if !opts.full {
 		if len(opts.theirSnapshotPath) == 0 {
 			if len(opts.ourSnapshotPath) == 0 {
-				common, err := tb.storage.CommonSnapshot()
+				common, err := tb.storage.CommonSnapshot(tb.ctx)
 				if err != nil {
 					return nil, err
 				}

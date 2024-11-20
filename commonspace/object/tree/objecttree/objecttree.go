@@ -136,13 +136,11 @@ func (ot *objectTree) rebuildFromStorage(theirHeads, theirSnapshotPath []string,
 		ourPath []string
 		oldTree = ot.tree
 	)
-	if ot.tree != nil {
+	if theirHeads != nil {
 		ourPath = ot.SnapshotPath()
 	}
 	ot.tree, err = ot.treeBuilder.Build(treeBuilderOpts{
-		full:              false,
 		theirHeads:        theirHeads,
-		ourHeads:          ot.tree.Heads(),
 		ourSnapshotPath:   ourPath,
 		theirSnapshotPath: theirSnapshotPath,
 		newChanges:        newChanges,
