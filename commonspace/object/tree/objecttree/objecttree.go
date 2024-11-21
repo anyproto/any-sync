@@ -14,7 +14,6 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/slice"
 )
@@ -86,7 +85,7 @@ type ObjectTree interface {
 	SnapshotPath() []string
 	ChangesAfterCommonSnapshotLoader(snapshotPath, heads []string) (LoadIterator, error)
 
-	Storage() treestorage.TreeStorage
+	Storage() Storage
 
 	AddContent(ctx context.Context, content SignableChangeContent) (AddResult, error)
 	AddContentWithValidator(ctx context.Context, content SignableChangeContent, validate ChangeValidator) (AddResult, error)
@@ -103,7 +102,6 @@ type ObjectTree interface {
 }
 
 type objectTree struct {
-	treeStorage   treestorage.TreeStorage
 	storage       Storage
 	changeBuilder ChangeBuilder
 	validator     ObjectTreeValidator
@@ -203,8 +201,8 @@ func (ot *objectTree) ChangeInfo() *treechangeproto.TreeChangeInfo {
 	return ot.root.Model.(*treechangeproto.TreeChangeInfo)
 }
 
-func (ot *objectTree) Storage() treestorage.TreeStorage {
-	return ot.treeStorage
+func (ot *objectTree) Storage() Storage {
+	return ot.storage
 }
 
 func (ot *objectTree) GetChange(id string) (*Change, error) {
@@ -731,7 +729,7 @@ func (ot *objectTree) Delete() error {
 		return nil
 	}
 	ot.isDeleted = true
-	return ot.treeStorage.Delete()
+	return ot.storage.Delete()
 }
 
 func (ot *objectTree) SnapshotPath() []string {
