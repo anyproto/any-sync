@@ -10,6 +10,7 @@ import (
 	"github.com/anyproto/any-store/query"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 const (
@@ -65,6 +66,96 @@ type storage struct {
 	arena       *anyenc.Arena
 }
 
+func createStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, store anystore.DB) (Storage, error) {
+	st := &storage{
+		id:    root.Id,
+		store: store,
+	}
+	builder := NewChangeBuilder(crypto.NewKeyStorage(), root)
+	_, err := builder.Unmarshall(root, true)
+	if err != nil {
+		return nil, err
+	}
+	firstOrder := lexId.Next("")
+	stChange := StorageChange{
+		RawChange:       root.RawChange,
+		Id:              root.Id,
+		SnapshotCounter: 1,
+		SnapshotId:      "",
+		OrderId:         firstOrder,
+		ChangeSize:      len(root.RawChange),
+	}
+	orderIdx := anystore.IndexInfo{
+		Name:   orderKey,
+		Fields: []string{orderKey},
+		Unique: true,
+	}
+	err = st.changesColl.EnsureIndex(ctx, orderIdx)
+	if err != nil {
+		return nil, err
+	}
+	headsColl, err := store.Collection(ctx, headsCollectionName)
+	if err != nil {
+		return nil, err
+	}
+	st.headsColl = headsColl
+	changesColl, err := store.Collection(ctx, changesCollectionName)
+	if err != nil {
+		return nil, err
+	}
+	st.changesColl = changesColl
+	st.arena = &anyenc.Arena{}
+	defer st.arena.Reset()
+	doc := newStorageChangeValue(stChange, st.arena)
+	tx, err := st.store.WriteTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	err = st.changesColl.Insert(tx.Context(), doc)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	headsDoc := st.arena.NewObject()
+	headsDoc.Set(headsKey, newStringArrayValue([]string{root.Id}, st.arena))
+	headsDoc.Set(commonSnapshotKey, st.arena.NewString(root.Id))
+	err = st.headsColl.Insert(tx.Context(), doc)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	return st, nil
+}
+
+func newStorage(ctx context.Context, id string, store anystore.DB) (Storage, error) {
+	// TODO: use spacestorage to set heads
+	st := &storage{
+		id:    id,
+		store: store,
+	}
+	orderIdx := anystore.IndexInfo{
+		Name:   orderKey,
+		Fields: []string{orderKey},
+		Unique: true,
+	}
+	err := st.changesColl.EnsureIndex(ctx, orderIdx)
+	if err != nil {
+		return nil, err
+	}
+	headsColl, err := store.Collection(ctx, headsCollectionName)
+	if err != nil {
+		return nil, err
+	}
+	st.headsColl = headsColl
+	changesColl, err := store.Collection(ctx, changesCollectionName)
+	if err != nil {
+		return nil, err
+	}
+	st.changesColl = changesColl
+	st.arena = &anyenc.Arena{}
+	return st, nil
+}
+
 func (s *storage) Heads(ctx context.Context) (res []string, err error) {
 	doc, err := s.headsColl.FindId(ctx, s.id)
 	if err != nil {
@@ -90,8 +181,7 @@ func (s *storage) Has(ctx context.Context, id string) (bool, error) {
 }
 
 func (s *storage) GetAfterOrder(ctx context.Context, orderId string, storageIter StorageIterator) error {
-	// TODO: fix query
-	qry := s.changesColl.Find(query.Key{Path: []string{orderKey}, Filter: query.NewComp(query.CompOpGte, orderId)}).Sort("o.id")
+	qry := s.changesColl.Find(query.Key{Path: []string{orderKey}, Filter: query.NewComp(query.CompOpGte, orderId)}).Sort(orderKey)
 	iter, err := qry.Iter(ctx)
 	if err != nil {
 		return fmt.Errorf("find iter: %w", err)
@@ -124,15 +214,7 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 	}
 	vals := make([]*anyenc.Value, 0, len(changes))
 	for _, ch := range changes {
-		newVal := arena.NewObject()
-		newVal.Set(orderKey, arena.NewString(ch.OrderId))
-		newVal.Set(rawChangeKey, arena.NewBinary(ch.RawChange))
-		newVal.Set(snapshotCounterKey, arena.NewNumberInt(ch.SnapshotCounter))
-		newVal.Set(snapshotIdKey, arena.NewString(ch.SnapshotId))
-		newVal.Set(changeSizeKey, arena.NewNumberInt(ch.ChangeSize))
-		if len(ch.PrevIds) != 0 {
-			newVal.Set(prevIdsKey, newStringArrayValue(ch.PrevIds, arena))
-		}
+		newVal := newStorageChangeValue(ch, arena)
 		vals = append(vals, newVal)
 	}
 	err = s.changesColl.Insert(tx.Context(), vals...)
@@ -170,33 +252,6 @@ func (s *storage) Delete() error {
 		return fmt.Errorf("failed to remove document from heads collection: %w", err)
 	}
 	return nil
-}
-
-func newStorage(ctx context.Context, id string, store anystore.DB) (Storage, error) {
-	st := &storage{
-		id:    id,
-		store: store,
-	}
-	orderIdx := anystore.IndexInfo{
-		Name:   orderKey,
-		Fields: []string{orderKey},
-		Unique: true,
-	}
-	err := st.changesColl.EnsureIndex(ctx, orderIdx)
-	if err != nil {
-		return nil, err
-	}
-	headsColl, err := store.Collection(ctx, headsCollectionName)
-	if err != nil {
-		return nil, err
-	}
-	st.headsColl = headsColl
-	changesColl, err := store.Collection(ctx, changesCollectionName)
-	if err != nil {
-		return nil, err
-	}
-	st.changesColl = changesColl
-	return st, nil
 }
 
 func (s *storage) Id() string {
@@ -251,4 +306,17 @@ func newStringArrayValue(strings []string, arena *anyenc.Arena) *anyenc.Value {
 		val.SetArrayItem(idx, arena.NewString(str))
 	}
 	return val
+}
+
+func newStorageChangeValue(ch StorageChange, arena *anyenc.Arena) *anyenc.Value {
+	newVal := arena.NewObject()
+	newVal.Set(orderKey, arena.NewString(ch.OrderId))
+	newVal.Set(rawChangeKey, arena.NewBinary(ch.RawChange))
+	newVal.Set(snapshotCounterKey, arena.NewNumberInt(ch.SnapshotCounter))
+	newVal.Set(snapshotIdKey, arena.NewString(ch.SnapshotId))
+	newVal.Set(changeSizeKey, arena.NewNumberInt(ch.ChangeSize))
+	if len(ch.PrevIds) != 0 {
+		newVal.Set(prevIdsKey, newStringArrayValue(ch.PrevIds, arena))
+	}
+	return newVal
 }

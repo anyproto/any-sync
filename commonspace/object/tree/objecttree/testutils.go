@@ -1,11 +1,16 @@
 package objecttree
 
 import (
+	"context"
 	"fmt"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anyproto/any-sync/util/crypto"
+	"testing"
+
+	anystore "github.com/anyproto/any-store"
 	libcrypto "github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/stretchr/testify/require"
+
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/util/crypto"
 )
 
 type mockPubKey struct {
@@ -67,10 +72,14 @@ func (m mockKeyStorage) PubKeyFromProto(protoBytes []byte) (crypto.PubKey, error
 	return mockPubKey{}, nil
 }
 
-type MockChangeCreator struct{}
+type MockChangeCreator struct {
+	store anystore.DB
+}
 
-func NewMockChangeCreator() *MockChangeCreator {
-	return &MockChangeCreator{}
+func NewMockChangeCreator(store anystore.DB) *MockChangeCreator {
+	return &MockChangeCreator{
+		store: store,
+	}
 }
 
 func (c *MockChangeCreator) CreateRoot(id, aclId string) *treechangeproto.RawTreeChangeWithId {
@@ -136,8 +145,9 @@ func (c *MockChangeCreator) CreateRawWithData(id, aclId, snapshotId string, isSn
 	}
 }
 
-func (c *MockChangeCreator) CreateNewTreeStorage(treeId, aclHeadId string, isDerived bool) treestorage.TreeStorage {
+func (c *MockChangeCreator) CreateNewTreeStorage(t *testing.T, treeId, aclHeadId string, isDerived bool) Storage {
 	root := c.CreateRoot(treeId, aclHeadId)
-	treeStorage, _ := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
-	return treeStorage
+	storage, err := createStorage(context.Background(), root, c.store)
+	require.NoError(t, err)
+	return storage
 }
