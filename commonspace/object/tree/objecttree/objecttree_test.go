@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -121,6 +124,11 @@ type testTreeContext struct {
 	objTree       ObjectTree
 }
 
+type testStore struct {
+	anystore.DB
+	path string
+}
+
 func newStore(ctx context.Context, t *testing.T) anystore.DB {
 	return newNamedStore(ctx, t, "changes.db")
 }
@@ -132,7 +140,72 @@ func newNamedStore(ctx context.Context, t *testing.T, name string) anystore.DB {
 		err := db.Close()
 		require.NoError(t, err)
 	})
-	return db
+	return testStore{
+		DB:   db,
+		path: filepath.Join(t.TempDir(), name),
+	}
+}
+
+func copyFolder(src string, dst string) error {
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		dstPath := filepath.Join(dst, relPath)
+		if d.IsDir() {
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+			return os.MkdirAll(dstPath, info.Mode())
+		} else {
+			return copyFile(path, dstPath, d)
+		}
+	})
+}
+
+func copyFile(src, dst string, d fs.DirEntry) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+	_, err = io.Copy(dstFile, srcFile)
+	if err != nil {
+		return err
+	}
+	info, err := d.Info()
+	if err != nil {
+		return err
+	}
+	return os.Chmod(dst, info.Mode())
+}
+
+func copyStore(ctx context.Context, t *testing.T, store testStore, name string) anystore.DB {
+	err := store.Checkpoint(ctx, true)
+	require.NoError(t, err)
+	newPath := filepath.Join(t.TempDir(), name)
+	err = copyFolder(store.path, newPath)
+	require.NoError(t, err)
+	db, err := anystore.Open(ctx, newPath, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err := db.Close()
+		require.NoError(t, err)
+	})
+	return testStore{
+		DB:   db,
+		path: newPath,
+	}
 }
 
 func prepareAclList(t *testing.T) (list.AclList, *accountdata.AccountKeys) {
@@ -284,7 +357,8 @@ func TestObjectTree(t *testing.T) {
 			DataType:    mockDataType,
 		})
 		require.NoError(t, err)
-		bStore := aTree.Storage().(*treestorage.InMemoryTreeStorage).Copy()
+		storeB := copyStore(ctx, t, storeA.(testStore), "b")
+		bStore, _ := newStorage(ctx, root.Id, storeB)
 		bTree, err := BuildKeyFilterableObjectTree(bStore, bAccount.Acl)
 		require.NoError(t, err)
 		err = exec.Execute("a.remove::b")
