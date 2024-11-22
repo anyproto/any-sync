@@ -1,6 +1,8 @@
 package objecttree
 
 import (
+	"context"
+
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -94,7 +96,7 @@ func nonVerifiableTreeDeps(
 }
 
 func BuildEmptyDataObjectTree(storage Storage, aclList list.AclList) (ObjectTree, error) {
-	rootChange, err := storage.Root()
+	rootChange, err := storage.Root(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +105,7 @@ func BuildEmptyDataObjectTree(storage Storage, aclList list.AclList) (ObjectTree
 }
 
 func BuildTestableTree(storage Storage, aclList list.AclList) (ObjectTree, error) {
-	root, _ := storage.Root()
+	root, _ := storage.Root(context.Background())
 	changeBuilder := &nonVerifiableChangeBuilder{
 		ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), root.RawTreeChangeWithId()),
 	}
@@ -120,7 +122,7 @@ func BuildTestableTree(storage Storage, aclList list.AclList) (ObjectTree, error
 }
 
 func BuildEmptyDataTestableTree(storage Storage, aclList list.AclList) (ObjectTree, error) {
-	root, _ := storage.Root()
+	root, _ := storage.Root(context.Background())
 	changeBuilder := &nonVerifiableChangeBuilder{
 		ChangeBuilder: NewEmptyDataChangeBuilder(newMockKeyStorage(), root.RawTreeChangeWithId()),
 	}
@@ -137,7 +139,7 @@ func BuildEmptyDataTestableTree(storage Storage, aclList list.AclList) (ObjectTr
 }
 
 func BuildKeyFilterableObjectTree(storage Storage, aclList list.AclList) (ObjectTree, error) {
-	rootChange, err := storage.Root()
+	rootChange, err := storage.Root(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +149,7 @@ func BuildKeyFilterableObjectTree(storage Storage, aclList list.AclList) (Object
 }
 
 func BuildEmptyDataKeyFilterableObjectTree(storage Storage, aclList list.AclList) (ObjectTree, error) {
-	rootChange, err := storage.Root()
+	rootChange, err := storage.Root(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +159,7 @@ func BuildEmptyDataKeyFilterableObjectTree(storage Storage, aclList list.AclList
 }
 
 func BuildObjectTree(storage Storage, aclList list.AclList) (ObjectTree, error) {
-	rootChange, err := storage.Root()
+	rootChange, err := storage.Root(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +168,7 @@ func BuildObjectTree(storage Storage, aclList list.AclList) (ObjectTree, error) 
 }
 
 func BuildNonVerifiableHistoryTree(params HistoryTreeParams) (HistoryTree, error) {
-	rootChange, err := params.Storage.Root()
+	rootChange, err := params.Storage.Root(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +177,7 @@ func BuildNonVerifiableHistoryTree(params HistoryTreeParams) (HistoryTree, error
 }
 
 func BuildHistoryTree(params HistoryTreeParams) (HistoryTree, error) {
-	rootChange, err := params.Storage.Root()
+	rootChange, err := params.Storage.Root(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -232,10 +234,12 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		return nil, err
 	}
 
-	objTree.rawRoot, err = objTree.treeStorage.Root()
+	// TODO: think about contexts
+	root, err := objTree.storage.Root(context.Background())
 	if err != nil {
 		return nil, err
 	}
+	objTree.rawRoot = root.RawTreeChangeWithId()
 
 	// verifying root
 	header, err := objTree.changeBuilder.Unmarshall(objTree.rawRoot, true)
@@ -269,7 +273,7 @@ func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht History
 		return nil, err
 	}
 	objTree.id = objTree.storage.Id()
-	root, err := objTree.storage.Root()
+	root, err := objTree.storage.Root(context.Background())
 	if err != nil {
 		return nil, err
 	}

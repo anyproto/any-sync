@@ -785,6 +785,19 @@ func (ot *objectTree) ChangesAfterCommonSnapshotLoader(theirPath, theirHeads []s
 	return iter, nil
 }
 
+// this is a helper function to be used in testing
+func (ot *objectTree) changesAfterCommonSnapshot(theirPath, theirHeads []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
+	loader, err := ot.ChangesAfterCommonSnapshotLoader(theirPath, theirHeads)
+	if err != nil {
+		return nil, err
+	}
+	res, err := loader.NextBatch(10 * 1024 * 1024)
+	if err != nil {
+		return nil, err
+	}
+	return res.Batch, nil
+}
+
 func (ot *objectTree) snapshotPathIsActual() bool {
 	return len(ot.snapshotPath) != 0 && ot.snapshotPath[0] == ot.tree.RootId()
 }

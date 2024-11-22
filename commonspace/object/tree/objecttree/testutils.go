@@ -76,6 +76,18 @@ type MockChangeCreator struct {
 	store anystore.DB
 }
 
+type testStorage struct {
+	Storage
+	errAdd error
+}
+
+func (t testStorage) AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
+	if t.errAdd != nil {
+		return t.errAdd
+	}
+	return t.Storage.AddAll(ctx, changes, heads, commonSnapshot)
+}
+
 func NewMockChangeCreator(store anystore.DB) *MockChangeCreator {
 	return &MockChangeCreator{
 		store: store,
@@ -149,5 +161,7 @@ func (c *MockChangeCreator) CreateNewTreeStorage(t *testing.T, treeId, aclHeadId
 	root := c.CreateRoot(treeId, aclHeadId)
 	storage, err := createStorage(context.Background(), root, c.store)
 	require.NoError(t, err)
-	return storage
+	return testStorage{
+		Storage: storage,
+	}
 }
