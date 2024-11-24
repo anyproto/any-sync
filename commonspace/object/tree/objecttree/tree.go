@@ -210,6 +210,9 @@ func (t *Tree) add(c *Change) bool {
 
 	if t.root == nil { // first element
 		t.root = c
+		if c.OrderId == "" {
+			c.OrderId = lexId.Next("")
+		}
 		t.lastIteratedHeadId = t.root.Id
 		t.attached = map[string]*Change{
 			c.Id: c,
@@ -450,6 +453,7 @@ func (t *Tree) updateHeads() {
 		prev := buf[lastOrderIdx].OrderId
 		for i := lastOrderIdx - 1; i >= 0; i-- {
 			buf[i].OrderId = lexId.Next(prev)
+			prev = buf[i].OrderId
 		}
 	}
 

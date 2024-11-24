@@ -3,11 +3,13 @@ package objecttree
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 )
 
 func newChange(id string, snapshotId string, prevIds ...string) *Change {
@@ -124,7 +126,6 @@ func TestTree_Add(t *testing.T) {
 		t.Log(time.Since(st))
 		assert.Equal(t, []string{"9999"}, tr.Heads())
 	})
-	// TODO: add my tests
 }
 
 func TestTree_Hash(t *testing.T) {
@@ -337,6 +338,101 @@ func TestTree_Iterate(t *testing.T) {
 			return true
 		})
 		assert.Equal(t, []string{"1", "2", "2.1", "2.2", "2.4", "2.3", "2.3.1", "2.2+3", "2.2+3.1", "10", "last"}, res)
+	})
+}
+
+func TestTree_Orders(t *testing.T) {
+	t.Run("test orders", func(t *testing.T) {
+		tr := new(Tree)
+		tr.Add(
+			newSnapshot("0", ""),
+			newChange("1", "0", "0"),
+			newChange("1.1", "0", "1"),
+			newChange("1.2", "0", "1"),
+			newChange("1.4", "0", "1.2"),
+			newChange("1.3", "0", "1"),
+			newChange("1.3.1", "0", "1.3"),
+			newChange("1.2+3", "0", "1.4", "1.3.1"),
+			newChange("1.2+3.1", "0", "1.2+3"),
+			newChange("10", "0", "1.2+3.1", "1.1"),
+			newChange("last", "0", "10"),
+		)
+		var res []string
+		var changes []*Change
+		tr.IterateSkip("0", func(c *Change) (isContinue bool) {
+			res = append(res, c.Id)
+			changes = append(changes, c)
+			return true
+		})
+		slices.Reverse(changes)
+		slices.SortFunc(changes, func(c1, c2 *Change) int {
+			return strings.Compare(c1.OrderId, c2.OrderId)
+		})
+		require.Equal(t, len(changes), len(res))
+		for i := 0; i < len(changes); i++ {
+			require.Equal(t, changes[i].Id, res[i])
+		}
+	})
+	t.Run("test orders split", func(t *testing.T) {
+		tr := new(Tree)
+		tr.Add(
+			newSnapshot("0", ""),
+			newChange("1", "0", "0"),
+			newChange("1.1", "0", "1"),
+			newChange("1.2", "0", "1"),
+			newChange("1.4", "0", "1.2"),
+		)
+		tr.Add(
+			newChange("1.3", "0", "1"),
+			newChange("1.3.1", "0", "1.3"),
+			newChange("1.2+3", "0", "1.4", "1.3.1"),
+			newChange("1.2+3.1", "0", "1.2+3"),
+			newChange("10", "0", "1.2+3.1", "1.1"),
+			newChange("last", "0", "10"),
+		)
+		var res []string
+		var changes []*Change
+		tr.IterateSkip("0", func(c *Change) (isContinue bool) {
+			res = append(res, c.Id)
+			changes = append(changes, c)
+			return true
+		})
+		slices.Reverse(changes)
+		slices.SortFunc(changes, func(c1, c2 *Change) int {
+			return strings.Compare(c1.OrderId, c2.OrderId)
+		})
+		require.Equal(t, len(changes), len(res))
+		for i := 0; i < len(changes); i++ {
+			require.Equal(t, changes[i].Id, res[i])
+		}
+	})
+	t.Run("test orders gap", func(t *testing.T) {
+		tr := new(Tree)
+		tr.Add(
+			newSnapshot("0", ""),
+			newChange("1", "0", "0"),
+			newChange("2", "0", "1"),
+			newChange("3", "0", "2"),
+		)
+		tr.Add(
+			newChange("0.1", "0", "0"),
+			newChange("0.2", "0", "0.1"),
+			newChange("0.3", "0", "0.2"),
+		)
+		var res []string
+		var changes []*Change
+		tr.IterateSkip("0", func(c *Change) (isContinue bool) {
+			res = append(res, c.Id)
+			changes = append(changes, c)
+			return true
+		})
+		slices.SortFunc(changes, func(c1, c2 *Change) int {
+			return strings.Compare(c1.OrderId, c2.OrderId)
+		})
+		require.Equal(t, len(changes), len(res))
+		for i := 0; i < len(changes); i++ {
+			require.Equal(t, changes[i].Id, res[i])
+		}
 	})
 }
 
