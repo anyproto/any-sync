@@ -329,17 +329,6 @@ func (t *Tree) attach(c *Change, newEl bool) {
 	}
 }
 
-func (t *Tree) after(id1, id2 string) (found bool) {
-	t.iterate(t.attached[id2], func(c *Change) (isContinue bool) {
-		if c.Id == id1 {
-			found = true
-			return false
-		}
-		return true
-	})
-	return
-}
-
 func (t *Tree) dfsPrev(stack []*Change, breakpoints []string, visit func(ch *Change) (isContinue bool), afterVisit func([]*Change)) {
 	t.visitedBuf = t.visitedBuf[:0]
 

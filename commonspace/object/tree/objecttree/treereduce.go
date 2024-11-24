@@ -10,34 +10,6 @@ func (t *Tree) clearPossibleRoots() {
 	t.possibleRoots = t.possibleRoots[:0]
 }
 
-// checkRoot checks if a change can be a new root for the tree
-// it returns total changes which were discovered during dfsPrev from heads
-func (t *Tree) checkRoot(change *Change) (total int) {
-	t.stackBuf = t.stackBuf[:0]
-	stack := t.stackBuf
-
-	// starting with heads
-	for _, h := range t.headIds {
-		stack = append(stack, t.attached[h])
-	}
-
-	t.dfsPrev(
-		stack,
-		[]string{change.Id},
-		func(ch *Change) bool {
-			total += 1
-			return true
-		},
-		func(changes []*Change) {
-			if t.root.visited {
-				total = -1
-			}
-		},
-	)
-
-	return
-}
-
 // makeRootAndRemove removes all changes before start and makes start the root
 func (t *Tree) makeRootAndRemove(start *Change) {
 	t.stackBuf = t.stackBuf[:0]
@@ -69,7 +41,13 @@ func (t *Tree) reduceTree() (res bool) {
 	if len(t.possibleRoots) == 0 {
 		return
 	}
-	cur, ok := t.attached[t.attached[t.headIds[0]].SnapshotId]
+	firstHead := t.attached[t.headIds[0]]
+	if firstHead.IsSnapshot && len(t.headIds) == 1 {
+		t.clearPossibleRoots()
+		t.makeRootAndRemove(firstHead)
+		return true
+	}
+	cur, ok := t.attached[firstHead.SnapshotId]
 	if !ok {
 		log.Error("snapshot not found in tree", zap.String("snapshotId", t.attached[t.headIds[0]].SnapshotId))
 		return false
@@ -82,13 +60,13 @@ func (t *Tree) reduceTree() (res bool) {
 	// gathering snapshots from first head to root
 	var path []*Change
 	for cur.Id != t.root.Id {
+		cur.visited = true
 		path = append(path, cur)
 		cur, ok = t.attached[cur.SnapshotId]
 		if !ok {
 			log.Error("snapshot not found in tree", zap.String("snapshotId", cur.SnapshotId))
 			return false
 		}
-		cur.visited = true
 	}
 	path = append(path, t.root)
 	t.root.visited = true
