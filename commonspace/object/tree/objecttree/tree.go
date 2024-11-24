@@ -200,7 +200,7 @@ func (t *Tree) RemoveInvalidChange(id string) {
 	t.updateHeads()
 }
 
-func (t *Tree) add(c *Change) (attached bool) {
+func (t *Tree) add(c *Change) bool {
 	if c == nil {
 		return false
 	}
@@ -231,7 +231,7 @@ func (t *Tree) add(c *Change) (attached bool) {
 	} else if !remove {
 		t.unAttached[c.Id] = c
 	}
-	return
+	return attach
 }
 
 func (t *Tree) canAttachOrRemove(c *Change, addToWait bool) (attach, remove bool) {
@@ -261,12 +261,12 @@ func (t *Tree) canAttachOrRemove(c *Change, addToWait bool) (attach, remove bool
 		return
 	}
 	// we should also have snapshot of attached change inside tree
-	sn, ok := t.attached[c.SnapshotId]
+	_, ok := t.attached[c.SnapshotId]
 	if !ok {
 		log.Error("snapshot not found in tree", zap.String("id", c.Id), zap.String("snapshot", c.SnapshotId))
 		return false, true
 	}
-	if !slices.Contains(prevSnapshots, sn.SnapshotId) {
+	if !slices.Contains(prevSnapshots, c.SnapshotId) {
 		log.Error("change has different snapshot than its prev ids", zap.String("id", c.Id), zap.String("snapshot", c.SnapshotId))
 		return false, true
 	}
