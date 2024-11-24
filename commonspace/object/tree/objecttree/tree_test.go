@@ -170,7 +170,7 @@ func TestTree_AddFuzzy(t *testing.T) {
 	}
 }
 
-func TestTree_Reduce(t *testing.T) {
+func TestTree_CountersReduce(t *testing.T) {
 	t.Run("reduce once", func(t *testing.T) {
 		tr := new(Tree)
 		tr.Add(
@@ -195,6 +195,7 @@ func TestTree_Reduce(t *testing.T) {
 				return true
 			})
 			assert.Equal(t, []string{"10", "last"}, res)
+			assert.Equal(t, 1, tr.attached["10"].SnapshotCounter)
 		})
 	})
 	t.Run("snapshots in line", func(t *testing.T) {
@@ -216,6 +217,7 @@ func TestTree_Reduce(t *testing.T) {
 				return true
 			})
 			assert.Equal(t, []string{"3"}, res)
+			assert.Equal(t, 3, tr.attached["3"].SnapshotCounter)
 		})
 	})
 	t.Run("many snapshots", func(t *testing.T) {
@@ -243,6 +245,8 @@ func TestTree_Reduce(t *testing.T) {
 				return true
 			})
 			assert.Equal(t, []string{"1.2+3", "1.2+3.1", "1.2+3.2", "10", "last", "last1", "last2"}, res)
+			assert.Equal(t, 3, tr.attached["10"].SnapshotCounter)
+			assert.Equal(t, 2, tr.attached["1.2+3"].SnapshotCounter)
 		})
 	})
 }
