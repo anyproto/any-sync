@@ -149,7 +149,7 @@ func newStorage(ctx context.Context, id string, store anystore.DB) (Storage, err
 		Unique: true,
 	}
 	err = st.changesColl.EnsureIndex(ctx, orderIdx)
-	if err != nil {
+	if err != nil && !errors.Is(err, anystore.ErrIndexExists) {
 		return nil, err
 	}
 	st.arena = &anyenc.Arena{}

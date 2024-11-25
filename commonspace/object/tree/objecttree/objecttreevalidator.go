@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	anystore "github.com/anyproto/any-store"
+
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/util/slice"
@@ -13,10 +15,12 @@ type TreeStorageCreator interface {
 	CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (Storage, error)
 }
 
-type InMemoryStorageCreator struct{}
+type tempTreeStorageCreator struct {
+	store anystore.DB
+}
 
-func (i InMemoryStorageCreator) CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (Storage, error) {
-	return nil, nil
+func (t *tempTreeStorageCreator) CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (Storage, error) {
+	return createStorage(context.Background(), payload.RootRawChange, t.store)
 }
 
 type ValidatorFunc func(payload treestorage.TreeStorageCreatePayload, storageCreator TreeStorageCreator, aclList list.AclList) (ret ObjectTree, err error)
@@ -241,7 +245,7 @@ func ValidateFilterRawTree(payload treestorage.TreeStorageCreatePayload, storage
 	return tree, nil
 }
 
-func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList) (err error) {
-	_, err = ValidateRawTreeDefault(payload, InMemoryStorageCreator{}, aclList)
+func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList, store anystore.DB) (err error) {
+	_, err = ValidateRawTreeDefault(payload, &tempTreeStorageCreator{store: store}, aclList)
 	return
 }

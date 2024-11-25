@@ -661,7 +661,10 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 			err = list.ErrNoReadKey
 			return
 		}
-
+		if c.Data == nil {
+			err = fmt.Errorf("no data in change %s", c.Id)
+			return
+		}
 		decrypted, err = readKey.Decrypt(c.Data)
 		return
 	}
