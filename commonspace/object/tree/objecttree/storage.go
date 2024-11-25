@@ -14,17 +14,16 @@ import (
 )
 
 const (
-	orderKey              = "o"
-	headsKey              = "c"
-	commonSnapshotKey     = "s"
-	idKey                 = "id"
-	rawChangeKey          = "r"
-	snapshotCounterKey    = "sc"
-	changeSizeKey         = "sz"
-	snapshotIdKey         = "i"
-	prevIdsKey            = "p"
-	headsCollectionName   = "heads"
-	changesCollectionName = "changes"
+	orderKey            = "o"
+	headsKey            = "h"
+	commonSnapshotKey   = "s"
+	idKey               = "id"
+	rawChangeKey        = "r"
+	snapshotCounterKey  = "sc"
+	changeSizeKey       = "sz"
+	snapshotIdKey       = "i"
+	prevIdsKey          = "p"
+	headsCollectionName = "heads"
 )
 
 type StorageChange struct {
@@ -85,6 +84,16 @@ func createStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 		OrderId:         firstOrder,
 		ChangeSize:      len(root.RawChange),
 	}
+	headsColl, err := store.Collection(ctx, headsCollectionName)
+	if err != nil {
+		return nil, err
+	}
+	st.headsColl = headsColl
+	changesColl, err := store.Collection(ctx, root.Id)
+	if err != nil {
+		return nil, err
+	}
+	st.changesColl = changesColl
 	orderIdx := anystore.IndexInfo{
 		Name:   orderKey,
 		Fields: []string{orderKey},
@@ -94,16 +103,6 @@ func createStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 	if err != nil {
 		return nil, err
 	}
-	headsColl, err := store.Collection(ctx, headsCollectionName)
-	if err != nil {
-		return nil, err
-	}
-	st.headsColl = headsColl
-	changesColl, err := store.Collection(ctx, changesCollectionName)
-	if err != nil {
-		return nil, err
-	}
-	st.changesColl = changesColl
 	st.arena = &anyenc.Arena{}
 	defer st.arena.Reset()
 	doc := newStorageChangeValue(stChange, st.arena)
@@ -119,12 +118,13 @@ func createStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 	headsDoc := st.arena.NewObject()
 	headsDoc.Set(headsKey, newStringArrayValue([]string{root.Id}, st.arena))
 	headsDoc.Set(commonSnapshotKey, st.arena.NewString(root.Id))
-	err = st.headsColl.Insert(tx.Context(), doc)
+	headsDoc.Set(idKey, st.arena.NewString(root.Id))
+	err = st.headsColl.Insert(tx.Context(), headsDoc)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
 	}
-	return st, nil
+	return st, tx.Commit()
 }
 
 func newStorage(ctx context.Context, id string, store anystore.DB) (Storage, error) {
@@ -133,25 +133,25 @@ func newStorage(ctx context.Context, id string, store anystore.DB) (Storage, err
 		id:    id,
 		store: store,
 	}
-	orderIdx := anystore.IndexInfo{
-		Name:   orderKey,
-		Fields: []string{orderKey},
-		Unique: true,
-	}
-	err := st.changesColl.EnsureIndex(ctx, orderIdx)
-	if err != nil {
-		return nil, err
-	}
 	headsColl, err := store.Collection(ctx, headsCollectionName)
 	if err != nil {
 		return nil, err
 	}
 	st.headsColl = headsColl
-	changesColl, err := store.Collection(ctx, changesCollectionName)
+	changesColl, err := store.Collection(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	st.changesColl = changesColl
+	orderIdx := anystore.IndexInfo{
+		Name:   orderKey,
+		Fields: []string{orderKey},
+		Unique: true,
+	}
+	err = st.changesColl.EnsureIndex(ctx, orderIdx)
+	if err != nil {
+		return nil, err
+	}
 	st.arena = &anyenc.Arena{}
 	return st, nil
 }
@@ -251,7 +251,7 @@ func (s *storage) Delete() error {
 		tx.Rollback()
 		return fmt.Errorf("failed to remove document from heads collection: %w", err)
 	}
-	return nil
+	return tx.Commit()
 }
 
 func (s *storage) Id() string {
@@ -315,6 +315,7 @@ func newStorageChangeValue(ch StorageChange, arena *anyenc.Arena) *anyenc.Value 
 	newVal.Set(snapshotCounterKey, arena.NewNumberInt(ch.SnapshotCounter))
 	newVal.Set(snapshotIdKey, arena.NewString(ch.SnapshotId))
 	newVal.Set(changeSizeKey, arena.NewNumberInt(ch.ChangeSize))
+	newVal.Set(idKey, arena.NewString(ch.Id))
 	if len(ch.PrevIds) != 0 {
 		newVal.Set(prevIdsKey, newStringArrayValue(ch.PrevIds, arena))
 	}

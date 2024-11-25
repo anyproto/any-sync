@@ -306,7 +306,8 @@ func TestObjectTree(t *testing.T) {
 			IsEncrypted:   true,
 		}, aAccount.Acl)
 		require.NoError(t, err)
-		aStore, _ := createStorage(ctx, root, store)
+		aStore, err := createStorage(ctx, root, store)
+		require.NoError(t, err)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
 		err = aTree.Delete()
