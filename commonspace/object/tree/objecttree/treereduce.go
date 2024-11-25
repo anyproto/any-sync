@@ -12,6 +12,9 @@ func (t *Tree) clearPossibleRoots() {
 
 // makeRootAndRemove removes all changes before start and makes start the root
 func (t *Tree) makeRootAndRemove(start *Change) {
+	if start.Id == t.root.Id {
+		return
+	}
 	t.stackBuf = t.stackBuf[:0]
 	stack := t.stackBuf
 	for _, prev := range start.PreviousIds {

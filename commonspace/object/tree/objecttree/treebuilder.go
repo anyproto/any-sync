@@ -122,6 +122,8 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 		ch.OrderId = storageChange.OrderId
 		ch.SnapshotCounter = storageChange.SnapshotCounter
 		changes = append(changes, ch)
+		// TODO: in case of history tree we should only iterate until we see the order of max head
+		//  that way we can avoid iterating over all changes, though we still need to filter
 		return true, nil
 	})
 	if err != nil {

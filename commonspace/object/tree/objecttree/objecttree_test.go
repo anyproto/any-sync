@@ -229,8 +229,9 @@ func prepareAclList(t *testing.T) (list.AclList, *accountdata.AccountKeys) {
 }
 
 func prepareHistoryTreeDeps(t *testing.T, aclList list.AclList) (*MockChangeCreator, objectTreeDeps) {
-	store := newStore(ctx, t)
-	changeCreator := NewMockChangeCreator(store)
+	changeCreator := NewMockChangeCreator(func() anystore.DB {
+		return newStore(ctx, t)
+	})
 	treeStorage := changeCreator.CreateNewTreeStorage(t, "0", aclList.Head().Id, false)
 	root, _ := treeStorage.Root(ctx)
 	changeBuilder := &nonVerifiableChangeBuilder{
@@ -256,8 +257,9 @@ func prepareContext(
 	objTreeBuilder BuildObjectTreeFunc,
 	isDerived bool,
 	additionalChanges func(changeCreator *MockChangeCreator) RawChangesPayload) testTreeContext {
-	store := newStore(ctx, t)
-	changeCreator := NewMockChangeCreator(store)
+	changeCreator := NewMockChangeCreator(func() anystore.DB {
+		return newStore(ctx, t)
+	})
 	treeStorage := changeCreator.CreateNewTreeStorage(t, "0", aclList.Head().Id, isDerived)
 	objTree, err := objTreeBuilder(treeStorage, aclList)
 	require.NoError(t, err, "building tree should be without error")

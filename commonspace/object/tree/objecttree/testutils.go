@@ -73,7 +73,7 @@ func (m mockKeyStorage) PubKeyFromProto(protoBytes []byte) (crypto.PubKey, error
 }
 
 type MockChangeCreator struct {
-	store anystore.DB
+	storeCreator func() anystore.DB
 }
 
 type testStorage struct {
@@ -88,9 +88,9 @@ func (t *testStorage) AddAll(ctx context.Context, changes []StorageChange, heads
 	return t.Storage.AddAll(ctx, changes, heads, commonSnapshot)
 }
 
-func NewMockChangeCreator(store anystore.DB) *MockChangeCreator {
+func NewMockChangeCreator(storeCreator func() anystore.DB) *MockChangeCreator {
 	return &MockChangeCreator{
-		store: store,
+		storeCreator: storeCreator,
 	}
 }
 
@@ -164,7 +164,7 @@ func (c *MockChangeCreator) CreateNewTreeStorage(t *testing.T, treeId, aclHeadId
 			ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), rootChange),
 		}
 	}
-	storage, err := createStorage(context.Background(), root, c.store)
+	storage, err := createStorage(context.Background(), root, c.storeCreator())
 	require.NoError(t, err)
 	return &testStorage{
 		Storage: storage,
