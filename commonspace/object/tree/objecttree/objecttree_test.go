@@ -1091,6 +1091,109 @@ func TestObjectTree(t *testing.T) {
 		require.Equal(t, "0", objTree.Root().Id)
 	})
 
+	t.Run("find correct common snapshot", func(t *testing.T) {
+		// checking that adding old changes did not affect the tree
+		ctx := prepareTreeContext(t, aclList)
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree
+
+		rawChanges := []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("1", aclList.Head().Id, "0", true, "0"),
+			changeCreator.CreateRaw("2", aclList.Head().Id, "1", true, "1"),
+			changeCreator.CreateRaw("3", aclList.Head().Id, "2", true, "2"),
+			changeCreator.CreateRaw("4", aclList.Head().Id, "3", true, "3"),
+			changeCreator.CreateRaw("5", aclList.Head().Id, "4", true, "4"),
+			changeCreator.CreateRaw("6", aclList.Head().Id, "5", true, "5"),
+			changeCreator.CreateRaw("6.a.1", aclList.Head().Id, "6", true, "6"),
+			changeCreator.CreateRaw("6.a.2", aclList.Head().Id, "6.a.1", true, "6.a.1"),
+			changeCreator.CreateRaw("6.a.3", aclList.Head().Id, "6.a.2", true, "6.a.2"),
+			changeCreator.CreateRaw("6.b.1", aclList.Head().Id, "6", true, "6"),
+			changeCreator.CreateRaw("6.b.2", aclList.Head().Id, "6.b.1", true, "6.b.1"),
+			changeCreator.CreateRaw("6.b.3", aclList.Head().Id, "6.b.2", true, "6.b.2"),
+		}
+		payload := RawChangesPayload{
+			NewHeads:   []string{"6.b.3", "6.a.3"},
+			RawChanges: rawChanges,
+		}
+		_, err := objTree.AddRawChanges(context.Background(), payload)
+		require.NoError(t, err, "adding changes should be without error")
+		require.Equal(t, "6", objTree.Root().Id)
+
+		rawChanges = []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("4.a.1", aclList.Head().Id, "4", true, "4"),
+			changeCreator.CreateRaw("4.a.2", aclList.Head().Id, "4.a.1", true, "4.a.1"),
+			changeCreator.CreateRaw("4.a.3", aclList.Head().Id, "4.a.2", true, "4.a.2"),
+			changeCreator.CreateRaw("4.b.1", aclList.Head().Id, "4", true, "4"),
+			changeCreator.CreateRaw("4.b.2", aclList.Head().Id, "4.b.1", true, "4.b.1"),
+			changeCreator.CreateRaw("4.b.3", aclList.Head().Id, "4.b.2", true, "4.b.2"),
+			changeCreator.CreateRaw("5.a.1", aclList.Head().Id, "5", true, "5"),
+			changeCreator.CreateRaw("5.a.2", aclList.Head().Id, "5.a.1", true, "5.a.1"),
+			changeCreator.CreateRaw("5.a.3", aclList.Head().Id, "5.a.2", true, "5.a.2"),
+			changeCreator.CreateRaw("5.b.1", aclList.Head().Id, "5", true, "5"),
+			changeCreator.CreateRaw("5.b.2", aclList.Head().Id, "5.b.1", true, "5.b.1"),
+			changeCreator.CreateRaw("5.b.3", aclList.Head().Id, "5.b.2", true, "5.b.2"),
+		}
+		payload = RawChangesPayload{
+			NewHeads:   []string{"4.b.3", "4.a.3", "5.b.3", "5.a.3"},
+			RawChanges: rawChanges,
+		}
+		_, err = objTree.AddRawChanges(context.Background(), payload)
+		require.NoError(t, err, "adding changes should be without error")
+		require.Equal(t, "4", objTree.Root().Id)
+	})
+
+	t.Run("find correct common snapshot with existing path", func(t *testing.T) {
+		// checking that adding old changes did not affect the tree
+		ctx := prepareTreeContext(t, aclList)
+		changeCreator := ctx.changeCreator
+		objTree := ctx.objTree
+
+		rawChanges := []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("1", aclList.Head().Id, "0", true, "0"),
+			changeCreator.CreateRaw("2", aclList.Head().Id, "1", true, "1"),
+			changeCreator.CreateRaw("3", aclList.Head().Id, "2", true, "2"),
+			changeCreator.CreateRaw("4", aclList.Head().Id, "3", true, "3"),
+			changeCreator.CreateRaw("5", aclList.Head().Id, "4", true, "4"),
+			changeCreator.CreateRaw("6", aclList.Head().Id, "5", true, "5"),
+			changeCreator.CreateRaw("6.a.1", aclList.Head().Id, "6", true, "6"),
+			changeCreator.CreateRaw("6.a.2", aclList.Head().Id, "6.a.1", true, "6.a.1"),
+			changeCreator.CreateRaw("6.a.3", aclList.Head().Id, "6.a.2", true, "6.a.2"),
+			changeCreator.CreateRaw("6.b.1", aclList.Head().Id, "6", true, "6"),
+			changeCreator.CreateRaw("6.b.2", aclList.Head().Id, "6.b.1", true, "6.b.1"),
+			changeCreator.CreateRaw("6.b.3", aclList.Head().Id, "6.b.2", true, "6.b.2"),
+		}
+		payload := RawChangesPayload{
+			NewHeads:   []string{"6.b.3", "6.a.3"},
+			RawChanges: rawChanges,
+		}
+		_, err := objTree.AddRawChanges(context.Background(), payload)
+		require.NoError(t, err, "adding changes should be without error")
+		require.Equal(t, "6", objTree.Root().Id)
+
+		rawChanges = []*treechangeproto.RawTreeChangeWithId{
+			changeCreator.CreateRaw("4.a.1", aclList.Head().Id, "4", true, "4"),
+			changeCreator.CreateRaw("4.a.2", aclList.Head().Id, "4.a.1", true, "4.a.1"),
+			changeCreator.CreateRaw("4.a.3", aclList.Head().Id, "4.a.2", true, "4.a.2"),
+			changeCreator.CreateRaw("4.b.1", aclList.Head().Id, "4", true, "4"),
+			changeCreator.CreateRaw("4.b.2", aclList.Head().Id, "4.b.1", true, "4.b.1"),
+			changeCreator.CreateRaw("4.b.3", aclList.Head().Id, "4.b.2", true, "4.b.2"),
+			changeCreator.CreateRaw("5.a.1", aclList.Head().Id, "5", true, "5"),
+			changeCreator.CreateRaw("5.a.2", aclList.Head().Id, "5.a.1", true, "5.a.1"),
+			changeCreator.CreateRaw("5.a.3", aclList.Head().Id, "5.a.2", true, "5.a.2"),
+			changeCreator.CreateRaw("5.b.1", aclList.Head().Id, "5", true, "5"),
+			changeCreator.CreateRaw("5.b.2", aclList.Head().Id, "5.b.1", true, "5.b.1"),
+			changeCreator.CreateRaw("5.b.3", aclList.Head().Id, "5.b.2", true, "5.b.2"),
+		}
+		payload = RawChangesPayload{
+			NewHeads:     []string{"4.b.3", "4.a.3", "5.b.3", "5.a.3"},
+			RawChanges:   rawChanges,
+			SnapshotPath: []string{"4", "3", "2", "1", "0"},
+		}
+		_, err = objTree.AddRawChanges(context.Background(), payload)
+		require.NoError(t, err, "adding changes should be without error")
+		require.Equal(t, "4", objTree.Root().Id)
+	})
+
 	t.Run("their heads before common snapshot", func(t *testing.T) {
 		// checking that adding old changes did not affect the tree
 		ctx := prepareTreeContext(t, aclList)

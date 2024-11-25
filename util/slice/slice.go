@@ -146,25 +146,31 @@ func ContainsSorted[T constraints.Ordered](seq []T, subseq []T) bool {
 }
 
 func DiscardDuplicatesSorted[T comparable](sorted []T) []T {
-	cnt := 0
-	for i := 0; i < len(sorted)-1; i++ {
-		if sorted[i] != sorted[i+1] {
+	if len(sorted) <= 1 {
+		return sorted
+	}
+	cnt := 1
+	for i := 1; i < len(sorted)-1; i++ {
+		if sorted[i] != sorted[i-1] {
+			sorted[cnt] = sorted[i]
 			cnt++
-			sorted[cnt] = sorted[i+1]
 		}
 	}
-	return sorted[:cnt+1]
+	return sorted[:cnt]
 }
 
 func DiscardDuplicatesSortedFunc[T any](sorted []T, equal func(T, T) bool) []T {
-	cnt := 0
-	for i := 0; i < len(sorted)-1; i++ {
-		if !equal(sorted[i], sorted[i+1]) {
+	if len(sorted) <= 1 {
+		return sorted
+	}
+	cnt := 1
+	for i := 1; i < len(sorted)-1; i++ {
+		if !equal(sorted[i], sorted[i-1]) {
+			sorted[cnt] = sorted[i]
 			cnt++
-			sorted[cnt] = sorted[i+1]
 		}
 	}
-	return sorted[:cnt+1]
+	return sorted[:cnt]
 }
 
 func DiscardFromSlice[T any](elements []T, isDiscarded func(T) bool) []T {

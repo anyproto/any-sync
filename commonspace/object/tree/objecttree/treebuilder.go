@@ -76,6 +76,10 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 		}
 	} else if !opts.full {
 		if len(opts.theirSnapshotPath) == 0 {
+			// this is actually not obvious why we should call this here
+			// but the idea is if we have no snapshot path, then this can be only in cases
+			// when we want to use a common snapshot, otherwise we would provide this path
+			// because we always have a snapshot path
 			if len(opts.ourSnapshotPath) == 0 {
 				common, err := tb.storage.CommonSnapshot(tb.ctx)
 				if err != nil {
@@ -83,7 +87,7 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 				}
 				snapshot = common
 			} else {
-				our := opts.ourSnapshotPath[len(opts.ourSnapshotPath)-1]
+				our := opts.ourSnapshotPath[0]
 				lowest, err := tb.lowestSnapshots(cache, opts.theirHeads, our)
 				if err != nil {
 					return nil, err
@@ -161,9 +165,9 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 				return nil, err
 			}
 			if ch.SnapshotId != "" {
-				next = append(next, ch.SnapshotId)
+				snapshots = append(snapshots, ch.SnapshotId)
 			} else if len(ch.PrevIds) == 0 && ch.Id == tb.storage.Id() { // this is a root change
-				next = append(next, ch.Id)
+				snapshots = append(snapshots, ch.Id)
 			} else {
 				return nil, fmt.Errorf("head with empty snapshot id: %s", ch.Id)
 			}
@@ -172,18 +176,28 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 	slices.Sort(next)
 	next = slice.DiscardDuplicatesSorted(next)
 	current = make([]string, 0, len(next))
+	var visited []*Change
 	for len(next) > 0 {
 		current = current[:0]
 		current = append(current, next...)
 		next = next[:0]
 		for _, id := range current {
 			if ch, ok := cache[id]; ok {
-				next = append(current, ch.SnapshotId)
+				// prevent accidental cycles, which can happen if there is a malicious change
+				if ch.visited {
+					return nil, fmt.Errorf("cycle detected in snapshot path: %s", id)
+				}
+				ch.visited = true
+				visited = append(visited, ch)
+				next = append(next, ch.SnapshotId)
 			} else {
 				// this is the lowest snapshot from the ones provided
 				snapshots = append(snapshots, id)
 			}
 		}
+	}
+	for _, ch := range visited {
+		ch.visited = false
 	}
 	if ourSnapshot != "" {
 		snapshots = append(snapshots, ourSnapshot)
