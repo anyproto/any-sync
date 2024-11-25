@@ -81,8 +81,10 @@ func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 		}
 		curSize += rawEntry.size
 
+		cp := make([]byte, 0, len(c.RawChange))
+		cp = append(cp, c.RawChange...)
 		batch.Batch = append(batch.Batch, &treechangeproto.RawTreeChangeWithId{
-			RawChange: c.RawChange,
+			RawChange: cp,
 			Id:        c.Id,
 		})
 		batch.Heads = slice.DiscardFromSlice(batch.Heads, func(s string) bool {

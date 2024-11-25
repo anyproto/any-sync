@@ -81,7 +81,7 @@ type testStorage struct {
 	errAdd error
 }
 
-func (t testStorage) AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
+func (t *testStorage) AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
 	if t.errAdd != nil {
 		return t.errAdd
 	}
@@ -166,7 +166,7 @@ func (c *MockChangeCreator) CreateNewTreeStorage(t *testing.T, treeId, aclHeadId
 	}
 	storage, err := createStorage(context.Background(), root, c.store)
 	require.NoError(t, err)
-	return testStorage{
+	return &testStorage{
 		Storage: storage,
 	}
 }

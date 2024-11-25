@@ -278,7 +278,7 @@ func (s *storage) Get(ctx context.Context, id string) (StorageChange, error) {
 	if err != nil {
 		return StorageChange{}, err
 	}
-	ch, err := s.changeFromDoc(s.id, doc)
+	ch, err := s.changeFromDoc(id, doc)
 	if err != nil {
 		return StorageChange{}, err
 	}

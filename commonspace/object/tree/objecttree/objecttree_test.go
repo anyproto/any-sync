@@ -786,7 +786,8 @@ func TestObjectTree(t *testing.T) {
 		for _, ch := range rawChanges {
 			raw, err := treeStorage.Get(context.Background(), ch.Id)
 			assert.NoError(t, err, "storage should have all the changes")
-			assert.Equal(t, ch, raw, "the changes in the storage should be the same")
+			assert.Equal(t, ch.Id, raw.RawTreeChangeWithId().Id, "the changes in the storage should be the same")
+			assert.Equal(t, ch.RawChange, raw.RawTreeChangeWithId().RawChange, "the changes in the storage should be the same")
 		}
 	})
 
@@ -912,7 +913,8 @@ func TestObjectTree(t *testing.T) {
 		for _, ch := range rawChanges {
 			raw, err := treeStorage.Get(context.Background(), ch.Id)
 			assert.NoError(t, err, "storage should have all the changes")
-			assert.Equal(t, ch, raw, "the changes in the storage should be the same")
+			assert.Equal(t, ch.Id, raw.RawTreeChangeWithId().Id, "the changes in the storage should be the same")
+			assert.Equal(t, ch.RawChange, raw.RawTreeChangeWithId().RawChange, "the changes in the storage should be the same")
 		}
 	})
 
@@ -995,7 +997,8 @@ func TestObjectTree(t *testing.T) {
 		for _, ch := range rawChanges {
 			raw, err := treeStorage.Get(context.Background(), ch.Id)
 			assert.NoError(t, err, "storage should have all the changes")
-			assert.Equal(t, ch, raw, "the changes in the storage should be the same")
+			assert.Equal(t, ch.Id, raw.RawTreeChangeWithId().Id, "the changes in the storage should be the same")
+			assert.Equal(t, ch.RawChange, raw.RawTreeChangeWithId().RawChange, "the changes in the storage should be the same")
 			treeCh, err := objTree.GetChange(ch.Id)
 			if ch.Id == "3" || ch.Id == "4" {
 				require.NoError(t, err)
@@ -1071,7 +1074,7 @@ func TestObjectTree(t *testing.T) {
 		treeCtx := prepareTreeContext(t, aclList)
 		changeCreator := treeCtx.changeCreator
 		objTree := treeCtx.objTree
-		store := treeCtx.treeStorage.(testStorage)
+		store := treeCtx.treeStorage.(*testStorage)
 		store.errAdd = fmt.Errorf("error saving")
 
 		rawChanges := []*treechangeproto.RawTreeChangeWithId{
