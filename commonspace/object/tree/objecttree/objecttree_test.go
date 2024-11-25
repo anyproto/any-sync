@@ -410,9 +410,9 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		chCount := 0
 		err = treeCopy.IterateRoot(func(change *Change, decrypted []byte) (any, error) {
-			chCount++
 			return nil, nil
 		}, func(change *Change) bool {
+			chCount++
 			return true
 		})
 		require.Equal(t, 2, chCount)
@@ -421,7 +421,7 @@ func TestObjectTree(t *testing.T) {
 
 	t.Run("filter changes when no aclHeadId", func(t *testing.T) {
 		exec := list.NewAclExecutor("spaceId")
-		store := newStore(ctx, t)
+		storeA := newStore(ctx, t)
 		type cmdErr struct {
 			cmd string
 			err error
@@ -446,7 +446,8 @@ func TestObjectTree(t *testing.T) {
 			IsEncrypted:   true,
 		}, aAccount.Acl)
 		require.NoError(t, err)
-		aStore, _ := createStorage(ctx, root, store)
+		aStore, err := createStorage(ctx, root, storeA)
+		require.NoError(t, err)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
 		_, err = aTree.AddContent(ctx, SignableChangeContent{
@@ -457,8 +458,8 @@ func TestObjectTree(t *testing.T) {
 			DataType:    mockDataType,
 		})
 		require.NoError(t, err)
-		storeB := copyStore(ctx, t, store.(testStore), "b")
-		bStore, err := createStorage(ctx, root, storeB)
+		storeB := copyStore(ctx, t, storeA.(testStore), "b")
+		bStore, err := newStorage(ctx, root.Id, storeB)
 		require.NoError(t, err)
 		// copying old version of storage
 		prevAclRecs, err := bAccount.Acl.RecordsAfter(ctx, "")
