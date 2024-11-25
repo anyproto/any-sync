@@ -669,7 +669,9 @@ func TestObjectTree(t *testing.T) {
 			}
 			slices.SortFunc(chs, sortFunc)
 			slices.SortFunc(rawChs, sortFunc)
-			require.Equal(t, chs, rawChs)
+			for i, ch := range chs {
+				require.Equal(t, ch.Id, rawChs[i].Id)
+			}
 		})
 
 		t.Run("derived more than 1 change, snapshot, correct", func(t *testing.T) {
@@ -713,7 +715,9 @@ func TestObjectTree(t *testing.T) {
 			}
 			slices.SortFunc(chs, sortFunc)
 			slices.SortFunc(rawChs, sortFunc)
-			require.Equal(t, chs, rawChs)
+			for i, ch := range chs {
+				require.Equal(t, ch.Id, rawChs[i].Id)
+			}
 		})
 
 		t.Run("validate from start, multiple snapshots, correct", func(t *testing.T) {

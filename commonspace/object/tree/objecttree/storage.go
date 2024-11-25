@@ -65,12 +65,14 @@ type storage struct {
 	arena       *anyenc.Arena
 }
 
+var storageChangeBuilder = NewChangeBuilder
+
 func createStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, store anystore.DB) (Storage, error) {
 	st := &storage{
 		id:    root.Id,
 		store: store,
 	}
-	builder := NewChangeBuilder(crypto.NewKeyStorage(), root)
+	builder := storageChangeBuilder(crypto.NewKeyStorage(), root)
 	_, err := builder.Unmarshall(root, true)
 	if err != nil {
 		return nil, err

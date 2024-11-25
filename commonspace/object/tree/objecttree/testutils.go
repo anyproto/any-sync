@@ -159,6 +159,11 @@ func (c *MockChangeCreator) CreateRawWithData(id, aclId, snapshotId string, isSn
 
 func (c *MockChangeCreator) CreateNewTreeStorage(t *testing.T, treeId, aclHeadId string, isDerived bool) Storage {
 	root := c.CreateRoot(treeId, aclHeadId)
+	storageChangeBuilder = func(keys crypto.KeyStorage, rootChange *treechangeproto.RawTreeChangeWithId) ChangeBuilder {
+		return &nonVerifiableChangeBuilder{
+			ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), rootChange),
+		}
+	}
 	storage, err := createStorage(context.Background(), root, c.store)
 	require.NoError(t, err)
 	return testStorage{
