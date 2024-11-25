@@ -43,7 +43,7 @@ func (c StorageChange) RawTreeChangeWithId() *treechangeproto.RawTreeChangeWithI
 	}
 }
 
-type StorageIterator = func(ctx context.Context, change StorageChange) (shouldContinue bool)
+type StorageIterator = func(ctx context.Context, change StorageChange) (shouldContinue bool, err error)
 
 type Storage interface {
 	Id() string
@@ -199,9 +199,9 @@ func (s *storage) GetAfterOrder(ctx context.Context, orderId string, storageIter
 		if err != nil {
 			return fmt.Errorf("failed to make change from doc: %w", err)
 		}
-		cont := storageIter(ctx, parsed)
+		cont, err := storageIter(ctx, parsed)
 		if !cont {
-			break
+			return err
 		}
 	}
 	return nil

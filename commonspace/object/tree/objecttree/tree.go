@@ -9,6 +9,8 @@ import (
 	"github.com/anyproto/lexid"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
+
+	"github.com/anyproto/any-sync/util/slice"
 )
 
 type Mode int
@@ -327,6 +329,31 @@ func (t *Tree) attach(c *Change, newEl bool) {
 		}
 		delete(t.waitList, c.Id)
 	}
+}
+
+func (t *Tree) LeaveOnlyBefore(proposedHeads []string) {
+	stack := make([]*Change, 0, len(proposedHeads))
+	for _, headId := range proposedHeads {
+		if head, ok := t.attached[headId]; ok {
+			stack = append(stack, head)
+		}
+	}
+	t.dfsPrev(stack, nil, func(ch *Change) (isContinue bool) {
+		ch.visited = true
+		return true
+	}, func(changes []*Change) {
+		for id, ch := range t.attached {
+			if !ch.visited {
+				delete(t.attached, id)
+			}
+		}
+		for _, ch := range changes {
+			ch.Next = slice.DiscardFromSlice(ch.Next, func(change *Change) bool {
+				return !change.visited
+			})
+		}
+	})
+	t.updateHeads()
 }
 
 func (t *Tree) dfsPrev(stack []*Change, breakpoints []string, visit func(ch *Change) (isContinue bool), afterVisit func([]*Change)) {

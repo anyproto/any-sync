@@ -3,6 +3,7 @@ package objecttree
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -111,17 +112,17 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	}
 	rawChange := &treechangeproto.RawTreeChangeWithId{}
 	var changes []*Change
-	err = tb.storage.GetAfterOrder(tb.ctx, snapshotCh.OrderId, func(ctx context.Context, storageChange StorageChange) (shouldContinue bool) {
+	err = tb.storage.GetAfterOrder(tb.ctx, snapshotCh.OrderId, func(ctx context.Context, storageChange StorageChange) (shouldContinue bool, err error) {
 		rawChange.Id = storageChange.Id
 		rawChange.RawChange = storageChange.RawChange
 		ch, err := tb.builder.Unmarshall(rawChange, false)
 		if err != nil {
-			return false
+			return false, err
 		}
 		ch.OrderId = storageChange.OrderId
 		ch.SnapshotCounter = storageChange.SnapshotCounter
 		changes = append(changes, ch)
-		return true
+		return true, nil
 	})
 	if err != nil {
 		return nil, err
@@ -129,6 +130,9 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	tr = &Tree{}
 	changes = append(changes, opts.newChanges...)
 	tr.AddFast(changes...)
+	if opts.useHeadsSnapshot {
+		tr.LeaveOnlyBefore(opts.ourHeads)
+	}
 	return tr, nil
 }
 
@@ -140,7 +144,13 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 			if !ok {
 				continue
 			}
-			next = append(next, head.SnapshotId)
+			if head.SnapshotId != "" {
+				next = append(next, head.SnapshotId)
+			} else if len(head.PreviousIds) == 0 && head.Id == tb.storage.Id() { // this is a root change
+				next = append(next, head.Id)
+			} else {
+				return nil, fmt.Errorf("head with empty snapshot id: %s", head.Id)
+			}
 		}
 	} else {
 		for _, head := range heads {
@@ -148,7 +158,13 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 			if err != nil {
 				return nil, err
 			}
-			next = append(next, ch.SnapshotId)
+			if ch.SnapshotId != "" {
+				next = append(next, ch.SnapshotId)
+			} else if len(ch.PrevIds) == 0 && ch.Id == tb.storage.Id() { // this is a root change
+				next = append(next, ch.Id)
+			} else {
+				return nil, fmt.Errorf("head with empty snapshot id: %s", ch.Id)
+			}
 		}
 	}
 	slices.Sort(next)
@@ -158,9 +174,9 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 		current = current[:0]
 		current = append(current, next...)
 		next = next[:0]
-		for _, id := range next {
+		for _, id := range current {
 			if ch, ok := cache[id]; ok {
-				next = append(next, ch.SnapshotId)
+				next = append(current, ch.SnapshotId)
 			} else {
 				// this is the lowest snapshot from the ones provided
 				snapshots = append(snapshots, id)

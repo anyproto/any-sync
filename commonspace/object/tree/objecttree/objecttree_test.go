@@ -149,9 +149,9 @@ func newNamedStore(ctx context.Context, t *testing.T, name string) anystore.DB {
 }
 
 func allChanges(ctx context.Context, t *testing.T, store Storage) (res []*treechangeproto.RawTreeChangeWithId) {
-	err := store.GetAfterOrder(ctx, "", func(ctx context.Context, change StorageChange) (shouldContinue bool) {
+	err := store.GetAfterOrder(ctx, "", func(ctx context.Context, change StorageChange) (shouldContinue bool, err error) {
 		res = append(res, change.RawTreeChangeWithId())
-		return true
+		return true, nil
 	})
 	require.NoError(t, err)
 	return
@@ -1347,7 +1347,8 @@ func TestObjectTree(t *testing.T) {
 		for _, ch := range rawChanges {
 			raw, err := treeStorage.Get(context.Background(), ch.Id)
 			assert.NoError(t, err, "storage should have all the changes")
-			assert.Equal(t, ch, raw, "the changes in the storage should be the same")
+			assert.Equal(t, ch.Id, raw.RawTreeChangeWithId().Id, "the changes in the storage should be the same")
+			assert.Equal(t, ch.RawChange, raw.RawTreeChangeWithId().RawChange, "the changes in the storage should be the same")
 		}
 	})
 
@@ -1362,7 +1363,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("5", aclList.Head().Id, "0", false, "1"),
 			changeCreator.CreateRaw("6", aclList.Head().Id, "0", false, "3", "4", "5"),
 		}
-		objTree, err := BuildObjectTree(deps.storage, deps.aclList)
+		objTree, err := BuildTestableTree(deps.storage, deps.aclList)
 		require.NoError(t, err)
 		payload := RawChangesPayload{
 			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
@@ -1401,7 +1402,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("5", aclList.Head().Id, "1", true, "3", "4"),
 			changeCreator.CreateRaw("6", aclList.Head().Id, "5", false, "5"),
 		}
-		objTree, err := BuildObjectTree(deps.storage, deps.aclList)
+		objTree, err := BuildTestableTree(deps.storage, deps.aclList)
 		require.NoError(t, err)
 		payload := RawChangesPayload{
 			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},
@@ -1436,7 +1437,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("5", aclList.Head().Id, "0", false, "1"),
 			changeCreator.CreateRaw("6", aclList.Head().Id, "0", false, "3", "4", "5"),
 		}
-		objTree, err := BuildObjectTree(deps.storage, deps.aclList)
+		objTree, err := BuildTestableTree(deps.storage, deps.aclList)
 		require.NoError(t, err)
 		payload := RawChangesPayload{
 			NewHeads:   []string{rawChanges[len(rawChanges)-1].Id},

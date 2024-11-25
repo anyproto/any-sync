@@ -59,12 +59,12 @@ func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 		return
 	}
 	l.isExhausted = true
-	err = l.storage.GetAfterOrder(context.Background(), l.orderId, func(ctx context.Context, c StorageChange) (shouldContinue bool) {
+	err = l.storage.GetAfterOrder(context.Background(), l.orderId, func(ctx context.Context, c StorageChange) (shouldContinue bool, err error) {
 		l.orderId = c.OrderId
 		rawEntry, ok := l.cache[c.Id]
 		// if there are no such entry in cache continue
 		if !ok {
-			return true
+			return true, nil
 		}
 		if rawEntry.removed {
 			batch.Heads = slice.DiscardFromSlice(batch.Heads, func(s string) bool {
@@ -73,11 +73,11 @@ func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 			if !slices.Contains(batch.Heads, c.Id) {
 				batch.Heads = append(batch.Heads, c.Id)
 			}
-			return true
+			return true, nil
 		}
 		if curSize+rawEntry.size >= maxSize && len(batch.Batch) != 0 {
 			l.isExhausted = false
-			return false
+			return false, nil
 		}
 		curSize += rawEntry.size
 
@@ -93,7 +93,7 @@ func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 		if !slices.Contains(batch.Heads, c.Id) {
 			batch.Heads = append(batch.Heads, c.Id)
 		}
-		return true
+		return true, nil
 	})
 	if err != nil {
 		return
@@ -109,19 +109,18 @@ func (l *loadIterator) load(commonSnapshot string, heads, breakpoints []string) 
 		return
 	}
 	rawCh := &treechangeproto.RawTreeChangeWithId{}
-	err = l.storage.GetAfterOrder(ctx, cs.OrderId, func(ctx context.Context, change StorageChange) (shouldContinue bool) {
+	err = l.storage.GetAfterOrder(ctx, cs.OrderId, func(ctx context.Context, change StorageChange) (shouldContinue bool, err error) {
 		rawCh.Id = change.Id
 		rawCh.RawChange = change.RawChange
-		var ch *Change
-		ch, err = l.builder.UnmarshallReduced(rawCh)
+		ch, err := l.builder.UnmarshallReduced(rawCh)
 		if err != nil {
-			return false
+			return false, err
 		}
 		l.cache[change.Id] = rawCacheEntry{
 			change: ch,
 			size:   len(change.RawChange),
 		}
-		return true
+		return true, nil
 	})
 	if err != nil {
 		return
