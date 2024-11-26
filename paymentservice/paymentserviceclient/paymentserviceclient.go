@@ -71,7 +71,6 @@ func New() AnyPpClientService {
  */
 func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProcessingClient) error) error {
 	if len(s.nodeconf.PaymentProcessingNodePeers()) == 0 {
-		log.Error("no payment processing peers configured. Maybe you're on a custom network. Node config ID: " + s.nodeconf.Id())
 		return errors.New("no paymentProcessingNode peers configured. Maybe you're on a custom network. Node config ID: " + s.nodeconf.Id())
 	}
 
