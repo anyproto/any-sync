@@ -351,26 +351,26 @@ func TestObjectTree(t *testing.T) {
 			err := exec.Execute(cmd.cmd)
 			require.Equal(t, cmd.err, err, cmd)
 		}
-		aAccount := exec.ActualAccounts()["a"]
-		recs, err := aAccount.Acl.RecordsAfter(ctx, "")
+		account := exec.ActualAccounts()["a"]
+		recs, err := account.Acl.RecordsAfter(ctx, "")
 		require.NoError(t, err)
-		firstStorage, err := liststorage.NewInMemoryAclListStorage(recs[0].Id, recs)
+		beforeStorage, err := liststorage.NewInMemoryAclListStorage(recs[0].Id, recs)
 		require.NoError(t, err)
-		firstAcl, err := list.BuildAclListWithIdentity(aAccount.Keys, firstStorage, list.NoOpAcceptorVerifier{})
+		beforeAcl, err := list.BuildAclListWithIdentity(account.Keys, beforeStorage, list.NoOpAcceptorVerifier{})
 		require.NoError(t, err)
 		err = exec.Execute("a.invite::invId")
 		require.NoError(t, err)
 		root, err := CreateObjectTreeRoot(ObjectTreeCreatePayload{
-			PrivKey:       aAccount.Keys.SignKey,
+			PrivKey:       account.Keys.SignKey,
 			ChangeType:    "changeType",
 			ChangePayload: nil,
 			SpaceId:       "spaceId",
 			IsEncrypted:   true,
-		}, aAccount.Acl)
+		}, account.Acl)
 		require.NoError(t, err)
-		store, err := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
+		treeStorage, err := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
 		require.NoError(t, err)
-		_, err = BuildKeyFilterableObjectTree(store, firstAcl)
+		_, err = BuildKeyFilterableObjectTree(treeStorage, beforeAcl)
 		require.Equal(t, list.ErrNoSuchRecord, err)
 	})
 
