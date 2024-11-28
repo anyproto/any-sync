@@ -156,6 +156,9 @@ func (st *AclState) Keys() map[string]AclKeys {
 }
 
 func (st *AclState) PermissionsAtRecord(id string, pubKey crypto.PubKey) (AclPermissions, error) {
+	if !st.list.HasHead(id) {
+		return AclPermissionsNone, ErrNoSuchRecord
+	}
 	accountState, ok := st.accountStates[mapKeyFromPubKey(pubKey)]
 	if !ok {
 		return AclPermissionsNone, ErrNoSuchAccount
