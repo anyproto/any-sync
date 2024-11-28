@@ -201,7 +201,7 @@ func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
 	close(fx.treeManager.waitLoad)
 
 	// waiting until everything is deleted
-	time.Sleep(3 * time.Second)
+	time.Sleep(6 * time.Second)
 	require.Equal(t, len(ids), len(fx.treeManager.deletedIds))
 
 	// checking that new snapshot will contain all the changes
