@@ -164,7 +164,7 @@ func (c *MockChangeCreator) CreateNewTreeStorage(t *testing.T, treeId, aclHeadId
 			ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), rootChange),
 		}
 	}
-	storage, err := createStorage(context.Background(), root, c.storeCreator())
+	storage, err := CreateStorage(context.Background(), root, c.storeCreator())
 	require.NoError(t, err)
 	return &testStorage{
 		Storage: storage,

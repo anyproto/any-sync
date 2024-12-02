@@ -20,7 +20,7 @@ type tempTreeStorageCreator struct {
 }
 
 func (t *tempTreeStorageCreator) CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (Storage, error) {
-	return createStorage(context.Background(), payload.RootRawChange, t.store)
+	return CreateStorage(context.Background(), payload.RootRawChange, t.store)
 }
 
 type ValidatorFunc func(payload treestorage.TreeStorageCreatePayload, storageCreator TreeStorageCreator, aclList list.AclList) (ret ObjectTree, err error)

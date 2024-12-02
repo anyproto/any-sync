@@ -57,7 +57,7 @@ type storage struct {
 	arena       *anyenc.Arena
 }
 
-func createStorage(ctx context.Context, root *consensusproto.RawRecordWithId, store anystore.DB) (Storage, error) {
+func CreateStorage(ctx context.Context, root *consensusproto.RawRecordWithId, store anystore.DB) (Storage, error) {
 	st := &storage{
 		id:    root.Id,
 		store: store,
@@ -110,7 +110,7 @@ func createStorage(ctx context.Context, root *consensusproto.RawRecordWithId, st
 	return st, tx.Commit()
 }
 
-func newStorage(ctx context.Context, id string, store anystore.DB) (Storage, error) {
+func NewStorage(ctx context.Context, id string, store anystore.DB) (Storage, error) {
 	st := &storage{
 		id:    id,
 		store: store,

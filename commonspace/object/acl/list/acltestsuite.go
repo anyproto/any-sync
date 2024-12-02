@@ -245,14 +245,14 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			meta := []byte(account)
 			var acl AclList
 			if a.ownerKeys == nil {
-				acl, err = NewTestDerivedAclMetadata(a.spaceId, keys, meta)
+				acl, err = newInMemoryDerivedAclMetadata(a.spaceId, keys, meta)
 				if err != nil {
 					return err
 				}
 			} else {
 				keys = a.ownerKeys
 				meta = a.ownerMeta
-				acl, err = NewTestAclWithRoot(keys, a.root)
+				acl, err = newInMemoryAclWithRoot(keys, a.root)
 				if err != nil {
 					return err
 				}

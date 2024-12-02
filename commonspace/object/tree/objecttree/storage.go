@@ -67,7 +67,7 @@ type storage struct {
 
 var storageChangeBuilder = NewChangeBuilder
 
-func createStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, store anystore.DB) (Storage, error) {
+func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, store anystore.DB) (Storage, error) {
 	st := &storage{
 		id:    root.Id,
 		store: store,
@@ -129,7 +129,7 @@ func createStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 	return st, tx.Commit()
 }
 
-func newStorage(ctx context.Context, id string, store anystore.DB) (Storage, error) {
+func NewStorage(ctx context.Context, id string, store anystore.DB) (Storage, error) {
 	// TODO: use spacestorage to set heads
 	st := &storage{
 		id:    id,

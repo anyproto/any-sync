@@ -130,11 +130,11 @@ type testStore struct {
 	errAdd bool
 }
 
-func newStore(ctx context.Context, t *testing.T) anystore.DB {
-	return newNamedStore(ctx, t, "changes.db")
+func createStore(ctx context.Context, t *testing.T) anystore.DB {
+	return createNamedStore(ctx, t, "changes.db")
 }
 
-func newNamedStore(ctx context.Context, t *testing.T, name string) anystore.DB {
+func createNamedStore(ctx context.Context, t *testing.T, name string) anystore.DB {
 	path := filepath.Join(t.TempDir(), name)
 	db, err := anystore.Open(ctx, path, nil)
 	require.NoError(t, err)
@@ -222,7 +222,7 @@ func copyStore(ctx context.Context, t *testing.T, store testStore, name string) 
 func prepareAclList(t *testing.T) (list.AclList, *accountdata.AccountKeys) {
 	randKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
-	aclList, err := list.NewTestDerivedAcl("spaceId", randKeys)
+	aclList, err := list.NewInMemoryDerivedAcl("spaceId", randKeys)
 	require.NoError(t, err, "building acl list should be without error")
 
 	return aclList, randKeys
@@ -230,7 +230,7 @@ func prepareAclList(t *testing.T) (list.AclList, *accountdata.AccountKeys) {
 
 func prepareHistoryTreeDeps(t *testing.T, aclList list.AclList) (*MockChangeCreator, objectTreeDeps) {
 	changeCreator := NewMockChangeCreator(func() anystore.DB {
-		return newStore(ctx, t)
+		return createStore(ctx, t)
 	})
 	treeStorage := changeCreator.CreateNewTreeStorage(t, "0", aclList.Head().Id, false)
 	root, _ := treeStorage.Root(ctx)
@@ -258,7 +258,7 @@ func prepareContext(
 	isDerived bool,
 	additionalChanges func(changeCreator *MockChangeCreator) RawChangesPayload) testTreeContext {
 	changeCreator := NewMockChangeCreator(func() anystore.DB {
-		return newStore(ctx, t)
+		return createStore(ctx, t)
 	})
 	treeStorage := changeCreator.CreateNewTreeStorage(t, "0", aclList.Head().Id, isDerived)
 	objTree, err := objTreeBuilder(treeStorage, aclList)
@@ -287,7 +287,7 @@ func TestObjectTree(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("delete object tree", func(t *testing.T) {
-		store := newStore(ctx, t)
+		store := createStore(ctx, t)
 		exec := list.NewAclExecutor("spaceId")
 		type cmdErr struct {
 			cmd string
@@ -309,7 +309,7 @@ func TestObjectTree(t *testing.T) {
 			IsEncrypted:   true,
 		}, aAccount.Acl)
 		require.NoError(t, err)
-		aStore, err := createStorage(ctx, root, store)
+		aStore, err := CreateStorage(ctx, root, store)
 		require.NoError(t, err)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
@@ -334,7 +334,7 @@ func TestObjectTree(t *testing.T) {
 	})
 
 	t.Run("user delete logic: validation, key change, decryption", func(t *testing.T) {
-		storeA := newNamedStore(ctx, t, "a")
+		storeA := createNamedStore(ctx, t, "a")
 		exec := list.NewAclExecutor("spaceId")
 		type cmdErr struct {
 			cmd string
@@ -360,7 +360,7 @@ func TestObjectTree(t *testing.T) {
 			IsEncrypted:   true,
 		}, aAccount.Acl)
 		require.NoError(t, err)
-		aStore, err := createStorage(ctx, root, storeA)
+		aStore, err := CreateStorage(ctx, root, storeA)
 		require.NoError(t, err)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
@@ -373,7 +373,7 @@ func TestObjectTree(t *testing.T) {
 		})
 		require.NoError(t, err)
 		storeB := copyStore(ctx, t, storeA.(testStore), "b")
-		bStore, err := newStorage(ctx, root.Id, storeB)
+		bStore, err := NewStorage(ctx, root.Id, storeB)
 		require.NoError(t, err)
 		bTree, err := BuildKeyFilterableObjectTree(bStore, bAccount.Acl)
 		require.NoError(t, err)
@@ -399,7 +399,7 @@ func TestObjectTree(t *testing.T) {
 		require.Equal(t, oldHeads, bTree.Heads())
 		rawAdded = allChanges(ctx, t, bStore)
 		require.NoError(t, err)
-		validateStore := newStore(ctx, t)
+		validateStore := createStore(ctx, t)
 		newTree, err := ValidateFilterRawTree(treestorage.TreeStorageCreatePayload{
 			RootRawChange: root,
 			Changes:       rawAdded,
@@ -423,7 +423,7 @@ func TestObjectTree(t *testing.T) {
 
 	t.Run("filter changes when no aclHeadId", func(t *testing.T) {
 		exec := list.NewAclExecutor("spaceId")
-		storeA := newStore(ctx, t)
+		storeA := createStore(ctx, t)
 		type cmdErr struct {
 			cmd string
 			err error
@@ -448,7 +448,7 @@ func TestObjectTree(t *testing.T) {
 			IsEncrypted:   true,
 		}, aAccount.Acl)
 		require.NoError(t, err)
-		aStore, err := createStorage(ctx, root, storeA)
+		aStore, err := CreateStorage(ctx, root, storeA)
 		require.NoError(t, err)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
@@ -461,7 +461,7 @@ func TestObjectTree(t *testing.T) {
 		})
 		require.NoError(t, err)
 		storeB := copyStore(ctx, t, storeA.(testStore), "b")
-		bStore, err := newStorage(ctx, root.Id, storeB)
+		bStore, err := NewStorage(ctx, root.Id, storeB)
 		require.NoError(t, err)
 		// copying old version of storage
 		prevAclRecs, err := bAccount.Acl.RecordsAfter(ctx, "")
@@ -512,8 +512,8 @@ func TestObjectTree(t *testing.T) {
 			IsEncrypted:   true,
 		}, aclList)
 		require.NoError(t, err)
-		store := newStore(ctx, t)
-		storage, _ := createStorage(ctx, root, store)
+		store := createStore(ctx, t)
+		storage, _ := CreateStorage(ctx, root, store)
 		oTree, err := BuildObjectTree(storage, aclList)
 		require.NoError(t, err)
 
@@ -582,12 +582,12 @@ func TestObjectTree(t *testing.T) {
 				IsEncrypted:   true,
 			}, aclList)
 			require.NoError(t, err)
-			store := newStore(ctx, t)
-			storage, _ := createStorage(ctx, root, store)
+			store := createStore(ctx, t)
+			storage, _ := CreateStorage(ctx, root, store)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			emptyDataTreeDeps = nonVerifiableTreeDeps
-			validateStore := newStore(ctx, t)
+			validateStore := createStore(ctx, t)
 			err = ValidateRawTree(treestorage.TreeStorageCreatePayload{
 				RootRawChange: oTree.Header(),
 				Heads:         []string{root.Id},
@@ -604,11 +604,11 @@ func TestObjectTree(t *testing.T) {
 				IsEncrypted:   true,
 			}, aclList)
 			require.NoError(t, err)
-			store := newStore(ctx, t)
-			storage, _ := createStorage(ctx, root, store)
+			store := createStore(ctx, t)
+			storage, _ := CreateStorage(ctx, root, store)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
-			validateStore := newStore(ctx, t)
+			validateStore := createStore(ctx, t)
 			err = ValidateRawTree(treestorage.TreeStorageCreatePayload{
 				RootRawChange: oTree.Header(),
 				Heads:         []string{root.Id},
@@ -638,8 +638,8 @@ func TestObjectTree(t *testing.T) {
 				IsEncrypted:   true,
 			}, aclList)
 			require.NoError(t, err)
-			store := newStore(ctx, t)
-			storage, _ := createStorage(ctx, root, store)
+			store := createStore(ctx, t)
+			storage, _ := CreateStorage(ctx, root, store)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			_, err = oTree.AddContent(ctx, SignableChangeContent{
@@ -653,7 +653,7 @@ func TestObjectTree(t *testing.T) {
 			require.NoError(t, err)
 			chs := allChanges(ctx, t, storage)
 			emptyDataTreeDeps = nonVerifiableTreeDeps
-			validateStore := newStore(ctx, t)
+			validateStore := createStore(ctx, t)
 			err = ValidateRawTree(treestorage.TreeStorageCreatePayload{
 				RootRawChange: oTree.Header(),
 				Heads:         []string{oTree.Heads()[0]},
@@ -685,8 +685,8 @@ func TestObjectTree(t *testing.T) {
 			}, aclList)
 			require.NoError(t, err)
 			emptyDataTreeDeps = nonVerifiableTreeDeps
-			store := newStore(ctx, t)
-			storage, _ := createStorage(ctx, root, store)
+			store := createStore(ctx, t)
+			storage, _ := CreateStorage(ctx, root, store)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			_, err = oTree.AddContent(ctx, SignableChangeContent{
@@ -699,7 +699,7 @@ func TestObjectTree(t *testing.T) {
 			})
 			require.NoError(t, err)
 			chs := allChanges(ctx, t, storage)
-			validateStore := newStore(ctx, t)
+			validateStore := createStore(ctx, t)
 			err = ValidateRawTree(treestorage.TreeStorageCreatePayload{
 				RootRawChange: oTree.Header(),
 				Heads:         []string{oTree.Heads()[0]},
@@ -733,7 +733,7 @@ func TestObjectTree(t *testing.T) {
 				changeCreator.CreateRaw("3", aclList.Head().Id, "0", true, "2"),
 			}
 			emptyDataTreeDeps = nonVerifiableTreeDeps
-			validateStore := newStore(ctx, t)
+			validateStore := createStore(ctx, t)
 			err := ValidateRawTree(treestorage.TreeStorageCreatePayload{
 				RootRawChange: treeCtx.objTree.Header(),
 				Heads:         []string{"3"},
@@ -1601,7 +1601,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("3", aclList.Head().Id, "0", true, "2"),
 		}
 		emptyDataTreeDeps = nonVerifiableTreeDeps
-		validateStore := newStore(ctx, t)
+		validateStore := createStore(ctx, t)
 		err := ValidateRawTree(treestorage.TreeStorageCreatePayload{
 			RootRawChange: treeCtx.objTree.Header(),
 			Heads:         []string{"3"},
@@ -1619,7 +1619,7 @@ func TestObjectTree(t *testing.T) {
 			changeCreator.CreateRaw("3", aclList.Head().Id, "0", true, "2"),
 		}
 		emptyDataTreeDeps = nonVerifiableTreeDeps
-		validateStore := newStore(ctx, t)
+		validateStore := createStore(ctx, t)
 		err := ValidateRawTree(treestorage.TreeStorageCreatePayload{
 			RootRawChange: treeCtx.objTree.Header(),
 			Heads:         []string{"3"},

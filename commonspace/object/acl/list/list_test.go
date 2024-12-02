@@ -29,9 +29,9 @@ func newFixture(t *testing.T) *aclFixture {
 	accountKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
 	spaceId := "spaceId"
-	ownerAcl, err := NewTestDerivedAcl(spaceId, ownerKeys)
+	ownerAcl, err := NewInMemoryDerivedAcl(spaceId, ownerKeys)
 	require.NoError(t, err)
-	accountAcl, err := NewTestAclWithRoot(accountKeys, ownerAcl.Root())
+	accountAcl, err := newInMemoryAclWithRoot(accountKeys, ownerAcl.Root())
 	require.NoError(t, err)
 	require.Equal(t, ownerAcl.AclState().lastRecordId, ownerAcl.Id())
 	require.Equal(t, ownerAcl.AclState().lastRecordId, accountAcl.AclState().lastRecordId)
@@ -114,7 +114,7 @@ func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 func TestAclList_BuildRoot(t *testing.T) {
 	randomKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
-	randomAcl, err := NewTestDerivedAcl("spaceId", randomKeys)
+	randomAcl, err := NewInMemoryDerivedAcl("spaceId", randomKeys)
 	require.NoError(t, err)
 	fmt.Println(randomAcl.Id())
 }
