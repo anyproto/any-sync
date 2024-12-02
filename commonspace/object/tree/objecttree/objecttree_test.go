@@ -20,7 +20,6 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
-	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 )
@@ -466,7 +465,7 @@ func TestObjectTree(t *testing.T) {
 		// copying old version of storage
 		prevAclRecs, err := bAccount.Acl.RecordsAfter(ctx, "")
 		require.NoError(t, err)
-		storage, err := liststorage.NewInMemoryAclListStorage(prevAclRecs[0].Id, prevAclRecs)
+		storage, err := list.NewInMemoryStorage(prevAclRecs[0].Id, prevAclRecs)
 		require.NoError(t, err)
 		acl, err := list.BuildAclListWithIdentity(bAccount.Keys, storage, list.NoOpAcceptorVerifier{})
 		require.NoError(t, err)

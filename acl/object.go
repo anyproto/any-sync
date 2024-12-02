@@ -6,11 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anyproto/any-sync/commonspace/object/acl/list"
-	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
-	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
 
 func (as *aclService) newAclObject(ctx context.Context, id string) (*aclObject, error) {
@@ -38,7 +38,7 @@ func (as *aclService) newAclObject(ctx context.Context, id string) (*aclObject, 
 type aclObject struct {
 	id         string
 	aclService *aclService
-	store      liststorage.ListStorage
+	store      list.Storage
 
 	list.AclList
 	ready   chan struct{}
@@ -55,7 +55,7 @@ func (a *aclObject) AddConsensusRecords(recs []*consensusproto.RawRecordWithId) 
 	slices.Reverse(recs)
 	if a.store == nil {
 		defer close(a.ready)
-		if a.store, a.consErr = liststorage.NewInMemoryAclListStorage(a.id, recs); a.consErr != nil {
+		if a.store, a.consErr = list.NewInMemoryStorage(a.id, recs); a.consErr != nil {
 			return
 		}
 		if a.AclList, a.consErr = list.BuildAclListWithIdentity(a.aclService.accountService.Account(), a.store, list.NoOpAcceptorVerifier{}); a.consErr != nil {
