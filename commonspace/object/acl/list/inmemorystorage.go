@@ -97,6 +97,20 @@ func (t *inMemoryStorage) GetAfterOrder(ctx context.Context, order int, iter Sto
 	return nil
 }
 
+func (t *inMemoryStorage) GetBeforeOrder(ctx context.Context, order int, iter StorageIterator) error {
+	t.RLock()
+	defer t.RUnlock()
+	if order > len(t.records) || order < 0 {
+		return nil
+	}
+	for i := 0; i <= order; i++ {
+		if shouldContinue, err := iter(ctx, t.records[i]); !shouldContinue || err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (t *inMemoryStorage) AddAll(ctx context.Context, records []StorageRecord) error {
 	t.Lock()
 	defer t.Unlock()

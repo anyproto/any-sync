@@ -46,6 +46,7 @@ type Storage interface {
 	Has(ctx context.Context, id string) (bool, error)
 	Get(ctx context.Context, id string) (StorageRecord, error)
 	GetAfterOrder(ctx context.Context, order int, iter StorageIterator) error
+	GetBeforeOrder(ctx context.Context, order int, iter StorageIterator) error
 	AddAll(ctx context.Context, records []StorageRecord) error
 }
 
@@ -163,7 +164,16 @@ func (s *storage) Has(ctx context.Context, id string) (bool, error) {
 
 func (s *storage) GetAfterOrder(ctx context.Context, order int, storageIter StorageIterator) error {
 	qry := s.changesColl.Find(query.Key{Path: []string{orderKey}, Filter: query.NewComp(query.CompOpGte, order)}).Sort(orderKey)
-	iter, err := qry.Iter(ctx)
+	return s.getWithQuery(ctx, qry, storageIter)
+}
+
+func (s *storage) GetBeforeOrder(ctx context.Context, order int, storageIter StorageIterator) error {
+	qry := s.changesColl.Find(query.Key{Path: []string{orderKey}, Filter: query.NewComp(query.CompOpLte, order)}).Sort(orderKey)
+	return s.getWithQuery(ctx, qry, storageIter)
+}
+
+func (s *storage) getWithQuery(ctx context.Context, qry anystore.Query, storageIter StorageIterator) error {
+	iter, err := s.changesColl.Find(qry).Iter(ctx)
 	if err != nil {
 		return fmt.Errorf("find iter: %w", err)
 	}
