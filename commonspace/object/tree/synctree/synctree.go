@@ -76,7 +76,7 @@ type BuildDeps struct {
 	Listener           updatelistener.UpdateListener
 	AclList            list.AclList
 	SpaceStorage       spacestorage.SpaceStorage
-	TreeStorage        treestorage.TreeStorage
+	TreeStorage        objecttree.Storage
 	OnClose            func(id string)
 	SyncStatus         syncstatus.StatusUpdater
 	PeerGetter         ResponsiblePeersGetter

@@ -54,11 +54,11 @@ func (s syncTreeMatcher) String() string {
 }
 
 type testTreeGetter struct {
-	treeStorage treestorage.TreeStorage
+	treeStorage objecttree.Storage
 	peerId      string
 }
 
-func (t testTreeGetter) getTree(ctx context.Context) (treeStorage treestorage.TreeStorage, peerId string, err error) {
+func (t testTreeGetter) getTree(ctx context.Context) (treeStorage objecttree.Storage, peerId string, err error) {
 	return t.treeStorage, t.peerId, nil
 }
 
@@ -89,7 +89,7 @@ func newFixture(t *testing.T) *fixture {
 		SyncClient:     syncClient,
 		Listener:       listener,
 		HeadNotifiable: headNotifiable,
-		BuildObjectTree: func(treestorage.TreeStorage, list.AclList) (objecttree.ObjectTree, error) {
+		BuildObjectTree: func(objecttree.Storage, list.AclList) (objecttree.ObjectTree, error) {
 			return objTree, nil
 		},
 		SyncStatus:   syncStatus,
@@ -208,10 +208,11 @@ func Test_SyncTree(t *testing.T) {
 
 	headUpdate := &objectmessages.HeadUpdate{}
 	t.Run("AddRawChangesFromPeer update", func(t *testing.T) {
-		changes := []*treechangeproto.RawTreeChangeWithId{{Id: "some"}}
+		changes := []objecttree.StorageChange{{Id: "some"}}
+		rawChanges := []*treechangeproto.RawTreeChangeWithId{{Id: "some"}}
 		payload := objecttree.RawChangesPayload{
 			NewHeads:   []string{"headId1"},
-			RawChanges: changes,
+			RawChanges: rawChanges,
 		}
 		expectedRes := objecttree.AddResult{
 			Added:    changes,
