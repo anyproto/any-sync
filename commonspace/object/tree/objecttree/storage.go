@@ -9,22 +9,20 @@ import (
 	"github.com/anyproto/any-store/anyenc"
 	"github.com/anyproto/any-store/query"
 
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/storeutil"
 )
 
 const (
-	orderKey            = "o"
-	headsKey            = "h"
-	commonSnapshotKey   = "s"
-	idKey               = "id"
-	rawChangeKey        = "r"
-	snapshotCounterKey  = "sc"
-	changeSizeKey       = "sz"
-	snapshotIdKey       = "i"
-	prevIdsKey          = "p"
-	headsCollectionName = "heads"
+	orderKey           = "o"
+	idKey              = "id"
+	rawChangeKey       = "r"
+	snapshotCounterKey = "sc"
+	changeSizeKey      = "sz"
+	snapshotIdKey      = "i"
+	prevIdsKey         = "p"
 )
 
 type StorageChange struct {
@@ -62,17 +60,18 @@ type Storage interface {
 type storage struct {
 	id          string
 	store       anystore.DB
-	headsColl   anystore.Collection
+	headStorage headstorage.HeadStorage
 	changesColl anystore.Collection
 	arena       *anyenc.Arena
 }
 
 var storageChangeBuilder = NewChangeBuilder
 
-func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, store anystore.DB) (Storage, error) {
+func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
 	st := &storage{
-		id:    root.Id,
-		store: store,
+		id:          root.Id,
+		store:       store,
+		headStorage: headStorage,
 	}
 	builder := storageChangeBuilder(crypto.NewKeyStorage(), root)
 	_, err := builder.Unmarshall(root, true)
@@ -88,11 +87,6 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 		OrderId:         firstOrder,
 		ChangeSize:      len(root.RawChange),
 	}
-	headsColl, err := store.Collection(ctx, headsCollectionName)
-	if err != nil {
-		return nil, err
-	}
-	st.headsColl = headsColl
 	changesColl, err := store.Collection(ctx, root.Id)
 	if err != nil {
 		return nil, err
@@ -119,11 +113,11 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 		tx.Rollback()
 		return nil, err
 	}
-	headsDoc := st.arena.NewObject()
-	headsDoc.Set(headsKey, storeutil.NewStringArrayValue([]string{root.Id}, st.arena))
-	headsDoc.Set(commonSnapshotKey, st.arena.NewString(root.Id))
-	headsDoc.Set(idKey, st.arena.NewString(root.Id))
-	err = st.headsColl.Insert(tx.Context(), headsDoc)
+	err = st.headStorage.UpdateEntryTx(tx.Context(), headstorage.HeadsUpdate{
+		Id:             root.Id,
+		Heads:          []string{root.Id},
+		CommonSnapshot: &root.Id,
+	})
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -131,17 +125,12 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 	return st, tx.Commit()
 }
 
-func NewStorage(ctx context.Context, id string, store anystore.DB) (Storage, error) {
-	// TODO: use spacestorage to set heads
+func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
 	st := &storage{
-		id:    id,
-		store: store,
+		id:          id,
+		store:       store,
+		headStorage: headStorage,
 	}
-	headsColl, err := store.Collection(ctx, headsCollectionName)
-	if err != nil {
-		return nil, err
-	}
-	st.headsColl = headsColl
 	changesColl, err := store.Collection(ctx, id)
 	if err != nil {
 		return nil, err
@@ -161,20 +150,15 @@ func NewStorage(ctx context.Context, id string, store anystore.DB) (Storage, err
 }
 
 func (s *storage) Heads(ctx context.Context) (res []string, err error) {
-	doc, err := s.headsColl.FindId(ctx, s.id)
+	headsEntry, err := s.headStorage.GetEntry(ctx, s.id)
 	if err != nil {
-		return nil, err
+		return
 	}
-	res = make([]string, 0, len(res))
-	heads := doc.Value().GetArray(headsKey)
-	for _, h := range heads {
-		res = append(res, h.GetString())
-	}
-	return
+	return headsEntry.Heads, nil
 }
 
 func (s *storage) Has(ctx context.Context, id string) (bool, error) {
-	_, err := s.headsColl.FindId(ctx, s.id)
+	_, err := s.changesColl.FindId(ctx, id)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocNotFound) {
 			return false, nil
@@ -226,12 +210,12 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 		tx.Rollback()
 		return nil
 	}
-	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
-		v.Set(headsKey, storeutil.NewStringArrayValue(heads, a))
-		v.Set(commonSnapshotKey, a.NewString(commonSnapshot))
-		return v, true, nil
-	})
-	_, err = s.headsColl.UpsertId(tx.Context(), s.id, mod)
+	update := headstorage.HeadsUpdate{
+		Id:             s.id,
+		Heads:          heads,
+		CommonSnapshot: &commonSnapshot,
+	}
+	err = s.headStorage.UpdateEntryTx(tx.Context(), update)
 	if err != nil {
 		tx.Rollback()
 		return nil
@@ -249,7 +233,7 @@ func (s *storage) Delete(ctx context.Context) error {
 		tx.Rollback()
 		return fmt.Errorf("failed to delete changes collection: %w", err)
 	}
-	err = s.headsColl.DeleteId(tx.Context(), s.id)
+	err = s.headStorage.DeleteEntryTx(tx.Context(), s.id)
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to remove document from heads collection: %w", err)
@@ -271,11 +255,11 @@ func (s *storage) Root(ctx context.Context) (StorageChange, error) {
 
 func (s *storage) CommonSnapshot(ctx context.Context) (string, error) {
 	// TODO: cache this in memory if needed
-	doc, err := s.headsColl.FindId(ctx, s.id)
+	entry, err := s.headStorage.GetEntry(ctx, s.id)
 	if err != nil {
 		return "", err
 	}
-	return doc.Value().GetString(commonSnapshotKey), nil
+	return entry.CommonSnapshot, nil
 }
 
 func (s *storage) Get(ctx context.Context, id string) (StorageChange, error) {

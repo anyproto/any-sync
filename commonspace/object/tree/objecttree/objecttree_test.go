@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -308,7 +309,9 @@ func TestObjectTree(t *testing.T) {
 			IsEncrypted:   true,
 		}, aAccount.Acl)
 		require.NoError(t, err)
-		aStore, err := CreateStorage(ctx, root, store)
+		aHeadsStorage, err := headstorage.New(ctx, store)
+		require.NoError(t, err)
+		aStore, err := CreateStorage(ctx, root, aHeadsStorage, store)
 		require.NoError(t, err)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
@@ -359,7 +362,9 @@ func TestObjectTree(t *testing.T) {
 			IsEncrypted:   true,
 		}, aAccount.Acl)
 		require.NoError(t, err)
-		aStore, err := CreateStorage(ctx, root, storeA)
+		aHeadsStorage, err := headstorage.New(ctx, storeA)
+		require.NoError(t, err)
+		aStore, err := CreateStorage(ctx, root, aHeadsStorage, storeA)
 		require.NoError(t, err)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
@@ -372,7 +377,9 @@ func TestObjectTree(t *testing.T) {
 		})
 		require.NoError(t, err)
 		storeB := copyStore(ctx, t, storeA.(testStore), "b")
-		bStore, err := NewStorage(ctx, root.Id, storeB)
+		bHeadsStorage, err := headstorage.New(ctx, storeB)
+		require.NoError(t, err)
+		bStore, err := NewStorage(ctx, root.Id, bHeadsStorage, storeB)
 		require.NoError(t, err)
 		bTree, err := BuildKeyFilterableObjectTree(bStore, bAccount.Acl)
 		require.NoError(t, err)
@@ -447,7 +454,9 @@ func TestObjectTree(t *testing.T) {
 			IsEncrypted:   true,
 		}, aAccount.Acl)
 		require.NoError(t, err)
-		aStore, err := CreateStorage(ctx, root, storeA)
+		aHeadsStorage, err := headstorage.New(ctx, storeA)
+		require.NoError(t, err)
+		aStore, err := CreateStorage(ctx, root, aHeadsStorage, storeA)
 		require.NoError(t, err)
 		aTree, err := BuildKeyFilterableObjectTree(aStore, aAccount.Acl)
 		require.NoError(t, err)
@@ -460,7 +469,9 @@ func TestObjectTree(t *testing.T) {
 		})
 		require.NoError(t, err)
 		storeB := copyStore(ctx, t, storeA.(testStore), "b")
-		bStore, err := NewStorage(ctx, root.Id, storeB)
+		bHeadsStorage, err := headstorage.New(ctx, storeB)
+		require.NoError(t, err)
+		bStore, err := NewStorage(ctx, root.Id, bHeadsStorage, storeB)
 		require.NoError(t, err)
 		// copying old version of storage
 		prevAclRecs, err := bAccount.Acl.RecordsAfter(ctx, "")
@@ -512,7 +523,10 @@ func TestObjectTree(t *testing.T) {
 		}, aclList)
 		require.NoError(t, err)
 		store := createStore(ctx, t)
-		storage, _ := CreateStorage(ctx, root, store)
+		headsStorage, err := headstorage.New(ctx, store)
+		require.NoError(t, err)
+		storage, err := CreateStorage(ctx, root, headsStorage, store)
+		require.NoError(t, err)
 		oTree, err := BuildObjectTree(storage, aclList)
 		require.NoError(t, err)
 
@@ -582,7 +596,10 @@ func TestObjectTree(t *testing.T) {
 			}, aclList)
 			require.NoError(t, err)
 			store := createStore(ctx, t)
-			storage, _ := CreateStorage(ctx, root, store)
+			headsStorage, err := headstorage.New(ctx, store)
+			require.NoError(t, err)
+			storage, err := CreateStorage(ctx, root, headsStorage, store)
+			require.NoError(t, err)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			emptyDataTreeDeps = nonVerifiableTreeDeps
@@ -604,7 +621,10 @@ func TestObjectTree(t *testing.T) {
 			}, aclList)
 			require.NoError(t, err)
 			store := createStore(ctx, t)
-			storage, _ := CreateStorage(ctx, root, store)
+			headsStorage, err := headstorage.New(ctx, store)
+			require.NoError(t, err)
+			storage, err := CreateStorage(ctx, root, headsStorage, store)
+			require.NoError(t, err)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			validateStore := createStore(ctx, t)
@@ -638,7 +658,10 @@ func TestObjectTree(t *testing.T) {
 			}, aclList)
 			require.NoError(t, err)
 			store := createStore(ctx, t)
-			storage, _ := CreateStorage(ctx, root, store)
+			headsStorage, err := headstorage.New(ctx, store)
+			require.NoError(t, err)
+			storage, err := CreateStorage(ctx, root, headsStorage, store)
+			require.NoError(t, err)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			_, err = oTree.AddContent(ctx, SignableChangeContent{
@@ -685,7 +708,10 @@ func TestObjectTree(t *testing.T) {
 			require.NoError(t, err)
 			emptyDataTreeDeps = nonVerifiableTreeDeps
 			store := createStore(ctx, t)
-			storage, _ := CreateStorage(ctx, root, store)
+			headsStorage, err := headstorage.New(ctx, store)
+			require.NoError(t, err)
+			storage, err := CreateStorage(ctx, root, headsStorage, store)
+			require.NoError(t, err)
 			oTree, err := BuildObjectTree(storage, aclList)
 			require.NoError(t, err)
 			_, err = oTree.AddContent(ctx, SignableChangeContent{

@@ -6,6 +6,7 @@ import (
 
 	anystore "github.com/anyproto/any-store"
 
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/util/slice"
@@ -20,7 +21,12 @@ type tempTreeStorageCreator struct {
 }
 
 func (t *tempTreeStorageCreator) CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (Storage, error) {
-	return CreateStorage(context.Background(), payload.RootRawChange, t.store)
+	ctx := context.Background()
+	headStorage, err := headstorage.New(ctx, t.store)
+	if err != nil {
+		return nil, err
+	}
+	return CreateStorage(ctx, payload.RootRawChange, headStorage, t.store)
 }
 
 type ValidatorFunc func(payload treestorage.TreeStorageCreatePayload, storageCreator TreeStorageCreator, aclList list.AclList) (ret ObjectTree, err error)

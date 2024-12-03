@@ -38,6 +38,7 @@ type EntryIterator func(entry HeadsEntry) (bool, error)
 type HeadStorage interface {
 	IterateEntries(ctx context.Context, iter EntryIterator) error
 	GetEntry(ctx context.Context, id string) (HeadsEntry, error)
+	DeleteEntryTx(txCtx context.Context, id string) error
 	UpdateEntryTx(txCtx context.Context, update HeadsUpdate) error
 }
 
@@ -103,6 +104,10 @@ func (h *headStorage) UpdateEntryTx(ctx context.Context, update HeadsUpdate) (er
 	})
 	_, err = h.headsColl.UpsertId(ctx, update.Id, mod)
 	return
+}
+
+func (h *headStorage) DeleteEntryTx(ctx context.Context, id string) error {
+	return h.headsColl.DeleteId(ctx, id)
 }
 
 func (h *headStorage) entryFromDoc(doc anystore.Doc) HeadsEntry {

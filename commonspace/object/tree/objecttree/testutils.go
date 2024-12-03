@@ -9,6 +9,7 @@ import (
 	libcrypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/stretchr/testify/require"
 
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -164,7 +165,11 @@ func (c *MockChangeCreator) CreateNewTreeStorage(t *testing.T, treeId, aclHeadId
 			ChangeBuilder: NewChangeBuilder(newMockKeyStorage(), rootChange),
 		}
 	}
-	storage, err := CreateStorage(context.Background(), root, c.storeCreator())
+	ctx := context.Background()
+	store := c.storeCreator()
+	headStorage, err := headstorage.New(ctx, store)
+	require.NoError(t, err)
+	storage, err := CreateStorage(ctx, root, headStorage, store)
 	require.NoError(t, err)
 	return &testStorage{
 		Storage: storage,
