@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
@@ -46,12 +47,16 @@ func newFixture(t *testing.T) *aclFixture {
 	ctx := context.Background()
 	ownerAcl, err := newDerivedAclWithStoreProvider(spaceId, ownerKeys, []byte("metadata"), func(root *consensusproto.RawRecordWithId) (Storage, error) {
 		store := createStore(ctx, t)
-		return CreateStorage(ctx, root, store)
+		headStorage, err := headstorage.New(ctx, store)
+		require.NoError(t, err)
+		return CreateStorage(ctx, root, headStorage, store)
 	})
 	require.NoError(t, err)
 	accountAcl, err := newAclWithStoreProvider(ownerAcl.Root(), accountKeys, func(root *consensusproto.RawRecordWithId) (Storage, error) {
 		store := createStore(ctx, t)
-		return CreateStorage(ctx, root, store)
+		headStorage, err := headstorage.New(ctx, store)
+		require.NoError(t, err)
+		return CreateStorage(ctx, root, headStorage, store)
 	})
 	require.NoError(t, err)
 	require.Equal(t, ownerAcl.AclState().lastRecordId, ownerAcl.Id())

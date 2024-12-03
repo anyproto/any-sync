@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-store/anyenc"
@@ -22,6 +23,7 @@ const (
 	snapshotCounterKey = "sc"
 	changeSizeKey      = "sz"
 	snapshotIdKey      = "i"
+	addedKey           = "a"
 	prevIdsKey         = "p"
 )
 
@@ -181,11 +183,7 @@ func (s *storage) GetAfterOrder(ctx context.Context, orderId string, storageIter
 		if err != nil {
 			return fmt.Errorf("doc not found: %w", err)
 		}
-		parsed, err := s.changeFromDoc(doc.Value().GetString(idKey), doc)
-		if err != nil {
-			return fmt.Errorf("failed to make change from doc: %w", err)
-		}
-		cont, err := storageIter(ctx, parsed)
+		cont, err := storageIter(ctx, s.changeFromDoc(doc))
 		if !cont {
 			return err
 		}
@@ -267,16 +265,12 @@ func (s *storage) Get(ctx context.Context, id string) (StorageChange, error) {
 	if err != nil {
 		return StorageChange{}, err
 	}
-	ch, err := s.changeFromDoc(id, doc)
-	if err != nil {
-		return StorageChange{}, err
-	}
-	return ch, nil
+	return s.changeFromDoc(doc), nil
 }
 
-func (s *storage) changeFromDoc(id string, doc anystore.Doc) (StorageChange, error) {
-	change := StorageChange{
-		Id:              id,
+func (s *storage) changeFromDoc(doc anystore.Doc) StorageChange {
+	return StorageChange{
+		Id:              doc.Value().GetString(idKey),
 		RawChange:       doc.Value().GetBytes(rawChangeKey),
 		SnapshotId:      doc.Value().GetString(snapshotIdKey),
 		OrderId:         doc.Value().GetString(orderKey),
@@ -284,7 +278,6 @@ func (s *storage) changeFromDoc(id string, doc anystore.Doc) (StorageChange, err
 		SnapshotCounter: doc.Value().GetInt(snapshotCounterKey),
 		PrevIds:         storeutil.StringsFromArrayValue(doc.Value(), prevIdsKey),
 	}
-	return change, nil
 }
 
 func newStorageChangeValue(ch StorageChange, arena *anyenc.Arena) *anyenc.Value {
@@ -295,6 +288,7 @@ func newStorageChangeValue(ch StorageChange, arena *anyenc.Arena) *anyenc.Value 
 	newVal.Set(snapshotIdKey, arena.NewString(ch.SnapshotId))
 	newVal.Set(changeSizeKey, arena.NewNumberInt(ch.ChangeSize))
 	newVal.Set(idKey, arena.NewString(ch.Id))
+	newVal.Set(addedKey, arena.NewNumberFloat64(float64(time.Now().Unix())))
 	if len(ch.PrevIds) != 0 {
 		newVal.Set(prevIdsKey, storeutil.NewStringArrayValue(ch.PrevIds, arena))
 	}

@@ -74,6 +74,7 @@ func Create(ctx context.Context, state State, store anystore.DB) (StateStorage, 
 	if err != nil {
 		return nil, err
 	}
+	defer arena.Reset()
 	doc := arena.NewObject()
 	doc.Set(idKey, arena.NewString(state.SpaceId))
 	doc.Set(settingsIdKey, arena.NewString(state.SettingsId))
@@ -87,7 +88,7 @@ func Create(ctx context.Context, state State, store anystore.DB) (StateStorage, 
 		spaceId:   state.SpaceId,
 		store:     store,
 		stateColl: stateCollection,
-		arena:     &anyenc.Arena{},
+		arena:     arena,
 	}, tx.Commit()
 }
 

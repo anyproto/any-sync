@@ -9,6 +9,7 @@ import (
 	"github.com/anyproto/any-store/anyenc"
 	"github.com/anyproto/any-store/query"
 
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
 
@@ -53,57 +54,54 @@ type Storage interface {
 type storage struct {
 	id          string
 	store       anystore.DB
+	headStorage headstorage.HeadStorage
 	headsColl   anystore.Collection
-	changesColl anystore.Collection
+	recordsColl anystore.Collection
 	arena       *anyenc.Arena
 }
 
-func CreateStorage(ctx context.Context, root *consensusproto.RawRecordWithId, store anystore.DB) (Storage, error) {
+func CreateStorage(ctx context.Context, root *consensusproto.RawRecordWithId, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
 	st := &storage{
-		id:    root.Id,
-		store: store,
+		id:          root.Id,
+		store:       store,
+		headStorage: headStorage,
 	}
-	stChange := StorageRecord{
+	rec := StorageRecord{
 		RawRecord:  root.Payload,
 		Id:         root.Id,
 		Order:      1,
 		ChangeSize: len(root.Payload),
 	}
-	headsColl, err := store.Collection(ctx, headsCollectionName)
+	recordsColl, err := store.Collection(ctx, root.Id)
 	if err != nil {
 		return nil, err
 	}
-	st.headsColl = headsColl
-	changesColl, err := store.Collection(ctx, root.Id)
-	if err != nil {
-		return nil, err
-	}
-	st.changesColl = changesColl
+	st.recordsColl = recordsColl
 	orderIdx := anystore.IndexInfo{
 		Name:   orderKey,
 		Fields: []string{orderKey},
 		Unique: true,
 	}
-	err = st.changesColl.EnsureIndex(ctx, orderIdx)
+	err = st.recordsColl.EnsureIndex(ctx, orderIdx)
 	if err != nil {
 		return nil, err
 	}
 	st.arena = &anyenc.Arena{}
 	defer st.arena.Reset()
-	doc := newStorageRecordValue(stChange, st.arena)
+	doc := newStorageRecordValue(rec, st.arena)
 	tx, err := st.store.WriteTx(ctx)
 	if err != nil {
 		return nil, err
 	}
-	err = st.changesColl.Insert(tx.Context(), doc)
+	err = st.recordsColl.Insert(tx.Context(), doc)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
 	}
-	headsDoc := st.arena.NewObject()
-	headsDoc.Set(headsKey, newStringArrayValue([]string{root.Id}, st.arena))
-	headsDoc.Set(idKey, st.arena.NewString(root.Id))
-	err = st.headsColl.Insert(tx.Context(), headsDoc)
+	err = st.headStorage.UpdateEntryTx(tx.Context(), headstorage.HeadsUpdate{
+		Id:    root.Id,
+		Heads: []string{root.Id},
+	})
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -111,27 +109,23 @@ func CreateStorage(ctx context.Context, root *consensusproto.RawRecordWithId, st
 	return st, tx.Commit()
 }
 
-func NewStorage(ctx context.Context, id string, store anystore.DB) (Storage, error) {
+func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
 	st := &storage{
-		id:    id,
-		store: store,
+		id:          id,
+		store:       store,
+		headStorage: headStorage,
 	}
-	headsColl, err := store.Collection(ctx, headsCollectionName)
+	recordsColl, err := store.Collection(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	st.headsColl = headsColl
-	changesColl, err := store.Collection(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	st.changesColl = changesColl
+	st.recordsColl = recordsColl
 	orderIdx := anystore.IndexInfo{
 		Name:   orderKey,
 		Fields: []string{orderKey},
 		Unique: true,
 	}
-	err = st.changesColl.EnsureIndex(ctx, orderIdx)
+	err = st.recordsColl.EnsureIndex(ctx, orderIdx)
 	if err != nil && !errors.Is(err, anystore.ErrIndexExists) {
 		return nil, err
 	}
@@ -140,19 +134,18 @@ func NewStorage(ctx context.Context, id string, store anystore.DB) (Storage, err
 }
 
 func (s *storage) Head(ctx context.Context) (res string, err error) {
-	doc, err := s.headsColl.FindId(ctx, s.id)
+	headsEntry, err := s.headStorage.GetEntry(ctx, s.id)
 	if err != nil {
-		return "", err
+		return
 	}
-	heads := doc.Value().GetArray(headsKey)
-	if len(heads) > 0 {
-		return heads[0].GetString(), nil
+	if len(headsEntry.Heads) == 1 {
+		return headsEntry.Heads[0], nil
 	}
-	return
+	return "", nil
 }
 
 func (s *storage) Has(ctx context.Context, id string) (bool, error) {
-	_, err := s.headsColl.FindId(ctx, s.id)
+	_, err := s.recordsColl.FindId(ctx, id)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocNotFound) {
 			return false, nil
@@ -163,17 +156,17 @@ func (s *storage) Has(ctx context.Context, id string) (bool, error) {
 }
 
 func (s *storage) GetAfterOrder(ctx context.Context, order int, storageIter StorageIterator) error {
-	qry := s.changesColl.Find(query.Key{Path: []string{orderKey}, Filter: query.NewComp(query.CompOpGte, order)}).Sort(orderKey)
+	qry := s.recordsColl.Find(query.Key{Path: []string{orderKey}, Filter: query.NewComp(query.CompOpGte, order)}).Sort(orderKey)
 	return s.getWithQuery(ctx, qry, storageIter)
 }
 
 func (s *storage) GetBeforeOrder(ctx context.Context, order int, storageIter StorageIterator) error {
-	qry := s.changesColl.Find(query.Key{Path: []string{orderKey}, Filter: query.NewComp(query.CompOpLte, order)}).Sort(orderKey)
+	qry := s.recordsColl.Find(query.Key{Path: []string{orderKey}, Filter: query.NewComp(query.CompOpLte, order)}).Sort(orderKey)
 	return s.getWithQuery(ctx, qry, storageIter)
 }
 
 func (s *storage) getWithQuery(ctx context.Context, qry anystore.Query, storageIter StorageIterator) error {
-	iter, err := s.changesColl.Find(qry).Iter(ctx)
+	iter, err := s.recordsColl.Find(qry).Iter(ctx)
 	if err != nil {
 		return fmt.Errorf("find iter: %w", err)
 	}
@@ -211,17 +204,17 @@ func (s *storage) AddAll(ctx context.Context, records []StorageRecord) error {
 		newVal := newStorageRecordValue(ch, arena)
 		vals = append(vals, newVal)
 	}
-	err = s.changesColl.Insert(tx.Context(), vals...)
+	err = s.recordsColl.Insert(tx.Context(), vals...)
 	if err != nil {
 		tx.Rollback()
 		return nil
 	}
 	head := records[len(records)-1].Id
-	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
-		v.Set(headsKey, newStringArrayValue([]string{head}, a))
-		return v, true, nil
-	})
-	_, err = s.headsColl.UpsertId(tx.Context(), s.id, mod)
+	update := headstorage.HeadsUpdate{
+		Id:    s.id,
+		Heads: []string{head},
+	}
+	err = s.headStorage.UpdateEntryTx(tx.Context(), update)
 	if err != nil {
 		tx.Rollback()
 		return nil
@@ -238,7 +231,7 @@ func (s *storage) Root(ctx context.Context) (StorageRecord, error) {
 }
 
 func (s *storage) Get(ctx context.Context, id string) (StorageRecord, error) {
-	doc, err := s.changesColl.FindId(ctx, id)
+	doc, err := s.recordsColl.FindId(ctx, id)
 	if err != nil {
 		return StorageRecord{}, err
 	}
