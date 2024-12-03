@@ -724,7 +724,7 @@ func (ot *objectTree) TryClose(objectTTL time.Duration) (bool, error) {
 }
 
 func (ot *objectTree) Close() error {
-	return nil
+	return ot.storage.Close()
 }
 
 func (ot *objectTree) Delete() error {
@@ -732,7 +732,7 @@ func (ot *objectTree) Delete() error {
 		return nil
 	}
 	ot.isDeleted = true
-	return ot.storage.Delete()
+	return ot.storage.Delete(context.Background())
 }
 
 func (ot *objectTree) SnapshotPath() []string {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/util/crypto"
+	"github.com/anyproto/any-sync/util/storeutil"
 )
 
 const (
@@ -54,7 +55,8 @@ type Storage interface {
 	Get(ctx context.Context, id string) (StorageChange, error)
 	GetAfterOrder(ctx context.Context, orderId string, iter StorageIterator) error
 	AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error
-	Delete() error
+	Delete(ctx context.Context) error
+	Close() error
 }
 
 type storage struct {
@@ -118,7 +120,7 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 		return nil, err
 	}
 	headsDoc := st.arena.NewObject()
-	headsDoc.Set(headsKey, newStringArrayValue([]string{root.Id}, st.arena))
+	headsDoc.Set(headsKey, storeutil.NewStringArrayValue([]string{root.Id}, st.arena))
 	headsDoc.Set(commonSnapshotKey, st.arena.NewString(root.Id))
 	headsDoc.Set(idKey, st.arena.NewString(root.Id))
 	err = st.headsColl.Insert(tx.Context(), headsDoc)
@@ -195,7 +197,7 @@ func (s *storage) GetAfterOrder(ctx context.Context, orderId string, storageIter
 		if err != nil {
 			return fmt.Errorf("doc not found: %w", err)
 		}
-		parsed, err := s.changeFromDoc(doc.Value().GetString("id"), doc)
+		parsed, err := s.changeFromDoc(doc.Value().GetString(idKey), doc)
 		if err != nil {
 			return fmt.Errorf("failed to make change from doc: %w", err)
 		}
@@ -225,7 +227,7 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 		return nil
 	}
 	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
-		v.Set(headsKey, newStringArrayValue(heads, a))
+		v.Set(headsKey, storeutil.NewStringArrayValue(heads, a))
 		v.Set(commonSnapshotKey, a.NewString(commonSnapshot))
 		return v, true, nil
 	})
@@ -237,9 +239,8 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 	return tx.Commit()
 }
 
-func (s *storage) Delete() error {
-	// TODO: add context
-	tx, err := s.store.WriteTx(context.Background())
+func (s *storage) Delete(ctx context.Context) error {
+	tx, err := s.store.WriteTx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create write tx: %w", err)
 	}
@@ -254,6 +255,10 @@ func (s *storage) Delete() error {
 		return fmt.Errorf("failed to remove document from heads collection: %w", err)
 	}
 	return tx.Commit()
+}
+
+func (s *storage) Close() error {
+	return s.changesColl.Close()
 }
 
 func (s *storage) Id() string {
@@ -293,21 +298,9 @@ func (s *storage) changeFromDoc(id string, doc anystore.Doc) (StorageChange, err
 		OrderId:         doc.Value().GetString(orderKey),
 		ChangeSize:      doc.Value().GetInt(changeSizeKey),
 		SnapshotCounter: doc.Value().GetInt(snapshotCounterKey),
-	}
-	prevIds := doc.Value().GetArray(prevIdsKey)
-	change.PrevIds = make([]string, 0, len(prevIds))
-	for _, item := range prevIds {
-		change.PrevIds = append(change.PrevIds, item.GetString())
+		PrevIds:         storeutil.StringsFromArrayValue(doc.Value(), prevIdsKey),
 	}
 	return change, nil
-}
-
-func newStringArrayValue(strings []string, arena *anyenc.Arena) *anyenc.Value {
-	val := arena.NewArray()
-	for idx, str := range strings {
-		val.SetArrayItem(idx, arena.NewString(str))
-	}
-	return val
 }
 
 func newStorageChangeValue(ch StorageChange, arena *anyenc.Arena) *anyenc.Value {
@@ -319,7 +312,7 @@ func newStorageChangeValue(ch StorageChange, arena *anyenc.Arena) *anyenc.Value 
 	newVal.Set(changeSizeKey, arena.NewNumberInt(ch.ChangeSize))
 	newVal.Set(idKey, arena.NewString(ch.Id))
 	if len(ch.PrevIds) != 0 {
-		newVal.Set(prevIdsKey, newStringArrayValue(ch.PrevIds, arena))
+		newVal.Set(prevIdsKey, storeutil.NewStringArrayValue(ch.PrevIds, arena))
 	}
 	return newVal
 }
