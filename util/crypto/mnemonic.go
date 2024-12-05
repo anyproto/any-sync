@@ -49,6 +49,12 @@ type DerivationResult struct {
 	EthereumIdentity ecdsa.PrivateKey
 }
 
+type MnemonicKeys struct {
+	Node   slip10.Node
+	First  PrivKey
+	Second PrivKey
+}
+
 type MnemonicGenerator struct {
 	mnemonic string
 }
@@ -98,30 +104,43 @@ func (g MnemonicGenerator) WithEntropy(b []byte) (Mnemonic, error) {
 	return Mnemonic(mnemonic), nil
 }
 
-func (m Mnemonic) deriveForPath(onlyMaster bool, index uint32, path string) (res DerivationResult, err error) {
+func (m Mnemonic) DeriveIndexKeys(path string, firstIndex, secondIndex uint32) (keys MnemonicKeys, err error) {
 	seed, err := m.Seed()
 	if err != nil {
 		return
 	}
-	prefixNode, err := slip10.DeriveForPath(path, seed)
+	node, err := slip10.DeriveForPath(path, seed)
 	if err != nil {
 		return
 	}
-	// m/44'/code'/index'
-	res.MasterNode, err = prefixNode.Derive(slip10.FirstHardenedIndex + index)
+	firstNode, err := node.Derive(slip10.FirstHardenedIndex + firstIndex)
 	if err != nil {
 		return
 	}
-	res.MasterKey, err = genKey(res.MasterNode)
-	if err != nil || onlyMaster {
-		return
-	}
-	// m/44'/code'/index'/0'
-	identityNode, err := res.MasterNode.Derive(slip10.FirstHardenedIndex)
+	keys.Node = firstNode
+	keys.First, err = genKey(firstNode)
 	if err != nil {
 		return
 	}
-	res.Identity, err = genKey(identityNode)
+	secondNode, err := firstNode.Derive(slip10.FirstHardenedIndex + secondIndex)
+	if err != nil {
+		return
+	}
+	keys.Second, err = genKey(secondNode)
+	return
+}
+
+func (m Mnemonic) deriveForPath(onlyMaster bool, index uint32, path string) (res DerivationResult, err error) {
+	keys, err := m.DeriveIndexKeys(path, index, 0)
+	if err != nil {
+		return
+	}
+	res.MasterNode = keys.Node
+	res.MasterKey = keys.First
+	if onlyMaster {
+		return
+	}
+	res.Identity = keys.Second
 	return
 }
 
