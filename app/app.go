@@ -57,14 +57,15 @@ type ComponentStatable interface {
 // App is the central part of the application
 // It contains and manages all components
 type App struct {
-	parent         *App
-	components     []Component
-	mu             sync.RWMutex
-	startStat      Stat
-	stopStat       Stat
-	deviceState    int
-	versionName    string
-	anySyncVersion string
+	parent            *App
+	components        []Component
+	mu                sync.RWMutex
+	startStat         Stat
+	stopStat          Stat
+	deviceState       int
+	versionName       string
+	anySyncVersion    string
+	componentListener func(comp Component)
 }
 
 // Name returns app name
@@ -130,9 +131,10 @@ func VersionDescription() string {
 // It doesn't call Start on any of the parent's components
 func (app *App) ChildApp() *App {
 	return &App{
-		parent:         app,
-		deviceState:    app.deviceState,
-		anySyncVersion: app.AnySyncVersion(),
+		parent:            app,
+		deviceState:       app.deviceState,
+		anySyncVersion:    app.AnySyncVersion(),
+		componentListener: app.componentListener,
 	}
 }
 
@@ -159,6 +161,7 @@ func (app *App) Component(name string) Component {
 	for current != nil {
 		for _, s := range current.components {
 			if s.Name() == name {
+				app.onComponent(s)
 				return s
 			}
 		}
@@ -184,6 +187,7 @@ func MustComponent[i any](app *App) i {
 	for current != nil {
 		for _, s := range current.components {
 			if v, ok := s.(i); ok {
+				app.onComponent(s)
 				return v
 			}
 		}
@@ -383,4 +387,10 @@ func (app *App) AnySyncVersion() string {
 		}
 	})
 	return app.anySyncVersion
+}
+
+func (app *App) onComponent(s Component) {
+	if app.componentListener != nil {
+		app.componentListener(s)
+	}
 }
