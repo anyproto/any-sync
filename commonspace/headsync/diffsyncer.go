@@ -7,6 +7,7 @@ import (
 
 	"github.com/quic-go/quic-go"
 
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 
@@ -27,9 +28,8 @@ import (
 
 type DiffSyncer interface {
 	Sync(ctx context.Context) error
-	RemoveObjects(ids []string)
-	UpdateHeads(id string, heads []string)
 	Init()
+	Close()
 }
 
 const logPeriodSecs = 200
@@ -53,42 +53,49 @@ type diffSyncer struct {
 	spaceId            string
 	diff               ldiff.Diff
 	peerManager        peermanager.PeerManager
+	headUpdater        *headUpdater
 	treeManager        treemanager.TreeManager
 	treeSyncer         treesyncer.TreeSyncer
 	storage            spacestorage.SpaceStorage
 	clientFactory      spacesyncproto.ClientFactory
 	log                syncLogger
+	ctx                context.Context
+	cancel             context.CancelFunc
 	deletionState      deletionstate.ObjectDeletionState
 	credentialProvider credentialprovider.CredentialProvider
 	syncAcl            syncacl.SyncAcl
 }
 
 func (d *diffSyncer) Init() {
-	d.deletionState.AddObserver(d.RemoveObjects)
+	d.ctx, d.cancel = context.WithCancel(context.Background())
+	d.headUpdater = newHeadUpdater(d.updateHeads)
+	d.storage.HeadStorage().AddObserver(d)
 }
 
-func (d *diffSyncer) RemoveObjects(ids []string) {
-	for _, id := range ids {
-		_ = d.diff.RemoveId(id)
-	}
-	if err := d.storage.WriteSpaceHash(d.diff.Hash()); err != nil {
-		d.log.Error("can't write space hash", zap.Error(err))
-	}
-}
-
-func (d *diffSyncer) UpdateHeads(id string, heads []string) {
-	if d.deletionState.Exists(id) {
-		return
-	}
-	d.diff.Set(ldiff.Element{
-		Id:   id,
-		Head: concatStrings(heads),
-	})
-	if err := d.storage.WriteSpaceHash(d.diff.Hash()); err != nil {
-		d.log.Error("can't write space hash", zap.Error(err))
+func (d *diffSyncer) OnUpdate(headsUpdate headstorage.HeadsUpdate) {
+	err := d.headUpdater.Add(headsUpdate)
+	if err != nil {
+		d.log.Warn("failed to add heads update", zap.Error(err))
 	}
 }
 
+func (d *diffSyncer) updateHeads(update headstorage.HeadsUpdate) {
+	if update.DeletedStatus != nil {
+		_ = d.diff.RemoveId(update.Id)
+	} else {
+		if d.deletionState.Exists(update.Id) {
+			return
+		}
+		d.diff.Set(ldiff.Element{
+			Id:   update.Id,
+			Head: concatStrings(update.Heads),
+		})
+	}
+	err := d.storage.StateStorage().SetHash(d.ctx, d.diff.Hash())
+	if err != nil {
+		d.log.Warn("can't write space hash", zap.Error(err))
+	}
+}
 func (d *diffSyncer) Sync(ctx context.Context) error {
 	// TODO: split diffsyncer into components
 	st := time.Now()
@@ -111,6 +118,10 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 	}
 	d.log.DebugCtx(ctx, "diff done", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
 	return nil
+}
+
+func (d *diffSyncer) Close() {
+	d.cancel()
 }
 
 func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {

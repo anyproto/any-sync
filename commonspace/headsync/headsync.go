@@ -39,9 +39,7 @@ type HeadSync interface {
 	ExternalIds() []string
 	DebugAllHeads() (res []TreeHeads)
 	AllIds() []string
-	UpdateHeads(id string, heads []string)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
-	RemoveObjects(ids []string)
 }
 
 type headSync struct {
@@ -87,7 +85,6 @@ func (h *headSync) Init(a *app.App) (err error) {
 		return h.syncer.Sync(ctx)
 	}
 	h.periodicSync = periodicsync.NewPeriodicSync(h.syncPeriod, time.Minute, sync, h.log)
-	h.syncAcl.SetHeadUpdater(h)
 	// TODO: move to run?
 	h.syncer.Init()
 	return nil
@@ -115,10 +112,6 @@ func (h *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.H
 	return
 }
 
-func (h *headSync) UpdateHeads(id string, heads []string) {
-	h.syncer.UpdateHeads(id, heads)
-}
-
 func (h *headSync) AllIds() []string {
 	return h.diff.Ids()
 }
@@ -143,11 +136,8 @@ func (h *headSync) DebugAllHeads() (res []TreeHeads) {
 	return
 }
 
-func (h *headSync) RemoveObjects(ids []string) {
-	h.syncer.RemoveObjects(ids)
-}
-
 func (h *headSync) Close(ctx context.Context) (err error) {
+	h.syncer.Close()
 	h.periodicSync.Close()
 	return
 }

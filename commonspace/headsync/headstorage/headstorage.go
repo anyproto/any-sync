@@ -51,6 +51,7 @@ type IterOpts struct {
 }
 
 type HeadStorage interface {
+	AddObserver(observer Observer)
 	IterateEntries(ctx context.Context, iterOpts IterOpts, iter EntryIterator) error
 	GetEntry(ctx context.Context, id string) (HeadsEntry, error)
 	DeleteEntryTx(txCtx context.Context, id string) error
@@ -58,9 +59,14 @@ type HeadStorage interface {
 	UpdateEntry(ctx context.Context, update HeadsUpdate) error
 }
 
+type Observer interface {
+	OnUpdate(update HeadsUpdate)
+}
+
 type headStorage struct {
 	store     anystore.DB
 	headsColl anystore.Collection
+	observers []Observer
 	arena     *anyenc.Arena
 }
 
@@ -81,6 +87,11 @@ func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
 		Sparse: true,
 	}
 	return st, st.headsColl.EnsureIndex(ctx, deletedIdx)
+}
+
+func (h *headStorage) AddObserver(observer Observer) {
+	// we don't take lock here, because it shouldn't happen during the program execution
+	h.observers = append(h.observers, observer)
 }
 
 func (h *headStorage) IterateEntries(ctx context.Context, opts IterOpts, entryIter EntryIterator) error {
@@ -118,6 +129,13 @@ func (h *headStorage) GetEntry(ctx context.Context, id string) (HeadsEntry, erro
 }
 
 func (h *headStorage) UpdateEntry(ctx context.Context, update HeadsUpdate) (err error) {
+	defer func() {
+		if err == nil {
+			for _, observer := range h.observers {
+				observer.OnUpdate(update)
+			}
+		}
+	}()
 	tx, err := h.headsColl.WriteTx(ctx)
 	if err != nil {
 		return
