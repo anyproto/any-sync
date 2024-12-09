@@ -43,6 +43,14 @@ type AddResult struct {
 	Mode Mode
 }
 
+func (a AddResult) RawChanges() []*treechangeproto.RawTreeChangeWithId {
+	rawChanges := make([]*treechangeproto.RawTreeChangeWithId, 0, len(a.Added))
+	for _, ch := range a.Added {
+		rawChanges = append(rawChanges, ch.RawTreeChangeWithId())
+	}
+	return rawChanges
+}
+
 type RawChangesPayload struct {
 	NewHeads     []string
 	RawChanges   []*treechangeproto.RawTreeChangeWithId

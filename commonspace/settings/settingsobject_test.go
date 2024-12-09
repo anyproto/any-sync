@@ -11,7 +11,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage/mock_treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate/mock_settingsstate"

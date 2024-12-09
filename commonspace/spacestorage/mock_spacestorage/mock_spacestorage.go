@@ -14,7 +14,6 @@ import (
 	reflect "reflect"
 
 	app "github.com/anyproto/any-sync/app"
-	liststorage "github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	treechangeproto "github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	treestorage "github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"

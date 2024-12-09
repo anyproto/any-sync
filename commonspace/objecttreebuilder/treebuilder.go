@@ -10,7 +10,6 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/commonspace/headsync"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
@@ -85,7 +84,6 @@ func (t *treeBuilder) Init(a *app.App) (err error) {
 	t.aclList = a.MustComponent(syncacl.CName).(syncacl.SyncAcl)
 	t.spaceStorage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	t.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
-	t.headsNotifiable = a.MustComponent(headsync.CName).(headsync.HeadSync)
 	t.syncStatus = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	t.syncService = a.MustComponent(sync.CName).(sync.SyncService)
 	t.peerManager = a.MustComponent(peermanager.CName).(peermanager.PeerManager)
@@ -144,7 +142,7 @@ func (t *treeBuilder) BuildHistoryTree(ctx context.Context, id string, opts Hist
 		Heads:           opts.Heads,
 		IncludeBeforeId: opts.Include,
 	}
-	params.TreeStorage, err = t.spaceStorage.TreeStorage(id)
+	params.Storage, err = t.spaceStorage.TreeStorage(ctx, id)
 	if err != nil {
 		return
 	}

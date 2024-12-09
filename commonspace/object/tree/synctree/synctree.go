@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
@@ -55,7 +56,6 @@ type syncTree struct {
 	objecttree.ObjectTree
 	syncClient SyncClient
 	syncStatus syncstatus.StatusUpdater
-	notifiable HeadNotifiable
 	listener   updatelistener.UpdateListener
 	onClose    func(id string)
 	isClosed   bool
@@ -101,11 +101,11 @@ func BuildSyncTreeOrGetRemote(ctx context.Context, id string, deps BuildDeps) (t
 }
 
 func PutSyncTree(ctx context.Context, payload treestorage.TreeStorageCreatePayload, deps BuildDeps) (t SyncTree, err error) {
-	err = checkTreeDeleted(payload.RootRawChange.Id, deps.SpaceStorage)
+	err = checkTreeDeleted(ctx, payload.RootRawChange.Id, deps.SpaceStorage)
 	if err != nil {
 		return
 	}
-	deps.TreeStorage, err = deps.SpaceStorage.CreateTreeStorage(payload)
+	deps.TreeStorage, err = deps.SpaceStorage.CreateTreeStorage(ctx, payload)
 	if err != nil {
 		return
 	}
@@ -121,7 +121,6 @@ func buildSyncTree(ctx context.Context, peerId string, deps BuildDeps) (t SyncTr
 	syncTree := &syncTree{
 		ObjectTree: objTree,
 		syncClient: syncClient,
-		notifiable: deps.HeadNotifiable,
 		onClose:    deps.OnClose,
 		listener:   deps.Listener,
 		syncStatus: deps.SyncStatus,
@@ -182,11 +181,8 @@ func (s *syncTree) AddContentWithValidator(ctx context.Context, content objecttr
 	if err != nil {
 		return
 	}
-	if s.notifiable != nil {
-		s.notifiable.UpdateHeads(s.Id(), res.Heads)
-	}
 	s.syncStatus.HeadsChange(s.Id(), res.Heads)
-	headUpdate, err := s.syncClient.CreateHeadUpdate(s, "", res.Added)
+	headUpdate, err := s.syncClient.CreateHeadUpdate(s, "", res.RawChanges())
 	if err != nil {
 		return
 	}
@@ -212,7 +208,7 @@ func (s *syncTree) AddRawChangesFromPeer(ctx context.Context, peerId string, cha
 	if err != nil || res.Mode == objecttree.Nothing {
 		return
 	}
-	headUpdate, err := s.syncClient.CreateHeadUpdate(s, peerId, res.Added)
+	headUpdate, err := s.syncClient.CreateHeadUpdate(s, peerId, res.RawChanges())
 	if err != nil {
 		return res, err
 	}
@@ -242,7 +238,7 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload objecttree.
 	if err = s.checkAlive(); err != nil {
 		return
 	}
-	res, err = s.ObjectTree.AddRawChangesWithUpdater(ctx, changesPayload, func(tree objecttree.ObjectTree, md objecttree.Mode) error {
+	return s.ObjectTree.AddRawChangesWithUpdater(ctx, changesPayload, func(tree objecttree.ObjectTree, md objecttree.Mode) error {
 		if s.listener != nil {
 			switch md {
 			case objecttree.Nothing:
@@ -255,17 +251,6 @@ func (s *syncTree) AddRawChanges(ctx context.Context, changesPayload objecttree.
 		}
 		return nil
 	})
-	if err != nil {
-		return
-	}
-
-	if res.Mode != objecttree.Nothing {
-		if s.notifiable != nil {
-			s.notifiable.UpdateHeads(s.Id(), res.Heads)
-		}
-		// broadcast will happen on upper level, so we know which peer sent the changes
-	}
-	return
 }
 
 func (s *syncTree) Delete() (err error) {
@@ -345,17 +330,14 @@ func (s *syncTree) afterBuild() {
 	if s.listener != nil {
 		s.listener.Rebuild(s)
 	}
-	if s.notifiable != nil {
-		s.notifiable.UpdateHeads(s.Id(), s.Heads())
-	}
 }
 
-func checkTreeDeleted(treeId string, spaceStorage spacestorage.SpaceStorage) error {
-	status, err := spaceStorage.TreeDeletedStatus(treeId)
+func checkTreeDeleted(ctx context.Context, treeId string, spaceStorage spacestorage.SpaceStorage) error {
+	status, err := spaceStorage.HeadStorage().GetEntry(ctx, treeId)
 	if err != nil {
 		return err
 	}
-	if status != "" {
+	if status.DeletedStatus != headstorage.DeletedStatusNotDeleted {
 		return spacestorage.ErrTreeStorageAlreadyDeleted
 	}
 	return nil

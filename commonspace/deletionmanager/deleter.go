@@ -35,7 +35,7 @@ func (d *deleter) Delete(ctx context.Context) {
 	)
 	for _, id := range allQueued {
 		log := d.log.With(zap.String("treeId", id))
-		shouldDelete, err := d.tryMarkDeleted(spaceId, id)
+		shouldDelete, err := d.tryMarkDeleted(ctx, spaceId, id)
 		if !shouldDelete {
 			if err != nil {
 				log.Error("failed to mark object as deleted", zap.Error(err))
@@ -56,8 +56,8 @@ func (d *deleter) Delete(ctx context.Context) {
 	}
 }
 
-func (d *deleter) tryMarkDeleted(spaceId, treeId string) (bool, error) {
-	_, err := d.st.TreeStorage(treeId)
+func (d *deleter) tryMarkDeleted(ctx context.Context, spaceId, treeId string) (bool, error) {
+	_, err := d.st.TreeStorage(ctx, treeId)
 	if err == nil {
 		return true, nil
 	}

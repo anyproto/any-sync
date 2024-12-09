@@ -12,7 +12,6 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
-	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/streampool"
 	syncqueues "github.com/anyproto/any-sync/util/syncqueues"
 )
@@ -21,7 +20,6 @@ type RequestManager interface {
 	QueueRequest(rq syncdeps.Request) error
 	SendRequest(ctx context.Context, rq syncdeps.Request, collector syncdeps.ResponseCollector) error
 	HandleStreamRequest(ctx context.Context, rq syncdeps.Request, stream drpc.Stream) error
-	HandleDeprecatedObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
 	Close()
 }
 
@@ -85,18 +83,6 @@ func (r *requestManager) QueueRequest(rq syncdeps.Request) error {
 		r.metric.UpdateQueueSize(size, syncdeps.MsgTypeOutgoingRequest, false)
 	})
 	return nil
-}
-
-func (r *requestManager) HandleDeprecatedObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
-	peerId, err := peer.CtxPeerId(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if !r.incomingGuard.TryTake(fullId(peerId, req.ObjectId)) {
-		return nil, spacesyncproto.ErrUnexpected
-	}
-	defer r.incomingGuard.Release(fullId(peerId, req.ObjectId))
-	return r.handler.HandleDeprecatedObjectSync(ctx, req)
 }
 
 func (r *requestManager) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, stream drpc.Stream) error {
