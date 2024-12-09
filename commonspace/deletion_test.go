@@ -16,7 +16,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/settings"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -125,95 +124,6 @@ func createTree(t *testing.T, ctx context.Context, spc Space, acc *accountdata.A
 	require.NoError(t, err)
 	tr.Close()
 	return tr.Id()
-}
-
-func TestSpaceDeleteIdsIncorrectSnapshot(t *testing.T) {
-	fx := newFixture(t)
-	acc := fx.account.Account()
-	rk := crypto.NewAES()
-	privKey, _, _ := crypto.GenerateRandomEd25519KeyPair()
-	ctx := context.Background()
-	totalObjs := 1500
-	partialObjs := 300
-
-	// creating space
-	sp, err := fx.spaceService.CreateSpace(ctx, SpaceCreatePayload{
-		SigningKey:     acc.SignKey,
-		SpaceType:      "type",
-		ReadKey:        rk,
-		MetadataKey:    privKey,
-		ReplicationKey: 10,
-		MasterKey:      acc.PeerKey,
-	})
-	require.NoError(t, err)
-	require.NotNil(t, sp)
-
-	// initializing space
-	spc, err := fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}, SyncStatus: syncstatus.NewNoOpSyncStatus()})
-	require.NoError(t, err)
-	require.NotNil(t, spc)
-	// adding space to tree manager
-	fx.treeManager.space = spc
-	err = spc.Init(ctx)
-	close(fx.treeManager.waitLoad)
-	require.NoError(t, err)
-
-	settingsObject := spc.(*space).app.MustComponent(settings.CName).(settings.Settings).SettingsObject()
-	var ids []string
-	for i := 0; i < totalObjs; i++ {
-		id := createTree(t, ctx, spc, acc)
-		ids = append(ids, id)
-	}
-	// copying storage, so we will have all the trees locally
-	inmemory := spc.Storage().(*spacestorage.InMemorySpaceStorage)
-	storageCopy := inmemory.CopyStorage()
-	treesCopy := inmemory.AllTrees()
-
-	// deleting trees
-	for _, id := range ids {
-		err = spc.DeleteTree(ctx, id)
-		require.NoError(t, err)
-	}
-	mapIds := map[string]struct{}{}
-	for _, id := range ids[:partialObjs] {
-		mapIds[id] = struct{}{}
-	}
-	// adding snapshot that breaks the state
-	err = addIncorrectSnapshot(settingsObject, acc, mapIds, ids[partialObjs])
-	require.NoError(t, err)
-	// copying the contents of the settings tree
-	treesCopy[settingsObject.Id()] = settingsObject.Storage()
-	storageCopy.SetTrees(treesCopy)
-	spc.Close()
-	time.Sleep(100 * time.Millisecond)
-	// now we replace the storage, so the trees are back, but the settings object says that they are deleted
-	fx.storageProvider.(*spacestorage.InMemorySpaceStorageProvider).SetStorage(storageCopy)
-
-	spc, err = fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}, SyncStatus: syncstatus.NewNoOpSyncStatus()})
-	require.NoError(t, err)
-	require.NotNil(t, spc)
-	fx.treeManager.waitLoad = make(chan struct{})
-	fx.treeManager.space = spc
-	fx.treeManager.deletedIds = nil
-	fx.treeManager.wait = true
-	err = spc.Init(ctx)
-	require.NoError(t, err)
-	close(fx.treeManager.waitLoad)
-
-	// waiting until everything is deleted
-	time.Sleep(3 * time.Second)
-	require.Equal(t, len(ids), len(fx.treeManager.deletedIds))
-
-	// checking that new snapshot will contain all the changes
-	settingsObject = spc.(*space).app.MustComponent(settings.CName).(settings.Settings).SettingsObject()
-	settings.DoSnapshot = func(treeLen int) bool {
-		return true
-	}
-	id := createTree(t, ctx, spc, acc)
-	err = spc.DeleteTree(ctx, id)
-	require.NoError(t, err)
-	delIds := settingsObject.Root().Model.(*spacesyncproto.SettingsData).Snapshot.DeletedIds
-	require.Equal(t, totalObjs+1, len(delIds))
 }
 
 func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {

@@ -21,6 +21,7 @@ import (
 type MockListStorage struct {
 	ctrl     *gomock.Controller
 	recorder *MockListStorageMockRecorder
+	isgomock struct{}
 }
 
 // MockListStorageMockRecorder is the mock recorder for MockListStorage.
@@ -41,32 +42,32 @@ func (m *MockListStorage) EXPECT() *MockListStorageMockRecorder {
 }
 
 // AddRawRecord mocks base method.
-func (m *MockListStorage) AddRawRecord(arg0 context.Context, arg1 *consensusproto.RawRecordWithId) error {
+func (m *MockListStorage) AddRawRecord(ctx context.Context, rec *consensusproto.RawRecordWithId) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRawRecord", arg0, arg1)
+	ret := m.ctrl.Call(m, "AddRawRecord", ctx, rec)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddRawRecord indicates an expected call of AddRawRecord.
-func (mr *MockListStorageMockRecorder) AddRawRecord(arg0, arg1 any) *gomock.Call {
+func (mr *MockListStorageMockRecorder) AddRawRecord(ctx, rec any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecord", reflect.TypeOf((*MockListStorage)(nil).AddRawRecord), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecord", reflect.TypeOf((*MockListStorage)(nil).AddRawRecord), ctx, rec)
 }
 
 // GetRawRecord mocks base method.
-func (m *MockListStorage) GetRawRecord(arg0 context.Context, arg1 string) (*consensusproto.RawRecordWithId, error) {
+func (m *MockListStorage) GetRawRecord(ctx context.Context, id string) (*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRawRecord", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetRawRecord", ctx, id)
 	ret0, _ := ret[0].(*consensusproto.RawRecordWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetRawRecord indicates an expected call of GetRawRecord.
-func (mr *MockListStorageMockRecorder) GetRawRecord(arg0, arg1 any) *gomock.Call {
+func (mr *MockListStorageMockRecorder) GetRawRecord(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRawRecord", reflect.TypeOf((*MockListStorage)(nil).GetRawRecord), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRawRecord", reflect.TypeOf((*MockListStorage)(nil).GetRawRecord), ctx, id)
 }
 
 // Head mocks base method.
@@ -114,15 +115,15 @@ func (mr *MockListStorageMockRecorder) Root() *gomock.Call {
 }
 
 // SetHead mocks base method.
-func (m *MockListStorage) SetHead(arg0 string) error {
+func (m *MockListStorage) SetHead(headId string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetHead", arg0)
+	ret := m.ctrl.Call(m, "SetHead", headId)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SetHead indicates an expected call of SetHead.
-func (mr *MockListStorageMockRecorder) SetHead(arg0 any) *gomock.Call {
+func (mr *MockListStorageMockRecorder) SetHead(headId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHead", reflect.TypeOf((*MockListStorage)(nil).SetHead), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHead", reflect.TypeOf((*MockListStorage)(nil).SetHead), headId)
 }

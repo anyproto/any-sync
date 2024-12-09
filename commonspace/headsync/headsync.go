@@ -106,7 +106,13 @@ func (h *headSync) Run(ctx context.Context) (err error) {
 }
 
 func (h *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
-	return HandleRangeRequest(ctx, h.diff, req)
+	resp, err = HandleRangeRequest(ctx, h.diff, req)
+	if err != nil {
+		return
+	}
+	// this is done to fix the problem with compatibility with old clients
+	resp.DiffType = spacesyncproto.DiffType_Precalculated
+	return
 }
 
 func (h *headSync) UpdateHeads(id string, heads []string) {

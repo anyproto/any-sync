@@ -63,7 +63,9 @@ func verifiableTreeDeps(
 	}
 }
 
-func emptyDataTreeDeps(
+var emptyDataTreeDeps = verifiableEmptyDataTreeDeps
+
+func verifiableEmptyDataTreeDeps(
 	rootChange *treechangeproto.RawTreeChangeWithId,
 	treeStorage treestorage.TreeStorage,
 	aclList list.AclList) objectTreeDeps {
@@ -152,6 +154,16 @@ func BuildKeyFilterableObjectTree(treeStorage treestorage.TreeStorage, aclList l
 		return nil, err
 	}
 	deps := defaultObjectTreeDeps(rootChange, treeStorage, aclList)
+	deps.validator = newTreeValidator(true, true)
+	return buildObjectTree(deps)
+}
+
+func BuildEmptyDataKeyFilterableObjectTree(treeStorage treestorage.TreeStorage, aclList list.AclList) (ObjectTree, error) {
+	rootChange, err := treeStorage.Root()
+	if err != nil {
+		return nil, err
+	}
+	deps := emptyDataTreeDeps(rootChange, treeStorage, aclList)
 	deps.validator = newTreeValidator(true, true)
 	return buildObjectTree(deps)
 }

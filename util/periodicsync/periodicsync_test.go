@@ -2,11 +2,14 @@ package periodicsync
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/app/logger"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
+	"github.com/anyproto/any-sync/app/logger"
 )
 
 func TestPeriodicSync_Run(t *testing.T) {
@@ -17,33 +20,32 @@ func TestPeriodicSync_Run(t *testing.T) {
 	l := logger.NewNamed("sync")
 
 	t.Run("loop call 1 time", func(t *testing.T) {
-		secs := 0
-		times := 0
+		times := atomic.Int32{}
 		diffSyncer := func(ctx context.Context) (err error) {
-			times += 1
+			times.Add(1)
 			return nil
 		}
-		pSync := NewPeriodicSync(secs, 0, diffSyncer, l)
-
+		pSync := NewPeriodicSyncDuration(time.Second, 0, diffSyncer, l)
 		pSync.Run()
 		pSync.Close()
-		require.Equal(t, 1, times)
+		require.Equal(t, int32(1), times.Load())
 	})
 
 	t.Run("loop call 2 times", func(t *testing.T) {
-		secs := 1
-
-		times := 0
+		var neededTimes int32 = 2
+		times := atomic.Int32{}
+		ch := make(chan struct{})
 		diffSyncer := func(ctx context.Context) (err error) {
-			times += 1
+			times.Add(1)
+			if neededTimes == times.Load() {
+				close(ch)
+			}
 			return nil
 		}
-		pSync := NewPeriodicSync(secs, 0, diffSyncer, l)
-
+		pSync := NewPeriodicSyncDuration(time.Millisecond*100, 0, diffSyncer, l)
 		pSync.Run()
-		time.Sleep(time.Second * time.Duration(secs))
+		<-ch
 		pSync.Close()
-		require.Equal(t, 2, times)
 	})
 
 	t.Run("loop close not running", func(t *testing.T) {

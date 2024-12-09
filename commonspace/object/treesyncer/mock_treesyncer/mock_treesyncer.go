@@ -22,6 +22,7 @@ import (
 type MockTreeSyncer struct {
 	ctrl     *gomock.Controller
 	recorder *MockTreeSyncerMockRecorder
+	isgomock struct{}
 }
 
 // MockTreeSyncerMockRecorder is the mock recorder for MockTreeSyncer.
@@ -42,31 +43,31 @@ func (m *MockTreeSyncer) EXPECT() *MockTreeSyncerMockRecorder {
 }
 
 // Close mocks base method.
-func (m *MockTreeSyncer) Close(arg0 context.Context) error {
+func (m *MockTreeSyncer) Close(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", arg0)
+	ret := m.ctrl.Call(m, "Close", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockTreeSyncerMockRecorder) Close(arg0 any) *gomock.Call {
+func (mr *MockTreeSyncerMockRecorder) Close(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockTreeSyncer)(nil).Close), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockTreeSyncer)(nil).Close), ctx)
 }
 
 // Init mocks base method.
-func (m *MockTreeSyncer) Init(arg0 *app.App) error {
+func (m *MockTreeSyncer) Init(a *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init", a)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockTreeSyncerMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockTreeSyncerMockRecorder) Init(a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockTreeSyncer)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockTreeSyncer)(nil).Init), a)
 }
 
 // Name mocks base method.
@@ -84,31 +85,31 @@ func (mr *MockTreeSyncerMockRecorder) Name() *gomock.Call {
 }
 
 // Run mocks base method.
-func (m *MockTreeSyncer) Run(arg0 context.Context) error {
+func (m *MockTreeSyncer) Run(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", arg0)
+	ret := m.ctrl.Call(m, "Run", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockTreeSyncerMockRecorder) Run(arg0 any) *gomock.Call {
+func (mr *MockTreeSyncerMockRecorder) Run(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockTreeSyncer)(nil).Run), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockTreeSyncer)(nil).Run), ctx)
 }
 
 // ShouldSync mocks base method.
-func (m *MockTreeSyncer) ShouldSync(arg0 string) bool {
+func (m *MockTreeSyncer) ShouldSync(peerId string) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ShouldSync", arg0)
+	ret := m.ctrl.Call(m, "ShouldSync", peerId)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // ShouldSync indicates an expected call of ShouldSync.
-func (mr *MockTreeSyncerMockRecorder) ShouldSync(arg0 any) *gomock.Call {
+func (mr *MockTreeSyncerMockRecorder) ShouldSync(peerId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldSync", reflect.TypeOf((*MockTreeSyncer)(nil).ShouldSync), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldSync", reflect.TypeOf((*MockTreeSyncer)(nil).ShouldSync), peerId)
 }
 
 // StartSync mocks base method.
@@ -136,15 +137,15 @@ func (mr *MockTreeSyncerMockRecorder) StopSync() *gomock.Call {
 }
 
 // SyncAll mocks base method.
-func (m *MockTreeSyncer) SyncAll(arg0 context.Context, arg1 peer.Peer, arg2, arg3 []string) error {
+func (m *MockTreeSyncer) SyncAll(ctx context.Context, p peer.Peer, existing, missing []string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SyncAll", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "SyncAll", ctx, p, existing, missing)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SyncAll indicates an expected call of SyncAll.
-func (mr *MockTreeSyncerMockRecorder) SyncAll(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockTreeSyncerMockRecorder) SyncAll(ctx, p, existing, missing any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncAll", reflect.TypeOf((*MockTreeSyncer)(nil).SyncAll), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncAll", reflect.TypeOf((*MockTreeSyncer)(nil).SyncAll), ctx, p, existing, missing)
 }

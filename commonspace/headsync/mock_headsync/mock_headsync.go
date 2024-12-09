@@ -20,6 +20,7 @@ import (
 type MockDiffSyncer struct {
 	ctrl     *gomock.Controller
 	recorder *MockDiffSyncerMockRecorder
+	isgomock struct{}
 }
 
 // MockDiffSyncerMockRecorder is the mock recorder for MockDiffSyncer.
@@ -52,39 +53,39 @@ func (mr *MockDiffSyncerMockRecorder) Init() *gomock.Call {
 }
 
 // RemoveObjects mocks base method.
-func (m *MockDiffSyncer) RemoveObjects(arg0 []string) {
+func (m *MockDiffSyncer) RemoveObjects(ids []string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RemoveObjects", arg0)
+	m.ctrl.Call(m, "RemoveObjects", ids)
 }
 
 // RemoveObjects indicates an expected call of RemoveObjects.
-func (mr *MockDiffSyncerMockRecorder) RemoveObjects(arg0 any) *gomock.Call {
+func (mr *MockDiffSyncerMockRecorder) RemoveObjects(ids any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveObjects", reflect.TypeOf((*MockDiffSyncer)(nil).RemoveObjects), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveObjects", reflect.TypeOf((*MockDiffSyncer)(nil).RemoveObjects), ids)
 }
 
 // Sync mocks base method.
-func (m *MockDiffSyncer) Sync(arg0 context.Context) error {
+func (m *MockDiffSyncer) Sync(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Sync", arg0)
+	ret := m.ctrl.Call(m, "Sync", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Sync indicates an expected call of Sync.
-func (mr *MockDiffSyncerMockRecorder) Sync(arg0 any) *gomock.Call {
+func (mr *MockDiffSyncerMockRecorder) Sync(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockDiffSyncer)(nil).Sync), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockDiffSyncer)(nil).Sync), ctx)
 }
 
 // UpdateHeads mocks base method.
-func (m *MockDiffSyncer) UpdateHeads(arg0 string, arg1 []string) {
+func (m *MockDiffSyncer) UpdateHeads(id string, heads []string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateHeads", arg0, arg1)
+	m.ctrl.Call(m, "UpdateHeads", id, heads)
 }
 
 // UpdateHeads indicates an expected call of UpdateHeads.
-func (mr *MockDiffSyncerMockRecorder) UpdateHeads(arg0, arg1 any) *gomock.Call {
+func (mr *MockDiffSyncerMockRecorder) UpdateHeads(id, heads any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateHeads", reflect.TypeOf((*MockDiffSyncer)(nil).UpdateHeads), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateHeads", reflect.TypeOf((*MockDiffSyncer)(nil).UpdateHeads), id, heads)
 }

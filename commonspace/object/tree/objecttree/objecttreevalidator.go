@@ -9,7 +9,17 @@ import (
 	"github.com/anyproto/any-sync/util/slice"
 )
 
-type ValidatorFunc func(payload treestorage.TreeStorageCreatePayload, buildFunc BuildObjectTreeFunc, aclList list.AclList) (retPayload treestorage.TreeStorageCreatePayload, err error)
+type TreeStorageCreator interface {
+	CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (treestorage.TreeStorage, error)
+}
+
+type InMemoryStorageCreator struct{}
+
+func (i InMemoryStorageCreator) CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (treestorage.TreeStorage, error) {
+	return treestorage.NewInMemoryTreeStorage(payload.RootRawChange, payload.Heads, payload.Changes)
+}
+
+type ValidatorFunc func(payload treestorage.TreeStorageCreatePayload, storageCreator TreeStorageCreator, aclList list.AclList) (ret ObjectTree, err error)
 
 type ObjectTreeValidator interface {
 	// ValidateFullTree should always be entered while holding a read lock on AclList
@@ -21,13 +31,20 @@ type ObjectTreeValidator interface {
 
 type noOpTreeValidator struct {
 	filterFunc func(ch *Change) bool
+	fail       bool
 }
 
 func (n *noOpTreeValidator) ValidateFullTree(tree *Tree, aclList list.AclList) error {
+	if n.fail {
+		return fmt.Errorf("failed")
+	}
 	return nil
 }
 
 func (n *noOpTreeValidator) ValidateNewChanges(tree *Tree, aclList list.AclList, newChanges []*Change) error {
+	if n.fail {
+		return fmt.Errorf("failed")
+	}
 	return nil
 }
 
@@ -160,12 +177,15 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 	return
 }
 
-func ValidateRawTreeBuildFunc(payload treestorage.TreeStorageCreatePayload, buildFunc BuildObjectTreeFunc, aclList list.AclList) (newPayload treestorage.TreeStorageCreatePayload, err error) {
-	treeStorage, err := treestorage.NewInMemoryTreeStorage(payload.RootRawChange, []string{payload.RootRawChange.Id}, nil)
+func ValidateRawTreeDefault(payload treestorage.TreeStorageCreatePayload, storageCreator TreeStorageCreator, aclList list.AclList) (objTree ObjectTree, err error) {
+	treeStorage, err := storageCreator.CreateTreeStorage(treestorage.TreeStorageCreatePayload{
+		RootRawChange: payload.RootRawChange,
+		Heads:         []string{payload.RootRawChange.Id},
+	})
 	if err != nil {
 		return
 	}
-	tree, err := buildFunc(treeStorage, aclList)
+	tree, err := BuildEmptyDataObjectTree(treeStorage, aclList)
 	if err != nil {
 		return
 	}
@@ -179,33 +199,36 @@ func ValidateRawTreeBuildFunc(payload treestorage.TreeStorageCreatePayload, buil
 		return
 	}
 	if !slice.UnsortedEquals(res.Heads, payload.Heads) {
-		return payload, fmt.Errorf("heads mismatch: %v != %v, %w", res.Heads, payload.Heads, ErrHasInvalidChanges)
+		return nil, fmt.Errorf("heads mismatch: %v != %v, %w", res.Heads, payload.Heads, ErrHasInvalidChanges)
 	}
 	// if tree has only one change we still should check if the snapshot id is same as root
 	if IsEmptyDerivedTree(tree) {
-		return payload, ErrDerived
+		return nil, ErrDerived
 	}
-	return payload, nil
+	return tree, nil
 }
 
-func ValidateFilterRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList) (retPayload treestorage.TreeStorageCreatePayload, err error) {
+func ValidateFilterRawTree(payload treestorage.TreeStorageCreatePayload, storageCreator TreeStorageCreator, aclList list.AclList) (objTree ObjectTree, err error) {
 	aclList.RLock()
 	if !aclList.AclState().HadReadPermissions(aclList.AclState().Identity()) {
 		aclList.RUnlock()
-		return payload, list.ErrNoReadKey
+		return nil, list.ErrNoReadKey
 	}
 	aclList.RUnlock()
-	treeStorage, err := treestorage.NewInMemoryTreeStorage(payload.RootRawChange, []string{payload.RootRawChange.Id}, nil)
+	treeStorage, err := storageCreator.CreateTreeStorage(treestorage.TreeStorageCreatePayload{
+		RootRawChange: payload.RootRawChange,
+		Heads:         []string{payload.RootRawChange.Id},
+	})
 	if err != nil {
 		return
 	}
-	tree, err := BuildKeyFilterableObjectTree(treeStorage, aclList)
+	tree, err := BuildEmptyDataKeyFilterableObjectTree(treeStorage, aclList)
 	if err != nil {
 		return
 	}
 	tree.Lock()
 	defer tree.Unlock()
-	res, err := tree.AddRawChanges(context.Background(), RawChangesPayload{
+	_, err = tree.AddRawChanges(context.Background(), RawChangesPayload{
 		NewHeads:   payload.Heads,
 		RawChanges: payload.Changes,
 	})
@@ -213,16 +236,12 @@ func ValidateFilterRawTree(payload treestorage.TreeStorageCreatePayload, aclList
 		return
 	}
 	if IsEmptyTree(tree) {
-		return payload, ErrNoChangeInTree
+		return nil, ErrNoChangeInTree
 	}
-	return treestorage.TreeStorageCreatePayload{
-		RootRawChange: payload.RootRawChange,
-		Heads:         res.Heads,
-		Changes:       treeStorage.(*treestorage.InMemoryTreeStorage).AllChanges(),
-	}, nil
+	return tree, nil
 }
 
 func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList) (err error) {
-	_, err = ValidateRawTreeBuildFunc(payload, BuildObjectTree, aclList)
+	_, err = ValidateRawTreeDefault(payload, InMemoryStorageCreator{}, aclList)
 	return
 }

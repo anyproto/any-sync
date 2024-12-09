@@ -55,8 +55,8 @@ func TestTreeRemoteGetter(t *testing.T) {
 		fx := newTreeRemoteGetterFixture(t)
 		defer fx.stop()
 		mockPeer := mock_peer.NewMockPeer(fx.ctrl)
-		coll := newFullResponseCollector()
-		createCollector = func() *fullResponseCollector {
+		coll := newFullResponseCollector(BuildDeps{})
+		createCollector = func(deps BuildDeps) *fullResponseCollector {
 			return coll
 		}
 		tCtx := peer.CtxWithPeerId(ctx, "*")
@@ -74,8 +74,8 @@ func TestTreeRemoteGetter(t *testing.T) {
 		fx := newTreeRemoteGetterFixture(t)
 		defer fx.stop()
 		mockPeer := mock_peer.NewMockPeer(fx.ctrl)
-		coll := newFullResponseCollector()
-		createCollector = func() *fullResponseCollector {
+		coll := newFullResponseCollector(BuildDeps{})
+		createCollector = func(deps BuildDeps) *fullResponseCollector {
 			return coll
 		}
 		tCtx := peer.CtxWithPeerId(ctx, "*")
@@ -91,8 +91,8 @@ func TestTreeRemoteGetter(t *testing.T) {
 		fx := newTreeRemoteGetterFixture(t)
 		defer fx.stop()
 		mockPeer := mock_peer.NewMockPeer(fx.ctrl)
-		coll := newFullResponseCollector()
-		createCollector = func() *fullResponseCollector {
+		coll := newFullResponseCollector(BuildDeps{})
+		createCollector = func(deps BuildDeps) *fullResponseCollector {
 			return coll
 		}
 		tCtx := peer.CtxWithPeerId(ctx, "*")

@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"io"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,7 +30,6 @@ var ctx = context.Background()
 func TestSyncService(t *testing.T) {
 	t.Run("send and receive", func(t *testing.T) {
 		f := newFixture(t)
-		defer f.Close(t)
 		f.syncHandler.toSendData = map[string][]*testResponse{
 			"objectId": {
 				{msg: "send-msg1"},
@@ -42,13 +42,14 @@ func TestSyncService(t *testing.T) {
 				{msg: "receive-msg2"},
 			},
 		}
+		f.syncHandler.responsesExist = true
 		rq := &testRequest{peerId: "peerId", objectId: "objectId"}
 		returnRq := &testRequest{peerId: "peerId1", objectId: "objectId"}
 		handleStream := f.syncHandler.newSendStream(ctx, "objectId")
 		f.syncHandler.returnRequest = returnRq
 		err := f.HandleStreamRequest(ctx, rq, handleStream)
 		require.NoError(t, err)
-		time.Sleep(100 * time.Millisecond)
+		f.Close(t)
 		for i, resp := range handleStream.(*testStream).toReceive {
 			require.Equal(t, f.syncHandler.toSendData["objectId"][i], resp)
 		}
@@ -76,17 +77,17 @@ func TestSyncService(t *testing.T) {
 	})
 	t.Run("queue", func(t *testing.T) {
 		f := newFixture(t)
-		defer f.Close(t)
 		f.syncHandler.toReceiveData = map[string][]*testResponse{
 			"objectId": {
 				{msg: "receive-msg1"},
 				{msg: "receive-msg2"},
 			},
 		}
+		f.syncHandler.responsesExist = true
 		rq := &testRequest{peerId: "peerId", objectId: "objectId"}
 		err := f.QueueRequest(ctx, rq)
 		require.NoError(t, err)
-		time.Sleep(100 * time.Millisecond)
+		f.Close(t)
 		for i, resp := range f.syncHandler.toReceiveData["objectId"] {
 			require.Equal(t, f.syncHandler.collector.responses[i].resp, resp)
 			require.Equal(t, f.syncHandler.collector.responses[i].peerId, rq.peerId)
@@ -94,19 +95,20 @@ func TestSyncService(t *testing.T) {
 	})
 	t.Run("handle message and queue", func(t *testing.T) {
 		f := newFixture(t)
-		defer f.Close(t)
 		f.syncHandler.toReceiveData = map[string][]*testResponse{
 			"objectId": {
 				{msg: "receive-msg1"},
 				{msg: "receive-msg2"},
 			},
 		}
+		f.syncHandler.responsesExist = true
+		f.syncHandler.headUpdateExist = true
 		headUpdate := &testMessage{objectId: "objectId"}
 		rq := &testRequest{peerId: "peerId", objectId: "objectId"}
 		f.syncHandler.returnRequest = rq
 		err := f.HandleMessage(ctx, headUpdate)
 		require.NoError(t, err)
-		time.Sleep(100 * time.Millisecond)
+		f.Close(t)
 		for i, resp := range f.syncHandler.toReceiveData["objectId"] {
 			require.Equal(t, f.syncHandler.collector.responses[i].resp, resp)
 			require.Equal(t, f.syncHandler.collector.responses[i].peerId, rq.peerId)
@@ -115,17 +117,17 @@ func TestSyncService(t *testing.T) {
 	})
 	t.Run("handle message", func(t *testing.T) {
 		f := newFixture(t)
-		defer f.Close(t)
 		f.syncHandler.toReceiveData = map[string][]*testResponse{
 			"objectId": {
 				{msg: "receive-msg1"},
 				{msg: "receive-msg2"},
 			},
 		}
+		f.syncHandler.headUpdateExist = true
 		headUpdate := &testMessage{objectId: "objectId"}
 		err := f.HandleMessage(ctx, headUpdate)
 		require.NoError(t, err)
-		time.Sleep(100 * time.Millisecond)
+		f.Close(t)
 		require.Equal(t, headUpdate, f.syncHandler.headUpdate)
 		require.Empty(t, f.syncHandler.collector.responses)
 	})
@@ -184,13 +186,13 @@ func newFixture(t *testing.T) *fixture {
 	f.nodeConf.EXPECT().Configuration().Return(nodeconf.Configuration{})
 	f.syncQueues = syncqueues.New()
 	f.syncService = &syncService{}
-	f.a.Register(f.syncHandler).
-		Register(accService).
+	f.a.Register(accService).
 		Register(f.peerManager).
 		Register(f.spaceState).
 		Register(f.nodeConf).
 		Register(f.syncQueues).
-		Register(f.syncService)
+		Register(f.syncService).
+		Register(f.syncHandler)
 
 	require.NoError(t, f.a.Start(context.Background()))
 	return f
@@ -208,11 +210,42 @@ func (m mockEncoding) Unmarshal(buf []byte, msg drpc.Message) error {
 }
 
 type testSyncHandler struct {
-	toSendData    map[string][]*testResponse
-	toReceiveData map[string][]*testResponse
-	collector     *testResponseCollector
-	returnRequest syncdeps.Request
-	headUpdate    *testMessage
+	toSendData      map[string][]*testResponse
+	toReceiveData   map[string][]*testResponse
+	responsesExist  bool
+	headUpdateExist bool
+	collector       *testResponseCollector
+	returnRequest   syncdeps.Request
+	headUpdate      *testMessage
+}
+
+func (m *testSyncHandler) Run(ctx context.Context) (err error) {
+	return nil
+}
+
+func (m *testSyncHandler) Close(ctx context.Context) (err error) {
+	var (
+		responsesFound  = !m.responsesExist
+		headUpdateFound = !m.headUpdateExist
+	)
+	for {
+		if responsesFound && headUpdateFound {
+			break
+		}
+		m.collector.Lock()
+		if !responsesFound && len(m.collector.responses) != 0 {
+			responsesFound = true
+		}
+		if !headUpdateFound && m.headUpdate != nil {
+			headUpdateFound = true
+		}
+		m.collector.Unlock()
+		if responsesFound && headUpdateFound {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return nil
 }
 
 func (m *testSyncHandler) newSendStream(ctx context.Context, objectId string) drpc.Stream {
@@ -232,6 +265,8 @@ func (m *testSyncHandler) Name() (name string) {
 }
 
 func (m *testSyncHandler) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Message) (syncdeps.Request, error) {
+	m.collector.Lock()
+	defer m.collector.Unlock()
 	m.headUpdate = headUpdate.(*testMessage)
 	return m.returnRequest, nil
 }
@@ -297,6 +332,7 @@ type collectedResponse struct {
 
 type testResponseCollector struct {
 	responses []collectedResponse
+	sync.Mutex
 }
 
 func (t *testResponseCollector) NewResponse() syncdeps.Response {
@@ -304,6 +340,8 @@ func (t *testResponseCollector) NewResponse() syncdeps.Response {
 }
 
 func (t *testResponseCollector) CollectResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
+	t.Lock()
+	defer t.Unlock()
 	t.responses = append(t.responses, collectedResponse{peerId: peerId, objectId: objectId, resp: resp})
 	return nil
 }

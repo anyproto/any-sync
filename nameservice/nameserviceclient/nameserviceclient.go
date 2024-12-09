@@ -1,3 +1,4 @@
+//go:generate mockgen -destination=mock/mock_nameserviceclient.go -package=mock_nameserviceclient github.com/anyproto/any-sync/nameservice/nameserviceclient AnyNsClientService
 package nameserviceclient
 
 import (
@@ -71,15 +72,15 @@ func New() AnyNsClientService {
 
 func (s *service) doClient(ctx context.Context, fn func(cl nsp.DRPCAnynsClient) error) error {
 	if len(s.nodeconf.NamingNodePeers()) == 0 {
-		log.Error("no namingNode peers configured")
-		return errors.New("no namingNode peers configured. Node config ID: " + s.nodeconf.Id())
+		log.Error("no ns peers configured. Maybe you're on a custom network. Node config ID: " + s.nodeconf.Id())
+		return errors.New("no namingNode peers configured. Maybe you're on a custom network. Node config ID: " + s.nodeconf.Id())
 	}
 
 	// it will try to connect to the Naming Node
 	// please enable "namingNode" type of node in the config (in the network.nodes array)
 	peer, err := s.pool.GetOneOf(ctx, s.nodeconf.NamingNodePeers())
 	if err != nil {
-		log.Error("failed to get a namingnode peer. maybe you're on a custom network", zap.Error(err))
+		log.Error("failed to get a namingnode peer", zap.Error(err))
 		return err
 	}
 

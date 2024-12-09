@@ -64,3 +64,5 @@ func (c *TestPeerManager) SendMessage(ctx context.Context, peerId string, msg dr
 		return []peer.Peer{pr}, nil
 	})
 }
+
+func (c *TestPeerManager) KeepAlive(ctx context.Context) {}

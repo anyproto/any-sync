@@ -78,9 +78,24 @@ func (q *quicMultiConn) Close() error {
 	return q.Connection.CloseWithError(2, "")
 }
 
+const (
+	reset quic.StreamErrorCode = 0
+)
+
 type quicNetConn struct {
 	quic.Stream
 	localAddr, remoteAddr net.Addr
+}
+
+func (q quicNetConn) Close() error {
+	// From quic docs: https://quic-go.net/docs/quic/streams/
+	// "Calling Close on a quic.Stream closes the send side of the stream.
+	//  Note that for bidirectional streams, Close only closes the send side of the stream.
+	//  It is still possible to read from the stream until the peer closes or resets the stream."
+	//
+	// That's why we cancel read explicitly (same approach used in libp2p)
+	q.Stream.CancelRead(reset)
+	return q.Stream.Close()
 }
 
 func (q quicNetConn) LocalAddr() net.Addr {

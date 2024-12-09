@@ -21,6 +21,7 @@ import (
 type MockTreeStorage struct {
 	ctrl     *gomock.Controller
 	recorder *MockTreeStorageMockRecorder
+	isgomock struct{}
 }
 
 // MockTreeStorageMockRecorder is the mock recorder for MockTreeStorage.
@@ -41,31 +42,31 @@ func (m *MockTreeStorage) EXPECT() *MockTreeStorageMockRecorder {
 }
 
 // AddRawChange mocks base method.
-func (m *MockTreeStorage) AddRawChange(arg0 *treechangeproto.RawTreeChangeWithId) error {
+func (m *MockTreeStorage) AddRawChange(change *treechangeproto.RawTreeChangeWithId) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRawChange", arg0)
+	ret := m.ctrl.Call(m, "AddRawChange", change)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddRawChange indicates an expected call of AddRawChange.
-func (mr *MockTreeStorageMockRecorder) AddRawChange(arg0 any) *gomock.Call {
+func (mr *MockTreeStorageMockRecorder) AddRawChange(change any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChange", reflect.TypeOf((*MockTreeStorage)(nil).AddRawChange), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChange", reflect.TypeOf((*MockTreeStorage)(nil).AddRawChange), change)
 }
 
 // AddRawChangesSetHeads mocks base method.
-func (m *MockTreeStorage) AddRawChangesSetHeads(arg0 []*treechangeproto.RawTreeChangeWithId, arg1 []string) error {
+func (m *MockTreeStorage) AddRawChangesSetHeads(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRawChangesSetHeads", arg0, arg1)
+	ret := m.ctrl.Call(m, "AddRawChangesSetHeads", changes, heads)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddRawChangesSetHeads indicates an expected call of AddRawChangesSetHeads.
-func (mr *MockTreeStorageMockRecorder) AddRawChangesSetHeads(arg0, arg1 any) *gomock.Call {
+func (mr *MockTreeStorageMockRecorder) AddRawChangesSetHeads(changes, heads any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChangesSetHeads", reflect.TypeOf((*MockTreeStorage)(nil).AddRawChangesSetHeads), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChangesSetHeads", reflect.TypeOf((*MockTreeStorage)(nil).AddRawChangesSetHeads), changes, heads)
 }
 
 // Delete mocks base method.
@@ -98,48 +99,48 @@ func (mr *MockTreeStorageMockRecorder) GetAllChangeIds() *gomock.Call {
 }
 
 // GetAppendRawChange mocks base method.
-func (m *MockTreeStorage) GetAppendRawChange(arg0 context.Context, arg1 []byte, arg2 string) (*treechangeproto.RawTreeChangeWithId, error) {
+func (m *MockTreeStorage) GetAppendRawChange(ctx context.Context, buf []byte, id string) (*treechangeproto.RawTreeChangeWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAppendRawChange", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "GetAppendRawChange", ctx, buf, id)
 	ret0, _ := ret[0].(*treechangeproto.RawTreeChangeWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAppendRawChange indicates an expected call of GetAppendRawChange.
-func (mr *MockTreeStorageMockRecorder) GetAppendRawChange(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockTreeStorageMockRecorder) GetAppendRawChange(ctx, buf, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAppendRawChange", reflect.TypeOf((*MockTreeStorage)(nil).GetAppendRawChange), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAppendRawChange", reflect.TypeOf((*MockTreeStorage)(nil).GetAppendRawChange), ctx, buf, id)
 }
 
 // GetRawChange mocks base method.
-func (m *MockTreeStorage) GetRawChange(arg0 context.Context, arg1 string) (*treechangeproto.RawTreeChangeWithId, error) {
+func (m *MockTreeStorage) GetRawChange(ctx context.Context, id string) (*treechangeproto.RawTreeChangeWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRawChange", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetRawChange", ctx, id)
 	ret0, _ := ret[0].(*treechangeproto.RawTreeChangeWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetRawChange indicates an expected call of GetRawChange.
-func (mr *MockTreeStorageMockRecorder) GetRawChange(arg0, arg1 any) *gomock.Call {
+func (mr *MockTreeStorageMockRecorder) GetRawChange(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRawChange", reflect.TypeOf((*MockTreeStorage)(nil).GetRawChange), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRawChange", reflect.TypeOf((*MockTreeStorage)(nil).GetRawChange), ctx, id)
 }
 
 // HasChange mocks base method.
-func (m *MockTreeStorage) HasChange(arg0 context.Context, arg1 string) (bool, error) {
+func (m *MockTreeStorage) HasChange(ctx context.Context, id string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasChange", arg0, arg1)
+	ret := m.ctrl.Call(m, "HasChange", ctx, id)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HasChange indicates an expected call of HasChange.
-func (mr *MockTreeStorageMockRecorder) HasChange(arg0, arg1 any) *gomock.Call {
+func (mr *MockTreeStorageMockRecorder) HasChange(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasChange", reflect.TypeOf((*MockTreeStorage)(nil).HasChange), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasChange", reflect.TypeOf((*MockTreeStorage)(nil).HasChange), ctx, id)
 }
 
 // Heads mocks base method.
@@ -187,15 +188,15 @@ func (mr *MockTreeStorageMockRecorder) Root() *gomock.Call {
 }
 
 // SetHeads mocks base method.
-func (m *MockTreeStorage) SetHeads(arg0 []string) error {
+func (m *MockTreeStorage) SetHeads(heads []string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetHeads", arg0)
+	ret := m.ctrl.Call(m, "SetHeads", heads)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SetHeads indicates an expected call of SetHeads.
-func (mr *MockTreeStorageMockRecorder) SetHeads(arg0 any) *gomock.Call {
+func (mr *MockTreeStorageMockRecorder) SetHeads(heads any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHeads", reflect.TypeOf((*MockTreeStorage)(nil).SetHeads), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHeads", reflect.TypeOf((*MockTreeStorage)(nil).SetHeads), heads)
 }
