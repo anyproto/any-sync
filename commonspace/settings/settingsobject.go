@@ -29,7 +29,7 @@ var log = logger.NewNamed("common.commonspace.settings")
 type SettingsObject interface {
 	synctree.SyncTree
 	Init(ctx context.Context) (err error)
-	DeleteObject(id string) (err error)
+	DeleteObject(ctx context.Context, id string) (err error)
 }
 
 var (
@@ -44,8 +44,8 @@ var (
 	DoSnapshot       = objecttree.DoSnapshot
 	buildHistoryTree = func(objTree objecttree.ObjectTree) (objecttree.ReadableObjectTree, error) {
 		return objecttree.BuildHistoryTree(objecttree.HistoryTreeParams{
-			TreeStorage: objTree.Storage(),
-			AclList:     objTree.AclList(),
+			Storage: objTree.Storage(),
+			AclList: objTree.AclList(),
 		})
 	}
 )
@@ -133,9 +133,12 @@ func (s *settingsObject) Rebuild(tr objecttree.ObjectTree) error {
 }
 
 func (s *settingsObject) Init(ctx context.Context) (err error) {
-	settingsId := s.store.SpaceSettingsId()
-	log.Debug("space settings id", zap.String("id", settingsId))
-	s.SyncTree, err = s.buildFunc(ctx, settingsId, s)
+	state, err := s.store.StateStorage().GetState(ctx)
+	if err != nil {
+		return
+	}
+	log.Debug("space settings id", zap.String("id", state.SettingsId))
+	s.SyncTree, err = s.buildFunc(ctx, state.SettingsId, s)
 	if err != nil {
 		return
 	}
@@ -175,9 +178,7 @@ func (s *settingsObject) Close() error {
 	return nil
 }
 
-var isDerivedRoot = objecttree.IsDerivedRoot
-
-func (s *settingsObject) DeleteObject(id string) (err error) {
+func (s *settingsObject) DeleteObject(ctx context.Context, id string) (err error) {
 	s.Lock()
 	defer s.Unlock()
 	if s.Id() == id {
@@ -186,19 +187,11 @@ func (s *settingsObject) DeleteObject(id string) (err error) {
 	if s.state.Exists(id) {
 		return ErrAlreadyDeleted
 	}
-	st, err := s.store.TreeStorage(id)
+	entry, err := s.store.HeadStorage().GetEntry(ctx, id)
 	if err != nil {
-		return ErrObjDoesNotExist
+		return err
 	}
-	root, err := st.Root()
-	if err != nil {
-		return ErrObjDoesNotExist
-	}
-	isDerived, err := isDerivedRoot(root)
-	if err != nil {
-		return ErrObjDoesNotExist
-	}
-	if isDerived {
+	if entry.IsDerived {
 		return ErrCantDeleteDerivedObject
 	}
 	isSnapshot := DoSnapshot(s.Len())

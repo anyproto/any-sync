@@ -180,32 +180,33 @@ func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, peerId string, cl
 		return
 	}
 
-	root, err := aclStorage.Root()
+	root, err := aclStorage.Root(ctx)
 	if err != nil {
 		return
 	}
 
-	header, err := d.storage.SpaceHeader()
+	state, err := d.storage.StateStorage().GetState(ctx)
 	if err != nil {
 		return
 	}
 
-	settingsStorage, err := d.storage.TreeStorage(d.storage.SpaceSettingsId())
+	settingsStorage, err := d.storage.TreeStorage(ctx, state.SettingsId)
 	if err != nil {
 		return
 	}
-	spaceSettingsRoot, err := settingsStorage.Root()
+	spaceSettingsRoot, err := settingsStorage.Root(ctx)
 	if err != nil {
 		return
 	}
 
-	cred, err := d.credentialProvider.GetCredential(ctx, header)
+	raw := &spacesyncproto.RawSpaceHeaderWithId{RawHeader: state.SpaceHeader, Id: state.SpaceId}
+	cred, err := d.credentialProvider.GetCredential(ctx, raw)
 	if err != nil {
 		return
 	}
 	spacePayload := &spacesyncproto.SpacePayload{
-		SpaceHeader:            header,
-		AclPayload:             root.Payload,
+		SpaceHeader:            raw,
+		AclPayload:             root.RawRecord,
 		AclPayloadId:           root.Id,
 		SpaceSettingsPayload:   spaceSettingsRoot.RawChange,
 		SpaceSettingsPayloadId: spaceSettingsRoot.Id,

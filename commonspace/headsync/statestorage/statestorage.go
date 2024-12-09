@@ -8,14 +8,16 @@ import (
 )
 
 type State struct {
-	Hash       string
-	AclId      string
-	SettingsId string
-	SpaceId    string
+	Hash        string
+	AclId       string
+	SettingsId  string
+	SpaceId     string
+	SpaceHeader []byte
 }
 
 type StateStorage interface {
 	GetState(ctx context.Context) (State, error)
+	SettingsId() string
 	SetHash(ctx context.Context, hash string) error
 }
 
@@ -23,15 +25,18 @@ const (
 	stateCollectionKey = "state"
 	idKey              = "id"
 	hashKey            = "h"
+	headerKey          = "e"
 	aclIdKey           = "a"
 	settingsIdKey      = "s"
 )
 
 type stateStorage struct {
-	spaceId   string
-	store     anystore.DB
-	stateColl anystore.Collection
-	arena     *anyenc.Arena
+	spaceId    string
+	settingsId string
+	aclId      string
+	store      anystore.DB
+	stateColl  anystore.Collection
+	arena      *anyenc.Arena
 }
 
 func (s *stateStorage) GetState(ctx context.Context) (State, error) {
@@ -56,12 +61,18 @@ func New(ctx context.Context, spaceId string, store anystore.DB) (StateStorage, 
 	if err != nil {
 		return nil, err
 	}
-	return &stateStorage{
+	storage := &stateStorage{
 		store:     store,
 		spaceId:   spaceId,
 		stateColl: stateCollection,
 		arena:     &anyenc.Arena{},
-	}, nil
+	}
+	st, err := storage.GetState(ctx)
+	if err != nil {
+		return nil, err
+	}
+	storage.settingsId = st.SettingsId
+	return storage, nil
 }
 
 func Create(ctx context.Context, state State, store anystore.DB) (StateStorage, error) {
@@ -78,6 +89,7 @@ func Create(ctx context.Context, state State, store anystore.DB) (StateStorage, 
 	doc := arena.NewObject()
 	doc.Set(idKey, arena.NewString(state.SpaceId))
 	doc.Set(settingsIdKey, arena.NewString(state.SettingsId))
+	doc.Set(headerKey, arena.NewBinary(state.SpaceHeader))
 	doc.Set(aclIdKey, arena.NewString(state.AclId))
 	err = stateCollection.Insert(tx.Context(), doc)
 	if err != nil {
@@ -85,18 +97,24 @@ func Create(ctx context.Context, state State, store anystore.DB) (StateStorage, 
 		return nil, err
 	}
 	return &stateStorage{
-		spaceId:   state.SpaceId,
-		store:     store,
-		stateColl: stateCollection,
-		arena:     arena,
+		spaceId:    state.SpaceId,
+		store:      store,
+		settingsId: state.SettingsId,
+		stateColl:  stateCollection,
+		arena:      arena,
 	}, tx.Commit()
+}
+
+func (s *stateStorage) SettingsId() string {
+	return s.settingsId
 }
 
 func (s *stateStorage) stateFromDoc(doc anystore.Doc) State {
 	return State{
-		SpaceId:    doc.Value().GetString(idKey),
-		SettingsId: doc.Value().GetString(settingsIdKey),
-		AclId:      doc.Value().GetString(aclIdKey),
-		Hash:       doc.Value().GetString(hashKey),
+		SpaceId:     doc.Value().GetString(idKey),
+		SettingsId:  doc.Value().GetString(settingsIdKey),
+		AclId:       doc.Value().GetString(aclIdKey),
+		Hash:        doc.Value().GetString(hashKey),
+		SpaceHeader: doc.Value().GetBytes(headerKey),
 	}
 }

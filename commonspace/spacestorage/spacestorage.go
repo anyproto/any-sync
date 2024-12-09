@@ -6,7 +6,10 @@ import (
 	"errors"
 
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
+	"github.com/anyproto/any-sync/commonspace/headsync/statestorage"
+	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -23,28 +26,14 @@ var (
 	ErrTreeStorageAlreadyDeleted = errors.New("tree storage already deleted")
 )
 
-const (
-	TreeDeletedStatusQueued  = "queued"
-	TreeDeletedStatusDeleted = "deleted"
-)
-
 type SpaceStorage interface {
 	app.ComponentRunnable
 	Id() string
-	SetSpaceDeleted() error
-	IsSpaceDeleted() (bool, error)
-	SetTreeDeletedStatus(id, state string) error
-	TreeDeletedStatus(id string) (string, error)
-	SpaceSettingsId() string
-	AclStorage() (liststorage.ListStorage, error)
-	SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error)
-	StoredIds() ([]string, error)
-	TreeRoot(id string) (*treechangeproto.RawTreeChangeWithId, error)
-	TreeStorage(id string) (treestorage.TreeStorage, error)
-	HasTree(id string) (bool, error)
-	CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (treestorage.TreeStorage, error)
-	WriteSpaceHash(hash string) error
-	ReadSpaceHash() (hash string, err error)
+	HeadStorage() headstorage.HeadStorage
+	StateStorage() statestorage.StateStorage
+	AclStorage() (list.Storage, error)
+	TreeStorage(ctx context.Context, id string) (objecttree.Storage, error)
+	CreateTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.Storage, error)
 }
 
 type SpaceStorageCreatePayload struct {

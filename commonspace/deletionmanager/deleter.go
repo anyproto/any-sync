@@ -2,6 +2,7 @@ package deletionmanager
 
 import (
 	"context"
+	"errors"
 
 	"go.uber.org/zap"
 
@@ -42,7 +43,7 @@ func (d *deleter) Delete(ctx context.Context) {
 			}
 		} else {
 			err = d.getter.DeleteTree(ctx, spaceId, id)
-			if err != nil && err != spacestorage.ErrTreeStorageAlreadyDeleted {
+			if err != nil && !errors.Is(err, spacestorage.ErrTreeStorageAlreadyDeleted) {
 				log.Error("failed to delete object", zap.Error(err))
 				continue
 			}
@@ -60,7 +61,7 @@ func (d *deleter) tryMarkDeleted(spaceId, treeId string) (bool, error) {
 	if err == nil {
 		return true, nil
 	}
-	if err != treestorage.ErrUnknownTreeId {
+	if !errors.Is(err, treestorage.ErrUnknownTreeId) {
 		return false, err
 	}
 	return false, d.getter.MarkTreeDeleted(context.Background(), spaceId, treeId)

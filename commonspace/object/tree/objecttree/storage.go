@@ -76,7 +76,7 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 		headStorage: headStorage,
 	}
 	builder := storageChangeBuilder(crypto.NewKeyStorage(), root)
-	_, err := builder.Unmarshall(root, true)
+	unmarshalled, err := builder.Unmarshall(root, true)
 	if err != nil {
 		return nil, err
 	}
@@ -119,6 +119,7 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 		Id:             root.Id,
 		Heads:          []string{root.Id},
 		CommonSnapshot: &root.Id,
+		IsDerived:      &unmarshalled.IsDerived,
 	})
 	if err != nil {
 		tx.Rollback()
@@ -230,11 +231,6 @@ func (s *storage) Delete(ctx context.Context) error {
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to delete changes collection: %w", err)
-	}
-	err = s.headStorage.DeleteEntryTx(tx.Context(), s.id)
-	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to remove document from heads collection: %w", err)
 	}
 	return tx.Commit()
 }
