@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 
+	anystore "github.com/anyproto/any-store"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/headsync/statestorage"
@@ -47,4 +49,106 @@ type SpaceStorageProvider interface {
 	WaitSpaceStorage(ctx context.Context, id string) (SpaceStorage, error)
 	SpaceExists(id string) bool
 	CreateSpaceStorage(payload SpaceStorageCreatePayload) (SpaceStorage, error)
+}
+
+func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePayload) (SpaceStorage, error) {
+	spaceId := payload.SpaceHeaderWithId.Id
+	state := statestorage.State{
+		AclId:       payload.AclWithId.Id,
+		SettingsId:  payload.SpaceSettingsWithId.Id,
+		SpaceId:     payload.SpaceHeaderWithId.Id,
+		SpaceHeader: payload.SpaceSettingsWithId.RawChange,
+	}
+	// TODO: put it in one transaction
+	_, err := statestorage.Create(ctx, state, store)
+	if err != nil {
+		return nil, err
+	}
+	headStorage, err := headstorage.New(ctx, store)
+	if err != nil {
+		return nil, err
+	}
+	_, err = list.CreateStorage(ctx, &consensusproto.RawRecordWithId{
+		Payload: payload.AclWithId.Payload,
+		Id:      payload.AclWithId.Id,
+	}, headStorage, store)
+	if err != nil {
+		return nil, err
+	}
+	_, err = objecttree.CreateStorage(ctx, &treechangeproto.RawTreeChangeWithId{
+		RawChange: payload.SpaceSettingsWithId.RawChange,
+		Id:        payload.SpaceSettingsWithId.Id,
+	}, headStorage, store)
+	if err != nil {
+		return nil, err
+	}
+	return New(spaceId, store), nil
+}
+
+func New(spaceId string, store anystore.DB) SpaceStorage {
+	return &spaceStorage{
+		store:   store,
+		spaceId: spaceId,
+	}
+}
+
+type spaceStorage struct {
+	spaceId      string
+	headStorage  headstorage.HeadStorage
+	stateStorage statestorage.StateStorage
+	aclStorage   list.Storage
+	store        anystore.DB
+}
+
+func (s *spaceStorage) Name() (name string) {
+	return CName
+}
+
+func (s *spaceStorage) Close(ctx context.Context) (err error) {
+	return nil
+}
+
+func (s *spaceStorage) Id() string {
+	return s.spaceId
+}
+
+func (s *spaceStorage) HeadStorage() headstorage.HeadStorage {
+	return s.headStorage
+}
+
+func (s *spaceStorage) StateStorage() statestorage.StateStorage {
+	return s.stateStorage
+}
+
+func (s *spaceStorage) AclStorage() (list.Storage, error) {
+	return s.aclStorage, nil
+}
+
+func (s *spaceStorage) TreeStorage(ctx context.Context, id string) (objecttree.Storage, error) {
+	return objecttree.NewStorage(ctx, id, s.headStorage, s.store)
+}
+
+func (s *spaceStorage) CreateTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.Storage, error) {
+	return objecttree.CreateStorage(ctx, payload.RootRawChange, s.headStorage, s.store)
+}
+
+func (s *spaceStorage) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (s *spaceStorage) Run(ctx context.Context) (err error) {
+	s.headStorage, err = headstorage.New(ctx, s.store)
+	if err != nil {
+		return err
+	}
+	s.stateStorage, err = statestorage.New(ctx, s.spaceId, s.store)
+	if err != nil {
+		return err
+	}
+	state, err := s.stateStorage.GetState(ctx)
+	if err != nil {
+		return err
+	}
+	s.aclStorage, err = list.NewStorage(ctx, state.AclId, s.headStorage, s.store)
+	return
 }
