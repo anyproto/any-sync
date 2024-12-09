@@ -14,6 +14,7 @@ import (
 
 	anystore "github.com/anyproto/any-store"
 	"golang.org/x/exp/slices"
+	"golang.org/x/sys/unix"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -141,6 +142,7 @@ func createNamedStore(ctx context.Context, t *testing.T, name string) anystore.D
 	t.Cleanup(func() {
 		err := db.Close()
 		require.NoError(t, err)
+		unix.Rmdir(path)
 	})
 	return testStore{
 		DB:   db,

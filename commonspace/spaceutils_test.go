@@ -645,7 +645,7 @@ func newFixture(t *testing.T) *spaceFixture {
 		configurationService: &mockConf{},
 		streamOpener:         newStreamOpener("spaceId"),
 		peerManagerProvider:  &testPeerManagerProvider{},
-		storageProvider:      spacestorage.NewInMemorySpaceStorageProvider(),
+		storageProvider:      &spaceStorageProvider{rootPath: t.TempDir()},
 		treeManager:          newMockTreeManager("spaceId"),
 		pool:                 &mockPool{},
 		spaceService:         New(),
@@ -674,7 +674,10 @@ func newFixture(t *testing.T) *spaceFixture {
 	return fx
 }
 
-func newPeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spacestorage.InMemorySpaceStorageProvider) *spaceFixture {
+func Test(t *testing.T) {
+}
+
+func newPeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spaceStorageProvider) *spaceFixture {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	fx := &spaceFixture{
 		ctx:                  ctx,
@@ -765,26 +768,31 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 	var (
 		allKeys    []*accountdata.AccountKeys
 		allRecords []*consensusproto.RawRecordWithId
-		providers  []*spacestorage.InMemorySpaceStorageProvider
+		providers  []*spaceStorageProvider
 		peerIds    []string
 	)
 	allRecords, err = executor.ActualAccounts()["0"].Acl.RecordsAfter(context.Background(), "")
 	require.NoError(t, err)
+	ctx := context.Background()
 	for i := 0; i < peerNum; i++ {
 		allKeys = append(allKeys, executor.ActualAccounts()[fmt.Sprint(i)].Keys)
 		peerIds = append(peerIds, executor.ActualAccounts()[fmt.Sprint(i)].Keys.PeerId)
-		provider := spacestorage.NewInMemorySpaceStorageProvider().(*spacestorage.InMemorySpaceStorageProvider)
+		provider := &spaceStorageProvider{rootPath: t.TempDir()}
 		providers = append(providers, provider)
-		spaceStore, err := provider.CreateSpaceStorage(createSpace)
+		spaceStore, err := provider.CreateSpaceStorage(ctx, createSpace)
 		require.NoError(t, err)
 		listStorage, err := spaceStore.AclStorage()
 		require.NoError(t, err)
-		for _, rec := range allRecords {
-			err = listStorage.AddRawRecord(context.Background(), rec)
+		for i, rec := range allRecords {
+			prevRec := ""
+			if i > 0 {
+				prevRec = allRecords[i-1].Id
+			}
+			err := listStorage.AddAll(ctx, []list.StorageRecord{
+				{RawRecord: rec.Payload, Id: rec.Id, PrevId: prevRec, Order: i + 1, ChangeSize: len(rec.Payload)},
+			})
 			require.NoError(t, err)
 		}
-		err = listStorage.SetHead(allRecords[len(allRecords)-1].Id)
-		require.NoError(t, err)
 	}
 	peerPool := synctest.NewPeerGlobalPool(peerIds)
 	peerPool.MakePeers()
@@ -808,9 +816,9 @@ func Test_Sync(t *testing.T) {
 	for _, fx := range mpFixture.peerFixtures {
 		sp, err := fx.app.MustComponent(RpcName).(*RpcServer).GetSpace(context.Background(), fx.process.spaceId)
 		require.NoError(t, err)
-		spaceHash, err := sp.Storage().ReadSpaceHash()
+		state, err := sp.Storage().StateStorage().GetState(context.Background())
 		require.NoError(t, err)
-		hashes = append(hashes, spaceHash)
+		hashes = append(hashes, state.Hash)
 	}
 	for i := 1; i < len(hashes); i++ {
 		require.Equal(t, hashes[0], hashes[i])

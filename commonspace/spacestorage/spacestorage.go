@@ -48,7 +48,7 @@ type SpaceStorageProvider interface {
 	app.Component
 	WaitSpaceStorage(ctx context.Context, id string) (SpaceStorage, error)
 	SpaceExists(id string) bool
-	CreateSpaceStorage(payload SpaceStorageCreatePayload) (SpaceStorage, error)
+	CreateSpaceStorage(ctx context.Context, payload SpaceStorageCreatePayload) (SpaceStorage, error)
 }
 
 func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePayload) (SpaceStorage, error) {
