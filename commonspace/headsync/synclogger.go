@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/anyproto/any-sync/app/logger"
-	"go.uber.org/zap"
 )
 
 type syncLogger struct {
@@ -32,10 +31,4 @@ func (s syncLogger) logSyncDone(peerId string, newIds, changedIds, removedIds, d
 		}
 	}
 	s.lastLogged[peerId] = now
-	s.Info("sync done:", zap.Int("newIds", newIds),
-		zap.Int("changedIds", changedIds),
-		zap.Int("removedIds", removedIds),
-		zap.Int("already deleted ids", deltedIds),
-		zap.String("peerId", peerId),
-	)
 }
