@@ -97,9 +97,9 @@ func (h *headStorage) AddObserver(observer Observer) {
 func (h *headStorage) IterateEntries(ctx context.Context, opts IterOpts, entryIter EntryIterator) error {
 	var qry any
 	if opts.Deleted {
-		qry = query.Key{Path: []string{deletedStatusKey}, Filter: query.NewComp(query.CompOpGte, DeletedStatusQueued)}
+		qry = query.Key{Path: []string{deletedStatusKey}, Filter: query.NewComp(query.CompOpGte, int(DeletedStatusQueued))}
 	} else {
-		qry = query.Key{Path: []string{deletedStatusKey}, Filter: query.NewComp(query.CompOpLt, DeletedStatusQueued)}
+		qry = query.Key{Path: []string{deletedStatusKey}, Filter: query.NewComp(query.CompOpLt, int(DeletedStatusQueued))}
 	}
 	iter, err := h.headsColl.Find(qry).Sort(idKey).Iter(ctx)
 	if err != nil {

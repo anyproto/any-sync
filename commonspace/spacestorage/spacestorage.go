@@ -60,7 +60,7 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 		SpaceHeader: payload.SpaceSettingsWithId.RawChange,
 	}
 	// TODO: put it in one transaction
-	_, err := statestorage.Create(ctx, state, store)
+	stateStorage, err := statestorage.Create(ctx, state, store)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 	if err != nil {
 		return nil, err
 	}
-	_, err = list.CreateStorage(ctx, &consensusproto.RawRecordWithId{
+	aclStorage, err := list.CreateStorage(ctx, &consensusproto.RawRecordWithId{
 		Payload: payload.AclWithId.Payload,
 		Id:      payload.AclWithId.Id,
 	}, headStorage, store)
@@ -82,14 +82,38 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 	if err != nil {
 		return nil, err
 	}
-	return New(spaceId, store), nil
+	return &spaceStorage{
+		store:        store,
+		spaceId:      spaceId,
+		headStorage:  headStorage,
+		stateStorage: stateStorage,
+		aclStorage:   aclStorage,
+	}, nil
 }
 
-func New(spaceId string, store anystore.DB) SpaceStorage {
-	return &spaceStorage{
+func New(ctx context.Context, spaceId string, store anystore.DB) (SpaceStorage, error) {
+	s := &spaceStorage{
 		store:   store,
 		spaceId: spaceId,
 	}
+	var err error
+	s.headStorage, err = headstorage.New(ctx, s.store)
+	if err != nil {
+		return nil, err
+	}
+	s.stateStorage, err = statestorage.New(ctx, s.spaceId, s.store)
+	if err != nil {
+		return nil, err
+	}
+	state, err := s.stateStorage.GetState(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s.aclStorage, err = list.NewStorage(ctx, state.AclId, s.headStorage, s.store)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 type spaceStorage struct {
@@ -100,12 +124,16 @@ type spaceStorage struct {
 	store        anystore.DB
 }
 
-func (s *spaceStorage) Name() (name string) {
-	return CName
+func (s *spaceStorage) Run(ctx context.Context) (err error) {
+	return nil
 }
 
 func (s *spaceStorage) Close(ctx context.Context) (err error) {
 	return nil
+}
+
+func (s *spaceStorage) Name() (name string) {
+	return CName
 }
 
 func (s *spaceStorage) Id() string {
@@ -134,21 +162,4 @@ func (s *spaceStorage) CreateTreeStorage(ctx context.Context, payload treestorag
 
 func (s *spaceStorage) Init(a *app.App) (err error) {
 	return nil
-}
-
-func (s *spaceStorage) Run(ctx context.Context) (err error) {
-	s.headStorage, err = headstorage.New(ctx, s.store)
-	if err != nil {
-		return err
-	}
-	s.stateStorage, err = statestorage.New(ctx, s.spaceId, s.store)
-	if err != nil {
-		return err
-	}
-	state, err := s.stateStorage.GetState(ctx)
-	if err != nil {
-		return err
-	}
-	s.aclStorage, err = list.NewStorage(ctx, state.AclId, s.headStorage, s.store)
-	return
 }

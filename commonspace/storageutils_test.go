@@ -41,7 +41,7 @@ func (s *spaceStorageProvider) WaitSpaceStorage(ctx context.Context, id string) 
 	if err != nil {
 		return nil, err
 	}
-	return spacestorage.New(id, db), nil
+	return spacestorage.New(ctx, id, db)
 }
 
 func (s *spaceStorageProvider) SpaceExists(id string) bool {

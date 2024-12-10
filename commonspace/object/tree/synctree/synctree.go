@@ -7,6 +7,7 @@ import (
 	"slices"
 	"time"
 
+	anystore "github.com/anyproto/any-store"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app/logger"
@@ -335,6 +336,9 @@ func (s *syncTree) afterBuild() {
 func checkTreeDeleted(ctx context.Context, treeId string, spaceStorage spacestorage.SpaceStorage) error {
 	status, err := spaceStorage.HeadStorage().GetEntry(ctx, treeId)
 	if err != nil {
+		if errors.Is(err, anystore.ErrDocNotFound) {
+			return nil
+		}
 		return err
 	}
 	if status.DeletedStatus != headstorage.DeletedStatusNotDeleted {

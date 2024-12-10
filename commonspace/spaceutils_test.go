@@ -675,6 +675,8 @@ func newFixture(t *testing.T) *spaceFixture {
 }
 
 func Test(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.app.Close(context.Background())
 }
 
 func newPeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spaceStorageProvider) *spaceFixture {
