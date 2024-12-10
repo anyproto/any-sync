@@ -143,6 +143,7 @@ func (ot *objectTree) rebuildFromStorage(theirHeads, theirSnapshotPath []string,
 		oldTree = ot.tree
 	)
 	if theirHeads != nil {
+		// TODO: add error handling
 		ourPath = ot.SnapshotPath()
 	}
 	ot.tree, err = ot.treeBuilder.Build(treeBuilderOpts{
@@ -758,13 +759,13 @@ func (ot *objectTree) SnapshotPath() []string {
 	for currentSnapshotId != "" {
 		sn, err := ot.storage.Get(context.Background(), currentSnapshotId)
 		if err != nil {
-			break
+			// TODO: add error handling
+			panic("failed to get snapshot from storage")
 		}
 		path = append(path, currentSnapshotId)
 		currentSnapshotId = sn.SnapshotId
 	}
 	ot.snapshotPath = path
-
 	return path
 }
 
