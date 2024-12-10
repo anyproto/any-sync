@@ -3,7 +3,7 @@ package coordinatorproto
 import (
 	"errors"
 
-	"github.com/anyproto/any-sync/net/rpc/rpcerr"
+	"github.com/anyproto/any-sync/net/rpc/rpcerr"u	
 )
 
 var (

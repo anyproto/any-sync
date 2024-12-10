@@ -196,6 +196,29 @@ message AclGetRecordsResponse {
     repeated bytes records = 1;
 }
 
+
+message KVHeadSyncRequest {
+    repeated HeadSyncRange ranges = 3;
+}
+
+message KVHeadSyncResponse {
+    repeated HeadSyncResult results = 1;
+}
+
+message KVGetValuesRequest {
+    repeated string keys = 1;
+}
+
+message KVGetValuesResponse {
+    repeated KeyValue values = 1;
+}
+
+message KeyValue {
+    string key = 1;
+    bytes value = 2;
+    int64 timestampMilli = 3;
+}
+
 // DiffType is a type of diff
 enum DiffType {
     Initial = 0;
