@@ -91,11 +91,13 @@ func (d *diffSyncer) updateHeads(update headstorage.HeadsUpdate) {
 			Head: concatStrings(update.Heads),
 		})
 	}
+	// probably we should somehow batch the updates
 	err := d.storage.StateStorage().SetHash(d.ctx, d.diff.Hash())
 	if err != nil {
 		d.log.Warn("can't write space hash", zap.Error(err))
 	}
 }
+
 func (d *diffSyncer) Sync(ctx context.Context) error {
 	// TODO: split diffsyncer into components
 	st := time.Now()

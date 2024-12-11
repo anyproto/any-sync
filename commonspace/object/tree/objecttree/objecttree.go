@@ -760,7 +760,7 @@ func (ot *objectTree) SnapshotPath() []string {
 		sn, err := ot.storage.Get(context.Background(), currentSnapshotId)
 		if err != nil {
 			// TODO: add error handling
-			panic("failed to get snapshot from storage")
+			panic(fmt.Sprintf("failed to get snapshot %s: %w", currentSnapshotId, err))
 		}
 		path = append(path, currentSnapshotId)
 		currentSnapshotId = sn.SnapshotId

@@ -15,10 +15,15 @@ type State struct {
 	SpaceHeader []byte
 }
 
+type Observer interface {
+	OnHashChange(hash string)
+}
+
 type StateStorage interface {
 	GetState(ctx context.Context) (State, error)
 	SettingsId() string
 	SetHash(ctx context.Context, hash string) error
+	SetObserver(observer Observer)
 }
 
 const (
@@ -34,6 +39,7 @@ type stateStorage struct {
 	spaceId    string
 	settingsId string
 	aclId      string
+	observer   Observer
 	store      anystore.DB
 	stateColl  anystore.Collection
 	arena      *anyenc.Arena
@@ -47,13 +53,30 @@ func (s *stateStorage) GetState(ctx context.Context) (State, error) {
 	return s.stateFromDoc(doc), nil
 }
 
-func (s *stateStorage) SetHash(ctx context.Context, hash string) error {
+func (s *stateStorage) SetObserver(observer Observer) {
+	s.observer = observer
+}
+
+func (s *stateStorage) SetHash(ctx context.Context, hash string) (err error) {
+	defer func() {
+		if s.observer != nil && err == nil {
+			s.observer.OnHashChange(hash)
+		}
+	}()
+	tx, err := s.stateColl.WriteTx(ctx)
+	if err != nil {
+		return err
+	}
 	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
 		v.Set(hashKey, a.NewString(hash))
 		return v, true, nil
 	})
-	_, err := s.stateColl.UpsertId(ctx, s.spaceId, mod)
-	return err
+	_, err = s.stateColl.UpsertId(tx.Context(), s.spaceId, mod)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }
 
 func New(ctx context.Context, spaceId string, store anystore.DB) (StateStorage, error) {
