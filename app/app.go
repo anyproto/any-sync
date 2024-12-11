@@ -180,7 +180,7 @@ func (app *App) MustComponent(name string) Component {
 	return s
 }
 
-func ShouldComponent[t any](app *App) (t, error) {
+func GetComponent[t any](app *App) (t, error) {
 	app.mu.RLock()
 	defer app.mu.RUnlock()
 	var empty t
@@ -199,7 +199,7 @@ func ShouldComponent[t any](app *App) (t, error) {
 
 // MustComponent - generic version of app.MustComponent
 func MustComponent[t any](app *App) t {
-	component, err := ShouldComponent[t](app)
+	component, err := GetComponent[t](app)
 	if err != nil {
 		panic(fmt.Errorf("component with interface %T is not found", new(t)))
 	}
