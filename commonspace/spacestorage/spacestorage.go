@@ -36,6 +36,7 @@ type SpaceStorage interface {
 	AclStorage() (list.Storage, error)
 	TreeStorage(ctx context.Context, id string) (objecttree.Storage, error)
 	CreateTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (objecttree.Storage, error)
+	AnyStore() anystore.DB
 }
 
 type SpaceStorageCreatePayload struct {
@@ -138,6 +139,10 @@ func (s *spaceStorage) Name() (name string) {
 
 func (s *spaceStorage) Id() string {
 	return s.spaceId
+}
+
+func (s *spaceStorage) AnyStore() anystore.DB {
+	return s.store
 }
 
 func (s *spaceStorage) HeadStorage() headstorage.HeadStorage {
