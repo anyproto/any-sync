@@ -23,11 +23,11 @@ var (
 )
 
 var (
-	log               = logger.NewNamed("app")
-	StopDeadline      = time.Minute
-	StopWarningAfter  = time.Second * 10
-	StartWarningAfter = time.Second * 10
-	ComponentNotFound = errors.New("component not found")
+	log                  = logger.NewNamed("app")
+	StopDeadline         = time.Minute
+	StopWarningAfter     = time.Second * 10
+	StartWarningAfter    = time.Second * 10
+	ErrComponentNotFound = errors.New("component not found")
 )
 
 // Component is a minimal interface for a common app.Component
@@ -194,7 +194,7 @@ func GetComponent[t any](app *App) (t, error) {
 		}
 		current = current.parent
 	}
-	return empty, ComponentNotFound
+	return empty, ErrComponentNotFound
 }
 
 // MustComponent - generic version of app.MustComponent
