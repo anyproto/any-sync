@@ -1,40 +1,42 @@
 package objecttree
 
-type changeDiffer struct {
-	toFind      map[string][]*Change
-	headChanges []Change
-	attached    map[string]*Change
-	unAttached  map[string]*Change
-	waitList    map[string][]string
+type hasChangesFunc func(ids ...string) bool
+
+type ChangeDiffer struct {
+	*Tree
+	hasChanges hasChangesFunc
 }
 
-func newChangeDiffer() *changeDiffer {
-	return &changeDiffer{
-		toFind:     make(map[string][]*Change),
-		attached:   make(map[string]*Change),
-		unAttached: make(map[string]*Change),
-		waitList:   make(map[string][]string),
+func NewChangeDiffer(tree *Tree, hasChanges hasChangesFunc) *ChangeDiffer {
+	return &ChangeDiffer{
+		Tree:       tree,
+		hasChanges: hasChanges,
 	}
 }
 
-func (d *changeDiffer) MustAttach(ch *Change) {
-	d.attached[ch.Id] = ch
-}
-
-func (d *changeDiffer) AddChanges(changes []*Change) error {
-	
-}
-
-func (d *changeDiffer) canAttach(c *Change) (attach bool) {
-	if c == nil {
-		return false
-	}
-	attach = true
-	for _, id := range c.PreviousIds {
-		if _, exists := t.attached[id]; !exists {
-			attach = false
-			break
+func (d *ChangeDiffer) RemoveBefore(ids []string) (removed []*Change, notFound []string) {
+	var attached []*Change
+	for _, id := range ids {
+		if ch, ok := d.attached[id]; ok {
+			attached = append(attached, ch)
+			continue
+		}
+		// check if we have it at the bottom
+		if !d.hasChanges(id) {
+			notFound = append(notFound, id)
 		}
 	}
+	d.Tree.dfsPrev(attached, nil, func(ch *Change) (isContinue bool) {
+		removed = append(removed, ch)
+		return true
+	}, nil)
+	for _, ch := range removed {
+		delete(d.attached, ch.Id)
+	}
+	return
+}
+
+func (d *ChangeDiffer) Add(changes ...*Change) (added []*Change) {
+	_, added = d.Tree.Add(changes...)
 	return
 }
