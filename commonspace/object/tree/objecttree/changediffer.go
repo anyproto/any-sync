@@ -153,6 +153,10 @@ func (d *DiffManager) Remove(ids []string) {
 	d.onRemove(removed)
 }
 
+func (d *DiffManager) Add(change *Change) {
+	d.differ.Add(change)
+}
+
 func (d *DiffManager) Update(objTree ObjectTree) {
 	var (
 		toAdd    = make([]*Change, 0, objTree.Len())
