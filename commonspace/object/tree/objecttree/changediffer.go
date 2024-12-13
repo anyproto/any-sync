@@ -7,15 +7,26 @@ type (
 )
 
 type ChangeDiffer struct {
-	*Tree
 	hasChanges hasChangesFunc
+	attached   map[string]*Change
+	waitList   map[string][]*Change
+	visitedBuf []*Change
 }
 
 func NewChangeDiffer(tree *Tree, hasChanges hasChangesFunc) *ChangeDiffer {
-	return &ChangeDiffer{
-		Tree:       tree,
+	diff := &ChangeDiffer{
 		hasChanges: hasChanges,
+		attached:   make(map[string]*Change),
+		waitList:   make(map[string][]*Change),
 	}
+	tree.IterateSkip(tree.RootId(), func(c *Change) (isContinue bool) {
+		diff.add(&Change{
+			Id:          c.Id,
+			PreviousIds: c.PreviousIds,
+		})
+		return true
+	})
+	return diff
 }
 
 func (d *ChangeDiffer) RemoveBefore(ids []string) (removed []string, notFound []string) {
@@ -30,7 +41,7 @@ func (d *ChangeDiffer) RemoveBefore(ids []string) (removed []string, notFound []
 			notFound = append(notFound, id)
 		}
 	}
-	d.Tree.dfsPrev(attached, nil, func(ch *Change) (isContinue bool) {
+	d.dfsPrev(attached, func(ch *Change) (isContinue bool) {
 		removed = append(removed, ch.Id)
 		return true
 	}, nil)
@@ -40,9 +51,65 @@ func (d *ChangeDiffer) RemoveBefore(ids []string) (removed []string, notFound []
 	return
 }
 
-func (d *ChangeDiffer) Add(changes ...*Change) (added []*Change) {
-	_, added = d.Tree.Add(changes...)
+func (d *ChangeDiffer) dfsPrev(stack []*Change, visit func(ch *Change) (isContinue bool), afterVisit func([]*Change)) {
+	d.visitedBuf = d.visitedBuf[:0]
+	defer func() {
+		if afterVisit != nil {
+			afterVisit(d.visitedBuf)
+		}
+		for _, ch := range d.visitedBuf {
+			ch.visited = false
+		}
+	}()
+	for len(stack) > 0 {
+		ch := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		if ch.visited {
+			continue
+		}
+		ch.visited = true
+		d.visitedBuf = append(d.visitedBuf, ch)
+		for _, prevCh := range ch.Previous {
+			if !prevCh.visited {
+				stack = append(stack, prevCh)
+			}
+		}
+		if !visit(ch) {
+			return
+		}
+	}
+}
+
+func (d *ChangeDiffer) Add(changes ...*Change) {
+	for _, ch := range changes {
+		d.add(ch)
+	}
 	return
+}
+
+func (d *ChangeDiffer) add(change *Change) {
+	_, exists := d.attached[change.Id]
+	if exists {
+		return
+	}
+	d.attached[change.Id] = change
+	wl, exists := d.waitList[change.Id]
+	if exists {
+		for _, ch := range wl {
+			ch.Previous = append(ch.Previous, change)
+		}
+		delete(d.waitList, change.Id)
+	}
+	for _, id := range change.PreviousIds {
+		prev, exists := d.attached[id]
+		if exists {
+			change.Previous = append(change.Previous, prev)
+			continue
+		}
+		wl := d.waitList[id]
+		wl = append(wl, change)
+		d.waitList[id] = wl
+	}
 }
 
 type DiffManager struct {
@@ -92,10 +159,12 @@ func (d *DiffManager) Update(objTree ObjectTree) {
 		toRemove []string
 	)
 	objTree.Tree().iterate(objTree.Root(), func(ch *Change) bool {
-		toAdd = append(toAdd, &Change{
-			Id:          ch.Id,
-			PreviousIds: ch.PreviousIds,
-		})
+		if ch.IsNew {
+			toAdd = append(toAdd, &Change{
+				Id:          ch.Id,
+				PreviousIds: ch.PreviousIds,
+			})
+		}
 		if _, ok := d.notFound[ch.Id]; ok {
 			toRemove = append(toRemove, ch.Id)
 		}
