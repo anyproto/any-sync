@@ -1,5 +1,7 @@
 package objecttree
 
+import "github.com/anyproto/any-sync/util/slice"
+
 type (
 	hasChangesFunc  func(ids ...string) bool
 	treeBuilderFunc func(heads []string) (ReadableObjectTree, error)
@@ -18,6 +20,9 @@ func NewChangeDiffer(tree *Tree, hasChanges hasChangesFunc) *ChangeDiffer {
 		hasChanges: hasChanges,
 		attached:   make(map[string]*Change),
 		waitList:   make(map[string][]*Change),
+	}
+	if tree == nil {
+		return diff
 	}
 	tree.IterateSkip(tree.RootId(), func(c *Change) (isContinue bool) {
 		diff.add(&Change{
@@ -44,10 +49,16 @@ func (d *ChangeDiffer) RemoveBefore(ids []string) (removed []string, notFound []
 	d.dfsPrev(attached, func(ch *Change) (isContinue bool) {
 		removed = append(removed, ch.Id)
 		return true
-	}, nil)
-	for _, ch := range removed {
-		delete(d.attached, ch)
-	}
+	}, func(changes []*Change) {
+		for _, ch := range removed {
+			delete(d.attached, ch)
+		}
+		for _, ch := range d.attached {
+			ch.Previous = slice.DiscardFromSlice(ch.Previous, func(change *Change) bool {
+				return change.visited
+			})
+		}
+	})
 	return
 }
 
@@ -171,6 +182,7 @@ func (d *DiffManager) Update(objTree ObjectTree) {
 		}
 		if _, ok := d.notFound[ch.Id]; ok {
 			toRemove = append(toRemove, ch.Id)
+			delete(d.notFound, ch.Id)
 		}
 		return true
 	})
