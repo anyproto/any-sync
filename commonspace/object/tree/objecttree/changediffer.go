@@ -1,6 +1,10 @@
 package objecttree
 
-import "github.com/anyproto/any-sync/util/slice"
+import (
+	"go.uber.org/zap"
+
+	"github.com/anyproto/any-sync/util/slice"
+)
 
 type (
 	hasChangesFunc  func(ids ...string) bool
@@ -15,23 +19,26 @@ type ChangeDiffer struct {
 	visitedBuf []*Change
 }
 
-func NewChangeDiffer(tree *Tree, hasChanges hasChangesFunc) *ChangeDiffer {
+func NewChangeDiffer(tree ReadableObjectTree, hasChanges hasChangesFunc) (*ChangeDiffer, error) {
 	diff := &ChangeDiffer{
 		hasChanges: hasChanges,
 		attached:   make(map[string]*Change),
 		waitList:   make(map[string][]*Change),
 	}
 	if tree == nil {
-		return diff
+		return diff, nil
 	}
-	tree.IterateSkip(tree.RootId(), func(c *Change) (isContinue bool) {
+	err := tree.IterateRoot(nil, func(c *Change) (isContinue bool) {
 		diff.add(&Change{
 			Id:          c.Id,
 			PreviousIds: c.PreviousIds,
 		})
 		return true
 	})
-	return diff
+	if err != nil {
+		return nil, err
+	}
+	return diff, nil
 }
 
 func (d *ChangeDiffer) RemoveBefore(ids []string) (removed []string, notFound []string) {
@@ -140,7 +147,10 @@ func NewDiffManager(initHeads, curHeads []string, treeBuilder treeBuilderFunc, o
 	if err != nil {
 		return nil, err
 	}
-	differ := NewChangeDiffer(readableTree.Tree(), readableTree.HasChanges)
+	differ, err := NewChangeDiffer(readableTree, readableTree.HasChanges)
+	if err != nil {
+		return nil, err
+	}
 	return &DiffManager{
 		differ:       differ,
 		heads:        curHeads,
@@ -173,7 +183,7 @@ func (d *DiffManager) Update(objTree ObjectTree) {
 		toAdd    = make([]*Change, 0, objTree.Len())
 		toRemove []string
 	)
-	objTree.Tree().iterate(objTree.Root(), func(ch *Change) bool {
+	err := objTree.IterateRoot(nil, func(ch *Change) bool {
 		if ch.IsNew {
 			toAdd = append(toAdd, &Change{
 				Id:          ch.Id,
@@ -186,6 +196,10 @@ func (d *DiffManager) Update(objTree ObjectTree) {
 		}
 		return true
 	})
+	if err != nil {
+		log.Warn("error while iterating over object tree", zap.Error(err))
+		return
+	}
 	d.differ.Add(toAdd...)
 	d.heads = make([]string, 0, len(d.heads))
 	d.heads = append(d.heads, objTree.Heads()...)

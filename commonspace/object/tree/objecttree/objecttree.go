@@ -68,7 +68,6 @@ type ReadableObjectTree interface {
 	Root() *Change
 	Len() int
 	IsDerived() bool
-	Tree() *Tree
 
 	AclList() list.AclList
 
@@ -172,10 +171,6 @@ func (ot *objectTree) IsDerived() bool {
 
 func (ot *objectTree) Len() int {
 	return ot.tree.Len()
-}
-
-func (ot *objectTree) Tree() *Tree {
-	return ot.tree
 }
 
 func (ot *objectTree) AclList() list.AclList {

@@ -19,7 +19,7 @@ func TestChangeDiffer_Add(t *testing.T) {
 			newChange("6", "0", "5"),
 			newChange("7", "0", "3", "6"),
 		}
-		differ := NewChangeDiffer(nil, func(ids ...string) bool {
+		differ, _ := NewChangeDiffer(nil, func(ids ...string) bool {
 			return false
 		})
 		differ.Add(changes...)
@@ -38,7 +38,7 @@ func TestChangeDiffer_Add(t *testing.T) {
 			newChange("6", "0", "5"),
 			newChange("7", "0", "3", "6"),
 		}
-		differ := NewChangeDiffer(nil, func(ids ...string) bool {
+		differ, _ := NewChangeDiffer(nil, func(ids ...string) bool {
 			return false
 		})
 		differ.Add(changes...)
@@ -56,7 +56,7 @@ func TestChangeDiffer_Add(t *testing.T) {
 			newChange("2", "0", "0"),
 			newChange("3", "0", "1", "2"),
 		}
-		differ := NewChangeDiffer(nil, func(ids ...string) bool {
+		differ, _ := NewChangeDiffer(nil, func(ids ...string) bool {
 			return false
 		})
 		differ.Add(changes...)
@@ -75,7 +75,7 @@ func TestChangeDiffer_Add(t *testing.T) {
 		require.Equal(t, len(changes), len(res))
 	})
 	t.Run("remove not found", func(t *testing.T) {
-		differ := NewChangeDiffer(nil, func(ids ...string) bool {
+		differ, _ := NewChangeDiffer(nil, func(ids ...string) bool {
 			return false
 		})
 		_, notFound := differ.RemoveBefore([]string{"3", "4", "5"})
@@ -83,7 +83,7 @@ func TestChangeDiffer_Add(t *testing.T) {
 	})
 	t.Run("exists in storage", func(t *testing.T) {
 		storedIds := []string{"3", "4", "5"}
-		differ := NewChangeDiffer(nil, func(ids ...string) bool {
+		differ, _ := NewChangeDiffer(nil, func(ids ...string) bool {
 			for _, id := range ids {
 				if !slices.Contains(storedIds, id) {
 					return false
