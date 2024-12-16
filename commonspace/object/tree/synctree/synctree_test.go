@@ -118,7 +118,7 @@ func Test_BuildSyncTree(t *testing.T) {
 		}
 		fx.objTree.EXPECT().Heads().AnyTimes().Return([]string{"headId"})
 		fx.objTree.EXPECT().Id().AnyTimes().Return("id")
-		fx.objTree.EXPECT().IsDerived().Return(false)
+		fx.objTree.EXPECT().IsDerived().AnyTimes().Return(false)
 		fx.headNotifiable.EXPECT().UpdateHeads("id", []string{"headId"})
 		fx.listener.EXPECT().Rebuild(gomock.Any())
 		headUpdate := &objectmessages.HeadUpdate{
@@ -139,6 +139,7 @@ func Test_BuildSyncTree(t *testing.T) {
 		}
 		fx.objTree.EXPECT().Heads().AnyTimes().Return([]string{"headId"})
 		fx.objTree.EXPECT().Id().AnyTimes().Return("id")
+		fx.objTree.EXPECT().IsDerived().AnyTimes().Return(false)
 		fx.headNotifiable.EXPECT().UpdateHeads("id", []string{"headId"})
 		fx.listener.EXPECT().Rebuild(gomock.Any())
 		res, err := BuildSyncTreeOrGetRemote(ctx, "id", fx.deps)
@@ -154,7 +155,7 @@ func Test_PutSyncTree(t *testing.T) {
 		fx.spaceStorage.EXPECT().CreateTreeStorage(gomock.Any()).Return(nil, nil)
 		fx.objTree.EXPECT().Heads().AnyTimes().Return([]string{"headId"})
 		fx.objTree.EXPECT().Id().AnyTimes().Return("id")
-		fx.objTree.EXPECT().IsDerived().Return(false)
+		fx.objTree.EXPECT().IsDerived().AnyTimes().Return(false)
 		fx.headNotifiable.EXPECT().UpdateHeads("id", []string{"headId"})
 		fx.listener.EXPECT().Rebuild(gomock.Any())
 		headUpdate := &objectmessages.HeadUpdate{
@@ -162,6 +163,25 @@ func Test_PutSyncTree(t *testing.T) {
 		}
 		fx.syncClient.EXPECT().CreateHeadUpdate(gomock.Any(), "", nil).Return(headUpdate, nil)
 		fx.syncClient.EXPECT().Broadcast(gomock.Any(), headUpdate)
+		fx.spaceStorage.EXPECT().TreeDeletedStatus("rootId").Return("", nil)
+		res, err := PutSyncTree(ctx, treestorage.TreeStorageCreatePayload{
+			RootRawChange: &treechangeproto.RawTreeChangeWithId{
+				Id: "rootId",
+			},
+		}, fx.deps)
+		require.NoError(t, err)
+		require.NotNil(t, res)
+	})
+	t.Run("put sync tree derived, one change", func(t *testing.T) {
+		fx := newFixture(t)
+		defer fx.finish()
+		fx.spaceStorage.EXPECT().CreateTreeStorage(gomock.Any()).Return(nil, nil)
+		fx.objTree.EXPECT().Heads().AnyTimes().Return([]string{"id"})
+		fx.objTree.EXPECT().Id().AnyTimes().Return("id")
+		fx.objTree.EXPECT().Root().AnyTimes().Return(&objecttree.Change{Id: "id"})
+		fx.objTree.EXPECT().IsDerived().AnyTimes().Return(true)
+		fx.objTree.EXPECT().Len().AnyTimes().Return(1)
+		fx.listener.EXPECT().Rebuild(gomock.Any())
 		fx.spaceStorage.EXPECT().TreeDeletedStatus("rootId").Return("", nil)
 		res, err := PutSyncTree(ctx, treestorage.TreeStorageCreatePayload{
 			RootRawChange: &treechangeproto.RawTreeChangeWithId{
