@@ -14,6 +14,8 @@ import (
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
@@ -152,6 +154,20 @@ func (h *headSync) Close(ctx context.Context) (err error) {
 	return
 }
 
+var checkDerived = (*headSync).isDerived
+
+func (h *headSync) isDerived(storage treestorage.TreeStorage) (isDerived bool, err error) {
+	r, err := storage.Root()
+	if err != nil {
+		return
+	}
+	root, err := objecttree.UnmarshallRoot(r)
+	if err != nil {
+		return
+	}
+	return root.IsDerived, nil
+}
+
 func (h *headSync) fillDiff(objectIds []string) {
 	var els = make([]ldiff.Element, 0, len(objectIds))
 	for _, id := range objectIds {
@@ -161,6 +177,19 @@ func (h *headSync) fillDiff(objectIds []string) {
 		}
 		heads, err := st.Heads()
 		if err != nil {
+			continue
+		}
+		if len(heads) == 0 {
+			log.Warn("empty heads", zap.String("id", id))
+			continue
+		}
+		isDerived, err := checkDerived(h, st)
+		if err != nil {
+			log.Warn("can't get derived flag", zap.Error(err))
+			continue
+		}
+		if isDerived && heads[0] == id {
+			// this is an empty derived object, we don't need to sync it
 			continue
 		}
 		els = append(els, ldiff.Element{

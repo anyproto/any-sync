@@ -11,7 +11,7 @@ func IsEmptyDerivedTree(tree ObjectTree) bool {
 }
 
 func IsEmptyTree(tree ObjectTree) bool {
-	return tree.Len() == 1 && tree.Root().Id == tree.Header().Id
+	return tree.Len() == 1 && tree.Root().Id == tree.Id()
 }
 
 func IsDerivedRoot(root *treechangeproto.RawTreeChangeWithId) (derived bool, err error) {

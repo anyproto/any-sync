@@ -19,6 +19,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/mock_syncacl"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage/mock_treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
@@ -144,7 +145,7 @@ func (fx *headSyncFixture) stop() {
 func TestHeadSync(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("run close", func(t *testing.T) {
+	t.Run("run close not derived", func(t *testing.T) {
 		fx := newHeadSyncFixture(t)
 		fx.init(t)
 		defer fx.stop()
@@ -153,16 +154,81 @@ func TestHeadSync(t *testing.T) {
 		treeMock := mock_treestorage.NewMockTreeStorage(fx.ctrl)
 		fx.storageMock.EXPECT().StoredIds().Return(ids, nil)
 		fx.storageMock.EXPECT().TreeStorage(ids[0]).Return(treeMock, nil)
+		checkDerived = func(sync *headSync, storage treestorage.TreeStorage) (bool, error) {
+			return false, nil
+		}
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "headId"})
 		treeMock.EXPECT().Heads().Return([]string{"h1", "h2"}, nil)
 		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   "id1",
 			Head: "h1h2",
+		}, ldiff.Element{
+			Id:   "aclId",
+			Head: "headId",
 		})
 		fx.diffMock.EXPECT().Hash().Return("hash")
 		fx.storageMock.EXPECT().WriteSpaceHash("hash").Return(nil)
 		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
+		err := fx.headSync.Run(ctx)
+		require.NoError(t, err)
+		err = fx.headSync.Close(ctx)
+		require.NoError(t, err)
+	})
+
+	t.Run("run close derived empty", func(t *testing.T) {
+		fx := newHeadSyncFixture(t)
+		fx.init(t)
+		defer fx.stop()
+
+		ids := []string{"id1"}
+		treeMock := mock_treestorage.NewMockTreeStorage(fx.ctrl)
+		fx.storageMock.EXPECT().StoredIds().Return(ids, nil)
+		fx.storageMock.EXPECT().TreeStorage(ids[0]).Return(treeMock, nil)
+		checkDerived = func(sync *headSync, storage treestorage.TreeStorage) (bool, error) {
+			return true, nil
+		}
+		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
+		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "headId"})
+		treeMock.EXPECT().Heads().Return([]string{"id1"}, nil)
+		fx.diffMock.EXPECT().Hash().Return("hash")
+		fx.storageMock.EXPECT().WriteSpaceHash("hash").Return(nil)
+		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "aclId",
+			Head: "headId",
+		})
+		err := fx.headSync.Run(ctx)
+		require.NoError(t, err)
+		err = fx.headSync.Close(ctx)
+		require.NoError(t, err)
+	})
+
+	t.Run("run close derived not empty", func(t *testing.T) {
+		fx := newHeadSyncFixture(t)
+		fx.init(t)
+		defer fx.stop()
+
+		ids := []string{"id1"}
+		treeMock := mock_treestorage.NewMockTreeStorage(fx.ctrl)
+		fx.storageMock.EXPECT().StoredIds().Return(ids, nil)
+		fx.storageMock.EXPECT().TreeStorage(ids[0]).Return(treeMock, nil)
+		checkDerived = func(sync *headSync, storage treestorage.TreeStorage) (bool, error) {
+			return true, nil
+		}
+		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
+		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "headId"})
+		treeMock.EXPECT().Heads().Return([]string{"headId1"}, nil)
+		fx.diffMock.EXPECT().Hash().Return("hash")
+		fx.storageMock.EXPECT().WriteSpaceHash("hash").Return(nil)
+		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id1",
+			Head: "headId1",
+		}, ldiff.Element{
+			Id:   "aclId",
+			Head: "headId",
+		})
 		err := fx.headSync.Run(ctx)
 		require.NoError(t, err)
 		err = fx.headSync.Close(ctx)

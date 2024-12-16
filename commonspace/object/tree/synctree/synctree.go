@@ -326,9 +326,6 @@ func (s *syncTree) checkAlive() (err error) {
 func (s *syncTree) SyncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	s.Lock()
 	defer s.Unlock()
-	if objecttree.IsEmptyDerivedTree(s.ObjectTree) {
-		return
-	}
 	req := s.syncClient.CreateFullSyncRequest(p.Id(), s)
 	return s.syncClient.QueueRequest(ctx, req)
 }
@@ -337,7 +334,7 @@ func (s *syncTree) afterBuild() {
 	if s.listener != nil {
 		s.listener.Rebuild(s)
 	}
-	if s.notifiable != nil {
+	if s.notifiable != nil && !objecttree.IsEmptyDerivedTree(s.ObjectTree) {
 		s.notifiable.UpdateHeads(s.Id(), s.Heads())
 	}
 }
