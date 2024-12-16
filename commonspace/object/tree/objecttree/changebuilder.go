@@ -415,3 +415,18 @@ func (c *changeBuilder) isRoot(id string) bool {
 	}
 	return false
 }
+
+func UnmarshallRoot(rawRoot *treechangeproto.RawTreeChangeWithId) (root *treechangeproto.RootChange, err error) {
+	raw := &treechangeproto.RawTreeChange{}
+	err = proto.Unmarshal(rawRoot.GetRawChange(), raw)
+	if err != nil {
+		return
+	}
+
+	root = &treechangeproto.RootChange{}
+	err = proto.Unmarshal(raw.Payload, root)
+	if err != nil {
+		return
+	}
+	return
+}
