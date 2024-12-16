@@ -27,7 +27,7 @@ func TestChangeDiffer_Add(t *testing.T) {
 		require.Len(t, notFound, 0)
 		require.Equal(t, len(changes), len(res))
 	})
-	t.Run("remove some", func(t *testing.T) {
+	t.Run("remove in two parts", func(t *testing.T) {
 		changes := []*Change{
 			newChange("0", ""),
 			newChange("1", "0", "0"),
@@ -49,7 +49,7 @@ func TestChangeDiffer_Add(t *testing.T) {
 		require.Len(t, notFound, 0)
 		require.Equal(t, 6, len(res))
 	})
-	t.Run("remove in two parts", func(t *testing.T) {
+	t.Run("add and remove", func(t *testing.T) {
 		changes := []*Change{
 			newChange("0", ""),
 			newChange("1", "0", "0"),
