@@ -72,6 +72,12 @@ func (s *secureService) Init(a *app.App) (err error) {
 		s.compatibleVersions = compatibleVersions
 	}
 	account := a.MustComponent(commonaccount.CName).(commonaccount.Service)
+
+	var conf Config
+	if cg, ok := a.Component("config").(configGetter); ok {
+		conf = cg.GetSecureService()
+	}
+
 	peerKey, err := account.Account().PeerKey.Raw()
 	if err != nil {
 		return
@@ -86,7 +92,7 @@ func (s *secureService) Init(a *app.App) (err error) {
 
 	s.inboundChecker = s.noVerifyChecker
 	confTypes := s.nodeconf.NodeTypes(account.Account().PeerId)
-	if len(confTypes) > 0 {
+	if conf.RequireClientAuth || len(confTypes) > 0 {
 		// require identity verification if we are node
 		s.inboundChecker = s.peerSignVerifier
 	}
@@ -137,7 +143,7 @@ func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (cctx
 func (s *secureService) HandshakeOutbound(ctx context.Context, conn io.ReadWriteCloser, peerId string) (cctx context.Context, err error) {
 	confTypes := s.nodeconf.NodeTypes(peerId)
 	var checker handshake.CredentialChecker
-	if len(confTypes) > 0 {
+	if CtxIsAccountCheckAllowed(ctx) || len(confTypes) > 0 {
 		checker = s.peerSignVerifier
 	} else {
 		checker = s.noVerifyChecker
