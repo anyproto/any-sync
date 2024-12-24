@@ -12,7 +12,6 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/storeutil"
 )
@@ -130,19 +129,12 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 }
 
 func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
-	entry, err := headStorage.GetEntry(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get heads entry for storage, %w, %s: %w", treestorage.ErrUnknownTreeId, id, err)
-	}
-	if len(entry.Heads) == 0 {
-		return nil, fmt.Errorf("no heads found for storage %w: %s", treestorage.ErrUnknownTreeId, id)
-	}
 	st := &storage{
 		id:          id,
 		store:       store,
 		headStorage: headStorage,
 	}
-	changesColl, err := store.Collection(ctx, id)
+	changesColl, err := store.OpenCollection(ctx, id)
 	if err != nil {
 		return nil, err
 	}

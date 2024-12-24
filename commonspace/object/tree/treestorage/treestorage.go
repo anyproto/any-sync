@@ -11,6 +11,8 @@ import (
 
 var (
 	ErrUnknownTreeId = errors.New("tree does not exist")
+	ErrTreeExists    = errors.New("tree already exists")
+	ErrUnknownChange = errors.New("change doesn't exist")
 )
 
 type TreeStorageCreatePayload struct {
