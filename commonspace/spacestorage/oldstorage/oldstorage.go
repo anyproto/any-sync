@@ -11,6 +11,11 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
 
+const (
+	TreeDeletedStatusQueued  = "queued"
+	TreeDeletedStatusDeleted = "deleted"
+)
+
 type TreeStorage interface {
 	Id() string
 	Root() (*treechangeproto.RawTreeChangeWithId, error)
