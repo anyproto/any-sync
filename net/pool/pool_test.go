@@ -189,6 +189,127 @@ func TestPool_Pick(t *testing.T) {
 	})
 }
 
+func TestProvideStat(t *testing.T) {
+	t.Run("only incoming peers", func(t *testing.T) {
+		// given
+		fx := newFixture(t)
+		defer fx.Finish()
+		created := time.Now()
+		p1 := newTestPeerWithParams("p1", created, 1, 1)
+		require.NoError(t, fx.AddPeer(ctx, p1))
+
+		statProvider, ok := fx.Service.(*poolService)
+		assert.True(t, ok)
+
+		// when
+		stat := statProvider.ProvideStat()
+
+		// then
+		assert.NotNil(t, stat)
+		poolStat, ok := stat.(*poolStats)
+		assert.True(t, ok)
+
+		assert.Len(t, poolStat.PeerStats, 1)
+		assert.Equal(t, p1.id, poolStat.PeerStats[0].PeerId)
+		assert.Equal(t, p1.created, poolStat.PeerStats[0].Created)
+		assert.Equal(t, p1.subConnections, poolStat.PeerStats[0].SubConnections)
+		assert.Equal(t, p1.version, poolStat.PeerStats[0].Version)
+		assert.NotEmpty(t, poolStat.PeerStats[0].AliveTimeSecs)
+	})
+	t.Run("outgoing and incoming peers", func(t *testing.T) {
+		// given
+		fx := newFixture(t)
+		defer fx.Finish()
+		created := time.Now()
+		created1 := time.Now()
+		p1 := newTestPeerWithParams("p1", created, 2, 2)
+		require.NoError(t, fx.AddPeer(ctx, p1))
+
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+			return newTestPeerWithParams(peerId, created1, 0, 0), nil
+		}
+
+		peerId := "p2"
+		_, err := fx.Get(ctx, peerId)
+		require.NoError(t, err)
+
+		statProvider, ok := fx.Service.(*poolService)
+		assert.True(t, ok)
+
+		// when
+		stat := statProvider.ProvideStat()
+
+		// then
+		assert.NotNil(t, stat)
+		poolStat, ok := stat.(*poolStats)
+		assert.True(t, ok)
+
+		assert.Len(t, poolStat.PeerStats, 2)
+		assert.Equal(t, peerId, poolStat.PeerStats[0].PeerId)
+		assert.Equal(t, created1, poolStat.PeerStats[0].Created)
+		assert.Equal(t, 0, poolStat.PeerStats[0].SubConnections)
+		assert.Equal(t, uint32(0), poolStat.PeerStats[0].Version)
+		assert.NotEmpty(t, poolStat.PeerStats[0].AliveTimeSecs)
+
+		assert.Equal(t, p1.id, poolStat.PeerStats[1].PeerId)
+		assert.Equal(t, p1.created, poolStat.PeerStats[1].Created)
+		assert.Equal(t, p1.subConnections, poolStat.PeerStats[1].SubConnections)
+		assert.Equal(t, p1.version, poolStat.PeerStats[1].Version)
+		assert.NotEmpty(t, poolStat.PeerStats[1].AliveTimeSecs)
+	})
+	t.Run("only outcoming peers", func(t *testing.T) {
+		// given
+		peerId := "p1"
+		fx := newFixture(t)
+		defer fx.Finish()
+		created := time.Now()
+		subConn := 3
+		version := uint32(2)
+
+		fx.Dialer.dial = func(ctx context.Context, peerId string) (peer peer.Peer, err error) {
+			return newTestPeerWithParams(peerId, created, subConn, version), nil
+		}
+
+		_, err := fx.Get(ctx, peerId)
+		require.NoError(t, err)
+
+		statProvider, ok := fx.Service.(*poolService)
+		assert.True(t, ok)
+
+		// when
+		stat := statProvider.ProvideStat()
+
+		// then
+		assert.NotNil(t, stat)
+		poolStat, ok := stat.(*poolStats)
+		assert.True(t, ok)
+
+		assert.Len(t, poolStat.PeerStats, 1)
+		assert.Equal(t, peerId, poolStat.PeerStats[0].PeerId)
+		assert.Equal(t, created, poolStat.PeerStats[0].Created)
+		assert.Equal(t, subConn, poolStat.PeerStats[0].SubConnections)
+		assert.Equal(t, version, poolStat.PeerStats[0].Version)
+		assert.NotEmpty(t, version, poolStat.PeerStats[0].AliveTimeSecs)
+	})
+	t.Run("no peers", func(t *testing.T) {
+		// given
+		fx := newFixture(t)
+		defer fx.Finish()
+
+		statProvider, ok := fx.Service.(*poolService)
+		assert.True(t, ok)
+
+		// when
+		stat := statProvider.ProvideStat()
+
+		// then
+		assert.NotNil(t, stat)
+		poolStat, ok := stat.(*poolStats)
+		assert.True(t, ok)
+		assert.Len(t, poolStat.PeerStats, 0)
+	})
+}
+
 func newFixture(t *testing.T) *fixture {
 	fx := &fixture{
 		Service: New(),
@@ -247,9 +368,32 @@ func newTestPeer(id string) *testPeer {
 	}
 }
 
+func newTestPeerWithParams(id string, created time.Time, subConnections int, version uint32) *testPeer {
+	return &testPeer{
+		id:             id,
+		closed:         make(chan struct{}),
+		created:        created,
+		subConnections: subConnections,
+		version:        version,
+	}
+}
+
 type testPeer struct {
-	id     string
-	closed chan struct{}
+	id             string
+	closed         chan struct{}
+	created        time.Time
+	subConnections int
+	version        uint32
+}
+
+func (t *testPeer) ProvideStat() *peer.Stat {
+	return &peer.Stat{
+		PeerId:         t.id,
+		Created:        t.created,
+		SubConnections: t.subConnections,
+		Version:        t.version,
+		AliveTimeSecs:  time.Now().Sub(t.created).Seconds(),
+	}
 }
 
 func (t *testPeer) SetTTL(ttl time.Duration) {

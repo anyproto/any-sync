@@ -119,6 +119,8 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 		}
 	}
 	d.log.DebugCtx(ctx, "diff done", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
+
+	d.peerManager.KeepAlive(ctx)
 	return nil
 }
 

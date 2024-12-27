@@ -429,6 +429,42 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	//t.Run("reject root referring to unknown acl", func(t *testing.T) {
+	//	exec := list.NewAclExecutor("spaceId")
+	//	type cmdErr struct {
+	//		cmd string
+	//		err error
+	//	}
+	//	cmds := []cmdErr{
+	//		{"a.init::a", nil},
+	//	}
+	//	for _, cmd := range cmds {
+	//		err := exec.Execute(cmd.cmd)
+	//		require.Equal(t, cmd.err, err, cmd)
+	//	}
+	//	account := exec.ActualAccounts()["a"]
+	//	recs, err := account.Acl.RecordsAfter(ctx, "")
+	//	require.NoError(t, err)
+	//	beforeStorage, err := liststorage.NewInMemoryAclListStorage(recs[0].Id, recs)
+	//	require.NoError(t, err)
+	//	beforeAcl, err := list.BuildAclListWithIdentity(account.Keys, beforeStorage, list.NoOpAcceptorVerifier{})
+	//	require.NoError(t, err)
+	//	err = exec.Execute("a.invite::invId")
+	//	require.NoError(t, err)
+	//	root, err := CreateObjectTreeRoot(ObjectTreeCreatePayload{
+	//		PrivKey:       account.Keys.SignKey,
+	//		ChangeType:    "changeType",
+	//		ChangePayload: nil,
+	//		SpaceId:       "spaceId",
+	//		IsEncrypted:   true,
+	//	}, account.Acl)
+	//	require.NoError(t, err)
+	//	treeStorage, err := treestorage.NewInMemoryTreeStorage(root, []string{root.Id}, []*treechangeproto.RawTreeChangeWithId{root})
+	//	require.NoError(t, err)
+	//	_, err = BuildKeyFilterableObjectTree(treeStorage, beforeAcl)
+	//	require.Equal(t, list.ErrNoSuchRecord, err)
+	//})
+
 	t.Run("filter changes when no aclHeadId", func(t *testing.T) {
 		exec := list.NewAclExecutor("spaceId")
 		storeA := createStore(ctx, t)

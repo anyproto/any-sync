@@ -197,6 +197,8 @@ func (p *mockPeerManager) GetNodePeers(ctx context.Context) (peers []peer.Peer, 
 	return nil, nil
 }
 
+func (p *mockPeerManager) KeepAlive(ctx context.Context) {}
+
 type testPeerManagerProvider struct {
 }
 

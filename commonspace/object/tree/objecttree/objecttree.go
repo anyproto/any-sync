@@ -255,7 +255,14 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 	if err != nil {
 		return
 	}
+	// validating the change just in case to avoid possible bugs
+	err = ot.validateTree([]*Change{objChange})
+	if err != nil {
+		err = fmt.Errorf("error validating added change: %w", err)
+		return
+	}
 	objChange.OrderId = lexId.Next(ot.tree.attached[ot.tree.lastIteratedHeadId].OrderId)
+
 	if content.IsSnapshot {
 		objChange.SnapshotCounter = ot.tree.root.SnapshotCounter + 1
 		// clearing tree, because we already saved everything in the last snapshot

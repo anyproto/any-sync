@@ -150,6 +150,15 @@ func TestAclList_InvitePipeline(t *testing.T) {
 	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
 }
 
+func TestAclList_PermissionsAtRecord(t *testing.T) {
+	t.Run("non-existing record", func(t *testing.T) {
+		fx := newFixture(t)
+		fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
+		_, err := fx.ownerAcl.aclState.PermissionsAtRecord("some", fx.ownerKeys.SignKey.GetPublic())
+		require.Equal(t, ErrNoSuchRecord, err)
+	})
+}
+
 func TestAclList_InviteRevoke(t *testing.T) {
 	fx := newFixture(t)
 	var (

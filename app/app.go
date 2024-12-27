@@ -23,10 +23,11 @@ var (
 )
 
 var (
-	log               = logger.NewNamed("app")
-	StopDeadline      = time.Minute
-	StopWarningAfter  = time.Second * 10
-	StartWarningAfter = time.Second * 10
+	log                  = logger.NewNamed("app")
+	StopDeadline         = time.Minute
+	StopWarningAfter     = time.Second * 10
+	StartWarningAfter    = time.Second * 10
+	ErrComponentNotFound = errors.New("component not found")
 )
 
 // Component is a minimal interface for a common app.Component
@@ -57,14 +58,15 @@ type ComponentStatable interface {
 // App is the central part of the application
 // It contains and manages all components
 type App struct {
-	parent         *App
-	components     []Component
-	mu             sync.RWMutex
-	startStat      Stat
-	stopStat       Stat
-	deviceState    int
-	versionName    string
-	anySyncVersion string
+	parent            *App
+	components        []Component
+	mu                sync.RWMutex
+	startStat         Stat
+	stopStat          Stat
+	deviceState       int
+	versionName       string
+	anySyncVersion    string
+	componentListener func(comp Component)
 }
 
 // Name returns app name
@@ -130,9 +132,10 @@ func VersionDescription() string {
 // It doesn't call Start on any of the parent's components
 func (app *App) ChildApp() *App {
 	return &App{
-		parent:         app,
-		deviceState:    app.deviceState,
-		anySyncVersion: app.AnySyncVersion(),
+		parent:            app,
+		deviceState:       app.deviceState,
+		anySyncVersion:    app.AnySyncVersion(),
+		componentListener: app.componentListener,
 	}
 }
 
@@ -159,6 +162,7 @@ func (app *App) Component(name string) Component {
 	for current != nil {
 		for _, s := range current.components {
 			if s.Name() == name {
+				app.onComponent(s)
 				return s
 			}
 		}
@@ -176,21 +180,30 @@ func (app *App) MustComponent(name string) Component {
 	return s
 }
 
-// MustComponent - generic version of app.MustComponent
-func MustComponent[i any](app *App) i {
+func GetComponent[t any](app *App) (t, error) {
 	app.mu.RLock()
 	defer app.mu.RUnlock()
+	var empty t
 	current := app
 	for current != nil {
 		for _, s := range current.components {
-			if v, ok := s.(i); ok {
-				return v
+			if v, ok := s.(t); ok {
+				app.onComponent(s)
+				return v, nil
 			}
 		}
 		current = current.parent
 	}
-	empty := new(i)
-	panic(fmt.Errorf("component with interface %T is not found", empty))
+	return empty, ErrComponentNotFound
+}
+
+// MustComponent - generic version of app.MustComponent
+func MustComponent[t any](app *App) t {
+	component, err := GetComponent[t](app)
+	if err != nil {
+		panic(fmt.Errorf("component with interface %T is not found", new(t)))
+	}
+	return component
 }
 
 // ComponentNames returns all registered names
@@ -383,4 +396,10 @@ func (app *App) AnySyncVersion() string {
 		}
 	})
 	return app.anySyncVersion
+}
+
+func (app *App) onComponent(s Component) {
+	if app.componentListener != nil {
+		app.componentListener(s)
+	}
 }
