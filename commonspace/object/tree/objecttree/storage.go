@@ -140,6 +140,9 @@ func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStor
 	}
 	changesColl, err := store.OpenCollection(ctx, id)
 	if err != nil {
+		if errors.Is(err, anystore.ErrCollectionNotFound) {
+			return nil, treestorage.ErrUnknownTreeId
+		}
 		return nil, err
 	}
 	st.changesColl = changesColl
