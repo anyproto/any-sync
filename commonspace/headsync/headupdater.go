@@ -15,7 +15,8 @@ type headUpdater struct {
 
 func newHeadUpdater(update func(update headstorage.HeadsUpdate)) *headUpdater {
 	return &headUpdater{
-		batcher: mb.New[headstorage.HeadsUpdate](0),
+		batcher:    mb.New[headstorage.HeadsUpdate](0),
+		updateFunc: update,
 	}
 }
 

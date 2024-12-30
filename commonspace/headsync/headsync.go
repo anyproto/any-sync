@@ -145,6 +145,9 @@ func (h *headSync) Close(ctx context.Context) (err error) {
 func (h *headSync) fillDiff(ctx context.Context) error {
 	var els = make([]ldiff.Element, 0, 100)
 	err := h.storage.HeadStorage().IterateEntries(ctx, headstorage.IterOpts{}, func(entry headstorage.HeadsEntry) (bool, error) {
+		if entry.IsDerived && entry.Heads[0] == entry.Id {
+			return true, nil
+		}
 		els = append(els, ldiff.Element{
 			Id:   entry.Id,
 			Head: concatStrings(entry.Heads),
