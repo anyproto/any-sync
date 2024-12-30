@@ -70,6 +70,7 @@ func (d *diffSyncer) Init() {
 	d.ctx, d.cancel = context.WithCancel(context.Background())
 	d.headUpdater = newHeadUpdater(d.updateHeads)
 	d.storage.HeadStorage().AddObserver(d)
+	d.headUpdater.Run()
 }
 
 func (d *diffSyncer) OnUpdate(headsUpdate headstorage.HeadsUpdate) {
@@ -126,6 +127,7 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 
 func (d *diffSyncer) Close() {
 	d.cancel()
+	d.headUpdater.Close()
 }
 
 func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {

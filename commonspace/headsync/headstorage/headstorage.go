@@ -99,7 +99,7 @@ func (h *headStorage) IterateEntries(ctx context.Context, opts IterOpts, entryIt
 	if opts.Deleted {
 		qry = query.Key{Path: []string{deletedStatusKey}, Filter: query.NewComp(query.CompOpGte, int(DeletedStatusQueued))}
 	} else {
-		qry = query.Key{Path: []string{deletedStatusKey}, Filter: query.NewComp(query.CompOpLt, int(DeletedStatusQueued))}
+		qry = query.Key{Path: []string{deletedStatusKey}, Filter: query.Not{query.Exists{}}}
 	}
 	iter, err := h.headsColl.Find(qry).Sort(idKey).Iter(ctx)
 	if err != nil {
@@ -129,13 +129,6 @@ func (h *headStorage) GetEntry(ctx context.Context, id string) (HeadsEntry, erro
 }
 
 func (h *headStorage) UpdateEntry(ctx context.Context, update HeadsUpdate) (err error) {
-	defer func() {
-		if err == nil {
-			for _, observer := range h.observers {
-				observer.OnUpdate(update)
-			}
-		}
-	}()
 	tx, err := h.headsColl.WriteTx(ctx)
 	if err != nil {
 		return
@@ -149,6 +142,13 @@ func (h *headStorage) UpdateEntry(ctx context.Context, update HeadsUpdate) (err 
 }
 
 func (h *headStorage) UpdateEntryTx(ctx context.Context, update HeadsUpdate) (err error) {
+	defer func() {
+		if err == nil {
+			for _, observer := range h.observers {
+				observer.OnUpdate(update)
+			}
+		}
+	}()
 	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
 		if update.DeletedStatus != nil {
 			v.Set(deletedStatusKey, a.NewNumberInt(int(*update.DeletedStatus)))
