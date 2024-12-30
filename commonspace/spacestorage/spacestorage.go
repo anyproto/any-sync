@@ -58,7 +58,7 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 		AclId:       payload.AclWithId.Id,
 		SettingsId:  payload.SpaceSettingsWithId.Id,
 		SpaceId:     payload.SpaceHeaderWithId.Id,
-		SpaceHeader: payload.SpaceSettingsWithId.RawChange,
+		SpaceHeader: payload.SpaceHeaderWithId.RawHeader,
 	}
 	// TODO: put it in one transaction
 	stateStorage, err := statestorage.Create(ctx, state, store)

@@ -12,6 +12,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/storeutil"
 )
@@ -113,6 +114,9 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 	err = st.changesColl.Insert(tx.Context(), doc)
 	if err != nil {
 		tx.Rollback()
+		if errors.Is(err, anystore.ErrDocExists) {
+			return nil, treestorage.ErrTreeExists
+		}
 		return nil, err
 	}
 	err = st.headStorage.UpdateEntryTx(tx.Context(), headstorage.HeadsUpdate{
