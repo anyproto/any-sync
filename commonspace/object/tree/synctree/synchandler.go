@@ -71,8 +71,9 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 		return s.syncClient.CreateFullSyncRequest(peerId, s.tree), nil
 	}
 	rawChangesPayload := objecttree.RawChangesPayload{
-		NewHeads:   contentUpdate.Heads,
-		RawChanges: contentUpdate.Changes,
+		NewHeads:     contentUpdate.Heads,
+		RawChanges:   contentUpdate.Changes,
+		SnapshotPath: contentUpdate.SnapshotPath,
 	}
 	res, err := s.tree.AddRawChangesFromPeer(ctx, peerId, rawChangesPayload)
 	if err != nil {
@@ -159,8 +160,9 @@ func (s *syncHandler) HandleResponse(ctx context.Context, peerId, objectId strin
 	s.tree.Lock()
 	defer s.tree.Unlock()
 	rawChangesPayload := objecttree.RawChangesPayload{
-		NewHeads:   rsp.Heads,
-		RawChanges: rsp.Changes,
+		NewHeads:     rsp.Heads,
+		RawChanges:   rsp.Changes,
+		SnapshotPath: rsp.SnapshotPath,
 	}
 	_, err := s.tree.AddRawChangesFromPeer(ctx, peerId, rawChangesPayload)
 	return err

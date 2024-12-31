@@ -150,7 +150,7 @@ func DiscardDuplicatesSorted[T comparable](sorted []T) []T {
 		return sorted
 	}
 	cnt := 1
-	for i := 1; i < len(sorted)-1; i++ {
+	for i := 1; i < len(sorted); i++ {
 		if sorted[i] != sorted[i-1] {
 			sorted[cnt] = sorted[i]
 			cnt++
@@ -164,7 +164,7 @@ func DiscardDuplicatesSortedFunc[T any](sorted []T, equal func(T, T) bool) []T {
 		return sorted
 	}
 	cnt := 1
-	for i := 1; i < len(sorted)-1; i++ {
+	for i := 1; i < len(sorted); i++ {
 		if !equal(sorted[i], sorted[i-1]) {
 			sorted[cnt] = sorted[i]
 			cnt++

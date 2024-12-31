@@ -8,7 +8,6 @@ import (
 
 	"github.com/anyproto/lexid"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 
 	"github.com/anyproto/any-sync/util/slice"
 )
@@ -269,10 +268,6 @@ func (t *Tree) canAttachOrRemove(c *Change, addToWait bool) (attach, remove bool
 	_, ok := t.attached[c.SnapshotId]
 	if !ok {
 		log.Error("snapshot not found in tree", zap.String("id", c.Id), zap.String("snapshot", c.SnapshotId))
-		return false, true
-	}
-	if !slices.Contains(prevSnapshots, c.SnapshotId) {
-		log.Error("change has different snapshot than its prev ids", zap.String("id", c.Id), zap.String("snapshot", c.SnapshotId))
 		return false, true
 	}
 	return true, false
