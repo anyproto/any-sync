@@ -83,7 +83,6 @@ func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
 	deletedIdx := anystore.IndexInfo{
 		Name:   deletedStatusKey,
 		Fields: []string{deletedStatusKey},
-		Unique: true,
 		Sparse: true,
 	}
 	return st, st.headsColl.EnsureIndex(ctx, deletedIdx)
