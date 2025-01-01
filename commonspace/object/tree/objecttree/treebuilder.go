@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -53,6 +54,12 @@ func (tb *treeBuilder) Build(opts treeBuilderOpts) (*Tree, error) {
 func (tb *treeBuilder) BuildFull() (*Tree, error) {
 	return tb.build(treeBuilderOpts{full: true})
 }
+
+var (
+	totalSnapshots atomic.Int32
+	totalCommon    atomic.Int32
+	totalLowest    atomic.Int32
+)
 
 func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	cache := make(map[string]*Change)
@@ -110,6 +117,7 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	} else {
 		snapshot = tb.storage.Id()
 	}
+	totalSnapshots.Store(totalSnapshots.Load() + 1)
 	snapshotCh, err := tb.storage.Get(tb.ctx, snapshot)
 	if err != nil {
 		return nil, err
@@ -160,6 +168,7 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 		}
 	} else {
 		for _, head := range heads {
+			totalLowest.Store(totalLowest.Load() + 1)
 			ch, err := tb.storage.Get(tb.ctx, head)
 			if err != nil {
 				return nil, err
@@ -215,6 +224,7 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 	// TODO: we should actually check for all changes if they have valid snapshots
 	// getting actual snapshots
 	for _, id := range snapshots {
+		totalCommon.Store(totalCommon.Load() + 1)
 		ch, err := tb.storage.Get(tb.ctx, id)
 		if err != nil {
 			log.Error("failed to get snapshot", zap.String("id", id), zap.Error(err))
@@ -228,6 +238,7 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 	// equalizing counters for each snapshot branch
 	for i, ch := range current {
 		for ch.SnapshotCounter > lowestCounter {
+			totalCommon.Store(totalCommon.Load() + 1)
 			ch, err = tb.storage.Get(tb.ctx, ch.SnapshotId)
 			if err != nil {
 				return "", err
@@ -256,6 +267,7 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 		}
 		// go down one counter
 		for i, ch := range current {
+			totalCommon.Store(totalCommon.Load() + 1)
 			ch, err = tb.storage.Get(tb.ctx, ch.SnapshotId)
 			if err != nil {
 				return "", err

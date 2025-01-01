@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
@@ -66,6 +67,7 @@ type storage struct {
 	headStorage headstorage.HeadStorage
 	changesColl anystore.Collection
 	arena       *anyenc.Arena
+	root        StorageChange
 }
 
 var storageChangeBuilder = NewChangeBuilder
@@ -90,6 +92,7 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 		OrderId:         firstOrder,
 		ChangeSize:      len(root.RawChange),
 	}
+	st.root = stChange
 	changesColl, err := store.Collection(ctx, root.Id)
 	if err != nil {
 		return nil, err
@@ -156,6 +159,10 @@ func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStor
 		return nil, err
 	}
 	st.arena = &anyenc.Arena{}
+	st.root, err = st.Get(ctx, st.id)
+	if err != nil {
+		return nil, err
+	}
 	return st, nil
 }
 
@@ -251,7 +258,7 @@ func (s *storage) Id() string {
 }
 
 func (s *storage) Root(ctx context.Context) (StorageChange, error) {
-	return s.Get(ctx, s.id)
+	return s.root, nil
 }
 
 func (s *storage) CommonSnapshot(ctx context.Context) (string, error) {
@@ -263,8 +270,19 @@ func (s *storage) CommonSnapshot(ctx context.Context) (string, error) {
 	return entry.CommonSnapshot, nil
 }
 
+var (
+	totalCalls atomic.Int32
+	totalTime  atomic.Int64
+)
+
 func (s *storage) Get(ctx context.Context, id string) (StorageChange, error) {
+	tm := time.Now()
+	totalCalls.Add(1)
 	doc, err := s.changesColl.FindId(ctx, id)
+	totalTime.Add(int64(time.Since(tm)))
+	if totalCalls.Load()%100 == 0 {
+		fmt.Println("[x]: totalTime", time.Duration(totalTime.Load()).String(), "totalCalls", totalCalls.Load())
+	}
 	if err != nil {
 		return StorageChange{}, err
 	}
