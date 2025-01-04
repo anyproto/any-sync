@@ -158,6 +158,9 @@ func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStor
 	st.arena = &anyenc.Arena{}
 	st.root, err = st.Get(ctx, st.id)
 	if err != nil {
+		if errors.Is(err, anystore.ErrDocNotFound) {
+			return nil, treestorage.ErrUnknownTreeId
+		}
 		return nil, err
 	}
 	return st, nil
