@@ -27,6 +27,8 @@ const (
 	snapshotIdKey      = "i"
 	addedKey           = "a"
 	prevIdsKey         = "p"
+	treeKey            = "t"
+	collName           = "changes"
 )
 
 type StorageChange struct {
@@ -37,6 +39,7 @@ type StorageChange struct {
 	SnapshotId      string
 	OrderId         string
 	ChangeSize      int
+	TreeId          string
 }
 
 func (c StorageChange) RawTreeChangeWithId() *treechangeproto.RawTreeChangeWithId {
@@ -90,17 +93,17 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 		SnapshotCounter: 1,
 		SnapshotId:      "",
 		OrderId:         firstOrder,
+		TreeId:          root.Id,
 		ChangeSize:      len(root.RawChange),
 	}
 	st.root = stChange
-	changesColl, err := store.Collection(ctx, root.Id)
+	changesColl, err := store.Collection(ctx, collName)
 	if err != nil {
 		return nil, err
 	}
 	st.changesColl = changesColl
 	orderIdx := anystore.IndexInfo{
-		Name:   orderKey,
-		Fields: []string{orderKey},
+		Fields: []string{treeKey, orderKey},
 		Unique: true,
 	}
 	err = st.changesColl.EnsureIndex(ctx, orderIdx)
@@ -141,23 +144,17 @@ func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStor
 		store:       store,
 		headStorage: headStorage,
 	}
-	changesColl, err := store.OpenCollection(ctx, id)
-	if err != nil {
-		if errors.Is(err, anystore.ErrCollectionNotFound) {
+	if _, err := headStorage.GetEntry(ctx, id); err != nil {
+		if errors.Is(err, anystore.ErrDocNotFound) {
 			return nil, treestorage.ErrUnknownTreeId
 		}
 		return nil, err
 	}
-	st.changesColl = changesColl
-	orderIdx := anystore.IndexInfo{
-		Name:   orderKey,
-		Fields: []string{orderKey},
-		Unique: true,
-	}
-	err = st.changesColl.EnsureIndex(ctx, orderIdx)
-	if err != nil && !errors.Is(err, anystore.ErrIndexExists) {
+	changesColl, err := store.OpenCollection(ctx, collName)
+	if err != nil {
 		return nil, err
 	}
+	st.changesColl = changesColl
 	st.arena = &anyenc.Arena{}
 	st.root, err = st.Get(ctx, st.id)
 	if err != nil {
@@ -186,7 +183,11 @@ func (s *storage) Has(ctx context.Context, id string) (bool, error) {
 }
 
 func (s *storage) GetAfterOrder(ctx context.Context, orderId string, storageIter StorageIterator) error {
-	qry := s.changesColl.Find(query.Key{Path: []string{orderKey}, Filter: query.NewComp(query.CompOpGte, orderId)}).Sort(orderKey)
+	filter := query.And{
+		query.Key{Path: []string{orderKey}, Filter: query.NewComp(query.CompOpGte, orderId)},
+		query.Key{Path: []string{treeKey}, Filter: query.NewComp(query.CompOpEq, s.id)},
+	}
+	qry := s.changesColl.Find(filter).Sort(orderKey)
 	iter, err := qry.Iter(ctx)
 	if err != nil {
 		return fmt.Errorf("find iter: %w", err)
@@ -215,6 +216,7 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 	}
 	vals := make([]*anyenc.Value, 0, len(changes))
 	for _, ch := range changes {
+		ch.TreeId = s.id
 		newVal := newStorageChangeValue(ch, arena)
 		vals = append(vals, newVal)
 	}
@@ -309,6 +311,7 @@ func newStorageChangeValue(ch StorageChange, arena *anyenc.Arena) *anyenc.Value 
 	newVal.Set(snapshotIdKey, arena.NewString(ch.SnapshotId))
 	newVal.Set(changeSizeKey, arena.NewNumberInt(ch.ChangeSize))
 	newVal.Set(idKey, arena.NewString(ch.Id))
+	newVal.Set(treeKey, arena.NewString(ch.TreeId))
 	newVal.Set(addedKey, arena.NewNumberFloat64(float64(time.Now().Unix())))
 	if len(ch.PrevIds) != 0 {
 		newVal.Set(prevIdsKey, storeutil.NewStringArrayValue(ch.PrevIds, arena))
