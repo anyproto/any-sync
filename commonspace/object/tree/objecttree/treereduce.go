@@ -76,12 +76,13 @@ func (t *Tree) reduceTree() (res bool) {
 	// checking where paths from other heads intersect path
 	maxIdx := 0
 	for i := 1; i < len(t.headIds); i++ {
-		cur, ok := t.attached[t.attached[t.headIds[i]].SnapshotId]
+		headSnapshot := t.attached[t.headIds[i]].SnapshotId
+		cur, ok := t.attached[headSnapshot]
 		if !ok {
 			log.Error("snapshot not found in tree", zap.String("snapshotId", t.attached[t.headIds[i]].SnapshotId))
 			return false
 		}
-		for cur.Id != t.root.Id {
+		for {
 			if cur.visited {
 				// TODO: we may use counters here but it is not necessary
 				idx := slices.IndexFunc(path, func(c *Change) bool {
