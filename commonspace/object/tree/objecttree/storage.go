@@ -246,10 +246,28 @@ func (s *storage) Delete(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create write tx: %w", err)
 	}
-	err = s.changesColl.Drop(tx.Context())
+	qry := s.changesColl.Find(query.Key{Path: []string{treeKey}, Filter: query.NewComp(query.CompOpEq, s.id)})
+	iter, err := qry.Iter(tx.Context())
 	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to delete changes collection: %w", err)
+		return fmt.Errorf("find iter: %w", err)
+	}
+	var toDelete []string
+	for iter.Next() {
+		doc, err := iter.Doc()
+		if err != nil {
+			iter.Close()
+			tx.Rollback()
+			return fmt.Errorf("doc not found: %w", err)
+		}
+		toDelete = append(toDelete, doc.Value().GetString(idKey))
+	}
+	iter.Close()
+	for _, id := range toDelete {
+		err = s.changesColl.DeleteId(tx.Context(), id)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
 	}
 	return tx.Commit()
 }
