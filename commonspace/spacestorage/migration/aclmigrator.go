@@ -3,6 +3,7 @@ package migration
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	anystore "github.com/anyproto/any-store"
 
@@ -22,7 +23,7 @@ func migrateAclList(ctx context.Context, oldStorage oldstorage.ListStorage, head
 	if err != nil {
 		return nil, fmt.Errorf("migration: failed to get acl head: %w", err)
 	}
-	aclStorage, err := list.CreateStorage(ctx, rootChange, headStorage, store)
+	aclStorage, err := list.NewStorage(ctx, rootChange.Id, headStorage, store)
 	if err != nil {
 		return nil, fmt.Errorf("migration: failed to create acl storage: %w", err)
 	}
@@ -38,6 +39,7 @@ func migrateAclList(ctx context.Context, oldStorage oldstorage.ListStorage, head
 		allRecords []*consensusproto.RawRecordWithId
 		rec        *consensusproto.RawRecordWithId
 		cur        = head
+		builder    = aclList.RecordBuilder()
 	)
 	for rec == nil || rec.Id != rootChange.Id {
 		rec, err = oldStorage.GetRawRecord(ctx, cur)
@@ -45,7 +47,13 @@ func migrateAclList(ctx context.Context, oldStorage oldstorage.ListStorage, head
 			return nil, fmt.Errorf("migration: failed to get acl record: %w", err)
 		}
 		allRecords = append(allRecords, rec)
+		res, err := builder.UnmarshallWithId(rec)
+		if err != nil {
+			return nil, fmt.Errorf("migration: failed to unmarshall acl record: %w", err)
+		}
+		cur = res.PrevId
 	}
+	slices.Reverse(allRecords)
 	err = aclList.AddRawRecords(allRecords)
 	if err != nil {
 		return nil, fmt.Errorf("migration: failed to add acl records: %w", err)

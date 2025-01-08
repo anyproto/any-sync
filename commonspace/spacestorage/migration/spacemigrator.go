@@ -7,12 +7,15 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/oldstorage"
-	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
 type SpaceMigrator interface {
-	MigrateId(ctx context.Context, id string) (spacestorage.SpaceStorage, error)
+	MigrateId(ctx context.Context, id string, progress Progress) (spacestorage.SpaceStorage, error)
+}
+
+type Progress interface {
+	AddDone(done int64)
 }
 
 type spaceMigrator struct {
@@ -29,7 +32,7 @@ func NewSpaceMigrator(oldProvider oldstorage.SpaceStorageProvider, newProvider s
 	}
 }
 
-func (s *spaceMigrator) MigrateId(ctx context.Context, id string) (spacestorage.SpaceStorage, error) {
+func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progress) (spacestorage.SpaceStorage, error) {
 	oldStorage, err := s.oldProvider.WaitSpaceStorage(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("migration: failed to get old space storage: %w", err)
@@ -64,7 +67,7 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string) (spacestorage.
 	if err != nil {
 		return nil, fmt.Errorf("migration: failed to migrate acl list: %w", err)
 	}
-	executor := streampool.NewExecPool(s.numParallel, 0)
+	executor := newMigratePool(s.numParallel, 0)
 	storedIds, err := oldStorage.StoredIds()
 	if err != nil {
 		return nil, fmt.Errorf("migration: failed to get stored ids: %w", err)
@@ -80,6 +83,7 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string) (spacestorage.
 		err := executor.Add(ctx, func() {
 			tm := <-ch
 			defer func() {
+				progress.AddDone(1)
 				ch <- tm
 			}()
 			treeStorage, err := oldStorage.TreeStorage(id)
