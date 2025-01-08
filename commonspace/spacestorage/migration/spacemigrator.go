@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/oldstorage"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -88,7 +90,7 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 			}()
 			treeStorage, err := oldStorage.TreeStorage(id)
 			if err != nil {
-				allErrors = append(allErrors, fmt.Errorf("migration: failed to get tree storage: %w", err))
+				log.Warn("migration: failed to get old tree storage", zap.String("id", id), zap.Error(err))
 				return
 			}
 			err = tm.migrateTreeStorage(ctx, treeStorage, newStorage.HeadStorage(), newStorage.AnyStore())

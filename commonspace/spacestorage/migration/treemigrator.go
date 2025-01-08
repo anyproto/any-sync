@@ -2,6 +2,7 @@ package migration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	anystore "github.com/anyproto/any-store"
@@ -10,6 +11,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/oldstorage"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/slice"
@@ -48,8 +50,14 @@ func (tm *treeMigrator) migrateTreeStorage(ctx context.Context, storage oldstora
 	}
 	tm.dfs(ctx, heads, rootChange.Id)
 	newStorage, err := objecttree.CreateStorage(ctx, rootChange, headStorage, store)
-	if err != nil {
+	if err != nil && !errors.Is(err, treestorage.ErrTreeExists) {
 		return fmt.Errorf("migration: failed to create new storage: %w", err)
+	}
+	if errors.Is(err, treestorage.ErrTreeExists) {
+		newStorage, err = objecttree.NewStorage(ctx, rootChange.Id, headStorage, store)
+		if err != nil {
+			return fmt.Errorf("migration: failed to start old storage: %w", err)
+		}
 	}
 	objTree, err := objecttree.BuildObjectTree(newStorage, tm.aclList)
 	if err != nil {

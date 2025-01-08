@@ -52,12 +52,12 @@ func (mp *migratePool) Run() {
 func (mp *migratePool) sendLoop() {
 	for {
 		f, err := mp.batch.WaitOne(context.Background())
-		mp.wg.Done()
 		if err != nil {
 			log.Debug("close send loop", zap.Error(err))
 			return
 		}
 		f()
+		mp.wg.Done()
 	}
 }
 
