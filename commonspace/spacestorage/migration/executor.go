@@ -2,7 +2,6 @@ package migration
 
 import (
 	"context"
-	"sync"
 
 	"github.com/cheggaaa/mb/v3"
 	"go.uber.org/zap"
@@ -12,9 +11,11 @@ import (
 
 var log = logger.NewNamed("common.spacestorage.migration")
 
-func newMigratePool(workers, maxSize int) *migratePool {
+func newMigratePool(ctx context.Context, workers, maxSize int) *migratePool {
 	ss := &migratePool{
 		workers: workers,
+		ctx:     ctx,
+		wg:      newContextWaitGroup(ctx),
 		batch:   mb.New[func()](maxSize),
 	}
 	return ss
@@ -24,7 +25,8 @@ type migratePool struct {
 	workers int
 	batch   *mb.MB[func()]
 	close   chan struct{}
-	wg      sync.WaitGroup
+	ctx     context.Context
+	wg      *contextWaitGroup
 }
 
 func (mp *migratePool) Add(ctx context.Context, f ...func()) (err error) {
@@ -51,7 +53,7 @@ func (mp *migratePool) Run() {
 
 func (mp *migratePool) sendLoop() {
 	for {
-		f, err := mp.batch.WaitOne(context.Background())
+		f, err := mp.batch.WaitOne(mp.ctx)
 		if err != nil {
 			log.Debug("close send loop", zap.Error(err))
 			return
@@ -61,7 +63,8 @@ func (mp *migratePool) sendLoop() {
 	}
 }
 
-func (mp *migratePool) Close() (err error) {
-	mp.wg.Wait()
-	return mp.batch.Close()
+func (mp *migratePool) Wait() (err error) {
+	err = mp.wg.Wait()
+	mp.batch.Close()
+	return err
 }

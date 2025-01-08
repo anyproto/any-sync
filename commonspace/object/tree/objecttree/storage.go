@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
@@ -275,19 +274,8 @@ func (s *storage) CommonSnapshot(ctx context.Context) (string, error) {
 	return entry.CommonSnapshot, nil
 }
 
-var (
-	totalCalls atomic.Int32
-	totalTime  atomic.Int64
-)
-
 func (s *storage) Get(ctx context.Context, id string) (StorageChange, error) {
-	tm := time.Now()
-	totalCalls.Add(1)
 	doc, err := s.changesColl.FindId(ctx, id)
-	totalTime.Add(int64(time.Since(tm)))
-	if totalCalls.Load()%100 == 0 {
-		fmt.Println("[x]: totalTime", time.Duration(totalTime.Load()).String(), "totalCalls", totalCalls.Load())
-	}
 	if err != nil {
 		return StorageChange{}, err
 	}
