@@ -68,7 +68,9 @@ func (tm *treeMigrator) migrateTreeStorage(ctx context.Context, storage oldstora
 		RawChanges:   tm.allChanges,
 		SnapshotPath: []string{rootChange.Id},
 	}
+	objTree.Lock()
 	res, err := objTree.AddRawChanges(ctx, addPayload)
+	objTree.Unlock()
 	if err != nil {
 		return fmt.Errorf("migration: failed to add raw changes: %w", err)
 	}
