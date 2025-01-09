@@ -576,7 +576,7 @@ func TestObjectTree(t *testing.T) {
 				IsEncrypted: true,
 				Timestamp:   0,
 				DataType:    mockDataType,
-			}, func(change *treechangeproto.RawTreeChangeWithId) error {
+			}, func(change StorageChange) error {
 				return errors.New("validation failed")
 			})
 			require.Error(t, err)

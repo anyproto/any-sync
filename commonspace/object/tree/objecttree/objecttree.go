@@ -30,7 +30,7 @@ var (
 
 type (
 	Updater         = func(tree ObjectTree, md Mode) error
-	ChangeValidator = func(change *treechangeproto.RawTreeChangeWithId) error
+	ChangeValidator = func(change StorageChange) error
 )
 
 type AddResultSummary int
@@ -236,7 +236,7 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 	return ot.AddContentWithValidator(ctx, content, nil)
 }
 
-func (ot *objectTree) AddContentWithValidator(ctx context.Context, content SignableChangeContent, validator func(change *treechangeproto.RawTreeChangeWithId) error) (res AddResult, err error) {
+func (ot *objectTree) AddContentWithValidator(ctx context.Context, content SignableChangeContent, validator func(change StorageChange) error) (res AddResult, err error) {
 	if ot.isDeleted {
 		err = ErrDeleted
 		return
@@ -262,23 +262,10 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 		return
 	}
 	objChange.OrderId = lexId.Next(ot.tree.attached[ot.tree.lastIteratedHeadId].OrderId)
-
 	if content.IsSnapshot {
 		objChange.SnapshotCounter = ot.tree.root.SnapshotCounter + 1
 		// clearing tree, because we already saved everything in the last snapshot
 		ot.tree = &Tree{}
-	}
-
-	if validator != nil {
-		err = validator(rawChange)
-		if err != nil {
-			return
-		}
-	}
-
-	err = ot.tree.AddMergedHead(objChange)
-	if err != nil {
-		panic(err)
 	}
 	storageChange := StorageChange{
 		RawChange:       rawChange.RawChange,
@@ -288,6 +275,16 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 		SnapshotId:      objChange.SnapshotId,
 		OrderId:         objChange.OrderId,
 		ChangeSize:      len(rawChange.RawChange),
+	}
+	if validator != nil {
+		err = validator(storageChange)
+		if err != nil {
+			return
+		}
+	}
+	err = ot.tree.AddMergedHead(objChange)
+	if err != nil {
+		panic(err)
 	}
 	err = ot.storage.AddAll(ctx, []StorageChange{storageChange}, ot.Heads(), ot.tree.root.Id)
 	if err != nil {
