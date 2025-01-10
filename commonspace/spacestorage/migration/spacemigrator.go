@@ -27,6 +27,7 @@ var ErrAlreadyMigrated = errors.New("already migrated")
 
 type SpaceMigrator interface {
 	MigrateId(ctx context.Context, id string, progress Progress) (spacestorage.SpaceStorage, error)
+	CheckMigrated(ctx context.Context, id string) (bool, error)
 }
 
 type Progress interface {
@@ -47,6 +48,14 @@ func NewSpaceMigrator(oldProvider oldstorage.SpaceStorageProvider, newProvider s
 		numParallel: numParallel,
 		rootPath:    rootPath,
 	}
+}
+
+func (s *spaceMigrator) CheckMigrated(ctx context.Context, id string) (bool, error) {
+	migrated, storage := s.checkMigrated(ctx, id)
+	if storage != nil {
+		return migrated, storage.Close(ctx)
+	}
+	return false, nil
 }
 
 func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progress) (spacestorage.SpaceStorage, error) {
