@@ -192,9 +192,8 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 		next = next[:0]
 		for _, id := range current {
 			if ch, ok := cache[id]; ok {
-				// prevent accidental cycles, which can happen if there is a malicious change
 				if ch.visited {
-					return nil, fmt.Errorf("cycle detected in snapshot path: %s", id)
+					continue
 				}
 				ch.visited = true
 				visited = append(visited, ch)
