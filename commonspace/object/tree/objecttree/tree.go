@@ -205,9 +205,6 @@ func (t *Tree) add(c *Change) bool {
 	if c == nil {
 		return false
 	}
-	if _, exists := t.invalidChanges[c.Id]; exists {
-		return false
-	}
 
 	if t.root == nil { // first element
 		t.root = c
