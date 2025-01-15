@@ -79,6 +79,22 @@ func verifiableEmptyDataTreeDeps(
 	}
 }
 
+func nonVerifiableEmptyDataTreeDeps(
+	rootChange *treechangeproto.RawTreeChangeWithId,
+	storage Storage,
+	aclList list.AclList) objectTreeDeps {
+	changeBuilder := &nonVerifiableChangeBuilder{NewEmptyDataChangeBuilder(crypto.NewKeyStorage(), rootChange)}
+	treeBuilder := newTreeBuilder(storage, changeBuilder)
+	return objectTreeDeps{
+		changeBuilder: changeBuilder,
+		treeBuilder:   treeBuilder,
+		storage:       storage,
+		validator:     newTreeValidator(false, false),
+		aclList:       aclList,
+		flusher:       &defaultFlusher{},
+	}
+}
+
 func nonVerifiableTreeDeps(
 	rootChange *treechangeproto.RawTreeChangeWithId,
 	storage Storage,
@@ -135,6 +151,15 @@ func BuildEmptyDataTestableTree(storage Storage, aclList list.AclList) (ObjectTr
 		flusher:       &defaultFlusher{},
 	}
 
+	return buildObjectTree(deps)
+}
+
+func BuildMigratableObjectTree(storage Storage, aclList list.AclList) (ObjectTree, error) {
+	rootChange, err := storage.Root(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	deps := nonVerifiableEmptyDataTreeDeps(rootChange.RawTreeChangeWithId(), storage, aclList)
 	return buildObjectTree(deps)
 }
 

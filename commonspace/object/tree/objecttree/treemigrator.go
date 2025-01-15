@@ -1,4 +1,4 @@
-package migration
+package objecttree
 
 import (
 	"context"
@@ -9,46 +9,65 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
-	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anyproto/any-sync/commonspace/spacestorage/oldstorage"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/slice"
 )
 
-type treeMigrator struct {
+type treeStorage interface {
+	Id() string
+	Root() (*treechangeproto.RawTreeChangeWithId, error)
+	Heads() ([]string, error)
+	SetHeads(heads []string) error
+	AddRawChange(change *treechangeproto.RawTreeChangeWithId) error
+	AddRawChangesSetHeads(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error
+	GetAllChangeIds() ([]string, error)
+
+	GetRawChange(ctx context.Context, id string) (*treechangeproto.RawTreeChangeWithId, error)
+	GetAppendRawChange(ctx context.Context, buf []byte, id string) (*treechangeproto.RawTreeChangeWithId, error)
+	HasChange(ctx context.Context, id string) (bool, error)
+	Delete() error
+}
+
+type changesIterator interface {
+	GetAllChanges() ([]*treechangeproto.RawTreeChangeWithId, error)
+	IterateChanges(proc func(id string, rawChange []byte) error) error
+}
+
+type TreeMigrator struct {
 	idStack    []string
-	cache      map[string]*objecttree.Change
-	storage    oldstorage.TreeStorage
-	builder    objecttree.ChangeBuilder
+	cache      map[string]*Change
+	storage    treeStorage
+	builder    ChangeBuilder
 	allChanges []*treechangeproto.RawTreeChangeWithId
 
 	keyStorage crypto.KeyStorage
 	aclList    list.AclList
 }
 
-func newTreeMigrator(keyStorage crypto.KeyStorage, aclList list.AclList) *treeMigrator {
-	return &treeMigrator{
+func NewTreeMigrator(keyStorage crypto.KeyStorage, aclList list.AclList) *TreeMigrator {
+	return &TreeMigrator{
 		keyStorage: keyStorage,
 		aclList:    aclList,
 	}
 }
 
-func (tm *treeMigrator) migrateTreeStorage(ctx context.Context, storage oldstorage.TreeStorage, headStorage headstorage.HeadStorage, store anystore.DB) error {
+func (tm *TreeMigrator) MigrateTreeStorage(ctx context.Context, storage treeStorage, headStorage headstorage.HeadStorage, store anystore.DB) error {
 	rootChange, err := storage.Root()
 	if err != nil {
 		return err
 	}
 	tm.allChanges = []*treechangeproto.RawTreeChangeWithId{rootChange}
 	tm.storage = storage
-	tm.cache = make(map[string]*objecttree.Change)
-	tm.builder = objecttree.NewChangeBuilder(tm.keyStorage, rootChange)
+	tm.cache = make(map[string]*Change)
+	tm.builder = NewChangeBuilder(tm.keyStorage, rootChange)
+	tm.builder = &nonVerifiableChangeBuilder{tm.builder}
 	heads, err := storage.Heads()
 	if err != nil {
 		return fmt.Errorf("migration: failed to get heads: %w", err)
 	}
-	if iterStore, ok := storage.(oldstorage.ChangesIterator); ok {
+	if iterStore, ok := storage.(changesIterator); ok {
 		tm.allChanges, err = iterStore.GetAllChanges()
 		if err != nil {
 			return fmt.Errorf("migration: failed to get all changes: %w", err)
@@ -56,21 +75,21 @@ func (tm *treeMigrator) migrateTreeStorage(ctx context.Context, storage oldstora
 	} else {
 		tm.dfs(ctx, heads, rootChange.Id)
 	}
-	newStorage, err := objecttree.CreateStorage(ctx, rootChange, headStorage, store)
+	newStorage, err := CreateStorage(ctx, rootChange, headStorage, store)
 	if err != nil && !errors.Is(err, treestorage.ErrTreeExists) {
 		return fmt.Errorf("migration: failed to create new storage: %w", err)
 	}
 	if errors.Is(err, treestorage.ErrTreeExists) {
-		newStorage, err = objecttree.NewStorage(ctx, rootChange.Id, headStorage, store)
+		newStorage, err = NewStorage(ctx, rootChange.Id, headStorage, store)
 		if err != nil {
 			return fmt.Errorf("migration: failed to start old storage: %w", err)
 		}
 	}
-	objTree, err := objecttree.BuildObjectTree(newStorage, tm.aclList)
+	objTree, err := BuildMigratableObjectTree(newStorage, tm.aclList)
 	if err != nil {
 		return fmt.Errorf("migration: failed to build object tree: %w", err)
 	}
-	addPayload := objecttree.RawChangesPayload{
+	addPayload := RawChangesPayload{
 		NewHeads:     heads,
 		RawChanges:   tm.allChanges,
 		SnapshotPath: []string{rootChange.Id},
@@ -87,7 +106,7 @@ func (tm *treeMigrator) migrateTreeStorage(ctx context.Context, storage oldstora
 	return nil
 }
 
-func (tm *treeMigrator) dfs(ctx context.Context, heads []string, breakpoint string) {
+func (tm *TreeMigrator) dfs(ctx context.Context, heads []string, breakpoint string) {
 	tm.idStack = tm.idStack[:0]
 	uniqMap := map[string]struct{}{breakpoint: {}}
 	tm.idStack = append(tm.idStack, heads...)
@@ -114,7 +133,7 @@ func (tm *treeMigrator) dfs(ctx context.Context, heads []string, breakpoint stri
 	}
 }
 
-func (tm *treeMigrator) loadChange(ctx context.Context, id string) (ch *objecttree.Change, err error) {
+func (tm *TreeMigrator) loadChange(ctx context.Context, id string) (ch *Change, err error) {
 	if ch, ok := tm.cache[id]; ok {
 		return ch, nil
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/anyproto/any-store/anyenc"
 	"go.uber.org/zap"
 
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/oldstorage"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -122,10 +123,10 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 	if err != nil {
 		return fmt.Errorf("migration: failed to get stored ids: %w", err)
 	}
-	treeMigrators := make([]*treeMigrator, 0, s.numParallel)
-	ch := make(chan *treeMigrator, s.numParallel)
+	treeMigrators := make([]*objecttree.TreeMigrator, 0, s.numParallel)
+	ch := make(chan *objecttree.TreeMigrator, s.numParallel)
 	for i := 0; i < s.numParallel; i++ {
-		treeMigrators = append(treeMigrators, newTreeMigrator(crypto.NewKeyStorage(), aclList))
+		treeMigrators = append(treeMigrators, objecttree.NewTreeMigrator(crypto.NewKeyStorage(), aclList))
 		ch <- treeMigrators[i]
 	}
 	var allErrors []error
@@ -141,7 +142,7 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 				log.Warn("migration: failed to get old tree storage", zap.String("id", id), zap.Error(err))
 				return
 			}
-			err = tm.migrateTreeStorage(ctx, treeStorage, newStorage.HeadStorage(), newStorage.AnyStore())
+			err = tm.MigrateTreeStorage(ctx, treeStorage, newStorage.HeadStorage(), newStorage.AnyStore())
 			if err != nil {
 				allErrors = append(allErrors, fmt.Errorf("migration: failed to migrate tree storage: %w", err))
 				return
