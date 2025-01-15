@@ -60,6 +60,18 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 		SpaceId:     payload.SpaceHeaderWithId.Id,
 		SpaceHeader: payload.SpaceHeaderWithId.RawHeader,
 	}
+	changesColl, err := store.Collection(ctx, objecttree.CollName)
+	if err != nil {
+		return nil, err
+	}
+	orderIdx := anystore.IndexInfo{
+		Fields: []string{objecttree.TreeKey, objecttree.OrderKey},
+		Unique: true,
+	}
+	err = changesColl.EnsureIndex(ctx, orderIdx)
+	if err != nil {
+		return nil, err
+	}
 	// TODO: put it in one transaction
 	stateStorage, err := statestorage.Create(ctx, state, store)
 	if err != nil {
@@ -97,7 +109,18 @@ func New(ctx context.Context, spaceId string, store anystore.DB) (SpaceStorage, 
 		store:   store,
 		spaceId: spaceId,
 	}
-	var err error
+	changesColl, err := store.OpenCollection(ctx, objecttree.CollName)
+	if err != nil {
+		return nil, err
+	}
+	orderIdx := anystore.IndexInfo{
+		Fields: []string{objecttree.TreeKey, objecttree.OrderKey},
+		Unique: true,
+	}
+	err = changesColl.EnsureIndex(ctx, orderIdx)
+	if err != nil {
+		return nil, err
+	}
 	s.headStorage, err = headstorage.New(ctx, s.store)
 	if err != nil {
 		return nil, err
