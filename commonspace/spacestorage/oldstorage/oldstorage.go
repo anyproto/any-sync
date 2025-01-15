@@ -31,6 +31,12 @@ type TreeStorage interface {
 	Delete() error
 }
 
+// ChangesIterator could be implemented by specific treestorage (badger, sqlite, for example)
+type ChangesIterator interface {
+	GetAllChanges() ([]*treechangeproto.RawTreeChangeWithId, error)
+	IterateChanges(proc func(id string, rawChange []byte) error) error
+}
+
 type ListStorage interface {
 	Id() string
 	Root() (*consensusproto.RawRecordWithId, error)
