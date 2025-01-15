@@ -24,13 +24,17 @@ type TreeStorage interface {
 	AddRawChange(change *treechangeproto.RawTreeChangeWithId) error
 	AddRawChangesSetHeads(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error
 	GetAllChangeIds() ([]string, error)
-	GetAllChanges() ([]*treechangeproto.RawTreeChangeWithId, error)
-	IterateChanges(proc func(id string, rawChange []byte) error) error
 
 	GetRawChange(ctx context.Context, id string) (*treechangeproto.RawTreeChangeWithId, error)
 	GetAppendRawChange(ctx context.Context, buf []byte, id string) (*treechangeproto.RawTreeChangeWithId, error)
 	HasChange(ctx context.Context, id string) (bool, error)
 	Delete() error
+}
+
+// ChangesIterator could be implemented by specific treestorage (badger, sqlite, for example)
+type ChangesIterator interface {
+	GetAllChanges() ([]*treechangeproto.RawTreeChangeWithId, error)
+	IterateChanges(proc func(id string, rawChange []byte) error) error
 }
 
 type ListStorage interface {
