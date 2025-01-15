@@ -48,7 +48,14 @@ func (tm *treeMigrator) migrateTreeStorage(ctx context.Context, storage oldstora
 	if err != nil {
 		return fmt.Errorf("migration: failed to get heads: %w", err)
 	}
-	tm.dfs(ctx, heads, rootChange.Id)
+	if iterStore, ok := storage.(oldstorage.ChangesIterator); ok {
+		tm.allChanges, err = iterStore.GetAllChanges()
+		if err != nil {
+			return fmt.Errorf("migration: failed to get all changes: %w", err)
+		}
+	} else {
+		tm.dfs(ctx, heads, rootChange.Id)
+	}
 	newStorage, err := objecttree.CreateStorage(ctx, rootChange, headStorage, store)
 	if err != nil && !errors.Is(err, treestorage.ErrTreeExists) {
 		return fmt.Errorf("migration: failed to create new storage: %w", err)
