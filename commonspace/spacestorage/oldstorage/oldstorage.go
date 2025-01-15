@@ -24,6 +24,8 @@ type TreeStorage interface {
 	AddRawChange(change *treechangeproto.RawTreeChangeWithId) error
 	AddRawChangesSetHeads(changes []*treechangeproto.RawTreeChangeWithId, heads []string) error
 	GetAllChangeIds() ([]string, error)
+	GetAllChanges() ([]*treechangeproto.RawTreeChangeWithId, error)
+	IterateChanges(proc func(id string, rawChange []byte) error) error
 
 	GetRawChange(ctx context.Context, id string) (*treechangeproto.RawTreeChangeWithId, error)
 	GetAppendRawChange(ctx context.Context, buf []byte, id string) (*treechangeproto.RawTreeChangeWithId, error)
