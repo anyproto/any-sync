@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cheggaaa/mb/v3"
-	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app/logger"
 )
@@ -55,7 +54,6 @@ func (mp *migratePool) sendLoop() {
 	for {
 		f, err := mp.batch.WaitOne(mp.ctx)
 		if err != nil {
-			log.Debug("close send loop", zap.Error(err))
 			return
 		}
 		f()
