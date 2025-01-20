@@ -11,11 +11,13 @@ import (
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-store/anyenc"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/oldstorage"
 	"github.com/anyproto/any-sync/util/crypto"
+	"github.com/anyproto/any-sync/util/slice"
 )
 
 const (
@@ -130,6 +132,8 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 		ch <- treeMigrators[i]
 	}
 	var allErrors []error
+	slices.Sort(storedIds)
+	storedIds = slice.DiscardDuplicatesSorted(storedIds)
 	for _, id := range storedIds {
 		err := executor.Add(ctx, func() {
 			tm := <-ch
