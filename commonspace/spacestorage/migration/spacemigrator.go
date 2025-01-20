@@ -160,7 +160,18 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 	if len(allErrors) > 0 {
 		return fmt.Errorf("migration failed: %w", errors.Join(allErrors...))
 	}
+	if err := s.migrateHash(ctx, oldStorage, newStorage); err != nil {
+		log.Warn("migration: failed to migrate hash", zap.Error(err))
+	}
 	return s.setMigrated(ctx, newStorage.AnyStore())
+}
+
+func (s *spaceMigrator) migrateHash(ctx context.Context, oldStorage oldstorage.SpaceStorage, newStorage spacestorage.SpaceStorage) error {
+	spaceHash, err := oldStorage.ReadSpaceHash()
+	if err != nil {
+		return err
+	}
+	return newStorage.StateStorage().SetHash(ctx, spaceHash)
 }
 
 func (s *spaceMigrator) checkMigrated(ctx context.Context, id string) (bool, spacestorage.SpaceStorage) {
