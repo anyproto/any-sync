@@ -23,9 +23,10 @@ func TestChangeDiffer_Add(t *testing.T) {
 			return false
 		})
 		differ.Add(changes...)
-		res, notFound := differ.RemoveBefore([]string{"7"})
+		res, notFound, seenHeads := differ.RemoveBefore([]string{"7"}, []string{"0"})
 		require.Len(t, notFound, 0)
 		require.Equal(t, len(changes), len(res))
+		require.Equal(t, []string{"7"}, seenHeads)
 	})
 	t.Run("remove in two parts", func(t *testing.T) {
 		changes := []*Change{
@@ -42,12 +43,14 @@ func TestChangeDiffer_Add(t *testing.T) {
 			return false
 		})
 		differ.Add(changes...)
-		res, notFound := differ.RemoveBefore([]string{"4"})
+		res, notFound, seenHeads := differ.RemoveBefore([]string{"4"}, []string{"0"})
 		require.Len(t, notFound, 0)
 		require.Equal(t, 2, len(res))
-		res, notFound = differ.RemoveBefore([]string{"7"})
+		require.Equal(t, []string{"4"}, seenHeads)
+		res, notFound, seenHeads = differ.RemoveBefore([]string{"7"}, seenHeads)
 		require.Len(t, notFound, 0)
 		require.Equal(t, 6, len(res))
+		require.Equal(t, []string{"7"}, seenHeads)
 	})
 	t.Run("add and remove", func(t *testing.T) {
 		changes := []*Change{
@@ -60,9 +63,10 @@ func TestChangeDiffer_Add(t *testing.T) {
 			return false
 		})
 		differ.Add(changes...)
-		res, notFound := differ.RemoveBefore([]string{"3"})
+		res, notFound, seenHeads := differ.RemoveBefore([]string{"3"}, []string{"0"})
 		require.Len(t, notFound, 0)
 		require.Equal(t, len(changes), len(res))
+		require.Equal(t, []string{"3"}, seenHeads)
 		changes = []*Change{
 			newChange("4", "0", "0"),
 			newChange("5", "0", "4"),
@@ -70,15 +74,17 @@ func TestChangeDiffer_Add(t *testing.T) {
 			newChange("7", "0", "3", "6"),
 		}
 		differ.Add(changes...)
-		res, notFound = differ.RemoveBefore([]string{"7"})
+		res, notFound, seenHeads = differ.RemoveBefore([]string{"7"}, seenHeads)
 		require.Len(t, notFound, 0)
 		require.Equal(t, len(changes), len(res))
+		require.Equal(t, []string{"7"}, seenHeads)
 	})
 	t.Run("remove not found", func(t *testing.T) {
 		differ, _ := NewChangeDiffer(nil, func(ids ...string) bool {
 			return false
 		})
-		_, notFound := differ.RemoveBefore([]string{"3", "4", "5"})
+		_, notFound, seenHeads := differ.RemoveBefore([]string{"3", "4", "5"}, []string{"0"})
+		require.Equal(t, seenHeads, []string{"0"})
 		require.Len(t, notFound, 3)
 	})
 	t.Run("exists in storage", func(t *testing.T) {
@@ -91,8 +97,9 @@ func TestChangeDiffer_Add(t *testing.T) {
 			}
 			return true
 		})
-		res, notFound := differ.RemoveBefore([]string{"3", "4", "5"})
+		res, notFound, seenHeads := differ.RemoveBefore([]string{"3", "4", "5"}, []string{"7"})
 		require.Len(t, res, 0)
 		require.Len(t, notFound, 0)
+		require.Equal(t, seenHeads, []string{"7"})
 	})
 }

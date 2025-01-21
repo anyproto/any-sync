@@ -2,6 +2,7 @@ package objecttree
 
 import (
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 
 	"github.com/anyproto/any-sync/util/slice"
 )
@@ -41,11 +42,15 @@ func NewChangeDiffer(tree ReadableObjectTree, hasChanges hasChangesFunc) (*Chang
 	return diff, nil
 }
 
-func (d *ChangeDiffer) RemoveBefore(ids []string) (removed []string, notFound []string) {
-	var attached []*Change
+func (d *ChangeDiffer) RemoveBefore(ids []string, seenHeads []string) (removed []string, notFound []string, heads []string) {
+	var (
+		attached    []*Change
+		attachedIds []string
+	)
 	for _, id := range ids {
 		if ch, ok := d.attached[id]; ok {
 			attached = append(attached, ch)
+			attachedIds = append(attachedIds, id)
 			continue
 		}
 		// check if we have it at the bottom
@@ -53,7 +58,11 @@ func (d *ChangeDiffer) RemoveBefore(ids []string) (removed []string, notFound []
 			notFound = append(notFound, id)
 		}
 	}
+	heads = make([]string, 0, len(seenHeads))
+	heads = append(heads, seenHeads...)
 	d.dfsPrev(attached, func(ch *Change) (isContinue bool) {
+		heads = append(heads, ch.Id)
+		heads = append(heads, ch.PreviousIds...)
 		removed = append(removed, ch.Id)
 		return true
 	}, func(changes []*Change) {
@@ -66,6 +75,12 @@ func (d *ChangeDiffer) RemoveBefore(ids []string) (removed []string, notFound []
 			})
 		}
 	})
+	slices.Sort(heads)
+	heads = slice.RemoveRepeatedSorted(heads)
+	heads = append(heads, attachedIds...)
+	heads = append(heads, seenHeads...)
+	heads = slice.RemoveUniqueElementsSorted(heads)
+	heads = slice.DiscardDuplicatesSorted(heads)
 	return
 }
 
@@ -162,15 +177,21 @@ func NewDiffManager(initHeads, curHeads []string, treeBuilder treeBuilderFunc, o
 }
 
 func (d *DiffManager) Init() {
-	removed, _ := d.differ.RemoveBefore(d.seenHeads)
+	removed, _, seenHeads := d.differ.RemoveBefore(d.seenHeads, []string{})
+	d.seenHeads = seenHeads
 	d.onRemove(removed)
 }
 
+func (d *DiffManager) SeenHeads() []string {
+	return d.seenHeads
+}
+
 func (d *DiffManager) Remove(ids []string) {
-	removed, notFound := d.differ.RemoveBefore(ids)
+	removed, notFound, seenHeads := d.differ.RemoveBefore(ids, d.seenHeads)
 	for _, id := range notFound {
 		d.notFound[id] = struct{}{}
 	}
+	d.seenHeads = seenHeads
 	d.onRemove(removed)
 }
 
@@ -203,6 +224,7 @@ func (d *DiffManager) Update(objTree ObjectTree) {
 	d.differ.Add(toAdd...)
 	d.heads = make([]string, 0, len(d.heads))
 	d.heads = append(d.heads, objTree.Heads()...)
-	removed, _ := d.differ.RemoveBefore(toRemove)
+	removed, _, seenHeads := d.differ.RemoveBefore(toRemove, d.seenHeads)
+	d.seenHeads = seenHeads
 	d.onRemove(removed)
 }

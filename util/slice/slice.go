@@ -159,6 +159,50 @@ func DiscardDuplicatesSorted[T comparable](sorted []T) []T {
 	return sorted[:cnt]
 }
 
+func RemoveRepeatedSorted[T constraints.Ordered](nums []T) []T {
+	if len(nums) == 0 {
+		return nums
+	}
+	writeIndex := 0
+	i := 0
+	for i < len(nums) {
+		count := 1
+		for i+1 < len(nums) && nums[i] == nums[i+1] {
+			count++
+			i++
+		}
+		if count == 1 {
+			nums[writeIndex] = nums[i]
+			writeIndex++
+		}
+		i++
+	}
+	return nums[:writeIndex]
+}
+
+func RemoveUniqueElementsSorted[T constraints.Ordered](nums []T) []T {
+	if len(nums) == 0 {
+		return nums
+	}
+	writeIndex := 0
+	i := 0
+	for i < len(nums) {
+		count := 1
+		for i+1 < len(nums) && nums[i] == nums[i+1] {
+			count++
+			i++
+		}
+		if count > 1 {
+			for j := 0; j < count; j++ {
+				nums[writeIndex] = nums[i]
+				writeIndex++
+			}
+		}
+		i++
+	}
+	return nums[:writeIndex]
+}
+
 func DiscardDuplicatesSortedFunc[T any](sorted []T, equal func(T, T) bool) []T {
 	if len(sorted) <= 1 {
 		return sorted
