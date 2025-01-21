@@ -79,6 +79,7 @@ func (d *ChangeDiffer) RemoveBefore(ids []string, seenHeads []string) (removed [
 	heads = slice.RemoveRepeatedSorted(heads)
 	heads = append(heads, attachedIds...)
 	heads = append(heads, seenHeads...)
+	slices.Sort(heads)
 	heads = slice.RemoveUniqueElementsSorted(heads)
 	heads = slice.DiscardDuplicatesSorted(heads)
 	return
