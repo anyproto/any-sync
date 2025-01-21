@@ -162,7 +162,7 @@ func NewDiffManager(initHeads, curHeads []string, treeBuilder treeBuilderFunc, o
 }
 
 func (d *DiffManager) Init() {
-	removed, _ := d.differ.RemoveBefore(d.heads)
+	removed, _ := d.differ.RemoveBefore(d.seenHeads)
 	d.onRemove(removed)
 }
 
