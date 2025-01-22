@@ -87,6 +87,9 @@ func (d *diffSyncer) updateHeads(update headstorage.HeadsUpdate) {
 		if d.deletionState.Exists(update.Id) {
 			return
 		}
+		if update.IsDerived != nil && *update.IsDerived && len(update.Heads) == 1 && update.Heads[0] == update.Id {
+			return
+		}
 		d.diff.Set(ldiff.Element{
 			Id:   update.Id,
 			Head: concatStrings(update.Heads),

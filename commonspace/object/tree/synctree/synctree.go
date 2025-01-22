@@ -20,7 +20,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/secureservice"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/slice"
 )
@@ -312,16 +311,6 @@ func (s *syncTree) checkAlive() (err error) {
 func (s *syncTree) SyncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	s.Lock()
 	defer s.Unlock()
-	if objecttree.IsEmptyDerivedTree(s.ObjectTree) {
-		return
-	}
-	protoVersion, err := peer.CtxProtoVersion(p.Context())
-	if err != nil {
-		return
-	}
-	if protoVersion <= secureservice.CompatibleVersion {
-		return nil
-	}
 	req := s.syncClient.CreateFullSyncRequest(p.Id(), s)
 	return s.syncClient.QueueRequest(ctx, req)
 }
