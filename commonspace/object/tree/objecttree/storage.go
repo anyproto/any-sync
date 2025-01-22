@@ -69,6 +69,7 @@ type storage struct {
 	headStorage headstorage.HeadStorage
 	changesColl anystore.Collection
 	arena       *anyenc.Arena
+	parser      *anyenc.Parser
 	root        StorageChange
 }
 
@@ -102,6 +103,7 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 	}
 	st.changesColl = changesColl
 	st.arena = &anyenc.Arena{}
+	st.parser = &anyenc.Parser{}
 	defer st.arena.Reset()
 	doc := newStorageChangeValue(stChange, st.arena)
 	tx, err := st.store.WriteTx(ctx)
@@ -147,6 +149,7 @@ func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStor
 	}
 	st.changesColl = changesColl
 	st.arena = &anyenc.Arena{}
+	st.parser = &anyenc.Parser{}
 	st.root, err = st.Get(ctx, st.id)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocNotFound) {
@@ -166,7 +169,7 @@ func (s *storage) Heads(ctx context.Context) (res []string, err error) {
 }
 
 func (s *storage) Has(ctx context.Context, id string) (bool, error) {
-	_, err := s.changesColl.FindId(ctx, id)
+	_, err := s.changesColl.FindIdWithParser(ctx, s.parser, id)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocNotFound) {
 			return false, nil
@@ -266,7 +269,7 @@ func (s *storage) CommonSnapshot(ctx context.Context) (string, error) {
 }
 
 func (s *storage) Get(ctx context.Context, id string) (StorageChange, error) {
-	doc, err := s.changesColl.FindId(ctx, id)
+	doc, err := s.changesColl.FindIdWithParser(ctx, s.parser, id)
 	if err != nil {
 		return StorageChange{}, err
 	}
