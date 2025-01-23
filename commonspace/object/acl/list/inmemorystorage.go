@@ -24,19 +24,20 @@ func NewInMemoryStorage(
 	if len(records) == 0 {
 		return nil, fmt.Errorf("empty records")
 	}
-	newRecs := make([]StorageRecord, 0, len(records))
+	storageRecords := make([]StorageRecord, 0, len(records))
 	recordsToIndex := make(map[string]int, len(records))
-	newRecs = append(newRecs, StorageRecord{
-		RawRecord: records[0].Payload,
-		PrevId:    "",
-		Id:        records[0].Id,
-		Order:     1,
+	storageRecords = append(storageRecords, StorageRecord{
+		RawRecord:  records[0].Payload,
+		PrevId:     "",
+		Id:         records[0].Id,
+		Order:      1,
+		ChangeSize: len(records[0].Payload),
 	})
-	recordsToIndex[newRecs[0].Id] = 0
-	for i := 1; i < len(records)-1; i++ {
-		prevRec := newRecs[i-1]
+	recordsToIndex[storageRecords[0].Id] = 0
+	for i := 1; i < len(records); i++ {
+		prevRec := storageRecords[i-1]
 		rec := records[i]
-		newRecs = append(newRecs, StorageRecord{
+		storageRecords = append(storageRecords, StorageRecord{
 			RawRecord:  rec.Payload,
 			PrevId:     prevRec.Id,
 			Id:         rec.Id,
@@ -45,14 +46,13 @@ func NewInMemoryStorage(
 		})
 		recordsToIndex[rec.Id] = i
 	}
-	root := newRecs[0]
-	head := records[len(records)-1]
+	root := storageRecords[0]
 
 	return &inMemoryStorage{
 		id:             root.Id,
 		root:           root,
-		head:           head.Id,
-		records:        newRecs,
+		head:           records[len(records)-1].Id,
+		records:        storageRecords,
 		recordsToIndex: recordsToIndex,
 	}, nil
 }
