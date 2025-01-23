@@ -222,7 +222,7 @@ func (a *aclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 		RawRecord:  rawRec.Payload,
 		PrevId:     record.PrevId,
 		Id:         record.Id,
-		Order:      len(a.records) + 1,
+		Order:      len(a.records),
 		ChangeSize: len(rawRec.Payload),
 	}
 	return a.storage.AddAll(context.Background(), []StorageRecord{storageRec})

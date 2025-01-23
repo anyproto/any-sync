@@ -107,7 +107,7 @@ func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePaylo
 	}
 	store, err := s.createSpaceStorage(ctx, storageCreate)
 	if err != nil {
-		if err == spacestorage.ErrSpaceStorageExists {
+		if errors.Is(err, spacestorage.ErrSpaceStorageExists) {
 			return storageCreate.SpaceHeaderWithId.Id, nil
 		}
 		return
@@ -132,7 +132,7 @@ func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePaylo
 	}
 	store, err := s.createSpaceStorage(ctx, storageCreate)
 	if err != nil {
-		if err == spacestorage.ErrSpaceStorageExists {
+		if errors.Is(err, spacestorage.ErrSpaceStorageExists) {
 			return storageCreate.SpaceHeaderWithId.Id, nil
 		}
 		return
@@ -144,7 +144,7 @@ func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePaylo
 func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Space, error) {
 	st, err := s.storageProvider.WaitSpaceStorage(ctx, id)
 	if err != nil {
-		if err != spacestorage.ErrSpaceStorageMissing {
+		if !errors.Is(err, spacestorage.ErrSpaceStorageMissing) {
 			return nil, err
 		}
 
@@ -214,7 +214,7 @@ func (s *spaceService) addSpaceStorage(ctx context.Context, spaceDescription Spa
 	st, err = s.createSpaceStorage(ctx, payload)
 	if err != nil {
 		err = spacesyncproto.ErrUnexpected
-		if err == spacestorage.ErrSpaceStorageExists {
+		if errors.Is(err, spacestorage.ErrSpaceStorageExists) {
 			err = spacesyncproto.ErrSpaceExists
 		}
 		return

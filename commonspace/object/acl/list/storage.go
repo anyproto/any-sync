@@ -217,7 +217,7 @@ func (s *storage) AddAll(ctx context.Context, records []StorageRecord) error {
 	err = s.headStorage.UpdateEntryTx(tx.Context(), update)
 	if err != nil {
 		tx.Rollback()
-		return nil
+		return err
 	}
 	return tx.Commit()
 }
