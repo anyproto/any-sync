@@ -298,7 +298,7 @@ func (a *aclList) Iterate(iterFunc IterFunc) {
 func (a *aclList) RecordsAfter(ctx context.Context, id string) (records []*consensusproto.RawRecordWithId, err error) {
 	var recIdx int
 	if id == "" {
-		recIdx = 0
+		recIdx = 1
 	} else {
 		var ok bool
 		recIdx, ok = a.indexes[id]
@@ -307,7 +307,12 @@ func (a *aclList) RecordsAfter(ctx context.Context, id string) (records []*conse
 		}
 	}
 	err = a.storage.GetAfterOrder(ctx, recIdx, func(ctx context.Context, record StorageRecord) (shouldContinue bool, err error) {
-		records = append(records, record.RawRecordWithId())
+		raw := make([]byte, 0, len(record.RawRecord))
+		raw = append(raw, record.RawRecord...)
+		records = append(records, &consensusproto.RawRecordWithId{
+			Payload: raw,
+			Id:      record.Id,
+		})
 		return true, nil
 	})
 	return
@@ -322,7 +327,12 @@ func (a *aclList) RecordsBefore(ctx context.Context, headId string) (records []*
 		return nil, ErrNoSuchRecord
 	}
 	err = a.storage.GetBeforeOrder(ctx, recIdx, func(ctx context.Context, record StorageRecord) (shouldContinue bool, err error) {
-		records = append(records, record.RawRecordWithId())
+		raw := make([]byte, 0, len(record.RawRecord))
+		raw = append(raw, record.RawRecord...)
+		records = append(records, &consensusproto.RawRecordWithId{
+			Payload: raw,
+			Id:      record.Id,
+		})
 		return true, nil
 	})
 	return
