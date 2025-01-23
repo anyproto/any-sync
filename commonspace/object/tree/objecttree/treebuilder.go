@@ -120,7 +120,7 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	totalSnapshots.Store(totalSnapshots.Load() + 1)
 	snapshotCh, err := tb.storage.Get(tb.ctx, snapshot)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get common snapshot %s: %w", snapshot, err)
 	}
 	rawChange := &treechangeproto.RawTreeChangeWithId{}
 	var changes []*Change
@@ -139,7 +139,7 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 		return true, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get changes after order: %w", err)
 	}
 	tr = &Tree{}
 	changes = append(changes, opts.newChanges...)
@@ -240,7 +240,7 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 			totalCommon.Store(totalCommon.Load() + 1)
 			ch, err = tb.storage.Get(tb.ctx, ch.SnapshotId)
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("failed to get snapshot: %w", err)
 			}
 		}
 		current[i] = ch
@@ -269,7 +269,7 @@ func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err 
 			totalCommon.Store(totalCommon.Load() + 1)
 			ch, err = tb.storage.Get(tb.ctx, ch.SnapshotId)
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("failed to get snapshot: %w", err)
 			}
 			current[i] = ch
 		}

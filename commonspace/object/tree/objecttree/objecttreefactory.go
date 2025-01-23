@@ -2,6 +2,7 @@ package objecttree
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -157,7 +158,7 @@ func BuildEmptyDataTestableTree(storage Storage, aclList list.AclList) (ObjectTr
 func BuildMigratableObjectTree(storage Storage, aclList list.AclList) (ObjectTree, error) {
 	rootChange, err := storage.Root(context.Background())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get root: %w", err)
 	}
 	deps := nonVerifiableEmptyDataTreeDeps(rootChange.RawTreeChangeWithId(), storage, aclList)
 	return buildObjectTree(deps)
@@ -256,7 +257,7 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 
 	err := objTree.rebuildFromStorage(nil, nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to rebuild from storage: %w", err)
 	}
 
 	// TODO: think about contexts

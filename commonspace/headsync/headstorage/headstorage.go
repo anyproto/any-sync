@@ -68,6 +68,7 @@ type headStorage struct {
 	headsColl anystore.Collection
 	observers []Observer
 	arena     *anyenc.Arena
+	parser    *anyenc.Parser
 }
 
 func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
@@ -79,6 +80,7 @@ func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
 		store:     store,
 		headsColl: headsColl,
 		arena:     &anyenc.Arena{},
+		parser:    &anyenc.Parser{},
 	}
 	deletedIdx := anystore.IndexInfo{
 		Name:   deletedStatusKey,

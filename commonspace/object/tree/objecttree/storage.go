@@ -141,11 +141,11 @@ func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStor
 		if errors.Is(err, anystore.ErrDocNotFound) {
 			return nil, treestorage.ErrUnknownTreeId
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get head entry: %w", err)
 	}
 	changesColl, err := store.OpenCollection(ctx, CollName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open collection: %w", err)
 	}
 	st.changesColl = changesColl
 	st.arena = &anyenc.Arena{}
@@ -163,13 +163,14 @@ func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStor
 func (s *storage) Heads(ctx context.Context) (res []string, err error) {
 	headsEntry, err := s.headStorage.GetEntry(ctx, s.id)
 	if err != nil {
+		err = fmt.Errorf("failed to get heads entry: %w", err)
 		return
 	}
 	return headsEntry.Heads, nil
 }
 
 func (s *storage) Has(ctx context.Context, id string) (bool, error) {
-	_, err := s.changesColl.FindIdWithParser(ctx, s.parser, id)
+	_, err := s.changesColl.FindId(ctx, id)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocNotFound) {
 			return false, nil
@@ -263,13 +264,13 @@ func (s *storage) CommonSnapshot(ctx context.Context) (string, error) {
 	// TODO: cache this in memory if needed
 	entry, err := s.headStorage.GetEntry(ctx, s.id)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get head entry for common snapshot: %w", err)
 	}
 	return entry.CommonSnapshot, nil
 }
 
 func (s *storage) Get(ctx context.Context, id string) (StorageChange, error) {
-	doc, err := s.changesColl.FindIdWithParser(ctx, s.parser, id)
+	doc, err := s.changesColl.FindId(ctx, id)
 	if err != nil {
 		return StorageChange{}, err
 	}

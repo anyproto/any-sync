@@ -96,6 +96,7 @@ func (l *loadIterator) NextBatch(maxSize int) (batch IteratorBatch, err error) {
 		return true, nil
 	})
 	if err != nil {
+		err = fmt.Errorf("load iterator: failed to get changes after order: %w", err)
 		return
 	}
 	l.lastHeads = batch.Heads
@@ -123,6 +124,7 @@ func (l *loadIterator) load(commonSnapshot string, heads, breakpoints []string) 
 		return true, nil
 	})
 	if err != nil {
+		err = fmt.Errorf("load iterator: failed to get changes after order: %w", err)
 		return
 	}
 	existingBreakpoints := make([]string, 0, len(breakpoints))
