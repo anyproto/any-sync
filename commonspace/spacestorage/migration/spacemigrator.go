@@ -68,10 +68,13 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 		return ErrAlreadyMigrated
 	}
 	if storage != nil {
+		anyStore := storage.AnyStore()
 		err := storage.Close(ctx)
 		if err != nil {
 			return fmt.Errorf("migration: failed to close old storage: %w", err)
 		}
+		// closing this just in case, because the storage doesn't always close the underlying store
+		anyStore.Close()
 		os.RemoveAll(filepath.Join(s.rootPath, id))
 	}
 	oldStorage, err := s.oldProvider.WaitSpaceStorage(ctx, id)
