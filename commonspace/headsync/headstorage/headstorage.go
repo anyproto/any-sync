@@ -64,11 +64,10 @@ type Observer interface {
 }
 
 type headStorage struct {
-	store     anystore.DB
-	headsColl anystore.Collection
-	observers []Observer
-	arena     *anyenc.Arena
-	parser    *anyenc.Parser
+	store      anystore.DB
+	headsColl  anystore.Collection
+	observers  []Observer
+	parserPool *anyenc.ParserPool
 }
 
 func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
@@ -77,10 +76,9 @@ func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
 		return nil, err
 	}
 	st := &headStorage{
-		store:     store,
-		headsColl: headsColl,
-		arena:     &anyenc.Arena{},
-		parser:    &anyenc.Parser{},
+		store:      store,
+		headsColl:  headsColl,
+		parserPool: &anyenc.ParserPool{},
 	}
 	deletedIdx := anystore.IndexInfo{
 		Name:   deletedStatusKey,
@@ -122,7 +120,9 @@ func (h *headStorage) IterateEntries(ctx context.Context, opts IterOpts, entryIt
 }
 
 func (h *headStorage) GetEntry(ctx context.Context, id string) (HeadsEntry, error) {
-	doc, err := h.headsColl.FindId(ctx, id)
+	parser := h.parserPool.Get()
+	doc, err := h.headsColl.FindIdWithParser(ctx, parser, id)
+	defer h.parserPool.Put(parser)
 	if err != nil {
 		return HeadsEntry{}, err
 	}

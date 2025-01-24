@@ -170,7 +170,7 @@ func (s *storage) Heads(ctx context.Context) (res []string, err error) {
 }
 
 func (s *storage) Has(ctx context.Context, id string) (bool, error) {
-	_, err := s.changesColl.FindId(ctx, id)
+	_, err := s.changesColl.FindIdWithParser(ctx, s.parser, id)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocNotFound) {
 			return false, nil
@@ -270,7 +270,7 @@ func (s *storage) CommonSnapshot(ctx context.Context) (string, error) {
 }
 
 func (s *storage) Get(ctx context.Context, id string) (StorageChange, error) {
-	doc, err := s.changesColl.FindId(ctx, id)
+	doc, err := s.changesColl.FindIdWithParser(ctx, s.parser, id)
 	if err != nil {
 		return StorageChange{}, err
 	}
