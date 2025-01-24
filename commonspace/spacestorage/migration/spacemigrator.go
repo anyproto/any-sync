@@ -37,19 +37,27 @@ type Progress interface {
 	AddDone(done int64)
 }
 
+type RemoveFunc func(newStorage spacestorage.SpaceStorage, rootPath string) error
+
 type spaceMigrator struct {
 	oldProvider oldstorage.SpaceStorageProvider
 	newProvider spacestorage.SpaceStorageProvider
 	numParallel int
 	rootPath    string
+	removeFunc  RemoveFunc
 }
 
 func NewSpaceMigrator(oldProvider oldstorage.SpaceStorageProvider, newProvider spacestorage.SpaceStorageProvider, numParallel int, rootPath string) SpaceMigrator {
+	return NewSpaceMigratorWithRemoveFunc(oldProvider, newProvider, numParallel, rootPath, nil)
+}
+
+func NewSpaceMigratorWithRemoveFunc(oldProvider oldstorage.SpaceStorageProvider, newProvider spacestorage.SpaceStorageProvider, numParallel int, rootPath string, removeFunc RemoveFunc) SpaceMigrator {
 	return &spaceMigrator{
 		oldProvider: oldProvider,
 		newProvider: newProvider,
 		numParallel: numParallel,
 		rootPath:    rootPath,
+		removeFunc:  removeFunc,
 	}
 }
 
@@ -68,14 +76,18 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 		return ErrAlreadyMigrated
 	}
 	if storage != nil {
-		anyStore := storage.AnyStore()
-		err := storage.Close(ctx)
-		if err != nil {
-			return fmt.Errorf("migration: failed to close old storage: %w", err)
+		if s.removeFunc != nil {
+			err := s.removeFunc(storage, s.rootPath)
+			if err != nil {
+				return fmt.Errorf("migration: failed to remove new storage: %w", err)
+			}
+		} else {
+			err := storage.Close(ctx)
+			if err != nil {
+				return fmt.Errorf("migration: failed to close old storage: %w", err)
+			}
+			os.RemoveAll(filepath.Join(s.rootPath, id))
 		}
-		// closing this just in case, because the storage doesn't always close the underlying store
-		anyStore.Close()
-		os.RemoveAll(filepath.Join(s.rootPath, id))
 	}
 	oldStorage, err := s.oldProvider.WaitSpaceStorage(ctx, id)
 	if err != nil {
