@@ -120,9 +120,7 @@ func (h *headStorage) IterateEntries(ctx context.Context, opts IterOpts, entryIt
 }
 
 func (h *headStorage) GetEntry(ctx context.Context, id string) (HeadsEntry, error) {
-	parser := h.parserPool.Get()
-	doc, err := h.headsColl.FindIdWithParser(ctx, parser, id)
-	defer h.parserPool.Put(parser)
+	doc, err := h.headsColl.FindId(ctx, id)
 	if err != nil {
 		return HeadsEntry{}, err
 	}
