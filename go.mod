@@ -21,11 +21,11 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/yamux v0.1.2
 	github.com/huandu/skiplist v1.2.1
-	github.com/ipfs/boxo v0.26.0
+	github.com/ipfs/boxo v0.27.0
 	github.com/ipfs/go-block-format v0.2.0
-	github.com/ipfs/go-cid v0.4.1
+	github.com/ipfs/go-cid v0.5.0
 	github.com/ipfs/go-ipld-format v0.6.0
-	github.com/libp2p/go-libp2p v0.38.1
+	github.com/libp2p/go-libp2p v0.38.2
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multibase v0.2.0
 	github.com/multiformats/go-multihash v0.2.3
@@ -41,7 +41,7 @@ require (
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
 	golang.org/x/net v0.34.0
 	golang.org/x/sys v0.29.0
-	golang.org/x/time v0.8.0
+	golang.org/x/time v0.9.0
 	golang.org/x/tools v0.29.0
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.34
@@ -111,6 +111,7 @@ require (
 	golang.org/x/image v0.21.0 // indirect
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/protobuf v1.36.0 // indirect
 	lukechampine.com/blake3 v1.3.0 // indirect

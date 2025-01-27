@@ -89,6 +89,8 @@ type OCache interface {
 	Add(id string, value Object) (err error)
 	// Remove closes and removes object
 	Remove(ctx context.Context, id string) (ok bool, err error)
+	// TryRemove Tries to close and to remove the object
+	TryRemove(id string) (ok bool, err error)
 	// ForEach iterates over all loaded objects, breaks when callback returns false
 	ForEach(f func(v Object) (isContinue bool))
 	// GC frees not used and expired objects
@@ -210,6 +212,45 @@ func (c *oCache) remove(ctx context.Context, e *entry) (ok bool, err error) {
 		c.mu.Unlock()
 	}
 	return
+}
+
+func (c *oCache) TryRemove(id string) (ok bool, err error) {
+	c.mu.Lock()
+
+	if c.closed {
+		c.mu.Unlock()
+		return false, ErrClosed
+	}
+
+	e, contains := c.data[id]
+	if !contains {
+		c.mu.Unlock()
+		return false, ErrNotExists
+	}
+
+	c.mu.Unlock()
+
+	prevState, _ := e.setClosing(false)
+	if prevState == entryStateClosing || prevState == entryStateClosed {
+		return false, nil
+	}
+
+	closed, err := e.value.TryClose(c.ttl)
+	if err != nil {
+		c.log.With("object_id", e.id).Warnf("try remove err: %v", err)
+		return closed, err
+	}
+
+	if !closed {
+		e.setActive(true)
+		return false, nil
+	}
+
+	c.mu.Lock()
+	e.setClosed()
+	delete(c.data, e.id)
+	c.mu.Unlock()
+	return true, nil
 }
 
 func (c *oCache) DoLockedIfNotExists(id string, action func() error) error {
