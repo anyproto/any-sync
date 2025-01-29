@@ -21,8 +21,8 @@ const (
 	OrderKey           = "o"
 	idKey              = "id"
 	rawChangeKey       = "r"
-	snapshotCounterKey = "sc"
-	changeSizeKey      = "sz"
+	SnapshotCounterKey = "sc"
+	ChangeSizeKey      = "sz"
 	snapshotIdKey      = "i"
 	addedKey           = "a"
 	prevIdsKey         = "p"
@@ -283,8 +283,8 @@ func (s *storage) changeFromDoc(doc anystore.Doc) StorageChange {
 		RawChange:       doc.Value().GetBytes(rawChangeKey),
 		SnapshotId:      doc.Value().GetString(snapshotIdKey),
 		OrderId:         doc.Value().GetString(OrderKey),
-		ChangeSize:      doc.Value().GetInt(changeSizeKey),
-		SnapshotCounter: doc.Value().GetInt(snapshotCounterKey),
+		ChangeSize:      doc.Value().GetInt(ChangeSizeKey),
+		SnapshotCounter: doc.Value().GetInt(SnapshotCounterKey),
 		PrevIds:         storeutil.StringsFromArrayValue(doc.Value(), prevIdsKey),
 	}
 }
@@ -293,9 +293,9 @@ func newStorageChangeValue(ch StorageChange, arena *anyenc.Arena) *anyenc.Value 
 	newVal := arena.NewObject()
 	newVal.Set(OrderKey, arena.NewString(ch.OrderId))
 	newVal.Set(rawChangeKey, arena.NewBinary(ch.RawChange))
-	newVal.Set(snapshotCounterKey, arena.NewNumberInt(ch.SnapshotCounter))
+	newVal.Set(SnapshotCounterKey, arena.NewNumberInt(ch.SnapshotCounter))
 	newVal.Set(snapshotIdKey, arena.NewString(ch.SnapshotId))
-	newVal.Set(changeSizeKey, arena.NewNumberInt(ch.ChangeSize))
+	newVal.Set(ChangeSizeKey, arena.NewNumberInt(ch.ChangeSize))
 	newVal.Set(idKey, arena.NewString(ch.Id))
 	newVal.Set(TreeKey, arena.NewString(ch.TreeId))
 	newVal.Set(addedKey, arena.NewNumberFloat64(float64(time.Now().Unix())))
