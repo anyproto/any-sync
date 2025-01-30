@@ -15,9 +15,9 @@ const (
 	headsKey            = "h"
 	commonSnapshotKey   = "s"
 	idKey               = "id"
-	deletedStatusKey    = "d"
+	DeletedStatusKey    = "d"
 	derivedStatusKey    = "r"
-	headsCollectionName = "heads"
+	HeadsCollectionName = "heads"
 )
 
 type DeletedStatus int
@@ -71,7 +71,7 @@ type headStorage struct {
 }
 
 func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
-	headsColl, err := store.Collection(ctx, headsCollectionName)
+	headsColl, err := store.Collection(ctx, HeadsCollectionName)
 	if err != nil {
 		return nil, err
 	}
@@ -81,8 +81,8 @@ func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
 		parserPool: &anyenc.ParserPool{},
 	}
 	deletedIdx := anystore.IndexInfo{
-		Name:   deletedStatusKey,
-		Fields: []string{deletedStatusKey},
+		Name:   DeletedStatusKey,
+		Fields: []string{DeletedStatusKey},
 		Sparse: true,
 	}
 	return st, st.headsColl.EnsureIndex(ctx, deletedIdx)
@@ -96,9 +96,9 @@ func (h *headStorage) AddObserver(observer Observer) {
 func (h *headStorage) IterateEntries(ctx context.Context, opts IterOpts, entryIter EntryIterator) error {
 	var qry any
 	if opts.Deleted {
-		qry = query.Key{Path: []string{deletedStatusKey}, Filter: query.NewComp(query.CompOpGte, int(DeletedStatusQueued))}
+		qry = query.Key{Path: []string{DeletedStatusKey}, Filter: query.NewComp(query.CompOpGte, int(DeletedStatusQueued))}
 	} else {
-		qry = query.Key{Path: []string{deletedStatusKey}, Filter: query.Not{query.Exists{}}}
+		qry = query.Key{Path: []string{DeletedStatusKey}, Filter: query.Not{query.Exists{}}}
 	}
 	iter, err := h.headsColl.Find(qry).Sort(idKey).Iter(ctx)
 	if err != nil {
@@ -150,7 +150,7 @@ func (h *headStorage) UpdateEntryTx(ctx context.Context, update HeadsUpdate) (er
 	}()
 	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
 		if update.DeletedStatus != nil {
-			v.Set(deletedStatusKey, a.NewNumberInt(int(*update.DeletedStatus)))
+			v.Set(DeletedStatusKey, a.NewNumberInt(int(*update.DeletedStatus)))
 		}
 		if update.CommonSnapshot != nil {
 			v.Set(commonSnapshotKey, a.NewString(*update.CommonSnapshot))
@@ -180,7 +180,7 @@ func (h *headStorage) entryFromDoc(doc anystore.Doc) HeadsEntry {
 		Id:             doc.Value().GetString(idKey),
 		Heads:          storeutil.StringsFromArrayValue(doc.Value(), headsKey),
 		CommonSnapshot: doc.Value().GetString(commonSnapshotKey),
-		DeletedStatus:  DeletedStatus(doc.Value().GetInt(deletedStatusKey)),
+		DeletedStatus:  DeletedStatus(doc.Value().GetInt(DeletedStatusKey)),
 		IsDerived:      doc.Value().GetBool(derivedStatusKey),
 	}
 }
