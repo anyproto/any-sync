@@ -86,10 +86,10 @@ func (t *inMemoryStorage) Get(ctx context.Context, id string) (StorageRecord, er
 func (t *inMemoryStorage) GetAfterOrder(ctx context.Context, order int, iter StorageIterator) error {
 	t.RLock()
 	defer t.RUnlock()
-	if order >= len(t.records) {
+	if order > len(t.records) {
 		return nil
 	}
-	for i := order; i < len(t.records); i++ {
+	for i := order - 1; i < len(t.records); i++ {
 		if shouldContinue, err := iter(ctx, t.records[i]); !shouldContinue || err != nil {
 			return err
 		}
@@ -100,10 +100,10 @@ func (t *inMemoryStorage) GetAfterOrder(ctx context.Context, order int, iter Sto
 func (t *inMemoryStorage) GetBeforeOrder(ctx context.Context, order int, iter StorageIterator) error {
 	t.RLock()
 	defer t.RUnlock()
-	if order > len(t.records) || order < 0 {
+	if order > len(t.records) || order < 1 {
 		return nil
 	}
-	for i := 0; i <= order; i++ {
+	for i := 0; i < order; i++ {
 		if shouldContinue, err := iter(ctx, t.records[i]); !shouldContinue || err != nil {
 			return err
 		}
@@ -125,4 +125,22 @@ func (t *inMemoryStorage) AddAll(ctx context.Context, records []StorageRecord) e
 
 func (t *inMemoryStorage) Id() string {
 	return t.id
+}
+
+func (t *inMemoryStorage) Copy() Storage {
+	t.RLock()
+	defer t.RUnlock()
+	records := make([]StorageRecord, len(t.records))
+	copy(records, t.records)
+	recordsToIndex := make(map[string]int, len(t.recordsToIndex))
+	for k, v := range t.recordsToIndex {
+		recordsToIndex[k] = v
+	}
+	return &inMemoryStorage{
+		id:             t.id,
+		root:           t.root,
+		head:           t.head,
+		records:        records,
+		recordsToIndex: recordsToIndex,
+	}
 }
