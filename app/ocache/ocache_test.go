@@ -317,6 +317,78 @@ func Test_OCache_Remove(t *testing.T) {
 		<-getCh
 		require.Equal(t, []string{"close", "get"}, events)
 	})
+	t.Run("tryRemove simple", func(t *testing.T) {
+		closeCh := make(chan struct{})
+		getCh := make(chan struct{})
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			return NewTestObject(id, true, closeCh), nil
+		}, WithTTL(time.Millisecond*10))
+
+		val, err := c.Get(context.TODO(), "id")
+		require.NoError(t, err)
+		require.NotNil(t, val)
+		assert.Equal(t, 1, c.Len())
+		// try removing the object, so we will wait on closing
+		go func() {
+			_, err := c.TryRemove("id")
+			require.Equal(t, 0, c.Len())
+			require.NoError(t, err)
+		}()
+		time.Sleep(time.Millisecond * 20)
+
+		var events []string
+		go func() {
+			_, err := c.Get(context.TODO(), "id")
+			require.Equal(t, 1, c.Len())
+			require.NoError(t, err)
+			require.NotNil(t, val)
+			events = append(events, "get")
+			close(getCh)
+		}()
+		// sleeping to make sure that Get is called
+		time.Sleep(time.Millisecond * 20)
+		events = append(events, "close")
+		close(closeCh)
+
+		<-getCh
+		require.Equal(t, []string{"close", "get"}, events)
+	})
+	t.Run("tryRemove simple - can't be removed", func(t *testing.T) {
+		closeCh := make(chan struct{})
+		getCh := make(chan struct{})
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			return NewTestObject(id, false, closeCh), nil
+		}, WithTTL(time.Millisecond*10))
+
+		val, err := c.Get(context.TODO(), "id")
+		require.NoError(t, err)
+		require.NotNil(t, val)
+		assert.Equal(t, 1, c.Len())
+		// try removing the object, so we will wait on closing
+		go func() {
+			_, err := c.TryRemove("id")
+			require.Equal(t, 1, c.Len())
+			require.NoError(t, err)
+		}()
+		time.Sleep(time.Millisecond * 20)
+
+		var events []string
+		go func() {
+			_, err := c.Get(context.TODO(), "id")
+			require.Equal(t, 1, c.Len())
+			require.NoError(t, err)
+			require.NotNil(t, val)
+			events = append(events, "get")
+			close(getCh)
+		}()
+		// sleeping to make sure that Get is called
+		time.Sleep(time.Millisecond * 20)
+		events = append(events, "close")
+		close(closeCh)
+
+		<-getCh
+		require.Equal(t, []string{"close", "get"}, events)
+	})
 	t.Run("test remove while gc, tryClose false", func(t *testing.T) {
 		closeCh := make(chan struct{})
 		removeCh := make(chan struct{})
