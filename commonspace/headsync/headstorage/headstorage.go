@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_headstorage/mock_headstorage.go github.com/anyproto/any-sync/commonspace/headsync/headstorage HeadStorage
 package headstorage
 
 import (

@@ -19,8 +19,6 @@ import (
 	response "github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
 	updatelistener "github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
 	treechangeproto "github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	treestorage "github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	objectmessages "github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	syncdeps "github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	syncstatus "github.com/anyproto/any-sync/commonspace/syncstatus"
@@ -34,7 +32,6 @@ import (
 type MockSyncTree struct {
 	ctrl     *gomock.Controller
 	recorder *MockSyncTreeMockRecorder
-	isgomock struct{}
 }
 
 // MockSyncTreeMockRecorder is the mock recorder for MockSyncTree.
@@ -69,78 +66,78 @@ func (mr *MockSyncTreeMockRecorder) AclList() *gomock.Call {
 }
 
 // AddContent mocks base method.
-func (m *MockSyncTree) AddContent(ctx context.Context, content objecttree.SignableChangeContent) (objecttree.AddResult, error) {
+func (m *MockSyncTree) AddContent(arg0 context.Context, arg1 objecttree.SignableChangeContent) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddContent", ctx, content)
+	ret := m.ctrl.Call(m, "AddContent", arg0, arg1)
 	ret0, _ := ret[0].(objecttree.AddResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddContent indicates an expected call of AddContent.
-func (mr *MockSyncTreeMockRecorder) AddContent(ctx, content any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) AddContent(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContent", reflect.TypeOf((*MockSyncTree)(nil).AddContent), ctx, content)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContent", reflect.TypeOf((*MockSyncTree)(nil).AddContent), arg0, arg1)
 }
 
 // AddContentWithValidator mocks base method.
-func (m *MockSyncTree) AddContentWithValidator(ctx context.Context, content objecttree.SignableChangeContent, validate func(*treechangeproto.RawTreeChangeWithId) error) (objecttree.AddResult, error) {
+func (m *MockSyncTree) AddContentWithValidator(arg0 context.Context, arg1 objecttree.SignableChangeContent, arg2 func(objecttree.StorageChange) error) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddContentWithValidator", ctx, content, validate)
+	ret := m.ctrl.Call(m, "AddContentWithValidator", arg0, arg1, arg2)
 	ret0, _ := ret[0].(objecttree.AddResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddContentWithValidator indicates an expected call of AddContentWithValidator.
-func (mr *MockSyncTreeMockRecorder) AddContentWithValidator(ctx, content, validate any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) AddContentWithValidator(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContentWithValidator", reflect.TypeOf((*MockSyncTree)(nil).AddContentWithValidator), ctx, content, validate)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContentWithValidator", reflect.TypeOf((*MockSyncTree)(nil).AddContentWithValidator), arg0, arg1, arg2)
 }
 
 // AddRawChanges mocks base method.
-func (m *MockSyncTree) AddRawChanges(ctx context.Context, changes objecttree.RawChangesPayload) (objecttree.AddResult, error) {
+func (m *MockSyncTree) AddRawChanges(arg0 context.Context, arg1 objecttree.RawChangesPayload) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRawChanges", ctx, changes)
+	ret := m.ctrl.Call(m, "AddRawChanges", arg0, arg1)
 	ret0, _ := ret[0].(objecttree.AddResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddRawChanges indicates an expected call of AddRawChanges.
-func (mr *MockSyncTreeMockRecorder) AddRawChanges(ctx, changes any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) AddRawChanges(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChanges", reflect.TypeOf((*MockSyncTree)(nil).AddRawChanges), ctx, changes)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChanges", reflect.TypeOf((*MockSyncTree)(nil).AddRawChanges), arg0, arg1)
 }
 
 // AddRawChangesFromPeer mocks base method.
-func (m *MockSyncTree) AddRawChangesFromPeer(ctx context.Context, peerId string, changesPayload objecttree.RawChangesPayload) (objecttree.AddResult, error) {
+func (m *MockSyncTree) AddRawChangesFromPeer(arg0 context.Context, arg1 string, arg2 objecttree.RawChangesPayload) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRawChangesFromPeer", ctx, peerId, changesPayload)
+	ret := m.ctrl.Call(m, "AddRawChangesFromPeer", arg0, arg1, arg2)
 	ret0, _ := ret[0].(objecttree.AddResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddRawChangesFromPeer indicates an expected call of AddRawChangesFromPeer.
-func (mr *MockSyncTreeMockRecorder) AddRawChangesFromPeer(ctx, peerId, changesPayload any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) AddRawChangesFromPeer(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChangesFromPeer", reflect.TypeOf((*MockSyncTree)(nil).AddRawChangesFromPeer), ctx, peerId, changesPayload)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChangesFromPeer", reflect.TypeOf((*MockSyncTree)(nil).AddRawChangesFromPeer), arg0, arg1, arg2)
 }
 
 // AddRawChangesWithUpdater mocks base method.
-func (m *MockSyncTree) AddRawChangesWithUpdater(ctx context.Context, changes objecttree.RawChangesPayload, updater func(objecttree.ObjectTree, objecttree.Mode) error) (objecttree.AddResult, error) {
+func (m *MockSyncTree) AddRawChangesWithUpdater(arg0 context.Context, arg1 objecttree.RawChangesPayload, arg2 func(objecttree.ObjectTree, objecttree.Mode) error) (objecttree.AddResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRawChangesWithUpdater", ctx, changes, updater)
+	ret := m.ctrl.Call(m, "AddRawChangesWithUpdater", arg0, arg1, arg2)
 	ret0, _ := ret[0].(objecttree.AddResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddRawChangesWithUpdater indicates an expected call of AddRawChangesWithUpdater.
-func (mr *MockSyncTreeMockRecorder) AddRawChangesWithUpdater(ctx, changes, updater any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) AddRawChangesWithUpdater(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChangesWithUpdater", reflect.TypeOf((*MockSyncTree)(nil).AddRawChangesWithUpdater), ctx, changes, updater)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawChangesWithUpdater", reflect.TypeOf((*MockSyncTree)(nil).AddRawChangesWithUpdater), arg0, arg1, arg2)
 }
 
 // ChangeInfo mocks base method.
@@ -157,34 +154,19 @@ func (mr *MockSyncTreeMockRecorder) ChangeInfo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeInfo", reflect.TypeOf((*MockSyncTree)(nil).ChangeInfo))
 }
 
-// ChangesAfterCommonSnapshot mocks base method.
-func (m *MockSyncTree) ChangesAfterCommonSnapshot(snapshotPath, heads []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChangesAfterCommonSnapshot", snapshotPath, heads)
-	ret0, _ := ret[0].([]*treechangeproto.RawTreeChangeWithId)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ChangesAfterCommonSnapshot indicates an expected call of ChangesAfterCommonSnapshot.
-func (mr *MockSyncTreeMockRecorder) ChangesAfterCommonSnapshot(snapshotPath, heads any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangesAfterCommonSnapshot", reflect.TypeOf((*MockSyncTree)(nil).ChangesAfterCommonSnapshot), snapshotPath, heads)
-}
-
 // ChangesAfterCommonSnapshotLoader mocks base method.
-func (m *MockSyncTree) ChangesAfterCommonSnapshotLoader(snapshotPath, heads []string) (objecttree.LoadIterator, error) {
+func (m *MockSyncTree) ChangesAfterCommonSnapshotLoader(arg0, arg1 []string) (objecttree.LoadIterator, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChangesAfterCommonSnapshotLoader", snapshotPath, heads)
+	ret := m.ctrl.Call(m, "ChangesAfterCommonSnapshotLoader", arg0, arg1)
 	ret0, _ := ret[0].(objecttree.LoadIterator)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ChangesAfterCommonSnapshotLoader indicates an expected call of ChangesAfterCommonSnapshotLoader.
-func (mr *MockSyncTreeMockRecorder) ChangesAfterCommonSnapshotLoader(snapshotPath, heads any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) ChangesAfterCommonSnapshotLoader(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangesAfterCommonSnapshotLoader", reflect.TypeOf((*MockSyncTree)(nil).ChangesAfterCommonSnapshotLoader), snapshotPath, heads)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangesAfterCommonSnapshotLoader", reflect.TypeOf((*MockSyncTree)(nil).ChangesAfterCommonSnapshotLoader), arg0, arg1)
 }
 
 // Close mocks base method.
@@ -202,18 +184,18 @@ func (mr *MockSyncTreeMockRecorder) Close() *gomock.Call {
 }
 
 // Debug mocks base method.
-func (m *MockSyncTree) Debug(parser objecttree.DescriptionParser) (objecttree.DebugInfo, error) {
+func (m *MockSyncTree) Debug(arg0 objecttree.DescriptionParser) (objecttree.DebugInfo, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Debug", parser)
+	ret := m.ctrl.Call(m, "Debug", arg0)
 	ret0, _ := ret[0].(objecttree.DebugInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Debug indicates an expected call of Debug.
-func (mr *MockSyncTreeMockRecorder) Debug(parser any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) Debug(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Debug", reflect.TypeOf((*MockSyncTree)(nil).Debug), parser)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Debug", reflect.TypeOf((*MockSyncTree)(nil).Debug), arg0)
 }
 
 // Delete mocks base method.
@@ -245,63 +227,48 @@ func (mr *MockSyncTreeMockRecorder) GetChange(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChange", reflect.TypeOf((*MockSyncTree)(nil).GetChange), arg0)
 }
 
-// HandleDeprecatedRequest mocks base method.
-func (m *MockSyncTree) HandleDeprecatedRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (*spacesyncproto.ObjectSyncMessage, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleDeprecatedRequest", ctx, req)
-	ret0, _ := ret[0].(*spacesyncproto.ObjectSyncMessage)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// HandleDeprecatedRequest indicates an expected call of HandleDeprecatedRequest.
-func (mr *MockSyncTreeMockRecorder) HandleDeprecatedRequest(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleDeprecatedRequest", reflect.TypeOf((*MockSyncTree)(nil).HandleDeprecatedRequest), ctx, req)
-}
-
 // HandleHeadUpdate mocks base method.
-func (m *MockSyncTree) HandleHeadUpdate(ctx context.Context, statusUpdater syncstatus.StatusUpdater, headUpdate drpc.Message) (syncdeps.Request, error) {
+func (m *MockSyncTree) HandleHeadUpdate(arg0 context.Context, arg1 syncstatus.StatusUpdater, arg2 drpc.Message) (syncdeps.Request, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleHeadUpdate", ctx, statusUpdater, headUpdate)
+	ret := m.ctrl.Call(m, "HandleHeadUpdate", arg0, arg1, arg2)
 	ret0, _ := ret[0].(syncdeps.Request)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HandleHeadUpdate indicates an expected call of HandleHeadUpdate.
-func (mr *MockSyncTreeMockRecorder) HandleHeadUpdate(ctx, statusUpdater, headUpdate any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) HandleHeadUpdate(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleHeadUpdate", reflect.TypeOf((*MockSyncTree)(nil).HandleHeadUpdate), ctx, statusUpdater, headUpdate)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleHeadUpdate", reflect.TypeOf((*MockSyncTree)(nil).HandleHeadUpdate), arg0, arg1, arg2)
 }
 
 // HandleResponse mocks base method.
-func (m *MockSyncTree) HandleResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
+func (m *MockSyncTree) HandleResponse(arg0 context.Context, arg1, arg2 string, arg3 syncdeps.Response) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleResponse", ctx, peerId, objectId, resp)
+	ret := m.ctrl.Call(m, "HandleResponse", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // HandleResponse indicates an expected call of HandleResponse.
-func (mr *MockSyncTreeMockRecorder) HandleResponse(ctx, peerId, objectId, resp any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) HandleResponse(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleResponse", reflect.TypeOf((*MockSyncTree)(nil).HandleResponse), ctx, peerId, objectId, resp)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleResponse", reflect.TypeOf((*MockSyncTree)(nil).HandleResponse), arg0, arg1, arg2, arg3)
 }
 
 // HandleStreamRequest mocks base method.
-func (m *MockSyncTree) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, send func(proto.Message) error) (syncdeps.Request, error) {
+func (m *MockSyncTree) HandleStreamRequest(arg0 context.Context, arg1 syncdeps.Request, arg2 syncdeps.QueueSizeUpdater, arg3 func(proto.Message) error) (syncdeps.Request, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleStreamRequest", ctx, rq, updater, send)
+	ret := m.ctrl.Call(m, "HandleStreamRequest", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(syncdeps.Request)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HandleStreamRequest indicates an expected call of HandleStreamRequest.
-func (mr *MockSyncTreeMockRecorder) HandleStreamRequest(ctx, rq, updater, send any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) HandleStreamRequest(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStreamRequest", reflect.TypeOf((*MockSyncTree)(nil).HandleStreamRequest), ctx, rq, updater, send)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStreamRequest", reflect.TypeOf((*MockSyncTree)(nil).HandleStreamRequest), arg0, arg1, arg2, arg3)
 }
 
 // HasChanges mocks base method.
@@ -379,31 +346,31 @@ func (mr *MockSyncTreeMockRecorder) IsDerived() *gomock.Call {
 }
 
 // IterateFrom mocks base method.
-func (m *MockSyncTree) IterateFrom(id string, convert func(*objecttree.Change, []byte) (any, error), iterate func(*objecttree.Change) bool) error {
+func (m *MockSyncTree) IterateFrom(arg0 string, arg1 func(*objecttree.Change, []byte) (any, error), arg2 func(*objecttree.Change) bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IterateFrom", id, convert, iterate)
+	ret := m.ctrl.Call(m, "IterateFrom", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // IterateFrom indicates an expected call of IterateFrom.
-func (mr *MockSyncTreeMockRecorder) IterateFrom(id, convert, iterate any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) IterateFrom(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateFrom", reflect.TypeOf((*MockSyncTree)(nil).IterateFrom), id, convert, iterate)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateFrom", reflect.TypeOf((*MockSyncTree)(nil).IterateFrom), arg0, arg1, arg2)
 }
 
 // IterateRoot mocks base method.
-func (m *MockSyncTree) IterateRoot(convert func(*objecttree.Change, []byte) (any, error), iterate func(*objecttree.Change) bool) error {
+func (m *MockSyncTree) IterateRoot(arg0 func(*objecttree.Change, []byte) (any, error), arg1 func(*objecttree.Change) bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IterateRoot", convert, iterate)
+	ret := m.ctrl.Call(m, "IterateRoot", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // IterateRoot indicates an expected call of IterateRoot.
-func (mr *MockSyncTreeMockRecorder) IterateRoot(convert, iterate any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) IterateRoot(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateRoot", reflect.TypeOf((*MockSyncTree)(nil).IterateRoot), convert, iterate)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateRoot", reflect.TypeOf((*MockSyncTree)(nil).IterateRoot), arg0, arg1)
 }
 
 // Len mocks base method.
@@ -433,18 +400,18 @@ func (mr *MockSyncTreeMockRecorder) Lock() *gomock.Call {
 }
 
 // PrepareChange mocks base method.
-func (m *MockSyncTree) PrepareChange(content objecttree.SignableChangeContent) (*treechangeproto.RawTreeChangeWithId, error) {
+func (m *MockSyncTree) PrepareChange(arg0 objecttree.SignableChangeContent) (*treechangeproto.RawTreeChangeWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrepareChange", content)
+	ret := m.ctrl.Call(m, "PrepareChange", arg0)
 	ret0, _ := ret[0].(*treechangeproto.RawTreeChangeWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PrepareChange indicates an expected call of PrepareChange.
-func (mr *MockSyncTreeMockRecorder) PrepareChange(content any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) PrepareChange(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareChange", reflect.TypeOf((*MockSyncTree)(nil).PrepareChange), content)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareChange", reflect.TypeOf((*MockSyncTree)(nil).PrepareChange), arg0)
 }
 
 // ResponseCollector mocks base method.
@@ -476,27 +443,27 @@ func (mr *MockSyncTreeMockRecorder) Root() *gomock.Call {
 }
 
 // SetFlusher mocks base method.
-func (m *MockSyncTree) SetFlusher(flusher objecttree.Flusher) {
+func (m *MockSyncTree) SetFlusher(arg0 objecttree.Flusher) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetFlusher", flusher)
+	m.ctrl.Call(m, "SetFlusher", arg0)
 }
 
 // SetFlusher indicates an expected call of SetFlusher.
-func (mr *MockSyncTreeMockRecorder) SetFlusher(flusher any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) SetFlusher(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFlusher", reflect.TypeOf((*MockSyncTree)(nil).SetFlusher), flusher)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFlusher", reflect.TypeOf((*MockSyncTree)(nil).SetFlusher), arg0)
 }
 
 // SetListener mocks base method.
-func (m *MockSyncTree) SetListener(listener updatelistener.UpdateListener) {
+func (m *MockSyncTree) SetListener(arg0 updatelistener.UpdateListener) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetListener", listener)
+	m.ctrl.Call(m, "SetListener", arg0)
 }
 
 // SetListener indicates an expected call of SetListener.
-func (mr *MockSyncTreeMockRecorder) SetListener(listener any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) SetListener(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetListener", reflect.TypeOf((*MockSyncTree)(nil).SetListener), listener)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetListener", reflect.TypeOf((*MockSyncTree)(nil).SetListener), arg0)
 }
 
 // SnapshotPath mocks base method.
@@ -514,10 +481,10 @@ func (mr *MockSyncTreeMockRecorder) SnapshotPath() *gomock.Call {
 }
 
 // Storage mocks base method.
-func (m *MockSyncTree) Storage() treestorage.TreeStorage {
+func (m *MockSyncTree) Storage() objecttree.Storage {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Storage")
-	ret0, _ := ret[0].(treestorage.TreeStorage)
+	ret0, _ := ret[0].(objecttree.Storage)
 	return ret0
 }
 
@@ -528,32 +495,32 @@ func (mr *MockSyncTreeMockRecorder) Storage() *gomock.Call {
 }
 
 // SyncWithPeer mocks base method.
-func (m *MockSyncTree) SyncWithPeer(ctx context.Context, p peer.Peer) error {
+func (m *MockSyncTree) SyncWithPeer(arg0 context.Context, arg1 peer.Peer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SyncWithPeer", ctx, p)
+	ret := m.ctrl.Call(m, "SyncWithPeer", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SyncWithPeer indicates an expected call of SyncWithPeer.
-func (mr *MockSyncTreeMockRecorder) SyncWithPeer(ctx, p any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) SyncWithPeer(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncWithPeer", reflect.TypeOf((*MockSyncTree)(nil).SyncWithPeer), ctx, p)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncWithPeer", reflect.TypeOf((*MockSyncTree)(nil).SyncWithPeer), arg0, arg1)
 }
 
 // TryClose mocks base method.
-func (m *MockSyncTree) TryClose(objectTTL time.Duration) (bool, error) {
+func (m *MockSyncTree) TryClose(arg0 time.Duration) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TryClose", objectTTL)
+	ret := m.ctrl.Call(m, "TryClose", arg0)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // TryClose indicates an expected call of TryClose.
-func (mr *MockSyncTreeMockRecorder) TryClose(objectTTL any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) TryClose(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryClose", reflect.TypeOf((*MockSyncTree)(nil).TryClose), objectTTL)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryClose", reflect.TypeOf((*MockSyncTree)(nil).TryClose), arg0)
 }
 
 // TryLock mocks base method.
@@ -597,25 +564,24 @@ func (mr *MockSyncTreeMockRecorder) UnmarshalledHeader() *gomock.Call {
 }
 
 // UnpackChange mocks base method.
-func (m *MockSyncTree) UnpackChange(raw *treechangeproto.RawTreeChangeWithId) ([]byte, error) {
+func (m *MockSyncTree) UnpackChange(arg0 *treechangeproto.RawTreeChangeWithId) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnpackChange", raw)
+	ret := m.ctrl.Call(m, "UnpackChange", arg0)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UnpackChange indicates an expected call of UnpackChange.
-func (mr *MockSyncTreeMockRecorder) UnpackChange(raw any) *gomock.Call {
+func (mr *MockSyncTreeMockRecorder) UnpackChange(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnpackChange", reflect.TypeOf((*MockSyncTree)(nil).UnpackChange), raw)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnpackChange", reflect.TypeOf((*MockSyncTree)(nil).UnpackChange), arg0)
 }
 
 // MockHeadNotifiable is a mock of HeadNotifiable interface.
 type MockHeadNotifiable struct {
 	ctrl     *gomock.Controller
 	recorder *MockHeadNotifiableMockRecorder
-	isgomock struct{}
 }
 
 // MockHeadNotifiableMockRecorder is the mock recorder for MockHeadNotifiable.
@@ -636,22 +602,21 @@ func (m *MockHeadNotifiable) EXPECT() *MockHeadNotifiableMockRecorder {
 }
 
 // UpdateHeads mocks base method.
-func (m *MockHeadNotifiable) UpdateHeads(id string, heads []string) {
+func (m *MockHeadNotifiable) UpdateHeads(arg0 string, arg1 []string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateHeads", id, heads)
+	m.ctrl.Call(m, "UpdateHeads", arg0, arg1)
 }
 
 // UpdateHeads indicates an expected call of UpdateHeads.
-func (mr *MockHeadNotifiableMockRecorder) UpdateHeads(id, heads any) *gomock.Call {
+func (mr *MockHeadNotifiableMockRecorder) UpdateHeads(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateHeads", reflect.TypeOf((*MockHeadNotifiable)(nil).UpdateHeads), id, heads)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateHeads", reflect.TypeOf((*MockHeadNotifiable)(nil).UpdateHeads), arg0, arg1)
 }
 
 // MockSyncClient is a mock of SyncClient interface.
 type MockSyncClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockSyncClientMockRecorder
-	isgomock struct{}
 }
 
 // MockSyncClientMockRecorder is the mock recorder for MockSyncClient.
@@ -672,110 +637,109 @@ func (m *MockSyncClient) EXPECT() *MockSyncClientMockRecorder {
 }
 
 // Broadcast mocks base method.
-func (m *MockSyncClient) Broadcast(ctx context.Context, headUpdate *objectmessages.HeadUpdate) error {
+func (m *MockSyncClient) Broadcast(arg0 context.Context, arg1 *objectmessages.HeadUpdate) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Broadcast", ctx, headUpdate)
+	ret := m.ctrl.Call(m, "Broadcast", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Broadcast indicates an expected call of Broadcast.
-func (mr *MockSyncClientMockRecorder) Broadcast(ctx, headUpdate any) *gomock.Call {
+func (mr *MockSyncClientMockRecorder) Broadcast(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Broadcast", reflect.TypeOf((*MockSyncClient)(nil).Broadcast), ctx, headUpdate)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Broadcast", reflect.TypeOf((*MockSyncClient)(nil).Broadcast), arg0, arg1)
 }
 
 // CreateFullSyncRequest mocks base method.
-func (m *MockSyncClient) CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectmessages.Request {
+func (m *MockSyncClient) CreateFullSyncRequest(arg0 string, arg1 objecttree.ObjectTree) *objectmessages.Request {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateFullSyncRequest", peerId, t)
+	ret := m.ctrl.Call(m, "CreateFullSyncRequest", arg0, arg1)
 	ret0, _ := ret[0].(*objectmessages.Request)
 	return ret0
 }
 
 // CreateFullSyncRequest indicates an expected call of CreateFullSyncRequest.
-func (mr *MockSyncClientMockRecorder) CreateFullSyncRequest(peerId, t any) *gomock.Call {
+func (mr *MockSyncClientMockRecorder) CreateFullSyncRequest(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFullSyncRequest", reflect.TypeOf((*MockSyncClient)(nil).CreateFullSyncRequest), peerId, t)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFullSyncRequest", reflect.TypeOf((*MockSyncClient)(nil).CreateFullSyncRequest), arg0, arg1)
 }
 
 // CreateHeadUpdate mocks base method.
-func (m *MockSyncClient) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (*objectmessages.HeadUpdate, error) {
+func (m *MockSyncClient) CreateHeadUpdate(arg0 objecttree.ObjectTree, arg1 string, arg2 []*treechangeproto.RawTreeChangeWithId) (*objectmessages.HeadUpdate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateHeadUpdate", t, ignoredPeer, added)
+	ret := m.ctrl.Call(m, "CreateHeadUpdate", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*objectmessages.HeadUpdate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateHeadUpdate indicates an expected call of CreateHeadUpdate.
-func (mr *MockSyncClientMockRecorder) CreateHeadUpdate(t, ignoredPeer, added any) *gomock.Call {
+func (mr *MockSyncClientMockRecorder) CreateHeadUpdate(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateHeadUpdate", reflect.TypeOf((*MockSyncClient)(nil).CreateHeadUpdate), t, ignoredPeer, added)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateHeadUpdate", reflect.TypeOf((*MockSyncClient)(nil).CreateHeadUpdate), arg0, arg1, arg2)
 }
 
 // CreateNewTreeRequest mocks base method.
-func (m *MockSyncClient) CreateNewTreeRequest(peerId, objectId string) *objectmessages.Request {
+func (m *MockSyncClient) CreateNewTreeRequest(arg0, arg1 string) *objectmessages.Request {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateNewTreeRequest", peerId, objectId)
+	ret := m.ctrl.Call(m, "CreateNewTreeRequest", arg0, arg1)
 	ret0, _ := ret[0].(*objectmessages.Request)
 	return ret0
 }
 
 // CreateNewTreeRequest indicates an expected call of CreateNewTreeRequest.
-func (mr *MockSyncClientMockRecorder) CreateNewTreeRequest(peerId, objectId any) *gomock.Call {
+func (mr *MockSyncClientMockRecorder) CreateNewTreeRequest(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNewTreeRequest", reflect.TypeOf((*MockSyncClient)(nil).CreateNewTreeRequest), peerId, objectId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNewTreeRequest", reflect.TypeOf((*MockSyncClient)(nil).CreateNewTreeRequest), arg0, arg1)
 }
 
 // CreateResponseProducer mocks base method.
-func (m *MockSyncClient) CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (response.ResponseProducer, error) {
+func (m *MockSyncClient) CreateResponseProducer(arg0 objecttree.ObjectTree, arg1, arg2 []string) (response.ResponseProducer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateResponseProducer", t, theirHeads, theirSnapshotPath)
+	ret := m.ctrl.Call(m, "CreateResponseProducer", arg0, arg1, arg2)
 	ret0, _ := ret[0].(response.ResponseProducer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateResponseProducer indicates an expected call of CreateResponseProducer.
-func (mr *MockSyncClientMockRecorder) CreateResponseProducer(t, theirHeads, theirSnapshotPath any) *gomock.Call {
+func (mr *MockSyncClientMockRecorder) CreateResponseProducer(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateResponseProducer", reflect.TypeOf((*MockSyncClient)(nil).CreateResponseProducer), t, theirHeads, theirSnapshotPath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateResponseProducer", reflect.TypeOf((*MockSyncClient)(nil).CreateResponseProducer), arg0, arg1, arg2)
 }
 
 // QueueRequest mocks base method.
-func (m *MockSyncClient) QueueRequest(ctx context.Context, req syncdeps.Request) error {
+func (m *MockSyncClient) QueueRequest(arg0 context.Context, arg1 syncdeps.Request) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueueRequest", ctx, req)
+	ret := m.ctrl.Call(m, "QueueRequest", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // QueueRequest indicates an expected call of QueueRequest.
-func (mr *MockSyncClientMockRecorder) QueueRequest(ctx, req any) *gomock.Call {
+func (mr *MockSyncClientMockRecorder) QueueRequest(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueueRequest", reflect.TypeOf((*MockSyncClient)(nil).QueueRequest), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueueRequest", reflect.TypeOf((*MockSyncClient)(nil).QueueRequest), arg0, arg1)
 }
 
 // SendTreeRequest mocks base method.
-func (m *MockSyncClient) SendTreeRequest(ctx context.Context, req syncdeps.Request, collector syncdeps.ResponseCollector) error {
+func (m *MockSyncClient) SendTreeRequest(arg0 context.Context, arg1 syncdeps.Request, arg2 syncdeps.ResponseCollector) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SendTreeRequest", ctx, req, collector)
+	ret := m.ctrl.Call(m, "SendTreeRequest", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SendTreeRequest indicates an expected call of SendTreeRequest.
-func (mr *MockSyncClientMockRecorder) SendTreeRequest(ctx, req, collector any) *gomock.Call {
+func (mr *MockSyncClientMockRecorder) SendTreeRequest(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendTreeRequest", reflect.TypeOf((*MockSyncClient)(nil).SendTreeRequest), ctx, req, collector)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendTreeRequest", reflect.TypeOf((*MockSyncClient)(nil).SendTreeRequest), arg0, arg1, arg2)
 }
 
 // MockRequestFactory is a mock of RequestFactory interface.
 type MockRequestFactory struct {
 	ctrl     *gomock.Controller
 	recorder *MockRequestFactoryMockRecorder
-	isgomock struct{}
 }
 
 // MockRequestFactoryMockRecorder is the mock recorder for MockRequestFactory.
@@ -796,59 +760,59 @@ func (m *MockRequestFactory) EXPECT() *MockRequestFactoryMockRecorder {
 }
 
 // CreateFullSyncRequest mocks base method.
-func (m *MockRequestFactory) CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectmessages.Request {
+func (m *MockRequestFactory) CreateFullSyncRequest(arg0 string, arg1 objecttree.ObjectTree) *objectmessages.Request {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateFullSyncRequest", peerId, t)
+	ret := m.ctrl.Call(m, "CreateFullSyncRequest", arg0, arg1)
 	ret0, _ := ret[0].(*objectmessages.Request)
 	return ret0
 }
 
 // CreateFullSyncRequest indicates an expected call of CreateFullSyncRequest.
-func (mr *MockRequestFactoryMockRecorder) CreateFullSyncRequest(peerId, t any) *gomock.Call {
+func (mr *MockRequestFactoryMockRecorder) CreateFullSyncRequest(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFullSyncRequest", reflect.TypeOf((*MockRequestFactory)(nil).CreateFullSyncRequest), peerId, t)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFullSyncRequest", reflect.TypeOf((*MockRequestFactory)(nil).CreateFullSyncRequest), arg0, arg1)
 }
 
 // CreateHeadUpdate mocks base method.
-func (m *MockRequestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (*objectmessages.HeadUpdate, error) {
+func (m *MockRequestFactory) CreateHeadUpdate(arg0 objecttree.ObjectTree, arg1 string, arg2 []*treechangeproto.RawTreeChangeWithId) (*objectmessages.HeadUpdate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateHeadUpdate", t, ignoredPeer, added)
+	ret := m.ctrl.Call(m, "CreateHeadUpdate", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*objectmessages.HeadUpdate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateHeadUpdate indicates an expected call of CreateHeadUpdate.
-func (mr *MockRequestFactoryMockRecorder) CreateHeadUpdate(t, ignoredPeer, added any) *gomock.Call {
+func (mr *MockRequestFactoryMockRecorder) CreateHeadUpdate(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateHeadUpdate", reflect.TypeOf((*MockRequestFactory)(nil).CreateHeadUpdate), t, ignoredPeer, added)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateHeadUpdate", reflect.TypeOf((*MockRequestFactory)(nil).CreateHeadUpdate), arg0, arg1, arg2)
 }
 
 // CreateNewTreeRequest mocks base method.
-func (m *MockRequestFactory) CreateNewTreeRequest(peerId, objectId string) *objectmessages.Request {
+func (m *MockRequestFactory) CreateNewTreeRequest(arg0, arg1 string) *objectmessages.Request {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateNewTreeRequest", peerId, objectId)
+	ret := m.ctrl.Call(m, "CreateNewTreeRequest", arg0, arg1)
 	ret0, _ := ret[0].(*objectmessages.Request)
 	return ret0
 }
 
 // CreateNewTreeRequest indicates an expected call of CreateNewTreeRequest.
-func (mr *MockRequestFactoryMockRecorder) CreateNewTreeRequest(peerId, objectId any) *gomock.Call {
+func (mr *MockRequestFactoryMockRecorder) CreateNewTreeRequest(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNewTreeRequest", reflect.TypeOf((*MockRequestFactory)(nil).CreateNewTreeRequest), peerId, objectId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNewTreeRequest", reflect.TypeOf((*MockRequestFactory)(nil).CreateNewTreeRequest), arg0, arg1)
 }
 
 // CreateResponseProducer mocks base method.
-func (m *MockRequestFactory) CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (response.ResponseProducer, error) {
+func (m *MockRequestFactory) CreateResponseProducer(arg0 objecttree.ObjectTree, arg1, arg2 []string) (response.ResponseProducer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateResponseProducer", t, theirHeads, theirSnapshotPath)
+	ret := m.ctrl.Call(m, "CreateResponseProducer", arg0, arg1, arg2)
 	ret0, _ := ret[0].(response.ResponseProducer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateResponseProducer indicates an expected call of CreateResponseProducer.
-func (mr *MockRequestFactoryMockRecorder) CreateResponseProducer(t, theirHeads, theirSnapshotPath any) *gomock.Call {
+func (mr *MockRequestFactoryMockRecorder) CreateResponseProducer(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateResponseProducer", reflect.TypeOf((*MockRequestFactory)(nil).CreateResponseProducer), t, theirHeads, theirSnapshotPath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateResponseProducer", reflect.TypeOf((*MockRequestFactory)(nil).CreateResponseProducer), arg0, arg1, arg2)
 }

@@ -1,4 +1,3 @@
-//go:generate mockgen -destination mock_treestorage/mock_treestorage.go github.com/anyproto/any-sync/commonspace/object/tree/treestorage TreeStorage
 package treestorage
 
 import (

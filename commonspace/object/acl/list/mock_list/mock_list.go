@@ -23,7 +23,6 @@ import (
 type MockAclList struct {
 	ctrl     *gomock.Controller
 	recorder *MockAclListMockRecorder
-	isgomock struct{}
 }
 
 // MockAclListMockRecorder is the mock recorder for MockAclList.
@@ -58,89 +57,89 @@ func (mr *MockAclListMockRecorder) AclState() *gomock.Call {
 }
 
 // AddRawRecord mocks base method.
-func (m *MockAclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) error {
+func (m *MockAclList) AddRawRecord(arg0 *consensusproto.RawRecordWithId) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRawRecord", rawRec)
+	ret := m.ctrl.Call(m, "AddRawRecord", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddRawRecord indicates an expected call of AddRawRecord.
-func (mr *MockAclListMockRecorder) AddRawRecord(rawRec any) *gomock.Call {
+func (mr *MockAclListMockRecorder) AddRawRecord(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecord", reflect.TypeOf((*MockAclList)(nil).AddRawRecord), rawRec)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecord", reflect.TypeOf((*MockAclList)(nil).AddRawRecord), arg0)
 }
 
 // AddRawRecords mocks base method.
-func (m *MockAclList) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) error {
+func (m *MockAclList) AddRawRecords(arg0 []*consensusproto.RawRecordWithId) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRawRecords", rawRecords)
+	ret := m.ctrl.Call(m, "AddRawRecords", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddRawRecords indicates an expected call of AddRawRecords.
-func (mr *MockAclListMockRecorder) AddRawRecords(rawRecords any) *gomock.Call {
+func (mr *MockAclListMockRecorder) AddRawRecords(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecords", reflect.TypeOf((*MockAclList)(nil).AddRawRecords), rawRecords)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecords", reflect.TypeOf((*MockAclList)(nil).AddRawRecords), arg0)
 }
 
 // Close mocks base method.
-func (m *MockAclList) Close(ctx context.Context) error {
+func (m *MockAclList) Close(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", ctx)
+	ret := m.ctrl.Call(m, "Close", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockAclListMockRecorder) Close(ctx any) *gomock.Call {
+func (mr *MockAclListMockRecorder) Close(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockAclList)(nil).Close), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockAclList)(nil).Close), arg0)
 }
 
 // Get mocks base method.
-func (m *MockAclList) Get(id string) (*list.AclRecord, error) {
+func (m *MockAclList) Get(arg0 string) (*list.AclRecord, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", id)
+	ret := m.ctrl.Call(m, "Get", arg0)
 	ret0, _ := ret[0].(*list.AclRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockAclListMockRecorder) Get(id any) *gomock.Call {
+func (mr *MockAclListMockRecorder) Get(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockAclList)(nil).Get), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockAclList)(nil).Get), arg0)
 }
 
 // GetIndex mocks base method.
-func (m *MockAclList) GetIndex(idx int) (*list.AclRecord, error) {
+func (m *MockAclList) GetIndex(arg0 int) (*list.AclRecord, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIndex", idx)
+	ret := m.ctrl.Call(m, "GetIndex", arg0)
 	ret0, _ := ret[0].(*list.AclRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetIndex indicates an expected call of GetIndex.
-func (mr *MockAclListMockRecorder) GetIndex(idx any) *gomock.Call {
+func (mr *MockAclListMockRecorder) GetIndex(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIndex", reflect.TypeOf((*MockAclList)(nil).GetIndex), idx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIndex", reflect.TypeOf((*MockAclList)(nil).GetIndex), arg0)
 }
 
 // HasHead mocks base method.
-func (m *MockAclList) HasHead(head string) bool {
+func (m *MockAclList) HasHead(arg0 string) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasHead", head)
+	ret := m.ctrl.Call(m, "HasHead", arg0)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // HasHead indicates an expected call of HasHead.
-func (mr *MockAclListMockRecorder) HasHead(head any) *gomock.Call {
+func (mr *MockAclListMockRecorder) HasHead(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasHead", reflect.TypeOf((*MockAclList)(nil).HasHead), head)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasHead", reflect.TypeOf((*MockAclList)(nil).HasHead), arg0)
 }
 
 // Head mocks base method.
@@ -172,42 +171,42 @@ func (mr *MockAclListMockRecorder) Id() *gomock.Call {
 }
 
 // IsAfter mocks base method.
-func (m *MockAclList) IsAfter(first, second string) (bool, error) {
+func (m *MockAclList) IsAfter(arg0, arg1 string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsAfter", first, second)
+	ret := m.ctrl.Call(m, "IsAfter", arg0, arg1)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsAfter indicates an expected call of IsAfter.
-func (mr *MockAclListMockRecorder) IsAfter(first, second any) *gomock.Call {
+func (mr *MockAclListMockRecorder) IsAfter(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAfter", reflect.TypeOf((*MockAclList)(nil).IsAfter), first, second)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAfter", reflect.TypeOf((*MockAclList)(nil).IsAfter), arg0, arg1)
 }
 
 // Iterate mocks base method.
-func (m *MockAclList) Iterate(iterFunc func(*list.AclRecord) bool) {
+func (m *MockAclList) Iterate(arg0 func(*list.AclRecord) bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Iterate", iterFunc)
+	m.ctrl.Call(m, "Iterate", arg0)
 }
 
 // Iterate indicates an expected call of Iterate.
-func (mr *MockAclListMockRecorder) Iterate(iterFunc any) *gomock.Call {
+func (mr *MockAclListMockRecorder) Iterate(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Iterate", reflect.TypeOf((*MockAclList)(nil).Iterate), iterFunc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Iterate", reflect.TypeOf((*MockAclList)(nil).Iterate), arg0)
 }
 
 // IterateFrom mocks base method.
-func (m *MockAclList) IterateFrom(startId string, iterFunc func(*list.AclRecord) bool) {
+func (m *MockAclList) IterateFrom(arg0 string, arg1 func(*list.AclRecord) bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "IterateFrom", startId, iterFunc)
+	m.ctrl.Call(m, "IterateFrom", arg0, arg1)
 }
 
 // IterateFrom indicates an expected call of IterateFrom.
-func (mr *MockAclListMockRecorder) IterateFrom(startId, iterFunc any) *gomock.Call {
+func (mr *MockAclListMockRecorder) IterateFrom(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateFrom", reflect.TypeOf((*MockAclList)(nil).IterateFrom), startId, iterFunc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateFrom", reflect.TypeOf((*MockAclList)(nil).IterateFrom), arg0, arg1)
 }
 
 // KeyStorage mocks base method.
@@ -289,33 +288,33 @@ func (mr *MockAclListMockRecorder) Records() *gomock.Call {
 }
 
 // RecordsAfter mocks base method.
-func (m *MockAclList) RecordsAfter(ctx context.Context, id string) ([]*consensusproto.RawRecordWithId, error) {
+func (m *MockAclList) RecordsAfter(arg0 context.Context, arg1 string) ([]*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecordsAfter", ctx, id)
+	ret := m.ctrl.Call(m, "RecordsAfter", arg0, arg1)
 	ret0, _ := ret[0].([]*consensusproto.RawRecordWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RecordsAfter indicates an expected call of RecordsAfter.
-func (mr *MockAclListMockRecorder) RecordsAfter(ctx, id any) *gomock.Call {
+func (mr *MockAclListMockRecorder) RecordsAfter(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordsAfter", reflect.TypeOf((*MockAclList)(nil).RecordsAfter), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordsAfter", reflect.TypeOf((*MockAclList)(nil).RecordsAfter), arg0, arg1)
 }
 
 // RecordsBefore mocks base method.
-func (m *MockAclList) RecordsBefore(ctx context.Context, headId string) ([]*consensusproto.RawRecordWithId, error) {
+func (m *MockAclList) RecordsBefore(arg0 context.Context, arg1 string) ([]*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecordsBefore", ctx, headId)
+	ret := m.ctrl.Call(m, "RecordsBefore", arg0, arg1)
 	ret0, _ := ret[0].([]*consensusproto.RawRecordWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RecordsBefore indicates an expected call of RecordsBefore.
-func (mr *MockAclListMockRecorder) RecordsBefore(ctx, headId any) *gomock.Call {
+func (mr *MockAclListMockRecorder) RecordsBefore(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordsBefore", reflect.TypeOf((*MockAclList)(nil).RecordsBefore), ctx, headId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordsBefore", reflect.TypeOf((*MockAclList)(nil).RecordsBefore), arg0, arg1)
 }
 
 // Root mocks base method.
@@ -345,15 +344,15 @@ func (mr *MockAclListMockRecorder) Unlock() *gomock.Call {
 }
 
 // ValidateRawRecord mocks base method.
-func (m *MockAclList) ValidateRawRecord(rawRec *consensusproto.RawRecord, afterValid func(*list.AclState) error) error {
+func (m *MockAclList) ValidateRawRecord(arg0 *consensusproto.RawRecord, arg1 func(*list.AclState) error) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateRawRecord", rawRec, afterValid)
+	ret := m.ctrl.Call(m, "ValidateRawRecord", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ValidateRawRecord indicates an expected call of ValidateRawRecord.
-func (mr *MockAclListMockRecorder) ValidateRawRecord(rawRec, afterValid any) *gomock.Call {
+func (mr *MockAclListMockRecorder) ValidateRawRecord(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRawRecord", reflect.TypeOf((*MockAclList)(nil).ValidateRawRecord), rawRec, afterValid)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRawRecord", reflect.TypeOf((*MockAclList)(nil).ValidateRawRecord), arg0, arg1)
 }

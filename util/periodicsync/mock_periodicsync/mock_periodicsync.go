@@ -19,7 +19,6 @@ import (
 type MockPeriodicSync struct {
 	ctrl     *gomock.Controller
 	recorder *MockPeriodicSyncMockRecorder
-	isgomock struct{}
 }
 
 // MockPeriodicSyncMockRecorder is the mock recorder for MockPeriodicSync.

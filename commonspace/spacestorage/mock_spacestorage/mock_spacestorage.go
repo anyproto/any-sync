@@ -13,10 +13,13 @@ import (
 	context "context"
 	reflect "reflect"
 
+	anystore "github.com/anyproto/any-store"
 	app "github.com/anyproto/any-sync/app"
-	treechangeproto "github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	headstorage "github.com/anyproto/any-sync/commonspace/headsync/headstorage"
+	statestorage "github.com/anyproto/any-sync/commonspace/headsync/statestorage"
+	list "github.com/anyproto/any-sync/commonspace/object/acl/list"
+	objecttree "github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	treestorage "github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -24,7 +27,6 @@ import (
 type MockSpaceStorage struct {
 	ctrl     *gomock.Controller
 	recorder *MockSpaceStorageMockRecorder
-	isgomock struct{}
 }
 
 // MockSpaceStorageMockRecorder is the mock recorder for MockSpaceStorage.
@@ -45,10 +47,10 @@ func (m *MockSpaceStorage) EXPECT() *MockSpaceStorageMockRecorder {
 }
 
 // AclStorage mocks base method.
-func (m *MockSpaceStorage) AclStorage() (liststorage.ListStorage, error) {
+func (m *MockSpaceStorage) AclStorage() (list.Storage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AclStorage")
-	ret0, _ := ret[0].(liststorage.ListStorage)
+	ret0, _ := ret[0].(list.Storage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -59,48 +61,61 @@ func (mr *MockSpaceStorageMockRecorder) AclStorage() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclStorage", reflect.TypeOf((*MockSpaceStorage)(nil).AclStorage))
 }
 
-// Close mocks base method.
-func (m *MockSpaceStorage) Close(ctx context.Context) error {
+// AnyStore mocks base method.
+func (m *MockSpaceStorage) AnyStore() anystore.DB {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", ctx)
+	ret := m.ctrl.Call(m, "AnyStore")
+	ret0, _ := ret[0].(anystore.DB)
+	return ret0
+}
+
+// AnyStore indicates an expected call of AnyStore.
+func (mr *MockSpaceStorageMockRecorder) AnyStore() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AnyStore", reflect.TypeOf((*MockSpaceStorage)(nil).AnyStore))
+}
+
+// Close mocks base method.
+func (m *MockSpaceStorage) Close(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockSpaceStorageMockRecorder) Close(ctx any) *gomock.Call {
+func (mr *MockSpaceStorageMockRecorder) Close(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockSpaceStorage)(nil).Close), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockSpaceStorage)(nil).Close), arg0)
 }
 
 // CreateTreeStorage mocks base method.
-func (m *MockSpaceStorage) CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (treestorage.TreeStorage, error) {
+func (m *MockSpaceStorage) CreateTreeStorage(arg0 context.Context, arg1 treestorage.TreeStorageCreatePayload) (objecttree.Storage, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateTreeStorage", payload)
-	ret0, _ := ret[0].(treestorage.TreeStorage)
+	ret := m.ctrl.Call(m, "CreateTreeStorage", arg0, arg1)
+	ret0, _ := ret[0].(objecttree.Storage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateTreeStorage indicates an expected call of CreateTreeStorage.
-func (mr *MockSpaceStorageMockRecorder) CreateTreeStorage(payload any) *gomock.Call {
+func (mr *MockSpaceStorageMockRecorder) CreateTreeStorage(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTreeStorage", reflect.TypeOf((*MockSpaceStorage)(nil).CreateTreeStorage), payload)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTreeStorage", reflect.TypeOf((*MockSpaceStorage)(nil).CreateTreeStorage), arg0, arg1)
 }
 
-// HasTree mocks base method.
-func (m *MockSpaceStorage) HasTree(id string) (bool, error) {
+// HeadStorage mocks base method.
+func (m *MockSpaceStorage) HeadStorage() headstorage.HeadStorage {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasTree", id)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "HeadStorage")
+	ret0, _ := ret[0].(headstorage.HeadStorage)
+	return ret0
 }
 
-// HasTree indicates an expected call of HasTree.
-func (mr *MockSpaceStorageMockRecorder) HasTree(id any) *gomock.Call {
+// HeadStorage indicates an expected call of HeadStorage.
+func (mr *MockSpaceStorageMockRecorder) HeadStorage() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasTree", reflect.TypeOf((*MockSpaceStorage)(nil).HasTree), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadStorage", reflect.TypeOf((*MockSpaceStorage)(nil).HeadStorage))
 }
 
 // Id mocks base method.
@@ -118,32 +133,17 @@ func (mr *MockSpaceStorageMockRecorder) Id() *gomock.Call {
 }
 
 // Init mocks base method.
-func (m *MockSpaceStorage) Init(a *app.App) error {
+func (m *MockSpaceStorage) Init(arg0 *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", a)
+	ret := m.ctrl.Call(m, "Init", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockSpaceStorageMockRecorder) Init(a any) *gomock.Call {
+func (mr *MockSpaceStorageMockRecorder) Init(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockSpaceStorage)(nil).Init), a)
-}
-
-// IsSpaceDeleted mocks base method.
-func (m *MockSpaceStorage) IsSpaceDeleted() (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsSpaceDeleted")
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsSpaceDeleted indicates an expected call of IsSpaceDeleted.
-func (mr *MockSpaceStorageMockRecorder) IsSpaceDeleted() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsSpaceDeleted", reflect.TypeOf((*MockSpaceStorage)(nil).IsSpaceDeleted))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockSpaceStorage)(nil).Init), arg0)
 }
 
 // Name mocks base method.
@@ -160,162 +160,45 @@ func (mr *MockSpaceStorageMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockSpaceStorage)(nil).Name))
 }
 
-// ReadSpaceHash mocks base method.
-func (m *MockSpaceStorage) ReadSpaceHash() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadSpaceHash")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadSpaceHash indicates an expected call of ReadSpaceHash.
-func (mr *MockSpaceStorageMockRecorder) ReadSpaceHash() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadSpaceHash", reflect.TypeOf((*MockSpaceStorage)(nil).ReadSpaceHash))
-}
-
 // Run mocks base method.
-func (m *MockSpaceStorage) Run(ctx context.Context) error {
+func (m *MockSpaceStorage) Run(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx)
+	ret := m.ctrl.Call(m, "Run", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockSpaceStorageMockRecorder) Run(ctx any) *gomock.Call {
+func (mr *MockSpaceStorageMockRecorder) Run(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockSpaceStorage)(nil).Run), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockSpaceStorage)(nil).Run), arg0)
 }
 
-// SetSpaceDeleted mocks base method.
-func (m *MockSpaceStorage) SetSpaceDeleted() error {
+// StateStorage mocks base method.
+func (m *MockSpaceStorage) StateStorage() statestorage.StateStorage {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetSpaceDeleted")
-	ret0, _ := ret[0].(error)
+	ret := m.ctrl.Call(m, "StateStorage")
+	ret0, _ := ret[0].(statestorage.StateStorage)
 	return ret0
 }
 
-// SetSpaceDeleted indicates an expected call of SetSpaceDeleted.
-func (mr *MockSpaceStorageMockRecorder) SetSpaceDeleted() *gomock.Call {
+// StateStorage indicates an expected call of StateStorage.
+func (mr *MockSpaceStorageMockRecorder) StateStorage() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSpaceDeleted", reflect.TypeOf((*MockSpaceStorage)(nil).SetSpaceDeleted))
-}
-
-// SetTreeDeletedStatus mocks base method.
-func (m *MockSpaceStorage) SetTreeDeletedStatus(id, state string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetTreeDeletedStatus", id, state)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetTreeDeletedStatus indicates an expected call of SetTreeDeletedStatus.
-func (mr *MockSpaceStorageMockRecorder) SetTreeDeletedStatus(id, state any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTreeDeletedStatus", reflect.TypeOf((*MockSpaceStorage)(nil).SetTreeDeletedStatus), id, state)
-}
-
-// SpaceHeader mocks base method.
-func (m *MockSpaceStorage) SpaceHeader() (*spacesyncproto.RawSpaceHeaderWithId, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpaceHeader")
-	ret0, _ := ret[0].(*spacesyncproto.RawSpaceHeaderWithId)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SpaceHeader indicates an expected call of SpaceHeader.
-func (mr *MockSpaceStorageMockRecorder) SpaceHeader() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceHeader", reflect.TypeOf((*MockSpaceStorage)(nil).SpaceHeader))
-}
-
-// SpaceSettingsId mocks base method.
-func (m *MockSpaceStorage) SpaceSettingsId() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpaceSettingsId")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// SpaceSettingsId indicates an expected call of SpaceSettingsId.
-func (mr *MockSpaceStorageMockRecorder) SpaceSettingsId() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceSettingsId", reflect.TypeOf((*MockSpaceStorage)(nil).SpaceSettingsId))
-}
-
-// StoredIds mocks base method.
-func (m *MockSpaceStorage) StoredIds() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StoredIds")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// StoredIds indicates an expected call of StoredIds.
-func (mr *MockSpaceStorageMockRecorder) StoredIds() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoredIds", reflect.TypeOf((*MockSpaceStorage)(nil).StoredIds))
-}
-
-// TreeDeletedStatus mocks base method.
-func (m *MockSpaceStorage) TreeDeletedStatus(id string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TreeDeletedStatus", id)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// TreeDeletedStatus indicates an expected call of TreeDeletedStatus.
-func (mr *MockSpaceStorageMockRecorder) TreeDeletedStatus(id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TreeDeletedStatus", reflect.TypeOf((*MockSpaceStorage)(nil).TreeDeletedStatus), id)
-}
-
-// TreeRoot mocks base method.
-func (m *MockSpaceStorage) TreeRoot(id string) (*treechangeproto.RawTreeChangeWithId, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TreeRoot", id)
-	ret0, _ := ret[0].(*treechangeproto.RawTreeChangeWithId)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// TreeRoot indicates an expected call of TreeRoot.
-func (mr *MockSpaceStorageMockRecorder) TreeRoot(id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TreeRoot", reflect.TypeOf((*MockSpaceStorage)(nil).TreeRoot), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateStorage", reflect.TypeOf((*MockSpaceStorage)(nil).StateStorage))
 }
 
 // TreeStorage mocks base method.
-func (m *MockSpaceStorage) TreeStorage(id string) (treestorage.TreeStorage, error) {
+func (m *MockSpaceStorage) TreeStorage(arg0 context.Context, arg1 string) (objecttree.Storage, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TreeStorage", id)
-	ret0, _ := ret[0].(treestorage.TreeStorage)
+	ret := m.ctrl.Call(m, "TreeStorage", arg0, arg1)
+	ret0, _ := ret[0].(objecttree.Storage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // TreeStorage indicates an expected call of TreeStorage.
-func (mr *MockSpaceStorageMockRecorder) TreeStorage(id any) *gomock.Call {
+func (mr *MockSpaceStorageMockRecorder) TreeStorage(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TreeStorage", reflect.TypeOf((*MockSpaceStorage)(nil).TreeStorage), id)
-}
-
-// WriteSpaceHash mocks base method.
-func (m *MockSpaceStorage) WriteSpaceHash(hash string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteSpaceHash", hash)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// WriteSpaceHash indicates an expected call of WriteSpaceHash.
-func (mr *MockSpaceStorageMockRecorder) WriteSpaceHash(hash any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteSpaceHash", reflect.TypeOf((*MockSpaceStorage)(nil).WriteSpaceHash), hash)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TreeStorage", reflect.TypeOf((*MockSpaceStorage)(nil).TreeStorage), arg0, arg1)
 }
