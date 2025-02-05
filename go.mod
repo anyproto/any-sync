@@ -36,7 +36,7 @@ require (
 	golang.org/x/crypto v0.32.0
 	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
 	golang.org/x/net v0.34.0
-	golang.org/x/time v0.9.0
+	golang.org/x/time v0.10.0
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.34
 )
