@@ -1,29 +1,32 @@
 package deletionstate
 
 import (
-	"github.com/anyproto/any-sync/commonspace/spacestorage"
-	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
+	"context"
 	"sort"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage/mock_headstorage"
 )
 
 type fixture struct {
-	ctrl         *gomock.Controller
-	delState     *objectDeletionState
-	spaceStorage *mock_spacestorage.MockSpaceStorage
+	ctrl        *gomock.Controller
+	delState    *objectDeletionState
+	headStorage *mock_headstorage.MockHeadStorage
 }
 
 func newFixture(t *testing.T) *fixture {
 	ctrl := gomock.NewController(t)
-	spaceStorage := mock_spacestorage.NewMockSpaceStorage(ctrl)
+	headStorage := mock_headstorage.NewMockHeadStorage(ctrl)
 	delState := New().(*objectDeletionState)
-	delState.storage = spaceStorage
+	delState.storage = headStorage
 	return &fixture{
-		ctrl:         ctrl,
-		delState:     delState,
-		spaceStorage: spaceStorage,
+		ctrl:        ctrl,
+		delState:    delState,
+		headStorage: headStorage,
 	}
 }
 
@@ -36,28 +39,33 @@ func TestDeletionState_Add(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.stop()
 		id := "newId"
-		fx.spaceStorage.EXPECT().TreeDeletedStatus(id).Return("", nil)
-		fx.spaceStorage.EXPECT().SetTreeDeletedStatus(id, spacestorage.TreeDeletedStatusQueued).Return(nil)
+		var queued []string
+		fx.delState.AddObserver(func(ids []string) {
+			queued = ids
+		})
+		fx.headStorage.EXPECT().UpdateEntry(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, update headstorage.HeadsUpdate) error {
+			require.Equal(t, headstorage.DeletedStatusQueued, *update.DeletedStatus)
+			return nil
+		})
 		fx.delState.Add(map[string]struct{}{id: {}})
 		require.Contains(t, fx.delState.queued, id)
+		require.Equal(t, []string{id}, queued)
 	})
 
 	t.Run("add existing queued", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.stop()
 		id := "newId"
-		fx.spaceStorage.EXPECT().TreeDeletedStatus(id).Return(spacestorage.TreeDeletedStatusQueued, nil)
+		fx.delState.queued[id] = struct{}{}
 		fx.delState.Add(map[string]struct{}{id: {}})
-		require.Contains(t, fx.delState.queued, id)
 	})
 
 	t.Run("add existing deleted", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.stop()
 		id := "newId"
-		fx.spaceStorage.EXPECT().TreeDeletedStatus(id).Return(spacestorage.TreeDeletedStatusDeleted, nil)
+		fx.delState.deleted[id] = struct{}{}
 		fx.delState.Add(map[string]struct{}{id: {}})
-		require.Contains(t, fx.delState.deleted, id)
 	})
 }
 
@@ -84,30 +92,16 @@ func TestDeletionState_FilterJoin(t *testing.T) {
 	require.Equal(t, []string{"id3"}, filtered)
 }
 
-func TestDeletionState_AddObserver(t *testing.T) {
-	fx := newFixture(t)
-	defer fx.stop()
-
-	var queued []string
-
-	fx.delState.AddObserver(func(ids []string) {
-		queued = ids
-	})
-	id := "newId"
-	fx.spaceStorage.EXPECT().TreeDeletedStatus(id).Return("", nil)
-	fx.spaceStorage.EXPECT().SetTreeDeletedStatus(id, spacestorage.TreeDeletedStatusQueued).Return(nil)
-	fx.delState.Add(map[string]struct{}{id: {}})
-	require.Contains(t, fx.delState.queued, id)
-	require.Equal(t, []string{id}, queued)
-}
-
 func TestDeletionState_Delete(t *testing.T) {
 	fx := newFixture(t)
 	defer fx.stop()
 
 	id := "deletedId"
 	fx.delState.queued[id] = struct{}{}
-	fx.spaceStorage.EXPECT().SetTreeDeletedStatus(id, spacestorage.TreeDeletedStatusDeleted).Return(nil)
+	fx.headStorage.EXPECT().UpdateEntry(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, update headstorage.HeadsUpdate) error {
+		require.Equal(t, headstorage.DeletedStatusDeleted, *update.DeletedStatus)
+		return nil
+	})
 	err := fx.delState.Delete(id)
 	require.NoError(t, err)
 	require.Contains(t, fx.delState.deleted, id)

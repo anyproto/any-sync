@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_statestorage/mock_statestorage.go github.com/anyproto/any-sync/commonspace/headsync/statestorage StateStorage
 package statestorage
 
 import (

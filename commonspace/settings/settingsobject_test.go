@@ -2,24 +2,29 @@ package settings
 
 import (
 	"context"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
 	"github.com/anyproto/any-sync/accountservice/mock_accountservice"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager/mock_deletionmanager"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage/mock_headstorage"
+	"github.com/anyproto/any-sync/commonspace/headsync/statestorage"
+	"github.com/anyproto/any-sync/commonspace/headsync/statestorage/mock_statestorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/mock_synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"github.com/anyproto/any-sync/commonspace/settings/settingsstate/mock_settingsstate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
-	"sync"
-	"testing"
-	"time"
 )
 
 type testSyncTreeMock struct {
@@ -54,7 +59,11 @@ type settingsFixture struct {
 	syncTree        *mock_synctree.MockSyncTree
 	historyTree     *mock_objecttree.MockObjectTree
 	account         *mock_accountservice.MockService
+	stateStorage    *mock_statestorage.MockStateStorage
+	headStorage     *mock_headstorage.MockHeadStorage
 }
+
+var ctx = context.Background()
 
 func newSettingsFixture(t *testing.T) *settingsFixture {
 	spaceId := "spaceId"
@@ -69,6 +78,8 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 	changeFactory := mock_settingsstate.NewMockChangeFactory(ctrl)
 	syncTree := mock_synctree.NewMockSyncTree(ctrl)
 	historyTree := mock_objecttree.NewMockObjectTree(ctrl)
+	stateStorage := mock_statestorage.NewMockStateStorage(ctrl)
+	headStorage := mock_headstorage.NewMockHeadStorage(ctrl)
 
 	buildFunc := BuildTreeFunc(func(ctx context.Context, id string, listener updatelistener.UpdateListener) (synctree.SyncTree, error) {
 		require.Equal(t, objectId, id)
@@ -101,11 +112,17 @@ func newSettingsFixture(t *testing.T) *settingsFixture {
 		syncTree:        syncTree,
 		account:         acc,
 		historyTree:     historyTree,
+		stateStorage:    stateStorage,
+		headStorage:     headStorage,
 	}
 }
 
 func (fx *settingsFixture) init(t *testing.T) {
-	fx.spaceStorage.EXPECT().SpaceSettingsId().Return(fx.docId)
+	fx.spaceStorage.EXPECT().StateStorage().AnyTimes().Return(fx.stateStorage)
+	fx.stateStorage.EXPECT().GetState(gomock.Any()).Return(statestorage.State{
+		SettingsId: fx.docId,
+	}, nil)
+	fx.spaceStorage.EXPECT().HeadStorage().AnyTimes().Return(fx.headStorage)
 	fx.stateBuilder.EXPECT().Build(fx.historyTree, nil).Return(&settingsstate.State{}, nil)
 	fx.doc.state = &settingsstate.State{}
 
@@ -129,24 +146,18 @@ func TestSettingsObject_Init(t *testing.T) {
 }
 
 func TestSettingsObject_DeleteObject_NoSnapshot(t *testing.T) {
-	isDerivedRoot = func(root *treechangeproto.RawTreeChangeWithId) (derived bool, err error) {
-		return false, nil
-	}
 	fx := newSettingsFixture(t)
 	defer fx.stop(t)
-
 	fx.init(t)
-
 	delId := "delId"
 	DoSnapshot = func(len int) bool {
 		return false
 	}
-
 	fx.syncTree.EXPECT().Id().Return("syncId")
 	fx.syncTree.EXPECT().Len().Return(10)
-	treeStorageMock := mock_treestorage.NewMockTreeStorage(fx.ctrl)
-	fx.spaceStorage.EXPECT().TreeStorage(delId).Return(treeStorageMock, nil)
-	treeStorageMock.EXPECT().Root().Return(&treechangeproto.RawTreeChangeWithId{}, nil)
+	fx.headStorage.EXPECT().GetEntry(gomock.Any(), gomock.Any()).Return(headstorage.HeadsEntry{
+		IsDerived: false,
+	}, nil)
 	res := []byte("settingsData")
 	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
 	fx.changeFactory.EXPECT().CreateObjectDeleteChange(delId, fx.doc.state, false).Return(res, nil)
@@ -163,14 +174,11 @@ func TestSettingsObject_DeleteObject_NoSnapshot(t *testing.T) {
 
 	fx.stateBuilder.EXPECT().Build(fx.doc, fx.doc.state).Return(fx.doc.state, nil)
 	fx.deletionManager.EXPECT().UpdateState(gomock.Any(), fx.doc.state).Return(nil)
-	err = fx.doc.DeleteObject(delId)
+	err = fx.doc.DeleteObject(ctx, delId)
 	require.NoError(t, err)
 }
 
 func TestSettingsObject_DeleteObject_WithSnapshot(t *testing.T) {
-	isDerivedRoot = func(root *treechangeproto.RawTreeChangeWithId) (derived bool, err error) {
-		return false, nil
-	}
 	fx := newSettingsFixture(t)
 	defer fx.stop(t)
 	fx.init(t)
@@ -178,12 +186,11 @@ func TestSettingsObject_DeleteObject_WithSnapshot(t *testing.T) {
 	DoSnapshot = func(len int) bool {
 		return true
 	}
-
 	fx.syncTree.EXPECT().Id().Return("syncId")
 	fx.syncTree.EXPECT().Len().Return(10)
-	treeStorageMock := mock_treestorage.NewMockTreeStorage(fx.ctrl)
-	fx.spaceStorage.EXPECT().TreeStorage(delId).Return(treeStorageMock, nil)
-	treeStorageMock.EXPECT().Root().Return(&treechangeproto.RawTreeChangeWithId{}, nil)
+	fx.headStorage.EXPECT().GetEntry(gomock.Any(), gomock.Any()).Return(headstorage.HeadsEntry{
+		IsDerived: false,
+	}, nil)
 	res := []byte("settingsData")
 	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
 	fx.changeFactory.EXPECT().CreateObjectDeleteChange(delId, fx.doc.state, true).Return(res, nil)
@@ -196,31 +203,28 @@ func TestSettingsObject_DeleteObject_WithSnapshot(t *testing.T) {
 		Key:         accountData.SignKey,
 		IsSnapshot:  true,
 		IsEncrypted: false,
-	}).Return(objecttree.AddResult{Mode: objecttree.Rebuild}, nil)
+	}).Return(objecttree.AddResult{}, nil)
 
-	fx.stateBuilder.EXPECT().Build(fx.doc, nil).Return(fx.doc.state, nil)
+	fx.stateBuilder.EXPECT().Build(fx.doc, fx.doc.state).Return(fx.doc.state, nil)
 	fx.deletionManager.EXPECT().UpdateState(gomock.Any(), fx.doc.state).Return(nil)
-	err = fx.doc.DeleteObject(delId)
+	err = fx.doc.DeleteObject(ctx, delId)
 	require.NoError(t, err)
 }
 
 func TestSettingsObject_DeleteDerivedObject(t *testing.T) {
-	isDerivedRoot = func(root *treechangeproto.RawTreeChangeWithId) (derived bool, err error) {
-		return true, nil
-	}
 	fx := newSettingsFixture(t)
 	defer fx.stop(t)
 	fx.init(t)
 	delId := "delId"
 	DoSnapshot = func(len int) bool {
-		return true
+		return false
 	}
-
 	fx.syncTree.EXPECT().Id().Return("syncId")
-	treeStorageMock := mock_treestorage.NewMockTreeStorage(fx.ctrl)
-	fx.spaceStorage.EXPECT().TreeStorage(delId).Return(treeStorageMock, nil)
-	treeStorageMock.EXPECT().Root().Return(&treechangeproto.RawTreeChangeWithId{}, nil)
-	err := fx.doc.DeleteObject(delId)
+	fx.headStorage.EXPECT().GetEntry(gomock.Any(), gomock.Any()).Return(headstorage.HeadsEntry{
+		IsDerived: true,
+	}, nil)
+	fx.doc.state = &settingsstate.State{LastIteratedId: "someId"}
+	err := fx.doc.DeleteObject(ctx, delId)
 	require.Equal(t, ErrCantDeleteDerivedObject, err)
 }
 
