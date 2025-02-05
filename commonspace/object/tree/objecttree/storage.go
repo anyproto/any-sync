@@ -59,6 +59,7 @@ type Storage interface {
 	Get(ctx context.Context, id string) (StorageChange, error)
 	GetAfterOrder(ctx context.Context, orderId string, iter StorageIterator) error
 	AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error
+	AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error
 	Delete(ctx context.Context) error
 	Close() error
 }
@@ -218,6 +219,36 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 		err = s.changesColl.Insert(tx.Context(), newVal)
 		arena.Reset()
 		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	update := headstorage.HeadsUpdate{
+		Id:             s.id,
+		Heads:          heads,
+		CommonSnapshot: &commonSnapshot,
+	}
+	err = s.headStorage.UpdateEntryTx(tx.Context(), update)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
+	arena := s.arena
+	defer arena.Reset()
+	tx, err := s.store.WriteTx(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create write tx: %w", err)
+	}
+	for _, ch := range changes {
+		ch.TreeId = s.id
+		newVal := newStorageChangeValue(ch, arena)
+		err = s.changesColl.Insert(tx.Context(), newVal)
+		arena.Reset()
+		if err != nil && !errors.Is(err, anystore.ErrDocExists) {
 			tx.Rollback()
 			return err
 		}

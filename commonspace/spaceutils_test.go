@@ -355,6 +355,7 @@ type testTreeManager struct {
 	accService  accountService.Service
 	deletedIds  []string
 	markedIds   []string
+	condFunc    func()
 	treesToPut  map[string]treestorage.TreeStorageCreatePayload
 	wait        bool
 	waitLoad    chan struct{}
@@ -376,6 +377,9 @@ func (t *testTreeManager) MarkTreeDeleted(ctx context.Context, spaceId, treeId s
 	t.mx.Lock()
 	defer t.mx.Unlock()
 	t.markedIds = append(t.markedIds, treeId)
+	if t.condFunc != nil {
+		t.condFunc()
+	}
 	return nil
 }
 
@@ -470,6 +474,9 @@ func (t *testTreeManager) DeleteTree(ctx context.Context, spaceId, treeId string
 	}
 	t.deletedIds = append(t.deletedIds, treeId)
 	_, err = t.cache.Remove(ctx, treeId)
+	if t.condFunc != nil {
+		t.condFunc()
+	}
 	return nil
 }
 

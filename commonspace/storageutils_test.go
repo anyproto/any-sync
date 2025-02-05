@@ -9,11 +9,13 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 )
 
 type spaceStorageProvider struct {
-	rootPath string
+	rootPath  string
+	anyStores map[string]anystore.DB
 }
 
 func (s *spaceStorageProvider) Run(ctx context.Context) (err error) {
@@ -33,6 +35,12 @@ func (s *spaceStorageProvider) Name() (name string) {
 }
 
 func (s *spaceStorageProvider) WaitSpaceStorage(ctx context.Context, id string) (spacestorage.SpaceStorage, error) {
+	if s.anyStores == nil {
+		s.anyStores = make(map[string]anystore.DB)
+	}
+	if store, ok := s.anyStores[id]; ok {
+		return spacestorage.New(ctx, id, store)
+	}
 	dbPath := path.Join(s.rootPath, id)
 	if _, err := os.Stat(dbPath); err != nil {
 		return nil, err
@@ -41,7 +49,18 @@ func (s *spaceStorageProvider) WaitSpaceStorage(ctx context.Context, id string) 
 	if err != nil {
 		return nil, err
 	}
-	return spacestorage.New(ctx, id, db)
+	testStore := objecttree.TestStore{
+		DB:   db,
+		Path: dbPath,
+	}
+	return spacestorage.New(ctx, id, testStore)
+}
+
+func (s *spaceStorageProvider) SetStore(id string, store anystore.DB) {
+	if s.anyStores == nil {
+		s.anyStores = make(map[string]anystore.DB)
+	}
+	s.anyStores[id] = store
 }
 
 func (s *spaceStorageProvider) SpaceExists(id string) bool {
