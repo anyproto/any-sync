@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	anystore "github.com/anyproto/any-store"
+	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
@@ -54,6 +55,10 @@ func NewTreeMigrator(keyStorage crypto.KeyStorage, aclList list.AclList) *TreeMi
 }
 
 func (tm *TreeMigrator) MigrateTreeStorage(ctx context.Context, storage treeStorage, headStorage headstorage.HeadStorage, store anystore.DB) error {
+	var (
+		usedDfs    bool
+		loadFailed bool
+	)
 	rootChange, err := storage.Root()
 	if err != nil {
 		return err
@@ -73,7 +78,8 @@ func (tm *TreeMigrator) MigrateTreeStorage(ctx context.Context, storage treeStor
 			return fmt.Errorf("migration: failed to get all changes: %w", err)
 		}
 	} else {
-		tm.dfs(ctx, heads, rootChange.Id)
+		usedDfs = true
+		loadFailed = tm.dfs(ctx, heads, rootChange.Id)
 	}
 	newStorage, err := CreateStorage(ctx, rootChange, headStorage, store)
 	if err != nil && !errors.Is(err, treestorage.ErrTreeExists) {
@@ -101,12 +107,25 @@ func (tm *TreeMigrator) MigrateTreeStorage(ctx context.Context, storage treeStor
 		return fmt.Errorf("migration: failed to add raw changes: %w", err)
 	}
 	if !slice.UnsortedEquals(res.Heads, heads) {
-		return fmt.Errorf("migration: heads mismatch: %v != %v", res.Heads, heads)
+		returnErr := fmt.Errorf("migration: heads mismatch: %v, %v != %v", rootChange.Id, res.Heads, heads)
+		if loadFailed {
+			log.Error("tree is corrupted", zap.String("id", storage.Id()), zap.Error(returnErr))
+			return nil
+		}
+		if usedDfs {
+			return returnErr
+		}
+		tm.allChanges = nil
+		if tm.dfs(ctx, heads, rootChange.Id) {
+			log.Error("tree is corrupted", zap.String("id", storage.Id()), zap.Error(returnErr))
+			return nil
+		}
+		return returnErr
 	}
 	return nil
 }
 
-func (tm *TreeMigrator) dfs(ctx context.Context, heads []string, breakpoint string) {
+func (tm *TreeMigrator) dfs(ctx context.Context, heads []string, breakpoint string) (loadFailed bool) {
 	tm.idStack = tm.idStack[:0]
 	uniqMap := map[string]struct{}{breakpoint: {}}
 	tm.idStack = append(tm.idStack, heads...)
@@ -120,6 +139,7 @@ func (tm *TreeMigrator) dfs(ctx context.Context, heads []string, breakpoint stri
 
 		ch, err := tm.loadChange(ctx, id)
 		if err != nil {
+			loadFailed = true
 			continue
 		}
 
@@ -131,6 +151,7 @@ func (tm *TreeMigrator) dfs(ctx context.Context, heads []string, breakpoint stri
 			tm.idStack = append(tm.idStack, prev)
 		}
 	}
+	return
 }
 
 func (tm *TreeMigrator) loadChange(ctx context.Context, id string) (ch *Change, err error) {
