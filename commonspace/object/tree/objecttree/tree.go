@@ -444,7 +444,7 @@ func (t *Tree) updateHeads() {
 					buf[i].OrderId, err = lexId.NextBefore(prev, before)
 					if err != nil {
 						// TODO: this should never happen
-						log.Error("failed to generate order id", zap.Error(err))
+						panic(fmt.Sprintf("failed to generate order id: %v", err))
 					}
 					prev = buf[i].OrderId
 				}

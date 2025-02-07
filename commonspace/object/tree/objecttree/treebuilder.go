@@ -67,9 +67,12 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	for _, ch := range opts.newChanges {
 		cache[ch.Id] = ch
 	}
-	var snapshot string
+	var (
+		snapshot string
+		order    string
+	)
 	if opts.useHeadsSnapshot {
-		lowest, err := tb.lowestSnapshots(nil, opts.ourHeads, "")
+		maxOrder, lowest, err := tb.lowestSnapshots(nil, opts.ourHeads, "")
 		if err != nil {
 			return nil, err
 		}
@@ -81,6 +84,7 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 		} else {
 			snapshot = lowest[0]
 		}
+		order = maxOrder
 	} else if !opts.full {
 		if len(opts.theirSnapshotPath) == 0 {
 			// this is actually not obvious why we should call this here
@@ -95,7 +99,7 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 				snapshot = common
 			} else {
 				our := opts.ourSnapshotPath[0]
-				lowest, err := tb.lowestSnapshots(cache, opts.theirHeads, our)
+				_, lowest, err := tb.lowestSnapshots(cache, opts.theirHeads, our)
 				if err != nil {
 					return nil, err
 				}
@@ -125,6 +129,9 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	rawChange := &treechangeproto.RawTreeChangeWithId{}
 	var changes []*Change
 	err = tb.storage.GetAfterOrder(tb.ctx, snapshotCh.OrderId, func(ctx context.Context, storageChange StorageChange) (shouldContinue bool, err error) {
+		if order != "" && storageChange.OrderId > order {
+			return false, nil
+		}
 		rawChange.Id = storageChange.Id
 		rawChange.RawChange = storageChange.RawChange
 		ch, err := tb.builder.Unmarshall(rawChange, false)
@@ -134,8 +141,6 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 		ch.OrderId = storageChange.OrderId
 		ch.SnapshotCounter = storageChange.SnapshotCounter
 		changes = append(changes, ch)
-		// TODO: in case of history tree we should only iterate until we see the order of max head
-		//  that way we can avoid iterating over all changes, though we still need to filter
 		return true, nil
 	})
 	if err != nil {
@@ -150,7 +155,7 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	return tr, nil
 }
 
-func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string, ourSnapshot string) (snapshots []string, err error) {
+func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string, ourSnapshot string) (maxOrder string, snapshots []string, err error) {
 	var next, current []string
 	if cache != nil {
 		for _, ch := range heads {
@@ -163,7 +168,7 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 			} else if len(head.PreviousIds) == 0 && head.Id == tb.storage.Id() { // this is a root change
 				next = append(next, head.Id)
 			} else {
-				return nil, fmt.Errorf("head with empty snapshot id: %s", head.Id)
+				return "", nil, fmt.Errorf("head with empty snapshot id: %s", head.Id)
 			}
 		}
 	} else {
@@ -171,14 +176,17 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 			totalLowest.Store(totalLowest.Load() + 1)
 			ch, err := tb.storage.Get(tb.ctx, head)
 			if err != nil {
-				return nil, err
+				return "", nil, err
+			}
+			if ch.OrderId > maxOrder {
+				maxOrder = ch.OrderId
 			}
 			if ch.SnapshotId != "" {
 				snapshots = append(snapshots, ch.SnapshotId)
 			} else if len(ch.PrevIds) == 0 && ch.Id == tb.storage.Id() { // this is a root change
 				snapshots = append(snapshots, ch.Id)
 			} else {
-				return nil, fmt.Errorf("head with empty snapshot id: %s", ch.Id)
+				return "", nil, fmt.Errorf("head with empty snapshot id: %s", ch.Id)
 			}
 		}
 	}
@@ -212,7 +220,7 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 	}
 	slices.Sort(snapshots)
 	snapshots = slice.DiscardDuplicatesSorted(snapshots)
-	return snapshots, nil
+	return maxOrder, snapshots, nil
 }
 
 func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err error) {
