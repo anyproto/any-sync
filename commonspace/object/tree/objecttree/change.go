@@ -26,16 +26,20 @@ type Change struct {
 	ReadKeyId   string
 	Identity    crypto.PubKey
 	Data        []byte
-	Model       interface{}
-	Signature   []byte
-	DataType    string
-	IsSnapshot  bool
-	IsDerived   bool
-	IsNew       bool
+	// TODO: add call one time comment
+	Model           interface{}
+	Signature       []byte
+	DataType        string
+	IsSnapshot      bool
+	IsDerived       bool
+	IsNew           bool
+	OrderId         string
+	SnapshotCounter int
 
 	// iterator helpers
 	visited          bool
 	branchesFinished bool
+	lastSeenOrderId  string
 }
 
 func NewChangeFromRoot(id string, identity crypto.PubKey, ch *treechangeproto.RootChange, signature []byte, isDerived bool) *Change {

@@ -9,7 +9,6 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
-	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/node/nodeclient"
 )
@@ -56,7 +55,7 @@ func (c *aclJoiningClient) getAcl(ctx context.Context, spaceId string) (l list.A
 		err = fmt.Errorf("acl not found")
 		return
 	}
-	storage, err := liststorage.NewInMemoryAclListStorage(res[0].Id, res)
+	storage, err := list.NewInMemoryStorage(res[0].Id, res)
 	if err != nil {
 		return
 	}

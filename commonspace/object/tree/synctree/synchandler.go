@@ -11,7 +11,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	response "github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
@@ -72,8 +71,9 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 		return s.syncClient.CreateFullSyncRequest(peerId, s.tree), nil
 	}
 	rawChangesPayload := objecttree.RawChangesPayload{
-		NewHeads:   contentUpdate.Heads,
-		RawChanges: contentUpdate.Changes,
+		NewHeads:     contentUpdate.Heads,
+		RawChanges:   contentUpdate.Changes,
+		SnapshotPath: contentUpdate.SnapshotPath,
 	}
 	res, err := s.tree.AddRawChangesFromPeer(ctx, peerId, rawChangesPayload)
 	if err != nil {
@@ -83,58 +83,6 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 		return s.syncClient.CreateFullSyncRequest(peerId, s.tree), nil
 	}
 	return nil, nil
-}
-
-func (s *syncHandler) HandleDeprecatedRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
-	unmarshalled := &treechangeproto.TreeSyncMessage{}
-	err = proto.Unmarshal(req.Payload, unmarshalled)
-	if err != nil {
-		return nil, err
-	}
-	cnt := unmarshalled.GetContent().GetFullSyncRequest()
-	if cnt == nil {
-		return nil, treechangeproto.ErrGetTree
-	}
-	peerId, err := peer.CtxPeerId(ctx)
-	if err != nil {
-		return nil, err
-	}
-	prepareResponse := func(chs []*treechangeproto.RawTreeChangeWithId) (*spacesyncproto.ObjectSyncMessage, error) {
-		treeSyncMessage := treechangeproto.WrapFullResponse(&treechangeproto.TreeFullSyncResponse{
-			Heads:        s.tree.Heads(),
-			SnapshotPath: s.tree.SnapshotPath(),
-			Changes:      chs,
-		}, s.tree.Header())
-		payload, err := proto.Marshal(treeSyncMessage)
-		if err != nil {
-			return nil, err
-		}
-		return &spacesyncproto.ObjectSyncMessage{
-			SpaceId:  req.SpaceId,
-			Payload:  payload,
-			ObjectId: req.ObjectId,
-		}, nil
-	}
-	s.tree.Lock()
-	defer s.tree.Unlock()
-	// in this case we are only adding data and returning empty response
-	if cnt.Changes != nil {
-		if !slice.UnsortedEquals(s.tree.Heads(), cnt.Heads) {
-			_, err = s.tree.AddRawChangesFromPeer(ctx, peerId, objecttree.RawChangesPayload{
-				NewHeads:   cnt.Heads,
-				RawChanges: cnt.Changes,
-			})
-			if err != nil {
-				log.Warn("failed to add changes from peer", zap.Error(err), zap.String("peerId", peerId))
-			}
-		}
-		return prepareResponse(nil)
-	}
-	chs, err := s.tree.ChangesAfterCommonSnapshot(cnt.SnapshotPath, cnt.Heads)
-	if err != nil {
-		return nil, err
-	}
-	return prepareResponse(chs)
 }
 
 func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, send func(resp proto.Message) error) (syncdeps.Request, error) {
@@ -212,8 +160,9 @@ func (s *syncHandler) HandleResponse(ctx context.Context, peerId, objectId strin
 	s.tree.Lock()
 	defer s.tree.Unlock()
 	rawChangesPayload := objecttree.RawChangesPayload{
-		NewHeads:   rsp.Heads,
-		RawChanges: rsp.Changes,
+		NewHeads:     rsp.Heads,
+		RawChanges:   rsp.Changes,
+		SnapshotPath: rsp.SnapshotPath,
 	}
 	_, err := s.tree.AddRawChangesFromPeer(ctx, peerId, rawChangesPayload)
 	return err

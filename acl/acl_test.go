@@ -24,7 +24,7 @@ func TestAclService_AddRecord(t *testing.T) {
 	ownerKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
 	spaceId := "spaceId"
-	ownerAcl, err := list.NewTestDerivedAcl(spaceId, ownerKeys)
+	ownerAcl, err := list.NewInMemoryDerivedAcl(spaceId, ownerKeys)
 	require.NoError(t, err)
 	inv, err := ownerAcl.RecordBuilder().BuildInvite()
 	require.NoError(t, err)
@@ -96,7 +96,7 @@ func TestAclService_RecordsAfter(t *testing.T) {
 	ownerKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
 	spaceId := "spaceId"
-	ownerAcl, err := list.NewTestDerivedAcl(spaceId, ownerKeys)
+	ownerAcl, err := list.NewInMemoryDerivedAcl(spaceId, ownerKeys)
 	require.NoError(t, err)
 
 	fx := newFixture(t)
@@ -121,7 +121,7 @@ func TestAclService(t *testing.T) {
 	ownerKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
 	spaceId := "spaceId"
-	ownerAcl, err := list.NewTestDerivedAcl(spaceId, ownerKeys)
+	ownerAcl, err := list.NewInMemoryDerivedAcl(spaceId, ownerKeys)
 	require.NoError(t, err)
 
 	fx := newFixture(t)
@@ -153,7 +153,7 @@ func TestAclService_ReadState(t *testing.T) {
 	ownerKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
 	spaceId := "spaceId"
-	ownerAcl, err := list.NewTestDerivedAcl(spaceId, ownerKeys)
+	ownerAcl, err := list.NewInMemoryDerivedAcl(spaceId, ownerKeys)
 	require.NoError(t, err)
 
 	fx := newFixture(t)
@@ -179,7 +179,7 @@ func TestAclService_HasRecord(t *testing.T) {
 	ownerKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
 	spaceId := "spaceId"
-	ownerAcl, err := list.NewTestDerivedAcl(spaceId, ownerKeys)
+	ownerAcl, err := list.NewInMemoryDerivedAcl(spaceId, ownerKeys)
 	require.NoError(t, err)
 
 	fx := newFixture(t)

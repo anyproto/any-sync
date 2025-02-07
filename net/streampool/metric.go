@@ -30,7 +30,10 @@ func registerMetrics(ref *prometheus.Registry, sp *streamPool, name string) {
 			Name:      "dial_queue",
 			Help:      "dial queue size",
 		}, func() float64 {
-			return float64(sp.dial.batch.Len())
+			if sp.dial != nil {
+				return float64(sp.dial.batch.Len())
+			}
+			return 0
 		}),
 	)
 }

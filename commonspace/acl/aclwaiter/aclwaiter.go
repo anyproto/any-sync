@@ -14,7 +14,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
-	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
 	"github.com/anyproto/any-sync/util/periodicsync"
 )
 
@@ -79,7 +78,7 @@ func (a *aclWaiter) loop(ctx context.Context) error {
 		if len(res) == 0 {
 			return fmt.Errorf("acl not found")
 		}
-		storage, err := liststorage.NewInMemoryAclListStorage(res[0].Id, res)
+		storage, err := list.NewInMemoryStorage(res[0].Id, res)
 		if err != nil {
 			return err
 		}

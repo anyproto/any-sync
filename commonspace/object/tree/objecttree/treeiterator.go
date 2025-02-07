@@ -24,7 +24,6 @@ func freeIterator(i *iterator) {
 type iterator struct {
 	resBuf []*Change
 	stack  []*Change
-	f      func(c *Change) bool
 }
 
 func (i *iterator) iterateSkip(start *Change, skipBefore *Change, include bool, f func(c *Change) (isContinue bool)) {
@@ -81,18 +80,23 @@ func (i *iterator) topSort(start *Change) {
 }
 
 func (i *iterator) iterate(start *Change, f func(c *Change) (isContinue bool)) {
-	if start == nil {
-		return
-	}
-	// reset
-	i.resBuf = i.resBuf[:0]
-	i.stack = i.stack[:0]
-	i.f = f
-
-	i.topSort(start)
-	for idx := len(i.resBuf) - 1; idx >= 0; idx-- {
-		if !f(i.resBuf[idx]) {
+	buf := i.makeIterBuffer(start)
+	for idx := len(buf) - 1; idx >= 0; idx-- {
+		if !f(buf[idx]) {
 			return
 		}
 	}
+}
+
+func (i *iterator) makeIterBuffer(start *Change) []*Change {
+	if start == nil {
+		return nil
+	}
+
+	// reset
+	i.resBuf = i.resBuf[:0]
+	i.stack = i.stack[:0]
+
+	i.topSort(start)
+	return i.resBuf
 }

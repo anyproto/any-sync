@@ -20,7 +20,6 @@ import (
 type MockUpdateListener struct {
 	ctrl     *gomock.Controller
 	recorder *MockUpdateListenerMockRecorder
-	isgomock struct{}
 }
 
 // MockUpdateListenerMockRecorder is the mock recorder for MockUpdateListener.
@@ -41,29 +40,29 @@ func (m *MockUpdateListener) EXPECT() *MockUpdateListenerMockRecorder {
 }
 
 // Rebuild mocks base method.
-func (m *MockUpdateListener) Rebuild(tree objecttree.ObjectTree) error {
+func (m *MockUpdateListener) Rebuild(arg0 objecttree.ObjectTree) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Rebuild", tree)
+	ret := m.ctrl.Call(m, "Rebuild", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Rebuild indicates an expected call of Rebuild.
-func (mr *MockUpdateListenerMockRecorder) Rebuild(tree any) *gomock.Call {
+func (mr *MockUpdateListenerMockRecorder) Rebuild(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rebuild", reflect.TypeOf((*MockUpdateListener)(nil).Rebuild), tree)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rebuild", reflect.TypeOf((*MockUpdateListener)(nil).Rebuild), arg0)
 }
 
 // Update mocks base method.
-func (m *MockUpdateListener) Update(tree objecttree.ObjectTree) error {
+func (m *MockUpdateListener) Update(arg0 objecttree.ObjectTree) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", tree)
+	ret := m.ctrl.Call(m, "Update", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockUpdateListenerMockRecorder) Update(tree any) *gomock.Call {
+func (mr *MockUpdateListenerMockRecorder) Update(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockUpdateListener)(nil).Update), tree)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockUpdateListener)(nil).Update), arg0)
 }

@@ -245,14 +245,14 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			meta := []byte(account)
 			var acl AclList
 			if a.ownerKeys == nil {
-				acl, err = NewTestDerivedAclMetadata(a.spaceId, keys, meta)
+				acl, err = newInMemoryDerivedAclMetadata(a.spaceId, keys, meta)
 				if err != nil {
 					return err
 				}
 			} else {
 				keys = a.ownerKeys
 				meta = a.ownerMeta
-				acl, err = NewTestAclWithRoot(keys, a.root)
+				acl, err = newInMemoryAclWithRoot(keys, a.root)
 				if err != nil {
 					return err
 				}
@@ -272,7 +272,8 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			return nil
 		} else {
 			ownerAcl := a.actualAccounts[a.owner].Acl.(*aclList)
-			accountAcl, err := BuildAclListWithIdentity(keys, ownerAcl.storage, NoOpAcceptorVerifier{})
+			copyStorage := ownerAcl.storage.(*inMemoryStorage).Copy()
+			accountAcl, err := BuildAclListWithIdentity(keys, copyStorage, NoOpAcceptorVerifier{})
 			if err != nil {
 				return err
 			}
@@ -289,7 +290,8 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 	} else if a.expectedAccounts[account].status == StatusRemoved {
 		keys := a.actualAccounts[account].Keys
 		ownerAcl := a.actualAccounts[a.owner].Acl.(*aclList)
-		accountAcl, err := BuildAclListWithIdentity(keys, ownerAcl.storage, NoOpAcceptorVerifier{})
+		copyStorage := ownerAcl.storage.(*inMemoryStorage).Copy()
+		accountAcl, err := BuildAclListWithIdentity(keys, copyStorage, NoOpAcceptorVerifier{})
 		if err != nil {
 			return err
 		}

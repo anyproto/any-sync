@@ -13,9 +13,8 @@ import (
 	"github.com/anyproto/any-sync/commonspace/config"
 	"github.com/anyproto/any-sync/commonspace/credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
-	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
@@ -40,14 +39,13 @@ type HeadSync interface {
 	ExternalIds() []string
 	DebugAllHeads() (res []TreeHeads)
 	AllIds() []string
-	UpdateHeads(id string, heads []string)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
-	RemoveObjects(ids []string)
 }
 
 type headSync struct {
 	spaceId    string
 	syncPeriod int
+	settingsId string
 
 	periodicSync       periodicsync.PeriodicSync
 	storage            spacestorage.SpaceStorage
@@ -87,7 +85,6 @@ func (h *headSync) Init(a *app.App) (err error) {
 		return h.syncer.Sync(ctx)
 	}
 	h.periodicSync = periodicsync.NewPeriodicSync(h.syncPeriod, time.Minute, sync, h.log)
-	h.syncAcl.SetHeadUpdater(h)
 	// TODO: move to run?
 	h.syncer.Init()
 	return nil
@@ -98,11 +95,9 @@ func (h *headSync) Name() (name string) {
 }
 
 func (h *headSync) Run(ctx context.Context) (err error) {
-	initialIds, err := h.storage.StoredIds()
-	if err != nil {
-		return
+	if err := h.fillDiff(ctx); err != nil {
+		return err
 	}
-	h.fillDiff(initialIds)
 	h.periodicSync.Run()
 	return
 }
@@ -117,16 +112,12 @@ func (h *headSync) HandleRangeRequest(ctx context.Context, req *spacesyncproto.H
 	return
 }
 
-func (h *headSync) UpdateHeads(id string, heads []string) {
-	h.syncer.UpdateHeads(id, heads)
-}
-
 func (h *headSync) AllIds() []string {
 	return h.diff.Ids()
 }
 
 func (h *headSync) ExternalIds() []string {
-	settingsId := h.storage.SpaceSettingsId()
+	settingsId := h.storage.StateStorage().SettingsId()
 	aclId := h.syncAcl.Id()
 	return slice.DiscardFromSlice(h.AllIds(), func(id string) bool {
 		return id == settingsId || id == aclId
@@ -145,57 +136,26 @@ func (h *headSync) DebugAllHeads() (res []TreeHeads) {
 	return
 }
 
-func (h *headSync) RemoveObjects(ids []string) {
-	h.syncer.RemoveObjects(ids)
-}
-
 func (h *headSync) Close(ctx context.Context) (err error) {
+	h.syncer.Close()
 	h.periodicSync.Close()
 	return
 }
 
-var checkDerived = (*headSync).isDerived
-
-func (h *headSync) isDerived(storage treestorage.TreeStorage) (isDerived bool, err error) {
-	r, err := storage.Root()
-	if err != nil {
-		return
-	}
-	root, err := objecttree.UnmarshallRoot(r)
-	if err != nil {
-		return
-	}
-	return root.IsDerived, nil
-}
-
-func (h *headSync) fillDiff(objectIds []string) {
-	var els = make([]ldiff.Element, 0, len(objectIds))
-	for _, id := range objectIds {
-		st, err := h.storage.TreeStorage(id)
-		if err != nil {
-			continue
-		}
-		heads, err := st.Heads()
-		if err != nil {
-			continue
-		}
-		if len(heads) == 0 {
-			log.Warn("empty heads", zap.String("id", id))
-			continue
-		}
-		isDerived, err := checkDerived(h, st)
-		if err != nil {
-			log.Warn("can't get derived flag", zap.Error(err))
-			continue
-		}
-		if isDerived && heads[0] == id {
-			// this is an empty derived object, we don't need to sync it
-			continue
+func (h *headSync) fillDiff(ctx context.Context) error {
+	var els = make([]ldiff.Element, 0, 100)
+	err := h.storage.HeadStorage().IterateEntries(ctx, headstorage.IterOpts{}, func(entry headstorage.HeadsEntry) (bool, error) {
+		if entry.IsDerived && entry.Heads[0] == entry.Id {
+			return true, nil
 		}
 		els = append(els, ldiff.Element{
-			Id:   id,
-			Head: concatStrings(heads),
+			Id:   entry.Id,
+			Head: concatStrings(entry.Heads),
 		})
+		return true, nil
+	})
+	if err != nil {
+		return err
 	}
 	els = append(els, ldiff.Element{
 		Id:   h.syncAcl.Id(),
@@ -203,7 +163,9 @@ func (h *headSync) fillDiff(objectIds []string) {
 	})
 	log.Debug("setting acl", zap.String("aclId", h.syncAcl.Id()), zap.String("headId", h.syncAcl.Head().Id))
 	h.diff.Set(els...)
-	if err := h.storage.WriteSpaceHash(h.diff.Hash()); err != nil {
+	if err := h.storage.StateStorage().SetHash(ctx, h.diff.Hash()); err != nil {
 		h.log.Error("can't write space hash", zap.Error(err))
+		return err
 	}
+	return nil
 }

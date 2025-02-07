@@ -5,6 +5,11 @@ import (
 	"crypto/md5"
 	"fmt"
 	"sort"
+
+	"github.com/anyproto/lexid"
+	"go.uber.org/zap"
+
+	"github.com/anyproto/any-sync/util/slice"
 )
 
 type Mode int
@@ -14,6 +19,8 @@ const (
 	Rebuild
 	Nothing
 )
+
+var lexId = lexid.Must(lexid.CharsAllNoEscape, 4, 100)
 
 type Tree struct {
 	root               *Change
@@ -194,16 +201,16 @@ func (t *Tree) RemoveInvalidChange(id string) {
 	t.updateHeads()
 }
 
-func (t *Tree) add(c *Change) (attached bool) {
+func (t *Tree) add(c *Change) bool {
 	if c == nil {
-		return false
-	}
-	if _, exists := t.invalidChanges[c.Id]; exists {
 		return false
 	}
 
 	if t.root == nil { // first element
 		t.root = c
+		if c.OrderId == "" {
+			c.OrderId = lexId.Next("")
+		}
 		t.lastIteratedHeadId = t.root.Id
 		t.attached = map[string]*Change{
 			c.Id: c,
@@ -219,37 +226,48 @@ func (t *Tree) add(c *Change) (attached bool) {
 		sort.Strings(c.PreviousIds)
 	}
 	// attaching only if all prev ids are attached
-	attached = true
-	for _, pid := range c.PreviousIds {
-		if _, ok := t.attached[pid]; ok {
-			continue
-		}
-		attached = false
-		// updating wait list for either unseen or unAttached changes
-		wl := t.waitList[pid]
-		wl = append(wl, c.Id)
-		t.waitList[pid] = wl
-	}
-	if attached {
+	attach, remove := t.canAttachOrRemove(c, true)
+	if attach {
 		t.attach(c, true)
-	} else {
+	} else if !remove {
 		t.unAttached[c.Id] = c
 	}
-	return
+	return attach
 }
 
-func (t *Tree) canAttach(c *Change) (attach bool) {
+func (t *Tree) canAttachOrRemove(c *Change, addToWait bool) (attach, remove bool) {
 	if c == nil {
-		return false
+		return false, false
 	}
 	attach = true
-	for _, id := range c.PreviousIds {
-		if _, exists := t.attached[id]; !exists {
-			attach = false
-			break
+	prevSnapshots := make([]string, 0, len(c.PreviousIds))
+	for _, pid := range c.PreviousIds {
+		if prev, ok := t.attached[pid]; ok {
+			if prev.IsSnapshot && len(c.PreviousIds) == 1 {
+				prevSnapshots = append(prevSnapshots, prev.Id)
+			} else {
+				prevSnapshots = append(prevSnapshots, prev.SnapshotId)
+			}
+			continue
+		}
+		attach = false
+		if addToWait {
+			// updating wait list for either unseen or unAttached changes
+			wl := t.waitList[pid]
+			wl = append(wl, c.Id)
+			t.waitList[pid] = wl
 		}
 	}
-	return
+	if !attach {
+		return
+	}
+	// we should also have snapshot of attached change inside tree
+	_, ok := t.attached[c.SnapshotId]
+	if !ok {
+		log.Error("snapshot not found in tree", zap.String("id", c.Id), zap.String("snapshot", c.SnapshotId))
+		return false, true
+	}
+	return true, false
 }
 
 func (t *Tree) attach(c *Change, newEl bool) {
@@ -258,8 +276,9 @@ func (t *Tree) attach(c *Change, newEl bool) {
 	if !newEl {
 		delete(t.unAttached, c.Id)
 	}
-	if c.IsSnapshot {
+	if c.SnapshotCounter == 0 {
 		t.possibleRoots = append(t.possibleRoots, c)
+		c.SnapshotCounter = t.attached[c.SnapshotId].SnapshotCounter + 1
 	}
 
 	// add next to all prev changes
@@ -291,8 +310,11 @@ func (t *Tree) attach(c *Change, newEl bool) {
 			// next can only be in unAttached, because if next is attached then previous (we) are attached
 			// which is obviously not true, because we are attaching previous only now
 			next := t.unAttached[wid]
-			if t.canAttach(next) {
+			attach, remove := t.canAttachOrRemove(next, false)
+			if attach {
 				t.attach(next, false)
+			} else if remove {
+				delete(t.unAttached, next.Id)
 			}
 			// if we can't attach next that means that some other change will trigger attachment later,
 			// so we don't care about those changes
@@ -301,15 +323,29 @@ func (t *Tree) attach(c *Change, newEl bool) {
 	}
 }
 
-func (t *Tree) after(id1, id2 string) (found bool) {
-	t.iterate(t.attached[id2], func(c *Change) (isContinue bool) {
-		if c.Id == id1 {
-			found = true
-			return false
+func (t *Tree) LeaveOnlyBefore(proposedHeads []string) {
+	stack := make([]*Change, 0, len(proposedHeads))
+	for _, headId := range proposedHeads {
+		if head, ok := t.attached[headId]; ok {
+			stack = append(stack, head)
 		}
+	}
+	t.dfsPrev(stack, nil, func(ch *Change) (isContinue bool) {
+		ch.visited = true
 		return true
+	}, func(changes []*Change) {
+		for id, ch := range t.attached {
+			if !ch.visited {
+				delete(t.attached, id)
+			}
+		}
+		for _, ch := range changes {
+			ch.Next = slice.DiscardFromSlice(ch.Next, func(change *Change) bool {
+				return !change.visited
+			})
+		}
 	})
-	return
+	t.updateHeads()
 }
 
 func (t *Tree) dfsPrev(stack []*Change, breakpoints []string, visit func(ch *Change) (isContinue bool), afterVisit func([]*Change)) {
@@ -387,13 +423,48 @@ func (t *Tree) dfsNext(stack []*Change, visit func(ch *Change) (isContinue bool)
 }
 
 func (t *Tree) updateHeads() {
-	var newHeadIds []string
-	t.iterate(t.root, func(c *Change) (isContinue bool) {
+	var (
+		newHeadIds []string
+		it         = newIterator()
+		buf        = it.makeIterBuffer(t.root)
+		// root change should always have order id
+		lastOrderIdx = len(buf) - 1
+	)
+	defer freeIterator(it)
+	// using buffer directly to simplify iteration, and not iterate twice or save changes in separate slice
+	for idx := len(buf) - 1; idx >= 0; idx-- {
+		c := buf[idx]
+		if c.OrderId != "" {
+			// if there is a gap between order ids, then we need to fill it
+			if lastOrderIdx-idx > 1 {
+				prev := buf[lastOrderIdx].OrderId
+				before := buf[idx].OrderId
+				for i := lastOrderIdx - 1; i > idx; i-- {
+					var err error
+					buf[i].OrderId, err = lexId.NextBefore(prev, before)
+					if err != nil {
+						// TODO: this should never happen
+						panic(fmt.Sprintf("failed to generate order id: %v", err))
+					}
+					prev = buf[i].OrderId
+				}
+			}
+			lastOrderIdx = idx
+		}
 		if len(c.Next) == 0 {
 			newHeadIds = append(newHeadIds, c.Id)
 		}
-		return true
-	})
+	}
+	// if there are some order ids left, then we need to fill them, but there are no max id for them,
+	// they are strictly after the lastIteratedId
+	if lastOrderIdx != 0 {
+		prev := buf[lastOrderIdx].OrderId
+		for i := lastOrderIdx - 1; i >= 0; i-- {
+			buf[i].OrderId = lexId.Next(prev)
+			prev = buf[i].OrderId
+		}
+	}
+
 	t.headIds = newHeadIds
 	// the lastIteratedHeadId is the id of the head which was iterated last according to the order
 	t.lastIteratedHeadId = newHeadIds[len(newHeadIds)-1]

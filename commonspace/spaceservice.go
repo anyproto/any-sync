@@ -105,9 +105,9 @@ func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePaylo
 	if err != nil {
 		return
 	}
-	store, err := s.createSpaceStorage(storageCreate)
+	store, err := s.createSpaceStorage(ctx, storageCreate)
 	if err != nil {
-		if err == spacestorage.ErrSpaceStorageExists {
+		if errors.Is(err, spacestorage.ErrSpaceStorageExists) {
 			return storageCreate.SpaceHeaderWithId.Id, nil
 		}
 		return
@@ -130,9 +130,9 @@ func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePaylo
 	if err != nil {
 		return
 	}
-	store, err := s.createSpaceStorage(storageCreate)
+	store, err := s.createSpaceStorage(ctx, storageCreate)
 	if err != nil {
-		if err == spacestorage.ErrSpaceStorageExists {
+		if errors.Is(err, spacestorage.ErrSpaceStorageExists) {
 			return storageCreate.SpaceHeaderWithId.Id, nil
 		}
 		return
@@ -144,7 +144,7 @@ func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePaylo
 func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Space, error) {
 	st, err := s.storageProvider.WaitSpaceStorage(ctx, id)
 	if err != nil {
-		if err != spacestorage.ErrSpaceStorageMissing {
+		if !errors.Is(err, spacestorage.ErrSpaceStorageMissing) {
 			return nil, err
 		}
 
@@ -211,10 +211,10 @@ func (s *spaceService) addSpaceStorage(ctx context.Context, spaceDescription Spa
 			Id:        spaceDescription.SpaceSettingsId,
 		},
 	}
-	st, err = s.createSpaceStorage(payload)
+	st, err = s.createSpaceStorage(ctx, payload)
 	if err != nil {
 		err = spacesyncproto.ErrUnexpected
-		if err == spacestorage.ErrSpaceStorageExists {
+		if errors.Is(err, spacestorage.ErrSpaceStorageExists) {
 			err = spacesyncproto.ErrSpaceExists
 		}
 		return
@@ -286,7 +286,7 @@ func (s *spaceService) spacePullWithPeer(ctx context.Context, p peer.Peer, id st
 		return
 	}
 
-	return s.createSpaceStorage(spacestorage.SpaceStorageCreatePayload{
+	return s.createSpaceStorage(ctx, spacestorage.SpaceStorageCreatePayload{
 		AclWithId: &consensusproto.RawRecordWithId{
 			Payload: res.Payload.AclPayload,
 			Id:      res.Payload.AclPayloadId,
@@ -299,10 +299,10 @@ func (s *spaceService) spacePullWithPeer(ctx context.Context, p peer.Peer, id st
 	})
 }
 
-func (s *spaceService) createSpaceStorage(payload spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {
+func (s *spaceService) createSpaceStorage(ctx context.Context, payload spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {
 	err := validateSpaceStorageCreatePayload(payload)
 	if err != nil {
 		return nil, err
 	}
-	return s.storageProvider.CreateSpaceStorage(payload)
+	return s.storageProvider.CreateSpaceStorage(ctx, payload)
 }

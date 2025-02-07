@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/net/peer"
 )
@@ -13,7 +14,7 @@ var (
 )
 
 type treeGetter interface {
-	getTree(ctx context.Context) (treeStorage treestorage.TreeStorage, peerId string, err error)
+	getTree(ctx context.Context) (treeStorage objecttree.Storage, peerId string, err error)
 }
 
 type treeRemoteGetter struct {
@@ -69,12 +70,12 @@ func (t treeRemoteGetter) treeRequestLoop(ctx context.Context) (collector *fullR
 	return collector, peerId, err
 }
 
-func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage treestorage.TreeStorage, peerId string, err error) {
-	treeStorage, err = t.deps.SpaceStorage.TreeStorage(t.treeId)
+func (t treeRemoteGetter) getTree(ctx context.Context) (treeStorage objecttree.Storage, peerId string, err error) {
+	treeStorage, err = t.deps.SpaceStorage.TreeStorage(ctx, t.treeId)
 	if err == nil || !errors.Is(err, treestorage.ErrUnknownTreeId) {
 		return
 	}
-	err = checkTreeDeleted(t.treeId, t.deps.SpaceStorage)
+	err = checkTreeDeleted(ctx, t.treeId, t.deps.SpaceStorage)
 	if err != nil {
 		return
 	}

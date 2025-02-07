@@ -15,12 +15,13 @@ import (
 	"github.com/anyproto/any-sync/commonspace/credentialprovider/mock_credentialprovider"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/deletionstate/mock_deletionstate"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage/mock_headstorage"
 	"github.com/anyproto/any-sync/commonspace/headsync/mock_headsync"
+	"github.com/anyproto/any-sync/commonspace/headsync/statestorage/mock_statestorage"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/mock_syncacl"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage/mock_treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
@@ -66,6 +67,8 @@ type headSyncFixture struct {
 	diffMock               *mock_ldiff.MockDiff
 	clientMock             *mock_spacesyncproto.MockDRPCSpaceSyncClient
 	aclMock                *mock_syncacl.MockSyncAcl
+	headStorage            *mock_headstorage.MockHeadStorage
+	stateStorage           *mock_statestorage.MockStateStorage
 	headSync               *headSync
 	diffSyncer             *diffSyncer
 }
@@ -89,12 +92,15 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 	deletionStateMock.EXPECT().Name().AnyTimes().Return(deletionstate.CName)
 	diffSyncerMock := mock_headsync.NewMockDiffSyncer(ctrl)
 	treeSyncerMock := mock_treesyncer.NewMockTreeSyncer(ctrl)
+	headStorage := mock_headstorage.NewMockHeadStorage(ctrl)
+	stateStorage := mock_statestorage.NewMockStateStorage(ctrl)
+	storageMock.EXPECT().HeadStorage().AnyTimes().Return(headStorage)
+	storageMock.EXPECT().StateStorage().AnyTimes().Return(stateStorage)
 	treeSyncerMock.EXPECT().Name().AnyTimes().Return(treesyncer.CName)
 	diffMock := mock_ldiff.NewMockDiff(ctrl)
 	clientMock := mock_spacesyncproto.NewMockDRPCSpaceSyncClient(ctrl)
 	aclMock := mock_syncacl.NewMockSyncAcl(ctrl)
 	aclMock.EXPECT().Name().AnyTimes().Return(syncacl.CName)
-	aclMock.EXPECT().SetHeadUpdater(gomock.Any()).AnyTimes()
 
 	hs := &headSync{}
 	a := &app.App{}
@@ -119,6 +125,8 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 		credentialProviderMock: credentialProviderMock,
 		treeManagerMock:        treeManagerMock,
 		deletionStateMock:      deletionStateMock,
+		headStorage:            headStorage,
+		stateStorage:           stateStorage,
 		headSync:               hs,
 		diffSyncerMock:         diffSyncerMock,
 		treeSyncerMock:         treeSyncerMock,
@@ -133,6 +141,7 @@ func (fx *headSyncFixture) init(t *testing.T) {
 		return fx.diffSyncerMock
 	}
 	fx.diffSyncerMock.EXPECT().Init()
+	fx.headStorage.EXPECT().AddObserver(gomock.Any())
 	err := fx.headSync.Init(fx.app)
 	require.NoError(t, err)
 	fx.headSync.diff = fx.diffMock
@@ -145,111 +154,98 @@ func (fx *headSyncFixture) stop() {
 func TestHeadSync(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("run close not derived", func(t *testing.T) {
+	t.Run("run close", func(t *testing.T) {
 		fx := newHeadSyncFixture(t)
-		fx.init(t)
+		fx.initDiffSyncer(t)
 		defer fx.stop()
 
-		ids := []string{"id1"}
-		treeMock := mock_treestorage.NewMockTreeStorage(fx.ctrl)
-		fx.storageMock.EXPECT().StoredIds().Return(ids, nil)
-		fx.storageMock.EXPECT().TreeStorage(ids[0]).Return(treeMock, nil)
-		checkDerived = func(sync *headSync, storage treestorage.TreeStorage) (bool, error) {
-			return false, nil
+		headEntries := []headstorage.HeadsEntry{
+			{
+				Id:        "id1",
+				Heads:     []string{"h1", "h2"},
+				IsDerived: false,
+			},
+			{
+				Id:        "id2",
+				Heads:     []string{"h3", "h4"},
+				IsDerived: false,
+			},
 		}
+		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, opts headstorage.IterOpts, entryIter headstorage.EntryIterator) error {
+				for _, entry := range headEntries {
+					if res, err := entryIter(entry); err != nil || !res {
+						return err
+					}
+				}
+				return nil
+			})
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "headId"})
-		treeMock.EXPECT().Heads().Return([]string{"h1", "h2"}, nil)
+
 		fx.diffMock.EXPECT().Set(ldiff.Element{
 			Id:   "id1",
 			Head: "h1h2",
 		}, ldiff.Element{
-			Id:   "aclId",
-			Head: "headId",
-		})
-		fx.diffMock.EXPECT().Hash().Return("hash")
-		fx.storageMock.EXPECT().WriteSpaceHash("hash").Return(nil)
-		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
-		err := fx.headSync.Run(ctx)
-		require.NoError(t, err)
-		err = fx.headSync.Close(ctx)
-		require.NoError(t, err)
-	})
-
-	t.Run("run close derived empty", func(t *testing.T) {
-		fx := newHeadSyncFixture(t)
-		fx.init(t)
-		defer fx.stop()
-
-		ids := []string{"id1"}
-		treeMock := mock_treestorage.NewMockTreeStorage(fx.ctrl)
-		fx.storageMock.EXPECT().StoredIds().Return(ids, nil)
-		fx.storageMock.EXPECT().TreeStorage(ids[0]).Return(treeMock, nil)
-		checkDerived = func(sync *headSync, storage treestorage.TreeStorage) (bool, error) {
-			return true, nil
-		}
-		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
-		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "headId"})
-		treeMock.EXPECT().Heads().Return([]string{"id1"}, nil)
-		fx.diffMock.EXPECT().Hash().Return("hash")
-		fx.storageMock.EXPECT().WriteSpaceHash("hash").Return(nil)
-		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
-		fx.diffMock.EXPECT().Set(ldiff.Element{
-			Id:   "aclId",
-			Head: "headId",
-		})
-		err := fx.headSync.Run(ctx)
-		require.NoError(t, err)
-		err = fx.headSync.Close(ctx)
-		require.NoError(t, err)
-	})
-
-	t.Run("run close derived not empty", func(t *testing.T) {
-		fx := newHeadSyncFixture(t)
-		fx.init(t)
-		defer fx.stop()
-
-		ids := []string{"id1"}
-		treeMock := mock_treestorage.NewMockTreeStorage(fx.ctrl)
-		fx.storageMock.EXPECT().StoredIds().Return(ids, nil)
-		fx.storageMock.EXPECT().TreeStorage(ids[0]).Return(treeMock, nil)
-		checkDerived = func(sync *headSync, storage treestorage.TreeStorage) (bool, error) {
-			return true, nil
-		}
-		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
-		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "headId"})
-		treeMock.EXPECT().Heads().Return([]string{"headId1"}, nil)
-		fx.diffMock.EXPECT().Hash().Return("hash")
-		fx.storageMock.EXPECT().WriteSpaceHash("hash").Return(nil)
-		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
-		fx.diffMock.EXPECT().Set(ldiff.Element{
-			Id:   "id1",
-			Head: "headId1",
+			Id:   "id2",
+			Head: "h3h4",
 		}, ldiff.Element{
 			Id:   "aclId",
 			Head: "headId",
 		})
+		fx.diffMock.EXPECT().Hash().Return("hash")
+		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
+		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
+		fx.diffSyncerMock.EXPECT().Close()
 		err := fx.headSync.Run(ctx)
 		require.NoError(t, err)
 		err = fx.headSync.Close(ctx)
 		require.NoError(t, err)
 	})
 
-	t.Run("update heads", func(t *testing.T) {
+	t.Run("run close, no empty derived", func(t *testing.T) {
 		fx := newHeadSyncFixture(t)
-		fx.init(t)
+		fx.initDiffSyncer(t)
 		defer fx.stop()
 
-		fx.diffSyncerMock.EXPECT().UpdateHeads("id1", []string{"h1"})
-		fx.headSync.UpdateHeads("id1", []string{"h1"})
-	})
+		headEntries := []headstorage.HeadsEntry{
+			{
+				Id:        "id1",
+				Heads:     []string{"id1"},
+				IsDerived: true,
+			},
+			{
+				Id:        "id2",
+				Heads:     []string{"h3", "h4"},
+				IsDerived: false,
+			},
+		}
+		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, opts headstorage.IterOpts, entryIter headstorage.EntryIterator) error {
+				for _, entry := range headEntries {
+					if res, err := entryIter(entry); err != nil || !res {
+						return err
+					}
+				}
+				return nil
+			})
+		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
+		fx.aclMock.EXPECT().Head().AnyTimes().Return(&list.AclRecord{Id: "headId"})
 
-	t.Run("remove objects", func(t *testing.T) {
-		fx := newHeadSyncFixture(t)
-		fx.init(t)
-		defer fx.stop()
-
-		fx.diffSyncerMock.EXPECT().RemoveObjects([]string{"id1"})
-		fx.headSync.RemoveObjects([]string{"id1"})
+		fx.diffMock.EXPECT().Set(ldiff.Element{
+			Id:   "id2",
+			Head: "h3h4",
+		}, ldiff.Element{
+			Id:   "aclId",
+			Head: "headId",
+		})
+		fx.diffMock.EXPECT().Hash().Return("hash")
+		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
+		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
+		fx.diffSyncerMock.EXPECT().Close()
+		err := fx.headSync.Run(ctx)
+		require.NoError(t, err)
+		err = fx.headSync.Close(ctx)
+		require.NoError(t, err)
 	})
 }
