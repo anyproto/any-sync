@@ -6,7 +6,7 @@ toolchain go1.23.5
 
 require (
 	filippo.io/edwards25519 v1.1.0
-	github.com/anyproto/any-store v0.1.6
+	github.com/anyproto/any-store v0.1.7
 	github.com/anyproto/go-chash v0.1.0
 	github.com/anyproto/go-slip10 v1.0.0
 	github.com/anyproto/go-slip21 v1.0.0
