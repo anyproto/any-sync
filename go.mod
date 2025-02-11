@@ -25,7 +25,7 @@ require (
 	github.com/ipfs/go-block-format v0.2.0
 	github.com/ipfs/go-cid v0.5.0
 	github.com/ipfs/go-ipld-format v0.6.0
-	github.com/libp2p/go-libp2p v0.38.2
+	github.com/libp2p/go-libp2p v0.39.0
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multibase v0.2.0
 	github.com/multiformats/go-multihash v0.2.3
@@ -38,7 +38,7 @@ require (
 	go.uber.org/mock v0.5.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.33.0
-	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
+	golang.org/x/exp v0.0.0-20250128182459-e0ece0dbea4c
 	golang.org/x/net v0.34.0
 	golang.org/x/sys v0.30.0
 	golang.org/x/time v0.10.0
@@ -66,7 +66,7 @@ require (
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
-	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad // indirect
+	github.com/google/pprof v0.0.0-20250202011525-fc3143867406 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/ipfs/bbloom v0.0.4 // indirect
 	github.com/ipfs/go-bitfield v1.1.0 // indirect
@@ -92,11 +92,11 @@ require (
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
-	github.com/onsi/ginkgo/v2 v2.22.0 // indirect
+	github.com/onsi/ginkgo/v2 v2.22.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/polydawn/refmt v0.89.0 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.61.0 // indirect
+	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
@@ -109,10 +109,10 @@ require (
 	go.opentelemetry.io/otel/trace v1.31.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/image v0.21.0 // indirect
-	golang.org/x/mod v0.22.0 // indirect
+	golang.org/x/mod v0.23.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
-	google.golang.org/protobuf v1.36.0 // indirect
+	google.golang.org/protobuf v1.36.4 // indirect
 	lukechampine.com/blake3 v1.3.0 // indirect
 	modernc.org/libc v1.61.9 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
