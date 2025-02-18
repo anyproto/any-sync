@@ -60,7 +60,7 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 		SpaceId:     payload.SpaceHeaderWithId.Id,
 		SpaceHeader: payload.SpaceHeaderWithId.RawHeader,
 	}
-	changesColl, err := store.Collection(ctx, objecttree.CollName)
+	changesColl, err := store.Collection(ctx, spaceId+"-"+objecttree.CollName)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 	if err != nil {
 		return nil, err
 	}
-	headStorage, err := headstorage.New(ctx, store)
+	headStorage, err := headstorage.NewWithSpace(ctx, store, spaceId)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func New(ctx context.Context, spaceId string, store anystore.DB) (SpaceStorage, 
 		store:   store,
 		spaceId: spaceId,
 	}
-	changesColl, err := store.OpenCollection(ctx, objecttree.CollName)
+	changesColl, err := store.OpenCollection(ctx, spaceId+"-"+objecttree.CollName)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func New(ctx context.Context, spaceId string, store anystore.DB) (SpaceStorage, 
 	if err != nil {
 		return nil, err
 	}
-	s.headStorage, err = headstorage.New(ctx, s.store)
+	s.headStorage, err = headstorage.NewWithSpace(ctx, s.store, s.spaceId)
 	if err != nil {
 		return nil, err
 	}

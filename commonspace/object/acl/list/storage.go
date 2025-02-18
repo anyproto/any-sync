@@ -57,14 +57,21 @@ type storage struct {
 	headStorage headstorage.HeadStorage
 	headsColl   anystore.Collection
 	recordsColl anystore.Collection
+	collName    string
 	arena       *anyenc.Arena
 }
 
 func CreateStorage(ctx context.Context, root *consensusproto.RawRecordWithId, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
+	spaceId := headStorage.SpaceId()
+	collName := "acl"
+	if spaceId != "" {
+		collName = spaceId + "-" + collName
+	}
 	st := &storage{
 		id:          root.Id,
 		store:       store,
 		headStorage: headStorage,
+		collName:    collName,
 	}
 	rec := StorageRecord{
 		RawRecord:  root.Payload,
@@ -72,7 +79,7 @@ func CreateStorage(ctx context.Context, root *consensusproto.RawRecordWithId, he
 		Order:      1,
 		ChangeSize: len(root.Payload),
 	}
-	recordsColl, err := store.Collection(ctx, root.Id)
+	recordsColl, err := store.Collection(ctx, collName)
 	if err != nil {
 		return nil, err
 	}
@@ -110,12 +117,18 @@ func CreateStorage(ctx context.Context, root *consensusproto.RawRecordWithId, he
 }
 
 func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
+	spaceId := headStorage.SpaceId()
+	collName := "acl"
+	if spaceId != "" {
+		collName = spaceId + "-" + collName
+	}
 	st := &storage{
 		id:          id,
 		store:       store,
 		headStorage: headStorage,
+		collName:    collName,
 	}
-	recordsColl, err := store.Collection(ctx, id)
+	recordsColl, err := store.Collection(ctx, collName)
 	if err != nil {
 		return nil, err
 	}

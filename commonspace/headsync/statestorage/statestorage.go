@@ -81,7 +81,7 @@ func (s *stateStorage) SetHash(ctx context.Context, hash string) (err error) {
 }
 
 func New(ctx context.Context, spaceId string, store anystore.DB) (StateStorage, error) {
-	stateCollection, err := store.Collection(ctx, stateCollectionKey)
+	stateCollection, err := store.Collection(ctx, spaceId+"-"+stateCollectionKey)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func New(ctx context.Context, spaceId string, store anystore.DB) (StateStorage, 
 
 func Create(ctx context.Context, state State, store anystore.DB) (StateStorage, error) {
 	arena := &anyenc.Arena{}
-	stateCollection, err := store.Collection(ctx, stateCollectionKey)
+	stateCollection, err := store.Collection(ctx, state.SpaceId+"-"+stateCollectionKey)
 	if err != nil {
 		return nil, err
 	}

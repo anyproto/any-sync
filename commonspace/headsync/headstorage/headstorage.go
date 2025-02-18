@@ -53,6 +53,7 @@ type IterOpts struct {
 
 type HeadStorage interface {
 	AddObserver(observer Observer)
+	SpaceId() string
 	IterateEntries(ctx context.Context, iterOpts IterOpts, iter EntryIterator) error
 	GetEntry(ctx context.Context, id string) (HeadsEntry, error)
 	DeleteEntryTx(txCtx context.Context, id string) error
@@ -69,10 +70,15 @@ type headStorage struct {
 	headsColl  anystore.Collection
 	observers  []Observer
 	parserPool *anyenc.ParserPool
+	spaceId    string
 }
 
-func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
-	headsColl, err := store.Collection(ctx, HeadsCollectionName)
+func NewWithSpace(ctx context.Context, store anystore.DB, spaceId string) (HeadStorage, error) {
+	collName := HeadsCollectionName
+	if spaceId != "" {
+		collName = spaceId + "-" + collName
+	}
+	headsColl, err := store.Collection(ctx, collName)
 	if err != nil {
 		return nil, err
 	}
@@ -80,6 +86,7 @@ func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
 		store:      store,
 		headsColl:  headsColl,
 		parserPool: &anyenc.ParserPool{},
+		spaceId:    spaceId,
 	}
 	deletedIdx := anystore.IndexInfo{
 		Name:   DeletedStatusKey,
@@ -87,6 +94,14 @@ func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
 		Sparse: true,
 	}
 	return st, st.headsColl.EnsureIndex(ctx, deletedIdx)
+}
+
+func New(ctx context.Context, store anystore.DB) (HeadStorage, error) {
+	return NewWithSpace(ctx, store, "")
+}
+
+func (h *headStorage) SpaceId() string {
+	return h.spaceId
 }
 
 func (h *headStorage) AddObserver(observer Observer) {

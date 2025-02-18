@@ -82,6 +82,11 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 		store:       store,
 		headStorage: headStorage,
 	}
+	spaceId := headStorage.SpaceId()
+	collName := CollName
+	if spaceId != "" {
+		collName = spaceId + "-" + collName
+	}
 	builder := storageChangeBuilder(crypto.NewKeyStorage(), root)
 	unmarshalled, err := builder.Unmarshall(root, true)
 	if err != nil {
@@ -98,7 +103,7 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 		ChangeSize:      len(root.RawChange),
 	}
 	st.root = stChange
-	changesColl, err := store.Collection(ctx, CollName)
+	changesColl, err := store.Collection(ctx, collName)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +149,12 @@ func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStor
 		}
 		return nil, fmt.Errorf("failed to get head entry: %w", err)
 	}
-	changesColl, err := store.OpenCollection(ctx, CollName)
+	spaceId := headStorage.SpaceId()
+	collName := CollName
+	if spaceId != "" {
+		collName = spaceId + "-" + collName
+	}
+	changesColl, err := store.OpenCollection(ctx, collName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open collection: %w", err)
 	}

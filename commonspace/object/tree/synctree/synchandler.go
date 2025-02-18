@@ -3,7 +3,6 @@ package synctree
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
@@ -63,14 +62,11 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 	statusUpdater.HeadsReceive(peerId, update.ObjectId(), contentUpdate.Heads)
 	s.tree.Lock()
 	defer s.tree.Unlock()
-	fmt.Println("[x]: receive head update, peer:", update.PeerId(), "object:", update.ObjectId(), "heads:", contentUpdate.Heads, "my heads", s.tree.Heads())
 	if len(contentUpdate.Changes) == 0 {
 		if s.hasHeads(s.tree, contentUpdate.Heads) {
-			fmt.Println("[x]: receive head update, no changes, has heads", update.PeerId(), "object:", update.ObjectId())
 			statusUpdater.HeadsApply(peerId, update.ObjectId(), contentUpdate.Heads, true)
 			return nil, nil
 		}
-		fmt.Println("[x]: receive head update, no changes, heads not equal", update.PeerId(), "object:", update.ObjectId())
 		statusUpdater.HeadsApply(peerId, update.ObjectId(), contentUpdate.Heads, false)
 		return s.syncClient.CreateFullSyncRequest(peerId, s.tree), nil
 	}
@@ -84,7 +80,6 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("[x]: receive head update, after apply", update.PeerId(), "object:", update.ObjectId(), "update heads", contentUpdate.Heads, "result heads", res.Heads)
 	if !slice.UnsortedEquals(res.Heads, contentUpdate.Heads) {
 		return s.syncClient.CreateFullSyncRequest(peerId, s.tree), nil
 	}
@@ -115,7 +110,6 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 	}
 	var returnReq syncdeps.Request
 	if slice.UnsortedEquals(curHeads, request.Heads) || slice.ContainsSorted(request.Heads, curHeads) {
-		fmt.Println("[x]: receive stream request, contains heads", rq.PeerId(), "object:", rq.ObjectId(), "update heads", request.Heads, "result heads", s.tree.Heads())
 		if len(curHeads) != len(request.Heads) {
 			returnReq = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
 		}
@@ -127,7 +121,6 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		}
 		return returnReq, send(protoResp)
 	} else {
-		fmt.Println("[x]: receive stream request, not contains heads", rq.PeerId(), "object:", rq.ObjectId(), "update heads", request.Heads, "result heads", s.tree.Heads())
 		if len(request.Heads) != 0 {
 			returnReq = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
 		}
@@ -172,12 +165,10 @@ func (s *syncHandler) HandleResponse(ctx context.Context, peerId, objectId strin
 		RawChanges:   rsp.Changes,
 		SnapshotPath: rsp.SnapshotPath,
 	}
-	fmt.Println("[x]: receive stream response", peerId, "object:", objectId, "update heads", rawChangesPayload.NewHeads, "our heads", s.tree.Heads())
-	res, err := s.tree.AddRawChangesFromPeer(ctx, peerId, rawChangesPayload)
+	_, err := s.tree.AddRawChangesFromPeer(ctx, peerId, rawChangesPayload)
 	if err != nil {
 		return err
 	}
-	fmt.Println("[x]: apply stream response", peerId, "object:", objectId, "update heads", rawChangesPayload.NewHeads, "applied heads", res.Heads)
 	return err
 }
 
