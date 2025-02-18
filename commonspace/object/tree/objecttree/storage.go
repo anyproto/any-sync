@@ -223,7 +223,7 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 	if err != nil {
 		return fmt.Errorf("failed to create write tx: %w", err)
 	}
-	for _, ch := range changes {
+	for i, ch := range changes {
 		ch.TreeId = s.id
 		newVal := newStorageChangeValue(ch, arena)
 		err = s.changesColl.Insert(tx.Context(), newVal)
@@ -231,6 +231,16 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 		if err != nil {
 			tx.Rollback()
 			return err
+		}
+		if i%20 == 0 && i > 0 {
+			err = tx.Commit()
+			if err != nil {
+				return err
+			}
+			tx, err = s.store.WriteTx(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create write tx: %w", err)
+			}
 		}
 	}
 	update := headstorage.HeadsUpdate{
