@@ -60,6 +60,9 @@ func (s *stateStorage) SetObserver(observer Observer) {
 
 func (s *stateStorage) SetHash(ctx context.Context, hash string) (err error) {
 	defer func() {
+		if last, ok := s.store.(lastWriteDb); ok {
+			last.SetLastWrite()
+		}
 		if s.observer != nil && err == nil {
 			s.observer.OnHashChange(hash)
 		}
@@ -78,6 +81,11 @@ func (s *stateStorage) SetHash(ctx context.Context, hash string) (err error) {
 		return err
 	}
 	return tx.Commit()
+}
+
+type lastWriteDb interface {
+	SetLastWrite()
+	anystore.DB
 }
 
 func New(ctx context.Context, spaceId string, store anystore.DB) (StateStorage, error) {

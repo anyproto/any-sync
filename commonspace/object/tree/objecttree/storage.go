@@ -4,13 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-store/anyenc"
 	"github.com/anyproto/any-store/query"
-	"go.uber.org/atomic"
 
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -208,11 +206,6 @@ func (s *storage) GetAfterOrder(ctx context.Context, orderId string, storageIter
 	return nil
 }
 
-var (
-	lastCheckpoint = atomic.Time{}
-	lock           = sync.Mutex{}
-)
-
 func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
 	arena := s.arena
 	defer arena.Reset()
@@ -228,19 +221,6 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 		if err != nil {
 			tx.Rollback()
 			return err
-		}
-		now := time.Now()
-		checkpoint := lastCheckpoint.Load()
-
-		if now.Sub(checkpoint) > time.Second {
-			lock.Lock()
-			checkpoint := lastCheckpoint.Load()
-			now = time.Now()
-			if now.Sub(checkpoint) > time.Second {
-				s.store.Checkpoint(context.Background(), false)
-				lastCheckpoint.Store(time.Now())
-			}
-			lock.Unlock()
 		}
 	}
 	update := headstorage.HeadsUpdate{
