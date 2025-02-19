@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-store/anyenc"
 	"github.com/anyproto/any-store/query"
+	"go.uber.org/atomic"
 
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
@@ -73,6 +75,34 @@ type storage struct {
 	parser      *anyenc.Parser
 	root        StorageChange
 }
+
+type Runner struct {
+	sem chan struct{}
+}
+
+func NewRunner(max int) *Runner {
+	return &Runner{
+		sem: make(chan struct{}, max),
+	}
+}
+
+var (
+	lastCheckpoint = atomic.Time{}
+)
+
+func (r *Runner) Run(action func(), store anystore.DB) {
+	r.sem <- struct{}{}
+	defer func() {
+		<-r.sem
+	}()
+
+	action()
+}
+
+var (
+	runner = NewRunner(1000)
+	lock   = sync.Mutex{}
+)
 
 var storageChangeBuilder = NewChangeBuilder
 
@@ -216,7 +246,7 @@ func (s *storage) GetAfterOrder(ctx context.Context, orderId string, storageIter
 	return nil
 }
 
-func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
+func (s *storage) addAllInner(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
 	arena := s.arena
 	defer arena.Reset()
 	tx, err := s.store.WriteTx(ctx)
@@ -232,16 +262,32 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 			tx.Rollback()
 			return err
 		}
-		if i%20 == 0 && i > 0 {
-			err = tx.Commit()
-			if err != nil {
-				return err
-			}
-			tx, err = s.store.WriteTx(ctx)
-			if err != nil {
-				return fmt.Errorf("failed to create write tx: %w", err)
+		if i%10 == 0 || i == len(changes)-1 {
+			//err = tx.Commit()
+			//if err != nil {
+			//	return err
+			//}
+			//tx, err = s.store.WriteTx(ctx)
+			//if err != nil {
+			//	return fmt.Errorf("failed to create write tx: %w", err)
+			//}
+			now := time.Now()
+			checkpoint := lastCheckpoint.Load()
+
+			if now.Sub(checkpoint) > time.Second {
+				lock.Lock()
+				checkpoint := lastCheckpoint.Load()
+				now = time.Now()
+				if now.Sub(checkpoint) > time.Second {
+					s.store.Checkpoint(context.Background(), false)
+					lastCheckpoint.Store(time.Now())
+				}
+				lock.Unlock()
 			}
 		}
+		//if totalOps.Add(1)%100 == 0 {
+		//	s.store.Checkpoint(ctx, false)
+		//}
 	}
 	update := headstorage.HeadsUpdate{
 		Id:             s.id,
@@ -254,6 +300,14 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 		return err
 	}
 	return tx.Commit()
+}
+
+func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
+	var err error
+	runner.Run(func() {
+		err = s.addAllInner(ctx, changes, heads, commonSnapshot)
+	}, s.store)
+	return err
 }
 
 func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
