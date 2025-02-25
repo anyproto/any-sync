@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/anyproto/any-sync/util/reflection"
 	"sync"
 	"time"
 
@@ -170,7 +171,7 @@ func (c *oCache) load(ctx context.Context, id string, e *entry) {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if value == nil && err == nil {
+	if reflection.IsNilish(value) && err == nil {
 		err = fmt.Errorf("loaded value is nil, id: %s", id)
 	}
 	if err != nil {
