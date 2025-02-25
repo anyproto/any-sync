@@ -67,6 +67,7 @@ func TestOCache_Get(t *testing.T) {
 		assert.Equal(t, 1, c.Len())
 		assert.NoError(t, c.Close())
 	})
+
 	t.Run("error", func(t *testing.T) {
 		tErr := errors.New("err")
 		c := New(func(ctx context.Context, id string) (value Object, err error) {
@@ -283,6 +284,17 @@ func TestOCache_GC(t *testing.T) {
 }
 
 func Test_OCache_Remove(t *testing.T) {
+	t.Run("remove puzzler", func(t *testing.T) {
+		c := New(func(ctx context.Context, id string) (value Object, err error) {
+			var p *testObject
+			return p, err
+		})
+		val, err := c.Get(context.TODO(), "test")
+		require.Error(t, err, "loaded value is nil, id: test")
+		require.Nil(t, val)
+		require.Equal(t, 0, c.Len())
+		require.NoError(t, c.Close())
+	})
 	t.Run("remove simple", func(t *testing.T) {
 		closeCh := make(chan struct{})
 		getCh := make(chan struct{})
