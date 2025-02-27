@@ -87,10 +87,13 @@ func (c *changeBuilder) Unmarshall(rawIdChange *treechangeproto.RawTreeChangeWit
 		}
 	}
 
-	c.rawTreeCh.Signature = c.rawTreeCh.Signature[:0]
+	// Signature is not safe to reuse, as it escapes changeBuilder context
+	c.rawTreeCh.Signature = nil
 	c.rawTreeCh.Payload = c.rawTreeCh.Payload[:0]
+
 	raw := c.rawTreeCh
-	err = proto.Unmarshal(rawIdChange.GetRawChange(), raw)
+	// Use UnmarshalMerge, because proto.Unmarshal calls Reset and delete buffers before unmarshalling
+	err = proto.UnmarshalMerge(rawIdChange.GetRawChange(), raw)
 	if err != nil {
 		return
 	}
@@ -120,10 +123,13 @@ func (c *changeBuilder) UnmarshallReduced(rawIdChange *treechangeproto.RawTreeCh
 		return
 	}
 
-	c.rawTreeCh.Signature = c.rawTreeCh.Signature[:0]
+	// Signature is not safe to reuse, as it escapes changeBuilder context
+	c.rawTreeCh.Signature = nil
 	c.rawTreeCh.Payload = c.rawTreeCh.Payload[:0]
+
 	raw := c.rawTreeCh
-	err = proto.Unmarshal(rawIdChange.GetRawChange(), raw)
+	// Use UnmarshalMerge, because proto.Unmarshal calls Reset and delete buffers before unmarshalling
+	err = proto.UnmarshalMerge(rawIdChange.GetRawChange(), raw)
 	if err != nil {
 		return
 	}
