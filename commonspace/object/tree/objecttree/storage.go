@@ -74,7 +74,7 @@ type storage struct {
 	root        StorageChange
 }
 
-var storageChangeBuilder = NewChangeBuilder
+var StorageChangeBuilder = NewChangeBuilder
 
 func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
 	st := &storage{
@@ -82,7 +82,7 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 		store:       store,
 		headStorage: headStorage,
 	}
-	builder := storageChangeBuilder(crypto.NewKeyStorage(), root)
+	builder := StorageChangeBuilder(crypto.NewKeyStorage(), root)
 	unmarshalled, err := builder.Unmarshall(root, true)
 	if err != nil {
 		return nil, err
