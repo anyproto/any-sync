@@ -761,7 +761,7 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 		MetadataKey:    metaKey,
 		Metadata:       meta,
 	}
-	createSpace, err := storagePayloadForSpaceCreate(payload)
+	createSpace, err := StoragePayloadForSpaceCreate(payload)
 	require.NoError(t, err)
 	executor := list.NewExternalKeysAclExecutor(createSpace.SpaceHeaderWithId.Id, keys, meta, createSpace.AclWithId)
 	cmds := []string{

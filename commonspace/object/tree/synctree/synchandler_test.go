@@ -51,6 +51,7 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 		}
 		ctx = peer.CtxWithPeerId(ctx, "peerId")
 		fx.syncStatus.EXPECT().HeadsReceive("peerId", "objectId", heads)
+		fx.tree.EXPECT().Heads().AnyTimes().Return([]string{rawCh.Id})
 		fx.tree.EXPECT().AddRawChangesFromPeer(ctx, "peerId", objecttree.RawChangesPayload{
 			NewHeads:     heads,
 			RawChanges:   changes,
@@ -92,6 +93,7 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 		}
 		ctx = peer.CtxWithPeerId(ctx, "peerId")
 		fx.syncStatus.EXPECT().HeadsReceive("peerId", "objectId", heads)
+		fx.tree.EXPECT().Heads().AnyTimes().Return([]string{rawCh.Id})
 		fx.tree.EXPECT().AddRawChangesFromPeer(ctx, "peerId", objecttree.RawChangesPayload{
 			NewHeads:     heads,
 			RawChanges:   changes,
