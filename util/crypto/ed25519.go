@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/anyproto/any-sync/util/crypto/cryptoproto"
 	"github.com/anyproto/any-sync/util/strkey"
-	"github.com/anyproto/protobuf/proto"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"io"
 	"sync"
@@ -45,7 +44,7 @@ func NewEd25519PubKey(pubKey ed25519.PublicKey) PubKey {
 
 func UnmarshalEd25519PublicKeyProto(bytes []byte) (PubKey, error) {
 	msg := &cryptoproto.Key{}
-	err := proto.Unmarshal(bytes, msg)
+	err := msg.UnmarshalVT(bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +56,7 @@ func UnmarshalEd25519PublicKeyProto(bytes []byte) (PubKey, error) {
 
 func UnmarshalEd25519PrivateKeyProto(bytes []byte) (PrivKey, error) {
 	msg := &cryptoproto.Key{}
-	err := proto.Unmarshal(bytes, msg)
+	err := msg.UnmarshalVT(bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +131,7 @@ func (k *Ed25519PrivKey) Marshall() ([]byte, error) {
 		Type: cryptoproto.KeyType_Ed25519Private,
 		Data: k.privKey,
 	}
-	return msg.Marshal()
+	return msg.MarshalVT()
 }
 
 // Decrypt decrypts the message
@@ -211,7 +210,7 @@ func (k *Ed25519PubKey) Marshall() ([]byte, error) {
 			Type: cryptoproto.KeyType_Ed25519Public,
 			Data: k.pubKey,
 		}
-		k.marshalled, k.marshallErr = proto.Marshal(msg)
+		k.marshalled, k.marshallErr = msg.MarshalVT()
 	})
 	return k.marshalled, k.marshallErr
 }

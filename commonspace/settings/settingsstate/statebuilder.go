@@ -3,7 +3,6 @@ package settingsstate
 import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/anyproto/protobuf/proto"
 )
 
 type StateBuilder interface {
@@ -36,7 +35,7 @@ func (s *stateBuilder) Build(tr objecttree.ReadableObjectTree, oldState *State) 
 	}
 	convert := func(ch *objecttree.Change, decrypted []byte) (res any, err error) {
 		deleteChange := &spacesyncproto.SettingsData{}
-		err = proto.Unmarshal(decrypted, deleteChange)
+		err = deleteChange.UnmarshalVT(decrypted)
 		if err != nil {
 			return nil, err
 		}

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/strkey"
-	"github.com/anyproto/protobuf/proto"
 	"time"
 )
 
@@ -30,7 +29,7 @@ func PrepareSpaceReceipt(spaceId, peerId string, validPeriod time.Duration, acco
 		NetworkId:       networkKey.GetPublic().Network(),
 		ValidUntil:      uint64(time.Now().Add(validPeriod).Unix()),
 	}
-	receiptData, err := receipt.Marshal()
+	receiptData, err := receipt.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -46,7 +45,7 @@ func PrepareSpaceReceipt(spaceId, peerId string, validPeriod time.Duration, acco
 
 func CheckReceipt(peerId, spaceId string, accountIdentity []byte, networkId string, receipt *SpaceReceiptWithSignature) (err error) {
 	payload := &SpaceReceipt{}
-	err = proto.Unmarshal(receipt.GetSpaceReceiptPayload(), payload)
+	err = payload.UnmarshalVT(receipt.GetSpaceReceiptPayload())
 	if err != nil {
 		return
 	}

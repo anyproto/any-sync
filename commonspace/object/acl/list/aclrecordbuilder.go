@@ -4,8 +4,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/anyproto/protobuf/proto"
-
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
@@ -164,7 +162,7 @@ func (a *aclRecordBuilder) buildRecord(aclContent *aclrecordproto.AclContentValu
 
 func (a *aclRecordBuilder) buildRecords(aclContent []*aclrecordproto.AclContentValue) (rawRec *consensusproto.RawRecord, err error) {
 	aclData := &aclrecordproto.AclData{AclContent: aclContent}
-	marshalledData, err := aclData.Marshal()
+	marshalledData, err := aclData.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -178,7 +176,7 @@ func (a *aclRecordBuilder) buildRecords(aclContent []*aclrecordproto.AclContentV
 		Data:      marshalledData,
 		Timestamp: time.Now().Unix(),
 	}
-	marshalledRec, err := rec.Marshal()
+	marshalledRec, err := rec.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -226,7 +224,7 @@ func (a *aclRecordBuilder) buildPermissionChanges(payload PermissionChangesPaylo
 		})
 	}
 	return &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_PermissionChanges{
-		&aclrecordproto.AclAccountPermissionChanges{changes},
+		&aclrecordproto.AclAccountPermissionChanges{Changes: changes},
 	}}, nil
 }
 
@@ -282,7 +280,7 @@ func (a *aclRecordBuilder) buildAccountsAdd(payload AccountsAddPayload) (value *
 		})
 	}
 	return &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_AccountsAdd{
-		&aclrecordproto.AclAccountsAdd{accs},
+		&aclrecordproto.AclAccountsAdd{Additions: accs},
 	}}, nil
 }
 
@@ -622,7 +620,7 @@ func (a *aclRecordBuilder) BuildRequestRemove() (rawRecord *consensusproto.RawRe
 
 func (a *aclRecordBuilder) Unmarshall(rawRecord *consensusproto.RawRecord) (rec *AclRecord, err error) {
 	aclRecord := &consensusproto.Record{}
-	err = proto.Unmarshal(rawRecord.Payload, aclRecord)
+	err = aclRecord.UnmarshalVT(rawRecord.Payload)
 	if err != nil {
 		return
 	}
@@ -631,7 +629,7 @@ func (a *aclRecordBuilder) Unmarshall(rawRecord *consensusproto.RawRecord) (rec 
 		return
 	}
 	aclData := &aclrecordproto.AclData{}
-	err = proto.Unmarshal(aclRecord.Data, aclData)
+	err = aclData.UnmarshalVT(aclRecord.Data)
 	if err != nil {
 		return
 	}
@@ -660,13 +658,13 @@ func (a *aclRecordBuilder) UnmarshallWithId(rawIdRecord *consensusproto.RawRecor
 		rawRec = &consensusproto.RawRecord{}
 		pubKey crypto.PubKey
 	)
-	err = proto.Unmarshal(rawIdRecord.Payload, rawRec)
+	err = rawRec.UnmarshalVT(rawIdRecord.Payload)
 	if err != nil {
 		return
 	}
 	if rawIdRecord.Id == a.id {
 		aclRoot := &aclrecordproto.AclRoot{}
-		err = proto.Unmarshal(rawRec.Payload, aclRoot)
+		err = aclRoot.UnmarshalVT(rawRec.Payload)
 		if err != nil {
 			return
 		}
@@ -687,7 +685,7 @@ func (a *aclRecordBuilder) UnmarshallWithId(rawIdRecord *consensusproto.RawRecor
 			return
 		}
 		aclRecord := &consensusproto.Record{}
-		err = proto.Unmarshal(rawRec.Payload, aclRecord)
+		err = aclRecord.UnmarshalVT(rawRec.Payload)
 		if err != nil {
 			return
 		}
@@ -696,7 +694,7 @@ func (a *aclRecordBuilder) UnmarshallWithId(rawIdRecord *consensusproto.RawRecor
 			return
 		}
 		aclData := &aclrecordproto.AclData{}
-		err = proto.Unmarshal(aclRecord.Data, aclData)
+		err = aclData.UnmarshalVT(aclRecord.Data)
 		if err != nil {
 			return
 		}
@@ -791,7 +789,7 @@ func verifyRaw(
 }
 
 func marshalAclRoot(aclRoot *aclrecordproto.AclRoot, key crypto.PrivKey) (rawWithId *consensusproto.RawRecordWithId, err error) {
-	marshalledRoot, err := aclRoot.Marshal()
+	marshalledRoot, err := aclRoot.MarshalVT()
 	if err != nil {
 		return
 	}
@@ -803,7 +801,7 @@ func marshalAclRoot(aclRoot *aclrecordproto.AclRoot, key crypto.PrivKey) (rawWit
 		Payload:   marshalledRoot,
 		Signature: signature,
 	}
-	marshalledRaw, err := raw.Marshal()
+	marshalledRaw, err := raw.MarshalVT()
 	if err != nil {
 		return
 	}

@@ -10,17 +10,18 @@
 package mock_headstorage
 
 import (
-	context "context"
 	reflect "reflect"
 
 	headstorage "github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	gomock "go.uber.org/mock/gomock"
+	context "golang.org/x/net/context"
 )
 
 // MockHeadStorage is a mock of HeadStorage interface.
 type MockHeadStorage struct {
 	ctrl     *gomock.Controller
 	recorder *MockHeadStorageMockRecorder
+	isgomock struct{}
 }
 
 // MockHeadStorageMockRecorder is the mock recorder for MockHeadStorage.
@@ -41,84 +42,84 @@ func (m *MockHeadStorage) EXPECT() *MockHeadStorageMockRecorder {
 }
 
 // AddObserver mocks base method.
-func (m *MockHeadStorage) AddObserver(arg0 headstorage.Observer) {
+func (m *MockHeadStorage) AddObserver(observer headstorage.Observer) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AddObserver", arg0)
+	m.ctrl.Call(m, "AddObserver", observer)
 }
 
 // AddObserver indicates an expected call of AddObserver.
-func (mr *MockHeadStorageMockRecorder) AddObserver(arg0 any) *gomock.Call {
+func (mr *MockHeadStorageMockRecorder) AddObserver(observer any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddObserver", reflect.TypeOf((*MockHeadStorage)(nil).AddObserver), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddObserver", reflect.TypeOf((*MockHeadStorage)(nil).AddObserver), observer)
 }
 
 // DeleteEntryTx mocks base method.
-func (m *MockHeadStorage) DeleteEntryTx(arg0 context.Context, arg1 string) error {
+func (m *MockHeadStorage) DeleteEntryTx(txCtx context.Context, id string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteEntryTx", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteEntryTx", txCtx, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteEntryTx indicates an expected call of DeleteEntryTx.
-func (mr *MockHeadStorageMockRecorder) DeleteEntryTx(arg0, arg1 any) *gomock.Call {
+func (mr *MockHeadStorageMockRecorder) DeleteEntryTx(txCtx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEntryTx", reflect.TypeOf((*MockHeadStorage)(nil).DeleteEntryTx), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEntryTx", reflect.TypeOf((*MockHeadStorage)(nil).DeleteEntryTx), txCtx, id)
 }
 
 // GetEntry mocks base method.
-func (m *MockHeadStorage) GetEntry(arg0 context.Context, arg1 string) (headstorage.HeadsEntry, error) {
+func (m *MockHeadStorage) GetEntry(ctx context.Context, id string) (headstorage.HeadsEntry, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEntry", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetEntry", ctx, id)
 	ret0, _ := ret[0].(headstorage.HeadsEntry)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetEntry indicates an expected call of GetEntry.
-func (mr *MockHeadStorageMockRecorder) GetEntry(arg0, arg1 any) *gomock.Call {
+func (mr *MockHeadStorageMockRecorder) GetEntry(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEntry", reflect.TypeOf((*MockHeadStorage)(nil).GetEntry), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEntry", reflect.TypeOf((*MockHeadStorage)(nil).GetEntry), ctx, id)
 }
 
 // IterateEntries mocks base method.
-func (m *MockHeadStorage) IterateEntries(arg0 context.Context, arg1 headstorage.IterOpts, arg2 headstorage.EntryIterator) error {
+func (m *MockHeadStorage) IterateEntries(ctx context.Context, iterOpts headstorage.IterOpts, iter headstorage.EntryIterator) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IterateEntries", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "IterateEntries", ctx, iterOpts, iter)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // IterateEntries indicates an expected call of IterateEntries.
-func (mr *MockHeadStorageMockRecorder) IterateEntries(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockHeadStorageMockRecorder) IterateEntries(ctx, iterOpts, iter any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateEntries", reflect.TypeOf((*MockHeadStorage)(nil).IterateEntries), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateEntries", reflect.TypeOf((*MockHeadStorage)(nil).IterateEntries), ctx, iterOpts, iter)
 }
 
 // UpdateEntry mocks base method.
-func (m *MockHeadStorage) UpdateEntry(arg0 context.Context, arg1 headstorage.HeadsUpdate) error {
+func (m *MockHeadStorage) UpdateEntry(ctx context.Context, update headstorage.HeadsUpdate) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateEntry", arg0, arg1)
+	ret := m.ctrl.Call(m, "UpdateEntry", ctx, update)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateEntry indicates an expected call of UpdateEntry.
-func (mr *MockHeadStorageMockRecorder) UpdateEntry(arg0, arg1 any) *gomock.Call {
+func (mr *MockHeadStorageMockRecorder) UpdateEntry(ctx, update any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEntry", reflect.TypeOf((*MockHeadStorage)(nil).UpdateEntry), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEntry", reflect.TypeOf((*MockHeadStorage)(nil).UpdateEntry), ctx, update)
 }
 
 // UpdateEntryTx mocks base method.
-func (m *MockHeadStorage) UpdateEntryTx(arg0 context.Context, arg1 headstorage.HeadsUpdate) error {
+func (m *MockHeadStorage) UpdateEntryTx(txCtx context.Context, update headstorage.HeadsUpdate) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateEntryTx", arg0, arg1)
+	ret := m.ctrl.Call(m, "UpdateEntryTx", txCtx, update)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateEntryTx indicates an expected call of UpdateEntryTx.
-func (mr *MockHeadStorageMockRecorder) UpdateEntryTx(arg0, arg1 any) *gomock.Call {
+func (mr *MockHeadStorageMockRecorder) UpdateEntryTx(txCtx, update any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEntryTx", reflect.TypeOf((*MockHeadStorage)(nil).UpdateEntryTx), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEntryTx", reflect.TypeOf((*MockHeadStorage)(nil).UpdateEntryTx), txCtx, update)
 }

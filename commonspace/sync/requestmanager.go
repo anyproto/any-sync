@@ -3,10 +3,10 @@ package sync
 import (
 	"context"
 	"errors"
+	"google.golang.org/protobuf/proto"
 	"io"
 	"strings"
 
-	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 

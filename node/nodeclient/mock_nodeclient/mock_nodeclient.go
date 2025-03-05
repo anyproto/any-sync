@@ -22,6 +22,7 @@ import (
 type MockNodeClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockNodeClientMockRecorder
+	isgomock struct{}
 }
 
 // MockNodeClientMockRecorder is the mock recorder for MockNodeClient.
@@ -42,47 +43,47 @@ func (m *MockNodeClient) EXPECT() *MockNodeClientMockRecorder {
 }
 
 // AclAddRecord mocks base method.
-func (m *MockNodeClient) AclAddRecord(arg0 context.Context, arg1 string, arg2 *consensusproto.RawRecord) (*consensusproto.RawRecordWithId, error) {
+func (m *MockNodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AclAddRecord", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "AclAddRecord", ctx, spaceId, rec)
 	ret0, _ := ret[0].(*consensusproto.RawRecordWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AclAddRecord indicates an expected call of AclAddRecord.
-func (mr *MockNodeClientMockRecorder) AclAddRecord(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNodeClientMockRecorder) AclAddRecord(ctx, spaceId, rec any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclAddRecord", reflect.TypeOf((*MockNodeClient)(nil).AclAddRecord), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclAddRecord", reflect.TypeOf((*MockNodeClient)(nil).AclAddRecord), ctx, spaceId, rec)
 }
 
 // AclGetRecords mocks base method.
-func (m *MockNodeClient) AclGetRecords(arg0 context.Context, arg1, arg2 string) ([]*consensusproto.RawRecordWithId, error) {
+func (m *MockNodeClient) AclGetRecords(ctx context.Context, spaceId, aclHead string) ([]*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AclGetRecords", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "AclGetRecords", ctx, spaceId, aclHead)
 	ret0, _ := ret[0].([]*consensusproto.RawRecordWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AclGetRecords indicates an expected call of AclGetRecords.
-func (mr *MockNodeClientMockRecorder) AclGetRecords(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockNodeClientMockRecorder) AclGetRecords(ctx, spaceId, aclHead any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclGetRecords", reflect.TypeOf((*MockNodeClient)(nil).AclGetRecords), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclGetRecords", reflect.TypeOf((*MockNodeClient)(nil).AclGetRecords), ctx, spaceId, aclHead)
 }
 
 // Init mocks base method.
-func (m *MockNodeClient) Init(arg0 *app.App) error {
+func (m *MockNodeClient) Init(a *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init", a)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockNodeClientMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockNodeClientMockRecorder) Init(a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockNodeClient)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockNodeClient)(nil).Init), a)
 }
 
 // Name mocks base method.

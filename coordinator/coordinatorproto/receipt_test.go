@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"github.com/anyproto/any-sync/util/crypto"
-	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -45,14 +44,14 @@ func (fx *fixture) prepareReceipt(t *testing.T, validPeriod time.Duration) {
 	fx.signedReceipt, err = PrepareSpaceReceipt(fx.spaceId, fx.peerId, validPeriod, fx.accountKey, fx.networkKey)
 	require.NoError(t, err)
 	fx.originalReceipt = &SpaceReceipt{}
-	err = proto.Unmarshal(fx.signedReceipt.SpaceReceiptPayload, fx.originalReceipt)
+	err = fx.originalReceipt.UnmarshalVT(fx.signedReceipt.SpaceReceiptPayload)
 	require.NoError(t, err)
 	return
 }
 
 func (fx *fixture) updateReceipt(t *testing.T, update func(t *testing.T, receipt *SpaceReceipt)) {
 	update(t, fx.originalReceipt)
-	marshalled, err := proto.Marshal(fx.originalReceipt)
+	marshalled, err := fx.originalReceipt.MarshalVT()
 	require.NoError(t, err)
 	signature, err := fx.networkKey.Sign(marshalled)
 	require.NoError(t, err)

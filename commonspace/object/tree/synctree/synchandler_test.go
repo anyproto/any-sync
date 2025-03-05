@@ -1,9 +1,9 @@
 package synctree
 
 import (
+	"google.golang.org/protobuf/proto"
 	"testing"
 
-	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -39,7 +39,7 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 			SnapshotPath: []string{rawCh.Id},
 		}
 		wrapped := treechangeproto.WrapHeadUpdate(treeHeadUpdate, rawCh.RawTreeChangeWithId())
-		marshaled, err := wrapped.Marshal()
+		marshaled, err := wrapped.MarshalVT()
 		require.NoError(t, err)
 		headUpdate := &objectmessages.HeadUpdate{
 			Bytes: marshaled,
@@ -80,7 +80,7 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 			SnapshotPath: []string{rawCh.Id},
 		}
 		wrapped := treechangeproto.WrapHeadUpdate(treeHeadUpdate, rawCh.RawTreeChangeWithId())
-		marshaled, err := wrapped.Marshal()
+		marshaled, err := wrapped.MarshalVT()
 		require.NoError(t, err)
 		headUpdate := &objectmessages.HeadUpdate{
 			Bytes: marshaled,
@@ -123,7 +123,7 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 			SnapshotPath: []string{rawCh.Id},
 		}
 		wrapped := treechangeproto.WrapHeadUpdate(treeHeadUpdate, rawCh)
-		marshaled, err := wrapped.Marshal()
+		marshaled, err := wrapped.MarshalVT()
 		require.NoError(t, err)
 		headUpdate := &objectmessages.HeadUpdate{
 			Bytes: marshaled,
@@ -154,7 +154,7 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 			SnapshotPath: []string{rawCh.Id},
 		}
 		wrapped := treechangeproto.WrapHeadUpdate(treeHeadUpdate, rawCh)
-		marshaled, err := wrapped.Marshal()
+		marshaled, err := wrapped.MarshalVT()
 		require.NoError(t, err)
 		headUpdate := &objectmessages.HeadUpdate{
 			Bytes: marshaled,
@@ -193,7 +193,7 @@ func TestSyncHandler_HandleStreamRequest(t *testing.T) {
 			Id:        "chId",
 		}
 		wrapped := treechangeproto.WrapFullRequest(fullRequest, nil)
-		marshaled, err := wrapped.Marshal()
+		marshaled, err := wrapped.MarshalVT()
 		require.NoError(t, err)
 		request := objectmessages.NewByteRequest("peerId", "spaceId", "objectId", marshaled)
 		producer := mock_response.NewMockResponseProducer(fx.ctrl)
@@ -235,7 +235,7 @@ func TestSyncHandler_HandleStreamRequest(t *testing.T) {
 			Id:        "chId",
 		}
 		wrapped := treechangeproto.WrapFullRequest(fullRequest, nil)
-		marshaled, err := wrapped.Marshal()
+		marshaled, err := wrapped.MarshalVT()
 		require.NoError(t, err)
 		request := objectmessages.NewByteRequest("peerId", "spaceId", "objectId", marshaled)
 		producer := mock_response.NewMockResponseProducer(fx.ctrl)
@@ -271,7 +271,7 @@ func TestSyncHandler_HandleStreamRequest(t *testing.T) {
 			Heads: heads,
 		}
 		wrapped := treechangeproto.WrapFullRequest(fullRequest, nil)
-		marshaled, err := wrapped.Marshal()
+		marshaled, err := wrapped.MarshalVT()
 		require.NoError(t, err)
 		request := objectmessages.NewByteRequest("peerId", "spaceId", "objectId", marshaled)
 		producer := mock_response.NewMockResponseProducer(fx.ctrl)
@@ -306,7 +306,7 @@ func TestSyncHandler_HandleStreamRequest(t *testing.T) {
 			Heads: heads,
 		}
 		wrapped := treechangeproto.WrapFullRequest(fullRequest, nil)
-		marshaled, err := wrapped.Marshal()
+		marshaled, err := wrapped.MarshalVT()
 		require.NoError(t, err)
 		request := objectmessages.NewByteRequest("peerId", "spaceId", "objectId", marshaled)
 		producer := mock_response.NewMockResponseProducer(fx.ctrl)
