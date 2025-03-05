@@ -22,6 +22,7 @@ import (
 type MockDeletionManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockDeletionManagerMockRecorder
+	isgomock struct{}
 }
 
 // MockDeletionManagerMockRecorder is the mock recorder for MockDeletionManager.
@@ -42,31 +43,31 @@ func (m *MockDeletionManager) EXPECT() *MockDeletionManagerMockRecorder {
 }
 
 // Close mocks base method.
-func (m *MockDeletionManager) Close(arg0 context.Context) error {
+func (m *MockDeletionManager) Close(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", arg0)
+	ret := m.ctrl.Call(m, "Close", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockDeletionManagerMockRecorder) Close(arg0 any) *gomock.Call {
+func (mr *MockDeletionManagerMockRecorder) Close(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockDeletionManager)(nil).Close), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockDeletionManager)(nil).Close), ctx)
 }
 
 // Init mocks base method.
-func (m *MockDeletionManager) Init(arg0 *app.App) error {
+func (m *MockDeletionManager) Init(a *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init", a)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockDeletionManagerMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockDeletionManagerMockRecorder) Init(a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockDeletionManager)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockDeletionManager)(nil).Init), a)
 }
 
 // Name mocks base method.
@@ -84,37 +85,38 @@ func (mr *MockDeletionManagerMockRecorder) Name() *gomock.Call {
 }
 
 // Run mocks base method.
-func (m *MockDeletionManager) Run(arg0 context.Context) error {
+func (m *MockDeletionManager) Run(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", arg0)
+	ret := m.ctrl.Call(m, "Run", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockDeletionManagerMockRecorder) Run(arg0 any) *gomock.Call {
+func (mr *MockDeletionManagerMockRecorder) Run(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockDeletionManager)(nil).Run), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockDeletionManager)(nil).Run), ctx)
 }
 
 // UpdateState mocks base method.
-func (m *MockDeletionManager) UpdateState(arg0 context.Context, arg1 *settingsstate.State) error {
+func (m *MockDeletionManager) UpdateState(ctx context.Context, state *settingsstate.State) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateState", arg0, arg1)
+	ret := m.ctrl.Call(m, "UpdateState", ctx, state)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateState indicates an expected call of UpdateState.
-func (mr *MockDeletionManagerMockRecorder) UpdateState(arg0, arg1 any) *gomock.Call {
+func (mr *MockDeletionManagerMockRecorder) UpdateState(ctx, state any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateState", reflect.TypeOf((*MockDeletionManager)(nil).UpdateState), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateState", reflect.TypeOf((*MockDeletionManager)(nil).UpdateState), ctx, state)
 }
 
 // MockDeleter is a mock of Deleter interface.
 type MockDeleter struct {
 	ctrl     *gomock.Controller
 	recorder *MockDeleterMockRecorder
+	isgomock struct{}
 }
 
 // MockDeleterMockRecorder is the mock recorder for MockDeleter.
@@ -135,13 +137,13 @@ func (m *MockDeleter) EXPECT() *MockDeleterMockRecorder {
 }
 
 // Delete mocks base method.
-func (m *MockDeleter) Delete(arg0 context.Context) {
+func (m *MockDeleter) Delete(ctx context.Context) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Delete", arg0)
+	m.ctrl.Call(m, "Delete", ctx)
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockDeleterMockRecorder) Delete(arg0 any) *gomock.Call {
+func (mr *MockDeleterMockRecorder) Delete(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDeleter)(nil).Delete), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDeleter)(nil).Delete), ctx)
 }

@@ -7,7 +7,6 @@ import (
 	"crypto/subtle"
 	"fmt"
 	"github.com/anyproto/any-sync/util/crypto/cryptoproto"
-	"github.com/anyproto/protobuf/proto"
 	mbase "github.com/multiformats/go-multibase"
 )
 
@@ -65,7 +64,7 @@ func UnmarshallAESKey(k []byte) (*AESKey, error) {
 // UnmarshallAESKeyProto returns a key by decoding bytes.
 func UnmarshallAESKeyProto(k []byte) (*AESKey, error) {
 	msg := &cryptoproto.Key{}
-	err := proto.Unmarshal(k, msg)
+	err := msg.UnmarshalVT(k)
 	if err != nil {
 		return nil, err
 	}
@@ -141,5 +140,5 @@ func (k *AESKey) Marshall() ([]byte, error) {
 		Type: cryptoproto.KeyType_AES,
 		Data: k.raw,
 	}
-	return msg.Marshal()
+	return msg.MarshalVT()
 }
