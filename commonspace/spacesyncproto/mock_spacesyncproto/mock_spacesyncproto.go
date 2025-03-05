@@ -21,6 +21,7 @@ import (
 type MockDRPCSpaceSyncClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockDRPCSpaceSyncClientMockRecorder
+	isgomock struct{}
 }
 
 // MockDRPCSpaceSyncClientMockRecorder is the mock recorder for MockDRPCSpaceSyncClient.
@@ -41,33 +42,33 @@ func (m *MockDRPCSpaceSyncClient) EXPECT() *MockDRPCSpaceSyncClientMockRecorder 
 }
 
 // AclAddRecord mocks base method.
-func (m *MockDRPCSpaceSyncClient) AclAddRecord(arg0 context.Context, arg1 *spacesyncproto.AclAddRecordRequest) (*spacesyncproto.AclAddRecordResponse, error) {
+func (m *MockDRPCSpaceSyncClient) AclAddRecord(ctx context.Context, in *spacesyncproto.AclAddRecordRequest) (*spacesyncproto.AclAddRecordResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AclAddRecord", arg0, arg1)
+	ret := m.ctrl.Call(m, "AclAddRecord", ctx, in)
 	ret0, _ := ret[0].(*spacesyncproto.AclAddRecordResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AclAddRecord indicates an expected call of AclAddRecord.
-func (mr *MockDRPCSpaceSyncClientMockRecorder) AclAddRecord(arg0, arg1 any) *gomock.Call {
+func (mr *MockDRPCSpaceSyncClientMockRecorder) AclAddRecord(ctx, in any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclAddRecord", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).AclAddRecord), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclAddRecord", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).AclAddRecord), ctx, in)
 }
 
 // AclGetRecords mocks base method.
-func (m *MockDRPCSpaceSyncClient) AclGetRecords(arg0 context.Context, arg1 *spacesyncproto.AclGetRecordsRequest) (*spacesyncproto.AclGetRecordsResponse, error) {
+func (m *MockDRPCSpaceSyncClient) AclGetRecords(ctx context.Context, in *spacesyncproto.AclGetRecordsRequest) (*spacesyncproto.AclGetRecordsResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AclGetRecords", arg0, arg1)
+	ret := m.ctrl.Call(m, "AclGetRecords", ctx, in)
 	ret0, _ := ret[0].(*spacesyncproto.AclGetRecordsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AclGetRecords indicates an expected call of AclGetRecords.
-func (mr *MockDRPCSpaceSyncClientMockRecorder) AclGetRecords(arg0, arg1 any) *gomock.Call {
+func (mr *MockDRPCSpaceSyncClientMockRecorder) AclGetRecords(ctx, in any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclGetRecords", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).AclGetRecords), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclGetRecords", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).AclGetRecords), ctx, in)
 }
 
 // DRPCConn mocks base method.
@@ -85,91 +86,91 @@ func (mr *MockDRPCSpaceSyncClientMockRecorder) DRPCConn() *gomock.Call {
 }
 
 // HeadSync mocks base method.
-func (m *MockDRPCSpaceSyncClient) HeadSync(arg0 context.Context, arg1 *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
+func (m *MockDRPCSpaceSyncClient) HeadSync(ctx context.Context, in *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HeadSync", arg0, arg1)
+	ret := m.ctrl.Call(m, "HeadSync", ctx, in)
 	ret0, _ := ret[0].(*spacesyncproto.HeadSyncResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HeadSync indicates an expected call of HeadSync.
-func (mr *MockDRPCSpaceSyncClientMockRecorder) HeadSync(arg0, arg1 any) *gomock.Call {
+func (mr *MockDRPCSpaceSyncClientMockRecorder) HeadSync(ctx, in any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadSync", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).HeadSync), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadSync", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).HeadSync), ctx, in)
 }
 
 // ObjectSync mocks base method.
-func (m *MockDRPCSpaceSyncClient) ObjectSync(arg0 context.Context, arg1 *spacesyncproto.ObjectSyncMessage) (*spacesyncproto.ObjectSyncMessage, error) {
+func (m *MockDRPCSpaceSyncClient) ObjectSync(ctx context.Context, in *spacesyncproto.ObjectSyncMessage) (*spacesyncproto.ObjectSyncMessage, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ObjectSync", arg0, arg1)
+	ret := m.ctrl.Call(m, "ObjectSync", ctx, in)
 	ret0, _ := ret[0].(*spacesyncproto.ObjectSyncMessage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ObjectSync indicates an expected call of ObjectSync.
-func (mr *MockDRPCSpaceSyncClientMockRecorder) ObjectSync(arg0, arg1 any) *gomock.Call {
+func (mr *MockDRPCSpaceSyncClientMockRecorder) ObjectSync(ctx, in any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObjectSync", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).ObjectSync), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObjectSync", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).ObjectSync), ctx, in)
 }
 
 // ObjectSyncRequestStream mocks base method.
-func (m *MockDRPCSpaceSyncClient) ObjectSyncRequestStream(arg0 context.Context, arg1 *spacesyncproto.ObjectSyncMessage) (spacesyncproto.DRPCSpaceSync_ObjectSyncRequestStreamClient, error) {
+func (m *MockDRPCSpaceSyncClient) ObjectSyncRequestStream(ctx context.Context, in *spacesyncproto.ObjectSyncMessage) (spacesyncproto.DRPCSpaceSync_ObjectSyncRequestStreamClient, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ObjectSyncRequestStream", arg0, arg1)
+	ret := m.ctrl.Call(m, "ObjectSyncRequestStream", ctx, in)
 	ret0, _ := ret[0].(spacesyncproto.DRPCSpaceSync_ObjectSyncRequestStreamClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ObjectSyncRequestStream indicates an expected call of ObjectSyncRequestStream.
-func (mr *MockDRPCSpaceSyncClientMockRecorder) ObjectSyncRequestStream(arg0, arg1 any) *gomock.Call {
+func (mr *MockDRPCSpaceSyncClientMockRecorder) ObjectSyncRequestStream(ctx, in any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObjectSyncRequestStream", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).ObjectSyncRequestStream), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObjectSyncRequestStream", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).ObjectSyncRequestStream), ctx, in)
 }
 
 // ObjectSyncStream mocks base method.
-func (m *MockDRPCSpaceSyncClient) ObjectSyncStream(arg0 context.Context) (spacesyncproto.DRPCSpaceSync_ObjectSyncStreamClient, error) {
+func (m *MockDRPCSpaceSyncClient) ObjectSyncStream(ctx context.Context) (spacesyncproto.DRPCSpaceSync_ObjectSyncStreamClient, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ObjectSyncStream", arg0)
+	ret := m.ctrl.Call(m, "ObjectSyncStream", ctx)
 	ret0, _ := ret[0].(spacesyncproto.DRPCSpaceSync_ObjectSyncStreamClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ObjectSyncStream indicates an expected call of ObjectSyncStream.
-func (mr *MockDRPCSpaceSyncClientMockRecorder) ObjectSyncStream(arg0 any) *gomock.Call {
+func (mr *MockDRPCSpaceSyncClientMockRecorder) ObjectSyncStream(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObjectSyncStream", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).ObjectSyncStream), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObjectSyncStream", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).ObjectSyncStream), ctx)
 }
 
 // SpacePull mocks base method.
-func (m *MockDRPCSpaceSyncClient) SpacePull(arg0 context.Context, arg1 *spacesyncproto.SpacePullRequest) (*spacesyncproto.SpacePullResponse, error) {
+func (m *MockDRPCSpaceSyncClient) SpacePull(ctx context.Context, in *spacesyncproto.SpacePullRequest) (*spacesyncproto.SpacePullResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpacePull", arg0, arg1)
+	ret := m.ctrl.Call(m, "SpacePull", ctx, in)
 	ret0, _ := ret[0].(*spacesyncproto.SpacePullResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SpacePull indicates an expected call of SpacePull.
-func (mr *MockDRPCSpaceSyncClientMockRecorder) SpacePull(arg0, arg1 any) *gomock.Call {
+func (mr *MockDRPCSpaceSyncClientMockRecorder) SpacePull(ctx, in any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpacePull", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).SpacePull), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpacePull", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).SpacePull), ctx, in)
 }
 
 // SpacePush mocks base method.
-func (m *MockDRPCSpaceSyncClient) SpacePush(arg0 context.Context, arg1 *spacesyncproto.SpacePushRequest) (*spacesyncproto.SpacePushResponse, error) {
+func (m *MockDRPCSpaceSyncClient) SpacePush(ctx context.Context, in *spacesyncproto.SpacePushRequest) (*spacesyncproto.SpacePushResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpacePush", arg0, arg1)
+	ret := m.ctrl.Call(m, "SpacePush", ctx, in)
 	ret0, _ := ret[0].(*spacesyncproto.SpacePushResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SpacePush indicates an expected call of SpacePush.
-func (mr *MockDRPCSpaceSyncClientMockRecorder) SpacePush(arg0, arg1 any) *gomock.Call {
+func (mr *MockDRPCSpaceSyncClientMockRecorder) SpacePush(ctx, in any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpacePush", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).SpacePush), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpacePush", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).SpacePush), ctx, in)
 }

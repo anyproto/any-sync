@@ -1,8 +1,6 @@
 module github.com/anyproto/any-sync
 
-go 1.23.0
-
-toolchain go1.23.5
+go 1.23.2
 
 require (
 	filippo.io/edwards25519 v1.1.0
@@ -11,7 +9,6 @@ require (
 	github.com/anyproto/go-slip10 v1.0.0
 	github.com/anyproto/go-slip21 v1.0.0
 	github.com/anyproto/lexid v0.0.4
-	github.com/anyproto/protobuf v1.3.3-0.20240814124528-72b8c7e0e0f5
 	github.com/btcsuite/btcd v0.22.1
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
 	github.com/cespare/xxhash v1.1.0
@@ -29,6 +26,7 @@ require (
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multibase v0.2.0
 	github.com/multiformats/go-multihash v0.2.3
+	github.com/planetscale/vtprotobuf v0.6.0
 	github.com/prometheus/client_golang v1.21.1
 	github.com/quic-go/quic-go v0.50.0
 	github.com/stretchr/testify v1.10.0
@@ -43,6 +41,7 @@ require (
 	golang.org/x/sys v0.31.0
 	golang.org/x/time v0.11.0
 	golang.org/x/tools v0.31.0
+	google.golang.org/protobuf v1.36.5
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.34
 )
@@ -111,7 +110,6 @@ require (
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
-	google.golang.org/protobuf v1.36.5 // indirect
 	lukechampine.com/blake3 v1.4.0 // indirect
 	modernc.org/libc v1.61.13 // indirect
 	modernc.org/mathutil v1.7.1 // indirect

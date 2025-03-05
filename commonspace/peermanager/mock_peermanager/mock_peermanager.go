@@ -22,6 +22,7 @@ import (
 type MockPeerManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockPeerManagerMockRecorder
+	isgomock struct{}
 }
 
 // MockPeerManagerMockRecorder is the mock recorder for MockPeerManager.
@@ -42,73 +43,73 @@ func (m *MockPeerManager) EXPECT() *MockPeerManagerMockRecorder {
 }
 
 // BroadcastMessage mocks base method.
-func (m *MockPeerManager) BroadcastMessage(arg0 context.Context, arg1 drpc.Message) error {
+func (m *MockPeerManager) BroadcastMessage(ctx context.Context, msg drpc.Message) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BroadcastMessage", arg0, arg1)
+	ret := m.ctrl.Call(m, "BroadcastMessage", ctx, msg)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // BroadcastMessage indicates an expected call of BroadcastMessage.
-func (mr *MockPeerManagerMockRecorder) BroadcastMessage(arg0, arg1 any) *gomock.Call {
+func (mr *MockPeerManagerMockRecorder) BroadcastMessage(ctx, msg any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BroadcastMessage", reflect.TypeOf((*MockPeerManager)(nil).BroadcastMessage), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BroadcastMessage", reflect.TypeOf((*MockPeerManager)(nil).BroadcastMessage), ctx, msg)
 }
 
 // GetNodePeers mocks base method.
-func (m *MockPeerManager) GetNodePeers(arg0 context.Context) ([]peer.Peer, error) {
+func (m *MockPeerManager) GetNodePeers(ctx context.Context) ([]peer.Peer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNodePeers", arg0)
+	ret := m.ctrl.Call(m, "GetNodePeers", ctx)
 	ret0, _ := ret[0].([]peer.Peer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetNodePeers indicates an expected call of GetNodePeers.
-func (mr *MockPeerManagerMockRecorder) GetNodePeers(arg0 any) *gomock.Call {
+func (mr *MockPeerManagerMockRecorder) GetNodePeers(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodePeers", reflect.TypeOf((*MockPeerManager)(nil).GetNodePeers), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodePeers", reflect.TypeOf((*MockPeerManager)(nil).GetNodePeers), ctx)
 }
 
 // GetResponsiblePeers mocks base method.
-func (m *MockPeerManager) GetResponsiblePeers(arg0 context.Context) ([]peer.Peer, error) {
+func (m *MockPeerManager) GetResponsiblePeers(ctx context.Context) ([]peer.Peer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetResponsiblePeers", arg0)
+	ret := m.ctrl.Call(m, "GetResponsiblePeers", ctx)
 	ret0, _ := ret[0].([]peer.Peer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetResponsiblePeers indicates an expected call of GetResponsiblePeers.
-func (mr *MockPeerManagerMockRecorder) GetResponsiblePeers(arg0 any) *gomock.Call {
+func (mr *MockPeerManagerMockRecorder) GetResponsiblePeers(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResponsiblePeers", reflect.TypeOf((*MockPeerManager)(nil).GetResponsiblePeers), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResponsiblePeers", reflect.TypeOf((*MockPeerManager)(nil).GetResponsiblePeers), ctx)
 }
 
 // Init mocks base method.
-func (m *MockPeerManager) Init(arg0 *app.App) error {
+func (m *MockPeerManager) Init(a *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init", a)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockPeerManagerMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockPeerManagerMockRecorder) Init(a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockPeerManager)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockPeerManager)(nil).Init), a)
 }
 
 // KeepAlive mocks base method.
-func (m *MockPeerManager) KeepAlive(arg0 context.Context) {
+func (m *MockPeerManager) KeepAlive(ctx context.Context) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "KeepAlive", arg0)
+	m.ctrl.Call(m, "KeepAlive", ctx)
 }
 
 // KeepAlive indicates an expected call of KeepAlive.
-func (mr *MockPeerManagerMockRecorder) KeepAlive(arg0 any) *gomock.Call {
+func (mr *MockPeerManagerMockRecorder) KeepAlive(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeepAlive", reflect.TypeOf((*MockPeerManager)(nil).KeepAlive), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeepAlive", reflect.TypeOf((*MockPeerManager)(nil).KeepAlive), ctx)
 }
 
 // Name mocks base method.
@@ -126,15 +127,15 @@ func (mr *MockPeerManagerMockRecorder) Name() *gomock.Call {
 }
 
 // SendMessage mocks base method.
-func (m *MockPeerManager) SendMessage(arg0 context.Context, arg1 string, arg2 drpc.Message) error {
+func (m *MockPeerManager) SendMessage(ctx context.Context, peerId string, msg drpc.Message) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SendMessage", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "SendMessage", ctx, peerId, msg)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SendMessage indicates an expected call of SendMessage.
-func (mr *MockPeerManagerMockRecorder) SendMessage(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockPeerManagerMockRecorder) SendMessage(ctx, peerId, msg any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMessage", reflect.TypeOf((*MockPeerManager)(nil).SendMessage), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMessage", reflect.TypeOf((*MockPeerManager)(nil).SendMessage), ctx, peerId, msg)
 }

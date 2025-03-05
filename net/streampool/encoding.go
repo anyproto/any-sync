@@ -2,8 +2,9 @@ package streampool
 
 import (
 	"errors"
-
-	"github.com/anyproto/protobuf/proto"
+	"github.com/anyproto/any-sync/protobuf"
+	drpc2 "github.com/planetscale/vtprotobuf/codec/drpc"
+	"google.golang.org/protobuf/proto"
 	"storj.io/drpc"
 )
 
@@ -39,7 +40,7 @@ func (p protoEncoding) Marshal(msg drpc.Message) (res []byte, err error) {
 			return nil, errNotAProtoMsg
 		}
 	}
-	return proto.Marshal(pmsg)
+	return drpc2.Marshal(pmsg)
 }
 
 func (p protoEncoding) MarshalAppend(buf []byte, msg drpc.Message) (res []byte, err error) {
@@ -54,7 +55,7 @@ func (p protoEncoding) MarshalAppend(buf []byte, msg drpc.Message) (res []byte, 
 			return nil, errNotAProtoMsg
 		}
 	}
-	return proto.MarshalAppend(buf, pmsg)
+	return protobuf.MarshalAppend(buf, pmsg)
 }
 
 func (p protoEncoding) Unmarshal(buf []byte, msg drpc.Message) (err error) {
@@ -70,7 +71,7 @@ func (p protoEncoding) Unmarshal(buf []byte, msg drpc.Message) (err error) {
 			return errNotAProtoMsg
 		}
 	}
-	err = proto.Unmarshal(buf, pmsg)
+	err = drpc2.Unmarshal(buf, pmsg)
 	if err != nil {
 		return err
 	}

@@ -79,7 +79,7 @@ func (a *namedAcl) Init(app *app.App) error {
 }
 
 func marshallRecord(t *testing.T, rec *consensusproto.RawRecord) *consensusproto.RawRecordWithId {
-	data, err := rec.Marshal()
+	data, err := rec.MarshalVT()
 	require.NoError(t, err)
 	recId, err := cidutil.NewCidFromBytes(data)
 	require.NoError(t, err)

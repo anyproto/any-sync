@@ -21,6 +21,7 @@ import (
 type MockTransport struct {
 	ctrl     *gomock.Controller
 	recorder *MockTransportMockRecorder
+	isgomock struct{}
 }
 
 // MockTransportMockRecorder is the mock recorder for MockTransport.
@@ -41,36 +42,37 @@ func (m *MockTransport) EXPECT() *MockTransportMockRecorder {
 }
 
 // Dial mocks base method.
-func (m *MockTransport) Dial(arg0 context.Context, arg1 string) (transport.MultiConn, error) {
+func (m *MockTransport) Dial(ctx context.Context, addr string) (transport.MultiConn, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Dial", arg0, arg1)
+	ret := m.ctrl.Call(m, "Dial", ctx, addr)
 	ret0, _ := ret[0].(transport.MultiConn)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Dial indicates an expected call of Dial.
-func (mr *MockTransportMockRecorder) Dial(arg0, arg1 any) *gomock.Call {
+func (mr *MockTransportMockRecorder) Dial(ctx, addr any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dial", reflect.TypeOf((*MockTransport)(nil).Dial), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dial", reflect.TypeOf((*MockTransport)(nil).Dial), ctx, addr)
 }
 
 // SetAccepter mocks base method.
-func (m *MockTransport) SetAccepter(arg0 transport.Accepter) {
+func (m *MockTransport) SetAccepter(accepter transport.Accepter) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetAccepter", arg0)
+	m.ctrl.Call(m, "SetAccepter", accepter)
 }
 
 // SetAccepter indicates an expected call of SetAccepter.
-func (mr *MockTransportMockRecorder) SetAccepter(arg0 any) *gomock.Call {
+func (mr *MockTransportMockRecorder) SetAccepter(accepter any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAccepter", reflect.TypeOf((*MockTransport)(nil).SetAccepter), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAccepter", reflect.TypeOf((*MockTransport)(nil).SetAccepter), accepter)
 }
 
 // MockMultiConn is a mock of MultiConn interface.
 type MockMultiConn struct {
 	ctrl     *gomock.Controller
 	recorder *MockMultiConnMockRecorder
+	isgomock struct{}
 }
 
 // MockMultiConnMockRecorder is the mock recorder for MockMultiConn.
@@ -176,16 +178,16 @@ func (mr *MockMultiConnMockRecorder) IsClosed() *gomock.Call {
 }
 
 // Open mocks base method.
-func (m *MockMultiConn) Open(arg0 context.Context) (net.Conn, error) {
+func (m *MockMultiConn) Open(ctx context.Context) (net.Conn, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Open", arg0)
+	ret := m.ctrl.Call(m, "Open", ctx)
 	ret0, _ := ret[0].(net.Conn)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Open indicates an expected call of Open.
-func (mr *MockMultiConnMockRecorder) Open(arg0 any) *gomock.Call {
+func (mr *MockMultiConnMockRecorder) Open(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Open", reflect.TypeOf((*MockMultiConn)(nil).Open), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Open", reflect.TypeOf((*MockMultiConn)(nil).Open), ctx)
 }

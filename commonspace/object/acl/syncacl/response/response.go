@@ -2,8 +2,7 @@ package response
 
 import (
 	"fmt"
-
-	"github.com/anyproto/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
@@ -47,7 +46,7 @@ func (r *Response) SetProtoMessage(message proto.Message) error {
 		return fmt.Errorf("unexpected message type: %T", message)
 	}
 	logMsg := &consensusproto.LogSyncMessage{}
-	err := proto.Unmarshal(msg.Payload, logMsg)
+	err := logMsg.UnmarshalVT(msg.Payload)
 	if err != nil {
 		return err
 	}

@@ -24,6 +24,7 @@ import (
 type MockCoordinatorClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockCoordinatorClientMockRecorder
+	isgomock struct{}
 }
 
 // MockCoordinatorClientMockRecorder is the mock recorder for MockCoordinatorClient.
@@ -44,164 +45,164 @@ func (m *MockCoordinatorClient) EXPECT() *MockCoordinatorClientMockRecorder {
 }
 
 // AccountDelete mocks base method.
-func (m *MockCoordinatorClient) AccountDelete(arg0 context.Context, arg1 *coordinatorproto.DeletionConfirmPayloadWithSignature) (int64, error) {
+func (m *MockCoordinatorClient) AccountDelete(ctx context.Context, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AccountDelete", arg0, arg1)
+	ret := m.ctrl.Call(m, "AccountDelete", ctx, conf)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AccountDelete indicates an expected call of AccountDelete.
-func (mr *MockCoordinatorClientMockRecorder) AccountDelete(arg0, arg1 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) AccountDelete(ctx, conf any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountDelete", reflect.TypeOf((*MockCoordinatorClient)(nil).AccountDelete), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountDelete", reflect.TypeOf((*MockCoordinatorClient)(nil).AccountDelete), ctx, conf)
 }
 
 // AccountLimitsSet mocks base method.
-func (m *MockCoordinatorClient) AccountLimitsSet(arg0 context.Context, arg1 *coordinatorproto.AccountLimitsSetRequest) error {
+func (m *MockCoordinatorClient) AccountLimitsSet(ctx context.Context, req *coordinatorproto.AccountLimitsSetRequest) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AccountLimitsSet", arg0, arg1)
+	ret := m.ctrl.Call(m, "AccountLimitsSet", ctx, req)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AccountLimitsSet indicates an expected call of AccountLimitsSet.
-func (mr *MockCoordinatorClientMockRecorder) AccountLimitsSet(arg0, arg1 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) AccountLimitsSet(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountLimitsSet", reflect.TypeOf((*MockCoordinatorClient)(nil).AccountLimitsSet), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountLimitsSet", reflect.TypeOf((*MockCoordinatorClient)(nil).AccountLimitsSet), ctx, req)
 }
 
 // AccountRevertDeletion mocks base method.
-func (m *MockCoordinatorClient) AccountRevertDeletion(arg0 context.Context) error {
+func (m *MockCoordinatorClient) AccountRevertDeletion(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AccountRevertDeletion", arg0)
+	ret := m.ctrl.Call(m, "AccountRevertDeletion", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AccountRevertDeletion indicates an expected call of AccountRevertDeletion.
-func (mr *MockCoordinatorClientMockRecorder) AccountRevertDeletion(arg0 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) AccountRevertDeletion(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountRevertDeletion", reflect.TypeOf((*MockCoordinatorClient)(nil).AccountRevertDeletion), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AccountRevertDeletion", reflect.TypeOf((*MockCoordinatorClient)(nil).AccountRevertDeletion), ctx)
 }
 
 // AclAddRecord mocks base method.
-func (m *MockCoordinatorClient) AclAddRecord(arg0 context.Context, arg1 string, arg2 *consensusproto.RawRecord) (*consensusproto.RawRecordWithId, error) {
+func (m *MockCoordinatorClient) AclAddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AclAddRecord", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "AclAddRecord", ctx, spaceId, rec)
 	ret0, _ := ret[0].(*consensusproto.RawRecordWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AclAddRecord indicates an expected call of AclAddRecord.
-func (mr *MockCoordinatorClientMockRecorder) AclAddRecord(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) AclAddRecord(ctx, spaceId, rec any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclAddRecord", reflect.TypeOf((*MockCoordinatorClient)(nil).AclAddRecord), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclAddRecord", reflect.TypeOf((*MockCoordinatorClient)(nil).AclAddRecord), ctx, spaceId, rec)
 }
 
 // AclEventLog mocks base method.
-func (m *MockCoordinatorClient) AclEventLog(arg0 context.Context, arg1, arg2 string, arg3 int) ([]*coordinatorproto.AclEventLogRecord, error) {
+func (m *MockCoordinatorClient) AclEventLog(ctx context.Context, accountId, lastRecordId string, limit int) ([]*coordinatorproto.AclEventLogRecord, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AclEventLog", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "AclEventLog", ctx, accountId, lastRecordId, limit)
 	ret0, _ := ret[0].([]*coordinatorproto.AclEventLogRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AclEventLog indicates an expected call of AclEventLog.
-func (mr *MockCoordinatorClientMockRecorder) AclEventLog(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) AclEventLog(ctx, accountId, lastRecordId, limit any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclEventLog", reflect.TypeOf((*MockCoordinatorClient)(nil).AclEventLog), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclEventLog", reflect.TypeOf((*MockCoordinatorClient)(nil).AclEventLog), ctx, accountId, lastRecordId, limit)
 }
 
 // AclGetRecords mocks base method.
-func (m *MockCoordinatorClient) AclGetRecords(arg0 context.Context, arg1, arg2 string) ([]*consensusproto.RawRecordWithId, error) {
+func (m *MockCoordinatorClient) AclGetRecords(ctx context.Context, spaceId, aclHead string) ([]*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AclGetRecords", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "AclGetRecords", ctx, spaceId, aclHead)
 	ret0, _ := ret[0].([]*consensusproto.RawRecordWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AclGetRecords indicates an expected call of AclGetRecords.
-func (mr *MockCoordinatorClientMockRecorder) AclGetRecords(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) AclGetRecords(ctx, spaceId, aclHead any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclGetRecords", reflect.TypeOf((*MockCoordinatorClient)(nil).AclGetRecords), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AclGetRecords", reflect.TypeOf((*MockCoordinatorClient)(nil).AclGetRecords), ctx, spaceId, aclHead)
 }
 
 // DeletionLog mocks base method.
-func (m *MockCoordinatorClient) DeletionLog(arg0 context.Context, arg1 string, arg2 int) ([]*coordinatorproto.DeletionLogRecord, error) {
+func (m *MockCoordinatorClient) DeletionLog(ctx context.Context, lastRecordId string, limit int) ([]*coordinatorproto.DeletionLogRecord, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeletionLog", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "DeletionLog", ctx, lastRecordId, limit)
 	ret0, _ := ret[0].([]*coordinatorproto.DeletionLogRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DeletionLog indicates an expected call of DeletionLog.
-func (mr *MockCoordinatorClientMockRecorder) DeletionLog(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) DeletionLog(ctx, lastRecordId, limit any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletionLog", reflect.TypeOf((*MockCoordinatorClient)(nil).DeletionLog), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletionLog", reflect.TypeOf((*MockCoordinatorClient)(nil).DeletionLog), ctx, lastRecordId, limit)
 }
 
 // IdentityRepoGet mocks base method.
-func (m *MockCoordinatorClient) IdentityRepoGet(arg0 context.Context, arg1, arg2 []string) ([]*identityrepoproto.DataWithIdentity, error) {
+func (m *MockCoordinatorClient) IdentityRepoGet(ctx context.Context, identities, kinds []string) ([]*identityrepoproto.DataWithIdentity, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IdentityRepoGet", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "IdentityRepoGet", ctx, identities, kinds)
 	ret0, _ := ret[0].([]*identityrepoproto.DataWithIdentity)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IdentityRepoGet indicates an expected call of IdentityRepoGet.
-func (mr *MockCoordinatorClientMockRecorder) IdentityRepoGet(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) IdentityRepoGet(ctx, identities, kinds any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IdentityRepoGet", reflect.TypeOf((*MockCoordinatorClient)(nil).IdentityRepoGet), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IdentityRepoGet", reflect.TypeOf((*MockCoordinatorClient)(nil).IdentityRepoGet), ctx, identities, kinds)
 }
 
 // IdentityRepoPut mocks base method.
-func (m *MockCoordinatorClient) IdentityRepoPut(arg0 context.Context, arg1 string, arg2 []*identityrepoproto.Data) error {
+func (m *MockCoordinatorClient) IdentityRepoPut(ctx context.Context, identity string, data []*identityrepoproto.Data) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IdentityRepoPut", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "IdentityRepoPut", ctx, identity, data)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // IdentityRepoPut indicates an expected call of IdentityRepoPut.
-func (mr *MockCoordinatorClientMockRecorder) IdentityRepoPut(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) IdentityRepoPut(ctx, identity, data any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IdentityRepoPut", reflect.TypeOf((*MockCoordinatorClient)(nil).IdentityRepoPut), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IdentityRepoPut", reflect.TypeOf((*MockCoordinatorClient)(nil).IdentityRepoPut), ctx, identity, data)
 }
 
 // Init mocks base method.
-func (m *MockCoordinatorClient) Init(arg0 *app.App) error {
+func (m *MockCoordinatorClient) Init(a *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init", a)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockCoordinatorClientMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) Init(a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockCoordinatorClient)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockCoordinatorClient)(nil).Init), a)
 }
 
 // IsNetworkNeedsUpdate mocks base method.
-func (m *MockCoordinatorClient) IsNetworkNeedsUpdate(arg0 context.Context) (bool, error) {
+func (m *MockCoordinatorClient) IsNetworkNeedsUpdate(ctx context.Context) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsNetworkNeedsUpdate", arg0)
+	ret := m.ctrl.Call(m, "IsNetworkNeedsUpdate", ctx)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsNetworkNeedsUpdate indicates an expected call of IsNetworkNeedsUpdate.
-func (mr *MockCoordinatorClientMockRecorder) IsNetworkNeedsUpdate(arg0 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) IsNetworkNeedsUpdate(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNetworkNeedsUpdate", reflect.TypeOf((*MockCoordinatorClient)(nil).IsNetworkNeedsUpdate), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNetworkNeedsUpdate", reflect.TypeOf((*MockCoordinatorClient)(nil).IsNetworkNeedsUpdate), ctx)
 }
 
 // Name mocks base method.
@@ -219,96 +220,96 @@ func (mr *MockCoordinatorClientMockRecorder) Name() *gomock.Call {
 }
 
 // NetworkConfiguration mocks base method.
-func (m *MockCoordinatorClient) NetworkConfiguration(arg0 context.Context, arg1 string) (*coordinatorproto.NetworkConfigurationResponse, error) {
+func (m *MockCoordinatorClient) NetworkConfiguration(ctx context.Context, currentId string) (*coordinatorproto.NetworkConfigurationResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NetworkConfiguration", arg0, arg1)
+	ret := m.ctrl.Call(m, "NetworkConfiguration", ctx, currentId)
 	ret0, _ := ret[0].(*coordinatorproto.NetworkConfigurationResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NetworkConfiguration indicates an expected call of NetworkConfiguration.
-func (mr *MockCoordinatorClientMockRecorder) NetworkConfiguration(arg0, arg1 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) NetworkConfiguration(ctx, currentId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkConfiguration", reflect.TypeOf((*MockCoordinatorClient)(nil).NetworkConfiguration), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkConfiguration", reflect.TypeOf((*MockCoordinatorClient)(nil).NetworkConfiguration), ctx, currentId)
 }
 
 // SpaceDelete mocks base method.
-func (m *MockCoordinatorClient) SpaceDelete(arg0 context.Context, arg1 string, arg2 *coordinatorproto.DeletionConfirmPayloadWithSignature) error {
+func (m *MockCoordinatorClient) SpaceDelete(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpaceDelete", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "SpaceDelete", ctx, spaceId, conf)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SpaceDelete indicates an expected call of SpaceDelete.
-func (mr *MockCoordinatorClientMockRecorder) SpaceDelete(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) SpaceDelete(ctx, spaceId, conf any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceDelete", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceDelete), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceDelete", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceDelete), ctx, spaceId, conf)
 }
 
 // SpaceMakeShareable mocks base method.
-func (m *MockCoordinatorClient) SpaceMakeShareable(arg0 context.Context, arg1 string) error {
+func (m *MockCoordinatorClient) SpaceMakeShareable(ctx context.Context, spaceId string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpaceMakeShareable", arg0, arg1)
+	ret := m.ctrl.Call(m, "SpaceMakeShareable", ctx, spaceId)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SpaceMakeShareable indicates an expected call of SpaceMakeShareable.
-func (mr *MockCoordinatorClientMockRecorder) SpaceMakeShareable(arg0, arg1 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) SpaceMakeShareable(ctx, spaceId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceMakeShareable", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceMakeShareable), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceMakeShareable", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceMakeShareable), ctx, spaceId)
 }
 
 // SpaceMakeUnshareable mocks base method.
-func (m *MockCoordinatorClient) SpaceMakeUnshareable(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockCoordinatorClient) SpaceMakeUnshareable(ctx context.Context, spaceId, aclId string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpaceMakeUnshareable", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "SpaceMakeUnshareable", ctx, spaceId, aclId)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SpaceMakeUnshareable indicates an expected call of SpaceMakeUnshareable.
-func (mr *MockCoordinatorClientMockRecorder) SpaceMakeUnshareable(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) SpaceMakeUnshareable(ctx, spaceId, aclId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceMakeUnshareable", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceMakeUnshareable), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceMakeUnshareable", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceMakeUnshareable), ctx, spaceId, aclId)
 }
 
 // SpaceSign mocks base method.
-func (m *MockCoordinatorClient) SpaceSign(arg0 context.Context, arg1 coordinatorclient.SpaceSignPayload) (*coordinatorproto.SpaceReceiptWithSignature, error) {
+func (m *MockCoordinatorClient) SpaceSign(ctx context.Context, payload coordinatorclient.SpaceSignPayload) (*coordinatorproto.SpaceReceiptWithSignature, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpaceSign", arg0, arg1)
+	ret := m.ctrl.Call(m, "SpaceSign", ctx, payload)
 	ret0, _ := ret[0].(*coordinatorproto.SpaceReceiptWithSignature)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SpaceSign indicates an expected call of SpaceSign.
-func (mr *MockCoordinatorClientMockRecorder) SpaceSign(arg0, arg1 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) SpaceSign(ctx, payload any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceSign", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceSign), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpaceSign", reflect.TypeOf((*MockCoordinatorClient)(nil).SpaceSign), ctx, payload)
 }
 
 // StatusCheck mocks base method.
-func (m *MockCoordinatorClient) StatusCheck(arg0 context.Context, arg1 string) (*coordinatorproto.SpaceStatusPayload, error) {
+func (m *MockCoordinatorClient) StatusCheck(ctx context.Context, spaceId string) (*coordinatorproto.SpaceStatusPayload, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StatusCheck", arg0, arg1)
+	ret := m.ctrl.Call(m, "StatusCheck", ctx, spaceId)
 	ret0, _ := ret[0].(*coordinatorproto.SpaceStatusPayload)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // StatusCheck indicates an expected call of StatusCheck.
-func (mr *MockCoordinatorClientMockRecorder) StatusCheck(arg0, arg1 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) StatusCheck(ctx, spaceId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusCheck", reflect.TypeOf((*MockCoordinatorClient)(nil).StatusCheck), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusCheck", reflect.TypeOf((*MockCoordinatorClient)(nil).StatusCheck), ctx, spaceId)
 }
 
 // StatusCheckMany mocks base method.
-func (m *MockCoordinatorClient) StatusCheckMany(arg0 context.Context, arg1 []string) ([]*coordinatorproto.SpaceStatusPayload, *coordinatorproto.AccountLimits, error) {
+func (m *MockCoordinatorClient) StatusCheckMany(ctx context.Context, spaceIds []string) ([]*coordinatorproto.SpaceStatusPayload, *coordinatorproto.AccountLimits, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StatusCheckMany", arg0, arg1)
+	ret := m.ctrl.Call(m, "StatusCheckMany", ctx, spaceIds)
 	ret0, _ := ret[0].([]*coordinatorproto.SpaceStatusPayload)
 	ret1, _ := ret[1].(*coordinatorproto.AccountLimits)
 	ret2, _ := ret[2].(error)
@@ -316,7 +317,7 @@ func (m *MockCoordinatorClient) StatusCheckMany(arg0 context.Context, arg1 []str
 }
 
 // StatusCheckMany indicates an expected call of StatusCheckMany.
-func (mr *MockCoordinatorClientMockRecorder) StatusCheckMany(arg0, arg1 any) *gomock.Call {
+func (mr *MockCoordinatorClientMockRecorder) StatusCheckMany(ctx, spaceIds any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusCheckMany", reflect.TypeOf((*MockCoordinatorClient)(nil).StatusCheckMany), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusCheckMany", reflect.TypeOf((*MockCoordinatorClient)(nil).StatusCheckMany), ctx, spaceIds)
 }

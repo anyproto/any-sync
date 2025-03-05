@@ -19,6 +19,7 @@ import (
 type MockStatusUpdater struct {
 	ctrl     *gomock.Controller
 	recorder *MockStatusUpdaterMockRecorder
+	isgomock struct{}
 }
 
 // MockStatusUpdaterMockRecorder is the mock recorder for MockStatusUpdater.
@@ -39,53 +40,53 @@ func (m *MockStatusUpdater) EXPECT() *MockStatusUpdaterMockRecorder {
 }
 
 // HeadsApply mocks base method.
-func (m *MockStatusUpdater) HeadsApply(arg0, arg1 string, arg2 []string, arg3 bool) {
+func (m *MockStatusUpdater) HeadsApply(senderId, treeId string, heads []string, allAdded bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "HeadsApply", arg0, arg1, arg2, arg3)
+	m.ctrl.Call(m, "HeadsApply", senderId, treeId, heads, allAdded)
 }
 
 // HeadsApply indicates an expected call of HeadsApply.
-func (mr *MockStatusUpdaterMockRecorder) HeadsApply(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockStatusUpdaterMockRecorder) HeadsApply(senderId, treeId, heads, allAdded any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadsApply", reflect.TypeOf((*MockStatusUpdater)(nil).HeadsApply), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadsApply", reflect.TypeOf((*MockStatusUpdater)(nil).HeadsApply), senderId, treeId, heads, allAdded)
 }
 
 // HeadsChange mocks base method.
-func (m *MockStatusUpdater) HeadsChange(arg0 string, arg1 []string) {
+func (m *MockStatusUpdater) HeadsChange(treeId string, heads []string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "HeadsChange", arg0, arg1)
+	m.ctrl.Call(m, "HeadsChange", treeId, heads)
 }
 
 // HeadsChange indicates an expected call of HeadsChange.
-func (mr *MockStatusUpdaterMockRecorder) HeadsChange(arg0, arg1 any) *gomock.Call {
+func (mr *MockStatusUpdaterMockRecorder) HeadsChange(treeId, heads any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadsChange", reflect.TypeOf((*MockStatusUpdater)(nil).HeadsChange), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadsChange", reflect.TypeOf((*MockStatusUpdater)(nil).HeadsChange), treeId, heads)
 }
 
 // HeadsReceive mocks base method.
-func (m *MockStatusUpdater) HeadsReceive(arg0, arg1 string, arg2 []string) {
+func (m *MockStatusUpdater) HeadsReceive(senderId, treeId string, heads []string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "HeadsReceive", arg0, arg1, arg2)
+	m.ctrl.Call(m, "HeadsReceive", senderId, treeId, heads)
 }
 
 // HeadsReceive indicates an expected call of HeadsReceive.
-func (mr *MockStatusUpdaterMockRecorder) HeadsReceive(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockStatusUpdaterMockRecorder) HeadsReceive(senderId, treeId, heads any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadsReceive", reflect.TypeOf((*MockStatusUpdater)(nil).HeadsReceive), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadsReceive", reflect.TypeOf((*MockStatusUpdater)(nil).HeadsReceive), senderId, treeId, heads)
 }
 
 // Init mocks base method.
-func (m *MockStatusUpdater) Init(arg0 *app.App) error {
+func (m *MockStatusUpdater) Init(a *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init", a)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockStatusUpdaterMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockStatusUpdaterMockRecorder) Init(a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockStatusUpdater)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockStatusUpdater)(nil).Init), a)
 }
 
 // Name mocks base method.
@@ -103,13 +104,13 @@ func (mr *MockStatusUpdaterMockRecorder) Name() *gomock.Call {
 }
 
 // ObjectReceive mocks base method.
-func (m *MockStatusUpdater) ObjectReceive(arg0, arg1 string, arg2 []string) {
+func (m *MockStatusUpdater) ObjectReceive(senderId, treeId string, heads []string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ObjectReceive", arg0, arg1, arg2)
+	m.ctrl.Call(m, "ObjectReceive", senderId, treeId, heads)
 }
 
 // ObjectReceive indicates an expected call of ObjectReceive.
-func (mr *MockStatusUpdaterMockRecorder) ObjectReceive(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockStatusUpdaterMockRecorder) ObjectReceive(senderId, treeId, heads any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObjectReceive", reflect.TypeOf((*MockStatusUpdater)(nil).ObjectReceive), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObjectReceive", reflect.TypeOf((*MockStatusUpdater)(nil).ObjectReceive), senderId, treeId, heads)
 }

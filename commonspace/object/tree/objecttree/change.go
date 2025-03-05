@@ -3,8 +3,6 @@ package objecttree
 import (
 	"errors"
 
-	"github.com/anyproto/protobuf/proto"
-
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -47,7 +45,7 @@ func NewChangeFromRoot(id string, identity crypto.PubKey, ch *treechangeproto.Ro
 		ChangeType:    ch.ChangeType,
 		ChangePayload: ch.ChangePayload,
 	}
-	data, _ := proto.Marshal(changeInfo)
+	data, _ := changeInfo.MarshalVT()
 	return &Change{
 		Next:       nil,
 		AclHeadId:  ch.AclHeadId,

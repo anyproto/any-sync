@@ -2,7 +2,8 @@
 package spacesyncproto
 
 import (
-	"github.com/anyproto/protobuf/proto"
+	"github.com/anyproto/any-sync/protobuf"
+	"google.golang.org/protobuf/proto"
 	"storj.io/drpc"
 )
 
@@ -18,8 +19,8 @@ type ClientFactory interface {
 	Client(cc drpc.Conn) DRPCSpaceSyncClient
 }
 
-func MarshallSyncMessage(message proto.Marshaler, spaceId, objectId string) (objMsg *ObjectSyncMessage, err error) {
-	payload, err := message.Marshal()
+func MarshallSyncMessage(message proto.Message, spaceId, objectId string) (objMsg *ObjectSyncMessage, err error) {
+	payload, err := message.(protobuf.ProtoBuf).MarshalVT()
 	if err != nil {
 		return
 	}

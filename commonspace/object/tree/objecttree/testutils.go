@@ -103,13 +103,13 @@ func (c *MockChangeCreator) CreateRoot(id, aclId string) *treechangeproto.RawTre
 	aclChange := &treechangeproto.RootChange{
 		AclHeadId: aclId,
 	}
-	res, _ := aclChange.Marshal()
+	res, _ := aclChange.MarshalVT()
 
 	raw := &treechangeproto.RawTreeChange{
 		Payload:   res,
 		Signature: nil,
 	}
-	rawMarshalled, _ := raw.Marshal()
+	rawMarshalled, _ := raw.MarshalVT()
 
 	return &treechangeproto.RawTreeChangeWithId{
 		RawChange: rawMarshalled,
@@ -121,13 +121,13 @@ func (c *MockChangeCreator) CreateDerivedRoot(id string, isDerived bool) *treech
 	aclChange := &treechangeproto.RootChange{
 		IsDerived: isDerived,
 	}
-	res, _ := aclChange.Marshal()
+	res, _ := aclChange.MarshalVT()
 
 	raw := &treechangeproto.RawTreeChange{
 		Payload:   res,
 		Signature: nil,
 	}
-	rawMarshalled, _ := raw.Marshal()
+	rawMarshalled, _ := raw.MarshalVT()
 
 	return &treechangeproto.RawTreeChangeWithId{
 		RawChange: rawMarshalled,
@@ -148,13 +148,13 @@ func (c *MockChangeCreator) CreateRawWithData(id, aclId, snapshotId string, isSn
 		IsSnapshot:     isSnapshot,
 		DataType:       mockDataType,
 	}
-	res, _ := aclChange.Marshal()
+	res, _ := aclChange.MarshalVT()
 
 	raw := &treechangeproto.RawTreeChange{
 		Payload:   res,
 		Signature: nil,
 	}
-	rawMarshalled, _ := raw.Marshal()
+	rawMarshalled, _ := raw.MarshalVT()
 
 	return &treechangeproto.RawTreeChangeWithId{
 		RawChange: rawMarshalled,

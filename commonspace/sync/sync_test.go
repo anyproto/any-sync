@@ -2,12 +2,13 @@ package sync
 
 import (
 	"context"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"io"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"storj.io/drpc"
@@ -348,6 +349,10 @@ func (t *testResponseCollector) CollectResponse(ctx context.Context, peerId, obj
 
 type testResponse struct {
 	msg string
+}
+
+func (t *testResponse) ProtoReflect() protoreflect.Message {
+	panic("implement me")
 }
 
 func (t *testResponse) Reset() {
