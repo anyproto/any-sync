@@ -106,7 +106,6 @@ func (s *syncService) handleIncomingMessage(msg msgCtx) {
 	if req == nil {
 		return
 	}
-	log.Debug("queue request", zap.String("objectId", req.ObjectId()), zap.String("spaceId", s.spaceId))
 	err = s.manager.QueueRequest(req)
 	if err != nil {
 		log.Error("failed to queue request", zap.Error(err))
@@ -124,7 +123,6 @@ func (s *syncService) HandleMessage(ctx context.Context, msg drpc.Message) error
 		Sizeable: idMsg,
 	})
 	if errors.Is(err, mb.ErrOverflowed) {
-		log.Info("queue overflowed", zap.String("objectId", objectId))
 		return nil
 	}
 	return err
