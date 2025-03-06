@@ -43,9 +43,12 @@ service Coordinator {
   rpc AclGetRecords(AclGetRecordsRequest) returns (AclGetRecordsResponse);
   // AccountLimitsSet sets limits to the account. Can be used only by a network config member
   rpc AccountLimitsSet(AccountLimitsSetRequest) returns (AccountLimitsSetResponse);
-  
+
   // EventLog gets the latest event log records
   rpc AclEventLog(AclEventLogRequest) returns (AclEventLogResponse);
+
+  // InboxFetch returns a set of (new) messages starting from a given offset
+  rpc InboxFetch(InboxFetchRequest) returns (InboxFetchResponse);
 }
 
 message SpaceSignRequest {
@@ -401,5 +404,47 @@ message AclEventLogRecord {
   // Type of current event
   AclEventLogRecordType type = 4;
   // only for RecordTypeSpaceAclAddRecord
-  string aclChangeId = 5; 
+  string aclChangeId = 5;
+}
+
+// Inbox Message
+enum InboxPacketType {
+  Default = 0;
+}
+
+enum InboxKeyType {
+  ed25519 = 0;
+}
+
+message InboxMessage {
+  string id = 1;
+  InboxKeyType keyType = 2;
+  InboxPacketType packetType = 3;
+  InboxPacket packet = 4;
+}
+
+message InboxPacket {
+  bytes senderIdentity = 1;
+  bytes seceiverIdentity = 2;
+  bytes senderSignature = 3;
+  InboxPayload payload = 4;
+}
+
+enum InboxPayloadType {
+  InboxPayloadSpaceInvite = 0;
+}
+
+message InboxPayload {
+  InboxPayloadType payloadType = 1;
+  int64 timestamp = 2;
+  bytes body = 3;
+}
+
+message InboxFetchRequest {
+  string offset = 1;
+}
+
+message InboxFetchResponse {
+  repeated InboxMessage messages = 1;
+
 }

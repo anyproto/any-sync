@@ -55,6 +55,7 @@ type DRPCCoordinatorClient interface {
 	AclGetRecords(ctx context.Context, in *AclGetRecordsRequest) (*AclGetRecordsResponse, error)
 	AccountLimitsSet(ctx context.Context, in *AccountLimitsSetRequest) (*AccountLimitsSetResponse, error)
 	AclEventLog(ctx context.Context, in *AclEventLogRequest) (*AclEventLogResponse, error)
+	InboxFetch(ctx context.Context, in *InboxFetchRequest) (*InboxFetchResponse, error)
 }
 
 type drpcCoordinatorClient struct {
@@ -202,6 +203,15 @@ func (c *drpcCoordinatorClient) AclEventLog(ctx context.Context, in *AclEventLog
 	return out, nil
 }
 
+func (c *drpcCoordinatorClient) InboxFetch(ctx context.Context, in *InboxFetchRequest) (*InboxFetchResponse, error) {
+	out := new(InboxFetchResponse)
+	err := c.cc.Invoke(ctx, "/coordinator.Coordinator/InboxFetch", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCCoordinatorServer interface {
 	SpaceSign(context.Context, *SpaceSignRequest) (*SpaceSignResponse, error)
 	SpaceStatusCheck(context.Context, *SpaceStatusCheckRequest) (*SpaceStatusCheckResponse, error)
@@ -218,6 +228,7 @@ type DRPCCoordinatorServer interface {
 	AclGetRecords(context.Context, *AclGetRecordsRequest) (*AclGetRecordsResponse, error)
 	AccountLimitsSet(context.Context, *AccountLimitsSetRequest) (*AccountLimitsSetResponse, error)
 	AclEventLog(context.Context, *AclEventLogRequest) (*AclEventLogResponse, error)
+	InboxFetch(context.Context, *InboxFetchRequest) (*InboxFetchResponse, error)
 }
 
 type DRPCCoordinatorUnimplementedServer struct{}
@@ -282,9 +293,13 @@ func (s *DRPCCoordinatorUnimplementedServer) AclEventLog(context.Context, *AclEv
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCCoordinatorUnimplementedServer) InboxFetch(context.Context, *InboxFetchRequest) (*InboxFetchResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCCoordinatorDescription struct{}
 
-func (DRPCCoordinatorDescription) NumMethods() int { return 15 }
+func (DRPCCoordinatorDescription) NumMethods() int { return 16 }
 
 func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -423,6 +438,15 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 						in1.(*AclEventLogRequest),
 					)
 			}, DRPCCoordinatorServer.AclEventLog, true
+	case 15:
+		return "/coordinator.Coordinator/InboxFetch", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCCoordinatorServer).
+					InboxFetch(
+						ctx,
+						in1.(*InboxFetchRequest),
+					)
+			}, DRPCCoordinatorServer.InboxFetch, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -666,6 +690,22 @@ type drpcCoordinator_AclEventLogStream struct {
 }
 
 func (x *drpcCoordinator_AclEventLogStream) SendAndClose(m *AclEventLogResponse) error {
+	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
+}
+
+type DRPCCoordinator_InboxFetchStream interface {
+	drpc.Stream
+	SendAndClose(*InboxFetchResponse) error
+}
+
+type drpcCoordinator_InboxFetchStream struct {
+	drpc.Stream
+}
+
+func (x *drpcCoordinator_InboxFetchStream) SendAndClose(m *InboxFetchResponse) error {
 	if err := x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
 		return err
 	}
