@@ -100,12 +100,21 @@ func New(ctx context.Context, spaceId string, store anystore.DB) (StateStorage, 
 }
 
 func Create(ctx context.Context, state State, store anystore.DB) (StateStorage, error) {
-	arena := &anyenc.Arena{}
-	stateCollection, err := store.Collection(ctx, stateCollectionKey)
+	tx, err := store.WriteTx(ctx)
 	if err != nil {
 		return nil, err
 	}
-	tx, err := stateCollection.WriteTx(ctx)
+	storage, err := CreateTx(tx.Context(), state, store)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	return storage, tx.Commit()
+}
+
+func CreateTx(ctx context.Context, state State, store anystore.DB) (StateStorage, error) {
+	arena := &anyenc.Arena{}
+	stateCollection, err := store.Collection(ctx, stateCollectionKey)
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +124,8 @@ func Create(ctx context.Context, state State, store anystore.DB) (StateStorage, 
 	doc.Set(settingsIdKey, arena.NewString(state.SettingsId))
 	doc.Set(headerKey, arena.NewBinary(state.SpaceHeader))
 	doc.Set(aclIdKey, arena.NewString(state.AclId))
-	err = stateCollection.Insert(tx.Context(), doc)
+	err = stateCollection.Insert(ctx, doc)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 	return &stateStorage{
@@ -126,7 +134,7 @@ func Create(ctx context.Context, state State, store anystore.DB) (StateStorage, 
 		settingsId: state.SettingsId,
 		stateColl:  stateCollection,
 		arena:      arena,
-	}, tx.Commit()
+	}, nil
 }
 
 func (s *stateStorage) SettingsId() string {

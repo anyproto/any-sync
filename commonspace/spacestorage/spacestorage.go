@@ -52,7 +52,7 @@ type SpaceStorageProvider interface {
 	CreateSpaceStorage(ctx context.Context, payload SpaceStorageCreatePayload) (SpaceStorage, error)
 }
 
-func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePayload) (SpaceStorage, error) {
+func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePayload) (st SpaceStorage, err error) {
 	spaceId := payload.SpaceHeaderWithId.Id
 	state := statestorage.State{
 		AclId:       payload.AclWithId.Id,
@@ -60,7 +60,16 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 		SpaceId:     payload.SpaceHeaderWithId.Id,
 		SpaceHeader: payload.SpaceHeaderWithId.RawHeader,
 	}
-	changesColl, err := store.Collection(ctx, objecttree.CollName)
+	tx, err := store.WriteTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+	changesColl, err := store.Collection(tx.Context(), objecttree.CollName)
 	if err != nil {
 		return nil, err
 	}
@@ -68,27 +77,27 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 		Fields: []string{objecttree.TreeKey, objecttree.OrderKey},
 		Unique: true,
 	}
-	err = changesColl.EnsureIndex(ctx, orderIdx)
+	err = changesColl.EnsureIndex(tx.Context(), orderIdx)
 	if err != nil {
 		return nil, err
 	}
 	// TODO: put it in one transaction
-	stateStorage, err := statestorage.Create(ctx, state, store)
+	stateStorage, err := statestorage.CreateTx(tx.Context(), state, store)
 	if err != nil {
 		return nil, err
 	}
-	headStorage, err := headstorage.New(ctx, store)
+	headStorage, err := headstorage.New(tx.Context(), store)
 	if err != nil {
 		return nil, err
 	}
-	aclStorage, err := list.CreateStorage(ctx, &consensusproto.RawRecordWithId{
+	aclStorage, err := list.CreateStorageTx(tx.Context(), &consensusproto.RawRecordWithId{
 		Payload: payload.AclWithId.Payload,
 		Id:      payload.AclWithId.Id,
 	}, headStorage, store)
 	if err != nil {
 		return nil, err
 	}
-	_, err = objecttree.CreateStorage(ctx, &treechangeproto.RawTreeChangeWithId{
+	_, err = objecttree.CreateStorageTx(tx.Context(), &treechangeproto.RawTreeChangeWithId{
 		RawChange: payload.SpaceSettingsWithId.RawChange,
 		Id:        payload.SpaceSettingsWithId.Id,
 	}, headStorage, store)
@@ -101,7 +110,7 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 		headStorage:  headStorage,
 		stateStorage: stateStorage,
 		aclStorage:   aclStorage,
-	}, nil
+	}, tx.Commit()
 }
 
 func New(ctx context.Context, spaceId string, store anystore.DB) (SpaceStorage, error) {
