@@ -82,8 +82,12 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 		return nil, err
 	}
 	storage, err := CreateStorageTx(tx.Context(), root, headStorage, store)
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 	return storage, tx.Commit()

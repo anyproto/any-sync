@@ -99,14 +99,18 @@ func New(ctx context.Context, spaceId string, store anystore.DB) (StateStorage, 
 	return storage, nil
 }
 
-func Create(ctx context.Context, state State, store anystore.DB) (StateStorage, error) {
+func Create(ctx context.Context, state State, store anystore.DB) (st StateStorage, err error) {
 	tx, err := store.WriteTx(ctx)
 	if err != nil {
 		return nil, err
 	}
 	storage, err := CreateTx(tx.Context(), state, store)
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 	return storage, tx.Commit()
