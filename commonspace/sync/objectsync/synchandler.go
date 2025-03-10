@@ -23,7 +23,6 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
-	"github.com/anyproto/any-sync/net/secureservice"
 )
 
 var ErrUnexpectedHeadUpdateType = errors.New("unexpected head update type")
@@ -62,36 +61,21 @@ func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Messa
 	if err != nil {
 		return nil, err
 	}
-	protoVersion, err := peer.CtxProtoVersion(ctx)
-	if err != nil {
-		return nil, err
-	}
-	log.Debug("handle head update", zap.String("spaceId", o.spaceId), zap.String("peerId", peerId), zap.String("objectId", update.Meta.ObjectId))
-	isNewProto := protoVersion >= secureservice.ProtoVersion
 	obj, err := o.manager.GetObject(context.Background(), update.Meta.ObjectId)
 	if err != nil {
-		if isNewProto {
-			log.Debug("return request", zap.String("spaceId", o.spaceId), zap.String("peerId", peerId), zap.String("objectId", update.Meta.ObjectId))
-			return synctree.NewRequest(peerId, update.Meta.SpaceId, update.Meta.ObjectId, nil, nil, nil), nil
-		}
-		return nil, err
+		return synctree.NewRequest(peerId, update.Meta.SpaceId, update.Meta.ObjectId, nil, nil, nil), nil
 	}
 	objHandler, ok := obj.(syncdeps.ObjectSyncHandler)
 	if !ok {
 		return nil, fmt.Errorf("object %s does not support sync", obj.Id())
 	}
-	req, err := objHandler.HandleHeadUpdate(ctx, o.status, update)
-	if isNewProto {
-		return req, err
-	}
-	return nil, err
+	return objHandler.HandleHeadUpdate(ctx, o.status, update)
 }
 
 func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, sendResponse func(resp proto.Message) error) (syncdeps.Request, error) {
-	log.Debug("handle stream request", zap.String("spaceId", o.spaceId), zap.String("peerId", rq.PeerId()), zap.String("objectId", rq.ObjectId()))
 	obj, err := o.manager.GetObject(context.Background(), rq.ObjectId())
 	if err != nil {
-		log.Debug("object not found", zap.String("spaceId", o.spaceId), zap.String("peerId", rq.PeerId()), zap.String("objectId", rq.ObjectId()))
+		log.Debug("handle stream request no object", zap.String("spaceId", o.spaceId), zap.String("peerId", rq.PeerId()), zap.String("objectId", rq.ObjectId()))
 		req, ok := rq.(*objectmessages.Request)
 		if !ok {
 			return nil, treechangeproto.ErrGetTree

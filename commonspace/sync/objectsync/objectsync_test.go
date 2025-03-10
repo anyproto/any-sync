@@ -59,28 +59,6 @@ func TestObjectSync_HandleHeadUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, req, r)
 	})
-	t.Run("handle head update old proto, return nothing", func(t *testing.T) {
-		fx := newFixture(t)
-		defer fx.close(t)
-		update := &objectmessages.HeadUpdate{
-			Meta: objectmessages.ObjectMeta{
-				PeerId:   "peerId",
-				ObjectId: "objectId",
-				SpaceId:  "spaceId",
-			},
-		}
-		ctx = peer.CtxWithPeerId(ctx, "peerId")
-		ctx = peer.CtxWithProtoVersion(ctx, secureservice.CompatibleVersion)
-		objHandler := mock_syncdeps.NewMockObjectSyncHandler(fx.ctrl)
-		fx.objectManager.EXPECT().GetObject(context.Background(), "objectId").Return(syncGetter{objHandler}, nil)
-		req := &objectmessages.Request{
-			Bytes: []byte("byte"),
-		}
-		objHandler.EXPECT().HandleHeadUpdate(ctx, fx.status, update).Return(req, nil)
-		r, err := fx.objectSync.HandleHeadUpdate(ctx, update)
-		require.NoError(t, err)
-		require.Nil(t, r)
-	})
 	t.Run("handle head update object missing, return request", func(t *testing.T) {
 		fx := newFixture(t)
 		defer fx.close(t)

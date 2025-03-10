@@ -27,7 +27,7 @@ const (
 
 var ErrIncorrectIdentity = errors.New("incorrect identity")
 
-func storagePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
+func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
 	// marshalling keys
 	identity, err := payload.SigningKey.GetPublic().Marshall()
 	if err != nil {

@@ -7,13 +7,12 @@ import (
 	"strings"
 
 	"github.com/anyproto/protobuf/proto"
-	"go.uber.org/zap"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/net/streampool"
-	syncqueues "github.com/anyproto/any-sync/util/syncqueues"
+	"github.com/anyproto/any-sync/util/syncqueues"
 )
 
 type RequestManager interface {
@@ -47,7 +46,6 @@ func NewRequestManager(handler syncdeps.SyncHandler, metric syncdeps.QueueSizeUp
 }
 
 func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, collector syncdeps.ResponseCollector) error {
-	log.Debug("send request", zap.String("peerId", rq.PeerId()), zap.String("objectId", rq.ObjectId()))
 	return r.handler.SendStreamRequest(ctx, rq, func(stream drpc.Stream) error {
 		calledOnce := false
 		for {
@@ -75,10 +73,7 @@ func (r *requestManager) QueueRequest(rq syncdeps.Request) error {
 	size := rq.MsgSize()
 	r.metric.UpdateQueueSize(size, syncdeps.MsgTypeOutgoingRequest, true)
 	r.requestPool.Add(rq.PeerId(), rq.ObjectId(), func(ctx context.Context) {
-		err := r.handler.ApplyRequest(ctx, rq, r)
-		if err != nil {
-			log.Debug("failed to apply request", zap.Error(err), zap.String("peerId", rq.PeerId()), zap.String("objectId", rq.ObjectId()))
-		}
+		r.handler.ApplyRequest(ctx, rq, r)
 	}, func() {
 		r.metric.UpdateQueueSize(size, syncdeps.MsgTypeOutgoingRequest, false)
 	})
@@ -102,10 +97,7 @@ func (r *requestManager) HandleStreamRequest(ctx context.Context, rq syncdeps.Re
 	})
 	// here is a little bit non-standard decision, because we can return error but still can queue the request
 	if newRq != nil {
-		rqErr := r.QueueRequest(newRq)
-		if rqErr != nil {
-			log.Debug("failed to queue request", zap.Error(err))
-		}
+		r.QueueRequest(newRq)
 	}
 	if err != nil {
 		return err

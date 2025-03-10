@@ -9,7 +9,7 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
-	response "github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
@@ -62,6 +62,11 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 	statusUpdater.HeadsReceive(peerId, update.ObjectId(), contentUpdate.Heads)
 	s.tree.Lock()
 	defer s.tree.Unlock()
+	log.Debug("got head update",
+		zap.String("objectId", update.ObjectId()),
+		zap.String("peerId", peerId),
+		zap.Strings("theirHeads", contentUpdate.Heads),
+		zap.Strings("ourHeads", s.tree.Heads()))
 	if len(contentUpdate.Changes) == 0 {
 		if s.hasHeads(s.tree, contentUpdate.Heads) {
 			statusUpdater.HeadsApply(peerId, update.ObjectId(), contentUpdate.Heads, true)
@@ -101,7 +106,11 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 	}
 	s.tree.Lock()
 	curHeads := s.tree.Heads()
-	log.Debug("got stream request", zap.String("objectId", req.ObjectId()), zap.String("peerId", rq.PeerId()))
+	log.Debug("got stream request",
+		zap.String("objectId", req.ObjectId()),
+		zap.String("peerId", rq.PeerId()),
+		zap.Strings("theirHeads", request.Heads),
+		zap.Strings("ourHeads", curHeads))
 	producer, err := createResponseProducer(s.spaceId, s.tree, request.Heads, request.SnapshotPath)
 	if err != nil {
 		s.tree.Unlock()

@@ -102,7 +102,7 @@ func (s *spaceService) Name() (name string) {
 }
 
 func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePayload) (id string, err error) {
-	storageCreate, err := storagePayloadForSpaceCreate(payload)
+	storageCreate, err := StoragePayloadForSpaceCreate(payload)
 	if err != nil {
 		return
 	}
