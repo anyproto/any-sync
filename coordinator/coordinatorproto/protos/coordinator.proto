@@ -49,6 +49,9 @@ service Coordinator {
 
   // InboxFetch returns a set of (new) messages starting from a given offset
   rpc InboxFetch(InboxFetchRequest) returns (InboxFetchResponse);
+
+  // InboxNotifySubscribe returns a subscription to new inbox msg
+  rpc InboxNotifySubscribe(stream InboxNotifySubscribeRequest) returns (stream InboxNotifySubscribeEvent);
 }
 
 message SpaceSignRequest {
@@ -447,4 +450,12 @@ message InboxFetchRequest {
 message InboxFetchResponse {
   repeated InboxMessage messages = 1;
 
+}
+
+message InboxNotifySubscribeRequest {
+
+}
+
+message InboxNotifySubscribeEvent {
+  string notifyId = 1;
 }
