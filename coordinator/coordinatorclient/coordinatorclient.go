@@ -405,6 +405,7 @@ func (c *coordinatorClient) streamWatcher() {
 		st  *stream
 	)
 	for {
+		log.Info("reading inbox stream")
 		// open stream
 		if st, err = c.openStream(context.Background()); err != nil {
 			log.Error("failed to open inbox notification stream", zap.Error(err))
