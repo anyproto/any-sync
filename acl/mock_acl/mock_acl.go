@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_acl/mock_acl.go github.com/anyproto/any-sync/acl AclService
 //
-
 // Package mock_acl is a generated GoMock package.
 package mock_acl
 

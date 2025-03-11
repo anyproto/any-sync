@@ -1075,7 +1075,8 @@ func TestObjectTree(t *testing.T) {
 		_, err := objTree.AddRawChanges(context.Background(), payload)
 		require.NoError(t, err, "adding changes should be without error")
 
-		snapshotPath := objTree.SnapshotPath()
+		snapshotPath, err := objTree.SnapshotPath()
+		require.NoError(t, err)
 		assert.Equal(t, []string{"3", "0"}, snapshotPath)
 
 		assert.Equal(t, true, objTree.(*objectTree).snapshotPathIsActual())
@@ -1857,7 +1858,9 @@ func TestObjectTree(t *testing.T) {
 			RawChanges: result.changes,
 		})
 		require.NoError(t, err)
-		iter, err := objTree.ChangesAfterCommonSnapshotLoader(otherTree.SnapshotPath(), otherTree.Heads())
+		snPath, err := otherTree.SnapshotPath()
+		require.NoError(t, err)
+		iter, err := objTree.ChangesAfterCommonSnapshotLoader(snPath, otherTree.Heads())
 		require.NoError(t, err)
 		for {
 			batch, err := iter.NextBatch(400)

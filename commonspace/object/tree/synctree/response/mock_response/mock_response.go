@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_response/mock_response.go github.com/anyproto/any-sync/commonspace/object/tree/synctree/response ResponseProducer
 //
-
 // Package mock_response is a generated GoMock package.
 package mock_response
 
@@ -40,11 +39,12 @@ func (m *MockResponseProducer) EXPECT() *MockResponseProducerMockRecorder {
 }
 
 // EmptyResponse mocks base method.
-func (m *MockResponseProducer) EmptyResponse() *response.Response {
+func (m *MockResponseProducer) EmptyResponse() (*response.Response, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EmptyResponse")
 	ret0, _ := ret[0].(*response.Response)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // EmptyResponse indicates an expected call of EmptyResponse.
