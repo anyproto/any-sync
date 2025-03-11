@@ -107,7 +107,7 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 		returnReq := &objectmessages.Request{
 			Bytes: []byte("abcd"),
 		}
-		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq)
+		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq, nil)
 		req, err := fx.syncHandler.HandleHeadUpdate(ctx, fx.syncStatus, headUpdate)
 		require.NoError(t, err)
 		require.Equal(t, returnReq, req)
@@ -174,7 +174,7 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 		returnReq := &objectmessages.Request{
 			Bytes: []byte("abcd"),
 		}
-		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq)
+		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq, nil)
 		req, err := fx.syncHandler.HandleHeadUpdate(ctx, fx.syncStatus, headUpdate)
 		require.NoError(t, err)
 		require.Equal(t, returnReq, req)
@@ -205,7 +205,7 @@ func TestSyncHandler_HandleStreamRequest(t *testing.T) {
 		returnReq := &objectmessages.Request{
 			Bytes: []byte("abcde"),
 		}
-		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq)
+		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq, nil)
 		fx.tree.EXPECT().Heads().Return([]string{"curHead"})
 		resp := &response.Response{
 			Heads:    heads,
@@ -287,8 +287,8 @@ func TestSyncHandler_HandleStreamRequest(t *testing.T) {
 		returnReq := &objectmessages.Request{
 			Bytes: []byte("abcde"),
 		}
-		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq)
-		producer.EXPECT().EmptyResponse().Return(resp)
+		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq, nil)
+		producer.EXPECT().EmptyResponse().Return(resp, nil)
 		ctx = peer.CtxWithPeerId(ctx, "peerId")
 		callCount := 0
 		req, err := fx.syncHandler.HandleStreamRequest(ctx, request, testUpdater{}, func(resp proto.Message) error {
@@ -322,8 +322,8 @@ func TestSyncHandler_HandleStreamRequest(t *testing.T) {
 		returnReq := &objectmessages.Request{
 			Bytes: []byte("abcde"),
 		}
-		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq)
-		producer.EXPECT().EmptyResponse().Return(resp)
+		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq, nil)
+		producer.EXPECT().EmptyResponse().Return(resp, nil)
 		ctx = peer.CtxWithPeerId(ctx, "peerId")
 		callCount := 0
 		req, err := fx.syncHandler.HandleStreamRequest(ctx, request, testUpdater{}, func(resp proto.Message) error {

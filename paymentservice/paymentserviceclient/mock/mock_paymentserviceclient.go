@@ -5,7 +5,6 @@
 //
 //	mockgen -destination=mock/mock_paymentserviceclient.go -package=mock_paymentserviceclient github.com/anyproto/any-sync/paymentservice/paymentserviceclient AnyPpClientService
 //
-
 // Package mock_paymentserviceclient is a generated GoMock package.
 package mock_paymentserviceclient
 

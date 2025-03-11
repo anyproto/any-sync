@@ -311,7 +311,10 @@ func (s *syncTree) checkAlive() (err error) {
 func (s *syncTree) SyncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	s.Lock()
 	defer s.Unlock()
-	req := s.syncClient.CreateFullSyncRequest(p.Id(), s)
+	req, err := s.syncClient.CreateFullSyncRequest(p.Id(), s)
+	if err != nil {
+		return
+	}
 	return s.syncClient.QueueRequest(ctx, req)
 }
 

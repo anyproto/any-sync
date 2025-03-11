@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_commonspace/mock_commonspace.go github.com/anyproto/any-sync/commonspace Space
 //
-
 // Package mock_commonspace is a generated GoMock package.
 package mock_commonspace
 

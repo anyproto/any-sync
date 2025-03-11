@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_syncdeps/mock_syncdeps.go github.com/anyproto/any-sync/commonspace/sync/syncdeps ObjectSyncHandler,RequestSender,ResponseCollector
 //
-
 // Package mock_syncdeps is a generated GoMock package.
 package mock_syncdeps
 

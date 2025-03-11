@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_statestorage/mock_statestorage.go github.com/anyproto/any-sync/commonspace/headsync/statestorage StateStorage
 //
-
 // Package mock_statestorage is a generated GoMock package.
 package mock_statestorage
 

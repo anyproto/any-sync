@@ -90,7 +90,7 @@ type ReadableObjectTree interface {
 type ObjectTree interface {
 	ReadableObjectTree
 
-	SnapshotPath() []string
+	SnapshotPath() ([]string, error)
 	ChangesAfterCommonSnapshotLoader(snapshotPath, heads []string) (LoadIterator, error)
 
 	Storage() Storage
@@ -144,7 +144,10 @@ func (ot *objectTree) rebuildFromStorage(theirHeads, theirSnapshotPath []string,
 	)
 	if theirHeads != nil {
 		// TODO: add error handling
-		ourPath = ot.SnapshotPath()
+		ourPath, err = ot.SnapshotPath()
+		if err != nil {
+			return fmt.Errorf("rebuild from storage: %w", err)
+		}
 	}
 	ot.tree, err = ot.treeBuilder.Build(treeBuilderOpts{
 		theirHeads:        theirHeads,
@@ -748,13 +751,12 @@ func (ot *objectTree) Delete() error {
 	return ot.storage.Delete(context.Background())
 }
 
-func (ot *objectTree) SnapshotPath() []string {
+func (ot *objectTree) SnapshotPath() ([]string, error) {
 	if ot.isDeleted {
-		return nil
+		return nil, ErrDeleted
 	}
-	// TODO: Add error as return parameter
 	if ot.snapshotPathIsActual() {
-		return ot.snapshotPath
+		return ot.snapshotPath, nil
 	}
 
 	var path []string
@@ -763,14 +765,13 @@ func (ot *objectTree) SnapshotPath() []string {
 	for currentSnapshotId != "" {
 		sn, err := ot.storage.Get(context.Background(), currentSnapshotId)
 		if err != nil {
-			// TODO: add error handling
-			panic(fmt.Sprintf("failed to get snapshot %s: %v", currentSnapshotId, err))
+			return nil, fmt.Errorf("failed to get snapshot %s: %w", currentSnapshotId, err)
 		}
 		path = append(path, currentSnapshotId)
 		currentSnapshotId = sn.SnapshotId
 	}
 	ot.snapshotPath = path
-	return path
+	return path, nil
 }
 
 func (ot *objectTree) ChangesAfterCommonSnapshotLoader(theirPath, theirHeads []string) (LoadIterator, error) {
@@ -779,12 +780,16 @@ func (ot *objectTree) ChangesAfterCommonSnapshotLoader(theirPath, theirHeads []s
 	}
 	var (
 		needFullDocument = len(theirPath) == 0
-		ourPath          = ot.SnapshotPath()
+		ourPath          []string
 		// by default returning everything we have from start
-		commonSnapshot = ourPath[len(ourPath)-1]
+		commonSnapshot string
 		err            error
 	)
-
+	ourPath, err = ot.SnapshotPath()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get snapshot path: %w", err)
+	}
+	commonSnapshot = ourPath[len(ourPath)-1]
 	// if this is non-empty request
 	if !needFullDocument {
 		commonSnapshot, err = commonSnapshotForTwoPaths(ourPath, theirPath)

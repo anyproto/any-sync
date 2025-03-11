@@ -73,7 +73,7 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 			return nil, nil
 		}
 		statusUpdater.HeadsApply(peerId, update.ObjectId(), contentUpdate.Heads, false)
-		return s.syncClient.CreateFullSyncRequest(peerId, s.tree), nil
+		return s.syncClient.CreateFullSyncRequest(peerId, s.tree)
 	}
 	rawChangesPayload := objecttree.RawChangesPayload{
 		NewHeads:     contentUpdate.Heads,
@@ -85,7 +85,7 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 		return nil, err
 	}
 	if !slice.UnsortedEquals(res.Heads, contentUpdate.Heads) {
-		return s.syncClient.CreateFullSyncRequest(peerId, s.tree), nil
+		return s.syncClient.CreateFullSyncRequest(peerId, s.tree)
 	}
 	return nil, nil
 }
@@ -119,10 +119,17 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 	var returnReq syncdeps.Request
 	if slice.UnsortedEquals(curHeads, request.Heads) || slice.ContainsSorted(request.Heads, curHeads) {
 		if len(curHeads) != len(request.Heads) {
-			returnReq = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
+			returnReq, err = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
+			if err != nil {
+				s.tree.Unlock()
+				return nil, err
+			}
 		}
-		resp := producer.EmptyResponse()
+		resp, err := producer.EmptyResponse()
 		s.tree.Unlock()
+		if err != nil {
+			return nil, err
+		}
 		protoResp, err := resp.ProtoMessage()
 		if err != nil {
 			return nil, err
@@ -130,7 +137,11 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		return returnReq, send(protoResp)
 	} else {
 		if len(request.Heads) != 0 {
-			returnReq = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
+			returnReq, err = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
+			if err != nil {
+				s.tree.Unlock()
+				return nil, err
+			}
 		}
 		s.tree.Unlock()
 	}
