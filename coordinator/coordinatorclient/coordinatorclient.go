@@ -425,15 +425,12 @@ func (c *coordinatorClient) streamWatcher() {
 
 func (c *coordinatorClient) streamReader() error {
 	for {
-		events := c.stream.WaitNotifyEvents()
-		if len(events) == 0 {
-			return c.stream.Err()
-		}
+		event := c.stream.WaitNotifyEvents()
+
 		c.mu.Lock()
-		for _, e := range events {
-			// TODO: notify exec
-			log.Info("notify event", zap.String("event id", e.NotifyId))
-		}
+		// TODO: notify exec
+		log.Info("notify event", zap.String("event id", event.NotifyId))
+
 		c.mu.Unlock()
 	}
 }

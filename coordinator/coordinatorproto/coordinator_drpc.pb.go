@@ -56,7 +56,7 @@ type DRPCCoordinatorClient interface {
 	AccountLimitsSet(ctx context.Context, in *AccountLimitsSetRequest) (*AccountLimitsSetResponse, error)
 	AclEventLog(ctx context.Context, in *AclEventLogRequest) (*AclEventLogResponse, error)
 	InboxFetch(ctx context.Context, in *InboxFetchRequest) (*InboxFetchResponse, error)
-	InboxNotifySubscribe(ctx context.Context) (DRPCCoordinator_InboxNotifySubscribeClient, error)
+	InboxNotifySubscribe(ctx context.Context, in *InboxNotifySubscribeRequest) (DRPCCoordinator_InboxNotifySubscribeClient, error)
 }
 
 type drpcCoordinatorClient struct {
@@ -213,18 +213,23 @@ func (c *drpcCoordinatorClient) InboxFetch(ctx context.Context, in *InboxFetchRe
 	return out, nil
 }
 
-func (c *drpcCoordinatorClient) InboxNotifySubscribe(ctx context.Context) (DRPCCoordinator_InboxNotifySubscribeClient, error) {
+func (c *drpcCoordinatorClient) InboxNotifySubscribe(ctx context.Context, in *InboxNotifySubscribeRequest) (DRPCCoordinator_InboxNotifySubscribeClient, error) {
 	stream, err := c.cc.NewStream(ctx, "/coordinator.Coordinator/InboxNotifySubscribe", drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{})
 	if err != nil {
 		return nil, err
 	}
 	x := &drpcCoordinator_InboxNotifySubscribeClient{stream}
+	if err := x.MsgSend(in, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
+		return nil, err
+	}
+	if err := x.CloseSend(); err != nil {
+		return nil, err
+	}
 	return x, nil
 }
 
 type DRPCCoordinator_InboxNotifySubscribeClient interface {
 	drpc.Stream
-	Send(*InboxNotifySubscribeRequest) error
 	Recv() (*InboxNotifySubscribeEvent, error)
 }
 
@@ -234,10 +239,6 @@ type drpcCoordinator_InboxNotifySubscribeClient struct {
 
 func (x *drpcCoordinator_InboxNotifySubscribeClient) GetStream() drpc.Stream {
 	return x.Stream
-}
-
-func (x *drpcCoordinator_InboxNotifySubscribeClient) Send(m *InboxNotifySubscribeRequest) error {
-	return x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{})
 }
 
 func (x *drpcCoordinator_InboxNotifySubscribeClient) Recv() (*InboxNotifySubscribeEvent, error) {
@@ -269,7 +270,7 @@ type DRPCCoordinatorServer interface {
 	AccountLimitsSet(context.Context, *AccountLimitsSetRequest) (*AccountLimitsSetResponse, error)
 	AclEventLog(context.Context, *AclEventLogRequest) (*AclEventLogResponse, error)
 	InboxFetch(context.Context, *InboxFetchRequest) (*InboxFetchResponse, error)
-	InboxNotifySubscribe(DRPCCoordinator_InboxNotifySubscribeStream) error
+	InboxNotifySubscribe(*InboxNotifySubscribeRequest, DRPCCoordinator_InboxNotifySubscribeStream) error
 }
 
 type DRPCCoordinatorUnimplementedServer struct{}
@@ -338,7 +339,7 @@ func (s *DRPCCoordinatorUnimplementedServer) InboxFetch(context.Context, *InboxF
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCCoordinatorUnimplementedServer) InboxNotifySubscribe(DRPCCoordinator_InboxNotifySubscribeStream) error {
+func (s *DRPCCoordinatorUnimplementedServer) InboxNotifySubscribe(*InboxNotifySubscribeRequest, DRPCCoordinator_InboxNotifySubscribeStream) error {
 	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
@@ -497,7 +498,8 @@ func (DRPCCoordinatorDescription) Method(n int) (string, drpc.Encoding, drpc.Rec
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return nil, srv.(DRPCCoordinatorServer).
 					InboxNotifySubscribe(
-						&drpcCoordinator_InboxNotifySubscribeStream{in1.(drpc.Stream)},
+						in1.(*InboxNotifySubscribeRequest),
+						&drpcCoordinator_InboxNotifySubscribeStream{in2.(drpc.Stream)},
 					)
 			}, DRPCCoordinatorServer.InboxNotifySubscribe, true
 	default:
@@ -768,7 +770,6 @@ func (x *drpcCoordinator_InboxFetchStream) SendAndClose(m *InboxFetchResponse) e
 type DRPCCoordinator_InboxNotifySubscribeStream interface {
 	drpc.Stream
 	Send(*InboxNotifySubscribeEvent) error
-	Recv() (*InboxNotifySubscribeRequest, error)
 }
 
 type drpcCoordinator_InboxNotifySubscribeStream struct {
@@ -777,16 +778,4 @@ type drpcCoordinator_InboxNotifySubscribeStream struct {
 
 func (x *drpcCoordinator_InboxNotifySubscribeStream) Send(m *InboxNotifySubscribeEvent) error {
 	return x.MsgSend(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{})
-}
-
-func (x *drpcCoordinator_InboxNotifySubscribeStream) Recv() (*InboxNotifySubscribeRequest, error) {
-	m := new(InboxNotifySubscribeRequest)
-	if err := x.MsgRecv(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{}); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (x *drpcCoordinator_InboxNotifySubscribeStream) RecvMsg(m *InboxNotifySubscribeRequest) error {
-	return x.MsgRecv(m, drpcEncoding_File_coordinator_coordinatorproto_protos_coordinator_proto{})
 }

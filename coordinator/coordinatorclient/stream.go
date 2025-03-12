@@ -24,9 +24,9 @@ type stream struct {
 	err       error
 }
 
-func (s *stream) WaitNotifyEvents() []*coordinatorproto.InboxNotifySubscribeEvent {
-	events, _ := s.mb.Wait(context.TODO())
-	return events
+func (s *stream) WaitNotifyEvents() *coordinatorproto.InboxNotifySubscribeEvent {
+	event, _ := s.mb.WaitOne(context.TODO())
+	return event
 }
 
 func (s *stream) Err() error {
