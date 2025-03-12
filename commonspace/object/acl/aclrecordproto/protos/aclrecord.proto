@@ -133,4 +133,5 @@ enum AclUserPermissions {
     Admin = 2;
     Writer = 3;
     Reader = 4;
+    Guest = 5;
 }

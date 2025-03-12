@@ -118,6 +118,16 @@ func TestAclExecutor(t *testing.T) {
 		{"p.batch::revoke:i1;revoke:i2", nil},
 		{"f.join::i1", ErrNoSuchInvite},
 		{"f.join::i2", ErrNoSuchInvite},
+		// add stream guest user
+		{"a.add::guest,g,guestm", nil},
+		// guest can't request removal
+		{"guest.request_remove::guest", ErrInsufficientPermissions},
+		{"guest.remove::guest", ErrInsufficientPermissions},
+		// can't change permission of existing guest user
+		{"a.changes::guest,rw", ErrInsufficientPermissions},
+		{"a.changes::guest,none", ErrInsufficientPermissions},
+		// can't change permission of existing user to guest, should be only possible to create it with add
+		{"a.changes::r,g", ErrInsufficientPermissions},
 	}
 	for _, cmd := range cmds {
 		err := a.Execute(cmd.cmd)
