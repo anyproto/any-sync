@@ -69,7 +69,7 @@ type AclPermissions aclrecordproto.AclUserPermissions
 const (
 	AclPermissionsNone   = AclPermissions(aclrecordproto.AclUserPermissions_None)
 	AclPermissionsReader = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
-	AclPermissionsGuest  = AclPermissions(aclrecordproto.AclUserPermissions_Guest) // like reader, but can't remove itself and can't request permissions change
+	AclPermissionsGuest  = AclPermissions(aclrecordproto.AclUserPermissions_Guest) // like reader, but can't request removal and can't be upgraded to another permission
 	AclPermissionsWriter = AclPermissions(aclrecordproto.AclUserPermissions_Writer)
 	AclPermissionsAdmin  = AclPermissions(aclrecordproto.AclUserPermissions_Admin)
 	AclPermissionsOwner  = AclPermissions(aclrecordproto.AclUserPermissions_Owner)
