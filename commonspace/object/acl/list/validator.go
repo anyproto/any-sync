@@ -117,10 +117,33 @@ func (c *contentValidator) ValidatePermissionChange(ch *aclrecordproto.AclAccoun
 	if err != nil {
 		return err
 	}
-	_, exists := c.aclState.accountStates[mapKeyFromPubKey(chIdentity)]
+	currentState, exists := c.aclState.accountStates[mapKeyFromPubKey(chIdentity)]
 	if !exists {
 		return ErrNoSuchAccount
 	}
+
+	if currentState.Permissions == AclPermissionsGuest {
+		// it shouldn't be possible to change permission of guest user
+		// it should be only possible to remove it with AccountRemove acl change
+		return ErrInsufficientPermissions
+	}
+
+	if currentState.Permissions == AclPermissionsOwner {
+		// it shouldn't be possible to change permission of owner
+		return ErrInsufficientPermissions
+	}
+
+	if ch.Permissions == aclrecordproto.AclUserPermissions_Owner {
+		// not supported
+		// if we are going to support owner transfer, it should be done with a separate acl change so we can't have more than 1 owner at a time
+		return ErrInsufficientPermissions
+	}
+
+	if ch.Permissions == aclrecordproto.AclUserPermissions_Guest {
+		// it should be only possible to create guest user with AccountsAdd acl change
+		return ErrInsufficientPermissions
+	}
+
 	return
 }
 

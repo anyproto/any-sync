@@ -668,6 +668,9 @@ func (st *AclState) applyRequestRemove(ch *aclrecordproto.AclAccountRequestRemov
 	st.pendingRequests[mapKeyFromPubKey(record.Identity)] = record.Id
 	pk := mapKeyFromPubKey(record.Identity)
 	accSt, exists := st.accountStates[pk]
+	if !accSt.Permissions.CanRequestRemove() {
+		return ErrInsufficientPermissions
+	}
 	if !exists {
 		return ErrNoSuchAccount
 	}

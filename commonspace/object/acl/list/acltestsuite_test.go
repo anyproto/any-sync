@@ -118,6 +118,13 @@ func TestAclExecutor(t *testing.T) {
 		{"p.batch::revoke:i1;revoke:i2", nil},
 		{"f.join::i1", ErrNoSuchInvite},
 		{"f.join::i2", ErrNoSuchInvite},
+		// add stream guest user
+		{"a.add::guest,g,guestm", nil},
+		{"guest.request_remove::guest", ErrInsufficientPermissions},
+		{"guest.remove::guest", ErrInsufficientPermissions},
+		{"a.changes::guest,rw", ErrInsufficientPermissions},
+		{"a.changes::guest,none", ErrInsufficientPermissions},
+		{"a.changes::guest,rw", ErrInsufficientPermissions},
 	}
 	for _, cmd := range cmds {
 		err := a.Execute(cmd.cmd)

@@ -69,6 +69,7 @@ type AclPermissions aclrecordproto.AclUserPermissions
 const (
 	AclPermissionsNone   = AclPermissions(aclrecordproto.AclUserPermissions_None)
 	AclPermissionsReader = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
+	AclPermissionsGuest  = AclPermissions(aclrecordproto.AclUserPermissions_Guest) // like reader, but can't remove itself and can't request permissions change
 	AclPermissionsWriter = AclPermissions(aclrecordproto.AclUserPermissions_Writer)
 	AclPermissionsAdmin  = AclPermissions(aclrecordproto.AclUserPermissions_Admin)
 	AclPermissionsOwner  = AclPermissions(aclrecordproto.AclUserPermissions_Owner)
@@ -103,5 +104,14 @@ func (p AclPermissions) CanManageAccounts() bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func (p AclPermissions) CanRequestRemove() bool {
+	switch aclrecordproto.AclUserPermissions(p) {
+	case aclrecordproto.AclUserPermissions_Guest:
+		return false
+	default:
+		return true
 	}
 }
