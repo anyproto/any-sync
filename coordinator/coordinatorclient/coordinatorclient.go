@@ -4,14 +4,10 @@ package coordinatorclient
 import (
 	"context"
 	"errors"
-	"sync"
-	"time"
 
-	"go.uber.org/zap"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/identityrepo/identityrepoproto"
@@ -25,8 +21,6 @@ import (
 )
 
 const CName = "common.coordinator.coordinatorclient"
-
-var log = logger.NewNamed(CName)
 
 var (
 	ErrPubKeyMissing     = errors.New("peer pub key missing")
@@ -59,7 +53,6 @@ type CoordinatorClient interface {
 	AccountLimitsSet(ctx context.Context, req *coordinatorproto.AccountLimitsSetRequest) error
 
 	AclEventLog(ctx context.Context, accountId, lastRecordId string, limit int) (records []*coordinatorproto.AclEventLogRecord, err error)
-	InboxFetch(ctx context.Context, accountId, offset string) (records []*coordinatorproto.InboxMessage, err error)
 
 	app.Component
 }
@@ -75,9 +68,6 @@ type SpaceSignPayload struct {
 type coordinatorClient struct {
 	pool     pool.Pool
 	nodeConf nodeconf.Service
-
-	stream *stream
-	mu     sync.Mutex
 }
 
 func (c *coordinatorClient) Init(a *app.App) (err error) {
@@ -88,11 +78,6 @@ func (c *coordinatorClient) Init(a *app.App) (err error) {
 
 func (c *coordinatorClient) Name() (name string) {
 	return CName
-}
-
-func (c *coordinatorClient) Run(_ context.Context) error {
-	go c.streamWatcher()
-	return nil
 }
 
 func (c *coordinatorClient) SpaceDelete(ctx context.Context, spaceId string, conf *coordinatorproto.DeletionConfirmPayloadWithSignature) (err error) {
@@ -365,74 +350,6 @@ func (c *coordinatorClient) AclEventLog(ctx context.Context, accountId, lastReco
 		return nil
 	})
 	return
-}
-
-func (c *coordinatorClient) InboxFetch(ctx context.Context, accountId, offset string) (messages []*coordinatorproto.InboxMessage, err error) {
-	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
-		resp, err := cl.InboxFetch(ctx, &coordinatorproto.InboxFetchRequest{
-			Offset: offset,
-		})
-		if err != nil {
-			return rpcerr.Unwrap(err)
-		}
-		messages = resp.Messages
-		return nil
-	})
-	return
-
-}
-
-func (c *coordinatorClient) openStream(ctx context.Context) (st *stream, err error) {
-	pr, err := c.pool.GetOneOf(ctx, c.nodeConf.CoordinatorPeers())
-	if err != nil {
-		return nil, err
-	}
-	pr.SetTTL(time.Hour * 24)
-	dc, err := pr.AcquireDrpcConn(ctx)
-	if err != nil {
-		return nil, err
-	}
-	rpcStream, err := coordinatorproto.NewDRPCCoordinatorClient(dc).InboxNotifySubscribe(ctx)
-	if err != nil {
-		return nil, rpcerr.Unwrap(err)
-	}
-	return runStream(rpcStream), nil
-}
-
-func (c *coordinatorClient) streamWatcher() {
-	var (
-		err error
-		st  *stream
-	)
-	for {
-		log.Info("reading inbox stream")
-		// open stream
-		if st, err = c.openStream(context.Background()); err != nil {
-			log.Error("failed to open inbox notification stream", zap.Error(err))
-			return
-		}
-		c.mu.Lock()
-		c.stream = st
-		c.mu.Unlock()
-		// read stream
-		if err = c.streamReader(); err != nil {
-			log.Error("stream read error", zap.Error(err))
-			continue
-		}
-		return
-	}
-}
-
-func (c *coordinatorClient) streamReader() error {
-	for {
-		event := c.stream.WaitNotifyEvents()
-
-		c.mu.Lock()
-		// TODO: notify exec
-		log.Info("notify event", zap.String("event id", event.NotifyId))
-
-		c.mu.Unlock()
-	}
 }
 
 func (c *coordinatorClient) IsNetworkNeedsUpdate(ctx context.Context) (bool, error) {
