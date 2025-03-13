@@ -453,7 +453,6 @@ message InboxFetchResponse {
 }
 
 message InboxNotifySubscribeRequest {
-  string accountId = 1;
 }
 
 message InboxNotifySubscribeEvent {
