@@ -8,7 +8,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/util/crypto"
 
-	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/accountservice"
@@ -236,7 +235,7 @@ func VerifyDeleteChange(raw *treechangeproto.RawTreeChangeWithId, identity crypt
 
 func verifyDeleteContent(data []byte, peerId string) (err error) {
 	content := &spacesyncproto.SettingsData{}
-	err = proto.Unmarshal(data, content)
+	err = content.UnmarshalVT(data)
 	if err != nil {
 		return
 	}

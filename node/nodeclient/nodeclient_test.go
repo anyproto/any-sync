@@ -51,7 +51,7 @@ func TestNodeClient_AclGetRecords(t *testing.T) {
 		expectedRecs = append(expectedRecs, &consensusproto.RawRecordWithId{
 			Id: fmt.Sprint(i),
 		})
-		marshalled, err := expectedRecs[i].Marshal()
+		marshalled, err := expectedRecs[i].MarshalVT()
 		require.NoError(t, err)
 		expectedByteRecs = append(expectedByteRecs, marshalled)
 	}
@@ -76,7 +76,7 @@ func TestNodeClient_AclAddRecords(t *testing.T) {
 	sendRec := &consensusproto.RawRecord{
 		AcceptorTimestamp: 10,
 	}
-	data, err := sendRec.Marshal()
+	data, err := sendRec.MarshalVT()
 	require.NoError(t, err)
 	expectedRec := &consensusproto.RawRecordWithId{
 		Id:      "recId",

@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_debugstat/mock_debugstat.go github.com/anyproto/any-sync/app/debugstat StatService
 //
+
 // Package mock_debugstat is a generated GoMock package.
 package mock_debugstat
 
@@ -21,6 +22,7 @@ import (
 type MockStatService struct {
 	ctrl     *gomock.Controller
 	recorder *MockStatServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockStatServiceMockRecorder is the mock recorder for MockStatService.
@@ -41,29 +43,29 @@ func (m *MockStatService) EXPECT() *MockStatServiceMockRecorder {
 }
 
 // AddProvider mocks base method.
-func (m *MockStatService) AddProvider(arg0 debugstat.StatProvider) {
+func (m *MockStatService) AddProvider(provider debugstat.StatProvider) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AddProvider", arg0)
+	m.ctrl.Call(m, "AddProvider", provider)
 }
 
 // AddProvider indicates an expected call of AddProvider.
-func (mr *MockStatServiceMockRecorder) AddProvider(arg0 any) *gomock.Call {
+func (mr *MockStatServiceMockRecorder) AddProvider(provider any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddProvider", reflect.TypeOf((*MockStatService)(nil).AddProvider), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddProvider", reflect.TypeOf((*MockStatService)(nil).AddProvider), provider)
 }
 
 // Close mocks base method.
-func (m *MockStatService) Close(arg0 context.Context) error {
+func (m *MockStatService) Close(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", arg0)
+	ret := m.ctrl.Call(m, "Close", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockStatServiceMockRecorder) Close(arg0 any) *gomock.Call {
+func (mr *MockStatServiceMockRecorder) Close(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockStatService)(nil).Close), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockStatService)(nil).Close), ctx)
 }
 
 // GetStat mocks base method.
@@ -81,17 +83,17 @@ func (mr *MockStatServiceMockRecorder) GetStat() *gomock.Call {
 }
 
 // Init mocks base method.
-func (m *MockStatService) Init(arg0 *app.App) error {
+func (m *MockStatService) Init(a *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init", a)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockStatServiceMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockStatServiceMockRecorder) Init(a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockStatService)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockStatService)(nil).Init), a)
 }
 
 // Name mocks base method.
@@ -109,27 +111,27 @@ func (mr *MockStatServiceMockRecorder) Name() *gomock.Call {
 }
 
 // RemoveProvider mocks base method.
-func (m *MockStatService) RemoveProvider(arg0 debugstat.StatProvider) {
+func (m *MockStatService) RemoveProvider(provider debugstat.StatProvider) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RemoveProvider", arg0)
+	m.ctrl.Call(m, "RemoveProvider", provider)
 }
 
 // RemoveProvider indicates an expected call of RemoveProvider.
-func (mr *MockStatServiceMockRecorder) RemoveProvider(arg0 any) *gomock.Call {
+func (mr *MockStatServiceMockRecorder) RemoveProvider(provider any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveProvider", reflect.TypeOf((*MockStatService)(nil).RemoveProvider), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveProvider", reflect.TypeOf((*MockStatService)(nil).RemoveProvider), provider)
 }
 
 // Run mocks base method.
-func (m *MockStatService) Run(arg0 context.Context) error {
+func (m *MockStatService) Run(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", arg0)
+	ret := m.ctrl.Call(m, "Run", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockStatServiceMockRecorder) Run(arg0 any) *gomock.Call {
+func (mr *MockStatServiceMockRecorder) Run(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockStatService)(nil).Run), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockStatService)(nil).Run), ctx)
 }
