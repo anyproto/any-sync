@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_updatelistener/mock_updatelistener.go github.com/anyproto/any-sync/commonspace/object/tree/synctree/updatelistener UpdateListener
 //
+
 // Package mock_updatelistener is a generated GoMock package.
 package mock_updatelistener
 

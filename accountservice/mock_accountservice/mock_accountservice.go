@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_accountservice/mock_accountservice.go github.com/anyproto/any-sync/accountservice Service
 //
+
 // Package mock_accountservice is a generated GoMock package.
 package mock_accountservice
 

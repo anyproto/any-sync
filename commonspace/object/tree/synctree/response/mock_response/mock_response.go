@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_response/mock_response.go github.com/anyproto/any-sync/commonspace/object/tree/synctree/response ResponseProducer
 //
+
 // Package mock_response is a generated GoMock package.
 package mock_response
 

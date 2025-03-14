@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_headsync/mock_headsync.go github.com/anyproto/any-sync/commonspace/headsync DiffSyncer
 //
+
 // Package mock_headsync is a generated GoMock package.
 package mock_headsync
 

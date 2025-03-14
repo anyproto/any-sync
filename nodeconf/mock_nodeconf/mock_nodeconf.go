@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_nodeconf/mock_nodeconf.go github.com/anyproto/any-sync/nodeconf Service
 //
+
 // Package mock_nodeconf is a generated GoMock package.
 package mock_nodeconf
 

@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_settingsstate/mock_settingsstate.go github.com/anyproto/any-sync/commonspace/settings/settingsstate StateBuilder,ChangeFactory
 //
+
 // Package mock_settingsstate is a generated GoMock package.
 package mock_settingsstate
 

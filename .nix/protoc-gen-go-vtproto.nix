@@ -7,7 +7,7 @@ buildGoModule rec {
   src = fetchFromGitHub {
     owner = "planetscale";
     repo = "vtprotobuf";
-    rev = "main";  # Последний коммит
+    rev = "main";
     sha256 = "sha256-zxR1yye/6ldN234FOplLbZ/weaohAiM8JL/KxunXsnk=";
   };
 

@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_periodicsync/mock_periodicsync.go github.com/anyproto/any-sync/util/periodicsync PeriodicSync
 //
+
 // Package mock_periodicsync is a generated GoMock package.
 package mock_periodicsync
 

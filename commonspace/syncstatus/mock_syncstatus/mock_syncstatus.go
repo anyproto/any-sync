@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_syncstatus/mock_syncstatus.go github.com/anyproto/any-sync/commonspace/syncstatus StatusUpdater
 //
+
 // Package mock_syncstatus is a generated GoMock package.
 package mock_syncstatus
 

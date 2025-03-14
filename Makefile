@@ -58,8 +58,7 @@ proto:
 
 mocks:
 	echo 'Generating mocks...'
-	go build -o deps go.uber.org/mock/mockgen
-	PATH=$(CURDIR)/deps:$(PATH) go generate ./...
+	go generate ./...
 
 test:
 	go test ./... --cover

@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_headstorage/mock_headstorage.go github.com/anyproto/any-sync/commonspace/headsync/headstorage HeadStorage
 //
+
 // Package mock_headstorage is a generated GoMock package.
 package mock_headstorage
 

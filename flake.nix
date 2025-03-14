@@ -24,6 +24,7 @@
         };
 
         protoc-gen-go-vtproto = pkgs.callPackage .nix/protoc-gen-go-vtproto.nix {};
+        mockgen = pkgs.callPackage .nix/mockgen.nix {};
         # drpc generator
         protoc-gen-go-drpc = drpc.defaultPackage.${system};
 
@@ -32,6 +33,7 @@
           protoc-gen-go-drpc
           go_1_23
           protobuf
+          mockgen
           protoc-gen-go
           pkg-config
           pre-commit
@@ -40,6 +42,10 @@
         devShell = pkgs.mkShell {
           name = "dev shell";
           buildInputs = commonPackages;
+          shellHook = ''
+                      export GOROOT="${pkgs.go_1_23}/share/go"
+                      export PATH="$GOROOT/bin:$PATH"
+                    '';
         };
 
       in

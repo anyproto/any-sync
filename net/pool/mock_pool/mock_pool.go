@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_pool/mock_pool.go github.com/anyproto/any-sync/net/pool Pool,Service
 //
+
 // Package mock_pool is a generated GoMock package.
 package mock_pool
 

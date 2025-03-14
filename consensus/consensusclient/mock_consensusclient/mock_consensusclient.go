@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_consensusclient/mock_consensusclient.go github.com/anyproto/any-sync/consensus/consensusclient Service
 //
+
 // Package mock_consensusclient is a generated GoMock package.
 package mock_consensusclient
 

@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_syncacl/mock_syncacl.go github.com/anyproto/any-sync/commonspace/object/acl/syncacl SyncClient,SyncAcl
 //
+
 // Package mock_syncacl is a generated GoMock package.
 package mock_syncacl
 
@@ -349,7 +350,7 @@ func (mr *MockSyncAclMockRecorder) IsAfter(first, second any) *gomock.Call {
 }
 
 // Iterate mocks base method.
-func (m *MockSyncAcl) Iterate(iterFunc list.IterFunc) {
+func (m *MockSyncAcl) Iterate(iterFunc func(*list.AclRecord) bool) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Iterate", iterFunc)
 }
@@ -361,7 +362,7 @@ func (mr *MockSyncAclMockRecorder) Iterate(iterFunc any) *gomock.Call {
 }
 
 // IterateFrom mocks base method.
-func (m *MockSyncAcl) IterateFrom(startId string, iterFunc list.IterFunc) {
+func (m *MockSyncAcl) IterateFrom(startId string, iterFunc func(*list.AclRecord) bool) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "IterateFrom", startId, iterFunc)
 }
