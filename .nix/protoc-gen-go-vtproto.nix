@@ -7,8 +7,8 @@ buildGoModule rec {
   src = fetchFromGitHub {
     owner = "planetscale";
     repo = "vtprotobuf";
-    rev = "main";
-    sha256 = "sha256-zxR1yye/6ldN234FOplLbZ/weaohAiM8JL/KxunXsnk=";
+    rev = "ba97887b0a2597d20399eb70221c99c95520e8c1";
+    sha256 = "sha256-r4DhjNCZyoxzdJzzh3uNE5LET7xNkUIa2KXYYeuy8PY=";
   };
 
   subPackages = [ "cmd/protoc-gen-go-vtproto" ];
