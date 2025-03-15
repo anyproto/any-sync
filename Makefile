@@ -1,6 +1,5 @@
 .PHONY: proto test deps mocks
 export GOPRIVATE=github.com/anyproto
-export PATH:=deps:$(PATH)
 
 all:
 	@set -e;
@@ -35,7 +34,7 @@ proto-execute:
 mocks:
 	echo 'Generating mocks...'
 	go build -o deps go.uber.org/mock/mockgen
-	PATH=$(CURDIR)/deps:$(PATH) go generate ./...
+	go generate ./...
 
 deps:
 	go mod download
@@ -47,4 +46,4 @@ test:
 
 replace-gogo-strings:
 	@echo "Replacing 'github.com/gogo/protobuf' with 'github.com/anyproto/protobuf' in all files recursively..."
-	LC_CTYPE=C LANG=C find . -type f -name "*.go" | xargs sed -i '' "s|github.com/gogo/protobuf|github.com/anyproto/protobuf|g"
+	LC_CTYPE=C LANG=C find . -type f -name "*.go" | xargs sed -i "s|github.com/gogo/protobuf|github.com/anyproto/protobuf|g"

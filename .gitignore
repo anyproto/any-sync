@@ -32,3 +32,7 @@ db
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# Add "use flake" in .envrc to get shell automatically with direnv+nix
+/.envrc
+/.direnv/
