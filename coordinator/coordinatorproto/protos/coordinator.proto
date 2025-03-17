@@ -50,6 +50,9 @@ service Coordinator {
   // InboxFetch returns a set of (new) messages starting from a given offset
   rpc InboxFetch(InboxFetchRequest) returns (InboxFetchResponse);
 
+  // InboxFetch returns a set of (new) messages starting from a given offset
+  rpc InboxAddMessage(InboxAddMessageRequest) returns (InboxAddMessageResponse);
+
   // InboxNotifySubscribe returns a subscription to new inbox msg
   rpc InboxNotifySubscribe(InboxNotifySubscribeRequest) returns (stream InboxNotifySubscribeEvent);
 }
@@ -457,4 +460,12 @@ message InboxNotifySubscribeRequest {
 
 message InboxNotifySubscribeEvent {
   string notifyId = 1;
+}
+
+message InboxAddMessageRequest {
+  InboxMessage message = 1;
+}
+
+message InboxAddMessageResponse {
+
 }
