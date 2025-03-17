@@ -53,12 +53,13 @@ type SyncTree interface {
 type syncTree struct {
 	syncdeps.ObjectSyncHandler
 	objecttree.ObjectTree
-	syncClient SyncClient
-	syncStatus syncstatus.StatusUpdater
-	listener   updatelistener.UpdateListener
-	onClose    func(id string)
-	isClosed   bool
-	isDeleted  bool
+	syncClient     SyncClient
+	syncStatus     syncstatus.StatusUpdater
+	listener       updatelistener.UpdateListener
+	statsCollector *TreeStatsCollector
+	onClose        func(id string)
+	isClosed       bool
+	isDeleted      bool
 }
 
 var log = logger.NewNamed("common.commonspace.synctree")
@@ -81,6 +82,7 @@ type BuildDeps struct {
 	PeerGetter         ResponsiblePeersGetter
 	BuildObjectTree    objecttree.BuildObjectTreeFunc
 	ValidateObjectTree objecttree.ValidatorFunc
+	StatsCollector     *TreeStatsCollector
 }
 
 var newTreeGetter = func(deps BuildDeps, treeId string) treeGetter {
@@ -118,11 +120,12 @@ func buildSyncTree(ctx context.Context, peerId string, deps BuildDeps) (t SyncTr
 	}
 	syncClient := deps.SyncClient
 	syncTree := &syncTree{
-		ObjectTree: objTree,
-		syncClient: syncClient,
-		onClose:    deps.OnClose,
-		listener:   deps.Listener,
-		syncStatus: deps.SyncStatus,
+		ObjectTree:     objTree,
+		syncClient:     syncClient,
+		onClose:        deps.OnClose,
+		listener:       deps.Listener,
+		syncStatus:     deps.SyncStatus,
+		statsCollector: deps.StatsCollector,
 	}
 	syncHandler := NewSyncHandler(syncTree, syncClient, deps.SpaceId)
 	syncTree.ObjectSyncHandler = syncHandler
@@ -145,6 +148,9 @@ func buildSyncTree(ctx context.Context, peerId string, deps BuildDeps) (t SyncTr
 		if peerId != peer.CtxResponsiblePeers {
 			deps.SyncStatus.ObjectReceive(peerId, syncTree.Id(), syncTree.Heads())
 		}
+	}
+	if syncTree.statsCollector != nil {
+		syncTree.statsCollector.Register(syncTree)
 	}
 	return
 }
@@ -285,6 +291,11 @@ func (s *syncTree) Close() (err error) {
 }
 
 func (s *syncTree) close() (err error) {
+	defer func() {
+		if s.statsCollector != nil {
+			s.statsCollector.Unregister(s)
+		}
+	}()
 	defer s.Unlock()
 	defer func() {
 		log.Debug("closed sync tree", zap.Error(err), zap.String("id", s.Id()))
