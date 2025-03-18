@@ -6,7 +6,7 @@ toolchain go1.23.5
 
 require (
 	filippo.io/edwards25519 v1.1.0
-	github.com/anyproto/any-store v0.1.10
+	github.com/anyproto/any-store v0.1.11
 	github.com/anyproto/go-chash v0.1.0
 	github.com/anyproto/go-slip10 v1.0.0
 	github.com/anyproto/go-slip21 v1.0.0
@@ -38,7 +38,7 @@ require (
 	go.uber.org/mock v0.5.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.36.0
-	golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa
+	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
 	golang.org/x/net v0.37.0
 	golang.org/x/sys v0.31.0
 	golang.org/x/time v0.11.0
@@ -116,6 +116,6 @@ require (
 	modernc.org/libc v1.61.13 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.8.2 // indirect
-	modernc.org/sqlite v1.36.0 // indirect
+	modernc.org/sqlite v1.36.1 // indirect
 	zombiezen.com/go/sqlite v1.4.0 // indirect
 )
