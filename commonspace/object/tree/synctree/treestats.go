@@ -35,7 +35,7 @@ func (t *TreeStatsCollector) Collect() []TreeStats {
 			Heads:           tree.Heads(),
 			ObjectId:        tree.Id(),
 			SpaceId:         t.spaceId,
-			BuildTimeSecs:   int(tree.buildTime.Seconds()),
+			BuildTimeMillis: int(tree.buildTime.Milliseconds()),
 		})
 		tree.Unlock()
 	}
@@ -54,5 +54,5 @@ type TreeStats struct {
 	Heads           []string `json:"heads"`
 	ObjectId        string   `json:"object_id"`
 	SpaceId         string   `json:"space_id"`
-	BuildTimeSecs   int      `json:"build_time"`
+	BuildTimeMillis int      `json:"build_time_millis"`
 }
