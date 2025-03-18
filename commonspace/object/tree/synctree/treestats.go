@@ -5,19 +5,19 @@ import (
 )
 
 type TreeStatsCollector struct {
-	trees   map[string]SyncTree
+	trees   map[string]*syncTree
 	mutex   sync.Mutex
 	spaceId string
 }
 
 func NewTreeStatsCollector(spaceId string) *TreeStatsCollector {
 	return &TreeStatsCollector{
-		trees:   make(map[string]SyncTree),
+		trees:   make(map[string]*syncTree),
 		spaceId: spaceId,
 	}
 }
 
-func (t *TreeStatsCollector) Register(tree SyncTree) {
+func (t *TreeStatsCollector) Register(tree *syncTree) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	t.trees[tree.Id()] = tree
@@ -35,6 +35,7 @@ func (t *TreeStatsCollector) Collect() []TreeStats {
 			Heads:           tree.Heads(),
 			ObjectId:        tree.Id(),
 			SpaceId:         t.spaceId,
+			BuildTimeSecs:   int(tree.buildTime.Seconds()),
 		})
 		tree.Unlock()
 	}
@@ -53,4 +54,5 @@ type TreeStats struct {
 	Heads           []string `json:"heads"`
 	ObjectId        string   `json:"object_id"`
 	SpaceId         string   `json:"space_id"`
+	BuildTimeSecs   int      `json:"build_time"`
 }

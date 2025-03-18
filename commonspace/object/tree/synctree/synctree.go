@@ -60,6 +60,7 @@ type syncTree struct {
 	onClose        func(id string)
 	isClosed       bool
 	isDeleted      bool
+	buildTime      time.Duration
 }
 
 var log = logger.NewNamed("common.commonspace.synctree")
@@ -114,6 +115,7 @@ func PutSyncTree(ctx context.Context, payload treestorage.TreeStorageCreatePaylo
 }
 
 func buildSyncTree(ctx context.Context, peerId string, deps BuildDeps) (t SyncTree, err error) {
+	buildStart := time.Now()
 	objTree, err := deps.BuildObjectTree(deps.TreeStorage, deps.AclList)
 	if err != nil {
 		return
@@ -126,6 +128,7 @@ func buildSyncTree(ctx context.Context, peerId string, deps BuildDeps) (t SyncTr
 		listener:       deps.Listener,
 		syncStatus:     deps.SyncStatus,
 		statsCollector: deps.StatsCollector,
+		buildTime:      time.Since(buildStart),
 	}
 	syncHandler := NewSyncHandler(syncTree, syncClient, deps.SpaceId)
 	syncTree.ObjectSyncHandler = syncHandler
