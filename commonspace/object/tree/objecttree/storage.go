@@ -162,7 +162,7 @@ func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStor
 	st.changesColl = changesColl
 	st.arena = &anyenc.Arena{}
 	st.parser = &anyenc.Parser{}
-	st.root, err = st.Get(ctx, st.id)
+	st.root, err = st.getWithoutParser(ctx, st.id)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocNotFound) {
 			return nil, treestorage.ErrUnknownTreeId
@@ -193,6 +193,7 @@ func (s *storage) Has(ctx context.Context, id string) (bool, error) {
 }
 
 func (s *storage) GetAfterOrder(ctx context.Context, orderId string, storageIter StorageIterator) error {
+	// this method can be called without having a lock on a tree, so don't reuse any non-thread-safe parts
 	filter := query.And{
 		query.Key{Path: []string{OrderKey}, Filter: query.NewComp(query.CompOpGte, orderId)},
 		query.Key{Path: []string{TreeKey}, Filter: query.NewComp(query.CompOpEq, s.id)},
@@ -309,6 +310,15 @@ func (s *storage) CommonSnapshot(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to get head entry for common snapshot: %w", err)
 	}
 	return entry.CommonSnapshot, nil
+}
+
+func (s *storage) getWithoutParser(ctx context.Context, id string) (StorageChange, error) {
+	// root will be reused outside the lock, so we shouldn't use parser for it
+	doc, err := s.changesColl.FindId(ctx, id)
+	if err != nil {
+		return StorageChange{}, err
+	}
+	return s.changeFromDoc(doc), nil
 }
 
 func (s *storage) Get(ctx context.Context, id string) (StorageChange, error) {
