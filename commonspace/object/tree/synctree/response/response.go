@@ -2,8 +2,7 @@ package response
 
 import (
 	"fmt"
-
-	"github.com/anyproto/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -52,7 +51,7 @@ func (r *Response) SetProtoMessage(message proto.Message) error {
 		return fmt.Errorf("unexpected message type: %T", message)
 	}
 	treeMsg := &treechangeproto.TreeSyncMessage{}
-	err := proto.Unmarshal(msg.Payload, treeMsg)
+	err := treeMsg.UnmarshalVT(msg.Payload)
 	if err != nil {
 		return err
 	}
