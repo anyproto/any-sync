@@ -472,8 +472,8 @@ func (a *aclRecordBuilder) BuildPermissionChange(payload PermissionChangePayload
 		return
 	}
 	if payload.Permissions.IsOwner() {
-		//err = ErrIsOwner
-		//return
+		err = ErrIsOwner
+		return
 	}
 	protoIdentity, err := payload.Identity.Marshall()
 	if err != nil {

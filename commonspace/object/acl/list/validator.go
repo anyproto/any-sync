@@ -139,8 +139,9 @@ func (c *contentValidator) ValidatePermissionChange(ch *aclrecordproto.AclAccoun
 		return ErrInsufficientPermissions
 	}
 
-	if ch.Permissions == aclrecordproto.AclUserPermissions_Guest {
-		// it should be only possible to create guest user with AccountsAdd acl change
+	if ch.Permissions == aclrecordproto.AclUserPermissions_Guest && currentState.Permissions != AclPermissionsReader {
+		// generally, it should be only possible to create guest user with AccountsAdd acl change
+		// but in order to migrate the current guest users we allow to change permissions to guest from reader
 		return ErrInsufficientPermissions
 	}
 
