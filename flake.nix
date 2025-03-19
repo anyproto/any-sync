@@ -11,17 +11,17 @@
         config = { allowUnfree = true; };
       };
 
-      any-protoc-gen-gogofaster = pkgs.callPackage ./nix/any-protoc-gen-gogofaster.nix {};
-      protoc-gen-go-drpc = drpc.defaultPackage.${system};
+      # any-protoc-gen-gogofaster = pkgs.callPackage ./nix/any-protoc-gen-gogofaster.nix {};
+      # protoc-gen-go-drpc = drpc.defaultPackage.${system};
     in {
       devShell = pkgs.mkShell {
         name = "any-sync";
         nativeBuildInputs = [
           # our forked proto generator
-          any-protoc-gen-gogofaster
+          # any-protoc-gen-gogofaster
 
           # drpc generator
-          protoc-gen-go-drpc
+          # protoc-gen-go-drpc
 
           pkgs.go_1_23
           # pkgs.gox
