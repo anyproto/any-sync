@@ -117,7 +117,8 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 	d.log.DebugCtx(ctx, "start diffsync", zap.Strings("peerIds", peerIds))
 	for _, p := range peers {
 		if err = d.syncWithPeer(peer.CtxWithPeerAddr(ctx, p.Id()), p); err != nil {
-			if !errors.Is(err, &quic.IdleTimeoutError{}) && !errors.Is(err, context.DeadlineExceeded) {
+			var idleTimeoutErr *quic.IdleTimeoutError
+			if !errors.As(err, &idleTimeoutErr) && !errors.Is(err, context.DeadlineExceeded) {
 				d.log.ErrorCtx(ctx, "can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
 			}
 		}
