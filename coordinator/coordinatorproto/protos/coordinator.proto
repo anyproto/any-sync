@@ -424,16 +424,16 @@ enum InboxKeyType {
 
 message InboxMessage {
   string id = 1;
-  InboxKeyType keyType = 2;
-  InboxPacketType packetType = 3;
-  InboxPacket packet = 4;
+  InboxPacketType packetType = 2;
+  InboxPacket packet = 3;
 }
 
 message InboxPacket {
-  bytes senderIdentity = 1;
-  bytes seceiverIdentity = 2;
-  bytes senderSignature = 3;
-  InboxPayload payload = 4;
+  InboxKeyType keyType = 1;
+  bytes senderIdentity = 2;
+  bytes seceiverIdentity = 3;
+  bytes senderSignature = 4;
+  InboxPayload payload = 5;
 }
 
 enum InboxPayloadType {
