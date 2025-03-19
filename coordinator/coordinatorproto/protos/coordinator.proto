@@ -430,8 +430,8 @@ message InboxMessage {
 
 message InboxPacket {
   InboxKeyType keyType = 1;
-  bytes senderIdentity = 2;
-  bytes receiverIdentity = 3;
+  string senderIdentity = 2;
+  string receiverIdentity = 3;
   bytes senderSignature = 4;
   InboxPayload payload = 5;
 }
