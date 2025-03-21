@@ -332,12 +332,18 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 	getPerm := func(perm string) AclPermissions {
 		var aclPerm aclrecordproto.AclUserPermissions
 		switch perm {
+		case "own":
+			aclPerm = aclrecordproto.AclUserPermissions_Owner
 		case "adm":
 			aclPerm = aclrecordproto.AclUserPermissions_Admin
 		case "rw":
 			aclPerm = aclrecordproto.AclUserPermissions_Writer
+		case "none":
+			aclPerm = aclrecordproto.AclUserPermissions_None
 		case "r":
 			aclPerm = aclrecordproto.AclUserPermissions_Reader
+		case "g":
+			aclPerm = aclrecordproto.AclUserPermissions_Guest
 		}
 		return AclPermissions(aclPerm)
 	}

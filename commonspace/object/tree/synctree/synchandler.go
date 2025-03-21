@@ -9,7 +9,7 @@ import (
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
-	response "github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
@@ -41,6 +41,13 @@ func NewSyncHandler(tree SyncTree, syncClient SyncClient, spaceId string) syncde
 }
 
 func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncstatus.StatusUpdater, headUpdate drpc.Message) (req syncdeps.Request, err error) {
+	var objectRequest *objectmessages.Request
+	defer func() {
+		// we mitigate the problem of a nil value being wrapped in an interface
+		if err == nil && objectRequest != nil {
+			req = objectRequest
+		}
+	}()
 	update, ok := headUpdate.(*objectmessages.HeadUpdate)
 	if !ok {
 		return nil, ErrUnexpectedResponseType
@@ -62,13 +69,19 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 	statusUpdater.HeadsReceive(peerId, update.ObjectId(), contentUpdate.Heads)
 	s.tree.Lock()
 	defer s.tree.Unlock()
+	log.Debug("got head update",
+		zap.String("objectId", update.ObjectId()),
+		zap.String("peerId", peerId),
+		zap.Strings("theirHeads", contentUpdate.Heads),
+		zap.Strings("ourHeads", s.tree.Heads()))
 	if len(contentUpdate.Changes) == 0 {
 		if s.hasHeads(s.tree, contentUpdate.Heads) {
 			statusUpdater.HeadsApply(peerId, update.ObjectId(), contentUpdate.Heads, true)
 			return nil, nil
 		}
 		statusUpdater.HeadsApply(peerId, update.ObjectId(), contentUpdate.Heads, false)
-		return s.syncClient.CreateFullSyncRequest(peerId, s.tree), nil
+		objectRequest, err = s.syncClient.CreateFullSyncRequest(peerId, s.tree)
+		return
 	}
 	rawChangesPayload := objecttree.RawChangesPayload{
 		NewHeads:     contentUpdate.Heads,
@@ -80,7 +93,8 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 		return nil, err
 	}
 	if !slice.UnsortedEquals(res.Heads, contentUpdate.Heads) {
-		return s.syncClient.CreateFullSyncRequest(peerId, s.tree), nil
+		objectRequest, err = s.syncClient.CreateFullSyncRequest(peerId, s.tree)
+		return
 	}
 	return nil, nil
 }
@@ -101,7 +115,11 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 	}
 	s.tree.Lock()
 	curHeads := s.tree.Heads()
-	log.Debug("got stream request", zap.String("objectId", req.ObjectId()), zap.String("peerId", rq.PeerId()))
+	log.Debug("got stream request",
+		zap.String("objectId", req.ObjectId()),
+		zap.String("peerId", rq.PeerId()),
+		zap.Strings("theirHeads", request.Heads),
+		zap.Strings("ourHeads", curHeads))
 	producer, err := createResponseProducer(s.spaceId, s.tree, request.Heads, request.SnapshotPath)
 	if err != nil {
 		s.tree.Unlock()
@@ -110,10 +128,17 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 	var returnReq syncdeps.Request
 	if slice.UnsortedEquals(curHeads, request.Heads) || slice.ContainsSorted(request.Heads, curHeads) {
 		if len(curHeads) != len(request.Heads) {
-			returnReq = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
+			returnReq, err = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
+			if err != nil {
+				s.tree.Unlock()
+				return nil, err
+			}
 		}
-		resp := producer.EmptyResponse()
+		resp, err := producer.EmptyResponse()
 		s.tree.Unlock()
+		if err != nil {
+			return nil, err
+		}
 		protoResp, err := resp.ProtoMessage()
 		if err != nil {
 			return nil, err
@@ -121,7 +146,11 @@ func (s *syncHandler) HandleStreamRequest(ctx context.Context, rq syncdeps.Reque
 		return returnReq, send(protoResp)
 	} else {
 		if len(request.Heads) != 0 {
-			returnReq = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
+			returnReq, err = s.syncClient.CreateFullSyncRequest(rq.PeerId(), s.tree)
+			if err != nil {
+				s.tree.Unlock()
+				return nil, err
+			}
 		}
 		s.tree.Unlock()
 	}

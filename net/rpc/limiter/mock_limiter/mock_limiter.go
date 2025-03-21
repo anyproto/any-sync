@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_limiter/mock_limiter.go github.com/anyproto/any-sync/net/rpc/limiter RpcLimiter
 //
-
 // Package mock_limiter is a generated GoMock package.
 package mock_limiter
 

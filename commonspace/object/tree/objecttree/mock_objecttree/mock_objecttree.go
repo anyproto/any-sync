@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_objecttree/mock_objecttree.go github.com/anyproto/any-sync/commonspace/object/tree/objecttree ObjectTree,Storage
 //
-
 // Package mock_objecttree is a generated GoMock package.
 package mock_objecttree
 
@@ -374,11 +373,12 @@ func (mr *MockObjectTreeMockRecorder) SetFlusher(arg0 any) *gomock.Call {
 }
 
 // SnapshotPath mocks base method.
-func (m *MockObjectTree) SnapshotPath() []string {
+func (m *MockObjectTree) SnapshotPath() ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SnapshotPath")
 	ret0, _ := ret[0].([]string)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // SnapshotPath indicates an expected call of SnapshotPath.

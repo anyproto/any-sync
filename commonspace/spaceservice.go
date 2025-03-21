@@ -66,8 +66,9 @@ type SpaceService interface {
 }
 
 type Deps struct {
-	SyncStatus syncstatus.StatusUpdater
-	TreeSyncer treesyncer.TreeSyncer
+	SyncStatus     syncstatus.StatusUpdater
+	TreeSyncer     treesyncer.TreeSyncer
+	AccountService accountservice.Service
 }
 
 type spaceService struct {
@@ -101,7 +102,7 @@ func (s *spaceService) Name() (name string) {
 }
 
 func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePayload) (id string, err error) {
-	storageCreate, err := storagePayloadForSpaceCreate(payload)
+	storageCreate, err := StoragePayloadForSpaceCreate(payload)
 	if err != nil {
 		return
 	}
@@ -176,6 +177,9 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 		return nil, err
 	}
 	spaceApp := s.app.ChildApp()
+	if deps.AccountService != nil {
+		spaceApp.Register(deps.AccountService)
+	}
 	spaceApp.Register(state).
 		Register(deps.SyncStatus).
 		Register(peerManager).

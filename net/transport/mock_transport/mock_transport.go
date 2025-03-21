@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_transport/mock_transport.go github.com/anyproto/any-sync/net/transport Transport,MultiConn
 //
-
 // Package mock_transport is a generated GoMock package.
 package mock_transport
 

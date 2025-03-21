@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_treesyncer/mock_treesyncer.go github.com/anyproto/any-sync/commonspace/object/treesyncer TreeSyncer
 //
-
 // Package mock_treesyncer is a generated GoMock package.
 package mock_treesyncer
 

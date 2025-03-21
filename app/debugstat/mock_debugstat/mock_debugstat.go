@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_debugstat/mock_debugstat.go github.com/anyproto/any-sync/app/debugstat StatService
 //
-
 // Package mock_debugstat is a generated GoMock package.
 package mock_debugstat
 

@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_list/mock_list.go github.com/anyproto/any-sync/commonspace/object/acl/list AclList,Storage
 //
-
 // Package mock_list is a generated GoMock package.
 package mock_list
 
