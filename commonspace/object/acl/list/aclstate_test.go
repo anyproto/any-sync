@@ -79,7 +79,6 @@ func TestAclState_FirstMetadataKey(t *testing.T) {
 		pubKey := privKey.GetPublic()
 		readKey := crypto.NewAES()
 
-		// Create an AclState
 		state := &AclState{
 			readKeyChanges: []string{"recordId"},
 			keys: map[string]AclKeys{
