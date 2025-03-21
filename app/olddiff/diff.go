@@ -1,8 +1,5 @@
-// Package ldiff provides a container of elements with fixed id and changeable content.
-// Diff can calculate the difference with another diff container (you can make it remote) with minimum hops and traffic.
-//
-//go:generate mockgen -destination mock_ldiff/mock_ldiff.go github.com/anyproto/any-sync/app/ldiff Diff,Remote
-package ldiff
+//go:generate mockgen -destination mock_olddiff/mock_olddiff.go github.com/anyproto/any-sync/app/olddiff Diff,Remote
+package olddiff
 
 import (
 	"bytes"
@@ -15,28 +12,9 @@ import (
 	"github.com/cespare/xxhash"
 	"github.com/huandu/skiplist"
 	"github.com/zeebo/blake3"
-)
 
-// Diff contains elements and can compare it with Remote diff
-type Diff interface {
-	Remote
-	// Set adds or update elements in container
-	Set(elements ...Element)
-	// RemoveId removes element by id
-	RemoveId(id string) error
-	// Diff makes diff with remote container
-	Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error)
-	// Elements retrieves all elements in the Diff
-	Elements() []Element
-	// Element returns an element by id
-	Element(id string) (Element, error)
-	// Ids retrieves ids of all elements in the Diff
-	Ids() []string
-	// Hash returns hash of all elements in the diff
-	Hash() string
-	// Len returns count of elements in the diff
-	Len() int
-}
+	"github.com/anyproto/any-sync/app/ldiff"
+)
 
 // New creates precalculated Diff container
 //
@@ -52,11 +30,11 @@ type Diff interface {
 //	normal value between 8 and 64
 //
 // Less threshold and divideFactor - less traffic but more requests
-func New(divideFactor, compareThreshold int) Diff {
+func New(divideFactor, compareThreshold int) ldiff.Diff {
 	return newDiff(divideFactor, compareThreshold)
 }
 
-func newDiff(divideFactor, compareThreshold int) Diff {
+func newDiff(divideFactor, compareThreshold int) ldiff.Diff {
 	if divideFactor < 2 {
 		divideFactor = 2
 	}
@@ -82,35 +60,9 @@ var hashersPool = &sync.Pool{
 
 var ErrElementNotFound = errors.New("ldiff: element not found")
 
-// Element of data
-type Element struct {
-	Id   string
-	Head string
-}
-
-// Range request to get RangeResult
-type Range struct {
-	From, To uint64
-	Elements bool
-	Limit    int
-}
-
-// RangeResult response for Range
-type RangeResult struct {
-	Hash     []byte
-	Elements []Element
-	Count    int
-}
-
 type element struct {
-	Element
+	ldiff.Element
 	hash uint64
-}
-
-// Remote interface for using in the Diff
-type Remote interface {
-	// Ranges calculates given ranges and return results
-	Ranges(ctx context.Context, ranges []Range, resBuf []RangeResult) (results []RangeResult, err error)
 }
 
 // Diff contains elements and can compare it with Remote diff
@@ -120,7 +72,6 @@ type diff struct {
 	compareThreshold int
 	ranges           *hashRanges
 	mu               sync.RWMutex
-	id               int
 }
 
 // Compare implements skiplist interface
@@ -148,7 +99,7 @@ func (d *diff) CalcScore(key interface{}) float64 {
 }
 
 // Set adds or update element in container
-func (d *diff) Set(elements ...Element) {
+func (d *diff) Set(elements ...ldiff.Element) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	for _, e := range elements {
@@ -182,11 +133,11 @@ func (d *diff) Len() int {
 	return d.sl.Len()
 }
 
-func (d *diff) Elements() (elements []Element) {
+func (d *diff) Elements() (elements []ldiff.Element) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
-	elements = make([]Element, 0, d.sl.Len())
+	elements = make([]ldiff.Element, 0, d.sl.Len())
 
 	cur := d.sl.Front()
 	for cur != nil {
@@ -197,17 +148,17 @@ func (d *diff) Elements() (elements []Element) {
 	return
 }
 
-func (d *diff) Element(id string) (Element, error) {
+func (d *diff) Element(id string) (ldiff.Element, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
-	el := d.sl.Get(&element{Element: Element{Id: id}, hash: xxhash.Sum64([]byte(id))})
+	el := d.sl.Get(&element{Element: ldiff.Element{Id: id}, hash: xxhash.Sum64([]byte(id))})
 	if el == nil {
-		return Element{}, ErrElementNotFound
+		return ldiff.Element{}, ErrElementNotFound
 	}
 	if e, ok := el.Key().(*element); ok {
 		return e.Element, nil
 	}
-	return Element{}, ErrElementNotFound
+	return ldiff.Element{}, ErrElementNotFound
 }
 
 func (d *diff) Hash() string {
@@ -221,7 +172,7 @@ func (d *diff) RemoveId(id string) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	hash := xxhash.Sum64([]byte(id))
-	el := &element{Element: Element{
+	el := &element{Element: ldiff.Element{
 		Id: id,
 	}, hash: hash}
 	if d.sl.Remove(el) == nil {
@@ -232,18 +183,19 @@ func (d *diff) RemoveId(id string) error {
 	return nil
 }
 
-func (d *diff) getRange(r Range) (rr RangeResult) {
+func (d *diff) getRange(r ldiff.Range) (rr ldiff.RangeResult) {
 	rng := d.ranges.getRange(r.From, r.To)
 	// if we have the division for this range
 	if rng != nil {
 		rr.Hash = rng.hash
 		rr.Count = rng.elements
-		if !r.Elements {
+		if !r.Elements && rng.isDivided {
 			return
 		}
 	}
+
 	el := d.sl.Find(&element{hash: r.From})
-	rr.Elements = make([]Element, 0, d.divideFactor)
+	rr.Elements = make([]ldiff.Element, 0, d.divideFactor)
 	for el != nil && el.Key().(*element).hash <= r.To {
 		elem := el.Key().(*element).Element
 		el = el.Next()
@@ -254,7 +206,7 @@ func (d *diff) getRange(r Range) (rr RangeResult) {
 }
 
 // Ranges calculates given ranges and return results
-func (d *diff) Ranges(ctx context.Context, ranges []Range, resBuf []RangeResult) (results []RangeResult, err error) {
+func (d *diff) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldiff.RangeResult) (results []ldiff.RangeResult, err error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -268,16 +220,16 @@ func (d *diff) Ranges(ctx context.Context, ranges []Range, resBuf []RangeResult)
 type diffCtx struct {
 	newIds, changedIds, removedIds []string
 
-	toSend, prepare []Range
-	myRes, otherRes []RangeResult
+	toSend, prepare []ldiff.Range
+	myRes, otherRes []ldiff.RangeResult
 }
 
 var errMismatched = errors.New("query and results mismatched")
 
 // Diff makes diff with remote container
-func (d *diff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error) {
+func (d *diff) Diff(ctx context.Context, dl ldiff.Remote) (newIds, changedIds, removedIds []string, err error) {
 	dctx := &diffCtx{}
-	dctx.toSend = append(dctx.toSend, Range{
+	dctx.toSend = append(dctx.toSend, ldiff.Range{
 		From: 0,
 		To:   math.MaxUint64,
 	})
@@ -307,11 +259,12 @@ func (d *diff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, removed
 	return dctx.newIds, dctx.changedIds, dctx.removedIds, nil
 }
 
-func (d *diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResult) {
+func (d *diff) compareResults(dctx *diffCtx, r ldiff.Range, myRes, otherRes ldiff.RangeResult) {
 	// both hash equals - do nothing
 	if bytes.Equal(myRes.Hash, otherRes.Hash) {
 		return
 	}
+
 	// other has elements
 	if len(otherRes.Elements) == otherRes.Count {
 		if len(myRes.Elements) == myRes.Count {
@@ -322,20 +275,21 @@ func (d *diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResul
 		}
 		return
 	}
-	if otherRes.Count <= d.compareThreshold && len(otherRes.Elements) == 0 || len(myRes.Elements) == myRes.Count {
+	// request all elements from other, because we don't have enough
+	if len(myRes.Elements) == myRes.Count {
 		r.Elements = true
 		dctx.prepare = append(dctx.prepare, r)
 		return
 	}
 	rangeTuples := genTupleRanges(r.From, r.To, d.divideFactor)
 	for _, tuple := range rangeTuples {
-		dctx.prepare = append(dctx.prepare, Range{From: tuple.from, To: tuple.to})
+		dctx.prepare = append(dctx.prepare, ldiff.Range{From: tuple.from, To: tuple.to})
 	}
 	return
 }
 
-func (d *diff) compareElements(dctx *diffCtx, my, other []Element) {
-	find := func(list []Element, targetEl Element) (has, eq bool) {
+func (d *diff) compareElements(dctx *diffCtx, my, other []ldiff.Element) {
+	find := func(list []ldiff.Element, targetEl ldiff.Element) (has, eq bool) {
 		for _, el := range list {
 			if el.Id == targetEl.Id {
 				return true, el.Head == targetEl.Head
