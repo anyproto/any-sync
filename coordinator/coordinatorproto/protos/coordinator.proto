@@ -452,7 +452,7 @@ message InboxFetchRequest {
 
 message InboxFetchResponse {
   repeated InboxMessage messages = 1;
-
+  bool hasMore = 2;
 }
 
 message InboxNotifySubscribeRequest {
