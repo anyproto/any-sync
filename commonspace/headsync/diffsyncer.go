@@ -36,7 +36,7 @@ const logPeriodSecs = 200
 
 func newDiffSyncer(hs *headSync) DiffSyncer {
 	return &diffSyncer{
-		diff:               hs.diff,
+		diffContainer:      hs.diffContainer,
 		spaceId:            hs.spaceId,
 		storage:            hs.storage,
 		peerManager:        hs.peerManager,
@@ -51,7 +51,7 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 
 type diffSyncer struct {
 	spaceId            string
-	diff               ldiff.Diff
+	diffContainer      ldiff.DiffContainer
 	peerManager        peermanager.PeerManager
 	headUpdater        *headUpdater
 	treeManager        treemanager.TreeManager
@@ -82,7 +82,7 @@ func (d *diffSyncer) OnUpdate(headsUpdate headstorage.HeadsUpdate) {
 
 func (d *diffSyncer) updateHeads(update headstorage.HeadsUpdate) {
 	if update.DeletedStatus != nil {
-		_ = d.diff.RemoveId(update.Id)
+		_ = d.diffContainer.RemoveId(update.Id)
 	} else {
 		if d.deletionState.Exists(update.Id) {
 			return
@@ -90,13 +90,15 @@ func (d *diffSyncer) updateHeads(update headstorage.HeadsUpdate) {
 		if update.IsDerived != nil && *update.IsDerived && len(update.Heads) == 1 && update.Heads[0] == update.Id {
 			return
 		}
-		d.diff.Set(ldiff.Element{
+		d.diffContainer.Set(ldiff.Element{
 			Id:   update.Id,
 			Head: concatStrings(update.Heads),
 		})
 	}
 	// probably we should somehow batch the updates
-	err := d.storage.StateStorage().SetHash(d.ctx, d.diff.Hash())
+	oldHash := d.diffContainer.OldDiff().Hash()
+	newHash := d.diffContainer.NewDiff().Hash()
+	err := d.storage.StateStorage().SetHash(d.ctx, oldHash, newHash)
 	if err != nil {
 		d.log.Warn("can't write space hash", zap.Error(err))
 	}
@@ -152,10 +154,17 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 		newIds, changedIds, removedIds []string
 	)
 
-	newIds, changedIds, removedIds, err = d.diff.Diff(ctx, rdiff)
+	needsSync, diff, err := d.diffContainer.DiffTypeCheck(ctx, rdiff)
 	err = rpcerr.Unwrap(err)
 	if err != nil {
 		return d.onDiffError(ctx, p, cl, err)
+	}
+	if needsSync {
+		newIds, changedIds, removedIds, err = diff.Diff(ctx, rdiff)
+		err = rpcerr.Unwrap(err)
+		if err != nil {
+			return d.onDiffError(ctx, p, cl, err)
+		}
 	}
 	totalLen := len(newIds) + len(changedIds) + len(removedIds)
 	// not syncing ids which were removed through settings document

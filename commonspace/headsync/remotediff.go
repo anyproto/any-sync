@@ -1,7 +1,10 @@
 package headsync
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
+	"math"
 
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -12,6 +15,7 @@ type Client interface {
 }
 
 type RemoteDiff interface {
+	ldiff.RemoteTypeChecker
 	ldiff.Remote
 }
 
@@ -64,6 +68,39 @@ func (r *remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldif
 			Elements: elms,
 			Count:    int(rr.Count),
 		})
+	}
+	return
+}
+
+func (r *remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffContainer) (needsSync bool, diff ldiff.Diff, err error) {
+	req := &spacesyncproto.HeadSyncRequest{
+		SpaceId:  r.spaceId,
+		DiffType: spacesyncproto.DiffType_V2,
+		Ranges:   []*spacesyncproto.HeadSyncRange{{From: 0, To: math.MaxUint64}},
+	}
+	resp, err := r.client.HeadSync(ctx, req)
+	if err != nil {
+		return
+	}
+	needsSync = true
+	checkHash := func(diff ldiff.Diff) (bool, error) {
+		hashB, err := hex.DecodeString(diff.Hash())
+		if err != nil {
+			return false, err
+		}
+		if len(resp.Results) != 0 && bytes.Equal(hashB, resp.Results[0].Hash) {
+			return false, nil
+		}
+		return true, nil
+	}
+	r.diffType = resp.DiffType
+	switch resp.DiffType {
+	case spacesyncproto.DiffType_V2:
+		diff = diffContainer.OldDiff()
+		needsSync, err = checkHash(diff)
+	default:
+		diff = diffContainer.NewDiff()
+		needsSync, err = checkHash(diff)
 	}
 	return
 }

@@ -42,9 +42,9 @@ func (d *diffContainer) DiffTypeCheck(ctx context.Context, typeChecker RemoteTyp
 	return typeChecker.DiffTypeCheck(ctx, d)
 }
 
-func NewDiffContainer(divideFactor, compareThreshold int) DiffContainer {
-	newDiff := newDiff(divideFactor, compareThreshold)
+func NewDiffContainer(new, old Diff) DiffContainer {
 	return &diffContainer{
-		precalculated: newDiff,
+		newDiff: new,
+		oldDiff: old,
 	}
 }

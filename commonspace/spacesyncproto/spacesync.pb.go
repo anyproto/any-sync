@@ -104,18 +104,21 @@ func (SpaceSubscriptionAction) EnumDescriptor() ([]byte, []int) {
 type DiffType int32
 
 const (
-	DiffType_Initial       DiffType = 0
-	DiffType_Precalculated DiffType = 1
+	DiffType_Initial DiffType = 0
+	DiffType_V1      DiffType = 1
+	DiffType_V2      DiffType = 2
 )
 
 var DiffType_name = map[int32]string{
 	0: "Initial",
-	1: "Precalculated",
+	1: "V1",
+	2: "V2",
 }
 
 var DiffType_value = map[string]int32{
-	"Initial":       0,
-	"Precalculated": 1,
+	"Initial": 0,
+	"V1":      1,
+	"V2":      2,
 }
 
 func (x DiffType) String() string {
