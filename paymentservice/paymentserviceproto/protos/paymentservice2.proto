@@ -149,6 +149,8 @@ message Membership2 {
     string spaceID = 2;
     // some additional context (extra) 
     string context = 3;
+
+    string ownerEthAddress = 4;
   }
 
   message StoreCartResponse {
