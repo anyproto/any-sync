@@ -63,7 +63,7 @@ message HeadSyncResultElement {
 message HeadSyncRequest {
     string spaceId = 1;
     repeated HeadSyncRange ranges = 2;
-    DiffType diffType = 3 [deprecated=true];
+    DiffType diffType = 3;
 }
 
 // HeadSyncResponse is a response for HeadSync
