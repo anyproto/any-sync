@@ -14,6 +14,7 @@ import (
 	"github.com/zeebo/blake3"
 
 	"github.com/anyproto/any-sync/app/ldiff"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
 // New creates precalculated Diff container
@@ -131,6 +132,10 @@ func (d *diff) Len() int {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 	return d.sl.Len()
+}
+
+func (d *diff) DiffType() spacesyncproto.DiffType {
+	return spacesyncproto.DiffType_V1
 }
 
 func (d *diff) Elements() (elements []ldiff.Element) {

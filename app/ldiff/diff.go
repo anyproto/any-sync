@@ -15,6 +15,8 @@ import (
 	"github.com/cespare/xxhash"
 	"github.com/huandu/skiplist"
 	"github.com/zeebo/blake3"
+
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
 // Diff contains elements and can compare it with Remote diff
@@ -36,6 +38,8 @@ type Diff interface {
 	Hash() string
 	// Len returns count of elements in the diff
 	Len() int
+	// DiffType returns the diff type (diff logic and parameters)
+	DiffType() spacesyncproto.DiffType
 }
 
 // New creates precalculated Diff container
@@ -140,6 +144,10 @@ func (d *diff) Compare(lhs, rhs interface{}) int {
 	} else {
 		return -1
 	}
+}
+
+func (d *diff) DiffType() spacesyncproto.DiffType {
+	return spacesyncproto.DiffType_V2
 }
 
 // CalcScore implements skiplist interface

@@ -96,10 +96,10 @@ func (r *remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffCont
 	r.diffType = resp.DiffType
 	switch resp.DiffType {
 	case spacesyncproto.DiffType_V2:
-		diff = diffContainer.OldDiff()
+		diff = diffContainer.NewDiff()
 		needsSync, err = checkHash(diff)
 	default:
-		diff = diffContainer.NewDiff()
+		diff = diffContainer.OldDiff()
 		needsSync, err = checkHash(diff)
 	}
 	return
@@ -141,5 +141,6 @@ func HandleRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesyncproto.H
 			Count:    uint32(rangeRes.Count),
 		})
 	}
+	resp.DiffType = d.DiffType()
 	return
 }
