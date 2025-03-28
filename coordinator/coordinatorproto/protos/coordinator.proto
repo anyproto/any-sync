@@ -82,6 +82,7 @@ enum ErrorCodes {
   AclHeadIsMissing = 8;
   AclNonEmpty = 9;
   SpaceNotShareable = 10;
+  InboxMessageVerifyFailed = 11;
   ErrorOffset = 300;
 }
 
