@@ -2,6 +2,7 @@ package inboxclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -10,7 +11,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/net/peer"
-	"github.com/anyproto/any-sync/net/pool"
+	"github.com/anyproto/any-sync/net/rpc/rpctest"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -18,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	"storj.io/drpc/drpcerr"
 )
 
 var ctx = context.Background()
@@ -34,35 +36,62 @@ func TestInbox_CryptoTest(t *testing.T) {
 }
 
 func TestInbox_Fetch(t *testing.T) {
+	var makeClientServer = func(t *testing.T) (fxC, fxS *fixture, peerId string) {
+		fxC = newFixture(t)
+		fxS = newFixture(t)
+		peerId = "peer"
+		identity, err := fxC.account.Account().SignKey.GetPublic().Marshall()
+		require.NoError(t, err)
+		mcS, mcC := rpctest.MultiConnPairWithIdentity(peerId, peerId+"client", identity)
+		pS, err := peer.NewPeer(mcS, fxC.ts)
+		require.NoError(t, err)
+		fxC.tp.AddPeer(ctx, pS)
+		_, err = peer.NewPeer(mcC, fxS.ts)
+		require.NoError(t, err)
+		return
+	}
+
 	t.Run("test callback call", func(t *testing.T) {
-		fx := newFixture(t)
-		fx.SetMessageReceiver(dummyReceiver)
-		msgs, err := fx.InboxFetch(context.TODO(), "")
+
+		fxC, _, _ := makeClientServer(t)
+		fxC.SetMessageReceiver(dummyReceiver)
+		msgs, err := fxC.InboxFetch(ctx, "")
 		require.NoError(t, err)
 		assert.Len(t, msgs, 10)
+		assert.True(t, false)
 	})
 }
 
 func dummyReceiver(e *coordinatorproto.InboxNotifySubscribeEvent) {
 	fmt.Printf("event: %s\n", e)
 }
+
+var coordinatorPeer = "peer"
+
 func newFixture(t *testing.T) (fx *fixture) {
+	ts := rpctest.NewTestServer()
 	account := &accounttest.AccountTestService{}
 	c := New()
+
 	fx = &fixture{
 		InboxClient: c,
-		mr:          dummyReceiver,
 		account:     account,
 		ctrl:        gomock.NewController(t),
 		a:           new(app.App),
+		ts:          ts,
+		tp:          rpctest.NewTestPool(),
 	}
+
 	c.SetMessageReceiver(dummyReceiver)
+
 	fx.a.
-		Register(fx.account).
+		Register(account).
 		Register(&mockConf{}).
-		Register(&mockPool{}).
+		Register(fx.tp).
+		Register(fx.ts).
 		Register(c)
 
+	require.NoError(t, coordinatorproto.DRPCRegisterCoordinator(ts, &testServer{}))
 	require.NoError(t, fx.a.Start(ctx))
 
 	return fx
@@ -70,10 +99,11 @@ func newFixture(t *testing.T) (fx *fixture) {
 
 type fixture struct {
 	InboxClient
-	a       *app.App
-	mr      MessageReceiver
 	account *accounttest.AccountTestService
+	a       *app.App
 	ctrl    *gomock.Controller
+	ts      *rpctest.TestServer
+	tp      *rpctest.TestPool
 }
 
 func (fx *fixture) Finish(t *testing.T) {
@@ -81,8 +111,19 @@ func (fx *fixture) Finish(t *testing.T) {
 	fx.ctrl.Finish()
 }
 
-//
+type testServer struct {
+	coordinatorproto.DRPCCoordinatorUnimplementedServer
+}
 
+func (t *testServer) InboxFetch(context.Context, *coordinatorproto.InboxFetchRequest) (*coordinatorproto.InboxFetchResponse, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented Fetch"), drpcerr.Unimplemented)
+}
+
+func (t *testServer) InboxNotifySubscribe(*coordinatorproto.InboxNotifySubscribeRequest, coordinatorproto.DRPCCoordinator_InboxNotifySubscribeStream) error {
+	return drpcerr.WithCode(errors.New("Unimplemented 1"), drpcerr.Unimplemented)
+}
+
+// //
 type mockConf struct {
 	id            string
 	networkId     string
@@ -127,7 +168,7 @@ func (m *mockConf) Close(ctx context.Context) (err error) {
 }
 
 func (m *mockConf) Id() string {
-	return m.id
+	return ""
 }
 
 func (m *mockConf) Configuration() nodeconf.Configuration {
@@ -136,9 +177,6 @@ func (m *mockConf) Configuration() nodeconf.Configuration {
 
 func (m *mockConf) NodeIds(spaceId string) []string {
 	var nodeIds []string
-	for _, node := range m.configuration.Nodes {
-		nodeIds = append(nodeIds, node.PeerId)
-	}
 	return nodeIds
 }
 
@@ -155,7 +193,7 @@ func (m *mockConf) ConsensusPeers() []string {
 }
 
 func (m *mockConf) CoordinatorPeers() []string {
-	return nil
+	return []string{coordinatorPeer}
 }
 
 func (m *mockConf) NamingNodePeers() []string {
@@ -167,9 +205,6 @@ func (m *mockConf) PaymentProcessingNodePeers() []string {
 }
 
 func (m *mockConf) PeerAddresses(peerId string) (addrs []string, ok bool) {
-	if peerId == m.configuration.Nodes[0].PeerId {
-		return m.configuration.Nodes[0].Addresses, true
-	}
 	return nil, false
 }
 
@@ -182,51 +217,5 @@ func (m *mockConf) Partition(spaceId string) (part int) {
 }
 
 func (m *mockConf) NodeTypes(nodeId string) []nodeconf.NodeType {
-	if nodeId == m.configuration.Nodes[0].PeerId {
-		return m.configuration.Nodes[0].Types
-	}
 	return nil
-}
-
-type mockPool struct {
-}
-
-func (m *mockPool) Run(ctx context.Context) (err error) {
-	return nil
-}
-
-func (m *mockPool) Close(ctx context.Context) (err error) {
-	return nil
-}
-
-func (m *mockPool) AddPeer(ctx context.Context, p peer.Peer) (err error) {
-	return nil
-}
-
-func (m *mockPool) Init(a *app.App) (err error) {
-	return nil
-}
-
-func (m *mockPool) Name() (name string) {
-	return pool.CName
-}
-
-func (m *mockPool) Get(ctx context.Context, id string) (peer.Peer, error) {
-	return nil, fmt.Errorf("no such peer")
-}
-
-func (m *mockPool) Dial(ctx context.Context, id string) (peer.Peer, error) {
-	return nil, fmt.Errorf("can't dial peer")
-}
-
-func (m *mockPool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
-	return nil, fmt.Errorf("can't dial peer")
-}
-
-func (m *mockPool) DialOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
-	return nil, fmt.Errorf("can't dial peer")
-}
-
-func (m *mockPool) Pick(ctx context.Context, id string) (peer.Peer, error) {
-	return nil, fmt.Errorf("no such peer")
 }
