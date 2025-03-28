@@ -153,7 +153,6 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 		syncAclId                      = d.syncAcl.Id()
 		newIds, changedIds, removedIds []string
 	)
-
 	needsSync, diff, err := d.diffContainer.DiffTypeCheck(ctx, rdiff)
 	err = rpcerr.Unwrap(err)
 	if err != nil {
@@ -175,7 +174,6 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	existingIds = slice.DiscardFromSlice(existingIds, func(s string) bool {
 		return s == syncAclId
 	})
-
 	// if we removed acl head from the list
 	if len(existingIds) < prevExistingLen {
 		if syncErr := d.syncAcl.SyncWithPeer(ctx, p); syncErr != nil {

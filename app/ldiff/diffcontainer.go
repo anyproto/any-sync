@@ -1,6 +1,10 @@
 package ldiff
 
-import "context"
+import (
+	"context"
+
+	"github.com/zeebo/blake3"
+)
 
 type RemoteTypeChecker interface {
 	DiffTypeCheck(ctx context.Context, diffContainer DiffContainer) (needsSync bool, diff Diff, err error)
@@ -28,7 +32,16 @@ func (d *diffContainer) OldDiff() Diff {
 }
 
 func (d *diffContainer) Set(elements ...Element) {
-	d.newDiff.Set(elements...)
+	hasher := hashersPool.Get().(*blake3.Hasher)
+	defer hashersPool.Put(hasher)
+	for _, el := range elements {
+		hasher.Reset()
+		hasher.WriteString(el.Head)
+		d.newDiff.Set(Element{
+			Id:   el.Id,
+			Head: string(hasher.Sum(nil)),
+		})
+	}
 	d.oldDiff.Set(elements...)
 }
 
