@@ -8,6 +8,7 @@ import (
 
 	accountService "github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -35,26 +36,32 @@ func TestInbox_CryptoTest(t *testing.T) {
 func TestInbox_Fetch(t *testing.T) {
 	t.Run("test callback call", func(t *testing.T) {
 		fx := newFixture(t)
+		fx.SetMessageReceiver(dummyReceiver)
 		msgs, err := fx.InboxFetch(context.TODO(), "")
 		require.NoError(t, err)
 		assert.Len(t, msgs, 10)
 	})
 }
 
+func dummyReceiver(e *coordinatorproto.InboxNotifySubscribeEvent) {
+	fmt.Printf("event: %s\n", e)
+}
 func newFixture(t *testing.T) (fx *fixture) {
 	account := &accounttest.AccountTestService{}
+	c := New()
 	fx = &fixture{
-		InboxClient: New(),
+		InboxClient: c,
+		mr:          dummyReceiver,
 		account:     account,
 		ctrl:        gomock.NewController(t),
 		a:           new(app.App),
 	}
-
+	c.SetMessageReceiver(dummyReceiver)
 	fx.a.
 		Register(fx.account).
 		Register(&mockConf{}).
 		Register(&mockPool{}).
-		Register(fx.InboxClient)
+		Register(c)
 
 	require.NoError(t, fx.a.Start(ctx))
 
@@ -64,6 +71,7 @@ func newFixture(t *testing.T) (fx *fixture) {
 type fixture struct {
 	InboxClient
 	a       *app.App
+	mr      MessageReceiver
 	account *accounttest.AccountTestService
 	ctrl    *gomock.Controller
 }
