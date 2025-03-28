@@ -159,10 +159,10 @@ func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 }
 
 func (p *peer) ReleaseDrpcConn(conn drpc.Conn) {
-	// do nothing if it's closed connection
+	var closed bool
 	select {
 	case <-conn.Closed():
-		return
+		closed = true
 	default:
 	}
 
@@ -183,7 +183,9 @@ func (p *peer) ReleaseDrpcConn(conn drpc.Conn) {
 	if _, ok = p.active[sc]; ok {
 		delete(p.active, sc)
 	}
-	p.inactive = append(p.inactive, sc)
+	if !closed {
+		p.inactive = append(p.inactive, sc)
+	}
 	return
 }
 
