@@ -38,7 +38,6 @@ type TreeHeads struct {
 type HeadSync interface {
 	app.ComponentRunnable
 	ExternalIds() []string
-	DebugAllHeads() (res []TreeHeads)
 	AllIds() []string
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
 }
@@ -121,18 +120,6 @@ func (h *headSync) ExternalIds() []string {
 	return slice.DiscardFromSlice(h.AllIds(), func(id string) bool {
 		return id == settingsId || id == aclId
 	})
-}
-
-func (h *headSync) DebugAllHeads() (res []TreeHeads) {
-	els := h.diffContainer.NewDiff().Elements()
-	for _, el := range els {
-		idHead := TreeHeads{
-			Id:    el.Id,
-			Heads: splitString(el.Head),
-		}
-		res = append(res, idHead)
-	}
-	return
 }
 
 func (h *headSync) Close(ctx context.Context) (err error) {

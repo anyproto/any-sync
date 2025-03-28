@@ -2,6 +2,7 @@ package ldiff
 
 import (
 	"context"
+	"encoding/hex"
 
 	"github.com/zeebo/blake3"
 )
@@ -37,9 +38,10 @@ func (d *diffContainer) Set(elements ...Element) {
 	for _, el := range elements {
 		hasher.Reset()
 		hasher.WriteString(el.Head)
+		stringHash := hex.EncodeToString(hasher.Sum(nil))
 		d.newDiff.Set(Element{
 			Id:   el.Id,
-			Head: string(hasher.Sum(nil)),
+			Head: stringHash,
 		})
 	}
 	d.oldDiff.Set(elements...)
