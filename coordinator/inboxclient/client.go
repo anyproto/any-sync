@@ -50,7 +50,7 @@ func New() InboxClient {
 }
 
 type InboxClient interface {
-	InboxFetch(ctx context.Context, offset string) (records []*coordinatorproto.InboxMessage, err error)
+	InboxFetch(ctx context.Context, offset string) (messages []*coordinatorproto.InboxMessage, err error)
 	InboxAddMessage(ctx context.Context, receiverPubKey crypto.PubKey, message *coordinatorproto.InboxMessage) (err error)
 	SetMessageReceiver(receiver MessageReceiver) (err error)
 	app.ComponentRunnable
