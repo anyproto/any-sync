@@ -19,6 +19,13 @@ func MultiConnPair(peerIdServ, peerIdClient string) (serv, client transport.Mult
 	)
 }
 
+func MultiConnPairWithIdentity(peerIdServ, peerIdClient string, serverIdentity []byte) (serv, client transport.MultiConn) {
+	return multiconntest.MultiConnPair(
+		peer.CtxWithProtoVersion(peer.CtxWithIdentity(peer.CtxWithPeerId(context.Background(), peerIdServ), serverIdentity), secureservice.ProtoVersion),
+		peer.CtxWithProtoVersion(peer.CtxWithPeerId(context.Background(), peerIdClient), secureservice.ProtoVersion),
+	)
+}
+
 type MockPeer struct {
 	Ctx context.Context
 }
@@ -28,7 +35,6 @@ func (m MockPeer) CloseChan() <-chan struct{} {
 }
 
 func (m MockPeer) SetTTL(ttl time.Duration) {
-	return
 }
 
 func (m MockPeer) Id() string {
