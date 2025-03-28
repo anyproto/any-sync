@@ -23,7 +23,7 @@ import (
 
 const CName = "common.inboxclient"
 
-type MessageReceiver func(messages []*coordinatorproto.InboxMessage)
+type MessageReceiver func(messages *coordinatorproto.InboxNotifySubscribeEvent)
 
 var (
 	ErrPubKeyMissing     = errors.New("peer pub key missing")
@@ -40,8 +40,6 @@ type inboxClient struct {
 	mu     sync.Mutex
 	close  chan struct{}
 	stream *stream
-
-	offset string
 
 	running         bool
 	messageReceiver MessageReceiver
@@ -212,39 +210,17 @@ func (c *inboxClient) streamWatcher() {
 		c.stream = st
 		c.mu.Unlock()
 		// read stream
-		if err = c.streamReader(); err != nil {
-			log.Error("stream read error", zap.Error(err))
-			continue
-		}
-		return
+		c.streamReader()
 	}
 }
 
-func (c *inboxClient) streamReader() error {
+func (c *inboxClient) streamReader() {
 	for {
 		event := c.stream.WaitNotifyEvents()
 		if event == nil {
 			continue
 		}
 
-		msgs, err := c.InboxFetch(context.TODO(), c.offset)
-		if err != nil {
-			log.Error("fetching after notify err", zap.Error(err))
-		}
-		if len(msgs) != 0 {
-			// assuming that msgs are sorted
-			c.offset = msgs[len(msgs)-1].Id
-			for _, msg := range msgs {
-				encrypted := msg.Packet.Payload.Body
-				body, err := c.account.Account().SignKey.Decrypt(encrypted)
-				if err != nil {
-					log.Error("error decrypting body", zap.Error(err))
-				}
-				msg.Packet.Payload.Body = body
-			}
-			c.messageReceiver(msgs)
-		} else {
-			log.Error("fetched zero msgs after notify")
-		}
+		c.messageReceiver(event)
 	}
 }
