@@ -203,6 +203,7 @@ func (c *inboxClient) streamWatcher() {
 		log.Info("streamWatcher: open inbox stream")
 		// open stream
 		if st, err = c.openStream(context.Background()); err != nil {
+			// TODO: graceful timeout and reopen
 			log.Error("failed to open inbox notification stream", zap.Error(err))
 			return
 		}
@@ -210,17 +211,22 @@ func (c *inboxClient) streamWatcher() {
 		c.stream = st
 		c.mu.Unlock()
 		// read stream
-		c.streamReader()
-	}
-}
-
-func (c *inboxClient) streamReader() {
-	for {
-		event := c.stream.WaitNotifyEvents()
-		if event == nil {
+		err = c.streamReader()
+		if err == ErrShutdown {
+			return
+		} else {
 			continue
 		}
 
+	}
+}
+
+func (c *inboxClient) streamReader() error {
+	for {
+		event, err := c.stream.WaitNotifyEvents()
+		if err != nil {
+			return err
+		}
 		c.messageReceiver(event)
 	}
 }
