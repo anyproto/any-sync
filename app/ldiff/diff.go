@@ -331,6 +331,7 @@ func (d *diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResul
 		return
 	}
 	if otherRes.Count <= d.compareThreshold && len(otherRes.Elements) == 0 || len(myRes.Elements) == myRes.Count {
+		//fmt.Println(otherRes.Count, len(myRes.Elements), myRes.Count)
 		r.Elements = true
 		dctx.prepare = append(dctx.prepare, r)
 		return

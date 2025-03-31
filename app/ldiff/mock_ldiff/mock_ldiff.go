@@ -13,6 +13,7 @@ import (
 	reflect "reflect"
 
 	ldiff "github.com/anyproto/any-sync/app/ldiff"
+	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -54,6 +55,20 @@ func (m *MockDiff) Diff(arg0 context.Context, arg1 ldiff.Remote) ([]string, []st
 func (mr *MockDiffMockRecorder) Diff(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Diff", reflect.TypeOf((*MockDiff)(nil).Diff), arg0, arg1)
+}
+
+// DiffType mocks base method.
+func (m *MockDiff) DiffType() spacesyncproto.DiffType {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DiffType")
+	ret0, _ := ret[0].(spacesyncproto.DiffType)
+	return ret0
+}
+
+// DiffType indicates an expected call of DiffType.
+func (mr *MockDiffMockRecorder) DiffType() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiffType", reflect.TypeOf((*MockDiff)(nil).DiffType))
 }
 
 // Element mocks base method.

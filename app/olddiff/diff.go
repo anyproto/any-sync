@@ -1,4 +1,3 @@
-//go:generate mockgen -destination mock_olddiff/mock_olddiff.go github.com/anyproto/any-sync/app/olddiff Diff,Remote
 package olddiff
 
 import (

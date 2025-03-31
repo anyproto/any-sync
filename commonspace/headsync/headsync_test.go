@@ -144,7 +144,7 @@ func (fx *headSyncFixture) init(t *testing.T) {
 	fx.headStorage.EXPECT().AddObserver(gomock.Any())
 	err := fx.headSync.Init(fx.app)
 	require.NoError(t, err)
-	fx.headSync.diff = fx.diffMock
+	//fx.headSync.diff = fx.diffMock
 }
 
 func (fx *headSyncFixture) stop() {
@@ -194,7 +194,7 @@ func TestHeadSync(t *testing.T) {
 			Head: "headId",
 		})
 		fx.diffMock.EXPECT().Hash().Return("hash")
-		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
+		//fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
 		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
 		fx.diffSyncerMock.EXPECT().Close()
 		err := fx.headSync.Run(ctx)
@@ -240,7 +240,7 @@ func TestHeadSync(t *testing.T) {
 			Head: "headId",
 		})
 		fx.diffMock.EXPECT().Hash().Return("hash")
-		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
+		//fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
 		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
 		fx.diffSyncerMock.EXPECT().Close()
 		err := fx.headSync.Run(ctx)

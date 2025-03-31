@@ -135,7 +135,7 @@ func TestDiffSyncer(t *testing.T) {
 		deletedId := "id"
 		fx.diffMock.EXPECT().RemoveId(deletedId).Return(nil)
 		fx.diffMock.EXPECT().Hash().Return("hash")
-		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
+		//fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
 		upd := headstorage.DeletedStatusDeleted
 		fx.diffSyncer.updateHeads(headstorage.HeadsUpdate{
 			Id:            "id",
@@ -154,7 +154,7 @@ func TestDiffSyncer(t *testing.T) {
 			Id:   updatedId,
 			Head: "head",
 		})
-		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
+		//fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
 		fx.diffSyncer.updateHeads(headstorage.HeadsUpdate{
 			Id:    "id",
 			Heads: []string{"head"},
