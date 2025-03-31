@@ -124,7 +124,6 @@ type diff struct {
 	compareThreshold int
 	ranges           *hashRanges
 	mu               sync.RWMutex
-	id               int
 }
 
 // Compare implements skiplist interface
