@@ -177,6 +177,7 @@ func (c *inboxClient) doClient(ctx context.Context, f func(cl coordinatorproto.D
 }
 
 func (c *inboxClient) openStream(ctx context.Context) (st *stream, err error) {
+	log.Warn("streamWatcher: trying to connect")
 	pr, err := c.pool.GetOneOf(ctx, c.nodeconf.CoordinatorPeers())
 	if err != nil {
 		return nil, err
