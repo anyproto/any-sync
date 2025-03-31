@@ -198,15 +198,26 @@ func (c *inboxClient) streamWatcher() {
 	var (
 		err error
 		st  *stream
+		i   int
 	)
 	for {
 		log.Info("streamWatcher: open inbox stream")
-		// open stream
 		if st, err = c.openStream(context.Background()); err != nil {
-			// TODO: graceful timeout and reopen
-			log.Error("failed to open inbox notification stream", zap.Error(err))
-			return
+			// can't open stream, we will retry until success connection or close
+			if i < 60 {
+				i++
+			}
+			sleepTime := time.Second * time.Duration(i)
+			log.Error("watch inbox error", zap.Error(err), zap.Duration("waitTime", sleepTime))
+			select {
+			case <-time.After(sleepTime):
+				continue
+			case <-c.close:
+				return
+			}
 		}
+		i = 0
+
 		c.mu.Lock()
 		c.stream = st
 		c.mu.Unlock()

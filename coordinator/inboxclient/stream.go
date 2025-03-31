@@ -59,10 +59,7 @@ func (s *stream) readStream() {
 			if err == mb.ErrOverflowed {
 				continue
 			}
-
-			if err != nil {
-				return
-			}
+			return
 		}
 	}
 }

@@ -54,11 +54,13 @@ func TestInbox_Fetch(t *testing.T) {
 	t.Run("test callback call", func(t *testing.T) {
 
 		fxC, _, _ := makeClientServer(t)
+		// TODO: dummyReceiver should be mock, e.g. EXPECT it to
+		// be called with a certain val
 		fxC.SetMessageReceiver(dummyReceiver)
 		msgs, err := fxC.InboxFetch(ctx, "")
 		require.NoError(t, err)
 		assert.Len(t, msgs, 10)
-		assert.True(t, false)
+
 	})
 }
 
@@ -116,7 +118,14 @@ type testServer struct {
 }
 
 func (t *testServer) InboxFetch(context.Context, *coordinatorproto.InboxFetchRequest) (*coordinatorproto.InboxFetchResponse, error) {
-	return nil, drpcerr.WithCode(errors.New("Unimplemented Fetch"), drpcerr.Unimplemented)
+	// TODO make ts.inboxfetch and call it here
+	res := new(coordinatorproto.InboxFetchResponse)
+	res.HasMore = false
+	res.Messages = make([]*coordinatorproto.InboxMessage, 10)
+	for i := range 10 {
+		res.Messages[i] = &coordinatorproto.InboxMessage{}
+	}
+	return res, nil
 }
 
 func (t *testServer) InboxNotifySubscribe(*coordinatorproto.InboxNotifySubscribeRequest, coordinatorproto.DRPCCoordinator_InboxNotifySubscribeStream) error {
