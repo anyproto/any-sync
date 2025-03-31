@@ -10,12 +10,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/anyproto/any-sync/app/ldiff"
+	"github.com/anyproto/any-sync/app/olddiff"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
 func benchmarkDifferentDiffs(t *testing.T, diffFactory func() ldiff.Diff, headLength int) {
 	moduloValues := []int{1, 10, 100, 1000, 10000, 100000}
-	totalElements := 1000000
+	totalElements := 100000
 
 	for _, modVal := range moduloValues {
 		t.Run(fmt.Sprintf("New_%d", totalElements/modVal), func(t *testing.T) {
@@ -66,12 +67,12 @@ func TestBenchRemoteWithDifferentCounts(t *testing.T) {
 			return ldiff.New(32, 256)
 		}, 32)
 	})
-	// old has higher head lengths because of hashes
-	//t.Run("OldLdiff", func(t *testing.T) {
-	//	benchmarkDifferentDiffs(t, func() ldiff.Diff {
-	//		return olddiff.New(32, 256)
-	//	}, 100)
-	//})
+	//old has higher head lengths because of hashes
+	t.Run("OldLdiff", func(t *testing.T) {
+		benchmarkDifferentDiffs(t, func() ldiff.Diff {
+			return olddiff.New(32, 256)
+		}, 100)
+	})
 }
 
 type mockClient struct {
