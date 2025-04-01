@@ -11,6 +11,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
+	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/streampool"
 	"github.com/anyproto/any-sync/util/syncqueues"
 )
@@ -50,7 +51,7 @@ func (r *requestManager) SendRequest(ctx context.Context, rq syncdeps.Request, c
 		calledOnce := false
 		for {
 			resp := collector.NewResponse()
-			err := stream.MsgRecv(resp, streampool.EncodingProto)
+			err := stream.MsgRecv(resp, peer.SnappyEnc{streampool.EncodingProto})
 			if err != nil {
 				if errors.Is(err, io.EOF) && calledOnce {
 					return nil

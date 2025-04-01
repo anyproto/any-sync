@@ -3,12 +3,14 @@ package peer
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/golang/snappy"
 	"go.uber.org/zap"
 	"storj.io/drpc"
 	"storj.io/drpc/drpcconn"
@@ -31,6 +33,51 @@ type connCtrl interface {
 	ServeConn(ctx context.Context, conn net.Conn) (err error)
 	DrpcConfig() rpc.Config
 }
+
+type SnappyEnc struct {
+	Enc drpc.Encoding
+}
+
+func (s SnappyEnc) Marshal(msg drpc.Message) ([]byte, error) {
+	res, err := s.Enc.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+	return snappy.Encode(nil, res), nil
+}
+
+func (s SnappyEnc) Unmarshal(buf []byte, msg drpc.Message) error {
+	snappyBuf, err := snappy.Decode(nil, buf)
+	if err != nil {
+		fmt.Println("snappy decode error", err)
+		return s.Enc.Unmarshal(buf, msg)
+	}
+	return s.Enc.Unmarshal(snappyBuf, msg)
+}
+
+//func (s SnappyEnc) MarshalAppend(buf []byte, msg drpc.Message) (res []byte, err error) {
+//	res, err = s.Enc.Marshal(msg)
+//	if err != nil {
+//		return nil, err
+//	}
+//	var (
+//		resLen    = len(res)
+//		curLen    = len(buf)
+//		snappyLen = snappy.MaxEncodedLen(len(res))
+//	)
+//	if cap(buf) < len(buf)+snappyLen {
+//		oldBuf := buf
+//		buf = make([]byte, len(buf)+snappyLen)
+//		copy(buf, oldBuf)
+//	} else {
+//		for i := 0; i < snappyLen; i++ {
+//			buf = append(buf, 0)
+//		}
+//	}
+//	res = snappy.Encode(buf[curLen:], res)
+//	fmt.Println("saved", resLen-len(res), "bytes")
+//	return buf[:curLen+len(res)], nil
+//}
 
 func NewPeer(mc transport.MultiConn, ctrl connCtrl) (p Peer, err error) {
 	ctx := mc.Context()
@@ -88,6 +135,14 @@ type Peer interface {
 type subConn struct {
 	drpc.Conn
 	*connutil.LastUsageConn
+}
+
+func (s *subConn) Invoke(ctx context.Context, rpc string, enc drpc.Encoding, in, out drpc.Message) error {
+	return s.Conn.Invoke(ctx, rpc, SnappyEnc{enc}, in, out)
+}
+
+func (s *subConn) NewStream(ctx context.Context, rpc string, enc drpc.Encoding) (drpc.Stream, error) {
+	return s.Conn.NewStream(ctx, rpc, SnappyEnc{enc})
 }
 
 type peer struct {
