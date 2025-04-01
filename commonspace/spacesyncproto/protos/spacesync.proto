@@ -59,10 +59,6 @@ message HeadSyncResultElement {
     string head = 2;
 }
 
-message EncodedHeadSyncResults {
-    repeated HeadSyncResult results = 1;
-}
-
 // HeadSyncRequest is a request for HeadSync
 message HeadSyncRequest {
     string spaceId = 1;
@@ -74,7 +70,6 @@ message HeadSyncRequest {
 message HeadSyncResponse {
     repeated HeadSyncResult results = 1;
     DiffType diffType = 2;
-    bytes encodedResult = 3;
 }
 
 // ObjectSyncMessage is a message sent on object sync

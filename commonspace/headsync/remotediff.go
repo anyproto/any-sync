@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"math"
 
-	"github.com/golang/snappy"
-
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
@@ -54,17 +52,6 @@ func (r *remote) Ranges(ctx context.Context, ranges []ldiff.Range, resBuf []ldif
 	if err != nil {
 		return
 	}
-	if resp.EncodedResult != nil {
-		encoded := &spacesyncproto.EncodedHeadSyncResults{}
-		decodedBytes, err := snappy.Decode(nil, resp.EncodedResult)
-		if err != nil {
-			return nil, err
-		}
-		if err = encoded.Unmarshal(decodedBytes); err != nil {
-			return nil, err
-		}
-		resp.Results = encoded.Results
-	}
 	for _, rr := range resp.Results {
 		var elms []ldiff.Element
 		if len(rr.Elements) > 0 {
@@ -94,17 +81,6 @@ func (r *remote) DiffTypeCheck(ctx context.Context, diffContainer ldiff.DiffCont
 	resp, err := r.client.HeadSync(ctx, req)
 	if err != nil {
 		return
-	}
-	if resp.EncodedResult != nil {
-		encoded := &spacesyncproto.EncodedHeadSyncResults{}
-		decodedBytes, err := snappy.Decode(nil, resp.EncodedResult)
-		if err != nil {
-			return false, nil, err
-		}
-		if err = encoded.Unmarshal(decodedBytes); err != nil {
-			return false, nil, err
-		}
-		resp.Results = encoded.Results
 	}
 	needsSync = true
 	checkHash := func(diff ldiff.Diff) (bool, error) {
@@ -164,16 +140,6 @@ func HandleRangeRequest(ctx context.Context, d ldiff.Diff, req *spacesyncproto.H
 			Elements: elements,
 			Count:    uint32(rangeRes.Count),
 		})
-	}
-	if d.DiffType() == spacesyncproto.DiffType_V2 {
-		encoded := spacesyncproto.EncodedHeadSyncResults{Results: resp.Results}
-		resp.Results = nil
-		encodedBytes, err := encoded.Marshal()
-		if err != nil {
-			return nil, err
-		}
-		encodedBytes = snappy.Encode(nil, encodedBytes)
-		resp.EncodedResult = encodedBytes
 	}
 	resp.DiffType = d.DiffType()
 	return
