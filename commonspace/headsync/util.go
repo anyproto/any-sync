@@ -1,8 +1,13 @@
 package headsync
 
-import "strings"
+import (
+	"strings"
+)
 
 func concatStrings(strs []string) string {
+	if len(strs) == 1 {
+		return strs[0]
+	}
 	var (
 		b        strings.Builder
 		totalLen int
@@ -16,12 +21,4 @@ func concatStrings(strs []string) string {
 		b.WriteString(s)
 	}
 	return b.String()
-}
-
-func splitString(str string) (res []string) {
-	const cidLen = 59
-	for i := 0; i < len(str); i += cidLen {
-		res = append(res, str[i:i+cidLen])
-	}
-	return
 }

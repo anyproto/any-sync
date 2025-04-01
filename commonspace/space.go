@@ -13,6 +13,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/headsync"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
@@ -145,8 +146,17 @@ func (s *space) StoredIds() []string {
 	return s.headSync.ExternalIds()
 }
 
-func (s *space) DebugAllHeads() []headsync.TreeHeads {
-	return s.headSync.DebugAllHeads()
+func (s *space) DebugAllHeads() (heads []headsync.TreeHeads) {
+	s.storage.HeadStorage().IterateEntries(context.Background(), headstorage.IterOpts{}, func(entry headstorage.HeadsEntry) (bool, error) {
+		if entry.CommonSnapshot != "" {
+			heads = append(heads, headsync.TreeHeads{
+				Id: entry.Id,
+				Heads: entry.Heads,
+			})
+		}
+		return true, nil
+	})
+	return heads
 }
 
 func (s *space) DeleteTree(ctx context.Context, id string) (err error) {

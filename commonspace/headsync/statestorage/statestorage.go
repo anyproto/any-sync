@@ -9,7 +9,8 @@ import (
 )
 
 type State struct {
-	Hash        string
+	OldHash     string
+	NewHash     string
 	AclId       string
 	SettingsId  string
 	SpaceId     string
@@ -17,20 +18,21 @@ type State struct {
 }
 
 type Observer interface {
-	OnHashChange(hash string)
+	OnHashChange(oldHash, newHash string)
 }
 
 type StateStorage interface {
 	GetState(ctx context.Context) (State, error)
 	SettingsId() string
-	SetHash(ctx context.Context, hash string) error
+	SetHash(ctx context.Context, oldHash, newHash string) error
 	SetObserver(observer Observer)
 }
 
 const (
 	stateCollectionKey = "state"
 	idKey              = "id"
-	hashKey            = "h"
+	oldHashKey         = "oh"
+	newHashKey         = "nh"
 	headerKey          = "e"
 	aclIdKey           = "a"
 	settingsIdKey      = "s"
@@ -58,10 +60,10 @@ func (s *stateStorage) SetObserver(observer Observer) {
 	s.observer = observer
 }
 
-func (s *stateStorage) SetHash(ctx context.Context, hash string) (err error) {
+func (s *stateStorage) SetHash(ctx context.Context, oldHash, newHash string) (err error) {
 	defer func() {
 		if s.observer != nil && err == nil {
-			s.observer.OnHashChange(hash)
+			s.observer.OnHashChange(oldHash, newHash)
 		}
 	}()
 	tx, err := s.stateColl.WriteTx(ctx)
@@ -69,7 +71,8 @@ func (s *stateStorage) SetHash(ctx context.Context, hash string) (err error) {
 		return err
 	}
 	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
-		v.Set(hashKey, a.NewString(hash))
+		v.Set(oldHashKey, a.NewString(oldHash))
+		v.Set(newHashKey, a.NewString(newHash))
 		return v, true, nil
 	})
 	_, err = s.stateColl.UpsertId(tx.Context(), s.spaceId, mod)
@@ -150,7 +153,8 @@ func (s *stateStorage) stateFromDoc(doc anystore.Doc) State {
 		SpaceId:     doc.Value().GetString(idKey),
 		SettingsId:  doc.Value().GetString(settingsIdKey),
 		AclId:       doc.Value().GetString(aclIdKey),
-		Hash:        doc.Value().GetString(hashKey),
+		OldHash:     doc.Value().GetString(newHashKey),
+		NewHash:     doc.Value().GetString(oldHashKey),
 		SpaceHeader: doc.Value().GetBytes(headerKey),
 	}
 }
