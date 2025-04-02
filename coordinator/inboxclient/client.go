@@ -209,7 +209,7 @@ func (c *inboxClient) streamWatcher() {
 		if st, err = c.openStream(context.Background()); err != nil {
 			// can't open stream, we will retry until success connection or close
 			log.Error("streamWatcher: watch inbox error, retry", zap.Error(err))
-			if i < 2 {
+			if i < 10 {
 				i++
 			}
 			sleepTime := time.Second * time.Duration(i)
