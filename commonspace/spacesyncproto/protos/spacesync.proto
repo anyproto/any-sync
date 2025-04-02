@@ -20,6 +20,10 @@ enum ErrCodes {
 service SpaceSync {
     // HeadSync compares all objects and their hashes in a space
     rpc HeadSync(HeadSyncRequest) returns (HeadSyncResponse);
+    // StoreDiff compares all objects and their hashes in a space
+    rpc StoreDiff(StoreDiffRequest) returns (StoreDiffResponse);
+    // StoreElements exchanges elements between peers
+    rpc StoreElements(stream StoreKeyValue) returns (stream StoreKeyValue);
     // SpacePush sends new space to the node
     rpc SpacePush(SpacePushRequest) returns (SpacePushResponse);
     // SpacePull gets space from the remote peer
@@ -196,24 +200,15 @@ message AclGetRecordsResponse {
     repeated bytes records = 1;
 }
 
-
-message KVHeadSyncRequest {
+message StoreDiffRequest {
     repeated HeadSyncRange ranges = 3;
 }
 
-message KVHeadSyncResponse {
+message StoreDiffResponse {
     repeated HeadSyncResult results = 1;
 }
 
-message KVGetValuesRequest {
-    repeated string keys = 1;
-}
-
-message KVGetValuesResponse {
-    repeated KeyValue values = 1;
-}
-
-message KeyValue {
+message StoreKeyValue {
     string key = 1;
     bytes value = 2;
     int64 timestampMilli = 3;
