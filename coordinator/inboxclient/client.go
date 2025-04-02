@@ -192,6 +192,7 @@ func (c *inboxClient) openStream(ctx context.Context) (st *stream, err error) {
 	req := &coordinatorproto.InboxNotifySubscribeRequest{}
 	rpcStream, err := coordinatorproto.NewDRPCCoordinatorClient(dc).InboxNotifySubscribe(ctx, req)
 	if err != nil {
+		log.Warn("streamWatcher: notify subscribe error")
 		return nil, rpcerr.Unwrap(err)
 	}
 	return runStream(rpcStream), nil
@@ -225,15 +226,11 @@ func (c *inboxClient) streamWatcher() {
 		c.mu.Lock()
 		c.stream = st
 		c.mu.Unlock()
-		// read stream
 		err = c.streamReader()
 		if err == ErrShutdown {
-			log.Error("streamWatcher: ErrShutdown", zap.Error(err))
-			// TODO: becaus openStream doesn't return any error is coordinator is off
-			// it fails only on Read and returns shutdown
-			continue
-		} else {
-			continue
+			// if stream is shutdown, we continue to retry via openStream
+			// we exit only in case of c.close, i.e. client component close
+			log.Error("streamWatcher: shutdown, continue", zap.Error(err))
 		}
 
 	}
