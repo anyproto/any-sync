@@ -36,9 +36,9 @@ func TestInbox_CryptoTest(t *testing.T) {
 }
 
 func TestInbox_Fetch(t *testing.T) {
-	var makeClientServer = func(t *testing.T) (fxC, fxS *fixture, peerId string) {
-		fxC = newFixture(t)
-		fxS = newFixture(t)
+	var makeClientServer = func(t *testing.T, ts *testServer) (fxC, fxS *fixture, peerId string) {
+		fxC = newFixture(t, nil)
+		fxS = newFixture(t, ts)
 		peerId = "peer"
 		identity, err := fxC.account.Account().SignKey.GetPublic().Marshall()
 		require.NoError(t, err)
@@ -51,9 +51,17 @@ func TestInbox_Fetch(t *testing.T) {
 		return
 	}
 
-	t.Run("test callback call", func(t *testing.T) {
+	t.Run("simple InboxFetch", func(t *testing.T) {
 
-		fxC, _, _ := makeClientServer(t)
+		myTs := &testServer{}
+
+		res := new(coordinatorproto.InboxFetchResponse)
+		res.Messages = make([]*coordinatorproto.InboxMessage, 10)
+		for i := range 10 {
+			res.Messages[i] = &coordinatorproto.InboxMessage{}
+		}
+		myTs.FetchResponse = res
+		fxC, _, _ := makeClientServer(t, myTs)
 		// TODO: dummyReceiver should be mock, e.g. EXPECT it to
 		// be called with a certain val
 		fxC.SetMessageReceiver(dummyReceiver)
@@ -70,7 +78,9 @@ func dummyReceiver(e *coordinatorproto.InboxNotifySubscribeEvent) {
 
 var coordinatorPeer = "peer"
 
-func newFixture(t *testing.T) (fx *fixture) {
+// myTs is used to send testServer structure to control e.g. what
+// InboxFetch returns
+func newFixture(t *testing.T, myTs *testServer) (fx *fixture) {
 	ts := rpctest.NewTestServer()
 	account := &accounttest.AccountTestService{}
 	c := New()
@@ -93,7 +103,10 @@ func newFixture(t *testing.T) (fx *fixture) {
 		Register(fx.ts).
 		Register(c)
 
-	require.NoError(t, coordinatorproto.DRPCRegisterCoordinator(ts, &testServer{}))
+	if myTs == nil {
+		myTs = &testServer{}
+	}
+	require.NoError(t, coordinatorproto.DRPCRegisterCoordinator(ts, myTs))
 	require.NoError(t, fx.a.Start(ctx))
 
 	return fx
@@ -115,17 +128,12 @@ func (fx *fixture) Finish(t *testing.T) {
 
 type testServer struct {
 	coordinatorproto.DRPCCoordinatorUnimplementedServer
+	FetchResponse *coordinatorproto.InboxFetchResponse
 }
 
 func (t *testServer) InboxFetch(context.Context, *coordinatorproto.InboxFetchRequest) (*coordinatorproto.InboxFetchResponse, error) {
 	// TODO make ts.inboxfetch and call it here
-	res := new(coordinatorproto.InboxFetchResponse)
-	res.HasMore = false
-	res.Messages = make([]*coordinatorproto.InboxMessage, 10)
-	for i := range 10 {
-		res.Messages[i] = &coordinatorproto.InboxMessage{}
-	}
-	return res, nil
+	return t.FetchResponse, nil
 }
 
 func (t *testServer) InboxNotifySubscribe(*coordinatorproto.InboxNotifySubscribeRequest, coordinatorproto.DRPCCoordinator_InboxNotifySubscribeStream) error {
