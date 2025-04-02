@@ -7,6 +7,7 @@ import (
 
 	"github.com/quic-go/quic-go"
 
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 
@@ -27,16 +28,15 @@ import (
 
 type DiffSyncer interface {
 	Sync(ctx context.Context) error
-	RemoveObjects(ids []string)
-	UpdateHeads(id string, heads []string)
 	Init()
+	Close()
 }
 
 const logPeriodSecs = 200
 
 func newDiffSyncer(hs *headSync) DiffSyncer {
 	return &diffSyncer{
-		diff:               hs.diff,
+		diffContainer:      hs.diffContainer,
 		spaceId:            hs.spaceId,
 		storage:            hs.storage,
 		peerManager:        hs.peerManager,
@@ -51,41 +51,56 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 
 type diffSyncer struct {
 	spaceId            string
-	diff               ldiff.Diff
+	diffContainer      ldiff.DiffContainer
 	peerManager        peermanager.PeerManager
+	headUpdater        *headUpdater
 	treeManager        treemanager.TreeManager
 	treeSyncer         treesyncer.TreeSyncer
 	storage            spacestorage.SpaceStorage
 	clientFactory      spacesyncproto.ClientFactory
 	log                syncLogger
+	ctx                context.Context
+	cancel             context.CancelFunc
 	deletionState      deletionstate.ObjectDeletionState
 	credentialProvider credentialprovider.CredentialProvider
 	syncAcl            syncacl.SyncAcl
 }
 
 func (d *diffSyncer) Init() {
-	d.deletionState.AddObserver(d.RemoveObjects)
+	d.ctx, d.cancel = context.WithCancel(context.Background())
+	d.headUpdater = newHeadUpdater(d.updateHeads)
+	d.storage.HeadStorage().AddObserver(d)
+	d.headUpdater.Run()
 }
 
-func (d *diffSyncer) RemoveObjects(ids []string) {
-	for _, id := range ids {
-		_ = d.diff.RemoveId(id)
-	}
-	if err := d.storage.WriteSpaceHash(d.diff.Hash()); err != nil {
-		d.log.Error("can't write space hash", zap.Error(err))
+func (d *diffSyncer) OnUpdate(headsUpdate headstorage.HeadsUpdate) {
+	err := d.headUpdater.Add(headsUpdate)
+	if err != nil {
+		d.log.Warn("failed to add heads update", zap.Error(err))
 	}
 }
 
-func (d *diffSyncer) UpdateHeads(id string, heads []string) {
-	if d.deletionState.Exists(id) {
-		return
+func (d *diffSyncer) updateHeads(update headstorage.HeadsUpdate) {
+	if update.DeletedStatus != nil {
+		_ = d.diffContainer.RemoveId(update.Id)
+	} else {
+		if d.deletionState.Exists(update.Id) {
+			return
+		}
+		if update.IsDerived != nil && *update.IsDerived && len(update.Heads) == 1 && update.Heads[0] == update.Id {
+			return
+		}
+		d.diffContainer.Set(ldiff.Element{
+			Id:   update.Id,
+			Head: concatStrings(update.Heads),
+		})
 	}
-	d.diff.Set(ldiff.Element{
-		Id:   id,
-		Head: concatStrings(heads),
-	})
-	if err := d.storage.WriteSpaceHash(d.diff.Hash()); err != nil {
-		d.log.Error("can't write space hash", zap.Error(err))
+	// probably we should somehow batch the updates
+	oldHash := d.diffContainer.OldDiff().Hash()
+	newHash := d.diffContainer.NewDiff().Hash()
+	err := d.storage.StateStorage().SetHash(d.ctx, oldHash, newHash)
+	if err != nil {
+		d.log.Warn("can't write space hash", zap.Error(err))
 	}
 }
 
@@ -104,7 +119,8 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 	d.log.DebugCtx(ctx, "start diffsync", zap.Strings("peerIds", peerIds))
 	for _, p := range peers {
 		if err = d.syncWithPeer(peer.CtxWithPeerAddr(ctx, p.Id()), p); err != nil {
-			if !errors.Is(err, &quic.IdleTimeoutError{}) && !errors.Is(err, context.DeadlineExceeded) {
+			var idleTimeoutErr *quic.IdleTimeoutError
+			if !errors.As(err, &idleTimeoutErr) && !errors.Is(err, context.DeadlineExceeded) {
 				d.log.ErrorCtx(ctx, "can't sync with peer", zap.String("peer", p.Id()), zap.Error(err))
 			}
 		}
@@ -113,6 +129,11 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 
 	d.peerManager.KeepAlive(ctx)
 	return nil
+}
+
+func (d *diffSyncer) Close() {
+	d.cancel()
+	d.headUpdater.Close()
 }
 
 func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
@@ -132,11 +153,17 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 		syncAclId                      = d.syncAcl.Id()
 		newIds, changedIds, removedIds []string
 	)
-
-	newIds, changedIds, removedIds, err = d.diff.Diff(ctx, rdiff)
+	needsSync, diff, err := d.diffContainer.DiffTypeCheck(ctx, rdiff)
 	err = rpcerr.Unwrap(err)
 	if err != nil {
 		return d.onDiffError(ctx, p, cl, err)
+	}
+	if needsSync {
+		newIds, changedIds, removedIds, err = diff.Diff(ctx, rdiff)
+		err = rpcerr.Unwrap(err)
+		if err != nil {
+			return d.onDiffError(ctx, p, cl, err)
+		}
 	}
 	totalLen := len(newIds) + len(changedIds) + len(removedIds)
 	// not syncing ids which were removed through settings document
@@ -147,7 +174,6 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	existingIds = slice.DiscardFromSlice(existingIds, func(s string) bool {
 		return s == syncAclId
 	})
-
 	// if we removed acl head from the list
 	if len(existingIds) < prevExistingLen {
 		if syncErr := d.syncAcl.SyncWithPeer(ctx, p); syncErr != nil {
@@ -182,32 +208,33 @@ func (d *diffSyncer) sendPushSpaceRequest(ctx context.Context, peerId string, cl
 		return
 	}
 
-	root, err := aclStorage.Root()
+	root, err := aclStorage.Root(ctx)
 	if err != nil {
 		return
 	}
 
-	header, err := d.storage.SpaceHeader()
+	state, err := d.storage.StateStorage().GetState(ctx)
 	if err != nil {
 		return
 	}
 
-	settingsStorage, err := d.storage.TreeStorage(d.storage.SpaceSettingsId())
+	settingsStorage, err := d.storage.TreeStorage(ctx, state.SettingsId)
 	if err != nil {
 		return
 	}
-	spaceSettingsRoot, err := settingsStorage.Root()
+	spaceSettingsRoot, err := settingsStorage.Root(ctx)
 	if err != nil {
 		return
 	}
 
-	cred, err := d.credentialProvider.GetCredential(ctx, header)
+	raw := &spacesyncproto.RawSpaceHeaderWithId{RawHeader: state.SpaceHeader, Id: state.SpaceId}
+	cred, err := d.credentialProvider.GetCredential(ctx, raw)
 	if err != nil {
 		return
 	}
 	spacePayload := &spacesyncproto.SpacePayload{
-		SpaceHeader:            header,
-		AclPayload:             root.Payload,
+		SpaceHeader:            raw,
+		AclPayload:             root.RawRecord,
 		AclPayloadId:           root.Id,
 		SpaceSettingsPayload:   spaceSettingsRoot.RawChange,
 		SpaceSettingsPayloadId: spaceSettingsRoot.Id,

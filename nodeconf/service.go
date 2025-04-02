@@ -115,7 +115,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.source = a.MustComponent(CNameSource).(Source)
 	s.store = a.MustComponent(CNameStore).(Store)
 	lastStored, err := s.store.GetLast(context.Background(), s.config.NetworkId)
-	if err == ErrConfigurationNotFound {
+	if errors.Is(err, ErrConfigurationNotFound) {
 		lastStored = s.config
 		err = nil
 	} else {
@@ -139,7 +139,7 @@ func (s *service) Init(a *app.App) (err error) {
 	s.sync = periodicsync.NewPeriodicSync(updatePeriodSec, 0, func(ctx context.Context) (err error) {
 		err = s.updateConfiguration(ctx)
 		if err != nil {
-			if err == ErrConfigurationNotChanged || err == ErrConfigurationNotFound {
+			if errors.Is(err, ErrConfigurationNotChanged) || errors.Is(err, ErrConfigurationNotFound) {
 				err = nil
 			}
 		}

@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_headsync/mock_headsync.go github.com/anyproto/any-sync/commonspace/headsync DiffSyncer
 //
-
 // Package mock_headsync is a generated GoMock package.
 package mock_headsync
 
@@ -20,7 +19,6 @@ import (
 type MockDiffSyncer struct {
 	ctrl     *gomock.Controller
 	recorder *MockDiffSyncerMockRecorder
-	isgomock struct{}
 }
 
 // MockDiffSyncerMockRecorder is the mock recorder for MockDiffSyncer.
@@ -40,6 +38,18 @@ func (m *MockDiffSyncer) EXPECT() *MockDiffSyncerMockRecorder {
 	return m.recorder
 }
 
+// Close mocks base method.
+func (m *MockDiffSyncer) Close() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Close")
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockDiffSyncerMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockDiffSyncer)(nil).Close))
+}
+
 // Init mocks base method.
 func (m *MockDiffSyncer) Init() {
 	m.ctrl.T.Helper()
@@ -52,40 +62,16 @@ func (mr *MockDiffSyncerMockRecorder) Init() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockDiffSyncer)(nil).Init))
 }
 
-// RemoveObjects mocks base method.
-func (m *MockDiffSyncer) RemoveObjects(ids []string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RemoveObjects", ids)
-}
-
-// RemoveObjects indicates an expected call of RemoveObjects.
-func (mr *MockDiffSyncerMockRecorder) RemoveObjects(ids any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveObjects", reflect.TypeOf((*MockDiffSyncer)(nil).RemoveObjects), ids)
-}
-
 // Sync mocks base method.
-func (m *MockDiffSyncer) Sync(ctx context.Context) error {
+func (m *MockDiffSyncer) Sync(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Sync", ctx)
+	ret := m.ctrl.Call(m, "Sync", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Sync indicates an expected call of Sync.
-func (mr *MockDiffSyncerMockRecorder) Sync(ctx any) *gomock.Call {
+func (mr *MockDiffSyncerMockRecorder) Sync(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockDiffSyncer)(nil).Sync), ctx)
-}
-
-// UpdateHeads mocks base method.
-func (m *MockDiffSyncer) UpdateHeads(id string, heads []string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateHeads", id, heads)
-}
-
-// UpdateHeads indicates an expected call of UpdateHeads.
-func (mr *MockDiffSyncerMockRecorder) UpdateHeads(id, heads any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateHeads", reflect.TypeOf((*MockDiffSyncer)(nil).UpdateHeads), id, heads)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockDiffSyncer)(nil).Sync), arg0)
 }

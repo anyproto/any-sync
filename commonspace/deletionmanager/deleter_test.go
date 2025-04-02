@@ -26,11 +26,11 @@ func TestDeleter_Delete(t *testing.T) {
 		spaceId := "spaceId"
 		delState.EXPECT().GetQueued().Return([]string{id})
 		st.EXPECT().Id().Return(spaceId)
-		st.EXPECT().TreeStorage(id).Return(nil, treestorage.ErrUnknownTreeId)
+		st.EXPECT().TreeStorage(gomock.Any(), id).Return(nil, treestorage.ErrUnknownTreeId)
 		treeManager.EXPECT().MarkTreeDeleted(gomock.Any(), spaceId, id).Return(nil)
 		delState.EXPECT().Delete(id).Return(nil)
 
-		deleter.Delete(context.TODO())
+		deleter.Delete(context.Background())
 	})
 
 	t.Run("deleter delete mark deleted other error", func(t *testing.T) {
@@ -38,9 +38,9 @@ func TestDeleter_Delete(t *testing.T) {
 		spaceId := "spaceId"
 		delState.EXPECT().GetQueued().Return([]string{id})
 		st.EXPECT().Id().Return(spaceId)
-		st.EXPECT().TreeStorage(id).Return(nil, fmt.Errorf("unknown error"))
+		st.EXPECT().TreeStorage(gomock.Any(), id).Return(nil, fmt.Errorf("unknown error"))
 
-		deleter.Delete(context.TODO())
+		deleter.Delete(context.Background())
 	})
 
 	t.Run("deleter delete mark deleted fail", func(t *testing.T) {
@@ -48,10 +48,10 @@ func TestDeleter_Delete(t *testing.T) {
 		spaceId := "spaceId"
 		delState.EXPECT().GetQueued().Return([]string{id})
 		st.EXPECT().Id().Return(spaceId)
-		st.EXPECT().TreeStorage(id).Return(nil, treestorage.ErrUnknownTreeId)
+		st.EXPECT().TreeStorage(gomock.Any(), id).Return(nil, treestorage.ErrUnknownTreeId)
 		treeManager.EXPECT().MarkTreeDeleted(gomock.Any(), spaceId, id).Return(fmt.Errorf("mark error"))
 
-		deleter.Delete(context.TODO())
+		deleter.Delete(context.Background())
 	})
 
 	t.Run("deleter delete success", func(t *testing.T) {
@@ -59,11 +59,11 @@ func TestDeleter_Delete(t *testing.T) {
 		spaceId := "spaceId"
 		delState.EXPECT().GetQueued().Return([]string{id})
 		st.EXPECT().Id().Return(spaceId)
-		st.EXPECT().TreeStorage(id).Return(nil, nil)
+		st.EXPECT().TreeStorage(gomock.Any(), id).Return(nil, nil)
 		treeManager.EXPECT().DeleteTree(gomock.Any(), spaceId, id).Return(nil)
 		delState.EXPECT().Delete(id).Return(nil)
 
-		deleter.Delete(context.TODO())
+		deleter.Delete(context.Background())
 	})
 
 	t.Run("deleter delete error", func(t *testing.T) {
@@ -71,9 +71,9 @@ func TestDeleter_Delete(t *testing.T) {
 		spaceId := "spaceId"
 		delState.EXPECT().GetQueued().Return([]string{id})
 		st.EXPECT().Id().Return(spaceId)
-		st.EXPECT().TreeStorage(id).Return(nil, nil)
+		st.EXPECT().TreeStorage(gomock.Any(), id).Return(nil, nil)
 		treeManager.EXPECT().DeleteTree(gomock.Any(), spaceId, id).Return(fmt.Errorf("some error"))
 
-		deleter.Delete(context.TODO())
+		deleter.Delete(context.Background())
 	})
 }

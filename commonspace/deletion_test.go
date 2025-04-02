@@ -2,111 +2,19 @@ package commonspace
 
 import (
 	"context"
-	"fmt"
-	"math/rand"
+	"crypto/rand"
 	"testing"
 	"time"
 
+	anystore "github.com/anyproto/any-store"
 	"github.com/stretchr/testify/require"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
-	"github.com/anyproto/any-sync/commonspace/settings"
-	"github.com/anyproto/any-sync/commonspace/settings/settingsstate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/util/crypto"
 )
-
-func addIncorrectSnapshot(settingsObject settings.SettingsObject, acc *accountdata.AccountKeys, partialIds map[string]struct{}, newId string) (err error) {
-	factory := settingsstate.NewChangeFactory()
-	bytes, err := factory.CreateObjectDeleteChange(newId, &settingsstate.State{DeletedIds: partialIds}, true)
-	if err != nil {
-		return
-	}
-	ch, err := settingsObject.PrepareChange(objecttree.SignableChangeContent{
-		Data:        bytes,
-		Key:         acc.SignKey,
-		IsSnapshot:  true,
-		IsEncrypted: false,
-		Timestamp:   time.Now().Unix(),
-	})
-	if err != nil {
-		return
-	}
-	res, err := settingsObject.AddRawChanges(context.Background(), objecttree.RawChangesPayload{
-		NewHeads:   []string{ch.Id},
-		RawChanges: []*treechangeproto.RawTreeChangeWithId{ch},
-	})
-	if err != nil {
-		return
-	}
-	if res.Mode != objecttree.Rebuild {
-		return fmt.Errorf("incorrect mode: %d", res.Mode)
-	}
-	return
-}
-
-func TestSpaceDeleteIds(t *testing.T) {
-	fx := newFixture(t)
-	acc := fx.account.Account()
-	rk := crypto.NewAES()
-	privKey, _, _ := crypto.GenerateRandomEd25519KeyPair()
-	ctx := context.Background()
-	totalObjs := 1500
-
-	// creating space
-	sp, err := fx.spaceService.CreateSpace(ctx, SpaceCreatePayload{
-		SigningKey:     acc.SignKey,
-		SpaceType:      "type",
-		ReadKey:        rk,
-		MetadataKey:    privKey,
-		ReplicationKey: 10,
-		MasterKey:      acc.PeerKey,
-	})
-	require.NoError(t, err)
-	require.NotNil(t, sp)
-
-	// initializing space
-	spc, err := fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}, SyncStatus: syncstatus.NewNoOpSyncStatus()})
-	require.NoError(t, err)
-	require.NotNil(t, spc)
-	// adding space to tree manager
-	fx.treeManager.space = spc
-	err = spc.Init(ctx)
-	require.NoError(t, err)
-	close(fx.treeManager.waitLoad)
-
-	var ids []string
-	for i := 0; i < totalObjs; i++ {
-		// creating a tree
-		bytes := make([]byte, 32)
-		rand.Read(bytes)
-		doc, err := spc.TreeBuilder().CreateTree(ctx, objecttree.ObjectTreeCreatePayload{
-			PrivKey:     acc.SignKey,
-			ChangeType:  "some",
-			SpaceId:     spc.Id(),
-			IsEncrypted: false,
-			Seed:        bytes,
-			Timestamp:   time.Now().Unix(),
-		})
-		require.NoError(t, err)
-		tr, err := spc.TreeBuilder().PutTree(ctx, doc, nil)
-		require.NoError(t, err)
-		ids = append(ids, tr.Id())
-		tr.Close()
-	}
-	// deleting trees
-	for _, id := range ids {
-		err = spc.DeleteTree(ctx, id)
-		require.NoError(t, err)
-	}
-	time.Sleep(3 * time.Second)
-	spc.Close()
-	require.Equal(t, len(ids), len(fx.treeManager.deletedIds))
-}
 
 func createTree(t *testing.T, ctx context.Context, spc Space, acc *accountdata.AccountKeys) string {
 	bytes := make([]byte, 32)
@@ -126,13 +34,17 @@ func createTree(t *testing.T, ctx context.Context, spc Space, acc *accountdata.A
 	return tr.Id()
 }
 
+type storeSetter interface {
+	SetStore(id string, store anystore.DB)
+}
+
 func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	fx := newFixture(t)
 	acc := fx.account.Account()
 	rk := crypto.NewAES()
 	privKey, _, _ := crypto.GenerateRandomEd25519KeyPair()
 	ctx := context.Background()
-	totalObjs := 1500
+	totalObjs := 1000
 
 	// creating space
 	sp, err := fx.spaceService.CreateSpace(ctx, SpaceCreatePayload{
@@ -156,34 +68,57 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	require.NoError(t, err)
 	close(fx.treeManager.waitLoad)
 
-	settingsObject := spc.(*space).app.MustComponent(settings.CName).(settings.Settings).SettingsObject()
+	anyStore := spc.Storage().AnyStore()
+	newStore := objecttree.CopyStore(ctx, t, anyStore.(objecttree.TestStore), "store")
+
 	var ids []string
 	for i := 0; i < totalObjs; i++ {
 		id := createTree(t, ctx, spc, acc)
 		ids = append(ids, id)
 	}
-	// copying storage, so we will have the same contents, except for empty trees
-	inmemory := spc.Storage().(*spacestorage.InMemorySpaceStorage)
-	storageCopy := inmemory.CopyStorage()
-
 	// deleting trees, this will prepare the document to have all the deletion changes
 	for _, id := range ids {
 		err = spc.DeleteTree(ctx, id)
 		require.NoError(t, err)
 	}
-	treesMap := map[string]treestorage.TreeStorage{}
-	// copying the contents of the settings tree
-	treesMap[settingsObject.Id()] = settingsObject.Storage()
-	storageCopy.SetTrees(treesMap)
-	spc.Close()
+	settingsId := spc.Storage().StateStorage().SettingsId()
+	settingsStorage, err := spc.Storage().TreeStorage(ctx, settingsId)
+	require.NoError(t, err)
+	var allChanges []objecttree.StorageChange
+	err = settingsStorage.GetAfterOrder(ctx, "", func(ctx context.Context, change objecttree.StorageChange) (shouldContinue bool, err error) {
+		rawCh := make([]byte, len(change.RawChange))
+		copy(rawCh, change.RawChange)
+		change.RawChange = rawCh
+		allChanges = append(allChanges, change)
+		return true, nil
+	})
+	require.NoError(t, err)
+	heads, err := settingsStorage.Heads(ctx)
+	require.NoError(t, err)
+	commonSnapshot, err := settingsStorage.CommonSnapshot(ctx)
+	require.NoError(t, err)
+	newStorage, err := spacestorage.New(ctx, spc.Id(), newStore)
+	require.NoError(t, err)
+	newSettingsStorage, err := newStorage.TreeStorage(ctx, settingsId)
+	require.NoError(t, err)
+	err = newSettingsStorage.AddAllNoError(ctx, allChanges, heads, commonSnapshot)
+	require.NoError(t, err)
+	err = spc.Close()
+	require.NoError(t, err)
 	time.Sleep(100 * time.Millisecond)
-	// now we replace the storage, so the trees are back, but the settings object says that they are deleted
-	fx.storageProvider.(*spacestorage.InMemorySpaceStorageProvider).SetStorage(storageCopy)
-
+	storeSetter := fx.storageProvider.(storeSetter)
+	storeSetter.SetStore(sp, newStore)
 	spc, err = fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}, SyncStatus: syncstatus.NewNoOpSyncStatus()})
 	require.NoError(t, err)
 	require.NotNil(t, spc)
+	waitTest := make(chan struct{})
+	fx.treeManager.wait = true
 	fx.treeManager.space = spc
+	fx.treeManager.condFunc = func() {
+		if len(fx.treeManager.markedIds) == len(ids) {
+			close(waitTest)
+		}
+	}
 	fx.treeManager.waitLoad = make(chan struct{})
 	fx.treeManager.deletedIds = nil
 	fx.treeManager.markedIds = nil
@@ -191,8 +126,99 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	require.NoError(t, err)
 	close(fx.treeManager.waitLoad)
 
-	// waiting until everything is deleted
-	time.Sleep(3 * time.Second)
+	<-waitTest
 	require.Equal(t, len(ids), len(fx.treeManager.markedIds))
 	require.Zero(t, len(fx.treeManager.deletedIds))
+}
+
+func TestSpaceDeleteIds(t *testing.T) {
+	fx := newFixture(t)
+	acc := fx.account.Account()
+	rk := crypto.NewAES()
+	privKey, _, _ := crypto.GenerateRandomEd25519KeyPair()
+	ctx := context.Background()
+	totalObjs := 1000
+
+	// creating space
+	sp, err := fx.spaceService.CreateSpace(ctx, SpaceCreatePayload{
+		SigningKey:     acc.SignKey,
+		SpaceType:      "type",
+		ReadKey:        rk,
+		MetadataKey:    privKey,
+		ReplicationKey: 10,
+		MasterKey:      acc.PeerKey,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, sp)
+
+	// initializing space
+	spc, err := fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}, SyncStatus: syncstatus.NewNoOpSyncStatus()})
+	require.NoError(t, err)
+	require.NotNil(t, spc)
+	// adding space to tree manager
+	fx.treeManager.space = spc
+	err = spc.Init(ctx)
+	require.NoError(t, err)
+	close(fx.treeManager.waitLoad)
+
+	var ids []string
+	for i := 0; i < totalObjs; i++ {
+		id := createTree(t, ctx, spc, acc)
+		ids = append(ids, id)
+	}
+	// copying storage, so we will have the same contents, except for empty trees
+	anyStore := spc.Storage().AnyStore()
+	newStore := objecttree.CopyStore(ctx, t, anyStore.(objecttree.TestStore), "store")
+	// deleting trees, this will prepare the document to have all the deletion changes
+	for _, id := range ids {
+		err = spc.DeleteTree(ctx, id)
+		require.NoError(t, err)
+	}
+	settingsId := spc.Storage().StateStorage().SettingsId()
+	settingsStorage, err := spc.Storage().TreeStorage(ctx, settingsId)
+	require.NoError(t, err)
+	var allChanges []objecttree.StorageChange
+	err = settingsStorage.GetAfterOrder(ctx, "", func(ctx context.Context, change objecttree.StorageChange) (shouldContinue bool, err error) {
+		rawCh := make([]byte, len(change.RawChange))
+		copy(rawCh, change.RawChange)
+		change.RawChange = rawCh
+		allChanges = append(allChanges, change)
+		return true, nil
+	})
+	require.NoError(t, err)
+	heads, err := settingsStorage.Heads(ctx)
+	require.NoError(t, err)
+	commonSnapshot, err := settingsStorage.CommonSnapshot(ctx)
+	require.NoError(t, err)
+	newStorage, err := spacestorage.New(ctx, spc.Id(), newStore)
+	require.NoError(t, err)
+	newSettingsStorage, err := newStorage.TreeStorage(ctx, settingsId)
+	require.NoError(t, err)
+	err = newSettingsStorage.AddAllNoError(ctx, allChanges, heads, commonSnapshot)
+	require.NoError(t, err)
+	err = spc.Close()
+	require.NoError(t, err)
+	time.Sleep(100 * time.Millisecond)
+	storeSetter := fx.storageProvider.(storeSetter)
+	storeSetter.SetStore(sp, newStore)
+	spc, err = fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}, SyncStatus: syncstatus.NewNoOpSyncStatus()})
+	require.NoError(t, err)
+	require.NotNil(t, spc)
+	waitTest := make(chan struct{})
+	fx.treeManager.wait = true
+	fx.treeManager.space = spc
+	fx.treeManager.waitLoad = make(chan struct{})
+	fx.treeManager.deletedIds = nil
+	fx.treeManager.markedIds = nil
+	fx.treeManager.condFunc = func() {
+		if len(fx.treeManager.deletedIds) == len(ids) {
+			close(waitTest)
+		}
+	}
+	err = spc.Init(ctx)
+	require.NoError(t, err)
+	close(fx.treeManager.waitLoad)
+	// waiting until everything is deleted
+	<-waitTest
+	require.Equal(t, len(ids), len(fx.treeManager.deletedIds))
 }

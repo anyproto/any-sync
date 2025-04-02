@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_periodicsync/mock_periodicsync.go github.com/anyproto/any-sync/util/periodicsync PeriodicSync
 //
-
 // Package mock_periodicsync is a generated GoMock package.
 package mock_periodicsync
 
@@ -19,7 +18,6 @@ import (
 type MockPeriodicSync struct {
 	ctrl     *gomock.Controller
 	recorder *MockPeriodicSyncMockRecorder
-	isgomock struct{}
 }
 
 // MockPeriodicSyncMockRecorder is the mock recorder for MockPeriodicSync.

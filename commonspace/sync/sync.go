@@ -12,7 +12,6 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -29,7 +28,6 @@ var ErrUnexpectedMessage = errors.New("unexpected message")
 type SyncService interface {
 	app.Component
 	BroadcastMessage(ctx context.Context, msg drpc.Message) error
-	HandleDeprecatedObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
 	HandleStreamRequest(ctx context.Context, req syncdeps.Request, stream drpc.Stream) error
 	HandleMessage(ctx context.Context, msg drpc.Message) error
 	SendRequest(ctx context.Context, rq syncdeps.Request, collector syncdeps.ResponseCollector) error
@@ -108,7 +106,6 @@ func (s *syncService) handleIncomingMessage(msg msgCtx) {
 	if req == nil {
 		return
 	}
-	log.Debug("queue request", zap.String("objectId", req.ObjectId()), zap.String("spaceId", s.spaceId))
 	err = s.manager.QueueRequest(req)
 	if err != nil {
 		log.Error("failed to queue request", zap.Error(err))
@@ -126,14 +123,9 @@ func (s *syncService) HandleMessage(ctx context.Context, msg drpc.Message) error
 		Sizeable: idMsg,
 	})
 	if errors.Is(err, mb.ErrOverflowed) {
-		log.Info("queue overflowed", zap.String("objectId", objectId))
 		return nil
 	}
 	return err
-}
-
-func (s *syncService) HandleDeprecatedObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
-	return s.manager.HandleDeprecatedObjectSync(ctx, req)
 }
 
 func (s *syncService) QueueRequest(ctx context.Context, rq syncdeps.Request) error {

@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_commonspace/mock_commonspace.go github.com/anyproto/any-sync/commonspace Space
 //
-
 // Package mock_commonspace is a generated GoMock package.
 package mock_commonspace
 
@@ -33,7 +32,6 @@ import (
 type MockSpace struct {
 	ctrl     *gomock.Controller
 	recorder *MockSpaceMockRecorder
-	isgomock struct{}
 }
 
 // MockSpaceMockRecorder is the mock recorder for MockSpace.
@@ -110,105 +108,90 @@ func (mr *MockSpaceMockRecorder) DebugAllHeads() *gomock.Call {
 }
 
 // DeleteTree mocks base method.
-func (m *MockSpace) DeleteTree(ctx context.Context, id string) error {
+func (m *MockSpace) DeleteTree(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteTree", ctx, id)
+	ret := m.ctrl.Call(m, "DeleteTree", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteTree indicates an expected call of DeleteTree.
-func (mr *MockSpaceMockRecorder) DeleteTree(ctx, id any) *gomock.Call {
+func (mr *MockSpaceMockRecorder) DeleteTree(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTree", reflect.TypeOf((*MockSpace)(nil).DeleteTree), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTree", reflect.TypeOf((*MockSpace)(nil).DeleteTree), arg0, arg1)
 }
 
 // Description mocks base method.
-func (m *MockSpace) Description() (commonspace.SpaceDescription, error) {
+func (m *MockSpace) Description(arg0 context.Context) (commonspace.SpaceDescription, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Description")
+	ret := m.ctrl.Call(m, "Description", arg0)
 	ret0, _ := ret[0].(commonspace.SpaceDescription)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Description indicates an expected call of Description.
-func (mr *MockSpaceMockRecorder) Description() *gomock.Call {
+func (mr *MockSpaceMockRecorder) Description(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Description", reflect.TypeOf((*MockSpace)(nil).Description))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Description", reflect.TypeOf((*MockSpace)(nil).Description), arg0)
 }
 
 // GetNodePeers mocks base method.
-func (m *MockSpace) GetNodePeers(ctx context.Context) ([]peer.Peer, error) {
+func (m *MockSpace) GetNodePeers(arg0 context.Context) ([]peer.Peer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNodePeers", ctx)
+	ret := m.ctrl.Call(m, "GetNodePeers", arg0)
 	ret0, _ := ret[0].([]peer.Peer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetNodePeers indicates an expected call of GetNodePeers.
-func (mr *MockSpaceMockRecorder) GetNodePeers(ctx any) *gomock.Call {
+func (mr *MockSpaceMockRecorder) GetNodePeers(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodePeers", reflect.TypeOf((*MockSpace)(nil).GetNodePeers), ctx)
-}
-
-// HandleDeprecatedObjectSyncRequest mocks base method.
-func (m *MockSpace) HandleDeprecatedObjectSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (*spacesyncproto.ObjectSyncMessage, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleDeprecatedObjectSyncRequest", ctx, req)
-	ret0, _ := ret[0].(*spacesyncproto.ObjectSyncMessage)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// HandleDeprecatedObjectSyncRequest indicates an expected call of HandleDeprecatedObjectSyncRequest.
-func (mr *MockSpaceMockRecorder) HandleDeprecatedObjectSyncRequest(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleDeprecatedObjectSyncRequest", reflect.TypeOf((*MockSpace)(nil).HandleDeprecatedObjectSyncRequest), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodePeers", reflect.TypeOf((*MockSpace)(nil).GetNodePeers), arg0)
 }
 
 // HandleMessage mocks base method.
-func (m *MockSpace) HandleMessage(ctx context.Context, msg *objectmessages.HeadUpdate) error {
+func (m *MockSpace) HandleMessage(arg0 context.Context, arg1 *objectmessages.HeadUpdate) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleMessage", ctx, msg)
+	ret := m.ctrl.Call(m, "HandleMessage", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // HandleMessage indicates an expected call of HandleMessage.
-func (mr *MockSpaceMockRecorder) HandleMessage(ctx, msg any) *gomock.Call {
+func (mr *MockSpaceMockRecorder) HandleMessage(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleMessage", reflect.TypeOf((*MockSpace)(nil).HandleMessage), ctx, msg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleMessage", reflect.TypeOf((*MockSpace)(nil).HandleMessage), arg0, arg1)
 }
 
 // HandleRangeRequest mocks base method.
-func (m *MockSpace) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
+func (m *MockSpace) HandleRangeRequest(arg0 context.Context, arg1 *spacesyncproto.HeadSyncRequest) (*spacesyncproto.HeadSyncResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleRangeRequest", ctx, req)
+	ret := m.ctrl.Call(m, "HandleRangeRequest", arg0, arg1)
 	ret0, _ := ret[0].(*spacesyncproto.HeadSyncResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HandleRangeRequest indicates an expected call of HandleRangeRequest.
-func (mr *MockSpaceMockRecorder) HandleRangeRequest(ctx, req any) *gomock.Call {
+func (mr *MockSpaceMockRecorder) HandleRangeRequest(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleRangeRequest", reflect.TypeOf((*MockSpace)(nil).HandleRangeRequest), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleRangeRequest", reflect.TypeOf((*MockSpace)(nil).HandleRangeRequest), arg0, arg1)
 }
 
 // HandleStreamSyncRequest mocks base method.
-func (m *MockSpace) HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage, stream drpc.Stream) error {
+func (m *MockSpace) HandleStreamSyncRequest(arg0 context.Context, arg1 *spacesyncproto.ObjectSyncMessage, arg2 drpc.Stream) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleStreamSyncRequest", ctx, req, stream)
+	ret := m.ctrl.Call(m, "HandleStreamSyncRequest", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // HandleStreamSyncRequest indicates an expected call of HandleStreamSyncRequest.
-func (mr *MockSpaceMockRecorder) HandleStreamSyncRequest(ctx, req, stream any) *gomock.Call {
+func (mr *MockSpaceMockRecorder) HandleStreamSyncRequest(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStreamSyncRequest", reflect.TypeOf((*MockSpace)(nil).HandleStreamSyncRequest), ctx, req, stream)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStreamSyncRequest", reflect.TypeOf((*MockSpace)(nil).HandleStreamSyncRequest), arg0, arg1, arg2)
 }
 
 // Id mocks base method.
@@ -226,17 +209,17 @@ func (mr *MockSpaceMockRecorder) Id() *gomock.Call {
 }
 
 // Init mocks base method.
-func (m *MockSpace) Init(ctx context.Context) error {
+func (m *MockSpace) Init(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", ctx)
+	ret := m.ctrl.Call(m, "Init", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockSpaceMockRecorder) Init(ctx any) *gomock.Call {
+func (mr *MockSpaceMockRecorder) Init(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockSpace)(nil).Init), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockSpace)(nil).Init), arg0)
 }
 
 // Storage mocks base method.
@@ -310,16 +293,16 @@ func (mr *MockSpaceMockRecorder) TreeSyncer() *gomock.Call {
 }
 
 // TryClose mocks base method.
-func (m *MockSpace) TryClose(objectTTL time.Duration) (bool, error) {
+func (m *MockSpace) TryClose(arg0 time.Duration) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TryClose", objectTTL)
+	ret := m.ctrl.Call(m, "TryClose", arg0)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // TryClose indicates an expected call of TryClose.
-func (mr *MockSpaceMockRecorder) TryClose(objectTTL any) *gomock.Call {
+func (mr *MockSpaceMockRecorder) TryClose(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryClose", reflect.TypeOf((*MockSpace)(nil).TryClose), objectTTL)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryClose", reflect.TypeOf((*MockSpace)(nil).TryClose), arg0)
 }

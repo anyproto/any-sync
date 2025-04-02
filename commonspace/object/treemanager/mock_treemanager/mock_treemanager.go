@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_treemanager/mock_treemanager.go github.com/anyproto/any-sync/commonspace/object/treemanager TreeManager
 //
-
 // Package mock_treemanager is a generated GoMock package.
 package mock_treemanager
 
@@ -23,7 +22,6 @@ import (
 type MockTreeManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockTreeManagerMockRecorder
-	isgomock struct{}
 }
 
 // MockTreeManagerMockRecorder is the mock recorder for MockTreeManager.
@@ -44,74 +42,74 @@ func (m *MockTreeManager) EXPECT() *MockTreeManagerMockRecorder {
 }
 
 // Close mocks base method.
-func (m *MockTreeManager) Close(ctx context.Context) error {
+func (m *MockTreeManager) Close(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", ctx)
+	ret := m.ctrl.Call(m, "Close", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockTreeManagerMockRecorder) Close(ctx any) *gomock.Call {
+func (mr *MockTreeManagerMockRecorder) Close(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockTreeManager)(nil).Close), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockTreeManager)(nil).Close), arg0)
 }
 
 // DeleteTree mocks base method.
-func (m *MockTreeManager) DeleteTree(ctx context.Context, spaceId, treeId string) error {
+func (m *MockTreeManager) DeleteTree(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteTree", ctx, spaceId, treeId)
+	ret := m.ctrl.Call(m, "DeleteTree", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteTree indicates an expected call of DeleteTree.
-func (mr *MockTreeManagerMockRecorder) DeleteTree(ctx, spaceId, treeId any) *gomock.Call {
+func (mr *MockTreeManagerMockRecorder) DeleteTree(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTree", reflect.TypeOf((*MockTreeManager)(nil).DeleteTree), ctx, spaceId, treeId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTree", reflect.TypeOf((*MockTreeManager)(nil).DeleteTree), arg0, arg1, arg2)
 }
 
 // GetTree mocks base method.
-func (m *MockTreeManager) GetTree(ctx context.Context, spaceId, treeId string) (objecttree.ObjectTree, error) {
+func (m *MockTreeManager) GetTree(arg0 context.Context, arg1, arg2 string) (objecttree.ObjectTree, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTree", ctx, spaceId, treeId)
+	ret := m.ctrl.Call(m, "GetTree", arg0, arg1, arg2)
 	ret0, _ := ret[0].(objecttree.ObjectTree)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetTree indicates an expected call of GetTree.
-func (mr *MockTreeManagerMockRecorder) GetTree(ctx, spaceId, treeId any) *gomock.Call {
+func (mr *MockTreeManagerMockRecorder) GetTree(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTree", reflect.TypeOf((*MockTreeManager)(nil).GetTree), ctx, spaceId, treeId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTree", reflect.TypeOf((*MockTreeManager)(nil).GetTree), arg0, arg1, arg2)
 }
 
 // Init mocks base method.
-func (m *MockTreeManager) Init(a *app.App) error {
+func (m *MockTreeManager) Init(arg0 *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", a)
+	ret := m.ctrl.Call(m, "Init", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockTreeManagerMockRecorder) Init(a any) *gomock.Call {
+func (mr *MockTreeManagerMockRecorder) Init(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockTreeManager)(nil).Init), a)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockTreeManager)(nil).Init), arg0)
 }
 
 // MarkTreeDeleted mocks base method.
-func (m *MockTreeManager) MarkTreeDeleted(ctx context.Context, spaceId, treeId string) error {
+func (m *MockTreeManager) MarkTreeDeleted(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MarkTreeDeleted", ctx, spaceId, treeId)
+	ret := m.ctrl.Call(m, "MarkTreeDeleted", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // MarkTreeDeleted indicates an expected call of MarkTreeDeleted.
-func (mr *MockTreeManagerMockRecorder) MarkTreeDeleted(ctx, spaceId, treeId any) *gomock.Call {
+func (mr *MockTreeManagerMockRecorder) MarkTreeDeleted(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkTreeDeleted", reflect.TypeOf((*MockTreeManager)(nil).MarkTreeDeleted), ctx, spaceId, treeId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkTreeDeleted", reflect.TypeOf((*MockTreeManager)(nil).MarkTreeDeleted), arg0, arg1, arg2)
 }
 
 // Name mocks base method.
@@ -129,29 +127,29 @@ func (mr *MockTreeManagerMockRecorder) Name() *gomock.Call {
 }
 
 // Run mocks base method.
-func (m *MockTreeManager) Run(ctx context.Context) error {
+func (m *MockTreeManager) Run(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx)
+	ret := m.ctrl.Call(m, "Run", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockTreeManagerMockRecorder) Run(ctx any) *gomock.Call {
+func (mr *MockTreeManagerMockRecorder) Run(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockTreeManager)(nil).Run), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockTreeManager)(nil).Run), arg0)
 }
 
 // ValidateAndPutTree mocks base method.
-func (m *MockTreeManager) ValidateAndPutTree(ctx context.Context, spaceId string, payload treestorage.TreeStorageCreatePayload) error {
+func (m *MockTreeManager) ValidateAndPutTree(arg0 context.Context, arg1 string, arg2 treestorage.TreeStorageCreatePayload) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateAndPutTree", ctx, spaceId, payload)
+	ret := m.ctrl.Call(m, "ValidateAndPutTree", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ValidateAndPutTree indicates an expected call of ValidateAndPutTree.
-func (mr *MockTreeManagerMockRecorder) ValidateAndPutTree(ctx, spaceId, payload any) *gomock.Call {
+func (mr *MockTreeManagerMockRecorder) ValidateAndPutTree(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateAndPutTree", reflect.TypeOf((*MockTreeManager)(nil).ValidateAndPutTree), ctx, spaceId, payload)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateAndPutTree", reflect.TypeOf((*MockTreeManager)(nil).ValidateAndPutTree), arg0, arg1, arg2)
 }

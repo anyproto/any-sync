@@ -13,7 +13,6 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/objectmanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
@@ -24,7 +23,6 @@ import (
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/pool"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
-	"github.com/anyproto/any-sync/net/secureservice"
 )
 
 var ErrUnexpectedHeadUpdateType = errors.New("unexpected head update type")
@@ -63,36 +61,21 @@ func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Messa
 	if err != nil {
 		return nil, err
 	}
-	protoVersion, err := peer.CtxProtoVersion(ctx)
-	if err != nil {
-		return nil, err
-	}
-	log.Debug("handle head update", zap.String("spaceId", o.spaceId), zap.String("peerId", peerId), zap.String("objectId", update.Meta.ObjectId))
-	isNewProto := protoVersion >= secureservice.ProtoVersion
 	obj, err := o.manager.GetObject(context.Background(), update.Meta.ObjectId)
 	if err != nil {
-		if isNewProto {
-			log.Debug("return request", zap.String("spaceId", o.spaceId), zap.String("peerId", peerId), zap.String("objectId", update.Meta.ObjectId))
-			return synctree.NewRequest(peerId, update.Meta.SpaceId, update.Meta.ObjectId, nil, nil, nil), nil
-		}
-		return nil, err
+		return synctree.NewRequest(peerId, update.Meta.SpaceId, update.Meta.ObjectId, nil, nil, nil), nil
 	}
 	objHandler, ok := obj.(syncdeps.ObjectSyncHandler)
 	if !ok {
 		return nil, fmt.Errorf("object %s does not support sync", obj.Id())
 	}
-	req, err := objHandler.HandleHeadUpdate(ctx, o.status, update)
-	if isNewProto {
-		return req, err
-	}
-	return nil, err
+	return objHandler.HandleHeadUpdate(ctx, o.status, update)
 }
 
 func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, sendResponse func(resp proto.Message) error) (syncdeps.Request, error) {
-	log.Debug("handle stream request", zap.String("spaceId", o.spaceId), zap.String("peerId", rq.PeerId()), zap.String("objectId", rq.ObjectId()))
 	obj, err := o.manager.GetObject(context.Background(), rq.ObjectId())
 	if err != nil {
-		log.Debug("object not found", zap.String("spaceId", o.spaceId), zap.String("peerId", rq.PeerId()), zap.String("objectId", rq.ObjectId()))
+		log.Debug("handle stream request no object", zap.String("spaceId", o.spaceId), zap.String("peerId", rq.PeerId()), zap.String("objectId", rq.ObjectId()))
 		req, ok := rq.(*objectmessages.Request)
 		if !ok {
 			return nil, treechangeproto.ErrGetTree
@@ -113,58 +96,6 @@ func (o *objectSync) HandleStreamRequest(ctx context.Context, rq syncdeps.Reques
 		return nil, fmt.Errorf("object %s does not support sync", obj.Id())
 	}
 	return objHandler.HandleStreamRequest(ctx, rq, updater, sendResponse)
-}
-
-func (o *objectSync) HandleDeprecatedObjectSync(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
-	obj, err := o.manager.GetObject(context.Background(), req.ObjectId)
-	if err != nil {
-		unmarshalled := &treechangeproto.TreeSyncMessage{}
-		err = proto.Unmarshal(req.Payload, unmarshalled)
-		if err != nil {
-			return nil, err
-		}
-		cnt := unmarshalled.GetContent().GetFullSyncRequest()
-		// we also don't have the tree, so nobody has the tree
-		if unmarshalled.RootChange == nil || cnt == nil {
-			return nil, treechangeproto.ErrGetTree
-		}
-		// we don't have the tree, so we return empty response, so next time we will get the tree
-		if cnt.Changes == nil {
-			return &spacesyncproto.ObjectSyncMessage{
-				SpaceId:  req.SpaceId,
-				ObjectId: req.ObjectId,
-			}, nil
-		}
-		// we don't have the tree, but this must be a request with full data
-		payload := treestorage.TreeStorageCreatePayload{
-			RootRawChange: unmarshalled.RootChange,
-			Changes:       cnt.Changes,
-			Heads:         cnt.Heads,
-		}
-		err := o.manager.ValidateAndPutTree(ctx, o.spaceId, payload)
-		if err != nil {
-			return nil, err
-		}
-		resp := &treechangeproto.TreeFullSyncResponse{
-			Heads:        cnt.Heads,
-			SnapshotPath: cnt.SnapshotPath,
-		}
-		syncMsg := treechangeproto.WrapFullResponse(resp, unmarshalled.RootChange)
-		marshalled, err := proto.Marshal(syncMsg)
-		if err != nil {
-			return nil, err
-		}
-		return &spacesyncproto.ObjectSyncMessage{
-			SpaceId:  req.SpaceId,
-			ObjectId: req.ObjectId,
-			Payload:  marshalled,
-		}, nil
-	}
-	objHandler, ok := obj.(syncdeps.ObjectSyncHandler)
-	if !ok {
-		return nil, fmt.Errorf("object %s does not support sync", obj.Id())
-	}
-	return objHandler.HandleDeprecatedRequest(ctx, req)
 }
 
 func (o *objectSync) ApplyRequest(ctx context.Context, rq syncdeps.Request, requestSender syncdeps.RequestSender) error {

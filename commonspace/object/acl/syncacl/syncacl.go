@@ -32,7 +32,6 @@ type SyncAcl interface {
 	app.ComponentRunnable
 	list.AclList
 	syncdeps.ObjectSyncHandler
-	SetHeadUpdater(updater headupdater.HeadUpdater)
 	SyncWithPeer(ctx context.Context, p peer.Peer) (err error)
 	SetAclUpdater(updater headupdater.AclUpdater)
 }
@@ -44,10 +43,9 @@ func New() SyncAcl {
 type syncAcl struct {
 	list.AclList
 	syncdeps.ObjectSyncHandler
-	syncClient  SyncClient
-	headUpdater headupdater.HeadUpdater
-	isClosed    bool
-	aclUpdater  headupdater.AclUpdater
+	syncClient SyncClient
+	isClosed   bool
+	aclUpdater headupdater.AclUpdater
 }
 
 func (s *syncAcl) SetAclUpdater(updater headupdater.AclUpdater) {
@@ -59,12 +57,7 @@ func (s *syncAcl) SetAclUpdater(updater headupdater.AclUpdater) {
 func (s *syncAcl) Run(ctx context.Context) (err error) {
 	s.Lock()
 	defer s.Unlock()
-	s.headUpdater.UpdateHeads(s.Id(), []string{s.Head().Id})
 	return
-}
-
-func (s *syncAcl) SetHeadUpdater(updater headupdater.HeadUpdater) {
-	s.headUpdater = updater
 }
 
 func (s *syncAcl) Init(a *app.App) (err error) {
@@ -89,17 +82,18 @@ func (s *syncAcl) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 	if s.isClosed {
 		return ErrSyncAclClosed
 	}
-	log.Debug("received update", zap.String("aclId", s.AclList.Id()), zap.String("prevHead", s.AclList.Head().Id), zap.String("newHead", rawRec.Id))
+	prevHead := s.AclList.Head().Id
+	log := log.With(zap.String("aclId", s.AclList.Id()), zap.String("prevHead", prevHead))
 	err = s.AclList.AddRawRecord(rawRec)
 	if err != nil {
 		return
 	}
+	log.Debug("acl record updated", zap.String("head", s.AclList.Head().Id), zap.Int("len(total)", len(s.AclList.Records())))
 	headUpdate, err := s.syncClient.CreateHeadUpdate(s, []*consensusproto.RawRecordWithId{rawRec})
 	if err != nil {
 		return
 	}
 	s.broadcast(headUpdate)
-	s.headUpdater.UpdateHeads(s.Id(), []string{rawRec.Id})
 	if s.aclUpdater != nil {
 		s.aclUpdater.UpdateAcl(s)
 	}
@@ -119,17 +113,15 @@ func (s *syncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) (e
 	}
 	prevHead := s.AclList.Head().Id
 	log := log.With(zap.String("aclId", s.AclList.Id()), zap.String("prevHead", prevHead))
-	log.Debug("received updates", zap.String("newHead", rawRecords[len(rawRecords)-1].Id))
 	err = s.AclList.AddRawRecords(rawRecords)
 	if err != nil || s.AclList.Head().Id == prevHead {
 		return
 	}
-	log.Debug("records updated", zap.String("head", s.AclList.Head().Id), zap.Int("len(total)", len(s.AclList.Records())))
+	log.Debug("acl records updated", zap.String("head", s.AclList.Head().Id), zap.Int("len(total)", len(s.AclList.Records())))
 	headUpdate, err := s.syncClient.CreateHeadUpdate(s, rawRecords)
 	if err != nil {
 		return
 	}
-	s.headUpdater.UpdateHeads(s.Id(), []string{rawRecords[len(rawRecords)-1].Id})
 	s.broadcast(headUpdate)
 	if s.aclUpdater != nil {
 		s.aclUpdater.UpdateAcl(s)

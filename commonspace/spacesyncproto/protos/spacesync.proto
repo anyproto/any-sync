@@ -63,7 +63,7 @@ message HeadSyncResultElement {
 message HeadSyncRequest {
     string spaceId = 1;
     repeated HeadSyncRange ranges = 2;
-    DiffType diffType = 3 [deprecated=true];
+    DiffType diffType = 3;
 }
 
 // HeadSyncResponse is a response for HeadSync
@@ -222,5 +222,6 @@ message KeyValue {
 // DiffType is a type of diff
 enum DiffType {
     Initial = 0;
-    Precalculated = 1;
+    V1 = 1;
+    V2 = 2;
 }

@@ -1,12 +1,16 @@
 package list
 
 import (
+	"context"
 	"fmt"
+	"path/filepath"
 	"testing"
 
+	anystore "github.com/anyproto/any-store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
@@ -21,6 +25,17 @@ type aclFixture struct {
 	spaceId     string
 }
 
+func createStore(ctx context.Context, t *testing.T) anystore.DB {
+	path := filepath.Join(t.TempDir(), "list.db")
+	db, err := anystore.Open(ctx, path, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err := db.Close()
+		require.NoError(t, err)
+	})
+	return db
+}
+
 var mockMetadata = []byte("very important metadata")
 
 func newFixture(t *testing.T) *aclFixture {
@@ -29,9 +44,20 @@ func newFixture(t *testing.T) *aclFixture {
 	accountKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
 	spaceId := "spaceId"
-	ownerAcl, err := NewTestDerivedAcl(spaceId, ownerKeys)
+	ctx := context.Background()
+	ownerAcl, err := newDerivedAclWithStoreProvider(spaceId, ownerKeys, []byte("metadata"), func(root *consensusproto.RawRecordWithId) (Storage, error) {
+		store := createStore(ctx, t)
+		headStorage, err := headstorage.New(ctx, store)
+		require.NoError(t, err)
+		return CreateStorage(ctx, root, headStorage, store)
+	})
 	require.NoError(t, err)
-	accountAcl, err := NewTestAclWithRoot(accountKeys, ownerAcl.Root())
+	accountAcl, err := newAclWithStoreProvider(ownerAcl.Root(), accountKeys, func(root *consensusproto.RawRecordWithId) (Storage, error) {
+		store := createStore(ctx, t)
+		headStorage, err := headstorage.New(ctx, store)
+		require.NoError(t, err)
+		return CreateStorage(ctx, root, headStorage, store)
+	})
 	require.NoError(t, err)
 	require.Equal(t, ownerAcl.AclState().lastRecordId, ownerAcl.Id())
 	require.Equal(t, ownerAcl.AclState().lastRecordId, accountAcl.AclState().lastRecordId)
@@ -114,7 +140,7 @@ func (fx *aclFixture) inviteAccount(t *testing.T, perms AclPermissions) {
 func TestAclList_BuildRoot(t *testing.T) {
 	randomKeys, err := accountdata.NewRandom()
 	require.NoError(t, err)
-	randomAcl, err := NewTestDerivedAcl("spaceId", randomKeys)
+	randomAcl, err := NewInMemoryDerivedAcl("spaceId", randomKeys)
 	require.NoError(t, err)
 	fmt.Println(randomAcl.Id())
 }

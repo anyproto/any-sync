@@ -2,6 +2,11 @@ package deletionmanager
 
 import (
 	"context"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager/mock_deletionmanager"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
@@ -12,9 +17,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacestorage/mock_spacestorage"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
-	"testing"
 )
 
 type deletionManagerFixture struct {
@@ -54,7 +56,6 @@ func (fx *deletionManagerFixture) init(t *testing.T) {
 	fx.delState.EXPECT().Name().AnyTimes().Return(deletionstate.CName)
 	fx.treeManager.EXPECT().Name().AnyTimes().Return(treemanager.CName)
 	fx.storage.EXPECT().Name().AnyTimes().Return(spacestorage.CName)
-	fx.storage.EXPECT().SpaceSettingsId().AnyTimes().Return(fx.settingsId)
 	fx.delState.EXPECT().AddObserver(gomock.Any())
 	fx.app.Register(fx.spaceState).
 		Register(fx.storage).

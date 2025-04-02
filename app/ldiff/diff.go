@@ -1,7 +1,7 @@
 // Package ldiff provides a container of elements with fixed id and changeable content.
 // Diff can calculate the difference with another diff container (you can make it remote) with minimum hops and traffic.
 //
-//go:generate mockgen -destination mock_ldiff/mock_ldiff.go github.com/anyproto/any-sync/app/ldiff Diff,Remote
+//go:generate mockgen -destination mock_ldiff/mock_ldiff.go github.com/anyproto/any-sync/app/ldiff Diff,Remote,DiffContainer
 package ldiff
 
 import (
@@ -15,6 +15,8 @@ import (
 	"github.com/cespare/xxhash"
 	"github.com/huandu/skiplist"
 	"github.com/zeebo/blake3"
+
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
 // Diff contains elements and can compare it with Remote diff
@@ -36,6 +38,8 @@ type Diff interface {
 	Hash() string
 	// Len returns count of elements in the diff
 	Len() int
+	// DiffType returns the diff type (diff logic and parameters)
+	DiffType() spacesyncproto.DiffType
 }
 
 // New creates precalculated Diff container
@@ -141,6 +145,10 @@ func (d *diff) Compare(lhs, rhs interface{}) int {
 	}
 }
 
+func (d *diff) DiffType() spacesyncproto.DiffType {
+	return spacesyncproto.DiffType_V2
+}
+
 // CalcScore implements skiplist interface
 func (d *diff) CalcScore(key interface{}) float64 {
 	return 0
@@ -237,11 +245,10 @@ func (d *diff) getRange(r Range) (rr RangeResult) {
 	if rng != nil {
 		rr.Hash = rng.hash
 		rr.Count = rng.elements
-		if !r.Elements && rng.isDivided {
+		if !r.Elements {
 			return
 		}
 	}
-
 	el := d.sl.Find(&element{hash: r.From})
 	rr.Elements = make([]Element, 0, d.divideFactor)
 	for el != nil && el.Key().(*element).hash <= r.To {
@@ -312,7 +319,6 @@ func (d *diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResul
 	if bytes.Equal(myRes.Hash, otherRes.Hash) {
 		return
 	}
-
 	// other has elements
 	if len(otherRes.Elements) == otherRes.Count {
 		if len(myRes.Elements) == myRes.Count {
@@ -323,8 +329,7 @@ func (d *diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResul
 		}
 		return
 	}
-	// request all elements from other, because we don't have enough
-	if len(myRes.Elements) == myRes.Count {
+	if otherRes.Count <= d.compareThreshold && len(otherRes.Elements) == 0 || len(myRes.Elements) == myRes.Count {
 		r.Elements = true
 		dctx.prepare = append(dctx.prepare, r)
 		return

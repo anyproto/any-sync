@@ -4,19 +4,28 @@ import (
 	"context"
 	"fmt"
 
+	anystore "github.com/anyproto/any-store"
+
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/util/slice"
 )
 
 type TreeStorageCreator interface {
-	CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (treestorage.TreeStorage, error)
+	CreateTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (Storage, error)
 }
 
-type InMemoryStorageCreator struct{}
+type tempTreeStorageCreator struct {
+	store anystore.DB
+}
 
-func (i InMemoryStorageCreator) CreateTreeStorage(payload treestorage.TreeStorageCreatePayload) (treestorage.TreeStorage, error) {
-	return treestorage.NewInMemoryTreeStorage(payload.RootRawChange, payload.Heads, payload.Changes)
+func (t *tempTreeStorageCreator) CreateTreeStorage(ctx context.Context, payload treestorage.TreeStorageCreatePayload) (Storage, error) {
+	headStorage, err := headstorage.New(ctx, t.store)
+	if err != nil {
+		return nil, err
+	}
+	return CreateStorage(ctx, payload.RootRawChange, headStorage, t.store)
 }
 
 type ValidatorFunc func(payload treestorage.TreeStorageCreatePayload, storageCreator TreeStorageCreator, aclList list.AclList) (ret ObjectTree, err error)
@@ -178,7 +187,8 @@ func (v *objectTreeValidator) validateChange(tree *Tree, aclList list.AclList, c
 }
 
 func ValidateRawTreeDefault(payload treestorage.TreeStorageCreatePayload, storageCreator TreeStorageCreator, aclList list.AclList) (objTree ObjectTree, err error) {
-	treeStorage, err := storageCreator.CreateTreeStorage(treestorage.TreeStorageCreatePayload{
+	ctx := context.Background()
+	treeStorage, err := storageCreator.CreateTreeStorage(ctx, treestorage.TreeStorageCreatePayload{
 		RootRawChange: payload.RootRawChange,
 		Heads:         []string{payload.RootRawChange.Id},
 	})
@@ -215,7 +225,8 @@ func ValidateFilterRawTree(payload treestorage.TreeStorageCreatePayload, storage
 		return nil, list.ErrNoReadKey
 	}
 	aclList.RUnlock()
-	treeStorage, err := storageCreator.CreateTreeStorage(treestorage.TreeStorageCreatePayload{
+	ctx := context.Background()
+	treeStorage, err := storageCreator.CreateTreeStorage(ctx, treestorage.TreeStorageCreatePayload{
 		RootRawChange: payload.RootRawChange,
 		Heads:         []string{payload.RootRawChange.Id},
 	})
@@ -241,7 +252,7 @@ func ValidateFilterRawTree(payload treestorage.TreeStorageCreatePayload, storage
 	return tree, nil
 }
 
-func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList) (err error) {
-	_, err = ValidateRawTreeDefault(payload, InMemoryStorageCreator{}, aclList)
+func ValidateRawTree(payload treestorage.TreeStorageCreatePayload, aclList list.AclList, store anystore.DB) (err error) {
+	_, err = ValidateRawTreeDefault(payload, &tempTreeStorageCreator{store: store}, aclList)
 	return
 }

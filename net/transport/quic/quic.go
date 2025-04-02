@@ -147,7 +147,7 @@ func (q *quicTransport) Dial(ctx context.Context, addr string) (mc transport.Mul
 		return nil, err
 	}
 
-	return newConn(cctx, qConn), nil
+	return newConn(cctx, qConn, time.Second*time.Duration(q.conf.WriteTimeoutSec)), nil
 }
 
 func (q *quicTransport) acceptLoop(ctx context.Context, list *quic.Listener) {
@@ -199,7 +199,7 @@ func (q *quicTransport) accept(conn quic.Connection) (err error) {
 		}()
 		return
 	}
-	mc := newConn(cctx, conn)
+	mc := newConn(cctx, conn, time.Second*time.Duration(q.conf.WriteTimeoutSec))
 	return q.accepter.Accept(mc)
 }
 
