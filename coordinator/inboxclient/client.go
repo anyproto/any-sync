@@ -227,10 +227,10 @@ func (c *inboxClient) streamWatcher() {
 		c.stream = st
 		c.mu.Unlock()
 		err = c.streamReader()
-		if err == ErrShutdown {
-			// if stream is shutdown, we continue to retry via openStream
+		if err != nil {
+			// if stream is error or shutdown, we continue to retry via openStream
 			// we exit only in case of c.close, i.e. client component close
-			log.Error("streamWatcher: shutdown, continue", zap.Error(err))
+			log.Error("streamWatcher: error, continue", zap.Error(err))
 		}
 
 	}
