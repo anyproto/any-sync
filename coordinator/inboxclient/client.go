@@ -180,11 +180,13 @@ func (c *inboxClient) openStream(ctx context.Context) (st *stream, err error) {
 	log.Warn("streamWatcher: trying to connect")
 	pr, err := c.pool.GetOneOf(ctx, c.nodeconf.CoordinatorPeers())
 	if err != nil {
+		log.Warn("streamWatcher: pool error")
 		return nil, err
 	}
 	pr.SetTTL(time.Hour * 24)
 	dc, err := pr.AcquireDrpcConn(ctx)
 	if err != nil {
+		log.Warn("streamWatcher: drpc conn error")
 		return nil, err
 	}
 	req := &coordinatorproto.InboxNotifySubscribeRequest{}
@@ -205,11 +207,12 @@ func (c *inboxClient) streamWatcher() {
 		log.Info("streamWatcher: open inbox stream")
 		if st, err = c.openStream(context.Background()); err != nil {
 			// can't open stream, we will retry until success connection or close
-			if i < 60 {
+			log.Error("streamWatcher: watch inbox error, retry", zap.Error(err))
+			if i < 2 {
 				i++
 			}
 			sleepTime := time.Second * time.Duration(i)
-			log.Error("watch inbox error", zap.Error(err), zap.Duration("waitTime", sleepTime))
+			log.Error("streamWatcher: watch inbox erro, retry", zap.Error(err), zap.Duration("waitTime", sleepTime))
 			select {
 			case <-time.After(sleepTime):
 				continue
@@ -225,7 +228,10 @@ func (c *inboxClient) streamWatcher() {
 		// read stream
 		err = c.streamReader()
 		if err == ErrShutdown {
-			return
+			log.Error("streamWatcher: ErrShutdown", zap.Error(err))
+			// TODO: becaus openStream doesn't return any error is coordinator is off
+			// it fails only on Read and returns shutdown
+			continue
 		} else {
 			continue
 		}

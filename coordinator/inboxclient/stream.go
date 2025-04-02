@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"sync/atomic"
 
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
@@ -26,7 +25,6 @@ var ErrShutdown = errors.New("stream shutted down")
 type stream struct {
 	rpcStream  coordinatorproto.DRPCCoordinator_InboxNotifySubscribeClient
 	mb         *mb.MB[*coordinatorproto.InboxNotifySubscribeEvent]
-	mu         sync.Mutex
 	isShutdown atomic.Bool
 }
 
@@ -70,6 +68,7 @@ func (s *stream) close() {
 }
 func (s *stream) Close() error {
 	if s.isShutdown.CompareAndSwap(false, true) {
+		log.Warn("stream: close, shutdown")
 		s.close()
 	}
 	return nil
