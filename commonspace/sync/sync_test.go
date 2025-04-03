@@ -115,6 +115,14 @@ func TestSyncService(t *testing.T) {
 		}
 		require.Equal(t, headUpdate, f.syncHandler.headUpdate)
 	})
+	t.Run("handle key value message no op", func(t *testing.T) {
+		f := newFixture(t)
+		headUpdate := &testMessage{objectId: "objectId", objectType: spacesyncproto.ObjectType_KeyValue}
+		err := f.HandleMessage(ctx, headUpdate)
+		require.NoError(t, err)
+		f.Close(t)
+		require.Nil(t, f.syncHandler.headUpdate)
+	})
 	t.Run("handle message", func(t *testing.T) {
 		f := newFixture(t)
 		f.syncHandler.toReceiveData = map[string][]*testResponse{
@@ -386,7 +394,12 @@ func (r *testRequest) MsgSize() uint64 {
 }
 
 type testMessage struct {
-	objectId string
+	objectId   string
+	objectType spacesyncproto.ObjectType
+}
+
+func (t *testMessage) ObjectType() spacesyncproto.ObjectType {
+	return t.objectType
 }
 
 func (t *testMessage) ObjectId() string {
