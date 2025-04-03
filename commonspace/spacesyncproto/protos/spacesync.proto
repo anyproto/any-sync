@@ -211,7 +211,16 @@ message StoreDiffResponse {
 message StoreKeyValue {
     string key = 1;
     bytes value = 2;
-    int64 timestampMilli = 3;
+    bytes identitySignature = 3;
+    bytes peerSignature = 4;
+}
+
+message StoreKeyInner {
+    bytes peer = 1;
+    bytes identity = 2;
+    bytes value = 3;
+    int64 timestampMilli = 4;
+    string aclHeadId = 5;
 }
 
 // DiffType is a type of diff
