@@ -23,7 +23,7 @@ import (
 
 const CName = "common.inboxclient"
 
-type MessageReceiver func(messages *coordinatorproto.InboxNotifySubscribeEvent)
+type MessageReceiver func(message *coordinatorproto.InboxNotifySubscribeEvent)
 
 var (
 	ErrPubKeyMissing     = errors.New("peer pub key missing")

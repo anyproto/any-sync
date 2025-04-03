@@ -2,7 +2,7 @@ package inboxclient
 
 import (
 	"context"
-	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,6 +18,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+
+	"github.com/anyproto/any-sync/coordinator/inboxclient/mocks"
 )
 
 var ctx = context.Background()
@@ -60,40 +62,124 @@ func TestInbox_Fetch(t *testing.T) {
 		}
 		myTs.FetchResponse = res
 		fxC, _, _ := makeClientServer(t, myTs)
-		// TODO: dummyReceiver should be mock, e.g. EXPECT it to
-		// be called with a certain val
-		fxC.SetMessageReceiver(dummyReceiver)
 		msgs, err := fxC.InboxFetch(ctx, "")
+
 		require.NoError(t, err)
 		assert.Len(t, msgs, 10)
 
 	})
 }
 
-func dummyReceiver(e *coordinatorproto.InboxNotifySubscribeEvent) {
-	fmt.Printf("event: %s\n", e)
+func TestInbox_Notify(t *testing.T) {
+	var makeClientServer = func(t *testing.T, ts *testServer) (fxC, fxS *fixture, peerId string) {
+		fxC = newFixture(t, nil)
+		fxS = newFixtureWithReceiver(t, ts)
+		peerId = "peer"
+		identity, err := fxC.account.Account().SignKey.GetPublic().Marshall()
+		require.NoError(t, err)
+		mcS, mcC := rpctest.MultiConnPairWithIdentity(peerId, peerId+"client", identity)
+		pS, err := peer.NewPeer(mcS, fxC.ts)
+		require.NoError(t, err)
+		fxC.tp.AddPeer(ctx, pS)
+		_, err = peer.NewPeer(mcC, fxS.ts)
+		require.NoError(t, err)
+		return
+	}
+	t.Run("notify simple test", func(t *testing.T) {
+
+		myTs := &testServer{
+			name:             "fxC",
+			NotifySenderChan: make(chan *coordinatorproto.InboxNotifySubscribeEvent),
+		}
+		expectedEvent := &coordinatorproto.InboxNotifySubscribeEvent{
+			NotifyId: "hello",
+		}
+		_, fxS, _ := makeClientServer(t, myTs)
+		var wg sync.WaitGroup
+		wg.Add(1)
+		fxS.mockReceiver.EXPECT().
+			Receive(expectedEvent).
+			Do(func(evt *coordinatorproto.InboxNotifySubscribeEvent) {
+				defer wg.Done()
+			}).
+			Times(1)
+
+		myTs.NotifySenderChan <- expectedEvent
+
+		done := make(chan struct{})
+		go func() {
+			wg.Wait()
+			close(done)
+		}()
+
+		select {
+		case <-done:
+			return
+		case <-time.After(2 * time.Second):
+			t.Fatal("Receive callback was not triggered in time")
+		}
+	})
+
 }
 
 var coordinatorPeer = "peer"
 
 // myTs is used to send testServer structure to control e.g. what
 // InboxFetch returns
+func newFixtureWithReceiver(t *testing.T, myTs *testServer) (fx *fixture) {
+	ts := rpctest.NewTestServer()
+	account := &accounttest.AccountTestService{}
+	c := New()
+	ctrl := gomock.NewController(t)
+	mockReceiver := mocks.NewMockMessageReceiverTest(ctrl)
+
+	fx = &fixture{
+		InboxClient:  c,
+		account:      account,
+		ctrl:         ctrl,
+		a:            new(app.App),
+		ts:           ts,
+		tp:           rpctest.NewTestPool().WithServer(ts),
+		mockReceiver: mockReceiver,
+	}
+
+	fx.SetMessageReceiver(mockReceiver.Receive)
+	fx.a.
+		Register(account).
+		Register(&mockConf{}).
+		Register(fx.tp).
+		Register(fx.ts).
+		Register(c)
+
+	if myTs == nil {
+		myTs = &testServer{}
+	}
+	require.NoError(t, coordinatorproto.DRPCRegisterCoordinator(ts, myTs))
+	require.NoError(t, fx.a.Start(ctx))
+
+	return fx
+}
+
+func dummyReceiver(e *coordinatorproto.InboxNotifySubscribeEvent) {
+	fmt.Printf("event: %s\n", e)
+}
+
 func newFixture(t *testing.T, myTs *testServer) (fx *fixture) {
 	ts := rpctest.NewTestServer()
 	account := &accounttest.AccountTestService{}
 	c := New()
+	ctrl := gomock.NewController(t)
 
 	fx = &fixture{
 		InboxClient: c,
 		account:     account,
-		ctrl:        gomock.NewController(t),
+		ctrl:        ctrl,
 		a:           new(app.App),
 		ts:          ts,
 		tp:          rpctest.NewTestPool().WithServer(ts),
 	}
 
-	c.SetMessageReceiver(dummyReceiver)
-
+	fx.SetMessageReceiver(dummyReceiver)
 	fx.a.
 		Register(account).
 		Register(&mockConf{}).
@@ -112,11 +198,12 @@ func newFixture(t *testing.T, myTs *testServer) (fx *fixture) {
 
 type fixture struct {
 	InboxClient
-	account *accounttest.AccountTestService
-	a       *app.App
-	ctrl    *gomock.Controller
-	ts      *rpctest.TestServer
-	tp      *rpctest.TestPool
+	account      *accounttest.AccountTestService
+	a            *app.App
+	ctrl         *gomock.Controller
+	ts           *rpctest.TestServer
+	tp           *rpctest.TestPool
+	mockReceiver *mocks.MockMessageReceiverTest
 }
 
 func (fx *fixture) Finish(t *testing.T) {
@@ -126,7 +213,9 @@ func (fx *fixture) Finish(t *testing.T) {
 
 type testServer struct {
 	coordinatorproto.DRPCCoordinatorUnimplementedServer
-	FetchResponse *coordinatorproto.InboxFetchResponse
+	FetchResponse    *coordinatorproto.InboxFetchResponse
+	NotifySenderChan chan *coordinatorproto.InboxNotifySubscribeEvent
+	name             string
 }
 
 func (t *testServer) InboxFetch(context.Context, *coordinatorproto.InboxFetchRequest) (*coordinatorproto.InboxFetchResponse, error) {
@@ -135,10 +224,15 @@ func (t *testServer) InboxFetch(context.Context, *coordinatorproto.InboxFetchReq
 }
 
 func (t *testServer) notifySender(rpcStream coordinatorproto.DRPCCoordinator_InboxNotifySubscribeStream, closeCh chan struct{}) {
-	e := &coordinatorproto.InboxNotifySubscribeEvent{}
-	fmt.Printf("sending test event\n")
-	rpcStream.Send(e)
-
+	fmt.Printf("myTs <%s>: notifySender\n", t.name)
+	select {
+	case e := <-t.NotifySenderChan:
+		fmt.Printf("myTs <%s>: sending test event: %s\n", t.name, e.NotifyId)
+		rpcStream.Send(e)
+	case <-closeCh:
+		fmt.Printf("closing notifySender\n")
+		return
+	}
 }
 
 func (t *testServer) InboxNotifySubscribe(req *coordinatorproto.InboxNotifySubscribeRequest, rpcStream coordinatorproto.DRPCCoordinator_InboxNotifySubscribeStream) error {
