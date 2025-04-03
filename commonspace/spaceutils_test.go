@@ -829,7 +829,7 @@ func Test_Sync(t *testing.T) {
 		require.NoError(t, err)
 		state, err := sp.Storage().StateStorage().GetState(context.Background())
 		require.NoError(t, err)
-		hashes = append(hashes, state.Hash)
+		hashes = append(hashes, state.NewHash)
 	}
 	for i := 1; i < len(hashes); i++ {
 		require.Equal(t, hashes[0], hashes[i])
