@@ -161,7 +161,7 @@ func newFixtureWithReceiver(t *testing.T, myTs *testServer) (fx *fixture) {
 }
 
 func dummyReceiver(e *coordinatorproto.InboxNotifySubscribeEvent) {
-	fmt.Printf("event: %s\n", e)
+
 }
 
 func newFixture(t *testing.T, myTs *testServer) (fx *fixture) {
@@ -224,19 +224,15 @@ func (t *testServer) InboxFetch(context.Context, *coordinatorproto.InboxFetchReq
 }
 
 func (t *testServer) notifySender(rpcStream coordinatorproto.DRPCCoordinator_InboxNotifySubscribeStream, closeCh chan struct{}) {
-	fmt.Printf("myTs <%s>: notifySender\n", t.name)
 	select {
 	case e := <-t.NotifySenderChan:
-		fmt.Printf("myTs <%s>: sending test event: %s\n", t.name, e.NotifyId)
 		rpcStream.Send(e)
 	case <-closeCh:
-		fmt.Printf("closing notifySender\n")
 		return
 	}
 }
 
 func (t *testServer) InboxNotifySubscribe(req *coordinatorproto.InboxNotifySubscribeRequest, rpcStream coordinatorproto.DRPCCoordinator_InboxNotifySubscribeStream) error {
-	fmt.Printf("calling notify subs\n")
 	closeCh := make(chan struct{})
 	go t.notifySender(rpcStream, closeCh)
 	<-rpcStream.Context().Done()
