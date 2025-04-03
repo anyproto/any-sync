@@ -100,7 +100,7 @@ func (h *HeadUpdate) ProtoMessage() (proto.Message, error) {
 			SpaceId:    h.Meta.SpaceId,
 			Payload:    payload,
 			ObjectId:   h.Meta.ObjectId,
-			ObjectType: h.objectType,
+			ObjectType: h.Update.ObjectType(),
 		}, nil
 	}
 	return NewMessage(), nil
