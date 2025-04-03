@@ -97,7 +97,24 @@ func TestAclState_FirstMetadataKey(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, privKey, key)
 	})
+	t.Run("first metadata is nil", func(t *testing.T) {
+		// given
+		state := &AclState{
+			readKeyChanges: []string{"recordId"},
+			keys: map[string]AclKeys{
+				"recordId": {
+					ReadKey: crypto.NewAES(),
+				},
+			},
+		}
 
+		// when
+		key, err := state.FirstMetadataKey()
+
+		// then
+		require.ErrorIs(t, err, ErrNoMetadataKey)
+		require.Nil(t, key)
+	})
 	t.Run("returns error when no read key changes", func(t *testing.T) {
 		// given
 		state := &AclState{readKeyChanges: []string{}}
