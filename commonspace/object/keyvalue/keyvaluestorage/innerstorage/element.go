@@ -10,6 +10,8 @@ type KeyValue struct {
 	Key            string
 	Value          Value
 	TimestampMilli int
+	Identity       string
+	PeerId         string
 }
 
 type Value struct {
@@ -31,6 +33,8 @@ func (kv KeyValue) AnyEnc(a *anyenc.Arena) *anyenc.Value {
 	obj.Set("id", a.NewString(kv.Key))
 	obj.Set("v", kv.Value.AnyEnc(a))
 	obj.Set("t", a.NewNumberInt(kv.TimestampMilli))
+	obj.Set("i", a.NewString(kv.Identity))
+	obj.Set("p", a.NewString(kv.PeerId))
 	return obj
 }
 

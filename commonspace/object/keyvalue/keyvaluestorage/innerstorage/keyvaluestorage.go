@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"strings"
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/any-store/anyenc"
+	"github.com/anyproto/any-store/query"
 
 	"github.com/anyproto/any-sync/app/ldiff"
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
@@ -22,6 +24,7 @@ type KeyValueStorage interface {
 	Diff() ldiff.CompareDiff
 	Get(ctx context.Context, key string) (keyValue KeyValue, err error)
 	IterateValues(context.Context, func(kv KeyValue) (bool, error)) (err error)
+	IteratePrefix(context.Context, string, func(kv KeyValue) error) (err error)
 }
 
 type storage struct {
@@ -118,6 +121,32 @@ func (s *storage) IterateValues(ctx context.Context, iterFunc func(kv KeyValue) 
 	return nil
 }
 
+func (s *storage) IteratePrefix(ctx context.Context, prefix string, iterFunc func(kv KeyValue) error) (err error) {
+	filter := query.Key{Path: []string{"id"}, Filter: query.NewComp(query.CompOpGte, prefix)}
+	qry := s.collection.Find(filter).Sort("id")
+	iter, err := s.collection.Find(qry).Iter(ctx)
+	if err != nil {
+		return
+	}
+	defer func() {
+		_ = iter.Close()
+	}()
+	var doc anystore.Doc
+	for iter.Next() {
+		if doc, err = iter.Doc(); err != nil {
+			return
+		}
+		if !strings.Contains(doc.Value().GetString("id"), prefix) {
+			break
+		}
+		err := iterFunc(s.keyValueFromDoc(doc))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *storage) keyValueFromDoc(doc anystore.Doc) KeyValue {
 	valueObj := doc.Value().GetObject("v")
 	value := Value{
@@ -129,6 +158,8 @@ func (s *storage) keyValueFromDoc(doc anystore.Doc) KeyValue {
 		Key:            doc.Value().GetString("id"),
 		Value:          value,
 		TimestampMilli: doc.Value().GetInt("t"),
+		Identity:       doc.Value().GetString("i"),
+		PeerId:         doc.Value().GetString("p"),
 	}
 }
 
