@@ -30,12 +30,14 @@ var (
 	// ProtoVersion 3 - acl with breaking changes / multiplayer
 	// ProtoVersion 4 - new sync compatible version
 	// ProtoVersion 5 - sync with no entry space
+	// ProtoVersion 6 - sync with key value messages
 	CompatibleVersion = uint32(4)
 	ProtoVersion      = uint32(5)
+	KeyValueVersion   = uint32(6)
 )
 
 var (
-	compatibleVersions = []uint32{CompatibleVersion, ProtoVersion}
+	compatibleVersions = []uint32{CompatibleVersion, ProtoVersion, KeyValueVersion}
 )
 
 func New() SecureService {

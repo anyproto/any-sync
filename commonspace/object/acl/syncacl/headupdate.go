@@ -1,6 +1,7 @@
 package syncacl
 
 import (
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 )
@@ -22,6 +23,10 @@ func (h *InnerHeadUpdate) MsgSize() uint64 {
 		size += uint64(len(record.Payload))
 	}
 	return size + uint64(len(h.head)) + uint64(len(h.root.Id)) + uint64(len(h.root.Payload))
+}
+
+func (h *InnerHeadUpdate) ObjectType() spacesyncproto.ObjectType {
+	return spacesyncproto.ObjectType_Acl
 }
 
 func (h *InnerHeadUpdate) Prepare() error {
