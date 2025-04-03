@@ -79,6 +79,7 @@ message ObjectSyncMessage {
     string replyId = 3;
     bytes payload = 4;
     string objectId = 5;
+    ObjectType objectType = 6;
 }
 
 // SpacePushRequest is a request to add space on a node containing only one acl record
@@ -200,4 +201,11 @@ message AclGetRecordsResponse {
 enum DiffType {
     Initial = 0;
     Precalculated = 1;
+}
+
+// ObjectType is a type of object
+enum ObjectType {
+    Tree = 0;
+    Acl = 1;
+    KeyValue = 2;
 }
