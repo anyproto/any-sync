@@ -2,7 +2,6 @@ package inboxclient
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -19,7 +18,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"storj.io/drpc/drpcerr"
 )
 
 var ctx = context.Background()
@@ -91,7 +89,7 @@ func newFixture(t *testing.T, myTs *testServer) (fx *fixture) {
 		ctrl:        gomock.NewController(t),
 		a:           new(app.App),
 		ts:          ts,
-		tp:          rpctest.NewTestPool(),
+		tp:          rpctest.NewTestPool().WithServer(ts),
 	}
 
 	c.SetMessageReceiver(dummyReceiver)
@@ -136,8 +134,20 @@ func (t *testServer) InboxFetch(context.Context, *coordinatorproto.InboxFetchReq
 	return t.FetchResponse, nil
 }
 
-func (t *testServer) InboxNotifySubscribe(*coordinatorproto.InboxNotifySubscribeRequest, coordinatorproto.DRPCCoordinator_InboxNotifySubscribeStream) error {
-	return drpcerr.WithCode(errors.New("Unimplemented 1"), drpcerr.Unimplemented)
+func (t *testServer) notifySender(rpcStream coordinatorproto.DRPCCoordinator_InboxNotifySubscribeStream, closeCh chan struct{}) {
+	e := &coordinatorproto.InboxNotifySubscribeEvent{}
+	fmt.Printf("sending test event\n")
+	rpcStream.Send(e)
+
+}
+
+func (t *testServer) InboxNotifySubscribe(req *coordinatorproto.InboxNotifySubscribeRequest, rpcStream coordinatorproto.DRPCCoordinator_InboxNotifySubscribeStream) error {
+	fmt.Printf("calling notify subs\n")
+	closeCh := make(chan struct{})
+	go t.notifySender(rpcStream, closeCh)
+	<-rpcStream.Context().Done()
+	close(closeCh)
+	return nil
 }
 
 // //

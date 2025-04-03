@@ -180,7 +180,7 @@ func (c *inboxClient) openStream(ctx context.Context) (st *stream, err error) {
 	log.Warn("streamWatcher: trying to connect")
 	pr, err := c.pool.GetOneOf(ctx, c.nodeconf.CoordinatorPeers())
 	if err != nil {
-		log.Warn("streamWatcher: pool error")
+		log.Warn("streamWatcher: pool error", zap.Error(err))
 		return nil, err
 	}
 	pr.SetTTL(time.Hour * 24)
