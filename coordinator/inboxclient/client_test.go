@@ -2,6 +2,7 @@ package inboxclient
 
 import (
 	"context"
+	"crypto/rand"
 	"sync"
 	"testing"
 	"time"
@@ -47,12 +48,7 @@ func TestInbox_Fetch(t *testing.T) {
 
 		myTs := &testServer{}
 
-		res := new(coordinatorproto.InboxFetchResponse)
-		res.Messages = make([]*coordinatorproto.InboxMessage, 10)
-		for i := range 10 {
-			res.Messages[i] = &coordinatorproto.InboxMessage{}
-		}
-		myTs.FetchResponse = res
+		myTs.FetchResponse = makeFetchResponse()
 		fxC, _, _ := makeClientServer(t, myTs)
 		msgs, err := fxC.InboxFetch(ctx, "")
 
@@ -112,4 +108,70 @@ func TestInbox_Notify(t *testing.T) {
 		}
 	})
 
+	t.Run("InboxAddMessage sends notification and InboxFetch gets new message", func(t *testing.T) {
+
+		myTs := &testServer{
+			name:             "fxC",
+			NotifySenderChan: make(chan *coordinatorproto.InboxNotifySubscribeEvent),
+		}
+		expectedEvent := &coordinatorproto.InboxNotifySubscribeEvent{
+			NotifyId: "event",
+		}
+
+		myTs.FetchResponse = makeFetchResponse()
+
+		fxC, fxS, _ := makeClientServer(t, myTs)
+		var wg sync.WaitGroup
+		wg.Add(1)
+		fxS.mockReceiver.EXPECT().
+			Receive(expectedEvent).
+			Do(func(evt *coordinatorproto.InboxNotifySubscribeEvent) {
+				defer wg.Done()
+			}).
+			Times(1)
+
+		privKey, pubKey, _ := crypto.GenerateEd25519Key(rand.Reader)
+		msg := &coordinatorproto.InboxMessage{
+			Packet: &coordinatorproto.InboxPacket{
+				Payload: &coordinatorproto.InboxPayload{
+					Body: []byte("hello, notify testId"),
+				},
+			},
+		}
+
+		fxC.InboxAddMessage(ctx, pubKey, msg)
+
+		done := make(chan struct{})
+		go func() {
+			wg.Wait()
+			close(done)
+		}()
+
+		select {
+		case <-done:
+			msgs, err := fxC.InboxFetch(ctx, "")
+			require.NoError(t, err)
+			assert.Len(t, msgs, 11)
+
+			msg, err := privKey.Decrypt(msgs[10].Packet.Payload.Body)
+			require.NoError(t, err)
+			assert.Equal(t, "hello, notify testId", string(msg))
+
+			return
+		case <-time.After(2 * time.Second):
+			t.Fatal("Receive callback was not triggered in time")
+		}
+	})
+
+}
+
+func makeFetchResponse() *coordinatorproto.InboxFetchResponse {
+	res := new(coordinatorproto.InboxFetchResponse)
+	res.Messages = make([]*coordinatorproto.InboxMessage, 10)
+	// message.Packet.ReceiverIdentity
+	//
+	for i := range 10 {
+		res.Messages[i] = &coordinatorproto.InboxMessage{}
+	}
+	return res
 }

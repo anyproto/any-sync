@@ -126,7 +126,6 @@ func (c *inboxClient) InboxFetch(ctx context.Context, offset string) (messages [
 }
 
 func (c *inboxClient) InboxAddMessage(ctx context.Context, receiverPubKey crypto.PubKey, message *coordinatorproto.InboxMessage) (err error) {
-	log.Debug("receiverId", zap.String("id", message.Packet.ReceiverIdentity))
 	encrypted, err := receiverPubKey.Encrypt(message.Packet.Payload.Body)
 	if err != nil {
 		return
