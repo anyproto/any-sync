@@ -22,7 +22,7 @@ var (
 type KeyValueStorage interface {
 	Set(ctx context.Context, keyValues ...KeyValue) (err error)
 	Diff() ldiff.CompareDiff
-	Get(ctx context.Context, key string) (keyValue KeyValue, err error)
+	GetKeyPeerId(ctx context.Context, keyPeerId string) (keyValue KeyValue, err error)
 	IterateValues(context.Context, func(kv KeyValue) (bool, error)) (err error)
 	IteratePrefix(context.Context, string, func(kv KeyValue) error) (err error)
 }
@@ -86,8 +86,8 @@ func (s *storage) Diff() ldiff.CompareDiff {
 	return s.diff
 }
 
-func (s *storage) Get(ctx context.Context, key string) (value KeyValue, err error) {
-	doc, err := s.collection.FindId(ctx, key)
+func (s *storage) GetKeyPeerId(ctx context.Context, keyPeerId string) (value KeyValue, err error) {
+	doc, err := s.collection.FindId(ctx, keyPeerId)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocNotFound) {
 			return KeyValue{}, nil
@@ -155,11 +155,12 @@ func (s *storage) keyValueFromDoc(doc anystore.Doc) KeyValue {
 		IdentitySignature: valueObj.Get("i").GetBytes(),
 	}
 	return KeyValue{
-		Key:            doc.Value().GetString("id"),
+		KeyPeerId:      doc.Value().GetString("id"),
 		Value:          value,
 		TimestampMilli: doc.Value().GetInt("t"),
 		Identity:       doc.Value().GetString("i"),
 		PeerId:         doc.Value().GetString("p"),
+		Key:			doc.Value().GetString("k"),
 	}
 }
 
@@ -214,7 +215,7 @@ func (s *storage) updateValues(ctx context.Context, values ...KeyValue) (element
 	elements = make([]ldiff.Element, 0, len(values))
 	var doc anystore.Doc
 	for _, value := range values {
-		doc, err = s.collection.FindIdWithParser(ctx, parser, value.Key)
+		doc, err = s.collection.FindIdWithParser(ctx, parser, value.KeyPeerId)
 		isNotFound := errors.Is(err, anystore.ErrDocNotFound)
 		if err != nil && !isNotFound {
 			return

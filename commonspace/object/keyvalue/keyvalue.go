@@ -9,3 +9,7 @@ type KeyValueService interface {
 	app.ComponentRunnable
 	DefaultStore() innerstorage.KeyValueStorage
 }
+
+type keyValueService struct {
+
+}

@@ -209,7 +209,7 @@ message StoreDiffResponse {
 }
 
 message StoreKeyValue {
-    string key = 1;
+    string keyPeerId = 1;
     bytes value = 2;
     bytes identitySignature = 3;
     bytes peerSignature = 4;

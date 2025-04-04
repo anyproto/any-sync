@@ -12,6 +12,7 @@ import (
 var ErrInvalidSignature = errors.New("invalid signature")
 
 type KeyValue struct {
+	KeyPeerId      string
 	Key            string
 	Value          Value
 	TimestampMilli int
@@ -26,7 +27,7 @@ type Value struct {
 }
 
 func KeyValueFromProto(proto *spacesyncproto.StoreKeyValue, verify bool) (kv KeyValue, err error) {
-	kv.Key = proto.Key
+	kv.KeyPeerId = proto.KeyPeerId
 	kv.Value.Value = proto.Value
 	kv.Value.PeerSignature = proto.PeerSignature
 	kv.Value.IdentitySignature = proto.IdentitySignature
@@ -45,6 +46,8 @@ func KeyValueFromProto(proto *spacesyncproto.StoreKeyValue, verify bool) (kv Key
 	}
 	kv.Identity = identity.Account()
 	kv.PeerId = peerId.PeerId()
+	kv.Key = innerValue.Key
+	// TODO: check that key-peerId is equal to key+peerId?
 	if verify {
 		if verify, _ = identity.Verify(proto.Value, proto.IdentitySignature); !verify {
 			return kv, ErrInvalidSignature
@@ -66,7 +69,8 @@ func (v Value) AnyEnc(a *anyenc.Arena) *anyenc.Value {
 
 func (kv KeyValue) AnyEnc(a *anyenc.Arena) *anyenc.Value {
 	obj := a.NewObject()
-	obj.Set("id", a.NewString(kv.Key))
+	obj.Set("id", a.NewString(kv.KeyPeerId))
+	obj.Set("k", a.NewString(kv.Key))
 	obj.Set("v", kv.Value.AnyEnc(a))
 	obj.Set("t", a.NewNumberInt(kv.TimestampMilli))
 	obj.Set("i", a.NewString(kv.Identity))
@@ -76,7 +80,7 @@ func (kv KeyValue) AnyEnc(a *anyenc.Arena) *anyenc.Value {
 
 func (kv KeyValue) Proto() *spacesyncproto.StoreKeyValue {
 	return &spacesyncproto.StoreKeyValue{
-		Key:               kv.Key,
+		KeyPeerId:         kv.KeyPeerId,
 		Value:             kv.Value.Value,
 		PeerSignature:     kv.Value.PeerSignature,
 		IdentitySignature: kv.Value.IdentitySignature,

@@ -5,9 +5,11 @@ import (
 	"sync"
 	"time"
 
+	anystore "github.com/anyproto/any-store"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage/innerstorage"
@@ -33,6 +35,27 @@ type storage struct {
 	aclList list.AclList
 	indexer Indexer
 	mx      sync.Mutex
+}
+
+func New(
+	storageName string,
+	ctx context.Context,
+	store anystore.DB,
+	headStorage headstorage.HeadStorage,
+	keys *accountdata.AccountKeys,
+	aclList list.AclList,
+	indexer Indexer,
+) (Storage, error) {
+	inner, err := innerstorage.New(ctx, storageName, headStorage, store)
+	if err != nil {
+		return nil, err
+	}
+	return &storage{
+		inner:   inner,
+		keys:    keys,
+		aclList: aclList,
+		indexer: indexer,
+	}, nil
 }
 
 func (s *storage) Set(ctx context.Context, key string, value []byte) error {
@@ -76,16 +99,18 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 	if err != nil {
 		return err
 	}
+	keyPeerId := key + "-" + peerIdKey.GetPublic().PeerId()
 	keyValue := innerstorage.KeyValue{
-		Key: key,
+		KeyPeerId:      keyPeerId,
+		Key:            key,
+		TimestampMilli: int(timestampMilli),
+		Identity:       identityKey.GetPublic().Account(),
+		PeerId:         peerIdKey.GetPublic().PeerId(),
 		Value: innerstorage.Value{
 			Value:             value,
 			PeerSignature:     peerSig,
 			IdentitySignature: identitySig,
 		},
-		TimestampMilli: int(timestampMilli),
-		Identity:       identityKey.GetPublic().Account(),
-		PeerId:         peerIdKey.GetPublic().PeerId(),
 	}
 	err = s.inner.Set(ctx, keyValue)
 	if err != nil {
@@ -115,7 +140,7 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 	}
 	indexErr := s.indexer.Index(keyValues...)
 	if indexErr != nil {
-		log.Warn("failed to index for key", zap.String("key", key), zap.Error(indexErr))
+		log.Warn("failed to index for keys", zap.Error(indexErr))
 	}
 	return nil
 }
