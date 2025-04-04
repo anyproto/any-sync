@@ -218,8 +218,16 @@ type testServer struct {
 	name             string
 }
 
+func (t *testServer) InboxAddMessage(ctx context.Context, in *coordinatorproto.InboxAddMessageRequest) (*coordinatorproto.InboxAddMessageResponse, error) {
+	t.FetchResponse.Messages = append(t.FetchResponse.Messages, in.Message)
+	e := &coordinatorproto.InboxNotifySubscribeEvent{
+		NotifyId: "event",
+	}
+	t.NotifySenderChan <- e
+	return &coordinatorproto.InboxAddMessageResponse{}, nil
+}
+
 func (t *testServer) InboxFetch(context.Context, *coordinatorproto.InboxFetchRequest) (*coordinatorproto.InboxFetchResponse, error) {
-	// TODO make ts.inboxfetch and call it here
 	return t.FetchResponse, nil
 }
 
