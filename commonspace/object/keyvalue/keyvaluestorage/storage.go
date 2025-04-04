@@ -13,6 +13,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage/innerstorage"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage/syncstorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
@@ -30,11 +31,12 @@ type Storage interface {
 }
 
 type storage struct {
-	inner   innerstorage.KeyValueStorage
-	keys    *accountdata.AccountKeys
-	aclList list.AclList
-	indexer Indexer
-	mx      sync.Mutex
+	inner      innerstorage.KeyValueStorage
+	keys       *accountdata.AccountKeys
+	aclList    list.AclList
+	syncClient syncstorage.SyncClient
+	indexer    Indexer
+	mx         sync.Mutex
 }
 
 func New(
@@ -43,6 +45,7 @@ func New(
 	store anystore.DB,
 	headStorage headstorage.HeadStorage,
 	keys *accountdata.AccountKeys,
+	syncClient syncstorage.SyncClient,
 	aclList list.AclList,
 	indexer Indexer,
 ) (Storage, error) {
@@ -51,10 +54,11 @@ func New(
 		return nil, err
 	}
 	return &storage{
-		inner:   inner,
-		keys:    keys,
-		aclList: aclList,
-		indexer: indexer,
+		inner:      inner,
+		keys:       keys,
+		aclList:    aclList,
+		indexer:    indexer,
+		syncClient: syncClient,
 	}, nil
 }
 
@@ -120,6 +124,10 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 	if indexErr != nil {
 		log.Warn("failed to index for key", zap.String("key", key), zap.Error(indexErr))
 	}
+	sendErr := s.syncClient.Broadcast(ctx, keyValue)
+	if sendErr != nil {
+		log.Warn("failed to send key value", zap.String("key", key), zap.Error(sendErr))
+	}
 	return nil
 }
 
@@ -141,6 +149,10 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 	indexErr := s.indexer.Index(keyValues...)
 	if indexErr != nil {
 		log.Warn("failed to index for keys", zap.Error(indexErr))
+	}
+	sendErr := s.syncClient.Broadcast(ctx, keyValues...)
+	if sendErr != nil {
+		log.Warn("failed to send key values", zap.Error(sendErr))
 	}
 	return nil
 }

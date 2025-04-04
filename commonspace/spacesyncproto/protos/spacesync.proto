@@ -215,6 +215,10 @@ message StoreKeyValue {
     bytes peerSignature = 4;
 }
 
+message StoreKeyValues {
+    repeated StoreKeyValue keyValues = 1;
+}
+
 message StoreKeyInner {
     bytes peer = 1;
     bytes identity = 2;
