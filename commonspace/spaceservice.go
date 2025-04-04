@@ -13,6 +13,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/sync"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
@@ -184,6 +185,7 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 		Register(deps.SyncStatus).
 		Register(peerManager).
 		Register(st).
+		Register(keyvalue.New()).
 		Register(objectsync.New()).
 		Register(sync.NewSyncService()).
 		Register(syncacl.New()).

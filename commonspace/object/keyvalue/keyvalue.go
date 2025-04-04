@@ -15,6 +15,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage/syncstorage"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
@@ -26,15 +27,7 @@ import (
 
 var ErrUnexpectedMessageType = errors.New("unexpected message type")
 
-var log = logger.NewNamed(CName)
-
-const CName = "common.object.keyvalue"
-
-type KeyValueService interface {
-	app.ComponentRunnable
-	DefaultStore() keyvaluestorage.Storage
-	HandleMessage(ctx context.Context, msg objectmessages.HeadUpdate) (err error)
-}
+var log = logger.NewNamed(kvinterfaces.CName)
 
 type keyValueService struct {
 	storageId string
@@ -42,20 +35,32 @@ type keyValueService struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 
+	limiter       *concurrentLimiter
 	spaceStorage  spacestorage.SpaceStorage
 	defaultStore  keyvaluestorage.Storage
 	clientFactory spacesyncproto.ClientFactory
 	syncService   sync.SyncService
 }
 
+func New() kvinterfaces.KeyValueService {
+	return &keyValueService{}
+}
+
 func (k *keyValueService) DefaultStore() keyvaluestorage.Storage {
 	return k.defaultStore
 }
 
-func (k *keyValueService) SyncWithPeer(ctx context.Context, p peer.Peer) (err error) {
-	if k.syncService == nil {
-		return nil
-	}
+func (k *keyValueService) SyncWithPeer(p peer.Peer) (err error) {
+	k.limiter.ScheduleRequest(k.ctx, p.Id(), func() {
+		err = k.syncWithPeer(k.ctx, p)
+		if err != nil {
+			log.Error("failed to sync with peer", zap.String("peerId", p.ID()), zap.Error(err))
+		}
+	})
+	return nil
+}
+
+func (k *keyValueService) syncWithPeer(ctx context.Context, p peer.Peer) (err error) {
 	conn, err := p.AcquireDrpcConn(ctx)
 	if err != nil {
 		return
@@ -180,6 +185,8 @@ func (k *keyValueService) Init(a *app.App) (err error) {
 	k.ctx, k.cancel = context.WithCancel(context.Background())
 	spaceState := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
 	k.spaceId = spaceState.SpaceId
+	k.clientFactory = spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient)
+	k.limiter = newConcurrentLimiter()
 	accountService := a.MustComponent(accountservice.CName).(accountservice.Service)
 	aclList := a.MustComponent(syncacl.CName).(list.AclList)
 	k.spaceStorage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
@@ -199,7 +206,7 @@ func (k *keyValueService) Init(a *app.App) (err error) {
 }
 
 func (k *keyValueService) Name() (name string) {
-	return CName
+	return kvinterfaces.CName
 }
 
 func (k *keyValueService) Run(ctx context.Context) (err error) {
@@ -208,6 +215,7 @@ func (k *keyValueService) Run(ctx context.Context) (err error) {
 
 func (k *keyValueService) Close(ctx context.Context) (err error) {
 	k.cancel()
+	k.limiter.Close()
 	return nil
 }
 
