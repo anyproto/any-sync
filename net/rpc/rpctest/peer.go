@@ -26,6 +26,13 @@ func MultiConnPairWithIdentity(peerIdServ, peerIdClient string, serverIdentity [
 	)
 }
 
+func MultiConnPairWithClientServerIdentity(peerIdServ, peerIdClient string, serverIdentity []byte, clientIdentity []byte) (serv, client transport.MultiConn) {
+	return multiconntest.MultiConnPair(
+		peer.CtxWithProtoVersion(peer.CtxWithIdentity(peer.CtxWithPeerId(context.Background(), peerIdServ), serverIdentity), secureservice.ProtoVersion),
+		peer.CtxWithProtoVersion(peer.CtxWithIdentity(peer.CtxWithPeerId(context.Background(), peerIdClient), clientIdentity), secureservice.ProtoVersion),
+	)
+}
+
 type MockPeer struct {
 	Ctx context.Context
 }
