@@ -1,10 +1,15 @@
 package innerstorage
 
 import (
+	"errors"
+
 	"github.com/anyproto/any-store/anyenc"
 
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/util/crypto"
 )
+
+var ErrInvalidSignature = errors.New("invalid signature")
 
 type KeyValue struct {
 	Key            string
@@ -18,6 +23,37 @@ type Value struct {
 	Value             []byte
 	PeerSignature     []byte
 	IdentitySignature []byte
+}
+
+func KeyValueFromProto(proto *spacesyncproto.StoreKeyValue, verify bool) (kv KeyValue, err error) {
+	kv.Key = proto.Key
+	kv.Value.Value = proto.Value
+	kv.Value.PeerSignature = proto.PeerSignature
+	kv.Value.IdentitySignature = proto.IdentitySignature
+	innerValue := &spacesyncproto.StoreKeyInner{}
+	if err = innerValue.Unmarshal(proto.Value); err != nil {
+		return kv, err
+	}
+	kv.TimestampMilli = int(innerValue.TimestampMilli)
+	identity, err := crypto.UnmarshalEd25519PublicKeyProto(innerValue.Identity)
+	if err != nil {
+		return kv, err
+	}
+	peerId, err := crypto.UnmarshalEd25519PublicKeyProto(innerValue.Peer)
+	if err != nil {
+		return kv, err
+	}
+	kv.Identity = identity.Account()
+	kv.PeerId = peerId.PeerId()
+	if verify {
+		if verify, _ = identity.Verify(proto.Value, proto.IdentitySignature); !verify {
+			return kv, ErrInvalidSignature
+		}
+		if verify, _ = peerId.Verify(proto.Value, proto.PeerSignature); !verify {
+			return kv, ErrInvalidSignature
+		}
+	}
+	return kv, nil
 }
 
 func (v Value) AnyEnc(a *anyenc.Arena) *anyenc.Value {

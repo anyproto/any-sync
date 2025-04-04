@@ -221,6 +221,7 @@ message StoreKeyInner {
     bytes value = 3;
     int64 timestampMilli = 4;
     string aclHeadId = 5;
+    string key = 6;
 }
 
 // DiffType is a type of diff
