@@ -41,6 +41,13 @@ func NewSyncHandler(tree SyncTree, syncClient SyncClient, spaceId string) syncde
 }
 
 func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncstatus.StatusUpdater, headUpdate drpc.Message) (req syncdeps.Request, err error) {
+	var objectRequest *objectmessages.Request
+	defer func() {
+		// we mitigate the problem of a nil value being wrapped in an interface
+		if err == nil && objectRequest != nil {
+			req = objectRequest
+		}
+	}()
 	update, ok := headUpdate.(*objectmessages.HeadUpdate)
 	if !ok {
 		return nil, ErrUnexpectedResponseType
@@ -73,7 +80,8 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 			return nil, nil
 		}
 		statusUpdater.HeadsApply(peerId, update.ObjectId(), contentUpdate.Heads, false)
-		return s.syncClient.CreateFullSyncRequest(peerId, s.tree)
+		objectRequest, err = s.syncClient.CreateFullSyncRequest(peerId, s.tree)
+		return
 	}
 	rawChangesPayload := objecttree.RawChangesPayload{
 		NewHeads:     contentUpdate.Heads,
@@ -85,7 +93,8 @@ func (s *syncHandler) HandleHeadUpdate(ctx context.Context, statusUpdater syncst
 		return nil, err
 	}
 	if !slice.UnsortedEquals(res.Heads, contentUpdate.Heads) {
-		return s.syncClient.CreateFullSyncRequest(peerId, s.tree)
+		objectRequest, err = s.syncClient.CreateFullSyncRequest(peerId, s.tree)
+		return
 	}
 	return nil, nil
 }

@@ -195,6 +195,10 @@ func (st *AclState) Invites() []crypto.PubKey {
 	return invites
 }
 
+func (st *AclState) Key() crypto.PrivKey {
+	return st.key
+}
+
 func (st *AclState) InviteIds() []string {
 	var invites []string
 	for invId := range st.inviteKeys {
@@ -663,6 +667,9 @@ func (st *AclState) applyRequestRemove(ch *aclrecordproto.AclAccountRequestRemov
 	st.pendingRequests[mapKeyFromPubKey(record.Identity)] = record.Id
 	pk := mapKeyFromPubKey(record.Identity)
 	accSt, exists := st.accountStates[pk]
+	if !accSt.Permissions.CanRequestRemove() {
+		return ErrInsufficientPermissions
+	}
 	if !exists {
 		return ErrNoSuchAccount
 	}

@@ -4,6 +4,7 @@ package paymentserviceclient
 import (
 	"context"
 	"errors"
+	"github.com/anyproto/any-sync/net"
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
@@ -78,7 +79,9 @@ func (s *service) doClient(ctx context.Context, fn func(cl pp.DRPCAnyPaymentProc
 	// please use "paymentProcessingNode" type of node in the config (in the network.nodes array)
 	peer, err := s.pool.GetOneOf(ctx, s.nodeconf.PaymentProcessingNodePeers())
 	if err != nil {
-		log.Error("failed to get a paymentnode peer", zap.Error(err))
+		if !errors.Is(err, net.ErrUnableToConnect) {
+			log.Error("failed to get a paymentnode peer", zap.Error(err))
+		}
 		return err
 	}
 

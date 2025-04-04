@@ -5,23 +5,21 @@
 //
 //	mockgen -destination mock_statestorage/mock_statestorage.go github.com/anyproto/any-sync/commonspace/headsync/statestorage StateStorage
 //
-
 // Package mock_statestorage is a generated GoMock package.
 package mock_statestorage
 
 import (
+	context "context"
 	reflect "reflect"
 
 	statestorage "github.com/anyproto/any-sync/commonspace/headsync/statestorage"
 	gomock "go.uber.org/mock/gomock"
-	context "golang.org/x/net/context"
 )
 
 // MockStateStorage is a mock of StateStorage interface.
 type MockStateStorage struct {
 	ctrl     *gomock.Controller
 	recorder *MockStateStorageMockRecorder
-	isgomock struct{}
 }
 
 // MockStateStorageMockRecorder is the mock recorder for MockStateStorage.
@@ -42,44 +40,44 @@ func (m *MockStateStorage) EXPECT() *MockStateStorageMockRecorder {
 }
 
 // GetState mocks base method.
-func (m *MockStateStorage) GetState(ctx context.Context) (statestorage.State, error) {
+func (m *MockStateStorage) GetState(arg0 context.Context) (statestorage.State, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetState", ctx)
+	ret := m.ctrl.Call(m, "GetState", arg0)
 	ret0, _ := ret[0].(statestorage.State)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetState indicates an expected call of GetState.
-func (mr *MockStateStorageMockRecorder) GetState(ctx any) *gomock.Call {
+func (mr *MockStateStorageMockRecorder) GetState(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetState", reflect.TypeOf((*MockStateStorage)(nil).GetState), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetState", reflect.TypeOf((*MockStateStorage)(nil).GetState), arg0)
 }
 
 // SetHash mocks base method.
-func (m *MockStateStorage) SetHash(ctx context.Context, hash string) error {
+func (m *MockStateStorage) SetHash(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetHash", ctx, hash)
+	ret := m.ctrl.Call(m, "SetHash", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SetHash indicates an expected call of SetHash.
-func (mr *MockStateStorageMockRecorder) SetHash(ctx, hash any) *gomock.Call {
+func (mr *MockStateStorageMockRecorder) SetHash(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHash", reflect.TypeOf((*MockStateStorage)(nil).SetHash), ctx, hash)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHash", reflect.TypeOf((*MockStateStorage)(nil).SetHash), arg0, arg1, arg2)
 }
 
 // SetObserver mocks base method.
-func (m *MockStateStorage) SetObserver(observer statestorage.Observer) {
+func (m *MockStateStorage) SetObserver(arg0 statestorage.Observer) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetObserver", observer)
+	m.ctrl.Call(m, "SetObserver", arg0)
 }
 
 // SetObserver indicates an expected call of SetObserver.
-func (mr *MockStateStorageMockRecorder) SetObserver(observer any) *gomock.Call {
+func (mr *MockStateStorageMockRecorder) SetObserver(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetObserver", reflect.TypeOf((*MockStateStorage)(nil).SetObserver), observer)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetObserver", reflect.TypeOf((*MockStateStorage)(nil).SetObserver), arg0)
 }
 
 // SettingsId mocks base method.

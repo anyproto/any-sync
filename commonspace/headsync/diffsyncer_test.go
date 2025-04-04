@@ -80,6 +80,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
 			Return([]peer.Peer{mPeer}, nil)
+		fx.diffContainerMock.EXPECT().DiffTypeCheck(gomock.Any(), gomock.Any()).Return(true, fx.diffMock, nil)
 		fx.diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock))).
 			Return([]string{"new"}, []string{"changed"}, nil, nil)
@@ -103,6 +104,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
 			Return([]peer.Peer{mPeer}, nil)
+		fx.diffContainerMock.EXPECT().DiffTypeCheck(gomock.Any(), gomock.Any()).Return(true, fx.diffMock, nil)
 		fx.diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remDiff)).
 			Return([]string{"new"}, []string{"changed"}, nil, nil)
@@ -133,9 +135,12 @@ func TestDiffSyncer(t *testing.T) {
 		fx.initDiffSyncer(t)
 		defer fx.stop()
 		deletedId := "id"
-		fx.diffMock.EXPECT().RemoveId(deletedId).Return(nil)
-		fx.diffMock.EXPECT().Hash().Return("hash")
-		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
+		fx.diffContainerMock.EXPECT().RemoveId(deletedId).Return(nil)
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Hash().AnyTimes().Return("hash")
+		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash", "hash").Return(nil)
+
 		upd := headstorage.DeletedStatusDeleted
 		fx.diffSyncer.updateHeads(headstorage.HeadsUpdate{
 			Id:            "id",
@@ -150,11 +155,14 @@ func TestDiffSyncer(t *testing.T) {
 		updatedId := "id"
 		fx.diffMock.EXPECT().Hash().Return("hash")
 		fx.deletionStateMock.EXPECT().Exists(updatedId).Return(false)
-		fx.diffMock.EXPECT().Set(ldiff.Element{
+		fx.diffContainerMock.EXPECT().Set(ldiff.Element{
 			Id:   updatedId,
 			Head: "head",
 		})
-		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash").Return(nil)
+		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
+		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Hash().AnyTimes().Return("hash")
+		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash", "hash").Return(nil)
 		fx.diffSyncer.updateHeads(headstorage.HeadsUpdate{
 			Id:    "id",
 			Heads: []string{"head"},
@@ -180,6 +188,7 @@ func TestDiffSyncer(t *testing.T) {
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
 			Return([]peer.Peer{rpctest.MockPeer{}}, nil)
+		fx.diffContainerMock.EXPECT().DiffTypeCheck(gomock.Any(), gomock.Any()).Return(true, fx.diffMock, nil)
 		fx.diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remDiff)).
 			Return(nil, nil, nil, spacesyncproto.ErrSpaceMissing)
@@ -219,6 +228,8 @@ func TestDiffSyncer(t *testing.T) {
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
 			Return([]peer.Peer{rpctest.MockPeer{}}, nil)
+
+		fx.diffContainerMock.EXPECT().DiffTypeCheck(gomock.Any(), gomock.Any()).Return(true, fx.diffMock, nil)
 		fx.diffMock.EXPECT().
 			Diff(gomock.Any(), gomock.Eq(remDiff)).
 			Return(nil, nil, nil, spacesyncproto.ErrUnexpected)
@@ -232,15 +243,12 @@ func TestDiffSyncer(t *testing.T) {
 		fx.initDiffSyncer(t)
 		defer fx.stop()
 		mPeer := rpctest.MockPeer{}
-		remDiff := NewRemoteDiff(fx.spaceState.SpaceId, fx.clientMock)
 		fx.treeSyncerMock.EXPECT().ShouldSync(gomock.Any()).Return(true)
 		fx.aclMock.EXPECT().Id().AnyTimes().Return("aclId")
 		fx.peerManagerMock.EXPECT().
 			GetResponsiblePeers(gomock.Any()).
 			Return([]peer.Peer{mPeer}, nil)
-		fx.diffMock.EXPECT().
-			Diff(gomock.Any(), gomock.Eq(remDiff)).
-			Return(nil, nil, nil, spacesyncproto.ErrSpaceIsDeleted)
+		fx.diffContainerMock.EXPECT().DiffTypeCheck(gomock.Any(), gomock.Any()).Return(true, fx.diffMock, spacesyncproto.ErrSpaceIsDeleted)
 		fx.peerManagerMock.EXPECT().KeepAlive(gomock.Any())
 
 		require.NoError(t, fx.diffSyncer.Sync(ctx))
