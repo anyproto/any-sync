@@ -249,7 +249,6 @@ func (app *App) Start(ctx context.Context) (err error) {
 	}
 
 	for i, s := range app.components {
-		fmt.Printf("init service %s\n", s.Name())
 		if err = s.Init(app); err != nil {
 			log.Error("can't init service", zap.String("service", s.Name()), zap.Error(err))
 			closeServices(i)
@@ -260,7 +259,6 @@ func (app *App) Start(ctx context.Context) (err error) {
 	for i, s := range app.components {
 		if serviceRun, ok := s.(ComponentRunnable); ok {
 			start := time.Now()
-			fmt.Printf("run service %s\n", s.Name())
 			if err = serviceRun.Run(ctx); err != nil {
 				log.Error("can't run service", zap.String("service", serviceRun.Name()), zap.Error(err))
 				closeServices(i)
