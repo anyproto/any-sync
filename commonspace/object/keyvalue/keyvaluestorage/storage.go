@@ -23,7 +23,14 @@ type Indexer interface {
 	Index(keyValue ...innerstorage.KeyValue) error
 }
 
+type NoOpIndexer struct{}
+
+func (n NoOpIndexer) Index(keyValue ...innerstorage.KeyValue) error {
+	return nil
+}
+
 type Storage interface {
+	Id() string
 	Set(ctx context.Context, key string, value []byte) error
 	SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreKeyValue) error
 	GetAll(ctx context.Context, key string) (values []innerstorage.KeyValue, err error)
@@ -36,12 +43,13 @@ type storage struct {
 	aclList    list.AclList
 	syncClient syncstorage.SyncClient
 	indexer    Indexer
+	storageId  string
 	mx         sync.Mutex
 }
 
 func New(
-	storageName string,
 	ctx context.Context,
+	storageId string,
 	store anystore.DB,
 	headStorage headstorage.HeadStorage,
 	keys *accountdata.AccountKeys,
@@ -49,17 +57,22 @@ func New(
 	aclList list.AclList,
 	indexer Indexer,
 ) (Storage, error) {
-	inner, err := innerstorage.New(ctx, storageName, headStorage, store)
+	inner, err := innerstorage.New(ctx, storageId, headStorage, store)
 	if err != nil {
 		return nil, err
 	}
 	return &storage{
 		inner:      inner,
 		keys:       keys,
+		storageId:  storageId,
 		aclList:    aclList,
 		indexer:    indexer,
 		syncClient: syncClient,
 	}, nil
+}
+
+func (s *storage) Id() string {
+	return s.storageId
 }
 
 func (s *storage) Set(ctx context.Context, key string, value []byte) error {
@@ -124,7 +137,7 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 	if indexErr != nil {
 		log.Warn("failed to index for key", zap.String("key", key), zap.Error(indexErr))
 	}
-	sendErr := s.syncClient.Broadcast(ctx, keyValue)
+	sendErr := s.syncClient.Broadcast(ctx, s.storageId, keyValue)
 	if sendErr != nil {
 		log.Warn("failed to send key value", zap.String("key", key), zap.Error(sendErr))
 	}
@@ -150,7 +163,7 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 	if indexErr != nil {
 		log.Warn("failed to index for keys", zap.Error(indexErr))
 	}
-	sendErr := s.syncClient.Broadcast(ctx, keyValues...)
+	sendErr := s.syncClient.Broadcast(ctx, s.storageId, keyValues...)
 	if sendErr != nil {
 		log.Warn("failed to send key values", zap.Error(sendErr))
 	}

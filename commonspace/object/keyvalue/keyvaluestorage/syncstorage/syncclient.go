@@ -49,12 +49,19 @@ func (i *innerUpdate) ObjectType() spacesyncproto.ObjectType {
 }
 
 type SyncClient interface {
-	Broadcast(ctx context.Context, keyValues ...innerstorage.KeyValue) error
+	Broadcast(ctx context.Context, objectId string, keyValues ...innerstorage.KeyValue) error
 }
 
 type syncClient struct {
 	spaceId     string
 	syncService sync.SyncService
+}
+
+func New(spaceId string, syncService sync.SyncService) SyncClient {
+	return &syncClient{
+		spaceId:     spaceId,
+		syncService: syncService,
+	}
 }
 
 func (s *syncClient) Broadcast(ctx context.Context, objectId string, keyValue ...innerstorage.KeyValue) error {

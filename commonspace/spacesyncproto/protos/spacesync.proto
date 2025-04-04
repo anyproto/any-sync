@@ -202,7 +202,8 @@ message AclGetRecordsResponse {
 }
 
 message StoreDiffRequest {
-    repeated HeadSyncRange ranges = 3;
+    string spaceId = 1;
+    repeated HeadSyncRange ranges = 2;
 }
 
 message StoreDiffResponse {
@@ -227,6 +228,11 @@ message StoreKeyInner {
     int64 timestampMilli = 4;
     string aclHeadId = 5;
     string key = 6;
+}
+
+message StorageHeader {
+    string spaceId = 1;
+    string storageName = 2;
 }
 
 // DiffType is a type of diff
