@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_response/mock_response.go github.com/anyproto/any-sync/commonspace/object/tree/synctree/response ResponseProducer
 //
+
 // Package mock_response is a generated GoMock package.
 package mock_response
 
@@ -19,6 +20,7 @@ import (
 type MockResponseProducer struct {
 	ctrl     *gomock.Controller
 	recorder *MockResponseProducerMockRecorder
+	isgomock struct{}
 }
 
 // MockResponseProducerMockRecorder is the mock recorder for MockResponseProducer.
@@ -54,16 +56,16 @@ func (mr *MockResponseProducerMockRecorder) EmptyResponse() *gomock.Call {
 }
 
 // NewResponse mocks base method.
-func (m *MockResponseProducer) NewResponse(arg0 int) (*response.Response, error) {
+func (m *MockResponseProducer) NewResponse(batchSize int) (*response.Response, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewResponse", arg0)
+	ret := m.ctrl.Call(m, "NewResponse", batchSize)
 	ret0, _ := ret[0].(*response.Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewResponse indicates an expected call of NewResponse.
-func (mr *MockResponseProducerMockRecorder) NewResponse(arg0 any) *gomock.Call {
+func (mr *MockResponseProducerMockRecorder) NewResponse(batchSize any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewResponse", reflect.TypeOf((*MockResponseProducer)(nil).NewResponse), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewResponse", reflect.TypeOf((*MockResponseProducer)(nil).NewResponse), batchSize)
 }

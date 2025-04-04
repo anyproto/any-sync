@@ -259,7 +259,7 @@ func (d *diffSyncer) subscribe(ctx context.Context, peerId string) (err error) {
 		SpaceIds: []string{d.spaceId},
 		Action:   spacesyncproto.SpaceSubscriptionAction_Subscribe,
 	}
-	payload, err := msg.Marshal()
+	payload, err := msg.MarshalVT()
 	if err != nil {
 		return
 	}

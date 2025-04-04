@@ -29,7 +29,7 @@ func (h *InnerHeadUpdate) Prepare() error {
 		Head:    h.head,
 		Records: h.records,
 	}, h.root)
-	bytes, err := logMsg.Marshal()
+	bytes, err := logMsg.MarshalVT()
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (h *InnerHeadUpdate) Marshall(data objectmessages.ObjectMeta) ([]byte, erro
 		Head:    h.head,
 		Records: h.records,
 	}, h.root)
-	return logMsg.Marshal()
+	return logMsg.MarshalVT()
 }
 
 func (h *InnerHeadUpdate) Heads() []string {

@@ -75,7 +75,7 @@ func (p *peerSignVerifier) MakeCredentials(remotePeerId string) *handshakeproto.
 		Identity: marshalled,
 		Sign:     sign,
 	}
-	payload, _ := msg.Marshal()
+	payload, _ := msg.MarshalVT()
 	return &handshakeproto.Credentials{
 		Type:          handshakeproto.CredentialsType_SignedPeerIds,
 		Payload:       payload,
@@ -94,7 +94,7 @@ func (p *peerSignVerifier) CheckCredential(remotePeerId string, cred *handshakep
 		return
 	}
 	var msg = &handshakeproto.PayloadSignedPeerIds{}
-	if err = msg.Unmarshal(cred.Payload); err != nil {
+	if err = msg.UnmarshalVT(cred.Payload); err != nil {
 		err = handshake.ErrUnexpectedPayload
 		return
 	}

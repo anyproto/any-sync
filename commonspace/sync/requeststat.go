@@ -46,7 +46,7 @@ func (r *requestStat) AddQueueRequest(peerId string, req *spacesyncproto.ObjectS
 	defer r.Unlock()
 	stat := r.peerStats[peerId]
 	stat.QueueCount++
-	stat.QueueSize += int64(req.Size())
+	stat.QueueSize += int64(req.SizeVT())
 	r.peerStats[peerId] = stat
 }
 
@@ -55,7 +55,7 @@ func (r *requestStat) AddSyncRequest(peerId string, req *spacesyncproto.ObjectSy
 	defer r.Unlock()
 	stat := r.peerStats[peerId]
 	stat.SyncCount++
-	stat.SyncSize += int64(req.Size())
+	stat.SyncSize += int64(req.SizeVT())
 	r.peerStats[peerId] = stat
 }
 
@@ -64,7 +64,7 @@ func (r *requestStat) RemoveSyncRequest(peerId string, req *spacesyncproto.Objec
 	defer r.Unlock()
 	stat := r.peerStats[peerId]
 	stat.SyncCount--
-	stat.SyncSize -= int64(req.Size())
+	stat.SyncSize -= int64(req.SizeVT())
 	r.peerStats[peerId] = stat
 }
 
@@ -73,7 +73,7 @@ func (r *requestStat) RemoveQueueRequest(peerId string, req *spacesyncproto.Obje
 	defer r.Unlock()
 	stat := r.peerStats[peerId]
 	stat.QueueCount--
-	stat.QueueSize -= int64(req.Size())
+	stat.QueueSize -= int64(req.SizeVT())
 	r.peerStats[peerId] = stat
 }
 

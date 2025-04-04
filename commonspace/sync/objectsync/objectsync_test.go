@@ -3,9 +3,9 @@ package objectsync
 import (
 	"context"
 	"fmt"
+	"google.golang.org/protobuf/proto"
 	"testing"
 
-	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
@@ -90,7 +90,7 @@ func TestObjectSync_HandleStreamRequest(t *testing.T) {
 			Id: "objectId",
 		}
 		treeSyncMsg := treechangeproto.WrapFullRequest(fullSyncReq, rootCh)
-		payload, err := treeSyncMsg.Marshal()
+		payload, err := treeSyncMsg.MarshalVT()
 		require.NoError(t, err)
 		sendResponse := func(resp proto.Message) error {
 			return nil
@@ -112,7 +112,7 @@ func TestObjectSync_HandleStreamRequest(t *testing.T) {
 			Id: "objectId",
 		}
 		treeSyncMsg := treechangeproto.WrapFullRequest(fullSyncReq, rootCh)
-		payload, err := treeSyncMsg.Marshal()
+		payload, err := treeSyncMsg.MarshalVT()
 		require.NoError(t, err)
 		sendResponse := func(resp proto.Message) error {
 			return nil

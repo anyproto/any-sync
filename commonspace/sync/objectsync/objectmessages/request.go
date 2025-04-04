@@ -1,9 +1,8 @@
 package objectmessages
 
 import (
-	"github.com/anyproto/protobuf/proto"
-
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"google.golang.org/protobuf/proto"
 )
 
 type InnerRequest interface {
