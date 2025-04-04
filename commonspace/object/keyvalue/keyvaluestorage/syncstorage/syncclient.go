@@ -26,7 +26,7 @@ func (i *innerUpdate) Prepare() error {
 	// TODO: Add peer to ignored peers list
 	var (
 		protoKeyValues []*spacesyncproto.StoreKeyValue
-		err error
+		err            error
 	)
 	for _, kv := range i.keyValues {
 		protoKeyValues = append(protoKeyValues, kv.Proto())
@@ -42,6 +42,10 @@ func (i *innerUpdate) Heads() []string {
 
 func (i *innerUpdate) MsgSize() uint64 {
 	return uint64(len(i.prepared))
+}
+
+func (i *innerUpdate) ObjectType() spacesyncproto.ObjectType {
+	return spacesyncproto.ObjectType_KeyValue
 }
 
 type SyncClient interface {
