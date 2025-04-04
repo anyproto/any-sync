@@ -3,13 +3,14 @@ package keyvalue
 import (
 	"context"
 	"errors"
-	"io"
 
 	"github.com/anyproto/protobuf/proto"
+	"go.uber.org/zap"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage"
@@ -24,6 +25,8 @@ import (
 )
 
 var ErrUnexpectedMessageType = errors.New("unexpected message type")
+
+var log = logger.NewNamed(CName)
 
 const CName = "common.object.keyvalue"
 
@@ -93,18 +96,69 @@ func (k *keyValueService) SyncWithPeer(ctx context.Context, p peer.Peer) (err er
 			return err
 		}
 	}
+	err = stream.Send(&spacesyncproto.StoreKeyValue{})
+	if err != nil {
+		return err
+	}
 	var messages []*spacesyncproto.StoreKeyValue
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
 			return err
+		}
+		if msg.KeyPeerId == "" {
+			break
 		}
 		messages = append(messages, msg)
 	}
 	return k.defaultStore.SetRaw(ctx, messages...)
+}
+
+func (k *keyValueService) HandleStoreDiffRequest(ctx context.Context, req *spacesyncproto.StoreDiffRequest) (resp *spacesyncproto.StoreDiffResponse, err error) {
+	return HandleRangeRequest(ctx, k.defaultStore.InnerStorage().Diff(), req)
+}
+
+func (k *keyValueService) HandleStoreElementsRequest(ctx context.Context, stream spacesyncproto.DRPCSpaceSync_StoreElementsStream) (err error) {
+	var (
+		messagesToSave []*spacesyncproto.StoreKeyValue
+		messagesToSend []string
+	)
+	for {
+		msg, err := stream.Recv()
+		if err != nil {
+			return err
+		}
+		if msg.KeyPeerId == "" {
+			break
+		}
+		if msg.Value != nil {
+			messagesToSave = append(messagesToSave, msg)
+		} else {
+			messagesToSend = append(messagesToSend, msg.KeyPeerId)
+		}
+	}
+	innerStorage := k.defaultStore.InnerStorage()
+	isError := false
+	for _, msg := range messagesToSend {
+		kv, err := innerStorage.GetKeyPeerId(ctx, msg)
+		if err != nil {
+			log.Warn("failed to get key value", zap.String("key", msg), zap.Error(err))
+			continue
+		}
+		err = stream.Send(kv.Proto())
+		if err != nil {
+			log.Warn("failed to send key value", zap.String("key", msg), zap.Error(err))
+			isError = true
+			break
+		}
+	}
+	if !isError {
+		err = stream.Send(&spacesyncproto.StoreKeyValue{})
+		if err != nil {
+			return err
+		}
+	}
+	return k.defaultStore.SetRaw(ctx, messagesToSave...)
 }
 
 func (k *keyValueService) HandleMessage(ctx context.Context, headUpdate drpc.Message) (err error) {

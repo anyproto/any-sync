@@ -145,6 +145,9 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 }
 
 func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreKeyValue) error {
+	if len(keyValue) == 0 {
+		return nil
+	}
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	keyValues := make([]innerstorage.KeyValue, len(keyValue))
