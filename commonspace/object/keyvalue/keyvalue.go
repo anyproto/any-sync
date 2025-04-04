@@ -54,7 +54,7 @@ func (k *keyValueService) SyncWithPeer(p peer.Peer) (err error) {
 	k.limiter.ScheduleRequest(k.ctx, p.Id(), func() {
 		err = k.syncWithPeer(k.ctx, p)
 		if err != nil {
-			log.Error("failed to sync with peer", zap.String("peerId", p.ID()), zap.Error(err))
+			log.Error("failed to sync with peer", zap.String("peerId", p.Id()), zap.Error(err))
 		}
 	})
 	return nil
@@ -192,6 +192,10 @@ func (k *keyValueService) Init(a *app.App) (err error) {
 	k.spaceStorage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	k.syncService = a.MustComponent(sync.CName).(sync.SyncService)
 	k.storageId = storageIdFromSpace(k.spaceId)
+	indexer := a.Component(keyvaluestorage.IndexerCName).(keyvaluestorage.Indexer)
+	if indexer == nil {
+		indexer = keyvaluestorage.NoOpIndexer{}
+	}
 	syncClient := syncstorage.New(spaceState.SpaceId, k.syncService)
 	k.defaultStore, err = keyvaluestorage.New(
 		k.ctx,
@@ -201,7 +205,7 @@ func (k *keyValueService) Init(a *app.App) (err error) {
 		accountService.Account(),
 		syncClient,
 		aclList,
-		keyvaluestorage.NoOpIndexer{})
+		indexer)
 	return
 }
 

@@ -8,6 +8,7 @@ import (
 	anystore "github.com/anyproto/any-store"
 	"go.uber.org/zap"
 
+	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
@@ -19,11 +20,22 @@ import (
 
 var log = logger.NewNamed("common.keyvalue.keyvaluestorage")
 
+const IndexerCName = "common.keyvalue.indexer"
+
 type Indexer interface {
+	app.Component
 	Index(keyValue ...innerstorage.KeyValue) error
 }
 
 type NoOpIndexer struct{}
+
+func (n NoOpIndexer) Init(a *app.App) (err error) {
+	return nil
+}
+
+func (n NoOpIndexer) Name() (name string) {
+	return IndexerCName
+}
 
 func (n NoOpIndexer) Index(keyValue ...innerstorage.KeyValue) error {
 	return nil

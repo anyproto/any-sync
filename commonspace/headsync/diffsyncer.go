@@ -8,6 +8,7 @@ import (
 	"github.com/quic-go/quic-go"
 
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
 
@@ -42,6 +43,7 @@ func newDiffSyncer(hs *headSync) DiffSyncer {
 		peerManager:        hs.peerManager,
 		clientFactory:      spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient),
 		credentialProvider: hs.credentialProvider,
+		keyValue:           hs.keyValue,
 		log:                newSyncLogger(hs.log, logPeriodSecs),
 		deletionState:      hs.deletionState,
 		syncAcl:            hs.syncAcl,
@@ -63,6 +65,7 @@ type diffSyncer struct {
 	cancel             context.CancelFunc
 	deletionState      deletionstate.ObjectDeletionState
 	credentialProvider credentialprovider.CredentialProvider
+	keyValue           kvinterfaces.KeyValueService
 	syncAcl            syncacl.SyncAcl
 }
 
@@ -90,10 +93,17 @@ func (d *diffSyncer) updateHeads(update headstorage.HeadsUpdate) {
 		if update.IsDerived != nil && *update.IsDerived && len(update.Heads) == 1 && update.Heads[0] == update.Id {
 			return
 		}
-		d.diffContainer.Set(ldiff.Element{
-			Id:   update.Id,
-			Head: concatStrings(update.Heads),
-		})
+		if update.Id == d.keyValue.DefaultStore().Id() {
+			d.diffContainer.NewDiff().Set(ldiff.Element{
+				Id:   update.Id,
+				Head: concatStrings(update.Heads),
+			})
+		} else {
+			d.diffContainer.Set(ldiff.Element{
+				Id:   update.Id,
+				Head: concatStrings(update.Heads),
+			})
+		}
 	}
 	// probably we should somehow batch the updates
 	oldHash := d.diffContainer.OldDiff().Hash()
@@ -126,7 +136,6 @@ func (d *diffSyncer) Sync(ctx context.Context) error {
 		}
 	}
 	d.log.DebugCtx(ctx, "diff done", zap.String("spaceId", d.spaceId), zap.Duration("dur", time.Since(st)))
-
 	d.peerManager.KeepAlive(ctx)
 	return nil
 }
@@ -153,6 +162,7 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 		syncAclId                      = d.syncAcl.Id()
 		newIds, changedIds, removedIds []string
 	)
+	storageId := d.keyValue.DefaultStore().Id()
 	needsSync, diff, err := d.diffContainer.DiffTypeCheck(ctx, rdiff)
 	err = rpcerr.Unwrap(err)
 	if err != nil {
@@ -169,15 +179,30 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 	// not syncing ids which were removed through settings document
 	missingIds := d.deletionState.Filter(newIds)
 	existingIds := append(d.deletionState.Filter(removedIds), d.deletionState.Filter(changedIds)...)
-
-	prevExistingLen := len(existingIds)
+	var (
+		isStorage = false
+		isAcl     = false
+	)
 	existingIds = slice.DiscardFromSlice(existingIds, func(s string) bool {
-		return s == syncAclId
+		if s == storageId {
+			isStorage = true
+			return true
+		}
+		if s == syncAclId {
+			isAcl = true
+			return true
+		}
+		return false
 	})
 	// if we removed acl head from the list
-	if len(existingIds) < prevExistingLen {
+	if isAcl {
 		if syncErr := d.syncAcl.SyncWithPeer(ctx, p); syncErr != nil {
 			log.Warn("failed to send acl sync message to peer", zap.String("aclId", syncAclId))
+		}
+	}
+	if isStorage {
+		if err = d.keyValue.SyncWithPeer(p); err != nil {
+			log.Warn("failed to send storage sync message to peer", zap.String("storageId", storageId))
 		}
 	}
 

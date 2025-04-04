@@ -16,6 +16,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
@@ -83,6 +84,7 @@ type Space interface {
 	AclClient() aclclient.AclSpaceClient
 	SyncStatus() syncstatus.StatusUpdater
 	Storage() spacestorage.SpaceStorage
+	KeyValue() kvinterfaces.KeyValueService
 
 	DeleteTree(ctx context.Context, id string) (err error)
 	GetNodePeers(ctx context.Context) (peer []peer.Peer, err error)
@@ -110,6 +112,7 @@ type space struct {
 	settings     settings.Settings
 	storage      spacestorage.SpaceStorage
 	aclClient    aclclient.AclSpaceClient
+	keyValue     kvinterfaces.KeyValueService
 	aclList      list.AclList
 	creationTime time.Time
 }
@@ -150,7 +153,7 @@ func (s *space) DebugAllHeads() (heads []headsync.TreeHeads) {
 	s.storage.HeadStorage().IterateEntries(context.Background(), headstorage.IterOpts{}, func(entry headstorage.HeadsEntry) (bool, error) {
 		if entry.CommonSnapshot != "" {
 			heads = append(heads, headsync.TreeHeads{
-				Id: entry.Id,
+				Id:    entry.Id,
 				Heads: entry.Heads,
 			})
 		}
@@ -221,11 +224,16 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.streamPool = s.app.MustComponent(streampool.CName).(streampool.StreamPool)
 	s.treeSyncer = s.app.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	s.aclClient = s.app.MustComponent(aclclient.CName).(aclclient.AclSpaceClient)
+	s.keyValue = s.app.MustComponent(kvinterfaces.CName).(kvinterfaces.KeyValueService)
 	return
 }
 
 func (s *space) SyncStatus() syncstatus.StatusUpdater {
 	return s.syncStatus
+}
+
+func (s *space) KeyValue() kvinterfaces.KeyValueService {
+	return s.keyValue
 }
 
 func (s *space) Storage() spacestorage.SpaceStorage {
