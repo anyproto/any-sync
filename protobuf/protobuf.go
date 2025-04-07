@@ -2,6 +2,8 @@ package protobuf
 
 import (
 	"fmt"
+	"slices"
+
 	"google.golang.org/protobuf/proto"
 )
 
@@ -15,18 +17,15 @@ type ProtoBuf interface {
 func MarshalAppend(buf []byte, pb proto.Message) ([]byte, error) {
 	if m, ok := pb.(ProtoBuf); ok {
 		siz := m.SizeVT()
-		if cap(buf) < len(buf)+siz {
-			newBuf := make([]byte, 0, len(buf)+siz)
-			buf = append(newBuf, buf...)
-		}
-		return MarshalToSizedBuffer(m, buf, len(buf)+siz)
+		offset := len(buf)
+		buf = slices.Grow(buf, offset+siz)[:offset+siz]
+		return MarshalToSizedBuffer(m, buf, offset)
 	}
 	return nil, fmt.Errorf("proto: MarshalAppend not supported by %T", pb)
 }
 
-func MarshalToSizedBuffer(m ProtoBuf, b []byte, newLen int) ([]byte, error) {
-	b = b[:newLen]
-	_, err := m.MarshalToSizedBufferVT(b)
+func MarshalToSizedBuffer(m ProtoBuf, b []byte, offset int) ([]byte, error) {
+	_, err := m.MarshalToSizedBufferVT(b[offset:])
 	if err != nil {
 		return nil, err
 	}
