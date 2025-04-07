@@ -7,6 +7,7 @@ import (
 	"time"
 
 	anystore "github.com/anyproto/any-store"
+	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app"
@@ -156,7 +157,7 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 		AclId:          headId,
 		ReadKeyId:      readKeyId,
 		Value: innerstorage.Value{
-			Value:             value,
+			Value:             innerBytes,
 			PeerSignature:     peerSig,
 			IdentitySignature: identitySig,
 		},
@@ -182,7 +183,7 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 	}
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	keyValues := make([]innerstorage.KeyValue, len(keyValue))
+	keyValues := make([]innerstorage.KeyValue, 0, len(keyValue))
 	for _, kv := range keyValue {
 		innerKv, err := innerstorage.KeyValueFromProto(kv, true)
 		if err != nil {
@@ -197,10 +198,10 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 		s.aclList.RUnlock()
 		return err
 	}
-	for _, kv := range keyValues {
-		kv.ReadKeyId, err = state.ReadKeyForAclId(kv.AclId)
+	for i := range keyValues {
+		keyValues[i].ReadKeyId, err = state.ReadKeyForAclId(keyValues[i].AclId)
 		if err != nil {
-			kv.KeyPeerId = ""
+			keyValues[i].KeyPeerId = ""
 			continue
 		}
 	}
@@ -274,7 +275,12 @@ func (s *storage) decrypt(kv innerstorage.KeyValue) (value []byte, err error) {
 	if key == nil {
 		return nil, fmt.Errorf("no read key for %s", kv.ReadKeyId)
 	}
-	value, err = key.Decrypt(kv.Value.Value)
+	msg := &spacesyncproto.StoreKeyInner{}
+	err = proto.Unmarshal(kv.Value.Value, msg)
+	if err != nil {
+		return nil, err
+	}
+	value, err = key.Decrypt(msg.Value)
 	if err != nil {
 		return nil, err
 	}

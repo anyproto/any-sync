@@ -68,6 +68,10 @@ func (s *syncClient) Broadcast(ctx context.Context, objectId string, keyValue ..
 	inner := &innerUpdate{
 		keyValues: keyValue,
 	}
+	err := inner.Prepare()
+	if err != nil {
+		return err
+	}
 	headUpdate := &objectmessages.HeadUpdate{
 		Meta: objectmessages.ObjectMeta{
 			ObjectId: objectId,

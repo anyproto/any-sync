@@ -12,7 +12,6 @@ import (
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	"github.com/anyproto/any-sync/metric"
 	"github.com/anyproto/any-sync/nodeconf"
@@ -117,9 +116,6 @@ func (s *syncService) HandleMessage(ctx context.Context, msg drpc.Message) error
 	idMsg, ok := msg.(syncdeps.Message)
 	if !ok {
 		return ErrUnexpectedMessage
-	}
-	if idMsg.ObjectType() == spacesyncproto.ObjectType_KeyValue {
-		return nil
 	}
 	objectId := idMsg.ObjectId()
 	err := s.receiveQueue.Add(ctx, objectId, msgCtx{
