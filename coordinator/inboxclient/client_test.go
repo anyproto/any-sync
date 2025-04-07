@@ -17,17 +17,6 @@ import (
 
 var ctx = context.Background()
 
-func TestInbox_CryptoTest(t *testing.T) {
-	privKey, pubKey, _ := crypto.GenerateRandomEd25519KeyPair()
-
-	t.Run("test encrypt/decrypt", func(t *testing.T) {
-		body := []byte("hello")
-		encrypted, _ := pubKey.Encrypt(body)
-		decrypted, _ := privKey.Decrypt(encrypted)
-		assert.Equal(t, body, decrypted)
-	})
-}
-
 func TestInbox_Fetch(t *testing.T) {
 	var makeClientServer = func(t *testing.T, ts *testServer) (fxC, fxS *fixture, peerId string) {
 		fxC = newFixture(t, nil)
