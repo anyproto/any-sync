@@ -131,6 +131,20 @@ func (st *AclState) CurrentReadKeyId() string {
 	return st.readKeyChanges[len(st.readKeyChanges)-1]
 }
 
+func (st *AclState) ReadKeyForAclId(id string) (string, error) {
+	recIdx, ok := st.list.indexes[id]
+	if !ok {
+		return "", ErrNoSuchRecord
+	}
+	for i := len(st.readKeyChanges) - 1; i >= 0; i-- {
+		recId := st.readKeyChanges[i]
+		if recIdx >= st.list.indexes[recId] {
+			return recId, nil
+		}
+	}
+	return "", ErrNoSuchRecord
+}
+
 func (st *AclState) AccountKey() crypto.PrivKey {
 	return st.key
 }

@@ -13,11 +13,13 @@ var ErrInvalidSignature = errors.New("invalid signature")
 
 type KeyValue struct {
 	KeyPeerId      string
+	ReadKeyId      string
 	Key            string
 	Value          Value
 	TimestampMilli int
 	Identity       string
 	PeerId         string
+	AclId          string
 }
 
 type Value struct {
@@ -47,6 +49,7 @@ func KeyValueFromProto(proto *spacesyncproto.StoreKeyValue, verify bool) (kv Key
 	kv.Identity = identity.Account()
 	kv.PeerId = peerId.PeerId()
 	kv.Key = innerValue.Key
+	kv.AclId = innerValue.AclHeadId
 	// TODO: check that key-peerId is equal to key+peerId?
 	if verify {
 		if verify, _ = identity.Verify(proto.Value, proto.IdentitySignature); !verify {
@@ -71,6 +74,7 @@ func (kv KeyValue) AnyEnc(a *anyenc.Arena) *anyenc.Value {
 	obj := a.NewObject()
 	obj.Set("id", a.NewString(kv.KeyPeerId))
 	obj.Set("k", a.NewString(kv.Key))
+	obj.Set("r", a.NewString(kv.ReadKeyId))
 	obj.Set("v", kv.Value.AnyEnc(a))
 	obj.Set("t", a.NewNumberInt(kv.TimestampMilli))
 	obj.Set("i", a.NewString(kv.Identity))

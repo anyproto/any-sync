@@ -156,11 +156,12 @@ func (s *storage) keyValueFromDoc(doc anystore.Doc) KeyValue {
 	}
 	return KeyValue{
 		KeyPeerId:      doc.Value().GetString("id"),
+		ReadKeyId:      doc.Value().GetString("r"),
 		Value:          value,
 		TimestampMilli: doc.Value().GetInt("t"),
 		Identity:       doc.Value().GetString("i"),
 		PeerId:         doc.Value().GetString("p"),
-		Key:			doc.Value().GetString("k"),
+		Key:            doc.Value().GetString("k"),
 	}
 }
 
