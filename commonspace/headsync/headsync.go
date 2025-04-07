@@ -120,8 +120,9 @@ func (h *headSync) AllIds() []string {
 func (h *headSync) ExternalIds() []string {
 	settingsId := h.storage.StateStorage().SettingsId()
 	aclId := h.syncAcl.Id()
+	keyValueId := h.keyValue.DefaultStore().Id()
 	return slice.DiscardFromSlice(h.AllIds(), func(id string) bool {
-		return id == settingsId || id == aclId
+		return id == settingsId || id == aclId || id == keyValueId
 	})
 }
 
