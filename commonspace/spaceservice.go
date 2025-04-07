@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/sync"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
@@ -70,6 +71,7 @@ type Deps struct {
 	SyncStatus     syncstatus.StatusUpdater
 	TreeSyncer     treesyncer.TreeSyncer
 	AccountService accountservice.Service
+	Indexer        keyvaluestorage.Indexer
 }
 
 type spaceService struct {
@@ -181,10 +183,15 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 	if deps.AccountService != nil {
 		spaceApp.Register(deps.AccountService)
 	}
+	var keyValueIndexer keyvaluestorage.Indexer = keyvaluestorage.NoOpIndexer{}
+	if deps.Indexer != nil {
+		keyValueIndexer = deps.Indexer
+	}
 	spaceApp.Register(state).
 		Register(deps.SyncStatus).
 		Register(peerManager).
 		Register(st).
+		Register(keyValueIndexer).
 		Register(keyvalue.New()).
 		Register(objectsync.New()).
 		Register(sync.NewSyncService()).
