@@ -22,7 +22,11 @@ import (
 
 func TestKeyValueService(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
-		fxClient, _, serverPeer := prepareFixtures(t)
+		fxClient, fxServer, serverPeer := prepareFixtures(t)
+		fxClient.add(t, "key1", []byte("value1"))
+		fxClient.add(t, "key2", []byte("value2"))
+		fxServer.add(t, "key3", []byte("value3"))
+		fxServer.add(t, "key4", []byte("value4"))
 		err := fxClient.SyncWithPeer(serverPeer)
 		require.NoError(t, err)
 		fxClient.limiter.Close()
@@ -95,6 +99,11 @@ func newFixture(t *testing.T, keys *accountdata.AccountKeys, spacePayload spaces
 		keyValueService: service,
 		server:          rpcHandler,
 	}
+}
+
+func (fx *fixture) add(t *testing.T, key string, value []byte) {
+	err := fx.defaultStore.Set(ctx, key, value)
+	require.NoError(t, err)
 }
 
 func newStorageCreatePayload(t *testing.T, keys *accountdata.AccountKeys) spacestorage.SpaceStorageCreatePayload {

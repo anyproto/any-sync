@@ -51,7 +51,7 @@ type Storage interface {
 	Id() string
 	Set(ctx context.Context, key string, value []byte) error
 	SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreKeyValue) error
-	GetAll(ctx context.Context, key string) (values []innerstorage.KeyValue, err error)
+	GetAll(ctx context.Context, key string) (values []innerstorage.KeyValue, decryptor Decryptor, err error)
 	Iterate(ctx context.Context, f func(key string, values []innerstorage.KeyValue) (bool, error)) error
 	InnerStorage() innerstorage.KeyValueStorage
 }
@@ -226,7 +226,8 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 	return nil
 }
 
-func (s *storage) GetAll(ctx context.Context, key string) (values []innerstorage.KeyValue, err error) {
+func (s *storage) GetAll(ctx context.Context, key string) (values []innerstorage.KeyValue, decryptor Decryptor, err error) {
+	decryptor = s.decrypt
 	err = s.inner.IteratePrefix(ctx, key, func(kv innerstorage.KeyValue) error {
 		values = append(values, kv)
 		return nil
