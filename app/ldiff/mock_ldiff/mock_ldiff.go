@@ -232,6 +232,7 @@ func (mr *MockRemoteMockRecorder) Ranges(ctx, ranges, resBuf any) *gomock.Call {
 type MockDiffContainer struct {
 	ctrl     *gomock.Controller
 	recorder *MockDiffContainerMockRecorder
+	isgomock struct{}
 }
 
 // MockDiffContainerMockRecorder is the mock recorder for MockDiffContainer.
@@ -252,9 +253,9 @@ func (m *MockDiffContainer) EXPECT() *MockDiffContainerMockRecorder {
 }
 
 // DiffTypeCheck mocks base method.
-func (m *MockDiffContainer) DiffTypeCheck(arg0 context.Context, arg1 ldiff.RemoteTypeChecker) (bool, ldiff.Diff, error) {
+func (m *MockDiffContainer) DiffTypeCheck(ctx context.Context, typeChecker ldiff.RemoteTypeChecker) (bool, ldiff.Diff, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DiffTypeCheck", arg0, arg1)
+	ret := m.ctrl.Call(m, "DiffTypeCheck", ctx, typeChecker)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(ldiff.Diff)
 	ret2, _ := ret[2].(error)
@@ -262,9 +263,9 @@ func (m *MockDiffContainer) DiffTypeCheck(arg0 context.Context, arg1 ldiff.Remot
 }
 
 // DiffTypeCheck indicates an expected call of DiffTypeCheck.
-func (mr *MockDiffContainerMockRecorder) DiffTypeCheck(arg0, arg1 any) *gomock.Call {
+func (mr *MockDiffContainerMockRecorder) DiffTypeCheck(ctx, typeChecker any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiffTypeCheck", reflect.TypeOf((*MockDiffContainer)(nil).DiffTypeCheck), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiffTypeCheck", reflect.TypeOf((*MockDiffContainer)(nil).DiffTypeCheck), ctx, typeChecker)
 }
 
 // NewDiff mocks base method.
@@ -296,31 +297,31 @@ func (mr *MockDiffContainerMockRecorder) OldDiff() *gomock.Call {
 }
 
 // RemoveId mocks base method.
-func (m *MockDiffContainer) RemoveId(arg0 string) error {
+func (m *MockDiffContainer) RemoveId(id string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoveId", arg0)
+	ret := m.ctrl.Call(m, "RemoveId", id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RemoveId indicates an expected call of RemoveId.
-func (mr *MockDiffContainerMockRecorder) RemoveId(arg0 any) *gomock.Call {
+func (mr *MockDiffContainerMockRecorder) RemoveId(id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveId", reflect.TypeOf((*MockDiffContainer)(nil).RemoveId), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveId", reflect.TypeOf((*MockDiffContainer)(nil).RemoveId), id)
 }
 
 // Set mocks base method.
-func (m *MockDiffContainer) Set(arg0 ...ldiff.Element) {
+func (m *MockDiffContainer) Set(elements ...ldiff.Element) {
 	m.ctrl.T.Helper()
 	varargs := []any{}
-	for _, a := range arg0 {
+	for _, a := range elements {
 		varargs = append(varargs, a)
 	}
 	m.ctrl.Call(m, "Set", varargs...)
 }
 
 // Set indicates an expected call of Set.
-func (mr *MockDiffContainerMockRecorder) Set(arg0 ...any) *gomock.Call {
+func (mr *MockDiffContainerMockRecorder) Set(elements ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockDiffContainer)(nil).Set), arg0...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*MockDiffContainer)(nil).Set), elements...)
 }
