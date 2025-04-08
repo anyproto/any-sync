@@ -2,6 +2,7 @@ package response
 
 import (
 	"fmt"
+
 	"google.golang.org/protobuf/proto"
 
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"

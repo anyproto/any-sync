@@ -20,7 +20,7 @@ type ClientFactory interface {
 }
 
 func MarshallSyncMessage(message proto.Message, spaceId, objectId string) (objMsg *ObjectSyncMessage, err error) {
-	payload, err := message.(protobuf.ProtoBuf).MarshalVT()
+	payload, err := message.(protobuf.Message).MarshalVT()
 	if err != nil {
 		return
 	}
