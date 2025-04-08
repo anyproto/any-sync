@@ -109,6 +109,7 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 	readKeyId := state.CurrentReadKeyId()
 	err := s.readKeysFromAclState(state)
 	if err != nil {
+		s.aclList.RUnlock()
 		return err
 	}
 	s.aclList.RUnlock()
