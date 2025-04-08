@@ -8,7 +8,7 @@ enum PeriodType {
   PeriodTypeDays = 2;
   PeriodTypeWeeks = 3;
   PeriodTypeMonths = 4;
-  PeriodTypeYears = 5;  
+  PeriodTypeYears = 5;
 }
 
 message Feature {
@@ -32,7 +32,7 @@ message GetTiersRequestSigned {
 
 message TierData {
   // this is a unique ID of the tier
-  // you should hardcode this in your app and provide icon, graphics, etc for each tier 
+  // you should hardcode this in your app and provide icon, graphics, etc for each tier
   // (even for old/historical/inactive/hidden tiers)
   uint32 id = 1;
   // localazied name of the tier
@@ -43,7 +43,7 @@ message TierData {
   // can you buy it (ON ALL PLATFORMS, without clarification)?
   bool isActive = 4;
   // is this tier for debugging only?
-  bool isTest = 5;  
+  bool isTest = 5;
   // hidden tiers are only visible once user got them
   bool isHiddenTier = 6;
   // how long is the period of the subscription
@@ -52,7 +52,7 @@ message TierData {
   uint32 periodValue = 8;
   // this one is a price we use ONLY on Stripe platform
   uint32 priceStripeUsdCents = 9;
-  // number of ANY NS names that this tier includes 
+  // number of ANY NS names that this tier includes
   // (not counted as a "feature" and not in the features list)
   uint32 anyNamesCountIncluded = 10;
   // somename.any - len of 8
