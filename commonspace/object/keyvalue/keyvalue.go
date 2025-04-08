@@ -36,10 +36,8 @@ type keyValueService struct {
 	cancel    context.CancelFunc
 
 	limiter       *concurrentLimiter
-	spaceStorage  spacestorage.SpaceStorage
 	defaultStore  keyvaluestorage.Storage
 	clientFactory spacesyncproto.ClientFactory
-	syncService   sync.SyncService
 }
 
 func New() kvinterfaces.KeyValueService {
@@ -189,19 +187,19 @@ func (k *keyValueService) Init(a *app.App) (err error) {
 	k.limiter = newConcurrentLimiter()
 	accountService := a.MustComponent(accountservice.CName).(accountservice.Service)
 	aclList := a.MustComponent(syncacl.CName).(list.AclList)
-	k.spaceStorage = a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
-	k.syncService = a.MustComponent(sync.CName).(sync.SyncService)
+	spaceStorage := a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
+	syncService := a.MustComponent(sync.CName).(sync.SyncService)
 	k.storageId = storageIdFromSpace(k.spaceId)
 	indexer := a.Component(keyvaluestorage.IndexerCName).(keyvaluestorage.Indexer)
 	if indexer == nil {
 		indexer = keyvaluestorage.NoOpIndexer{}
 	}
-	syncClient := syncstorage.New(spaceState.SpaceId, k.syncService)
+	syncClient := syncstorage.New(spaceState.SpaceId, syncService)
 	k.defaultStore, err = keyvaluestorage.New(
 		k.ctx,
 		k.storageId,
-		k.spaceStorage.AnyStore(),
-		k.spaceStorage.HeadStorage(),
+		spaceStorage.AnyStore(),
+		spaceStorage.HeadStorage(),
 		accountService.Account(),
 		syncClient,
 		aclList,

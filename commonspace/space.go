@@ -29,34 +29,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/streampool"
-	"github.com/anyproto/any-sync/util/crypto"
 )
-
-type SpaceCreatePayload struct {
-	// SigningKey is the signing key of the owner
-	SigningKey crypto.PrivKey
-	// SpaceType is an arbitrary string
-	SpaceType string
-	// ReplicationKey is a key which is to be used to determine the node where the space should be held
-	ReplicationKey uint64
-	// SpacePayload is an arbitrary payload related to space type
-	SpacePayload []byte
-	// MasterKey is the master key of the owner
-	MasterKey crypto.PrivKey
-	// ReadKey is the first read key of space
-	ReadKey crypto.SymKey
-	// MetadataKey is the first metadata key of space
-	MetadataKey crypto.PrivKey
-	// Metadata is the metadata of the owner
-	Metadata []byte
-}
-
-type SpaceDerivePayload struct {
-	SigningKey   crypto.PrivKey
-	MasterKey    crypto.PrivKey
-	SpaceType    string
-	SpacePayload []byte
-}
 
 type SpaceDescription struct {
 	SpaceHeader          *spacesyncproto.RawSpaceHeaderWithId

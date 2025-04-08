@@ -26,6 +26,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
+	"github.com/anyproto/any-sync/commonspace/spacepayloads"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
@@ -751,7 +752,7 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 	require.NoError(t, err)
 	readKey := crypto.NewAES()
 	meta := []byte("account")
-	payload := SpaceCreatePayload{
+	payload := spacepayloads.SpaceCreatePayload{
 		SigningKey:     keys.SignKey,
 		SpaceType:      "space",
 		ReplicationKey: 10,
@@ -761,7 +762,7 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 		MetadataKey:    metaKey,
 		Metadata:       meta,
 	}
-	createSpace, err := StoragePayloadForSpaceCreate(payload)
+	createSpace, err := spacepayloads.StoragePayloadForSpaceCreate(payload)
 	require.NoError(t, err)
 	executor := list.NewExternalKeysAclExecutor(createSpace.SpaceHeaderWithId.Id, keys, meta, createSpace.AclWithId)
 	cmds := []string{

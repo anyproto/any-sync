@@ -52,6 +52,7 @@ type Storage interface {
 	Set(ctx context.Context, key string, value []byte) error
 	SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreKeyValue) error
 	GetAll(ctx context.Context, key string) (values []innerstorage.KeyValue, err error)
+	Iterate(ctx context.Context, f func(key string, values []innerstorage.KeyValue) (bool, error)) error
 	InnerStorage() innerstorage.KeyValueStorage
 }
 
@@ -265,6 +266,37 @@ func (s *storage) readKeysFromAclState(state *list.AclState) (err error) {
 		return nil
 	}
 	s.currentReadKey, err = deriveKey(curKey, s.storageId)
+	return err
+}
+
+func (s *storage) Iterate(ctx context.Context, f func(key string, values []innerstorage.KeyValue) (bool, error)) (err error) {
+	var (
+		curKey = ""
+		values []innerstorage.KeyValue
+	)
+	err = s.inner.IterateValues(ctx, func(kv innerstorage.KeyValue) (bool, error) {
+		if kv.Key != curKey {
+			if curKey != "" {
+				iter, err := f(curKey, values)
+				if err != nil {
+					return false, err
+				}
+				if !iter {
+					return false, nil
+				}
+			}
+			curKey = kv.Key
+			values = values[:0]
+		}
+		values = append(values, kv)
+		return true, nil
+	})
+	if err != nil {
+		return err
+	}
+	if len(values) > 0 {
+		_, err = f(curKey, values)
+	}
 	return err
 }
 

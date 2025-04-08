@@ -16,6 +16,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
+	"github.com/anyproto/any-sync/commonspace/spacepayloads"
 	"github.com/anyproto/any-sync/commonspace/sync"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
 	"github.com/anyproto/any-sync/net"
@@ -60,9 +61,9 @@ type ctxKey int
 const AddSpaceCtxKey ctxKey = 0
 
 type SpaceService interface {
-	DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (string, error)
-	DeriveId(ctx context.Context, payload SpaceDerivePayload) (string, error)
-	CreateSpace(ctx context.Context, payload SpaceCreatePayload) (string, error)
+	DeriveSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (string, error)
+	DeriveId(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (string, error)
+	CreateSpace(ctx context.Context, payload spacepayloads.SpaceCreatePayload) (string, error)
 	NewSpace(ctx context.Context, id string, deps Deps) (sp Space, err error)
 	app.Component
 }
@@ -104,8 +105,8 @@ func (s *spaceService) Name() (name string) {
 	return CName
 }
 
-func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePayload) (id string, err error) {
-	storageCreate, err := StoragePayloadForSpaceCreate(payload)
+func (s *spaceService) CreateSpace(ctx context.Context, payload spacepayloads.SpaceCreatePayload) (id string, err error) {
+	storageCreate, err := spacepayloads.StoragePayloadForSpaceCreate(payload)
 	if err != nil {
 		return
 	}
@@ -120,8 +121,8 @@ func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePaylo
 	return store.Id(), store.Close(ctx)
 }
 
-func (s *spaceService) DeriveId(ctx context.Context, payload SpaceDerivePayload) (id string, err error) {
-	storageCreate, err := storagePayloadForSpaceDerive(payload)
+func (s *spaceService) DeriveId(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (id string, err error) {
+	storageCreate, err := spacepayloads.StoragePayloadForSpaceDerive(payload)
 	if err != nil {
 		return
 	}
@@ -129,8 +130,8 @@ func (s *spaceService) DeriveId(ctx context.Context, payload SpaceDerivePayload)
 	return
 }
 
-func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (id string, err error) {
-	storageCreate, err := storagePayloadForSpaceDerive(payload)
+func (s *spaceService) DeriveSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (id string, err error) {
+	storageCreate, err := spacepayloads.StoragePayloadForSpaceDerive(payload)
 	if err != nil {
 		return
 	}
@@ -313,7 +314,7 @@ func (s *spaceService) spacePullWithPeer(ctx context.Context, p peer.Peer, id st
 }
 
 func (s *spaceService) createSpaceStorage(ctx context.Context, payload spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {
-	err := validateSpaceStorageCreatePayload(payload)
+	err := spacepayloads.ValidateSpaceStorageCreatePayload(payload)
 	if err != nil {
 		return nil, err
 	}
