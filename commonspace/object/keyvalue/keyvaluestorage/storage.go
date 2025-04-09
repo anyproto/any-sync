@@ -2,6 +2,7 @@ package keyvaluestorage
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"sync"
 	"time"
