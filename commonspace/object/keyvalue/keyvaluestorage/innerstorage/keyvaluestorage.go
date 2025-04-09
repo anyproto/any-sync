@@ -134,7 +134,7 @@ func (s *storage) IteratePrefix(ctx context.Context, prefix string, iterFunc fun
 			return
 		}
 		if !strings.Contains(doc.Value().GetString("id"), prefix) {
-			break
+			continue
 		}
 		err := iterFunc(s.keyValueFromDoc(doc))
 		if err != nil {
