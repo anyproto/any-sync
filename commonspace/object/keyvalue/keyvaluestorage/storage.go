@@ -64,6 +64,7 @@ type storage struct {
 	syncClient     syncstorage.SyncClient
 	indexer        Indexer
 	storageId      string
+	byteRepr       []byte
 	readKeys       map[string]crypto.SymKey
 	currentReadKey crypto.SymKey
 	mx             sync.Mutex
@@ -90,6 +91,7 @@ func New(
 		aclList:    aclList,
 		indexer:    indexer,
 		syncClient: syncClient,
+		byteRepr:   make([]byte, 8),
 		readKeys:   make(map[string]crypto.SymKey),
 	}
 	return s, nil
@@ -209,6 +211,14 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 		return err
 	}
 	for i := range keyValues {
+		el, err := s.inner.Diff().Element(keyValues[i].KeyPeerId)
+		if err == nil {
+			binary.BigEndian.PutUint64(s.byteRepr, uint64(keyValues[i].TimestampMilli))
+			if el.Head >= string(s.byteRepr) {
+				keyValues[i].KeyPeerId = ""
+				continue
+			}
+		}
 		keyValues[i].ReadKeyId, err = state.ReadKeyForAclId(keyValues[i].AclId)
 		if err != nil {
 			keyValues[i].KeyPeerId = ""
@@ -219,6 +229,9 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 	keyValues = slice.DiscardFromSlice(keyValues, func(value innerstorage.KeyValue) bool {
 		return value.KeyPeerId == ""
 	})
+	if len(keyValues) == 0 {
+		return nil
+	}
 	err = s.inner.Set(ctx, keyValues...)
 	if err != nil {
 		return err
