@@ -29,5 +29,5 @@ func (r *InnerRequest) Marshall() ([]byte, error) {
 		Head: r.head,
 	}
 	fullSync := consensusproto.WrapFullRequest(req, r.root)
-	return fullSync.Marshal()
+	return fullSync.MarshalVT()
 }

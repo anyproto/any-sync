@@ -5,6 +5,7 @@
 //
 //	mockgen -destination mock_pool/mock_pool.go github.com/anyproto/any-sync/net/pool Pool,Service
 //
+
 // Package mock_pool is a generated GoMock package.
 package mock_pool
 
@@ -21,6 +22,7 @@ import (
 type MockPool struct {
 	ctrl     *gomock.Controller
 	recorder *MockPoolMockRecorder
+	isgomock struct{}
 }
 
 // MockPoolMockRecorder is the mock recorder for MockPool.
@@ -41,68 +43,69 @@ func (m *MockPool) EXPECT() *MockPoolMockRecorder {
 }
 
 // AddPeer mocks base method.
-func (m *MockPool) AddPeer(arg0 context.Context, arg1 peer.Peer) error {
+func (m *MockPool) AddPeer(ctx context.Context, p peer.Peer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddPeer", arg0, arg1)
+	ret := m.ctrl.Call(m, "AddPeer", ctx, p)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddPeer indicates an expected call of AddPeer.
-func (mr *MockPoolMockRecorder) AddPeer(arg0, arg1 any) *gomock.Call {
+func (mr *MockPoolMockRecorder) AddPeer(ctx, p any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPeer", reflect.TypeOf((*MockPool)(nil).AddPeer), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPeer", reflect.TypeOf((*MockPool)(nil).AddPeer), ctx, p)
 }
 
 // Get mocks base method.
-func (m *MockPool) Get(arg0 context.Context, arg1 string) (peer.Peer, error) {
+func (m *MockPool) Get(ctx context.Context, id string) (peer.Peer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1)
+	ret := m.ctrl.Call(m, "Get", ctx, id)
 	ret0, _ := ret[0].(peer.Peer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockPoolMockRecorder) Get(arg0, arg1 any) *gomock.Call {
+func (mr *MockPoolMockRecorder) Get(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPool)(nil).Get), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPool)(nil).Get), ctx, id)
 }
 
 // GetOneOf mocks base method.
-func (m *MockPool) GetOneOf(arg0 context.Context, arg1 []string) (peer.Peer, error) {
+func (m *MockPool) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOneOf", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetOneOf", ctx, peerIds)
 	ret0, _ := ret[0].(peer.Peer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetOneOf indicates an expected call of GetOneOf.
-func (mr *MockPoolMockRecorder) GetOneOf(arg0, arg1 any) *gomock.Call {
+func (mr *MockPoolMockRecorder) GetOneOf(ctx, peerIds any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOneOf", reflect.TypeOf((*MockPool)(nil).GetOneOf), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOneOf", reflect.TypeOf((*MockPool)(nil).GetOneOf), ctx, peerIds)
 }
 
 // Pick mocks base method.
-func (m *MockPool) Pick(arg0 context.Context, arg1 string) (peer.Peer, error) {
+func (m *MockPool) Pick(ctx context.Context, id string) (peer.Peer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Pick", arg0, arg1)
+	ret := m.ctrl.Call(m, "Pick", ctx, id)
 	ret0, _ := ret[0].(peer.Peer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Pick indicates an expected call of Pick.
-func (mr *MockPoolMockRecorder) Pick(arg0, arg1 any) *gomock.Call {
+func (mr *MockPoolMockRecorder) Pick(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pick", reflect.TypeOf((*MockPool)(nil).Pick), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pick", reflect.TypeOf((*MockPool)(nil).Pick), ctx, id)
 }
 
 // MockService is a mock of Service interface.
 type MockService struct {
 	ctrl     *gomock.Controller
 	recorder *MockServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockServiceMockRecorder is the mock recorder for MockService.
@@ -123,75 +126,75 @@ func (m *MockService) EXPECT() *MockServiceMockRecorder {
 }
 
 // AddPeer mocks base method.
-func (m *MockService) AddPeer(arg0 context.Context, arg1 peer.Peer) error {
+func (m *MockService) AddPeer(ctx context.Context, p peer.Peer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddPeer", arg0, arg1)
+	ret := m.ctrl.Call(m, "AddPeer", ctx, p)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddPeer indicates an expected call of AddPeer.
-func (mr *MockServiceMockRecorder) AddPeer(arg0, arg1 any) *gomock.Call {
+func (mr *MockServiceMockRecorder) AddPeer(ctx, p any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPeer", reflect.TypeOf((*MockService)(nil).AddPeer), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPeer", reflect.TypeOf((*MockService)(nil).AddPeer), ctx, p)
 }
 
 // Close mocks base method.
-func (m *MockService) Close(arg0 context.Context) error {
+func (m *MockService) Close(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", arg0)
+	ret := m.ctrl.Call(m, "Close", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockServiceMockRecorder) Close(arg0 any) *gomock.Call {
+func (mr *MockServiceMockRecorder) Close(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockService)(nil).Close), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockService)(nil).Close), ctx)
 }
 
 // Get mocks base method.
-func (m *MockService) Get(arg0 context.Context, arg1 string) (peer.Peer, error) {
+func (m *MockService) Get(ctx context.Context, id string) (peer.Peer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1)
+	ret := m.ctrl.Call(m, "Get", ctx, id)
 	ret0, _ := ret[0].(peer.Peer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockServiceMockRecorder) Get(arg0, arg1 any) *gomock.Call {
+func (mr *MockServiceMockRecorder) Get(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockService)(nil).Get), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockService)(nil).Get), ctx, id)
 }
 
 // GetOneOf mocks base method.
-func (m *MockService) GetOneOf(arg0 context.Context, arg1 []string) (peer.Peer, error) {
+func (m *MockService) GetOneOf(ctx context.Context, peerIds []string) (peer.Peer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOneOf", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetOneOf", ctx, peerIds)
 	ret0, _ := ret[0].(peer.Peer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetOneOf indicates an expected call of GetOneOf.
-func (mr *MockServiceMockRecorder) GetOneOf(arg0, arg1 any) *gomock.Call {
+func (mr *MockServiceMockRecorder) GetOneOf(ctx, peerIds any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOneOf", reflect.TypeOf((*MockService)(nil).GetOneOf), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOneOf", reflect.TypeOf((*MockService)(nil).GetOneOf), ctx, peerIds)
 }
 
 // Init mocks base method.
-func (m *MockService) Init(arg0 *app.App) error {
+func (m *MockService) Init(a *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", arg0)
+	ret := m.ctrl.Call(m, "Init", a)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockServiceMockRecorder) Init(arg0 any) *gomock.Call {
+func (mr *MockServiceMockRecorder) Init(a any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockService)(nil).Init), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockService)(nil).Init), a)
 }
 
 // Name mocks base method.
@@ -209,30 +212,30 @@ func (mr *MockServiceMockRecorder) Name() *gomock.Call {
 }
 
 // Pick mocks base method.
-func (m *MockService) Pick(arg0 context.Context, arg1 string) (peer.Peer, error) {
+func (m *MockService) Pick(ctx context.Context, id string) (peer.Peer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Pick", arg0, arg1)
+	ret := m.ctrl.Call(m, "Pick", ctx, id)
 	ret0, _ := ret[0].(peer.Peer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Pick indicates an expected call of Pick.
-func (mr *MockServiceMockRecorder) Pick(arg0, arg1 any) *gomock.Call {
+func (mr *MockServiceMockRecorder) Pick(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pick", reflect.TypeOf((*MockService)(nil).Pick), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pick", reflect.TypeOf((*MockService)(nil).Pick), ctx, id)
 }
 
 // Run mocks base method.
-func (m *MockService) Run(arg0 context.Context) error {
+func (m *MockService) Run(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", arg0)
+	ret := m.ctrl.Call(m, "Run", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockServiceMockRecorder) Run(arg0 any) *gomock.Call {
+func (mr *MockServiceMockRecorder) Run(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockService)(nil).Run), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockService)(nil).Run), ctx)
 }

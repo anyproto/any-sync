@@ -355,7 +355,7 @@ func (a *aclList) Close(ctx context.Context) (err error) {
 }
 
 func WrapAclRecord(rawRec *consensusproto.RawRecord) *consensusproto.RawRecordWithId {
-	payload, err := rawRec.Marshal()
+	payload, err := rawRec.MarshalVT()
 	if err != nil {
 		panic(err)
 	}

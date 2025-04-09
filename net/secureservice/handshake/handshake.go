@@ -87,8 +87,8 @@ type handshake struct {
 }
 
 func (h *handshake) writeCredentials(cred *handshakeproto.Credentials) (err error) {
-	h.buf = slices.Grow(h.buf, cred.Size()+headerSize)[:cred.Size()+headerSize]
-	n, err := cred.MarshalToSizedBuffer(h.buf[headerSize:])
+	h.buf = slices.Grow(h.buf, cred.SizeVT()+headerSize)[:cred.SizeVT()+headerSize]
+	n, err := cred.MarshalToSizedBufferVT(h.buf[headerSize:])
 	if err != nil {
 		return err
 	}
@@ -96,8 +96,8 @@ func (h *handshake) writeCredentials(cred *handshakeproto.Credentials) (err erro
 }
 
 func (h *handshake) writeProto(proto *handshakeproto.Proto) (err error) {
-	h.buf = slices.Grow(h.buf, proto.Size()+headerSize)[:proto.Size()+headerSize]
-	n, err := proto.MarshalToSizedBuffer(h.buf[headerSize:])
+	h.buf = slices.Grow(h.buf, proto.SizeVT()+headerSize)[:proto.SizeVT()+headerSize]
+	n, err := proto.MarshalToSizedBufferVT(h.buf[headerSize:])
 	if err != nil {
 		return err
 	}
@@ -122,8 +122,8 @@ func (h *handshake) tryWriteErrAndClose(err error) {
 
 func (h *handshake) writeAck(ackErr handshakeproto.Error) (err error) {
 	h.localAck.Error = ackErr
-	h.buf = slices.Grow(h.buf, h.localAck.Size()+headerSize)[:h.localAck.Size()+headerSize]
-	n, err := h.localAck.MarshalTo(h.buf[headerSize:])
+	h.buf = slices.Grow(h.buf, h.localAck.SizeVT()+headerSize)[:h.localAck.SizeVT()+headerSize]
+	n, err := h.localAck.MarshalToSizedBufferVT(h.buf[headerSize:])
 	if err != nil {
 		return err
 	}
@@ -164,17 +164,17 @@ func (h *handshake) readMsg(allowedTypes ...byte) (msg message, err error) {
 	}
 	switch tp {
 	case msgTypeCred:
-		if err = h.remoteCred.Unmarshal(h.buf[:size]); err != nil {
+		if err = h.remoteCred.UnmarshalVT(h.buf[:size]); err != nil {
 			return
 		}
 		msg.cred = h.remoteCred
 	case msgTypeAck:
-		if err = h.remoteAck.Unmarshal(h.buf[:size]); err != nil {
+		if err = h.remoteAck.UnmarshalVT(h.buf[:size]); err != nil {
 			return
 		}
 		msg.ack = h.remoteAck
 	case msgTypeProto:
-		if err = h.remoteProto.Unmarshal(h.buf[:size]); err != nil {
+		if err = h.remoteProto.UnmarshalVT(h.buf[:size]); err != nil {
 			return
 		}
 		msg.proto = h.remoteProto

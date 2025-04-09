@@ -53,7 +53,7 @@ func (c *nodeClient) AclGetRecords(ctx context.Context, spaceId, aclHead string)
 		recs = make([]*consensusproto.RawRecordWithId, len(resp.Records))
 		for i, rec := range resp.Records {
 			recs[i] = &consensusproto.RawRecordWithId{}
-			if err = recs[i].Unmarshal(rec); err != nil {
+			if err = recs[i].UnmarshalVT(rec); err != nil {
 				return err
 			}
 		}
@@ -63,7 +63,7 @@ func (c *nodeClient) AclGetRecords(ctx context.Context, spaceId, aclHead string)
 }
 
 func (c *nodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *consensusproto.RawRecord) (recWithId *consensusproto.RawRecordWithId, err error) {
-	data, err := rec.Marshal()
+	data, err := rec.MarshalVT()
 	if err != nil {
 		return
 	}

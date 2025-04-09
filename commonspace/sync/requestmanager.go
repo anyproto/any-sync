@@ -3,10 +3,10 @@ package sync
 import (
 	"context"
 	"errors"
+	"google.golang.org/protobuf/proto"
 	"io"
 	"strings"
 
-	"github.com/anyproto/protobuf/proto"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"

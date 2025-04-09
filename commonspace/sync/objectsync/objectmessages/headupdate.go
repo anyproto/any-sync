@@ -2,9 +2,9 @@ package objectmessages
 
 import (
 	"fmt"
+	"google.golang.org/protobuf/proto"
 	"sync"
 
-	"github.com/anyproto/protobuf/proto"
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
