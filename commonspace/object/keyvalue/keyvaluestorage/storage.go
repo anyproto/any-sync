@@ -82,7 +82,7 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	return &storage{
+	s := &storage{
 		inner:      inner,
 		keys:       keys,
 		storageId:  storageId,
@@ -90,7 +90,11 @@ func New(
 		indexer:    indexer,
 		syncClient: syncClient,
 		readKeys:   make(map[string]crypto.SymKey),
-	}, nil
+	}
+	s.aclList.RLock()
+	defer s.aclList.RUnlock()
+	err = s.readKeysFromAclState(s.aclList.AclState())
+	return s, err
 }
 
 func (s *storage) Id() string {
