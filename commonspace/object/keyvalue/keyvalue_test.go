@@ -22,7 +22,7 @@ import (
 )
 
 func TestKeyValueService(t *testing.T) {
-	t.Run("basic", func(t *testing.T) {
+	t.Run("different keys", func(t *testing.T) {
 		fxClient, fxServer, serverPeer := prepareFixtures(t)
 		fxClient.add(t, "key1", []byte("value1"))
 		fxClient.add(t, "key2", []byte("value2"))
@@ -35,6 +35,27 @@ func TestKeyValueService(t *testing.T) {
 		fxClient.check(t, "key4", []byte("value4"))
 		fxServer.check(t, "key1", []byte("value1"))
 		fxServer.check(t, "key2", []byte("value2"))
+	})
+	t.Run("change same keys, different values", func(t *testing.T) {
+		fxClient, fxServer, serverPeer := prepareFixtures(t)
+		fxClient.add(t, "key1", []byte("value1"))
+		fxServer.add(t, "key1", []byte("value2"))
+		err := fxClient.SyncWithPeer(serverPeer)
+		require.NoError(t, err)
+		fxClient.limiter.Close()
+		fxClient.check(t, "key1", []byte("value1"))
+		fxClient.check(t, "key1", []byte("value2"))
+		fxServer.check(t, "key1", []byte("value1"))
+		fxServer.check(t, "key1", []byte("value2"))
+		fxClient.add(t, "key1", []byte("value1-2"))
+		fxServer.add(t, "key1", []byte("value2-2"))
+		err = fxClient.SyncWithPeer(serverPeer)
+		require.NoError(t, err)
+		fxClient.limiter.Close()
+		fxClient.check(t, "key1", []byte("value1-2"))
+		fxClient.check(t, "key1", []byte("value2-2"))
+		fxServer.check(t, "key1", []byte("value1-2"))
+		fxServer.check(t, "key1", []byte("value2-2"))
 	})
 }
 
