@@ -126,16 +126,21 @@ func (t *testServer) InboxFetch(context.Context, *coordinatorproto.InboxFetchReq
 	return t.FetchResponse, nil
 }
 
-func (t *testServer) notifySender(rpcStream coordinatorproto.DRPCCoordinator_InboxNotifySubscribeStream, closeCh chan struct{}) {
+func (t *testServer) notifySender(rpcStream coordinatorproto.DRPCCoordinator_NotifySubscribeStream, closeCh chan struct{}) {
 	select {
 	case e := <-t.NotifySenderChan:
-		rpcStream.Send(e)
+		event := &coordinatorproto.NotifySubscribeEvent{
+			Event: &coordinatorproto.NotifySubscribeEvent_InboxEvent{
+				InboxEvent: e,
+			},
+		}
+		rpcStream.Send(event)
 	case <-closeCh:
 		return
 	}
 }
 
-func (t *testServer) InboxNotifySubscribe(req *coordinatorproto.InboxNotifySubscribeRequest, rpcStream coordinatorproto.DRPCCoordinator_InboxNotifySubscribeStream) error {
+func (t *testServer) InboxNotifySubscribe(req *coordinatorproto.InboxNotifySubscribeRequest, rpcStream coordinatorproto.DRPCCoordinator_NotifySubscribeStream) error {
 	closeCh := make(chan struct{})
 	go t.notifySender(rpcStream, closeCh)
 	<-rpcStream.Context().Done()

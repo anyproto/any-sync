@@ -188,8 +188,10 @@ func (c *inboxClient) openStream(ctx context.Context) (st *stream, err error) {
 		log.Warn("streamWatcher: drpc conn error")
 		return nil, err
 	}
-	req := &coordinatorproto.InboxNotifySubscribeRequest{}
-	rpcStream, err := coordinatorproto.NewDRPCCoordinatorClient(dc).InboxNotifySubscribe(ctx, req)
+	req := &coordinatorproto.NotifySubscribeRequest{
+		EventType: coordinatorproto.NotifyEventType_InboxNewMessageEvent,
+	}
+	rpcStream, err := coordinatorproto.NewDRPCCoordinatorClient(dc).NotifySubscribe(ctx, req)
 	if err != nil {
 		log.Warn("streamWatcher: notify subscribe error")
 		return nil, rpcerr.Unwrap(err)

@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func runStream(rpcStream coordinatorproto.DRPCCoordinator_InboxNotifySubscribeClient) *stream {
+func runStream(rpcStream coordinatorproto.DRPCCoordinator_NotifySubscribeClient) *stream {
 	st := &stream{
 		rpcStream: rpcStream,
 		mb:        mb.New[*coordinatorproto.InboxNotifySubscribeEvent](1),
@@ -23,7 +23,7 @@ func runStream(rpcStream coordinatorproto.DRPCCoordinator_InboxNotifySubscribeCl
 var ErrShutdown = errors.New("stream shutted down")
 
 type stream struct {
-	rpcStream  coordinatorproto.DRPCCoordinator_InboxNotifySubscribeClient
+	rpcStream  coordinatorproto.DRPCCoordinator_NotifySubscribeClient
 	mb         *mb.MB[*coordinatorproto.InboxNotifySubscribeEvent]
 	isShutdown atomic.Bool
 }
@@ -53,7 +53,12 @@ func (s *stream) readStream() {
 			return
 		}
 		log.Info("read stream, mb add")
-		if err = s.mb.TryAdd(event); err != nil {
+		inboxEvent := event.GetInboxEvent()
+		if inboxEvent == nil {
+			log.Error("read stream inbox event cast err")
+			continue
+		}
+		if err = s.mb.TryAdd(inboxEvent); err != nil {
 			if err == mb.ErrOverflowed {
 				continue
 			}

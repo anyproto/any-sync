@@ -53,9 +53,10 @@ service Coordinator {
   // InboxFetch returns a set of (new) messages starting from a given offset
   rpc InboxAddMessage(InboxAddMessageRequest) returns (InboxAddMessageResponse);
 
-  // InboxNotifySubscribe returns a subscription to new inbox msg
-  rpc InboxNotifySubscribe(InboxNotifySubscribeRequest) returns (stream InboxNotifySubscribeEvent);
+  // NotifySubscribe returns a subscription to new inbox msg
+  rpc NotifySubscribe(NotifySubscribeRequest) returns (stream NotifySubscribeEvent);
 }
+
 
 message SpaceSignRequest {
   // SpaceId is the id of the signed space
@@ -468,5 +469,22 @@ message InboxAddMessageRequest {
 }
 
 message InboxAddMessageResponse {
+}
 
+// Request to subscribe to notifications
+message NotifySubscribeRequest {
+  NotifyEventType eventType = 1; // Subscribe to multiple event types
+}
+
+// Enum for event types
+enum NotifyEventType {
+  UnspecifiedEvent = 0;
+  InboxNewMessageEvent = 1;
+  NetworkConfigChangedEvent = 2;
+}
+
+message NotifySubscribeEvent {
+  oneof event {
+    InboxNotifySubscribeEvent inboxEvent = 1;
+  }
 }
