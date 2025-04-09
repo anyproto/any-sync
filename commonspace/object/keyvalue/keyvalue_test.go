@@ -1,6 +1,7 @@
 package keyvalue
 
 import (
+	"bytes"
 	"context"
 	"path/filepath"
 	"testing"
@@ -30,6 +31,10 @@ func TestKeyValueService(t *testing.T) {
 		err := fxClient.SyncWithPeer(serverPeer)
 		require.NoError(t, err)
 		fxClient.limiter.Close()
+		fxClient.check(t, "key3", []byte("value3"))
+		fxClient.check(t, "key4", []byte("value4"))
+		fxServer.check(t, "key1", []byte("value1"))
+		fxServer.check(t, "key2", []byte("value2"))
 	})
 }
 
@@ -104,6 +109,19 @@ func newFixture(t *testing.T, keys *accountdata.AccountKeys, spacePayload spaces
 func (fx *fixture) add(t *testing.T, key string, value []byte) {
 	err := fx.defaultStore.Set(ctx, key, value)
 	require.NoError(t, err)
+}
+
+func (fx *fixture) check(t *testing.T, key string, value []byte) bool {
+	kv, decryptor, err := fx.defaultStore.GetAll(ctx, key)
+	require.NoError(t, err)
+	for _, v := range kv {
+		decryptedValue, err := decryptor(v)
+		require.NoError(t, err)
+		if bytes.Equal(value, decryptedValue) {
+			return true
+		}
+	}
+	return false
 }
 
 func newStorageCreatePayload(t *testing.T, keys *accountdata.AccountKeys) spacestorage.SpaceStorageCreatePayload {
