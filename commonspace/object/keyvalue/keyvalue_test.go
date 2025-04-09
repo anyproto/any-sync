@@ -120,7 +120,7 @@ func newFixture(t *testing.T, keys *accountdata.AccountKeys, spacePayload spaces
 		clientFactory: spacesyncproto.ClientFactoryFunc(spacesyncproto.NewDRPCSpaceSyncClient),
 		defaultStore:  defaultStorage,
 	}
-	require.NoError(t, spacesyncproto.DRPCRegisterSpaceSync(rpcHandler, &testServer{service: service}))
+	require.NoError(t, spacesyncproto.DRPCRegisterSpaceSync(rpcHandler, &testServer{service: service, t: t}))
 	return &fixture{
 		keyValueService: service,
 		server:          rpcHandler,
@@ -170,6 +170,7 @@ func newStorageCreatePayload(t *testing.T, keys *accountdata.AccountKeys) spaces
 type testServer struct {
 	spacesyncproto.DRPCSpaceSyncUnimplementedServer
 	service *keyValueService
+	t *testing.T
 }
 
 func (t *testServer) StoreDiff(ctx context.Context, req *spacesyncproto.StoreDiffRequest) (*spacesyncproto.StoreDiffResponse, error) {
@@ -177,5 +178,8 @@ func (t *testServer) StoreDiff(ctx context.Context, req *spacesyncproto.StoreDif
 }
 
 func (t *testServer) StoreElements(stream spacesyncproto.DRPCSpaceSync_StoreElementsStream) error {
+	msg, err := stream.Recv()
+	require.NoError(t.t, err)
+	require.NotEmpty(t.t, msg.SpaceId)
 	return t.service.HandleStoreElementsRequest(ctx, stream)
 }

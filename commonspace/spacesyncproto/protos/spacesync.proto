@@ -215,6 +215,7 @@ message StoreKeyValue {
     bytes value = 2;
     bytes identitySignature = 3;
     bytes peerSignature = 4;
+    string spaceId = 5;
 }
 
 message StoreKeyValues {

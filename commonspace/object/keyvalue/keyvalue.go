@@ -80,6 +80,10 @@ func (k *keyValueService) syncWithPeer(ctx context.Context, p peer.Peer) (err er
 		return err
 	}
 	defer stream.CloseSend()
+	err = stream.Send(&spacesyncproto.StoreKeyValue{SpaceId: k.spaceId})
+	if err != nil {
+		return err
+	}
 	for _, id := range append(removedIds, changedIds...) {
 		kv, err := innerStorage.GetKeyPeerId(ctx, id)
 		if err != nil {

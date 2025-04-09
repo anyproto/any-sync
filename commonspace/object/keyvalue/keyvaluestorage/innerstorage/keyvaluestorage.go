@@ -89,9 +89,6 @@ func (s *storage) Diff() ldiff.CompareDiff {
 func (s *storage) GetKeyPeerId(ctx context.Context, keyPeerId string) (value KeyValue, err error) {
 	doc, err := s.collection.FindId(ctx, keyPeerId)
 	if err != nil {
-		if errors.Is(err, anystore.ErrDocNotFound) {
-			return KeyValue{}, nil
-		}
 		return
 	}
 	return s.keyValueFromDoc(doc), nil
