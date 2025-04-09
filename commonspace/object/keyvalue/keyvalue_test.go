@@ -3,8 +3,13 @@ package keyvalue
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"math/rand"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
+	"time"
 
 	anystore "github.com/anyproto/any-store"
 	"github.com/stretchr/testify/require"
@@ -36,6 +41,7 @@ func TestKeyValueService(t *testing.T) {
 		fxServer.check(t, "key1", []byte("value1"))
 		fxServer.check(t, "key2", []byte("value2"))
 	})
+
 	t.Run("change same keys, different values", func(t *testing.T) {
 		fxClient, fxServer, serverPeer := prepareFixtures(t)
 		fxClient.add(t, "key1", []byte("value1"))
@@ -56,6 +62,65 @@ func TestKeyValueService(t *testing.T) {
 		fxClient.check(t, "key1", []byte("value2-2"))
 		fxServer.check(t, "key1", []byte("value1-2"))
 		fxServer.check(t, "key1", []byte("value2-2"))
+	})
+
+	t.Run("random keys and values", func(t *testing.T) {
+		rand.Seed(time.Now().UnixNano())
+		diffEntries := 100
+		ovelappingEntries := 10
+		fxClient, fxServer, serverPeer := prepareFixtures(t)
+		numClientEntries := 5 + rand.Intn(diffEntries)
+		numServerEntries := 5 + rand.Intn(diffEntries)
+		allKeys := make(map[string]bool)
+		for i := 0; i < numClientEntries; i++ {
+			key := fmt.Sprintf("client-key-%d", i)
+			value := []byte(fmt.Sprintf("client-value-%d", i))
+			fxClient.add(t, key, value)
+			allKeys[key] = true
+		}
+		for i := 0; i < numServerEntries; i++ {
+			key := fmt.Sprintf("server-key-%d", i)
+			value := []byte(fmt.Sprintf("server-value-%d", i))
+			fxServer.add(t, key, value)
+			allKeys[key] = true
+		}
+		numOverlappingKeys := 3 + rand.Intn(ovelappingEntries)
+		for i := 0; i < numOverlappingKeys; i++ {
+			key := fmt.Sprintf("overlap-key-%d", i)
+			clientValue := []byte(fmt.Sprintf("client-overlap-value-%d", i))
+			serverValue := []byte(fmt.Sprintf("server-overlap-value-%d", i))
+			fxClient.add(t, key, clientValue)
+			fxServer.add(t, key, serverValue)
+			allKeys[key] = true
+		}
+		err := fxClient.SyncWithPeer(serverPeer)
+		require.NoError(t, err)
+		fxClient.limiter.Close()
+
+		for key := range allKeys {
+			if strings.HasPrefix(key, "client-key-") {
+				i, _ := strconv.Atoi(strings.TrimPrefix(key, "client-key-"))
+				value := []byte(fmt.Sprintf("client-value-%d", i))
+				fxClient.check(t, key, value)
+				fxServer.check(t, key, value)
+			}
+			if strings.HasPrefix(key, "server-key-") {
+				i, _ := strconv.Atoi(strings.TrimPrefix(key, "server-key-"))
+				value := []byte(fmt.Sprintf("server-value-%d", i))
+				fxClient.check(t, key, value)
+				fxServer.check(t, key, value)
+			}
+		}
+		for i := 0; i < numOverlappingKeys; i++ {
+			key := fmt.Sprintf("overlap-key-%d", i)
+			clientValue := []byte(fmt.Sprintf("client-overlap-value-%d", i))
+			serverValue := []byte(fmt.Sprintf("server-overlap-value-%d", i))
+
+			fxClient.check(t, key, clientValue)
+			fxClient.check(t, key, serverValue)
+			fxServer.check(t, key, clientValue)
+			fxServer.check(t, key, serverValue)
+		}
 	})
 }
 
@@ -170,7 +235,7 @@ func newStorageCreatePayload(t *testing.T, keys *accountdata.AccountKeys) spaces
 type testServer struct {
 	spacesyncproto.DRPCSpaceSyncUnimplementedServer
 	service *keyValueService
-	t *testing.T
+	t       *testing.T
 }
 
 func (t *testServer) StoreDiff(ctx context.Context, req *spacesyncproto.StoreDiffRequest) (*spacesyncproto.StoreDiffResponse, error) {
