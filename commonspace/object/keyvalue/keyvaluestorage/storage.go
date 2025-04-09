@@ -49,6 +49,7 @@ func (n NoOpIndexer) Index(decryptor Decryptor, keyValue ...innerstorage.KeyValu
 
 type Storage interface {
 	Id() string
+	Prepare() error
 	Set(ctx context.Context, key string, value []byte) error
 	SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreKeyValue) error
 	GetAll(ctx context.Context, key string) (values []innerstorage.KeyValue, decryptor Decryptor, err error)
@@ -91,10 +92,13 @@ func New(
 		syncClient: syncClient,
 		readKeys:   make(map[string]crypto.SymKey),
 	}
+	return s, nil
+}
+
+func (s *storage) Prepare() error {
 	s.aclList.RLock()
 	defer s.aclList.RUnlock()
-	err = s.readKeysFromAclState(s.aclList.AclState())
-	return s, err
+	return s.readKeysFromAclState(s.aclList.AclState())
 }
 
 func (s *storage) Id() string {

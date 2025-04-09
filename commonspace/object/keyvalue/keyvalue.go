@@ -216,7 +216,7 @@ func (k *keyValueService) Name() (name string) {
 }
 
 func (k *keyValueService) Run(ctx context.Context) (err error) {
-	return nil
+	return k.defaultStore.Prepare()
 }
 
 func (k *keyValueService) Close(ctx context.Context) (err error) {

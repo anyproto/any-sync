@@ -193,10 +193,10 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 		Register(peerManager).
 		Register(st).
 		Register(keyValueIndexer).
-		Register(keyvalue.New()).
 		Register(objectsync.New()).
 		Register(sync.NewSyncService()).
 		Register(syncacl.New()).
+		Register(keyvalue.New()).
 		Register(deletionstate.New()).
 		Register(deletionmanager.New()).
 		Register(settings.New()).
