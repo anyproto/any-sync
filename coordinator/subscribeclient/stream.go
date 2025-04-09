@@ -1,4 +1,4 @@
-package inboxclient
+package subscribeclient
 
 import (
 	"context"
