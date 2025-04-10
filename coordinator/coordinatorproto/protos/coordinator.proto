@@ -484,6 +484,8 @@ enum NotifyEventType {
 }
 
 message NotifySubscribeEvent {
+  Type
+  Payload
   oneof event {
     InboxNotifySubscribeEvent inboxEvent = 1;
   }
