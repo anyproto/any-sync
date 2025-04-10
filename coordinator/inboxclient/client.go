@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 
 	"storj.io/drpc"
 
@@ -37,7 +36,6 @@ type inboxClient struct {
 	pool            pool.Pool
 	account         commonaccount.Service
 	subscribeClient subscribeclient.SubscribeClientService
-	mu              sync.Mutex
 	close           chan struct{}
 
 	running         bool
@@ -49,7 +47,7 @@ func New() InboxClient {
 }
 
 type InboxClient interface {
-	InboxFetch(ctx context.Context, offset string) (messages []*coordinatorproto.InboxMessage, err error)
+	InboxFetch(ctx context.Context, offset string) (messages []*coordinatorproto.InboxMessage, hasMore bool, err error)
 	InboxAddMessage(ctx context.Context, receiverPubKey crypto.PubKey, message *coordinatorproto.InboxMessage) (err error)
 	SetMessageReceiver(receiver MessageReceiver) (err error)
 	app.ComponentRunnable
@@ -73,23 +71,27 @@ func (c *inboxClient) SetMessageReceiver(receiver MessageReceiver) (err error) {
 	if c.running {
 		return fmt.Errorf("set receiver must be called before Run")
 	}
+	c.messageReceiver = receiver
+
+	return
+}
+
+func (c *inboxClient) Run(ctx context.Context) (err error) {
+	c.running = true
+	if c.messageReceiver == nil {
+		err = fmt.Errorf("messageReceiver is nil: can't start streamWatcher()")
+		return err
+	}
 
 	c.subscribeClient.Subscribe(coordinatorproto.NotifyEventType_InboxNewMessageEvent, func(event *coordinatorproto.NotifySubscribeEvent) {
 		inboxEvent := event.GetInboxEvent()
 		if inboxEvent == nil {
 			err = fmt.Errorf("inboxEvent is nil. Original event: %#v", event)
+		} else {
+			log.Debug("calling messagereceiver from subscribe()")
+			c.messageReceiver(inboxEvent)
 		}
-		receiver(inboxEvent)
 	})
-	return
-}
-
-func (c *inboxClient) Run(ctx context.Context) error {
-	c.running = true
-	if !c.subscribeClient.IsSubscribed(CName, coordinatorproto.NotifyEventType_InboxNewMessageEvent) {
-		err := fmt.Errorf("messageReceiver is nil: it must be set to get inbox notifications")
-		return err
-	}
 
 	return nil
 }
@@ -104,7 +106,7 @@ func (c *inboxClient) Close(_ context.Context) error {
 //
 // It is assumed that caller will save the last message id somewhere locally to reuse it
 // in the next call.
-func (c *inboxClient) InboxFetch(ctx context.Context, offset string) (messages []*coordinatorproto.InboxMessage, err error) {
+func (c *inboxClient) InboxFetch(ctx context.Context, offset string) (messages []*coordinatorproto.InboxMessage, hasMore bool, err error) {
 	log.Debug("inbox fetch", zap.String("offset", offset))
 	err = c.doClient(ctx, func(cl coordinatorproto.DRPCCoordinatorClient) error {
 		resp, err := cl.InboxFetch(ctx, &coordinatorproto.InboxFetchRequest{
@@ -114,8 +116,10 @@ func (c *inboxClient) InboxFetch(ctx context.Context, offset string) (messages [
 			return rpcerr.Unwrap(err)
 		}
 		messages = resp.Messages
+		hasMore = resp.HasMore
 		return nil
 	})
+
 	return
 
 }

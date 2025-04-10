@@ -8,13 +8,14 @@ import (
 
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/cheggaaa/mb/v3"
+
 	"go.uber.org/zap"
 )
 
 func runStream(rpcStream coordinatorproto.DRPCCoordinator_NotifySubscribeClient) *stream {
 	st := &stream{
 		rpcStream: rpcStream,
-		mb:        mb.New[*coordinatorproto.InboxNotifySubscribeEvent](1),
+		mb:        mb.New[*coordinatorproto.NotifySubscribeEvent](100),
 	}
 	go st.readStream()
 	return st
@@ -24,13 +25,13 @@ var ErrShutdown = errors.New("stream shutted down")
 
 type stream struct {
 	rpcStream  coordinatorproto.DRPCCoordinator_NotifySubscribeClient
-	mb         *mb.MB[*coordinatorproto.InboxNotifySubscribeEvent]
+	mb         *mb.MB[*coordinatorproto.NotifySubscribeEvent]
 	isShutdown atomic.Bool
 }
 
 // if close, reconnect
 // if shutdown, don't try more
-func (s *stream) WaitNotifyEvents() (*coordinatorproto.InboxNotifySubscribeEvent, error) {
+func (s *stream) WaitNotifyEvents() (*coordinatorproto.NotifySubscribeEvent, error) {
 	event, err := s.mb.WaitOne(context.TODO())
 	if err != nil {
 		if s.isShutdown.Load() {
@@ -53,17 +54,7 @@ func (s *stream) readStream() {
 			return
 		}
 		log.Info("read stream, mb add")
-		inboxEvent := event.GetInboxEvent()
-		if inboxEvent == nil {
-			log.Error("read stream inbox event cast err")
-			continue
-		}
-		if err = s.mb.TryAdd(inboxEvent); err != nil {
-			if err == mb.ErrOverflowed {
-				continue
-			}
-			return
-		}
+		s.mb.Add(context.TODO(), event)
 	}
 }
 

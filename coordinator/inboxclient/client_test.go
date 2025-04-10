@@ -39,7 +39,7 @@ func TestInbox_Fetch(t *testing.T) {
 
 		myTs.FetchResponse = makeFetchResponse()
 		fxC, _, _ := makeClientServer(t, myTs)
-		msgs, err := fxC.InboxFetch(ctx, "")
+		msgs, _, err := fxC.InboxFetch(ctx, "")
 
 		require.NoError(t, err)
 		assert.Len(t, msgs, 10)
@@ -138,7 +138,7 @@ func TestInbox_Notify(t *testing.T) {
 
 		select {
 		case <-done:
-			msgs, err := fxC.InboxFetch(ctx, "")
+			msgs, _, err := fxC.InboxFetch(ctx, "")
 			require.NoError(t, err)
 			assert.Len(t, msgs, 11)
 

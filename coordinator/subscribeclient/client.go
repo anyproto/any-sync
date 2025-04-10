@@ -2,7 +2,6 @@ package subscribeclient
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -19,10 +18,6 @@ import (
 const CName = "common.subscribeclient"
 
 var log = logger.NewNamed(CName)
-
-var (
-	ErrSomeError = errors.New("some error")
-)
 
 func New() SubscribeClientService {
 	return new(subscribeClient)
@@ -61,6 +56,7 @@ func (s *subscribeClient) Name() (name string) {
 }
 
 func (s *subscribeClient) Run(ctx context.Context) error {
+	go s.streamWatcher()
 	return nil
 }
 
@@ -125,12 +121,12 @@ func (s *subscribeClient) streamWatcher() {
 		log.Info("streamWatcher: open inbox stream")
 		if st, err = s.openStream(context.Background()); err != nil {
 			// can't open stream, we will retry until success connection or close
-			log.Error("streamWatcher: watch inbox error, retry", zap.Error(err))
+			log.Error("streamWatcher: subscribe watch error, retry", zap.Error(err))
 			if i < 10 {
 				i++
 			}
 			sleepTime := time.Second * time.Duration(i)
-			log.Error("streamWatcher: watch inbox erro, retry", zap.Error(err), zap.Duration("waitTime", sleepTime))
+			log.Error("streamWatcher: subscribe watch error, retry", zap.Error(err), zap.Duration("waitTime", sleepTime))
 			select {
 			case <-time.After(sleepTime):
 				continue
@@ -159,8 +155,19 @@ func (s *subscribeClient) streamReader() error {
 		if err != nil {
 			return err
 		}
-		// disapatch event to all listeners for this type
-		event.
-			s.messageReceiver(event)
+		// disapatch event to listener
+
+		s.mucb.Lock()
+		if e := event.GetInboxEvent(); e != nil {
+			if receiver, ok := s.callbacks[coordinatorproto.NotifyEventType_InboxNewMessageEvent]; ok {
+				log.Debug("calling message receiver for inboxNotify")
+				receiver(event)
+			} else {
+				log.Warn("got InboxNewMessageEvent, but have no receiver", zap.String("event", fmt.Sprintf("%#v", event)))
+			}
+		} else {
+			log.Warn("unipmlemented event type", zap.String("event", fmt.Sprintf("%#v", event)))
+		}
+		s.mucb.Unlock()
 	}
 }
