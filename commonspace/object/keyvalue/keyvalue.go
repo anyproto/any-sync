@@ -23,6 +23,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/rpc/rpcerr"
+	"github.com/anyproto/any-sync/util/cidutil"
 )
 
 var ErrUnexpectedMessageType = errors.New("unexpected message type")
@@ -193,7 +194,10 @@ func (k *keyValueService) Init(a *app.App) (err error) {
 	aclList := a.MustComponent(syncacl.CName).(list.AclList)
 	spaceStorage := a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
 	syncService := a.MustComponent(sync.CName).(sync.SyncService)
-	k.storageId = storageIdFromSpace(k.spaceId)
+	k.storageId, err = storageIdFromSpace(k.spaceId)
+	if err != nil {
+		return err
+	}
 	indexer := a.Component(keyvaluestorage.IndexerCName).(keyvaluestorage.Indexer)
 	if indexer == nil {
 		indexer = keyvaluestorage.NoOpIndexer{}
@@ -225,6 +229,18 @@ func (k *keyValueService) Close(ctx context.Context) (err error) {
 	return nil
 }
 
-func storageIdFromSpace(spaceId string) (storageId string) {
-	return spaceId + ".keyvalue"
+func storageIdFromSpace(spaceId string) (storageId string, err error) {
+	header := &spacesyncproto.StorageHeader{
+		SpaceId:     spaceId,
+		StorageName: "default",
+	}
+	data, err := proto.Marshal(header)
+	if err != nil {
+		return "", err
+	}
+	cid, err := cidutil.NewCidFromBytes(data)
+	if err != nil {
+		return "", err
+	}
+	return cid, nil
 }

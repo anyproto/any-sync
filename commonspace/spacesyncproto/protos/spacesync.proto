@@ -149,6 +149,12 @@ message ObjectDelete {
     string id = 1;
 }
 
+// StoreHeader is a header for a store
+message StoreHeader {
+    string spaceId = 1;
+    string storageName = 2;
+}
+
 // SpaceDelete is a message containing deleter peer id
 message SpaceDelete {
     string deleterPeerId = 1;
