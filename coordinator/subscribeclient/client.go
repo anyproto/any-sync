@@ -122,7 +122,7 @@ func (s *subscribeClient) streamWatcher() {
 		if st, err = s.openStream(context.Background()); err != nil {
 			// can't open stream, we will retry until success connection or close
 			log.Error("streamWatcher: subscribe watch error, retry", zap.Error(err))
-			if i < 10 {
+			if i < 60 {
 				i++
 			}
 			sleepTime := time.Second * time.Duration(i)
