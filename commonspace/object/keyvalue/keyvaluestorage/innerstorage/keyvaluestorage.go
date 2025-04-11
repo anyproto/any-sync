@@ -121,7 +121,7 @@ func (s *storage) IterateValues(ctx context.Context, iterFunc func(kv KeyValue) 
 func (s *storage) IteratePrefix(ctx context.Context, prefix string, iterFunc func(kv KeyValue) error) (err error) {
 	filter := query.Key{Path: []string{"id"}, Filter: query.NewComp(query.CompOpGte, prefix)}
 	qry := s.collection.Find(filter).Sort("id")
-	iter, err := s.collection.Find(qry).Iter(ctx)
+	iter, err := qry.Iter(ctx)
 	if err != nil {
 		return
 	}
@@ -134,7 +134,7 @@ func (s *storage) IteratePrefix(ctx context.Context, prefix string, iterFunc fun
 			return
 		}
 		if !strings.Contains(doc.Value().GetString("id"), prefix) {
-			continue
+			break
 		}
 		err := iterFunc(s.keyValueFromDoc(doc))
 		if err != nil {

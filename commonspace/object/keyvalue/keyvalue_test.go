@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -121,6 +122,111 @@ func TestKeyValueService(t *testing.T) {
 			fxServer.check(t, key, clientValue)
 			fxServer.check(t, key, serverValue)
 		}
+		foundClientKeys := make(map[string]bool)
+		foundServerKeys := make(map[string]bool)
+		err = fxClient.defaultStore.Iterate(context.Background(), func(decryptor keyvaluestorage.Decryptor, key string, values []innerstorage.KeyValue) (bool, error) {
+			foundClientKeys[key] = true
+			return true, nil
+		})
+		require.NoError(t, err)
+		err = fxServer.defaultStore.Iterate(context.Background(), func(decryptor keyvaluestorage.Decryptor, key string, values []innerstorage.KeyValue) (bool, error) {
+			foundServerKeys[key] = true
+			return true, nil
+		})
+		require.NoError(t, err)
+		require.True(t, mapEqual(allKeys, foundServerKeys), "expected all client keys to be found")
+		require.True(t, mapEqual(foundClientKeys, foundServerKeys), "expected all client keys to be found")
+	})
+}
+
+func TestKeyValueServiceIterate(t *testing.T) {
+	t.Run("empty storage", func(t *testing.T) {
+		fxClient, _, _ := prepareFixtures(t)
+		var keys []string
+		err := fxClient.defaultStore.Iterate(context.Background(), func(decryptor keyvaluestorage.Decryptor, key string, values []innerstorage.KeyValue) (bool, error) {
+			keys = append(keys, key)
+			return true, nil
+		})
+		require.NoError(t, err)
+		require.Empty(t, keys, "expected no keys in empty storage")
+	})
+
+	t.Run("single key later value", func(t *testing.T) {
+		fxClient, _, _ := prepareFixtures(t)
+		err := fxClient.defaultStore.Set(context.Background(), "test-key", []byte("value1"))
+		require.NoError(t, err)
+		err = fxClient.defaultStore.Set(context.Background(), "test-key", []byte("value2"))
+		require.NoError(t, err)
+		var keys []string
+		valueCount := 0
+		err = fxClient.defaultStore.Iterate(context.Background(), func(decryptor keyvaluestorage.Decryptor, key string, values []innerstorage.KeyValue) (bool, error) {
+			keys = append(keys, key)
+			valueCount = len(values)
+
+			for _, kv := range values {
+				val, err := decryptor(kv)
+				require.NoError(t, err)
+				require.Equal(t, "value2", string(val))
+			}
+			return true, nil
+		})
+		require.NoError(t, err)
+		require.Equal(t, 1, len(keys), "expected one key")
+		require.Equal(t, "test-key", keys[0], "expected key to be 'test-key'")
+		require.Equal(t, 1, valueCount, "expected one value for key")
+	})
+
+	t.Run("multiple keys", func(t *testing.T) {
+		fxClient, _, _ := prepareFixtures(t)
+		testKeys := []string{"key1", "key2", "key3"}
+		for _, key := range testKeys {
+			err := fxClient.defaultStore.Set(context.Background(), key, []byte("value-"+key))
+			require.NoError(t, err)
+		}
+		var foundKeys []string
+		err := fxClient.defaultStore.Iterate(context.Background(), func(decryptor keyvaluestorage.Decryptor, key string, values []innerstorage.KeyValue) (bool, error) {
+			foundKeys = append(foundKeys, key)
+			require.Equal(t, 1, len(values), "Expected one value for key: "+key)
+			val, err := decryptor(values[0])
+			require.NoError(t, err)
+			require.Equal(t, "value-"+key, string(val), "Value doesn't match for key: "+key)
+
+			return true, nil
+		})
+		require.NoError(t, err)
+		sort.Strings(foundKeys)
+		sort.Strings(testKeys)
+		require.Equal(t, testKeys, foundKeys, "Expected all keys to be found")
+	})
+
+	t.Run("early termination", func(t *testing.T) {
+		fxClient, _, _ := prepareFixtures(t)
+		testKeys := []string{"key1", "key2", "key3", "key4", "key5"}
+		for _, key := range testKeys {
+			err := fxClient.defaultStore.Set(context.Background(), key, []byte("value-"+key))
+			require.NoError(t, err)
+		}
+
+		var foundKeys []string
+		err := fxClient.defaultStore.Iterate(context.Background(), func(decryptor keyvaluestorage.Decryptor, key string, values []innerstorage.KeyValue) (bool, error) {
+			foundKeys = append(foundKeys, key)
+			return len(foundKeys) < 2, nil
+		})
+		require.NoError(t, err)
+		require.Equal(t, 2, len(foundKeys), "expected to find exactly 2 keys before stopping")
+	})
+
+	t.Run("error during iteration", func(t *testing.T) {
+		fxClient, _, _ := prepareFixtures(t)
+
+		err := fxClient.defaultStore.Set(context.Background(), "test-key", []byte("test-value"))
+		require.NoError(t, err)
+
+		expectedErr := context.Canceled
+		err = fxClient.defaultStore.Iterate(context.Background(), func(decryptor keyvaluestorage.Decryptor, key string, values []innerstorage.KeyValue) (bool, error) {
+			return false, expectedErr
+		})
+		require.Equal(t, expectedErr, err, "expected error to be propagated")
 	})
 }
 
@@ -139,6 +245,18 @@ func prepareFixtures(t *testing.T) (fxClient *fixture, fxServer *fixture, server
 	_, err = peer.NewPeer(clientConn, fxServer.server)
 	require.NoError(t, err)
 	return
+}
+
+func mapEqual[K comparable, V comparable](map1, map2 map[K]V) bool {
+	if len(map1) != len(map2) {
+		return false
+	}
+	for key, val1 := range map1 {
+		if val2, ok := map2[key]; !ok || val1 != val2 {
+			return false
+		}
+	}
+	return true
 }
 
 var ctx = context.Background()

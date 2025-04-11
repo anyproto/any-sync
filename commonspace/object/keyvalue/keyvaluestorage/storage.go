@@ -54,7 +54,7 @@ type Storage interface {
 	Set(ctx context.Context, key string, value []byte) error
 	SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreKeyValue) error
 	GetAll(ctx context.Context, key string, get func(decryptor Decryptor, values []innerstorage.KeyValue) error) error
-	Iterate(ctx context.Context, f func(key string, values []innerstorage.KeyValue) (bool, error)) error
+	Iterate(ctx context.Context, f func(decryptor Decryptor, key string, values []innerstorage.KeyValue) (bool, error)) error
 	InnerStorage() innerstorage.KeyValueStorage
 }
 
@@ -139,12 +139,12 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 	if err != nil {
 		return err
 	}
-	timestampMilli := time.Now().UnixMilli()
+	timestampMicro := time.Now().UnixMicro()
 	inner := spacesyncproto.StoreKeyInner{
 		Peer:           protoPeerKey,
 		Identity:       protoIdentityKey,
 		Value:          value,
-		TimestampMilli: timestampMilli,
+		TimestampMicro: timestampMicro,
 		AclHeadId:      headId,
 		Key:            key,
 	}
@@ -164,7 +164,7 @@ func (s *storage) Set(ctx context.Context, key string, value []byte) error {
 	keyValue := innerstorage.KeyValue{
 		KeyPeerId:      keyPeerId,
 		Key:            key,
-		TimestampMilli: int(timestampMilli),
+		TimestampMilli: int(timestampMicro),
 		Identity:       identityKey.GetPublic().Account(),
 		PeerId:         peerIdKey.GetPublic().PeerId(),
 		AclId:          headId,
@@ -251,6 +251,9 @@ func (s *storage) SetRaw(ctx context.Context, keyValue ...*spacesyncproto.StoreK
 func (s *storage) GetAll(ctx context.Context, key string, get func(decryptor Decryptor, values []innerstorage.KeyValue) error) (err error) {
 	var values []innerstorage.KeyValue
 	err = s.inner.IteratePrefix(ctx, key, func(kv innerstorage.KeyValue) error {
+		bytes := make([]byte, len(kv.Value.Value))
+		copy(bytes, kv.Value.Value)
+		kv.Value.Value = bytes
 		values = append(values, kv)
 		return nil
 	})
@@ -297,25 +300,32 @@ func (s *storage) readKeysFromAclState(state *list.AclState) (err error) {
 	return err
 }
 
-func (s *storage) Iterate(ctx context.Context, f func(key string, values []innerstorage.KeyValue) (bool, error)) (err error) {
+func (s *storage) Iterate(ctx context.Context, f func(decryptor Decryptor, key string, values []innerstorage.KeyValue) (bool, error)) (err error) {
+	s.mx.Lock()
+	defer s.mx.Unlock()
 	var (
 		curKey = ""
+		// TODO: reuse buffer
 		values []innerstorage.KeyValue
 	)
 	err = s.inner.IterateValues(ctx, func(kv innerstorage.KeyValue) (bool, error) {
 		if kv.Key != curKey {
 			if curKey != "" {
-				iter, err := f(curKey, values)
+				iter, err := f(s.decrypt, curKey, values)
 				if err != nil {
 					return false, err
 				}
 				if !iter {
+					values = nil
 					return false, nil
 				}
 			}
 			curKey = kv.Key
 			values = values[:0]
 		}
+		bytes := make([]byte, len(kv.Value.Value))
+		copy(bytes, kv.Value.Value)
+		kv.Value.Value = bytes
 		values = append(values, kv)
 		return true, nil
 	})
@@ -323,7 +333,7 @@ func (s *storage) Iterate(ctx context.Context, f func(key string, values []inner
 		return err
 	}
 	if len(values) > 0 {
-		_, err = f(curKey, values)
+		_, err = f(s.decrypt, curKey, values)
 	}
 	return err
 }
