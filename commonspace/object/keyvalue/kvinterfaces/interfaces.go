@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_kvinterfaces/mock_kvinterfaces.go github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces KeyValueService
 package kvinterfaces
 
 import (

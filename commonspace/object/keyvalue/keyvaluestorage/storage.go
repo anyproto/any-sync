@@ -1,3 +1,4 @@
+//go:generate mockgen -destination mock_keyvaluestorage/mock_keyvaluestorage.go github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage Storage
 package keyvaluestorage
 
 import (

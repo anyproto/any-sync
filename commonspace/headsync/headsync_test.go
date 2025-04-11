@@ -22,6 +22,9 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/mock_syncacl"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage/mock_keyvaluestorage"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces/mock_kvinterfaces"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager/mock_treemanager"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
@@ -34,6 +37,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto/mock_spacesyncproto"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/nodeconf/mock_nodeconf"
+	"github.com/anyproto/any-sync/testutil/anymock"
 )
 
 type mockConfig struct {
@@ -57,6 +61,8 @@ type headSyncFixture struct {
 	app        *app.App
 
 	configurationMock      *mock_nodeconf.MockService
+	kvMock                 *mock_kvinterfaces.MockKeyValueService
+	defStoreMock           *mock_keyvaluestorage.MockStorage
 	storageMock            *mock_spacestorage.MockSpaceStorage
 	peerManagerMock        *mock_peermanager.MockPeerManager
 	credentialProviderMock *mock_credentialprovider.MockCredentialProvider
@@ -96,6 +102,11 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 	treeSyncerMock := mock_treesyncer.NewMockTreeSyncer(ctrl)
 	headStorage := mock_headstorage.NewMockHeadStorage(ctrl)
 	stateStorage := mock_statestorage.NewMockStateStorage(ctrl)
+	kvMock := mock_kvinterfaces.NewMockKeyValueService(ctrl)
+	anymock.ExpectComp(kvMock.EXPECT(), kvinterfaces.CName)
+	defStore := mock_keyvaluestorage.NewMockStorage(ctrl)
+	kvMock.EXPECT().DefaultStore().Return(defStore).AnyTimes()
+	defStore.EXPECT().Id().Return("store").AnyTimes()
 	storageMock.EXPECT().HeadStorage().AnyTimes().Return(headStorage)
 	storageMock.EXPECT().StateStorage().AnyTimes().Return(stateStorage)
 	treeSyncerMock.EXPECT().Name().AnyTimes().Return(treesyncer.CName)
@@ -108,6 +119,7 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 	a := &app.App{}
 	a.Register(spaceState).
 		Register(aclMock).
+		Register(kvMock).
 		Register(mockConfig{}).
 		Register(configurationMock).
 		Register(storageMock).
@@ -121,6 +133,8 @@ func newHeadSyncFixture(t *testing.T) *headSyncFixture {
 		spaceState:             spaceState,
 		ctrl:                   ctrl,
 		app:                    a,
+		kvMock:                 kvMock,
+		defStoreMock:           defStore,
 		configurationMock:      configurationMock,
 		storageMock:            storageMock,
 		diffContainerMock:      diffContainerMock,
