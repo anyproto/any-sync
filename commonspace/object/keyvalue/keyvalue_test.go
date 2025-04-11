@@ -197,17 +197,20 @@ func (fx *fixture) add(t *testing.T, key string, value []byte) {
 	require.NoError(t, err)
 }
 
-func (fx *fixture) check(t *testing.T, key string, value []byte) bool {
-	kv, decryptor, err := fx.defaultStore.GetAll(ctx, key)
-	require.NoError(t, err)
-	for _, v := range kv {
-		decryptedValue, err := decryptor(v)
-		require.NoError(t, err)
-		if bytes.Equal(value, decryptedValue) {
-			return true
+func (fx *fixture) check(t *testing.T, key string, value []byte) (isFound bool) {
+	err := fx.defaultStore.GetAll(ctx, key, func(decryptor keyvaluestorage.Decryptor, values []innerstorage.KeyValue) error {
+		for _, v := range values {
+			decryptedValue, err := decryptor(v)
+			require.NoError(t, err)
+			if bytes.Equal(value, decryptedValue) {
+				isFound = true
+				break
+			}
 		}
-	}
-	return false
+		return nil
+	})
+	require.NoError(t, err)
+	return
 }
 
 func newStorageCreatePayload(t *testing.T, keys *accountdata.AccountKeys) spacestorage.SpaceStorageCreatePayload {
