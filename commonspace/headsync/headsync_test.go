@@ -178,14 +178,16 @@ func TestHeadSync(t *testing.T) {
 
 		headEntries := []headstorage.HeadsEntry{
 			{
-				Id:        "id1",
-				Heads:     []string{"h1", "h2"},
-				IsDerived: false,
+				Id:             "id1",
+				Heads:          []string{"h1", "h2"},
+				CommonSnapshot: "id1",
+				IsDerived:      false,
 			},
 			{
-				Id:        "id2",
-				Heads:     []string{"h3", "h4"},
-				IsDerived: false,
+				Id:             "id2",
+				Heads:          []string{"h3", "h4"},
+				CommonSnapshot: "id2",
+				IsDerived:      false,
 			},
 		}
 		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -210,8 +212,9 @@ func TestHeadSync(t *testing.T) {
 			Id:   "aclId",
 			Head: "headId",
 		})
-		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
-		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Set([]ldiff.Element{})
+		fx.diffContainerMock.EXPECT().NewDiff().AnyTimes().Return(fx.diffMock)
+		fx.diffContainerMock.EXPECT().OldDiff().AnyTimes().Return(fx.diffMock)
 		fx.diffMock.EXPECT().Hash().AnyTimes().Return("hash")
 		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash", "hash").Return(nil)
 		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
@@ -229,14 +232,16 @@ func TestHeadSync(t *testing.T) {
 
 		headEntries := []headstorage.HeadsEntry{
 			{
-				Id:        "id1",
-				Heads:     []string{"id1"},
-				IsDerived: true,
+				Id:             "id1",
+				Heads:          []string{"id1"},
+				CommonSnapshot: "id1",
+				IsDerived:      true,
 			},
 			{
-				Id:        "id2",
-				Heads:     []string{"h3", "h4"},
-				IsDerived: false,
+				Id:             "id2",
+				Heads:          []string{"h3", "h4"},
+				CommonSnapshot: "id2",
+				IsDerived:      false,
 			},
 		}
 		fx.headStorage.EXPECT().IterateEntries(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -258,8 +263,9 @@ func TestHeadSync(t *testing.T) {
 			Id:   "aclId",
 			Head: "headId",
 		})
-		fx.diffContainerMock.EXPECT().NewDiff().Return(fx.diffMock)
-		fx.diffContainerMock.EXPECT().OldDiff().Return(fx.diffMock)
+		fx.diffMock.EXPECT().Set([]ldiff.Element{})
+		fx.diffContainerMock.EXPECT().NewDiff().AnyTimes().Return(fx.diffMock)
+		fx.diffContainerMock.EXPECT().OldDiff().AnyTimes().Return(fx.diffMock)
 		fx.diffMock.EXPECT().Hash().AnyTimes().Return("hash")
 		fx.stateStorage.EXPECT().SetHash(gomock.Any(), "hash", "hash").Return(nil)
 		fx.diffSyncerMock.EXPECT().Sync(gomock.Any()).Return(nil)
