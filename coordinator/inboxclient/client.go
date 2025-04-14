@@ -22,7 +22,7 @@ import (
 
 const CName = "common.inboxclient"
 
-type MessageReceiver func(message *coordinatorproto.InboxNotifySubscribeEvent)
+type MessageReceiver func(message *coordinatorproto.NotifySubscribeEvent)
 
 var (
 	ErrPubKeyMissing     = errors.New("peer pub key missing")
@@ -84,13 +84,9 @@ func (c *inboxClient) Run(ctx context.Context) (err error) {
 	}
 
 	c.subscribeClient.Subscribe(coordinatorproto.NotifyEventType_InboxNewMessageEvent, func(event *coordinatorproto.NotifySubscribeEvent) {
-		inboxEvent := event.GetInboxEvent()
-		if inboxEvent == nil {
-			err = fmt.Errorf("inboxEvent is nil. Original event: %#v", event)
-		} else {
-			log.Debug("calling messagereceiver from subscribe()")
-			c.messageReceiver(inboxEvent)
-		}
+		log.Debug("calling messagereceiver from subscribe()")
+		c.messageReceiver(event)
+
 	})
 
 	return nil

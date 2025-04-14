@@ -158,13 +158,9 @@ func (s *subscribeClient) streamReader() error {
 		// disapatch event to listener
 
 		s.mucb.Lock()
-		if e := event.GetInboxEvent(); e != nil {
-			if receiver, ok := s.callbacks[coordinatorproto.NotifyEventType_InboxNewMessageEvent]; ok {
-				log.Debug("calling message receiver for inboxNotify")
-				receiver(event)
-			} else {
-				log.Warn("got InboxNewMessageEvent, but have no receiver", zap.String("event", fmt.Sprintf("%#v", event)))
-			}
+
+		if receiver, ok := s.callbacks[event.EventType]; ok {
+			receiver(event)
 		} else {
 			log.Warn("unipmlemented event type", zap.String("event", fmt.Sprintf("%#v", event)))
 		}
