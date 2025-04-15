@@ -457,13 +457,6 @@ message InboxFetchResponse {
   bool hasMore = 2;
 }
 
-message InboxNotifySubscribeRequest {
-}
-
-message InboxNotifySubscribeEvent {
-  string notifyId = 1;
-}
-
 message InboxAddMessageRequest {
   InboxMessage message = 1;
 }

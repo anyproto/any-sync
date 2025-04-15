@@ -9,6 +9,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/coordinator/coordinatorproto"
 	"github.com/anyproto/any-sync/coordinator/inboxclient/mocks"
+	"github.com/anyproto/any-sync/coordinator/subscribeclient"
 	"github.com/anyproto/any-sync/net/rpc/rpctest"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
@@ -19,81 +20,77 @@ import (
 
 var coordinatorPeer = "peer"
 
-// myTs is used to send testServer structure to control e.g. what
-// InboxFetch returns
-func newFixtureWithReceiver(t *testing.T, myTs *testServer) (fx *fixture) {
+func newFixtureServer(t *testing.T) (fx *fixtureServer) {
+	testServer := &testServer{
+		NotifySenderChan: make(chan *coordinatorproto.NotifySubscribeEvent),
+	}
+
 	ts := rpctest.NewTestServer()
 	account := &accounttest.AccountTestService{}
-	c := New()
+
+	fx = &fixtureServer{
+		account:    account,
+		a:          new(app.App),
+		testServer: testServer,
+		ts:         ts,
+		tp:         rpctest.NewTestPool().WithServer(ts),
+	}
+
+	fx.a.
+		Register(account).
+		Register(&mockConf{}).
+		Register(fx.tp).
+		Register(fx.ts)
+
+	require.NoError(t, coordinatorproto.DRPCRegisterCoordinator(ts, testServer))
+	require.NoError(t, fx.a.Start(ctx))
+
+	return fx
+}
+
+func newFixtureClient(t *testing.T) (fx *fixtureClient) {
+	ts := rpctest.NewTestServer()
+	account := &accounttest.AccountTestService{}
 	ctrl := gomock.NewController(t)
 	mockReceiver := mocks.NewMockMessageReceiverTest(ctrl)
+	inboxClient := New()
 
-	fx = &fixture{
-		InboxClient:  c,
+	fx = &fixtureClient{
 		account:      account,
+		inbox:        inboxClient,
+		subscribe:    subscribeclient.New(),
 		ctrl:         ctrl,
 		a:            new(app.App),
 		ts:           ts,
 		tp:           rpctest.NewTestPool().WithServer(ts),
 		mockReceiver: mockReceiver,
 	}
-
-	fx.SetMessageReceiver(mockReceiver.Receive)
+	fx.inbox.SetMessageReceiver(mockReceiver.Receive)
 	fx.a.
 		Register(account).
 		Register(&mockConf{}).
 		Register(fx.tp).
 		Register(fx.ts).
-		Register(c)
+		Register(fx.subscribe).
+		Register(fx.inbox)
 
-	if myTs == nil {
-		myTs = &testServer{}
-	}
-	require.NoError(t, coordinatorproto.DRPCRegisterCoordinator(ts, myTs))
 	require.NoError(t, fx.a.Start(ctx))
 
 	return fx
 }
 
-func dummyReceiver(e *coordinatorproto.InboxNotifySubscribeEvent) {
-
+type fixtureServer struct {
+	account    *accounttest.AccountTestService
+	a          *app.App
+	testServer *testServer
+	ts         *rpctest.TestServer
+	tp         *rpctest.TestPool
 }
 
-func newFixture(t *testing.T, myTs *testServer) (fx *fixture) {
-	ts := rpctest.NewTestServer()
-	account := &accounttest.AccountTestService{}
-	c := New()
-	ctrl := gomock.NewController(t)
-
-	fx = &fixture{
-		InboxClient: c,
-		account:     account,
-		ctrl:        ctrl,
-		a:           new(app.App),
-		ts:          ts,
-		tp:          rpctest.NewTestPool().WithServer(ts),
-	}
-
-	fx.SetMessageReceiver(dummyReceiver)
-	fx.a.
-		Register(account).
-		Register(&mockConf{}).
-		Register(fx.tp).
-		Register(fx.ts).
-		Register(c)
-
-	if myTs == nil {
-		myTs = &testServer{}
-	}
-	require.NoError(t, coordinatorproto.DRPCRegisterCoordinator(ts, myTs))
-	require.NoError(t, fx.a.Start(ctx))
-
-	return fx
-}
-
-type fixture struct {
-	InboxClient
+type fixtureClient struct {
+	inbox        InboxClient
 	account      *accounttest.AccountTestService
+	subscribe    subscribeclient.SubscribeClientService
 	a            *app.App
 	ctrl         *gomock.Controller
 	ts           *rpctest.TestServer
@@ -101,23 +98,27 @@ type fixture struct {
 	mockReceiver *mocks.MockMessageReceiverTest
 }
 
-func (fx *fixture) Finish(t *testing.T) {
+func (fx *fixtureServer) Finish(t *testing.T) {
+	require.NoError(t, fx.a.Close(ctx))
+}
+
+func (fx *fixtureClient) Finish(t *testing.T) {
 	require.NoError(t, fx.a.Close(ctx))
 	fx.ctrl.Finish()
+
 }
 
 type testServer struct {
 	coordinatorproto.DRPCCoordinatorUnimplementedServer
 	FetchResponse    *coordinatorproto.InboxFetchResponse
 	NotifySenderChan chan *coordinatorproto.NotifySubscribeEvent
-	name             string
 }
 
 func (t *testServer) InboxAddMessage(ctx context.Context, in *coordinatorproto.InboxAddMessageRequest) (*coordinatorproto.InboxAddMessageResponse, error) {
 	t.FetchResponse.Messages = append(t.FetchResponse.Messages, in.Message)
 	e := &coordinatorproto.NotifySubscribeEvent{
 		EventType: coordinatorproto.NotifyEventType_InboxNewMessageEvent,
-		Payload:   []byte("event"),
+		Payload:   []byte(in.Message.Id),
 	}
 	t.NotifySenderChan <- e
 	return &coordinatorproto.InboxAddMessageResponse{}, nil
@@ -125,6 +126,14 @@ func (t *testServer) InboxAddMessage(ctx context.Context, in *coordinatorproto.I
 
 func (t *testServer) InboxFetch(context.Context, *coordinatorproto.InboxFetchRequest) (*coordinatorproto.InboxFetchResponse, error) {
 	return t.FetchResponse, nil
+}
+
+func (t *testServer) NotifySubscribe(req *coordinatorproto.NotifySubscribeRequest, rpcStream coordinatorproto.DRPCCoordinator_NotifySubscribeStream) error {
+	closeCh := make(chan struct{})
+	go t.notifySender(rpcStream, closeCh)
+	<-rpcStream.Context().Done()
+	close(closeCh)
+	return nil
 }
 
 func (t *testServer) notifySender(rpcStream coordinatorproto.DRPCCoordinator_NotifySubscribeStream, closeCh chan struct{}) {
@@ -136,15 +145,7 @@ func (t *testServer) notifySender(rpcStream coordinatorproto.DRPCCoordinator_Not
 	}
 }
 
-func (t *testServer) InboxNotifySubscribe(req *coordinatorproto.InboxNotifySubscribeRequest, rpcStream coordinatorproto.DRPCCoordinator_NotifySubscribeStream) error {
-	closeCh := make(chan struct{})
-	go t.notifySender(rpcStream, closeCh)
-	<-rpcStream.Context().Done()
-	close(closeCh)
-	return nil
-}
-
-// //
+// // //// // //// // //
 type mockConf struct {
 	id            string
 	networkId     string

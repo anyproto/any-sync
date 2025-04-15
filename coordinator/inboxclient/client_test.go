@@ -17,72 +17,49 @@ import (
 
 var ctx = context.Background()
 
+func makeClientServer(t *testing.T) (fxC *fixtureClient, fxS *fixtureServer, peerId string) {
+	fxC = newFixtureClient(t)
+	fxS = newFixtureServer(t)
+	peerId = "peer"
+	identity, err := fxC.account.Account().SignKey.GetPublic().Marshall()
+	require.NoError(t, err)
+	mcS, mcC := rpctest.MultiConnPairWithIdentity(peerId, peerId+"client", identity)
+	pS, err := peer.NewPeer(mcS, fxC.ts)
+	require.NoError(t, err)
+	fxC.tp.AddPeer(ctx, pS)
+	_, err = peer.NewPeer(mcC, fxS.ts)
+	require.NoError(t, err)
+	return
+}
+
 func TestInbox_Fetch(t *testing.T) {
-	var makeClientServer = func(t *testing.T, ts *testServer) (fxC, fxS *fixture, peerId string) {
-		fxC = newFixture(t, nil)
-		fxS = newFixture(t, ts)
-		peerId = "peer"
-		identity, err := fxC.account.Account().SignKey.GetPublic().Marshall()
-		require.NoError(t, err)
-		mcS, mcC := rpctest.MultiConnPairWithIdentity(peerId, peerId+"client", identity)
-		pS, err := peer.NewPeer(mcS, fxC.ts)
-		require.NoError(t, err)
-		fxC.tp.AddPeer(ctx, pS)
-		_, err = peer.NewPeer(mcC, fxS.ts)
-		require.NoError(t, err)
-		return
-	}
-
 	t.Run("simple InboxFetch", func(t *testing.T) {
+		fxC, fxS, _ := makeClientServer(t)
+		fxS.testServer.FetchResponse = makeFetchResponse()
 
-		myTs := &testServer{}
-
-		myTs.FetchResponse = makeFetchResponse()
-		fxC, _, _ := makeClientServer(t, myTs)
-		msgs, _, err := fxC.InboxFetch(ctx, "")
-
+		msgs, _, err := fxC.inbox.InboxFetch(ctx, "")
 		require.NoError(t, err)
 		assert.Len(t, msgs, 10)
-
 	})
 }
 
 func TestInbox_Notify(t *testing.T) {
-	var makeClientServer = func(t *testing.T, ts *testServer) (fxC, fxS *fixture, peerId string) {
-		fxC = newFixture(t, nil)
-		fxS = newFixtureWithReceiver(t, ts)
-		peerId = "peer"
-		identity, err := fxC.account.Account().SignKey.GetPublic().Marshall()
-		require.NoError(t, err)
-		mcS, mcC := rpctest.MultiConnPairWithIdentity(peerId, peerId+"client", identity)
-		pS, err := peer.NewPeer(mcS, fxC.ts)
-		require.NoError(t, err)
-		fxC.tp.AddPeer(ctx, pS)
-		_, err = peer.NewPeer(mcC, fxS.ts)
-		require.NoError(t, err)
-		return
-	}
 	t.Run("notify simple test", func(t *testing.T) {
-
-		myTs := &testServer{
-			name:             "fxC",
-			NotifySenderChan: make(chan *coordinatorproto.NotifySubscribeEvent),
-		}
 		expectedEvent := &coordinatorproto.NotifySubscribeEvent{
 			EventType: coordinatorproto.NotifyEventType_InboxNewMessageEvent,
 			Payload:   []byte("hello"),
 		}
-		_, fxS, _ := makeClientServer(t, myTs)
+		fxC, fxS, _ := makeClientServer(t)
 		var wg sync.WaitGroup
 		wg.Add(1)
-		fxS.mockReceiver.EXPECT().
+		fxC.mockReceiver.EXPECT().
 			Receive(expectedEvent).
 			Do(func(evt *coordinatorproto.NotifySubscribeEvent) {
 				defer wg.Done()
 			}).
 			Times(1)
 
-		myTs.NotifySenderChan <- expectedEvent
+		fxS.testServer.NotifySenderChan <- expectedEvent
 
 		done := make(chan struct{})
 		go func() {
@@ -99,30 +76,25 @@ func TestInbox_Notify(t *testing.T) {
 	})
 
 	t.Run("InboxAddMessage sends notification and InboxFetch gets new message", func(t *testing.T) {
-
-		myTs := &testServer{
-			name:             "fxC",
-			NotifySenderChan: make(chan *coordinatorproto.NotifySubscribeEvent),
-		}
+		fxC, fxS, _ := makeClientServer(t)
+		fxS.testServer.FetchResponse = makeFetchResponse()
 		expectedEvent := &coordinatorproto.NotifySubscribeEvent{
 			EventType: coordinatorproto.NotifyEventType_InboxNewMessageEvent,
 			Payload:   []byte("hello"),
 		}
 
-		myTs.FetchResponse = makeFetchResponse()
-
-		fxC, fxS, _ := makeClientServer(t, myTs)
 		var wg sync.WaitGroup
 		wg.Add(1)
-		fxS.mockReceiver.EXPECT().
+		fxC.mockReceiver.EXPECT().
 			Receive(expectedEvent).
-			Do(func(evt *coordinatorproto.InboxNotifySubscribeEvent) {
+			Do(func(evt *coordinatorproto.NotifySubscribeEvent) {
 				defer wg.Done()
 			}).
 			Times(1)
 
 		privKey, pubKey, _ := crypto.GenerateEd25519Key(rand.Reader)
 		msg := &coordinatorproto.InboxMessage{
+			Id: "hello",
 			Packet: &coordinatorproto.InboxPacket{
 				Payload: &coordinatorproto.InboxPayload{
 					Body: []byte("hello, notify testId"),
@@ -130,7 +102,7 @@ func TestInbox_Notify(t *testing.T) {
 			},
 		}
 
-		fxC.InboxAddMessage(ctx, pubKey, msg)
+		fxC.inbox.InboxAddMessage(ctx, pubKey, msg)
 
 		done := make(chan struct{})
 		go func() {
@@ -140,7 +112,7 @@ func TestInbox_Notify(t *testing.T) {
 
 		select {
 		case <-done:
-			msgs, _, err := fxC.InboxFetch(ctx, "")
+			msgs, _, err := fxC.inbox.InboxFetch(ctx, "")
 			require.NoError(t, err)
 			assert.Len(t, msgs, 11)
 
