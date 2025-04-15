@@ -66,17 +66,18 @@ func TestInbox_Notify(t *testing.T) {
 
 		myTs := &testServer{
 			name:             "fxC",
-			NotifySenderChan: make(chan *coordinatorproto.InboxNotifySubscribeEvent),
+			NotifySenderChan: make(chan *coordinatorproto.NotifySubscribeEvent),
 		}
-		expectedEvent := &coordinatorproto.InboxNotifySubscribeEvent{
-			NotifyId: "hello",
+		expectedEvent := &coordinatorproto.NotifySubscribeEvent{
+			EventType: coordinatorproto.NotifyEventType_InboxNewMessageEvent,
+			Payload:   []byte("hello"),
 		}
 		_, fxS, _ := makeClientServer(t, myTs)
 		var wg sync.WaitGroup
 		wg.Add(1)
 		fxS.mockReceiver.EXPECT().
 			Receive(expectedEvent).
-			Do(func(evt *coordinatorproto.InboxNotifySubscribeEvent) {
+			Do(func(evt *coordinatorproto.NotifySubscribeEvent) {
 				defer wg.Done()
 			}).
 			Times(1)
@@ -101,10 +102,11 @@ func TestInbox_Notify(t *testing.T) {
 
 		myTs := &testServer{
 			name:             "fxC",
-			NotifySenderChan: make(chan *coordinatorproto.InboxNotifySubscribeEvent),
+			NotifySenderChan: make(chan *coordinatorproto.NotifySubscribeEvent),
 		}
-		expectedEvent := &coordinatorproto.InboxNotifySubscribeEvent{
-			NotifyId: "event",
+		expectedEvent := &coordinatorproto.NotifySubscribeEvent{
+			EventType: coordinatorproto.NotifyEventType_InboxNewMessageEvent,
+			Payload:   []byte("hello"),
 		}
 
 		myTs.FetchResponse = makeFetchResponse()

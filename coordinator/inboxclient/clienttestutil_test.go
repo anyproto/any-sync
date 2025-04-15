@@ -109,14 +109,15 @@ func (fx *fixture) Finish(t *testing.T) {
 type testServer struct {
 	coordinatorproto.DRPCCoordinatorUnimplementedServer
 	FetchResponse    *coordinatorproto.InboxFetchResponse
-	NotifySenderChan chan *coordinatorproto.InboxNotifySubscribeEvent
+	NotifySenderChan chan *coordinatorproto.NotifySubscribeEvent
 	name             string
 }
 
 func (t *testServer) InboxAddMessage(ctx context.Context, in *coordinatorproto.InboxAddMessageRequest) (*coordinatorproto.InboxAddMessageResponse, error) {
 	t.FetchResponse.Messages = append(t.FetchResponse.Messages, in.Message)
-	e := &coordinatorproto.InboxNotifySubscribeEvent{
-		NotifyId: "event",
+	e := &coordinatorproto.NotifySubscribeEvent{
+		EventType: coordinatorproto.NotifyEventType_InboxNewMessageEvent,
+		Payload:   []byte("event"),
 	}
 	t.NotifySenderChan <- e
 	return &coordinatorproto.InboxAddMessageResponse{}, nil
@@ -129,12 +130,7 @@ func (t *testServer) InboxFetch(context.Context, *coordinatorproto.InboxFetchReq
 func (t *testServer) notifySender(rpcStream coordinatorproto.DRPCCoordinator_NotifySubscribeStream, closeCh chan struct{}) {
 	select {
 	case e := <-t.NotifySenderChan:
-		event := &coordinatorproto.NotifySubscribeEvent{
-			Event: &coordinatorproto.NotifySubscribeEvent_InboxEvent{
-				InboxEvent: e,
-			},
-		}
-		rpcStream.Send(event)
+		rpcStream.Send(e)
 	case <-closeCh:
 		return
 	}
