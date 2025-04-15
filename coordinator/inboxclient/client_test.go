@@ -131,8 +131,6 @@ func TestInbox_Notify(t *testing.T) {
 func makeFetchResponse() *coordinatorproto.InboxFetchResponse {
 	res := new(coordinatorproto.InboxFetchResponse)
 	res.Messages = make([]*coordinatorproto.InboxMessage, 10)
-	// message.Packet.ReceiverIdentity
-	//
 	for i := range 10 {
 		res.Messages[i] = &coordinatorproto.InboxMessage{}
 	}
