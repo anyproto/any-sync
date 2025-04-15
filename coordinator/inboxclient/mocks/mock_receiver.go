@@ -41,7 +41,7 @@ func (m *MockMessageReceiverTest) EXPECT() *MockMessageReceiverTestMockRecorder 
 }
 
 // Receive mocks base method.
-func (m *MockMessageReceiverTest) Receive(event *coordinatorproto.InboxNotifySubscribeEvent) {
+func (m *MockMessageReceiverTest) Receive(event *coordinatorproto.NotifySubscribeEvent) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Receive", event)
 }
