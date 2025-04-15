@@ -32,6 +32,7 @@ type storage struct {
 	headStorage headstorage.HeadStorage
 	collection  anystore.Collection
 	store       anystore.DB
+	storageName string
 }
 
 func New(ctx context.Context, storageName string, headStorage headstorage.HeadStorage, store anystore.DB) (kv KeyValueStorage, err error) {
@@ -51,6 +52,7 @@ func New(ctx context.Context, storageName string, headStorage headstorage.HeadSt
 		}
 	}()
 	storage := &storage{
+		storageName: storageName,
 		headStorage: headStorage,
 		collection:  collection,
 		store:       store,
@@ -201,6 +203,10 @@ func (s *storage) Set(ctx context.Context, values ...KeyValue) (err error) {
 		return
 	}
 	s.diff.Set(elements...)
+	err = s.headStorage.UpdateEntryTx(ctx, headstorage.HeadsUpdate{
+		Id:    s.storageName,
+		Heads: []string{s.diff.Hash()},
+	})
 	return
 }
 
