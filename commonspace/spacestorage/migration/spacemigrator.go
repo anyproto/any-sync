@@ -121,7 +121,6 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 		treeMigrators = append(treeMigrators, objecttree.NewTreeMigrator(crypto.NewKeyStorage(), aclList))
 		ch <- treeMigrators[i]
 	}
-	var allErrors []error
 	slices.Sort(storedIds)
 	storedIds = slice.DiscardDuplicatesSorted(storedIds)
 	for _, id := range storedIds {
@@ -138,7 +137,6 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 			}
 			err = tm.MigrateTreeStorage(ctx, treeStorage, newStorage.HeadStorage(), newStorage.AnyStore())
 			if err != nil {
-				allErrors = append(allErrors, fmt.Errorf("migration: failed to migrate tree storage: %w", err))
 				return
 			}
 		})
@@ -150,9 +148,6 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 	err = executor.Wait()
 	if err != nil {
 		return fmt.Errorf("migration: failed to wait for executor: %w", err)
-	}
-	if len(allErrors) > 0 {
-		return fmt.Errorf("migration failed: %w", errors.Join(allErrors...))
 	}
 	if err := s.migrateHash(ctx, oldStorage, newStorage); err != nil {
 		log.Warn("migration: failed to migrate hash", zap.Error(err))
