@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 )
 
@@ -19,6 +20,10 @@ type InnerHeadUpdate struct {
 
 func (h *InnerHeadUpdate) MsgSize() (size uint64) {
 	return uint64(len(h.prepared))
+}
+
+func (h *InnerHeadUpdate) ObjectType() spacesyncproto.ObjectType {
+	return spacesyncproto.ObjectType_Tree
 }
 
 func (h *InnerHeadUpdate) Prepare() error {

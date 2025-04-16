@@ -11,6 +11,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
+	"github.com/anyproto/any-sync/commonspace/spacepayloads"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -47,7 +48,7 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	totalObjs := 1000
 
 	// creating space
-	sp, err := fx.spaceService.CreateSpace(ctx, SpaceCreatePayload{
+	sp, err := fx.spaceService.CreateSpace(ctx, spacepayloads.SpaceCreatePayload{
 		SigningKey:     acc.SignKey,
 		SpaceType:      "type",
 		ReadKey:        rk,
@@ -140,7 +141,7 @@ func TestSpaceDeleteIds(t *testing.T) {
 	totalObjs := 1000
 
 	// creating space
-	sp, err := fx.spaceService.CreateSpace(ctx, SpaceCreatePayload{
+	sp, err := fx.spaceService.CreateSpace(ctx, spacepayloads.SpaceCreatePayload{
 		SigningKey:     acc.SignKey,
 		SpaceType:      "type",
 		ReadKey:        rk,

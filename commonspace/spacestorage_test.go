@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/spacepayloads"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -22,7 +23,7 @@ func newStorageCreatePayload(t *testing.T) spacestorage.SpaceStorageCreatePayloa
 	require.NoError(t, err)
 	readKey := crypto.NewAES()
 	meta := []byte("account")
-	payload := SpaceCreatePayload{
+	payload := spacepayloads.SpaceCreatePayload{
 		SigningKey:     keys.SignKey,
 		SpaceType:      "space",
 		ReplicationKey: 10,
@@ -32,7 +33,7 @@ func newStorageCreatePayload(t *testing.T) spacestorage.SpaceStorageCreatePayloa
 		MetadataKey:    metaKey,
 		Metadata:       meta,
 	}
-	createSpace, err := StoragePayloadForSpaceCreate(payload)
+	createSpace, err := spacepayloads.StoragePayloadForSpaceCreate(payload)
 	require.NoError(t, err)
 	return createSpace
 }
