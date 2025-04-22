@@ -2,12 +2,14 @@ package commonspace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
 	"testing"
 	"time"
 
+	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/go-chash"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -803,6 +805,9 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 			err := listStorage.AddAll(ctx, []list.StorageRecord{
 				{RawRecord: rec.Payload, Id: rec.Id, PrevId: prevRec, Order: i + 1, ChangeSize: len(rec.Payload)},
 			})
+			if errors.Is(err, anystore.ErrDocExists) {
+				continue
+			}
 			require.NoError(t, err)
 		}
 	}

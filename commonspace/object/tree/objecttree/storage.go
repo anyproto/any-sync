@@ -82,12 +82,8 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 		return nil, err
 	}
 	storage, err := CreateStorageTx(tx.Context(), root, headStorage, store)
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	return storage, tx.Commit()
@@ -225,13 +221,19 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 	if err != nil {
 		return fmt.Errorf("failed to create write tx: %w", err)
 	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			err = tx.Commit()
+		}
+	}()
 	for _, ch := range changes {
 		ch.TreeId = s.id
 		newVal := newStorageChangeValue(ch, arena)
 		err = s.changesColl.Insert(tx.Context(), newVal)
 		arena.Reset()
 		if err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
@@ -240,12 +242,7 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 		Heads:          heads,
 		CommonSnapshot: &commonSnapshot,
 	}
-	err = s.headStorage.UpdateEntryTx(tx.Context(), update)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	return tx.Commit()
+	return s.headStorage.UpdateEntryTx(tx.Context(), update)
 }
 
 func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
@@ -255,13 +252,19 @@ func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, he
 	if err != nil {
 		return fmt.Errorf("failed to create write tx: %w", err)
 	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			err = tx.Commit()
+		}
+	}()
 	for _, ch := range changes {
 		ch.TreeId = s.id
 		newVal := newStorageChangeValue(ch, arena)
 		err = s.changesColl.Insert(tx.Context(), newVal)
 		arena.Reset()
 		if err != nil && !errors.Is(err, anystore.ErrDocExists) {
-			tx.Rollback()
 			return err
 		}
 	}
@@ -270,12 +273,7 @@ func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, he
 		Heads:          heads,
 		CommonSnapshot: &commonSnapshot,
 	}
-	err = s.headStorage.UpdateEntryTx(tx.Context(), update)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	return tx.Commit()
+	return s.headStorage.UpdateEntryTx(tx.Context(), update)
 }
 
 func (s *storage) Delete(ctx context.Context) error {
