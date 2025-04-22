@@ -66,7 +66,9 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
+		} else {
+			err = tx.Commit()
 		}
 	}()
 	changesColl, err := store.Collection(tx.Context(), objecttree.CollName)
@@ -110,7 +112,7 @@ func Create(ctx context.Context, store anystore.DB, payload SpaceStorageCreatePa
 		headStorage:  headStorage,
 		stateStorage: stateStorage,
 		aclStorage:   aclStorage,
-	}, tx.Commit()
+	}, nil
 }
 
 func New(ctx context.Context, spaceId string, store anystore.DB) (SpaceStorage, error) {

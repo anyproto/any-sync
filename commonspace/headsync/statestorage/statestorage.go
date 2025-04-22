@@ -108,12 +108,8 @@ func Create(ctx context.Context, state State, store anystore.DB) (st StateStorag
 		return nil, err
 	}
 	storage, err := CreateTx(tx.Context(), state, store)
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	return storage, tx.Commit()
