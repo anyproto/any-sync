@@ -36,7 +36,6 @@ type inboxClient struct {
 	pool            pool.Pool
 	account         commonaccount.Service
 	subscribeClient subscribeclient.SubscribeClientService
-	close           chan struct{}
 
 	running         bool
 	messageReceiver MessageReceiver
@@ -62,7 +61,6 @@ func (c *inboxClient) Init(a *app.App) (err error) {
 	c.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	c.account = a.MustComponent(commonaccount.CName).(commonaccount.Service)
 	c.subscribeClient = a.MustComponent(subscribeclient.CName).(subscribeclient.SubscribeClientService)
-	c.close = make(chan struct{})
 
 	return nil
 }

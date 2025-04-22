@@ -84,6 +84,7 @@ enum ErrorCodes {
   AclNonEmpty = 9;
   SpaceNotShareable = 10;
   InboxMessageVerifyFailed = 11;
+  SubscribePeerAlreadySubscribed = 12;
   ErrorOffset = 300;
 }
 
