@@ -38,15 +38,16 @@ type subscribeClient struct {
 	mucb      sync.Mutex
 	callbacks map[coordinatorproto.NotifyEventType]EventCallback
 
-	mu     sync.Mutex
-	stream *stream
-	close  chan struct{}
+	mu        sync.Mutex
+	stream    *stream
+	ctx       context.Context
+	ctxCancel context.CancelFunc
 }
 
 func (s *subscribeClient) Init(a *app.App) (err error) {
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
-	s.close = make(chan struct{})
+	s.ctx, s.ctxCancel = context.WithCancel(context.Background())
 	s.callbacks = make(map[coordinatorproto.NotifyEventType]EventCallback)
 	return
 }
@@ -66,11 +67,7 @@ func (s *subscribeClient) Close(_ context.Context) (err error) {
 		_ = s.stream.Close()
 	}
 	s.mu.Unlock()
-	select {
-	case <-s.close:
-	default:
-		close(s.close)
-	}
+	s.ctxCancel()
 	return nil
 }
 
@@ -118,19 +115,22 @@ func (s *subscribeClient) streamWatcher() {
 		i   int
 	)
 	for {
+
 		log.Info("streamWatcher: open inbox stream")
-		if st, err = s.openStream(context.Background()); err != nil {
+		if st, err = s.openStream(s.ctx); err != nil {
 			// can't open stream, we will retry until success connection or close
-			log.Error("streamWatcher: subscribe watch error, retry", zap.Error(err))
+
 			if i < 60 {
 				i++
 			}
 			sleepTime := time.Second * time.Duration(i)
-			log.Error("streamWatcher: subscribe watch error, retry", zap.Error(err), zap.Duration("waitTime", sleepTime))
+
 			select {
 			case <-time.After(sleepTime):
+				log.Error("streamWatcher: subscribe watch error, retry", zap.Error(err), zap.Duration("waitTime", sleepTime))
 				continue
-			case <-s.close:
+			case <-s.ctx.Done():
+				log.Info("streamWatcher: ctx.Done, closing", zap.Error(err))
 				return
 			}
 		}
@@ -151,7 +151,7 @@ func (s *subscribeClient) streamWatcher() {
 
 func (s *subscribeClient) streamReader() error {
 	for {
-		event, err := s.stream.WaitNotifyEvents()
+		event, err := s.stream.WaitNotifyEvents(s.ctx)
 		if err != nil {
 			return err
 		}

@@ -31,8 +31,8 @@ type stream struct {
 
 // if close, reconnect
 // if shutdown, don't try more
-func (s *stream) WaitNotifyEvents() (*coordinatorproto.NotifySubscribeEvent, error) {
-	event, err := s.mb.WaitOne(context.TODO())
+func (s *stream) WaitNotifyEvents(ctx context.Context) (*coordinatorproto.NotifySubscribeEvent, error) {
+	event, err := s.mb.WaitOne(ctx)
 	if err != nil {
 		if s.isShutdown.Load() {
 			return nil, ErrShutdown
