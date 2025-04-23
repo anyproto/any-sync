@@ -11,6 +11,7 @@ import (
 type State struct {
 	OldHash     string
 	NewHash     string
+	LegacyHash  string
 	AclId       string
 	SettingsId  string
 	SpaceId     string
@@ -33,6 +34,7 @@ const (
 	idKey              = "id"
 	oldHashKey         = "oh"
 	newHashKey         = "nh"
+	legacyHashKey      = "h"
 	headerKey          = "e"
 	aclIdKey           = "a"
 	settingsIdKey      = "s"
@@ -151,6 +153,7 @@ func (s *stateStorage) stateFromDoc(doc anystore.Doc) State {
 		AclId:       doc.Value().GetString(aclIdKey),
 		OldHash:     doc.Value().GetString(newHashKey),
 		NewHash:     doc.Value().GetString(oldHashKey),
+		LegacyHash:  doc.Value().GetString(legacyHashKey),
 		SpaceHeader: doc.Value().GetBytes(headerKey),
 	}
 }
