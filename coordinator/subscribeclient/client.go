@@ -42,12 +42,15 @@ type subscribeClient struct {
 	stream    *stream
 	ctx       context.Context
 	ctxCancel context.CancelFunc
+	close     chan struct{}
 }
 
 func (s *subscribeClient) Init(a *app.App) (err error) {
 	s.pool = a.MustComponent(pool.CName).(pool.Pool)
 	s.nodeconf = a.MustComponent(nodeconf.CName).(nodeconf.Service)
 	s.ctx, s.ctxCancel = context.WithCancel(context.Background())
+	s.close = make(chan struct{})
+
 	s.callbacks = make(map[coordinatorproto.NotifyEventType]EventCallback)
 	return
 }
@@ -68,6 +71,7 @@ func (s *subscribeClient) Close(_ context.Context) (err error) {
 	}
 	s.mu.Unlock()
 	s.ctxCancel()
+	<-s.close
 	return nil
 }
 
@@ -109,13 +113,13 @@ func (s *subscribeClient) openStream(ctx context.Context) (st *stream, err error
 }
 
 func (s *subscribeClient) streamWatcher() {
+	defer close(s.close)
 	var (
 		err error
 		st  *stream
 		i   int
 	)
 	for {
-
 		log.Info("streamWatcher: open inbox stream")
 		if st, err = s.openStream(s.ctx); err != nil {
 			// can't open stream, we will retry until success connection or close
