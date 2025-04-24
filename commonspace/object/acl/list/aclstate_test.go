@@ -2,8 +2,9 @@ package list
 
 import (
 	"crypto/rand"
-	"github.com/anyproto/any-sync/util/crypto"
 	"testing"
+
+	"github.com/anyproto/any-sync/util/crypto"
 
 	"github.com/stretchr/testify/require"
 )
@@ -73,14 +74,12 @@ func TestAclStateIsEmpty(t *testing.T) {
 
 func TestAclState_FirstMetadataKey(t *testing.T) {
 	t.Run("returns first metadata key successfully", func(t *testing.T) {
-		// given
 		privKey, _, err := crypto.GenerateEd25519Key(rand.Reader)
 		require.NoError(t, err)
 		pubKey := privKey.GetPublic()
 		readKey := crypto.NewAES()
-
 		state := &AclState{
-			readKeyChanges: []string{"recordId"},
+			id: "recordId",
 			keys: map[string]AclKeys{
 				"recordId": {
 					ReadKey:         readKey,
@@ -89,53 +88,26 @@ func TestAclState_FirstMetadataKey(t *testing.T) {
 				},
 			},
 		}
-
-		// when
 		key, err := state.FirstMetadataKey()
-
-		// then
 		require.NoError(t, err)
 		require.Equal(t, privKey, key)
 	})
 	t.Run("first metadata is nil", func(t *testing.T) {
-		// given
 		state := &AclState{
-			readKeyChanges: []string{"recordId"},
+			id: "recordId",
 			keys: map[string]AclKeys{
 				"recordId": {
 					ReadKey: crypto.NewAES(),
 				},
 			},
 		}
-
-		// when
 		key, err := state.FirstMetadataKey()
-
-		// then
 		require.ErrorIs(t, err, ErrNoMetadataKey)
 		require.Nil(t, key)
 	})
 	t.Run("returns error when no read key changes", func(t *testing.T) {
-		// given
-		state := &AclState{readKeyChanges: []string{}}
-
-		// when
+		state := &AclState{}
 		_, err := state.FirstMetadataKey()
-
-		// then
-		require.ErrorIs(t, err, ErrNoMetadataKey)
-	})
-
-	t.Run("returns error when first read key change is missing", func(t *testing.T) {
-		// given
-		state := &AclState{
-			readKeyChanges: []string{"missingRecord"},
-			keys:           make(map[string]AclKeys)}
-
-		// when
-		_, err := state.FirstMetadataKey()
-
-		// then
 		require.ErrorIs(t, err, ErrNoMetadataKey)
 	})
 }

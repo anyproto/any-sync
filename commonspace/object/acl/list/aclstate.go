@@ -152,17 +152,8 @@ func (st *AclState) CurrentMetadataKey() (crypto.PubKey, error) {
 }
 
 func (st *AclState) FirstMetadataKey() (crypto.PrivKey, error) {
-	if len(st.readKeyChanges) == 0 {
-		return nil, ErrNoMetadataKey
-	}
-	for _, change := range st.readKeyChanges {
-		key, exists := st.keys[change]
-		if !exists {
-			continue
-		}
-		if key.MetadataPrivKey != nil {
-			return key.MetadataPrivKey, nil
-		}
+	if firstKey, ok := st.keys[st.id]; ok && firstKey.MetadataPrivKey != nil {
+		return firstKey.MetadataPrivKey, nil
 	}
 	return nil, ErrNoMetadataKey
 }
