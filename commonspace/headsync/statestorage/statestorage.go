@@ -11,7 +11,6 @@ import (
 type State struct {
 	OldHash     string
 	NewHash     string
-	LegacyHash  string
 	AclId       string
 	SettingsId  string
 	SpaceId     string
@@ -147,13 +146,21 @@ func (s *stateStorage) SettingsId() string {
 }
 
 func (s *stateStorage) stateFromDoc(doc anystore.Doc) State {
+	var (
+		oldHash = doc.Value().GetString(oldHashKey)
+		newHash = doc.Value().GetString(newHashKey)
+	)
+	// legacy hash is used for backward compatibility, which was due to a mistake in key names
+	if oldHash == "" || newHash == "" {
+		oldHash = doc.Value().GetString(legacyHashKey)
+		newHash = oldHash
+	}
 	return State{
 		SpaceId:     doc.Value().GetString(idKey),
 		SettingsId:  doc.Value().GetString(settingsIdKey),
 		AclId:       doc.Value().GetString(aclIdKey),
-		OldHash:     doc.Value().GetString(oldHashKey),
-		NewHash:     doc.Value().GetString(newHashKey),
-		LegacyHash:  doc.Value().GetString(legacyHashKey),
+		OldHash:     oldHash,
+		NewHash:     newHash,
 		SpaceHeader: doc.Value().GetBytes(headerKey),
 	}
 }
