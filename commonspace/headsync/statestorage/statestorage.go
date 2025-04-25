@@ -151,8 +151,8 @@ func (s *stateStorage) stateFromDoc(doc anystore.Doc) State {
 		SpaceId:     doc.Value().GetString(idKey),
 		SettingsId:  doc.Value().GetString(settingsIdKey),
 		AclId:       doc.Value().GetString(aclIdKey),
-		OldHash:     doc.Value().GetString(newHashKey),
-		NewHash:     doc.Value().GetString(oldHashKey),
+		OldHash:     doc.Value().GetString(oldHashKey),
+		NewHash:     doc.Value().GetString(newHashKey),
 		LegacyHash:  doc.Value().GetString(legacyHashKey),
 		SpaceHeader: doc.Value().GetBytes(headerKey),
 	}
