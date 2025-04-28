@@ -32,7 +32,3 @@ db
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
-
-# ignore envrc, used for direnv + flake
-/.envrc
-/.direnv/

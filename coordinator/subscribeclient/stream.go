@@ -29,8 +29,6 @@ type stream struct {
 	isShutdown atomic.Bool
 }
 
-// if close, reconnect
-// if shutdown, don't try more
 func (s *stream) WaitNotifyEvents(ctx context.Context) (*coordinatorproto.NotifySubscribeEvent, error) {
 	event, err := s.mb.WaitOne(ctx)
 	if err != nil {

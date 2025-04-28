@@ -26,7 +26,6 @@ func New() SubscribeClientService {
 type EventCallback func(*coordinatorproto.NotifySubscribeEvent)
 
 type SubscribeClientService interface {
-	// `id` is just some id which is used to unsubscribe
 	Subscribe(eventType coordinatorproto.NotifyEventType, callback EventCallback) error
 	app.ComponentRunnable
 }
@@ -123,7 +122,6 @@ func (s *subscribeClient) streamWatcher() {
 		log.Info("streamWatcher: open inbox stream")
 		if st, err = s.openStream(s.ctx); err != nil {
 			// can't open stream, we will retry until success connection or close
-
 			if i < 60 {
 				i++
 			}
@@ -159,8 +157,6 @@ func (s *subscribeClient) streamReader() error {
 		if err != nil {
 			return err
 		}
-		// disapatch event to listener
-
 		s.mucb.Lock()
 
 		if receiver, ok := s.callbacks[event.EventType]; ok {

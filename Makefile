@@ -47,4 +47,4 @@ test:
 
 replace-gogo-strings:
 	@echo "Replacing 'github.com/gogo/protobuf' with 'github.com/anyproto/protobuf' in all files recursively..."
-	LC_CTYPE=C LANG=C find . -type f -name "*.go" | xargs sed -i "s|github.com/gogo/protobuf|github.com/anyproto/protobuf|g"
+	LC_CTYPE=C LANG=C find . -type f -name "*.go" | xargs sed -i '' "s|github.com/gogo/protobuf|github.com/anyproto/protobuf|g"
