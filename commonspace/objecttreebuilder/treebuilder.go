@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/app/debugstat"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
@@ -69,14 +70,47 @@ type treeBuilder struct {
 
 	log       logger.CtxLogger
 	builder   objecttree.BuildObjectTreeFunc
+	treeStats *synctree.TreeStatsCollector
+	debugStat debugstat.StatService
 	spaceId   string
 	aclList   list.AclList
 	treesUsed *atomic.Int32
 	isClosed  *atomic.Bool
 }
 
+func (t *treeBuilder) ProvideStat() any {
+	return debugStat{
+		TreeStats: t.treeStats.Collect(),
+		SpaceId:   t.spaceId,
+	}
+}
+
+func (t *treeBuilder) StatId() string {
+	return t.spaceId
+}
+
+func (t *treeBuilder) StatType() string {
+	return CName
+}
+
+func (t *treeBuilder) Run(ctx context.Context) (err error) {
+	t.debugStat.AddProvider(t)
+	return
+}
+
+func (t *treeBuilder) Close(ctx context.Context) (err error) {
+	t.debugStat.RemoveProvider(t)
+	return
+}
+
 func (t *treeBuilder) Init(a *app.App) (err error) {
 	state := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
+	comp, ok := a.Component(debugstat.CName).(debugstat.StatService)
+	if !ok {
+		comp = debugstat.NewNoOp()
+	}
+	t.treeStats = synctree.NewTreeStatsCollector(state.SpaceId)
+	t.debugStat = comp
 	t.spaceId = state.SpaceId
 	t.isClosed = state.SpaceIsClosed
 	t.treesUsed = state.TreesUsed
@@ -119,6 +153,7 @@ func (t *treeBuilder) BuildTree(ctx context.Context, id string, opts BuildTreeOp
 		PeerGetter:         t.peerManager,
 		BuildObjectTree:    treeBuilder,
 		ValidateObjectTree: opts.TreeValidator,
+		StatsCollector:     t.treeStats,
 	}
 	t.treesUsed.Add(1)
 	t.log.Debug("incrementing counter", zap.String("id", id), zap.Int32("trees", t.treesUsed.Load()))

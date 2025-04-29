@@ -131,6 +131,20 @@ func (st *AclState) CurrentReadKeyId() string {
 	return st.readKeyChanges[len(st.readKeyChanges)-1]
 }
 
+func (st *AclState) ReadKeyForAclId(id string) (string, error) {
+	recIdx, ok := st.list.indexes[id]
+	if !ok {
+		return "", ErrNoSuchRecord
+	}
+	for i := len(st.readKeyChanges) - 1; i >= 0; i-- {
+		recId := st.readKeyChanges[i]
+		if recIdx >= st.list.indexes[recId] {
+			return recId, nil
+		}
+	}
+	return "", ErrNoSuchRecord
+}
+
 func (st *AclState) AccountKey() crypto.PrivKey {
 	return st.key
 }
@@ -149,6 +163,13 @@ func (st *AclState) CurrentMetadataKey() (crypto.PubKey, error) {
 		return nil, ErrNoMetadataKey
 	}
 	return curKeys.MetadataPubKey, nil
+}
+
+func (st *AclState) FirstMetadataKey() (crypto.PrivKey, error) {
+	if firstKey, ok := st.keys[st.id]; ok && firstKey.MetadataPrivKey != nil {
+		return firstKey.MetadataPrivKey, nil
+	}
+	return nil, ErrNoMetadataKey
 }
 
 func (st *AclState) Keys() map[string]AclKeys {
@@ -194,6 +215,10 @@ func (st *AclState) Invites() []crypto.PubKey {
 		invites = append(invites, inv)
 	}
 	return invites
+}
+
+func (st *AclState) Key() crypto.PrivKey {
+	return st.key
 }
 
 func (st *AclState) InviteIds() []string {
@@ -664,6 +689,9 @@ func (st *AclState) applyRequestRemove(ch *aclrecordproto.AclAccountRequestRemov
 	st.pendingRequests[mapKeyFromPubKey(record.Identity)] = record.Id
 	pk := mapKeyFromPubKey(record.Identity)
 	accSt, exists := st.accountStates[pk]
+	if !accSt.Permissions.CanRequestRemove() {
+		return ErrInsufficientPermissions
+	}
 	if !exists {
 		return ErrNoSuchAccount
 	}

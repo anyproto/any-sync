@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_aclclient/mock_aclclient.go github.com/anyproto/any-sync/commonspace/acl/aclclient AclJoiningClient,AclSpaceClient
 //
-
 // Package mock_aclclient is a generated GoMock package.
 package mock_aclclient
 

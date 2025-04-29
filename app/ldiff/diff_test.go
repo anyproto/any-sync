@@ -139,6 +139,35 @@ func TestDiff_Diff(t *testing.T) {
 		assert.Len(t, changedIds, length/2)
 		assert.Len(t, removedIds, 0)
 	})
+	t.Run("compare diff", func(t *testing.T) {
+		d1 := New(16, 128).(CompareDiff)
+		d2 := New(16, 128)
+
+		length := 10000
+		for i := 0; i < length; i++ {
+			id := fmt.Sprint(i)
+			head := "a" + uuid.NewString()
+			d1.Set(Element{
+				Id:   id,
+				Head: head,
+			})
+		}
+		for i := 0; i < length; i++ {
+			id := fmt.Sprint(i)
+			head := "b" + uuid.NewString()
+			d2.Set(Element{
+				Id:   id,
+				Head: head,
+			})
+		}
+
+		newIds, changedIds, theirChangedIds, removedIds, err := d1.CompareDiff(ctx, d2)
+		require.NoError(t, err)
+		assert.Len(t, newIds, 0)
+		assert.Len(t, changedIds, 0)
+		assert.Len(t, theirChangedIds, length)
+		assert.Len(t, removedIds, 0)
+	})
 	t.Run("empty", func(t *testing.T) {
 		d1 := New(16, 16)
 		d2 := New(16, 16)

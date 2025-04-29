@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_commonspace/mock_commonspace.go github.com/anyproto/any-sync/commonspace Space
 //
-
 // Package mock_commonspace is a generated GoMock package.
 package mock_commonspace
 
@@ -18,6 +17,7 @@ import (
 	aclclient "github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	headsync "github.com/anyproto/any-sync/commonspace/headsync"
 	syncacl "github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
+	kvinterfaces "github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
 	treesyncer "github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	objecttreebuilder "github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	spacestorage "github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -221,6 +221,20 @@ func (m *MockSpace) Init(arg0 context.Context) error {
 func (mr *MockSpaceMockRecorder) Init(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockSpace)(nil).Init), arg0)
+}
+
+// KeyValue mocks base method.
+func (m *MockSpace) KeyValue() kvinterfaces.KeyValueService {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KeyValue")
+	ret0, _ := ret[0].(kvinterfaces.KeyValueService)
+	return ret0
+}
+
+// KeyValue indicates an expected call of KeyValue.
+func (mr *MockSpaceMockRecorder) KeyValue() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeyValue", reflect.TypeOf((*MockSpace)(nil).KeyValue))
 }
 
 // Storage mocks base method.

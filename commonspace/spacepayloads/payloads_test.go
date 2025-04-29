@@ -1,4 +1,4 @@
-package commonspace
+package spacepayloads
 
 import (
 	"fmt"
@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
@@ -16,8 +19,6 @@ import (
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSuccessHeaderPayloadForSpaceCreate(t *testing.T) {
@@ -438,7 +439,7 @@ func TestSuccessSameIds(t *testing.T) {
 		SpaceHeaderWithId:   rawHeaderWithId,
 		SpaceSettingsWithId: rawSettingsPayload,
 	}
-	err = validateSpaceStorageCreatePayload(spacePayload)
+	err = ValidateSpaceStorageCreatePayload(spacePayload)
 	require.NoError(t, err)
 }
 
@@ -455,7 +456,7 @@ func TestFailWithAclWrongSpaceId(t *testing.T) {
 		SpaceHeaderWithId:   rawHeaderWithId,
 		SpaceSettingsWithId: rawSettingsPayload,
 	}
-	err = validateSpaceStorageCreatePayload(spacePayload)
+	err = ValidateSpaceStorageCreatePayload(spacePayload)
 	assert.EqualErrorf(t, err, spacestorage.ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", spacestorage.ErrIncorrectSpaceHeader, err)
 }
 
@@ -472,7 +473,7 @@ func TestFailWithSettingsWrongSpaceId(t *testing.T) {
 		SpaceHeaderWithId:   rawHeaderWithId,
 		SpaceSettingsWithId: rawSettingsPayload,
 	}
-	err = validateSpaceStorageCreatePayload(spacePayload)
+	err = ValidateSpaceStorageCreatePayload(spacePayload)
 	assert.EqualErrorf(t, err, spacestorage.ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", spacestorage.ErrIncorrectSpaceHeader, err)
 }
 
@@ -489,7 +490,7 @@ func TestFailWithWrongAclHeadIdInSettingsPayload(t *testing.T) {
 		SpaceHeaderWithId:   rawHeaderWithId,
 		SpaceSettingsWithId: rawSettingsPayload,
 	}
-	err = validateSpaceStorageCreatePayload(spacePayload)
+	err = ValidateSpaceStorageCreatePayload(spacePayload)
 	assert.EqualErrorf(t, err, spacestorage.ErrIncorrectSpaceHeader.Error(), "Error should be: %v, got: %v", spacestorage.ErrIncorrectSpaceHeader, err)
 }
 

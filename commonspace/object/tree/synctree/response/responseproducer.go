@@ -7,7 +7,7 @@ import (
 
 type ResponseProducer interface {
 	NewResponse(batchSize int) (*Response, error)
-	EmptyResponse() *Response
+	EmptyResponse() (*Response, error)
 }
 
 type responseProducer struct {
@@ -45,14 +45,18 @@ func (r *responseProducer) NewResponse(batchSize int) (*Response, error) {
 	}, nil
 }
 
-func (r *responseProducer) EmptyResponse() *Response {
+func (r *responseProducer) EmptyResponse() (*Response, error) {
 	headsCopy := make([]string, len(r.tree.Heads()))
 	copy(headsCopy, r.tree.Heads())
+	snapshotPath, err := r.tree.SnapshotPath()
+	if err != nil {
+		return nil, err
+	}
 	return &Response{
 		Heads:        headsCopy,
 		SpaceId:      r.spaceId,
 		ObjectId:     r.objectId,
 		Root:         r.tree.Header(),
-		SnapshotPath: r.tree.SnapshotPath(),
-	}
+		SnapshotPath: snapshotPath,
+	}, nil
 }

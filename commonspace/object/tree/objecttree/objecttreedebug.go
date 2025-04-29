@@ -20,6 +20,6 @@ func (o objectTreeDebug) debugInfo(ot *objectTree, parser DescriptionParser) (di
 	di.TreeString = ot.tree.String()
 	di.TreeLen = ot.tree.Len()
 	di.Heads = ot.Heads()
-	di.SnapshotPath = ot.SnapshotPath()
+	di.SnapshotPath, _ = ot.SnapshotPath()
 	return
 }

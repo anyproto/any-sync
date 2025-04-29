@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_spacesyncproto/mock_spacesyncproto.go github.com/anyproto/any-sync/commonspace/spacesyncproto DRPCSpaceSyncClient
 //
-
 // Package mock_spacesyncproto is a generated GoMock package.
 package mock_spacesyncproto
 
@@ -173,4 +172,34 @@ func (m *MockDRPCSpaceSyncClient) SpacePush(arg0 context.Context, arg1 *spacesyn
 func (mr *MockDRPCSpaceSyncClientMockRecorder) SpacePush(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpacePush", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).SpacePush), arg0, arg1)
+}
+
+// StoreDiff mocks base method.
+func (m *MockDRPCSpaceSyncClient) StoreDiff(arg0 context.Context, arg1 *spacesyncproto.StoreDiffRequest) (*spacesyncproto.StoreDiffResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StoreDiff", arg0, arg1)
+	ret0, _ := ret[0].(*spacesyncproto.StoreDiffResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StoreDiff indicates an expected call of StoreDiff.
+func (mr *MockDRPCSpaceSyncClientMockRecorder) StoreDiff(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreDiff", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).StoreDiff), arg0, arg1)
+}
+
+// StoreElements mocks base method.
+func (m *MockDRPCSpaceSyncClient) StoreElements(arg0 context.Context) (spacesyncproto.DRPCSpaceSync_StoreElementsClient, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StoreElements", arg0)
+	ret0, _ := ret[0].(spacesyncproto.DRPCSpaceSync_StoreElementsClient)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StoreElements indicates an expected call of StoreElements.
+func (mr *MockDRPCSpaceSyncClientMockRecorder) StoreElements(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreElements", reflect.TypeOf((*MockDRPCSpaceSyncClient)(nil).StoreElements), arg0)
 }

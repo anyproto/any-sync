@@ -12,7 +12,7 @@ const batchSize = 1024 * 1024
 type RequestFactory interface {
 	CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer string, added []*treechangeproto.RawTreeChangeWithId) (headUpdate *objectmessages.HeadUpdate, err error)
 	CreateNewTreeRequest(peerId, objectId string) *objectmessages.Request
-	CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectmessages.Request
+	CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) (*objectmessages.Request, error)
 	CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (response.ResponseProducer, error)
 }
 
@@ -29,6 +29,10 @@ func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer s
 	if ignoredPeer != "" {
 		broadcastOpts.EmptyPeers = []string{ignoredPeer}
 	}
+	snapshotPath, err := t.SnapshotPath()
+	if err != nil {
+		return
+	}
 	headUpdate = &objectmessages.HeadUpdate{
 		Meta: objectmessages.ObjectMeta{
 			ObjectId: t.Id(),
@@ -38,7 +42,7 @@ func (r *requestFactory) CreateHeadUpdate(t objecttree.ObjectTree, ignoredPeer s
 			opts:         broadcastOpts,
 			heads:        t.Heads(),
 			changes:      added,
-			snapshotPath: t.SnapshotPath(),
+			snapshotPath: snapshotPath,
 			root:         t.Header(),
 		},
 	}
@@ -50,8 +54,12 @@ func (r *requestFactory) CreateNewTreeRequest(peerId, objectId string) *objectme
 	return NewRequest(peerId, r.spaceId, objectId, nil, nil, nil)
 }
 
-func (r *requestFactory) CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) *objectmessages.Request {
-	return NewRequest(peerId, r.spaceId, t.Id(), t.Heads(), t.SnapshotPath(), t.Header())
+func (r *requestFactory) CreateFullSyncRequest(peerId string, t objecttree.ObjectTree) (*objectmessages.Request, error) {
+	path, err := t.SnapshotPath()
+	if err != nil {
+		return nil, err
+	}
+	return NewRequest(peerId, r.spaceId, t.Id(), t.Heads(), path, t.Header()), nil
 }
 
 func (r *requestFactory) CreateResponseProducer(t objecttree.ObjectTree, theirHeads, theirSnapshotPath []string) (response.ResponseProducer, error) {

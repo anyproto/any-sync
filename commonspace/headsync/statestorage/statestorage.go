@@ -9,7 +9,8 @@ import (
 )
 
 type State struct {
-	Hash        string
+	OldHash     string
+	NewHash     string
 	AclId       string
 	SettingsId  string
 	SpaceId     string
@@ -17,20 +18,22 @@ type State struct {
 }
 
 type Observer interface {
-	OnHashChange(hash string)
+	OnHashChange(oldHash, newHash string)
 }
 
 type StateStorage interface {
 	GetState(ctx context.Context) (State, error)
 	SettingsId() string
-	SetHash(ctx context.Context, hash string) error
+	SetHash(ctx context.Context, oldHash, newHash string) error
 	SetObserver(observer Observer)
 }
 
 const (
 	stateCollectionKey = "state"
 	idKey              = "id"
-	hashKey            = "h"
+	oldHashKey         = "oh"
+	newHashKey         = "nh"
+	legacyHashKey      = "h"
 	headerKey          = "e"
 	aclIdKey           = "a"
 	settingsIdKey      = "s"
@@ -58,10 +61,10 @@ func (s *stateStorage) SetObserver(observer Observer) {
 	s.observer = observer
 }
 
-func (s *stateStorage) SetHash(ctx context.Context, hash string) (err error) {
+func (s *stateStorage) SetHash(ctx context.Context, oldHash, newHash string) (err error) {
 	defer func() {
 		if s.observer != nil && err == nil {
-			s.observer.OnHashChange(hash)
+			s.observer.OnHashChange(oldHash, newHash)
 		}
 	}()
 	tx, err := s.stateColl.WriteTx(ctx)
@@ -69,7 +72,8 @@ func (s *stateStorage) SetHash(ctx context.Context, hash string) (err error) {
 		return err
 	}
 	mod := query.ModifyFunc(func(a *anyenc.Arena, v *anyenc.Value) (result *anyenc.Value, modified bool, err error) {
-		v.Set(hashKey, a.NewString(hash))
+		v.Set(oldHashKey, a.NewString(oldHash))
+		v.Set(newHashKey, a.NewString(newHash))
 		return v, true, nil
 	})
 	_, err = s.stateColl.UpsertId(tx.Context(), s.spaceId, mod)
@@ -99,13 +103,22 @@ func New(ctx context.Context, spaceId string, store anystore.DB) (StateStorage, 
 	return storage, nil
 }
 
-func Create(ctx context.Context, state State, store anystore.DB) (StateStorage, error) {
-	arena := &anyenc.Arena{}
-	stateCollection, err := store.Collection(ctx, stateCollectionKey)
+func Create(ctx context.Context, state State, store anystore.DB) (st StateStorage, err error) {
+	tx, err := store.WriteTx(ctx)
 	if err != nil {
 		return nil, err
 	}
-	tx, err := stateCollection.WriteTx(ctx)
+	storage, err := CreateTx(tx.Context(), state, store)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	return storage, tx.Commit()
+}
+
+func CreateTx(ctx context.Context, state State, store anystore.DB) (StateStorage, error) {
+	arena := &anyenc.Arena{}
+	stateCollection, err := store.Collection(ctx, stateCollectionKey)
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +128,8 @@ func Create(ctx context.Context, state State, store anystore.DB) (StateStorage, 
 	doc.Set(settingsIdKey, arena.NewString(state.SettingsId))
 	doc.Set(headerKey, arena.NewBinary(state.SpaceHeader))
 	doc.Set(aclIdKey, arena.NewString(state.AclId))
-	err = stateCollection.Insert(tx.Context(), doc)
+	err = stateCollection.Insert(ctx, doc)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 	return &stateStorage{
@@ -126,7 +138,7 @@ func Create(ctx context.Context, state State, store anystore.DB) (StateStorage, 
 		settingsId: state.SettingsId,
 		stateColl:  stateCollection,
 		arena:      arena,
-	}, tx.Commit()
+	}, nil
 }
 
 func (s *stateStorage) SettingsId() string {
@@ -134,11 +146,21 @@ func (s *stateStorage) SettingsId() string {
 }
 
 func (s *stateStorage) stateFromDoc(doc anystore.Doc) State {
+	var (
+		oldHash = doc.Value().GetString(oldHashKey)
+		newHash = doc.Value().GetString(newHashKey)
+	)
+	// legacy hash is used for backward compatibility, which was due to a mistake in key names
+	if oldHash == "" || newHash == "" {
+		oldHash = doc.Value().GetString(legacyHashKey)
+		newHash = oldHash
+	}
 	return State{
 		SpaceId:     doc.Value().GetString(idKey),
 		SettingsId:  doc.Value().GetString(settingsIdKey),
 		AclId:       doc.Value().GetString(aclIdKey),
-		Hash:        doc.Value().GetString(hashKey),
+		OldHash:     oldHash,
+		NewHash:     newHash,
 		SpaceHeader: doc.Value().GetBytes(headerKey),
 	}
 }

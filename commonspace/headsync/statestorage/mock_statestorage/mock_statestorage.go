@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_statestorage/mock_statestorage.go github.com/anyproto/any-sync/commonspace/headsync/statestorage StateStorage
 //
-
 // Package mock_statestorage is a generated GoMock package.
 package mock_statestorage
 
@@ -56,17 +55,17 @@ func (mr *MockStateStorageMockRecorder) GetState(arg0 any) *gomock.Call {
 }
 
 // SetHash mocks base method.
-func (m *MockStateStorage) SetHash(arg0 context.Context, arg1 string) error {
+func (m *MockStateStorage) SetHash(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetHash", arg0, arg1)
+	ret := m.ctrl.Call(m, "SetHash", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SetHash indicates an expected call of SetHash.
-func (mr *MockStateStorageMockRecorder) SetHash(arg0, arg1 any) *gomock.Call {
+func (mr *MockStateStorageMockRecorder) SetHash(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHash", reflect.TypeOf((*MockStateStorage)(nil).SetHash), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHash", reflect.TypeOf((*MockStateStorage)(nil).SetHash), arg0, arg1, arg2)
 }
 
 // SetObserver mocks base method.

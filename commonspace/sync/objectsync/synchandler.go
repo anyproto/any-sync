@@ -11,6 +11,7 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
@@ -30,10 +31,11 @@ var ErrUnexpectedHeadUpdateType = errors.New("unexpected head update type")
 var log = logger.NewNamed(syncdeps.CName)
 
 type objectSync struct {
-	spaceId string
-	pool    pool.Service
-	manager objectmanager.ObjectManager
-	status  syncstatus.StatusUpdater
+	spaceId  string
+	pool     pool.Service
+	manager  objectmanager.ObjectManager
+	status   syncstatus.StatusUpdater
+	keyValue kvinterfaces.KeyValueService
 }
 
 func New() syncdeps.SyncHandler {
@@ -43,6 +45,7 @@ func New() syncdeps.SyncHandler {
 func (o *objectSync) Init(a *app.App) (err error) {
 	o.manager = a.MustComponent(treemanager.CName).(objectmanager.ObjectManager)
 	o.pool = a.MustComponent(pool.CName).(pool.Service)
+	o.keyValue = a.MustComponent(kvinterfaces.CName).(kvinterfaces.KeyValueService)
 	o.status = a.MustComponent(syncstatus.CName).(syncstatus.StatusUpdater)
 	o.spaceId = a.MustComponent(spacestate.CName).(*spacestate.SpaceState).SpaceId
 	return
@@ -56,6 +59,9 @@ func (o *objectSync) HandleHeadUpdate(ctx context.Context, headUpdate drpc.Messa
 	update, ok := headUpdate.(*objectmessages.HeadUpdate)
 	if !ok {
 		return nil, ErrUnexpectedHeadUpdateType
+	}
+	if update.ObjectType() == spacesyncproto.ObjectType_KeyValue {
+		return nil, o.keyValue.HandleMessage(ctx, update)
 	}
 	peerId, err := peer.CtxPeerId(ctx)
 	if err != nil {

@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_objectmanager/mock_objectmanager.go github.com/anyproto/any-sync/commonspace/objectmanager ObjectManager
 //
-
 // Package mock_objectmanager is a generated GoMock package.
 package mock_objectmanager
 

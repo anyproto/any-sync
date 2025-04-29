@@ -61,6 +61,19 @@ type storage struct {
 }
 
 func CreateStorage(ctx context.Context, root *consensusproto.RawRecordWithId, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
+	tx, err := store.WriteTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	storage, err := CreateStorageTx(tx.Context(), root, headStorage, store)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	return storage, tx.Commit()
+}
+
+func CreateStorageTx(ctx context.Context, root *consensusproto.RawRecordWithId, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
 	st := &storage{
 		id:          root.Id,
 		store:       store,
@@ -89,24 +102,18 @@ func CreateStorage(ctx context.Context, root *consensusproto.RawRecordWithId, he
 	st.arena = &anyenc.Arena{}
 	defer st.arena.Reset()
 	doc := newStorageRecordValue(rec, st.arena)
-	tx, err := st.store.WriteTx(ctx)
+	err = st.recordsColl.Insert(ctx, doc)
 	if err != nil {
 		return nil, err
 	}
-	err = st.recordsColl.Insert(tx.Context(), doc)
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-	err = st.headStorage.UpdateEntryTx(tx.Context(), headstorage.HeadsUpdate{
+	err = st.headStorage.UpdateEntryTx(ctx, headstorage.HeadsUpdate{
 		Id:    root.Id,
 		Heads: []string{root.Id},
 	})
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
-	return st, tx.Commit()
+	return st, nil
 }
 
 func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
@@ -199,6 +206,13 @@ func (s *storage) AddAll(ctx context.Context, records []StorageRecord) error {
 	if err != nil {
 		return fmt.Errorf("failed to create write tx: %w", err)
 	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		} else {
+			err = tx.Commit()
+		}
+	}()
 	vals := make([]*anyenc.Value, 0, len(records))
 	for _, ch := range records {
 		newVal := newStorageRecordValue(ch, arena)
@@ -206,20 +220,14 @@ func (s *storage) AddAll(ctx context.Context, records []StorageRecord) error {
 	}
 	err = s.recordsColl.Insert(tx.Context(), vals...)
 	if err != nil {
-		tx.Rollback()
-		return nil
+		return err
 	}
 	head := records[len(records)-1].Id
 	update := headstorage.HeadsUpdate{
 		Id:    s.id,
 		Heads: []string{head},
 	}
-	err = s.headStorage.UpdateEntryTx(tx.Context(), update)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	return tx.Commit()
+	return s.headStorage.UpdateEntryTx(tx.Context(), update)
 }
 
 func (s *storage) Id() string {

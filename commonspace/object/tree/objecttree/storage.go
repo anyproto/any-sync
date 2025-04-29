@@ -77,6 +77,19 @@ type storage struct {
 var StorageChangeBuilder = NewChangeBuilder
 
 func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
+	tx, err := store.WriteTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	storage, err := CreateStorageTx(tx.Context(), root, headStorage, store)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	return storage, tx.Commit()
+}
+
+func CreateStorageTx(ctx context.Context, root *treechangeproto.RawTreeChangeWithId, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
 	st := &storage{
 		id:          root.Id,
 		store:       store,
@@ -107,29 +120,23 @@ func CreateStorage(ctx context.Context, root *treechangeproto.RawTreeChangeWithI
 	st.parser = &anyenc.Parser{}
 	defer st.arena.Reset()
 	doc := newStorageChangeValue(stChange, st.arena)
-	tx, err := st.store.WriteTx(ctx)
+	err = st.changesColl.Insert(ctx, doc)
 	if err != nil {
-		return nil, err
-	}
-	err = st.changesColl.Insert(tx.Context(), doc)
-	if err != nil {
-		tx.Rollback()
 		if errors.Is(err, anystore.ErrDocExists) {
 			return nil, treestorage.ErrTreeExists
 		}
 		return nil, err
 	}
-	err = st.headStorage.UpdateEntryTx(tx.Context(), headstorage.HeadsUpdate{
+	err = st.headStorage.UpdateEntryTx(ctx, headstorage.HeadsUpdate{
 		Id:             root.Id,
 		Heads:          []string{root.Id},
 		CommonSnapshot: &root.Id,
 		IsDerived:      &unmarshalled.IsDerived,
 	})
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
-	return st, tx.Commit()
+	return st, nil
 }
 
 func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStorage, store anystore.DB) (Storage, error) {
@@ -151,7 +158,7 @@ func NewStorage(ctx context.Context, id string, headStorage headstorage.HeadStor
 	st.changesColl = changesColl
 	st.arena = &anyenc.Arena{}
 	st.parser = &anyenc.Parser{}
-	st.root, err = st.Get(ctx, st.id)
+	st.root, err = st.getWithoutParser(ctx, st.id)
 	if err != nil {
 		if errors.Is(err, anystore.ErrDocNotFound) {
 			return nil, treestorage.ErrUnknownTreeId
@@ -182,6 +189,7 @@ func (s *storage) Has(ctx context.Context, id string) (bool, error) {
 }
 
 func (s *storage) GetAfterOrder(ctx context.Context, orderId string, storageIter StorageIterator) error {
+	// this method can be called without having a lock on a tree, so don't reuse any non-thread-safe parts
 	filter := query.And{
 		query.Key{Path: []string{OrderKey}, Filter: query.NewComp(query.CompOpGte, orderId)},
 		query.Key{Path: []string{TreeKey}, Filter: query.NewComp(query.CompOpEq, s.id)},
@@ -213,13 +221,19 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 	if err != nil {
 		return fmt.Errorf("failed to create write tx: %w", err)
 	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			err = tx.Commit()
+		}
+	}()
 	for _, ch := range changes {
 		ch.TreeId = s.id
 		newVal := newStorageChangeValue(ch, arena)
 		err = s.changesColl.Insert(tx.Context(), newVal)
 		arena.Reset()
 		if err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
@@ -228,12 +242,7 @@ func (s *storage) AddAll(ctx context.Context, changes []StorageChange, heads []s
 		Heads:          heads,
 		CommonSnapshot: &commonSnapshot,
 	}
-	err = s.headStorage.UpdateEntryTx(tx.Context(), update)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	return tx.Commit()
+	return s.headStorage.UpdateEntryTx(tx.Context(), update)
 }
 
 func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, heads []string, commonSnapshot string) error {
@@ -243,13 +252,19 @@ func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, he
 	if err != nil {
 		return fmt.Errorf("failed to create write tx: %w", err)
 	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			err = tx.Commit()
+		}
+	}()
 	for _, ch := range changes {
 		ch.TreeId = s.id
 		newVal := newStorageChangeValue(ch, arena)
 		err = s.changesColl.Insert(tx.Context(), newVal)
 		arena.Reset()
 		if err != nil && !errors.Is(err, anystore.ErrDocExists) {
-			tx.Rollback()
 			return err
 		}
 	}
@@ -258,12 +273,7 @@ func (s *storage) AddAllNoError(ctx context.Context, changes []StorageChange, he
 		Heads:          heads,
 		CommonSnapshot: &commonSnapshot,
 	}
-	err = s.headStorage.UpdateEntryTx(tx.Context(), update)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	return tx.Commit()
+	return s.headStorage.UpdateEntryTx(tx.Context(), update)
 }
 
 func (s *storage) Delete(ctx context.Context) error {
@@ -298,6 +308,15 @@ func (s *storage) CommonSnapshot(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to get head entry for common snapshot: %w", err)
 	}
 	return entry.CommonSnapshot, nil
+}
+
+func (s *storage) getWithoutParser(ctx context.Context, id string) (StorageChange, error) {
+	// root will be reused outside the lock, so we shouldn't use parser for it
+	doc, err := s.changesColl.FindId(ctx, id)
+	if err != nil {
+		return StorageChange{}, err
+	}
+	return s.changeFromDoc(doc), nil
 }
 
 func (s *storage) Get(ctx context.Context, id string) (StorageChange, error) {

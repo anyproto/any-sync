@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_synctree/mock_synctree.go github.com/anyproto/any-sync/commonspace/object/tree/synctree SyncTree,HeadNotifiable,SyncClient,RequestFactory
 //
-
 // Package mock_synctree is a generated GoMock package.
 package mock_synctree
 
@@ -467,11 +466,12 @@ func (mr *MockSyncTreeMockRecorder) SetListener(arg0 any) *gomock.Call {
 }
 
 // SnapshotPath mocks base method.
-func (m *MockSyncTree) SnapshotPath() []string {
+func (m *MockSyncTree) SnapshotPath() ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SnapshotPath")
 	ret0, _ := ret[0].([]string)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // SnapshotPath indicates an expected call of SnapshotPath.
@@ -651,11 +651,12 @@ func (mr *MockSyncClientMockRecorder) Broadcast(arg0, arg1 any) *gomock.Call {
 }
 
 // CreateFullSyncRequest mocks base method.
-func (m *MockSyncClient) CreateFullSyncRequest(arg0 string, arg1 objecttree.ObjectTree) *objectmessages.Request {
+func (m *MockSyncClient) CreateFullSyncRequest(arg0 string, arg1 objecttree.ObjectTree) (*objectmessages.Request, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateFullSyncRequest", arg0, arg1)
 	ret0, _ := ret[0].(*objectmessages.Request)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CreateFullSyncRequest indicates an expected call of CreateFullSyncRequest.
@@ -760,11 +761,12 @@ func (m *MockRequestFactory) EXPECT() *MockRequestFactoryMockRecorder {
 }
 
 // CreateFullSyncRequest mocks base method.
-func (m *MockRequestFactory) CreateFullSyncRequest(arg0 string, arg1 objecttree.ObjectTree) *objectmessages.Request {
+func (m *MockRequestFactory) CreateFullSyncRequest(arg0 string, arg1 objecttree.ObjectTree) (*objectmessages.Request, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateFullSyncRequest", arg0, arg1)
 	ret0, _ := ret[0].(*objectmessages.Request)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CreateFullSyncRequest indicates an expected call of CreateFullSyncRequest.

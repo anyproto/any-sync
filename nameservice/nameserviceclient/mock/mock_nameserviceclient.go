@@ -5,7 +5,6 @@
 //
 //	mockgen -destination=mock/mock_nameserviceclient.go -package=mock_nameserviceclient github.com/anyproto/any-sync/nameservice/nameserviceclient AnyNsClientService
 //
-
 // Package mock_nameserviceclient is a generated GoMock package.
 package mock_nameserviceclient
 
