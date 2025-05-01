@@ -24,7 +24,7 @@ type AnyPpClientService2 interface {
 	StoreCartProductAdd(ctx context.Context, in *pp.Membership2_StoreCartProductAddRequest) (out *pp.Membership2_StoreCartResponse, err error)
 	StoreCartProductRemove(ctx context.Context, in *pp.Membership2_StoreCartProductRemoveRequest) (out *pp.Membership2_StoreCartResponse, err error)
 	StoreCartPromocodeApply(ctx context.Context, in *pp.Membership2_StoreCartPromocodeApplyRequest) (out *pp.Membership2_StoreCartResponse, err error)
-	StoreCartCheckoutGenerate(ctx context.Context, in *pp.Membership2_StoreCartCheckoutGenerateRequest) (out *pp.Membership2_StoreCartCheckoutGenerateResponse, err error)
+	StoreCartCheckoutGenerate(ctx context.Context, in *pp.Membership2_StoreCartCheckoutRequest) (out *pp.Membership2_StoreCartCheckoutResponse, err error)
 
 	ProductsEnumerate(ctx context.Context, in *pp.Membership2_StoreProductsEnumerateRequest) (out *pp.Membership2_StoreProductsEnumerateResponse, err error)
 	GetStatus(ctx context.Context, in *pp.Membership2_GetStatusRequest) (out *pp.Membership2_GetStatusResponse, err error)
@@ -138,9 +138,9 @@ func (s *service) StoreCartPromocodeApply(ctx context.Context, in *pp.Membership
 	return
 }
 
-func (s *service) StoreCartCheckoutGenerate(ctx context.Context, in *pp.Membership2_StoreCartCheckoutGenerateRequest) (out *pp.Membership2_StoreCartCheckoutGenerateResponse, err error) {
+func (s *service) StoreCartCheckoutGenerate(ctx context.Context, in *pp.Membership2_StoreCartCheckoutRequest) (out *pp.Membership2_StoreCartCheckoutResponse, err error) {
 	err = s.doClient(ctx, func(cl pp.DRPCAnyPaymentProcessing2Client) error {
-		if out, err = cl.StoreCartCheckoutGenerate(ctx, in); err != nil {
+		if out, err = cl.StoreCartCheckout(ctx, in); err != nil {
 			return rpcerr.Unwrap(err)
 		}
 		return nil

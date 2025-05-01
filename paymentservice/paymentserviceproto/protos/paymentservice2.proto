@@ -189,6 +189,15 @@ message Membership2 {
   message ProductSetSettingsResponse {
     
   }
+
+  message StoreCartUpdateRequest {
+    repeated CartProduct products = 1;
+    string ownerEthAddress = 2;
+  }
+
+  message StoreCartUpdateResponse {
+    Membership2.Cart cart = 1;
+  }
 }
 
 service AnyPaymentProcessing2 {
@@ -197,6 +206,7 @@ service AnyPaymentProcessing2 {
   rpc StoreCartProductRemove (Membership2.StoreCartProductRemoveRequest) returns (Membership2.StoreCartResponse);
   rpc StoreCartPromocodeApply (Membership2.StoreCartPromocodeApplyRequest) returns (Membership2.StoreCartResponse);
   rpc StoreCartCheckout(Membership2.StoreCartCheckoutRequest) returns (Membership2.StoreCartCheckoutResponse);
+  rpc StoreCartUpdate(Membership2.StoreCartUpdateRequest) returns (Membership2.StoreCartUpdateResponse);
 
   rpc GetStatus (Membership2.GetStatusRequest) returns (Membership2.GetStatusResponse);
   rpc ProductsEnumerate (Membership2.StoreProductsEnumerateRequest) returns (Membership2.StoreProductsEnumerateResponse);
