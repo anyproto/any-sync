@@ -34,7 +34,7 @@ type Progress interface {
 	AddDone(done int64)
 }
 
-type RemoveFunc func(newStorage spacestorage.SpaceStorage, rootPath string) error
+type RemoveFunc func(newStorage spacestorage.SpaceStorage, id, rootPath string) error
 
 type spaceMigrator struct {
 	oldProvider oldstorage.SpaceStorageProvider
@@ -60,11 +60,9 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 		storage.Close(ctx)
 		return ErrAlreadyMigrated
 	}
-	if !migrated {
-		err := s.removeFunc(storage, s.rootPath)
-		if err != nil {
-			return fmt.Errorf("migration: failed to remove new storage: %w", err)
-		}
+	err := s.removeFunc(storage, id, s.rootPath)
+	if err != nil {
+		return fmt.Errorf("migration: failed to remove new storage: %w", err)
 	}
 	oldStorage, err := s.oldProvider.WaitSpaceStorage(ctx, id)
 	if err != nil {
