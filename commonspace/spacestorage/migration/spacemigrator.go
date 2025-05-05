@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
@@ -30,7 +28,6 @@ var ErrAlreadyMigrated = errors.New("already migrated")
 
 type SpaceMigrator interface {
 	MigrateId(ctx context.Context, id string, progress Progress) error
-	CheckMigrated(ctx context.Context, id string) (bool, error)
 }
 
 type Progress interface {
@@ -47,11 +44,7 @@ type spaceMigrator struct {
 	removeFunc  RemoveFunc
 }
 
-func NewSpaceMigrator(oldProvider oldstorage.SpaceStorageProvider, newProvider spacestorage.SpaceStorageProvider, numParallel int, rootPath string) SpaceMigrator {
-	return NewSpaceMigratorWithRemoveFunc(oldProvider, newProvider, numParallel, rootPath, nil)
-}
-
-func NewSpaceMigratorWithRemoveFunc(oldProvider oldstorage.SpaceStorageProvider, newProvider spacestorage.SpaceStorageProvider, numParallel int, rootPath string, removeFunc RemoveFunc) SpaceMigrator {
+func NewSpaceMigrator(oldProvider oldstorage.SpaceStorageProvider, newProvider spacestorage.SpaceStorageProvider, numParallel int, rootPath string, removeFunc RemoveFunc) SpaceMigrator {
 	return &spaceMigrator{
 		oldProvider: oldProvider,
 		newProvider: newProvider,
@@ -61,32 +54,16 @@ func NewSpaceMigratorWithRemoveFunc(oldProvider oldstorage.SpaceStorageProvider,
 	}
 }
 
-func (s *spaceMigrator) CheckMigrated(ctx context.Context, id string) (bool, error) {
-	migrated, storage := s.checkMigrated(ctx, id)
-	if storage != nil {
-		return migrated, storage.Close(ctx)
-	}
-	return false, nil
-}
-
 func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progress) error {
 	migrated, storage := s.checkMigrated(ctx, id)
 	if migrated {
 		storage.Close(ctx)
 		return ErrAlreadyMigrated
 	}
-	if storage != nil {
-		if s.removeFunc != nil {
-			err := s.removeFunc(storage, s.rootPath)
-			if err != nil {
-				return fmt.Errorf("migration: failed to remove new storage: %w", err)
-			}
-		} else {
-			err := storage.Close(ctx)
-			if err != nil {
-				return fmt.Errorf("migration: failed to close old storage: %w", err)
-			}
-			os.RemoveAll(filepath.Join(s.rootPath, id))
+	if !migrated {
+		err := s.removeFunc(storage, s.rootPath)
+		if err != nil {
+			return fmt.Errorf("migration: failed to remove new storage: %w", err)
 		}
 	}
 	oldStorage, err := s.oldProvider.WaitSpaceStorage(ctx, id)
