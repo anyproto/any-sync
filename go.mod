@@ -42,7 +42,7 @@ require (
 	golang.org/x/net v0.40.0
 	golang.org/x/sys v0.33.0
 	golang.org/x/time v0.11.0
-	golang.org/x/tools v0.31.0
+	golang.org/x/tools v0.33.0
 	gopkg.in/yaml.v3 v3.0.1
 	storj.io/drpc v0.0.34
 )
