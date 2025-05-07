@@ -174,11 +174,12 @@ func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 func (p *peer) ReleaseDrpcConn(ctx context.Context, conn drpc.Conn) {
 	var closed bool
 	select {
+	case <-conn.Closed():
+		closed = true
 	case <-ctx.Done():
 		// in case ctx is closed the connection may be not yet closed because of the signal logic in the drpc manager
+		// but, we want to shortcut to avoid race conditions
 		_ = conn.Close()
-		closed = true
-	case <-conn.Closed():
 		closed = true
 	default:
 		// make sure this connection doesn't have an unfinished work
