@@ -143,12 +143,6 @@ func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 			case dconn := <-p.subConnRelease:
 				// nil conn means connection was closed, used to wake up AcquireDrpcConn
 				if dconn != nil {
-					select {
-					case <-dconn.Closed():
-						// double check if the connection is closed
-						return p.AcquireDrpcConn(ctx)
-					default:
-					}
 					return dconn, nil
 				}
 			case <-wait:
