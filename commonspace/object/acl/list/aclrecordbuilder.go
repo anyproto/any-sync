@@ -323,7 +323,7 @@ func (a *aclRecordBuilder) buildInviteRevoke(inviteRecordId string) (value *aclr
 		err = ErrInsufficientPermissions
 		return
 	}
-	_, exists := a.state.inviteKeys[inviteRecordId]
+	_, exists := a.state.invites[inviteRecordId]
 	if !exists {
 		err = ErrNoSuchInvite
 		return
@@ -334,17 +334,17 @@ func (a *aclRecordBuilder) buildInviteRevoke(inviteRecordId string) (value *aclr
 
 func (a *aclRecordBuilder) BuildRequestJoin(payload RequestJoinPayload) (rawRecord *consensusproto.RawRecord, err error) {
 	var inviteId string
-	for id, key := range a.state.inviteKeys {
-		if key.Equals(payload.InviteKey.GetPublic()) {
+	for id, inv := range a.state.invites {
+		if inv.Key.Equals(payload.InviteKey.GetPublic()) && inv.Type == aclrecordproto.AclInviteType_RequestToJoin {
 			inviteId = id
 		}
 	}
-	key, exists := a.state.inviteKeys[inviteId]
+	invite, exists := a.state.invites[inviteId]
 	if !exists {
 		err = ErrNoSuchInvite
 		return
 	}
-	if !payload.InviteKey.GetPublic().Equals(key) {
+	if !payload.InviteKey.GetPublic().Equals(invite.Key) {
 		err = ErrIncorrectInviteKey
 		return
 	}

@@ -186,8 +186,8 @@ func TestAclList_InviteRevoke(t *testing.T) {
 	// checking acl state
 	require.True(t, ownerState().Permissions(ownerState().pubKey).IsOwner())
 	require.True(t, ownerState().Permissions(accountState().pubKey).NoPermissions())
-	require.Empty(t, ownerState().inviteKeys)
-	require.Empty(t, accountState().inviteKeys)
+	require.Empty(t, ownerState().invites)
+	require.Empty(t, accountState().invites)
 }
 
 func TestAclList_RequestDecline(t *testing.T) {

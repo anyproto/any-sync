@@ -160,7 +160,7 @@ func (c *contentValidator) ValidateInviteRevoke(ch *aclrecordproto.AclAccountInv
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
-	_, exists := c.aclState.inviteKeys[ch.InviteRecordId]
+	_, exists := c.aclState.invites[ch.InviteRecordId]
 	if !exists {
 		return ErrNoSuchInvite
 	}
@@ -168,7 +168,7 @@ func (c *contentValidator) ValidateInviteRevoke(ch *aclrecordproto.AclAccountInv
 }
 
 func (c *contentValidator) ValidateRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, authorIdentity crypto.PubKey) (err error) {
-	inviteKey, exists := c.aclState.inviteKeys[ch.InviteRecordId]
+	invite, exists := c.aclState.invites[ch.InviteRecordId]
 	if !exists {
 		return ErrNoSuchInvite
 	}
@@ -189,7 +189,7 @@ func (c *contentValidator) ValidateRequestJoin(ch *aclrecordproto.AclAccountRequ
 	if err != nil {
 		return err
 	}
-	ok, err := inviteKey.Verify(rawInviteIdentity, ch.InviteIdentitySignature)
+	ok, err := invite.Key.Verify(rawInviteIdentity, ch.InviteIdentitySignature)
 	if err != nil {
 		return ErrInvalidSignature
 	}

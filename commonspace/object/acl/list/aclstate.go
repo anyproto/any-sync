@@ -50,6 +50,11 @@ type AclKeys struct {
 	MetadataPubKey  crypto.PubKey
 }
 
+type Invite struct {
+	Key  crypto.PubKey
+	Type aclrecordproto.AclInviteType
+}
+
 type AclState struct {
 	id string
 	// keys represent current keys of the acl
@@ -57,7 +62,7 @@ type AclState struct {
 	// accountStates is a map pubKey -> state which defines current account state
 	accountStates map[string]AccountState
 	// inviteKeys is a map recordId -> invite
-	inviteKeys map[string]crypto.PubKey
+	invites map[string]Invite
 	// requestRecords is a map recordId -> RequestRecord
 	requestRecords map[string]RequestRecord
 	// pendingRequests is a map pubKey -> recordId
@@ -82,7 +87,7 @@ func newAclStateWithKeys(
 		pubKey:          key.GetPublic(),
 		keys:            make(map[string]AclKeys),
 		accountStates:   make(map[string]AccountState),
-		inviteKeys:      make(map[string]crypto.PubKey),
+		invites:         make(map[string]Invite),
 		requestRecords:  make(map[string]RequestRecord),
 		pendingRequests: make(map[string]string),
 		keyStore:        crypto.NewKeyStorage(),
@@ -103,7 +108,7 @@ func newAclState(rootRecord *AclRecord) (st *AclState, err error) {
 		id:              rootRecord.Id,
 		keys:            make(map[string]AclKeys),
 		accountStates:   make(map[string]AccountState),
-		inviteKeys:      make(map[string]crypto.PubKey),
+		invites:         make(map[string]Invite),
 		requestRecords:  make(map[string]RequestRecord),
 		pendingRequests: make(map[string]string),
 		keyStore:        crypto.NewKeyStorage(),
@@ -209,9 +214,9 @@ func (st *AclState) HadReadPermissions(identity crypto.PubKey) (had bool) {
 	return false
 }
 
-func (st *AclState) Invites() []crypto.PubKey {
-	var invites []crypto.PubKey
-	for _, inv := range st.inviteKeys {
+func (st *AclState) Invites() []Invite {
+	var invites []Invite
+	for _, inv := range st.invites {
 		invites = append(invites, inv)
 	}
 	return invites
@@ -223,7 +228,7 @@ func (st *AclState) Key() crypto.PrivKey {
 
 func (st *AclState) InviteIds() []string {
 	var invites []string
-	for invId := range st.inviteKeys {
+	for invId := range st.invites {
 		invites = append(invites, invId)
 	}
 	return invites
@@ -350,7 +355,7 @@ func (st *AclState) Copy() *AclState {
 		pubKey:          st.key.GetPublic(),
 		keys:            make(map[string]AclKeys),
 		accountStates:   make(map[string]AccountState),
-		inviteKeys:      make(map[string]crypto.PubKey),
+		invites:         make(map[string]Invite),
 		requestRecords:  make(map[string]RequestRecord),
 		pendingRequests: make(map[string]string),
 		keyStore:        st.keyStore,
@@ -365,8 +370,8 @@ func (st *AclState) Copy() *AclState {
 		accState.PermissionChanges = permChanges
 		newSt.accountStates[k] = accState
 	}
-	for k, v := range st.inviteKeys {
-		newSt.inviteKeys[k] = v
+	for k, v := range st.invites {
+		newSt.invites[k] = v
 	}
 	for k, v := range st.requestRecords {
 		newSt.requestRecords[k] = v
@@ -452,7 +457,10 @@ func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, record *Acl
 	if err != nil {
 		return err
 	}
-	st.inviteKeys[record.Id] = inviteKey
+	st.invites[record.Id] = Invite{
+		Key:  inviteKey,
+		Type: aclrecordproto.AclInviteType_RequestToJoin, // Default value
+	}
 	return nil
 }
 
@@ -461,7 +469,7 @@ func (st *AclState) applyInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke,
 	if err != nil {
 		return err
 	}
-	delete(st.inviteKeys, ch.InviteRecordId)
+	delete(st.invites, ch.InviteRecordId)
 	return nil
 }
 
@@ -792,8 +800,8 @@ func (st *AclState) unmarshallDecryptPrivKey(msg []byte, decryptor func(msg []by
 }
 
 func (st *AclState) GetInviteIdByPrivKey(inviteKey crypto.PrivKey) (recId string, err error) {
-	for id, inv := range st.inviteKeys {
-		if inv.Equals(inviteKey.GetPublic()) {
+	for id, inv := range st.invites {
+		if inv.Key.Equals(inviteKey.GetPublic()) {
 			return id, nil
 		}
 	}

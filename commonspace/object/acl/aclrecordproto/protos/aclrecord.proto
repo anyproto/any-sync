@@ -20,6 +20,11 @@ message AclAccountInvite {
     bytes inviteKey = 1;
 }
 
+enum AclInviteType {
+    RequestToJoin = 0;
+    AnyoneCanJoin = 1;
+}
+
 // AclAccountRequestJoin contains the reference to the invite record and the data of the person who wants to join, confirmed by the private invite key
 message AclAccountRequestJoin {
     bytes inviteIdentity = 1;
