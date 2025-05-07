@@ -111,7 +111,11 @@ func (s *service) doClientAA(ctx context.Context, fn func(cl nsp.DRPCAnynsAccoun
 		return err
 	}
 	defer peer.ReleaseDrpcConn(dc)
-
+	defer func() {
+		if ctx.Err() != nil {
+			_ = dc.Close()
+		}
+	}()
 	return fn(nsp.NewDRPCAnynsAccountAbstractionClient(dc))
 }
 

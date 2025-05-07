@@ -155,7 +155,11 @@ func (d *diffSyncer) syncWithPeer(ctx context.Context, p peer.Peer) (err error) 
 		return
 	}
 	defer p.ReleaseDrpcConn(conn)
-
+	defer func() {
+		if ctx.Err() != nil {
+			_ = conn.Close()
+		}
+	}()
 	var (
 		cl                             = d.clientFactory.Client(conn)
 		rdiff                          = NewRemoteDiff(d.spaceId, cl)

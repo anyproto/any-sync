@@ -90,6 +90,14 @@ type subConn struct {
 	*connutil.LastUsageConn
 }
 
+func (s *subConn) Unblocked() <-chan struct{} {
+	return s.Conn.(connUnblocked).Unblocked()
+}
+
+type connUnblocked interface {
+	Unblocked() <-chan struct{}
+}
+
 type peer struct {
 	id string
 
@@ -99,7 +107,7 @@ type peer struct {
 	// outgoing
 	inactive         []*subConn
 	active           map[*subConn]struct{}
-	subConnRelease   chan drpc.Conn
+	subConnRelease   chan drpc.Conn // can send nil
 	openingWaitCount atomic.Int32
 
 	incomingCount atomic.Int32
@@ -133,7 +141,16 @@ func (p *peer) AcquireDrpcConn(ctx context.Context) (drpc.Conn, error) {
 			case <-ctx.Done():
 				return nil, ctx.Err()
 			case dconn := <-p.subConnRelease:
-				return dconn, nil
+				// nil conn means connection was closed, used to wake up AcquireDrpcConn
+				if dconn != nil {
+					select {
+					case <-dconn.Closed():
+						// double check if the connection is closed
+						return p.AcquireDrpcConn(ctx)
+					default:
+					}
+					return dconn, nil
+				}
 			case <-wait:
 			}
 		}
@@ -166,36 +183,79 @@ func (p *peer) ReleaseDrpcConn(conn drpc.Conn) {
 	default:
 	}
 
-	// try to send this connection to acquire if anyone is waiting for it
-	select {
-	case p.subConnRelease <- conn:
-		return
-	default:
+	// make sure this connection doesn't have an unfinished work
+	if connCasted, ok := conn.(connUnblocked); ok {
+		select {
+		case <-conn.Closed():
+			closed = true
+		case <-connCasted.Unblocked():
+			// semi-safe to reuse this connection
+			// it may be still a chance that connection will be closed in next milliseconds
+		default:
+			// means the connection has some unfinished work,
+			// e.g. not fully read stream
+			// we cannot reuse this connection so let's close it
+			err := conn.Close()
+			if err != nil {
+				log.Info("ReleaseDrpcConn failed to close connection", zap.String("peerId", p.id), zap.Error(err))
+			}
+			closed = true
+		}
+	} else {
+		panic("conn does not implement Unblocked()")
 	}
 
-	// return to pool
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	if !closed {
+		select {
+		case p.subConnRelease <- conn:
+			// shortcut to send a reusable connection
+			return
+		default:
+		}
+	}
+
 	sc, ok := conn.(*subConn)
 	if !ok {
 		return
 	}
+
+	p.mu.Lock()
+
 	if _, ok = p.active[sc]; ok {
 		delete(p.active, sc)
 	}
+
 	if !closed {
+		// put it back into the pool
 		p.inactive = append(p.inactive, sc)
 	}
-	return
+	p.mu.Unlock()
+
+	if closed {
+		select {
+		case p.subConnRelease <- nil:
+			// wake up the waiting AcquireDrpcConn
+			// even in case it is closed, it will be discarded
+			return
+		default:
+		}
+	}
 }
 
 func (p *peer) DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error {
 	conn, err := p.AcquireDrpcConn(ctx)
 	if err != nil {
+		log.Debug("DoDrpc failed to acquire connection", zap.String("peerId", p.id), zap.Error(err))
 		return err
 	}
+	err = do(conn)
 	defer p.ReleaseDrpcConn(conn)
-	return do(conn)
+	defer func() {
+		if ctx.Err() != nil {
+			_ = conn.Close()
+		}
+	}()
+	return err
 }
 
 func (p *peer) openDrpcConn(ctx context.Context) (dconn *subConn, err error) {
