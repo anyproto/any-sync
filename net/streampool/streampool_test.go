@@ -299,3 +299,7 @@ func (t *testServerHandler) TestStream(st testservice.DRPCTest_TestStreamStream)
 	}
 	return nil
 }
+
+func (t *testServerHandler) TestStream2(msg *testservice.StreamMessage, st testservice.DRPCTest_TestStream2Stream) error {
+	return fmt.Errorf("not implemented")
+}
