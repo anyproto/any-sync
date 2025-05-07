@@ -86,7 +86,7 @@ func TestPeer_AcquireDrpcConn(t *testing.T) {
 		assert.Len(t, fx.active, 1)
 		assert.Len(t, fx.inactive, 0)
 
-		fx.ReleaseDrpcConn(dc)
+		fx.ReleaseDrpcConn(ctx, dc)
 
 		assert.Len(t, fx.active, 0)
 		assert.Len(t, fx.inactive, 1)
@@ -103,7 +103,7 @@ func TestPeer_AcquireDrpcConn(t *testing.T) {
 
 		closedIn, _ := net.Pipe()
 		dc := drpcconn.New(closedIn)
-		fx.ReleaseDrpcConn(&subConn{Conn: dc})
+		fx.ReleaseDrpcConn(ctx, &subConn{Conn: dc})
 		dc.Close()
 
 		in, out := net.Pipe()
@@ -144,7 +144,7 @@ func TestPeer_DrpcConn_OpenThrottling(t *testing.T) {
 
 	go func() {
 		time.Sleep(fx.limiter.slowDownStep)
-		fx.ReleaseDrpcConn(conns[0])
+		fx.ReleaseDrpcConn(ctx, conns[0])
 		conns = conns[1:]
 	}()
 	_, err := fx.AcquireDrpcConn(ctx)
@@ -273,9 +273,9 @@ func TestPeer_TryClose(t *testing.T) {
 		require.NoError(t, err)
 		defer dc4.Close()
 
-		fx.ReleaseDrpcConn(dc3)
+		fx.ReleaseDrpcConn(ctx, dc3)
 		_ = dc3.Close()
-		fx.ReleaseDrpcConn(dc)
+		fx.ReleaseDrpcConn(ctx, dc)
 
 		time.Sleep(time.Millisecond * 100)
 

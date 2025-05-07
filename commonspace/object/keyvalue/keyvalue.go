@@ -64,12 +64,7 @@ func (k *keyValueService) syncWithPeer(ctx context.Context, p peer.Peer) (err er
 	if err != nil {
 		return
 	}
-	defer p.ReleaseDrpcConn(conn)
-	defer func() {
-		if ctx.Err() != nil {
-			_ = conn.Close()
-		}
-	}()
+	defer p.ReleaseDrpcConn(ctx, conn)
 	var (
 		client = k.clientFactory.Client(conn)
 		rdiff  = NewRemoteDiff(k.spaceId, client)
