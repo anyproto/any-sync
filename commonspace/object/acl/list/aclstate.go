@@ -5,6 +5,7 @@ import (
 
 	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
@@ -214,9 +215,12 @@ func (st *AclState) HadReadPermissions(identity crypto.PubKey) (had bool) {
 	return false
 }
 
-func (st *AclState) Invites() []Invite {
+func (st *AclState) Invites(inviteType ...aclrecordproto.AclInviteType) []Invite {
 	var invites []Invite
 	for _, inv := range st.invites {
+		if len(inviteType) > 0 && !slices.Contains(inviteType, inv.Type) {
+			continue
+		}
 		invites = append(invites, inv)
 	}
 	return invites
@@ -232,6 +236,79 @@ func (st *AclState) InviteIds() []string {
 		invites = append(invites, invId)
 	}
 	return invites
+}
+
+func (st *AclState) RequestIds() []string {
+	var requests []string
+	for reqId := range st.requestRecords {
+		requests = append(requests, reqId)
+	}
+	return requests
+}
+
+func (st *AclState) DecryptInvite(invitePk crypto.PrivKey) (keys AclKeys, err error) {
+	if invitePk == nil {
+		return AclKeys{}, ErrNoReadKey
+	}
+	var recId string
+	for id, invite := range st.invites {
+		if invite.Key.Equals(invitePk.GetPublic()) {
+			recId = id
+		}
+	}
+	if recId == "" {
+		return AclKeys{}, ErrNoSuchInvite
+	}
+	currentKey := st.CurrentReadKeyId()
+	currentRec, err := st.list.Get(currentKey)
+	if err != nil {
+		return AclKeys{}, err
+	}
+	model, ok := currentRec.Model.(*aclrecordproto.AclData)
+	if !ok {
+		return AclKeys{}, ErrNoReadKey
+	}
+	var value *aclrecordproto.AclReadKeyChange
+	for _, ch := range model.GetAclContent() {
+		if ch.GetAccountRemove() != nil {
+			value = ch.GetReadKeyChange()
+			break
+		} else if ch.GetReadKeyChange() != nil {
+			value = ch.GetReadKeyChange()
+			break
+		}
+	}
+	if value == nil {
+		return AclKeys{}, ErrNoReadKey
+	}
+	mkPubKey, err := st.keyStore.PubKeyFromProto(value.MetadataPubKey)
+	if err != nil {
+		return AclKeys{}, err
+	}
+	keys = AclKeys{
+		MetadataPubKey: mkPubKey,
+	}
+	for _, key := range value.InviteKeys {
+		invKey, err := st.keyStore.PubKeyFromProto(key.Identity)
+		if err != nil {
+			return AclKeys{}, err
+		}
+		if invitePk.Equals(invKey) {
+			keys.ReadKey, err = st.unmarshallDecryptReadKey(key.EncryptedReadKey, invitePk.Decrypt)
+			if err != nil {
+				return AclKeys{}, err
+			}
+			break
+		}
+	}
+	if keys.ReadKey == nil {
+		return AclKeys{}, ErrNoReadKey
+	}
+	keys.MetadataPrivKey, err = st.unmarshallDecryptPrivKey(value.EncryptedMetadataPrivKey, keys.ReadKey.Decrypt)
+	if err != nil {
+		return AclKeys{}, err
+	}
+	return keys, nil
 }
 
 func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
@@ -459,7 +536,7 @@ func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, record *Acl
 	}
 	st.invites[record.Id] = Invite{
 		Key:  inviteKey,
-		Type: aclrecordproto.AclInviteType_RequestToJoin, // Default value
+		Type: ch.InviteType,
 	}
 	return nil
 }
