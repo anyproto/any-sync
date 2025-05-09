@@ -4,19 +4,20 @@ import (
 	"context"
 	"errors"
 
-	"github.com/anyproto/protobuf/proto"
 	"storj.io/drpc"
+
+	"github.com/anyproto/any-sync/protobuf"
 )
 
 var ErrNotAProtoMessage = errors.New("encoding: not a proto message")
 
 type ProtoMessageGettable interface {
-	ProtoMessage() (proto.Message, error)
+	ProtoMessage() (protobuf.Message, error)
 }
 
 type ProtoMessageSettable interface {
 	ProtoMessageGettable
-	SetProtoMessage(proto.Message) error
+	SetProtoMessage(protobuf.Message) error
 }
 
 // WrapConnEncoding wraps the drpc connection and replace an encoding

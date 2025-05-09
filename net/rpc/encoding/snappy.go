@@ -7,9 +7,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/anyproto/protobuf/proto"
 	"github.com/golang/snappy"
 	"storj.io/drpc"
+
+	"github.com/anyproto/any-sync/protobuf"
 )
 
 var (
@@ -42,7 +43,7 @@ func (se *snappyEncoding) Marshal(msg drpc.Message) ([]byte, error) {
 }
 
 func (se *snappyEncoding) MarshalAppend(buf []byte, msg drpc.Message) (res []byte, err error) {
-	protoMessage, ok := msg.(proto.Message)
+	protoMessage, ok := msg.(protobuf.Message)
 	if !ok {
 		if protoMessageGettable, ok := msg.(ProtoMessageGettable); ok {
 			protoMessage, err = protoMessageGettable.ProtoMessage()
@@ -53,7 +54,7 @@ func (se *snappyEncoding) MarshalAppend(buf []byte, msg drpc.Message) (res []byt
 			return nil, ErrNotAProtoMessage
 		}
 	}
-	if se.marshalBuf, err = proto.MarshalAppend(se.marshalBuf[:0], protoMessage); err != nil {
+	if se.marshalBuf, err = protobuf.MarshalAppend(se.marshalBuf[:0], protoMessage); err != nil {
 		return nil, err
 	}
 
@@ -80,7 +81,7 @@ func (se *snappyEncoding) Unmarshal(buf []byte, msg drpc.Message) (err error) {
 	rawBytes.Add(uint64(len(se.unmarshalBuf)))
 
 	var protoMessageSettable ProtoMessageSettable
-	protoMessage, ok := msg.(proto.Message)
+	protoMessage, ok := msg.(protobuf.Message)
 	if !ok {
 		if protoMessageSettable, ok = msg.(ProtoMessageSettable); ok {
 			protoMessage, err = protoMessageSettable.ProtoMessage()
@@ -91,7 +92,7 @@ func (se *snappyEncoding) Unmarshal(buf []byte, msg drpc.Message) (err error) {
 			return ErrNotAProtoMessage
 		}
 	}
-	err = proto.Unmarshal(se.unmarshalBuf, protoMessage)
+	err = protoMessage.UnmarshalVT(se.unmarshalBuf)
 	if err != nil {
 		return err
 	}

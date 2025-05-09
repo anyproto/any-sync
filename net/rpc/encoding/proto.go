@@ -1,8 +1,9 @@
 package encoding
 
 import (
-	"github.com/anyproto/protobuf/proto"
 	"storj.io/drpc"
+
+	"github.com/anyproto/any-sync/protobuf"
 )
 
 var (
@@ -16,7 +17,7 @@ func (b protoEncoding) Marshal(msg drpc.Message) ([]byte, error) {
 }
 
 func (b protoEncoding) MarshalAppend(buf []byte, msg drpc.Message) (res []byte, err error) {
-	protoMessage, ok := msg.(proto.Message)
+	protoMessage, ok := msg.(protobuf.Message)
 	if !ok {
 		if protoMessageGettable, ok := msg.(ProtoMessageGettable); ok {
 			protoMessage, err = protoMessageGettable.ProtoMessage()
@@ -27,12 +28,12 @@ func (b protoEncoding) MarshalAppend(buf []byte, msg drpc.Message) (res []byte, 
 			return nil, ErrNotAProtoMessage
 		}
 	}
-	return proto.MarshalAppend(buf, protoMessage)
+	return protobuf.MarshalAppend(buf, protoMessage)
 }
 
 func (b protoEncoding) Unmarshal(buf []byte, msg drpc.Message) (err error) {
 	var protoMessageSettable ProtoMessageSettable
-	protoMessage, ok := msg.(proto.Message)
+	protoMessage, ok := msg.(protobuf.Message)
 	if !ok {
 		if protoMessageSettable, ok = msg.(ProtoMessageSettable); ok {
 			protoMessage, err = protoMessageSettable.ProtoMessage()
@@ -43,7 +44,7 @@ func (b protoEncoding) Unmarshal(buf []byte, msg drpc.Message) (err error) {
 			return ErrNotAProtoMessage
 		}
 	}
-	err = proto.Unmarshal(buf, protoMessage)
+	err = protoMessage.UnmarshalVT(buf)
 	if err != nil {
 		return err
 	}

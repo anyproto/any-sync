@@ -12,6 +12,7 @@ type Message interface {
 	MarshalVT() (dAtA []byte, err error)
 	UnmarshalVT(dAtA []byte) error
 	MarshalToSizedBufferVT(dAtA []byte) (int, error)
+	proto.Message
 }
 
 func MarshalAppend(buf []byte, pb proto.Message) ([]byte, error) {
