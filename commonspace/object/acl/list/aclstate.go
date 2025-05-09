@@ -52,8 +52,9 @@ type AclKeys struct {
 }
 
 type Invite struct {
-	Key  crypto.PubKey
-	Type aclrecordproto.AclInviteType
+	Key         crypto.PubKey
+	Type        aclrecordproto.AclInviteType
+	Permissions AclPermissions
 }
 
 type AclState struct {
@@ -465,6 +466,8 @@ func (st *AclState) Copy() *AclState {
 
 func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, record *AclRecord) error {
 	switch {
+	case ch.GetInviteJoin() != nil:
+		return st.applyInviteJoin(ch.GetInviteJoin(), record)
 	case ch.GetPermissionChange() != nil:
 		return st.applyPermissionChange(ch.GetPermissionChange(), record)
 	case ch.GetInvite() != nil:
@@ -535,8 +538,9 @@ func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, record *Acl
 		return err
 	}
 	st.invites[record.Id] = Invite{
-		Key:  inviteKey,
-		Type: ch.InviteType,
+		Key:         inviteKey,
+		Type:        ch.InviteType,
+		Permissions: AclPermissions(ch.Permissions),
 	}
 	return nil
 }
@@ -663,6 +667,44 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 	delete(st.requestRecords, ch.RequestRecordId)
 	if !st.pubKey.Equals(acceptIdentity) {
 		return nil
+	}
+	return st.unpackAllKeys(ch.EncryptedReadKey)
+}
+
+func (st *AclState) applyInviteJoin(ch *aclrecordproto.AclInviteJoin, record *AclRecord) error {
+	identity, err := st.keyStore.PubKeyFromProto(ch.Identity)
+	if err != nil {
+		return err
+	}
+	inviteRecord, _ := st.invites[ch.InviteRecordId]
+	pKeyString := mapKeyFromPubKey(identity)
+	state, exists := st.accountStates[pKeyString]
+	if !exists {
+		st.accountStates[pKeyString] = AccountState{
+			PubKey:          identity,
+			Permissions:     inviteRecord.Permissions,
+			RequestMetadata: ch.Metadata,
+			KeyRecordId:     st.CurrentReadKeyId(),
+			Status:          StatusActive,
+			PermissionChanges: []PermissionChange{
+				{
+					Permission: inviteRecord.Permissions,
+					RecordId:   record.Id,
+				},
+			},
+		}
+	} else {
+		st.accountStates[pKeyString] = AccountState{
+			PubKey:          identity,
+			Permissions:     inviteRecord.Permissions,
+			RequestMetadata: ch.Metadata,
+			KeyRecordId:     st.CurrentReadKeyId(),
+			Status:          StatusActive,
+			PermissionChanges: append(state.PermissionChanges, PermissionChange{
+				Permission: inviteRecord.Permissions,
+				RecordId:   record.Id,
+			}),
+		}
 	}
 	return st.unpackAllKeys(ch.EncryptedReadKey)
 }

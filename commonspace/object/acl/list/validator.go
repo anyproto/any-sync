@@ -152,6 +152,10 @@ func (c *contentValidator) ValidateInvite(ch *aclrecordproto.AclAccountInvite, a
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
+	if ch.InviteType == aclrecordproto.AclInviteType_AnyoneCanJoin &&
+		(AclPermissions(ch.Permissions).IsOwner() || AclPermissions(ch.Permissions).NoPermissions()) {
+		return ErrInsufficientPermissions
+	}
 	_, err = c.keyStore.PubKeyFromProto(ch.InviteKey)
 	return
 }
