@@ -372,6 +372,16 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		if err != nil {
 			return err
 		}
+	case "invite_anyone":
+		res, err := acl.RecordBuilder().BuildInviteAnyone()
+		if err != nil {
+			return err
+		}
+		a.invites[args[0]] = res.InviteKey
+		err = addRec(WrapAclRecord(res.InviteRec))
+		if err != nil {
+			return err
+		}
 	case "batch":
 		afterAll, err = a.buildBatchRequest(args, acl, getPerm, addRec)
 		if err != nil {

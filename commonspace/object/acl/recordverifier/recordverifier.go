@@ -44,10 +44,7 @@ func (r *recordVerifier) VerifyAcceptor(rec *consensusproto.RawRecord) (err erro
 	if err != nil {
 		return fmt.Errorf("failed to get acceptor identity: %w", err)
 	}
-	if !identity.Equals(r.networkKey) {
-		return fmt.Errorf("acceptor identity does not match network key")
-	}
-	verified, err := r.networkKey.Verify(rec.Payload, rec.AcceptorSignature)
+	verified, err := identity.Verify(rec.Payload, rec.AcceptorSignature)
 	if !verified || err != nil {
 		return fmt.Errorf("failed to verify acceptor: %w", err)
 	}

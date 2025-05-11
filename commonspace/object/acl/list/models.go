@@ -24,6 +24,8 @@ type AclRecord struct {
 	AcceptorTimestamp int64
 	Data              []byte
 	Identity          crypto.PubKey
+	AcceptorIdentity  crypto.PubKey
+	AcceptorSignature []byte
 	Model             interface{}
 	Signature         []byte
 }

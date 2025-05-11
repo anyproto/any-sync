@@ -1,6 +1,8 @@
 package list
 
 import (
+	"golang.org/x/exp/slices"
+
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -11,6 +13,7 @@ type ContentValidator interface {
 	ValidatePermissionChanges(ch *aclrecordproto.AclAccountPermissionChanges, authorIdentity crypto.PubKey) (err error)
 	ValidateAccountsAdd(ch *aclrecordproto.AclAccountsAdd, authorIdentity crypto.PubKey) (err error)
 	ValidateInvite(ch *aclrecordproto.AclAccountInvite, authorIdentity crypto.PubKey) (err error)
+	ValidateInviteJoin(ch *aclrecordproto.AclInviteJoin, authorIdentity crypto.PubKey) (err error)
 	ValidateInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, authorIdentity crypto.PubKey) (err error)
@@ -66,6 +69,44 @@ func (c *contentValidator) ValidateAccountsAdd(ch *aclrecordproto.AclAccountsAdd
 	return nil
 }
 
+func (c *contentValidator) ValidateInviteJoin(ch *aclrecordproto.AclInviteJoin, authorIdentity crypto.PubKey) (err error) {
+	if !c.aclState.Permissions(authorIdentity).NoPermissions() {
+		return ErrInsufficientPermissions
+	}
+	invite, exists := c.aclState.invites[ch.InviteRecordId]
+	if !exists {
+		return ErrNoSuchInvite
+	}
+	if invite.Type != aclrecordproto.AclInviteType_AnyoneCanJoin {
+		return ErrNoSuchInvite
+	}
+	if !c.aclState.Permissions(authorIdentity).NoPermissions() {
+		return ErrInsufficientPermissions
+	}
+	inviteIdentity, err := c.keyStore.PubKeyFromProto(ch.Identity)
+	if err != nil {
+		return
+	}
+	if !authorIdentity.Equals(inviteIdentity) {
+		return ErrIncorrectIdentity
+	}
+	rawInviteIdentity, err := inviteIdentity.Raw()
+	if err != nil {
+		return err
+	}
+	ok, err := invite.Key.Verify(rawInviteIdentity, ch.InviteIdentitySignature)
+	if err != nil {
+		return ErrInvalidSignature
+	}
+	if !ok {
+		return ErrInvalidSignature
+	}
+	if len(ch.Metadata) > MaxMetadataLen {
+		return ErrMetadataTooLarge
+	}
+	return nil
+}
+
 func (c *contentValidator) ValidateAclRecordContents(ch *AclRecord) (err error) {
 	if ch.PrevId != c.aclState.lastRecordId {
 		return ErrIncorrectRecordSequence
@@ -90,6 +131,8 @@ func (c *contentValidator) validateAclRecordContent(ch *aclrecordproto.AclConten
 		return c.ValidateInviteRevoke(ch.GetInviteRevoke(), authorIdentity)
 	case ch.GetRequestJoin() != nil:
 		return c.ValidateRequestJoin(ch.GetRequestJoin(), authorIdentity)
+	case ch.GetInviteJoin() != nil:
+		return c.ValidateInviteJoin(ch.GetInviteJoin(), authorIdentity)
 	case ch.GetRequestAccept() != nil:
 		return c.ValidateRequestAccept(ch.GetRequestAccept(), authorIdentity)
 	case ch.GetRequestDecline() != nil:
@@ -303,23 +346,55 @@ func (c *contentValidator) validateReadKeyChange(ch *aclrecordproto.AclReadKeyCh
 	if ch.EncryptedMetadataPrivKey == nil || ch.EncryptedOldReadKey == nil {
 		return ErrIncorrectReadKey
 	}
+	var (
+		activeUsers    []string
+		updatedInvites []string
+		activeInvites  []string
+		updatedUsers   []string
+	)
+	for _, accState := range c.aclState.accountStates {
+		if accState.Permissions.NoPermissions() {
+			continue
+		}
+		pubKey := mapKeyFromPubKey(accState.PubKey)
+		if _, exists := removedUsers[pubKey]; exists {
+			continue
+		}
+		activeUsers = append(activeUsers, pubKey)
+	}
+	for _, invite := range c.aclState.invites {
+		if invite.Type == aclrecordproto.AclInviteType_AnyoneCanJoin {
+			activeInvites = append(activeInvites, mapKeyFromPubKey(invite.Key))
+		}
+	}
 	for _, encKeys := range ch.AccountKeys {
 		identity, err := c.keyStore.PubKeyFromProto(encKeys.Identity)
 		if err != nil {
 			return err
 		}
 		idKey := mapKeyFromPubKey(identity)
-		_, exists := c.aclState.accountStates[idKey]
-		if !exists {
-			return ErrNoSuchAccount
+		updatedUsers = append(updatedUsers, idKey)
+	}
+	for _, invKeys := range ch.InviteKeys {
+		identity, err := c.keyStore.PubKeyFromProto(invKeys.Identity)
+		if err != nil {
+			return err
 		}
-		if removedUsers == nil {
-			continue
-		}
-		_, exists = removedUsers[idKey]
-		if exists {
-			return ErrIncorrectNumberOfAccounts
-		}
+		idKey := mapKeyFromPubKey(identity)
+		updatedInvites = append(updatedInvites, idKey)
+	}
+	if len(activeUsers) != len(updatedUsers) {
+		return ErrIncorrectNumberOfAccounts
+	}
+	if len(activeInvites) != len(updatedInvites) {
+		return ErrIncorrectNumberOfAccounts
+	}
+	slices.Sort(updatedUsers)
+	slices.Sort(updatedInvites)
+	slices.Sort(activeUsers)
+	slices.Sort(activeInvites)
+	if !slices.Equal(activeUsers, updatedUsers) || !slices.Equal(activeInvites, updatedInvites) {
+		return ErrIncorrectNumberOfAccounts
 	}
 	return
 }

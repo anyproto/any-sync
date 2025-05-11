@@ -38,7 +38,7 @@ message AclAccountRequestJoin {
 
 // AclInviteJoin contains the reference to the invite record and the data of the person who wants to join, confirmed by the private invite key
 // The person must encrypt the key with its own public key
-message AclInviteJoin {
+message AclAccountInviteJoin {
     bytes identity = 1;
     string inviteRecordId = 2;
     bytes inviteIdentitySignature = 3;
@@ -137,7 +137,7 @@ message AclContentValue {
         AclAccountPermissionChanges permissionChanges = 10;
         AclAccountsAdd accountsAdd = 11;
         AclAccountRequestCancel requestCancel = 12;
-        AclInviteJoin inviteJoin = 13;
+        AclAccountInviteJoin inviteJoin = 13;
     }
 }
 
