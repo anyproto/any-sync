@@ -28,7 +28,6 @@ type RequestJoinPayload struct {
 
 type InviteJoinPayload struct {
 	InviteKey crypto.PrivKey
-	ReadKey   crypto.SymKey
 	Metadata  []byte
 }
 
@@ -89,6 +88,7 @@ type AclRecordBuilder interface {
 	BuildInvite() (res InviteResult, err error)
 	BuildInviteAnyone() (res InviteResult, err error)
 	BuildInviteRevoke(inviteRecordId string) (rawRecord *consensusproto.RawRecord, err error)
+	BuildInviteJoin(payload InviteJoinPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestJoin(payload RequestJoinPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestAccept(payload RequestAcceptPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestDecline(requestRecordId string) (rawRecord *consensusproto.RawRecord, err error)
@@ -334,10 +334,23 @@ func (a *aclRecordBuilder) BuildInviteAnyone() (res InviteResult, err error) {
 	if err != nil {
 		return
 	}
+	curReadKey, err := a.state.CurrentReadKey()
+	if err != nil {
+		return
+	}
+	raw, err := curReadKey.Marshall()
+	if err != nil {
+		return
+	}
+	encReadKey, err := pubKey.Encrypt(raw)
+	if err != nil {
+		return
+	}
 	inviteRec := &aclrecordproto.AclAccountInvite{
-		InviteKey:   invitePubKey,
-		InviteType:  aclrecordproto.AclInviteType_AnyoneCanJoin,
-		Permissions: aclrecordproto.AclUserPermissions_Reader,
+		InviteKey:        invitePubKey,
+		InviteType:       aclrecordproto.AclInviteType_AnyoneCanJoin,
+		Permissions:      aclrecordproto.AclUserPermissions_Reader,
+		EncryptedReadKey: encReadKey,
 	}
 	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_Invite{Invite: inviteRec}}
 	rawRec, err := a.buildRecord(content)
@@ -463,7 +476,11 @@ func (a *aclRecordBuilder) BuildInviteJoin(payload InviteJoinPayload) (rawRecord
 	if err != nil {
 		return
 	}
-	readKey, err := payload.ReadKey.Marshall()
+	key, err := a.state.DecryptInvite(payload.InviteKey)
+	if err != nil {
+		return
+	}
+	readKey, err := key.Marshall()
 	if err != nil {
 		return
 	}

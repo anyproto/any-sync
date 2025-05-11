@@ -13,7 +13,7 @@ type ContentValidator interface {
 	ValidatePermissionChanges(ch *aclrecordproto.AclAccountPermissionChanges, authorIdentity crypto.PubKey) (err error)
 	ValidateAccountsAdd(ch *aclrecordproto.AclAccountsAdd, authorIdentity crypto.PubKey) (err error)
 	ValidateInvite(ch *aclrecordproto.AclAccountInvite, authorIdentity crypto.PubKey) (err error)
-	ValidateInviteJoin(ch *aclrecordproto.AclInviteJoin, authorIdentity crypto.PubKey) (err error)
+	ValidateInviteJoin(ch *aclrecordproto.AclAccountInviteJoin, authorIdentity crypto.PubKey) (err error)
 	ValidateInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, authorIdentity crypto.PubKey) (err error)
@@ -69,7 +69,7 @@ func (c *contentValidator) ValidateAccountsAdd(ch *aclrecordproto.AclAccountsAdd
 	return nil
 }
 
-func (c *contentValidator) ValidateInviteJoin(ch *aclrecordproto.AclInviteJoin, authorIdentity crypto.PubKey) (err error) {
+func (c *contentValidator) ValidateInviteJoin(ch *aclrecordproto.AclAccountInviteJoin, authorIdentity crypto.PubKey) (err error) {
 	if !c.aclState.Permissions(authorIdentity).NoPermissions() {
 		return ErrInsufficientPermissions
 	}
@@ -103,6 +103,9 @@ func (c *contentValidator) ValidateInviteJoin(ch *aclrecordproto.AclInviteJoin, 
 	}
 	if len(ch.Metadata) > MaxMetadataLen {
 		return ErrMetadataTooLarge
+	}
+	if ch.EncryptedReadKey == nil {
+		return ErrIncorrectReadKey
 	}
 	return nil
 }

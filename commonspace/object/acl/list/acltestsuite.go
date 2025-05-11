@@ -498,6 +498,21 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		if err != nil {
 			return err
 		}
+	case "invite_join":
+		invite := a.invites[args[0]]
+		inviteJoin, err := acl.RecordBuilder().BuildInviteJoin(InviteJoinPayload{
+			InviteKey: invite,
+			Metadata:  []byte(account),
+		})
+		if err != nil {
+			return err
+		}
+		err = addRec(WrapAclRecord(inviteJoin))
+		if err != nil {
+			return err
+		}
+		a.expectedAccounts[account].status = StatusActive
+		a.expectedAccounts[account].perms = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
 	case "remove":
 		identities := strings.Split(args[0], ",")
 		var pubKeys []crypto.PubKey

@@ -55,9 +55,10 @@ type AclKeys struct {
 }
 
 type Invite struct {
-	Key         crypto.PubKey
-	Type        aclrecordproto.AclInviteType
-	Permissions AclPermissions
+	Key          crypto.PubKey
+	Type         aclrecordproto.AclInviteType
+	Permissions  AclPermissions
+	encryptedKey []byte
 }
 
 type AclState struct {
@@ -250,69 +251,20 @@ func (st *AclState) RequestIds() []string {
 	return requests
 }
 
-func (st *AclState) DecryptInvite(invitePk crypto.PrivKey) (keys AclKeys, err error) {
+func (st *AclState) DecryptInvite(invitePk crypto.PrivKey) (key crypto.SymKey, err error) {
 	if invitePk == nil {
-		return AclKeys{}, ErrNoReadKey
+		return nil, ErrNoReadKey
 	}
-	var recId string
-	for id, invite := range st.invites {
+	for _, invite := range st.invites {
 		if invite.Key.Equals(invitePk.GetPublic()) {
-			recId = id
-		}
-	}
-	if recId == "" {
-		return AclKeys{}, ErrNoSuchInvite
-	}
-	currentKey := st.CurrentReadKeyId()
-	currentRec, err := st.list.Get(currentKey)
-	if err != nil {
-		return AclKeys{}, err
-	}
-	model, ok := currentRec.Model.(*aclrecordproto.AclData)
-	if !ok {
-		return AclKeys{}, ErrNoReadKey
-	}
-	var value *aclrecordproto.AclReadKeyChange
-	for _, ch := range model.GetAclContent() {
-		if ch.GetAccountRemove() != nil {
-			value = ch.GetReadKeyChange()
-			break
-		} else if ch.GetReadKeyChange() != nil {
-			value = ch.GetReadKeyChange()
-			break
-		}
-	}
-	if value == nil {
-		return AclKeys{}, ErrNoReadKey
-	}
-	mkPubKey, err := st.keyStore.PubKeyFromProto(value.MetadataPubKey)
-	if err != nil {
-		return AclKeys{}, err
-	}
-	keys = AclKeys{
-		MetadataPubKey: mkPubKey,
-	}
-	for _, key := range value.InviteKeys {
-		invKey, err := st.keyStore.PubKeyFromProto(key.Identity)
-		if err != nil {
-			return AclKeys{}, err
-		}
-		if invitePk.Equals(invKey) {
-			keys.ReadKey, err = st.unmarshallDecryptReadKey(key.EncryptedReadKey, invitePk.Decrypt)
+			res, err := st.unmarshallDecryptReadKey(invite.encryptedKey, invitePk.Decrypt)
 			if err != nil {
-				return AclKeys{}, err
+				return nil, err
 			}
-			break
+			return res, nil
 		}
 	}
-	if keys.ReadKey == nil {
-		return AclKeys{}, ErrNoReadKey
-	}
-	keys.MetadataPrivKey, err = st.unmarshallDecryptPrivKey(value.EncryptedMetadataPrivKey, keys.ReadKey.Decrypt)
-	if err != nil {
-		return AclKeys{}, err
-	}
-	return keys, nil
+	return nil, ErrNoSuchInvite
 }
 
 func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
@@ -544,9 +496,10 @@ func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, record *Acl
 		return err
 	}
 	st.invites[record.Id] = Invite{
-		Key:         inviteKey,
-		Type:        ch.InviteType,
-		Permissions: AclPermissions(ch.Permissions),
+		Key:          inviteKey,
+		Type:         ch.InviteType,
+		Permissions:  AclPermissions(ch.Permissions),
+		encryptedKey: ch.EncryptedReadKey,
 	}
 	return nil
 }
@@ -677,7 +630,7 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 	return st.unpackAllKeys(ch.EncryptedReadKey)
 }
 
-func (st *AclState) applyInviteJoin(ch *aclrecordproto.AclInviteJoin, record *AclRecord) error {
+func (st *AclState) applyInviteJoin(ch *aclrecordproto.AclAccountInviteJoin, record *AclRecord) error {
 	err := st.contentValidator.ValidateInviteJoin(ch, record.Identity)
 	if err != nil {
 		return err
@@ -716,7 +669,10 @@ func (st *AclState) applyInviteJoin(ch *aclrecordproto.AclInviteJoin, record *Ac
 			}),
 		}
 	}
-	return st.unpackAllKeys(ch.EncryptedReadKey)
+	if st.pubKey.Equals(identity) {
+		return st.unpackAllKeys(ch.EncryptedReadKey)
+	}
+	return nil
 }
 
 func (st *AclState) unpackAllKeys(rk []byte) error {
@@ -868,6 +824,19 @@ func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, reco
 				return err
 			}
 			aclKeys.ReadKey = res
+		}
+	}
+	for _, encKey := range ch.InviteKeys {
+		invKey, err := st.keyStore.PubKeyFromProto(encKey.Identity)
+		if err != nil {
+			return err
+		}
+		for key, invite := range st.invites {
+			if invite.Key.Equals(invKey) {
+				invite.encryptedKey = encKey.EncryptedReadKey
+				st.invites[key] = invite
+				break
+			}
 		}
 	}
 	if aclKeys.ReadKey != nil {

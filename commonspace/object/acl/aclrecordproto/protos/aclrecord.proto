@@ -20,6 +20,7 @@ message AclAccountInvite {
     bytes inviteKey = 1;
     AclInviteType inviteType = 2;
     AclUserPermissions permissions = 3;
+    bytes encryptedReadKey = 4;
 }
 
 enum AclInviteType {

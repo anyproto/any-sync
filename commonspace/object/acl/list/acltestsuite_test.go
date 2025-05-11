@@ -128,6 +128,9 @@ func TestAclExecutor(t *testing.T) {
 		{"a.changes::guest,none", ErrInsufficientPermissions},
 		// can't change permission of existing user to guest, should be only possible to create it with add
 		{"a.changes::r,g", ErrInsufficientPermissions},
+		{"a.invite_anyone::invAnyoneId", nil},
+		{"new.invite_join::invAnyoneId", nil},
+		{"new1.invite_join::invAnyoneId", nil},
 	}
 	for _, cmd := range cmds {
 		err := a.Execute(cmd.cmd)
