@@ -49,6 +49,9 @@ type AclKeys struct {
 	ReadKey         crypto.SymKey
 	MetadataPrivKey crypto.PrivKey
 	MetadataPubKey  crypto.PubKey
+
+	oldEncryptedReadKey []byte
+	encMetadatKey       []byte
 }
 
 type Invite struct {
@@ -360,7 +363,10 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 		if err != nil {
 			return err
 		}
-		st.keys[record.Id] = AclKeys{MetadataPubKey: mkPubKey}
+		st.keys[record.Id] = AclKeys{
+			MetadataPubKey: mkPubKey,
+			encMetadatKey:  root.EncryptedMetadataPrivKey,
+		}
 	} else {
 		// this should be a derived acl
 		st.keys[record.Id] = AclKeys{}
@@ -672,6 +678,10 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 }
 
 func (st *AclState) applyInviteJoin(ch *aclrecordproto.AclInviteJoin, record *AclRecord) error {
+	err := st.contentValidator.ValidateInviteJoin(ch, record.Identity)
+	if err != nil {
+		return err
+	}
 	identity, err := st.keyStore.PubKeyFromProto(ch.Identity)
 	if err != nil {
 		return err
@@ -716,42 +726,8 @@ func (st *AclState) unpackAllKeys(rk []byte) error {
 	}
 	for idx := len(st.readKeyChanges) - 1; idx >= 0; idx-- {
 		recId := st.readKeyChanges[idx]
-		rec, err := st.list.Get(recId)
-		if err != nil {
-			return err
-		}
-		// if this is a first key change
-		if recId == st.id {
-			ch := rec.Model.(*aclrecordproto.AclRoot)
-			metadataKey, err := st.unmarshallDecryptPrivKey(ch.EncryptedMetadataPrivKey, iterReadKey.Decrypt)
-			if err != nil {
-				return err
-			}
-			aclKeys := st.keys[recId]
-			aclKeys.ReadKey = iterReadKey
-			aclKeys.MetadataPrivKey = metadataKey
-			st.keys[recId] = aclKeys
-			break
-		}
-		model := rec.Model.(*aclrecordproto.AclData)
-		content := model.GetAclContent()
-		var readKeyChange *aclrecordproto.AclReadKeyChange
-		for _, ch := range content {
-			switch {
-			case ch.GetReadKeyChange() != nil:
-				readKeyChange = ch.GetReadKeyChange()
-			case ch.GetAccountRemove() != nil:
-				readKeyChange = ch.GetAccountRemove().GetReadKeyChange()
-			}
-		}
-		if readKeyChange == nil {
-			return ErrIncorrectReadKey
-		}
-		oldReadKey, err := st.unmarshallDecryptReadKey(readKeyChange.EncryptedOldReadKey, iterReadKey.Decrypt)
-		if err != nil {
-			return err
-		}
-		metadataKey, err := st.unmarshallDecryptPrivKey(readKeyChange.EncryptedMetadataPrivKey, iterReadKey.Decrypt)
+		keys := st.keys[recId]
+		metadataKey, err := st.unmarshallDecryptPrivKey(keys.encMetadatKey, iterReadKey.Decrypt)
 		if err != nil {
 			return err
 		}
@@ -759,7 +735,16 @@ func (st *AclState) unpackAllKeys(rk []byte) error {
 		aclKeys.ReadKey = iterReadKey
 		aclKeys.MetadataPrivKey = metadataKey
 		st.keys[recId] = aclKeys
-		iterReadKey = oldReadKey
+		if idx != 0 {
+			if keys.oldEncryptedReadKey == nil {
+				return ErrIncorrectReadKey
+			}
+			oldReadKey, err := st.unmarshallDecryptReadKey(keys.oldEncryptedReadKey, iterReadKey.Decrypt)
+			if err != nil {
+				return err
+			}
+			iterReadKey = oldReadKey
+		}
 	}
 	return nil
 }
@@ -871,7 +856,9 @@ func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, reco
 		return err
 	}
 	aclKeys := AclKeys{
-		MetadataPubKey: mkPubKey,
+		MetadataPubKey:      mkPubKey,
+		oldEncryptedReadKey: ch.EncryptedOldReadKey,
+		encMetadatKey:       ch.EncryptedMetadataPrivKey,
 	}
 	for _, accKey := range ch.AccountKeys {
 		identity, _ := st.keyStore.PubKeyFromProto(accKey.Identity)
