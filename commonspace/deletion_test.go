@@ -10,12 +10,21 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/spacepayloads"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/util/crypto"
 )
+
+func mockDeps() Deps {
+	return Deps{
+		TreeSyncer:     mockTreeSyncer{},
+		SyncStatus:     syncstatus.NewNoOpSyncStatus(),
+		recordVerifier: recordverifier.NewAlwaysAccept(),
+	}
+}
 
 func createTree(t *testing.T, ctx context.Context, spc Space, acc *accountdata.AccountKeys) string {
 	bytes := make([]byte, 32)
@@ -60,7 +69,7 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	require.NotNil(t, sp)
 
 	// initializing space
-	spc, err := fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}, SyncStatus: syncstatus.NewNoOpSyncStatus()})
+	spc, err := fx.spaceService.NewSpace(ctx, sp, mockDeps())
 	require.NoError(t, err)
 	require.NotNil(t, spc)
 	// adding space to tree manager
@@ -109,7 +118,7 @@ func TestSpaceDeleteIdsMarkDeleted(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	storeSetter := fx.storageProvider.(storeSetter)
 	storeSetter.SetStore(sp, newStore)
-	spc, err = fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}, SyncStatus: syncstatus.NewNoOpSyncStatus()})
+	spc, err = fx.spaceService.NewSpace(ctx, sp, mockDeps())
 	require.NoError(t, err)
 	require.NotNil(t, spc)
 	waitTest := make(chan struct{})
@@ -153,7 +162,7 @@ func TestSpaceDeleteIds(t *testing.T) {
 	require.NotNil(t, sp)
 
 	// initializing space
-	spc, err := fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}, SyncStatus: syncstatus.NewNoOpSyncStatus()})
+	spc, err := fx.spaceService.NewSpace(ctx, sp, mockDeps())
 	require.NoError(t, err)
 	require.NotNil(t, spc)
 	// adding space to tree manager
@@ -202,7 +211,7 @@ func TestSpaceDeleteIds(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	storeSetter := fx.storageProvider.(storeSetter)
 	storeSetter.SetStore(sp, newStore)
-	spc, err = fx.spaceService.NewSpace(ctx, sp, Deps{TreeSyncer: mockTreeSyncer{}, SyncStatus: syncstatus.NewNoOpSyncStatus()})
+	spc, err = fx.spaceService.NewSpace(ctx, sp, mockDeps())
 	require.NoError(t, err)
 	require.NotNil(t, spc)
 	waitTest := make(chan struct{})
