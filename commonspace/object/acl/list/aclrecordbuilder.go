@@ -626,7 +626,10 @@ func (a *aclRecordBuilder) buildReadKeyChange(payload ReadKeyChangePayload, remo
 	if err != nil {
 		return nil, err
 	}
-	var aclReadKeys []*aclrecordproto.AclEncryptedReadKey
+	var (
+		aclReadKeys []*aclrecordproto.AclEncryptedReadKey
+		invites     []*aclrecordproto.AclEncryptedReadKey
+	)
 	for identity, st := range a.state.accountStates {
 		if removedIdentities != nil {
 			if _, exists := removedIdentities[identity]; exists {
@@ -645,6 +648,23 @@ func (a *aclRecordBuilder) buildReadKeyChange(payload ReadKeyChangePayload, remo
 			return nil, err
 		}
 		aclReadKeys = append(aclReadKeys, &aclrecordproto.AclEncryptedReadKey{
+			Identity:         protoIdentity,
+			EncryptedReadKey: enc,
+		})
+	}
+	for _, invite := range a.state.invites {
+		if invite.Type != aclrecordproto.AclInviteType_AnyoneCanJoin {
+			continue
+		}
+		protoIdentity, err := invite.Key.Marshall()
+		if err != nil {
+			return nil, err
+		}
+		enc, err := invite.Key.Encrypt(protoKey)
+		if err != nil {
+			return nil, err
+		}
+		invites = append(invites, &aclrecordproto.AclEncryptedReadKey{
 			Identity:         protoIdentity,
 			EncryptedReadKey: enc,
 		})
@@ -680,6 +700,7 @@ func (a *aclRecordBuilder) buildReadKeyChange(payload ReadKeyChangePayload, remo
 		MetadataPubKey:           mkPubKey,
 		EncryptedMetadataPrivKey: encPrivKey,
 		EncryptedOldReadKey:      encOldKey,
+		InviteKeys:               invites,
 	}
 	return readRec, nil
 }

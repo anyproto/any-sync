@@ -53,6 +53,7 @@ func TestAclExecutor(t *testing.T) {
 		{"a.init::a", nil},
 		// creating an invite
 		{"a.invite::invId", nil},
+		{"a.invite_anyone::oldInvId", nil},
 		// cannot self join
 		{"a.join::invId", ErrInsufficientPermissions},
 		// now b can join
@@ -130,7 +131,12 @@ func TestAclExecutor(t *testing.T) {
 		{"a.changes::r,g", ErrInsufficientPermissions},
 		{"a.invite_anyone::invAnyoneId", nil},
 		{"new.invite_join::invAnyoneId", nil},
+		// invite keys persist after user removal
+		{"a.remove::new", nil},
 		{"new1.invite_join::invAnyoneId", nil},
+		{"a.revoke::invAnyoneId", nil},
+		{"new2.invite_join::invAnyoneId", ErrNoSuchInvite},
+		{"new2.invite_join::oldInvId", nil},
 	}
 	for _, cmd := range cmds {
 		err := a.Execute(cmd.cmd)
