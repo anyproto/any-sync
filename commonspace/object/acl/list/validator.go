@@ -4,6 +4,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -27,10 +28,10 @@ type ContentValidator interface {
 type contentValidator struct {
 	keyStore crypto.KeyStorage
 	aclState *AclState
-	verifier AcceptorVerifier
+	verifier recordverifier.AcceptorVerifier
 }
 
-func newContentValidator(keyStore crypto.KeyStorage, aclState *AclState, verifier AcceptorVerifier) ContentValidator {
+func newContentValidator(keyStore crypto.KeyStorage, aclState *AclState, verifier recordverifier.AcceptorVerifier) ContentValidator {
 	return &contentValidator{
 		keyStore: keyStore,
 		aclState: aclState,

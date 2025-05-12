@@ -13,6 +13,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -279,7 +280,7 @@ func TestAclList_FixAcceptPanic(t *testing.T) {
 	fx := newFixture(t)
 	fx.inviteAccount(t, AclPermissions(aclrecordproto.AclUserPermissions_Writer))
 
-	_, err := BuildAclListWithIdentity(fx.accountKeys, fx.ownerAcl.storage, NoOpAcceptorVerifier{})
+	_, err := BuildAclListWithIdentity(fx.accountKeys, fx.ownerAcl.storage, recordverifier.NewValidateFull())
 	require.NoError(t, err)
 }
 

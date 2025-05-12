@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -12,9 +11,14 @@ import (
 
 const CName = "common.acl.recordverifier"
 
+type AcceptorVerifier interface {
+	VerifyAcceptor(rec *consensusproto.RawRecord) (err error)
+	ShouldValidate() bool
+}
+
 type RecordVerifier interface {
 	app.Component
-	list.AcceptorVerifier
+	AcceptorVerifier
 }
 
 func New() RecordVerifier {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -87,7 +88,7 @@ type AclState struct {
 func newAclStateWithKeys(
 	rootRecord *AclRecord,
 	key crypto.PrivKey,
-	verifier AcceptorVerifier) (st *AclState, err error) {
+	verifier recordverifier.AcceptorVerifier) (st *AclState, err error) {
 	st = &AclState{
 		id:              rootRecord.Id,
 		key:             key,
@@ -107,7 +108,7 @@ func newAclStateWithKeys(
 	return st, nil
 }
 
-func newAclState(rootRecord *AclRecord, verifier AcceptorVerifier) (st *AclState, err error) {
+func newAclState(rootRecord *AclRecord, verifier recordverifier.AcceptorVerifier) (st *AclState, err error) {
 	st = &AclState{
 		id:              rootRecord.Id,
 		keys:            make(map[string]AclKeys),

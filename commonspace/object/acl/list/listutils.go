@@ -2,6 +2,7 @@ package list
 
 import (
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -17,7 +18,7 @@ func newAclWithStoreProvider(root *consensusproto.RawRecordWithId, keys *account
 	if err != nil {
 		return nil, err
 	}
-	return BuildAclListWithIdentity(keys, storage, NoOpAcceptorVerifier{})
+	return BuildAclListWithIdentity(keys, storage, recordverifier.NewValidateFull())
 }
 
 func newDerivedAclWithStoreProvider(spaceId string, keys *accountdata.AccountKeys, metadata []byte, storeProvider StorageProvider) (AclList, error) {
@@ -43,11 +44,11 @@ func newInMemoryAclWithRoot(keys *accountdata.AccountKeys, root *consensusproto.
 	if err != nil {
 		return nil, err
 	}
-	return BuildAclListWithIdentity(keys, st, NoOpAcceptorVerifier{})
+	return BuildAclListWithIdentity(keys, st, recordverifier.NewValidateFull())
 }
 
 func buildDerivedRoot(spaceId string, keys *accountdata.AccountKeys, metadata []byte) (root *consensusproto.RawRecordWithId, err error) {
-	builder := NewAclRecordBuilder("", crypto.NewKeyStorage(), keys, NoOpAcceptorVerifier{})
+	builder := NewAclRecordBuilder("", crypto.NewKeyStorage(), keys, recordverifier.NewValidateFull())
 	masterKey, _, err := crypto.GenerateRandomEd25519KeyPair()
 	if err != nil {
 		return nil, err

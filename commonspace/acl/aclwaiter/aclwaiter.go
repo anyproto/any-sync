@@ -14,6 +14,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/util/periodicsync"
 )
 
@@ -82,7 +83,7 @@ func (a *aclWaiter) loop(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		acl, err := list.BuildAclListWithIdentity(a.keys, storage, list.NoOpAcceptorVerifier{})
+		acl, err := list.BuildAclListWithIdentity(a.keys, storage, recordverifier.NewValidateFull())
 		if err != nil {
 			return err
 		}

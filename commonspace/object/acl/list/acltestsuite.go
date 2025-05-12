@@ -7,6 +7,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -86,7 +87,7 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 					return nil, err
 				}
 				ownerAcl := a.actualAccounts[a.owner].Acl.(*aclList)
-				accountAcl, err := BuildAclListWithIdentity(keys, ownerAcl.storage, NoOpAcceptorVerifier{})
+				accountAcl, err := BuildAclListWithIdentity(keys, ownerAcl.storage, recordverifier.NewValidateFull())
 				if err != nil {
 					return nil, err
 				}
@@ -273,7 +274,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		} else {
 			ownerAcl := a.actualAccounts[a.owner].Acl.(*aclList)
 			copyStorage := ownerAcl.storage.(*inMemoryStorage).Copy()
-			accountAcl, err := BuildAclListWithIdentity(keys, copyStorage, NoOpAcceptorVerifier{})
+			accountAcl, err := BuildAclListWithIdentity(keys, copyStorage, recordverifier.NewValidateFull())
 			if err != nil {
 				return err
 			}
@@ -291,7 +292,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		keys := a.actualAccounts[account].Keys
 		ownerAcl := a.actualAccounts[a.owner].Acl.(*aclList)
 		copyStorage := ownerAcl.storage.(*inMemoryStorage).Copy()
-		accountAcl, err := BuildAclListWithIdentity(keys, copyStorage, NoOpAcceptorVerifier{})
+		accountAcl, err := BuildAclListWithIdentity(keys, copyStorage, recordverifier.NewValidateFull())
 		if err != nil {
 			return err
 		}
@@ -458,7 +459,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 				return err
 			}
 			ownerAcl := a.actualAccounts[a.owner].Acl.(*aclList)
-			accountAcl, err := BuildAclListWithIdentity(keys, ownerAcl.storage, NoOpAcceptorVerifier{})
+			accountAcl, err := BuildAclListWithIdentity(keys, ownerAcl.storage, recordverifier.NewValidateFull())
 			if err != nil {
 				return err
 			}

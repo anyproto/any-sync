@@ -130,7 +130,7 @@ func (r *RpcServer) getSpace(ctx context.Context, spaceId string) (sp Space, err
 		sp, err = r.spaceService.NewSpace(ctx, spaceId, Deps{
 			TreeSyncer:     NewTreeSyncer(spaceId),
 			SyncStatus:     syncstatus.NewNoOpSyncStatus(),
-			recordVerifier: recordverifier.NewAlwaysAccept(),
+			recordVerifier: recordverifier.NewValidateFull(),
 		})
 		if err != nil {
 			return nil, err

@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -24,22 +25,6 @@ type RWLocker interface {
 	sync.Locker
 	RLock()
 	RUnlock()
-}
-
-type AcceptorVerifier interface {
-	VerifyAcceptor(rec *consensusproto.RawRecord) (err error)
-	ShouldValidate() bool
-}
-
-type NoOpAcceptorVerifier struct {
-}
-
-func (n NoOpAcceptorVerifier) VerifyAcceptor(rec *consensusproto.RawRecord) (err error) {
-	return nil
-}
-
-func (n NoOpAcceptorVerifier) ShouldValidate() bool {
-	return true
 }
 
 type AclList interface {
@@ -80,7 +65,7 @@ type aclList struct {
 	keyStorage    crypto.KeyStorage
 	aclState      *AclState
 	storage       Storage
-	verifier      AcceptorVerifier
+	verifier      recordverifier.AcceptorVerifier
 
 	sync.RWMutex
 }
@@ -90,10 +75,10 @@ type internalDeps struct {
 	keyStorage       crypto.KeyStorage
 	stateBuilder     *aclStateBuilder
 	recordBuilder    AclRecordBuilder
-	acceptorVerifier AcceptorVerifier
+	acceptorVerifier recordverifier.AcceptorVerifier
 }
 
-func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage Storage, verifier AcceptorVerifier) (AclList, error) {
+func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage Storage, verifier recordverifier.AcceptorVerifier) (AclList, error) {
 	keyStorage := crypto.NewKeyStorage()
 	deps := internalDeps{
 		storage:          storage,

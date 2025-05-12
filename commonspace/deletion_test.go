@@ -22,7 +22,7 @@ func mockDeps() Deps {
 	return Deps{
 		TreeSyncer:     mockTreeSyncer{},
 		SyncStatus:     syncstatus.NewNoOpSyncStatus(),
-		recordVerifier: recordverifier.NewAlwaysAccept(),
+		recordVerifier: recordverifier.NewValidateFull(),
 	}
 }
 

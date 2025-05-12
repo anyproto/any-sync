@@ -8,6 +8,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -105,11 +106,11 @@ type aclRecordBuilder struct {
 	id          string
 	keyStorage  crypto.KeyStorage
 	accountKeys *accountdata.AccountKeys
-	verifier    AcceptorVerifier
+	verifier    recordverifier.AcceptorVerifier
 	state       *AclState
 }
 
-func NewAclRecordBuilder(id string, keyStorage crypto.KeyStorage, keys *accountdata.AccountKeys, verifier AcceptorVerifier) AclRecordBuilder {
+func NewAclRecordBuilder(id string, keyStorage crypto.KeyStorage, keys *accountdata.AccountKeys, verifier recordverifier.AcceptorVerifier) AclRecordBuilder {
 	return &aclRecordBuilder{
 		id:          id,
 		keyStorage:  keyStorage,
