@@ -50,3 +50,7 @@ func (r *recordVerifier) VerifyAcceptor(rec *consensusproto.RawRecord) (err erro
 	}
 	return nil
 }
+
+func (r *recordVerifier) ShouldValidate() bool {
+	return false
+}

@@ -27,16 +27,21 @@ type ContentValidator interface {
 type contentValidator struct {
 	keyStore crypto.KeyStorage
 	aclState *AclState
+	verifier AcceptorVerifier
 }
 
-func newContentValidator(keyStore crypto.KeyStorage, aclState *AclState) ContentValidator {
+func newContentValidator(keyStore crypto.KeyStorage, aclState *AclState, verifier AcceptorVerifier) ContentValidator {
 	return &contentValidator{
 		keyStore: keyStore,
 		aclState: aclState,
+		verifier: verifier,
 	}
 }
 
 func (c *contentValidator) ValidatePermissionChanges(ch *aclrecordproto.AclAccountPermissionChanges, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	for _, ch := range ch.Changes {
 		err := c.ValidatePermissionChange(ch, authorIdentity)
 		if err != nil {
@@ -47,6 +52,9 @@ func (c *contentValidator) ValidatePermissionChanges(ch *aclrecordproto.AclAccou
 }
 
 func (c *contentValidator) ValidateAccountsAdd(ch *aclrecordproto.AclAccountsAdd, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
@@ -70,6 +78,9 @@ func (c *contentValidator) ValidateAccountsAdd(ch *aclrecordproto.AclAccountsAdd
 }
 
 func (c *contentValidator) ValidateInviteJoin(ch *aclrecordproto.AclAccountInviteJoin, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	if !c.aclState.Permissions(authorIdentity).NoPermissions() {
 		return ErrInsufficientPermissions
 	}
@@ -111,6 +122,9 @@ func (c *contentValidator) ValidateInviteJoin(ch *aclrecordproto.AclAccountInvit
 }
 
 func (c *contentValidator) ValidateAclRecordContents(ch *AclRecord) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	if ch.PrevId != c.aclState.lastRecordId {
 		return ErrIncorrectRecordSequence
 	}
@@ -156,6 +170,9 @@ func (c *contentValidator) validateAclRecordContent(ch *aclrecordproto.AclConten
 }
 
 func (c *contentValidator) ValidatePermissionChange(ch *aclrecordproto.AclAccountPermissionChange, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
@@ -195,6 +212,9 @@ func (c *contentValidator) ValidatePermissionChange(ch *aclrecordproto.AclAccoun
 }
 
 func (c *contentValidator) ValidateInvite(ch *aclrecordproto.AclAccountInvite, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
@@ -207,6 +227,9 @@ func (c *contentValidator) ValidateInvite(ch *aclrecordproto.AclAccountInvite, a
 }
 
 func (c *contentValidator) ValidateInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
@@ -218,6 +241,9 @@ func (c *contentValidator) ValidateInviteRevoke(ch *aclrecordproto.AclAccountInv
 }
 
 func (c *contentValidator) ValidateRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	invite, exists := c.aclState.invites[ch.InviteRecordId]
 	if !exists {
 		return ErrNoSuchInvite
@@ -253,6 +279,9 @@ func (c *contentValidator) ValidateRequestJoin(ch *aclrecordproto.AclAccountRequ
 }
 
 func (c *contentValidator) ValidateRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
@@ -274,6 +303,9 @@ func (c *contentValidator) ValidateRequestAccept(ch *aclrecordproto.AclAccountRe
 }
 
 func (c *contentValidator) ValidateRequestDecline(ch *aclrecordproto.AclAccountRequestDecline, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
@@ -285,6 +317,9 @@ func (c *contentValidator) ValidateRequestDecline(ch *aclrecordproto.AclAccountR
 }
 
 func (c *contentValidator) ValidateRequestCancel(ch *aclrecordproto.AclAccountRequestCancel, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	rec, exists := c.aclState.requestRecords[ch.RecordId]
 	if !exists {
 		return ErrNoSuchRequest
@@ -296,6 +331,9 @@ func (c *contentValidator) ValidateRequestCancel(ch *aclrecordproto.AclAccountRe
 }
 
 func (c *contentValidator) ValidateAccountRemove(ch *aclrecordproto.AclAccountRemove, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
 		return ErrInsufficientPermissions
 	}
@@ -325,6 +363,9 @@ func (c *contentValidator) ValidateAccountRemove(ch *aclrecordproto.AclAccountRe
 }
 
 func (c *contentValidator) ValidateRequestRemove(ch *aclrecordproto.AclAccountRequestRemove, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	if c.aclState.Permissions(authorIdentity).NoPermissions() {
 		return ErrInsufficientPermissions
 	}
@@ -338,10 +379,16 @@ func (c *contentValidator) ValidateRequestRemove(ch *aclrecordproto.AclAccountRe
 }
 
 func (c *contentValidator) ValidateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	return c.validateReadKeyChange(ch, nil)
 }
 
 func (c *contentValidator) validateReadKeyChange(ch *aclrecordproto.AclReadKeyChange, removedUsers map[string]struct{}) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
 	_, err = c.keyStore.PubKeyFromProto(ch.MetadataPubKey)
 	if err != nil {
 		return ErrNoMetadataKey

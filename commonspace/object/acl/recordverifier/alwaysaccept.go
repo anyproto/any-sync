@@ -22,3 +22,7 @@ func (a *AlwaysAccept) Name() string {
 func (a *AlwaysAccept) VerifyAcceptor(_ *consensusproto.RawRecord) error {
 	return nil
 }
+
+func (a *AlwaysAccept) ShouldValidate() bool {
+	return true
+}

@@ -28,6 +28,7 @@ type RWLocker interface {
 
 type AcceptorVerifier interface {
 	VerifyAcceptor(rec *consensusproto.RawRecord) (err error)
+	ShouldValidate() bool
 }
 
 type NoOpAcceptorVerifier struct {
@@ -35,6 +36,10 @@ type NoOpAcceptorVerifier struct {
 
 func (n NoOpAcceptorVerifier) VerifyAcceptor(rec *consensusproto.RawRecord) (err error) {
 	return nil
+}
+
+func (n NoOpAcceptorVerifier) ShouldValidate() bool {
+	return true
 }
 
 type AclList interface {
@@ -75,6 +80,7 @@ type aclList struct {
 	keyStorage    crypto.KeyStorage
 	aclState      *AclState
 	storage       Storage
+	verifier      AcceptorVerifier
 
 	sync.RWMutex
 }
@@ -159,6 +165,7 @@ func build(deps internalDeps) (list AclList, err error) {
 		stateBuilder:  stateBuilder,
 		recordBuilder: recBuilder,
 		storage:       storage,
+		verifier:      deps.acceptorVerifier,
 		id:            id,
 	}
 	stateBuilder.Init(id)

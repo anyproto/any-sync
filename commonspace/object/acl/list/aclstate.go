@@ -86,7 +86,8 @@ type AclState struct {
 
 func newAclStateWithKeys(
 	rootRecord *AclRecord,
-	key crypto.PrivKey) (st *AclState, err error) {
+	key crypto.PrivKey,
+	verifier AcceptorVerifier) (st *AclState, err error) {
 	st = &AclState{
 		id:              rootRecord.Id,
 		key:             key,
@@ -98,10 +99,7 @@ func newAclStateWithKeys(
 		pendingRequests: make(map[string]string),
 		keyStore:        crypto.NewKeyStorage(),
 	}
-	st.contentValidator = &contentValidator{
-		keyStore: st.keyStore,
-		aclState: st,
-	}
+	st.contentValidator = newContentValidator(st.keyStore, st, verifier)
 	err = st.applyRoot(rootRecord)
 	if err != nil {
 		return
@@ -109,7 +107,7 @@ func newAclStateWithKeys(
 	return st, nil
 }
 
-func newAclState(rootRecord *AclRecord) (st *AclState, err error) {
+func newAclState(rootRecord *AclRecord, verifier AcceptorVerifier) (st *AclState, err error) {
 	st = &AclState{
 		id:              rootRecord.Id,
 		keys:            make(map[string]AclKeys),
@@ -119,10 +117,7 @@ func newAclState(rootRecord *AclRecord) (st *AclState, err error) {
 		pendingRequests: make(map[string]string),
 		keyStore:        crypto.NewKeyStorage(),
 	}
-	st.contentValidator = &contentValidator{
-		keyStore: st.keyStore,
-		aclState: st,
-	}
+	st.contentValidator = newContentValidator(st.keyStore, st, verifier)
 	err = st.applyRoot(rootRecord)
 	if err != nil {
 		return
@@ -418,7 +413,7 @@ func (st *AclState) Copy() *AclState {
 	newSt.readKeyChanges = append(newSt.readKeyChanges, st.readKeyChanges...)
 	newSt.list = st.list
 	newSt.lastRecordId = st.lastRecordId
-	newSt.contentValidator = newContentValidator(newSt.keyStore, newSt)
+	newSt.contentValidator = newContentValidator(newSt.keyStore, newSt, st.list.verifier)
 	return newSt
 }
 
