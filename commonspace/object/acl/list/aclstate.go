@@ -27,6 +27,7 @@ var (
 	ErrNoSuchRequest             = errors.New("no such request")
 	ErrNoSuchInvite              = errors.New("no such invite")
 	ErrInsufficientPermissions   = errors.New("insufficient permissions")
+	ErrDuplicateInvites          = errors.New("duplicate invites")
 	ErrIsOwner                   = errors.New("can't be made by owner")
 	ErrIncorrectNumberOfAccounts = errors.New("incorrect number of accounts")
 	ErrDuplicateAccounts         = errors.New("duplicate accounts")

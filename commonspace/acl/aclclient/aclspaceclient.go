@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
@@ -27,6 +28,7 @@ type InviteSaveFunc func()
 type AclSpaceClient interface {
 	app.Component
 	GenerateInvite() (list.InviteResult, error)
+	GenerateAnyoneCanJoinInvite(permissions list.AclPermissions) (list.InviteResult, error)
 	StopSharing(ctx context.Context, readKeyChange list.ReadKeyChangePayload) (err error)
 	AddRecord(ctx context.Context, consRec *consensusproto.RawRecord) error
 	RemoveAccounts(ctx context.Context, payload list.AccountRemovePayload) error
@@ -211,9 +213,19 @@ func (c *aclSpaceClient) AcceptRequest(ctx context.Context, payload list.Request
 }
 
 func (c *aclSpaceClient) GenerateInvite() (resp list.InviteResult, err error) {
-	c.acl.RLock()
-	defer c.acl.RUnlock()
+	c.acl.Lock()
+	defer c.acl.Unlock()
 	return c.acl.RecordBuilder().BuildInvite()
+}
+
+func (c *aclSpaceClient) GenerateAnyoneCanJoinInvite(permissions list.AclPermissions) (resp list.InviteResult, err error) {
+	c.acl.Lock()
+	defer c.acl.Unlock()
+	anyoneInvites := c.acl.AclState().Invites(aclrecordproto.AclInviteType_AnyoneCanJoin)
+	if len(anyoneInvites) > 0 {
+		return list.InviteResult{}, list.ErrDuplicateInvites
+	}
+	return c.acl.RecordBuilder().BuildInviteAnyone(permissions)
 }
 
 func (c *aclSpaceClient) AddRecord(ctx context.Context, consRec *consensusproto.RawRecord) (err error) {

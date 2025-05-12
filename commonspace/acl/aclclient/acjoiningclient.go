@@ -21,6 +21,7 @@ type AclJoiningClient interface {
 	AclGetRecords(ctx context.Context, spaceId, aclHead string) ([]*consensusproto.RawRecordWithId, error)
 	RequestJoin(ctx context.Context, spaceId string, payload list.RequestJoinPayload) (aclHeadId string, err error)
 	CancelJoin(ctx context.Context, spaceId string) (err error)
+	InviteJoin(ctx context.Context, spaceId string, payload list.InviteJoinPayload) (aclHeadId string, err error)
 	CancelRemoveSelf(ctx context.Context, spaceId string) (err error)
 }
 
@@ -96,6 +97,23 @@ func (c *aclJoiningClient) RequestJoin(ctx context.Context, spaceId string, payl
 		}
 	}
 	rec, err := acl.RecordBuilder().BuildRequestJoin(payload)
+	if err != nil {
+		return
+	}
+	recWithId, err := c.nodeClient.AclAddRecord(ctx, spaceId, rec)
+	if err != nil {
+		return
+	}
+	aclHeadId = recWithId.Id
+	return
+}
+
+func (c *aclJoiningClient) InviteJoin(ctx context.Context, spaceId string, payload list.InviteJoinPayload) (aclHeadId string, err error) {
+	acl, err := c.getAcl(ctx, spaceId)
+	if err != nil {
+		return
+	}
+	rec, err := acl.RecordBuilder().BuildInviteJoin(payload)
 	if err != nil {
 		return
 	}
