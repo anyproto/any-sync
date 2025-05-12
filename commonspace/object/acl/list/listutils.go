@@ -1,6 +1,8 @@
 package list
 
 import (
+	"fmt"
+
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
@@ -68,4 +70,31 @@ func buildDerivedRoot(spaceId string, keys *accountdata.AccountKeys, metadata []
 		},
 		Metadata: metadata,
 	})
+}
+
+func NewTestAclStateWithUsers(numWriters, numReaders, numInvites int) *AclState {
+	st := &AclState{
+		keys:            make(map[string]AclKeys),
+		accountStates:   make(map[string]AccountState),
+		invites:         make(map[string]Invite),
+		requestRecords:  make(map[string]RequestRecord),
+		pendingRequests: make(map[string]string),
+		keyStore:        crypto.NewKeyStorage(),
+	}
+	for i := 0; i < numWriters; i++ {
+		st.accountStates[fmt.Sprint("w", i)] = AccountState{
+			Permissions: AclPermissionsWriter,
+			Status:      StatusActive,
+		}
+	}
+	for i := 0; i < numReaders; i++ {
+		st.accountStates[fmt.Sprint("r", i)] = AccountState{
+			Permissions: AclPermissionsReader,
+			Status:      StatusActive,
+		}
+	}
+	for i := 0; i < numInvites; i++ {
+		st.invites[fmt.Sprint("r", i)] = Invite{}
+	}
+	return st
 }
