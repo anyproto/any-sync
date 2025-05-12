@@ -15,6 +15,7 @@ type ContentValidator interface {
 	ValidateAccountsAdd(ch *aclrecordproto.AclAccountsAdd, authorIdentity crypto.PubKey) (err error)
 	ValidateInvite(ch *aclrecordproto.AclAccountInvite, authorIdentity crypto.PubKey) (err error)
 	ValidateInviteJoin(ch *aclrecordproto.AclAccountInviteJoin, authorIdentity crypto.PubKey) (err error)
+	ValidateInviteChange(ch *aclrecordproto.AclAccountInviteChange, authorIdentity crypto.PubKey) (err error)
 	ValidateInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestJoin(ch *aclrecordproto.AclAccountRequestJoin, authorIdentity crypto.PubKey) (err error)
 	ValidateRequestAccept(ch *aclrecordproto.AclAccountRequestAccept, authorIdentity crypto.PubKey) (err error)
@@ -229,6 +230,30 @@ func (c *contentValidator) ValidateInvite(ch *aclrecordproto.AclAccountInvite, a
 		}
 	}
 	_, err = c.keyStore.PubKeyFromProto(ch.InviteKey)
+	return
+}
+
+func (c *contentValidator) ValidateInviteChange(ch *aclrecordproto.AclAccountInviteChange, authorIdentity crypto.PubKey) (err error) {
+	if !c.verifier.ShouldValidate() {
+		return nil
+	}
+	if !c.aclState.Permissions(authorIdentity).CanManageAccounts() {
+		return ErrInsufficientPermissions
+	}
+	invite, exists := c.aclState.invites[ch.InviteRecordId]
+	if !exists {
+		return ErrNoSuchInvite
+	}
+	permissions := AclPermissions(ch.Permissions)
+	if invite.Type != aclrecordproto.AclInviteType_AnyoneCanJoin {
+		return ErrNoSuchInvite
+	}
+	if invite.Permissions == permissions {
+		return ErrInsufficientPermissions
+	}
+	if permissions.IsOwner() || permissions.NoPermissions() || permissions.IsGuest() {
+		return ErrInsufficientPermissions
+	}
 	return
 }
 

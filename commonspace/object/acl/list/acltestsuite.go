@@ -374,11 +374,20 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 			return err
 		}
 	case "invite_anyone":
-		res, err := acl.RecordBuilder().BuildInviteAnyone()
+		var permissions AclPermissions
+		inviteParts := strings.Split(args[0], ",")
+		if inviteParts[1] == "r" {
+			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
+		} else if inviteParts[1] == "rw" {
+			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Writer)
+		} else {
+			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Admin)
+		}
+		res, err := acl.RecordBuilder().BuildInviteAnyone(permissions)
 		if err != nil {
 			return err
 		}
-		a.invites[args[0]] = res.InviteKey
+		a.invites[inviteParts[0]] = res.InviteKey
 		err = addRec(WrapAclRecord(res.InviteRec))
 		if err != nil {
 			return err

@@ -53,7 +53,7 @@ func TestAclExecutor(t *testing.T) {
 		{"a.init::a", nil},
 		// creating an invite
 		{"a.invite::invId", nil},
-		{"a.invite_anyone::oldInvId", nil},
+		{"a.invite_anyone::oldInvId,r", nil},
 		// cannot self join
 		{"a.join::invId", ErrInsufficientPermissions},
 		// now b can join
@@ -129,7 +129,7 @@ func TestAclExecutor(t *testing.T) {
 		{"a.changes::guest,none", ErrInsufficientPermissions},
 		// can't change permission of existing user to guest, should be only possible to create it with add
 		{"a.changes::r,g", ErrInsufficientPermissions},
-		{"a.invite_anyone::invAnyoneId", nil},
+		{"a.invite_anyone::invAnyoneId,rw", nil},
 		{"new.invite_join::invAnyoneId", nil},
 		// invite keys persist after user removal
 		{"a.remove::new", nil},

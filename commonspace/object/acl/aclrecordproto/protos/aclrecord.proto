@@ -23,6 +23,11 @@ message AclAccountInvite {
     bytes encryptedReadKey = 4;
 }
 
+message AclAccountInviteChange {
+    string inviteRecordId = 1;
+    AclUserPermissions permissions = 2;
+}
+
 enum AclInviteType {
     RequestToJoin = 0;
     AnyoneCanJoin = 1;
@@ -139,6 +144,7 @@ message AclContentValue {
         AclAccountsAdd accountsAdd = 11;
         AclAccountRequestCancel requestCancel = 12;
         AclAccountInviteJoin inviteJoin = 13;
+        AclAccountInviteChange inviteChange = 14;
     }
 }
 

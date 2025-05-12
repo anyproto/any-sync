@@ -420,6 +420,8 @@ func (st *AclState) Copy() *AclState {
 
 func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, record *AclRecord) error {
 	switch {
+	case ch.GetInviteChange() != nil:
+		return st.applyInviteChange(ch.GetInviteChange(), record)
 	case ch.GetInviteJoin() != nil:
 		return st.applyInviteJoin(ch.GetInviteJoin(), record)
 	case ch.GetPermissionChange() != nil:
@@ -459,6 +461,17 @@ func (st *AclState) applyPermissionChanges(ch *aclrecordproto.AclAccountPermissi
 			return err
 		}
 	}
+	return nil
+}
+
+func (st *AclState) applyInviteChange(ch *aclrecordproto.AclAccountInviteChange, record *AclRecord) (err error) {
+	err = st.contentValidator.ValidateInviteChange(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	invite := st.invites[ch.InviteRecordId]
+	invite.Permissions = AclPermissions(ch.Permissions)
+	st.invites[ch.InviteRecordId] = invite
 	return nil
 }
 

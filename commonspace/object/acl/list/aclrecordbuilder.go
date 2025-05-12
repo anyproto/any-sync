@@ -87,7 +87,7 @@ type AclRecordBuilder interface {
 	BuildRoot(content RootContent) (rec *consensusproto.RawRecordWithId, err error)
 	BuildBatchRequest(payload BatchRequestPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildInvite() (res InviteResult, err error)
-	BuildInviteAnyone() (res InviteResult, err error)
+	BuildInviteAnyone(permissions AclPermissions) (res InviteResult, err error)
 	BuildInviteRevoke(inviteRecordId string) (rawRecord *consensusproto.RawRecord, err error)
 	BuildInviteJoin(payload InviteJoinPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestJoin(payload RequestJoinPayload) (rawRecord *consensusproto.RawRecord, err error)
@@ -198,7 +198,16 @@ func (a *aclRecordBuilder) buildRecords(aclContent []*aclrecordproto.AclContentV
 		Payload:   marshalledRec,
 		Signature: signature,
 	}
+	err = a.preflightCheck(rawRec)
 	return
+}
+
+func (a *aclRecordBuilder) preflightCheck(rawRecord *consensusproto.RawRecord) (err error) {
+	aclRec, err := a.Unmarshall(rawRecord)
+	if err != nil {
+		return
+	}
+	return a.state.Copy().ApplyRecord(aclRec)
 }
 
 func (a *aclRecordBuilder) BuildPermissionChanges(payload PermissionChangesPayload) (rawRecord *consensusproto.RawRecord, err error) {
@@ -322,7 +331,7 @@ func (a *aclRecordBuilder) BuildInvite() (res InviteResult, err error) {
 	return
 }
 
-func (a *aclRecordBuilder) BuildInviteAnyone() (res InviteResult, err error) {
+func (a *aclRecordBuilder) BuildInviteAnyone(permissions AclPermissions) (res InviteResult, err error) {
 	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
 		err = ErrInsufficientPermissions
 		return
