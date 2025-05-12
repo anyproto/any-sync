@@ -46,7 +46,10 @@ func (r *recordVerifier) Name() (name string) {
 func (r *recordVerifier) VerifyAcceptor(rec *consensusproto.RawRecord) (err error) {
 	identity, err := r.store.PubKeyFromProto(rec.AcceptorIdentity)
 	if err != nil {
-		return fmt.Errorf("failed to get acceptor identity: %w", err)
+		identity, err = crypto.UnmarshalEd25519PublicKey(rec.AcceptorIdentity)
+		if err != nil {
+			return fmt.Errorf("failed to get acceptor identity: %w", err)
+		}
 	}
 	verified, err := identity.Verify(rec.Payload, rec.AcceptorSignature)
 	if !verified || err != nil {
