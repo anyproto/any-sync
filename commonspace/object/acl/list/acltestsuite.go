@@ -373,6 +373,32 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		if err != nil {
 			return err
 		}
+	case "invite_change":
+		var permissions AclPermissions
+		inviteParts := strings.Split(args[0], ",")
+		if inviteParts[1] == "r" {
+			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
+		} else if inviteParts[1] == "rw" {
+			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Writer)
+		} else {
+			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Admin)
+		}
+		invite := a.invites[inviteParts[0]]
+		invId, err := acl.AclState().GetInviteIdByPrivKey(invite)
+		if err != nil {
+			return err
+		}
+		res, err := acl.RecordBuilder().BuildInviteChange(InviteChangePayload{
+			IniviteRecordId: invId,
+			Permissions:     permissions,
+		})
+		if err != nil {
+			return err
+		}
+		err = addRec(WrapAclRecord(res))
+		if err != nil {
+			return err
+		}
 	case "invite_anyone":
 		var permissions AclPermissions
 		inviteParts := strings.Split(args[0], ",")
@@ -517,12 +543,16 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		if err != nil {
 			return err
 		}
+		invId, err := acl.AclState().GetInviteIdByPrivKey(invite)
+		if err != nil {
+			return err
+		}
 		err = addRec(WrapAclRecord(inviteJoin))
 		if err != nil {
 			return err
 		}
 		a.expectedAccounts[account].status = StatusActive
-		a.expectedAccounts[account].perms = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
+		a.expectedAccounts[account].perms = acl.AclState().invites[invId].Permissions
 	case "remove":
 		identities := strings.Split(args[0], ",")
 		var pubKeys []crypto.PubKey

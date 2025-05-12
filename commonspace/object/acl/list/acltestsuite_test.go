@@ -136,7 +136,9 @@ func TestAclExecutor(t *testing.T) {
 		{"new1.invite_join::invAnyoneId", nil},
 		{"a.revoke::invAnyoneId", nil},
 		{"new2.invite_join::invAnyoneId", ErrNoSuchInvite},
+		{"a.invite_change::oldInvId,a", nil},
 		{"new2.invite_join::oldInvId", nil},
+		{"new2.add::new3,r,new3m", nil},
 	}
 	for _, cmd := range cmds {
 		err := a.Execute(cmd.cmd)

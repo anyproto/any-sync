@@ -47,6 +47,11 @@ type PermissionChangePayload struct {
 	Permissions AclPermissions
 }
 
+type InviteChangePayload struct {
+	IniviteRecordId string
+	Permissions     AclPermissions
+}
+
 type PermissionChangesPayload struct {
 	Changes []PermissionChangePayload
 }
@@ -88,6 +93,7 @@ type AclRecordBuilder interface {
 	BuildBatchRequest(payload BatchRequestPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildInvite() (res InviteResult, err error)
 	BuildInviteAnyone(permissions AclPermissions) (res InviteResult, err error)
+	BuildInviteChange(inviteChange InviteChangePayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildInviteRevoke(inviteRecordId string) (rawRecord *consensusproto.RawRecord, err error)
 	BuildInviteJoin(payload InviteJoinPayload) (rawRecord *consensusproto.RawRecord, err error)
 	BuildRequestJoin(payload RequestJoinPayload) (rawRecord *consensusproto.RawRecord, err error)
@@ -207,7 +213,9 @@ func (a *aclRecordBuilder) preflightCheck(rawRecord *consensusproto.RawRecord) (
 	if err != nil {
 		return
 	}
-	return a.state.Copy().ApplyRecord(aclRec)
+	cp := a.state.Copy()
+	cp.contentValidator.(*contentValidator).verifier = recordverifier.NewValidateFull()
+	return cp.ApplyRecord(aclRec)
 }
 
 func (a *aclRecordBuilder) BuildPermissionChanges(payload PermissionChangesPayload) (rawRecord *consensusproto.RawRecord, err error) {
@@ -329,6 +337,19 @@ func (a *aclRecordBuilder) BuildInvite() (res InviteResult, err error) {
 	res.InviteKey = privKey
 	res.InviteRec = rawRec
 	return
+}
+
+func (a *aclRecordBuilder) BuildInviteChange(inviteChange InviteChangePayload) (rawRecord *consensusproto.RawRecord, err error) {
+	if !a.state.Permissions(a.state.pubKey).CanManageAccounts() {
+		err = ErrInsufficientPermissions
+		return
+	}
+	inviteRec := &aclrecordproto.AclAccountInviteChange{
+		InviteRecordId: inviteChange.IniviteRecordId,
+		Permissions:    aclrecordproto.AclUserPermissions(inviteChange.Permissions),
+	}
+	content := &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_InviteChange{InviteChange: inviteRec}}
+	return a.buildRecord(content)
 }
 
 func (a *aclRecordBuilder) BuildInviteAnyone(permissions AclPermissions) (res InviteResult, err error) {
