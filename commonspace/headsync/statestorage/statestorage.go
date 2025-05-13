@@ -33,6 +33,7 @@ const (
 	idKey              = "id"
 	oldHashKey         = "oh"
 	newHashKey         = "nh"
+	legacyHashKey      = "h"
 	headerKey          = "e"
 	aclIdKey           = "a"
 	settingsIdKey      = "s"
@@ -108,12 +109,8 @@ func Create(ctx context.Context, state State, store anystore.DB) (st StateStorag
 		return nil, err
 	}
 	storage, err := CreateTx(tx.Context(), state, store)
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	return storage, tx.Commit()
@@ -149,12 +146,21 @@ func (s *stateStorage) SettingsId() string {
 }
 
 func (s *stateStorage) stateFromDoc(doc anystore.Doc) State {
+	var (
+		oldHash = doc.Value().GetString(oldHashKey)
+		newHash = doc.Value().GetString(newHashKey)
+	)
+	// legacy hash is used for backward compatibility, which was due to a mistake in key names
+	if oldHash == "" || newHash == "" {
+		oldHash = doc.Value().GetString(legacyHashKey)
+		newHash = oldHash
+	}
 	return State{
 		SpaceId:     doc.Value().GetString(idKey),
 		SettingsId:  doc.Value().GetString(settingsIdKey),
 		AclId:       doc.Value().GetString(aclIdKey),
-		OldHash:     doc.Value().GetString(newHashKey),
-		NewHash:     doc.Value().GetString(oldHashKey),
+		OldHash:     oldHash,
+		NewHash:     newHash,
 		SpaceHeader: doc.Value().GetBytes(headerKey),
 	}
 }

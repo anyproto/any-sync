@@ -10,6 +10,8 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces/mock_kvinterfaces"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
@@ -159,6 +161,7 @@ func TestObjectSync_ApplyRequest(t *testing.T) {
 type fixture struct {
 	*objectSync
 	objectManager *mock_objectmanager.MockObjectManager
+	keyValue      *mock_kvinterfaces.MockKeyValueService
 	pool          *mock_pool.MockService
 	a             *app.App
 	ctrl          *gomock.Controller
@@ -171,13 +174,16 @@ func newFixture(t *testing.T) *fixture {
 	fx.ctrl = gomock.NewController(t)
 	fx.objectManager = mock_objectmanager.NewMockObjectManager(fx.ctrl)
 	fx.pool = mock_pool.NewMockService(fx.ctrl)
+	fx.keyValue = mock_kvinterfaces.NewMockKeyValueService(fx.ctrl)
 	anymock.ExpectComp(fx.objectManager.EXPECT(), treemanager.CName)
 	anymock.ExpectComp(fx.pool.EXPECT(), pool.CName)
+	anymock.ExpectComp(fx.keyValue.EXPECT(), kvinterfaces.CName)
 	fx.objectSync = &objectSync{}
 	spaceState := &spacestate.SpaceState{SpaceId: "spaceId"}
 	fx.a.Register(fx.objectManager).
 		Register(spaceState).
 		Register(fx.pool).
+		Register(fx.keyValue).
 		Register(syncstatus.NewNoOpSyncStatus()).
 		Register(fx.objectSync)
 	require.NoError(t, fx.a.Start(context.Background()))

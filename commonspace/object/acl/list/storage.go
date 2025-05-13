@@ -66,12 +66,8 @@ func CreateStorage(ctx context.Context, root *consensusproto.RawRecordWithId, he
 		return nil, err
 	}
 	storage, err := CreateStorageTx(tx.Context(), root, headStorage, store)
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	return storage, tx.Commit()
@@ -210,6 +206,13 @@ func (s *storage) AddAll(ctx context.Context, records []StorageRecord) error {
 	if err != nil {
 		return fmt.Errorf("failed to create write tx: %w", err)
 	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		} else {
+			err = tx.Commit()
+		}
+	}()
 	vals := make([]*anyenc.Value, 0, len(records))
 	for _, ch := range records {
 		newVal := newStorageRecordValue(ch, arena)
@@ -217,20 +220,14 @@ func (s *storage) AddAll(ctx context.Context, records []StorageRecord) error {
 	}
 	err = s.recordsColl.Insert(tx.Context(), vals...)
 	if err != nil {
-		tx.Rollback()
-		return nil
+		return err
 	}
 	head := records[len(records)-1].Id
 	update := headstorage.HeadsUpdate{
 		Id:    s.id,
 		Heads: []string{head},
 	}
-	err = s.headStorage.UpdateEntryTx(tx.Context(), update)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	return tx.Commit()
+	return s.headStorage.UpdateEntryTx(tx.Context(), update)
 }
 
 func (s *storage) Id() string {

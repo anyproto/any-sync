@@ -130,6 +130,20 @@ func (st *AclState) CurrentReadKeyId() string {
 	return st.readKeyChanges[len(st.readKeyChanges)-1]
 }
 
+func (st *AclState) ReadKeyForAclId(id string) (string, error) {
+	recIdx, ok := st.list.indexes[id]
+	if !ok {
+		return "", ErrNoSuchRecord
+	}
+	for i := len(st.readKeyChanges) - 1; i >= 0; i-- {
+		recId := st.readKeyChanges[i]
+		if recIdx >= st.list.indexes[recId] {
+			return recId, nil
+		}
+	}
+	return "", ErrNoSuchRecord
+}
+
 func (st *AclState) AccountKey() crypto.PrivKey {
 	return st.key
 }
@@ -148,6 +162,13 @@ func (st *AclState) CurrentMetadataKey() (crypto.PubKey, error) {
 		return nil, ErrNoMetadataKey
 	}
 	return curKeys.MetadataPubKey, nil
+}
+
+func (st *AclState) FirstMetadataKey() (crypto.PrivKey, error) {
+	if firstKey, ok := st.keys[st.id]; ok && firstKey.MetadataPrivKey != nil {
+		return firstKey.MetadataPrivKey, nil
+	}
+	return nil, ErrNoMetadataKey
 }
 
 func (st *AclState) Keys() map[string]AclKeys {

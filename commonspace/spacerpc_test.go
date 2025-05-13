@@ -93,6 +93,16 @@ type RpcServer struct {
 	sync.Mutex
 }
 
+func (r *RpcServer) StoreDiff(ctx2 context.Context, request *spacesyncproto.StoreDiffRequest) (*spacesyncproto.StoreDiffResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r *RpcServer) StoreElements(stream spacesyncproto.DRPCSpaceSync_StoreElementsStream) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewRpcServer() *RpcServer {
 	return &RpcServer{
 		spaces: make(map[string]Space),

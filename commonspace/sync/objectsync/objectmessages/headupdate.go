@@ -39,6 +39,7 @@ type InnerHeadUpdate interface {
 	Prepare() error
 	Heads() []string
 	MsgSize() uint64
+	ObjectType() spacesyncproto.ObjectType
 }
 
 type ObjectMeta struct {
@@ -48,10 +49,11 @@ type ObjectMeta struct {
 }
 
 type HeadUpdate struct {
-	Meta   ObjectMeta
-	Bytes  []byte
-	Update InnerHeadUpdate
-	msg    *spacesyncproto.ObjectSyncMessage
+	Meta       ObjectMeta
+	Bytes      []byte
+	Update     InnerHeadUpdate
+	objectType spacesyncproto.ObjectType
+	msg        *spacesyncproto.ObjectSyncMessage
 }
 
 func (h *HeadUpdate) MsgSize() uint64 {
@@ -84,6 +86,7 @@ func (h *HeadUpdate) SetProtoMessage(message protobuf.Message) error {
 	h.Bytes = msg.GetPayload()
 	h.Meta.SpaceId = msg.SpaceId
 	h.Meta.ObjectId = msg.ObjectId
+	h.objectType = msg.GetObjectType()
 	return nil
 }
 
@@ -94,12 +97,17 @@ func (h *HeadUpdate) ProtoMessage() (protobuf.Message, error) {
 			return nil, err
 		}
 		return &spacesyncproto.ObjectSyncMessage{
-			SpaceId:  h.Meta.SpaceId,
-			Payload:  payload,
-			ObjectId: h.Meta.ObjectId,
+			SpaceId:    h.Meta.SpaceId,
+			Payload:    payload,
+			ObjectId:   h.Meta.ObjectId,
+			ObjectType: h.Update.ObjectType(),
 		}, nil
 	}
 	return NewMessage(), nil
+}
+
+func (h *HeadUpdate) ObjectType() spacesyncproto.ObjectType {
+	return h.objectType
 }
 
 func (h *HeadUpdate) SpaceId() string {
@@ -116,9 +124,10 @@ func (h *HeadUpdate) ObjectId() string {
 
 func (h *HeadUpdate) Copy() drpc.Message {
 	return &HeadUpdate{
-		Meta:   h.Meta,
-		Bytes:  h.Bytes,
-		Update: h.Update,
-		msg:    h.msg,
+		Meta:       h.Meta,
+		Bytes:      h.Bytes,
+		Update:     h.Update,
+		msg:        h.msg,
+		objectType: h.objectType,
 	}
 }

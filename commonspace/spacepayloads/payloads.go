@@ -1,9 +1,9 @@
-package commonspace
+package spacepayloads
 
 import (
+	"crypto/rand"
 	"errors"
 	"hash/fnv"
-	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +18,32 @@ import (
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
 )
+
+type SpaceCreatePayload struct {
+	// SigningKey is the signing key of the owner
+	SigningKey crypto.PrivKey
+	// SpaceType is an arbitrary string
+	SpaceType string
+	// ReplicationKey is a key which is to be used to determine the node where the space should be held
+	ReplicationKey uint64
+	// SpacePayload is an arbitrary payload related to space type
+	SpacePayload []byte
+	// MasterKey is the master key of the owner
+	MasterKey crypto.PrivKey
+	// ReadKey is the first read key of space
+	ReadKey crypto.SymKey
+	// MetadataKey is the first metadata key of space
+	MetadataKey crypto.PrivKey
+	// Metadata is the metadata of the owner
+	Metadata []byte
+}
+
+type SpaceDerivePayload struct {
+	SigningKey   crypto.PrivKey
+	MasterKey    crypto.PrivKey
+	SpaceType    string
+	SpacePayload []byte
+}
 
 const (
 	SpaceReserved = "any-sync.space"
@@ -111,7 +137,7 @@ func StoragePayloadForSpaceCreate(payload SpaceCreatePayload) (storagePayload sp
 	return
 }
 
-func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
+func StoragePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload spacestorage.SpaceStorageCreatePayload, err error) {
 	// marshalling keys
 	identity, err := payload.SigningKey.GetPublic().Marshall()
 	if err != nil {
@@ -190,7 +216,7 @@ func storagePayloadForSpaceDerive(payload SpaceDerivePayload) (storagePayload sp
 	return
 }
 
-func validateSpaceStorageCreatePayload(payload spacestorage.SpaceStorageCreatePayload) (err error) {
+func ValidateSpaceStorageCreatePayload(payload spacestorage.SpaceStorageCreatePayload) (err error) {
 	err = ValidateSpaceHeader(payload.SpaceHeaderWithId, nil)
 	if err != nil {
 		return
@@ -325,4 +351,8 @@ func validateCreateSpaceSettingsPayload(rawWithId *treechangeproto.RawTreeChange
 	aclHeadId = rootChange.AclHeadId
 
 	return
+}
+
+func NewSpaceId(id string, repKey uint64) string {
+	return strings.Join([]string{id, strconv.FormatUint(repKey, 36)}, ".")
 }

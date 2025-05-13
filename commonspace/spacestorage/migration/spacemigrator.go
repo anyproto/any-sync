@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	anystore "github.com/anyproto/any-store"
@@ -30,14 +28,13 @@ var ErrAlreadyMigrated = errors.New("already migrated")
 
 type SpaceMigrator interface {
 	MigrateId(ctx context.Context, id string, progress Progress) error
-	CheckMigrated(ctx context.Context, id string) (bool, error)
 }
 
 type Progress interface {
 	AddDone(done int64)
 }
 
-type RemoveFunc func(newStorage spacestorage.SpaceStorage, rootPath string) error
+type RemoveFunc func(newStorage spacestorage.SpaceStorage, id, rootPath string) error
 
 type spaceMigrator struct {
 	oldProvider oldstorage.SpaceStorageProvider
@@ -47,11 +44,7 @@ type spaceMigrator struct {
 	removeFunc  RemoveFunc
 }
 
-func NewSpaceMigrator(oldProvider oldstorage.SpaceStorageProvider, newProvider spacestorage.SpaceStorageProvider, numParallel int, rootPath string) SpaceMigrator {
-	return NewSpaceMigratorWithRemoveFunc(oldProvider, newProvider, numParallel, rootPath, nil)
-}
-
-func NewSpaceMigratorWithRemoveFunc(oldProvider oldstorage.SpaceStorageProvider, newProvider spacestorage.SpaceStorageProvider, numParallel int, rootPath string, removeFunc RemoveFunc) SpaceMigrator {
+func NewSpaceMigrator(oldProvider oldstorage.SpaceStorageProvider, newProvider spacestorage.SpaceStorageProvider, numParallel int, rootPath string, removeFunc RemoveFunc) SpaceMigrator {
 	return &spaceMigrator{
 		oldProvider: oldProvider,
 		newProvider: newProvider,
@@ -61,33 +54,15 @@ func NewSpaceMigratorWithRemoveFunc(oldProvider oldstorage.SpaceStorageProvider,
 	}
 }
 
-func (s *spaceMigrator) CheckMigrated(ctx context.Context, id string) (bool, error) {
-	migrated, storage := s.checkMigrated(ctx, id)
-	if storage != nil {
-		return migrated, storage.Close(ctx)
-	}
-	return false, nil
-}
-
 func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progress) error {
 	migrated, storage := s.checkMigrated(ctx, id)
 	if migrated {
 		storage.Close(ctx)
 		return ErrAlreadyMigrated
 	}
-	if storage != nil {
-		if s.removeFunc != nil {
-			err := s.removeFunc(storage, s.rootPath)
-			if err != nil {
-				return fmt.Errorf("migration: failed to remove new storage: %w", err)
-			}
-		} else {
-			err := storage.Close(ctx)
-			if err != nil {
-				return fmt.Errorf("migration: failed to close old storage: %w", err)
-			}
-			os.RemoveAll(filepath.Join(s.rootPath, id))
-		}
+	err := s.removeFunc(storage, id, s.rootPath)
+	if err != nil {
+		return fmt.Errorf("migration: failed to remove new storage: %w", err)
 	}
 	oldStorage, err := s.oldProvider.WaitSpaceStorage(ctx, id)
 	if err != nil {
@@ -146,7 +121,6 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 		treeMigrators = append(treeMigrators, objecttree.NewTreeMigrator(crypto.NewKeyStorage(), aclList))
 		ch <- treeMigrators[i]
 	}
-	var allErrors []error
 	slices.Sort(storedIds)
 	storedIds = slice.DiscardDuplicatesSorted(storedIds)
 	for _, id := range storedIds {
@@ -163,7 +137,6 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 			}
 			err = tm.MigrateTreeStorage(ctx, treeStorage, newStorage.HeadStorage(), newStorage.AnyStore())
 			if err != nil {
-				allErrors = append(allErrors, fmt.Errorf("migration: failed to migrate tree storage: %w", err))
 				return
 			}
 		})
@@ -175,9 +148,6 @@ func (s *spaceMigrator) MigrateId(ctx context.Context, id string, progress Progr
 	err = executor.Wait()
 	if err != nil {
 		return fmt.Errorf("migration: failed to wait for executor: %w", err)
-	}
-	if len(allErrors) > 0 {
-		return fmt.Errorf("migration failed: %w", errors.Join(allErrors...))
 	}
 	if err := s.migrateHash(ctx, oldStorage, newStorage); err != nil {
 		log.Warn("migration: failed to migrate hash", zap.Error(err))

@@ -2,12 +2,14 @@ package commonspace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
 	"testing"
 	"time"
 
+	anystore "github.com/anyproto/any-store"
 	"github.com/anyproto/go-chash"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -26,6 +28,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
+	"github.com/anyproto/any-sync/commonspace/spacepayloads"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
@@ -751,7 +754,7 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 	require.NoError(t, err)
 	readKey := crypto.NewAES()
 	meta := []byte("account")
-	payload := SpaceCreatePayload{
+	payload := spacepayloads.SpaceCreatePayload{
 		SigningKey:     keys.SignKey,
 		SpaceType:      "space",
 		ReplicationKey: 10,
@@ -761,7 +764,7 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 		MetadataKey:    metaKey,
 		Metadata:       meta,
 	}
-	createSpace, err := StoragePayloadForSpaceCreate(payload)
+	createSpace, err := spacepayloads.StoragePayloadForSpaceCreate(payload)
 	require.NoError(t, err)
 	executor := list.NewExternalKeysAclExecutor(createSpace.SpaceHeaderWithId.Id, keys, meta, createSpace.AclWithId)
 	cmds := []string{
@@ -802,6 +805,9 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 			err := listStorage.AddAll(ctx, []list.StorageRecord{
 				{RawRecord: rec.Payload, Id: rec.Id, PrevId: prevRec, Order: i + 1, ChangeSize: len(rec.Payload)},
 			})
+			if errors.Is(err, anystore.ErrDocExists) {
+				continue
+			}
 			require.NoError(t, err)
 		}
 	}

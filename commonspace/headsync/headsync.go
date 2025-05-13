@@ -16,6 +16,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
 	"github.com/anyproto/any-sync/commonspace/spacestate"
@@ -58,6 +59,7 @@ type headSync struct {
 	credentialProvider credentialprovider.CredentialProvider
 	deletionState      deletionstate.ObjectDeletionState
 	syncAcl            syncacl.SyncAcl
+	keyValue           kvinterfaces.KeyValueService
 }
 
 func New() HeadSync {
@@ -80,6 +82,7 @@ func (h *headSync) Init(a *app.App) (err error) {
 	h.credentialProvider = a.MustComponent(credentialprovider.CName).(credentialprovider.CredentialProvider)
 	h.treeSyncer = a.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	h.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
+	h.keyValue = a.MustComponent(kvinterfaces.CName).(kvinterfaces.KeyValueService)
 	h.syncer = createDiffSyncer(h)
 	sync := func(ctx context.Context) (err error) {
 		return h.syncer.Sync(ctx)
@@ -117,8 +120,9 @@ func (h *headSync) AllIds() []string {
 func (h *headSync) ExternalIds() []string {
 	settingsId := h.storage.StateStorage().SettingsId()
 	aclId := h.syncAcl.Id()
+	keyValueId := h.keyValue.DefaultStore().Id()
 	return slice.DiscardFromSlice(h.AllIds(), func(id string) bool {
-		return id == settingsId || id == aclId
+		return id == settingsId || id == aclId || id == keyValueId
 	})
 }
 
@@ -130,14 +134,23 @@ func (h *headSync) Close(ctx context.Context) (err error) {
 
 func (h *headSync) fillDiff(ctx context.Context) error {
 	var els = make([]ldiff.Element, 0, 100)
+	var aclOrStorage []ldiff.Element
 	err := h.storage.HeadStorage().IterateEntries(ctx, headstorage.IterOpts{}, func(entry headstorage.HeadsEntry) (bool, error) {
 		if entry.IsDerived && entry.Heads[0] == entry.Id {
 			return true, nil
 		}
-		els = append(els, ldiff.Element{
-			Id:   entry.Id,
-			Head: concatStrings(entry.Heads),
-		})
+		if entry.CommonSnapshot != "" {
+			els = append(els, ldiff.Element{
+				Id:   entry.Id,
+				Head: concatStrings(entry.Heads),
+			})
+		} else {
+			// this whole stuff is done to prevent storage hash from being set to old diff
+			aclOrStorage = append(aclOrStorage, ldiff.Element{
+				Id:   entry.Id,
+				Head: concatStrings(entry.Heads),
+			})
+		}
 		return true, nil
 	})
 	if err != nil {
@@ -149,6 +162,8 @@ func (h *headSync) fillDiff(ctx context.Context) error {
 	})
 	log.Debug("setting acl", zap.String("aclId", h.syncAcl.Id()), zap.String("headId", h.syncAcl.Head().Id))
 	h.diffContainer.Set(els...)
+	// acl will be set twice to the diff but it doesn't matter
+	h.diffContainer.NewDiff().Set(aclOrStorage...)
 	oldHash := h.diffContainer.OldDiff().Hash()
 	newHash := h.diffContainer.NewDiff().Hash()
 	if err := h.storage.StateStorage().SetHash(ctx, oldHash, newHash); err != nil {
