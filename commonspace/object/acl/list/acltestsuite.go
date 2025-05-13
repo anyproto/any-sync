@@ -217,7 +217,7 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 	if err != nil {
 		return nil, err
 	}
-	return afterAll, addRec(WrapAclRecord(res))
+	return afterAll, addRec(WrapAclRecord(res.Rec))
 }
 
 func (a *AclTestExecutor) Execute(cmd string) (err error) {

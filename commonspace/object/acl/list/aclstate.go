@@ -60,6 +60,7 @@ type Invite struct {
 	Key          crypto.PubKey
 	Type         aclrecordproto.AclInviteType
 	Permissions  AclPermissions
+	Id           string
 	encryptedKey []byte
 }
 
@@ -507,6 +508,7 @@ func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, record *Acl
 	}
 	st.invites[record.Id] = Invite{
 		Key:          inviteKey,
+		Id:           record.Id,
 		Type:         ch.InviteType,
 		Permissions:  AclPermissions(ch.Permissions),
 		encryptedKey: ch.EncryptedReadKey,
