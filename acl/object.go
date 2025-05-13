@@ -59,7 +59,7 @@ func (a *aclObject) AddConsensusRecords(recs []*consensusproto.RawRecordWithId) 
 		if a.store, a.consErr = list.NewInMemoryStorage(a.id, recs); a.consErr != nil {
 			return
 		}
-		if a.AclList, a.consErr = list.BuildAclListWithIdentity(a.aclService.accountService.Account(), a.store, recordverifier.NewValidateFull()); a.consErr != nil {
+		if a.AclList, a.consErr = list.BuildAclListWithIdentity(a.aclService.accountService.Account(), a.store, recordverifier.New()); a.consErr != nil {
 			return
 		}
 	} else {

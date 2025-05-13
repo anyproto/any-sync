@@ -83,7 +83,7 @@ func (a *aclWaiter) loop(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		acl, err := list.BuildAclListWithIdentity(a.keys, storage, recordverifier.NewValidateFull())
+		acl, err := list.BuildAclListWithIdentity(a.keys, storage, recordverifier.New())
 		if err != nil {
 			return err
 		}

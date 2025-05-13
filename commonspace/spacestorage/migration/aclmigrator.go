@@ -32,7 +32,7 @@ func migrateAclList(ctx context.Context, oldStorage oldstorage.ListStorage, head
 	if err != nil {
 		return nil, fmt.Errorf("migration: failed to generate keys: %w", err)
 	}
-	aclList, err := list.BuildAclListWithIdentity(keys, aclStorage, recordverifier.NewValidateFull())
+	aclList, err := list.BuildAclListWithIdentity(keys, aclStorage, recordverifier.New())
 	if err != nil {
 		return nil, fmt.Errorf("migration: failed to build acl list: %w", err)
 	}

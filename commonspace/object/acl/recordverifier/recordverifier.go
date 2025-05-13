@@ -5,7 +5,6 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/anyproto/any-sync/nodeconf"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -22,20 +21,16 @@ type RecordVerifier interface {
 }
 
 func New() RecordVerifier {
-	return &recordVerifier{}
+	return &recordVerifier{
+		store: crypto.NewKeyStorage(),
+	}
 }
 
 type recordVerifier struct {
-	configuration nodeconf.NodeConf
-	networkKey    crypto.PubKey
-	store         crypto.KeyStorage
+	store crypto.KeyStorage
 }
 
 func (r *recordVerifier) Init(a *app.App) (err error) {
-	r.configuration = a.MustComponent(nodeconf.CName).(nodeconf.NodeConf)
-	r.store = crypto.NewKeyStorage()
-	networkId := r.configuration.Configuration().NetworkId
-	r.networkKey, err = crypto.DecodeNetworkId(networkId)
 	return
 }
 

@@ -61,7 +61,7 @@ func (c *aclJoiningClient) getAcl(ctx context.Context, spaceId string) (l list.A
 	if err != nil {
 		return
 	}
-	return list.BuildAclListWithIdentity(c.keys, storage, recordverifier.NewValidateFull())
+	return list.BuildAclListWithIdentity(c.keys, storage, recordverifier.New())
 }
 
 func (c *aclJoiningClient) CancelJoin(ctx context.Context, spaceId string) (err error) {

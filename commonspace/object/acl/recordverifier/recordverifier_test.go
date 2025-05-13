@@ -8,7 +8,6 @@ import (
 
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
-	"github.com/anyproto/any-sync/nodeconf/testconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -22,9 +21,8 @@ type fixture struct {
 func newFixture(t *testing.T) *fixture {
 	accService := &accounttest.AccountTestService{}
 	a := &app.App{}
-	verifier := &recordVerifier{}
+	verifier := New().(*recordVerifier)
 	a.Register(accService).
-		Register(&testconf.StubConf{}).
 		Register(verifier)
 	require.NoError(t, a.Start(context.Background()))
 	return &fixture{
