@@ -3,10 +3,9 @@ package response
 import (
 	"fmt"
 
-	"github.com/anyproto/protobuf/proto"
-
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
+	"github.com/anyproto/any-sync/protobuf"
 )
 
 type Response struct {
@@ -26,7 +25,7 @@ func (r *Response) MsgSize() uint64 {
 	return size + uint64(len(r.SpaceId)) + uint64(len(r.ObjectId))
 }
 
-func (r *Response) ProtoMessage() (proto.Message, error) {
+func (r *Response) ProtoMessage() (protobuf.Message, error) {
 	if r.ObjectId == "" {
 		return &spacesyncproto.ObjectSyncMessage{}, nil
 	}
@@ -38,7 +37,7 @@ func (r *Response) ProtoMessage() (proto.Message, error) {
 	return spacesyncproto.MarshallSyncMessage(wrapped, r.SpaceId, r.ObjectId)
 }
 
-func (r *Response) SetProtoMessage(message proto.Message) error {
+func (r *Response) SetProtoMessage(message protobuf.Message) error {
 	var (
 		msg *spacesyncproto.ObjectSyncMessage
 		ok  bool
@@ -47,7 +46,7 @@ func (r *Response) SetProtoMessage(message proto.Message) error {
 		return fmt.Errorf("unexpected message type: %T", message)
 	}
 	logMsg := &consensusproto.LogSyncMessage{}
-	err := proto.Unmarshal(msg.Payload, logMsg)
+	err := logMsg.UnmarshalVT(msg.Payload)
 	if err != nil {
 		return err
 	}

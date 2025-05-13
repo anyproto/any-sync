@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"github.com/anyproto/any-sync/app/ocache"
 	"github.com/anyproto/any-sync/net/connutil"
 	"github.com/anyproto/any-sync/net/rpc"
+	"github.com/anyproto/any-sync/net/rpc/encoding"
 	"github.com/anyproto/any-sync/net/secureservice/handshake"
 	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
 	"github.com/anyproto/any-sync/net/transport"
@@ -198,24 +200,32 @@ func (p *peer) DoDrpc(ctx context.Context, do func(conn drpc.Conn) error) error 
 	return do(conn)
 }
 
-func (p *peer) openDrpcConn(ctx context.Context) (dconn *subConn, err error) {
+var defaultHandshakeProto = &handshakeproto.Proto{
+	Proto:     handshakeproto.ProtoType_DRPC,
+	Encodings: []handshakeproto.Encoding{handshakeproto.Encoding_Snappy, handshakeproto.Encoding_None},
+}
+
+func (p *peer) openDrpcConn(ctx context.Context) (*subConn, error) {
 	conn, err := p.Open(ctx)
 	if err != nil {
 		return nil, err
 	}
-	tconn := connutil.NewLastUsageConn(conn)
-	if err = handshake.OutgoingProtoHandshake(ctx, tconn, handshakeproto.ProtoType_DRPC); err != nil {
+	lastUsageConn := connutil.NewLastUsageConn(conn)
+	proto, err := handshake.OutgoingProtoHandshake(ctx, lastUsageConn, defaultHandshakeProto)
+	if err != nil {
 		return nil, err
 	}
 	bufSize := p.ctrl.DrpcConfig().Stream.MaxMsgSizeMb * (1 << 20)
+	drpcConn := drpcconn.NewWithOptions(lastUsageConn, drpcconn.Options{
+		Manager: drpcmanager.Options{
+			Reader: drpcwire.ReaderOptions{MaximumBufferSize: bufSize},
+			Stream: drpcstream.Options{MaximumBufferSize: bufSize},
+		},
+	})
+	isSnappy := slices.Contains(proto.Encodings, handshakeproto.Encoding_Snappy)
 	return &subConn{
-		Conn: drpcconn.NewWithOptions(tconn, drpcconn.Options{
-			Manager: drpcmanager.Options{
-				Reader: drpcwire.ReaderOptions{MaximumBufferSize: bufSize},
-				Stream: drpcstream.Options{MaximumBufferSize: bufSize},
-			},
-		}),
-		LastUsageConn: tconn,
+		Conn:          encoding.WrapConnEncoding(drpcConn, isSnappy),
+		LastUsageConn: lastUsageConn,
 	}, nil
 }
 
@@ -255,6 +265,7 @@ var defaultProtoChecker = handshake.ProtoChecker{
 	AllowedProtoTypes: []handshakeproto.ProtoType{
 		handshakeproto.ProtoType_DRPC,
 	},
+	SupportedEncodings: []handshakeproto.Encoding{handshakeproto.Encoding_Snappy, handshakeproto.Encoding_None},
 }
 
 func (p *peer) serve(conn net.Conn) (err error) {
@@ -262,12 +273,17 @@ func (p *peer) serve(conn net.Conn) (err error) {
 		_ = conn.Close()
 	}()
 	hsCtx, cancel := context.WithTimeout(p.Context(), time.Second*20)
-	if _, err = handshake.IncomingProtoHandshake(hsCtx, conn, defaultProtoChecker); err != nil {
+	proto, err := handshake.IncomingProtoHandshake(hsCtx, conn, defaultProtoChecker)
+	if err != nil {
 		cancel()
 		return
 	}
 	cancel()
-	return p.ctrl.ServeConn(p.Context(), conn)
+	ctx := p.Context()
+	if slices.Contains(proto.Encodings, handshakeproto.Encoding_Snappy) {
+		ctx = encoding.CtxWithSnappy(ctx)
+	}
+	return p.ctrl.ServeConn(ctx, conn)
 }
 
 func (p *peer) SetTTL(ttl time.Duration) {

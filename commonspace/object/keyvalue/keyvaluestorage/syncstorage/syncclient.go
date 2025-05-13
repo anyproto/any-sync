@@ -32,7 +32,7 @@ func (i *innerUpdate) Prepare() error {
 		protoKeyValues = append(protoKeyValues, kv.Proto())
 	}
 	keyValues := &spacesyncproto.StoreKeyValues{KeyValues: protoKeyValues}
-	i.prepared, err = keyValues.Marshal()
+	i.prepared, err = keyValues.MarshalVT()
 	return err
 }
 
