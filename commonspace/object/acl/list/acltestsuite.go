@@ -67,6 +67,7 @@ var (
 func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm func(perm string) AclPermissions, addRec func(rec *consensusproto.RawRecordWithId) error) (afterAll []func(), err error) {
 	// remove:a,b,c;add:d,rw,m1|e,r,m2;changes:f,rw|g,r;revoke:inv1id;decline:g,h;
 	batchPayload := BatchRequestPayload{}
+	var inviteIds []string
 	for _, arg := range args {
 		parts := strings.Split(arg, ":")
 		if len(parts) != 2 {
@@ -182,6 +183,16 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 			afterAll = append(afterAll, func() {
 				a.expectedAccounts[id].status = StatusDeclined
 			})
+		case "invite":
+			inviteParts := strings.Split(commandArgs[0], ",")
+			id := inviteParts[0]
+			inviteIds = append(inviteIds, id)
+			batchPayload.NewInvites = append(batchPayload.NewInvites, AclPermissionsNone)
+		case "invite_anyone":
+			inviteParts := strings.Split(commandArgs[0], ",")
+			id := inviteParts[0]
+			inviteIds = append(inviteIds, id)
+			batchPayload.NewInvites = append(batchPayload.NewInvites, AclPermissionsReader)
 		case "approve":
 			recs, err := acl.AclState().JoinRecords(false)
 			if err != nil {
@@ -212,10 +223,12 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 			})
 		}
 	}
-
 	res, err := acl.RecordBuilder().BuildBatchRequest(batchPayload)
 	if err != nil {
 		return nil, err
+	}
+	for i, id := range inviteIds {
+		a.invites[id] = res.Invites[i]
 	}
 	return afterAll, addRec(WrapAclRecord(res.Rec))
 }
