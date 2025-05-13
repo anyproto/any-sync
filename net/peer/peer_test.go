@@ -2,20 +2,21 @@ package peer
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/net/rpc"
-	"github.com/anyproto/any-sync/net/secureservice/handshake"
-	"github.com/anyproto/any-sync/net/secureservice/handshake/handshakeproto"
-	"github.com/anyproto/any-sync/net/transport/mock_transport"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 	"io"
 	"net"
 	_ "net/http/pprof"
-	"storj.io/drpc"
-	"storj.io/drpc/drpcconn"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+	"storj.io/drpc"
+	"storj.io/drpc/drpcconn"
+
+	"github.com/anyproto/any-sync/net/rpc"
+	"github.com/anyproto/any-sync/net/secureservice/handshake"
+	"github.com/anyproto/any-sync/net/transport/mock_transport"
 )
 
 var ctx = context.Background()
@@ -111,7 +112,8 @@ func TestPeerAccept(t *testing.T) {
 
 	var outHandshakeCh = make(chan error)
 	go func() {
-		outHandshakeCh <- handshake.OutgoingProtoHandshake(ctx, out, handshakeproto.ProtoType_DRPC)
+		_, hErr := handshake.OutgoingProtoHandshake(ctx, out, defaultHandshakeProto)
+		outHandshakeCh <- hErr
 	}()
 	fx.acceptCh <- acceptedConn{conn: in}
 	cn := <-fx.testCtrl.serveConn
@@ -130,7 +132,8 @@ func TestPeer_DrpcConn_AcceptThrottling(t *testing.T) {
 
 		var outHandshakeCh = make(chan error)
 		go func() {
-			outHandshakeCh <- handshake.OutgoingProtoHandshake(ctx, out, handshakeproto.ProtoType_DRPC)
+			_, hErr := handshake.OutgoingProtoHandshake(ctx, out, defaultHandshakeProto)
+			outHandshakeCh <- hErr
 		}()
 		fx.acceptCh <- acceptedConn{conn: in}
 		cn := <-fx.testCtrl.serveConn

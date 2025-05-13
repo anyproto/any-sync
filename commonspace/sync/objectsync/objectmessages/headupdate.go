@@ -2,12 +2,12 @@ package objectmessages
 
 import (
 	"fmt"
-	"google.golang.org/protobuf/proto"
 	"sync"
 
 	"storj.io/drpc"
 
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/protobuf"
 )
 
 var messagePool = &sync.Pool{
@@ -72,7 +72,7 @@ func (h *HeadUpdate) SetPeerId(peerId string) {
 	h.Meta.PeerId = peerId
 }
 
-func (h *HeadUpdate) SetProtoMessage(message proto.Message) error {
+func (h *HeadUpdate) SetProtoMessage(message protobuf.Message) error {
 	var (
 		msg *spacesyncproto.ObjectSyncMessage
 		ok  bool
@@ -87,7 +87,7 @@ func (h *HeadUpdate) SetProtoMessage(message proto.Message) error {
 	return nil
 }
 
-func (h *HeadUpdate) ProtoMessage() (proto.Message, error) {
+func (h *HeadUpdate) ProtoMessage() (protobuf.Message, error) {
 	if h.Update != nil {
 		payload, err := h.Update.Marshall(h.Meta)
 		if err != nil {

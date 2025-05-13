@@ -2,10 +2,10 @@ package response
 
 import (
 	"fmt"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"github.com/anyproto/any-sync/protobuf"
 )
 
 type Response struct {
@@ -29,7 +29,7 @@ func (r *Response) MsgSize() uint64 {
 	return size + uint64(len(r.Heads))*cidLen
 }
 
-func (r *Response) ProtoMessage() (proto.Message, error) {
+func (r *Response) ProtoMessage() (protobuf.Message, error) {
 	if r.ObjectId == "" {
 		return &spacesyncproto.ObjectSyncMessage{}, nil
 	}
@@ -42,7 +42,7 @@ func (r *Response) ProtoMessage() (proto.Message, error) {
 	return spacesyncproto.MarshallSyncMessage(wrapped, r.SpaceId, r.ObjectId)
 }
 
-func (r *Response) SetProtoMessage(message proto.Message) error {
+func (r *Response) SetProtoMessage(message protobuf.Message) error {
 	var (
 		msg *spacesyncproto.ObjectSyncMessage
 		ok  bool

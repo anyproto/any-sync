@@ -271,7 +271,7 @@ func (t *testHandler) HandleMessage(ctx context.Context, peerId string, msg drpc
 }
 
 func (t *testHandler) DRPCEncoding() drpc.Encoding {
-	return EncodingProto
+	return nil
 }
 
 func (t *testHandler) NewReadMessage() drpc.Message {
