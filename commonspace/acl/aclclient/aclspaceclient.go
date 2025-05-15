@@ -244,9 +244,17 @@ func (c *aclSpaceClient) GenerateInvite(isRevoke, isRequestToJoin bool, permissi
 		}
 		inviteIds = c.acl.AclState().InviteIds()
 	}
-	payload := list.BatchRequestPayload{
-		InviteRevokes: inviteIds,
-		NewInvites:    []list.AclPermissions{permissions},
+	var payload list.BatchRequestPayload
+	if isRequestToJoin {
+		payload = list.BatchRequestPayload{
+			InviteRevokes: inviteIds,
+			NewInvites:    []list.AclPermissions{list.AclPermissionsNone},
+		}
+	} else {
+		payload = list.BatchRequestPayload{
+			InviteRevokes: inviteIds,
+			NewInvites:    []list.AclPermissions{permissions},
+		}
 	}
 	res, err := c.acl.RecordBuilder().BuildBatchRequest(payload)
 	if err != nil {
