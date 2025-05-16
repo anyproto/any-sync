@@ -455,7 +455,7 @@ func (a *aclRecordBuilder) buildInviteAnyone(permissions AclPermissions) (invKey
 	inviteRec := &aclrecordproto.AclAccountInvite{
 		InviteKey:        invitePubKey,
 		InviteType:       aclrecordproto.AclInviteType_AnyoneCanJoin,
-		Permissions:      aclrecordproto.AclUserPermissions_Reader,
+		Permissions:      aclrecordproto.AclUserPermissions(permissions),
 		EncryptedReadKey: encReadKey,
 	}
 	content = &aclrecordproto.AclContentValue{Value: &aclrecordproto.AclContentValue_Invite{Invite: inviteRec}}

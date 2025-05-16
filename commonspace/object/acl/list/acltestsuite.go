@@ -191,8 +191,16 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 		case "invite_anyone":
 			inviteParts := strings.Split(commandArgs[0], ",")
 			id := inviteParts[0]
+			var permissions AclPermissions
+			if inviteParts[1] == "r" {
+				permissions = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
+			} else if inviteParts[1] == "rw" {
+				permissions = AclPermissions(aclrecordproto.AclUserPermissions_Writer)
+			} else {
+				permissions = AclPermissions(aclrecordproto.AclUserPermissions_Admin)
+			}
 			inviteIds = append(inviteIds, id)
-			batchPayload.NewInvites = append(batchPayload.NewInvites, AclPermissionsReader)
+			batchPayload.NewInvites = append(batchPayload.NewInvites, permissions)
 		case "approve":
 			recs, err := acl.AclState().JoinRecords(false)
 			if err != nil {

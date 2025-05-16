@@ -139,8 +139,9 @@ func TestAclExecutor(t *testing.T) {
 		{"a.invite_change::oldInvId,a", nil},
 		{"new2.invite_join::oldInvId", nil},
 		{"new2.add::new3,r,new3m", nil},
-		{"a.batch::revoke:oldInvId;invite_anyone:someId", nil},
+		{"a.batch::revoke:oldInvId;invite_anyone:someId,a", nil},
 		{"new4.invite_join::someId", nil},
+		{"new4.add::super,r,superm", nil},
 	}
 	for _, cmd := range cmds {
 		err := a.Execute(cmd.cmd)
