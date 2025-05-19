@@ -8,6 +8,7 @@ import (
 
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/deletionstate"
+	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
@@ -43,7 +44,7 @@ func (d *deleter) Delete(ctx context.Context) {
 			}
 		} else {
 			err = d.getter.DeleteTree(ctx, spaceId, id)
-			if err != nil && !errors.Is(err, spacestorage.ErrTreeStorageAlreadyDeleted) {
+			if err != nil && !errors.Is(err, spacestorage.ErrTreeStorageAlreadyDeleted) && !errors.Is(err, synctree.ErrSyncTreeDeleted) {
 				log.Error("failed to delete object", zap.Error(err))
 				continue
 			}

@@ -5,9 +5,11 @@ import (
 
 	"github.com/anyproto/protobuf/proto"
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
 
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/util/crypto"
 )
 
@@ -25,6 +27,7 @@ var (
 	ErrNoSuchRequest             = errors.New("no such request")
 	ErrNoSuchInvite              = errors.New("no such invite")
 	ErrInsufficientPermissions   = errors.New("insufficient permissions")
+	ErrDuplicateInvites          = errors.New("duplicate invites")
 	ErrIsOwner                   = errors.New("can't be made by owner")
 	ErrIncorrectNumberOfAccounts = errors.New("incorrect number of accounts")
 	ErrDuplicateAccounts         = errors.New("duplicate accounts")
@@ -48,6 +51,17 @@ type AclKeys struct {
 	ReadKey         crypto.SymKey
 	MetadataPrivKey crypto.PrivKey
 	MetadataPubKey  crypto.PubKey
+
+	oldEncryptedReadKey []byte
+	encMetadatKey       []byte
+}
+
+type Invite struct {
+	Key          crypto.PubKey
+	Type         aclrecordproto.AclInviteType
+	Permissions  AclPermissions
+	Id           string
+	encryptedKey []byte
 }
 
 type AclState struct {
@@ -57,7 +71,7 @@ type AclState struct {
 	// accountStates is a map pubKey -> state which defines current account state
 	accountStates map[string]AccountState
 	// inviteKeys is a map recordId -> invite
-	inviteKeys map[string]crypto.PubKey
+	invites map[string]Invite
 	// requestRecords is a map recordId -> RequestRecord
 	requestRecords map[string]RequestRecord
 	// pendingRequests is a map pubKey -> recordId
@@ -75,22 +89,20 @@ type AclState struct {
 
 func newAclStateWithKeys(
 	rootRecord *AclRecord,
-	key crypto.PrivKey) (st *AclState, err error) {
+	key crypto.PrivKey,
+	verifier recordverifier.AcceptorVerifier) (st *AclState, err error) {
 	st = &AclState{
 		id:              rootRecord.Id,
 		key:             key,
 		pubKey:          key.GetPublic(),
 		keys:            make(map[string]AclKeys),
 		accountStates:   make(map[string]AccountState),
-		inviteKeys:      make(map[string]crypto.PubKey),
+		invites:         make(map[string]Invite),
 		requestRecords:  make(map[string]RequestRecord),
 		pendingRequests: make(map[string]string),
 		keyStore:        crypto.NewKeyStorage(),
 	}
-	st.contentValidator = &contentValidator{
-		keyStore: st.keyStore,
-		aclState: st,
-	}
+	st.contentValidator = newContentValidator(st.keyStore, st, verifier)
 	err = st.applyRoot(rootRecord)
 	if err != nil {
 		return
@@ -98,20 +110,17 @@ func newAclStateWithKeys(
 	return st, nil
 }
 
-func newAclState(rootRecord *AclRecord) (st *AclState, err error) {
+func newAclState(rootRecord *AclRecord, verifier recordverifier.AcceptorVerifier) (st *AclState, err error) {
 	st = &AclState{
 		id:              rootRecord.Id,
 		keys:            make(map[string]AclKeys),
 		accountStates:   make(map[string]AccountState),
-		inviteKeys:      make(map[string]crypto.PubKey),
+		invites:         make(map[string]Invite),
 		requestRecords:  make(map[string]RequestRecord),
 		pendingRequests: make(map[string]string),
 		keyStore:        crypto.NewKeyStorage(),
 	}
-	st.contentValidator = &contentValidator{
-		keyStore: st.keyStore,
-		aclState: st,
-	}
+	st.contentValidator = newContentValidator(st.keyStore, st, verifier)
 	err = st.applyRoot(rootRecord)
 	if err != nil {
 		return
@@ -209,9 +218,12 @@ func (st *AclState) HadReadPermissions(identity crypto.PubKey) (had bool) {
 	return false
 }
 
-func (st *AclState) Invites() []crypto.PubKey {
-	var invites []crypto.PubKey
-	for _, inv := range st.inviteKeys {
+func (st *AclState) Invites(inviteType ...aclrecordproto.AclInviteType) []Invite {
+	var invites []Invite
+	for _, inv := range st.invites {
+		if len(inviteType) > 0 && !slices.Contains(inviteType, inv.Type) {
+			continue
+		}
 		invites = append(invites, inv)
 	}
 	return invites
@@ -223,10 +235,34 @@ func (st *AclState) Key() crypto.PrivKey {
 
 func (st *AclState) InviteIds() []string {
 	var invites []string
-	for invId := range st.inviteKeys {
+	for invId := range st.invites {
 		invites = append(invites, invId)
 	}
 	return invites
+}
+
+func (st *AclState) RequestIds() []string {
+	var requests []string
+	for reqId := range st.requestRecords {
+		requests = append(requests, reqId)
+	}
+	return requests
+}
+
+func (st *AclState) DecryptInvite(invitePk crypto.PrivKey) (key crypto.SymKey, err error) {
+	if invitePk == nil {
+		return nil, ErrNoReadKey
+	}
+	for _, invite := range st.invites {
+		if invite.Key.Equals(invitePk.GetPublic()) {
+			res, err := st.unmarshallDecryptReadKey(invite.encryptedKey, invitePk.Decrypt)
+			if err != nil {
+				return nil, err
+			}
+			return res, nil
+		}
+	}
+	return nil, ErrNoSuchInvite
 }
 
 func (st *AclState) ApplyRecord(record *AclRecord) (err error) {
@@ -277,7 +313,10 @@ func (st *AclState) applyRoot(record *AclRecord) (err error) {
 		if err != nil {
 			return err
 		}
-		st.keys[record.Id] = AclKeys{MetadataPubKey: mkPubKey}
+		st.keys[record.Id] = AclKeys{
+			MetadataPubKey: mkPubKey,
+			encMetadatKey:  root.EncryptedMetadataPrivKey,
+		}
 	} else {
 		// this should be a derived acl
 		st.keys[record.Id] = AclKeys{}
@@ -350,7 +389,7 @@ func (st *AclState) Copy() *AclState {
 		pubKey:          st.key.GetPublic(),
 		keys:            make(map[string]AclKeys),
 		accountStates:   make(map[string]AccountState),
-		inviteKeys:      make(map[string]crypto.PubKey),
+		invites:         make(map[string]Invite),
 		requestRecords:  make(map[string]RequestRecord),
 		pendingRequests: make(map[string]string),
 		keyStore:        st.keyStore,
@@ -365,8 +404,8 @@ func (st *AclState) Copy() *AclState {
 		accState.PermissionChanges = permChanges
 		newSt.accountStates[k] = accState
 	}
-	for k, v := range st.inviteKeys {
-		newSt.inviteKeys[k] = v
+	for k, v := range st.invites {
+		newSt.invites[k] = v
 	}
 	for k, v := range st.requestRecords {
 		newSt.requestRecords[k] = v
@@ -377,12 +416,16 @@ func (st *AclState) Copy() *AclState {
 	newSt.readKeyChanges = append(newSt.readKeyChanges, st.readKeyChanges...)
 	newSt.list = st.list
 	newSt.lastRecordId = st.lastRecordId
-	newSt.contentValidator = newContentValidator(newSt.keyStore, newSt)
+	newSt.contentValidator = newContentValidator(newSt.keyStore, newSt, st.list.verifier)
 	return newSt
 }
 
 func (st *AclState) applyChangeContent(ch *aclrecordproto.AclContentValue, record *AclRecord) error {
 	switch {
+	case ch.GetInviteChange() != nil:
+		return st.applyInviteChange(ch.GetInviteChange(), record)
+	case ch.GetInviteJoin() != nil:
+		return st.applyInviteJoin(ch.GetInviteJoin(), record)
 	case ch.GetPermissionChange() != nil:
 		return st.applyPermissionChange(ch.GetPermissionChange(), record)
 	case ch.GetInvite() != nil:
@@ -423,6 +466,17 @@ func (st *AclState) applyPermissionChanges(ch *aclrecordproto.AclAccountPermissi
 	return nil
 }
 
+func (st *AclState) applyInviteChange(ch *aclrecordproto.AclAccountInviteChange, record *AclRecord) (err error) {
+	err = st.contentValidator.ValidateInviteChange(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	invite := st.invites[ch.InviteRecordId]
+	invite.Permissions = AclPermissions(ch.Permissions)
+	st.invites[ch.InviteRecordId] = invite
+	return nil
+}
+
 func (st *AclState) applyPermissionChange(ch *aclrecordproto.AclAccountPermissionChange, record *AclRecord) error {
 	chIdentity, err := st.keyStore.PubKeyFromProto(ch.Identity)
 	if err != nil {
@@ -452,7 +506,13 @@ func (st *AclState) applyInvite(ch *aclrecordproto.AclAccountInvite, record *Acl
 	if err != nil {
 		return err
 	}
-	st.inviteKeys[record.Id] = inviteKey
+	st.invites[record.Id] = Invite{
+		Key:          inviteKey,
+		Id:           record.Id,
+		Type:         ch.InviteType,
+		Permissions:  AclPermissions(ch.Permissions),
+		encryptedKey: ch.EncryptedReadKey,
+	}
 	return nil
 }
 
@@ -461,7 +521,7 @@ func (st *AclState) applyInviteRevoke(ch *aclrecordproto.AclAccountInviteRevoke,
 	if err != nil {
 		return err
 	}
-	delete(st.inviteKeys, ch.InviteRecordId)
+	delete(st.invites, ch.InviteRecordId)
 	return nil
 }
 
@@ -582,6 +642,51 @@ func (st *AclState) applyRequestAccept(ch *aclrecordproto.AclAccountRequestAccep
 	return st.unpackAllKeys(ch.EncryptedReadKey)
 }
 
+func (st *AclState) applyInviteJoin(ch *aclrecordproto.AclAccountInviteJoin, record *AclRecord) error {
+	err := st.contentValidator.ValidateInviteJoin(ch, record.Identity)
+	if err != nil {
+		return err
+	}
+	identity, err := st.keyStore.PubKeyFromProto(ch.Identity)
+	if err != nil {
+		return err
+	}
+	inviteRecord, _ := st.invites[ch.InviteRecordId]
+	pKeyString := mapKeyFromPubKey(identity)
+	state, exists := st.accountStates[pKeyString]
+	if !exists {
+		st.accountStates[pKeyString] = AccountState{
+			PubKey:          identity,
+			Permissions:     inviteRecord.Permissions,
+			RequestMetadata: ch.Metadata,
+			KeyRecordId:     st.CurrentReadKeyId(),
+			Status:          StatusActive,
+			PermissionChanges: []PermissionChange{
+				{
+					Permission: inviteRecord.Permissions,
+					RecordId:   record.Id,
+				},
+			},
+		}
+	} else {
+		st.accountStates[pKeyString] = AccountState{
+			PubKey:          identity,
+			Permissions:     inviteRecord.Permissions,
+			RequestMetadata: ch.Metadata,
+			KeyRecordId:     st.CurrentReadKeyId(),
+			Status:          StatusActive,
+			PermissionChanges: append(state.PermissionChanges, PermissionChange{
+				Permission: inviteRecord.Permissions,
+				RecordId:   record.Id,
+			}),
+		}
+	}
+	if st.pubKey.Equals(identity) {
+		return st.unpackAllKeys(ch.EncryptedReadKey)
+	}
+	return nil
+}
+
 func (st *AclState) unpackAllKeys(rk []byte) error {
 	iterReadKey, err := st.unmarshallDecryptReadKey(rk, st.key.Decrypt)
 	if err != nil {
@@ -589,42 +694,8 @@ func (st *AclState) unpackAllKeys(rk []byte) error {
 	}
 	for idx := len(st.readKeyChanges) - 1; idx >= 0; idx-- {
 		recId := st.readKeyChanges[idx]
-		rec, err := st.list.Get(recId)
-		if err != nil {
-			return err
-		}
-		// if this is a first key change
-		if recId == st.id {
-			ch := rec.Model.(*aclrecordproto.AclRoot)
-			metadataKey, err := st.unmarshallDecryptPrivKey(ch.EncryptedMetadataPrivKey, iterReadKey.Decrypt)
-			if err != nil {
-				return err
-			}
-			aclKeys := st.keys[recId]
-			aclKeys.ReadKey = iterReadKey
-			aclKeys.MetadataPrivKey = metadataKey
-			st.keys[recId] = aclKeys
-			break
-		}
-		model := rec.Model.(*aclrecordproto.AclData)
-		content := model.GetAclContent()
-		var readKeyChange *aclrecordproto.AclReadKeyChange
-		for _, ch := range content {
-			switch {
-			case ch.GetReadKeyChange() != nil:
-				readKeyChange = ch.GetReadKeyChange()
-			case ch.GetAccountRemove() != nil:
-				readKeyChange = ch.GetAccountRemove().GetReadKeyChange()
-			}
-		}
-		if readKeyChange == nil {
-			return ErrIncorrectReadKey
-		}
-		oldReadKey, err := st.unmarshallDecryptReadKey(readKeyChange.EncryptedOldReadKey, iterReadKey.Decrypt)
-		if err != nil {
-			return err
-		}
-		metadataKey, err := st.unmarshallDecryptPrivKey(readKeyChange.EncryptedMetadataPrivKey, iterReadKey.Decrypt)
+		keys := st.keys[recId]
+		metadataKey, err := st.unmarshallDecryptPrivKey(keys.encMetadatKey, iterReadKey.Decrypt)
 		if err != nil {
 			return err
 		}
@@ -632,7 +703,16 @@ func (st *AclState) unpackAllKeys(rk []byte) error {
 		aclKeys.ReadKey = iterReadKey
 		aclKeys.MetadataPrivKey = metadataKey
 		st.keys[recId] = aclKeys
-		iterReadKey = oldReadKey
+		if idx != 0 {
+			if keys.oldEncryptedReadKey == nil {
+				return ErrIncorrectReadKey
+			}
+			oldReadKey, err := st.unmarshallDecryptReadKey(keys.oldEncryptedReadKey, iterReadKey.Decrypt)
+			if err != nil {
+				return err
+			}
+			iterReadKey = oldReadKey
+		}
 	}
 	return nil
 }
@@ -744,7 +824,9 @@ func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, reco
 		return err
 	}
 	aclKeys := AclKeys{
-		MetadataPubKey: mkPubKey,
+		MetadataPubKey:      mkPubKey,
+		oldEncryptedReadKey: ch.EncryptedOldReadKey,
+		encMetadatKey:       ch.EncryptedMetadataPrivKey,
 	}
 	for _, accKey := range ch.AccountKeys {
 		identity, _ := st.keyStore.PubKeyFromProto(accKey.Identity)
@@ -754,6 +836,19 @@ func (st *AclState) applyReadKeyChange(ch *aclrecordproto.AclReadKeyChange, reco
 				return err
 			}
 			aclKeys.ReadKey = res
+		}
+	}
+	for _, encKey := range ch.InviteKeys {
+		invKey, err := st.keyStore.PubKeyFromProto(encKey.Identity)
+		if err != nil {
+			return err
+		}
+		for key, invite := range st.invites {
+			if invite.Key.Equals(invKey) {
+				invite.encryptedKey = encKey.EncryptedReadKey
+				st.invites[key] = invite
+				break
+			}
 		}
 	}
 	if aclKeys.ReadKey != nil {
@@ -792,8 +887,8 @@ func (st *AclState) unmarshallDecryptPrivKey(msg []byte, decryptor func(msg []by
 }
 
 func (st *AclState) GetInviteIdByPrivKey(inviteKey crypto.PrivKey) (recId string, err error) {
-	for id, inv := range st.inviteKeys {
-		if inv.Equals(inviteKey.GetPublic()) {
+	for id, inv := range st.invites {
+		if inv.Key.Equals(inviteKey.GetPublic()) {
 			return id, nil
 		}
 	}

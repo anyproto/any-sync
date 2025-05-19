@@ -7,6 +7,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/aclrecordproto"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/crypto"
 )
@@ -66,6 +67,7 @@ var (
 func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm func(perm string) AclPermissions, addRec func(rec *consensusproto.RawRecordWithId) error) (afterAll []func(), err error) {
 	// remove:a,b,c;add:d,rw,m1|e,r,m2;changes:f,rw|g,r;revoke:inv1id;decline:g,h;
 	batchPayload := BatchRequestPayload{}
+	var inviteIds []string
 	for _, arg := range args {
 		parts := strings.Split(arg, ":")
 		if len(parts) != 2 {
@@ -86,7 +88,7 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 					return nil, err
 				}
 				ownerAcl := a.actualAccounts[a.owner].Acl.(*aclList)
-				accountAcl, err := BuildAclListWithIdentity(keys, ownerAcl.storage, NoOpAcceptorVerifier{})
+				accountAcl, err := BuildAclListWithIdentity(keys, ownerAcl.storage, recordverifier.NewValidateFull())
 				if err != nil {
 					return nil, err
 				}
@@ -181,6 +183,24 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 			afterAll = append(afterAll, func() {
 				a.expectedAccounts[id].status = StatusDeclined
 			})
+		case "invite":
+			inviteParts := strings.Split(commandArgs[0], ",")
+			id := inviteParts[0]
+			inviteIds = append(inviteIds, id)
+			batchPayload.NewInvites = append(batchPayload.NewInvites, AclPermissionsNone)
+		case "invite_anyone":
+			inviteParts := strings.Split(commandArgs[0], ",")
+			id := inviteParts[0]
+			var permissions AclPermissions
+			if inviteParts[1] == "r" {
+				permissions = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
+			} else if inviteParts[1] == "rw" {
+				permissions = AclPermissions(aclrecordproto.AclUserPermissions_Writer)
+			} else {
+				permissions = AclPermissions(aclrecordproto.AclUserPermissions_Admin)
+			}
+			inviteIds = append(inviteIds, id)
+			batchPayload.NewInvites = append(batchPayload.NewInvites, permissions)
 		case "approve":
 			recs, err := acl.AclState().JoinRecords(false)
 			if err != nil {
@@ -211,12 +231,14 @@ func (a *AclTestExecutor) buildBatchRequest(args []string, acl AclList, getPerm 
 			})
 		}
 	}
-
 	res, err := acl.RecordBuilder().BuildBatchRequest(batchPayload)
 	if err != nil {
 		return nil, err
 	}
-	return afterAll, addRec(WrapAclRecord(res))
+	for i, id := range inviteIds {
+		a.invites[id] = res.Invites[i]
+	}
+	return afterAll, addRec(WrapAclRecord(res.Rec))
 }
 
 func (a *AclTestExecutor) Execute(cmd string) (err error) {
@@ -273,7 +295,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		} else {
 			ownerAcl := a.actualAccounts[a.owner].Acl.(*aclList)
 			copyStorage := ownerAcl.storage.(*inMemoryStorage).Copy()
-			accountAcl, err := BuildAclListWithIdentity(keys, copyStorage, NoOpAcceptorVerifier{})
+			accountAcl, err := BuildAclListWithIdentity(keys, copyStorage, recordverifier.NewValidateFull())
 			if err != nil {
 				return err
 			}
@@ -291,7 +313,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		keys := a.actualAccounts[account].Keys
 		ownerAcl := a.actualAccounts[a.owner].Acl.(*aclList)
 		copyStorage := ownerAcl.storage.(*inMemoryStorage).Copy()
-		accountAcl, err := BuildAclListWithIdentity(keys, copyStorage, NoOpAcceptorVerifier{})
+		accountAcl, err := BuildAclListWithIdentity(keys, copyStorage, recordverifier.NewValidateFull())
 		if err != nil {
 			return err
 		}
@@ -372,6 +394,51 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		if err != nil {
 			return err
 		}
+	case "invite_change":
+		var permissions AclPermissions
+		inviteParts := strings.Split(args[0], ",")
+		if inviteParts[1] == "r" {
+			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
+		} else if inviteParts[1] == "rw" {
+			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Writer)
+		} else {
+			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Admin)
+		}
+		invite := a.invites[inviteParts[0]]
+		invId, err := acl.AclState().GetInviteIdByPrivKey(invite)
+		if err != nil {
+			return err
+		}
+		res, err := acl.RecordBuilder().BuildInviteChange(InviteChangePayload{
+			IniviteRecordId: invId,
+			Permissions:     permissions,
+		})
+		if err != nil {
+			return err
+		}
+		err = addRec(WrapAclRecord(res))
+		if err != nil {
+			return err
+		}
+	case "invite_anyone":
+		var permissions AclPermissions
+		inviteParts := strings.Split(args[0], ",")
+		if inviteParts[1] == "r" {
+			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
+		} else if inviteParts[1] == "rw" {
+			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Writer)
+		} else {
+			permissions = AclPermissions(aclrecordproto.AclUserPermissions_Admin)
+		}
+		res, err := acl.RecordBuilder().BuildInviteAnyone(permissions)
+		if err != nil {
+			return err
+		}
+		a.invites[inviteParts[0]] = res.InviteKey
+		err = addRec(WrapAclRecord(res.InviteRec))
+		if err != nil {
+			return err
+		}
 	case "batch":
 		afterAll, err = a.buildBatchRequest(args, acl, getPerm, addRec)
 		if err != nil {
@@ -448,7 +515,7 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 				return err
 			}
 			ownerAcl := a.actualAccounts[a.owner].Acl.(*aclList)
-			accountAcl, err := BuildAclListWithIdentity(keys, ownerAcl.storage, NoOpAcceptorVerifier{})
+			accountAcl, err := BuildAclListWithIdentity(keys, ownerAcl.storage, recordverifier.NewValidateFull())
 			if err != nil {
 				return err
 			}
@@ -488,6 +555,25 @@ func (a *AclTestExecutor) Execute(cmd string) (err error) {
 		if err != nil {
 			return err
 		}
+	case "invite_join":
+		invite := a.invites[args[0]]
+		inviteJoin, err := acl.RecordBuilder().BuildInviteJoin(InviteJoinPayload{
+			InviteKey: invite,
+			Metadata:  []byte(account),
+		})
+		if err != nil {
+			return err
+		}
+		invId, err := acl.AclState().GetInviteIdByPrivKey(invite)
+		if err != nil {
+			return err
+		}
+		err = addRec(WrapAclRecord(inviteJoin))
+		if err != nil {
+			return err
+		}
+		a.expectedAccounts[account].status = StatusActive
+		a.expectedAccounts[account].perms = acl.AclState().invites[invId].Permissions
 	case "remove":
 		identities := strings.Split(args[0], ",")
 		var pubKeys []crypto.PubKey

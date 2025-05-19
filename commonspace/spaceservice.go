@@ -13,6 +13,7 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue"
 	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
@@ -72,6 +73,7 @@ type Deps struct {
 	SyncStatus     syncstatus.StatusUpdater
 	TreeSyncer     treesyncer.TreeSyncer
 	AccountService accountservice.Service
+	recordVerifier recordverifier.RecordVerifier
 	Indexer        keyvaluestorage.Indexer
 }
 
@@ -188,8 +190,13 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 	if deps.Indexer != nil {
 		keyValueIndexer = deps.Indexer
 	}
+	recordVerifier := recordverifier.New()
+	if deps.recordVerifier != nil {
+		recordVerifier = deps.recordVerifier
+	}
 	spaceApp.Register(state).
 		Register(deps.SyncStatus).
+		Register(recordVerifier).
 		Register(peerManager).
 		Register(st).
 		Register(keyValueIndexer).

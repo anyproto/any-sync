@@ -11,6 +11,7 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/app/logger"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/headupdater"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/sync"
@@ -67,7 +68,8 @@ func (s *syncAcl) Init(a *app.App) (err error) {
 		return err
 	}
 	acc := a.MustComponent(accountservice.CName).(accountservice.Service)
-	s.AclList, err = list.BuildAclListWithIdentity(acc.Account(), aclStorage, list.NoOpAcceptorVerifier{})
+	verifier := a.MustComponent(recordverifier.CName).(recordverifier.RecordVerifier)
+	s.AclList, err = list.BuildAclListWithIdentity(acc.Account(), aclStorage, verifier)
 	if err != nil {
 		return
 	}

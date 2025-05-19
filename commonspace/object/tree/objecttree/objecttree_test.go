@@ -19,6 +19,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 )
@@ -390,7 +391,7 @@ func TestObjectTree(t *testing.T) {
 			require.NoError(t, err)
 			prevId = rec.Id
 		}
-		beforeAcl, err := list.BuildAclListWithIdentity(account.Keys, beforeStorage, list.NoOpAcceptorVerifier{})
+		beforeAcl, err := list.BuildAclListWithIdentity(account.Keys, beforeStorage, recordverifier.NewValidateFull())
 		require.NoError(t, err)
 		err = exec.Execute("a.invite::invId")
 		require.NoError(t, err)
@@ -462,7 +463,7 @@ func TestObjectTree(t *testing.T) {
 		require.NoError(t, err)
 		storage, err := list.NewInMemoryStorage(prevAclRecs[0].Id, prevAclRecs)
 		require.NoError(t, err)
-		acl, err := list.BuildAclListWithIdentity(bAccount.Keys, storage, list.NoOpAcceptorVerifier{})
+		acl, err := list.BuildAclListWithIdentity(bAccount.Keys, storage, recordverifier.NewValidateFull())
 		require.NoError(t, err)
 		// creating tree with old storage which doesn't have a new invite record
 		bTree, err := BuildKeyFilterableObjectTree(bStore, acl)
