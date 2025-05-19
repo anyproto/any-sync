@@ -266,16 +266,6 @@ func (c *aclSpaceClient) GenerateInvite(isRevoke, isRequestToJoin bool, permissi
 	}, nil
 }
 
-func (c *aclSpaceClient) GenerateAnyoneCanJoinInvite(permissions list.AclPermissions) (resp list.InviteResult, err error) {
-	c.acl.Lock()
-	defer c.acl.Unlock()
-	anyoneInvites := c.acl.AclState().Invites(aclrecordproto.AclInviteType_AnyoneCanJoin)
-	if len(anyoneInvites) > 0 {
-		return list.InviteResult{}, list.ErrDuplicateInvites
-	}
-	return c.acl.RecordBuilder().BuildInviteAnyone(permissions)
-}
-
 func (c *aclSpaceClient) AddRecord(ctx context.Context, consRec *consensusproto.RawRecord) (err error) {
 	return c.sendRecordAndUpdate(ctx, c.spaceId, consRec)
 }
