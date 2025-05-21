@@ -282,6 +282,9 @@ func (c *contentValidator) ValidateRequestJoin(ch *aclrecordproto.AclAccountRequ
 	if !c.aclState.Permissions(authorIdentity).NoPermissions() {
 		return ErrInsufficientPermissions
 	}
+	if invite.Type != aclrecordproto.AclInviteType_RequestToJoin {
+		return ErrNoSuchInvite
+	}
 	inviteIdentity, err := c.keyStore.PubKeyFromProto(ch.InviteIdentity)
 	if err != nil {
 		return
