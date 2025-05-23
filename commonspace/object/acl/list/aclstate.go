@@ -681,6 +681,13 @@ func (st *AclState) applyInviteJoin(ch *aclrecordproto.AclAccountInviteJoin, rec
 			}),
 		}
 	}
+	for _, rec := range st.requestRecords {
+		if rec.RequestIdentity.Equals(identity) {
+			delete(st.pendingRequests, mapKeyFromPubKey(rec.RequestIdentity))
+			delete(st.requestRecords, rec.RecordId)
+			break
+		}
+	}
 	if st.pubKey.Equals(identity) {
 		return st.unpackAllKeys(ch.EncryptedReadKey)
 	}

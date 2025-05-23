@@ -17,7 +17,7 @@ import (
 
 var (
 	log      = logger.NewNamedSugared("common.commonspace.objecttree")
-	ErrEmpty = errors.New("logs empty")
+	ErrEmpty = errors.New("database is empty")
 )
 
 type treeBuilder struct {
@@ -145,6 +145,9 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get changes after order: %w", err)
+	}
+	if len(changes) == 0 {
+		return nil, ErrEmpty
 	}
 	tr = &Tree{}
 	changes = append(changes, opts.newChanges...)
