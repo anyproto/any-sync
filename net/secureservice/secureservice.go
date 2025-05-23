@@ -30,12 +30,14 @@ var (
 	// ProtoVersion 3 - acl with breaking changes / multiplayer
 	// ProtoVersion 4 - new sync compatible version
 	// ProtoVersion 5 - sync with no entry space
+	// ProtoVersion 6 - sync with key value messages
 	CompatibleVersion = uint32(4)
 	ProtoVersion      = uint32(5)
+	KeyValueVersion   = uint32(6)
 )
 
 var (
-	compatibleVersions = []uint32{CompatibleVersion, ProtoVersion}
+	compatibleVersions = []uint32{CompatibleVersion, ProtoVersion, KeyValueVersion}
 )
 
 func New() SecureService {
@@ -72,6 +74,12 @@ func (s *secureService) Init(a *app.App) (err error) {
 		s.compatibleVersions = compatibleVersions
 	}
 	account := a.MustComponent(commonaccount.CName).(commonaccount.Service)
+
+	var conf Config
+	if cg, ok := a.Component("config").(configGetter); ok {
+		conf = cg.GetSecureService()
+	}
+
 	peerKey, err := account.Account().PeerKey.Raw()
 	if err != nil {
 		return
@@ -86,7 +94,7 @@ func (s *secureService) Init(a *app.App) (err error) {
 
 	s.inboundChecker = s.noVerifyChecker
 	confTypes := s.nodeconf.NodeTypes(account.Account().PeerId)
-	if len(confTypes) > 0 {
+	if conf.RequireClientAuth || len(confTypes) > 0 {
 		// require identity verification if we are node
 		s.inboundChecker = s.peerSignVerifier
 	}
@@ -137,7 +145,7 @@ func (s *secureService) SecureOutbound(ctx context.Context, conn net.Conn) (cctx
 func (s *secureService) HandshakeOutbound(ctx context.Context, conn io.ReadWriteCloser, peerId string) (cctx context.Context, err error) {
 	confTypes := s.nodeconf.NodeTypes(peerId)
 	var checker handshake.CredentialChecker
-	if len(confTypes) > 0 {
+	if CtxIsAccountCheckAllowed(ctx) || len(confTypes) > 0 {
 		checker = s.peerSignVerifier
 	} else {
 		checker = s.noVerifyChecker

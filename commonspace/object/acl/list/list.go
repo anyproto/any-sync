@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_list/mock_list.go github.com/anyproto/any-sync/commonspace/object/acl/list AclList
+//go:generate mockgen -destination mock_list/mock_list.go github.com/anyproto/any-sync/commonspace/object/acl/list AclList,Storage
 package list
 
 import (
@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
-	"github.com/anyproto/any-sync/commonspace/object/acl/liststorage"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
 	"github.com/anyproto/any-sync/util/cidutil"
 	"github.com/anyproto/any-sync/util/crypto"
@@ -25,17 +25,6 @@ type RWLocker interface {
 	sync.Locker
 	RLock()
 	RUnlock()
-}
-
-type AcceptorVerifier interface {
-	VerifyAcceptor(rec *consensusproto.RawRecord) (err error)
-}
-
-type NoOpAcceptorVerifier struct {
-}
-
-func (n NoOpAcceptorVerifier) VerifyAcceptor(rec *consensusproto.RawRecord) (err error) {
-	return nil
 }
 
 type AclList interface {
@@ -75,20 +64,21 @@ type aclList struct {
 	recordBuilder AclRecordBuilder
 	keyStorage    crypto.KeyStorage
 	aclState      *AclState
-	storage       liststorage.ListStorage
+	storage       Storage
+	verifier      recordverifier.AcceptorVerifier
 
 	sync.RWMutex
 }
 
 type internalDeps struct {
-	storage          liststorage.ListStorage
+	storage          Storage
 	keyStorage       crypto.KeyStorage
 	stateBuilder     *aclStateBuilder
 	recordBuilder    AclRecordBuilder
-	acceptorVerifier AcceptorVerifier
+	acceptorVerifier recordverifier.AcceptorVerifier
 }
 
-func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage liststorage.ListStorage, verifier AcceptorVerifier) (AclList, error) {
+func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage Storage, verifier recordverifier.AcceptorVerifier) (AclList, error) {
 	keyStorage := crypto.NewKeyStorage()
 	deps := internalDeps{
 		storage:          storage,
@@ -100,48 +90,37 @@ func BuildAclListWithIdentity(acc *accountdata.AccountKeys, storage liststorage.
 	return build(deps)
 }
 
-func BuildAclList(storage liststorage.ListStorage, verifier AcceptorVerifier) (AclList, error) {
-	keyStorage := crypto.NewKeyStorage()
-	deps := internalDeps{
-		storage:          storage,
-		keyStorage:       keyStorage,
-		stateBuilder:     newAclStateBuilder(),
-		recordBuilder:    NewAclRecordBuilder(storage.Id(), keyStorage, nil, verifier),
-		acceptorVerifier: verifier,
-	}
-	return build(deps)
-}
-
 func build(deps internalDeps) (list AclList, err error) {
 	var (
+		ctx          = context.Background()
 		storage      = deps.storage
 		id           = deps.storage.Id()
 		recBuilder   = deps.recordBuilder
 		stateBuilder = deps.stateBuilder
 	)
-	head, err := storage.Head()
+	head, err := storage.Head(ctx)
 	if err != nil {
 		return
 	}
 
-	rawRecordWithId, err := storage.GetRawRecord(context.Background(), head)
+	rec, err := storage.Get(ctx, head)
 	if err != nil {
 		return
 	}
 
-	record, err := recBuilder.UnmarshallWithId(rawRecordWithId)
+	record, err := recBuilder.UnmarshallWithId(rec.RawRecordWithId())
 	if err != nil {
 		return
 	}
 	records := []*AclRecord{record}
 
 	for record.PrevId != "" {
-		rawRecordWithId, err = storage.GetRawRecord(context.Background(), record.PrevId)
+		rec, err = storage.Get(ctx, record.PrevId)
 		if err != nil {
 			return
 		}
 
-		record, err = recBuilder.UnmarshallWithId(rawRecordWithId)
+		record, err = recBuilder.UnmarshallWithId(rec.RawRecordWithId())
 		if err != nil {
 			return
 		}
@@ -159,18 +138,19 @@ func build(deps internalDeps) (list AclList, err error) {
 		indexes[records[len(records)/2].Id] = len(records) / 2
 	}
 	// TODO: check if this is correct (raw model instead of unmarshalled)
-	rootWithId, err := storage.Root()
+	rootWithId, err := storage.Root(ctx)
 	if err != nil {
 		return
 	}
 
 	list = &aclList{
-		root:          rootWithId,
+		root:          rootWithId.RawRecordWithId(),
 		records:       records,
 		indexes:       indexes,
 		stateBuilder:  stateBuilder,
 		recordBuilder: recBuilder,
 		storage:       storage,
+		verifier:      deps.acceptorVerifier,
 		id:            id,
 	}
 	stateBuilder.Init(id)
@@ -208,7 +188,7 @@ func (a *aclList) ValidateRawRecord(rawRec *consensusproto.RawRecord, afterValid
 func (a *aclList) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) error {
 	for _, rec := range rawRecords {
 		err := a.AddRawRecord(rec)
-		if err != nil && err != ErrRecordAlreadyExists {
+		if err != nil && !errors.Is(err, ErrRecordAlreadyExists) {
 			return err
 		}
 	}
@@ -230,13 +210,14 @@ func (a *aclList) AddRawRecord(rawRec *consensusproto.RawRecordWithId) (err erro
 	a.setState(copyState)
 	a.records = append(a.records, record)
 	a.indexes[record.Id] = len(a.records) - 1
-	if err = a.storage.AddRawRecord(context.Background(), rawRec); err != nil {
-		return
+	storageRec := StorageRecord{
+		RawRecord:  rawRec.Payload,
+		PrevId:     record.PrevId,
+		Id:         record.Id,
+		Order:      len(a.records),
+		ChangeSize: len(rawRec.Payload),
 	}
-	if err = a.storage.SetHead(rawRec.Id); err != nil {
-		return
-	}
-	return
+	return a.storage.AddAll(context.Background(), []StorageRecord{storageRec})
 }
 
 func (a *aclList) setState(state *AclState) {
@@ -309,7 +290,7 @@ func (a *aclList) Iterate(iterFunc IterFunc) {
 func (a *aclList) RecordsAfter(ctx context.Context, id string) (records []*consensusproto.RawRecordWithId, err error) {
 	var recIdx int
 	if id == "" {
-		recIdx = -1
+		recIdx = 1
 	} else {
 		var ok bool
 		recIdx, ok = a.indexes[id]
@@ -317,13 +298,15 @@ func (a *aclList) RecordsAfter(ctx context.Context, id string) (records []*conse
 			return nil, ErrNoSuchRecord
 		}
 	}
-	for i := recIdx + 1; i < len(a.records); i++ {
-		rawRec, err := a.storage.GetRawRecord(ctx, a.records[i].Id)
-		if err != nil {
-			return nil, err
-		}
-		records = append(records, rawRec)
-	}
+	err = a.storage.GetAfterOrder(ctx, recIdx, func(ctx context.Context, record StorageRecord) (shouldContinue bool, err error) {
+		raw := make([]byte, 0, len(record.RawRecord))
+		raw = append(raw, record.RawRecord...)
+		records = append(records, &consensusproto.RawRecordWithId{
+			Payload: raw,
+			Id:      record.Id,
+		})
+		return true, nil
+	})
 	return
 }
 
@@ -335,13 +318,15 @@ func (a *aclList) RecordsBefore(ctx context.Context, headId string) (records []*
 	if !ok {
 		return nil, ErrNoSuchRecord
 	}
-	for i := 0; i <= recIdx; i++ {
-		rawRec, err := a.storage.GetRawRecord(ctx, a.records[i].Id)
-		if err != nil {
-			return nil, err
-		}
-		records = append(records, rawRec)
-	}
+	err = a.storage.GetBeforeOrder(ctx, recIdx, func(ctx context.Context, record StorageRecord) (shouldContinue bool, err error) {
+		raw := make([]byte, 0, len(record.RawRecord))
+		raw = append(raw, record.RawRecord...)
+		records = append(records, &consensusproto.RawRecordWithId{
+			Payload: raw,
+			Id:      record.Id,
+		})
+		return true, nil
+	})
 	return
 }
 

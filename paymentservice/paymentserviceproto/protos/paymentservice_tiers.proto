@@ -73,6 +73,9 @@ message TierData {
   // Android platform-specific data:
   string androidProductId = 18;
   string androidManageUrl = 19;
+
+  // something like "limited offer", etc
+  string offer = 20;
 }
 
 message GetTiersResponse {

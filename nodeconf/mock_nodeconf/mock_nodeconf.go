@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_nodeconf/mock_nodeconf.go github.com/anyproto/any-sync/nodeconf Service
 //
-
 // Package mock_nodeconf is a generated GoMock package.
 package mock_nodeconf
 
@@ -23,7 +22,6 @@ import (
 type MockService struct {
 	ctrl     *gomock.Controller
 	recorder *MockServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockServiceMockRecorder is the mock recorder for MockService.
@@ -58,17 +56,17 @@ func (mr *MockServiceMockRecorder) CHash() *gomock.Call {
 }
 
 // Close mocks base method.
-func (m *MockService) Close(ctx context.Context) error {
+func (m *MockService) Close(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", ctx)
+	ret := m.ctrl.Call(m, "Close", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockServiceMockRecorder) Close(ctx any) *gomock.Call {
+func (mr *MockServiceMockRecorder) Close(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockService)(nil).Close), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockService)(nil).Close), arg0)
 }
 
 // Configuration mocks base method.
@@ -142,31 +140,31 @@ func (mr *MockServiceMockRecorder) Id() *gomock.Call {
 }
 
 // Init mocks base method.
-func (m *MockService) Init(a *app.App) error {
+func (m *MockService) Init(arg0 *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", a)
+	ret := m.ctrl.Call(m, "Init", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockServiceMockRecorder) Init(a any) *gomock.Call {
+func (mr *MockServiceMockRecorder) Init(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockService)(nil).Init), a)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockService)(nil).Init), arg0)
 }
 
 // IsResponsible mocks base method.
-func (m *MockService) IsResponsible(spaceId string) bool {
+func (m *MockService) IsResponsible(arg0 string) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsResponsible", spaceId)
+	ret := m.ctrl.Call(m, "IsResponsible", arg0)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // IsResponsible indicates an expected call of IsResponsible.
-func (mr *MockServiceMockRecorder) IsResponsible(spaceId any) *gomock.Call {
+func (mr *MockServiceMockRecorder) IsResponsible(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsResponsible", reflect.TypeOf((*MockService)(nil).IsResponsible), spaceId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsResponsible", reflect.TypeOf((*MockService)(nil).IsResponsible), arg0)
 }
 
 // Name mocks base method.
@@ -212,45 +210,45 @@ func (mr *MockServiceMockRecorder) NetworkCompatibilityStatus() *gomock.Call {
 }
 
 // NodeIds mocks base method.
-func (m *MockService) NodeIds(spaceId string) []string {
+func (m *MockService) NodeIds(arg0 string) []string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NodeIds", spaceId)
+	ret := m.ctrl.Call(m, "NodeIds", arg0)
 	ret0, _ := ret[0].([]string)
 	return ret0
 }
 
 // NodeIds indicates an expected call of NodeIds.
-func (mr *MockServiceMockRecorder) NodeIds(spaceId any) *gomock.Call {
+func (mr *MockServiceMockRecorder) NodeIds(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeIds", reflect.TypeOf((*MockService)(nil).NodeIds), spaceId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeIds", reflect.TypeOf((*MockService)(nil).NodeIds), arg0)
 }
 
 // NodeTypes mocks base method.
-func (m *MockService) NodeTypes(nodeId string) []nodeconf.NodeType {
+func (m *MockService) NodeTypes(arg0 string) []nodeconf.NodeType {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NodeTypes", nodeId)
+	ret := m.ctrl.Call(m, "NodeTypes", arg0)
 	ret0, _ := ret[0].([]nodeconf.NodeType)
 	return ret0
 }
 
 // NodeTypes indicates an expected call of NodeTypes.
-func (mr *MockServiceMockRecorder) NodeTypes(nodeId any) *gomock.Call {
+func (mr *MockServiceMockRecorder) NodeTypes(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeTypes", reflect.TypeOf((*MockService)(nil).NodeTypes), nodeId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeTypes", reflect.TypeOf((*MockService)(nil).NodeTypes), arg0)
 }
 
 // Partition mocks base method.
-func (m *MockService) Partition(spaceId string) int {
+func (m *MockService) Partition(arg0 string) int {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Partition", spaceId)
+	ret := m.ctrl.Call(m, "Partition", arg0)
 	ret0, _ := ret[0].(int)
 	return ret0
 }
 
 // Partition indicates an expected call of Partition.
-func (mr *MockServiceMockRecorder) Partition(spaceId any) *gomock.Call {
+func (mr *MockServiceMockRecorder) Partition(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Partition", reflect.TypeOf((*MockService)(nil).Partition), spaceId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Partition", reflect.TypeOf((*MockService)(nil).Partition), arg0)
 }
 
 // PaymentProcessingNodePeers mocks base method.
@@ -268,30 +266,30 @@ func (mr *MockServiceMockRecorder) PaymentProcessingNodePeers() *gomock.Call {
 }
 
 // PeerAddresses mocks base method.
-func (m *MockService) PeerAddresses(peerId string) ([]string, bool) {
+func (m *MockService) PeerAddresses(arg0 string) ([]string, bool) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PeerAddresses", peerId)
+	ret := m.ctrl.Call(m, "PeerAddresses", arg0)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(bool)
 	return ret0, ret1
 }
 
 // PeerAddresses indicates an expected call of PeerAddresses.
-func (mr *MockServiceMockRecorder) PeerAddresses(peerId any) *gomock.Call {
+func (mr *MockServiceMockRecorder) PeerAddresses(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PeerAddresses", reflect.TypeOf((*MockService)(nil).PeerAddresses), peerId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PeerAddresses", reflect.TypeOf((*MockService)(nil).PeerAddresses), arg0)
 }
 
 // Run mocks base method.
-func (m *MockService) Run(ctx context.Context) error {
+func (m *MockService) Run(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx)
+	ret := m.ctrl.Call(m, "Run", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockServiceMockRecorder) Run(ctx any) *gomock.Call {
+func (mr *MockServiceMockRecorder) Run(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockService)(nil).Run), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockService)(nil).Run), arg0)
 }

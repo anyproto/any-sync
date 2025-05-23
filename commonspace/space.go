@@ -13,8 +13,10 @@ import (
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/headsync"
+	"github.com/anyproto/any-sync/commonspace/headsync/headstorage"
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/kvinterfaces"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
@@ -27,34 +29,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
 	"github.com/anyproto/any-sync/net/streampool"
-	"github.com/anyproto/any-sync/util/crypto"
 )
-
-type SpaceCreatePayload struct {
-	// SigningKey is the signing key of the owner
-	SigningKey crypto.PrivKey
-	// SpaceType is an arbitrary string
-	SpaceType string
-	// ReplicationKey is a key which is to be used to determine the node where the space should be held
-	ReplicationKey uint64
-	// SpacePayload is an arbitrary payload related to space type
-	SpacePayload []byte
-	// MasterKey is the master key of the owner
-	MasterKey crypto.PrivKey
-	// ReadKey is the first read key of space
-	ReadKey crypto.SymKey
-	// MetadataKey is the first metadata key of space
-	MetadataKey crypto.PrivKey
-	// Metadata is the metadata of the owner
-	Metadata []byte
-}
-
-type SpaceDerivePayload struct {
-	SigningKey   crypto.PrivKey
-	MasterKey    crypto.PrivKey
-	SpaceType    string
-	SpacePayload []byte
-}
 
 type SpaceDescription struct {
 	SpaceHeader          *spacesyncproto.RawSpaceHeaderWithId
@@ -75,18 +50,18 @@ type Space interface {
 
 	StoredIds() []string
 	DebugAllHeads() []headsync.TreeHeads
-	Description() (desc SpaceDescription, err error)
+	Description(ctx context.Context) (desc SpaceDescription, err error)
 
 	TreeBuilder() objecttreebuilder.TreeBuilder
 	TreeSyncer() treesyncer.TreeSyncer
 	AclClient() aclclient.AclSpaceClient
 	SyncStatus() syncstatus.StatusUpdater
 	Storage() spacestorage.SpaceStorage
+	KeyValue() kvinterfaces.KeyValueService
 
 	DeleteTree(ctx context.Context, id string) (err error)
 	GetNodePeers(ctx context.Context) (peer []peer.Peer, err error)
 
-	HandleDeprecatedObjectSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error)
 	HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage, stream drpc.Stream) (err error)
 	HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error)
 	HandleMessage(ctx context.Context, msg *objectmessages.HeadUpdate) (err error)
@@ -96,9 +71,7 @@ type Space interface {
 }
 
 type space struct {
-	mu     sync.RWMutex
-	header *spacesyncproto.RawSpaceHeaderWithId
-
+	mu    sync.RWMutex
 	state *spacestate.SpaceState
 	app   *app.App
 
@@ -112,23 +85,31 @@ type space struct {
 	settings     settings.Settings
 	storage      spacestorage.SpaceStorage
 	aclClient    aclclient.AclSpaceClient
+	keyValue     kvinterfaces.KeyValueService
 	aclList      list.AclList
 	creationTime time.Time
 }
 
-func (s *space) Description() (desc SpaceDescription, err error) {
-	root := s.aclList.Root()
-	settingsStorage, err := s.storage.TreeStorage(s.storage.SpaceSettingsId())
+func (s *space) Description(ctx context.Context) (desc SpaceDescription, err error) {
+	state, err := s.storage.StateStorage().GetState(ctx)
 	if err != nil {
 		return
 	}
-	settingsRoot, err := settingsStorage.Root()
+	root := s.aclList.Root()
+	settingsStorage, err := s.storage.TreeStorage(ctx, state.SettingsId)
+	if err != nil {
+		return
+	}
+	settingsRoot, err := settingsStorage.Root(ctx)
 	if err != nil {
 		return
 	}
 
 	desc = SpaceDescription{
-		SpaceHeader:          s.header,
+		SpaceHeader: &spacesyncproto.RawSpaceHeaderWithId{
+			RawHeader: state.SpaceHeader,
+			Id:        state.SpaceId,
+		},
 		AclId:                root.Id,
 		AclPayload:           root.Payload,
 		SpaceSettingsId:      settingsRoot.Id,
@@ -141,8 +122,17 @@ func (s *space) StoredIds() []string {
 	return s.headSync.ExternalIds()
 }
 
-func (s *space) DebugAllHeads() []headsync.TreeHeads {
-	return s.headSync.DebugAllHeads()
+func (s *space) DebugAllHeads() (heads []headsync.TreeHeads) {
+	s.storage.HeadStorage().IterateEntries(context.Background(), headstorage.IterOpts{}, func(entry headstorage.HeadsEntry) (bool, error) {
+		if entry.CommonSnapshot != "" {
+			heads = append(heads, headsync.TreeHeads{
+				Id:    entry.Id,
+				Heads: entry.Heads,
+			})
+		}
+		return true, nil
+	})
+	return heads
 }
 
 func (s *space) DeleteTree(ctx context.Context, id string) (err error) {
@@ -160,10 +150,6 @@ func (s *space) HandleStreamSyncRequest(ctx context.Context, req *spacesyncproto
 	}
 	objSyncReq := objectmessages.NewByteRequest(peerId, req.SpaceId, req.ObjectId, req.Payload)
 	return s.syncService.HandleStreamRequest(ctx, objSyncReq, stream)
-}
-
-func (s *space) HandleDeprecatedObjectSyncRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (resp *spacesyncproto.ObjectSyncMessage, err error) {
-	return s.syncService.HandleDeprecatedObjectSync(ctx, req)
 }
 
 func (s *space) HandleRangeRequest(ctx context.Context, req *spacesyncproto.HeadSyncRequest) (resp *spacesyncproto.HeadSyncResponse, err error) {
@@ -211,12 +197,16 @@ func (s *space) Init(ctx context.Context) (err error) {
 	s.streamPool = s.app.MustComponent(streampool.CName).(streampool.StreamPool)
 	s.treeSyncer = s.app.MustComponent(treesyncer.CName).(treesyncer.TreeSyncer)
 	s.aclClient = s.app.MustComponent(aclclient.CName).(aclclient.AclSpaceClient)
-	s.header, err = s.storage.SpaceHeader()
+	s.keyValue = s.app.MustComponent(kvinterfaces.CName).(kvinterfaces.KeyValueService)
 	return
 }
 
 func (s *space) SyncStatus() syncstatus.StatusUpdater {
 	return s.syncStatus
+}
+
+func (s *space) KeyValue() kvinterfaces.KeyValueService {
+	return s.keyValue
 }
 
 func (s *space) Storage() spacestorage.SpaceStorage {

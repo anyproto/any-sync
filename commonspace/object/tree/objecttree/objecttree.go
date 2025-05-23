@@ -1,4 +1,4 @@
-//go:generate mockgen -destination mock_objecttree/mock_objecttree.go github.com/anyproto/any-sync/commonspace/object/tree/objecttree ObjectTree
+//go:generate mockgen -destination mock_objecttree/mock_objecttree.go github.com/anyproto/any-sync/commonspace/object/tree/objecttree ObjectTree,Storage
 package objecttree
 
 import (
@@ -14,7 +14,6 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/object/acl/list"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/slice"
 )
@@ -31,7 +30,7 @@ var (
 
 type (
 	Updater         = func(tree ObjectTree, md Mode) error
-	ChangeValidator = func(change *treechangeproto.RawTreeChangeWithId) error
+	ChangeValidator = func(change StorageChange) error
 )
 
 type AddResultSummary int
@@ -39,14 +38,23 @@ type AddResultSummary int
 type AddResult struct {
 	OldHeads []string
 	Heads    []string
-	Added    []*treechangeproto.RawTreeChangeWithId
+	Added    []StorageChange
 
 	Mode Mode
 }
 
+func (a AddResult) RawChanges() []*treechangeproto.RawTreeChangeWithId {
+	rawChanges := make([]*treechangeproto.RawTreeChangeWithId, 0, len(a.Added))
+	for _, ch := range a.Added {
+		rawChanges = append(rawChanges, ch.RawTreeChangeWithId())
+	}
+	return rawChanges
+}
+
 type RawChangesPayload struct {
-	NewHeads   []string
-	RawChanges []*treechangeproto.RawTreeChangeWithId
+	NewHeads     []string
+	RawChanges   []*treechangeproto.RawTreeChangeWithId
+	SnapshotPath []string
 }
 
 type ChangeIterateFunc = func(change *Change) bool
@@ -82,11 +90,10 @@ type ReadableObjectTree interface {
 type ObjectTree interface {
 	ReadableObjectTree
 
-	SnapshotPath() []string
-	ChangesAfterCommonSnapshot(snapshotPath, heads []string) ([]*treechangeproto.RawTreeChangeWithId, error)
+	SnapshotPath() ([]string, error)
 	ChangesAfterCommonSnapshotLoader(snapshotPath, heads []string) (LoadIterator, error)
 
-	Storage() treestorage.TreeStorage
+	Storage() Storage
 
 	AddContent(ctx context.Context, content SignableChangeContent) (AddResult, error)
 	AddContentWithValidator(ctx context.Context, content SignableChangeContent, validate ChangeValidator) (AddResult, error)
@@ -103,13 +110,12 @@ type ObjectTree interface {
 }
 
 type objectTree struct {
-	treeStorage     treestorage.TreeStorage
-	changeBuilder   ChangeBuilder
-	validator       ObjectTreeValidator
-	rawChangeLoader *rawChangeLoader
-	treeBuilder     *treeBuilder
-	aclList         list.AclList
-	flusher         Flusher
+	storage       Storage
+	changeBuilder ChangeBuilder
+	validator     ObjectTreeValidator
+	treeBuilder   *treeBuilder
+	aclList       list.AclList
+	flusher       Flusher
 
 	id      string
 	rawRoot *treechangeproto.RawTreeChangeWithId
@@ -131,10 +137,24 @@ type objectTree struct {
 	sync.Mutex
 }
 
-func (ot *objectTree) rebuildFromStorage(theirHeads []string, newChanges []*Change) (err error) {
-	oldTree := ot.tree
-	ot.treeBuilder.Reset()
-	ot.tree, err = ot.treeBuilder.Build(theirHeads, newChanges)
+func (ot *objectTree) rebuildFromStorage(theirHeads, theirSnapshotPath []string, newChanges []*Change) (err error) {
+	var (
+		ourPath []string
+		oldTree = ot.tree
+	)
+	if theirHeads != nil {
+		// TODO: add error handling
+		ourPath, err = ot.SnapshotPath()
+		if err != nil {
+			return fmt.Errorf("rebuild from storage: %w", err)
+		}
+	}
+	ot.tree, err = ot.treeBuilder.Build(treeBuilderOpts{
+		theirHeads:        theirHeads,
+		ourSnapshotPath:   ourPath,
+		theirSnapshotPath: theirSnapshotPath,
+		newChanges:        newChanges,
+	})
 	if err != nil {
 		ot.tree = oldTree
 		return
@@ -193,8 +213,8 @@ func (ot *objectTree) ChangeInfo() *treechangeproto.TreeChangeInfo {
 	return ot.root.Model.(*treechangeproto.TreeChangeInfo)
 }
 
-func (ot *objectTree) Storage() treestorage.TreeStorage {
-	return ot.treeStorage
+func (ot *objectTree) Storage() Storage {
+	return ot.storage
 }
 
 func (ot *objectTree) GetChange(id string) (*Change, error) {
@@ -219,7 +239,7 @@ func (ot *objectTree) AddContent(ctx context.Context, content SignableChangeCont
 	return ot.AddContentWithValidator(ctx, content, nil)
 }
 
-func (ot *objectTree) AddContentWithValidator(ctx context.Context, content SignableChangeContent, validator func(change *treechangeproto.RawTreeChangeWithId) error) (res AddResult, err error) {
+func (ot *objectTree) AddContentWithValidator(ctx context.Context, content SignableChangeContent, validator func(change StorageChange) error) (res AddResult, err error) {
 	if ot.isDeleted {
 		err = ErrDeleted
 		return
@@ -244,23 +264,32 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 		err = fmt.Errorf("error validating added change: %w", err)
 		return
 	}
+	objChange.OrderId = lexId.Next(ot.tree.attached[ot.tree.lastIteratedHeadId].OrderId)
 	if content.IsSnapshot {
+		objChange.SnapshotCounter = ot.tree.root.SnapshotCounter + 1
 		// clearing tree, because we already saved everything in the last snapshot
 		ot.tree = &Tree{}
 	}
+	storageChange := StorageChange{
+		RawChange:       rawChange.RawChange,
+		PrevIds:         objChange.PreviousIds,
+		Id:              objChange.Id,
+		SnapshotCounter: objChange.SnapshotCounter,
+		SnapshotId:      objChange.SnapshotId,
+		OrderId:         objChange.OrderId,
+		ChangeSize:      len(rawChange.RawChange),
+	}
 	if validator != nil {
-		err = validator(rawChange)
+		err = validator(storageChange)
 		if err != nil {
 			return
 		}
 	}
-
 	err = ot.tree.AddMergedHead(objChange)
 	if err != nil {
 		panic(err)
 	}
-
-	err = ot.treeStorage.AddRawChangesSetHeads([]*treechangeproto.RawTreeChangeWithId{rawChange}, []string{objChange.Id})
+	err = ot.storage.AddAll(ctx, []StorageChange{storageChange}, ot.Heads(), ot.tree.root.Id)
 	if err != nil {
 		return
 	}
@@ -273,7 +302,7 @@ func (ot *objectTree) AddContentWithValidator(ctx context.Context, content Signa
 	res = AddResult{
 		OldHeads: oldHeads,
 		Heads:    []string{objChange.Id},
-		Added:    []*treechangeproto.RawTreeChangeWithId{rawChange},
+		Added:    []StorageChange{storageChange},
 		Mode:     mode,
 	}
 	log.With("treeId", ot.id).With("head", objChange.Id).
@@ -377,7 +406,7 @@ func (ot *objectTree) AddRawChangesWithUpdater(ctx context.Context, changes RawC
 	}
 
 	rollback := func() {
-		rebuildErr := ot.rebuildFromStorage(nil, nil)
+		rebuildErr := ot.rebuildFromStorage(nil, nil, nil)
 		if rebuildErr != nil {
 			log.Error("failed to rebuild after adding to storage", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
 		}
@@ -391,7 +420,7 @@ func (ot *objectTree) AddRawChangesWithUpdater(ctx context.Context, changes RawC
 		}
 	}
 
-	err = ot.treeStorage.AddRawChangesSetHeads(addResult.Added, addResult.Heads)
+	err = ot.storage.AddAll(ctx, addResult.Added, addResult.Heads, ot.tree.RootId())
 	if err != nil {
 		rollback()
 		return
@@ -491,45 +520,55 @@ func (ot *objectTree) addChangesToTree(ctx context.Context, changesPayload RawCh
 	}
 
 	// checks if we need to go to database
-	snapshotNotInTree := func(ch *Change) bool {
+	snapshotNotInTree := func(ch *Change) (bool, error) {
 		if ch.SnapshotId == ot.tree.RootId() {
-			return false
+			return false, nil
+		}
+		if oldSn, ok := ot.tree.attached[ch.SnapshotId]; ok {
+			if !oldSn.IsSnapshot {
+				return false, ErrHasInvalidChanges
+			}
 		}
 		for _, sn := range ot.newSnapshotsBuf {
 			// if change refers to newly received snapshot
 			if ch.SnapshotId == sn.Id {
-				return false
+				return false, nil
 			}
 		}
-		return true
+		return true, nil
 	}
 
 	shouldRebuildFromStorage := false
 	// checking if we have some changes with different snapshot and then rebuilding
 	for _, ch := range ot.newChangesBuf {
-		if snapshotNotInTree(ch) {
+		var notInTree bool
+		notInTree, err = snapshotNotInTree(ch)
+		if err != nil {
+			return
+		}
+		if notInTree {
 			shouldRebuildFromStorage = true
 			break
 		}
 	}
 	log := log.With(zap.String("treeId", ot.id))
 	if shouldRebuildFromStorage {
-		err = ot.rebuildFromStorage(headsToUse, ot.newChangesBuf)
+		err = ot.rebuildFromStorage(headsToUse, changesPayload.SnapshotPath, ot.newChangesBuf)
 		if err != nil {
 			log.Error("failed to rebuild with new heads", zap.Strings("headsToUse", headsToUse), zap.Error(err))
 			// rebuilding without new changes
-			rebuildErr := ot.rebuildFromStorage(nil, nil)
+			rebuildErr := ot.rebuildFromStorage(nil, nil, nil)
 			if rebuildErr != nil {
 				log.Error("failed to rebuild from storage", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
 			}
 			return
 		}
-		addResult, err = ot.createAddResult(prevHeadsCopy, Rebuild, nil, changesPayload.RawChanges)
+		addResult, err = ot.createAddResult(prevHeadsCopy, Rebuild, changesPayload.RawChanges)
 		if err != nil {
 			log.Error("failed to create add result", zap.Strings("headsToUse", headsToUse), zap.Error(err))
 			// that means that some unattached changes were somehow corrupted in memory
 			// this shouldn't happen but if that happens, then rebuilding from storage
-			rebuildErr := ot.rebuildFromStorage(nil, nil)
+			rebuildErr := ot.rebuildFromStorage(nil, nil, nil)
 			if rebuildErr != nil {
 				log.Error("failed to rebuild after add result", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
 			}
@@ -556,12 +595,12 @@ func (ot *objectTree) addChangesToTree(ctx context.Context, changesPayload RawCh
 			err = fmt.Errorf("%w: %w", ErrHasInvalidChanges, err)
 			return
 		}
-		addResult, err = ot.createAddResult(prevHeadsCopy, mode, treeChangesAdded, changesPayload.RawChanges)
+		addResult, err = ot.createAddResult(prevHeadsCopy, mode, changesPayload.RawChanges)
 		if err != nil {
 			// that means that some unattached changes were somehow corrupted in memory
 			// this shouldn't happen but if that happens, then rebuilding from storage
 			rollback(treeChangesAdded)
-			rebuildErr := ot.rebuildFromStorage(nil, nil)
+			rebuildErr := ot.rebuildFromStorage(nil, nil, nil)
 			if rebuildErr != nil {
 				log.Error("failed to rebuild after add result (add to tree)", zap.Strings("heads", ot.Heads()), zap.Error(rebuildErr))
 			}
@@ -571,7 +610,7 @@ func (ot *objectTree) addChangesToTree(ctx context.Context, changesPayload RawCh
 	}
 }
 
-func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesAdded []*Change, rawChanges []*treechangeproto.RawTreeChangeWithId) (addResult AddResult, err error) {
+func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, rawChanges []*treechangeproto.RawTreeChangeWithId) (addResult AddResult, err error) {
 	headsCopy := func() []string {
 		newHeads := make([]string, 0, len(ot.tree.Heads()))
 		newHeads = append(newHeads, ot.tree.Heads()...)
@@ -581,24 +620,27 @@ func (ot *objectTree) createAddResult(oldHeads []string, mode Mode, treeChangesA
 	// returns changes that we added to the tree as attached this round
 	// they can include not only the changes that were added now,
 	// but also the changes that were previously in the tree
-	getAddedChanges := func() (added []*treechangeproto.RawTreeChangeWithId, err error) {
+	getAddedChanges := func() (added []StorageChange, err error) {
 		for _, idx := range ot.notSeenIdxBuf {
 			rawChange := rawChanges[idx]
 			if ch, exists := ot.tree.attached[rawChange.Id]; exists {
 				ot.flusher.MarkNewChange(ch)
-				added = append(added, rawChange)
+				added = append(added, StorageChange{
+					RawChange:       rawChange.RawChange,
+					PrevIds:         ch.PreviousIds,
+					Id:              ch.Id,
+					SnapshotCounter: ch.SnapshotCounter,
+					SnapshotId:      ch.SnapshotId,
+					OrderId:         ch.OrderId,
+					ChangeSize:      len(rawChange.RawChange),
+				})
 			}
 		}
 		return
 	}
 
-	var added []*treechangeproto.RawTreeChangeWithId
+	var added []StorageChange
 	added, err = getAddedChanges()
-	if !ot.treeBuilder.keepInMemoryData {
-		for _, ch := range treeChangesAdded {
-			ch.Data = nil
-		}
-	}
 	if err != nil {
 		return
 	}
@@ -635,7 +677,10 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 			err = list.ErrNoReadKey
 			return
 		}
-
+		if c.Data == nil {
+			err = fmt.Errorf("no data in change %s", c.Id)
+			return
+		}
 		decrypted, err = readKey.Decrypt(c.Data)
 		return
 	}
@@ -663,6 +708,8 @@ func (ot *objectTree) IterateFrom(id string, convert ChangeConvertFunc, iterate 
 		}
 
 		c.Model = model
+		// delete data because it just wastes memory
+		c.Data = nil
 		return iterate(c)
 	})
 	return
@@ -693,7 +740,7 @@ func (ot *objectTree) TryClose(objectTTL time.Duration) (bool, error) {
 }
 
 func (ot *objectTree) Close() error {
-	return nil
+	return ot.storage.Close()
 }
 
 func (ot *objectTree) Delete() error {
@@ -701,55 +748,30 @@ func (ot *objectTree) Delete() error {
 		return nil
 	}
 	ot.isDeleted = true
-	return ot.treeStorage.Delete()
+	return ot.storage.Delete(context.Background())
 }
 
-func (ot *objectTree) SnapshotPath() []string {
+func (ot *objectTree) SnapshotPath() ([]string, error) {
 	if ot.isDeleted {
-		return nil
+		return nil, ErrDeleted
 	}
-	// TODO: Add error as return parameter
 	if ot.snapshotPathIsActual() {
-		return ot.snapshotPath
+		return ot.snapshotPath, nil
 	}
 
 	var path []string
 	// TODO: think that the user may have not all of the snapshots locally
 	currentSnapshotId := ot.tree.RootId()
 	for currentSnapshotId != "" {
-		sn, err := ot.treeBuilder.loadChange(currentSnapshotId)
+		sn, err := ot.storage.Get(context.Background(), currentSnapshotId)
 		if err != nil {
-			break
+			return nil, fmt.Errorf("failed to get snapshot %s: %w", currentSnapshotId, err)
 		}
 		path = append(path, currentSnapshotId)
 		currentSnapshotId = sn.SnapshotId
 	}
 	ot.snapshotPath = path
-
-	return path
-}
-
-func (ot *objectTree) ChangesAfterCommonSnapshot(theirPath, theirHeads []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
-	if ot.isDeleted {
-		return nil, ErrDeleted
-	}
-	var (
-		needFullDocument = len(theirPath) == 0
-		ourPath          = ot.SnapshotPath()
-		// by default returning everything we have from start
-		commonSnapshot = ourPath[len(ourPath)-1]
-		err            error
-	)
-
-	// if this is non-empty request
-	if !needFullDocument {
-		commonSnapshot, err = commonSnapshotForTwoPaths(ourPath, theirPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return ot.rawChangeLoader.Load(commonSnapshot, ot.tree, theirHeads)
+	return path, nil
 }
 
 func (ot *objectTree) ChangesAfterCommonSnapshotLoader(theirPath, theirHeads []string) (LoadIterator, error) {
@@ -758,12 +780,16 @@ func (ot *objectTree) ChangesAfterCommonSnapshotLoader(theirPath, theirHeads []s
 	}
 	var (
 		needFullDocument = len(theirPath) == 0
-		ourPath          = ot.SnapshotPath()
+		ourPath          []string
 		// by default returning everything we have from start
-		commonSnapshot = ourPath[len(ourPath)-1]
+		commonSnapshot string
 		err            error
 	)
-
+	ourPath, err = ot.SnapshotPath()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get snapshot path: %w", err)
+	}
+	commonSnapshot = ourPath[len(ourPath)-1]
 	// if this is non-empty request
 	if !needFullDocument {
 		commonSnapshot, err = commonSnapshotForTwoPaths(ourPath, theirPath)
@@ -772,12 +798,25 @@ func (ot *objectTree) ChangesAfterCommonSnapshotLoader(theirPath, theirHeads []s
 		}
 	}
 
-	iter := newLoadIterator(ot.rawChangeLoader, ourPath)
+	iter := newLoadIterator(ot.rawRoot, ourPath, ot.storage, ot.changeBuilder)
 	err = iter.load(commonSnapshot, ot.tree.headIds, theirHeads)
 	if err != nil {
 		return nil, err
 	}
 	return iter, nil
+}
+
+// this is a helper function to be used in testing
+func (ot *objectTree) changesAfterCommonSnapshot(theirPath, theirHeads []string) ([]*treechangeproto.RawTreeChangeWithId, error) {
+	loader, err := ot.ChangesAfterCommonSnapshotLoader(theirPath, theirHeads)
+	if err != nil {
+		return nil, err
+	}
+	res, err := loader.NextBatch(10 * 1024 * 1024)
+	if err != nil {
+		return nil, err
+	}
+	return res.Batch, nil
 }
 
 func (ot *objectTree) snapshotPathIsActual() bool {

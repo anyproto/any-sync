@@ -24,6 +24,8 @@ type AclRecord struct {
 	AcceptorTimestamp int64
 	Data              []byte
 	Identity          crypto.PubKey
+	AcceptorIdentity  crypto.PubKey
+	AcceptorSignature []byte
 	Model             interface{}
 	Signature         []byte
 }
@@ -69,6 +71,7 @@ type AclPermissions aclrecordproto.AclUserPermissions
 const (
 	AclPermissionsNone   = AclPermissions(aclrecordproto.AclUserPermissions_None)
 	AclPermissionsReader = AclPermissions(aclrecordproto.AclUserPermissions_Reader)
+	AclPermissionsGuest  = AclPermissions(aclrecordproto.AclUserPermissions_Guest) // like reader, but can't request removal and can't be upgraded to another permission
 	AclPermissionsWriter = AclPermissions(aclrecordproto.AclUserPermissions_Writer)
 	AclPermissionsAdmin  = AclPermissions(aclrecordproto.AclUserPermissions_Admin)
 	AclPermissionsOwner  = AclPermissions(aclrecordproto.AclUserPermissions_Owner)
@@ -80,6 +83,10 @@ func (p AclPermissions) NoPermissions() bool {
 
 func (p AclPermissions) IsOwner() bool {
 	return aclrecordproto.AclUserPermissions(p) == aclrecordproto.AclUserPermissions_Owner
+}
+
+func (p AclPermissions) IsGuest() bool {
+	return aclrecordproto.AclUserPermissions(p) == aclrecordproto.AclUserPermissions_Guest
 }
 
 func (p AclPermissions) CanWrite() bool {
@@ -103,5 +110,14 @@ func (p AclPermissions) CanManageAccounts() bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func (p AclPermissions) CanRequestRemove() bool {
+	switch aclrecordproto.AclUserPermissions(p) {
+	case aclrecordproto.AclUserPermissions_Guest:
+		return false
+	default:
+		return true
 	}
 }

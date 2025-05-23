@@ -10,6 +10,7 @@ import (
 
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree"
 	"github.com/anyproto/any-sync/commonspace/object/treemanager"
@@ -93,6 +94,16 @@ type RpcServer struct {
 	sync.Mutex
 }
 
+func (r *RpcServer) StoreDiff(ctx2 context.Context, request *spacesyncproto.StoreDiffRequest) (*spacesyncproto.StoreDiffResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r *RpcServer) StoreElements(stream spacesyncproto.DRPCSpaceSync_StoreElementsStream) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewRpcServer() *RpcServer {
 	return &RpcServer{
 		spaces: make(map[string]Space),
@@ -117,8 +128,9 @@ func (r *RpcServer) getSpace(ctx context.Context, spaceId string) (sp Space, err
 	sp, ok := r.spaces[spaceId]
 	if !ok {
 		sp, err = r.spaceService.NewSpace(ctx, spaceId, Deps{
-			TreeSyncer: NewTreeSyncer(spaceId),
-			SyncStatus: syncstatus.NewNoOpSyncStatus(),
+			TreeSyncer:     NewTreeSyncer(spaceId),
+			SyncStatus:     syncstatus.NewNoOpSyncStatus(),
+			recordVerifier: recordverifier.NewValidateFull(),
 		})
 		if err != nil {
 			return nil, err

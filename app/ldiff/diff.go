@@ -1,7 +1,7 @@
 // Package ldiff provides a container of elements with fixed id and changeable content.
 // Diff can calculate the difference with another diff container (you can make it remote) with minimum hops and traffic.
 //
-//go:generate mockgen -destination mock_ldiff/mock_ldiff.go github.com/anyproto/any-sync/app/ldiff Diff,Remote
+//go:generate mockgen -destination mock_ldiff/mock_ldiff.go github.com/anyproto/any-sync/app/ldiff Diff,Remote,DiffContainer
 package ldiff
 
 import (
@@ -15,6 +15,8 @@ import (
 	"github.com/cespare/xxhash"
 	"github.com/huandu/skiplist"
 	"github.com/zeebo/blake3"
+
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
 // Diff contains elements and can compare it with Remote diff
@@ -36,6 +38,13 @@ type Diff interface {
 	Hash() string
 	// Len returns count of elements in the diff
 	Len() int
+	// DiffType returns the diff type (diff logic and parameters)
+	DiffType() spacesyncproto.DiffType
+}
+
+type CompareDiff interface {
+	CompareDiff(ctx context.Context, dl Remote) (newIds, ourChangedIds, theirChangedIds, removedIds []string, err error)
+	Diff
 }
 
 // New creates precalculated Diff container
@@ -141,6 +150,10 @@ func (d *diff) Compare(lhs, rhs interface{}) int {
 	}
 }
 
+func (d *diff) DiffType() spacesyncproto.DiffType {
+	return spacesyncproto.DiffType_V2
+}
+
 // CalcScore implements skiplist interface
 func (d *diff) CalcScore(key interface{}) float64 {
 	return 0
@@ -237,11 +250,10 @@ func (d *diff) getRange(r Range) (rr RangeResult) {
 	if rng != nil {
 		rr.Hash = rng.hash
 		rr.Count = rng.elements
-		if !r.Elements && rng.isDivided {
+		if !r.Elements {
 			return
 		}
 	}
-
 	el := d.sl.Find(&element{hash: r.From})
 	rr.Elements = make([]Element, 0, d.divideFactor)
 	for el != nil && el.Key().(*element).hash <= r.To {
@@ -266,17 +278,18 @@ func (d *diff) Ranges(ctx context.Context, ranges []Range, resBuf []RangeResult)
 }
 
 type diffCtx struct {
-	newIds, changedIds, removedIds []string
+	newIds, changedIds, theirChangedIds, removedIds []string
 
 	toSend, prepare []Range
 	myRes, otherRes []RangeResult
+	compareFunc     func(dctx *diffCtx, my, other []Element)
 }
 
 var errMismatched = errors.New("query and results mismatched")
 
 // Diff makes diff with remote container
 func (d *diff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, removedIds []string, err error) {
-	dctx := &diffCtx{}
+	dctx := &diffCtx{compareFunc: d.compareElementsEqual}
 	dctx.toSend = append(dctx.toSend, Range{
 		From: 0,
 		To:   math.MaxUint64,
@@ -307,6 +320,38 @@ func (d *diff) Diff(ctx context.Context, dl Remote) (newIds, changedIds, removed
 	return dctx.newIds, dctx.changedIds, dctx.removedIds, nil
 }
 
+func (d *diff) CompareDiff(ctx context.Context, dl Remote) (newIds, ourChangedIds, theirChangedIds, removedIds []string, err error) {
+	dctx := &diffCtx{compareFunc: d.compareElementsGreater}
+	dctx.toSend = append(dctx.toSend, Range{
+		From: 0,
+		To:   math.MaxUint64,
+	})
+	for len(dctx.toSend) > 0 {
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+			return
+		default:
+		}
+		if dctx.otherRes, err = dl.Ranges(ctx, dctx.toSend, dctx.otherRes); err != nil {
+			return
+		}
+		if dctx.myRes, err = d.Ranges(ctx, dctx.toSend, dctx.myRes); err != nil {
+			return
+		}
+		if len(dctx.otherRes) != len(dctx.toSend) || len(dctx.myRes) != len(dctx.toSend) {
+			err = errMismatched
+			return
+		}
+		for i, r := range dctx.toSend {
+			d.compareResults(dctx, r, dctx.myRes[i], dctx.otherRes[i])
+		}
+		dctx.toSend, dctx.prepare = dctx.prepare, dctx.toSend
+		dctx.prepare = dctx.prepare[:0]
+	}
+	return dctx.newIds, dctx.changedIds, dctx.theirChangedIds, dctx.removedIds, nil
+}
+
 func (d *diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResult) {
 	// both hash equals - do nothing
 	if bytes.Equal(myRes.Hash, otherRes.Hash) {
@@ -316,15 +361,14 @@ func (d *diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResul
 	// other has elements
 	if len(otherRes.Elements) == otherRes.Count {
 		if len(myRes.Elements) == myRes.Count {
-			d.compareElements(dctx, myRes.Elements, otherRes.Elements)
+			dctx.compareFunc(dctx, myRes.Elements, otherRes.Elements)
 		} else {
 			r.Elements = true
-			d.compareElements(dctx, d.getRange(r).Elements, otherRes.Elements)
+			dctx.compareFunc(dctx, d.getRange(r).Elements, otherRes.Elements)
 		}
 		return
 	}
-	// request all elements from other, because we don't have enough
-	if len(myRes.Elements) == myRes.Count {
+	if otherRes.Count <= d.compareThreshold && len(otherRes.Elements) == 0 || len(myRes.Elements) == myRes.Count {
 		r.Elements = true
 		dctx.prepare = append(dctx.prepare, r)
 		return
@@ -336,7 +380,7 @@ func (d *diff) compareResults(dctx *diffCtx, r Range, myRes, otherRes RangeResul
 	return
 }
 
-func (d *diff) compareElements(dctx *diffCtx, my, other []Element) {
+func (d *diff) compareElementsEqual(dctx *diffCtx, my, other []Element) {
 	find := func(list []Element, targetEl Element) (has, eq bool) {
 		for _, el := range list {
 			if el.Id == targetEl.Id {
@@ -360,6 +404,43 @@ func (d *diff) compareElements(dctx *diffCtx, my, other []Element) {
 
 	for _, el := range other {
 		if has, _ := find(my, el); !has {
+			dctx.newIds = append(dctx.newIds, el.Id)
+		}
+	}
+}
+
+func (d *diff) compareElementsGreater(dctx *diffCtx, my, other []Element) {
+	find := func(list []Element, targetEl Element) (has, equal, greater bool) {
+		for _, el := range list {
+			if el.Id == targetEl.Id {
+				if el.Head == targetEl.Head {
+					return true, true, false
+				}
+				return true, false, el.Head > targetEl.Head
+			}
+		}
+		return false, false, false
+	}
+
+	for _, el := range my {
+		has, eq, theirGreater := find(other, el)
+		if !has {
+			dctx.removedIds = append(dctx.removedIds, el.Id)
+			continue
+		} else {
+			if eq {
+				continue
+			}
+			if theirGreater {
+				dctx.theirChangedIds = append(dctx.theirChangedIds, el.Id)
+			} else {
+				dctx.changedIds = append(dctx.changedIds, el.Id)
+			}
+		}
+	}
+
+	for _, el := range other {
+		if has, _, _ := find(my, el); !has {
 			dctx.newIds = append(dctx.newIds, el.Id)
 		}
 	}

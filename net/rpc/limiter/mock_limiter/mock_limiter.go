@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_limiter/mock_limiter.go github.com/anyproto/any-sync/net/rpc/limiter RpcLimiter
 //
-
 // Package mock_limiter is a generated GoMock package.
 package mock_limiter
 
@@ -22,7 +21,6 @@ import (
 type MockRpcLimiter struct {
 	ctrl     *gomock.Controller
 	recorder *MockRpcLimiterMockRecorder
-	isgomock struct{}
 }
 
 // MockRpcLimiterMockRecorder is the mock recorder for MockRpcLimiter.
@@ -43,31 +41,31 @@ func (m *MockRpcLimiter) EXPECT() *MockRpcLimiterMockRecorder {
 }
 
 // Close mocks base method.
-func (m *MockRpcLimiter) Close(ctx context.Context) error {
+func (m *MockRpcLimiter) Close(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", ctx)
+	ret := m.ctrl.Call(m, "Close", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockRpcLimiterMockRecorder) Close(ctx any) *gomock.Call {
+func (mr *MockRpcLimiterMockRecorder) Close(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockRpcLimiter)(nil).Close), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockRpcLimiter)(nil).Close), arg0)
 }
 
 // Init mocks base method.
-func (m *MockRpcLimiter) Init(a *app.App) error {
+func (m *MockRpcLimiter) Init(arg0 *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", a)
+	ret := m.ctrl.Call(m, "Init", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockRpcLimiterMockRecorder) Init(a any) *gomock.Call {
+func (mr *MockRpcLimiterMockRecorder) Init(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockRpcLimiter)(nil).Init), a)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockRpcLimiter)(nil).Init), arg0)
 }
 
 // Name mocks base method.
@@ -85,29 +83,29 @@ func (mr *MockRpcLimiterMockRecorder) Name() *gomock.Call {
 }
 
 // Run mocks base method.
-func (m *MockRpcLimiter) Run(ctx context.Context) error {
+func (m *MockRpcLimiter) Run(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx)
+	ret := m.ctrl.Call(m, "Run", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockRpcLimiterMockRecorder) Run(ctx any) *gomock.Call {
+func (mr *MockRpcLimiterMockRecorder) Run(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockRpcLimiter)(nil).Run), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockRpcLimiter)(nil).Run), arg0)
 }
 
 // WrapDRPCHandler mocks base method.
-func (m *MockRpcLimiter) WrapDRPCHandler(handler drpc.Handler) drpc.Handler {
+func (m *MockRpcLimiter) WrapDRPCHandler(arg0 drpc.Handler) drpc.Handler {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WrapDRPCHandler", handler)
+	ret := m.ctrl.Call(m, "WrapDRPCHandler", arg0)
 	ret0, _ := ret[0].(drpc.Handler)
 	return ret0
 }
 
 // WrapDRPCHandler indicates an expected call of WrapDRPCHandler.
-func (mr *MockRpcLimiterMockRecorder) WrapDRPCHandler(handler any) *gomock.Call {
+func (mr *MockRpcLimiterMockRecorder) WrapDRPCHandler(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WrapDRPCHandler", reflect.TypeOf((*MockRpcLimiter)(nil).WrapDRPCHandler), handler)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WrapDRPCHandler", reflect.TypeOf((*MockRpcLimiter)(nil).WrapDRPCHandler), arg0)
 }

@@ -386,7 +386,12 @@ func (r *testRequest) MsgSize() uint64 {
 }
 
 type testMessage struct {
-	objectId string
+	objectId   string
+	objectType spacesyncproto.ObjectType
+}
+
+func (t *testMessage) ObjectType() spacesyncproto.ObjectType {
+	return t.objectType
 }
 
 func (t *testMessage) ObjectId() string {

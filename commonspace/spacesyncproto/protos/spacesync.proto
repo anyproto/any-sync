@@ -20,6 +20,10 @@ enum ErrCodes {
 service SpaceSync {
     // HeadSync compares all objects and their hashes in a space
     rpc HeadSync(HeadSyncRequest) returns (HeadSyncResponse);
+    // StoreDiff compares all objects and their hashes in a space
+    rpc StoreDiff(StoreDiffRequest) returns (StoreDiffResponse);
+    // StoreElements exchanges elements between peers
+    rpc StoreElements(stream StoreKeyValue) returns (stream StoreKeyValue);
     // SpacePush sends new space to the node
     rpc SpacePush(SpacePushRequest) returns (SpacePushResponse);
     // SpacePull gets space from the remote peer
@@ -63,7 +67,7 @@ message HeadSyncResultElement {
 message HeadSyncRequest {
     string spaceId = 1;
     repeated HeadSyncRange ranges = 2;
-    DiffType diffType = 3 [deprecated=true];
+    DiffType diffType = 3;
 }
 
 // HeadSyncResponse is a response for HeadSync
@@ -79,6 +83,7 @@ message ObjectSyncMessage {
     string replyId = 3;
     bytes payload = 4;
     string objectId = 5;
+    ObjectType objectType = 6;
 }
 
 // SpacePushRequest is a request to add space on a node containing only one acl record
@@ -144,6 +149,12 @@ message ObjectDelete {
     string id = 1;
 }
 
+// StoreHeader is a header for a store
+message StoreHeader {
+    string spaceId = 1;
+    string storageName = 2;
+}
+
 // SpaceDelete is a message containing deleter peer id
 message SpaceDelete {
     string deleterPeerId = 1;
@@ -196,8 +207,51 @@ message AclGetRecordsResponse {
     repeated bytes records = 1;
 }
 
+message StoreDiffRequest {
+    string spaceId = 1;
+    repeated HeadSyncRange ranges = 2;
+}
+
+message StoreDiffResponse {
+    repeated HeadSyncResult results = 1;
+}
+
+message StoreKeyValue {
+    string keyPeerId = 1;
+    bytes value = 2;
+    bytes identitySignature = 3;
+    bytes peerSignature = 4;
+    string spaceId = 5;
+}
+
+message StoreKeyValues {
+    repeated StoreKeyValue keyValues = 1;
+}
+
+message StoreKeyInner {
+    bytes peer = 1;
+    bytes identity = 2;
+    bytes value = 3;
+    int64 timestampMicro = 4;
+    string aclHeadId = 5;
+    string key = 6;
+}
+
+message StorageHeader {
+    string spaceId = 1;
+    string storageName = 2;
+}
+
 // DiffType is a type of diff
 enum DiffType {
     Initial = 0;
-    Precalculated = 1;
+    V1 = 1;
+    V2 = 2;
+}
+
+// ObjectType is a type of object
+enum ObjectType {
+    Tree = 0;
+    Acl = 1;
+    KeyValue = 2;
 }

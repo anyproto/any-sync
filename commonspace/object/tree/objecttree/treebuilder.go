@@ -1,13 +1,17 @@
 package objecttree
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
+	"golang.org/x/tools/container/intsets"
 
 	"github.com/anyproto/any-sync/app/logger"
-	"github.com/anyproto/any-sync/commonspace/object/tree/treestorage"
+	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
 	"github.com/anyproto/any-sync/util/slice"
 )
 
@@ -17,357 +21,265 @@ var (
 )
 
 type treeBuilder struct {
-	treeStorage treestorage.TreeStorage
-	builder     ChangeBuilder
-	loader      *rawChangeLoader
-
-	cache            map[string]*Change
-	tree             *Tree
-	keepInMemoryData bool
+	builder ChangeBuilder
+	storage Storage
+	ctx     context.Context
 
 	// buffers
 	idStack    []string
 	loadBuffer []*Change
 }
 
-func newTreeBuilder(keepData bool, storage treestorage.TreeStorage, builder ChangeBuilder, loader *rawChangeLoader) *treeBuilder {
+type treeBuilderOpts struct {
+	full              bool
+	useHeadsSnapshot  bool
+	theirHeads        []string
+	ourHeads          []string
+	ourSnapshotPath   []string
+	theirSnapshotPath []string
+	newChanges        []*Change
+}
+
+func newTreeBuilder(storage Storage, builder ChangeBuilder) *treeBuilder {
 	return &treeBuilder{
-		treeStorage:      storage,
-		builder:          builder,
-		loader:           loader,
-		keepInMemoryData: keepData,
+		storage: storage,
+		builder: builder,
 	}
 }
 
-func (tb *treeBuilder) Reset() {
-	tb.cache = make(map[string]*Change)
-	tb.tree = &Tree{}
-}
-
-func (tb *treeBuilder) Build(theirHeads []string, newChanges []*Change) (*Tree, error) {
-	heads, err := tb.treeStorage.Heads()
-	if err != nil {
-		return nil, err
-	}
-	return tb.build(heads, theirHeads, newChanges)
+func (tb *treeBuilder) Build(opts treeBuilderOpts) (*Tree, error) {
+	return tb.build(opts)
 }
 
 func (tb *treeBuilder) BuildFull() (*Tree, error) {
-	defer func() {
-		tb.cache = make(map[string]*Change)
-	}()
-	tb.cache = make(map[string]*Change)
-	heads, err := tb.treeStorage.Heads()
-	if err != nil {
-		return nil, err
-	}
-	err = tb.buildTree(heads, tb.treeStorage.Id())
-	if err != nil {
-		return nil, err
-	}
-	return tb.tree, nil
+	return tb.build(treeBuilderOpts{full: true})
 }
 
-func (tb *treeBuilder) build(heads []string, theirHeads []string, newChanges []*Change) (*Tree, error) {
-	defer func() {
-		tb.cache = make(map[string]*Change)
-	}()
+var (
+	totalSnapshots atomic.Int32
+	totalCommon    atomic.Int32
+	totalLowest    atomic.Int32
+)
 
-	var proposedHeads []string
-	tb.cache = make(map[string]*Change)
-
-	// TODO: we can actually get this from tree (though not sure, that there would always be
-	//  an invariant where the tree has the closest common snapshot of heads)
-	//  so if optimization is critical we can change this to inject from tree directly,
-	//  but then we have to be sure that invariant stays true
-	oldBreakpoint, err := tb.findBreakpoint(heads, true)
-	if err != nil {
-		log.Error("findBreakpoint error", zap.Error(err), zap.String("treeId", tb.treeStorage.Id()))
-		heads, oldBreakpoint, err = tb.restoreTree()
-		if err != nil {
-			return nil, fmt.Errorf("restoreTree error: %v", err)
-		}
+func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
+	cache := make(map[string]*Change)
+	tb.ctx = context.Background()
+	for _, ch := range opts.newChanges {
+		cache[ch.Id] = ch
 	}
-
-	if len(theirHeads) > 0 {
-		proposedHeads = append(proposedHeads, theirHeads...)
-	}
-	for _, ch := range newChanges {
-		if len(theirHeads) == 0 {
-			// in this case we don't know what new heads are, so every change can be head
-			proposedHeads = append(proposedHeads, ch.Id)
-		}
-		tb.cache[ch.Id] = ch
-	}
-
-	// getting common snapshot for new heads
-	breakpoint, err := tb.findBreakpoint(proposedHeads, false)
-	if err != nil {
-		breakpoint = oldBreakpoint
-	} else {
-		breakpoint, err = tb.findCommonForTwoSnapshots(oldBreakpoint, breakpoint)
-		if err != nil {
-			breakpoint = oldBreakpoint
-		}
-	}
-	proposedHeads = append(proposedHeads, heads...)
-
-	log.With(zap.Strings("heads", proposedHeads), zap.String("id", tb.treeStorage.Id())).Debug("building tree")
-	if err = tb.buildTree(proposedHeads, breakpoint); err != nil {
-		return nil, fmt.Errorf("buildTree error: %v", err)
-	}
-
-	return tb.tree, nil
-}
-
-func (tb *treeBuilder) buildTree(heads []string, breakpoint string) (err error) {
-	ch, err := tb.loadChange(breakpoint)
-	if err != nil {
-		return
-	}
-	changes := tb.dfs(heads, breakpoint)
-	tb.tree.AddFast(ch)
-	tb.tree.AddFast(changes...)
-	return
-}
-
-func (tb *treeBuilder) dfs(heads []string, breakpoint string) []*Change {
-	// initializing buffers
-	tb.idStack = tb.idStack[:0]
-	tb.loadBuffer = tb.loadBuffer[:0]
-
-	// updating map
-	uniqMap := map[string]struct{}{breakpoint: {}}
-
-	// preparing dfs
-	tb.idStack = append(tb.idStack, heads...)
-
-	// dfs
-	for len(tb.idStack) > 0 {
-		id := tb.idStack[len(tb.idStack)-1]
-		tb.idStack = tb.idStack[:len(tb.idStack)-1]
-		if _, exists := uniqMap[id]; exists {
-			continue
-		}
-
-		ch, err := tb.loadChange(id)
-		if err != nil {
-			continue
-		}
-
-		uniqMap[id] = struct{}{}
-		tb.loadBuffer = append(tb.loadBuffer, ch)
-
-		for _, prev := range ch.PreviousIds {
-			if _, exists := uniqMap[prev]; exists {
-				continue
-			}
-			tb.idStack = append(tb.idStack, prev)
-		}
-	}
-	return tb.loadBuffer
-}
-
-func (tb *treeBuilder) loadChange(id string) (ch *Change, err error) {
-	if ch, ok := tb.cache[id]; ok {
-		return ch, nil
-	}
-
-	change, err := tb.loader.loadAppendRaw(id)
-	if err != nil {
-		return nil, err
-	}
-
-	ch, err = tb.builder.Unmarshall(change, true)
-	if err != nil {
-		return nil, err
-	}
-	// TODO: see if we can delete this
-	if !tb.keepInMemoryData {
-		ch.Data = nil
-	}
-
-	tb.cache[id] = ch
-	return ch, nil
-}
-
-func (tb *treeBuilder) restoreTree() (newHeads []string, breakpoint string, err error) {
-	allIds, err := tb.treeStorage.GetAllChangeIds()
-	if err != nil {
-		return
-	}
-	rootCh, err := tb.loadChange(tb.treeStorage.Id())
-	if err != nil {
-		return
-	}
-	tr := &Tree{}
-	tr.AddFast(rootCh)
-	var changes []*Change
-	for _, id := range allIds {
-		if id == tb.treeStorage.Id() {
-			continue
-		}
-		ch, e := tb.loadChange(id)
-		if e != nil {
-			continue
-		}
-		changes = append(changes, ch)
-	}
-	tr.AddFast(changes...)
-	breakpoint, err = tb.findBreakpoint(tr.headIds, false)
-	if err != nil {
-		return
-	}
-	newHeads = tr.headIds
-	err = tb.treeStorage.SetHeads(newHeads)
-	return
-}
-
-func (tb *treeBuilder) findBreakpoint(heads []string, noError bool) (breakpoint string, err error) {
 	var (
-		ch          *Change
-		snapshotIds []string
+		snapshot string
+		order    string
 	)
-	for _, head := range heads {
-		if ch, err = tb.loadChange(head); err != nil {
-			if noError {
-				return
-			}
-
-			log.With(zap.String("head", head), zap.Error(err)).Debug("couldn't find head")
-			continue
+	if opts.useHeadsSnapshot {
+		maxOrder, lowest, err := tb.lowestSnapshots(nil, opts.ourHeads, "")
+		if err != nil {
+			return nil, err
 		}
-
-		shId := ch.SnapshotId
-		if ch.IsSnapshot {
-			shId = ch.Id
-		} else {
-			_, err = tb.loadChange(shId)
+		if len(lowest) != 1 {
+			snapshot, err = tb.commonSnapshot(lowest)
 			if err != nil {
-				if noError {
-					return
+				return nil, err
+			}
+		} else {
+			snapshot = lowest[0]
+		}
+		order = maxOrder
+	} else if !opts.full {
+		if len(opts.theirSnapshotPath) == 0 {
+			// this is actually not obvious why we should call this here
+			// but the idea is if we have no snapshot path, then this can be only in cases
+			// when we want to use a common snapshot, otherwise we would provide this path
+			// because we always have a snapshot path
+			if len(opts.ourSnapshotPath) == 0 {
+				common, err := tb.storage.CommonSnapshot(tb.ctx)
+				if err != nil {
+					return nil, err
 				}
+				snapshot = common
+			} else {
+				our := opts.ourSnapshotPath[0]
+				_, lowest, err := tb.lowestSnapshots(cache, opts.theirHeads, our)
+				if err != nil {
+					return nil, err
+				}
+				if len(lowest) != 1 {
+					snapshot, err = tb.commonSnapshot(lowest)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					snapshot = lowest[0]
+				}
+			}
+		} else {
+			snapshot, err = commonSnapshotForTwoPaths(opts.ourSnapshotPath, opts.theirSnapshotPath)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		snapshot = tb.storage.Id()
+	}
+	totalSnapshots.Store(totalSnapshots.Load() + 1)
+	snapshotCh, err := tb.storage.Get(tb.ctx, snapshot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get common snapshot %s: %w", snapshot, err)
+	}
+	rawChange := &treechangeproto.RawTreeChangeWithId{}
+	var changes []*Change
+	err = tb.storage.GetAfterOrder(tb.ctx, snapshotCh.OrderId, func(ctx context.Context, storageChange StorageChange) (shouldContinue bool, err error) {
+		if order != "" && storageChange.OrderId > order {
+			return false, nil
+		}
+		rawChange.Id = storageChange.Id
+		rawChange.RawChange = storageChange.RawChange
+		ch, err := tb.builder.Unmarshall(rawChange, false)
+		if err != nil {
+			return false, err
+		}
+		ch.OrderId = storageChange.OrderId
+		ch.SnapshotCounter = storageChange.SnapshotCounter
+		changes = append(changes, ch)
+		return true, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get changes after order: %w", err)
+	}
+	tr = &Tree{}
+	changes = append(changes, opts.newChanges...)
+	tr.AddFast(changes...)
+	if opts.useHeadsSnapshot {
+		tr.LeaveOnlyBefore(opts.ourHeads)
+	}
+	return tr, nil
+}
 
-				log.With(zap.String("snapshot id", shId), zap.Error(err)).Debug("couldn't find head's snapshot")
+func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string, ourSnapshot string) (maxOrder string, snapshots []string, err error) {
+	var next, current []string
+	if cache != nil {
+		for _, ch := range heads {
+			head, ok := cache[ch]
+			if !ok {
 				continue
 			}
+			if head.SnapshotId != "" {
+				next = append(next, head.SnapshotId)
+			} else if len(head.PreviousIds) == 0 && head.Id == tb.storage.Id() { // this is a root change
+				next = append(next, head.Id)
+			} else {
+				return "", nil, fmt.Errorf("head with empty snapshot id: %s", head.Id)
+			}
 		}
-		if slice.FindPos(snapshotIds, shId) == -1 {
-			snapshotIds = append(snapshotIds, shId)
+	} else {
+		for _, head := range heads {
+			totalLowest.Store(totalLowest.Load() + 1)
+			ch, err := tb.storage.Get(tb.ctx, head)
+			if err != nil {
+				return "", nil, err
+			}
+			if ch.OrderId > maxOrder {
+				maxOrder = ch.OrderId
+			}
+			if ch.SnapshotId != "" {
+				snapshots = append(snapshots, ch.SnapshotId)
+			} else if len(ch.PrevIds) == 0 && ch.Id == tb.storage.Id() { // this is a root change
+				snapshots = append(snapshots, ch.Id)
+			} else {
+				return "", nil, fmt.Errorf("head with empty snapshot id: %s", ch.Id)
+			}
 		}
 	}
-	return tb.findCommonSnapshot(snapshotIds)
+	slices.Sort(next)
+	next = slice.DiscardDuplicatesSorted(next)
+	current = make([]string, 0, len(next))
+	var visited []*Change
+	for len(next) > 0 {
+		current = current[:0]
+		current = append(current, next...)
+		next = next[:0]
+		for _, id := range current {
+			if ch, ok := cache[id]; ok {
+				if ch.visited {
+					continue
+				}
+				ch.visited = true
+				visited = append(visited, ch)
+				next = append(next, ch.SnapshotId)
+			} else {
+				// this is the lowest snapshot from the ones provided
+				snapshots = append(snapshots, id)
+			}
+		}
+	}
+	for _, ch := range visited {
+		ch.visited = false
+	}
+	if ourSnapshot != "" {
+		snapshots = append(snapshots, ourSnapshot)
+	}
+	slices.Sort(snapshots)
+	snapshots = slice.DiscardDuplicatesSorted(snapshots)
+	return maxOrder, snapshots, nil
 }
 
-func (tb *treeBuilder) findCommonSnapshot(snapshotIds []string) (snapshotId string, err error) {
-	if len(snapshotIds) == 1 {
-		return snapshotIds[0], nil
-	} else if len(snapshotIds) == 0 {
-		return "", fmt.Errorf("snapshots not found")
-	}
-
-	// TODO: use divide and conquer to find the snapshot, then we will have only logN findCommonForTwoSnapshots calls
-	for len(snapshotIds) > 1 {
-		l := len(snapshotIds)
-		shId, e := tb.findCommonForTwoSnapshots(snapshotIds[l-2], snapshotIds[l-1])
-		if e != nil {
-			return "", e
+func (tb *treeBuilder) commonSnapshot(snapshots []string) (snapshot string, err error) {
+	var (
+		current       []StorageChange
+		lowestCounter = intsets.MaxInt
+	)
+	// TODO: we should actually check for all changes if they have valid snapshots
+	// getting actual snapshots
+	for _, id := range snapshots {
+		totalCommon.Store(totalCommon.Load() + 1)
+		ch, err := tb.storage.Get(tb.ctx, id)
+		if err != nil {
+			log.Error("failed to get snapshot", zap.String("id", id), zap.Error(err))
+			continue
 		}
-		snapshotIds[l-2] = shId
-		snapshotIds = snapshotIds[:l-1]
+		current = append(current, ch)
+		if ch.SnapshotCounter < lowestCounter {
+			lowestCounter = ch.SnapshotCounter
+		}
 	}
-	return snapshotIds[0], nil
-}
-
-func (tb *treeBuilder) findCommonForTwoSnapshots(s1, s2 string) (s string, err error) {
-	// fast cases
-	if s1 == s2 {
-		return s1, nil
+	// equalizing counters for each snapshot branch
+	for i, ch := range current {
+		for ch.SnapshotCounter > lowestCounter {
+			totalCommon.Store(totalCommon.Load() + 1)
+			ch, err = tb.storage.Get(tb.ctx, ch.SnapshotId)
+			if err != nil {
+				return "", fmt.Errorf("failed to get snapshot: %w", err)
+			}
+		}
+		current[i] = ch
 	}
-	ch1, err := tb.loadChange(s1)
-	if err != nil {
-		return "", err
-	}
-	if ch1.SnapshotId == s2 {
-		return s2, nil
-	}
-	ch2, err := tb.loadChange(s2)
-	if err != nil {
-		return "", err
-	}
-	if ch2.SnapshotId == s1 {
-		return s1, nil
-	}
-	if ch1.SnapshotId == ch2.SnapshotId && ch1.SnapshotId != "" {
-		return ch1.SnapshotId, nil
-	}
-	// traverse
-	var t1 = make([]string, 0, 5)
-	var t2 = make([]string, 0, 5)
-	t1 = append(t1, ch1.Id, ch1.SnapshotId)
-	t2 = append(t2, ch2.Id, ch2.SnapshotId)
+	// finding common snapshot
 	for {
-		lid1 := t1[len(t1)-1]
-		if lid1 != "" {
-			l1, e := tb.loadChange(lid1)
-			if e != nil {
-				return "", e
+		slices.SortFunc(current, func(a, b StorageChange) int {
+			if a.SnapshotId < b.SnapshotId {
+				return -1
 			}
-			if l1.SnapshotId != "" {
-				if slice.FindPos(t2, l1.SnapshotId) != -1 {
-					return l1.SnapshotId, nil
-				}
+			if a.SnapshotId > b.SnapshotId {
+				return 1
 			}
-			t1 = append(t1, l1.SnapshotId)
+			return 0
+		})
+		// removing same snapshots
+		current = slice.DiscardDuplicatesSortedFunc(current, func(a, b StorageChange) bool {
+			return a.SnapshotId == b.SnapshotId
+		})
+		// if there is only one snapshot left - return it
+		if len(current) == 1 {
+			return current[0].Id, nil
 		}
-		lid2 := t2[len(t2)-1]
-		if lid2 != "" {
-			l2, e := tb.loadChange(t2[len(t2)-1])
-			if e != nil {
-				return "", e
+		// go down one counter
+		for i, ch := range current {
+			totalCommon.Store(totalCommon.Load() + 1)
+			ch, err = tb.storage.Get(tb.ctx, ch.SnapshotId)
+			if err != nil {
+				return "", fmt.Errorf("failed to get snapshot: %w", err)
 			}
-			if l2.SnapshotId != "" {
-				if slice.FindPos(t1, l2.SnapshotId) != -1 {
-					return l2.SnapshotId, nil
-				}
-			}
-			t2 = append(t2, l2.SnapshotId)
-		}
-		if lid1 == "" && lid2 == "" {
-			break
+			current[i] = ch
 		}
 	}
-
-	log.Warnf("changes build Tree: possible versions split")
-
-	// prefer not first snapshot
-	if len(ch1.PreviousIds) == 0 && len(ch2.PreviousIds) > 0 {
-		log.Warnf("changes build Tree: prefer %s(%d prevIds) over %s(%d prevIds)", s2, len(ch2.PreviousIds), s1, len(ch1.PreviousIds))
-		return s2, nil
-	} else if len(ch1.PreviousIds) > 0 && len(ch2.PreviousIds) == 0 {
-		log.Warnf("changes build Tree: prefer %s(%d prevIds) over %s(%d prevIds)", s1, len(ch1.PreviousIds), s2, len(ch2.PreviousIds))
-		return s1, nil
-	}
-
-	isEmptySnapshot := func(ch *Change) bool {
-		return !ch.IsSnapshot
-	}
-
-	// prefer not empty snapshot
-	if isEmptySnapshot(ch1) && !isEmptySnapshot(ch2) {
-		log.Warnf("changes build Tree: prefer %s(not empty) over %s(empty)", s2, s1)
-		return s2, nil
-	} else if isEmptySnapshot(ch2) && !isEmptySnapshot(ch1) {
-		log.Warnf("changes build Tree: prefer %s(not empty) over %s(empty)", s1, s2)
-		return s1, nil
-	}
-
-	// unexpected behavior - just return lesser id
-	if s1 < s2 {
-		log.Warnf("changes build Tree: prefer %s (%s<%s)", s1, s1, s2)
-		return s1, nil
-	}
-	log.Warnf("changes build Tree: prefer %s (%s<%s)", s2, s2, s1)
-
-	return s2, nil
 }

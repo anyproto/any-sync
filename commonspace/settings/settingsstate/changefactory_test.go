@@ -1,11 +1,13 @@
 package settingsstate
 
 import (
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
+	"testing"
+
 	"github.com/anyproto/protobuf/proto"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/slices"
-	"testing"
+
+	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 )
 
 func TestChangeFactory_CreateObjectDeleteChange(t *testing.T) {

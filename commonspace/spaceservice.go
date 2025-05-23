@@ -13,7 +13,11 @@ import (
 
 	"github.com/anyproto/any-sync/commonspace/acl/aclclient"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
+	"github.com/anyproto/any-sync/commonspace/object/acl/recordverifier"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue"
+	"github.com/anyproto/any-sync/commonspace/object/keyvalue/keyvaluestorage"
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
+	"github.com/anyproto/any-sync/commonspace/spacepayloads"
 	"github.com/anyproto/any-sync/commonspace/sync"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync"
 	"github.com/anyproto/any-sync/net"
@@ -58,16 +62,19 @@ type ctxKey int
 const AddSpaceCtxKey ctxKey = 0
 
 type SpaceService interface {
-	DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (string, error)
-	DeriveId(ctx context.Context, payload SpaceDerivePayload) (string, error)
-	CreateSpace(ctx context.Context, payload SpaceCreatePayload) (string, error)
+	DeriveSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (string, error)
+	DeriveId(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (string, error)
+	CreateSpace(ctx context.Context, payload spacepayloads.SpaceCreatePayload) (string, error)
 	NewSpace(ctx context.Context, id string, deps Deps) (sp Space, err error)
 	app.Component
 }
 
 type Deps struct {
-	SyncStatus syncstatus.StatusUpdater
-	TreeSyncer treesyncer.TreeSyncer
+	SyncStatus     syncstatus.StatusUpdater
+	TreeSyncer     treesyncer.TreeSyncer
+	AccountService accountservice.Service
+	recordVerifier recordverifier.RecordVerifier
+	Indexer        keyvaluestorage.Indexer
 }
 
 type spaceService struct {
@@ -100,14 +107,14 @@ func (s *spaceService) Name() (name string) {
 	return CName
 }
 
-func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePayload) (id string, err error) {
-	storageCreate, err := storagePayloadForSpaceCreate(payload)
+func (s *spaceService) CreateSpace(ctx context.Context, payload spacepayloads.SpaceCreatePayload) (id string, err error) {
+	storageCreate, err := spacepayloads.StoragePayloadForSpaceCreate(payload)
 	if err != nil {
 		return
 	}
-	store, err := s.createSpaceStorage(storageCreate)
+	store, err := s.createSpaceStorage(ctx, storageCreate)
 	if err != nil {
-		if err == spacestorage.ErrSpaceStorageExists {
+		if errors.Is(err, spacestorage.ErrSpaceStorageExists) {
 			return storageCreate.SpaceHeaderWithId.Id, nil
 		}
 		return
@@ -116,8 +123,8 @@ func (s *spaceService) CreateSpace(ctx context.Context, payload SpaceCreatePaylo
 	return store.Id(), store.Close(ctx)
 }
 
-func (s *spaceService) DeriveId(ctx context.Context, payload SpaceDerivePayload) (id string, err error) {
-	storageCreate, err := storagePayloadForSpaceDerive(payload)
+func (s *spaceService) DeriveId(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (id string, err error) {
+	storageCreate, err := spacepayloads.StoragePayloadForSpaceDerive(payload)
 	if err != nil {
 		return
 	}
@@ -125,14 +132,14 @@ func (s *spaceService) DeriveId(ctx context.Context, payload SpaceDerivePayload)
 	return
 }
 
-func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePayload) (id string, err error) {
-	storageCreate, err := storagePayloadForSpaceDerive(payload)
+func (s *spaceService) DeriveSpace(ctx context.Context, payload spacepayloads.SpaceDerivePayload) (id string, err error) {
+	storageCreate, err := spacepayloads.StoragePayloadForSpaceDerive(payload)
 	if err != nil {
 		return
 	}
-	store, err := s.createSpaceStorage(storageCreate)
+	store, err := s.createSpaceStorage(ctx, storageCreate)
 	if err != nil {
-		if err == spacestorage.ErrSpaceStorageExists {
+		if errors.Is(err, spacestorage.ErrSpaceStorageExists) {
 			return storageCreate.SpaceHeaderWithId.Id, nil
 		}
 		return
@@ -144,7 +151,7 @@ func (s *spaceService) DeriveSpace(ctx context.Context, payload SpaceDerivePaylo
 func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Space, error) {
 	st, err := s.storageProvider.WaitSpaceStorage(ctx, id)
 	if err != nil {
-		if err != spacestorage.ErrSpaceStorageMissing {
+		if !errors.Is(err, spacestorage.ErrSpaceStorageMissing) {
 			return nil, err
 		}
 
@@ -176,13 +183,27 @@ func (s *spaceService) NewSpace(ctx context.Context, id string, deps Deps) (Spac
 		return nil, err
 	}
 	spaceApp := s.app.ChildApp()
+	if deps.AccountService != nil {
+		spaceApp.Register(deps.AccountService)
+	}
+	var keyValueIndexer keyvaluestorage.Indexer = keyvaluestorage.NoOpIndexer{}
+	if deps.Indexer != nil {
+		keyValueIndexer = deps.Indexer
+	}
+	recordVerifier := recordverifier.New()
+	if deps.recordVerifier != nil {
+		recordVerifier = deps.recordVerifier
+	}
 	spaceApp.Register(state).
 		Register(deps.SyncStatus).
+		Register(recordVerifier).
 		Register(peerManager).
 		Register(st).
+		Register(keyValueIndexer).
 		Register(objectsync.New()).
 		Register(sync.NewSyncService()).
 		Register(syncacl.New()).
+		Register(keyvalue.New()).
 		Register(deletionstate.New()).
 		Register(deletionmanager.New()).
 		Register(settings.New()).
@@ -211,10 +232,10 @@ func (s *spaceService) addSpaceStorage(ctx context.Context, spaceDescription Spa
 			Id:        spaceDescription.SpaceSettingsId,
 		},
 	}
-	st, err = s.createSpaceStorage(payload)
+	st, err = s.createSpaceStorage(ctx, payload)
 	if err != nil {
 		err = spacesyncproto.ErrUnexpected
-		if err == spacestorage.ErrSpaceStorageExists {
+		if errors.Is(err, spacestorage.ErrSpaceStorageExists) {
 			err = spacesyncproto.ErrSpaceExists
 		}
 		return
@@ -286,7 +307,7 @@ func (s *spaceService) spacePullWithPeer(ctx context.Context, p peer.Peer, id st
 		return
 	}
 
-	return s.createSpaceStorage(spacestorage.SpaceStorageCreatePayload{
+	return s.createSpaceStorage(ctx, spacestorage.SpaceStorageCreatePayload{
 		AclWithId: &consensusproto.RawRecordWithId{
 			Payload: res.Payload.AclPayload,
 			Id:      res.Payload.AclPayloadId,
@@ -299,10 +320,10 @@ func (s *spaceService) spacePullWithPeer(ctx context.Context, p peer.Peer, id st
 	})
 }
 
-func (s *spaceService) createSpaceStorage(payload spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {
-	err := validateSpaceStorageCreatePayload(payload)
+func (s *spaceService) createSpaceStorage(ctx context.Context, payload spacestorage.SpaceStorageCreatePayload) (spacestorage.SpaceStorage, error) {
+	err := spacepayloads.ValidateSpaceStorageCreatePayload(payload)
 	if err != nil {
 		return nil, err
 	}
-	return s.storageProvider.CreateSpaceStorage(payload)
+	return s.storageProvider.CreateSpaceStorage(ctx, payload)
 }

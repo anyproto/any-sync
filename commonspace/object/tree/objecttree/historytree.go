@@ -1,6 +1,7 @@
 package objecttree
 
 import (
+	"context"
 	"errors"
 )
 
@@ -27,46 +28,44 @@ func (h *historyTree) rebuildFromStorage(params HistoryTreeParams) (err error) {
 }
 
 func (h *historyTree) rebuild(params HistoryTreeParams) (err error) {
-	h.treeBuilder.Reset()
-
-	if len(params.Heads) == 0 {
+	switch len(params.Heads) {
+	case 0:
 		h.tree, err = h.treeBuilder.BuildFull()
 		return err
+	case 1:
+		if params.Heads[0] == "" {
+			return h.rebuildCurrent()
+		}
+		if !params.IncludeBeforeId {
+			return h.rebuildFromPrevious(params.Heads[0])
+		}
+		fallthrough
+	default:
+		return h.rebuildFromHeads(params.Heads)
 	}
-
-	if len(params.Heads) == 1 {
-		return h.rebuildWithSingleHead(params.IncludeBeforeId, params.Heads[0])
-	}
-
-	h.tree, err = h.treeBuilder.build(params.Heads, nil, nil)
-	return err
 }
 
-func (h *historyTree) rebuildWithSingleHead(includeBeforeId bool, head string) (err error) {
-	if head == "" {
-		return h.rebuildWithEmptyHead()
-	}
-	if !includeBeforeId {
-		return h.rebuildWithPreviousHead(head)
-	}
-	h.tree, err = h.treeBuilder.build([]string{head}, nil, nil)
-	return err
+func (h *historyTree) rebuildFromHeads(heads []string) (err error) {
+	h.tree, err = h.treeBuilder.build(treeBuilderOpts{
+		useHeadsSnapshot: true,
+		ourHeads:         heads,
+	})
+	return
 }
 
-func (h *historyTree) rebuildWithEmptyHead() (err error) {
-	heads, err := h.treeStorage.Heads()
+func (h *historyTree) rebuildCurrent() (err error) {
+	h.tree, err = h.treeBuilder.build(treeBuilderOpts{})
+	return
+}
+
+func (h *historyTree) rebuildFromPrevious(beforeId string) (err error) {
+	change, err := h.storage.Get(context.Background(), beforeId)
 	if err != nil {
 		return err
 	}
-	h.tree, err = h.treeBuilder.build(heads, nil, nil)
-	return err
-}
-
-func (h *historyTree) rebuildWithPreviousHead(head string) (err error) {
-	change, err := h.treeBuilder.loadChange(head)
-	if err != nil {
-		return err
-	}
-	h.tree, err = h.treeBuilder.build(change.PreviousIds, nil, nil)
+	h.tree, err = h.treeBuilder.build(treeBuilderOpts{
+		useHeadsSnapshot: true,
+		ourHeads:         change.PrevIds,
+	})
 	return err
 }

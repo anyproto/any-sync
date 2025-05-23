@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_syncacl/mock_syncacl.go github.com/anyproto/any-sync/commonspace/object/acl/syncacl SyncClient,SyncAcl
 //
-
 // Package mock_syncacl is a generated GoMock package.
 package mock_syncacl
 
@@ -17,7 +16,6 @@ import (
 	list "github.com/anyproto/any-sync/commonspace/object/acl/list"
 	headupdater "github.com/anyproto/any-sync/commonspace/object/acl/syncacl/headupdater"
 	response "github.com/anyproto/any-sync/commonspace/object/acl/syncacl/response"
-	spacesyncproto "github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	objectmessages "github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	syncdeps "github.com/anyproto/any-sync/commonspace/sync/syncdeps"
 	syncstatus "github.com/anyproto/any-sync/commonspace/syncstatus"
@@ -33,7 +31,6 @@ import (
 type MockSyncClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockSyncClientMockRecorder
-	isgomock struct{}
 }
 
 // MockSyncClientMockRecorder is the mock recorder for MockSyncClient.
@@ -54,82 +51,81 @@ func (m *MockSyncClient) EXPECT() *MockSyncClientMockRecorder {
 }
 
 // Broadcast mocks base method.
-func (m *MockSyncClient) Broadcast(ctx context.Context, headUpdate *objectmessages.HeadUpdate) error {
+func (m *MockSyncClient) Broadcast(arg0 context.Context, arg1 *objectmessages.HeadUpdate) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Broadcast", ctx, headUpdate)
+	ret := m.ctrl.Call(m, "Broadcast", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Broadcast indicates an expected call of Broadcast.
-func (mr *MockSyncClientMockRecorder) Broadcast(ctx, headUpdate any) *gomock.Call {
+func (mr *MockSyncClientMockRecorder) Broadcast(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Broadcast", reflect.TypeOf((*MockSyncClient)(nil).Broadcast), ctx, headUpdate)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Broadcast", reflect.TypeOf((*MockSyncClient)(nil).Broadcast), arg0, arg1)
 }
 
 // CreateFullSyncRequest mocks base method.
-func (m *MockSyncClient) CreateFullSyncRequest(peerId string, l list.AclList) *objectmessages.Request {
+func (m *MockSyncClient) CreateFullSyncRequest(arg0 string, arg1 list.AclList) *objectmessages.Request {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateFullSyncRequest", peerId, l)
+	ret := m.ctrl.Call(m, "CreateFullSyncRequest", arg0, arg1)
 	ret0, _ := ret[0].(*objectmessages.Request)
 	return ret0
 }
 
 // CreateFullSyncRequest indicates an expected call of CreateFullSyncRequest.
-func (mr *MockSyncClientMockRecorder) CreateFullSyncRequest(peerId, l any) *gomock.Call {
+func (mr *MockSyncClientMockRecorder) CreateFullSyncRequest(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFullSyncRequest", reflect.TypeOf((*MockSyncClient)(nil).CreateFullSyncRequest), peerId, l)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFullSyncRequest", reflect.TypeOf((*MockSyncClient)(nil).CreateFullSyncRequest), arg0, arg1)
 }
 
 // CreateFullSyncResponse mocks base method.
-func (m *MockSyncClient) CreateFullSyncResponse(l list.AclList, theirHead string) (*response.Response, error) {
+func (m *MockSyncClient) CreateFullSyncResponse(arg0 list.AclList, arg1 string) (*response.Response, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateFullSyncResponse", l, theirHead)
+	ret := m.ctrl.Call(m, "CreateFullSyncResponse", arg0, arg1)
 	ret0, _ := ret[0].(*response.Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateFullSyncResponse indicates an expected call of CreateFullSyncResponse.
-func (mr *MockSyncClientMockRecorder) CreateFullSyncResponse(l, theirHead any) *gomock.Call {
+func (mr *MockSyncClientMockRecorder) CreateFullSyncResponse(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFullSyncResponse", reflect.TypeOf((*MockSyncClient)(nil).CreateFullSyncResponse), l, theirHead)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFullSyncResponse", reflect.TypeOf((*MockSyncClient)(nil).CreateFullSyncResponse), arg0, arg1)
 }
 
 // CreateHeadUpdate mocks base method.
-func (m *MockSyncClient) CreateHeadUpdate(l list.AclList, added []*consensusproto.RawRecordWithId) (*objectmessages.HeadUpdate, error) {
+func (m *MockSyncClient) CreateHeadUpdate(arg0 list.AclList, arg1 []*consensusproto.RawRecordWithId) (*objectmessages.HeadUpdate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateHeadUpdate", l, added)
+	ret := m.ctrl.Call(m, "CreateHeadUpdate", arg0, arg1)
 	ret0, _ := ret[0].(*objectmessages.HeadUpdate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateHeadUpdate indicates an expected call of CreateHeadUpdate.
-func (mr *MockSyncClientMockRecorder) CreateHeadUpdate(l, added any) *gomock.Call {
+func (mr *MockSyncClientMockRecorder) CreateHeadUpdate(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateHeadUpdate", reflect.TypeOf((*MockSyncClient)(nil).CreateHeadUpdate), l, added)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateHeadUpdate", reflect.TypeOf((*MockSyncClient)(nil).CreateHeadUpdate), arg0, arg1)
 }
 
 // QueueRequest mocks base method.
-func (m *MockSyncClient) QueueRequest(ctx context.Context, req syncdeps.Request) error {
+func (m *MockSyncClient) QueueRequest(arg0 context.Context, arg1 syncdeps.Request) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueueRequest", ctx, req)
+	ret := m.ctrl.Call(m, "QueueRequest", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // QueueRequest indicates an expected call of QueueRequest.
-func (mr *MockSyncClientMockRecorder) QueueRequest(ctx, req any) *gomock.Call {
+func (mr *MockSyncClientMockRecorder) QueueRequest(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueueRequest", reflect.TypeOf((*MockSyncClient)(nil).QueueRequest), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueueRequest", reflect.TypeOf((*MockSyncClient)(nil).QueueRequest), arg0, arg1)
 }
 
 // MockSyncAcl is a mock of SyncAcl interface.
 type MockSyncAcl struct {
 	ctrl     *gomock.Controller
 	recorder *MockSyncAclMockRecorder
-	isgomock struct{}
 }
 
 // MockSyncAclMockRecorder is the mock recorder for MockSyncAcl.
@@ -164,148 +160,133 @@ func (mr *MockSyncAclMockRecorder) AclState() *gomock.Call {
 }
 
 // AddRawRecord mocks base method.
-func (m *MockSyncAcl) AddRawRecord(rawRec *consensusproto.RawRecordWithId) error {
+func (m *MockSyncAcl) AddRawRecord(arg0 *consensusproto.RawRecordWithId) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRawRecord", rawRec)
+	ret := m.ctrl.Call(m, "AddRawRecord", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddRawRecord indicates an expected call of AddRawRecord.
-func (mr *MockSyncAclMockRecorder) AddRawRecord(rawRec any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) AddRawRecord(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecord", reflect.TypeOf((*MockSyncAcl)(nil).AddRawRecord), rawRec)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecord", reflect.TypeOf((*MockSyncAcl)(nil).AddRawRecord), arg0)
 }
 
 // AddRawRecords mocks base method.
-func (m *MockSyncAcl) AddRawRecords(rawRecords []*consensusproto.RawRecordWithId) error {
+func (m *MockSyncAcl) AddRawRecords(arg0 []*consensusproto.RawRecordWithId) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddRawRecords", rawRecords)
+	ret := m.ctrl.Call(m, "AddRawRecords", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddRawRecords indicates an expected call of AddRawRecords.
-func (mr *MockSyncAclMockRecorder) AddRawRecords(rawRecords any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) AddRawRecords(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecords", reflect.TypeOf((*MockSyncAcl)(nil).AddRawRecords), rawRecords)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRawRecords", reflect.TypeOf((*MockSyncAcl)(nil).AddRawRecords), arg0)
 }
 
 // Close mocks base method.
-func (m *MockSyncAcl) Close(ctx context.Context) error {
+func (m *MockSyncAcl) Close(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", ctx)
+	ret := m.ctrl.Call(m, "Close", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Close indicates an expected call of Close.
-func (mr *MockSyncAclMockRecorder) Close(ctx any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) Close(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockSyncAcl)(nil).Close), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockSyncAcl)(nil).Close), arg0)
 }
 
 // Get mocks base method.
-func (m *MockSyncAcl) Get(id string) (*list.AclRecord, error) {
+func (m *MockSyncAcl) Get(arg0 string) (*list.AclRecord, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", id)
+	ret := m.ctrl.Call(m, "Get", arg0)
 	ret0, _ := ret[0].(*list.AclRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockSyncAclMockRecorder) Get(id any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) Get(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSyncAcl)(nil).Get), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSyncAcl)(nil).Get), arg0)
 }
 
 // GetIndex mocks base method.
-func (m *MockSyncAcl) GetIndex(idx int) (*list.AclRecord, error) {
+func (m *MockSyncAcl) GetIndex(arg0 int) (*list.AclRecord, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIndex", idx)
+	ret := m.ctrl.Call(m, "GetIndex", arg0)
 	ret0, _ := ret[0].(*list.AclRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetIndex indicates an expected call of GetIndex.
-func (mr *MockSyncAclMockRecorder) GetIndex(idx any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) GetIndex(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIndex", reflect.TypeOf((*MockSyncAcl)(nil).GetIndex), idx)
-}
-
-// HandleDeprecatedRequest mocks base method.
-func (m *MockSyncAcl) HandleDeprecatedRequest(ctx context.Context, req *spacesyncproto.ObjectSyncMessage) (*spacesyncproto.ObjectSyncMessage, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleDeprecatedRequest", ctx, req)
-	ret0, _ := ret[0].(*spacesyncproto.ObjectSyncMessage)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// HandleDeprecatedRequest indicates an expected call of HandleDeprecatedRequest.
-func (mr *MockSyncAclMockRecorder) HandleDeprecatedRequest(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleDeprecatedRequest", reflect.TypeOf((*MockSyncAcl)(nil).HandleDeprecatedRequest), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIndex", reflect.TypeOf((*MockSyncAcl)(nil).GetIndex), arg0)
 }
 
 // HandleHeadUpdate mocks base method.
-func (m *MockSyncAcl) HandleHeadUpdate(ctx context.Context, statusUpdater syncstatus.StatusUpdater, headUpdate drpc.Message) (syncdeps.Request, error) {
+func (m *MockSyncAcl) HandleHeadUpdate(arg0 context.Context, arg1 syncstatus.StatusUpdater, arg2 drpc.Message) (syncdeps.Request, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleHeadUpdate", ctx, statusUpdater, headUpdate)
+	ret := m.ctrl.Call(m, "HandleHeadUpdate", arg0, arg1, arg2)
 	ret0, _ := ret[0].(syncdeps.Request)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HandleHeadUpdate indicates an expected call of HandleHeadUpdate.
-func (mr *MockSyncAclMockRecorder) HandleHeadUpdate(ctx, statusUpdater, headUpdate any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) HandleHeadUpdate(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleHeadUpdate", reflect.TypeOf((*MockSyncAcl)(nil).HandleHeadUpdate), ctx, statusUpdater, headUpdate)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleHeadUpdate", reflect.TypeOf((*MockSyncAcl)(nil).HandleHeadUpdate), arg0, arg1, arg2)
 }
 
 // HandleResponse mocks base method.
-func (m *MockSyncAcl) HandleResponse(ctx context.Context, peerId, objectId string, resp syncdeps.Response) error {
+func (m *MockSyncAcl) HandleResponse(arg0 context.Context, arg1, arg2 string, arg3 syncdeps.Response) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleResponse", ctx, peerId, objectId, resp)
+	ret := m.ctrl.Call(m, "HandleResponse", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // HandleResponse indicates an expected call of HandleResponse.
-func (mr *MockSyncAclMockRecorder) HandleResponse(ctx, peerId, objectId, resp any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) HandleResponse(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleResponse", reflect.TypeOf((*MockSyncAcl)(nil).HandleResponse), ctx, peerId, objectId, resp)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleResponse", reflect.TypeOf((*MockSyncAcl)(nil).HandleResponse), arg0, arg1, arg2, arg3)
 }
 
 // HandleStreamRequest mocks base method.
-func (m *MockSyncAcl) HandleStreamRequest(ctx context.Context, rq syncdeps.Request, updater syncdeps.QueueSizeUpdater, send func(proto.Message) error) (syncdeps.Request, error) {
+func (m *MockSyncAcl) HandleStreamRequest(arg0 context.Context, arg1 syncdeps.Request, arg2 syncdeps.QueueSizeUpdater, arg3 func(proto.Message) error) (syncdeps.Request, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleStreamRequest", ctx, rq, updater, send)
+	ret := m.ctrl.Call(m, "HandleStreamRequest", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(syncdeps.Request)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HandleStreamRequest indicates an expected call of HandleStreamRequest.
-func (mr *MockSyncAclMockRecorder) HandleStreamRequest(ctx, rq, updater, send any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) HandleStreamRequest(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStreamRequest", reflect.TypeOf((*MockSyncAcl)(nil).HandleStreamRequest), ctx, rq, updater, send)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStreamRequest", reflect.TypeOf((*MockSyncAcl)(nil).HandleStreamRequest), arg0, arg1, arg2, arg3)
 }
 
 // HasHead mocks base method.
-func (m *MockSyncAcl) HasHead(head string) bool {
+func (m *MockSyncAcl) HasHead(arg0 string) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasHead", head)
+	ret := m.ctrl.Call(m, "HasHead", arg0)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // HasHead indicates an expected call of HasHead.
-func (mr *MockSyncAclMockRecorder) HasHead(head any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) HasHead(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasHead", reflect.TypeOf((*MockSyncAcl)(nil).HasHead), head)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasHead", reflect.TypeOf((*MockSyncAcl)(nil).HasHead), arg0)
 }
 
 // Head mocks base method.
@@ -337,56 +318,56 @@ func (mr *MockSyncAclMockRecorder) Id() *gomock.Call {
 }
 
 // Init mocks base method.
-func (m *MockSyncAcl) Init(a *app.App) error {
+func (m *MockSyncAcl) Init(arg0 *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", a)
+	ret := m.ctrl.Call(m, "Init", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockSyncAclMockRecorder) Init(a any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) Init(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockSyncAcl)(nil).Init), a)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockSyncAcl)(nil).Init), arg0)
 }
 
 // IsAfter mocks base method.
-func (m *MockSyncAcl) IsAfter(first, second string) (bool, error) {
+func (m *MockSyncAcl) IsAfter(arg0, arg1 string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsAfter", first, second)
+	ret := m.ctrl.Call(m, "IsAfter", arg0, arg1)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsAfter indicates an expected call of IsAfter.
-func (mr *MockSyncAclMockRecorder) IsAfter(first, second any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) IsAfter(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAfter", reflect.TypeOf((*MockSyncAcl)(nil).IsAfter), first, second)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAfter", reflect.TypeOf((*MockSyncAcl)(nil).IsAfter), arg0, arg1)
 }
 
 // Iterate mocks base method.
-func (m *MockSyncAcl) Iterate(iterFunc func(*list.AclRecord) bool) {
+func (m *MockSyncAcl) Iterate(arg0 func(*list.AclRecord) bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Iterate", iterFunc)
+	m.ctrl.Call(m, "Iterate", arg0)
 }
 
 // Iterate indicates an expected call of Iterate.
-func (mr *MockSyncAclMockRecorder) Iterate(iterFunc any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) Iterate(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Iterate", reflect.TypeOf((*MockSyncAcl)(nil).Iterate), iterFunc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Iterate", reflect.TypeOf((*MockSyncAcl)(nil).Iterate), arg0)
 }
 
 // IterateFrom mocks base method.
-func (m *MockSyncAcl) IterateFrom(startId string, iterFunc func(*list.AclRecord) bool) {
+func (m *MockSyncAcl) IterateFrom(arg0 string, arg1 func(*list.AclRecord) bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "IterateFrom", startId, iterFunc)
+	m.ctrl.Call(m, "IterateFrom", arg0, arg1)
 }
 
 // IterateFrom indicates an expected call of IterateFrom.
-func (mr *MockSyncAclMockRecorder) IterateFrom(startId, iterFunc any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) IterateFrom(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateFrom", reflect.TypeOf((*MockSyncAcl)(nil).IterateFrom), startId, iterFunc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IterateFrom", reflect.TypeOf((*MockSyncAcl)(nil).IterateFrom), arg0, arg1)
 }
 
 // KeyStorage mocks base method.
@@ -482,33 +463,33 @@ func (mr *MockSyncAclMockRecorder) Records() *gomock.Call {
 }
 
 // RecordsAfter mocks base method.
-func (m *MockSyncAcl) RecordsAfter(ctx context.Context, id string) ([]*consensusproto.RawRecordWithId, error) {
+func (m *MockSyncAcl) RecordsAfter(arg0 context.Context, arg1 string) ([]*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecordsAfter", ctx, id)
+	ret := m.ctrl.Call(m, "RecordsAfter", arg0, arg1)
 	ret0, _ := ret[0].([]*consensusproto.RawRecordWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RecordsAfter indicates an expected call of RecordsAfter.
-func (mr *MockSyncAclMockRecorder) RecordsAfter(ctx, id any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) RecordsAfter(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordsAfter", reflect.TypeOf((*MockSyncAcl)(nil).RecordsAfter), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordsAfter", reflect.TypeOf((*MockSyncAcl)(nil).RecordsAfter), arg0, arg1)
 }
 
 // RecordsBefore mocks base method.
-func (m *MockSyncAcl) RecordsBefore(ctx context.Context, headId string) ([]*consensusproto.RawRecordWithId, error) {
+func (m *MockSyncAcl) RecordsBefore(arg0 context.Context, arg1 string) ([]*consensusproto.RawRecordWithId, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecordsBefore", ctx, headId)
+	ret := m.ctrl.Call(m, "RecordsBefore", arg0, arg1)
 	ret0, _ := ret[0].([]*consensusproto.RawRecordWithId)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RecordsBefore indicates an expected call of RecordsBefore.
-func (mr *MockSyncAclMockRecorder) RecordsBefore(ctx, headId any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) RecordsBefore(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordsBefore", reflect.TypeOf((*MockSyncAcl)(nil).RecordsBefore), ctx, headId)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordsBefore", reflect.TypeOf((*MockSyncAcl)(nil).RecordsBefore), arg0, arg1)
 }
 
 // ResponseCollector mocks base method.
@@ -540,55 +521,43 @@ func (mr *MockSyncAclMockRecorder) Root() *gomock.Call {
 }
 
 // Run mocks base method.
-func (m *MockSyncAcl) Run(ctx context.Context) error {
+func (m *MockSyncAcl) Run(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx)
+	ret := m.ctrl.Call(m, "Run", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockSyncAclMockRecorder) Run(ctx any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) Run(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockSyncAcl)(nil).Run), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockSyncAcl)(nil).Run), arg0)
 }
 
 // SetAclUpdater mocks base method.
-func (m *MockSyncAcl) SetAclUpdater(updater headupdater.AclUpdater) {
+func (m *MockSyncAcl) SetAclUpdater(arg0 headupdater.AclUpdater) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetAclUpdater", updater)
+	m.ctrl.Call(m, "SetAclUpdater", arg0)
 }
 
 // SetAclUpdater indicates an expected call of SetAclUpdater.
-func (mr *MockSyncAclMockRecorder) SetAclUpdater(updater any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) SetAclUpdater(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAclUpdater", reflect.TypeOf((*MockSyncAcl)(nil).SetAclUpdater), updater)
-}
-
-// SetHeadUpdater mocks base method.
-func (m *MockSyncAcl) SetHeadUpdater(updater headupdater.HeadUpdater) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetHeadUpdater", updater)
-}
-
-// SetHeadUpdater indicates an expected call of SetHeadUpdater.
-func (mr *MockSyncAclMockRecorder) SetHeadUpdater(updater any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHeadUpdater", reflect.TypeOf((*MockSyncAcl)(nil).SetHeadUpdater), updater)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAclUpdater", reflect.TypeOf((*MockSyncAcl)(nil).SetAclUpdater), arg0)
 }
 
 // SyncWithPeer mocks base method.
-func (m *MockSyncAcl) SyncWithPeer(ctx context.Context, p peer.Peer) error {
+func (m *MockSyncAcl) SyncWithPeer(arg0 context.Context, arg1 peer.Peer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SyncWithPeer", ctx, p)
+	ret := m.ctrl.Call(m, "SyncWithPeer", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SyncWithPeer indicates an expected call of SyncWithPeer.
-func (mr *MockSyncAclMockRecorder) SyncWithPeer(ctx, p any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) SyncWithPeer(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncWithPeer", reflect.TypeOf((*MockSyncAcl)(nil).SyncWithPeer), ctx, p)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncWithPeer", reflect.TypeOf((*MockSyncAcl)(nil).SyncWithPeer), arg0, arg1)
 }
 
 // Unlock mocks base method.
@@ -604,15 +573,15 @@ func (mr *MockSyncAclMockRecorder) Unlock() *gomock.Call {
 }
 
 // ValidateRawRecord mocks base method.
-func (m *MockSyncAcl) ValidateRawRecord(rawRec *consensusproto.RawRecord, afterValid func(*list.AclState) error) error {
+func (m *MockSyncAcl) ValidateRawRecord(arg0 *consensusproto.RawRecord, arg1 func(*list.AclState) error) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateRawRecord", rawRec, afterValid)
+	ret := m.ctrl.Call(m, "ValidateRawRecord", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ValidateRawRecord indicates an expected call of ValidateRawRecord.
-func (mr *MockSyncAclMockRecorder) ValidateRawRecord(rawRec, afterValid any) *gomock.Call {
+func (mr *MockSyncAclMockRecorder) ValidateRawRecord(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRawRecord", reflect.TypeOf((*MockSyncAcl)(nil).ValidateRawRecord), rawRec, afterValid)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRawRecord", reflect.TypeOf((*MockSyncAcl)(nil).ValidateRawRecord), arg0, arg1)
 }

@@ -18,6 +18,19 @@ message AclRoot {
 // AclAccountInvite contains the public invite key, the private part of which is sent to the user directly
 message AclAccountInvite {
     bytes inviteKey = 1;
+    AclInviteType inviteType = 2;
+    AclUserPermissions permissions = 3;
+    bytes encryptedReadKey = 4;
+}
+
+message AclAccountInviteChange {
+    string inviteRecordId = 1;
+    AclUserPermissions permissions = 2;
+}
+
+enum AclInviteType {
+    RequestToJoin = 0;
+    AnyoneCanJoin = 1;
 }
 
 // AclAccountRequestJoin contains the reference to the invite record and the data of the person who wants to join, confirmed by the private invite key
@@ -27,6 +40,17 @@ message AclAccountRequestJoin {
     bytes inviteIdentitySignature = 3;
     // Metadata is encrypted with metadata key of the space
     bytes metadata = 4;
+}
+
+// AclInviteJoin contains the reference to the invite record and the data of the person who wants to join, confirmed by the private invite key
+// The person must encrypt the key with its own public key
+message AclAccountInviteJoin {
+    bytes identity = 1;
+    string inviteRecordId = 2;
+    bytes inviteIdentitySignature = 3;
+    // Metadata is encrypted with metadata key of the space
+    bytes metadata = 4;
+    bytes encryptedReadKey = 5;
 }
 
 // AclAccountRequestAccept contains the reference to join record and all read keys, encrypted with the identity of the requestor
@@ -90,6 +114,7 @@ message AclReadKeyChange {
     bytes encryptedMetadataPrivKey = 3;
     // EncryptedOldReadKey is encrypted with new read key
     bytes encryptedOldReadKey = 4;
+    repeated AclEncryptedReadKey inviteKeys = 5;
 }
 
 // AclAccountRemove removes an account and changes read key for space
@@ -118,6 +143,8 @@ message AclContentValue {
         AclAccountPermissionChanges permissionChanges = 10;
         AclAccountsAdd accountsAdd = 11;
         AclAccountRequestCancel requestCancel = 12;
+        AclAccountInviteJoin inviteJoin = 13;
+        AclAccountInviteChange inviteChange = 14;
     }
 }
 
@@ -133,4 +160,5 @@ enum AclUserPermissions {
     Admin = 2;
     Writer = 3;
     Reader = 4;
+    Guest = 5;
 }

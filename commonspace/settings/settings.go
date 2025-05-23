@@ -2,6 +2,9 @@ package settings
 
 import (
 	"context"
+
+	"go.uber.org/zap"
+
 	"github.com/anyproto/any-sync/accountservice"
 	"github.com/anyproto/any-sync/app"
 	"github.com/anyproto/any-sync/commonspace/deletionmanager"
@@ -12,7 +15,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/spacestate"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/nodeconf"
-	"go.uber.org/zap"
 )
 
 const CName = "common.commonspace.settings"
@@ -79,7 +81,7 @@ func (s *settings) Close(ctx context.Context) (err error) {
 }
 
 func (s *settings) DeleteTree(ctx context.Context, id string) (err error) {
-	return s.settingsObject.DeleteObject(id)
+	return s.settingsObject.DeleteObject(ctx, id)
 }
 
 func (s *settings) SettingsObject() SettingsObject {

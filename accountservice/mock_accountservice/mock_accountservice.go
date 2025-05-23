@@ -5,7 +5,6 @@
 //
 //	mockgen -destination mock_accountservice/mock_accountservice.go github.com/anyproto/any-sync/accountservice Service
 //
-
 // Package mock_accountservice is a generated GoMock package.
 package mock_accountservice
 
@@ -21,7 +20,6 @@ import (
 type MockService struct {
 	ctrl     *gomock.Controller
 	recorder *MockServiceMockRecorder
-	isgomock struct{}
 }
 
 // MockServiceMockRecorder is the mock recorder for MockService.
@@ -56,17 +54,17 @@ func (mr *MockServiceMockRecorder) Account() *gomock.Call {
 }
 
 // Init mocks base method.
-func (m *MockService) Init(a *app.App) error {
+func (m *MockService) Init(arg0 *app.App) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Init", a)
+	ret := m.ctrl.Call(m, "Init", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Init indicates an expected call of Init.
-func (mr *MockServiceMockRecorder) Init(a any) *gomock.Call {
+func (mr *MockServiceMockRecorder) Init(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockService)(nil).Init), a)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockService)(nil).Init), arg0)
 }
 
 // Name mocks base method.

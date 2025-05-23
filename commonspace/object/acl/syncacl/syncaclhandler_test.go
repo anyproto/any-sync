@@ -12,7 +12,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/acl/list/mock_list"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/mock_syncacl"
 	"github.com/anyproto/any-sync/commonspace/object/acl/syncacl/response"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus/mock_syncstatus"
 	"github.com/anyproto/any-sync/consensus/consensusproto"
@@ -181,69 +180,6 @@ func TestSyncAclHandler_HandleStreamRequest(t *testing.T) {
 		require.NoError(t, err)
 		require.Nil(t, req)
 		require.True(t, sendCalled)
-	})
-}
-
-func TestSyncAclHandler_HandleDeprecatedRequest(t *testing.T) {
-	t.Run("handle deprecated request, records, return empty response", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.stop()
-		chWithId := &consensusproto.RawRecordWithId{}
-		fullRequest := &consensusproto.LogFullSyncRequest{
-			Head:    "h1",
-			Records: []*consensusproto.RawRecordWithId{chWithId},
-		}
-		logMessage := consensusproto.WrapFullRequest(fullRequest, chWithId)
-		objectMsg, err := spacesyncproto.MarshallSyncMessage(logMessage, "spaceId", "objectId")
-		require.NoError(t, err)
-		fx.aclMock.EXPECT().Root().Return(chWithId)
-		fx.aclMock.EXPECT().Head().Return(&list.AclRecord{Id: "h2"})
-		fx.aclMock.EXPECT().HasHead("h1").Return(false)
-		fx.aclMock.EXPECT().AddRawRecords([]*consensusproto.RawRecordWithId{chWithId}).Return(nil)
-		resp, err := fx.syncHandler.HandleDeprecatedRequest(ctx, objectMsg)
-		require.NoError(t, err)
-		require.NotNil(t, resp)
-		require.Equal(t, "spaceId", resp.SpaceId)
-		require.Equal(t, "objectId", resp.ObjectId)
-	})
-	t.Run("handle deprecated request, no records, return empty response", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.stop()
-		chWithId := &consensusproto.RawRecordWithId{}
-		fullRequest := &consensusproto.LogFullSyncRequest{
-			Head: "h1",
-		}
-		logMessage := consensusproto.WrapFullRequest(fullRequest, chWithId)
-		objectMsg, err := spacesyncproto.MarshallSyncMessage(logMessage, "spaceId", "objectId")
-		require.NoError(t, err)
-		fx.aclMock.EXPECT().Root().Return(chWithId)
-		fx.aclMock.EXPECT().Head().Return(&list.AclRecord{Id: "h2"})
-		fx.aclMock.EXPECT().HasHead("h1").Return(false)
-		resp, err := fx.syncHandler.HandleDeprecatedRequest(ctx, objectMsg)
-		require.NoError(t, err)
-		require.NotNil(t, resp)
-		require.Equal(t, "spaceId", resp.SpaceId)
-		require.Equal(t, "objectId", resp.ObjectId)
-	})
-	t.Run("handle deprecated request, has head, return records after", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.stop()
-		chWithId := &consensusproto.RawRecordWithId{}
-		fullRequest := &consensusproto.LogFullSyncRequest{
-			Head: "h1",
-		}
-		logMessage := consensusproto.WrapFullRequest(fullRequest, chWithId)
-		objectMsg, err := spacesyncproto.MarshallSyncMessage(logMessage, "spaceId", "objectId")
-		require.NoError(t, err)
-		fx.aclMock.EXPECT().Root().Return(chWithId)
-		fx.aclMock.EXPECT().Head().Times(2).Return(&list.AclRecord{Id: "h2"})
-		fx.aclMock.EXPECT().HasHead("h1").Return(true)
-		fx.aclMock.EXPECT().RecordsAfter(ctx, "h1").Return([]*consensusproto.RawRecordWithId{chWithId}, nil)
-		resp, err := fx.syncHandler.HandleDeprecatedRequest(ctx, objectMsg)
-		require.NoError(t, err)
-		require.NotNil(t, resp)
-		require.Equal(t, "spaceId", resp.SpaceId)
-		require.Equal(t, "objectId", resp.ObjectId)
 	})
 }
 

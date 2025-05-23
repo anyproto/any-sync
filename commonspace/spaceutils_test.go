@@ -2,13 +2,14 @@ package commonspace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/anyproto/go-chash"
+	anystore "github.com/anyproto/any-store"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"storj.io/drpc"
@@ -26,6 +27,7 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/treesyncer"
 	"github.com/anyproto/any-sync/commonspace/objecttreebuilder"
 	"github.com/anyproto/any-sync/commonspace/peermanager"
+	"github.com/anyproto/any-sync/commonspace/spacepayloads"
 	"github.com/anyproto/any-sync/commonspace/spacestorage"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
@@ -41,113 +43,11 @@ import (
 	"github.com/anyproto/any-sync/net/streampool/streamhandler"
 	"github.com/anyproto/any-sync/node/nodeclient"
 	"github.com/anyproto/any-sync/nodeconf"
+	"github.com/anyproto/any-sync/nodeconf/testconf"
 	"github.com/anyproto/any-sync/testutil/accounttest"
 	"github.com/anyproto/any-sync/util/crypto"
 	"github.com/anyproto/any-sync/util/syncqueues"
 )
-
-type mockConf struct {
-	id            string
-	networkId     string
-	configuration nodeconf.Configuration
-}
-
-func (m *mockConf) NetworkCompatibilityStatus() nodeconf.NetworkCompatibilityStatus {
-	return nodeconf.NetworkCompatibilityStatusOk
-}
-
-func (m *mockConf) Init(a *app.App) (err error) {
-	accountKeys := a.MustComponent(accountService.CName).(accountService.Service).Account()
-	networkId := accountKeys.SignKey.GetPublic().Network()
-	node := nodeconf.Node{
-		PeerId:    accountKeys.PeerId,
-		Addresses: []string{"127.0.0.1:4430"},
-		Types:     []nodeconf.NodeType{nodeconf.NodeTypeTree},
-	}
-	m.id = networkId
-	m.networkId = networkId
-	m.configuration = nodeconf.Configuration{
-		Id:           networkId,
-		NetworkId:    networkId,
-		Nodes:        []nodeconf.Node{node},
-		CreationTime: time.Now(),
-	}
-	return nil
-}
-
-func (m *mockConf) Name() (name string) {
-	return nodeconf.CName
-}
-
-func (m *mockConf) Run(ctx context.Context) (err error) {
-	return nil
-}
-
-func (m *mockConf) Close(ctx context.Context) (err error) {
-	return nil
-}
-
-func (m *mockConf) Id() string {
-	return m.id
-}
-
-func (m *mockConf) Configuration() nodeconf.Configuration {
-	return m.configuration
-}
-
-func (m *mockConf) NodeIds(spaceId string) []string {
-	var nodeIds []string
-	for _, node := range m.configuration.Nodes {
-		nodeIds = append(nodeIds, node.PeerId)
-	}
-	return nodeIds
-}
-
-func (m *mockConf) IsResponsible(spaceId string) bool {
-	return true
-}
-
-func (m *mockConf) FilePeers() []string {
-	return nil
-}
-
-func (m *mockConf) ConsensusPeers() []string {
-	return nil
-}
-
-func (m *mockConf) CoordinatorPeers() []string {
-	return nil
-}
-
-func (m *mockConf) NamingNodePeers() []string {
-	return nil
-}
-
-func (m *mockConf) PaymentProcessingNodePeers() []string {
-	return nil
-}
-
-func (m *mockConf) PeerAddresses(peerId string) (addrs []string, ok bool) {
-	if peerId == m.configuration.Nodes[0].PeerId {
-		return m.configuration.Nodes[0].Addresses, true
-	}
-	return nil, false
-}
-
-func (m *mockConf) CHash() chash.CHash {
-	return nil
-}
-
-func (m *mockConf) Partition(spaceId string) (part int) {
-	return 0
-}
-
-func (m *mockConf) NodeTypes(nodeId string) []nodeconf.NodeType {
-	if nodeId == m.configuration.Nodes[0].PeerId {
-		return m.configuration.Nodes[0].Types
-	}
-	return nil
-}
 
 var _ nodeclient.NodeClient = (*mockNodeClient)(nil)
 
@@ -355,6 +255,7 @@ type testTreeManager struct {
 	accService  accountService.Service
 	deletedIds  []string
 	markedIds   []string
+	condFunc    func()
 	treesToPut  map[string]treestorage.TreeStorageCreatePayload
 	wait        bool
 	waitLoad    chan struct{}
@@ -376,6 +277,9 @@ func (t *testTreeManager) MarkTreeDeleted(ctx context.Context, spaceId, treeId s
 	t.mx.Lock()
 	defer t.mx.Unlock()
 	t.markedIds = append(t.markedIds, treeId)
+	if t.condFunc != nil {
+		t.condFunc()
+	}
 	return nil
 }
 
@@ -470,6 +374,9 @@ func (t *testTreeManager) DeleteTree(ctx context.Context, spaceId, treeId string
 	}
 	t.deletedIds = append(t.deletedIds, treeId)
 	_, err = t.cache.Remove(ctx, treeId)
+	if t.condFunc != nil {
+		t.condFunc()
+	}
 	return nil
 }
 
@@ -644,10 +551,10 @@ func newFixture(t *testing.T) *spaceFixture {
 		app:                  &app.App{},
 		config:               &mockConfig{},
 		account:              &accounttest.AccountTestService{},
-		configurationService: &mockConf{},
+		configurationService: &testconf.StubConf{},
 		streamOpener:         newStreamOpener("spaceId"),
 		peerManagerProvider:  &testPeerManagerProvider{},
-		storageProvider:      spacestorage.NewInMemorySpaceStorageProvider(),
+		storageProvider:      &spaceStorageProvider{rootPath: t.TempDir()},
 		treeManager:          newMockTreeManager("spaceId"),
 		pool:                 &mockPool{},
 		spaceService:         New(),
@@ -676,7 +583,12 @@ func newFixture(t *testing.T) *spaceFixture {
 	return fx
 }
 
-func newPeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spacestorage.InMemorySpaceStorageProvider) *spaceFixture {
+func Test(t *testing.T) {
+	fx := newFixture(t)
+	defer fx.app.Close(context.Background())
+}
+
+func newPeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys, peerPool *synctest.PeerGlobalPool, provider *spaceStorageProvider) *spaceFixture {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	fx := &spaceFixture{
 		ctx:                  ctx,
@@ -684,7 +596,7 @@ func newPeerFixture(t *testing.T, spaceId string, keys *accountdata.AccountKeys,
 		app:                  &app.App{},
 		config:               &mockConfig{},
 		account:              accounttest.NewWithAcc(keys),
-		configurationService: &mockConf{},
+		configurationService: &testconf.StubConf{},
 		storageProvider:      provider,
 		streamOpener:         newStreamOpener(spaceId),
 		peerManagerProvider:  &testPeerManagerProvider{},
@@ -739,7 +651,7 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 	require.NoError(t, err)
 	readKey := crypto.NewAES()
 	meta := []byte("account")
-	payload := SpaceCreatePayload{
+	payload := spacepayloads.SpaceCreatePayload{
 		SigningKey:     keys.SignKey,
 		SpaceType:      "space",
 		ReplicationKey: 10,
@@ -749,7 +661,7 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 		MetadataKey:    metaKey,
 		Metadata:       meta,
 	}
-	createSpace, err := storagePayloadForSpaceCreate(payload)
+	createSpace, err := spacepayloads.StoragePayloadForSpaceCreate(payload)
 	require.NoError(t, err)
 	executor := list.NewExternalKeysAclExecutor(createSpace.SpaceHeaderWithId.Id, keys, meta, createSpace.AclWithId)
 	cmds := []string{
@@ -767,26 +679,34 @@ func newMultiPeerFixture(t *testing.T, peerNum int) *multiPeerFixture {
 	var (
 		allKeys    []*accountdata.AccountKeys
 		allRecords []*consensusproto.RawRecordWithId
-		providers  []*spacestorage.InMemorySpaceStorageProvider
+		providers  []*spaceStorageProvider
 		peerIds    []string
 	)
 	allRecords, err = executor.ActualAccounts()["0"].Acl.RecordsAfter(context.Background(), "")
 	require.NoError(t, err)
+	ctx := context.Background()
 	for i := 0; i < peerNum; i++ {
 		allKeys = append(allKeys, executor.ActualAccounts()[fmt.Sprint(i)].Keys)
 		peerIds = append(peerIds, executor.ActualAccounts()[fmt.Sprint(i)].Keys.PeerId)
-		provider := spacestorage.NewInMemorySpaceStorageProvider().(*spacestorage.InMemorySpaceStorageProvider)
+		provider := &spaceStorageProvider{rootPath: t.TempDir()}
 		providers = append(providers, provider)
-		spaceStore, err := provider.CreateSpaceStorage(createSpace)
+		spaceStore, err := provider.CreateSpaceStorage(ctx, createSpace)
 		require.NoError(t, err)
 		listStorage, err := spaceStore.AclStorage()
 		require.NoError(t, err)
-		for _, rec := range allRecords {
-			err = listStorage.AddRawRecord(context.Background(), rec)
+		for i, rec := range allRecords {
+			prevRec := ""
+			if i > 0 {
+				prevRec = allRecords[i-1].Id
+			}
+			err := listStorage.AddAll(ctx, []list.StorageRecord{
+				{RawRecord: rec.Payload, Id: rec.Id, PrevId: prevRec, Order: i + 1, ChangeSize: len(rec.Payload)},
+			})
+			if errors.Is(err, anystore.ErrDocExists) {
+				continue
+			}
 			require.NoError(t, err)
 		}
-		err = listStorage.SetHead(allRecords[len(allRecords)-1].Id)
-		require.NoError(t, err)
 	}
 	peerPool := synctest.NewPeerGlobalPool(peerIds)
 	peerPool.MakePeers()
@@ -810,9 +730,9 @@ func Test_Sync(t *testing.T) {
 	for _, fx := range mpFixture.peerFixtures {
 		sp, err := fx.app.MustComponent(RpcName).(*RpcServer).GetSpace(context.Background(), fx.process.spaceId)
 		require.NoError(t, err)
-		spaceHash, err := sp.Storage().ReadSpaceHash()
+		state, err := sp.Storage().StateStorage().GetState(context.Background())
 		require.NoError(t, err)
-		hashes = append(hashes, spaceHash)
+		hashes = append(hashes, state.NewHash)
 	}
 	for i := 1; i < len(hashes); i++ {
 		require.Equal(t, hashes[0], hashes[i])

@@ -2,12 +2,13 @@ package nodeconfstore
 
 import (
 	"context"
-	"github.com/anyproto/any-sync/app"
-	"github.com/anyproto/any-sync/nodeconf"
-	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/anyproto/any-sync/app"
+	"github.com/anyproto/any-sync/nodeconf"
+	"gopkg.in/yaml.v3"
 )
 
 func New() NodeConfStore {
@@ -30,7 +31,7 @@ type configGetter interface {
 
 func (n *nodeConfStore) Init(a *app.App) (err error) {
 	n.path = a.MustComponent("config").(configGetter).GetNodeConfStorePath()
-	if e := os.Mkdir(n.path, 0755); e != nil && !os.IsExist(e) {
+	if e := os.MkdirAll(n.path, 0o755); e != nil && !os.IsExist(e) {
 		return e
 	}
 	return
@@ -61,5 +62,5 @@ func (n *nodeConfStore) SaveLast(ctx context.Context, c nodeconf.Configuration) 
 	if err != nil {
 		return
 	}
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0o644)
 }

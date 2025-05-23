@@ -12,7 +12,6 @@ import (
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/response"
 	"github.com/anyproto/any-sync/commonspace/object/tree/synctree/response/mock_response"
 	"github.com/anyproto/any-sync/commonspace/object/tree/treechangeproto"
-	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
 	"github.com/anyproto/any-sync/commonspace/sync/objectsync/objectmessages"
 	"github.com/anyproto/any-sync/commonspace/syncstatus/mock_syncstatus"
 	"github.com/anyproto/any-sync/net/peer"
@@ -28,18 +27,18 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 	t.Run("head update ok, everything added, we don't send request", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
 		defer fx.finish()
-		rawCh := &treechangeproto.RawTreeChangeWithId{
+		rawCh := objecttree.StorageChange{
 			RawChange: []byte("abcd"),
 			Id:        "chId",
 		}
 		heads := []string{rawCh.Id}
-		changes := []*treechangeproto.RawTreeChangeWithId{rawCh}
+		changes := []*treechangeproto.RawTreeChangeWithId{rawCh.RawTreeChangeWithId()}
 		treeHeadUpdate := &treechangeproto.TreeHeadUpdate{
 			Changes:      changes,
 			Heads:        heads,
 			SnapshotPath: []string{rawCh.Id},
 		}
-		wrapped := treechangeproto.WrapHeadUpdate(treeHeadUpdate, rawCh)
+		wrapped := treechangeproto.WrapHeadUpdate(treeHeadUpdate, rawCh.RawTreeChangeWithId())
 		marshaled, err := wrapped.Marshal()
 		require.NoError(t, err)
 		headUpdate := &objectmessages.HeadUpdate{
@@ -52,13 +51,15 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 		}
 		ctx = peer.CtxWithPeerId(ctx, "peerId")
 		fx.syncStatus.EXPECT().HeadsReceive("peerId", "objectId", heads)
+		fx.tree.EXPECT().Heads().AnyTimes().Return([]string{rawCh.Id})
 		fx.tree.EXPECT().AddRawChangesFromPeer(ctx, "peerId", objecttree.RawChangesPayload{
-			NewHeads:   heads,
-			RawChanges: changes,
+			NewHeads:     heads,
+			RawChanges:   changes,
+			SnapshotPath: []string{rawCh.Id},
 		}).Return(objecttree.AddResult{
 			OldHeads: []string{"head"},
 			Heads:    heads,
-			Added:    []*treechangeproto.RawTreeChangeWithId{rawCh},
+			Added:    []objecttree.StorageChange{rawCh},
 			Mode:     objecttree.Append,
 		}, nil)
 		req, err := fx.syncHandler.HandleHeadUpdate(ctx, fx.syncStatus, headUpdate)
@@ -68,18 +69,18 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 	t.Run("head update different heads after add, we send request", func(t *testing.T) {
 		fx := newSyncHandlerFixture(t)
 		defer fx.finish()
-		rawCh := &treechangeproto.RawTreeChangeWithId{
+		rawCh := objecttree.StorageChange{
 			RawChange: []byte("abcd"),
 			Id:        "chId",
 		}
 		heads := []string{rawCh.Id}
-		changes := []*treechangeproto.RawTreeChangeWithId{rawCh}
+		changes := []*treechangeproto.RawTreeChangeWithId{rawCh.RawTreeChangeWithId()}
 		treeHeadUpdate := &treechangeproto.TreeHeadUpdate{
 			Changes:      changes,
 			Heads:        heads,
 			SnapshotPath: []string{rawCh.Id},
 		}
-		wrapped := treechangeproto.WrapHeadUpdate(treeHeadUpdate, rawCh)
+		wrapped := treechangeproto.WrapHeadUpdate(treeHeadUpdate, rawCh.RawTreeChangeWithId())
 		marshaled, err := wrapped.Marshal()
 		require.NoError(t, err)
 		headUpdate := &objectmessages.HeadUpdate{
@@ -92,19 +93,21 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 		}
 		ctx = peer.CtxWithPeerId(ctx, "peerId")
 		fx.syncStatus.EXPECT().HeadsReceive("peerId", "objectId", heads)
+		fx.tree.EXPECT().Heads().AnyTimes().Return([]string{rawCh.Id})
 		fx.tree.EXPECT().AddRawChangesFromPeer(ctx, "peerId", objecttree.RawChangesPayload{
-			NewHeads:   heads,
-			RawChanges: changes,
+			NewHeads:     heads,
+			RawChanges:   changes,
+			SnapshotPath: []string{rawCh.Id},
 		}).Return(objecttree.AddResult{
 			OldHeads: []string{"head"},
 			Heads:    []string{"other"},
-			Added:    []*treechangeproto.RawTreeChangeWithId{rawCh},
+			Added:    []objecttree.StorageChange{rawCh},
 			Mode:     objecttree.Append,
 		}, nil)
 		returnReq := &objectmessages.Request{
 			Bytes: []byte("abcd"),
 		}
-		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq)
+		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq, nil)
 		req, err := fx.syncHandler.HandleHeadUpdate(ctx, fx.syncStatus, headUpdate)
 		require.NoError(t, err)
 		require.Equal(t, returnReq, req)
@@ -171,106 +174,10 @@ func TestSyncHandler_HeadUpdate(t *testing.T) {
 		returnReq := &objectmessages.Request{
 			Bytes: []byte("abcd"),
 		}
-		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq)
+		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq, nil)
 		req, err := fx.syncHandler.HandleHeadUpdate(ctx, fx.syncStatus, headUpdate)
 		require.NoError(t, err)
 		require.Equal(t, returnReq, req)
-	})
-}
-
-func TestSyncHandler_HandleDeprecatedObjectSync(t *testing.T) {
-	t.Run("request with no changes, return non empty response", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.finish()
-		fullSyncReq := &treechangeproto.TreeFullSyncRequest{
-			Heads:        []string{"head"},
-			SnapshotPath: []string{"root"},
-		}
-		rootCh := &treechangeproto.RawTreeChangeWithId{
-			Id: "objectId",
-		}
-		treeSyncMsg := treechangeproto.WrapFullRequest(fullSyncReq, rootCh)
-		payload, err := treeSyncMsg.Marshal()
-		require.NoError(t, err)
-		msg := &spacesyncproto.ObjectSyncMessage{
-			SpaceId:  "spaceId",
-			Payload:  payload,
-			ObjectId: "objectId",
-		}
-		fx.tree.EXPECT().ChangesAfterCommonSnapshot([]string{"root"}, []string{"head"}).Return([]*treechangeproto.RawTreeChangeWithId{rootCh}, nil)
-		fx.tree.EXPECT().Heads().Return([]string{"head"})
-		fx.tree.EXPECT().SnapshotPath().Return([]string{"root"})
-		fx.tree.EXPECT().Header().Return(rootCh)
-		ctx = peer.CtxWithPeerId(ctx, "peerId")
-		resp, err := fx.syncHandler.HandleDeprecatedRequest(ctx, msg)
-		require.NoError(t, err)
-		require.Equal(t, "objectId", resp.ObjectId)
-		require.Equal(t, "spaceId", resp.SpaceId)
-	})
-	t.Run("request with no changes, different heads, return empty response", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.finish()
-		rootCh := &treechangeproto.RawTreeChangeWithId{
-			Id: "objectId",
-		}
-		fullSyncReq := &treechangeproto.TreeFullSyncRequest{
-			Heads:        []string{"head"},
-			SnapshotPath: []string{"root"},
-			Changes: []*treechangeproto.RawTreeChangeWithId{
-				rootCh,
-			},
-		}
-		treeSyncMsg := treechangeproto.WrapFullRequest(fullSyncReq, rootCh)
-		payload, err := treeSyncMsg.Marshal()
-		require.NoError(t, err)
-		msg := &spacesyncproto.ObjectSyncMessage{
-			SpaceId:  "spaceId",
-			Payload:  payload,
-			ObjectId: "objectId",
-		}
-		ctx = peer.CtxWithPeerId(ctx, "peerId")
-		fx.tree.EXPECT().Heads().Return([]string{"otherHead"})
-		fx.tree.EXPECT().AddRawChangesFromPeer(ctx, "peerId", objecttree.RawChangesPayload{
-			NewHeads:   []string{"head"},
-			RawChanges: []*treechangeproto.RawTreeChangeWithId{rootCh},
-		})
-		fx.tree.EXPECT().Heads().Return([]string{"head"})
-		fx.tree.EXPECT().SnapshotPath().Return([]string{"root"})
-		fx.tree.EXPECT().Header().Return(rootCh)
-		resp, err := fx.syncHandler.HandleDeprecatedRequest(ctx, msg)
-		require.NoError(t, err)
-		require.Equal(t, "objectId", resp.ObjectId)
-		require.Equal(t, "spaceId", resp.SpaceId)
-	})
-	t.Run("request with no changes, same heads, return empty response", func(t *testing.T) {
-		fx := newSyncHandlerFixture(t)
-		defer fx.finish()
-		rootCh := &treechangeproto.RawTreeChangeWithId{
-			Id: "objectId",
-		}
-		fullSyncReq := &treechangeproto.TreeFullSyncRequest{
-			Heads:        []string{"head"},
-			SnapshotPath: []string{"root"},
-			Changes: []*treechangeproto.RawTreeChangeWithId{
-				rootCh,
-			},
-		}
-		treeSyncMsg := treechangeproto.WrapFullRequest(fullSyncReq, rootCh)
-		payload, err := treeSyncMsg.Marshal()
-		require.NoError(t, err)
-		msg := &spacesyncproto.ObjectSyncMessage{
-			SpaceId:  "spaceId",
-			Payload:  payload,
-			ObjectId: "objectId",
-		}
-		ctx = peer.CtxWithPeerId(ctx, "peerId")
-		fx.tree.EXPECT().Heads().Times(2).Return([]string{"head"})
-		fx.tree.EXPECT().SnapshotPath().Return([]string{"root"})
-		fx.tree.EXPECT().Header().Return(rootCh)
-		resp, err := fx.syncHandler.HandleDeprecatedRequest(ctx, msg)
-		require.NoError(t, err)
-		require.Equal(t, "objectId", resp.ObjectId)
-		require.Equal(t, "spaceId", resp.SpaceId)
 	})
 }
 
@@ -298,7 +205,7 @@ func TestSyncHandler_HandleStreamRequest(t *testing.T) {
 		returnReq := &objectmessages.Request{
 			Bytes: []byte("abcde"),
 		}
-		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq)
+		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq, nil)
 		fx.tree.EXPECT().Heads().Return([]string{"curHead"})
 		resp := &response.Response{
 			Heads:    heads,
@@ -380,8 +287,8 @@ func TestSyncHandler_HandleStreamRequest(t *testing.T) {
 		returnReq := &objectmessages.Request{
 			Bytes: []byte("abcde"),
 		}
-		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq)
-		producer.EXPECT().EmptyResponse().Return(resp)
+		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq, nil)
+		producer.EXPECT().EmptyResponse().Return(resp, nil)
 		ctx = peer.CtxWithPeerId(ctx, "peerId")
 		callCount := 0
 		req, err := fx.syncHandler.HandleStreamRequest(ctx, request, testUpdater{}, func(resp proto.Message) error {
@@ -415,8 +322,8 @@ func TestSyncHandler_HandleStreamRequest(t *testing.T) {
 		returnReq := &objectmessages.Request{
 			Bytes: []byte("abcde"),
 		}
-		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq)
-		producer.EXPECT().EmptyResponse().Return(resp)
+		fx.client.EXPECT().CreateFullSyncRequest("peerId", fx.tree).Return(returnReq, nil)
+		producer.EXPECT().EmptyResponse().Return(resp, nil)
 		ctx = peer.CtxWithPeerId(ctx, "peerId")
 		callCount := 0
 		req, err := fx.syncHandler.HandleStreamRequest(ctx, request, testUpdater{}, func(resp proto.Message) error {

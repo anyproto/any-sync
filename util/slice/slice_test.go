@@ -136,3 +136,144 @@ func TestContainsSorted(t *testing.T) {
 		})
 	}
 }
+
+func TestRemoveRepeatedSorted(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []int
+		expected []int
+	}{
+		{
+			name:     "empty slice",
+			input:    []int{},
+			expected: []int{},
+		},
+		{
+			name:     "single element",
+			input:    []int{1},
+			expected: []int{1},
+		},
+		{
+			name:     "all duplicates",
+			input:    []int{2, 2, 2},
+			expected: []int{},
+		},
+		{
+			name:     "mixed duplicates and unique",
+			input:    []int{1, 2, 2, 3, 4, 4, 4},
+			expected: []int{1, 3},
+		},
+		{
+			name:     "all unique elements",
+			input:    []int{5, 6, 7},
+			expected: []int{5, 6, 7},
+		},
+		{
+			name:     "duplicates at end",
+			input:    []int{1, 1, 2},
+			expected: []int{2},
+		},
+		{
+			name:     "multiple groups",
+			input:    []int{1, 1, 2, 3, 3, 4},
+			expected: []int{2, 4},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			inputCopy := make([]int, len(tt.input))
+			copy(inputCopy, tt.input)
+			result := RemoveRepeatedSorted(inputCopy)
+			require.Equal(t, result, tt.expected)
+		})
+	}
+
+	// Test with strings
+	stringTest := struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		name:     "string elements",
+		input:    []string{"a", "a", "b", "c", "c", "c"},
+		expected: []string{"b"},
+	}
+
+	t.Run(stringTest.name, func(t *testing.T) {
+		inputCopy := make([]string, len(stringTest.input))
+		copy(inputCopy, stringTest.input)
+		result := RemoveRepeatedSorted(inputCopy)
+		require.Equal(t, result, stringTest.expected)
+	})
+}
+
+func TestRemoveUniqueElementsSorted(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []int
+		expected []int
+	}{
+		{
+			name:     "empty slice",
+			input:    []int{},
+			expected: []int{},
+		},
+		{
+			name:     "single element",
+			input:    []int{1},
+			expected: []int{},
+		},
+		{
+			name:     "all duplicates",
+			input:    []int{3, 3, 3},
+			expected: []int{3, 3, 3},
+		},
+		{
+			name:     "mixed duplicates and unique",
+			input:    []int{1, 2, 2, 3, 4, 4, 4, 5},
+			expected: []int{2, 2, 4, 4, 4},
+		},
+		{
+			name:     "all unique elements",
+			input:    []int{5, 6, 7},
+			expected: []int{},
+		},
+		{
+			name:     "duplicates at beginning",
+			input:    []int{1, 1, 2, 3},
+			expected: []int{1, 1},
+		},
+		{
+			name:     "multiple duplicate groups",
+			input:    []int{1, 1, 2, 2, 3, 4, 4},
+			expected: []int{1, 1, 2, 2, 4, 4},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			inputCopy := make([]int, len(tt.input))
+			copy(inputCopy, tt.input)
+			result := RemoveUniqueElementsSorted(inputCopy)
+			require.Equal(t, result, tt.expected)
+		})
+	}
+
+	stringTest := struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		name:     "string elements",
+		input:    []string{"a", "a", "b", "c", "c", "c"},
+		expected: []string{"a", "a", "c", "c", "c"},
+	}
+
+	t.Run(stringTest.name, func(t *testing.T) {
+		inputCopy := make([]string, len(stringTest.input))
+		copy(inputCopy, stringTest.input)
+		result := RemoveUniqueElementsSorted(inputCopy)
+		require.Equal(t, result, stringTest.expected)
+	})
+}

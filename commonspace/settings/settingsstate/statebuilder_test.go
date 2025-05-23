@@ -2,13 +2,15 @@ package settingsstate
 
 import (
 	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
 	"github.com/anyproto/any-sync/commonspace/object/accountdata"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree"
 	"github.com/anyproto/any-sync/commonspace/object/tree/objecttree/mock_objecttree"
 	"github.com/anyproto/any-sync/commonspace/spacesyncproto"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
-	"testing"
 )
 
 func TestStateBuilder_ProcessChange(t *testing.T) {

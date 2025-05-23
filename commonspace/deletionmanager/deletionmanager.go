@@ -40,7 +40,7 @@ type deletionManager struct {
 func (d *deletionManager) Init(a *app.App) (err error) {
 	state := a.MustComponent(spacestate.CName).(*spacestate.SpaceState)
 	storage := a.MustComponent(spacestorage.CName).(spacestorage.SpaceStorage)
-	d.log = log.With(zap.String("spaceId", state.SpaceId), zap.String("settingsId", storage.SpaceSettingsId()))
+	d.log = log.With(zap.String("spaceId", state.SpaceId))
 	d.deletionState = a.MustComponent(deletionstate.CName).(deletionstate.ObjectDeletionState)
 	treeManager := a.MustComponent(treemanager.CName).(treemanager.TreeManager)
 	d.deleter = newDeleter(storage, d.deletionState, treeManager, d.log)
