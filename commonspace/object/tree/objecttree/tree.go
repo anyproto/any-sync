@@ -53,6 +53,9 @@ func (t *Tree) Root() *Change {
 }
 
 func (t *Tree) AddFast(changes ...*Change) []*Change {
+	if len(changes) == 0 {
+		return nil
+	}
 	defer t.clearUnattached()
 	t.addedBuf = t.addedBuf[:0]
 	for _, c := range changes {

@@ -49,6 +49,10 @@ func TestTree_Add(t *testing.T) {
 		assert.Equal(t, tr.root.Id, "root")
 		assert.Equal(t, []string{"root"}, tr.Heads())
 	})
+	t.Run("empty tree add should not panic", func(t *testing.T) {
+		tr := &Tree{}
+		tr.AddFast()
+	})
 	t.Run("linear add", func(t *testing.T) {
 		tr := new(Tree)
 		res, _ := tr.Add(
