@@ -250,12 +250,11 @@ func buildObjectTree(deps objectTreeDeps) (ObjectTree, error) {
 		keys:            make(map[string]crypto.SymKey),
 		newChangesBuf:   make([]*Change, 0, 10),
 		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
-		notSeenIdxBuf:   make([]int, 0, 10),
 		newSnapshotsBuf: make([]*Change, 0, 10),
 		flusher:         deps.flusher,
 	}
 
-	err := objTree.rebuildFromStorage(nil, nil, nil)
+	_, err := objTree.rebuildFromStorage(nil, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to rebuild from storage: %w", err)
 	}
@@ -288,7 +287,6 @@ func buildHistoryTree(deps objectTreeDeps, params HistoryTreeParams) (ht History
 		keys:            make(map[string]crypto.SymKey),
 		newChangesBuf:   make([]*Change, 0, 10),
 		difSnapshotBuf:  make([]*treechangeproto.RawTreeChangeWithId, 0, 10),
-		notSeenIdxBuf:   make([]int, 0, 10),
 		newSnapshotsBuf: make([]*Change, 0, 10),
 		flusher:         deps.flusher,
 	}
