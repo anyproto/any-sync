@@ -225,7 +225,7 @@ func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string,
 		current = append(current, next...)
 		next = next[:0]
 		for _, id := range current {
-			if ch, ok := cache[id]; ok {
+			if ch, ok := cache[id]; ok && ch.SnapshotId != "" {
 				if ch.visited {
 					continue
 				}
