@@ -488,10 +488,8 @@ func TestObjectTree(t *testing.T) {
 		})
 		require.NoError(t, err)
 		bObjTree := bTree.(*objectTree)
-		// this is just a random slice, so the func works
-		indexes := []int{1, 2, 3, 4, 5}
 		// checking that we filter the changes
-		filtered, filteredChanges, _, _ := bObjTree.validator.FilterChanges(bObjTree.aclList, collectedChanges, nil, indexes)
+		filtered, filteredChanges, _ := bObjTree.validator.FilterChanges(bObjTree.aclList, collectedChanges, nil)
 		require.True(t, filtered)
 		for _, ch := range filteredChanges {
 			require.NotEqual(t, unexpectedId, ch.Id)

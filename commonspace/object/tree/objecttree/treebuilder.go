@@ -47,10 +47,6 @@ func newTreeBuilder(storage Storage, builder ChangeBuilder) *treeBuilder {
 	}
 }
 
-func (tb *treeBuilder) Build(opts treeBuilderOpts) (*Tree, error) {
-	return tb.build(opts)
-}
-
 func (tb *treeBuilder) BuildFull() (*Tree, error) {
 	return tb.build(treeBuilderOpts{full: true})
 }
@@ -61,7 +57,7 @@ var (
 	totalLowest    atomic.Int32
 )
 
-func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
+func (tb *treeBuilder) buildWithAdded(opts treeBuilderOpts) (*Tree, []*Change, error) {
 	cache := make(map[string]*Change)
 	tb.ctx = context.Background()
 	for _, ch := range opts.newChanges {
@@ -74,12 +70,12 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	if opts.useHeadsSnapshot {
 		maxOrder, lowest, err := tb.lowestSnapshots(nil, opts.ourHeads, "")
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if len(lowest) != 1 {
 			snapshot, err = tb.commonSnapshot(lowest)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		} else {
 			snapshot = lowest[0]
@@ -94,28 +90,29 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 			if len(opts.ourSnapshotPath) == 0 {
 				common, err := tb.storage.CommonSnapshot(tb.ctx)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				snapshot = common
 			} else {
 				our := opts.ourSnapshotPath[0]
 				_, lowest, err := tb.lowestSnapshots(cache, opts.theirHeads, our)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				if len(lowest) != 1 {
 					snapshot, err = tb.commonSnapshot(lowest)
 					if err != nil {
-						return nil, err
+						return nil, nil, err
 					}
 				} else {
 					snapshot = lowest[0]
 				}
 			}
 		} else {
+			var err error
 			snapshot, err = commonSnapshotForTwoPaths(opts.ourSnapshotPath, opts.theirSnapshotPath)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	} else {
@@ -124,10 +121,13 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 	totalSnapshots.Store(totalSnapshots.Load() + 1)
 	snapshotCh, err := tb.storage.Get(tb.ctx, snapshot)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get common snapshot %s: %w", snapshot, err)
+		return nil, nil, fmt.Errorf("failed to get common snapshot %s: %w", snapshot, err)
 	}
 	rawChange := &treechangeproto.RawTreeChangeWithId{}
-	var changes []*Change
+	var (
+		changes    = make([]*Change, 0, 10)
+		newChanges = make([]*Change, 0, 10)
+	)
 	err = tb.storage.GetAfterOrder(tb.ctx, snapshotCh.OrderId, func(ctx context.Context, storageChange StorageChange) (shouldContinue bool, err error) {
 		if order != "" && storageChange.OrderId > order {
 			return false, nil
@@ -141,21 +141,44 @@ func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
 		ch.OrderId = storageChange.OrderId
 		ch.SnapshotCounter = storageChange.SnapshotCounter
 		changes = append(changes, ch)
+		if _, contains := cache[ch.Id]; contains {
+			delete(cache, ch.Id)
+		}
 		return true, nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get changes after order: %w", err)
+		return nil, nil, fmt.Errorf("failed to get changes after order: %w", err)
+	}
+	// getting the filtered new changes, we know that we don't have them in storage
+	for _, change := range cache {
+		newChanges = append(newChanges, change)
 	}
 	if len(changes) == 0 {
-		return nil, ErrEmpty
+		return nil, nil, ErrEmpty
 	}
-	tr = &Tree{}
-	changes = append(changes, opts.newChanges...)
-	tr.AddFast(changes...)
+	tr := &Tree{}
+	changes = append(changes, newChanges...)
+	added := tr.AddFast(changes...)
 	if opts.useHeadsSnapshot {
+		// this is important for history, because by default we get everything after the snapshot
 		tr.LeaveOnlyBefore(opts.ourHeads)
 	}
-	return tr, nil
+	if len(newChanges) > 0 {
+		newChanges = newChanges[:0]
+		for _, change := range added {
+			// only those that are both added and are new we deem newChanges
+			if _, contains := cache[change.Id]; contains {
+				newChanges = append(newChanges, change)
+			}
+		}
+		return tr, newChanges, nil
+	}
+	return tr, nil, nil
+}
+
+func (tb *treeBuilder) build(opts treeBuilderOpts) (tr *Tree, err error) {
+	tr, _, err = tb.buildWithAdded(opts)
+	return
 }
 
 func (tb *treeBuilder) lowestSnapshots(cache map[string]*Change, heads []string, ourSnapshot string) (maxOrder string, snapshots []string, err error) {
