@@ -396,8 +396,9 @@ func (d *diff) compareElementsEqual(dctx *diffCtx, my, other []Element) {
 		return result
 	}
 
+	otherMap := toMap(other)
 	for _, el := range my {
-		has, eq := find(toMap(other), el)
+		has, eq := find(otherMap, el)
 		if !has {
 			dctx.removedIds = append(dctx.removedIds, el.Id)
 			continue
@@ -408,8 +409,9 @@ func (d *diff) compareElementsEqual(dctx *diffCtx, my, other []Element) {
 		}
 	}
 
+	myMap := toMap(my)
 	for _, el := range other {
-		if has, _ := find(toMap(my), el); !has {
+		if has, _ := find(myMap, el); !has {
 			dctx.newIds = append(dctx.newIds, el.Id)
 		}
 	}
