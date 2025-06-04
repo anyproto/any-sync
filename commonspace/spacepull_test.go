@@ -72,7 +72,7 @@ func TestSpaceService_SpacePull(t *testing.T) {
 		defer fxC.Finish(t)
 		defer fxS.Finish(t)
 
-		spaceId, payload := fxS.createTestSpaceWithAclRecords(t)
+		spaceId, recLen, payload := fxS.createTestSpaceWithAclRecords(t)
 
 		space, err := fxC.spaceService.NewSpace(ctx, spaceId, Deps{
 			SyncStatus:     syncstatus.NewNoOpSyncStatus(),
@@ -85,7 +85,7 @@ func TestSpaceService_SpacePull(t *testing.T) {
 		require.NoError(t, space.Init(ctx))
 		records, err := space.Acl().RecordsAfter(ctx, "")
 		require.NoError(t, err)
-		require.Greater(t, len(records), 1)
+		require.Equal(t, recLen, len(records))
 		storage := space.Storage()
 		state, err := storage.StateStorage().GetState(ctx)
 		require.NoError(t, err)
@@ -179,7 +179,7 @@ func (fx *spacePullFixture) createTestSpace(t *testing.T) (string, spacestorage.
 	return createPayload.SpaceHeaderWithId.Id, createPayload
 }
 
-func (fx *spacePullFixture) createTestSpaceWithAclRecords(t *testing.T) (string, spacestorage.SpaceStorageCreatePayload) {
+func (fx *spacePullFixture) createTestSpaceWithAclRecords(t *testing.T) (string, int, spacestorage.SpaceStorageCreatePayload) {
 	spaceId, payload := fx.createTestSpace(t)
 	keys := fx.account.Account()
 
@@ -218,7 +218,7 @@ func (fx *spacePullFixture) createTestSpaceWithAclRecords(t *testing.T) (string,
 		require.NoError(t, err)
 	}
 
-	return spaceId, payload
+	return spaceId, len(allRecords), payload
 }
 
 type testSpaceSyncServer struct {
