@@ -71,6 +71,7 @@ func (m mockNodeClient) AclAddRecord(ctx context.Context, spaceId string, rec *c
 }
 
 type mockPeerManager struct {
+	peer peer.Peer
 }
 
 func (p *mockPeerManager) BroadcastMessage(ctx context.Context, msg drpc.Message) error {
@@ -90,6 +91,9 @@ func (p *mockPeerManager) Name() (name string) {
 }
 
 func (p *mockPeerManager) GetResponsiblePeers(ctx context.Context) (peers []peer.Peer, err error) {
+	if p.peer != nil {
+		return []peer.Peer{p.peer}, nil
+	}
 	return nil, nil
 }
 
@@ -115,6 +119,7 @@ func (m *testPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId st
 }
 
 type mockPeerManagerProvider struct {
+	peer peer.Peer
 }
 
 func (m *mockPeerManagerProvider) Init(a *app.App) (err error) {
@@ -126,7 +131,7 @@ func (m *mockPeerManagerProvider) Name() (name string) {
 }
 
 func (m *mockPeerManagerProvider) NewPeerManager(ctx context.Context, spaceId string) (sm peermanager.PeerManager, err error) {
-	return &mockPeerManager{}, nil
+	return &mockPeerManager{m.peer}, nil
 }
 
 type mockPool struct {
@@ -491,7 +496,10 @@ func (s *streamOpener) NewReadMessage() drpc.Message {
 }
 
 func (s *streamOpener) Init(a *app.App) (err error) {
-	s.spaceGetter = a.MustComponent(RpcName).(*RpcServer)
+	sp := a.Component(RpcName)
+	if sp != nil {
+		s.spaceGetter = sp.(*RpcServer)
+	}
 	s.streamPool = a.MustComponent(streampool.CName).(streampool.StreamPool)
 	return nil
 }

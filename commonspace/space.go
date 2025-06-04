@@ -37,6 +37,7 @@ type SpaceDescription struct {
 	AclPayload           []byte
 	SpaceSettingsId      string
 	SpaceSettingsPayload []byte
+	AclRecords           []*spacesyncproto.AclRecord
 }
 
 func NewSpaceId(id string, repKey uint64) string {
@@ -95,6 +96,19 @@ func (s *space) Description(ctx context.Context) (desc SpaceDescription, err err
 	if err != nil {
 		return
 	}
+	s.aclList.RLock()
+	defer s.aclList.RUnlock()
+	recs, err := s.aclList.RecordsAfter(ctx, "")
+	if err != nil {
+		return
+	}
+	aclRecs := make([]*spacesyncproto.AclRecord, 0, len(recs))
+	for _, rec := range recs {
+		aclRecs = append(aclRecs, &spacesyncproto.AclRecord{
+			Id:         rec.Id,
+			AclPayload: rec.Payload,
+		})
+	}
 	root := s.aclList.Root()
 	settingsStorage, err := s.storage.TreeStorage(ctx, state.SettingsId)
 	if err != nil {
@@ -114,6 +128,7 @@ func (s *space) Description(ctx context.Context) (desc SpaceDescription, err err
 		AclPayload:           root.Payload,
 		SpaceSettingsId:      settingsRoot.Id,
 		SpaceSettingsPayload: settingsRoot.RawChange,
+		AclRecords:           aclRecs,
 	}
 	return
 }
