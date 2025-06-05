@@ -69,7 +69,7 @@ func (m *StubConf) NodeIds(spaceId string) []string {
 }
 
 func (m *StubConf) IsResponsible(spaceId string) bool {
-	return true
+	return false
 }
 
 func (m *StubConf) FilePeers() []string {
